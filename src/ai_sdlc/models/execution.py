@@ -24,6 +24,11 @@ class Task(BaseModel):
     phase: int = 0
     file_paths: list[str] = []
     parallelizable: bool = False
+    parallel_group: str = ""
+    allowed_paths: list[str] = []
+    forbidden_paths: list[str] = []
+    interface_contracts: list[str] = []
+    merge_order: int = 0
     status: TaskStatus = TaskStatus.PENDING
     depends_on: list[str] = []
 
