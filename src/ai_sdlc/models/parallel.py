@@ -25,8 +25,10 @@ class InterfaceContract(BaseModel):
 
 class WorkerAssignment(BaseModel):
     """Assignment of a task slice to a specific worker."""
-    worker_index: int
-    parallel_group: str
+    worker_id: str = ""
+    worker_index: int = 0
+    parallel_group: str = ""
+    group_id: str = ""
     task_ids: list[str] = []
     branch_name: str = ""
     allowed_paths: list[str] = []
@@ -37,8 +39,12 @@ class WorkerAssignment(BaseModel):
 class OverlapResult(BaseModel):
     """Result of overlap detection between worker branches."""
     has_overlap: bool = False
+    has_conflicts: bool = False
     overlapping_files: list[str] = Field(default_factory=list)
+    conflicting_files: dict[str, list[str]] = Field(default_factory=dict)
     conflicting_workers: list[tuple[int, int]] = Field(default_factory=list)
+    total_shared_files: int = 0
+    recommendation: str = ""
     details: str = ""
 
 
@@ -46,5 +52,6 @@ class MergeSimulation(BaseModel):
     """Result of a dry-run merge simulation."""
     success: bool = True
     conflicts: list[str] = Field(default_factory=list)
+    predicted_conflicts: list[str] = Field(default_factory=list)
     merge_order: list[str] = Field(default_factory=list)
     notes: str = ""
