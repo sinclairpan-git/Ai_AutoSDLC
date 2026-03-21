@@ -38,6 +38,8 @@ def init_project(root: Path, project_name: str = "") -> ProjectState:
     """Initialize AI-SDLC in a project directory.
 
     Creates the .ai-sdlc/ directory structure and writes initial project-state.yaml.
+    For existing projects (has code but no .ai-sdlc/), also runs deep scanning
+    and generates the engineering knowledge baseline.
     Idempotent: if already initialized, returns existing state without overwriting.
 
     Args:
@@ -52,11 +54,16 @@ def init_project(root: Path, project_name: str = "") -> ProjectState:
         logger.info("Project already initialized at %s", root)
         return load_project_state(root)
 
+    is_existing = existing == EXISTING_UNINITIALIZED
+
     if not project_name:
         project_name = root.resolve().name
 
     dirs_to_create = [
         root / AI_SDLC_DIR / "project" / "config",
+        root / AI_SDLC_DIR / "project" / "memory",
+        root / AI_SDLC_DIR / "project" / "generated",
+        root / AI_SDLC_DIR / "project" / "bootstrap",
         root / AI_SDLC_DIR / "memory",
         root / AI_SDLC_DIR / "profiles",
         root / AI_SDLC_DIR / "state",
@@ -74,5 +81,13 @@ def init_project(root: Path, project_name: str = "") -> ProjectState:
         next_work_item_seq=1,
     )
     save_project_state(root, state)
+
+    if is_existing:
+        from ai_sdlc.routers.existing_project_init import init_existing_project
+
+        logger.info("Detected existing project — running deep scan for '%s'", project_name)
+        _scan, _generated = init_existing_project(root)
+        logger.info("Generated %d knowledge baseline files", len(_generated))
+
     logger.info("Initialized AI-SDLC project '%s' at %s", project_name, root)
     return state
