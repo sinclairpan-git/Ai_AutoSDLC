@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from pathlib import Path
-
 import typer
 from rich.console import Console
 from rich.panel import Panel
@@ -15,7 +13,9 @@ studio_app = typer.Typer(help="Studio routing and processing commands.")
 
 @studio_app.command("route")
 def route_command(
-    work_type: str = typer.Argument(help="Work type: new_requirement | production_issue | change_request | maintenance_task"),
+    work_type: str = typer.Argument(
+        help="Work type: new_requirement | production_issue | change_request | maintenance_task"
+    ),
     work_item_id: str = typer.Option("WI-MANUAL-001", help="Work item ID."),
     path: str = typer.Option(".", help="Project directory."),
 ) -> None:
@@ -28,14 +28,16 @@ def route_command(
     except ValueError:
         console.print(f"[red]Unknown work type: {work_type}[/red]")
         console.print(f"Valid types: {', '.join(t.value for t in WorkType)}")
-        raise typer.Exit(code=2)
+        raise typer.Exit(code=2) from None
 
     studio = FLOW_MAP.get(wt)
     if studio:
-        console.print(Panel(
-            f"Work type [bold]{work_type}[/bold] → [green]{studio}[/green]",
-            title="Studio Routing",
-        ))
+        console.print(
+            Panel(
+                f"Work type [bold]{work_type}[/bold] → [green]{studio}[/green]",
+                title="Studio Routing",
+            )
+        )
     else:
         console.print(f"[yellow]No studio mapped for {work_type}[/yellow]")
 

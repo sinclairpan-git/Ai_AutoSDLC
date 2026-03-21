@@ -20,7 +20,9 @@ logger = logging.getLogger(__name__)
 class ChangeStudio:
     """Process change requests: freeze current state, analyze impact, create rebaseline."""
 
-    def process(self, input_data: Any, context: dict[str, Any] | None = None) -> dict[str, Any]:
+    def process(
+        self, input_data: Any, context: dict[str, Any] | None = None
+    ) -> dict[str, Any]:
         """Process a ChangeRequest and produce change management artifacts.
 
         Args:
@@ -33,7 +35,9 @@ class ChangeStudio:
             and the updated "change_request".
         """
         if not isinstance(input_data, ChangeRequest):
-            raise TypeError(f"ChangeStudio expects ChangeRequest, got {type(input_data).__name__}")
+            raise TypeError(
+                f"ChangeStudio expects ChangeRequest, got {type(input_data).__name__}"
+            )
 
         ctx = context or {}
         cr: ChangeRequest = input_data
@@ -59,7 +63,9 @@ class ChangeStudio:
             "rebaseline_record": rebaseline,
         }
 
-    def _create_freeze_snapshot(self, cr: ChangeRequest, ctx: dict[str, Any]) -> FreezeSnapshot:
+    def _create_freeze_snapshot(
+        self, cr: ChangeRequest, ctx: dict[str, Any]
+    ) -> FreezeSnapshot:
         return FreezeSnapshot(
             work_item_id=cr.work_item_id,
             frozen_at=now_iso(),
@@ -68,7 +74,9 @@ class ChangeStudio:
             current_branch=ctx.get("current_branch", ""),
         )
 
-    def _create_impact_analysis(self, cr: ChangeRequest, ctx: dict[str, Any]) -> ImpactAnalysis:
+    def _create_impact_analysis(
+        self, cr: ChangeRequest, ctx: dict[str, Any]
+    ) -> ImpactAnalysis:
         return ImpactAnalysis(
             change_request_id=cr.change_request_id,
             affected_specs=["<!-- TODO: List affected spec sections -->"],
@@ -98,7 +106,7 @@ class ChangeStudio:
                 f"## Reason\n\n{cr.reason}\n\n"
                 f"## Affected Specs\n\n"
                 + "\n".join(f"- {s}" for s in cr.impact_analysis.affected_specs)
-                + f"\n\n## Affected Tasks\n\n"
+                + "\n\n## Affected Tasks\n\n"
                 + "\n".join(f"- {t}" for t in cr.impact_analysis.affected_tasks)
                 + f"\n\n## Risk Level\n\n{cr.impact_analysis.risk_level}\n",
                 encoding="utf-8",

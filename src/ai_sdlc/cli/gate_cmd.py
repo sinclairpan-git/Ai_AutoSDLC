@@ -62,7 +62,10 @@ def _build_context(stage: str, root_str: str) -> dict[str, object]:
 
 @gate_app.command(name="check")
 def gate_check(
-    stage: str = typer.Argument(..., help="Stage name (init, refine, design, decompose, verify, execute, close)."),
+    stage: str = typer.Argument(
+        ...,
+        help="Stage name (init, refine, design, decompose, verify, execute, close).",
+    ),
 ) -> None:
     """Run gate check for a specific pipeline stage."""
     root = find_project_root()
@@ -72,7 +75,9 @@ def gate_check(
 
     registry = _build_registry()
     if registry.get(stage) is None:
-        console.print(f"[red]Unknown stage: {stage}. Available: {', '.join(registry.stages)}[/red]")
+        console.print(
+            f"[red]Unknown stage: {stage}. Available: {', '.join(registry.stages)}[/red]"
+        )
         raise typer.Exit(code=2)
 
     ctx = _build_context(stage, str(root))

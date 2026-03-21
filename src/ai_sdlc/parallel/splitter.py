@@ -61,12 +61,13 @@ def _greedy_partition(
         for gid in sorted(group_files.keys()):
             if len(group_files) > max_groups:
                 break
-            if not task_files & group_files[gid]:
-                if _dependencies_satisfied(task, group_tasks[gid]):
-                    group_files[gid].update(task_files)
-                    group_tasks[gid].append(task)
-                    assigned = True
-                    break
+            if not task_files & group_files[gid] and _dependencies_satisfied(
+                task, group_tasks[gid]
+            ):
+                group_files[gid].update(task_files)
+                group_tasks[gid].append(task)
+                assigned = True
+                break
 
         if not assigned:
             gid = f"group-{len(group_files)}"

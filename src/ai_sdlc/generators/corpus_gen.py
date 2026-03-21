@@ -35,11 +35,16 @@ def generate_engineering_corpus(root: Path, scan: ScanResult) -> str:
 
 def generate_codebase_summary(scan: ScanResult) -> str:
     """Generate a concise codebase-summary.md."""
-    lang_lines = "\n".join(f"- **{lang}**: {count} files" for lang, count in sorted(scan.languages.items(), key=lambda x: -x[1]))
+    lang_lines = "\n".join(
+        f"- **{lang}**: {count} files"
+        for lang, count in sorted(scan.languages.items(), key=lambda x: -x[1])
+    )
     deps_by_eco: dict[str, int] = {}
     for d in scan.dependencies:
         deps_by_eco[d.ecosystem] = deps_by_eco.get(d.ecosystem, 0) + 1
-    dep_lines = "\n".join(f"- {eco}: {count} dependencies" for eco, count in sorted(deps_by_eco.items()))
+    dep_lines = "\n".join(
+        f"- {eco}: {count} dependencies" for eco, count in sorted(deps_by_eco.items())
+    )
 
     return f"""# Codebase Summary
 
@@ -68,7 +73,9 @@ def generate_codebase_summary(scan: ScanResult) -> str:
 
 def generate_project_brief(scan: ScanResult) -> str:
     """Generate a project-brief.md with high-level project info."""
-    primary_lang = max(scan.languages, key=scan.languages.get) if scan.languages else "unknown"
+    primary_lang = (
+        max(scan.languages, key=scan.languages.get) if scan.languages else "unknown"
+    )
     return f"""# Project Brief
 
 ## Overview
@@ -117,8 +124,11 @@ def save_corpus_files(root: Path, scan: ScanResult) -> list[str]:
 
 # --- Section generators ---
 
+
 def _section_1_summary(scan: ScanResult) -> str:
-    primary = max(scan.languages, key=scan.languages.get) if scan.languages else "unknown"
+    primary = (
+        max(scan.languages, key=scan.languages.get) if scan.languages else "unknown"
+    )
     return f"""## 1. One-Page Summary
 
 A {primary}-based project with **{scan.total_files} files** ({scan.total_lines} lines) across {len(scan.languages)} language(s).
@@ -202,7 +212,9 @@ def _section_8_external_integrations(scan: ScanResult) -> str:
     if scan.api_endpoints:
         lines = ["## 8. External Integrations\n", "### Detected API Endpoints\n"]
         for ep in scan.api_endpoints[:20]:
-            lines.append(f"- `{ep.method} {ep.path}` ({ep.framework}, `{ep.source_file}:{ep.line_number}`)")
+            lines.append(
+                f"- `{ep.method} {ep.path}` ({ep.framework}, `{ep.source_file}:{ep.line_number}`)"
+            )
         return "\n".join(lines)
     return "## 8. External Integrations\n\n<!-- TODO: Document external service integrations -->\n"
 

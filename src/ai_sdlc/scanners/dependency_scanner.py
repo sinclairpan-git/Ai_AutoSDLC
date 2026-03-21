@@ -46,15 +46,25 @@ def _scan_package_json(root: Path) -> list[DependencyInfo]:
 
     results: list[DependencyInfo] = []
     for name, version in data.get("dependencies", {}).items():
-        results.append(DependencyInfo(
-            name=name, version=str(version), source_file="package.json",
-            is_dev=False, ecosystem="npm",
-        ))
+        results.append(
+            DependencyInfo(
+                name=name,
+                version=str(version),
+                source_file="package.json",
+                is_dev=False,
+                ecosystem="npm",
+            )
+        )
     for name, version in data.get("devDependencies", {}).items():
-        results.append(DependencyInfo(
-            name=name, version=str(version), source_file="package.json",
-            is_dev=True, ecosystem="npm",
-        ))
+        results.append(
+            DependencyInfo(
+                name=name,
+                version=str(version),
+                source_file="package.json",
+                is_dev=True,
+                ecosystem="npm",
+            )
+        )
     return results
 
 
@@ -93,10 +103,15 @@ def _scan_pyproject_toml(root: Path) -> list[DependencyInfo]:
             if match:
                 name = match.group(1)
                 version = (match.group(2) or "").strip()
-                results.append(DependencyInfo(
-                    name=name, version=version, source_file="pyproject.toml",
-                    is_dev=in_dev_deps, ecosystem="pypi",
-                ))
+                results.append(
+                    DependencyInfo(
+                        name=name,
+                        version=version,
+                        source_file="pyproject.toml",
+                        is_dev=in_dev_deps,
+                        ecosystem="pypi",
+                    )
+                )
     return results
 
 
@@ -116,12 +131,14 @@ def _scan_requirements_txt(root: Path) -> list[DependencyInfo]:
             continue
         match = re.match(r"([a-zA-Z0-9_.-]+)\s*([><=!~].*)?", line)
         if match:
-            results.append(DependencyInfo(
-                name=match.group(1),
-                version=(match.group(2) or "").strip(),
-                source_file="requirements.txt",
-                ecosystem="pypi",
-            ))
+            results.append(
+                DependencyInfo(
+                    name=match.group(1),
+                    version=(match.group(2) or "").strip(),
+                    source_file="requirements.txt",
+                    ecosystem="pypi",
+                )
+            )
     return results
 
 
@@ -147,10 +164,14 @@ def _scan_go_mod(root: Path) -> list[DependencyInfo]:
         if in_require or stripped.startswith("require "):
             parts = stripped.replace("require ", "").strip().split()
             if len(parts) >= 2:
-                results.append(DependencyInfo(
-                    name=parts[0], version=parts[1],
-                    source_file="go.mod", ecosystem="go",
-                ))
+                results.append(
+                    DependencyInfo(
+                        name=parts[0],
+                        version=parts[1],
+                        source_file="go.mod",
+                        ecosystem="go",
+                    )
+                )
     return results
 
 
@@ -184,10 +205,15 @@ def _scan_cargo_toml(root: Path) -> list[DependencyInfo]:
         if in_deps or in_dev:
             match = re.match(r'(\w[\w-]*)\s*=\s*"([^"]*)"', stripped)
             if match:
-                results.append(DependencyInfo(
-                    name=match.group(1), version=match.group(2),
-                    source_file="Cargo.toml", is_dev=in_dev, ecosystem="cargo",
-                ))
+                results.append(
+                    DependencyInfo(
+                        name=match.group(1),
+                        version=match.group(2),
+                        source_file="Cargo.toml",
+                        is_dev=in_dev,
+                        ecosystem="cargo",
+                    )
+                )
     return results
 
 
@@ -202,11 +228,16 @@ def _scan_gemfile(root: Path) -> list[DependencyInfo]:
 
     results: list[DependencyInfo] = []
     for line in content.splitlines():
-        match = re.match(r"""gem\s+['"]([^'"]+)['"](?:\s*,\s*['"]([^'"]*)['""])?""", line.strip())
+        match = re.match(
+            r"""gem\s+['"]([^'"]+)['"](?:\s*,\s*['"]([^'"]*)['""])?""", line.strip()
+        )
         if match:
-            results.append(DependencyInfo(
-                name=match.group(1),
-                version=match.group(2) or "",
-                source_file="Gemfile", ecosystem="gem",
-            ))
+            results.append(
+                DependencyInfo(
+                    name=match.group(1),
+                    version=match.group(2) or "",
+                    source_file="Gemfile",
+                    ecosystem="gem",
+                )
+            )
     return results

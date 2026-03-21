@@ -45,8 +45,11 @@ class TestResumePack:
         cp = Checkpoint(
             current_stage="execute",
             feature=FeatureInfo(
-                id="001", spec_dir="s", design_branch="d",
-                feature_branch="f", current_branch="f",
+                id="001",
+                spec_dir="s",
+                design_branch="d",
+                feature_branch="f",
+                current_branch="f",
             ),
         )
         save_checkpoint(tmp_path, cp)

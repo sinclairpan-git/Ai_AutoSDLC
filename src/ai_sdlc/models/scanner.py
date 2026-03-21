@@ -7,6 +7,7 @@ from pydantic import BaseModel, Field
 
 class FileInfo(BaseModel):
     """Information about a single file in the project."""
+
     path: str
     language: str = "unknown"
     line_count: int = 0
@@ -18,6 +19,7 @@ class FileInfo(BaseModel):
 
 class DependencyInfo(BaseModel):
     """A project dependency extracted from a manifest file."""
+
     name: str
     version: str = ""
     source_file: str = ""
@@ -27,6 +29,7 @@ class DependencyInfo(BaseModel):
 
 class ApiEndpoint(BaseModel):
     """An API endpoint detected in the codebase."""
+
     method: str = "GET"
     path: str = ""
     handler: str = ""
@@ -37,6 +40,7 @@ class ApiEndpoint(BaseModel):
 
 class SymbolInfo(BaseModel):
     """A code symbol (class, function, etc.) extracted via AST or heuristic."""
+
     name: str
     kind: str = ""  # class, function, method, constant, export
     source_file: str = ""
@@ -48,6 +52,7 @@ class SymbolInfo(BaseModel):
 
 class DiscoveredTestFile(BaseModel):
     """Information about a test file or test function."""
+
     path: str
     framework: str = ""  # pytest, jest, junit, go test, etc.
     test_count: int = 0
@@ -56,6 +61,7 @@ class DiscoveredTestFile(BaseModel):
 
 class RiskItem(BaseModel):
     """A potential risk identified during scanning."""
+
     category: str  # large_file, high_complexity, no_tests, todo_density, high_coupling
     path: str = ""
     severity: str = "medium"
@@ -65,6 +71,7 @@ class RiskItem(BaseModel):
 
 class ScanResult(BaseModel):
     """Aggregated result from all project scanners."""
+
     root: str = ""
     total_files: int = 0
     total_lines: int = 0

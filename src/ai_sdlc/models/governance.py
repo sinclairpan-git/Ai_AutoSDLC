@@ -7,6 +7,7 @@ from pydantic import BaseModel, Field
 
 class GovernanceItem(BaseModel):
     """A single governance checklist item."""
+
     exists: bool = False
     path: str = ""
     verified_at: str | None = None
@@ -27,6 +28,7 @@ def _default_governance_items() -> dict[str, GovernanceItem]:
 
 class GovernanceState(BaseModel):
     """Governance freeze state for a work item."""
+
     frozen: bool = False
     frozen_at: str | None = None
     items: dict[str, GovernanceItem] = Field(default_factory=_default_governance_items)
@@ -49,4 +51,6 @@ class GovernanceState(BaseModel):
     @property
     def all_required_present(self) -> bool:
         """Check if all required governance items are present."""
-        return all(self.items.get(k, GovernanceItem()).exists for k in self.required_items)
+        return all(
+            self.items.get(k, GovernanceItem()).exists for k in self.required_items
+        )

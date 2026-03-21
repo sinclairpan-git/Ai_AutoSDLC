@@ -9,6 +9,7 @@ from ai_sdlc.models.work_item import Severity
 
 class IncidentBrief(BaseModel):
     """Input to the Incident Studio: structured incident report."""
+
     phenomenon: str
     impact_scope: str = ""
     severity: Severity = Severity.HIGH
@@ -20,6 +21,7 @@ class IncidentBrief(BaseModel):
 
 class IncidentAnalysis(BaseModel):
     """Output from Incident Studio: root cause analysis."""
+
     work_item_id: str
     summary: str
     probable_causes: list[str] = []
@@ -29,6 +31,7 @@ class IncidentAnalysis(BaseModel):
 
 class IncidentTask(BaseModel):
     """A single task within an incident fix plan."""
+
     task_id: str
     title: str
     description: str = ""
@@ -38,6 +41,7 @@ class IncidentTask(BaseModel):
 
 class IncidentFixPlan(BaseModel):
     """Output from Incident Studio: fix plan with tasks."""
+
     work_item_id: str
     strategy: str
     tasks: list[IncidentTask] = Field(default_factory=list)
@@ -47,6 +51,7 @@ class IncidentFixPlan(BaseModel):
 
 class PostmortemRecord(BaseModel):
     """Postmortem template produced after incident resolution."""
+
     work_item_id: str
     incident_summary: str = ""
     timeline: str = ""

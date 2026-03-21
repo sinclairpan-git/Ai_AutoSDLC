@@ -48,11 +48,11 @@ from ai_sdlc.models.project import ProjectConfig, ProjectState, ProjectStatus
 from ai_sdlc.models.scanner import (
     ApiEndpoint,
     DependencyInfo,
+    DiscoveredTestFile,
     FileInfo,
     RiskItem,
     ScanResult,
     SymbolInfo,
-    DiscoveredTestFile,
 )
 from ai_sdlc.models.work_item import (
     Confidence,

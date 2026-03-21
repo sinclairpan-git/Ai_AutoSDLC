@@ -19,37 +19,43 @@ def scan_risks(root: Path, files: list[FileInfo]) -> list[RiskItem]:
 
     for fi in source_files:
         if fi.line_count > LARGE_FILE_THRESHOLD:
-            risks.append(RiskItem(
-                category="large_file",
-                path=fi.path,
-                severity="medium" if fi.line_count < 1000 else "high",
-                description=f"File has {fi.line_count} lines (threshold: {LARGE_FILE_THRESHOLD})",
-                metric_value=float(fi.line_count),
-            ))
+            risks.append(
+                RiskItem(
+                    category="large_file",
+                    path=fi.path,
+                    severity="medium" if fi.line_count < 1000 else "high",
+                    description=f"File has {fi.line_count} lines (threshold: {LARGE_FILE_THRESHOLD})",
+                    metric_value=float(fi.line_count),
+                )
+            )
 
     for fi in source_files:
         path = root / fi.path
         todo_count = _count_todos(path)
         if todo_count >= 5:
-            risks.append(RiskItem(
-                category="todo_density",
-                path=fi.path,
-                severity="low" if todo_count < 10 else "medium",
-                description=f"Contains {todo_count} TODO/FIXME/HACK markers",
-                metric_value=float(todo_count),
-            ))
+            risks.append(
+                RiskItem(
+                    category="todo_density",
+                    path=fi.path,
+                    severity="low" if todo_count < 10 else "medium",
+                    description=f"Contains {todo_count} TODO/FIXME/HACK markers",
+                    metric_value=float(todo_count),
+                )
+            )
 
     import_counts = _compute_import_fan_in(root, source_files)
     high_coupling_threshold = max(5, len(source_files) // 5) if source_files else 5
     for path_str, count in import_counts.items():
         if count >= high_coupling_threshold:
-            risks.append(RiskItem(
-                category="high_coupling",
-                path=path_str,
-                severity="medium",
-                description=f"Imported by {count} other files (threshold: {high_coupling_threshold})",
-                metric_value=float(count),
-            ))
+            risks.append(
+                RiskItem(
+                    category="high_coupling",
+                    path=path_str,
+                    severity="medium",
+                    description=f"Imported by {count} other files (threshold: {high_coupling_threshold})",
+                    metric_value=float(count),
+                )
+            )
 
     test_paths = {f.path for f in files if f.is_test}
     source_dirs = {str(Path(f.path).parent) for f in source_files}
@@ -60,12 +66,14 @@ def scan_risks(root: Path, files: list[FileInfo]) -> list[RiskItem]:
             for t in test_paths
         )
         if not has_tests and sd and sd != ".":
-            risks.append(RiskItem(
-                category="no_tests",
-                path=sd,
-                severity="medium",
-                description=f"Source directory '{sd}' has no corresponding test directory",
-            ))
+            risks.append(
+                RiskItem(
+                    category="no_tests",
+                    path=sd,
+                    severity="medium",
+                    description=f"Source directory '{sd}' has no corresponding test directory",
+                )
+            )
 
     return risks
 

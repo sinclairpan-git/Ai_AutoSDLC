@@ -21,25 +21,31 @@ class ExecuteGate:
         checks: list[GateCheck] = []
 
         tests_ok = context.get("tests_passed", False)
-        checks.append(GateCheck(
-            name="tests_passed",
-            passed=tests_ok,
-            message="" if tests_ok else "Tests did not pass",
-        ))
+        checks.append(
+            GateCheck(
+                name="tests_passed",
+                passed=tests_ok,
+                message="" if tests_ok else "Tests did not pass",
+            )
+        )
 
         committed = context.get("committed", False)
-        checks.append(GateCheck(
-            name="changes_committed",
-            passed=committed,
-            message="" if committed else "Changes not committed",
-        ))
+        checks.append(
+            GateCheck(
+                name="changes_committed",
+                passed=committed,
+                message="" if committed else "Changes not committed",
+            )
+        )
 
         logged = context.get("logged", False)
-        checks.append(GateCheck(
-            name="execution_logged",
-            passed=logged,
-            message="" if logged else "Execution not logged",
-        ))
+        checks.append(
+            GateCheck(
+                name="execution_logged",
+                passed=logged,
+                message="" if logged else "Execution not logged",
+            )
+        )
 
         all_passed = all(c.passed for c in checks)
         verdict = GateVerdict.PASS if all_passed else GateVerdict.RETRY

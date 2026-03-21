@@ -16,16 +16,22 @@ console = Console()
 def refresh_command(
     path: str = typer.Argument(".", help="Project directory."),
     work_item_id: str = typer.Option("WI-MANUAL", help="Work item ID for the refresh."),
-    files: list[str] = typer.Option([], "--file", "-f", help="Changed files to consider."),
+    files: list[str] = typer.Option(
+        [], "--file", "-f", help="Changed files to consider."
+    ),  # noqa: B008
     spec_changed: bool = typer.Option(False, help="Whether spec files changed."),
-    force_level: int = typer.Option(-1, help="Force a specific refresh level (0-3). -1 = auto."),
+    force_level: int = typer.Option(
+        -1, help="Force a specific refresh level (0-3). -1 = auto."
+    ),
 ) -> None:
     """Compute and apply knowledge refresh."""
     root = Path(path).resolve()
 
     baseline = load_baseline(root)
     if not baseline.initialized:
-        console.print("[red]Knowledge baseline not initialized. Run 'ai-sdlc init' first.[/red]")
+        console.print(
+            "[red]Knowledge baseline not initialized. Run 'ai-sdlc init' first.[/red]"
+        )
         raise typer.Exit(code=1)
 
     if force_level >= 0:

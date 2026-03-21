@@ -15,6 +15,7 @@ class GateVerdict(str, Enum):
 
 class GateCheck(BaseModel):
     """Result of a single gate check item."""
+
     name: str
     passed: bool
     message: str = ""
@@ -22,6 +23,7 @@ class GateCheck(BaseModel):
 
 class GateResult(BaseModel):
     """Aggregate result of a stage gate check."""
+
     stage: str
     verdict: GateVerdict
     checks: list[GateCheck] = []

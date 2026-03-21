@@ -9,6 +9,7 @@ from pydantic import BaseModel, Field
 
 class RefreshLevel(int, Enum):
     """Knowledge refresh level determined by the scope of changes."""
+
     L0 = 0  # No refresh needed (comments, docs, small tests)
     L1 = 1  # Regenerate auto-indexes only
     L2 = 2  # Indexes + patch knowledge docs
@@ -17,6 +18,7 @@ class RefreshLevel(int, Enum):
 
 class KnowledgeBaselineState(BaseModel):
     """Tracks the state of the project knowledge baseline."""
+
     initialized: bool = False
     initialized_at: str | None = None
     last_refreshed_at: str | None = None
@@ -28,6 +30,7 @@ class KnowledgeBaselineState(BaseModel):
 
 class RefreshEntry(BaseModel):
     """A single entry in the knowledge refresh log."""
+
     work_item_id: str
     refresh_level: RefreshLevel
     triggered_at: str
@@ -40,4 +43,5 @@ class RefreshEntry(BaseModel):
 
 class KnowledgeRefreshLog(BaseModel):
     """Append-only log of knowledge refresh operations."""
+
     entries: list[RefreshEntry] = Field(default_factory=list)

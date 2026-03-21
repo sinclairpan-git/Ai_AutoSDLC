@@ -46,7 +46,9 @@ class TestKeywordClassification:
         assert result.classification_confidence == Confidence.LOW
 
     def test_production_issue_english(self) -> None:
-        result = self.router.classify("Production outage: service is down with OOM errors")
+        result = self.router.classify(
+            "Production outage: service is down with OOM errors"
+        )
         assert result.work_type == WorkType.PRODUCTION_ISSUE
 
     def test_new_requirement_prd(self) -> None:
@@ -69,4 +71,5 @@ class TestKeywordClassification:
     def test_created_status(self) -> None:
         result = self.router.classify("新增功能")
         from ai_sdlc.models.work_item import WorkItemStatus
+
         assert result.status == WorkItemStatus.CREATED

@@ -45,7 +45,9 @@ class TestKnowledgeRefreshFlow:
         assert baseline.index_version == 2
         assert baseline.refresh_count == 1
 
-        corpus = (tmp_path / ".ai-sdlc" / "project" / "memory" / "engineering-corpus.md").read_text()
+        corpus = (
+            tmp_path / ".ai-sdlc" / "project" / "memory" / "engineering-corpus.md"
+        ).read_text()
         assert "Partial refresh" in corpus
 
     def test_spec_change_triggers_l3(self, tmp_path: Path) -> None:
@@ -67,7 +69,9 @@ class TestKnowledgeRefreshFlow:
         apply_refresh(tmp_path, "WI-B", ["f.py"], RefreshLevel.L1)
         apply_refresh(tmp_path, "WI-C", ["g.py"], RefreshLevel.L2)
 
-        log_path = tmp_path / ".ai-sdlc" / "project" / "config" / "knowledge-refresh-log.yaml"
+        log_path = (
+            tmp_path / ".ai-sdlc" / "project" / "config" / "knowledge-refresh-log.yaml"
+        )
         data = yaml.safe_load(log_path.read_text())
         assert len(data["entries"]) == 3
         wids = [e["work_item_id"] for e in data["entries"]]

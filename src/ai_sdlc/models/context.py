@@ -7,6 +7,7 @@ from pydantic import BaseModel
 
 class RuntimeState(BaseModel):
     """Runtime execution state for a work item."""
+
     current_stage: str = ""
     current_batch: int = 0
     last_committed_task: str = ""
@@ -18,6 +19,7 @@ class RuntimeState(BaseModel):
 
 class WorkingSet(BaseModel):
     """The set of files needed for the current execution context."""
+
     prd_path: str = ""
     constitution_path: str = ""
     tech_stack_path: str = ""
@@ -30,6 +32,7 @@ class WorkingSet(BaseModel):
 
 class ResumePack(BaseModel):
     """Snapshot for resuming after interruption."""
+
     current_stage: str
     current_batch: int = 0
     last_committed_task: str = ""

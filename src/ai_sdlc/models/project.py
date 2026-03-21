@@ -14,6 +14,7 @@ class ProjectStatus(str, Enum):
 
 class ProjectState(BaseModel):
     """Represents the project initialization state stored in project-state.yaml."""
+
     status: ProjectStatus = ProjectStatus.UNINITIALIZED
     project_name: str = ""
     initialized_at: str | None = None
@@ -24,6 +25,7 @@ class ProjectState(BaseModel):
 
 class ProjectConfig(BaseModel):
     """Project-level configuration stored in project-config.yaml."""
+
     product_form: str = "hybrid"
     default_execution_mode: str = "auto"
     default_branch_strategy: str = "dual"

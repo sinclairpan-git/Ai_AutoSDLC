@@ -25,22 +25,26 @@ class KnowledgeGate:
         baseline = load_baseline(root)
 
         if not baseline.initialized:
-            checks.append(GateCheck(
-                name="knowledge_baseline_initialized",
-                passed=False,
-                message="Knowledge baseline not initialized. Run project init first.",
-            ))
+            checks.append(
+                GateCheck(
+                    name="knowledge_baseline_initialized",
+                    passed=False,
+                    message="Knowledge baseline not initialized. Run project init first.",
+                )
+            )
             return GateResult(
                 stage="knowledge_check",
                 verdict=GateVerdict.HALT,
                 checks=checks,
             )
 
-        checks.append(GateCheck(
-            name="knowledge_baseline_initialized",
-            passed=True,
-            message=f"Knowledge baseline v{baseline.corpus_version}/{baseline.index_version}",
-        ))
+        checks.append(
+            GateCheck(
+                name="knowledge_baseline_initialized",
+                passed=True,
+                message=f"Knowledge baseline v{baseline.corpus_version}/{baseline.index_version}",
+            )
+        )
 
         changed_files = context.get("changed_files", [])
         spec_changed = context.get("spec_changed", False)
@@ -55,23 +59,27 @@ class KnowledgeGate:
         )
 
         if level.value >= 1:
-            checks.append(GateCheck(
-                name="knowledge_refresh_required",
-                passed=False,
-                message=f"Knowledge refresh L{level.value} required before proceeding. "
-                        f"Changed files: {len(changed_files)}, spec_changed={spec_changed}",
-            ))
+            checks.append(
+                GateCheck(
+                    name="knowledge_refresh_required",
+                    passed=False,
+                    message=f"Knowledge refresh L{level.value} required before proceeding. "
+                    f"Changed files: {len(changed_files)}, spec_changed={spec_changed}",
+                )
+            )
             return GateResult(
                 stage="knowledge_check",
                 verdict=GateVerdict.HALT,
                 checks=checks,
             )
 
-        checks.append(GateCheck(
-            name="knowledge_refresh_required",
-            passed=True,
-            message="No knowledge refresh needed (L0).",
-        ))
+        checks.append(
+            GateCheck(
+                name="knowledge_refresh_required",
+                passed=True,
+                message="No knowledge refresh needed (L0).",
+            )
+        )
 
         return GateResult(
             stage="knowledge_check",

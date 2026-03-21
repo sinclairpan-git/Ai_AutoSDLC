@@ -11,7 +11,9 @@ class StudioProtocol(Protocol):
     Each Studio processes a typed input and returns structured output artifacts.
     """
 
-    def process(self, input_data: Any, context: dict[str, Any] | None = None) -> dict[str, Any]:
+    def process(
+        self, input_data: Any, context: dict[str, Any] | None = None
+    ) -> dict[str, Any]:
         """Process input and produce studio artifacts.
 
         Args:

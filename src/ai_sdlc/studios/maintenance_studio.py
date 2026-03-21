@@ -19,7 +19,9 @@ logger = logging.getLogger(__name__)
 class MaintenanceStudio:
     """Process maintenance briefs into lightweight plans with small task graphs."""
 
-    def process(self, input_data: Any, context: dict[str, Any] | None = None) -> dict[str, Any]:
+    def process(
+        self, input_data: Any, context: dict[str, Any] | None = None
+    ) -> dict[str, Any]:
         """Process a MaintenanceBrief and produce a lightweight maintenance plan.
 
         Args:
@@ -30,7 +32,9 @@ class MaintenanceStudio:
             Dictionary with "plan" artifact.
         """
         if not isinstance(input_data, MaintenanceBrief):
-            raise TypeError(f"MaintenanceStudio expects MaintenanceBrief, got {type(input_data).__name__}")
+            raise TypeError(
+                f"MaintenanceStudio expects MaintenanceBrief, got {type(input_data).__name__}"
+            )
 
         ctx = context or {}
         work_item_id = ctx.get("work_item_id", "WI-UNKNOWN")
@@ -55,32 +59,40 @@ class MaintenanceStudio:
             task_graph=SmallTaskGraph(tasks=tasks, execution_order=execution_order),
         )
 
-    def _generate_tasks(self, wid: str, brief: MaintenanceBrief) -> list[MaintenanceTask]:
+    def _generate_tasks(
+        self, wid: str, brief: MaintenanceBrief
+    ) -> list[MaintenanceTask]:
         tasks: list[MaintenanceTask] = []
 
-        tasks.append(MaintenanceTask(
-            task_id=f"{wid}-MT-1",
-            title="Assess current state",
-            description=f"Review impact scope: {', '.join(brief.impact_scope) or 'TBD'}",
-            verification="Current state documented",
-        ))
+        tasks.append(
+            MaintenanceTask(
+                task_id=f"{wid}-MT-1",
+                title="Assess current state",
+                description=f"Review impact scope: {', '.join(brief.impact_scope) or 'TBD'}",
+                verification="Current state documented",
+            )
+        )
 
-        tasks.append(MaintenanceTask(
-            task_id=f"{wid}-MT-2",
-            title="Execute maintenance",
-            description=brief.description,
-            depends_on=[f"{wid}-MT-1"],
-            file_paths=brief.impact_scope,
-            verification="Changes applied successfully",
-        ))
+        tasks.append(
+            MaintenanceTask(
+                task_id=f"{wid}-MT-2",
+                title="Execute maintenance",
+                description=brief.description,
+                depends_on=[f"{wid}-MT-1"],
+                file_paths=brief.impact_scope,
+                verification="Changes applied successfully",
+            )
+        )
 
-        tasks.append(MaintenanceTask(
-            task_id=f"{wid}-MT-3",
-            title="Verify and test",
-            description="Run relevant tests and verify no regressions",
-            depends_on=[f"{wid}-MT-2"],
-            verification="All tests pass, no regressions",
-        ))
+        tasks.append(
+            MaintenanceTask(
+                task_id=f"{wid}-MT-3",
+                title="Verify and test",
+                description="Run relevant tests and verify no regressions",
+                depends_on=[f"{wid}-MT-2"],
+                verification="All tests pass, no regressions",
+            )
+        )
 
         return tasks
 

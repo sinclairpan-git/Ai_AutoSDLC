@@ -35,7 +35,9 @@ class TestRecoverFlow:
             prd_source="prd.md",
             completed_stages=[
                 CompletedStage(stage="init", completed_at="2026-01-01T00:01:00+00:00"),
-                CompletedStage(stage="refine", completed_at="2026-01-01T00:02:00+00:00"),
+                CompletedStage(
+                    stage="refine", completed_at="2026-01-01T00:02:00+00:00"
+                ),
             ],
         )
         save_checkpoint(project_dir, cp)

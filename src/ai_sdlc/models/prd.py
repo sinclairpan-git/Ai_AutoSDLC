@@ -7,6 +7,7 @@ from pydantic import BaseModel, Field
 
 class PrdReadiness(BaseModel):
     """Result of a PRD readiness review."""
+
     readiness: str
     score: int = 0
     missing_sections: list[str] = []

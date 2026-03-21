@@ -97,9 +97,7 @@ class TestComputeRefreshLevel:
         assert level == RefreshLevel.L3
 
     def test_spec_overrides_file_changes(self) -> None:
-        level = compute_refresh_level(
-            ["src/main.py"], spec_changed=True
-        )
+        level = compute_refresh_level(["src/main.py"], spec_changed=True)
         assert level == RefreshLevel.L3
 
 
@@ -126,7 +124,8 @@ class TestApplyRefresh:
     def test_l1_updates_indexes(self, tmp_path: Path) -> None:
         self._setup_project(tmp_path)
         entry = apply_refresh(
-            tmp_path, "WI-002",
+            tmp_path,
+            "WI-002",
             ["src/__init__.py"],
             RefreshLevel.L1,
         )
@@ -138,7 +137,8 @@ class TestApplyRefresh:
     def test_l2_updates_corpus_partial(self, tmp_path: Path) -> None:
         self._setup_project(tmp_path)
         entry = apply_refresh(
-            tmp_path, "WI-003",
+            tmp_path,
+            "WI-003",
             ["src/handler.py"],
             RefreshLevel.L2,
         )
@@ -148,13 +148,16 @@ class TestApplyRefresh:
         assert state.corpus_version == 2
         assert state.index_version == 2
 
-        corpus = (tmp_path / ".ai-sdlc" / "project" / "memory" / "engineering-corpus.md").read_text()
+        corpus = (
+            tmp_path / ".ai-sdlc" / "project" / "memory" / "engineering-corpus.md"
+        ).read_text()
         assert "Partial refresh" in corpus
 
     def test_l3_full_corpus_refresh(self, tmp_path: Path) -> None:
         self._setup_project(tmp_path)
         entry = apply_refresh(
-            tmp_path, "WI-004",
+            tmp_path,
+            "WI-004",
             ["specs/spec.md"],
             RefreshLevel.L3,
         )
@@ -167,7 +170,9 @@ class TestApplyRefresh:
         apply_refresh(tmp_path, "WI-005", [], RefreshLevel.L0)
         apply_refresh(tmp_path, "WI-006", ["f.py"], RefreshLevel.L1)
 
-        log_path = tmp_path / ".ai-sdlc" / "project" / "config" / "knowledge-refresh-log.yaml"
+        log_path = (
+            tmp_path / ".ai-sdlc" / "project" / "config" / "knowledge-refresh-log.yaml"
+        )
         assert log_path.exists()
         data = yaml.safe_load(log_path.read_text())
         assert len(data["entries"]) == 2

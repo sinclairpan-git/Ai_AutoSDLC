@@ -73,7 +73,9 @@ class StudioRouter:
 
         studio_name = FLOW_MAP.get(work_item.work_type)
         if not studio_name:
-            raise StudioRoutingError(f"No studio mapped for work type: {work_item.work_type}")
+            raise StudioRoutingError(
+                f"No studio mapped for work type: {work_item.work_type}"
+            )
 
         studio = self._studios.get(studio_name)
         if not studio:

@@ -20,8 +20,10 @@ class TestCliRecover:
         cp = Checkpoint(
             current_stage="design",
             feature=FeatureInfo(
-                id="001", spec_dir="specs/001",
-                design_branch="d/001", feature_branch="f/001",
+                id="001",
+                spec_dir="specs/001",
+                design_branch="d/001",
+                feature_branch="f/001",
                 current_branch="d/001",
             ),
         )

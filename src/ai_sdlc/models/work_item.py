@@ -53,6 +53,7 @@ class WorkItemStatus(str, Enum):
 
 class WorkItem(BaseModel):
     """A single work item tracked through the SDLC pipeline."""
+
     work_item_id: str
     work_type: WorkType
     severity: Severity = Severity.MEDIUM

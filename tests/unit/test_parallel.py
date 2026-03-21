@@ -159,7 +159,10 @@ class TestOverlapDetector:
             "group-1": [_task("T2", ["x.py"])],
         }
         result = detect_overlaps(groups)
-        assert "conflicting" in result.recommendation.lower() or "x.py" in result.recommendation
+        assert (
+            "conflicting" in result.recommendation.lower()
+            or "x.py" in result.recommendation
+        )
 
 
 class TestMergeSimulator:
@@ -173,12 +176,16 @@ class TestMergeSimulator:
         overlap = detect_overlaps(groups)
         assignments = [
             WorkerAssignment(
-                worker_id="w1", group_id="group-0",
-                branch_name="feature/WI-001-worker-1", task_ids=["T1"],
+                worker_id="w1",
+                group_id="group-0",
+                branch_name="feature/WI-001-worker-1",
+                task_ids=["T1"],
             ),
             WorkerAssignment(
-                worker_id="w2", group_id="group-1",
-                branch_name="feature/WI-001-worker-2", task_ids=["T2"],
+                worker_id="w2",
+                group_id="group-1",
+                branch_name="feature/WI-001-worker-2",
+                task_ids=["T2"],
             ),
         ]
         sim = simulate_merge(assignments, overlap)
@@ -196,12 +203,16 @@ class TestMergeSimulator:
         overlap = detect_overlaps(groups)
         assignments = [
             WorkerAssignment(
-                worker_id="w1", group_id="group-0",
-                branch_name="feature/WI-001-worker-1", task_ids=["T1"],
+                worker_id="w1",
+                group_id="group-0",
+                branch_name="feature/WI-001-worker-1",
+                task_ids=["T1"],
             ),
             WorkerAssignment(
-                worker_id="w2", group_id="group-1",
-                branch_name="feature/WI-001-worker-2", task_ids=["T2"],
+                worker_id="w2",
+                group_id="group-1",
+                branch_name="feature/WI-001-worker-2",
+                task_ids=["T2"],
             ),
         ]
         sim = simulate_merge(assignments, overlap)
@@ -223,12 +234,16 @@ class TestMergeSimulator:
         overlap = OverlapResult(has_conflicts=False)
         assignments = [
             WorkerAssignment(
-                worker_id="w1", group_id="group-0",
-                branch_name="feature/WI-001-worker-1", task_ids=["T1"],
+                worker_id="w1",
+                group_id="group-0",
+                branch_name="feature/WI-001-worker-1",
+                task_ids=["T1"],
             ),
             WorkerAssignment(
-                worker_id="w-main", group_id="group-seq",
-                branch_name="feature/WI-001-dev", task_ids=["T0"],
+                worker_id="w-main",
+                group_id="group-seq",
+                branch_name="feature/WI-001-dev",
+                task_ids=["T0"],
             ),
         ]
         sim = simulate_merge(assignments, overlap)

@@ -28,29 +28,35 @@ class TestKnowledgeGate:
     def test_halts_if_spec_changed(self, tmp_path: Path) -> None:
         initialize_baseline(tmp_path)
         gate = KnowledgeGate()
-        result = gate.check({
-            "root": str(tmp_path),
-            "spec_changed": True,
-        })
+        result = gate.check(
+            {
+                "root": str(tmp_path),
+                "spec_changed": True,
+            }
+        )
         assert result.verdict == GateVerdict.HALT
         assert any("L3" in c.message for c in result.checks)
 
     def test_halts_on_significant_file_changes(self, tmp_path: Path) -> None:
         initialize_baseline(tmp_path)
         gate = KnowledgeGate()
-        result = gate.check({
-            "root": str(tmp_path),
-            "changed_files": ["src/handler.py"],
-        })
+        result = gate.check(
+            {
+                "root": str(tmp_path),
+                "changed_files": ["src/handler.py"],
+            }
+        )
         assert result.verdict == GateVerdict.HALT
 
     def test_passes_on_insignificant_changes(self, tmp_path: Path) -> None:
         initialize_baseline(tmp_path)
         gate = KnowledgeGate()
-        result = gate.check({
-            "root": str(tmp_path),
-            "changed_files": ["README.md"],
-        })
+        result = gate.check(
+            {
+                "root": str(tmp_path),
+                "changed_files": ["README.md"],
+            }
+        )
         assert result.verdict == GateVerdict.PASS
 
 
@@ -80,10 +86,12 @@ class TestParallelGate:
             total_shared_files=2,
             recommendation="Merge groups",
         )
-        result = gate.check({
-            "parallel_policy": policy,
-            "overlap_result": overlap,
-        })
+        result = gate.check(
+            {
+                "parallel_policy": policy,
+                "overlap_result": overlap,
+            }
+        )
         assert result.verdict == GateVerdict.HALT
 
     def test_halts_when_contracts_not_frozen(self) -> None:
@@ -94,11 +102,13 @@ class TestParallelGate:
             require_contract_freeze=True,
         )
         overlap = OverlapResult(has_conflicts=False)
-        result = gate.check({
-            "parallel_policy": policy,
-            "overlap_result": overlap,
-            "contracts_frozen": False,
-        })
+        result = gate.check(
+            {
+                "parallel_policy": policy,
+                "overlap_result": overlap,
+                "contracts_frozen": False,
+            }
+        )
         assert result.verdict == GateVerdict.HALT
 
     def test_passes_all_checks(self) -> None:
@@ -109,11 +119,13 @@ class TestParallelGate:
             require_contract_freeze=True,
         )
         overlap = OverlapResult(has_conflicts=False)
-        result = gate.check({
-            "parallel_policy": policy,
-            "overlap_result": overlap,
-            "contracts_frozen": True,
-        })
+        result = gate.check(
+            {
+                "parallel_policy": policy,
+                "overlap_result": overlap,
+                "contracts_frozen": True,
+            }
+        )
         assert result.verdict == GateVerdict.PASS
 
 

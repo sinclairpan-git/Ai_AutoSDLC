@@ -18,7 +18,9 @@ def status_command() -> None:
     """Show current AI-SDLC pipeline status."""
     root = find_project_root()
     if root is None:
-        console.print("[red]Not inside an AI-SDLC project. Run 'ai-sdlc init' first.[/red]")
+        console.print(
+            "[red]Not inside an AI-SDLC project. Run 'ai-sdlc init' first.[/red]"
+        )
         raise typer.Exit(code=1)
 
     state = load_project_state(root)

@@ -21,17 +21,23 @@ class VerifyGate:
         high = context.get("high_issues", 0)
         checks: list[GateCheck] = []
 
-        checks.append(GateCheck(
-            name="no_critical_issues",
-            passed=critical == 0,
-            message="" if critical == 0 else f"{critical} CRITICAL issues remain",
-        ))
+        checks.append(
+            GateCheck(
+                name="no_critical_issues",
+                passed=critical == 0,
+                message="" if critical == 0 else f"{critical} CRITICAL issues remain",
+            )
+        )
 
-        checks.append(GateCheck(
-            name="high_issues_acceptable",
-            passed=high <= 3,
-            message="" if high <= 3 else f"{high} HIGH issues exceed threshold of 3",
-        ))
+        checks.append(
+            GateCheck(
+                name="high_issues_acceptable",
+                passed=high <= 3,
+                message=""
+                if high <= 3
+                else f"{high} HIGH issues exceed threshold of 3",
+            )
+        )
 
         all_passed = all(c.passed for c in checks)
         verdict = GateVerdict.PASS if all_passed else GateVerdict.RETRY

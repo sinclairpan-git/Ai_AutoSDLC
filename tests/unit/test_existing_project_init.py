@@ -35,13 +35,30 @@ def _make_scan(root: str = "/project") -> ScanResult:
         total_lines=500,
         languages={"python": 8, "yaml": 2},
         files=[
-            FileInfo(path="main.py", language="python", line_count=50, is_entry_point=True, category="source"),
-            FileInfo(path="pyproject.toml", language="toml", is_config=True, category="config"),
+            FileInfo(
+                path="main.py",
+                language="python",
+                line_count=50,
+                is_entry_point=True,
+                category="source",
+            ),
+            FileInfo(
+                path="pyproject.toml",
+                language="toml",
+                is_config=True,
+                category="config",
+            ),
         ],
         entry_points=["main.py"],
         dependencies=[DependencyInfo(name="flask", version="2.0", ecosystem="pypi")],
-        api_endpoints=[ApiEndpoint(method="GET", path="/health", framework="flask", source_file="main.py")],
-        symbols=[SymbolInfo(name="App", kind="class", source_file="main.py", line_number=1)],
+        api_endpoints=[
+            ApiEndpoint(
+                method="GET", path="/health", framework="flask", source_file="main.py"
+            )
+        ],
+        symbols=[
+            SymbolInfo(name="App", kind="class", source_file="main.py", line_number=1)
+        ],
         tests=[],
         risks=[RiskItem(category="no_tests", path="src/", description="No tests")],
     )
@@ -70,9 +87,15 @@ class TestCorpusGeneration:
         (tmp_path / ".ai-sdlc" / "project" / "memory").mkdir(parents=True)
         saved = save_corpus_files(tmp_path, scan)
         assert len(saved) == 3
-        assert (tmp_path / ".ai-sdlc" / "project" / "memory" / "engineering-corpus.md").exists()
-        assert (tmp_path / ".ai-sdlc" / "project" / "memory" / "codebase-summary.md").exists()
-        assert (tmp_path / ".ai-sdlc" / "project" / "memory" / "project-brief.md").exists()
+        assert (
+            tmp_path / ".ai-sdlc" / "project" / "memory" / "engineering-corpus.md"
+        ).exists()
+        assert (
+            tmp_path / ".ai-sdlc" / "project" / "memory" / "codebase-summary.md"
+        ).exists()
+        assert (
+            tmp_path / ".ai-sdlc" / "project" / "memory" / "project-brief.md"
+        ).exists()
 
 
 class TestExtendedIndexGeneration:
@@ -91,7 +114,9 @@ class TestExtendedIndexGeneration:
         scan = _make_scan(str(tmp_path))
         generate_all_extended_indexes(tmp_path, scan)
         data = json.loads(
-            (tmp_path / ".ai-sdlc" / "project" / "generated" / "api-index.json").read_text()
+            (
+                tmp_path / ".ai-sdlc" / "project" / "generated" / "api-index.json"
+            ).read_text()
         )
         assert data["total_endpoints"] == 1
         assert data["endpoints"][0]["method"] == "GET"
@@ -100,7 +125,13 @@ class TestExtendedIndexGeneration:
         scan = _make_scan(str(tmp_path))
         generate_all_extended_indexes(tmp_path, scan)
         data = json.loads(
-            (tmp_path / ".ai-sdlc" / "project" / "generated" / "dependency-index.json").read_text()
+            (
+                tmp_path
+                / ".ai-sdlc"
+                / "project"
+                / "generated"
+                / "dependency-index.json"
+            ).read_text()
         )
         assert data["total_dependencies"] == 1
         assert "pypi" in data["ecosystems"]
@@ -130,7 +161,9 @@ class TestInitExistingProject:
     def test_full_init_flow(self, tmp_path: Path) -> None:
         (tmp_path / "package.json").write_text('{"dependencies": {"express": "4.0"}}')
         (tmp_path / "src").mkdir()
-        (tmp_path / "src" / "index.js").write_text("const app = require('express')();\napp.get('/api', (req, res) => res.send('ok'));\n")
+        (tmp_path / "src" / "index.js").write_text(
+            "const app = require('express')();\napp.get('/api', (req, res) => res.send('ok'));\n"
+        )
 
         assert detect_project_state(tmp_path) == EXISTING_UNINITIALIZED
 
@@ -138,10 +171,22 @@ class TestInitExistingProject:
         assert scan.total_files >= 2
         assert len(generated) >= 10
 
-        assert (tmp_path / ".ai-sdlc" / "project" / "memory" / "engineering-corpus.md").exists()
-        assert (tmp_path / ".ai-sdlc" / "project" / "generated" / "key-files.json").exists()
-        assert (tmp_path / ".ai-sdlc" / "project" / "config" / "branch-policy.yaml").exists()
-        assert (tmp_path / ".ai-sdlc" / "project" / "config" / "knowledge-baseline-state.yaml").exists()
+        assert (
+            tmp_path / ".ai-sdlc" / "project" / "memory" / "engineering-corpus.md"
+        ).exists()
+        assert (
+            tmp_path / ".ai-sdlc" / "project" / "generated" / "key-files.json"
+        ).exists()
+        assert (
+            tmp_path / ".ai-sdlc" / "project" / "config" / "branch-policy.yaml"
+        ).exists()
+        assert (
+            tmp_path
+            / ".ai-sdlc"
+            / "project"
+            / "config"
+            / "knowledge-baseline-state.yaml"
+        ).exists()
 
     def test_policy_files_not_overwritten(self, tmp_path: Path) -> None:
         (tmp_path / "package.json").write_text('{"dependencies": {}}')
@@ -165,11 +210,17 @@ class TestBootstrapExtended:
         state = init_project(tmp_path)
         assert state.project_name == tmp_path.name
 
-        assert (tmp_path / ".ai-sdlc" / "project" / "memory" / "engineering-corpus.md").exists()
-        assert (tmp_path / ".ai-sdlc" / "project" / "generated" / "dependency-index.json").exists()
+        assert (
+            tmp_path / ".ai-sdlc" / "project" / "memory" / "engineering-corpus.md"
+        ).exists()
+        assert (
+            tmp_path / ".ai-sdlc" / "project" / "generated" / "dependency-index.json"
+        ).exists()
 
     def test_greenfield_does_not_trigger_scan(self, tmp_path: Path) -> None:
         state = init_project(tmp_path)
         assert state.project_name == tmp_path.name
 
-        assert not (tmp_path / ".ai-sdlc" / "project" / "memory" / "engineering-corpus.md").exists()
+        assert not (
+            tmp_path / ".ai-sdlc" / "project" / "memory" / "engineering-corpus.md"
+        ).exists()

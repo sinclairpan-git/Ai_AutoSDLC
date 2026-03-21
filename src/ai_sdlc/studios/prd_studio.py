@@ -22,7 +22,13 @@ ALTERNATIVE_NAMES: dict[str, list[str]] = {
     "目标": ["目标", "objective", "goal", "背景与目标"],
     "范围": ["范围", "scope", "产品范围"],
     "用户角色": ["用户角色", "user role", "角色", "用户", "actor"],
-    "功能需求": ["功能需求", "functional requirement", "功能", "核心能力", "capability"],
+    "功能需求": [
+        "功能需求",
+        "functional requirement",
+        "功能",
+        "核心能力",
+        "capability",
+    ],
     "验收标准": ["验收标准", "acceptance criteria", "验收", "发布门槛"],
 }
 
@@ -84,9 +90,7 @@ def check_prd_readiness(prd_path: Path) -> PrdReadiness:
 
     if tbd_found:
         score -= len(tbd_found)
-        recommendations.append(
-            f"Found unresolved markers: {', '.join(tbd_found)}"
-        )
+        recommendations.append(f"Found unresolved markers: {', '.join(tbd_found)}")
 
     score += 5  # base score for non-empty
 
@@ -122,7 +126,9 @@ class PrdStudioAdapter:
         elif isinstance(input_data, Path):
             prd_path = input_data
         else:
-            raise TypeError(f"PrdStudioAdapter expects Path or str, got {type(input_data).__name__}")
+            raise TypeError(
+                f"PrdStudioAdapter expects Path or str, got {type(input_data).__name__}"
+            )
 
         readiness = check_prd_readiness(prd_path)
         return {"prd_readiness": readiness}

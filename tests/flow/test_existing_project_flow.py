@@ -50,20 +50,42 @@ class TestExistingProjectFlow:
 
         assert detect_project_state(tmp_path) == "existing_project_initialized"
 
-        assert (tmp_path / ".ai-sdlc" / "project" / "memory" / "engineering-corpus.md").exists()
-        assert (tmp_path / ".ai-sdlc" / "project" / "memory" / "codebase-summary.md").exists()
-        assert (tmp_path / ".ai-sdlc" / "project" / "memory" / "project-brief.md").exists()
-        assert (tmp_path / ".ai-sdlc" / "project" / "generated" / "api-index.json").exists()
-        assert (tmp_path / ".ai-sdlc" / "project" / "generated" / "dependency-index.json").exists()
-        assert (tmp_path / ".ai-sdlc" / "project" / "generated" / "test-index.json").exists()
-        assert (tmp_path / ".ai-sdlc" / "project" / "config" / "branch-policy.yaml").exists()
-        assert (tmp_path / ".ai-sdlc" / "project" / "config" / "knowledge-baseline-state.yaml").exists()
+        assert (
+            tmp_path / ".ai-sdlc" / "project" / "memory" / "engineering-corpus.md"
+        ).exists()
+        assert (
+            tmp_path / ".ai-sdlc" / "project" / "memory" / "codebase-summary.md"
+        ).exists()
+        assert (
+            tmp_path / ".ai-sdlc" / "project" / "memory" / "project-brief.md"
+        ).exists()
+        assert (
+            tmp_path / ".ai-sdlc" / "project" / "generated" / "api-index.json"
+        ).exists()
+        assert (
+            tmp_path / ".ai-sdlc" / "project" / "generated" / "dependency-index.json"
+        ).exists()
+        assert (
+            tmp_path / ".ai-sdlc" / "project" / "generated" / "test-index.json"
+        ).exists()
+        assert (
+            tmp_path / ".ai-sdlc" / "project" / "config" / "branch-policy.yaml"
+        ).exists()
+        assert (
+            tmp_path
+            / ".ai-sdlc"
+            / "project"
+            / "config"
+            / "knowledge-baseline-state.yaml"
+        ).exists()
 
         baseline = load_baseline(tmp_path)
         assert baseline.initialized
         assert baseline.corpus_version == 1
 
-        corpus = (tmp_path / ".ai-sdlc" / "project" / "memory" / "engineering-corpus.md").read_text()
+        corpus = (
+            tmp_path / ".ai-sdlc" / "project" / "memory" / "engineering-corpus.md"
+        ).read_text()
         assert "## 1." in corpus
         assert "## 10." in corpus
 
@@ -74,7 +96,9 @@ class TestExistingProjectFlow:
 
         state = init_project(project_dir)
         assert state.project_name == "new-proj"
-        assert not (project_dir / ".ai-sdlc" / "project" / "memory" / "engineering-corpus.md").exists()
+        assert not (
+            project_dir / ".ai-sdlc" / "project" / "memory" / "engineering-corpus.md"
+        ).exists()
 
     def test_idempotent_init(self, tmp_path: Path) -> None:
         """Double init on existing project returns same state without re-scanning."""

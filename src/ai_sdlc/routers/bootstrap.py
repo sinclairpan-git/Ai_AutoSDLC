@@ -85,7 +85,9 @@ def init_project(root: Path, project_name: str = "") -> ProjectState:
     if is_existing:
         from ai_sdlc.routers.existing_project_init import init_existing_project
 
-        logger.info("Detected existing project — running deep scan for '%s'", project_name)
+        logger.info(
+            "Detected existing project — running deep scan for '%s'", project_name
+        )
         _scan, _generated = init_existing_project(root)
         logger.info("Generated %d knowledge baseline files", len(_generated))
 

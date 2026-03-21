@@ -2,11 +2,12 @@
 
 from __future__ import annotations
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 
 
 class FreezeSnapshot(BaseModel):
     """Snapshot of the current pipeline state at the moment of freeze."""
+
     work_item_id: str
     frozen_at: str
     current_stage: str
@@ -18,6 +19,7 @@ class FreezeSnapshot(BaseModel):
 
 class ImpactAnalysis(BaseModel):
     """Analysis of a change request's impact on the current baseline."""
+
     change_request_id: str
     affected_specs: list[str] = []
     affected_plan_sections: list[str] = []
@@ -29,6 +31,7 @@ class ImpactAnalysis(BaseModel):
 
 class RebaselineRecord(BaseModel):
     """Record of the baseline diff caused by a change request."""
+
     change_request_id: str
     old_baseline_ref: str = ""
     new_baseline_ref: str = ""
@@ -38,6 +41,7 @@ class RebaselineRecord(BaseModel):
 
 class ChangeRequest(BaseModel):
     """A change request submitted during an active work item."""
+
     change_request_id: str
     work_item_id: str
     description: str

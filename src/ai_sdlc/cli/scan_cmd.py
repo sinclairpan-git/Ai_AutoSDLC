@@ -51,4 +51,6 @@ def scan_command(
     if scan.risks:
         console.print(f"\n[yellow]Risks detected: {len(scan.risks)}[/yellow]")
         for risk in scan.risks[:10]:
-            console.print(f"  [{risk.severity}] {risk.category}: {risk.path} — {risk.description}")
+            console.print(
+                f"  [{risk.severity}] {risk.category}: {risk.path} — {risk.description}"
+            )

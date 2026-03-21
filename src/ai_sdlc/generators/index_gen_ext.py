@@ -33,11 +33,11 @@ def generate_key_files_index(root: Path, scan: ScanResult) -> str:
     data = {
         "entry_points": [
             {"path": f.path, "language": f.language, "lines": f.line_count}
-            for f in scan.files if f.is_entry_point
+            for f in scan.files
+            if f.is_entry_point
         ],
         "config_files": [
-            {"path": f.path, "language": f.language}
-            for f in scan.files if f.is_config
+            {"path": f.path, "language": f.language} for f in scan.files if f.is_config
         ],
         "largest_files": [
             {"path": f.path, "language": f.language, "lines": f.line_count}
@@ -73,12 +73,14 @@ def generate_dependency_index(root: Path, scan: ScanResult) -> str:
     """Generate dependency-index.json from scan results."""
     by_ecosystem: dict[str, list[dict[str, str | bool]]] = {}
     for dep in scan.dependencies:
-        by_ecosystem.setdefault(dep.ecosystem, []).append({
-            "name": dep.name,
-            "version": dep.version,
-            "is_dev": dep.is_dev,
-            "source_file": dep.source_file,
-        })
+        by_ecosystem.setdefault(dep.ecosystem, []).append(
+            {
+                "name": dep.name,
+                "version": dep.version,
+                "is_dev": dep.is_dev,
+                "source_file": dep.source_file,
+            }
+        )
     data = {
         "total_dependencies": len(scan.dependencies),
         "ecosystems": by_ecosystem,
@@ -109,12 +111,14 @@ def generate_risk_index(root: Path, scan: ScanResult) -> str:
     """Generate risk-index.json from scan results."""
     by_category: dict[str, list[dict[str, object]]] = {}
     for r in scan.risks:
-        by_category.setdefault(r.category, []).append({
-            "path": r.path,
-            "severity": r.severity,
-            "description": r.description,
-            "metric_value": r.metric_value,
-        })
+        by_category.setdefault(r.category, []).append(
+            {
+                "path": r.path,
+                "severity": r.severity,
+                "description": r.description,
+                "metric_value": r.metric_value,
+            }
+        )
     data = {
         "total_risks": len(scan.risks),
         "by_category": by_category,

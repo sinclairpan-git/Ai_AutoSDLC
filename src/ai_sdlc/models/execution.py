@@ -18,6 +18,7 @@ class TaskStatus(str, Enum):
 
 class Task(BaseModel):
     """A single executable task within a phase."""
+
     task_id: str
     title: str
     user_story: str = ""
@@ -35,6 +36,7 @@ class Task(BaseModel):
 
 class ExecutionBatch(BaseModel):
     """A batch of tasks to be executed together."""
+
     batch_id: int
     phase: int
     tasks: list[str] = []
@@ -45,6 +47,7 @@ class ExecutionBatch(BaseModel):
 
 class ExecutionPlan(BaseModel):
     """The full execution plan for a work item."""
+
     total_tasks: int = 0
     total_batches: int = 0
     tasks: list[Task] = []

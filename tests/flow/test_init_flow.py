@@ -27,7 +27,9 @@ class TestInitFlow:
         assert loaded.project_name == "my-project"
         assert loaded.next_work_item_seq == 1
 
-        assert (project_dir / ".ai-sdlc" / "project" / "config" / "project-state.yaml").exists()
+        assert (
+            project_dir / ".ai-sdlc" / "project" / "config" / "project-state.yaml"
+        ).exists()
         assert (project_dir / ".ai-sdlc" / "memory").is_dir()
         assert (project_dir / ".ai-sdlc" / "profiles").is_dir()
         assert (project_dir / ".ai-sdlc" / "state").is_dir()

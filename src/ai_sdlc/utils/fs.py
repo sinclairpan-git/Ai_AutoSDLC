@@ -12,9 +12,15 @@ PROJECT_STATE_PATH = Path(AI_SDLC_DIR) / "project" / "config" / "project-state.y
 PROJECT_CONFIG_PATH = Path(AI_SDLC_DIR) / "project" / "config" / "project-config.yaml"
 
 PROJECT_MARKERS = (
-    "package.json", "pom.xml", "build.gradle", "go.mod",
-    "Cargo.toml", "requirements.txt", "pyproject.toml",
-    "setup.py", "Gemfile",
+    "package.json",
+    "pom.xml",
+    "build.gradle",
+    "go.mod",
+    "Cargo.toml",
+    "requirements.txt",
+    "pyproject.toml",
+    "setup.py",
+    "Gemfile",
 )
 PROJECT_DIRS = ("src", "app")
 

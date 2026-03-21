@@ -30,10 +30,14 @@ class TestIncidentFlow:
             reported_at="2026-03-21T10:00:00",
         )
 
-        result = router.route(wi, brief, {
-            "work_item_id": "WI-2026-INC-001",
-            "root": str(tmp_path),
-        })
+        result = router.route(
+            wi,
+            brief,
+            {
+                "work_item_id": "WI-2026-INC-001",
+                "root": str(tmp_path),
+            },
+        )
 
         assert result["analysis"].summary
         assert len(result["fix_plan"].tasks) == 3

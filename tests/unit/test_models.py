@@ -94,10 +94,19 @@ class TestWorkItemModels:
 
     def test_all_work_item_statuses(self) -> None:
         expected = {
-            "created", "intake_classified", "governance_frozen",
-            "docs_baseline", "dev_executing", "dev_verifying",
-            "dev_reviewed", "archiving", "knowledge_refreshing",
-            "completed", "suspended", "resumed", "failed",
+            "created",
+            "intake_classified",
+            "governance_frozen",
+            "docs_baseline",
+            "dev_executing",
+            "dev_verifying",
+            "dev_reviewed",
+            "archiving",
+            "knowledge_refreshing",
+            "completed",
+            "suspended",
+            "resumed",
+            "failed",
         }
         assert {s.value for s in WorkItemStatus} == expected
 

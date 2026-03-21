@@ -43,6 +43,7 @@ class TestGateRegistry:
 class TestInitGate:
     def test_pass(self, initialized_project_dir: Path, git_repo: Path) -> None:
         import shutil
+
         ai_sdlc = initialized_project_dir / ".ai-sdlc"
         dest = git_repo / ".ai-sdlc"
         shutil.copytree(ai_sdlc, dest)
@@ -99,9 +100,7 @@ class TestDecomposeGate:
     def test_pass(self, tmp_path: Path) -> None:
         spec_dir = tmp_path / "specs"
         spec_dir.mkdir()
-        (spec_dir / "tasks.md").write_text(
-            "### Task 1.1\n- **依赖**：无\n"
-        )
+        (spec_dir / "tasks.md").write_text("### Task 1.1\n- **依赖**：无\n")
         result = DecomposeGate().check({"spec_dir": str(spec_dir)})
         assert result.verdict == GateVerdict.PASS
 
@@ -141,17 +140,21 @@ class TestExecuteGate:
 class TestCloseGate:
     def test_pass(self, tmp_path: Path) -> None:
         (tmp_path / "development-summary.md").write_text("# Summary")
-        result = CloseGate().check({
-            "root": str(tmp_path),
-            "all_tasks_complete": True,
-            "tests_passed": True,
-        })
+        result = CloseGate().check(
+            {
+                "root": str(tmp_path),
+                "all_tasks_complete": True,
+                "tests_passed": True,
+            }
+        )
         assert result.verdict == GateVerdict.PASS
 
     def test_fail_no_summary(self, tmp_path: Path) -> None:
-        result = CloseGate().check({
-            "root": str(tmp_path),
-            "all_tasks_complete": True,
-            "tests_passed": True,
-        })
+        result = CloseGate().check(
+            {
+                "root": str(tmp_path),
+                "all_tasks_complete": True,
+                "tests_passed": True,
+            }
+        )
         assert result.verdict == GateVerdict.RETRY

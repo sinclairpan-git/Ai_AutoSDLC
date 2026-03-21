@@ -43,11 +43,11 @@ from ai_sdlc.models.parallel import (
 from ai_sdlc.models.scanner import (
     ApiEndpoint,
     DependencyInfo,
+    DiscoveredTestFile,
     FileInfo,
     RiskItem,
     ScanResult,
     SymbolInfo,
-    DiscoveredTestFile,
 )
 from ai_sdlc.models.work_item import Severity
 
@@ -179,7 +179,9 @@ class TestMaintenanceModels:
     def test_small_task_graph_count(self) -> None:
         tasks = [
             MaintenanceTask(task_id="MT-1", title="Bump version"),
-            MaintenanceTask(task_id="MT-2", title="Fix breaking changes", depends_on=["MT-1"]),
+            MaintenanceTask(
+                task_id="MT-2", title="Fix breaking changes", depends_on=["MT-1"]
+            ),
         ]
         graph = SmallTaskGraph(tasks=tasks, execution_order=["MT-1", "MT-2"])
         assert graph.task_count == 2
@@ -231,7 +233,9 @@ class TestParallelModels:
 
 class TestScannerModels:
     def test_file_info(self) -> None:
-        fi = FileInfo(path="src/main.py", language="python", line_count=150, is_entry_point=True)
+        fi = FileInfo(
+            path="src/main.py", language="python", line_count=150, is_entry_point=True
+        )
         assert fi.is_entry_point
 
     def test_dependency_info(self) -> None:
@@ -247,7 +251,9 @@ class TestScannerModels:
         assert sym.is_public
 
     def test_discovered_test_file(self) -> None:
-        ti = DiscoveredTestFile(path="tests/test_auth.py", framework="pytest", test_count=12)
+        ti = DiscoveredTestFile(
+            path="tests/test_auth.py", framework="pytest", test_count=12
+        )
         assert ti.test_count == 12
 
     def test_risk_item(self) -> None:
@@ -268,7 +274,7 @@ class TestScannerModels:
 
 class TestTaskParallelFields:
     def test_task_parallel_defaults(self) -> None:
-        from ai_sdlc.models.execution import Task, TaskStatus
+        from ai_sdlc.models.execution import Task
 
         task = Task(task_id="T-1", title="Test")
         assert task.parallelizable is False

@@ -18,27 +18,67 @@ from ai_sdlc.models.work_item import (
 logger = logging.getLogger(__name__)
 
 ISSUE_KEYWORDS = [
-    "生产", "线上", "故障", "告警", "宕机", "回滚",
-    "502", "503", "500", "OOM", "数据不一致",
-    "production", "outage", "incident", "crash", "down",
-    "P0", "P1", "critical bug", "hotfix",
+    "生产",
+    "线上",
+    "故障",
+    "告警",
+    "宕机",
+    "回滚",
+    "502",
+    "503",
+    "500",
+    "OOM",
+    "数据不一致",
+    "production",
+    "outage",
+    "incident",
+    "crash",
+    "down",
+    "P0",
+    "P1",
+    "critical bug",
+    "hotfix",
 ]
 
 CHANGE_KEYWORDS = [
-    "修改", "调整", "变更", "change request", "refactor",
-    "改造", "迁移", "migrate", "upgrade", "update",
+    "修改",
+    "调整",
+    "变更",
+    "change request",
+    "refactor",
+    "改造",
+    "迁移",
+    "migrate",
+    "upgrade",
+    "update",
 ]
 
 MAINTENANCE_KEYWORDS = [
-    "维护", "清理", "优化", "debt", "cleanup",
-    "maintenance", "tech debt", "dependency update",
-    "性能优化", "performance",
+    "维护",
+    "清理",
+    "优化",
+    "debt",
+    "cleanup",
+    "maintenance",
+    "tech debt",
+    "dependency update",
+    "性能优化",
+    "performance",
 ]
 
 NEW_REQ_KEYWORDS = [
-    "新功能", "新增", "需求", "feature", "new",
-    "实现", "开发", "build", "create", "add",
-    "PRD", "产品需求",
+    "新功能",
+    "新增",
+    "需求",
+    "feature",
+    "new",
+    "实现",
+    "开发",
+    "build",
+    "create",
+    "add",
+    "PRD",
+    "产品需求",
 ]
 
 

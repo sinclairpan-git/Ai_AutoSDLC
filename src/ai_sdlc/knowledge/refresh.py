@@ -6,7 +6,7 @@ import hashlib
 import logging
 from pathlib import Path
 
-from ai_sdlc.knowledge.baseline import bump_baseline, load_baseline
+from ai_sdlc.knowledge.baseline import bump_baseline
 from ai_sdlc.models.knowledge import KnowledgeRefreshLog, RefreshEntry, RefreshLevel
 from ai_sdlc.utils.fs import AI_SDLC_DIR
 from ai_sdlc.utils.time_utils import now_iso
@@ -165,7 +165,9 @@ def _is_significant_change(filepath: str) -> bool:
 
 def _is_structural_change(filepath: str) -> bool:
     """Detect structural changes (new modules, deletions, renames)."""
-    return "__init__" in filepath or filepath.endswith(("setup.py", "setup.cfg", "pyproject.toml", "package.json"))
+    return "__init__" in filepath or filepath.endswith(
+        ("setup.py", "setup.cfg", "pyproject.toml", "package.json")
+    )
 
 
 def _append_log(root: Path, entry: RefreshEntry) -> None:

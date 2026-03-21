@@ -46,7 +46,9 @@ def initialize_baseline(root: Path) -> KnowledgeBaselineState:
     return state
 
 
-def bump_baseline(root: Path, *, corpus_updated: bool = False, index_updated: bool = False) -> KnowledgeBaselineState:
+def bump_baseline(
+    root: Path, *, corpus_updated: bool = False, index_updated: bool = False
+) -> KnowledgeBaselineState:
     """Increment baseline versions after a refresh cycle."""
     state = load_baseline(root)
     if corpus_updated:

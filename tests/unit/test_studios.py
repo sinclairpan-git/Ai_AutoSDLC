@@ -20,7 +20,9 @@ from ai_sdlc.studios.router import StudioRouter
 class TestIncidentStudio:
     def test_process_returns_artifacts(self) -> None:
         studio = IncidentStudio()
-        brief = IncidentBrief(phenomenon="Service OOM crash", severity=Severity.CRITICAL)
+        brief = IncidentBrief(
+            phenomenon="Service OOM crash", severity=Severity.CRITICAL
+        )
         result = studio.process(brief, {"work_item_id": "WI-2026-001"})
         assert "analysis" in result
         assert "fix_plan" in result
@@ -35,7 +37,9 @@ class TestIncidentStudio:
 
     def test_saves_files_when_root_provided(self, tmp_path: Path) -> None:
         studio = IncidentStudio()
-        brief = IncidentBrief(phenomenon="API 500 errors", impact_scope="payment-service")
+        brief = IncidentBrief(
+            phenomenon="API 500 errors", impact_scope="payment-service"
+        )
         studio.process(brief, {"work_item_id": "WI-2026-003", "root": str(tmp_path)})
         wid_dir = tmp_path / ".ai-sdlc" / "work-items" / "WI-2026-003"
         assert (wid_dir / "incident-analysis.md").exists()
@@ -127,7 +131,13 @@ class TestMaintenanceStudio:
         studio = MaintenanceStudio()
         brief = MaintenanceBrief(description="Performance optimization")
         studio.process(brief, {"work_item_id": "WI-2026-010", "root": str(tmp_path)})
-        assert (tmp_path / ".ai-sdlc" / "work-items" / "WI-2026-010" / "maintenance-brief.md").exists()
+        assert (
+            tmp_path
+            / ".ai-sdlc"
+            / "work-items"
+            / "WI-2026-010"
+            / "maintenance-brief.md"
+        ).exists()
 
     def test_rejects_wrong_input_type(self) -> None:
         studio = MaintenanceStudio()
@@ -195,7 +205,12 @@ class TestStudioRouter:
 
     def test_get_studio_for_type(self) -> None:
         router = StudioRouter()
-        assert router.get_studio_for_type(WorkType.PRODUCTION_ISSUE) == "incident_studio"
+        assert (
+            router.get_studio_for_type(WorkType.PRODUCTION_ISSUE) == "incident_studio"
+        )
         assert router.get_studio_for_type(WorkType.CHANGE_REQUEST) == "change_studio"
-        assert router.get_studio_for_type(WorkType.MAINTENANCE_TASK) == "maintenance_studio"
+        assert (
+            router.get_studio_for_type(WorkType.MAINTENANCE_TASK)
+            == "maintenance_studio"
+        )
         assert router.get_studio_for_type(WorkType.NEW_REQUIREMENT) == "prd_studio"

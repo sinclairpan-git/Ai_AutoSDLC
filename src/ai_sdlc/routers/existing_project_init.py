@@ -85,20 +85,28 @@ def init_existing_project(root: Path) -> tuple[ScanResult, list[str]]:
     generated.extend(ext_indexes)
 
     _create_policy_files(root)
-    generated.extend([
-        str(Path(AI_SDLC_DIR) / "project" / "config" / "branch-policy.yaml"),
-        str(Path(AI_SDLC_DIR) / "project" / "config" / "quality-policy.yaml"),
-        str(Path(AI_SDLC_DIR) / "project" / "config" / "parallel-policy.yaml"),
-        str(Path(AI_SDLC_DIR) / "project" / "config" / "environment-policy.yaml"),
-    ])
+    generated.extend(
+        [
+            str(Path(AI_SDLC_DIR) / "project" / "config" / "branch-policy.yaml"),
+            str(Path(AI_SDLC_DIR) / "project" / "config" / "quality-policy.yaml"),
+            str(Path(AI_SDLC_DIR) / "project" / "config" / "parallel-policy.yaml"),
+            str(Path(AI_SDLC_DIR) / "project" / "config" / "environment-policy.yaml"),
+        ]
+    )
 
     _create_initialization_status(root, scan)
-    generated.append(str(Path(AI_SDLC_DIR) / "project" / "config" / "initialization-status.yaml"))
+    generated.append(
+        str(Path(AI_SDLC_DIR) / "project" / "config" / "initialization-status.yaml")
+    )
 
     _create_knowledge_baseline_state(root)
-    generated.append(str(Path(AI_SDLC_DIR) / "project" / "config" / "knowledge-baseline-state.yaml"))
+    generated.append(
+        str(Path(AI_SDLC_DIR) / "project" / "config" / "knowledge-baseline-state.yaml")
+    )
 
-    logger.info("Existing project initialization complete. Generated %d files.", len(generated))
+    logger.info(
+        "Existing project initialization complete. Generated %d files.", len(generated)
+    )
     return scan, generated
 
 

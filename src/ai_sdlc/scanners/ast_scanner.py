@@ -44,35 +44,41 @@ def _scan_python_ast(path: Path, rel_path: str) -> list[SymbolInfo]:
     symbols: list[SymbolInfo] = []
     for node in ast.iter_child_nodes(tree):
         if isinstance(node, ast.ClassDef):
-            symbols.append(SymbolInfo(
-                name=node.name,
-                kind="class",
-                source_file=rel_path,
-                line_number=node.lineno,
-                docstring=ast.get_docstring(node) or "",
-                decorators=[_decorator_name(d) for d in node.decorator_list],
-                is_public=not node.name.startswith("_"),
-            ))
+            symbols.append(
+                SymbolInfo(
+                    name=node.name,
+                    kind="class",
+                    source_file=rel_path,
+                    line_number=node.lineno,
+                    docstring=ast.get_docstring(node) or "",
+                    decorators=[_decorator_name(d) for d in node.decorator_list],
+                    is_public=not node.name.startswith("_"),
+                )
+            )
         elif isinstance(node, ast.FunctionDef | ast.AsyncFunctionDef):
-            symbols.append(SymbolInfo(
-                name=node.name,
-                kind="function",
-                source_file=rel_path,
-                line_number=node.lineno,
-                docstring=ast.get_docstring(node) or "",
-                decorators=[_decorator_name(d) for d in node.decorator_list],
-                is_public=not node.name.startswith("_"),
-            ))
+            symbols.append(
+                SymbolInfo(
+                    name=node.name,
+                    kind="function",
+                    source_file=rel_path,
+                    line_number=node.lineno,
+                    docstring=ast.get_docstring(node) or "",
+                    decorators=[_decorator_name(d) for d in node.decorator_list],
+                    is_public=not node.name.startswith("_"),
+                )
+            )
         elif isinstance(node, ast.Assign):
             for target in node.targets:
                 if isinstance(target, ast.Name) and target.id.isupper():
-                    symbols.append(SymbolInfo(
-                        name=target.id,
-                        kind="constant",
-                        source_file=rel_path,
-                        line_number=node.lineno,
-                        is_public=not target.id.startswith("_"),
-                    ))
+                    symbols.append(
+                        SymbolInfo(
+                            name=target.id,
+                            kind="constant",
+                            source_file=rel_path,
+                            line_number=node.lineno,
+                            is_public=not target.id.startswith("_"),
+                        )
+                    )
     return symbols
 
 
@@ -108,10 +114,14 @@ def _scan_js_ts_heuristic(path: Path, rel_path: str) -> list[SymbolInfo]:
             m = re.search(pattern, line)
             if m and m.group(1) not in seen:
                 seen.add(m.group(1))
-                symbols.append(SymbolInfo(
-                    name=m.group(1), kind=kind,
-                    source_file=rel_path, line_number=i,
-                ))
+                symbols.append(
+                    SymbolInfo(
+                        name=m.group(1),
+                        kind=kind,
+                        source_file=rel_path,
+                        line_number=i,
+                    )
+                )
     return symbols
 
 
@@ -126,7 +136,10 @@ def _scan_java_heuristic(path: Path, rel_path: str) -> list[SymbolInfo]:
     patterns = [
         (r"(?:public|private|protected)?\s*(?:abstract\s+)?class\s+(\w+)", "class"),
         (r"(?:public|private|protected)?\s*interface\s+(\w+)", "class"),
-        (r"(?:public|private|protected)\s+(?:static\s+)?(?:\w+\s+)(\w+)\s*\(", "method"),
+        (
+            r"(?:public|private|protected)\s+(?:static\s+)?(?:\w+\s+)(\w+)\s*\(",
+            "method",
+        ),
     ]
 
     seen: set[str] = set()
@@ -135,10 +148,14 @@ def _scan_java_heuristic(path: Path, rel_path: str) -> list[SymbolInfo]:
             m = re.search(pattern, line)
             if m and m.group(1) not in seen:
                 seen.add(m.group(1))
-                symbols.append(SymbolInfo(
-                    name=m.group(1), kind=kind,
-                    source_file=rel_path, line_number=i,
-                ))
+                symbols.append(
+                    SymbolInfo(
+                        name=m.group(1),
+                        kind=kind,
+                        source_file=rel_path,
+                        line_number=i,
+                    )
+                )
     return symbols
 
 
@@ -161,9 +178,13 @@ def _scan_go_heuristic(path: Path, rel_path: str) -> list[SymbolInfo]:
             m = re.match(pattern, line)
             if m:
                 name = m.group(2) if m.lastindex and m.lastindex >= 2 else m.group(1)
-                symbols.append(SymbolInfo(
-                    name=name, kind=kind,
-                    source_file=rel_path, line_number=i,
-                    is_public=name[0].isupper(),
-                ))
+                symbols.append(
+                    SymbolInfo(
+                        name=name,
+                        kind=kind,
+                        source_file=rel_path,
+                        line_number=i,
+                        is_public=name[0].isupper(),
+                    )
+                )
     return symbols

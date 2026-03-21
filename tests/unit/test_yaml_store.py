@@ -17,16 +17,14 @@ class TestYamlStoreLoad:
 
     def test_load_nonexistent_returns_explicit_default(self, tmp_path: Path) -> None:
         default = ProjectState(status=ProjectStatus.INITIALIZED, project_name="x")
-        result = YamlStore.load(tmp_path / "missing.yaml", ProjectState, default=default)
+        result = YamlStore.load(
+            tmp_path / "missing.yaml", ProjectState, default=default
+        )
         assert result.project_name == "x"
 
     def test_load_valid_yaml(self, tmp_path: Path) -> None:
         f = tmp_path / "state.yaml"
-        f.write_text(
-            "status: initialized\n"
-            "project_name: demo\n"
-            "next_work_item_seq: 3\n"
-        )
+        f.write_text("status: initialized\nproject_name: demo\nnext_work_item_seq: 3\n")
         state = YamlStore.load(f, ProjectState)
         assert state.status == ProjectStatus.INITIALIZED
         assert state.project_name == "demo"

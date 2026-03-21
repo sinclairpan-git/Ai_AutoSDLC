@@ -10,7 +10,7 @@ from ai_sdlc.models.scanner import DiscoveredTestFile, FileInfo
 
 def scan_tests(root: Path, files: list[FileInfo]) -> list[DiscoveredTestFile]:
     """Scan test files and extract test function/method counts."""
-    results: list[TestFileInfo] = []
+    results: list[DiscoveredTestFile] = []
 
     for fi in files:
         if not fi.is_test:
@@ -68,8 +68,10 @@ def _scan_js_tests(path: Path, rel_path: str) -> DiscoveredTestFile:
         framework = "mocha"
 
     return DiscoveredTestFile(
-        path=rel_path, framework=framework,
-        test_count=len(test_names), test_names=test_names,
+        path=rel_path,
+        framework=framework,
+        test_count=len(test_names),
+        test_names=test_names,
     )
 
 
@@ -85,14 +87,17 @@ def _scan_java_tests(path: Path, rel_path: str) -> DiscoveredTestFile:
             continue
         m = re.search(r"(?:public|void)\s+(?:void\s+)?(\w+)\s*\(", line)
         if m and (
-            m.group(1).startswith("test")
-            or "@Test" in source[:source.index(line)] if line in source else False
+            m.group(1).startswith("test") or "@Test" in source[: source.index(line)]
+            if line in source
+            else False
         ):
             test_names.append(m.group(1))
 
     return DiscoveredTestFile(
-        path=rel_path, framework="junit",
-        test_count=len(test_names), test_names=test_names,
+        path=rel_path,
+        framework="junit",
+        test_count=len(test_names),
+        test_names=test_names,
     )
 
 
@@ -109,6 +114,8 @@ def _scan_go_tests(path: Path, rel_path: str) -> DiscoveredTestFile:
             test_names.append(m.group(1))
 
     return DiscoveredTestFile(
-        path=rel_path, framework="go_test",
-        test_count=len(test_names), test_names=test_names,
+        path=rel_path,
+        framework="go_test",
+        test_count=len(test_names),
+        test_names=test_names,
     )

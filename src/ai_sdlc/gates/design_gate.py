@@ -23,11 +23,13 @@ class DesignGate:
         required_files = ["plan.md", "research.md", "data-model.md"]
         for fname in required_files:
             fpath = spec_dir / fname
-            checks.append(GateCheck(
-                name=f"{fname}_exists",
-                passed=fpath.exists(),
-                message="" if fpath.exists() else f"{fpath} not found",
-            ))
+            checks.append(
+                GateCheck(
+                    name=f"{fname}_exists",
+                    passed=fpath.exists(),
+                    message="" if fpath.exists() else f"{fpath} not found",
+                )
+            )
 
         all_passed = all(c.passed for c in checks)
         verdict = GateVerdict.PASS if all_passed else GateVerdict.RETRY

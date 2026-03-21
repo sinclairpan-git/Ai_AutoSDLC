@@ -21,7 +21,9 @@ logger = logging.getLogger(__name__)
 class IncidentStudio:
     """Process incident briefs into analysis, fix plan, tasks, and postmortem template."""
 
-    def process(self, input_data: Any, context: dict[str, Any] | None = None) -> dict[str, Any]:
+    def process(
+        self, input_data: Any, context: dict[str, Any] | None = None
+    ) -> dict[str, Any]:
         """Process an IncidentBrief and produce incident artifacts.
 
         Args:
@@ -32,7 +34,9 @@ class IncidentStudio:
             Dictionary with "analysis", "fix_plan", "postmortem" artifacts.
         """
         if not isinstance(input_data, IncidentBrief):
-            raise TypeError(f"IncidentStudio expects IncidentBrief, got {type(input_data).__name__}")
+            raise TypeError(
+                f"IncidentStudio expects IncidentBrief, got {type(input_data).__name__}"
+            )
 
         ctx = context or {}
         work_item_id = ctx.get("work_item_id", "WI-UNKNOWN")
@@ -44,7 +48,9 @@ class IncidentStudio:
 
         root = ctx.get("root")
         if root:
-            self._save_artifacts(Path(root), work_item_id, analysis, fix_plan, postmortem)
+            self._save_artifacts(
+                Path(root), work_item_id, analysis, fix_plan, postmortem
+            )
 
         return {
             "analysis": analysis,
@@ -119,7 +125,7 @@ class IncidentStudio:
             f"## Summary\n\n{analysis.summary}\n\n"
             f"## Probable Causes\n\n"
             + "\n".join(f"- {c}" for c in analysis.probable_causes)
-            + f"\n\n## Affected Modules\n\n"
+            + "\n\n## Affected Modules\n\n"
             + "\n".join(f"- {m}" for m in analysis.affected_modules)
             + f"\n\n## Risk Assessment\n\n{analysis.risk_assessment}\n",
             encoding="utf-8",
@@ -144,7 +150,7 @@ class IncidentStudio:
             f"## Root Cause\n\n{postmortem.root_cause}\n\n"
             f"## Resolution\n\n{postmortem.resolution}\n\n"
             f"## Lessons Learned\n\n"
-            + "\n".join(f"- {l}" for l in postmortem.lessons_learned)
+            + "\n".join(f"- {lesson}" for lesson in postmortem.lessons_learned)
             + "\n",
             encoding="utf-8",
         )

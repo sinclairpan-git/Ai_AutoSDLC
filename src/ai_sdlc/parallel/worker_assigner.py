@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import logging
-from pathlib import Path
 
 from ai_sdlc.models.parallel import ParallelPolicy, WorkerAssignment
 
@@ -44,14 +43,20 @@ def assign_workers(
             file_paths.update(getattr(t, "file_paths", []))
             file_paths.update(getattr(t, "allowed_paths", []))
 
-        assignments.append(WorkerAssignment(
-            worker_id=f"worker-{worker_num - 1}" if group_id != "group-seq" else "worker-main",
-            group_id=group_id,
-            branch_name=branch,
-            task_ids=task_ids,
-            allowed_paths=sorted(file_paths),
-            forbidden_paths=_compute_forbidden(sorted(file_paths), groups, group_id),
-        ))
+        assignments.append(
+            WorkerAssignment(
+                worker_id=f"worker-{worker_num - 1}"
+                if group_id != "group-seq"
+                else "worker-main",
+                group_id=group_id,
+                branch_name=branch,
+                task_ids=task_ids,
+                allowed_paths=sorted(file_paths),
+                forbidden_paths=_compute_forbidden(
+                    sorted(file_paths), groups, group_id
+                ),
+            )
+        )
 
     return assignments
 

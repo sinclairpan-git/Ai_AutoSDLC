@@ -144,7 +144,7 @@ class TestAstScanner:
         (tmp_path / "module.py").write_text(
             'class UserService:\n    """Manages users."""\n    pass\n\n'
             'def create_user():\n    """Create a user."""\n    pass\n\n'
-            'MAX_RETRIES = 3\n'
+            "MAX_RETRIES = 3\n"
         )
         files = [FileInfo(path="module.py", language="python", category="source")]
         symbols = scan_symbols(tmp_path, files)
@@ -188,9 +188,7 @@ class TestAstScanner:
 
     def test_java_class_detection(self, tmp_path: Path) -> None:
         (tmp_path / "User.java").write_text(
-            "public class UserController {\n"
-            "    public void getUser() {}\n"
-            "}\n"
+            "public class UserController {\n    public void getUser() {}\n}\n"
         )
         files = [FileInfo(path="User.java", language="java", category="source")]
         symbols = scan_symbols(tmp_path, files)
@@ -239,7 +237,7 @@ class TestApiScanner:
 
     def test_flask_routes(self, tmp_path: Path) -> None:
         (tmp_path / "app.py").write_text(
-            'from flask import Flask\napp = Flask(__name__)\n\n'
+            "from flask import Flask\napp = Flask(__name__)\n\n"
             '@app.route("/health")\ndef health(): return "ok"\n'
         )
         files = [FileInfo(path="app.py", language="python", category="source")]
@@ -272,7 +270,14 @@ class TestTestScanner:
         (tests_dir / "test_auth.py").write_text(
             "def test_login(): pass\ndef test_logout(): pass\ndef helper(): pass\n"
         )
-        files = [FileInfo(path="tests/test_auth.py", language="python", is_test=True, category="test")]
+        files = [
+            FileInfo(
+                path="tests/test_auth.py",
+                language="python",
+                is_test=True,
+                category="test",
+            )
+        ]
         result = scan_tests(tmp_path, files)
         assert len(result) == 1
         assert result[0].test_count == 2
@@ -286,17 +291,26 @@ class TestTestScanner:
             "  test('should logout', () => {});\n"
             "});\n"
         )
-        files = [FileInfo(path="auth.test.js", language="javascript", is_test=True, category="test")]
+        files = [
+            FileInfo(
+                path="auth.test.js",
+                language="javascript",
+                is_test=True,
+                category="test",
+            )
+        ]
         result = scan_tests(tmp_path, files)
         assert len(result) == 1
         assert result[0].test_count == 2
 
     def test_go_test_detection(self, tmp_path: Path) -> None:
         (tmp_path / "main_test.go").write_text(
-            "package main\n\nimport \"testing\"\n\n"
+            'package main\n\nimport "testing"\n\n'
             "func TestAdd(t *testing.T) {}\nfunc TestSub(t *testing.T) {}\n"
         )
-        files = [FileInfo(path="main_test.go", language="go", is_test=True, category="test")]
+        files = [
+            FileInfo(path="main_test.go", language="go", is_test=True, category="test")
+        ]
         result = scan_tests(tmp_path, files)
         assert len(result) == 1
         assert result[0].test_count == 2
@@ -304,7 +318,11 @@ class TestTestScanner:
 
     def test_skips_non_test_files(self, tmp_path: Path) -> None:
         (tmp_path / "main.py").write_text("def main(): pass")
-        files = [FileInfo(path="main.py", language="python", is_test=False, category="source")]
+        files = [
+            FileInfo(
+                path="main.py", language="python", is_test=False, category="source"
+            )
+        ]
         result = scan_tests(tmp_path, files)
         assert result == []
 
@@ -313,7 +331,11 @@ class TestRiskScanner:
     def test_large_file_detection(self, tmp_path: Path) -> None:
         content = "\n".join([f"line_{i} = {i}" for i in range(600)])
         (tmp_path / "big.py").write_text(content)
-        files = [FileInfo(path="big.py", language="python", line_count=600, category="source")]
+        files = [
+            FileInfo(
+                path="big.py", language="python", line_count=600, category="source"
+            )
+        ]
         risks = scan_risks(tmp_path, files)
         large = [r for r in risks if r.category == "large_file"]
         assert len(large) == 1
@@ -322,7 +344,11 @@ class TestRiskScanner:
     def test_todo_density(self, tmp_path: Path) -> None:
         content = "\n".join([f"# TODO: fix item {i}" for i in range(8)] + ["code = 1"])
         (tmp_path / "messy.py").write_text(content)
-        files = [FileInfo(path="messy.py", language="python", line_count=9, category="source")]
+        files = [
+            FileInfo(
+                path="messy.py", language="python", line_count=9, category="source"
+            )
+        ]
         risks = scan_risks(tmp_path, files)
         todos = [r for r in risks if r.category == "todo_density"]
         assert len(todos) == 1
@@ -334,9 +360,19 @@ class TestRiskScanner:
         tests_dir.mkdir()
         (tests_dir / "test_clean.py").write_text("def test_x(): pass\n")
         files = [
-            FileInfo(path="clean.py", language="python", line_count=1, category="source"),
-            FileInfo(path="tests/test_clean.py", language="python", line_count=1, category="test", is_test=True),
+            FileInfo(
+                path="clean.py", language="python", line_count=1, category="source"
+            ),
+            FileInfo(
+                path="tests/test_clean.py",
+                language="python",
+                line_count=1,
+                category="test",
+                is_test=True,
+            ),
         ]
         risks = scan_risks(tmp_path, files)
-        large_or_todo = [r for r in risks if r.category in ("large_file", "todo_density")]
+        large_or_todo = [
+            r for r in risks if r.category in ("large_file", "todo_density")
+        ]
         assert large_or_todo == []

@@ -25,17 +25,23 @@ def _init_git(path: Path) -> None:
     subprocess.run(["git", "init"], cwd=path, capture_output=True, check=True)
     subprocess.run(
         ["git", "config", "user.email", "t@t.com"],
-        cwd=path, capture_output=True, check=True,
+        cwd=path,
+        capture_output=True,
+        check=True,
     )
     subprocess.run(
         ["git", "config", "user.name", "T"],
-        cwd=path, capture_output=True, check=True,
+        cwd=path,
+        capture_output=True,
+        check=True,
     )
     (path / "f.txt").write_text("x")
     subprocess.run(["git", "add", "."], cwd=path, capture_output=True, check=True)
     subprocess.run(
         ["git", "commit", "-m", "init"],
-        cwd=path, capture_output=True, check=True,
+        cwd=path,
+        capture_output=True,
+        check=True,
     )
 
 
@@ -48,8 +54,7 @@ class TestGovernanceGuard:
         # Create PRD
         prd = root / "prd.md"
         prd.write_text(
-            "## 目标\nx\n## 范围\ny\n## 用户角色\nz\n"
-            "## 功能需求\nFR\n## 验收标准\nAC\n"
+            "## 目标\nx\n## 范围\ny\n## 用户角色\nz\n## 功能需求\nFR\n## 验收标准\nAC\n"
         )
 
         # Create governance file
@@ -61,7 +66,9 @@ class TestGovernanceGuard:
         subprocess.run(["git", "add", "."], cwd=root, capture_output=True, check=True)
         subprocess.run(
             ["git", "commit", "-m", "setup"],
-            cwd=root, capture_output=True, check=True,
+            cwd=root,
+            capture_output=True,
+            check=True,
         )
 
         wi = _make_work_item()
