@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import logging
-from pathlib import Path
 
 from ai_sdlc.branch.git_client import GitClient, GitError
 

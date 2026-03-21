@@ -25,16 +25,16 @@ class YamlStore:
     @staticmethod
     def load(path: Path, model_class: type[T], *, default: T | None = None) -> T:
         """Load a YAML file and parse into a Pydantic model.
-        
+
         Args:
             path: Path to the YAML file.
             model_class: Pydantic model class to parse into.
             default: Default value if file doesn't exist. If None and file
                      doesn't exist, returns model_class with no args (if possible).
-        
+
         Returns:
             Parsed model instance.
-            
+
         Raises:
             YamlStoreError: If the file exists but cannot be parsed.
         """
@@ -62,9 +62,9 @@ class YamlStore:
     @staticmethod
     def save(path: Path, model: BaseModel) -> None:
         """Save a Pydantic model to a YAML file with atomic write.
-        
+
         Writes to a temporary file first, then renames to ensure atomicity.
-        
+
         Args:
             path: Destination file path.
             model: Pydantic model instance to serialize.

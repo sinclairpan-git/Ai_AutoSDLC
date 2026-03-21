@@ -5,8 +5,6 @@ from __future__ import annotations
 import subprocess
 from pathlib import Path
 
-import pytest
-
 from ai_sdlc.gates.governance_guard import MAX_AI_DECISIONS, check_governance
 from ai_sdlc.models.gate import GateVerdict
 from ai_sdlc.models.work_item import WorkItem, WorkItemStatus, WorkType

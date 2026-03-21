@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import logging
 import re
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Protocol
 
 from ai_sdlc.models.work_item import (
@@ -56,7 +56,7 @@ def _match_score(text: str, keywords: list[str]) -> int:
 
 def generate_work_item_id(seq: int) -> str:
     """Generate a work item ID in format WI-YYYY-NNN."""
-    year = datetime.now(timezone.utc).year
+    year = datetime.now(UTC).year
     return f"WI-{year}-{seq:03d}"
 
 

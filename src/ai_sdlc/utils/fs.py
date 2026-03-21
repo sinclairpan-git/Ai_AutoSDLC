@@ -37,10 +37,7 @@ def find_project_root(start: Path | None = None) -> Path | None:
 def is_git_repo(path: Path) -> bool:
     """Check if path is inside a git repository."""
     current = path.resolve()
-    for parent in [current, *current.parents]:
-        if (parent / ".git").exists():
-            return True
-    return False
+    return any((parent / ".git").exists() for parent in [current, *current.parents])
 
 
 def has_project_markers(path: Path) -> bool:
@@ -51,7 +48,4 @@ def has_project_markers(path: Path) -> bool:
     for dir_name in PROJECT_DIRS:
         if (path / dir_name).is_dir():
             return True
-    # Also check for *.csproj files
-    if list(path.glob("*.csproj")):
-        return True
-    return False
+    return bool(list(path.glob("*.csproj")))

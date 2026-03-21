@@ -1,0 +1,14 @@
+current_stage: execute
+current_batch: 0
+last_committed_task: ''
+working_set_snapshot:
+  prd_path: AI-SDLC 全自动化框架 产品需求文档（PRD）.md
+  constitution_path: /Users/sinclairpan/project/Ai_AutoSDLC/.ai-sdlc/memory/constitution.md
+  tech_stack_path: /Users/sinclairpan/project/Ai_AutoSDLC/.ai-sdlc/profiles/tech-stack.yml
+  spec_path: /Users/sinclairpan/project/Ai_AutoSDLC/specs/001-ai-sdlc-framework/spec.md
+  plan_path: /Users/sinclairpan/project/Ai_AutoSDLC/specs/001-ai-sdlc-framework/plan.md
+  tasks_path: /Users/sinclairpan/project/Ai_AutoSDLC/specs/001-ai-sdlc-framework/tasks.md
+  active_files: []
+  context_summary: ''
+timestamp: '2026-03-21T12:54:17+00:00'
+checkpoint_path: .ai-sdlc/state/checkpoint.yml
