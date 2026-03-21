@@ -35,8 +35,10 @@ def detect_overlaps(groups: dict[str, list[Task]]) -> OverlapResult:
         if len(gids) > 1:
             conflicts[fp] = gids
 
+    has_issues = bool(conflicts)
     return OverlapResult(
-        has_conflicts=bool(conflicts),
+        has_overlap=has_issues,
+        has_conflicts=has_issues,
         conflicting_files=conflicts,
         total_shared_files=len(conflicts),
         recommendation=_generate_recommendation(conflicts),

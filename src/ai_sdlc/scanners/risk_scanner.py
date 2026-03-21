@@ -60,10 +60,19 @@ def scan_risks(root: Path, files: list[FileInfo]) -> list[RiskItem]:
     test_paths = {f.path for f in files if f.is_test}
     source_dirs = {str(Path(f.path).parent) for f in source_files}
     for sd in source_dirs:
-        has_tests = any(
-            t.startswith(sd.replace("src", "tests").replace("lib", "tests"))
-            or t.startswith(sd.replace("src", "test"))
-            for t in test_paths
+        parts = Path(sd).parts
+        test_variants = set()
+        for i, part in enumerate(parts):
+            if part in ("src", "lib"):
+                for replacement in ("tests", "test"):
+                    test_variants.add(
+                        str(Path(*parts[:i], replacement, *parts[i + 1 :]))
+                    )
+        has_tests = (
+            bool(test_paths)
+            and any(any(t.startswith(tv) for tv in test_variants) for t in test_paths)
+            if test_variants
+            else False
         )
         if not has_tests and sd and sd != ".":
             risks.append(

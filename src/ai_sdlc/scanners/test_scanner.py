@@ -82,16 +82,19 @@ def _scan_java_tests(path: Path, rel_path: str) -> DiscoveredTestFile:
         return DiscoveredTestFile(path=rel_path)
 
     test_names: list[str] = []
-    for line in source.splitlines():
-        if "@Test" in line:
+    lines = source.splitlines()
+    prev_has_test_annotation = False
+    for line in lines:
+        stripped = line.strip()
+        if "@Test" in stripped:
+            prev_has_test_annotation = True
             continue
-        m = re.search(r"(?:public|void)\s+(?:void\s+)?(\w+)\s*\(", line)
-        if m and (
-            m.group(1).startswith("test") or "@Test" in source[: source.index(line)]
-            if line in source
-            else False
-        ):
+        m = re.search(r"(?:public|void)\s+(?:void\s+)?(\w+)\s*\(", stripped)
+        if m and (m.group(1).startswith("test") or prev_has_test_annotation):
             test_names.append(m.group(1))
+            prev_has_test_annotation = False
+        elif stripped and not stripped.startswith("//"):
+            prev_has_test_annotation = False
 
     return DiscoveredTestFile(
         path=rel_path,

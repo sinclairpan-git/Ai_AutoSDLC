@@ -27,7 +27,6 @@ IGNORED_DIRS = {
     "build",
     ".tox",
     ".eggs",
-    "*.egg-info",
     ".next",
     ".nuxt",
     "coverage",
@@ -171,7 +170,7 @@ def _is_test_file(path: Path) -> bool:
     if any(p.lower() in TEST_DIR_NAMES for p in parts):
         return True
     name = path.stem.lower()
-    return name.startswith("test_") or name.endswith("_test") or name.startswith("test")
+    return name.startswith("test_") or name.endswith("_test")
 
 
 def _count_lines(path: Path) -> int:

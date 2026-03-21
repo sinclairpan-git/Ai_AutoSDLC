@@ -59,8 +59,6 @@ def _greedy_partition(
         task_files = set(task.file_paths + task.allowed_paths)
 
         for gid in sorted(group_files.keys()):
-            if len(group_files) > max_groups:
-                break
             if not task_files & group_files[gid] and _dependencies_satisfied(
                 task, group_tasks[gid]
             ):
@@ -70,9 +68,14 @@ def _greedy_partition(
                 break
 
         if not assigned:
-            gid = f"group-{len(group_files)}"
-            group_files[gid] = set(task_files)
-            group_tasks[gid] = [task]
+            if len(group_files) < max_groups:
+                gid = f"group-{len(group_files)}"
+                group_files[gid] = set(task_files)
+                group_tasks[gid] = [task]
+            else:
+                smallest = min(group_tasks, key=lambda g: len(group_tasks[g]))
+                group_files[smallest].update(task_files)
+                group_tasks[smallest].append(task)
 
     return group_tasks
 

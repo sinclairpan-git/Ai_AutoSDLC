@@ -23,7 +23,11 @@ def scan_command(
         raise typer.Exit(code=2)
 
     console.print(f"[bold]Scanning project at {root}...[/bold]")
-    scan = run_full_scan(root)
+    try:
+        scan = run_full_scan(root)
+    except Exception as exc:
+        console.print(f"[red]Scan failed: {exc}[/red]")
+        raise typer.Exit(code=1) from None
 
     table = Table(title="Scan Results")
     table.add_column("Metric", style="bold")

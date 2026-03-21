@@ -18,7 +18,7 @@ def refresh_command(
     work_item_id: str = typer.Option("WI-MANUAL", help="Work item ID for the refresh."),
     files: list[str] = typer.Option(
         [], "--file", "-f", help="Changed files to consider."
-    ),  # noqa: B008
+    ),
     spec_changed: bool = typer.Option(False, help="Whether spec files changed."),
     force_level: int = typer.Option(
         -1, help="Force a specific refresh level (0-3). -1 = auto."
@@ -37,7 +37,13 @@ def refresh_command(
     if force_level >= 0:
         from ai_sdlc.models.knowledge import RefreshLevel
 
-        level = RefreshLevel(force_level)
+        try:
+            level = RefreshLevel(force_level)
+        except ValueError:
+            console.print(
+                f"[red]Invalid refresh level: {force_level}. Must be 0-3.[/red]"
+            )
+            raise typer.Exit(code=2) from None
     else:
         level = compute_refresh_level(files, spec_changed=spec_changed)
 
