@@ -1,0 +1,35 @@
+# AI-SDLC Pipeline Checkpoint
+# 本文件由流水线自动维护，用于断点恢复
+# 请勿手动修改
+
+pipeline:
+  started_at: "2026-03-21T00:00:00"
+  last_updated: "2026-03-21T00:00:00"
+
+current_stage: "refine"
+
+feature:
+  id: "001-ai-sdlc-framework"
+  spec_dir: "specs/001-ai-sdlc-framework"
+  design_branch: "design/001-ai-sdlc-framework"
+  feature_branch: "feature/001-ai-sdlc-framework"
+  current_branch: "main"
+
+multi_agent:
+  supported: true
+  max_parallel: 3
+  tool_capability: "cursor-background-agents"
+
+prd_source: "AI-SDLC 全自动化框架 产品需求文档（PRD）.md"
+
+completed_stages:
+  - stage: init
+    completed_at: "2026-03-21T00:00:00"
+    artifacts:
+      - ".ai-sdlc/memory/constitution.md"
+      - ".ai-sdlc/profiles/tech-stack.yml"
+      - ".ai-sdlc/profiles/decisions.yml"
+      - ".ai-sdlc/config/pipeline.yml"
+
+ai_decisions_count: 0
+execution_mode: auto

@@ -1,0 +1,150 @@
+# AI-Native SDLC 流水线配置
+# 本文件定义流水线的阶段、门禁、熔断和行为参数
+# 修改本文件可以调整流水线行为，无需修改命令或规则
+
+version: "3.0"                              # 3.0: 新增分支策略 + 多 Agent 并行
+
+# 阶段定义（按顺序执行，不可跳过）
+stages:
+  - id: refine
+    description: "需求细化：PRD → spec.md"
+    gate:
+      min_user_stories: 1
+      max_unresolved_clarifications: 0
+      require_acceptance_scenarios: true
+    max_retries: 3
+
+  - id: design
+    description: "技术设计：spec → plan + research + data-model + contracts"
+    gate:
+      required_artifacts:
+        - plan.md
+        - research.md
+        - data-model.md
+      require_contracts_if_http_api: true
+    max_retries: 2
+
+  - id: decompose
+    description: "任务拆分：设计产物 → tasks.md"
+    gate:
+      min_tasks: 1
+      require_file_paths: true
+      require_user_story_coverage: true
+    max_retries: 2
+
+  - id: verify
+    description: "一致性校验：spec + plan + tasks 交叉验证"
+    gate:
+      max_critical_issues: 0
+      max_high_issues: 3
+    max_retries: 2
+
+  - id: execute
+    description: "批次实现：TDD + 自动归档 + 自动提交"
+    # execute 阶段的门禁在每个批次级别检查
+    batch:
+      strategy: by_phase          # by_phase | by_user_story | fixed_size
+      max_tasks_per_batch: 12     # 单批次最大任务数
+      tdd_enforced: true          # 是否强制 TDD
+      auto_archive: true          # 每批自动归档
+      auto_commit: true           # 每批自动提交
+      max_debug_retries: 3        # 单任务最大调试轮数
+    gate:
+      require_all_tests_pass: true
+      require_build_success: true
+      require_full_regression: true
+
+  - id: close
+    description: "归档收口：总结 + 最终验证 + 最终提交"
+    gate:
+      require_summary: true
+      require_final_verification: true
+
+# 熔断器配置
+circuit_breaker:
+  consecutive_failure_limit: 2          # 连续失败任务数达到此值则熔断
+  max_debug_rounds_per_task: 3          # 单个任务最大调试轮数
+  max_ai_decisions_before_pause: 15     # AI 自主决策累计超过此值则暂停
+  max_files_per_task: 5                 # 单个任务最大文件数，超出则警告
+  max_lines_per_class: 500             # 单个类最大行数，超出则建议拆分
+
+# 自动决策配置
+auto_decision:
+  enabled: true
+  use_decisions_yml: true              # 优先查预决策矩阵
+  ai_judgment_allowed: true            # 允许 AI 自主判断
+  escalation_triggers:                  # 命中以下关键词则阻断
+    - "安全"
+    - "合规"
+    - "支付"
+    - "资金"
+    - "隐私"
+    - "矛盾"
+
+# 提交规范
+commit:
+  convention: conventional             # conventional | angular | custom
+  sign_off: false
+  scope_from_feature: true             # 从 feature 名称提取 scope
+
+# ============================================================
+# 执行模式
+# ============================================================
+# auto    = 全自动，阶段间不等人（默认）
+# confirm = 每个阶段结束后暂停，等用户确认再继续
+# 也可以按阶段单独覆盖（见下方 stage_overrides）
+execution_mode: auto                   # auto | confirm
+
+# 按阶段覆盖执行模式（可选）
+# 只需列出需要覆盖的阶段，未列出的阶段跟随全局 execution_mode
+stage_overrides:
+  # init: auto
+  # refine: confirm                   # 如需求细化后人工审核再继续
+  # design: confirm                   # 如技术设计后人工审核再继续
+  # decompose: auto
+  # verify: auto
+  # execute: auto                     # 也可以设 confirm，每批次结束等确认
+  # close: auto
+
+# execute 阶段批次级模式（仅 execution_mode 或 stage_overrides.execute = confirm 时生效）
+# batch_confirm: per_batch            # per_batch = 每批确认 | per_phase = 每 Phase 确认
+# 默认不配置 = 全自动，不在批次间暂停
+
+# ============================================================
+# 状态面板
+# ============================================================
+# 控制流水线执行过程中的实时状态输出
+status_dashboard:
+  enabled: true                        # 是否输出实时状态面板
+  update_frequency: per_step           # per_step = 每个关键步骤 | per_stage = 每阶段
+  show_task_detail: true               # EXECUTE 阶段是否显示当前任务详情
+  show_ai_decisions: true              # 是否在面板中显示 AI 决策计数
+
+# ============================================================
+# 通知配置
+# ============================================================
+notification:
+  on_halt: true                        # 阻断时通知
+  on_completion: true                  # 完成时通知
+  on_confirm_wait: true                # confirm 模式暂停时通知
+  method: terminal                     # terminal | webhook | file
+
+# ============================================================
+# Git 分支策略
+# ============================================================
+git_branch:
+  strategy: dual                       # dual = 设计分支 + 开发分支 | single = 仅 feature 分支
+  design_prefix: "design/"             # 设计分支前缀
+  feature_prefix: "feature/"           # 开发分支前缀
+  merge_design_to_main: true           # Stage 4 通过后是否合并设计分支到 main
+  delete_merged_branches: false        # 合并后是否自动删除分支
+
+# ============================================================
+# 多 Agent 并行
+# ============================================================
+multi_agent:
+  enabled: auto                        # auto = 自动检测能力 | true = 强制启用 | false = 禁用
+  max_parallel_agents: 3               # 最大并行 Agent 数
+  merge_strategy: main_verify          # main_verify = Main 统一验证后提交
+  allow_shared_files: false            # 是否允许多 Agent 修改同一文件（建议 false）
+  fallback_to_serial: true             # 遇到问题时自动降级为串行

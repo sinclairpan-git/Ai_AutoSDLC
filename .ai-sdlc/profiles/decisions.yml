@@ -1,0 +1,96 @@
+# AI-SDLC 预决策矩阵
+# 来源：PRD v1.1 自动推导
+# 生成时间：2026-03-21
+# 用途：遇到歧义时，优先查本文件获取预配置答案（auto-decision.md Layer 1）
+
+decisions:
+
+  # ── 架构决策 ──
+
+  - id: AD-001
+    question: "CLI 框架选型：Click vs Typer？"
+    decision: "Typer"
+    rationale: "Typer 基于 Click 但支持类型注解自动推导参数，与项目强制类型注解的规范一致；且 Rich 集成更好，适合输出状态面板"
+    alternatives: ["Click"]
+    reversibility: high
+
+  - id: AD-002
+    question: "状态文件格式：YAML vs JSON vs TOML？"
+    decision: "YAML（.yaml 后缀）"
+    rationale: "PRD 中所有状态文件示例均为 YAML；YAML 可读性优于 JSON，注释支持优于 TOML"
+    alternatives: ["JSON", "TOML"]
+    reversibility: high
+
+  - id: AD-003
+    question: "依赖管理工具：Poetry vs uv vs pip？"
+    decision: "uv"
+    rationale: "uv 速度快、兼容 pip 生态、支持 pyproject.toml，符合现代 Python 实践"
+    alternatives: ["Poetry", "pip + venv"]
+    reversibility: high
+
+  - id: AD-004
+    question: "产品代码目录结构：flat vs src layout？"
+    decision: "src layout（src/ai_sdlc/）"
+    rationale: "src layout 避免测试时意外导入本地包，是 Python 社区推荐的最佳实践"
+    alternatives: ["flat layout (ai_sdlc/)"]
+    reversibility: medium
+
+  - id: AD-005
+    question: "Git 操作：直接调 subprocess vs GitPython？"
+    decision: "subprocess 调用 git CLI"
+    rationale: "减少运行时依赖；AI-SDLC 本身已要求 git 存在；GitPython 是额外的重依赖"
+    alternatives: ["GitPython", "dulwich"]
+    reversibility: high
+
+  # ── 范围决策 ──
+
+  - id: AD-010
+    question: "P0 是否需要支持 Windows？"
+    decision: "不需要，P0 仅保证 macOS + Linux"
+    rationale: "PRD 非目标中未列出跨平台，但 CLI-first + 文件驱动的设计天然跨平台；P0 不做 Windows 专项测试"
+    alternatives: ["全平台支持"]
+    reversibility: high
+
+  - id: AD-011
+    question: "P0 的 PRD Studio 是否需要交互式多轮引导？"
+    decision: "P0 仅支持完整 PRD 输入（readiness review），多轮引导放 P1"
+    rationale: "MVP 优先原则；多轮引导需要复杂的对话状态管理，P0 先确保核心闭环"
+    alternatives: ["P0 即支持多轮引导"]
+    reversibility: high
+
+  - id: AD-012
+    question: "Knowledge Refresh Level 如何自动判定？"
+    decision: "基于 git diff 的文件变更统计：新增/删除目录 → Level 3；跨模块文件变更 > 5 → Level 2；单模块文件变更 ≤ 5 → Level 1；仅测试/文档/注释 → Level 0"
+    rationale: "Knowledge lean 原则，用可推导事实（git diff）自动判定，不需要人工标注"
+    alternatives: ["人工标注", "基于代码复杂度分析"]
+    reversibility: high
+
+  # ── 行为决策 ──
+
+  - id: AD-020
+    question: "YAML 读写时 key 不存在怎么处理？"
+    decision: "Pydantic model 定义默认值，缺失 key 用默认值填充，不抛异常"
+    rationale: "容错优先；状态文件可能因中断而不完整，默认值保证可恢复"
+    alternatives: ["严格模式，缺失即报错"]
+    reversibility: high
+
+  - id: AD-021
+    question: "Bootstrap Router 判断 'existing_project_uninitialized' 的依据？"
+    decision: "项目根目录存在以下任一文件即判定有业务代码：package.json, pom.xml, build.gradle, go.mod, Cargo.toml, requirements.txt, pyproject.toml, setup.py, Gemfile, *.csproj, Makefile + src/ 或 app/ 目录"
+    rationale: "与 autopilot.md Step 0.2 路径 A 的检测指纹一致"
+    alternatives: ["仅检查 .git 历史", "检查文件数量阈值"]
+    reversibility: high
+
+  - id: AD-022
+    question: "分支命名中的 ID 格式？"
+    decision: "feature/<WI-YYYY-NNN>-docs 和 feature/<WI-YYYY-NNN>-dev，与 work_item_id 一致"
+    rationale: "统一 ID 命名空间，便于追溯"
+    alternatives: ["自增数字", "短 hash"]
+    reversibility: medium
+
+  - id: AD-023
+    question: "多 Agent 并行时的文件锁策略？"
+    decision: "P0 不实现文件锁（Multi-Agent 是 P1）；P1 使用 .lock 文件 + 文件路径隔离保证不冲突"
+    rationale: "P0 仅单 Agent，无需锁；P1 的 allowed_paths 机制已通过路径隔离避免冲突"
+    alternatives: ["OS 级文件锁", "数据库锁"]
+    reversibility: high

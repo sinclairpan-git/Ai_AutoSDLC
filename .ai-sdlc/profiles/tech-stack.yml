@@ -1,0 +1,93 @@
+# AI-SDLC 技术栈配置
+# 来源：PRD v1.1 指定 + python-fastapi 预设适配
+# 生成时间：2026-03-21
+
+source: "prd-specified + preset:python-fastapi (adapted for CLI)"
+
+backend:
+  language: Python
+  language_version: "3.11+"
+  framework: "Typer (CLI)"
+  build_tool: "uv"
+  package_format: "pyproject.toml"
+  testing:
+    unit: "pytest"
+    mock: "unittest.mock + pytest-mock"
+    coverage: "pytest-cov"
+    fixtures: "pytest fixtures + tmp_path"
+  linting: "Ruff"
+  formatting: "Ruff format"
+  type_checking: "mypy (strict mode)"
+  serialization: "PyYAML + Pydantic v2"
+  templating: "Jinja2"
+
+frontend: null  # CLI 工具，无前端
+
+conventions:
+  naming:
+    module: "snake_case（短名词）"
+    class: "UpperCamelCase"
+    function: "snake_case（动词或动词短语）"
+    variable: "snake_case"
+    constant: "UPPER_SNAKE_CASE"
+    private: "_前缀（单下划线 = 约定私有）"
+
+  code_style:
+    max_line_length: 88
+    indent: "4 spaces"
+    quotes: "double quotes"
+    trailing_comma: true
+    type_hints: "所有函数签名必须有类型注解"
+    docstring_style: "Google style"
+    function_max_lines: 50
+    file_max_lines: 400
+
+  mandatory_rules:
+    - "所有函数必须有类型注解（参数 + 返回值）"
+    - "使用 Pydantic BaseModel 做数据校验和配置管理"
+    - "禁止裸 except（至少 except Exception）"
+    - "使用 logging 模块，禁止 print 调试"
+    - "使用 Enum 代替魔法字符串"
+    - "YAML 文件读写统一通过封装函数，不散落直接调用"
+    - "所有文件路径使用 pathlib.Path，不用字符串拼接"
+    - "CLI 命令使用 Typer app，每个子命令一个模块"
+
+  project_structure:
+    root: "src/ai_sdlc/"
+    layout:
+      - "cli/              CLI 命令入口（Typer app）"
+      - "core/             核心引擎（状态机、Runner、事件循环）"
+      - "routers/          路由器（Bootstrap Router、Work Intake Router）"
+      - "studios/          Studios（PRD、Incident、Change、Maintenance）"
+      - "gates/            质量门禁（Gate 检查器）"
+      - "context/          Context Control Plane（状态管理、恢复）"
+      - "branch/           分支管理器（docs/dev 双分支）"
+      - "generators/       模板生成器 + 索引生成器"
+      - "models/           数据模型（Pydantic models for YAML schemas）"
+      - "utils/            工具函数（文件 I/O、Git 操作封装）"
+      - "rules/            产品内置规则文件（Markdown，随产品分发）"
+      - "templates/        产品内置模板文件（随产品分发）"
+    tests: "tests/"
+    test_layout:
+      - "unit/             单元测试"
+      - "flow/             流程测试"
+      - "integration/      集成测试"
+
+  reference_standards:
+    - "PEP 8: https://peps.python.org/pep-0008/"
+    - "Google Python Style Guide: https://google.github.io/styleguide/pyguide.html"
+    - "Typer docs: https://typer.tiangolo.com/"
+
+runtime_dependencies:
+  - "typer >= 0.9"
+  - "pyyaml >= 6.0"
+  - "pydantic >= 2.0"
+  - "jinja2 >= 3.1"
+  - "rich >= 13.0"      # CLI 输出美化（状态面板、表格）
+
+dev_dependencies:
+  - "pytest >= 8.0"
+  - "pytest-cov >= 4.0"
+  - "pytest-mock >= 3.12"
+  - "mypy >= 1.8"
+  - "ruff >= 0.3"
