@@ -98,3 +98,31 @@ def check_prd_readiness(prd_path: Path) -> PrdReadiness:
         missing_sections=missing,
         recommendations=recommendations,
     )
+
+
+class PrdStudioAdapter:
+    """Adapter wrapping check_prd_readiness to conform to StudioProtocol."""
+
+    def process(
+        self,
+        input_data: object,
+        context: dict[str, object] | None = None,
+    ) -> dict[str, object]:
+        """Process a PRD path and return readiness check results.
+
+        Args:
+            input_data: A Path to the PRD file, or a string path.
+            context: Optional context dict.
+
+        Returns:
+            Dictionary with "prd_readiness" artifact.
+        """
+        if isinstance(input_data, str):
+            prd_path = Path(input_data)
+        elif isinstance(input_data, Path):
+            prd_path = input_data
+        else:
+            raise TypeError(f"PrdStudioAdapter expects Path or str, got {type(input_data).__name__}")
+
+        readiness = check_prd_readiness(prd_path)
+        return {"prd_readiness": readiness}
