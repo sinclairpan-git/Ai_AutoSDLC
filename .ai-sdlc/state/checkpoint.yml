@@ -6,7 +6,7 @@ pipeline:
   started_at: "2026-03-21T00:00:00"
   last_updated: "2026-03-21T00:00:00"
 
-current_stage: "refine"
+current_stage: "design"
 
 feature:
   id: "001-ai-sdlc-framework"
@@ -30,6 +30,10 @@ completed_stages:
       - ".ai-sdlc/profiles/tech-stack.yml"
       - ".ai-sdlc/profiles/decisions.yml"
       - ".ai-sdlc/config/pipeline.yml"
+  - stage: refine
+    completed_at: "2026-03-21T00:05:00"
+    artifacts:
+      - "specs/001-ai-sdlc-framework/spec.md"
 
 ai_decisions_count: 0
 execution_mode: auto
