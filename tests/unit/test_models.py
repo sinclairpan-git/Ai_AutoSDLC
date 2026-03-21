@@ -106,7 +106,7 @@ class TestGovernanceModels:
     def test_governance_state_defaults(self) -> None:
         gov = GovernanceState()
         assert gov.frozen is False
-        assert len(gov.items) == 6
+        assert len(gov.items) == 8
         assert "tech_profile" in gov.items
         assert "constitution" in gov.items
 

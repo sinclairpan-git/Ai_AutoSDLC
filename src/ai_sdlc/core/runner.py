@@ -13,6 +13,8 @@ from ai_sdlc.gates.decompose_gate import DecomposeGate
 from ai_sdlc.gates.design_gate import DesignGate
 from ai_sdlc.gates.execute_gate import ExecuteGate
 from ai_sdlc.gates.init_gate import InitGate
+from ai_sdlc.gates.knowledge_gate import KnowledgeGate
+from ai_sdlc.gates.parallel_gate import ParallelGate
 from ai_sdlc.gates.refine_gate import RefineGate
 from ai_sdlc.gates.verify_gate import VerifyGate
 from ai_sdlc.models.checkpoint import Checkpoint, CompletedStage, FeatureInfo
@@ -54,6 +56,8 @@ class SDLCRunner:
         reg.register("verify", VerifyGate())
         reg.register("execute", ExecuteGate())
         reg.register("close", CloseGate())
+        reg.register("knowledge_check", KnowledgeGate())
+        reg.register("parallel_check", ParallelGate())
         return reg
 
     def run(self, *, mode: str = "auto", dry_run: bool = False) -> Checkpoint:
