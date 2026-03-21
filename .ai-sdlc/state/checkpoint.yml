@@ -6,7 +6,7 @@ pipeline:
   started_at: "2026-03-21T00:00:00"
   last_updated: "2026-03-21T00:00:00"
 
-current_stage: "verify"
+current_stage: "execute"
 
 feature:
   id: "001-ai-sdlc-framework"
@@ -45,6 +45,10 @@ completed_stages:
     completed_at: "2026-03-21T00:20:00"
     artifacts:
       - "specs/001-ai-sdlc-framework/tasks.md"
+  - stage: verify
+    completed_at: "2026-03-21T00:25:00"
+    artifacts:
+      - "specs/001-ai-sdlc-framework/tasks.md (FR refs fixed)"
 
 ai_decisions_count: 0
 execution_mode: auto
