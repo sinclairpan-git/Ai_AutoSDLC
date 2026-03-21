@@ -1,0 +1,74 @@
+# Node.js + Express/NestJS 技术栈预设
+# 规范参考：Airbnb JavaScript Style Guide + Node.js Best Practices
+# 适用场景：API 服务、BFF、中小型后端、全栈 TypeScript
+
+id: node-express
+name: "Node.js + TypeScript"
+tags: [backend, api, fullstack, bff]
+
+stack:
+  language: TypeScript
+  language_version: "5.x"
+  runtime: "Node.js 20+ LTS"
+  framework: "Express 或 NestJS"       # 简单项目 Express，中大型项目 NestJS
+  build_tool: "tsup 或 tsc"
+  package_manager: "pnpm"
+  orm: "Prisma 或 Drizzle"
+  database: "PostgreSQL"
+  testing:
+    unit: "Vitest"
+    integration: "supertest"
+    mock: "vitest mock"
+  linting: "ESLint + @typescript-eslint"
+  formatting: "Prettier"
+
+conventions:
+  naming:
+    file: "kebab-case.ts（user-service.ts）"
+    class: "PascalCase"
+    function: "camelCase"
+    variable: "camelCase"
+    constant: "UPPER_SNAKE_CASE"
+    interface: "PascalCase（不加 I 前缀）"
+    database_table: "snake_case，复数形式"
+    api_path: "kebab-case（/api/v1/user-groups）"
+
+  code_style:
+    max_line_length: 100
+    indent: "2 spaces"
+    quotes: "single quotes"
+    semicolons: true
+    trailing_comma: "all"
+    async_style: "async/await（禁止 callback 嵌套，慎用 .then 链）"
+    type_annotation: "所有函数签名必须有类型"
+
+  mandatory_rules:
+    - "所有函数必须有 TypeScript 类型注解"
+    - "禁止 any（必要时用 unknown + 类型守卫）"
+    - "异步操作必须 try/catch 或全局错误中间件兜底"
+    - "请求参数必须做 schema 校验（Zod 或 class-validator）"
+    - "环境变量通过 .env + 类型化 config 管理"
+    - "Controller / Service / Repository 三层分离"
+    - "数据库迁移必须通过 ORM migration 管理"
+    - "密钥类信息禁止硬编码或提交 git"
+    - "日志使用 pino 或 winston，不用 console.log"
+    - "所有外部调用必须有超时设置"
+
+  project_structure:
+    - "src/"
+    - "src/index.ts              入口"
+    - "src/routes/ 或 src/controllers/   路由/控制器"
+    - "src/services/              业务逻辑"
+    - "src/repositories/          数据访问"
+    - "src/middlewares/           中间件"
+    - "src/schemas/              请求/响应校验"
+    - "src/types/                类型定义"
+    - "src/utils/                工具函数"
+    - "src/config/               配置"
+    - "prisma/ 或 drizzle/       ORM schema + 迁移"
+    - "tests/                    测试"
+
+  reference_standards:
+    - "Airbnb JavaScript Style Guide: https://github.com/airbnb/javascript"
+    - "Node.js Best Practices: https://github.com/goldbergyoni/nodebestpractices"
+    - "TypeScript Handbook: https://www.typescriptlang.org/docs/handbook/"

@@ -1,0 +1,68 @@
+# Java + Spring Boot 技术栈预设
+# 规范参考：Alibaba Java Coding Guidelines + Google Java Style Guide
+# 适用场景：企业级 Web 服务、内部管理系统、微服务
+
+id: java-spring
+name: "Java + Spring Boot"
+tags: [backend, enterprise, web-service]
+
+stack:
+  language: Java
+  language_version: "17"          # LTS，如需兼容老系统可降至 8 或 11
+  framework: "Spring Boot"
+  framework_version: "3.x"        # 如 Java 8 则用 2.7.x
+  build_tool: "Maven"             # 或 Gradle
+  orm: "MyBatis-Plus"             # 或 Spring Data JPA
+  database: "MySQL 8.0"
+  testing:
+    unit: "JUnit 5 + Mockito"
+    integration: "@SpringBootTest"
+    assertion: "AssertJ"
+  linting: "Checkstyle (alibaba-p3c)"
+  formatting: "google-java-format"
+
+conventions:
+  naming:
+    class: "UpperCamelCase（名词或名词短语）"
+    method: "lowerCamelCase（动词或动词短语）"
+    constant: "UPPER_SNAKE_CASE"
+    variable: "lowerCamelCase"
+    package: "全小写，点号分隔，域名反转（com.company.project.module）"
+    database_table: "snake_case，单数形式"
+    database_column: "snake_case"
+    api_path: "kebab-case，复数名词（/api/v1/user-groups）"
+
+  code_style:
+    max_line_length: 120
+    indent: "4 spaces"
+    brace_style: "K&R（左花括号不换行）"
+    import_order: "static imports first, then java/javax, then third-party, then project"
+    no_wildcard_import: true
+    method_max_lines: 80
+    class_max_lines: 500
+    parameter_max_count: 5
+
+  mandatory_rules:
+    - "所有外部入参必须做非空和格式校验（@Valid + @NotNull）"
+    - "禁止在 Controller 中写业务逻辑，Controller 仅做参数校验和转发"
+    - "Service 层必须面向接口编程（interface + impl）"
+    - "所有数据库操作必须在 Service 层事务内完成"
+    - "禁止 catch Exception 后吞掉不处理"
+    - "所有 REST 接口必须有统一响应包装（Result<T>）"
+    - "日期时间使用 java.time（禁止 java.util.Date）"
+    - "字符串比较使用 Objects.equals() 或常量.equals(变量)"
+    - "集合初始化必须指定初始容量（如果可预估）"
+    - "魔法值（Magic Number）必须定义为常量"
+
+  database_rules:
+    - "每张表必须有主键（推荐自增 bigint）"
+    - "每张表必须有 created_at 和 updated_at 字段"
+    - "索引命名：idx_表名_字段名"
+    - "外键仅在逻辑层维护，不建物理外键"
+    - "禁止 SELECT *，必须明确列出字段"
+    - "单表字段数不超过 30"
+    - "字段类型选择最小满足原则"
+
+  reference_standards:
+    - "《阿里巴巴 Java 开发手册》（泰山版）"
+    - "Google Java Style Guide: https://google.github.io/styleguide/javaguide.html"

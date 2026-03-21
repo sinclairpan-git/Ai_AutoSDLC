@@ -1,0 +1,68 @@
+# Go 技术栈预设
+# 规范参考：Effective Go + Google Go Style Guide + Uber Go Style Guide
+# 适用场景：CLI 工具、高性能服务、微服务、基础设施
+
+id: go
+name: "Go"
+tags: [backend, cli, high-performance, microservice]
+
+stack:
+  language: Go
+  language_version: "1.22+"
+  framework: "标准库 net/http 或 Gin"   # 简单项目用标准库，复杂项目用 Gin
+  build_tool: "go build / go mod"
+  orm: "GORM 或 sqlx"                   # 简单项目直接用 database/sql
+  database: "PostgreSQL 或 MySQL"
+  testing:
+    unit: "testing 标准库"
+    assertion: "testify/assert"
+    mock: "testify/mock 或 gomock"
+    benchmark: "testing.B"
+  linting: "golangci-lint"
+  formatting: "gofmt / goimports"
+
+conventions:
+  naming:
+    package: "全小写单词，不用下划线或驼峰（strconv, httputil）"
+    exported: "UpperCamelCase（首字母大写 = 导出）"
+    unexported: "lowerCamelCase（首字母小写 = 包内私有）"
+    interface: "动词+er 后缀（Reader, Writer, Closer）单方法接口"
+    constant: "UpperCamelCase（Go 没有 UPPER_SNAKE 惯例）"
+    file: "snake_case.go"
+    test_file: "xxx_test.go"
+    database_table: "snake_case，复数形式"
+    api_path: "kebab-case（/api/v1/user-groups）"
+
+  code_style:
+    indent: "tabs（gofmt 强制）"
+    max_line_length: 120  # 非强制，但建议
+    error_handling: "显式检查，禁止 _ = err"
+    no_naked_return: true
+    receiver_naming: "1-2 字母缩写（func (s *Server) Start()）"
+    function_max_lines: 60
+    file_max_lines: 500
+
+  mandatory_rules:
+    - "所有 error 必须处理，禁止 _ = someFunc()"
+    - "使用 fmt.Errorf(\"xxx: %w\", err) 包装错误，保留错误链"
+    - "goroutine 必须有 recover 或明确的退出机制"
+    - "channel 必须明确谁负责 close"
+    - "context.Context 作为函数第一个参数传递"
+    - "不使用 init() 函数（除非有充分理由）"
+    - "禁止全局可变状态（全局变量仅限常量或 sync.Once 初始化的不可变值）"
+    - "struct 零值必须可用（设计 struct 时考虑零值语义）"
+    - "slice 用 nil 表示空，不用 make([]T, 0)"
+    - "defer 用于资源释放，注意 defer 在循环中的行为"
+
+  project_structure:
+    - "cmd/         程序入口（每个可执行文件一个子目录）"
+    - "internal/    不对外暴露的包"
+    - "pkg/         可对外暴露的库代码（可选）"
+    - "api/         API 定义（proto, openapi）"
+    - "configs/     配置文件模板"
+    - "scripts/     构建和运维脚本"
+
+  reference_standards:
+    - "Effective Go: https://go.dev/doc/effective_go"
+    - "Google Go Style Guide: https://google.github.io/styleguide/go/"
+    - "Uber Go Style Guide: https://github.com/uber-go/guide/blob/master/style.md"

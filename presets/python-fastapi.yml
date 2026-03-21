@@ -1,0 +1,73 @@
+# Python + FastAPI 技术栈预设
+# 规范参考：PEP 8 + Google Python Style Guide
+# 适用场景：AI 服务、API 网关、数据处理、快速原型
+
+id: python-fastapi
+name: "Python + FastAPI"
+tags: [backend, api, ai, data-processing]
+
+stack:
+  language: Python
+  language_version: "3.11+"
+  framework: "FastAPI"
+  build_tool: "Poetry 或 uv"
+  orm: "SQLAlchemy 2.0 + Alembic"
+  database: "PostgreSQL"
+  testing:
+    unit: "pytest"
+    async: "pytest-asyncio"
+    mock: "unittest.mock + pytest-mock"
+    coverage: "pytest-cov"
+    http: "httpx.AsyncClient (TestClient)"
+  linting: "Ruff"
+  formatting: "Ruff format (替代 Black)"
+  type_checking: "mypy (strict mode)"
+
+conventions:
+  naming:
+    module: "snake_case（短名词）"
+    class: "UpperCamelCase"
+    function: "snake_case（动词或动词短语）"
+    variable: "snake_case"
+    constant: "UPPER_SNAKE_CASE"
+    private: "_前缀（单下划线 = 约定私有）"
+    database_table: "snake_case，复数形式"
+    api_path: "snake_case（/api/v1/user_groups）注：FastAPI 社区惯例"
+
+  code_style:
+    max_line_length: 88          # Black/Ruff 默认
+    indent: "4 spaces"
+    quotes: "double quotes"       # Ruff/Black 默认
+    trailing_comma: true
+    type_hints: "所有函数签名必须有类型注解"
+    docstring_style: "Google style"
+    function_max_lines: 50
+    file_max_lines: 400
+
+  mandatory_rules:
+    - "所有函数必须有类型注解（参数 + 返回值）"
+    - "使用 Pydantic BaseModel 做请求/响应数据校验"
+    - "异步函数用 async def，同步函数用 def，不混用"
+    - "数据库操作必须使用 async session + dependency injection"
+    - "禁止裸 except（至少 except Exception）"
+    - "使用 logging 模块，禁止 print 调试"
+    - "环境变量通过 pydantic-settings 管理，禁止硬编码"
+    - "所有 API 路由必须有 response_model 定义"
+    - "使用 Enum 代替魔法字符串"
+    - "SQL 迁移必须通过 Alembic，禁止手动改表"
+
+  project_structure:
+    - "app/           应用代码根目录"
+    - "app/main.py    FastAPI 应用入口"
+    - "app/api/       路由定义"
+    - "app/models/    SQLAlchemy 模型"
+    - "app/schemas/   Pydantic 模型"
+    - "app/services/  业务逻辑层"
+    - "app/core/      配置、安全、依赖注入"
+    - "tests/         测试"
+    - "alembic/       数据库迁移"
+
+  reference_standards:
+    - "PEP 8: https://peps.python.org/pep-0008/"
+    - "Google Python Style Guide: https://google.github.io/styleguide/pyguide.html"
+    - "FastAPI Best Practices: https://github.com/zhanymkanov/fastapi-best-practices"

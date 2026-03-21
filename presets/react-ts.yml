@@ -1,0 +1,71 @@
+# React + TypeScript 技术栈预设
+# 规范参考：Airbnb React Style Guide + React Official Docs
+# 适用场景：中大型 Web 应用、SaaS、管理后台
+
+id: react-ts
+name: "React + TypeScript"
+tags: [frontend, spa, web-app, saas]
+
+stack:
+  language: TypeScript
+  language_version: "5.x"
+  framework: "React 18+"
+  build_tool: "Vite 或 Next.js"
+  state_management: "Zustand 或 React Query（服务端状态）"
+  router: "React Router 6 或 Next.js App Router"
+  http_client: "Axios 或 ky"
+  ui_framework: "Ant Design 或 shadcn/ui（可选）"
+  testing:
+    unit: "Vitest"
+    component: "@testing-library/react"
+    e2e: "Playwright（可选）"
+  linting: "ESLint + @typescript-eslint"
+  formatting: "Prettier"
+  css: "TailwindCSS 或 CSS Modules"
+
+conventions:
+  naming:
+    component_file: "PascalCase.tsx（UserProfile.tsx）"
+    hook: "use 前缀（useAuth.ts, useDebounce.ts）"
+    util: "camelCase.ts"
+    type_file: "camelCase.types.ts 或同文件内"
+    constant: "UPPER_SNAKE_CASE"
+    css_module: "ComponentName.module.css"
+
+  code_style:
+    max_line_length: 100
+    indent: "2 spaces"
+    quotes: "single quotes (JSX 用 double)"
+    semicolons: true
+    trailing_comma: "all"
+    component_pattern: "函数组件 + Hooks（禁止 class 组件）"
+    type_annotation: "Props 必须有 interface 定义"
+
+  mandatory_rules:
+    - "组件必须是函数组件，禁止 class 组件"
+    - "Props 必须定义 TypeScript interface"
+    - "使用 React.FC 时显式传入 Props 泛型"
+    - "副作用必须在 useEffect 中，且声明完整依赖数组"
+    - "避免在渲染中创建新对象/函数，使用 useMemo/useCallback"
+    - "列表渲染必须有稳定的 key（禁止用 index 作为 key）"
+    - "条件渲染用 && 或三元表达式，不用 if 语句"
+    - "API 请求封装在 hooks/ 或 services/ 层"
+    - "全局状态最小化：优先 local state → context → external store"
+    - "自定义 Hook 必须以 use 开头"
+
+  project_structure:
+    - "src/"
+    - "src/main.tsx 或 src/app/        入口"
+    - "src/pages/ 或 src/routes/        页面"
+    - "src/components/                  通用组件"
+    - "src/hooks/                       自定义 Hooks"
+    - "src/stores/                      状态管理"
+    - "src/services/ 或 src/api/        API 请求"
+    - "src/types/                       类型定义"
+    - "src/utils/                       工具函数"
+    - "src/lib/                         第三方库封装"
+
+  reference_standards:
+    - "Airbnb React/JSX Style Guide: https://github.com/airbnb/javascript/tree/master/react"
+    - "React Official Docs: https://react.dev/learn"
+    - "TypeScript Handbook: https://www.typescriptlang.org/docs/handbook/"
