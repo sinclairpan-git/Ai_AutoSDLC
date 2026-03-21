@@ -6,7 +6,7 @@ pipeline:
   started_at: "2026-03-21T00:00:00"
   last_updated: "2026-03-21T00:00:00"
 
-current_stage: "design"
+current_stage: "decompose"
 
 feature:
   id: "001-ai-sdlc-framework"
@@ -34,6 +34,13 @@ completed_stages:
     completed_at: "2026-03-21T00:05:00"
     artifacts:
       - "specs/001-ai-sdlc-framework/spec.md"
+  - stage: design
+    completed_at: "2026-03-21T00:15:00"
+    artifacts:
+      - "specs/001-ai-sdlc-framework/plan.md"
+      - "specs/001-ai-sdlc-framework/research.md"
+      - "specs/001-ai-sdlc-framework/data-model.md"
+      - "specs/001-ai-sdlc-framework/quickstart.md"
 
 ai_decisions_count: 0
 execution_mode: auto
