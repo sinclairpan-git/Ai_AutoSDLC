@@ -1,0 +1,239 @@
+"""Unit tests for BatchExecutor."""
+
+from __future__ import annotations
+
+import pytest
+
+from ai_sdlc.core.batch_executor import (
+    MAX_CONSECUTIVE_HALTS,
+    MAX_DEBUG_ROUNDS,
+    BatchExecutor,
+    CircuitBreakerError,
+)
+from ai_sdlc.models.context import RuntimeState
+from ai_sdlc.models.execution import ExecutionBatch, ExecutionPlan, Task, TaskStatus
+
+
+def _make_plan(tasks: list[Task], batches: list[ExecutionBatch]) -> ExecutionPlan:
+    return ExecutionPlan(
+        total_tasks=len(tasks),
+        total_batches=len(batches),
+        tasks=tasks,
+        batches=batches,
+    )
+
+
+def _make_two_batch_plan() -> ExecutionPlan:
+    """Plan with 2 batches, 2 tasks each."""
+    tasks = [
+        Task(task_id="T1", title="Task 1", phase=1),
+        Task(task_id="T2", title="Task 2", phase=1),
+        Task(task_id="T3", title="Task 3", phase=2),
+        Task(task_id="T4", title="Task 4", phase=2),
+    ]
+    batches = [
+        ExecutionBatch(batch_id=1, phase=1, tasks=["T1", "T2"]),
+        ExecutionBatch(batch_id=2, phase=2, tasks=["T3", "T4"]),
+    ]
+    return _make_plan(tasks, batches)
+
+
+class TestBatchExecutorNormalFlow:
+    """Normal execution: complete batch 1, advance to batch 2."""
+
+    def test_advance_through_two_batches(self) -> None:
+        plan = _make_two_batch_plan()
+        runtime = RuntimeState()
+        exe = BatchExecutor(plan, runtime)
+
+        assert exe.get_current_batch() is not None
+        assert exe.get_current_batch().batch_id == 1  # type: ignore[union-attr]
+        assert not exe.is_complete()
+
+        exe.advance_task("T1", TaskStatus.COMPLETED)
+        exe.advance_task("T2", TaskStatus.COMPLETED)
+
+        batch = exe.advance_batch()
+        assert batch is not None
+        assert batch.batch_id == 2
+        assert runtime.current_batch == 1
+
+        exe.advance_task("T3", TaskStatus.COMPLETED)
+        exe.advance_task("T4", TaskStatus.COMPLETED)
+
+        result = exe.advance_batch()
+        assert result is None
+        assert exe.is_complete()
+
+    def test_completed_task_resets_consecutive_halts(self) -> None:
+        plan = _make_two_batch_plan()
+        runtime = RuntimeState(consecutive_halts=1)
+        exe = BatchExecutor(plan, runtime)
+
+        exe.advance_task("T1", TaskStatus.COMPLETED)
+        assert runtime.consecutive_halts == 0
+
+    def test_last_committed_task_tracks_completion(self) -> None:
+        plan = _make_two_batch_plan()
+        runtime = RuntimeState()
+        exe = BatchExecutor(plan, runtime)
+
+        exe.advance_task("T1", TaskStatus.COMPLETED)
+        assert runtime.last_committed_task == "T1"
+
+        exe.advance_task("T2", TaskStatus.COMPLETED)
+        assert runtime.last_committed_task == "T2"
+
+
+class TestDebugRoundHalt:
+    """BR-030: task HALTED after MAX_DEBUG_ROUNDS failures."""
+
+    def test_task_halted_after_max_debug_rounds(self) -> None:
+        plan = _make_plan(
+            [Task(task_id="TX", title="Flaky", phase=1)],
+            [ExecutionBatch(batch_id=1, phase=1, tasks=["TX"])],
+        )
+        runtime = RuntimeState()
+        exe = BatchExecutor(plan, runtime)
+
+        for i in range(MAX_DEBUG_ROUNDS - 1):
+            exe.advance_task("TX", TaskStatus.FAILED)
+            assert plan.tasks[0].status == TaskStatus.FAILED
+            assert runtime.debug_rounds["TX"] == i + 1
+
+        exe.advance_task("TX", TaskStatus.FAILED)
+        assert plan.tasks[0].status == TaskStatus.HALTED
+        assert runtime.debug_rounds["TX"] == MAX_DEBUG_ROUNDS
+
+    def test_failed_task_stays_failed_before_limit(self) -> None:
+        plan = _make_plan(
+            [Task(task_id="TX", title="Flaky", phase=1)],
+            [ExecutionBatch(batch_id=1, phase=1, tasks=["TX"])],
+        )
+        runtime = RuntimeState()
+        exe = BatchExecutor(plan, runtime)
+
+        exe.advance_task("TX", TaskStatus.FAILED)
+        assert plan.tasks[0].status == TaskStatus.FAILED
+
+
+class TestCircuitBreaker:
+    """BR-031: CircuitBreakerError after consecutive HALTs."""
+
+    def test_circuit_breaker_on_consecutive_halts(self) -> None:
+        tasks = [
+            Task(task_id="A", title="A", phase=1),
+            Task(task_id="B", title="B", phase=1),
+        ]
+        plan = _make_plan(
+            tasks, [ExecutionBatch(batch_id=1, phase=1, tasks=["A", "B"])]
+        )
+        runtime = RuntimeState()
+        exe = BatchExecutor(plan, runtime)
+
+        for _ in range(MAX_DEBUG_ROUNDS):
+            exe.advance_task("A", TaskStatus.FAILED)
+
+        assert runtime.consecutive_halts == 1
+
+        with pytest.raises(CircuitBreakerError, match="BR-031"):
+            for _ in range(MAX_DEBUG_ROUNDS):
+                exe.advance_task("B", TaskStatus.FAILED)
+
+        assert runtime.consecutive_halts == MAX_CONSECUTIVE_HALTS
+
+    def test_halt_then_complete_resets_breaker(self) -> None:
+        tasks = [
+            Task(task_id="A", title="A", phase=1),
+            Task(task_id="B", title="B", phase=1),
+        ]
+        plan = _make_plan(
+            tasks, [ExecutionBatch(batch_id=1, phase=1, tasks=["A", "B"])]
+        )
+        runtime = RuntimeState()
+        exe = BatchExecutor(plan, runtime)
+
+        for _ in range(MAX_DEBUG_ROUNDS):
+            exe.advance_task("A", TaskStatus.FAILED)
+        assert runtime.consecutive_halts == 1
+
+        exe.advance_task("B", TaskStatus.COMPLETED)
+        assert runtime.consecutive_halts == 0
+
+
+class TestAdvanceBatchEdgeCases:
+    """Edge cases for batch advancement."""
+
+    def test_batch_not_ready_with_pending_tasks(self) -> None:
+        plan = _make_two_batch_plan()
+        runtime = RuntimeState()
+        exe = BatchExecutor(plan, runtime)
+
+        exe.advance_task("T1", TaskStatus.COMPLETED)
+        batch = exe.advance_batch()
+        assert batch is not None
+        assert batch.batch_id == 1
+        assert runtime.current_batch == 0
+
+    def test_advance_batch_when_all_done_returns_none(self) -> None:
+        plan = _make_two_batch_plan()
+        runtime = RuntimeState()
+        exe = BatchExecutor(plan, runtime)
+
+        exe.advance_task("T1", TaskStatus.COMPLETED)
+        exe.advance_task("T2", TaskStatus.COMPLETED)
+        exe.advance_batch()
+        exe.advance_task("T3", TaskStatus.COMPLETED)
+        exe.advance_task("T4", TaskStatus.COMPLETED)
+        result = exe.advance_batch()
+        assert result is None
+
+    def test_halted_task_allows_batch_advance(self) -> None:
+        """HALTED is a terminal status; batch can still advance."""
+        plan = _make_plan(
+            [Task(task_id="X", title="X", phase=1)],
+            [ExecutionBatch(batch_id=1, phase=1, tasks=["X"])],
+        )
+        runtime = RuntimeState()
+        exe = BatchExecutor(plan, runtime)
+
+        for _ in range(MAX_DEBUG_ROUNDS):
+            exe.advance_task("X", TaskStatus.FAILED)
+
+        result = exe.advance_batch()
+        assert result is None
+        assert exe.is_complete()
+
+
+class TestIsComplete:
+    """is_complete checks."""
+
+    def test_not_complete_initially(self) -> None:
+        plan = _make_two_batch_plan()
+        exe = BatchExecutor(plan, RuntimeState())
+        assert not exe.is_complete()
+
+    def test_complete_after_all_batches(self) -> None:
+        plan = _make_two_batch_plan()
+        runtime = RuntimeState()
+        exe = BatchExecutor(plan, runtime)
+
+        for tid in ["T1", "T2"]:
+            exe.advance_task(tid, TaskStatus.COMPLETED)
+        exe.advance_batch()
+        for tid in ["T3", "T4"]:
+            exe.advance_task(tid, TaskStatus.COMPLETED)
+        exe.advance_batch()
+
+        assert exe.is_complete()
+
+
+class TestTaskNotFound:
+    """KeyError for unknown task_id."""
+
+    def test_unknown_task_raises_key_error(self) -> None:
+        plan = _make_plan([], [])
+        exe = BatchExecutor(plan, RuntimeState())
+
+        with pytest.raises(KeyError, match="Task not found: GHOST"):
+            exe.advance_task("GHOST", TaskStatus.COMPLETED)

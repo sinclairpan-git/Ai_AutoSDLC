@@ -49,6 +49,21 @@ class CloseGate:
             )
         )
 
+        refresh_level = context.get("knowledge_refresh_level")
+        if refresh_level is not None:
+            skip_ok = refresh_level == 0
+            checks.append(
+                GateCheck(
+                    name="knowledge_refresh_level",
+                    passed=True,
+                    message=(
+                        "L0: no refresh needed"
+                        if skip_ok
+                        else f"L{refresh_level}: refresh required before completion"
+                    ),
+                )
+            )
+
         all_passed = all(c.passed for c in checks)
         verdict = GateVerdict.PASS if all_passed else GateVerdict.RETRY
 
