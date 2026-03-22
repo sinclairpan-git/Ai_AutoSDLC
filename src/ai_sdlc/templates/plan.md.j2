@@ -1,0 +1,33 @@
+# 实现计划：{{ project_name }}
+
+**功能编号**：`{{ work_item_id }}`
+**创建日期**：{{ created_at }}
+
+---
+
+## 架构方案
+
+{{ architecture_notes | default('TODO: 填写架构方案') }}
+
+## 模块分解
+
+{% for mod in modules %}
+### {{ mod.name }}
+
+{{ mod.description | default('TODO') }}
+{% endfor %}
+{% if not modules %}
+TODO: 分解模块
+{% endif %}
+
+## 实现顺序
+
+{{ implementation_order | default('TODO: 定义实现顺序') }}
+
+## 关键设计决策
+
+TODO: 记录关键技术决策
+
+## 风险评估
+
+TODO: 评估实现风险

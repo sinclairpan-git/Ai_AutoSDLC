@@ -1,0 +1,20 @@
+# 执行日志：{{ work_item_id }}
+
+**开始时间**：{{ started_at | default('TBD') }}
+**状态**：进行中
+
+---
+
+{% for batch in batches %}
+## Batch {{ batch.batch_id }} (Phase {{ batch.phase }})
+
+| Task | 状态 | 开始 | 完成 |
+|------|------|------|------|
+{% for task_id in batch.tasks %}
+| {{ task_id }} | {{ batch.status }} | {{ batch.started_at | default('-') }} | {{ batch.completed_at | default('-') }} |
+{% endfor %}
+
+{% endfor %}
+{% if not batches %}
+_尚无执行记录_
+{% endif %}

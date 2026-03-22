@@ -1,0 +1,20 @@
+# 任务分解：{{ work_item_id }}
+
+**创建日期**：{{ created_at }}
+**总任务数**：{{ tasks | length }}
+
+---
+
+{% for task in tasks %}
+### Task {{ task.phase }}.{{ loop.index }} {{ task.title }}
+
+- **Task ID**: {{ task.task_id }}
+- **Phase**: {{ task.phase }}
+- **依赖**: {{ task.depends_on | join(', ') if task.depends_on else '无' }}
+- **文件**: {{ task.file_paths | join(', ') if task.file_paths else 'TBD' }}
+- **可并行**: {{ '是' if task.parallelizable else '否' }}
+
+{% endfor %}
+{% if not tasks %}
+TODO: 定义具体任务
+{% endif %}
