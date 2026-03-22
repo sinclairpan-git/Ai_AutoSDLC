@@ -24,7 +24,10 @@ TRANSITIONS: dict[WorkItemStatus, list[WorkItemStatus]] = {
         WorkItemStatus.DEV_EXECUTING,
     ],
     WorkItemStatus.DEV_REVIEWED: [WorkItemStatus.ARCHIVING],
-    WorkItemStatus.ARCHIVING: [WorkItemStatus.KNOWLEDGE_REFRESHING],
+    WorkItemStatus.ARCHIVING: [
+        WorkItemStatus.KNOWLEDGE_REFRESHING,
+        WorkItemStatus.COMPLETED,  # L0: no refresh needed (BR-051)
+    ],
     WorkItemStatus.KNOWLEDGE_REFRESHING: [WorkItemStatus.COMPLETED],
     WorkItemStatus.SUSPENDED: [WorkItemStatus.RESUMED],
     WorkItemStatus.RESUMED: [WorkItemStatus.DEV_EXECUTING],

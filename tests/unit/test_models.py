@@ -162,6 +162,13 @@ class TestContextModels:
         assert rt.current_stage == ""
         assert rt.ai_decisions_count == 0
         assert rt.execution_mode == "auto"
+        assert rt.debug_rounds == {}
+        assert rt.consecutive_halts == 0
+
+    def test_runtime_state_debug_rounds(self) -> None:
+        rt = RuntimeState(debug_rounds={"T001": 2, "T002": 1}, consecutive_halts=1)
+        assert rt.debug_rounds["T001"] == 2
+        assert rt.consecutive_halts == 1
 
     def test_working_set_defaults(self) -> None:
         ws = WorkingSet()

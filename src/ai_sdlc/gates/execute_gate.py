@@ -47,6 +47,22 @@ class ExecuteGate:
             )
         )
 
+        log_ts = context.get("log_timestamp", "")
+        commit_ts = context.get("commit_timestamp", "")
+        if log_ts and commit_ts:
+            order_ok = log_ts <= commit_ts
+            checks.append(
+                GateCheck(
+                    name="log_before_commit",
+                    passed=order_ok,
+                    message=(
+                        ""
+                        if order_ok
+                        else "Execution log must be written before commit"
+                    ),
+                )
+            )
+
         all_passed = all(c.passed for c in checks)
         verdict = GateVerdict.PASS if all_passed else GateVerdict.RETRY
 

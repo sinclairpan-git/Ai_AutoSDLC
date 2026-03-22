@@ -27,6 +27,7 @@ class TestValidTransitions:
         (WorkItemStatus.DEV_VERIFYING, WorkItemStatus.DEV_EXECUTING),
         (WorkItemStatus.DEV_REVIEWED, WorkItemStatus.ARCHIVING),
         (WorkItemStatus.ARCHIVING, WorkItemStatus.KNOWLEDGE_REFRESHING),
+        (WorkItemStatus.ARCHIVING, WorkItemStatus.COMPLETED),
         (WorkItemStatus.KNOWLEDGE_REFRESHING, WorkItemStatus.COMPLETED),
         (WorkItemStatus.SUSPENDED, WorkItemStatus.RESUMED),
         (WorkItemStatus.RESUMED, WorkItemStatus.DEV_EXECUTING),
@@ -75,3 +76,10 @@ class TestGetValidTransitions:
 
     def test_failed_is_terminal(self) -> None:
         assert get_valid_transitions(WorkItemStatus.FAILED) == []
+
+    def test_archiving_has_two_targets(self) -> None:
+        """BR-051: ARCHIVING can go to KNOWLEDGE_REFRESHING or COMPLETED."""
+        targets = get_valid_transitions(WorkItemStatus.ARCHIVING)
+        assert WorkItemStatus.KNOWLEDGE_REFRESHING in targets
+        assert WorkItemStatus.COMPLETED in targets
+        assert len(targets) == 2

@@ -15,6 +15,8 @@ class RuntimeState(BaseModel):
     execution_mode: str = "auto"
     started_at: str = ""
     last_updated: str = ""
+    debug_rounds: dict[str, int] = {}
+    consecutive_halts: int = 0
 
 
 class WorkingSet(BaseModel):

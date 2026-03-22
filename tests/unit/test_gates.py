@@ -136,6 +136,40 @@ class TestExecuteGate:
         )
         assert result.verdict == GateVerdict.RETRY
 
+    def test_log_before_commit_pass(self) -> None:
+        """BR-032: log timestamp <= commit timestamp."""
+        result = ExecuteGate().check(
+            {
+                "tests_passed": True,
+                "committed": True,
+                "logged": True,
+                "log_timestamp": "2026-03-21T10:00:00",
+                "commit_timestamp": "2026-03-21T10:00:01",
+            }
+        )
+        assert result.verdict == GateVerdict.PASS
+
+    def test_log_before_commit_fail(self) -> None:
+        """BR-032: fails when commit happens before log."""
+        result = ExecuteGate().check(
+            {
+                "tests_passed": True,
+                "committed": True,
+                "logged": True,
+                "log_timestamp": "2026-03-21T10:00:02",
+                "commit_timestamp": "2026-03-21T10:00:01",
+            }
+        )
+        assert result.verdict == GateVerdict.RETRY
+
+    def test_log_before_commit_skip_when_absent(self) -> None:
+        """BR-032: check skipped when timestamps not provided."""
+        result = ExecuteGate().check(
+            {"tests_passed": True, "committed": True, "logged": True}
+        )
+        assert result.verdict == GateVerdict.PASS
+        assert all(c.name != "log_before_commit" for c in result.checks)
+
 
 class TestCloseGate:
     def test_pass(self, tmp_path: Path) -> None:
