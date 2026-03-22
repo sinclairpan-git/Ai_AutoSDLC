@@ -3,10 +3,12 @@
 from __future__ import annotations
 
 from pathlib import Path
+from unittest.mock import MagicMock
 
 import pytest
 
 from ai_sdlc.branch.branch_manager import BranchError, BranchManager
+from ai_sdlc.branch.file_guard import FileGuard
 from ai_sdlc.branch.git_client import GitClient
 
 
@@ -82,3 +84,101 @@ class TestBranchManager:
         gc.checkout("main")
         name = bm.create_docs_branch("WI-2026-001")
         assert name == "design/WI-2026-001-docs"
+
+
+class TestBranchManagerMockedGit:
+    """Tests using a mocked GitClient (BR-021 / BR-022, hotfix/release)."""
+
+    def test_switch_to_dev_spec_dir_baseline_pass(self, tmp_path: Path) -> None:
+        spec_rel = "specs/wi"
+        spec_path = tmp_path / spec_rel
+        spec_path.mkdir(parents=True)
+        (spec_path / "spec.md").write_text("s")
+        (spec_path / "plan.md").write_text("p")
+
+        mock_git = MagicMock()
+        mock_git.has_uncommitted_changes.return_value = False
+        mock_git.repo_path = tmp_path
+
+        bm = BranchManager(mock_git)
+        bm.switch_to_dev("WI-1", spec_dir=spec_rel)
+
+        mock_git.checkout.assert_called_once_with("feature/WI-1-dev")
+
+    def test_switch_to_dev_spec_dir_baseline_fails(self, tmp_path: Path) -> None:
+        mock_git = MagicMock()
+        mock_git.has_uncommitted_changes.return_value = False
+        mock_git.repo_path = tmp_path
+
+        bm = BranchManager(mock_git)
+        with pytest.raises(BranchError, match="Baseline recheck failed"):
+            bm.switch_to_dev("WI-1", spec_dir="missing")
+
+    def test_switch_to_dev_protects_spec_and_plan(self, tmp_path: Path) -> None:
+        spec_rel = "specs/wi"
+        spec_path = tmp_path / spec_rel
+        spec_path.mkdir(parents=True)
+        (spec_path / "spec.md").write_text("s")
+        (spec_path / "plan.md").write_text("p")
+
+        mock_git = MagicMock()
+        mock_git.has_uncommitted_changes.return_value = False
+        mock_git.repo_path = tmp_path
+
+        fg = FileGuard()
+        bm = BranchManager(mock_git, file_guard=fg)
+        bm.switch_to_dev("WI-1", spec_dir=spec_rel)
+
+        assert fg.is_protected(str(tmp_path / spec_rel / "spec.md"))
+        assert fg.is_protected(str(tmp_path / spec_rel / "plan.md"))
+
+    def test_create_hotfix_branch_new(self) -> None:
+        mock_git = MagicMock()
+        mock_git.has_uncommitted_changes.return_value = False
+        mock_git.branch_exists.return_value = False
+
+        bm = BranchManager(mock_git)
+        name = bm.create_hotfix_branch("ISSUE-42")
+
+        assert name == "hotfix/ISSUE-42"
+        mock_git.create_branch.assert_called_once_with("hotfix/ISSUE-42", checkout=True)
+
+    def test_create_hotfix_branch_exists(self) -> None:
+        mock_git = MagicMock()
+        mock_git.has_uncommitted_changes.return_value = False
+        mock_git.branch_exists.return_value = True
+
+        bm = BranchManager(mock_git)
+        name = bm.create_hotfix_branch("ISSUE-42")
+
+        assert name == "hotfix/ISSUE-42"
+        mock_git.checkout.assert_called_once_with("hotfix/ISSUE-42")
+
+    def test_create_release_branch_new(self) -> None:
+        mock_git = MagicMock()
+        mock_git.has_uncommitted_changes.return_value = False
+        mock_git.branch_exists.return_value = False
+
+        bm = BranchManager(mock_git)
+        name = bm.create_release_branch("1.0.0")
+
+        assert name == "release/1.0.0"
+        mock_git.create_branch.assert_called_once_with("release/1.0.0", checkout=True)
+
+    def test_create_release_branch_exists(self) -> None:
+        mock_git = MagicMock()
+        mock_git.has_uncommitted_changes.return_value = False
+        mock_git.branch_exists.return_value = True
+
+        bm = BranchManager(mock_git)
+        name = bm.create_release_branch("1.0.0")
+
+        assert name == "release/1.0.0"
+        mock_git.checkout.assert_called_once_with("release/1.0.0")
+
+    def test_file_guard_property(self) -> None:
+        mock_git = MagicMock()
+        mock_git.has_uncommitted_changes.return_value = False
+        fg = FileGuard()
+        bm = BranchManager(mock_git, file_guard=fg)
+        assert bm.file_guard is fg
