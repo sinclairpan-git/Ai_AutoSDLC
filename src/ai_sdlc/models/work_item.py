@@ -35,6 +35,24 @@ class Confidence(str, Enum):
     LOW = "low"
 
 
+class ClarificationStatus(str, Enum):
+    """Status of the clarification process for uncertain work items."""
+
+    PENDING = "pending"
+    RESOLVED = "resolved"
+    HALTED = "halted"
+
+
+class ClarificationState(BaseModel):
+    """Tracks multi-round clarification for uncertain work items (BR-006)."""
+
+    round_count: int = 0
+    max_rounds: int = 2
+    options_presented: list[str] = []
+    user_responses: list[str] = []
+    status: ClarificationStatus = ClarificationStatus.PENDING
+
+
 class WorkItemStatus(str, Enum):
     CREATED = "created"
     INTAKE_CLASSIFIED = "intake_classified"
@@ -66,3 +84,4 @@ class WorkItem(BaseModel):
     updated_at: str = ""
     title: str = ""
     description: str = ""
+    clarification: ClarificationState | None = None

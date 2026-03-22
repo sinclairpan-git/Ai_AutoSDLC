@@ -4,7 +4,12 @@ from __future__ import annotations
 
 import re
 
-from ai_sdlc.models.work_item import Confidence, WorkType
+from ai_sdlc.models.work_item import (
+    ClarificationStatus,
+    Confidence,
+    WorkItemSource,
+    WorkType,
+)
 from ai_sdlc.routers.work_intake import KeywordWorkIntakeRouter, generate_work_item_id
 
 
@@ -73,3 +78,54 @@ class TestKeywordClassification:
         from ai_sdlc.models.work_item import WorkItemStatus
 
         assert result.status == WorkItemStatus.CREATED
+
+
+class TestClarification:
+    """Test multi-round clarification (BR-006)."""
+
+    def test_clarify_resolves_on_round_1(self) -> None:
+        """Round 1 with clear keyword resolves the item."""
+        router = KeywordWorkIntakeRouter()
+        item = router.classify("something unclear", WorkItemSource.TEXT)
+        assert item.work_type == WorkType.UNCERTAIN
+
+        result = router.clarify(item, "this is a production incident crash")
+        assert result.work_type == WorkType.PRODUCTION_ISSUE
+        assert result.clarification is not None
+        assert result.clarification.status == ClarificationStatus.RESOLVED
+        assert result.needs_human_confirmation is False
+
+    def test_clarify_halts_after_max_rounds(self) -> None:
+        """BR-006: 2 rounds still uncertain -> HALTED."""
+        router = KeywordWorkIntakeRouter()
+        item = router.classify("something unclear", WorkItemSource.TEXT)
+        assert item.work_type == WorkType.UNCERTAIN
+
+        result = router.clarify(item, "still vague")
+        assert result.work_type == WorkType.UNCERTAIN
+        assert result.clarification.round_count == 1
+        assert result.clarification.status == ClarificationStatus.PENDING
+
+        result = router.clarify(result, "no idea")
+        assert result.work_type == WorkType.UNCERTAIN
+        assert result.clarification.round_count == 2
+        assert result.clarification.status == ClarificationStatus.HALTED
+        assert result.needs_human_confirmation is True
+
+    def test_clarify_noop_for_non_uncertain(self) -> None:
+        """Clarification is no-op for already classified items."""
+        router = KeywordWorkIntakeRouter()
+        item = router.classify("线上 production 故障 crash", WorkItemSource.TEXT)
+        assert item.work_type == WorkType.PRODUCTION_ISSUE
+
+        result = router.clarify(item, "more info")
+        assert result.work_type == WorkType.PRODUCTION_ISSUE
+        assert result.clarification is None
+
+    def test_clarify_tracks_responses(self) -> None:
+        router = KeywordWorkIntakeRouter()
+        item = router.classify("?", WorkItemSource.TEXT)
+        result = router.clarify(item, "first try")
+        assert result.clarification.user_responses == ["first try"]
+        result = router.clarify(result, "second try")
+        assert result.clarification.user_responses == ["first try", "second try"]

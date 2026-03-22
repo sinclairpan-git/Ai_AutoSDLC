@@ -55,6 +55,8 @@ from ai_sdlc.models.scanner import (
     SymbolInfo,
 )
 from ai_sdlc.models.work_item import (
+    ClarificationState,
+    ClarificationStatus,
     Confidence,
     Severity,
     WorkItem,
@@ -67,6 +69,8 @@ __all__ = [
     "ApiEndpoint",
     "ChangeRequest",
     "Checkpoint",
+    "ClarificationState",
+    "ClarificationStatus",
     "CompletedStage",
     "Confidence",
     "DependencyInfo",

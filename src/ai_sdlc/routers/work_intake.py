@@ -8,6 +8,8 @@ from datetime import UTC, datetime
 from typing import Protocol
 
 from ai_sdlc.models.work_item import (
+    ClarificationState,
+    ClarificationStatus,
     Confidence,
     WorkItem,
     WorkItemSource,
@@ -148,6 +150,44 @@ class KeywordWorkIntakeRouter:
             title=title,
             description=description,
         )
+
+    def clarify(self, work_item: WorkItem, user_input: str) -> WorkItem:
+        """Process a clarification round for an uncertain work item.
+
+        BR-006: After max_rounds of failed clarification, status becomes HALTED.
+
+        Args:
+            work_item: The uncertain work item to clarify.
+            user_input: User's clarification input text.
+
+        Returns:
+            Updated work item with new classification or HALTED status.
+        """
+        if work_item.work_type != WorkType.UNCERTAIN:
+            return work_item
+
+        if work_item.clarification is None:
+            work_item.clarification = ClarificationState()
+
+        state = work_item.clarification
+        state.round_count += 1
+        state.user_responses.append(user_input)
+
+        combined = f"{work_item.description} {user_input}"
+        reclassified = self.classify(combined, work_item.source)
+
+        if reclassified.work_type != WorkType.UNCERTAIN:
+            work_item.work_type = reclassified.work_type
+            work_item.classification_confidence = reclassified.classification_confidence
+            work_item.needs_human_confirmation = False
+            state.status = ClarificationStatus.RESOLVED
+            return work_item
+
+        if state.round_count >= state.max_rounds:
+            state.status = ClarificationStatus.HALTED
+            work_item.needs_human_confirmation = True
+
+        return work_item
 
 
 def _extract_title(description: str) -> str:
