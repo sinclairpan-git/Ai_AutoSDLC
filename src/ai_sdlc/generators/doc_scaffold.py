@@ -24,6 +24,18 @@ class DocScaffolder:
     def __init__(self, template_gen: TemplateGenerator | None = None) -> None:
         self._gen = template_gen or TemplateGenerator()
 
+    def render(self, template_name: str, context: dict[str, object]) -> str:
+        """Render a template to string.
+
+        Args:
+            template_name: Template filename (e.g. "spec.md.j2").
+            context: Template variables.
+
+        Returns:
+            Rendered string.
+        """
+        return self._gen.render(template_name, context)
+
     def scaffold(
         self,
         root: Path,

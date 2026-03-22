@@ -237,3 +237,20 @@ class TestTaskNotFound:
 
         with pytest.raises(KeyError, match="Task not found: GHOST"):
             exe.advance_task("GHOST", TaskStatus.COMPLETED)
+
+
+def test_advance_terminal_task_is_noop() -> None:
+    tasks = [Task(task_id="T1", title="t", phase=1)]
+    plan = ExecutionPlan(
+        total_tasks=1,
+        total_batches=1,
+        tasks=tasks,
+        batches=[ExecutionBatch(batch_id=1, phase=1, tasks=["T1"])],
+    )
+    rt = RuntimeState()
+    ex = BatchExecutor(plan, rt)
+    ex.advance_task("T1", TaskStatus.COMPLETED)
+    # Try to re-complete — should be no-op
+    ex.advance_task("T1", TaskStatus.FAILED)
+    assert tasks[0].status == TaskStatus.COMPLETED
+    assert rt.consecutive_halts == 0

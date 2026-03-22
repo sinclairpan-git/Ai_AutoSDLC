@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import os
 
 logger = logging.getLogger(__name__)
 
@@ -27,7 +28,7 @@ class FileGuard:
         Args:
             path: Absolute or relative path to protect.
         """
-        normalized = str(path).replace("\\", "/")
+        normalized = os.path.normpath(path)
         self._protected.add(normalized)
         logger.info("File protected: %s", normalized)
 
@@ -37,7 +38,7 @@ class FileGuard:
         Args:
             path: Path to unprotect.
         """
-        normalized = str(path).replace("\\", "/")
+        normalized = os.path.normpath(path)
         self._protected.discard(normalized)
 
     def is_protected(self, path: str) -> bool:
@@ -49,7 +50,7 @@ class FileGuard:
         Returns:
             True if the path is write-protected.
         """
-        normalized = str(path).replace("\\", "/")
+        normalized = os.path.normpath(path)
         return normalized in self._protected
 
     def guard_write(self, path: str) -> None:

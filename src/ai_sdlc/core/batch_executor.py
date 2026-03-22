@@ -64,6 +64,15 @@ class BatchExecutor:
         if task is None:
             raise KeyError(f"Task not found: {task_id}")
 
+        terminal = {TaskStatus.COMPLETED, TaskStatus.HALTED, TaskStatus.CANCELLED}
+        if task.status in terminal:
+            logger.warning(
+                "Task %s already in terminal state %s",
+                task_id,
+                task.status.value,
+            )
+            return task
+
         if status == TaskStatus.FAILED:
             self._handle_failure(task)
             return task

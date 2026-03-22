@@ -2,39 +2,64 @@
 
 from __future__ import annotations
 
-import shutil
 from pathlib import Path
+from unittest.mock import MagicMock
 
 from ai_sdlc.core.runner import SDLCRunner
-from ai_sdlc.gates.base import GateRegistry
-from ai_sdlc.gates.init_gate import InitGate
+from ai_sdlc.models.gate import GateCheck, GateResult, GateVerdict
 
 
 class TestConfirmMode:
-    def test_confirm_callback_pauses_pipeline(
-        self,
-        initialized_project_dir: Path,
-        git_repo: Path,
-    ) -> None:
+    def test_confirm_callback_pauses_pipeline(self, tmp_path: Path) -> None:
         """Pipeline pauses when confirm callback returns False."""
-        ai_sdlc = initialized_project_dir / ".ai-sdlc"
-        dest = git_repo / ".ai-sdlc"
-        shutil.copytree(ai_sdlc, dest)
-        (git_repo / ".ai-sdlc" / "state").mkdir(exist_ok=True)
+        ai_sdlc = tmp_path / ".ai-sdlc"
+        (ai_sdlc / "project" / "config").mkdir(parents=True)
+        (ai_sdlc / "state").mkdir(parents=True)
+        (ai_sdlc / "project" / "config" / "project-state.yaml").write_text(
+            "status: initialized\nproject_name: test\n"
+        )
 
-        runner = SDLCRunner(git_repo)
+        runner = SDLCRunner(tmp_path)
 
-        call_count = 0
+        pass_result = GateResult(
+            stage="init",
+            verdict=GateVerdict.PASS,
+            checks=[GateCheck(name="ok", passed=True)],
+        )
+        runner._run_gate = MagicMock(return_value=pass_result)
 
-        def reject_callback(stage: str, _result: object) -> bool:
-            nonlocal call_count
-            call_count += 1
+        calls: list[str] = []
+
+        def reject(stage: str, _result: object) -> bool:
+            calls.append(stage)
             return False
 
-        reg = GateRegistry()
-        reg.register("init", InitGate())
-        runner._registry = reg
+        runner.run(mode="confirm", on_confirm=reject)
+        assert len(calls) >= 1
 
-        runner.run(mode="confirm", on_confirm=reject_callback)
+    def test_auto_mode_ignores_callback(self, tmp_path: Path) -> None:
+        """Auto mode does not call the confirm callback."""
+        ai_sdlc = tmp_path / ".ai-sdlc"
+        (ai_sdlc / "project" / "config").mkdir(parents=True)
+        (ai_sdlc / "state").mkdir(parents=True)
+        (ai_sdlc / "project" / "config" / "project-state.yaml").write_text(
+            "status: initialized\nproject_name: test\n"
+        )
 
-        assert call_count >= 1
+        runner = SDLCRunner(tmp_path)
+
+        pass_result = GateResult(
+            stage="init",
+            verdict=GateVerdict.PASS,
+            checks=[GateCheck(name="ok", passed=True)],
+        )
+        runner._run_gate = MagicMock(return_value=pass_result)
+
+        calls: list[str] = []
+
+        def track(stage: str, _result: object) -> bool:
+            calls.append(stage)
+            return True
+
+        runner.run(mode="auto", on_confirm=track)
+        assert len(calls) == 0

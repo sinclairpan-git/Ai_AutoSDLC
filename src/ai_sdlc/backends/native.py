@@ -25,15 +25,15 @@ class NativeBackend:
 
     def generate_spec(self, context: dict[str, Any]) -> str:
         """Render spec template with given context."""
-        return self._scaffolder._gen.render("spec.md.j2", context)
+        return self._scaffolder.render("spec.md.j2", context)
 
     def generate_plan(self, context: dict[str, Any]) -> str:
         """Render plan template with given context."""
-        return self._scaffolder._gen.render("plan.md.j2", context)
+        return self._scaffolder.render("plan.md.j2", context)
 
     def generate_tasks(self, context: dict[str, Any]) -> str:
         """Render tasks template with given context."""
-        return self._scaffolder._gen.render("tasks.md.j2", context)
+        return self._scaffolder.render("tasks.md.j2", context)
 
     def execute_task(self, task_id: str, context: dict[str, Any]) -> str:
         """Return pending — Agent handles actual execution."""

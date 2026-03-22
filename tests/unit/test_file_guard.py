@@ -38,9 +38,14 @@ class TestFileGuard:
         assert isinstance(paths, frozenset)
         assert paths == frozenset({"p1", "p2"})
 
-    def test_path_normalization_backslash(self) -> None:
+    def test_path_normalization_collapses_dotdot(self) -> None:
         fg = FileGuard()
-        fg.protect("C:\\foo\\bar.md")
-        assert fg.is_protected("C:/foo/bar.md") is True
+        fg.protect("/tmp/project/spec.md")
+        assert fg.is_protected("/tmp/project/../project/spec.md") is True
         with pytest.raises(ProtectedFileError, match="protected file"):
-            fg.guard_write("C:/foo/bar.md")
+            fg.guard_write("/tmp/project/../project/spec.md")
+
+    def test_path_traversal_normalization(self) -> None:
+        guard = FileGuard()
+        guard.protect("/project/specs/WI-001/spec.md")
+        assert guard.is_protected("/project/specs/../specs/WI-001/spec.md")

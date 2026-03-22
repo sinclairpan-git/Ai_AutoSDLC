@@ -20,7 +20,7 @@ from ai_sdlc.gates.postmortem_gate import PostmortemGate
 from ai_sdlc.gates.refine_gate import RefineGate
 from ai_sdlc.gates.verify_gate import VerifyGate
 from ai_sdlc.models.checkpoint import Checkpoint, CompletedStage, FeatureInfo
-from ai_sdlc.models.gate import GateVerdict
+from ai_sdlc.models.gate import GateResult, GateVerdict
 from ai_sdlc.utils.time_utils import now_iso
 
 logger = logging.getLogger(__name__)
@@ -76,19 +76,18 @@ class SDLCRunner:
 
         Args:
             mode: Execution mode ("auto" or "confirm").
-            dry_run: If True, run gate checks without executing stage logic.
-            on_confirm: In confirm mode, called after each passing gate; return False
-                to pause the pipeline and return the current checkpoint.
+            dry_run: If True, run gate checks without side effects.
+            on_confirm: Called after each passing gate in confirm mode.
 
         Returns:
             The final checkpoint state.
 
         Raises:
-            PipelineHaltError: If a gate check HALTs after max retries.
+            PipelineHaltError: If a gate HALTs after max retries.
         """
         cp = self._ensure_checkpoint()
-
         start_idx = self._stage_index(cp.current_stage)
+
         for idx in range(start_idx, len(PIPELINE_STAGES)):
             stage = PIPELINE_STAGES[idx]
             logger.info("Pipeline: entering stage '%s'", stage)
@@ -98,44 +97,64 @@ class SDLCRunner:
                 cp.pipeline_last_updated = now_iso()
                 save_checkpoint(self.root, cp)
 
+            result = self._run_gate_with_retry(stage, cp, dry_run)
+            cp = self._apply_result(result, stage, idx, cp, mode, dry_run, on_confirm)
+            if cp.current_stage == stage and mode == "confirm":
+                return cp
+
+        return cp
+
+    def _run_gate_with_retry(
+        self, stage: str, cp: Checkpoint, dry_run: bool
+    ) -> GateResult:
+        """Run gate check with retry loop up to MAX_RETRIES."""
+        for attempt in range(MAX_RETRIES):
             result = self._run_gate(stage, cp)
+            if result.verdict != GateVerdict.RETRY or dry_run:
+                return result
+            logger.warning("Stage '%s' RETRY %d/%d", stage, attempt + 1, MAX_RETRIES)
+        raise PipelineHaltError(
+            f"Stage '{stage}' failed after {MAX_RETRIES} retries: "
+            f"{[c.message for c in result.checks if not c.passed]}"
+        )
 
-            if result.verdict == GateVerdict.PASS:
-                if not dry_run:
-                    cp.completed_stages.append(
-                        CompletedStage(stage=stage, completed_at=now_iso())
-                    )
-                    save_checkpoint(self.root, cp)
+    def _apply_result(
+        self,
+        result: GateResult,
+        stage: str,
+        idx: int,
+        cp: Checkpoint,
+        mode: str,
+        dry_run: bool,
+        on_confirm: ConfirmCallback | None,
+    ) -> Checkpoint:
+        """Apply a gate result to the checkpoint."""
+        if result.verdict == GateVerdict.HALT:
+            raise PipelineHaltError(
+                f"Pipeline halted at '{stage}': "
+                f"{[c.message for c in result.checks if not c.passed]}"
+            )
 
-                    if (
-                        mode == "confirm"
-                        and on_confirm is not None
-                        and not on_confirm(stage, result)
-                    ):
-                        logger.info(
-                            "Pipeline paused by confirm callback at '%s'", stage
-                        )
-                        save_checkpoint(self.root, cp)
-                        return cp
+        if result.verdict == GateVerdict.PASS and not dry_run:
+            cp.completed_stages.append(
+                CompletedStage(stage=stage, completed_at=now_iso())
+            )
+            save_checkpoint(self.root, cp)
 
-                    if idx + 1 < len(PIPELINE_STAGES):
-                        cp.current_stage = PIPELINE_STAGES[idx + 1]
-                    save_checkpoint(self.root, cp)
-                logger.info("Pipeline: stage '%s' PASSED", stage)
-            elif result.verdict == GateVerdict.HALT:
-                raise PipelineHaltError(
-                    f"Pipeline halted at stage '{stage}': "
-                    f"{[c.message for c in result.checks if not c.passed]}"
-                )
-            else:
-                logger.warning(
-                    "Pipeline: stage '%s' needs RETRY (dry_run=%s)",
-                    stage,
-                    dry_run,
-                )
-                if dry_run:
-                    continue
+            if (
+                mode == "confirm"
+                and on_confirm is not None
+                and not on_confirm(stage, result)
+            ):
+                logger.info("Paused at '%s' by confirm callback", stage)
+                save_checkpoint(self.root, cp)
+                return cp
 
+            if idx + 1 < len(PIPELINE_STAGES):
+                cp.current_stage = PIPELINE_STAGES[idx + 1]
+            save_checkpoint(self.root, cp)
+
+        logger.info("Pipeline: stage '%s' %s", stage, result.verdict.value)
         return cp
 
     def check_gate(self, stage: str) -> dict[str, Any]:
@@ -164,25 +183,64 @@ class SDLCRunner:
             save_checkpoint(self.root, cp)
         return cp
 
-    def _run_gate(self, stage: str, cp: Checkpoint) -> Any:
+    def _run_gate(self, stage: str, cp: Checkpoint) -> GateResult:
         ctx = self._build_context(stage, cp)
         return self._registry.check(stage, ctx)
 
     def _build_context(self, stage: str, cp: Checkpoint | None) -> dict[str, Any]:
+        """Build gate context from persisted state, not hardcoded values."""
         ctx: dict[str, Any] = {"root": str(self.root)}
-        if cp and cp.feature:
-            ctx["spec_dir"] = str(self.root / cp.feature.spec_dir)
-        if stage == "verify":
+        spec_dir = self._resolve_spec_dir(cp)
+        if spec_dir:
+            ctx["spec_dir"] = str(spec_dir)
+
+        if stage == "execute":
+            self._enrich_execute_context(ctx, spec_dir, cp)
+        elif stage == "close":
+            self._enrich_close_context(ctx, spec_dir, cp)
+        elif stage == "verify":
             ctx["critical_issues"] = 0
             ctx["high_issues"] = 0
-        elif stage == "execute":
-            ctx["tests_passed"] = True
-            ctx["committed"] = True
-            ctx["logged"] = True
-        elif stage == "close":
-            ctx["all_tasks_complete"] = True
-            ctx["tests_passed"] = True
         return ctx
+
+    def _resolve_spec_dir(self, cp: Checkpoint | None) -> Path | None:
+        if cp and cp.feature:
+            return self.root / cp.feature.spec_dir
+        return None
+
+    def _enrich_execute_context(
+        self,
+        ctx: dict[str, Any],
+        spec_dir: Path | None,
+        cp: Checkpoint | None,
+    ) -> None:
+        """Populate execute-gate context from real state."""
+        ctx["tests_passed"] = False
+        ctx["committed"] = False
+        ctx["logged"] = False
+        if spec_dir and (spec_dir / "execution-log.md").exists():
+            size = (spec_dir / "execution-log.md").stat().st_size
+            ctx["logged"] = size > 30
+        if cp and cp.execute_progress:
+            has_task = cp.execute_progress.last_committed_task != ""
+            ctx["committed"] = has_task
+            ctx["tests_passed"] = has_task
+
+    def _enrich_close_context(
+        self,
+        ctx: dict[str, Any],
+        spec_dir: Path | None,
+        cp: Checkpoint | None,
+    ) -> None:
+        """Populate close-gate context from real state."""
+        ctx["all_tasks_complete"] = False
+        ctx["tests_passed"] = False
+        if cp and cp.execute_progress:
+            prog = cp.execute_progress
+            ctx["all_tasks_complete"] = (
+                prog.total_batches > 0 and prog.completed_batches >= prog.total_batches
+            )
+            ctx["tests_passed"] = prog.last_committed_task != ""
 
     @staticmethod
     def _stage_index(stage: str) -> int:
