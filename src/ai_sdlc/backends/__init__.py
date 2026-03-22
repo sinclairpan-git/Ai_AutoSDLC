@@ -1,0 +1,1 @@
+"""Backend protocol and registry."""
