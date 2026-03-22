@@ -7,6 +7,8 @@ from ai_sdlc.cli.index_cmd import index_command
 from ai_sdlc.cli.init_cmd import init_command
 from ai_sdlc.cli.recover_cmd import recover_command
 from ai_sdlc.cli.refresh_cmd import refresh_command
+from ai_sdlc.cli.rules_cmd import rules_app
+from ai_sdlc.cli.run_cmd import run_command
 from ai_sdlc.cli.scan_cmd import scan_command
 from ai_sdlc.cli.status_cmd import status_command
 from ai_sdlc.cli.studio_cmd import studio_app
@@ -23,7 +25,9 @@ app.command(name="recover")(recover_command)
 app.command(name="index")(index_command)
 app.command(name="scan")(scan_command)
 app.command(name="refresh")(refresh_command)
+app.command(name="run")(run_command)
 app.add_typer(gate_app, name="gate")
+app.add_typer(rules_app, name="rules")
 app.add_typer(studio_app, name="studio")
 
 if __name__ == "__main__":
