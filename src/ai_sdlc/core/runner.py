@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
@@ -15,6 +16,7 @@ from ai_sdlc.gates.execute_gate import ExecuteGate
 from ai_sdlc.gates.init_gate import InitGate
 from ai_sdlc.gates.knowledge_gate import KnowledgeGate
 from ai_sdlc.gates.parallel_gate import ParallelGate
+from ai_sdlc.gates.postmortem_gate import PostmortemGate
 from ai_sdlc.gates.refine_gate import RefineGate
 from ai_sdlc.gates.verify_gate import VerifyGate
 from ai_sdlc.models.checkpoint import Checkpoint, CompletedStage, FeatureInfo
@@ -22,6 +24,8 @@ from ai_sdlc.models.gate import GateVerdict
 from ai_sdlc.utils.time_utils import now_iso
 
 logger = logging.getLogger(__name__)
+
+ConfirmCallback = Callable[[str, Any], bool]
 
 PIPELINE_STAGES = [
     "init",
@@ -58,14 +62,23 @@ class SDLCRunner:
         reg.register("close", CloseGate())
         reg.register("knowledge_check", KnowledgeGate())
         reg.register("parallel_check", ParallelGate())
+        reg.register("postmortem", PostmortemGate())
         return reg
 
-    def run(self, *, mode: str = "auto", dry_run: bool = False) -> Checkpoint:
+    def run(
+        self,
+        *,
+        mode: str = "auto",
+        dry_run: bool = False,
+        on_confirm: ConfirmCallback | None = None,
+    ) -> Checkpoint:
         """Run the pipeline from the current checkpoint position.
 
         Args:
             mode: Execution mode ("auto" or "confirm").
             dry_run: If True, run gate checks without executing stage logic.
+            on_confirm: In confirm mode, called after each passing gate; return False
+                to pause the pipeline and return the current checkpoint.
 
         Returns:
             The final checkpoint state.
@@ -92,6 +105,19 @@ class SDLCRunner:
                     cp.completed_stages.append(
                         CompletedStage(stage=stage, completed_at=now_iso())
                     )
+                    save_checkpoint(self.root, cp)
+
+                    if (
+                        mode == "confirm"
+                        and on_confirm is not None
+                        and not on_confirm(stage, result)
+                    ):
+                        logger.info(
+                            "Pipeline paused by confirm callback at '%s'", stage
+                        )
+                        save_checkpoint(self.root, cp)
+                        return cp
+
                     if idx + 1 < len(PIPELINE_STAGES):
                         cp.current_stage = PIPELINE_STAGES[idx + 1]
                     save_checkpoint(self.root, cp)
