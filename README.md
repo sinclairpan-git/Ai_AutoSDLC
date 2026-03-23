@@ -33,3 +33,4 @@ uv run mypy src/ai_sdlc/
 ## Documentation
 
 - Chinese user guide: `docs/USER_GUIDE.zh-CN.md`
+- Offline install bundle (build + one-command install): `packaging/offline/README.md`
