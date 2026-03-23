@@ -6,9 +6,13 @@ from pathlib import Path
 
 import yaml
 
-from ai_sdlc.knowledge.baseline import initialize_baseline, load_baseline
-from ai_sdlc.knowledge.refresh import apply_refresh, compute_refresh_level
-from ai_sdlc.models.knowledge import RefreshLevel
+from ai_sdlc.knowledge.engine import (
+    apply_refresh,
+    compute_refresh_level,
+    initialize_baseline,
+    load_baseline,
+)
+from ai_sdlc.models.scanner import RefreshLevel
 
 
 class TestKnowledgeRefreshFlow:

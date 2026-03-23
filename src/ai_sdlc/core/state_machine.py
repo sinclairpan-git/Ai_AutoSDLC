@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from ai_sdlc.models.work_item import WorkItemStatus
+from ai_sdlc.models.work import WorkItemStatus
 
 
 class InvalidTransitionError(Exception):

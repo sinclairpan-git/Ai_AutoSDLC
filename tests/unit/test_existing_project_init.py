@@ -11,7 +11,7 @@ from ai_sdlc.generators.corpus_gen import (
     generate_project_brief,
     save_corpus_files,
 )
-from ai_sdlc.generators.index_gen_ext import generate_all_extended_indexes
+from ai_sdlc.generators.index_gen import generate_all_extended_indexes
 from ai_sdlc.models.scanner import (
     ApiEndpoint,
     DependencyInfo,

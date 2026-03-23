@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from ai_sdlc.knowledge.baseline import load_baseline
+from ai_sdlc.knowledge.engine import load_baseline
 from ai_sdlc.routers.bootstrap import detect_project_state, init_project
 
 

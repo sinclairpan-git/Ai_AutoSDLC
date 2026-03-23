@@ -6,9 +6,12 @@ from pathlib import Path
 
 import pytest
 
-from ai_sdlc.backends.native import NativeBackend
-from ai_sdlc.backends.protocol import BackendProtocol
-from ai_sdlc.backends.registry import BackendNotFoundError, BackendRegistry
+from ai_sdlc.backends.native import (
+    BackendNotFoundError,
+    BackendProtocol,
+    BackendRegistry,
+    NativeBackend,
+)
 
 
 class TestBackendProtocol:

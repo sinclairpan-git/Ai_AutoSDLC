@@ -16,13 +16,13 @@ runner = CliRunner()
 class TestCliStatus:
     def test_status_initialized(self, tmp_path: Path) -> None:
         init_project(tmp_path)
-        with patch("ai_sdlc.cli.status_cmd.find_project_root", return_value=tmp_path):
+        with patch("ai_sdlc.cli.commands.find_project_root", return_value=tmp_path):
             result = runner.invoke(app, ["status"])
             assert result.exit_code == 0
             assert "AI-SDLC Status" in result.output
             assert tmp_path.name in result.output
 
     def test_status_not_initialized(self) -> None:
-        with patch("ai_sdlc.cli.status_cmd.find_project_root", return_value=None):
+        with patch("ai_sdlc.cli.commands.find_project_root", return_value=None):
             result = runner.invoke(app, ["status"])
             assert result.exit_code == 1

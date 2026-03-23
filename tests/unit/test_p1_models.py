@@ -8,48 +8,42 @@ from ai_sdlc.errors import (
     RefreshRequiredError,
     StudioRoutingError,
 )
-from ai_sdlc.models.change_request import (
-    ChangeRequest,
-    FreezeSnapshot,
-    ImpactAnalysis,
-    RebaselineRecord,
-)
-from ai_sdlc.models.incident import (
-    IncidentAnalysis,
-    IncidentBrief,
-    IncidentFixPlan,
-    IncidentTask,
-    PostmortemRecord,
-)
-from ai_sdlc.models.knowledge import (
+from ai_sdlc.models.scanner import (
+    ApiEndpoint,
+    DependencyInfo,
+    DiscoveredTestFile,
+    FileInfo,
     KnowledgeBaselineState,
     KnowledgeRefreshLog,
     RefreshEntry,
     RefreshLevel,
+    RiskItem,
+    ScanResult,
+    SymbolInfo,
 )
-from ai_sdlc.models.maintenance import (
-    MaintenanceBrief,
-    MaintenancePlan,
-    MaintenanceTask,
-    SmallTaskGraph,
-)
-from ai_sdlc.models.parallel import (
+from ai_sdlc.models.state import (
     InterfaceContract,
     MergeSimulation,
     OverlapResult,
     ParallelPolicy,
     WorkerAssignment,
 )
-from ai_sdlc.models.scanner import (
-    ApiEndpoint,
-    DependencyInfo,
-    DiscoveredTestFile,
-    FileInfo,
-    RiskItem,
-    ScanResult,
-    SymbolInfo,
+from ai_sdlc.models.work import (
+    ChangeRequest,
+    FreezeSnapshot,
+    ImpactAnalysis,
+    IncidentAnalysis,
+    IncidentBrief,
+    IncidentFixPlan,
+    IncidentTask,
+    MaintenanceBrief,
+    MaintenancePlan,
+    MaintenanceTask,
+    PostmortemRecord,
+    RebaselineRecord,
+    Severity,
+    SmallTaskGraph,
 )
-from ai_sdlc.models.work_item import Severity
 
 
 class TestRefreshLevel:
@@ -274,7 +268,7 @@ class TestScannerModels:
 
 class TestTaskParallelFields:
     def test_task_parallel_defaults(self) -> None:
-        from ai_sdlc.models.execution import Task
+        from ai_sdlc.models.state import Task
 
         task = Task(task_id="T-1", title="Test")
         assert task.parallelizable is False
@@ -285,7 +279,7 @@ class TestTaskParallelFields:
         assert task.merge_order == 0
 
     def test_task_with_parallel_config(self) -> None:
-        from ai_sdlc.models.execution import Task
+        from ai_sdlc.models.state import Task
 
         task = Task(
             task_id="T-1",
@@ -320,7 +314,7 @@ class TestErrors:
 
 class TestStudioProtocol:
     def test_protocol_compliance(self) -> None:
-        from ai_sdlc.studios.base import StudioProtocol
+        from ai_sdlc.studios.router import StudioProtocol
 
         class MockStudio:
             def process(self, input_data: object, context: dict | None = None) -> dict:

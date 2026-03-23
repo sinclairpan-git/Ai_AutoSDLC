@@ -6,13 +6,13 @@ import logging
 from pathlib import Path
 from typing import Any
 
-from ai_sdlc.models.change_request import (
+from ai_sdlc.models.work import (
     ChangeRequest,
     FreezeSnapshot,
     ImpactAnalysis,
     RebaselineRecord,
 )
-from ai_sdlc.utils.time_utils import now_iso
+from ai_sdlc.utils.helpers import now_iso
 
 logger = logging.getLogger(__name__)
 
@@ -94,7 +94,7 @@ class ChangeStudio:
         )
 
     def _save_artifacts(self, root: Path, cr: ChangeRequest) -> None:
-        from ai_sdlc.utils.fs import AI_SDLC_DIR
+        from ai_sdlc.utils.helpers import AI_SDLC_DIR
 
         out_dir = root / AI_SDLC_DIR / "work-items" / cr.work_item_id
         out_dir.mkdir(parents=True, exist_ok=True)

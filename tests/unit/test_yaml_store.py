@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from ai_sdlc.core.yaml_store import YamlStore, YamlStoreError
+from ai_sdlc.core.config import YamlStore, YamlStoreError
 from ai_sdlc.models.project import ProjectConfig, ProjectState, ProjectStatus
 
 

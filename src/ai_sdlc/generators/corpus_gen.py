@@ -6,7 +6,7 @@ import logging
 from pathlib import Path
 
 from ai_sdlc.models.scanner import ScanResult
-from ai_sdlc.utils.fs import AI_SDLC_DIR
+from ai_sdlc.utils.helpers import AI_SDLC_DIR
 
 logger = logging.getLogger(__name__)
 

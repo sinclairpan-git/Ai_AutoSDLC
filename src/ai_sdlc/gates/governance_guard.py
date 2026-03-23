@@ -7,9 +7,9 @@ from pathlib import Path
 
 from ai_sdlc.branch.git_client import GitClient, GitError
 from ai_sdlc.models.gate import GateCheck, GateResult, GateVerdict
-from ai_sdlc.models.work_item import WorkItem
+from ai_sdlc.models.work import WorkItem
 from ai_sdlc.studios.prd_studio import check_prd_readiness
-from ai_sdlc.utils.fs import AI_SDLC_DIR
+from ai_sdlc.utils.helpers import AI_SDLC_DIR
 
 logger = logging.getLogger(__name__)
 
@@ -78,7 +78,7 @@ def check_governance(
     )
 
     # 3. Work item status validity
-    from ai_sdlc.models.work_item import WorkItemStatus
+    from ai_sdlc.models.work import WorkItemStatus
 
     invalid_statuses = {WorkItemStatus.FAILED, WorkItemStatus.COMPLETED}
     status_ok = work_item.status not in invalid_statuses

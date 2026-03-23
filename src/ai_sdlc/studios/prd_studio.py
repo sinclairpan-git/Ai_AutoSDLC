@@ -6,7 +6,7 @@ import logging
 import re
 from pathlib import Path
 
-from ai_sdlc.models.prd import PrdReadiness
+from ai_sdlc.models.work import PrdReadiness
 
 logger = logging.getLogger(__name__)
 

@@ -7,8 +7,13 @@ from pathlib import Path
 import pytest
 
 from ai_sdlc.errors import ProjectNotInitializedError, StudioRoutingError
-from ai_sdlc.models.incident import IncidentBrief
-from ai_sdlc.models.work_item import Severity, WorkItem, WorkItemSource, WorkType
+from ai_sdlc.models.work import (
+    IncidentBrief,
+    Severity,
+    WorkItem,
+    WorkItemSource,
+    WorkType,
+)
 from ai_sdlc.studios.router import StudioRouter
 
 

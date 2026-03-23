@@ -1,0 +1,37 @@
+stage: close
+description: "收尾验收 — 全量测试、lint、知识刷新、归档"
+prerequisites: [init, refine, design, decompose, verify, execute]
+
+context:
+  must_read:
+    - specs/{id}/tasks.md
+    - specs/{id}/spec.md
+  rules:
+    - quality-gate
+    - verification
+    - auto-decision
+    - brownfield-corpus
+
+checklist:
+  - id: full_test
+    action: "运行 pytest 全量测试"
+    verify: "0 failures"
+  - id: lint_check
+    action: "运行 ruff check + ruff format --check"
+    verify: "All checks passed"
+  - id: knowledge_refresh
+    action: "计算并执行知识刷新（L0-L3）"
+    verify: "RefreshEntry 已写入 refresh log"
+  - id: update_state
+    action: "工作项状态更新为 archiving → completed"
+    verify: "WorkItemStatus = COMPLETED"
+  - id: merge_branch
+    action: "合并 feature 分支到 main"
+    verify: "git merge 成功"
+  - id: gate_check
+    action: "运行 close gate"
+    verify: "verdict = PASS"
+
+outputs:
+  - updated project-state.yaml
+  - merged main branch

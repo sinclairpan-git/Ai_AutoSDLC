@@ -8,7 +8,7 @@ import typer
 from rich.console import Console
 
 from ai_sdlc.core.runner import PipelineHaltError, SDLCRunner
-from ai_sdlc.utils.fs import find_project_root
+from ai_sdlc.utils.helpers import find_project_root
 
 console = Console()
 

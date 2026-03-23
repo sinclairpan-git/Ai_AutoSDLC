@@ -1,0 +1,33 @@
+stage: design
+description: "架构设计 — 生成 plan.md、research.md、data-model.md"
+prerequisites: [init, refine]
+
+context:
+  must_read:
+    - "{prd_path}"
+    - .ai-sdlc/memory/constitution.md
+    - .ai-sdlc/profiles/tech-stack.yml
+    - specs/{id}/spec.md
+  rules:
+    - prd-guidance
+    - quality-gate
+    - code-review
+
+checklist:
+  - id: research
+    action: "产出 research.md — 技术调研与方案对比"
+    verify: "specs/{id}/research.md 文件存在"
+  - id: data_model
+    action: "产出 data-model.md — 数据模型定义"
+    verify: "specs/{id}/data-model.md 文件存在"
+  - id: plan
+    action: "产出 plan.md — 实现计划，引用 constitution"
+    verify: "specs/{id}/plan.md 文件存在且引用 constitution"
+  - id: gate_check
+    action: "运行 design gate"
+    verify: "verdict = PASS"
+
+outputs:
+  - specs/{id}/plan.md
+  - specs/{id}/research.md
+  - specs/{id}/data-model.md

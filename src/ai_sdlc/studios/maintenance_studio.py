@@ -6,7 +6,7 @@ import logging
 from pathlib import Path
 from typing import Any
 
-from ai_sdlc.models.maintenance import (
+from ai_sdlc.models.work import (
     MaintenanceBrief,
     MaintenancePlan,
     MaintenanceTask,
@@ -97,7 +97,7 @@ class MaintenanceStudio:
         return tasks
 
     def _save_artifacts(self, root: Path, wid: str, plan: MaintenancePlan) -> None:
-        from ai_sdlc.utils.fs import AI_SDLC_DIR
+        from ai_sdlc.utils.helpers import AI_SDLC_DIR
 
         out_dir = root / AI_SDLC_DIR / "work-items" / wid
         out_dir.mkdir(parents=True, exist_ok=True)

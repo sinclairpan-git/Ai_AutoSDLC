@@ -9,7 +9,7 @@ from ai_sdlc.core.state_machine import (
     get_valid_transitions,
     transition,
 )
-from ai_sdlc.models.work_item import WorkItemStatus
+from ai_sdlc.models.work import WorkItemStatus
 
 
 class TestValidTransitions:

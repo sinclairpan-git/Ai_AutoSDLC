@@ -7,8 +7,7 @@ from pathlib import Path
 
 from ai_sdlc.core.config import load_project_state, save_project_state
 from ai_sdlc.models.project import ProjectState, ProjectStatus
-from ai_sdlc.utils.fs import AI_SDLC_DIR, has_project_markers
-from ai_sdlc.utils.time_utils import now_iso
+from ai_sdlc.utils.helpers import AI_SDLC_DIR, has_project_markers, now_iso
 
 logger = logging.getLogger(__name__)
 
@@ -90,6 +89,10 @@ def init_project(root: Path, project_name: str = "") -> ProjectState:
         )
         _scan, _generated = init_existing_project(root)
         logger.info("Generated %d knowledge baseline files", len(_generated))
+
+    from ai_sdlc.integrations.ide_adapter import ensure_ide_adaptation
+
+    ensure_ide_adaptation(root)
 
     logger.info("Initialized AI-SDLC project '%s' at %s", project_name, root)
     return state

@@ -1,0 +1,229 @@
+"""Sub-app CLI commands — gate, rules, studio."""
+
+from __future__ import annotations
+
+import typer
+from rich.console import Console
+from rich.panel import Panel
+from rich.table import Table
+
+from ai_sdlc.context.state import load_checkpoint
+from ai_sdlc.gates.pipeline_gates import (
+    CloseGate,
+    DecomposeGate,
+    DesignGate,
+    ExecuteGate,
+    InitGate,
+    RefineGate,
+    VerifyGate,
+)
+from ai_sdlc.gates.registry import GateRegistry
+from ai_sdlc.models.gate import GateVerdict
+from ai_sdlc.rules import RulesLoader
+from ai_sdlc.utils.helpers import find_project_root
+
+console = Console()
+
+# ---------------------------------------------------------------------------
+# gate sub-app
+# ---------------------------------------------------------------------------
+
+gate_app = typer.Typer(help="Run quality gate checks.")
+
+
+def _build_registry() -> GateRegistry:
+    reg = GateRegistry()
+    reg.register("init", InitGate())
+    reg.register("refine", RefineGate())
+    reg.register("design", DesignGate())
+    reg.register("decompose", DecomposeGate())
+    reg.register("verify", VerifyGate())
+    reg.register("execute", ExecuteGate())
+    reg.register("close", CloseGate())
+    return reg
+
+
+def _build_context(stage: str, root_str: str) -> dict[str, object]:
+    """Build gate context from checkpoint and filesystem."""
+    from pathlib import Path
+
+    root = Path(root_str)
+    ctx: dict[str, object] = {"root": root_str}
+
+    cp = load_checkpoint(root)
+    if cp and cp.feature:
+        ctx["spec_dir"] = str(root / cp.feature.spec_dir)
+
+    if stage == "verify":
+        ctx.setdefault("critical_issues", 0)
+        ctx.setdefault("high_issues", 0)
+    elif stage == "execute":
+        ctx.setdefault("tests_passed", False)
+        ctx.setdefault("committed", False)
+        ctx.setdefault("logged", False)
+    elif stage == "close":
+        ctx.setdefault("all_tasks_complete", False)
+        ctx.setdefault("tests_passed", False)
+
+    return ctx
+
+
+@gate_app.command(name="check")
+def gate_check(
+    stage: str = typer.Argument(
+        ...,
+        help="Stage name (init, refine, design, decompose, verify, execute, close).",
+    ),
+) -> None:
+    """Run gate check for a specific pipeline stage."""
+    root = find_project_root()
+    if root is None:
+        console.print("[red]Not inside an AI-SDLC project.[/red]")
+        raise typer.Exit(code=1)
+
+    registry = _build_registry()
+    if registry.get(stage) is None:
+        console.print(
+            f"[red]Unknown stage: {stage}. "
+            f"Available: {', '.join(registry.stages)}[/red]"
+        )
+        raise typer.Exit(code=2)
+
+    ctx = _build_context(stage, str(root))
+    result = registry.check(stage, ctx)
+
+    table = Table(title=f"Gate: {stage}")
+    table.add_column("Check", style="cyan")
+    table.add_column("Result")
+    table.add_column("Message")
+
+    for check in result.checks:
+        status = "[green]PASS[/green]" if check.passed else "[red]FAIL[/red]"
+        table.add_row(check.name, status, check.message)
+
+    console.print(table)
+
+    if result.verdict == GateVerdict.PASS:
+        console.print(f"\n[bold green]Gate {stage}: PASS[/bold green]")
+    elif result.verdict == GateVerdict.RETRY:
+        console.print(f"\n[bold yellow]Gate {stage}: RETRY[/bold yellow]")
+    else:
+        console.print(f"\n[bold red]Gate {stage}: HALT[/bold red]")
+
+    exit_code = 0 if result.verdict == GateVerdict.PASS else 1
+    raise typer.Exit(code=exit_code)
+
+
+# ---------------------------------------------------------------------------
+# rules sub-app
+# ---------------------------------------------------------------------------
+
+rules_app = typer.Typer(help="Inspect built-in SDLC rules.")
+
+
+@rules_app.command(name="list")
+def rules_list() -> None:
+    """List all available built-in rules."""
+    loader = RulesLoader()
+    names = loader.list_rules()
+
+    table = Table(title="Built-in SDLC Rules")
+    table.add_column("Rule", style="cyan")
+    table.add_column("Title")
+
+    for name in names:
+        title = loader.get_rule_title(name)
+        table.add_row(name, title)
+
+    console.print(table)
+    console.print(f"\n[dim]{len(names)} rules available[/dim]")
+
+
+@rules_app.command(name="show")
+def rules_show(
+    name: str = typer.Argument(..., help="Rule name to display."),
+) -> None:
+    """Show the full content of a specific rule."""
+    loader = RulesLoader()
+    try:
+        content = loader.load_rule(name)
+    except FileNotFoundError:
+        console.print(f"[red]Rule not found: {name}[/red]")
+        console.print(f"Available: {', '.join(loader.list_rules())}")
+        raise typer.Exit(code=1) from None
+    console.print(content)
+
+
+@rules_app.command(name="active")
+def rules_active(
+    stage: str = typer.Argument(..., help="Pipeline stage name."),
+) -> None:
+    """Show rules active for a specific pipeline stage."""
+    loader = RulesLoader()
+    active = loader.get_active_rules(stage)
+
+    if not active:
+        console.print(f"[yellow]No rules active for stage: {stage}[/yellow]")
+        raise typer.Exit(code=0)
+
+    table = Table(title=f"Rules Active for '{stage}'")
+    table.add_column("Rule", style="cyan")
+    table.add_column("Title")
+
+    for name in active:
+        title = loader.get_rule_title(name)
+        table.add_row(name, title)
+
+    console.print(table)
+
+
+# ---------------------------------------------------------------------------
+# studio sub-app
+# ---------------------------------------------------------------------------
+
+studio_app = typer.Typer(help="Studio routing and processing commands.")
+
+
+@studio_app.command("route")
+def route_command(
+    work_type: str = typer.Argument(
+        help=(
+            "Work type: new_requirement | production_issue "
+            "| change_request | maintenance_task"
+        ),
+    ),
+    work_item_id: str = typer.Option("WI-MANUAL-001", help="Work item ID."),
+    path: str = typer.Option(".", help="Project directory."),
+) -> None:
+    """Show which studio a work type would be routed to."""
+    from ai_sdlc.models.work import WorkType
+    from ai_sdlc.studios.router import FLOW_MAP
+
+    try:
+        wt = WorkType(work_type)
+    except ValueError:
+        console.print(f"[red]Unknown work type: {work_type}[/red]")
+        console.print(f"Valid types: {', '.join(t.value for t in WorkType)}")
+        raise typer.Exit(code=2) from None
+
+    studio = FLOW_MAP.get(wt)
+    if studio:
+        console.print(
+            Panel(
+                f"Work type [bold]{work_type}[/bold] → [green]{studio}[/green]",
+                title="Studio Routing",
+            )
+        )
+    else:
+        console.print(f"[yellow]No studio mapped for {work_type}[/yellow]")
+
+
+@studio_app.command("list")
+def list_studios() -> None:
+    """List all available studios and their work type mappings."""
+    from ai_sdlc.models.work import WorkType
+    from ai_sdlc.studios.router import FLOW_MAP
+
+    for wt in WorkType:
+        studio = FLOW_MAP.get(wt, "(none)")
+        console.print(f"  {wt.value:25s} → {studio}")

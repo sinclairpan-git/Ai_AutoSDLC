@@ -7,7 +7,7 @@ import re
 from datetime import UTC, datetime
 from typing import Protocol
 
-from ai_sdlc.models.work_item import (
+from ai_sdlc.models.work import (
     ClarificationState,
     ClarificationStatus,
     Confidence,

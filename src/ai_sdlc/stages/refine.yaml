@@ -1,0 +1,33 @@
+stage: refine
+description: "需求精炼 — 审查 PRD，分类工作项，生成 spec.md"
+prerequisites: [init]
+
+context:
+  must_read:
+    - "{prd_path}"
+    - .ai-sdlc/memory/constitution.md
+    - .ai-sdlc/profiles/tech-stack.yml
+  rules:
+    - prd-guidance
+    - scenario-routing
+    - quality-gate
+
+checklist:
+  - id: classify_work
+    action: "对用户输入进行工作项分类（new_requirement / production_issue / change_request / maintenance_task）"
+    verify: "WorkItem.work_type 非 uncertain，或已完成多轮澄清"
+  - id: check_prd
+    action: "运行 PRD readiness check"
+    verify: "PrdReadiness.ready = True，无 TBD/TODO"
+  - id: create_docs_branch
+    action: "创建 design/{id}-docs 分支"
+    verify: "git branch 输出包含 design/{id}-docs"
+  - id: generate_spec
+    action: "在 specs/{id}/ 下生成 spec.md"
+    verify: "spec.md 文件存在且非空"
+  - id: gate_check
+    action: "运行 refine gate"
+    verify: "verdict = PASS"
+
+outputs:
+  - specs/{id}/spec.md

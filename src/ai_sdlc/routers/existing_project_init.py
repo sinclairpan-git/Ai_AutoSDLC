@@ -8,18 +8,19 @@ from pathlib import Path
 import yaml
 
 from ai_sdlc.generators.corpus_gen import save_corpus_files
-from ai_sdlc.generators.index_gen import generate_index, save_index
-from ai_sdlc.generators.index_gen_ext import generate_all_extended_indexes
-from ai_sdlc.models.knowledge import KnowledgeBaselineState
-from ai_sdlc.models.scanner import ScanResult
+from ai_sdlc.generators.index_gen import (
+    generate_all_extended_indexes,
+    generate_index,
+    save_index,
+)
+from ai_sdlc.models.scanner import KnowledgeBaselineState, ScanResult
 from ai_sdlc.scanners.api_scanner import scan_apis
 from ai_sdlc.scanners.ast_scanner import scan_symbols
 from ai_sdlc.scanners.dependency_scanner import scan_dependencies
 from ai_sdlc.scanners.file_scanner import scan_files
 from ai_sdlc.scanners.risk_scanner import scan_risks
 from ai_sdlc.scanners.test_scanner import scan_tests
-from ai_sdlc.utils.fs import AI_SDLC_DIR
-from ai_sdlc.utils.time_utils import now_iso
+from ai_sdlc.utils.helpers import AI_SDLC_DIR, now_iso
 
 logger = logging.getLogger(__name__)
 
@@ -181,7 +182,7 @@ def _create_knowledge_baseline_state(root: Path) -> None:
     config_dir = root / AI_SDLC_DIR / "project" / "config"
     config_dir.mkdir(parents=True, exist_ok=True)
 
-    from ai_sdlc.core.yaml_store import YamlStore
+    from ai_sdlc.core.config import YamlStore
 
     state = KnowledgeBaselineState(
         initialized=True,

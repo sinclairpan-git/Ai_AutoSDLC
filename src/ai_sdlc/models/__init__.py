@@ -1,64 +1,64 @@
 """Data models for AI-SDLC framework."""
 
-from ai_sdlc.models.change_request import (
-    ChangeRequest,
-    FreezeSnapshot,
-    ImpactAnalysis,
-    RebaselineRecord,
+from ai_sdlc.models.gate import (
+    GateCheck,
+    GateResult,
+    GateVerdict,
+    GovernanceItem,
+    GovernanceState,
 )
-from ai_sdlc.models.checkpoint import (
-    Checkpoint,
-    CompletedStage,
-    ExecuteProgress,
-    FeatureInfo,
-    MultiAgentInfo,
-)
-from ai_sdlc.models.context import ResumePack, RuntimeState, WorkingSet
-from ai_sdlc.models.execution import ExecutionBatch, ExecutionPlan, Task, TaskStatus
-from ai_sdlc.models.gate import GateCheck, GateResult, GateVerdict
-from ai_sdlc.models.governance import GovernanceItem, GovernanceState
-from ai_sdlc.models.incident import (
-    IncidentAnalysis,
-    IncidentBrief,
-    IncidentFixPlan,
-    IncidentTask,
-    PostmortemRecord,
-)
-from ai_sdlc.models.knowledge import (
-    KnowledgeBaselineState,
-    KnowledgeRefreshLog,
-    RefreshEntry,
-    RefreshLevel,
-)
-from ai_sdlc.models.maintenance import (
-    MaintenanceBrief,
-    MaintenancePlan,
-    MaintenanceTask,
-    SmallTaskGraph,
-)
-from ai_sdlc.models.parallel import (
-    InterfaceContract,
-    MergeSimulation,
-    OverlapResult,
-    ParallelPolicy,
-    WorkerAssignment,
-)
-from ai_sdlc.models.prd import PrdReadiness
 from ai_sdlc.models.project import ProjectConfig, ProjectState, ProjectStatus
 from ai_sdlc.models.scanner import (
     ApiEndpoint,
     DependencyInfo,
     DiscoveredTestFile,
     FileInfo,
+    KnowledgeBaselineState,
+    KnowledgeRefreshLog,
+    RefreshEntry,
+    RefreshLevel,
     RiskItem,
     ScanResult,
     SymbolInfo,
 )
-from ai_sdlc.models.work_item import (
+from ai_sdlc.models.state import (
+    Checkpoint,
+    CompletedStage,
+    ExecuteProgress,
+    ExecutionBatch,
+    ExecutionPlan,
+    FeatureInfo,
+    InterfaceContract,
+    MergeSimulation,
+    MultiAgentInfo,
+    OverlapResult,
+    ParallelPolicy,
+    ResumePack,
+    RuntimeState,
+    Task,
+    TaskStatus,
+    WorkerAssignment,
+    WorkingSet,
+)
+from ai_sdlc.models.work import (
+    ChangeRequest,
     ClarificationState,
     ClarificationStatus,
     Confidence,
+    FreezeSnapshot,
+    ImpactAnalysis,
+    IncidentAnalysis,
+    IncidentBrief,
+    IncidentFixPlan,
+    IncidentTask,
+    MaintenanceBrief,
+    MaintenancePlan,
+    MaintenanceTask,
+    PostmortemRecord,
+    PrdReadiness,
+    RebaselineRecord,
     Severity,
+    SmallTaskGraph,
     WorkItem,
     WorkItemSource,
     WorkItemStatus,
@@ -74,6 +74,7 @@ __all__ = [
     "CompletedStage",
     "Confidence",
     "DependencyInfo",
+    "DiscoveredTestFile",
     "ExecuteProgress",
     "ExecutionBatch",
     "ExecutionPlan",
@@ -117,7 +118,6 @@ __all__ = [
     "SymbolInfo",
     "Task",
     "TaskStatus",
-    "DiscoveredTestFile",
     "WorkItem",
     "WorkItemSource",
     "WorkItemStatus",

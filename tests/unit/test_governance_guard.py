@@ -7,7 +7,7 @@ from pathlib import Path
 
 from ai_sdlc.gates.governance_guard import MAX_AI_DECISIONS, check_governance
 from ai_sdlc.models.gate import GateVerdict
-from ai_sdlc.models.work_item import WorkItem, WorkItemStatus, WorkType
+from ai_sdlc.models.work import WorkItem, WorkItemStatus, WorkType
 
 
 def _make_work_item(

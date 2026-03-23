@@ -7,7 +7,7 @@ from unittest.mock import MagicMock, PropertyMock
 
 from ai_sdlc.branch.branch_manager import BranchManager
 from ai_sdlc.branch.git_client import GitClient
-from ai_sdlc.generators.doc_scaffold import DocScaffolder
+from ai_sdlc.generators.doc_gen import DocScaffolder
 
 
 class TestDocsDevFlow:

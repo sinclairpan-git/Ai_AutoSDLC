@@ -1,4 +1,4 @@
-"""Studio Router — route work items to the correct Studio based on type.
+"""Studio Router — protocol, routing, and dispatch for all Studios.
 
 Enforces BR-033: production_issue must go to IncidentStudio, not PRDStudio.
 Enforces BR-003: uninitialized projects block all Studio calls.
@@ -7,17 +7,27 @@ Enforces BR-003: uninitialized projects block all Studio calls.
 from __future__ import annotations
 
 import logging
-from typing import Any
+from typing import Any, Protocol
 
 from ai_sdlc.errors import ProjectNotInitializedError, StudioRoutingError
-from ai_sdlc.models.work_item import WorkItem, WorkType
-from ai_sdlc.studios.base import StudioProtocol
+from ai_sdlc.models.work import WorkItem, WorkType
 from ai_sdlc.studios.change_studio import ChangeStudio
 from ai_sdlc.studios.incident_studio import IncidentStudio
 from ai_sdlc.studios.maintenance_studio import MaintenanceStudio
 from ai_sdlc.studios.prd_studio import PrdStudioAdapter
 
 logger = logging.getLogger(__name__)
+
+
+class StudioProtocol(Protocol):
+    """Protocol that all Studio implementations must satisfy."""
+
+    def process(
+        self, input_data: Any, context: dict[str, Any] | None = None
+    ) -> dict[str, Any]:
+        """Process input and produce studio artifacts."""
+        ...
+
 
 FLOW_MAP: dict[WorkType, str] = {
     WorkType.NEW_REQUIREMENT: "prd_studio",

@@ -4,9 +4,13 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from ai_sdlc.context.checkpoint import load_checkpoint, save_checkpoint
-from ai_sdlc.context.resume import build_resume_pack, save_resume_pack
-from ai_sdlc.models.checkpoint import Checkpoint, CompletedStage, FeatureInfo
+from ai_sdlc.context.state import (
+    build_resume_pack,
+    load_checkpoint,
+    save_checkpoint,
+    save_resume_pack,
+)
+from ai_sdlc.models.state import Checkpoint, CompletedStage, FeatureInfo
 
 
 class TestRecoverFlow:

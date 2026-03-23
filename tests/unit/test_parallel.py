@@ -2,12 +2,14 @@
 
 from __future__ import annotations
 
-from ai_sdlc.models.execution import Task
-from ai_sdlc.models.parallel import ParallelPolicy, WorkerAssignment
-from ai_sdlc.parallel.merge_simulator import simulate_merge
-from ai_sdlc.parallel.overlap_detector import detect_overlaps
-from ai_sdlc.parallel.splitter import compute_file_ownership, split_into_groups
-from ai_sdlc.parallel.worker_assigner import assign_workers
+from ai_sdlc.models.state import ParallelPolicy, Task, WorkerAssignment
+from ai_sdlc.parallel.engine import (
+    assign_workers,
+    compute_file_ownership,
+    detect_overlaps,
+    simulate_merge,
+    split_into_groups,
+)
 
 
 def _task(
@@ -167,7 +169,7 @@ class TestOverlapDetector:
 
 class TestMergeSimulator:
     def test_clean_merge(self) -> None:
-        from ai_sdlc.parallel.overlap_detector import detect_overlaps
+        from ai_sdlc.parallel.engine import detect_overlaps
 
         groups = {
             "group-0": [_task("T1", ["a.py"])],
@@ -194,7 +196,7 @@ class TestMergeSimulator:
         assert not sim.predicted_conflicts
 
     def test_conflict_predicted(self) -> None:
-        from ai_sdlc.parallel.overlap_detector import detect_overlaps
+        from ai_sdlc.parallel.engine import detect_overlaps
 
         groups = {
             "group-0": [_task("T1", ["shared.py"])],
@@ -221,7 +223,7 @@ class TestMergeSimulator:
         assert "shared.py" in sim.predicted_conflicts[0]
 
     def test_empty_assignments(self) -> None:
-        from ai_sdlc.models.parallel import OverlapResult
+        from ai_sdlc.models.state import OverlapResult
 
         overlap = OverlapResult(has_conflicts=False)
         sim = simulate_merge([], overlap)
@@ -229,7 +231,7 @@ class TestMergeSimulator:
         assert sim.merge_order == []
 
     def test_merge_order_sequential_first(self) -> None:
-        from ai_sdlc.models.parallel import OverlapResult
+        from ai_sdlc.models.state import OverlapResult
 
         overlap = OverlapResult(has_conflicts=False)
         assignments = [

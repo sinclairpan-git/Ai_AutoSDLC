@@ -7,21 +7,22 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
-from ai_sdlc.context.checkpoint import load_checkpoint, save_checkpoint
-from ai_sdlc.gates.base import GateRegistry
-from ai_sdlc.gates.close_gate import CloseGate
-from ai_sdlc.gates.decompose_gate import DecomposeGate
-from ai_sdlc.gates.design_gate import DesignGate
-from ai_sdlc.gates.execute_gate import ExecuteGate
-from ai_sdlc.gates.init_gate import InitGate
-from ai_sdlc.gates.knowledge_gate import KnowledgeGate
-from ai_sdlc.gates.parallel_gate import ParallelGate
-from ai_sdlc.gates.postmortem_gate import PostmortemGate
-from ai_sdlc.gates.refine_gate import RefineGate
-from ai_sdlc.gates.verify_gate import VerifyGate
-from ai_sdlc.models.checkpoint import Checkpoint, CompletedStage, FeatureInfo
+from ai_sdlc.context.state import load_checkpoint, save_checkpoint
+from ai_sdlc.core.dispatcher import StageDispatcher
+from ai_sdlc.gates.extra_gates import KnowledgeGate, ParallelGate, PostmortemGate
+from ai_sdlc.gates.pipeline_gates import (
+    CloseGate,
+    DecomposeGate,
+    DesignGate,
+    ExecuteGate,
+    InitGate,
+    RefineGate,
+    VerifyGate,
+)
+from ai_sdlc.gates.registry import GateRegistry
 from ai_sdlc.models.gate import GateResult, GateVerdict
-from ai_sdlc.utils.time_utils import now_iso
+from ai_sdlc.models.state import Checkpoint, CompletedStage, FeatureInfo
+from ai_sdlc.utils.helpers import now_iso
 
 logger = logging.getLogger(__name__)
 
@@ -50,6 +51,7 @@ class SDLCRunner:
     def __init__(self, root: Path) -> None:
         self.root = root.resolve()
         self._registry = self._build_registry()
+        self._dispatcher = StageDispatcher()
 
     def _build_registry(self) -> GateRegistry:
         reg = GateRegistry()
@@ -92,12 +94,19 @@ class SDLCRunner:
             stage = PIPELINE_STAGES[idx]
             logger.info("Pipeline: entering stage '%s'", stage)
 
+            self._dispatcher.begin_stage(stage)
+
             if not dry_run:
                 cp.current_stage = stage
                 cp.pipeline_last_updated = now_iso()
                 save_checkpoint(self.root, cp)
 
             result = self._run_gate_with_retry(stage, cp, dry_run)
+            self._dispatcher.record_result(
+                "gate_check",
+                result.verdict == GateVerdict.PASS,
+                result.verdict.value,
+            )
             cp = self._apply_result(result, stage, idx, cp, mode, dry_run, on_confirm)
             if cp.current_stage == stage and mode == "confirm":
                 return cp

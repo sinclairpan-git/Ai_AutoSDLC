@@ -1,23 +1,39 @@
 """AI-SDLC CLI entry point."""
 
 import typer
+from rich.console import Console
 
-from ai_sdlc.cli.gate_cmd import gate_app
-from ai_sdlc.cli.index_cmd import index_command
-from ai_sdlc.cli.init_cmd import init_command
-from ai_sdlc.cli.recover_cmd import recover_command
-from ai_sdlc.cli.refresh_cmd import refresh_command
-from ai_sdlc.cli.rules_cmd import rules_app
+from ai_sdlc.cli.cli_hooks import run_ide_adapter_if_initialized
+from ai_sdlc.cli.commands import (
+    index_command,
+    init_command,
+    recover_command,
+    refresh_command,
+    scan_command,
+    status_command,
+)
 from ai_sdlc.cli.run_cmd import run_command
-from ai_sdlc.cli.scan_cmd import scan_command
-from ai_sdlc.cli.status_cmd import status_command
-from ai_sdlc.cli.studio_cmd import studio_app
+from ai_sdlc.cli.stage_cmd import stage_app
+from ai_sdlc.cli.sub_apps import gate_app, rules_app, studio_app
 
 app = typer.Typer(
     name="ai-sdlc",
     help="AI-native SDLC automation framework.",
     no_args_is_help=True,
 )
+
+_hook_console = Console()
+
+
+@app.callback()
+def _global_before_command(ctx: typer.Context) -> None:
+    """First non-init command in an initialized project applies IDE adapter."""
+    if ctx.invoked_subcommand is None:
+        return
+    if ctx.invoked_subcommand == "init":
+        return
+    run_ide_adapter_if_initialized(console=_hook_console)
+
 
 app.command(name="init")(init_command)
 app.command(name="status")(status_command)
@@ -29,6 +45,7 @@ app.command(name="run")(run_command)
 app.add_typer(gate_app, name="gate")
 app.add_typer(rules_app, name="rules")
 app.add_typer(studio_app, name="studio")
+app.add_typer(stage_app, name="stage")
 
 if __name__ == "__main__":
     app()

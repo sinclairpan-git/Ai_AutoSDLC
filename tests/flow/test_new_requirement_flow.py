@@ -5,7 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from ai_sdlc.core.state_machine import transition
-from ai_sdlc.models.work_item import WorkItemStatus, WorkType
+from ai_sdlc.models.work import WorkItemStatus, WorkType
 from ai_sdlc.routers.bootstrap import init_project
 from ai_sdlc.routers.work_intake import KeywordWorkIntakeRouter, generate_work_item_id
 from ai_sdlc.studios.prd_studio import check_prd_readiness

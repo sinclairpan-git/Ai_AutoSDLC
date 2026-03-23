@@ -6,14 +6,14 @@ import logging
 from pathlib import Path
 from typing import Any
 
-from ai_sdlc.models.incident import (
+from ai_sdlc.models.work import (
     IncidentAnalysis,
     IncidentBrief,
     IncidentFixPlan,
     IncidentTask,
     PostmortemRecord,
 )
-from ai_sdlc.utils.time_utils import now_iso
+from ai_sdlc.utils.helpers import now_iso
 
 logger = logging.getLogger(__name__)
 
@@ -115,7 +115,7 @@ class IncidentStudio:
         fix_plan: IncidentFixPlan,
         postmortem: PostmortemRecord,
     ) -> None:
-        from ai_sdlc.utils.fs import AI_SDLC_DIR
+        from ai_sdlc.utils.helpers import AI_SDLC_DIR
 
         out_dir = root / AI_SDLC_DIR / "work-items" / wid
         out_dir.mkdir(parents=True, exist_ok=True)

@@ -1,0 +1,27 @@
+stage: decompose
+description: "任务分解 — 将 plan 拆解为可执行的 tasks.md"
+prerequisites: [init, refine, design]
+
+context:
+  must_read:
+    - specs/{id}/spec.md
+    - specs/{id}/plan.md
+    - .ai-sdlc/memory/constitution.md
+  rules:
+    - batch-protocol
+    - pipeline
+    - multi-agent
+
+checklist:
+  - id: generate_tasks
+    action: "基于 plan.md 生成 tasks.md，按 Batch 分组"
+    verify: "specs/{id}/tasks.md 文件存在且包含 Task 条目"
+  - id: check_dependencies
+    action: "验证任务依赖关系无循环"
+    verify: "无循环依赖"
+  - id: gate_check
+    action: "运行 decompose gate"
+    verify: "verdict = PASS"
+
+outputs:
+  - specs/{id}/tasks.md

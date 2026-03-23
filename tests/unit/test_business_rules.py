@@ -10,14 +10,19 @@ import pytest
 from ai_sdlc.branch.branch_manager import BranchError, BranchManager
 from ai_sdlc.branch.file_guard import FileGuard, ProtectedFileError
 from ai_sdlc.branch.git_client import GitClient
-from ai_sdlc.core.batch_executor import BatchExecutor, CircuitBreakerError
+from ai_sdlc.core.executor import BatchExecutor, CircuitBreakerError
 from ai_sdlc.core.state_machine import transition
 from ai_sdlc.errors import ProjectNotInitializedError, StudioRoutingError
-from ai_sdlc.gates.execute_gate import ExecuteGate
-from ai_sdlc.models.context import RuntimeState
-from ai_sdlc.models.execution import ExecutionBatch, ExecutionPlan, Task, TaskStatus
+from ai_sdlc.gates.pipeline_gates import ExecuteGate
 from ai_sdlc.models.gate import GateVerdict
-from ai_sdlc.models.work_item import (
+from ai_sdlc.models.state import (
+    ExecutionBatch,
+    ExecutionPlan,
+    RuntimeState,
+    Task,
+    TaskStatus,
+)
+from ai_sdlc.models.work import (
     ClarificationStatus,
     WorkItem,
     WorkItemSource,
@@ -69,7 +74,7 @@ class TestRoutingRules:
 
 class TestGovernanceRules:
     def test_br010_governance_requires_all_present(self) -> None:
-        from ai_sdlc.models.governance import GovernanceState
+        from ai_sdlc.models.gate import GovernanceState
 
         gov = GovernanceState()
         assert not gov.frozen
@@ -166,9 +171,8 @@ class TestExecutionRules:
 
 class TestRecoveryRules:
     def test_br040_resume_pack_restores_stage(self, tmp_path: Path) -> None:
-        from ai_sdlc.context.checkpoint import save_checkpoint
-        from ai_sdlc.context.resume import build_resume_pack
-        from ai_sdlc.models.checkpoint import (
+        from ai_sdlc.context.state import build_resume_pack, save_checkpoint
+        from ai_sdlc.models.state import (
             Checkpoint,
             ExecuteProgress,
             FeatureInfo,
@@ -197,8 +201,8 @@ class TestRecoveryRules:
 
 class TestKnowledgeRules:
     def test_br050_refresh_blocks_completion(self, tmp_path: Path) -> None:
-        from ai_sdlc.gates.knowledge_gate import KnowledgeGate
-        from ai_sdlc.knowledge.baseline import initialize_baseline
+        from ai_sdlc.gates.extra_gates import KnowledgeGate
+        from ai_sdlc.knowledge.engine import initialize_baseline
 
         initialize_baseline(tmp_path)
         result = KnowledgeGate().check({"root": str(tmp_path), "spec_changed": True})
@@ -209,9 +213,8 @@ class TestKnowledgeRules:
         assert result == WorkItemStatus.COMPLETED
 
     def test_br052_refresh_log_appended(self, tmp_path: Path) -> None:
-        from ai_sdlc.knowledge.baseline import initialize_baseline
-        from ai_sdlc.knowledge.refresh import apply_refresh
-        from ai_sdlc.models.knowledge import RefreshLevel
+        from ai_sdlc.knowledge.engine import apply_refresh, initialize_baseline
+        from ai_sdlc.models.scanner import RefreshLevel
 
         initialize_baseline(tmp_path)
         apply_refresh(tmp_path, "WI-001", ["src/foo.py"], RefreshLevel.L1)

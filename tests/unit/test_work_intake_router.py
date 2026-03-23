@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import re
 
-from ai_sdlc.models.work_item import (
+from ai_sdlc.models.work import (
     ClarificationStatus,
     Confidence,
     WorkItemSource,
@@ -75,7 +75,7 @@ class TestKeywordClassification:
 
     def test_created_status(self) -> None:
         result = self.router.classify("新增功能")
-        from ai_sdlc.models.work_item import WorkItemStatus
+        from ai_sdlc.models.work import WorkItemStatus
 
         assert result.status == WorkItemStatus.CREATED
 

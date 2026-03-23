@@ -2,12 +2,13 @@
 
 from __future__ import annotations
 
-from ai_sdlc.models.execution import Task
-from ai_sdlc.models.parallel import ParallelPolicy
-from ai_sdlc.parallel.merge_simulator import simulate_merge
-from ai_sdlc.parallel.overlap_detector import detect_overlaps
-from ai_sdlc.parallel.splitter import split_into_groups
-from ai_sdlc.parallel.worker_assigner import assign_workers
+from ai_sdlc.models.state import ParallelPolicy, Task
+from ai_sdlc.parallel.engine import (
+    assign_workers,
+    detect_overlaps,
+    simulate_merge,
+    split_into_groups,
+)
 
 
 def _task(

@@ -1,0 +1,25 @@
+stage: verify
+description: "任务审核 — 验证 tasks.md 的质量与可执行性"
+prerequisites: [init, refine, design, decompose]
+
+context:
+  must_read:
+    - specs/{id}/spec.md
+    - specs/{id}/plan.md
+    - specs/{id}/tasks.md
+  rules:
+    - quality-gate
+    - verification
+
+checklist:
+  - id: review_tasks
+    action: "审核 tasks.md 中每个 Task 的完整性（有 ID、标题、依赖、产物、验证条件）"
+    verify: "所有 Task 字段完整"
+  - id: check_coverage
+    action: "验证 tasks 覆盖 plan.md 中所有 Phase"
+    verify: "plan 中每个 Phase 至少有一个 Task"
+  - id: gate_check
+    action: "运行 verify gate"
+    verify: "verdict = PASS"
+
+outputs: []

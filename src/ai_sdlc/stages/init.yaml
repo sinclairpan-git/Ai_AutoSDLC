@@ -1,0 +1,27 @@
+stage: init
+description: "项目初始化 — 创建 .ai-sdlc 目录结构，检测项目状态"
+prerequisites: []
+
+context:
+  must_read: []
+  rules:
+    - pipeline
+    - scenario-routing
+
+checklist:
+  - id: detect_state
+    action: "检测项目状态（greenfield / existing_initialized / existing_uninitialized）"
+    verify: "detect_project_state 返回有效状态字符串"
+  - id: create_structure
+    action: "创建 .ai-sdlc/ 目录结构（project/, state/, memory/, profiles/）"
+    verify: ".ai-sdlc/ 目录及子目录存在"
+  - id: write_state
+    action: "写入 project-state.yaml（status=initialized）"
+    verify: "project-state.yaml 存在且可解析"
+  - id: gate_check
+    action: "运行 init gate"
+    verify: "verdict = PASS"
+
+outputs:
+  - .ai-sdlc/project/config/project-state.yaml
+  - .ai-sdlc/project/config/project-config.yaml

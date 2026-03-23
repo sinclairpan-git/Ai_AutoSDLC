@@ -4,11 +4,9 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from ai_sdlc.core.batch_executor import BatchExecutor
-from ai_sdlc.core.execution_logger import ExecutionLogger
-from ai_sdlc.generators.tasks_parser import TasksParser
-from ai_sdlc.models.context import RuntimeState
-from ai_sdlc.models.execution import TaskStatus
+from ai_sdlc.core.executor import BatchExecutor, ExecutionLogger
+from ai_sdlc.generators.doc_gen import TasksParser
+from ai_sdlc.models.state import RuntimeState, TaskStatus
 
 SAMPLE_TASKS_MD = """\
 # 任务分解：WI-2026-FLOW

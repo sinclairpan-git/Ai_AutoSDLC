@@ -1,0 +1,43 @@
+stage: execute
+description: "代码实现与测试 — 按批次执行任务，逐条提交"
+prerequisites: [init, refine, design, decompose, verify]
+
+context:
+  must_read:
+    - specs/{id}/tasks.md
+    - specs/{id}/plan.md
+    - specs/{id}/spec.md
+    - .ai-sdlc/memory/constitution.md
+  rules:
+    - batch-protocol
+    - tdd
+    - debugging
+    - code-review
+    - git-branch
+
+checklist:
+  - id: parse_tasks
+    action: "解析 tasks.md 为 ExecutionPlan"
+    verify: "任务列表非空"
+  - id: switch_branch
+    action: "切换到 feature/{id}-dev 分支"
+    verify: "git branch 输出包含 feature/{id}-dev"
+  - id: execute_batch
+    action: "执行当前批次所有任务"
+    verify: "批次内任务全部 completed 或 halted"
+  - id: run_tests
+    action: "运行 pytest 全量测试"
+    verify: "0 failures"
+  - id: write_log
+    action: "追加 execution-log.md"
+    verify: "文件已更新"
+  - id: commit
+    action: "git commit 当前批次"
+    verify: "git status clean"
+  - id: gate_check
+    action: "运行 execute gate"
+    verify: "verdict = PASS"
+
+outputs:
+  - execution-log.md
+  - committed code on feature branch

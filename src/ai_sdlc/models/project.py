@@ -30,3 +30,8 @@ class ProjectConfig(BaseModel):
     default_execution_mode: str = "auto"
     default_branch_strategy: str = "dual"
     max_parallel_agents: int = 3
+    # Auto IDE adapter (first command + init)
+    detected_ide: str = ""
+    adapter_applied: str = ""
+    adapter_version: str = ""
+    adapter_applied_at: str = ""

@@ -4,11 +4,29 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pytest
 from typer.testing import CliRunner
 
 from ai_sdlc.cli.main import app
 
 runner = CliRunner()
+
+IDE_ENV_KEYS = [
+    "CURSOR_TRACE_ID",
+    "CURSOR_AGENT",
+    "VSCODE_IPC_HOOK_CLI",
+    "TERM_PROGRAM",
+    "OPENAI_CODEX",
+    "CODEX_CLI_READY",
+    "CLAUDE_CODE_ENTRYPOINT",
+    "CLAUDECODE",
+]
+
+
+@pytest.fixture(autouse=True)
+def _clear_ide_env(monkeypatch: pytest.MonkeyPatch) -> None:
+    for key in IDE_ENV_KEYS:
+        monkeypatch.delenv(key, raising=False)
 
 
 class TestCliInit:
@@ -31,3 +49,17 @@ class TestCliInit:
         result = runner.invoke(app, ["init", str(tmp_path)])
         assert result.exit_code == 0
         assert tmp_path.name in result.output
+
+    def test_init_with_cursor_dir_installs_rule(self, tmp_path: Path) -> None:
+        (tmp_path / ".cursor").mkdir()
+        result = runner.invoke(app, ["init", str(tmp_path)])
+        assert result.exit_code == 0
+        rule = tmp_path / ".cursor" / "rules" / "ai-sdlc.md"
+        assert rule.is_file()
+        assert "cursor" in result.output.lower()
+
+    def test_init_generic_hint_without_ide_dirs(self, tmp_path: Path) -> None:
+        result = runner.invoke(app, ["init", str(tmp_path)])
+        assert result.exit_code == 0
+        hint = tmp_path / ".ai-sdlc" / "memory" / "ide-adapter-hint.md"
+        assert hint.is_file()
