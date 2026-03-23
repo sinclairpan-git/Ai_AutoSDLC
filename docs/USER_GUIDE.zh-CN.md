@@ -327,3 +327,51 @@ ai-sdlc recover
 
 到这里你就可以把这套流程迁移到真实项目中，开始按阶段协作开发。
 
+---
+
+## 12. 完全离线环境：一键打包 + 一键安装（含 Windows）
+
+适用场景：他人电脑、服务器、内网、无 GitHub、无公网 PyPI。
+
+### 12.1 联网机器打包
+
+```bash
+cd /path/to/Ai_AutoSDLC
+./packaging/offline/build_offline_bundle.sh
+```
+
+产物：
+
+- `dist-offline/ai-sdlc-offline-<version>.tar.gz`（Linux/macOS 推荐）
+- `dist-offline/ai-sdlc-offline-<version>.zip`（Windows 推荐）
+
+### 12.2 目标机离线安装
+
+Linux/macOS：
+
+```bash
+tar xzf ai-sdlc-offline-0.1.0.tar.gz
+cd ai-sdlc-offline-0.1.0
+chmod +x install_offline.sh
+./install_offline.sh
+```
+
+Windows（PowerShell）：
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\install_offline.ps1
+```
+
+Windows（批处理）：
+
+```bat
+install_offline.bat
+```
+
+安装后在你的项目目录执行：
+
+```bash
+ai-sdlc --help
+ai-sdlc init .
+```
+
