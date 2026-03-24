@@ -15,13 +15,13 @@ context:
 
 checklist:
   - id: research
-    action: "产出 research.md — 技术调研与方案对比"
+    action: "产出 research.md — 技术调研与方案对比（简体中文）"
     verify: "specs/{id}/research.md 文件存在"
   - id: data_model
-    action: "产出 data-model.md — 数据模型定义"
+    action: "产出 data-model.md — 数据模型定义（简体中文）"
     verify: "specs/{id}/data-model.md 文件存在"
   - id: plan
-    action: "产出 plan.md — 实现计划，引用 constitution"
+    action: "产出 plan.md — 实现计划，引用 constitution（简体中文）"
     verify: "specs/{id}/plan.md 文件存在且引用 constitution"
   - id: gate_check
     action: "运行 design gate"

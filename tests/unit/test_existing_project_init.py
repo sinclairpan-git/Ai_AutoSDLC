@@ -74,7 +74,7 @@ class TestCorpusGeneration:
     def test_codebase_summary_stats(self) -> None:
         scan = _make_scan()
         summary = generate_codebase_summary(scan)
-        assert "**Total files**: 10" in summary
+        assert "**文件总数**：10" in summary
         assert "python" in summary
 
     def test_project_brief_primary_language(self) -> None:

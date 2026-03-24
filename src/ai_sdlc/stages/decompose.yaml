@@ -14,8 +14,8 @@ context:
 
 checklist:
   - id: generate_tasks
-    action: "基于 plan.md 生成 tasks.md，按 Batch 分组"
-    verify: "specs/{id}/tasks.md 文件存在且包含 Task 条目"
+    action: "基于 plan.md 生成 tasks.md，按批次分组（简体中文）"
+    verify: "specs/{id}/tasks.md 文件存在且包含任务条目"
   - id: check_dependencies
     action: "验证任务依赖关系无循环"
     verify: "无循环依赖"

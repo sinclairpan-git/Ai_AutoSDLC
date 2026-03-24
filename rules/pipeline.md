@@ -2,6 +2,10 @@
 
 > 本规则在执行 SDLC 流水线的任何阶段时生效。
 
+## 产出语言（默认）
+
+凡由本流水线**生成或写入**、**面向人阅读**的 Markdown（包括 `specs/**` 下 spec/plan/tasks、`.ai-sdlc/memory/**` 宪章与基线、项目 README、产品说明等），**正文与章节标题须使用简体中文**；路径、命令、代码标识符、HTTP 方法、JSON 字段名、接口名等保持原样。可参考仓库 `templates/constitution-template.zh.md`、`templates/readme-template.zh.md` 的结构与语气。
+
 ## 强制行为
 
 1. **宪章至上**：在任何阶段生成任何产物之前，必须先读取 `.ai-sdlc/memory/constitution.md` 并确保产物符合宪章所有 MUST 规则。宪章违规是 CRITICAL 级别问题，不允许自动跳过。

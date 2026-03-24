@@ -20,7 +20,7 @@
 - **路径**：`.ai-sdlc/memory/engineering-corpus.md`
 - **模板**：`templates/brownfield-corpus-template.md`
 - **与宪章的关系**：宪章回答「必须遵守什么」（规范性）；corpus 回答「现有系统是什么」（描述性）。Stage 0 生成宪章时须对照 corpus 中的事实，不得产生矛盾。
-- **与 README 的关系**：独立成文。README 面向人类 onboarding；corpus 面向结构化推理与变更定位。二者可互相链接路径，不引用对方内容。
+- **与 README 的关系**：独立成文。README 面向人类 onboarding；corpus 面向结构化推理与变更定位。二者可互相链接路径，不引用对方内容。若新建或更新项目根 `README.md`，**正文须使用简体中文**（见 `rules/pipeline.md`「产出语言」）；可参考 `templates/readme-template.zh.md`。
 
 ## 3. 分层有界探索
 

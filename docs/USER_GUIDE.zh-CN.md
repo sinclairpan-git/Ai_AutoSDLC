@@ -356,7 +356,7 @@ ai-sdlc stage status
 初始化后你会看到：
 
 - `.ai-sdlc/project/config/project-state.yaml`：项目状态（是否初始化、时间戳等）
-- `.ai-sdlc/project/config/project-config.yaml`：项目配置（含 IDE 识别/适配记录）
+- `.ai-sdlc/project/config/project-config.yaml`：项目配置（含 IDE 识别/适配记录）。字段 `document_locale` 默认 `zh-CN`，表示框架生成的**面向人阅读的 Markdown**（扫描基线、脚手架等）以简体中文为主；流水线产物语言约定另见 `rules/pipeline.md`「产出语言」。
 - `.ai-sdlc/memory/`：记忆与上下文沉淀（含 generic 适配 hint）
 
 这部分是框架的“持久化大脑”，建议提交到版本库（除非你的团队有其他策略）。

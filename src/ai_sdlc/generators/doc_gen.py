@@ -65,7 +65,9 @@ class DocScaffolder:
 
 # ── tasks parser ──
 
-_TASK_HEADER = re.compile(r"^###\s+Task\s+(\d+)\.(\d+)\s+(.*)", re.IGNORECASE)
+_TASK_HEADER = re.compile(
+    r"^###\s+(?:Task|任务)\s+(\d+)\.(\d+)\s+(.*)", re.IGNORECASE
+)
 _FIELD_PATTERN = re.compile(r"^-\s+\*\*(.*?)\*\*\s*[:：]\s*(.*)")
 
 
@@ -119,7 +121,10 @@ class TasksParser:
         """Build a Task from parsed header and field data."""
         phase = int(header.group(1))
         title = header.group(3).strip()
-        task_id = fields.get("task id", f"T{phase}{header.group(2)}")
+        task_id = fields.get(
+            "task id",
+            fields.get("任务编号", f"T{phase}{header.group(2)}"),
+        )
 
         depends_raw = fields.get("依赖", fields.get("depends", ""))
         depends_on: list[str] = []
@@ -128,7 +133,7 @@ class TasksParser:
 
         files_raw = fields.get("文件", fields.get("files", ""))
         file_paths: list[str] = []
-        if files_raw and files_raw not in ("TBD", "tbd", "-"):
+        if files_raw and files_raw not in ("TBD", "tbd", "-", "待定"):
             file_paths = [f.strip() for f in files_raw.split(",") if f.strip()]
 
         parallel_raw = fields.get("可并行", fields.get("parallelizable", "否"))

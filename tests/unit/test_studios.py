@@ -136,13 +136,15 @@ class TestMaintenanceStudio:
         studio = MaintenanceStudio()
         brief = MaintenanceBrief(description="Performance optimization")
         studio.process(brief, {"work_item_id": "WI-2026-010", "root": str(tmp_path)})
-        assert (
+        out = (
             tmp_path
             / ".ai-sdlc"
             / "work-items"
             / "WI-2026-010"
             / "maintenance-brief.md"
-        ).exists()
+        )
+        assert out.exists()
+        assert "# 维护计划：" in out.read_text(encoding="utf-8")
 
     def test_rejects_wrong_input_type(self) -> None:
         studio = MaintenanceStudio()

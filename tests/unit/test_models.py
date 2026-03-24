@@ -58,6 +58,7 @@ class TestProjectModels:
         assert config.default_execution_mode == "auto"
         assert config.default_branch_strategy == "dual"
         assert config.max_parallel_agents == 3
+        assert config.document_locale == "zh-CN"
 
 
 class TestWorkItemModels:

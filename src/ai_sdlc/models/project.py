@@ -38,6 +38,8 @@ class ProjectConfig(BaseModel):
     default_execution_mode: str = "auto"
     default_branch_strategy: str = "dual"
     max_parallel_agents: int = 3
+    #: Default language for human-readable generated docs (Markdown). Use zh-CN for 简体中文.
+    document_locale: str = "zh-CN"
     # Auto IDE adapter (first command + init)
     detected_ide: str = ""
     adapter_applied: str = ""

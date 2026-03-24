@@ -29,7 +29,7 @@ def test_template_renders_minimal_context(template_name: str) -> None:
     if template_name != "execution-log.md.j2":
         assert "2026-01-01T00:00:00+00:00" in out
     else:
-        assert "TBD" in out
+        assert "待定" in out
 
 
 @pytest.mark.parametrize("template_name", TEMPLATES)

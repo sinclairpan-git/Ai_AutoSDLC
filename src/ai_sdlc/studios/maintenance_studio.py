@@ -103,14 +103,14 @@ class MaintenanceStudio:
         out_dir.mkdir(parents=True, exist_ok=True)
 
         (out_dir / "maintenance-brief.md").write_text(
-            f"# Maintenance Plan: {wid}\n\n"
-            f"## Summary\n\n{plan.brief_summary}\n\n"
-            f"## Category\n\n{plan.category or 'general'}\n\n"
-            f"## Tasks ({plan.task_graph.task_count})\n\n"
+            f"# 维护计划：{wid}\n\n"
+            f"## 摘要\n\n{plan.brief_summary}\n\n"
+            f"## 类别\n\n{plan.category or 'general'}\n\n"
+            f"## 任务（共 {plan.task_graph.task_count} 项）\n\n"
             + "\n".join(
-                f"### {t.task_id}: {t.title}\n\n{t.description}\n\n"
-                f"**Depends on**: {', '.join(t.depends_on) or 'none'}\n\n"
-                f"**Verification**: {t.verification}\n"
+                f"### {t.task_id}：{t.title}\n\n{t.description}\n\n"
+                f"**依赖**：{', '.join(t.depends_on) or '无'}\n\n"
+                f"**验证方式**：{t.verification}\n"
                 for t in plan.task_graph.tasks
             ),
             encoding="utf-8",
