@@ -7,7 +7,7 @@
 # Usage:
 #   ./packaging/offline/build_offline_bundle.sh
 # Env:
-#   PYTHON=/path/to/python3.11   interpreter used for pip download (default: python3)
+#   PYTHON=/path/to/python3.11   interpreter used for pip download (default: try python3.11, then python3)
 
 set -euo pipefail
 
@@ -19,11 +19,29 @@ VERSION="$(awk -F'"' '/^version =/ {print $2; exit}' pyproject.toml)"
 OUT="${ROOT}/dist-offline/ai-sdlc-offline-${VERSION}"
 ARCHIVE="${ROOT}/dist-offline/ai-sdlc-offline-${VERSION}.tar.gz"
 ZIP_ARCHIVE="${ROOT}/dist-offline/ai-sdlc-offline-${VERSION}.zip"
-PY="${PYTHON:-python3}"
 
-if ! "${PY}" -c 'import sys; sys.exit(0 if sys.version_info >= (3, 11) else 1)' 2>/dev/null; then
-  echo "error: ${PY} must be Python >= 3.11" >&2
-  exit 1
+_pick_py() {
+  local c
+  for c in "$@"; do
+    if "${c}" -c 'import sys; sys.exit(0 if sys.version_info >= (3, 11) else 1)' 2>/dev/null \
+      && "${c}" -m pip --version >/dev/null 2>&1; then
+      printf '%s' "${c}"
+      return 0
+    fi
+  done
+  return 1
+}
+
+if [[ -n "${PYTHON:-}" ]]; then
+  if ! PY="$(_pick_py "${PYTHON}")"; then
+    echo "error: PYTHON=${PYTHON} must be Python >= 3.11 with pip (for pip download step)" >&2
+    exit 1
+  fi
+else
+  if ! PY="$(_pick_py python3.11 python3)"; then
+    echo "error: need Python >= 3.11 with pip on PATH (try: brew install python@3.11, or set PYTHON=...)" >&2
+    exit 1
+  fi
 fi
 
 rm -rf "${OUT}"
