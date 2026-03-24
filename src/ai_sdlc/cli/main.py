@@ -12,6 +12,7 @@ from ai_sdlc.cli.commands import (
     scan_command,
     status_command,
 )
+from ai_sdlc.cli.program_cmd import program_app
 from ai_sdlc.cli.run_cmd import run_command
 from ai_sdlc.cli.stage_cmd import stage_app
 from ai_sdlc.cli.sub_apps import gate_app, rules_app, studio_app
@@ -46,6 +47,7 @@ app.add_typer(gate_app, name="gate")
 app.add_typer(rules_app, name="rules")
 app.add_typer(studio_app, name="studio")
 app.add_typer(stage_app, name="stage")
+app.add_typer(program_app, name="program")
 
 if __name__ == "__main__":
     app()

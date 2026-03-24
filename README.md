@@ -34,3 +34,4 @@ uv run mypy src/ai_sdlc/
 
 - Chinese user guide: `docs/USER_GUIDE.zh-CN.md`
 - Offline install bundle (build + one-command install): `packaging/offline/README.md`
+- Spec split and program orchestration: `docs/SPEC_SPLIT_AND_PROGRAM.zh-CN.md`

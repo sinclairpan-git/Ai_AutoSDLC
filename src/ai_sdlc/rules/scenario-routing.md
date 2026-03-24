@@ -18,6 +18,10 @@
 
 适用于：新功能、较大改造、从 0 到 1、增量 Feature（简化引导但仍产出 PRD）。
 
+若一个 PRD 需要拆分为多个可并行执行的 SPEC，按
+`docs/SPEC_SPLIT_AND_PROGRAM.zh-CN.md` 的 Program 清单与依赖规则执行，
+避免在 EXECUTE 阶段临时决定跨 spec 并行。
+
 **存量代码库**（已有业务实现）：在 PRD 引导之后、进入 Stage 1 之前，须满足 `rules/brownfield-corpus.md`——先产出 `memory/engineering-corpus.md` 作为结构化工程索引。不得用通读全仓库代替（与热修复 §2 的精简流程要求不同）。
 
 ---

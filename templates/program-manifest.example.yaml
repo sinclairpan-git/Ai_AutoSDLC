@@ -1,0 +1,22 @@
+schema_version: "1"
+prd_path: "PRD.md"
+specs:
+  - id: "001-auth-core"
+    path: "specs/001-auth-core"
+    depends_on: []
+    branch_slug: "auth-core"
+    owner: "team-auth"
+
+  - id: "002-course-catalog"
+    path: "specs/002-course-catalog"
+    depends_on: []
+    branch_slug: "course-catalog"
+    owner: "team-course"
+
+  - id: "003-enrollment-flow"
+    path: "specs/003-enrollment-flow"
+    depends_on:
+      - "001-auth-core"
+      - "002-course-catalog"
+    branch_slug: "enrollment-flow"
+    owner: "team-enrollment"

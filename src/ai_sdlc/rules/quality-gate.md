@@ -89,14 +89,17 @@ PASS 条件:
   ✓ 每个用户故事至少有 1 个任务覆盖
   ✓ 任务 ID 连续且唯一
   ✓ Phase 划分合理（有准备阶段和收尾阶段）
+  ✓ 若存在 program-manifest.yaml：depends_on 无环、spec 节点可解析、依赖引用存在
 
 RETRY 触发:
   - 部分任务缺少文件路径 → 自动补充
   - 遗漏了某个用户故事 → 自动补充
+  - program manifest 存在可修复的格式问题（缺少可推导字段）
 
 HALT 触发:
   - 任务依赖关系成环
   - 生成了超出 spec 范围的任务
+  - program manifest 依赖关系成环或引用不存在的 spec
 ```
 
 ### VERIFY 阶段门禁

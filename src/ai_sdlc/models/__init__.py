@@ -7,6 +7,7 @@ from ai_sdlc.models.gate import (
     GovernanceItem,
     GovernanceState,
 )
+from ai_sdlc.models.program import ProgramManifest, ProgramSpecRef
 from ai_sdlc.models.project import ProjectConfig, ProjectState, ProjectStatus
 from ai_sdlc.models.scanner import (
     ApiEndpoint,
@@ -103,6 +104,8 @@ __all__ = [
     "ParallelPolicy",
     "PostmortemRecord",
     "PrdReadiness",
+    "ProgramManifest",
+    "ProgramSpecRef",
     "ProjectConfig",
     "ProjectState",
     "ProjectStatus",

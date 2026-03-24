@@ -375,3 +375,23 @@ ai-sdlc --help
 ai-sdlc init .
 ```
 
+---
+
+## 13. 多 SPEC Program 命令（分阶段上线）
+
+当你的 PRD 需要拆成多个 `specs/NNN-*` 时，使用 Program 命令进行程序级校验与计划：
+
+```bash
+ai-sdlc program validate --manifest program-manifest.yaml
+ai-sdlc program status --manifest program-manifest.yaml
+ai-sdlc program plan --manifest program-manifest.yaml
+```
+
+命令语义（当前阶段）：
+
+- `validate`：检查 manifest 格式、依赖引用、环依赖、路径有效性。
+- `status`：查看各 spec 的阶段提示、任务完成度和阻塞依赖。
+- `plan`：输出拓扑顺序和并行 tiers（可并行分组）。
+
+拆分规则与收口规范见：`docs/SPEC_SPLIT_AND_PROGRAM.zh-CN.md`。
+

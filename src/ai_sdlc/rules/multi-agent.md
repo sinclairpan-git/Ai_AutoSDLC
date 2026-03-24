@@ -3,6 +3,13 @@
 > 本规则在 DECOMPOSE 阶段的任务标记和 EXECUTE 阶段的批次执行中激活。
 > 当运行环境支持多 Agent 并行时，协调多个 Agent 同时工作以提高效率。
 
+## 术语边界（避免混淆）
+
+- **Spec Agent-Main**：单个 `specs/NNN-*` 内部并行调度者（本文既有 Step P1~P4 角色）。
+- **Program Integrator**：跨多个 spec 的程序级收口者，负责依赖顺序合并、验证、归档与发布。
+  Program Integrator 规则详见 `docs/SPEC_SPLIT_AND_PROGRAM.zh-CN.md` 与
+  CLI `ai-sdlc program integrate` 命令约束。
+
 ## 核心原则
 
 ```
