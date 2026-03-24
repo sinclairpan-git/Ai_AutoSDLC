@@ -9,6 +9,36 @@ uv sync
 uv run ai-sdlc --help
 ```
 
+## Windows: venv, PATH, and `ai-sdlc` not found
+
+After `pip install` or the offline installer, the `ai-sdlc.exe` shim lives under your venv’s `Scripts` folder. That directory is only on `PATH` while the venv is activated.
+
+1. Create and activate the venv (PowerShell). If `Activate.ps1` is blocked, use bypass for this session only:
+
+   ```powershell
+   Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
+   .\.venv\Scripts\Activate.ps1
+   ```
+
+2. Check that the CLI resolves:
+
+   ```powershell
+   Get-Command ai-sdlc
+   ai-sdlc --help
+   ```
+
+3. If `ai-sdlc` is still not found, call the shim by full path (adjust `.venv` if you used another name):
+
+   ```powershell
+   & .\.venv\Scripts\ai-sdlc.exe --help
+   ```
+
+4. If `ai-sdlc` is not on `PATH` but Python can import the package, you can use `python -m ai_sdlc` (same subcommands as `ai-sdlc`).
+
+5. Run `python -m ai_sdlc doctor` (or `ai-sdlc doctor` after activation) to print the active interpreter, whether `ai-sdlc` is on `PATH`, and the typical shim path for this Python.
+
+See also `packaging/offline/README.md` for offline bundles: build wheels on the **same OS/CPU** as the target machine; do not reuse a macOS wheel set on Windows.
+
 ## Start The Framework
 
 After initializing your project, explicitly start the pipeline from CLI:
@@ -43,6 +73,6 @@ uv run mypy src/ai_sdlc/
 
 ## Documentation
 
-- Chinese user guide: `docs/USER_GUIDE.zh-CN.md`
+- Chinese user guide: `docs/USER_GUIDE.zh-CN.md` (start with **§3 Install & environment**)
 - Offline install bundle (build + one-command install): `packaging/offline/README.md`
 - Spec split and program orchestration: `docs/SPEC_SPLIT_AND_PROGRAM.zh-CN.md`

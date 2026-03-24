@@ -5,6 +5,6 @@
 请手动在所用 AI 助手中引用：
 
 - `.ai-sdlc/memory/constitution.md`
-- `ai-sdlc stage --help` 与 `ai-sdlc run --help`
+- `ai-sdlc stage --help` 与 `ai-sdlc run --help`（若 `ai-sdlc` 不在 PATH，请用已安装该包的 Python：`python -m ai_sdlc ...`）
 
 若之后添加 `.cursor/`、`.vscode/`、`.codex/` 或 `.claude/` 目录，下次执行任意 `ai-sdlc` 命令时会自动尝试补齐对应适配文件（不覆盖已有文件）。

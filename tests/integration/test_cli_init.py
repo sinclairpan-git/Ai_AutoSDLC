@@ -36,12 +36,14 @@ class TestCliInit:
         assert (tmp_path / ".ai-sdlc").is_dir()
         assert "Initialized" in result.output
         assert "ai-sdlc run --dry-run" in result.output
+        assert "python -m ai_sdlc run --dry-run" in result.output
 
     def test_init_already_initialized(self, initialized_project_dir: Path) -> None:
         result = runner.invoke(app, ["init", str(initialized_project_dir)])
         assert result.exit_code == 0
         assert "already initialized" in result.output
         assert "ai-sdlc run --dry-run" in result.output
+        assert "python -m ai_sdlc run --dry-run" in result.output
 
     def test_init_nonexistent_dir(self, tmp_path: Path) -> None:
         result = runner.invoke(app, ["init", str(tmp_path / "nope")])

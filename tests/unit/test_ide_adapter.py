@@ -119,6 +119,7 @@ class TestApplyAdapter:
             apply_adapter(tmp_path, ide)
             text = path.read_text(encoding="utf-8")
             assert "ai-sdlc run --dry-run" in text
+            assert "python -m ai_sdlc run --dry-run" in text
 
 
 class TestEnsureIdeAdaptation:

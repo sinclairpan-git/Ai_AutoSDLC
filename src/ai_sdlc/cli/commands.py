@@ -31,7 +31,9 @@ def _startup_next_step_hint() -> str:
     return (
         "\n\n[bold]Next step:[/bold]\n"
         "  Start framework in safe mode: [cyan]ai-sdlc run --dry-run[/cyan]\n"
-        "  Or stage-by-stage: [cyan]ai-sdlc stage run init --dry-run[/cyan]"
+        "  Or stage-by-stage: [cyan]ai-sdlc stage run init --dry-run[/cyan]\n"
+        "  If `ai-sdlc` is not on PATH, use the venv's Python:\n"
+        "  [cyan]python -m ai_sdlc run --dry-run[/cyan]"
     )
 
 

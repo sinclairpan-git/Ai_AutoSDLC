@@ -1,0 +1,47 @@
+"""Integration tests for `python -m ai_sdlc` (PATH fallback)."""
+
+from __future__ import annotations
+
+import os
+import subprocess
+import sys
+from pathlib import Path
+
+_REPO_ROOT = Path(__file__).resolve().parents[2]
+_SRC = _REPO_ROOT / "src"
+
+
+def _env_with_src_on_path() -> dict[str, str]:
+    env = dict(os.environ)
+    prev = env.get("PYTHONPATH", "")
+    env["PYTHONPATH"] = str(_SRC) if not prev else f"{_SRC}{os.pathsep}{prev}"
+    return env
+
+
+def test_python_m_ai_sdlc_help_exits_zero() -> None:
+    result = subprocess.run(
+        [sys.executable, "-m", "ai_sdlc", "--help"],
+        capture_output=True,
+        text=True,
+        cwd=str(_REPO_ROOT),
+        env=_env_with_src_on_path(),
+        check=False,
+    )
+    assert result.returncode == 0, result.stderr
+    combined = f"{result.stdout}\n{result.stderr}"
+    assert "ai-sdlc" in combined.lower() or "SDLC" in combined
+
+
+def test_python_m_ai_sdlc_no_args_shows_help() -> None:
+    result = subprocess.run(
+        [sys.executable, "-m", "ai_sdlc"],
+        capture_output=True,
+        text=True,
+        cwd=str(_REPO_ROOT),
+        env=_env_with_src_on_path(),
+        check=False,
+    )
+    # Typer may exit 2 when printing help with no subcommand; content is what matters.
+    assert result.returncode in (0, 2), result.stderr
+    combined = f"{result.stdout}\n{result.stderr}"
+    assert "Usage:" in combined and "COMMAND" in combined

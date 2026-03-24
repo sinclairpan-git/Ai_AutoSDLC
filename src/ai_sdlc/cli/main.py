@@ -12,6 +12,7 @@ from ai_sdlc.cli.commands import (
     scan_command,
     status_command,
 )
+from ai_sdlc.cli.doctor_cmd import doctor_command
 from ai_sdlc.cli.program_cmd import program_app
 from ai_sdlc.cli.run_cmd import run_command
 from ai_sdlc.cli.stage_cmd import stage_app
@@ -31,12 +32,13 @@ def _global_before_command(ctx: typer.Context) -> None:
     """First non-init command in an initialized project applies IDE adapter."""
     if ctx.invoked_subcommand is None:
         return
-    if ctx.invoked_subcommand == "init":
+    if ctx.invoked_subcommand in ("init", "doctor"):
         return
     run_ide_adapter_if_initialized(console=_hook_console)
 
 
 app.command(name="init")(init_command)
+app.command(name="doctor")(doctor_command)
 app.command(name="status")(status_command)
 app.command(name="recover")(recover_command)
 app.command(name="index")(index_command)

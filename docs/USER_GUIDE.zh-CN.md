@@ -1,5 +1,7 @@
 # AI-SDLC 实战用户手册（中文版）
 
+> **阅读顺序**：使用本工具前，请先完成 **[§3 安装与环境（第一步）](#user-guide-s3-install)**（含安装后验证）。再执行 `init`、流水线与日常命令。
+
 ## 1. 这套框架是什么
 
 `AI-SDLC` 是一套 AI-Native 软件研发流程自动化框架，核心形态是一个 Python CLI（`ai-sdlc`）。
@@ -17,64 +19,169 @@
 
 ---
 
-## 3. 快速开始（5 分钟）
+<a id="user-guide-s3-install"></a>
+
+## 3. 安装与环境（第一步）
+
+**所有使用场景都请先完成：安装 → [安装验证](#user-guide-install-verify) → 再 `init`。**  
+下面按常见路径组织；若某一步报错「找不到 `ai-sdlc`」，优先看 **[§3.7 Windows 与 PATH](#user-guide-win-path)**（macOS/Linux 同理：需激活 venv 或改用 `python -m ai_sdlc`）。
 
 ### 3.1 环境准备
 
-- Python `>=3.11`
-- 推荐使用 `uv`（也支持 `pip`）
+- Python **`>=3.11`**
+- 包管理：普通用户用 **`pip`** 即可；已安装 **`uv`** 时可用 `uv sync` / `uv run`（见 §3.5）
 
-### 3.2 安装（开发模式）
+### 3.2 安装方式怎么选
+
+| 你的情况 | 推荐小节 |
+|----------|----------|
+| 有公网，只要在本机用 CLI，不参与本仓库开发 | **[§3.3 在线安装（pip）](#user-guide-install-online)** |
+| 无外网 / 内网 / 不能访问 PyPI、GitHub | **[§3.4 离线安装](#user-guide-install-offline)**，细节另见 **[§12](#user-guide-offline-chapter)** 与仓库 [`packaging/offline/README.md`](../packaging/offline/README.md) |
+| 已克隆 `Ai_AutoSDLC` 仓库，想快速跑 CLI | **[§3.5 使用 uv（本仓库）](#user-guide-install-uv)** |
+| 在本仓库里改框架代码 | **[§3.6 开发模式（可编辑安装）](#user-guide-install-dev)** |
+
+<a id="user-guide-install-online"></a>
+
+### 3.3 在线安装（pip，普通用户推荐）
+
+> 适用：不在本仓库内开发，只想在本机安装并使用 `ai-sdlc`。
+
+Windows / macOS / Linux（通用；**推荐不依赖本机 Git**，用 zip 源）：
+
+```bash
+python -m venv .venv
+# Windows (PowerShell): .\.venv\Scripts\Activate.ps1
+# macOS/Linux: source .venv/bin/activate
+python -m pip install -U pip
+pip install "https://github.com/sinclairpan-git/Ai_AutoSDLC/archive/refs/tags/v0.2.1.zip"
+```
+
+安装完成后**务必**做 [§3.8 安装验证](#user-guide-install-verify)（`ai-sdlc --help` 或 `python -m ai_sdlc --help`）。Windows 若未激活 venv，可先使用：
+
+```powershell
+& .\.venv\Scripts\ai-sdlc.exe --help
+```
+
+若本机已安装 Git，也可改用（将标签换成当前发布版本，例如 `v0.2.1`）：
+
+```bash
+pip install "git+https://github.com/sinclairpan-git/Ai_AutoSDLC.git@v0.2.1"
+```
+
+<a id="user-guide-install-offline"></a>
+
+### 3.4 离线安装（无外网）
+
+适用：目标机无法访问 PyPI / GitHub，或使用内网镜像仍不可用。
+
+1. **打包**（在联网机器、且尽量与目标机 **同一操作系统与 CPU 架构** 上执行）：仓库根目录执行 `./packaging/offline/build_offline_bundle.sh`，产物与目录说明见 [`packaging/offline/README.md`](../packaging/offline/README.md) 与下文 **[§12](#user-guide-offline-chapter)**。
+2. **安装**：将离线包拷到目标机解压后，运行 `install_offline.sh`（Linux/macOS）或 `install_offline.ps1` / `install_offline.bat`（Windows）。**禁止**把在 macOS 上打好的 `wheels` 目录直接用于 Windows（反之亦然），否则会出现缺依赖或无法安装。
+3. **验证**：与 [§3.8](#user-guide-install-verify) 相同；脚本结束时的提示也会给出 `Activate.ps1`、全路径 `ai-sdlc.exe` 与 `python -m ai_sdlc` 等写法。
+
+维护者发布离线包前的检查清单见 [`packaging/offline/README.md`](../packaging/offline/README.md) 第五节。
+
+<a id="user-guide-install-uv"></a>
+
+### 3.5 使用 uv（本仓库）
+
+> 适用：已克隆 `Ai_AutoSDLC` 仓库，且本机已安装 [uv](https://github.com/astral-sh/uv)。
+
+```bash
+cd /path/to/Ai_AutoSDLC
+uv sync              # 参与框架开发可加: uv sync --dev
+uv run ai-sdlc --help
+```
+
+`uv run` 会在项目环境中执行 CLI，不依赖全局 PATH 上的 `ai-sdlc`。
+
+<a id="user-guide-install-dev"></a>
+
+### 3.6 开发模式（可编辑安装）
+
+> 适用：在本仓库内修改 `ai-sdlc` 源码并即时生效。
 
 ```bash
 # 方式 A：uv
 uv sync --dev
+uv run ai-sdlc --help
 
 # 方式 B：pip editable
 python3.11 -m venv .venv
-source .venv/bin/activate
+source .venv/bin/activate          # Windows: .\.venv\Scripts\Activate.ps1
 pip install -U pip
 pip install -e ".[dev]"
-```
-
-### 3.3 安装（在线，面向普通使用者）
-
-> 适用：不在本仓库内开发，只想在本机安装并使用 `ai-sdlc`。
-
-Windows / macOS / Linux（通用，推荐不依赖本机 git）：
-
-```bash
-python -m venv .venv
-# Windows: .\.venv\Scripts\Activate.ps1
-# macOS/Linux: source .venv/bin/activate
-python -m pip install -U pip
-pip install "https://github.com/sinclairpan-git/Ai_AutoSDLC/archive/refs/tags/v0.2.0.zip"
 ai-sdlc --help
 ```
 
-若本机已安装 git，也可使用：
+<a id="user-guide-win-path"></a>
 
-```bash
-pip install "git+https://github.com/sinclairpan-git/Ai_AutoSDLC.git@v0.2.0"
-```
+### 3.7 Windows：虚拟环境、PATH 与「找不到 ai-sdlc」
 
-### 3.4 查看命令
+`ai-sdlc` 的可执行文件默认安装在虚拟环境的 `Scripts` 目录（例如 `.venv\Scripts\ai-sdlc.exe`）。**未激活 venv** 或 **未把 `Scripts` 加入 PATH** 时，直接在终端输入 `ai-sdlc` 会提示找不到命令，这是环境配置问题，不是 CLI 未安装。
+
+建议顺序：
+
+1. 创建并激活 venv（PowerShell）。若提示无法加载 `Activate.ps1`，仅当前进程放宽执行策略：
+
+   ```powershell
+   Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
+   .\.venv\Scripts\Activate.ps1
+   ```
+
+2. 确认能解析到命令：
+
+   ```powershell
+   Get-Command ai-sdlc
+   ai-sdlc --help
+   ```
+
+3. 若仍失败，使用完整路径（venv 目录名按你实际为准）：
+
+   ```powershell
+   & .\.venv\Scripts\ai-sdlc.exe --help
+   ```
+
+4. 若已激活 venv 但习惯用解释器调用，可使用 `python -m ai_sdlc`（子命令与 `ai-sdlc` 相同），例如 `python -m ai_sdlc run --dry-run`。
+
+**说明**：本框架**不会**替你修改 Windows 全局 PATH；在 Cursor / VS Code / Codex 等内置终端中，仍需使用已激活 venv 的终端，或上述全路径 / `python -m` 写法。
+
+<a id="user-guide-install-verify"></a>
+
+### 3.8 安装验证与故障自检
+
+安装完成后，在**安装时所使用的同一虚拟环境**下执行（任选其一成功即可）：
 
 ```bash
 ai-sdlc --help
 ```
 
-### 3.5 初始化项目
+若提示找不到 `ai-sdlc`，改用：
 
-在你的工程目录执行：
+```bash
+python -m ai_sdlc --help
+```
+
+需要查看当前 Python、`ai-sdlc` 是否在 PATH、典型 shim 路径时：
+
+```bash
+ai-sdlc doctor
+# 或（不依赖 PATH 上的 ai-sdlc）
+python -m ai_sdlc doctor
+```
+
+### 3.9 初始化项目
+
+**在确认 §3.8 通过后**，在你的工程目录执行：
 
 ```bash
 ai-sdlc init .
 ```
 
+（若仅用 `python -m`，则：`python -m ai_sdlc init .`。后文示例默认已激活 venv。）
+
 初始化后会生成 `.ai-sdlc/`，并自动进行 IDE 适配落地。
 
-### 3.6 启动工程框架（强制入口）
+### 3.10 启动工程框架（强制入口）
 
 > 关键说明：输入需求本身不会自动执行流水线。完成 `init` 后，需显式执行启动命令。
 
@@ -372,7 +479,11 @@ ai-sdlc recover
 
 ---
 
+<a id="user-guide-offline-chapter"></a>
+
 ## 12. 完全离线环境：一键打包 + 一键安装（含 Windows）
+
+> **与 §3 的关系**：离线安装是 **[§3.4](#user-guide-install-offline)** 的展开版；通用安装顺序、验证命令与 Windows PATH 说明以 **[§3](#user-guide-s3-install)** 为准。
 
 适用场景：他人电脑、服务器、内网、无 GitHub、无公网 PyPI。
 
@@ -390,11 +501,11 @@ cd /path/to/Ai_AutoSDLC
 
 ### 12.2 目标机离线安装
 
-Linux/macOS：
+Linux/macOS（将 `0.2.1` 换成你手中离线包的实际版本目录名）：
 
 ```bash
-tar xzf ai-sdlc-offline-0.2.0.tar.gz
-cd ai-sdlc-offline-0.2.0
+tar xzf ai-sdlc-offline-0.2.1.tar.gz
+cd ai-sdlc-offline-0.2.1
 chmod +x install_offline.sh
 ./install_offline.sh
 ```
@@ -413,11 +524,20 @@ install_offline.bat
 
 > 注意：离线包依赖 wheel 与平台相关。Windows 用户请下载 Windows 包，macOS 用户请下载 macOS 包，不可混用。
 
-安装后在你的项目目录执行：
+安装后请先完成 **[§3.8 安装验证](#user-guide-install-verify)**，再进入业务项目目录。示例：
 
 ```bash
+# 已激活 venv 时
 ai-sdlc --help
 ai-sdlc init .
+```
+
+Windows 若尚未激活 venv，可先验证：
+
+```powershell
+& .\.venv\Scripts\ai-sdlc.exe --help
+# 或
+& .\.venv\Scripts\python.exe -m ai_sdlc --help
 ```
 
 ---

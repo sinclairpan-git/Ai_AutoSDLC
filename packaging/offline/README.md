@@ -46,8 +46,22 @@ install_offline.bat
 
 ## 三、安装后验证
 
+**Linux / macOS**（已 `source .venv/bin/activate`）：
+
 ```bash
 ai-sdlc --help
+```
+
+**Windows**（推荐先激活 venv；若未激活，用完整路径或模块方式）：
+
+```powershell
+# 激活后
+ai-sdlc --help
+
+# 或未激活时
+& .\.venv\Scripts\ai-sdlc.exe --help
+# 或
+& .\.venv\Scripts\python.exe -m ai_sdlc --help
 ```
 
 然后进入业务项目目录：
@@ -72,3 +86,12 @@ ai-sdlc init .
 - `install_offline.ps1` / `install_offline.bat`：Windows 一键离线安装
 
 `dist-offline/` 是本地构建产物，已在 `.gitignore` 中忽略，不提交二进制包。
+
+## 五、发布检查清单（维护者）
+
+发布或分发离线包前建议逐项确认：
+
+1. **平台匹配**：在 **Windows** 上构建/下载的 `wheels` 只给 Windows 用；在 **Linux/macOS** 上生成的依赖 wheel 不要与 Windows 混用（否则会出现缺依赖或无法安装的二进制包）。
+2. **版本一致**：`wheels/` 内仅保留一个 `ai_sdlc-<version>-*.whl`，与 `pyproject.toml` / 标签版本一致。
+3. **冒烟**：在目标平台解压后运行对应 `install_offline` 脚本，再按上文「安装后验证」执行 `ai-sdlc --help` 或 `python -m ai_sdlc --help`。
+4. **发行说明**：在 Release Notes 中写明「离线包需与目标操作系统一致」，并指向本文档。
