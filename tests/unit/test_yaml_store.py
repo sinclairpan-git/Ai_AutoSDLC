@@ -36,6 +36,15 @@ class TestYamlStoreLoad:
         state = YamlStore.load(f, ProjectState)
         assert state.status == ProjectStatus.UNINITIALIZED
 
+    def test_load_legacy_planning_status_maps_to_initialized(
+        self, tmp_path: Path
+    ) -> None:
+        f = tmp_path / "legacy.yaml"
+        f.write_text("status: planning\nproject_name: demo\n")
+        state = YamlStore.load(f, ProjectState)
+        assert state.status == ProjectStatus.INITIALIZED
+        assert state.project_name == "demo"
+
     def test_load_corrupt_yaml_raises(self, tmp_path: Path) -> None:
         f = tmp_path / "corrupt.yaml"
         f.write_text(": : : [invalid yaml\n  bad: {{")

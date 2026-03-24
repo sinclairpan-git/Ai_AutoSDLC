@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from enum import Enum
 
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 
 
 class ProjectStatus(str, Enum):
@@ -21,6 +21,14 @@ class ProjectState(BaseModel):
     last_updated: str | None = None
     next_work_item_seq: int = 1
     version: str = "1.0"
+
+    @field_validator("status", mode="before")
+    @classmethod
+    def _normalize_legacy_status(cls, value: object) -> object:
+        # Backward compatibility: early builds wrote `planning`.
+        if isinstance(value, str) and value.strip().lower() == "planning":
+            return ProjectStatus.INITIALIZED
+        return value
 
 
 class ProjectConfig(BaseModel):
