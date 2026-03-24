@@ -148,3 +148,106 @@ def program_plan(
         table.add_row(str(idx), ", ".join(tier))
     console.print(table)
     raise typer.Exit(code=0)
+
+
+@program_app.command("integrate")
+def program_integrate(
+    manifest: str = typer.Option(
+        "program-manifest.yaml",
+        "--manifest",
+        help="Path to program manifest relative to project root.",
+    ),
+    dry_run: bool = typer.Option(
+        True,
+        "--dry-run/--execute",
+        help="Dry-run only in current phase; execute is guarded and not enabled yet.",
+    ),
+    report: str = typer.Option(
+        "",
+        "--report",
+        help="Optional report output path relative to project root.",
+    ),
+) -> None:
+    """Build an integration runbook. Current phase supports dry-run only."""
+    root = _resolve_root()
+    svc = ProgramService(root, root / manifest)
+
+    try:
+        mf = svc.load_manifest()
+    except Exception as exc:
+        console.print(f"[red]Failed to load manifest: {exc}[/red]")
+        raise typer.Exit(code=2) from None
+
+    result = svc.validate_manifest(mf)
+    if not result.valid:
+        console.print("[bold red]Manifest invalid; cannot build integration runbook.[/bold red]")
+        for e in result.errors:
+            console.print(f"  - {e}")
+        raise typer.Exit(code=1)
+
+    if not dry_run:
+        console.print(
+            "[bold yellow]`--execute` is intentionally disabled in Phase 3a.[/bold yellow]"
+        )
+        console.print("Use `--dry-run` to generate a safe integration runbook first.")
+        raise typer.Exit(code=2)
+
+    plan = svc.build_integration_dry_run(mf)
+    if not plan.steps:
+        console.print("[red]No integration steps generated.[/red]")
+        raise typer.Exit(code=1)
+
+    table = Table(title="Program Integrate Dry-Run")
+    table.add_column("Order")
+    table.add_column("Tier")
+    table.add_column("Spec")
+    table.add_column("Path")
+    table.add_column("Verification")
+    table.add_column("Archive Checks")
+    for step in plan.steps:
+        table.add_row(
+            str(step.order),
+            str(step.tier),
+            step.spec_id,
+            step.path,
+            " ; ".join(step.verification_commands),
+            " ; ".join(step.archive_checks),
+        )
+    console.print(table)
+
+    if plan.warnings:
+        console.print("\n[bold yellow]Warnings[/bold yellow]")
+        for w in plan.warnings:
+            console.print(f"  - {w}")
+
+    if report:
+        report_path = root / report
+        report_path.parent.mkdir(parents=True, exist_ok=True)
+        lines: list[str] = [
+            "# Program Integration Dry-Run",
+            "",
+            f"- Manifest: `{manifest}`",
+            "",
+            "## Steps",
+            "",
+        ]
+        for step in plan.steps:
+            lines.extend(
+                [
+                    f"### {step.order}. {step.spec_id} (tier {step.tier})",
+                    f"- Path: `{step.path}`",
+                    "- Verification:",
+                ]
+            )
+            lines.extend([f"  - `{cmd}`" for cmd in step.verification_commands])
+            lines.append("- Archive checks:")
+            lines.extend([f"  - {item}" for item in step.archive_checks])
+            lines.append("")
+        if plan.warnings:
+            lines.append("## Warnings")
+            lines.extend([f"- {w}" for w in plan.warnings])
+            lines.append("")
+        report_path.write_text("\n".join(lines), encoding="utf-8")
+        console.print(f"\n[green]Report written:[/green] {report_path}")
+
+    raise typer.Exit(code=0)

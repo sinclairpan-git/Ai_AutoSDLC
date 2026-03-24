@@ -27,6 +27,22 @@ class ProgramSpecStatus:
     blocked_by: list[str] = field(default_factory=list)
 
 
+@dataclass
+class ProgramIntegrationStep:
+    order: int
+    tier: int
+    spec_id: str
+    path: str
+    verification_commands: list[str] = field(default_factory=list)
+    archive_checks: list[str] = field(default_factory=list)
+
+
+@dataclass
+class ProgramIntegrationPlan:
+    steps: list[ProgramIntegrationStep] = field(default_factory=list)
+    warnings: list[str] = field(default_factory=list)
+
+
 class ProgramService:
     """Program-level helper service used by CLI `program` commands."""
 
@@ -165,6 +181,50 @@ class ProgramService:
             statuses[spec.id].blocked_by = blocked
 
         return [statuses[s.id] for s in manifest.specs if s.id in statuses]
+
+    def build_integration_dry_run(self, manifest: ProgramManifest) -> ProgramIntegrationPlan:
+        """Build a dry-run integration plan (no git mutations)."""
+        tiers = self.topo_tiers(manifest)
+        status_rows = {row.spec_id: row for row in self.build_status(manifest)}
+        spec_by_id = {spec.id: spec for spec in manifest.specs}
+
+        steps: list[ProgramIntegrationStep] = []
+        warnings: list[str] = []
+        order = 1
+        for tier_idx, tier in enumerate(tiers):
+            for spec_id in tier:
+                spec = spec_by_id.get(spec_id)
+                if spec is None:
+                    warnings.append(f"spec {spec_id}: missing from manifest index")
+                    continue
+                row = status_rows.get(spec_id)
+                if row and row.blocked_by:
+                    warnings.append(
+                        f"spec {spec_id}: currently blocked by {', '.join(row.blocked_by)}"
+                    )
+                steps.append(
+                    ProgramIntegrationStep(
+                        order=order,
+                        tier=tier_idx,
+                        spec_id=spec_id,
+                        path=spec.path,
+                        verification_commands=[
+                            ".venv/bin/python -m pytest tests/ -q --tb=short",
+                            ".venv/bin/python -m ruff check src/ tests/",
+                            ".venv/bin/python -m ruff format --check src/ tests/",
+                        ],
+                        archive_checks=[
+                            "execution-log up to date",
+                            "development-summary present or updated",
+                            "PRD traceability matrix updated",
+                        ],
+                    )
+                )
+                order += 1
+
+        if not steps:
+            warnings.append("no integration steps computed from manifest")
+        return ProgramIntegrationPlan(steps=steps, warnings=warnings)
 
     def _build_graph(self, manifest: ProgramManifest) -> dict[str, list[str]]:
         return {spec.id: list(spec.depends_on) for spec in manifest.specs}

@@ -90,3 +90,34 @@ specs:
         assert plan.exit_code == 0
         assert "Program Plan" in plan.output
         assert "003-enroll" in plan.output
+
+    def test_program_integrate_dry_run_with_report(
+        self, initialized_project_dir: Path
+    ) -> None:
+        root = initialized_project_dir
+        _write_manifest(root)
+        report_rel = ".ai-sdlc/memory/program-integration-plan.md"
+        with patch("ai_sdlc.cli.program_cmd.find_project_root", return_value=root):
+            result = runner.invoke(
+                app,
+                [
+                    "program",
+                    "integrate",
+                    "--dry-run",
+                    "--report",
+                    report_rel,
+                ],
+            )
+        assert result.exit_code == 0
+        assert "Program Integrate Dry-Run" in result.output
+        assert (root / report_rel).is_file()
+
+    def test_program_integrate_execute_is_blocked(
+        self, initialized_project_dir: Path
+    ) -> None:
+        root = initialized_project_dir
+        _write_manifest(root)
+        with patch("ai_sdlc.cli.program_cmd.find_project_root", return_value=root):
+            result = runner.invoke(app, ["program", "integrate", "--execute"])
+        assert result.exit_code == 2
+        assert "disabled in Phase 3a" in result.output
