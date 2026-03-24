@@ -39,6 +39,17 @@
 - `ai-sdlc program validate`: 校验 manifest（重复、缺失、环依赖、路径）
 - `ai-sdlc program status`: 查看每个 spec 的阶段提示与任务完成度
 - `ai-sdlc program plan`: 输出拓扑顺序与可并行 tiers
+- `ai-sdlc program integrate --dry-run`: 生成只读收口 runbook（顺序、验证矩阵、归档检查）
+- `ai-sdlc program integrate --execute --yes`: 执行受保护门禁检查（Phase 3b）
+
+### 3.1 `integrate --execute` 门禁（Phase 3b）
+
+执行模式为“有保护但不做危险 Git 变更”的收口入口，默认必须显式确认：
+
+- 必须带 `--yes`，否则命令直接拒绝执行（exit code 2）。
+- 每个 spec 必须达到 `close`（即 `development-summary.md` 已存在）。
+- 不允许存在依赖阻塞（`blocked_by` 必须为空）。
+- 默认要求 Git 工作区干净；如需临时放宽，使用 `--allow-dirty`（会输出 warning）。
 
 ## 4. 收口 Agent（Program Integrator）
 

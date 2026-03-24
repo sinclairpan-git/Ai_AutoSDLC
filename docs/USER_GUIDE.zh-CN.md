@@ -386,6 +386,7 @@ ai-sdlc program validate --manifest program-manifest.yaml
 ai-sdlc program status --manifest program-manifest.yaml
 ai-sdlc program plan --manifest program-manifest.yaml
 ai-sdlc program integrate --dry-run --manifest program-manifest.yaml
+ai-sdlc program integrate --execute --yes --manifest program-manifest.yaml
 ```
 
 命令语义（当前阶段）：
@@ -394,6 +395,7 @@ ai-sdlc program integrate --dry-run --manifest program-manifest.yaml
 - `status`：查看各 spec 的阶段提示、任务完成度和阻塞依赖。
 - `plan`：输出拓扑顺序和并行 tiers（可并行分组）。
 - `integrate --dry-run`：输出程序级收口预演步骤（合并顺序、验证矩阵、归档检查），不执行 merge/push。
+- `integrate --execute --yes`：执行受保护收口门禁（仅在门禁通过时返回成功），支持 `--allow-dirty` 临时放宽工作区干净检查。
 
 拆分规则与收口规范见：`docs/SPEC_SPLIT_AND_PROGRAM.zh-CN.md`。
 
