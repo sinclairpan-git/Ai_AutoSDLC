@@ -107,6 +107,19 @@ class TestApplyAdapter:
         assert f.read_text(encoding="utf-8") == "user content"
         assert str(f) in r.skipped_user_modified
 
+    def test_all_ide_templates_include_safe_start_command(self, tmp_path: Path) -> None:
+        (tmp_path / AI_SDLC_DIR).mkdir(parents=True)
+        targets = [
+            (IDEKind.CURSOR, tmp_path / ".cursor" / "rules" / "ai-sdlc.md"),
+            (IDEKind.VSCODE, tmp_path / ".vscode" / "AI-SDLC.md"),
+            (IDEKind.CODEX, tmp_path / ".codex" / "AI-SDLC.md"),
+            (IDEKind.CLAUDE_CODE, tmp_path / ".claude" / "AI-SDLC.md"),
+        ]
+        for ide, path in targets:
+            apply_adapter(tmp_path, ide)
+            text = path.read_text(encoding="utf-8")
+            assert "ai-sdlc run --dry-run" in text
+
 
 class TestEnsureIdeAdaptation:
     def test_skips_without_ai_sdlc(self, tmp_path: Path) -> None:

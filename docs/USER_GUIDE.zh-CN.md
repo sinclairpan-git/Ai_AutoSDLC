@@ -74,6 +74,28 @@ ai-sdlc init .
 
 初始化后会生成 `.ai-sdlc/`，并自动进行 IDE 适配落地。
 
+### 3.6 启动工程框架（强制入口）
+
+> 关键说明：输入需求本身不会自动执行流水线。完成 `init` 后，需显式执行启动命令。
+
+推荐入口（安全）：
+
+```bash
+ai-sdlc run --dry-run
+```
+
+通过后再执行：
+
+```bash
+ai-sdlc run
+```
+
+如果你偏好分阶段执行，可使用：
+
+```bash
+ai-sdlc stage run init --dry-run
+```
+
 ---
 
 ## 4. 开箱即用 IDE 自动适配
@@ -489,4 +511,41 @@ ai-sdlc stage run close --dry-run
 - 先复现、后修改；先验证、后收口。
 - 优先最小改动面，避免“顺手大改”。
 - 收口前确保测试、lint、关键流程检查通过。
+
+---
+
+## 15. 代码评审、测试评审与归档收口模板
+
+### 15.1 代码评审（提交前）
+
+建议按 `rules/code-review.md` 六维度执行：
+
+- 宪章对齐（Critical）
+- 需求规格对齐（Critical）
+- 技术规范一致性
+- 代码质量
+- 测试质量
+- Spec 偏移检测
+
+### 15.2 测试评审（完成声明前）
+
+最小验证命令（示例）：
+
+```bash
+uv run pytest -q
+uv run ruff check src/ tests/
+uv run ruff format --check src/ tests/
+```
+
+在任何“已完成”声明前，必须有新鲜命令输出证据（见 `rules/verification.md`）。
+
+### 15.3 归档收口（Close）
+
+收口时至少确认：
+
+- `tasks.md` 中任务状态与实际一致
+- `task-execution-log.md` 记录完整
+- `development-summary.md` 已更新
+- 最终测试/构建结果可追溯
+- Git 提交与发布说明已同步
 

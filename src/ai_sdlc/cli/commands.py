@@ -27,6 +27,14 @@ from ai_sdlc.utils.helpers import AI_SDLC_DIR, find_project_root
 console = Console()
 
 
+def _startup_next_step_hint() -> str:
+    return (
+        "\n\n[bold]Next step:[/bold]\n"
+        "  Start framework in safe mode: [cyan]ai-sdlc run --dry-run[/cyan]\n"
+        "  Or stage-by-stage: [cyan]ai-sdlc stage run init --dry-run[/cyan]"
+    )
+
+
 # ---------------------------------------------------------------------------
 # init
 # ---------------------------------------------------------------------------
@@ -50,7 +58,8 @@ def init_command(
         ensure_ide_adaptation(root)
         console.print(
             Panel(
-                f"Project already initialized at [bold]{root}[/bold]",
+                f"Project already initialized at [bold]{root}[/bold]"
+                f"{_startup_next_step_hint()}",
                 title="ai-sdlc init",
                 border_style="yellow",
             )
@@ -74,6 +83,7 @@ def init_command(
     )
     if is_existing:
         info += "\n  [dim]Knowledge baseline generated (corpus + indexes)[/dim]"
+    info += _startup_next_step_hint()
 
     console.print(Panel(info, title="ai-sdlc init", border_style="green"))
     raise typer.Exit(code=0)

@@ -9,6 +9,17 @@ uv sync
 uv run ai-sdlc --help
 ```
 
+## Start The Framework
+
+After initializing your project, explicitly start the pipeline from CLI:
+
+```bash
+ai-sdlc init .
+ai-sdlc run --dry-run
+```
+
+`--dry-run` is the recommended safe entry. It validates stage routing and gates before real execution.
+
 ## Stage-based dispatch (LLM-friendly)
 
 Run one pipeline stage at a time with an explicit checklist (manifests live in `src/ai_sdlc/stages/*.yaml`):
