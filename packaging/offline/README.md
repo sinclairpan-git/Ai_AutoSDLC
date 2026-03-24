@@ -26,8 +26,8 @@ chmod +x packaging/offline/build_offline_bundle.sh
 ### Linux/macOS
 
 ```bash
-tar xzf ai-sdlc-offline-0.1.0.tar.gz
-cd ai-sdlc-offline-0.1.0
+tar xzf ai-sdlc-offline-0.2.0.tar.gz
+cd ai-sdlc-offline-0.2.0
 chmod +x install_offline.sh
 ./install_offline.sh
 ```
@@ -55,6 +55,15 @@ ai-sdlc --help
 ```bash
 ai-sdlc init .
 ```
+
+## 平台兼容提醒
+
+离线包中的依赖 wheel 可能与操作系统/CPU 架构相关。请尽量：
+
+- 在与目标机相同的平台打包
+- 或为 Windows、macOS 分别提供对应离线包
+
+避免将 macOS 打出的离线包直接用于 Windows（反之亦然）。
 
 ## 四、脚本说明
 

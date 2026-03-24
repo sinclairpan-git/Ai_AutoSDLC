@@ -37,13 +37,34 @@ pip install -U pip
 pip install -e ".[dev]"
 ```
 
-### 3.3 查看命令
+### 3.3 安装（在线，面向普通使用者）
+
+> 适用：不在本仓库内开发，只想在本机安装并使用 `ai-sdlc`。
+
+Windows / macOS / Linux（通用，推荐不依赖本机 git）：
+
+```bash
+python -m venv .venv
+# Windows: .\.venv\Scripts\Activate.ps1
+# macOS/Linux: source .venv/bin/activate
+python -m pip install -U pip
+pip install "https://github.com/sinclairpan-git/Ai_AutoSDLC/archive/refs/tags/v0.2.0.zip"
+ai-sdlc --help
+```
+
+若本机已安装 git，也可使用：
+
+```bash
+pip install "git+https://github.com/sinclairpan-git/Ai_AutoSDLC.git@v0.2.0"
+```
+
+### 3.4 查看命令
 
 ```bash
 ai-sdlc --help
 ```
 
-### 3.4 初始化项目
+### 3.5 初始化项目
 
 在你的工程目录执行：
 
@@ -350,8 +371,8 @@ cd /path/to/Ai_AutoSDLC
 Linux/macOS：
 
 ```bash
-tar xzf ai-sdlc-offline-0.1.0.tar.gz
-cd ai-sdlc-offline-0.1.0
+tar xzf ai-sdlc-offline-0.2.0.tar.gz
+cd ai-sdlc-offline-0.2.0
 chmod +x install_offline.sh
 ./install_offline.sh
 ```
@@ -367,6 +388,8 @@ Windows（批处理）：
 ```bat
 install_offline.bat
 ```
+
+> 注意：离线包依赖 wheel 与平台相关。Windows 用户请下载 Windows 包，macOS 用户请下载 macOS 包，不可混用。
 
 安装后在你的项目目录执行：
 
@@ -398,4 +421,72 @@ ai-sdlc program integrate --execute --yes --manifest program-manifest.yaml
 - `integrate --execute --yes`：执行受保护收口门禁（仅在门禁通过时返回成功），支持 `--allow-dirty` 临时放宽工作区干净检查。
 
 拆分规则与收口规范见：`docs/SPEC_SPLIT_AND_PROGRAM.zh-CN.md`。
+
+---
+
+## 14. 如何开启“需求开发”与“Bug 修复”
+
+### 14.1 新需求开发（Feature SOP）
+
+适用：新增能力、需求迭代、模块扩展。
+
+```bash
+# 1) 进入项目并初始化（首次）
+ai-sdlc init .
+
+# 2) 先看当前状态
+ai-sdlc status
+
+# 3) 先 dry-run，再正式执行
+ai-sdlc run --dry-run
+ai-sdlc run
+```
+
+若你希望人工把关更细，使用阶段式：
+
+```bash
+ai-sdlc stage show init
+ai-sdlc stage run init --dry-run
+ai-sdlc stage run refine --dry-run
+ai-sdlc stage run design --dry-run
+ai-sdlc stage run decompose --dry-run
+ai-sdlc stage run verify --dry-run
+ai-sdlc stage run execute --dry-run
+ai-sdlc stage run close --dry-run
+```
+
+多 SPEC 场景（Program）建议顺序：
+
+```bash
+ai-sdlc program validate --manifest program-manifest.yaml
+ai-sdlc program status --manifest program-manifest.yaml
+ai-sdlc program plan --manifest program-manifest.yaml
+ai-sdlc program integrate --dry-run --manifest program-manifest.yaml
+ai-sdlc program integrate --execute --yes --manifest program-manifest.yaml
+```
+
+### 14.2 Bug 修复（Bugfix SOP）
+
+适用：线上问题修复、回归缺陷、兼容性问题。
+
+```bash
+# 1) 先确认当前状态与上下文
+ai-sdlc status
+
+# 2) 用阶段方式先做定位与验证准备（建议 dry-run）
+ai-sdlc stage run refine --dry-run
+ai-sdlc stage run design --dry-run
+ai-sdlc stage run decompose --dry-run
+
+# 3) 修复前后执行验证
+ai-sdlc stage run verify --dry-run
+ai-sdlc stage run execute --dry-run
+ai-sdlc stage run close --dry-run
+```
+
+最小原则：
+
+- 先复现、后修改；先验证、后收口。
+- 优先最小改动面，避免“顺手大改”。
+- 收口前确保测试、lint、关键流程检查通过。
 
