@@ -5,6 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from ai_sdlc.branch.git_client import GitClient, GitError
 from ai_sdlc.core.config import YamlStore
 from ai_sdlc.models.program import ProgramManifest, ProgramSpecRef
 
@@ -40,6 +41,13 @@ class ProgramIntegrationStep:
 @dataclass
 class ProgramIntegrationPlan:
     steps: list[ProgramIntegrationStep] = field(default_factory=list)
+    warnings: list[str] = field(default_factory=list)
+
+
+@dataclass
+class ProgramExecuteGates:
+    passed: bool
+    failed: list[str] = field(default_factory=list)
     warnings: list[str] = field(default_factory=list)
 
 
@@ -225,6 +233,37 @@ class ProgramService:
         if not steps:
             warnings.append("no integration steps computed from manifest")
         return ProgramIntegrationPlan(steps=steps, warnings=warnings)
+
+    def evaluate_execute_gates(
+        self, manifest: ProgramManifest, *, allow_dirty: bool = False
+    ) -> ProgramExecuteGates:
+        """Evaluate protection gates before `program integrate --execute`."""
+        failed: list[str] = []
+        warnings: list[str] = []
+
+        status_rows = self.build_status(manifest)
+        for row in status_rows:
+            if row.stage_hint != "close":
+                failed.append(f"spec {row.spec_id} is not closed (stage={row.stage_hint})")
+            if row.blocked_by:
+                failed.append(
+                    f"spec {row.spec_id} is blocked by unresolved deps: {', '.join(row.blocked_by)}"
+                )
+
+        if not allow_dirty:
+            try:
+                if GitClient(self.root).has_uncommitted_changes():
+                    failed.append("git working tree is dirty; commit/stash before execute")
+            except GitError as exc:
+                warnings.append(f"git gate skipped: {exc}")
+        else:
+            warnings.append("git dirty check bypassed by --allow-dirty")
+
+        return ProgramExecuteGates(
+            passed=not failed,
+            failed=failed,
+            warnings=warnings,
+        )
 
     def _build_graph(self, manifest: ProgramManifest) -> dict[str, list[str]]:
         return {spec.id: list(spec.depends_on) for spec in manifest.specs}

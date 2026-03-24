@@ -100,3 +100,30 @@ def test_build_integration_dry_run(tmp_path: Path) -> None:
     assert plan.steps[0].tier == 0
     assert plan.steps[2].spec_id == "003-enroll"
     assert plan.steps[2].tier == 1
+
+
+def test_execution_gates_require_all_specs_closed(tmp_path: Path) -> None:
+    for p in ("specs/001-auth", "specs/002-course", "specs/003-enroll"):
+        (tmp_path / p).mkdir(parents=True)
+    (tmp_path / "specs" / "001-auth" / "development-summary.md").write_text(
+        "ok\n", encoding="utf-8"
+    )
+    (tmp_path / "specs" / "002-course" / "development-summary.md").write_text(
+        "ok\n", encoding="utf-8"
+    )
+    svc = ProgramService(tmp_path)
+    gates = svc.evaluate_execute_gates(_manifest(), allow_dirty=True)
+    assert gates.passed is False
+    assert any("not closed" in item for item in gates.failed)
+
+
+def test_execution_gates_pass_when_closed(tmp_path: Path) -> None:
+    for p in ("specs/001-auth", "specs/002-course", "specs/003-enroll"):
+        (tmp_path / p).mkdir(parents=True)
+    for spec in ("001-auth", "002-course", "003-enroll"):
+        (tmp_path / "specs" / spec / "development-summary.md").write_text(
+            "ok\n", encoding="utf-8"
+        )
+    svc = ProgramService(tmp_path)
+    gates = svc.evaluate_execute_gates(_manifest(), allow_dirty=True)
+    assert gates.passed is True

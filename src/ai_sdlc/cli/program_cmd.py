@@ -167,8 +167,18 @@ def program_integrate(
         "--report",
         help="Optional report output path relative to project root.",
     ),
+    yes: bool = typer.Option(
+        False,
+        "--yes",
+        help="Confirm guarded execute mode.",
+    ),
+    allow_dirty: bool = typer.Option(
+        False,
+        "--allow-dirty",
+        help="Allow execute gate to run on dirty working tree (not recommended).",
+    ),
 ) -> None:
-    """Build an integration runbook. Current phase supports dry-run only."""
+    """Build or execute a guarded integration runbook."""
     root = _resolve_root()
     svc = ProgramService(root, root / manifest)
 
@@ -185,18 +195,14 @@ def program_integrate(
             console.print(f"  - {e}")
         raise typer.Exit(code=1)
 
-    if not dry_run:
-        console.print(
-            "[bold yellow]`--execute` is intentionally disabled in Phase 3a.[/bold yellow]"
-        )
-        console.print("Use `--dry-run` to generate a safe integration runbook first.")
-        raise typer.Exit(code=2)
-
     plan = svc.build_integration_dry_run(mf)
     if not plan.steps:
         console.print("[red]No integration steps generated.[/red]")
         raise typer.Exit(code=1)
 
+    mode_title = (
+        "Program Integrate Dry-Run" if dry_run else "Program Integrate Execute (Guarded)"
+    )
     table = Table(title="Program Integrate Dry-Run")
     table.add_column("Order")
     table.add_column("Tier")
@@ -213,6 +219,7 @@ def program_integrate(
             " ; ".join(step.verification_commands),
             " ; ".join(step.archive_checks),
         )
+    table.title = mode_title
     console.print(table)
 
     if plan.warnings:
@@ -224,9 +231,10 @@ def program_integrate(
         report_path = root / report
         report_path.parent.mkdir(parents=True, exist_ok=True)
         lines: list[str] = [
-            "# Program Integration Dry-Run",
+            f"# {mode_title}",
             "",
             f"- Manifest: `{manifest}`",
+            f"- Mode: `{'dry-run' if dry_run else 'execute'}`",
             "",
             "## Steps",
             "",
@@ -249,5 +257,30 @@ def program_integrate(
             lines.append("")
         report_path.write_text("\n".join(lines), encoding="utf-8")
         console.print(f"\n[green]Report written:[/green] {report_path}")
+
+    if dry_run:
+        raise typer.Exit(code=0)
+
+    if not yes:
+        console.print(
+            "[bold yellow]`--execute` requires explicit confirmation via `--yes`.[/bold yellow]"
+        )
+        raise typer.Exit(code=2)
+
+    gates = svc.evaluate_execute_gates(mf, allow_dirty=allow_dirty)
+    if gates.warnings:
+        console.print("\n[bold yellow]Gate warnings[/bold yellow]")
+        for item in gates.warnings:
+            console.print(f"  - {item}")
+    if not gates.passed:
+        console.print("\n[bold red]Execution gates failed[/bold red]")
+        for item in gates.failed:
+            console.print(f"  - {item}")
+        raise typer.Exit(code=1)
+
+    console.print("\n[bold green]Execution gates passed[/bold green]")
+    console.print(
+        "Guarded execute completed: runbook generated and gates validated."
+    )
 
     raise typer.Exit(code=0)

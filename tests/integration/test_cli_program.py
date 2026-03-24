@@ -120,4 +120,45 @@ specs:
         with patch("ai_sdlc.cli.program_cmd.find_project_root", return_value=root):
             result = runner.invoke(app, ["program", "integrate", "--execute"])
         assert result.exit_code == 2
-        assert "disabled in Phase 3a" in result.output
+        assert "requires explicit confirmation" in result.output
+
+    def test_program_integrate_execute_success(self, initialized_project_dir: Path) -> None:
+        root = initialized_project_dir
+        _write_manifest(root)
+        for spec in ("001-auth", "002-course", "003-enroll"):
+            (root / "specs" / spec / "development-summary.md").write_text(
+                "done\n", encoding="utf-8"
+            )
+        report_rel = ".ai-sdlc/memory/program-integrate-execute.md"
+        with patch("ai_sdlc.cli.program_cmd.find_project_root", return_value=root):
+            result = runner.invoke(
+                app,
+                [
+                    "program",
+                    "integrate",
+                    "--execute",
+                    "--yes",
+                    "--allow-dirty",
+                    "--report",
+                    report_rel,
+                ],
+            )
+        assert result.exit_code == 0
+        assert "Program Integrate Execute (Guarded)" in result.output
+        assert (root / report_rel).is_file()
+
+    def test_program_integrate_execute_gate_fail_not_closed(
+        self, initialized_project_dir: Path
+    ) -> None:
+        root = initialized_project_dir
+        _write_manifest(root)
+        (root / "specs" / "001-auth" / "development-summary.md").write_text(
+            "done\n", encoding="utf-8"
+        )
+        with patch("ai_sdlc.cli.program_cmd.find_project_root", return_value=root):
+            result = runner.invoke(
+                app,
+                ["program", "integrate", "--execute", "--yes", "--allow-dirty"],
+            )
+        assert result.exit_code == 1
+        assert "Execution gates failed" in result.output
