@@ -1,6 +1,6 @@
 [project]
 name = "ai-sdlc"
-version = "0.2.2"
+version = "0.2.3"
 description = "AI-native SDLC automation framework"
 readme = "README.md"
 requires-python = ">=3.11"
