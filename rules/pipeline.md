@@ -48,6 +48,8 @@ init → refine → design → decompose → verify → execute → close
 
 唯一例外：如果 `specs/NNN/` 中已有某阶段的产物（如 spec.md 已存在），可以从下一个阶段开始，但必须先验证已有产物的门禁条件。
 
+> **与 Runner 对齐（Task 6.6）**：`SDLCRunner` 以 `checkpoint.yml` 中的 `current_stage` 为起点顺序执行门禁，**不会**仅依据「磁盘上已有 spec/plan/tasks」自动推断应处于哪一阶段。将「已有产物」落实为合法下一阶段的常规做法是：更新断点 / 经 `init`·`recover` 等路径使 checkpoint 与事实一致，并通过对应阶段门禁。对照表见 `specs/001-ai-sdlc-framework/research-pipeline-vs-runner.md`。
+
 ## 上下文传递
 
 每个阶段启动时必须读取的上下文：

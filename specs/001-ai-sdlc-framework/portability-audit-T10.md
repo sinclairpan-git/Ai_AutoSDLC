@@ -1,4 +1,4 @@
-# T10 可移植性审计（进行中）
+# T10 可移植性审计（主表 P1/P2 已关闭；根目录 PRD 改版已于 2026-03-25 落地）
 
 **工作项**：001-ai-sdlc-framework · **任务**：Task 6.1  
 **目的**：识别将 **Cursor 或单一 IDE** 作为**唯一**落地路径的表述或实现，改为多平台与 IDE 解耦。
@@ -14,7 +14,7 @@
 | `src/ai_sdlc/integrations/ide_adapter.py` | 检测 `.cursor` 等 | — | 保留：可选适配逻辑；文档侧标明非必需 | 关闭 |
 | `autopilot.md` | 已声明工具无关 | — | 无改 | 关闭 |
 | `rules/multi-agent.md` / `src/ai_sdlc/rules/multi-agent.md` | 列举 Cursor capability | P2 | 已补充「其他 IDE/Agent 等价能力」说明 | 已关闭 |
-| 根目录 `AI-SDLC 全自动化框架 产品需求文档（PRD）.md` | 列举 Cursor 等为 Agent 示例 | P2 | PRD 改版时统一为「多平台示例」 | 延期 |
+| 根目录 `AI-SDLC 全自动化框架 产品需求文档（PRD）.md` | 列举 Cursor 等为 Agent 示例 | P2 | §12.3 增补「示例宿主、非唯一路径」及规范真值指向 CLI/rules/用户指南 | **已关闭**（2026-03-25） |
 
 ## 检索命令（复核）
 
@@ -49,3 +49,4 @@ rg -i "cursor|plan mode" --glob '!**/.cursor/**' --glob '!**/node_modules/**'
 - 2026-03-24：**Task 6.2 文档子产物**：`USER_GUIDE` §2.1、`tasks-template` related_plan、`docs/plan-check-cli-spec.zh.md`、`docs/pull-request-checklist.zh.md`（无实现）。
 - 2026-03-24：**Task 6.1 文档类 P2 收口**：`cursor/commands/dev.autopilot.md`、`rules/multi-agent.md` 与 `src/ai_sdlc/rules/multi-agent.md`；`pipeline.md` 条款 **18**（close 前对账）；本工作项 [`tasks.md`](tasks.md) 增加 **frontmatter `related_plan`**。根目录 PRD 仍为**延期**（不纳入本批次修订）。
 - 2026-03-25：按工程约束补做本任务独立收口：核验审计表状态、追加 `task-execution-log.md` 批次记录、独立 git commit（不夹带后续任务）。
+- 2026-03-25：**关闭 PRD 延期行**：根目录 PRD §12.3 增加多平台示例与真值说明；与本表「已关闭」一致。

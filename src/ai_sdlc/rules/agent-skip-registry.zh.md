@@ -44,7 +44,7 @@
 | 日期 (UTC) | 发现阶段 | 跳过内容摘要 | 根因 | 框架强化建议 | wi_id | 状态 |
 |------------|----------|--------------|------|--------------|-------|------|
 | 2026-03-24 | 对话/规划 | 在 design 未落到 `tasks.md`（decompose）前催促「执行」直改产品代码 | A, C | `pipeline.md` 已增条款 16–17；推进 `preflight` / execute 前校验 `tasks.md` |  | 已记录 |
-| 2026-03-24 | 对话/规划 | 用「退出 plan mode」等 **单平台** 表述描述通用下一动作 | F | 计划与文档改为「verify 就绪后 / execute 阶段」等中性表述；T10 全仓审计 |  | WIP |
+| 2026-03-24 | 对话/规划 | 用「退出 plan mode」等 **单平台** 表述描述通用下一动作 | F | 计划与文档改为「verify 就绪后 / execute 阶段」等中性表述；T10 全仓审计 |  | 已关闭 |
 | 2026-03-24 | 执行/回顾 | **未先跑全量 pytest、未完成 Task 6.1 verify 全项收口**即合并多文件规则/文档/适配器变更并声称交付 | A, B | CI 或 preflight 强制 `pytest`（全量或仓库约定子集）；文档-only 变更也要求落盘 verify 证据路径；`portability-audit-T10.md` 与 tasks 对齐 |  | 已补测+已对齐记录 |
 | 2026-03-24 | 执行/回顾 | **计划文件 `todos[].status` 未随开发进度更新**，与仓库事实长期错位 | H, A | **FR-085～087** + **Task 6.2**（DoD、`related_plan`、可选 `plan-check`）；合并前模板；plan frontmatter 已与事实同步 |  | 已记录+已入 spec |
 | 2026-03-25 | 执行/回顾 | 实现 **FR-087/088/089**（`workitem plan-check`、`workitem link`、`verify constraints`）过程中，**未同步**按 `pipeline.md` 做「批次归档 execution-log + 六维 code-review 落盘」、**未 git commit/push** 收口；用户手册 §2.1 仍写「plan-check 未实现」与事实漂移 | A, B, H | ① 交付后立刻更新 `USER_GUIDE.zh-CN.md` / PR 清单，避免「未实现」残留；② 合并前跑 `pytest`+`ruff`+`verify constraints`+（如有）`plan-check`；③ Agent 会话内将「声称完成」与「归档/commit」拆成显式 checklist；④ 本条登记 |  | 已补文档+已登记 |

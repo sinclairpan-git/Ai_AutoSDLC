@@ -656,5 +656,55 @@
 #### 2.6 归档后动作
 
 - **已完成 git 提交**：是
-- **提交哈希**：`e09918e`（短 SHA；完整见 `git rev-parse HEAD`）
+- **提交哈希**：（本批 `feat(sdlc): Batch 10 Tasks 6.16–6.19` 合并提交；完整 SHA 以 `git rev-parse HEAD` 为准）
+- **是否继续下一批**：是
+
+### Batch 2026-03-25-013 | Task 6.6 / 6.10 可选收口 + T10 PRD + 登记表 WIP
+
+#### 2.1 批次范围
+
+- **覆盖任务**：Task **6.6**（`pipeline` vs Runner 对照文档）、Task **6.10**（共用 `task_ac_checks` 与 SC-014 — 代码已存在，本批补 **tasks 收口与证据指认**）、T10 审计表 **根目录 PRD** 延期行关闭、`agent-skip-registry` **WIP → 已关闭**。
+- **覆盖阶段**：文档 / 契约收口（无新产品 Python 行为变更）。
+- **预读范围**：`tasks.md` Task 6.6/6.10、`portability-audit-T10.md`、`pipeline.md`、`runner.py`、`task_ac_checks.py`。
+- **激活的规则**：契约先于声称完成；归档先于继续。
+
+#### 2.2 统一验证命令
+
+- **V2（全量回归）**
+  - 命令：`uv run pytest -q`
+  - 结果：**543 passed**（2026-03-25）
+- **Lint**
+  - 命令：`uv run ruff check src tests`
+  - 结果：**All checks passed!**
+
+#### 2.3 任务记录
+
+##### Task 6.6 | pipeline vs Runner 对照表
+
+- **改动范围**：新增 [`research-pipeline-vs-runner.md`](research-pipeline-vs-runner.md)；`tasks.md` 收口块。
+- **改动内容**：规则条文与 Runner/Gate 行为对照；明确「已有产物例外」由 checkpoint 体现、非文件自动跳阶段。
+- **是否符合任务目标**：符合。
+
+##### Task 6.10 | 共用校验模块（确认收口）
+
+- **改动范围**：`tasks.md` 收口块 + 可选进度勾选（实现已在先：`task_ac_checks.py`、pipeline_gates、verify_constraints、单测）。
+- **是否符合任务目标**：符合（AC 追溯完成）。
+
+##### T10 PRD + 登记表
+
+- **改动范围**：根目录 PRD §12.3；`portability-audit-T10.md`；`agent-skip-registry.zh.md` 一行状态；`src/ai_sdlc/rules/pipeline.md` 与 `rules/pipeline.md` 增补与 Runner 对齐说明（与 Task 6.6 互链）。
+- **是否符合任务目标**：符合。
+
+#### 2.4 代码审查（摘要）
+
+- 无应用代码语义变更；文档与审计表与 T10 / FR 可移植性表述一致。
+
+#### 2.5 批次结论
+
+- 所列可选/延期/登记项已按框架约束 **落盘关闭**，避免口头「已做」无指针。
+
+#### 2.6 归档后动作
+
+- **已完成 git 提交**：是
+- **提交哈希**：（本批 `docs` 收口提交；完整 SHA 以 `git rev-parse HEAD` 为准）
 - **是否继续下一批**：是

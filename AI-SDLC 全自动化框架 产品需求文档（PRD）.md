@@ -985,7 +985,9 @@ lightweight brief
 
 ### **12.3 多 IDE 兼容**
 
-必须兼容：
+> **可移植性（T10）**：下列为**示例性**宿主环境，**不表示**唯一操作路径或产品绑定。规范真值以 **CLI**（`ai-sdlc …`）、仓库内 **`src/ai_sdlc/rules/`**（及安装后的规则副本）、**[`docs/USER_GUIDE.zh-CN.md`](docs/USER_GUIDE.zh-CN.md)** 为准；各 IDE 目录下规则仅为**可选适配**（与可移植性审计表一致）。
+
+必须兼容（示例列举，可扩展）：
 
 - Codex CLI / App
 
