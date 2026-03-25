@@ -116,3 +116,49 @@
 - **已完成 git 提交**：是
 - **提交哈希**：`9cef32d0c5df7b46806cf84755e64e52e019a63d`
 - **是否继续下一批**：是（进入 Task 6.6；若策略选择跳过可在 tasks 中显式标注）。
+
+### Batch 2026-03-25-003 | Task 6.6（pipeline 例外 vs Runner 对照表）
+
+#### 2.1 批次范围
+
+- **覆盖任务**：Task **6.6**（仅文档）：`pipeline`「已有产物」例外 vs Runner 对照表。
+- **覆盖阶段**：DESIGN / VERIFY（文档对照与建议，不引入产品行为变更）。
+- **预读范围**：`.ai-sdlc/memory/constitution.md`、`src/ai_sdlc/rules/pipeline.md`、`src/ai_sdlc/rules/batch-protocol.md`、`specs/001-ai-sdlc-framework/tasks.md`（Task 6.6 条目）。
+- **激活的规则**：归档先于继续、完成前必须验证、范围严控（MUST-1）、独立可回退（MUST-3）。
+
+#### 2.2 统一验证命令
+
+- **V2（全量回归）**
+  - 命令：`uv run pytest -q`
+  - 结果：**通过**（见本批次提交前的终端输出）。
+- **Lint**
+  - 命令：`uv run ruff check src tests`
+  - 结果：**通过**。
+
+#### 2.3 任务记录
+
+##### Task 6.6 | 对照表文档
+
+- **改动范围**：`specs/001-ai-sdlc-framework/adr-001-pipeline-vs-runner.md`
+- **改动内容**：建立规则条文 vs 当前代码行为的对照表，指出“单独运行某 stage gate 可能绕过链式门禁”的风险，并把建议映射回 Batch 8/9 的后续实现任务。
+- **新增/调整的测试**：无（文档变更）。
+- **执行的命令**：见统一验证命令。
+- **测试结果**：见统一验证命令。
+- **是否符合任务目标**：符合（产物存在、可审阅、可追溯到后续 tasks）。
+
+#### 2.4 代码审查（`rules/code-review.md` 摘要）
+
+- **宪章对齐**：未引入 P0 之外新功能；仅对照与建议，符合 MUST-1。
+- **规格对齐**：与 Task 6.6 产物要求一致；不改变 Runner 行为（避免越界）。
+- **测试质量**：文档变更仍执行全量回归与 ruff，满足验证协议。
+- **结论**：无 Critical 阻塞项。
+
+#### 2.5 批次结论
+
+- Task 6.6 文档产物已落盘；可进入 Batch 8 的 Task 6.7（文档先行）。
+
+#### 2.6 归档后动作
+
+- **已完成 git 提交**：是
+- **提交哈希**：`PLACEHOLDER_T66_SHA`
+- **是否继续下一批**：是
