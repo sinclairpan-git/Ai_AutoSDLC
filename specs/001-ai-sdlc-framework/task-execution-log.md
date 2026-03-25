@@ -482,7 +482,7 @@
 
 - **R1（红灯验证）**
   - 命令：`uv run pytest tests/unit/test_close_check.py tests/integration/test_cli_workitem_close_check.py -q`
-  - 结果：新增 docs 漂移用例先失败（2 failed），证明功能未实现前测试可捕获。
+  - 结果：新增 docs 漂移用例先失败（2 failed），证明 TDD 红阶段（功能尚未落地时）测试可捕获。
 - **V1（定向）**
   - 命令：`uv run pytest tests/unit/test_close_check.py tests/integration/test_cli_workitem_close_check.py -q`
   - 结果：**10 passed**。
@@ -499,7 +499,7 @@
 
 - **改动范围**：`src/ai_sdlc/core/close_check.py`、`tests/unit/test_close_check.py`、`tests/integration/test_cli_workitem_close_check.py`。
 - **改动内容**：
-  - close-check 新增 `docs_consistency` 子检查：当 `docs/**/*.md` 同时出现“未实现前/未来可能提供”与已注册命令（`ai-sdlc workitem plan-check`、`ai-sdlc verify constraints`）时输出 BLOCKER。
+  - close-check 新增 `docs_consistency` 子检查：当 `docs/**/*.md` 同时出现 **SC-019** 漂移关键字（与 `close_check.DOCS_UNIMPLEMENTED_HINTS` 一致）与已注册命令（如 `ai-sdlc` `workitem` `plan-check`、`ai-sdlc` `verify` `constraints`）时输出 BLOCKER。
   - 补充正反夹具：覆盖 `plan-check` 与 `verify constraints` 两条命令，且修正文案后可通过。
 - **新增/调整的测试**：unit 新增 2 条（负面+正面）；integration 新增 1 条负面。
 - **执行的命令**：见统一验证命令。

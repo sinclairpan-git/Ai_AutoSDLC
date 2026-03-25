@@ -291,7 +291,7 @@
   1) `specs/<WI>/tasks.md` 完成度；  
   2) 若存在 `related_plan`，计划 `todos` 与 Git 事实是否一致；  
   3) `task-execution-log.md` 是否含本批次验证/自审证据（可由模板约定字段）；  
-  4) `docs/` 中是否存在“未实现前”且与已实现 CLI 冲突的陈述（可先做规则化关键字检查）。
+  4) `docs/` 中是否存在与已实现 CLI 冲突的陈述（规则化关键字检查见 **SC-019**）。
 - **FR-092（P1）**：`templates/execution-log-template.md`（或等效模板）应新增收口小节：最少包含「验证命令」「代码审查结论」「相关任务/计划同步状态」三项，避免仅口头完成。
 - **FR-093（P1）**：`docs/pull-request-checklist.zh.md` 应纳入可执行闭环：`pytest`、`ruff`、`verify constraints`、（如适用）`workitem plan-check` / `close-check`；并区分“文档变更”与“代码变更”的最低验证集合。
 - **FR-094（P1）**：当 `agent-skip-registry.zh.md` 新增偏离条目后，须在同一工作项的 `spec/plan/tasks` 中形成对应条目（FR 或 Task），禁止只登记不产品化。
@@ -343,13 +343,13 @@
 
 ##### P1 分解门禁增强（与 FR-090 / tasks Batch 8 对应）
 
-- **SC-014**：给定夹具 `tasks.md` 含 `### Task` 标题但某 Task 区块缺少 FR-090 定义的「任务级可验收」字段时，`ai-sdlc gate check decompose` **非零退出**，且失败信息包含该 Task 标识。
+- **SC-014**：给定夹具 `tasks.md` 含 `### Task` 标题但某 Task 区块缺少 FR-090 定义的「任务级可验收」字段时，`ai-sdlc` `gate` `check` `decompose` **非零退出**，且失败信息包含该 Task 标识。
 
 ##### P1 收口与归档约束硬化（与 FR-091～FR-094 对应）
 
 - **SC-017**：`ai-sdlc workitem close-check`（实现名以 PR 为准）在夹具中：任一收口项缺失（如 tasks 未完成、`related_plan` 漂移、execution-log 缺验证段）时**非零退出**并包含 `BLOCKER`。
 - **SC-018**：更新后的 `execution-log` 模板在至少 1 个集成夹具中被实际使用，且能被 `close-check` 识别出「验证命令 / 审查结论 / 状态同步」字段。
-- **SC-019**：当文档仍含“未实现前”但对应命令已存在时，`close-check` 或等效校验可发现并失败；修复后通过。
+- **SC-019**：当文档仍含与实现对齐前占位表述（见 `close_check.DOCS_UNIMPLEMENTED_HINTS`）但对应命令已存在时，`close-check` 或等效校验可发现并失败；修复后通过。
 
 ##### P1 规则作用域与纪律优化（与 FR-095～FR-098 / tasks Batch 10 对应）
 
