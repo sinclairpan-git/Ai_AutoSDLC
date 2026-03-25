@@ -4,6 +4,7 @@
 
 ## 框架与仓库约定
 
+- [ ] **本地项目配置**：勿提交 `.ai-sdlc/project/config/project-config.yaml`（仓库已 `.gitignore`）；协作方从 `project-config.example.yaml` 复制或依赖默认加载；详见 `docs/USER_GUIDE.zh-CN.md`。
 - [ ] 已阅读 `.ai-sdlc/memory/constitution.md` 与 `src/ai_sdlc/rules/pipeline.md` 中与本次变更相关的条款。
 - [ ] 变更与 `specs/<WI>/tasks.md` 中任务对应关系已说明，或已注明「不纳入本 WI」。
 - [ ] 若使用 IDE 生成计划文件：相关 **`todos` 状态已更新** 与本次交付一致，或已说明为何保留 `pending`。

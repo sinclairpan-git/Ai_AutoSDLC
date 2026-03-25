@@ -1,3 +1,8 @@
 """AI-SDLC: AI-native SDLC automation framework."""
 
-__version__ = "0.1.0"
+from importlib.metadata import PackageNotFoundError, version
+
+try:
+    __version__ = version("ai-sdlc")
+except PackageNotFoundError:  # pragma: no cover — editable/src-only runs
+    __version__ = "0.2.4"

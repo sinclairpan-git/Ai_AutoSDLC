@@ -67,7 +67,7 @@ python -m venv .venv
 # Windows (PowerShell): .\.venv\Scripts\Activate.ps1
 # macOS/Linux: source .venv/bin/activate
 python -m pip install -U pip
-pip install "https://github.com/sinclairpan-git/Ai_AutoSDLC/archive/refs/tags/v0.2.3.zip"
+pip install "https://github.com/sinclairpan-git/Ai_AutoSDLC/archive/refs/tags/v0.2.4.zip"
 ```
 
 安装完成后**务必**做 [§3.8 安装验证](#user-guide-install-verify)（`ai-sdlc --help` 或 `python -m ai_sdlc --help`）。Windows 若未激活 venv，可先使用：
@@ -76,10 +76,10 @@ pip install "https://github.com/sinclairpan-git/Ai_AutoSDLC/archive/refs/tags/v0
 & .\.venv\Scripts\ai-sdlc.exe --help
 ```
 
-若本机已安装 Git，也可改用（将标签换成当前发布版本，例如 `v0.2.3`）：
+若本机已安装 Git，也可改用（将标签换成当前发布版本，例如 `v0.2.4`）：
 
 ```bash
-pip install "git+https://github.com/sinclairpan-git/Ai_AutoSDLC.git@v0.2.3"
+pip install "git+https://github.com/sinclairpan-git/Ai_AutoSDLC.git@v0.2.4"
 ```
 
 <a id="user-guide-install-offline"></a>
@@ -517,11 +517,11 @@ cd /path/to/Ai_AutoSDLC
 
 ### 12.2 目标机离线安装
 
-Linux/macOS（将 `0.2.3` 换成你手中离线包的实际版本目录名）：
+Linux/macOS（将 `0.2.4` 换成你手中离线包的实际版本目录名）：
 
 ```bash
-tar xzf ai-sdlc-offline-0.2.3.tar.gz
-cd ai-sdlc-offline-0.2.3
+tar xzf ai-sdlc-offline-0.2.4.tar.gz
+cd ai-sdlc-offline-0.2.4
 chmod +x install_offline.sh
 ./install_offline.sh
 ```

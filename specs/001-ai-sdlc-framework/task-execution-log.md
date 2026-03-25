@@ -708,3 +708,99 @@
 - **已完成 git 提交**：是
 - **提交哈希**：（本批 `docs` 收口提交；完整 SHA 以 `git rev-parse HEAD` 为准）
 - **是否继续下一批**：是
+
+### Batch 2026-03-25-014 | 本地 `project-config.yaml` 不入库 + 示例/默认加载/测
+
+#### 2.1 批次范围
+
+- **覆盖内容**：`.gitignore` 忽略 `.ai-sdlc/project/config/project-config.yaml`；`git rm --cached` 停止跟踪；新增 `project-config.example.yaml`；`load_project_config` / `ProjectConfig` 文档与默认路径行为；`tests/unit/test_project_config.py`；USER_GUIDE / README / `init.yaml` 等与本地配置策略对齐。
+- **覆盖阶段**：配置契约 + 可复现交付（避免「每人一份脏 yaml」污染 `git status`）。
+- **预读范围**：`tasks.md`（若后续补链）、`data-model.md`、`USER_GUIDE.zh-CN.md` 初始化节。
+- **激活的规则**：契约先于声称完成；本地密钥/路径类配置不入库。
+
+#### 2.2 统一验证命令
+
+- **V2（全量回归）**
+  - 命令：`uv run pytest -q`
+  - 结果：**546 passed**（2026-03-25，归档前本机）。
+- **Lint**
+  - 命令：`uv run ruff check src tests`
+  - 结果：**All checks passed!**
+- **Build**
+  - 命令：`uv build`
+  - 结果：**成功**（`ai_sdlc-0.2.3` sdist + wheel）。
+- **离线包（可选、联网、与目标机同 OS/CPU 推荐）**
+  - 命令：`./packaging/offline/build_offline_bundle.sh`
+  - 结果：**成功**（`dist-offline/ai-sdlc-offline-0.2.3.tar.gz` 与 `.zip`；产物目录已 `.gitignore`）。
+
+#### 2.3 任务记录
+
+##### 配置策略 | `project-config` 不入库
+
+- **改动范围**：`.gitignore`、`project-config.example.yaml`、`src/ai_sdlc/...` 加载与模型文档、单测、用户文档与初始化模板。
+- **是否符合任务目标**：符合（克隆后无强制提交本地 `project-config.yaml`；示例与默认路径可重建）。
+
+#### 2.4 代码审查（摘要）
+
+- 无扩大写盘攻击面；默认加载路径与忽略规则一致；测试覆盖示例与默认行为。
+
+#### 2.5 批次结论
+
+- 本地配置与可复现交付边界已落盘；可与 **main 作为集成分支** 文档（`4b3f938` 等）一并作为发布前卫生检查依据。
+
+#### 2.6 归档后动作
+
+- **已完成 git 提交**：是（配置策略主提交）
+- **提交哈希**：`ad7e3c79d7ba9b6259006fcf15bb36eb9006430c`（`feat(config): gitignore project-config.yaml; example + default load + tests`）
+- **是否继续下一批**：按需（版本号 bump / PyPI / 对外发布公告）
+
+### Batch 2026-03-26-015 | 版本 0.2.4 打包与升级（对齐 pyproject / 用户指南 / 离线包）
+
+#### 2.1 批次范围
+
+- **覆盖内容**：`pyproject.toml` / `uv.lock` 版本 **0.2.3 → 0.2.4**；`src/ai_sdlc/__init__.py` 中 `__version__` 改为 **安装态** `importlib.metadata.version("ai-sdlc")`，无分发元数据时回退 **0.2.4**；`docs/USER_GUIDE.zh-CN.md` 中 GitHub 标签与离线包示例路径与 **0.2.4** 一致；按 `packaging/offline/README.md` 执行离线包构建。
+- **覆盖阶段**：发布卫生检查（与 Batch 014 同一套：测试 + Lint + Build + 可选离线包）。
+- **预读范围**：`packaging/offline/build_offline_bundle.sh`、`docs/USER_GUIDE.zh-CN.md` §3 / §12。
+
+#### 2.2 统一验证命令
+
+- **V2（全量回归）**
+  - 命令：`uv run pytest -q`
+  - 结果：**546 passed**（2026-03-26，本机）。
+- **Lint**
+  - 命令：`uv run ruff check src tests`
+  - 结果：**All checks passed!**
+- **Build**
+  - 命令：`uv build`
+  - 结果：**成功**（`ai_sdlc-0.2.4` sdist + wheel）。
+- **离线包（可选、联网、与目标机同 OS/CPU 推荐）**
+  - 命令：`./packaging/offline/build_offline_bundle.sh`
+  - 结果：**成功**（`dist-offline/ai-sdlc-offline-0.2.4.tar.gz` 与 `.zip`；产物目录已 `.gitignore`）。
+- **治理只读约束**
+  - 命令：`uv run ai-sdlc verify constraints`
+  - 结果：**无 BLOCKER**。
+- **`__version__` 冒烟**
+  - 命令：`uv run python -c "from ai_sdlc import __version__; assert __version__ == '0.2.4'"`
+  - 结果：**通过**。
+
+#### 2.3 任务记录
+
+##### 版本与文档 | 0.2.4
+
+- **改动范围**：`pyproject.toml`、`uv.lock`、`src/ai_sdlc/__init__.py`、`docs/USER_GUIDE.zh-CN.md`（安装示例中的标签与离线目录名）。
+- **是否符合任务目标**：符合（单一发布版本号；安装文档与 wheel/离线包名一致；`__version__` 与已安装包版本一致）。
+
+#### 2.4 代码审查（摘要）
+
+- 无新增运行时依赖；`PackageNotFoundError` 回退与可编辑/源码直跑场景兼容。
+
+#### 2.5 批次结论
+
+- **0.2.4** 已完成：sdist/wheel、离线 `tar.gz` / `zip`（本机构建为 **macOS arm64 + cp311** 依赖 wheel 集；Windows 目标机需在同平台重建离线包）。
+- **后续维护者动作**：在远端打 **`v0.2.4` 标签** 后、`USER_GUIDE` 中的 `pip install` URL 与 `git @v0.2.4` 方可实际解析。
+
+#### 2.6 归档后动作
+
+- **已完成 git 提交**：否（本批变更待提交）
+- **提交哈希**：（待提交后执行 `git rev-parse HEAD` 填写）
+- **是否继续下一批**：按需（PyPI 发布、打标签、公告）
