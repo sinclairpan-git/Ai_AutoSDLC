@@ -38,6 +38,12 @@
 
 15. **存量工程认知基线必须优先**：在已有业务代码的仓库上走标准 SDLC 时，须先完成 `rules/brownfield-corpus.md` 要求的 `.ai-sdlc/memory/engineering-corpus.md`，再进入 Stage 1。探索须分层有界（Tier 1/2/3，深度与变更范围挂钩），禁止用无预算的通读全仓库代替。corpus 已存在时，Step 0 须验证 §2 仓库地图与实际一级目录的一致性。
 
+16. **宿主规划与仓库阶段区分**：任意 IDE/Agent 宿主环境中的「实施规划」或对话内方案**不等于**仓库内流水线阶段已完成。规划收敛后的法定下一步是 **decompose**（如更新 `specs/<WI>/tasks.md`），再 **verify**，再 **execute**；禁止将「计划已定」直接等同于可以修改产品源代码。
+
+17. **代理偏离登记**：在回顾中发现曾跳过本文件或宪章中的强制顺序即交付结论时，须在 `rules/agent-skip-registry.zh.md` 追加一条记录（跳过项、根因、`rules/agent-skip-registry.zh.md` 中的归类字母、对 CLI/门禁/preflight 的强化建议）。该登记作为框架演进输入，**不替代** `verification.md` 与自动化测试。
+
+18. **close 前工作项与计划对账**：进入 **close** 阶段前，须核对 `specs/<WI>/tasks.md` 中任务完成情况与（若存在）`related_plan` 指向的外部计划之待办状态是否已与 Git 事实一致，或已登记延期原因；与「归档先于继续」一致。
+
 ## 阶段执行顺序
 
 严格按以下顺序执行，不允许跳阶段：

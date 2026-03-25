@@ -3,6 +3,16 @@
 **输入**：来自 `/specs/NNN-feature-name/` 的设计文档
 **前置条件**：plan.md、spec.md、research.md、data-model.md、quickstart.md、contracts/
 
+**可选元数据（YAML frontmatter，若仓库支持）**：
+
+```yaml
+---
+related_plan: ".cursor/plans/your-plan-name.plan.md"   # 或相对本仓库的其它计划文件路径；无则省略
+---
+```
+
+- **`related_plan`**：指向本工作项依赖的**外部实施计划**（各 IDE 路径不同），便于人工与将来 **plan-check** 对账；**非必填**。与 **FR-086** 一致。
+
 **测试要求**：[是否必须编写测试，依据宪章和 spec 判断]
 
 **组织方式**：任务按用户故事分组，以支持每个故事独立实现、独立测试。

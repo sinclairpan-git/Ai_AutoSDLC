@@ -17,6 +17,20 @@
 - 支持中断恢复（checkpoint），避免一次会话失败就丢进度
 - 支持 IDE 自动适配（Cursor/VSCode/Codex/Claude Code），复制目录后开箱即用
 
+**规范入口（与 IDE 无关）**：流水线真值以终端中的 `python -m ai-sdlc`（或已安装的 `ai-sdlc`）、`.ai-sdlc/state/checkpoint.yml`、以及包内/仓库内 `src/ai_sdlc/rules/`（含 `pipeline.md`）为准。各编辑器目录下的规则文件为**可选**辅助。若在协作中发现曾跳过强制顺序，须在 `src/ai_sdlc/rules/agent-skip-registry.zh.md` 登记（见该文件说明及 `pipeline.md` 条款 17）。
+
+<a id="user-guide-dod-plan-sync"></a>
+
+### 2.1 交付完成（DoD）与计划 / 任务状态（P1 约定）
+
+一次迭代或 PR 在**声称「与框架相关的工作已完成」**时，除代码与测试外，建议同时满足（与 **FR-085** 一致）：
+
+1. **`specs/<工作项>/tasks.md`** 中与本次变更对应的任务行已勾选或已注明「不做 / 延期」及原因。
+2. 若你使用 **IDE 或工具生成的实施计划文件**（如 `.cursor/plans/*.md` 等），其 frontmatter 中与本批相关的 `todos` **状态已更新**为 `completed` / `in_progress` / `cancelled`，**或与事实一致**；若未使用此类文件，可忽略本款。
+3. 若 `tasks.md` / `plan.md` 中填写了 **`related_plan`**（见 [`templates/tasks-template.md`](../templates/tasks-template.md) 说明），合并前请确认该外部计划路径仍有效。
+
+> **说明（已实现）**：可只读运行 `ai-sdlc workitem plan-check`（行为与退出码见 [`docs/plan-check-cli-spec.zh.md`](plan-check-cli-spec.zh.md)），比对外部计划 `todos` 与 Git 工作区变更。另可运行 `ai-sdlc verify constraints` 检查宪章文件与 checkpoint 的 `spec_dir` 是否落在真实目录（与 `ai-sdlc doctor` 的环境诊断互补）。若需在 checkpoint 中落盘工作项/计划关联，使用 `ai-sdlc workitem link`（见 `--help`）。合并前仍建议对照 [`docs/pull-request-checklist.zh.md`](pull-request-checklist.zh.md)。
+
 ---
 
 <a id="user-guide-s3-install"></a>

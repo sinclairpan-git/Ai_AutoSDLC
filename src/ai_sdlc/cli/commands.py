@@ -135,6 +135,12 @@ def status_command() -> None:
                 "Execute Progress",
                 f"Batch {ep.current_batch}/{ep.total_batches}",
             )
+        if cp.linked_wi_id:
+            table.add_row("Linked WI ID", cp.linked_wi_id)
+        if cp.linked_plan_uri:
+            table.add_row("Linked plan URI", cp.linked_plan_uri)
+        if cp.last_synced_at:
+            table.add_row("Last synced (plan)", cp.last_synced_at)
 
     console.print(table)
     raise typer.Exit(code=0)

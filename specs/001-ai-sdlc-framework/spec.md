@@ -267,6 +267,29 @@
 - **FR-083**：系统必须提供索引生成器，扫描项目目录生成 `repo-facts.json`、`key-files.json`
 - **FR-084**：Plugin Backend 接口预留：定义 `BackendProtocol`（Python Protocol），Native 为默认实现
 
+#### 工作项与外部计划状态一致性（P1 backlog，MUST-4 延伸）
+
+> 来源：2026-03-24 复盘——仓库已实现变更，但 **Cursor/IDE 计划文件** frontmatter `todos` 长期为 `pending`，与事实不对齐；与「checkpoint vs project-state」同类元问题。
+
+- **FR-085（P1）**：框架须在 **用户指南** 中定义 **交付完成（DoD）** 的一条：**关联工作项** `specs/<WI>/tasks.md` 或 **已声明绑定的外部计划** 中的待办状态已与本次变更同步更新，或已登记延期原因；与「状态落盘」一致，禁止仅依赖会话记忆。
+- **FR-086（P1）**：`specs/<WI>/` 下 **plan.md 或 tasks.md frontmatter** 宜支持可选字段 `related_plan:`（URI 或相对路径），指向仓库内或工具生成的计划文件，便于人工与后续 **对账脚本** 引用（**本条目仅为数据契约与文档约定，实现可后置**）。
+- **FR-087（P1）**：框架路线图包含可选 CLI：**`ai-sdlc workitem plan-check`（名称待定）**——**只读**比对「计划待办 pending」与「Git 已变更路径 / tasks 勾选」的差异，输出报告；**默认不写库**；实现须符合 MUST-2/3。
+- **FR-088（P1）**：`Checkpoint`（或经 ADR 批准的并列 YAML）可**可选**记录 `linked_wi_id`、`linked_plan_uri`、`last_synced_at`；`ai-sdlc status` 只读展示一行；**须向后兼容**既有 `checkpoint.yml`；实现须 YamlStore + 单元测试（MUST-2）。
+- **FR-089（P1）**：`ai-sdlc verify constraints`（名称可调整）：只读检查必读治理文件、checkpoint 与 `specs/` 目录一致性等，输出 BLOCKER 列表；**默认不写库**；退出码约定见实现 PR；须 pytest（MUST-2）。
+
+#### 执行收口与归档约束硬化（P1 backlog，MUST-2/3/4/5 延伸）
+
+> 来源：2026-03-25 复盘——实现 `FR-087/088/089` 时出现「命令与文档状态漂移、归档证据未结构化、会话中声称完成与收口动作分离」现象。
+
+- **FR-091（P1）**：框架应提供只读命令（名称待定，如 `ai-sdlc workitem close-check`），在合并前检查以下收口项并输出 BLOCKER 列表：  
+  1) `specs/<WI>/tasks.md` 完成度；  
+  2) 若存在 `related_plan`，计划 `todos` 与 Git 事实是否一致；  
+  3) `task-execution-log.md` 是否含本批次验证/自审证据（可由模板约定字段）；  
+  4) `docs/` 中是否存在“未实现前”且与已实现 CLI 冲突的陈述（可先做规则化关键字检查）。
+- **FR-092（P1）**：`templates/execution-log-template.md`（或等效模板）应新增收口小节：最少包含「验证命令」「代码审查结论」「相关任务/计划同步状态」三项，避免仅口头完成。
+- **FR-093（P1）**：`docs/pull-request-checklist.zh.md` 应纳入可执行闭环：`pytest`、`ruff`、`verify constraints`、（如适用）`workitem plan-check` / `close-check`；并区分“文档变更”与“代码变更”的最低验证集合。
+- **FR-094（P1）**：当 `agent-skip-registry.zh.md` 新增偏离条目后，须在同一工作项的 `spec/plan/tasks` 中形成对应条目（FR 或 Task），禁止只登记不产品化。
+
 ### 关键实体
 
 - **ProjectState**：项目级状态（status, next_work_item_seq, initialized_at, last_updated）
@@ -294,3 +317,15 @@
 - **SC-008**：全量 BR-xxx 业务规则测试通过率 = 100%
 - **SC-009**：全量 AC-xxx 验收标准通过率 = 100%（P0 部分）
 - **SC-010**：单 Agent 闭环可执行一个 3-Phase 的 tasks.md 从头到尾，无 HALT
+
+##### P1 框架增强（与 FR-085～FR-089 / tasks Batch 7 对应）
+
+- **SC-011**：`ai-sdlc workitem plan-check`（实现名以 PR 为准）在夹具中：当外部计划某 todo 为 `pending` 且 Git 已包含对应路径变更时，以**非零退出码**退出（或 `--json` 中报告漂移，由实现 PR 与 spec 锁定）。
+- **SC-012**：`ai-sdlc verify constraints` 在缺少 `.ai-sdlc/memory/constitution.md` 或 checkpoint 与 `specs/` 明显冲突的夹具上**失败（非零）**。
+- **SC-013**：在存在 `specs/WI-*` 且完成 **FR-088** 绑定流程后的夹具中，`ai-sdlc status` 展示的 Feature ID **不为** `unknown`（若绑定为可选则用户指南说明豁免条件）。
+
+##### P1 收口与归档约束硬化（与 FR-091～FR-094 对应）
+
+- **SC-017**：`ai-sdlc workitem close-check`（实现名以 PR 为准）在夹具中：任一收口项缺失（如 tasks 未完成、`related_plan` 漂移、execution-log 缺验证段）时**非零退出**并包含 `BLOCKER`。
+- **SC-018**：更新后的 `execution-log` 模板在至少 1 个集成夹具中被实际使用，且能被 `close-check` 识别出「验证命令 / 审查结论 / 状态同步」字段。
+- **SC-019**：当文档仍含“未实现前”但对应命令已存在时，`close-check` 或等效校验可发现并失败；修复后通过。

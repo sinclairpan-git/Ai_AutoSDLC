@@ -31,6 +31,8 @@
      - VS Code + Copilot: 有限支持（单线程为主）
      - 其他: 需评估
 
+  **说明**：其他 IDE/Agent 平台若具备**等价**的多任务/并行能力，按上表同一维度自评并写入 `tool_capability` 描述字符串；**勿**将 checkpoint 中的能力字段写死为单一厂商专用语义。
+
   2. 检测结果写入 checkpoint.yml：
      multi_agent:
        supported: true | false

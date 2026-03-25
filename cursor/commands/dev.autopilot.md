@@ -1,5 +1,5 @@
 ---
-description: "AI-Native SDLC 全自动流水线（Cursor 适配器）"
+description: "AI-Native SDLC 全自动流水线（可选：Cursor 命令示例；真值以 .ai-sdlc/autopilot.md 与 ai-sdlc CLI 为准）"
 ---
 
 读取并严格遵循 `.ai-sdlc/autopilot.md` 中的全部指令执行流水线。

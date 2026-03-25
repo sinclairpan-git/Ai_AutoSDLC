@@ -61,6 +61,10 @@ class Checkpoint(BaseModel):
     execute_progress: ExecuteProgress | None = None
     ai_decisions_count: int = 0
     execution_mode: str = "auto"
+    # FR-088: optional linkage to work item / external plan (backward compatible)
+    linked_wi_id: str | None = None
+    linked_plan_uri: str | None = None
+    last_synced_at: str | None = None
 
 
 # ---------------------------------------------------------------------------
