@@ -277,6 +277,12 @@
 - **FR-088（P1）**：`Checkpoint`（或经 ADR 批准的并列 YAML）可**可选**记录 `linked_wi_id`、`linked_plan_uri`、`last_synced_at`；`ai-sdlc status` 只读展示一行；**须向后兼容**既有 `checkpoint.yml`；实现须 YamlStore + 单元测试（MUST-2）。
 - **FR-089（P1）**：`ai-sdlc verify constraints`（名称可调整）：只读检查必读治理文件、checkpoint 与 `specs/` 目录一致性等，输出 BLOCKER 列表；**默认不写库**；退出码约定见实现 PR；须 pytest（MUST-2）。
 
+#### 分解门禁增强（P1 backlog）—「可规划」≠「可不经分解就执行」
+
+> 来源：工程约束复盘——已具备 `spec/FR` 时只能进入规划；要进入执行必须先完成 `tasks.md` 分解与任务级验收。
+
+- **FR-090（P1）**：DECOMPOSE Gate（或等效只读校验）须校验：对 `specs/<WI>/tasks.md` 中每个 `### Task …` 区块，至少存在一类**任务级可验收**表述（如 `验收标准`、`AC`、或与本仓库一致的 `**验证**`）；缺失则 gate 为 FAIL/RETRY（按 GateVerdict 约定），并指出首个不合规 Task 标识。
+
 #### 执行收口与归档约束硬化（P1 backlog，MUST-2/3/4/5 延伸）
 
 > 来源：2026-03-25 复盘——实现 `FR-087/088/089` 时出现「命令与文档状态漂移、归档证据未结构化、会话中声称完成与收口动作分离」现象。
@@ -323,6 +329,10 @@
 - **SC-011**：`ai-sdlc workitem plan-check`（实现名以 PR 为准）在夹具中：当外部计划某 todo 为 `pending` 且 Git 已包含对应路径变更时，以**非零退出码**退出（或 `--json` 中报告漂移，由实现 PR 与 spec 锁定）。
 - **SC-012**：`ai-sdlc verify constraints` 在缺少 `.ai-sdlc/memory/constitution.md` 或 checkpoint 与 `specs/` 明显冲突的夹具上**失败（非零）**。
 - **SC-013**：在存在 `specs/WI-*` 且完成 **FR-088** 绑定流程后的夹具中，`ai-sdlc status` 展示的 Feature ID **不为** `unknown`（若绑定为可选则用户指南说明豁免条件）。
+
+##### P1 分解门禁增强（与 FR-090 / tasks Batch 8 对应）
+
+- **SC-014**：给定夹具 `tasks.md` 含 `### Task` 标题但某 Task 区块缺少 FR-090 定义的「任务级可验收」字段时，`ai-sdlc gate check decompose` **非零退出**，且失败信息包含该 Task 标识。
 
 ##### P1 收口与归档约束硬化（与 FR-091～FR-094 对应）
 

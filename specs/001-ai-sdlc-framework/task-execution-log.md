@@ -162,3 +162,51 @@
 - **已完成 git 提交**：是
 - **提交哈希**：`3fa371abe636f9771dd18ca67d62dfe788252f4e`
 - **是否继续下一批**：是
+
+### Batch 2026-03-25-004 | Task 6.7（FR-090 / SC-014 文档契约）
+
+#### 2.1 批次范围
+
+- **覆盖任务**：Task **6.7**（仅文档）：在 `spec.md` 增补 FR-090 / SC-014；同步 `templates/tasks-template.md` 的任务块约束说明。
+- **覆盖阶段**：DECOMPOSE（契约与门禁要求定义）。
+- **预读范围**：`.ai-sdlc/memory/constitution.md`、`src/ai_sdlc/rules/pipeline.md`、`specs/001-ai-sdlc-framework/tasks.md`（Task 6.7 AC）、`templates/tasks-template.md`。
+- **激活的规则**：宪章（MUST-1/2/3）、完成前验证、归档先于继续。
+
+#### 2.2 统一验证命令
+
+- **V2（全量回归）**
+  - 命令：`uv run pytest -q`
+  - 结果：**509 passed**（2026-03-25）。
+- **Lint**
+  - 命令：`uv run ruff check src tests`
+  - 结果：**All checks passed!**
+
+#### 2.3 任务记录
+
+##### Task 6.7 | FR-090 / SC-014 契约落盘
+
+- **改动范围**：`specs/001-ai-sdlc-framework/spec.md`、`templates/tasks-template.md`
+- **改动内容**：
+  - 新增 **FR-090**：DECOMPOSE Gate 任务级可验收字段约束（验收标准/AC/验证）。
+  - 新增 **SC-014**：缺字段夹具下 `gate check decompose` 非零并定位 Task 标识。
+  - 模板补充「任务块必须包含可验收字段」说明，避免分解缺口。
+- **新增/调整的测试**：无（本 Task 为文档契约；实现与测试在 Task 6.8）。
+- **执行的命令**：见统一验证命令。
+- **测试结果**：见统一验证命令。
+- **是否符合任务目标**：符合（spec+模板一致，且为后续 gate 实现提供可测准则）。
+
+#### 2.4 代码审查（`rules/code-review.md` 摘要）
+
+- **宪章对齐**：无新增实现，仅补齐契约；范围受控。
+- **规格对齐**：与 tasks Batch 8 的 6.7 AC 一致。
+- **结论**：无 Critical 阻塞项。
+
+#### 2.5 批次结论
+
+- Task 6.7 文档契约已完成，可进入 Task 6.8（实现 DecomposeGate）。
+
+#### 2.6 归档后动作
+
+- **已完成 git 提交**：是
+- **提交哈希**：`PLACEHOLDER_T67_SHA`
+- **是否继续下一批**：是
