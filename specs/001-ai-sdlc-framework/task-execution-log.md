@@ -210,3 +210,52 @@
 - **已完成 git 提交**：是
 - **提交哈希**：`67f21289bcec4955297e39d63d62db0ce800ac3f`
 - **是否继续下一批**：是
+
+### Batch 2026-03-25-005 | Task 6.8（DecomposeGate 任务级可验收校验）
+
+#### 2.1 批次范围
+
+- **覆盖任务**：Task **6.8**：实现 `DecomposeGate` 任务级 AC/验证字段校验（FR-090 / SC-014）。
+- **覆盖阶段**：DECOMPOSE Gate（质量门禁增强）。
+- **预读范围**：`.ai-sdlc/memory/constitution.md`、`src/ai_sdlc/rules/pipeline.md`、`specs/001-ai-sdlc-framework/spec.md`（FR-090/SC-014）、`specs/001-ai-sdlc-framework/tasks.md`（Task 6.8 AC）。
+- **激活的规则**：TDD（先红后绿）、完成前验证、归档先于继续。
+
+#### 2.2 统一验证命令
+
+- **V1（定向）**
+  - 命令：`uv run pytest tests/unit/test_gates.py::TestDecomposeGate -v`
+  - 结果：通过（RED→GREEN：缺验收字段时 gate RETRY）。
+- **V2（全量回归）**
+  - 命令：`uv run pytest -q`
+  - 结果：**510 passed**（2026-03-25）。
+- **Lint**
+  - 命令：`uv run ruff check src tests`
+  - 结果：**All checks passed!**
+
+#### 2.3 任务记录
+
+##### Task 6.8 | `DecomposeGate` 校验实现
+
+- **改动范围**：`src/ai_sdlc/gates/pipeline_gates.py`、`tests/unit/test_gates.py`
+- **改动内容**：对 `tasks.md` 按 `### Task` 分段，检查每段是否包含「验收标准 / AC / 验证」任一标记；缺失时 gate RETRY 并指出首个不合规 Task id。
+- **新增/调整的测试**：扩展 `TestDecomposeGate` 覆盖通过与缺失验收字段的失败路径。
+- **执行的命令**：见统一验证命令。
+- **测试结果**：见统一验证命令。
+- **是否符合任务目标**：符合（AC：分段校验、失败定位、pytest+ruff）。
+
+#### 2.4 代码审查（`rules/code-review.md` 摘要）
+
+- **宪章/规格对齐**：仅增强门禁；不引入额外行为；FR-090 定义的关键字集合可追溯。
+- **代码质量**：解析逻辑局部封装；失败信息可定位首个 Task。
+- **测试质量**：覆盖 happy path + 缺失字段错误路径；避免对全仓副作用。
+- **结论**：无 Critical 阻塞项。
+
+#### 2.5 批次结论
+
+- Task 6.8 已完成；下一步进入 Task 6.9（ExecuteGate 前置只读检查）。
+
+#### 2.6 归档后动作
+
+- **已完成 git 提交**：是
+- **提交哈希**：`PLACEHOLDER_T68_SHA`
+- **是否继续下一批**：是

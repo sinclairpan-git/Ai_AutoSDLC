@@ -105,9 +105,22 @@ class TestDecomposeGate:
     def test_pass(self, tmp_path: Path) -> None:
         spec_dir = tmp_path / "specs"
         spec_dir.mkdir()
-        (spec_dir / "tasks.md").write_text("### Task 1.1\n- **依赖**：无\n")
+        (spec_dir / "tasks.md").write_text(
+            "### Task 1.1 — 示例\n"
+            "- **依赖**：无\n"
+            "- **验收标准（AC）**：\n"
+            "  1. 示例\n"
+        )
         result = DecomposeGate().check({"spec_dir": str(spec_dir)})
         assert result.verdict == GateVerdict.PASS
+
+    def test_fail_missing_task_acceptance(self, tmp_path: Path) -> None:
+        spec_dir = tmp_path / "specs"
+        spec_dir.mkdir()
+        (spec_dir / "tasks.md").write_text("### Task 1.1 — 示例\n- **依赖**：无\n")
+        result = DecomposeGate().check({"spec_dir": str(spec_dir)})
+        assert result.verdict == GateVerdict.RETRY
+        assert any("acceptance" in c.name or "验收" in c.message for c in result.checks)
 
     def test_fail_no_tasks(self, tmp_path: Path) -> None:
         result = DecomposeGate().check({"spec_dir": str(tmp_path)})
