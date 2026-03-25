@@ -304,6 +304,31 @@ class ExecuteGate:
         """
         checks: list[GateCheck] = []
 
+        spec_dir_raw = context.get("spec_dir")
+        if isinstance(spec_dir_raw, str) and spec_dir_raw.strip():
+            spec_dir = Path(spec_dir_raw)
+            tasks_file = spec_dir / "tasks.md"
+            if not tasks_file.exists():
+                checks.append(
+                    GateCheck(
+                        name="decompose_prerequisite",
+                        passed=False,
+                        message=f"{tasks_file} not found",
+                    )
+                )
+            else:
+                content = tasks_file.read_text(encoding="utf-8")
+                first_missing = _first_task_missing_acceptance(content)
+                checks.append(
+                    GateCheck(
+                        name="decompose_prerequisite",
+                        passed=first_missing is None,
+                        message=""
+                        if first_missing is None
+                        else f"Task {first_missing} missing acceptance fields",
+                    )
+                )
+
         tests_ok = context.get("tests_passed", False)
         checks.append(
             GateCheck(

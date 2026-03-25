@@ -259,3 +259,52 @@
 - **已完成 git 提交**：是
 - **提交哈希**：`d4f5673164e6d190bc7700ddd84e0427bb2f49b7`
 - **是否继续下一批**：是
+
+### Batch 2026-03-25-006 | Task 6.9（ExecuteGate 前置只读检查）
+
+#### 2.1 批次范围
+
+- **覆盖任务**：Task **6.9**：`ExecuteGate` 增加对 decompose 前置条件的只读检查（防单独 `gate check execute` 绕过）。
+- **覆盖阶段**：EXECUTE Gate（前置约束增强）。
+- **预读范围**：`.ai-sdlc/memory/constitution.md`、`src/ai_sdlc/rules/pipeline.md`、`src/ai_sdlc/rules/batch-protocol.md`、`specs/001-ai-sdlc-framework/tasks.md`（Task 6.9 AC）。
+- **激活的规则**：TDD、完成前验证、归档先于继续。
+
+#### 2.2 统一验证命令
+
+- **V1（定向）**
+  - 命令：`uv run pytest tests/unit/test_gates.py::TestExecuteGate -v`
+  - 结果：通过（新增 2 个前置检查场景）。
+- **V2（全量回归）**
+  - 命令：`uv run pytest -q`
+  - 结果：**512 passed**（2026-03-25）。
+- **Lint**
+  - 命令：`uv run ruff check src tests`
+  - 结果：**All checks passed!**
+
+#### 2.3 任务记录
+
+##### Task 6.9 | `ExecuteGate` 前置检查
+
+- **改动范围**：`src/ai_sdlc/gates/pipeline_gates.py`、`tests/unit/test_gates.py`
+- **改动内容**：当 context 提供 `spec_dir` 时，`ExecuteGate` 先检查 `tasks.md` 是否存在且通过 FR-090 任务级可验收校验；不满足则 `decompose_prerequisite` 失败并使 gate RETRY。
+- **新增/调整的测试**：`TestExecuteGate` 新增“缺验收字段失败”和“验收满足通过”场景。
+- **执行的命令**：见统一验证命令。
+- **测试结果**：见统一验证命令。
+- **是否符合任务目标**：符合（AC：不再允许 execute 在分解未就绪时 PASS）。
+
+#### 2.4 代码审查（`rules/code-review.md` 摘要）
+
+- **宪章/规格对齐**：实现限定在 Task 6.9 范围；不改 spec/plan 语义。
+- **代码质量**：前置检查复用 FR-090 辅助函数；失败信息可定位。
+- **测试质量**：新增负面+正面场景，并保留原 execute 行为回归。
+- **结论**：无 Critical 阻塞项。
+
+#### 2.5 批次结论
+
+- Task 6.9 已完成；可进入 Task 6.10（可选）或直接转 Batch 9 的 Task 6.11。
+
+#### 2.6 归档后动作
+
+- **已完成 git 提交**：是
+- **提交哈希**：`PLACEHOLDER_T69_SHA`
+- **是否继续下一批**：是

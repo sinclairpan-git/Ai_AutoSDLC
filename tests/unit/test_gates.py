@@ -188,6 +188,43 @@ class TestExecuteGate:
         assert result.verdict == GateVerdict.PASS
         assert all(c.name != "log_before_commit" for c in result.checks)
 
+    def test_fail_when_decompose_prerequisite_missing_acceptance(
+        self, tmp_path: Path
+    ) -> None:
+        spec_dir = tmp_path / "specs" / "001"
+        spec_dir.mkdir(parents=True)
+        (spec_dir / "tasks.md").write_text("### Task 1.1\n- **依赖**：无\n", encoding="utf-8")
+
+        result = ExecuteGate().check(
+            {
+                "tests_passed": True,
+                "committed": True,
+                "logged": True,
+                "spec_dir": str(spec_dir),
+            }
+        )
+        assert result.verdict == GateVerdict.RETRY
+        assert any(c.name == "decompose_prerequisite" and not c.passed for c in result.checks)
+
+    def test_pass_when_decompose_prerequisite_ok(self, tmp_path: Path) -> None:
+        spec_dir = tmp_path / "specs" / "001"
+        spec_dir.mkdir(parents=True)
+        (spec_dir / "tasks.md").write_text(
+            "### Task 1.1\n- **依赖**：无\n- **验收标准（AC）**：\n  1. 示例\n",
+            encoding="utf-8",
+        )
+
+        result = ExecuteGate().check(
+            {
+                "tests_passed": True,
+                "committed": True,
+                "logged": True,
+                "spec_dir": str(spec_dir),
+            }
+        )
+        assert result.verdict == GateVerdict.PASS
+        assert any(c.name == "decompose_prerequisite" and c.passed for c in result.checks)
+
 
 class TestCloseGate:
     def test_pass(self, tmp_path: Path) -> None:
