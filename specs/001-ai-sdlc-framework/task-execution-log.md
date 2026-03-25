@@ -64,5 +64,5 @@
 #### 2.6 归档后动作
 
 - **已完成 git 提交**：是（见下方哈希）。
-- **提交哈希**：`5bdf362a5bfac508bca6baddadc29ba022a48763`
+- **提交哈希**：`db1425d260aab6465973ecc34248b1bc26541402`（主题含 `feat(cli): workitem plan-check/link, verify constraints (FR-087..089)`）
 - **是否继续下一批**：按 `tasks.md` 进入 **Task 6.6**（可选文档）或 **Batch 8/9** 须**另开会话/PR**，本批次不自动启动未勾选任务。
