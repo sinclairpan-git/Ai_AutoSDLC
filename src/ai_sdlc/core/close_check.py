@@ -16,6 +16,11 @@ REQUIRED_LOG_MARKERS = (
     "代码审查",
     "任务/计划同步状态",
 )
+DOCS_UNIMPLEMENTED_HINTS = ("未实现前", "未来可能提供")
+REGISTERED_COMMANDS = (
+    "ai-sdlc workitem plan-check",
+    "ai-sdlc verify constraints",
+)
 
 
 @dataclass
@@ -40,6 +45,25 @@ class CloseCheckResult:
 
 def _unchecked_tasks_count(tasks_md: str) -> int:
     return len(re.findall(r"(?m)^\s*-\s*\[\s\]\s+", tasks_md))
+
+
+def _docs_consistency_violations(root: Path) -> list[str]:
+    """Return doc paths that claim unimplemented text for registered commands."""
+    docs_dir = root / "docs"
+    if not docs_dir.is_dir():
+        return []
+
+    violations: list[str] = []
+    for md in docs_dir.rglob("*.md"):
+        text = md.read_text(encoding="utf-8")
+        has_hint = any(hint in text for hint in DOCS_UNIMPLEMENTED_HINTS)
+        if not has_hint:
+            continue
+        for cmd in REGISTERED_COMMANDS:
+            if cmd in text:
+                violations.append(f"{md}: contains '{cmd}' with unimplemented wording")
+                break
+    return violations
 
 
 def run_close_check(*, cwd: Path | None, wi: Path) -> CloseCheckResult:
@@ -142,6 +166,23 @@ def run_close_check(*, cwd: Path | None, wi: Path) -> CloseCheckResult:
                 "BLOCKER: task-execution-log.md missing required close-out fields: "
                 + ", ".join(missing)
             )
+
+    doc_violations = _docs_consistency_violations(root)
+    docs_ok = len(doc_violations) == 0
+    checks.append(
+        {
+            "name": "docs_consistency",
+            "ok": docs_ok,
+            "detail": "no doc/command consistency drift"
+            if docs_ok
+            else f"{len(doc_violations)} inconsistency item(s)",
+        }
+    )
+    if not docs_ok:
+        blockers.append(
+            "BLOCKER: docs consistency drift for registered commands: "
+            + " | ".join(doc_violations)
+        )
 
     return CloseCheckResult(
         ok=len(blockers) == 0,

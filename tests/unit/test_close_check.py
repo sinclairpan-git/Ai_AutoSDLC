@@ -104,3 +104,44 @@ def test_close_check_pass_when_all_requirements_met(tmp_path: Path) -> None:
     assert r.error is None
     assert r.ok is True
     assert r.blockers == []
+
+
+def test_close_check_blocker_docs_claim_not_implemented_for_registered_command(
+    tmp_path: Path,
+) -> None:
+    root = tmp_path / "repo4"
+    root.mkdir()
+    _setup_repo(
+        root,
+        tasks_body="- [x] done\n### Task 1.1\n- **验收标准（AC）**：ok",
+        plan_status="completed",
+    )
+    docs_dir = root / "docs"
+    docs_dir.mkdir(parents=True)
+    (docs_dir / "bad.md").write_text(
+        "该能力在未实现前保留：`ai-sdlc workitem plan-check`。\n",
+        encoding="utf-8",
+    )
+
+    r = run_close_check(cwd=root, wi=Path("specs/001-wi"))
+    assert r.ok is False
+    assert any("docs consistency" in b for b in r.blockers)
+
+
+def test_close_check_docs_consistency_pass_after_fix(tmp_path: Path) -> None:
+    root = tmp_path / "repo5"
+    root.mkdir()
+    _setup_repo(
+        root,
+        tasks_body="- [x] done\n### Task 1.1\n- **验收标准（AC）**：ok",
+        plan_status="completed",
+    )
+    docs_dir = root / "docs"
+    docs_dir.mkdir(parents=True)
+    (docs_dir / "ok.md").write_text(
+        "`ai-sdlc verify constraints` 已可使用，见命令帮助。\n",
+        encoding="utf-8",
+    )
+
+    r = run_close_check(cwd=root, wi=Path("specs/001-wi"))
+    assert r.ok is True

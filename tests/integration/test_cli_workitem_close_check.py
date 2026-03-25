@@ -132,3 +132,25 @@ class TestCliWorkitemCloseCheck:
         assert result.exit_code == 0
         out = result.output.lower()
         assert "close" in out and "read-only" in out
+
+    def test_exit_1_when_docs_claim_unimplemented_but_command_exists(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        root = tmp_path / "r4"
+        root.mkdir()
+        _setup_repo(
+            root,
+            tasks_body="- [x] done\n### Task 1.1\n- **验收标准（AC）**：ok",
+            plan_status="completed",
+        )
+        docs_dir = root / "docs"
+        docs_dir.mkdir(parents=True)
+        (docs_dir / "bad.md").write_text(
+            "未来可能提供：`ai-sdlc verify constraints`。\n",
+            encoding="utf-8",
+        )
+        monkeypatch.chdir(root)
+
+        result = runner.invoke(app, ["workitem", "close-check", "--wi", "specs/001-wi"])
+        assert result.exit_code == 1
+        assert "BLOCKER" in result.output

@@ -468,3 +468,57 @@
 - **已完成 git 提交**：是
 - **提交哈希**：`b082c13018d4d59b094f83df492447cfaabbd0ab`
 - **是否继续下一批**：是
+
+### Batch 2026-03-25-010 | Task 6.13（文档一致性漂移防回归）
+
+#### 2.1 批次范围
+
+- **覆盖任务**：Task **6.13**：在 `workitem close-check` 增加 docs 一致性子检查。
+- **覆盖阶段**：EXECUTE（close-check 规则增强）。
+- **预读范围**：`.ai-sdlc/memory/constitution.md`、`src/ai_sdlc/rules/pipeline.md`、`src/ai_sdlc/rules/batch-protocol.md`、`specs/001-ai-sdlc-framework/tasks.md`（Task 6.13 AC）。
+- **激活的规则**：TDD（先红后绿）、完成前验证、归档先于继续。
+
+#### 2.2 统一验证命令
+
+- **R1（红灯验证）**
+  - 命令：`uv run pytest tests/unit/test_close_check.py tests/integration/test_cli_workitem_close_check.py -q`
+  - 结果：新增 docs 漂移用例先失败（2 failed），证明功能未实现前测试可捕获。
+- **V1（定向）**
+  - 命令：`uv run pytest tests/unit/test_close_check.py tests/integration/test_cli_workitem_close_check.py -q`
+  - 结果：**10 passed**。
+- **V2（全量回归）**
+  - 命令：`uv run pytest -q`
+  - 结果：**529 passed**（2026-03-25）。
+- **Lint**
+  - 命令：`uv run ruff check src tests`
+  - 结果：**All checks passed!**
+
+#### 2.3 任务记录
+
+##### Task 6.13 | docs 一致性检查（FR-091 / FR-093 / SC-019）
+
+- **改动范围**：`src/ai_sdlc/core/close_check.py`、`tests/unit/test_close_check.py`、`tests/integration/test_cli_workitem_close_check.py`。
+- **改动内容**：
+  - close-check 新增 `docs_consistency` 子检查：当 `docs/**/*.md` 同时出现“未实现前/未来可能提供”与已注册命令（`ai-sdlc workitem plan-check`、`ai-sdlc verify constraints`）时输出 BLOCKER。
+  - 补充正反夹具：覆盖 `plan-check` 与 `verify constraints` 两条命令，且修正文案后可通过。
+- **新增/调整的测试**：unit 新增 2 条（负面+正面）；integration 新增 1 条负面。
+- **执行的命令**：见统一验证命令。
+- **测试结果**：见统一验证命令。
+- **是否符合任务目标**：符合（AC1/AC2/AC3 达成）。
+
+#### 2.4 代码审查（`rules/code-review.md` 摘要）
+
+- **宪章/规格对齐**：仅增强 close-check 只读规则，未引入额外写操作。
+- **代码质量**：规则集中于 `close_check.py`，输出 `checks + blockers` 可追踪。
+- **测试质量**：先红后绿，覆盖两个指定命令与修复后通过路径。
+- **结论**：无 Critical 阻塞项。
+
+#### 2.5 批次结论
+
+- Task 6.13 已完成；下一步可进入 Task 6.14（偏离登记产品化闭环）。
+
+#### 2.6 归档后动作
+
+- **已完成 git 提交**：是
+- **提交哈希**：`PLACEHOLDER_COMMIT_SHA`
+- **是否继续下一批**：是
