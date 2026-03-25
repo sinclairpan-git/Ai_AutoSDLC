@@ -379,3 +379,30 @@ Phase 0（脚手架）
 - 回归：`uv run pytest` + `uv run ruff check src tests`。
 
 **宪章对齐**：MUST-2（可验证）、MUST-3（独立可回退批次）、MUST-4（状态落盘）、MUST-5（规则与产品能力一致）。
+
+## 增量设计（P1 backlog）— 规则作用域收敛与工程纪律
+
+**背景**：见 spec **FR-095～FR-098** 与 `agent-skip-registry.zh.md`「工程纪律复盘（2026-03-26）」。首轮实现中已出现「全局登记表 + 全量 docs 扫描」导致 **误报与流程摩擦** 的风险；同时「归档哈希二次提交」增加审阅噪音。
+
+**设计要点**：
+
+1. **skip-registry 与 WI 绑定**：登记表增加 **`wi_id` 列**（已实现表头迁移见规则文件）；`verify constraints` 仅解析 **当前 WI 行** 的 FR/Task 引用做映射 BLOCKER；历史无 `wi_id` 行跳过自动阻断。
+2. **close-check 文档扫描分层**：默认 **WI 目录 + 文档白名单**；`--all-docs` 显式扩大至全 `docs/**`，避免日常迭代被无关文档绊倒。
+3. **归档与提交**：优先 **单 commit 携带 execution-log**；若保留哈希字段，则模板与 `batch-protocol.md` 同步改为「可选或批次末一次回填」，避免默认双提交。
+4. **命令真值来源**：从 Typer `app` 遍历 command / typer 子树生成「完整子命令路径」集合，供 docs 漂移检查；单测覆盖「注册变更即检查同步」。
+
+**阶段映射（杜绝先动手）**：
+
+| 错误做法 | 对应误闯阶段 | 正确做法 |
+|----------|--------------|----------|
+| 直接改 `verify_constraints.py` / `close_check.py` | execute 抢跑 | 先 **decompose**：`tasks.md` Batch 10 任务与 AC 落盘 |
+| 口头同意「缩小作用域」 | refine 未冻结 | 先 **spec**：FR-095～098、SC-020～023 写入 `spec.md` |
+| 仅改代码不测历史行 | verify 不足 | **pytest** 夹具含「历史行不阻断」「白名单默认通过」 |
+
+**验证策略**：
+
+- 单元：`collect_constraint_blockers` 在混合登记表文本下的过滤逻辑；`close_check` 默认路径与 `--all-docs` 分支。
+- 集成：CLI 层 `verify constraints`、`workitem close-check` 各至少 1 条回归。
+- 全量：`uv run pytest` + `uv run ruff check src tests`。
+
+**宪章对齐**：MUST-1（独立批次可回退）、MUST-2（可验证）、MUST-3（范围声明）、MUST-4（复盘与登记落盘）。

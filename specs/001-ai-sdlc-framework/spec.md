@@ -298,6 +298,15 @@
 
 > 术语约束：FR-091～094 相关文档统一使用 `close-check`、`BLOCKER`、`related_plan` 三个关键术语，避免同义词漂移。
 
+#### 规则作用域与工程纪律优化（P1 backlog，FR-094 延伸 / 防规则膨胀）
+
+> 来源：2026-03-26 复盘——`verify constraints` 对 **全局** `agent-skip-registry` 做 FR/Task 映射、`close-check` **全量**扫描 `docs/`、以及「归档占位哈希 + 二次提交回填」等实现，易引发 **误报 BLOCKER**、**全局效率下降**、**规则越堆越重**。本组需求约束：**先契约、后实现**；作用域与真值来源须写进 spec/tasks 再改代码。
+
+- **FR-095（P1）**：`verify constraints` 对 `agent-skip-registry.zh.md` 的 FR/Task 映射检查须 **按工作项作用域过滤**：登记表须具备 **`wi_id`（或等价列名）**；仅当 **`wi_id` 与当前 checkpoint 绑定的工作项一致**（或与 `feature.spec_dir` 推导的工作项 id 一致，策略由实现 PR 与本文锁死）时，才对该行执行「登记内容须在当项 `spec.md`/`tasks.md` 可找到」的 BLOCKER；**无 `wi_id` 的历史行不参与该项 BLOCKER**（避免全表历史拖累当前 WI）。须向后兼容现有表结构与既有测试夹具（迁移策略见 tasks）。
+- **FR-096（P1）**：`workitem close-check` 的 **docs 一致性**子检查默认仅扫描 **与当前 WI 强相关** 的路径：`specs/<WI>/` 下 Markdown，外加 **白名单**（至少含 `docs/pull-request-checklist.zh.md`、`docs/USER_GUIDE.zh-CN.md`，可扩展列表由实现 PR 与本文锁死）；**全仓库 `docs/**` 扫描**仅当 CLI 显式传入 `--all-docs`（或等价开关）时启用。须 pytest 覆盖「默认不扫无关子目录」「`--all-docs` 扩大范围」两类行为。
+- **FR-097（P1）**：**归档提交策略降噪**：`templates/execution-log-template.md` 与 `batch-protocol.md` 叙述应对齐——**允许单次 commit 同时包含实现与 execution-log**；**「提交哈希」字段改为可选**（或允许批次结束后 **一次** 回填 amend/追加提交，二选一由实现 PR 锁死，且须在模板中注明）。目标是消除「无信息增量的二次 commit」为默认路径。
+- **FR-098（P1）**：`close-check`（及将来同类检查）中「已注册 CLI 命令」列表 **不得长期硬编码**；须从 **Typer 应用对象**（或经批准的单一注册表模块）**枚举子命令全名**（如 `ai-sdlc workitem plan-check`），与 `ai-sdlc --help` / 实际注册保持一致；须 pytest 防止漏注册或重命名后检查失效。
+
 ### 关键实体
 
 - **ProjectState**：项目级状态（status, next_work_item_seq, initialized_at, last_updated）
@@ -341,3 +350,10 @@
 - **SC-017**：`ai-sdlc workitem close-check`（实现名以 PR 为准）在夹具中：任一收口项缺失（如 tasks 未完成、`related_plan` 漂移、execution-log 缺验证段）时**非零退出**并包含 `BLOCKER`。
 - **SC-018**：更新后的 `execution-log` 模板在至少 1 个集成夹具中被实际使用，且能被 `close-check` 识别出「验证命令 / 审查结论 / 状态同步」字段。
 - **SC-019**：当文档仍含“未实现前”但对应命令已存在时，`close-check` 或等效校验可发现并失败；修复后通过。
+
+##### P1 规则作用域与纪律优化（与 FR-095～FR-098 / tasks Batch 10 对应）
+
+- **SC-020**：给定夹具：登记表含 **多条历史行 + 一条 `wi_id` 匹配当前 checkpoint 且 FR 未映射** 时，`verify constraints` **仅因该匹配行**失败；**不因**无关历史行失败。
+- **SC-021**：给定夹具：`docs/` 某深层路径含违规句但 **不在** `specs/<WI>/` 与白名单时，默认 `close-check` **通过**；同一夹具加 `--all-docs` 后 **失败**。
+- **SC-022**：execution-log 模板与 `batch-protocol.md` 对「提交哈希必填 / 二次提交」的表述 **一致**，且与选定策略（单次 commit 或一次回填）一致。
+- **SC-023**：在 CLI 增加别名子命令的夹具中，`close-check` 使用的命令枚举 **仍包含**该别名对应全名（或文档明确豁免规则，二者择一锁死）。
