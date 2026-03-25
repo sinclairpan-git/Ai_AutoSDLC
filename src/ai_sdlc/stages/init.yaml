@@ -24,4 +24,5 @@ checklist:
 
 outputs:
   - .ai-sdlc/project/config/project-state.yaml
+  # project-config.yaml：运行时由 init 内 IDE 适配首次写入；缺省时 load 返回默认模型。示例字段见 project-config.example.yaml（本仓库对该 YAML 默认 gitignore）。
   - .ai-sdlc/project/config/project-config.yaml

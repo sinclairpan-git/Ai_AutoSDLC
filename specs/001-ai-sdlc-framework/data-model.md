@@ -28,7 +28,7 @@ class ProjectState(BaseModel):
 
 ### ProjectConfig
 
-文件：`.ai-sdlc/project/config/project-config.yaml`
+文件：`.ai-sdlc/project/config/project-config.yaml`（本仓库开发克隆上通常 **gitignore**；缺失时加载为模型默认值，由 `init`/IDE 适配重建。示例见 `project-config.example.yaml`。）
 
 ```python
 class ProjectConfig(BaseModel):

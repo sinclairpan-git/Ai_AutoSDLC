@@ -95,7 +95,12 @@ def load_project_state(root: Path) -> ProjectState:
 
 
 def load_project_config(root: Path) -> ProjectConfig:
-    """Load project config from the .ai-sdlc directory."""
+    """Load project config from ``.ai-sdlc/project/config/project-config.yaml``.
+
+    If the file is missing (typical when the path is gitignored), returns
+    :class:`~ai_sdlc.models.project.ProjectConfig` with model defaults; the next
+    :func:`save_project_config` or IDE adaptation persist will create the file.
+    """
     return YamlStore.load(root / PROJECT_CONFIG_PATH, ProjectConfig)
 
 

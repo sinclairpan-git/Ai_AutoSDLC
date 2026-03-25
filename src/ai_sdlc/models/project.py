@@ -32,7 +32,10 @@ class ProjectState(BaseModel):
 
 
 class ProjectConfig(BaseModel):
-    """Project-level configuration stored in project-config.yaml."""
+    """Project-level configuration stored in ``project-config.yaml`` (often gitignored).
+
+    When the file is absent, loaders return this model with field defaults.
+    """
 
     product_form: str = "hybrid"
     default_execution_mode: str = "auto"

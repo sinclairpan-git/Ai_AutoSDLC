@@ -1,8 +1,0 @@
-product_form: hybrid
-default_execution_mode: auto
-default_branch_strategy: dual
-max_parallel_agents: 3
-detected_ide: cursor
-adapter_applied: cursor
-adapter_version: '1'
-adapter_applied_at: '2026-03-24T08:37:45+00:00'

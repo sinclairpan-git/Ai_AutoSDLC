@@ -1,0 +1,11 @@
+# 示例：`.ai-sdlc/project/config/project-config.yaml` 的字段形态（仓库内跟踪）。
+# 真实 `project-config.yaml` 由 `ai-sdlc init` 或首次 IDE 适配写入，默认加入 .gitignore，勿提交本机时间戳/IDE 记录。
+product_form: hybrid
+default_execution_mode: auto
+default_branch_strategy: dual
+max_parallel_agents: 3
+document_locale: zh-CN
+detected_ide: ""
+adapter_applied: ""
+adapter_version: ""
+adapter_applied_at: ""
