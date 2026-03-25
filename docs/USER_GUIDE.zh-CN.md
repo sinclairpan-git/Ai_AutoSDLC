@@ -388,6 +388,8 @@ uv build
 
 提交前至少保证：测试 + lint + build 全绿。
 
+**Git 分支（本仓库）**：`main` 为集成主线。历史分支 `design/001-ai-sdlc-framework`、`feature/001-ai-sdlc-framework` 的提交已包含在当前 `main` 中，**仅作考古**；新工作请从最新 `main` 拉取后新建 `feature/*`（或团队约定前缀）。若远端仍保留上述旧分支名，维护者可删除以免与当前流程混淆。
+
 ---
 
 ## 10. 常见问题（FAQ）

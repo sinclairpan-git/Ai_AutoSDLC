@@ -71,6 +71,10 @@ uv run ruff check src/ tests/
 uv run mypy src/ai_sdlc/
 ```
 
+### Git branches
+
+`main` is the integration branch. Historical branches `design/001-ai-sdlc-framework` and `feature/001-ai-sdlc-framework` are **fully merged into `main`** (as of 2026-03); treat them as archival names only. Use **new** `feature/*` or `fix/*` branches from current `main` for new work. Remote copies of those legacy branches may be deleted to avoid confusion once your team agrees.
+
 ## Documentation
 
 - Chinese user guide: `docs/USER_GUIDE.zh-CN.md` (start with **§3 Install & environment**)
