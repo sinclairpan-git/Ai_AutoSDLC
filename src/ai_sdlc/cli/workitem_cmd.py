@@ -105,6 +105,15 @@ def workitem_close_check(
         "--wi",
         help="Path to specs/<WI>/ directory to validate before close/merge.",
     ),
+    all_docs: bool = typer.Option(
+        False,
+        "--all-docs",
+        help=(
+            "Scan all docs/**/*.md for CLI wording drift (legacy full scan). "
+            "Default: only specs/<WI>/*.md plus docs/pull-request-checklist.zh.md "
+            "and docs/USER_GUIDE.zh-CN.md (FR-096)."
+        ),
+    ),
     as_json: bool = typer.Option(
         False,
         "--json",
@@ -112,7 +121,7 @@ def workitem_close_check(
     ),
 ) -> None:
     """Read-only close checks (FR-091 / SC-017). Exit 0 when no BLOCKERs."""
-    result = run_close_check(cwd=Path.cwd(), wi=wi)
+    result = run_close_check(cwd=Path.cwd(), wi=wi, all_docs=all_docs)
 
     if as_json:
         console.print(format_close_check_json(result))

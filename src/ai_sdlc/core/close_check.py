@@ -17,10 +17,18 @@ REQUIRED_LOG_MARKERS = (
     "任务/计划同步状态",
 )
 DOCS_UNIMPLEMENTED_HINTS = ("未实现前", "未来可能提供")
-REGISTERED_COMMANDS = (
-    "ai-sdlc workitem plan-check",
-    "ai-sdlc verify constraints",
+# FR-096: default docs scan = WI `*.md` + these repo-relative paths (when present).
+DOCS_WHITELIST_RELS = (
+    Path("docs/pull-request-checklist.zh.md"),
+    Path("docs/USER_GUIDE.zh-CN.md"),
 )
+
+
+def _registered_command_strings() -> tuple[str, ...]:
+    """FR-098: commands from Typer tree (lazy import)."""
+    from ai_sdlc.cli.command_names import collect_flat_command_strings
+
+    return collect_flat_command_strings()
 
 
 @dataclass
@@ -47,27 +55,54 @@ def _unchecked_tasks_count(tasks_md: str) -> int:
     return len(re.findall(r"(?m)^\s*-\s*\[\s\]\s+", tasks_md))
 
 
-def _docs_consistency_violations(root: Path) -> list[str]:
-    """Return doc paths that claim unimplemented text for registered commands."""
-    docs_dir = root / "docs"
-    if not docs_dir.is_dir():
-        return []
+def _docs_scan_targets(root: Path, wi_dir: Path, *, all_docs: bool) -> list[Path]:
+    """FR-096: default = WI markdown + whitelist; --all-docs adds full docs/**."""
+    paths: list[Path] = []
+    paths.extend(p for p in sorted(wi_dir.glob("*.md")) if p.is_file())
+    for rel in DOCS_WHITELIST_RELS:
+        fp = root / rel
+        if fp.is_file():
+            paths.append(fp)
+    if all_docs:
+        docs_dir = root / "docs"
+        if docs_dir.is_dir():
+            paths.extend(sorted(docs_dir.rglob("*.md")))
 
+    seen: set[Path] = set()
+    uniq: list[Path] = []
+    for p in paths:
+        key = p.resolve()
+        if key not in seen:
+            seen.add(key)
+            uniq.append(p)
+    return uniq
+
+
+def _docs_consistency_violations(
+    root: Path, wi_dir: Path, *, all_docs: bool
+) -> list[str]:
+    """Doc paths that pair unimplemented wording with a real CLI command string."""
     violations: list[str] = []
-    for md in docs_dir.rglob("*.md"):
+    cmds = _registered_command_strings()
+    for md in _docs_scan_targets(root, wi_dir, all_docs=all_docs):
         text = md.read_text(encoding="utf-8")
         has_hint = any(hint in text for hint in DOCS_UNIMPLEMENTED_HINTS)
         if not has_hint:
             continue
-        for cmd in REGISTERED_COMMANDS:
+        for cmd in cmds:
             if cmd in text:
                 violations.append(f"{md}: contains '{cmd}' with unimplemented wording")
                 break
     return violations
 
 
-def run_close_check(*, cwd: Path | None, wi: Path) -> CloseCheckResult:
-    """Run read-only close checks for a `specs/<WI>/` directory."""
+def run_close_check(*, cwd: Path | None, wi: Path, all_docs: bool = False) -> CloseCheckResult:
+    """Run read-only close checks for a `specs/<WI>/` directory.
+
+    When ``all_docs`` is False (default), docs consistency only scans ``specs/<WI>/*.md``
+    plus the paths in ``DOCS_WHITELIST_RELS``. Set ``all_docs=True`` for a full
+    ``docs/**/*.md`` scan (FR-096).
+    """
     start = (cwd or Path.cwd()).resolve()
     root = find_project_root(start)
     if root is None:
@@ -167,7 +202,7 @@ def run_close_check(*, cwd: Path | None, wi: Path) -> CloseCheckResult:
                 + ", ".join(missing)
             )
 
-    doc_violations = _docs_consistency_violations(root)
+    doc_violations = _docs_consistency_violations(root, wi_dir, all_docs=all_docs)
     docs_ok = len(doc_violations) == 0
     checks.append(
         {

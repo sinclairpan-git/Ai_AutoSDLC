@@ -7,6 +7,7 @@ from pathlib import Path
 
 from ai_sdlc.context.state import load_checkpoint
 from ai_sdlc.gates.task_ac_checks import first_task_missing_acceptance
+from ai_sdlc.models.state import Checkpoint
 
 CONSTITUTION_REL = Path(".ai-sdlc") / "memory" / "constitution.md"
 SKIP_REGISTRY_REL = Path("src") / "ai_sdlc" / "rules" / "agent-skip-registry.zh.md"
@@ -50,19 +51,94 @@ def collect_constraint_blockers(root: Path) -> list[str]:
                 f"gate decompose `task_acceptance_present`): first breach Task {missing_id}"
             )
 
-    blockers.extend(_skip_registry_mapping_blockers(root, spec_path))
+    blockers.extend(_skip_registry_mapping_blockers(root, spec_path, cp))
     return blockers
 
 
-def _skip_registry_mapping_blockers(root: Path, spec_dir: Path) -> list[str]:
-    """Check skip-registry references are mapped into current spec/tasks."""
+def _effective_wi_id_for_registry(cp: Checkpoint) -> str:
+    """FR-095: prefer linked_wi_id; else basename of feature.spec_dir."""
+    linked = (cp.linked_wi_id or "").strip()
+    if linked:
+        return linked
+    sd = (cp.feature.spec_dir or "").strip()
+    if sd:
+        return Path(sd).name
+    return ""
+
+
+def _norm_header_cell(cell: str) -> str:
+    return re.sub(r"\*+", "", cell.strip()).strip().lower()
+
+
+def _is_separator_row(parts: list[str]) -> bool:
+    if not parts:
+        return False
+    for p in parts:
+        t = p.strip().replace(" ", "")
+        if not t:
+            continue
+        if not re.fullmatch(r":?-{3,}:?", t):
+            return False
+    return any(p.strip() for p in parts)
+
+
+def _scoped_skip_registry_lines(reg_text: str, effective_wi_id: str) -> list[str]:
+    """Lines from pipe tables whose header includes wi_id and row wi_id matches."""
+    if not effective_wi_id:
+        return []
+
+    wi_id_idx: int | None = None
+    past_separator = False
+    scoped: list[str] = []
+
+    for line in reg_text.splitlines():
+        s = line.strip()
+        if not s.startswith("|"):
+            continue
+        parts = [c.strip() for c in s.strip().strip("|").split("|")]
+
+        if wi_id_idx is None:
+            for i, cell in enumerate(parts):
+                if _norm_header_cell(cell) == "wi_id":
+                    wi_id_idx = i
+                    break
+            continue
+
+        if _is_separator_row(parts):
+            past_separator = True
+            continue
+
+        if not past_separator:
+            continue
+
+        if len(parts) <= wi_id_idx:
+            continue
+
+        raw_wi = parts[wi_id_idx].strip().strip("`").strip()
+        if not raw_wi or raw_wi != effective_wi_id:
+            continue
+        scoped.append(s)
+
+    return scoped
+
+
+def _skip_registry_mapping_blockers(
+    root: Path, spec_dir: Path, cp: Checkpoint
+) -> list[str]:
+    """FR-095 / SC-020: only rows with matching wi_id participate."""
     registry = root / SKIP_REGISTRY_REL
     if not registry.is_file():
         return []
 
+    effective = _effective_wi_id_for_registry(cp)
     reg_text = registry.read_text(encoding="utf-8")
-    fr_refs = sorted(set(re.findall(r"\bFR-\d{3}\b", reg_text)))
-    task_refs = sorted(set(re.findall(r"\bTask\s+\d+\.\d+\b", reg_text)))
+    scoped_lines = _scoped_skip_registry_lines(reg_text, effective)
+    if not scoped_lines:
+        return []
+
+    scoped_blob = "\n".join(scoped_lines)
+    fr_refs = sorted(set(re.findall(r"\bFR-\d{3}\b", scoped_blob)))
+    task_refs = sorted(set(re.findall(r"\bTask\s+\d+\.\d+\b", scoped_blob)))
 
     spec_text = (spec_dir / "spec.md").read_text(encoding="utf-8") if (spec_dir / "spec.md").is_file() else ""
     tasks_text = (spec_dir / "tasks.md").read_text(encoding="utf-8") if (spec_dir / "tasks.md").is_file() else ""

@@ -136,9 +136,9 @@ class TestCliVerifyConstraints:
         rules_dir = tmp_path / "src" / "ai_sdlc" / "rules"
         rules_dir.mkdir(parents=True)
         (rules_dir / "agent-skip-registry.zh.md").write_text(
-            "| 日期 | 发现阶段 | 跳过内容摘要 | 根因 | 框架强化建议 | 状态 |\n"
-            "|------|----------|--------------|------|--------------|------|\n"
-            "| 2026-03-26 | 执行 | x | A | 引入 FR-999 并补 Task 9.9 | 已记录 |\n",
+            "| 日期 | 发现阶段 | 跳过内容摘要 | 根因 | 框架强化建议 | wi_id | 状态 |\n"
+            "|------|----------|--------------|------|--------------|-------|------|\n"
+            "| 2026-03-26 | 执行 | x | A | 引入 FR-999 并补 Task 9.9 | 001-wi | 已记录 |\n",
             encoding="utf-8",
         )
         cp = Checkpoint(

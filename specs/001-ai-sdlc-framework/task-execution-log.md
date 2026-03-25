@@ -579,3 +579,82 @@
 - **已完成 git 提交**：是
 - **提交哈希**：`1f1b3667c9809752005ebbe0ab22b1ba9db6dbae`
 - **是否继续下一批**：是
+
+### Batch 2026-03-25-012 | Task 6.16–6.19（FR-095～FR-098 / SC-020～SC-023）
+
+#### 2.1 批次范围
+
+- **覆盖任务**：Task **6.16**（skip-registry `wi_id` 作用域）、**6.17**（close-check 默认 WI+白名单与 `--all-docs`）、**6.18**（归档/批次协议哈希策略）、**6.19**（Typer 枚举命令）。
+- **覆盖阶段**：EXECUTE（verify + close-check + 文档契约）。
+- **预读范围**：`specs/001-ai-sdlc-framework/tasks.md`（Batch 10）、`spec.md`（FR-095～098）、`agent-skip-registry.zh.md`、`batch-protocol.md`、`execution-log-template.md`。
+- **激活的规则**：TDD（先红后绿）、完成前验证、归档与单次提交语义（FR-097）。
+
+#### 2.2 统一验证命令
+
+- **R1（红灯验证）**
+  - 命令：`uv run pytest tests/unit/test_verify_constraints.py tests/unit/test_close_check.py tests/integration/test_cli_verify_constraints.py tests/integration/test_cli_workitem_close_check.py -q`（迭代中按需收窄）。
+  - 结果：新增/调整用例先失败再随实现转绿。
+- **V1（定向）**
+  - 命令：`uv run pytest tests/unit/test_verify_constraints.py tests/unit/test_close_check.py tests/unit/test_command_names.py tests/integration/test_cli_verify_constraints.py tests/integration/test_cli_workitem_close_check.py -q`
+  - 结果：**33 passed**（定向套件）。
+- **V2（全量回归）**
+  - 命令：`uv run pytest -q`
+  - 结果：**543 passed**（2026-03-25，实现完成后）。
+- **Lint**
+  - 命令：`uv run ruff check src tests`
+  - 结果：**All checks passed!**
+
+#### 2.3 任务记录
+
+##### Task 6.16 | skip-registry 按 `wi_id` 过滤（FR-095 / SC-020）
+
+- **改动范围**：`src/ai_sdlc/core/verify_constraints.py`、`tests/unit/test_verify_constraints.py`、`tests/integration/test_cli_verify_constraints.py`。
+- **改动内容**：解析登记表中含 **`wi_id`** 列的 Markdown 表；仅当行内 `wi_id` 与 checkpoint 的 `linked_wi_id`（若设）或 `feature.spec_dir` 目录名一致时，才对该行提取 `FR-xxx` / `Task x.y` 做 spec/tasks 映射校验；空 `wi_id` 历史行不参与 BLOCKER。
+- **新增/调整的测试**：SC-020 混合夹具（仅当前 WI 行触发）、`linked_wi_id` 优先于目录名。
+- **执行的命令**：见统一验证命令。
+- **测试结果**：见统一验证命令。
+- **是否符合任务目标**：符合。
+
+##### Task 6.17 | close-check 文档范围 + `--all-docs`（FR-096 / SC-021）
+
+- **改动范围**：`src/ai_sdlc/core/close_check.py`、`src/ai_sdlc/cli/workitem_cmd.py`、close-check 相关单测与集成测。
+- **改动内容**：默认扫描 `specs/<WI>/*.md` 与 `docs/pull-request-checklist.zh.md`、`docs/USER_GUIDE.zh-CN.md`；`--all-docs` 恢复全 `docs/**/*.md` 扫描。
+- **新增/调整的测试**：默认忽略深层 `docs/nested` 违规；`--all-docs` 捕获；`--help` 展示开关。
+- **执行的命令**：见统一验证命令。
+- **测试结果**：见统一验证命令。
+- **是否符合任务目标**：符合。
+
+##### Task 6.18 | 归档与批次协议降噪（FR-097 / SC-022）
+
+- **改动范围**：`templates/execution-log-template.md`、`src/ai_sdlc/rules/batch-protocol.md`、`specs/001-ai-sdlc-framework/spec.md`（FR-097 锁死表述）。
+- **改动内容**：对齐「默认单次提交 + 哈希于 commit 后填一次 / 可用 `git commit --amend`」策略，消除双提交噪音说明。
+- **新增/调整的测试**：无（文档）；全量 pytest/ruff 回归。
+- **执行的命令**：见统一验证命令。
+- **测试结果**：见统一验证命令。
+- **是否符合任务目标**：符合。
+
+##### Task 6.19 | 命令列表从 Typer 枚举（FR-098 / SC-023）
+
+- **改动范围**：新增 `src/ai_sdlc/cli/command_names.py`；`close_check` 移除硬编码命令元组，运行时枚举 CLI。
+- **改动内容**：`collect_flat_command_strings()` 遍历 `Typer`/`Click` 组；docs 一致性使用全量叶子命令路径。
+- **新增/调整的测试**：`tests/unit/test_command_names.py`；monkeypatch 证明列表非冻结双字符串。
+- **执行的命令**：见统一验证命令。
+- **测试结果**：见统一验证命令。
+- **是否符合任务目标**：符合。
+
+#### 2.4 代码审查（`rules/code-review.md` 摘要）
+
+- **宪章/规格对齐**：实现与 FR-095～098、SC-020～023 一致；`verify` 与 `close-check` 仍为只读。
+- **代码质量**：`verify_constraints` 表解析与 wi 作用域集中；`command_names` 懒加载避免 import 环。
+- **测试质量**：TDD 顺序；覆盖 wi_id、白名单、`--all-docs`、Typer 枚举与 monkeypatch。
+- **结论**：无 Critical 阻塞项。
+
+#### 2.5 批次结论
+
+- Batch 10 实现项 **6.16～6.19** 已完成；`close-check` / `verify constraints` 作用域与真值来源已按契约收敛。
+
+#### 2.6 归档后动作
+
+- **已完成 git 提交**：是
+- **提交哈希**：`e09918e`（短 SHA；完整见 `git rev-parse HEAD`）
+- **是否继续下一批**：是

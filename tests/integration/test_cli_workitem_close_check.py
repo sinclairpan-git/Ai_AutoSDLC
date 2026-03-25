@@ -143,9 +143,8 @@ class TestCliWorkitemCloseCheck:
             tasks_body="- [x] done\n### Task 1.1\n- **验收标准（AC）**：ok",
             plan_status="completed",
         )
-        docs_dir = root / "docs"
-        docs_dir.mkdir(parents=True)
-        (docs_dir / "bad.md").write_text(
+        wi = root / "specs" / "001-wi"
+        (wi / "drift.md").write_text(
             "未来可能提供：`ai-sdlc verify constraints`。\n",
             encoding="utf-8",
         )
@@ -154,3 +153,60 @@ class TestCliWorkitemCloseCheck:
         result = runner.invoke(app, ["workitem", "close-check", "--wi", "specs/001-wi"])
         assert result.exit_code == 1
         assert "BLOCKER" in result.output
+
+    def test_exit_0_when_violation_only_in_unlisted_deep_docs(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        root = tmp_path / "r5"
+        root.mkdir()
+        _setup_repo(
+            root,
+            tasks_body="- [x] done\n### Task 1.1\n- **验收标准（AC）**：ok",
+            plan_status="completed",
+        )
+        deep = root / "docs" / "nested"
+        deep.mkdir(parents=True)
+        (deep / "bad.md").write_text(
+            "未来可能提供：`ai-sdlc verify constraints`。\n",
+            encoding="utf-8",
+        )
+        monkeypatch.chdir(root)
+
+        result = runner.invoke(app, ["workitem", "close-check", "--wi", "specs/001-wi"])
+        assert result.exit_code == 0
+
+    def test_exit_1_when_deep_docs_violation_with_all_docs_flag(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        root = tmp_path / "r6"
+        root.mkdir()
+        _setup_repo(
+            root,
+            tasks_body="- [x] done\n### Task 1.1\n- **验收标准（AC）**：ok",
+            plan_status="completed",
+        )
+        deep = root / "docs" / "nested"
+        deep.mkdir(parents=True)
+        (deep / "bad.md").write_text(
+            "未来可能提供：`ai-sdlc verify constraints`。\n",
+            encoding="utf-8",
+        )
+        monkeypatch.chdir(root)
+
+        result = runner.invoke(
+            app,
+            [
+                "workitem",
+                "close-check",
+                "--wi",
+                "specs/001-wi",
+                "--all-docs",
+            ],
+        )
+        assert result.exit_code == 1
+        assert "BLOCKER" in result.output
+
+    def test_help_mentions_all_docs_option(self) -> None:
+        result = runner.invoke(app, ["workitem", "close-check", "--help"])
+        assert result.exit_code == 0
+        assert "--all-docs" in result.output

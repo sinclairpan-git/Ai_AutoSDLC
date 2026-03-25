@@ -93,6 +93,8 @@ Round 3 后仍失败 → 触发熔断器，阻断流水线
 
 ### Step 4：归档
 
+**提交与哈希（FR-097 / SC-022）**：默认 **单次提交**。本批验证通过后，先在 `task-execution-log.md` 追加批次记录，再将 **本批实现、测试、归档段落与 `tasks.md` 勾选** 一并 `git commit`。**「提交哈希」** 仅在本次 commit **成功之后** 写入归档（或等价地由该提交的 SHA 追溯），**禁止**为填满哈希栏而额外制造与实现无关的第二次「仅改归档」提交。
+
 在 `task-execution-log.md` 末尾追加批次记录，使用以下固定格式：
 
 ```markdown
@@ -131,8 +133,8 @@ Round 3 后仍失败 → 触发熔断器，阻断流水线
 - [总结当前批次完成情况和下一步]
 
 #### 归档后动作
-- 已完成 git 提交：`是`
-- 提交哈希：`xxxxxxx`
+- 已完成 git 提交：`是`（与 **本批唯一一次** commit 对应）
+- 提交哈希：`xxxxxxx`（**commit 成功后** 填一次；不预占位后二次修订）
 - 是否继续下一批：`是` / `阻断`
 ```
 
@@ -162,6 +164,8 @@ git add specs/NNN/task-execution-log.md
 git add specs/NNN/tasks.md
 git commit -m "[type]: [描述]"
 ```
+
+**与 Step 4 的衔接**：优先 **一次** `git add` / `git commit` 覆盖实现、测试、归档与任务勾选。若须在获知 SHA 后才填写「提交哈希」，可在更新 `task-execution-log.md` 对应行后执行 **`git commit --amend --no-edit`**，仍视为 **单条语义提交**，避免多出「仅改归档」的第二次 commit。**每批哈希只回填一次**。
 
 commit message 规范：
 - 准备/基础阶段：`feat: scaffold [feature name] implementation`
