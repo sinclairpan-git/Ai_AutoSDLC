@@ -120,3 +120,40 @@ class TestCliVerifyConstraints:
         assert result.exit_code == 1
         assert '"ok"' in result.output
         assert "blockers" in result.output
+
+    def test_exit_1_when_skip_registry_unmapped(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        init_project(tmp_path)
+        _minimal_constitution(tmp_path)
+        spec = tmp_path / "specs" / "001-wi"
+        spec.mkdir(parents=True)
+        (spec / "spec.md").write_text("- **FR-001**: x\n", encoding="utf-8")
+        (spec / "tasks.md").write_text(
+            "### Task 1.1\n- **依赖**：无\n- **验收标准（AC）**：\n  1. ok\n",
+            encoding="utf-8",
+        )
+        rules_dir = tmp_path / "src" / "ai_sdlc" / "rules"
+        rules_dir.mkdir(parents=True)
+        (rules_dir / "agent-skip-registry.zh.md").write_text(
+            "| 日期 | 发现阶段 | 跳过内容摘要 | 根因 | 框架强化建议 | 状态 |\n"
+            "|------|----------|--------------|------|--------------|------|\n"
+            "| 2026-03-26 | 执行 | x | A | 引入 FR-999 并补 Task 9.9 | 已记录 |\n",
+            encoding="utf-8",
+        )
+        cp = Checkpoint(
+            current_stage="init",
+            feature=FeatureInfo(
+                id="001",
+                spec_dir="specs/001-wi",
+                design_branch="d",
+                feature_branch="f",
+                current_branch="main",
+            ),
+        )
+        save_checkpoint(tmp_path, cp)
+        monkeypatch.chdir(tmp_path)
+
+        result = runner.invoke(app, ["verify", "constraints"])
+        assert result.exit_code == 1
+        assert "skip-registry" in result.output

@@ -90,3 +90,79 @@ def test_blocker_tasks_md_missing_task_acceptance(tmp_path: Path) -> None:
     assert any("BLOCKER" in x for x in b)
     assert any("SC-014" in x for x in b)
     assert any("1.1" in x for x in b)
+
+
+def test_blocker_skip_registry_unmapped_to_spec_or_tasks(tmp_path: Path) -> None:
+    mem = tmp_path / ".ai-sdlc" / "memory"
+    mem.mkdir(parents=True)
+    (mem / "constitution.md").write_text("# C\n", encoding="utf-8")
+
+    spec = tmp_path / "specs" / "001-wi"
+    spec.mkdir(parents=True)
+    (spec / "spec.md").write_text("- **FR-001**: x\n", encoding="utf-8")
+    (spec / "tasks.md").write_text(
+        "### Task 1.1\n- **依赖**：无\n- **验收标准（AC）**：\n  1. ok\n",
+        encoding="utf-8",
+    )
+
+    registry = tmp_path / "src" / "ai_sdlc" / "rules"
+    registry.mkdir(parents=True)
+    (registry / "agent-skip-registry.zh.md").write_text(
+        "| 日期 | 发现阶段 | 跳过内容摘要 | 根因 | 框架强化建议 | 状态 |\n"
+        "|------|----------|--------------|------|--------------|------|\n"
+        "| 2026-03-26 | 执行 | x | A | 引入 FR-999 并补 Task 9.9 | 已记录 |\n",
+        encoding="utf-8",
+    )
+
+    cp = Checkpoint(
+        current_stage="init",
+        feature=FeatureInfo(
+            id="001",
+            spec_dir="specs/001-wi",
+            design_branch="d",
+            feature_branch="f",
+            current_branch="main",
+        ),
+    )
+    save_checkpoint(tmp_path, cp)
+
+    b = collect_constraint_blockers(tmp_path)
+    assert any("BLOCKER" in x for x in b)
+    assert any("skip-registry" in x for x in b)
+
+
+def test_pass_skip_registry_with_mapped_refs(tmp_path: Path) -> None:
+    mem = tmp_path / ".ai-sdlc" / "memory"
+    mem.mkdir(parents=True)
+    (mem / "constitution.md").write_text("# C\n", encoding="utf-8")
+
+    spec = tmp_path / "specs" / "001-wi"
+    spec.mkdir(parents=True)
+    (spec / "spec.md").write_text("- **FR-001**: x\n", encoding="utf-8")
+    (spec / "tasks.md").write_text(
+        "### Task 1.1\n- **依赖**：无\n- **验收标准（AC）**：\n  1. ok\n",
+        encoding="utf-8",
+    )
+
+    registry = tmp_path / "src" / "ai_sdlc" / "rules"
+    registry.mkdir(parents=True)
+    (registry / "agent-skip-registry.zh.md").write_text(
+        "| 日期 | 发现阶段 | 跳过内容摘要 | 根因 | 框架强化建议 | 状态 |\n"
+        "|------|----------|--------------|------|--------------|------|\n"
+        "| 2026-03-26 | 执行 | x | A | 引入 FR-001 并补 Task 1.1 | 已记录 |\n",
+        encoding="utf-8",
+    )
+
+    cp = Checkpoint(
+        current_stage="init",
+        feature=FeatureInfo(
+            id="001",
+            spec_dir="specs/001-wi",
+            design_branch="d",
+            feature_branch="f",
+            current_branch="main",
+        ),
+    )
+    save_checkpoint(tmp_path, cp)
+
+    assert collect_constraint_blockers(tmp_path) == []

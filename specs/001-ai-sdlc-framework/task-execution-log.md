@@ -522,3 +522,60 @@
 - **已完成 git 提交**：是
 - **提交哈希**：`71d801e4a2febb0ca896d6367805c22a269f011d`
 - **是否继续下一批**：是
+
+### Batch 2026-03-25-011 | Task 6.14（偏离登记产品化闭环）
+
+#### 2.1 批次范围
+
+- **覆盖任务**：Task **6.14**：在只读约束检查中加入 skip-registry 到 spec/tasks 的最小映射校验。
+- **覆盖阶段**：EXECUTE（verify constraints 规则增强）。
+- **预读范围**：`.ai-sdlc/memory/constitution.md`、`src/ai_sdlc/rules/pipeline.md`、`src/ai_sdlc/rules/batch-protocol.md`、`specs/001-ai-sdlc-framework/tasks.md`（Task 6.14 AC）、`src/ai_sdlc/rules/agent-skip-registry.zh.md`。
+- **激活的规则**：TDD（先红后绿）、完成前验证、归档先于继续。
+
+#### 2.2 统一验证命令
+
+- **R1（红灯验证）**
+  - 命令：`uv run pytest tests/unit/test_verify_constraints.py tests/integration/test_cli_verify_constraints.py -q`
+  - 结果：新增「仅登记未映射」用例先失败（2 failed）。
+- **V1（定向）**
+  - 命令：`uv run pytest tests/unit/test_verify_constraints.py tests/integration/test_cli_verify_constraints.py -q`
+  - 结果：**12 passed**。
+- **V2（全量回归）**
+  - 命令：`uv run pytest -q`
+  - 结果：**532 passed**（2026-03-25）。
+- **Lint**
+  - 命令：`uv run ruff check src tests`
+  - 结果：**All checks passed!**
+
+#### 2.3 任务记录
+
+##### Task 6.14 | skip-registry 映射校验（FR-094 / SC-017 延伸）
+
+- **改动范围**：`src/ai_sdlc/core/verify_constraints.py`、`tests/unit/test_verify_constraints.py`、`tests/integration/test_cli_verify_constraints.py`。
+- **改动内容**：
+  - `verify constraints` 新增 `_skip_registry_mapping_blockers`：解析 `agent-skip-registry.zh.md` 中 `FR-xxx` 与 `Task x.y` 引用；
+  - 最小映射规则：`FR` 必须可在当前 `spec.md` 或 `tasks.md` 找到，`Task` 必须可在当前 `tasks.md` 找到；
+  - 未映射时返回 `BLOCKER: skip-registry ... unmapped references ...`。
+- **新增/调整的测试**：
+  - unit：1 个负面（`FR-999`/`Task 9.9` 未落 spec/tasks）+ 1 个正面（`FR-001`/`Task 1.1` 已映射）；
+  - integration：1 个负面（CLI 非零并包含 `skip-registry`）。
+- **执行的命令**：见统一验证命令。
+- **测试结果**：见统一验证命令。
+- **是否符合任务目标**：符合（AC1/AC2 达成）。
+
+#### 2.4 代码审查（`rules/code-review.md` 摘要）
+
+- **宪章/规格对齐**：仅增强只读约束检查，未引入写路径。
+- **代码质量**：映射规则最小且可解释；未映射明细可定位到 FR/Task 号。
+- **测试质量**：覆盖负面与正向夹具，含 CLI 层退出码行为。
+- **结论**：无 Critical 阻塞项。
+
+#### 2.5 批次结论
+
+- Task 6.14 已完成；Batch 9（6.11～6.14）实现项收口完成。
+
+#### 2.6 归档后动作
+
+- **已完成 git 提交**：是
+- **提交哈希**：`PLACEHOLDER_COMMIT_SHA`
+- **是否继续下一批**：是
