@@ -357,3 +357,55 @@
 - **已完成 git 提交**：是
 - **提交哈希**：`fdeb7460b47859943908e345295afb341e488bad`
 - **是否继续下一批**：是
+
+### Batch 2026-03-25-008 | Task 6.11（规格与模板：收口约束契约落盘）
+
+#### 2.1 批次范围
+
+- **覆盖任务**：Task **6.11**（仅文档）：spec / execution-log 模板 / PR 清单术语与收口字段对齐。
+- **覆盖阶段**：EXECUTE（文档契约先行）。
+- **预读范围**：`.ai-sdlc/memory/constitution.md`、`src/ai_sdlc/rules/pipeline.md`、`src/ai_sdlc/rules/batch-protocol.md`、`specs/001-ai-sdlc-framework/tasks.md`（Task 6.11 AC）。
+- **激活的规则**：MUST-2/3/4/5、归档先于继续、完成前验证。
+
+#### 2.2 统一验证命令
+
+- **V1（本任务相关审阅）**
+  - 命令：人工审阅 `spec.md` / `templates/execution-log-template.md` / `docs/pull-request-checklist.zh.md` 术语一致性。
+  - 结果：一致（`close-check`、`BLOCKER`、`related_plan` 统一）。
+- **V2（全量回归）**
+  - 命令：`uv run pytest -q`
+  - 结果：**519 passed**（2026-03-25）。
+- **Lint**
+  - 命令：`uv run ruff check src tests`
+  - 结果：**All checks passed!**
+
+#### 2.3 任务记录
+
+##### Task 6.11 | 规格与模板收口契约
+
+- **改动范围**：`specs/001-ai-sdlc-framework/spec.md`、`templates/execution-log-template.md`、`docs/pull-request-checklist.zh.md`。
+- **改动内容**：
+  - `spec.md` 增补 FR-091～094 术语约束说明（`close-check` / `BLOCKER` / `related_plan` 一致）。
+  - execution-log 模板新增 mandatory 字段：「代码审查结论」「任务/计划同步状态」，并调整章节顺序。
+  - PR 清单新增“最小验证集”分流：文档变更 vs 代码变更，两类分别给出最低验证命令与 `BLOCKER` 约束。
+- **新增/调整的测试**：无（文档任务）。
+- **执行的命令**：见统一验证命令。
+- **测试结果**：见统一验证命令。
+- **是否符合任务目标**：符合（AC：术语一致；无“命令已实现但文档仍标未实现”矛盾）。
+
+#### 2.4 代码审查（`rules/code-review.md` 摘要）
+
+- **宪章/规格对齐**：仅文档契约，不扩大产品行为范围。
+- **代码质量**：无运行时代码修改。
+- **测试质量**：执行全量回归与 lint 作为完成证据。
+- **结论**：无 Critical 阻塞项。
+
+#### 2.5 批次结论
+
+- Task 6.11 已完成；可进入 Task 6.12（`workitem close-check` 只读实现）。
+
+#### 2.6 归档后动作
+
+- **已完成 git 提交**：是
+- **提交哈希**：`PLACEHOLDER_COMMIT_SHA`
+- **是否继续下一批**：是

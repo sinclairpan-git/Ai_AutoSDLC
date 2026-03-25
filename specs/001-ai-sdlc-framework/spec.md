@@ -296,6 +296,8 @@
 - **FR-093（P1）**：`docs/pull-request-checklist.zh.md` 应纳入可执行闭环：`pytest`、`ruff`、`verify constraints`、（如适用）`workitem plan-check` / `close-check`；并区分“文档变更”与“代码变更”的最低验证集合。
 - **FR-094（P1）**：当 `agent-skip-registry.zh.md` 新增偏离条目后，须在同一工作项的 `spec/plan/tasks` 中形成对应条目（FR 或 Task），禁止只登记不产品化。
 
+> 术语约束：FR-091～094 相关文档统一使用 `close-check`、`BLOCKER`、`related_plan` 三个关键术语，避免同义词漂移。
+
 ### 关键实体
 
 - **ProjectState**：项目级状态（status, next_work_item_seq, initialized_at, last_updated）

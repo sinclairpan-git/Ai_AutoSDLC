@@ -11,6 +11,11 @@
 - [ ] 自动化：`uv run pytest`（或 CI 等价）与 `uv run ruff check src tests` 已通过（若有 Python 变更）。
 - [ ] （可选）`uv run ai-sdlc verify constraints` 与 `uv run ai-sdlc workitem plan-check --wi specs/<WI>/`（若本 PR 涉及外部计划或 `related_plan`）。
 
+## 最小验证集（Mandatory）
+
+- [ ] **文档变更（仅 docs/spec/template）**：至少执行 `uv run ai-sdlc verify constraints`；若触及 `related_plan` / 收口文档，补执行 `uv run ai-sdlc workitem close-check --wi specs/<WI>/`（或实现等价命令）并确认无 `BLOCKER`。
+- [ ] **代码变更（src/tests）**：执行 `uv run pytest`、`uv run ruff check src tests`、`uv run ai-sdlc verify constraints`；若存在 `related_plan` 或 close 阶段收口改动，补执行 `workitem plan-check` 与 `workitem close-check`（命令名以当前实现为准）并确认无 `BLOCKER`。
+
 ## 参考
 
 - 用户手册：[§2.1 交付完成（DoD）与计划 / 任务状态](USER_GUIDE.zh-CN.md#user-guide-dod-plan-sync)
