@@ -9,6 +9,11 @@ from rich.console import Console
 from rich.table import Table
 
 from ai_sdlc.context.state import load_checkpoint, save_checkpoint
+from ai_sdlc.core.close_check import (
+    CloseCheckResult,
+    format_close_check_json,
+    run_close_check,
+)
 from ai_sdlc.core.plan_check import PlanCheckResult, format_json, run_plan_check
 from ai_sdlc.utils.helpers import find_project_root, now_iso
 
@@ -86,6 +91,59 @@ def _print_table(result: PlanCheckResult) -> None:
         if len(result.changed_paths) > 50:
             console.print(f"  … ({len(result.changed_paths) - 50} more)")
 
+
+@workitem_app.command(
+    "close-check",
+    help=(
+        "Read-only close-stage checks for a work item: tasks completion, related_plan "
+        "drift, and execution-log required fields. Does not write checkpoint."
+    ),
+)
+def workitem_close_check(
+    wi: Path = typer.Option(
+        ...,
+        "--wi",
+        help="Path to specs/<WI>/ directory to validate before close/merge.",
+    ),
+    as_json: bool = typer.Option(
+        False,
+        "--json",
+        help="Machine-readable report (ok/blockers/checks). Read-only.",
+    ),
+) -> None:
+    """Read-only close checks (FR-091 / SC-017). Exit 0 when no BLOCKERs."""
+    result = run_close_check(cwd=Path.cwd(), wi=wi)
+
+    if as_json:
+        console.print(format_close_check_json(result))
+    else:
+        _print_close_table(result)
+
+    if result.error:
+        raise typer.Exit(code=1)
+    raise typer.Exit(code=0 if result.ok else 1)
+
+
+def _print_close_table(result: CloseCheckResult) -> None:
+    """Render close-check output in a compact table."""
+    table = Table(title="workitem close-check (read-only)")
+    table.add_column("Check", style="cyan")
+    table.add_column("Result")
+    table.add_column("Detail")
+
+    for item in result.checks:
+        ok = bool(item.get("ok"))
+        table.add_row(
+            str(item.get("name", "unknown")),
+            "[green]PASS[/green]" if ok else "[red]BLOCKER[/red]",
+            str(item.get("detail", "")),
+        )
+    console.print(table)
+
+    if result.blockers:
+        console.print("[bold red]BLOCKERs[/bold red]")
+        for b in result.blockers:
+            console.print(f"  {b}")
 
 @workitem_app.command(
     "link",

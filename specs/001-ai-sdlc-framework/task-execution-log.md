@@ -409,3 +409,62 @@
 - **已完成 git 提交**：是
 - **提交哈希**：`d38c7cc65e3eebb01bb441d8fa87c5526267fd41`
 - **是否继续下一批**：是
+
+### Batch 2026-03-25-009 | Task 6.12（实现 `ai-sdlc workitem close-check`）
+
+#### 2.1 批次范围
+
+- **覆盖任务**：Task **6.12**：新增只读 `workitem close-check` 与核心聚合检查器。
+- **覆盖阶段**：EXECUTE（收口检查实现）。
+- **预读范围**：`.ai-sdlc/memory/constitution.md`、`src/ai_sdlc/rules/pipeline.md`、`src/ai_sdlc/rules/batch-protocol.md`、`specs/001-ai-sdlc-framework/tasks.md`（Task 6.12 AC）。
+- **激活的规则**：TDD（先红后绿）、完成前验证、归档先于继续、代码审查。
+
+#### 2.2 统一验证命令
+
+- **R1（红灯验证）**
+  - 命令：`uv run pytest tests/unit/test_close_check.py tests/integration/test_cli_workitem_close_check.py -q`
+  - 结果：初次失败（`ModuleNotFoundError: ai_sdlc.core.close_check`），证明新行为测试先红。
+- **V1（定向）**
+  - 命令：`uv run pytest tests/unit/test_close_check.py tests/integration/test_cli_workitem_close_check.py -q`
+  - 结果：**7 passed**。
+- **V2（全量回归）**
+  - 命令：`uv run pytest -q`
+  - 结果：**526 passed**（2026-03-25）。
+- **Lint**
+  - 命令：`uv run ruff check src tests`
+  - 结果：先发现 `I001` 导入排序；修复后 **All checks passed!**。
+- **Smoke（CLI）**
+  - 命令：`uv run ai-sdlc workitem close-check --help`
+  - 结果：退出码 0，明确 `Read-only`、close-stage 语义与 `--wi/--json`。
+
+#### 2.3 任务记录
+
+##### Task 6.12 | `workitem close-check`（FR-091 / SC-017）
+
+- **改动范围**：`src/ai_sdlc/core/close_check.py`、`src/ai_sdlc/cli/workitem_cmd.py`、`tests/unit/test_close_check.py`、`tests/integration/test_cli_workitem_close_check.py`。
+- **改动内容**：
+  - 新增只读核心：检查 `tasks.md` 完成度、`related_plan` 漂移（复用 `plan_check`）、`task-execution-log.md` 关键字段完整性；
+  - CLI 新增 `ai-sdlc workitem close-check --wi ... [--json]`，机器可读输出包含 `ok/blockers/checks`；
+  - 保持默认不写 checkpoint，不修改仓库状态文件。
+- **新增/调整的测试**：单元 3 条（2 负面 + 1 正向），集成 4 条（退出码、JSON 字段、help 文案）。
+- **执行的命令**：见统一验证命令。
+- **测试结果**：见统一验证命令。
+- **是否符合任务目标**：符合（AC1～AC4 达成）。
+
+#### 2.4 代码审查（`rules/code-review.md` 摘要）
+
+- **宪章/规格对齐**：仅实现 FR-091 / SC-017 范围；命令为只读。
+- **技术规范一致性**：复用现有 `plan_check` 解析与 drift 规则；CLI 保持统一 JSON/退出码习惯。
+- **代码质量**：检查项结构化输出，失败原因可定位；无副作用写操作。
+- **测试质量**：覆盖 tasks 未完成、related_plan 漂移、全绿路径与 JSON/help。
+- **结论**：无 Critical 阻塞项。
+
+#### 2.5 批次结论
+
+- Task 6.12 已完成；下一步可进入 Task 6.13（文档一致性漂移防回归）。
+
+#### 2.6 归档后动作
+
+- **已完成 git 提交**：是
+- **提交哈希**：`PLACEHOLDER_COMMIT_SHA`
+- **是否继续下一批**：是
