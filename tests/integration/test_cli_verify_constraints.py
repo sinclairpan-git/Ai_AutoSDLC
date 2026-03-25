@@ -83,6 +83,35 @@ class TestCliVerifyConstraints:
         assert result.exit_code == 0
         assert "no blocker" in result.output.lower()
 
+    def test_exit_1_tasks_missing_acceptance(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        init_project(tmp_path)
+        _minimal_constitution(tmp_path)
+        spec = tmp_path / "specs" / "001-wi"
+        spec.mkdir(parents=True)
+        (spec / "tasks.md").write_text(
+            "### Task 1.1\n- **依赖**：无\n",
+            encoding="utf-8",
+        )
+        cp = Checkpoint(
+            current_stage="init",
+            feature=FeatureInfo(
+                id="001",
+                spec_dir="specs/001-wi",
+                design_branch="d",
+                feature_branch="f",
+                current_branch="main",
+            ),
+        )
+        save_checkpoint(tmp_path, cp)
+        monkeypatch.chdir(tmp_path)
+
+        result = runner.invoke(app, ["verify", "constraints"])
+        assert result.exit_code == 1
+        assert "BLOCKER" in result.output
+        assert "SC-014" in result.output
+
     def test_json_output(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
         init_project(tmp_path)
         monkeypatch.chdir(tmp_path)

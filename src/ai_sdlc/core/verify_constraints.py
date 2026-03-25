@@ -5,6 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from ai_sdlc.context.state import load_checkpoint
+from ai_sdlc.gates.task_ac_checks import first_task_missing_acceptance
 
 CONSTITUTION_REL = Path(".ai-sdlc") / "memory" / "constitution.md"
 
@@ -35,4 +36,15 @@ def collect_constraint_blockers(root: Path) -> list[str]:
             "BLOCKER: checkpoint feature.spec_dir is not an existing directory "
             f"({spec_dir_raw!r})"
         )
+        return blockers
+
+    tasks_file = spec_path / "tasks.md"
+    if tasks_file.is_file():
+        content = tasks_file.read_text(encoding="utf-8")
+        missing_id = first_task_missing_acceptance(content)
+        if missing_id is not None:
+            blockers.append(
+                "BLOCKER: tasks.md missing task-level acceptance (SC-014; same rule as "
+                f"gate decompose `task_acceptance_present`): first breach Task {missing_id}"
+            )
     return blockers

@@ -22,8 +22,10 @@ console = Console()
 @verify_app.command(
     "constraints",
     help=(
-        "Read-only: required governance files and checkpoint/specs consistency. "
-        "Does not write checkpoint. Exit 0 if no BLOCKERs, else 1."
+        "Read-only: required governance files and checkpoint/specs consistency; "
+        "when tasks.md exists under feature.spec_dir, task-level acceptance must "
+        "match gate decompose (SC-014). Does not write checkpoint. "
+        "Exit 0 if no BLOCKERs, else 1."
     ),
 )
 def verify_constraints(
@@ -33,7 +35,7 @@ def verify_constraints(
         help="Machine-readable report on stdout.",
     ),
 ) -> None:
-    """Validate constitution and checkpoint spec_dir against the repo (FR-089 / SC-012)."""
+    """Validate constitution, checkpoint spec_dir, and tasks.md AC vs SC-014 (FR-089)."""
     root = find_project_root()
     if root is None:
         msg = "Not inside an AI-SDLC project (.ai-sdlc/ not found)."

@@ -9,6 +9,7 @@ import re
 from pathlib import Path
 from typing import Any
 
+from ai_sdlc.gates.task_ac_checks import first_task_missing_acceptance
 from ai_sdlc.models.gate import GateCheck, GateResult, GateVerdict
 from ai_sdlc.utils.helpers import AI_SDLC_DIR, is_git_repo
 
@@ -196,7 +197,7 @@ class DecomposeGate:
 
             # FR-090: each Task block must include task-level acceptance info.
             # Accept any of: "验收标准", standalone "AC", or "**验证**" field.
-            first_missing = _first_task_missing_acceptance(content)
+            first_missing = first_task_missing_acceptance(content)
             checks.append(
                 GateCheck(
                     name="task_acceptance_present",
@@ -232,26 +233,6 @@ class DecomposeGate:
         all_passed = all(c.passed for c in checks)
         verdict = GateVerdict.PASS if all_passed else GateVerdict.RETRY
         return GateResult(stage="decompose", verdict=verdict, checks=checks)
-
-
-def _first_task_missing_acceptance(tasks_md: str) -> str | None:
-    """Return first Task id missing acceptance markers, else None."""
-    parts = re.split(r"(?m)^###\s+Task\s+", tasks_md)
-    # parts[0] is preamble (maybe empty)
-    for part in parts[1:]:
-        # part starts with "{id}..." until next split
-        m = re.match(r"(?P<id>\d+\.\d+)", part.strip())
-        task_id = m.group("id") if m else "unknown"
-        block = part
-
-        has_acceptance = (
-            "验收标准" in block
-            or re.search(r"(?m)\\bAC\\b", block) is not None
-            or "验证" in block
-        )
-        if not has_acceptance:
-            return task_id
-    return None
 
 
 class VerifyGate:
@@ -318,7 +299,7 @@ class ExecuteGate:
                 )
             else:
                 content = tasks_file.read_text(encoding="utf-8")
-                first_missing = _first_task_missing_acceptance(content)
+                first_missing = first_task_missing_acceptance(content)
                 checks.append(
                     GateCheck(
                         name="decompose_prerequisite",

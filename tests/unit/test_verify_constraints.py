@@ -60,3 +60,33 @@ def test_pass_constitution_and_spec_dir(tmp_path: Path) -> None:
     save_checkpoint(tmp_path, cp)
 
     assert collect_constraint_blockers(tmp_path) == []
+
+
+def test_blocker_tasks_md_missing_task_acceptance(tmp_path: Path) -> None:
+    mem = tmp_path / ".ai-sdlc" / "memory"
+    mem.mkdir(parents=True)
+    (mem / "constitution.md").write_text("# C\n", encoding="utf-8")
+
+    spec = tmp_path / "specs" / "001-wi"
+    spec.mkdir(parents=True)
+    (spec / "tasks.md").write_text(
+        "### Task 1.1 — 示例\n- **依赖**：无\n",
+        encoding="utf-8",
+    )
+
+    cp = Checkpoint(
+        current_stage="init",
+        feature=FeatureInfo(
+            id="001",
+            spec_dir="specs/001-wi",
+            design_branch="d",
+            feature_branch="f",
+            current_branch="main",
+        ),
+    )
+    save_checkpoint(tmp_path, cp)
+
+    b = collect_constraint_blockers(tmp_path)
+    assert any("BLOCKER" in x for x in b)
+    assert any("SC-014" in x for x in b)
+    assert any("1.1" in x for x in b)

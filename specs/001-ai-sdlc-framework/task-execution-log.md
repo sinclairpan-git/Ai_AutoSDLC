@@ -308,3 +308,52 @@
 - **已完成 git 提交**：是
 - **提交哈希**：`74364f2c7cdac87ccc89077f2cb013481ffd6931`
 - **是否继续下一批**：是
+
+### Batch 2026-03-25-007 | Task 6.10（共用 task AC 校验 + verify constraints 对齐 SC-014）
+
+#### 2.1 批次范围
+
+- **覆盖任务**：Task **6.10**（可选）：`task_ac_checks` 共用模块；`collect_constraint_blockers` 在存在 `tasks.md` 时与 **SC-014** / `DecomposeGate` 同规则。
+- **覆盖阶段**：EXECUTE（门禁与只读校验一致性）。
+- **预读范围**：`.ai-sdlc/memory/constitution.md`、`src/ai_sdlc/rules/pipeline.md`、`src/ai_sdlc/rules/batch-protocol.md`、`specs/001-ai-sdlc-framework/tasks.md`（Task 6.10 AC）。
+- **激活的规则**：完成前验证、归档先于继续、MUST-2 测试覆盖。
+
+#### 2.2 统一验证命令
+
+- **V1（定向）**
+  - 命令：`uv run pytest tests/unit/test_task_ac_checks.py tests/unit/test_verify_constraints.py tests/integration/test_cli_verify_constraints.py -q`
+  - 结果：通过。
+- **V2（全量回归）**
+  - 命令：`uv run pytest -q`
+  - 结果：**519 passed**（2026-03-25）。
+- **Lint**
+  - 命令：`uv run ruff check src tests`
+  - 结果：**All checks passed!**
+
+#### 2.3 任务记录
+
+##### Task 6.10 | 共用校验 + `verify constraints`
+
+- **改动范围**：`src/ai_sdlc/gates/task_ac_checks.py`（新）、`src/ai_sdlc/gates/pipeline_gates.py`、`src/ai_sdlc/core/verify_constraints.py`、`src/ai_sdlc/cli/verify_cmd.py`。
+- **改动内容**：抽取 `first_task_missing_acceptance`；`DecomposeGate` / `ExecuteGate` 经共用模块调用；`verify constraints` 在 `feature.spec_dir/tasks.md` 存在时缺任务级 AC 则 **BLOCKER**；CLI `--help` 补充 SC-014 说明。
+- **新增/调整的测试**：`tests/unit/test_task_ac_checks.py`；`tests/unit/test_verify_constraints.py`；`tests/integration/test_cli_verify_constraints.py`。
+- **执行的命令**：见统一验证命令。
+- **测试结果**：见统一验证命令。
+- **是否符合任务目标**：符合（AC：共用函数 pytest 覆盖；verify 与 gate decompose 规则一致）。
+
+#### 2.4 代码审查（`rules/code-review.md` 摘要）
+
+- **宪章/规格对齐**：范围限定 Task 6.10；与 FR-089 / SC-014 一致。
+- **代码质量**：单一路径解析任务块，避免 gate 与 verify 双份规则。
+- **测试质量**：单元 + 集成负例覆盖 BLOCKER。
+- **结论**：无 Critical 阻塞项。
+
+#### 2.5 批次结论
+
+- Task 6.10 已完成；可按 `tasks.md` 进入 **Batch 9 / Task 6.11**。
+
+#### 2.6 归档后动作
+
+- **已完成 git 提交**：是
+- **提交哈希**：`PLACEHOLDER_COMMIT_SHA`
+- **是否继续下一批**：是
