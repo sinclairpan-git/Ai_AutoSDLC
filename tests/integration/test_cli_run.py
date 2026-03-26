@@ -8,6 +8,9 @@ import pytest
 from typer.testing import CliRunner
 
 from ai_sdlc.cli.main import app
+from ai_sdlc.context.state import save_checkpoint
+from ai_sdlc.models.state import Checkpoint, FeatureInfo
+from ai_sdlc.routers.bootstrap import init_project
 
 runner = CliRunner()
 
@@ -50,3 +53,83 @@ class TestRunCommand:
         assert runner.invoke(app, ["run", "--dry-run"]).exit_code == 0
         doc = tmp_path / ".codex" / "AI-SDLC.md"
         assert doc.is_file()
+
+    def test_run_dry_run_guides_user_when_legacy_reconcile_is_needed(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.chdir(tmp_path)
+        (tmp_path / ".git").mkdir()
+        assert runner.invoke(app, ["init", "."]).exit_code == 0
+        (tmp_path / "product-requirements.md").write_text("# PRD\n", encoding="utf-8")
+        (tmp_path / "spec.md").write_text(
+            "### 用户故事 1\n场景\n\n- **FR-001**: requirement\n",
+            encoding="utf-8",
+        )
+        (tmp_path / "research.md").write_text("# research\n", encoding="utf-8")
+        (tmp_path / "data-model.md").write_text("# data model\n", encoding="utf-8")
+        (tmp_path / "plan.md").write_text("# plan\n", encoding="utf-8")
+        (tmp_path / "tasks.md").write_text(
+            "### Task 1.1 — 示例\n"
+            "- **依赖**：无\n"
+            "- **验收标准（AC）**：\n"
+            "  1. 示例\n",
+            encoding="utf-8",
+        )
+        save_checkpoint(
+            tmp_path,
+            Checkpoint(
+                current_stage="init",
+                feature=FeatureInfo(
+                    id="unknown",
+                    spec_dir="specs/unknown",
+                    design_branch="design/unknown",
+                    feature_branch="feature/unknown",
+                    current_branch="main",
+                ),
+            ),
+        )
+
+        result = runner.invoke(app, ["run", "--dry-run"])
+        assert result.exit_code == 1
+        assert "recover --reconcile" in result.output
+
+    def test_run_dry_run_continues_after_reconcile(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.chdir(tmp_path)
+        (tmp_path / ".git").mkdir()
+        assert runner.invoke(app, ["init", "."]).exit_code == 0
+        (tmp_path / "product-requirements.md").write_text("# PRD\n", encoding="utf-8")
+        (tmp_path / "spec.md").write_text(
+            "### 用户故事 1\n场景\n\n- **FR-001**: requirement\n",
+            encoding="utf-8",
+        )
+        (tmp_path / "research.md").write_text("# research\n", encoding="utf-8")
+        (tmp_path / "data-model.md").write_text("# data model\n", encoding="utf-8")
+        (tmp_path / "plan.md").write_text("# plan\n", encoding="utf-8")
+        (tmp_path / "tasks.md").write_text(
+            "### Task 1.1 — 示例\n"
+            "- **依赖**：无\n"
+            "- **验收标准（AC）**：\n"
+            "  1. 示例\n",
+            encoding="utf-8",
+        )
+        save_checkpoint(
+            tmp_path,
+            Checkpoint(
+                current_stage="init",
+                feature=FeatureInfo(
+                    id="unknown",
+                    spec_dir="specs/unknown",
+                    design_branch="design/unknown",
+                    feature_branch="feature/unknown",
+                    current_branch="main",
+                ),
+            ),
+        )
+
+        assert runner.invoke(app, ["recover", "--reconcile"]).exit_code == 0
+
+        result = runner.invoke(app, ["run", "--dry-run"])
+        assert result.exit_code == 0
+        assert "Pipeline completed. Stage: verify" in result.output

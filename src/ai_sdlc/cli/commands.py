@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import sys
 from pathlib import Path
 
 import typer
@@ -11,6 +12,7 @@ from rich.table import Table
 
 from ai_sdlc.context.state import build_resume_pack, load_checkpoint, save_resume_pack
 from ai_sdlc.core.config import load_project_config, load_project_state
+from ai_sdlc.core.reconcile import ReconcileHint, detect_reconcile_hint, reconcile_checkpoint
 from ai_sdlc.generators.index_gen import generate_index, save_index
 from ai_sdlc.integrations.ide_adapter import ensure_ide_adaptation
 from ai_sdlc.knowledge.engine import apply_refresh, compute_refresh_level, load_baseline
@@ -35,6 +37,48 @@ def _startup_next_step_hint() -> str:
         "  If `ai-sdlc` is not on PATH, use the venv's Python:\n"
         "  [cyan]python -m ai_sdlc run --dry-run[/cyan]"
     )
+
+
+def _is_interactive_terminal() -> bool:
+    try:
+        return sys.stdin.isatty() and sys.stdout.isatty()
+    except Exception:
+        return False
+
+
+def _print_reconcile_guidance(
+    hint: ReconcileHint,
+    *,
+    current_command: str,
+    blocking: bool,
+) -> None:
+    status_word = "已暂停" if blocking else "检测到"
+    console.print(
+        Panel(
+            (
+                f"{status_word}旧版产物与 checkpoint 可能不一致。\n"
+                f"{hint.reason}"
+            ),
+            title=f"{current_command} 状态诊断",
+            border_style="yellow",
+        )
+    )
+
+    table = Table(title="Legacy Artifact Probe")
+    table.add_column("Property", style="cyan")
+    table.add_column("Value")
+    table.add_row("Artifact Layout", hint.layout)
+    table.add_row("Detected Files", ", ".join(hint.detected_files))
+    table.add_row("Checkpoint Stage", hint.checkpoint_stage)
+    table.add_row("Checkpoint Feature", hint.checkpoint_feature_id)
+    table.add_row("Suggested Stage", hint.current_stage)
+    table.add_row("Suggested Spec Dir", hint.spec_dir)
+    table.add_row("Suggested Feature ID", hint.feature_id)
+    console.print(table)
+    console.print("[bold]下一步你可以：[/bold]")
+    console.print("  1. [cyan]ai-sdlc recover --reconcile[/cyan] 进行状态对齐")
+    console.print("  2. [cyan]ai-sdlc status[/cyan] 查看当前 checkpoint")
+    console.print("  3. [cyan]ai-sdlc run --dry-run[/cyan] 在对齐后预演流水线")
 
 
 # ---------------------------------------------------------------------------
@@ -143,6 +187,13 @@ def status_command() -> None:
             table.add_row("Last synced (plan)", cp.last_synced_at)
 
     console.print(table)
+    hint = detect_reconcile_hint(root)
+    if hint is not None:
+        _print_reconcile_guidance(
+            hint,
+            current_command="ai-sdlc status",
+            blocking=False,
+        )
     raise typer.Exit(code=0)
 
 
@@ -151,15 +202,53 @@ def status_command() -> None:
 # ---------------------------------------------------------------------------
 
 
-def recover_command() -> None:
+def recover_command(
+    reconcile: bool = typer.Option(
+        False,
+        "--reconcile",
+        help="Detect legacy artifacts and reconcile stale checkpoint state before recovering.",
+    ),
+) -> None:
     """Recover pipeline state from last checkpoint."""
     root = find_project_root()
     if root is None:
         console.print("[red]Not inside an AI-SDLC project.[/red]")
         raise typer.Exit(code=1)
 
+    hint = detect_reconcile_hint(root)
+    if hint is not None and not reconcile:
+        _print_reconcile_guidance(
+            hint,
+            current_command="ai-sdlc recover",
+            blocking=False,
+        )
+        if _is_interactive_terminal():
+            reconcile = typer.confirm(
+                "检测到旧版产物并怀疑 checkpoint 已过时。是否现在执行 reconcile？",
+                default=True,
+            )
+
+    if reconcile:
+        applied = reconcile_checkpoint(root)
+        if applied is not None:
+            console.print(
+                Panel(
+                    (
+                        "[green]Checkpoint 已根据现有产物完成对齐。[/green]\n"
+                        f"下一阶段：{applied.current_stage}"
+                    ),
+                    title="ai-sdlc recover --reconcile",
+                    border_style="green",
+                )
+            )
+            hint = applied
+
     pack = build_resume_pack(root)
     if pack is None:
+        if hint is not None:
+            console.print(
+                "[yellow]尚未写入可恢复的 checkpoint。请执行 `ai-sdlc recover --reconcile`。[/yellow]"
+            )
         console.print("[yellow]No checkpoint found. Nothing to recover.[/yellow]")
         raise typer.Exit(code=1)
 
@@ -172,6 +261,10 @@ def recover_command() -> None:
     table.add_row("Current Batch", str(pack.current_batch))
     table.add_row("Last Task", pack.last_committed_task or "none")
     table.add_row("Timestamp", pack.timestamp)
+    if hint is not None:
+        table.add_row("Reconciled Stage", hint.current_stage)
+        table.add_row("Reconciled Spec Dir", hint.spec_dir)
+        table.add_row("Detected Files", ", ".join(hint.detected_files))
 
     ws = pack.working_set_snapshot
     if ws.prd_path:

@@ -7,6 +7,8 @@ from typing import Any
 import typer
 from rich.console import Console
 
+from ai_sdlc.cli.commands import _print_reconcile_guidance
+from ai_sdlc.core.reconcile import detect_reconcile_hint
 from ai_sdlc.core.runner import PipelineHaltError, SDLCRunner
 from ai_sdlc.utils.helpers import find_project_root
 
@@ -37,6 +39,18 @@ def run_command(
     root = find_project_root()
     if root is None:
         console.print("[red]Not inside an AI-SDLC project.[/red]")
+        raise typer.Exit(code=1)
+
+    hint = detect_reconcile_hint(root)
+    if hint is not None:
+        _print_reconcile_guidance(
+            hint,
+            current_command="ai-sdlc run",
+            blocking=True,
+        )
+        console.print(
+            "[yellow]已停止当前运行，避免基于过时 checkpoint 继续执行。[/yellow]"
+        )
         raise typer.Exit(code=1)
 
     runner = SDLCRunner(root)

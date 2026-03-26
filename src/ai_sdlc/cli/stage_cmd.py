@@ -6,8 +6,10 @@ import typer
 from rich.console import Console
 from rich.table import Table
 
+from ai_sdlc.cli.commands import _print_reconcile_guidance
 from ai_sdlc.context.state import load_checkpoint
 from ai_sdlc.core.dispatcher import VALID_STAGES, StageDispatcher
+from ai_sdlc.core.reconcile import detect_reconcile_hint
 from ai_sdlc.utils.helpers import find_project_root
 
 stage_app = typer.Typer(help="Stage-based pipeline dispatch")
@@ -56,6 +58,18 @@ def stage_run(
     root = find_project_root()
     if root is None:
         console.print("[red]Not inside an ai-sdlc project.[/red]")
+        raise typer.Exit(code=1)
+
+    hint = detect_reconcile_hint(root)
+    if hint is not None:
+        _print_reconcile_guidance(
+            hint,
+            current_command=f"ai-sdlc stage run {name}",
+            blocking=True,
+        )
+        console.print(
+            "[yellow]已停止当前阶段调度，建议先执行 `ai-sdlc recover --reconcile`。[/yellow]"
+        )
         raise typer.Exit(code=1)
 
     dispatcher = StageDispatcher()
