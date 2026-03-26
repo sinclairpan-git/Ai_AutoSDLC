@@ -12,7 +12,11 @@ from rich.table import Table
 
 from ai_sdlc.context.state import build_resume_pack, load_checkpoint, save_resume_pack
 from ai_sdlc.core.config import load_project_config, load_project_state
-from ai_sdlc.core.reconcile import ReconcileHint, detect_reconcile_hint, reconcile_checkpoint
+from ai_sdlc.core.reconcile import (
+    ReconcileHint,
+    detect_reconcile_hint,
+    reconcile_checkpoint,
+)
 from ai_sdlc.generators.index_gen import generate_index, save_index
 from ai_sdlc.integrations.ide_adapter import ensure_ide_adaptation
 from ai_sdlc.knowledge.engine import apply_refresh, compute_refresh_level, load_baseline

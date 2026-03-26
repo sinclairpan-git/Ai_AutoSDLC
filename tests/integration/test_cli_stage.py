@@ -10,7 +10,6 @@ from typer.testing import CliRunner
 from ai_sdlc.cli.main import app
 from ai_sdlc.context.state import save_checkpoint
 from ai_sdlc.models.state import Checkpoint, FeatureInfo
-from ai_sdlc.routers.bootstrap import init_project
 
 runner = CliRunner()
 
