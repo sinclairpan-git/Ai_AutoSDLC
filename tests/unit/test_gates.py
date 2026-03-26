@@ -55,6 +55,13 @@ class TestInitGate:
         result = InitGate().check({"root": str(git_repo)})
         assert result.verdict == GateVerdict.PASS
 
+    def test_pass_initialized_project_without_git_repo(
+        self, initialized_project_dir: Path
+    ) -> None:
+        result = InitGate().check({"root": str(initialized_project_dir)})
+        assert result.verdict == GateVerdict.PASS
+        assert all(check.name != "git_initialized" for check in result.checks)
+
     def test_fail_no_ai_sdlc(self, tmp_path: Path) -> None:
         result = InitGate().check({"root": str(tmp_path)})
         assert result.verdict == GateVerdict.RETRY

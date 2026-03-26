@@ -9,8 +9,9 @@ from typer.testing import CliRunner
 
 from ai_sdlc.cli.main import app
 from ai_sdlc.context.state import save_checkpoint
+from ai_sdlc.core.runner import SDLCRunner
+from ai_sdlc.models.gate import GateCheck, GateResult, GateVerdict
 from ai_sdlc.models.state import Checkpoint, FeatureInfo
-from ai_sdlc.routers.bootstrap import init_project
 
 runner = CliRunner()
 
@@ -53,6 +54,30 @@ class TestRunCommand:
         assert runner.invoke(app, ["run", "--dry-run"]).exit_code == 0
         doc = tmp_path / ".codex" / "AI-SDLC.md"
         assert doc.is_file()
+
+    def test_run_non_dry_run_does_not_halt_init_when_git_repo_is_missing(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.chdir(tmp_path)
+        assert runner.invoke(app, ["init", "."]).exit_code == 0
+
+        original_run_gate = SDLCRunner._run_gate
+
+        def gate_wrapper(self: SDLCRunner, stage: str, cp: Checkpoint) -> GateResult:
+            if stage == "init":
+                return original_run_gate(self, stage, cp)
+            return GateResult(
+                stage=stage,
+                verdict=GateVerdict.PASS,
+                checks=[GateCheck(name=f"{stage}_ok", passed=True)],
+            )
+
+        monkeypatch.setattr(SDLCRunner, "_run_gate", gate_wrapper)
+
+        result = runner.invoke(app, ["run"])
+        assert result.exit_code == 0
+        assert "Pipeline completed. Stage: close" in result.output
+        assert "Not a git repository" not in result.output
 
     def test_run_dry_run_guides_user_when_legacy_reconcile_is_needed(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch

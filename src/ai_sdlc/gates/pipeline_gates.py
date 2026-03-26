@@ -11,7 +11,7 @@ from typing import Any
 
 from ai_sdlc.gates.task_ac_checks import first_task_missing_acceptance
 from ai_sdlc.models.gate import GateCheck, GateResult, GateVerdict
-from ai_sdlc.utils.helpers import AI_SDLC_DIR, is_git_repo
+from ai_sdlc.utils.helpers import AI_SDLC_DIR
 
 
 class InitGate:
@@ -41,14 +41,6 @@ class InitGate:
                 name="project_state_exists",
                 passed=state_file.exists(),
                 message="" if state_file.exists() else f"{state_file} not found",
-            )
-        )
-
-        checks.append(
-            GateCheck(
-                name="git_initialized",
-                passed=is_git_repo(root),
-                message="" if is_git_repo(root) else "Not a git repository",
             )
         )
 
