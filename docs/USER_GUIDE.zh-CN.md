@@ -17,7 +17,7 @@
 - 支持中断恢复（checkpoint），避免一次会话失败就丢进度
 - 支持 IDE 自动适配（Cursor/VSCode/Codex/Claude Code），复制目录后开箱即用
 
-**规范入口（与 IDE 无关）**：流水线真值以终端中的 `python -m ai-sdlc`（或已安装的 `ai-sdlc`）、`.ai-sdlc/state/checkpoint.yml`、以及包内/仓库内 `src/ai_sdlc/rules/`（含 `pipeline.md`）为准。各编辑器目录下的规则文件为**可选**辅助。若在协作中发现曾跳过强制顺序，须在 `src/ai_sdlc/rules/agent-skip-registry.zh.md` 登记（见该文件说明及 `pipeline.md` 条款 17）。
+**规范入口（与 IDE 无关）**：流水线真值以终端中的 `python -m ai-sdlc`（或已安装的 `ai-sdlc`）、`.ai-sdlc/state/checkpoint.yml`、以及包内/仓库内 `src/ai_sdlc/rules/`（含 `pipeline.md`）为准。各编辑器目录下的规则文件为**可选**辅助。若在协作中发现框架缺陷、状态漂移、或曾跳过强制顺序，须优先登记到 [`docs/framework-defect-backlog.zh-CN.md`](framework-defect-backlog.zh-CN.md)；历史兼容来源见 `src/ai_sdlc/rules/agent-skip-registry.zh.md`（亦见 `pipeline.md` 条款 17）。
 
 <a id="user-guide-dod-plan-sync"></a>
 
@@ -684,4 +684,3 @@ uv run ruff format --check src/ tests/
 - `development-summary.md` 已更新
 - 最终测试/构建结果可追溯
 - Git 提交与发布说明已同步
-

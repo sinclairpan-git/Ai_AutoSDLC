@@ -20,4 +20,5 @@
 ## 参考
 
 - 用户手册：[§2.1 交付完成（DoD）与计划 / 任务状态](USER_GUIDE.zh-CN.md#user-guide-dod-plan-sync)
-- 偏离登记：`src/ai_sdlc/rules/agent-skip-registry.zh.md`
+- 框架缺陷 / 违约待办：`docs/framework-defect-backlog.zh-CN.md`
+- 历史兼容来源：`src/ai_sdlc/rules/agent-skip-registry.zh.md`

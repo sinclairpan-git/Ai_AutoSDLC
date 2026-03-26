@@ -28,6 +28,33 @@ def _minimal_constitution(root: Path) -> None:
     (mem / "constitution.md").write_text("# Constitution\n", encoding="utf-8")
 
 
+def _framework_backlog(root: Path, *, include_eval: bool) -> None:
+    path = root / "docs" / "framework-defect-backlog.zh-CN.md"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    body = (
+        "# 框架缺陷待办池\n\n"
+        "## FD-2026-03-26-001 | 示例条目\n\n"
+        "- 现象: 发现框架缺陷\n"
+        "- 触发场景: 用户要求登记\n"
+        "- 影响范围: 规则与流程\n"
+        "- 根因分类: B\n"
+        "- 建议改动层级: rule / policy, workflow\n"
+        "- prompt / context: 会话内发现偏离\n"
+        "- rule / policy: pipeline.md 条款 17\n"
+        "- middleware: 无\n"
+        "- workflow: 需登记再继续\n"
+        "- tool: ai-sdlc verify constraints\n"
+    )
+    if include_eval:
+        body += "- eval: 结构化字段完整率\n"
+    body += (
+        "- 风险等级: 中\n"
+        "- 可验证成功标准: verify constraints 无 BLOCKER\n"
+        "- 是否需要回归测试补充: 是\n"
+    )
+    path.write_text(body, encoding="utf-8")
+
+
 class TestCliVerifyConstraints:
     def test_exit_1_missing_constitution(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
@@ -157,3 +184,27 @@ class TestCliVerifyConstraints:
         result = runner.invoke(app, ["verify", "constraints"])
         assert result.exit_code == 1
         assert "skip-registry" in result.output
+
+    def test_exit_1_when_framework_backlog_missing_required_field(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        init_project(tmp_path)
+        _minimal_constitution(tmp_path)
+        _framework_backlog(tmp_path, include_eval=False)
+        monkeypatch.chdir(tmp_path)
+
+        result = runner.invoke(app, ["verify", "constraints"])
+        assert result.exit_code == 1
+        assert "framework-defect-backlog" in result.output
+
+    def test_exit_0_when_framework_backlog_well_formed(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        init_project(tmp_path)
+        _minimal_constitution(tmp_path)
+        _framework_backlog(tmp_path, include_eval=True)
+        monkeypatch.chdir(tmp_path)
+
+        result = runner.invoke(app, ["verify", "constraints"])
+        assert result.exit_code == 0
+        assert "no blocker" in result.output.lower()

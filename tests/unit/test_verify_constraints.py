@@ -9,6 +9,17 @@ from ai_sdlc.core.verify_constraints import collect_constraint_blockers
 from ai_sdlc.models.state import Checkpoint, FeatureInfo
 
 
+def _write_framework_backlog(root: Path, entry_body: str) -> None:
+    path = root / "docs" / "framework-defect-backlog.zh-CN.md"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(
+        "# 框架缺陷待办池\n\n"
+        "## FD-2026-03-26-001 | 示例条目\n\n"
+        f"{entry_body}",
+        encoding="utf-8",
+    )
+
+
 def test_blocker_missing_constitution(tmp_path: Path) -> None:
     (tmp_path / ".ai-sdlc" / "state").mkdir(parents=True)
     b = collect_constraint_blockers(tmp_path)
@@ -284,5 +295,58 @@ def test_pass_skip_registry_with_mapped_refs(tmp_path: Path) -> None:
         ),
     )
     save_checkpoint(tmp_path, cp)
+
+    assert collect_constraint_blockers(tmp_path) == []
+
+
+def test_framework_backlog_missing_required_fields_blocks(tmp_path: Path) -> None:
+    mem = tmp_path / ".ai-sdlc" / "memory"
+    mem.mkdir(parents=True)
+    (mem / "constitution.md").write_text("# C\n", encoding="utf-8")
+
+    _write_framework_backlog(
+        tmp_path,
+        "- 现象: 发现框架缺陷\n"
+        "- 触发场景: 用户要求登记\n"
+        "- 影响范围: 规则与流程\n"
+        "- 根因分类: B\n"
+        "- 建议改动层级: rule / policy, workflow\n"
+        "- prompt / context: 会话内发现偏离\n"
+        "- rule / policy: pipeline.md 条款 17\n"
+        "- middleware: 无\n"
+        "- workflow: 需登记再继续\n"
+        "- tool: ai-sdlc verify constraints\n"
+        "- 风险等级: 中\n"
+        "- 可验证成功标准: verify constraints 可识别结构问题\n"
+        "- 是否需要回归测试补充: 是\n",
+    )
+
+    blockers = collect_constraint_blockers(tmp_path)
+    assert any("framework-defect-backlog" in x for x in blockers)
+    assert any("eval" in x for x in blockers)
+
+
+def test_framework_backlog_well_formed_passes(tmp_path: Path) -> None:
+    mem = tmp_path / ".ai-sdlc" / "memory"
+    mem.mkdir(parents=True)
+    (mem / "constitution.md").write_text("# C\n", encoding="utf-8")
+
+    _write_framework_backlog(
+        tmp_path,
+        "- 现象: 发现框架缺陷\n"
+        "- 触发场景: 用户要求登记\n"
+        "- 影响范围: 规则与流程\n"
+        "- 根因分类: B\n"
+        "- 建议改动层级: rule / policy, workflow\n"
+        "- prompt / context: 会话内发现偏离\n"
+        "- rule / policy: pipeline.md 条款 17\n"
+        "- middleware: 无\n"
+        "- workflow: 需登记再继续\n"
+        "- tool: ai-sdlc verify constraints\n"
+        "- eval: 结构化字段完整率\n"
+        "- 风险等级: 中\n"
+        "- 可验证成功标准: verify constraints 无 BLOCKER\n"
+        "- 是否需要回归测试补充: 是\n",
+    )
 
     assert collect_constraint_blockers(tmp_path) == []

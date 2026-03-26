@@ -11,6 +11,23 @@ from ai_sdlc.models.state import Checkpoint
 
 CONSTITUTION_REL = Path(".ai-sdlc") / "memory" / "constitution.md"
 SKIP_REGISTRY_REL = Path("src") / "ai_sdlc" / "rules" / "agent-skip-registry.zh.md"
+FRAMEWORK_DEFECT_BACKLOG_REL = Path("docs") / "framework-defect-backlog.zh-CN.md"
+FRAMEWORK_DEFECT_BACKLOG_REQUIRED_FIELDS = (
+    "现象",
+    "触发场景",
+    "影响范围",
+    "根因分类",
+    "建议改动层级",
+    "prompt / context",
+    "rule / policy",
+    "middleware",
+    "workflow",
+    "tool",
+    "eval",
+    "风险等级",
+    "可验证成功标准",
+    "是否需要回归测试补充",
+)
 
 
 def collect_constraint_blockers(root: Path) -> list[str]:
@@ -23,6 +40,8 @@ def collect_constraint_blockers(root: Path) -> list[str]:
             "BLOCKER: missing required governance file "
             f"{CONSTITUTION_REL.as_posix()}"
         )
+
+    blockers.extend(_framework_defect_backlog_blockers(root))
 
     cp = load_checkpoint(root)
     if cp is None or cp.feature is None:
@@ -53,6 +72,60 @@ def collect_constraint_blockers(root: Path) -> list[str]:
 
     blockers.extend(_skip_registry_mapping_blockers(root, spec_path, cp))
     return blockers
+
+
+def _framework_defect_backlog_blockers(root: Path) -> list[str]:
+    """Validate the repo-local framework backlog structure when present."""
+    path = root / FRAMEWORK_DEFECT_BACKLOG_REL
+    if not path.is_file():
+        return []
+
+    entries = _parse_framework_defect_backlog(path.read_text(encoding="utf-8"))
+    blockers: list[str] = []
+    for title, fields in entries:
+        missing = [
+            name
+            for name in FRAMEWORK_DEFECT_BACKLOG_REQUIRED_FIELDS
+            if not fields.get(_norm_framework_backlog_key(name), "").strip()
+        ]
+        if missing:
+            blockers.append(
+                "BLOCKER: framework-defect-backlog entry "
+                f"{title!r} missing required fields: {', '.join(missing)}"
+            )
+    return blockers
+
+
+def _parse_framework_defect_backlog(text: str) -> list[tuple[str, dict[str, str]]]:
+    """Parse `##` entries and `- key: value` field lines from the backlog doc."""
+    entries: list[tuple[str, dict[str, str]]] = []
+    current_title = ""
+    current_fields: dict[str, str] = {}
+
+    for raw_line in text.splitlines():
+        line = raw_line.strip()
+        if line.startswith("## FD-"):
+            if current_title:
+                entries.append((current_title, current_fields))
+            current_title = line[3:].strip()
+            current_fields = {}
+            continue
+
+        if not current_title or not line.startswith("- "):
+            continue
+
+        key, sep, value = line[2:].partition(":")
+        if not sep:
+            continue
+        current_fields[_norm_framework_backlog_key(key)] = value.strip()
+
+    if current_title:
+        entries.append((current_title, current_fields))
+    return entries
+
+
+def _norm_framework_backlog_key(key: str) -> str:
+    return re.sub(r"\s+", " ", key.strip().lower())
 
 
 def _effective_wi_id_for_registry(cp: Checkpoint) -> str:

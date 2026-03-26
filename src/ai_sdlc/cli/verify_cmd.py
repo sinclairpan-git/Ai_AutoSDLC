@@ -13,7 +13,8 @@ from ai_sdlc.utils.helpers import find_project_root
 verify_app = typer.Typer(
     help=(
         "Read-only verification. Complements `ai-sdlc doctor` (environment/PATH); "
-        "this command checks governance files and checkpoint vs specs tree (FR-089)."
+        "this command checks governance files, checkpoint vs specs tree, and "
+        "repo-local framework backlog structure when present (FR-089)."
     ),
 )
 console = Console()
@@ -24,7 +25,8 @@ console = Console()
     help=(
         "Read-only: required governance files and checkpoint/specs consistency; "
         "when tasks.md exists under feature.spec_dir, task-level acceptance must "
-        "match gate decompose (SC-014). Does not write checkpoint. "
+        "match gate decompose (SC-014); when docs/framework-defect-backlog.zh-CN.md "
+        "exists, its structured entry fields must be complete. Does not write checkpoint. "
         "Exit 0 if no BLOCKERs, else 1."
     ),
 )
