@@ -889,3 +889,72 @@
 - **已完成 git 提交**：是
 - **提交哈希**：本批唯一一次语义提交为 `chore: close framework follow-up and telemetry lint debt`；完整 SHA 以该提交后的 `HEAD` 为准。
 - **是否继续下一批**：按需
+
+### Batch 2026-03-27-017 | 框架文档收口：自迭代开发指南接入用户手册
+
+#### 2.1 批次范围
+
+- **覆盖内容**：将框架自迭代开发指南纳入仓库文档；在 [`docs/USER_GUIDE.zh-CN.md`](../../docs/USER_GUIDE.zh-CN.md) 增加入口；新增 [`docs/框架自迭代开发与发布约定.md`](../../docs/框架自迭代开发与发布约定.md)。
+- **覆盖阶段**：CLOSE（文档补充与用户入口收敛）。
+- **预读范围**：`src/ai_sdlc/rules/batch-protocol.md`、`templates/execution-log-template.md`、`docs/USER_GUIDE.zh-CN.md`、`docs/framework-defect-backlog.zh-CN.md`。
+- **激活的规则**：完成前验证、代码自审、文档变更最小验证集。
+
+#### 2.2 统一验证命令
+
+- **R1（红灯验证）**
+  - 命令：无（文档批次，无行为实现）。
+  - 结果：不适用。
+- **V1（定向）**
+  - 命令：`uv run ai-sdlc verify constraints`
+  - 结果：**无 BLOCKER**。
+- **V2（收口校验）**
+  - 命令：`uv run ai-sdlc workitem close-check --wi specs/001-ai-sdlc-framework --all-docs`
+  - 结果：`tasks_completion` / `related_plan_drift` / `execution_log_fields` / `docs_consistency` **全部 PASS**。
+
+#### 2.3 任务记录
+
+##### 文档入口 | 用户手册补充
+
+- **改动范围**：`docs/USER_GUIDE.zh-CN.md`
+- **改动内容**：在 telemetry 运维边界章节后新增“框架自身开发补充”入口，明确框架仓库内自迭代开发应跳转到独立指南；链接收敛为仓库实际文件名。
+- **新增/调整的测试**：无（文档变更）。
+- **执行的命令**：`uv run ai-sdlc verify constraints`、`uv run ai-sdlc workitem close-check --wi specs/001-ai-sdlc-framework --all-docs`
+- **测试结果**：无 BLOCKER；all-docs close-check 全 PASS。
+- **是否符合任务目标**：符合。
+
+##### 新增文档 | 框架自迭代开发与发布约定
+
+- **改动范围**：`docs/框架自迭代开发与发布约定.md`
+- **改动内容**：补充框架仓库内自迭代开发的真值来源、`uv run ai-sdlc ...` 用法、push / merge / pull / release 语义边界，以及 trace / backlog / 回归测试闭环的操作说明。
+- **新增/调整的测试**：无（文档变更）。
+- **执行的命令**：`uv run ai-sdlc workitem close-check --wi specs/001-ai-sdlc-framework --all-docs`
+- **测试结果**：`docs_consistency` PASS。
+- **是否符合任务目标**：符合。
+
+#### 2.4 代码审查（摘要）
+
+- **宪章/规格对齐**：仅补充文档入口与开发约定，不扩大产品能力范围；与现有只读运维面、trace/backlog 流程一致。
+- **代码质量**：无运行时代码改动。
+- **测试质量**：按文档变更最小验证集执行 `verify constraints` 与 `close-check --all-docs`，覆盖用户手册与新增文档路径。
+- **Spec 偏移**：无；新增文档为框架自迭代操作说明，不改变 `spec.md` 契约。
+- **结论**：无 Critical 阻塞项。
+
+#### 2.5 任务/计划同步状态
+
+- `tasks.md` 同步状态：`无需变更`（本批不对应新的执行任务拆分）。
+- `related_plan`（如存在）同步状态：`已对账`（当前工作项未声明 `related_plan`，按约定跳过）。
+- 说明：本批仅收口文档与入口链接，沿用 `001-ai-sdlc-framework` 的 close-check 作为仓库级文档一致性守卫。
+
+#### 2.6 自动决策记录（如有）
+
+- AD-001：保留新增文档的中文文件名，并将 `USER_GUIDE` 链接收敛到实际仓库路径 → 来源：仓库现有 docs 已同时使用中英文文件名，且当前新增文档已以中文文件名存在 → 理由：避免无意义重命名带来的额外提交噪音，同时消除用户手册中的断链。
+
+#### 2.7 批次结论
+
+- 文档入口与自迭代说明已落盘；用户可从 `USER_GUIDE` 直接跳转到框架仓库的开发/发布操作约定，且全仓 docs 一致性校验通过。
+
+#### 2.8 归档后动作
+
+- **已完成 git 提交**：是
+- **提交哈希**：本批唯一一次语义提交为 `docs: add framework self-iteration guide`；完整 SHA 以该提交后的 `HEAD` 为准。
+- **是否继续下一批**：按需

@@ -603,3 +603,16 @@ python -m ai_sdlc telemetry close-session --goal-session-id <gs_id> --status suc
 - telemetry 缺失时会返回 `not_initialized`，并且不会创建 `.ai-sdlc/local/telemetry/`。
 - `python -m ai_sdlc doctor` 的 telemetry readiness 仅做只读诊断：root 可写性、manifest 状态、registry 可解析性、writer path 有效性、resolver 健康、`status --json` surface 可用性。
 - `doctor` 不会深度扫描 trace，不会隐式 rebuild indexes，也不会隐式初始化 telemetry 根目录。
+
+## 框架自身开发补充
+
+如果你不是在“业务项目里使用 AI-SDLC”，而是在 **AI-SDLC 仓库里开发 AI-SDLC 自身**，应改看这份文档：
+
+- [框架自迭代开发与发布约定](./框架自迭代开发与发布约定.md)
+
+这份补充文档专门解释：
+
+- 为什么框架仓库内应优先使用 `uv run ai-sdlc ...`
+- commit / push / PR / merge / pull / release 各自改变的是什么
+- 为什么“刚 push 完”通常不需要再 pull
+- 如何把 telemetry trace、约束违约、backlog、根因分析和回归验证串成自优化闭环
