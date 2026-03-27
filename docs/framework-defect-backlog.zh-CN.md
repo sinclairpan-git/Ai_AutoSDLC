@@ -412,3 +412,72 @@
 - 风险等级: 低
 - 可验证成功标准: `.gitignore` 能匹配 `.ai-sdlc/local/**`；执行 `verify constraints --json` 后，`git status` 不再显示 telemetry 本地运行态目录为未跟踪/已修改文件。
 - 是否需要回归测试补充: 否：当前通过真实 CLI smoke + `git status` / `git check-ignore` 复核更贴近问题本身。
+
+## FD-2026-03-27-011 | source closure 父链校验过严，run 级 artifact 无法引用同 run 下的 step 级来源
+
+- 日期 (UTC): 2026-03-27
+- 来源: final_review
+- 状态: open
+- owner: codex
+- wi_id: 003-telemetry-trace-governance
+- 现象: 当前 `governance_publisher` / `writer` 的 source closure 校验要求 artifact 与其 source 在 `step_id` 上完全相等，导致 run 级 artifact 一旦引用同一 `workflow_run_id` 下的 step 级 evidence/evaluation，就会被误判为跨链，无法从 `generated` 提升到 `published`。
+- 触发场景: final review 复现 run 级 report 引用 step 级 evidence/evaluation 的合法父链时，发布仍被拒绝。
+- 影响范围: V1 的 run 级治理产物可追溯性被削弱；publisher 无法接受同 run 子步骤来源，source closure 语义比设计要求更窄。
+- 根因分类: A, B, D
+- 未来杜绝方案摘要: 将 source closure 的父链判断从“完全等值”收敛到“source 属于 artifact 父链之下的合法后代链”，并补 run->step 正向发布回归测试，防止父链兼容性再次被实现成严格相等。
+- 建议改动层级: rule / policy, middleware, workflow, tool, eval
+- prompt / context: artifact 的作用域允许高于其来源作用域；同一 session/run 下的子步骤来源应视为合法闭包，而不是跨链。
+- rule / policy: source closure 允许父级 artifact 引用同父链下的子级 source，但仍禁止跨 session/run 的引用。
+- middleware: writer/publisher 统一使用“前缀父链兼容”而非“step_id 全等”的校验逻辑。
+- workflow: final review / publisher 相关测试默认覆盖 session->run、run->step 的合法闭包，以及真正跨链的拒绝用例。
+- tool: `src/ai_sdlc/telemetry/governance_publisher.py`、`src/ai_sdlc/telemetry/writer.py`
+- eval: legal-descendant-source-rejected 次数、cross-chain-source-bypass 次数
+- 风险等级: 高
+- 可验证成功标准: run 级 artifact 能发布引用同 run 下 step 级 source 的合法闭包；跨 session/run 的 source 仍被拒绝。
+- 是否需要回归测试补充: 是：补充 run->step source closure 正例与真正跨链负例。
+
+## FD-2026-03-27-012 | CCP registry 冻结了 gate/audit 控制点，但 raw trace 里无法证明这些控制点
+
+- 日期 (UTC): 2026-03-27
+- 来源: final_review
+- 状态: open
+- owner: codex
+- wi_id: 003-telemetry-trace-governance
+- 现象: CCP registry 已冻结 `gate_hit`、`gate_blocked`、`audit_report_generated` 等 V1 控制点，但当前持久化的 `TelemetryEvent` 与 runtime/publisher 写入路径没有对应的 gate/audit 事件形状或最小证据引用，导致 coverage evaluator 无法从 raw trace 证明这些控制点是否真的发生。
+- 触发场景: final review 逆查 registry、contracts 与 runtime/publisher 写入路径时，发现 registry 声明的控制点在 persisted trace 中没有可对账的事件表达。
+- 影响范围: V1 coverage evaluator 对关键控制点的结论不可信；设计文档要求的“自动采关键控制点 + coverage evaluator”在 gate/audit 维度上无法闭环。
+- 根因分类: A, B, H
+- 未来杜绝方案摘要: 让 CCP registry 与 raw trace 事件模型保持一一可表示关系，为 gate/audit 类控制点补最小事件形状和证据引用，并用 coverage 测试证明 registry 中的 required CCP 都能从 persisted trace 推导。
+- 建议改动层级: contract, rule / policy, middleware, workflow, tool, eval
+- prompt / context: registry 不是愿望清单；凡被 registry 冻结为 required 的 CCP，必须能在 raw trace 中被表达和证明。
+- rule / policy: gate/audit 控制点若列入 V1 registry，必须同步定义最小事件与证据闭包，不允许只在 registry 里声明、不在 trace 中落真值。
+- middleware: 为 runtime/publisher 补 gate/audit 专用 telemetry event 与必要 evidence 引用，coverage evaluator 只消费这些 canonical traces。
+- workflow: Task 级 spec review 默认核对 registry 中每个 required CCP 是否有对应 persisted trace 形状和测试。
+- tool: `src/ai_sdlc/telemetry/registry.py`、`src/ai_sdlc/telemetry/contracts.py`、`src/ai_sdlc/telemetry/runtime.py`、`src/ai_sdlc/core/runner.py`、`src/ai_sdlc/telemetry/governance_publisher.py`
+- eval: unprovable-required-ccp 次数、gate/audit-ccp-coverage-gap 次数
+- 风险等级: 高
+- 可验证成功标准: registry 中的 `gate_hit`、`gate_blocked`、`audit_report_generated` 都能从 persisted trace 中被稳定识别并计入 coverage evaluator。
+- 是否需要回归测试补充: 是：补 gate/audit CCP 持久化与 coverage evaluator 的正反测试。
+
+## FD-2026-03-27-013 | status/readiness 的 latest 与 latest-index 视图会陈旧，无法跟随真实写入刷新
+
+- 日期 (UTC): 2026-03-27
+- 来源: final_review
+- 状态: open
+- owner: codex
+- wi_id: 003-telemetry-trace-governance
+- 现象: `status --json` 的 latest/current 视图当前依赖 scope 根目录 mtime 和派生 index 文件；但 append 事件或 snapshot 时不一定会更新 scope 根目录 mtime，而生产写路径也未自动重建 `open-violations.json` / `latest-artifacts.json` / `timeline-cursor.json`，导致 fresh write 后 readiness 仍可能显示旧的 latest scope 或空的 latest summary。
+- 触发场景: final review 在真实写入后复现 readiness 视图，发现向较早 session 追加新事件后 latest id 不变，写入 open violation 后 `open_violations.count` 仍为 0，直到手工 rebuild indexes。
+- 影响范围: bounded operator surface 失真，运维对“当前/latest”与 open debt 的判断会落后于真实 trace。
+- 根因分类: A, B, H
+- 未来杜绝方案摘要: latest/current 的 recency 信号应来自真正随写入变化的对象或索引，而不是不稳定的目录 mtime；同时生产写路径要维护最小派生 index，使 `status --json` 不依赖手工 rebuild 才能看见 fresh state。
+- 建议改动层级: middleware, workflow, tool, eval
+- prompt / context: bounded status 可以不做深扫，但不能因为避开深扫而长期展示过期状态；只读 surface 仍需消费新鲜的派生真值。
+- rule / policy: readiness/status 的 latest/current 输出必须基于可辩护且随写入同步更新的真值来源。
+- middleware: 在 writer/store 层维护最小 index 更新或等价 recency 光标；readiness 读取这些 canonical 最新真值，而不是目录 mtime 猜测。
+- workflow: final review 默认检查 fresh write 后的 latest/current/open_violations 是否立即可见，不允许依赖手工 `rebuild_indexes()` 才刷新。
+- tool: `src/ai_sdlc/telemetry/readiness.py`、`src/ai_sdlc/telemetry/store.py`、`src/ai_sdlc/telemetry/writer.py`
+- eval: stale-latest-view 次数、stale-open-violations-count 次数、manual-rebuild-required 次数
+- 风险等级: 中
+- 可验证成功标准: fresh event / violation / artifact 写入后，`status --json` 的 latest/current 与 latest summary 在不手工 rebuild 的情况下即可反映更新。
+- 是否需要回归测试补充: 是：补 fresh write 后 latest/current 与 index summary 即时刷新的回归测试。
