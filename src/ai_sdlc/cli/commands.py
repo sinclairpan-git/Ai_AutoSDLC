@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import sys
 from pathlib import Path
 
@@ -28,6 +29,7 @@ from ai_sdlc.routers.bootstrap import (
     init_project,
 )
 from ai_sdlc.routers.existing_project_init import run_full_scan
+from ai_sdlc.telemetry.readiness import build_status_json_surface
 from ai_sdlc.utils.helpers import AI_SDLC_DIR, find_project_root
 
 console = Console()
@@ -144,7 +146,13 @@ def init_command(
 # ---------------------------------------------------------------------------
 
 
-def status_command() -> None:
+def status_command(
+    as_json: bool = typer.Option(
+        False,
+        "--json",
+        help="Machine-readable bounded telemetry summary.",
+    ),
+) -> None:
     """Show current AI-SDLC pipeline status."""
     root = find_project_root()
     if root is None:
@@ -157,6 +165,10 @@ def status_command() -> None:
     if state.status == ProjectStatus.UNINITIALIZED:
         console.print("[yellow]Project found but not initialized.[/yellow]")
         raise typer.Exit(code=1)
+
+    if as_json:
+        typer.echo(json.dumps(build_status_json_surface(root), indent=2))
+        raise typer.Exit(code=0)
 
     table = Table(title="AI-SDLC Status")
     table.add_column("Property", style="cyan")

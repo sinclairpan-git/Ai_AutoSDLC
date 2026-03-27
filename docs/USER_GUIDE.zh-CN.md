@@ -573,3 +573,33 @@ python -m ai_sdlc run --dry-run
 - 初始化还是在终端执行
 - `run --dry-run` 还是在终端执行
 - 真正开始需求沟通，是在 IDE 聊天输入框里执行自然语言对话
+
+## Telemetry 运维边界（status/doctor）
+
+### 1) 原始 trace 与治理产物的区别
+
+- 原始 trace（运行证据）在 `.ai-sdlc/local/telemetry/`，包含 manifest、event/evidence 流和 indexes（如果已存在）。
+- 治理产物（面向运维阅读）在 `.ai-sdlc/project/reports/telemetry/`。
+
+### 2) 手工记录 telemetry 的命令
+
+在仓库根目录终端执行：
+
+```bash
+python -m ai_sdlc telemetry open-session
+python -m ai_sdlc telemetry record-event --scope session --goal-session-id <gs_id>
+python -m ai_sdlc telemetry record-evidence --scope session --goal-session-id <gs_id> --locator <locator>
+python -m ai_sdlc telemetry close-session --goal-session-id <gs_id> --status succeeded
+```
+
+### 3) `accepted` 的含义
+
+- `accepted` 表示“风险被接受/债务被接受”，不是“问题已解决”。
+- 在治理汇总里，`accepted` 仍属于 open debt，不会计入 resolved。
+
+### 4) `status --json` 与 `doctor` 的边界
+
+- `python -m ai_sdlc status --json` 只输出 bounded telemetry surface：只读 manifest + latest index summaries。
+- telemetry 缺失时会返回 `not_initialized`，并且不会创建 `.ai-sdlc/local/telemetry/`。
+- `python -m ai_sdlc doctor` 的 telemetry readiness 仅做只读诊断：root 可写性、manifest 状态、registry 可解析性、writer path 有效性、resolver 健康、`status --json` surface 可用性。
+- `doctor` 不会深度扫描 trace，不会隐式 rebuild indexes，也不会隐式初始化 telemetry 根目录。

@@ -2,15 +2,18 @@
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 from unittest.mock import patch
 
+import pytest
 from typer.testing import CliRunner
 
 from ai_sdlc.cli.main import app
 from ai_sdlc.context.state import save_checkpoint
 from ai_sdlc.models.state import Checkpoint, FeatureInfo
 from ai_sdlc.routers.bootstrap import init_project
+from ai_sdlc.telemetry.paths import telemetry_indexes_root, telemetry_local_root
 
 runner = CliRunner()
 
@@ -35,6 +38,11 @@ def _write_legacy_root_artifacts(root: Path) -> None:
 
 
 class TestCliStatus:
+    @pytest.fixture(autouse=True)
+    def _no_ide_adapter_hook(self) -> None:
+        with patch("ai_sdlc.cli.main.run_ide_adapter_if_initialized"):
+            yield
+
     def test_status_initialized(self, tmp_path: Path) -> None:
         init_project(tmp_path)
         with patch("ai_sdlc.cli.commands.find_project_root", return_value=tmp_path):
@@ -72,3 +80,112 @@ class TestCliStatus:
         assert result.exit_code == 0
         assert "recover --reconcile" in result.output
         assert "旧版产物" in result.output
+
+    def test_status_json_reports_not_initialized_when_telemetry_is_absent(
+        self, tmp_path: Path
+    ) -> None:
+        init_project(tmp_path)
+        telemetry_root = telemetry_local_root(tmp_path)
+        assert telemetry_root.exists() is False
+
+        with patch("ai_sdlc.cli.commands.find_project_root", return_value=tmp_path):
+            result = runner.invoke(app, ["status", "--json"])
+
+        assert result.exit_code == 0
+        payload = json.loads(result.output)
+        assert payload["telemetry"]["state"] == "not_initialized"
+        assert payload["telemetry"]["current"] is None
+        assert payload["telemetry"]["latest"] is None
+        assert telemetry_root.exists() is False
+
+    def test_status_json_returns_bounded_latest_and_current_summary(
+        self, tmp_path: Path
+    ) -> None:
+        init_project(tmp_path)
+        local_root = telemetry_local_root(tmp_path)
+        local_root.mkdir(parents=True, exist_ok=True)
+        manifest_path = local_root / "manifest.json"
+        manifest_path.write_text(
+            json.dumps(
+                {
+                    "version": 1,
+                    "sessions": {
+                        "gs_01": {"path": "sessions/gs_01"},
+                        "gs_02": {"path": "sessions/gs_02"},
+                    },
+                    "runs": {
+                        "wr_01": {"goal_session_id": "gs_01", "path": "sessions/gs_01/runs/wr_01"},
+                        "wr_02": {"goal_session_id": "gs_02", "path": "sessions/gs_02/runs/wr_02"},
+                    },
+                    "steps": {
+                        "st_01": {
+                            "goal_session_id": "gs_01",
+                            "workflow_run_id": "wr_01",
+                            "path": "sessions/gs_01/runs/wr_01/steps/st_01",
+                        },
+                        "st_02": {
+                            "goal_session_id": "gs_02",
+                            "workflow_run_id": "wr_02",
+                            "path": "sessions/gs_02/runs/wr_02/steps/st_02",
+                        },
+                    },
+                }
+            ),
+            encoding="utf-8",
+        )
+        indexes_root = telemetry_indexes_root(tmp_path)
+        indexes_root.mkdir(parents=True, exist_ok=True)
+        (indexes_root / "latest-artifacts.json").write_text(
+            json.dumps(
+                {
+                    "artifact_ids": ["art_01", "art_02", "art_03", "art_04", "art_05"],
+                }
+            ),
+            encoding="utf-8",
+        )
+        (indexes_root / "open-violations.json").write_text(
+            json.dumps(
+                {
+                    "violation_ids": ["vio_01", "vio_02", "vio_03", "vio_04"],
+                }
+            ),
+            encoding="utf-8",
+        )
+        (indexes_root / "timeline-cursor.json").write_text(
+            json.dumps(
+                {
+                    "event_count": 9,
+                    "last_event_id": "evt_02",
+                    "last_timestamp": "2026-03-27T09:00:00Z",
+                }
+            ),
+            encoding="utf-8",
+        )
+
+        with patch("ai_sdlc.cli.commands.find_project_root", return_value=tmp_path):
+            result = runner.invoke(app, ["status", "--json"])
+
+        assert result.exit_code == 0
+        payload = json.loads(result.output)
+        assert set(payload) == {"telemetry"}
+        telemetry = payload["telemetry"]
+        assert telemetry["state"] == "ready"
+        assert telemetry["current"] == {
+            "manifest_version": 1,
+            "sessions": {"count": 2, "latest_goal_session_id": "gs_02"},
+            "runs": {"count": 2, "latest_workflow_run_id": "wr_02"},
+            "steps": {"count": 2, "latest_step_id": "st_02"},
+        }
+        assert telemetry["latest"]["artifacts"] == {
+            "count": 5,
+            "sample_ids": ["art_03", "art_04", "art_05"],
+        }
+        assert telemetry["latest"]["open_violations"] == {
+            "count": 4,
+            "sample_ids": ["vio_02", "vio_03", "vio_04"],
+        }
+        assert telemetry["latest"]["timeline_cursor"] == {
+            "event_count": 9,
+            "last_event_id": "evt_02",
+            "last_timestamp": "2026-03-27T09:00:00Z",
+        }

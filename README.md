@@ -62,6 +62,26 @@ ai-sdlc stage status
 
 The full pipeline remains available via `ai-sdlc run`; the runner coordinates gates while the stage CLI focuses on per-stage context and checklists.
 
+## Telemetry Operator Surfaces
+
+- Raw telemetry traces are local runtime evidence under `.ai-sdlc/local/telemetry/` (event/evidence streams, manifest, and derived indexes when present).
+- Governance artifacts are operator-facing report payloads under `.ai-sdlc/project/reports/telemetry/`.
+- `accepted` violation status means accepted risk/debt, not resolved debt; it remains part of open debt rollups.
+
+Manual recording commands (repo root):
+
+```bash
+python -m ai_sdlc telemetry open-session
+python -m ai_sdlc telemetry record-event --scope session --goal-session-id <gs_id>
+python -m ai_sdlc telemetry record-evidence --scope session --goal-session-id <gs_id> --locator <locator>
+python -m ai_sdlc telemetry close-session --goal-session-id <gs_id> --status succeeded
+```
+
+Boundaries:
+
+- `python -m ai_sdlc status --json` is a bounded telemetry surface. It reads manifest + latest index summaries only. If telemetry is absent, it returns `not_initialized` and does not create `.ai-sdlc/local/telemetry/`.
+- `python -m ai_sdlc doctor` includes telemetry readiness checks (root writability, manifest state, registry parseability, writer path validity, resolver health, and `status --json` surface) as read-only diagnostics. It does not deep scan traces, rebuild indexes, or initialize telemetry roots.
+
 ## Development
 
 ```bash
