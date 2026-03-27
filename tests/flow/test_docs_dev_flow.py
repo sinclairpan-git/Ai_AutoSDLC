@@ -21,7 +21,7 @@ class TestDocsDevFlow:
         bm = BranchManager(git)
 
         docs_branch = bm.create_docs_branch("WI-2026-001")
-        assert docs_branch == "design/WI-2026-001-docs"
+        assert docs_branch == "feature/WI-2026-001-docs"
 
         scaffolder = DocScaffolder()
         created = scaffolder.scaffold(tmp_path, "WI-2026-001")

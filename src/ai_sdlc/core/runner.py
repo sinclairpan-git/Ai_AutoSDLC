@@ -9,6 +9,7 @@ from typing import Any
 
 from ai_sdlc.context.state import load_checkpoint, save_checkpoint
 from ai_sdlc.core.dispatcher import StageDispatcher
+from ai_sdlc.core.executor import Executor
 from ai_sdlc.gates.extra_gates import KnowledgeGate, ParallelGate, PostmortemGate
 from ai_sdlc.gates.pipeline_gates import (
     CloseGate,
@@ -21,7 +22,13 @@ from ai_sdlc.gates.pipeline_gates import (
 )
 from ai_sdlc.gates.registry import GateRegistry
 from ai_sdlc.models.gate import GateResult, GateVerdict
-from ai_sdlc.models.state import Checkpoint, CompletedStage, FeatureInfo
+from ai_sdlc.models.state import (
+    Checkpoint,
+    CompletedStage,
+    ExecuteProgress,
+    FeatureInfo,
+    RuntimeState,
+)
 from ai_sdlc.telemetry.enums import TelemetryEventStatus
 from ai_sdlc.telemetry.runtime import RuntimeTelemetry
 from ai_sdlc.utils.helpers import now_iso
@@ -108,6 +115,8 @@ class SDLCRunner:
                     cp.current_stage = stage
                     cp.pipeline_last_updated = now_iso()
                     save_checkpoint(self.root, cp)
+                    if stage == "execute":
+                        cp = self._run_execute_stage(cp)
 
                 try:
                     result = self._run_gate_with_retry(stage, cp, dry_run)
@@ -259,6 +268,44 @@ class SDLCRunner:
             ctx["high_issues"] = 0
         return ctx
 
+    def _build_executor(self) -> Executor:
+        """Build the execute-stage orchestration entrypoint."""
+        return Executor(self.root)
+
+    def _run_execute_stage(self, cp: Checkpoint) -> Checkpoint:
+        """Run execute-side effects before the execute gate validates artifacts."""
+        spec_dir = self._resolve_spec_dir(cp)
+        if spec_dir is None:
+            return cp
+
+        tasks_file = spec_dir / "tasks.md"
+        if not tasks_file.exists():
+            return cp
+
+        progress = cp.execute_progress
+        runtime = RuntimeState(
+            current_stage="execute",
+            current_batch=progress.current_batch if progress else 0,
+            last_committed_task=progress.last_committed_task if progress else "",
+            execution_mode=cp.execution_mode,
+        )
+        result = self._build_executor().run(tasks_file, runtime=runtime)
+        cp.execute_progress = ExecuteProgress(
+            total_batches=result.plan.total_batches,
+            completed_batches=result.completed_batches,
+            current_batch=result.runtime.current_batch,
+            last_committed_task=result.runtime.last_committed_task,
+            tasks_file=str(tasks_file.relative_to(self.root)),
+            execution_log=str(result.log_path.relative_to(self.root)),
+            last_log_at=result.last_log_timestamp,
+            last_commit_at=result.last_commit_timestamp,
+            last_commit_hash=result.commit_hashes[-1] if result.commit_hashes else "",
+            halted=result.halted,
+            error=result.error,
+        )
+        save_checkpoint(self.root, cp)
+        return cp
+
     def _resolve_spec_dir(self, cp: Checkpoint | None) -> Path | None:
         if cp and cp.feature:
             return self.root / cp.feature.spec_dir
@@ -274,13 +321,25 @@ class SDLCRunner:
         ctx["tests_passed"] = False
         ctx["committed"] = False
         ctx["logged"] = False
-        if spec_dir and (spec_dir / "execution-log.md").exists():
-            size = (spec_dir / "execution-log.md").stat().st_size
-            ctx["logged"] = size > 30
         if cp and cp.execute_progress:
-            has_task = cp.execute_progress.last_committed_task != ""
-            ctx["committed"] = has_task
-            ctx["tests_passed"] = has_task
+            progress = cp.execute_progress
+            log_file = self.root / progress.execution_log if progress.execution_log else None
+            if log_file is not None and log_file.exists():
+                ctx["logged"] = log_file.stat().st_size > 30
+            elif spec_dir is not None:
+                for name in ("task-execution-log.md", "execution-log.md"):
+                    candidate = spec_dir / name
+                    if candidate.exists():
+                        ctx["logged"] = candidate.stat().st_size > 30
+                        break
+            ctx["committed"] = progress.last_commit_hash != ""
+            ctx["tests_passed"] = (
+                not progress.halted
+                and progress.total_batches > 0
+                and progress.completed_batches >= progress.total_batches
+            )
+            ctx["log_timestamp"] = progress.last_log_at
+            ctx["commit_timestamp"] = progress.last_commit_at
 
     def _enrich_close_context(
         self,
@@ -291,12 +350,16 @@ class SDLCRunner:
         """Populate close-gate context from real state."""
         ctx["all_tasks_complete"] = False
         ctx["tests_passed"] = False
+        if spec_dir is not None:
+            ctx["summary_path"] = str(spec_dir / "development-summary.md")
         if cp and cp.execute_progress:
             prog = cp.execute_progress
             ctx["all_tasks_complete"] = (
-                prog.total_batches > 0 and prog.completed_batches >= prog.total_batches
+                prog.total_batches > 0
+                and prog.completed_batches >= prog.total_batches
+                and not prog.halted
             )
-            ctx["tests_passed"] = prog.last_committed_task != ""
+            ctx["tests_passed"] = prog.last_commit_hash != "" and not prog.halted
 
     @staticmethod
     def _stage_index(stage: str) -> int:

@@ -18,6 +18,7 @@ from ai_sdlc.utils.helpers import now_iso
 logger = logging.getLogger(__name__)
 
 CHECKPOINT_PATH = Path(".ai-sdlc") / "state" / "checkpoint.yml"
+RESUME_PACK_PATH = Path(".ai-sdlc") / "state" / "resume-pack.yaml"
 
 STAGE_FILES: dict[str, list[str]] = {
     "init": [],
@@ -28,6 +29,20 @@ STAGE_FILES: dict[str, list[str]] = {
     "execute": ["tasks_path", "plan_path", "spec_path", "constitution_path"],
     "close": ["tasks_path", "spec_path"],
 }
+
+VALID_CHECKPOINT_STAGES = frozenset(STAGE_FILES)
+
+
+class CheckpointLoadError(Exception):
+    """Raised when checkpoint.yml is missing or violates recovery contracts."""
+
+
+class ResumePackError(Exception):
+    """Raised when resume-pack.yaml cannot be loaded safely."""
+
+
+class ResumePackNotFoundError(ResumePackError):
+    """Raised when resume-pack.yaml is required but missing."""
 
 
 # ── checkpoint management ──
@@ -43,22 +58,30 @@ def save_checkpoint(root: Path, checkpoint: Checkpoint) -> None:
     YamlStore.save(cp_path, checkpoint)
 
 
-def load_checkpoint(root: Path) -> Checkpoint | None:
+def load_checkpoint(root: Path, *, strict: bool = False) -> Checkpoint | None:
     """Load checkpoint from file. Returns None if not found.
 
     Falls back to .bak file if primary is corrupted.
     """
     cp_path = root / CHECKPOINT_PATH
-    if cp_path.exists():
-        try:
-            return YamlStore.load(cp_path, Checkpoint)
-        except YamlStoreError:
-            logger.warning("Checkpoint corrupted, trying backup")
-            bak = cp_path.with_suffix(".yml.bak")
-            if bak.exists():
-                return YamlStore.load(bak, Checkpoint)
-            return None
-    return None
+    bak = cp_path.with_suffix(".yml.bak")
+
+    if not cp_path.exists():
+        if strict:
+            raise CheckpointLoadError("checkpoint.yml not found")
+        return None
+
+    try:
+        return _load_checkpoint_candidate(root, cp_path, strict=strict)
+    except (YamlStoreError, CheckpointLoadError) as exc:
+        logger.warning("Checkpoint load failed (%s), trying backup", exc)
+        if bak.exists():
+            return _load_checkpoint_candidate(root, bak, strict=strict)
+        if strict and isinstance(exc, CheckpointLoadError):
+            raise
+        if strict:
+            raise CheckpointLoadError(str(exc)) from exc
+        return None
 
 
 def update_stage(
@@ -131,8 +154,26 @@ def build_resume_pack(root: Path) -> ResumePack | None:
 
 def save_resume_pack(root: Path, pack: ResumePack) -> None:
     """Save a resume pack to disk."""
-    path = root / ".ai-sdlc" / "state" / "resume-pack.yaml"
-    YamlStore.save(path, pack)
+    YamlStore.save(root / RESUME_PACK_PATH, pack)
+
+
+def load_resume_pack(root: Path) -> ResumePack:
+    """Load an existing resume pack and validate the paired checkpoint."""
+    path = root / RESUME_PACK_PATH
+    if not path.exists():
+        raise ResumePackNotFoundError(
+            "No resume pack found. Run ai-sdlc init to start fresh."
+        )
+
+    try:
+        pack = YamlStore.load(path, ResumePack)
+    except YamlStoreError as exc:
+        raise ResumePackError(
+            "Resume pack corrupted. Please inspect .ai-sdlc/state/resume-pack.yaml manually."
+        ) from exc
+
+    load_checkpoint(root, strict=True)
+    return pack
 
 
 # ── working set ──
@@ -193,3 +234,38 @@ def _find_tasks(root: Path) -> str:
     for p in (root / "specs").rglob("tasks.md"):
         return str(p)
     return ""
+
+
+def _load_checkpoint_candidate(
+    root: Path,
+    path: Path,
+    *,
+    strict: bool,
+) -> Checkpoint:
+    checkpoint = YamlStore.load(path, Checkpoint)
+    if strict:
+        _validate_checkpoint(root, checkpoint)
+    return checkpoint
+
+
+def _validate_checkpoint(root: Path, checkpoint: Checkpoint) -> None:
+    """Validate checkpoint.yml against FR-054 recovery constraints."""
+    if checkpoint.current_stage not in VALID_CHECKPOINT_STAGES:
+        raise CheckpointLoadError(
+            f"Invalid checkpoint current_stage: {checkpoint.current_stage}"
+        )
+
+    if not checkpoint.feature or not checkpoint.feature.spec_dir.strip():
+        raise CheckpointLoadError("checkpoint feature.spec_dir is missing")
+
+    if checkpoint.current_stage == "init":
+        return
+
+    if checkpoint.feature.id == "unknown":
+        raise CheckpointLoadError("checkpoint spec_dir is unresolved for recovery")
+
+    spec_dir = root / checkpoint.feature.spec_dir
+    if not spec_dir.exists():
+        raise CheckpointLoadError(
+            f"checkpoint spec_dir does not exist: {checkpoint.feature.spec_dir}"
+        )

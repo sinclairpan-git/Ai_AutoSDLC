@@ -28,7 +28,11 @@ console = Console()
 # gate sub-app
 # ---------------------------------------------------------------------------
 
-gate_app = typer.Typer(help="Run quality gate checks.")
+gate_app = typer.Typer(
+    help="Run quality gate checks.",
+    invoke_without_command=True,
+    context_settings={"allow_extra_args": True, "ignore_unknown_options": True},
+)
 
 
 def _build_registry() -> GateRegistry:
@@ -59,13 +63,51 @@ def _build_context(stage: str, root_str: str) -> dict[str, object]:
         ctx.setdefault("high_issues", 0)
     elif stage == "execute":
         ctx.setdefault("tests_passed", False)
+        ctx.setdefault("build_succeeded", False)
         ctx.setdefault("committed", False)
         ctx.setdefault("logged", False)
+        if cp and cp.execute_progress:
+            progress = cp.execute_progress
+            ctx["tests_passed"] = (
+                not progress.halted
+                and progress.total_batches > 0
+                and progress.completed_batches >= progress.total_batches
+            )
+            ctx["build_succeeded"] = ctx["tests_passed"]
+            ctx["committed"] = progress.last_commit_hash != ""
+            if progress.execution_log:
+                log_file = root / progress.execution_log
+                ctx["logged"] = log_file.exists() and log_file.stat().st_size > 30
+            ctx["log_timestamp"] = progress.last_log_at
+            ctx["commit_timestamp"] = progress.last_commit_at
     elif stage == "close":
         ctx.setdefault("all_tasks_complete", False)
         ctx.setdefault("tests_passed", False)
+        if cp and cp.execute_progress:
+            progress = cp.execute_progress
+            ctx["all_tasks_complete"] = (
+                not progress.halted
+                and progress.total_batches > 0
+                and progress.completed_batches >= progress.total_batches
+            )
+            ctx["tests_passed"] = progress.last_commit_hash != "" and not progress.halted
+        if "spec_dir" in ctx:
+            ctx["summary_path"] = str(Path(ctx["spec_dir"]) / "development-summary.md")
 
     return ctx
+
+
+@gate_app.callback()
+def gate_root(ctx: typer.Context) -> None:
+    """Support both `ai-sdlc gate check <stage>` and `ai-sdlc gate <stage>`."""
+    if ctx.invoked_subcommand is not None:
+        return
+    if not ctx.args:
+        return
+    if len(ctx.args) != 1:
+        console.print("[red]Usage: ai-sdlc gate <stage>[/red]")
+        raise typer.Exit(code=2)
+    gate_check(ctx.args[0])
 
 
 @gate_app.command(name="check")
@@ -112,6 +154,18 @@ def gate_check(
 
     exit_code = 0 if result.verdict == GateVerdict.PASS else 1
     raise typer.Exit(code=exit_code)
+
+
+def _register_gate_alias(stage_name: str) -> None:
+    """Register `ai-sdlc gate <stage>` alias while keeping `gate check <stage>`."""
+
+    @gate_app.command(name=stage_name)
+    def _alias_command() -> None:
+        gate_check(stage_name)
+
+
+for _stage_name in ("init", "refine", "design", "decompose", "verify", "execute", "close"):
+    _register_gate_alias(_stage_name)
 
 
 # ---------------------------------------------------------------------------

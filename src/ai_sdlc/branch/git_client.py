@@ -93,6 +93,10 @@ class GitClient:
         self._run("commit", "-m", message)
         return self._run("rev-parse", "--short", "HEAD")
 
+    def head_commit_timestamp(self) -> str:
+        """Return the ISO timestamp of the current HEAD commit."""
+        return self._run("show", "-s", "--format=%cI", "HEAD")
+
     def merge(self, source: str, target: str) -> None:
         """Merge source branch into target branch.
 

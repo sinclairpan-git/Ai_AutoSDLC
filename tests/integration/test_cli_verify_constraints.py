@@ -65,6 +65,7 @@ class TestCliVerifyConstraints:
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         init_project(tmp_path)
+        (tmp_path / ".ai-sdlc" / "memory" / "constitution.md").unlink()
         monkeypatch.chdir(tmp_path)
 
         result = runner.invoke(app, ["verify", "constraints"])

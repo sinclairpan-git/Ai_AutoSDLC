@@ -31,6 +31,29 @@ def initialized_project_dir(tmp_project_dir: Path) -> Path:
         "next_work_item_seq: 1\n"
         "version: '1.0'\n"
     )
+    memory_dir = ai_sdlc / "memory"
+    memory_dir.mkdir(parents=True, exist_ok=True)
+    (memory_dir / "constitution.md").write_text(
+        "# Constitution\n"
+        "- Principle 1\n"
+        "- Principle 2\n"
+        "- Principle 3\n",
+        encoding="utf-8",
+    )
+    profiles_dir = ai_sdlc / "profiles"
+    profiles_dir.mkdir(parents=True, exist_ok=True)
+    (profiles_dir / "tech-stack.yml").write_text(
+        "backend:\n"
+        "  name: python\n"
+        "  source: https://example.com/python\n",
+        encoding="utf-8",
+    )
+    (profiles_dir / "decisions.yml").write_text(
+        "decisions:\n"
+        "  - id: D1\n"
+        "    choice: use-python\n",
+        encoding="utf-8",
+    )
     return tmp_project_dir
 
 

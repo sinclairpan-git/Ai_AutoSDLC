@@ -1,8 +1,9 @@
-"""Unit tests for BatchExecutor and ExecutionLogger."""
+"""Unit tests for BatchExecutor, Executor, and ExecutionLogger."""
 
 from __future__ import annotations
 
 import json
+import subprocess
 from pathlib import Path
 
 import pytest
@@ -13,6 +14,7 @@ from ai_sdlc.core.executor import (
     BatchExecutor,
     CircuitBreakerError,
     ExecutionLogger,
+    Executor,
 )
 from ai_sdlc.models.state import (
     ExecutionBatch,
@@ -55,6 +57,86 @@ def _make_two_batch_plan() -> ExecutionPlan:
         ExecutionBatch(batch_id=2, phase=2, tasks=["T3", "T4"]),
     ]
     return _make_plan(tasks, batches)
+
+
+def _write_pipeline_config(
+    root: Path,
+    *,
+    max_tasks_per_batch: int = 12,
+    max_debug_rounds_per_task: int = 3,
+    consecutive_failure_limit: int = 2,
+) -> None:
+    cfg = root / ".ai-sdlc" / "config" / "pipeline.yml"
+    cfg.parent.mkdir(parents=True, exist_ok=True)
+    cfg.write_text(
+        (
+            "stages:\n"
+            "  - id: execute\n"
+            "    batch:\n"
+            "      strategy: by_phase\n"
+            f"      max_tasks_per_batch: {max_tasks_per_batch}\n"
+            "      auto_archive: true\n"
+            "      auto_commit: true\n"
+            "circuit_breaker:\n"
+            f"  max_debug_rounds_per_task: {max_debug_rounds_per_task}\n"
+            f"  consecutive_failure_limit: {consecutive_failure_limit}\n"
+        ),
+        encoding="utf-8",
+    )
+
+
+def _write_tasks_md(spec_dir: Path, body: str) -> Path:
+    spec_dir.mkdir(parents=True, exist_ok=True)
+    path = spec_dir / "tasks.md"
+    path.write_text(body, encoding="utf-8")
+    return path
+
+
+def _sample_tasks_md() -> str:
+    return """\
+### Task 1.1 Setup batch one
+- **Task ID**: T001
+- **依赖**：无
+- **文件**：src/setup.py
+- **验收标准（AC）**：
+  1. setup done
+
+### Task 1.2 Continue batch one
+- **Task ID**: T002
+- **依赖**：T001
+- **文件**：src/app.py
+- **验收标准（AC）**：
+  1. app done
+
+### Task 1.3 Split by max tasks
+- **Task ID**: T003
+- **依赖**：T002
+- **文件**：src/extra.py
+- **验收标准（AC）**：
+  1. extra done
+"""
+
+
+def _single_task_md() -> str:
+    return """\
+### Task 1.1 Flaky task
+- **Task ID**: T001
+- **依赖**：无
+- **文件**：src/flaky.py
+- **验收标准（AC）**：
+  1. flaky handled
+"""
+
+
+def _git_commit_count(root: Path) -> int:
+    result = subprocess.run(
+        ["git", "rev-list", "--count", "HEAD"],
+        cwd=root,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    return int(result.stdout.strip())
 
 
 class TestBatchExecutorNormalFlow:
@@ -222,6 +304,88 @@ class TestAdvanceBatchEdgeCases:
         result = exe.advance_batch()
         assert result is None
         assert exe.is_complete()
+
+
+class TestExecutorRun:
+    def test_run_splits_batches_writes_log_commits_and_summary(
+        self, git_repo: Path
+    ) -> None:
+        spec_dir = git_repo / "specs" / "WI-2026-EXEC"
+        tasks_path = _write_tasks_md(spec_dir, _sample_tasks_md())
+        _write_pipeline_config(git_repo, max_tasks_per_batch=2)
+
+        before_commits = _git_commit_count(git_repo)
+        executor = Executor(git_repo)
+
+        result = executor.run(tasks_path)
+
+        assert result.plan.total_batches == 2
+        assert result.completed_batches == 2
+        assert result.halted is False
+        assert result.log_path == spec_dir / "task-execution-log.md"
+        assert result.summary_path == spec_dir / "development-summary.md"
+        assert result.log_path.exists()
+        assert result.summary_path.exists()
+        assert len(result.commit_hashes) == 2
+        assert _git_commit_count(git_repo) == before_commits + 2
+        assert result.last_log_timestamp <= result.last_commit_timestamp
+
+        log_content = result.log_path.read_text(encoding="utf-8")
+        assert "### Batch 1" in log_content
+        assert "### Batch 2" in log_content
+        assert "**T003**: completed" in log_content
+
+        summary = result.summary_path.read_text(encoding="utf-8")
+        assert "Total Tasks: 3" in summary
+        assert "Completed Tasks: 3" in summary
+        assert result.commit_hashes[-1] in summary
+
+    def test_run_halts_task_after_configured_debug_limit(self, git_repo: Path) -> None:
+        spec_dir = git_repo / "specs" / "WI-2026-HALT"
+        tasks_path = _write_tasks_md(spec_dir, _single_task_md())
+        _write_pipeline_config(
+            git_repo,
+            max_debug_rounds_per_task=2,
+            consecutive_failure_limit=2,
+        )
+
+        executor = Executor(
+            git_repo,
+            task_runner=lambda _task, _runtime: TaskStatus.FAILED,
+        )
+        result = executor.run(tasks_path)
+
+        assert result.halted is False
+        assert result.plan.tasks[0].status == TaskStatus.HALTED
+        assert result.runtime.debug_rounds["T001"] == 2
+        assert "halted" in result.log_path.read_text(encoding="utf-8").lower()
+
+    def test_run_stops_when_circuit_breaker_triggers(self, git_repo: Path) -> None:
+        spec_dir = git_repo / "specs" / "WI-2026-BREAK"
+        tasks_path = _write_tasks_md(
+            spec_dir,
+            _single_task_md()
+            + "\n"
+            + _single_task_md().replace("Task 1.1", "Task 1.2").replace(
+                "T001", "T002"
+            ),
+        )
+        _write_pipeline_config(
+            git_repo,
+            max_debug_rounds_per_task=1,
+            consecutive_failure_limit=2,
+        )
+
+        executor = Executor(
+            git_repo,
+            task_runner=lambda _task, _runtime: TaskStatus.FAILED,
+        )
+        result = executor.run(tasks_path)
+
+        assert result.halted is True
+        assert "Circuit breaker" in result.error
+        assert result.plan.tasks[0].status == TaskStatus.HALTED
+        assert result.plan.tasks[1].status == TaskStatus.HALTED
 
 
 class TestIsComplete:

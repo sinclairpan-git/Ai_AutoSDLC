@@ -4,9 +4,15 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pytest
+
 from ai_sdlc.context.state import (
+    CheckpointLoadError,
+    ResumePackError,
+    ResumePackNotFoundError,
     build_resume_pack,
     load_checkpoint,
+    load_resume_pack,
     save_checkpoint,
     save_resume_pack,
     update_stage,
@@ -70,6 +76,39 @@ class TestCheckpointManager:
         assert loaded is not None
         assert loaded.current_stage == "init"
 
+    def test_strict_load_rejects_invalid_stage(self, tmp_path: Path) -> None:
+        cp_path = tmp_path / ".ai-sdlc" / "state" / "checkpoint.yml"
+        cp_path.parent.mkdir(parents=True, exist_ok=True)
+        cp_path.write_text(
+            "current_stage: bogus\n"
+            "feature:\n"
+            "  id: '001'\n"
+            "  spec_dir: specs/001\n"
+            "  design_branch: design/001\n"
+            "  feature_branch: feature/001\n"
+            "  current_branch: main\n",
+            encoding="utf-8",
+        )
+
+        with pytest.raises(CheckpointLoadError, match="current_stage"):
+            load_checkpoint(tmp_path, strict=True)
+
+    def test_strict_load_rejects_missing_spec_dir(self, tmp_path: Path) -> None:
+        cp = Checkpoint(
+            current_stage="design",
+            feature=FeatureInfo(
+                id="001",
+                spec_dir="specs/missing",
+                design_branch="design/001",
+                feature_branch="feature/001",
+                current_branch="main",
+            ),
+        )
+        save_checkpoint(tmp_path, cp)
+
+        with pytest.raises(CheckpointLoadError, match="spec_dir"):
+            load_checkpoint(tmp_path, strict=True)
+
 
 class TestResumePack:
     def test_build_from_checkpoint(self, tmp_path: Path) -> None:
@@ -120,3 +159,41 @@ class TestResumePack:
         save_resume_pack(tmp_path, pack)
         resume_file = tmp_path / ".ai-sdlc" / "state" / "resume-pack.yaml"
         assert resume_file.exists()
+
+    def test_load_resume_pack_round_trip(self, tmp_path: Path) -> None:
+        spec_dir = tmp_path / "specs" / "001"
+        spec_dir.mkdir(parents=True)
+        (spec_dir / "spec.md").write_text("# Spec", encoding="utf-8")
+        cp = Checkpoint(
+            current_stage="execute",
+            feature=FeatureInfo(
+                id="001",
+                spec_dir="specs/001",
+                design_branch="d/001",
+                feature_branch="f/001",
+                current_branch="f/001",
+            ),
+        )
+        save_checkpoint(tmp_path, cp)
+        pack = build_resume_pack(tmp_path)
+        assert pack is not None
+        save_resume_pack(tmp_path, pack)
+
+        loaded = load_resume_pack(tmp_path)
+        assert loaded.current_stage == "execute"
+        assert loaded.working_set_snapshot.spec_path.endswith("spec.md")
+
+    def test_load_resume_pack_missing_raises_spec_error(self, tmp_path: Path) -> None:
+        with pytest.raises(
+            ResumePackNotFoundError,
+            match="No resume pack found",
+        ):
+            load_resume_pack(tmp_path)
+
+    def test_load_resume_pack_corrupted_raises_spec_error(self, tmp_path: Path) -> None:
+        resume_file = tmp_path / ".ai-sdlc" / "state" / "resume-pack.yaml"
+        resume_file.parent.mkdir(parents=True, exist_ok=True)
+        resume_file.write_text(": invalid yaml {{", encoding="utf-8")
+
+        with pytest.raises(ResumePackError, match="Resume pack corrupted"):
+            load_resume_pack(tmp_path)

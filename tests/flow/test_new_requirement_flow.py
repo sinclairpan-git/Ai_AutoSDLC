@@ -4,11 +4,39 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from ai_sdlc.core.state_machine import transition
+from ai_sdlc.core.state_machine import (
+    load_work_item,
+    save_work_item,
+    transition_work_item,
+)
 from ai_sdlc.models.work import WorkItemStatus, WorkType
 from ai_sdlc.routers.bootstrap import init_project
 from ai_sdlc.routers.work_intake import KeywordWorkIntakeRouter, generate_work_item_id
 from ai_sdlc.studios.prd_studio import check_prd_readiness
+
+
+def _complete_prd() -> str:
+    return (
+        "# 用户管理平台\n"
+        "## 文档信息\n"
+        "- 项目名称：用户管理平台\n"
+        "## 项目背景\n统一账号治理。\n"
+        "## 产品目标\n"
+        "- 统一注册登录\n"
+        "## 用户角色\n"
+        "- 管理员\n"
+        "- 普通用户\n"
+        "## 功能需求\n"
+        "- 注册\n"
+        "- 登录\n"
+        "## 核心业务规则\n"
+        "- 邮箱唯一\n"
+        "## 验收标准\n"
+        "- AC-001 注册成功\n"
+        "- AC-002 登录成功\n"
+        "## 开发优先级\n"
+        "- P0 注册登录\n"
+    )
 
 
 class TestNewRequirementFlow:
@@ -23,26 +51,23 @@ class TestNewRequirementFlow:
 
         wi.work_item_id = generate_work_item_id(1)
         assert wi.work_item_id.startswith("WI-")
+        save_work_item(project_dir, wi)
 
-        new_status = transition(wi.status, WorkItemStatus.INTAKE_CLASSIFIED)
-        assert new_status == WorkItemStatus.INTAKE_CLASSIFIED
-        wi.status = new_status
+        wi = transition_work_item(project_dir, wi, WorkItemStatus.INTAKE_CLASSIFIED)
+        assert wi.status == WorkItemStatus.INTAKE_CLASSIFIED
 
         prd = tmp_path / "prd.md"
-        prd.write_text(
-            "## 目标\n用户管理\n## 范围\n注册登录\n## 用户角色\n开发者\n"
-            "## 功能需求\nFR-001\n## 验收标准\nAC-001\n"
-        )
+        prd.write_text(_complete_prd(), encoding="utf-8")
         readiness = check_prd_readiness(prd)
         assert readiness.readiness == "pass"
 
-        new_status = transition(wi.status, WorkItemStatus.GOVERNANCE_FROZEN)
-        assert new_status == WorkItemStatus.GOVERNANCE_FROZEN
-        wi.status = new_status
+        wi = transition_work_item(project_dir, wi, WorkItemStatus.GOVERNANCE_FROZEN)
+        assert wi.status == WorkItemStatus.GOVERNANCE_FROZEN
 
-        new_status = transition(wi.status, WorkItemStatus.DOCS_BASELINE)
-        wi.status = new_status
+        wi = transition_work_item(project_dir, wi, WorkItemStatus.DOCS_BASELINE)
         assert wi.status == WorkItemStatus.DOCS_BASELINE
+        persisted = load_work_item(project_dir, wi.work_item_id)
+        assert persisted.status == WorkItemStatus.DOCS_BASELINE
 
     def test_uncertain_requires_confirmation(self, tmp_path: Path) -> None:
         router = KeywordWorkIntakeRouter()

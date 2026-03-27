@@ -2,7 +2,11 @@
 
 from __future__ import annotations
 
-from ai_sdlc.models.work import WorkItemStatus
+from pathlib import Path
+
+from ai_sdlc.core.config import YamlStore
+from ai_sdlc.models.work import WorkItem, WorkItemStatus
+from ai_sdlc.utils.helpers import now_iso
 
 
 class InvalidTransitionError(Exception):
@@ -61,3 +65,35 @@ def transition(current: WorkItemStatus, target: WorkItemStatus) -> WorkItemStatu
             f"Valid targets: {[s.value for s in valid]}"
         )
     return target
+
+
+def work_item_path(root: Path, work_item_id: str) -> Path:
+    """Return the filesystem path of a persisted work item."""
+    return root / ".ai-sdlc" / "work-items" / work_item_id / "work-item.yaml"
+
+
+def save_work_item(root: Path, work_item: WorkItem) -> Path:
+    """Persist a work item under `.ai-sdlc/work-items/<WI>/work-item.yaml`."""
+    if not work_item.created_at:
+        work_item.created_at = now_iso()
+    work_item.updated_at = now_iso()
+    path = work_item_path(root, work_item.work_item_id)
+    YamlStore.save(path, work_item)
+    return path
+
+
+def load_work_item(root: Path, work_item_id: str) -> WorkItem:
+    """Load a persisted work item."""
+    return YamlStore.load(work_item_path(root, work_item_id), WorkItem)
+
+
+def transition_work_item(
+    root: Path,
+    work_item: WorkItem,
+    target: WorkItemStatus,
+) -> WorkItem:
+    """Apply a legal transition and persist the new status to work-item.yaml."""
+    new_status = transition(work_item.status, target)
+    work_item.status = new_status
+    save_work_item(root, work_item)
+    return work_item

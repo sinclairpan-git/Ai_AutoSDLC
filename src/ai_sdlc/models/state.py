@@ -46,6 +46,11 @@ class ExecuteProgress(BaseModel):
     last_committed_task: str = ""
     tasks_file: str = ""
     execution_log: str = ""
+    last_log_at: str = ""
+    last_commit_at: str = ""
+    last_commit_hash: str = ""
+    halted: bool = False
+    error: str = ""
 
 
 class Checkpoint(BaseModel):
