@@ -229,6 +229,13 @@ class TelemetryStore:
         self._write_json(report_path, payload)
         return report_path
 
+    def load_governance_report(self, artifact_id: str) -> dict[str, Any] | None:
+        """Load a canonical governance report payload when available."""
+        report_path = self.governance_report_path(artifact_id)
+        if not report_path.exists():
+            return None
+        return self._read_json(report_path)
+
     def load_current_snapshots(
         self,
         kind: str,

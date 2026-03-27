@@ -78,10 +78,13 @@ def test_generate_run_reports_includes_evaluation_summary_and_audit_report(
         workflow_run_id=event.workflow_run_id,
     )
 
-    assert set(reports) == {"evaluation_summary", "audit_report"}
+    assert set(reports) == {"evaluation_summary", "violation_summary", "audit_report"}
     assert reports["evaluation_summary"]["totals"]["count"] == 1
     assert reports["evaluation_summary"]["source_evidence_refs"] == [evidence.evidence_id]
     assert reports["evaluation_summary"]["source_object_refs"] == [f"evaluation:{evaluation.evaluation_id}"]
+    assert reports["evaluation_summary"]["coverage_view"]["coverage_state"] == "covered"
+    assert reports["evaluation_summary"]["evidence_quality_view"]["quality_state"] == "complete"
+    assert reports["violation_summary"]["open_debt"]["count"] == 0
     assert reports["audit_report"]["audit_status"] == "clean"
 
 
@@ -186,6 +189,49 @@ def test_revalidate_downgrades_previously_published_artifact_when_refs_break(
     assert [item.artifact_id for item in downgraded] == [published.artifact_id]
     latest = _read_json(store.current_object_path(downgraded[0]))
     assert latest["status"] == ArtifactStatus.REVIEWED.value
+    report = _read_json(store.governance_report_path(published.artifact_id))
+    assert report["artifact_status"] == ArtifactStatus.REVIEWED.value
+    assert report["source_closure_ok"] is False
+
+
+def test_evaluation_summary_contains_minimal_coverage_and_evidence_quality_views(
+    tmp_path: Path,
+) -> None:
+    store = TelemetryStore(tmp_path)
+    writer = TelemetryWriter(store)
+    publisher = GovernancePublisher(store=store, writer=writer)
+    event, _, _ = _seed_completed_run(writer)
+    missing_digest = Evidence(
+        scope_level=ScopeLevel.RUN,
+        goal_session_id=event.goal_session_id,
+        workflow_run_id=event.workflow_run_id,
+        locator="verify-constraints:report:sha256:abcdef",
+        digest=None,
+        created_at="2026-03-27T10:00:01Z",
+        updated_at="2026-03-27T10:00:01Z",
+    )
+    failed = Evaluation(
+        scope_level=ScopeLevel.RUN,
+        goal_session_id=event.goal_session_id,
+        workflow_run_id=event.workflow_run_id,
+        result=EvaluationResult.FAILED,
+        status=EvaluationStatus.FAILED,
+        created_at="2026-03-27T10:00:01Z",
+        updated_at="2026-03-27T10:00:01Z",
+    )
+    writer.write_evidence(missing_digest)
+    writer.write_evaluation(failed)
+
+    summary = publisher.generate_run_reports(
+        goal_session_id=event.goal_session_id,
+        workflow_run_id=event.workflow_run_id,
+    )["evaluation_summary"]
+
+    assert summary["coverage_view"]["coverage_state"] == "partial"
+    assert summary["coverage_view"]["issue_evaluation_count"] == 1
+    assert summary["evidence_quality_view"]["quality_state"] == "partial"
+    assert summary["evidence_quality_view"]["missing_digest_count"] == 1
+    assert missing_digest.evidence_id in summary["evidence_quality_view"]["missing_digest_refs"]
 
 
 def test_accepted_violation_remains_open_debt_not_resolved_in_audit_report(

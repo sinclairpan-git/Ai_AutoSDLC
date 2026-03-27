@@ -7,7 +7,13 @@ from typing import Any, Mapping
 from ai_sdlc.telemetry.clock import utc_now_z
 from ai_sdlc.telemetry.contracts import Artifact, Evaluation, Violation
 from ai_sdlc.telemetry.enums import ArtifactStatus
-from ai_sdlc.telemetry.generators import build_audit_report, build_evaluation_rollup
+from ai_sdlc.telemetry.generators import (
+    build_audit_report,
+    build_evaluation_coverage_view,
+    build_evaluation_rollup,
+    build_evidence_quality_view,
+    build_violation_rollup,
+)
 from ai_sdlc.telemetry.resolver import SourceResolver
 from ai_sdlc.telemetry.store import TelemetryStore
 from ai_sdlc.telemetry.writer import TelemetryWriter
@@ -55,6 +61,11 @@ class GovernancePublisher:
             workflow_run_id=workflow_run_id,
         )
         evaluation_summary = build_evaluation_rollup(evaluations)
+        violation_summary = build_violation_rollup(violations)
+        evaluation_summary["coverage_view"] = build_evaluation_coverage_view(evaluations)
+        evaluation_summary["evidence_quality_view"] = build_evidence_quality_view(
+            evidence_payloads
+        )
         evaluation_summary["source_evidence_refs"] = [
             payload["evidence_id"] for payload in evidence_payloads
         ]
@@ -64,6 +75,7 @@ class GovernancePublisher:
         audit_report = build_audit_report(evaluations, violations)
         return {
             "evaluation_summary": evaluation_summary,
+            "violation_summary": violation_summary,
             "audit_report": audit_report,
         }
 
@@ -121,6 +133,7 @@ class GovernancePublisher:
                 updated_at=_next_updated_at(artifact),
             )
             self.writer.write_artifact(reviewed)
+            self._write_revalidated_report(reviewed)
             downgraded.append(reviewed)
         return downgraded
 
@@ -153,6 +166,28 @@ class GovernancePublisher:
             payload.get("goal_session_id") == artifact.goal_session_id
             and payload.get("workflow_run_id") == artifact.workflow_run_id
             and payload.get("step_id") == artifact.step_id
+        )
+
+    def _write_revalidated_report(self, artifact: Artifact) -> None:
+        existing = self.store.load_governance_report(artifact.artifact_id) or {}
+        report_name = existing.get("report_name")
+        if not isinstance(report_name, str) or not report_name:
+            report_name = "audit_report"
+        report_payload = existing.get("report")
+        if not isinstance(report_payload, Mapping):
+            report_payload = {}
+        self.store.write_governance_report(
+            artifact.artifact_id,
+            {
+                "report_name": report_name,
+                "artifact_id": artifact.artifact_id,
+                "artifact_status": artifact.status.value,
+                "goal_session_id": artifact.goal_session_id,
+                "workflow_run_id": artifact.workflow_run_id,
+                "step_id": artifact.step_id,
+                "source_closure_ok": False,
+                "report": dict(report_payload),
+            },
         )
 
 

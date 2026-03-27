@@ -5,7 +5,7 @@ from __future__ import annotations
 import hashlib
 import json
 from dataclasses import asdict
-from typing import Sequence
+from typing import Mapping, Sequence
 
 from ai_sdlc.core.verify_constraints import ConstraintReport
 from ai_sdlc.telemetry.contracts import Evaluation, Violation
@@ -104,6 +104,69 @@ def build_violation_rollup(violations: Sequence[Violation]) -> dict[str, object]
             "count": len(resolved_violations),
             "violation_ids": sorted(violation.violation_id for violation in resolved_violations),
         },
+    }
+
+
+def build_evaluation_coverage_view(evaluations: Sequence[Evaluation]) -> dict[str, object]:
+    """Build a minimal coverage view grounded in evaluation outcomes."""
+    issue_evaluation_count = sum(
+        1
+        for evaluation in evaluations
+        if evaluation.status is EvaluationStatus.FAILED
+        or evaluation.result in {EvaluationResult.FAILED, EvaluationResult.WARNING}
+    )
+    if not evaluations:
+        coverage_state = "missing"
+    elif issue_evaluation_count > 0:
+        coverage_state = "partial"
+    else:
+        coverage_state = "covered"
+    return {
+        "coverage_state": coverage_state,
+        "total_evaluation_count": len(evaluations),
+        "issue_evaluation_count": issue_evaluation_count,
+        "passed_evaluation_count": len(evaluations) - issue_evaluation_count,
+    }
+
+
+def build_evidence_quality_view(evidence_payloads: Sequence[Mapping[str, object]]) -> dict[str, object]:
+    """Build a minimal evidence-quality view from canonical evidence payloads."""
+    evidence_refs = sorted(
+        str(payload["evidence_id"])
+        for payload in evidence_payloads
+        if payload.get("evidence_id") is not None
+    )
+    missing_digest_refs = sorted(
+        str(payload["evidence_id"])
+        for payload in evidence_payloads
+        if payload.get("evidence_id") is not None and not payload.get("digest")
+    )
+    missing_locator_refs = sorted(
+        str(payload["evidence_id"])
+        for payload in evidence_payloads
+        if payload.get("evidence_id") is not None and not payload.get("locator")
+    )
+    non_available_refs = sorted(
+        str(payload["evidence_id"])
+        for payload in evidence_payloads
+        if payload.get("evidence_id") is not None and payload.get("status") != "available"
+    )
+    total_count = len(evidence_refs)
+    if total_count == 0:
+        quality_state = "missing"
+    elif missing_digest_refs or missing_locator_refs or non_available_refs:
+        quality_state = "partial"
+    else:
+        quality_state = "complete"
+    return {
+        "quality_state": quality_state,
+        "total_count": total_count,
+        "missing_digest_count": len(missing_digest_refs),
+        "missing_locator_count": len(missing_locator_refs),
+        "non_available_count": len(non_available_refs),
+        "missing_digest_refs": missing_digest_refs,
+        "missing_locator_refs": missing_locator_refs,
+        "non_available_refs": non_available_refs,
     }
 
 
