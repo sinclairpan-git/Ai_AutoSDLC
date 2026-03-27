@@ -21,6 +21,7 @@
   - `触发场景`
   - `影响范围`
   - `根因分类`
+  - `未来杜绝方案摘要`
   - `建议改动层级`
   - `prompt / context`
   - `rule / policy`
@@ -42,11 +43,12 @@
 ### 字段约定
 
 - `根因分类`：沿用 legacy registry 的 A-H 归类，可多选。
+- `未来杜绝方案摘要`：用 1-3 句概括“以后靠什么约束/机制杜绝同类问题再发生”；详细落地仍应展开到 `rule / policy`、`middleware`、`workflow`、`tool`、`eval` 字段。
 - `建议改动层级`：从 `prompt / context`、`rule / policy`、`middleware`、`workflow`、`tool`、`eval` 中选择一项或多项。
 - `风险等级`：建议使用 `低 / 中 / 高 / 极高`。
 - `是否需要回归测试补充`：使用 `是：...` / `否：...`。
 - `状态`：建议使用 `open / planned / in_progress / closed / migrated`。
-- 若条目对应的是“已被拦截且已修复”的违约，`状态` 可记为 `closed`，但正文仍必须写清：`现象`、`根因分类`、以及未来如何杜绝同类问题再次出现（应落到 `rule / policy`、`middleware`、`workflow`、`tool`、`eval` 等字段）。
+- 若条目对应的是“已被拦截且已修复”的违约，`状态` 可记为 `closed`，但正文仍必须写清：`现象`、`根因分类`、`未来杜绝方案摘要`，以及未来如何杜绝同类问题再次出现（应落到 `rule / policy`、`middleware`、`workflow`、`tool`、`eval` 等字段）。
 
 ### 迁移说明
 
@@ -295,3 +297,47 @@
 - 风险等级: 中
 - 可验证成功标准: downgrade 后 artifact snapshot 与 report JSON 状态一致；run 级 canonical artifacts 至少包含 `evaluation_summary`、`violation_summary`、`audit_report`；`evaluation_summary` 包含 coverage 与 evidence quality 的最小聚合字段；`pending / waived / not_applicable` 不会被 audit 或 summary 误判为 clean/pass。
 - 是否需要回归测试补充: 是：补充 downgrade report rewrite、standalone violation_summary 生成、evaluation_summary coverage/evidence 视图的回归测试。
+
+## FD-2026-03-27-006 | status --json 仍会经全局 IDE hook 产生写入，破坏 bounded/read-only 语义
+
+- 日期 (UTC): 2026-03-27
+- 来源: self_review
+- 状态: open
+- owner: codex
+- wi_id: 003-telemetry-trace-governance
+- 现象: Task 7 为 `status --json` 增加了 bounded telemetry JSON surface，但 CLI 全局 callback 仍会在 `status` 子命令执行前触发 `run_ide_adapter_if_initialized()`，而该 hook 会调用 `ensure_ide_adaptation()` 持久化 `.ai-sdlc/project/config/project-config.yaml`，使 `status --json` 仍然带有文件写副作用。
+- 触发场景: 对 `a2285b6` 做本地 review 时，逆查 `status --json` 执行路径，发现虽然 readiness 逻辑本身不做 telemetry init/rebuild，但命令外围的 IDE adaptation hook 依旧生效。
+- 影响范围: `status --json` 的 bounded/read-only 契约被破坏；运维和自动化可能在“只想读状态”时意外改写项目配置；测试若只 patch 掉 hook，容易掩盖真实执行路径。
+- 根因分类: A, B, D
+- 建议改动层级: rule / policy, middleware, workflow, tool, eval
+- prompt / context: bounded status/doctor surface 不只是“telemetry 不落盘”，还应避免命令外围的其他写副作用；全局 hook 也必须服从只读诊断边界。
+- rule / policy: 将 `status --json` / `doctor` 视为只读运维面；任何会落盘的 hook 都不得在这些命令前隐式执行。
+- middleware: 在 CLI 全局 callback 中把 `status`（至少 `status --json`）与 `doctor` 排除出 IDE adaptation 写路径，或为 hook 增加显式只读模式。
+- workflow: Task 级 review 默认检查“命令本体虽只读，但外围 hook 是否仍可能写文件”。
+- tool: `src/ai_sdlc/cli/main.py`、`src/ai_sdlc/cli/cli_hooks.py`、`src/ai_sdlc/integrations/ide_adapter.py`
+- eval: read-only command side-effect 次数、status-json write-side-effect 次数
+- 风险等级: 中
+- 可验证成功标准: 执行 `status --json` 和 `doctor` 前后，不会新增或改写 IDE adapter / project-config 相关文件；同时仍保持 telemetry `not_initialized` 不隐式创建。
+- 是否需要回归测试补充: 是：补充 `status --json` 与 `doctor` 在真实 CLI 路径下不触发 IDE adaptation 写入的回归测试。
+
+## FD-2026-03-27-007 | Task 7 readiness 初版存在 latest/current 指向失真，resolver health 先是假阳性、后又先后出现越界 deep scan 与过窄 probe 假 warn
+
+- 日期 (UTC): 2026-03-27
+- 来源: self_review, code_review
+- 状态: open
+- owner: codex
+- wi_id: 003-telemetry-trace-governance
+- 现象: `status --json` 的 `latest.artifacts.sample_ids` 起初取的是 `latest-artifacts.json` 的尾部切片，而该索引本身是 newest-first，导致 latest sample 实际上可能返回最旧的一段；随后又暴露出 `latest_goal_session_id / latest_workflow_run_id / latest_step_id` 直接取 manifest dict key 的“最后一个”条目，在 manifest 重写/重载后会丢失真实 recency 语义。同时 `doctor` 的 `resolver health` 检查先是只调用 `resolve(\"unsupported\", ...)` 并把预期的 `ValueError` 视为健康，后续修补为正向解析时又先后出现递归扫描 `events.ndjson` 的 deep scan 越界，以及只探测极少数 manifest 候选 path、导致存在合法 fixture 时仍报 `warn` 的过窄 probe。
+- 触发场景: 对 Task 7 的 readiness surface 做 spec review 时，按 store/index 真值和 doctor readiness 要求逆查 `readiness.py`，发现 latest sample 语义与 index 顺序不一致，resolver health 也只验证了拒绝路径。
+- 影响范围: `status --json` 的 latest/current 区域会误导运维判断当前与最近 scope；`doctor` 可能把实际损坏的 resolver 误报为 `ok`，或为了一次 health check 而退化成不受控 trace 扫描，或在存在合法 fixture 时误报 `warn`，削弱 readiness 诊断价值并突破 bounded surface 约束。
+- 根因分类: A, B, H
+- 建议改动层级: rule / policy, middleware, workflow, tool, eval
+- prompt / context: bounded summary 不只是“字段数量受限”，还必须保持 latest/current 指向的真值方向正确；health check 也必须触达正向路径，但正向路径的验证既不能靠全量 trace 扫描补正确性，也不能缩到只看极少数候选而放过 manifest 已知的合法来源。
+- rule / policy: `latest` 采样必须遵循权威 index 的排序语义；`health/readiness` 检查至少覆盖一条真实支持路径。
+- middleware: readiness helper 中 latest sample 统一按权威索引顺序切片；resolver health 通过最小合法 source fixture 走一次正向解析，不再以 unsupported guard 代替健康检查。
+- workflow: Task 级 spec/code review 默认检查“latest sample 是否和 index 顺序一致”“latest/current id 是否有真实 recency 依据”“health check 是否真正覆盖正向路径”，并额外检查“该正向路径是否仍保持 bounded probe，而不是深扫本地 trace，且不会因为候选过窄而误报 warn”。
+- tool: `src/ai_sdlc/telemetry/readiness.py`、`tests/integration/test_cli_status.py`、`tests/integration/test_cli_doctor.py`
+- eval: latest-sample-ordering-error 次数、latest-current-id-mispoint 次数、resolver-health-false-positive 次数、resolver-health-deep-scan 次数、resolver-health-false-warn 次数
+- 风险等级: 中
+- 可验证成功标准: `status --json` 的 latest artifact sample 与 `latest-artifacts.json` 的 newest-first 语义一致；`latest_goal_session_id / latest_workflow_run_id / latest_step_id` 基于可辩护的 recency 信号而不是 dict 顺序；`doctor` 的 resolver health 至少验证一个受支持 source kind 的成功解析，且该验证通过 manifest/index 驱动的 bounded probe 完成，不递归扫描全部 trace，也不会在 manifest 已知存在合法 fixture 时误报 `warn`。
+- 是否需要回归测试补充: 是：补充 latest sample 顺序和 resolver health 正向解析的回归测试。

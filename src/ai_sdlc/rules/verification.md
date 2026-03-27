@@ -123,7 +123,7 @@ CLI 工具：
    - 自检发现自己跳过了框架约束
 3. 命中后，在 docs/framework-defect-backlog.zh-CN.md 追加结构化条目
 4. 即使该问题已在当前轮次被及时拦截并修复，只要它曾真实出现并暴露框架缺口，也必须登记；不得因为“已经修好”而跳过 backlog
-5. 条目中除现象/根因外，还必须写出未来杜绝方案，应落到 `rule / policy`、`middleware`、`workflow`、`tool`、`eval` 中的一项或多项
+5. 条目中除现象/根因外，还必须写出 `未来杜绝方案摘要`，并在 `rule / policy`、`middleware`、`workflow`、`tool`、`eval` 中的一项或多项展开成可执行的防复发方案
 6. 仅当本轮没有新增框架问题时，才允许不追加条目
 ```
 
