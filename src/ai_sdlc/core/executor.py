@@ -159,9 +159,14 @@ class BatchExecutor:
         """Emit executor-owned tool telemetry without writing workflow events."""
         if self._telemetry is None or self._step_id is None:
             return
-        self._telemetry.record_tool_event(
+        self._telemetry.record_tool_control_point(
             step_id=self._step_id,
+            control_point_name="command_completed",
             status=self._tool_status(task.status),
+            details={
+                "task_id": task.task_id,
+                "task_status": task.status.value,
+            },
         )
         self._telemetry.record_tool_evidence(
             step_id=self._step_id,

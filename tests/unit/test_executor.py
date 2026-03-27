@@ -389,6 +389,10 @@ def test_executor_emits_only_tool_events_and_evidence(tmp_path: Path) -> None:
     assert all(event["trace_layer"] == "tool" for event in new_events)
     assert all(event["status"] == "succeeded" for event in new_events)
     assert evidence[-1]["locator"] == "executor://tasks/TX"
+    assert any(
+        payload["locator"].startswith("ccp:v1:command_completed:event:")
+        for payload in evidence
+    )
 
 
 def test_circuit_breaker_failure_still_emits_tool_event_and_evidence(
@@ -431,7 +435,11 @@ def test_circuit_breaker_failure_still_emits_tool_event_and_evidence(
     after_evidence = _read_ndjson(step_root / "evidence.ndjson")
 
     assert len(after_events) == before_event_count + MAX_DEBUG_ROUNDS
-    assert len(after_evidence) == before_evidence_count + MAX_DEBUG_ROUNDS
+    assert len(after_evidence) == before_evidence_count + (MAX_DEBUG_ROUNDS * 2)
     assert after_events[-1]["trace_layer"] == "tool"
     assert after_events[-1]["status"] == "blocked"
     assert after_evidence[-1]["locator"] == "executor://tasks/B"
+    assert any(
+        payload["locator"].startswith("ccp:v1:command_completed:event:")
+        for payload in after_evidence[before_evidence_count:]
+    )

@@ -339,6 +339,35 @@ class RuntimeTelemetry:
         self.writer.write_evidence(evidence)
         return evidence
 
+    def record_tool_control_point(
+        self,
+        *,
+        step_id: str | None,
+        control_point_name: str,
+        status: TelemetryEventStatus,
+        actor_type: ActorType = ActorType.FRAMEWORK_RUNTIME,
+        confidence: Confidence = Confidence.MEDIUM,
+        details: dict[str, object] | None = None,
+    ) -> tuple[TelemetryEvent, Evidence] | None:
+        """Write a tool/evaluation CCP event/evidence pair for an auto-captured hook."""
+        event = self.record_tool_event(
+            step_id=step_id,
+            status=status,
+            actor_type=actor_type,
+        )
+        if event is None:
+            return None
+        evidence = self._record_control_point_evidence(
+            scope_level=ScopeLevel.STEP,
+            workflow_run_id=event.workflow_run_id,
+            step_id=event.step_id,
+            control_point_name=control_point_name,
+            event=event,
+            confidence=confidence,
+            details=details,
+        )
+        return event, evidence
+
     def record_gate_control_point(
         self,
         *,
@@ -374,27 +403,56 @@ class RuntimeTelemetry:
             ),
         )
         self.writer.write_event(event)
-
-        evidence = Evidence(
+        evidence = self._record_control_point_evidence(
             scope_level=ScopeLevel.STEP,
+            workflow_run_id=event.workflow_run_id,
+            step_id=event.step_id,
+            control_point_name=control_point_name,
+            event=event,
+            confidence=Confidence.HIGH,
+            details={
+                "stage": stage,
+                "verdict": verdict,
+                "check_messages": tuple(check_messages),
+            },
+        )
+        return event, evidence
+
+    def _record_control_point_evidence(
+        self,
+        *,
+        scope_level: ScopeLevel,
+        workflow_run_id: str | None,
+        step_id: str | None,
+        control_point_name: str,
+        event: TelemetryEvent,
+        confidence: Confidence,
+        details: dict[str, object] | None = None,
+        artifact_id: str | None = None,
+    ) -> Evidence:
+        if self.goal_session_id is None:
+            raise ValueError("goal_session_id is required for control-point evidence")
+        evidence = Evidence(
+            scope_level=scope_level,
             goal_session_id=self.goal_session_id,
-            workflow_run_id=self.workflow_run_id,
+            workflow_run_id=workflow_run_id,
             step_id=step_id,
             capture_mode=CaptureMode.AUTO,
-            confidence=Confidence.HIGH,
-            locator=control_point_locator(control_point_name, event_id=event.event_id),
+            confidence=confidence,
+            locator=control_point_locator(
+                control_point_name,
+                event_id=event.event_id,
+                artifact_id=artifact_id,
+            ),
             digest=control_point_evidence_digest(
                 control_point_name,
                 event_id=event.event_id,
-                details={
-                    "stage": stage,
-                    "verdict": verdict,
-                    "check_messages": tuple(check_messages),
-                },
+                artifact_id=artifact_id,
+                details=details,
             ),
         )
         self.writer.write_evidence(evidence)
-        return event, evidence
+        return evidence
 
     @staticmethod
     def _verdict_status(verdict: str) -> TelemetryEventStatus:

@@ -32,7 +32,11 @@ from ai_sdlc.telemetry.enums import (
     ViolationStatus,
 )
 from ai_sdlc.telemetry.generators import control_point_evidence_digest, control_point_locator
-from ai_sdlc.telemetry.registry import CCPRegistry, CriticalControlPoint
+from ai_sdlc.telemetry.registry import (
+    CCPRegistry,
+    CriticalControlPoint,
+    build_default_ccp_registry,
+)
 
 
 def _source_chain() -> tuple[TelemetryEvent, Evidence]:
@@ -298,6 +302,174 @@ def test_malformed_or_unresolvable_control_point_locators_do_not_satisfy_ccps() 
     )
 
     assert gaps == ("audit_report_generated", "gate_hit")
+
+
+def test_default_registry_event_only_ccps_are_proven_from_raw_workflow_events() -> None:
+    registry = build_default_ccp_registry()
+    goal_session_id = "gs_0123456789abcdef0123456789abcdef"
+    workflow_run_id = "wr_0123456789abcdef0123456789abcdef"
+    step_id = "st_0123456789abcdef0123456789abcdef"
+    events = [
+        TelemetryEvent(
+            scope_level=ScopeLevel.SESSION,
+            goal_session_id=goal_session_id,
+            trace_layer=TraceLayer.WORKFLOW,
+            status=TelemetryEventStatus.STARTED,
+            confidence=Confidence.HIGH,
+            capture_mode=CaptureMode.AUTO,
+        ),
+        TelemetryEvent(
+            scope_level=ScopeLevel.RUN,
+            goal_session_id=goal_session_id,
+            workflow_run_id=workflow_run_id,
+            trace_layer=TraceLayer.WORKFLOW,
+            status=TelemetryEventStatus.STARTED,
+            confidence=Confidence.HIGH,
+            capture_mode=CaptureMode.AUTO,
+        ),
+        TelemetryEvent(
+            scope_level=ScopeLevel.RUN,
+            goal_session_id=goal_session_id,
+            workflow_run_id=workflow_run_id,
+            trace_layer=TraceLayer.WORKFLOW,
+            status=TelemetryEventStatus.SUCCEEDED,
+            confidence=Confidence.HIGH,
+            capture_mode=CaptureMode.AUTO,
+        ),
+        TelemetryEvent(
+            scope_level=ScopeLevel.STEP,
+            goal_session_id=goal_session_id,
+            workflow_run_id=workflow_run_id,
+            step_id=step_id,
+            trace_layer=TraceLayer.WORKFLOW,
+            status=TelemetryEventStatus.STARTED,
+            confidence=Confidence.HIGH,
+            capture_mode=CaptureMode.AUTO,
+        ),
+    ]
+
+    gaps = calculate_ccp_coverage_gaps(
+        registry,
+        event_payloads=[event.model_dump(mode="json") for event in events],
+    )
+
+    assert "session_created" not in gaps
+    assert "workflow_run_started" not in gaps
+    assert "workflow_run_ended" not in gaps
+    assert "workflow_step_transitioned" not in gaps
+
+
+def test_default_registry_tool_ccps_are_proven_only_when_canonical_trace_exists() -> None:
+    registry = build_default_ccp_registry()
+    goal_session_id = "gs_0123456789abcdef0123456789abcdef"
+    workflow_run_id = "wr_0123456789abcdef0123456789abcdef"
+    step_id = "st_0123456789abcdef0123456789abcdef"
+    command_event = TelemetryEvent(
+        scope_level=ScopeLevel.STEP,
+        goal_session_id=goal_session_id,
+        workflow_run_id=workflow_run_id,
+        step_id=step_id,
+        trace_layer=TraceLayer.TOOL,
+        status=TelemetryEventStatus.SUCCEEDED,
+    )
+    patch_event = TelemetryEvent(
+        scope_level=ScopeLevel.STEP,
+        goal_session_id=goal_session_id,
+        workflow_run_id=workflow_run_id,
+        step_id=step_id,
+        trace_layer=TraceLayer.TOOL,
+        status=TelemetryEventStatus.SUCCEEDED,
+    )
+    file_event = TelemetryEvent(
+        scope_level=ScopeLevel.STEP,
+        goal_session_id=goal_session_id,
+        workflow_run_id=workflow_run_id,
+        step_id=step_id,
+        trace_layer=TraceLayer.TOOL,
+        status=TelemetryEventStatus.SUCCEEDED,
+    )
+    test_event = TelemetryEvent(
+        scope_level=ScopeLevel.STEP,
+        goal_session_id=goal_session_id,
+        workflow_run_id=workflow_run_id,
+        step_id=step_id,
+        trace_layer=TraceLayer.EVALUATION,
+        status=TelemetryEventStatus.FAILED,
+    )
+    evidence = [
+        Evidence(
+            scope_level=ScopeLevel.STEP,
+            goal_session_id=goal_session_id,
+            workflow_run_id=workflow_run_id,
+            step_id=step_id,
+            locator=control_point_locator(
+                "command_completed",
+                event_id=command_event.event_id,
+            ),
+            digest=control_point_evidence_digest(
+                "command_completed",
+                event_id=command_event.event_id,
+            ),
+        ),
+        Evidence(
+            scope_level=ScopeLevel.STEP,
+            goal_session_id=goal_session_id,
+            workflow_run_id=workflow_run_id,
+            step_id=step_id,
+            locator=control_point_locator(
+                "patch_applied",
+                event_id=patch_event.event_id,
+            ),
+            digest=control_point_evidence_digest(
+                "patch_applied",
+                event_id=patch_event.event_id,
+            ),
+        ),
+        Evidence(
+            scope_level=ScopeLevel.STEP,
+            goal_session_id=goal_session_id,
+            workflow_run_id=workflow_run_id,
+            step_id=step_id,
+            locator=control_point_locator(
+                "file_written",
+                event_id=file_event.event_id,
+            ),
+            digest=control_point_evidence_digest(
+                "file_written",
+                event_id=file_event.event_id,
+            ),
+        ),
+        Evidence(
+            scope_level=ScopeLevel.STEP,
+            goal_session_id=goal_session_id,
+            workflow_run_id=workflow_run_id,
+            step_id=step_id,
+            locator=control_point_locator(
+                "test_result_recorded",
+                event_id=test_event.event_id,
+            ),
+            digest=control_point_evidence_digest(
+                "test_result_recorded",
+                event_id=test_event.event_id,
+            ),
+        ),
+    ]
+
+    gaps = calculate_ccp_coverage_gaps(
+        registry,
+        event_payloads=[
+            command_event.model_dump(mode="json"),
+            patch_event.model_dump(mode="json"),
+            file_event.model_dump(mode="json"),
+            test_event.model_dump(mode="json"),
+        ],
+        evidence_payloads=[item.model_dump(mode="json") for item in evidence],
+    )
+
+    assert "command_completed" not in gaps
+    assert "patch_applied" not in gaps
+    assert "file_written" not in gaps
+    assert "test_result_recorded" not in gaps
 
 
 def test_escalate_hard_gate_to_violation() -> None:

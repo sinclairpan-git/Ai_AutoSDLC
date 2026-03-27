@@ -102,6 +102,7 @@ def _observed_control_point_names(
     evidence_payloads: Sequence[Mapping[str, object]],
     artifact_payloads: Sequence[Mapping[str, object]],
 ) -> set[str]:
+    observed = _observed_event_only_control_point_names(event_payloads)
     events_by_id = {
         str(payload["event_id"]): payload
         for payload in event_payloads
@@ -112,8 +113,6 @@ def _observed_control_point_names(
         for payload in artifact_payloads
         if payload.get("artifact_id") is not None
     }
-    observed: set[str] = set()
-
     for evidence in evidence_payloads:
         if evidence.get("status") != EvidenceStatus.AVAILABLE.value:
             continue
@@ -150,6 +149,26 @@ def _observed_control_point_names(
     return observed
 
 
+def _observed_event_only_control_point_names(
+    event_payloads: Sequence[Mapping[str, object]],
+) -> set[str]:
+    observed: set[str] = set()
+    for event in event_payloads:
+        if not _is_runtime_owned_workflow_event(event):
+            continue
+        scope_level = event.get("scope_level")
+        status = event.get("status")
+        if scope_level == "session" and status == TelemetryEventStatus.STARTED.value:
+            observed.add("session_created")
+        if scope_level == "run" and status == TelemetryEventStatus.STARTED.value:
+            observed.add("workflow_run_started")
+        if scope_level == "run" and status in _TERMINAL_EVENT_STATUSES:
+            observed.add("workflow_run_ended")
+        if scope_level == "step":
+            observed.add("workflow_step_transitioned")
+    return observed
+
+
 def _same_parent_chain(
     left: Mapping[str, object],
     right: Mapping[str, object],
@@ -164,15 +183,38 @@ def _event_matches_control_point(
     control_point_name: str,
     event: Mapping[str, object],
 ) -> bool:
-    if event.get("trace_layer") != TraceLayer.EVALUATION.value:
-        return False
+    trace_layer = event.get("trace_layer")
     status = event.get("status")
     if control_point_name == "gate_hit":
-        return status == TelemetryEventStatus.SUCCEEDED.value
+        return (
+            trace_layer == TraceLayer.EVALUATION.value
+            and status == TelemetryEventStatus.SUCCEEDED.value
+        )
     if control_point_name == "gate_blocked":
-        return status == TelemetryEventStatus.BLOCKED.value
+        return (
+            trace_layer == TraceLayer.EVALUATION.value
+            and status == TelemetryEventStatus.BLOCKED.value
+        )
     if control_point_name == "audit_report_generated":
-        return status == TelemetryEventStatus.SUCCEEDED.value
+        return (
+            trace_layer == TraceLayer.EVALUATION.value
+            and status == TelemetryEventStatus.SUCCEEDED.value
+        )
+    if control_point_name == "command_completed":
+        return (
+            trace_layer == TraceLayer.TOOL.value
+            and status in _TERMINAL_EVENT_STATUSES
+        )
+    if control_point_name in {"patch_applied", "file_written"}:
+        return (
+            trace_layer == TraceLayer.TOOL.value
+            and status == TelemetryEventStatus.SUCCEEDED.value
+        )
+    if control_point_name == "test_result_recorded":
+        return (
+            trace_layer in {TraceLayer.TOOL.value, TraceLayer.EVALUATION.value}
+            and status in _TERMINAL_EVENT_STATUSES
+        )
     return False
 
 
@@ -185,4 +227,22 @@ def _artifact_matches_control_point(
     return (
         artifact.get("artifact_type") == ArtifactType.REPORT.value
         and artifact.get("artifact_role") == ArtifactRole.AUDIT.value
+    )
+
+
+_TERMINAL_EVENT_STATUSES = {
+    TelemetryEventStatus.SUCCEEDED.value,
+    TelemetryEventStatus.FAILED.value,
+    TelemetryEventStatus.BLOCKED.value,
+    TelemetryEventStatus.SKIPPED.value,
+    TelemetryEventStatus.CANCELLED.value,
+}
+
+
+def _is_runtime_owned_workflow_event(event: Mapping[str, object]) -> bool:
+    return (
+        event.get("trace_layer") == TraceLayer.WORKFLOW.value
+        and event.get("actor_type") == "framework_runtime"
+        and event.get("capture_mode") == "auto"
+        and event.get("confidence") == "high"
     )
