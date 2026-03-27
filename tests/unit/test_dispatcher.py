@@ -2,12 +2,23 @@
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 import pytest
 
 from ai_sdlc.core.dispatcher import VALID_STAGES, StageDispatcher
 from ai_sdlc.models.state import Checkpoint, CompletedStage, FeatureInfo
+from ai_sdlc.telemetry.paths import telemetry_local_root
+from ai_sdlc.telemetry.runtime import RuntimeTelemetry
+
+
+def _read_ndjson(path: Path) -> list[dict]:
+    return [
+        json.loads(line)
+        for line in path.read_text(encoding="utf-8").splitlines()
+        if line.strip()
+    ]
 
 
 def _base_cp() -> Checkpoint:
@@ -110,3 +121,27 @@ class TestStageDispatcher:
         stages_dir = Path(__file__).resolve().parents[2] / "src" / "ai_sdlc" / "stages"
         for name in VALID_STAGES:
             assert (stages_dir / f"{name}.yaml").is_file(), f"missing {name}.yaml"
+
+    def test_begin_and_finish_stage_write_step_lifecycle_once(self, tmp_path: Path) -> None:
+        telemetry = RuntimeTelemetry(tmp_path)
+        telemetry.open_workflow_run()
+        dispatcher = StageDispatcher(telemetry=telemetry)
+
+        dispatcher.begin_stage("init")
+        dispatcher.record_result("gate_check", True, "PASS")
+        dispatcher.finish_stage("PASS")
+
+        assert dispatcher.current_step_id is not None
+        events = _read_ndjson(
+            telemetry_local_root(tmp_path)
+            / "sessions"
+            / telemetry.goal_session_id
+            / "runs"
+            / telemetry.workflow_run_id
+            / "steps"
+            / dispatcher.current_step_id
+            / "events.ndjson"
+        )
+
+        assert [event["trace_layer"] for event in events] == ["workflow", "workflow"]
+        assert [event["status"] for event in events] == ["started", "succeeded"]

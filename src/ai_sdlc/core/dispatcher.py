@@ -11,6 +11,7 @@ from pydantic import BaseModel, Field
 
 from ai_sdlc.models.state import Checkpoint
 from ai_sdlc.rules import RulesLoader
+from ai_sdlc.telemetry.runtime import RuntimeTelemetry
 
 logger = logging.getLogger(__name__)
 
@@ -57,11 +58,17 @@ class StageDispatcher:
     with an explicit checklist of actions and verification conditions.
     """
 
-    def __init__(self, rules_loader: RulesLoader | None = None) -> None:
+    def __init__(
+        self,
+        rules_loader: RulesLoader | None = None,
+        telemetry: RuntimeTelemetry | None = None,
+    ) -> None:
         self._rules = rules_loader or RulesLoader()
+        self._telemetry = telemetry
         self._manifests: dict[str, StageManifest] = {}
         self._current: StageManifest | None = None
         self._result: StageResult | None = None
+        self._current_step_id: str | None = None
 
     def load_manifest(self, stage: str) -> StageManifest:
         """Load a single stage's YAML manifest.
@@ -96,7 +103,25 @@ class StageDispatcher:
             stage=stage,
             checklist=[item.model_copy() for item in manifest.checklist],
         )
+        self._current_step_id = None
+        if self._telemetry is not None:
+            self._current_step_id = self._telemetry.begin_step(stage)
         return manifest
+
+    @property
+    def current_step_id(self) -> str | None:
+        """Return the active telemetry step id, if one exists."""
+        return self._current_step_id
+
+    def finish_stage(self, verdict: str) -> str | None:
+        """Close the current stage lifecycle telemetry, if enabled."""
+        if self._telemetry is None or self._current is None:
+            return self._current_step_id
+        self._current_step_id = self._telemetry.finish_step(
+            self._current.stage,
+            verdict,
+        )
+        return self._current_step_id
 
     def check_prerequisites(self, stage: str, checkpoint: Checkpoint) -> list[str]:
         """Check which prerequisites are not yet completed.
