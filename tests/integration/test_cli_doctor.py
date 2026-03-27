@@ -11,6 +11,7 @@ from typer.testing import CliRunner
 
 from ai_sdlc.cli.main import app
 from ai_sdlc.routers.bootstrap import init_project
+from ai_sdlc.telemetry import readiness
 from ai_sdlc.telemetry.paths import (
     telemetry_indexes_root,
     telemetry_local_root,
@@ -206,20 +207,59 @@ def test_doctor_resolver_health_does_not_parse_trace_payloads(
 ) -> None:
     init_project(tmp_path)
     _seed_bounded_event_fixture(tmp_path)
+    events_path = (
+        telemetry_local_root(tmp_path)
+        / "sessions"
+        / "gs_0123456789abcdef0123456789abcdef"
+        / "events.ndjson"
+    )
+    # Make the stream larger than the probe budget so unbounded reads are detectable.
+    large_payload = (json.dumps({"event_id": "evt_0123456789abcdef0123456789abcdef"}) + "\n") * 4000
+    events_path.write_text(large_payload, encoding="utf-8")
     monkeypatch.chdir(tmp_path)
 
-    def _fail_parse(*_args, **_kwargs):
-        raise AssertionError("trace payload parsing is forbidden for readiness")
+    original_open = Path.open
+    read_sizes: list[int] = []
 
-    monkeypatch.setattr(
-        "ai_sdlc.telemetry.readiness._iter_ndjson_dicts",
-        _fail_parse,
-    )
+    class _BoundedReadGuard:
+        def __init__(self, handle, max_bytes: int) -> None:
+            self._handle = handle
+            self._max_bytes = max_bytes
+
+        def __enter__(self):
+            self._handle.__enter__()
+            return self
+
+        def __exit__(self, exc_type, exc, tb):
+            return self._handle.__exit__(exc_type, exc, tb)
+
+        def seek(self, *args, **kwargs):
+            return self._handle.seek(*args, **kwargs)
+
+        def read(self, size: int = -1):
+            if size < 0 or size > self._max_bytes:
+                raise AssertionError("resolver tail probe performed an unbounded read")
+            read_sizes.append(size)
+            return self._handle.read(size)
+
+        def __getattr__(self, name: str):
+            return getattr(self._handle, name)
+
+    def _guarded_open(self: Path, *args, **kwargs):
+        mode = args[0] if args else kwargs.get("mode", "r")
+        handle = original_open(self, *args, **kwargs)
+        if self == events_path and "b" in mode:
+            return _BoundedReadGuard(handle, readiness._EVENT_TAIL_PROBE_BYTES)
+        return handle
+
+    monkeypatch.setattr(Path, "open", _guarded_open)
 
     result = runner.invoke(app, ["doctor"], catch_exceptions=False)
 
     assert result.exit_code == 0
     assert "supported source kind resolved" in result.output
+    assert read_sizes
+    assert max(read_sizes) <= readiness._EVENT_TAIL_PROBE_BYTES
 
 
 def test_doctor_resolver_health_is_not_ok_when_timeline_event_id_is_absent_from_candidate_stream(
