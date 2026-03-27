@@ -2,18 +2,27 @@
 
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Iterable
 
 from ai_sdlc.telemetry.contracts import Evidence, ScopeLevel, TelemetryEvent
 from ai_sdlc.telemetry.enums import (
     ActorType,
+    CaptureMode,
     Confidence,
     EvidenceStatus,
     TelemetryEventStatus,
     TraceLayer,
 )
-from ai_sdlc.telemetry.ids import new_goal_session_id, new_step_id, new_workflow_run_id
+from ai_sdlc.telemetry.ids import (
+    ID_PREFIXES,
+    new_goal_session_id,
+    new_step_id,
+    new_workflow_run_id,
+    validate_telemetry_id,
+)
 from ai_sdlc.telemetry.store import TelemetryStore
 from ai_sdlc.telemetry.writer import TelemetryWriter
 
@@ -89,6 +98,113 @@ class RuntimeTelemetry:
                 )
             )
         return self.goal_session_id
+
+    def close_session(
+        self,
+        goal_session_id: str | None = None,
+        *,
+        status: TelemetryEventStatus = TelemetryEventStatus.SUCCEEDED,
+    ) -> str:
+        """Write a terminal event for a goal session."""
+        session_id = goal_session_id or self.goal_session_id
+        if session_id is None:
+            raise ValueError("goal_session_id is required")
+
+        session_id = self._require_open_session(session_id)
+        self._validate_terminal_status(status)
+        if self._session_has_open_workflow_run(session_id):
+            raise ValueError("workflow run is still open")
+
+        self.writer.write_event(
+            TelemetryEvent(
+                scope_level=ScopeLevel.SESSION,
+                goal_session_id=session_id,
+                trace_layer=TraceLayer.WORKFLOW,
+                actor_type=ActorType.FRAMEWORK_RUNTIME,
+                confidence=Confidence.HIGH,
+                status=status,
+            )
+        )
+        if self.goal_session_id == session_id:
+            self.workflow_run_id = None
+            self._step_ids = {}
+            self._finished_steps = set()
+            self._run_closed = True
+            self.goal_session_id = None
+        return session_id
+
+    def validate_manual_scope(
+        self,
+        *,
+        scope_level: ScopeLevel,
+        goal_session_id: str,
+        workflow_run_id: str | None = None,
+        step_id: str | None = None,
+    ) -> None:
+        """Validate that a manual CLI write targets an existing open scope chain."""
+        self._require_open_session(goal_session_id)
+        if scope_level is ScopeLevel.SESSION:
+            return
+
+        manifest = self.store.load_manifest()
+        errors: list[str] = []
+
+        if workflow_run_id is None:
+            errors.append("workflow_run_id is required")
+        else:
+            run_entry = manifest["runs"].get(workflow_run_id)
+            if run_entry is None:
+                errors.append(
+                    f"workflow_run_id {workflow_run_id!r} must already exist in telemetry"
+                )
+            elif run_entry["goal_session_id"] != goal_session_id:
+                errors.append(
+                    f"workflow_run_id {workflow_run_id!r} does not belong to goal_session_id {goal_session_id!r}"
+                )
+
+        if scope_level is ScopeLevel.STEP:
+            if step_id is None:
+                errors.append("step_id is required")
+            else:
+                step_entry = manifest["steps"].get(step_id)
+                if step_entry is None:
+                    errors.append(
+                        f"step_id {step_id!r} must already exist in telemetry"
+                    )
+                elif (
+                    step_entry["goal_session_id"] != goal_session_id
+                    or step_entry["workflow_run_id"] != workflow_run_id
+                ):
+                    errors.append(
+                        f"step_id {step_id!r} does not belong to workflow_run_id {workflow_run_id!r}"
+                    )
+
+        if errors:
+            raise ValueError("; ".join(errors))
+
+    def validate_manual_event(
+        self,
+        *,
+        trace_layer: TraceLayer,
+        actor_type: ActorType,
+        capture_mode: CaptureMode,
+    ) -> None:
+        """Reject manual records that imitate runtime lifecycle events."""
+        forbidden: list[str] = []
+        if trace_layer is TraceLayer.WORKFLOW:
+            forbidden.append("trace_layer=workflow")
+        if actor_type is ActorType.FRAMEWORK_RUNTIME:
+            forbidden.append("actor_type=framework_runtime")
+        if capture_mode is CaptureMode.AUTO:
+            forbidden.append("capture_mode=auto")
+        if forbidden:
+            raise ValueError(
+                "manual record-event cannot emit runtime-owned lifecycle events"
+            )
+
+    def ensure_session_open(self, goal_session_id: str) -> str:
+        """Validate that a goal session is currently open."""
+        return self._require_open_session(goal_session_id)
 
     def close_workflow_run(
         self, status: TelemetryEventStatus = TelemetryEventStatus.SUCCEEDED
@@ -228,3 +344,98 @@ class RuntimeTelemetry:
         if normalized in {"retry", "halt"}:
             return TelemetryEventStatus.BLOCKED
         return TelemetryEventStatus.FAILED
+
+    def _require_open_session(self, goal_session_id: str) -> str:
+        validate_telemetry_id(goal_session_id, ID_PREFIXES["goal_session_id"])
+        if self._session_is_closed(goal_session_id):
+            raise ValueError(f"goal_session_id {goal_session_id!r} session is closed")
+        if not self._session_started(goal_session_id):
+            raise ValueError(
+                f"goal_session_id {goal_session_id!r} must be opened with 'telemetry open-session'"
+            )
+        return goal_session_id
+
+    def _validate_terminal_status(self, status: TelemetryEventStatus) -> None:
+        if status is TelemetryEventStatus.STARTED:
+            raise ValueError("close-session status must be a terminal status")
+
+    def _session_started(self, goal_session_id: str) -> bool:
+        return self._session_marker(goal_session_id, TelemetryEventStatus.STARTED)
+
+    def _session_is_closed(self, goal_session_id: str) -> bool:
+        return self._session_marker(
+            goal_session_id,
+            TelemetryEventStatus.SUCCEEDED,
+            TelemetryEventStatus.FAILED,
+            TelemetryEventStatus.BLOCKED,
+            TelemetryEventStatus.SKIPPED,
+            TelemetryEventStatus.CANCELLED,
+        )
+
+    def _session_marker(
+        self,
+        goal_session_id: str,
+        *statuses: TelemetryEventStatus,
+    ) -> bool:
+        path = self.store.event_stream_path(
+            scope_level=ScopeLevel.SESSION,
+            goal_session_id=goal_session_id,
+        )
+        if not path.exists():
+            return False
+        status_values = {status.value for status in statuses}
+        for payload in self._read_ndjson(path):
+            if (
+                payload.get("scope_level") == ScopeLevel.SESSION.value
+                and payload.get("goal_session_id") == goal_session_id
+                and payload.get("trace_layer") == TraceLayer.WORKFLOW.value
+                and payload.get("actor_type") == ActorType.FRAMEWORK_RUNTIME.value
+                and payload.get("capture_mode") == CaptureMode.AUTO.value
+                and payload.get("confidence") == Confidence.HIGH.value
+                and payload.get("status") in status_values
+            ):
+                return True
+        return False
+
+    def _session_has_open_workflow_run(self, goal_session_id: str) -> bool:
+        open_runs: set[str] = set()
+        terminal_statuses = {
+            TelemetryEventStatus.SUCCEEDED.value,
+            TelemetryEventStatus.FAILED.value,
+            TelemetryEventStatus.BLOCKED.value,
+            TelemetryEventStatus.SKIPPED.value,
+            TelemetryEventStatus.CANCELLED.value,
+        }
+        session_root = self.store.local_root / "sessions" / goal_session_id
+        if not session_root.exists():
+            return False
+
+        for path in sorted(session_root.rglob("events.ndjson")):
+            for payload in self._read_ndjson(path):
+                if not self._is_runtime_owned_workflow_payload(payload):
+                    continue
+                workflow_run_id = payload.get("workflow_run_id")
+                if not workflow_run_id:
+                    continue
+                status = payload.get("status")
+                if status == TelemetryEventStatus.STARTED.value:
+                    open_runs.add(workflow_run_id)
+                elif status in terminal_statuses:
+                    open_runs.discard(workflow_run_id)
+        return bool(open_runs)
+
+    @staticmethod
+    def _is_runtime_owned_workflow_payload(payload: dict) -> bool:
+        return (
+            payload.get("scope_level") == ScopeLevel.RUN.value
+            and payload.get("trace_layer") == TraceLayer.WORKFLOW.value
+            and payload.get("actor_type") == ActorType.FRAMEWORK_RUNTIME.value
+            and payload.get("capture_mode") == CaptureMode.AUTO.value
+            and payload.get("confidence") == Confidence.HIGH.value
+        )
+
+    @staticmethod
+    def _read_ndjson(path: Path) -> Iterable[dict]:
+        for line in path.read_text(encoding="utf-8").splitlines():
+            if line.strip():
+                yield json.loads(line)

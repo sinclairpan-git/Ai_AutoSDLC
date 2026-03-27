@@ -13,6 +13,7 @@ from ai_sdlc.cli.commands import (
     status_command,
 )
 from ai_sdlc.cli.doctor_cmd import doctor_command
+from ai_sdlc.cli.telemetry_cmd import telemetry_app
 from ai_sdlc.cli.program_cmd import program_app
 from ai_sdlc.cli.run_cmd import run_command
 from ai_sdlc.cli.stage_cmd import stage_app
@@ -54,6 +55,7 @@ app.add_typer(stage_app, name="stage")
 app.add_typer(program_app, name="program")
 app.add_typer(workitem_app, name="workitem")
 app.add_typer(verify_app, name="verify")
+app.add_typer(telemetry_app, name="telemetry")
 
 if __name__ == "__main__":
     app()
