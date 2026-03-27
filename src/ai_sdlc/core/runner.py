@@ -157,6 +157,15 @@ class SDLCRunner:
         """Run gate check with retry loop up to MAX_RETRIES."""
         for attempt in range(MAX_RETRIES):
             result = self._run_gate(stage, cp)
+            if not dry_run:
+                self._telemetry.record_gate_control_point(
+                    step_id=self._dispatcher.current_step_id,
+                    stage=stage,
+                    verdict=result.verdict.value,
+                    check_messages=tuple(
+                        check.message or check.name for check in result.checks
+                    ),
+                )
             if result.verdict != GateVerdict.RETRY or dry_run:
                 return result
             logger.warning("Stage '%s' RETRY %d/%d", stage, attempt + 1, MAX_RETRIES)

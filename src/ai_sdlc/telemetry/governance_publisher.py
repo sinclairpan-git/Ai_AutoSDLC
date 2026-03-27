@@ -5,10 +5,21 @@ from __future__ import annotations
 from typing import Any, Mapping
 
 from ai_sdlc.telemetry.clock import utc_now_z
-from ai_sdlc.telemetry.contracts import Artifact, Evaluation, Violation
-from ai_sdlc.telemetry.enums import ArtifactStatus
+from ai_sdlc.telemetry.contracts import Artifact, Evaluation, Evidence, TelemetryEvent, Violation
+from ai_sdlc.telemetry.enums import (
+    ActorType,
+    ArtifactRole,
+    ArtifactStatus,
+    ArtifactType,
+    CaptureMode,
+    Confidence,
+    TraceLayer,
+    TelemetryEventStatus,
+)
 from ai_sdlc.telemetry.generators import (
     build_audit_report,
+    control_point_evidence_digest,
+    control_point_locator,
     build_evaluation_coverage_view,
     build_evaluation_rollup,
     build_evidence_quality_view,
@@ -116,6 +127,8 @@ class GovernancePublisher:
                 "report": dict(report_payload),
             },
         )
+        if _is_audit_report_artifact(persisted, report_name):
+            self._write_audit_report_control_point(persisted, report_name)
         return persisted
 
     def revalidate_published_artifacts(self) -> list[Artifact]:
@@ -183,6 +196,48 @@ class GovernancePublisher:
             },
         )
 
+    def _write_audit_report_control_point(
+        self,
+        artifact: Artifact,
+        report_name: str,
+    ) -> None:
+        event = TelemetryEvent(
+            scope_level=artifact.scope_level,
+            goal_session_id=artifact.goal_session_id,
+            workflow_run_id=artifact.workflow_run_id,
+            step_id=artifact.step_id,
+            trace_layer=TraceLayer.EVALUATION,
+            actor_type=ActorType.FRAMEWORK_RUNTIME,
+            capture_mode=CaptureMode.AUTO,
+            confidence=Confidence.HIGH,
+            status=TelemetryEventStatus.SUCCEEDED,
+        )
+        self.writer.write_event(event)
+
+        evidence = Evidence(
+            scope_level=artifact.scope_level,
+            goal_session_id=artifact.goal_session_id,
+            workflow_run_id=artifact.workflow_run_id,
+            step_id=artifact.step_id,
+            capture_mode=CaptureMode.AUTO,
+            confidence=Confidence.HIGH,
+            locator=control_point_locator(
+                "audit_report_generated",
+                event_id=event.event_id,
+                artifact_id=artifact.artifact_id,
+            ),
+            digest=control_point_evidence_digest(
+                "audit_report_generated",
+                event_id=event.event_id,
+                artifact_id=artifact.artifact_id,
+                details={
+                    "report_name": report_name,
+                    "artifact_status": artifact.status.value,
+                },
+            ),
+        )
+        self.writer.write_evidence(evidence)
+
 
 def _parse_object_ref(value: str) -> tuple[str, str]:
     if ":" not in value:
@@ -199,3 +254,11 @@ def _next_updated_at(record: Artifact) -> str:
     current = record.updated_at or record.created_at
     now = utc_now_z()
     return now if now >= current else current
+
+
+def _is_audit_report_artifact(artifact: Artifact, report_name: str) -> bool:
+    return (
+        report_name == "audit_report"
+        and artifact.artifact_type is ArtifactType.REPORT
+        and artifact.artifact_role is ArtifactRole.AUDIT
+    )

@@ -16,6 +16,11 @@ from ai_sdlc.telemetry.enums import (
     TelemetryEventStatus,
     TraceLayer,
 )
+from ai_sdlc.telemetry.generators import (
+    control_point_evidence_digest,
+    control_point_locator,
+    gate_control_point_name,
+)
 from ai_sdlc.telemetry.ids import (
     ID_PREFIXES,
     new_goal_session_id,
@@ -333,6 +338,63 @@ class RuntimeTelemetry:
         )
         self.writer.write_evidence(evidence)
         return evidence
+
+    def record_gate_control_point(
+        self,
+        *,
+        step_id: str | None,
+        stage: str,
+        verdict: str,
+        check_messages: Iterable[str] = (),
+    ) -> tuple[TelemetryEvent, Evidence] | None:
+        """Write the canonical gate CCP event/evidence pair for one gate attempt."""
+        if (
+            step_id is None
+            or self.goal_session_id is None
+            or self.workflow_run_id is None
+        ):
+            return None
+
+        control_point_name = gate_control_point_name(verdict)
+        if control_point_name is None:
+            return None
+
+        event = TelemetryEvent(
+            scope_level=ScopeLevel.STEP,
+            goal_session_id=self.goal_session_id,
+            workflow_run_id=self.workflow_run_id,
+            step_id=step_id,
+            trace_layer=TraceLayer.EVALUATION,
+            actor_type=ActorType.FRAMEWORK_RUNTIME,
+            confidence=Confidence.HIGH,
+            status=(
+                TelemetryEventStatus.SUCCEEDED
+                if control_point_name == "gate_hit"
+                else TelemetryEventStatus.BLOCKED
+            ),
+        )
+        self.writer.write_event(event)
+
+        evidence = Evidence(
+            scope_level=ScopeLevel.STEP,
+            goal_session_id=self.goal_session_id,
+            workflow_run_id=self.workflow_run_id,
+            step_id=step_id,
+            capture_mode=CaptureMode.AUTO,
+            confidence=Confidence.HIGH,
+            locator=control_point_locator(control_point_name, event_id=event.event_id),
+            digest=control_point_evidence_digest(
+                control_point_name,
+                event_id=event.event_id,
+                details={
+                    "stage": stage,
+                    "verdict": verdict,
+                    "check_messages": tuple(check_messages),
+                },
+            ),
+        )
+        self.writer.write_evidence(evidence)
+        return event, evidence
 
     @staticmethod
     def _verdict_status(verdict: str) -> TelemetryEventStatus:

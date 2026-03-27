@@ -4,8 +4,9 @@ from __future__ import annotations
 
 import hashlib
 import json
+from collections.abc import Mapping
 from dataclasses import asdict
-from typing import Mapping, Sequence
+from typing import Sequence
 
 from ai_sdlc.core.verify_constraints import ConstraintReport
 from ai_sdlc.telemetry.contracts import Evaluation, Violation
@@ -15,6 +16,14 @@ from ai_sdlc.telemetry.enums import (
     ViolationRiskLevel,
     ViolationStatus,
 )
+
+_CONTROL_POINT_LOCATOR_VERSION = "v1"
+_GATE_CONTROL_POINTS_BY_VERDICT = {
+    "pass": "gate_hit",
+    "retry": "gate_blocked",
+    "halt": "gate_blocked",
+    "block": "gate_blocked",
+}
 
 
 def constraint_report_digest(report: ConstraintReport) -> str:
@@ -26,6 +35,81 @@ def constraint_report_digest(report: ConstraintReport) -> str:
 def constraint_report_locator(report: ConstraintReport) -> str:
     """Return a stable locator string for a structured verify-constraints report."""
     return f"verify-constraints:report:{constraint_report_digest(report).removeprefix('sha256:')}"
+
+
+def gate_control_point_name(verdict: str) -> str | None:
+    """Map a gate verdict to its canonical CCP name."""
+    return _GATE_CONTROL_POINTS_BY_VERDICT.get(verdict.strip().lower())
+
+
+def control_point_locator(
+    control_point_name: str,
+    *,
+    event_id: str,
+    artifact_id: str | None = None,
+) -> str:
+    """Return a versioned locator for a concrete control-point observation."""
+    locator = f"ccp:{_CONTROL_POINT_LOCATOR_VERSION}:{control_point_name}:event:{event_id}"
+    if artifact_id is not None:
+        locator += f":artifact:{artifact_id}"
+    return locator
+
+
+def control_point_evidence_digest(
+    control_point_name: str,
+    *,
+    event_id: str,
+    artifact_id: str | None = None,
+    details: Mapping[str, object] | None = None,
+) -> str:
+    """Return a deterministic digest for canonical CCP evidence."""
+    payload: dict[str, object] = {
+        "control_point_name": control_point_name,
+        "event_id": event_id,
+    }
+    if artifact_id is not None:
+        payload["artifact_id"] = artifact_id
+    if details:
+        payload["details"] = dict(details)
+    encoded = json.dumps(payload, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
+    return f"sha256:{hashlib.sha256(encoded.encode('utf-8')).hexdigest()}"
+
+
+def parse_control_point_locator(locator: str | None) -> dict[str, str] | None:
+    """Parse a canonical CCP locator or return None for malformed values."""
+    if not locator:
+        return None
+
+    parts = locator.split(":")
+    if len(parts) not in {5, 7}:
+        return None
+    if parts[0] != "ccp" or parts[1] != _CONTROL_POINT_LOCATOR_VERSION:
+        return None
+
+    control_point_name = parts[2]
+    if not control_point_name:
+        return None
+
+    refs: dict[str, str] = {}
+    for index in range(3, len(parts), 2):
+        ref_kind = parts[index]
+        ref_value = parts[index + 1]
+        if ref_kind not in {"event", "artifact"}:
+            return None
+        if not ref_value or ref_kind in refs:
+            return None
+        refs[ref_kind] = ref_value
+
+    if "event" not in refs:
+        return None
+
+    parsed = {
+        "control_point_name": control_point_name,
+        "event_id": refs["event"],
+    }
+    if "artifact" in refs:
+        parsed["artifact_id"] = refs["artifact"]
+    return parsed
 
 
 def build_evaluation_summary(

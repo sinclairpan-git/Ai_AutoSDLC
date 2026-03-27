@@ -5,7 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from ai_sdlc.core.verify_constraints import ConstraintReport
-from ai_sdlc.telemetry.contracts import Evidence, Evaluation, TelemetryEvent, Violation
+from ai_sdlc.telemetry.contracts import Artifact, Evidence, Evaluation, TelemetryEvent, Violation
 from ai_sdlc.telemetry.detectors import (
     ViolationHit,
     escalate_hard_gate_violation,
@@ -17,6 +17,9 @@ from ai_sdlc.telemetry.evaluators import (
     calculate_ccp_coverage_gaps,
 )
 from ai_sdlc.telemetry.enums import (
+    ArtifactRole,
+    ArtifactStatus,
+    ArtifactType,
     CaptureMode,
     Confidence,
     EvaluationResult,
@@ -28,6 +31,7 @@ from ai_sdlc.telemetry.enums import (
     ViolationRiskLevel,
     ViolationStatus,
 )
+from ai_sdlc.telemetry.generators import control_point_evidence_digest, control_point_locator
 from ai_sdlc.telemetry.registry import CCPRegistry, CriticalControlPoint
 
 
@@ -74,13 +78,18 @@ def test_build_verify_constraint_evaluation_uses_trace_event_and_evidence() -> N
     assert evaluation.root_cause_class is RootCauseClass.RULE_POLICY
 
 
-def test_calculate_ccp_coverage_gaps_from_registry() -> None:
+def test_calculate_ccp_coverage_gaps_from_raw_trace_locators() -> None:
     registry = CCPRegistry(
         control_points={
-            "session_created": CriticalControlPoint(
-                name="session_created",
-                primary_writer="runtime facade",
-                minimum_evidence_closure=("event",),
+            "gate_hit": CriticalControlPoint(
+                name="gate_hit",
+                primary_writer="runner/dispatcher gate hook",
+                minimum_evidence_closure=("event", "gate_reason_evidence"),
+            ),
+            "gate_blocked": CriticalControlPoint(
+                name="gate_blocked",
+                primary_writer="runner/dispatcher gate hook",
+                minimum_evidence_closure=("event", "gate_reason_evidence"),
             ),
             "audit_report_generated": CriticalControlPoint(
                 name="audit_report_generated",
@@ -89,13 +98,206 @@ def test_calculate_ccp_coverage_gaps_from_registry() -> None:
             ),
         }
     )
+    gate_hit_event = TelemetryEvent(
+        scope_level=ScopeLevel.STEP,
+        goal_session_id="gs_0123456789abcdef0123456789abcdef",
+        workflow_run_id="wr_0123456789abcdef0123456789abcdef",
+        step_id="st_0123456789abcdef0123456789abcdef",
+        trace_layer=TraceLayer.EVALUATION,
+        status=TelemetryEventStatus.SUCCEEDED,
+    )
+    gate_blocked_event = TelemetryEvent(
+        scope_level=ScopeLevel.STEP,
+        goal_session_id=gate_hit_event.goal_session_id,
+        workflow_run_id=gate_hit_event.workflow_run_id,
+        step_id=gate_hit_event.step_id,
+        trace_layer=TraceLayer.EVALUATION,
+        status=TelemetryEventStatus.BLOCKED,
+    )
+    audit_event = TelemetryEvent(
+        scope_level=ScopeLevel.RUN,
+        goal_session_id=gate_hit_event.goal_session_id,
+        workflow_run_id=gate_hit_event.workflow_run_id,
+        trace_layer=TraceLayer.EVALUATION,
+        status=TelemetryEventStatus.SUCCEEDED,
+    )
+    audit_artifact = Artifact(
+        scope_level=ScopeLevel.RUN,
+        goal_session_id=gate_hit_event.goal_session_id,
+        workflow_run_id=gate_hit_event.workflow_run_id,
+        status=ArtifactStatus.GENERATED,
+        artifact_type=ArtifactType.REPORT,
+        artifact_role=ArtifactRole.AUDIT,
+    )
+    evidence = [
+        Evidence(
+            scope_level=ScopeLevel.STEP,
+            goal_session_id=gate_hit_event.goal_session_id,
+            workflow_run_id=gate_hit_event.workflow_run_id,
+            step_id=gate_hit_event.step_id,
+            locator=control_point_locator("gate_hit", event_id=gate_hit_event.event_id),
+            digest=control_point_evidence_digest(
+                "gate_hit",
+                event_id=gate_hit_event.event_id,
+            ),
+        ),
+        Evidence(
+            scope_level=ScopeLevel.STEP,
+            goal_session_id=gate_hit_event.goal_session_id,
+            workflow_run_id=gate_hit_event.workflow_run_id,
+            step_id=gate_hit_event.step_id,
+            locator=control_point_locator(
+                "gate_blocked",
+                event_id=gate_blocked_event.event_id,
+            ),
+            digest=control_point_evidence_digest(
+                "gate_blocked",
+                event_id=gate_blocked_event.event_id,
+            ),
+        ),
+        Evidence(
+            scope_level=ScopeLevel.RUN,
+            goal_session_id=audit_event.goal_session_id,
+            workflow_run_id=audit_event.workflow_run_id,
+            locator=control_point_locator(
+                "audit_report_generated",
+                event_id=audit_event.event_id,
+                artifact_id=audit_artifact.artifact_id,
+            ),
+            digest=control_point_evidence_digest(
+                "audit_report_generated",
+                event_id=audit_event.event_id,
+                artifact_id=audit_artifact.artifact_id,
+            ),
+        ),
+    ]
 
     gaps = calculate_ccp_coverage_gaps(
         registry,
-        available_evidence_closure=("event", "structured_report"),
+        event_payloads=[
+            gate_hit_event.model_dump(mode="json"),
+            gate_blocked_event.model_dump(mode="json"),
+            audit_event.model_dump(mode="json"),
+        ],
+        evidence_payloads=[item.model_dump(mode="json") for item in evidence],
+        artifact_payloads=[audit_artifact.model_dump(mode="json")],
     )
 
-    assert gaps == ("audit_report_generated",)
+    assert gaps == ()
+
+
+def test_gate_reason_evidence_only_satisfies_the_named_control_point() -> None:
+    registry = CCPRegistry(
+        control_points={
+            "gate_hit": CriticalControlPoint(
+                name="gate_hit",
+                primary_writer="runner/dispatcher gate hook",
+                minimum_evidence_closure=("event", "gate_reason_evidence"),
+            ),
+            "gate_blocked": CriticalControlPoint(
+                name="gate_blocked",
+                primary_writer="runner/dispatcher gate hook",
+                minimum_evidence_closure=("event", "gate_reason_evidence"),
+            ),
+        }
+    )
+    blocked_event = TelemetryEvent(
+        scope_level=ScopeLevel.STEP,
+        goal_session_id="gs_0123456789abcdef0123456789abcdef",
+        workflow_run_id="wr_0123456789abcdef0123456789abcdef",
+        step_id="st_0123456789abcdef0123456789abcdef",
+        trace_layer=TraceLayer.EVALUATION,
+        status=TelemetryEventStatus.BLOCKED,
+    )
+    blocked_evidence = Evidence(
+        scope_level=ScopeLevel.STEP,
+        goal_session_id=blocked_event.goal_session_id,
+        workflow_run_id=blocked_event.workflow_run_id,
+        step_id=blocked_event.step_id,
+        locator=control_point_locator(
+            "gate_blocked",
+            event_id=blocked_event.event_id,
+        ),
+        digest=control_point_evidence_digest(
+            "gate_blocked",
+            event_id=blocked_event.event_id,
+        ),
+    )
+
+    gaps = calculate_ccp_coverage_gaps(
+        registry,
+        event_payloads=[blocked_event.model_dump(mode="json")],
+        evidence_payloads=[blocked_evidence.model_dump(mode="json")],
+    )
+
+    assert gaps == ("gate_hit",)
+
+
+def test_malformed_or_unresolvable_control_point_locators_do_not_satisfy_ccps() -> None:
+    registry = CCPRegistry(
+        control_points={
+            "gate_hit": CriticalControlPoint(
+                name="gate_hit",
+                primary_writer="runner/dispatcher gate hook",
+                minimum_evidence_closure=("event", "gate_reason_evidence"),
+            ),
+            "audit_report_generated": CriticalControlPoint(
+                name="audit_report_generated",
+                primary_writer="governance publisher",
+                minimum_evidence_closure=("event", "artifact_ref"),
+            ),
+        }
+    )
+    gate_event = TelemetryEvent(
+        scope_level=ScopeLevel.STEP,
+        goal_session_id="gs_0123456789abcdef0123456789abcdef",
+        workflow_run_id="wr_0123456789abcdef0123456789abcdef",
+        step_id="st_0123456789abcdef0123456789abcdef",
+        trace_layer=TraceLayer.EVALUATION,
+        status=TelemetryEventStatus.SUCCEEDED,
+    )
+    non_audit_artifact = Artifact(
+        scope_level=ScopeLevel.RUN,
+        goal_session_id=gate_event.goal_session_id,
+        workflow_run_id=gate_event.workflow_run_id,
+        status=ArtifactStatus.GENERATED,
+        artifact_type=ArtifactType.REPORT,
+        artifact_role=ArtifactRole.EVALUATION,
+    )
+    evidence = [
+        Evidence(
+            scope_level=ScopeLevel.STEP,
+            goal_session_id=gate_event.goal_session_id,
+            workflow_run_id=gate_event.workflow_run_id,
+            step_id=gate_event.step_id,
+            locator="ccp:v1:gate_hit:event:not-an-event-id",
+            digest="sha256:badbadbadbadbadbadbadbadbadbadbadbadbadbadbadbadbadbadbadbadbadb",
+        ),
+        Evidence(
+            scope_level=ScopeLevel.RUN,
+            goal_session_id=gate_event.goal_session_id,
+            workflow_run_id=gate_event.workflow_run_id,
+            locator=control_point_locator(
+                "audit_report_generated",
+                event_id=gate_event.event_id,
+                artifact_id=non_audit_artifact.artifact_id,
+            ),
+            digest=control_point_evidence_digest(
+                "audit_report_generated",
+                event_id=gate_event.event_id,
+                artifact_id=non_audit_artifact.artifact_id,
+            ),
+        ),
+    ]
+
+    gaps = calculate_ccp_coverage_gaps(
+        registry,
+        event_payloads=[gate_event.model_dump(mode="json")],
+        evidence_payloads=[item.model_dump(mode="json") for item in evidence],
+        artifact_payloads=[non_audit_artifact.model_dump(mode="json")],
+    )
+
+    assert gaps == ("audit_report_generated", "gate_hit")
 
 
 def test_escalate_hard_gate_to_violation() -> None:

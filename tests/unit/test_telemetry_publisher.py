@@ -28,6 +28,14 @@ def _read_json(path: Path) -> dict:
     return json.loads(path.read_text(encoding="utf-8"))
 
 
+def _read_ndjson(path: Path) -> list[dict]:
+    return [
+        json.loads(line)
+        for line in path.read_text(encoding="utf-8").splitlines()
+        if line.strip()
+    ]
+
+
 def _seed_completed_run(
     writer: TelemetryWriter,
 ) -> tuple[TelemetryEvent, Evidence, Evaluation]:
@@ -122,6 +130,111 @@ def test_publish_promotes_artifact_when_source_closure_is_valid(tmp_path: Path) 
     report_path = store.governance_report_path(published.artifact_id)
     assert report_path.is_file()
     assert report_path.is_relative_to(store.reports_root)
+
+
+def test_publish_audit_report_emits_audit_report_generated_control_point(
+    tmp_path: Path,
+) -> None:
+    store = TelemetryStore(tmp_path)
+    writer = TelemetryWriter(store)
+    publisher = GovernancePublisher(store=store, writer=writer)
+    event, evidence, evaluation = _seed_completed_run(writer)
+    artifact = Artifact(
+        scope_level=ScopeLevel.RUN,
+        goal_session_id=event.goal_session_id,
+        workflow_run_id=event.workflow_run_id,
+        status=ArtifactStatus.GENERATED,
+        artifact_type=ArtifactType.REPORT,
+        artifact_role=ArtifactRole.AUDIT,
+        source_evidence_refs=(evidence.evidence_id,),
+        source_object_refs=(f"evaluation:{evaluation.evaluation_id}",),
+        created_at="2026-03-27T10:00:01Z",
+        updated_at="2026-03-27T10:00:01Z",
+    )
+
+    persisted = publisher.publish_artifact(
+        artifact,
+        report_name="audit_report",
+        report_payload={"audit_status": "clean"},
+    )
+
+    run_events = _read_ndjson(
+        store.event_stream_path(
+            scope_level=ScopeLevel.RUN,
+            goal_session_id=event.goal_session_id,
+            workflow_run_id=event.workflow_run_id,
+        )
+    )
+    run_evidence = _read_ndjson(
+        store.evidence_stream_path(
+            scope_level=ScopeLevel.RUN,
+            goal_session_id=event.goal_session_id,
+            workflow_run_id=event.workflow_run_id,
+        )
+    )
+    audit_events = [
+        payload
+        for payload in run_events
+        if payload["trace_layer"] == TraceLayer.EVALUATION.value
+        and payload["status"] == TelemetryEventStatus.SUCCEEDED.value
+    ]
+    audit_locators = [
+        payload["locator"]
+        for payload in run_evidence
+        if payload.get("locator", "").startswith(
+            "ccp:v1:audit_report_generated:event:"
+        )
+    ]
+
+    assert len(audit_locators) == 1
+    event_id = audit_locators[0].split(":")[4]
+    assert any(payload["event_id"] == event_id for payload in audit_events)
+    assert audit_locators == [
+        f"ccp:v1:audit_report_generated:event:{event_id}:artifact:{persisted.artifact_id}"
+    ]
+
+
+def test_publish_non_audit_report_does_not_emit_audit_report_generated_control_point(
+    tmp_path: Path,
+) -> None:
+    store = TelemetryStore(tmp_path)
+    writer = TelemetryWriter(store)
+    publisher = GovernancePublisher(store=store, writer=writer)
+    event, evidence, evaluation = _seed_completed_run(writer)
+    artifact = Artifact(
+        scope_level=ScopeLevel.RUN,
+        goal_session_id=event.goal_session_id,
+        workflow_run_id=event.workflow_run_id,
+        status=ArtifactStatus.GENERATED,
+        artifact_type=ArtifactType.REPORT,
+        artifact_role=ArtifactRole.AUDIT,
+        source_evidence_refs=(evidence.evidence_id,),
+        source_object_refs=(f"evaluation:{evaluation.evaluation_id}",),
+        created_at="2026-03-27T10:00:01Z",
+        updated_at="2026-03-27T10:00:01Z",
+    )
+
+    publisher.publish_artifact(
+        artifact,
+        report_name="evaluation_summary",
+        report_payload={"coverage_state": "covered"},
+    )
+
+    run_evidence = _read_ndjson(
+        store.evidence_stream_path(
+            scope_level=ScopeLevel.RUN,
+            goal_session_id=event.goal_session_id,
+            workflow_run_id=event.workflow_run_id,
+        )
+    )
+
+    assert not [
+        payload
+        for payload in run_evidence
+        if payload.get("locator", "").startswith(
+            "ccp:v1:audit_report_generated:event:"
+        )
+    ]
 
 
 def test_publish_promotes_run_artifact_with_same_run_step_sources(tmp_path: Path) -> None:
