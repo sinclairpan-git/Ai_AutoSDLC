@@ -219,6 +219,63 @@ class TelemetryStore:
             "timeline_cursor_path": timeline_cursor_path,
         }
 
+    def governance_report_path(self, artifact_id: str) -> Path:
+        """Return the canonical governance report path for an artifact."""
+        return self.reports_root / f"{artifact_id}.json"
+
+    def write_governance_report(self, artifact_id: str, payload: dict[str, Any]) -> Path:
+        """Write a canonical governance report JSON payload."""
+        report_path = self.governance_report_path(artifact_id)
+        self._write_json(report_path, payload)
+        return report_path
+
+    def load_current_snapshots(
+        self,
+        kind: str,
+        *,
+        goal_session_id: str | None = None,
+        workflow_run_id: str | None = None,
+        step_id: str | None = None,
+    ) -> list[dict[str, Any]]:
+        """Load current snapshots filtered by an exact parent chain prefix."""
+        if kind not in _MUTABLE_KIND_DIRS:
+            raise ValueError(f"unsupported mutable kind: {kind!r}")
+        snapshots = self._iter_mutable_snapshots(kind)
+        matches = snapshots
+        if goal_session_id is not None:
+            matches = [payload for payload in matches if payload.get("goal_session_id") == goal_session_id]
+        if workflow_run_id is not None:
+            matches = [payload for payload in matches if payload.get("workflow_run_id") == workflow_run_id]
+        if step_id is not None:
+            matches = [payload for payload in matches if payload.get("step_id") == step_id]
+        return matches
+
+    def load_canonical_evidence_payloads(
+        self,
+        *,
+        goal_session_id: str,
+        workflow_run_id: str | None = None,
+        step_id: str | None = None,
+    ) -> list[dict[str, Any]]:
+        """Load canonical evidence payloads for a parent-chain prefix."""
+        grouped: dict[str, list[tuple[Path, dict[str, Any]]]] = {}
+        for path in sorted(self.local_root.rglob("evidence.ndjson")):
+            for payload in self._read_ndjson(path):
+                if payload.get("goal_session_id") != goal_session_id:
+                    continue
+                if workflow_run_id is not None and payload.get("workflow_run_id") != workflow_run_id:
+                    continue
+                if step_id is not None and payload.get("step_id") != step_id:
+                    continue
+                evidence_id = payload["evidence_id"]
+                grouped.setdefault(evidence_id, []).append((path, payload))
+
+        canonical: list[dict[str, Any]] = []
+        for evidence_id in sorted(grouped):
+            _, payload = self._canonicalize_evidence_matches(evidence_id, grouped[evidence_id])
+            canonical.append(payload)
+        return canonical
+
     def find_current_object_path(self, kind: str, source_ref: str) -> Path | None:
         """Return the snapshot path for a mutable object id if it exists."""
         if kind not in _MUTABLE_KIND_DIRS:

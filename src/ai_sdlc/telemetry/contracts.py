@@ -59,6 +59,14 @@ _FIELD_PREFIXES = {
     "artifact_id": ID_PREFIXES["artifact_id"],
 }
 
+_SOURCE_OBJECT_KIND_PREFIXES = {
+    "event": ID_PREFIXES["event_id"],
+    "telemetry_event": ID_PREFIXES["event_id"],
+    "evaluation": ID_PREFIXES["evaluation_id"],
+    "violation": ID_PREFIXES["violation_id"],
+    "artifact": ID_PREFIXES["artifact_id"],
+}
+
 
 class TelemetryRecord(BaseModel):
     """Base contract for telemetry objects."""
@@ -272,8 +280,50 @@ class Artifact(TelemetryRecord):
     artifact_type: ArtifactType = ArtifactType.REPORT
     artifact_role: ArtifactRole = ArtifactRole.AUDIT
     storage_scope: ArtifactStorageScope = ArtifactStorageScope.PROJECT_LOCAL
+    source_evidence_refs: tuple[str, ...] = Field(default_factory=tuple)
+    source_object_refs: tuple[str, ...] = Field(default_factory=tuple)
+
+    @field_validator("source_evidence_refs", mode="before")
+    @classmethod
+    def _normalize_source_evidence_refs(cls, value: object) -> tuple[str, ...]:
+        if value is None:
+            return ()
+        if isinstance(value, str):
+            raise ValueError("source_evidence_refs must be an iterable of evidence IDs")
+        refs = tuple(value)
+        if len(set(refs)) != len(refs):
+            raise ValueError("source_evidence_refs must not contain duplicates")
+        for ref in refs:
+            validate_telemetry_id(ref, ID_PREFIXES["evidence_id"])
+        return refs
+
+    @field_validator("source_object_refs", mode="before")
+    @classmethod
+    def _normalize_source_object_refs(cls, value: object) -> tuple[str, ...]:
+        if value is None:
+            return ()
+        if isinstance(value, str):
+            raise ValueError("source_object_refs must be an iterable of source references")
+        refs = tuple(value)
+        if len(set(refs)) != len(refs):
+            raise ValueError("source_object_refs must not contain duplicates")
+        for ref in refs:
+            _validate_object_ref(ref)
+        return refs
 
 
 def _parse_utc_z_timestamp(value: str) -> datetime:
     """Parse a UTC RFC3339 Z timestamp into an aware datetime."""
     return datetime.fromisoformat(value.removesuffix("Z") + "+00:00")
+
+
+def _validate_object_ref(value: str) -> str:
+    """Validate a canonical source-object reference."""
+    if ":" not in value:
+        raise ValueError("source_object_refs entries must use '<kind>:<source_ref>' format")
+    source_kind, source_ref = value.split(":", 1)
+    prefix = _SOURCE_OBJECT_KIND_PREFIXES.get(source_kind)
+    if prefix is None:
+        raise ValueError(f"unsupported source_object_refs kind: {source_kind!r}")
+    validate_telemetry_id(source_ref, prefix)
+    return value
