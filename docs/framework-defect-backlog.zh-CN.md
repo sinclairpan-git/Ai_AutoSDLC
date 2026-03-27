@@ -309,6 +309,7 @@
 - 触发场景: 对 `a2285b6` 做本地 review 时，逆查 `status --json` 执行路径，发现虽然 readiness 逻辑本身不做 telemetry init/rebuild，但命令外围的 IDE adaptation hook 依旧生效。
 - 影响范围: `status --json` 的 bounded/read-only 契约被破坏；运维和自动化可能在“只想读状态”时意外改写项目配置；测试若只 patch 掉 hook，容易掩盖真实执行路径。
 - 根因分类: A, B, D
+- 未来杜绝方案摘要: 把 read-only surface 的“不得隐式写入”约束前移到 CLI 全局 hook 层，并要求 `status --json` / `doctor` 的真实 CLI 路径无写入回归测试长期保留。
 - 建议改动层级: rule / policy, middleware, workflow, tool, eval
 - prompt / context: bounded status/doctor surface 不只是“telemetry 不落盘”，还应避免命令外围的其他写副作用；全局 hook 也必须服从只读诊断边界。
 - rule / policy: 将 `status --json` / `doctor` 视为只读运维面；任何会落盘的 hook 都不得在这些命令前隐式执行。
@@ -331,6 +332,7 @@
 - 触发场景: 对 Task 7 的 readiness surface 做 spec review 时，按 store/index 真值和 doctor readiness 要求逆查 `readiness.py`，发现 latest sample 语义与 index 顺序不一致，resolver health 也只验证了拒绝路径。
 - 影响范围: `status --json` 的 latest/current 区域会误导运维判断当前与最近 scope；`doctor` 可能把实际损坏的 resolver 误报为 `ok`，或为了一次 health check 而退化成不受控 trace 扫描，或在存在合法 fixture 时误报 `warn`，削弱 readiness 诊断价值并突破 bounded surface 约束。
 - 根因分类: A, B, H
+- 未来杜绝方案摘要: 将 bounded readiness 的 latest/current 真值与 resolver health 都收敛到共享 helper，禁止为 health check 解析真实 trace payload；Task 级 review 默认核查 recency 依据、探针边界和假阳性/假 warn 风险。
 - 建议改动层级: rule / policy, middleware, workflow, tool, eval
 - prompt / context: bounded summary 不只是“字段数量受限”，还必须保持 latest/current 指向的真值方向正确；health check 也必须触达正向路径，但正向路径的验证既不能靠全量 trace 扫描补正确性，也不能缩到只看极少数候选而放过 manifest 已知的合法来源。
 - rule / policy: `latest` 采样必须遵循权威 index 的排序语义；`health/readiness` 检查至少覆盖一条真实支持路径。
@@ -341,3 +343,26 @@
 - 风险等级: 中
 - 可验证成功标准: `status --json` 的 latest artifact sample 与 `latest-artifacts.json` 的 newest-first 语义一致；`latest_goal_session_id / latest_workflow_run_id / latest_step_id` 基于可辩护的 recency 信号而不是 dict 顺序；`doctor` 的 resolver health 至少验证一个受支持 source kind 的成功解析，且该验证通过 manifest/index 驱动的 bounded probe 完成，不递归扫描全部 trace，也不会在 manifest 已知存在合法 fixture 时误报 `warn`。
 - 是否需要回归测试补充: 是：补充 latest sample 顺序和 resolver health 正向解析的回归测试。
+
+## FD-2026-03-27-008 | status --json 的真实 CLI 合同与 doctor readiness 检查再次分叉
+
+- 日期 (UTC): 2026-03-27
+- 来源: spec_review, self_review
+- 状态: open
+- owner: codex
+- wi_id: 003-telemetry-trace-governance
+- 现象: `status --json` 的 telemetry surface 虽然已经有 helper，但真实 CLI 路径仍先检查 `project-state.yaml` 是否为 `uninitialized` 并直接 exit 1，导致“项目存在但未初始化”时拿不到 JSON；与此同时 `doctor` 的 `status --json surface` 检查绕过真实命令路径，直接调用 helper 并报告 `ok/not_initialized`，两者对同一 surface 给出了相互矛盾的结论。
+- 触发场景: 对 Task 7 的 spec review 在真实 CLI 路径上复现“project found but uninitialized”场景时，发现 `status --json` 与 doctor readiness 对 surface availability 的判断不一致。
+- 影响范围: 运维和自动化无法稳定依赖 `status --json` 读取 telemetry readiness；`doctor` 会把实际上不可达的 JSON surface 误报为可用，破坏只读诊断面的可信度。
+- 根因分类: A, B, H
+- 未来杜绝方案摘要: 将 `status --json` 的真实 CLI 合同收敛到单一 helper，并要求 doctor 的 surface 检查复用同一合同；新增“uninitialized project 仍可返回 bounded JSON”与“doctor/CLI 合同一致”的回归测试，防止 helper 与命令外围分支再次漂移。
+- 建议改动层级: rule / policy, middleware, workflow, tool, eval
+- prompt / context: bounded operator surface 的真值不应由“内部 helper 能调用”代替“真实 CLI 是否可达”；命令外围分支和 doctor readiness 必须共享同一合同。
+- rule / policy: `status --json` 在 telemetry 缺失时可返回 `not_initialized`，且该 contract 适用于项目存在但 project-state 仍为 `uninitialized` 的场景；doctor 检查的 surface availability 必须与真实 CLI 行为一致。
+- middleware: 抽取共享的 bounded status surface builder / availability contract，供 `status` 命令与 doctor readiness 共同复用，避免外围 gate 与内部 helper 分叉。
+- workflow: Task 级 spec/code review 默认检查“readiness helper 是否绕过真实命令路径”以及“CLI 对外合同是否与 doctor 判断一致”。
+- tool: `src/ai_sdlc/cli/commands.py`、`src/ai_sdlc/telemetry/readiness.py`、`tests/integration/test_cli_status.py`、`tests/integration/test_cli_doctor.py`
+- eval: status-surface-contract-drift 次数、doctor-surface-false-availability 次数
+- 风险等级: 中
+- 可验证成功标准: 当项目根存在但 `project-state.yaml` 仍为 `uninitialized` 时，`ai-sdlc status --json` 仍返回 bounded telemetry JSON 且 `telemetry.state=not_initialized`；`doctor` 对 `status --json surface` 的状态与真实 CLI 行为保持一致。
+- 是否需要回归测试补充: 是：补充 uninitialized project 下 `status --json` 可达、doctor surface 检查与真实 CLI 行为一致的回归测试。
