@@ -161,14 +161,14 @@ def status_command(
         )
         raise typer.Exit(code=1)
 
+    if as_json:
+        typer.echo(json.dumps(build_status_json_surface(root), indent=2))
+        raise typer.Exit(code=0)
+
     state = load_project_state(root)
     if state.status == ProjectStatus.UNINITIALIZED:
         console.print("[yellow]Project found but not initialized.[/yellow]")
         raise typer.Exit(code=1)
-
-    if as_json:
-        typer.echo(json.dumps(build_status_json_surface(root), indent=2))
-        raise typer.Exit(code=0)
 
     table = Table(title="AI-SDLC Status")
     table.add_column("Property", style="cyan")

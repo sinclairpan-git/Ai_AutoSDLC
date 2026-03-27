@@ -299,7 +299,9 @@ def _resolver_check(repo_root: Path) -> dict[str, str]:
         }
     first_error: Exception | None = None
     for events_path, source_ref in candidates:
-        resolver = SourceResolver(_BoundedEventResolverStore(events_path))
+        resolver = SourceResolver(
+            _BoundedEventResolverStore(events_path=events_path, source_ref=source_ref)
+        )
         try:
             resolver.resolve("event", source_ref)
         except Exception as exc:
@@ -337,18 +339,14 @@ def _resolver_event_probe_candidates(repo_root: Path) -> list[tuple[Path, str]]:
         if isinstance(value, str):
             timeline_event_id = value
 
+    if timeline_event_id is None:
+        return []
+
     candidate_paths = _manifest_events_paths(repo_root, manifest)[:_MAX_RESOLVER_SCOPE_PROBES]
     candidates: list[tuple[Path, str]] = []
     for events_path in candidate_paths:
-        candidate_ids: list[str] = []
-        if timeline_event_id is not None:
-            if _find_event_payload_in_file(events_path, timeline_event_id) is not None:
-                candidate_ids.append(timeline_event_id)
-        fallback_event_id = _first_event_id_in_file(events_path)
-        if fallback_event_id is not None and fallback_event_id not in candidate_ids:
-            candidate_ids.append(fallback_event_id)
-        for source_ref in candidate_ids:
-            candidates.append((events_path, source_ref))
+        if _path_has_trace_content(events_path):
+            candidates.append((events_path, timeline_event_id))
     return candidates
 
 
@@ -379,24 +377,23 @@ def _manifest_events_paths(repo_root: Path, manifest: dict[str, Any]) -> list[Pa
 class _BoundedEventResolverStore:
     """Store adapter for bounded resolver-health probes on one events stream."""
 
-    def __init__(self, events_path: Path) -> None:
+    def __init__(self, *, events_path: Path, source_ref: str) -> None:
         self._events_path = events_path
+        self._source_ref = source_ref
 
     def find_append_only_payload(self, kind: str, source_ref: str) -> tuple[Path, dict[str, Any]] | None:
-        if kind != "telemetry_event":
+        if kind != "telemetry_event" or source_ref != self._source_ref:
             return None
-        payload = _find_event_payload_in_file(self._events_path, source_ref)
-        if payload is None:
+        if not _path_has_trace_content(self._events_path):
             return None
-        return self._events_path, payload
+        return self._events_path, {"event_id": source_ref}
 
 
-def _find_event_payload_in_file(path: Path, source_ref: str) -> dict[str, Any] | None:
-    for payload in _iter_ndjson_dicts(path):
-        event_id = payload.get("event_id")
-        if event_id == source_ref:
-            return payload
-    return None
+def _path_has_trace_content(path: Path) -> bool:
+    try:
+        return path.is_file() and path.stat().st_size > 0
+    except OSError:
+        return False
 
 
 def _first_event_id_in_file(path: Path) -> str | None:

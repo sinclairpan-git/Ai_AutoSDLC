@@ -13,6 +13,8 @@ from typer.testing import CliRunner
 
 from ai_sdlc.cli.main import app
 from ai_sdlc.context.state import save_checkpoint
+from ai_sdlc.core.config import save_project_state
+from ai_sdlc.models.project import ProjectState, ProjectStatus
 from ai_sdlc.models.state import Checkpoint, FeatureInfo
 from ai_sdlc.routers.bootstrap import init_project
 from ai_sdlc.telemetry.paths import telemetry_indexes_root, telemetry_local_root
@@ -292,3 +294,28 @@ def test_status_json_latest_scope_ids_do_not_depend_on_manifest_key_order(
     assert current["sessions"]["latest_goal_session_id"] == gs_new
     assert current["runs"]["latest_workflow_run_id"] == wr_new
     assert current["steps"]["latest_step_id"] == st_new
+
+
+def test_status_json_contract_is_available_when_project_state_is_uninitialized(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    init_project(tmp_path)
+    save_project_state(
+        tmp_path,
+        ProjectState(
+            status=ProjectStatus.UNINITIALIZED,
+            project_name=tmp_path.name,
+        ),
+    )
+    telemetry_root = telemetry_local_root(tmp_path)
+    assert telemetry_root.exists() is False
+    monkeypatch.chdir(tmp_path)
+
+    status_result = runner.invoke(app, ["status", "--json"], catch_exceptions=False)
+    doctor_result = runner.invoke(app, ["doctor"], catch_exceptions=False)
+
+    assert status_result.exit_code == 0
+    payload = json.loads(status_result.output)
+    assert payload["telemetry"]["state"] == "not_initialized"
+    assert "status --json surface" in doctor_result.output
+    assert "not_initialized" in doctor_result.output

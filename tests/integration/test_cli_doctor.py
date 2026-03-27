@@ -199,3 +199,24 @@ def test_doctor_resolver_health_checks_multiple_manifest_listed_scope_paths(
     assert result.exit_code == 0
     assert "resolver health" in result.output
     assert "supported source kind resolved" in result.output
+
+
+def test_doctor_resolver_health_does_not_parse_trace_payloads(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    init_project(tmp_path)
+    _seed_bounded_event_fixture(tmp_path)
+    monkeypatch.chdir(tmp_path)
+
+    def _fail_parse(*_args, **_kwargs):
+        raise AssertionError("trace payload parsing is forbidden for readiness")
+
+    monkeypatch.setattr(
+        "ai_sdlc.telemetry.readiness._iter_ndjson_dicts",
+        _fail_parse,
+    )
+
+    result = runner.invoke(app, ["doctor"], catch_exceptions=False)
+
+    assert result.exit_code == 0
+    assert "supported source kind resolved" in result.output
