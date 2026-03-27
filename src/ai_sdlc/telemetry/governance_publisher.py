@@ -16,7 +16,7 @@ from ai_sdlc.telemetry.generators import (
 )
 from ai_sdlc.telemetry.resolver import SourceResolver
 from ai_sdlc.telemetry.store import TelemetryStore
-from ai_sdlc.telemetry.writer import TelemetryWriter
+from ai_sdlc.telemetry.writer import TelemetryWriter, source_chain_compatible
 
 
 class GovernancePublisher:
@@ -146,7 +146,7 @@ class GovernancePublisher:
                 resolved = self.resolver.resolve("evidence", evidence_ref)
             except (LookupError, ValueError):
                 return False
-            if not self._same_parent_chain(artifact, resolved.payload):
+            if not source_chain_compatible(artifact, resolved.payload):
                 return False
             if not resolved.payload.get("digest"):
                 return False
@@ -157,16 +157,9 @@ class GovernancePublisher:
                 resolved = self.resolver.resolve(source_kind, object_ref)
             except (LookupError, ValueError):
                 return False
-            if not self._same_parent_chain(artifact, resolved.payload):
+            if not source_chain_compatible(artifact, resolved.payload):
                 return False
         return True
-
-    def _same_parent_chain(self, artifact: Artifact, payload: Mapping[str, Any]) -> bool:
-        return (
-            payload.get("goal_session_id") == artifact.goal_session_id
-            and payload.get("workflow_run_id") == artifact.workflow_run_id
-            and payload.get("step_id") == artifact.step_id
-        )
 
     def _write_revalidated_report(self, artifact: Artifact) -> None:
         existing = self.store.load_governance_report(artifact.artifact_id) or {}

@@ -124,6 +124,60 @@ def test_publish_promotes_artifact_when_source_closure_is_valid(tmp_path: Path) 
     assert report_path.is_relative_to(store.reports_root)
 
 
+def test_publish_promotes_run_artifact_with_same_run_step_sources(tmp_path: Path) -> None:
+    store = TelemetryStore(tmp_path)
+    writer = TelemetryWriter(store)
+    publisher = GovernancePublisher(store=store, writer=writer)
+    goal_session_id = "gs_0123456789abcdef0123456789abcdef"
+    workflow_run_id = "wr_0123456789abcdef0123456789abcdef"
+    step_id = "st_0123456789abcdef0123456789abcdef"
+    evidence = Evidence(
+        scope_level=ScopeLevel.STEP,
+        goal_session_id=goal_session_id,
+        workflow_run_id=workflow_run_id,
+        step_id=step_id,
+        locator="verify-constraints:report:sha256:0123456789abcdef0123456789abcdef",
+        digest="sha256:0123456789abcdef0123456789abcdef",
+        created_at="2026-03-27T10:00:00Z",
+        updated_at="2026-03-27T10:00:00Z",
+    )
+    evaluation = Evaluation(
+        scope_level=ScopeLevel.STEP,
+        goal_session_id=goal_session_id,
+        workflow_run_id=workflow_run_id,
+        step_id=step_id,
+        result=EvaluationResult.PASSED,
+        status=EvaluationStatus.PASSED,
+        created_at="2026-03-27T10:00:00Z",
+        updated_at="2026-03-27T10:00:00Z",
+    )
+    writer.write_evidence(evidence)
+    writer.write_evaluation(evaluation)
+    artifact = Artifact(
+        scope_level=ScopeLevel.RUN,
+        goal_session_id=goal_session_id,
+        workflow_run_id=workflow_run_id,
+        status=ArtifactStatus.GENERATED,
+        artifact_type=ArtifactType.REPORT,
+        artifact_role=ArtifactRole.EVALUATION,
+        source_evidence_refs=(evidence.evidence_id,),
+        source_object_refs=(f"evaluation:{evaluation.evaluation_id}",),
+        created_at="2026-03-27T10:00:01Z",
+        updated_at="2026-03-27T10:00:01Z",
+    )
+
+    published = publisher.publish_artifact(
+        artifact,
+        report_name="evaluation_summary",
+        report_payload={"coverage_state": "covered"},
+    )
+
+    assert published.status is ArtifactStatus.PUBLISHED
+    report = _read_json(store.governance_report_path(published.artifact_id))
+    assert report["source_closure_ok"] is True
+    assert report["artifact_status"] == ArtifactStatus.PUBLISHED.value
+
+
 def test_publish_with_invalid_source_refs_keeps_artifact_below_published(tmp_path: Path) -> None:
     store = TelemetryStore(tmp_path)
     writer = TelemetryWriter(store)

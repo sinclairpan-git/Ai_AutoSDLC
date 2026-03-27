@@ -8,7 +8,15 @@ from pathlib import Path
 import pytest
 
 from ai_sdlc.telemetry.contracts import Artifact, Evaluation, Evidence, ScopeLevel, TelemetryEvent, Violation
-from ai_sdlc.telemetry.enums import ArtifactRole, ArtifactStatus, ArtifactType, TraceLayer, ViolationStatus
+from ai_sdlc.telemetry.enums import (
+    ArtifactRole,
+    ArtifactStatus,
+    ArtifactType,
+    EvaluationResult,
+    EvaluationStatus,
+    TraceLayer,
+    ViolationStatus,
+)
 from ai_sdlc.telemetry.paths import telemetry_local_root, telemetry_manifest_path, telemetry_reports_root
 from ai_sdlc.telemetry.resolver import SourceResolver
 from ai_sdlc.telemetry.store import TelemetryStore
@@ -365,6 +373,52 @@ def test_writer_rejects_direct_published_artifact_without_source_closure(tmp_pat
         artifact_role=ArtifactRole.AUDIT,
         created_at="2026-03-27T10:00:00Z",
         updated_at="2026-03-27T10:00:00Z",
+    )
+
+    with pytest.raises(ValueError, match="source closure"):
+        writer.write_artifact(artifact)
+
+
+def test_writer_rejects_cross_run_source_refs_for_published_artifact(tmp_path: Path) -> None:
+    store = TelemetryStore(tmp_path)
+    writer = TelemetryWriter(store)
+    goal_session_id = "gs_0123456789abcdef0123456789abcdef"
+    source_run_id = "wr_0123456789abcdef0123456789abcdef"
+    artifact_run_id = "wr_ffffffffffffffffffffffffffffffff"
+    step_id = "st_0123456789abcdef0123456789abcdef"
+    evidence = Evidence(
+        scope_level=ScopeLevel.STEP,
+        goal_session_id=goal_session_id,
+        workflow_run_id=source_run_id,
+        step_id=step_id,
+        locator="file:///tmp/evidence.txt",
+        digest="sha256:abc123",
+        created_at="2026-03-27T10:00:00Z",
+        updated_at="2026-03-27T10:00:00Z",
+    )
+    evaluation = Evaluation(
+        scope_level=ScopeLevel.STEP,
+        goal_session_id=goal_session_id,
+        workflow_run_id=source_run_id,
+        step_id=step_id,
+        result=EvaluationResult.PASSED,
+        status=EvaluationStatus.PASSED,
+        created_at="2026-03-27T10:00:00Z",
+        updated_at="2026-03-27T10:00:00Z",
+    )
+    writer.write_evidence(evidence)
+    writer.write_evaluation(evaluation)
+    artifact = Artifact(
+        scope_level=ScopeLevel.RUN,
+        goal_session_id=goal_session_id,
+        workflow_run_id=artifact_run_id,
+        status=ArtifactStatus.PUBLISHED,
+        artifact_type=ArtifactType.REPORT,
+        artifact_role=ArtifactRole.AUDIT,
+        source_evidence_refs=(evidence.evidence_id,),
+        source_object_refs=(f"evaluation:{evaluation.evaluation_id}",),
+        created_at="2026-03-27T10:00:01Z",
+        updated_at="2026-03-27T10:00:01Z",
     )
 
     with pytest.raises(ValueError, match="source closure"):
