@@ -958,3 +958,108 @@
 - **已完成 git 提交**：是
 - **提交哈希**：本批唯一一次语义提交为 `docs: add framework self-iteration guide`；完整 SHA 以该提交后的 `HEAD` 为准。
 - **是否继续下一批**：按需
+
+### Batch 2026-03-28-018 | 001 remediation 收尾：Batch 12 对账清零 + FR-034 最终闭环
+
+#### 2.1 批次范围
+
+- **覆盖内容**：完成 Batch 12（Task **6.27～6.31**）剩余接口漂移清理，并补齐 Task **6.22 / FR-034** 的“统一裸写入口硬拦截”遗留缺口；同步回填 [`implementation-drift-matrix.md`](implementation-drift-matrix.md)、[`tasks.md`](tasks.md)、[`docs/framework-defect-backlog.zh-CN.md`](../../docs/framework-defect-backlog.zh-CN.md) 与本归档。
+- **覆盖阶段**：EXECUTE / VERIFY / CLOSE（合同实现收尾 + 文档/台账对账）。
+- **预读范围**：[`plan.md`](plan.md) remediation 设计节、[`tasks.md`](tasks.md) Batch 11 / 12、[`implementation-drift-matrix.md`](implementation-drift-matrix.md)、[`docs/framework-defect-backlog.zh-CN.md`](../../docs/framework-defect-backlog.zh-CN.md) 中 **FD-2026-03-27-014**。
+- **激活的规则**：合同先于实现；测试先于修复；完成前验证；归档先于继续。
+
+#### 2.2 统一验证命令
+
+- **R1（红灯验证）**
+  - 命令：`uv run pytest -q tests/unit/test_file_guard.py tests/unit/test_branch_manager.py`
+  - 结果：在补丁前新增的 raw write / `open(..., 'w')` / `replace()` 保护断言 **5 failed**，确认 `FR-034` 当时仍为 `partial`。
+- **V1（定向）**
+  - 命令：`uv run pytest -q tests/unit/test_prd_studio.py tests/unit/test_branch_manager.py tests/unit/test_gates.py tests/integration/test_cli_index_gate.py tests/flow/test_docs_dev_flow.py tests/flow/test_new_requirement_flow.py tests/integration/test_cli_verify_constraints.py tests/unit/test_business_rules.py`
+  - 结果：**111 passed**。
+- **V2（全量回归）**
+  - 命令：`uv run pytest -q`
+  - 结果：**721 passed**（2026-03-28，本机）。
+- **Lint**
+  - 命令：`uv run ruff check src tests`
+  - 结果：**All checks passed!**
+- **治理只读校验**
+  - 命令：`uv run ai-sdlc verify constraints`
+  - 结果：**无 BLOCKER**。
+- **Close 收口校验**
+  - 命令：`uv run ai-sdlc workitem close-check --wi specs/001-ai-sdlc-framework`、`uv run ai-sdlc workitem close-check --wi specs/001-ai-sdlc-framework --all-docs`
+  - 结果：`tasks_completion` / `related_plan_drift` / `execution_log_fields` / `docs_consistency` **全部 PASS**。
+
+#### 2.3 任务记录
+
+##### Task 6.27 | PRD Studio 接口与结构化摘要合同
+
+- **改动范围**：`src/ai_sdlc/studios/prd_studio.py`、`tests/unit/test_prd_studio.py`、`tests/flow/test_new_requirement_flow.py`
+- **改动内容**：对齐 `PrdStudio.review(prd_content)` / `review_path()` 合同与 `structured_output` 输出；保留 `check_prd_readiness(prd_path)` 兼容入口；同步将 new requirement flow 的 PRD 夹具升级到 Batch 12 要求的 canonical sections。
+- **新增/调整的测试**：`tests/unit/test_prd_studio.py` 补 path/content 两条入口与结构化摘要断言；`tests/flow/test_new_requirement_flow.py` 改用完整 PRD 样例并继续验证状态持久化链条。
+- **执行的命令**：见 V1 / V2。
+- **测试结果**：定向与全量回归均通过。
+- **是否符合任务目标**：符合。
+
+##### Task 6.28 + Task 6.22 residual | docs branch / baseline 合同与 `FR-034` 最终闭环
+
+- **改动范围**：`src/ai_sdlc/branch/branch_manager.py`、`src/ai_sdlc/branch/file_guard.py`、`tests/unit/test_branch_manager.py`、`tests/unit/test_file_guard.py`、`tests/flow/test_docs_dev_flow.py`、`tests/unit/test_business_rules.py`
+- **改动内容**：对齐 docs branch canonical name `feature/<WI>-docs` 与 baseline recheck 的 `spec.md` / `plan.md` / `tasks.md` 要求；将 `FileGuard` 升级为进程级写拦截，统一守卫 `Path.write_text()` / `Path.write_bytes()` / `open(..., write mode)` / `Path.replace()` / `Path.rename()` 对受保护 `spec.md` / `plan.md` 的写入，消除“只拦模板写入口”的 partial 语义。
+- **新增/调整的测试**：`tests/unit/test_file_guard.py` 新增 raw write / bytes / open / replace 负例；`tests/unit/test_branch_manager.py` 新增 direct write negative case；`tests/flow/test_docs_dev_flow.py` 与 `tests/unit/test_business_rules.py` 同步新 branch/baseline 合同。
+- **执行的命令**：R1、V1、V2。
+- **测试结果**：红灯验证先证明缺口存在；修复后 `tests/unit/test_file_guard.py tests/unit/test_branch_manager.py` **33 passed**，并纳入定向 / 全量回归。
+- **是否符合任务目标**：符合。
+
+##### Task 6.29 | INIT / REFINE / EXECUTE Gate 合同补齐
+
+- **改动范围**：`src/ai_sdlc/gates/pipeline_gates.py`、`tests/unit/test_gates.py`
+- **改动内容**：补齐 INIT 的 constitution principles / tech-stack source / decisions / source attribution，REFINE 的 acceptance scenario 校验，以及 EXECUTE 的 build prerequisite；PASS / RETRY / HALT 语义改由真实上下文证据驱动。
+- **新增/调整的测试**：`tests/unit/test_gates.py` 覆盖 constitution principles 缺失、tech stack source 缺失、用户故事缺 acceptance scenario、execute 缺 build 等负例。
+- **执行的命令**：见 V1 / V2。
+- **测试结果**：定向与全量回归通过。
+- **是否符合任务目标**：符合。
+
+##### Task 6.30 | `index` / `gate` CLI 形态与索引重建合同
+
+- **改动范围**：`src/ai_sdlc/cli/commands.py`、`src/ai_sdlc/cli/sub_apps.py`、`tests/integration/test_cli_index_gate.py`、`tests/integration/test_cli_verify_constraints.py`
+- **改动内容**：`ai-sdlc index` 现重建 `repo-facts.json` 与 `key-files.json` 等自动索引；`gate` 显式注册 `ai-sdlc gate <stage>` aliases，同时保留 `gate check <stage>` 兼容层；同步修正 verify-constraints 对“缺 constitution”场景的旧夹具假设。
+- **新增/调整的测试**：`tests/integration/test_cli_index_gate.py` 覆盖 CLI 形态与索引产物；`tests/integration/test_cli_verify_constraints.py` 改为显式删除 bootstrap 生成的 constitution，再断言 BLOCKER。
+- **执行的命令**：见 V1 / V2、治理只读校验。
+- **测试结果**：定向集成与只读治理校验通过。
+- **是否符合任务目标**：符合。
+
+##### Task 6.31 | 文档 / 计划 / backlog / traceability 最终对账
+
+- **改动范围**：`specs/001-ai-sdlc-framework/tasks.md`、`specs/001-ai-sdlc-framework/implementation-drift-matrix.md`、`docs/framework-defect-backlog.zh-CN.md`、`specs/001-ai-sdlc-framework/task-execution-log.md`
+- **改动内容**：将 `FR-034` 从 `deferred` 收口为 `closed`；在 `tasks.md` 追加 Batch 12 收口说明，并把 Batch 11 对 `FR-034` 的 partial 说明改成“后续已补齐”的历史口径；将 backlog 中 **FD-2026-03-27-014** 状态改为 `closed`，并补最终收口验证证据；把本批执行证据追加入归档文件。
+- **新增/调整的测试**：无新增代码测试；以 `verify constraints`、`close-check` 与 `close-check --all-docs` 作为文档/台账 fresh evidence。
+- **执行的命令**：治理只读校验、Close 收口校验。
+- **测试结果**：全部 PASS。
+- **是否符合任务目标**：符合。
+
+#### 2.4 代码审查（摘要）
+
+- **宪章/规格对齐**：本批围绕 `001` remediation 真值收口，不扩 scope；所有 drift 项均回到 `spec.md` 合同与 `tasks.md` AC 核对后再宣称关闭。
+- **代码质量**：`FileGuard` 的硬拦截收敛到统一基础层，避免继续在上层零散补 guard；CLI / gate / studio 变更保持兼容层与 contract tests 同步。
+- **测试质量**：`FR-034` 先红后绿；Batch 12 定向 contract suite、全量 pytest、ruff、verify constraints、close-check 与 `--all-docs` 均为新鲜证据。
+- **Spec 偏移**：无新增偏移；`implementation-drift-matrix.md` 已无 `open/partial/deferred` 项。
+- **结论**：无 Critical 阻塞项。
+
+#### 2.5 任务/计划同步状态
+
+- `tasks.md` 同步状态：`已同步`（Batch 11 / 12 收口说明已回填；`M12` 口径与实现一致）。
+- `related_plan`（如存在）同步状态：`已对账`（当前工作项未声明 `related_plan`，close-check 按约定跳过）。
+- 说明：`001` remediation 已全部收口；新发现的 checkpoint / resume-pack stale-source 缺陷已另行登记为 backlog 条目 **FD-2026-03-28-001**，不混入本批 drift closure 语义。
+
+#### 2.6 自动决策记录（如有）
+
+- AD-001：只有在 `FR-034` 的 raw write / `replace()` 负例、Batch 12 定向 suite、全量 pytest、ruff、verify constraints 与 close-check 全部 fresh pass 后，才将 **FD-2026-03-27-014** 从 `open` 改为 `closed` → 理由：避免“矩阵已写 closed，但 contract 仍只到 partial”的再次漂移。
+
+#### 2.7 批次结论
+
+- `001-ai-sdlc-framework` 相对 `spec.md` 的 remediation drift 已全部收口：`implementation-drift-matrix.md` 全部为 `closed`，`tasks.md` / backlog / execution log / close-check 证据一致，`FR-034` 不再保留 `partial` 尾项。
+
+#### 2.8 归档后动作
+
+- **已完成 git 提交**：否
+- **提交哈希**：N/A（待本批统一提交后填写）
+- **是否继续下一批**：按需（`001` drift 已清零；仅剩独立登记的 stale checkpoint/backlog 待办不属于本批）

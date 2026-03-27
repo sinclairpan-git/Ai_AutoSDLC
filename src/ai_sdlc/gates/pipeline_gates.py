@@ -44,6 +44,62 @@ class InitGate:
             )
         )
 
+        constitution = ai_sdlc_dir / "memory" / "constitution.md"
+        checks.append(
+            GateCheck(
+                name="constitution_exists",
+                passed=constitution.exists(),
+                message="" if constitution.exists() else f"{constitution} not found",
+            )
+        )
+
+        tech_stack = ai_sdlc_dir / "profiles" / "tech-stack.yml"
+        checks.append(
+            GateCheck(
+                name="tech_stack_exists",
+                passed=tech_stack.exists(),
+                message="" if tech_stack.exists() else f"{tech_stack} not found",
+            )
+        )
+
+        decisions = ai_sdlc_dir / "profiles" / "decisions.yml"
+        checks.append(
+            GateCheck(
+                name="decisions_exists",
+                passed=decisions.exists(),
+                message="" if decisions.exists() else f"{decisions} not found",
+            )
+        )
+
+        principle_count = 0
+        if constitution.exists():
+            principle_count = len(
+                [
+                    line
+                    for line in constitution.read_text(encoding="utf-8").splitlines()
+                    if line.strip().startswith(("- ", "* "))
+                ]
+            )
+        checks.append(
+            GateCheck(
+                name="constitution_principles",
+                passed=principle_count >= 3,
+                message=""
+                if principle_count >= 3
+                else f"Constitution has only {principle_count} principles",
+            )
+        )
+
+        tech_content = tech_stack.read_text(encoding="utf-8") if tech_stack.exists() else ""
+        has_source = "source:" in tech_content.lower() or "来源:" in tech_content
+        checks.append(
+            GateCheck(
+                name="tech_stack_source",
+                passed=has_source,
+                message="" if has_source else "tech-stack.yml missing source attribution",
+            )
+        )
+
         all_passed = all(c.passed for c in checks)
         verdict = GateVerdict.PASS if all_passed else GateVerdict.RETRY
         return GateResult(stage="init", verdict=verdict, checks=checks)
@@ -99,7 +155,18 @@ class RefineGate:
                     passed=not has_clarification,
                     message=""
                     if not has_clarification
-                    else "Found NEEDS_CLARIFICATION markers",
+                        else "Found NEEDS_CLARIFICATION markers",
+                )
+            )
+
+            has_acceptance_scenarios = _all_user_stories_have_scenarios(content)
+            checks.append(
+                GateCheck(
+                    name="acceptance_scenarios_present",
+                    passed=has_acceptance_scenarios,
+                    message=""
+                    if has_acceptance_scenarios
+                    else "One or more user stories are missing acceptance scenarios",
                 )
             )
         else:
@@ -107,6 +174,7 @@ class RefineGate:
                 "user_stories_present",
                 "functional_requirements",
                 "no_needs_clarification",
+                "acceptance_scenarios_present",
             ):
                 checks.append(
                     GateCheck(name=name, passed=False, message="spec.md missing")
@@ -311,6 +379,15 @@ class ExecuteGate:
             )
         )
 
+        build_ok = context.get("build_succeeded", tests_ok)
+        checks.append(
+            GateCheck(
+                name="build_succeeded",
+                passed=build_ok,
+                message="" if build_ok else "Build did not succeed",
+            )
+        )
+
         committed = context.get("committed", False)
         checks.append(
             GateCheck(
@@ -381,8 +458,16 @@ class CloseGate:
             )
         )
 
-        root = Path(context.get("root", "."))
-        summary = root / "development-summary.md"
+        summary_path = context.get("summary_path")
+        if isinstance(summary_path, str) and summary_path.strip():
+            summary = Path(summary_path)
+        else:
+            spec_dir_raw = context.get("spec_dir")
+            if isinstance(spec_dir_raw, str) and spec_dir_raw.strip():
+                summary = Path(spec_dir_raw) / "development-summary.md"
+            else:
+                root = Path(context.get("root", "."))
+                summary = root / "development-summary.md"
         checks.append(
             GateCheck(
                 name="summary_exists",
@@ -409,3 +494,13 @@ class CloseGate:
         all_passed = all(c.passed for c in checks)
         verdict = GateVerdict.PASS if all_passed else GateVerdict.RETRY
         return GateResult(stage="close", verdict=verdict, checks=checks)
+
+
+def _all_user_stories_have_scenarios(content: str) -> bool:
+    """Return True when every user story block contains an acceptance scenario marker."""
+    blocks = re.split(r"^###\s+用户故事.*$", content, flags=re.MULTILINE)
+    story_blocks = [block for block in blocks[1:] if block.strip()]
+    if not story_blocks:
+        return False
+    scenario_pattern = re.compile(r"(^|\n)\s*(场景|scenario)\b", re.IGNORECASE)
+    return all(bool(scenario_pattern.search(block)) for block in story_blocks)

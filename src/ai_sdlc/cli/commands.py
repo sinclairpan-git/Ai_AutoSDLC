@@ -11,14 +11,26 @@ from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
 
-from ai_sdlc.context.state import build_resume_pack, load_checkpoint, save_resume_pack
+from ai_sdlc.context.state import (
+    CheckpointLoadError,
+    ResumePackError,
+    ResumePackNotFoundError,
+    build_resume_pack,
+    load_checkpoint,
+    load_resume_pack,
+    save_resume_pack,
+)
 from ai_sdlc.core.config import load_project_config, load_project_state
 from ai_sdlc.core.reconcile import (
     ReconcileHint,
     detect_reconcile_hint,
     reconcile_checkpoint,
 )
-from ai_sdlc.generators.index_gen import generate_index, save_index
+from ai_sdlc.generators.index_gen import (
+    generate_all_extended_indexes,
+    generate_index,
+    save_index,
+)
 from ai_sdlc.integrations.ide_adapter import (
     ensure_ide_adaptation,
     format_adapter_notice,
@@ -266,16 +278,26 @@ def recover_command(
             )
             hint = applied
 
-    pack = build_resume_pack(root)
-    if pack is None:
+    if reconcile:
+        pack = build_resume_pack(root)
+        if pack is not None:
+            save_resume_pack(root, pack)
+
+    try:
+        pack = load_resume_pack(root)
+    except ResumePackNotFoundError as exc:
         if hint is not None:
             console.print(
-                "[yellow]尚未写入可恢复的 checkpoint。请执行 `ai-sdlc recover --reconcile`。[/yellow]"
+                "[yellow]尚未写入恢复包。若当前项目仍是旧版产物布局，请先执行 `ai-sdlc recover --reconcile`。[/yellow]"
             )
-        console.print("[yellow]No checkpoint found. Nothing to recover.[/yellow]")
-        raise typer.Exit(code=1)
-
-    save_resume_pack(root, pack)
+        console.print(f"[yellow]{exc}[/yellow]")
+        raise typer.Exit(code=1) from None
+    except ResumePackError as exc:
+        console.print(f"[red]{exc}[/red]")
+        raise typer.Exit(code=1) from None
+    except CheckpointLoadError as exc:
+        console.print(f"[red]Invalid checkpoint: {exc}[/red]")
+        raise typer.Exit(code=1) from None
 
     table = Table(title="Recovery Info")
     table.add_column("Property", style="cyan")
@@ -326,8 +348,13 @@ def index_command() -> None:
         raise typer.Exit(code=1)
 
     save_index(root, index)
+    scan = run_full_scan(root)
+    extended = generate_all_extended_indexes(root, scan)
     file_count = index.get("file_count", 0)
-    console.print(f"[green]Index rebuilt: {file_count} files indexed.[/green]")
+    console.print(
+        f"[green]Index rebuilt: {file_count} files indexed, "
+        f"{len(extended)} extended indexes refreshed.[/green]"
+    )
     raise typer.Exit(code=0)
 
 

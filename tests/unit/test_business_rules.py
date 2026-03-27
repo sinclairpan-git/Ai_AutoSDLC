@@ -107,6 +107,7 @@ class TestBranchRules:
         spec_dir.mkdir(parents=True)
         (spec_dir / "spec.md").write_text("# spec")
         (spec_dir / "plan.md").write_text("# plan")
+        (spec_dir / "tasks.md").write_text("# tasks")
 
         bm.switch_to_dev("WI-001", spec_dir="specs/WI-001")
 

@@ -33,7 +33,7 @@ class BranchManager:
             BranchError: If there are uncommitted changes.
         """
         self._guard_uncommitted()
-        name = f"design/{work_item_id}-docs"
+        name = self._docs_branch_name(work_item_id)
         if self._git.branch_exists(name):
             self._git.checkout(name)
         else:
@@ -64,7 +64,7 @@ class BranchManager:
             BranchError: If there are uncommitted changes.
         """
         self._guard_uncommitted()
-        name = f"design/{work_item_id}-docs"
+        name = self._resolve_docs_branch(work_item_id)
         self._git.checkout(name)
 
     def switch_to_dev(self, work_item_id: str, spec_dir: str = "") -> None:
@@ -87,7 +87,7 @@ class BranchManager:
             if not self.check_baseline(spec_dir):
                 raise BranchError(
                     f"Baseline recheck failed after switching to {name}. "
-                    f"spec.md and plan.md must exist in {spec_dir}."
+                    f"spec.md, plan.md, and tasks.md must exist in {spec_dir}."
                 )
             root = self._git.repo_path
             for doc in ("spec.md", "plan.md"):
@@ -115,7 +115,7 @@ class BranchManager:
         spec_path = root / spec_dir
         if not spec_path.is_dir():
             return False
-        required = ["spec.md", "plan.md"]
+        required = ["spec.md", "plan.md", "tasks.md"]
         return all((spec_path / f).exists() for f in required)
 
     def create_hotfix_branch(self, issue_id: str) -> str:
@@ -173,3 +173,23 @@ class BranchManager:
                 )
         except GitError as exc:
             raise BranchError(f"Git check failed: {exc}") from exc
+
+    @staticmethod
+    def _docs_branch_name(work_item_id: str) -> str:
+        """Return the canonical docs-branch name mandated by the spec."""
+        return f"feature/{work_item_id}-docs"
+
+    @staticmethod
+    def _legacy_docs_branch_name(work_item_id: str) -> str:
+        """Return the pre-remediation docs-branch name kept for compatibility."""
+        return f"design/{work_item_id}-docs"
+
+    def _resolve_docs_branch(self, work_item_id: str) -> str:
+        """Resolve docs branch with legacy fallback for pre-existing repos."""
+        preferred = self._docs_branch_name(work_item_id)
+        if self._git.branch_exists(preferred):
+            return preferred
+        legacy = self._legacy_docs_branch_name(work_item_id)
+        if self._git.branch_exists(legacy):
+            return legacy
+        return preferred

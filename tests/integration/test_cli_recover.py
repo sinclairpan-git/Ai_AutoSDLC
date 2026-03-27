@@ -8,7 +8,7 @@ from unittest.mock import patch
 from typer.testing import CliRunner
 
 from ai_sdlc.cli.main import app
-from ai_sdlc.context.state import save_checkpoint
+from ai_sdlc.context.state import build_resume_pack, save_checkpoint, save_resume_pack
 from ai_sdlc.models.state import Checkpoint, FeatureInfo
 from ai_sdlc.routers.bootstrap import init_project
 
@@ -35,8 +35,11 @@ def _write_legacy_root_artifacts(root: Path) -> None:
 
 
 class TestCliRecover:
-    def test_recover_with_checkpoint(self, tmp_path: Path) -> None:
+    def test_recover_with_resume_pack(self, tmp_path: Path) -> None:
         (tmp_path / ".ai-sdlc").mkdir()
+        spec_dir = tmp_path / "specs" / "001"
+        spec_dir.mkdir(parents=True)
+        (spec_dir / "spec.md").write_text("# Spec\n", encoding="utf-8")
         cp = Checkpoint(
             current_stage="design",
             feature=FeatureInfo(
@@ -48,18 +51,57 @@ class TestCliRecover:
             ),
         )
         save_checkpoint(tmp_path, cp)
+        pack = build_resume_pack(tmp_path)
+        assert pack is not None
+        save_resume_pack(tmp_path, pack)
 
         with patch("ai_sdlc.cli.commands.find_project_root", return_value=tmp_path):
             result = runner.invoke(app, ["recover"])
             assert result.exit_code == 0
             assert "Recovery" in result.output or "recovered" in result.output.lower()
 
-    def test_recover_no_checkpoint(self, tmp_path: Path) -> None:
+    def test_recover_missing_resume_pack(self, tmp_path: Path) -> None:
         (tmp_path / ".ai-sdlc").mkdir()
+        save_checkpoint(tmp_path, Checkpoint(
+            current_stage="design",
+            feature=FeatureInfo(
+                id="001",
+                spec_dir="specs/001",
+                design_branch="d/001",
+                feature_branch="f/001",
+                current_branch="d/001",
+            ),
+        ))
         with patch("ai_sdlc.cli.commands.find_project_root", return_value=tmp_path):
             result = runner.invoke(app, ["recover"])
             assert result.exit_code == 1
-            assert "No checkpoint" in result.output
+            assert "No resume pack found" in result.output
+
+    def test_recover_corrupted_resume_pack(self, tmp_path: Path) -> None:
+        (tmp_path / ".ai-sdlc" / "state").mkdir(parents=True)
+        save_checkpoint(
+            tmp_path,
+            Checkpoint(
+                current_stage="design",
+                feature=FeatureInfo(
+                    id="001",
+                    spec_dir="specs/001",
+                    design_branch="d/001",
+                    feature_branch="f/001",
+                    current_branch="d/001",
+                ),
+            ),
+        )
+        (tmp_path / ".ai-sdlc" / "state" / "resume-pack.yaml").write_text(
+            ": invalid yaml {{",
+            encoding="utf-8",
+        )
+
+        with patch("ai_sdlc.cli.commands.find_project_root", return_value=tmp_path):
+            result = runner.invoke(app, ["recover"])
+
+        assert result.exit_code == 1
+        assert "Resume pack corrupted" in result.output
 
     def test_recover_reconcile_updates_legacy_checkpoint(self, tmp_path: Path) -> None:
         init_project(tmp_path)
@@ -84,6 +126,7 @@ class TestCliRecover:
         assert result.exit_code == 0
         assert "verify" in result.output.lower()
         assert "spec.md" in result.output
+        assert (tmp_path / ".ai-sdlc" / "state" / "resume-pack.yaml").exists()
 
     def test_recover_prompts_and_applies_reconcile_for_legacy_artifacts(
         self, tmp_path: Path
@@ -113,3 +156,31 @@ class TestCliRecover:
         assert result.exit_code == 0
         assert "reconcile" in result.output.lower()
         assert "verify" in result.output.lower()
+        assert (tmp_path / ".ai-sdlc" / "state" / "resume-pack.yaml").exists()
+
+    def test_recover_invalid_checkpoint_fails(self, tmp_path: Path) -> None:
+        (tmp_path / ".ai-sdlc" / "state").mkdir(parents=True)
+        (tmp_path / ".ai-sdlc" / "state" / "checkpoint.yml").write_text(
+            "current_stage: bogus\n"
+            "feature:\n"
+            "  id: '001'\n"
+            "  spec_dir: specs/001\n"
+            "  design_branch: design/001\n"
+            "  feature_branch: feature/001\n"
+            "  current_branch: main\n",
+            encoding="utf-8",
+        )
+        (tmp_path / ".ai-sdlc" / "state" / "resume-pack.yaml").write_text(
+            "current_stage: design\n"
+            "current_batch: 0\n"
+            "last_committed_task: ''\n"
+            "working_set_snapshot: {}\n"
+            "timestamp: '2026-01-01T00:00:00+00:00'\n",
+            encoding="utf-8",
+        )
+
+        with patch("ai_sdlc.cli.commands.find_project_root", return_value=tmp_path):
+            result = runner.invoke(app, ["recover"])
+
+        assert result.exit_code == 1
+        assert "checkpoint" in result.output.lower()

@@ -9,7 +9,7 @@ import pytest
 from typer.testing import CliRunner
 
 from ai_sdlc.cli.main import app
-from ai_sdlc.context.state import save_checkpoint
+from ai_sdlc.context.state import load_checkpoint, save_checkpoint
 from ai_sdlc.core.runner import SDLCRunner
 from ai_sdlc.models.gate import GateCheck, GateResult, GateVerdict
 from ai_sdlc.models.state import Checkpoint, FeatureInfo
@@ -36,6 +36,32 @@ def _clear_ide_env(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 class TestRunCommand:
+    @staticmethod
+    def _write_pipeline_config(
+        root: Path,
+        *,
+        max_tasks_per_batch: int = 2,
+        max_debug_rounds_per_task: int = 3,
+        consecutive_failure_limit: int = 2,
+    ) -> None:
+        cfg = root / ".ai-sdlc" / "config" / "pipeline.yml"
+        cfg.parent.mkdir(parents=True, exist_ok=True)
+        cfg.write_text(
+            (
+                "stages:\n"
+                "  - id: execute\n"
+                "    batch:\n"
+                "      strategy: by_phase\n"
+                f"      max_tasks_per_batch: {max_tasks_per_batch}\n"
+                "      auto_archive: true\n"
+                "      auto_commit: true\n"
+                "circuit_breaker:\n"
+                f"  max_debug_rounds_per_task: {max_debug_rounds_per_task}\n"
+                f"  consecutive_failure_limit: {consecutive_failure_limit}\n"
+            ),
+            encoding="utf-8",
+        )
+
     def test_run_outside_project(self, tmp_path: Path) -> None:
         """Not inside a project → exit 1 (not found) or 2 (halt), never success."""
         result = runner.invoke(app, ["run", "--dry-run"], cwd=str(tmp_path))
@@ -95,6 +121,64 @@ class TestRunCommand:
         assert result.exit_code == 0
         assert "Pipeline completed. Stage: close" in result.output
         assert "Not a git repository" not in result.output
+
+    def test_run_non_dry_run_executes_batches_updates_checkpoint_and_summary(
+        self, git_repo: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.chdir(git_repo)
+        assert runner.invoke(app, ["init", "."]).exit_code == 0
+        self._write_pipeline_config(git_repo)
+
+        spec_dir = git_repo / "specs" / "WI-2026-RUN"
+        spec_dir.mkdir(parents=True)
+        (spec_dir / "tasks.md").write_text(
+            "### Task 1.1 — setup\n"
+            "- **Task ID**: T001\n"
+            "- **依赖**：无\n"
+            "- **文件**：src/setup.py\n"
+            "- **验收标准（AC）**：\n"
+            "  1. setup done\n\n"
+            "### Task 1.2 — implement\n"
+            "- **Task ID**: T002\n"
+            "- **依赖**：T001\n"
+            "- **文件**：src/app.py\n"
+            "- **验收标准（AC）**：\n"
+            "  1. app done\n\n"
+            "### Task 2.1 — verify\n"
+            "- **Task ID**: T003\n"
+            "- **依赖**：T002\n"
+            "- **文件**：tests/test_app.py\n"
+            "- **验收标准（AC）**：\n"
+            "  1. verify done\n",
+            encoding="utf-8",
+        )
+        save_checkpoint(
+            git_repo,
+            Checkpoint(
+                current_stage="execute",
+                feature=FeatureInfo(
+                    id="WI-2026-RUN",
+                    spec_dir="specs/WI-2026-RUN",
+                    design_branch="design/WI-2026-RUN",
+                    feature_branch="feature/WI-2026-RUN",
+                    current_branch="main",
+                ),
+            ),
+        )
+
+        result = runner.invoke(app, ["run"])
+
+        assert result.exit_code == 0
+        assert "Pipeline completed. Stage: close" in result.output
+        assert (spec_dir / "task-execution-log.md").exists()
+        assert (spec_dir / "development-summary.md").exists()
+
+        cp = load_checkpoint(git_repo)
+        assert cp is not None
+        assert cp.execute_progress is not None
+        assert cp.execute_progress.total_batches == 2
+        assert cp.execute_progress.completed_batches == 2
+        assert cp.execute_progress.last_committed_task == "T003"
 
     def test_run_dry_run_guides_user_when_legacy_reconcile_is_needed(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch

@@ -7,6 +7,8 @@ from pathlib import Path
 
 from jinja2 import Environment, FileSystemLoader, TemplateNotFound
 
+from ai_sdlc.branch.file_guard import FileGuard
+
 logger = logging.getLogger(__name__)
 
 
@@ -17,7 +19,12 @@ class TemplateGeneratorError(Exception):
 class TemplateGenerator:
     """Generate files from Jinja2 templates."""
 
-    def __init__(self, template_dir: Path | None = None) -> None:
+    def __init__(
+        self,
+        template_dir: Path | None = None,
+        *,
+        file_guard: FileGuard | None = None,
+    ) -> None:
         if template_dir is None:
             template_dir = Path(__file__).parent.parent / "templates"
         self._env = Environment(
@@ -26,6 +33,7 @@ class TemplateGenerator:
             trim_blocks=True,
             lstrip_blocks=True,
         )
+        self._file_guard = file_guard
 
     def render(self, template_name: str, context: dict[str, object]) -> str:
         """Render a template to string.
@@ -63,5 +71,8 @@ class TemplateGenerator:
         Creates parent directories if needed.
         """
         content = self.render(template_name, context)
+        if self._file_guard is not None:
+            self._file_guard.write_text(output_path, content, encoding="utf-8")
+            return
         output_path.parent.mkdir(parents=True, exist_ok=True)
         output_path.write_text(content, encoding="utf-8")

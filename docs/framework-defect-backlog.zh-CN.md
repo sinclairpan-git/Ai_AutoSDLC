@@ -481,3 +481,58 @@
 - 风险等级: 中
 - 可验证成功标准: fresh event / violation / artifact 写入后，`status --json` 的 latest/current 与 latest summary 在不手工 rebuild 的情况下即可反映更新。
 - 是否需要回归测试补充: 是：补 fresh write 后 latest/current 与 index summary 即时刷新的回归测试。
+
+## FD-2026-03-27-014 | 001 spec 的 FR 合同被局部实现语义替换，编排型能力长期停留在半闭环
+
+- 日期 (UTC): 2026-03-27
+- 来源: traceability_review
+- 状态: closed
+- owner: codex
+- wi_id: 001-ai-sdlc-framework
+- related_doc: specs/001-ai-sdlc-framework/research-pipeline-vs-runner.md, specs/001-ai-sdlc-framework/adr-001-pipeline-vs-runner.md, specs/001-ai-sdlc-framework/task-execution-log.md
+- 现象: `001-ai-sdlc-framework` 中多组 FR 已有代码与局部测试，但实现语义与 spec 合同不完全一致，或只完成底层能力而未完成闭环编排。例如 `FR-020~023` 实现成运行时治理检查而不是 spec 定义的 6 项 freeze + `governance.yaml` 落盘；`FR-040~045` 具备 `BatchExecutor` / `ExecutionLogger`，但 `Runner` / CLI 尚未真正按 `tasks.md` 驱动执行、批次提交与开发总结；`FR-052/054` 只有 resume-pack build/save，没有 spec 所述 `load_resume_pack()` 恢复语义；`FR-034` 与 `FR-081` 分别缺统一写拦截与 `work-item.yaml` 状态持久化。
+- 触发场景: 实现按小批次围绕 gate、checkpoint、CLI surface 与局部测试推进时，执行侧容易把“当前最易落地的局部语义”当成 FR 真值；close 又主要依据已有测试和入口可用性，而不是逐条回到 FR 合同核对 orchestration、persistence、write-interception 等完整责任。
+- 影响范围: 需求可追溯性、spec/plan/tasks 与代码的一致性、执行阶段真实闭环能力、恢复兼容能力、状态机可信度，以及用户对“已实现 / 已完成”表述的判断。
+- 根因分类: A, B, D, E, H
+- 未来杜绝方案摘要: 把 FR 合同而不是当前 gate/checkpoint/局部测试定义为实现真值；凡实现语义有意偏离 spec，必须在同一迭代同步更新 `spec.md` / `plan.md` / `tasks.md` 或 ADR，而不能让代码暗自替换合同。对编排型、持久化型、写保护型 FR，只有在 end-to-end 行为和 contract-level 回归测试都成立后，才允许标记为“已实现”。
+- 建议改动层级: rule / policy, middleware, workflow, tool, eval
+- prompt / context: 拆解或实现 FR 时，必须先区分“底层 helper 已存在”与“FR 合同已交付”；不得把 checkpoint 当前行为、单个 gate 通过或局部单测通过，直接等价成 spec 中的完整能力已经成立。
+- rule / policy: 增加 FR 合同优先级规则。若代码选择与 spec 不同的语义，必须先更新 spec/plan/tasks 或登记 ADR；若 FR 涉及编排、持久化、恢复、文件保护等跨模块能力，仅有局部对象模型或 helper 不得宣称完成。
+- middleware: 为统一写文件入口、`work-item.yaml` 状态持久化、resume-pack load path、execute 主闭环提供单一接入层，避免 FR 长期停在“局部零件已存在、总装件缺失”的状态。
+- workflow: 每个实现批次开始前先建立或刷新 `FR -> 设计 -> tasks -> 代码 -> 测试` 对账表；批次收口时必须显式标注哪些 FR 仅完成局部能力、哪些仍缺 orchestration/persistence；close 前把该矩阵作为必查项，而不是只看测试是否全绿。
+- tool: 扩展 `workitem close-check` / `verify constraints`，或新增 `workitem trace-check`，对 `spec.md`、`plan.md`、`tasks.md`、实现文件、测试文件做 FR 级对账，并对“只有 helper 没有闭环”的高风险模式给出阻断或告警。
+- eval: 为治理冻结、execute 主闭环、resume-pack 加载恢复、`work-item.yaml` 状态持久化、受保护文件真实写拦截建立 contract-level 正反回归测试；close 前必须能证明这些 FR 不是只在单元层存在。
+- 风险等级: 高
+- Batch 11 处置进展 (2026-03-28):
+  - 已闭环: `FR-020~023`（Governance Freeze + `governance.yaml`）、`FR-040~045`（`Executor.run()` 主闭环、批次日志/commit/summary）、`FR-052/054`（`load_resume_pack()` + strict checkpoint 校验 + recover 主路径）、`FR-081`（`work-item.yaml` 状态持久化）。
+  - 当时残留: `FR-034` 已从 `open` 降到 `partial`，框架模板与受 guard 写入口已被拦截，但尚未形成“所有文件写入口统一接管”的硬保护；其余接口漂移与门禁缩减项转入 Batch 12。
+  - Batch 11 验证: 定向 contract suite 217 passed；全量 `uv run pytest -q` 707 passed；`uv run ruff check src tests` passed。
+- 最终收口 (2026-03-28):
+  - Batch 12 已闭环: `FR-010~012`（PRD Studio 对外合同 + `structured_output`）、`FR-030/033`（docs branch 命名与 baseline recheck）、`FR-061~063`（INIT / REFINE / EXECUTE Gate）、`FR-073/083`（`index` 自动索引重建）、`FR-074`（`gate <stage>` CLI 形态）。
+  - `FR-034` 已闭环: `FileGuard` 现已统一拦截对受保护 `spec.md` / `plan.md` 的 `Path.write_text()` / `Path.write_bytes()` / `open(..., write mode)` / `Path.replace()` / `Path.rename()`，不再只停留在模板写入口保护。
+  - 最终验证: 定向 contract suite 111 passed；全量 `uv run pytest -q` 721 passed；`uv run ruff check src tests` passed；`uv run ai-sdlc verify constraints` 无 BLOCKER；`uv run ai-sdlc workitem close-check --wi specs/001-ai-sdlc-framework` 与 `--all-docs` 全 PASS。
+- 可验证成功标准: 对 `FR-020~023`、`FR-034`、`FR-040~045`、`FR-052/054`、`FR-081` 这类合同型 FR，仓库存在对应的实现真值、contract-level 回归测试与 FR 对账结果；若实现只到局部能力，`close-check` / `trace-check` 必须明确标识“部分实现”，不得继续被表述为“已实现”。
+- 是否需要回归测试补充: 是：补 governance freeze 落盘、execute end-to-end、resume-pack load/recover、`work-item.yaml` 状态持久化、真实写拦截与 FR 对账阻断的回归测试。
+
+## FD-2026-03-28-001 | checkpoint 与 resume-pack 双状态源失配，recover 反复回到旧断点
+
+- 日期 (UTC): 2026-03-28
+- 来源: user_report, self_review
+- 状态: planned
+- owner: codex
+- wi_id: 001-ai-sdlc-framework
+- 现象: `checkpoint.yml` 已推进到较新阶段甚至 `close`，但 `resume-pack.yaml` 仍停留在更早的 `execute`/旧 batch；此后再次执行 `ai-sdlc recover` 时，CLI 会继续读取旧 `resume-pack` 并向用户报告过期断点，形成“每次中断都回到同一旧位置”的假象。
+- 触发场景: 流水线运行过程中持续写入 `checkpoint.yml`，但 `resume-pack.yaml` 未随阶段推进自动刷新；或用户在已有旧 `resume-pack` 的项目里多次中断/恢复，`recover` 继续把旧 pack 当成可用真值。
+- 影响范围: 断点恢复可信度、阶段推进判断、批次续跑、用户对 CLI 状态面的信任，以及“是否已真正恢复到最新位置”的操作决策。
+- 根因分类: A, B, D, H
+- 未来杜绝方案摘要: 断点恢复必须收敛为单一真值来源：`checkpoint.yml` 为唯一恢复真值，`resume-pack.yaml` 仅是由 checkpoint 派生出的上下文快照，且必须在 checkpoint 变更时同步刷新。`recover/status` 需要显式校验两者的一致性，发现 stale pack 时要阻断或自动重建，而不是继续静默复用旧快照。
+- 建议改动层级: prompt / context, rule / policy, middleware, workflow, tool, eval
+- prompt / context: 所有面向用户的恢复说明必须明确“checkpoint 是恢复真值，resume-pack 是派生快照”；不得把旧快照继续表述成当前断点。
+- rule / policy: 规定 checkpoint 为唯一断点真值；resume-pack 不得独立领先或落后于 checkpoint 而仍被视为有效恢复依据。
+- middleware: 在 `save_checkpoint()` 后自动重建并写回 resume-pack；`load_resume_pack()` 增加 stage / batch / timestamp / checkpoint pointer 一致性校验；若发现不一致则返回 stale-pack 错误或直接按 checkpoint 重建。
+- workflow: 每次 recover / status / run 进入恢复路径前，先做 checkpoint↔resume-pack 对账；若 pack 过期，只允许“自动重建后继续”或“显式报错要求重建”，不再静默沿用。
+- tool: `src/ai_sdlc/context/state.py`、`src/ai_sdlc/cli/commands.py`、`src/ai_sdlc/core/runner.py`、`ai-sdlc recover`、`ai-sdlc status`
+- eval: stale-resume-pack 检出率、recover 使用过期 pack 的发生率、checkpoint/save 后 pack 自动刷新覆盖率、恢复位置误报次数
+- 风险等级: 高
+- 可验证成功标准: 给定“checkpoint 已推进、resume-pack 仍旧”的夹具时，`recover` 与 `status` 必须识别并拒绝陈旧 pack，或自动按最新 checkpoint 重建；正常路径下每次 checkpoint 更新后磁盘上的 resume-pack 都与最新 stage/batch 一致，不再反复回到旧断点。
+- 是否需要回归测试补充: 是：补 checkpoint 前进但 resume-pack 未刷新的 stale-pack 正反测试、`save_checkpoint()` 自动同步测试、`recover/status` 遇到双状态源失配时的阻断或自动重建集成测试。

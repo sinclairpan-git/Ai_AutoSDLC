@@ -80,6 +80,7 @@ def init_project(root: Path, project_name: str = "") -> ProjectState:
         next_work_item_seq=1,
     )
     save_project_state(root, state)
+    _bootstrap_governance_files(root)
 
     if is_existing:
         from ai_sdlc.routers.existing_project_init import init_existing_project
@@ -96,3 +97,37 @@ def init_project(root: Path, project_name: str = "") -> ProjectState:
 
     logger.info("Initialized AI-SDLC project '%s' at %s", project_name, root)
     return state
+
+
+def _bootstrap_governance_files(root: Path) -> None:
+    """Create minimal governance assets required by INIT gate when absent."""
+    constitution = root / AI_SDLC_DIR / "memory" / "constitution.md"
+    if not constitution.exists():
+        constitution.write_text(
+            "# Constitution\n"
+            "- Principle 1: Persist decisions to the repository.\n"
+            "- Principle 2: Prefer contract-level verification before closure.\n"
+            "- Principle 3: Keep docs and code traceable.\n",
+            encoding="utf-8",
+        )
+
+    tech_stack = root / AI_SDLC_DIR / "profiles" / "tech-stack.yml"
+    if not tech_stack.exists():
+        tech_stack.write_text(
+            "backend:\n"
+            "  name: python\n"
+            "  version: '3.11+'\n"
+            "  source: bootstrap-default\n",
+            encoding="utf-8",
+        )
+
+    decisions = root / AI_SDLC_DIR / "profiles" / "decisions.yml"
+    if not decisions.exists():
+        decisions.write_text(
+            "decisions:\n"
+            "  - id: INIT-001\n"
+            "    question: default_execution_mode\n"
+            "    choice: auto\n"
+            "    rationale: bootstrap default\n",
+            encoding="utf-8",
+        )

@@ -409,3 +409,45 @@ Phase 0（脚手架）
 - 全量：`uv run pytest` + `uv run ruff check src tests`。
 
 **宪章对齐**：MUST-1（独立批次可回退）、MUST-2（可验证）、MUST-3（范围声明）、MUST-4（复盘与登记落盘）。
+
+## 增量设计（P1 remediation）— 001 spec 合同回对与实现偏差修复
+
+**背景**：`001-ai-sdlc-framework` 已具备大量可运行能力，但 `spec.md` 与当前实现之间仍存在一组合同级偏差：一部分是接口形态漂移（如 docs 分支命名、`gate` CLI 形态），另一部分是“已有零件、缺总装”的半闭环（如 governance freeze、execute 主闭环、resume-pack load、`work-item.yaml` 状态持久化）。偏差真值统一记录在 [`implementation-drift-matrix.md`](implementation-drift-matrix.md)。
+
+**设计目标**：
+
+1. 先建立 **spec -> drift matrix -> plan -> tasks** 的单一追踪链，避免继续靠会话记忆或局部测试判断“已实现”。
+2. 修复顺序按“先闭环底座、后清理接口形态”推进，避免在核心状态/恢复/执行链仍不完整时先处理表层命令形态。
+3. 每一批修复都以 **contract-level 测试 + traceability/backlog 回填** 为收口条件，而不是仅凭单元层通过。
+
+### 真值与分期
+
+- **偏差真值表**：[`implementation-drift-matrix.md`](implementation-drift-matrix.md)
+- **第一批（Batch 11）核心闭环**：
+  - `FR-020~023`：Governance Freeze 合同回对
+  - `FR-034`：dev 分支 docs 写保护硬化
+  - `FR-040~045`：execute 主闭环、批次日志、commit、summary
+  - `FR-052/054`：resume-pack load / checkpoint 校验 / recover 合同
+  - `FR-081`：`work-item.yaml` 状态持久化
+- **第二批（Batch 12）剩余漂移清理**：
+  - `FR-010~012`：PRD Studio 接口与结构化摘要
+  - `FR-030`、`FR-033`：docs 分支命名与 baseline recheck
+  - `FR-061~063`：Gate 合同补齐
+  - `FR-073/083`：index 完整索引重建
+  - `FR-074`：CLI `gate` 形态与文档/计划回填
+
+### 验证协议
+
+1. **每个 remediation Task 先补 contract-level 测试**，再进入实现；禁止只做 helper 级修补。
+2. **每个 Batch 收口**必须同时完成：
+   - 目标 FR 的定向 contract-level 测试
+   - 全量 `uv run pytest`
+   - `uv run ruff check src tests`
+   - [`implementation-drift-matrix.md`](implementation-drift-matrix.md) 状态回填
+   - [`docs/framework-defect-backlog.zh-CN.md`](../../docs/framework-defect-backlog.zh-CN.md) 对应条目更新
+3. **close 前对账**：`tasks.md` 中 remediation Batch 的 AC、drift matrix 状态、backlog 条目与实际实现必须一致。
+
+### 范围控制
+
+- 本 remediation 仅处理 `001-ai-sdlc-framework` 相对 `spec.md` 的已识别偏差，不顺手引入 `002` 或 telemetry 线的新增能力。
+- 若修复过程中发现某项其实属于“spec 需要改而不是实现要补”，必须先更新 `spec.md` / `plan.md` / `tasks.md` 或补 ADR，再继续代码改动，不允许代码单边替换合同。

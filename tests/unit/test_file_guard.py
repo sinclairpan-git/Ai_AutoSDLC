@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
 import pytest
 
 from ai_sdlc.branch.file_guard import FileGuard, ProtectedFileError
@@ -49,3 +51,54 @@ class TestFileGuard:
         guard = FileGuard()
         guard.protect("/project/specs/WI-001/spec.md")
         assert guard.is_protected("/project/specs/../specs/WI-001/spec.md")
+
+    def test_write_text_protected_raises_and_does_not_write(self, tmp_path: Path) -> None:
+        guard = FileGuard()
+        target = tmp_path / "spec.md"
+        guard.protect(str(target))
+        with pytest.raises(ProtectedFileError, match="protected file"):
+            guard.write_text(target, "# blocked\n")
+        assert not target.exists()
+
+    def test_write_text_unprotected_persists_content(self, tmp_path: Path) -> None:
+        guard = FileGuard()
+        target = tmp_path / "plan.md"
+        guard.write_text(target, "# ok\n")
+        assert target.read_text(encoding="utf-8") == "# ok\n"
+
+    def test_path_write_text_protected_raises(self, tmp_path: Path) -> None:
+        guard = FileGuard()
+        target = tmp_path / "spec.md"
+        guard.protect(str(target))
+
+        with pytest.raises(ProtectedFileError, match="protected file"):
+            target.write_text("# blocked\n", encoding="utf-8")
+
+    def test_path_write_bytes_protected_raises(self, tmp_path: Path) -> None:
+        guard = FileGuard()
+        target = tmp_path / "spec.md"
+        guard.protect(str(target))
+
+        with pytest.raises(ProtectedFileError, match="protected file"):
+            target.write_bytes(b"# blocked\n")
+
+    def test_open_write_protected_raises(self, tmp_path: Path) -> None:
+        guard = FileGuard()
+        target = tmp_path / "spec.md"
+        guard.protect(str(target))
+
+        with (
+            pytest.raises(ProtectedFileError, match="protected file"),
+            open(target, "w", encoding="utf-8"),
+        ):
+            pass
+
+    def test_replace_into_protected_target_raises(self, tmp_path: Path) -> None:
+        guard = FileGuard()
+        target = tmp_path / "spec.md"
+        source = tmp_path / "tmp.md"
+        source.write_text("# tmp\n", encoding="utf-8")
+        guard.protect(str(target))
+
+        with pytest.raises(ProtectedFileError, match="protected file"):
+            source.replace(target)

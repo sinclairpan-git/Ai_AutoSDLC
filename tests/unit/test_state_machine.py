@@ -2,14 +2,19 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
 import pytest
 
 from ai_sdlc.core.state_machine import (
     InvalidTransitionError,
     get_valid_transitions,
+    load_work_item,
+    save_work_item,
     transition,
+    transition_work_item,
 )
-from ai_sdlc.models.work import WorkItemStatus
+from ai_sdlc.models.work import WorkItem, WorkItemSource, WorkItemStatus, WorkType
 
 
 class TestValidTransitions:
@@ -83,3 +88,58 @@ class TestGetValidTransitions:
         assert WorkItemStatus.KNOWLEDGE_REFRESHING in targets
         assert WorkItemStatus.COMPLETED in targets
         assert len(targets) == 2
+
+
+def _make_work_item() -> WorkItem:
+    return WorkItem(
+        work_item_id="WI-2026-001",
+        work_type=WorkType.NEW_REQUIREMENT,
+        source=WorkItemSource.TEXT,
+        title="State machine fixture",
+        description="fixture",
+    )
+
+
+class TestPersistentTransitions:
+    def test_transition_work_item_persists_status(self, tmp_path: Path) -> None:
+        work_item = _make_work_item()
+        save_work_item(tmp_path, work_item)
+
+        updated = transition_work_item(
+            tmp_path,
+            work_item,
+            WorkItemStatus.INTAKE_CLASSIFIED,
+        )
+
+        assert updated.status == WorkItemStatus.INTAKE_CLASSIFIED
+        loaded = load_work_item(tmp_path, work_item.work_item_id)
+        assert loaded.status == WorkItemStatus.INTAKE_CLASSIFIED
+
+    def test_illegal_transition_does_not_mutate_disk(self, tmp_path: Path) -> None:
+        work_item = _make_work_item()
+        save_work_item(tmp_path, work_item)
+
+        with pytest.raises(InvalidTransitionError):
+            transition_work_item(tmp_path, work_item, WorkItemStatus.COMPLETED)
+
+        loaded = load_work_item(tmp_path, work_item.work_item_id)
+        assert loaded.status == WorkItemStatus.CREATED
+
+    def test_cross_stage_chain_persists_until_completed(self, tmp_path: Path) -> None:
+        work_item = _make_work_item()
+        save_work_item(tmp_path, work_item)
+
+        for target in (
+            WorkItemStatus.INTAKE_CLASSIFIED,
+            WorkItemStatus.GOVERNANCE_FROZEN,
+            WorkItemStatus.DOCS_BASELINE,
+            WorkItemStatus.DEV_EXECUTING,
+            WorkItemStatus.DEV_VERIFYING,
+            WorkItemStatus.DEV_REVIEWED,
+            WorkItemStatus.ARCHIVING,
+            WorkItemStatus.COMPLETED,
+        ):
+            work_item = transition_work_item(tmp_path, work_item, target)
+
+        loaded = load_work_item(tmp_path, work_item.work_item_id)
+        assert loaded.status == WorkItemStatus.COMPLETED

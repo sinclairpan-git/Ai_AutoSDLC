@@ -66,6 +66,28 @@ class TestInitGate:
         result = InitGate().check({"root": str(tmp_path)})
         assert result.verdict == GateVerdict.RETRY
 
+    def test_fail_when_constitution_has_too_few_principles(
+        self, initialized_project_dir: Path
+    ) -> None:
+        constitution = (
+            initialized_project_dir / ".ai-sdlc" / "memory" / "constitution.md"
+        )
+        constitution.write_text("# Constitution\n- Principle 1\n", encoding="utf-8")
+
+        result = InitGate().check({"root": str(initialized_project_dir)})
+        assert result.verdict == GateVerdict.RETRY
+        assert any(c.name == "constitution_principles" and not c.passed for c in result.checks)
+
+    def test_fail_when_tech_stack_has_no_source(self, initialized_project_dir: Path) -> None:
+        tech_stack = (
+            initialized_project_dir / ".ai-sdlc" / "profiles" / "tech-stack.yml"
+        )
+        tech_stack.write_text("backend:\n  name: python\n", encoding="utf-8")
+
+        result = InitGate().check({"root": str(initialized_project_dir)})
+        assert result.verdict == GateVerdict.RETRY
+        assert any(c.name == "tech_stack_source" and not c.passed for c in result.checks)
+
 
 class TestRefineGate:
     def test_pass(self, tmp_path: Path) -> None:
@@ -89,6 +111,17 @@ class TestRefineGate:
         )
         result = RefineGate().check({"spec_dir": str(spec_dir)})
         assert result.verdict == GateVerdict.RETRY
+
+    def test_fail_when_user_story_has_no_acceptance_scenario(self, tmp_path: Path) -> None:
+        spec_dir = tmp_path / "specs"
+        spec_dir.mkdir()
+        (spec_dir / "spec.md").write_text(
+            "### 用户故事 1\n没有场景\n\n- **FR-001**: requirement\n",
+            encoding="utf-8",
+        )
+        result = RefineGate().check({"spec_dir": str(spec_dir)})
+        assert result.verdict == GateVerdict.RETRY
+        assert any(c.name == "acceptance_scenarios_present" and not c.passed for c in result.checks)
 
 
 class TestDesignGate:
@@ -160,6 +193,18 @@ class TestExecuteGate:
             {"tests_passed": False, "committed": True, "logged": True}
         )
         assert result.verdict == GateVerdict.RETRY
+
+    def test_fail_without_build_success(self) -> None:
+        result = ExecuteGate().check(
+            {
+                "tests_passed": True,
+                "build_succeeded": False,
+                "committed": True,
+                "logged": True,
+            }
+        )
+        assert result.verdict == GateVerdict.RETRY
+        assert any(c.name == "build_succeeded" and not c.passed for c in result.checks)
 
     def test_log_before_commit_pass(self) -> None:
         """BR-032: log timestamp <= commit timestamp."""

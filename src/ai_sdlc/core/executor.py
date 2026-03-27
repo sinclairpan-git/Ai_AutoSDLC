@@ -3,8 +3,15 @@
 from __future__ import annotations
 
 import logging
+from collections.abc import Callable
+from dataclasses import dataclass, field
 from pathlib import Path
+from typing import Any
 
+import yaml
+
+from ai_sdlc.branch.git_client import GitClient, GitError
+from ai_sdlc.generators.doc_gen import TasksParser
 from ai_sdlc.models.state import (
     ExecutionBatch,
     ExecutionPlan,
@@ -22,6 +29,44 @@ MAX_DEBUG_ROUNDS = 3
 MAX_CONSECUTIVE_HALTS = 2
 
 
+@dataclass(slots=True)
+class ExecutorSettings:
+    """Runtime settings loaded from pipeline.yml for execute stage behavior."""
+
+    max_tasks_per_batch: int = 12
+    auto_archive: bool = True
+    auto_commit: bool = True
+    max_debug_rounds_per_task: int = MAX_DEBUG_ROUNDS
+    consecutive_failure_limit: int = MAX_CONSECUTIVE_HALTS
+
+
+@dataclass(slots=True)
+class TaskExecutionOutcome:
+    """Normalized outcome returned by a task runner."""
+
+    status: TaskStatus
+    details: str = ""
+
+
+@dataclass(slots=True)
+class ExecutionResult:
+    """Top-level execute-stage result returned by Executor.run()."""
+
+    plan: ExecutionPlan
+    runtime: RuntimeState
+    log_path: Path
+    summary_path: Path
+    commit_hashes: list[str] = field(default_factory=list)
+    completed_batches: int = 0
+    last_log_timestamp: str = ""
+    last_commit_timestamp: str = ""
+    halted: bool = False
+    error: str = ""
+
+
+TaskRunner = Callable[[Task, RuntimeState], TaskStatus | TaskExecutionOutcome]
+
+
 class CircuitBreakerError(Exception):
     """Raised when consecutive task HALTs trigger the circuit breaker (BR-031)."""
 
@@ -37,11 +82,15 @@ class BatchExecutor:
         plan: ExecutionPlan,
         runtime: RuntimeState,
         *,
+        max_debug_rounds: int = MAX_DEBUG_ROUNDS,
+        max_consecutive_halts: int = MAX_CONSECUTIVE_HALTS,
         telemetry: RuntimeTelemetry | None = None,
         step_id: str | None = None,
     ) -> None:
         self._plan = plan
         self._runtime = runtime
+        self._max_debug_rounds = max_debug_rounds
+        self._max_consecutive_halts = max_consecutive_halts
         self._telemetry = telemetry
         self._step_id = step_id
         self._task_map: dict[str, Task] = {t.task_id: t for t in plan.tasks}
@@ -111,13 +160,18 @@ class BatchExecutor:
         tid = task.task_id
         rounds = self._runtime.debug_rounds.get(tid, 0) + 1
         self._runtime.debug_rounds[tid] = rounds
-        logger.warning("Task %s failed (round %d/%d)", tid, rounds, MAX_DEBUG_ROUNDS)
+        logger.warning(
+            "Task %s failed (round %d/%d)",
+            tid,
+            rounds,
+            self._max_debug_rounds,
+        )
 
-        if rounds >= MAX_DEBUG_ROUNDS:
+        if rounds >= self._max_debug_rounds:
             task.status = TaskStatus.HALTED
             self._runtime.consecutive_halts += 1
             logger.error("Task %s HALTED after %d debug rounds (BR-030)", tid, rounds)
-            if self._runtime.consecutive_halts >= MAX_CONSECUTIVE_HALTS:
+            if self._runtime.consecutive_halts >= self._max_consecutive_halts:
                 raise CircuitBreakerError(
                     f"Circuit breaker triggered: "
                     f"{self._runtime.consecutive_halts} "
@@ -226,3 +280,315 @@ class ExecutionLogger:
         """Append text to the log file."""
         with self._path.open("a", encoding="utf-8") as f:
             f.write(text)
+
+
+class Executor:
+    """Execute a tasks.md plan batch by batch and emit required close-out artifacts."""
+
+    def __init__(
+        self,
+        root: Path,
+        *,
+        task_runner: TaskRunner | None = None,
+        git_client_factory: type[GitClient] = GitClient,
+    ) -> None:
+        self.root = root.resolve()
+        self._task_runner = task_runner or self._default_task_runner
+        self._git_client_factory = git_client_factory
+        self._settings = self._load_settings()
+
+    def run(
+        self,
+        tasks_file: Path,
+        *,
+        runtime: RuntimeState | None = None,
+    ) -> ExecutionResult:
+        """Execute the given tasks file end-to-end and return close-out metadata."""
+        tasks_file = tasks_file.resolve()
+        spec_dir = tasks_file.parent
+        log_path = spec_dir / "task-execution-log.md"
+        summary_path = spec_dir / "development-summary.md"
+        legacy_log_path = spec_dir / "execution-log.md"
+        runtime_state = runtime or RuntimeState(current_stage="execute")
+        runtime_state.current_stage = "execute"
+
+        plan = TasksParser().parse(tasks_file)
+        plan = self._rebatch_plan(plan, self._settings.max_tasks_per_batch)
+        logger_ = ExecutionLogger(log_path)
+        executor = BatchExecutor(
+            plan,
+            runtime_state,
+            max_debug_rounds=self._settings.max_debug_rounds_per_task,
+            max_consecutive_halts=self._settings.consecutive_failure_limit,
+        )
+        task_map = {task.task_id: task for task in plan.tasks}
+
+        commit_hashes: list[str] = []
+        last_log_timestamp = ""
+        last_commit_timestamp = ""
+        halted = False
+        error = ""
+
+        while True:
+            batch = executor.get_current_batch()
+            if batch is None:
+                break
+            if batch.started_at is None:
+                batch.started_at = now_iso()
+
+            try:
+                for task_id in batch.tasks:
+                    task = task_map[task_id]
+                    if task.status in {
+                        TaskStatus.COMPLETED,
+                        TaskStatus.HALTED,
+                        TaskStatus.CANCELLED,
+                    }:
+                        continue
+                    last_log_timestamp = self._run_task_with_retry(
+                        executor,
+                        logger_,
+                        task,
+                    )
+                    self._sync_legacy_log(log_path, legacy_log_path)
+
+                next_batch = executor.advance_batch()
+                last_log_timestamp = logger_.log_batch(
+                    batch.batch_id,
+                    self._batch_summary(batch, plan),
+                )
+                self._sync_legacy_log(log_path, legacy_log_path)
+
+                if self._settings.auto_commit:
+                    commit_hashes.append(
+                        self._git_client_factory(self.root).add_and_commit(
+                            f"feat(execute): batch {batch.batch_id}"
+                        )
+                    )
+                    last_commit_timestamp = self._git_client_factory(
+                        self.root
+                    ).head_commit_timestamp()
+
+                if next_batch is None:
+                    self._write_summary(
+                        summary_path,
+                        plan=plan,
+                        runtime=runtime_state,
+                        commit_hashes=commit_hashes,
+                        halted=False,
+                        error="",
+                    )
+            except CircuitBreakerError as exc:
+                halted = True
+                error = str(exc)
+                self._write_summary(
+                    summary_path,
+                    plan=plan,
+                    runtime=runtime_state,
+                    commit_hashes=commit_hashes,
+                    halted=True,
+                    error=error,
+                )
+                break
+            except GitError as exc:
+                halted = True
+                error = str(exc)
+                self._write_summary(
+                    summary_path,
+                    plan=plan,
+                    runtime=runtime_state,
+                    commit_hashes=commit_hashes,
+                    halted=True,
+                    error=error,
+                )
+                break
+
+        if not summary_path.exists():
+            self._write_summary(
+                summary_path,
+                plan=plan,
+                runtime=runtime_state,
+                commit_hashes=commit_hashes,
+                halted=halted,
+                error=error,
+            )
+
+        return ExecutionResult(
+            plan=plan,
+            runtime=runtime_state,
+            log_path=log_path,
+            summary_path=summary_path,
+            commit_hashes=commit_hashes,
+            completed_batches=runtime_state.current_batch,
+            last_log_timestamp=last_log_timestamp,
+            last_commit_timestamp=last_commit_timestamp,
+            halted=halted,
+            error=error,
+        )
+
+    @staticmethod
+    def _default_task_runner(_task: Task, _runtime: RuntimeState) -> TaskStatus:
+        """Framework-native execution placeholder: mark task as completed."""
+        return TaskStatus.COMPLETED
+
+    def _run_task_with_retry(
+        self,
+        executor: BatchExecutor,
+        logger_: ExecutionLogger,
+        task: Task,
+    ) -> str:
+        """Run a single task until it reaches a terminal state."""
+        last_log_timestamp = ""
+        while task.status not in {
+            TaskStatus.COMPLETED,
+            TaskStatus.HALTED,
+            TaskStatus.CANCELLED,
+        }:
+            outcome = self._normalize_outcome(
+                self._task_runner(task, executor.runtime)
+            )
+            updated = executor.advance_task(task.task_id, outcome.status)
+            last_log_timestamp = logger_.log_task(
+                task.task_id,
+                updated.status.value,
+                details=outcome.details,
+            )
+            if updated.status == TaskStatus.FAILED:
+                continue
+        return last_log_timestamp
+
+    @staticmethod
+    def _normalize_outcome(
+        raw: TaskStatus | TaskExecutionOutcome,
+    ) -> TaskExecutionOutcome:
+        if isinstance(raw, TaskExecutionOutcome):
+            return raw
+        return TaskExecutionOutcome(status=raw)
+
+    def _load_settings(self) -> ExecutorSettings:
+        """Load execute-stage settings from project pipeline.yml."""
+        settings = ExecutorSettings()
+        cfg_candidates = [
+            self.root / ".ai-sdlc" / "config" / "pipeline.yml",
+            self.root / "config" / "pipeline.yml",
+        ]
+        cfg_path = next((path for path in cfg_candidates if path.exists()), None)
+        if cfg_path is None:
+            return settings
+
+        raw = yaml.safe_load(cfg_path.read_text(encoding="utf-8")) or {}
+        execute_stage: dict[str, Any] = {}
+        for stage in raw.get("stages", []):
+            if isinstance(stage, dict) and stage.get("id") == "execute":
+                execute_stage = stage
+                break
+        batch_cfg = execute_stage.get("batch", {})
+        circuit_cfg = raw.get("circuit_breaker", {})
+
+        settings.max_tasks_per_batch = self._int_or_default(
+            batch_cfg.get("max_tasks_per_batch"),
+            settings.max_tasks_per_batch,
+        )
+        settings.auto_archive = bool(batch_cfg.get("auto_archive", settings.auto_archive))
+        settings.auto_commit = bool(batch_cfg.get("auto_commit", settings.auto_commit))
+        settings.max_debug_rounds_per_task = self._int_or_default(
+            circuit_cfg.get("max_debug_rounds_per_task"),
+            settings.max_debug_rounds_per_task,
+        )
+        settings.consecutive_failure_limit = self._int_or_default(
+            circuit_cfg.get("consecutive_failure_limit"),
+            settings.consecutive_failure_limit,
+        )
+        return settings
+
+    @staticmethod
+    def _int_or_default(value: Any, default: int) -> int:
+        try:
+            parsed = int(value)
+        except (TypeError, ValueError):
+            return default
+        return parsed if parsed > 0 else default
+
+    @staticmethod
+    def _rebatch_plan(plan: ExecutionPlan, max_tasks_per_batch: int) -> ExecutionPlan:
+        """Split phase batches further when pipeline.yml limits batch size."""
+        if max_tasks_per_batch <= 0 or len(plan.tasks) <= max_tasks_per_batch:
+            return plan
+
+        phase_map: dict[int, list[str]] = {}
+        for task in plan.tasks:
+            phase_map.setdefault(task.phase, []).append(task.task_id)
+
+        batches: list[ExecutionBatch] = []
+        batch_id = 1
+        for phase in sorted(phase_map):
+            task_ids = phase_map[phase]
+            for idx in range(0, len(task_ids), max_tasks_per_batch):
+                batches.append(
+                    ExecutionBatch(
+                        batch_id=batch_id,
+                        phase=phase,
+                        tasks=task_ids[idx : idx + max_tasks_per_batch],
+                    )
+                )
+                batch_id += 1
+
+        plan.batches = batches
+        plan.total_batches = len(batches)
+        return plan
+
+    @staticmethod
+    def _batch_summary(batch: ExecutionBatch, plan: ExecutionPlan) -> str:
+        task_map = {task.task_id: task for task in plan.tasks}
+        completed = sum(
+            1
+            for task_id in batch.tasks
+            if task_map[task_id].status == TaskStatus.COMPLETED
+        )
+        halted = sum(
+            1 for task_id in batch.tasks if task_map[task_id].status == TaskStatus.HALTED
+        )
+        return (
+            f"Phase {batch.phase} complete: {completed}/{len(batch.tasks)} tasks "
+            f"completed, {halted} halted."
+        )
+
+    @staticmethod
+    def _sync_legacy_log(task_log: Path, legacy_log: Path) -> None:
+        """Keep legacy execution-log.md in sync until drift cleanup batch."""
+        legacy_log.write_text(task_log.read_text(encoding="utf-8"), encoding="utf-8")
+
+    def _write_summary(
+        self,
+        path: Path,
+        *,
+        plan: ExecutionPlan,
+        runtime: RuntimeState,
+        commit_hashes: list[str],
+        halted: bool,
+        error: str,
+    ) -> None:
+        completed_tasks = sum(
+            1 for task in plan.tasks if task.status == TaskStatus.COMPLETED
+        )
+        halted_tasks = sum(1 for task in plan.tasks if task.status == TaskStatus.HALTED)
+        lines = [
+            "# Development Summary",
+            "",
+            f"Status: {'halted' if halted else 'completed'}",
+            f"Total Tasks: {plan.total_tasks}",
+            f"Completed Tasks: {completed_tasks}",
+            f"Halted Tasks: {halted_tasks}",
+            f"Total Batches: {plan.total_batches}",
+            f"Completed Batches: {runtime.current_batch}",
+            f"Last Committed Task: {runtime.last_committed_task or '-'}",
+            "",
+            "## Commit Records",
+        ]
+        if commit_hashes:
+            lines.extend(f"- {commit_hash}" for commit_hash in commit_hashes)
+        else:
+            lines.append("- none")
+        if error:
+            lines.extend(["", "## Error", error])
+        path.write_text("\n".join(lines) + "\n", encoding="utf-8")
