@@ -220,6 +220,8 @@ def test_doctor_resolver_health_does_not_parse_trace_payloads(
 
     original_open = Path.open
     read_sizes: list[int] = []
+    read_call_count = 0
+    total_bytes_read = 0
 
     class _BoundedReadGuard:
         def __init__(self, handle, max_bytes: int) -> None:
@@ -237,10 +239,18 @@ def test_doctor_resolver_health_does_not_parse_trace_payloads(
             return self._handle.seek(*args, **kwargs)
 
         def read(self, size: int = -1):
+            nonlocal read_call_count, total_bytes_read
+            read_call_count += 1
+            if read_call_count > 1:
+                raise AssertionError("resolver tail probe performed multiple reads")
             if size < 0 or size > self._max_bytes:
                 raise AssertionError("resolver tail probe performed an unbounded read")
             read_sizes.append(size)
-            return self._handle.read(size)
+            data = self._handle.read(size)
+            total_bytes_read += len(data)
+            if total_bytes_read > self._max_bytes:
+                raise AssertionError("resolver tail probe exceeded total byte budget")
+            return data
 
         def __getattr__(self, name: str):
             return getattr(self._handle, name)
@@ -259,6 +269,8 @@ def test_doctor_resolver_health_does_not_parse_trace_payloads(
     assert result.exit_code == 0
     assert "supported source kind resolved" in result.output
     assert read_sizes
+    assert read_call_count == 1
+    assert total_bytes_read <= readiness._EVENT_TAIL_PROBE_BYTES
     assert max(read_sizes) <= readiness._EVENT_TAIL_PROBE_BYTES
 
 
