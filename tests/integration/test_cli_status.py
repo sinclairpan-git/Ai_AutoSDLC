@@ -179,7 +179,7 @@ class TestCliStatus:
         }
         assert telemetry["latest"]["artifacts"] == {
             "count": 5,
-            "sample_ids": ["art_03", "art_04", "art_05"],
+            "sample_ids": ["art_01", "art_02", "art_03"],
         }
         assert telemetry["latest"]["open_violations"] == {
             "count": 4,

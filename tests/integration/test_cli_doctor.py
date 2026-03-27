@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import time
 from pathlib import Path
 
@@ -64,3 +65,30 @@ def test_doctor_real_cli_path_does_not_mutate_project_config(
     after = config_path.read_text(encoding="utf-8") if config_path.exists() else None
     assert result.exit_code == 0
     assert after == before
+
+
+def test_doctor_resolver_health_exercises_supported_source_resolution(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    init_project(tmp_path)
+    events_path = (
+        tmp_path
+        / ".ai-sdlc"
+        / "local"
+        / "telemetry"
+        / "sessions"
+        / "gs_0123456789abcdef0123456789abcdef"
+        / "events.ndjson"
+    )
+    events_path.parent.mkdir(parents=True, exist_ok=True)
+    events_path.write_text(
+        json.dumps({"event_id": "evt_0123456789abcdef0123456789abcdef"}) + "\n",
+        encoding="utf-8",
+    )
+    monkeypatch.chdir(tmp_path)
+
+    result = runner.invoke(app, ["doctor"], catch_exceptions=False)
+
+    assert result.exit_code == 0
+    assert "resolver health" in result.output
+    assert "supported source kind resolved" in result.output

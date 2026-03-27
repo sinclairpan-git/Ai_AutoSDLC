@@ -141,7 +141,7 @@ def _load_latest_index_summaries(repo_root: Path) -> dict[str, Any]:
     return {
         "artifacts": {
             "count": len(artifact_ids),
-            "sample_ids": artifact_ids[-_SAMPLE_LIMIT:],
+            "sample_ids": artifact_ids[:_SAMPLE_LIMIT],
         },
         "open_violations": {
             "count": len(violation_ids),
@@ -262,14 +262,15 @@ def _writer_path_check(repo_root: Path) -> dict[str, str]:
 
 def _resolver_check(repo_root: Path) -> dict[str, str]:
     resolver = SourceResolver(TelemetryStore(repo_root))
-    try:
-        resolver.resolve("unsupported", "evt_0123456789abcdef0123456789abcdef")
-    except ValueError:
+    source_ref = _find_supported_event_source_ref(repo_root)
+    if source_ref is None:
         return {
             "name": "resolver health",
-            "state": "ok",
-            "detail": "resolver callable",
+            "state": "warn",
+            "detail": "no supported source fixture found",
         }
+    try:
+        resolver.resolve("event", source_ref)
     except Exception as exc:
         return {
             "name": "resolver health",
@@ -279,8 +280,20 @@ def _resolver_check(repo_root: Path) -> dict[str, str]:
     return {
         "name": "resolver health",
         "state": "ok",
-        "detail": "resolved",
+        "detail": "supported source kind resolved: event",
     }
+
+
+def _find_supported_event_source_ref(repo_root: Path) -> str | None:
+    local_root = telemetry_local_root(repo_root)
+    if not local_root.exists():
+        return None
+    for path in sorted(local_root.rglob("events.ndjson")):
+        for payload in _read_ndjson_file(path):
+            event_id = payload.get("event_id")
+            if isinstance(event_id, str) and event_id.startswith("evt_"):
+                return event_id
+    return None
 
 
 def _status_surface_check(repo_root: Path) -> dict[str, str]:
@@ -327,3 +340,22 @@ def _read_json_file(path: Path) -> dict[str, Any] | list[Any] | None:
         return json.loads(path.read_text(encoding="utf-8"))
     except Exception:
         return None
+
+
+def _read_ndjson_file(path: Path) -> list[dict[str, Any]]:
+    try:
+        lines = path.read_text(encoding="utf-8").splitlines()
+    except Exception:
+        return []
+
+    payloads: list[dict[str, Any]] = []
+    for line in lines:
+        if not line.strip():
+            continue
+        try:
+            payload = json.loads(line)
+        except Exception:
+            continue
+        if isinstance(payload, dict):
+            payloads.append(payload)
+    return payloads
