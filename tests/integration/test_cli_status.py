@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import os
 import time
 from pathlib import Path
 from unittest.mock import patch
@@ -212,3 +213,82 @@ def test_status_json_real_cli_path_does_not_mutate_project_config(
     after = config_path.read_text(encoding="utf-8") if config_path.exists() else None
     assert result.exit_code == 0
     assert after == before
+
+
+def test_status_json_latest_scope_ids_do_not_depend_on_manifest_key_order(
+    tmp_path: Path,
+) -> None:
+    init_project(tmp_path)
+    local_root = telemetry_local_root(tmp_path)
+    local_root.mkdir(parents=True, exist_ok=True)
+
+    gs_old = "gs_ffffffffffffffffffffffffffffffff"
+    gs_new = "gs_00000000000000000000000000000000"
+    wr_old = "wr_ffffffffffffffffffffffffffffffff"
+    wr_new = "wr_00000000000000000000000000000000"
+    st_old = "st_ffffffffffffffffffffffffffffffff"
+    st_new = "st_00000000000000000000000000000000"
+
+    manifest_path = local_root / "manifest.json"
+    # Simulate sort_keys=True output order (lexicographic), not registration order.
+    manifest_path.write_text(
+        json.dumps(
+            {
+                "version": 1,
+                "sessions": {
+                    gs_new: {"path": f"sessions/{gs_new}"},
+                    gs_old: {"path": f"sessions/{gs_old}"},
+                },
+                "runs": {
+                    wr_new: {"goal_session_id": gs_new, "path": f"sessions/{gs_new}/runs/{wr_new}"},
+                    wr_old: {"goal_session_id": gs_old, "path": f"sessions/{gs_old}/runs/{wr_old}"},
+                },
+                "steps": {
+                    st_new: {
+                        "goal_session_id": gs_new,
+                        "workflow_run_id": wr_new,
+                        "path": f"sessions/{gs_new}/runs/{wr_new}/steps/{st_new}",
+                    },
+                    st_old: {
+                        "goal_session_id": gs_old,
+                        "workflow_run_id": wr_old,
+                        "path": f"sessions/{gs_old}/runs/{wr_old}/steps/{st_old}",
+                    },
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    old_session_root = local_root / "sessions" / gs_old
+    new_session_root = local_root / "sessions" / gs_new
+    old_run_root = old_session_root / "runs" / wr_old
+    new_run_root = new_session_root / "runs" / wr_new
+    old_step_root = old_run_root / "steps" / st_old
+    new_step_root = new_run_root / "steps" / st_new
+    for path in (
+        old_session_root,
+        new_session_root,
+        old_run_root,
+        new_run_root,
+        old_step_root,
+        new_step_root,
+    ):
+        path.mkdir(parents=True, exist_ok=True)
+
+    old_ts = 1_710_000_000
+    new_ts = old_ts + 100
+    for path in (old_session_root, old_run_root, old_step_root):
+        os.utime(path, (old_ts, old_ts))
+    for path in (new_session_root, new_run_root, new_step_root):
+        os.utime(path, (new_ts, new_ts))
+
+    with patch("ai_sdlc.cli.commands.find_project_root", return_value=tmp_path):
+        result = runner.invoke(app, ["status", "--json"])
+
+    assert result.exit_code == 0
+    payload = json.loads(result.output)
+    current = payload["telemetry"]["current"]
+    assert current["sessions"]["latest_goal_session_id"] == gs_new
+    assert current["runs"]["latest_workflow_run_id"] == wr_new
+    assert current["steps"]["latest_step_id"] == st_new

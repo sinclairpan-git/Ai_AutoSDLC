@@ -144,3 +144,58 @@ def test_doctor_resolver_health_probe_is_bounded_without_recursive_store_scan(
 
     assert result.exit_code == 0
     assert "supported source kind resolved" in result.output
+
+
+def test_doctor_resolver_health_checks_multiple_manifest_listed_scope_paths(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    init_project(tmp_path)
+    local_root = telemetry_local_root(tmp_path)
+    local_root.mkdir(parents=True, exist_ok=True)
+
+    gs_valid = "gs_00000000000000000000000000000000"
+    gs_empty = "gs_ffffffffffffffffffffffffffffffff"
+    event_id = "evt_0123456789abcdef0123456789abcdef"
+
+    telemetry_manifest_path(tmp_path).write_text(
+        json.dumps(
+            {
+                "version": 1,
+                "sessions": {
+                    gs_valid: {"path": f"sessions/{gs_valid}"},
+                    gs_empty: {"path": f"sessions/{gs_empty}"},
+                },
+                "runs": {},
+                "steps": {},
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    valid_events = local_root / "sessions" / gs_valid / "events.ndjson"
+    valid_events.parent.mkdir(parents=True, exist_ok=True)
+    valid_events.write_text(json.dumps({"event_id": event_id}) + "\n", encoding="utf-8")
+
+    empty_events = local_root / "sessions" / gs_empty / "events.ndjson"
+    empty_events.parent.mkdir(parents=True, exist_ok=True)
+    empty_events.write_text("", encoding="utf-8")
+
+    indexes_root = telemetry_indexes_root(tmp_path)
+    indexes_root.mkdir(parents=True, exist_ok=True)
+    (indexes_root / "timeline-cursor.json").write_text(
+        json.dumps(
+            {
+                "event_count": 1,
+                "last_event_id": event_id,
+                "last_timestamp": "2026-03-27T09:00:00Z",
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    monkeypatch.chdir(tmp_path)
+    result = runner.invoke(app, ["doctor"], catch_exceptions=False)
+
+    assert result.exit_code == 0
+    assert "resolver health" in result.output
+    assert "supported source kind resolved" in result.output

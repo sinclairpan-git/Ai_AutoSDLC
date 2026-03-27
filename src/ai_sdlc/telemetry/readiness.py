@@ -18,6 +18,7 @@ from ai_sdlc.telemetry.resolver import SourceResolver
 from ai_sdlc.telemetry.store import TelemetryStore
 
 _SAMPLE_LIMIT = 3
+_MAX_RESOLVER_SCOPE_PROBES = 32
 
 
 def build_status_json_surface(repo_root: Path) -> dict[str, Any]:
@@ -48,13 +49,19 @@ def build_status_json_surface(repo_root: Path) -> dict[str, Any]:
             "current": {
                 "manifest_version": manifest.get("version"),
                 "sessions": _current_bucket_summary(
-                    manifest.get("sessions", {}), "latest_goal_session_id"
+                    repo_root,
+                    manifest.get("sessions", {}),
+                    "latest_goal_session_id",
                 ),
                 "runs": _current_bucket_summary(
-                    manifest.get("runs", {}), "latest_workflow_run_id"
+                    repo_root,
+                    manifest.get("runs", {}),
+                    "latest_workflow_run_id",
                 ),
                 "steps": _current_bucket_summary(
-                    manifest.get("steps", {}), "latest_step_id"
+                    repo_root,
+                    manifest.get("steps", {}),
+                    "latest_step_id",
                 ),
             },
             "latest": _load_latest_index_summaries(repo_root),
@@ -115,10 +122,32 @@ def build_doctor_readiness_items(repo_root: Path | None) -> list[dict[str, str]]
     ]
 
 
-def _current_bucket_summary(values: dict[str, Any], latest_key_name: str) -> dict[str, Any]:
-    ids = list(values.keys())
-    latest_id = ids[-1] if ids else None
-    return {"count": len(ids), latest_key_name: latest_id}
+def _current_bucket_summary(
+    repo_root: Path,
+    values: dict[str, Any],
+    latest_key_name: str,
+) -> dict[str, Any]:
+    latest_id = _latest_bucket_id(repo_root, values)
+    return {"count": len(values), latest_key_name: latest_id}
+
+
+def _latest_bucket_id(repo_root: Path, values: dict[str, Any]) -> str | None:
+    if not values:
+        return None
+    scored: list[tuple[str, int]] = []
+    local_root = telemetry_local_root(repo_root)
+    for object_id, entry in values.items():
+        if not isinstance(object_id, str) or not isinstance(entry, dict):
+            continue
+        path_value = entry.get("path")
+        if not isinstance(path_value, str):
+            continue
+        scope_root = local_root / path_value
+        scored.append((object_id, _path_mtime_ns(scope_root)))
+    if not scored:
+        return None
+    # Prefer most recently touched scope root; tie-break by id for stable output.
+    return max(scored, key=lambda item: (item[1], item[0]))[0]
 
 
 def _load_latest_index_summaries(repo_root: Path) -> dict[str, Any]:
@@ -261,37 +290,46 @@ def _writer_path_check(repo_root: Path) -> dict[str, str]:
 
 
 def _resolver_check(repo_root: Path) -> dict[str, str]:
-    candidate = _resolver_event_probe_candidate(repo_root)
-    if candidate is None:
+    candidates = _resolver_event_probe_candidates(repo_root)
+    if not candidates:
         return {
             "name": "resolver health",
             "state": "warn",
             "detail": "no supported source fixture found",
         }
-    events_path, source_ref = candidate
-    resolver = SourceResolver(_BoundedEventResolverStore(events_path))
-    try:
-        resolver.resolve("event", source_ref)
-    except Exception as exc:
+    first_error: Exception | None = None
+    for events_path, source_ref in candidates:
+        resolver = SourceResolver(_BoundedEventResolverStore(events_path))
+        try:
+            resolver.resolve("event", source_ref)
+        except Exception as exc:
+            if first_error is None:
+                first_error = exc
+            continue
+        return {
+            "name": "resolver health",
+            "state": "ok",
+            "detail": "supported source kind resolved: event",
+        }
+    if first_error is not None:
         return {
             "name": "resolver health",
             "state": "error",
-            "detail": str(exc),
+            "detail": str(first_error),
         }
     return {
         "name": "resolver health",
-        "state": "ok",
-        "detail": "supported source kind resolved: event",
+        "state": "warn",
+        "detail": "no supported source fixture found",
     }
 
 
-def _resolver_event_probe_candidate(repo_root: Path) -> tuple[Path, str] | None:
+def _resolver_event_probe_candidates(repo_root: Path) -> list[tuple[Path, str]]:
     manifest_state = _load_manifest_state(repo_root)
     if manifest_state["state"] != "loaded":
-        return None
+        return []
 
     manifest = manifest_state["manifest"]
-    local_root = telemetry_local_root(repo_root)
     timeline_payload = _read_json_file(telemetry_indexes_root(repo_root) / "timeline-cursor.json")
     timeline_event_id = None
     if isinstance(timeline_payload, dict):
@@ -299,37 +337,43 @@ def _resolver_event_probe_candidate(repo_root: Path) -> tuple[Path, str] | None:
         if isinstance(value, str):
             timeline_event_id = value
 
-    candidate_roots = _manifest_candidate_scope_roots(manifest)
-    for scope_root in candidate_roots:
-        events_path = local_root / scope_root / "events.ndjson"
-        if not events_path.exists():
-            continue
-        if timeline_event_id is not None and _find_event_payload_in_file(events_path, timeline_event_id) is not None:
-            return events_path, timeline_event_id
+    candidate_paths = _manifest_events_paths(repo_root, manifest)[:_MAX_RESOLVER_SCOPE_PROBES]
+    candidates: list[tuple[Path, str]] = []
+    for events_path in candidate_paths:
+        candidate_ids: list[str] = []
+        if timeline_event_id is not None:
+            if _find_event_payload_in_file(events_path, timeline_event_id) is not None:
+                candidate_ids.append(timeline_event_id)
         fallback_event_id = _first_event_id_in_file(events_path)
-        if fallback_event_id is not None:
-            return events_path, fallback_event_id
-    return None
+        if fallback_event_id is not None and fallback_event_id not in candidate_ids:
+            candidate_ids.append(fallback_event_id)
+        for source_ref in candidate_ids:
+            candidates.append((events_path, source_ref))
+    return candidates
 
 
-def _manifest_candidate_scope_roots(manifest: dict[str, Any]) -> list[str]:
-    candidates: list[str] = []
+def _manifest_events_paths(repo_root: Path, manifest: dict[str, Any]) -> list[Path]:
+    local_root = telemetry_local_root(repo_root)
+    scored_paths: list[tuple[int, Path]] = []
+    seen: set[str] = set()
     for field_name in ("steps", "runs", "sessions"):
         bucket = manifest.get(field_name)
-        if not isinstance(bucket, dict) or not bucket:
+        if not isinstance(bucket, dict):
             continue
-        last_value = next(reversed(bucket.values()))
-        if not isinstance(last_value, dict):
-            continue
-        path_value = last_value.get("path")
-        if isinstance(path_value, str):
-            candidates.append(path_value)
-    # Preserve priority but avoid duplicated checks.
-    deduped: list[str] = []
-    for path_value in candidates:
-        if path_value not in deduped:
-            deduped.append(path_value)
-    return deduped
+        for entry in bucket.values():
+            if not isinstance(entry, dict):
+                continue
+            path_value = entry.get("path")
+            if not isinstance(path_value, str):
+                continue
+            events_path = local_root / path_value / "events.ndjson"
+            path_key = events_path.as_posix()
+            if path_key in seen:
+                continue
+            seen.add(path_key)
+            scored_paths.append((_path_mtime_ns(events_path), events_path))
+    scored_paths.sort(key=lambda item: (item[0], item[1].as_posix()), reverse=True)
+    return [path for _, path in scored_paths]
 
 
 class _BoundedEventResolverStore:
@@ -381,6 +425,13 @@ def _iter_ndjson_dicts(path: Path) -> list[dict[str, Any]]:
     except Exception:
         return payloads
     return payloads
+
+
+def _path_mtime_ns(path: Path) -> int:
+    try:
+        return path.stat().st_mtime_ns
+    except OSError:
+        return -1
 
 
 def _status_surface_check(repo_root: Path) -> dict[str, str]:
