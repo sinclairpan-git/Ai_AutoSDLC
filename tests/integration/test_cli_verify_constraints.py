@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 from unittest.mock import patch
 
@@ -141,12 +142,63 @@ class TestCliVerifyConstraints:
 
     def test_json_output(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
         init_project(tmp_path)
+        _minimal_constitution(tmp_path)
+        save_checkpoint(
+            tmp_path,
+            Checkpoint(
+                current_stage="init",
+                feature=FeatureInfo(
+                    id="001",
+                    spec_dir="specs/missing-wi",
+                    design_branch="d",
+                    feature_branch="f",
+                    current_branch="main",
+                ),
+            ),
+        )
         monkeypatch.chdir(tmp_path)
 
         result = runner.invoke(app, ["verify", "constraints", "--json"])
         assert result.exit_code == 1
-        assert '"ok"' in result.output
-        assert "blockers" in result.output
+        payload = json.loads(result.output)
+        assert set(payload) >= {"ok", "blockers", "root"}
+        session_id = payload["telemetry"]["goal_session_id"]
+        events_path = (
+            tmp_path
+            / ".ai-sdlc"
+            / "local"
+            / "telemetry"
+            / "sessions"
+            / session_id
+            / "events.ndjson"
+        )
+        lines = [
+            json.loads(line)
+            for line in events_path.read_text(encoding="utf-8").splitlines()
+            if line.strip()
+        ]
+        assert lines[-1]["scope_level"] == "session"
+        assert lines[-1]["status"] == "failed"
+        assert lines[-1]["trace_layer"] == "workflow"
+        telemetry_root = tmp_path / ".ai-sdlc" / "local" / "telemetry"
+        assert telemetry_root.is_dir()
+        assert list(telemetry_root.rglob("events.ndjson"))
+        assert list(telemetry_root.rglob("evidence.ndjson"))
+        assert list(telemetry_root.rglob("evaluations/*.json"))
+        assert list(telemetry_root.rglob("violations/*.json"))
+
+    def test_json_output_outside_project_includes_root(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.chdir(tmp_path)
+
+        result = runner.invoke(app, ["verify", "constraints", "--json"])
+        assert result.exit_code == 1
+        payload = json.loads(result.output)
+        assert payload["ok"] is False
+        assert payload["blockers"] == []
+        assert "root" in payload
+        assert payload["root"] is None
 
     def test_exit_1_when_skip_registry_unmapped(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch

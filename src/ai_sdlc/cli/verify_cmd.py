@@ -7,7 +7,20 @@ import json
 import typer
 from rich.console import Console
 
-from ai_sdlc.core.verify_constraints import collect_constraint_blockers
+from ai_sdlc.core.verify_constraints import build_constraint_report
+from ai_sdlc.telemetry.contracts import Evidence, TelemetryEvent
+from ai_sdlc.telemetry.detectors import escalate_hard_gate_violation
+from ai_sdlc.telemetry.evaluators import build_verify_constraint_evaluation
+from ai_sdlc.telemetry.enums import (
+    ActorType,
+    CaptureMode,
+    Confidence,
+    ScopeLevel,
+    TelemetryEventStatus,
+    TraceLayer,
+)
+from ai_sdlc.telemetry.generators import constraint_report_digest, constraint_report_locator
+from ai_sdlc.telemetry.runtime import RuntimeTelemetry
 from ai_sdlc.utils.helpers import find_project_root
 
 verify_app = typer.Typer(
@@ -42,22 +55,85 @@ def verify_constraints(
     if root is None:
         msg = "Not inside an AI-SDLC project (.ai-sdlc/ not found)."
         if as_json:
-            console.print(
-                json.dumps({"ok": False, "error": msg, "blockers": []}, indent=2)
+            typer.echo(
+                json.dumps({"ok": False, "error": msg, "blockers": [], "root": None}, indent=2)
             )
         else:
             console.print(f"[red]{msg}[/red]")
         raise typer.Exit(code=1)
 
-    blockers = collect_constraint_blockers(root)
+    report = build_constraint_report(root)
+    blockers = list(report.blockers)
+    telemetry = RuntimeTelemetry(root)
+    goal_session_id = telemetry.open_session()
+    evaluation_event = TelemetryEvent(
+        scope_level=ScopeLevel.SESSION,
+        goal_session_id=goal_session_id,
+        trace_layer=TraceLayer.EVALUATION,
+        actor_type=ActorType.FRAMEWORK_RUNTIME,
+        capture_mode=CaptureMode.AUTO,
+        confidence=Confidence.HIGH,
+        status=(
+            TelemetryEventStatus.FAILED
+            if blockers
+            else TelemetryEventStatus.SUCCEEDED
+        ),
+    )
+    telemetry.writer.write_event(evaluation_event)
+
+    report_digest = constraint_report_digest(report)
+    report_locator = constraint_report_locator(report)
+    report_evidence = Evidence(
+        scope_level=ScopeLevel.SESSION,
+        goal_session_id=goal_session_id,
+        capture_mode=CaptureMode.AUTO,
+        confidence=Confidence.HIGH,
+        locator=report_locator,
+        digest=report_digest,
+    )
+    telemetry.writer.write_evidence(report_evidence)
+
+    evaluation = build_verify_constraint_evaluation(
+        report,
+        source_event=evaluation_event,
+        source_evidence=report_evidence,
+    )
+    telemetry.writer.write_evaluation(evaluation)
+
+    violation = escalate_hard_gate_violation(
+        report,
+        evaluation=evaluation,
+        source_event=evaluation_event,
+        source_evidence=report_evidence,
+    )
+    if violation is not None:
+        telemetry.writer.write_violation(violation)
+
+    telemetry.close_session(
+        goal_session_id,
+        status=(
+            TelemetryEventStatus.FAILED
+            if blockers
+            else TelemetryEventStatus.SUCCEEDED
+        ),
+    )
 
     if as_json:
-        console.print(
+        typer.echo(
             json.dumps(
                 {
                     "ok": len(blockers) == 0,
                     "blockers": blockers,
                     "root": str(root),
+                    "telemetry": {
+                        "goal_session_id": goal_session_id,
+                        "event_id": evaluation_event.event_id,
+                        "evidence_id": report_evidence.evidence_id,
+                        "evaluation_id": evaluation.evaluation_id,
+                        "violation_id": violation.violation_id if violation is not None else None,
+                        "report_digest": report_digest,
+                        "report_locator": report_locator,
+                    },
                 },
                 indent=2,
             )

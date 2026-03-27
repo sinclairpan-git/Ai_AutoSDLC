@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 import re
 from pathlib import Path
 
@@ -28,6 +29,26 @@ FRAMEWORK_DEFECT_BACKLOG_REQUIRED_FIELDS = (
     "可验证成功标准",
     "是否需要回归测试补充",
 )
+
+
+@dataclass(frozen=True, slots=True)
+class ConstraintReport:
+    """Structured verify-constraints result for telemetry evidence capture."""
+
+    root: str
+    source_name: str
+    blockers: tuple[str, ...]
+    coverage_gaps: tuple[str, ...] = ()
+    evidence_kinds: tuple[str, ...] = ("event", "structured_report")
+
+
+def build_constraint_report(root: Path) -> ConstraintReport:
+    """Build a structured report for verify constraints."""
+    return ConstraintReport(
+        root=str(root),
+        source_name="verify constraints",
+        blockers=tuple(collect_constraint_blockers(root)),
+    )
 
 
 def collect_constraint_blockers(root: Path) -> list[str]:
