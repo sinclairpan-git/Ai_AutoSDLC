@@ -86,7 +86,7 @@ class CCPRegistry(BaseModel):
     control_points: dict[str, CriticalControlPoint] = Field(default_factory=dict)
 
     @classmethod
-    def from_config(cls, config: dict[str, Any] | None = None) -> "CCPRegistry":
+    def from_config(cls, config: dict[str, Any] | None = None) -> CCPRegistry:
         payload = {
             "control_points": {
                 name: dict(values) for name, values in _DEFAULT_CONTROL_POINTS.items()

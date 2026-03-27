@@ -2,10 +2,17 @@
 
 from __future__ import annotations
 
-from typing import Any, Mapping
+from collections.abc import Mapping
+from typing import Any
 
 from ai_sdlc.telemetry.clock import utc_now_z
-from ai_sdlc.telemetry.contracts import Artifact, Evaluation, Evidence, TelemetryEvent, Violation
+from ai_sdlc.telemetry.contracts import (
+    Artifact,
+    Evaluation,
+    Evidence,
+    TelemetryEvent,
+    Violation,
+)
 from ai_sdlc.telemetry.enums import (
     ActorType,
     ArtifactRole,
@@ -13,17 +20,17 @@ from ai_sdlc.telemetry.enums import (
     ArtifactType,
     CaptureMode,
     Confidence,
-    TraceLayer,
     TelemetryEventStatus,
+    TraceLayer,
 )
 from ai_sdlc.telemetry.generators import (
     build_audit_report,
-    control_point_evidence_digest,
-    control_point_locator,
     build_evaluation_coverage_view,
     build_evaluation_rollup,
     build_evidence_quality_view,
     build_violation_rollup,
+    control_point_evidence_digest,
+    control_point_locator,
 )
 from ai_sdlc.telemetry.resolver import SourceResolver
 from ai_sdlc.telemetry.store import TelemetryStore

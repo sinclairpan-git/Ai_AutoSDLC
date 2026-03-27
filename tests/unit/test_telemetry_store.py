@@ -7,7 +7,14 @@ from pathlib import Path
 
 import pytest
 
-from ai_sdlc.telemetry.contracts import Artifact, Evaluation, Evidence, ScopeLevel, TelemetryEvent, Violation
+from ai_sdlc.telemetry.contracts import (
+    Artifact,
+    Evaluation,
+    Evidence,
+    ScopeLevel,
+    TelemetryEvent,
+    Violation,
+)
 from ai_sdlc.telemetry.enums import (
     ArtifactRole,
     ArtifactStatus,
@@ -15,7 +22,6 @@ from ai_sdlc.telemetry.enums import (
     EvaluationResult,
     EvaluationStatus,
     TraceLayer,
-    ViolationStatus,
 )
 from ai_sdlc.telemetry.paths import (
     telemetry_indexes_root,

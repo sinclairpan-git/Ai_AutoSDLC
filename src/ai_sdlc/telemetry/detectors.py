@@ -5,12 +5,12 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from ai_sdlc.core.verify_constraints import ConstraintReport
-from ai_sdlc.telemetry.contracts import Evidence, Evaluation, TelemetryEvent, Violation
+from ai_sdlc.telemetry.contracts import Evaluation, Evidence, TelemetryEvent, Violation
 from ai_sdlc.telemetry.enums import (
     CaptureMode,
+    EvaluationResult,
     RootCauseClass,
     ScopeLevel,
-    EvaluationResult,
     ViolationRiskLevel,
     ViolationStatus,
 )

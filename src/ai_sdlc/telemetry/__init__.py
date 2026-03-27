@@ -5,8 +5,8 @@ from ai_sdlc.telemetry.contracts import (
     APPEND_ONLY_OBJECTS,
     MUTABLE_OBJECTS,
     Artifact,
-    Evidence,
     Evaluation,
+    Evidence,
     ScopeLevel,
     TelemetryEvent,
     TelemetryObjectCategory,
@@ -21,9 +21,9 @@ from ai_sdlc.telemetry.enums import (
     ArtifactType,
     CaptureMode,
     Confidence,
-    EvidenceStatus,
     EvaluationResult,
     EvaluationStatus,
+    EvidenceStatus,
     RootCauseClass,
     SuggestedChangeLayer,
     TelemetryEventStatus,
@@ -35,8 +35,8 @@ from ai_sdlc.telemetry.ids import (
     ID_PREFIXES,
     new_artifact_id,
     new_evaluation_id,
-    new_evidence_id,
     new_event_id,
+    new_evidence_id,
     new_goal_session_id,
     new_prefixed_id,
     new_step_id,
@@ -44,7 +44,11 @@ from ai_sdlc.telemetry.ids import (
     new_workflow_run_id,
     validate_telemetry_id,
 )
-from ai_sdlc.telemetry.registry import CCPRegistry, CriticalControlPoint, build_default_ccp_registry
+from ai_sdlc.telemetry.registry import (
+    CCPRegistry,
+    CriticalControlPoint,
+    build_default_ccp_registry,
+)
 
 __all__ = [
     "APPEND_ONLY_OBJECTS",

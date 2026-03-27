@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import pytest
 from pydantic import ValidationError
@@ -12,8 +12,8 @@ from ai_sdlc.telemetry.contracts import (
     APPEND_ONLY_OBJECTS,
     MUTABLE_OBJECTS,
     Artifact,
-    Evidence,
     Evaluation,
+    Evidence,
     ScopeLevel,
     TelemetryEvent,
     TelemetryObjectCategory,
@@ -28,23 +28,25 @@ from ai_sdlc.telemetry.enums import (
     ArtifactType,
     CaptureMode,
     Confidence,
-    EvidenceStatus,
     EvaluationResult,
     EvaluationStatus,
+    EvidenceStatus,
     RootCauseClass,
-    ScopeLevel as ScopeLevelEnum,
     SuggestedChangeLayer,
     TelemetryEventStatus,
     TraceLayer,
     ViolationRiskLevel,
     ViolationStatus,
 )
+from ai_sdlc.telemetry.enums import (
+    ScopeLevel as ScopeLevelEnum,
+)
 from ai_sdlc.telemetry.ids import (
     ID_PREFIXES,
     new_artifact_id,
     new_evaluation_id,
-    new_evidence_id,
     new_event_id,
+    new_evidence_id,
     new_goal_session_id,
     new_step_id,
     new_violation_id,
@@ -490,12 +492,12 @@ def test_rfc3339_utc_z_timestamps() -> None:
     assert timestamp.endswith("Z")
     assert "+00:00" not in timestamp
     parsed = datetime.fromisoformat(timestamp.removesuffix("Z") + "+00:00")
-    assert parsed.tzinfo == timezone.utc
+    assert parsed.tzinfo == UTC
 
 
 def test_append_only_vs_mutable_object_categories() -> None:
-    assert APPEND_ONLY_OBJECTS == frozenset({"telemetry_event", "evidence"})
-    assert MUTABLE_OBJECTS == frozenset({"evaluation", "violation", "artifact"})
+    assert frozenset({"telemetry_event", "evidence"}) == APPEND_ONLY_OBJECTS
+    assert frozenset({"evaluation", "violation", "artifact"}) == MUTABLE_OBJECTS
     assert TelemetryEvent.object_category is TelemetryObjectCategory.APPEND_ONLY
     assert Evidence.object_category is TelemetryObjectCategory.APPEND_ONLY
     assert Evaluation.object_category is TelemetryObjectCategory.MUTABLE

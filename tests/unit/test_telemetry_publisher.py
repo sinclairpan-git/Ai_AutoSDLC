@@ -5,7 +5,13 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from ai_sdlc.telemetry.contracts import Artifact, Evaluation, Evidence, TelemetryEvent, Violation
+from ai_sdlc.telemetry.contracts import (
+    Artifact,
+    Evaluation,
+    Evidence,
+    TelemetryEvent,
+    Violation,
+)
 from ai_sdlc.telemetry.enums import (
     ArtifactRole,
     ArtifactStatus,

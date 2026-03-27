@@ -5,13 +5,13 @@ from __future__ import annotations
 from collections.abc import Iterable, Mapping, Sequence
 
 from ai_sdlc.core.verify_constraints import ConstraintReport
-from ai_sdlc.telemetry.contracts import Evidence, Evaluation, TelemetryEvent
+from ai_sdlc.telemetry.contracts import Evaluation, Evidence, TelemetryEvent
 from ai_sdlc.telemetry.enums import (
     ArtifactRole,
     ArtifactType,
-    EvidenceStatus,
     EvaluationResult,
     EvaluationStatus,
+    EvidenceStatus,
     RootCauseClass,
     SuggestedChangeLayer,
     TelemetryEventStatus,

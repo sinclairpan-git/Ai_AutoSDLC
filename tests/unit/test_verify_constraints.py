@@ -5,7 +5,10 @@ from __future__ import annotations
 from pathlib import Path
 
 from ai_sdlc.context.state import save_checkpoint
-from ai_sdlc.core.verify_constraints import build_constraint_report, collect_constraint_blockers
+from ai_sdlc.core.verify_constraints import (
+    build_constraint_report,
+    collect_constraint_blockers,
+)
 from ai_sdlc.models.state import Checkpoint, FeatureInfo
 
 

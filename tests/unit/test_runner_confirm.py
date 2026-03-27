@@ -9,8 +9,8 @@ from unittest.mock import MagicMock
 import pytest
 
 from ai_sdlc.core.runner import PipelineHaltError, SDLCRunner
-from ai_sdlc.telemetry.paths import telemetry_local_root, telemetry_manifest_path
 from ai_sdlc.models.gate import GateCheck, GateResult, GateVerdict
+from ai_sdlc.telemetry.paths import telemetry_local_root, telemetry_manifest_path
 
 
 def _read_json(path: Path) -> dict:

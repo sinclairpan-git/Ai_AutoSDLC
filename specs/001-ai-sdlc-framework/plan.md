@@ -326,12 +326,15 @@ tests/
 | Checkpoint 恢复一致 | 单元测试保存/加载 | 流程测试中断恢复 |
 | Gate 检查不可绕过 | 单元测试 PASS/RETRY/HALT | 流程测试跳阶段尝试 |
 
-## 开放问题
+## 开放问题（已收敛）
 
 | 问题 | 状态 | 阻塞阶段 |
 |------|------|----------|
-| Rich 面板在 CI 环境的降级策略 | 待定 | Phase 9 |
-| 产品内置规则文件的初始内容 | 待定 | Phase 8 |
+| Rich 面板在 CI 环境的降级策略 | 已收敛：CI / 非交互环境不依赖 Rich 交互；确认提示仅在 TTY 开启，机器消费走 `--json` + 退出码，静态 Panel/Table 允许退化为普通文本输出 | 不阻塞 |
+| 产品内置规则文件的初始内容 | 已收敛：以内置 `src/ai_sdlc/rules/*.md` 为 P0 初始规则集，激活关系由 `src/ai_sdlc/rules/__init__.py` 与 `src/ai_sdlc/stages/*.yaml` 锁定 | 不阻塞 |
+
+- Rich / CI 决策依据：`src/ai_sdlc/cli/commands.py` 仅在 TTY 下触发 `typer.confirm`；`status --json` 与 `doctor` 作为只读机器/运维面保持有界输出。
+- 内置规则初始集：`pipeline`、`prd-guidance`、`scenario-routing`、`batch-protocol`、`tdd`、`debugging`、`code-review`、`quality-gate`、`verification`、`git-branch`、`multi-agent`、`auto-decision`、`brownfield-corpus`。
 
 ## 实施顺序建议
 

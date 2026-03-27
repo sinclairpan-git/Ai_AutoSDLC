@@ -2,19 +2,19 @@
 
 from __future__ import annotations
 
-from pathlib import Path
-
 from ai_sdlc.core.verify_constraints import ConstraintReport
-from ai_sdlc.telemetry.contracts import Artifact, Evidence, Evaluation, TelemetryEvent, Violation
+from ai_sdlc.telemetry.contracts import (
+    Artifact,
+    Evaluation,
+    Evidence,
+    TelemetryEvent,
+    Violation,
+)
 from ai_sdlc.telemetry.detectors import (
     ViolationHit,
     escalate_hard_gate_violation,
     merge_violation_hits,
     violation_allows_inferred_only_closure,
-)
-from ai_sdlc.telemetry.evaluators import (
-    build_verify_constraint_evaluation,
-    calculate_ccp_coverage_gaps,
 )
 from ai_sdlc.telemetry.enums import (
     ArtifactRole,
@@ -31,7 +31,14 @@ from ai_sdlc.telemetry.enums import (
     ViolationRiskLevel,
     ViolationStatus,
 )
-from ai_sdlc.telemetry.generators import control_point_evidence_digest, control_point_locator
+from ai_sdlc.telemetry.evaluators import (
+    build_verify_constraint_evaluation,
+    calculate_ccp_coverage_gaps,
+)
+from ai_sdlc.telemetry.generators import (
+    control_point_evidence_digest,
+    control_point_locator,
+)
 from ai_sdlc.telemetry.registry import (
     CCPRegistry,
     CriticalControlPoint,

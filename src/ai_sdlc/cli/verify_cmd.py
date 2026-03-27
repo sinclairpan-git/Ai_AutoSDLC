@@ -10,7 +10,6 @@ from rich.console import Console
 from ai_sdlc.core.verify_constraints import build_constraint_report
 from ai_sdlc.telemetry.contracts import Evidence, TelemetryEvent
 from ai_sdlc.telemetry.detectors import escalate_hard_gate_violation
-from ai_sdlc.telemetry.evaluators import build_verify_constraint_evaluation
 from ai_sdlc.telemetry.enums import (
     ActorType,
     CaptureMode,
@@ -19,7 +18,11 @@ from ai_sdlc.telemetry.enums import (
     TelemetryEventStatus,
     TraceLayer,
 )
-from ai_sdlc.telemetry.generators import constraint_report_digest, constraint_report_locator
+from ai_sdlc.telemetry.evaluators import build_verify_constraint_evaluation
+from ai_sdlc.telemetry.generators import (
+    constraint_report_digest,
+    constraint_report_locator,
+)
 from ai_sdlc.telemetry.runtime import RuntimeTelemetry
 from ai_sdlc.utils.helpers import find_project_root
 

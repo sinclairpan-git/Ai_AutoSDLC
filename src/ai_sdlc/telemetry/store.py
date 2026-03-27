@@ -8,7 +8,14 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from ai_sdlc.telemetry.contracts import Artifact, Evaluation, Evidence, ScopeLevel, TelemetryEvent, Violation
+from ai_sdlc.telemetry.contracts import (
+    Artifact,
+    Evaluation,
+    Evidence,
+    ScopeLevel,
+    TelemetryEvent,
+    Violation,
+)
 from ai_sdlc.telemetry.paths import (
     run_root,
     session_root,

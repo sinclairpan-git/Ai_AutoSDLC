@@ -4,9 +4,8 @@ from __future__ import annotations
 
 import hashlib
 import json
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from dataclasses import asdict
-from typing import Sequence
 
 from ai_sdlc.core.verify_constraints import ConstraintReport
 from ai_sdlc.telemetry.contracts import Evaluation, Violation

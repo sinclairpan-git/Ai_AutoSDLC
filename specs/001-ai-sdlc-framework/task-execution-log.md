@@ -805,3 +805,87 @@
 - **提交哈希**：`218bc79f45c8090764c9d823f65372b2564fa5cf`（`chore(release): bump ai-sdlc to 0.2.4`）
 - **远端标签**：`v0.2.4` 已推送至 `origin`
 - **是否继续下一批**：按需（PyPI 发布、对外公告；非本仓库强制门）
+
+### Batch 2026-03-27-016 | 框架收口：Telemetry lint 清零 + 开放问题收敛 + Task 6.15 指针补齐
+
+#### 2.1 批次范围
+
+- **覆盖内容**：清理 telemetry / CLI / tests 的 `ruff` 遗留问题；收敛 [`plan.md`](plan.md) 中两个仍标记为“待定”的开放问题；在 [`tasks.md`](tasks.md) 为 **Task 6.15** 增补显式收口说明。
+- **覆盖阶段**：VERIFY / CLOSE（工程卫生 + 规格/计划文档收口）。
+- **预读范围**：`src/ai_sdlc/rules/batch-protocol.md`、`templates/execution-log-template.md`、`specs/001-ai-sdlc-framework/plan.md`、`specs/001-ai-sdlc-framework/tasks.md`。
+- **激活的规则**：完成前验证、代码自审、单次提交语义（FR-097 / SC-022）。
+
+#### 2.2 统一验证命令
+
+- **R1（红灯验证）**
+  - 命令：无（本批为工程卫生与文档收口，未新增行为）。
+  - 结果：不适用。
+- **V1（定向）**
+  - 命令：`uv run ruff check src tests`
+  - 结果：**All checks passed!**
+- **V2（全量回归）**
+  - 命令：`uv run pytest -q`
+  - 结果：**691 passed**（2026-03-27）。
+- **只读治理校验**
+  - 命令：`uv run ai-sdlc verify constraints`
+  - 结果：**无 BLOCKER**。
+- **Close 收口校验**
+  - 命令：`uv run ai-sdlc workitem close-check --wi specs/001-ai-sdlc-framework`
+  - 结果：`tasks_completion` / `related_plan_drift` / `execution_log_fields` / `docs_consistency` **全部 PASS**。
+
+#### 2.3 任务记录
+
+##### 收口项 A | Telemetry / CLI / tests lint 清零
+
+- **改动范围**：`src/ai_sdlc/cli/main.py`、`src/ai_sdlc/cli/verify_cmd.py`、`src/ai_sdlc/core/verify_constraints.py`、`src/ai_sdlc/telemetry/*.py`、`tests/unit/test_runner_confirm.py`、`tests/unit/test_telemetry_*.py`、`tests/unit/test_verify_constraints.py`。
+- **改动内容**：通过 `ruff --fix` 与少量手工修正，完成 import 排序、`typing` / `collections.abc` 迁移、annotation 简化、条件表达式收敛等清理，不改变既有行为语义。
+- **新增/调整的测试**：无新增测试；保留并通过现有 telemetry / verify / runner 回归测试。
+- **执行的命令**：`uv run ruff check src tests --fix`、`uv run ruff check src tests`、`uv run pytest -q`。
+- **测试结果**：lint 全绿；全量 pytest 通过。
+- **是否符合任务目标**：符合。
+
+##### 收口项 B | `plan.md` 开放问题收敛
+
+- **改动范围**：`specs/001-ai-sdlc-framework/plan.md`
+- **改动内容**：将 “Rich 面板在 CI 环境的降级策略” 与 “产品内置规则文件的初始内容” 从“待定”收敛为仓库事实：前者以 TTY / `--json` / 只读运维面边界为准，后者以内置 `src/ai_sdlc/rules/*.md` 与阶段激活映射为准。
+- **新增/调整的测试**：无；证据来自现有 CLI/doctor/status 边界与规则加载实现。
+- **执行的命令**：`uv run ai-sdlc verify constraints`、`uv run ai-sdlc workitem close-check --wi specs/001-ai-sdlc-framework`
+- **测试结果**：无 BLOCKER；close-check 全 PASS。
+- **是否符合任务目标**：符合。
+
+##### 收口项 C | Task 6.15 证据链补齐
+
+- **改动范围**：`specs/001-ai-sdlc-framework/tasks.md`
+- **改动内容**：在 **Task 6.15** 下追加“收口说明”，将 `spec.md`、`plan.md`、`agent-skip-registry.zh.md` 三处文档契约与 Batch 10 实现收口建立显式指针，消除“无独立 batch 归档是否算已落地”的歧义。
+- **新增/调整的测试**：无（文档收口）。
+- **执行的命令**：`uv run ai-sdlc workitem close-check --wi specs/001-ai-sdlc-framework`
+- **测试结果**：`execution_log_fields` 与 `docs_consistency` 通过。
+- **是否符合任务目标**：符合。
+
+#### 2.4 代码审查（摘要）
+
+- **宪章/规格对齐**：本批不扩大需求范围；仅对现有 telemetry/规则/计划文档做工程卫生与证据链收口，符合 MUST-2/3/4。
+- **代码质量**：lint 修复限定于格式、导入、typing 与等价逻辑收敛；未引入新的写盘路径或行为分叉。
+- **测试质量**：以全量 pytest、lint、`verify constraints`、`close-check` 作为新鲜证据；无“只改代码不验”的漂移。
+- **Spec 偏移**：无新增偏移；Task 6.15 的文档前置条件已显式补齐为仓库真值。
+- **结论**：无 Critical 阻塞项。
+
+#### 2.5 任务/计划同步状态
+
+- `tasks.md` 同步状态：`已同步`（Task 6.15 收口说明已落盘；无未勾选 checklist 项）。
+- `related_plan`（如存在）同步状态：`已对账`（当前工作项未声明 `related_plan`，close-check 按约定跳过）。
+- 说明：本批提交仅纳入“框架收口”直接相关文件；现有 `docs/USER_GUIDE.zh-CN.md` 与新增框架补充文档草稿不并入本批，避免误提交未收口的用户态文档改动。
+
+#### 2.6 自动决策记录（如有）
+
+- AD-001：将 `docs/USER_GUIDE.zh-CN.md` 与未跟踪的框架补充文档排除出本批提交 → 来源：当前工作树已有独立文档改动，且本批 close-check / execution-log 目标不依赖其入库 → 理由：避免把未完成或未核对链接关系的用户文档改动混入本次框架收口提交。
+
+#### 2.7 批次结论
+
+- 本批已完成框架要求的收口动作：lint 清零、开放问题收敛、Task 6.15 证据链补齐、只读约束与 close-check 复验通过；可进入单次提交。
+
+#### 2.8 归档后动作
+
+- **已完成 git 提交**：是
+- **提交哈希**：本批唯一一次语义提交为 `chore: close framework follow-up and telemetry lint debt`；完整 SHA 以该提交后的 `HEAD` 为准。
+- **是否继续下一批**：按需

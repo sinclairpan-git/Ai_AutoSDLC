@@ -23,9 +23,9 @@ from ai_sdlc.telemetry.enums import (
     ArtifactType,
     CaptureMode,
     Confidence,
-    EvidenceStatus,
     EvaluationResult,
     EvaluationStatus,
+    EvidenceStatus,
     RootCauseClass,
     ScopeLevel,
     SuggestedChangeLayer,
@@ -39,8 +39,8 @@ from ai_sdlc.telemetry.ids import (
     ID_PREFIXES,
     new_artifact_id,
     new_evaluation_id,
-    new_evidence_id,
     new_event_id,
+    new_evidence_id,
     new_violation_id,
     validate_telemetry_id,
 )
@@ -142,7 +142,7 @@ class TelemetryRecord(BaseModel):
         return validate_utc_z_timestamp(value)
 
     @model_validator(mode="after")
-    def _validate_scope_and_timestamps(self) -> "TelemetryRecord":
+    def _validate_scope_and_timestamps(self) -> TelemetryRecord:
         if self.scope_level is ScopeLevel.SESSION:
             if self.goal_session_id is None:
                 raise ValueError("session scope requires goal_session_id")
@@ -170,11 +170,14 @@ class TelemetryRecord(BaseModel):
         if updated_at < created_at:
             raise ValueError("updated_at must not be earlier than created_at")
 
-        if self.object_category is TelemetryObjectCategory.APPEND_ONLY:
-            if self.allowed_update_fields == frozenset() and updated_at != created_at:
-                raise ValueError(
-                    "append-only telemetry objects must not diverge in updated_at"
-                )
+        if (
+            self.object_category is TelemetryObjectCategory.APPEND_ONLY
+            and self.allowed_update_fields == frozenset()
+            and updated_at != created_at
+        ):
+            raise ValueError(
+                "append-only telemetry objects must not diverge in updated_at"
+            )
         return self
 
     def validated_update(self, **changes: Any) -> Self:

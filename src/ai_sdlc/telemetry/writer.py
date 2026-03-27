@@ -2,9 +2,16 @@
 
 from __future__ import annotations
 
-from typing import Any, Mapping
+from collections.abc import Mapping
+from typing import Any
 
-from ai_sdlc.telemetry.contracts import Artifact, Evaluation, Evidence, TelemetryEvent, Violation
+from ai_sdlc.telemetry.contracts import (
+    Artifact,
+    Evaluation,
+    Evidence,
+    TelemetryEvent,
+    Violation,
+)
 from ai_sdlc.telemetry.enums import ArtifactStatus
 from ai_sdlc.telemetry.resolver import SourceResolver
 from ai_sdlc.telemetry.store import TelemetryStore
@@ -20,11 +27,12 @@ def source_chain_compatible(artifact: Artifact, payload: Mapping[str, Any]) -> b
     """Return True when a source lies on or below the artifact's parent chain."""
     if payload.get("goal_session_id") != artifact.goal_session_id:
         return False
-    if artifact.workflow_run_id is not None and payload.get("workflow_run_id") != artifact.workflow_run_id:
+    if (
+        artifact.workflow_run_id is not None
+        and payload.get("workflow_run_id") != artifact.workflow_run_id
+    ):
         return False
-    if artifact.step_id is not None and payload.get("step_id") != artifact.step_id:
-        return False
-    return True
+    return artifact.step_id is None or payload.get("step_id") == artifact.step_id
 
 
 class TelemetryWriter:
