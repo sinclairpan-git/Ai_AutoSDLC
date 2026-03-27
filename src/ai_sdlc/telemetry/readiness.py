@@ -261,14 +261,15 @@ def _writer_path_check(repo_root: Path) -> dict[str, str]:
 
 
 def _resolver_check(repo_root: Path) -> dict[str, str]:
-    resolver = SourceResolver(TelemetryStore(repo_root))
-    source_ref = _find_supported_event_source_ref(repo_root)
-    if source_ref is None:
+    candidate = _resolver_event_probe_candidate(repo_root)
+    if candidate is None:
         return {
             "name": "resolver health",
             "state": "warn",
             "detail": "no supported source fixture found",
         }
+    events_path, source_ref = candidate
+    resolver = SourceResolver(_BoundedEventResolverStore(events_path))
     try:
         resolver.resolve("event", source_ref)
     except Exception as exc:
@@ -284,16 +285,102 @@ def _resolver_check(repo_root: Path) -> dict[str, str]:
     }
 
 
-def _find_supported_event_source_ref(repo_root: Path) -> str | None:
-    local_root = telemetry_local_root(repo_root)
-    if not local_root.exists():
+def _resolver_event_probe_candidate(repo_root: Path) -> tuple[Path, str] | None:
+    manifest_state = _load_manifest_state(repo_root)
+    if manifest_state["state"] != "loaded":
         return None
-    for path in sorted(local_root.rglob("events.ndjson")):
-        for payload in _read_ndjson_file(path):
-            event_id = payload.get("event_id")
-            if isinstance(event_id, str) and event_id.startswith("evt_"):
-                return event_id
+
+    manifest = manifest_state["manifest"]
+    local_root = telemetry_local_root(repo_root)
+    timeline_payload = _read_json_file(telemetry_indexes_root(repo_root) / "timeline-cursor.json")
+    timeline_event_id = None
+    if isinstance(timeline_payload, dict):
+        value = timeline_payload.get("last_event_id")
+        if isinstance(value, str):
+            timeline_event_id = value
+
+    candidate_roots = _manifest_candidate_scope_roots(manifest)
+    for scope_root in candidate_roots:
+        events_path = local_root / scope_root / "events.ndjson"
+        if not events_path.exists():
+            continue
+        if timeline_event_id is not None and _find_event_payload_in_file(events_path, timeline_event_id) is not None:
+            return events_path, timeline_event_id
+        fallback_event_id = _first_event_id_in_file(events_path)
+        if fallback_event_id is not None:
+            return events_path, fallback_event_id
     return None
+
+
+def _manifest_candidate_scope_roots(manifest: dict[str, Any]) -> list[str]:
+    candidates: list[str] = []
+    for field_name in ("steps", "runs", "sessions"):
+        bucket = manifest.get(field_name)
+        if not isinstance(bucket, dict) or not bucket:
+            continue
+        last_value = next(reversed(bucket.values()))
+        if not isinstance(last_value, dict):
+            continue
+        path_value = last_value.get("path")
+        if isinstance(path_value, str):
+            candidates.append(path_value)
+    # Preserve priority but avoid duplicated checks.
+    deduped: list[str] = []
+    for path_value in candidates:
+        if path_value not in deduped:
+            deduped.append(path_value)
+    return deduped
+
+
+class _BoundedEventResolverStore:
+    """Store adapter for bounded resolver-health probes on one events stream."""
+
+    def __init__(self, events_path: Path) -> None:
+        self._events_path = events_path
+
+    def find_append_only_payload(self, kind: str, source_ref: str) -> tuple[Path, dict[str, Any]] | None:
+        if kind != "telemetry_event":
+            return None
+        payload = _find_event_payload_in_file(self._events_path, source_ref)
+        if payload is None:
+            return None
+        return self._events_path, payload
+
+
+def _find_event_payload_in_file(path: Path, source_ref: str) -> dict[str, Any] | None:
+    for payload in _iter_ndjson_dicts(path):
+        event_id = payload.get("event_id")
+        if event_id == source_ref:
+            return payload
+    return None
+
+
+def _first_event_id_in_file(path: Path) -> str | None:
+    for payload in _iter_ndjson_dicts(path):
+        event_id = payload.get("event_id")
+        if isinstance(event_id, str) and event_id.startswith("evt_"):
+            return event_id
+    return None
+
+
+def _iter_ndjson_dicts(path: Path) -> list[dict[str, Any]]:
+    if not path.exists():
+        return []
+    payloads: list[dict[str, Any]] = []
+    try:
+        with path.open("r", encoding="utf-8") as handle:
+            for line in handle:
+                if not line.strip():
+                    continue
+                try:
+                    payload = json.loads(line)
+                except Exception:
+                    continue
+                if isinstance(payload, dict):
+                    payloads.append(payload)
+    except Exception:
+        return payloads
+    return payloads
 
 
 def _status_surface_check(repo_root: Path) -> dict[str, str]:
@@ -340,22 +427,3 @@ def _read_json_file(path: Path) -> dict[str, Any] | list[Any] | None:
         return json.loads(path.read_text(encoding="utf-8"))
     except Exception:
         return None
-
-
-def _read_ndjson_file(path: Path) -> list[dict[str, Any]]:
-    try:
-        lines = path.read_text(encoding="utf-8").splitlines()
-    except Exception:
-        return []
-
-    payloads: list[dict[str, Any]] = []
-    for line in lines:
-        if not line.strip():
-            continue
-        try:
-            payload = json.loads(line)
-        except Exception:
-            continue
-        if isinstance(payload, dict):
-            payloads.append(payload)
-    return payloads
