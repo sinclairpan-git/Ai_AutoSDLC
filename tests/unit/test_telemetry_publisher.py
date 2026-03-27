@@ -385,6 +385,47 @@ def test_audit_report_does_not_mark_waived_not_applicable_clean() -> None:
     assert report["audit_status"] == "issues_found"
 
 
+def test_audit_report_does_not_mark_warning_clean() -> None:
+    warning = Evaluation(
+        scope_level=ScopeLevel.RUN,
+        goal_session_id="gs_0123456789abcdef0123456789abcdef",
+        workflow_run_id="wr_0123456789abcdef0123456789abcdef",
+        result=EvaluationResult.WARNING,
+        status=EvaluationStatus.PASSED,
+        created_at="2026-03-27T10:00:00Z",
+        updated_at="2026-03-27T10:00:00Z",
+    )
+
+    report = build_audit_report([warning], [])
+
+    assert report["audit_status"] == "issues_found"
+
+
+def test_audit_report_keeps_blocked_priority_over_non_passing_evaluation() -> None:
+    pending = Evaluation(
+        scope_level=ScopeLevel.RUN,
+        goal_session_id="gs_0123456789abcdef0123456789abcdef",
+        workflow_run_id="wr_0123456789abcdef0123456789abcdef",
+        result=EvaluationResult.PASSED,
+        status=EvaluationStatus.PENDING,
+        created_at="2026-03-27T10:00:00Z",
+        updated_at="2026-03-27T10:00:00Z",
+    )
+    accepted_high = Violation(
+        scope_level=ScopeLevel.RUN,
+        goal_session_id=pending.goal_session_id,
+        workflow_run_id=pending.workflow_run_id,
+        status=ViolationStatus.ACCEPTED,
+        risk_level=ViolationRiskLevel.HIGH,
+        created_at="2026-03-27T10:00:00Z",
+        updated_at="2026-03-27T10:00:00Z",
+    )
+
+    report = build_audit_report([pending], [accepted_high])
+
+    assert report["audit_status"] == "blocked"
+
+
 def test_evaluation_summary_pending_is_non_passing_and_not_covered(tmp_path: Path) -> None:
     store = TelemetryStore(tmp_path)
     writer = TelemetryWriter(store)
