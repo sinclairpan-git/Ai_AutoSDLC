@@ -220,3 +220,53 @@ def test_doctor_resolver_health_does_not_parse_trace_payloads(
 
     assert result.exit_code == 0
     assert "supported source kind resolved" in result.output
+
+
+def test_doctor_resolver_health_is_not_ok_when_timeline_event_id_is_absent_from_candidate_stream(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    init_project(tmp_path)
+    local_root = telemetry_local_root(tmp_path)
+    local_root.mkdir(parents=True, exist_ok=True)
+    session_id = "gs_0123456789abcdef0123456789abcdef"
+    present_event_id = "evt_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    stale_event_id = "evt_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+
+    telemetry_manifest_path(tmp_path).write_text(
+        json.dumps(
+            {
+                "version": 1,
+                "sessions": {session_id: {"path": f"sessions/{session_id}"}},
+                "runs": {},
+                "steps": {},
+            }
+        ),
+        encoding="utf-8",
+    )
+    events_path = local_root / "sessions" / session_id / "events.ndjson"
+    events_path.parent.mkdir(parents=True, exist_ok=True)
+    events_path.write_text(
+        json.dumps({"event_id": present_event_id}) + "\n",
+        encoding="utf-8",
+    )
+
+    indexes_root = telemetry_indexes_root(tmp_path)
+    indexes_root.mkdir(parents=True, exist_ok=True)
+    (indexes_root / "timeline-cursor.json").write_text(
+        json.dumps(
+            {
+                "event_count": 1,
+                "last_event_id": stale_event_id,
+                "last_timestamp": "2026-03-27T09:00:00Z",
+            }
+        ),
+        encoding="utf-8",
+    )
+    monkeypatch.chdir(tmp_path)
+
+    result = runner.invoke(app, ["doctor"], catch_exceptions=False)
+
+    assert result.exit_code == 0
+    assert "resolver health" in result.output
+    assert "supported source kind resolved" not in result.output
+    assert "no supported source fixture found" in result.output

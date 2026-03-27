@@ -19,6 +19,7 @@ from ai_sdlc.telemetry.store import TelemetryStore
 
 _SAMPLE_LIMIT = 3
 _MAX_RESOLVER_SCOPE_PROBES = 32
+_EVENT_TAIL_PROBE_BYTES = 65_536
 
 
 def build_status_json_surface(repo_root: Path) -> dict[str, Any]:
@@ -345,7 +346,7 @@ def _resolver_event_probe_candidates(repo_root: Path) -> list[tuple[Path, str]]:
     candidate_paths = _manifest_events_paths(repo_root, manifest)[:_MAX_RESOLVER_SCOPE_PROBES]
     candidates: list[tuple[Path, str]] = []
     for events_path in candidate_paths:
-        if _path_has_trace_content(events_path):
+        if _events_tail_contains_event_id(events_path, timeline_event_id):
             candidates.append((events_path, timeline_event_id))
     return candidates
 
@@ -394,6 +395,27 @@ def _path_has_trace_content(path: Path) -> bool:
         return path.is_file() and path.stat().st_size > 0
     except OSError:
         return False
+
+
+def _events_tail_contains_event_id(path: Path, event_id: str) -> bool:
+    try:
+        if not path.is_file():
+            return False
+        size = path.stat().st_size
+        if size <= 0:
+            return False
+        read_size = min(size, _EVENT_TAIL_PROBE_BYTES)
+        with path.open("rb") as handle:
+            handle.seek(max(size - read_size, 0))
+            chunk = handle.read(read_size)
+    except OSError:
+        return False
+
+    raw_id = event_id.encode("utf-8")
+    return (
+        (b'"event_id":"' + raw_id + b'"') in chunk
+        or (b'"event_id": "' + raw_id + b'"') in chunk
+    )
 
 
 def _first_event_id_in_file(path: Path) -> str | None:
