@@ -276,6 +276,67 @@ def test_accepted_violation_remains_open_debt_not_resolved_in_audit_report(
     assert fixed.violation_id in resolved["violation_ids"]
 
 
+def test_violation_summary_includes_status_risk_and_open_item_rollups(
+    tmp_path: Path,
+) -> None:
+    store = TelemetryStore(tmp_path)
+    writer = TelemetryWriter(store)
+    publisher = GovernancePublisher(store=store, writer=writer)
+    event, _, _ = _seed_completed_run(writer)
+    triaged_high = Violation(
+        scope_level=ScopeLevel.RUN,
+        goal_session_id=event.goal_session_id,
+        workflow_run_id=event.workflow_run_id,
+        status=ViolationStatus.TRIAGED,
+        risk_level=ViolationRiskLevel.HIGH,
+        created_at="2026-03-27T10:00:01Z",
+        updated_at="2026-03-27T10:00:01Z",
+    )
+    accepted_high = Violation(
+        scope_level=ScopeLevel.RUN,
+        goal_session_id=event.goal_session_id,
+        workflow_run_id=event.workflow_run_id,
+        status=ViolationStatus.ACCEPTED,
+        risk_level=ViolationRiskLevel.HIGH,
+        created_at="2026-03-27T10:00:02Z",
+        updated_at="2026-03-27T10:00:02Z",
+    )
+    fixed_low = Violation(
+        scope_level=ScopeLevel.RUN,
+        goal_session_id=event.goal_session_id,
+        workflow_run_id=event.workflow_run_id,
+        status=ViolationStatus.FIXED,
+        risk_level=ViolationRiskLevel.LOW,
+        created_at="2026-03-27T10:00:03Z",
+        updated_at="2026-03-27T10:00:03Z",
+    )
+    writer.write_violation(triaged_high)
+    writer.write_violation(accepted_high)
+    writer.write_violation(fixed_low)
+
+    violation_summary = publisher.generate_run_reports(
+        goal_session_id=event.goal_session_id,
+        workflow_run_id=event.workflow_run_id,
+    )["violation_summary"]
+
+    assert violation_summary["by_status"] == {
+        ViolationStatus.TRIAGED.value: 1,
+        ViolationStatus.ACCEPTED.value: 1,
+        ViolationStatus.FIXED.value: 1,
+    }
+    assert violation_summary["by_risk"] == {
+        ViolationRiskLevel.HIGH.value: 2,
+        ViolationRiskLevel.LOW.value: 1,
+    }
+    assert [
+        item["violation_id"] for item in violation_summary["open_items"]
+    ] == sorted([triaged_high.violation_id, accepted_high.violation_id])
+    assert {item["status"] for item in violation_summary["open_items"]} == {
+        ViolationStatus.TRIAGED.value,
+        ViolationStatus.ACCEPTED.value,
+    }
+
+
 def test_audit_report_marks_failed_evaluation_as_issues_found_without_violations() -> None:
     failed_evaluation = Evaluation(
         scope_level=ScopeLevel.RUN,

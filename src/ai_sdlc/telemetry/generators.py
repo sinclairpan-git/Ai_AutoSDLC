@@ -94,6 +94,22 @@ def build_violation_rollup(violations: Sequence[Violation]) -> dict[str, object]
     accepted_violations = [
         violation for violation in open_violations if violation.status is ViolationStatus.ACCEPTED
     ]
+    status_counts: dict[str, int] = {}
+    risk_counts: dict[str, int] = {}
+    for violation in violations:
+        status_counts[violation.status.value] = status_counts.get(violation.status.value, 0) + 1
+        risk_counts[violation.risk_level.value] = risk_counts.get(violation.risk_level.value, 0) + 1
+    open_items = sorted(
+        (
+            {
+                "violation_id": violation.violation_id,
+                "status": violation.status.value,
+                "risk_level": violation.risk_level.value,
+            }
+            for violation in open_violations
+        ),
+        key=lambda item: str(item["violation_id"]),
+    )
     return {
         "open_debt": {
             "count": len(open_violations),
@@ -104,6 +120,9 @@ def build_violation_rollup(violations: Sequence[Violation]) -> dict[str, object]
             "count": len(resolved_violations),
             "violation_ids": sorted(violation.violation_id for violation in resolved_violations),
         },
+        "by_status": status_counts,
+        "by_risk": risk_counts,
+        "open_items": open_items,
     }
 
 
