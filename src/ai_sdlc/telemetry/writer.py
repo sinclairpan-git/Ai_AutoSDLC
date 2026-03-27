@@ -5,6 +5,8 @@ from __future__ import annotations
 from typing import Any
 
 from ai_sdlc.telemetry.contracts import Artifact, Evaluation, Evidence, TelemetryEvent, Violation
+from ai_sdlc.telemetry.enums import ArtifactStatus
+from ai_sdlc.telemetry.resolver import SourceResolver
 from ai_sdlc.telemetry.store import TelemetryStore
 
 _MUTABLE_ID_FIELDS = {
@@ -19,6 +21,7 @@ class TelemetryWriter:
 
     def __init__(self, store: TelemetryStore) -> None:
         self.store = store
+        self._resolver = SourceResolver(store)
 
     def write_event(self, event: TelemetryEvent) -> TelemetryEvent:
         """Append a telemetry event to its scope event stream."""
@@ -84,6 +87,8 @@ class TelemetryWriter:
 
     def write_artifact(self, artifact: Artifact) -> Artifact:
         """Persist an artifact through the canonical writer path."""
+        if artifact.status is ArtifactStatus.PUBLISHED and not self._artifact_source_closure_ok(artifact):
+            raise ValueError("artifact source closure validation failed for published status")
         return self._write_mutable("artifact", artifact)
 
     def _write_mutable(
@@ -118,3 +123,43 @@ class TelemetryWriter:
         chain_fields = ("goal_session_id", "workflow_run_id", "step_id")
         if any(current_payload.get(field) != new_payload.get(field) for field in chain_fields):
             raise ValueError("parent chain mismatch")
+
+    def _artifact_source_closure_ok(self, artifact: Artifact) -> bool:
+        if not artifact.source_evidence_refs:
+            return False
+
+        for evidence_ref in artifact.source_evidence_refs:
+            try:
+                resolved = self._resolver.resolve("evidence", evidence_ref)
+            except (LookupError, ValueError):
+                return False
+            if not self._same_parent_chain(artifact, resolved.payload):
+                return False
+            if not resolved.payload.get("digest"):
+                return False
+
+        for source_ref in artifact.source_object_refs:
+            source_kind, object_ref = _parse_source_object_ref(source_ref)
+            try:
+                resolved = self._resolver.resolve(source_kind, object_ref)
+            except (LookupError, ValueError):
+                return False
+            if not self._same_parent_chain(artifact, resolved.payload):
+                return False
+        return True
+
+    def _same_parent_chain(self, artifact: Artifact, payload: dict[str, Any]) -> bool:
+        return (
+            payload.get("goal_session_id") == artifact.goal_session_id
+            and payload.get("workflow_run_id") == artifact.workflow_run_id
+            and payload.get("step_id") == artifact.step_id
+        )
+
+
+def _parse_source_object_ref(value: str) -> tuple[str, str]:
+    if ":" not in value:
+        raise ValueError("source object refs must use '<kind>:<source_ref>' format")
+    source_kind, source_ref = value.split(":", 1)
+    if not source_kind or not source_ref:
+        raise ValueError("source object refs must use '<kind>:<source_ref>' format")
+    return source_kind, source_ref

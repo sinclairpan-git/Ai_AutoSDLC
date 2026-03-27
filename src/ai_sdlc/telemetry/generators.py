@@ -9,7 +9,12 @@ from typing import Sequence
 
 from ai_sdlc.core.verify_constraints import ConstraintReport
 from ai_sdlc.telemetry.contracts import Evaluation, Violation
-from ai_sdlc.telemetry.enums import EvaluationStatus, ViolationRiskLevel, ViolationStatus
+from ai_sdlc.telemetry.enums import (
+    EvaluationResult,
+    EvaluationStatus,
+    ViolationRiskLevel,
+    ViolationStatus,
+)
 
 
 def constraint_report_digest(report: ConstraintReport) -> str:
@@ -109,6 +114,11 @@ def build_audit_report(
     """Build an audit report from evaluations and current violation state."""
     violation_summary = build_violation_rollup(violations)
     open_debt_count = int(violation_summary["open_debt"]["count"])
+    evaluation_has_issues = any(
+        evaluation.status is EvaluationStatus.FAILED
+        or evaluation.result in {EvaluationResult.FAILED, EvaluationResult.WARNING}
+        for evaluation in evaluations
+    )
     blocked = any(
         violation.status in {ViolationStatus.OPEN, ViolationStatus.TRIAGED, ViolationStatus.ACCEPTED}
         and violation.risk_level in {ViolationRiskLevel.HIGH, ViolationRiskLevel.CRITICAL}
@@ -118,7 +128,7 @@ def build_audit_report(
         audit_status = "inconclusive"
     elif blocked:
         audit_status = "blocked"
-    elif open_debt_count > 0:
+    elif open_debt_count > 0 or evaluation_has_issues:
         audit_status = "issues_found"
     else:
         audit_status = "clean"

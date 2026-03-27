@@ -262,7 +262,7 @@ def test_evidence_rejects_same_chain_repeat_with_earlier_updated_at(tmp_path: Pa
     [
         ("write_evaluation", "evaluation_id", "status", "passed"),
         ("write_violation", "violation_id", "status", "fixed"),
-        ("write_artifact", "artifact_id", "status", "published"),
+        ("write_artifact", "artifact_id", "status", "reviewed"),
     ],
 )
 def test_mutable_objects_write_revision_before_current_snapshot(
@@ -351,6 +351,24 @@ def test_cross_chain_parent_mismatches_are_rejected(tmp_path: Path) -> None:
                 timestamp="2026-03-27T10:00:01Z",
             )
         )
+
+
+def test_writer_rejects_direct_published_artifact_without_source_closure(tmp_path: Path) -> None:
+    store = TelemetryStore(tmp_path)
+    writer = TelemetryWriter(store)
+    artifact = Artifact(
+        scope_level=ScopeLevel.RUN,
+        goal_session_id="gs_0123456789abcdef0123456789abcdef",
+        workflow_run_id="wr_0123456789abcdef0123456789abcdef",
+        status=ArtifactStatus.PUBLISHED,
+        artifact_type=ArtifactType.REPORT,
+        artifact_role=ArtifactRole.AUDIT,
+        created_at="2026-03-27T10:00:00Z",
+        updated_at="2026-03-27T10:00:00Z",
+    )
+
+    with pytest.raises(ValueError, match="source closure"):
+        writer.write_artifact(artifact)
 
 
 def test_source_resolver_uses_source_kind_and_source_ref(tmp_path: Path) -> None:

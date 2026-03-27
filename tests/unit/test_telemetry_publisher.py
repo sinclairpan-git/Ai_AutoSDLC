@@ -18,6 +18,7 @@ from ai_sdlc.telemetry.enums import (
     ViolationRiskLevel,
     ViolationStatus,
 )
+from ai_sdlc.telemetry.generators import build_audit_report
 from ai_sdlc.telemetry.governance_publisher import GovernancePublisher
 from ai_sdlc.telemetry.store import TelemetryStore
 from ai_sdlc.telemetry.writer import TelemetryWriter
@@ -227,3 +228,19 @@ def test_accepted_violation_remains_open_debt_not_resolved_in_audit_report(
     assert debt["violation_ids"] == [accepted.violation_id]
     assert resolved["count"] == 1
     assert fixed.violation_id in resolved["violation_ids"]
+
+
+def test_audit_report_marks_failed_evaluation_as_issues_found_without_violations() -> None:
+    failed_evaluation = Evaluation(
+        scope_level=ScopeLevel.RUN,
+        goal_session_id="gs_0123456789abcdef0123456789abcdef",
+        workflow_run_id="wr_0123456789abcdef0123456789abcdef",
+        result=EvaluationResult.FAILED,
+        status=EvaluationStatus.FAILED,
+        created_at="2026-03-27T10:00:00Z",
+        updated_at="2026-03-27T10:00:00Z",
+    )
+
+    report = build_audit_report([failed_evaluation], [])
+
+    assert report["audit_status"] == "issues_found"
