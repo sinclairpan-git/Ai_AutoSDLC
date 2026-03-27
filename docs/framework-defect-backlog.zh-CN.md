@@ -229,3 +229,69 @@
 - 风险等级: 中
 - 可验证成功标准: `verify constraints` 每次运行后 session event stream 都以 terminal workflow session event 结束；非项目路径与项目路径的 `--json` 输出均稳定包含 `ok`、`blockers`、`root`。
 - 是否需要回归测试补充: 是：补充 verify telemetry session terminal event、out-of-project JSON shape、violation telemetry 落盘的集成回归测试。
+
+## FD-2026-03-27-003 | telemetry artifact contract 漏掉 source refs，source closure 无法成立
+
+- 日期 (UTC): 2026-03-27
+- 来源: self_review
+- 状态: closed
+- owner: codex
+- wi_id: 003-telemetry-trace-governance
+- 现象: design baseline 已冻结 artifact publish 必须经过 `source_evidence_refs / source_object_refs` 的最小 source closure 校验，但当前实现里的 `Artifact` contract 还没有这些字段，导致 artifact 即使落盘，也没有规范化来源闭包可供 publisher 校验。
+- 触发场景: 进入 Task 6 准备实现 `governance_publisher` 时，按 spec 逆查 contract 与 writer 路径，发现 source closure 依赖已经写进设计与计划，但对象模型未同步冻结到代码。
+- 影响范围: published gating 无法基于 canonical contract 执行，artifact status 降级逻辑缺少真值输入，summary/audit 产物的可追溯性不足。
+- 根因分类: A, B, D
+- 建议改动层级: rule / policy, middleware, workflow, tool, eval
+- prompt / context: source closure 不是 publisher 里的临时逻辑，而是 artifact contract 的一部分；只在实现阶段补逻辑、不先补 contract，会让 writer 和 resolver 无法共享同一真值。
+- rule / policy: 凡 spec 已冻结的 contract 字段，进入对应 task 前必须先核对代码单一来源是否齐全；缺字段不得继续写上层功能。
+- middleware: 在 telemetry contracts/writer 层补 `source_evidence_refs / source_object_refs` 与 canonical validation，确保 publisher 只消费 contract，不再自造 side payload。
+- workflow: Task 开始前的自检清单加入“spec 冻结字段是否已进入 contract 单一来源”的检查，避免设计边界在任务切换时漂移。
+- tool: `src/ai_sdlc/telemetry/contracts.py`、`src/ai_sdlc/telemetry/writer.py`、`src/ai_sdlc/telemetry/governance_publisher.py`
+- eval: source-closure contract 漂移数、publisher 前置 contract 缺口发现率
+- 风险等级: 高
+- 可验证成功标准: artifact contract 明确携带 source refs；publisher 能据此完成 source closure 正反校验；published artifact 失去有效来源时会降级。
+- 是否需要回归测试补充: 是：补充 artifact source refs 必填/解析、closure 成功发布、closure 失效降级的正反测试。
+
+## FD-2026-03-27-004 | governance publishing 初版遗漏 writer 级 publish 守卫，且 audit verdict 对 failed evaluation 存在盲区
+
+- 日期 (UTC): 2026-03-27
+- 来源: self_review, code_review
+- 状态: closed
+- owner: codex
+- wi_id: 003-telemetry-trace-governance
+- 现象: Task 6 首版实现虽然引入了 `GovernancePublisher`，但 `TelemetryWriter.write_artifact()` 仍允许业务侧直接持久化 `status=published` 的 artifact，绕过 source closure；同时 `build_audit_report()` 在存在 failed evaluation 但尚未升级出 violation 时，会把 audit verdict 误判为 `clean`。
+- 触发场景: 对 `0a8f12a` 做 spec review 时，按 design baseline 逆查 writer 责任边界与 audit verdict 优先级，发现 source closure 只在 publisher 层守卫，audit 结论又只看 open violation，而没有把 failed evaluation 本身视为 `issues_found`。
+- 影响范围: published artifact 可被非法写入，source closure 真值不再由 writer 统一保障；audit_report 会低报治理风险，误把存在失败评测的 run/session 归类为 `clean`。
+- 根因分类: A, B, D
+- 建议改动层级: rule / policy, middleware, workflow, tool, eval
+- prompt / context: “有 publisher”不等于“writer 边界已守住”；同样，“有 violation 才算有问题”也不等于 audit 可忽略 failed evaluation。Task 级实现必须同时满足 writer 守卫和 verdict 语义。
+- rule / policy: 将 `published` 只能经 source closure 守卫写入、以及 failed evaluation 至少应使 audit 进入 `issues_found` 的语义继续视为冻结边界。
+- middleware: 在 writer 层拒绝无预检查上下文的非法 `published` 写入；在 generator 层把 failed / warning evaluation 纳入 audit verdict 推导。
+- workflow: Task 级 spec review 默认检查“是否仍可绕过 publisher 直接写 published”与“failed evaluation 无 violation 时 audit 是否仍为 clean”。
+- tool: `src/ai_sdlc/telemetry/writer.py`、`src/ai_sdlc/telemetry/generators.py`、`src/ai_sdlc/telemetry/governance_publisher.py`
+- eval: illegal published bypass 次数、failed-evaluation-clean 误判次数
+- 风险等级: 高
+- 可验证成功标准: 直接 `write_artifact(status=published)` 在来源闭包不成立时被拒绝；存在 failed / warning evaluation 且无高风险 block 时，audit verdict 至少为 `issues_found`，不会回落到 `clean`。
+- 是否需要回归测试补充: 是：补充 writer bypass negative case、failed evaluation audit verdict、warning evaluation audit verdict 的回归测试。
+
+## FD-2026-03-27-005 | governance report 生成初版语义不完整：遗漏 violation_summary，downgrade 后报告状态会陈旧，且非终态 evaluation 易被误判为 clean
+
+- 日期 (UTC): 2026-03-27
+- 来源: self_review, code_review
+- 状态: closed
+- owner: codex
+- wi_id: 003-telemetry-trace-governance
+- 现象: Task 6 初版 `generate_run_reports()` 只生成 `evaluation_summary` 与 `audit_report`，缺少独立 `violation_summary` 报告；同时已发布 artifact 在 `revalidate_published_artifacts()` 中被降级后，`.ai-sdlc/project/reports/telemetry/` 下对应 JSON 报告仍保留 `artifact_status=published`、`source_closure_ok=true` 的旧值；此外当前 summary 语义对 `pending / waived / not_applicable` 等非终态或非通过 evaluation 处理不完整，可能把并不应视为 clean 的 run/session 误判成 `clean`，或让 `evaluation_summary` 内部统计自相矛盾。
+- 触发场景: 对 `0a8f12a` 做 Task 6 spec review 时，按 design baseline 对照 `source closure`、summary generators 与 canonical report 行为，发现生成器只满足了部分 happy path，用例未覆盖降级后的报告重写与 summary 语义完整性。
+- 影响范围: operator 读取 canonical governance report 时会看到过期 published 状态；V1 缺少独立 `violation_summary` 产物；`evaluation_summary` 与 `audit_report` 对 coverage/evidence/非终态语义表达不完整，影响 audit 与后续 bounded status surfaces 的可信度。
+- 根因分类: A, B, H
+- 建议改动层级: rule / policy, middleware, workflow, tool, eval
+- prompt / context: Task 6 不只是“能写一份 report JSON”，而是要形成一组可被后续 status/doctor 消费的 canonical governance artifacts；降级后不回写报告、或只生成部分 summary，都属于 V1 语义不完整。
+- rule / policy: `evaluation_summary`、`violation_summary`、`audit_report` 作为 V1 最小治理产物必须同时成立；artifact 状态变化后 canonical report 必须与 snapshot 同步。
+- middleware: 在 governance publisher 中集中维护 artifact snapshot 与 report JSON 的一致性；summary generator 统一产出 coverage / evidence quality / open debt 视图，避免由下游 CLI 临时拼装。
+- workflow: Task 级 spec review 默认检查“降级后 report 是否同步改写”“是否存在独立 violation_summary”“evaluation_summary 是否包含 coverage/evidence 视图”，代码质量 review 默认检查 `pending / waived / not_applicable` 是否被误渲染成 clean/pass。
+- tool: `src/ai_sdlc/telemetry/governance_publisher.py`、`src/ai_sdlc/telemetry/generators.py`
+- eval: stale-governance-report 次数、missing-violation-summary 次数、evaluation-summary-semantic-gap 次数、non-terminal-clean-misclassification 次数
+- 风险等级: 中
+- 可验证成功标准: downgrade 后 artifact snapshot 与 report JSON 状态一致；run 级 canonical artifacts 至少包含 `evaluation_summary`、`violation_summary`、`audit_report`；`evaluation_summary` 包含 coverage 与 evidence quality 的最小聚合字段；`pending / waived / not_applicable` 不会被 audit 或 summary 误判为 clean/pass。
+- 是否需要回归测试补充: 是：补充 downgrade report rewrite、standalone violation_summary 生成、evaluation_summary coverage/evidence 视图的回归测试。
