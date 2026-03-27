@@ -513,3 +513,26 @@
   - 最终验证: 定向 contract suite 111 passed；全量 `uv run pytest -q` 721 passed；`uv run ruff check src tests` passed；`uv run ai-sdlc verify constraints` 无 BLOCKER；`uv run ai-sdlc workitem close-check --wi specs/001-ai-sdlc-framework` 与 `--all-docs` 全 PASS。
 - 可验证成功标准: 对 `FR-020~023`、`FR-034`、`FR-040~045`、`FR-052/054`、`FR-081` 这类合同型 FR，仓库存在对应的实现真值、contract-level 回归测试与 FR 对账结果；若实现只到局部能力，`close-check` / `trace-check` 必须明确标识“部分实现”，不得继续被表述为“已实现”。
 - 是否需要回归测试补充: 是：补 governance freeze 落盘、execute end-to-end、resume-pack load/recover、`work-item.yaml` 状态持久化、真实写拦截与 FR 对账阻断的回归测试。
+
+## FD-2026-03-28-001 | checkpoint 与 resume-pack 双状态源失配，recover 反复回到旧断点
+
+- 日期 (UTC): 2026-03-28
+- 来源: user_report, self_review
+- 状态: planned
+- owner: codex
+- wi_id: 001-ai-sdlc-framework
+- 现象: `checkpoint.yml` 已推进到较新阶段甚至 `close`，但 `resume-pack.yaml` 仍停留在更早的 `execute`/旧 batch；此后再次执行 `ai-sdlc recover` 时，CLI 会继续读取旧 `resume-pack` 并向用户报告过期断点，形成“每次中断都回到同一旧位置”的假象。
+- 触发场景: 流水线运行过程中持续写入 `checkpoint.yml`，但 `resume-pack.yaml` 未随阶段推进自动刷新；或用户在已有旧 `resume-pack` 的项目里多次中断/恢复，`recover` 继续把旧 pack 当成可用真值。
+- 影响范围: 断点恢复可信度、阶段推进判断、批次续跑、用户对 CLI 状态面的信任，以及“是否已真正恢复到最新位置”的操作决策。
+- 根因分类: A, B, D, H
+- 未来杜绝方案摘要: 断点恢复必须收敛为单一真值来源：`checkpoint.yml` 为唯一恢复真值，`resume-pack.yaml` 仅是由 checkpoint 派生出的上下文快照，且必须在 checkpoint 变更时同步刷新。`recover/status` 需要显式校验两者的一致性，发现 stale pack 时要阻断或自动重建，而不是继续静默复用旧快照。
+- 建议改动层级: prompt / context, rule / policy, middleware, workflow, tool, eval
+- prompt / context: 所有面向用户的恢复说明必须明确“checkpoint 是恢复真值，resume-pack 是派生快照”；不得把旧快照继续表述成当前断点。
+- rule / policy: 规定 checkpoint 为唯一断点真值；resume-pack 不得独立领先或落后于 checkpoint 而仍被视为有效恢复依据。
+- middleware: 在 `save_checkpoint()` 后自动重建并写回 resume-pack；`load_resume_pack()` 增加 stage / batch / timestamp / checkpoint pointer 一致性校验；若发现不一致则返回 stale-pack 错误或直接按 checkpoint 重建。
+- workflow: 每次 recover / status / run 进入恢复路径前，先做 checkpoint↔resume-pack 对账；若 pack 过期，只允许“自动重建后继续”或“显式报错要求重建”，不再静默沿用。
+- tool: `src/ai_sdlc/context/state.py`、`src/ai_sdlc/cli/commands.py`、`src/ai_sdlc/core/runner.py`、`ai-sdlc recover`、`ai-sdlc status`
+- eval: stale-resume-pack 检出率、recover 使用过期 pack 的发生率、checkpoint/save 后 pack 自动刷新覆盖率、恢复位置误报次数
+- 风险等级: 高
+- 可验证成功标准: 给定“checkpoint 已推进、resume-pack 仍旧”的夹具时，`recover` 与 `status` 必须识别并拒绝陈旧 pack，或自动按最新 checkpoint 重建；正常路径下每次 checkpoint 更新后磁盘上的 resume-pack 都与最新 stage/batch 一致，不再反复回到旧断点。
+- 是否需要回归测试补充: 是：补 checkpoint 前进但 resume-pack 未刷新的 stale-pack 正反测试、`save_checkpoint()` 自动同步测试、`recover/status` 遇到双状态源失配时的阻断或自动重建集成测试。
