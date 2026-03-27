@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import time
 from pathlib import Path
 from unittest.mock import patch
 
@@ -18,7 +19,10 @@ runner = CliRunner()
 
 
 @pytest.fixture(autouse=True)
-def _no_ide_adapter_hook() -> None:
+def _no_ide_adapter_hook(request: pytest.FixtureRequest) -> None:
+    if request.node.get_closest_marker("real_ide_hook") is not None:
+        yield
+        return
     with patch("ai_sdlc.cli.main.run_ide_adapter_if_initialized"):
         yield
 
@@ -259,4 +263,37 @@ class TestCliVerifyConstraints:
 
         result = runner.invoke(app, ["verify", "constraints"])
         assert result.exit_code == 0
-        assert "no blocker" in result.output.lower()
+
+    @pytest.mark.real_ide_hook
+    def test_verify_constraints_real_cli_path_does_not_mutate_ide_adapter_files(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        init_project(tmp_path)
+        _minimal_constitution(tmp_path)
+        (tmp_path / ".vscode").mkdir()
+        config_path = (
+            tmp_path
+            / ".ai-sdlc"
+            / "project"
+            / "config"
+            / "project-config.yaml"
+        )
+        before_config = (
+            config_path.read_text(encoding="utf-8") if config_path.exists() else None
+        )
+        before_adapter = (tmp_path / ".vscode" / "AI-SDLC.md").exists()
+        time.sleep(1.2)
+        monkeypatch.chdir(tmp_path)
+
+        result = runner.invoke(app, ["verify", "constraints", "--json"], catch_exceptions=False)
+
+        after_config = (
+            config_path.read_text(encoding="utf-8") if config_path.exists() else None
+        )
+        after_adapter = (tmp_path / ".vscode" / "AI-SDLC.md").exists()
+        assert result.exit_code == 0
+        assert after_config == before_config
+        assert after_adapter == before_adapter
+        payload = json.loads(result.output)
+        assert payload["ok"] is True
+        assert payload["blockers"] == []

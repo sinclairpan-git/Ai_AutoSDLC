@@ -159,7 +159,7 @@ def _fallback_latest_bucket_id(repo_root: Path, values: dict[str, Any]) -> str |
         if not isinstance(path_value, str):
             continue
         scope_root = local_root / path_value
-        scored.append((object_id, _path_mtime_ns(scope_root)))
+        scored.append((object_id, _scope_activity_mtime_ns(scope_root)))
     if not scored:
         return None
     return max(scored, key=lambda item: (item[1], item[0]))[0]
@@ -465,6 +465,19 @@ def _path_mtime_ns(path: Path) -> int:
         return path.stat().st_mtime_ns
     except OSError:
         return -1
+
+
+def _scope_activity_mtime_ns(scope_root: Path) -> int:
+    latest = _path_mtime_ns(scope_root)
+    if not scope_root.exists():
+        return latest
+    try:
+        for path in scope_root.rglob("*"):
+            if path.is_file():
+                latest = max(latest, _path_mtime_ns(path))
+    except OSError:
+        return latest
+    return latest
 
 
 def _status_surface_check(repo_root: Path) -> dict[str, str]:

@@ -426,3 +426,65 @@ def test_status_json_latest_scope_ids_follow_fresh_writes_on_existing_scope(
     assert result.exit_code == 0
     payload = json.loads(result.output)["telemetry"]
     assert payload["current"]["sessions"]["latest_goal_session_id"] == stale_session_event.goal_session_id
+
+
+def test_status_json_fallback_latest_scope_ids_follow_fresh_writes_without_indexes(
+    tmp_path: Path,
+) -> None:
+    init_project(tmp_path)
+    store = TelemetryStore(tmp_path)
+    writer = TelemetryWriter(store)
+
+    session_a = "gs_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    run_a = "wr_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    step_a = "st_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    session_b = "gs_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+    run_b = "wr_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+    step_b = "st_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+
+    writer.write_event(
+        TelemetryEvent(
+            scope_level=ScopeLevel.STEP,
+            goal_session_id=session_a,
+            workflow_run_id=run_a,
+            step_id=step_a,
+            created_at="2026-03-27T10:00:00Z",
+            updated_at="2026-03-27T10:00:00Z",
+            timestamp="2026-03-27T10:00:00Z",
+            trace_layer=TraceLayer.WORKFLOW,
+        )
+    )
+    writer.write_event(
+        TelemetryEvent(
+            scope_level=ScopeLevel.STEP,
+            goal_session_id=session_b,
+            workflow_run_id=run_b,
+            step_id=step_b,
+            created_at="2026-03-27T10:00:05Z",
+            updated_at="2026-03-27T10:00:05Z",
+            timestamp="2026-03-27T10:00:05Z",
+            trace_layer=TraceLayer.WORKFLOW,
+        )
+    )
+    writer.write_event(
+        TelemetryEvent(
+            scope_level=ScopeLevel.STEP,
+            goal_session_id=session_a,
+            workflow_run_id=run_a,
+            step_id=step_a,
+            created_at="2026-03-27T10:00:10Z",
+            updated_at="2026-03-27T10:00:10Z",
+            timestamp="2026-03-27T10:00:10Z",
+            trace_layer=TraceLayer.TOOL,
+        )
+    )
+    store.delete_indexes()
+
+    with patch("ai_sdlc.cli.commands.find_project_root", return_value=tmp_path):
+        result = runner.invoke(app, ["status", "--json"])
+
+    assert result.exit_code == 0
+    payload = json.loads(result.output)["telemetry"]
+    assert payload["current"]["sessions"]["latest_goal_session_id"] == session_a
+    assert payload["current"]["runs"]["latest_workflow_run_id"] == run_a
+    assert payload["current"]["steps"]["latest_step_id"] == step_a

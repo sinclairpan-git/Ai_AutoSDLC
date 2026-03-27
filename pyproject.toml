@@ -27,6 +27,9 @@ packages = ["src/ai_sdlc"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["src"]
+markers = [
+    "real_ide_hook: run the real CLI IDE hook instead of patching it out",
+]
 
 [tool.ruff]
 line-length = 88
