@@ -17,7 +17,11 @@ from ai_sdlc.core.config import save_project_state
 from ai_sdlc.models.project import ProjectState, ProjectStatus
 from ai_sdlc.models.state import Checkpoint, FeatureInfo
 from ai_sdlc.routers.bootstrap import init_project
+from ai_sdlc.telemetry.contracts import Artifact, TelemetryEvent, Violation
+from ai_sdlc.telemetry.enums import ArtifactRole, ArtifactType, ScopeLevel, TraceLayer
 from ai_sdlc.telemetry.paths import telemetry_indexes_root, telemetry_local_root
+from ai_sdlc.telemetry.store import TelemetryStore
+from ai_sdlc.telemetry.writer import TelemetryWriter
 
 runner = CliRunner()
 
@@ -319,3 +323,106 @@ def test_status_json_contract_is_available_when_project_state_is_uninitialized(
     assert payload["telemetry"]["state"] == "not_initialized"
     assert "status --json surface" in doctor_result.output
     assert "not_initialized" in doctor_result.output
+
+
+def test_status_json_reflects_fresh_writes_without_manual_rebuild(
+    tmp_path: Path,
+) -> None:
+    init_project(tmp_path)
+    store = TelemetryStore(tmp_path)
+    writer = TelemetryWriter(store)
+
+    older_event = TelemetryEvent(
+        scope_level=ScopeLevel.SESSION,
+        goal_session_id="gs_ffffffffffffffffffffffffffffffff",
+        created_at="2026-03-27T10:00:00Z",
+        updated_at="2026-03-27T10:00:00Z",
+        timestamp="2026-03-27T10:00:00Z",
+        trace_layer=TraceLayer.WORKFLOW,
+    )
+    writer.write_event(older_event)
+
+    fresh_event = TelemetryEvent(
+        scope_level=ScopeLevel.RUN,
+        goal_session_id="gs_00000000000000000000000000000000",
+        workflow_run_id="wr_00000000000000000000000000000000",
+        created_at="2026-03-27T10:00:10Z",
+        updated_at="2026-03-27T10:00:10Z",
+        timestamp="2026-03-27T10:00:10Z",
+        trace_layer=TraceLayer.TOOL,
+    )
+    fresh_violation = Violation(
+        scope_level=ScopeLevel.RUN,
+        goal_session_id=fresh_event.goal_session_id,
+        workflow_run_id=fresh_event.workflow_run_id,
+        created_at="2026-03-27T10:00:11Z",
+        updated_at="2026-03-27T10:00:11Z",
+    )
+    fresh_artifact = Artifact(
+        scope_level=ScopeLevel.RUN,
+        goal_session_id=fresh_event.goal_session_id,
+        workflow_run_id=fresh_event.workflow_run_id,
+        created_at="2026-03-27T10:00:12Z",
+        updated_at="2026-03-27T10:00:12Z",
+        artifact_type=ArtifactType.REPORT,
+        artifact_role=ArtifactRole.AUDIT,
+    )
+    writer.write_event(fresh_event)
+    writer.write_violation(fresh_violation)
+    writer.write_artifact(fresh_artifact)
+
+    with patch("ai_sdlc.cli.commands.find_project_root", return_value=tmp_path):
+        result = runner.invoke(app, ["status", "--json"])
+
+    assert result.exit_code == 0
+    payload = json.loads(result.output)["telemetry"]
+    assert payload["current"]["sessions"]["latest_goal_session_id"] == fresh_event.goal_session_id
+    assert payload["current"]["runs"]["latest_workflow_run_id"] == fresh_event.workflow_run_id
+    assert payload["latest"]["open_violations"]["count"] == 1
+    assert payload["latest"]["open_violations"]["sample_ids"] == [fresh_violation.violation_id]
+    assert payload["latest"]["artifacts"]["count"] == 1
+    assert payload["latest"]["artifacts"]["sample_ids"] == [fresh_artifact.artifact_id]
+
+
+def test_status_json_latest_scope_ids_follow_fresh_writes_on_existing_scope(
+    tmp_path: Path,
+) -> None:
+    init_project(tmp_path)
+    store = TelemetryStore(tmp_path)
+    writer = TelemetryWriter(store)
+
+    stale_session_event = TelemetryEvent(
+        scope_level=ScopeLevel.SESSION,
+        goal_session_id="gs_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        created_at="2026-03-27T10:00:00Z",
+        updated_at="2026-03-27T10:00:00Z",
+        timestamp="2026-03-27T10:00:00Z",
+        trace_layer=TraceLayer.WORKFLOW,
+    )
+    latest_session_event = TelemetryEvent(
+        scope_level=ScopeLevel.SESSION,
+        goal_session_id="gs_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        created_at="2026-03-27T10:00:05Z",
+        updated_at="2026-03-27T10:00:05Z",
+        timestamp="2026-03-27T10:00:05Z",
+        trace_layer=TraceLayer.WORKFLOW,
+    )
+    writer.write_event(stale_session_event)
+    writer.write_event(latest_session_event)
+
+    fresh_write_on_old_scope = TelemetryEvent(
+        scope_level=ScopeLevel.SESSION,
+        goal_session_id=stale_session_event.goal_session_id,
+        created_at="2026-03-27T10:00:10Z",
+        updated_at="2026-03-27T10:00:10Z",
+        timestamp="2026-03-27T10:00:10Z",
+        trace_layer=TraceLayer.TOOL,
+    )
+    writer.write_event(fresh_write_on_old_scope)
+
+    with patch("ai_sdlc.cli.commands.find_project_root", return_value=tmp_path):
+        result = runner.invoke(app, ["status", "--json"])
+
+    assert result.exit_code == 0
+    payload = json.loads(result.output)["telemetry"]
+    assert payload["current"]["sessions"]["latest_goal_session_id"] == stale_session_event.goal_session_id

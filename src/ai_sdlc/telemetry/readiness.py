@@ -25,6 +25,7 @@ _EVENT_TAIL_PROBE_BYTES = 65_536
 def build_status_json_surface(repo_root: Path) -> dict[str, Any]:
     """Return bounded telemetry status JSON without implicit init/rebuild."""
     manifest_state = _load_manifest_state(repo_root)
+    timeline_payload = _read_json_file(telemetry_indexes_root(repo_root) / "timeline-cursor.json")
     if manifest_state["state"] == "not_initialized":
         return {
             "telemetry": {
@@ -53,16 +54,19 @@ def build_status_json_surface(repo_root: Path) -> dict[str, Any]:
                     repo_root,
                     manifest.get("sessions", {}),
                     "latest_goal_session_id",
+                    _timeline_latest_id(timeline_payload, "latest_goal_session_id"),
                 ),
                 "runs": _current_bucket_summary(
                     repo_root,
                     manifest.get("runs", {}),
                     "latest_workflow_run_id",
+                    _timeline_latest_id(timeline_payload, "latest_workflow_run_id"),
                 ),
                 "steps": _current_bucket_summary(
                     repo_root,
                     manifest.get("steps", {}),
                     "latest_step_id",
+                    _timeline_latest_id(timeline_payload, "latest_step_id"),
                 ),
             },
             "latest": _load_latest_index_summaries(repo_root),
@@ -127,12 +131,23 @@ def _current_bucket_summary(
     repo_root: Path,
     values: dict[str, Any],
     latest_key_name: str,
+    latest_id: str | None,
 ) -> dict[str, Any]:
-    latest_id = _latest_bucket_id(repo_root, values)
+    if latest_id not in values:
+        latest_id = _fallback_latest_bucket_id(repo_root, values)
     return {"count": len(values), latest_key_name: latest_id}
 
 
-def _latest_bucket_id(repo_root: Path, values: dict[str, Any]) -> str | None:
+def _timeline_latest_id(payload: Any, field_name: str) -> str | None:
+    if not isinstance(payload, dict):
+        return None
+    value = payload.get(field_name)
+    if not isinstance(value, str):
+        return None
+    return value
+
+
+def _fallback_latest_bucket_id(repo_root: Path, values: dict[str, Any]) -> str | None:
     if not values:
         return None
     scored: list[tuple[str, int]] = []
@@ -147,7 +162,6 @@ def _latest_bucket_id(repo_root: Path, values: dict[str, Any]) -> str | None:
         scored.append((object_id, _path_mtime_ns(scope_root)))
     if not scored:
         return None
-    # Prefer most recently touched scope root; tie-break by id for stable output.
     return max(scored, key=lambda item: (item[1], item[0]))[0]
 
 

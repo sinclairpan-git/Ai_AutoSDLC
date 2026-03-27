@@ -17,7 +17,12 @@ from ai_sdlc.telemetry.enums import (
     TraceLayer,
     ViolationStatus,
 )
-from ai_sdlc.telemetry.paths import telemetry_local_root, telemetry_manifest_path, telemetry_reports_root
+from ai_sdlc.telemetry.paths import (
+    telemetry_indexes_root,
+    telemetry_local_root,
+    telemetry_manifest_path,
+    telemetry_reports_root,
+)
 from ai_sdlc.telemetry.resolver import SourceResolver
 from ai_sdlc.telemetry.store import TelemetryStore
 from ai_sdlc.telemetry.writer import TelemetryWriter
@@ -323,7 +328,11 @@ def test_mutable_objects_write_revision_before_current_snapshot(
     order.clear()
     getattr(writer, factory_name)(update)
 
-    assert order[-2:] == [f"{factory_name.removeprefix('write_')}s.revisions.ndjson", f"{getattr(initial, id_field)}.json"]
+    revision_name = f"{factory_name.removeprefix('write_')}s.revisions.ndjson"
+    snapshot_name = f"{getattr(initial, id_field)}.json"
+    assert revision_name in order
+    assert snapshot_name in order
+    assert order.index(revision_name) < order.index(snapshot_name)
 
     snapshot_path = store.current_object_path(update)
     revisions_path = store.revisions_path(update)
@@ -690,6 +699,46 @@ def test_rebuild_indexes_restores_deleted_index_directory(tmp_path: Path) -> Non
     assert _read_json(rebuilt["open_violations_path"])["violation_ids"] == [open_violation.violation_id]
     assert _read_json(rebuilt["latest_artifacts_path"])["artifact_ids"] == [artifact.artifact_id]
     assert _read_json(rebuilt["timeline_cursor_path"])["last_event_id"] == event.event_id
+
+
+def test_writer_refreshes_indexes_without_manual_rebuild(tmp_path: Path) -> None:
+    store = TelemetryStore(tmp_path)
+    writer = TelemetryWriter(store)
+
+    event = TelemetryEvent(
+        scope_level=ScopeLevel.RUN,
+        goal_session_id="gs_0123456789abcdef0123456789abcdef",
+        workflow_run_id="wr_0123456789abcdef0123456789abcdef",
+        created_at="2026-03-27T10:00:00Z",
+        updated_at="2026-03-27T10:00:00Z",
+        timestamp="2026-03-27T10:00:00Z",
+        trace_layer=TraceLayer.TOOL,
+    )
+    violation = Violation(
+        scope_level=ScopeLevel.RUN,
+        goal_session_id=event.goal_session_id,
+        workflow_run_id=event.workflow_run_id,
+        created_at="2026-03-27T10:00:01Z",
+        updated_at="2026-03-27T10:00:01Z",
+    )
+    artifact = Artifact(
+        scope_level=ScopeLevel.RUN,
+        goal_session_id=event.goal_session_id,
+        workflow_run_id=event.workflow_run_id,
+        created_at="2026-03-27T10:00:02Z",
+        updated_at="2026-03-27T10:00:02Z",
+        artifact_type=ArtifactType.REPORT,
+        artifact_role=ArtifactRole.AUDIT,
+    )
+
+    writer.write_event(event)
+    writer.write_violation(violation)
+    writer.write_artifact(artifact)
+
+    indexes_root = telemetry_indexes_root(tmp_path)
+    assert _read_json(indexes_root / "timeline-cursor.json")["last_event_id"] == event.event_id
+    assert _read_json(indexes_root / "open-violations.json")["violation_ids"] == [violation.violation_id]
+    assert _read_json(indexes_root / "latest-artifacts.json")["artifact_ids"] == [artifact.artifact_id]
 
 
 def test_only_writer_exposes_public_object_persistence_api() -> None:

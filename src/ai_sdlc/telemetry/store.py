@@ -193,6 +193,7 @@ class TelemetryStore:
             self._iter_event_payloads(),
             key=lambda payload: (payload["timestamp"], payload["event_id"]),
         )
+        latest_scope_ids = self._latest_scope_ids()
 
         open_violations_path = self.indexes_root / "open-violations.json"
         latest_artifacts_path = self.indexes_root / "latest-artifacts.json"
@@ -210,6 +211,9 @@ class TelemetryStore:
             "event_count": len(events),
             "last_event_id": events[-1]["event_id"] if events else None,
             "last_timestamp": events[-1]["timestamp"] if events else None,
+            "latest_goal_session_id": latest_scope_ids["latest_goal_session_id"],
+            "latest_workflow_run_id": latest_scope_ids["latest_workflow_run_id"],
+            "latest_step_id": latest_scope_ids["latest_step_id"],
         }
         self._write_json(timeline_cursor_path, timeline_payload)
 
@@ -428,6 +432,47 @@ class TelemetryStore:
         for path in sorted(self.local_root.rglob("events.ndjson")):
             payloads.extend(self._read_ndjson(path))
         return payloads
+
+    def _iter_evidence_payloads(self) -> list[dict[str, Any]]:
+        payloads: list[dict[str, Any]] = []
+        for path in sorted(self.local_root.rglob("evidence.ndjson")):
+            payloads.extend(self._read_ndjson(path))
+        return payloads
+
+    def _latest_scope_ids(self) -> dict[str, str | None]:
+        activity_records: list[tuple[str, dict[str, Any]]] = []
+        for payload in self._iter_event_payloads():
+            timestamp = payload.get("timestamp")
+            if isinstance(timestamp, str):
+                activity_records.append((timestamp, payload))
+        for payload in self._iter_evidence_payloads():
+            timestamp = payload.get("updated_at") or payload.get("created_at")
+            if isinstance(timestamp, str):
+                activity_records.append((timestamp, payload))
+        for kind in _MUTABLE_KIND_DIRS:
+            for payload in self._iter_mutable_snapshots(kind):
+                timestamp = payload.get("updated_at") or payload.get("created_at")
+                if isinstance(timestamp, str):
+                    activity_records.append((timestamp, payload))
+        return {
+            "latest_goal_session_id": self._latest_scope_id(activity_records, "goal_session_id"),
+            "latest_workflow_run_id": self._latest_scope_id(activity_records, "workflow_run_id"),
+            "latest_step_id": self._latest_scope_id(activity_records, "step_id"),
+        }
+
+    def _latest_scope_id(
+        self,
+        activity_records: list[tuple[str, dict[str, Any]]],
+        field_name: str,
+    ) -> str | None:
+        candidates = [
+            (timestamp, str(payload[field_name]))
+            for timestamp, payload in activity_records
+            if payload.get(field_name) is not None
+        ]
+        if not candidates:
+            return None
+        return max(candidates, key=lambda item: (item[0], item[1]))[1]
 
     def _canonicalize_evidence_matches(
         self,

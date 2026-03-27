@@ -56,6 +56,7 @@ class TelemetryWriter:
             ),
             event.model_dump(mode="json"),
         )
+        self.store.rebuild_indexes()
         return event
 
     def write_evidence(self, evidence: Evidence) -> Evidence:
@@ -86,6 +87,7 @@ class TelemetryWriter:
             step_id=evidence.step_id,
         )
         self.store._append_ndjson(stream_path, evidence.model_dump(mode="json"))
+        self.store.rebuild_indexes()
         return evidence
 
     def write_evaluation(self, evaluation: Evaluation) -> Evaluation:
@@ -124,6 +126,7 @@ class TelemetryWriter:
             self._validate_same_parent_chain(current_payload, payload)
             self.store._append_ndjson(self.store.revisions_path(record), payload)
         self.store._write_json(snapshot_path, payload)
+        self.store.rebuild_indexes()
         return record
 
     def _validate_same_parent_chain(
