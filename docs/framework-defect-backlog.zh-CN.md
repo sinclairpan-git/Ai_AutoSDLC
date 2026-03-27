@@ -302,7 +302,7 @@
 
 - 日期 (UTC): 2026-03-27
 - 来源: self_review
-- 状态: open
+- 状态: closed
 - owner: codex
 - wi_id: 003-telemetry-trace-governance
 - 现象: Task 7 为 `status --json` 增加了 bounded telemetry JSON surface，但 CLI 全局 callback 仍会在 `status` 子命令执行前触发 `run_ide_adapter_if_initialized()`，而该 hook 会调用 `ensure_ide_adaptation()` 持久化 `.ai-sdlc/project/config/project-config.yaml`，使 `status --json` 仍然带有文件写副作用。
@@ -325,7 +325,7 @@
 
 - 日期 (UTC): 2026-03-27
 - 来源: self_review, code_review
-- 状态: open
+- 状态: closed
 - owner: codex
 - wi_id: 003-telemetry-trace-governance
 - 现象: `status --json` 的 `latest.artifacts.sample_ids` 起初取的是 `latest-artifacts.json` 的尾部切片，而该索引本身是 newest-first，导致 latest sample 实际上可能返回最旧的一段；随后又暴露出 `latest_goal_session_id / latest_workflow_run_id / latest_step_id` 直接取 manifest dict key 的“最后一个”条目，在 manifest 重写/重载后会丢失真实 recency 语义。同时 `doctor` 的 `resolver health` 检查先是只调用 `resolve(\"unsupported\", ...)` 并把预期的 `ValueError` 视为健康，后续修补为正向解析时又先后出现递归扫描 `events.ndjson` 的 deep scan 越界，以及只探测极少数 manifest 候选 path、导致存在合法 fixture 时仍报 `warn` 的过窄 probe。
@@ -348,7 +348,7 @@
 
 - 日期 (UTC): 2026-03-27
 - 来源: spec_review, self_review
-- 状态: open
+- 状态: closed
 - owner: codex
 - wi_id: 003-telemetry-trace-governance
 - 现象: `status --json` 的 telemetry surface 虽然已经有 helper，但真实 CLI 路径仍先检查 `project-state.yaml` 是否为 `uninitialized` 并直接 exit 1，导致“项目存在但未初始化”时拿不到 JSON；与此同时 `doctor` 的 `status --json surface` 检查绕过真实命令路径，直接调用 helper 并报告 `ok/not_initialized`，两者对同一 surface 给出了相互矛盾的结论。
@@ -366,3 +366,26 @@
 - 风险等级: 中
 - 可验证成功标准: 当项目根存在但 `project-state.yaml` 仍为 `uninitialized` 时，`ai-sdlc status --json` 仍返回 bounded telemetry JSON 且 `telemetry.state=not_initialized`；`doctor` 对 `status --json surface` 的状态与真实 CLI 行为保持一致。
 - 是否需要回归测试补充: 是：补充 uninitialized project 下 `status --json` 可达、doctor surface 检查与真实 CLI 行为一致的回归测试。
+
+## FD-2026-03-27-009 | backlog 关单时批量状态替换误伤无关历史条目，被 diff 复核拦下
+
+- 日期 (UTC): 2026-03-27
+- 来源: self_review
+- 状态: closed
+- owner: codex
+- wi_id: 003-telemetry-trace-governance
+- 现象: 在关闭 Task 7 对应的 `FD-006/007/008` 时，使用了过宽的状态替换补丁，误把无关的历史条目 `FD-2026-03-26-002` 一并改成 `closed`；问题在提交前通过 `git diff` 人工复核被发现并立即纠正，没有进入新的 commit 历史。
+- 触发场景: 对 backlog 文档执行批量文本替换时，只按 `- 状态: open` 模式做局部修改，没有把标题或 work item 上下文纳入补丁定位条件。
+- 影响范围: 若未被复核拦下，会造成无关历史缺陷状态失真，削弱 backlog 作为框架真值台账的可信度。
+- 根因分类: A, B
+- 未来杜绝方案摘要: 对 backlog 状态变更一律采用“按标题上下文定点修改 + 提交前 diff 复核”的方式，不再对裸 `状态` 行做无上下文批量替换；继续把文档收口前的 `git diff` 检查视为硬步骤。
+- 建议改动层级: workflow, tool, eval
+- prompt / context: backlog 关单是台账真值修改，不是普通文本清理；任何批量补丁都必须带上下文锚点。
+- rule / policy: 对台账状态变更禁止无上下文批量替换；至少要以条目标题或唯一 ID 作为修改锚点。
+- middleware: 如后续引入 backlog 自动化编辑，应提供按条目 ID 定位的更新接口，避免自由文本替换。
+- workflow: backlog 收口前固定执行 `git diff` 复核，重点检查是否误伤无关条目。
+- tool: `git diff`、`git add -p` 或等价的定点变更流程
+- eval: backlog-status-collateral-edit 次数、提交前误伤拦截率
+- 风险等级: 低
+- 可验证成功标准: 后续 backlog 关单仅修改目标条目；若出现误伤，必须在提交前被 diff 复核拦下并修正。
+- 是否需要回归测试补充: 否：当前更适合用流程约束和 diff 复核兜底，而不是为纯文档编辑引入自动化测试。
