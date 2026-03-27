@@ -39,3 +39,16 @@ class TestCliIdeAdapterHook:
         assert runner.invoke(app, ["status"]).exit_code == 0
         vs = tmp_path / ".vscode" / "AI-SDLC.md"
         assert vs.is_file()
+
+    def test_status_json_does_not_install_vscode_file(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.chdir(tmp_path)
+        assert runner.invoke(app, ["init", "."]).exit_code == 0
+        (tmp_path / ".vscode").mkdir()
+
+        result = runner.invoke(app, ["status", "--json"])
+
+        assert result.exit_code == 0
+        vs = tmp_path / ".vscode" / "AI-SDLC.md"
+        assert vs.exists() is False

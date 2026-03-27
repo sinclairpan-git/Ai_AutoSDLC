@@ -48,7 +48,7 @@ def _write_legacy_root_artifacts(root: Path) -> None:
 class TestCliStatus:
     @pytest.fixture(autouse=True)
     def _no_ide_adapter_hook(self) -> None:
-        with patch("ai_sdlc.cli.main.run_ide_adapter_if_initialized"):
+        with patch("ai_sdlc.cli.commands.ensure_ide_adaptation"):
             yield
 
     def test_status_initialized(self, tmp_path: Path) -> None:

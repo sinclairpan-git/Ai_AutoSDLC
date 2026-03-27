@@ -19,7 +19,10 @@ from ai_sdlc.core.reconcile import (
     reconcile_checkpoint,
 )
 from ai_sdlc.generators.index_gen import generate_index, save_index
-from ai_sdlc.integrations.ide_adapter import ensure_ide_adaptation
+from ai_sdlc.integrations.ide_adapter import (
+    ensure_ide_adaptation,
+    format_adapter_notice,
+)
 from ai_sdlc.knowledge.engine import apply_refresh, compute_refresh_level, load_baseline
 from ai_sdlc.models.project import ProjectStatus
 from ai_sdlc.routers.bootstrap import (
@@ -164,6 +167,10 @@ def status_command(
     if as_json:
         typer.echo(json.dumps(build_status_json_surface(root), indent=2))
         raise typer.Exit(code=0)
+
+    note = format_adapter_notice(ensure_ide_adaptation(root))
+    if note:
+        console.print(note)
 
     state = load_project_state(root)
     if state.status == ProjectStatus.UNINITIALIZED:
