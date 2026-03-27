@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 import pytest
@@ -12,6 +13,7 @@ from ai_sdlc.context.state import save_checkpoint
 from ai_sdlc.core.runner import SDLCRunner
 from ai_sdlc.models.gate import GateCheck, GateResult, GateVerdict
 from ai_sdlc.models.state import Checkpoint, FeatureInfo
+from ai_sdlc.telemetry.paths import telemetry_manifest_path, telemetry_reports_root
 
 runner = CliRunner()
 
@@ -54,6 +56,21 @@ class TestRunCommand:
         assert runner.invoke(app, ["run", "--dry-run"]).exit_code == 0
         doc = tmp_path / ".codex" / "AI-SDLC.md"
         assert doc.is_file()
+
+    def test_run_dry_run_lazy_inits_telemetry_without_governance_artifacts(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.chdir(tmp_path)
+        assert runner.invoke(app, ["init", "."]).exit_code == 0
+
+        result = runner.invoke(app, ["run", "--dry-run"])
+
+        assert result.exit_code == 0
+        manifest = json.loads(
+            telemetry_manifest_path(tmp_path).read_text(encoding="utf-8")
+        )
+        assert manifest["version"] == 1
+        assert telemetry_reports_root(tmp_path).exists() is False
 
     def test_run_non_dry_run_does_not_halt_init_when_git_repo_is_missing(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch

@@ -22,6 +22,8 @@ from ai_sdlc.gates.pipeline_gates import (
 from ai_sdlc.gates.registry import GateRegistry
 from ai_sdlc.models.gate import GateResult, GateVerdict
 from ai_sdlc.models.state import Checkpoint, CompletedStage, FeatureInfo
+from ai_sdlc.telemetry.enums import TelemetryEventStatus
+from ai_sdlc.telemetry.runtime import RuntimeTelemetry
 from ai_sdlc.utils.helpers import now_iso
 
 logger = logging.getLogger(__name__)
@@ -50,8 +52,9 @@ class SDLCRunner:
 
     def __init__(self, root: Path) -> None:
         self.root = root.resolve()
+        self._telemetry = RuntimeTelemetry(self.root)
         self._registry = self._build_registry()
-        self._dispatcher = StageDispatcher()
+        self._dispatcher = StageDispatcher(telemetry=self._telemetry)
 
     def _build_registry(self) -> GateRegistry:
         reg = GateRegistry()
@@ -89,28 +92,63 @@ class SDLCRunner:
         """
         cp = self._ensure_checkpoint()
         start_idx = self._stage_index(cp.current_stage)
+        run_open = False
+        if not dry_run:
+            self._telemetry.open_workflow_run()
+            run_open = True
 
-        for idx in range(start_idx, len(PIPELINE_STAGES)):
-            stage = PIPELINE_STAGES[idx]
-            logger.info("Pipeline: entering stage '%s'", stage)
+        try:
+            for idx in range(start_idx, len(PIPELINE_STAGES)):
+                stage = PIPELINE_STAGES[idx]
+                logger.info("Pipeline: entering stage '%s'", stage)
 
-            self._dispatcher.begin_stage(stage)
+                self._dispatcher.begin_stage(stage)
 
-            if not dry_run:
-                cp.current_stage = stage
-                cp.pipeline_last_updated = now_iso()
-                save_checkpoint(self.root, cp)
+                if not dry_run:
+                    cp.current_stage = stage
+                    cp.pipeline_last_updated = now_iso()
+                    save_checkpoint(self.root, cp)
 
-            result = self._run_gate_with_retry(stage, cp, dry_run)
-            self._dispatcher.record_result(
-                "gate_check",
-                result.verdict == GateVerdict.PASS,
-                result.verdict.value,
-            )
-            cp = self._apply_result(result, stage, idx, cp, mode, dry_run, on_confirm)
-            if cp.current_stage == stage and mode == "confirm":
-                return cp
+                try:
+                    result = self._run_gate_with_retry(stage, cp, dry_run)
+                except PipelineHaltError:
+                    self._dispatcher.finish_stage("RETRY")
+                    raise
+                except Exception:
+                    self._dispatcher.finish_stage("FAIL")
+                    raise
+                self._dispatcher.record_result(
+                    "gate_check",
+                    result.verdict == GateVerdict.PASS,
+                    result.verdict.value,
+                )
+                self._dispatcher.finish_stage(result.verdict.value)
+                cp = self._apply_result(
+                    result,
+                    stage,
+                    idx,
+                    cp,
+                    mode,
+                    dry_run,
+                    on_confirm,
+                )
+                if cp.current_stage == stage and mode == "confirm":
+                    if run_open:
+                        self._telemetry.close_workflow_run(
+                            TelemetryEventStatus.BLOCKED
+                        )
+                    return cp
+        except PipelineHaltError:
+            if run_open:
+                self._telemetry.close_workflow_run(TelemetryEventStatus.BLOCKED)
+            raise
+        except Exception:
+            if run_open:
+                self._telemetry.close_workflow_run(TelemetryEventStatus.FAILED)
+            raise
 
+        if run_open:
+            self._telemetry.close_workflow_run(TelemetryEventStatus.SUCCEEDED)
         return cp
 
     def _run_gate_with_retry(
@@ -119,6 +157,15 @@ class SDLCRunner:
         """Run gate check with retry loop up to MAX_RETRIES."""
         for attempt in range(MAX_RETRIES):
             result = self._run_gate(stage, cp)
+            if not dry_run:
+                self._telemetry.record_gate_control_point(
+                    step_id=self._dispatcher.current_step_id,
+                    stage=stage,
+                    verdict=result.verdict.value,
+                    check_messages=tuple(
+                        check.message or check.name for check in result.checks
+                    ),
+                )
             if result.verdict != GateVerdict.RETRY or dry_run:
                 return result
             logger.warning("Stage '%s' RETRY %d/%d", stage, attempt + 1, MAX_RETRIES)

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import sys
 from pathlib import Path
 
@@ -18,7 +19,10 @@ from ai_sdlc.core.reconcile import (
     reconcile_checkpoint,
 )
 from ai_sdlc.generators.index_gen import generate_index, save_index
-from ai_sdlc.integrations.ide_adapter import ensure_ide_adaptation
+from ai_sdlc.integrations.ide_adapter import (
+    ensure_ide_adaptation,
+    format_adapter_notice,
+)
 from ai_sdlc.knowledge.engine import apply_refresh, compute_refresh_level, load_baseline
 from ai_sdlc.models.project import ProjectStatus
 from ai_sdlc.routers.bootstrap import (
@@ -28,6 +32,7 @@ from ai_sdlc.routers.bootstrap import (
     init_project,
 )
 from ai_sdlc.routers.existing_project_init import run_full_scan
+from ai_sdlc.telemetry.readiness import build_status_json_surface
 from ai_sdlc.utils.helpers import AI_SDLC_DIR, find_project_root
 
 console = Console()
@@ -144,7 +149,13 @@ def init_command(
 # ---------------------------------------------------------------------------
 
 
-def status_command() -> None:
+def status_command(
+    as_json: bool = typer.Option(
+        False,
+        "--json",
+        help="Machine-readable bounded telemetry summary.",
+    ),
+) -> None:
     """Show current AI-SDLC pipeline status."""
     root = find_project_root()
     if root is None:
@@ -152,6 +163,14 @@ def status_command() -> None:
             "[red]Not inside an AI-SDLC project. Run 'ai-sdlc init' first.[/red]"
         )
         raise typer.Exit(code=1)
+
+    if as_json:
+        typer.echo(json.dumps(build_status_json_surface(root), indent=2))
+        raise typer.Exit(code=0)
+
+    note = format_adapter_notice(ensure_ide_adaptation(root))
+    if note:
+        console.print(note)
 
     state = load_project_state(root)
     if state.status == ProjectStatus.UNINITIALIZED:

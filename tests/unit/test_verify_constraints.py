@@ -5,7 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from ai_sdlc.context.state import save_checkpoint
-from ai_sdlc.core.verify_constraints import collect_constraint_blockers
+from ai_sdlc.core.verify_constraints import build_constraint_report, collect_constraint_blockers
 from ai_sdlc.models.state import Checkpoint, FeatureInfo
 
 
@@ -71,6 +71,17 @@ def test_pass_constitution_and_spec_dir(tmp_path: Path) -> None:
     save_checkpoint(tmp_path, cp)
 
     assert collect_constraint_blockers(tmp_path) == []
+
+
+def test_structured_constraint_report_preserves_blockers(tmp_path: Path) -> None:
+    mem = tmp_path / ".ai-sdlc" / "memory"
+    mem.mkdir(parents=True)
+
+    report = build_constraint_report(tmp_path)
+
+    assert report.root == str(tmp_path)
+    assert report.blockers == tuple(collect_constraint_blockers(tmp_path))
+    assert report.source_name == "verify constraints"
 
 
 def test_skip_registry_historical_unmapped_rows_ignored_sc020(tmp_path: Path) -> None:

@@ -1,0 +1,143 @@
+"""Frozen telemetry enums defined once for the V1 contract."""
+
+from __future__ import annotations
+
+from enum import Enum
+
+
+class ScopeLevel(str, Enum):
+    SESSION = "session"
+    RUN = "run"
+    STEP = "step"
+
+
+class ActorType(str, Enum):
+    FRAMEWORK_RUNTIME = "framework_runtime"
+    AGENT = "agent"
+    HUMAN = "human"
+    OBSERVER = "observer"
+    EXTERNAL_TOOL = "external_tool"
+
+
+class CaptureMode(str, Enum):
+    AUTO = "auto"
+    AGENT_REPORTED = "agent_reported"
+    HUMAN_REPORTED = "human_reported"
+    INFERRED = "inferred"
+
+
+class Confidence(str, Enum):
+    HIGH = "high"
+    MEDIUM = "medium"
+    LOW = "low"
+
+
+class TraceLayer(str, Enum):
+    WORKFLOW = "workflow"
+    AGENT_ACTION = "agent_action"
+    TOOL = "tool"
+    HUMAN = "human"
+    EVALUATION = "evaluation"
+
+
+class TelemetryEventStatus(str, Enum):
+    STARTED = "started"
+    SUCCEEDED = "succeeded"
+    FAILED = "failed"
+    BLOCKED = "blocked"
+    SKIPPED = "skipped"
+    CANCELLED = "cancelled"
+
+
+class EvidenceStatus(str, Enum):
+    AVAILABLE = "available"
+    PARTIAL = "partial"
+    MISSING = "missing"
+    ARCHIVED = "archived"
+
+
+class EvaluationResult(str, Enum):
+    PASSED = "passed"
+    FAILED = "failed"
+    WARNING = "warning"
+    NOT_APPLICABLE = "not_applicable"
+
+
+class EvaluationStatus(str, Enum):
+    PENDING = "pending"
+    PASSED = "passed"
+    FAILED = "failed"
+    WAIVED = "waived"
+
+
+class ViolationStatus(str, Enum):
+    OPEN = "open"
+    TRIAGED = "triaged"
+    ACCEPTED = "accepted"
+    FIXED = "fixed"
+    DISMISSED = "dismissed"
+
+
+class ViolationRiskLevel(str, Enum):
+    LOW = "low"
+    MEDIUM = "medium"
+    HIGH = "high"
+    CRITICAL = "critical"
+
+
+class ArtifactStatus(str, Enum):
+    DRAFT = "draft"
+    GENERATED = "generated"
+    REVIEWED = "reviewed"
+    PUBLISHED = "published"
+    ARCHIVED = "archived"
+
+
+class ArtifactType(str, Enum):
+    REPORT = "report"
+    SNAPSHOT = "snapshot"
+    BUNDLE = "bundle"
+    ATTACHMENT = "attachment"
+    DELIVERABLE = "deliverable"
+
+
+class ArtifactRole(str, Enum):
+    AUDIT = "audit"
+    EVALUATION = "evaluation"
+    VIOLATION_SUMMARY = "violation_summary"
+    IMPROVEMENT_PROPOSAL = "improvement_proposal"
+    DELIVERABLE = "deliverable"
+    DEBUG_ATTACHMENT = "debug_attachment"
+
+
+class ArtifactStorageScope(str, Enum):
+    PROJECT_COMMITTABLE = "project_committable"
+    PROJECT_LOCAL = "project_local"
+    EXPORTABLE = "exportable"
+
+
+class RootCauseClass(str, Enum):
+    PROMPT = "prompt"
+    CONTEXT = "context"
+    RULE_POLICY = "rule_policy"
+    MIDDLEWARE = "middleware"
+    WORKFLOW = "workflow"
+    TOOL = "tool"
+    EVAL = "eval"
+    MODEL_BEHAVIOR = "model_behavior"
+    HUMAN_PROCESS = "human_process"
+
+
+class SuggestedChangeLayer(str, Enum):
+    PROMPT = "prompt"
+    CONTEXT = "context"
+    RULE_POLICY = "rule_policy"
+    MIDDLEWARE = "middleware"
+    WORKFLOW = "workflow"
+    TOOL = "tool"
+    EVAL = "eval"
+
+
+class TelemetryObjectCategory(str, Enum):
+    APPEND_ONLY = "append_only"
+    MUTABLE = "mutable"

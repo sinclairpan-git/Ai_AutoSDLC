@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import json
+import time
 from pathlib import Path
 from unittest.mock import patch
 
@@ -17,7 +19,10 @@ runner = CliRunner()
 
 
 @pytest.fixture(autouse=True)
-def _no_ide_adapter_hook() -> None:
+def _no_ide_adapter_hook(request: pytest.FixtureRequest) -> None:
+    if request.node.get_closest_marker("real_ide_hook") is not None:
+        yield
+        return
     with patch("ai_sdlc.cli.main.run_ide_adapter_if_initialized"):
         yield
 
@@ -141,12 +146,63 @@ class TestCliVerifyConstraints:
 
     def test_json_output(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
         init_project(tmp_path)
+        _minimal_constitution(tmp_path)
+        save_checkpoint(
+            tmp_path,
+            Checkpoint(
+                current_stage="init",
+                feature=FeatureInfo(
+                    id="001",
+                    spec_dir="specs/missing-wi",
+                    design_branch="d",
+                    feature_branch="f",
+                    current_branch="main",
+                ),
+            ),
+        )
         monkeypatch.chdir(tmp_path)
 
         result = runner.invoke(app, ["verify", "constraints", "--json"])
         assert result.exit_code == 1
-        assert '"ok"' in result.output
-        assert "blockers" in result.output
+        payload = json.loads(result.output)
+        assert set(payload) >= {"ok", "blockers", "root"}
+        session_id = payload["telemetry"]["goal_session_id"]
+        events_path = (
+            tmp_path
+            / ".ai-sdlc"
+            / "local"
+            / "telemetry"
+            / "sessions"
+            / session_id
+            / "events.ndjson"
+        )
+        lines = [
+            json.loads(line)
+            for line in events_path.read_text(encoding="utf-8").splitlines()
+            if line.strip()
+        ]
+        assert lines[-1]["scope_level"] == "session"
+        assert lines[-1]["status"] == "failed"
+        assert lines[-1]["trace_layer"] == "workflow"
+        telemetry_root = tmp_path / ".ai-sdlc" / "local" / "telemetry"
+        assert telemetry_root.is_dir()
+        assert list(telemetry_root.rglob("events.ndjson"))
+        assert list(telemetry_root.rglob("evidence.ndjson"))
+        assert list(telemetry_root.rglob("evaluations/*.json"))
+        assert list(telemetry_root.rglob("violations/*.json"))
+
+    def test_json_output_outside_project_includes_root(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.chdir(tmp_path)
+
+        result = runner.invoke(app, ["verify", "constraints", "--json"])
+        assert result.exit_code == 1
+        payload = json.loads(result.output)
+        assert payload["ok"] is False
+        assert payload["blockers"] == []
+        assert "root" in payload
+        assert payload["root"] is None
 
     def test_exit_1_when_skip_registry_unmapped(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
@@ -207,4 +263,37 @@ class TestCliVerifyConstraints:
 
         result = runner.invoke(app, ["verify", "constraints"])
         assert result.exit_code == 0
-        assert "no blocker" in result.output.lower()
+
+    @pytest.mark.real_ide_hook
+    def test_verify_constraints_real_cli_path_does_not_mutate_ide_adapter_files(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        init_project(tmp_path)
+        _minimal_constitution(tmp_path)
+        (tmp_path / ".vscode").mkdir()
+        config_path = (
+            tmp_path
+            / ".ai-sdlc"
+            / "project"
+            / "config"
+            / "project-config.yaml"
+        )
+        before_config = (
+            config_path.read_text(encoding="utf-8") if config_path.exists() else None
+        )
+        before_adapter = (tmp_path / ".vscode" / "AI-SDLC.md").exists()
+        time.sleep(1.2)
+        monkeypatch.chdir(tmp_path)
+
+        result = runner.invoke(app, ["verify", "constraints", "--json"], catch_exceptions=False)
+
+        after_config = (
+            config_path.read_text(encoding="utf-8") if config_path.exists() else None
+        )
+        after_adapter = (tmp_path / ".vscode" / "AI-SDLC.md").exists()
+        assert result.exit_code == 0
+        assert after_config == before_config
+        assert after_adapter == before_adapter
+        payload = json.loads(result.output)
+        assert payload["ok"] is True
+        assert payload["blockers"] == []

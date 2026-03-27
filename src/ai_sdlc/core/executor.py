@@ -12,6 +12,8 @@ from ai_sdlc.models.state import (
     Task,
     TaskStatus,
 )
+from ai_sdlc.telemetry.enums import TelemetryEventStatus
+from ai_sdlc.telemetry.runtime import RuntimeTelemetry
 from ai_sdlc.utils.helpers import now_iso
 
 logger = logging.getLogger(__name__)
@@ -30,9 +32,18 @@ class BatchExecutor:
     Enforces BR-030 (debug round limit) and BR-031 (circuit breaker).
     """
 
-    def __init__(self, plan: ExecutionPlan, runtime: RuntimeState) -> None:
+    def __init__(
+        self,
+        plan: ExecutionPlan,
+        runtime: RuntimeState,
+        *,
+        telemetry: RuntimeTelemetry | None = None,
+        step_id: str | None = None,
+    ) -> None:
         self._plan = plan
         self._runtime = runtime
+        self._telemetry = telemetry
+        self._step_id = step_id
         self._task_map: dict[str, Task] = {t.task_id: t for t in plan.tasks}
 
     @property
@@ -73,7 +84,14 @@ class BatchExecutor:
             return task
 
         if status == TaskStatus.FAILED:
-            self._handle_failure(task)
+            pending_error: CircuitBreakerError | None = None
+            try:
+                self._handle_failure(task)
+            except CircuitBreakerError as exc:
+                pending_error = exc
+            self._emit_tool_trace(task)
+            if pending_error is not None:
+                raise pending_error
             return task
 
         if status == TaskStatus.COMPLETED:
@@ -81,9 +99,11 @@ class BatchExecutor:
             self._runtime.last_committed_task = task_id
             self._runtime.consecutive_halts = 0
             logger.info("Task %s completed", task_id)
+            self._emit_tool_trace(task)
             return task
 
         task.status = status
+        self._emit_tool_trace(task)
         return task
 
     def _handle_failure(self, task: Task) -> None:
@@ -134,6 +154,37 @@ class BatchExecutor:
     def is_complete(self) -> bool:
         """Check if all batches have been processed."""
         return self._runtime.current_batch >= len(self._plan.batches)
+
+    def _emit_tool_trace(self, task: Task) -> None:
+        """Emit executor-owned tool telemetry without writing workflow events."""
+        if self._telemetry is None or self._step_id is None:
+            return
+        self._telemetry.record_tool_control_point(
+            step_id=self._step_id,
+            control_point_name="command_completed",
+            status=self._tool_status(task.status),
+            details={
+                "task_id": task.task_id,
+                "task_status": task.status.value,
+            },
+        )
+        self._telemetry.record_tool_evidence(
+            step_id=self._step_id,
+            locator=f"executor://tasks/{task.task_id}",
+            digest=f"status:{task.status.value}",
+        )
+
+    @staticmethod
+    def _tool_status(status: TaskStatus) -> TelemetryEventStatus:
+        if status is TaskStatus.COMPLETED:
+            return TelemetryEventStatus.SUCCEEDED
+        if status is TaskStatus.FAILED:
+            return TelemetryEventStatus.FAILED
+        if status is TaskStatus.HALTED:
+            return TelemetryEventStatus.BLOCKED
+        if status is TaskStatus.CANCELLED:
+            return TelemetryEventStatus.CANCELLED
+        return TelemetryEventStatus.STARTED
 
 
 # ── execution logger ──

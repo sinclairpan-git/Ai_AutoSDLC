@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 import pytest
@@ -20,6 +21,16 @@ from ai_sdlc.models.state import (
     Task,
     TaskStatus,
 )
+from ai_sdlc.telemetry.paths import telemetry_local_root
+from ai_sdlc.telemetry.runtime import RuntimeTelemetry
+
+
+def _read_ndjson(path: Path) -> list[dict]:
+    return [
+        json.loads(line)
+        for line in path.read_text(encoding="utf-8").splitlines()
+        if line.strip()
+    ]
 
 
 def _make_plan(tasks: list[Task], batches: list[ExecutionBatch]) -> ExecutionPlan:
@@ -340,3 +351,95 @@ class TestExecutionLogger:
         content = log_path.read_text(encoding="utf-8")
         assert "Old content." in content
         assert "**T1**: completed" in content
+
+
+def test_executor_emits_only_tool_events_and_evidence(tmp_path: Path) -> None:
+    telemetry = RuntimeTelemetry(tmp_path)
+    telemetry.open_workflow_run()
+    step_id = telemetry.begin_step("execute")
+    plan = _make_plan(
+        [Task(task_id="TX", title="Task X", phase=1)],
+        [ExecutionBatch(batch_id=1, phase=1, tasks=["TX"])],
+    )
+    exe = BatchExecutor(
+        plan,
+        RuntimeState(),
+        telemetry=telemetry,
+        step_id=step_id,
+    )
+
+    step_root = (
+        telemetry_local_root(tmp_path)
+        / "sessions"
+        / telemetry.goal_session_id
+        / "runs"
+        / telemetry.workflow_run_id
+        / "steps"
+        / step_id
+    )
+    before_events = _read_ndjson(step_root / "events.ndjson")
+
+    exe.advance_task("TX", TaskStatus.COMPLETED)
+
+    after_events = _read_ndjson(step_root / "events.ndjson")
+    new_events = after_events[len(before_events) :]
+    evidence = _read_ndjson(step_root / "evidence.ndjson")
+
+    assert new_events
+    assert all(event["trace_layer"] == "tool" for event in new_events)
+    assert all(event["status"] == "succeeded" for event in new_events)
+    assert evidence[-1]["locator"] == "executor://tasks/TX"
+    assert any(
+        payload["locator"].startswith("ccp:v1:command_completed:event:")
+        for payload in evidence
+    )
+
+
+def test_circuit_breaker_failure_still_emits_tool_event_and_evidence(
+    tmp_path: Path,
+) -> None:
+    telemetry = RuntimeTelemetry(tmp_path)
+    telemetry.open_workflow_run()
+    step_id = telemetry.begin_step("execute")
+    tasks = [
+        Task(task_id="A", title="A", phase=1),
+        Task(task_id="B", title="B", phase=1),
+    ]
+    exe = BatchExecutor(
+        _make_plan(tasks, [ExecutionBatch(batch_id=1, phase=1, tasks=["A", "B"])]),
+        RuntimeState(),
+        telemetry=telemetry,
+        step_id=step_id,
+    )
+
+    for _ in range(MAX_DEBUG_ROUNDS):
+        exe.advance_task("A", TaskStatus.FAILED)
+
+    step_root = (
+        telemetry_local_root(tmp_path)
+        / "sessions"
+        / telemetry.goal_session_id
+        / "runs"
+        / telemetry.workflow_run_id
+        / "steps"
+        / step_id
+    )
+    before_event_count = len(_read_ndjson(step_root / "events.ndjson"))
+    before_evidence_count = len(_read_ndjson(step_root / "evidence.ndjson"))
+
+    with pytest.raises(CircuitBreakerError, match="BR-031"):
+        for _ in range(MAX_DEBUG_ROUNDS):
+            exe.advance_task("B", TaskStatus.FAILED)
+
+    after_events = _read_ndjson(step_root / "events.ndjson")
+    after_evidence = _read_ndjson(step_root / "evidence.ndjson")
+
+    assert len(after_events) == before_event_count + MAX_DEBUG_ROUNDS
+    assert len(after_evidence) == before_evidence_count + (MAX_DEBUG_ROUNDS * 2)
+    assert after_events[-1]["trace_layer"] == "tool"
+    assert after_events[-1]["status"] == "blocked"
+    assert after_evidence[-1]["locator"] == "executor://tasks/B"
+    assert any(
+        payload["locator"].startswith("ccp:v1:command_completed:event:")
+        for payload in after_evidence[before_evidence_count:]
+    )
