@@ -389,3 +389,26 @@
 - 风险等级: 低
 - 可验证成功标准: 后续 backlog 关单仅修改目标条目；若出现误伤，必须在提交前被 diff 复核拦下并修正。
 - 是否需要回归测试补充: 否：当前更适合用流程约束和 diff 复核兜底，而不是为纯文档编辑引入自动化测试。
+
+## FD-2026-03-27-010 | telemetry 本地运行态目录未忽略，CLI smoke 会直接弄脏工作树
+
+- 日期 (UTC): 2026-03-27
+- 来源: self_review
+- 状态: closed
+- owner: codex
+- wi_id: 003-telemetry-trace-governance
+- 现象: 在 Task 8 smoke 中执行 `verify constraints --json` 后，仓库工作树出现未跟踪的 `.ai-sdlc/local/telemetry/**`，说明 telemetry 本地运行态目录没有被 Git 忽略；如果不手动清理，`git status` 会把正常 smoke 误呈现为脏工作树。
+- 触发场景: 在项目根上用真实 CLI 路径执行 `verify constraints --json`，命令会写入本地 telemetry manifest 和 session event/evidence stream。
+- 影响范围: 工作树整洁性、收口前状态判断、review 对“是否还有未归档变更”的辨识；也会增加误提交本地运行态文件的风险。
+- 根因分类: A, B
+- 未来杜绝方案摘要: 将 `.ai-sdlc/local/` 视为本地运行态目录并默认加入忽略规则；把“执行真实 CLI smoke 后 `git status` 仍保持干净”继续作为收口检查项。
+- 建议改动层级: rule / policy, workflow, tool
+- prompt / context: telemetry 的本地真值可以存在于项目目录，但不应进入版本库候选集；运行态文件和设计/代码产物要有不同的 Git 语义。
+- rule / policy: `.ai-sdlc/local/` 归类为本地运行态目录，默认不进入版本控制；真实 CLI smoke 后必须复核工作树是否仍然干净。
+- middleware: 需要本地 telemetry 的命令仍按原路径写入，但依赖忽略规则隔离版本控制影响。
+- workflow: Task 级 smoke 后固定执行 `git status`；若本地运行态目录未被忽略，需先修复忽略规则或清理再继续收口。
+- tool: `.gitignore`、`git check-ignore`、`git status`
+- eval: telemetry-local-dirty-worktree 次数、smoke-after-status-clean 通过率
+- 风险等级: 低
+- 可验证成功标准: `.gitignore` 能匹配 `.ai-sdlc/local/**`；执行 `verify constraints --json` 后，`git status` 不再显示 telemetry 本地运行态目录为未跟踪/已修改文件。
+- 是否需要回归测试补充: 否：当前通过真实 CLI smoke + `git status` / `git check-ignore` 复核更贴近问题本身。
