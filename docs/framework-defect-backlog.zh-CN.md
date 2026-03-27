@@ -10,6 +10,7 @@
 - `verify` / `gate` / `close-check` / 其他门禁因**框架自身约束、状态漂移、规则缺口**而阻断。
 - 代理自检发现自己**跳过了框架约束**、误用规则、选错真值来源，或被代码审查指出有同类问题。
 - 生产问题、兼容性问题、回归问题在修复时暴露出**框架层缺口**，需要进入后续演化 backlog。
+- 即使该违约 / 缺陷**已被门禁、review 或自检及时拦下，并在当前迭代内完成修复**，只要它曾真实出现过且暴露了框架缺口，仍必须记录；不得因为“已经修好”而只留会话备注、不进 backlog。
 
 ### 记录格式
 
@@ -45,6 +46,7 @@
 - `风险等级`：建议使用 `低 / 中 / 高 / 极高`。
 - `是否需要回归测试补充`：使用 `是：...` / `否：...`。
 - `状态`：建议使用 `open / planned / in_progress / closed / migrated`。
+- 若条目对应的是“已被拦截且已修复”的违约，`状态` 可记为 `closed`，但正文仍必须写清：`现象`、`根因分类`、以及未来如何杜绝同类问题再次出现（应落到 `rule / policy`、`middleware`、`workflow`、`tool`、`eval` 等字段）。
 
 ### 迁移说明
 
@@ -183,3 +185,47 @@
 - 风险等级: 高
 - 可验证成功标准: 给定“旧版根目录产物 + 过时/空白 checkpoint”的夹具，CLI 能识别真实阶段或提供显式 reconcile 入口，使 `status/recover/run` 不再长期停留于 `init/unknown`。
 - 是否需要回归测试补充: 是：补充根目录旧布局、旧 `project-state.yaml` 字段、空白 checkpoint、stale checkpoint 的兼容回归测试。
+
+## FD-2026-03-27-001 | manual telemetry 录入面可伪造 runtime 生命周期与 scope 链
+
+- 日期 (UTC): 2026-03-27
+- 来源: self_review, code_review
+- 状态: closed
+- owner: codex
+- wi_id: 003-telemetry-trace-governance
+- 现象: `ai-sdlc telemetry` 的手工录入面最初允许直接写入从未打开过的 `goal_session_id / workflow_run_id / step_id`，也允许手工事件伪装成 `workflow + framework_runtime + auto` 的 runtime 生命周期事件，进而绕过 session close 的 open-run 守卫。
+- 触发场景: 在 Task 4 落地 `open-session / record-event / record-evidence / close-session` 时，只校验了对象 schema，没有把“手工补记”和“runtime 真值写入”做硬隔离。
+- 影响范围: telemetry 真值污染、workflow 生命周期伪造、source closure 前提失真、后续 evaluation/violation 生成依据被污染。
+- 根因分类: A, B, D
+- 建议改动层级: rule / policy, middleware, workflow, tool, eval
+- prompt / context: “允许人工补记”不等于“允许人工重写 framework runtime 真值”；manual surface 必须被描述成补记层，不是生命周期主写层。
+- rule / policy: 明确手工 telemetry 只能写已存在 scope 链，且不得写 runtime-owned lifecycle 形状；凡绕过该边界的实现均视为框架违约。
+- middleware: 在 runtime/telemetry facade 中统一校验 session 是否 open、run/step 是否已存在、session 是否已 closed、以及 manual event 是否伪装成 runtime 生命周期。
+- workflow: Task 级 code review 默认把“manual 命令能否造假 session/run/step 或关闭未关闭 run”作为必查项。
+- tool: `ai-sdlc telemetry open-session`、`ai-sdlc telemetry record-event`、`ai-sdlc telemetry record-evidence`、`ai-sdlc telemetry close-session`
+- eval: manual telemetry forged-scope 拦截率、runtime-owned lifecycle 伪造阻断率
+- 风险等级: 高
+- 可验证成功标准: 手工 telemetry 命令只能写入已存在且仍 open 的合法 scope 链；`record-event` 不能伪装 `workflow/framework_runtime/auto`；`close-session` 不得在 runtime run 未闭合时成功，也不得被手工 run 事件欺骗。
+- 是否需要回归测试补充: 是：补充 fresh session/run/step 伪造、closed session 二次写入、runtime lifecycle 伪造、manual run 事件绕过 close-session 的正反用例。
+
+## FD-2026-03-27-002 | verify telemetry 接入时易引入 session 生命周期悬空与 JSON contract 漂移
+
+- 日期 (UTC): 2026-03-27
+- 来源: self_review, code_review
+- 状态: closed
+- owner: codex
+- wi_id: 003-telemetry-trace-governance
+- 现象: `verify constraints` 接 telemetry 后，初版实现会自动打开 telemetry session 但不写 terminal session event，留下 dangling session；同时 `--json` 的非项目路径错误输出一度丢失固定字段 `root`，破坏既有 JSON shape。
+- 触发场景: 在 Task 5 把 `verify constraints` 接成 evaluation-layer event/evidence/evaluation/violation 时，只关注治理对象生成，没有同时把自动 source 的 session 生命周期与 JSON 对外契约当成同等级 contract 维护。
+- 影响范围: 自动 telemetry source 的生命周期失真、session 累积悬空、机器消费端 schema 不稳定、后续 summary/publisher 读取风险增加。
+- 根因分类: A, B, H
+- 建议改动层级: rule / policy, workflow, tool, eval
+- prompt / context: 给现有命令挂 telemetry 时，必须把“命令外部契约”和“telemetry 内部生命周期”同时视为冻结边界，不能只顾新增对象落盘。
+- rule / policy: 任何自动 telemetry source 都必须在同一命令内写完 session terminal event；现有 `--json` surface 扩展字段时不得删除既有保底字段。
+- middleware: 为 CLI telemetry hook 提供统一的 auto-session open/close helper，并为 JSON surface 提供 shape-preserving builder，避免手写分支输出。
+- workflow: Task 级 review 默认检查两件事：自动 source 是否留下 dangling session；JSON/text 兼容字段是否被破坏。
+- tool: `ai-sdlc verify constraints --json`
+- eval: auto-session dangling 发生率、JSON shape 兼容性回归数
+- 风险等级: 中
+- 可验证成功标准: `verify constraints` 每次运行后 session event stream 都以 terminal workflow session event 结束；非项目路径与项目路径的 `--json` 输出均稳定包含 `ok`、`blockers`、`root`。
+- 是否需要回归测试补充: 是：补充 verify telemetry session terminal event、out-of-project JSON shape、violation telemetry 落盘的集成回归测试。
