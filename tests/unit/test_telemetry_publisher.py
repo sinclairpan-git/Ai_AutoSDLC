@@ -351,3 +351,91 @@ def test_audit_report_marks_failed_evaluation_as_issues_found_without_violations
     report = build_audit_report([failed_evaluation], [])
 
     assert report["audit_status"] == "issues_found"
+
+
+def test_audit_report_does_not_mark_pending_only_evaluations_clean() -> None:
+    pending = Evaluation(
+        scope_level=ScopeLevel.RUN,
+        goal_session_id="gs_0123456789abcdef0123456789abcdef",
+        workflow_run_id="wr_0123456789abcdef0123456789abcdef",
+        result=EvaluationResult.PASSED,
+        status=EvaluationStatus.PENDING,
+        created_at="2026-03-27T10:00:00Z",
+        updated_at="2026-03-27T10:00:00Z",
+    )
+
+    report = build_audit_report([pending], [])
+
+    assert report["audit_status"] == "issues_found"
+
+
+def test_audit_report_does_not_mark_waived_not_applicable_clean() -> None:
+    waived = Evaluation(
+        scope_level=ScopeLevel.RUN,
+        goal_session_id="gs_0123456789abcdef0123456789abcdef",
+        workflow_run_id="wr_0123456789abcdef0123456789abcdef",
+        result=EvaluationResult.NOT_APPLICABLE,
+        status=EvaluationStatus.WAIVED,
+        created_at="2026-03-27T10:00:00Z",
+        updated_at="2026-03-27T10:00:00Z",
+    )
+
+    report = build_audit_report([waived], [])
+
+    assert report["audit_status"] == "issues_found"
+
+
+def test_evaluation_summary_pending_is_non_passing_and_not_covered(tmp_path: Path) -> None:
+    store = TelemetryStore(tmp_path)
+    writer = TelemetryWriter(store)
+    publisher = GovernancePublisher(store=store, writer=writer)
+    pending = Evaluation(
+        scope_level=ScopeLevel.RUN,
+        goal_session_id="gs_0123456789abcdef0123456789abcdef",
+        workflow_run_id="wr_0123456789abcdef0123456789abcdef",
+        result=EvaluationResult.PASSED,
+        status=EvaluationStatus.PENDING,
+        created_at="2026-03-27T10:00:00Z",
+        updated_at="2026-03-27T10:00:00Z",
+    )
+    writer.write_evaluation(pending)
+
+    summary = publisher.generate_run_reports(
+        goal_session_id=pending.goal_session_id,
+        workflow_run_id=pending.workflow_run_id or "",
+    )["evaluation_summary"]
+
+    assert summary["totals"]["count"] == 1
+    assert summary["totals"]["passed_count"] == 0
+    assert summary["totals"]["failed_count"] == 1
+    assert summary["coverage_view"]["coverage_state"] == "partial"
+    assert summary["coverage_view"]["passed_evaluation_count"] == 0
+    assert summary["coverage_view"]["issue_evaluation_count"] == 1
+
+
+def test_evaluation_summary_waived_not_applicable_is_non_passing_and_not_covered(
+    tmp_path: Path,
+) -> None:
+    store = TelemetryStore(tmp_path)
+    writer = TelemetryWriter(store)
+    publisher = GovernancePublisher(store=store, writer=writer)
+    waived = Evaluation(
+        scope_level=ScopeLevel.RUN,
+        goal_session_id="gs_0123456789abcdef0123456789abcdef",
+        workflow_run_id="wr_0123456789abcdef0123456789abcdef",
+        result=EvaluationResult.NOT_APPLICABLE,
+        status=EvaluationStatus.WAIVED,
+        created_at="2026-03-27T10:00:00Z",
+        updated_at="2026-03-27T10:00:00Z",
+    )
+    writer.write_evaluation(waived)
+
+    summary = publisher.generate_run_reports(
+        goal_session_id=waived.goal_session_id,
+        workflow_run_id=waived.workflow_run_id or "",
+    )["evaluation_summary"]
+
+    assert summary["totals"]["passed_count"] == 0
+    assert summary["totals"]["failed_count"] == 1
+    assert summary["coverage_view"]["coverage_state"] == "partial"
+    assert summary["coverage_view"]["passed_evaluation_count"] == 0

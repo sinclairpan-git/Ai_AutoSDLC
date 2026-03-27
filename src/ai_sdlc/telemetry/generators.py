@@ -65,7 +65,7 @@ def build_evaluation_rollup(evaluations: Sequence[Evaluation]) -> dict[str, obje
     for evaluation in evaluations:
         status_counts[evaluation.status.value] = status_counts.get(evaluation.status.value, 0) + 1
         result_counts[evaluation.result.value] = result_counts.get(evaluation.result.value, 0) + 1
-    passed_count = status_counts.get(EvaluationStatus.PASSED.value, 0)
+    passed_count = sum(1 for evaluation in evaluations if _is_passing_evaluation(evaluation))
     return {
         "totals": {
             "count": len(evaluations),
@@ -128,12 +128,8 @@ def build_violation_rollup(violations: Sequence[Violation]) -> dict[str, object]
 
 def build_evaluation_coverage_view(evaluations: Sequence[Evaluation]) -> dict[str, object]:
     """Build a minimal coverage view grounded in evaluation outcomes."""
-    issue_evaluation_count = sum(
-        1
-        for evaluation in evaluations
-        if evaluation.status is EvaluationStatus.FAILED
-        or evaluation.result in {EvaluationResult.FAILED, EvaluationResult.WARNING}
-    )
+    passed_evaluation_count = sum(1 for evaluation in evaluations if _is_passing_evaluation(evaluation))
+    issue_evaluation_count = len(evaluations) - passed_evaluation_count
     if not evaluations:
         coverage_state = "missing"
     elif issue_evaluation_count > 0:
@@ -144,7 +140,7 @@ def build_evaluation_coverage_view(evaluations: Sequence[Evaluation]) -> dict[st
         "coverage_state": coverage_state,
         "total_evaluation_count": len(evaluations),
         "issue_evaluation_count": issue_evaluation_count,
-        "passed_evaluation_count": len(evaluations) - issue_evaluation_count,
+        "passed_evaluation_count": passed_evaluation_count,
     }
 
 
@@ -196,11 +192,7 @@ def build_audit_report(
     """Build an audit report from evaluations and current violation state."""
     violation_summary = build_violation_rollup(violations)
     open_debt_count = int(violation_summary["open_debt"]["count"])
-    evaluation_has_issues = any(
-        evaluation.status is EvaluationStatus.FAILED
-        or evaluation.result in {EvaluationResult.FAILED, EvaluationResult.WARNING}
-        for evaluation in evaluations
-    )
+    evaluation_has_issues = any(not _is_passing_evaluation(evaluation) for evaluation in evaluations)
     blocked = any(
         violation.status in {ViolationStatus.OPEN, ViolationStatus.TRIAGED, ViolationStatus.ACCEPTED}
         and violation.risk_level in {ViolationRiskLevel.HIGH, ViolationRiskLevel.CRITICAL}
@@ -220,3 +212,11 @@ def build_audit_report(
         "evaluation_count": len(evaluations),
         "violation_summary": violation_summary,
     }
+
+
+def _is_passing_evaluation(evaluation: Evaluation) -> bool:
+    """Define the minimal pass condition for summary/audit semantics."""
+    return (
+        evaluation.status is EvaluationStatus.PASSED
+        and evaluation.result is EvaluationResult.PASSED
+    )
