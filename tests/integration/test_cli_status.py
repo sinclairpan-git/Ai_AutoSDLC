@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import time
 from pathlib import Path
 from unittest.mock import patch
 
@@ -189,3 +190,25 @@ class TestCliStatus:
             "last_event_id": "evt_02",
             "last_timestamp": "2026-03-27T09:00:00Z",
         }
+
+
+def test_status_json_real_cli_path_does_not_mutate_project_config(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    init_project(tmp_path)
+    config_path = (
+        tmp_path
+        / ".ai-sdlc"
+        / "project"
+        / "config"
+        / "project-config.yaml"
+    )
+    before = config_path.read_text(encoding="utf-8") if config_path.exists() else None
+    time.sleep(1.2)
+    monkeypatch.chdir(tmp_path)
+
+    result = runner.invoke(app, ["status", "--json"], catch_exceptions=False)
+
+    after = config_path.read_text(encoding="utf-8") if config_path.exists() else None
+    assert result.exit_code == 0
+    assert after == before
