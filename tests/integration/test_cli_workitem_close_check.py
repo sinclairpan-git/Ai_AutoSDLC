@@ -14,13 +14,37 @@ from ai_sdlc.cli.main import app
 runner = CliRunner()
 
 
+def _commit_all(root: Path, message: str) -> None:
+    subprocess.run(["git", "add", "."], cwd=root, check=True, capture_output=True)
+    subprocess.run(["git", "commit", "-m", message], cwd=root, check=True, capture_output=True)
+
+
 @pytest.fixture(autouse=True)
 def _no_ide_adapter_hook() -> None:
     with patch("ai_sdlc.cli.main.run_ide_adapter_if_initialized"):
         yield
 
 
-def _setup_repo(root: Path, *, tasks_body: str, plan_status: str) -> None:
+def _write_execution_log(
+    wi_dir: Path, *, git_committed: bool, commit_hash: str = "N/A"
+) -> None:
+    committed_text = "是" if git_committed else "否"
+    rendered_hash = f"`{commit_hash}`" if commit_hash != "N/A" else "N/A"
+    (wi_dir / "task-execution-log.md").write_text(
+        "# Log\n\n"
+        "#### 2.2 统一验证命令\n"
+        "#### 2.4 代码审查（`rules/code-review.md` 摘要）\n"
+        "#### 2.5 任务/计划同步状态（Mandatory）\n"
+        "#### 2.8 归档后动作\n"
+        f"- **已完成 git 提交**：{committed_text}\n"
+        f"- **提交哈希**：{rendered_hash}\n",
+        encoding="utf-8",
+    )
+
+
+def _setup_repo(
+    root: Path, *, tasks_body: str, plan_status: str, git_committed: bool = True
+) -> None:
     subprocess.run(["git", "init"], cwd=root, check=True, capture_output=True)
     subprocess.run(
         ["git", "config", "user.email", "t@t.com"],
@@ -61,17 +85,32 @@ def _setup_repo(root: Path, *, tasks_body: str, plan_status: str) -> None:
         f"{tasks_body}\n",
         encoding="utf-8",
     )
-    (wi / "task-execution-log.md").write_text(
-        "# Log\n\n"
-        "#### 2.2 统一验证命令\n"
-        "#### 2.4 代码审查（`rules/code-review.md` 摘要）\n"
-        "#### 2.5 任务/计划同步状态（Mandatory）\n",
-        encoding="utf-8",
-    )
+    _write_execution_log(wi, git_committed=False)
 
     (root / "README.md").write_text("# R\n", encoding="utf-8")
     subprocess.run(["git", "add", "."], cwd=root, check=True, capture_output=True)
     subprocess.run(["git", "commit", "-m", "init"], cwd=root, check=True, capture_output=True)
+    if git_committed:
+        head = subprocess.run(
+            ["git", "rev-parse", "--short", "HEAD"],
+            cwd=root,
+            check=True,
+            capture_output=True,
+            text=True,
+        ).stdout.strip()
+        _write_execution_log(wi, git_committed=True, commit_hash=head)
+        subprocess.run(
+            ["git", "add", "specs/001-wi/task-execution-log.md"],
+            cwd=root,
+            check=True,
+            capture_output=True,
+        )
+        subprocess.run(
+            ["git", "commit", "--amend", "--no-edit"],
+            cwd=root,
+            check=True,
+            capture_output=True,
+        )
 
 
 class TestCliWorkitemCloseCheck:
@@ -105,6 +144,40 @@ class TestCliWorkitemCloseCheck:
 
         result = runner.invoke(app, ["workitem", "close-check", "--wi", "specs/001-wi"])
         assert result.exit_code == 0
+
+    def test_exit_1_when_git_closeout_not_committed(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        root = tmp_path / "r2b"
+        root.mkdir()
+        _setup_repo(
+            root,
+            tasks_body="- [x] done\n### Task 1.1\n- **验收标准（AC）**：ok",
+            plan_status="completed",
+            git_committed=False,
+        )
+        monkeypatch.chdir(root)
+
+        result = runner.invoke(app, ["workitem", "close-check", "--wi", "specs/001-wi"])
+        assert result.exit_code == 1
+        assert "git" in result.output.lower()
+
+    def test_exit_1_when_worktree_dirty_after_git_closeout(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        root = tmp_path / "r2c"
+        root.mkdir()
+        _setup_repo(
+            root,
+            tasks_body="- [x] done\n### Task 1.1\n- **验收标准（AC）**：ok",
+            plan_status="completed",
+        )
+        (root / "README.md").write_text("# dirty\n", encoding="utf-8")
+        monkeypatch.chdir(root)
+
+        result = runner.invoke(app, ["workitem", "close-check", "--wi", "specs/001-wi"])
+        assert result.exit_code == 1
+        assert "working tree" in result.output.lower()
 
     def test_json_output_has_required_fields(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
@@ -170,6 +243,7 @@ class TestCliWorkitemCloseCheck:
             "未来可能提供：`ai-sdlc verify constraints`。\n",
             encoding="utf-8",
         )
+        _commit_all(root, "docs: add deep doc")
         monkeypatch.chdir(root)
 
         result = runner.invoke(app, ["workitem", "close-check", "--wi", "specs/001-wi"])

@@ -1424,3 +1424,67 @@
 - **已完成 git 提交**：是
 - **提交哈希**：`6891e11`（`fix: close legacy reconcile backlog batch`）
 - **是否继续下一批**：可继续 Task `6.42`
+
+### Batch 2026-03-28-024 | 001 Batch 16 Task 6.43：close-check git 收口阻断
+
+#### 2.1 准备
+
+- **任务来源**：[`tasks.md`](tasks.md) Task `6.43`、[`../../docs/framework-defect-backlog.zh-CN.md`](../../docs/framework-defect-backlog.zh-CN.md) `FD-2026-03-24-003`
+- **目标**：把本轮真实暴露的“最终 `git commit` 之前先宣称收口”缺口产品化为 `close-check` blocker，并把违约回挂到 `001` 主线 backlog。
+- **预读范围**：[`../../src/ai_sdlc/core/close_check.py`](../../src/ai_sdlc/core/close_check.py)、[`../../tests/unit/test_close_check.py`](../../tests/unit/test_close_check.py)、[`../../tests/integration/test_cli_workitem_close_check.py`](../../tests/integration/test_cli_workitem_close_check.py)、[`../../docs/pull-request-checklist.zh.md`](../../docs/pull-request-checklist.zh.md)、[`tasks.md`](tasks.md) Batch `16`
+- **激活的规则**：verification-before-completion；TDD；收口必须落回 Git 真值。
+
+#### 2.2 统一验证命令
+
+- **R1（git close-out 红灯验证）**
+  - 命令：`uv run pytest tests/unit/test_close_check.py tests/integration/test_cli_workitem_close_check.py -q`
+  - 结果：先红后绿；初始失败证明当前 `close-check` 不会阻断 latest batch 未提交或工作树 dirty 的收口场景。
+- **V1（close-check 定向回归）**
+  - 命令：`uv run pytest tests/unit/test_close_check.py tests/integration/test_cli_workitem_close_check.py -q`
+  - 结果：**21 passed**。
+- **Lint**
+  - 命令：`uv run ruff check src/ai_sdlc/core/close_check.py tests/unit/test_close_check.py tests/integration/test_cli_workitem_close_check.py`
+  - 结果：**All checks passed!**
+
+#### 2.3 任务记录
+
+##### Task 6.43 | close-check git 收口阻断（第一轮）
+
+- **改动范围**：[`../../src/ai_sdlc/core/close_check.py`](../../src/ai_sdlc/core/close_check.py)、[`../../tests/unit/test_close_check.py`](../../tests/unit/test_close_check.py)、[`../../tests/integration/test_cli_workitem_close_check.py`](../../tests/integration/test_cli_workitem_close_check.py)、[`../../docs/pull-request-checklist.zh.md`](../../docs/pull-request-checklist.zh.md)、[`tasks.md`](tasks.md)、[`../../docs/framework-defect-backlog.zh-CN.md`](../../docs/framework-defect-backlog.zh-CN.md)
+- **改动内容**：
+  - `close-check` 新增 `git_closure` 检查：读取 execution-log latest batch 的 `已完成 git 提交` / `提交哈希` 标记，并在仓库工作树仍 dirty 时直接报 BLOCKER。
+  - 新增 unit / integration 回归，覆盖“latest batch 未提交”“latest batch 虽标记已提交但工作树仍脏”两类真实违约。
+  - PR checklist 与 backlog / tasks 同步更新，明确 close-check 需要在本轮 git 提交完成后执行，避免再次把“只读检查全绿”误表述为“已收口”。
+- **新增/调整的测试**：
+  - unit：`run_close_check()` 对 git close-out marker 缺失/为否、dirty worktree 的阻断。
+  - integration：CLI `workitem close-check` 对上述两类场景返回 exit code `1`。
+- **执行的命令**：见 R1 / V1 / Lint。
+- **测试结果**：通过。
+- **是否符合任务目标**：部分符合。`close-check` 已能阻断“未 commit 收口”，但 docs-only / rules-only 的最小 fresh verification 分类与 `verify constraints` 协同仍待继续。
+
+#### 2.4 代码审查（摘要）
+
+- **规格对齐**：本批把“最终 `git commit` 前不得声称收口”从规则文本落到了可执行门禁，不再只靠人工自觉。
+- **代码质量**：新检查只读依赖 execution-log 最新批次标记和 Git 状态，不引入写副作用。
+- **测试质量**：红灯先证明老逻辑确实放过了真实违约，再补两层自动化回归，避免只在文档层补口径。
+- **结论**：允许继续推进 Task `6.43` 剩余的 docs-only fresh verification 分类，但不得再把 `FD-2026-03-24-003` 视为“只差文案”。
+
+#### 2.5 任务/计划同步状态
+
+- `tasks.md` 同步状态：`已同步`（Task `6.43` 已补当前进展与残留边界）。
+- `framework-defect-backlog.zh-CN.md` 同步状态：`已同步`（`FD-2026-03-24-003` 已转 `in_progress` 并记录本轮真实违约）。
+- `related_plan`（如存在）同步状态：`已对账`（当前批次未引入新的 `related_plan` 漂移）。
+
+#### 2.6 自动决策记录（如有）
+
+- AD-001：本轮不重开 `FD-2026-03-25-001`，而是把真实违约回挂到仍处打开状态的 `FD-2026-03-24-003` / Task `6.43` → 理由：当前暴露的根因仍属于“完成前验证 / fresh evidence 未完全产品化”，继续沿既有第二波 backlog 收口更能保持单一真值。
+
+#### 2.7 批次结论
+
+- Task **6.43** 已完成第一轮产品化：`close-check` 会对未 commit 收口直接报 BLOCKER；`FD-2026-03-24-003` 仍保持 `in_progress`，等待 docs-only / rules-only 最小验证集与 `verify constraints` 协同继续补齐。
+
+#### 2.8 归档后动作
+
+- **已完成 git 提交**：是
+- **提交哈希**：本批唯一一次语义提交为 `fix: block uncommitted close-check closures`；完整 SHA 以当前 `HEAD`（`git rev-parse HEAD`）为准。
+- **是否继续下一批**：继续 Task `6.43`

@@ -8,6 +8,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
+from ai_sdlc.branch.git_client import GitClient, GitError
 from ai_sdlc.core.plan_check import resolve_plan_path_from_wi, run_plan_check
 from ai_sdlc.utils.helpers import find_project_root
 
@@ -17,6 +18,8 @@ REQUIRED_LOG_MARKERS = (
     "任务/计划同步状态",
 )
 DOCS_UNIMPLEMENTED_HINTS = ("未实现前", "未来可能提供")
+COMMIT_STATUS_RE = re.compile(r"(?m)^\s*-\s*\*\*已完成 git 提交\*\*：(?P<value>.+?)\s*$")
+COMMIT_HASH_RE = re.compile(r"(?m)^\s*-\s*\*\*提交哈希\*\*：(?P<value>.+?)\s*$")
 # FR-096: default docs scan = WI `*.md` + these repo-relative paths (when present).
 DOCS_WHITELIST_RELS = (
     Path("docs/pull-request-checklist.zh.md"),
@@ -94,6 +97,31 @@ def _docs_consistency_violations(
                 violations.append(f"{md}: contains '{cmd}' with unimplemented wording")
                 break
     return violations
+
+
+def _last_log_marker(pattern: re.Pattern[str], text: str) -> str | None:
+    matches = list(pattern.finditer(text))
+    if not matches:
+        return None
+    return matches[-1].group("value").strip()
+
+
+def _git_closure_violation(root: Path, log_text: str) -> str | None:
+    commit_status = _last_log_marker(COMMIT_STATUS_RE, log_text)
+    commit_hash = _last_log_marker(COMMIT_HASH_RE, log_text)
+    if commit_status is None or commit_hash is None:
+        return "task-execution-log.md missing git close-out markers for the latest batch"
+    if not commit_status.startswith("是"):
+        return "latest batch is not marked as git committed"
+    normalized_hash = commit_hash.replace("`", "").strip()
+    if normalized_hash in {"", "N/A"}:
+        return "latest batch is missing a committed git hash"
+    try:
+        if GitClient(root).has_uncommitted_changes():
+            return "git working tree has uncommitted changes; close-out is not fully committed"
+    except GitError as exc:
+        return f"unable to inspect git closure state: {exc}"
+    return None
 
 
 def run_close_check(*, cwd: Path | None, wi: Path, all_docs: bool = False) -> CloseCheckResult:
@@ -215,6 +243,19 @@ def run_close_check(*, cwd: Path | None, wi: Path, all_docs: bool = False) -> Cl
             blockers.append(
                 "BLOCKER: Review Gate missing review evidence in task-execution-log.md."
             )
+        git_closure_violation = _git_closure_violation(root, log_text)
+        git_closure_ok = git_closure_violation is None
+        checks.append(
+            {
+                "name": "git_closure",
+                "ok": git_closure_ok,
+                "detail": "latest batch marked committed and working tree clean"
+                if git_closure_ok
+                else git_closure_violation,
+            }
+        )
+        if not git_closure_ok:
+            blockers.append(f"BLOCKER: git close-out verification failed: {git_closure_violation}")
 
     doc_violations = _docs_consistency_violations(root, wi_dir, all_docs=all_docs)
     docs_ok = len(doc_violations) == 0

@@ -10,7 +10,31 @@ import pytest
 from ai_sdlc.core.close_check import run_close_check
 
 
-def _setup_repo(root: Path, *, tasks_body: str, plan_status: str) -> None:
+def _commit_all(root: Path, message: str) -> None:
+    subprocess.run(["git", "add", "."], cwd=root, check=True, capture_output=True)
+    subprocess.run(["git", "commit", "-m", message], cwd=root, check=True, capture_output=True)
+
+
+def _write_execution_log(
+    wi_dir: Path, *, git_committed: bool, commit_hash: str = "N/A"
+) -> None:
+    committed_text = "是" if git_committed else "否"
+    rendered_hash = f"`{commit_hash}`" if commit_hash != "N/A" else "N/A"
+    (wi_dir / "task-execution-log.md").write_text(
+        "# Log\n\n"
+        "#### 2.2 统一验证命令\n"
+        "#### 2.4 代码审查（`rules/code-review.md` 摘要）\n"
+        "#### 2.5 任务/计划同步状态（Mandatory）\n"
+        "#### 2.8 归档后动作\n"
+        f"- **已完成 git 提交**：{committed_text}\n"
+        f"- **提交哈希**：{rendered_hash}\n",
+        encoding="utf-8",
+    )
+
+
+def _setup_repo(
+    root: Path, *, tasks_body: str, plan_status: str, git_committed: bool = True
+) -> None:
     subprocess.run(["git", "init"], cwd=root, check=True, capture_output=True)
     subprocess.run(
         ["git", "config", "user.email", "t@t.com"],
@@ -51,17 +75,32 @@ def _setup_repo(root: Path, *, tasks_body: str, plan_status: str) -> None:
         f"{tasks_body}\n",
         encoding="utf-8",
     )
-    (wi / "task-execution-log.md").write_text(
-        "# Log\n\n"
-        "#### 2.2 统一验证命令\n"
-        "#### 2.4 代码审查（`rules/code-review.md` 摘要）\n"
-        "#### 2.5 任务/计划同步状态（Mandatory）\n",
-        encoding="utf-8",
-    )
+    _write_execution_log(wi, git_committed=False)
 
     (root / "README.md").write_text("# R\n", encoding="utf-8")
     subprocess.run(["git", "add", "."], cwd=root, check=True, capture_output=True)
     subprocess.run(["git", "commit", "-m", "init"], cwd=root, check=True, capture_output=True)
+    if git_committed:
+        head = subprocess.run(
+            ["git", "rev-parse", "--short", "HEAD"],
+            cwd=root,
+            check=True,
+            capture_output=True,
+            text=True,
+        ).stdout.strip()
+        _write_execution_log(wi, git_committed=True, commit_hash=head)
+        subprocess.run(
+            ["git", "add", "specs/001-wi/task-execution-log.md"],
+            cwd=root,
+            check=True,
+            capture_output=True,
+        )
+        subprocess.run(
+            ["git", "commit", "--amend", "--no-edit"],
+            cwd=root,
+            check=True,
+            capture_output=True,
+        )
 
 
 def test_close_check_blocker_tasks_incomplete(tmp_path: Path) -> None:
@@ -108,6 +147,36 @@ def test_close_check_pass_when_all_requirements_met(tmp_path: Path) -> None:
     assert r.blockers == []
 
 
+def test_close_check_blocker_when_git_closeout_not_committed(tmp_path: Path) -> None:
+    root = tmp_path / "repo3b"
+    root.mkdir()
+    _setup_repo(
+        root,
+        tasks_body="- [x] done\n### Task 1.1\n- **验收标准（AC）**：ok",
+        plan_status="completed",
+        git_committed=False,
+    )
+
+    r = run_close_check(cwd=root, wi=Path("specs/001-wi"))
+    assert r.ok is False
+    assert any("git close-out" in b for b in r.blockers)
+
+
+def test_close_check_blocker_when_worktree_dirty_after_git_closeout(tmp_path: Path) -> None:
+    root = tmp_path / "repo3c"
+    root.mkdir()
+    _setup_repo(
+        root,
+        tasks_body="- [x] done\n### Task 1.1\n- **验收标准（AC）**：ok",
+        plan_status="completed",
+    )
+    (root / "README.md").write_text("# dirty\n", encoding="utf-8")
+
+    r = run_close_check(cwd=root, wi=Path("specs/001-wi"))
+    assert r.ok is False
+    assert any("working tree" in b for b in r.blockers)
+
+
 def test_close_check_blocker_docs_claim_not_implemented_for_registered_command(
     tmp_path: Path,
 ) -> None:
@@ -142,6 +211,7 @@ def test_close_check_docs_consistency_pass_after_fix(tmp_path: Path) -> None:
         "`ai-sdlc verify constraints` 已可使用，见命令帮助。\n",
         encoding="utf-8",
     )
+    _commit_all(root, "docs: add summary")
 
     r = run_close_check(cwd=root, wi=Path("specs/001-wi"))
     assert r.ok is True
@@ -162,6 +232,7 @@ def test_close_check_default_skips_unlisted_docs_sc021(tmp_path: Path) -> None:
         "未来可能提供：`ai-sdlc verify constraints`。\n",
         encoding="utf-8",
     )
+    _commit_all(root, "docs: add deep doc")
 
     r = run_close_check(cwd=root, wi=Path("specs/001-wi"))
     assert r.ok is True
