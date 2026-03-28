@@ -78,8 +78,81 @@ def _write_doc_first_rule_surfaces(
         skip_registry += (
             "\n仅文档 / 仅需求沉淀任务必须先更新 spec.md / plan.md / tasks.md；"
             "禁止默认修改 `src/`、`tests/`。\n"
-        )
+    )
     (rules_dir / "agent-skip-registry.zh.md").write_text(skip_registry, encoding="utf-8")
+
+
+def _write_003_feature_contract_surfaces(
+    root: Path,
+    *,
+    include_authoring: bool = True,
+    include_reviewer: bool = True,
+    include_backend: bool = True,
+    include_release_gate: bool = True,
+) -> None:
+    models_dir = root / "src" / "ai_sdlc" / "models"
+    models_dir.mkdir(parents=True, exist_ok=True)
+    work_markers: list[str] = []
+    if include_authoring:
+        work_markers.extend(["draft_prd = True", "final_prd = True"])
+    if include_reviewer:
+        work_markers.extend(
+            [
+                "reviewer_decision = True",
+                "approve = True",
+                "revise = True",
+                "block = True",
+            ]
+        )
+    if work_markers:
+        (models_dir / "work.py").write_text(
+            "\"\"\"003 feature-contract surface.\"\"\"\n\n" + "\n".join(work_markers) + "\n",
+            encoding="utf-8",
+        )
+
+    if include_backend:
+        backend_dir = root / "src" / "ai_sdlc" / "backends"
+        backend_dir.mkdir(parents=True, exist_ok=True)
+        (backend_dir / "native.py").write_text(
+            "\"\"\"003 backend contract surface.\"\"\"\n\n"
+            "backend_capability = True\n"
+            "delegation = True\n"
+            "fallback = True\n",
+            encoding="utf-8",
+        )
+
+    if include_release_gate:
+        spec_dir = root / "specs" / "003-cross-cutting-authoring-and-extension-contracts"
+        spec_dir.mkdir(parents=True, exist_ok=True)
+        (spec_dir / "release-gate-evidence.md").write_text(
+            "# 003 release gate evidence\n\n"
+            "- release_gate_evidence: present\n"
+            "- PASS: example\n"
+            "- WARN: example\n"
+            "- BLOCK: example\n",
+            encoding="utf-8",
+        )
+
+
+def _write_003_checkpoint(root: Path) -> None:
+    mem = root / ".ai-sdlc" / "memory"
+    mem.mkdir(parents=True, exist_ok=True)
+    (mem / "constitution.md").write_text("# C\n", encoding="utf-8")
+
+    spec = root / "specs" / "003-cross-cutting-authoring-and-extension-contracts"
+    spec.mkdir(parents=True, exist_ok=True)
+
+    cp = Checkpoint(
+        current_stage="design",
+        feature=FeatureInfo(
+            id="003",
+            spec_dir="specs/003-cross-cutting-authoring-and-extension-contracts",
+            design_branch="d",
+            feature_branch="f",
+            current_branch="main",
+        ),
+    )
+    save_checkpoint(root, cp)
 
 
 def test_blocker_missing_constitution(tmp_path: Path) -> None:
@@ -538,4 +611,118 @@ def test_doc_first_rule_surfaces_pass_with_consistent_terms_and_docs_scope(
     )
     save_checkpoint(tmp_path, cp)
 
+    assert collect_constraint_blockers(tmp_path) == []
+
+
+def test_003_feature_contract_blocks_when_draft_prd_surfaces_missing(tmp_path: Path) -> None:
+    _write_003_checkpoint(tmp_path)
+    _write_003_feature_contract_surfaces(
+        tmp_path,
+        include_authoring=False,
+        include_reviewer=True,
+        include_backend=True,
+        include_release_gate=True,
+    )
+
+    report = build_constraint_report(tmp_path)
+    assert report.coverage_gaps == (
+        "draft_prd/final_prd",
+    )
+    blockers = collect_constraint_blockers(tmp_path)
+    assert len(blockers) == 1
+    assert blockers[0].endswith("draft_prd/final_prd")
+
+
+def test_003_feature_contract_blocks_when_reviewer_surface_missing(tmp_path: Path) -> None:
+    _write_003_checkpoint(tmp_path)
+    _write_003_feature_contract_surfaces(
+        tmp_path,
+        include_authoring=True,
+        include_reviewer=False,
+        include_backend=True,
+        include_release_gate=True,
+    )
+
+    report = build_constraint_report(tmp_path)
+    assert report.coverage_gaps == ("reviewer decision",)
+    blockers = collect_constraint_blockers(tmp_path)
+    assert len(blockers) == 1
+    assert blockers[0].endswith("reviewer decision")
+
+
+def test_003_feature_contract_blocks_when_backend_surface_missing(tmp_path: Path) -> None:
+    _write_003_checkpoint(tmp_path)
+    _write_003_feature_contract_surfaces(
+        tmp_path,
+        include_authoring=True,
+        include_reviewer=True,
+        include_backend=False,
+        include_release_gate=True,
+    )
+
+    report = build_constraint_report(tmp_path)
+    assert report.coverage_gaps == ("backend delegation/fallback",)
+    blockers = collect_constraint_blockers(tmp_path)
+    assert len(blockers) == 1
+    assert blockers[0].endswith("backend delegation/fallback")
+
+
+def test_003_feature_contract_blocks_when_release_gate_surface_missing(
+    tmp_path: Path,
+) -> None:
+    _write_003_checkpoint(tmp_path)
+    _write_003_feature_contract_surfaces(
+        tmp_path,
+        include_authoring=True,
+        include_reviewer=True,
+        include_backend=True,
+        include_release_gate=False,
+    )
+
+    report = build_constraint_report(tmp_path)
+    assert report.coverage_gaps == ("release-gate evidence",)
+    blockers = collect_constraint_blockers(tmp_path)
+    assert len(blockers) == 1
+    assert blockers[0].endswith("release-gate evidence")
+
+
+def test_003_feature_contract_blocks_when_feature_id_unknown_but_spec_dir_points_to_003(
+    tmp_path: Path,
+) -> None:
+    mem = tmp_path / ".ai-sdlc" / "memory"
+    mem.mkdir(parents=True)
+    (mem / "constitution.md").write_text("# C\n", encoding="utf-8")
+    spec = tmp_path / "specs" / "003-cross-cutting-authoring-and-extension-contracts"
+    spec.mkdir(parents=True)
+    save_checkpoint(
+        tmp_path,
+        Checkpoint(
+            current_stage="design",
+            feature=FeatureInfo(
+                id="unknown",
+                spec_dir="specs/003-cross-cutting-authoring-and-extension-contracts",
+                design_branch="d",
+                feature_branch="f",
+                current_branch="main",
+            ),
+        ),
+    )
+    _write_003_feature_contract_surfaces(
+        tmp_path,
+        include_authoring=False,
+        include_reviewer=True,
+        include_backend=True,
+        include_release_gate=True,
+    )
+
+    report = build_constraint_report(tmp_path)
+    assert report.coverage_gaps == ("draft_prd/final_prd",)
+
+
+def test_003_feature_contract_passes_when_all_surfaces_present(tmp_path: Path) -> None:
+    _write_003_checkpoint(tmp_path)
+    _write_003_feature_contract_surfaces(tmp_path)
+
+    report = build_constraint_report(tmp_path)
+    assert report.coverage_gaps == ()
     assert collect_constraint_blockers(tmp_path) == []

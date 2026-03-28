@@ -43,6 +43,8 @@ console = Console()
         "when tasks.md exists under feature.spec_dir, task-level acceptance must "
         "match gate decompose (SC-014); doc-first / requirements-first rule surfaces "
         "and doc-first task scope must stay aligned with design/decompose intent; "
+        "for active 003 work items, the draft PRD, reviewer decision, backend "
+        "delegation/fallback, and release-gate evidence surfaces must be present; "
         "when docs/framework-defect-backlog.zh-CN.md exists, its structured entry fields "
         "must be complete. Does not write checkpoint. "
         "Exit 0 if no BLOCKERs, else 1."
@@ -134,6 +136,7 @@ def verify_constraints(
                         "name": report.gate_name,
                         "source_name": report.source_name,
                         "check_objects": list(report.check_objects),
+                        "coverage_gaps": list(report.coverage_gaps),
                     },
                     "telemetry": {
                         "goal_session_id": goal_session_id,
