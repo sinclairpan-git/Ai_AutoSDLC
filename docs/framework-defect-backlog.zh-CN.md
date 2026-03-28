@@ -592,3 +592,27 @@
   - 新鲜验证包括：Batch 13 定向回归 `87 passed`、Batch 14 定向回归 `111 passed`、全量 `uv run pytest -q`、`uv run ruff check src tests`、`uv run ai-sdlc verify constraints`、`uv run ai-sdlc workitem close-check --wi specs/001-ai-sdlc-framework --all-docs`。
 - 可验证成功标准: 给定“分支已有实现但主线 / execution-log 未同步”的夹具时，traceability 检查能报出明确 blocker 或 warning；正常路径下，`RG-001~009` 都能在主线代码、测试和 execution-log 中找到一致映射。
 - 是否需要回归测试补充: 是：补“分支已实现但主线未合流”的检测夹具，并继续保留 `RG-001~009` 的 unit/flow/integration/traceability 回归。
+
+## FD-2026-03-28-004 | 并行 Git 写命令未被 guardrail 阻断，导致 `.git/index.lock` 争抢与假失败
+
+- 日期 (UTC): 2026-03-28
+- 来源: self_review, user_report
+- 状态: planned
+- owner: codex
+- wi_id: 001-ai-sdlc-framework
+- related_doc: docs/框架自迭代开发与发布约定.md
+- 现象: 当代理把同一仓库内的 Git 写命令并行发起时，例如 `git add` 与 `git commit` 或其他会写 index / refs 的命令重叠执行，后发命令会报 `fatal: Unable to create '.git/index.lock': File exists.`。这类失败通常不是仓库内容冲突，而是本地 Git 临界区被并发踩踏，随后又容易诱发“先删锁文件再继续”的次生操作。
+- 触发场景: 使用并行工具同时执行多个 Git 写操作，或在前一个 Git 写命令尚未完成时继续触发 `commit` / `merge` / `checkout` / `branch -d` / `worktree remove` 等后续写操作。
+- 影响范围: 提交/合并流程稳定性、代理对 Git 真值的判断、收口效率，以及误删仍被活跃 Git 进程持有的锁文件所带来的额外风险。
+- 根因分类: A, B, H
+- 未来杜绝方案摘要: 把同仓库内的 Git 写操作明确视为互斥临界区，禁止并行调度；在执行 `commit` / `merge` / `checkout` 等命令前先做仓库级写锁预检查。只有在确认没有活跃 Git 进程、且锁文件确属遗留垃圾时，才允许进入“移除 stale lock”分支，不能把删锁当成默认恢复手段。
+- 建议改动层级: prompt / context, rule / policy, middleware, workflow, tool, eval
+- prompt / context: 明确声明 Git 写命令不得并行；`git add`、`git commit`、`git merge`、`git checkout`、`git branch -d/-D`、`git worktree remove` 等都属于需要串行化的仓库写操作。
+- rule / policy: 在同一仓库内，禁止通过并行执行器同时发起两个及以上 Git 写命令；任何完成性收口前，必须保证 Git 写操作已经串行结束。
+- middleware: 为 Git 命令执行增加写命令分类和互斥 guard；发现 `.git/index.lock` 时先检查是否仍有活跃 Git 进程，而不是直接建议删除。
+- workflow: 收口顺序固定为 `git add -> git status/diff -> git commit -> git push`，不允许把这些步骤打包进并行工具；若出现锁文件错误，先判定是并发导致还是陈旧锁，再决定是否清理。
+- tool: `multi_tool_use.parallel` 使用约束、Git 执行封装、future close-out helper、`git status --short`
+- eval: `.git/index.lock` 争抢事件数、Git 写命令重叠调度次数、误删活跃锁文件的险情次数、dirty-worktree 收口中断次数
+- 风险等级: 中
+- 可验证成功标准: 给定“同一仓库内连续发起两个 Git 写命令”的场景时，代理必须串行化或直接拒绝并行执行，不再出现 `.git/index.lock` 争抢；给定“锁文件已存在”的场景时，只有在确认没有活跃 Git 进程后才允许清理陈旧锁文件。
+- 是否需要回归测试补充: 是：补一条针对 Git 写命令分类/串行化的 guardrail 检查，并增加“遇到 `.git/index.lock` 时先做进程与锁状态判断”的流程约束测试。
