@@ -63,9 +63,7 @@
   - `FD-2026-03-27-011` → `003-cross-cutting-authoring-and-extension-contracts`
 - 第二波（随后推进）：
   - `FD-2026-03-27-013` → `004-operator-surfaces-and-post-prd-extensions`
-  - `FD-2026-03-28-004` → `001-ai-sdlc-framework`
 - 挂靠原则：
-  - `001` 线：`FD-2026-03-28-004`
   - `003` 线：`FD-2026-03-27-011`、`FD-2026-03-27-012`
   - `004` 线：`FD-2026-03-27-013`
 
@@ -622,7 +620,7 @@
 
 - 日期 (UTC): 2026-03-28
 - 来源: self_review, user_report
-- 状态: planned
+- 状态: closed
 - owner: codex
 - wi_id: 001-ai-sdlc-framework
 - related_doc: docs/框架自迭代开发与发布约定.md
@@ -639,6 +637,7 @@
 - tool: `multi_tool_use.parallel` 使用约束、Git 执行封装、future close-out helper、`git status --short`
 - eval: `.git/index.lock` 争抢事件数、Git 写命令重叠调度次数、误删活跃锁文件的险情次数、dirty-worktree 收口中断次数
 - 风险等级: 中
-- 下一步任务归属（2026-03-28）: `001-ai-sdlc-framework` Batch 16 Task 6.42。
+- 下一步任务归属（2026-03-28）: `001-ai-sdlc-framework` Batch 16 Task 6.42（已完成）。
+- 处置进展（2026-03-28）: `001` Batch 16 Task 6.42 已完成收口：[`GitClient`](../src/ai_sdlc/branch/git_client.py) 新增仓库级 Git 写锁，统一把 `git add`、`git commit`、`git merge`、`git checkout`、`git branch` 写操作、`git worktree remove/add`、`git push` 等归入互斥临界区；`add_and_commit()` 固化为 `git add -> git status/diff -> git commit` 顺序，`push()` 明确为后置单独步骤。遇到 `.git/index.lock` 时，helper 会先区分 active vs stale：若存在活跃 Git 进程则直接阻断，若无活跃进程也只允许显式 `remove_stale_index_lock()` 路径，不再默认删锁。定向回归 **58 passed**，`uv run ruff check`、`uv run ai-sdlc verify constraints` 与 `uv run ai-sdlc workitem close-check --wi specs/001-ai-sdlc-framework --all-docs` 已通过，因此本条 defect 关单。
 - 可验证成功标准: 给定“同一仓库内连续发起两个 Git 写命令”的场景时，代理必须串行化或直接拒绝并行执行，不再出现 `.git/index.lock` 争抢；给定“锁文件已存在”的场景时，只有在确认没有活跃 Git 进程后才允许清理陈旧锁文件。
 - 是否需要回归测试补充: 是：补一条针对 Git 写命令分类/串行化的 guardrail 检查，并增加“遇到 `.git/index.lock` 时先做进程与锁状态判断”的流程约束测试。

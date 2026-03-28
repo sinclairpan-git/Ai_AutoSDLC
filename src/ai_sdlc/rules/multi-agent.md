@@ -228,7 +228,8 @@
 │    ├── 处理共享文件（如需更新 types.ts → Main 统一写入）  │
 │    ├── 更新 tasks.md（勾选所有并行任务）                  │
 │    ├── 合并各 Agent 的 execution-log                    │
-│    ├── git add + git commit                            │
+│    ├── 串行执行 git add → git status/diff → git commit │
+│    ├── 如需推远端，再单独 git push                      │
 │    └── 更新断点存档                                     │
 └────────────────────────────────────────────────────────┘
                           │

@@ -1624,3 +1624,82 @@
 - **已完成 git 提交**：是
 - **提交哈希**：本批唯一一次语义提交为 `feat: block execute flow for doc-first tasks`；完整 SHA 以当前 `HEAD`（`git rev-parse HEAD`）为准。
 - **是否继续下一批**：可继续 Task `6.45`
+
+### Batch 2026-03-28-027 | 001 Batch 16 Task 6.42 / 6.45：Git 写 guardrail 与第二波 backlog 对账
+
+#### 2.1 准备
+
+- **任务来源**：[`tasks.md`](tasks.md) Task `6.42`、Task `6.45`、[`../../docs/framework-defect-backlog.zh-CN.md`](../../docs/framework-defect-backlog.zh-CN.md) `FD-2026-03-28-004`
+- **目标**：把 Git 写命令互斥 guardrail、`.git/index.lock` active/stale 判定与收口顺序产品化到 `GitClient`，并完成 Batch 16 第二波 backlog 的最终对账。
+- **预读范围**：[`../../src/ai_sdlc/branch/git_client.py`](../../src/ai_sdlc/branch/git_client.py)、[`../../src/ai_sdlc/rules/multi-agent.md`](../../src/ai_sdlc/rules/multi-agent.md)、[`../../src/ai_sdlc/rules/batch-protocol.md`](../../src/ai_sdlc/rules/batch-protocol.md)、[`../../docs/框架自迭代开发与发布约定.md`](../../docs/框架自迭代开发与发布约定.md)、[`../../tests/unit/test_git_client.py`](../../tests/unit/test_git_client.py)、[`../../tests/unit/test_branch_manager.py`](../../tests/unit/test_branch_manager.py)、[`../../tests/unit/test_executor.py`](../../tests/unit/test_executor.py)
+- **激活的规则**：TDD；verification-before-completion；Git 写命令串行化。
+
+#### 2.2 统一验证命令
+
+- **验证画像**：`code-change`
+- **R1 / V1（Git 写 guardrail 定向回归）**
+  - 命令：`uv run pytest tests/unit/test_git_client.py tests/unit/test_branch_manager.py tests/unit/test_executor.py -q`
+  - 结果：**58 passed**。
+- **Lint**
+  - 命令：`uv run ruff check src/ai_sdlc/branch/git_client.py tests/unit/test_git_client.py tests/unit/test_branch_manager.py tests/unit/test_executor.py`
+  - 结果：**All checks passed!**
+- **治理只读校验**
+  - 命令：`uv run ai-sdlc verify constraints`
+  - 结果：**无 BLOCKER**。
+
+#### 2.3 任务记录
+
+##### Task 6.42 | Git 写命令互斥 guardrail 与 stale-lock 判断
+
+- **改动范围**：[`../../src/ai_sdlc/branch/git_client.py`](../../src/ai_sdlc/branch/git_client.py)、[`../../tests/unit/test_git_client.py`](../../tests/unit/test_git_client.py)、[`../../src/ai_sdlc/rules/multi-agent.md`](../../src/ai_sdlc/rules/multi-agent.md)、[`../../src/ai_sdlc/rules/batch-protocol.md`](../../src/ai_sdlc/rules/batch-protocol.md)、[`../../docs/框架自迭代开发与发布约定.md`](../../docs/框架自迭代开发与发布约定.md)
+- **改动内容**：
+  - `GitClient` 新增仓库级写锁，统一把 `git add`、`git commit`、`git merge`、`git checkout`、`git branch` 写操作、`git worktree remove/add`、`git push` 等归入互斥临界区，避免同仓库 Git 写命令并行争抢。
+  - 新增 `.git/index.lock` 检查：先区分 active Git process 与 stale lock；默认只阻断，不自动删锁；只有显式 `remove_stale_index_lock()` 才允许在确认 stale 后清理。
+  - `add_and_commit()` 固化为 `git add -> git status/diff -> git commit` 顺序；`push()` 明确为 commit 之后的单独步骤。
+  - 规则与手册同步改为同一口径：Git 写步骤必须串行，且 `.git/index.lock` 不得默认直接删除。
+- **新增/调整的测试**：
+  - unit：Git 写命令分类、`add_and_commit()` 顺序、仓库级写锁串行、`.git/index.lock` active/stale 判断与显式 stale-lock 清理。
+  - 回归：`BranchManager` / `Executor` 相关测试确认正常分支切换、merge、批次提交链未被 guardrail 打坏。
+- **执行的命令**：见 R1 / V1 / Lint / 治理只读校验。
+- **测试结果**：通过。
+- **是否符合任务目标**：符合。Task `6.42` 的 helper、规则与流程口径已对齐。
+
+##### Task 6.45 | Batch 16 第二波 backlog 对账
+
+- **改动范围**：[`../../docs/framework-defect-backlog.zh-CN.md`](../../docs/framework-defect-backlog.zh-CN.md)、[`tasks.md`](tasks.md)、[`task-execution-log.md`](task-execution-log.md)
+- **改动内容**：
+  - 将第二波 backlog 中的 `FD-2026-03-28-004` 收口为 `closed`，并从“下一波待修优先级”移除。
+  - 对齐 Batch 16 第二波三条 backlog 的状态：`FD-2026-03-28-004`、`FD-2026-03-24-003`、`FD-2026-03-26-001` 均已在 backlog / tasks / execution-log 写成单一真值。
+  - 明确 Batch 16 已完成，不再保留 `001` 线未收口 backlog。
+- **执行的命令**：沿用本批 R1 / V1 / Lint / 治理只读校验；`close-check --all-docs` 作为提交后的最终收口核验执行。
+- **测试结果**：对账已完成，等待提交后的最终 close-check 佐证。
+- **是否符合任务目标**：符合。Batch 16 第二波 backlog 已具备单一真值。
+
+#### 2.4 代码审查（摘要）
+
+- **规格对齐**：本批把“Git 写命令不得并行”和“锁文件不能默认直接删除”从 defect 描述落成了 helper + rules 双重约束。
+- **代码质量**：互斥 guard 只作用于 Git 写命令；读命令维持轻量路径，不扩大正常状态查询成本。
+- **测试质量**：新增 `test_git_client.py` 直接覆盖 guardrail 合同，并回归 `BranchManager` / `Executor` 既有用法。
+- **结论**：允许关闭 `FD-2026-03-28-004`，并将 Batch 16 第二波 backlog 标记为已对账完成。
+
+#### 2.5 任务/计划同步状态
+
+- `tasks.md` 同步状态：`已同步`（Task `6.42` 与 Task `6.45` 已更新为完成态）。
+- `framework-defect-backlog.zh-CN.md` 同步状态：`已同步`（`FD-2026-03-28-004` 已关闭并移出待修优先级）。
+- `related_plan`（如存在）同步状态：`已对账`。
+
+#### 2.6 自动决策记录（如有）
+
+- AD-001：仓库级 Git 写 guard 采用 framework-owned lock file，而不是仅靠进程内 mutex → 理由：需要覆盖同仓库不同 `GitClient` 实例乃至不同 Python 进程的串行化场景。
+- AD-002：`.git/index.lock` 默认只区分 active/stale 并阻断，不自动清理 → 理由：当前缺陷的核心就是“删锁被当成默认恢复动作”，必须把清理降级为显式路径。
+
+#### 2.7 批次结论
+
+- Task **6.42** 已完成，`FD-2026-03-28-004` 正式关单。
+- Task **6.45** 已完成，Batch 16 第二波 backlog 已在 backlog / tasks / execution-log 三处对齐为单一真值。
+
+#### 2.8 归档后动作
+
+- **已完成 git 提交**：是
+- **提交哈希**：本批唯一一次语义提交为 `feat: serialize repo git writes`；完整 SHA 以当前 `HEAD`（`git rev-parse HEAD`）为准。
+- **是否继续下一批**：Batch 16 已完成，可转下一个未收口 work item

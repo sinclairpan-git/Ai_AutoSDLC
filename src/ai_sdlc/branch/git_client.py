@@ -2,8 +2,14 @@
 
 from __future__ import annotations
 
+import json
 import logging
+import os
 import subprocess
+import time
+from contextlib import contextmanager, suppress
+from dataclasses import dataclass
+from enum import Enum
 from pathlib import Path
 
 logger = logging.getLogger(__name__)
@@ -13,11 +19,100 @@ class GitError(Exception):
     """Raised when a git operation fails."""
 
 
+class IndexLockState(str, Enum):
+    """Classification of the repository's ``.git/index.lock`` state."""
+
+    MISSING = "missing"
+    ACTIVE = "active"
+    STALE = "stale"
+
+
+@dataclass(frozen=True, slots=True)
+class IndexLockInspection:
+    """Structured result for ``.git/index.lock`` preflight checks."""
+
+    state: IndexLockState
+    path: Path
+    active_processes: tuple[str, ...] = ()
+
+
 class GitClient:
     """Thin wrapper around git CLI commands."""
 
-    def __init__(self, repo_path: Path) -> None:
+    def __init__(
+        self,
+        repo_path: Path,
+        *,
+        write_lock_timeout_sec: float = 10.0,
+        write_lock_poll_sec: float = 0.05,
+    ) -> None:
         self.repo_path = repo_path.resolve()
+        self._write_lock_timeout_sec = write_lock_timeout_sec
+        self._write_lock_poll_sec = write_lock_poll_sec
+
+    @property
+    def git_dir(self) -> Path:
+        """Return the effective git dir, resolving worktree indirection if needed."""
+        dot_git = self.repo_path / ".git"
+        if dot_git.is_dir():
+            return dot_git
+        if dot_git.is_file():
+            head = dot_git.read_text(encoding="utf-8").strip()
+            if head.startswith("gitdir:"):
+                raw = head.split(":", 1)[1].strip()
+                path = Path(raw)
+                if not path.is_absolute():
+                    path = (self.repo_path / path).resolve()
+                return path
+        return dot_git
+
+    @property
+    def index_lock_path(self) -> Path:
+        """Return the repository's ``index.lock`` path."""
+        return self.git_dir / "index.lock"
+
+    @property
+    def repo_write_lock_path(self) -> Path:
+        """Return the framework-owned repo write guard lock path."""
+        return self.git_dir / "ai-sdlc-write.lock"
+
+    @staticmethod
+    def is_write_command(*args: str) -> bool:
+        """Return whether a git subcommand mutates repo/index/ref state."""
+        if not args:
+            return False
+        cmd = args[0]
+        if cmd in {
+            "init",
+            "add",
+            "commit",
+            "merge",
+            "checkout",
+            "switch",
+            "push",
+            "reset",
+            "rebase",
+            "stash",
+            "tag",
+        }:
+            return True
+        if cmd == "branch":
+            if len(args) == 1:
+                return False
+            if args[1].startswith("-"):
+                destructive = {"-d", "-D", "-m", "-M", "-c", "-C"}
+                return any(arg in destructive for arg in args[1:])
+            return True
+        if cmd == "worktree":
+            return len(args) > 1 and args[1] in {
+                "add",
+                "remove",
+                "move",
+                "prune",
+                "lock",
+                "unlock",
+            }
+        return False
 
     def _run(self, *args: str) -> str:
         """Execute a git command and return stdout.
@@ -25,6 +120,14 @@ class GitClient:
         Raises:
             GitError: If the command exits with non-zero status.
         """
+        if self.is_write_command(*args):
+            with self._repo_write_guard(*args):
+                self._raise_if_index_lock_not_ready()
+                return self._run_raw(*args)
+        return self._run_raw(*args)
+
+    def _run_raw(self, *args: str) -> str:
+        """Execute a git command without acquiring the framework repo write guard."""
         cmd = ["git", *args]
         try:
             result = subprocess.run(
@@ -43,6 +146,139 @@ class GitClient:
                 f"{result.stderr.strip()}"
             )
         return result.stdout.strip()
+
+    @contextmanager
+    def _repo_write_guard(self, *args: str):
+        """Serialize framework-owned git write commands per repository."""
+        self.repo_write_lock_path.parent.mkdir(parents=True, exist_ok=True)
+        deadline = time.monotonic() + self._write_lock_timeout_sec
+
+        while True:
+            try:
+                fd = os.open(
+                    self.repo_write_lock_path,
+                    os.O_CREAT | os.O_EXCL | os.O_WRONLY,
+                    0o600,
+                )
+                break
+            except FileExistsError:
+                if self._clear_stale_repo_write_lock():
+                    continue
+                if time.monotonic() >= deadline:
+                    raise GitError(
+                        "Timed out waiting for repository git write guard; "
+                        "do not launch parallel git add/commit/merge/checkout flows "
+                        f"in {self.repo_path}"
+                    ) from None
+                time.sleep(self._write_lock_poll_sec)
+
+        with os.fdopen(fd, "w", encoding="utf-8") as fh:
+            json.dump(
+                {
+                    "pid": os.getpid(),
+                    "repo": str(self.repo_path),
+                    "args": list(args),
+                    "started_at": time.time(),
+                },
+                fh,
+            )
+
+        try:
+            yield
+        finally:
+            with suppress(FileNotFoundError):
+                self.repo_write_lock_path.unlink()
+
+    def _clear_stale_repo_write_lock(self) -> bool:
+        """Remove a stale framework repo write lock if its owner PID is gone."""
+        path = self.repo_write_lock_path
+        if not path.exists():
+            return False
+
+        try:
+            payload = json.loads(path.read_text(encoding="utf-8") or "{}")
+        except json.JSONDecodeError:
+            payload = {}
+        pid = int(payload.get("pid", 0) or 0)
+        if pid > 0 and self._pid_is_active(pid):
+            return False
+        try:
+            path.unlink()
+        except FileNotFoundError:
+            return False
+        return True
+
+    def inspect_index_lock(self) -> IndexLockInspection:
+        """Classify ``.git/index.lock`` as missing, active, or stale."""
+        path = self.index_lock_path
+        if not path.exists():
+            return IndexLockInspection(IndexLockState.MISSING, path)
+        active = self._list_active_git_processes()
+        state = IndexLockState.ACTIVE if active else IndexLockState.STALE
+        return IndexLockInspection(state=state, path=path, active_processes=active)
+
+    def remove_stale_index_lock(self) -> None:
+        """Explicit stale-lock cleanup path. Never runs automatically."""
+        inspection = self.inspect_index_lock()
+        if inspection.state is IndexLockState.MISSING:
+            return
+        if inspection.state is IndexLockState.ACTIVE:
+            raise GitError(
+                "Active git process appears to hold .git/index.lock; "
+                f"wait for it to finish instead of deleting {inspection.path}. "
+                f"Active processes: {', '.join(inspection.active_processes[:3])}"
+            )
+        inspection.path.unlink(missing_ok=True)
+
+    def _raise_if_index_lock_not_ready(self) -> None:
+        inspection = self.inspect_index_lock()
+        if inspection.state is IndexLockState.MISSING:
+            return
+        if inspection.state is IndexLockState.ACTIVE:
+            raise GitError(
+                "Active git process appears to hold .git/index.lock; "
+                f"wait and retry instead of deleting {inspection.path}. "
+                f"Active processes: {', '.join(inspection.active_processes[:3])}"
+            )
+        raise GitError(
+            f"Stale {inspection.path} detected; confirm no active git process exists "
+            "and call remove_stale_index_lock() explicitly. Do not delete lock files by default."
+        )
+
+    def _list_active_git_processes(self) -> tuple[str, ...]:
+        """Best-effort process snapshot used only to avoid default stale-lock deletion."""
+        try:
+            result = subprocess.run(
+                ["ps", "-ax", "-o", "pid=,command="],
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+        except FileNotFoundError:
+            return ()
+        if result.returncode != 0:
+            return ()
+
+        active: list[str] = []
+        for raw in result.stdout.splitlines():
+            line = raw.strip()
+            if not line:
+                continue
+            lowered = line.lower()
+            if " git " in f" {lowered} " or lowered.startswith("git "):
+                active.append(line)
+        return tuple(active)
+
+    @staticmethod
+    def _pid_is_active(pid: int) -> bool:
+        try:
+            os.kill(pid, 0)
+        except ProcessLookupError:
+            return False
+        except PermissionError:
+            return True
+        else:
+            return True
 
     def init(self) -> None:
         """Initialize a new git repository."""
@@ -86,12 +322,16 @@ class GitClient:
         Returns:
             The short commit hash.
         """
-        if paths:
-            self._run("add", *paths)
-        else:
-            self._run("add", ".")
-        self._run("commit", "-m", message)
-        return self._run("rev-parse", "--short", "HEAD")
+        with self._repo_write_guard("add", "status", "diff", "commit"):
+            self._raise_if_index_lock_not_ready()
+            if paths:
+                self._run_raw("add", *paths)
+            else:
+                self._run_raw("add", ".")
+            self._run_raw("status", "--short")
+            self._run_raw("diff", "--cached", "--stat")
+            self._run_raw("commit", "-m", message)
+            return self._run_raw("rev-parse", "--short", "HEAD")
 
     def head_commit_timestamp(self) -> str:
         """Return the ISO timestamp of the current HEAD commit."""
@@ -103,7 +343,16 @@ class GitClient:
         Checks out target, merges source, then returns to original branch.
         """
         original = self.current_branch()
-        self.checkout(target)
-        self._run("merge", source, "--no-edit")
-        if original != target:
-            self.checkout(original)
+        with self._repo_write_guard("checkout", "merge", "checkout"):
+            self._raise_if_index_lock_not_ready()
+            self._run_raw("checkout", target)
+            self._run_raw("merge", source, "--no-edit")
+            if original != target:
+                self._run_raw("checkout", original)
+
+    def push(self, remote: str = "origin", branch: str = "") -> None:
+        """Push the current branch, after add/status/diff/commit has finished."""
+        if branch:
+            self._run("push", remote, branch)
+            return
+        self._run("push", remote, self.current_branch())

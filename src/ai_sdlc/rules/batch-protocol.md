@@ -164,10 +164,13 @@ Round 3 后仍失败 → 触发熔断器，阻断流水线
 git add [本批次改动的所有文件]
 git add specs/NNN/task-execution-log.md
 git add specs/NNN/tasks.md
+git status --short
+git diff --cached --stat
 git commit -m "[type]: [描述]"
+git push origin <branch>
 ```
 
-**与 Step 4 的衔接**：优先 **一次** `git add` / `git commit` 覆盖实现、测试、归档与任务勾选。若须在获知 SHA 后才填写「提交哈希」，可在更新 `task-execution-log.md` 对应行后执行 **`git commit --amend --no-edit`**，仍视为 **单条语义提交**，避免多出「仅改归档」的第二次 commit。**每批哈希只回填一次**。
+**与 Step 4 的衔接**：优先 **一次**串行 `git add` → `git status/diff` → `git commit` 覆盖实现、测试、归档与任务勾选；如需推送远端，再在 commit 成功后单独执行 `git push`。**禁止**把这些 Git 写步骤交给并行工具或与其他仓库写命令重叠调度。若须在获知 SHA 后才填写「提交哈希」，可在更新 `task-execution-log.md` 对应行后执行 **`git commit --amend --no-edit`**，仍视为 **单条语义提交**，避免多出「仅改归档」的第二次 commit。**每批哈希只回填一次**。
 
 commit message 规范：
 - 准备/基础阶段：`feat: scaffold [feature name] implementation`
@@ -188,15 +191,21 @@ commit message 规范：
   → 阻断流水线，输出冲突文件列表
   → 提示用户手动解决冲突后重新运行
 
-情况 3：pre-commit hook 失败
+情况 3：出现 `.git/index.lock`
+  → 先判定是否仍有活跃 Git 进程持锁
+  → 若有活跃进程：等待其结束，禁止默认删锁
+  → 若确认无活跃进程：仅允许走显式 stale-lock 清理分支
+  → 禁止把“先 rm 锁文件再继续”当成默认恢复动作
+
+情况 4：pre-commit hook 失败
   → 读取 hook 输出，分析失败原因
   → 如果是 lint/format 问题 → 自动修复后重试（最多 2 次）
   → 如果是其他原因 → 阻断并输出诊断
 
-情况 4：磁盘权限或空间不足
+情况 5：磁盘权限或空间不足
   → 阻断流水线，输出系统错误信息
 
-情况 5：detached HEAD 状态
+情况 6：detached HEAD 状态
   → 尝试 git checkout -b feature/NNN-recovery
   → 然后重试提交
 ```
