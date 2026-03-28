@@ -128,3 +128,83 @@
 | FR-P1-035 | Done Gate 集成：Level ≥ 1 时阻止标记 completed 直到刷新完成（BR-050） |
 | FR-P1-036 | knowledge-refresh-log.yaml 追加记录（BR-052） |
 | FR-P1-037 | CLI `ai-sdlc refresh` 命令手动触发 |
+
+---
+
+## 缺口收敛补充（2026-03-28）
+
+> 本节用于吸收原始 PRD 中已归入 P1 范围、但此前在 `002` 中仍未充分细化或当前实现只完成一半的需求。对应缺口总表 **RG-010 ~ RG-015**。
+
+### 用户故事与验收补充
+
+#### US-P1-7 — Change Request 触发运行态暂停
+
+作为**产品经理 / 技术负责人**，我希望在执行中收到变更请求时，系统不仅生成分析文档，还会正式暂停当前运行态并保留恢复入口。
+
+**验收**：
+
+1. Given `dev_executing` 或 `dev_verifying` 状态，When 提交 `change_request`，Then work item 进入 `suspended`
+2. Given 变更分析完成，When 查看产物，Then 能看到 freeze snapshot、impact analysis、rebaseline record 与可消费的 resume point
+3. Given 变更处理完成，When 继续执行，Then `recover` / `run` 能从 resume point 恢复主链
+
+#### US-P1-8 — Maintenance Studio 输出显式 execution path
+
+作为**开发者**，我希望 Maintenance Studio 不仅给出 task graph，还给出明确 execution path，以便轻量任务也有正式执行顺序合同。
+
+**验收**：
+
+1. Given maintenance brief，When 处理完成，Then 输出 small task graph + execution path
+2. Given 查看持久化产物，When 检查文档或结构化对象，Then execution path 与 task 依赖顺序一致
+
+#### US-P1-9 — Multi-Agent 从 planning 进入 runtime orchestration
+
+作为**技术负责人**，我希望可并行任务不仅能被切片和模拟，还能由 Coordinator 正式编排 worker 生命周期与汇合验证。
+
+**验收**：
+
+1. Given parallelizable 任务集合，When 进入并行执行，Then Coordinator 持久化 assignment 与 contract freeze 结果
+2. Given 多个 worker branch 已生成，When 汇合，Then overlap detection、merge simulation 与 integration verify 都可见
+
+#### US-P1-10 — Knowledge Refresh 接入 Done / Close 主链
+
+作为**开发者**，我希望刷新不是一个手动补动作，而是 Done / Close 的正式门禁环节。
+
+**验收**：
+
+1. Given Level 0 任务，When 进入 Done / Close，Then 可直接 completed
+2. Given Level 1+ 任务，When 进入 Done / Close，Then 未完成 refresh 前不得 completed
+3. Given refresh 完成，When 进入 close 收口，Then 相关 evidence 与 refresh log 可被读取
+
+#### US-P1-11 — Incident Close 必须通过 Postmortem Gate
+
+作为**维护 / 值班工程师**，我希望 incident 的收口必须经过 postmortem 完整性检查，以便事故闭环成为正式门禁。
+
+**验收**：
+
+1. Given incident fix 已完成，When 准备 close，Then 必须先通过 Postmortem Gate
+2. Given postmortem 缺关键章节，When close，Then 返回 BLOCKER 而不是静默通过
+
+### 功能需求补充
+
+| ID | 需求 |
+|----|------|
+| FR-P1-017 | `change_request` 必须把活跃 work item 从 `dev_executing` / `dev_verifying` 转为 `suspended`，并持久化 freeze snapshot |
+| FR-P1-018 | ChangeStudio 产出的 `resume-point` 必须可被 `recover` / `run` 主链消费，而不只是写进自由文本 |
+| FR-P1-019 | MaintenanceStudio 必须输出并持久化 `execution-path`，使轻量维护路径具备正式执行顺序真值 |
+| FR-P1-027 | Multi-Agent Coordinator 必须编排 contract freeze、assignment 持久化、worker branch 生命周期与汇合验证 |
+| FR-P1-028 | 并行执行必须存在正式 coordination artifact，至少记录 group、worker、allowed/forbidden paths、merge order 与校验结果 |
+| FR-P1-029 | Worker branch 命名与 merge order 必须可被 status / report surface 读取，而不只是内存中的临时对象 |
+| FR-P1-038 | Level ≥ 1 的 Knowledge Refresh 义务必须正式接入 Done / Close Gate，而非仅依赖手动 `ai-sdlc refresh` |
+| FR-P1-039 | Close 收口必须能读取 refresh evidence / refresh log，并将其纳入 completion truth |
+| FR-P1-040 | Incident close path 必须在 completed 前通过 Postmortem Gate |
+| FR-P1-041 | Postmortem Gate 失败时必须指出缺失章节与阻断原因，供 incident recover / close-check 使用 |
+
+### 补充验收标准
+
+- **AC-025**：收到 `change_request` 后，work item 状态与 snapshot artifact 同步落盘，而不是仅生成文档产物
+- **AC-026**：`resume-point` 至少能被一个 recover / run 夹具直接消费并恢复执行
+- **AC-027**：Maintenance Studio 的 execution path 在对象层与落盘层都可读
+- **AC-028**：并行执行除 planning/simulation 外，至少具备 assignment freeze 与 integration verify 的正式合同面
+- **AC-029**：Level 1+ refresh 未完成时，Done / Close 不允许 completed
+- **AC-030**：refresh 完成后，close 收口能读取 refresh evidence 并解除阻断
+- **AC-031**：incident close 在 postmortem 缺章节时返回 BLOCKER，修复后可通过

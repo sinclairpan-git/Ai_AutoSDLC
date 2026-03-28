@@ -307,6 +307,45 @@
 - **FR-097（P1）**：**归档提交策略降噪**：`templates/execution-log-template.md` 与 `batch-protocol.md` 叙述应对齐——**默认单次 commit** 同时包含实现与 execution-log 批次段落；**「提交哈希」** 仅在 commit **成功之后** 填写 **一次**（若需知 SHA 后再写正文，可用 **`git commit --amend`** 将更新后的归档并入 **同一条语义提交**，避免「仅改归档」的二次 commit）。详见模板 **2.8** 与 `batch-protocol` Step 4–5。
 - **FR-098（P1）**：`close-check`（及将来同类检查）中「已注册 CLI 命令」列表 **不得长期硬编码**；须从 **Typer 应用对象**（或经批准的单一注册表模块）**枚举子命令全名**（如 `ai-sdlc workitem plan-check`），与 `ai-sdlc --help` / 实际注册保持一致；须 pytest 防止漏注册或重命名后检查失效。
 
+#### 缺口收敛补充合同（2026-03-28）
+
+> 本节用于吸收原始 PRD 中属于 `001` 范围、但此前未被正式细化或当前实现仍存在合同偏差的需求。对应缺口总表 **RG-001 ~ RG-009**。
+
+##### Routing / Intake 真值收敛
+
+- **FR-006**：任何创建新工作项的 intake 路径必须在同一事务中完成：生成 `WI-YYYY-NNN`、从 `project-state.yaml.next_work_item_seq` 读取当前值、写回自增值，并把分配结果写入工作项持久化状态；禁止由调用方在框架外手工补 ID。
+- **FR-007**：`WorkIntakeRouter` 的输出必须填充 `recommended_flow`：`new_requirement -> prd_studio`、`production_issue -> incident_studio`、`change_request -> change_studio`、`maintenance_task -> maintenance_studio`、`uncertain -> clarification`。
+- **FR-008**：`WorkIntakeRouter` 对 `production_issue` 必须给出明确 `severity` 推断；任一类型在低置信度下都必须显式设置 `needs_human_confirmation = true`，而不是仅对 `uncertain` 生效。
+- **FR-009**：`uncertain` 澄清流程必须持久化 `round_count`、候选类型、用户回应与停机原因；在连续两轮澄清后仍无法确定时，第三次路由决策必须进入 HALT，并留下可恢复的原因记录。
+
+##### Governance Freeze 与 docs baseline 入口硬化
+
+- **FR-024**：当工作项尚未 `governance frozen` 时，任何进入 docs baseline 的入口（至少含 docs branch 创建与 docs baseline stage）都必须阻断，并抛出 `GovernanceNotFrozenError`（或等价阻断结果）。
+- **FR-025**：一旦 governance 已冻结，`constitution`、`clarify/decisions`、治理 policy 等冻结输入不得被直接修改；若确需修改，必须经过显式 rebaseline / unfreeze 流程，而不是静默覆盖。
+- **FR-026**：治理冻结结果必须可被分支管理、状态面与恢复面直接读取；不得要求调用方仅通过会话记忆判断“是否已冻结”。
+
+##### Branch Protocol 与上下文刷新
+
+- **FR-035**：docs -> dev 切换前，系统必须冻结当前状态并持久化至少以下信息：当前分支、spec dir、最新 docs baseline 引用、checkpoint 时间戳。
+- **FR-036**：分支切换 preflight 除 clean worktree 外，还必须验证当前 checkpoint / runtime / resume 语义上可刷新；不能只做 Git 层检查。
+- **FR-037**：分支切换成功后，系统必须刷新并持久化 runtime / resume / progress / working-set 视图，避免 branch 已切换而恢复上下文仍停留在旧分支。
+- **FR-038**：baseline recheck 失败时，切换必须整体视为失败，不得留下“已切换但未完成上下文刷新”的半完成状态。
+- **FR-039**：`status` / `recover` / checkpoint surface 必须能展示当前分支与最近的 docs baseline 绑定关系。
+
+##### Planning / Context Artifact Contracts
+
+- **FR-046**：planning baseline 必须产出结构化 **task graph** 合同；该合同可内嵌于 `tasks.md`、或由经批准的并列 YAML / JSON 落盘，但不得只停留在自由文本描述。
+- **FR-047**：每个 active work item 必须持久化 `execution-plan.yaml`（或经批准的等价 artifact），作为 execute / recover 的批次顺序与执行策略真值。
+- **FR-048**：每个 active work item 必须持久化 `runtime.yaml`，至少包含 `current_stage`、`current_batch/task`、`current_branch`、`execution_mode` 与最近一次状态更新时间。
+- **FR-049**：每个 active work item 必须持久化 `working-set.yaml` 与 `latest-summary.md`，并在恢复时遵循 `summary-first`、`working-set-first` 的加载顺序。
+
+##### Gate Taxonomy 对齐
+
+- **FR-064**：系统必须把 **PRD Gate** 定义为显式合同面：它可以复用 PRD readiness 与 refine-entry 校验，但在对外语义上必须可被识别和引用。
+- **FR-065**：系统必须把 **Review Gate** 定义为显式合同面，用于检查审查结论、自审记录或等价 review 证据，而不是把这部分语义完全散落在 close-check / 文档模板中。
+- **FR-066**：系统必须把 **Done Gate** 定义为显式合同面；除实现、测试、归档外，还必须负责阻断“需 Knowledge Refresh 但尚未完成”的 completed 转换。
+- **FR-067**：系统必须把 **Verification Gate** 与 CLI / runner surface 对齐，保证用户能明确知道“verify 阶段的真值来自哪些检查对象”。
+
 ### 关键实体
 
 - **ProjectState**：项目级状态（status, next_work_item_seq, initialized_at, last_updated）
@@ -317,6 +356,11 @@
 - **GateResult**：门禁结果（result: PASS|RETRY|HALT, details: list[str], failures: list[str]）
 - **ExecutionBatch**：执行批次（batch_id, phase, tasks: list, status, started_at, completed_at）
 - **PrdReadiness**：PRD 就绪检查（readiness: pass|fail, score, missing_sections, recommendations, structured_output）
+- **TaskGraphArtifact**：规划阶段产出的任务图真值（任务、依赖、并行声明、执行顺序）
+- **ExecutionPlanArtifact**：执行计划真值（批次划分、执行顺序、策略、最近重算时间）
+- **RuntimeArtifact**：工作项运行态真值（stage、batch/task、branch、mode、updated_at）
+- **WorkingSetArtifact**：恢复优先使用的工作集快照（关键文档、关键路径、上下文摘要引用）
+- **LatestSummaryArtifact**：最近一次对人和 Agent 都可消费的阶段摘要
 
 ---
 
@@ -357,3 +401,12 @@
 - **SC-021**：给定夹具：`docs/` 某深层路径含违规句但 **不在** `specs/<WI>/` 与白名单时，默认 `close-check` **通过**；同一夹具加 `--all-docs` 后 **失败**。
 - **SC-022**：execution-log 模板与 `batch-protocol.md` 对「提交哈希必填 / 二次提交」的表述 **一致**，且与选定策略（单次 commit 或一次回填）一致。
 - **SC-023**：在 CLI 增加别名子命令的夹具中，`close-check` 使用的命令枚举 **仍包含**该别名对应全名（或文档明确豁免规则，二者择一锁死）。
+
+##### 001 合同补齐（2026-03-28）
+
+- **SC-024**：通过正式 intake 路径创建工作项时，`work_item_id` 分配与 `next_work_item_seq` 自增在一次框架调用中完成，且失败时不出现“ID 已发放但序号未落盘”。
+- **SC-025**：`WorkIntakeRouter` 输出中 `recommended_flow`、`severity`、`needs_human_confirmation` 三个字段与输入信号一致，且无需调用方二次补写。
+- **SC-026**：当 governance 未冻结时，docs branch / docs baseline 入口统一阻断，并返回可追溯的冻结缺失原因。
+- **SC-027**：docs -> dev 切换后，checkpoint、runtime、working-set 与 status surface 中的 branch / progress 信息全部刷新，不再停留在旧分支。
+- **SC-028**：active work item 至少拥有 `execution-plan`、`runtime`、`working-set`、`latest-summary` 四类 artifact 中的正式真值面，并可被 recover / status 使用。
+- **SC-029**：PRD Gate、Review Gate、Done Gate、Verification Gate 都能在文档与实现层被明确引用，不再仅靠隐式语义映射。
