@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import os
+from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
@@ -25,6 +26,15 @@ _EVENT_TAIL_PROBE_BYTES = 65_536
 def build_status_json_surface(repo_root: Path) -> dict[str, Any]:
     """Return bounded telemetry status JSON without implicit init/rebuild."""
     manifest_state = _load_manifest_state(repo_root)
+    store = TelemetryStore(repo_root)
+    derived_indexes: dict[str, dict[str, Any]] | None = None
+
+    def _derived_index_payloads() -> dict[str, dict[str, Any]]:
+        nonlocal derived_indexes
+        if derived_indexes is None:
+            derived_indexes = store.derive_index_payloads()
+        return derived_indexes
+
     timeline_payload = _read_json_file(telemetry_indexes_root(repo_root) / "timeline-cursor.json")
     if manifest_state["state"] == "not_initialized":
         return {
@@ -45,31 +55,52 @@ def build_status_json_surface(repo_root: Path) -> dict[str, Any]:
         }
 
     manifest = manifest_state["manifest"]
+    derived_timeline_payload: dict[str, Any] | None = None
+
+    def _resolved_latest_id(field_name: str, values: dict[str, Any]) -> str | None:
+        nonlocal derived_timeline_payload
+        latest_id = _timeline_latest_id(timeline_payload, field_name)
+        if latest_id in values:
+            return latest_id
+        if derived_timeline_payload is None:
+            derived_timeline_payload = _derived_index_payloads()["timeline_cursor"]
+        latest_id = _timeline_latest_id(derived_timeline_payload, field_name)
+        return latest_id if latest_id in values else None
+
     return {
         "telemetry": {
             "state": "ready",
             "current": {
                 "manifest_version": manifest.get("version"),
                 "sessions": _current_bucket_summary(
-                    repo_root,
                     manifest.get("sessions", {}),
                     "latest_goal_session_id",
-                    _timeline_latest_id(timeline_payload, "latest_goal_session_id"),
+                    _resolved_latest_id(
+                        "latest_goal_session_id",
+                        manifest.get("sessions", {}),
+                    ),
                 ),
                 "runs": _current_bucket_summary(
-                    repo_root,
                     manifest.get("runs", {}),
                     "latest_workflow_run_id",
-                    _timeline_latest_id(timeline_payload, "latest_workflow_run_id"),
+                    _resolved_latest_id(
+                        "latest_workflow_run_id",
+                        manifest.get("runs", {}),
+                    ),
                 ),
                 "steps": _current_bucket_summary(
-                    repo_root,
                     manifest.get("steps", {}),
                     "latest_step_id",
-                    _timeline_latest_id(timeline_payload, "latest_step_id"),
+                    _resolved_latest_id(
+                        "latest_step_id",
+                        manifest.get("steps", {}),
+                    ),
                 ),
             },
-            "latest": _load_latest_index_summaries(repo_root),
+            "latest": _load_latest_index_summaries(
+                repo_root,
+                derived_index_payloads=_derived_index_payloads,
+            ),
         }
     }
 
@@ -128,13 +159,12 @@ def build_doctor_readiness_items(repo_root: Path | None) -> list[dict[str, str]]
 
 
 def _current_bucket_summary(
-    repo_root: Path,
     values: dict[str, Any],
     latest_key_name: str,
     latest_id: str | None,
 ) -> dict[str, Any]:
     if latest_id not in values:
-        latest_id = _fallback_latest_bucket_id(repo_root, values)
+        latest_id = None
     return {"count": len(values), latest_key_name: latest_id}
 
 
@@ -147,40 +177,38 @@ def _timeline_latest_id(payload: Any, field_name: str) -> str | None:
     return value
 
 
-def _fallback_latest_bucket_id(repo_root: Path, values: dict[str, Any]) -> str | None:
-    if not values:
-        return None
-    scored: list[tuple[str, int]] = []
-    local_root = telemetry_local_root(repo_root)
-    for object_id, entry in values.items():
-        if not isinstance(object_id, str) or not isinstance(entry, dict):
-            continue
-        path_value = entry.get("path")
-        if not isinstance(path_value, str):
-            continue
-        scope_root = local_root / path_value
-        scored.append((object_id, _scope_activity_mtime_ns(scope_root)))
-    if not scored:
-        return None
-    return max(scored, key=lambda item: (item[1], item[0]))[0]
-
-
-def _load_latest_index_summaries(repo_root: Path) -> dict[str, Any]:
+def _load_latest_index_summaries(
+    repo_root: Path,
+    *,
+    derived_index_payloads: Callable[[], dict[str, dict[str, Any]]] | None = None,
+) -> dict[str, Any]:
     indexes_root = telemetry_indexes_root(repo_root)
     artifacts_payload = _read_json_file(indexes_root / "latest-artifacts.json")
     violations_payload = _read_json_file(indexes_root / "open-violations.json")
     timeline_payload = _read_json_file(indexes_root / "timeline-cursor.json")
 
-    artifact_ids = _coerce_id_list(artifacts_payload, "artifact_ids")
-    violation_ids = _coerce_id_list(violations_payload, "violation_ids")
+    derived_payloads: dict[str, dict[str, Any]] | None = None
 
-    timeline_cursor: dict[str, Any] | None = None
-    if isinstance(timeline_payload, dict):
-        timeline_cursor = {
-            "event_count": timeline_payload.get("event_count"),
-            "last_event_id": timeline_payload.get("last_event_id"),
-            "last_timestamp": timeline_payload.get("last_timestamp"),
-        }
+    def _derived_payload(name: str) -> dict[str, Any]:
+        nonlocal derived_payloads
+        if derived_payloads is None:
+            if derived_index_payloads is None:
+                derived_payloads = TelemetryStore(repo_root).derive_index_payloads()
+            else:
+                derived_payloads = derived_index_payloads()
+        return derived_payloads[name]
+
+    artifact_ids, artifacts_valid = _coerce_id_list(artifacts_payload, "artifact_ids")
+    if not artifacts_valid:
+        artifact_ids, _ = _coerce_id_list(_derived_payload("latest_artifacts"), "artifact_ids")
+
+    violation_ids, violations_valid = _coerce_id_list(violations_payload, "violation_ids")
+    if not violations_valid:
+        violation_ids, _ = _coerce_id_list(_derived_payload("open_violations"), "violation_ids")
+
+    timeline_cursor = _coerce_timeline_cursor(timeline_payload)
+    if timeline_cursor is None:
+        timeline_cursor = _coerce_timeline_cursor(_derived_payload("timeline_cursor"))
 
     return {
         "artifacts": {
@@ -195,13 +223,34 @@ def _load_latest_index_summaries(repo_root: Path) -> dict[str, Any]:
     }
 
 
-def _coerce_id_list(payload: Any, field_name: str) -> list[str]:
+def _coerce_id_list(payload: Any, field_name: str) -> tuple[list[str], bool]:
     if not isinstance(payload, dict):
-        return []
+        return [], False
     value = payload.get(field_name)
     if not isinstance(value, list):
-        return []
-    return [item for item in value if isinstance(item, str)]
+        return [], False
+    if not all(isinstance(item, str) for item in value):
+        return [], False
+    return list(value), True
+
+
+def _coerce_timeline_cursor(payload: Any) -> dict[str, Any] | None:
+    if not isinstance(payload, dict):
+        return None
+    event_count = payload.get("event_count")
+    last_event_id = payload.get("last_event_id")
+    last_timestamp = payload.get("last_timestamp")
+    if event_count is not None and not isinstance(event_count, int):
+        return None
+    if last_event_id is not None and not isinstance(last_event_id, str):
+        return None
+    if last_timestamp is not None and not isinstance(last_timestamp, str):
+        return None
+    return {
+        "event_count": event_count,
+        "last_event_id": last_event_id,
+        "last_timestamp": last_timestamp,
+    }
 
 
 def _telemetry_root_writable(repo_root: Path) -> dict[str, str]:
@@ -465,19 +514,6 @@ def _path_mtime_ns(path: Path) -> int:
         return path.stat().st_mtime_ns
     except OSError:
         return -1
-
-
-def _scope_activity_mtime_ns(scope_root: Path) -> int:
-    latest = _path_mtime_ns(scope_root)
-    if not scope_root.exists():
-        return latest
-    try:
-        for path in scope_root.rglob("*"):
-            if path.is_file():
-                latest = max(latest, _path_mtime_ns(path))
-    except OSError:
-        return latest
-    return latest
 
 
 def _status_surface_check(repo_root: Path) -> dict[str, str]:

@@ -185,7 +185,24 @@ class TelemetryStore:
         """Rebuild the derived telemetry indexes from authoritative local traces."""
         self.ensure_initialized()
         self.indexes_root.mkdir(parents=True, exist_ok=True)
+        index_payloads = self.derive_index_payloads()
 
+        open_violations_path = self.indexes_root / "open-violations.json"
+        latest_artifacts_path = self.indexes_root / "latest-artifacts.json"
+        timeline_cursor_path = self.indexes_root / "timeline-cursor.json"
+
+        self._write_json(open_violations_path, index_payloads["open_violations"])
+        self._write_json(latest_artifacts_path, index_payloads["latest_artifacts"])
+        self._write_json(timeline_cursor_path, index_payloads["timeline_cursor"])
+
+        return {
+            "open_violations_path": open_violations_path,
+            "latest_artifacts_path": latest_artifacts_path,
+            "timeline_cursor_path": timeline_cursor_path,
+        }
+
+    def derive_index_payloads(self) -> dict[str, dict[str, Any]]:
+        """Return canonical index payloads without mutating the filesystem."""
         open_violation_ids = [
             payload["violation_id"]
             for payload in self._iter_mutable_snapshots("violation")
@@ -201,33 +218,19 @@ class TelemetryStore:
             key=lambda payload: (payload["timestamp"], payload["event_id"]),
         )
         latest_scope_ids = self._latest_scope_ids()
-
-        open_violations_path = self.indexes_root / "open-violations.json"
-        latest_artifacts_path = self.indexes_root / "latest-artifacts.json"
-        timeline_cursor_path = self.indexes_root / "timeline-cursor.json"
-
-        self._write_json(
-            open_violations_path,
-            {"violation_ids": open_violation_ids},
-        )
-        self._write_json(
-            latest_artifacts_path,
-            {"artifact_ids": [payload["artifact_id"] for payload in latest_artifacts]},
-        )
-        timeline_payload = {
-            "event_count": len(events),
-            "last_event_id": events[-1]["event_id"] if events else None,
-            "last_timestamp": events[-1]["timestamp"] if events else None,
-            "latest_goal_session_id": latest_scope_ids["latest_goal_session_id"],
-            "latest_workflow_run_id": latest_scope_ids["latest_workflow_run_id"],
-            "latest_step_id": latest_scope_ids["latest_step_id"],
-        }
-        self._write_json(timeline_cursor_path, timeline_payload)
-
         return {
-            "open_violations_path": open_violations_path,
-            "latest_artifacts_path": latest_artifacts_path,
-            "timeline_cursor_path": timeline_cursor_path,
+            "open_violations": {"violation_ids": open_violation_ids},
+            "latest_artifacts": {
+                "artifact_ids": [payload["artifact_id"] for payload in latest_artifacts]
+            },
+            "timeline_cursor": {
+                "event_count": len(events),
+                "last_event_id": events[-1]["event_id"] if events else None,
+                "last_timestamp": events[-1]["timestamp"] if events else None,
+                "latest_goal_session_id": latest_scope_ids["latest_goal_session_id"],
+                "latest_workflow_run_id": latest_scope_ids["latest_workflow_run_id"],
+                "latest_step_id": latest_scope_ids["latest_step_id"],
+            },
         }
 
     def governance_report_path(self, artifact_id: str) -> Path:

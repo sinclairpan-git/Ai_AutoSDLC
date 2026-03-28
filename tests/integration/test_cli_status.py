@@ -238,6 +238,9 @@ class TestCliStatus:
                     "event_count": 9,
                     "last_event_id": "evt_02",
                     "last_timestamp": "2026-03-27T09:00:00Z",
+                    "latest_goal_session_id": "gs_02",
+                    "latest_workflow_run_id": "wr_02",
+                    "latest_step_id": "st_02",
                 }
             ),
             encoding="utf-8",
@@ -518,28 +521,60 @@ def test_status_json_latest_scope_ids_do_not_depend_on_manifest_key_order(
         encoding="utf-8",
     )
 
-    old_session_root = local_root / "sessions" / gs_old
-    new_session_root = local_root / "sessions" / gs_new
-    old_run_root = old_session_root / "runs" / wr_old
-    new_run_root = new_session_root / "runs" / wr_new
-    old_step_root = old_run_root / "steps" / st_old
-    new_step_root = new_run_root / "steps" / st_new
-    for path in (
-        old_session_root,
-        new_session_root,
-        old_run_root,
-        new_run_root,
-        old_step_root,
-        new_step_root,
-    ):
-        path.mkdir(parents=True, exist_ok=True)
-
-    old_ts = 1_710_000_000
-    new_ts = old_ts + 100
-    for path in (old_session_root, old_run_root, old_step_root):
-        os.utime(path, (old_ts, old_ts))
-    for path in (new_session_root, new_run_root, new_step_root):
-        os.utime(path, (new_ts, new_ts))
+    old_events_path = (
+        local_root
+        / "sessions"
+        / gs_old
+        / "runs"
+        / wr_old
+        / "steps"
+        / st_old
+        / "events.ndjson"
+    )
+    new_events_path = (
+        local_root
+        / "sessions"
+        / gs_new
+        / "runs"
+        / wr_new
+        / "steps"
+        / st_new
+        / "events.ndjson"
+    )
+    old_events_path.parent.mkdir(parents=True, exist_ok=True)
+    new_events_path.parent.mkdir(parents=True, exist_ok=True)
+    old_events_path.write_text(
+        json.dumps(
+            TelemetryEvent(
+                scope_level=ScopeLevel.STEP,
+                goal_session_id=gs_old,
+                workflow_run_id=wr_old,
+                step_id=st_old,
+                created_at="2026-03-27T10:00:00Z",
+                updated_at="2026-03-27T10:00:00Z",
+                timestamp="2026-03-27T10:00:00Z",
+                trace_layer=TraceLayer.WORKFLOW,
+            ).model_dump(mode="json")
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    new_events_path.write_text(
+        json.dumps(
+            TelemetryEvent(
+                scope_level=ScopeLevel.STEP,
+                goal_session_id=gs_new,
+                workflow_run_id=wr_new,
+                step_id=st_new,
+                created_at="2026-03-27T10:00:10Z",
+                updated_at="2026-03-27T10:00:10Z",
+                timestamp="2026-03-27T10:00:10Z",
+                trace_layer=TraceLayer.TOOL,
+            ).model_dump(mode="json")
+        )
+        + "\n",
+        encoding="utf-8",
+    )
 
     with patch("ai_sdlc.cli.commands.find_project_root", return_value=tmp_path):
         result = runner.invoke(app, ["status", "--json"])
@@ -730,6 +765,130 @@ def test_status_json_fallback_latest_scope_ids_follow_fresh_writes_without_index
             trace_layer=TraceLayer.TOOL,
         )
     )
+    store.delete_indexes()
+
+    with patch("ai_sdlc.cli.commands.find_project_root", return_value=tmp_path):
+        result = runner.invoke(app, ["status", "--json"])
+
+    assert result.exit_code == 0
+    payload = json.loads(result.output)["telemetry"]
+    assert payload["current"]["sessions"]["latest_goal_session_id"] == session_a
+    assert payload["current"]["runs"]["latest_workflow_run_id"] == run_a
+    assert payload["current"]["steps"]["latest_step_id"] == step_a
+
+
+def test_status_json_latest_summary_falls_back_to_canonical_snapshots_without_indexes(
+    tmp_path: Path,
+) -> None:
+    init_project(tmp_path)
+    store = TelemetryStore(tmp_path)
+    writer = TelemetryWriter(store)
+
+    event = TelemetryEvent(
+        scope_level=ScopeLevel.RUN,
+        goal_session_id="gs_0123456789abcdef0123456789abcdef",
+        workflow_run_id="wr_0123456789abcdef0123456789abcdef",
+        created_at="2026-03-27T10:00:00Z",
+        updated_at="2026-03-27T10:00:00Z",
+        timestamp="2026-03-27T10:00:00Z",
+        trace_layer=TraceLayer.TOOL,
+    )
+    violation = Violation(
+        scope_level=ScopeLevel.RUN,
+        goal_session_id=event.goal_session_id,
+        workflow_run_id=event.workflow_run_id,
+        created_at="2026-03-27T10:00:01Z",
+        updated_at="2026-03-27T10:00:01Z",
+    )
+    artifact = Artifact(
+        scope_level=ScopeLevel.RUN,
+        goal_session_id=event.goal_session_id,
+        workflow_run_id=event.workflow_run_id,
+        created_at="2026-03-27T10:00:02Z",
+        updated_at="2026-03-27T10:00:02Z",
+        artifact_type=ArtifactType.REPORT,
+        artifact_role=ArtifactRole.AUDIT,
+    )
+
+    writer.write_event(event)
+    writer.write_violation(violation)
+    writer.write_artifact(artifact)
+    store.delete_indexes()
+
+    with patch("ai_sdlc.cli.commands.find_project_root", return_value=tmp_path):
+        result = runner.invoke(app, ["status", "--json"])
+
+    assert result.exit_code == 0
+    payload = json.loads(result.output)["telemetry"]
+    assert payload["latest"]["open_violations"]["count"] == 1
+    assert payload["latest"]["open_violations"]["sample_ids"] == [violation.violation_id]
+    assert payload["latest"]["artifacts"]["count"] == 1
+    assert payload["latest"]["artifacts"]["sample_ids"] == [artifact.artifact_id]
+    assert payload["latest"]["timeline_cursor"] == {
+        "event_count": 1,
+        "last_event_id": event.event_id,
+        "last_timestamp": event.timestamp,
+    }
+
+
+def test_status_json_fallback_latest_scope_ids_ignore_misleading_mtime(
+    tmp_path: Path,
+) -> None:
+    init_project(tmp_path)
+    store = TelemetryStore(tmp_path)
+    writer = TelemetryWriter(store)
+
+    session_a = "gs_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    run_a = "wr_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    step_a = "st_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    session_b = "gs_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+    run_b = "wr_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+    step_b = "st_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+
+    writer.write_event(
+        TelemetryEvent(
+            scope_level=ScopeLevel.STEP,
+            goal_session_id=session_b,
+            workflow_run_id=run_b,
+            step_id=step_b,
+            created_at="2026-03-27T10:00:05Z",
+            updated_at="2026-03-27T10:00:05Z",
+            timestamp="2026-03-27T10:00:05Z",
+            trace_layer=TraceLayer.WORKFLOW,
+        )
+    )
+    writer.write_event(
+        TelemetryEvent(
+            scope_level=ScopeLevel.STEP,
+            goal_session_id=session_a,
+            workflow_run_id=run_a,
+            step_id=step_a,
+            created_at="2026-03-27T10:00:10Z",
+            updated_at="2026-03-27T10:00:10Z",
+            timestamp="2026-03-27T10:00:10Z",
+            trace_layer=TraceLayer.TOOL,
+        )
+    )
+
+    local_root = telemetry_local_root(tmp_path)
+    stale_scope_paths = [
+        local_root / "sessions" / session_b,
+        local_root / "sessions" / session_b / "runs" / run_b,
+        local_root / "sessions" / session_b / "runs" / run_b / "steps" / step_b,
+        local_root / "sessions" / session_b / "runs" / run_b / "steps" / step_b / "events.ndjson",
+    ]
+    fresh_scope_paths = [
+        local_root / "sessions" / session_a,
+        local_root / "sessions" / session_a / "runs" / run_a,
+        local_root / "sessions" / session_a / "runs" / run_a / "steps" / step_a,
+        local_root / "sessions" / session_a / "runs" / run_a / "steps" / step_a / "events.ndjson",
+    ]
+    stale_mtime = 2_000_000_000
+    fresh_mtime = stale_mtime - 1_000
+    for path in stale_scope_paths:
+        os.utime(path, (stale_mtime, stale_mtime))
+    for path in fresh_scope_paths:
+        os.utime(path, (fresh_mtime, fresh_mtime))
     store.delete_indexes()
 
     with patch("ai_sdlc.cli.commands.find_project_root", return_value=tmp_path):

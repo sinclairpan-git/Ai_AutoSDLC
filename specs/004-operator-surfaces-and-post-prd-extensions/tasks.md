@@ -134,6 +134,8 @@ Batch 6: backlog remediation for latest/readiness freshness
   3. 在保持即时刷新的同时，`status --json` / `doctor` 仍维持 bounded、read-only、不 deep scan 的 operator 边界。
 - **验证**：`uv run pytest tests/unit/test_telemetry_store.py tests/integration/test_cli_status.py tests/integration/test_cli_doctor.py -v`
 
+> **Task 6.1 完成（2026-03-28）**：[`../../src/ai_sdlc/telemetry/store.py`](../../src/ai_sdlc/telemetry/store.py) 已新增 `derive_index_payloads()`，把 latest/open-violations/timeline-cursor 的 canonical 派生逻辑从落盘行为里抽出来；[`../../src/ai_sdlc/telemetry/readiness.py`](../../src/ai_sdlc/telemetry/readiness.py) 在 index 缺失或无效时改为回退到这套只读派生真值，不再依赖目录 `mtime`、manifest 顺序或其他猜测。新增/更新的 store + status integration 回归 **50 passed**，`FD-2026-03-27-013` 已关闭。
+
 ### Task 6.2 — 004 第二波 backlog 对账收口
 
 - **优先级**：P1
@@ -143,3 +145,5 @@ Batch 6: backlog remediation for latest/readiness freshness
   2. `spec.md` / `plan.md` / `tasks.md` 对 bounded status/doctor 的“只读但新鲜”合同保持一致。
   3. 本批收口不会重新引入“helper 已修、真实 CLI 仍旧陈旧”的双轨状态。
 - **验证**：定向 integration + `verify constraints`
+
+> **Task 6.2 完成（2026-03-28）**：[`task-execution-log.md`](task-execution-log.md) 已创建并记录 Batch 6 的 fresh regression / review / sync evidence；[`../../docs/framework-defect-backlog.zh-CN.md`](../../docs/framework-defect-backlog.zh-CN.md) 与本文件已统一关闭 `FD-2026-03-27-013`；`004` 当前已无剩余 backlog remediation 项。

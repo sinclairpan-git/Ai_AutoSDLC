@@ -747,6 +747,67 @@ def test_writer_refreshes_indexes_without_manual_rebuild(tmp_path: Path) -> None
     assert _read_json(indexes_root / "latest-artifacts.json")["artifact_ids"] == [artifact.artifact_id]
 
 
+def test_derive_index_payloads_match_canonical_latest_truth_without_index_files(
+    tmp_path: Path,
+) -> None:
+    store = TelemetryStore(tmp_path)
+    writer = TelemetryWriter(store)
+
+    older_event = TelemetryEvent(
+        scope_level=ScopeLevel.RUN,
+        goal_session_id="gs_ffffffffffffffffffffffffffffffff",
+        workflow_run_id="wr_ffffffffffffffffffffffffffffffff",
+        created_at="2026-03-27T10:00:00Z",
+        updated_at="2026-03-27T10:00:00Z",
+        timestamp="2026-03-27T10:00:00Z",
+        trace_layer=TraceLayer.WORKFLOW,
+    )
+    fresh_event = TelemetryEvent(
+        scope_level=ScopeLevel.RUN,
+        goal_session_id="gs_00000000000000000000000000000000",
+        workflow_run_id="wr_00000000000000000000000000000000",
+        created_at="2026-03-27T10:00:10Z",
+        updated_at="2026-03-27T10:00:10Z",
+        timestamp="2026-03-27T10:00:10Z",
+        trace_layer=TraceLayer.TOOL,
+    )
+    violation = Violation(
+        scope_level=ScopeLevel.RUN,
+        goal_session_id=fresh_event.goal_session_id,
+        workflow_run_id=fresh_event.workflow_run_id,
+        created_at="2026-03-27T10:00:11Z",
+        updated_at="2026-03-27T10:00:11Z",
+    )
+    artifact = Artifact(
+        scope_level=ScopeLevel.RUN,
+        goal_session_id=fresh_event.goal_session_id,
+        workflow_run_id=fresh_event.workflow_run_id,
+        created_at="2026-03-27T10:00:12Z",
+        updated_at="2026-03-27T10:00:12Z",
+        artifact_type=ArtifactType.REPORT,
+        artifact_role=ArtifactRole.AUDIT,
+    )
+
+    writer.write_event(older_event)
+    writer.write_event(fresh_event)
+    writer.write_violation(violation)
+    writer.write_artifact(artifact)
+    store.delete_indexes()
+
+    payloads = store.derive_index_payloads()
+
+    assert payloads["open_violations"] == {"violation_ids": [violation.violation_id]}
+    assert payloads["latest_artifacts"] == {"artifact_ids": [artifact.artifact_id]}
+    assert payloads["timeline_cursor"] == {
+        "event_count": 2,
+        "last_event_id": fresh_event.event_id,
+        "last_timestamp": fresh_event.timestamp,
+        "latest_goal_session_id": fresh_event.goal_session_id,
+        "latest_workflow_run_id": fresh_event.workflow_run_id,
+        "latest_step_id": None,
+    }
+
+
 def test_only_writer_exposes_public_object_persistence_api() -> None:
     store_public = {
         name

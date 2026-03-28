@@ -58,12 +58,12 @@
 
 ## 下一波待修优先级（2026-03-28）
 
-- 当前待修：
-  - `FD-2026-03-27-013` → `004-operator-surfaces-and-post-prd-extensions`
+- 当前待修：无
 - 本轮已收口：
   - `003` 线 `FD-2026-03-27-011`、`FD-2026-03-27-012`
+  - `004` 线 `FD-2026-03-27-013`
 - 挂靠原则：
-  - `004` 线：`FD-2026-03-27-013`
+  - `004` 线：已全部收口
 
 ## FD-2026-03-24-001 | IDE 计划待办与仓库实现事实长期漂移
 
@@ -484,7 +484,7 @@
 
 - 日期 (UTC): 2026-03-27
 - 来源: final_review
-- 状态: open
+- 状态: closed
 - owner: codex
 - wi_id: 004-operator-surfaces-and-post-prd-extensions
 - 现象: `status --json` 的 latest/current 视图当前依赖 scope 根目录 mtime 和派生 index 文件；但 append 事件或 snapshot 时不一定会更新 scope 根目录 mtime，而生产写路径也未自动重建 `open-violations.json` / `latest-artifacts.json` / `timeline-cursor.json`，导致 fresh write 后 readiness 仍可能显示旧的 latest scope 或空的 latest summary。
@@ -500,7 +500,8 @@
 - tool: `src/ai_sdlc/telemetry/readiness.py`、`src/ai_sdlc/telemetry/store.py`、`src/ai_sdlc/telemetry/writer.py`
 - eval: stale-latest-view 次数、stale-open-violations-count 次数、manual-rebuild-required 次数
 - 风险等级: 中
-- 下一步任务归属（2026-03-28）: `004-operator-surfaces-and-post-prd-extensions` Batch 6 Task 6.1。
+- 处置进展（2026-03-28）: `TelemetryStore` 新增只读 `derive_index_payloads()`，把 `timeline-cursor` / `open-violations` / `latest-artifacts` 的 canonical 派生真值抽成共享逻辑；`readiness.py` 在 index 缺失或无效时改为回退到内存派生索引，而不是目录 `mtime` 或 manifest/dict 顺序猜测。新增回归覆盖“删掉 indexes 后 latest summary 仍反映 fresh violation/artifact”“伪造 `mtime` 也不会带偏 latest/current”，`tests/unit/test_telemetry_store.py tests/integration/test_cli_status.py tests/integration/test_cli_doctor.py` **50 passed**，`uv run ai-sdlc verify constraints` 通过，因此本条 defect 已在 `004` Batch 6 收口。
+- 下一步任务归属（2026-03-28）: 已在 `004-operator-surfaces-and-post-prd-extensions` Batch 6 Task 6.1 / 6.2 收口，无新增 action item。
 - 可验证成功标准: fresh event / violation / artifact 写入后，`status --json` 的 latest/current 与 latest summary 在不手工 rebuild 的情况下即可反映更新。
 - 是否需要回归测试补充: 是：补 fresh write 后 latest/current 与 index summary 即时刷新的回归测试。
 
