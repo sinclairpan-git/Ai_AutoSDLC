@@ -13,6 +13,7 @@ Batch 2: PRD draft authoring          (one-line idea -> draft PRD)
 Batch 3: Human Reviewer checkpoints   (approve / revise / block + decision log)
 Batch 4: backend delegation / fallback
 Batch 5: NFR / release gate surfaces
+Batch 6: backlog remediation          (source closure + CCP traceability)
 ```
 
 ---
@@ -132,3 +133,41 @@ Batch 5: NFR / release gate surfaces
   1. `spec.md`、`plan.md`、`tasks.md` 对齐。
   2. 全量 `uv run pytest` 与 `uv run ruff check src tests` 通过。
 - **验证**：全量 `pytest` + `ruff`
+
+---
+
+## Batch 6：backlog remediation（Telemetry governance contracts）
+
+> **说明**：本批承接原临时 telemetry governance 设计里尚未收口、但必须挂回正式 work item 的 contract 缺口：`FD-2026-03-27-011`、`FD-2026-03-27-012`。不再另开 mixed spec，真值以 backlog 与本文件 AC 为准。
+
+### Task 6.1 — source closure 父链从“step_id 全等”收敛到“合法后代链”（FD-2026-03-27-011）
+
+- **优先级**：P0
+- **依赖**：Task 5.2
+- **输入**：[`src/ai_sdlc/telemetry/governance_publisher.py`](../../src/ai_sdlc/telemetry/governance_publisher.py)、[`src/ai_sdlc/telemetry/writer.py`](../../src/ai_sdlc/telemetry/writer.py)、[`tests/unit/test_telemetry_publisher.py`](../../tests/unit/test_telemetry_publisher.py)、[`docs/framework-defect-backlog.zh-CN.md`](../../docs/framework-defect-backlog.zh-CN.md)
+- **验收标准**：
+  1. run 级 artifact 可以合法引用同一 `workflow_run_id` 下 step 级 evidence / evaluation，不再因 `step_id` 不相等被误判为跨链。
+  2. 跨 session / 跨 run 的 source 仍然被拒绝，不能因放宽父链兼容而放松真实闭包约束。
+  3. writer / publisher 复用同一套 closure helper，避免“一个接受、一个拒绝”的双轨语义。
+- **验证**：`uv run pytest tests/unit/test_telemetry_publisher.py -v`
+
+### Task 6.2 — required CCP 在 raw trace 中具备 canonical 可证明形状（FD-2026-03-27-012）
+
+- **优先级**：P0
+- **依赖**：Task 6.1
+- **输入**：[`src/ai_sdlc/telemetry/registry.py`](../../src/ai_sdlc/telemetry/registry.py)、[`src/ai_sdlc/telemetry/contracts.py`](../../src/ai_sdlc/telemetry/contracts.py)、[`src/ai_sdlc/telemetry/runtime.py`](../../src/ai_sdlc/telemetry/runtime.py)、[`src/ai_sdlc/core/runner.py`](../../src/ai_sdlc/core/runner.py)、[`src/ai_sdlc/telemetry/governance_publisher.py`](../../src/ai_sdlc/telemetry/governance_publisher.py)、[`src/ai_sdlc/telemetry/evaluators.py`](../../src/ai_sdlc/telemetry/evaluators.py)
+- **验收标准**：
+  1. `gate_hit`、`gate_blocked`、`audit_report_generated` 都有稳定的 persisted trace 事件形状与最小证据引用，不再只存在于 registry 声明中。
+  2. coverage evaluator 只基于 canonical raw trace 判定 required CCP 是否已证明，不再接受“registry 有名字但 trace 无真值”的伪覆盖。
+  3. gate / audit 写入路径、registry 合同与 evaluator 测试长期共用同一套控制点命名和证据规则。
+- **验证**：定向 telemetry governance / evaluator tests
+
+### Task 6.3 — 003 第一波 backlog 对账收口
+
+- **优先级**：P0
+- **依赖**：Task 6.1, Task 6.2
+- **验收标准**：
+  1. `FD-2026-03-27-011` / `FD-2026-03-27-012` 在 backlog、`tasks.md` 与后续 execution evidence 中保持同一状态口径。
+  2. source closure 与 CCP traceability 的回归测试能同时证明“合法闭包放行”和“无证据控制点拒绝”。
+  3. 本批收口后，不再需要回到临时 telemetry governance 文档补写第二份任务真值。
+- **验证**：定向 pytest + `verify constraints`

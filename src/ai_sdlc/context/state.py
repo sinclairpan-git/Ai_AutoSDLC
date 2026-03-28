@@ -66,7 +66,7 @@ def save_checkpoint(root: Path, checkpoint: Checkpoint) -> None:
     YamlStore.save(cp_path, checkpoint)
 
 
-def load_checkpoint(root: Path, *, strict: bool = False) -> Checkpoint | None:
+def load_checkpoint(root: Path, *, strict: bool = False, warn: bool = True) -> Checkpoint | None:
     """Load checkpoint from file. Returns None if not found.
 
     Falls back to .bak file if primary is corrupted.
@@ -82,7 +82,8 @@ def load_checkpoint(root: Path, *, strict: bool = False) -> Checkpoint | None:
     try:
         return _load_checkpoint_candidate(root, cp_path, strict=strict)
     except (YamlStoreError, CheckpointLoadError) as exc:
-        logger.warning("Checkpoint load failed (%s), trying backup", exc)
+        if warn:
+            logger.warning("Checkpoint load failed (%s), trying backup", exc)
         if bak.exists():
             return _load_checkpoint_candidate(root, bak, strict=strict)
         if strict and isinstance(exc, CheckpointLoadError):

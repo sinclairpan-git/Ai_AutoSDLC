@@ -13,6 +13,7 @@ Batch 2: Telemetry bounded status / doctor / stage / scan surfaces
 Batch 3: IDE adapter / project-config contracts
 Batch 4: Offline distribution contracts
 Batch 5: Final traceability and operator regression
+Batch 6: backlog remediation for latest/readiness freshness
 ```
 
 ---
@@ -115,3 +116,30 @@ Batch 5: Final traceability and operator regression
   2. program / doctor / stage / ide adapter 关键 integration tests 通过。
   3. 全量 `uv run pytest` 与 `uv run ruff check src tests` 通过。
 - **验证**：定向 integration + 全量 `pytest` + `ruff`
+
+---
+
+## Batch 6：backlog remediation（latest/readiness freshness）
+
+> **说明**：本批承接 `FD-2026-03-27-013`，把 bounded operator surface 的 latest/current 新鲜度问题挂回 `004` 正式任务，而不是继续留在临时 telemetry 设计上下文中。
+
+### Task 6.1 — latest/current/readiness 跟随 canonical write 即时刷新（FD-2026-03-27-013）
+
+- **优先级**：P1
+- **依赖**：Task 5.1
+- **输入**：[`src/ai_sdlc/telemetry/readiness.py`](../../src/ai_sdlc/telemetry/readiness.py)、[`src/ai_sdlc/telemetry/store.py`](../../src/ai_sdlc/telemetry/store.py)、[`src/ai_sdlc/telemetry/writer.py`](../../src/ai_sdlc/telemetry/writer.py)、[`tests/integration/test_cli_status.py`](../../tests/integration/test_cli_status.py)、[`tests/integration/test_cli_doctor.py`](../../tests/integration/test_cli_doctor.py)、[`tests/unit/test_telemetry_store.py`](../../tests/unit/test_telemetry_store.py)
+- **验收标准**：
+  1. fresh event / violation / artifact 写入后，`status --json` 的 latest/current/open-violations summary 无需手工 rebuild 即可反映真实状态。
+  2. latest/current 的 recency 信号来自随写入同步维护的 canonical index / cursor，而不是目录 `mtime`、dict 顺序或其他不稳定猜测。
+  3. 在保持即时刷新的同时，`status --json` / `doctor` 仍维持 bounded、read-only、不 deep scan 的 operator 边界。
+- **验证**：`uv run pytest tests/unit/test_telemetry_store.py tests/integration/test_cli_status.py tests/integration/test_cli_doctor.py -v`
+
+### Task 6.2 — 004 第二波 backlog 对账收口
+
+- **优先级**：P1
+- **依赖**：Task 6.1
+- **验收标准**：
+  1. `FD-2026-03-27-013` 的 backlog、`tasks.md` 与 operator regression 证据使用同一套新鲜度口径。
+  2. `spec.md` / `plan.md` / `tasks.md` 对 bounded status/doctor 的“只读但新鲜”合同保持一致。
+  3. 本批收口不会重新引入“helper 已修、真实 CLI 仍旧陈旧”的双轨状态。
+- **验证**：定向 integration + `verify constraints`

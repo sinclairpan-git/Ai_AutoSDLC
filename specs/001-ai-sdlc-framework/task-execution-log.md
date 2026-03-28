@@ -1282,3 +1282,145 @@
 
 - `framework-defect-backlog.zh-CN.md` 同步状态：`已同步`（`FD-2026-03-28-001` 已标记为 `fixed` 并写入收口说明）。
 - `001` 归档状态：`已补充`（本批为 001 余留 defect closure，不改动原 Batch 11~14 完成态）。
+
+---
+
+### Batch 2026-03-28-022 | 001 Batch 15 Task 6.40：legacy reconcile / recover 控制流收敛
+
+#### 2.1 准备
+
+- **任务来源**：[`tasks.md`](tasks.md) Task `6.40`、[`docs/framework-defect-backlog.zh-CN.md`](../../docs/framework-defect-backlog.zh-CN.md) `FD-2026-03-26-002`
+- **目标**：把 legacy checkpoint reconcile 的控制流从“已有提示但仍可能继续走旧 checkpoint / 抛底层错误”收敛为正式行为，并补齐 `specs/<WI>/` 旧布局、blank checkpoint 等兼容回归。
+- **预读范围**：[`docs/defects/2026-03-26-legacy-checkpoint-reconcile.zh-CN.md`](../../docs/defects/2026-03-26-legacy-checkpoint-reconcile.zh-CN.md)、[`tasks.md`](tasks.md) Batch `15`、`src/ai_sdlc/core/reconcile.py`、`src/ai_sdlc/context/state.py`、`src/ai_sdlc/cli/commands.py`、相关 reconcile / CLI tests。
+- **激活的规则**：TDD；systematic debugging；恢复真值唯一化；归档先于继续。
+
+#### 2.2 统一验证命令
+
+- **R1（红灯验证）**
+  - 命令：`uv run pytest tests/integration/test_cli_status.py::TestCliStatus::test_status_guides_user_when_blank_checkpoint_needs_reconcile tests/integration/test_cli_recover.py::TestCliRecover::test_recover_stops_until_reconcile_is_applied_for_legacy_artifacts -q`
+  - 结果：先红后绿；初始失败暴露两类真实问题：`status` 在 blank checkpoint 场景会先报 `Invalid checkpoint`，`recover` 在 stale `init/unknown` checkpoint 场景虽然给出 guidance 却仍继续按旧状态恢复。
+- **V1（legacy reconcile 定向回归）**
+  - 命令：`uv run pytest tests/integration/test_cli_status.py tests/integration/test_cli_recover.py tests/integration/test_cli_run.py tests/integration/test_cli_stage.py -q`
+  - 结果：**40 passed**。
+- **V2（reconcile / context 单测）**
+  - 命令：`uv run pytest tests/unit/test_reconcile.py tests/unit/test_context_state.py -q`
+  - 结果：**19 passed**。
+- **Lint**
+  - 命令：`uv run ruff check src tests`
+  - 结果：**All checks passed!**
+- **治理只读校验**
+  - 命令：`uv run ai-sdlc verify constraints`
+  - 结果：**无 BLOCKER**。
+
+#### 2.3 任务记录
+
+##### Task 6.40 | legacy reconcile / recover backfill 主路径
+
+- **改动范围**：`src/ai_sdlc/context/state.py`、`src/ai_sdlc/core/reconcile.py`、`src/ai_sdlc/cli/commands.py`、`tests/integration/test_cli_status.py`、`tests/integration/test_cli_recover.py`、`tests/unit/test_reconcile.py`
+- **改动内容**：
+  - `load_checkpoint()` 新增 `warn` 开关；reconcile 探测链改为静默消费损坏/空白 checkpoint，避免在 hint 探测阶段向用户泄露底层解析噪音。
+  - `status` 现会先判断 reconcile hint；若 checkpoint 文件存在但处于 blank/missing 可对齐场景，不再急于走 strict resume-pack 恢复，而是优先输出可操作 guidance。
+  - `recover` 在检测到 stale `init/unknown` checkpoint 且用户未执行 `--reconcile` 时会直接停止，不再一边提示、一边继续按旧 checkpoint 生成 `Resume Stage: init`。
+  - unit / integration tests 新增 `specs/<WI>/` 旧布局探测、blank checkpoint guidance、reconcile 后 `status` 脱离 `unknown/init` 等回归。
+- **新增/调整的测试**：
+  - integration：blank checkpoint 下 `status` guidance、未 reconcile 时 `recover` 阻断、`specs/<WI>/` 布局对齐后 `status` 真值展示。
+  - unit：无 checkpoint 的 `specs/<WI>/` 旧布局 reconcile hint。
+- **执行的命令**：见 R1 / V1 / V2 / Lint / 治理只读校验。
+- **测试结果**：全部通过。
+- **是否符合任务目标**：部分符合。Task 6.40 的控制流与主要兼容夹具已落地，但 Batch 15 仍需 Task 6.41 对账收口后再决定 defect 是否关闭。
+
+#### 2.4 代码审查（摘要）
+
+- **规格对齐**：本批把 defect 文档中的“空白 checkpoint 也应给正式对齐入口”“recover 不得继续沿旧 `init/unknown` 状态误恢复”落实成真实 CLI 行为，而不是只留 guidance 文案。
+- **代码质量**：checkpoint 解析噪音被约束在探测层内部，`status` / `recover` 分别负责“只读诊断”和“先对齐再恢复”的清晰职责。
+- **测试质量**：红灯用例先证明原缺口真实存在，再补 `specs/<WI>/` layout 与对齐后 `status` 真值回归，避免只测 happy path。
+- **结论**：无新的阻塞项；允许进入 Task 6.41 的 execution-log / backlog / close-check 对账。
+
+#### 2.5 任务/计划同步状态
+
+- `tasks.md` 同步状态：`已同步`（Task `6.40` 已追加进展说明，明确“已完成实现，待 6.41 对账”）。
+- `framework-defect-backlog.zh-CN.md` 同步状态：`已同步`（`FD-2026-03-26-002` 已从 `open` 调整为 `in_progress`，并补当前处置边界）。
+- `related_plan`（如存在）同步状态：`已对账`（Batch 15 当前仅推进 Task `6.40`，未与既有 `001` 计划产生新漂移）。
+
+#### 2.6 自动决策记录（如有）
+
+- AD-001：本轮只把 `FD-2026-03-26-002` 推进到 `in_progress`，不直接改成 `closed` → 理由：控制流与核心回归已收口，但 Batch 15 尚缺 Task `6.41` 的台账对账与是否补“旧 `project-state.yaml` 残留”专门夹具的最终判断。
+
+#### 2.7 批次结论
+
+- Task **6.40** 已完成第一轮实现与回归，`001` 的 legacy reconcile / recover 主路径不再在 blank checkpoint 或 stale `init/unknown` checkpoint 下给出误导性行为；Batch 15 仍待 Task **6.41** 完成文档与缺陷台账对账。
+
+#### 2.8 归档后动作
+
+- **已完成 git 提交**：否
+- **提交哈希**：N/A
+- **是否继续下一批**：继续 Task `6.41`
+
+### Batch 2026-03-28-023 | 001 Batch 15 Task 6.41：legacy reconcile backlog/document 收口
+
+#### 2.1 准备
+
+- **任务来源**：[`tasks.md`](tasks.md) Task `6.41`、[`docs/framework-defect-backlog.zh-CN.md`](../../docs/framework-defect-backlog.zh-CN.md) `FD-2026-03-26-002`
+- **目标**：在 Task `6.40` 主路径落地后，补齐旧 `project-state.yaml` 残留字段回归，并完成 execution-log / backlog / `close-check` 的关单对账。
+- **预读范围**：[`tasks.md`](tasks.md) Batch `15`、[`docs/framework-defect-backlog.zh-CN.md`](../../docs/framework-defect-backlog.zh-CN.md)、`tests/unit/test_reconcile.py`、[`task-execution-log.md`](task-execution-log.md)
+- **激活的规则**：fresh verification；台账真值唯一化；close 前先补回归再写结论。
+
+#### 2.2 统一验证命令
+
+- **V1（legacy CLI integration 回归）**
+  - 命令：`uv run pytest tests/integration/test_cli_status.py tests/integration/test_cli_recover.py tests/integration/test_cli_run.py tests/integration/test_cli_stage.py -q`
+  - 结果：**40 passed**。
+- **V2（reconcile / context 单测）**
+  - 命令：`uv run pytest tests/unit/test_reconcile.py tests/unit/test_context_state.py -q`
+  - 结果：**20 passed**。
+- **Lint**
+  - 命令：`uv run ruff check src tests`
+  - 结果：**All checks passed!**
+- **001 文档收口校验**
+  - 命令：`uv run ai-sdlc workitem close-check --wi specs/001-ai-sdlc-framework --all-docs`
+  - 结果：**PASS**（`tasks_completion` / `execution_log_fields` / `review_gate` / `docs_consistency` / `done_gate` 全通过）。
+- **治理只读校验**
+  - 命令：`uv run ai-sdlc verify constraints`
+  - 结果：**无 BLOCKER**。
+
+#### 2.3 任务记录
+
+##### Task 6.41 | Batch 15 backlog/document 收口
+
+- **改动范围**：`tests/unit/test_reconcile.py`、[`tasks.md`](tasks.md)、[`task-execution-log.md`](task-execution-log.md)、[`../../docs/framework-defect-backlog.zh-CN.md`](../../docs/framework-defect-backlog.zh-CN.md)
+- **改动内容**：
+  - 新增旧 `project-state.yaml` 残留字段夹具，验证 `reconcile_checkpoint()` 不会被历史 `current_stage/completed_stages/feature` 杂质误导。
+  - 将 Batch `15` 的任务进展、execution-log 与 defect backlog 对齐到同一事实，并把 `FD-2026-03-26-002` 从 `in_progress` 收到 `closed`。
+  - 更新“下一波待修优先级”，把已收口的 `FD-2026-03-26-002` 从待修清单中移除，避免后续执行时继续把已关闭项当作 backlog。
+- **新增/调整的测试**：
+  - unit：旧 `project-state.yaml` 残留字段 + stale checkpoint + 旧布局产物的 reconcile regression。
+- **执行的命令**：见 V1 / V2 / Lint / 001 文档收口校验 / 治理只读校验。
+- **测试结果**：全部通过。
+- **是否符合任务目标**：符合。Task `6.41` 的台账、文档与回归证据已经统一，Batch `15` 可正式收口。
+
+#### 2.4 代码审查（摘要）
+
+- **规格对齐**：补上 defect 文档最后缺失的“旧 `project-state.yaml` 字段残留”自动化证据后，Batch `15` 的验收标准已全部有回归或只读校验支撑。
+- **代码质量**：本批仅新增回归与文档对账，不扩大运行时代码改动面。
+- **测试质量**：Batch `15` 现在同时覆盖根目录旧布局、`specs/<WI>/` 旧布局、blank/stale checkpoint 与 legacy `project-state.yaml` 残留。
+- **结论**：允许关闭 `FD-2026-03-26-002`，并进入 Batch `16`。
+
+#### 2.5 任务/计划同步状态
+
+- `tasks.md` 同步状态：`已同步`（Task `6.40` 与 Task `6.41` 已更新为“已完成并收口”口径）。
+- `framework-defect-backlog.zh-CN.md` 同步状态：`已同步`（`FD-2026-03-26-002` 已关闭，顶部待修优先级已移除该项）。
+- `related_plan`（如存在）同步状态：`已对账`（Batch `15` 收口后不再残留未声明的 checkpoint / recover 分叉）。
+
+#### 2.6 自动决策记录（如有）
+
+- AD-001：在补齐旧 `project-state.yaml` 残留专门夹具后关闭 `FD-2026-03-26-002`，不再继续维持 `in_progress` → 理由：缺陷文档列出的最后一项回归证据已经补全，且 `001` 的只读 close 校验与全仓约束校验均通过。
+
+#### 2.7 批次结论
+
+- Task **6.41** 已完成，Batch **15** 正式收口；`FD-2026-03-26-002` 不再属于待修 backlog，`001` 下一步进入 Batch **16** 的 Git 写 guardrail / 完成前验证 / 文档优先执行约束。
+
+#### 2.8 归档后动作
+
+- **已完成 git 提交**：否
+- **提交哈希**：N/A
+- **是否继续下一批**：可继续 Task `6.42`

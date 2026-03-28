@@ -61,6 +61,27 @@ def _write_legacy_root_artifacts(root: Path) -> None:
     )
 
 
+def _write_specs_dir_legacy_artifacts(root: Path, work_item_id: str = "LEGACY-001") -> None:
+    (root / ".git").mkdir(exist_ok=True)
+    (root / "product-requirements.md").write_text("# PRD\n", encoding="utf-8")
+    spec_dir = root / "specs" / work_item_id
+    spec_dir.mkdir(parents=True, exist_ok=True)
+    (spec_dir / "spec.md").write_text(
+        "### 用户故事 1\n场景\n\n- **FR-001**: requirement\n",
+        encoding="utf-8",
+    )
+    (spec_dir / "research.md").write_text("# research\n", encoding="utf-8")
+    (spec_dir / "data-model.md").write_text("# data model\n", encoding="utf-8")
+    (spec_dir / "plan.md").write_text("# plan\n", encoding="utf-8")
+    (spec_dir / "tasks.md").write_text(
+        "### Task 1.1 — 示例\n"
+        "- **依赖**：无\n"
+        "- **验收标准（AC）**：\n"
+        "  1. 示例\n",
+        encoding="utf-8",
+    )
+
+
 class TestCliStatus:
     @pytest.fixture(autouse=True)
     def _no_ide_adapter_hook(self) -> None:
@@ -105,6 +126,24 @@ class TestCliStatus:
         assert "recover --reconcile" in result.output
         assert "旧版产物" in result.output
 
+    def test_status_guides_user_when_blank_checkpoint_needs_reconcile(
+        self, tmp_path: Path
+    ) -> None:
+        init_project(tmp_path)
+        _write_legacy_root_artifacts(tmp_path)
+        checkpoint_path = tmp_path / ".ai-sdlc" / "state" / "checkpoint.yml"
+        checkpoint_path.parent.mkdir(parents=True, exist_ok=True)
+        checkpoint_path.write_text("", encoding="utf-8")
+
+        with patch("ai_sdlc.cli.commands.find_project_root", return_value=tmp_path):
+            result = runner.invoke(app, ["status"])
+
+        assert result.exit_code == 0
+        assert "recover --reconcile" in result.output
+        assert "旧版产物" in result.output
+        assert "Invalid checkpoint" not in result.output
+        assert "trying backup" not in result.output
+
     def test_status_json_reports_not_initialized_when_telemetry_is_absent(
         self, tmp_path: Path
     ) -> None:
@@ -121,6 +160,24 @@ class TestCliStatus:
         assert payload["telemetry"]["current"] is None
         assert payload["telemetry"]["latest"] is None
         assert telemetry_root.exists() is False
+
+    def test_status_shows_reconciled_specs_dir_after_recover(
+        self, tmp_path: Path
+    ) -> None:
+        init_project(tmp_path)
+        _write_specs_dir_legacy_artifacts(tmp_path, "LEGACY-001")
+
+        with patch("ai_sdlc.cli.commands.find_project_root", return_value=tmp_path):
+            recover_result = runner.invoke(app, ["recover", "--reconcile"])
+            status_result = runner.invoke(app, ["status"])
+
+        assert recover_result.exit_code == 0
+        assert status_result.exit_code == 0
+        assert "Pipeline Stage" in status_result.output
+        assert "verify" in status_result.output
+        assert "Feature ID" in status_result.output
+        assert "LEGACY-001" in status_result.output
+        assert "unknown" not in status_result.output
 
     def test_status_json_returns_bounded_latest_and_current_summary(
         self, tmp_path: Path

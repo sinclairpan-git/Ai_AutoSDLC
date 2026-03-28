@@ -44,7 +44,7 @@ class ReconcileHint:
 def detect_reconcile_hint(root: Path) -> ReconcileHint | None:
     """Return a reconcile hint when existing artifacts outpace checkpoint state."""
     root = root.resolve()
-    cp = load_checkpoint(root)
+    cp = load_checkpoint(root, warn=False)
     candidate = _best_candidate(root, cp)
     if candidate is None:
         return None
@@ -83,7 +83,7 @@ def reconcile_checkpoint(root: Path) -> ReconcileHint | None:
     if hint is None:
         return None
 
-    existing = load_checkpoint(root)
+    existing = load_checkpoint(root, warn=False)
     current_branch = _current_branch(root, existing)
     feature_slug = slugify(hint.feature_id) or "legacy"
 

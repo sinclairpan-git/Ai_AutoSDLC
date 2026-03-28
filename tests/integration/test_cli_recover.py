@@ -217,6 +217,33 @@ class TestCliRecover:
         assert "verify" in result.output.lower()
         assert (tmp_path / ".ai-sdlc" / "state" / "resume-pack.yaml").exists()
 
+    def test_recover_stops_until_reconcile_is_applied_for_legacy_artifacts(
+        self, tmp_path: Path
+    ) -> None:
+        init_project(tmp_path)
+        _write_legacy_root_artifacts(tmp_path)
+        save_checkpoint(
+            tmp_path,
+            Checkpoint(
+                current_stage="init",
+                feature=FeatureInfo(
+                    id="unknown",
+                    spec_dir="specs/unknown",
+                    design_branch="design/unknown",
+                    feature_branch="feature/unknown",
+                    current_branch="main",
+                ),
+            ),
+        )
+
+        with patch("ai_sdlc.cli.commands.find_project_root", return_value=tmp_path):
+            result = runner.invoke(app, ["recover"])
+
+        assert result.exit_code == 1
+        assert "recover --reconcile" in result.output
+        assert "Pipeline state recovered successfully" not in result.output
+        assert "Resume Stage" not in result.output
+
     def test_recover_invalid_checkpoint_fails(self, tmp_path: Path) -> None:
         (tmp_path / ".ai-sdlc" / "state").mkdir(parents=True)
         (tmp_path / ".ai-sdlc" / "state" / "checkpoint.yml").write_text(

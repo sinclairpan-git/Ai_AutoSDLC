@@ -217,6 +217,7 @@ def status_command(
         console.print("[yellow]Project found but not initialized.[/yellow]")
         raise typer.Exit(code=1)
 
+    hint = detect_reconcile_hint(root)
     table = Table(title="AI-SDLC Status")
     table.add_column("Property", style="cyan")
     table.add_column("Value")
@@ -227,8 +228,9 @@ def status_command(
     table.add_row("Next WI Seq", str(state.next_work_item_seq))
 
     resume_pack = None
-    cp = load_checkpoint(root)
-    if (root / CHECKPOINT_PATH).exists():
+    checkpoint_usable = not (hint is not None and hint.checkpoint_stage == "missing")
+    cp = load_checkpoint(root) if checkpoint_usable else None
+    if (root / CHECKPOINT_PATH).exists() and checkpoint_usable:
         resume_events: list[str] = []
         try:
             resume_pack = load_resume_pack(
@@ -304,7 +306,6 @@ def status_command(
                     table.add_row("Governance Frozen At", governance.frozen_at)
 
     console.print(table)
-    hint = detect_reconcile_hint(root)
     if hint is not None:
         _print_reconcile_guidance(
             hint,
@@ -344,6 +345,11 @@ def recover_command(
                 "检测到旧版产物并怀疑 checkpoint 已过时。是否现在执行 reconcile？",
                 default=True,
             )
+        if not reconcile:
+            console.print(
+                "[yellow]已停止当前恢复，建议先执行 `ai-sdlc recover --reconcile`。[/yellow]"
+            )
+            raise typer.Exit(code=1)
 
     if reconcile:
         applied = reconcile_checkpoint(root)

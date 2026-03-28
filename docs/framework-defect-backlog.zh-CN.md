@@ -56,11 +56,26 @@
 - 迁移补齐的字段若原始材料未显式给出，会以“基于历史记录推断”的方式写入，但会保留 `legacy_ref`。
 - 新增条目应直接写入本文件；若需要回溯历史来源，再反向链接到 legacy registry。
 
+## 下一波待修优先级（2026-03-28）
+
+- 第一波（优先收口）：
+  - `FD-2026-03-27-012` → `003-cross-cutting-authoring-and-extension-contracts`
+  - `FD-2026-03-27-011` → `003-cross-cutting-authoring-and-extension-contracts`
+- 第二波（随后推进）：
+  - `FD-2026-03-27-013` → `004-operator-surfaces-and-post-prd-extensions`
+  - `FD-2026-03-28-004` → `001-ai-sdlc-framework`
+  - `FD-2026-03-24-003` → `001-ai-sdlc-framework`
+  - `FD-2026-03-26-001` → `001-ai-sdlc-framework`
+- 挂靠原则：
+  - `001` 线：`FD-2026-03-28-004`、`FD-2026-03-24-003`、`FD-2026-03-26-001`
+  - `003` 线：`FD-2026-03-27-011`、`FD-2026-03-27-012`
+  - `004` 线：`FD-2026-03-27-013`
+
 ## FD-2026-03-24-001 | IDE 计划待办与仓库实现事实长期漂移
 
 - 日期 (UTC): 2026-03-24
 - 来源: migrated_from_legacy_registry
-- 状态: migrated
+- 状态: closed
 - wi_id: 001-ai-sdlc-framework
 - legacy_ref: src/ai_sdlc/rules/agent-skip-registry.zh.md（“计划待办与实现事实不对齐”节 + 2026-03-24 登记行）
 - 现象: 仓库中的规则、文档与实现已更新并经过测试，但 IDE 计划文件 frontmatter 中的 `todos[].status` 仍长期停留在 `pending`，与仓库事实不一致。
@@ -75,6 +90,7 @@
 - tool: `ai-sdlc workitem plan-check`、`ai-sdlc workitem link`
 - eval: 计划漂移检出率、close 前对账覆盖率
 - 风险等级: 中
+- 收口说明（2026-03-28）: `001` 已通过 plan/traceability/close-check 收口链把“计划状态必须回到仓库真值”固化为正式约束；该缺口不再保留为独立待修项。
 - 可验证成功标准: 给定存在外部计划文件的工作项，`plan-check` 能稳定发现待办状态漂移；close 清单要求显式处理漂移。
 - 是否需要回归测试补充: 是：补充 `plan-check` 与 close 对账的正反用例。
 
@@ -82,7 +98,7 @@
 
 - 日期 (UTC): 2026-03-24
 - 来源: migrated_from_legacy_registry
-- 状态: migrated
+- 状态: closed
 - wi_id: 001-ai-sdlc-framework
 - legacy_ref: src/ai_sdlc/rules/agent-skip-registry.zh.md（2026-03-24 “在 design 未落到 tasks.md 前催促执行”行）
 - 现象: 设计尚未完成 decompose、`tasks.md` 未形成带验收标准的可执行任务时，执行侧仍倾向直接改产品代码。
@@ -97,6 +113,7 @@
 - tool: `gate check decompose`、`verify constraints`
 - eval: 执行前缺任务级验收的阻断率
 - 风险等级: 高
+- 收口说明（2026-03-28）: `001` 的 decompose / execute 前置校验、`task_ac_checks` 与相关规则文本已把“先落 `tasks.md` 再进入实现”收敛为正式约束，本条按已闭环归档。
 - 可验证成功标准: 缺少 `tasks.md` 或任务级 AC 时，decompose/execute 相关门禁必须非零阻断，且提示首个不合规任务。
 - 是否需要回归测试补充: 是：补充 decompose gate、execute prerequisite 与 verify constraints 的一致性测试。
 
@@ -104,7 +121,7 @@
 
 - 日期 (UTC): 2026-03-24
 - 来源: migrated_from_legacy_registry
-- 状态: migrated
+- 状态: open
 - wi_id: 001-ai-sdlc-framework
 - legacy_ref: src/ai_sdlc/rules/agent-skip-registry.zh.md（2026-03-24 “未先跑全量 pytest 即声称交付”行）
 - 现象: 在未完成仓库约定的全量验证、阶段收口与证据落盘前，就基于局部变更或主观判断声称“已完成”。
@@ -119,6 +136,7 @@
 - tool: `uv run pytest`、`uv run ruff check src tests`、`ai-sdlc verify constraints`
 - eval: “声称完成但缺验证证据”事件数
 - 风险等级: 高
+- 处置进展（2026-03-28）: `verification.md`、PR checklist 与 `close-check` 已部分覆盖“完成前验证”协议，但文档/规则类变更的 fresh evidence 仍未完全产品化；继续保留为 open，并挂回 `001` Batch 16 Task 6.43。
 - 可验证成功标准: PR/交付前清单与规则均要求新鲜验证证据；相关测试或流程检查能阻止无证据完成声明。
 - 是否需要回归测试补充: 是：补充文档变更与规则变更下的 verify/close-check 覆盖。
 
@@ -126,7 +144,7 @@
 
 - 日期 (UTC): 2026-03-25
 - 来源: migrated_from_legacy_registry
-- 状态: migrated
+- 状态: closed
 - wi_id: 001-ai-sdlc-framework
 - legacy_ref: src/ai_sdlc/rules/agent-skip-registry.zh.md（2026-03-25 FR-087/088/089 收口漂移行）
 - 现象: 功能实现已存在，但 `execution-log`、code review 记录、git 提交、用户手册等收口材料未在同一迭代及时同步，导致“实现事实”和“文档/归档事实”分叉。
@@ -141,6 +159,7 @@
 - tool: `ai-sdlc workitem close-check`、`ai-sdlc verify constraints`
 - eval: 收口漂移项数量、文档与实现一致性缺陷数
 - 风险等级: 中
+- 收口说明（2026-03-28）: `001` 已把 execution-log、里程碑、close-check 与 backlog 对账纳入同一收口链，本条不再作为独立未收口项保留。
 - 可验证成功标准: close-check 与清单能够在收口遗漏时发出明确 BLOCKER；文档与实现事实不再长期漂移。
 - 是否需要回归测试补充: 是：补充 close-check 与用户手册一致性的验证用例。
 
@@ -148,7 +167,7 @@
 
 - 日期 (UTC): 2026-03-26
 - 来源: migrated_from_legacy_registry
-- 状态: migrated
+- 状态: planned
 - wi_id: 001-ai-sdlc-framework
 - legacy_ref: src/ai_sdlc/rules/agent-skip-registry.zh.md（2026-03-26 回顾行）
 - 现象: 即使用户明确要求“先按框架约束把优化项转成需求/plan/tasks，再决定是否动手”，执行侧仍易下意识直接进入代码改动。
@@ -163,6 +182,7 @@
 - tool: `stage run design`、`stage run decompose`、`verify constraints`
 - eval: 用户明确要求“先落盘”场景下的违规率
 - 风险等级: 高
+- 处置进展（2026-03-28）: `FR-095~098`、Batch 10 规则文本与执行前判定已部分收敛，但“仅文档 / 先需求”仍缺独立硬阻断与统一提示；转入 `001` Batch 16 Task 6.44。
 - 可验证成功标准: 在“仅文档 / 先需求”指令下，规则文本与流程检查均指向 design/decompose，且不鼓励直接修改代码。
 - 是否需要回归测试补充: 是：补充规则文本与执行前判定的覆盖。
 
@@ -170,7 +190,7 @@
 
 - 日期 (UTC): 2026-03-26
 - 来源: user_report
-- 状态: open
+- 状态: closed
 - owner: codex
 - related_doc: docs/defects/2026-03-26-legacy-checkpoint-reconcile.zh-CN.md
 - 现象: 旧版本 CLI 已生成 `product-requirements.md`、`spec.md`、`research.md`、`data-model.md`、`plan.md`、`tasks.md` 等产物，但升级到 `0.2.4` 后重新执行 `ai-sdlc`，`status` / `recover` / `run --dry-run` 仍停留在 `init`，`Feature ID` 为 `unknown`。
@@ -185,6 +205,8 @@
 - tool: `ai-sdlc recover`、`ai-sdlc status`、`ai-sdlc run`、`ai-sdlc stage run`
 - eval: 旧项目升级后的恢复成功率、误报 `init/unknown` 的发生率
 - 风险等级: 高
+- 处置进展（2026-03-28）: `001` Batch 15 的 Task 6.40 / 6.41 已收口：blank checkpoint 场景下 `status` 会直接给 reconcile guidance，`recover` 在 stale `init/unknown` checkpoint 且未执行 `--reconcile` 时会停止，`specs/<WI>/` 旧布局与旧 `project-state.yaml` 残留字段已进入自动化回归；`status/recover/run/stage` 定向回归、reconcile/context 单测、`workitem close-check --wi specs/001-ai-sdlc-framework --all-docs` 与 `verify constraints` 均已通过，因此本条 defect 关单。
+- 下一步任务归属（2026-03-28）: 已在 `001-ai-sdlc-framework` Batch 15 Task 6.41 对账收口，无新增 action item。
 - 可验证成功标准: 给定“旧版根目录产物 + 过时/空白 checkpoint”的夹具，CLI 能识别真实阶段或提供显式 reconcile 入口，使 `status/recover/run` 不再长期停留于 `init/unknown`。
 - 是否需要回归测试补充: 是：补充根目录旧布局、旧 `project-state.yaml` 字段、空白 checkpoint、stale checkpoint 的兼容回归测试。
 
@@ -419,7 +441,7 @@
 - 来源: final_review
 - 状态: open
 - owner: codex
-- wi_id: 003-telemetry-trace-governance
+- wi_id: 003-cross-cutting-authoring-and-extension-contracts
 - 现象: 当前 `governance_publisher` / `writer` 的 source closure 校验要求 artifact 与其 source 在 `step_id` 上完全相等，导致 run 级 artifact 一旦引用同一 `workflow_run_id` 下的 step 级 evidence/evaluation，就会被误判为跨链，无法从 `generated` 提升到 `published`。
 - 触发场景: final review 复现 run 级 report 引用 step 级 evidence/evaluation 的合法父链时，发布仍被拒绝。
 - 影响范围: V1 的 run 级治理产物可追溯性被削弱；publisher 无法接受同 run 子步骤来源，source closure 语义比设计要求更窄。
@@ -433,6 +455,7 @@
 - tool: `src/ai_sdlc/telemetry/governance_publisher.py`、`src/ai_sdlc/telemetry/writer.py`
 - eval: legal-descendant-source-rejected 次数、cross-chain-source-bypass 次数
 - 风险等级: 高
+- 下一步任务归属（2026-03-28）: `003-cross-cutting-authoring-and-extension-contracts` Batch 6 Task 6.1。
 - 可验证成功标准: run 级 artifact 能发布引用同 run 下 step 级 source 的合法闭包；跨 session/run 的 source 仍被拒绝。
 - 是否需要回归测试补充: 是：补充 run->step source closure 正例与真正跨链负例。
 
@@ -442,7 +465,7 @@
 - 来源: final_review
 - 状态: open
 - owner: codex
-- wi_id: 003-telemetry-trace-governance
+- wi_id: 003-cross-cutting-authoring-and-extension-contracts
 - 现象: CCP registry 已冻结 `gate_hit`、`gate_blocked`、`audit_report_generated` 等 V1 控制点，但当前持久化的 `TelemetryEvent` 与 runtime/publisher 写入路径没有对应的 gate/audit 事件形状或最小证据引用，导致 coverage evaluator 无法从 raw trace 证明这些控制点是否真的发生。
 - 触发场景: final review 逆查 registry、contracts 与 runtime/publisher 写入路径时，发现 registry 声明的控制点在 persisted trace 中没有可对账的事件表达。
 - 影响范围: V1 coverage evaluator 对关键控制点的结论不可信；设计文档要求的“自动采关键控制点 + coverage evaluator”在 gate/audit 维度上无法闭环。
@@ -456,6 +479,7 @@
 - tool: `src/ai_sdlc/telemetry/registry.py`、`src/ai_sdlc/telemetry/contracts.py`、`src/ai_sdlc/telemetry/runtime.py`、`src/ai_sdlc/core/runner.py`、`src/ai_sdlc/telemetry/governance_publisher.py`
 - eval: unprovable-required-ccp 次数、gate/audit-ccp-coverage-gap 次数
 - 风险等级: 高
+- 下一步任务归属（2026-03-28）: `003-cross-cutting-authoring-and-extension-contracts` Batch 6 Task 6.2。
 - 可验证成功标准: registry 中的 `gate_hit`、`gate_blocked`、`audit_report_generated` 都能从 persisted trace 中被稳定识别并计入 coverage evaluator。
 - 是否需要回归测试补充: 是：补 gate/audit CCP 持久化与 coverage evaluator 的正反测试。
 
@@ -465,7 +489,7 @@
 - 来源: final_review
 - 状态: open
 - owner: codex
-- wi_id: 003-telemetry-trace-governance
+- wi_id: 004-operator-surfaces-and-post-prd-extensions
 - 现象: `status --json` 的 latest/current 视图当前依赖 scope 根目录 mtime 和派生 index 文件；但 append 事件或 snapshot 时不一定会更新 scope 根目录 mtime，而生产写路径也未自动重建 `open-violations.json` / `latest-artifacts.json` / `timeline-cursor.json`，导致 fresh write 后 readiness 仍可能显示旧的 latest scope 或空的 latest summary。
 - 触发场景: final review 在真实写入后复现 readiness 视图，发现向较早 session 追加新事件后 latest id 不变，写入 open violation 后 `open_violations.count` 仍为 0，直到手工 rebuild indexes。
 - 影响范围: bounded operator surface 失真，运维对“当前/latest”与 open debt 的判断会落后于真实 trace。
@@ -479,6 +503,7 @@
 - tool: `src/ai_sdlc/telemetry/readiness.py`、`src/ai_sdlc/telemetry/store.py`、`src/ai_sdlc/telemetry/writer.py`
 - eval: stale-latest-view 次数、stale-open-violations-count 次数、manual-rebuild-required 次数
 - 风险等级: 中
+- 下一步任务归属（2026-03-28）: `004-operator-surfaces-and-post-prd-extensions` Batch 6 Task 6.1。
 - 可验证成功标准: fresh event / violation / artifact 写入后，`status --json` 的 latest/current 与 latest summary 在不手工 rebuild 的情况下即可反映更新。
 - 是否需要回归测试补充: 是：补 fresh write 后 latest/current 与 index summary 即时刷新的回归测试。
 
@@ -615,5 +640,6 @@
 - tool: `multi_tool_use.parallel` 使用约束、Git 执行封装、future close-out helper、`git status --short`
 - eval: `.git/index.lock` 争抢事件数、Git 写命令重叠调度次数、误删活跃锁文件的险情次数、dirty-worktree 收口中断次数
 - 风险等级: 中
+- 下一步任务归属（2026-03-28）: `001-ai-sdlc-framework` Batch 16 Task 6.42。
 - 可验证成功标准: 给定“同一仓库内连续发起两个 Git 写命令”的场景时，代理必须串行化或直接拒绝并行执行，不再出现 `.git/index.lock` 争抢；给定“锁文件已存在”的场景时，只有在确认没有活跃 Git 进程后才允许清理陈旧锁文件。
 - 是否需要回归测试补充: 是：补一条针对 Git 写命令分类/串行化的 guardrail 检查，并增加“遇到 `.git/index.lock` 时先做进程与锁状态判断”的流程约束测试。
