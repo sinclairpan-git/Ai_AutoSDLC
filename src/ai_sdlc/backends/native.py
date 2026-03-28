@@ -320,6 +320,29 @@ class BackendRegistry:
                     capability_declaration=declaration,
                     failure=plugin_failure,
                 )
+            if plugin_failure.safe_to_fallback and not policy.allow_native_fallback:
+                return self._build_decision(
+                    decision_kind=BackendDecisionKind.BLOCK,
+                    requested_backend=backend_name,
+                    selected_backend=backend_name,
+                    required_capabilities=required_capabilities,
+                    available_capabilities=declaration.provided_capabilities,
+                    missing_capabilities=(),
+                    policy=policy,
+                    reason=(
+                        "plugin failure is safe to fallback, but native fallback "
+                        "is disabled by policy"
+                    ),
+                    evidence=(
+                        BACKEND_CAPABILITY_TOKEN,
+                        BACKEND_DELEGATION_TOKEN,
+                        plugin_failure.backend_name,
+                        "policy_forbidden",
+                        *plugin_failure.evidence,
+                    ),
+                    capability_declaration=declaration,
+                    failure=plugin_failure,
+                )
             return self._build_decision(
                 decision_kind=BackendDecisionKind.BLOCK,
                 requested_backend=backend_name,
@@ -362,6 +385,26 @@ class BackendRegistry:
                         *declaration.evidence_tokens(),
                     ),
                     capability_declaration=native_declaration,
+                )
+            if not policy.allow_native_fallback:
+                return self._build_decision(
+                    decision_kind=BackendDecisionKind.BLOCK,
+                    requested_backend=backend_name,
+                    selected_backend=backend_name,
+                    required_capabilities=required_capabilities,
+                    available_capabilities=declaration.provided_capabilities,
+                    missing_capabilities=missing_capabilities,
+                    policy=policy,
+                    reason=(
+                        "plugin capability coverage incomplete and native fallback "
+                        f"disabled: {', '.join(missing_capabilities)}"
+                    ),
+                    evidence=(
+                        *declaration.evidence_tokens(),
+                        "policy_forbidden",
+                        BACKEND_FALLBACK_TOKEN,
+                    ),
+                    capability_declaration=declaration,
                 )
             return self._build_decision(
                 decision_kind=BackendDecisionKind.BLOCK,
