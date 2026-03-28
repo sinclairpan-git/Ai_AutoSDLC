@@ -451,3 +451,66 @@ Phase 0（脚手架）
 
 - 本 remediation 仅处理 `001-ai-sdlc-framework` 相对 `spec.md` 的已识别偏差，不顺手引入 `002` 或 telemetry 线的新增能力。
 - 若修复过程中发现某项其实属于“spec 需要改而不是实现要补”，必须先更新 `spec.md` / `plan.md` / `tasks.md` 或补 ADR，再继续代码改动，不允许代码单边替换合同。
+
+## 增量设计（P0 gap backfill）— RG-001 ~ RG-009 合同补齐
+
+**背景**：前两轮 remediation 已清理 `001` 既有 drift matrix 中登记的偏差，但 2026-03-28 新补入 `spec.md` 的 **RG-001 ~ RG-009** 仍代表一组未完全落到 plan/tasks 的 P0 合同真值。这些缺口的特点不是“功能完全不存在”，而是**已有实现与 spec 新口径之间仍缺少原子性、持久化、显式 gate surface 或主链整合**。
+
+**设计目标**：
+
+1. 把 intake / governance / branch / context / gate taxonomy 五类合同补齐为**可执行任务**，避免它们继续只留在 `spec.md`。
+2. 优先处理会影响主闭环真值的路径：`work_item_id` 原子分配、governance 阻断、branch 切换后的 runtime/resume 刷新、recover/status 的 branch 绑定。
+3. 对新增 artifact/gate 要求，尽量复用现有 `Checkpoint`、`RuntimeState`、`WorkingSet`、`verify constraints`、`close-check` 入口，而不是平行再造一套状态系统。
+
+### 文件焦点
+
+- **Routing / Intake**：
+  - `src/ai_sdlc/routers/work_intake.py`
+  - `src/ai_sdlc/models/work.py`
+  - `tests/unit/test_work_intake_router.py`
+  - `tests/flow/test_new_requirement_flow.py`
+- **Governance / Branch Protocol**：
+  - `src/ai_sdlc/gates/governance_guard.py`
+  - `src/ai_sdlc/branch/branch_manager.py`
+  - `src/ai_sdlc/context/state.py`
+  - `tests/unit/test_governance_guard.py`
+  - `tests/unit/test_branch_manager.py`
+  - `tests/integration/test_cli_status.py`
+  - `tests/integration/test_cli_recover.py`
+- **Execution / Context Artifacts / Gate Surfaces**：
+  - `src/ai_sdlc/core/runner.py`
+  - `src/ai_sdlc/core/executor.py`
+  - `src/ai_sdlc/gates/pipeline_gates.py`
+  - `src/ai_sdlc/gates/registry.py`
+  - `src/ai_sdlc/core/verify_constraints.py`
+  - `src/ai_sdlc/core/close_check.py`
+  - `tests/unit/test_executor.py`
+  - `tests/unit/test_gates.py`
+  - `tests/integration/test_cli_verify_constraints.py`
+  - `tests/flow/test_execution_flow.py`
+  - `tests/flow/test_recover_flow.py`
+
+### 分批策略
+
+- **Batch 13**：先补 `RG-001 ~ RG-006`
+  - intake 原子分配与澄清状态持久化
+  - governance freeze 对 docs baseline 入口的硬阻断
+  - docs/dev 切换前后的 checkpoint / runtime / resume / progress 刷新协议
+- **Batch 14**：再补 `RG-007 ~ RG-009`
+  - planning / context artifacts 的正式真值面
+  - PRD / Review / Done / Verification Gate 的显式 surface
+  - traceability / close-check / verify constraints 对账
+
+### 验证协议
+
+1. **Batch 13** 必须用 flow / integration 证明：分配工作项、冻结治理、切换分支、查询状态与恢复上下文时，磁盘态与 surface 输出一致。
+2. **Batch 14** 必须用 contract-level tests 证明：`execution-plan` / `runtime` / `working-set` / `latest-summary` 至少存在单一真值面，且 `recover` / `status` / `verify constraints` / `close-check` 可读取。
+3. 每个 Batch 收口时同步更新：
+   - `spec.md` 中对应 FR / SC 的 traceability
+   - `tasks.md` 中任务状态与 AC
+   - 必要的 `task-execution-log.md` / backlog 说明
+
+### 范围控制
+
+- 本轮只处理 `001` 在原 PRD 范围内新增锁定的合同真值，不引入 `002-004` 的 runtime / operator 扩展。
+- 若某项 gap 在现有实现中已经“以不同形态存在”，任务目标是**回对到 spec 合同**，不是为了文档而重复造功能。
