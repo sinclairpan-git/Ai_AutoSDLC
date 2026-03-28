@@ -11,7 +11,12 @@ from ai_sdlc.models.state import (
     ParallelCoordinationArtifact,
     WorkerAssignment,
 )
-from ai_sdlc.models.work import ExecutionPath, FreezeSnapshot, ResumePoint
+from ai_sdlc.models.work import (
+    ExecutionPath,
+    FreezeSnapshot,
+    PrdReviewerDecision,
+    ResumePoint,
+)
 from ai_sdlc.utils.helpers import AI_SDLC_DIR
 
 
@@ -36,6 +41,26 @@ def load_resume_point(root: Path, work_item_id: str) -> ResumePoint | None:
     if not path.exists():
         return None
     return YamlStore.load(path, ResumePoint)
+
+
+def save_reviewer_decision(
+    root: Path,
+    work_item_id: str,
+    reviewer_decision: PrdReviewerDecision,
+) -> Path:
+    path = work_item_root(root, work_item_id) / "reviewer-decision.yaml"
+    YamlStore.save(path, reviewer_decision)
+    return path
+
+
+def load_reviewer_decision(
+    root: Path,
+    work_item_id: str,
+) -> PrdReviewerDecision | None:
+    path = work_item_root(root, work_item_id) / "reviewer-decision.yaml"
+    if not path.exists():
+        return None
+    return YamlStore.load(path, PrdReviewerDecision)
 
 
 def save_execution_path(root: Path, work_item_id: str, execution_path: ExecutionPath) -> Path:

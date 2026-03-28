@@ -113,6 +113,166 @@ class PrdReadiness(BaseModel):
     structured_output: dict[str, object] = Field(default_factory=dict)
 
 
+class PrdDocumentState(str, Enum):
+    DRAFT_PRD = "draft_prd"
+    FINAL_PRD = "final_prd"
+
+
+class PrdReviewerCheckpoint(str, Enum):
+    PRD_FREEZE = "prd_freeze"
+    DOCS_BASELINE_FREEZE = "docs_baseline_freeze"
+    PRE_CLOSE = "pre_close"
+
+
+class PrdReviewerDecisionKind(str, Enum):
+    APPROVE = "approve"
+    REVISE = "revise"
+    BLOCK = "block"
+
+
+def _default_prd_review_checkpoints() -> list[PrdReviewerCheckpoint]:
+    return [
+        PrdReviewerCheckpoint.PRD_FREEZE,
+        PrdReviewerCheckpoint.DOCS_BASELINE_FREEZE,
+        PrdReviewerCheckpoint.PRE_CLOSE,
+    ]
+
+
+class PrdDocument(BaseModel):
+    """Shared PRD document contract for draft and final states."""
+
+    work_item_id: str = ""
+    source_idea: str = ""
+    title: str = ""
+    background: str = ""
+    product_goals: list[str] = Field(default_factory=list)
+    user_roles: list[str] = Field(default_factory=list)
+    functional_requirements: list[str] = Field(default_factory=list)
+    core_business_rules: list[str] = Field(default_factory=list)
+    acceptance_criteria: list[str] = Field(default_factory=list)
+    development_priority: list[str] = Field(default_factory=list)
+    assumptions: list[str] = Field(default_factory=list)
+    placeholders: list[str] = Field(default_factory=list)
+    structured_metadata: dict[str, object] = Field(default_factory=dict)
+
+    def render_markdown(self) -> str:
+        """Render the PRD as readable markdown for downstream consumers."""
+        state = getattr(self, "document_state", PrdDocumentState.DRAFT_PRD)
+        state_value = state.value if isinstance(state, PrdDocumentState) else str(state)
+        sections = [
+            f"# {self.title or self.source_idea or 'PRD'}",
+            "## 文档状态",
+            f"- {state_value}",
+            "## 输入想法",
+            f"- {self.source_idea or '待确认'}",
+            "## 项目背景",
+            self.background or "待确认：项目背景",
+            "## 产品目标",
+            *self._bullet_lines(self.product_goals, "待确认：产品目标"),
+            "## 用户角色",
+            *self._bullet_lines(self.user_roles, "待确认：用户角色"),
+            "## 功能需求",
+            *self._bullet_lines(self.functional_requirements, "待确认：功能需求"),
+            "## 核心业务规则",
+            *self._bullet_lines(self.core_business_rules, "待确认：核心业务规则"),
+            "## 验收标准",
+            *self._bullet_lines(self.acceptance_criteria, "待确认：验收标准"),
+            "## 开发优先级",
+            *self._bullet_lines(self.development_priority, "待确认：开发优先级"),
+            "## 假设",
+            *self._bullet_lines(self.assumptions, "待确认：假设"),
+            "## 占位项",
+            *self._bullet_lines(self.placeholders, "待确认：占位项"),
+        ]
+        return "\n".join(sections).rstrip() + "\n"
+
+    @staticmethod
+    def _bullet_lines(items: list[str], fallback: str) -> list[str]:
+        values = items or [fallback]
+        return [f"- {item}" for item in values]
+
+
+class DraftPrd(PrdDocument):
+    """Draft PRD generated from a one-sentence idea."""
+
+    document_state: PrdDocumentState = PrdDocumentState.DRAFT_PRD
+
+    def to_final(self, reviewer_note: str = "") -> FinalPrd:
+        return FinalPrd.from_draft(self, reviewer_note=reviewer_note)
+
+
+class FinalPrd(PrdDocument):
+    """Frozen PRD accepted at a reviewer checkpoint."""
+
+    document_state: PrdDocumentState = PrdDocumentState.FINAL_PRD
+    finalized_from: str = "draft_prd"
+    reviewer_note: str = ""
+
+    @classmethod
+    def from_draft(cls, draft: DraftPrd, reviewer_note: str = "") -> FinalPrd:
+        metadata = dict(draft.structured_metadata)
+        metadata.update(
+            {
+                "document_state": PrdDocumentState.FINAL_PRD.value,
+                "finalized_from": draft.document_state.value,
+                "reviewer_note": reviewer_note,
+            }
+        )
+        return cls(
+            work_item_id=draft.work_item_id,
+            source_idea=draft.source_idea,
+            title=draft.title,
+            background=draft.background,
+            product_goals=draft.product_goals[:],
+            user_roles=draft.user_roles[:],
+            functional_requirements=draft.functional_requirements[:],
+            core_business_rules=draft.core_business_rules[:],
+            acceptance_criteria=draft.acceptance_criteria[:],
+            development_priority=draft.development_priority[:],
+            assumptions=draft.assumptions[:],
+            placeholders=draft.placeholders[:],
+            structured_metadata=metadata,
+            finalized_from=draft.document_state.value,
+            reviewer_note=reviewer_note,
+        )
+
+
+class PrdAuthoringResult(BaseModel):
+    """Output of PRD authoring from a one-sentence idea."""
+
+    work_item_id: str
+    draft_prd: DraftPrd
+    draft_markdown: str
+    review_checkpoints: list[PrdReviewerCheckpoint] = Field(
+        default_factory=_default_prd_review_checkpoints
+    )
+    structured_metadata: dict[str, object] = Field(default_factory=dict)
+
+
+class PrdReviewerDecision(BaseModel):
+    """Formal reviewer decision artifact for PRD checkpoints."""
+
+    checkpoint: PrdReviewerCheckpoint
+    decision: PrdReviewerDecisionKind
+    target: str
+    reason: str = ""
+    next_action: str = ""
+    timestamp: str = ""
+
+    def to_status_view(self) -> dict[str, str]:
+        """Return a read-only view suitable for status/recover surfaces."""
+        return {
+            "checkpoint": self.checkpoint.value,
+            "decision": self.decision.value,
+            "reviewer_decision": self.decision.value,
+            "target": self.target,
+            "reason": self.reason or "待补充",
+            "next_action": self.next_action or "待确认",
+            "timestamp": self.timestamp or "N/A",
+            "summary": f"{self.checkpoint.value}:{self.decision.value} -> {self.target}",
+        }
+
+
 # ---------------------------------------------------------------------------
 # Incident models (from incident)
 # ---------------------------------------------------------------------------

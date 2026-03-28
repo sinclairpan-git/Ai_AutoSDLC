@@ -1,9 +1,14 @@
-"""Unit tests for PRD Studio readiness check."""
+"""Unit tests for PRD Studio readiness check and authoring contracts."""
 
 from __future__ import annotations
 
 from pathlib import Path
 
+from ai_sdlc.models.work import (
+    PrdDocumentState,
+    PrdReviewerCheckpoint,
+    PrdReviewerDecisionKind,
+)
 from ai_sdlc.studios.prd_studio import PrdStudio, PrdStudioAdapter, check_prd_readiness
 
 
@@ -120,3 +125,78 @@ class TestPrdReadiness:
         assert from_string["prd_readiness"].structured_output["project_name"] == (
             "用户管理平台"
         )
+
+    def test_adapter_accepts_idea_string_for_authoring(self) -> None:
+        adapter = PrdStudioAdapter()
+        result = adapter.process(
+            "新增用户管理功能，实现注册和登录",
+            {"work_item_id": "WI-2026-304"},
+        )
+
+        assert "prd_authoring" in result
+        assert result["draft_prd"].work_item_id == "WI-2026-304"
+        assert result["prd_authoring"].draft_prd.document_state == PrdDocumentState.DRAFT_PRD
+
+    def test_adapter_pathlike_string_preserves_missing_file_failure(
+        self, tmp_path: Path
+    ) -> None:
+        adapter = PrdStudioAdapter()
+        result = adapter.process(str(tmp_path / "missing.md"))
+
+        assert "prd_readiness" in result
+        assert result["prd_readiness"].readiness == "fail"
+
+
+class TestPrdAuthoring:
+    def test_draft_from_idea_creates_placeholders_and_metadata(self) -> None:
+        result = PrdStudio().draft_from_idea(
+            "新增用户管理功能，实现注册和登录",
+            {"work_item_id": "WI-2026-301"},
+        )
+
+        assert result.draft_prd.document_state == PrdDocumentState.DRAFT_PRD
+        assert result.draft_prd.work_item_id == "WI-2026-301"
+        assert any("待确认" in item for item in result.draft_prd.placeholders)
+        assert any("假设" in item for item in result.draft_prd.assumptions)
+        assert result.review_checkpoints == [
+            PrdReviewerCheckpoint.PRD_FREEZE,
+            PrdReviewerCheckpoint.DOCS_BASELINE_FREEZE,
+            PrdReviewerCheckpoint.PRE_CLOSE,
+        ]
+        assert result.structured_metadata["document_state"] == "draft_prd"
+        assert result.structured_metadata["source_idea"] == "新增用户管理功能，实现注册和登录"
+        assert "draft_markdown" in result.structured_metadata
+
+    def test_draft_can_be_promoted_to_final_prd(self) -> None:
+        result = PrdStudio().draft_from_idea(
+            "新增用户管理功能，实现注册和登录",
+            {"work_item_id": "WI-2026-302"},
+        )
+
+        final_prd = result.draft_prd.to_final(
+            reviewer_note="PRD freeze approved",
+        )
+
+        assert final_prd.document_state == PrdDocumentState.FINAL_PRD
+        assert final_prd.work_item_id == "WI-2026-302"
+        assert final_prd.finalized_from == "draft_prd"
+        assert final_prd.reviewer_note == "PRD freeze approved"
+
+    def test_reviewer_decision_can_record_checkpoint_and_next_action(self) -> None:
+        studio = PrdStudio()
+        decision = studio.record_reviewer_decision(
+            checkpoint=PrdReviewerCheckpoint.PRD_FREEZE,
+            decision=PrdReviewerDecisionKind.APPROVE,
+            target="WI-2026-303",
+            reason="Draft is ready for freeze",
+            next_action="Persist final_prd",
+            timestamp="2026-03-29T10:00:00+08:00",
+        )
+        readable = studio.read_reviewer_decision(decision)
+
+        assert decision.checkpoint == PrdReviewerCheckpoint.PRD_FREEZE
+        assert decision.decision == PrdReviewerDecisionKind.APPROVE
+        assert decision.target == "WI-2026-303"
+        assert decision.next_action == "Persist final_prd"
+        assert readable["checkpoint"] == "prd_freeze"
+        assert readable["summary"] == "prd_freeze:approve -> WI-2026-303"

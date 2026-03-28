@@ -28,6 +28,7 @@ from ai_sdlc.core.p1_artifacts import (
     load_execution_path,
     load_parallel_coordination_artifact,
     load_resume_point,
+    load_reviewer_decision,
 )
 from ai_sdlc.core.reconcile import (
     ReconcileHint,
@@ -303,6 +304,13 @@ def status_command(
                 table.add_row("Active Files", ", ".join(working_set.active_files))
             if latest_summary:
                 table.add_row("Latest Summary", _latest_summary_preview(latest_summary))
+            reviewer_decision = load_reviewer_decision(root, active_wi_id)
+            if reviewer_decision is not None:
+                status_view = reviewer_decision.to_status_view()
+                table.add_row(
+                    "Latest Reviewer Decision",
+                    f"{status_view['summary']} | next: {status_view['next_action']}",
+                )
         if work_item_id:
             governance = load_governance_state(root, work_item_id)
             if governance is not None:

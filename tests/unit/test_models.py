@@ -31,6 +31,15 @@ from ai_sdlc.models import (
     WorkItemStatus,
     WorkType,
 )
+from ai_sdlc.models.work import (
+    DraftPrd,
+    FinalPrd,
+    PrdAuthoringResult,
+    PrdDocumentState,
+    PrdReviewerCheckpoint,
+    PrdReviewerDecision,
+    PrdReviewerDecisionKind,
+)
 
 
 class TestProjectModels:
@@ -295,3 +304,66 @@ class TestPrdModels:
         )
         assert len(pr.missing_sections) == 2
         assert len(pr.recommendations) == 1
+
+    def test_prd_draft_and_final_models(self) -> None:
+        draft = DraftPrd(
+            work_item_id="WI-2026-401",
+            source_idea="新增用户登录",
+            title="PRD 草案：新增用户登录",
+            background="待确认：背景与现状",
+            product_goals=["待确认：核心目标"],
+            user_roles=["待确认：用户角色"],
+            functional_requirements=["待确认：功能需求"],
+            core_business_rules=["待确认：核心规则"],
+            acceptance_criteria=["待确认：验收标准"],
+            development_priority=["P0"],
+            assumptions=["假设：优先级待确认"],
+            placeholders=["待确认：业务目标"],
+        )
+        final_prd = FinalPrd.from_draft(draft, reviewer_note="Approved")
+
+        assert draft.document_state == PrdDocumentState.DRAFT_PRD
+        assert final_prd.document_state == PrdDocumentState.FINAL_PRD
+        assert final_prd.finalized_from == "draft_prd"
+        assert final_prd.reviewer_note == "Approved"
+
+    def test_prd_authoring_and_reviewer_models(self) -> None:
+        draft = DraftPrd(
+            work_item_id="WI-2026-402",
+            source_idea="新增用户管理功能",
+            title="PRD 草案：新增用户管理功能",
+            background="待确认",
+            product_goals=["待确认"],
+            user_roles=["待确认"],
+            functional_requirements=["待确认"],
+            core_business_rules=["待确认"],
+            acceptance_criteria=["待确认"],
+            development_priority=["P0"],
+            assumptions=["假设：待确认"],
+            placeholders=["待确认"],
+        )
+        result = PrdAuthoringResult(
+            work_item_id="WI-2026-402",
+            draft_prd=draft,
+            draft_markdown=draft.render_markdown(),
+            review_checkpoints=[
+                PrdReviewerCheckpoint.PRD_FREEZE,
+                PrdReviewerCheckpoint.DOCS_BASELINE_FREEZE,
+                PrdReviewerCheckpoint.PRE_CLOSE,
+            ],
+            structured_metadata={"document_state": "draft_prd"},
+        )
+        decision = PrdReviewerDecision(
+            checkpoint=PrdReviewerCheckpoint.PRD_FREEZE,
+            decision=PrdReviewerDecisionKind.REVISE,
+            target="WI-2026-402",
+            reason="Need clearer acceptance criteria",
+            next_action="Update draft",
+            timestamp="2026-03-29T10:00:00+08:00",
+        )
+
+        assert result.draft_prd.work_item_id == "WI-2026-402"
+        assert result.review_checkpoints[-1] == PrdReviewerCheckpoint.PRE_CLOSE
+        assert "draft_prd" in result.draft_markdown
+        assert decision.decision == PrdReviewerDecisionKind.REVISE
+        assert decision.next_action == "Update draft"
