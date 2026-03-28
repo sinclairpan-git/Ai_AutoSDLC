@@ -585,3 +585,29 @@
 - 风险等级: 中
 - 可验证成功标准: 给定“代码已改且测试通过但尚未 commit”的场景时，代理的最终答复必须明确披露“未提交”状态，或继续执行 commit 后给出 SHA；不得再出现用户需要追问“为什么没提交”才能发现 Git 真值的情况。
 - 是否需要回归测试补充: 是：补一条面向收口流程的约束检查，验证 dirty worktree 时不会输出“已完成且已收口”的默认结论。
+
+## FD-2026-03-28-004 | 001 execution/context artifacts 与 gate taxonomy 长期停留在隐式语义，缺少正式 surface
+
+- 日期 (UTC): 2026-03-28
+- 来源: spec_backfill, self_review
+- 状态: closed
+- owner: codex
+- wi_id: 001-ai-sdlc-framework
+- 现象: `RG-007 ~ RG-009` 揭示出一组“已有局部能力但没有正式合同面”的残余漂移：execute 只在 `specs/<WI>/` 下写日志/summary，没有把 `execution-plan.yaml`、`runtime.yaml`、`working-set.yaml`、`latest-summary.md` 收敛到 active work item 真值目录；与此同时，`PRD Gate`、`Review Gate`、`Done Gate`、`Verification Gate` 只以隐式语义散落在 `refine` / `verify` / `close-check` / 文档模板中，无法被明确引用。
+- 触发场景: Batch 13 收口后继续按 2026-03-28 新补 `spec.md` 审视 `001` 的 planning/context artifacts 与 gate taxonomy，会发现代码虽然具备 execute、verify、close 的局部能力，但 `recover/status/verify constraints/close-check` 仍无法稳定基于单一真值面解释这些新增合同。
+- 影响范围: active work item 恢复与状态展示的一致性、verify/close 的门禁透明度、Knowledge Refresh 对 completed 转换的阻断语义，以及用户对“框架到底以什么对象作为真值”的理解。
+- 根因分类: A, B, D, H
+- 未来杜绝方案摘要: 对任何新增 artifact 或新增 gate taxonomy，必须同步落成三层真值：磁盘正式 surface、runner/CLI 可消费 surface、contract-level tests。只补“局部 helper”或“模板语义”而不补 registry/JSON/check-object surface，不得视为合同已收口。
+- 建议改动层级: rule / policy, middleware, workflow, tool, eval
+- prompt / context: 对 `spec.md` 新增的 artifact/gate 合同，不得只看“是否已有相近文件或相近 gate”；必须确认是否已经存在单一真值目录、可恢复 surface 与可引用的显式 gate 名称。
+- rule / policy: active work item 的正式 artifact 一律收敛到 `.ai-sdlc/work-items/<WI>/`；新增 gate taxonomy 时必须同步公开 registry alias、CLI surface 与 check-object 清单。
+- middleware: `Executor` 负责写入 `execution-plan.yaml` / `runtime.yaml` / `working-set.yaml` / `latest-summary.md`；`context.state` 负责 `summary-first` / `working-set-first` 恢复；`pipeline_gates` / `registry` 负责 `PRD/Review/Done/Verification` 显式 gate。
+- workflow: Batch 14 按 `Task 6.37 ~ 6.39` 先补红测，再落地 artifacts / gate surface，最后用 `verify constraints`、`close-check`、全量 `pytest` / `ruff` 对账。
+- tool: `src/ai_sdlc/core/executor.py`、`src/ai_sdlc/context/state.py`、`src/ai_sdlc/cli/commands.py`、`src/ai_sdlc/gates/pipeline_gates.py`、`src/ai_sdlc/gates/registry.py`、`src/ai_sdlc/core/verify_constraints.py`、`src/ai_sdlc/core/close_check.py`
+- eval: active-work-item artifact 漂移数、Verification Gate check-object 漏宣告数、Done Gate knowledge-refresh 阻断回归数、close-check `review_gate/done_gate` surface 漏报数
+- 风险等级: 高
+- Batch 14 收口 (2026-03-28):
+  - 已闭环: `execution-plan.yaml` / `runtime.yaml` / `working-set.yaml` / `latest-summary.md` 正式落盘，`recover/status` 直接消费；`PRDGate` / `ReviewGate` / `DoneGate` / `VerificationGate` 已进入 registry / gate CLI / runner / verify JSON / close-check surface。
+  - 验证: Batch 14 定向 suite 136 passed；`uv run ai-sdlc verify constraints` 无 BLOCKER；`uv run ai-sdlc workitem close-check --wi specs/001-ai-sdlc-framework` 与 `--all-docs` 均 PASS；全量 `uv run pytest -q` 742 passed；`uv run ruff check src tests` passed。
+- 可验证成功标准: 给定 active work item 的 execute/recover/status/verify/close 夹具时，框架能稳定从 `.ai-sdlc/work-items/<WI>/` 读取 formal artifacts，并能在实现、CLI JSON、gate registry 与 close-check 中明确指认 `PRD / Review / Done / Verification` surface；Knowledge Refresh 未完成时，Done Gate 必须返回非 PASS。
+- 是否需要回归测试补充: 是：补 executor artifact 持久化、resume-pack `summary-first/working-set-first`、status surface、Verification Gate check objects、Done Gate refresh block、close-check `review_gate/done_gate` 的正反回归测试。

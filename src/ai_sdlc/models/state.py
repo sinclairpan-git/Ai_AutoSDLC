@@ -84,7 +84,9 @@ class RuntimeState(BaseModel):
 
     current_stage: str = ""
     current_batch: int = 0
+    current_task: str = ""
     last_committed_task: str = ""
+    current_branch: str = ""
     ai_decisions_count: int = 0
     execution_mode: str = "auto"
     started_at: str = ""

@@ -15,9 +15,14 @@ from ai_sdlc.context.state import (
     CheckpointLoadError,
     ResumePackError,
     ResumePackNotFoundError,
+    active_work_item_id,
     build_resume_pack,
     load_checkpoint,
+    load_execution_plan,
+    load_latest_summary,
     load_resume_pack,
+    load_runtime_state,
+    load_working_set,
     save_resume_pack,
 )
 from ai_sdlc.core.config import load_project_config, load_project_state
@@ -112,6 +117,15 @@ def _print_reconcile_guidance(
     console.print("  1. [cyan]ai-sdlc recover --reconcile[/cyan] 进行状态对齐")
     console.print("  2. [cyan]ai-sdlc status[/cyan] 查看当前 checkpoint")
     console.print("  3. [cyan]ai-sdlc run --dry-run[/cyan] 在对齐后预演流水线")
+
+
+def _latest_summary_preview(summary: str) -> str:
+    for line in summary.splitlines():
+        candidate = line.strip()
+        if not candidate or candidate.startswith("#"):
+            continue
+        return candidate
+    return "present"
 
 
 # ---------------------------------------------------------------------------
@@ -237,6 +251,26 @@ def status_command(
         if cp.last_synced_at:
             table.add_row("Last synced (plan)", cp.last_synced_at)
         work_item_id = _surface_work_item_id(cp)
+        active_wi_id = active_work_item_id(cp)
+        if active_wi_id:
+            execution_plan = load_execution_plan(root, active_wi_id)
+            runtime = load_runtime_state(root, active_wi_id)
+            working_set = load_working_set(root, active_wi_id)
+            latest_summary = load_latest_summary(root, active_wi_id)
+            if execution_plan is not None:
+                table.add_row(
+                    "Execution Plan",
+                    f"{execution_plan.total_tasks} tasks / {execution_plan.total_batches} batches",
+                )
+            if runtime is not None:
+                if runtime.current_task:
+                    table.add_row("Runtime Task", runtime.current_task)
+                if runtime.last_updated:
+                    table.add_row("Runtime Updated", runtime.last_updated)
+            if working_set is not None and working_set.active_files:
+                table.add_row("Active Files", ", ".join(working_set.active_files))
+            if latest_summary:
+                table.add_row("Latest Summary", _latest_summary_preview(latest_summary))
         if work_item_id:
             governance = load_governance_state(root, work_item_id)
             if governance is not None:

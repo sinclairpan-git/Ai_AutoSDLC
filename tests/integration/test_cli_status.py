@@ -16,7 +16,16 @@ from ai_sdlc.context.state import save_checkpoint
 from ai_sdlc.core.config import YamlStore, save_project_state
 from ai_sdlc.models.gate import GovernanceItem, GovernanceState
 from ai_sdlc.models.project import ProjectState, ProjectStatus
-from ai_sdlc.models.state import Checkpoint, FeatureInfo
+from ai_sdlc.models.state import (
+    Checkpoint,
+    ExecutionBatch,
+    ExecutionPlan,
+    FeatureInfo,
+    RuntimeState,
+    Task,
+    TaskStatus,
+    WorkingSet,
+)
 from ai_sdlc.routers.bootstrap import init_project
 from ai_sdlc.telemetry.contracts import Artifact, TelemetryEvent, Violation
 from ai_sdlc.telemetry.enums import ArtifactRole, ArtifactType, ScopeLevel, TraceLayer
@@ -250,6 +259,78 @@ class TestCliStatus:
         assert "feature/WI-2026-001-docs" in result.output
         assert "Governance Frozen" in result.output
         assert "yes" in result.output.lower()
+
+    def test_status_reads_formal_execute_artifacts(self, tmp_path: Path) -> None:
+        init_project(tmp_path)
+        spec_dir = tmp_path / "specs" / "WI-2026-ART"
+        spec_dir.mkdir(parents=True)
+        (spec_dir / "spec.md").write_text("# Spec\n", encoding="utf-8")
+        (spec_dir / "plan.md").write_text("# Plan\n", encoding="utf-8")
+        (spec_dir / "tasks.md").write_text("# Tasks\n", encoding="utf-8")
+
+        save_checkpoint(
+            tmp_path,
+            Checkpoint(
+                current_stage="execute",
+                feature=FeatureInfo(
+                    id="WI-2026-ART",
+                    spec_dir="specs/WI-2026-ART",
+                    design_branch="feature/WI-2026-ART-docs",
+                    feature_branch="feature/WI-2026-ART-dev",
+                    current_branch="feature/WI-2026-ART-dev",
+                ),
+            ),
+        )
+
+        wi_dir = tmp_path / ".ai-sdlc" / "work-items" / "WI-2026-ART"
+        YamlStore.save(
+            wi_dir / "execution-plan.yaml",
+            ExecutionPlan(
+                total_tasks=2,
+                total_batches=1,
+                tasks=[
+                    Task(task_id="T001", title="one", phase=1, status=TaskStatus.COMPLETED),
+                    Task(task_id="T002", title="two", phase=1, status=TaskStatus.PENDING),
+                ],
+                batches=[ExecutionBatch(batch_id=1, phase=1, tasks=["T001", "T002"])],
+            ),
+        )
+        YamlStore.save(
+            wi_dir / "runtime.yaml",
+            RuntimeState(
+                current_stage="execute",
+                current_batch=1,
+                current_task="T002",
+                last_committed_task="T001",
+                current_branch="feature/WI-2026-ART-dev",
+                execution_mode="confirm",
+                last_updated="2026-03-28T12:00:00+00:00",
+            ),
+        )
+        YamlStore.save(
+            wi_dir / "working-set.yaml",
+            WorkingSet(
+                spec_path="specs/WI-2026-ART/spec.md",
+                plan_path="specs/WI-2026-ART/plan.md",
+                tasks_path="specs/WI-2026-ART/tasks.md",
+                active_files=["src/app.py"],
+            ),
+        )
+        (wi_dir / "latest-summary.md").write_text(
+            "# Latest Summary\n\nCurrent focus: T002\n",
+            encoding="utf-8",
+        )
+
+        with patch("ai_sdlc.cli.commands.find_project_root", return_value=tmp_path):
+            result = runner.invoke(app, ["status"])
+
+        assert result.exit_code == 0
+        assert "Execution Plan" in result.output
+        assert "2 tasks / 1 batches" in result.output
+        assert "Runtime Updated" in result.output
+        assert "2026-03-28T12:00:00+00:00" in result.output
+        assert "Latest Summary" in result.output
+        assert "Current focus: T002" in result.output
 
 
 def test_status_json_real_cli_path_does_not_mutate_project_config(

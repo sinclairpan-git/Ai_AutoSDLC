@@ -8,13 +8,18 @@ from rich.panel import Panel
 from rich.table import Table
 
 from ai_sdlc.context.state import load_checkpoint
+from ai_sdlc.core.verify_constraints import build_verification_gate_context
 from ai_sdlc.gates.pipeline_gates import (
     CloseGate,
     DecomposeGate,
     DesignGate,
+    DoneGate,
     ExecuteGate,
     InitGate,
+    PRDGate,
     RefineGate,
+    ReviewGate,
+    VerificationGate,
     VerifyGate,
 )
 from ai_sdlc.gates.registry import GateRegistry
@@ -39,11 +44,15 @@ def _build_registry() -> GateRegistry:
     reg = GateRegistry()
     reg.register("init", InitGate())
     reg.register("refine", RefineGate())
+    reg.register("prd", PRDGate())
     reg.register("design", DesignGate())
     reg.register("decompose", DecomposeGate())
     reg.register("verify", VerifyGate())
+    reg.register("verification", VerificationGate())
     reg.register("execute", ExecuteGate())
     reg.register("close", CloseGate())
+    reg.register("review", ReviewGate())
+    reg.register("done", DoneGate())
     return reg
 
 
@@ -58,9 +67,8 @@ def _build_context(stage: str, root_str: str) -> dict[str, object]:
     if cp and cp.feature:
         ctx["spec_dir"] = str(root / cp.feature.spec_dir)
 
-    if stage == "verify":
-        ctx.setdefault("critical_issues", 0)
-        ctx.setdefault("high_issues", 0)
+    if stage in {"verify", "verification"}:
+        ctx.update(build_verification_gate_context(root))
     elif stage == "execute":
         ctx.setdefault("tests_passed", False)
         ctx.setdefault("build_succeeded", False)
@@ -80,7 +88,7 @@ def _build_context(stage: str, root_str: str) -> dict[str, object]:
                 ctx["logged"] = log_file.exists() and log_file.stat().st_size > 30
             ctx["log_timestamp"] = progress.last_log_at
             ctx["commit_timestamp"] = progress.last_commit_at
-    elif stage == "close":
+    elif stage in {"close", "done"}:
         ctx.setdefault("all_tasks_complete", False)
         ctx.setdefault("tests_passed", False)
         if cp and cp.execute_progress:
@@ -92,7 +100,8 @@ def _build_context(stage: str, root_str: str) -> dict[str, object]:
             )
             ctx["tests_passed"] = progress.last_commit_hash != "" and not progress.halted
         if "spec_dir" in ctx:
-            ctx["summary_path"] = str(Path(ctx["spec_dir"]) / "development-summary.md")
+            spec_dir = Path(ctx["spec_dir"])
+            ctx["summary_path"] = str(spec_dir / "development-summary.md")
 
     return ctx
 
@@ -114,7 +123,10 @@ def gate_root(ctx: typer.Context) -> None:
 def gate_check(
     stage: str = typer.Argument(
         ...,
-        help="Stage name (init, refine, design, decompose, verify, execute, close).",
+        help=(
+            "Stage name (init, refine, prd, design, decompose, verify, verification, "
+            "execute, review, close, done)."
+        ),
     ),
 ) -> None:
     """Run gate check for a specific pipeline stage."""
@@ -164,7 +176,19 @@ def _register_gate_alias(stage_name: str) -> None:
         gate_check(stage_name)
 
 
-for _stage_name in ("init", "refine", "design", "decompose", "verify", "execute", "close"):
+for _stage_name in (
+    "init",
+    "refine",
+    "prd",
+    "design",
+    "decompose",
+    "verify",
+    "verification",
+    "execute",
+    "review",
+    "close",
+    "done",
+):
     _register_gate_alias(_stage_name)
 
 

@@ -128,6 +128,11 @@ def verify_constraints(
                     "ok": len(blockers) == 0,
                     "blockers": blockers,
                     "root": str(root),
+                    "verification_gate": {
+                        "name": report.gate_name,
+                        "source_name": report.source_name,
+                        "check_objects": list(report.check_objects),
+                    },
                     "telemetry": {
                         "goal_session_id": goal_session_id,
                         "event_id": evaluation_event.event_id,

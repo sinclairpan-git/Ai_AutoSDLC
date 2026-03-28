@@ -29,6 +29,13 @@ FRAMEWORK_DEFECT_BACKLOG_REQUIRED_FIELDS = (
     "可验证成功标准",
     "是否需要回归测试补充",
 )
+VERIFICATION_GATE_OBJECTS = (
+    "required_governance_files",
+    "framework_defect_backlog",
+    "checkpoint_spec_dir",
+    "tasks_acceptance",
+    "skip_registry_mapping",
+)
 
 
 @dataclass(frozen=True, slots=True)
@@ -38,6 +45,8 @@ class ConstraintReport:
     root: str
     source_name: str
     blockers: tuple[str, ...]
+    gate_name: str = "Verification Gate"
+    check_objects: tuple[str, ...] = VERIFICATION_GATE_OBJECTS
     coverage_gaps: tuple[str, ...] = ()
     evidence_kinds: tuple[str, ...] = ("event", "structured_report")
 
@@ -46,9 +55,22 @@ def build_constraint_report(root: Path) -> ConstraintReport:
     """Build a structured report for verify constraints."""
     return ConstraintReport(
         root=str(root),
+        gate_name="Verification Gate",
         source_name="verify constraints",
+        check_objects=VERIFICATION_GATE_OBJECTS,
         blockers=tuple(collect_constraint_blockers(root)),
     )
+
+
+def build_verification_gate_context(root: Path) -> dict[str, object]:
+    """Build the explicit Verification Gate context consumed by runner and gate CLI."""
+    report = build_constraint_report(root)
+    return {
+        "verification_sources": (report.source_name,),
+        "verification_check_objects": report.check_objects,
+        "constraint_blockers": report.blockers,
+        "coverage_gaps": report.coverage_gaps,
+    }
 
 
 def collect_constraint_blockers(root: Path) -> list[str]:
