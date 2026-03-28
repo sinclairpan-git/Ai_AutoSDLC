@@ -121,6 +121,6 @@
 #### 2.8 归档后动作
 
 - **已完成 git 提交**：是
-- **提交哈希**：`待回填`
+- **提交哈希**：`7f3f99f`（`feat: close 002 p1 contract gaps`）
 - **改动范围**：`src/ai_sdlc/models/__init__.py`, `src/ai_sdlc/models/state.py`, `src/ai_sdlc/models/work.py`, `src/ai_sdlc/core/p1_artifacts.py`, `src/ai_sdlc/knowledge/engine.py`, `src/ai_sdlc/gates/pipeline_gates.py`, `src/ai_sdlc/core/runner.py`, `src/ai_sdlc/cli/commands.py`, `src/ai_sdlc/parallel/engine.py`, `src/ai_sdlc/studios/change_studio.py`, `src/ai_sdlc/studios/maintenance_studio.py`, `tests/unit/test_p1_artifacts.py`, `tests/unit/test_p1_models.py`, `tests/unit/test_parallel.py`, `tests/unit/test_studios.py`, `tests/unit/test_gates.py`, `tests/unit/test_runner_confirm.py`, `tests/integration/test_cli_status.py`, `specs/002-p1-capabilities/task-execution-log.md`
 - **是否继续下一批**：阻断，待本批提交哈希回填并通过 `workitem close-check` 后再决定是否继续其他 work item。
