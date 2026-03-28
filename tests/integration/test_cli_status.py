@@ -12,12 +12,18 @@ import pytest
 from typer.testing import CliRunner
 
 from ai_sdlc.cli.main import app
-from ai_sdlc.context.state import save_checkpoint
+from ai_sdlc.context.state import (
+    build_resume_pack,
+    load_resume_pack,
+    save_checkpoint,
+    save_resume_pack,
+)
 from ai_sdlc.core.config import YamlStore, save_project_state
 from ai_sdlc.models.gate import GovernanceItem, GovernanceState
 from ai_sdlc.models.project import ProjectState, ProjectStatus
 from ai_sdlc.models.state import (
     Checkpoint,
+    ExecuteProgress,
     ExecutionBatch,
     ExecutionPlan,
     FeatureInfo,
@@ -331,6 +337,61 @@ class TestCliStatus:
         assert "2026-03-28T12:00:00+00:00" in result.output
         assert "Latest Summary" in result.output
         assert "Current focus: T002" in result.output
+
+    def test_status_rebuilds_stale_resume_pack_without_mutating_checkpoint(
+        self, tmp_path: Path
+    ) -> None:
+        init_project(tmp_path)
+        spec_dir = tmp_path / "specs" / "WI-2026-STATUS"
+        spec_dir.mkdir(parents=True)
+        (spec_dir / "spec.md").write_text("# Spec\n", encoding="utf-8")
+        (spec_dir / "plan.md").write_text("# Plan\n", encoding="utf-8")
+        (spec_dir / "tasks.md").write_text("# Tasks\n", encoding="utf-8")
+
+        checkpoint = Checkpoint(
+            current_stage="execute",
+            feature=FeatureInfo(
+                id="WI-2026-STATUS",
+                spec_dir="specs/WI-2026-STATUS",
+                design_branch="feature/WI-2026-STATUS-docs",
+                feature_branch="feature/WI-2026-STATUS-dev",
+                current_branch="feature/WI-2026-STATUS-dev",
+            ),
+            execute_progress=ExecuteProgress(
+                current_batch=1,
+                total_batches=3,
+                last_committed_task="T001",
+            ),
+        )
+        save_checkpoint(tmp_path, checkpoint)
+        pack = build_resume_pack(tmp_path)
+        assert pack is not None
+        save_resume_pack(tmp_path, pack)
+
+        checkpoint.execute_progress = ExecuteProgress(
+            current_batch=2,
+            total_batches=3,
+            last_committed_task="T002",
+        )
+        save_checkpoint(tmp_path, checkpoint)
+        checkpoint_path = tmp_path / ".ai-sdlc" / "state" / "checkpoint.yml"
+        before_checkpoint = checkpoint_path.read_text(encoding="utf-8")
+
+        with patch("ai_sdlc.cli.commands.find_project_root", return_value=tmp_path):
+            result = runner.invoke(app, ["status"])
+
+        after_checkpoint = checkpoint_path.read_text(encoding="utf-8")
+        fresh_pack = load_resume_pack(tmp_path)
+
+        assert result.exit_code == 0
+        assert "stale" in result.output.lower()
+        assert "rebuilding from checkpoint" in result.output.lower()
+        assert "rebuilt successfully" in result.output.lower()
+        assert "Resume Batch" in result.output
+        assert "T002" in result.output
+        assert before_checkpoint == after_checkpoint
+        assert fresh_pack.current_batch == 2
+        assert fresh_pack.last_committed_task == "T002"
 
 
 def test_status_json_real_cli_path_does_not_mutate_project_config(

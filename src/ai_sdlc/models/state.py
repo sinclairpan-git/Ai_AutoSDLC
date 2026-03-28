@@ -120,6 +120,8 @@ class ResumePack(BaseModel):
     docs_baseline_at: str = ""
     timestamp: str
     checkpoint_path: str = ".ai-sdlc/state/checkpoint.yml"
+    checkpoint_last_updated: str = ""
+    checkpoint_fingerprint: str = ""
 
 
 # ---------------------------------------------------------------------------

@@ -2,8 +2,11 @@
 
 from __future__ import annotations
 
+import hashlib
+import json
 import logging
 import shutil
+from collections.abc import Callable
 from pathlib import Path
 
 from ai_sdlc.core.config import YamlStore, YamlStoreError
@@ -45,6 +48,9 @@ class ResumePackError(Exception):
 
 class ResumePackNotFoundError(ResumePackError):
     """Raised when resume-pack.yaml is required but missing."""
+
+
+ResumePackObserver = Callable[[str], None]
 
 
 # ── checkpoint management ──
@@ -117,7 +123,10 @@ def build_resume_pack(root: Path) -> ResumePack | None:
     cp = load_checkpoint(root)
     if cp is None:
         return None
+    return _build_resume_pack_from_checkpoint(root, cp)
 
+
+def _build_resume_pack_from_checkpoint(root: Path, cp: Checkpoint) -> ResumePack:
     work_item_id = active_work_item_id(cp)
     runtime = load_runtime_state(root, work_item_id) if work_item_id else None
     summary = load_latest_summary(root, work_item_id) if work_item_id else ""
@@ -145,35 +154,70 @@ def build_resume_pack(root: Path) -> ResumePack | None:
         docs_baseline_ref=cp.feature.docs_baseline_ref if cp.feature else "",
         docs_baseline_at=cp.feature.docs_baseline_at if cp.feature else "",
         timestamp=now_iso(),
+        checkpoint_last_updated=cp.pipeline_last_updated,
+        checkpoint_fingerprint=_checkpoint_fingerprint(cp),
     )
 
 
 def save_resume_pack(root: Path, pack: ResumePack) -> None:
     """Save a resume pack to disk."""
-    YamlStore.save(root / RESUME_PACK_PATH, pack)
     checkpoint = load_checkpoint(root)
     work_item_id = active_work_item_id(checkpoint)
+    _write_resume_pack_files(root, pack, work_item_id)
+
+
+def load_resume_pack(
+    root: Path,
+    *,
+    observer: ResumePackObserver | None = None,
+    event_log: list[str] | None = None,
+) -> ResumePack:
+    """Load resume-pack.yaml, rebuilding it from checkpoint when safe."""
+    checkpoint = load_checkpoint(root, strict=True)
+    if checkpoint is None:
+        raise CheckpointLoadError("checkpoint.yml not found")
+
+    work_item_id = active_work_item_id(checkpoint)
+    root_pack, root_issue = _load_resume_pack_candidate(
+        root / RESUME_PACK_PATH,
+        checkpoint,
+    )
+    scoped_issue = None
     if work_item_id:
-        YamlStore.save(work_item_resume_pack_path(root, work_item_id), pack)
+        scoped_pack, scoped_issue = _load_resume_pack_candidate(
+            work_item_resume_pack_path(root, work_item_id),
+            checkpoint,
+        )
+        if (
+            root_issue is None
+            and scoped_issue is None
+            and root_pack is not None
+            and scoped_pack is not None
+            and root_pack.model_dump(mode="json") != scoped_pack.model_dump(mode="json")
+        ):
+            scoped_issue = "stale"
 
+    issue = root_issue or scoped_issue
+    if issue is not None:
+        _emit_resume_pack_event(
+            f"resume-pack {issue}; rebuilding from checkpoint",
+            observer=observer,
+            event_log=event_log,
+        )
+        pack = _build_resume_pack_from_checkpoint(root, checkpoint)
+        _write_resume_pack_files(root, pack, work_item_id)
+        _emit_resume_pack_event(
+            "resume-pack rebuilt successfully",
+            observer=observer,
+            event_log=event_log,
+        )
+        return pack
 
-def load_resume_pack(root: Path) -> ResumePack:
-    """Load an existing resume pack and validate the paired checkpoint."""
-    path = root / RESUME_PACK_PATH
-    if not path.exists():
+    if root_pack is None:
         raise ResumePackNotFoundError(
             "No resume pack found. Run ai-sdlc init to start fresh."
         )
-
-    try:
-        pack = YamlStore.load(path, ResumePack)
-    except YamlStoreError as exc:
-        raise ResumePackError(
-            "Resume pack corrupted. Please inspect .ai-sdlc/state/resume-pack.yaml manually."
-        ) from exc
-
-    load_checkpoint(root, strict=True)
-    return pack
+    return root_pack
 
 
 # ── working set ──
@@ -377,6 +421,9 @@ def _validate_checkpoint(root: Path, checkpoint: Checkpoint) -> None:
             f"Invalid checkpoint current_stage: {checkpoint.current_stage}"
         )
 
+    if not checkpoint.pipeline_last_updated.strip():
+        raise CheckpointLoadError("checkpoint pipeline_last_updated is missing")
+
     if not checkpoint.feature or not checkpoint.feature.spec_dir.strip():
         raise CheckpointLoadError("checkpoint feature.spec_dir is missing")
 
@@ -454,6 +501,78 @@ def _load_optional_model(path: Path, model_class: type[ExecutionPlan | RuntimeSt
     if not path.exists():
         return None
     return YamlStore.load(path, model_class)
+
+
+def _load_resume_pack_candidate(
+    path: Path,
+    checkpoint: Checkpoint,
+) -> tuple[ResumePack | None, str | None]:
+    if not path.exists():
+        return None, "missing"
+
+    try:
+        pack = YamlStore.load(path, ResumePack)
+    except YamlStoreError:
+        return None, "corrupted"
+
+    if _resume_pack_is_stale(pack, checkpoint):
+        return pack, "stale"
+    return pack, None
+
+
+def _resume_pack_is_stale(pack: ResumePack, checkpoint: Checkpoint) -> bool:
+    source = pack.checkpoint_last_updated.strip()
+    target = checkpoint.pipeline_last_updated.strip()
+    if not source or source != target:
+        return True
+
+    fingerprint = pack.checkpoint_fingerprint.strip()
+    return not fingerprint or fingerprint != _checkpoint_fingerprint(checkpoint)
+
+
+def _emit_resume_pack_event(
+    message: str,
+    *,
+    observer: ResumePackObserver | None,
+    event_log: list[str] | None,
+) -> None:
+    logger.info(message)
+    if event_log is not None:
+        event_log.append(message)
+    if observer is not None:
+        observer(message)
+
+
+def _write_resume_pack_files(root: Path, pack: ResumePack, work_item_id: str) -> None:
+    root_path = root / RESUME_PACK_PATH
+    if not work_item_id:
+        YamlStore.save(root_path, pack)
+        return
+
+    scoped_path = work_item_resume_pack_path(root, work_item_id)
+    staged_root = _staged_resume_pack_path(root_path)
+    staged_scoped = _staged_resume_pack_path(scoped_path)
+    try:
+        YamlStore.save(staged_root, pack)
+        YamlStore.save(staged_scoped, pack)
+        staged_scoped.replace(scoped_path)
+        staged_root.replace(root_path)
+    finally:
+        staged_root.unlink(missing_ok=True)
+        staged_scoped.unlink(missing_ok=True)
+
+
+def _staged_resume_pack_path(path: Path) -> Path:
+    return path.with_name(f".{path.name}.staged")
+
+
+def _checkpoint_fingerprint(checkpoint: Checkpoint) -> str:
+    payload = json.dumps(
+        checkpoint.model_dump(mode="json"),
+        sort_keys=True,
+        separators=(",", ":"),
+    )
+    return hashlib.sha256(payload.encode("utf-8")).hexdigest()
 
 
 def _relative_string(root: Path, raw_path: str) -> str:

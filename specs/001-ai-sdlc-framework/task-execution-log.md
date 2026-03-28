@@ -1231,3 +1231,54 @@
 - **已完成 git 提交**：否
 - **提交哈希**：N/A（待本次 merge commit 统一填写）
 - **是否继续下一批**：按需
+
+---
+
+### Batch 2026-03-28-021 | FD-2026-03-28-001 checkpoint / resume-pack 对账收口
+
+#### 2.1 准备
+
+- **任务来源**：[`docs/framework-defect-backlog.zh-CN.md`](../../docs/framework-defect-backlog.zh-CN.md) `FD-2026-03-28-001`
+- **目标**：将 `checkpoint.yml` 与 `resume-pack.yaml` 的恢复语义收敛为“checkpoint 为真值、resume-pack 为派生快照”，并完成 `recover/status` 的统一对账入口。
+- **预读范围**：[`spec.md`](spec.md) `FR-052, FR-054`、[`tasks.md`](tasks.md) Task `6.24`、[`docs/framework-defect-backlog.zh-CN.md`](../../docs/framework-defect-backlog.zh-CN.md) `FD-2026-03-28-001`、`src/ai_sdlc/context/state.py`、`src/ai_sdlc/cli/commands.py`。
+- **激活的规则**：TDD；恢复真值唯一化；可观测性优先；归档先于宣称完成。
+
+#### 2.2 统一验证命令
+
+- **R1（红灯验证）**
+  - 命令：`uv run pytest -q tests/unit/test_context_state.py tests/integration/test_cli_recover.py tests/integration/test_cli_status.py`
+  - 结果：先红后绿；红灯覆盖 `pack missing/corrupted/stale` 自动重建、checkpoint 不兼容失败、`recover/status` 输出语义与新 batch 生效。
+- **V1（恢复链路定向）**
+  - 命令：`uv run pytest -q tests/unit/test_context_state.py tests/integration/test_cli_recover.py tests/integration/test_cli_status.py tests/flow/test_recover_flow.py tests/unit/test_branch_manager.py`
+  - 结果：**66 passed**。
+- **V2（全量回归）**
+  - 命令：`uv run pytest -q`
+  - 结果：**746 passed**（2026-03-28，本机）。
+- **Lint**
+  - 命令：`uv run ruff check src tests`
+  - 结果：**All checks passed!**
+
+#### 2.3 缺陷收口记录
+
+- **改动范围**：`src/ai_sdlc/models/state.py`、`src/ai_sdlc/context/state.py`、`src/ai_sdlc/cli/commands.py`、`tests/unit/test_context_state.py`、`tests/integration/test_cli_recover.py`、`tests/integration/test_cli_status.py`、`docs/framework-defect-backlog.zh-CN.md`
+- **改动内容**：
+  - `ResumePack` 新增 `checkpoint_last_updated` 与 `checkpoint_fingerprint`，将 stale 判定从文件存在性提升为稳定的来源对账规则。
+  - `load_resume_pack()` 现会先 strict 校验 checkpoint；当 pack 缺失、损坏或 stale 且 checkpoint 有效时，自动重建 root/work-item scoped pack；当 checkpoint 无效或不兼容时直接失败，不再信任旧 pack。
+  - `ai-sdlc recover` 与 `ai-sdlc status` 统一消费该入口，并输出 `stale` / `rebuilding from checkpoint` / `rebuilt successfully` 等可观测提示；`status` 只修派生 pack，不推进业务状态。
+- **新增/调整的测试**：
+  - unit：锁定 pack 缺失、损坏、stale 自动重建，以及 checkpoint 不兼容失败。
+  - integration：锁定 `recover/status` 的自动重建输出语义与“重建后使用新 batch，而不是旧内存对象”。
+- **测试结果**：定向、恢复链路与全量回归全部通过。
+- **是否符合任务目标**：符合。
+
+#### 2.4 代码审查（摘要）
+
+- **规格对齐**：`checkpoint` 已收敛为恢复真值，`resume-pack` 明确退回派生快照角色；`recover/status` 不再独立信任旧 pack。
+- **代码质量**：checkpoint↔resume-pack 对账集中在 `context.state`，CLI 仅消费统一入口并负责输出可观测提示，职责边界清晰。
+- **测试质量**：已覆盖缺失、损坏、stale、checkpoint 不兼容，以及恢复后显示新 batch 的正反路径。
+- **结论**：无阻塞项，`FD-2026-03-28-001` 可收口。
+
+#### 2.5 归档后动作
+
+- `framework-defect-backlog.zh-CN.md` 同步状态：`已同步`（`FD-2026-03-28-001` 已标记为 `fixed` 并写入收口说明）。
+- `001` 归档状态：`已补充`（本批为 001 余留 defect closure，不改动原 Batch 11~14 完成态）。

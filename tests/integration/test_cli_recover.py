@@ -11,7 +11,7 @@ from ai_sdlc.cli.main import app
 from ai_sdlc.context.state import build_resume_pack, save_checkpoint, save_resume_pack
 from ai_sdlc.core.config import YamlStore
 from ai_sdlc.models.gate import GovernanceItem, GovernanceState
-from ai_sdlc.models.state import Checkpoint, FeatureInfo
+from ai_sdlc.models.state import Checkpoint, ExecuteProgress, FeatureInfo
 from ai_sdlc.routers.bootstrap import init_project
 
 runner = CliRunner()
@@ -64,23 +64,34 @@ class TestCliRecover:
 
     def test_recover_missing_resume_pack(self, tmp_path: Path) -> None:
         (tmp_path / ".ai-sdlc").mkdir()
-        save_checkpoint(tmp_path, Checkpoint(
-            current_stage="design",
-            feature=FeatureInfo(
-                id="001",
-                spec_dir="specs/001",
-                design_branch="d/001",
-                feature_branch="f/001",
-                current_branch="d/001",
+        spec_dir = tmp_path / "specs" / "001"
+        spec_dir.mkdir(parents=True)
+        (spec_dir / "spec.md").write_text("# Spec\n", encoding="utf-8")
+        save_checkpoint(
+            tmp_path,
+            Checkpoint(
+                current_stage="design",
+                feature=FeatureInfo(
+                    id="001",
+                    spec_dir="specs/001",
+                    design_branch="d/001",
+                    feature_branch="f/001",
+                    current_branch="d/001",
+                ),
             ),
-        ))
+        )
         with patch("ai_sdlc.cli.commands.find_project_root", return_value=tmp_path):
             result = runner.invoke(app, ["recover"])
-            assert result.exit_code == 1
-            assert "No resume pack found" in result.output
+            assert result.exit_code == 0
+            assert "rebuilding from checkpoint" in result.output.lower()
+            assert "rebuilt successfully" in result.output.lower()
+            assert "continuing" in result.output.lower()
 
     def test_recover_corrupted_resume_pack(self, tmp_path: Path) -> None:
         (tmp_path / ".ai-sdlc" / "state").mkdir(parents=True)
+        spec_dir = tmp_path / "specs" / "001"
+        spec_dir.mkdir(parents=True)
+        (spec_dir / "spec.md").write_text("# Spec\n", encoding="utf-8")
         save_checkpoint(
             tmp_path,
             Checkpoint(
@@ -102,8 +113,54 @@ class TestCliRecover:
         with patch("ai_sdlc.cli.commands.find_project_root", return_value=tmp_path):
             result = runner.invoke(app, ["recover"])
 
-        assert result.exit_code == 1
-        assert "Resume pack corrupted" in result.output
+        assert result.exit_code == 0
+        assert "rebuilding from checkpoint" in result.output.lower()
+        assert "rebuilt successfully" in result.output.lower()
+
+    def test_recover_stale_resume_pack_rebuilds_and_uses_latest_batch(
+        self, tmp_path: Path
+    ) -> None:
+        (tmp_path / ".ai-sdlc").mkdir()
+        spec_dir = tmp_path / "specs" / "001"
+        spec_dir.mkdir(parents=True)
+        (spec_dir / "spec.md").write_text("# Spec\n", encoding="utf-8")
+        checkpoint = Checkpoint(
+            current_stage="execute",
+            feature=FeatureInfo(
+                id="001",
+                spec_dir="specs/001",
+                design_branch="d/001",
+                feature_branch="f/001",
+                current_branch="f/001",
+            ),
+            execute_progress=ExecuteProgress(
+                current_batch=1,
+                total_batches=5,
+                last_committed_task="T001",
+            ),
+        )
+        save_checkpoint(tmp_path, checkpoint)
+        pack = build_resume_pack(tmp_path)
+        assert pack is not None
+        save_resume_pack(tmp_path, pack)
+
+        checkpoint.execute_progress = ExecuteProgress(
+            current_batch=4,
+            total_batches=5,
+            last_committed_task="T004",
+        )
+        save_checkpoint(tmp_path, checkpoint)
+
+        with patch("ai_sdlc.cli.commands.find_project_root", return_value=tmp_path):
+            result = runner.invoke(app, ["recover"])
+
+        assert result.exit_code == 0
+        assert "stale" in result.output.lower()
+        assert "rebuilding from checkpoint" in result.output.lower()
+        assert "rebuilt successfully" in result.output.lower()
+        assert "Current Batch" in result.output
+        assert "4" in result.output
+        assert "T004" in result.output
 
     def test_recover_reconcile_updates_legacy_checkpoint(self, tmp_path: Path) -> None:
         init_project(tmp_path)
