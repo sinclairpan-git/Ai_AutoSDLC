@@ -397,9 +397,10 @@ class TestBackendRegistry:
         )
 
         assert decision.decision_kind == BackendDecisionKind.BLOCK
-        assert decision.selected_backend == "plugin"
+        assert decision.selected_backend == "native"
         assert decision.failure == failure
         assert "native backend does not cover required capabilities" in decision.reason
+        assert decision.to_status_view()["capability_declaration"] == "native"
 
     def test_select_backend_blocks_when_safe_plugin_failure_but_policy_disables_fallback(
         self,
@@ -441,6 +442,47 @@ class TestBackendRegistry:
         assert decision.selected_backend == "plugin"
         assert decision.failure == failure
         assert "disabled by policy" in decision.reason
+
+    def test_select_backend_preserves_plugin_capability_truth_on_unsafe_failure(
+        self,
+    ) -> None:
+        reg = BackendRegistry()
+        reg.register(
+            "plugin",
+            type(
+                "PluginBackend",
+                (),
+                {
+                    "capability_declaration": lambda self: BackendCapabilityDeclaration(
+                        backend_name="plugin",
+                        provided_capabilities=("plugin_only",),
+                    ),
+                    "generate_spec": lambda self, context: "plugin",
+                    "generate_plan": lambda self, context: "plugin",
+                    "generate_tasks": lambda self, context: "plugin",
+                    "execute_task": lambda self, task_id, context: "plugin",
+                    "generate_index": lambda self, root: {},
+                },
+            )(),
+        )
+        failure = BackendFailureEvidence(
+            backend_name="plugin",
+            error="plugin crashed",
+            safe_to_fallback=False,
+            evidence=("plugin_crash",),
+        )
+
+        decision = reg.select_backend(
+            ("plugin_only",),
+            requested_backend="plugin",
+            plugin_failure=failure,
+        )
+
+        assert decision.decision_kind == BackendDecisionKind.BLOCK
+        assert decision.selected_backend == "plugin"
+        assert decision.available_capabilities == ("plugin_only",)
+        assert decision.missing_capabilities == ()
+        assert "native_insufficient" in decision.evidence
 
     def test_select_backend_blocks_when_plugin_failure_is_unsafe(self) -> None:
         reg = BackendRegistry()

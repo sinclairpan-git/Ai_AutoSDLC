@@ -302,7 +302,7 @@ class BackendRegistry:
                 return self._build_decision(
                     decision_kind=BackendDecisionKind.BLOCK,
                     requested_backend=backend_name,
-                    selected_backend=backend_name,
+                    selected_backend=self._default,
                     required_capabilities=required_capabilities,
                     available_capabilities=native_declaration.provided_capabilities,
                     missing_capabilities=native_missing_capabilities,
@@ -317,7 +317,7 @@ class BackendRegistry:
                         plugin_failure.backend_name,
                         *plugin_failure.evidence,
                     ),
-                    capability_declaration=declaration,
+                    capability_declaration=native_declaration,
                     failure=plugin_failure,
                 )
             if plugin_failure.safe_to_fallback and not policy.allow_native_fallback:
@@ -349,16 +349,26 @@ class BackendRegistry:
                 selected_backend=backend_name,
                 required_capabilities=required_capabilities,
                 available_capabilities=declaration.provided_capabilities,
-                missing_capabilities=(
-                    native_missing_capabilities if not native_can_cover else missing_capabilities
-                ),
+                missing_capabilities=missing_capabilities,
                 policy=policy,
-                reason=f"plugin failure unsafe to fallback: {plugin_failure.error}",
+                reason=(
+                    f"plugin failure unsafe to fallback: {plugin_failure.error}"
+                    + (
+                        ""
+                        if native_can_cover
+                        else "; native backend also cannot replace required capabilities"
+                    )
+                ),
                 evidence=(
                     BACKEND_CAPABILITY_TOKEN,
                     BACKEND_DELEGATION_TOKEN,
                     plugin_failure.backend_name,
                     *plugin_failure.evidence,
+                    *(
+                        ()
+                        if native_can_cover
+                        else ("native_insufficient", *native_missing_capabilities)
+                    ),
                 ),
                 capability_declaration=declaration,
                 failure=plugin_failure,
