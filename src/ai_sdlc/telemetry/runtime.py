@@ -8,6 +8,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from ai_sdlc.telemetry.contracts import Evidence, ScopeLevel, TelemetryEvent
+from ai_sdlc.telemetry.control_points import build_canonical_control_point_event
 from ai_sdlc.telemetry.enums import (
     ActorType,
     CaptureMode,
@@ -388,19 +389,11 @@ class RuntimeTelemetry:
         if control_point_name is None:
             return None
 
-        event = TelemetryEvent(
-            scope_level=ScopeLevel.STEP,
+        event = build_canonical_control_point_event(
+            control_point_name,
             goal_session_id=self.goal_session_id,
             workflow_run_id=self.workflow_run_id,
             step_id=step_id,
-            trace_layer=TraceLayer.EVALUATION,
-            actor_type=ActorType.FRAMEWORK_RUNTIME,
-            confidence=Confidence.HIGH,
-            status=(
-                TelemetryEventStatus.SUCCEEDED
-                if control_point_name == "gate_hit"
-                else TelemetryEventStatus.BLOCKED
-            ),
         )
         self.writer.write_event(event)
         evidence = self._record_control_point_evidence(

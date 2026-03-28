@@ -151,6 +151,8 @@ Batch 6: backlog remediation          (source closure + CCP traceability)
   3. writer / publisher 复用同一套 closure helper，避免“一个接受、一个拒绝”的双轨语义。
 - **验证**：`uv run pytest tests/unit/test_telemetry_publisher.py -v`
 
+> **Task 6.1 完成（2026-03-28）**：当前 `writer` / `publisher` 已收敛到 session/run 前缀父链兼容，run 级 artifact 可合法引用同 run 下 step 级 source，跨链引用仍被拒绝。该行为已由 `tests/unit/test_telemetry_publisher.py` 与 Batch 6 综合 telemetry 回归复核，`FD-2026-03-27-011` 已关闭。
+
 ### Task 6.2 — required CCP 在 raw trace 中具备 canonical 可证明形状（FD-2026-03-27-012）
 
 - **优先级**：P0
@@ -162,6 +164,8 @@ Batch 6: backlog remediation          (source closure + CCP traceability)
   3. gate / audit 写入路径、registry 合同与 evaluator 测试长期共用同一套控制点命名和证据规则。
 - **验证**：定向 telemetry governance / evaluator tests
 
+> **Task 6.2 完成（2026-03-28）**：新增 [`../../src/ai_sdlc/telemetry/control_points.py`](../../src/ai_sdlc/telemetry/control_points.py) 作为 gate/audit canonical control-point helper；[`../../src/ai_sdlc/telemetry/runtime.py`](../../src/ai_sdlc/telemetry/runtime.py) 与 [`../../src/ai_sdlc/telemetry/governance_publisher.py`](../../src/ai_sdlc/telemetry/governance_publisher.py) 复用同一套 event 形状；[`../../src/ai_sdlc/telemetry/evaluators.py`](../../src/ai_sdlc/telemetry/evaluators.py) 改为同时校验 canonical raw trace 与 `minimum_evidence_closure`。定向回归 **41 passed**、扩大 telemetry/contracts 回归 **73 passed**，`FD-2026-03-27-012` 已关闭。
+
 ### Task 6.3 — 003 第一波 backlog 对账收口
 
 - **优先级**：P0
@@ -171,3 +175,5 @@ Batch 6: backlog remediation          (source closure + CCP traceability)
   2. source closure 与 CCP traceability 的回归测试能同时证明“合法闭包放行”和“无证据控制点拒绝”。
   3. 本批收口后，不再需要回到临时 telemetry governance 文档补写第二份任务真值。
 - **验证**：定向 pytest + `verify constraints`
+
+> **Task 6.3 完成（2026-03-28）**：[`task-execution-log.md`](task-execution-log.md) 已创建并补齐 Batch 6 的真实执行证据；[`../../docs/framework-defect-backlog.zh-CN.md`](../../docs/framework-defect-backlog.zh-CN.md) 与本文件现已对齐关闭 `FD-2026-03-27-011` / `FD-2026-03-27-012`；第一波 backlog 的 `003` 线正式收口，下一步切到 `004` 的 `FD-2026-03-27-013`。

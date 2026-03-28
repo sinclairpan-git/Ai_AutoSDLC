@@ -6,6 +6,9 @@ from collections.abc import Iterable, Mapping, Sequence
 
 from ai_sdlc.core.verify_constraints import ConstraintReport
 from ai_sdlc.telemetry.contracts import Evaluation, Evidence, TelemetryEvent
+from ai_sdlc.telemetry.control_points import (
+    payload_matches_canonical_control_point_event,
+)
 from ai_sdlc.telemetry.enums import (
     ArtifactRole,
     ArtifactType,
@@ -133,6 +136,12 @@ def _observed_control_point_names(
             continue
         if not _event_matches_control_point(control_point_name, event):
             continue
+        if not _minimum_evidence_closure_satisfied(
+            control_point,
+            evidence,
+            artifact_id=parsed.get("artifact_id"),
+        ):
+            continue
 
         artifact_id = parsed.get("artifact_id")
         if artifact_id is not None:
@@ -183,23 +192,11 @@ def _event_matches_control_point(
     control_point_name: str,
     event: Mapping[str, object],
 ) -> bool:
+    if payload_matches_canonical_control_point_event(control_point_name, event):
+        return True
+
     trace_layer = event.get("trace_layer")
     status = event.get("status")
-    if control_point_name == "gate_hit":
-        return (
-            trace_layer == TraceLayer.EVALUATION.value
-            and status == TelemetryEventStatus.SUCCEEDED.value
-        )
-    if control_point_name == "gate_blocked":
-        return (
-            trace_layer == TraceLayer.EVALUATION.value
-            and status == TelemetryEventStatus.BLOCKED.value
-        )
-    if control_point_name == "audit_report_generated":
-        return (
-            trace_layer == TraceLayer.EVALUATION.value
-            and status == TelemetryEventStatus.SUCCEEDED.value
-        )
     if control_point_name == "command_completed":
         return (
             trace_layer == TraceLayer.TOOL.value
@@ -216,6 +213,19 @@ def _event_matches_control_point(
             and status in _TERMINAL_EVENT_STATUSES
         )
     return False
+
+
+def _minimum_evidence_closure_satisfied(
+    control_point,
+    evidence: Mapping[str, object],
+    *,
+    artifact_id: str | None,
+) -> bool:
+    closure = set(control_point.minimum_evidence_closure)
+    supporting_evidence = closure - {"event", "artifact_ref"}
+    if supporting_evidence and not evidence.get("digest"):
+        return False
+    return "artifact_ref" not in closure or artifact_id is not None
 
 
 def _artifact_matches_control_point(

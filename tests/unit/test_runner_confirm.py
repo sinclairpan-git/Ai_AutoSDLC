@@ -326,9 +326,19 @@ class TestConfirmMode:
             for payload in step_evidence
             if payload.get("locator", "").startswith("ccp:v1:gate_hit:event:")
         ]
+        gate_evidence = [
+            payload
+            for payload in step_evidence
+            if payload.get("locator", "").startswith("ccp:v1:gate_hit:event:")
+        ]
 
         assert len(gate_events) == 1
+        assert gate_events[0]["scope_level"] == "step"
+        assert gate_events[0]["actor_type"] == "framework_runtime"
+        assert gate_events[0]["capture_mode"] == "auto"
+        assert gate_events[0]["confidence"] == "high"
         assert gate_locators == [f"ccp:v1:gate_hit:event:{gate_events[0]['event_id']}"]
+        assert gate_evidence[0]["digest"]
 
     def test_retry_exhaustion_persists_gate_blocked_control_point_per_attempt(
         self, tmp_path: Path
@@ -392,11 +402,21 @@ class TestConfirmMode:
             for payload in step_evidence
             if payload.get("locator", "").startswith("ccp:v1:gate_blocked:event:")
         ]
+        blocked_evidence = [
+            payload
+            for payload in step_evidence
+            if payload.get("locator", "").startswith("ccp:v1:gate_blocked:event:")
+        ]
 
         assert len(blocked_events) == 1
+        assert blocked_events[0]["scope_level"] == "step"
+        assert blocked_events[0]["actor_type"] == "framework_runtime"
+        assert blocked_events[0]["capture_mode"] == "auto"
+        assert blocked_events[0]["confidence"] == "high"
         assert blocked_locators == [
             f"ccp:v1:gate_blocked:event:{blocked_events[0]['event_id']}"
         ]
+        assert blocked_evidence[0]["digest"]
 
     def test_retry_then_pass_persists_gate_blocked_and_gate_hit(self, tmp_path: Path) -> None:
         _bootstrap_project(tmp_path)

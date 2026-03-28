@@ -58,13 +58,11 @@
 
 ## 下一波待修优先级（2026-03-28）
 
-- 第一波（优先收口）：
-  - `FD-2026-03-27-012` → `003-cross-cutting-authoring-and-extension-contracts`
-  - `FD-2026-03-27-011` → `003-cross-cutting-authoring-and-extension-contracts`
-- 第二波（随后推进）：
+- 当前待修：
   - `FD-2026-03-27-013` → `004-operator-surfaces-and-post-prd-extensions`
+- 本轮已收口：
+  - `003` 线 `FD-2026-03-27-011`、`FD-2026-03-27-012`
 - 挂靠原则：
-  - `003` 线：`FD-2026-03-27-011`、`FD-2026-03-27-012`
   - `004` 线：`FD-2026-03-27-013`
 
 ## FD-2026-03-24-001 | IDE 计划待办与仓库实现事实长期漂移
@@ -436,7 +434,7 @@
 
 - 日期 (UTC): 2026-03-27
 - 来源: final_review
-- 状态: open
+- 状态: closed
 - owner: codex
 - wi_id: 003-cross-cutting-authoring-and-extension-contracts
 - 现象: 当前 `governance_publisher` / `writer` 的 source closure 校验要求 artifact 与其 source 在 `step_id` 上完全相等，导致 run 级 artifact 一旦引用同一 `workflow_run_id` 下的 step 级 evidence/evaluation，就会被误判为跨链，无法从 `generated` 提升到 `published`。
@@ -452,7 +450,8 @@
 - tool: `src/ai_sdlc/telemetry/governance_publisher.py`、`src/ai_sdlc/telemetry/writer.py`
 - eval: legal-descendant-source-rejected 次数、cross-chain-source-bypass 次数
 - 风险等级: 高
-- 下一步任务归属（2026-03-28）: `003-cross-cutting-authoring-and-extension-contracts` Batch 6 Task 6.1。
+- 处置进展（2026-03-28）: `source_chain_compatible()` 已按 session/run 前缀父链兼容生效，run 级 artifact 现在可以合法引用同一 `workflow_run_id` 下的 step 级 evidence / evaluation；跨 session / run 的 source 仍被拒绝。配套 `tests/unit/test_telemetry_publisher.py` 与 Batch 6 的综合 telemetry 回归 **73 passed**，本条 defect 已在 `003` Batch 6 收口。
+- 下一步任务归属（2026-03-28）: 已在 `003-cross-cutting-authoring-and-extension-contracts` Batch 6 Task 6.1 / 6.3 收口，无新增 action item。
 - 可验证成功标准: run 级 artifact 能发布引用同 run 下 step 级 source 的合法闭包；跨 session/run 的 source 仍被拒绝。
 - 是否需要回归测试补充: 是：补充 run->step source closure 正例与真正跨链负例。
 
@@ -460,7 +459,7 @@
 
 - 日期 (UTC): 2026-03-27
 - 来源: final_review
-- 状态: open
+- 状态: closed
 - owner: codex
 - wi_id: 003-cross-cutting-authoring-and-extension-contracts
 - 现象: CCP registry 已冻结 `gate_hit`、`gate_blocked`、`audit_report_generated` 等 V1 控制点，但当前持久化的 `TelemetryEvent` 与 runtime/publisher 写入路径没有对应的 gate/audit 事件形状或最小证据引用，导致 coverage evaluator 无法从 raw trace 证明这些控制点是否真的发生。
@@ -476,7 +475,8 @@
 - tool: `src/ai_sdlc/telemetry/registry.py`、`src/ai_sdlc/telemetry/contracts.py`、`src/ai_sdlc/telemetry/runtime.py`、`src/ai_sdlc/core/runner.py`、`src/ai_sdlc/telemetry/governance_publisher.py`
 - eval: unprovable-required-ccp 次数、gate/audit-ccp-coverage-gap 次数
 - 风险等级: 高
-- 下一步任务归属（2026-03-28）: `003-cross-cutting-authoring-and-extension-contracts` Batch 6 Task 6.2。
+- 处置进展（2026-03-28）: 新增 `src/ai_sdlc/telemetry/control_points.py` 作为 gate/audit canonical control-point helper；`RuntimeTelemetry.record_gate_control_point()` 与 `GovernancePublisher` 复用同一套 canonical event 形状，`calculate_ccp_coverage_gaps()` 改为同时校验 canonical raw trace 事件形状与 registry 的 `minimum_evidence_closure`，不再接受错误 scope / writer 或缺最小证据闭包的伪覆盖。相关 telemetry governance / runner / publisher / contract 回归 **73 passed**，`uv run ai-sdlc verify constraints` 无 BLOCKER，本条 defect 已在 `003` Batch 6 收口。
+- 下一步任务归属（2026-03-28）: 已在 `003-cross-cutting-authoring-and-extension-contracts` Batch 6 Task 6.2 / 6.3 收口，无新增 action item。
 - 可验证成功标准: registry 中的 `gate_hit`、`gate_blocked`、`audit_report_generated` 都能从 persisted trace 中被稳定识别并计入 coverage evaluator。
 - 是否需要回归测试补充: 是：补 gate/audit CCP 持久化与 coverage evaluator 的正反测试。
 

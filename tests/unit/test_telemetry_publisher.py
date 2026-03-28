@@ -191,13 +191,28 @@ def test_publish_audit_report_emits_audit_report_generated_control_point(
             "ccp:v1:audit_report_generated:event:"
         )
     ]
+    audit_evidence = [
+        payload
+        for payload in run_evidence
+        if payload.get("locator", "").startswith(
+            "ccp:v1:audit_report_generated:event:"
+        )
+    ]
 
     assert len(audit_locators) == 1
     event_id = audit_locators[0].split(":")[4]
-    assert any(payload["event_id"] == event_id for payload in audit_events)
+    assert any(
+        payload["event_id"] == event_id
+        and payload["scope_level"] == ScopeLevel.RUN.value
+        and payload["actor_type"] == "framework_runtime"
+        and payload["capture_mode"] == "auto"
+        and payload["confidence"] == "high"
+        for payload in audit_events
+    )
     assert audit_locators == [
         f"ccp:v1:audit_report_generated:event:{event_id}:artifact:{persisted.artifact_id}"
     ]
+    assert audit_evidence[0]["digest"]
 
 
 def test_publish_non_audit_report_does_not_emit_audit_report_generated_control_point(
@@ -237,6 +252,47 @@ def test_publish_non_audit_report_does_not_emit_audit_report_generated_control_p
     assert not [
         payload
         for payload in run_evidence
+        if payload.get("locator", "").startswith(
+            "ccp:v1:audit_report_generated:event:"
+        )
+    ]
+
+
+def test_publish_step_scope_audit_report_does_not_emit_audit_report_generated_control_point(
+    tmp_path: Path,
+) -> None:
+    store = TelemetryStore(tmp_path)
+    writer = TelemetryWriter(store)
+    publisher = GovernancePublisher(store=store, writer=writer)
+    event, evidence, evaluation = _seed_completed_run(writer)
+    artifact = Artifact(
+        scope_level=ScopeLevel.STEP,
+        goal_session_id=event.goal_session_id,
+        workflow_run_id=event.workflow_run_id,
+        step_id="st_0123456789abcdef0123456789abcdef",
+        status=ArtifactStatus.GENERATED,
+        artifact_type=ArtifactType.REPORT,
+        artifact_role=ArtifactRole.AUDIT,
+        source_evidence_refs=(evidence.evidence_id,),
+        source_object_refs=(f"evaluation:{evaluation.evaluation_id}",),
+        created_at="2026-03-27T10:00:01Z",
+        updated_at="2026-03-27T10:00:01Z",
+    )
+
+    publisher.publish_artifact(
+        artifact,
+        report_name="audit_report",
+        report_payload={"audit_status": "clean"},
+    )
+
+    evidence_payloads = store.load_canonical_evidence_payloads(
+        goal_session_id=event.goal_session_id,
+        workflow_run_id=event.workflow_run_id,
+    )
+
+    assert not [
+        payload
+        for payload in evidence_payloads
         if payload.get("locator", "").startswith(
             "ccp:v1:audit_report_generated:event:"
         )

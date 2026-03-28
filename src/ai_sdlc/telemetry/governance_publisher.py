@@ -10,18 +10,14 @@ from ai_sdlc.telemetry.contracts import (
     Artifact,
     Evaluation,
     Evidence,
-    TelemetryEvent,
     Violation,
 )
+from ai_sdlc.telemetry.control_points import build_canonical_control_point_event
 from ai_sdlc.telemetry.enums import (
-    ActorType,
     ArtifactRole,
     ArtifactStatus,
     ArtifactType,
-    CaptureMode,
-    Confidence,
-    TelemetryEventStatus,
-    TraceLayer,
+    ScopeLevel,
 )
 from ai_sdlc.telemetry.generators import (
     build_audit_report,
@@ -208,26 +204,20 @@ class GovernancePublisher:
         artifact: Artifact,
         report_name: str,
     ) -> None:
-        event = TelemetryEvent(
-            scope_level=artifact.scope_level,
+        event = build_canonical_control_point_event(
+            "audit_report_generated",
             goal_session_id=artifact.goal_session_id,
             workflow_run_id=artifact.workflow_run_id,
-            step_id=artifact.step_id,
-            trace_layer=TraceLayer.EVALUATION,
-            actor_type=ActorType.FRAMEWORK_RUNTIME,
-            capture_mode=CaptureMode.AUTO,
-            confidence=Confidence.HIGH,
-            status=TelemetryEventStatus.SUCCEEDED,
         )
         self.writer.write_event(event)
 
         evidence = Evidence(
-            scope_level=artifact.scope_level,
+            scope_level=event.scope_level,
             goal_session_id=artifact.goal_session_id,
             workflow_run_id=artifact.workflow_run_id,
-            step_id=artifact.step_id,
-            capture_mode=CaptureMode.AUTO,
-            confidence=Confidence.HIGH,
+            step_id=event.step_id,
+            capture_mode=event.capture_mode,
+            confidence=event.confidence,
             locator=control_point_locator(
                 "audit_report_generated",
                 event_id=event.event_id,
@@ -266,6 +256,7 @@ def _next_updated_at(record: Artifact) -> str:
 def _is_audit_report_artifact(artifact: Artifact, report_name: str) -> bool:
     return (
         report_name == "audit_report"
+        and artifact.scope_level is ScopeLevel.RUN
         and artifact.artifact_type is ArtifactType.REPORT
         and artifact.artifact_role is ArtifactRole.AUDIT
     )
