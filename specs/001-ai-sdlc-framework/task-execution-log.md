@@ -1488,3 +1488,73 @@
 - **已完成 git 提交**：是
 - **提交哈希**：本批唯一一次语义提交为 `fix: block uncommitted close-check closures`；完整 SHA 以当前 `HEAD`（`git rev-parse HEAD`）为准。
 - **是否继续下一批**：继续 Task `6.43`
+
+### Batch 2026-03-28-025 | 001 Batch 16 Task 6.43：docs-only fresh verification profile 收口
+
+#### 2.1 准备
+
+- **任务来源**：[`tasks.md`](tasks.md) Task `6.43`、[`../../docs/framework-defect-backlog.zh-CN.md`](../../docs/framework-defect-backlog.zh-CN.md) `FD-2026-03-24-003`
+- **目标**：把 `docs-only / rules-only / code-change` 三类最小 fresh verification 画像正式写入规则、PR checklist、execution-log 协议与只读门禁，并完成 `FD-2026-03-24-003` 的第二轮收口。
+- **预读范围**：[`../../src/ai_sdlc/rules/verification.md`](../../src/ai_sdlc/rules/verification.md)、[`../../src/ai_sdlc/rules/batch-protocol.md`](../../src/ai_sdlc/rules/batch-protocol.md)、[`../../docs/pull-request-checklist.zh.md`](../../docs/pull-request-checklist.zh.md)、[`../../src/ai_sdlc/core/close_check.py`](../../src/ai_sdlc/core/close_check.py)、[`../../src/ai_sdlc/core/verify_constraints.py`](../../src/ai_sdlc/core/verify_constraints.py)、[`../../tests/unit/test_verify_constraints.py`](../../tests/unit/test_verify_constraints.py)、[`../../tests/integration/test_cli_verify_constraints.py`](../../tests/integration/test_cli_verify_constraints.py)
+- **激活的规则**：verification-before-completion；TDD；fresh evidence profile 显式化。
+
+#### 2.2 统一验证命令
+
+- **验证画像**：`code-change`
+- **R1（verification profile 红灯验证）**
+  - 命令：`uv run pytest tests/unit/test_close_check.py tests/integration/test_cli_workitem_close_check.py tests/unit/test_verify_constraints.py tests/integration/test_cli_verify_constraints.py -q`
+  - 结果：先红后绿；初始失败证明 `close-check` 尚未校验 latest batch `验证画像` / docs-only 证据，`verify constraints` 也尚未要求规则与 PR checklist 明确声明 profile surface。
+- **V1（close-check + verify constraints 定向回归）**
+  - 命令：`uv run pytest tests/unit/test_close_check.py tests/integration/test_cli_workitem_close_check.py tests/unit/test_verify_constraints.py tests/integration/test_cli_verify_constraints.py -q`
+  - 结果：**55 passed**。
+- **Lint**
+  - 命令：`uv run ruff check src/ai_sdlc/core/close_check.py src/ai_sdlc/core/verify_constraints.py tests/unit/test_close_check.py tests/integration/test_cli_workitem_close_check.py tests/unit/test_verify_constraints.py tests/integration/test_cli_verify_constraints.py`
+  - 结果：**All checks passed!**
+- **治理只读校验**
+  - 命令：`uv run ai-sdlc verify constraints`
+  - 结果：**无 BLOCKER**。
+- **001 文档收口校验**
+  - 命令：`uv run ai-sdlc workitem close-check --wi specs/001-ai-sdlc-framework --all-docs`
+  - 结果：**PASS**（`verification_profile` / `git_closure` / `done_gate` 全通过）。
+
+#### 2.3 任务记录
+
+##### Task 6.43 | docs-only / rules-only / code-change verification profile（第二轮）
+
+- **改动范围**：[`../../src/ai_sdlc/core/close_check.py`](../../src/ai_sdlc/core/close_check.py)、[`../../src/ai_sdlc/core/verify_constraints.py`](../../src/ai_sdlc/core/verify_constraints.py)、[`../../src/ai_sdlc/rules/verification.md`](../../src/ai_sdlc/rules/verification.md)、[`../../src/ai_sdlc/rules/batch-protocol.md`](../../src/ai_sdlc/rules/batch-protocol.md)、[`../../docs/pull-request-checklist.zh.md`](../../docs/pull-request-checklist.zh.md)、[`../../tests/unit/test_close_check.py`](../../tests/unit/test_close_check.py)、[`../../tests/integration/test_cli_workitem_close_check.py`](../../tests/integration/test_cli_workitem_close_check.py)、[`../../tests/unit/test_verify_constraints.py`](../../tests/unit/test_verify_constraints.py)、[`../../tests/integration/test_cli_verify_constraints.py`](../../tests/integration/test_cli_verify_constraints.py)
+- **改动内容**：
+  - `close-check` 新增 latest batch `验证画像` 与 profile-specific evidence 校验，区分 `docs-only` / `rules-only` / `code-change`。
+  - `verify constraints` 在仓库存在规则/PR checklist surface 时，要求三类 verification profile 的定义与最小命令保持一致。
+  - 规则文本、PR checklist 与 execution-log 模板补上显式 `验证画像` 约定，避免 docs-only 继续靠口头例外运行。
+- **新增/调整的测试**：
+  - unit / integration：验证 profile 缺失、docs-only 缺 `verify constraints`、docs-only 伪装代码改动、verification profile docs surface 缺项等场景。
+- **执行的命令**：见 R1 / V1 / Lint / 治理只读校验 / 001 文档收口校验。
+- **测试结果**：定向回归、lint 与仓库级只读门禁均通过。
+- **是否符合任务目标**：符合。Task `6.43` 的 profile protocol、门禁阻断与 execution-log 记录要求已统一。
+
+#### 2.4 代码审查（摘要）
+
+- **规格对齐**：本批将“docs-only 可以执行更小验证集，但必须显式声明画像且不能伪装 code-change”落实为规则 + 工具 + 执行记录三层真值。
+- **代码质量**：`close-check` 和 `verify constraints` 都保持只读，不引入新的状态写入。
+- **测试质量**：红灯先证明协议缺口真实存在，随后用 unit / integration 双层回归固化。
+- **结论**：允许关闭 `FD-2026-03-24-003`，并进入 Task `6.44`。
+
+#### 2.5 任务/计划同步状态
+
+- `tasks.md` 同步状态：`已同步`（Task `6.43` 已更新为完成态，并指向本批结果）。
+- `framework-defect-backlog.zh-CN.md` 同步状态：`已同步`（`FD-2026-03-24-003` 已关闭并移出待修优先级）。
+- `related_plan`（如存在）同步状态：`已对账`。
+
+#### 2.6 自动决策记录（如有）
+
+- AD-001：将 docs-only / rules-only / code-change 画像产品化为 `close-check` 与 `verify constraints` 的共同协议，而不是只在 PR checklist 中写“文档变更例外” → 理由：只有这样才能同时满足“显式最小验证集”和“工具可阻断伪装收口”。
+
+#### 2.7 批次结论
+
+- Task **6.43** 已完成，`FD-2026-03-24-003` 正式关单；`001` 可继续进入 Task **6.44**。
+
+#### 2.8 归档后动作
+
+- **已完成 git 提交**：是
+- **提交哈希**：本批唯一一次语义提交为 `feat: enforce docs-only verification profiles`；完整 SHA 以当前 `HEAD`（`git rev-parse HEAD`）为准。
+- **是否继续下一批**：可继续 Task `6.44`

@@ -16,13 +16,30 @@ def _commit_all(root: Path, message: str) -> None:
 
 
 def _write_execution_log(
-    wi_dir: Path, *, git_committed: bool, commit_hash: str = "N/A"
+    wi_dir: Path,
+    *,
+    git_committed: bool,
+    commit_hash: str = "N/A",
+    verification_profile: str = "code-change",
+    verification_commands: tuple[str, ...] = (
+        "uv run pytest tests/unit/test_close_check.py -q",
+        "uv run ruff check src tests",
+        "uv run ai-sdlc verify constraints",
+    ),
+    changed_paths: tuple[str, ...] = ("src/example.py", "tests/test_example.py"),
 ) -> None:
     committed_text = "是" if git_committed else "否"
     rendered_hash = f"`{commit_hash}`" if commit_hash != "N/A" else "N/A"
+    command_lines = "".join(f"- 命令：`{command}`\n" for command in verification_commands)
+    path_text = "、".join(f"`{path}`" for path in changed_paths)
     (wi_dir / "task-execution-log.md").write_text(
         "# Log\n\n"
+        "### Batch 2026-03-28-001 | demo\n\n"
         "#### 2.2 统一验证命令\n"
+        f"- **验证画像**：`{verification_profile}`\n"
+        f"{command_lines}"
+        "#### 2.3 任务记录\n"
+        f"- **改动范围**：{path_text}\n"
         "#### 2.4 代码审查（`rules/code-review.md` 摘要）\n"
         "#### 2.5 任务/计划同步状态（Mandatory）\n"
         "#### 2.8 归档后动作\n"
@@ -33,7 +50,18 @@ def _write_execution_log(
 
 
 def _setup_repo(
-    root: Path, *, tasks_body: str, plan_status: str, git_committed: bool = True
+    root: Path,
+    *,
+    tasks_body: str,
+    plan_status: str,
+    git_committed: bool = True,
+    verification_profile: str = "code-change",
+    verification_commands: tuple[str, ...] = (
+        "uv run pytest tests/unit/test_close_check.py -q",
+        "uv run ruff check src tests",
+        "uv run ai-sdlc verify constraints",
+    ),
+    changed_paths: tuple[str, ...] = ("src/example.py", "tests/test_example.py"),
 ) -> None:
     subprocess.run(["git", "init"], cwd=root, check=True, capture_output=True)
     subprocess.run(
@@ -75,7 +103,13 @@ def _setup_repo(
         f"{tasks_body}\n",
         encoding="utf-8",
     )
-    _write_execution_log(wi, git_committed=False)
+    _write_execution_log(
+        wi,
+        git_committed=False,
+        verification_profile=verification_profile,
+        verification_commands=verification_commands,
+        changed_paths=changed_paths,
+    )
 
     (root / "README.md").write_text("# R\n", encoding="utf-8")
     subprocess.run(["git", "add", "."], cwd=root, check=True, capture_output=True)
@@ -88,7 +122,14 @@ def _setup_repo(
             capture_output=True,
             text=True,
         ).stdout.strip()
-        _write_execution_log(wi, git_committed=True, commit_hash=head)
+        _write_execution_log(
+            wi,
+            git_committed=True,
+            commit_hash=head,
+            verification_profile=verification_profile,
+            verification_commands=verification_commands,
+            changed_paths=changed_paths,
+        )
         subprocess.run(
             ["git", "add", "specs/001-wi/task-execution-log.md"],
             cwd=root,
@@ -175,6 +216,88 @@ def test_close_check_blocker_when_worktree_dirty_after_git_closeout(tmp_path: Pa
     r = run_close_check(cwd=root, wi=Path("specs/001-wi"))
     assert r.ok is False
     assert any("working tree" in b for b in r.blockers)
+
+
+def test_close_check_blocker_when_latest_batch_missing_verification_profile(
+    tmp_path: Path,
+) -> None:
+    root = tmp_path / "repo3d"
+    root.mkdir()
+    _setup_repo(
+        root,
+        tasks_body="- [x] done\n### Task 1.1\n- **验收标准（AC）**：ok",
+        plan_status="completed",
+    )
+    wi = root / "specs" / "001-wi"
+    _write_execution_log(
+        wi,
+        git_committed=True,
+        commit_hash="abc1234",
+        verification_profile="",
+        verification_commands=("uv run ai-sdlc verify constraints",),
+        changed_paths=("docs/example.md",),
+    )
+    _commit_all(root, "docs: remove profile marker")
+
+    r = run_close_check(cwd=root, wi=Path("specs/001-wi"))
+    assert r.ok is False
+    assert any("verification profile" in b for b in r.blockers)
+
+
+def test_close_check_pass_for_docs_only_profile_with_minimal_evidence(
+    tmp_path: Path,
+) -> None:
+    root = tmp_path / "repo3e"
+    root.mkdir()
+    _setup_repo(
+        root,
+        tasks_body="- [x] done\n### Task 1.1\n- **验收标准（AC）**：ok",
+        plan_status="completed",
+        verification_profile="docs-only",
+        verification_commands=("uv run ai-sdlc verify constraints",),
+        changed_paths=("docs/example.md", "specs/001-wi/tasks.md"),
+    )
+
+    r = run_close_check(cwd=root, wi=Path("specs/001-wi"))
+    assert r.ok is True
+
+
+def test_close_check_blocker_when_docs_only_profile_missing_verify_constraints(
+    tmp_path: Path,
+) -> None:
+    root = tmp_path / "repo3f"
+    root.mkdir()
+    _setup_repo(
+        root,
+        tasks_body="- [x] done\n### Task 1.1\n- **验收标准（AC）**：ok",
+        plan_status="completed",
+        verification_profile="docs-only",
+        verification_commands=("uv run ai-sdlc workitem close-check --wi specs/001-wi",),
+        changed_paths=("docs/example.md",),
+    )
+
+    r = run_close_check(cwd=root, wi=Path("specs/001-wi"))
+    assert r.ok is False
+    assert any("verify constraints" in b for b in r.blockers)
+
+
+def test_close_check_blocker_when_docs_only_profile_masks_code_changes(
+    tmp_path: Path,
+) -> None:
+    root = tmp_path / "repo3g"
+    root.mkdir()
+    _setup_repo(
+        root,
+        tasks_body="- [x] done\n### Task 1.1\n- **验收标准（AC）**：ok",
+        plan_status="completed",
+        verification_profile="docs-only",
+        verification_commands=("uv run ai-sdlc verify constraints",),
+        changed_paths=("src/example.py", "docs/example.md"),
+    )
+
+    r = run_close_check(cwd=root, wi=Path("specs/001-wi"))
+    assert r.ok is False
+    assert any("docs-only" in b for b in r.blockers)
 
 
 def test_close_check_blocker_docs_claim_not_implemented_for_registered_command(

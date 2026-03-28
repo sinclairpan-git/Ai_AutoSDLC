@@ -14,8 +14,10 @@
 
 ## 最小验证集（Mandatory）
 
-- [ ] **文档变更（仅 docs/spec/template）**：至少执行 `uv run ai-sdlc verify constraints`；若触及 `related_plan` / 收口文档，需在**完成本轮 git 提交后**执行 `uv run ai-sdlc workitem close-check --wi specs/<WI>/`（或实现等价命令）并确认无 `BLOCKER`；若工作树仍 dirty，视为收口未完成。
-- [ ] **代码变更（src/tests）**：执行 `uv run pytest`、`uv run ruff check src tests`、`uv run ai-sdlc verify constraints`；若存在 `related_plan` 或 close 阶段收口改动，补执行 `workitem plan-check` 与 `workitem close-check`（命令名以当前实现为准）并确认无 `BLOCKER`；`task-execution-log.md` 最新批次须已记录 `已完成 git 提交` 与提交哈希。
+- [ ] `docs-only`：仅改 `docs/**`、`specs/**.md`、`task-execution-log.md`、`tasks.md` 等 Markdown/收口文档；至少执行 `uv run ai-sdlc verify constraints`。若触及 `related_plan` / 收口文档，需在**完成本轮 git 提交后**执行 `uv run ai-sdlc workitem close-check --wi specs/<WI>/`（或等价命令）并确认无 `BLOCKER`。
+- [ ] `rules-only`：仅改 `src/ai_sdlc/rules/**.md` 与相关文档；至少执行 `uv run ai-sdlc verify constraints`。若混入 `src/**/*.py` 或 `tests/**`，必须改按 `code-change` 执行。
+- [ ] `code-change`：涉及 `src/**/*.py`、`tests/**`、运行时行为或生成逻辑；执行 `uv run pytest`、`uv run ruff check src tests`、`uv run ai-sdlc verify constraints`。若存在 `related_plan` 或 close 阶段收口改动，补执行 `workitem plan-check` 与 `workitem close-check`（命令名以当前实现为准）并确认无 `BLOCKER`。
+- [ ] latest batch 已在 `task-execution-log.md` 记录 `验证画像`、对应 fresh verification 命令，以及 `已完成 git 提交 / 提交哈希`；若工作树仍 dirty，视为收口未完成。
 
 ## 参考
 

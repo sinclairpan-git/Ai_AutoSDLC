@@ -60,6 +60,35 @@ def _framework_backlog(root: Path, *, include_eval: bool) -> None:
     path.write_text(body, encoding="utf-8")
 
 
+def _write_verification_profile_docs(
+    root: Path, *, include_rules_only: bool = True, include_checklist_code_change: bool = True
+) -> None:
+    rules_dir = root / "src" / "ai_sdlc" / "rules"
+    rules_dir.mkdir(parents=True, exist_ok=True)
+    verification = (
+        "# 完成前验证协议\n\n"
+        "## 最小 fresh verification 画像\n\n"
+        "- `docs-only`：至少执行 `uv run ai-sdlc verify constraints`\n"
+    )
+    if include_rules_only:
+        verification += "- `rules-only`：至少执行 `uv run ai-sdlc verify constraints`\n"
+    verification += (
+        "- `code-change`：执行 `uv run pytest`、`uv run ruff check`、`uv run ai-sdlc verify constraints`\n"
+    )
+    (rules_dir / "verification.md").write_text(verification, encoding="utf-8")
+
+    docs_dir = root / "docs"
+    docs_dir.mkdir(parents=True, exist_ok=True)
+    checklist = (
+        "# 合并前自检清单\n\n"
+        "- `docs-only`：`uv run ai-sdlc verify constraints`\n"
+        "- `rules-only`：`uv run ai-sdlc verify constraints`\n"
+    )
+    if include_checklist_code_change:
+        checklist += "- `code-change`：`uv run pytest`、`uv run ruff check`、`uv run ai-sdlc verify constraints`\n"
+    (docs_dir / "pull-request-checklist.zh.md").write_text(checklist, encoding="utf-8")
+
+
 class TestCliVerifyConstraints:
     def test_exit_1_missing_constitution(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
@@ -239,6 +268,18 @@ class TestCliVerifyConstraints:
         assert payload["blockers"] == []
         assert "root" in payload
         assert payload["root"] is None
+
+    def test_exit_1_when_verification_profile_docs_incomplete(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        init_project(tmp_path)
+        _minimal_constitution(tmp_path)
+        _write_verification_profile_docs(tmp_path, include_rules_only=False)
+        monkeypatch.chdir(tmp_path)
+
+        result = runner.invoke(app, ["verify", "constraints"])
+        assert result.exit_code == 1
+        assert "verification profile" in result.output
 
     def test_exit_1_when_skip_registry_unmapped(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch

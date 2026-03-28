@@ -64,10 +64,9 @@
 - 第二波（随后推进）：
   - `FD-2026-03-27-013` → `004-operator-surfaces-and-post-prd-extensions`
   - `FD-2026-03-28-004` → `001-ai-sdlc-framework`
-  - `FD-2026-03-24-003` → `001-ai-sdlc-framework`
   - `FD-2026-03-26-001` → `001-ai-sdlc-framework`
 - 挂靠原则：
-  - `001` 线：`FD-2026-03-28-004`、`FD-2026-03-24-003`、`FD-2026-03-26-001`
+  - `001` 线：`FD-2026-03-28-004`、`FD-2026-03-26-001`
   - `003` 线：`FD-2026-03-27-011`、`FD-2026-03-27-012`
   - `004` 线：`FD-2026-03-27-013`
 
@@ -121,7 +120,7 @@
 
 - 日期 (UTC): 2026-03-24
 - 来源: migrated_from_legacy_registry
-- 状态: in_progress
+- 状态: closed
 - wi_id: 001-ai-sdlc-framework
 - legacy_ref: src/ai_sdlc/rules/agent-skip-registry.zh.md（2026-03-24 “未先跑全量 pytest 即声称交付”行）
 - 现象: 在未完成仓库约定的全量验证、阶段收口与证据落盘前，就基于局部变更或主观判断声称“已完成”。
@@ -136,8 +135,8 @@
 - tool: `uv run pytest`、`uv run ruff check src tests`、`ai-sdlc verify constraints`
 - eval: “声称完成但缺验证证据”事件数
 - 风险等级: 高
-- 处置进展（2026-03-28）: 本轮再次复现一次真实违约：在 `001` Batch 15 收口时，曾在最终 `git commit` 之前先把“close-check 全 PASS”表述成“已收口”，暴露出 `close-check` 只能校验文档结构、不能阻断“未 commit 收口”的缺口。现已把该事件登记回本条，并在 `001` Batch 16 Task 6.43 先补上 `git_closure` blocker：`close-check` 现在会校验 latest batch 的 `已完成 git 提交 / 提交哈希` 标记，并在工作树 dirty 时直接报 BLOCKER。由于 docs-only / rules-only 的最小 fresh verification 分类仍待继续产品化，本条暂维持 `in_progress`。
-- 下一步任务归属（2026-03-28）: `001-ai-sdlc-framework` Batch 16 Task 6.43。
+- 处置进展（2026-03-28）: `001` Batch 16 Task 6.43 已完成两轮收口：第一轮把“未 commit 收口”落成 `close-check.git_closure` blocker；第二轮把 `docs-only / rules-only / code-change` 最小 fresh verification 画像写入 `verification.md`、PR checklist、execution-log 模板，并让 `close-check` 校验 latest batch 画像与证据、`verify constraints` 校验规则 surface 完整性。定向回归 **55 passed**，仓库级 `uv run ai-sdlc workitem close-check --wi specs/001-ai-sdlc-framework --all-docs` 与 `uv run ai-sdlc verify constraints` 均已通过，因此本条 defect 关单。
+- 下一步任务归属（2026-03-28）: 已在 `001-ai-sdlc-framework` Batch 16 Task 6.43 收口，无新增 action item。
 - 可验证成功标准: PR/交付前清单与规则均要求新鲜验证证据；相关测试或流程检查能阻止无证据完成声明。
 - 是否需要回归测试补充: 是：补充文档变更与规则变更下的 verify/close-check 覆盖。
 

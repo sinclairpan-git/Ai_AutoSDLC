@@ -23,6 +23,35 @@ def _write_framework_backlog(root: Path, entry_body: str) -> None:
     )
 
 
+def _write_verification_profile_docs(
+    root: Path, *, include_rules_only: bool = True, include_checklist_code_change: bool = True
+) -> None:
+    rules_dir = root / "src" / "ai_sdlc" / "rules"
+    rules_dir.mkdir(parents=True, exist_ok=True)
+    verification = (
+        "# 完成前验证协议\n\n"
+        "## 最小 fresh verification 画像\n\n"
+        "- `docs-only`：至少执行 `uv run ai-sdlc verify constraints`\n"
+    )
+    if include_rules_only:
+        verification += "- `rules-only`：至少执行 `uv run ai-sdlc verify constraints`\n"
+    verification += (
+        "- `code-change`：执行 `uv run pytest`、`uv run ruff check`、`uv run ai-sdlc verify constraints`\n"
+    )
+    (rules_dir / "verification.md").write_text(verification, encoding="utf-8")
+
+    docs_dir = root / "docs"
+    docs_dir.mkdir(parents=True, exist_ok=True)
+    checklist = (
+        "# 合并前自检清单\n\n"
+        "- `docs-only`：`uv run ai-sdlc verify constraints`\n"
+        "- `rules-only`：`uv run ai-sdlc verify constraints`\n"
+    )
+    if include_checklist_code_change:
+        checklist += "- `code-change`：`uv run pytest`、`uv run ruff check`、`uv run ai-sdlc verify constraints`\n"
+    (docs_dir / "pull-request-checklist.zh.md").write_text(checklist, encoding="utf-8")
+
+
 def test_blocker_missing_constitution(tmp_path: Path) -> None:
     (tmp_path / ".ai-sdlc" / "state").mkdir(parents=True)
     b = collect_constraint_blockers(tmp_path)
@@ -362,5 +391,40 @@ def test_framework_backlog_well_formed_passes(tmp_path: Path) -> None:
         "- 可验证成功标准: verify constraints 无 BLOCKER\n"
         "- 是否需要回归测试补充: 是\n",
     )
+
+    assert collect_constraint_blockers(tmp_path) == []
+
+
+def test_verification_profile_docs_block_when_rules_surface_missing_profile(
+    tmp_path: Path,
+) -> None:
+    mem = tmp_path / ".ai-sdlc" / "memory"
+    mem.mkdir(parents=True)
+    (mem / "constitution.md").write_text("# C\n", encoding="utf-8")
+    _write_verification_profile_docs(tmp_path, include_rules_only=False)
+
+    blockers = collect_constraint_blockers(tmp_path)
+    assert any("verification profile" in x for x in blockers)
+    assert any("rules-only" in x for x in blockers)
+
+
+def test_verification_profile_docs_block_when_checklist_missing_code_change(
+    tmp_path: Path,
+) -> None:
+    mem = tmp_path / ".ai-sdlc" / "memory"
+    mem.mkdir(parents=True)
+    (mem / "constitution.md").write_text("# C\n", encoding="utf-8")
+    _write_verification_profile_docs(tmp_path, include_checklist_code_change=False)
+
+    blockers = collect_constraint_blockers(tmp_path)
+    assert any("verification profile" in x for x in blockers)
+    assert any("code-change" in x for x in blockers)
+
+
+def test_verification_profile_docs_pass_when_both_surfaces_complete(tmp_path: Path) -> None:
+    mem = tmp_path / ".ai-sdlc" / "memory"
+    mem.mkdir(parents=True)
+    (mem / "constitution.md").write_text("# C\n", encoding="utf-8")
+    _write_verification_profile_docs(tmp_path)
 
     assert collect_constraint_blockers(tmp_path) == []

@@ -26,13 +26,30 @@ def _no_ide_adapter_hook() -> None:
 
 
 def _write_execution_log(
-    wi_dir: Path, *, git_committed: bool, commit_hash: str = "N/A"
+    wi_dir: Path,
+    *,
+    git_committed: bool,
+    commit_hash: str = "N/A",
+    verification_profile: str = "code-change",
+    verification_commands: tuple[str, ...] = (
+        "uv run pytest tests/integration/test_cli_workitem_close_check.py -q",
+        "uv run ruff check src tests",
+        "uv run ai-sdlc verify constraints",
+    ),
+    changed_paths: tuple[str, ...] = ("src/example.py", "tests/test_example.py"),
 ) -> None:
     committed_text = "是" if git_committed else "否"
     rendered_hash = f"`{commit_hash}`" if commit_hash != "N/A" else "N/A"
+    command_lines = "".join(f"- 命令：`{command}`\n" for command in verification_commands)
+    path_text = "、".join(f"`{path}`" for path in changed_paths)
     (wi_dir / "task-execution-log.md").write_text(
         "# Log\n\n"
+        "### Batch 2026-03-28-001 | demo\n\n"
         "#### 2.2 统一验证命令\n"
+        f"- **验证画像**：`{verification_profile}`\n"
+        f"{command_lines}"
+        "#### 2.3 任务记录\n"
+        f"- **改动范围**：{path_text}\n"
         "#### 2.4 代码审查（`rules/code-review.md` 摘要）\n"
         "#### 2.5 任务/计划同步状态（Mandatory）\n"
         "#### 2.8 归档后动作\n"
@@ -43,7 +60,18 @@ def _write_execution_log(
 
 
 def _setup_repo(
-    root: Path, *, tasks_body: str, plan_status: str, git_committed: bool = True
+    root: Path,
+    *,
+    tasks_body: str,
+    plan_status: str,
+    git_committed: bool = True,
+    verification_profile: str = "code-change",
+    verification_commands: tuple[str, ...] = (
+        "uv run pytest tests/integration/test_cli_workitem_close_check.py -q",
+        "uv run ruff check src tests",
+        "uv run ai-sdlc verify constraints",
+    ),
+    changed_paths: tuple[str, ...] = ("src/example.py", "tests/test_example.py"),
 ) -> None:
     subprocess.run(["git", "init"], cwd=root, check=True, capture_output=True)
     subprocess.run(
@@ -85,7 +113,13 @@ def _setup_repo(
         f"{tasks_body}\n",
         encoding="utf-8",
     )
-    _write_execution_log(wi, git_committed=False)
+    _write_execution_log(
+        wi,
+        git_committed=False,
+        verification_profile=verification_profile,
+        verification_commands=verification_commands,
+        changed_paths=changed_paths,
+    )
 
     (root / "README.md").write_text("# R\n", encoding="utf-8")
     subprocess.run(["git", "add", "."], cwd=root, check=True, capture_output=True)
@@ -98,7 +132,14 @@ def _setup_repo(
             capture_output=True,
             text=True,
         ).stdout.strip()
-        _write_execution_log(wi, git_committed=True, commit_hash=head)
+        _write_execution_log(
+            wi,
+            git_committed=True,
+            commit_hash=head,
+            verification_profile=verification_profile,
+            verification_commands=verification_commands,
+            changed_paths=changed_paths,
+        )
         subprocess.run(
             ["git", "add", "specs/001-wi/task-execution-log.md"],
             cwd=root,
@@ -178,6 +219,62 @@ class TestCliWorkitemCloseCheck:
         result = runner.invoke(app, ["workitem", "close-check", "--wi", "specs/001-wi"])
         assert result.exit_code == 1
         assert "working tree" in result.output.lower()
+
+    def test_exit_1_when_verification_profile_missing(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        root = tmp_path / "r2d"
+        root.mkdir()
+        _setup_repo(
+            root,
+            tasks_body="- [x] done\n### Task 1.1\n- **验收标准（AC）**：ok",
+            plan_status="completed",
+            verification_profile="",
+            verification_commands=("uv run ai-sdlc verify constraints",),
+            changed_paths=("docs/example.md",),
+        )
+        monkeypatch.chdir(root)
+
+        result = runner.invoke(app, ["workitem", "close-check", "--wi", "specs/001-wi"])
+        assert result.exit_code == 1
+        assert "verification profile" in result.output.lower()
+
+    def test_exit_0_for_docs_only_profile_with_minimal_evidence(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        root = tmp_path / "r2e"
+        root.mkdir()
+        _setup_repo(
+            root,
+            tasks_body="- [x] done\n### Task 1.1\n- **验收标准（AC）**：ok",
+            plan_status="completed",
+            verification_profile="docs-only",
+            verification_commands=("uv run ai-sdlc verify constraints",),
+            changed_paths=("docs/example.md", "specs/001-wi/tasks.md"),
+        )
+        monkeypatch.chdir(root)
+
+        result = runner.invoke(app, ["workitem", "close-check", "--wi", "specs/001-wi"])
+        assert result.exit_code == 0
+
+    def test_exit_1_when_docs_only_profile_missing_verify_constraints(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        root = tmp_path / "r2f"
+        root.mkdir()
+        _setup_repo(
+            root,
+            tasks_body="- [x] done\n### Task 1.1\n- **验收标准（AC）**：ok",
+            plan_status="completed",
+            verification_profile="docs-only",
+            verification_commands=("uv run ai-sdlc workitem close-check --wi specs/001-wi",),
+            changed_paths=("docs/example.md",),
+        )
+        monkeypatch.chdir(root)
+
+        result = runner.invoke(app, ["workitem", "close-check", "--wi", "specs/001-wi"])
+        assert result.exit_code == 1
+        assert "verify constraints" in result.output.lower()
 
     def test_json_output_has_required_fields(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch

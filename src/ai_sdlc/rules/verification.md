@@ -40,6 +40,25 @@
 | 批次完成 | 所有任务标记 + V2 通过 + 审查通过 | 任务做完了 |
 | 阶段完成 | 门禁 PASS + 产物齐全 | "应该差不多了" |
 
+## 最小 fresh verification 画像
+
+当变更范围不同，允许的最小 fresh verification 集合也不同；但**必须显式选择画像**，不得再靠“这只是 docs 改动”口头豁免。
+
+- `docs-only`
+  - 适用范围：仅改 `docs/**`、`specs/**.md`、`task-execution-log.md`、`tasks.md` 等 Markdown/收口文档。
+  - 最小证据：`uv run ai-sdlc verify constraints`
+  - 收口要求：若进入 close 阶段，`task-execution-log.md` 最新批次必须显式写 `验证画像：docs-only`，并在最终 `git commit` 后再运行 `workitem close-check`。
+- `rules-only`
+  - 适用范围：仅改 `src/ai_sdlc/rules/**.md` 与相关文档，不含 `src/**/*.py`、`tests/**`。
+  - 最小证据：`uv run ai-sdlc verify constraints`
+  - 收口要求：latest batch 必须显式写 `验证画像：rules-only`；若实际混入代码/测试改动，不得继续沿用本画像。
+- `code-change`
+  - 适用范围：任何涉及 `src/**/*.py`、`tests/**`、生成逻辑或运行时行为的变更。
+  - 最小证据：`uv run pytest`、`uv run ruff check`、`uv run ai-sdlc verify constraints`
+  - 收口要求：latest batch 必须显式写 `验证画像：code-change`；不得用 `docs-only` / `rules-only` 伪装代码改动。
+
+`close-check` 负责对 latest batch 的画像与 execution-log 中的 fresh evidence 做只读核验；`verify constraints` 负责确认本仓库规则文档和 PR checklist 对上述画像的定义保持一致。
+
 ## 阶段化验证要求
 
 ### 批次级验证（EXECUTE 阶段内）

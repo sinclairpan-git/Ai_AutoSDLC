@@ -13,6 +13,26 @@ from ai_sdlc.models.state import Checkpoint
 CONSTITUTION_REL = Path(".ai-sdlc") / "memory" / "constitution.md"
 SKIP_REGISTRY_REL = Path("src") / "ai_sdlc" / "rules" / "agent-skip-registry.zh.md"
 FRAMEWORK_DEFECT_BACKLOG_REL = Path("docs") / "framework-defect-backlog.zh-CN.md"
+VERIFICATION_RULE_REL = Path("src") / "ai_sdlc" / "rules" / "verification.md"
+PR_CHECKLIST_REL = Path("docs") / "pull-request-checklist.zh.md"
+VERIFICATION_PROFILE_SURFACES: dict[Path, tuple[str, ...]] = {
+    VERIFICATION_RULE_REL: (
+        "docs-only",
+        "rules-only",
+        "code-change",
+        "uv run ai-sdlc verify constraints",
+        "uv run pytest",
+        "uv run ruff check",
+    ),
+    PR_CHECKLIST_REL: (
+        "docs-only",
+        "rules-only",
+        "code-change",
+        "uv run ai-sdlc verify constraints",
+        "uv run pytest",
+        "uv run ruff check",
+    ),
+}
 FRAMEWORK_DEFECT_BACKLOG_REQUIRED_FIELDS = (
     "现象",
     "触发场景",
@@ -32,6 +52,7 @@ FRAMEWORK_DEFECT_BACKLOG_REQUIRED_FIELDS = (
 VERIFICATION_GATE_OBJECTS = (
     "required_governance_files",
     "framework_defect_backlog",
+    "verification_profiles",
     "checkpoint_spec_dir",
     "tasks_acceptance",
     "skip_registry_mapping",
@@ -85,6 +106,7 @@ def collect_constraint_blockers(root: Path) -> list[str]:
         )
 
     blockers.extend(_framework_defect_backlog_blockers(root))
+    blockers.extend(_verification_profile_blockers(root))
 
     cp = load_checkpoint(root)
     if cp is None or cp.feature is None:
@@ -114,6 +136,30 @@ def collect_constraint_blockers(root: Path) -> list[str]:
             )
 
     blockers.extend(_skip_registry_mapping_blockers(root, spec_path, cp))
+    return blockers
+
+
+def _verification_profile_blockers(root: Path) -> list[str]:
+    """Validate docs-only / rules-only / code-change profile docs when surfaces exist."""
+    present = [rel for rel in VERIFICATION_PROFILE_SURFACES if (root / rel).is_file()]
+    if not present:
+        return []
+
+    blockers: list[str] = []
+    for rel, required_tokens in VERIFICATION_PROFILE_SURFACES.items():
+        path = root / rel
+        if not path.is_file():
+            blockers.append(
+                "BLOCKER: verification profile surface missing: " f"{rel.as_posix()}"
+            )
+            continue
+        text = path.read_text(encoding="utf-8")
+        missing = [token for token in required_tokens if token not in text]
+        if missing:
+            blockers.append(
+                "BLOCKER: verification profile surface "
+                f"{rel.as_posix()} missing required markers: {', '.join(missing)}"
+            )
     return blockers
 
 

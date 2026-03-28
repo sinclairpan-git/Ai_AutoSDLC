@@ -20,6 +20,18 @@ REQUIRED_LOG_MARKERS = (
 DOCS_UNIMPLEMENTED_HINTS = ("未实现前", "未来可能提供")
 COMMIT_STATUS_RE = re.compile(r"(?m)^\s*-\s*\*\*已完成 git 提交\*\*：(?P<value>.+?)\s*$")
 COMMIT_HASH_RE = re.compile(r"(?m)^\s*-\s*\*\*提交哈希\*\*：(?P<value>.+?)\s*$")
+VERIFICATION_PROFILE_RE = re.compile(r"(?m)^\s*-\s*\*\*验证画像\*\*：(?P<value>.+?)\s*$")
+CHANGED_PATHS_RE = re.compile(r"(?m)^\s*-\s*\*\*改动范围\*\*：(?P<value>.+?)\s*$")
+PATH_TOKEN_RE = re.compile(r"`([^`]+)`|\[([^\]]+)\]\([^)]+\)")
+VERIFICATION_PROFILE_REQUIRED_COMMANDS: dict[str, tuple[str, ...]] = {
+    "docs-only": ("uv run ai-sdlc verify constraints",),
+    "rules-only": ("uv run ai-sdlc verify constraints",),
+    "code-change": (
+        "uv run pytest",
+        "uv run ruff check",
+        "uv run ai-sdlc verify constraints",
+    ),
+}
 # FR-096: default docs scan = WI `*.md` + these repo-relative paths (when present).
 DOCS_WHITELIST_RELS = (
     Path("docs/pull-request-checklist.zh.md"),
@@ -104,6 +116,64 @@ def _last_log_marker(pattern: re.Pattern[str], text: str) -> str | None:
     if not matches:
         return None
     return matches[-1].group("value").strip()
+
+
+def _latest_batch_text(log_text: str) -> str:
+    matches = list(re.finditer(r"(?m)^### Batch .+$", log_text))
+    if not matches:
+        return log_text
+    return log_text[matches[-1].start() :]
+
+
+def _normalize_marker_value(value: str | None) -> str:
+    if value is None:
+        return ""
+    return value.replace("`", "").strip()
+
+
+def _changed_paths_from_marker(value: str) -> list[str]:
+    paths: list[str] = []
+    for match in PATH_TOKEN_RE.finditer(value):
+        token = match.group(1) or match.group(2) or ""
+        normalized = token.strip()
+        if normalized:
+            paths.append(normalized)
+    return paths
+
+
+def _path_allowed_for_docs_profile(path: str) -> bool:
+    normalized = path.strip()
+    return normalized.endswith(".md")
+
+
+def _verification_profile_violation(log_text: str) -> str | None:
+    batch_text = _latest_batch_text(log_text)
+    profile = _normalize_marker_value(_last_log_marker(VERIFICATION_PROFILE_RE, batch_text))
+    if not profile:
+        return "latest batch missing verification profile"
+    required_commands = VERIFICATION_PROFILE_REQUIRED_COMMANDS.get(profile)
+    if required_commands is None:
+        return f"latest batch has unsupported verification profile: {profile}"
+
+    for command in required_commands:
+        if command not in batch_text:
+            return (
+                f"latest batch verification profile {profile} missing required command: {command}"
+            )
+
+    if profile in {"docs-only", "rules-only"}:
+        raw_paths = _last_log_marker(CHANGED_PATHS_RE, batch_text)
+        paths = _changed_paths_from_marker(raw_paths or "")
+        if not paths:
+            return f"latest batch verification profile {profile} missing changed-path scope"
+        disallowed = [path for path in paths if not _path_allowed_for_docs_profile(path)]
+        if disallowed:
+            return (
+                f"latest batch verification profile {profile} includes non-doc changes: "
+                + ", ".join(disallowed[:5])
+            )
+
+    return None
 
 
 def _git_closure_violation(root: Path, log_text: str) -> str | None:
@@ -242,6 +312,22 @@ def run_close_check(*, cwd: Path | None, wi: Path, all_docs: bool = False) -> Cl
         if not review_ok:
             blockers.append(
                 "BLOCKER: Review Gate missing review evidence in task-execution-log.md."
+            )
+        verification_profile_violation = _verification_profile_violation(log_text)
+        verification_profile_ok = verification_profile_violation is None
+        checks.append(
+            {
+                "name": "verification_profile",
+                "ok": verification_profile_ok,
+                "detail": "latest batch verification profile matches required fresh evidence"
+                if verification_profile_ok
+                else verification_profile_violation,
+            }
+        )
+        if not verification_profile_ok:
+            blockers.append(
+                "BLOCKER: verification profile evidence invalid: "
+                f"{verification_profile_violation}"
             )
         git_closure_violation = _git_closure_violation(root, log_text)
         git_closure_ok = git_closure_violation is None
