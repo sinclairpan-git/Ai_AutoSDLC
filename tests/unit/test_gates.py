@@ -11,12 +11,16 @@ from ai_sdlc.gates.pipeline_gates import (
     CloseGate,
     DecomposeGate,
     DesignGate,
+    DoneGate,
     ExecuteGate,
     InitGate,
+    PRDGate,
     RefineGate,
+    ReviewGate,
+    VerificationGate,
     VerifyGate,
 )
-from ai_sdlc.gates.registry import GateRegistry
+from ai_sdlc.gates.registry import GateRegistry, get_gate_by_stage
 from ai_sdlc.knowledge.engine import initialize_baseline
 from ai_sdlc.models.gate import GateVerdict, GovernanceState
 from ai_sdlc.models.state import OverlapResult, ParallelPolicy
@@ -43,6 +47,13 @@ class TestGateRegistry:
         reg.register("init", InitGate())
         reg.register("refine", RefineGate())
         assert set(reg.stages) == {"init", "refine"}
+
+    def test_explicit_gate_surfaces_are_registered(self) -> None:
+        mapping = get_gate_by_stage()
+        assert isinstance(mapping["prd"], PRDGate)
+        assert isinstance(mapping["review"], ReviewGate)
+        assert isinstance(mapping["done"], DoneGate)
+        assert isinstance(mapping["verification"], VerificationGate)
 
 
 class TestInitGate:
@@ -124,6 +135,19 @@ class TestRefineGate:
         assert any(c.name == "acceptance_scenarios_present" and not c.passed for c in result.checks)
 
 
+class TestPRDGate:
+    def test_pass(self, tmp_path: Path) -> None:
+        spec_dir = tmp_path / "specs" / "001"
+        spec_dir.mkdir(parents=True)
+        (spec_dir / "spec.md").write_text(
+            "### 用户故事 1\nscenario\n\n- **FR-001**: requirement\n",
+            encoding="utf-8",
+        )
+        result = PRDGate().check({"spec_dir": str(spec_dir)})
+        assert result.stage == "prd"
+        assert result.verdict == GateVerdict.PASS
+
+
 class TestDesignGate:
     def test_pass(self, tmp_path: Path) -> None:
         spec_dir = tmp_path / "specs"
@@ -169,8 +193,19 @@ class TestDecomposeGate:
 
 class TestVerifyGate:
     def test_pass(self) -> None:
-        result = VerifyGate().check({"critical_issues": 0, "high_issues": 2})
+        result = VerifyGate().check(
+            {
+                "verification_check_objects": (
+                    "required_governance_files",
+                    "checkpoint_spec_dir",
+                ),
+                "verification_sources": ("verify constraints",),
+                "constraint_blockers": (),
+                "coverage_gaps": (),
+            }
+        )
         assert result.verdict == GateVerdict.PASS
+        assert any(c.name == "verification_surface_declared" and c.passed for c in result.checks)
 
     def test_fail_critical(self) -> None:
         result = VerifyGate().check({"critical_issues": 1, "high_issues": 0})
@@ -179,6 +214,32 @@ class TestVerifyGate:
     def test_fail_too_many_high(self) -> None:
         result = VerifyGate().check({"critical_issues": 0, "high_issues": 5})
         assert result.verdict == GateVerdict.RETRY
+
+
+class TestVerificationGate:
+    def test_blocks_when_constraint_blockers_exist(self) -> None:
+        result = VerificationGate().check(
+            {
+                "verification_check_objects": ("required_governance_files",),
+                "verification_sources": ("verify constraints",),
+                "constraint_blockers": ("BLOCKER: missing constitution",),
+                "coverage_gaps": (),
+            }
+        )
+        assert result.stage == "verification"
+        assert result.verdict == GateVerdict.RETRY
+        assert any(c.name == "constraint_blockers_clear" and not c.passed for c in result.checks)
+
+
+class TestReviewGate:
+    def test_requires_review_evidence(self) -> None:
+        result = ReviewGate().check({"review_recorded": False})
+        assert result.verdict == GateVerdict.RETRY
+        assert any(c.name == "review_evidence_present" and not c.passed for c in result.checks)
+
+    def test_passes_with_review_evidence(self) -> None:
+        result = ReviewGate().check({"review_recorded": True})
+        assert result.verdict == GateVerdict.PASS
 
 
 class TestExecuteGate:
@@ -286,6 +347,7 @@ class TestCloseGate:
                 "root": str(tmp_path),
                 "all_tasks_complete": True,
                 "tests_passed": True,
+                "review_recorded": True,
             }
         )
         assert result.verdict == GateVerdict.PASS
@@ -299,6 +361,29 @@ class TestCloseGate:
             }
         )
         assert result.verdict == GateVerdict.RETRY
+
+
+class TestDoneGate:
+    def test_blocks_when_knowledge_refresh_is_pending(self, tmp_path: Path) -> None:
+        summary = tmp_path / "development-summary.md"
+        summary.write_text("# Summary\n", encoding="utf-8")
+
+        result = DoneGate().check(
+            {
+                "root": str(tmp_path),
+                "all_tasks_complete": True,
+                "tests_passed": True,
+                "review_recorded": True,
+                "summary_path": str(summary),
+                "knowledge_refresh_level": 2,
+                "knowledge_refresh_completed": False,
+            }
+        )
+        assert result.verdict == GateVerdict.RETRY
+        assert any(
+            c.name == "knowledge_refresh_complete" and not c.passed
+            for c in result.checks
+        )
 
 
 # --- P1: KnowledgeGate, ParallelGate, GovernanceState ---

@@ -10,14 +10,19 @@ from typing import Any
 from ai_sdlc.context.state import load_checkpoint, save_checkpoint
 from ai_sdlc.core.dispatcher import StageDispatcher
 from ai_sdlc.core.executor import Executor
+from ai_sdlc.core.verify_constraints import build_verification_gate_context
 from ai_sdlc.gates.extra_gates import KnowledgeGate, ParallelGate, PostmortemGate
 from ai_sdlc.gates.pipeline_gates import (
     CloseGate,
     DecomposeGate,
     DesignGate,
+    DoneGate,
     ExecuteGate,
     InitGate,
+    PRDGate,
     RefineGate,
+    ReviewGate,
+    VerificationGate,
     VerifyGate,
 )
 from ai_sdlc.gates.registry import GateRegistry
@@ -67,11 +72,15 @@ class SDLCRunner:
         reg = GateRegistry()
         reg.register("init", InitGate())
         reg.register("refine", RefineGate())
+        reg.register("prd", PRDGate())
         reg.register("design", DesignGate())
         reg.register("decompose", DecomposeGate())
         reg.register("verify", VerifyGate())
+        reg.register("verification", VerificationGate())
         reg.register("execute", ExecuteGate())
         reg.register("close", CloseGate())
+        reg.register("review", ReviewGate())
+        reg.register("done", DoneGate())
         reg.register("knowledge_check", KnowledgeGate())
         reg.register("parallel_check", ParallelGate())
         reg.register("postmortem", PostmortemGate())
@@ -264,8 +273,7 @@ class SDLCRunner:
         elif stage == "close":
             self._enrich_close_context(ctx, spec_dir, cp)
         elif stage == "verify":
-            ctx["critical_issues"] = 0
-            ctx["high_issues"] = 0
+            ctx.update(build_verification_gate_context(self.root))
         return ctx
 
     def _build_executor(self) -> Executor:

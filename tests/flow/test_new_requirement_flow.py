@@ -4,14 +4,14 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from ai_sdlc.core.config import load_project_state
 from ai_sdlc.core.state_machine import (
     load_work_item,
-    save_work_item,
     transition_work_item,
 )
 from ai_sdlc.models.work import WorkItemStatus, WorkType
 from ai_sdlc.routers.bootstrap import init_project
-from ai_sdlc.routers.work_intake import KeywordWorkIntakeRouter, generate_work_item_id
+from ai_sdlc.routers.work_intake import KeywordWorkIntakeRouter
 from ai_sdlc.studios.prd_studio import check_prd_readiness
 
 
@@ -46,15 +46,11 @@ class TestNewRequirementFlow:
         init_project(project_dir, "proj")
 
         router = KeywordWorkIntakeRouter()
-        wi = router.classify("新增用户管理功能，实现注册和登录")
+        wi = router.intake(project_dir, "新增用户管理功能，实现注册和登录")
         assert wi.work_type == WorkType.NEW_REQUIREMENT
-
-        wi.work_item_id = generate_work_item_id(1)
-        assert wi.work_item_id.startswith("WI-")
-        save_work_item(project_dir, wi)
-
-        wi = transition_work_item(project_dir, wi, WorkItemStatus.INTAKE_CLASSIFIED)
         assert wi.status == WorkItemStatus.INTAKE_CLASSIFIED
+        assert wi.work_item_id.startswith("WI-")
+        assert load_project_state(project_dir).next_work_item_seq == 2
 
         prd = tmp_path / "prd.md"
         prd.write_text(_complete_prd(), encoding="utf-8")

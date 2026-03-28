@@ -11,6 +11,13 @@ from typing import Any
 import yaml
 
 from ai_sdlc.branch.git_client import GitClient, GitError
+from ai_sdlc.context.state import (
+    build_execute_working_set,
+    save_execution_plan,
+    save_latest_summary,
+    save_runtime_state,
+    save_working_set,
+)
 from ai_sdlc.generators.doc_gen import TasksParser
 from ai_sdlc.models.state import (
     ExecutionBatch,
@@ -311,6 +318,10 @@ class Executor:
         legacy_log_path = spec_dir / "execution-log.md"
         runtime_state = runtime or RuntimeState(current_stage="execute")
         runtime_state.current_stage = "execute"
+        if not runtime_state.started_at:
+            runtime_state.started_at = now_iso()
+        if not runtime_state.current_branch:
+            runtime_state.current_branch = self._current_branch()
 
         plan = TasksParser().parse(tasks_file)
         plan = self._rebatch_plan(plan, self._settings.max_tasks_per_batch)
@@ -322,6 +333,18 @@ class Executor:
             max_consecutive_halts=self._settings.consecutive_failure_limit,
         )
         task_map = {task.task_id: task for task in plan.tasks}
+        work_item_id = spec_dir.name
+        latest_summary = ""
+
+        self._persist_truth_surfaces(
+            work_item_id=work_item_id,
+            plan=plan,
+            runtime=runtime_state,
+            spec_dir=spec_dir,
+            tasks_file=tasks_file,
+            batch=executor.get_current_batch(),
+            latest_summary=latest_summary,
+        )
 
         commit_hashes: list[str] = []
         last_log_timestamp = ""
@@ -335,6 +358,15 @@ class Executor:
                 break
             if batch.started_at is None:
                 batch.started_at = now_iso()
+            self._persist_truth_surfaces(
+                work_item_id=work_item_id,
+                plan=plan,
+                runtime=runtime_state,
+                spec_dir=spec_dir,
+                tasks_file=tasks_file,
+                batch=batch,
+                latest_summary=latest_summary,
+            )
 
             try:
                 for task_id in batch.tasks:
@@ -345,19 +377,51 @@ class Executor:
                         TaskStatus.CANCELLED,
                     }:
                         continue
+                    runtime_state.current_task = task.task_id
+                    self._persist_truth_surfaces(
+                        work_item_id=work_item_id,
+                        plan=plan,
+                        runtime=runtime_state,
+                        spec_dir=spec_dir,
+                        tasks_file=tasks_file,
+                        batch=batch,
+                        latest_summary=latest_summary,
+                    )
                     last_log_timestamp = self._run_task_with_retry(
                         executor,
                         logger_,
                         task,
                     )
+                    self._persist_truth_surfaces(
+                        work_item_id=work_item_id,
+                        plan=plan,
+                        runtime=runtime_state,
+                        spec_dir=spec_dir,
+                        tasks_file=tasks_file,
+                        batch=batch,
+                        latest_summary=latest_summary,
+                    )
                     self._sync_legacy_log(log_path, legacy_log_path)
 
                 next_batch = executor.advance_batch()
-                last_log_timestamp = logger_.log_batch(
-                    batch.batch_id,
-                    self._batch_summary(batch, plan),
-                )
+                batch_summary = self._batch_summary(batch, plan)
+                last_log_timestamp = logger_.log_batch(batch.batch_id, batch_summary)
                 self._sync_legacy_log(log_path, legacy_log_path)
+                runtime_state.current_task = ""
+                latest_summary = self._latest_summary_markdown(
+                    batch_summary,
+                    runtime_state,
+                    plan,
+                )
+                self._persist_truth_surfaces(
+                    work_item_id=work_item_id,
+                    plan=plan,
+                    runtime=runtime_state,
+                    spec_dir=spec_dir,
+                    tasks_file=tasks_file,
+                    batch=next_batch or batch,
+                    latest_summary=latest_summary,
+                )
 
                 if self._settings.auto_commit:
                     commit_hashes.append(
@@ -378,6 +442,16 @@ class Executor:
                         halted=False,
                         error="",
                     )
+                    latest_summary = summary_path.read_text(encoding="utf-8")
+                    self._persist_truth_surfaces(
+                        work_item_id=work_item_id,
+                        plan=plan,
+                        runtime=runtime_state,
+                        spec_dir=spec_dir,
+                        tasks_file=tasks_file,
+                        batch=batch,
+                        latest_summary=latest_summary,
+                    )
             except CircuitBreakerError as exc:
                 halted = True
                 error = str(exc)
@@ -388,6 +462,16 @@ class Executor:
                     commit_hashes=commit_hashes,
                     halted=True,
                     error=error,
+                )
+                latest_summary = summary_path.read_text(encoding="utf-8")
+                self._persist_truth_surfaces(
+                    work_item_id=work_item_id,
+                    plan=plan,
+                    runtime=runtime_state,
+                    spec_dir=spec_dir,
+                    tasks_file=tasks_file,
+                    batch=batch,
+                    latest_summary=latest_summary,
                 )
                 break
             except GitError as exc:
@@ -401,6 +485,16 @@ class Executor:
                     halted=True,
                     error=error,
                 )
+                latest_summary = summary_path.read_text(encoding="utf-8")
+                self._persist_truth_surfaces(
+                    work_item_id=work_item_id,
+                    plan=plan,
+                    runtime=runtime_state,
+                    spec_dir=spec_dir,
+                    tasks_file=tasks_file,
+                    batch=batch,
+                    latest_summary=latest_summary,
+                )
                 break
 
         if not summary_path.exists():
@@ -411,6 +505,16 @@ class Executor:
                 commit_hashes=commit_hashes,
                 halted=halted,
                 error=error,
+            )
+            latest_summary = summary_path.read_text(encoding="utf-8")
+            self._persist_truth_surfaces(
+                work_item_id=work_item_id,
+                plan=plan,
+                runtime=runtime_state,
+                spec_dir=spec_dir,
+                tasks_file=tasks_file,
+                batch=executor.get_current_batch(),
+                latest_summary=latest_summary,
             )
 
         return ExecutionResult(
@@ -430,6 +534,71 @@ class Executor:
     def _default_task_runner(_task: Task, _runtime: RuntimeState) -> TaskStatus:
         """Framework-native execution placeholder: mark task as completed."""
         return TaskStatus.COMPLETED
+
+    def _persist_truth_surfaces(
+        self,
+        *,
+        work_item_id: str,
+        plan: ExecutionPlan,
+        runtime: RuntimeState,
+        spec_dir: Path,
+        tasks_file: Path,
+        batch: ExecutionBatch | None,
+        latest_summary: str,
+    ) -> None:
+        runtime.last_updated = now_iso()
+        save_execution_plan(self.root, work_item_id, plan)
+        save_runtime_state(self.root, work_item_id, runtime)
+        save_working_set(
+            self.root,
+            work_item_id,
+            build_execute_working_set(
+                self.root,
+                spec_dir,
+                tasks_file,
+                active_files=self._batch_active_files(plan, batch),
+                context_summary=latest_summary.strip(),
+            ),
+        )
+        if latest_summary:
+            save_latest_summary(self.root, work_item_id, latest_summary)
+
+    @staticmethod
+    def _batch_active_files(
+        plan: ExecutionPlan,
+        batch: ExecutionBatch | None,
+    ) -> list[str]:
+        if batch is None:
+            return []
+        task_map = {task.task_id: task for task in plan.tasks}
+        files: list[str] = []
+        for task_id in batch.tasks:
+            task = task_map.get(task_id)
+            if task is None:
+                continue
+            for path in task.file_paths:
+                if path not in files:
+                    files.append(path)
+        return files
+
+    @staticmethod
+    def _latest_summary_markdown(
+        batch_summary: str,
+        runtime: RuntimeState,
+        plan: ExecutionPlan,
+    ) -> str:
+        return (
+            "# Latest Summary\n\n"
+            f"Current Batch: {runtime.current_batch}/{plan.total_batches}\n\n"
+            f"Last Task: {runtime.last_committed_task or 'none'}\n\n"
+            f"{batch_summary}\n"
+        )
+
+    def _current_branch(self) -> str:
+        try:
+            return self._git_client_factory(self.root).current_branch()
+        except GitError:
+            return ""
 
     def _run_task_with_retry(
         self,

@@ -185,6 +185,14 @@ class RefineGate:
         return GateResult(stage="refine", verdict=verdict, checks=checks)
 
 
+class PRDGate:
+    """Explicit PRD Gate surface for refine-entry readiness checks."""
+
+    def check(self, context: dict[str, Any]) -> GateResult:
+        result = RefineGate().check(context)
+        return GateResult(stage="prd", verdict=result.verdict, checks=result.checks)
+
+
 class DesignGate:
     """Gate check for the DESIGN stage."""
 
@@ -299,16 +307,88 @@ class VerifyGate:
     """Gate check for the VERIFY stage."""
 
     def check(self, context: dict[str, Any]) -> GateResult:
-        """Verify VERIFY stage completion.
+        """Verify VERIFY stage completion using the explicit Verification Gate surface."""
+        result = VerificationGate().check(context)
+        return GateResult(stage="verify", verdict=result.verdict, checks=result.checks)
+
+
+class VerificationGate:
+    """Explicit Verification Gate surface aligned with verify-constraints."""
+
+    def check(self, context: dict[str, Any]) -> GateResult:
+        """Verify the explicit verification surface, with legacy fallback support.
 
         Context keys:
-            critical_issues (int): Number of CRITICAL issues remaining.
-            high_issues (int): Number of HIGH issues remaining.
+            verification_sources (tuple[str, ...] | list[str]): verification truth sources.
+            verification_check_objects (tuple[str, ...] | list[str]): declared check objects.
+            constraint_blockers (tuple[str, ...] | list[str]): verify blockers.
+            coverage_gaps (tuple[str, ...] | list[str]): optional coverage gaps.
         """
+        checks: list[GateCheck] = []
+        sources = tuple(context.get("verification_sources", ()))
+        objects = tuple(context.get("verification_check_objects", ()))
+        blockers = tuple(context.get("constraint_blockers", ()))
+        coverage_gaps = tuple(context.get("coverage_gaps", ()))
+
+        if sources or objects or "constraint_blockers" in context or "coverage_gaps" in context:
+            surface_ok = bool(sources) and bool(objects)
+            checks.append(
+                GateCheck(
+                    name="verification_surface_declared",
+                    passed=surface_ok,
+                    message=""
+                    if surface_ok
+                    else "Verification Gate surface missing sources or check objects",
+                )
+            )
+            checks.append(
+                GateCheck(
+                    name="verification_sources_declared",
+                    passed=bool(sources),
+                    message=""
+                    if sources
+                    else "Verification Gate has no declared source surface",
+                )
+            )
+            checks.append(
+                GateCheck(
+                    name="verification_check_objects_declared",
+                    passed=bool(objects),
+                    message=", ".join(objects)
+                    if objects
+                    else "Verification Gate has no declared check objects",
+                )
+            )
+            checks.append(
+                GateCheck(
+                    name="constraint_blockers_clear",
+                    passed=len(blockers) == 0,
+                    message=""
+                    if not blockers
+                    else "; ".join(blockers[:3]),
+                )
+            )
+            checks.append(
+                GateCheck(
+                    name="coverage_gaps_clear",
+                    passed=len(coverage_gaps) == 0,
+                    message=""
+                    if not coverage_gaps
+                    else "; ".join(coverage_gaps[:3]),
+                )
+            )
+            verdict = GateVerdict.PASS if all(c.passed for c in checks) else GateVerdict.RETRY
+            return GateResult(stage="verification", verdict=verdict, checks=checks)
+
         critical = context.get("critical_issues", 0)
         high = context.get("high_issues", 0)
-        checks: list[GateCheck] = []
-
+        checks.append(
+            GateCheck(
+                name="verification_surface_declared",
+                passed=True,
+                message="Legacy issue-count surface",
+            )
+        )
         checks.append(
             GateCheck(
                 name="no_critical_issues",
@@ -329,7 +409,26 @@ class VerifyGate:
 
         all_passed = all(c.passed for c in checks)
         verdict = GateVerdict.PASS if all_passed else GateVerdict.RETRY
-        return GateResult(stage="verify", verdict=verdict, checks=checks)
+        return GateResult(stage="verification", verdict=verdict, checks=checks)
+
+
+class ReviewGate:
+    """Explicit Review Gate surface for self-review / code-review evidence."""
+
+    def check(self, context: dict[str, Any]) -> GateResult:
+        evidence = str(context.get("review_evidence", "")).strip()
+        recorded = bool(context.get("review_recorded", False) or evidence)
+        checks = [
+            GateCheck(
+                name="review_evidence_present",
+                passed=recorded,
+                message=""
+                if recorded
+                else "Review Gate requires self-review or equivalent review evidence",
+            )
+        ]
+        verdict = GateVerdict.PASS if recorded else GateVerdict.RETRY
+        return GateResult(stage="review", verdict=verdict, checks=checks)
 
 
 class ExecuteGate:
@@ -431,7 +530,16 @@ class CloseGate:
     """Gate check for the CLOSE stage."""
 
     def check(self, context: dict[str, Any]) -> GateResult:
-        """Verify CLOSE stage completion.
+        """Verify CLOSE stage completion via the explicit Done Gate surface."""
+        result = DoneGate().check(context)
+        return GateResult(stage="close", verdict=result.verdict, checks=result.checks)
+
+
+class DoneGate:
+    """Explicit Done Gate surface for completion readiness."""
+
+    def check(self, context: dict[str, Any]) -> GateResult:
+        """Verify completion semantics, including refresh blocking.
 
         Context keys:
             root (Path|str): Project root directory.
@@ -476,24 +584,35 @@ class CloseGate:
             )
         )
 
+        if "review_recorded" in context or "review_evidence" in context:
+            review_result = ReviewGate().check(context)
+            checks.extend(review_result.checks)
+
         refresh_level = context.get("knowledge_refresh_level")
         if refresh_level is not None:
-            skip_ok = refresh_level == 0
+            refresh_completed = bool(
+                context.get("knowledge_refresh_completed", refresh_level == 0)
+            )
+            refresh_ok = refresh_level == 0 or refresh_completed
             checks.append(
                 GateCheck(
-                    name="knowledge_refresh_level",
-                    passed=True,
+                    name="knowledge_refresh_complete",
+                    passed=refresh_ok,
                     message=(
                         "L0: no refresh needed"
-                        if skip_ok
-                        else f"L{refresh_level}: refresh required before completion"
+                        if refresh_level == 0
+                        else (
+                            ""
+                            if refresh_ok
+                            else f"L{refresh_level}: refresh required before completion"
+                        )
                     ),
                 )
             )
 
         all_passed = all(c.passed for c in checks)
         verdict = GateVerdict.PASS if all_passed else GateVerdict.RETRY
-        return GateResult(stage="close", verdict=verdict, checks=checks)
+        return GateResult(stage="done", verdict=verdict, checks=checks)
 
 
 def _all_user_stories_have_scenarios(content: str) -> bool:

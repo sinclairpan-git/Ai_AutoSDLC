@@ -33,6 +33,19 @@ class GovernanceFreezeError(Exception):
     """Raised when governance prerequisites are incomplete."""
 
 
+def governance_state_path(root: Path, work_item_id: str) -> Path:
+    """Return the persisted governance snapshot path for a work item."""
+    return root / AI_SDLC_DIR / "work-items" / work_item_id / "governance.yaml"
+
+
+def load_governance_state(root: Path, work_item_id: str) -> GovernanceState | None:
+    """Load governance.yaml if it exists."""
+    path = governance_state_path(root, work_item_id)
+    if not path.exists():
+        return None
+    return YamlStore.load(path, GovernanceState)
+
+
 def _default_item_paths(root: Path) -> dict[str, Path]:
     rules_root = Path(__file__).resolve().parents[1] / "rules"
     return {
@@ -64,13 +77,7 @@ class GovernanceGuard:
 
     @property
     def governance_path(self) -> Path:
-        return (
-            self.root
-            / AI_SDLC_DIR
-            / "work-items"
-            / self.work_item.work_item_id
-            / "governance.yaml"
-        )
+        return governance_state_path(self.root, self.work_item.work_item_id)
 
     def check(self) -> GateResult:
         """Verify the six governance prerequisites declared in FR-021."""
@@ -103,7 +110,11 @@ class GovernanceGuard:
             )
 
         frozen_at = now_iso()
-        state = GovernanceState(frozen=True, frozen_at=frozen_at)
+        state = GovernanceState(
+            frozen=True,
+            frozen_at=frozen_at,
+            work_type=self.work_item.work_type.value,
+        )
         for name in REQUIRED_GOVERNANCE_ITEMS:
             path = self.item_paths[name]
             state.items[name] = GovernanceItem(

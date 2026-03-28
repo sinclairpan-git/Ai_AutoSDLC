@@ -501,6 +501,8 @@ Phase 0（脚手架）
   - PRD / Review / Done / Verification Gate 的显式 surface
   - traceability / close-check / verify constraints 对账
 
+> **Batch 14 收口（2026-03-28）**：`Executor` / `context state` 已把 `execution-plan.yaml`、`runtime.yaml`、`working-set.yaml`、`latest-summary.md` 固化到 `.ai-sdlc/work-items/<WI>/`，并由 `recover/status` 直接消费；`pipeline_gates` / `registry` / `verify constraints` / `close-check` 已显式公开 `PRD / Review / Done / Verification Gate` surface。定向 contract suite **136 passed**；`uv run ai-sdlc verify constraints`：无 BLOCKER；`uv run ai-sdlc workitem close-check --wi specs/001-ai-sdlc-framework` 与 `--all-docs`：全部 PASS；全量 **`uv run pytest -q`：742 passed**；**`uv run ruff check src tests`：通过**。
+
 ### 验证协议
 
 1. **Batch 13** 必须用 flow / integration 证明：分配工作项、冻结治理、切换分支、查询状态与恢复上下文时，磁盘态与 surface 输出一致。

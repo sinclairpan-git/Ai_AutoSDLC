@@ -10,7 +10,14 @@ from ai_sdlc.context.state import (
     save_checkpoint,
     save_resume_pack,
 )
-from ai_sdlc.models.state import Checkpoint, CompletedStage, FeatureInfo
+from ai_sdlc.core.config import YamlStore
+from ai_sdlc.models.state import (
+    Checkpoint,
+    CompletedStage,
+    FeatureInfo,
+    RuntimeState,
+    WorkingSet,
+)
 
 
 class TestRecoverFlow:
@@ -68,3 +75,78 @@ class TestRecoverFlow:
     def test_no_checkpoint_means_no_recovery(self, tmp_path: Path) -> None:
         pack = build_resume_pack(tmp_path)
         assert pack is None
+
+    def test_recover_prefers_work_item_working_set_and_latest_summary(
+        self, tmp_path: Path
+    ) -> None:
+        project_dir = tmp_path / "proj"
+        project_dir.mkdir()
+
+        (project_dir / ".ai-sdlc" / "state").mkdir(parents=True)
+        spec_dir = project_dir / "specs" / "WI-2026-RECOVER"
+        spec_dir.mkdir(parents=True)
+        (spec_dir / "spec.md").write_text("# Spec", encoding="utf-8")
+        (spec_dir / "plan.md").write_text("# Plan", encoding="utf-8")
+        (spec_dir / "tasks.md").write_text("# Tasks", encoding="utf-8")
+        (project_dir / "prd.md").write_text("# PRD", encoding="utf-8")
+
+        checkpoint = Checkpoint(
+            pipeline_started_at="2026-01-01T00:00:00+00:00",
+            current_stage="execute",
+            feature=FeatureInfo(
+                id="WI-2026-RECOVER",
+                spec_dir="specs/WI-2026-RECOVER",
+                design_branch="feature/WI-2026-RECOVER-docs",
+                feature_branch="feature/WI-2026-RECOVER-dev",
+                current_branch="feature/WI-2026-RECOVER-dev",
+            ),
+            prd_source="prd.md",
+        )
+        save_checkpoint(project_dir, checkpoint)
+
+        work_item_dir = (
+            project_dir
+            / ".ai-sdlc"
+            / "work-items"
+            / "WI-2026-RECOVER"
+        )
+        YamlStore.save(
+            work_item_dir / "runtime.yaml",
+            RuntimeState(
+                current_stage="execute",
+                current_batch=2,
+                last_committed_task="T009",
+                current_branch="feature/WI-2026-RECOVER-dev",
+                execution_mode="confirm",
+                last_updated="2026-03-28T12:00:00+00:00",
+            ),
+        )
+        YamlStore.save(
+            work_item_dir / "working-set.yaml",
+            WorkingSet(
+                prd_path="artifacts/prd.md",
+                spec_path="artifacts/spec.md",
+                plan_path="artifacts/plan.md",
+                tasks_path="artifacts/tasks.md",
+                active_files=["src/api.py"],
+            ),
+        )
+        (work_item_dir / "latest-summary.md").write_text(
+            "Latest summary from artifact\n\n- keep this context\n",
+            encoding="utf-8",
+        )
+
+        pack = build_resume_pack(project_dir)
+        assert pack is not None
+        assert pack.current_stage == "execute"
+        assert pack.current_batch == 2
+        assert pack.last_committed_task == "T009"
+        assert pack.current_branch == "feature/WI-2026-RECOVER-dev"
+        assert pack.working_set_snapshot.prd_path == "artifacts/prd.md"
+        assert pack.working_set_snapshot.spec_path == "artifacts/spec.md"
+        assert pack.working_set_snapshot.plan_path == "artifacts/plan.md"
+        assert pack.working_set_snapshot.tasks_path == "artifacts/tasks.md"
+        assert pack.working_set_snapshot.active_files == ["src/api.py"]
+        assert pack.working_set_snapshot.context_summary.startswith(
+            "Latest summary from artifact"
+        )

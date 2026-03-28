@@ -201,6 +201,20 @@ def run_close_check(*, cwd: Path | None, wi: Path, all_docs: bool = False) -> Cl
                 "BLOCKER: task-execution-log.md missing required close-out fields: "
                 + ", ".join(missing)
             )
+        review_ok = "代码审查" in log_text or "review" in log_text.lower()
+        checks.append(
+            {
+                "name": "review_gate",
+                "ok": review_ok,
+                "detail": "review evidence recorded"
+                if review_ok
+                else "review evidence missing",
+            }
+        )
+        if not review_ok:
+            blockers.append(
+                "BLOCKER: Review Gate missing review evidence in task-execution-log.md."
+            )
 
     doc_violations = _docs_consistency_violations(root, wi_dir, all_docs=all_docs)
     docs_ok = len(doc_violations) == 0
@@ -218,6 +232,16 @@ def run_close_check(*, cwd: Path | None, wi: Path, all_docs: bool = False) -> Cl
             "BLOCKER: docs consistency drift for registered commands: "
             + " | ".join(doc_violations)
         )
+
+    checks.append(
+        {
+            "name": "done_gate",
+            "ok": len(blockers) == 0,
+            "detail": "ready for completion"
+            if len(blockers) == 0
+            else "completion still blocked",
+        }
+    )
 
     return CloseCheckResult(
         ok=len(blockers) == 0,

@@ -10,7 +10,9 @@ from ai_sdlc.core.config import YamlStore, YamlStoreError
 from ai_sdlc.models.state import (
     Checkpoint,
     CompletedStage,
+    ExecutionPlan,
     ResumePack,
+    RuntimeState,
     WorkingSet,
 )
 from ai_sdlc.utils.helpers import now_iso
@@ -116,38 +118,32 @@ def build_resume_pack(root: Path) -> ResumePack | None:
     if cp is None:
         return None
 
-    ws = WorkingSet()
-    if cp.feature:
-        spec_dir = root / cp.feature.spec_dir
-        if (spec_dir / "spec.md").exists():
-            ws.spec_path = str(spec_dir / "spec.md")
-        if (spec_dir / "plan.md").exists():
-            ws.plan_path = str(spec_dir / "plan.md")
-        if (spec_dir / "tasks.md").exists():
-            ws.tasks_path = str(spec_dir / "tasks.md")
-
-    if cp.prd_source and (root / cp.prd_source).exists():
-        ws.prd_path = cp.prd_source
-
-    constitution = root / ".ai-sdlc" / "memory" / "constitution.md"
-    if constitution.exists():
-        ws.constitution_path = str(constitution)
-
-    tech_stack = root / ".ai-sdlc" / "profiles" / "tech-stack.yml"
-    if tech_stack.exists():
-        ws.tech_stack_path = str(tech_stack)
+    work_item_id = active_work_item_id(cp)
+    runtime = load_runtime_state(root, work_item_id) if work_item_id else None
+    summary = load_latest_summary(root, work_item_id) if work_item_id else ""
+    ws = _build_resume_working_set(root, cp, work_item_id, summary)
 
     current_batch = 0
     last_task = ""
-    if cp.execute_progress:
+    if runtime is not None:
+        current_batch = runtime.current_batch
+        last_task = runtime.last_committed_task
+    elif cp.execute_progress:
         current_batch = cp.execute_progress.current_batch
         last_task = cp.execute_progress.last_committed_task
 
     return ResumePack(
-        current_stage=cp.current_stage,
+        current_stage=runtime.current_stage if runtime and runtime.current_stage else cp.current_stage,
         current_batch=current_batch,
         last_committed_task=last_task,
         working_set_snapshot=ws,
+        current_branch=(
+            runtime.current_branch
+            if runtime and runtime.current_branch
+            else (cp.feature.current_branch if cp.feature else "")
+        ),
+        docs_baseline_ref=cp.feature.docs_baseline_ref if cp.feature else "",
+        docs_baseline_at=cp.feature.docs_baseline_at if cp.feature else "",
         timestamp=now_iso(),
     )
 
@@ -155,6 +151,10 @@ def build_resume_pack(root: Path) -> ResumePack | None:
 def save_resume_pack(root: Path, pack: ResumePack) -> None:
     """Save a resume pack to disk."""
     YamlStore.save(root / RESUME_PACK_PATH, pack)
+    checkpoint = load_checkpoint(root)
+    work_item_id = active_work_item_id(checkpoint)
+    if work_item_id:
+        YamlStore.save(work_item_resume_pack_path(root, work_item_id), pack)
 
 
 def load_resume_pack(root: Path) -> ResumePack:
@@ -236,6 +236,128 @@ def _find_tasks(root: Path) -> str:
     return ""
 
 
+def active_work_item_id(checkpoint: Checkpoint | None) -> str:
+    """Resolve the active work item id from a checkpoint."""
+    if checkpoint is None:
+        return ""
+    linked = (checkpoint.linked_wi_id or "").strip()
+    if linked:
+        return linked
+    if checkpoint.feature and checkpoint.feature.id != "unknown":
+        return checkpoint.feature.id
+    return ""
+
+
+def work_item_dir(root: Path, work_item_id: str) -> Path:
+    """Return the canonical work-item artifact directory."""
+    return root / ".ai-sdlc" / "work-items" / work_item_id
+
+
+def execution_plan_path(root: Path, work_item_id: str) -> Path:
+    """Return the formal execution plan artifact path."""
+    return work_item_dir(root, work_item_id) / "execution-plan.yaml"
+
+
+def runtime_state_path(root: Path, work_item_id: str) -> Path:
+    """Return the formal runtime artifact path."""
+    return work_item_dir(root, work_item_id) / "runtime.yaml"
+
+
+def working_set_path(root: Path, work_item_id: str) -> Path:
+    """Return the formal working-set artifact path."""
+    return work_item_dir(root, work_item_id) / "working-set.yaml"
+
+
+def latest_summary_path(root: Path, work_item_id: str) -> Path:
+    """Return the formal latest-summary artifact path."""
+    return work_item_dir(root, work_item_id) / "latest-summary.md"
+
+
+def work_item_resume_pack_path(root: Path, work_item_id: str) -> Path:
+    """Return the work-item scoped resume-pack path."""
+    return work_item_dir(root, work_item_id) / "resume-pack.yaml"
+
+
+def save_execution_plan(root: Path, work_item_id: str, plan: ExecutionPlan) -> None:
+    """Persist execution-plan.yaml for an active work item."""
+    YamlStore.save(execution_plan_path(root, work_item_id), plan)
+
+
+def load_execution_plan(root: Path, work_item_id: str) -> ExecutionPlan | None:
+    """Load execution-plan.yaml if it exists."""
+    return _load_optional_model(execution_plan_path(root, work_item_id), ExecutionPlan)
+
+
+def save_runtime_state(root: Path, work_item_id: str, runtime: RuntimeState) -> None:
+    """Persist runtime.yaml for an active work item."""
+    YamlStore.save(runtime_state_path(root, work_item_id), runtime)
+
+
+def load_runtime_state(root: Path, work_item_id: str) -> RuntimeState | None:
+    """Load runtime.yaml if it exists."""
+    return _load_optional_model(runtime_state_path(root, work_item_id), RuntimeState)
+
+
+def save_working_set(root: Path, work_item_id: str, working_set: WorkingSet) -> None:
+    """Persist working-set.yaml for an active work item."""
+    YamlStore.save(working_set_path(root, work_item_id), working_set)
+
+
+def load_working_set(root: Path, work_item_id: str) -> WorkingSet | None:
+    """Load working-set.yaml if it exists."""
+    return _load_optional_model(working_set_path(root, work_item_id), WorkingSet)
+
+
+def save_latest_summary(root: Path, work_item_id: str, summary: str) -> None:
+    """Persist latest-summary.md for an active work item."""
+    path = latest_summary_path(root, work_item_id)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(summary, encoding="utf-8")
+
+
+def load_latest_summary(root: Path, work_item_id: str) -> str:
+    """Load latest-summary.md if it exists."""
+    path = latest_summary_path(root, work_item_id)
+    if not path.exists():
+        return ""
+    return path.read_text(encoding="utf-8")
+
+
+def build_execute_working_set(
+    root: Path,
+    spec_dir: Path,
+    tasks_file: Path,
+    *,
+    active_files: list[str] | None = None,
+    context_summary: str = "",
+) -> WorkingSet:
+    """Build the formal working-set artifact for an executing work item."""
+    ws = WorkingSet()
+
+    if (spec_dir / "spec.md").exists():
+        ws.spec_path = _relative_path(root, spec_dir / "spec.md")
+    if (spec_dir / "plan.md").exists():
+        ws.plan_path = _relative_path(root, spec_dir / "plan.md")
+    if tasks_file.exists():
+        ws.tasks_path = _relative_path(root, tasks_file)
+
+    prd = _find_prd(root)
+    if prd:
+        ws.prd_path = _relative_string(root, prd)
+
+    constitution = root / ".ai-sdlc" / "memory" / "constitution.md"
+    if constitution.exists():
+        ws.constitution_path = _relative_path(root, constitution)
+
+    tech_stack = root / ".ai-sdlc" / "profiles" / "tech-stack.yml"
+    if tech_stack.exists():
+        ws.tech_stack_path = _relative_path(root, tech_stack)
+
+    ws.active_files = active_files or []
+    ws.context_summary = context_summary
+    return ws
+
+
 def _load_checkpoint_candidate(
     root: Path,
     path: Path,
@@ -269,3 +391,77 @@ def _validate_checkpoint(root: Path, checkpoint: Checkpoint) -> None:
         raise CheckpointLoadError(
             f"checkpoint spec_dir does not exist: {checkpoint.feature.spec_dir}"
         )
+
+
+def _build_resume_working_set(
+    root: Path,
+    checkpoint: Checkpoint,
+    work_item_id: str,
+    summary: str,
+) -> WorkingSet:
+    working_set = _build_resume_working_set_from_filesystem(root, checkpoint)
+    artifact = load_working_set(root, work_item_id) if work_item_id else None
+    if artifact is not None:
+        for field in (
+            "prd_path",
+            "constitution_path",
+            "tech_stack_path",
+            "spec_path",
+            "plan_path",
+            "tasks_path",
+        ):
+            value = getattr(artifact, field)
+            if value:
+                setattr(working_set, field, value)
+        if artifact.active_files:
+            working_set.active_files = list(artifact.active_files)
+        if artifact.context_summary:
+            working_set.context_summary = artifact.context_summary
+
+    if summary:
+        working_set.context_summary = summary.strip()
+    return working_set
+
+
+def _build_resume_working_set_from_filesystem(
+    root: Path,
+    checkpoint: Checkpoint,
+) -> WorkingSet:
+    ws = WorkingSet()
+    if checkpoint.feature:
+        spec_dir = root / checkpoint.feature.spec_dir
+        if (spec_dir / "spec.md").exists():
+            ws.spec_path = str(spec_dir / "spec.md")
+        if (spec_dir / "plan.md").exists():
+            ws.plan_path = str(spec_dir / "plan.md")
+        if (spec_dir / "tasks.md").exists():
+            ws.tasks_path = str(spec_dir / "tasks.md")
+
+    if checkpoint.prd_source and (root / checkpoint.prd_source).exists():
+        ws.prd_path = checkpoint.prd_source
+
+    constitution = root / ".ai-sdlc" / "memory" / "constitution.md"
+    if constitution.exists():
+        ws.constitution_path = str(constitution)
+
+    tech_stack = root / ".ai-sdlc" / "profiles" / "tech-stack.yml"
+    if tech_stack.exists():
+        ws.tech_stack_path = str(tech_stack)
+    return ws
+
+
+def _load_optional_model(path: Path, model_class: type[ExecutionPlan | RuntimeState | WorkingSet]):
+    if not path.exists():
+        return None
+    return YamlStore.load(path, model_class)
+
+
+def _relative_string(root: Path, raw_path: str) -> str:
+    return _relative_path(root, Path(raw_path))
+
+
+def _relative_path(root: Path, path: Path) -> str:
+    try:
+        return str(path.resolve().relative_to(root.resolve()))
+    except ValueError:
+        return str(path)

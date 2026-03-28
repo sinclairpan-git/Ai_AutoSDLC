@@ -8,6 +8,7 @@ from pathlib import Path
 
 import pytest
 
+from ai_sdlc.core.config import YamlStore
 from ai_sdlc.core.executor import (
     MAX_CONSECUTIVE_HALTS,
     MAX_DEBUG_ROUNDS,
@@ -22,6 +23,7 @@ from ai_sdlc.models.state import (
     RuntimeState,
     Task,
     TaskStatus,
+    WorkingSet,
 )
 from ai_sdlc.telemetry.paths import telemetry_local_root
 from ai_sdlc.telemetry.runtime import RuntimeTelemetry
@@ -386,6 +388,37 @@ class TestExecutorRun:
         assert "Circuit breaker" in result.error
         assert result.plan.tasks[0].status == TaskStatus.HALTED
         assert result.plan.tasks[1].status == TaskStatus.HALTED
+
+    def test_run_persists_formal_truth_surfaces_for_active_work_item(
+        self, git_repo: Path
+    ) -> None:
+        spec_dir = git_repo / "specs" / "WI-2026-ART"
+        tasks_path = _write_tasks_md(spec_dir, _sample_tasks_md())
+        (spec_dir / "spec.md").write_text("# Spec\n", encoding="utf-8")
+        (spec_dir / "plan.md").write_text("# Plan\n", encoding="utf-8")
+        _write_pipeline_config(git_repo, max_tasks_per_batch=2)
+
+        result = Executor(git_repo).run(tasks_path)
+
+        wi_dir = git_repo / ".ai-sdlc" / "work-items" / "WI-2026-ART"
+        persisted_plan = YamlStore.load(wi_dir / "execution-plan.yaml", ExecutionPlan)
+        persisted_runtime = YamlStore.load(wi_dir / "runtime.yaml", RuntimeState)
+        persisted_working_set = YamlStore.load(wi_dir / "working-set.yaml", WorkingSet)
+        latest_summary = (wi_dir / "latest-summary.md").read_text(encoding="utf-8")
+
+        assert persisted_plan.total_batches == 2
+        assert persisted_plan.tasks[-1].status == TaskStatus.COMPLETED
+        assert persisted_runtime.current_stage == "execute"
+        assert persisted_runtime.current_batch == 2
+        assert persisted_runtime.last_committed_task == "T003"
+        assert persisted_runtime.current_branch != ""
+        assert persisted_runtime.last_updated != ""
+        assert persisted_working_set.spec_path.endswith("spec.md")
+        assert persisted_working_set.plan_path.endswith("plan.md")
+        assert persisted_working_set.tasks_path.endswith("tasks.md")
+        assert "src/extra.py" in persisted_working_set.active_files
+        assert latest_summary == result.summary_path.read_text(encoding="utf-8")
+        assert "Completed Tasks: 3" in latest_summary
 
 
 class TestIsComplete:

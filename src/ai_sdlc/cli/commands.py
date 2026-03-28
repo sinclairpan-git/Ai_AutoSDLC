@@ -15,9 +15,14 @@ from ai_sdlc.context.state import (
     CheckpointLoadError,
     ResumePackError,
     ResumePackNotFoundError,
+    active_work_item_id,
     build_resume_pack,
     load_checkpoint,
+    load_execution_plan,
+    load_latest_summary,
     load_resume_pack,
+    load_runtime_state,
+    load_working_set,
     save_resume_pack,
 )
 from ai_sdlc.core.config import load_project_config, load_project_state
@@ -26,6 +31,7 @@ from ai_sdlc.core.reconcile import (
     detect_reconcile_hint,
     reconcile_checkpoint,
 )
+from ai_sdlc.gates.governance_guard import load_governance_state
 from ai_sdlc.generators.index_gen import (
     generate_all_extended_indexes,
     generate_index,
@@ -37,6 +43,7 @@ from ai_sdlc.integrations.ide_adapter import (
 )
 from ai_sdlc.knowledge.engine import apply_refresh, compute_refresh_level, load_baseline
 from ai_sdlc.models.project import ProjectStatus
+from ai_sdlc.models.state import Checkpoint
 from ai_sdlc.routers.bootstrap import (
     EXISTING_INITIALIZED,
     EXISTING_UNINITIALIZED,
@@ -65,6 +72,16 @@ def _is_interactive_terminal() -> bool:
         return sys.stdin.isatty() and sys.stdout.isatty()
     except Exception:
         return False
+
+
+def _surface_work_item_id(cp: Checkpoint | None) -> str | None:
+    if cp is None:
+        return None
+    if cp.linked_wi_id:
+        return cp.linked_wi_id
+    if cp.feature and cp.feature.id:
+        return cp.feature.id
+    return None
 
 
 def _print_reconcile_guidance(
@@ -100,6 +117,15 @@ def _print_reconcile_guidance(
     console.print("  1. [cyan]ai-sdlc recover --reconcile[/cyan] 进行状态对齐")
     console.print("  2. [cyan]ai-sdlc status[/cyan] 查看当前 checkpoint")
     console.print("  3. [cyan]ai-sdlc run --dry-run[/cyan] 在对齐后预演流水线")
+
+
+def _latest_summary_preview(summary: str) -> str:
+    for line in summary.splitlines():
+        candidate = line.strip()
+        if not candidate or candidate.startswith("#"):
+            continue
+        return candidate
+    return "present"
 
 
 # ---------------------------------------------------------------------------
@@ -208,6 +234,10 @@ def status_command(
         if cp.feature:
             table.add_row("Feature ID", cp.feature.id)
             table.add_row("Current Branch", cp.feature.current_branch)
+            if cp.feature.docs_baseline_ref:
+                table.add_row("Docs Baseline", cp.feature.docs_baseline_ref)
+            if cp.feature.docs_baseline_at:
+                table.add_row("Docs Baseline At", cp.feature.docs_baseline_at)
         if cp.execute_progress:
             ep = cp.execute_progress
             table.add_row(
@@ -220,6 +250,33 @@ def status_command(
             table.add_row("Linked plan URI", cp.linked_plan_uri)
         if cp.last_synced_at:
             table.add_row("Last synced (plan)", cp.last_synced_at)
+        work_item_id = _surface_work_item_id(cp)
+        active_wi_id = active_work_item_id(cp)
+        if active_wi_id:
+            execution_plan = load_execution_plan(root, active_wi_id)
+            runtime = load_runtime_state(root, active_wi_id)
+            working_set = load_working_set(root, active_wi_id)
+            latest_summary = load_latest_summary(root, active_wi_id)
+            if execution_plan is not None:
+                table.add_row(
+                    "Execution Plan",
+                    f"{execution_plan.total_tasks} tasks / {execution_plan.total_batches} batches",
+                )
+            if runtime is not None:
+                if runtime.current_task:
+                    table.add_row("Runtime Task", runtime.current_task)
+                if runtime.last_updated:
+                    table.add_row("Runtime Updated", runtime.last_updated)
+            if working_set is not None and working_set.active_files:
+                table.add_row("Active Files", ", ".join(working_set.active_files))
+            if latest_summary:
+                table.add_row("Latest Summary", _latest_summary_preview(latest_summary))
+        if work_item_id:
+            governance = load_governance_state(root, work_item_id)
+            if governance is not None:
+                table.add_row("Governance Frozen", "yes" if governance.frozen else "no")
+                if governance.frozen_at:
+                    table.add_row("Governance Frozen At", governance.frozen_at)
 
     console.print(table)
     hint = detect_reconcile_hint(root)
@@ -298,6 +355,7 @@ def recover_command(
     except CheckpointLoadError as exc:
         console.print(f"[red]Invalid checkpoint: {exc}[/red]")
         raise typer.Exit(code=1) from None
+    cp = load_checkpoint(root)
 
     table = Table(title="Recovery Info")
     table.add_column("Property", style="cyan")
@@ -306,6 +364,12 @@ def recover_command(
     table.add_row("Current Batch", str(pack.current_batch))
     table.add_row("Last Task", pack.last_committed_task or "none")
     table.add_row("Timestamp", pack.timestamp)
+    if pack.current_branch:
+        table.add_row("Current Branch", pack.current_branch)
+    if pack.docs_baseline_ref:
+        table.add_row("Docs Baseline", pack.docs_baseline_ref)
+    if pack.docs_baseline_at:
+        table.add_row("Docs Baseline At", pack.docs_baseline_at)
     if hint is not None:
         table.add_row("Reconciled Stage", hint.current_stage)
         table.add_row("Reconciled Spec Dir", hint.spec_dir)
@@ -318,6 +382,13 @@ def recover_command(
         table.add_row("Spec", ws.spec_path)
     if ws.plan_path:
         table.add_row("Plan", ws.plan_path)
+    work_item_id = _surface_work_item_id(cp)
+    if work_item_id:
+        governance = load_governance_state(root, work_item_id)
+        if governance is not None:
+            table.add_row("Governance Frozen", "yes" if governance.frozen else "no")
+            if governance.frozen_at:
+                table.add_row("Governance Frozen At", governance.frozen_at)
 
     console.print(
         Panel(

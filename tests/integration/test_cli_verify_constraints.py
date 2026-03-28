@@ -192,6 +192,41 @@ class TestCliVerifyConstraints:
         assert list(telemetry_root.rglob("evaluations/*.json"))
         assert list(telemetry_root.rglob("violations/*.json"))
 
+    def test_json_output_exposes_verification_gate_surface(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        init_project(tmp_path)
+        _minimal_constitution(tmp_path)
+        spec = tmp_path / "specs" / "001-wi"
+        spec.mkdir(parents=True)
+        (spec / "spec.md").write_text("- **FR-001**: x\n", encoding="utf-8")
+        (spec / "tasks.md").write_text(
+            "### Task 1.1\n- **依赖**：无\n- **验收标准（AC）**：\n  1. ok\n",
+            encoding="utf-8",
+        )
+        save_checkpoint(
+            tmp_path,
+            Checkpoint(
+                current_stage="verify",
+                feature=FeatureInfo(
+                    id="001",
+                    spec_dir="specs/001-wi",
+                    design_branch="d",
+                    feature_branch="f",
+                    current_branch="main",
+                ),
+            ),
+        )
+        monkeypatch.chdir(tmp_path)
+
+        result = runner.invoke(app, ["verify", "constraints", "--json"])
+
+        assert result.exit_code == 0
+        payload = json.loads(result.output)
+        assert payload["verification_gate"]["name"] == "Verification Gate"
+        assert payload["verification_gate"]["source_name"] == "verify constraints"
+        assert "required_governance_files" in payload["verification_gate"]["check_objects"]
+
     def test_json_output_outside_project_includes_root(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:

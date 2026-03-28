@@ -1063,3 +1063,171 @@
 - **已完成 git 提交**：否
 - **提交哈希**：N/A（待本批统一提交后填写）
 - **是否继续下一批**：按需（`001` drift 已清零；仅剩独立登记的 stale checkpoint/backlog 待办不属于本批）
+
+### Batch 2026-03-28-019 | 001 gap closure Batch 13：intake / governance / branch protocol 合流与归档
+
+#### 2.1 批次范围
+
+- **覆盖内容**：审查并合流分支 `codex/batch13-rg001-rg006` 中对应 Batch 13 的实现（来源提交 `ef63c2a`），补齐 Task **6.32～6.36** 的主线代码、`tasks.md` 收口说明与 execution-log 正式归档。
+- **覆盖阶段**：EXECUTE / VERIFY / CLOSE（分支实现审查、主线合流、traceability 归档）。
+- **预读范围**：[`spec.md`](spec.md) `RG-001~006`、[`tasks.md`](tasks.md) Batch 13、[`plan.md`](plan.md) gap closure 设计节、`main..codex/batch13-rg001-rg006` 差异。
+- **激活的规则**：合同先于实现；完成前验证；代码自审；归档先于继续。
+
+#### 2.2 统一验证命令
+
+- **R1（红灯验证）**
+  - 命令：无（本批以已完成分支实现的审查与合流为主，未额外新增红灯夹具）。
+  - 结果：不适用。
+- **V1（定向）**
+  - 命令：`uv run pytest -q tests/unit/test_work_intake_router.py tests/flow/test_new_requirement_flow.py tests/unit/test_branch_manager.py tests/flow/test_docs_dev_flow.py tests/integration/test_cli_recover.py tests/integration/test_cli_status.py tests/unit/test_business_rules.py`
+  - 结果：**87 passed**。
+- **V2（全量回归）**
+  - 命令：`uv run pytest -q`
+  - 结果：**742 passed**（2026-03-28，本机）。
+- **Lint**
+  - 命令：`uv run ruff check src tests`
+  - 结果：**All checks passed!**
+
+#### 2.3 任务记录
+
+##### Task 6.32 + Task 6.33 | intake 原子分配、推荐流与 uncertain 澄清真值
+
+- **改动范围**：`src/ai_sdlc/routers/work_intake.py`、`src/ai_sdlc/models/work.py`、`tests/unit/test_work_intake_router.py`、`tests/flow/test_new_requirement_flow.py`
+- **改动内容**：为 `KeywordWorkIntakeRouter` 增加正式 `intake()` 路径，在同一框架调用中完成 `work_item_id` 分配、`next_work_item_seq` 落盘/回滚与 `WorkItem` 持久化；统一补齐 `recommended_flow`、`severity`、低置信度 `needs_human_confirmation` 输出。`ClarificationState` 新增 `candidate_types` 与 `halt_reason`，并按“连续两轮未收敛后，第 3 次决策 HALT”落实 spec。
+- **新增/调整的测试**：`tests/unit/test_work_intake_router.py` 新增 intake 成功、回滚、候选类型与 HALT 原因回归；`tests/flow/test_new_requirement_flow.py` 继续验证 formal intake 落盘链路。
+- **执行的命令**：见 V1 / V2。
+- **测试结果**：定向与全量回归通过。
+- **是否符合任务目标**：符合。
+
+##### Task 6.34 + Task 6.35 | governance freeze 阻断与 docs/dev branch binding
+
+- **改动范围**：`src/ai_sdlc/branch/branch_manager.py`、`src/ai_sdlc/gates/governance_guard.py`、`src/ai_sdlc/context/state.py`、`src/ai_sdlc/cli/commands.py`、`tests/unit/test_branch_manager.py`、`tests/flow/test_docs_dev_flow.py`、`tests/integration/test_cli_recover.py`、`tests/integration/test_cli_status.py`、`tests/unit/test_business_rules.py`
+- **改动内容**：`BranchManager` 现会从磁盘读取 `governance.yaml`，在 governance 未冻结时统一阻断 docs/dev 入口，并对冻结输入启用显式文件保护；docs -> dev 切换会记录并刷新 `current_branch`、`docs_baseline_ref`、`docs_baseline_at`，baseline recheck 失败时回滚 checkout，不再留下半更新状态。`status` / `recover` 直接展示 branch、docs baseline 与 governance frozen 绑定。
+- **新增/调整的测试**：branch switch、governance-not-frozen、rollback 与 CLI status/recover 绑定展示回归同步补齐。
+- **执行的命令**：见 V1 / V2。
+- **测试结果**：定向与全量回归通过。
+- **是否符合任务目标**：符合。
+
+##### Task 6.36 | Batch 13 traceability / backlog / 主线对账
+
+- **改动范围**：`specs/001-ai-sdlc-framework/tasks.md`、`specs/001-ai-sdlc-framework/task-execution-log.md`、`docs/framework-defect-backlog.zh-CN.md`
+- **改动内容**：将 Batch 13 的主线实现、执行证据与里程碑口径重新对齐，消除“分支已实现但主线/归档尚未同步”的漂移。
+- **新增/调整的测试**：无新增代码测试；以 V1 / V2 / Lint 作为 Batch 13 合流后的新鲜证据。
+- **执行的命令**：见 V1 / V2 / Lint。
+- **测试结果**：全部通过。
+- **是否符合任务目标**：符合。
+
+#### 2.4 代码审查（摘要）
+
+- **宪章/规格对齐**：逐项核对 `RG-001~006` 与分支实现，确认 formal intake、governance frozen 入口阻断、docs/dev branch binding、status/recover surface 已进入主路径，而不是只存在于局部 helper。
+- **代码质量**：`work_intake` / `branch_manager` / CLI surface 的职责边界清晰；澄清轮次边界按 `max_rounds=2` + “第 3 次决策 HALT”与 spec 保持一致。
+- **测试质量**：本批以 Batch 13 相关 unit / flow / integration 套件做定向验证，再辅以全量 `pytest` 与 `ruff` 复核。
+- **Spec 偏移**：无新增偏移；本批处理的是“分支实现先于主线真值同步”的收口漂移。
+- **结论**：无 Critical 阻塞项，允许合入主线。
+
+#### 2.5 任务/计划同步状态
+
+- `tasks.md` 同步状态：`已同步`（Batch 13 收口块与 `M13` 已对齐 execution-log 真值）。
+- `related_plan`（如存在）同步状态：`已对账`（[`plan.md`](plan.md) 中 Batch 13 对应 gap closure 设计已和主线实现一致）。
+- 说明：本批重点收口 Batch 13 的“分支实现 vs 主线/归档真值”漂移，不再保留 `planned` 口径。
+
+#### 2.6 自动决策记录（如有）
+
+- AD-001：保持 Batch 13 的 defect 记录以“主线/归档漂移”而非“实现从未存在”描述 → 来源：代码与测试已明确存在于分支 `codex/batch13-rg001-rg006` → 理由：避免把“未合入主线”误记成“从未实现”，确保 backlog 描述与 Git 真值一致。
+
+#### 2.7 批次结论
+
+- Batch 13（Task **6.32～6.36**）已完成主线合流与正式归档；`RG-001~006` 现在可在主线代码、回归测试、`tasks.md` 与 execution-log 中找到一致映射。
+
+#### 2.8 归档后动作
+
+- **已完成 git 提交**：否
+- **提交哈希**：N/A（待本次 merge commit 统一填写）
+- **是否继续下一批**：继续 Batch 14 归档与最终对账
+
+### Batch 2026-03-28-020 | 001 gap closure Batch 14：artifact / gate surface 合流与归档
+
+#### 2.1 批次范围
+
+- **覆盖内容**：审查并合流分支 `codex/batch13-rg001-rg006` 中对应 Batch 14 的实现（来源提交 `f21115a`），补齐 Task **6.37～6.39** 的主线代码、`tasks.md` 收口说明与 execution-log 正式归档。
+- **覆盖阶段**：EXECUTE / VERIFY / CLOSE（formal artifact / gate surface 合流、验证与文档对账）。
+- **预读范围**：[`spec.md`](spec.md) `RG-007~009`、[`tasks.md`](tasks.md) Batch 14、[`plan.md`](plan.md) gap closure 设计节、`main..codex/batch13-rg001-rg006` 差异。
+- **激活的规则**：合同先于实现；完成前验证；代码自审；归档先于继续。
+
+#### 2.2 统一验证命令
+
+- **R1（红灯验证）**
+  - 命令：无（本批以已完成分支实现的审查与合流为主，未额外新增红灯夹具）。
+  - 结果：不适用。
+- **V1（定向）**
+  - 命令：`uv run pytest -q tests/unit/test_executor.py tests/flow/test_recover_flow.py tests/unit/test_gates.py tests/integration/test_cli_verify_constraints.py tests/integration/test_cli_status.py`
+  - 结果：**111 passed**。
+- **V2（全量回归）**
+  - 命令：`uv run pytest -q`
+  - 结果：**742 passed**（2026-03-28，本机）。
+- **Lint**
+  - 命令：`uv run ruff check src tests`
+  - 结果：**All checks passed!**
+- **治理只读校验**
+  - 命令：`uv run ai-sdlc verify constraints`
+  - 结果：**无 BLOCKER**。
+- **Close 收口校验**
+  - 命令：`uv run ai-sdlc workitem close-check --wi specs/001-ai-sdlc-framework`、`uv run ai-sdlc workitem close-check --wi specs/001-ai-sdlc-framework --all-docs`
+  - 结果：`tasks_completion` / `related_plan_drift` / `execution_log_fields` / `review_gate` / `docs_consistency` / `done_gate` **全部 PASS**。
+
+#### 2.3 任务记录
+
+##### Task 6.37 | active work item artifact 正式真值面
+
+- **改动范围**：`src/ai_sdlc/core/executor.py`、`src/ai_sdlc/context/state.py`、`src/ai_sdlc/models/state.py`、`tests/unit/test_executor.py`、`tests/flow/test_recover_flow.py`、`tests/integration/test_cli_status.py`
+- **改动内容**：`Executor` 现会在 active work item 目录持续写入 `execution-plan.yaml`、`runtime.yaml`、`working-set.yaml` 与 `latest-summary.md`；`context.state` 新增这些 formal artifacts 的 load/save path，并在恢复时按 `summary-first` / `working-set-first` 组织 `resume-pack`。
+- **新增/调整的测试**：executor artifact 持久化、recover 对 formal artifacts 的优先消费、status 对 execution/runtime/summary surface 的展示回归。
+- **执行的命令**：见 V1 / V2。
+- **测试结果**：定向与全量回归通过。
+- **是否符合任务目标**：符合。
+
+##### Task 6.38 | PRD / Review / Done / Verification Gate surface 显式化
+
+- **改动范围**：`src/ai_sdlc/gates/pipeline_gates.py`、`src/ai_sdlc/gates/registry.py`、`src/ai_sdlc/core/runner.py`、`src/ai_sdlc/core/verify_constraints.py`、`src/ai_sdlc/core/close_check.py`、`tests/unit/test_gates.py`、`tests/integration/test_cli_verify_constraints.py`
+- **改动内容**：显式新增 `PRDGate`、`ReviewGate`、`DoneGate`、`VerificationGate`，并将其接入 gate registry、runner、CLI 与 JSON/check-object surface；`DoneGate` 对未完成的 Knowledge Refresh 具备正式阻断语义，`close-check` 增补 `review_gate` / `done_gate` 检查项。
+- **新增/调整的测试**：gates 单测锁定新 gate surface、Verification Gate check objects、Done Gate block 语义；CLI verify 回归验证 JSON surface。
+- **执行的命令**：见 V1 / V2 / 治理只读校验 / Close 收口校验。
+- **测试结果**：全部通过。
+- **是否符合任务目标**：符合。
+
+##### Task 6.39 | Batch 14 最终对账与里程碑回填
+
+- **改动范围**：`specs/001-ai-sdlc-framework/tasks.md`、`specs/001-ai-sdlc-framework/task-execution-log.md`、`docs/framework-defect-backlog.zh-CN.md`
+- **改动内容**：将 Batch 14 的主线实现、执行证据与里程碑口径重新对齐，并将 backlog defect 文案收敛为“分支实现曾存在，但主线/归档真值滞后”的准确历史描述。
+- **新增/调整的测试**：无新增代码测试；以 V1 / V2 / 治理只读校验 / Close 收口校验作为最终对账证据。
+- **执行的命令**：见 V1 / V2 / 治理只读校验 / Close 收口校验。
+- **测试结果**：全部通过。
+- **是否符合任务目标**：符合。
+
+#### 2.4 代码审查（摘要）
+
+- **宪章/规格对齐**：逐项核对 `RG-007~009` 与分支实现，确认 formal artifact 与显式 gate taxonomy 已进入主线磁盘真值、runner/CLI surface 与 close-check/verify surface，而不是只停留在隐式语义。
+- **代码质量**：artifact path/load/save 集中在 `context.state`，gate taxonomy 与 close-check 语义集中在 `pipeline_gates` / `verify_constraints` / `close_check`，职责边界清晰。
+- **测试质量**：以 Batch 14 相关 unit / flow / integration 套件做定向验证，再辅以全量 `pytest`、`ruff`、`verify constraints` 与 `close-check --all-docs` 复核。
+- **Spec 偏移**：无新增偏移；本批处理的是“formal surface 已在分支实现，但主线/归档未同步”的收口漂移。
+- **结论**：无 Critical 阻塞项，允许合入主线。
+
+#### 2.5 任务/计划同步状态
+
+- `tasks.md` 同步状态：`已同步`（Batch 14 收口块与 `M13` 已对齐 execution-log 真值）。
+- `related_plan`（如存在）同步状态：`已对账`（[`plan.md`](plan.md) 中 Batch 14 对应 gap closure 设计已和主线实现一致）。
+- 说明：本批完成 `RG-007~009` 的主线合流、artifact / gate surface 对账与 defect 文案纠偏。
+
+#### 2.6 自动决策记录（如有）
+
+- AD-001：将 backlog 文案从“主线未实现”修正为“分支已实现但主线/归档真值滞后” → 来源：`git log` 与 `git branch --contains` 明确显示 `ef63c2a` / `f21115a` 先存在于 `codex/batch13-rg001-rg006` → 理由：保留真实根因，避免用错误叙述覆盖已存在的实现事实。
+
+#### 2.7 批次结论
+
+- Batch 14（Task **6.37～6.39**）已完成主线合流与正式归档；`RG-007~009` 现在可在主线代码、formal artifact、回归测试、`tasks.md` 与 execution-log 中找到一致映射。
+
+#### 2.8 归档后动作
+
+- **已完成 git 提交**：否
+- **提交哈希**：N/A（待本次 merge commit 统一填写）
+- **是否继续下一批**：按需

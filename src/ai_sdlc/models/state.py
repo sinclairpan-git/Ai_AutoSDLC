@@ -27,6 +27,8 @@ class FeatureInfo(BaseModel):
     design_branch: str
     feature_branch: str
     current_branch: str
+    docs_baseline_ref: str = ""
+    docs_baseline_at: str = ""
 
 
 class MultiAgentInfo(BaseModel):
@@ -82,7 +84,9 @@ class RuntimeState(BaseModel):
 
     current_stage: str = ""
     current_batch: int = 0
+    current_task: str = ""
     last_committed_task: str = ""
+    current_branch: str = ""
     ai_decisions_count: int = 0
     execution_mode: str = "auto"
     started_at: str = ""
@@ -111,6 +115,9 @@ class ResumePack(BaseModel):
     current_batch: int = 0
     last_committed_task: str = ""
     working_set_snapshot: WorkingSet
+    current_branch: str = ""
+    docs_baseline_ref: str = ""
+    docs_baseline_at: str = ""
     timestamp: str
     checkpoint_path: str = ".ai-sdlc/state/checkpoint.yml"
 
