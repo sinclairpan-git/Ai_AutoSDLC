@@ -536,3 +536,52 @@
 - 风险等级: 高
 - 可验证成功标准: 给定“checkpoint 已推进、resume-pack 仍旧”的夹具时，`recover` 与 `status` 必须识别并拒绝陈旧 pack，或自动按最新 checkpoint 重建；正常路径下每次 checkpoint 更新后磁盘上的 resume-pack 都与最新 stage/batch 一致，不再反复回到旧断点。
 - 是否需要回归测试补充: 是：补 checkpoint 前进但 resume-pack 未刷新的 stale-pack 正反测试、`save_checkpoint()` 自动同步测试、`recover/status` 遇到双状态源失配时的阻断或自动重建集成测试。
+
+## FD-2026-03-28-002 | 001 intake / governance / branch protocol 新增合同缺口导致主链 surface 与磁盘态脱节
+
+- 日期 (UTC): 2026-03-28
+- 来源: spec_backfill, self_review
+- 状态: closed
+- owner: codex
+- wi_id: 001-ai-sdlc-framework
+- 现象: 2026-03-28 新补入 `spec.md` 的 `RG-001 ~ RG-006` 揭示出一组“已有局部能力但主链真值未收敛”的合同缺口：formal intake 仍要求调用方手工补 `work_item_id` / `recommended_flow` / `severity`，governance frozen 不会阻断 docs branch/docs baseline 入口，docs -> dev 切换也不会把 branch / docs baseline 绑定刷新到 checkpoint、resume-pack、`status` 与 `recover` surface。
+- 触发场景: 在 `001` Batch 12 已收口后继续按新版 spec 审视 routing / governance / branch protocol，会发现代码虽然可运行，但关键主链仍存在“需要调用方补写”“只在会话上下文判断”“磁盘态更新后 surface 不感知”的残余漂移。
+- 影响范围: 工作项 intake 真值、governance freeze 可信度、docs/dev 分支流转、恢复与状态展示的一致性，以及用户对框架“主闭环是否真的落盘”的信任。
+- 根因分类: A, B, D, H
+- 未来杜绝方案摘要: 把 routing / governance / branch protocol 的核心状态全部收敛到磁盘单一来源，并让 `status` / `recover` / branch entry 直接消费该真值，而不是依赖调用方补写或会话内判断。主链上任何需要“原子分配、冻结阻断、分支绑定”的合同都必须先在实现和 contract tests 里冻结，再允许继续扩展。
+- 建议改动层级: rule / policy, middleware, workflow, tool, eval
+- prompt / context: 对新增 FR/RG 的实现评审不得只看“是否已有 helper/局部能力”，而必须确认是否已经进入 formal intake、governance gate、branch switch、status/recover 等主路径。
+- rule / policy: formal intake 禁止框架外补 ID；governance 未冻结时 docs baseline 入口一律阻断；docs -> dev 切换必须刷新 checkpoint / resume-pack / status / recover 绑定。
+- middleware: `KeywordWorkIntakeRouter.intake()` 负责原子分配与回滚；`BranchManager` 负责从磁盘读取 `governance.yaml` 并刷新 checkpoint / resume-pack；CLI surface 直接消费 governance / branch binding 真值。
+- workflow: Batch 13 按 `Task 6.32 ~ 6.36` 以 TDD 收口，并用 unit / flow / integration tests 证明 intake、governance、branch switch、status、recover 的磁盘态与 surface 一致。
+- tool: `src/ai_sdlc/routers/work_intake.py`、`src/ai_sdlc/models/work.py`、`src/ai_sdlc/gates/governance_guard.py`、`src/ai_sdlc/branch/branch_manager.py`、`src/ai_sdlc/context/state.py`、`src/ai_sdlc/cli/commands.py`
+- eval: formal intake 原子分配回归、governance-not-frozen 阻断率、branch binding freshness、`status/recover` 对 docs baseline 绑定展示的一致性回归数
+- 风险等级: 高
+- Batch 13 收口 (2026-03-28):
+  - 已闭环: formal intake 原子分配/回滚、`recommended_flow` / `severity` / 低置信度确认、`ClarificationState(candidate_types, halt_reason)`、governance 未冻结阻断 docs/dev 入口、冻结输入显式保护、docs -> dev checkpoint/resume/status/recover 绑定刷新、baseline 失败回滚 checkout。
+  - 验证: Batch 13 定向 suite 105 passed；全量 `uv run pytest -q` 732 passed；`uv run ruff check src tests` passed。
+- 可验证成功标准: 给定低置信度 intake、uncertain 澄清、多轮 governance/docs/dev 切换与 status/recover 查询的夹具时，框架会直接基于磁盘态返回一致结果，不再出现“ID 已发放但未落盘”“governance 未冻结仍能进入 docs/dev”“切分支后 recover/status 仍显示旧 branch”这类主链真值漂移。
+- 是否需要回归测试补充: 是：补 intake 成功/失败事务、governance-not-frozen 阻断、docs->dev rollback、CLI status/recover 绑定展示的正反回归测试。
+
+## FD-2026-03-28-003 | 实现与验证已完成却未执行提交，导致收口声明与 Git 真值脱节
+
+- 日期 (UTC): 2026-03-28
+- 来源: user_report, self_review
+- 状态: open
+- owner: codex
+- wi_id: 001-ai-sdlc-framework
+- 现象: Batch 13 的代码实现、验证与文档回填已经完成，且向用户汇报了“已收口”的结果，但实际并未执行 `git commit`，分支仍停留在 dirty worktree，导致“完成声明”与 Git 真值不一致。
+- 触发场景: 用户只要求“开始执行实现”时，执行侧完成了代码、测试与文档回填，但在最终收口阶段没有继续执行 branch close-out / commit 动作，也没有在完成答复中显式声明“当前未提交”。
+- 影响范围: 交付可追溯性、分支卫生、用户对“已完成/已收口”表述的理解、后续 cherry-pick/PR/回滚 的操作确定性，以及“本次改动是否已固化”为仓库事实的判断。
+- 根因分类: A, B, H
+- 未来杜绝方案摘要: 把“实现完成”与“Git 收口完成”明确拆开，禁止在 dirty worktree 状态下使用容易被理解成“已完整交付”的完成表述。最终答复必须满足二选一：要么给出 commit SHA，要么明确声明“验证已通过但尚未提交”，并把是否提交作为显式下一步。
+- 建议改动层级: prompt / context, rule / policy, workflow, tool, eval
+- prompt / context: 对“开始实现”类请求，若代码已改且验证通过，默认仍需继续执行收口检查；不得把“未被明确要求提交”当成可以省略提交状态披露的理由。
+- rule / policy: 所有完成性表述必须与 Git 真值一致；若 worktree 非 clean，则禁止使用会让用户合理推断“已提交/已固化”的收口措辞。
+- middleware: 为最终交付路径增加 dirty-worktree guard；在准备输出完成结论前自动检查 `git status --short`，若存在未提交改动则切换为“未提交完成态”模板。
+- workflow: 将 “验证通过 -> 检查 worktree -> 提交或显式声明未提交” 固化为收口尾部清单；对已进入独立分支的实现批次，默认必须执行一次 `git status` 对账，再决定是否 commit。
+- tool: `git status --short`、`git branch --show-current`、future `finish-branch` / close-out helper
+- eval: “完成声明但 worktree 非 clean” 事件数、最终答复未披露提交状态次数、收口前 dirty-worktree 拦截率
+- 风险等级: 中
+- 可验证成功标准: 给定“代码已改且测试通过但尚未 commit”的场景时，代理的最终答复必须明确披露“未提交”状态，或继续执行 commit 后给出 SHA；不得再出现用户需要追问“为什么没提交”才能发现 Git 真值的情况。
+- 是否需要回归测试补充: 是：补一条面向收口流程的约束检查，验证 dirty worktree 时不会输出“已完成且已收口”的默认结论。

@@ -10,11 +10,12 @@ import pytest
 from ai_sdlc.branch.branch_manager import BranchError, BranchManager
 from ai_sdlc.branch.file_guard import FileGuard, ProtectedFileError
 from ai_sdlc.branch.git_client import GitClient
+from ai_sdlc.core.config import YamlStore
 from ai_sdlc.core.executor import BatchExecutor, CircuitBreakerError
 from ai_sdlc.core.state_machine import transition
 from ai_sdlc.errors import ProjectNotInitializedError, StudioRoutingError
 from ai_sdlc.gates.pipeline_gates import ExecuteGate
-from ai_sdlc.models.gate import GateVerdict
+from ai_sdlc.models.gate import GateVerdict, GovernanceItem, GovernanceState
 from ai_sdlc.models.state import (
     ExecutionBatch,
     ExecutionPlan,
@@ -32,6 +33,29 @@ from ai_sdlc.models.work import (
 from ai_sdlc.routers.bootstrap import detect_project_state
 from ai_sdlc.routers.work_intake import KeywordWorkIntakeRouter
 from ai_sdlc.studios.router import StudioRouter
+
+
+def _freeze_governance(root: Path, work_item_id: str) -> None:
+    gov_path = root / ".ai-sdlc" / "work-items" / work_item_id / "governance.yaml"
+    constitution = root / ".ai-sdlc" / "memory" / "constitution.md"
+    decisions = root / ".ai-sdlc" / "profiles" / "decisions.yml"
+    constitution.parent.mkdir(parents=True, exist_ok=True)
+    decisions.parent.mkdir(parents=True, exist_ok=True)
+    constitution.write_text("# Constitution\n", encoding="utf-8")
+    decisions.write_text("decisions: []\n", encoding="utf-8")
+
+    state = GovernanceState(frozen=True, frozen_at="2026-03-28T12:00:00+00:00")
+    state.items["constitution"] = GovernanceItem(
+        exists=True,
+        path=str(constitution),
+        verified_at="2026-03-28T12:00:00+00:00",
+    )
+    state.items["clarify"] = GovernanceItem(
+        exists=True,
+        path=str(decisions),
+        verified_at="2026-03-28T12:00:00+00:00",
+    )
+    YamlStore.save(gov_path, state)
 
 
 class TestRoutingRules:
@@ -68,6 +92,7 @@ class TestRoutingRules:
         item = router.classify("?", WorkItemSource.TEXT)
         item = router.clarify(item, "still vague")
         item = router.clarify(item, "no idea")
+        item = router.clarify(item, "still not sure")
         assert item.clarification is not None
         assert item.clarification.status == ClarificationStatus.HALTED
 
@@ -98,10 +123,12 @@ class TestBranchRules:
     def test_br022_spec_plan_protected_on_dev(self, tmp_path: Path) -> None:
         git = MagicMock(spec=GitClient)
         git.has_uncommitted_changes.return_value = False
+        git.current_branch.return_value = "feature/WI-001-docs"
         type(git).repo_path = PropertyMock(return_value=tmp_path)
 
         guard = FileGuard()
         bm = BranchManager(git, file_guard=guard)
+        _freeze_governance(tmp_path, "WI-001")
 
         spec_dir = tmp_path / "specs" / "WI-001"
         spec_dir.mkdir(parents=True)

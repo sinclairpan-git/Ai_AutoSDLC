@@ -148,6 +148,9 @@ def build_resume_pack(root: Path) -> ResumePack | None:
         current_batch=current_batch,
         last_committed_task=last_task,
         working_set_snapshot=ws,
+        current_branch=cp.feature.current_branch if cp.feature else "",
+        docs_baseline_ref=cp.feature.docs_baseline_ref if cp.feature else "",
+        docs_baseline_at=cp.feature.docs_baseline_at if cp.feature else "",
         timestamp=now_iso(),
     )
 

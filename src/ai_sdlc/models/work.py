@@ -73,9 +73,11 @@ class ClarificationState(BaseModel):
 
     round_count: int = 0
     max_rounds: int = 2
-    options_presented: list[str] = []
-    user_responses: list[str] = []
+    candidate_types: list[WorkType] = Field(default_factory=list)
+    options_presented: list[str] = Field(default_factory=list)
+    user_responses: list[str] = Field(default_factory=list)
     status: ClarificationStatus = ClarificationStatus.PENDING
+    halt_reason: str = ""
 
 
 class WorkItem(BaseModel):

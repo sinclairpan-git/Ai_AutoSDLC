@@ -9,6 +9,8 @@ from typer.testing import CliRunner
 
 from ai_sdlc.cli.main import app
 from ai_sdlc.context.state import build_resume_pack, save_checkpoint, save_resume_pack
+from ai_sdlc.core.config import YamlStore
+from ai_sdlc.models.gate import GovernanceItem, GovernanceState
 from ai_sdlc.models.state import Checkpoint, FeatureInfo
 from ai_sdlc.routers.bootstrap import init_project
 
@@ -184,3 +186,55 @@ class TestCliRecover:
 
         assert result.exit_code == 1
         assert "checkpoint" in result.output.lower()
+
+    def test_recover_displays_branch_binding_and_governance(
+        self, tmp_path: Path
+    ) -> None:
+        init_project(tmp_path)
+        spec_dir = tmp_path / "specs" / "WI-2026-001"
+        spec_dir.mkdir(parents=True)
+        (spec_dir / "spec.md").write_text("# Spec\n", encoding="utf-8")
+        (spec_dir / "plan.md").write_text("# Plan\n", encoding="utf-8")
+        (spec_dir / "tasks.md").write_text("# Tasks\n", encoding="utf-8")
+
+        checkpoint = Checkpoint(
+            current_stage="execute",
+            feature=FeatureInfo(
+                id="WI-2026-001",
+                spec_dir="specs/WI-2026-001",
+                design_branch="feature/WI-2026-001-docs",
+                feature_branch="feature/WI-2026-001-dev",
+                current_branch="feature/WI-2026-001-dev",
+                docs_baseline_ref="feature/WI-2026-001-docs",
+                docs_baseline_at="2026-03-28T12:00:00+00:00",
+            ),
+        )
+        save_checkpoint(tmp_path, checkpoint)
+        pack = build_resume_pack(tmp_path)
+        assert pack is not None
+        save_resume_pack(tmp_path, pack)
+
+        gov_path = (
+            tmp_path
+            / ".ai-sdlc"
+            / "work-items"
+            / "WI-2026-001"
+            / "governance.yaml"
+        )
+        state = GovernanceState(frozen=True, frozen_at="2026-03-28T11:00:00+00:00")
+        state.items["constitution"] = GovernanceItem(
+            exists=True,
+            path=str(tmp_path / ".ai-sdlc" / "memory" / "constitution.md"),
+            verified_at="2026-03-28T11:00:00+00:00",
+        )
+        YamlStore.save(gov_path, state)
+
+        with patch("ai_sdlc.cli.commands.find_project_root", return_value=tmp_path):
+            result = runner.invoke(app, ["recover"])
+
+        assert result.exit_code == 0
+        assert "Current Branch" in result.output
+        assert "feature/WI-2026-001-dev" in result.output
+        assert "Docs Baseline" in result.output
+        assert "feature/WI-2026-001-docs" in result.output
+        assert "Governance Frozen" in result.output
