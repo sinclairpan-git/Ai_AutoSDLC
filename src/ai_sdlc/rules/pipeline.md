@@ -38,7 +38,7 @@
 
 15. **存量工程认知基线必须优先**：在已有业务代码的仓库上走标准 SDLC 时，须先完成 `rules/brownfield-corpus.md` 要求的 `.ai-sdlc/memory/engineering-corpus.md`，再进入 Stage 1。探索须分层有界（Tier 1/2/3，深度与变更范围挂钩），禁止用无预算的通读全仓库代替。corpus 已存在时，Step 0 须验证 §2 仓库地图与实际一级目录的一致性。
 
-16. **宿主规划与仓库阶段区分**：任意 IDE/Agent 宿主环境中的「实施规划」或对话内方案**不等于**仓库内流水线阶段已完成。规划收敛后的法定下一步是 **decompose**（如更新 `specs/<WI>/tasks.md`），再 **verify**，再 **execute**；禁止将「计划已定」直接等同于可以修改产品源代码。
+16. **宿主规划与仓库阶段区分**：任意 IDE/Agent 宿主环境中的「实施规划」或对话内方案**不等于**仓库内流水线阶段已完成。规划收敛后的法定下一步是 **design/decompose**（如先更新 `spec.md` / `plan.md` / `specs/<WI>/tasks.md`），再 **verify**，再 **execute**。当用户明确要求「**先文档 / 先需求 / 先 spec-plan-tasks**」时，默认动作必须停在 **design/decompose**，不得直接改产品代码；禁止将「计划已定」直接等同于可以修改产品源代码。
 
 17. **框架缺陷 / 违约转待办**：当出现以下任一情形时，须在 `docs/framework-defect-backlog.zh-CN.md` 追加一条结构化 backlog：① 用户明确要求记录该缺陷/违约；② `gate` / `verify` / `close-check` 等门禁因框架缺口、状态漂移、规则矛盾而阻断；③ 自检或回顾发现曾跳过本文件或宪章中的强制顺序。即使该违约已被门禁、review 或自检及时拦下，并在当前迭代内修复，只要它真实出现过且暴露出框架缺口，仍必须登记，不得因“已修复”而省略。条目至少包含：现象、触发场景、影响范围、根因分类、`未来杜绝方案摘要`、建议改动层级、`prompt / context`、`rule / policy`、`middleware`、`workflow`、`tool`、`eval`、风险等级、可验证成功标准、是否需要回归测试补充；其中 `未来杜绝方案摘要` 负责概括防复发方案，而 `rule / policy`、`middleware`、`workflow`、`tool`、`eval` 应明确写出未来杜绝同类问题的具体落点。历史兼容来源见 `rules/agent-skip-registry.zh.md`。该登记作为框架演进输入，**不替代** `verification.md` 与自动化测试。
 

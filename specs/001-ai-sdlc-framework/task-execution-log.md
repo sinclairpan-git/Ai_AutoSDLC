@@ -1558,3 +1558,69 @@
 - **已完成 git 提交**：是
 - **提交哈希**：本批唯一一次语义提交为 `feat: enforce docs-only verification profiles`；完整 SHA 以当前 `HEAD`（`git rev-parse HEAD`）为准。
 - **是否继续下一批**：可继续 Task `6.44`
+
+### Batch 2026-03-28-026 | 001 Batch 16 Task 6.44：doc-first / requirements-first execute guard
+
+#### 2.1 准备
+
+- **任务来源**：[`tasks.md`](tasks.md) Task `6.44`、[`../../docs/framework-defect-backlog.zh-CN.md`](../../docs/framework-defect-backlog.zh-CN.md) `FD-2026-03-26-001`
+- **目标**：把“先文档 / 先需求 / 先 spec-plan-tasks”从规则文字收敛为可执行判定：共享 helper 能识别 doc-first 任务，`ExecuteGate` 能对目标任务给出 design/decompose 阻断，`verify constraints` 能校验术语 surface 与任务范围。
+- **预读范围**：[`../../src/ai_sdlc/gates/task_ac_checks.py`](../../src/ai_sdlc/gates/task_ac_checks.py)、[`../../src/ai_sdlc/gates/pipeline_gates.py`](../../src/ai_sdlc/gates/pipeline_gates.py)、[`../../src/ai_sdlc/core/verify_constraints.py`](../../src/ai_sdlc/core/verify_constraints.py)、[`../../src/ai_sdlc/core/runner.py`](../../src/ai_sdlc/core/runner.py)、[`../../src/ai_sdlc/cli/sub_apps.py`](../../src/ai_sdlc/cli/sub_apps.py)、[`../../src/ai_sdlc/cli/verify_cmd.py`](../../src/ai_sdlc/cli/verify_cmd.py)、[`../../src/ai_sdlc/rules/pipeline.md`](../../src/ai_sdlc/rules/pipeline.md)、[`../../src/ai_sdlc/rules/agent-skip-registry.zh.md`](../../src/ai_sdlc/rules/agent-skip-registry.zh.md)
+- **激活的规则**：TDD；verification-before-completion；“文档契约先于实现”。
+
+#### 2.2 统一验证命令
+
+- **验证画像**：`code-change`
+- **R1 / V1（doc-first 规则回归）**
+  - 命令：`uv run pytest tests/unit/test_task_ac_checks.py tests/unit/test_gates.py tests/unit/test_verify_constraints.py tests/integration/test_cli_verify_constraints.py -q`
+  - 结果：**101 passed**。
+- **Lint**
+  - 命令：`uv run ruff check src/ai_sdlc/gates/task_ac_checks.py src/ai_sdlc/gates/pipeline_gates.py src/ai_sdlc/core/verify_constraints.py src/ai_sdlc/core/runner.py src/ai_sdlc/cli/sub_apps.py src/ai_sdlc/cli/verify_cmd.py tests/unit/test_task_ac_checks.py tests/unit/test_gates.py tests/unit/test_verify_constraints.py tests/integration/test_cli_verify_constraints.py`
+  - 结果：**All checks passed!**
+- **治理只读校验**
+  - 命令：`uv run ai-sdlc verify constraints`
+  - 结果：**无 BLOCKER**。
+
+#### 2.3 任务记录
+
+##### Task 6.44 | doc-first / requirements-first execute guard
+
+- **改动范围**：[`../../src/ai_sdlc/gates/task_ac_checks.py`](../../src/ai_sdlc/gates/task_ac_checks.py)、[`../../src/ai_sdlc/gates/pipeline_gates.py`](../../src/ai_sdlc/gates/pipeline_gates.py)、[`../../src/ai_sdlc/core/verify_constraints.py`](../../src/ai_sdlc/core/verify_constraints.py)、[`../../src/ai_sdlc/core/runner.py`](../../src/ai_sdlc/core/runner.py)、[`../../src/ai_sdlc/cli/sub_apps.py`](../../src/ai_sdlc/cli/sub_apps.py)、[`../../src/ai_sdlc/cli/verify_cmd.py`](../../src/ai_sdlc/cli/verify_cmd.py)、[`../../src/ai_sdlc/rules/pipeline.md`](../../src/ai_sdlc/rules/pipeline.md)、[`../../src/ai_sdlc/rules/agent-skip-registry.zh.md`](../../src/ai_sdlc/rules/agent-skip-registry.zh.md)、[`../../tests/unit/test_task_ac_checks.py`](../../tests/unit/test_task_ac_checks.py)、[`../../tests/unit/test_gates.py`](../../tests/unit/test_gates.py)、[`../../tests/unit/test_verify_constraints.py`](../../tests/unit/test_verify_constraints.py)、[`../../tests/integration/test_cli_verify_constraints.py`](../../tests/integration/test_cli_verify_constraints.py)
+- **改动内容**：
+  - `task_ac_checks` 新增 doc-first / requirements-first 共享判定：识别 `仅文档` / `仅需求沉淀` / `先 spec-plan-tasks` 任务、发现 doc-first 任务误指向代码/测试路径，并可从执行进度推导下一条目标任务。
+  - `ExecuteGate` 新增 `doc_first_prerequisite`：当目标任务属于 doc-first 时，不再默认放行 execute，并在默认改动 `src/` 非 Markdown 代码或 `tests/` 路径时给出显式阻断信息。
+  - `verify constraints` 新增 doc-first rule surface 校验：`pipeline.md` 与 `agent-skip-registry.zh.md` 必须使用统一术语，并校验当前 `tasks.md` 中 doc-first 任务不会误把实现代码/测试文件当成默认落点。
+  - CLI `verify constraints --help`、`pipeline.md` 与 `agent-skip-registry.zh.md` 已统一到“先文档 / 先需求 / 先 spec-plan-tasks → design/decompose → verify → execute”的同一口径。
+- **新增/调整的测试**：
+  - unit：doc-first helper 的 runtime task id 命中、禁止路径识别、next pending task 推导；`ExecuteGate` 的 doc-first 阻断；`verify constraints` 的 rule surface / task scope BLOCKER。
+  - integration：CLI `verify constraints` 对缺少 doc-first 术语 surface、doc-first 任务误指向代码路径的非零退出回归。
+- **执行的命令**：见 R1 / V1 / Lint / 治理只读校验。
+- **测试结果**：通过。
+- **是否符合任务目标**：符合。Task `6.44` 的规则面、执行前判定与只读校验已对齐。
+
+#### 2.4 代码审查（摘要）
+
+- **规格对齐**：本批把“先落需求再实现”从经验口径固化为可检测的 gate / verify 行为，不再只靠对话理解。
+- **代码质量**：共享 helper 只负责任务块解析与目标任务推导，避免 `ExecuteGate`、`verify constraints` 各自维护一套 doc-first 判断。
+- **测试质量**：针对 helper、gate、CLI 三层都补了失败夹具，避免只在文档上写规则。
+- **结论**：允许关闭 `FD-2026-03-26-001`，并进入 Batch 16 最终对账 Task `6.45`。
+
+#### 2.5 任务/计划同步状态
+
+- `tasks.md` 同步状态：`已同步`（Task `6.44` 已更新为完成态）。
+- `framework-defect-backlog.zh-CN.md` 同步状态：`已同步`（`FD-2026-03-26-001` 已关闭并移出待修优先级）。
+- `related_plan`（如存在）同步状态：`已对账`。
+
+#### 2.6 自动决策记录（如有）
+
+- AD-001：将“先文档 / 先需求”术语 surface 与 task-level doc-first 分类拆成两套规则，而不是复用同一关键词集合 → 理由：`pipeline.md` 需要广义提示词，任务级阻断只应命中真正的 docs-first / requirements-only 任务，避免把问题描述误判成任务类型。
+
+#### 2.7 批次结论
+
+- Task **6.44** 已完成，`FD-2026-03-26-001` 正式关单；`001` 可继续进入 Task **6.45**。
+
+#### 2.8 归档后动作
+
+- **已完成 git 提交**：是
+- **提交哈希**：本批唯一一次语义提交为 `feat: block execute flow for doc-first tasks`；完整 SHA 以当前 `HEAD`（`git rev-parse HEAD`）为准。
+- **是否继续下一批**：可继续 Task `6.45`

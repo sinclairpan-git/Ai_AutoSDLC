@@ -64,9 +64,8 @@
 - 第二波（随后推进）：
   - `FD-2026-03-27-013` → `004-operator-surfaces-and-post-prd-extensions`
   - `FD-2026-03-28-004` → `001-ai-sdlc-framework`
-  - `FD-2026-03-26-001` → `001-ai-sdlc-framework`
 - 挂靠原则：
-  - `001` 线：`FD-2026-03-28-004`、`FD-2026-03-26-001`
+  - `001` 线：`FD-2026-03-28-004`
   - `003` 线：`FD-2026-03-27-011`、`FD-2026-03-27-012`
   - `004` 线：`FD-2026-03-27-013`
 
@@ -167,7 +166,7 @@
 
 - 日期 (UTC): 2026-03-26
 - 来源: migrated_from_legacy_registry
-- 状态: planned
+- 状态: closed
 - wi_id: 001-ai-sdlc-framework
 - legacy_ref: src/ai_sdlc/rules/agent-skip-registry.zh.md（2026-03-26 回顾行）
 - 现象: 即使用户明确要求“先按框架约束把优化项转成需求/plan/tasks，再决定是否动手”，执行侧仍易下意识直接进入代码改动。
@@ -182,7 +181,7 @@
 - tool: `stage run design`、`stage run decompose`、`verify constraints`
 - eval: 用户明确要求“先落盘”场景下的违规率
 - 风险等级: 高
-- 处置进展（2026-03-28）: `FR-095~098`、Batch 10 规则文本与执行前判定已部分收敛，但“仅文档 / 先需求”仍缺独立硬阻断与统一提示；转入 `001` Batch 16 Task 6.44。
+- 处置进展（2026-03-28）: `001` Batch 16 Task 6.44 已完成收口：`task_ac_checks` 新增 doc-first / requirements-first 共享判定，`ExecuteGate` 会对目标任务为“仅文档 / 仅需求沉淀 / 先 spec-plan-tasks”时直接报 `doc_first_prerequisite`，并在默认改动 `src/` 非 Markdown 代码或 `tests/` 路径时给出阻断提示；`verify constraints` 同步校验 `pipeline.md` / `agent-skip-registry.zh.md` 的术语 surface 与当前 `tasks.md` 中 doc-first 任务的路径范围。定向回归 **101 passed**，`uv run ai-sdlc verify constraints` 与 `uv run ai-sdlc workitem close-check --wi specs/001-ai-sdlc-framework --all-docs` 已通过，因此本条 defect 关单。
 - 可验证成功标准: 在“仅文档 / 先需求”指令下，规则文本与流程检查均指向 design/decompose，且不鼓励直接修改代码。
 - 是否需要回归测试补充: 是：补充规则文本与执行前判定的覆盖。
 

@@ -23,6 +23,7 @@ from ai_sdlc.gates.pipeline_gates import (
     VerifyGate,
 )
 from ai_sdlc.gates.registry import GateRegistry
+from ai_sdlc.gates.task_ac_checks import next_pending_task_ref
 from ai_sdlc.models.gate import GateVerdict
 from ai_sdlc.rules import RulesLoader
 from ai_sdlc.utils.helpers import find_project_root
@@ -74,6 +75,23 @@ def _build_context(stage: str, root_str: str) -> dict[str, object]:
         ctx.setdefault("build_succeeded", False)
         ctx.setdefault("committed", False)
         ctx.setdefault("logged", False)
+        spec_dir_raw = ctx.get("spec_dir")
+        if isinstance(spec_dir_raw, str) and spec_dir_raw.strip():
+            tasks_file = Path(spec_dir_raw) / "tasks.md"
+            if tasks_file.exists():
+                current_batch = cp.execute_progress.current_batch if cp and cp.execute_progress else 0
+                last_task = (
+                    cp.execute_progress.last_committed_task
+                    if cp and cp.execute_progress
+                    else ""
+                )
+                next_task = next_pending_task_ref(
+                    tasks_file,
+                    current_batch=current_batch,
+                    last_committed_task=last_task,
+                )
+                if next_task:
+                    ctx["target_task_id"] = next_task
         if cp and cp.execute_progress:
             progress = cp.execute_progress
             ctx["tests_passed"] = (

@@ -338,6 +338,63 @@ class TestExecuteGate:
         assert result.verdict == GateVerdict.PASS
         assert any(c.name == "decompose_prerequisite" and c.passed for c in result.checks)
 
+    def test_fail_when_target_task_is_doc_first(self, tmp_path: Path) -> None:
+        spec_dir = tmp_path / "specs" / "001"
+        spec_dir.mkdir(parents=True)
+        (spec_dir / "tasks.md").write_text(
+            "### Task 6.44 — 先 spec-plan-tasks 后实现\n"
+            "- **依赖**：Task 6.43\n"
+            "- **验收标准（AC）**：\n"
+            "  1. 先更新 specs\n",
+            encoding="utf-8",
+        )
+
+        result = ExecuteGate().check(
+            {
+                "tests_passed": True,
+                "build_succeeded": True,
+                "committed": True,
+                "logged": True,
+                "spec_dir": str(spec_dir),
+                "target_task_id": "T644",
+            }
+        )
+
+        assert result.verdict == GateVerdict.RETRY
+        assert any(c.name == "doc_first_prerequisite" and not c.passed for c in result.checks)
+
+    def test_fail_when_target_doc_first_task_touches_forbidden_paths(
+        self, tmp_path: Path
+    ) -> None:
+        spec_dir = tmp_path / "specs" / "001"
+        spec_dir.mkdir(parents=True)
+        (spec_dir / "tasks.md").write_text(
+            "### Task 6.44 — 仅文档：冻结需求\n"
+            "- **依赖**：Task 6.43\n"
+            "- **验收标准（AC）**：\n"
+            "  1. 仅更新文档\n",
+            encoding="utf-8",
+        )
+
+        result = ExecuteGate().check(
+            {
+                "tests_passed": True,
+                "build_succeeded": True,
+                "committed": True,
+                "logged": True,
+                "spec_dir": str(spec_dir),
+                "target_task_id": "6.44",
+                "changed_files": ("src/ai_sdlc/core/verify_constraints.py",),
+            }
+        )
+
+        assert result.verdict == GateVerdict.RETRY
+        assert any(
+            c.name == "doc_first_prerequisite"
+            and "verify_constraints.py" in c.message
+            for c in result.checks
+        )
+
 
 class TestCloseGate:
     def test_pass(self, tmp_path: Path) -> None:

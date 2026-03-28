@@ -7,14 +7,39 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from ai_sdlc.context.state import load_checkpoint
-from ai_sdlc.gates.task_ac_checks import first_task_missing_acceptance
+from ai_sdlc.gates.task_ac_checks import (
+    first_doc_first_task_scope_violation,
+    first_task_missing_acceptance,
+)
 from ai_sdlc.models.state import Checkpoint
 
 CONSTITUTION_REL = Path(".ai-sdlc") / "memory" / "constitution.md"
+PIPELINE_RULE_REL = Path("src") / "ai_sdlc" / "rules" / "pipeline.md"
 SKIP_REGISTRY_REL = Path("src") / "ai_sdlc" / "rules" / "agent-skip-registry.zh.md"
 FRAMEWORK_DEFECT_BACKLOG_REL = Path("docs") / "framework-defect-backlog.zh-CN.md"
 VERIFICATION_RULE_REL = Path("src") / "ai_sdlc" / "rules" / "verification.md"
 PR_CHECKLIST_REL = Path("docs") / "pull-request-checklist.zh.md"
+DOC_FIRST_SURFACES: dict[Path, tuple[str, ...]] = {
+    PIPELINE_RULE_REL: (
+        "先文档 / 先需求 / 先 spec-plan-tasks",
+        "design/decompose",
+        "不得直接改产品代码",
+    ),
+    SKIP_REGISTRY_REL: (
+        "仅文档 / 仅需求沉淀",
+        "spec.md",
+        "plan.md",
+        "tasks.md",
+        "`src/`、`tests/`",
+    ),
+}
+DOC_FIRST_ACTIVATION_TOKENS = (
+    "先文档",
+    "先需求",
+    "spec-plan-tasks",
+    "仅文档",
+    "仅需求",
+)
 VERIFICATION_PROFILE_SURFACES: dict[Path, tuple[str, ...]] = {
     VERIFICATION_RULE_REL: (
         "docs-only",
@@ -52,6 +77,7 @@ FRAMEWORK_DEFECT_BACKLOG_REQUIRED_FIELDS = (
 VERIFICATION_GATE_OBJECTS = (
     "required_governance_files",
     "framework_defect_backlog",
+    "doc_first_surfaces",
     "verification_profiles",
     "checkpoint_spec_dir",
     "tasks_acceptance",
@@ -106,6 +132,7 @@ def collect_constraint_blockers(root: Path) -> list[str]:
         )
 
     blockers.extend(_framework_defect_backlog_blockers(root))
+    blockers.extend(_doc_first_surface_blockers(root))
     blockers.extend(_verification_profile_blockers(root))
 
     cp = load_checkpoint(root)
@@ -134,8 +161,49 @@ def collect_constraint_blockers(root: Path) -> list[str]:
                 "BLOCKER: tasks.md missing task-level acceptance (SC-014; same rule as "
                 f"gate decompose `task_acceptance_present`): first breach Task {missing_id}"
             )
+        doc_first_violation = first_doc_first_task_scope_violation(content)
+        if doc_first_violation is not None:
+            task_id, path = doc_first_violation
+            blockers.append(
+                "BLOCKER: doc-first task "
+                f"Task {task_id} still points at execute-only path {path}; "
+                "keep doc-first work in design/decompose and out of code/tests"
+            )
 
     blockers.extend(_skip_registry_mapping_blockers(root, spec_path, cp))
+    return blockers
+
+
+def _doc_first_surface_blockers(root: Path) -> list[str]:
+    """Validate the repo-wide rule surfaces for doc-first / requirements-first flow."""
+    present_texts = {
+        rel: (root / rel).read_text(encoding="utf-8")
+        for rel in DOC_FIRST_SURFACES
+        if (root / rel).is_file()
+    }
+    if not present_texts:
+        return []
+    if not any(
+        any(token in text for token in DOC_FIRST_ACTIVATION_TOKENS)
+        for text in present_texts.values()
+    ):
+        return []
+
+    blockers: list[str] = []
+    for rel, required_tokens in DOC_FIRST_SURFACES.items():
+        path = root / rel
+        if not path.is_file():
+            blockers.append(
+                "BLOCKER: doc-first rule surface missing: " f"{rel.as_posix()}"
+            )
+            continue
+        text = path.read_text(encoding="utf-8")
+        missing = [token for token in required_tokens if token not in text]
+        if missing:
+            blockers.append(
+                "BLOCKER: doc-first rule surface "
+                f"{rel.as_posix()} missing required markers: {', '.join(missing)}"
+            )
     return blockers
 
 

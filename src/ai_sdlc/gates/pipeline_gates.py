@@ -9,7 +9,10 @@ import re
 from pathlib import Path
 from typing import Any
 
-from ai_sdlc.gates.task_ac_checks import first_task_missing_acceptance
+from ai_sdlc.gates.task_ac_checks import (
+    doc_first_execute_blocker,
+    first_task_missing_acceptance,
+)
 from ai_sdlc.models.gate import GateCheck, GateResult, GateVerdict
 from ai_sdlc.utils.helpers import AI_SDLC_DIR
 
@@ -468,6 +471,24 @@ class ExecuteGate:
                         else f"Task {first_missing} missing acceptance fields",
                     )
                 )
+                target_task = str(
+                    context.get("target_task_id")
+                    or context.get("current_task")
+                    or ""
+                ).strip()
+                if target_task:
+                    blocker = doc_first_execute_blocker(
+                        content,
+                        task_ref=target_task,
+                        touched_paths=tuple(context.get("changed_files", ()) or ()),
+                    )
+                    checks.append(
+                        GateCheck(
+                            name="doc_first_prerequisite",
+                            passed=blocker is None,
+                            message="" if blocker is None else blocker,
+                        )
+                    )
 
         tests_ok = context.get("tests_passed", False)
         checks.append(

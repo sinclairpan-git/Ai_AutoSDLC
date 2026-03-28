@@ -52,6 +52,36 @@ def _write_verification_profile_docs(
     (docs_dir / "pull-request-checklist.zh.md").write_text(checklist, encoding="utf-8")
 
 
+def _write_doc_first_rule_surfaces(
+    root: Path, *, include_pipeline_terms: bool = True, include_skip_registry_terms: bool = True
+) -> None:
+    rules_dir = root / "src" / "ai_sdlc" / "rules"
+    rules_dir.mkdir(parents=True, exist_ok=True)
+
+    pipeline = (
+        "# 流水线总控规则\n\n"
+        "16. 宿主规划与仓库阶段区分：法定下一步是 design/decompose，再 verify，再 execute。\n"
+    )
+    if include_pipeline_terms:
+        pipeline += (
+            "当用户明确要求“先文档 / 先需求 / 先 spec-plan-tasks”时，默认动作必须停在 "
+            "design/decompose，不得直接改产品代码。\n"
+        )
+    (rules_dir / "pipeline.md").write_text(pipeline, encoding="utf-8")
+
+    skip_registry = (
+        "# 代理跳过记录\n\n"
+        "| 日期 | 发现阶段 | 跳过内容摘要 | 根因 | 框架强化建议 | wi_id | 状态 |\n"
+        "|------|----------|--------------|------|--------------|-------|------|\n"
+    )
+    if include_skip_registry_terms:
+        skip_registry += (
+            "\n仅文档 / 仅需求沉淀任务必须先更新 spec.md / plan.md / tasks.md；"
+            "禁止默认修改 `src/`、`tests/`。\n"
+        )
+    (rules_dir / "agent-skip-registry.zh.md").write_text(skip_registry, encoding="utf-8")
+
+
 def test_blocker_missing_constitution(tmp_path: Path) -> None:
     (tmp_path / ".ai-sdlc" / "state").mkdir(parents=True)
     b = collect_constraint_blockers(tmp_path)
@@ -426,5 +456,86 @@ def test_verification_profile_docs_pass_when_both_surfaces_complete(tmp_path: Pa
     mem.mkdir(parents=True)
     (mem / "constitution.md").write_text("# C\n", encoding="utf-8")
     _write_verification_profile_docs(tmp_path)
+
+    assert collect_constraint_blockers(tmp_path) == []
+
+
+def test_doc_first_rule_surfaces_block_when_pipeline_terms_missing(tmp_path: Path) -> None:
+    mem = tmp_path / ".ai-sdlc" / "memory"
+    mem.mkdir(parents=True)
+    (mem / "constitution.md").write_text("# C\n", encoding="utf-8")
+    _write_doc_first_rule_surfaces(tmp_path, include_pipeline_terms=False)
+
+    blockers = collect_constraint_blockers(tmp_path)
+    assert any("doc-first" in x for x in blockers)
+    assert any("pipeline.md" in x for x in blockers)
+
+
+def test_doc_first_rule_surfaces_block_when_doc_first_task_targets_code(
+    tmp_path: Path,
+) -> None:
+    mem = tmp_path / ".ai-sdlc" / "memory"
+    mem.mkdir(parents=True)
+    (mem / "constitution.md").write_text("# C\n", encoding="utf-8")
+    _write_doc_first_rule_surfaces(tmp_path)
+
+    spec = tmp_path / "specs" / "001-wi"
+    spec.mkdir(parents=True)
+    (spec / "tasks.md").write_text(
+        "### Task 6.44 — 仅文档：冻结需求\n"
+        "- **依赖**：Task 6.43\n"
+        "- **验收标准（AC）**：\n"
+        "  1. 先更新 specs\n"
+        "- **产物**：`src/ai_sdlc/core/verify_constraints.py`\n",
+        encoding="utf-8",
+    )
+
+    cp = Checkpoint(
+        current_stage="design",
+        feature=FeatureInfo(
+            id="001",
+            spec_dir="specs/001-wi",
+            design_branch="d",
+            feature_branch="f",
+            current_branch="main",
+        ),
+    )
+    save_checkpoint(tmp_path, cp)
+
+    blockers = collect_constraint_blockers(tmp_path)
+    assert any("doc-first task" in x for x in blockers)
+    assert any("Task 6.44" in x for x in blockers)
+
+
+def test_doc_first_rule_surfaces_pass_with_consistent_terms_and_docs_scope(
+    tmp_path: Path,
+) -> None:
+    mem = tmp_path / ".ai-sdlc" / "memory"
+    mem.mkdir(parents=True)
+    (mem / "constitution.md").write_text("# C\n", encoding="utf-8")
+    _write_doc_first_rule_surfaces(tmp_path)
+
+    spec = tmp_path / "specs" / "001-wi"
+    spec.mkdir(parents=True)
+    (spec / "tasks.md").write_text(
+        "### Task 6.44 — 先 spec-plan-tasks 后实现\n"
+        "- **依赖**：Task 6.43\n"
+        "- **验收标准（AC）**：\n"
+        "  1. 先更新 specs\n"
+        "- **产物**：`specs/001-wi/tasks.md`、`src/ai_sdlc/rules/pipeline.md`\n",
+        encoding="utf-8",
+    )
+
+    cp = Checkpoint(
+        current_stage="design",
+        feature=FeatureInfo(
+            id="001",
+            spec_dir="specs/001-wi",
+            design_branch="d",
+            feature_branch="f",
+            current_branch="main",
+        ),
+    )
+    save_checkpoint(tmp_path, cp)
 
     assert collect_constraint_blockers(tmp_path) == []

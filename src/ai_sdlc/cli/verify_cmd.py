@@ -41,8 +41,10 @@ console = Console()
     help=(
         "Read-only: required governance files and checkpoint/specs consistency; "
         "when tasks.md exists under feature.spec_dir, task-level acceptance must "
-        "match gate decompose (SC-014); when docs/framework-defect-backlog.zh-CN.md "
-        "exists, its structured entry fields must be complete. Does not write checkpoint. "
+        "match gate decompose (SC-014); doc-first / requirements-first rule surfaces "
+        "and doc-first task scope must stay aligned with design/decompose intent; "
+        "when docs/framework-defect-backlog.zh-CN.md exists, its structured entry fields "
+        "must be complete. Does not write checkpoint. "
         "Exit 0 if no BLOCKERs, else 1."
     ),
 )
