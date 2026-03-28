@@ -85,6 +85,6 @@
 
 #### 2.8 归档后动作
 
-- **已完成 git 提交**：否
-- **提交哈希**：`N/A`
+- **已完成 git 提交**：是
+- **提交哈希**：`a64d956`（`fix: derive fresh telemetry status indexes`）
 - **是否继续下一批**：阻断，待本批代码与归档一并提交后再决定后续 work item。
