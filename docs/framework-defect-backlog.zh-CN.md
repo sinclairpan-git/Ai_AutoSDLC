@@ -536,3 +536,51 @@
 - 风险等级: 高
 - 可验证成功标准: 给定“checkpoint 已推进、resume-pack 仍旧”的夹具时，`recover` 与 `status` 必须识别并拒绝陈旧 pack，或自动按最新 checkpoint 重建；正常路径下每次 checkpoint 更新后磁盘上的 resume-pack 都与最新 stage/batch 一致，不再反复回到旧断点。
 - 是否需要回归测试补充: 是：补 checkpoint 前进但 resume-pack 未刷新的 stale-pack 正反测试、`save_checkpoint()` 自动同步测试、`recover/status` 遇到双状态源失配时的阻断或自动重建集成测试。
+
+## FD-2026-03-28-002 | 001 tasks 里程碑把未执行的 Batch 13/14 误写为已完成
+
+- 日期 (UTC): 2026-03-28
+- 来源: self_review, traceability_review
+- 状态: planned
+- owner: codex
+- wi_id: 001-ai-sdlc-framework
+- related_doc: specs/001-ai-sdlc-framework/tasks.md, specs/001-ai-sdlc-framework/task-execution-log.md
+- 现象: [`specs/001-ai-sdlc-framework/tasks.md`](../specs/001-ai-sdlc-framework/tasks.md) 中的 `M13` 里程碑把 Task `6.32~6.39` 记为“已完成”，但 [`task-execution-log.md`](../specs/001-ai-sdlc-framework/task-execution-log.md) 只有到 Batch 12 的收口证据，没有 Batch 13 / 14 的对应归档。
+- 触发场景: 2026-03-28 在 `001` remediation 收口后，将新补进 `spec.md` / `tasks.md` 的 gap backlog 与已执行批次混写，导致里程碑索引先于 execution-log 真值被手工更新。
+- 影响范围: `001` 完成度判断、后续任务调度、close-check 之外的人工对账、用户对框架“已完成/未完成”口径的信任。
+- 根因分类: A, B, H
+- 未来杜绝方案摘要: 里程碑、Batch 收口和“已完成”表述必须回到 execution-log / 收口块真值，不允许只因为 `spec.md` / `tasks.md` 已补定义就提前宣称完成。close 前应增加“里程碑是否存在对应 execution-log 批次证据”的一致性检查。
+- 建议改动层级: rule / policy, workflow, tool, eval
+- prompt / context: “任务已定义 / spec 已补齐”不等于“任务已执行完成”；凡涉及完成性表述，都必须先核对 execution-log 与收口块证据。
+- rule / policy: 明确里程碑表只能索引已存在的收口证据；若 Batch 尚无 execution-log 或任务收口块，不得在里程碑中标注“完成”。
+- middleware: 为 `close-check` 或后续 `trace-check` 增加“任务/里程碑完成表述 vs execution-log 批次证据”一致性校验。
+- workflow: 更新 `tasks.md` 的 Batch / milestone 状态前，先核对对应 batch 是否已有 execution-log、验证命令和收口块；缺其一则只能记为 `planned` / `pending`。
+- tool: `ai-sdlc workitem close-check`、后续 `trace-check`、`specs/001-ai-sdlc-framework/tasks.md`
+- eval: 假完成里程碑检出率、里程碑与 execution-log 漂移次数
+- 风险等级: 高
+- 可验证成功标准: 给定“里程碑写完成但 execution-log 无对应批次”的夹具时，close/trace 对账能稳定发现并阻断；正常路径下，里程碑只引用已存在的 Batch 收口证据。
+- 是否需要回归测试补充: 是：补 milestone/execution-log 漂移的正反夹具，验证 close-check 或等价 trace-check 能发现假完成状态。
+
+## FD-2026-03-28-003 | 001 新补 RG-001~009 合同已进入 spec/tasks，但实现与验证面未同步落地
+
+- 日期 (UTC): 2026-03-28
+- 来源: self_review, traceability_review
+- 状态: planned
+- owner: codex
+- wi_id: 001-ai-sdlc-framework
+- related_doc: specs/001-ai-sdlc-framework/spec.md, specs/001-ai-sdlc-framework/tasks.md
+- 现象: `001` 在 2026-03-28 新增的 `RG-001~009` 合同已经写入 [`spec.md`](../specs/001-ai-sdlc-framework/spec.md) 与 [`tasks.md`](../specs/001-ai-sdlc-framework/tasks.md)，但实现与测试仍停留在 Batch 12 前的语义：例如 intake 仍未完成 `work_item_id` 原子分配与 `recommended_flow` 输出，branch/status/recover 仍未暴露 docs baseline 绑定，`execution-plan.yaml` / `runtime.yaml` / `working-set.yaml` / `latest-summary.md` 与显式 PRD/Review/Done/Verification Gate 仍缺正式真值面。
+- 触发场景: 需求缺口收敛后先更新了 `001 spec/tasks`，但没有同步启动 Batch 13 / 14 的实现批次与 contract-level 回归。
+- 影响范围: `001` 的 traceability、需求真值可信度、后续执行优先级、用户对 “spec 已补齐是否等于框架已支持” 的判断。
+- 根因分类: A, B, D, H
+- 未来杜绝方案摘要: 对“补 spec 后待实现”的合同，必须在同一轮把任务状态显式标为 `planned`，并让验证面能识别“合同已声明但实现尚未落地”的状态，避免 spec 和实现长期分叉。
+- 建议改动层级: rule / policy, middleware, workflow, tool, eval
+- prompt / context: 将新合同写进 `spec.md` 只是冻结需求边界，不是完成实现；后续所有完成性表述必须区分“合同已声明”和“代码已兑现”。
+- rule / policy: 对新补 FR / SC / RG 条目建立“合同声明后必须进入实现 batch 或 backlog planned 状态”的规则；未进入实现前不得写成已完成里程碑。
+- middleware: 扩展 `verify constraints` / `close-check` 或新增 `trace-check`，识别“spec 新增合同存在，但 `src/` / `tests/` 缺对应真值或回归证据”的高风险模式。
+- workflow: 每次缺口收敛后，必须同步建立 `spec -> tasks -> code -> tests -> execution-log` 的最小映射；若实现尚未开始，明确回填 `planned`，不得让里程碑越过实现批次。
+- tool: `ai-sdlc verify constraints`、`ai-sdlc workitem close-check`、后续 `trace-check`、`specs/001-ai-sdlc-framework/spec.md`
+- eval: “合同已声明但未落地”缺口数、RG/SC 无实现映射检出率、spec 与测试覆盖漂移次数
+- 风险等级: 高
+- 可验证成功标准: 给定 `spec.md` 新增合同但 `src/` / `tests/` 无对应实现与验证证据的夹具时，traceability 检查能报出明确 blocker 或 warning；正常路径下，Batch 13 / 14 完成后 `RG-001~009` 都能映射到实现、测试和 execution-log。
+- 是否需要回归测试补充: 是：补 `RG-001~009` 对应的 unit/flow/integration/traceability 回归，并增加“spec 新增合同但实现未落地”的检测夹具。
