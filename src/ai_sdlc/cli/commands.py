@@ -12,18 +12,16 @@ from rich.panel import Panel
 from rich.table import Table
 
 from ai_sdlc.context.state import (
+    CHECKPOINT_PATH,
     CheckpointLoadError,
     ResumePackError,
-    ResumePackNotFoundError,
     active_work_item_id,
-    build_resume_pack,
     load_checkpoint,
     load_execution_plan,
     load_latest_summary,
     load_resume_pack,
     load_runtime_state,
     load_working_set,
-    save_resume_pack,
 )
 from ai_sdlc.core.config import load_project_config, load_project_state
 from ai_sdlc.core.reconcile import (
@@ -128,6 +126,10 @@ def _latest_summary_preview(summary: str) -> str:
     return "present"
 
 
+def _print_resume_pack_event(message: str) -> None:
+    console.print(f"[yellow]{message}[/yellow]")
+
+
 # ---------------------------------------------------------------------------
 # init
 # ---------------------------------------------------------------------------
@@ -224,7 +226,26 @@ def status_command(
     table.add_row("Version", state.version)
     table.add_row("Next WI Seq", str(state.next_work_item_seq))
 
+    resume_pack = None
     cp = load_checkpoint(root)
+    if (root / CHECKPOINT_PATH).exists():
+        resume_events: list[str] = []
+        try:
+            resume_pack = load_resume_pack(
+                root,
+                observer=_print_resume_pack_event,
+                event_log=resume_events,
+            )
+        except CheckpointLoadError as exc:
+            console.print(f"[red]Invalid checkpoint: {exc}[/red]")
+            raise typer.Exit(code=1) from None
+        except ResumePackError as exc:
+            console.print(f"[red]{exc}[/red]")
+            raise typer.Exit(code=1) from None
+        if resume_events:
+            console.print("[yellow]status using refreshed resume-pack[/yellow]")
+        cp = load_checkpoint(root, strict=True)
+
     if cp:
         table.add_row("Pipeline Stage", cp.current_stage)
         table.add_row("Execution Mode", cp.execution_mode)
@@ -244,6 +265,10 @@ def status_command(
                 "Execute Progress",
                 f"Batch {ep.current_batch}/{ep.total_batches}",
             )
+        if resume_pack is not None and resume_pack.current_batch:
+            table.add_row("Resume Batch", str(resume_pack.current_batch))
+        if resume_pack is not None and resume_pack.last_committed_task:
+            table.add_row("Resume Last Task", resume_pack.last_committed_task)
         if cp.linked_wi_id:
             table.add_row("Linked WI ID", cp.linked_wi_id)
         if cp.linked_plan_uri:
@@ -335,26 +360,21 @@ def recover_command(
             )
             hint = applied
 
-    if reconcile:
-        pack = build_resume_pack(root)
-        if pack is not None:
-            save_resume_pack(root, pack)
-
     try:
-        pack = load_resume_pack(root)
-    except ResumePackNotFoundError as exc:
-        if hint is not None:
-            console.print(
-                "[yellow]尚未写入恢复包。若当前项目仍是旧版产物布局，请先执行 `ai-sdlc recover --reconcile`。[/yellow]"
-            )
-        console.print(f"[yellow]{exc}[/yellow]")
-        raise typer.Exit(code=1) from None
+        resume_events: list[str] = []
+        pack = load_resume_pack(
+            root,
+            observer=_print_resume_pack_event,
+            event_log=resume_events,
+        )
     except ResumePackError as exc:
         console.print(f"[red]{exc}[/red]")
         raise typer.Exit(code=1) from None
     except CheckpointLoadError as exc:
         console.print(f"[red]Invalid checkpoint: {exc}[/red]")
         raise typer.Exit(code=1) from None
+    if resume_events:
+        console.print("[yellow]recover continuing with refreshed resume-pack[/yellow]")
     cp = load_checkpoint(root)
 
     table = Table(title="Recovery Info")

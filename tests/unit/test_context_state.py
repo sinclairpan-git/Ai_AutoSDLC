@@ -8,8 +8,6 @@ import pytest
 
 from ai_sdlc.context.state import (
     CheckpointLoadError,
-    ResumePackError,
-    ResumePackNotFoundError,
     build_resume_pack,
     load_checkpoint,
     load_resume_pack,
@@ -17,7 +15,7 @@ from ai_sdlc.context.state import (
     save_resume_pack,
     update_stage,
 )
-from ai_sdlc.models.state import Checkpoint, FeatureInfo
+from ai_sdlc.models.state import Checkpoint, ExecuteProgress, FeatureInfo
 
 
 def _make_checkpoint() -> Checkpoint:
@@ -111,6 +109,29 @@ class TestCheckpointManager:
 
 
 class TestResumePack:
+    def _prepare_checkpoint(self, tmp_path: Path, *, stage: str = "execute") -> Checkpoint:
+        spec_dir = tmp_path / "specs" / "001"
+        spec_dir.mkdir(parents=True, exist_ok=True)
+        (spec_dir / "spec.md").write_text("# Spec", encoding="utf-8")
+        (spec_dir / "plan.md").write_text("# Plan", encoding="utf-8")
+        (spec_dir / "tasks.md").write_text("# Tasks", encoding="utf-8")
+        (tmp_path / "prd.md").write_text("# PRD", encoding="utf-8")
+        checkpoint = Checkpoint(
+            current_stage=stage,
+            feature=FeatureInfo(
+                id="001",
+                spec_dir="specs/001",
+                design_branch="d/001",
+                feature_branch="f/001",
+                current_branch="f/001",
+            ),
+            prd_source="prd.md",
+        )
+        save_checkpoint(tmp_path, checkpoint)
+        loaded = load_checkpoint(tmp_path, strict=True)
+        assert loaded is not None
+        return loaded
+
     def test_build_from_checkpoint(self, tmp_path: Path) -> None:
         cp = Checkpoint(
             current_stage="design",
@@ -182,18 +203,88 @@ class TestResumePack:
         loaded = load_resume_pack(tmp_path)
         assert loaded.current_stage == "execute"
         assert loaded.working_set_snapshot.spec_path.endswith("spec.md")
+        checkpoint = load_checkpoint(tmp_path, strict=True)
+        assert checkpoint is not None
+        assert loaded.checkpoint_last_updated == checkpoint.pipeline_last_updated
 
-    def test_load_resume_pack_missing_raises_spec_error(self, tmp_path: Path) -> None:
-        with pytest.raises(
-            ResumePackNotFoundError,
-            match="No resume pack found",
-        ):
-            load_resume_pack(tmp_path)
+    def test_load_resume_pack_missing_rebuilds_from_checkpoint(
+        self, tmp_path: Path
+    ) -> None:
+        checkpoint = self._prepare_checkpoint(tmp_path)
 
-    def test_load_resume_pack_corrupted_raises_spec_error(self, tmp_path: Path) -> None:
+        loaded = load_resume_pack(tmp_path)
+
+        assert loaded.current_stage == checkpoint.current_stage
+        assert loaded.current_batch == 0
+        assert loaded.working_set_snapshot.spec_path.endswith("spec.md")
+        assert loaded.checkpoint_last_updated == checkpoint.pipeline_last_updated
+        assert (tmp_path / ".ai-sdlc" / "state" / "resume-pack.yaml").exists()
+
+    def test_load_resume_pack_corrupted_rebuilds_from_checkpoint(
+        self, tmp_path: Path
+    ) -> None:
+        checkpoint = self._prepare_checkpoint(tmp_path)
         resume_file = tmp_path / ".ai-sdlc" / "state" / "resume-pack.yaml"
         resume_file.parent.mkdir(parents=True, exist_ok=True)
         resume_file.write_text(": invalid yaml {{", encoding="utf-8")
 
-        with pytest.raises(ResumePackError, match="Resume pack corrupted"):
+        loaded = load_resume_pack(tmp_path)
+
+        assert loaded.current_stage == checkpoint.current_stage
+        assert loaded.checkpoint_last_updated == checkpoint.pipeline_last_updated
+        assert loaded.working_set_snapshot.plan_path.endswith("plan.md")
+
+    def test_load_resume_pack_stale_rebuilds_from_latest_checkpoint(
+        self, tmp_path: Path, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        checkpoint = self._prepare_checkpoint(tmp_path)
+
+        pack = build_resume_pack(tmp_path)
+        assert pack is not None
+        save_resume_pack(tmp_path, pack)
+
+        checkpoint.execute_progress = ExecuteProgress(
+            current_batch=3,
+            total_batches=5,
+            last_committed_task="T003",
+        )
+        save_checkpoint(tmp_path, checkpoint)
+
+        with caplog.at_level("INFO"):
+            loaded = load_resume_pack(tmp_path)
+
+        assert loaded.current_batch == 3
+        assert loaded.last_committed_task == "T003"
+        assert loaded.checkpoint_last_updated == checkpoint.pipeline_last_updated
+        messages = " ".join(record.getMessage().lower() for record in caplog.records)
+        assert "stale" in messages
+        assert "rebuilding from checkpoint" in messages
+        assert "rebuilt successfully" in messages
+
+    def test_load_resume_pack_incompatible_checkpoint_fails(
+        self, tmp_path: Path
+    ) -> None:
+        resume_file = tmp_path / ".ai-sdlc" / "state" / "resume-pack.yaml"
+        resume_file.parent.mkdir(parents=True, exist_ok=True)
+        resume_file.write_text(
+            "current_stage: design\n"
+            "current_batch: 1\n"
+            "last_committed_task: T001\n"
+            "working_set_snapshot: {}\n"
+            "timestamp: '2026-01-01T00:00:00+00:00'\n",
+            encoding="utf-8",
+        )
+        checkpoint_file = tmp_path / ".ai-sdlc" / "state" / "checkpoint.yml"
+        checkpoint_file.write_text(
+            "current_stage: unsupported\n"
+            "feature:\n"
+            "  id: '001'\n"
+            "  spec_dir: specs/001\n"
+            "  design_branch: design/001\n"
+            "  feature_branch: feature/001\n"
+            "  current_branch: main\n",
+            encoding="utf-8",
+        )
+
+        with pytest.raises(CheckpointLoadError, match="current_stage"):
             load_resume_pack(tmp_path)
