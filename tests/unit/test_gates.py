@@ -409,6 +409,26 @@ class TestCloseGate:
         )
         assert result.verdict == GateVerdict.PASS
 
+    def test_fail_when_postmortem_is_incomplete(self, tmp_path: Path) -> None:
+        (tmp_path / "development-summary.md").write_text("# Summary", encoding="utf-8")
+        (tmp_path / "postmortem.md").write_text(
+            "# Postmortem\n\n## Root Cause\n\nTODO\n",
+            encoding="utf-8",
+        )
+        result = CloseGate().check(
+            {
+                "root": str(tmp_path),
+                "all_tasks_complete": True,
+                "tests_passed": True,
+                "postmortem_path": "postmortem.md",
+            }
+        )
+        assert result.verdict == GateVerdict.RETRY
+        assert any(
+            check.name == "section_fix_description" and not check.passed
+            for check in result.checks
+        )
+
     def test_fail_no_summary(self, tmp_path: Path) -> None:
         result = CloseGate().check(
             {

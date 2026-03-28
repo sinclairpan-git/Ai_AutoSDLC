@@ -9,6 +9,7 @@ import re
 from pathlib import Path
 from typing import Any
 
+from ai_sdlc.gates.extra_gates import PostmortemGate
 from ai_sdlc.gates.task_ac_checks import (
     doc_first_execute_blocker,
     first_task_missing_acceptance,
@@ -553,7 +554,17 @@ class CloseGate:
     def check(self, context: dict[str, Any]) -> GateResult:
         """Verify CLOSE stage completion via the explicit Done Gate surface."""
         result = DoneGate().check(context)
-        return GateResult(stage="close", verdict=result.verdict, checks=result.checks)
+        checks = list(result.checks)
+        verdict = result.verdict
+
+        postmortem_path = context.get("postmortem_path")
+        if isinstance(postmortem_path, str) and postmortem_path.strip():
+            postmortem = PostmortemGate().check(context)
+            checks.extend(postmortem.checks)
+            if postmortem.verdict != GateVerdict.PASS:
+                verdict = GateVerdict.RETRY
+
+        return GateResult(stage="close", verdict=verdict, checks=checks)
 
 
 class DoneGate:

@@ -6,6 +6,8 @@ from pathlib import Path
 
 import pytest
 
+from ai_sdlc.core.p1_artifacts import load_execution_path, load_resume_point
+from ai_sdlc.core.state_machine import load_work_item, save_work_item
 from ai_sdlc.errors import ProjectNotInitializedError, StudioRoutingError
 from ai_sdlc.models.work import (
     ChangeRequest,
@@ -14,6 +16,7 @@ from ai_sdlc.models.work import (
     Severity,
     WorkItem,
     WorkItemSource,
+    WorkItemStatus,
     WorkType,
 )
 from ai_sdlc.studios.change_studio import ChangeStudio
@@ -92,18 +95,41 @@ class TestChangeStudio:
         assert updated_cr.status == "analyzing"
         assert updated_cr.freeze_snapshot is not None
         assert updated_cr.impact_analysis is not None
+        assert updated_cr.resume_point is not None
+        assert updated_cr.resume_point.stage == "design"
 
     def test_saves_files_when_root_provided(self, tmp_path: Path) -> None:
         studio = ChangeStudio()
+        save_work_item(
+            tmp_path,
+            WorkItem(
+                work_item_id="WI-2026-007",
+                work_type=WorkType.CHANGE_REQUEST,
+                source=WorkItemSource.TEXT,
+                status=WorkItemStatus.DEV_EXECUTING,
+            ),
+        )
         cr = ChangeRequest(
             change_request_id="CR-003",
             work_item_id="WI-2026-007",
             description="Add dark mode",
         )
-        studio.process(cr, {"root": str(tmp_path), "current_stage": "execute"})
+        studio.process(
+            cr,
+            {
+                "root": str(tmp_path),
+                "current_stage": "execute",
+                "current_batch": 2,
+                "current_branch": "feature/WI-2026-007-dev",
+            },
+        )
         wid_dir = tmp_path / ".ai-sdlc" / "work-items" / "WI-2026-007"
         assert (wid_dir / "impact-analysis.md").exists()
         assert (wid_dir / "rebaseline-record.md").exists()
+        assert (wid_dir / "freeze-snapshot.yaml").exists()
+        assert (wid_dir / "resume-point.yaml").exists()
+        assert load_resume_point(tmp_path, "WI-2026-007").batch == 2
+        assert load_work_item(tmp_path, "WI-2026-007").status == WorkItemStatus.SUSPENDED
 
     def test_rejects_wrong_input_type(self) -> None:
         studio = ChangeStudio()
@@ -136,15 +162,14 @@ class TestMaintenanceStudio:
         studio = MaintenanceStudio()
         brief = MaintenanceBrief(description="Performance optimization")
         studio.process(brief, {"work_item_id": "WI-2026-010", "root": str(tmp_path)})
-        out = (
-            tmp_path
-            / ".ai-sdlc"
-            / "work-items"
-            / "WI-2026-010"
-            / "maintenance-brief.md"
-        )
+        wi_root = tmp_path / ".ai-sdlc" / "work-items" / "WI-2026-010"
+        out = wi_root / "maintenance-brief.md"
         assert out.exists()
         assert "# 维护计划：" in out.read_text(encoding="utf-8")
+        assert (wi_root / "execution-path.yaml").exists()
+        execution_path = load_execution_path(tmp_path, "WI-2026-010")
+        assert execution_path is not None
+        assert execution_path.ordered_task_ids[0] == "WI-2026-010-MT-1"
 
     def test_rejects_wrong_input_type(self) -> None:
         studio = MaintenanceStudio()

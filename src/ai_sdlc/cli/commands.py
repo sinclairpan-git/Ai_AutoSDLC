@@ -24,6 +24,11 @@ from ai_sdlc.context.state import (
     load_working_set,
 )
 from ai_sdlc.core.config import load_project_config, load_project_state
+from ai_sdlc.core.p1_artifacts import (
+    load_execution_path,
+    load_parallel_coordination_artifact,
+    load_resume_point,
+)
 from ai_sdlc.core.reconcile import (
     ReconcileHint,
     detect_reconcile_hint,
@@ -304,6 +309,30 @@ def status_command(
                 table.add_row("Governance Frozen", "yes" if governance.frozen else "no")
                 if governance.frozen_at:
                     table.add_row("Governance Frozen At", governance.frozen_at)
+        if active_wi_id:
+            resume_point = load_resume_point(root, active_wi_id)
+            if resume_point is not None:
+                table.add_row(
+                    "Resume Point",
+                    f"{resume_point.stage} / batch {resume_point.batch}",
+                )
+            execution_path = load_execution_path(root, active_wi_id)
+            if execution_path is not None and execution_path.ordered_task_ids:
+                table.add_row(
+                    "Execution Path",
+                    ", ".join(execution_path.ordered_task_ids[:3]),
+                )
+            coordination = load_parallel_coordination_artifact(root, active_wi_id)
+            if coordination is not None:
+                table.add_row(
+                    "Parallel Coordination",
+                    f"{coordination.worker_count} workers",
+                )
+                if coordination.merge_order:
+                    table.add_row(
+                        "Parallel Merge Order",
+                        ", ".join(coordination.merge_order),
+                    )
 
     console.print(table)
     if hint is not None:

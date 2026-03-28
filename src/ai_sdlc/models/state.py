@@ -237,3 +237,21 @@ class MergeSimulation(BaseModel):
     predicted_conflicts: list[str] = Field(default_factory=list)
     merge_order: list[str] = Field(default_factory=list)
     notes: str = ""
+
+
+class ParallelCoordinationArtifact(BaseModel):
+    """Persisted runtime truth for parallel assignment and merge verification."""
+
+    work_item_id: str
+    group_task_ids: dict[str, list[str]] = Field(default_factory=dict)
+    assignments: list[WorkerAssignment] = Field(default_factory=list)
+    overlap_result: OverlapResult = Field(default_factory=OverlapResult)
+    merge_simulation: MergeSimulation = Field(default_factory=MergeSimulation)
+
+    @property
+    def worker_count(self) -> int:
+        return len(self.assignments)
+
+    @property
+    def merge_order(self) -> list[str]:
+        return list(self.merge_simulation.merge_order)

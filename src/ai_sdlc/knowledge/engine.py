@@ -55,6 +55,16 @@ def initialize_baseline(root: Path) -> KnowledgeBaselineState:
     return state
 
 
+def refresh_log_path(root: Path) -> Path:
+    """Return the knowledge refresh log path."""
+    return root / AI_SDLC_DIR / "project" / "config" / REFRESH_LOG_FILE
+
+
+def load_refresh_log(root: Path) -> KnowledgeRefreshLog:
+    """Load the refresh log, returning an empty one when missing."""
+    return YamlStore.load(refresh_log_path(root), KnowledgeRefreshLog)
+
+
 def bump_baseline(
     root: Path, *, corpus_updated: bool = False, index_updated: bool = False
 ) -> KnowledgeBaselineState:
@@ -230,13 +240,10 @@ def _is_structural_change(filepath: str) -> bool:
 
 def _append_log(root: Path, entry: RefreshEntry) -> None:
     """Append a refresh entry to the log file."""
-    log_path = root / AI_SDLC_DIR / "project" / "config" / REFRESH_LOG_FILE
+    log_path = refresh_log_path(root)
     log_path.parent.mkdir(parents=True, exist_ok=True)
 
-    if log_path.exists():
-        log = YamlStore.load(log_path, KnowledgeRefreshLog)
-    else:
-        log = KnowledgeRefreshLog()
+    log = load_refresh_log(root) if log_path.exists() else KnowledgeRefreshLog()
 
     log.entries.append(entry)
     YamlStore.save(log_path, log)

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from enum import Enum
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 # ---------------------------------------------------------------------------
 # Enums (from work_item)
@@ -212,6 +212,17 @@ class RebaselineRecord(BaseModel):
     rebaselined_at: str = ""
 
 
+class ResumePoint(BaseModel):
+    """Structured resume contract for change-request pause/resume."""
+
+    stage: str = ""
+    batch: int = 0
+    status: str = ""
+    checkpoint_path: str = ".ai-sdlc/state/checkpoint.yml"
+    current_branch: str = ""
+    last_committed_task: str = ""
+
+
 class ChangeRequest(BaseModel):
     """A change request submitted during an active work item."""
 
@@ -224,8 +235,29 @@ class ChangeRequest(BaseModel):
     freeze_snapshot: FreezeSnapshot | None = None
     impact_analysis: ImpactAnalysis | None = None
     rebaseline_record: RebaselineRecord | None = None
-    resume_point: str = ""
+    resume_point: ResumePoint | None = None
     status: str = "pending"
+
+    @field_validator("resume_point", mode="before")
+    @classmethod
+    def _coerce_resume_point(cls, value: object) -> object:
+        if not isinstance(value, str):
+            return value
+        text = value.strip()
+        if not text:
+            return None
+        fields: dict[str, str] = {}
+        for token in text.split(","):
+            if "=" not in token:
+                continue
+            key, raw = token.split("=", 1)
+            fields[key.strip()] = raw.strip()
+        batch = fields.get("batch", "0")
+        return {
+            "stage": fields.get("stage", ""),
+            "batch": int(batch) if batch.isdigit() else 0,
+            "status": fields.get("status", ""),
+        }
 
 
 # ---------------------------------------------------------------------------
@@ -255,6 +287,24 @@ class SmallTaskGraph(BaseModel):
         return len(self.tasks)
 
 
+class ExecutionPathStep(BaseModel):
+    """One ordered execution step for maintenance work."""
+
+    task_id: str
+    title: str
+    depends_on: list[str] = Field(default_factory=list)
+
+
+class ExecutionPath(BaseModel):
+    """Structured execution order for a lightweight maintenance plan."""
+
+    steps: list[ExecutionPathStep] = Field(default_factory=list)
+
+    @property
+    def ordered_task_ids(self) -> list[str]:
+        return [step.task_id for step in self.steps]
+
+
 class MaintenanceBrief(BaseModel):
     """Input to the Maintenance Brief Studio."""
 
@@ -271,4 +321,5 @@ class MaintenancePlan(BaseModel):
     brief_summary: str
     category: str = ""
     task_graph: SmallTaskGraph = Field(default_factory=SmallTaskGraph)
+    execution_path: ExecutionPath = Field(default_factory=ExecutionPath)
     estimated_effort: str = ""

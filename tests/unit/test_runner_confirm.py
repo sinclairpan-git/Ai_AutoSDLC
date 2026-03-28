@@ -8,8 +8,13 @@ from unittest.mock import MagicMock
 
 import pytest
 
+from ai_sdlc.context.state import load_checkpoint, save_checkpoint
 from ai_sdlc.core.runner import PipelineHaltError, SDLCRunner
+from ai_sdlc.core.state_machine import save_work_item
 from ai_sdlc.models.gate import GateCheck, GateResult, GateVerdict
+from ai_sdlc.models.scanner import KnowledgeRefreshLog, RefreshEntry, RefreshLevel
+from ai_sdlc.models.state import Checkpoint, FeatureInfo
+from ai_sdlc.models.work import WorkItem, WorkItemSource, WorkItemStatus, WorkType
 from ai_sdlc.telemetry.paths import telemetry_local_root, telemetry_manifest_path
 
 
@@ -52,6 +57,69 @@ def _step_trace_paths(tmp_path: Path) -> tuple[Path, Path]:
 
 
 class TestConfirmMode:
+    def test_close_context_includes_incident_postmortem_and_refresh_entry(
+        self, tmp_path: Path
+    ) -> None:
+        _bootstrap_project(tmp_path)
+        spec_dir = tmp_path / "specs" / "WI-INC-001"
+        spec_dir.mkdir(parents=True, exist_ok=True)
+        (spec_dir / "development-summary.md").write_text("# Summary\n", encoding="utf-8")
+        save_checkpoint(
+            tmp_path,
+            Checkpoint(
+                current_stage="close",
+                linked_wi_id="WI-INC-001",
+                feature=FeatureInfo(
+                    id="WI-INC-001",
+                    spec_dir="specs/WI-INC-001",
+                    design_branch="design/WI-INC-001",
+                    feature_branch="feature/WI-INC-001",
+                    current_branch="feature/WI-INC-001",
+                ),
+            ),
+        )
+        save_work_item(
+            tmp_path,
+            WorkItem(
+                work_item_id="WI-INC-001",
+                work_type=WorkType.PRODUCTION_ISSUE,
+                source=WorkItemSource.TEXT,
+                status=WorkItemStatus.ARCHIVING,
+            ),
+        )
+        incident_root = tmp_path / ".ai-sdlc" / "work-items" / "WI-INC-001"
+        incident_root.mkdir(parents=True, exist_ok=True)
+        (incident_root / "postmortem.md").write_text(
+            "# Postmortem\n\n"
+            "## Root Cause\n\nLeak\n\n"
+            "## Fix Description\n\nPatched\n\n"
+            "## Lessons Learned\n\nNo TODO\n",
+            encoding="utf-8",
+        )
+        (tmp_path / ".ai-sdlc" / "project" / "config" / "knowledge-refresh-log.yaml").write_text(
+            KnowledgeRefreshLog(
+                entries=[
+                    RefreshEntry(
+                        work_item_id="WI-INC-001",
+                        refresh_level=RefreshLevel.L2,
+                        triggered_at="2026-03-29T00:00:00+00:00",
+                        completed_at="2026-03-29T00:01:00+00:00",
+                    )
+                ]
+            ).model_dump_json(indent=2),
+            encoding="utf-8",
+        )
+
+        runner = SDLCRunner(tmp_path)
+        cp = load_checkpoint(tmp_path)
+        assert cp is not None
+
+        ctx = runner._build_context("close", cp)
+
+        assert ctx["postmortem_path"] == ".ai-sdlc/work-items/WI-INC-001/postmortem.md"
+        assert ctx["knowledge_refresh_level"] == 2
+        assert ctx["knowledge_refresh_completed"] is True
+
     def test_confirm_callback_pauses_pipeline(self, tmp_path: Path) -> None:
         """Pipeline pauses when confirm callback returns False."""
         _bootstrap_project(tmp_path)

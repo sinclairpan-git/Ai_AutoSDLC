@@ -10,6 +10,7 @@ from typing import Any
 from ai_sdlc.context.state import load_checkpoint, save_checkpoint
 from ai_sdlc.core.dispatcher import StageDispatcher
 from ai_sdlc.core.executor import Executor
+from ai_sdlc.core.state_machine import load_work_item, work_item_path
 from ai_sdlc.core.verify_constraints import build_verification_gate_context
 from ai_sdlc.gates.extra_gates import KnowledgeGate, ParallelGate, PostmortemGate
 from ai_sdlc.gates.pipeline_gates import (
@@ -27,6 +28,7 @@ from ai_sdlc.gates.pipeline_gates import (
 )
 from ai_sdlc.gates.registry import GateRegistry
 from ai_sdlc.gates.task_ac_checks import next_pending_task_ref
+from ai_sdlc.knowledge.engine import load_refresh_log
 from ai_sdlc.models.gate import GateResult, GateVerdict
 from ai_sdlc.models.state import (
     Checkpoint,
@@ -35,6 +37,7 @@ from ai_sdlc.models.state import (
     FeatureInfo,
     RuntimeState,
 )
+from ai_sdlc.models.work import WorkType
 from ai_sdlc.telemetry.enums import TelemetryEventStatus
 from ai_sdlc.telemetry.runtime import RuntimeTelemetry
 from ai_sdlc.utils.helpers import now_iso
@@ -385,6 +388,34 @@ class SDLCRunner:
                 and not prog.halted
             )
             ctx["tests_passed"] = prog.last_commit_hash != "" and not prog.halted
+        work_item_id = ""
+        if cp and cp.linked_wi_id:
+            work_item_id = cp.linked_wi_id
+        elif cp and cp.feature:
+            work_item_id = cp.feature.id
+        if not work_item_id:
+            return
+        if work_item_path(self.root, work_item_id).exists():
+            work_item = load_work_item(self.root, work_item_id)
+            if work_item.work_type is WorkType.PRODUCTION_ISSUE:
+                postmortem = (
+                    self.root
+                    / ".ai-sdlc"
+                    / "work-items"
+                    / work_item_id
+                    / "postmortem.md"
+                )
+                if postmortem.exists():
+                    ctx["postmortem_path"] = str(postmortem.relative_to(self.root))
+        refresh_entries = [
+            entry
+            for entry in load_refresh_log(self.root).entries
+            if entry.work_item_id == work_item_id
+        ]
+        if refresh_entries:
+            latest = refresh_entries[-1]
+            ctx["knowledge_refresh_level"] = int(latest.refresh_level)
+            ctx["knowledge_refresh_completed"] = latest.completed_at is not None
 
     @staticmethod
     def _stage_index(stage: str) -> int:

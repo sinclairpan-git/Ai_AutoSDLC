@@ -4,10 +4,13 @@ from __future__ import annotations
 
 import logging
 from collections import defaultdict
+from pathlib import Path
 
+from ai_sdlc.core.p1_artifacts import save_parallel_coordination_artifact
 from ai_sdlc.models.state import (
     MergeSimulation,
     OverlapResult,
+    ParallelCoordinationArtifact,
     ParallelPolicy,
     Task,
     WorkerAssignment,
@@ -222,6 +225,38 @@ def simulate_merge(
         predicted_conflicts=predicted_conflicts,
         notes=_generate_merge_notes(merge_order, predicted_conflicts),
     )
+
+
+def build_coordination_artifact(
+    work_item_id: str,
+    groups: dict[str, list[object]],
+    assignments: list[WorkerAssignment],
+    overlap_result: OverlapResult,
+    merge_simulation: MergeSimulation,
+    *,
+    root: Path | None = None,
+) -> ParallelCoordinationArtifact:
+    """Create the persisted coordination truth for a parallel run."""
+    artifact = ParallelCoordinationArtifact(
+        work_item_id=work_item_id,
+        group_task_ids={
+            group_id: [getattr(task, "task_id", str(task)) for task in tasks]
+            for group_id, tasks in groups.items()
+        },
+        assignments=assignments,
+        overlap_result=overlap_result,
+        merge_simulation=merge_simulation,
+    )
+    if root is not None:
+        save_parallel_coordination_artifact(
+            root,
+            work_item_id,
+            assignments=assignments,
+            overlap_result=overlap_result,
+            merge_simulation=merge_simulation,
+            artifact=artifact,
+        )
+    return artifact
 
 
 def _compute_merge_order(assignments: list[WorkerAssignment]) -> list[str]:

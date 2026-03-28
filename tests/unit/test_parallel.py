@@ -5,6 +5,7 @@ from __future__ import annotations
 from ai_sdlc.models.state import ParallelPolicy, Task, WorkerAssignment
 from ai_sdlc.parallel.engine import (
     assign_workers,
+    build_coordination_artifact,
     compute_file_ownership,
     detect_overlaps,
     simulate_merge,
@@ -250,3 +251,39 @@ class TestMergeSimulator:
         ]
         sim = simulate_merge(assignments, overlap)
         assert sim.merge_order[0] == "feature/WI-001-dev"
+
+
+class TestCoordinationArtifact:
+    def test_builds_and_persists_coordination_artifact(self, tmp_path) -> None:
+        groups = {
+            "group-0": [_task("T1", ["src/auth.py"])],
+            "group-1": [_task("T2", ["src/payment.py"])],
+        }
+        policy = ParallelPolicy(enabled=True, max_workers=2)
+
+        assignments = assign_workers("WI-COORD-001", groups, policy)
+        overlap = detect_overlaps(groups)
+        merge = simulate_merge(assignments, overlap)
+
+        artifact = build_coordination_artifact(
+            "WI-COORD-001",
+            groups,
+            assignments,
+            overlap,
+            merge,
+            root=tmp_path,
+        )
+
+        assert artifact.worker_count == 2
+        assert artifact.group_task_ids == {
+            "group-0": ["T1"],
+            "group-1": ["T2"],
+        }
+        assert artifact.merge_order == merge.merge_order
+        assert (
+            tmp_path
+            / ".ai-sdlc"
+            / "work-items"
+            / "WI-COORD-001"
+            / "parallel-coordination.yaml"
+        ).exists()

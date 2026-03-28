@@ -30,6 +30,8 @@ from ai_sdlc.models.state import (
 )
 from ai_sdlc.models.work import (
     ChangeRequest,
+    ExecutionPath,
+    ExecutionPathStep,
     FreezeSnapshot,
     ImpactAnalysis,
     IncidentAnalysis,
@@ -125,6 +127,17 @@ class TestIncidentModels:
 
 
 class TestChangeRequestModels:
+    def test_resume_point_from_legacy_string(self) -> None:
+        cr = ChangeRequest(
+            change_request_id="CR-LEGACY",
+            work_item_id="WI-2026-LEGACY",
+            description="Legacy payload",
+            resume_point="stage=execute, batch=3",
+        )
+        assert cr.resume_point is not None
+        assert cr.resume_point.stage == "execute"
+        assert cr.resume_point.batch == 3
+
     def test_freeze_snapshot(self) -> None:
         snap = FreezeSnapshot(
             work_item_id="WI-2026-002",
@@ -162,6 +175,19 @@ class TestChangeRequestModels:
 
 
 class TestMaintenanceModels:
+    def test_execution_path(self) -> None:
+        path = ExecutionPath(
+            steps=[
+                ExecutionPathStep(task_id="MT-1", title="Assess"),
+                ExecutionPathStep(
+                    task_id="MT-2",
+                    title="Execute",
+                    depends_on=["MT-1"],
+                ),
+            ]
+        )
+        assert path.ordered_task_ids == ["MT-1", "MT-2"]
+
     def test_brief(self) -> None:
         brief = MaintenanceBrief(
             description="Upgrade React from v18 to v19",

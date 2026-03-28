@@ -6,11 +6,19 @@ import logging
 from pathlib import Path
 from typing import Any
 
+from ai_sdlc.core.p1_artifacts import save_freeze_snapshot, save_resume_point
+from ai_sdlc.core.state_machine import (
+    load_work_item,
+    transition_work_item,
+    work_item_path,
+)
 from ai_sdlc.models.work import (
     ChangeRequest,
     FreezeSnapshot,
     ImpactAnalysis,
     RebaselineRecord,
+    ResumePoint,
+    WorkItemStatus,
 )
 from ai_sdlc.utils.helpers import now_iso
 
@@ -49,12 +57,13 @@ class ChangeStudio:
         cr.freeze_snapshot = freeze
         cr.impact_analysis = impact
         cr.rebaseline_record = rebaseline
-        cr.resume_point = f"stage={ctx.get('current_stage', 'unknown')}, batch={ctx.get('current_batch', 0)}"
+        cr.resume_point = self._create_resume_point(ctx)
         cr.status = "analyzing"
 
         root = ctx.get("root")
         if root:
             self._save_artifacts(Path(root), cr)
+            self._suspend_work_item(Path(root), cr.work_item_id)
 
         return {
             "change_request": cr,
@@ -93,11 +102,23 @@ class ChangeStudio:
             rebaselined_at=now_iso(),
         )
 
+    def _create_resume_point(self, ctx: dict[str, Any]) -> ResumePoint:
+        return ResumePoint(
+            stage=ctx.get("current_stage", "unknown"),
+            batch=ctx.get("current_batch", 0),
+            status=WorkItemStatus.SUSPENDED.value,
+            current_branch=ctx.get("current_branch", ""),
+        )
+
     def _save_artifacts(self, root: Path, cr: ChangeRequest) -> None:
         from ai_sdlc.utils.helpers import AI_SDLC_DIR
 
         out_dir = root / AI_SDLC_DIR / "work-items" / cr.work_item_id
         out_dir.mkdir(parents=True, exist_ok=True)
+        if cr.freeze_snapshot is not None:
+            save_freeze_snapshot(root, cr.work_item_id, cr.freeze_snapshot)
+        if cr.resume_point is not None:
+            save_resume_point(root, cr.work_item_id, cr.resume_point)
 
         if cr.impact_analysis:
             (out_dir / "impact-analysis.md").write_text(
@@ -119,3 +140,14 @@ class ChangeStudio:
                 f"## Rebaselined At\n\n{cr.rebaseline_record.rebaselined_at}\n",
                 encoding="utf-8",
             )
+
+    def _suspend_work_item(self, root: Path, work_item_id: str) -> None:
+        if not work_item_path(root, work_item_id).exists():
+            return
+        work_item = load_work_item(root, work_item_id)
+        if work_item.status not in {
+            WorkItemStatus.DEV_EXECUTING,
+            WorkItemStatus.DEV_VERIFYING,
+        }:
+            return
+        transition_work_item(root, work_item, WorkItemStatus.SUSPENDED)

@@ -6,7 +6,10 @@ import logging
 from pathlib import Path
 from typing import Any
 
+from ai_sdlc.core.p1_artifacts import save_execution_path
 from ai_sdlc.models.work import (
+    ExecutionPath,
+    ExecutionPathStep,
     MaintenanceBrief,
     MaintenancePlan,
     MaintenanceTask,
@@ -51,12 +54,23 @@ class MaintenanceStudio:
     def _build_plan(self, wid: str, brief: MaintenanceBrief) -> MaintenancePlan:
         tasks = self._generate_tasks(wid, brief)
         execution_order = [t.task_id for t in tasks]
+        execution_path = ExecutionPath(
+            steps=[
+                ExecutionPathStep(
+                    task_id=task.task_id,
+                    title=task.title,
+                    depends_on=list(task.depends_on),
+                )
+                for task in tasks
+            ]
+        )
 
         return MaintenancePlan(
             work_item_id=wid,
             brief_summary=brief.description,
             category=brief.category,
             task_graph=SmallTaskGraph(tasks=tasks, execution_order=execution_order),
+            execution_path=execution_path,
         )
 
     def _generate_tasks(
@@ -101,12 +115,16 @@ class MaintenanceStudio:
 
         out_dir = root / AI_SDLC_DIR / "work-items" / wid
         out_dir.mkdir(parents=True, exist_ok=True)
+        save_execution_path(root, wid, plan.execution_path)
 
         (out_dir / "maintenance-brief.md").write_text(
             f"# 维护计划：{wid}\n\n"
             f"## 摘要\n\n{plan.brief_summary}\n\n"
             f"## 类别\n\n{plan.category or 'general'}\n\n"
-            f"## 任务（共 {plan.task_graph.task_count} 项）\n\n"
+            f"## Execution Path\n\n"
+            + "\n".join(f"- {task_id}" for task_id in plan.execution_path.ordered_task_ids)
+            + "\n\n"
+            + f"## 任务（共 {plan.task_graph.task_count} 项）\n\n"
             + "\n".join(
                 f"### {t.task_id}：{t.title}\n\n{t.description}\n\n"
                 f"**依赖**：{', '.join(t.depends_on) or '无'}\n\n"

@@ -19,6 +19,11 @@ from ai_sdlc.context.state import (
     save_resume_pack,
 )
 from ai_sdlc.core.config import YamlStore, save_project_state
+from ai_sdlc.core.p1_artifacts import (
+    save_execution_path,
+    save_parallel_coordination_artifact,
+    save_resume_point,
+)
 from ai_sdlc.models.gate import GovernanceItem, GovernanceState
 from ai_sdlc.models.project import ProjectState, ProjectStatus
 from ai_sdlc.models.state import (
@@ -27,11 +32,15 @@ from ai_sdlc.models.state import (
     ExecutionBatch,
     ExecutionPlan,
     FeatureInfo,
+    MergeSimulation,
+    OverlapResult,
     RuntimeState,
     Task,
     TaskStatus,
+    WorkerAssignment,
     WorkingSet,
 )
+from ai_sdlc.models.work import ExecutionPath, ExecutionPathStep, ResumePoint
 from ai_sdlc.routers.bootstrap import init_project
 from ai_sdlc.telemetry.contracts import Artifact, TelemetryEvent, Violation
 from ai_sdlc.telemetry.enums import ArtifactRole, ArtifactType, ScopeLevel, TraceLayer
@@ -273,6 +282,84 @@ class TestCliStatus:
             "last_event_id": "evt_02",
             "last_timestamp": "2026-03-27T09:00:00Z",
         }
+
+    def test_status_shows_p1_artifact_surfaces(self, tmp_path: Path) -> None:
+        init_project(tmp_path)
+        work_item_id = "WI-2026-P1-STATUS"
+        spec_dir = tmp_path / "specs" / work_item_id
+        spec_dir.mkdir(parents=True, exist_ok=True)
+        (spec_dir / "development-summary.md").write_text("# Summary\n", encoding="utf-8")
+        save_checkpoint(
+            tmp_path,
+            Checkpoint(
+                current_stage="close",
+                linked_wi_id=work_item_id,
+                feature=FeatureInfo(
+                    id=work_item_id,
+                    spec_dir=f"specs/{work_item_id}",
+                    design_branch=f"design/{work_item_id}",
+                    feature_branch=f"feature/{work_item_id}",
+                    current_branch=f"feature/{work_item_id}",
+                ),
+            ),
+        )
+        save_resume_point(
+            tmp_path,
+            work_item_id,
+            ResumePoint(
+                stage="execute",
+                batch=4,
+                status="suspended",
+                current_branch=f"feature/{work_item_id}",
+            ),
+        )
+        save_execution_path(
+            tmp_path,
+            work_item_id,
+            ExecutionPath(
+                steps=[
+                    ExecutionPathStep(task_id=f"{work_item_id}-MT-1", title="Assess"),
+                    ExecutionPathStep(task_id=f"{work_item_id}-MT-2", title="Execute"),
+                ]
+            ),
+        )
+        save_parallel_coordination_artifact(
+            tmp_path,
+            work_item_id,
+            assignments=[
+                WorkerAssignment(
+                    worker_id="worker-1",
+                    worker_index=1,
+                    parallel_group="group-0",
+                    group_id="group-0",
+                    branch_name=f"feature/{work_item_id}-worker-1",
+                    task_ids=["T1"],
+                    allowed_paths=["src/a.py"],
+                    forbidden_paths=["src/b.py"],
+                )
+            ],
+            overlap_result=OverlapResult(
+                has_overlap=False,
+                has_conflicts=False,
+            ),
+            merge_simulation=MergeSimulation(
+                success=True,
+                merge_order=[f"feature/{work_item_id}-worker-1"],
+                predicted_conflicts=[],
+            ),
+            group_task_ids={"group-0": ["T1"]},
+        )
+
+        with patch("ai_sdlc.cli.commands.find_project_root", return_value=tmp_path):
+            result = runner.invoke(app, ["status"])
+
+        assert result.exit_code == 0
+        assert "Resume Point" in result.output
+        assert "execute / batch 4" in result.output
+        assert "Execution Path" in result.output
+        assert f"{work_item_id}-MT-1" in result.output
+        assert "Parallel Coordination" in result.output
+        assert "1 workers" in result.output
 
     def test_status_displays_governance_and_docs_baseline_binding(
         self, tmp_path: Path
