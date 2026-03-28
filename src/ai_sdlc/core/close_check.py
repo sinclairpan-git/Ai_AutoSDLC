@@ -10,6 +10,7 @@ from typing import Any
 
 from ai_sdlc.branch.git_client import GitClient, GitError
 from ai_sdlc.core.plan_check import resolve_plan_path_from_wi, run_plan_check
+from ai_sdlc.core.workitem_traceability import analyze_completion_truth
 from ai_sdlc.utils.helpers import find_project_root
 
 REQUIRED_LOG_MARKERS = (
@@ -342,6 +343,20 @@ def run_close_check(*, cwd: Path | None, wi: Path, all_docs: bool = False) -> Cl
         )
         if not git_closure_ok:
             blockers.append(f"BLOCKER: git close-out verification failed: {git_closure_violation}")
+
+        traceability = analyze_completion_truth(tasks_text if tasks_file.is_file() else "", log_text)
+        traceability_ok = traceability.ok
+        traceability_detail = "planned work matches execution evidence"
+        if not traceability_ok:
+            traceability_detail = "; ".join(traceability.blockers)
+            blockers.extend(traceability.blockers)
+        checks.append(
+            {
+                "name": "completion_truth",
+                "ok": traceability_ok,
+                "detail": traceability_detail,
+            }
+        )
 
     doc_violations = _docs_consistency_violations(root, wi_dir, all_docs=all_docs)
     docs_ok = len(doc_violations) == 0
