@@ -345,6 +345,6 @@
 
 #### 6.5 归档后动作
 
-- **已完成 git 提交**：否（待本轮代码与归档统一提交）
-- **提交哈希**：待提交
+- **已完成 git 提交**：是
+- **提交哈希**：`a065e11`（`feat: formalize 004 offline distribution contracts`）
 - **是否继续下一批**：可继续，建议最后集中补 `004` Batch 1-5 历史 execution evidence。
