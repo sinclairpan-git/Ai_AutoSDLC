@@ -64,6 +64,31 @@ def test_gate_denies_missing_approval(tmp_path) -> None:
     assert "approve" in outcome.next_action
 
 
+def test_gate_ignores_legacy_only_artifact_for_target_checkpoint(tmp_path) -> None:
+    save_reviewer_decision(
+        tmp_path,
+        "WI-001",
+        PrdReviewerDecision(
+            checkpoint=PrdReviewerCheckpoint.PRD_FREEZE,
+            decision=PrdReviewerDecisionKind.APPROVE,
+            target="WI-001",
+            reason="Legacy approval",
+            next_action="Proceed",
+            timestamp="2026-03-29T10:00:00+08:00",
+        ),
+    )
+
+    outcome = evaluate_reviewer_gate(
+        tmp_path,
+        "WI-001",
+        WorkItemStatus.DEV_REVIEWED,
+    )
+
+    assert outcome.outcome == ReviewerGateOutcomeKind.DENY_MISSING
+    assert outcome.checkpoint == PrdReviewerCheckpoint.PRE_CLOSE
+    assert outcome.target_status == WorkItemStatus.DEV_REVIEWED
+
+
 def test_gate_denies_revise(tmp_path) -> None:
     save_reviewer_decision(
         tmp_path,

@@ -160,6 +160,58 @@ class TestPersistentTransitions:
         loaded = load_work_item(tmp_path, work_item.work_item_id)
         assert loaded.status == WorkItemStatus.INTAKE_CLASSIFIED
 
+    def test_transition_work_item_denies_revise_gate(
+        self, tmp_path: Path
+    ) -> None:
+        work_item = _make_work_item()
+        work_item.status = WorkItemStatus.INTAKE_CLASSIFIED
+        save_work_item(tmp_path, work_item)
+
+        save_reviewer_decision(
+            tmp_path,
+            work_item.work_item_id,
+            PrdReviewerDecision(
+                checkpoint=PrdReviewerCheckpoint.PRD_FREEZE,
+                decision=PrdReviewerDecisionKind.REVISE,
+                target=work_item.work_item_id,
+                reason="Need more detail before freeze",
+                next_action="Revise the PRD",
+                timestamp="2026-03-29T10:00:00+08:00",
+            ),
+        )
+
+        with pytest.raises(InvalidTransitionError):
+            transition_work_item(tmp_path, work_item, WorkItemStatus.GOVERNANCE_FROZEN)
+
+        loaded = load_work_item(tmp_path, work_item.work_item_id)
+        assert loaded.status == WorkItemStatus.INTAKE_CLASSIFIED
+
+    def test_transition_work_item_denies_block_gate(
+        self, tmp_path: Path
+    ) -> None:
+        work_item = _make_work_item()
+        work_item.status = WorkItemStatus.GOVERNANCE_FROZEN
+        save_work_item(tmp_path, work_item)
+
+        save_reviewer_decision(
+            tmp_path,
+            work_item.work_item_id,
+            PrdReviewerDecision(
+                checkpoint=PrdReviewerCheckpoint.DOCS_BASELINE_FREEZE,
+                decision=PrdReviewerDecisionKind.BLOCK,
+                target=work_item.work_item_id,
+                reason="Docs baseline is blocked",
+                next_action="Resolve the blocker",
+                timestamp="2026-03-29T11:00:00+08:00",
+            ),
+        )
+
+        with pytest.raises(InvalidTransitionError):
+            transition_work_item(tmp_path, work_item, WorkItemStatus.DOCS_BASELINE)
+
+        loaded = load_work_item(tmp_path, work_item.work_item_id)
+        assert loaded.status == WorkItemStatus.GOVERNANCE_FROZEN
+
     def test_cross_stage_chain_persists_until_completed(self, tmp_path: Path) -> None:
         work_item = _make_work_item()
         save_work_item(tmp_path, work_item)

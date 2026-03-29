@@ -9,11 +9,11 @@ from ai_sdlc.core.p1_artifacts import (
     load_parallel_coordination_artifact,
     load_resume_point,
     load_reviewer_decision_for_checkpoint,
-    work_item_root,
     save_execution_path,
     save_parallel_coordination_artifact,
     save_resume_point,
     save_reviewer_decision,
+    work_item_root,
 )
 from ai_sdlc.models.state import MergeSimulation, OverlapResult, WorkerAssignment
 from ai_sdlc.models.work import (
@@ -93,7 +93,7 @@ def test_save_and_load_reviewer_decisions_per_checkpoint(tmp_path) -> None:
     assert latest.to_status_view()["summary"] == "pre_close:approve -> WI-001"
 
 
-def test_load_reviewer_decision_falls_back_to_legacy_file(tmp_path) -> None:
+def test_load_latest_reviewer_decision_falls_back_to_legacy_file(tmp_path) -> None:
     decision = PrdReviewerDecision(
         checkpoint=PrdReviewerCheckpoint.PRD_FREEZE,
         decision=PrdReviewerDecisionKind.APPROVE,
@@ -114,10 +114,10 @@ def test_load_reviewer_decision_falls_back_to_legacy_file(tmp_path) -> None:
     latest = load_latest_reviewer_decision(tmp_path, "WI-001")
 
     assert legacy_path.name == "reviewer-decision.yaml"
-    assert loaded == decision
+    assert loaded is None
     assert latest == decision
-    assert loaded is not None
-    assert loaded.to_status_view()["summary"] == "prd_freeze:approve -> WI-001"
+    assert latest is not None
+    assert latest.to_status_view()["summary"] == "prd_freeze:approve -> WI-001"
 
 
 def test_legacy_reviewer_decision_does_not_satisfy_wrong_checkpoint(tmp_path) -> None:
@@ -137,6 +137,32 @@ def test_legacy_reviewer_decision_does_not_satisfy_wrong_checkpoint(tmp_path) ->
         tmp_path,
         "WI-001",
         PrdReviewerCheckpoint.PRE_CLOSE,
+    )
+    latest = load_latest_reviewer_decision(tmp_path, "WI-001")
+
+    assert loaded is None
+    assert latest == decision
+
+
+def test_legacy_reviewer_decision_does_not_satisfy_checkpoint_specific_loader(
+    tmp_path,
+) -> None:
+    decision = PrdReviewerDecision(
+        checkpoint=PrdReviewerCheckpoint.PRD_FREEZE,
+        decision=PrdReviewerDecisionKind.APPROVE,
+        target="WI-001",
+        reason="Legacy artifact only",
+        next_action="Persist final_prd",
+        timestamp="2026-03-29T09:00:00+08:00",
+    )
+
+    legacy_path = work_item_root(tmp_path, "WI-001") / "reviewer-decision.yaml"
+    YamlStore.save(legacy_path, decision)
+
+    loaded = load_reviewer_decision_for_checkpoint(
+        tmp_path,
+        "WI-001",
+        PrdReviewerCheckpoint.PRD_FREEZE,
     )
     latest = load_latest_reviewer_decision(tmp_path, "WI-001")
 

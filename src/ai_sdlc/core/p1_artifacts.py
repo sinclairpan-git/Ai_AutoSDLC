@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 from ai_sdlc.core.config import YamlStore
@@ -15,8 +15,8 @@ from ai_sdlc.models.state import (
 from ai_sdlc.models.work import (
     ExecutionPath,
     FreezeSnapshot,
-    PrdReviewerDecision,
     PrdReviewerCheckpoint,
+    PrdReviewerDecision,
     ResumePoint,
 )
 from ai_sdlc.utils.helpers import AI_SDLC_DIR
@@ -62,14 +62,14 @@ def _reviewer_decision_path(
 
 def _parse_timestamp(timestamp: str) -> datetime:
     if not timestamp:
-        return datetime.min.replace(tzinfo=timezone.utc)
+        return datetime.min.replace(tzinfo=UTC)
     try:
         parsed = datetime.fromisoformat(timestamp.replace("Z", "+00:00"))
     except ValueError:
-        return datetime.min.replace(tzinfo=timezone.utc)
+        return datetime.min.replace(tzinfo=UTC)
     if parsed.tzinfo is None:
-        return parsed.replace(tzinfo=timezone.utc)
-    return parsed.astimezone(timezone.utc)
+        return parsed.replace(tzinfo=UTC)
+    return parsed.astimezone(UTC)
 
 
 def _latest_reviewer_decision(
@@ -111,12 +111,6 @@ def load_reviewer_decision_for_checkpoint(
     path = _reviewer_decision_path(root, work_item_id, checkpoint)
     if path.exists():
         return YamlStore.load(path, PrdReviewerDecision)
-
-    legacy_path = _reviewer_decision_path(root, work_item_id)
-    if legacy_path.exists():
-        legacy_decision = YamlStore.load(legacy_path, PrdReviewerDecision)
-        if legacy_decision.checkpoint == checkpoint:
-            return legacy_decision
     return None
 
 
