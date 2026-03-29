@@ -10,8 +10,9 @@ from ai_sdlc.backends.native import (
     BackendCapabilityDeclaration,
     BackendDecisionKind,
     BackendRegistry,
+    BackendSelectionPolicy,
 )
-from ai_sdlc.backends.routing import BackendRoutingCoordinator, RoutedDocument
+from ai_sdlc.backends.routing import BackendRoutingBlockedError
 from ai_sdlc.generators.doc_gen import DocScaffolder, TasksParser
 from ai_sdlc.generators.template_gen import TemplateGenerator
 
@@ -71,21 +72,35 @@ class RecordingBackend:
         return self.responses[method_name]
 
 
-class FakeRouter:
-    def __init__(self) -> None:
-        self.calls: list[tuple[str, dict[str, object]]] = []
-
-    def generate_spec(self, context: dict[str, object]) -> RoutedDocument:
-        self.calls.append(("generate_spec", dict(context)))
-        return RoutedDocument("ROUTED SPEC", "spec-decision")
-
-    def generate_plan(self, context: dict[str, object]) -> RoutedDocument:
-        self.calls.append(("generate_plan", dict(context)))
-        return RoutedDocument("ROUTED PLAN", "plan-decision")
-
-    def generate_tasks(self, context: dict[str, object]) -> RoutedDocument:
-        self.calls.append(("generate_tasks", dict(context)))
-        return RoutedDocument("ROUTED TASKS", "tasks-decision")
+def _registry_with_native_and_plugin(
+    *,
+    plugin_capabilities: tuple[str, ...] = ("generate_spec", "generate_plan", "generate_tasks"),
+    native_responses: dict[str, str] | None = None,
+    plugin_responses: dict[str, str] | None = None,
+) -> tuple[BackendRegistry, RecordingBackend, RecordingBackend]:
+    registry = BackendRegistry()
+    native = RecordingBackend(
+        "native-test",
+        capabilities=("generate_spec", "generate_plan", "generate_tasks"),
+        responses=native_responses or {
+            "generate_spec": "native spec",
+            "generate_plan": "native plan",
+            "generate_tasks": "native tasks",
+        },
+    )
+    plugin = RecordingBackend(
+        "plugin",
+        capabilities=plugin_capabilities,
+        responses=plugin_responses or {
+            "generate_spec": "plugin spec",
+            "generate_plan": "plugin plan",
+            "generate_tasks": "plugin tasks",
+        },
+    )
+    registry.register("native-test", native)
+    registry.set_default("native-test")
+    registry.register("plugin", plugin)
+    return registry, native, plugin
 
 
 @pytest.mark.parametrize("template_name", TEMPLATES)
@@ -211,67 +226,132 @@ def test_scaffold_returns_only_newly_created_paths(tmp_path: Path) -> None:
     assert (spec_dir / "spec.md").read_text(encoding="utf-8") == "# existing\n"
 
 
-def test_render_routes_spec_plan_tasks_and_bypasses_execution_log() -> None:
-    router = FakeRouter()
+def _public_context(
+    registry: BackendRegistry,
+    *,
+    requested_backend: str = "plugin",
+    policy: BackendSelectionPolicy | None = None,
+    backend_decisions: dict[str, object | None] | None = None,
+) -> dict[str, object]:
+    context: dict[str, object] = {
+        "work_item_id": "WI-CTX-001",
+        "backend_registry": registry,
+        "requested_backend": requested_backend,
+        "backend_policy": policy or BackendSelectionPolicy(),
+    }
+    if backend_decisions is not None:
+        context["backend_decisions"] = backend_decisions
+    return context
+
+
+def test_render_uses_context_backend_selection_and_records_decisions() -> None:
+    registry, _, plugin = _registry_with_native_and_plugin()
     template_gen = FakeTemplateGenerator()
-    scaffolder = DocScaffolder(template_gen=template_gen, router=router)
+    decisions: dict[str, object | None] = {}
+    scaffolder = DocScaffolder(template_gen=template_gen)
 
-    spec = scaffolder.render("spec.md.j2", {"work_item_id": "WI-001"})
-    plan = scaffolder.render("plan.md.j2", {"work_item_id": "WI-001"})
-    tasks = scaffolder.render("tasks.md.j2", {"work_item_id": "WI-001"})
-    execution_log = scaffolder.render("execution-log.md.j2", {"work_item_id": "WI-001"})
+    spec = scaffolder.render("spec.md.j2", _public_context(registry, backend_decisions=decisions))
+    plan = scaffolder.render("plan.md.j2", _public_context(registry, backend_decisions=decisions))
+    tasks = scaffolder.render("tasks.md.j2", _public_context(registry, backend_decisions=decisions))
+    execution_log = scaffolder.render(
+        "execution-log.md.j2",
+        _public_context(registry, backend_decisions=decisions),
+    )
 
-    assert spec == "ROUTED SPEC"
-    assert plan == "ROUTED PLAN"
-    assert tasks == "ROUTED TASKS"
+    assert spec == "plugin spec"
+    assert plan == "plugin plan"
+    assert tasks == "plugin tasks"
     assert execution_log == "template:execution-log.md.j2"
     assert template_gen.calls == ["execution-log.md.j2"]
-    assert [call[0] for call in router.calls] == [
+    assert decisions["spec.md"].decision_kind == BackendDecisionKind.DELEGATE
+    assert decisions["plan.md"].decision_kind == BackendDecisionKind.DELEGATE
+    assert decisions["tasks.md"].decision_kind == BackendDecisionKind.DELEGATE
+    assert decisions["execution-log.md"] is None
+    assert [call[0] for call in plugin.calls] == [
         "generate_spec",
         "generate_plan",
         "generate_tasks",
     ]
 
 
-def test_scaffold_with_backend_selection_exposes_backend_decisions(
-    tmp_path: Path,
+@pytest.mark.parametrize(
+    ("template_name", "output_name"),
+    [
+        ("spec.md.j2", "spec.md"),
+        ("plan.md.j2", "plan.md"),
+        ("tasks.md.j2", "tasks.md"),
+    ],
+)
+def test_render_falls_back_to_native_using_custom_template_gen(
+    template_name: str,
+    output_name: str,
 ) -> None:
     registry = BackendRegistry()
-    native = RecordingBackend(
-        "native-test",
-        capabilities=("generate_spec", "generate_plan", "generate_tasks"),
-        responses={
-            "generate_spec": "native spec",
-            "generate_plan": "native plan",
-            "generate_tasks": "native tasks",
-        },
-    )
     plugin = RecordingBackend(
         "plugin",
-        capabilities=("generate_spec", "generate_plan", "generate_tasks"),
+        capabilities=(),
         responses={
             "generate_spec": "plugin spec",
             "generate_plan": "plugin plan",
             "generate_tasks": "plugin tasks",
         },
     )
-    registry.register("native-test", native)
-    registry.set_default("native-test")
     registry.register("plugin", plugin)
+    template_gen = FakeTemplateGenerator()
+    decisions: dict[str, object | None] = {}
+    scaffolder = DocScaffolder(template_gen=template_gen)
 
-    router = BackendRoutingCoordinator(registry=registry, requested_backend="plugin")
-    scaffolder = DocScaffolder(template_gen=FakeTemplateGenerator(), router=router)
+    rendered = scaffolder.render(
+        template_name,
+        _public_context(registry, backend_decisions=decisions),
+    )
 
-    audit = scaffolder.scaffold_with_backend_selection(tmp_path, "WI-AUDIT-001")
+    assert rendered == f"template:{template_name}"
+    assert template_gen.calls == [template_name]
+    assert decisions[output_name].decision_kind == BackendDecisionKind.FALLBACK_NATIVE
+    assert plugin.calls == []
 
-    assert len(audit.created_paths) == 4
-    assert audit.backend_decisions["spec.md"].decision_kind == BackendDecisionKind.DELEGATE
-    assert audit.backend_decisions["plan.md"].decision_kind == BackendDecisionKind.DELEGATE
-    assert audit.backend_decisions["tasks.md"].decision_kind == BackendDecisionKind.DELEGATE
-    assert audit.backend_decisions["execution-log.md"] is None
+
+def test_render_blocks_when_context_policy_disallows_plugin() -> None:
+    registry, _, _ = _registry_with_native_and_plugin()
+    scaffolder = DocScaffolder(template_gen=FakeTemplateGenerator())
+
+    with pytest.raises(BackendRoutingBlockedError):
+        scaffolder.render(
+            "spec.md.j2",
+            _public_context(
+                registry,
+                policy=BackendSelectionPolicy(allow_plugin=False, allow_native_fallback=False),
+            ),
+        )
+
+
+def test_scaffold_populates_backend_decisions_via_context(tmp_path: Path) -> None:
+    registry, _, plugin = _registry_with_native_and_plugin()
+    template_gen = FakeTemplateGenerator()
+    decisions: dict[str, object | None] = {}
+    scaffolder = DocScaffolder(template_gen=template_gen)
+
+    created = scaffolder.scaffold(
+        tmp_path,
+        "WI-AUDIT-001",
+        _public_context(registry, backend_decisions=decisions),
+    )
+
+    assert len(created) == 4
+    assert decisions["spec.md"].decision_kind == BackendDecisionKind.DELEGATE
+    assert decisions["plan.md"].decision_kind == BackendDecisionKind.DELEGATE
+    assert decisions["tasks.md"].decision_kind == BackendDecisionKind.DELEGATE
+    assert decisions["execution-log.md"] is None
     assert (tmp_path / "specs" / "WI-AUDIT-001" / "spec.md").read_text(encoding="utf-8") == "plugin spec"
     assert (tmp_path / "specs" / "WI-AUDIT-001" / "plan.md").read_text(encoding="utf-8") == "plugin plan"
     assert (tmp_path / "specs" / "WI-AUDIT-001" / "tasks.md").read_text(encoding="utf-8") == "plugin tasks"
+    assert (tmp_path / "specs" / "WI-AUDIT-001" / "execution-log.md").read_text(encoding="utf-8") == "template:execution-log.md.j2"
+    assert [call[0] for call in plugin.calls] == [
+        "generate_spec",
+        "generate_plan",
+        "generate_tasks",
+    ]
 
 
 # --- TasksParser ---

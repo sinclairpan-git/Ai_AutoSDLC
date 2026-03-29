@@ -15,6 +15,11 @@ from ai_sdlc.utils.helpers import now_iso
 logger = logging.getLogger(__name__)
 
 _BACKEND_ROUTE_BYPASS_KEY = "_ai_sdlc_backend_route_bypass"
+_TEMPLATE_GENERATOR_KEY = "_ai_sdlc_template_gen"
+_BACKEND_REGISTRY_KEY = "backend_registry"
+_REQUESTED_BACKEND_KEY = "requested_backend"
+_BACKEND_POLICY_KEY = "backend_policy"
+_BACKEND_DECISIONS_KEY = "backend_decisions"
 
 
 @dataclass(frozen=True, slots=True)
@@ -64,27 +69,20 @@ class DocScaffolder:
     ) -> RenderResult:
         """Render a template and expose the backend decision used."""
         if context.get(_BACKEND_ROUTE_BYPASS_KEY):
-            return RenderResult(content=self._gen.render(template_name, context))
+            return RenderResult(content=self._render_direct(template_name, context))
 
         if template_name == "spec.md.j2":
-            routed = self._routing().generate_spec(context)
-            return RenderResult(
-                content=routed.content,
-                backend_decision=routed.backend_decision,
-            )
+            return self._route_and_record("spec.md", template_name, context)
         if template_name == "plan.md.j2":
-            routed = self._routing().generate_plan(context)
-            return RenderResult(
-                content=routed.content,
-                backend_decision=routed.backend_decision,
-            )
+            return self._route_and_record("plan.md", template_name, context)
         if template_name == "tasks.md.j2":
-            routed = self._routing().generate_tasks(context)
-            return RenderResult(
-                content=routed.content,
-                backend_decision=routed.backend_decision,
-            )
-        return RenderResult(content=self._gen.render(template_name, context))
+            return self._route_and_record("tasks.md", template_name, context)
+        rendered = self._render_direct(template_name, context)
+        if template_name == "execution-log.md.j2":
+            decisions = self._backend_decisions(context)
+            if decisions is not None:
+                decisions["execution-log.md"] = None
+        return RenderResult(content=rendered)
 
     def scaffold(
         self,
@@ -114,7 +112,7 @@ class DocScaffolder:
         spec_dir.mkdir(parents=True, exist_ok=True)
 
         created: list[Path] = []
-        backend_decisions: dict[str, object | None] = {}
+        backend_decisions = self._backend_decisions(ctx, create=True)
         for tmpl, out_name in zip(self.TEMPLATES, self.OUTPUT_NAMES, strict=True):
             out_path = spec_dir / out_name
             if out_path.exists():
@@ -122,10 +120,12 @@ class DocScaffolder:
                 continue
             rendered = self.render_with_backend_selection(tmpl, ctx)
             self._write_output(out_path, rendered.content)
-            backend_decisions[out_name] = rendered.backend_decision
             logger.info("Created scaffold: %s", out_path)
             created.append(out_path)
-        return ScaffoldRenderResult(created_paths=created, backend_decisions=backend_decisions)
+        return ScaffoldRenderResult(
+            created_paths=created,
+            backend_decisions=dict(backend_decisions),
+        )
 
     def _write_output(self, output_path: Path, content: str) -> None:
         file_guard = getattr(self._gen, "_file_guard", None)
@@ -135,10 +135,79 @@ class DocScaffolder:
         output_path.parent.mkdir(parents=True, exist_ok=True)
         output_path.write_text(content, encoding="utf-8")
 
-    def _routing(self) -> BackendRoutingCoordinator:
+    def _route_and_record(
+        self,
+        output_name: str,
+        template_name: str,
+        context: dict[str, object],
+    ) -> RenderResult:
+        routed_context = dict(context)
+        routed_context.setdefault(_TEMPLATE_GENERATOR_KEY, self._gen)
+        router = self._routing(context)
+        if template_name == "spec.md.j2":
+            routed = router.generate_spec(routed_context)
+        elif template_name == "plan.md.j2":
+            routed = router.generate_plan(routed_context)
+        else:
+            routed = router.generate_tasks(routed_context)
+        decisions = self._backend_decisions(context)
+        if decisions is not None:
+            decisions[output_name] = routed.backend_decision
+        return RenderResult(
+            content=routed.content,
+            backend_decision=routed.backend_decision,
+        )
+
+    def _render_direct(self, template_name: str, context: dict[str, object]) -> str:
+        renderer = self._template_renderer(context)
+        return renderer.render(template_name, context)
+
+    def _template_renderer(self, context: dict[str, object]) -> object:
+        renderer = context.get(_TEMPLATE_GENERATOR_KEY)
+        if renderer is not None:
+            return renderer
+        return self._gen
+
+    def _routing(self, context: dict[str, object]) -> BackendRoutingCoordinator:
+        import ai_sdlc.backends.native as native_backend
+
+        registry = context.get(_BACKEND_REGISTRY_KEY)
+        requested_backend = context.get(_REQUESTED_BACKEND_KEY)
+        policy = context.get(_BACKEND_POLICY_KEY)
+        if (
+            isinstance(registry, native_backend.BackendRegistry)
+            or requested_backend is not None
+            or isinstance(policy, native_backend.BackendSelectionPolicy)
+        ):
+            return BackendRoutingCoordinator(
+                registry=(
+                    registry if isinstance(registry, native_backend.BackendRegistry) else None
+                ),
+                requested_backend=(
+                    requested_backend if isinstance(requested_backend, str) else None
+                ),
+                policy=(
+                    policy if isinstance(policy, native_backend.BackendSelectionPolicy) else None
+                ),
+            )
         if self._router is None:
             self._router = BackendRoutingCoordinator()
         return self._router
+
+    def _backend_decisions(
+        self,
+        context: dict[str, object],
+        *,
+        create: bool = False,
+    ) -> dict[str, object | None] | None:
+        decisions = context.get(_BACKEND_DECISIONS_KEY)
+        if isinstance(decisions, dict):
+            return decisions
+        if not create:
+            return None
+        decisions = {}
+        context[_BACKEND_DECISIONS_KEY] = decisions
+        return decisions
 
 
 # ── tasks parser ──
