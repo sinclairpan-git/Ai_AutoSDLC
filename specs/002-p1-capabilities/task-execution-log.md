@@ -124,3 +124,68 @@
 - **提交哈希**：`7f3f99f`（`feat: close 002 p1 contract gaps`）
 - **改动范围**：`src/ai_sdlc/models/__init__.py`, `src/ai_sdlc/models/state.py`, `src/ai_sdlc/models/work.py`, `src/ai_sdlc/core/p1_artifacts.py`, `src/ai_sdlc/knowledge/engine.py`, `src/ai_sdlc/gates/pipeline_gates.py`, `src/ai_sdlc/core/runner.py`, `src/ai_sdlc/cli/commands.py`, `src/ai_sdlc/parallel/engine.py`, `src/ai_sdlc/studios/change_studio.py`, `src/ai_sdlc/studios/maintenance_studio.py`, `tests/unit/test_p1_artifacts.py`, `tests/unit/test_p1_models.py`, `tests/unit/test_parallel.py`, `tests/unit/test_studios.py`, `tests/unit/test_gates.py`, `tests/unit/test_runner_confirm.py`, `tests/integration/test_cli_status.py`, `specs/002-p1-capabilities/task-execution-log.md`
 - **是否继续下一批**：阻断，待本批提交哈希回填并通过 `workitem close-check` 后再决定是否继续其他 work item。
+
+### Batch 2026-03-30-001 | 002 final close-truth verification refresh
+
+#### 2.1 准备
+
+- **任务来源**：[`tasks.md`](tasks.md) Task `5.2`
+- **目标**：以当前主线仓库状态重新复核 `002` 的 P1 runtime contracts、治理门禁与 `close-check` 真值，并把最终 PASS 结果补录回正式台账。
+- **预读范围**：[`spec.md`](spec.md)、[`plan.md`](plan.md)、[`tasks.md`](tasks.md)、[`task-execution-log.md`](task-execution-log.md)、[`../../src/ai_sdlc/core/close_check.py`](../../src/ai_sdlc/core/close_check.py)
+- **激活的规则**：fresh verification；docs-only close-truth refresh；task/spec/plan 单一真值。
+- **验证画像**：`docs-only`
+
+#### 2.2 统一验证命令
+
+- **V1（002 targeted runtime regression）**
+  - 命令：`uv run pytest tests/unit/test_p1_artifacts.py tests/unit/test_p1_models.py tests/unit/test_studios.py tests/unit/test_parallel.py tests/unit/test_gates.py tests/unit/test_runner_confirm.py tests/flow/test_incident_flow.py tests/flow/test_parallel_flow.py tests/flow/test_knowledge_refresh_flow.py tests/integration/test_cli_status.py tests/integration/test_cli_run.py -q`
+  - 结果：**195 passed**。
+- **V2（治理只读校验）**
+  - 命令：`uv run ai-sdlc verify constraints`
+  - 结果：**verify constraints: no BLOCKERs.**
+- **V3（002 全文档 close-check）**
+  - 命令：`uv run ai-sdlc workitem close-check --wi specs/002-p1-capabilities --all-docs`
+  - 结果：**PASS**；tasks completion、review gate、verification profile、git closure、completion truth、docs consistency、done gate 均通过。
+
+#### 2.3 任务记录
+
+##### Task 5.2 | final close-truth refresh
+
+- **改动范围**：`specs/002-p1-capabilities/tasks.md`, `specs/002-p1-capabilities/task-execution-log.md`
+- **改动内容**：
+  - 重新执行 `002` 的 targeted runtime regression、`verify constraints` 与 `close-check --all-docs`，确认此前“只差 git_closure / execution-log 对账”的尾项已在当前主线仓库状态下自然消失。
+  - 将 Task `5.2` 的完成说明与本批 fresh verification 结果回填到 `tasks.md` / `task-execution-log.md`，避免 `002` 仍停留在“待再跑一次 close-check”的旧口径。
+  - 以提交 `c9ceeea` 对应的当前仓库代码状态作为本轮 close-truth baseline 复核对象；本批仅补录台账，不改动 P1 运行时代码。
+- **新增/调整的测试**：无新增运行时代码测试；本批使用 fresh 定向回归与只读门禁复核现有合同。
+- **执行的命令**：见 V1 ~ V3。
+- **测试结果**：通过。
+- **是否符合任务目标**：符合。`002` 现已具备 fresh runtime evidence 与 formal close-check PASS，不再残留未收口的 close truth 尾项。
+
+#### 2.4 代码审查（摘要）
+
+- **规格对齐**：本批没有新增或改写 `002` 的运行时行为，只把最终 close-truth 刷新到当前仓库事实，确保 `spec.md` / `plan.md` / `tasks.md` 与 formal gate 结论一致。
+- **代码质量**：无产品代码变更；保持 `002` 的 runtime contract 真值仍由既有 models / studios / runner / gates 承担。
+- **测试质量**：使用 fresh 定向 pytest、`verify constraints` 与 `close-check --all-docs` 交叉确认“代码对齐”和“台账对齐”同时成立。
+- **结论**：无新的阻塞项；`002` 已具备正式 close 条件。
+
+#### 2.5 任务/计划同步状态
+
+- `tasks.md` 同步状态：`已同步`（Task `5.2` 已补 final close-truth refresh 完成说明）。
+- `plan.md` 同步状态：`已对账`（Phase 0~4 的 artifact/runtime/surface 目标与当前仓库状态一致）。
+- `spec.md` 同步状态：`已对账`（P1 contracts 仍由 fresh targeted runtime regression 覆盖）。
+
+#### 2.6 自动决策记录（如有）
+
+- AD-002：本轮仅做 docs-only close-truth refresh，不重开 `002` mixed remediation 批次 → 理由：fresh `close-check` 已证明当前缺口不是代码合同缺失，而是旧台账还停留在“待再验证一次”的中间态。
+
+#### 2.7 批次结论
+
+- `002` 当前已满足 targeted runtime regression、`verify constraints` 与 `close-check --all-docs` 三条最终收口验证。
+- `002` 不再存在“只差 git_closure / execution-log 对账”的 formal close blocker，可作为已收口 work item 参与后续 `004` 盘点与 Program 级对账。
+
+#### 2.8 归档后动作
+
+- **已完成 git 提交**：是
+- **提交哈希**：`c9ceeea`（`fix: harden repo write lock cleanup`，本批 close-truth refresh 复核基线）
+- **改动范围**：`specs/002-p1-capabilities/tasks.md`, `specs/002-p1-capabilities/task-execution-log.md`
+- **是否继续下一批**：否，`002` 已完成 formal close-truth refresh。

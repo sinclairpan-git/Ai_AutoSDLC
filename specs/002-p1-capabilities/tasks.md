@@ -170,3 +170,5 @@ Batch 5: Surface / traceability finalization  (status / recover / report / close
   1. `spec.md`、`plan.md`、`tasks.md` 三者映射完整。
   2. 全量 `uv run pytest` 与 `uv run ruff check src tests` 通过。
 - **验证**：全量 `pytest` + `ruff`
+
+> **Task 5.2 完成（2026-03-30）**：已补 `002` final close-truth refresh。基于当前仓库状态重新执行 `uv run pytest tests/unit/test_p1_artifacts.py tests/unit/test_p1_models.py tests/unit/test_studios.py tests/unit/test_parallel.py tests/unit/test_gates.py tests/unit/test_runner_confirm.py tests/flow/test_incident_flow.py tests/flow/test_parallel_flow.py tests/flow/test_knowledge_refresh_flow.py tests/integration/test_cli_status.py tests/integration/test_cli_run.py -q`、`uv run ai-sdlc verify constraints` 与 `uv run ai-sdlc workitem close-check --wi specs/002-p1-capabilities --all-docs`，确认 P1 artifact/runtime contracts 仍与 `spec.md` / `plan.md` / `tasks.md` 对齐，`002` 已具备正式 close 条件。
