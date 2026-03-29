@@ -56,7 +56,8 @@ def _reviewer_decision_path(
     base = work_item_root(root, work_item_id)
     if checkpoint is None:
         return base / _REVIEWER_DECISION_FILENAME
-    return base / f"{_REVIEWER_DECISION_PREFIX}{checkpoint.value}.yaml"
+    checkpoint_slug = checkpoint.value.replace("_", "-")
+    return base / f"{_REVIEWER_DECISION_PREFIX}{checkpoint_slug}.yaml"
 
 
 def _parse_timestamp(timestamp: str) -> datetime:
@@ -113,7 +114,9 @@ def load_reviewer_decision_for_checkpoint(
 
     legacy_path = _reviewer_decision_path(root, work_item_id)
     if legacy_path.exists():
-        return YamlStore.load(legacy_path, PrdReviewerDecision)
+        legacy_decision = YamlStore.load(legacy_path, PrdReviewerDecision)
+        if legacy_decision.checkpoint == checkpoint:
+            return legacy_decision
     return None
 
 

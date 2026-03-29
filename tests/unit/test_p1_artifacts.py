@@ -76,9 +76,9 @@ def test_save_and_load_reviewer_decisions_per_checkpoint(tmp_path) -> None:
     }
 
     assert {path.name for path in saved_paths.values()} == {
-        "reviewer-decision-prd_freeze.yaml",
-        "reviewer-decision-docs_baseline_freeze.yaml",
-        "reviewer-decision-pre_close.yaml",
+        "reviewer-decision-prd-freeze.yaml",
+        "reviewer-decision-docs-baseline-freeze.yaml",
+        "reviewer-decision-pre-close.yaml",
     }
 
     for checkpoint, decision in decisions.items():
@@ -109,7 +109,7 @@ def test_load_reviewer_decision_falls_back_to_legacy_file(tmp_path) -> None:
     loaded = load_reviewer_decision_for_checkpoint(
         tmp_path,
         "WI-001",
-        PrdReviewerCheckpoint.PRE_CLOSE,
+        PrdReviewerCheckpoint.PRD_FREEZE,
     )
     latest = load_latest_reviewer_decision(tmp_path, "WI-001")
 
@@ -118,6 +118,30 @@ def test_load_reviewer_decision_falls_back_to_legacy_file(tmp_path) -> None:
     assert latest == decision
     assert loaded is not None
     assert loaded.to_status_view()["summary"] == "prd_freeze:approve -> WI-001"
+
+
+def test_legacy_reviewer_decision_does_not_satisfy_wrong_checkpoint(tmp_path) -> None:
+    decision = PrdReviewerDecision(
+        checkpoint=PrdReviewerCheckpoint.PRD_FREEZE,
+        decision=PrdReviewerDecisionKind.APPROVE,
+        target="WI-001",
+        reason="Legacy artifact still valid for PRD freeze only",
+        next_action="Persist final_prd",
+        timestamp="2026-03-29T09:00:00+08:00",
+    )
+
+    legacy_path = work_item_root(tmp_path, "WI-001") / "reviewer-decision.yaml"
+    YamlStore.save(legacy_path, decision)
+
+    loaded = load_reviewer_decision_for_checkpoint(
+        tmp_path,
+        "WI-001",
+        PrdReviewerCheckpoint.PRE_CLOSE,
+    )
+    latest = load_latest_reviewer_decision(tmp_path, "WI-001")
+
+    assert loaded is None
+    assert latest == decision
 
 
 def test_save_and_load_execution_path(tmp_path) -> None:
