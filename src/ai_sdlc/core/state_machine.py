@@ -5,6 +5,10 @@ from __future__ import annotations
 from pathlib import Path
 
 from ai_sdlc.core.config import YamlStore
+from ai_sdlc.core.reviewer_gate import (
+    ReviewerGateOutcomeKind,
+    evaluate_reviewer_gate,
+)
 from ai_sdlc.models.work import WorkItem, WorkItemStatus
 from ai_sdlc.utils.helpers import now_iso
 
@@ -94,6 +98,14 @@ def transition_work_item(
 ) -> WorkItem:
     """Apply a legal transition and persist the new status to work-item.yaml."""
     new_status = transition(work_item.status, target)
+    gate = evaluate_reviewer_gate(root, work_item.work_item_id, new_status)
+    if gate.outcome != ReviewerGateOutcomeKind.ALLOW:
+        checkpoint_label = gate.checkpoint.value if gate.checkpoint is not None else "n/a"
+        raise InvalidTransitionError(
+            f"Cannot transition from {work_item.status.value} to {new_status.value}. "
+            f"Reviewer gate {gate.outcome.value} at {checkpoint_label}: {gate.reason}. "
+            f"Next action: {gate.next_action}"
+        )
     work_item.status = new_status
     save_work_item(root, work_item)
     return work_item

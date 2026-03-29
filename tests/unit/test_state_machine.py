@@ -6,6 +6,7 @@ from pathlib import Path
 
 import pytest
 
+from ai_sdlc.core.p1_artifacts import save_reviewer_decision
 from ai_sdlc.core.state_machine import (
     InvalidTransitionError,
     get_valid_transitions,
@@ -14,7 +15,15 @@ from ai_sdlc.core.state_machine import (
     transition,
     transition_work_item,
 )
-from ai_sdlc.models.work import WorkItem, WorkItemSource, WorkItemStatus, WorkType
+from ai_sdlc.models.work import (
+    PrdReviewerCheckpoint,
+    PrdReviewerDecision,
+    PrdReviewerDecisionKind,
+    WorkItem,
+    WorkItemSource,
+    WorkItemStatus,
+    WorkType,
+)
 
 
 class TestValidTransitions:
@@ -125,9 +134,72 @@ class TestPersistentTransitions:
         loaded = load_work_item(tmp_path, work_item.work_item_id)
         assert loaded.status == WorkItemStatus.CREATED
 
+    def test_gated_transition_requires_matching_checkpoint_approval(
+        self, tmp_path: Path
+    ) -> None:
+        work_item = _make_work_item()
+        work_item.status = WorkItemStatus.INTAKE_CLASSIFIED
+        save_work_item(tmp_path, work_item)
+
+        save_reviewer_decision(
+            tmp_path,
+            work_item.work_item_id,
+            PrdReviewerDecision(
+                checkpoint=PrdReviewerCheckpoint.DOCS_BASELINE_FREEZE,
+                decision=PrdReviewerDecisionKind.APPROVE,
+                target=work_item.work_item_id,
+                reason="Approved for docs baseline",
+                next_action="Proceed",
+                timestamp="2026-03-29T11:00:00+08:00",
+            ),
+        )
+
+        with pytest.raises(InvalidTransitionError):
+            transition_work_item(tmp_path, work_item, WorkItemStatus.GOVERNANCE_FROZEN)
+
+        loaded = load_work_item(tmp_path, work_item.work_item_id)
+        assert loaded.status == WorkItemStatus.INTAKE_CLASSIFIED
+
     def test_cross_stage_chain_persists_until_completed(self, tmp_path: Path) -> None:
         work_item = _make_work_item()
         save_work_item(tmp_path, work_item)
+
+        save_reviewer_decision(
+            tmp_path,
+            work_item.work_item_id,
+            PrdReviewerDecision(
+                checkpoint=PrdReviewerCheckpoint.PRD_FREEZE,
+                decision=PrdReviewerDecisionKind.APPROVE,
+                target=work_item.work_item_id,
+                reason="Approved for governance freeze",
+                next_action="Proceed",
+                timestamp="2026-03-29T10:00:00+08:00",
+            ),
+        )
+        save_reviewer_decision(
+            tmp_path,
+            work_item.work_item_id,
+            PrdReviewerDecision(
+                checkpoint=PrdReviewerCheckpoint.DOCS_BASELINE_FREEZE,
+                decision=PrdReviewerDecisionKind.APPROVE,
+                target=work_item.work_item_id,
+                reason="Docs baseline is aligned",
+                next_action="Proceed",
+                timestamp="2026-03-29T11:00:00+08:00",
+            ),
+        )
+        save_reviewer_decision(
+            tmp_path,
+            work_item.work_item_id,
+            PrdReviewerDecision(
+                checkpoint=PrdReviewerCheckpoint.PRE_CLOSE,
+                decision=PrdReviewerDecisionKind.APPROVE,
+                target=work_item.work_item_id,
+                reason="Ready to close",
+                next_action="Proceed",
+                timestamp="2026-03-29T12:00:00+08:00",
+            ),
+        )
 
         for target in (
             WorkItemStatus.INTAKE_CLASSIFIED,

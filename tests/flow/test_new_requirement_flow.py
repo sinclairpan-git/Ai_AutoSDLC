@@ -5,11 +5,18 @@ from __future__ import annotations
 from pathlib import Path
 
 from ai_sdlc.core.config import load_project_state
+from ai_sdlc.core.p1_artifacts import save_reviewer_decision
 from ai_sdlc.core.state_machine import (
     load_work_item,
     transition_work_item,
 )
-from ai_sdlc.models.work import WorkItemStatus, WorkType
+from ai_sdlc.models.work import (
+    PrdReviewerCheckpoint,
+    PrdReviewerDecision,
+    PrdReviewerDecisionKind,
+    WorkItemStatus,
+    WorkType,
+)
 from ai_sdlc.routers.bootstrap import init_project
 from ai_sdlc.routers.work_intake import KeywordWorkIntakeRouter
 from ai_sdlc.studios.prd_studio import PrdStudio, check_prd_readiness
@@ -70,8 +77,34 @@ class TestNewRequirementFlow:
         readiness = check_prd_readiness(prd)
         assert readiness.readiness == "pass"
 
+        save_reviewer_decision(
+            project_dir,
+            wi.work_item_id,
+            PrdReviewerDecision(
+                checkpoint=PrdReviewerCheckpoint.PRD_FREEZE,
+                decision=PrdReviewerDecisionKind.APPROVE,
+                target=wi.work_item_id,
+                reason="Approved for governance freeze",
+                next_action="Proceed",
+                timestamp="2026-03-29T10:00:00+08:00",
+            ),
+        )
+
         wi = transition_work_item(project_dir, wi, WorkItemStatus.GOVERNANCE_FROZEN)
         assert wi.status == WorkItemStatus.GOVERNANCE_FROZEN
+
+        save_reviewer_decision(
+            project_dir,
+            wi.work_item_id,
+            PrdReviewerDecision(
+                checkpoint=PrdReviewerCheckpoint.DOCS_BASELINE_FREEZE,
+                decision=PrdReviewerDecisionKind.APPROVE,
+                target=wi.work_item_id,
+                reason="Docs baseline is aligned",
+                next_action="Proceed",
+                timestamp="2026-03-29T11:00:00+08:00",
+            ),
+        )
 
         wi = transition_work_item(project_dir, wi, WorkItemStatus.DOCS_BASELINE)
         assert wi.status == WorkItemStatus.DOCS_BASELINE
