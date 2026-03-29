@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from datetime import datetime, timezone
 from pathlib import Path
 
 from ai_sdlc.core.config import YamlStore
@@ -15,9 +16,13 @@ from ai_sdlc.models.work import (
     ExecutionPath,
     FreezeSnapshot,
     PrdReviewerDecision,
+    PrdReviewerCheckpoint,
     ResumePoint,
 )
 from ai_sdlc.utils.helpers import AI_SDLC_DIR
+
+_REVIEWER_DECISION_FILENAME = "reviewer-decision.yaml"
+_REVIEWER_DECISION_PREFIX = "reviewer-decision-"
 
 
 def work_item_root(root: Path, work_item_id: str) -> Path:
@@ -43,12 +48,49 @@ def load_resume_point(root: Path, work_item_id: str) -> ResumePoint | None:
     return YamlStore.load(path, ResumePoint)
 
 
+def _reviewer_decision_path(
+    root: Path,
+    work_item_id: str,
+    checkpoint: PrdReviewerCheckpoint | None = None,
+) -> Path:
+    base = work_item_root(root, work_item_id)
+    if checkpoint is None:
+        return base / _REVIEWER_DECISION_FILENAME
+    return base / f"{_REVIEWER_DECISION_PREFIX}{checkpoint.value}.yaml"
+
+
+def _parse_timestamp(timestamp: str) -> datetime:
+    if not timestamp:
+        return datetime.min.replace(tzinfo=timezone.utc)
+    try:
+        parsed = datetime.fromisoformat(timestamp.replace("Z", "+00:00"))
+    except ValueError:
+        return datetime.min.replace(tzinfo=timezone.utc)
+    if parsed.tzinfo is None:
+        return parsed.replace(tzinfo=timezone.utc)
+    return parsed.astimezone(timezone.utc)
+
+
+def _latest_reviewer_decision(
+    decisions: list[PrdReviewerDecision],
+) -> PrdReviewerDecision | None:
+    if not decisions:
+        return None
+    return max(
+        decisions,
+        key=lambda decision: (
+            _parse_timestamp(decision.timestamp),
+            decision.checkpoint.value,
+        ),
+    )
+
+
 def save_reviewer_decision(
     root: Path,
     work_item_id: str,
     reviewer_decision: PrdReviewerDecision,
 ) -> Path:
-    path = work_item_root(root, work_item_id) / "reviewer-decision.yaml"
+    path = _reviewer_decision_path(root, work_item_id, reviewer_decision.checkpoint)
     YamlStore.save(path, reviewer_decision)
     return path
 
@@ -57,10 +99,42 @@ def load_reviewer_decision(
     root: Path,
     work_item_id: str,
 ) -> PrdReviewerDecision | None:
-    path = work_item_root(root, work_item_id) / "reviewer-decision.yaml"
-    if not path.exists():
-        return None
-    return YamlStore.load(path, PrdReviewerDecision)
+    return load_latest_reviewer_decision(root, work_item_id)
+
+
+def load_reviewer_decision_for_checkpoint(
+    root: Path,
+    work_item_id: str,
+    checkpoint: PrdReviewerCheckpoint,
+) -> PrdReviewerDecision | None:
+    path = _reviewer_decision_path(root, work_item_id, checkpoint)
+    if path.exists():
+        return YamlStore.load(path, PrdReviewerDecision)
+
+    legacy_path = _reviewer_decision_path(root, work_item_id)
+    if legacy_path.exists():
+        return YamlStore.load(legacy_path, PrdReviewerDecision)
+    return None
+
+
+def load_latest_reviewer_decision(
+    root: Path,
+    work_item_id: str,
+) -> PrdReviewerDecision | None:
+    decisions: list[PrdReviewerDecision] = []
+    for checkpoint in PrdReviewerCheckpoint:
+        path = _reviewer_decision_path(root, work_item_id, checkpoint)
+        if path.exists():
+            decisions.append(YamlStore.load(path, PrdReviewerDecision))
+
+    latest = _latest_reviewer_decision(decisions)
+    if latest is not None:
+        return latest
+
+    legacy_path = _reviewer_decision_path(root, work_item_id)
+    if legacy_path.exists():
+        return YamlStore.load(legacy_path, PrdReviewerDecision)
+    return None
 
 
 def save_execution_path(root: Path, work_item_id: str, execution_path: ExecutionPath) -> Path:

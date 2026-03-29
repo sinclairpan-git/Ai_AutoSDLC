@@ -125,9 +125,33 @@ class TestWorkitemLinkStatus:
                 timestamp="2026-03-29T10:00:00+08:00",
             ),
         )
+        save_reviewer_decision(
+            tmp_path,
+            "WI-2026-777",
+            PrdReviewerDecision(
+                checkpoint=PrdReviewerCheckpoint.DOCS_BASELINE_FREEZE,
+                decision=PrdReviewerDecisionKind.APPROVE,
+                target="WI-2026-777",
+                reason="Docs baseline is aligned",
+                next_action="Persist docs baseline",
+                timestamp="2026-03-29T11:00:00+08:00",
+            ),
+        )
+        save_reviewer_decision(
+            tmp_path,
+            "WI-2026-777",
+            PrdReviewerDecision(
+                checkpoint=PrdReviewerCheckpoint.PRE_CLOSE,
+                decision=PrdReviewerDecisionKind.APPROVE,
+                target="WI-2026-777",
+                reason="Ready to close",
+                next_action="Archive work item",
+                timestamp="2026-03-29T12:00:00+08:00",
+            ),
+        )
 
         with patch("ai_sdlc.cli.commands.find_project_root", return_value=tmp_path):
             st = runner.invoke(app, ["status"])
         assert st.exit_code == 0
         assert "Latest Reviewer Decision" in st.output
-        assert "prd_freeze:approve -> WI-2026-777" in st.output
+        assert "pre_close:approve -> WI-2026-777" in st.output
