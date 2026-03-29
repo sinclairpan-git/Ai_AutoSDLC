@@ -19,6 +19,7 @@ Batch 6: backlog remediation          (source closure + CCP traceability)
 ## 实施进展复核（2026-03-29）
 
 - `2026-03-29` 已补齐 `003` 的 Batch 1~5 代码、测试与 release-gate evidence，close-out 真值不再仅依赖 Batch 6 的 telemetry backlog 记录。
+- `2026-03-30` 已补录 `pre_close` reviewer approval artifact，并以全量 `pytest`、`ruff`、`verify constraints`、`workitem close-check --all-docs` 复核最终 close truth。
 - Batch `1~3`（Task `1.1`、`2.1`、`2.2`、`3.1`、`3.2`）已由提交 `5ada806` 收口：完成 `draft_prd/final_prd`、reviewer checkpoint / decision artifact、idea-string PRD authoring 入口与 status-readable reviewer surface。
 - Batch `4`（Task `1.2`、`4.1`、`4.2`）已由提交 `fab9077`、`69c37b5`、`476dc9c` 收口：完成 backend capability declaration、selection/fallback/block 决策合同，以及 fake fallback / inconsistent decision-surface 修复。
 - Batch `5`（Task `5.1`、`5.2`）已由提交 `ae695e7` 与本批最终 traceability close-out 收口：完成 release gate evidence parser、`verify constraints` / `close-check` surface、`release-gate-evidence.md` 与 003 execution evidence 全量回填。

@@ -1,0 +1,6 @@
+checkpoint: pre_close
+decision: approve
+target: 003-cross-cutting-authoring-and-extension-contracts
+reason: 003 Batch 1~6 evidence and release gate are aligned; approve close.
+next_action: Proceed to close-check and branch closeout.
+timestamp: '2026-03-30T10:00:00+08:00'

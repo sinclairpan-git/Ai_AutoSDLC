@@ -200,3 +200,70 @@
 - **已完成 git 提交**：是
 - **提交哈希**：`ae695e7`（`feat: add release gate verification surfaces`）
 - **是否继续下一批**：否，`003` 已完成实现与台账对账，等待分支收口。
+
+### Batch 2026-03-30-001 | 003 final close-truth verification refresh
+
+#### 2.1 准备
+
+- **任务来源**：[`tasks.md`](tasks.md) Task `5.2`、[`../../docs/superpowers/plans/2026-03-29-003-completion-truth-remediation.md`](../../docs/superpowers/plans/2026-03-29-003-completion-truth-remediation.md)
+- **目标**：补录 `003` 正式 `pre_close` reviewer approval artifact，修正仓库最终 close truth 与 lint 细节漂移，并以 fresh verification 复核真实收口状态。
+- **预读范围**：[`tasks.md`](tasks.md)、[`release-gate-evidence.md`](release-gate-evidence.md)、[`../../src/ai_sdlc/core/close_check.py`](../../src/ai_sdlc/core/close_check.py)、[`../../src/ai_sdlc/core/reviewer_gate.py`](../../src/ai_sdlc/core/reviewer_gate.py)、[`../../src/ai_sdlc/cli/commands.py`](../../src/ai_sdlc/cli/commands.py)
+- **激活的规则**：fresh verification；close-check completion truth；task/backlog/execution-log 单一真值。
+- **验证画像**：`code-change`
+
+#### 2.2 统一验证命令
+
+- **V1（全量 pytest）**
+  - 命令：`uv run pytest -q`
+  - 结果：**881 passed**。
+- **V2（仓库 lint）**
+  - 命令：`uv run ruff check src tests`
+  - 结果：**All checks passed!**
+- **V3（治理与 feature-contract gate）**
+  - 命令：`uv run ai-sdlc verify constraints`
+  - 结果：**verify constraints: no BLOCKERs.**
+- **V4（003 全文档 close-check）**
+  - 命令：`uv run ai-sdlc workitem close-check --wi specs/003-cross-cutting-authoring-and-extension-contracts --all-docs`
+  - 结果：**PASS**；review gate、release gate、docs consistency、git closure 均通过。
+
+#### 2.3 任务记录
+
+##### Task 5.2 | final close-truth refresh
+
+- **改动范围**：[`../../src/ai_sdlc/cli/commands.py`](../../src/ai_sdlc/cli/commands.py)、[`.ai-sdlc/work-items/003-cross-cutting-authoring-and-extension-contracts/reviewer-decision-pre-close.yaml`](../../.ai-sdlc/work-items/003-cross-cutting-authoring-and-extension-contracts/reviewer-decision-pre-close.yaml)、[`tasks.md`](tasks.md)、[`task-execution-log.md`](task-execution-log.md)
+- **改动内容**：
+  - 修正 `src/ai_sdlc/cli/commands.py` 的 import 排序，使仓库重新满足 `ruff`。
+  - 补录 `003` 的正式 `pre_close` reviewer approval artifact，避免 `close-check` 只凭 execution-log 中的“代码审查”字样误判为已满足正式 reviewer gate。
+  - 追加本批 execution evidence，把全量验证结果与最终 close truth 对齐到最新仓库状态。
+- **新增/调整的测试**：无新增测试；复用既有 `close-check` / `verify constraints` / full pytest 回归。
+- **执行的命令**：见 V1 ~ V4。
+- **测试结果**：通过。
+- **是否符合任务目标**：符合。`003` 现已同时具备 formal reviewer approval、release gate evidence、fresh verification 与 clean git closure。
+
+#### 2.4 代码审查（摘要）
+
+- **规格对齐**：`003` 的最终收口现在同时满足 reviewer gate、release gate 与 execution evidence 三条正式合同，不再把“有 review 摘要”误当成“已有 pre_close approval”。
+- **代码质量**：本批没有新增行为面，只修复 lint 漂移并补齐 runtime artifact / docs 真值。
+- **测试质量**：使用 fresh full pytest、lint、`verify constraints` 与 `close-check --all-docs` 复核最终仓库状态。
+- **结论**：无新的阻塞项；`003` 已具备真实 close 条件。
+
+#### 2.5 任务/计划同步状态
+
+- `tasks.md` 同步状态：`已同步`（顶部“实施进展复核”已补 `pre_close` reviewer approval 与最终 close-truth refresh）。
+- `release-gate-evidence.md` 同步状态：`已对账`（release gate 仍维持 PASS/WARN/BLOCK 可读且可机读结构）。
+- `related_plan` 同步状态：`已同步`（Task `5.2` 的最终 close truth 已由 V1 ~ V4 fresh verification 覆盖）。
+
+#### 2.6 自动决策记录（如有）
+
+- AD-003：以新增“verification refresh”批次记录最终 closeout，而不重写 `2026-03-29` 批次结果 → 理由：保持 execution history 的时间顺序真实，显式记录本次发现并修复的 formal reviewer gate / lint 漂移。
+
+#### 2.7 批次结论
+
+- `003` 当前已满足 full pytest、lint、`verify constraints` 与 `close-check --all-docs` 四条最终收口验证。
+- `003` 的 formal reviewer gate 已具备正式 `pre_close` approval artifact，后续 close 判断不再依赖 execution-log 文本摘要猜测。
+
+#### 2.8 归档后动作
+
+- **已完成 git 提交**：是
+- **提交哈希**：`b2851c3`（`docs: record 003 close approval`）
+- **是否继续下一批**：否，待本批提交后结束 `003` 分支收口。
