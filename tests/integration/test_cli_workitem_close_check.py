@@ -10,6 +10,12 @@ import pytest
 from typer.testing import CliRunner
 
 from ai_sdlc.cli.main import app
+from ai_sdlc.core.p1_artifacts import save_reviewer_decision
+from ai_sdlc.models.work import (
+    PrdReviewerCheckpoint,
+    PrdReviewerDecision,
+    PrdReviewerDecisionKind,
+)
 
 runner = CliRunner()
 
@@ -60,11 +66,70 @@ def _write_execution_log(
     )
 
 
+def _write_release_gate_evidence(wi_dir: Path, *, overall_verdict: str = "PASS") -> None:
+    checks = [
+        {
+            "name": "recoverability",
+            "verdict": "PASS",
+            "evidence_source": "tests/integration/test_cli_recover.py",
+            "reason": "resume-pack rebuild and recover flows are covered",
+        },
+        {
+            "name": "portability",
+            "verdict": overall_verdict,
+            "evidence_source": "tests/integration/test_cli_module_invocation.py",
+            "reason": f"portability gate escalated to {overall_verdict}",
+        },
+        {
+            "name": "multi_ide",
+            "verdict": "PASS",
+            "evidence_source": "tests/integration/test_cli_status.py",
+            "reason": "status/adapter surfaces keep IDE-aware behavior bounded",
+        },
+        {
+            "name": "stability",
+            "verdict": "PASS",
+            "evidence_source": "uv run pytest -q",
+            "reason": "focused regression suites are green",
+        },
+    ]
+    if overall_verdict == "PASS":
+        checks[1]["reason"] = "module invocation fallback works without PATH assumptions"
+    rendered_checks = ",\n".join(
+        "      {\n"
+        f'        "name": "{check["name"]}",\n'
+        f'        "verdict": "{check["verdict"]}",\n'
+        f'        "evidence_source": "{check["evidence_source"]}",\n'
+        f'        "reason": "{check["reason"]}"\n'
+        "      }"
+        for check in checks
+    )
+    (wi_dir / "release-gate-evidence.md").write_text(
+        "# 003 release gate evidence\n\n"
+        "- release_gate_evidence: present\n"
+        "- PASS: supported\n"
+        "- WARN: supported\n"
+        "- BLOCK: supported\n\n"
+        "```json\n"
+        "{\n"
+        '  "release_gate_evidence": {\n'
+        f'    "overall_verdict": "{overall_verdict}",\n'
+        '    "checks": [\n'
+        f"{rendered_checks}\n"
+        "    ]\n"
+        "  }\n"
+        "}\n"
+        "```\n",
+        encoding="utf-8",
+    )
+
+
 def _setup_repo(
     root: Path,
     *,
     tasks_body: str,
     plan_status: str,
+    wi_rel: str = "specs/001-wi",
     git_committed: bool = True,
     execution_batch_number: int = 1,
     verification_profile: str = "code-change",
@@ -106,7 +171,7 @@ def _setup_repo(
         encoding="utf-8",
     )
 
-    wi = root / "specs" / "001-wi"
+    wi = root / wi_rel
     wi.mkdir(parents=True)
     (wi / "tasks.md").write_text(
         "---\n"
@@ -145,7 +210,7 @@ def _setup_repo(
             changed_paths=changed_paths,
         )
         subprocess.run(
-            ["git", "add", "specs/001-wi/task-execution-log.md"],
+            ["git", "add", f"{wi_rel}/task-execution-log.md"],
             cwd=root,
             check=True,
             capture_output=True,
@@ -656,3 +721,110 @@ class TestCliWorkitemCloseCheck:
         result = runner.invoke(app, ["workitem", "close-check", "--help"])
         assert result.exit_code == 0
         assert "--all-docs" in result.output
+
+    def test_exit_1_when_003_pre_close_approval_missing(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        root = tmp_path / "r7"
+        root.mkdir()
+        wi_rel = "specs/003-cross-cutting-authoring-and-extension-contracts"
+        _setup_repo(
+            root,
+            tasks_body=(
+                "## Batch 1：PRD draft authoring\n"
+                "### Task 1.1 — 实现一句话想法 -> draft PRD 生成入口\n"
+                "- **验收标准（AC）**：一行想法可以生成 draft PRD\n\n"
+                "## Batch 2：Human Reviewer checkpoints\n"
+                "### Task 2.1 — 把 reviewer checkpoints 接入 PRD freeze / docs baseline freeze / close 前\n"
+                "- **验收标准（AC）**：reviewer 决策可被 close-check 读取\n"
+            ),
+            plan_status="completed",
+            wi_rel=wi_rel,
+        )
+        wi = root / wi_rel
+        _write_release_gate_evidence(wi)
+        _commit_all(root, "docs: add 003 release gate evidence")
+        monkeypatch.chdir(root)
+
+        result = runner.invoke(app, ["workitem", "close-check", "--wi", wi_rel])
+        assert result.exit_code == 1
+        assert "pre_close" in result.output
+
+    def test_exit_0_when_003_pre_close_approval_present(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        root = tmp_path / "r8"
+        root.mkdir()
+        wi_rel = "specs/003-cross-cutting-authoring-and-extension-contracts"
+        _setup_repo(
+            root,
+            tasks_body=(
+                "## Batch 1：PRD draft authoring\n"
+                "### Task 1.1 — 实现一句话想法 -> draft PRD 生成入口\n"
+                "- **验收标准（AC）**：一行想法可以生成 draft PRD\n\n"
+                "## Batch 2：Human Reviewer checkpoints\n"
+                "### Task 2.1 — 把 reviewer checkpoints 接入 PRD freeze / docs baseline freeze / close 前\n"
+                "- **验收标准（AC）**：reviewer 决策可被 close-check 读取\n"
+            ),
+            plan_status="completed",
+            wi_rel=wi_rel,
+        )
+        wi = root / wi_rel
+        _write_release_gate_evidence(wi)
+        save_reviewer_decision(
+            root,
+            wi.name,
+            PrdReviewerDecision(
+                checkpoint=PrdReviewerCheckpoint.PRE_CLOSE,
+                decision=PrdReviewerDecisionKind.APPROVE,
+                target=wi.name,
+                reason="Ready to close",
+                next_action="Proceed to archive",
+                timestamp="2026-03-29T12:00:00+08:00",
+            ),
+        )
+        _commit_all(root, "docs: add 003 close approval evidence")
+        monkeypatch.chdir(root)
+
+        result = runner.invoke(app, ["workitem", "close-check", "--wi", wi_rel])
+        assert result.exit_code == 0
+
+    def test_exit_1_when_003_pre_close_revise_denied(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        root = tmp_path / "r9"
+        root.mkdir()
+        wi_rel = "specs/003-cross-cutting-authoring-and-extension-contracts"
+        _setup_repo(
+            root,
+            tasks_body=(
+                "## Batch 1：PRD draft authoring\n"
+                "### Task 1.1 — 实现一句话想法 -> draft PRD 生成入口\n"
+                "- **验收标准（AC）**：一行想法可以生成 draft PRD\n\n"
+                "## Batch 2：Human Reviewer checkpoints\n"
+                "### Task 2.1 — 把 reviewer checkpoints 接入 PRD freeze / docs baseline freeze / close 前\n"
+                "- **验收标准（AC）**：reviewer 决策可被 close-check 读取\n"
+            ),
+            plan_status="completed",
+            wi_rel=wi_rel,
+        )
+        wi = root / wi_rel
+        _write_release_gate_evidence(wi)
+        save_reviewer_decision(
+            root,
+            wi.name,
+            PrdReviewerDecision(
+                checkpoint=PrdReviewerCheckpoint.PRE_CLOSE,
+                decision=PrdReviewerDecisionKind.REVISE,
+                target=wi.name,
+                reason="Please revise final notes",
+                next_action="Revise before close",
+                timestamp="2026-03-29T12:00:00+08:00",
+            ),
+        )
+        _commit_all(root, "docs: add 003 close revise evidence")
+        monkeypatch.chdir(root)
+
+        result = runner.invoke(app, ["workitem", "close-check", "--wi", wi_rel])
+        assert result.exit_code == 1
+        assert "revise" in result.output.lower()

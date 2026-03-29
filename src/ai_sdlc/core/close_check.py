@@ -11,7 +11,12 @@ from typing import Any
 from ai_sdlc.branch.git_client import GitClient, GitError
 from ai_sdlc.core.plan_check import resolve_plan_path_from_wi, run_plan_check
 from ai_sdlc.core.release_gate import ReleaseGateParseError, load_release_gate_report
+from ai_sdlc.core.reviewer_gate import (
+    ReviewerGateOutcomeKind,
+    evaluate_reviewer_gate,
+)
 from ai_sdlc.core.workitem_traceability import analyze_completion_truth
+from ai_sdlc.models.work import WorkItemStatus
 from ai_sdlc.utils.helpers import find_project_root
 
 REQUIRED_LOG_MARKERS = (
@@ -201,6 +206,10 @@ def _requires_release_gate(wi_dir: Path) -> bool:
     return wi_dir.name.startswith("003-") or (wi_dir / RELEASE_GATE_EVIDENCE_FILE).is_file()
 
 
+def _requires_formal_reviewer_gate(wi_dir: Path) -> bool:
+    return wi_dir.name.startswith("003-")
+
+
 def run_close_check(*, cwd: Path | None, wi: Path, all_docs: bool = False) -> CloseCheckResult:
     """Run read-only close checks for a `specs/<WI>/` directory.
 
@@ -306,20 +315,34 @@ def run_close_check(*, cwd: Path | None, wi: Path, all_docs: bool = False) -> Cl
                 "BLOCKER: task-execution-log.md missing required close-out fields: "
                 + ", ".join(missing)
             )
-        review_ok = "代码审查" in log_text or "review" in log_text.lower()
+        review_evidence_ok = "代码审查" in log_text or "review" in log_text.lower()
+        review_gate_detail = "review evidence recorded" if review_evidence_ok else "review evidence missing"
+        formal_review_ok = True
+        formal_review_detail = ""
+        if _requires_formal_reviewer_gate(wi_dir):
+            gate = evaluate_reviewer_gate(root, wi_dir.name, WorkItemStatus.DEV_REVIEWED)
+            formal_review_ok = gate.outcome == ReviewerGateOutcomeKind.ALLOW
+            if not formal_review_ok:
+                checkpoint_label = gate.checkpoint.value if gate.checkpoint is not None else "n/a"
+                formal_review_detail = (
+                    f"formal reviewer gate {gate.outcome.value} at {checkpoint_label}: "
+                    f"{gate.reason}"
+                )
+            else:
+                formal_review_detail = f"formal reviewer gate approved at {gate.checkpoint.value}"
+        review_ok = review_evidence_ok and formal_review_ok
+        review_detail = review_gate_detail
+        if formal_review_detail:
+            review_detail = f"{review_gate_detail}; {formal_review_detail}"
         checks.append(
             {
                 "name": "review_gate",
                 "ok": review_ok,
-                "detail": "review evidence recorded"
-                if review_ok
-                else "review evidence missing",
+                "detail": review_detail,
             }
         )
         if not review_ok:
-            blockers.append(
-                "BLOCKER: Review Gate missing review evidence in task-execution-log.md."
-            )
+            blockers.append(f"BLOCKER: Review Gate failed: {review_detail}.")
         verification_profile_violation = _verification_profile_violation(log_text)
         verification_profile_ok = verification_profile_violation is None
         checks.append(

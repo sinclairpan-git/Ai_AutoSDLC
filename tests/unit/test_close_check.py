@@ -8,7 +8,13 @@ from pathlib import Path
 import pytest
 
 from ai_sdlc.core.close_check import run_close_check
+from ai_sdlc.core.p1_artifacts import save_reviewer_decision
 from ai_sdlc.core.workitem_traceability import extract_execution_batches
+from ai_sdlc.models.work import (
+    PrdReviewerCheckpoint,
+    PrdReviewerDecision,
+    PrdReviewerDecisionKind,
+)
 
 
 def _commit_all(root: Path, message: str) -> None:
@@ -770,3 +776,104 @@ def test_close_check_blocks_when_release_gate_verdict_is_block(tmp_path: Path) -
     )
     assert r.ok is False
     assert any("release gate portability -> BLOCK" in b for b in r.blockers)
+
+
+def test_close_check_blocks_003_when_pre_close_approval_missing(tmp_path: Path) -> None:
+    root = tmp_path / "repo12"
+    root.mkdir()
+    wi_rel = "specs/003-cross-cutting-authoring-and-extension-contracts"
+    _setup_repo(
+        root,
+        tasks_body=(
+            "## Batch 1：PRD draft authoring\n"
+            "### Task 1.1 — 实现一句话想法 -> draft PRD 生成入口\n"
+            "- **验收标准（AC）**：一行想法可以生成 draft PRD\n\n"
+            "## Batch 2：Human Reviewer checkpoints\n"
+            "### Task 2.1 — 把 reviewer checkpoints 接入 PRD freeze / docs baseline freeze / close 前\n"
+            "- **验收标准（AC）**：reviewer 决策可被 close-check 读取\n"
+        ),
+        plan_status="completed",
+        wi_rel=wi_rel,
+    )
+    wi = root / wi_rel
+    _write_release_gate_evidence(wi)
+    _commit_all(root, "docs: add 003 release gate evidence")
+
+    r = run_close_check(cwd=root, wi=Path(wi_rel))
+    assert r.ok is False
+    assert any("pre_close" in b for b in r.blockers)
+
+
+def test_close_check_passes_003_when_pre_close_approved(tmp_path: Path) -> None:
+    root = tmp_path / "repo13"
+    root.mkdir()
+    wi_rel = "specs/003-cross-cutting-authoring-and-extension-contracts"
+    _setup_repo(
+        root,
+        tasks_body=(
+            "## Batch 1：PRD draft authoring\n"
+            "### Task 1.1 — 实现一句话想法 -> draft PRD 生成入口\n"
+            "- **验收标准（AC）**：一行想法可以生成 draft PRD\n\n"
+            "## Batch 2：Human Reviewer checkpoints\n"
+            "### Task 2.1 — 把 reviewer checkpoints 接入 PRD freeze / docs baseline freeze / close 前\n"
+            "- **验收标准（AC）**：reviewer 决策可被 close-check 读取\n"
+        ),
+        plan_status="completed",
+        wi_rel=wi_rel,
+    )
+    wi = root / wi_rel
+    _write_release_gate_evidence(wi)
+    save_reviewer_decision(
+        root,
+        wi.name,
+        PrdReviewerDecision(
+            checkpoint=PrdReviewerCheckpoint.PRE_CLOSE,
+            decision=PrdReviewerDecisionKind.APPROVE,
+            target=wi.name,
+            reason="Ready to close",
+            next_action="Proceed to archive",
+            timestamp="2026-03-29T12:00:00+08:00",
+        ),
+    )
+    _commit_all(root, "docs: add 003 close approval evidence")
+
+    r = run_close_check(cwd=root, wi=Path(wi_rel))
+    assert r.ok is True
+
+
+def test_close_check_blocks_003_when_pre_close_is_revise(tmp_path: Path) -> None:
+    root = tmp_path / "repo14"
+    root.mkdir()
+    wi_rel = "specs/003-cross-cutting-authoring-and-extension-contracts"
+    _setup_repo(
+        root,
+        tasks_body=(
+            "## Batch 1：PRD draft authoring\n"
+            "### Task 1.1 — 实现一句话想法 -> draft PRD 生成入口\n"
+            "- **验收标准（AC）**：一行想法可以生成 draft PRD\n\n"
+            "## Batch 2：Human Reviewer checkpoints\n"
+            "### Task 2.1 — 把 reviewer checkpoints 接入 PRD freeze / docs baseline freeze / close 前\n"
+            "- **验收标准（AC）**：reviewer 决策可被 close-check 读取\n"
+        ),
+        plan_status="completed",
+        wi_rel=wi_rel,
+    )
+    wi = root / wi_rel
+    _write_release_gate_evidence(wi)
+    save_reviewer_decision(
+        root,
+        wi.name,
+        PrdReviewerDecision(
+            checkpoint=PrdReviewerCheckpoint.PRE_CLOSE,
+            decision=PrdReviewerDecisionKind.REVISE,
+            target=wi.name,
+            reason="Please revise final notes",
+            next_action="Revise before close",
+            timestamp="2026-03-29T12:00:00+08:00",
+        ),
+    )
+    _commit_all(root, "docs: add 003 close revise evidence")
+
+    r = run_close_check(cwd=root, wi=Path(wi_rel))
+    assert r.ok is False
+    assert any("deny_revise" in b or "pre_close" in b for b in r.blockers)
