@@ -64,6 +64,21 @@ Batch 6: backlog remediation for latest/readiness freshness
   2. `scan` / `status --json` 明确只读或 analysis 边界。
 - **验证**：`uv run pytest tests/integration/test_cli_stage.py tests/integration/test_cli_status.py -v`
 
+> **Task 2.2 完成（2026-03-30）**：[`../../src/ai_sdlc/cli/main.py`](../../src/ai_sdlc/cli/main.py) 已把 `scan` 归入不触发 IDE adapter 的 analysis surface；[`../../src/ai_sdlc/cli/commands.py`](../../src/ai_sdlc/cli/commands.py) 已移除 `scan` 内部的 adapter apply；[`../../tests/integration/test_cli_scan.py`](../../tests/integration/test_cli_scan.py) 已补“initialized project 下 scan 不得触发 adapter 写路径”的回归；[`../../docs/USER_GUIDE.zh-CN.md`](../../docs/USER_GUIDE.zh-CN.md) 已明确 `scan` 的 operator/analysis 边界。
+
+### Task 2.3 — 补齐 manual telemetry canonical writer commands
+
+- **优先级**：P1
+- **依赖**：Task 2.1
+- **输入**：[`src/ai_sdlc/cli/telemetry_cmd.py`](../../src/ai_sdlc/cli/telemetry_cmd.py)、[`src/ai_sdlc/telemetry/contracts.py`](../../src/ai_sdlc/telemetry/contracts.py)、[`src/ai_sdlc/telemetry/runtime.py`](../../src/ai_sdlc/telemetry/runtime.py)、[`src/ai_sdlc/telemetry/writer.py`](../../src/ai_sdlc/telemetry/writer.py)、[`tests/integration/test_cli_telemetry.py`](../../tests/integration/test_cli_telemetry.py)
+- **验收标准**：
+  1. manual telemetry CLI 覆盖 `record-event`、`record-evidence`、`record-evaluation`、`record-violation` 四类对象。
+  2. 四类 manual write 都经现有 canonical writer / scope validation 路径，不旁路 store 或 index rebuild。
+  3. 文档示例与 CLI 对外合同一致，不再只暴露 event/evidence 两类。
+- **验证**：`uv run pytest tests/integration/test_cli_telemetry.py -v`
+
+> **Task 2.3 完成（2026-03-30）**：[`../../src/ai_sdlc/cli/telemetry_cmd.py`](../../src/ai_sdlc/cli/telemetry_cmd.py) 已补 `record-evaluation` 与 `record-violation`，统一复用 `Evaluation` / `Violation` contract、`RuntimeTelemetry.validate_manual_scope()` 与 `TelemetryWriter`；[`../../tests/integration/test_cli_telemetry.py`](../../tests/integration/test_cli_telemetry.py) 已补 run/step scope 正向回归；[`../../docs/USER_GUIDE.zh-CN.md`](../../docs/USER_GUIDE.zh-CN.md) 已补四类 manual telemetry 命令示例。
+
 ---
 
 ## Batch 3：IDE adapter / project-config
@@ -110,7 +125,7 @@ Batch 6: backlog remediation for latest/readiness freshness
 ### Task 5.1 — 004 traceability / operator regression / docs 对账收口
 
 - **优先级**：P1
-- **依赖**：Task 1.2, Task 2.2, Task 3.2, Task 4.1
+- **依赖**：Task 1.2, Task 2.2, Task 2.3, Task 3.2, Task 4.1
 - **验收标准**：
   1. `spec.md`、`plan.md`、`tasks.md` 三者对齐。
   2. program / doctor / stage / ide adapter 关键 integration tests 通过。

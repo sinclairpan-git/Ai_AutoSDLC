@@ -4,7 +4,7 @@
 
 ## 概述
 
-本计划只承接原 PRD 之外的既成新增能力建制化：Program manifest、多 spec orchestration、Telemetry bounded status/doctor、`doctor` / `scan` / `stage` operator surfaces、IDE adapter / `project-config` 合同、离线分发。实现目标不是“补功能”，而是把已经存在的 operator / packaging 行为锁成正式 contract，并补齐缺少的验证与边界说明。
+本计划只承接原 PRD 之外的既成新增能力建制化：Program manifest、多 spec orchestration、Telemetry bounded status/doctor、manual telemetry canonical writer commands、`doctor` / `scan` / `stage` operator surfaces、IDE adapter / `project-config` 合同、离线分发。实现目标不是“补功能”，而是把已经存在的 operator / packaging 行为锁成正式 contract，并补齐缺少的验证与边界说明。
 
 ## 技术背景
 
@@ -85,9 +85,9 @@ packaging/offline/
 
 ### Phase 2：Telemetry bounded status / doctor / stage / scan 边界收敛
 
-**目标**：明确只读 operator 与 mutating command 的边界，避免 read-only surface 产生副作用。  
-**产物**：`telemetry/readiness.py`、`doctor_cmd.py`、`stage_cmd.py`、`commands.py` 增量与 integration tests。  
-**验证方式**：doctor / stage / status-json integration tests。  
+**目标**：明确只读 operator 与 mutating command 的边界，避免 read-only surface 产生副作用，并把 manual telemetry 写入统一收敛到 canonical writer。  
+**产物**：`telemetry/readiness.py`、`doctor_cmd.py`、`stage_cmd.py`、`commands.py`、`telemetry_cmd.py` 增量与 integration tests。  
+**验证方式**：doctor / stage / status-json / telemetry integration tests。  
 **回退方式**：先收敛 bounded read，再处理输出说明。
 
 ### Phase 3：IDE adapter / project-config contract
@@ -115,9 +115,9 @@ packaging/offline/
 
 ### 工作流 B：Read-only operator surfaces
 
-**范围**：bounded `status --json` / `doctor` / `stage show|status` / `scan`  
-**影响范围**：`telemetry/readiness.py`、CLI commands、integration tests  
-**验证方式**：证明 read-only 不改 project state / adapter files / telemetry store  
+**范围**：bounded `status --json` / `doctor` / `stage show|status` / `scan` + manual `telemetry record-*` commands  
+**影响范围**：`telemetry/readiness.py`、`cli/telemetry_cmd.py`、其他 CLI commands、integration tests  
+**验证方式**：证明 read-only 不改 project state / adapter files / telemetry store；manual telemetry 写入不绕过 canonical writer  
 **回退方式**：先 bounded read，再调输出
 
 ### 工作流 C：IDE + offline distribution
@@ -133,6 +133,7 @@ packaging/offline/
 |----------|------------|------------|
 | program validate/status/plan/integrate 契约 | `tests/integration/test_cli_program.py` | `tests/unit/test_program_service.py` |
 | doctor / bounded status 保持只读 | `tests/integration/test_cli_doctor.py` | `tests/integration/test_cli_status.py` |
+| manual telemetry canonical writer path | `tests/integration/test_cli_telemetry.py` | telemetry store/index assertions |
 | stage surfaces 与 full runner 分离 | `tests/integration/test_cli_stage.py` | CLI help / docs 对账 |
 | IDE adapter / project-config 默认回退 | `tests/unit/test_ide_adapter.py` | `tests/integration/test_cli_ide_adapter.py` |
 | offline bundle 平台边界 | shell smoke + README contract | packaging script review |

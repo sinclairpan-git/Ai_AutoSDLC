@@ -35,8 +35,8 @@ def _global_before_command(ctx: typer.Context) -> None:
     """First non-init command in an initialized project applies IDE adapter."""
     if ctx.invoked_subcommand is None:
         return
-    # Read-only surfaces must not trigger adapter writes.
-    if ctx.invoked_subcommand in ("init", "doctor", "status", "verify"):
+    # Read-only and analysis surfaces must not trigger adapter writes.
+    if ctx.invoked_subcommand in ("init", "doctor", "status", "scan", "verify"):
         return
     run_ide_adapter_if_initialized(console=_hook_console)
 

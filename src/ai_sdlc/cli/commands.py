@@ -506,9 +506,6 @@ def scan_command(
         console.print(f"[red]Error: {root} is not a directory[/red]")
         raise typer.Exit(code=2)
 
-    if (root / AI_SDLC_DIR).is_dir():
-        ensure_ide_adaptation(root)
-
     console.print(f"[bold]Scanning project at {root}...[/bold]")
     try:
         scan = run_full_scan(root)

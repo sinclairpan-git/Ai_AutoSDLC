@@ -8,14 +8,26 @@ import typer
 from pydantic import ValidationError
 from rich.console import Console
 
-from ai_sdlc.telemetry.contracts import Evidence, ScopeLevel, TelemetryEvent
+from ai_sdlc.telemetry.contracts import (
+    Evaluation,
+    Evidence,
+    ScopeLevel,
+    TelemetryEvent,
+    Violation,
+)
 from ai_sdlc.telemetry.enums import (
     ActorType,
     CaptureMode,
     Confidence,
+    EvaluationResult,
+    EvaluationStatus,
     EvidenceStatus,
+    RootCauseClass,
+    SuggestedChangeLayer,
     TelemetryEventStatus,
     TraceLayer,
+    ViolationRiskLevel,
+    ViolationStatus,
 )
 from ai_sdlc.telemetry.runtime import RuntimeTelemetry
 from ai_sdlc.telemetry.store import TelemetryStore
@@ -209,3 +221,121 @@ def record_evidence_command(
 
     writer.write_evidence(evidence)
     console.print(evidence.evidence_id)
+
+
+@telemetry_app.command("record-evaluation")
+def record_evaluation_command(
+    scope: ScopeLevel = typer.Option(..., "--scope"),
+    goal_session_id: str = typer.Option(..., "--goal-session-id"),
+    workflow_run_id: str | None = typer.Option(None, "--workflow-run-id"),
+    step_id: str | None = typer.Option(None, "--step-id"),
+    result: EvaluationResult = typer.Option(
+        EvaluationResult.PASSED,
+        "--result",
+        help="Evaluation outcome.",
+    ),
+    status: EvaluationStatus = typer.Option(
+        EvaluationStatus.PENDING,
+        "--status",
+        help="Evaluation status.",
+    ),
+    root_cause_class: RootCauseClass | None = typer.Option(
+        None,
+        "--root-cause-class",
+        help="Optional root cause classification.",
+    ),
+    suggested_change_layer: SuggestedChangeLayer | None = typer.Option(
+        None,
+        "--suggested-change-layer",
+        help="Optional suggested remediation layer.",
+    ),
+) -> None:
+    """Record a manual evaluation through the canonical writer."""
+    root = _resolve_root()
+    try:
+        evaluation = Evaluation(
+            scope_level=scope,
+            goal_session_id=goal_session_id,
+            workflow_run_id=workflow_run_id,
+            step_id=step_id,
+            result=result,
+            status=status,
+            root_cause_class=root_cause_class,
+            suggested_change_layer=suggested_change_layer,
+        )
+    except ValidationError as exc:
+        raise _bad_parameter(exc) from exc
+
+    telemetry = RuntimeTelemetry(root)
+    try:
+        telemetry.validate_manual_scope(
+            scope_level=evaluation.scope_level,
+            goal_session_id=evaluation.goal_session_id,
+            workflow_run_id=evaluation.workflow_run_id,
+            step_id=evaluation.step_id,
+        )
+    except ValueError as exc:
+        _raise_value_error(exc)
+
+    writer = _build_writer(root)
+    try:
+        writer.write_evaluation(evaluation)
+    except ValueError as exc:
+        _raise_value_error(exc)
+    console.print(evaluation.evaluation_id)
+
+
+@telemetry_app.command("record-violation")
+def record_violation_command(
+    scope: ScopeLevel = typer.Option(..., "--scope"),
+    goal_session_id: str = typer.Option(..., "--goal-session-id"),
+    workflow_run_id: str | None = typer.Option(None, "--workflow-run-id"),
+    step_id: str | None = typer.Option(None, "--step-id"),
+    status: ViolationStatus = typer.Option(
+        ViolationStatus.OPEN,
+        "--status",
+        help="Violation status.",
+    ),
+    risk_level: ViolationRiskLevel = typer.Option(
+        ViolationRiskLevel.MEDIUM,
+        "--risk-level",
+        help="Violation risk level.",
+    ),
+    root_cause_class: RootCauseClass | None = typer.Option(
+        None,
+        "--root-cause-class",
+        help="Optional root cause classification.",
+    ),
+) -> None:
+    """Record a manual violation through the canonical writer."""
+    root = _resolve_root()
+    try:
+        violation = Violation(
+            scope_level=scope,
+            goal_session_id=goal_session_id,
+            workflow_run_id=workflow_run_id,
+            step_id=step_id,
+            status=status,
+            risk_level=risk_level,
+            root_cause_class=root_cause_class,
+        )
+    except ValidationError as exc:
+        raise _bad_parameter(exc) from exc
+
+    telemetry = RuntimeTelemetry(root)
+    try:
+        telemetry.validate_manual_scope(
+            scope_level=violation.scope_level,
+            goal_session_id=violation.goal_session_id,
+            workflow_run_id=violation.workflow_run_id,
+            step_id=violation.step_id,
+        )
+    except ValueError as exc:
+        _raise_value_error(exc)
+
+    writer = _build_writer(root)
+    try:
+        writer.write_violation(violation)
+    except ValueError as exc:
+        _raise_value_error(exc)
+    console.print(violation.violation_id)

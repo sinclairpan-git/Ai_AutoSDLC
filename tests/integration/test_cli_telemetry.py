@@ -11,7 +11,18 @@ from typer.testing import CliRunner
 
 from ai_sdlc.cli.main import app
 from ai_sdlc.routers.bootstrap import init_project
-from ai_sdlc.telemetry.enums import ActorType, CaptureMode, Confidence, TraceLayer
+from ai_sdlc.telemetry.enums import (
+    ActorType,
+    CaptureMode,
+    Confidence,
+    EvaluationResult,
+    EvaluationStatus,
+    RootCauseClass,
+    SuggestedChangeLayer,
+    TraceLayer,
+    ViolationRiskLevel,
+    ViolationStatus,
+)
 from ai_sdlc.telemetry.ids import new_goal_session_id, new_step_id, new_workflow_run_id
 from ai_sdlc.telemetry.paths import telemetry_local_root
 from ai_sdlc.telemetry.runtime import RuntimeTelemetry
@@ -146,6 +157,119 @@ class TestCliTelemetry:
         assert entry["confidence"] == "medium"
         assert entry["locator"] == "file:///tmp/manual-note.md"
         assert entry["digest"] == "sha256:deadbeef"
+
+    def test_record_evaluation_writes_manual_evaluation_for_run_scope(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        init_project(tmp_path)
+        monkeypatch.chdir(tmp_path)
+        telemetry = RuntimeTelemetry(tmp_path)
+        context = telemetry.open_workflow_run()
+
+        result = runner.invoke(
+            app,
+            [
+                "telemetry",
+                "record-evaluation",
+                "--scope",
+                "run",
+                "--goal-session-id",
+                context.goal_session_id,
+                "--workflow-run-id",
+                context.workflow_run_id,
+                "--result",
+                EvaluationResult.WARNING.value,
+                "--status",
+                EvaluationStatus.WAIVED.value,
+                "--root-cause-class",
+                RootCauseClass.HUMAN_PROCESS.value,
+                "--suggested-change-layer",
+                SuggestedChangeLayer.WORKFLOW.value,
+            ],
+        )
+
+        assert result.exit_code == 0
+        evaluation_id = result.output.strip()
+        assert evaluation_id.startswith("eval_")
+        evaluation_path = (
+            telemetry_local_root(tmp_path)
+            / "sessions"
+            / context.goal_session_id
+            / "runs"
+            / context.workflow_run_id
+            / "evaluations"
+            / f"{evaluation_id}.json"
+        )
+        assert evaluation_path.is_file()
+        payload = json.loads(evaluation_path.read_text(encoding="utf-8"))
+        assert payload["evaluation_id"] == evaluation_id
+        assert payload["goal_session_id"] == context.goal_session_id
+        assert payload["workflow_run_id"] == context.workflow_run_id
+        assert payload["scope_level"] == "run"
+        assert payload["result"] == "warning"
+        assert payload["status"] == "waived"
+        assert payload["root_cause_class"] == "human_process"
+        assert payload["suggested_change_layer"] == "workflow"
+
+    def test_record_violation_writes_manual_violation_for_step_scope(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        init_project(tmp_path)
+        monkeypatch.chdir(tmp_path)
+        telemetry = RuntimeTelemetry(tmp_path)
+        context = telemetry.open_workflow_run()
+        step_id = telemetry.begin_step("review")
+        assert step_id is not None
+
+        result = runner.invoke(
+            app,
+            [
+                "telemetry",
+                "record-violation",
+                "--scope",
+                "step",
+                "--goal-session-id",
+                context.goal_session_id,
+                "--workflow-run-id",
+                context.workflow_run_id,
+                "--step-id",
+                step_id,
+                "--status",
+                ViolationStatus.TRIAGED.value,
+                "--risk-level",
+                ViolationRiskLevel.HIGH.value,
+                "--root-cause-class",
+                RootCauseClass.RULE_POLICY.value,
+            ],
+        )
+
+        assert result.exit_code == 0
+        violation_id = result.output.strip()
+        assert violation_id.startswith("vio_")
+        violation_path = (
+            telemetry_local_root(tmp_path)
+            / "sessions"
+            / context.goal_session_id
+            / "runs"
+            / context.workflow_run_id
+            / "steps"
+            / step_id
+            / "violations"
+            / f"{violation_id}.json"
+        )
+        assert violation_path.is_file()
+        payload = json.loads(violation_path.read_text(encoding="utf-8"))
+        assert payload["violation_id"] == violation_id
+        assert payload["goal_session_id"] == context.goal_session_id
+        assert payload["workflow_run_id"] == context.workflow_run_id
+        assert payload["step_id"] == step_id
+        assert payload["scope_level"] == "step"
+        assert payload["status"] == "triaged"
+        assert payload["risk_level"] == "high"
+        assert payload["root_cause_class"] == "rule_policy"
+        open_violations_path = telemetry_local_root(tmp_path) / "indexes" / "open-violations.json"
+        open_violations = json.loads(open_violations_path.read_text(encoding="utf-8"))
+        assert open_violations["violation_ids"] == [violation_id]
 
     def test_close_session_writes_terminal_session_event(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch

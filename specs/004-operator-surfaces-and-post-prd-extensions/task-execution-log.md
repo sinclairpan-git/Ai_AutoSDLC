@@ -88,3 +88,149 @@
 - **已完成 git 提交**：是
 - **提交哈希**：`a64d956`（`fix: derive fresh telemetry status indexes`）
 - **是否继续下一批**：阻断，待本批代码与归档一并提交后再决定后续 work item。
+
+### Batch 2026-03-30-001 | 004 Task 2.3（manual telemetry canonical writer commands）
+
+#### 3.1 准备
+
+- **任务来源**：[`tasks.md`](tasks.md) Task `2.3`；[`spec.md`](spec.md) `FR-004-006`
+- **目标**：补齐 manual telemetry CLI 的 `record-evaluation` / `record-violation`，让四类 manual records 都经 canonical writer + scope validation 路径写入。
+- **预读范围**：[`spec.md`](spec.md)、[`plan.md`](plan.md)、[`tasks.md`](tasks.md)、[`../../src/ai_sdlc/cli/telemetry_cmd.py`](../../src/ai_sdlc/cli/telemetry_cmd.py)、[`../../src/ai_sdlc/telemetry/contracts.py`](../../src/ai_sdlc/telemetry/contracts.py)、[`../../src/ai_sdlc/telemetry/runtime.py`](../../src/ai_sdlc/telemetry/runtime.py)、[`../../src/ai_sdlc/telemetry/writer.py`](../../src/ai_sdlc/telemetry/writer.py)
+- **激活的规则**：TDD；canonical writer 单一路径；scope-chain validation；docs/tasks/plan traceability 同步
+- **验证画像**：`code-change`
+
+#### 3.2 统一验证命令
+
+- **R1（FR-004-006 红灯）**
+  - 命令：`uv run pytest tests/integration/test_cli_telemetry.py -k 'record_evaluation or record_violation' -q`
+  - 结果：**2 failed**；实现前可稳定复现 `record-evaluation` / `record-violation` 缺失。
+- **V1（manual telemetry integration）**
+  - 命令：`uv run pytest tests/integration/test_cli_telemetry.py -q`
+  - 结果：**19 passed**。
+- **V2（004 operator targeted regression）**
+  - 命令：`uv run pytest tests/unit/test_program_service.py tests/unit/test_ide_adapter.py tests/unit/test_project_config.py tests/unit/test_telemetry_store.py tests/integration/test_cli_program.py tests/integration/test_cli_doctor.py tests/integration/test_cli_stage.py tests/integration/test_cli_ide_adapter.py tests/integration/test_cli_status.py tests/integration/test_cli_telemetry.py -q`
+  - 结果：**112 passed**。
+- **Lint**
+  - 命令：`uv run ruff check src/ai_sdlc/cli/telemetry_cmd.py tests/integration/test_cli_telemetry.py`
+  - 结果：**All checks passed!**
+- **治理只读校验**
+  - 命令：`uv run ai-sdlc verify constraints`
+  - 结果：**无 BLOCKER**。
+
+#### 3.3 任务记录
+
+##### Task 2.3 | manual telemetry canonical writer commands
+
+- **改动范围**：[`../../src/ai_sdlc/cli/telemetry_cmd.py`](../../src/ai_sdlc/cli/telemetry_cmd.py)、[`../../tests/integration/test_cli_telemetry.py`](../../tests/integration/test_cli_telemetry.py)、[`../../docs/USER_GUIDE.zh-CN.md`](../../docs/USER_GUIDE.zh-CN.md)、[`plan.md`](plan.md)、[`tasks.md`](tasks.md)
+- **改动内容**：
+  - 在 `telemetry` CLI 中新增 `record-evaluation` 与 `record-violation`，直接复用现有 `Evaluation` / `Violation` contract、`RuntimeTelemetry.validate_manual_scope()` 与 `TelemetryWriter.write_evaluation()` / `write_violation()`。
+  - 保持 `manual telemetry` 的写入路径与已有 `record-event` / `record-evidence` 一致，不引入旁路 store、手写 snapshot 或独立 index 更新逻辑。
+  - 在 integration tests 中补 run-scope evaluation 与 step-scope violation 正向回归，验证 current snapshot 落点与 `open-violations` index 会跟随 canonical write 刷新。
+  - 在 `004` 的 `plan.md` / `tasks.md` 中补回 `FR-004-006` 的正式映射，避免 spec 需求存在而任务/验证矩阵缺位。
+  - 在用户手册中把 manual telemetry 示例补齐为四类对象，并明确 CLI 采用 `evaluation` 命名，不额外引入 `assessment` 别名。
+- **新增/调整的测试**：
+  - integration：新增 `record-evaluation`、`record-violation` 正向回归，并通过整套 telemetry CLI 回归确认旧命令未受影响。
+  - 无新增 store/runtime 单测；依赖现有 canonical writer / scope validation 覆盖。
+- **执行的命令**：见 R1 / V1 / V2 / Lint / 治理只读校验。
+- **测试结果**：全部通过。
+- **是否符合任务目标**：符合。`FR-004-006` 当前已不再存在“manual telemetry 只支持 event/evidence”的实现缺口。
+
+#### 3.4 代码审查（摘要）
+
+- **规格对齐**：本批只补 `FR-004-006` 缺口，没有扩写 telemetry schema 或引入第二套 writer 路径，符合 `004` 的 operator/formalization 边界。
+- **代码质量**：CLI 层保持薄封装，状态与 parent-chain 校验继续由现有 contract/runtime/store 负责，没有把验证逻辑复制到命令层。
+- **测试质量**：先用红灯证明命令缺失，再用 integration 回归锁定 run/step scope、snapshot 落盘和 open-violations index 刷新。
+- **结论**：无新的阻塞项；允许把 `FR-004-006` 从“真实实现缺口”降为“已实现并可回归验证”。
+
+#### 3.5 任务/计划同步状态
+
+- `plan.md` 同步状态：`已同步`（Phase 2 / Workflow B / 关键路径验证矩阵已纳入 manual telemetry canonical writer surface）。
+- `tasks.md` 同步状态：`已同步`（新增 Task `2.3` 并补完成说明）。
+- `USER_GUIDE.zh-CN.md` 同步状态：`已同步`（manual telemetry 命令示例已扩成四类对象）。
+- `004` 剩余开放项：`scan` operator/analysis 边界、offline smoke contract、Task Batch 1-5 历史 execution evidence 仍待继续补齐。
+
+#### 3.6 自动决策记录（如有）
+
+- AD-001：本轮 CLI 采用 `record-evaluation`，不新增 `record-assessment` 别名 → 理由：现有 contract / writer / report / report artifact 统一使用 `evaluation` 术语；此时引入 alias 会增加对外命名分叉而不增加能力。
+
+#### 3.7 批次结论
+
+- `FR-004-006` 已落地；`004` 仍未整体 close，但“manual telemetry commands 缺 assessment/violation”这一真实实现缺口已关闭。
+
+#### 3.8 归档后动作
+
+- **已完成 git 提交**：否（待本批代码与归档一并提交）
+- **提交哈希**：待提交
+- **是否继续下一批**：可继续，建议优先转入 `FR-004-009` / `FR-004-015` 的 operator boundary formalization。
+
+### Batch 2026-03-30-002 | 004 Task 2.2（scan operator/analysis boundary formalization）
+
+#### 4.1 准备
+
+- **任务来源**：[`tasks.md`](tasks.md) Task `2.2`；[`spec.md`](spec.md) `FR-004-009`、`FR-004-015`
+- **目标**：把 `scan` 从“会隐式触发 adapter 写路径的 CLI”收敛成真正的 operator/analysis 命令，并补齐对外文档边界。
+- **预读范围**：[`spec.md`](spec.md)、[`plan.md`](plan.md)、[`tasks.md`](tasks.md)、[`../../src/ai_sdlc/cli/main.py`](../../src/ai_sdlc/cli/main.py)、[`../../src/ai_sdlc/cli/commands.py`](../../src/ai_sdlc/cli/commands.py)、[`../../src/ai_sdlc/integrations/ide_adapter.py`](../../src/ai_sdlc/integrations/ide_adapter.py)
+- **激活的规则**：TDD；operator/analysis boundary clarity；IDE adapter 写路径隔离；docs/tasks 同步
+- **验证画像**：`code-change`
+
+#### 4.2 统一验证命令
+
+- **R1（scan boundary 红灯）**
+  - 命令：`uv run pytest tests/integration/test_cli_scan.py -q`
+  - 结果：先红后绿；实现前 `initialized project` 下执行 `scan` 会触发 IDE adapter path，违背 analysis-only 边界。
+- **V1（scan integration）**
+  - 命令：`uv run pytest tests/integration/test_cli_scan.py -q`
+  - 结果：**2 passed**。
+- **V2（004 operator targeted regression）**
+  - 命令：`uv run pytest tests/integration/test_cli_scan.py tests/integration/test_cli_stage.py tests/integration/test_cli_status.py tests/integration/test_cli_doctor.py tests/integration/test_cli_ide_adapter.py tests/integration/test_cli_telemetry.py tests/integration/test_cli_program.py tests/unit/test_program_service.py tests/unit/test_ide_adapter.py tests/unit/test_project_config.py tests/unit/test_telemetry_store.py -q`
+  - 结果：**114 passed**。
+- **Lint**
+  - 命令：`uv run ruff check src/ai_sdlc/cli/main.py src/ai_sdlc/cli/commands.py tests/integration/test_cli_scan.py`
+  - 结果：**All checks passed!**
+- **治理只读校验**
+  - 命令：`uv run ai-sdlc verify constraints`
+  - 结果：**无 BLOCKER**。
+
+#### 4.3 任务记录
+
+##### Task 2.2 | `scan` / `status --json` / `stage` 边界收口中的 scan formalization
+
+- **改动范围**：[`../../src/ai_sdlc/cli/main.py`](../../src/ai_sdlc/cli/main.py)、[`../../src/ai_sdlc/cli/commands.py`](../../src/ai_sdlc/cli/commands.py)、[`../../tests/integration/test_cli_scan.py`](../../tests/integration/test_cli_scan.py)、[`../../docs/USER_GUIDE.zh-CN.md`](../../docs/USER_GUIDE.zh-CN.md)、[`tasks.md`](tasks.md)
+- **改动内容**：
+  - 在 CLI 全局 hook 中把 `scan` 归入不触发 IDE adapter 的 surface，避免进入隐式写路径。
+  - 删除 `scan_command()` 内部的 `ensure_ide_adaptation(root)` 调用，保持 deep scan 只做读取与终端输出。
+  - 新增 `test_cli_scan.py`，锁定两类契约：未初始化路径可直接扫描；已初始化项目下 `scan` 不得调用 adapter apply path。
+  - 在用户手册中把 `scan` 明确标成 operator/analysis 命令，并写明它不会替代 `run` / `stage run`，也不会隐式初始化 `.ai-sdlc/` 或触发 adapter 写入。
+- **新增/调整的测试**：
+  - integration：新增 `scan` CLI 契约测试。
+  - 通过 004 operator targeted regression 复核 `status` / `doctor` / `stage` / `telemetry` / `program` surface 未被带偏。
+- **执行的命令**：见 R1 / V1 / V2 / Lint / 治理只读校验。
+- **测试结果**：全部通过。
+- **是否符合任务目标**：符合。`scan` 现已是正式的 operator/analysis surface，不再携带 IDE adapter 写副作用。
+
+#### 4.4 代码审查（摘要）
+
+- **规格对齐**：本批直接针对 `FR-004-009` 的“operator/analysis 命令”要求收口，没有把 `scan` 变成写路径 bootstrap surface。
+- **代码质量**：通过同时收敛 main callback 与命令体内的本地调用，消除了双重 adapter apply 入口。
+- **测试质量**：新的 integration test 不是只看输出，而是直接把 adapter path patch 成 forbidden，从而锁死了“不得写”的边界。
+- **结论**：无新的阻塞项；`scan` 的 operator/analysis 合同已可通过自动化回归验证。
+
+#### 4.5 任务/计划同步状态
+
+- `tasks.md` 同步状态：`已同步`（Task `2.2` 已补完成说明）。
+- `USER_GUIDE.zh-CN.md` 同步状态：`已同步`（`scan` operator/analysis 边界已写明）。
+- `004` 剩余开放项：offline smoke contract、Batch 1-5 历史 execution evidence、以及 `FR-004-015` 更完整的 operator mutation matrix 仍待继续补齐。
+
+#### 4.6 自动决策记录（如有）
+
+- AD-001：`scan` 直接定义为 analysis-only，而不是“允许 adapter idempotent 写入的半只读命令” → 理由：spec 已把 `scan` 与 `doctor/status` 并列为 operator surface；若保留隐式 adapter apply，则外部无法稳定判断其是否改仓库。
+
+#### 4.7 批次结论
+
+- `FR-004-009` 已从“文档口径不硬、真实行为有写副作用”收敛为自动化可验证的 operator/analysis contract；`FR-004-015` 仍剩更完整的 mutation/read-only matrix 需要后续补齐。
+
+#### 4.8 归档后动作
+
+- **已完成 git 提交**：否（待本轮代码与归档统一提交）
+- **提交哈希**：待提交
+- **是否继续下一批**：可继续，建议转入 offline smoke contract 与 004 历史 batch traceability 补齐。

@@ -589,8 +589,12 @@ python -m ai_sdlc run --dry-run
 python -m ai_sdlc telemetry open-session
 python -m ai_sdlc telemetry record-event --scope session --goal-session-id <gs_id>
 python -m ai_sdlc telemetry record-evidence --scope session --goal-session-id <gs_id> --locator <locator>
+python -m ai_sdlc telemetry record-evaluation --scope session --goal-session-id <gs_id> --result warning --status waived
+python -m ai_sdlc telemetry record-violation --scope session --goal-session-id <gs_id> --status triaged --risk-level high
 python -m ai_sdlc telemetry close-session --goal-session-id <gs_id> --status succeeded
 ```
+
+这里的 `record-evaluation` 对应 telemetry 治理对象里的“评估结论”；CLI 沿用内部 `evaluation` 命名，而不是额外引入 `assessment` 别名。
 
 ### 3) `accepted` 的含义
 
@@ -603,6 +607,12 @@ python -m ai_sdlc telemetry close-session --goal-session-id <gs_id> --status suc
 - telemetry 缺失时会返回 `not_initialized`，并且不会创建 `.ai-sdlc/local/telemetry/`。
 - `python -m ai_sdlc doctor` 的 telemetry readiness 仅做只读诊断：root 可写性、manifest 状态、registry 可解析性、writer path 有效性、resolver 健康、`status --json` surface 可用性。
 - `doctor` 不会深度扫描 trace，不会隐式 rebuild indexes，也不会隐式初始化 telemetry 根目录。
+
+### 5) `scan` 的边界
+
+- `python -m ai_sdlc scan <path>` 是 operator/analysis 命令，用于做深度代码扫描并把摘要输出到终端。
+- `scan` 可以深度读取仓库内容，但不会隐式初始化 `.ai-sdlc/`、不会触发 IDE adapter 写入，也不会替代 `run` / `stage run` 这类执行面。
+- 如果你要生成或刷新工程知识基线，应该使用 `init`（已有项目初始化）或 `refresh`，而不是把 `scan` 当作写路径。
 
 ## 框架自身开发补充
 
