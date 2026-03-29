@@ -98,6 +98,54 @@ def test_write_commands_are_serialized_per_repo(git_repo: Path) -> None:
     assert add_start < add_end <= commit_start
 
 
+def test_clear_stale_repo_write_lock_ignores_raced_file_removal(
+    git_repo: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    git = GitClient(git_repo)
+
+    class _RacyLockPath:
+        def exists(self) -> bool:
+            return True
+
+        def read_text(self, encoding: str = "utf-8") -> str:
+            raise FileNotFoundError
+
+        def unlink(self) -> None:
+            raise AssertionError("unlink should not run when the lock file already disappeared")
+
+    monkeypatch.setattr(
+        GitClient,
+        "repo_write_lock_path",
+        property(lambda self: _RacyLockPath()),
+    )
+
+    assert git._clear_stale_repo_write_lock() is False
+
+
+def test_clear_stale_repo_write_lock_keeps_incomplete_payload(
+    git_repo: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    git = GitClient(git_repo)
+
+    class _IncompleteLockPath:
+        def exists(self) -> bool:
+            return True
+
+        def read_text(self, encoding: str = "utf-8") -> str:
+            return "{"
+
+        def unlink(self) -> None:
+            raise AssertionError("unlink should not run for an in-flight lock payload")
+
+    monkeypatch.setattr(
+        GitClient,
+        "repo_write_lock_path",
+        property(lambda self: _IncompleteLockPath()),
+    )
+
+    assert git._clear_stale_repo_write_lock() is False
+
+
 def test_inspect_index_lock_marks_active_git_process(git_repo: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     git = GitClient(git_repo)
     git.index_lock_path.write_text("lock", encoding="utf-8")

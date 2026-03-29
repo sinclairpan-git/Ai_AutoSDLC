@@ -196,10 +196,20 @@ class GitClient:
             return False
 
         try:
-            payload = json.loads(path.read_text(encoding="utf-8") or "{}")
+            raw = path.read_text(encoding="utf-8")
+        except FileNotFoundError:
+            return False
+
+        if not raw.strip():
+            return False
+
+        try:
+            payload = json.loads(raw)
         except json.JSONDecodeError:
-            payload = {}
+            return False
         pid = int(payload.get("pid", 0) or 0)
+        if pid <= 0:
+            return False
         if pid > 0 and self._pid_is_active(pid):
             return False
         try:

@@ -215,7 +215,7 @@
 
 - **V1（全量 pytest）**
   - 命令：`uv run pytest -q`
-  - 结果：**881 passed**。
+  - 结果：**883 passed**。
 - **V2（仓库 lint）**
   - 命令：`uv run ruff check src tests`
   - 结果：**All checks passed!**
@@ -230,12 +230,15 @@
 
 ##### Task 5.2 | final close-truth refresh
 
-- **改动范围**：[`../../src/ai_sdlc/cli/commands.py`](../../src/ai_sdlc/cli/commands.py)、[`.ai-sdlc/work-items/003-cross-cutting-authoring-and-extension-contracts/reviewer-decision-pre-close.yaml`](../../.ai-sdlc/work-items/003-cross-cutting-authoring-and-extension-contracts/reviewer-decision-pre-close.yaml)、[`tasks.md`](tasks.md)、[`task-execution-log.md`](task-execution-log.md)
+- **改动范围**：[`../../src/ai_sdlc/cli/commands.py`](../../src/ai_sdlc/cli/commands.py)、[`../../src/ai_sdlc/branch/git_client.py`](../../src/ai_sdlc/branch/git_client.py)、[`../../tests/unit/test_git_client.py`](../../tests/unit/test_git_client.py)、[`.ai-sdlc/work-items/003-cross-cutting-authoring-and-extension-contracts/reviewer-decision-pre-close.yaml`](../../.ai-sdlc/work-items/003-cross-cutting-authoring-and-extension-contracts/reviewer-decision-pre-close.yaml)、[`tasks.md`](tasks.md)、[`task-execution-log.md`](task-execution-log.md)
 - **改动内容**：
   - 修正 `src/ai_sdlc/cli/commands.py` 的 import 排序，使仓库重新满足 `ruff`。
   - 补录 `003` 的正式 `pre_close` reviewer approval artifact，避免 `close-check` 只凭 execution-log 中的“代码审查”字样误判为已满足正式 reviewer gate。
+  - 修复 `GitClient` 的 repo write-lock 清理竞态：锁文件若刚被移除或内容尚未写完整，不再被误当成 stale lock 清除，从而消除 full-suite 中的串行化 flake。
   - 追加本批 execution evidence，把全量验证结果与最终 close truth 对齐到最新仓库状态。
-- **新增/调整的测试**：无新增测试；复用既有 `close-check` / `verify constraints` / full pytest 回归。
+- **新增/调整的测试**：
+  - `tests/unit/test_git_client.py` 新增“锁文件刚消失 / 内容未写完整”两条 deterministic regression tests。
+  - 复用既有 `close-check` / `verify constraints` / full pytest 回归确认修复未破坏最终收口路径。
 - **执行的命令**：见 V1 ~ V4。
 - **测试结果**：通过。
 - **是否符合任务目标**：符合。`003` 现已同时具备 formal reviewer approval、release gate evidence、fresh verification 与 clean git closure。
