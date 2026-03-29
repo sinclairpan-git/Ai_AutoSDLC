@@ -6,6 +6,12 @@ from pathlib import Path
 
 import pytest
 
+from ai_sdlc.backends.native import (
+    BackendCapabilityDeclaration,
+    BackendDecisionKind,
+    BackendRegistry,
+)
+from ai_sdlc.backends.routing import BackendRoutingCoordinator, RoutedDocument
 from ai_sdlc.generators.doc_gen import DocScaffolder, TasksParser
 from ai_sdlc.generators.template_gen import TemplateGenerator
 
@@ -15,6 +21,71 @@ TEMPLATES = [
     "tasks.md.j2",
     "execution-log.md.j2",
 ]
+
+
+class FakeTemplateGenerator:
+    def __init__(self) -> None:
+        self.calls: list[str] = []
+
+    def render(self, template_name: str, context: dict[str, object]) -> str:
+        self.calls.append(template_name)
+        return f"template:{template_name}"
+
+
+class RecordingBackend:
+    def __init__(
+        self,
+        backend_name: str,
+        *,
+        capabilities: tuple[str, ...],
+        responses: dict[str, str],
+    ) -> None:
+        self.backend_name = backend_name
+        self.capabilities = capabilities
+        self.responses = responses
+        self.calls: list[tuple[str, dict[str, object]]] = []
+
+    def capability_declaration(self) -> BackendCapabilityDeclaration:
+        return BackendCapabilityDeclaration(
+            backend_name=self.backend_name,
+            provided_capabilities=self.capabilities,
+        )
+
+    def generate_spec(self, context: dict[str, object]) -> str:
+        return self._call("generate_spec", context)
+
+    def generate_plan(self, context: dict[str, object]) -> str:
+        return self._call("generate_plan", context)
+
+    def generate_tasks(self, context: dict[str, object]) -> str:
+        return self._call("generate_tasks", context)
+
+    def execute_task(self, task_id: str, context: dict[str, object]) -> str:
+        return "pending"
+
+    def generate_index(self, root: Path) -> dict[str, object]:
+        return {}
+
+    def _call(self, method_name: str, context: dict[str, object]) -> str:
+        self.calls.append((method_name, dict(context)))
+        return self.responses[method_name]
+
+
+class FakeRouter:
+    def __init__(self) -> None:
+        self.calls: list[tuple[str, dict[str, object]]] = []
+
+    def generate_spec(self, context: dict[str, object]) -> RoutedDocument:
+        self.calls.append(("generate_spec", dict(context)))
+        return RoutedDocument("ROUTED SPEC", "spec-decision")
+
+    def generate_plan(self, context: dict[str, object]) -> RoutedDocument:
+        self.calls.append(("generate_plan", dict(context)))
+        return RoutedDocument("ROUTED PLAN", "plan-decision")
+
+    def generate_tasks(self, context: dict[str, object]) -> RoutedDocument:
+        self.calls.append(("generate_tasks", dict(context)))
+        return RoutedDocument("ROUTED TASKS", "tasks-decision")
 
 
 @pytest.mark.parametrize("template_name", TEMPLATES)
@@ -138,6 +209,69 @@ def test_scaffold_returns_only_newly_created_paths(tmp_path: Path) -> None:
     assert len(created) == 3
     assert {p.name for p in created} == {"plan.md", "tasks.md", "execution-log.md"}
     assert (spec_dir / "spec.md").read_text(encoding="utf-8") == "# existing\n"
+
+
+def test_render_routes_spec_plan_tasks_and_bypasses_execution_log() -> None:
+    router = FakeRouter()
+    template_gen = FakeTemplateGenerator()
+    scaffolder = DocScaffolder(template_gen=template_gen, router=router)
+
+    spec = scaffolder.render("spec.md.j2", {"work_item_id": "WI-001"})
+    plan = scaffolder.render("plan.md.j2", {"work_item_id": "WI-001"})
+    tasks = scaffolder.render("tasks.md.j2", {"work_item_id": "WI-001"})
+    execution_log = scaffolder.render("execution-log.md.j2", {"work_item_id": "WI-001"})
+
+    assert spec == "ROUTED SPEC"
+    assert plan == "ROUTED PLAN"
+    assert tasks == "ROUTED TASKS"
+    assert execution_log == "template:execution-log.md.j2"
+    assert template_gen.calls == ["execution-log.md.j2"]
+    assert [call[0] for call in router.calls] == [
+        "generate_spec",
+        "generate_plan",
+        "generate_tasks",
+    ]
+
+
+def test_scaffold_with_backend_selection_exposes_backend_decisions(
+    tmp_path: Path,
+) -> None:
+    registry = BackendRegistry()
+    native = RecordingBackend(
+        "native-test",
+        capabilities=("generate_spec", "generate_plan", "generate_tasks"),
+        responses={
+            "generate_spec": "native spec",
+            "generate_plan": "native plan",
+            "generate_tasks": "native tasks",
+        },
+    )
+    plugin = RecordingBackend(
+        "plugin",
+        capabilities=("generate_spec", "generate_plan", "generate_tasks"),
+        responses={
+            "generate_spec": "plugin spec",
+            "generate_plan": "plugin plan",
+            "generate_tasks": "plugin tasks",
+        },
+    )
+    registry.register("native-test", native)
+    registry.set_default("native-test")
+    registry.register("plugin", plugin)
+
+    router = BackendRoutingCoordinator(registry=registry, requested_backend="plugin")
+    scaffolder = DocScaffolder(template_gen=FakeTemplateGenerator(), router=router)
+
+    audit = scaffolder.scaffold_with_backend_selection(tmp_path, "WI-AUDIT-001")
+
+    assert len(audit.created_paths) == 4
+    assert audit.backend_decisions["spec.md"].decision_kind == BackendDecisionKind.DELEGATE
+    assert audit.backend_decisions["plan.md"].decision_kind == BackendDecisionKind.DELEGATE
+    assert audit.backend_decisions["tasks.md"].decision_kind == BackendDecisionKind.DELEGATE
+    assert audit.backend_decisions["execution-log.md"] is None
+    assert (tmp_path / "specs" / "WI-AUDIT-001" / "spec.md").read_text(encoding="utf-8") == "plugin spec"
+    assert (tmp_path / "specs" / "WI-AUDIT-001" / "plan.md").read_text(encoding="utf-8") == "plugin plan"
+    assert (tmp_path / "specs" / "WI-AUDIT-001" / "tasks.md").read_text(encoding="utf-8") == "plugin tasks"
 
 
 # --- TasksParser ---
