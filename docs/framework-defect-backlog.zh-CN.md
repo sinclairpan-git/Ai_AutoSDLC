@@ -56,14 +56,91 @@
 - 迁移补齐的字段若原始材料未显式给出，会以“基于历史记录推断”的方式写入，但会保留 `legacy_ref`。
 - 新增条目应直接写入本文件；若需要回溯历史来源，再反向链接到 legacy registry。
 
-## 下一波待修优先级（2026-03-28）
+## 下一波待修优先级（2026-03-29）
 
 - 当前待修：无
 - 本轮已收口：
+  - `003` 线 `FD-2026-03-29-001`、`FD-2026-03-29-002`、`FD-2026-03-29-003`
   - `003` 线 `FD-2026-03-27-011`、`FD-2026-03-27-012`
   - `004` 线 `FD-2026-03-27-013`
 - 挂靠原则：
+  - `003` 线：已全部收口
   - `004` 线：已全部收口
+
+## FD-2026-03-29-001 | close-check 会把部分实现的 work item 误判为可收口
+
+- 日期 (UTC): 2026-03-29
+- 来源: self_review
+- 状态: closed
+- owner: codex
+- wi_id: 001-ai-sdlc-framework
+- related_doc: specs/003-cross-cutting-authoring-and-extension-contracts/spec.md, specs/003-cross-cutting-authoring-and-extension-contracts/tasks.md
+- 现象: `ai-sdlc workitem close-check` 当前只检查 `tasks.md` 中是否存在未勾选 checkbox、`task-execution-log.md` 是否具备最小字段、latest batch 是否记录 fresh verification 与 git closure，因此当 work item 规划了多批任务但前序批次并未真正实现时，只要最新一次局部 batch 写了合规 execution log，仍可能返回 `ready for completion`。
+- 触发场景: 对 `003-cross-cutting-authoring-and-extension-contracts` 执行 close-check 时，虽然 Batch 1~5 的 PRD authoring / reviewer / backend / release gate 主需求并无对应实现真值，但因为 Batch 6 的 telemetry backlog 收口材料完整，close-check 仍返回 PASS。
+- 影响范围: work item 完成状态判断、close gate 可信度、traceability 审阅、用户对“已收口”表述的信任，以及后续 spec/plan/tasks 与实现事实的一致性。
+- 根因分类: A, B, H
+- 未来杜绝方案摘要: `close-check` 必须从“文档字段完备性”升级为“合同完成真值”校验：同时验证 planned task/batch 覆盖、FR/SC 对应实现证据与 execution-log 覆盖范围，不能再把单次局部收口当成整个 work item 的完成证明。
+- 建议改动层级: rule / policy, middleware, workflow, tool, eval
+- prompt / context: `close-check` 的 PASS 语义必须是“当前 work item 的法定完成条件已满足”，而不是“最新一批执行记录写得合规”。
+- rule / policy: 若 `tasks.md` / `spec.md` 声明了多个 batch、多个 FR/SC cluster 或重开状态，close-check 必须验证这些范围是否均有实现与执行证据；只完成局部 batch 不得返回 ready for completion。
+- middleware: 增加 `work item completion truth` 聚合逻辑，解析 `tasks.md` / `task-execution-log.md` / 相关实现测试信号，识别“未执行 batch”“仅文档声明”“局部收口外推”等高风险模式。
+- workflow: 每次 close 前先运行 FR/SC 级 traceability / planned-batch coverage 校验；发现未覆盖范围时先回挂任务或补 execution evidence，再允许继续 close。
+- tool: `src/ai_sdlc/core/close_check.py`、新增 `src/ai_sdlc/core/workitem_traceability.py`（或等价聚合层）、`tests/unit/test_close_check.py`、`tests/integration/test_cli_workitem_close_check.py`
+- eval: false-green-close-check 次数、planned-batch-missing-evidence 检出率、partial-implementation-misclosed 次数
+- 风险等级: 高
+- 收口说明（2026-03-29）: `src/ai_sdlc/core/workitem_traceability.py`、`src/ai_sdlc/core/close_check.py` 及对应 unit/integration tests 已补齐 planned-batch coverage、reopened-status blocker 与 FR/SC traceability 校验；`003` 的 execution log 也已补成 Batch `1~5` + Batch `6` 的完整覆盖，`close-check` 不再把局部 batch 误判成整项可收口。
+- 可验证成功标准: 给定一个 work item 只完成最新局部 batch 而前序 batch 无 execution evidence / 无实现映射时，`close-check` 必须返回 BLOCKER；当所有 planned batch 与 FR/SC 覆盖完整后才允许 PASS。
+- 是否需要回归测试补充: 是：补“仅最新 batch 有 execution log”“tasks 无 checkbox 但前序 batch 未实现”“FR/SC 无代码映射”三类正反回归。
+
+## FD-2026-03-29-002 | verify constraints 缺少 feature-contract coverage，无法发现 spec 主需求未实现
+
+- 日期 (UTC): 2026-03-29
+- 来源: self_review
+- 状态: closed
+- owner: codex
+- wi_id: 001-ai-sdlc-framework
+- related_doc: specs/003-cross-cutting-authoring-and-extension-contracts/spec.md
+- 现象: `ai-sdlc verify constraints` 当前只校验治理文件、framework backlog、doc-first / verification profile surface、checkpoint spec_dir、task acceptance 与 skip-registry mapping 等仓库规则面；对于 `003` 中的 draft PRD authoring、reviewer checkpoint、backend delegation/fallback、release gate evidence 等 feature-contract 主需求没有任何检查对象，因此仓库规则面为绿时，命令仍可能返回 `no BLOCKERs`。
+- 触发场景: 对仓库执行 `uv run ai-sdlc verify constraints` 时，即使 `003` 的 `FR-003-001 ~ 015` 仅存在于 spec/plan/tasks，代码侧没有对应模型、路由、fallback 或 release-gate 实现，命令仍返回通过。
+- 影响范围: verification gate 的覆盖声明、work item readiness 判断、contract review、回归策略设计，以及“仓库全绿”被误解为“spec 主需求已实现”。
+- 根因分类: A, B, D, H
+- 未来杜绝方案摘要: `verify constraints` 需要引入 feature-contract coverage 面，至少能对当前活动 work item 的关键 FR/SC cluster 做 presence/shape 校验，并为“spec 只有声明、无实现对象/测试/执行证据”的情况给出 BLOCKER 或高优先级告警。
+- 建议改动层级: rule / policy, middleware, workflow, tool, eval
+- prompt / context: `verify constraints` 不应只验证仓库治理文档是否齐全；当它被用作 close 前新鲜证据时，必须同时对当前 work item 的关键合同面负责。
+- rule / policy: 对活动 work item 的核心合同（authoring、reviewer、backend、release gate 等）建立最小 feature-coverage object 清单；缺少对象或对象形状不符时，verification gate 不得静默通过。
+- middleware: 扩展 verification gate object registry，使其可声明并校验 work-item-scoped feature contract surfaces，而不只是 repo-wide governance files。
+- workflow: 执行 `verify constraints` 时默认读取当前 spec/work item 上下文，输出“规则面 PASS / feature-contract FAIL”之类的分层结论，避免单一绿灯掩盖主需求未实现。
+- tool: `src/ai_sdlc/core/verify_constraints.py`、`src/ai_sdlc/cli/verify_cmd.py`、`tests/unit/test_verify_constraints.py`、`tests/integration/test_cli_verify_constraints.py`
+- eval: missing-feature-contract-surface 次数、verify-false-green 次数、spec-only-without-implementation 检出率
+- 风险等级: 高
+- 收口说明（2026-03-29）: `src/ai_sdlc/core/verify_constraints.py` 与 `src/ai_sdlc/cli/verify_cmd.py` 已引入 `003` authoring / reviewer / backend / release-gate feature-contract coverage surfaces，缺面即 BLOCK；对应 unit/integration tests 已覆盖缺失与完整两类正反场景。
+- 可验证成功标准: 当活动 work item 的关键 FR/SC cluster 没有对应实现 surface 或测试覆盖时，`verify constraints` 必须输出明确 BLOCKER；当 surface 完整且测试/证据存在时才允许 PASS。
+- 是否需要回归测试补充: 是：补 `003` 类 feature-contract surface 缺失/存在的 CLI 与 unit 正反测试。
+
+## FD-2026-03-29-003 | work item 台账允许“最新 batch 局部成功”掩盖“前序 batch 未实现”
+
+- 日期 (UTC): 2026-03-29
+- 来源: self_review
+- 状态: closed
+- owner: codex
+- wi_id: 001-ai-sdlc-framework
+- related_doc: specs/003-cross-cutting-authoring-and-extension-contracts/tasks.md, specs/003-cross-cutting-authoring-and-extension-contracts/task-execution-log.md
+- 现象: work item 当前允许 `tasks.md` 声明多个 batch / task cluster，而 `task-execution-log.md` 只记录最近一次局部执行批次；若没有额外校验 planned batch 覆盖或“已完成”标记来源，读者很容易把“Batch 6 已关闭”误读成“整个 003 已收口”。
+- 触发场景: `003` 的 `tasks.md` 明确规划了 Batch 1~6，但 `task-execution-log.md` 只存在 Batch 6 的执行记录；同时 close-check/verify 也没有要求 execution-log 覆盖 Batch 1~5，从而让台账真值出现歧义。
+- 影响范围: execution evidence 可读性、任务真值一致性、缺陷归属判断、后续开发排期，以及 framework defect / requirement gap 的边界管理。
+- 根因分类: B, D, H
+- 未来杜绝方案摘要: 建立“planned batches/tasks -> execution evidence -> close verdict”强映射；凡 `tasks.md` 声明的 batch/task 尚无执行证据或显式延期状态，台账与 close surface 都必须给出未收口提示，避免局部成功覆盖全局未完成。
+- 建议改动层级: middleware, workflow, tool, eval
+- prompt / context: execution log 是工作项事实的一部分，不是任意追加的证明材料；读到单个 batch 的成功时，框架必须同时说明其覆盖边界。
+- rule / policy: `tasks.md` 中每个 planned batch/task cluster 必须有对应 execution evidence、明确的未开始/延期状态，或显式重开说明；缺其一即不能宣称整体完成。
+- middleware: 提供 planned-batch coverage parser，对比 `tasks.md` 与 `task-execution-log.md`，生成“missing execution evidence”清单。
+- workflow: 每次追加 execution log 或关闭 defect 时，同步更新 batch 覆盖状态；批次局部成功后若前序 batch 仍空缺，应在文档顶部显式写明“仅覆盖某 batch，不代表整体收口”。
+- tool: `src/ai_sdlc/core/close_check.py`、新增 `src/ai_sdlc/core/workitem_traceability.py`（或等价层）、`tests/unit/test_close_check.py`、`docs/framework-defect-backlog.zh-CN.md`
+- eval: latest-batch-overgeneralization 次数、missing-execution-coverage 检出率、traceability-ambiguity 事件数
+- 风险等级: 中
+- 收口说明（2026-03-29）: `003` 的 `tasks.md`、`task-execution-log.md` 与 `release-gate-evidence.md` 已重新对账，Batch `1~5` 的真实实现提交、验证命令与 release-gate evidence 均已补齐，台账不再允许“只看最新 batch”外推整项完成。
+- 可验证成功标准: 当 `tasks.md` 声明多个 batch 而 execution-log 只覆盖部分 batch 时，close surface 必须显式显示缺口；补齐所有 batch 的 execution evidence 或显式未开始状态后，台账口径恢复单一真值。
+- 是否需要回归测试补充: 是：补 planned batch 与 execution-log 覆盖对比的 parser / close-check 回归测试。
 
 ## FD-2026-03-24-001 | IDE 计划待办与仓库实现事实长期漂移
 

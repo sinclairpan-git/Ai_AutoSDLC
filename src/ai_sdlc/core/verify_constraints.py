@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from ai_sdlc.context.state import load_checkpoint
+from ai_sdlc.core.release_gate import ReleaseGateParseError, load_release_gate_report
 from ai_sdlc.gates.task_ac_checks import (
     first_doc_first_task_scope_violation,
     first_task_missing_acceptance,
@@ -58,6 +59,7 @@ VERIFICATION_PROFILE_SURFACES: dict[Path, tuple[str, ...]] = {
         "uv run ruff check",
     ),
 }
+FEATURE_CONTRACT_SURFACE_OBJECT = "feature_contract_surfaces"
 FRAMEWORK_DEFECT_BACKLOG_REQUIRED_FIELDS = (
     "现象",
     "触发场景",
@@ -79,10 +81,53 @@ VERIFICATION_GATE_OBJECTS = (
     "framework_defect_backlog",
     "doc_first_surfaces",
     "verification_profiles",
+    FEATURE_CONTRACT_SURFACE_OBJECT,
     "checkpoint_spec_dir",
     "tasks_acceptance",
     "skip_registry_mapping",
 )
+
+
+@dataclass(frozen=True, slots=True)
+class FeatureContractSurface:
+    """Minimal work-item scoped feature-contract surface requirement."""
+
+    label: str
+    relative_paths: tuple[Path, ...]
+    required_tokens: tuple[str, ...]
+
+
+FEATURE_CONTRACT_SURFACES: dict[str, tuple[FeatureContractSurface, ...]] = {
+    "003": (
+        # The 003 work item is intentionally scoped to the four missing contract groups
+        # called out in the task plan. Each surface is satisfied by one of the listed
+        # code files containing the required contract markers.
+        FeatureContractSurface(
+            label="draft_prd/final_prd",
+            relative_paths=(Path("src") / "ai_sdlc" / "models" / "work.py",),
+            required_tokens=("draft_prd", "final_prd"),
+        ),
+        FeatureContractSurface(
+            label="reviewer decision",
+            relative_paths=(Path("src") / "ai_sdlc" / "models" / "work.py",),
+            required_tokens=("reviewer_decision", "approve", "revise", "block"),
+        ),
+        FeatureContractSurface(
+            label="backend delegation/fallback",
+            relative_paths=(Path("src") / "ai_sdlc" / "backends" / "native.py",),
+            required_tokens=("backend_capability", "delegation", "fallback"),
+        ),
+        FeatureContractSurface(
+            label="release-gate evidence",
+            relative_paths=(
+                Path("specs")
+                / "003-cross-cutting-authoring-and-extension-contracts"
+                / "release-gate-evidence.md",
+            ),
+            required_tokens=("release_gate_evidence", "PASS", "WARN", "BLOCK"),
+        ),
+    ),
+}
 
 
 @dataclass(frozen=True, slots=True)
@@ -95,17 +140,21 @@ class ConstraintReport:
     gate_name: str = "Verification Gate"
     check_objects: tuple[str, ...] = VERIFICATION_GATE_OBJECTS
     coverage_gaps: tuple[str, ...] = ()
+    release_gate: dict[str, object] | None = None
     evidence_kinds: tuple[str, ...] = ("event", "structured_report")
 
 
 def build_constraint_report(root: Path) -> ConstraintReport:
     """Build a structured report for verify constraints."""
+    checkpoint = load_checkpoint(root)
     return ConstraintReport(
         root=str(root),
         gate_name="Verification Gate",
         source_name="verify constraints",
         check_objects=VERIFICATION_GATE_OBJECTS,
         blockers=tuple(collect_constraint_blockers(root)),
+        coverage_gaps=_feature_contract_coverage_gaps(root, checkpoint),
+        release_gate=_release_gate_surface(root, checkpoint),
     )
 
 
@@ -117,12 +166,14 @@ def build_verification_gate_context(root: Path) -> dict[str, object]:
         "verification_check_objects": report.check_objects,
         "constraint_blockers": report.blockers,
         "coverage_gaps": report.coverage_gaps,
+        "release_gate": report.release_gate,
     }
 
 
 def collect_constraint_blockers(root: Path) -> list[str]:
     """Return human-readable BLOCKER lines (empty list if none)."""
     blockers: list[str] = []
+    cp = load_checkpoint(root)
 
     constitution = root / CONSTITUTION_REL
     if not constitution.is_file():
@@ -135,7 +186,6 @@ def collect_constraint_blockers(root: Path) -> list[str]:
     blockers.extend(_doc_first_surface_blockers(root))
     blockers.extend(_verification_profile_blockers(root))
 
-    cp = load_checkpoint(root)
     if cp is None or cp.feature is None:
         return blockers
 
@@ -171,7 +221,119 @@ def collect_constraint_blockers(root: Path) -> list[str]:
             )
 
     blockers.extend(_skip_registry_mapping_blockers(root, spec_path, cp))
+    blockers.extend(_feature_contract_blockers(root, cp))
+    blockers.extend(_release_gate_blockers(root, cp))
     return blockers
+
+
+def _feature_contract_blockers(root: Path, checkpoint: Checkpoint | None) -> list[str]:
+    """Validate the active work-item feature-contract surfaces."""
+    gaps = _feature_contract_coverage_gaps(root, checkpoint)
+    if not gaps:
+        return []
+
+    work_item_id = _effective_feature_contract_wi_id(checkpoint)
+    return [
+        "BLOCKER: "
+        f"{work_item_id or 'active work item'} feature-contract surface missing: {gap}"
+        for gap in gaps
+    ]
+
+
+def _feature_contract_coverage_gaps(
+    root: Path,
+    checkpoint: Checkpoint | None,
+) -> tuple[str, ...]:
+    """Return missing feature-contract coverage labels for the active work item."""
+    if checkpoint is None or checkpoint.feature is None:
+        return ()
+
+    work_item_id = _effective_feature_contract_wi_id(checkpoint)
+    surfaces = _feature_contract_surfaces_for_work_item(work_item_id)
+    if not surfaces:
+        return ()
+
+    gaps = [
+        surface.label
+        for surface in surfaces
+        if not _feature_contract_surface_present(root, surface)
+    ]
+    return tuple(gaps)
+
+
+def _feature_contract_surfaces_for_work_item(
+    work_item_id: str,
+) -> tuple[FeatureContractSurface, ...]:
+    """Return the work-item-scoped feature-contract registry."""
+    if not _is_003_work_item(work_item_id):
+        return ()
+    return FEATURE_CONTRACT_SURFACES["003"]
+
+
+def _feature_contract_surface_present(
+    root: Path,
+    surface: FeatureContractSurface,
+) -> bool:
+    """Return True when at least one candidate file contains all contract markers."""
+    for rel in surface.relative_paths:
+        path = root / rel
+        if not path.is_file():
+            continue
+        text = path.read_text(encoding="utf-8")
+        if all(token in text for token in surface.required_tokens):
+            return True
+    return False
+
+
+def _is_003_work_item(work_item_id: str) -> bool:
+    normalized = work_item_id.strip()
+    return normalized == "003" or normalized.startswith("003-") or normalized.startswith("003/")
+
+
+def _effective_feature_contract_wi_id(checkpoint: Checkpoint | None) -> str:
+    """Resolve the active work-item id for feature-contract coverage."""
+    if checkpoint is None:
+        return ""
+    return _effective_wi_id_for_registry(checkpoint)
+
+
+def _release_gate_surface(
+    root: Path,
+    checkpoint: Checkpoint | None,
+) -> dict[str, object] | None:
+    path = _release_gate_path(root, checkpoint)
+    if path is None or not path.is_file():
+        return None
+    try:
+        report = load_release_gate_report(path)
+        assert report is not None
+    except (ReleaseGateParseError, AssertionError) as exc:
+        return {"source_path": str(path), "error": str(exc)}
+    return report.to_json_dict()
+
+
+def _release_gate_blockers(root: Path, checkpoint: Checkpoint | None) -> list[str]:
+    path = _release_gate_path(root, checkpoint)
+    if path is None or not path.is_file():
+        return []
+    try:
+        report = load_release_gate_report(path)
+        assert report is not None
+    except (ReleaseGateParseError, AssertionError) as exc:
+        return [f"BLOCKER: invalid release gate evidence: {exc}"]
+    return report.blocker_lines()
+
+
+def _release_gate_path(root: Path, checkpoint: Checkpoint | None) -> Path | None:
+    work_item_id = _effective_feature_contract_wi_id(checkpoint)
+    if not _is_003_work_item(work_item_id):
+        return None
+    return (
+        root
+        / "specs"
+        / "003-cross-cutting-authoring-and-extension-contracts"
+        / "release-gate-evidence.md"
+    )
 
 
 def _doc_first_surface_blockers(root: Path) -> list[str]:

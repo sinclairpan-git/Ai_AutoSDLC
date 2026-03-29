@@ -12,7 +12,7 @@ from ai_sdlc.core.state_machine import (
 from ai_sdlc.models.work import WorkItemStatus, WorkType
 from ai_sdlc.routers.bootstrap import init_project
 from ai_sdlc.routers.work_intake import KeywordWorkIntakeRouter
-from ai_sdlc.studios.prd_studio import check_prd_readiness
+from ai_sdlc.studios.prd_studio import PrdStudio, check_prd_readiness
 
 
 def _complete_prd() -> str:
@@ -51,6 +51,19 @@ class TestNewRequirementFlow:
         assert wi.status == WorkItemStatus.INTAKE_CLASSIFIED
         assert wi.work_item_id.startswith("WI-")
         assert load_project_state(project_dir).next_work_item_seq == 2
+
+        draft = PrdStudio().draft_from_idea(
+            "新增用户管理功能，实现注册和登录",
+            {"work_item_id": wi.work_item_id},
+        )
+        assert draft.draft_prd.work_item_id == wi.work_item_id
+        assert draft.draft_prd.document_state.value == "draft_prd"
+        assert any("待确认" in item for item in draft.draft_prd.placeholders)
+        assert draft.structured_metadata["review_checkpoints"] == [
+            "prd_freeze",
+            "docs_baseline_freeze",
+            "pre_close",
+        ]
 
         prd = tmp_path / "prd.md"
         prd.write_text(_complete_prd(), encoding="utf-8")

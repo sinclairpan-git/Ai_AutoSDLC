@@ -218,6 +218,16 @@ class TestStudioRouter:
         result = router.route(wi, prd_file)
         assert "prd_readiness" in result
 
+    def test_routes_new_requirement_idea_string_to_prd_authoring(self) -> None:
+        router = StudioRouter()
+        wi = self._make_work_item(WorkType.NEW_REQUIREMENT)
+        result = router.route(wi, "新增用户管理功能，实现注册和登录")
+        assert "prd_authoring" in result
+        assert result["prd_authoring"].draft_prd.work_item_id == wi.work_item_id
+        assert result["prd_authoring"].draft_prd.source_idea == (
+            "新增用户管理功能，实现注册和登录"
+        )
+
     def test_rejects_uncertain_type(self) -> None:
         router = StudioRouter()
         wi = self._make_work_item(WorkType.UNCERTAIN)

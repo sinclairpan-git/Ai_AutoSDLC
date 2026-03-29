@@ -6,7 +6,16 @@ import logging
 import re
 from pathlib import Path
 
-from ai_sdlc.models.work import PrdReadiness
+from ai_sdlc.models.work import (
+    DraftPrd,
+    PrdAuthoringResult,
+    PrdDocumentState,
+    PrdReadiness,
+    PrdReviewerCheckpoint,
+    PrdReviewerDecision,
+    PrdReviewerDecisionKind,
+)
+from ai_sdlc.utils.helpers import now_iso
 
 logger = logging.getLogger(__name__)
 
@@ -42,10 +51,106 @@ ALTERNATIVE_NAMES: dict[str, list[str]] = {
 }
 
 TBD_MARKERS = ["TBD", "TODO", "待定", "待补充", "FIXME"]
+REVIEW_CHECKPOINTS = [
+    PrdReviewerCheckpoint.PRD_FREEZE,
+    PrdReviewerCheckpoint.DOCS_BASELINE_FREEZE,
+    PrdReviewerCheckpoint.PRE_CLOSE,
+]
 
 
 class PrdStudio:
     """PRD Studio contract entrypoint aligned with `spec.md`."""
+
+    def draft_from_idea(
+        self,
+        idea: str,
+        context: dict[str, object] | None = None,
+    ) -> PrdAuthoringResult:
+        """Generate a structured draft PRD from a one-sentence idea."""
+        ctx = context or {}
+        work_item_id = str(ctx.get("work_item_id", "WI-UNKNOWN"))
+        normalized_idea = _normalize_idea(idea)
+        title = f"PRD 草案：{normalized_idea}"
+
+        draft = DraftPrd(
+            work_item_id=work_item_id,
+            source_idea=idea.strip(),
+            title=title,
+            background="待确认：项目背景、现状与约束需要 reviewer 补齐。",
+            product_goals=[
+                f"交付：{normalized_idea}",
+                "待确认：业务成功指标与范围边界",
+            ],
+            user_roles=["待确认：主要用户角色"],
+            functional_requirements=[
+                f"围绕“{normalized_idea}”拆解核心功能",
+                "待确认：输入、输出、边界和异常场景",
+            ],
+            core_business_rules=["待确认：核心业务规则"],
+            acceptance_criteria=["待确认：验收标准"],
+            development_priority=["P0：待确认"],
+            assumptions=[
+                "假设：这是一个新需求，而不是现有需求修订",
+                "假设：最终冻结范围会由 reviewer 决策确认",
+            ],
+            placeholders=[
+                "待确认：项目背景",
+                "待确认：用户角色",
+                "待确认：验收标准",
+                "待确认：开发优先级",
+            ],
+            structured_metadata={
+                "work_item_id": work_item_id,
+                "source_idea": idea.strip(),
+                "normalized_idea": normalized_idea,
+                "document_state": PrdDocumentState.DRAFT_PRD.value,
+                "review_checkpoints": [checkpoint.value for checkpoint in REVIEW_CHECKPOINTS],
+            },
+        )
+        draft_markdown = draft.render_markdown()
+        structured_metadata = dict(draft.structured_metadata)
+        structured_metadata.update(
+            {
+                "draft_markdown": draft_markdown,
+                "review_checkpoints": [
+                    checkpoint.value for checkpoint in REVIEW_CHECKPOINTS
+                ],
+                "read_surface": "status/recover",
+            }
+        )
+        return PrdAuthoringResult(
+            work_item_id=work_item_id,
+            draft_prd=draft,
+            draft_markdown=draft_markdown,
+            review_checkpoints=REVIEW_CHECKPOINTS[:],
+            structured_metadata=structured_metadata,
+        )
+
+    def record_reviewer_decision(
+        self,
+        *,
+        checkpoint: PrdReviewerCheckpoint,
+        decision: PrdReviewerDecisionKind,
+        target: str,
+        reason: str,
+        next_action: str,
+        timestamp: str | None = None,
+    ) -> PrdReviewerDecision:
+        """Create a reviewer decision artifact with a stable read-friendly shape."""
+        return PrdReviewerDecision(
+            checkpoint=checkpoint,
+            decision=decision,
+            target=target,
+            reason=reason,
+            next_action=next_action,
+            timestamp=timestamp or now_iso(),
+        )
+
+    def read_reviewer_decision(
+        self, decision: PrdReviewerDecision
+    ) -> dict[str, object]:
+        """Return a status/recover-friendly view of a reviewer decision."""
+        return decision.to_status_view()
 
     def review(self, prd_content: str) -> PrdReadiness:
         """Review PRD markdown content and return readiness + structured summary."""
@@ -117,26 +222,39 @@ class PrdStudioAdapter:
         input_data: object,
         context: dict[str, object] | None = None,
     ) -> dict[str, object]:
-        """Process a PRD path and return readiness check results.
+        """Process a PRD path or idea and return the matching PRD artifact.
 
         Args:
-            input_data: A Path to the PRD file, or a string path.
+            input_data: A Path to the PRD file, a string path, or a one-sentence idea.
             context: Optional context dict.
 
         Returns:
-            Dictionary with "prd_readiness" artifact.
+            Dictionary with either "prd_readiness" or "prd_authoring" artifacts.
         """
         if isinstance(input_data, str):
-            prd_path = Path(input_data)
-        elif isinstance(input_data, Path):
+            ctx = context or {}
+            mode = str(ctx.get("prd_input_kind", "")).strip().lower()
+            candidate_path = Path(input_data)
+            if mode == "path" or (
+                mode != "idea"
+                and (candidate_path.exists() or _looks_like_path_input(input_data))
+            ):
+                readiness = PrdStudio().review_path(candidate_path)
+                return {"prd_readiness": readiness}
+            authoring = PrdStudio().draft_from_idea(input_data, ctx)
+            return {
+                "prd_authoring": authoring,
+                "draft_prd": authoring.draft_prd,
+                "draft_markdown": authoring.draft_markdown,
+            }
+        if isinstance(input_data, Path):
             prd_path = input_data
+            readiness = PrdStudio().review_path(prd_path)
+            return {"prd_readiness": readiness}
         else:
             raise TypeError(
                 f"PrdStudioAdapter expects Path or str, got {type(input_data).__name__}"
             )
-
-        readiness = PrdStudio().review_path(prd_path)
-        return {"prd_readiness": readiness}
 
 
 _H2_PATTERN = re.compile(r"^##\s+(.+?)\s*$")
@@ -164,6 +282,23 @@ def _find_section_block(sections: dict[str, str], canonical_name: str) -> str:
         if any(candidate in key for candidate in candidates):
             return block
     return ""
+
+
+def _normalize_idea(idea: str) -> str:
+    stripped = idea.strip().rstrip("。.!?！？")
+    return stripped or "未命名需求"
+
+
+def _looks_like_path_input(value: str) -> bool:
+    stripped = value.strip()
+    if not stripped or "\n" in stripped:
+        return False
+    return (
+        stripped.endswith((".md", ".markdown"))
+        or stripped.startswith((".", "~"))
+        or "/" in stripped
+        or "\\" in stripped
+    )
 
 
 def _build_structured_summary(

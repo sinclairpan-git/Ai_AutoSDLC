@@ -118,6 +118,126 @@ def _write_doc_first_rule_surfaces(
     (rules_dir / "agent-skip-registry.zh.md").write_text(skip_registry, encoding="utf-8")
 
 
+def _write_003_feature_contract_surfaces(
+    root: Path,
+    *,
+    include_authoring: bool = True,
+    include_reviewer: bool = True,
+    include_backend: bool = True,
+    include_release_gate: bool = True,
+    release_gate_verdict: str = "PASS",
+) -> None:
+    models_dir = root / "src" / "ai_sdlc" / "models"
+    models_dir.mkdir(parents=True, exist_ok=True)
+    work_markers: list[str] = []
+    if include_authoring:
+        work_markers.extend(["draft_prd = True", "final_prd = True"])
+    if include_reviewer:
+        work_markers.extend(
+            [
+                "reviewer_decision = True",
+                "approve = True",
+                "revise = True",
+                "block = True",
+            ]
+        )
+    if work_markers:
+        (models_dir / "work.py").write_text(
+            "\"\"\"003 feature-contract surface.\"\"\"\n\n" + "\n".join(work_markers) + "\n",
+            encoding="utf-8",
+        )
+
+    if include_backend:
+        backend_dir = root / "src" / "ai_sdlc" / "backends"
+        backend_dir.mkdir(parents=True, exist_ok=True)
+        (backend_dir / "native.py").write_text(
+            "\"\"\"003 backend contract surface.\"\"\"\n\n"
+            "backend_capability = True\n"
+            "delegation = True\n"
+            "fallback = True\n",
+            encoding="utf-8",
+        )
+
+    if include_release_gate:
+        spec_dir = root / "specs" / "003-cross-cutting-authoring-and-extension-contracts"
+        spec_dir.mkdir(parents=True, exist_ok=True)
+        checks = [
+            {
+                "name": "recoverability",
+                "verdict": "PASS",
+                "evidence_source": "tests/integration/test_cli_recover.py",
+                "reason": "resume-pack rebuild and recover flows are covered",
+            },
+            {
+                "name": "portability",
+                "verdict": "PASS",
+                "evidence_source": "tests/integration/test_cli_module_invocation.py",
+                "reason": "module invocation fallback works without PATH assumptions",
+            },
+            {
+                "name": "multi_ide",
+                "verdict": "PASS",
+                "evidence_source": "tests/integration/test_cli_status.py",
+                "reason": "status/adapter surfaces keep IDE-aware behavior bounded",
+            },
+            {
+                "name": "stability",
+                "verdict": "PASS",
+                "evidence_source": "uv run pytest -q",
+                "reason": "focused regression suites are green",
+            },
+        ]
+        if release_gate_verdict in {"WARN", "BLOCK"}:
+            checks[1]["verdict"] = release_gate_verdict
+            checks[1]["reason"] = f"portability gate escalated to {release_gate_verdict}"
+        (spec_dir / "release-gate-evidence.md").write_text(
+            "# 003 release gate evidence\n\n"
+            "- release_gate_evidence: present\n"
+            "- PASS: supported\n"
+            "- WARN: supported\n"
+            "- BLOCK: supported\n\n"
+            "```json\n"
+            "{\n"
+            '  "release_gate_evidence": {\n'
+            f'    "overall_verdict": "{release_gate_verdict}",\n'
+            '    "checks": [\n'
+            + ",\n".join(
+                "      {\n"
+                f'        "name": "{check["name"]}",\n'
+                f'        "verdict": "{check["verdict"]}",\n'
+                f'        "evidence_source": "{check["evidence_source"]}",\n'
+                f'        "reason": "{check["reason"]}"\n'
+                "      }"
+                for check in checks
+            )
+            + "\n"
+            "    ]\n"
+            "  }\n"
+            "}\n"
+            "```\n",
+            encoding="utf-8",
+        )
+
+
+def _write_003_checkpoint(root: Path, *, feature_id: str = "003") -> None:
+    _minimal_constitution(root)
+    spec = root / "specs" / "003-cross-cutting-authoring-and-extension-contracts"
+    spec.mkdir(parents=True, exist_ok=True)
+    save_checkpoint(
+        root,
+        Checkpoint(
+            current_stage="design",
+            feature=FeatureInfo(
+                id=feature_id,
+                spec_dir="specs/003-cross-cutting-authoring-and-extension-contracts",
+                design_branch="d",
+                feature_branch="f",
+                current_branch="main",
+            ),
+        ),
+    )
+
+
 class TestCliVerifyConstraints:
     def test_exit_1_missing_constitution(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
@@ -284,6 +404,91 @@ class TestCliVerifyConstraints:
         assert payload["verification_gate"]["name"] == "Verification Gate"
         assert payload["verification_gate"]["source_name"] == "verify constraints"
         assert "required_governance_files" in payload["verification_gate"]["check_objects"]
+
+    def test_exit_1_when_003_feature_contract_surfaces_missing(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        init_project(tmp_path)
+        _write_003_checkpoint(tmp_path)
+        monkeypatch.chdir(tmp_path)
+
+        result = runner.invoke(app, ["verify", "constraints"])
+
+        assert result.exit_code == 1
+        assert "draft_prd/final_prd" in result.output
+        assert "reviewer decision" in result.output
+        assert "backend delegation/fallback" in result.output
+        assert "release-gate evidence" in result.output
+
+    def test_json_output_exposes_003_feature_contract_coverage_gaps(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        init_project(tmp_path)
+        _write_003_checkpoint(tmp_path)
+        monkeypatch.chdir(tmp_path)
+
+        result = runner.invoke(app, ["verify", "constraints", "--json"])
+
+        assert result.exit_code == 1
+        payload = json.loads(result.output)
+        assert "feature_contract_surfaces" in payload["verification_gate"]["check_objects"]
+        assert payload["verification_gate"]["coverage_gaps"] == [
+            "draft_prd/final_prd",
+            "reviewer decision",
+            "backend delegation/fallback",
+            "release-gate evidence",
+        ]
+
+    def test_exit_0_when_003_feature_contract_surfaces_complete(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        init_project(tmp_path)
+        _write_003_checkpoint(tmp_path)
+        _write_003_feature_contract_surfaces(tmp_path)
+        monkeypatch.chdir(tmp_path)
+
+        result = runner.invoke(app, ["verify", "constraints", "--json"])
+
+        assert result.exit_code == 0
+        payload = json.loads(result.output)
+        assert payload["ok"] is True
+        assert payload["verification_gate"]["coverage_gaps"] == []
+        assert payload["verification_gate"]["release_gate"]["overall_verdict"] == "PASS"
+
+    def test_exit_1_when_003_release_gate_verdict_is_block(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        init_project(tmp_path)
+        _write_003_checkpoint(tmp_path)
+        _write_003_feature_contract_surfaces(tmp_path, release_gate_verdict="BLOCK")
+        monkeypatch.chdir(tmp_path)
+
+        result = runner.invoke(app, ["verify", "constraints", "--json"])
+
+        assert result.exit_code == 1
+        payload = json.loads(result.output)
+        assert payload["verification_gate"]["release_gate"]["overall_verdict"] == "BLOCK"
+        assert any(
+            "release gate portability -> BLOCK" in blocker for blocker in payload["blockers"]
+        )
+
+    def test_exit_1_when_003_feature_contract_surfaces_missing_but_feature_id_is_unknown(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        init_project(tmp_path)
+        _write_003_checkpoint(tmp_path, feature_id="unknown")
+        monkeypatch.chdir(tmp_path)
+
+        result = runner.invoke(app, ["verify", "constraints", "--json"])
+
+        assert result.exit_code == 1
+        payload = json.loads(result.output)
+        assert payload["verification_gate"]["coverage_gaps"] == [
+            "draft_prd/final_prd",
+            "reviewer decision",
+            "backend delegation/fallback",
+            "release-gate evidence",
+        ]
 
     def test_json_output_outside_project_includes_root(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch

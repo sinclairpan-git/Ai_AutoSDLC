@@ -6,12 +6,21 @@ from ai_sdlc.core.p1_artifacts import (
     load_execution_path,
     load_parallel_coordination_artifact,
     load_resume_point,
+    load_reviewer_decision,
     save_execution_path,
     save_parallel_coordination_artifact,
     save_resume_point,
+    save_reviewer_decision,
 )
 from ai_sdlc.models.state import MergeSimulation, OverlapResult, WorkerAssignment
-from ai_sdlc.models.work import ExecutionPath, ExecutionPathStep, ResumePoint
+from ai_sdlc.models.work import (
+    ExecutionPath,
+    ExecutionPathStep,
+    PrdReviewerCheckpoint,
+    PrdReviewerDecision,
+    PrdReviewerDecisionKind,
+    ResumePoint,
+)
 
 
 def test_save_and_load_resume_point(tmp_path) -> None:
@@ -28,6 +37,25 @@ def test_save_and_load_resume_point(tmp_path) -> None:
 
     assert path.name == "resume-point.yaml"
     assert loaded == resume_point
+
+
+def test_save_and_load_reviewer_decision(tmp_path) -> None:
+    decision = PrdReviewerDecision(
+        checkpoint=PrdReviewerCheckpoint.PRD_FREEZE,
+        decision=PrdReviewerDecisionKind.APPROVE,
+        target="WI-001",
+        reason="Looks good",
+        next_action="Persist final_prd",
+        timestamp="2026-03-29T10:00:00+08:00",
+    )
+
+    path = save_reviewer_decision(tmp_path, "WI-001", decision)
+    loaded = load_reviewer_decision(tmp_path, "WI-001")
+
+    assert path.name == "reviewer-decision.yaml"
+    assert loaded == decision
+    assert loaded is not None
+    assert loaded.to_status_view()["reviewer_decision"] == "approve"
 
 
 def test_save_and_load_execution_path(tmp_path) -> None:

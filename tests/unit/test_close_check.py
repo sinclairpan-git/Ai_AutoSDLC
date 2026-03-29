@@ -8,6 +8,7 @@ from pathlib import Path
 import pytest
 
 from ai_sdlc.core.close_check import run_close_check
+from ai_sdlc.core.workitem_traceability import extract_execution_batches
 
 
 def _commit_all(root: Path, message: str) -> None:
@@ -20,6 +21,7 @@ def _write_execution_log(
     *,
     git_committed: bool,
     commit_hash: str = "N/A",
+    batch_number: int = 1,
     verification_profile: str = "code-change",
     verification_commands: tuple[str, ...] = (
         "uv run pytest tests/unit/test_close_check.py -q",
@@ -34,7 +36,7 @@ def _write_execution_log(
     path_text = "、".join(f"`{path}`" for path in changed_paths)
     (wi_dir / "task-execution-log.md").write_text(
         "# Log\n\n"
-        "### Batch 2026-03-28-001 | demo\n\n"
+        f"### Batch 2026-03-28-{batch_number:03d} | Batch {batch_number} demo\n\n"
         "#### 2.2 统一验证命令\n"
         f"- **验证画像**：`{verification_profile}`\n"
         f"{command_lines}"
@@ -49,12 +51,72 @@ def _write_execution_log(
     )
 
 
+def _write_release_gate_evidence(wi_dir: Path, *, overall_verdict: str = "PASS") -> None:
+    checks = [
+        {
+            "name": "recoverability",
+            "verdict": "PASS",
+            "evidence_source": "tests/integration/test_cli_recover.py",
+            "reason": "resume-pack rebuild and recover flows are covered",
+        },
+        {
+            "name": "portability",
+            "verdict": overall_verdict,
+            "evidence_source": "tests/integration/test_cli_module_invocation.py",
+            "reason": f"portability gate escalated to {overall_verdict}",
+        },
+        {
+            "name": "multi_ide",
+            "verdict": "PASS",
+            "evidence_source": "tests/integration/test_cli_status.py",
+            "reason": "status/adapter surfaces keep IDE-aware behavior bounded",
+        },
+        {
+            "name": "stability",
+            "verdict": "PASS",
+            "evidence_source": "uv run pytest -q",
+            "reason": "focused regression suites are green",
+        },
+    ]
+    if overall_verdict == "PASS":
+        checks[1]["reason"] = "module invocation fallback works without PATH assumptions"
+    rendered_checks = ",\n".join(
+        "      {\n"
+        f'        "name": "{check["name"]}",\n'
+        f'        "verdict": "{check["verdict"]}",\n'
+        f'        "evidence_source": "{check["evidence_source"]}",\n'
+        f'        "reason": "{check["reason"]}"\n'
+        "      }"
+        for check in checks
+    )
+    (wi_dir / "release-gate-evidence.md").write_text(
+        "# 003 release gate evidence\n\n"
+        "- release_gate_evidence: present\n"
+        "- PASS: supported\n"
+        "- WARN: supported\n"
+        "- BLOCK: supported\n\n"
+        "```json\n"
+        "{\n"
+        '  "release_gate_evidence": {\n'
+        f'    "overall_verdict": "{overall_verdict}",\n'
+        '    "checks": [\n'
+        f"{rendered_checks}\n"
+        "    ]\n"
+        "  }\n"
+        "}\n"
+        "```\n",
+        encoding="utf-8",
+    )
+
+
 def _setup_repo(
     root: Path,
     *,
     tasks_body: str,
     plan_status: str,
+    wi_rel: str = "specs/001-wi",
     git_committed: bool = True,
+    execution_batch_number: int = 1,
     verification_profile: str = "code-change",
     verification_commands: tuple[str, ...] = (
         "uv run pytest tests/unit/test_close_check.py -q",
@@ -94,7 +156,7 @@ def _setup_repo(
         encoding="utf-8",
     )
 
-    wi = root / "specs" / "001-wi"
+    wi = root / wi_rel
     wi.mkdir(parents=True)
     (wi / "tasks.md").write_text(
         "---\n"
@@ -106,6 +168,7 @@ def _setup_repo(
     _write_execution_log(
         wi,
         git_committed=False,
+        batch_number=execution_batch_number,
         verification_profile=verification_profile,
         verification_commands=verification_commands,
         changed_paths=changed_paths,
@@ -126,12 +189,13 @@ def _setup_repo(
             wi,
             git_committed=True,
             commit_hash=head,
+            batch_number=execution_batch_number,
             verification_profile=verification_profile,
             verification_commands=verification_commands,
             changed_paths=changed_paths,
         )
         subprocess.run(
-            ["git", "add", "specs/001-wi/task-execution-log.md"],
+            ["git", "add", f"{wi_rel}/task-execution-log.md"],
             cwd=root,
             check=True,
             capture_output=True,
@@ -242,6 +306,248 @@ def test_close_check_blocker_when_latest_batch_missing_verification_profile(
     r = run_close_check(cwd=root, wi=Path("specs/001-wi"))
     assert r.ok is False
     assert any("verification profile" in b for b in r.blockers)
+
+
+def test_extract_execution_batches_handles_realistic_header_formats() -> None:
+    log_text = (
+        "### Batch 2026-03-25-001 | Task 6.3–6.5\n"
+        "### Batch 2026-03-25-002 | Task 6.1（T10 可移植性审计收口）\n"
+    )
+
+    assert extract_execution_batches(log_text) == []
+
+
+def test_close_check_passes_when_explicit_execution_batch_range_covers_planned_batches(
+    tmp_path: Path,
+) -> None:
+    root = tmp_path / "repo3e1"
+    root.mkdir()
+    _setup_repo(
+        root,
+        tasks_body=(
+            "## Batch 2：contract models\n"
+            "### Task 1.1 — 定义 draft PRD / reviewer / release evidence 的正式对象模型\n"
+            "- **验收标准（AC）**：对象模型可区分 draft / final\n\n"
+            "## Batch 3：PRD draft authoring\n"
+            "### Task 2.1 — 实现一句话想法 -> draft PRD 生成入口\n"
+            "- **验收标准（AC）**：一行想法可以生成 draft PRD\n"
+            "## Batch 4：Human Reviewer checkpoints\n"
+            "### Task 3.1 — 定义 reviewer decision artifact\n"
+            "- **验收标准（AC）**：决策可记录\n\n"
+            "## Batch 5：backend delegation / fallback\n"
+            "### Task 4.1 — 实现 backend capability declaration\n"
+            "- **验收标准（AC）**：capability 可枚举\n"
+        ),
+        plan_status="completed",
+    )
+    wi = root / "specs" / "001-wi"
+    wi.joinpath("task-execution-log.md").write_text(
+        "# Log\n\n"
+        "### Batch 2026-03-29-001 | 002 Batch 2-5 runtime contract closure\n\n"
+        "#### 2.2 统一验证命令\n"
+        "- **验证画像**：`code-change`\n"
+        "- 命令：`uv run pytest tests/unit/test_close_check.py -q`\n"
+        "- 命令：`uv run ruff check src tests`\n"
+        "- 命令：`uv run ai-sdlc verify constraints`\n"
+        "#### 2.3 任务记录\n"
+        "- **改动范围**：`src/example.py`、`tests/test_example.py`\n"
+        "#### 2.4 代码审查（`rules/code-review.md` 摘要）\n"
+        "#### 2.5 任务/计划同步状态（Mandatory）\n"
+        "#### 2.8 归档后动作\n"
+        "- **已完成 git 提交**：是\n"
+        "- **提交哈希**：`abc1234`\n",
+        encoding="utf-8",
+    )
+    _commit_all(root, "docs: realistic execution headers")
+
+    r = run_close_check(cwd=root, wi=Path("specs/001-wi"))
+    assert r.ok is True
+    assert r.blockers == []
+
+
+def test_close_check_blocker_when_in_progress_history_is_not_a_reopen_signal(
+    tmp_path: Path,
+) -> None:
+    root = tmp_path / "repo3e2"
+    root.mkdir()
+    _setup_repo(
+        root,
+        tasks_body=(
+            "## Batch 1：contract models\n"
+            "### Task 1.1 — 定义 draft PRD / reviewer / release evidence 的正式对象模型\n"
+            "- **验收标准（AC）**：对象模型可区分 draft / final\n"
+        ),
+        plan_status="completed",
+    )
+    exec_log = root / "specs" / "001-wi" / "task-execution-log.md"
+    exec_log.write_text(
+        "# Log\n\n"
+        "### Batch 2026-03-28-001 | 001 Batch 1 demo\n\n"
+        "#### 2.2 统一验证命令\n"
+        "- **验证画像**：`code-change`\n"
+        "- 命令：`uv run pytest tests/unit/test_close_check.py -q`\n"
+        "- 命令：`uv run ruff check src tests`\n"
+        "- 命令：`uv run ai-sdlc verify constraints`\n"
+        "#### 2.3 任务记录\n"
+        "- **改动范围**：`src/example.py`、`tests/test_example.py`\n"
+        "#### 2.4 代码审查（`rules/code-review.md` 摘要）\n"
+        "#### 2.5 任务/计划同步状态（Mandatory）\n"
+        "- 历史状态：this item was previously in_progress while batch 7 was still running\n"
+        "#### 2.8 归档后动作\n"
+        "- **已完成 git 提交**：是\n"
+        "- **提交哈希**：`abc1234`\n",
+        encoding="utf-8",
+    )
+    _commit_all(root, "docs: record reopened note")
+
+    r = run_close_check(cwd=root, wi=Path("specs/001-wi"))
+    assert r.ok is True
+    assert all("reopen" not in b.lower() for b in r.blockers)
+
+
+def test_close_check_passes_for_001_style_history_without_status_correction(
+    tmp_path: Path,
+) -> None:
+    root = tmp_path / "repo3e2b"
+    root.mkdir()
+    _setup_repo(
+        root,
+        tasks_body=(
+            "## Batch 1：contract models\n"
+            "### Task 1.1 — 定义 draft PRD / reviewer / release evidence 的正式对象模型\n"
+            "- **验收标准（AC）**：对象模型可区分 draft / final\n"
+        ),
+        plan_status="completed",
+    )
+    wi = root / "specs" / "001-wi"
+    wi.joinpath("task-execution-log.md").write_text(
+        "# Log\n\n"
+        "### Batch 2026-03-28-001 | 001 Batch 1 demo\n\n"
+        "#### 2.2 统一验证命令\n"
+        "- **验证画像**：`code-change`\n"
+        "- 命令：`uv run pytest tests/unit/test_close_check.py -q`\n"
+        "- 命令：`uv run ruff check src tests`\n"
+        "- 命令：`uv run ai-sdlc verify constraints`\n"
+        "#### 2.3 任务记录\n"
+        "- **改动范围**：`src/example.py`、`tests/test_example.py`\n"
+        "#### 2.4 代码审查（`rules/code-review.md` 摘要）\n"
+        "#### 2.5 任务/计划同步状态（Mandatory）\n"
+        "- 历史状态：this item was previously in_progress while batch 7 was still running\n"
+        "#### 2.8 归档后动作\n"
+        "- **已完成 git 提交**：是\n"
+        "- **提交哈希**：`abc1234`\n",
+        encoding="utf-8",
+    )
+    _commit_all(root, "docs: 001-style historical note")
+
+    r = run_close_check(cwd=root, wi=Path("specs/001-wi"))
+    assert r.ok is True
+    assert r.blockers == []
+
+
+def test_close_check_passes_when_latest_only_batch_without_status_correction(
+    tmp_path: Path,
+) -> None:
+    root = tmp_path / "repo3e3"
+    root.mkdir()
+    _setup_repo(
+        root,
+        tasks_body=(
+            "## Batch 1：PRD draft authoring\n"
+            "### Task 1.1 — 实现一句话想法 -> draft PRD 生成入口\n"
+            "- **验收标准（AC）**：一行想法可以生成 draft PRD\n\n"
+            "## Batch 2：Human Reviewer checkpoints\n"
+            "### Task 2.1 — 把 reviewer checkpoints 接入 PRD freeze / docs baseline freeze / close 前\n"
+            "- **验收标准（AC）**：reviewer 决策可被 close-check 读取\n\n"
+        ),
+        plan_status="completed",
+        execution_batch_number=2,
+    )
+
+    r = run_close_check(cwd=root, wi=Path("specs/001-wi"))
+    assert r.ok is True
+    assert r.blockers == []
+
+
+def test_close_check_blocker_when_003_status_correction_is_explicit(
+    tmp_path: Path,
+) -> None:
+    root = tmp_path / "repo3e3b"
+    root.mkdir()
+    _setup_repo(
+        root,
+        tasks_body=(
+            "## 执行状态校正（2026-03-29）\n"
+            "- `003` work item 总体状态恢复为 `in_progress`\n\n"
+            "## Batch 1：PRD draft authoring\n"
+            "### Task 1.1 — 实现一句话想法 -> draft PRD 生成入口\n"
+            "- **验收标准（AC）**：一行想法可以生成 draft PRD\n\n"
+            "## Batch 2：Human Reviewer checkpoints\n"
+            "### Task 2.1 — 把 reviewer checkpoints 接入 PRD freeze / docs baseline freeze / close 前\n"
+            "- **验收标准（AC）**：reviewer 决策可被 close-check 读取\n"
+        ),
+        plan_status="completed",
+        execution_batch_number=2,
+    )
+
+    r = run_close_check(cwd=root, wi=Path("specs/001-wi"))
+    assert r.ok is False
+    assert any("batch" in b.lower() for b in r.blockers)
+
+
+def test_close_check_passes_when_generic_archive_headers_do_not_count_as_batches(
+    tmp_path: Path,
+) -> None:
+    root = tmp_path / "repo3e4"
+    root.mkdir()
+    _setup_repo(
+        root,
+        tasks_body=(
+            "## Batch 1：PRD draft authoring\n"
+            "### Task 1.1 — 实现一句话想法 -> draft PRD 生成入口\n"
+            "- **验收标准（AC）**：一行想法可以生成 draft PRD\n\n"
+            "## Batch 2：Human Reviewer checkpoints\n"
+            "### Task 2.1 — 把 reviewer checkpoints 接入 PRD freeze / docs baseline freeze / close 前\n"
+            "- **验收标准（AC）**：reviewer 决策可被 close-check 读取\n"
+        ),
+        plan_status="completed",
+    )
+    wi = root / "specs" / "001-wi"
+    wi.joinpath("task-execution-log.md").write_text(
+        "# Log\n\n"
+        "### Batch 2026-03-25-001 | Task 6.3–6.5\n\n"
+        "#### 2.2 统一验证命令\n"
+        "- **验证画像**：`code-change`\n"
+        "- 命令：`uv run pytest tests/unit/test_close_check.py -q`\n"
+        "- 命令：`uv run ruff check src tests`\n"
+        "- 命令：`uv run ai-sdlc verify constraints`\n"
+        "#### 2.3 任务记录\n"
+        "- **改动范围**：`src/example.py`、`tests/test_example.py`\n"
+        "#### 2.4 代码审查（`rules/code-review.md` 摘要）\n"
+        "#### 2.5 任务/计划同步状态（Mandatory）\n"
+        "#### 2.8 归档后动作\n"
+        "- **已完成 git 提交**：是\n"
+        "- **提交哈希**：`abc1234`\n\n"
+        "### Batch 2026-03-25-002 | Task 6.1（T10 可移植性审计收口）\n\n"
+        "#### 2.2 统一验证命令\n"
+        "- **验证画像**：`code-change`\n"
+        "- 命令：`uv run pytest tests/unit/test_close_check.py -q`\n"
+        "- 命令：`uv run ruff check src tests`\n"
+        "- 命令：`uv run ai-sdlc verify constraints`\n"
+        "#### 2.3 任务记录\n"
+        "- **改动范围**：`src/example.py`、`tests/test_example.py`\n"
+        "#### 2.4 代码审查（`rules/code-review.md` 摘要）\n"
+        "#### 2.5 任务/计划同步状态（Mandatory）\n"
+        "#### 2.8 归档后动作\n"
+        "- **已完成 git 提交**：是\n"
+        "- **提交哈希**：`def5678`\n",
+        encoding="utf-8",
+    )
+    _commit_all(root, "docs: generic headers should not count")
+
+    r = run_close_check(cwd=root, wi=Path("specs/001-wi"))
+    assert r.ok is True
+    assert r.blockers == []
 
 
 def test_close_check_pass_for_docs_only_profile_with_minimal_evidence(
@@ -425,3 +731,42 @@ def test_close_check_respects_synthetic_command_from_registry_sc023(
     r = run_close_check(cwd=root, wi=Path("specs/001-wi"))
     assert r.ok is False
     assert any("synthetic-new-cmd" in b for b in r.blockers)
+
+
+def test_close_check_blocks_when_003_release_gate_evidence_missing(tmp_path: Path) -> None:
+    root = tmp_path / "repo10"
+    root.mkdir()
+    _setup_repo(
+        root,
+        tasks_body="- [x] done\n### Task 1.1\n- **验收标准（AC）**：ok",
+        plan_status="completed",
+        wi_rel="specs/003-cross-cutting-authoring-and-extension-contracts",
+    )
+
+    r = run_close_check(
+        cwd=root,
+        wi=Path("specs/003-cross-cutting-authoring-and-extension-contracts"),
+    )
+    assert r.ok is False
+    assert any("release gate evidence missing" in b for b in r.blockers)
+
+
+def test_close_check_blocks_when_release_gate_verdict_is_block(tmp_path: Path) -> None:
+    root = tmp_path / "repo11"
+    root.mkdir()
+    _setup_repo(
+        root,
+        tasks_body="- [x] done\n### Task 1.1\n- **验收标准（AC）**：ok",
+        plan_status="completed",
+        wi_rel="specs/003-cross-cutting-authoring-and-extension-contracts",
+    )
+    wi = root / "specs" / "003-cross-cutting-authoring-and-extension-contracts"
+    _write_release_gate_evidence(wi, overall_verdict="BLOCK")
+    _commit_all(root, "docs: add blocking release gate evidence")
+
+    r = run_close_check(
+        cwd=root,
+        wi=Path("specs/003-cross-cutting-authoring-and-extension-contracts"),
+    )
+    assert r.ok is False
+    assert any("release gate portability -> BLOCK" in b for b in r.blockers)
