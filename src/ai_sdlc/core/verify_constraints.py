@@ -89,12 +89,19 @@ VERIFICATION_GATE_OBJECTS = (
 
 
 @dataclass(frozen=True, slots=True)
+class FeatureContractEvidence:
+    """One evidence entry required to satisfy a feature-contract surface."""
+
+    relative_paths: tuple[Path, ...]
+    required_tokens: tuple[str, ...]
+
+
+@dataclass(frozen=True, slots=True)
 class FeatureContractSurface:
     """Minimal work-item scoped feature-contract surface requirement."""
 
     label: str
-    relative_paths: tuple[Path, ...]
-    required_tokens: tuple[str, ...]
+    evidence_entries: tuple[FeatureContractEvidence, ...]
 
 
 FEATURE_CONTRACT_SURFACES: dict[str, tuple[FeatureContractSurface, ...]] = {
@@ -104,27 +111,86 @@ FEATURE_CONTRACT_SURFACES: dict[str, tuple[FeatureContractSurface, ...]] = {
         # code files containing the required contract markers.
         FeatureContractSurface(
             label="draft_prd/final_prd",
-            relative_paths=(Path("src") / "ai_sdlc" / "models" / "work.py",),
-            required_tokens=("draft_prd", "final_prd"),
+            evidence_entries=(
+                FeatureContractEvidence(
+                    relative_paths=(Path("src") / "ai_sdlc" / "models" / "work.py",),
+                    required_tokens=("draft_prd", "final_prd"),
+                ),
+            ),
         ),
         FeatureContractSurface(
             label="reviewer decision",
-            relative_paths=(Path("src") / "ai_sdlc" / "models" / "work.py",),
-            required_tokens=("reviewer_decision", "approve", "revise", "block"),
+            evidence_entries=(
+                FeatureContractEvidence(
+                    relative_paths=(Path("src") / "ai_sdlc" / "models" / "work.py",),
+                    required_tokens=("reviewer_decision", "approve", "revise", "block"),
+                ),
+                FeatureContractEvidence(
+                    relative_paths=(Path("src") / "ai_sdlc" / "core" / "reviewer_gate.py",),
+                    required_tokens=(
+                        "ALLOW",
+                        "DENY_MISSING",
+                        "DENY_REVISE",
+                        "DENY_BLOCK",
+                    ),
+                ),
+                FeatureContractEvidence(
+                    relative_paths=(Path("src") / "ai_sdlc" / "core" / "state_machine.py",),
+                    required_tokens=(
+                        "transition_work_item",
+                        "ReviewerGateOutcomeKind",
+                        "InvalidTransitionError",
+                    ),
+                ),
+                FeatureContractEvidence(
+                    relative_paths=(Path("src") / "ai_sdlc" / "core" / "close_check.py",),
+                    required_tokens=(
+                        "evaluate_reviewer_gate",
+                        "DEV_REVIEWED",
+                        "review_gate",
+                    ),
+                ),
+            ),
         ),
         FeatureContractSurface(
             label="backend delegation/fallback",
-            relative_paths=(Path("src") / "ai_sdlc" / "backends" / "native.py",),
-            required_tokens=("backend_capability", "delegation", "fallback"),
+            evidence_entries=(
+                FeatureContractEvidence(
+                    relative_paths=(Path("src") / "ai_sdlc" / "backends" / "native.py",),
+                    required_tokens=("backend_capability", "delegation", "fallback"),
+                ),
+                FeatureContractEvidence(
+                    relative_paths=(Path("src") / "ai_sdlc" / "backends" / "routing.py",),
+                    required_tokens=(
+                        "BackendRoutingCoordinator",
+                        "generate_spec",
+                        "generate_plan",
+                        "generate_tasks",
+                    ),
+                ),
+                FeatureContractEvidence(
+                    relative_paths=(Path("src") / "ai_sdlc" / "generators" / "doc_gen.py",),
+                    required_tokens=(
+                        "backend_registry",
+                        "requested_backend",
+                        "backend_policy",
+                        "backend_decisions",
+                    ),
+                ),
+            ),
         ),
         FeatureContractSurface(
             label="release-gate evidence",
-            relative_paths=(
-                Path("specs")
-                / "003-cross-cutting-authoring-and-extension-contracts"
-                / "release-gate-evidence.md",
+            evidence_entries=(
+                FeatureContractEvidence(
+                    relative_paths=(
+                        Path("specs")
+                        / "003-cross-cutting-authoring-and-extension-contracts"
+                        / "release-gate-evidence.md",
+                    ),
+                    required_tokens=("release_gate_evidence", "PASS", "WARN", "BLOCK"),
+                ),
             ),
-            required_tokens=("release_gate_evidence", "PASS", "WARN", "BLOCK"),
         ),
     ),
 }
@@ -274,13 +340,24 @@ def _feature_contract_surface_present(
     root: Path,
     surface: FeatureContractSurface,
 ) -> bool:
-    """Return True when at least one candidate file contains all contract markers."""
-    for rel in surface.relative_paths:
+    """Return True when all required evidence entries are present."""
+    return all(
+        _feature_contract_evidence_present(root, evidence)
+        for evidence in surface.evidence_entries
+    )
+
+
+def _feature_contract_evidence_present(
+    root: Path,
+    evidence: FeatureContractEvidence,
+) -> bool:
+    """Return True when one evidence entry's required tokens exist in a file."""
+    for rel in evidence.relative_paths:
         path = root / rel
         if not path.is_file():
             continue
         text = path.read_text(encoding="utf-8")
-        if all(token in text for token in surface.required_tokens):
+        if all(token in text for token in evidence.required_tokens):
             return True
     return False
 

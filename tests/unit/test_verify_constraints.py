@@ -86,8 +86,10 @@ def _write_003_feature_contract_surfaces(
     root: Path,
     *,
     include_authoring: bool = True,
-    include_reviewer: bool = True,
-    include_backend: bool = True,
+    include_reviewer_model: bool = True,
+    include_reviewer_runtime: bool = True,
+    include_backend_contract: bool = True,
+    include_backend_runtime: bool = True,
     include_release_gate: bool = True,
     release_gate_verdict: str = "PASS",
 ) -> None:
@@ -96,7 +98,7 @@ def _write_003_feature_contract_surfaces(
     work_markers: list[str] = []
     if include_authoring:
         work_markers.extend(["draft_prd = True", "final_prd = True"])
-    if include_reviewer:
+    if include_reviewer_model:
         work_markers.extend(
             [
                 "reviewer_decision = True",
@@ -111,7 +113,33 @@ def _write_003_feature_contract_surfaces(
             encoding="utf-8",
         )
 
-    if include_backend:
+    if include_reviewer_runtime:
+        core_dir = root / "src" / "ai_sdlc" / "core"
+        core_dir.mkdir(parents=True, exist_ok=True)
+        (core_dir / "reviewer_gate.py").write_text(
+            "\"\"\"003 reviewer gate runtime surface.\"\"\"\n\n"
+            "ALLOW = True\n"
+            "DENY_MISSING = True\n"
+            "DENY_REVISE = True\n"
+            "DENY_BLOCK = True\n",
+            encoding="utf-8",
+        )
+        (core_dir / "state_machine.py").write_text(
+            "\"\"\"003 state machine runtime surface.\"\"\"\n\n"
+            "transition_work_item = True\n"
+            "ReviewerGateOutcomeKind = True\n"
+            "InvalidTransitionError = True\n",
+            encoding="utf-8",
+        )
+        (core_dir / "close_check.py").write_text(
+            "\"\"\"003 close check runtime surface.\"\"\"\n\n"
+            "evaluate_reviewer_gate = True\n"
+            "DEV_REVIEWED = True\n"
+            "review_gate = True\n",
+            encoding="utf-8",
+        )
+
+    if include_backend_contract:
         backend_dir = root / "src" / "ai_sdlc" / "backends"
         backend_dir.mkdir(parents=True, exist_ok=True)
         (backend_dir / "native.py").write_text(
@@ -119,6 +147,28 @@ def _write_003_feature_contract_surfaces(
             "backend_capability = True\n"
             "delegation = True\n"
             "fallback = True\n",
+            encoding="utf-8",
+        )
+
+    if include_backend_runtime:
+        backend_dir = root / "src" / "ai_sdlc" / "backends"
+        backend_dir.mkdir(parents=True, exist_ok=True)
+        (backend_dir / "routing.py").write_text(
+            "\"\"\"003 routing runtime surface.\"\"\"\n\n"
+            "BackendRoutingCoordinator = True\n"
+            "generate_spec = True\n"
+            "generate_plan = True\n"
+            "generate_tasks = True\n",
+            encoding="utf-8",
+        )
+        gen_dir = root / "src" / "ai_sdlc" / "generators"
+        gen_dir.mkdir(parents=True, exist_ok=True)
+        (gen_dir / "doc_gen.py").write_text(
+            "\"\"\"003 doc generator runtime surface.\"\"\"\n\n"
+            "backend_registry = True\n"
+            "requested_backend = True\n"
+            "backend_policy = True\n"
+            "backend_decisions = True\n",
             encoding="utf-8",
         )
 
@@ -668,8 +718,10 @@ def test_003_feature_contract_blocks_when_draft_prd_surfaces_missing(tmp_path: P
     _write_003_feature_contract_surfaces(
         tmp_path,
         include_authoring=False,
-        include_reviewer=True,
-        include_backend=True,
+        include_reviewer_model=True,
+        include_reviewer_runtime=True,
+        include_backend_contract=True,
+        include_backend_runtime=True,
         include_release_gate=True,
     )
 
@@ -687,8 +739,10 @@ def test_003_feature_contract_blocks_when_reviewer_surface_missing(tmp_path: Pat
     _write_003_feature_contract_surfaces(
         tmp_path,
         include_authoring=True,
-        include_reviewer=False,
-        include_backend=True,
+        include_reviewer_model=True,
+        include_reviewer_runtime=False,
+        include_backend_contract=True,
+        include_backend_runtime=True,
         include_release_gate=True,
     )
 
@@ -704,8 +758,10 @@ def test_003_feature_contract_blocks_when_backend_surface_missing(tmp_path: Path
     _write_003_feature_contract_surfaces(
         tmp_path,
         include_authoring=True,
-        include_reviewer=True,
-        include_backend=False,
+        include_reviewer_model=True,
+        include_reviewer_runtime=True,
+        include_backend_contract=True,
+        include_backend_runtime=False,
         include_release_gate=True,
     )
 
@@ -723,8 +779,10 @@ def test_003_feature_contract_blocks_when_release_gate_surface_missing(
     _write_003_feature_contract_surfaces(
         tmp_path,
         include_authoring=True,
-        include_reviewer=True,
-        include_backend=True,
+        include_reviewer_model=True,
+        include_reviewer_runtime=True,
+        include_backend_contract=True,
+        include_backend_runtime=True,
         include_release_gate=False,
     )
 
@@ -759,8 +817,10 @@ def test_003_feature_contract_blocks_when_feature_id_unknown_but_spec_dir_points
     _write_003_feature_contract_surfaces(
         tmp_path,
         include_authoring=False,
-        include_reviewer=True,
-        include_backend=True,
+        include_reviewer_model=True,
+        include_reviewer_runtime=True,
+        include_backend_contract=True,
+        include_backend_runtime=True,
         include_release_gate=True,
     )
 
