@@ -614,6 +614,33 @@ python -m ai_sdlc telemetry close-session --goal-session-id <gs_id> --status suc
 - `scan` 可以深度读取仓库内容，但不会隐式初始化 `.ai-sdlc/`、不会触发 IDE adapter 写入，也不会替代 `run` / `stage run` 这类执行面。
 - 如果你要生成或刷新工程知识基线，应该使用 `init`（已有项目初始化）或 `refresh`，而不是把 `scan` 当作写路径。
 
+### 6) Operator surface 读写矩阵
+
+先看一个总规则：
+
+- 在已初始化项目里，除 `init`、`doctor`、`status`、`scan`、`verify` 外，CLI 默认会先尝试一次 **IDE adapter 幂等 apply**。
+- 这意味着某些本来以“查看/规划”为主的命令，仍可能写入 `.cursor/`、`.vscode/`、`.codex/`、`.claude/` 或 `.ai-sdlc/project/config/project-config.yaml` 里的 adapter 元数据。
+
+| Surface | 典型命令 | 主定位 | 仓库/本地状态影响 |
+|---|---|---|---|
+| bounded telemetry status | `python -m ai_sdlc status --json` | 只读 telemetry 摘要 | **只读**：不初始化 telemetry root，不 rebuild indexes，不触发 adapter |
+| doctor | `python -m ai_sdlc doctor` | 只读诊断 | **只读**：不 deep scan trace，不触发 adapter |
+| scan | `python -m ai_sdlc scan <path>` | operator / analysis | **analysis-only**：深度读取代码库并打印摘要；不初始化 `.ai-sdlc/`，不触发 adapter |
+| stage show / status | `python -m ai_sdlc stage show <stage>` / `stage status` | 阶段查看 | **可能写 adapter**：命令主体只读，但在已初始化项目中可能先触发一次 IDE adapter 幂等 apply |
+| stage run --dry-run | `python -m ai_sdlc stage run <stage> --dry-run` | 阶段预演 | **可能写 adapter**：命令本身只展示清单，不执行阶段步骤；但仍可能先触发 adapter apply |
+| stage run | `python -m ai_sdlc stage run <stage>` | 阶段调度入口 | **可能写 adapter**：命令本身输出清单与引导，不自动替你执行步骤；但仍可能先触发 adapter apply |
+| program validate / status / plan | `python -m ai_sdlc program ...` | Program 级校验与规划 | **可能写 adapter**：program service 自身以读和规划为主，但 CLI 入口仍可能先触发 adapter apply |
+| program integrate --dry-run | `python -m ai_sdlc program integrate --dry-run` | guarded integration runbook 预览 | **可能写 adapter**；若带 `--report`，还会写 report 文件 |
+| program integrate --execute --yes | `python -m ai_sdlc program integrate --execute --yes` | guarded execute gate | **可能写 adapter**；当前会做 gate 校验与可选 report 写入，不会直接替你修改各 spec 内容 |
+| manual telemetry | `python -m ai_sdlc telemetry open-session`、`record-*`、`close-session` | operator evidence write | **会写 telemetry**：落到 `.ai-sdlc/local/telemetry/` 与派生 indexes；CLI 入口本身也可能先触发 adapter apply |
+| offline build | `./packaging/offline/build_offline_bundle.sh` | 分发打包 | **会写本地构建产物**：写 `dist/`、`dist-offline/` 和 bundle archives，不修改业务仓源码 |
+| offline install | `./install_offline.sh` / `install_offline.ps1` / `install_offline.bat` | bundle 本地安装 | **会写 bundle 目录**：创建 `.venv/` 并安装 wheel；不会替目标业务仓初始化 AI-SDLC |
+
+判断一个命令是否“真的只读”，要同时看两层：
+
+- 命令主体是否会写业务状态、telemetry 或离线产物
+- 该命令是否处在会触发 IDE adapter 幂等 apply 的 CLI 入口上
+
 ## 框架自身开发补充
 
 如果你不是在“业务项目里使用 AI-SDLC”，而是在 **AI-SDLC 仓库里开发 AI-SDLC 自身**，应改看这份文档：

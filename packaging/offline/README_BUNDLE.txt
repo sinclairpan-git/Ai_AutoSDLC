@@ -3,6 +3,7 @@ ai-sdlc 离线安装包
 
 内含:
   wheels/               主包与依赖 wheel（由联网打包机生成）
+  bundle-manifest.json  bundle 对应的 OS/CPU 平台信息
   install_offline.sh    Linux/macOS 一键安装
   install_offline.ps1   Windows PowerShell 一键安装
   install_offline.bat   Windows 双击/命令行入口
@@ -10,7 +11,7 @@ ai-sdlc 离线安装包
 
 目标机要求:
   - Python 3.11 或更高
-  - 与打包机尽量同 OS/CPU 架构
+  - 与 `bundle-manifest.json` 中记录的平台一致
 
 Linux/macOS 安装:
   chmod +x install_offline.sh

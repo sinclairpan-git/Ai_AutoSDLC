@@ -18,8 +18,9 @@ chmod +x packaging/offline/build_offline_bundle.sh
 
 - `dist-offline/ai-sdlc-offline-<version>.tar.gz`（Linux/macOS 推荐）
 - `dist-offline/ai-sdlc-offline-<version>.zip`（Windows 推荐）
+- `dist-offline/ai-sdlc-offline-<version>/bundle-manifest.json`（记录 bundle 适用的 OS/CPU 平台）
 
-> 兼容建议：尽量在和目标机相同的 OS/CPU 环境打包。
+> 平台合同：新 bundle 会写出 `bundle-manifest.json`，安装脚本会校验目标机 OS/CPU 是否匹配；请尽量在和目标机相同的 OS/CPU 环境打包。
 
 ## 二、离线安装（目标机器）
 
@@ -43,6 +44,8 @@ powershell -ExecutionPolicy Bypass -File .\install_offline.ps1
 ```bat
 install_offline.bat
 ```
+
+如果 bundle 的 `bundle-manifest.json` 与当前机器 OS/CPU 不匹配，安装脚本会直接拒绝安装。
 
 ## 三、安装后验证
 
@@ -82,8 +85,9 @@ ai-sdlc init .
 ## 四、脚本说明
 
 - `build_offline_bundle.sh`：构建主包并下载依赖，输出 `.tar.gz` + `.zip`
-- `install_offline.sh`：Linux/macOS 一键离线安装
-- `install_offline.ps1` / `install_offline.bat`：Windows 一键离线安装
+- `bundle-manifest.json`：记录 bundle 的 package version、build OS、CPU 架构
+- `install_offline.sh`：Linux/macOS 一键离线安装，并校验 `bundle-manifest.json`
+- `install_offline.ps1` / `install_offline.bat`：Windows 一键离线安装，并校验 `bundle-manifest.json`
 
 `dist-offline/` 是本地构建产物，已在 `.gitignore` 中忽略，不提交二进制包。
 

@@ -101,7 +101,7 @@ packaging/offline/
 
 **目标**：把离线 bundle 的构建、安装入口、平台限制与 operator 文档边界锁定。  
 **产物**：`packaging/offline/*` 与配套说明。  
-**验证方式**：脚本 smoke / README contract review。  
+**验证方式**：offline packaging integration smoke + README contract review。  
 **回退方式**：文档与脚本分开提交。
 
 ## 工作流计划
@@ -143,7 +143,7 @@ packaging/offline/
 | 问题 | 状态 | 阻塞阶段 |
 |------|------|----------|
 | `scan` 是否拆出独立 CLI 文件还是继续留在 `commands.py` | 待锁定 | Phase 2 |
-| offline bundle smoke 放在 pytest 外还是 Make/script 验证 | 待锁定 | Phase 4 |
+| offline bundle smoke 如何在无网络环境下稳定验证 | 已锁定为 pytest + fake Python/uv wrappers | Phase 4 |
 
 ## 实施顺序建议
 

@@ -234,3 +234,117 @@
 - **已完成 git 提交**：否（待本轮代码与归档统一提交）
 - **提交哈希**：待提交
 - **是否继续下一批**：可继续，建议转入 offline smoke contract 与 004 历史 batch traceability 补齐。
+
+### Batch 2026-03-30-003 | 004 Task 4.1（offline bundle manifest + smoke contract）
+
+#### 5.1 准备
+
+- **任务来源**：[`tasks.md`](tasks.md) Task `4.1`；[`spec.md`](spec.md) `FR-004-013`、`FR-004-014`
+- **目标**：把 offline bundle 的适用平台边界从 README 提示提升为 bundle manifest + installer validation，并补齐无网络 smoke。
+- **预读范围**：[`../../packaging/offline/build_offline_bundle.sh`](../../packaging/offline/build_offline_bundle.sh)、[`../../packaging/offline/install_offline.sh`](../../packaging/offline/install_offline.sh)、[`../../packaging/offline/install_offline.ps1`](../../packaging/offline/install_offline.ps1)、[`../../packaging/offline/README.md`](../../packaging/offline/README.md)、[`plan.md`](plan.md)、[`tasks.md`](tasks.md)
+- **激活的规则**：TDD；offline smoke 不依赖真实网络；bundle 平台边界显式化；docs/tasks/log 同步
+- **验证画像**：`code-change`
+
+#### 5.2 统一验证命令
+
+- **R1（offline manifest / installer 红灯）**
+  - 命令：`uv run pytest tests/integration/test_offline_bundle_scripts.py -q`
+  - 结果：先红后绿；实现前 bundle 不生成 manifest，installer 也不会拒绝 manifest platform mismatch。
+- **V1（offline packaging smoke）**
+  - 命令：`uv run pytest tests/integration/test_offline_bundle_scripts.py -q`
+  - 结果：**3 passed**。
+- **Lint**
+  - 命令：`uv run ruff check packaging/offline tests/integration/test_offline_bundle_scripts.py`
+  - 结果：**All checks passed!**
+- **治理只读校验**
+  - 命令：`uv run ai-sdlc verify constraints`
+  - 结果：**无 BLOCKER**。
+
+#### 5.3 任务记录
+
+##### Task 4.1 | offline bundle manifest + installer platform validation
+
+- **改动范围**：[`../../packaging/offline/build_offline_bundle.sh`](../../packaging/offline/build_offline_bundle.sh)、[`../../packaging/offline/install_offline.sh`](../../packaging/offline/install_offline.sh)、[`../../packaging/offline/install_offline.ps1`](../../packaging/offline/install_offline.ps1)、[`../../packaging/offline/README.md`](../../packaging/offline/README.md)、[`../../packaging/offline/README_BUNDLE.txt`](../../packaging/offline/README_BUNDLE.txt)、[`../../tests/integration/test_offline_bundle_scripts.py`](../../tests/integration/test_offline_bundle_scripts.py)、[`plan.md`](plan.md)、[`tasks.md`](tasks.md)
+- **改动内容**：
+  - `build_offline_bundle.sh` 现在会生成 `bundle-manifest.json`，记录 `bundle_format_version`、`package_version`、`platform_os`、`platform_machine`，并随 `.tar.gz` / `.zip` 一起打包。
+  - `install_offline.sh` 在 manifest 存在时会用当前 Python 读取并校验平台；若 OS/CPU 不匹配则明确拒绝安装；旧 bundle 缺 manifest 时保留 warning 兼容路径。
+  - `install_offline.ps1` 同步补了 manifest 平台校验，保持 Windows 安装入口的合同一致。
+  - 新增 `test_offline_bundle_scripts.py`，使用 fake Python / fake uv wrappers 在无网络条件下做脚本 smoke，覆盖 build 产物、manifest 落盘、mismatch 拒绝、matching platform 安装成功。
+  - `README.md` / `README_BUNDLE.txt` 已把 `bundle-manifest.json` 与安装期平台校验写成正式合同。
+- **新增/调整的测试**：
+  - integration：新增 offline packaging smoke test 3 条。
+  - 当前自动化仅执行 Linux/macOS shell installer；PowerShell 路径已更新，但本轮未在真实 Windows 环境执行。
+- **执行的命令**：见 R1 / V1 / Lint。
+- **测试结果**：通过。
+- **是否符合任务目标**：符合。offline bundle 的平台限制不再只是文档建议，而是有 manifest 和 installer enforcement 的正式 contract。
+
+#### 5.4 代码审查（摘要）
+
+- **规格对齐**：本批直接把 `FR-004-013/014` 的“构建产物、安装入口、适用平台”做成 bundle 事实，而不是停留在 README 提醒。
+- **代码质量**：offline smoke 通过 fake wrappers 隔离真实网络与真实 wheel 安装，能稳定覆盖脚本控制流而不污染工作区。
+- **测试质量**：红灯先证明“manifest 缺失 / mismatch 未被拒绝”是实际缺口，绿灯后固定 build/install 两侧 contract。
+- **结论**：无新的阻塞项；offline bundle contract 已进入可自动回归状态。
+
+#### 5.5 任务/计划同步状态
+
+- `plan.md` 同步状态：`已同步`（Phase 4 验证方式与开放问题已更新）。
+- `tasks.md` 同步状态：`已同步`（Task `4.1` 已补完成说明）。
+- `packaging/offline/README.md` 同步状态：`已同步`（bundle-manifest 与 installer 校验合同已写明）。
+- `004` 剩余开放项：Batch 1-5 历史 execution evidence、以及更完整的 operator mutation/read-only matrix 仍待继续补齐。
+
+#### 5.6 自动决策记录（如有）
+
+- AD-001：旧 offline bundle 缺 `bundle-manifest.json` 时只 warning 不强制失败 → 理由：给历史产物保留兼容路径，同时让新 bundle 从现在开始具备强校验合同。
+
+#### 5.7 批次结论
+
+- `FR-004-013/014` 的平台边界已从文档建议升级为自动化可验证的 bundle/install contract；`004` 还未整体 close，但 offline distribution 不再缺 formal smoke。
+
+#### 5.8 归档后动作
+
+- **已完成 git 提交**：否（待本轮代码与归档统一提交）
+- **提交哈希**：待提交
+- **是否继续下一批**：可继续，建议转入 `004` Batch 1-5 历史 execution evidence 与 `FR-004-015` 的完整 mutation matrix。
+
+### Batch 2026-03-30-004 | 004 Task 5.2（operator mutation/read-only matrix docs）
+
+#### 6.1 准备
+
+- **任务来源**：[`tasks.md`](tasks.md) Task `5.2`；[`spec.md`](spec.md) `FR-004-015`
+- **目标**：把 `004` 范围内 operator / offline surfaces 的只读、analysis、写路径边界写成用户可查的矩阵，并显式说明 IDE adapter hook 的副作用层。
+- **预读范围**：[`../../docs/USER_GUIDE.zh-CN.md`](../../docs/USER_GUIDE.zh-CN.md)、[`../../src/ai_sdlc/cli/main.py`](../../src/ai_sdlc/cli/main.py)、[`../../src/ai_sdlc/cli/commands.py`](../../src/ai_sdlc/cli/commands.py)、[`../../src/ai_sdlc/cli/stage_cmd.py`](../../src/ai_sdlc/cli/stage_cmd.py)、[`../../src/ai_sdlc/cli/program_cmd.py`](../../src/ai_sdlc/cli/program_cmd.py)、[`../../src/ai_sdlc/cli/telemetry_cmd.py`](../../src/ai_sdlc/cli/telemetry_cmd.py)
+- **激活的规则**：现状优先；文档必须表达真实 CLI 行为而不是理想行为；adapter hook 影响单独披露
+- **验证画像**：`docs-only`
+
+#### 6.2 统一验证命令
+
+- **V1（operator matrix evidence set）**
+  - 命令：`uv run pytest tests/integration/test_cli_stage.py tests/integration/test_cli_program.py tests/integration/test_cli_scan.py tests/integration/test_cli_telemetry.py -q`
+  - 结果：**35 passed**。
+- **治理只读校验**
+  - 命令：`uv run ai-sdlc verify constraints`
+  - 结果：**无 BLOCKER**。
+
+#### 6.3 任务记录
+
+##### Task 5.2 | operator mutation/read-only matrix 文档收口
+
+- **改动范围**：[`../../docs/USER_GUIDE.zh-CN.md`](../../docs/USER_GUIDE.zh-CN.md)、[`tasks.md`](tasks.md)
+- **改动内容**：
+  - 新增 `Operator surface 读写矩阵`，覆盖 `status --json`、`doctor`、`scan`、`stage show/status/run`、`program validate/status/plan/integrate`、manual telemetry、offline build/install。
+  - 把“命令主体行为”和“CLI 全局 IDE adapter hook 可能带来的幂等写入”拆开表述，避免把 `stage` / `program` 这类命令误记成绝对只读。
+  - 保持 `scan`、`status --json`、`doctor` 的无 adapter/write 边界，与前面已落地的 `FR-004-005` / `FR-004-009` 收口一致。
+- **新增/调整的测试**：无新增自动化；依赖现有 integration tests 作为行为证据。
+- **是否符合任务目标**：符合。`FR-004-015` 的“哪些只读、哪些会改状态”现在已有统一文档矩阵可查。
+
+#### 6.4 代码审查（摘要）
+
+- **规格对齐**：文档矩阵只覆盖 `004` 范围内 surfaces，没有扩写到无关 CLI。
+- **质量判断**：用“主定位 + 状态影响”两层描述，比简单写成只读/非只读更接近真实行为，特别适合解释 adapter hook 这类幂等副作用。
+- **结论**：允许把 `FR-004-015` 从“口径不完整”收敛到“已有正式矩阵”，剩余问题主要转向历史 execution evidence 而非行为边界缺失。
+
+#### 6.5 归档后动作
+
+- **已完成 git 提交**：否（待本轮代码与归档统一提交）
+- **提交哈希**：待提交
+- **是否继续下一批**：可继续，建议最后集中补 `004` Batch 1-5 历史 execution evidence。

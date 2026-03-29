@@ -19,6 +19,7 @@ VERSION="$(awk -F'"' '/^version =/ {print $2; exit}' pyproject.toml)"
 OUT="${ROOT}/dist-offline/ai-sdlc-offline-${VERSION}"
 ARCHIVE="${ROOT}/dist-offline/ai-sdlc-offline-${VERSION}.tar.gz"
 ZIP_ARCHIVE="${ROOT}/dist-offline/ai-sdlc-offline-${VERSION}.zip"
+MANIFEST="${OUT}/bundle-manifest.json"
 
 _pick_py() {
   local c
@@ -76,6 +77,31 @@ cp "${SCRIPT_DIR}/install_offline.ps1" "${OUT}/"
 cp "${SCRIPT_DIR}/install_offline.bat" "${OUT}/"
 cp "${SCRIPT_DIR}/README_BUNDLE.txt" "${OUT}/README.txt"
 chmod +x "${OUT}/install_offline.sh"
+
+"${PY}" - "${VERSION}" "${MANIFEST}" <<'PY'
+from __future__ import annotations
+
+import json
+import platform
+import sys
+from pathlib import Path
+
+version = sys.argv[1]
+manifest_path = Path(sys.argv[2])
+manifest_path.write_text(
+    json.dumps(
+        {
+            "bundle_format_version": 1,
+            "package_version": version,
+            "platform_os": platform.system().lower(),
+            "platform_machine": platform.machine().lower(),
+        },
+        indent=2,
+    )
+    + "\n",
+    encoding="utf-8",
+)
+PY
 
 mkdir -p "${ROOT}/dist-offline"
 rm -f "${ARCHIVE}"

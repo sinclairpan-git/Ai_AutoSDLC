@@ -118,6 +118,8 @@ Batch 6: backlog remediation for latest/readiness freshness
   2. “同 OS/CPU 构建并安装”的边界被明确表达。
 - **验证**：脚本 smoke + 文档复核
 
+> **Task 4.1 完成（2026-03-30）**：[`../../packaging/offline/build_offline_bundle.sh`](../../packaging/offline/build_offline_bundle.sh) 已在 bundle 中生成 `bundle-manifest.json`，记录 package version / build OS / CPU；[`../../packaging/offline/install_offline.sh`](../../packaging/offline/install_offline.sh) 与 [`../../packaging/offline/install_offline.ps1`](../../packaging/offline/install_offline.ps1) 已在 manifest 存在时强制校验平台匹配；[`../../tests/integration/test_offline_bundle_scripts.py`](../../tests/integration/test_offline_bundle_scripts.py) 已补无网络 smoke，覆盖 bundle 产物、manifest 落盘、platform mismatch 拒绝与 matching platform 安装成功三类契约。
+
 ---
 
 ## Batch 5：Final traceability
@@ -131,6 +133,19 @@ Batch 6: backlog remediation for latest/readiness freshness
   2. program / doctor / stage / ide adapter 关键 integration tests 通过。
   3. 全量 `uv run pytest` 与 `uv run ruff check src tests` 通过。
 - **验证**：定向 integration + 全量 `pytest` + `ruff`
+
+### Task 5.2 — 补齐 operator mutation/read-only matrix 文档合同
+
+- **优先级**：P1
+- **依赖**：Task 2.2, Task 2.3, Task 4.1
+- **输入**：[`../../docs/USER_GUIDE.zh-CN.md`](../../docs/USER_GUIDE.zh-CN.md)、[`../../src/ai_sdlc/cli/main.py`](../../src/ai_sdlc/cli/main.py)、[`../../src/ai_sdlc/cli/commands.py`](../../src/ai_sdlc/cli/commands.py)、[`../../src/ai_sdlc/cli/stage_cmd.py`](../../src/ai_sdlc/cli/stage_cmd.py)、[`../../src/ai_sdlc/cli/program_cmd.py`](../../src/ai_sdlc/cli/program_cmd.py)、[`../../src/ai_sdlc/cli/telemetry_cmd.py`](../../src/ai_sdlc/cli/telemetry_cmd.py)
+- **验收标准**：
+  1. `004` 范围内的 operator / offline surfaces 被明确分成只读、analysis、会写本地状态三类。
+  2. IDE adapter hook 造成的“命令主体只读但入口仍可能写 adapter”边界被明确写出。
+  3. 文档口径与现有 CLI 行为、现有 integration tests 一致。
+- **验证**：`uv run pytest tests/integration/test_cli_stage.py tests/integration/test_cli_program.py tests/integration/test_cli_scan.py tests/integration/test_cli_telemetry.py -q` + 文档复核
+
+> **Task 5.2 完成（2026-03-30）**：[`../../docs/USER_GUIDE.zh-CN.md`](../../docs/USER_GUIDE.zh-CN.md) 已新增 operator surface 读写矩阵，覆盖 `status --json`、`doctor`、`scan`、`stage`、`program`、manual telemetry 与 offline build/install；矩阵已把 IDE adapter hook 导致的副作用层与命令主体行为分开表达，并与现有 CLI 实现及 integration evidence 对齐。
 
 ---
 
