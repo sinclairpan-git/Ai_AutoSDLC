@@ -329,7 +329,7 @@
 
 ##### Task 5.2 | operator mutation/read-only matrix 文档收口
 
-- **改动范围**：[`../../docs/USER_GUIDE.zh-CN.md`](../../docs/USER_GUIDE.zh-CN.md)、[`tasks.md`](tasks.md)
+- **改动范围**：`../../docs/USER_GUIDE.zh-CN.md`、`tasks.md`
 - **改动内容**：
   - 新增 `Operator surface 读写矩阵`，覆盖 `status --json`、`doctor`、`scan`、`stage show/status/run`、`program validate/status/plan/integrate`、manual telemetry、offline build/install。
   - 把“命令主体行为”和“CLI 全局 IDE adapter hook 可能带来的幂等写入”拆开表述，避免把 `stage` / `program` 这类命令误记成绝对只读。
