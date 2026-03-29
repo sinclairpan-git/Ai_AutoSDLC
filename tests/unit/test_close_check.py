@@ -51,11 +51,70 @@ def _write_execution_log(
     )
 
 
+def _write_release_gate_evidence(wi_dir: Path, *, overall_verdict: str = "PASS") -> None:
+    checks = [
+        {
+            "name": "recoverability",
+            "verdict": "PASS",
+            "evidence_source": "tests/integration/test_cli_recover.py",
+            "reason": "resume-pack rebuild and recover flows are covered",
+        },
+        {
+            "name": "portability",
+            "verdict": overall_verdict,
+            "evidence_source": "tests/integration/test_cli_module_invocation.py",
+            "reason": f"portability gate escalated to {overall_verdict}",
+        },
+        {
+            "name": "multi_ide",
+            "verdict": "PASS",
+            "evidence_source": "tests/integration/test_cli_status.py",
+            "reason": "status/adapter surfaces keep IDE-aware behavior bounded",
+        },
+        {
+            "name": "stability",
+            "verdict": "PASS",
+            "evidence_source": "uv run pytest -q",
+            "reason": "focused regression suites are green",
+        },
+    ]
+    if overall_verdict == "PASS":
+        checks[1]["reason"] = "module invocation fallback works without PATH assumptions"
+    rendered_checks = ",\n".join(
+        "      {\n"
+        f'        "name": "{check["name"]}",\n'
+        f'        "verdict": "{check["verdict"]}",\n'
+        f'        "evidence_source": "{check["evidence_source"]}",\n'
+        f'        "reason": "{check["reason"]}"\n'
+        "      }"
+        for check in checks
+    )
+    (wi_dir / "release-gate-evidence.md").write_text(
+        "# 003 release gate evidence\n\n"
+        "- release_gate_evidence: present\n"
+        "- PASS: supported\n"
+        "- WARN: supported\n"
+        "- BLOCK: supported\n\n"
+        "```json\n"
+        "{\n"
+        '  "release_gate_evidence": {\n'
+        f'    "overall_verdict": "{overall_verdict}",\n'
+        '    "checks": [\n'
+        f"{rendered_checks}\n"
+        "    ]\n"
+        "  }\n"
+        "}\n"
+        "```\n",
+        encoding="utf-8",
+    )
+
+
 def _setup_repo(
     root: Path,
     *,
     tasks_body: str,
     plan_status: str,
+    wi_rel: str = "specs/001-wi",
     git_committed: bool = True,
     execution_batch_number: int = 1,
     verification_profile: str = "code-change",
@@ -97,7 +156,7 @@ def _setup_repo(
         encoding="utf-8",
     )
 
-    wi = root / "specs" / "001-wi"
+    wi = root / wi_rel
     wi.mkdir(parents=True)
     (wi / "tasks.md").write_text(
         "---\n"
@@ -136,7 +195,7 @@ def _setup_repo(
             changed_paths=changed_paths,
         )
         subprocess.run(
-            ["git", "add", "specs/001-wi/task-execution-log.md"],
+            ["git", "add", f"{wi_rel}/task-execution-log.md"],
             cwd=root,
             check=True,
             capture_output=True,
@@ -672,3 +731,42 @@ def test_close_check_respects_synthetic_command_from_registry_sc023(
     r = run_close_check(cwd=root, wi=Path("specs/001-wi"))
     assert r.ok is False
     assert any("synthetic-new-cmd" in b for b in r.blockers)
+
+
+def test_close_check_blocks_when_003_release_gate_evidence_missing(tmp_path: Path) -> None:
+    root = tmp_path / "repo10"
+    root.mkdir()
+    _setup_repo(
+        root,
+        tasks_body="- [x] done\n### Task 1.1\n- **验收标准（AC）**：ok",
+        plan_status="completed",
+        wi_rel="specs/003-cross-cutting-authoring-and-extension-contracts",
+    )
+
+    r = run_close_check(
+        cwd=root,
+        wi=Path("specs/003-cross-cutting-authoring-and-extension-contracts"),
+    )
+    assert r.ok is False
+    assert any("release gate evidence missing" in b for b in r.blockers)
+
+
+def test_close_check_blocks_when_release_gate_verdict_is_block(tmp_path: Path) -> None:
+    root = tmp_path / "repo11"
+    root.mkdir()
+    _setup_repo(
+        root,
+        tasks_body="- [x] done\n### Task 1.1\n- **验收标准（AC）**：ok",
+        plan_status="completed",
+        wi_rel="specs/003-cross-cutting-authoring-and-extension-contracts",
+    )
+    wi = root / "specs" / "003-cross-cutting-authoring-and-extension-contracts"
+    _write_release_gate_evidence(wi, overall_verdict="BLOCK")
+    _commit_all(root, "docs: add blocking release gate evidence")
+
+    r = run_close_check(
+        cwd=root,
+        wi=Path("specs/003-cross-cutting-authoring-and-extension-contracts"),
+    )
+    assert r.ok is False
+    assert any("release gate portability -> BLOCK" in b for b in r.blockers)

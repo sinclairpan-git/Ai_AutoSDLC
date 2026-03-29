@@ -10,6 +10,7 @@ from typing import Any
 
 from ai_sdlc.branch.git_client import GitClient, GitError
 from ai_sdlc.core.plan_check import resolve_plan_path_from_wi, run_plan_check
+from ai_sdlc.core.release_gate import ReleaseGateParseError, load_release_gate_report
 from ai_sdlc.core.workitem_traceability import analyze_completion_truth
 from ai_sdlc.utils.helpers import find_project_root
 
@@ -38,6 +39,7 @@ DOCS_WHITELIST_RELS = (
     Path("docs/pull-request-checklist.zh.md"),
     Path("docs/USER_GUIDE.zh-CN.md"),
 )
+RELEASE_GATE_EVIDENCE_FILE = "release-gate-evidence.md"
 
 
 def _registered_command_strings() -> tuple[str, ...]:
@@ -193,6 +195,10 @@ def _git_closure_violation(root: Path, log_text: str) -> str | None:
     except GitError as exc:
         return f"unable to inspect git closure state: {exc}"
     return None
+
+
+def _requires_release_gate(wi_dir: Path) -> bool:
+    return wi_dir.name.startswith("003-") or (wi_dir / RELEASE_GATE_EVIDENCE_FILE).is_file()
 
 
 def run_close_check(*, cwd: Path | None, wi: Path, all_docs: bool = False) -> CloseCheckResult:
@@ -357,6 +363,36 @@ def run_close_check(*, cwd: Path | None, wi: Path, all_docs: bool = False) -> Cl
                 "detail": traceability_detail,
             }
         )
+
+    if _requires_release_gate(wi_dir):
+        release_gate_path = wi_dir / RELEASE_GATE_EVIDENCE_FILE
+        if not release_gate_path.is_file():
+            detail = f"{RELEASE_GATE_EVIDENCE_FILE} missing"
+            checks.append({"name": "release_gate", "ok": False, "detail": detail})
+            blockers.append(f"BLOCKER: release gate evidence missing: {release_gate_path}")
+        else:
+            try:
+                release_gate = load_release_gate_report(release_gate_path)
+                assert release_gate is not None
+            except (ReleaseGateParseError, AssertionError) as exc:
+                checks.append(
+                    {
+                        "name": "release_gate",
+                        "ok": False,
+                        "detail": str(exc),
+                    }
+                )
+                blockers.append(f"BLOCKER: invalid release gate evidence: {exc}")
+            else:
+                release_gate_ok = release_gate.overall_verdict != "BLOCK"
+                checks.append(
+                    {
+                        "name": "release_gate",
+                        "ok": release_gate_ok,
+                        "detail": release_gate.summary(),
+                    }
+                )
+                blockers.extend(release_gate.blocker_lines())
 
     doc_violations = _docs_consistency_violations(root, wi_dir, all_docs=all_docs)
     docs_ok = len(doc_violations) == 0

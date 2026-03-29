@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from ai_sdlc.context.state import load_checkpoint
+from ai_sdlc.core.release_gate import ReleaseGateParseError, load_release_gate_report
 from ai_sdlc.gates.task_ac_checks import (
     first_doc_first_task_scope_violation,
     first_task_missing_acceptance,
@@ -139,6 +140,7 @@ class ConstraintReport:
     gate_name: str = "Verification Gate"
     check_objects: tuple[str, ...] = VERIFICATION_GATE_OBJECTS
     coverage_gaps: tuple[str, ...] = ()
+    release_gate: dict[str, object] | None = None
     evidence_kinds: tuple[str, ...] = ("event", "structured_report")
 
 
@@ -152,6 +154,7 @@ def build_constraint_report(root: Path) -> ConstraintReport:
         check_objects=VERIFICATION_GATE_OBJECTS,
         blockers=tuple(collect_constraint_blockers(root)),
         coverage_gaps=_feature_contract_coverage_gaps(root, checkpoint),
+        release_gate=_release_gate_surface(root, checkpoint),
     )
 
 
@@ -163,6 +166,7 @@ def build_verification_gate_context(root: Path) -> dict[str, object]:
         "verification_check_objects": report.check_objects,
         "constraint_blockers": report.blockers,
         "coverage_gaps": report.coverage_gaps,
+        "release_gate": report.release_gate,
     }
 
 
@@ -218,6 +222,7 @@ def collect_constraint_blockers(root: Path) -> list[str]:
 
     blockers.extend(_skip_registry_mapping_blockers(root, spec_path, cp))
     blockers.extend(_feature_contract_blockers(root, cp))
+    blockers.extend(_release_gate_blockers(root, cp))
     return blockers
 
 
@@ -290,6 +295,45 @@ def _effective_feature_contract_wi_id(checkpoint: Checkpoint | None) -> str:
     if checkpoint is None:
         return ""
     return _effective_wi_id_for_registry(checkpoint)
+
+
+def _release_gate_surface(
+    root: Path,
+    checkpoint: Checkpoint | None,
+) -> dict[str, object] | None:
+    path = _release_gate_path(root, checkpoint)
+    if path is None or not path.is_file():
+        return None
+    try:
+        report = load_release_gate_report(path)
+        assert report is not None
+    except (ReleaseGateParseError, AssertionError) as exc:
+        return {"source_path": str(path), "error": str(exc)}
+    return report.to_json_dict()
+
+
+def _release_gate_blockers(root: Path, checkpoint: Checkpoint | None) -> list[str]:
+    path = _release_gate_path(root, checkpoint)
+    if path is None or not path.is_file():
+        return []
+    try:
+        report = load_release_gate_report(path)
+        assert report is not None
+    except (ReleaseGateParseError, AssertionError) as exc:
+        return [f"BLOCKER: invalid release gate evidence: {exc}"]
+    return report.blocker_lines()
+
+
+def _release_gate_path(root: Path, checkpoint: Checkpoint | None) -> Path | None:
+    work_item_id = _effective_feature_contract_wi_id(checkpoint)
+    if not _is_003_work_item(work_item_id):
+        return None
+    return (
+        root
+        / "specs"
+        / "003-cross-cutting-authoring-and-extension-contracts"
+        / "release-gate-evidence.md"
+    )
 
 
 def _doc_first_surface_blockers(root: Path) -> list[str]:

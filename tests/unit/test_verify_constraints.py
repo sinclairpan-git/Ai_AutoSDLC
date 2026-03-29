@@ -89,6 +89,7 @@ def _write_003_feature_contract_surfaces(
     include_reviewer: bool = True,
     include_backend: bool = True,
     include_release_gate: bool = True,
+    release_gate_verdict: str = "PASS",
 ) -> None:
     models_dir = root / "src" / "ai_sdlc" / "models"
     models_dir.mkdir(parents=True, exist_ok=True)
@@ -124,12 +125,60 @@ def _write_003_feature_contract_surfaces(
     if include_release_gate:
         spec_dir = root / "specs" / "003-cross-cutting-authoring-and-extension-contracts"
         spec_dir.mkdir(parents=True, exist_ok=True)
+        checks = [
+            {
+                "name": "recoverability",
+                "verdict": "PASS",
+                "evidence_source": "tests/integration/test_cli_recover.py",
+                "reason": "resume-pack rebuild and recover flows are covered",
+            },
+            {
+                "name": "portability",
+                "verdict": "PASS",
+                "evidence_source": "tests/integration/test_cli_module_invocation.py",
+                "reason": "module invocation fallback works without PATH assumptions",
+            },
+            {
+                "name": "multi_ide",
+                "verdict": "PASS",
+                "evidence_source": "tests/integration/test_cli_status.py",
+                "reason": "status/adapter surfaces keep IDE-aware behavior bounded",
+            },
+            {
+                "name": "stability",
+                "verdict": "PASS",
+                "evidence_source": "uv run pytest -q",
+                "reason": "focused regression suites are green",
+            },
+        ]
+        if release_gate_verdict in {"WARN", "BLOCK"}:
+            checks[1]["verdict"] = release_gate_verdict
+            checks[1]["reason"] = f"portability gate escalated to {release_gate_verdict}"
         (spec_dir / "release-gate-evidence.md").write_text(
             "# 003 release gate evidence\n\n"
             "- release_gate_evidence: present\n"
-            "- PASS: example\n"
-            "- WARN: example\n"
-            "- BLOCK: example\n",
+            "- PASS: supported\n"
+            "- WARN: supported\n"
+            "- BLOCK: supported\n\n"
+            "```json\n"
+            "{\n"
+            '  "release_gate_evidence": {\n'
+            f'    "overall_verdict": "{release_gate_verdict}",\n'
+            '    "checks": [\n'
+            + ",\n".join(
+                "      {\n"
+                f'        "name": "{check["name"]}",\n'
+                f'        "verdict": "{check["verdict"]}",\n'
+                f'        "evidence_source": "{check["evidence_source"]}",\n'
+                f'        "reason": "{check["reason"]}"\n'
+                "      }"
+                for check in checks
+            )
+            + "\n"
+            "    ]\n"
+            "  }\n"
+            "}\n"
+            "```\n",
             encoding="utf-8",
         )
 
@@ -726,3 +775,17 @@ def test_003_feature_contract_passes_when_all_surfaces_present(tmp_path: Path) -
     report = build_constraint_report(tmp_path)
     assert report.coverage_gaps == ()
     assert collect_constraint_blockers(tmp_path) == []
+    assert report.release_gate is not None
+    assert report.release_gate["overall_verdict"] == "PASS"
+
+
+def test_003_release_gate_blocks_when_evidence_verdict_is_block(tmp_path: Path) -> None:
+    _write_003_checkpoint(tmp_path)
+    _write_003_feature_contract_surfaces(tmp_path, release_gate_verdict="BLOCK")
+
+    report = build_constraint_report(tmp_path)
+    blockers = collect_constraint_blockers(tmp_path)
+
+    assert report.release_gate is not None
+    assert report.release_gate["overall_verdict"] == "BLOCK"
+    assert any("release gate portability -> BLOCK" in blocker for blocker in blockers)

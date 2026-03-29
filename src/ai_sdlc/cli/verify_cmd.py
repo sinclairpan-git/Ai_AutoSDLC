@@ -137,6 +137,7 @@ def verify_constraints(
                         "source_name": report.source_name,
                         "check_objects": list(report.check_objects),
                         "coverage_gaps": list(report.coverage_gaps),
+                        "release_gate": report.release_gate,
                     },
                     "telemetry": {
                         "goal_session_id": goal_session_id,
@@ -158,5 +159,8 @@ def verify_constraints(
                 console.print(f"  {b}")
         else:
             console.print("[green]verify constraints: no BLOCKERs.[/green]")
+            if report.release_gate is not None:
+                verdict = str(report.release_gate.get("overall_verdict", "UNKNOWN"))
+                console.print(f"[cyan]release gate: {verdict}[/cyan]")
 
     raise typer.Exit(code=1 if blockers else 0)
