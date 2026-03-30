@@ -12,9 +12,11 @@ from ai_sdlc.telemetry.contracts import (
 )
 from ai_sdlc.telemetry.control_points import build_canonical_control_point_event
 from ai_sdlc.telemetry.detectors import (
+    GovernanceViolationCandidate,
     ViolationHit,
     detect_native_delegation_mismatches,
     escalate_hard_gate_violation,
+    generate_observer_violations,
     merge_violation_hits,
     violation_allows_inferred_only_closure,
 )
@@ -39,6 +41,8 @@ from ai_sdlc.telemetry.evaluators import (
     classify_unknown_family_outputs,
 )
 from ai_sdlc.telemetry.generators import (
+    build_gate_decision_payload,
+    build_observer_audit_summary,
     control_point_evidence_digest,
     control_point_locator,
     observer_facts_digest,
@@ -839,3 +843,128 @@ def test_native_delegation_boundary_surfaces_unobserved_and_mismatch_findings() 
     assert [finding.kind for finding in unknown_family] == ["unobserved"]
     assert len(mismatch) == 1
     assert mismatch[0].finding_name == "native_backend_external_delegation"
+
+
+def test_generate_observer_violations_from_mismatch_findings() -> None:
+    goal_session_id = "gs_0123456789abcdef0123456789abcdef"
+    workflow_run_id = "wr_0123456789abcdef0123456789abcdef"
+    step_id = "st_0123456789abcdef0123456789abcdef"
+    started_event = TelemetryEvent(
+        scope_level=ScopeLevel.STEP,
+        goal_session_id=goal_session_id,
+        workflow_run_id=workflow_run_id,
+        step_id=step_id,
+        trace_layer=TraceLayer.TOOL,
+        status=TelemetryEventStatus.STARTED,
+    )
+    delegation_evidence = Evidence(
+        scope_level=ScopeLevel.STEP,
+        goal_session_id=goal_session_id,
+        workflow_run_id=workflow_run_id,
+        step_id=step_id,
+        locator="trace://native-delegation/task-17/worker-3",
+        digest="sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+    )
+    mismatch = detect_native_delegation_mismatches(
+        goal_session_id=goal_session_id,
+        workflow_run_id=workflow_run_id,
+        step_id=step_id,
+        event_payloads=[started_event.model_dump(mode="json")],
+        evidence_payloads=[delegation_evidence.model_dump(mode="json")],
+        observer_version="v1",
+        policy="default",
+        profile="self_hosting",
+        mode="lite",
+    )
+
+    violations = generate_observer_violations(mismatch_findings=mismatch)
+
+    assert len(violations) == 1
+    candidate = violations[0]
+    assert isinstance(candidate, GovernanceViolationCandidate)
+    assert candidate.violation.status is ViolationStatus.OPEN
+    assert candidate.violation.risk_level is ViolationRiskLevel.HIGH
+    assert candidate.violation.root_cause_class is RootCauseClass.WORKFLOW
+    assert candidate.evidence_refs == mismatch[0].evidence_refs
+    assert candidate.source_object_refs == (f"evaluation:{mismatch[0].evaluation.evaluation_id}",)
+
+
+def test_build_observer_audit_summary_preserves_deferred_outputs() -> None:
+    evaluation = Evaluation(
+        scope_level=ScopeLevel.STEP,
+        goal_session_id="gs_0123456789abcdef0123456789abcdef",
+        workflow_run_id="wr_0123456789abcdef0123456789abcdef",
+        step_id="st_0123456789abcdef0123456789abcdef",
+        result=EvaluationResult.WARNING,
+        status=EvaluationStatus.FAILED,
+        root_cause_class=RootCauseClass.EVAL,
+    )
+    violation = Violation(
+        scope_level=ScopeLevel.STEP,
+        goal_session_id=evaluation.goal_session_id,
+        workflow_run_id=evaluation.workflow_run_id,
+        step_id=evaluation.step_id,
+        status=ViolationStatus.OPEN,
+        risk_level=ViolationRiskLevel.HIGH,
+        root_cause_class=RootCauseClass.WORKFLOW,
+    )
+
+    audit_summary = build_observer_audit_summary(
+        evaluations=[evaluation],
+        violations=[violation],
+        coverage_gap_count=1,
+        unknown_count=1,
+        unobserved_count=1,
+    )
+
+    assert audit_summary["audit_status"] == "blocked"
+    assert audit_summary["formal_outputs"] == [
+        "violation",
+        "audit_summary",
+        "gate_decision_payload",
+    ]
+    assert audit_summary["deferred_outputs"] == {
+        "evaluation_summary": "contract_preserved_deferred",
+        "incident_report": "contract_preserved_deferred",
+    }
+
+
+def test_gate_decision_payload_blocks_only_when_sources_are_closed() -> None:
+    violation = Violation(
+        scope_level=ScopeLevel.STEP,
+        goal_session_id="gs_0123456789abcdef0123456789abcdef",
+        workflow_run_id="wr_0123456789abcdef0123456789abcdef",
+        step_id="st_0123456789abcdef0123456789abcdef",
+        status=ViolationStatus.OPEN,
+        risk_level=ViolationRiskLevel.HIGH,
+        root_cause_class=RootCauseClass.WORKFLOW,
+    )
+
+    closed = build_gate_decision_payload(
+        decision_subject="verify:wr_0123456789abcdef0123456789abcdef",
+        violations=[violation],
+        confidence=Confidence.HIGH,
+        evidence_refs=("evd_0123456789abcdef0123456789abcdef",),
+        source_closure_status="closed",
+        observer_version="v1",
+        policy="default",
+        profile="self_hosting",
+        mode="lite",
+    )
+    incomplete = build_gate_decision_payload(
+        decision_subject="verify:wr_0123456789abcdef0123456789abcdef",
+        violations=[violation],
+        confidence=Confidence.HIGH,
+        evidence_refs=("evd_0123456789abcdef0123456789abcdef",),
+        source_closure_status="incomplete",
+        observer_version="v1",
+        policy="default",
+        profile="self_hosting",
+        mode="lite",
+    )
+
+    assert closed["decision_result"] == "block"
+    assert closed["confidence"] == "high"
+    assert closed["source_closure_status"] == "closed"
+    assert incomplete["decision_result"] == "advisory"
+    assert incomplete["source_closure_status"] == "incomplete"

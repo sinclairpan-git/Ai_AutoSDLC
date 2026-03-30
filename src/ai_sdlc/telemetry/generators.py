@@ -8,8 +8,10 @@ from collections.abc import Mapping, Sequence
 from dataclasses import asdict
 
 from ai_sdlc.core.verify_constraints import ConstraintReport
+from ai_sdlc.telemetry.clock import utc_now_z
 from ai_sdlc.telemetry.contracts import Evaluation, Violation
 from ai_sdlc.telemetry.enums import (
+    Confidence,
     EvaluationResult,
     EvaluationStatus,
     ViolationRiskLevel,
@@ -72,6 +74,28 @@ def observer_evaluation_id(
     }
     encoded = json.dumps(payload, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
     return f"eval_{hashlib.sha256(encoded.encode('utf-8')).hexdigest()[:32]}"
+
+
+def observer_violation_id(
+    *,
+    kind: str,
+    source_evaluation_id: str,
+    observer_version: str,
+    policy: str,
+    profile: str,
+    mode: str,
+) -> str:
+    """Return a deterministic violation id for one observer-governance promotion."""
+    payload = {
+        "kind": kind,
+        "source_evaluation_id": source_evaluation_id,
+        "observer_version": observer_version,
+        "policy": policy,
+        "profile": profile,
+        "mode": mode,
+    }
+    encoded = json.dumps(payload, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
+    return f"vio_{hashlib.sha256(encoded.encode('utf-8')).hexdigest()[:32]}"
 
 
 def gate_control_point_name(verdict: str) -> str | None:
@@ -335,12 +359,93 @@ def build_audit_report(
     }
 
 
+def build_observer_audit_summary(
+    *,
+    evaluations: Sequence[Evaluation],
+    violations: Sequence[Violation],
+    coverage_gap_count: int,
+    unknown_count: int,
+    unobserved_count: int,
+) -> dict[str, object]:
+    """Build the minimal formal governance audit summary for observer outputs."""
+    report = build_audit_report(evaluations, violations)
+    report.update(
+        {
+            "formal_outputs": [
+                "violation",
+                "audit_summary",
+                "gate_decision_payload",
+            ],
+            "deferred_outputs": {
+                "evaluation_summary": "contract_preserved_deferred",
+                "incident_report": "contract_preserved_deferred",
+            },
+            "coverage_gap_count": coverage_gap_count,
+            "unknown_count": unknown_count,
+            "unobserved_count": unobserved_count,
+        }
+    )
+    return report
+
+
+def build_gate_decision_payload(
+    *,
+    decision_subject: str,
+    violations: Sequence[Violation],
+    confidence: Confidence,
+    evidence_refs: Sequence[str],
+    source_closure_status: str,
+    observer_version: str,
+    policy: str,
+    profile: str,
+    mode: str,
+    generated_at: str | None = None,
+) -> dict[str, object]:
+    """Build the minimal gate-capable governance payload for closure surfaces."""
+    decision_result = _decision_result(
+        violations=violations,
+        confidence=confidence,
+        source_closure_status=source_closure_status,
+    )
+    return {
+        "decision_subject": decision_subject,
+        "decision_result": decision_result,
+        "confidence": confidence.value,
+        "evidence_refs": sorted(dict.fromkeys(str(ref) for ref in evidence_refs)),
+        "source_closure_status": source_closure_status,
+        "observer_version": observer_version,
+        "policy": policy,
+        "profile": profile,
+        "mode": mode,
+        "generated_at": generated_at or utc_now_z(),
+    }
+
+
 def _is_passing_evaluation(evaluation: Evaluation) -> bool:
     """Define the minimal pass condition for summary/audit semantics."""
     return (
         evaluation.status is EvaluationStatus.PASSED
         and evaluation.result is EvaluationResult.PASSED
     )
+
+
+def _decision_result(
+    *,
+    violations: Sequence[Violation],
+    confidence: Confidence,
+    source_closure_status: str,
+) -> str:
+    if source_closure_status != "closed":
+        return "advisory"
+    if confidence is Confidence.HIGH and any(
+        violation.status in {ViolationStatus.OPEN, ViolationStatus.TRIAGED, ViolationStatus.ACCEPTED}
+        and violation.risk_level in {ViolationRiskLevel.HIGH, ViolationRiskLevel.CRITICAL}
+        for violation in violations
+    ):
+        return "block"
+    if violations:
+        return "warn"
+    return "allow"
 
 
 def _sorted_payloads(

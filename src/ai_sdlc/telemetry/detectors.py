@@ -20,6 +20,7 @@ from ai_sdlc.telemetry.enums import (
     ViolationStatus,
 )
 from ai_sdlc.telemetry.evaluators import build_observer_finding_evaluation
+from ai_sdlc.telemetry.generators import observer_violation_id
 
 
 @dataclass(frozen=True, slots=True)
@@ -31,6 +32,20 @@ class MismatchFinding:
     evaluation: Evaluation
     evidence_refs: tuple[str, ...]
     confidence: Confidence
+    observer_version: str
+    policy: str
+    profile: str
+    mode: str
+
+
+@dataclass(frozen=True, slots=True)
+class GovernanceViolationCandidate:
+    """A gate-capable violation plus the observer conditions that produced it."""
+
+    violation: Violation
+    confidence: Confidence
+    evidence_refs: tuple[str, ...]
+    source_object_refs: tuple[str, ...]
     observer_version: str
     policy: str
     profile: str
@@ -168,3 +183,44 @@ def detect_native_delegation_mismatches(
             mode=mode,
         ),
     )
+
+
+def generate_observer_violations(
+    *,
+    mismatch_findings: Sequence[MismatchFinding],
+) -> tuple[GovernanceViolationCandidate, ...]:
+    """Promote observer mismatch findings into minimal governance violations."""
+    candidates: list[GovernanceViolationCandidate] = []
+    for finding in mismatch_findings:
+        violation = Violation(
+            scope_level=finding.evaluation.scope_level,
+            goal_session_id=finding.evaluation.goal_session_id,
+            workflow_run_id=finding.evaluation.workflow_run_id,
+            step_id=finding.evaluation.step_id,
+            created_at=finding.evaluation.created_at,
+            updated_at=finding.evaluation.updated_at,
+            violation_id=observer_violation_id(
+                kind=finding.finding_name,
+                source_evaluation_id=finding.evaluation.evaluation_id,
+                observer_version=finding.observer_version,
+                policy=finding.policy,
+                profile=finding.profile,
+                mode=finding.mode,
+            ),
+            status=ViolationStatus.OPEN,
+            risk_level=ViolationRiskLevel.HIGH,
+            root_cause_class=finding.evaluation.root_cause_class or RootCauseClass.WORKFLOW,
+        )
+        candidates.append(
+            GovernanceViolationCandidate(
+                violation=violation,
+                confidence=finding.confidence,
+                evidence_refs=finding.evidence_refs,
+                source_object_refs=(f"evaluation:{finding.evaluation.evaluation_id}",),
+                observer_version=finding.observer_version,
+                policy=finding.policy,
+                profile=finding.profile,
+                mode=finding.mode,
+            )
+        )
+    return tuple(candidates)
