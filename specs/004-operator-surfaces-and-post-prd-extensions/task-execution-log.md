@@ -348,3 +348,181 @@
 - **已完成 git 提交**：是
 - **提交哈希**：`a065e11`（`feat: formalize 004 offline distribution contracts`）
 - **是否继续下一批**：可继续，建议最后集中补 `004` Batch 1-5 历史 execution evidence。
+
+### Batch 2026-03-30-005 | 004 Task 1.1-1.2 retrospective evidence refresh
+
+#### 7.1 准备
+
+- **任务来源**：[`tasks.md`](tasks.md) Task `1.1`、Task `1.2`
+- **目标**：为 Program manifest / CLI foundation 补齐 retrospective execution evidence，使早期 `program` 能力与 `004` 台账正式对齐。
+- **预读范围**：[`tasks.md`](tasks.md)、[`../../src/ai_sdlc/models/program.py`](../../src/ai_sdlc/models/program.py)、[`../../src/ai_sdlc/core/program_service.py`](../../src/ai_sdlc/core/program_service.py)、[`../../src/ai_sdlc/cli/program_cmd.py`](../../src/ai_sdlc/cli/program_cmd.py)、[`../../tests/unit/test_program_service.py`](../../tests/unit/test_program_service.py)、[`../../tests/integration/test_cli_program.py`](../../tests/integration/test_cli_program.py)
+- **激活的规则**：retrospective close-truth refresh；git ancestry 优先；docs-only evidence backfill
+- **验证画像**：`docs-only`
+
+#### 7.2 统一验证命令
+
+- **历史提交锚点**
+  - 命令：`git show -s --format='%h %cs %s' 3db010c 6a39f81 5aae73b`
+  - 结果：
+    - `3db010c 2026-03-24 feat(program-cli): add phased multi-spec validate/status/plan foundation`
+    - `6a39f81 2026-03-24 feat(program-cli): add phase-3a integrate dry-run runbook`
+    - `5aae73b 2026-03-24 feat(program-cli): add guarded integrate execute gates`
+- **V1（program retrospective regression）**
+  - 命令：`uv run pytest tests/unit/test_program_service.py tests/integration/test_cli_program.py -q`
+  - 结果：**14 passed**。
+- **治理只读校验**
+  - 命令：`uv run ai-sdlc verify constraints`
+  - 结果：**无 BLOCKER**。
+
+#### 7.3 任务记录
+
+##### Task 1.1 | program-manifest schema / blocked_by / topo contract
+
+- **改动范围**：`tasks.md`、`task-execution-log.md`
+- **改动内容**：
+  - 以 `3db010c` 为 foundation 锚点，回补 `program.py` / `program_service.py` 在 `path`、`dep`、`cycle`、`blocked_by`、topo planning 上的正式落地证据。
+  - 明确 `6a39f81` 与 `5aae73b` 不是新的 `Task 1.1` 范围外能力，而是把 integration runbook / execute gate 的 service contract 补齐到 Task 1.1 的验收面。
+- **新增/调整的测试**：无新增自动化；依赖当前 fresh regression 与 git ancestry 重建。
+- **是否符合任务目标**：符合。Task 1.1 现已具备明确的历史落地锚点与 fresh contract evidence。
+
+##### Task 1.2 | program validate/status/plan/integrate CLI contract
+
+- **改动范围**：`tasks.md`、`task-execution-log.md`
+- **改动内容**：
+  - 以 `3db010c`、`6a39f81`、`5aae73b` 三个连续提交重建 `program validate/status/plan/integrate` 的 CLI contract 演进链。
+  - 在 `tasks.md` 中补 completion note，使 CLI contract 不再只存在于代码和测试，而有正式任务完成声明。
+- **新增/调整的测试**：无新增自动化；依赖当前 fresh regression 与 git ancestry 重建。
+- **是否符合任务目标**：符合。Task 1.2 的 CLI 对外合同已能通过历史提交与当前测试共同自证。
+
+#### 7.4 代码审查（摘要）
+
+- **规格对齐**：retrospective 记录保持 `program` 能力属于 `004` 的 post-PRD operator/program surface，没有与 `001/002/003` 交叉污染。
+- **证据质量**：用连续提交链而不是单一当前状态快照，能更准确表达 Task 1.1/1.2 的形成顺序。
+- **结论**：允许把 `Task 1.1` / `1.2` 从“代码已在、台账偏空”收敛为“有正式 retrospective evidence”。
+
+#### 7.5 任务/计划同步状态
+
+- `tasks.md` 同步状态：`已同步`（Task `1.1` / `1.2` 已补 retrospective completion note）。
+- `004` 剩余开放项：Task `3.1` / `3.2` / `5.1` 的 retrospective evidence 仍待继续补齐。
+
+#### 7.6 归档后动作
+
+- **已完成 git 提交**：否（待本轮 docs-only backfill 一并提交）
+- **提交哈希**：待提交
+- **是否继续下一批**：继续，转入 Task `3.1` / `3.2` retrospective refresh。
+
+### Batch 2026-03-30-006 | 004 Task 3.1-3.2 retrospective evidence refresh
+
+#### 8.1 准备
+
+- **任务来源**：[`tasks.md`](tasks.md) Task `3.1`、Task `3.2`
+- **目标**：为 IDE adapter / project-config default fallback 补齐 retrospective execution evidence。
+- **预读范围**：[`tasks.md`](tasks.md)、[`../../src/ai_sdlc/integrations/ide_adapter.py`](../../src/ai_sdlc/integrations/ide_adapter.py)、[`../../src/ai_sdlc/models/project.py`](../../src/ai_sdlc/models/project.py)、[`../../src/ai_sdlc/core/config.py`](../../src/ai_sdlc/core/config.py)、[`../../tests/unit/test_ide_adapter.py`](../../tests/unit/test_ide_adapter.py)、[`../../tests/integration/test_cli_ide_adapter.py`](../../tests/integration/test_cli_ide_adapter.py)、[`../../tests/unit/test_project_config.py`](../../tests/unit/test_project_config.py)
+- **激活的规则**：retrospective close-truth refresh；git ancestry 优先；docs-only evidence backfill
+- **验证画像**：`docs-only`
+
+#### 8.2 统一验证命令
+
+- **历史提交锚点**
+  - 命令：`git show -s --format='%h %cs %s' 77d12c4 ad7e3c7`
+  - 结果：
+    - `77d12c4 2026-03-23 feat: implement auto IDE adaptation and refactor stage-driven architecture`
+    - `ad7e3c7 2026-03-26 feat(config): gitignore project-config.yaml; example + default load + tests`
+- **V1（ide/project-config retrospective regression）**
+  - 命令：`uv run pytest tests/unit/test_ide_adapter.py tests/integration/test_cli_ide_adapter.py tests/unit/test_project_config.py -q`
+  - 结果：**21 passed**。
+- **治理只读校验**
+  - 命令：`uv run ai-sdlc verify constraints`
+  - 结果：**无 BLOCKER**。
+
+#### 8.3 任务记录
+
+##### Task 3.1 | IDE detection / adapter output / idempotence
+
+- **改动范围**：`tasks.md`、`task-execution-log.md`
+- **改动内容**：
+  - 以 `77d12c4` 回补 IDE marker / env detection、namespaced adapter output、idempotent apply / preserve-user-modified contract 的历史落地记录。
+  - 将后续 test-only 强化（如只读命令与 CLI hook 行为）视为该任务证据补强的一部分，而非独立未归档任务。
+- **新增/调整的测试**：无新增自动化；依赖当前 fresh regression 与 git ancestry 重建。
+- **是否符合任务目标**：符合。Task 3.1 已能通过初始实现提交和当前测试矩阵共同自证。
+
+##### Task 3.2 | project-config missing-file fallback / rebuild
+
+- **改动范围**：`tasks.md`、`task-execution-log.md`
+- **改动内容**：
+  - 以 `ad7e3c7` 回补 `project-config.yaml` 缺失时返回默认 `ProjectConfig`、save/load、adapter 重建配置的历史证据。
+  - 将 `project-config` 的 gitignore-friendly contract 与 IDE adapter hook 保持在同一任务链路内，避免“config fallback 在代码里存在但任务未收口”。
+- **新增/调整的测试**：无新增自动化；依赖当前 fresh regression 与 git ancestry 重建。
+- **是否符合任务目标**：符合。Task 3.2 现已具备明确的历史锚点与 fresh fallback evidence。
+
+#### 8.4 代码审查（摘要）
+
+- **规格对齐**：retrospective 记录没有改变 IDE/project-config 的边界，只把早期实现补回正式台账。
+- **证据质量**：`77d12c4` 与 `ad7e3c7` 分别覆盖 adapter contract 和 config fallback contract，职责划分清晰。
+- **结论**：允许把 Task `3.1` / `3.2` 从“执行归档缺口”收敛为“历史可追溯”。
+
+#### 8.5 任务/计划同步状态
+
+- `tasks.md` 同步状态：`已同步`（Task `3.1` / `3.2` 已补 retrospective completion note）。
+- `004` 剩余开放项：Task `5.1` 的 retrospective evidence 仍待继续补齐。
+
+#### 8.6 归档后动作
+
+- **已完成 git 提交**：否（待本轮 docs-only backfill 一并提交）
+- **提交哈希**：待提交
+- **是否继续下一批**：继续，转入 Task `5.1` retrospective refresh。
+
+### Batch 2026-03-30-007 | 004 Task 5.1 retrospective evidence refresh
+
+#### 9.1 准备
+
+- **任务来源**：[`tasks.md`](tasks.md) Task `5.1`
+- **目标**：把 `004` final traceability / operator regression / docs 对账收口的历史证据补齐，使 `spec.md`、`plan.md`、`tasks.md` 与 fresh verification 形成闭环。
+- **预读范围**：[`spec.md`](spec.md)、[`plan.md`](plan.md)、[`tasks.md`](tasks.md)、[`task-execution-log.md`](task-execution-log.md)
+- **激活的规则**：retrospective close-truth refresh；docs-only evidence backfill；当前 fresh verification 优先
+- **验证画像**：`docs-only`
+
+#### 9.2 统一验证命令
+
+- **V1（004 operator regression set）**
+  - 命令：`uv run pytest tests/integration/test_cli_program.py tests/integration/test_cli_doctor.py tests/integration/test_cli_stage.py tests/integration/test_cli_ide_adapter.py tests/integration/test_cli_status.py tests/integration/test_cli_scan.py tests/integration/test_cli_telemetry.py tests/integration/test_offline_bundle_scripts.py tests/unit/test_program_service.py tests/unit/test_ide_adapter.py tests/unit/test_project_config.py tests/unit/test_telemetry_store.py -q`
+  - 结果：**117 passed**。
+- **V2（repository-wide regression）**
+  - 命令：`uv run pytest -q`
+  - 结果：**890 passed**。
+- **Lint**
+  - 命令：`uv run ruff check src tests`
+  - 结果：**All checks passed!**
+- **治理只读校验**
+  - 命令：`uv run ai-sdlc verify constraints`
+  - 结果：**无 BLOCKER**。
+
+#### 9.3 任务记录
+
+##### Task 5.1 | 004 traceability / operator regression / docs reconciliation
+
+- **改动范围**：`tasks.md`、`task-execution-log.md`
+- **改动内容**：
+  - 以 `2026-03-30` 当前 fresh regression 为主证据，回补 `004` 的 final traceability / operator regression 收口记录。
+  - 在 `tasks.md` 中补 completion note，明确 `spec.md` / `plan.md` / `tasks.md` 现已对齐，且 program / doctor / stage / ide adapter / status / scan / telemetry / offline smoke 均有当前回归证据。
+  - 将本轮 retrospective refresh 与前面 `Task 2.2`、`2.3`、`4.1`、`5.2`、`Batch 6` 的 execution batches 串成单一 execution narrative。
+- **新增/调整的测试**：无新增自动化；依赖当前 fresh regression 与全仓验证结果。
+- **是否符合任务目标**：符合。Task 5.1 现已具备正式的 traceability / regression / docs sync 证据链。
+
+#### 9.4 代码审查（摘要）
+
+- **规格对齐**：retrospective 记录没有把 `004` 扩成新范围，只补齐“早期 task 在 execution log 中缺位”的台账问题。
+- **证据质量**：`117 passed` 证明 004 关键 surface 当前协同正常，`890 passed` 与 `ruff check src tests` 让 Task 5.1 的“最终收口”有仓库级证据支撑。
+- **结论**：允许把 Task `5.1` 从“隐含完成”提升为“有正式 retrospective batch 的完成项”。
+
+#### 9.5 任务/计划同步状态
+
+- `tasks.md` 同步状态：`已同步`（Task `5.1` 已补 retrospective completion note）。
+- `spec.md / plan.md / tasks.md` 同步状态：`已对账`（`004` 当前 formal close 所需台账已齐）。
+- `004` 剩余开放项：无 formal close blocker；后续若继续，仅属于非阻断性的历史精修。
+
+#### 9.6 归档后动作
+
+- **已完成 git 提交**：否（待本轮 docs-only backfill 一并提交）
+- **提交哈希**：待提交
+- **是否继续下一批**：可停止；`004` retrospective evidence backfill 已完成。

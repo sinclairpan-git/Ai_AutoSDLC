@@ -30,6 +30,8 @@ Batch 6: backlog remediation for latest/readiness freshness
   2. integration dry-run / execute gate 条件明确。
 - **验证**：`uv run pytest tests/unit/test_program_service.py -v`
 
+> **Task 1.1 完成（2026-03-30，retrospective）**：`program-manifest` 的 schema、path/dep/cycle 校验、`blocked_by` 与 topo planning foundation 首次落地于 `3db010c`（2026-03-24），integration dry-run / execute gate 相关 service contract 后续由 `6a39f81`、`5aae73b` 收口；fresh retrospective regression `uv run pytest tests/unit/test_program_service.py tests/integration/test_cli_program.py -q` 当前为 **14 passed**。
+
 ### Task 1.2 — 对齐 `program validate/status/plan/integrate` CLI 对外合同
 
 - **优先级**：P1
@@ -39,6 +41,8 @@ Batch 6: backlog remediation for latest/readiness freshness
   1. validate/status/plan/integrate 输出和 exit code 稳定。
   2. `--execute` 受 guarded gate 与显式确认保护。
 - **验证**：`uv run pytest tests/integration/test_cli_program.py -v`
+
+> **Task 1.2 完成（2026-03-30，retrospective）**：`program validate/status/plan` CLI foundation 落地于 `3db010c`（2026-03-24），`integrate` dry-run runbook 与 guarded execute gates 分别由 `6a39f81`、`5aae73b` 完成；fresh retrospective regression `uv run pytest tests/unit/test_program_service.py tests/integration/test_cli_program.py -q` 当前为 **14 passed**。
 
 ---
 
@@ -94,6 +98,8 @@ Batch 6: backlog remediation for latest/readiness freshness
   3. read-only commands 不会意外触发 adapter 写入。
 - **验证**：unit + integration tests
 
+> **Task 3.1 完成（2026-03-30，retrospective）**：IDE auto-adapter detection / apply contract 首次落地于 `77d12c4`（2026-03-23），后续由 `f1ed89e`、`bf54db7` 扩展只读命令与 CLI hook 的集成回归；fresh retrospective regression `uv run pytest tests/unit/test_ide_adapter.py tests/integration/test_cli_ide_adapter.py tests/unit/test_project_config.py -q` 当前为 **21 passed**。
+
 ### Task 3.2 — 锁定 `project-config.yaml` 缺失时的默认回退与重建
 
 - **优先级**：P1
@@ -103,6 +109,8 @@ Batch 6: backlog remediation for latest/readiness freshness
   1. 缺失本地配置时回落到默认模型，而不是报错。
   2. 运行时允许重建配置并保持幂等。
 - **验证**：定向 unit/integration tests
+
+> **Task 3.2 完成（2026-03-30，retrospective）**：`project-config.yaml` 的 gitignore-friendly default load / save / missing-file fallback contract 落地于 `ad7e3c7`（2026-03-26），并通过 `tests/unit/test_project_config.py` 把“缺失即默认、adapter 可重建配置”锁成正式回归；fresh retrospective regression `uv run pytest tests/unit/test_ide_adapter.py tests/integration/test_cli_ide_adapter.py tests/unit/test_project_config.py -q` 当前为 **21 passed**。
 
 ---
 
@@ -133,6 +141,8 @@ Batch 6: backlog remediation for latest/readiness freshness
   2. program / doctor / stage / ide adapter 关键 integration tests 通过。
   3. 全量 `uv run pytest` 与 `uv run ruff check src tests` 通过。
 - **验证**：定向 integration + 全量 `pytest` + `ruff`
+
+> **Task 5.1 完成（2026-03-30，retrospective）**：在 `Task 2.2`、`2.3`、`4.1`、`5.2` 与 `Batch 6` 全部补齐 execution evidence 后，`004` 的 `spec.md / plan.md / tasks.md` 已重新对齐；fresh operator regression `uv run pytest tests/integration/test_cli_program.py tests/integration/test_cli_doctor.py tests/integration/test_cli_stage.py tests/integration/test_cli_ide_adapter.py tests/integration/test_cli_status.py tests/integration/test_cli_scan.py tests/integration/test_cli_telemetry.py tests/integration/test_offline_bundle_scripts.py tests/unit/test_program_service.py tests/unit/test_ide_adapter.py tests/unit/test_project_config.py tests/unit/test_telemetry_store.py -q` 当前为 **117 passed**，全仓 `uv run pytest -q` 当前为 **890 passed**，`uv run ruff check src tests` 当前通过。
 
 ### Task 5.2 — 补齐 operator mutation/read-only matrix 文档合同
 
