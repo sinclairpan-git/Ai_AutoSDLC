@@ -258,6 +258,42 @@ def test_close_check_pass_when_all_requirements_met(tmp_path: Path) -> None:
     assert r.blockers == []
 
 
+def test_close_check_blocks_when_verification_governance_source_closure_is_incomplete(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    root = tmp_path / "repo3b"
+    root.mkdir()
+    _setup_repo(
+        root,
+        tasks_body="- [x] done\n### Task 1.1\n- **验收标准（AC）**：ok",
+        plan_status="completed",
+    )
+    monkeypatch.setattr(
+        "ai_sdlc.core.close_check.load_verification_governance_bundle",
+        lambda root, wi_dir=None: {
+            "gate_decision_payload": {
+                "decision_subject": "close:001-wi",
+                "decision_result": "advisory",
+                "confidence": "high",
+                "evidence_refs": ["evd_0123456789abcdef0123456789abcdef"],
+                "source_closure_status": "incomplete",
+                "observer_version": "v1",
+                "policy": "default",
+                "profile": "self_hosting",
+                "mode": "lite",
+                "generated_at": "2026-03-30T00:00:00Z",
+            },
+            "advisories": ("governance payload advisory: source_closure_status=incomplete",),
+        },
+    )
+
+    r = run_close_check(cwd=root, wi=Path("specs/001-wi"))
+
+    assert r.ok is False
+    assert any("source closure" in b.lower() and "published" in b.lower() for b in r.blockers)
+
+
 def test_close_check_blocker_when_git_closeout_not_committed(tmp_path: Path) -> None:
     root = tmp_path / "repo3b"
     root.mkdir()

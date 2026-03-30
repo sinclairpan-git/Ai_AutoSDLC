@@ -10,7 +10,11 @@ from typing import Any
 
 from ai_sdlc.branch.git_client import GitClient, GitError
 from ai_sdlc.core.plan_check import resolve_plan_path_from_wi, run_plan_check
-from ai_sdlc.core.release_gate import ReleaseGateParseError, load_release_gate_report
+from ai_sdlc.core.release_gate import (
+    ReleaseGateParseError,
+    build_release_gate_governance_payload,
+    load_release_gate_report,
+)
 from ai_sdlc.core.reviewer_gate import (
     ReviewerGateOutcomeKind,
     evaluate_reviewer_gate,
@@ -208,6 +212,15 @@ def _requires_release_gate(wi_dir: Path) -> bool:
 
 def _requires_formal_reviewer_gate(wi_dir: Path) -> bool:
     return wi_dir.name.startswith("003-")
+
+
+def load_verification_governance_bundle(
+    root: Path,
+    *,
+    wi_dir: Path | None = None,
+) -> dict[str, object] | None:
+    """Return a bounded verification governance bundle when one is available."""
+    return None
 
 
 def run_close_check(*, cwd: Path | None, wi: Path, all_docs: bool = False) -> CloseCheckResult:
@@ -416,6 +429,63 @@ def run_close_check(*, cwd: Path | None, wi: Path, all_docs: bool = False) -> Cl
                     }
                 )
                 blockers.extend(release_gate.blocker_lines())
+                release_payload = build_release_gate_governance_payload(
+                    release_gate,
+                    decision_subject=f"release:{wi_dir.name}",
+                    evidence_refs=(str(release_gate_path),),
+                )
+                release_governance_ok = (
+                    release_payload["source_closure_status"] == "closed"
+                    and release_payload["decision_result"] in {"allow", "warn"}
+                )
+                checks.append(
+                    {
+                        "name": "release_governance",
+                        "ok": release_governance_ok,
+                        "detail": (
+                            f"{release_payload['decision_result']}; "
+                            f"source_closure_status={release_payload['source_closure_status']}"
+                        ),
+                    }
+                )
+                if release_payload["source_closure_status"] != "closed":
+                    blockers.append(
+                        "BLOCKER: release governance source closure incomplete; "
+                        "release must remain reviewed/draft/blocked, not published"
+                    )
+
+    verification_governance = load_verification_governance_bundle(root, wi_dir=wi_dir)
+    if verification_governance is not None:
+        gate_payload = verification_governance.get("gate_decision_payload", {})
+        decision_result = str(gate_payload.get("decision_result", "")).strip().lower()
+        source_closure_status = str(gate_payload.get("source_closure_status", "")).strip().lower()
+        governance_ok = (
+            source_closure_status == "closed"
+            and decision_result in {"allow", "warn"}
+        )
+        checks.append(
+            {
+                "name": "verification_governance",
+                "ok": governance_ok,
+                "detail": (
+                    f"{decision_result or 'unknown'}; "
+                    f"source_closure_status={source_closure_status or 'unknown'}"
+                ),
+            }
+        )
+        if source_closure_status != "closed":
+            blockers.append(
+                "BLOCKER: verification governance source closure incomplete; "
+                "work item must remain reviewed/draft/blocked, not published"
+            )
+        elif decision_result == "block":
+            governance_blockers = verification_governance.get("blockers", ())
+            if governance_blockers:
+                blockers.extend(str(item) for item in governance_blockers)
+            else:
+                blockers.append(
+                    "BLOCKER: verification governance gate decision blocked close-check"
+                )
 
     doc_violations = _docs_consistency_violations(root, wi_dir, all_docs=all_docs)
     docs_ok = len(doc_violations) == 0

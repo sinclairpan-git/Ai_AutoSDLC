@@ -6,6 +6,11 @@ from pathlib import Path
 
 import pytest
 
+from ai_sdlc.core.release_gate import (
+    ReleaseGateCheck,
+    ReleaseGateReport,
+    build_release_gate_governance_payload,
+)
 from ai_sdlc.gates.extra_gates import KnowledgeGate, ParallelGate, PostmortemGate
 from ai_sdlc.gates.pipeline_gates import (
     CloseGate,
@@ -248,6 +253,52 @@ class TestExecuteGate:
             {"tests_passed": True, "committed": True, "logged": True}
         )
         assert result.verdict == GateVerdict.PASS
+
+    def test_stays_local_and_advisory_only_even_with_governance_payload(self) -> None:
+        result = ExecuteGate().check(
+            {
+                "tests_passed": True,
+                "committed": True,
+                "logged": True,
+                "verification_governance": {
+                    "gate_decision_payload": {"decision_result": "block"}
+                },
+            }
+        )
+        assert result.verdict == GateVerdict.PASS
+
+
+def test_release_gate_governance_payload_reuses_gate_capable_minimum_fields() -> None:
+    report = ReleaseGateReport(
+        source_path="specs/003-cross-cutting-authoring-and-extension-contracts/release-gate-evidence.md",
+        overall_verdict="BLOCK",
+        checks=(
+            ReleaseGateCheck(
+                name="portability",
+                verdict="BLOCK",
+                evidence_source="tests/integration/test_cli_module_invocation.py",
+                reason="portability gate escalated to BLOCK",
+            ),
+        ),
+    )
+
+    closed = build_release_gate_governance_payload(
+        report,
+        decision_subject="release:003-cross-cutting-authoring-and-extension-contracts",
+        evidence_refs=(report.source_path,),
+    )
+    advisory = build_release_gate_governance_payload(
+        report,
+        decision_subject="release:003-cross-cutting-authoring-and-extension-contracts",
+        evidence_refs=(report.source_path,),
+        source_closure_status="incomplete",
+    )
+
+    assert closed["decision_result"] == "block"
+    assert closed["source_closure_status"] == "closed"
+    assert closed["observer_version"] == "v1"
+    assert advisory["decision_result"] == "advisory"
+    assert advisory["source_closure_status"] == "incomplete"
 
     def test_fail_tests(self) -> None:
         result = ExecuteGate().check(

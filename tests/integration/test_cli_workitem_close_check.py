@@ -255,6 +255,46 @@ class TestCliWorkitemCloseCheck:
         result = runner.invoke(app, ["workitem", "close-check", "--wi", "specs/001-wi"])
         assert result.exit_code == 0
 
+    def test_exit_1_when_verification_governance_source_closure_is_incomplete(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        root = tmp_path / "r2a"
+        root.mkdir()
+        _setup_repo(
+            root,
+            tasks_body="- [x] done\n### Task 1.1\n- **验收标准（AC）**：ok",
+            plan_status="completed",
+        )
+        monkeypatch.chdir(root)
+
+        import ai_sdlc.core.close_check as close_check_module
+
+        monkeypatch.setattr(
+            close_check_module,
+            "load_verification_governance_bundle",
+            lambda root, wi_dir=None: {
+                "gate_decision_payload": {
+                    "decision_subject": "close:001-wi",
+                    "decision_result": "advisory",
+                    "confidence": "high",
+                    "evidence_refs": ["evd_0123456789abcdef0123456789abcdef"],
+                    "source_closure_status": "incomplete",
+                    "observer_version": "v1",
+                    "policy": "default",
+                    "profile": "self_hosting",
+                    "mode": "lite",
+                    "generated_at": "2026-03-30T00:00:00Z",
+                },
+                "advisories": ["governance payload advisory: source_closure_status=incomplete"],
+            },
+        )
+
+        result = runner.invoke(app, ["workitem", "close-check", "--wi", "specs/001-wi"])
+
+        assert result.exit_code == 1
+        assert "source closure" in result.output.lower()
+        assert "published" in result.output.lower()
+
     def test_exit_1_when_git_closeout_not_committed(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:

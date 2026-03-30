@@ -7,6 +7,8 @@ import re
 from dataclasses import dataclass
 from pathlib import Path
 
+from ai_sdlc.telemetry.clock import utc_now_z
+
 ALLOWED_RELEASE_GATE_VERDICTS = ("PASS", "WARN", "BLOCK")
 REQUIRED_RELEASE_GATE_CHECKS = (
     "recoverability",
@@ -165,3 +167,38 @@ def _derive_overall_verdict(checks: tuple[ReleaseGateCheck, ...]) -> str:
     if any(check.verdict == "WARN" for check in checks):
         return "WARN"
     return "PASS"
+
+
+def build_release_gate_governance_payload(
+    report: ReleaseGateReport,
+    *,
+    decision_subject: str,
+    evidence_refs: tuple[str, ...] | list[str],
+    source_closure_status: str = "closed",
+    observer_version: str = "v1",
+    policy: str = "default",
+    profile: str = "self_hosting",
+    mode: str = "lite",
+    generated_at: str | None = None,
+) -> dict[str, object]:
+    """Build the minimal gate-capable payload for release gate consumption."""
+    if source_closure_status != "closed":
+        decision_result = "advisory"
+    elif report.overall_verdict == "BLOCK":
+        decision_result = "block"
+    elif report.overall_verdict == "WARN":
+        decision_result = "warn"
+    else:
+        decision_result = "allow"
+    return {
+        "decision_subject": decision_subject,
+        "decision_result": decision_result,
+        "confidence": "high",
+        "evidence_refs": sorted(dict.fromkeys(str(ref) for ref in evidence_refs)),
+        "source_closure_status": source_closure_status,
+        "observer_version": observer_version,
+        "policy": policy,
+        "profile": profile,
+        "mode": mode,
+        "generated_at": generated_at or utc_now_z(),
+    }
