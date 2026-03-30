@@ -626,6 +626,7 @@ python -m ai_sdlc telemetry close-session --goal-session-id <gs_id> --status suc
 | bounded telemetry status | `python -m ai_sdlc status --json` | 只读 telemetry 摘要 | **只读**：不初始化 telemetry root，不 rebuild indexes，不触发 adapter |
 | doctor | `python -m ai_sdlc doctor` | 只读诊断 | **只读**：不 deep scan trace，不触发 adapter |
 | scan | `python -m ai_sdlc scan <path>` | operator / analysis | **analysis-only**：深度读取代码库并打印摘要；不初始化 `.ai-sdlc/`，不触发 adapter |
+| verify constraints | `python -m ai_sdlc verify constraints` | 仓库级规则 / 治理只读校验 | **只读**：不触发 adapter，不写 telemetry；但它不替代代码变更场景下的 `pytest` / `ruff` |
 | stage show / status | `python -m ai_sdlc stage show <stage>` / `stage status` | 阶段查看 | **可能写 adapter**：命令主体只读，但在已初始化项目中可能先触发一次 IDE adapter 幂等 apply |
 | stage run --dry-run | `python -m ai_sdlc stage run <stage> --dry-run` | 阶段预演 | **可能写 adapter**：命令本身只展示清单，不执行阶段步骤；但仍可能先触发 adapter apply |
 | stage run | `python -m ai_sdlc stage run <stage>` | 阶段调度入口 | **可能写 adapter**：命令本身输出清单与引导，不自动替你执行步骤；但仍可能先触发 adapter apply |
@@ -633,6 +634,7 @@ python -m ai_sdlc telemetry close-session --goal-session-id <gs_id> --status suc
 | program integrate --dry-run | `python -m ai_sdlc program integrate --dry-run` | guarded integration runbook 预览 | **可能写 adapter**；若带 `--report`，还会写 report 文件 |
 | program integrate --execute --yes | `python -m ai_sdlc program integrate --execute --yes` | guarded execute gate | **可能写 adapter**；当前会做 gate 校验与可选 report 写入，不会直接替你修改各 spec 内容 |
 | manual telemetry | `python -m ai_sdlc telemetry open-session`、`record-*`、`close-session` | operator evidence write | **会写 telemetry**：落到 `.ai-sdlc/local/telemetry/` 与派生 indexes；CLI 入口本身也可能先触发 adapter apply |
+| workitem close-check | `python -m ai_sdlc workitem close-check --wi specs/<WI>/` | work item 收口真值核验 | **命令主体只读，但可能写 adapter**：会核对 tasks / planned batch / traceability / execution-log / fresh verification / git closure；若 latest batch 尚未最终提交或工作树 dirty，会返回 `BLOCKER` |
 | offline build | `./packaging/offline/build_offline_bundle.sh` | 分发打包 | **会写本地构建产物**：写 `dist/`、`dist-offline/` 和 bundle archives，不修改业务仓源码 |
 | offline install | `./install_offline.sh` / `install_offline.ps1` / `install_offline.bat` | bundle 本地安装 | **会写 bundle 目录**：创建 `.venv/` 并安装 wheel；不会替目标业务仓初始化 AI-SDLC |
 
@@ -640,6 +642,37 @@ python -m ai_sdlc telemetry close-session --goal-session-id <gs_id> --status suc
 
 - 命令主体是否会写业务状态、telemetry 或离线产物
 - 该命令是否处在会触发 IDE adapter 幂等 apply 的 CLI 入口上
+
+## 框架仓库里的 verify / close 收口
+
+如果你是在 **AI-SDLC 仓库里开发 AI-SDLC 自身**，`verify` 和 `close` 最容易被混淆的地方是：
+
+- `uv run ai-sdlc verify constraints`
+  - 这是**仓库级规则 / 治理只读校验**。
+  - 它负责检查 verification profile、PR checklist、bounded surface / telemetry governance 等规则面是否一致。
+  - 它不会替代代码改动场景下的 `uv run pytest -q` 和 `uv run ruff check src tests`。
+- `uv run ai-sdlc workitem close-check --wi specs/<WI>/`
+  - 这是**work item 级收口真值核验**。
+  - 它看的不是“你是不是写了几段 execution log”，而是该 work item 的 tasks 完成度、planned batch coverage、FR / SC traceability、latest batch 的 fresh verification、`related_plan` 对账，以及最终 `git closure`。
+  - 如果 latest batch 还没完成最终 `git commit`，或者仓库工作树仍 dirty，`close-check` 返回 `BLOCKER` 是符合预期的。
+- `uv run ai-sdlc workitem close-check --wi specs/<WI>/ --all-docs`
+  - 默认只扫 `specs/<WI>/*.md`，以及 `docs/pull-request-checklist.zh.md`、`docs/USER_GUIDE.zh-CN.md`。
+  - 只有当你需要做全仓 `docs/**/*.md` wording drift 复核时，才加 `--all-docs`。
+
+框架仓库里做 telemetry smoke 或仓库级回归时，最常用的一组 fresh verification 是：
+
+```bash
+uv run pytest -q
+uv run ruff check src tests
+uv run ai-sdlc verify constraints
+git status --short
+```
+
+这里的 `git status --short` 不是装饰动作：
+
+- 它用于确认 telemetry smoke、CLI smoke、或其他真实运行命令没有把工作树弄脏。
+- `.ai-sdlc/local/` 应继续被视为本地运行态目录并保持忽略；如果 smoke 后工作树不干净，先处理漂移，再声称收口。
+- 如果本轮还改了 close 阶段文档、`related_plan` 或 `task-execution-log.md`，应在**完成最终 git 提交后**再补跑一次 `workitem close-check`。
 
 ## 框架自身开发补充
 

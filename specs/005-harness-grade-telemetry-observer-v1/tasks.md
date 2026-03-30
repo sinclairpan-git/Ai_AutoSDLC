@@ -198,3 +198,5 @@ Batch 6: bounded surfaces + compatibility smoke
   2. full regression、lint、`verify constraints` 都通过。
   3. deferred 能力没有偷偷侵入默认 `self_hosting` 路径。
 - **验证**：`uv run pytest -q`, `uv run ruff check src tests`, `uv run ai-sdlc verify constraints`
+
+> **Batch 6 收口（2026-03-31）**：Task `6.1` / `6.2` 已完成。bounded `status --json` / `doctor` / manual telemetry surface 的主线实现与 smoke 锁定已由提交 `a64d956`、`b0d0a19`、`8437c55` 对齐；paired smoke 与仓库级回归 fresh evidence 为 `uv run pytest tests/unit/test_runner_confirm.py tests/unit/test_telemetry_contracts.py tests/unit/test_telemetry_store.py tests/unit/test_telemetry_observer.py tests/unit/test_verify_constraints.py tests/unit/test_close_check.py tests/unit/test_telemetry_collectors.py tests/unit/test_parallel.py tests/integration/test_cli_trace.py tests/integration/test_cli_telemetry.py tests/integration/test_cli_status.py tests/integration/test_cli_doctor.py -q` **208 passed**、`uv run pytest -q` **913 passed**、`uv run ruff check src tests` **All checks passed!**、`uv run ai-sdlc verify constraints` **no BLOCKERs**。正式归档见 [`task-execution-log.md`](task-execution-log.md) Batch `2026-03-31-001` ~ `2026-03-31-003`。
