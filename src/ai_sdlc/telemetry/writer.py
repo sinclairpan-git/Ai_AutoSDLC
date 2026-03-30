@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
+from dataclasses import dataclass
 from typing import Any
 
 from ai_sdlc.telemetry.contracts import (
@@ -12,7 +13,11 @@ from ai_sdlc.telemetry.contracts import (
     TelemetryEvent,
     Violation,
 )
-from ai_sdlc.telemetry.enums import ArtifactStatus
+from ai_sdlc.telemetry.enums import (
+    ArtifactStatus,
+    HardFailCategory,
+    SourceClosureStatus,
+)
 from ai_sdlc.telemetry.resolver import SourceResolver
 from ai_sdlc.telemetry.store import TelemetryStore
 
@@ -21,6 +26,14 @@ _MUTABLE_ID_FIELDS = {
     "violation": "violation_id",
     "artifact": "artifact_id",
 }
+
+
+@dataclass(frozen=True)
+class SourceClosureAssessment:
+    """Structured source-closure result for governance publication decisions."""
+
+    status: SourceClosureStatus
+    hard_fail_category: HardFailCategory | None = None
 
 
 def source_chain_compatible(artifact: Artifact, payload: Mapping[str, Any]) -> bool:
@@ -33,6 +46,45 @@ def source_chain_compatible(artifact: Artifact, payload: Mapping[str, Any]) -> b
     ):
         return False
     return artifact.step_id is None or payload.get("step_id") == artifact.step_id
+
+
+def assess_artifact_source_closure(
+    artifact: Artifact,
+    resolver: SourceResolver,
+    *,
+    gate_surface: bool = False,
+) -> SourceClosureAssessment:
+    """Assess whether artifact sources are closed, incomplete, or currently unknowable."""
+    if not artifact.source_evidence_refs:
+        return SourceClosureAssessment(SourceClosureStatus.INCOMPLETE)
+
+    try:
+        for evidence_ref in artifact.source_evidence_refs:
+            resolved = resolver.resolve("evidence", evidence_ref)
+            if not source_chain_compatible(artifact, resolved.payload):
+                return SourceClosureAssessment(SourceClosureStatus.INCOMPLETE)
+            if not resolved.payload.get("digest"):
+                return SourceClosureAssessment(SourceClosureStatus.INCOMPLETE)
+
+        for source_ref in artifact.source_object_refs:
+            source_kind, object_ref = _parse_source_object_ref(source_ref)
+            resolved = resolver.resolve(source_kind, object_ref)
+            if not source_chain_compatible(artifact, resolved.payload):
+                return SourceClosureAssessment(SourceClosureStatus.INCOMPLETE)
+    except (LookupError, ValueError):
+        return SourceClosureAssessment(SourceClosureStatus.INCOMPLETE)
+    except Exception:
+        hard_fail_category = (
+            HardFailCategory.POLICY_OVERRIDABLE_HARD_FAIL_CANDIDATE
+            if gate_surface
+            else None
+        )
+        return SourceClosureAssessment(
+            SourceClosureStatus.UNKNOWN,
+            hard_fail_category=hard_fail_category,
+        )
+
+    return SourceClosureAssessment(SourceClosureStatus.CLOSED)
 
 
 class TelemetryWriter:
@@ -108,7 +160,10 @@ class TelemetryWriter:
 
     def write_artifact(self, artifact: Artifact) -> Artifact:
         """Persist an artifact through the canonical writer path."""
-        if artifact.status is ArtifactStatus.PUBLISHED and not self._artifact_source_closure_ok(artifact):
+        if (
+            artifact.status is ArtifactStatus.PUBLISHED
+            and not self._artifact_source_closure_ok(artifact)
+        ):
             raise ValueError("artifact source closure validation failed for published status")
         return self._write_mutable("artifact", artifact)
 
@@ -147,28 +202,8 @@ class TelemetryWriter:
             raise ValueError("parent chain mismatch")
 
     def _artifact_source_closure_ok(self, artifact: Artifact) -> bool:
-        if not artifact.source_evidence_refs:
-            return False
-
-        for evidence_ref in artifact.source_evidence_refs:
-            try:
-                resolved = self._resolver.resolve("evidence", evidence_ref)
-            except (LookupError, ValueError):
-                return False
-            if not source_chain_compatible(artifact, resolved.payload):
-                return False
-            if not resolved.payload.get("digest"):
-                return False
-
-        for source_ref in artifact.source_object_refs:
-            source_kind, object_ref = _parse_source_object_ref(source_ref)
-            try:
-                resolved = self._resolver.resolve(source_kind, object_ref)
-            except (LookupError, ValueError):
-                return False
-            if not source_chain_compatible(artifact, resolved.payload):
-                return False
-        return True
+        assessment = assess_artifact_source_closure(artifact, self._resolver)
+        return assessment.status is SourceClosureStatus.CLOSED
 
 
 def _parse_source_object_ref(value: str) -> tuple[str, str]:

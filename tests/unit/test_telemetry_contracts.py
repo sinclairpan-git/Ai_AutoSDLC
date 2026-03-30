@@ -359,6 +359,38 @@ def test_mutable_validated_update_preserves_identity_and_chain(
     assert updated is not record
 
 
+def test_artifact_lifecycle_updates_cannot_rewrite_source_refs() -> None:
+    artifact = Artifact(
+        scope_level=ScopeLevel.RUN,
+        goal_session_id="gs_0123456789abcdef0123456789abcdef",
+        workflow_run_id="wr_0123456789abcdef0123456789abcdef",
+        status=ArtifactStatus.GENERATED,
+        source_evidence_refs=("evd_0123456789abcdef0123456789abcdef",),
+        source_object_refs=("evaluation:eval_0123456789abcdef0123456789abcdef",),
+        created_at="2026-03-27T10:00:00Z",
+        updated_at="2026-03-27T10:00:00Z",
+    )
+
+    reviewed = artifact.validated_update(
+        status=ArtifactStatus.REVIEWED,
+        updated_at="2026-03-27T10:00:05Z",
+    )
+
+    assert reviewed.status is ArtifactStatus.REVIEWED
+    assert reviewed.source_evidence_refs == artifact.source_evidence_refs
+    assert reviewed.source_object_refs == artifact.source_object_refs
+
+    with pytest.raises(ValueError):
+        artifact.validated_update(
+            source_evidence_refs=("evd_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",),
+        )
+
+    with pytest.raises(ValueError):
+        artifact.validated_update(
+            source_object_refs=("evaluation:eval_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",),
+        )
+
+
 @pytest.mark.parametrize(
     ("record", "changes"),
     [

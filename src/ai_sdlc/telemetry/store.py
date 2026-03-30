@@ -16,6 +16,7 @@ from ai_sdlc.telemetry.contracts import (
     TelemetryEvent,
     Violation,
 )
+from ai_sdlc.telemetry.enums import HardFailCategory
 from ai_sdlc.telemetry.paths import (
     run_root,
     session_root,
@@ -69,6 +70,14 @@ class TelemetryStore:
         if not self.manifest_path.exists():
             return self.ensure_initialized()
         return self._read_json(self.manifest_path)
+
+    def classify_hard_fail(self, error: Exception) -> str | None:
+        """Classify storage-layer integrity failures that should hard-fail by default."""
+        if isinstance(error, OSError):
+            return HardFailCategory.HARD_FAIL_DEFAULT.value
+        if isinstance(error, ValueError) and "parent chain mismatch" in str(error):
+            return HardFailCategory.HARD_FAIL_DEFAULT.value
+        return None
 
     def event_stream_path(
         self,

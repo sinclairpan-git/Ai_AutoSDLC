@@ -60,6 +60,25 @@ def test_lazy_init_creates_only_local_telemetry_root_and_manifest(tmp_path: Path
     assert manifest["steps"] == {}
 
 
+def test_store_classifies_hard_fail_default_integrity_failures(tmp_path: Path) -> None:
+    store = TelemetryStore(tmp_path)
+
+    classifier = getattr(store, "classify_hard_fail", None)
+
+    assert callable(classifier)
+    assert classifier(PermissionError("raw trace root is not writable")) == "hard_fail_default"
+    assert classifier(ValueError("parent chain mismatch for workflow_run_id")) == "hard_fail_default"
+
+
+def test_store_does_not_classify_lookup_miss_as_hard_fail_default(tmp_path: Path) -> None:
+    store = TelemetryStore(tmp_path)
+
+    classifier = getattr(store, "classify_hard_fail", None)
+
+    assert callable(classifier)
+    assert classifier(LookupError("unable to resolve evidence:evd_missing")) is None
+
+
 @pytest.mark.parametrize(
     ("scope_level", "workflow_run_id", "step_id"),
     [

@@ -276,7 +276,7 @@ class Violation(TelemetryRecord):
 
 class Artifact(TelemetryRecord):
     object_category: ClassVar[TelemetryObjectCategory] = TelemetryObjectCategory.MUTABLE
-    allowed_update_fields: ClassVar[frozenset[str] | None] = None
+    allowed_update_fields: ClassVar[frozenset[str] | None] = frozenset({"status", "updated_at"})
 
     artifact_id: str = Field(default_factory=new_artifact_id)
     status: ArtifactStatus = ArtifactStatus.DRAFT

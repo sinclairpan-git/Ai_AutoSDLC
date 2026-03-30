@@ -116,6 +116,17 @@ class ArtifactStorageScope(str, Enum):
     EXPORTABLE = "exportable"
 
 
+class SourceClosureStatus(str, Enum):
+    UNKNOWN = "unknown"
+    INCOMPLETE = "incomplete"
+    CLOSED = "closed"
+
+
+class HardFailCategory(str, Enum):
+    HARD_FAIL_DEFAULT = "hard_fail_default"
+    POLICY_OVERRIDABLE_HARD_FAIL_CANDIDATE = "policy_overridable_hard_fail_candidate"
+
+
 class RootCauseClass(str, Enum):
     PROMPT = "prompt"
     CONTEXT = "context"

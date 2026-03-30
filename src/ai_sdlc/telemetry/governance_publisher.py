@@ -18,6 +18,7 @@ from ai_sdlc.telemetry.enums import (
     ArtifactStatus,
     ArtifactType,
     ScopeLevel,
+    SourceClosureStatus,
 )
 from ai_sdlc.telemetry.generators import (
     build_audit_report,
@@ -30,7 +31,11 @@ from ai_sdlc.telemetry.generators import (
 )
 from ai_sdlc.telemetry.resolver import SourceResolver
 from ai_sdlc.telemetry.store import TelemetryStore
-from ai_sdlc.telemetry.writer import TelemetryWriter, source_chain_compatible
+from ai_sdlc.telemetry.writer import (
+    SourceClosureAssessment,
+    TelemetryWriter,
+    assess_artifact_source_closure,
+)
 
 
 class GovernancePublisher:
@@ -101,7 +106,8 @@ class GovernancePublisher:
         report_payload: Mapping[str, Any],
     ) -> Artifact:
         """Attempt to publish an artifact and write its canonical report payload."""
-        source_closure_ok = self._source_closure_ok(artifact)
+        source_closure = self._source_closure_assessment(artifact)
+        source_closure_ok = source_closure.status is SourceClosureStatus.CLOSED
         next_updated_at = _next_updated_at(artifact)
         if source_closure_ok:
             persisted = artifact.validated_update(
@@ -127,6 +133,12 @@ class GovernancePublisher:
                 "workflow_run_id": persisted.workflow_run_id,
                 "step_id": persisted.step_id,
                 "source_closure_ok": source_closure_ok,
+                "source_closure_status": source_closure.status.value,
+                "hard_fail_category": (
+                    source_closure.hard_fail_category.value
+                    if source_closure.hard_fail_category is not None
+                    else None
+                ),
                 "report": dict(report_payload),
             },
         )
@@ -142,42 +154,30 @@ class GovernancePublisher:
             if payload["status"] != ArtifactStatus.PUBLISHED.value:
                 continue
             artifact = Artifact.model_validate(payload)
-            if self._source_closure_ok(artifact):
+            source_closure = self._source_closure_assessment(artifact)
+            if source_closure.status is SourceClosureStatus.CLOSED:
                 continue
             reviewed = artifact.validated_update(
                 status=ArtifactStatus.REVIEWED,
                 updated_at=_next_updated_at(artifact),
             )
             self.writer.write_artifact(reviewed)
-            self._write_revalidated_report(reviewed)
+            self._write_revalidated_report(reviewed, source_closure)
             downgraded.append(reviewed)
         return downgraded
 
-    def _source_closure_ok(self, artifact: Artifact) -> bool:
-        if not artifact.source_evidence_refs:
-            return False
+    def _source_closure_assessment(self, artifact: Artifact) -> SourceClosureAssessment:
+        return assess_artifact_source_closure(
+            artifact,
+            self.resolver,
+            gate_surface=True,
+        )
 
-        for evidence_ref in artifact.source_evidence_refs:
-            try:
-                resolved = self.resolver.resolve("evidence", evidence_ref)
-            except (LookupError, ValueError):
-                return False
-            if not source_chain_compatible(artifact, resolved.payload):
-                return False
-            if not resolved.payload.get("digest"):
-                return False
-
-        for source_ref in artifact.source_object_refs:
-            source_kind, object_ref = _parse_object_ref(source_ref)
-            try:
-                resolved = self.resolver.resolve(source_kind, object_ref)
-            except (LookupError, ValueError):
-                return False
-            if not source_chain_compatible(artifact, resolved.payload):
-                return False
-        return True
-
-    def _write_revalidated_report(self, artifact: Artifact) -> None:
+    def _write_revalidated_report(
+        self,
+        artifact: Artifact,
+        source_closure: SourceClosureAssessment,
+    ) -> None:
         existing = self.store.load_governance_report(artifact.artifact_id) or {}
         report_name = existing.get("report_name")
         if not isinstance(report_name, str) or not report_name:
@@ -195,6 +195,12 @@ class GovernancePublisher:
                 "workflow_run_id": artifact.workflow_run_id,
                 "step_id": artifact.step_id,
                 "source_closure_ok": False,
+                "source_closure_status": source_closure.status.value,
+                "hard_fail_category": (
+                    source_closure.hard_fail_category.value
+                    if source_closure.hard_fail_category is not None
+                    else None
+                ),
                 "report": dict(report_payload),
             },
         )

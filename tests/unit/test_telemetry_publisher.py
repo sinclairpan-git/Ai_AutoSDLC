@@ -5,6 +5,8 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import pytest
+
 from ai_sdlc.telemetry.contracts import (
     Artifact,
     Evaluation,
@@ -136,6 +138,8 @@ def test_publish_promotes_artifact_when_source_closure_is_valid(tmp_path: Path) 
     report_path = store.governance_report_path(published.artifact_id)
     assert report_path.is_file()
     assert report_path.is_relative_to(store.reports_root)
+    report = _read_json(report_path)
+    assert report["source_closure_status"] == "closed"
 
 
 def test_publish_audit_report_emits_audit_report_generated_control_point(
@@ -380,6 +384,54 @@ def test_publish_with_invalid_source_refs_keeps_artifact_below_published(tmp_pat
     assert attempted.status is ArtifactStatus.GENERATED
     snapshot = _read_json(store.current_object_path(attempted))
     assert snapshot["status"] != ArtifactStatus.PUBLISHED.value
+    report = _read_json(store.governance_report_path(attempted.artifact_id))
+    assert report["source_closure_status"] == "incomplete"
+    assert report["hard_fail_category"] is None
+
+
+def test_publish_with_broken_resolver_marks_source_closure_unknown_and_records_candidate(
+    tmp_path: Path,
+) -> None:
+    class BrokenResolver:
+        def resolve(self, source_kind: str, source_ref: str) -> object:
+            raise RuntimeError(
+                f"source closure resolver corrupted for {source_kind}:{source_ref}"
+            )
+
+    store = TelemetryStore(tmp_path)
+    writer = TelemetryWriter(store)
+    event, evidence, evaluation = _seed_completed_run(writer)
+    publisher = GovernancePublisher(
+        store=store,
+        writer=writer,
+        resolver=BrokenResolver(),
+    )
+    artifact = Artifact(
+        scope_level=ScopeLevel.RUN,
+        goal_session_id=event.goal_session_id,
+        workflow_run_id=event.workflow_run_id,
+        status=ArtifactStatus.GENERATED,
+        artifact_type=ArtifactType.REPORT,
+        artifact_role=ArtifactRole.AUDIT,
+        source_evidence_refs=(evidence.evidence_id,),
+        source_object_refs=(f"evaluation:{evaluation.evaluation_id}",),
+        created_at="2026-03-27T10:00:01Z",
+        updated_at="2026-03-27T10:00:01Z",
+    )
+
+    try:
+        attempted = publisher.publish_artifact(
+            artifact,
+            report_name="audit_report",
+            report_payload={"audit_status": "issues_found"},
+        )
+    except RuntimeError as exc:  # pragma: no cover - this is the current gap under TDD
+        pytest.fail(f"broken source-closure resolver should degrade to unknown, got {exc!r}")
+
+    assert attempted.status is ArtifactStatus.GENERATED
+    report = _read_json(store.governance_report_path(attempted.artifact_id))
+    assert report["source_closure_status"] == "unknown"
+    assert report["hard_fail_category"] == "policy_overridable_hard_fail_candidate"
 
 
 def test_revalidate_downgrades_previously_published_artifact_when_refs_break(
