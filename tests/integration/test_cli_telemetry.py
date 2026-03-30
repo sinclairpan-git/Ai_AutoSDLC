@@ -45,6 +45,20 @@ def _read_ndjson(path: Path) -> list[dict]:
     ]
 
 
+def test_help_exposes_only_the_frozen_minimal_manual_surface() -> None:
+    result = runner.invoke(app, ["telemetry", "--help"])
+
+    assert result.exit_code == 0
+    assert "open-session" in result.output
+    assert "close-session" in result.output
+    assert "record-event" in result.output
+    assert "record-evidence" in result.output
+    assert "record-evaluation" in result.output
+    assert "record-violation" in result.output
+    assert "note" not in result.output.lower()
+    assert "comment" not in result.output.lower()
+
+
 class TestCliTelemetry:
     def test_open_session_writes_session_started_event(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch

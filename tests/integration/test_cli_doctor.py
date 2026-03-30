@@ -112,6 +112,27 @@ def test_doctor_real_cli_path_does_not_mutate_project_config(
     assert after == before
 
 
+def test_doctor_does_not_recreate_missing_indexes_when_reading_status_surface(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    init_project(tmp_path)
+    _seed_bounded_event_fixture(tmp_path)
+    indexes_root = telemetry_indexes_root(tmp_path)
+    for path in indexes_root.glob("*.json"):
+        path.unlink()
+    assert not list(indexes_root.glob("*.json"))
+    monkeypatch.chdir(tmp_path)
+
+    result = runner.invoke(app, ["doctor"], catch_exceptions=False)
+
+    assert result.exit_code == 0
+    assert not list(indexes_root.glob("*.json"))
+
+    assert result.exit_code == 0
+    assert not list(indexes_root.glob("*.json"))
+
+
 def test_doctor_resolver_health_exercises_supported_source_resolution(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

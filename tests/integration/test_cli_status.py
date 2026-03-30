@@ -918,6 +918,38 @@ def test_status_json_latest_summary_falls_back_to_canonical_snapshots_without_in
     }
 
 
+def test_status_json_fallback_does_not_recreate_missing_indexes(tmp_path: Path) -> None:
+    init_project(tmp_path)
+    store = TelemetryStore(tmp_path)
+    writer = TelemetryWriter(store)
+
+    event = TelemetryEvent(
+        scope_level=ScopeLevel.RUN,
+        goal_session_id="gs_0123456789abcdef0123456789abcdef",
+        workflow_run_id="wr_0123456789abcdef0123456789abcdef",
+        created_at="2026-03-27T10:00:00Z",
+        updated_at="2026-03-27T10:00:00Z",
+        timestamp="2026-03-27T10:00:00Z",
+        trace_layer=TraceLayer.TOOL,
+    )
+    writer.write_event(event)
+    store.delete_indexes()
+    indexes_root = telemetry_indexes_root(tmp_path)
+    assert not list(indexes_root.glob("*.json"))
+
+    with patch("ai_sdlc.cli.commands.find_project_root", return_value=tmp_path):
+        result = runner.invoke(app, ["status", "--json"])
+
+    assert result.exit_code == 0
+    assert not list(indexes_root.glob("*.json"))
+
+    with patch("ai_sdlc.cli.commands.find_project_root", return_value=tmp_path):
+        result = runner.invoke(app, ["status", "--json"])
+
+    assert result.exit_code == 0
+    assert not list(indexes_root.glob("*.json"))
+
+
 def test_status_json_fallback_latest_scope_ids_ignore_misleading_mtime(
     tmp_path: Path,
 ) -> None:
