@@ -5,11 +5,14 @@ from __future__ import annotations
 import logging
 from dataclasses import dataclass
 from enum import Enum
+from hashlib import sha256
 from pathlib import Path
 from typing import Any, Protocol, runtime_checkable
 
 from ai_sdlc.generators.doc_gen import DocScaffolder
 from ai_sdlc.generators.index_gen import generate_index as gen_index
+from ai_sdlc.telemetry.enums import TelemetryEventStatus
+from ai_sdlc.telemetry.runtime import RuntimeTelemetry
 
 logger = logging.getLogger(__name__)
 
@@ -169,11 +172,29 @@ class NativeBackend:
     def execute_task(self, task_id: str, context: dict[str, Any]) -> str:
         """Return pending — Agent handles actual execution."""
         logger.debug("Native backend: task %s execution delegated to Agent", task_id)
+        self._record_delegation_boundary(task_id, context)
         return "pending"
 
     def generate_index(self, root: Path) -> dict[str, Any]:
         """Generate project index using built-in scanner."""
         return gen_index(root)
+
+    def _record_delegation_boundary(self, task_id: str, context: dict[str, Any]) -> None:
+        telemetry = context.get("telemetry")
+        step_id = context.get("step_id")
+        worker_id = context.get("worker_id")
+        if not isinstance(telemetry, RuntimeTelemetry):
+            return
+        worker_token = worker_id if isinstance(worker_id, str) and worker_id else "worker-unknown"
+        telemetry.record_tool_event(
+            step_id=step_id,
+            status=TelemetryEventStatus.STARTED,
+        )
+        telemetry.record_tool_evidence(
+            step_id=step_id,
+            locator=f"trace://native-delegation/{task_id}/{worker_token}",
+            digest=f"sha256:{sha256(f'{task_id}:{worker_token}:pending'.encode()).hexdigest()}",
+        )
 
 
 # ── registry ──

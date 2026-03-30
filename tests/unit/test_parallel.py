@@ -2,15 +2,43 @@
 
 from __future__ import annotations
 
+import json
+from pathlib import Path
+
+from ai_sdlc.backends.native import NativeBackend
 from ai_sdlc.models.state import ParallelPolicy, Task, WorkerAssignment
 from ai_sdlc.parallel.engine import (
     assign_workers,
     build_coordination_artifact,
     compute_file_ownership,
     detect_overlaps,
+    emit_worker_lifecycle_fact,
     simulate_merge,
     split_into_groups,
 )
+from ai_sdlc.telemetry.enums import TelemetryEventStatus
+from ai_sdlc.telemetry.paths import telemetry_local_root
+from ai_sdlc.telemetry.runtime import RuntimeTelemetry
+
+
+def _read_ndjson(path: Path) -> list[dict]:
+    return [
+        json.loads(line)
+        for line in path.read_text(encoding="utf-8").splitlines()
+        if line.strip()
+    ]
+
+
+def _step_root(tmp_path: Path, telemetry: RuntimeTelemetry, step_id: str) -> Path:
+    return (
+        telemetry_local_root(tmp_path)
+        / "sessions"
+        / telemetry.goal_session_id
+        / "runs"
+        / telemetry.workflow_run_id
+        / "steps"
+        / step_id
+    )
 
 
 def _task(
@@ -134,6 +162,77 @@ class TestWorkerAssigner:
         assignments = assign_workers("WI-003", groups, policy)
         g0 = next(a for a in assignments if a.group_id == "group-0")
         assert "src/b.py" in g0.forbidden_paths
+
+    def test_assigns_worker_index_and_parallel_group(self) -> None:
+        groups = {
+            "group-0": [_task("T1", ["src/a.py"])],
+            "group-1": [_task("T2", ["src/b.py"])],
+            "group-seq": [_task("T3", ["src/c.py"], parallel=False)],
+        }
+        policy = ParallelPolicy(enabled=True)
+
+        assignments = assign_workers("WI-004", groups, policy)
+
+        group0 = next(a for a in assignments if a.group_id == "group-0")
+        seq = next(a for a in assignments if a.group_id == "group-seq")
+        assert group0.worker_id == "worker-1"
+        assert group0.worker_index == 1
+        assert group0.parallel_group == "group-0"
+        assert seq.worker_id == "worker-main"
+        assert seq.parallel_group == "group-seq"
+
+    def test_emit_worker_lifecycle_fact_records_worker_id_in_fact_layer(
+        self, tmp_path: Path
+    ) -> None:
+        telemetry = RuntimeTelemetry(tmp_path)
+        telemetry.open_workflow_run()
+        step_id = telemetry.begin_step("execute")
+        assignment = WorkerAssignment(
+            worker_id="worker-1",
+            group_id="group-0",
+            branch_name="feature/WI-005-worker-1",
+            task_ids=["T1"],
+        )
+
+        emit_worker_lifecycle_fact(
+            telemetry,
+            step_id=step_id,
+            assignment=assignment,
+            phase="started",
+            status=TelemetryEventStatus.STARTED,
+        )
+
+        step_root = _step_root(tmp_path, telemetry, step_id)
+        events = _read_ndjson(step_root / "events.ndjson")
+        evidence = _read_ndjson(step_root / "evidence.ndjson")
+        assert events[-1]["trace_layer"] == "tool"
+        assert events[-1]["status"] == "started"
+        assert evidence[-1]["locator"] == "trace://worker-lifecycle/worker-1/started"
+
+    def test_native_backend_records_delegation_boundary_without_completion(
+        self, tmp_path: Path
+    ) -> None:
+        telemetry = RuntimeTelemetry(tmp_path)
+        telemetry.open_workflow_run()
+        step_id = telemetry.begin_step("execute")
+
+        result = NativeBackend().execute_task(
+            "T-native",
+            {
+                "telemetry": telemetry,
+                "step_id": step_id,
+                "worker_id": "worker-2",
+            },
+        )
+
+        step_root = _step_root(tmp_path, telemetry, step_id)
+        events = _read_ndjson(step_root / "events.ndjson")
+        evidence = _read_ndjson(step_root / "evidence.ndjson")
+
+        assert result == "pending"
+        assert events[-1]["trace_layer"] == "tool"
+        assert events[-1]["status"] == "started"
+        assert evidence[-1]["locator"] == "trace://native-delegation/T-native/worker-2"
 
 
 class TestOverlapDetector:

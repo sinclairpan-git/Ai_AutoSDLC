@@ -15,6 +15,8 @@ from ai_sdlc.models.state import (
     Task,
     WorkerAssignment,
 )
+from ai_sdlc.telemetry.enums import TelemetryEventStatus
+from ai_sdlc.telemetry.runtime import RuntimeTelemetry
 
 logger = logging.getLogger(__name__)
 
@@ -156,8 +158,12 @@ def assign_workers(
     for group_id, tasks in sorted(groups.items()):
         if group_id == "group-seq":
             branch = f"feature/{work_item_id}-dev"
+            worker_id = "worker-main"
+            worker_index = 0
         else:
             branch = f"feature/{work_item_id}-worker-{worker_num}"
+            worker_id = f"worker-{worker_num}"
+            worker_index = worker_num
             worker_num += 1
 
         task_ids = [getattr(t, "task_id", str(t)) for t in tasks]
@@ -168,9 +174,9 @@ def assign_workers(
 
         assignments.append(
             WorkerAssignment(
-                worker_id=f"worker-{worker_num - 1}"
-                if group_id != "group-seq"
-                else "worker-main",
+                worker_id=worker_id,
+                worker_index=worker_index,
+                parallel_group=group_id,
                 group_id=group_id,
                 branch_name=branch,
                 task_ids=task_ids,
@@ -182,6 +188,29 @@ def assign_workers(
         )
 
     return assignments
+
+
+def emit_worker_lifecycle_fact(
+    telemetry: RuntimeTelemetry,
+    *,
+    step_id: str | None,
+    assignment: WorkerAssignment,
+    phase: str,
+    status: TelemetryEventStatus,
+) -> None:
+    """Append one worker-lifecycle fact to the active telemetry step scope."""
+    telemetry.record_tool_event(
+        step_id=step_id,
+        status=status,
+    )
+    telemetry.record_tool_evidence(
+        step_id=step_id,
+        locator=f"trace://worker-lifecycle/{assignment.worker_id}/{phase}",
+        digest=(
+            f"worker:{assignment.worker_id};phase:{phase};group:{assignment.group_id};"
+            f"branch:{assignment.branch_name};status:{status.value}"
+        ),
+    )
 
 
 def _compute_forbidden(
