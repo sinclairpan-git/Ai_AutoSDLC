@@ -58,7 +58,9 @@
 
 ## 下一波待修优先级（2026-03-29）
 
-- 当前待修：无
+- 当前待修：
+  - `FD-2026-03-30-001` | 新 framework capability 的 architecture/plan 已冻结，但仍把 `docs/superpowers/plans/*.md` 误当作可直接进入实施的法定入口，未先落到 `specs/<WI>/tasks.md`
+  - `FD-2026-03-30-002` | 已识别流程违约后，代理仍未按框架约束主动登记 `framework-defect-backlog`，而是等用户追问后才补录
 - 本轮已收口：
   - `003` 线 `FD-2026-03-29-001`、`FD-2026-03-29-002`、`FD-2026-03-29-003`
   - `003` 线 `FD-2026-03-27-011`、`FD-2026-03-27-012`
@@ -66,6 +68,52 @@
 - 挂靠原则：
   - `003` 线：已全部收口
   - `004` 线：已全部收口
+
+## FD-2026-03-30-001 | 新 framework capability 的 architecture/plan 已冻结，但仍把 `docs/superpowers/plans/*.md` 误当作可直接进入实施的法定入口，未先落到 `specs/<WI>/tasks.md`
+
+- 日期 (UTC): 2026-03-30
+- 来源: self_review, user_review
+- 状态: open
+- owner: codex
+- related_doc: docs/superpowers/specs/2026-03-30-harness-grade-telemetry-observer-architecture-design.md, docs/superpowers/plans/2026-03-30-harness-grade-telemetry-observer-v1.md, docs/框架自迭代开发与发布约定.md
+- 现象: 在 `Harness-Grade Telemetry & Observer Architecture` 这条新 framework capability 线上，architecture baseline 和 implementation plan 已写入 `docs/superpowers/`，但随后仍把 `docs/superpowers/plans/*.md` 误表述成“可直接从 Task 1 开始实施”的入口，没有先把设计收敛成正式 `specs/<WI>/spec.md + plan.md + tasks.md`。该问题被用户追问后才显式承认。
+- 触发场景: 对全新 framework 级能力先产出全景设计文档与实施计划后，执行侧沿着普通工程计划思维继续推进，把“已有 implementation plan”误当作“已满足框架执行前置条件”，而没有回到仓库法定真值入口 `tasks.md`。
+- 影响范围: 阶段顺序失真、`tasks.md` 法定地位被弱化、`TasksParser` / work item traceability / close-check 无法接入正式执行真值，以及后续 execution log / defect 挂靠 / close verdict 的单一真值被破坏。
+- 根因分类: A, B, C, H
+- 未来杜绝方案摘要: 对任何新 framework capability，只要执行目标是进入实现，就必须把 `docs/superpowers/specs/*.md` 与 `docs/superpowers/plans/*.md` 视为“设计输入”，而不是法定执行入口；在出现“可以开始 Task 1”这类完成性或执行性表述前，必须先落成 `specs/<WI>/spec.md`、`plan.md`、`tasks.md`。必要时应增加显式检查，阻断“只有 superpowers plan、没有正式 work item tasks”时的实施宣称。
+- 建议改动层级: prompt / context, rule / policy, workflow, tool, eval
+- prompt / context: `docs/superpowers/specs/*.md` 与 `docs/superpowers/plans/*.md` 负责 architecture baseline 和 planning frame，不自动等价于框架 work item 的法定执行入口；执行性表述前必须先核对 `specs/<WI>/tasks.md` 是否存在。
+- rule / policy: 将“新 framework capability 的设计文档与 superpowers implementation plan 不是执行真值；正式执行入口仍是 `specs/<WI>/tasks.md`”补成显式规则，并纳入自迭代约束。
+- middleware: 为后续 `trace-check`、`close-check` 或等价 guard 增加检测：若当前能力只有 `docs/superpowers/plans/*.md` 而没有正式 `specs/<WI>/tasks.md`，则不得进入实现完成态或对外宣称“可直接开做”。
+- workflow: 完整顺序必须收敛为 `architecture baseline -> implementation plan -> specs/<WI>/spec.md -> specs/<WI>/plan.md -> specs/<WI>/tasks.md -> execute -> task-execution-log`；任何在 `tasks.md` 之前的实现性推进都应视为流程违约。
+- tool: `src/ai_sdlc/context/state.py`、`src/ai_sdlc/generators/doc_gen.py`、后续 `workitem close-check` / `trace-check`、以及相关 `verify constraints` surface。
+- eval: “仅有 superpowers plan 即宣称可执行”事件数、`tasks.md` 缺失下的实施宣称拦截率、framework capability 从 design 到正式 work item 的转换完整率
+- 风险等级: 高
+- 可验证成功标准: 给定“只有 `docs/superpowers/specs/*.md` 与 `docs/superpowers/plans/*.md`、但尚未创建 `specs/<WI>/tasks.md`”的场景时，流程检查或 review 能明确指出“尚未满足法定执行前置”；完成正式 `specs/<WI>/tasks.md` 后，才能进入 Task 级实施与 execution log。
+- 是否需要回归测试补充: 是：补一类正反夹具，验证框架 capability 在只有 superpowers plan 时不会被表述为“可直接开做”，而在正式 `tasks.md` 落成后才允许进入实施路径。
+
+## FD-2026-03-30-002 | 已识别流程违约后，代理仍未按框架约束主动登记 `framework-defect-backlog`，而是等用户追问后才补录
+
+- 日期 (UTC): 2026-03-30
+- 来源: self_review, user_review
+- 状态: open
+- owner: codex
+- related_doc: docs/framework-defect-backlog.zh-CN.md, docs/框架自迭代开发与发布约定.md, src/ai_sdlc/rules/pipeline.md, src/ai_sdlc/rules/verification.md
+- 现象: 在已经识别出“把 `docs/superpowers/plans/*.md` 误当成可直接进入实施入口”的流程违约后，代理没有立即按仓库约束把该违约登记到 `docs/framework-defect-backlog.zh-CN.md`，而是先停留在口头承认，直到用户再次追问“违约的记录约束呢”之后才补录 backlog。
+- 触发场景: 代理已经完成违约识别与口头确认，但没有把“识别违约 -> 立即登记 backlog”视为同一轮法定动作，而是把 backlog 记录误当成可选后续步骤。
+- 影响范围: 框架违约归档时效性、缺陷真值单一来源、execution close-out 的可信度，以及“发现违约后是否会自动回挂演进输入池”的框架行为预期。
+- 根因分类: A, B, H
+- 未来杜绝方案摘要: “识别出框架违约”与“登记 framework-defect-backlog”必须被视为同一轮原子动作，而不是两个可分离步骤；一旦命中规则条件，代理应先补 backlog，再继续讨论补正路径或实施计划。
+- 建议改动层级: prompt / context, rule / policy, workflow, eval
+- prompt / context: 当代理自己已经明确说出“这是违约 / 这是框架缺口”时，下一动作默认应切到 backlog 记录，而不是继续停留在解释或等待用户提醒。
+- rule / policy: 把“识别违约后必须立即登记 backlog”从一般性描述收紧为明确执行顺序；若未登记，不得继续把该问题表述为已完整处理。
+- middleware: 后续可在 review checklist、trace-check 或等价自检面增加检测：若会话或执行归档中已明确识别违约，但 backlog 未新增对应条目，则给出流程 blocker 或高优先级告警。
+- workflow: 顺序固定为 `识别违约 -> 写 backlog 条目 -> 只读校验 -> 再讨论补正/修复/计划`，不得颠倒。
+- tool: `docs/framework-defect-backlog.zh-CN.md`、`uv run ai-sdlc verify constraints`、后续 `trace-check` / close-out checklist
+- eval: “已识别违约但未即时登记 backlog”事件数、违约识别到 backlog 落盘的延迟时间、需要用户二次提醒才补录的次数
+- 风险等级: 中
+- 可验证成功标准: 当代理在一次迭代中明确识别出框架违约时，同轮必须新增对应 backlog 条目，并在继续补正动作前完成只读校验；后续 review / traceability 不再出现“口头承认了违约，但 backlog 为空”的状态。
+- 是否需要回归测试补充: 是：补一类流程级正反夹具，验证“识别违约但未登记 backlog”会被明确视为未完成的流程缺口。
 
 ## FD-2026-03-29-001 | close-check 会把部分实现的 work item 误判为可收口
 
