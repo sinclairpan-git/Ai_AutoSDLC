@@ -18,6 +18,7 @@ from ai_sdlc.cli.run_cmd import run_command
 from ai_sdlc.cli.stage_cmd import stage_app
 from ai_sdlc.cli.sub_apps import gate_app, rules_app, studio_app
 from ai_sdlc.cli.telemetry_cmd import telemetry_app
+from ai_sdlc.cli.trace_cmd import trace_app
 from ai_sdlc.cli.verify_cmd import verify_app
 from ai_sdlc.cli.workitem_cmd import workitem_app
 
@@ -57,6 +58,7 @@ app.add_typer(program_app, name="program")
 app.add_typer(workitem_app, name="workitem")
 app.add_typer(verify_app, name="verify")
 app.add_typer(telemetry_app, name="telemetry")
+app.add_typer(trace_app, name="trace")
 
 if __name__ == "__main__":
     app()

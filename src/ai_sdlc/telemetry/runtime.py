@@ -260,6 +260,14 @@ class RuntimeTelemetry:
             )
         return step_id
 
+    def open_step_scope(self, stage: str) -> tuple[WorkflowRunContext, str]:
+        """Open the active workflow run and the named step scope."""
+        context = self.open_workflow_run()
+        step_id = self.begin_step(stage)
+        if step_id is None:  # pragma: no cover - guarded by open_workflow_run()
+            raise ValueError(f"unable to open telemetry step scope for {stage!r}")
+        return context, step_id
+
     def finish_step(self, stage: str, verdict: str) -> str | None:
         """Write the terminal workflow event for a stage scope."""
         if stage in self._finished_steps:
