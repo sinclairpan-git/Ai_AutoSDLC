@@ -2,18 +2,39 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 
 from ai_sdlc.core.verify_constraints import ConstraintReport
 from ai_sdlc.telemetry.contracts import Evaluation, Evidence, TelemetryEvent, Violation
 from ai_sdlc.telemetry.enums import (
     CaptureMode,
+    Confidence,
     EvaluationResult,
     RootCauseClass,
     ScopeLevel,
+    SuggestedChangeLayer,
+    TelemetryEventStatus,
+    TraceLayer,
     ViolationRiskLevel,
     ViolationStatus,
 )
+from ai_sdlc.telemetry.evaluators import build_observer_finding_evaluation
+
+
+@dataclass(frozen=True, slots=True)
+class MismatchFinding:
+    """A structured observer mismatch finding backed by one evaluation object."""
+
+    finding_name: str
+    subject: str
+    evaluation: Evaluation
+    evidence_refs: tuple[str, ...]
+    confidence: Confidence
+    observer_version: str
+    policy: str
+    profile: str
+    mode: str
 
 
 @dataclass(frozen=True, slots=True)
@@ -78,3 +99,72 @@ def violation_allows_inferred_only_closure(
     if not evidence:
         return False
     return any(e.capture_mode is not CaptureMode.INFERRED for e in evidence)
+
+
+def detect_native_delegation_mismatches(
+    *,
+    goal_session_id: str,
+    workflow_run_id: str,
+    step_id: str | None,
+    event_payloads: Sequence[Mapping[str, object]],
+    evidence_payloads: Sequence[Mapping[str, object]],
+    observer_version: str,
+    policy: str,
+    profile: str,
+    mode: str,
+) -> tuple[MismatchFinding, ...]:
+    """Flag native-backend delegation boundaries that lack an observed terminal tool outcome."""
+    native_boundary_refs = tuple(
+        sorted(
+            str(payload["evidence_id"])
+            for payload in evidence_payloads
+            if payload.get("evidence_id") is not None
+            and isinstance(payload.get("locator"), str)
+            and str(payload["locator"]).startswith("trace://native-delegation/")
+        )
+    )
+    if not native_boundary_refs:
+        return ()
+
+    terminal_outcome_observed = any(
+        payload.get("trace_layer") in {TraceLayer.TOOL.value, TraceLayer.EVALUATION.value}
+        and payload.get("status")
+        in {
+            TelemetryEventStatus.SUCCEEDED.value,
+            TelemetryEventStatus.FAILED.value,
+            TelemetryEventStatus.BLOCKED.value,
+            TelemetryEventStatus.SKIPPED.value,
+            TelemetryEventStatus.CANCELLED.value,
+        }
+        for payload in event_payloads
+    )
+    if terminal_outcome_observed:
+        return ()
+
+    return (
+        MismatchFinding(
+            finding_name="native_backend_external_delegation",
+            subject="external_agent_execution_boundary",
+            evaluation=build_observer_finding_evaluation(
+                kind="mismatch",
+                subject="native_backend_external_delegation",
+                goal_session_id=goal_session_id,
+                workflow_run_id=workflow_run_id,
+                step_id=step_id,
+                event_payloads=event_payloads,
+                evidence_payloads=evidence_payloads,
+                observer_version=observer_version,
+                policy=policy,
+                profile=profile,
+                mode=mode,
+                root_cause_class=RootCauseClass.WORKFLOW,
+                suggested_change_layer=SuggestedChangeLayer.WORKFLOW,
+            ),
+            evidence_refs=native_boundary_refs,
+            confidence=Confidence.MEDIUM,
+            observer_version=observer_version,
+            policy=policy,
+            profile=profile,
+            mode=mode,
+        ),
+    )

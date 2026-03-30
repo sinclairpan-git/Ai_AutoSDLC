@@ -13,6 +13,7 @@ from ai_sdlc.telemetry.contracts import (
 from ai_sdlc.telemetry.control_points import build_canonical_control_point_event
 from ai_sdlc.telemetry.detectors import (
     ViolationHit,
+    detect_native_delegation_mismatches,
     escalate_hard_gate_violation,
     merge_violation_hits,
     violation_allows_inferred_only_closure,
@@ -35,10 +36,12 @@ from ai_sdlc.telemetry.enums import (
 from ai_sdlc.telemetry.evaluators import (
     build_verify_constraint_evaluation,
     calculate_ccp_coverage_gaps,
+    classify_unknown_family_outputs,
 )
 from ai_sdlc.telemetry.generators import (
     control_point_evidence_digest,
     control_point_locator,
+    observer_facts_digest,
 )
 from ai_sdlc.telemetry.registry import (
     CCPRegistry,
@@ -739,3 +742,100 @@ def test_inferred_only_cannot_close_high_or_critical_violation() -> None:
     )
 
     assert not violation_allows_inferred_only_closure(violation, [evidence])
+
+
+def test_observer_facts_digest_is_stable_across_payload_order() -> None:
+    goal_session_id = "gs_0123456789abcdef0123456789abcdef"
+    workflow_run_id = "wr_0123456789abcdef0123456789abcdef"
+    step_id = "st_0123456789abcdef0123456789abcdef"
+    first_event = TelemetryEvent(
+        scope_level=ScopeLevel.STEP,
+        goal_session_id=goal_session_id,
+        workflow_run_id=workflow_run_id,
+        step_id=step_id,
+        trace_layer=TraceLayer.TOOL,
+        status=TelemetryEventStatus.STARTED,
+    )
+    second_event = TelemetryEvent(
+        scope_level=ScopeLevel.STEP,
+        goal_session_id=goal_session_id,
+        workflow_run_id=workflow_run_id,
+        step_id=step_id,
+        trace_layer=TraceLayer.WORKFLOW,
+        status=TelemetryEventStatus.SUCCEEDED,
+        confidence=Confidence.HIGH,
+    )
+    evidence = Evidence(
+        scope_level=ScopeLevel.STEP,
+        goal_session_id=goal_session_id,
+        workflow_run_id=workflow_run_id,
+        step_id=step_id,
+        locator=control_point_locator("command_completed", event_id=first_event.event_id),
+        digest=control_point_evidence_digest(
+            "command_completed",
+            event_id=first_event.event_id,
+        ),
+    )
+
+    assert observer_facts_digest(
+        event_payloads=[
+            first_event.model_dump(mode="json"),
+            second_event.model_dump(mode="json"),
+        ],
+        evidence_payloads=[evidence.model_dump(mode="json")],
+    ) == observer_facts_digest(
+        event_payloads=[
+            second_event.model_dump(mode="json"),
+            first_event.model_dump(mode="json"),
+        ],
+        evidence_payloads=[evidence.model_dump(mode="json")],
+    )
+
+
+def test_native_delegation_boundary_surfaces_unobserved_and_mismatch_findings() -> None:
+    goal_session_id = "gs_0123456789abcdef0123456789abcdef"
+    workflow_run_id = "wr_0123456789abcdef0123456789abcdef"
+    step_id = "st_0123456789abcdef0123456789abcdef"
+    started_event = TelemetryEvent(
+        scope_level=ScopeLevel.STEP,
+        goal_session_id=goal_session_id,
+        workflow_run_id=workflow_run_id,
+        step_id=step_id,
+        trace_layer=TraceLayer.TOOL,
+        status=TelemetryEventStatus.STARTED,
+    )
+    delegation_evidence = Evidence(
+        scope_level=ScopeLevel.STEP,
+        goal_session_id=goal_session_id,
+        workflow_run_id=workflow_run_id,
+        step_id=step_id,
+        locator="trace://native-delegation/task-17/worker-3",
+        digest="sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+    )
+
+    unknown_family = classify_unknown_family_outputs(
+        goal_session_id=goal_session_id,
+        workflow_run_id=workflow_run_id,
+        step_id=step_id,
+        event_payloads=[started_event.model_dump(mode="json")],
+        evidence_payloads=[delegation_evidence.model_dump(mode="json")],
+        observer_version="v1",
+        policy="default",
+        profile="self_hosting",
+        mode="lite",
+    )
+    mismatch = detect_native_delegation_mismatches(
+        goal_session_id=goal_session_id,
+        workflow_run_id=workflow_run_id,
+        step_id=step_id,
+        event_payloads=[started_event.model_dump(mode="json")],
+        evidence_payloads=[delegation_evidence.model_dump(mode="json")],
+        observer_version="v1",
+        policy="default",
+        profile="self_hosting",
+        mode="lite",
+    )
+
+    assert [finding.kind for finding in unknown_family] == ["unobserved"]
+    assert len(mismatch) == 1
+    assert mismatch[0].finding_name == "native_backend_external_delegation"

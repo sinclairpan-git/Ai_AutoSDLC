@@ -36,6 +36,44 @@ def constraint_report_locator(report: ConstraintReport) -> str:
     return f"verify-constraints:report:{constraint_report_digest(report).removeprefix('sha256:')}"
 
 
+def observer_facts_digest(
+    *,
+    event_payloads: Sequence[Mapping[str, object]] = (),
+    evidence_payloads: Sequence[Mapping[str, object]] = (),
+) -> str:
+    """Return a stable digest for one observer fact-layer replay input."""
+    payload = {
+        "events": _sorted_payloads(event_payloads, primary_key="event_id"),
+        "evidence": _sorted_payloads(evidence_payloads, primary_key="evidence_id"),
+    }
+    encoded = json.dumps(payload, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
+    return f"sha256:{hashlib.sha256(encoded.encode('utf-8')).hexdigest()}"
+
+
+def observer_evaluation_id(
+    *,
+    kind: str,
+    subject: str,
+    facts_digest: str,
+    observer_version: str,
+    policy: str,
+    profile: str,
+    mode: str,
+) -> str:
+    """Return a deterministic evaluation id for one observer-derived result."""
+    payload = {
+        "kind": kind,
+        "subject": subject,
+        "facts_digest": facts_digest,
+        "observer_version": observer_version,
+        "policy": policy,
+        "profile": profile,
+        "mode": mode,
+    }
+    encoded = json.dumps(payload, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
+    return f"eval_{hashlib.sha256(encoded.encode('utf-8')).hexdigest()[:32]}"
+
+
 def gate_control_point_name(verdict: str) -> str | None:
     """Map a gate verdict to its canonical CCP name."""
     return _GATE_CONTROL_POINTS_BY_VERDICT.get(verdict.strip().lower())
@@ -302,4 +340,19 @@ def _is_passing_evaluation(evaluation: Evaluation) -> bool:
     return (
         evaluation.status is EvaluationStatus.PASSED
         and evaluation.result is EvaluationResult.PASSED
+    )
+
+
+def _sorted_payloads(
+    payloads: Sequence[Mapping[str, object]],
+    *,
+    primary_key: str,
+) -> list[dict[str, object]]:
+    normalized = [dict(payload) for payload in payloads]
+    return sorted(
+        normalized,
+        key=lambda payload: (
+            str(payload.get(primary_key, "")),
+            json.dumps(payload, sort_keys=True, separators=(",", ":"), ensure_ascii=False),
+        ),
     )

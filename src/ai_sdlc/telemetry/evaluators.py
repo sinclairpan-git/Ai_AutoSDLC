@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 from collections.abc import Iterable, Mapping, Sequence
+from dataclasses import dataclass
 
 from ai_sdlc.core.verify_constraints import ConstraintReport
+from ai_sdlc.telemetry.clock import utc_now_z
 from ai_sdlc.telemetry.contracts import Evaluation, Evidence, TelemetryEvent
 from ai_sdlc.telemetry.control_points import (
     payload_matches_canonical_control_point_event,
@@ -12,16 +14,37 @@ from ai_sdlc.telemetry.control_points import (
 from ai_sdlc.telemetry.enums import (
     ArtifactRole,
     ArtifactType,
+    Confidence,
     EvaluationResult,
     EvaluationStatus,
     EvidenceStatus,
     RootCauseClass,
+    ScopeLevel,
     SuggestedChangeLayer,
     TelemetryEventStatus,
     TraceLayer,
 )
-from ai_sdlc.telemetry.generators import parse_control_point_locator
+from ai_sdlc.telemetry.generators import (
+    observer_evaluation_id,
+    observer_facts_digest,
+    parse_control_point_locator,
+)
 from ai_sdlc.telemetry.registry import CCPRegistry, build_default_ccp_registry
+
+
+@dataclass(frozen=True, slots=True)
+class ObserverEvaluationFinding:
+    """A structured observer finding backed by a canonical evaluation object."""
+
+    kind: str
+    subject: str
+    evaluation: Evaluation
+    evidence_refs: tuple[str, ...]
+    confidence: Confidence
+    observer_version: str
+    policy: str
+    profile: str
+    mode: str
 
 
 def calculate_ccp_coverage_gaps(
@@ -81,6 +104,257 @@ def build_verify_constraint_evaluation(
         root_cause_class=root_cause,
         suggested_change_layer=suggested_layer,
     )
+
+
+def build_observer_coverage_evaluation(
+    *,
+    goal_session_id: str,
+    workflow_run_id: str,
+    step_id: str | None,
+    event_payloads: Sequence[Mapping[str, object]],
+    evidence_payloads: Sequence[Mapping[str, object]],
+    observer_version: str,
+    policy: str,
+    profile: str,
+    mode: str,
+    issue_count: int,
+) -> Evaluation:
+    """Build the minimal observer coverage evaluation for one scope replay."""
+    observed_at = latest_observed_at(
+        event_payloads=event_payloads,
+        evidence_payloads=evidence_payloads,
+    )
+    facts_digest = observer_facts_digest(
+        event_payloads=event_payloads,
+        evidence_payloads=evidence_payloads,
+    )
+    has_issues = issue_count > 0
+    return Evaluation(
+        scope_level=_scope_level(step_id=step_id),
+        goal_session_id=goal_session_id,
+        workflow_run_id=workflow_run_id,
+        step_id=step_id,
+        created_at=observed_at,
+        updated_at=observed_at,
+        evaluation_id=observer_evaluation_id(
+            kind="coverage_evaluation",
+            subject=step_id or workflow_run_id or goal_session_id,
+            facts_digest=facts_digest,
+            observer_version=observer_version,
+            policy=policy,
+            profile=profile,
+            mode=mode,
+        ),
+        result=EvaluationResult.WARNING if has_issues else EvaluationResult.PASSED,
+        status=EvaluationStatus.FAILED if has_issues else EvaluationStatus.PASSED,
+        root_cause_class=RootCauseClass.EVAL if has_issues else None,
+        suggested_change_layer=SuggestedChangeLayer.EVAL if has_issues else None,
+    )
+
+
+def build_observer_finding_evaluation(
+    *,
+    kind: str,
+    subject: str,
+    goal_session_id: str,
+    workflow_run_id: str,
+    step_id: str | None,
+    event_payloads: Sequence[Mapping[str, object]],
+    evidence_payloads: Sequence[Mapping[str, object]],
+    observer_version: str,
+    policy: str,
+    profile: str,
+    mode: str,
+    root_cause_class: RootCauseClass,
+    suggested_change_layer: SuggestedChangeLayer,
+) -> Evaluation:
+    """Build one deterministic observer-derived warning evaluation."""
+    observed_at = latest_observed_at(
+        event_payloads=event_payloads,
+        evidence_payloads=evidence_payloads,
+    )
+    facts_digest = observer_facts_digest(
+        event_payloads=event_payloads,
+        evidence_payloads=evidence_payloads,
+    )
+    return Evaluation(
+        scope_level=_scope_level(step_id=step_id),
+        goal_session_id=goal_session_id,
+        workflow_run_id=workflow_run_id,
+        step_id=step_id,
+        created_at=observed_at,
+        updated_at=observed_at,
+        evaluation_id=observer_evaluation_id(
+            kind=kind,
+            subject=subject,
+            facts_digest=facts_digest,
+            observer_version=observer_version,
+            policy=policy,
+            profile=profile,
+            mode=mode,
+        ),
+        result=EvaluationResult.WARNING,
+        status=EvaluationStatus.FAILED,
+        root_cause_class=root_cause_class,
+        suggested_change_layer=suggested_change_layer,
+    )
+
+
+def classify_unknown_family_outputs(
+    *,
+    goal_session_id: str,
+    workflow_run_id: str,
+    step_id: str | None,
+    event_payloads: Sequence[Mapping[str, object]],
+    evidence_payloads: Sequence[Mapping[str, object]],
+    observer_version: str,
+    policy: str,
+    profile: str,
+    mode: str,
+) -> tuple[ObserverEvaluationFinding, ...]:
+    """Classify minimal `coverage_gap / unknown / unobserved` observer findings."""
+    findings: list[ObserverEvaluationFinding] = []
+    canonical_ccp_refs = tuple(
+        sorted(
+            str(payload["evidence_id"])
+            for payload in evidence_payloads
+            if payload.get("evidence_id") is not None
+            and payload.get("status") == EvidenceStatus.AVAILABLE.value
+            and payload.get("digest")
+            and parse_control_point_locator(payload.get("locator")) is not None
+        )
+    )
+    incomplete_refs = tuple(
+        sorted(
+            str(payload["evidence_id"])
+            for payload in evidence_payloads
+            if payload.get("evidence_id") is not None
+            and (
+                payload.get("status") != EvidenceStatus.AVAILABLE.value
+                or not payload.get("locator")
+                or not payload.get("digest")
+            )
+        )
+    )
+    native_boundary_refs = tuple(
+        sorted(
+            str(payload["evidence_id"])
+            for payload in evidence_payloads
+            if payload.get("evidence_id") is not None
+            and isinstance(payload.get("locator"), str)
+            and str(payload["locator"]).startswith("trace://native-delegation/")
+        )
+    )
+
+    if not canonical_ccp_refs and not native_boundary_refs:
+        findings.append(
+            ObserverEvaluationFinding(
+                kind="coverage_gap",
+                subject="missing_canonical_step_observation",
+                evaluation=build_observer_finding_evaluation(
+                    kind="coverage_gap",
+                    subject="missing_canonical_step_observation",
+                    goal_session_id=goal_session_id,
+                    workflow_run_id=workflow_run_id,
+                    step_id=step_id,
+                    event_payloads=event_payloads,
+                    evidence_payloads=evidence_payloads,
+                    observer_version=observer_version,
+                    policy=policy,
+                    profile=profile,
+                    mode=mode,
+                    root_cause_class=RootCauseClass.EVAL,
+                    suggested_change_layer=SuggestedChangeLayer.WORKFLOW,
+                ),
+                evidence_refs=(),
+                confidence=Confidence.MEDIUM,
+                observer_version=observer_version,
+                policy=policy,
+                profile=profile,
+                mode=mode,
+            )
+        )
+
+    if incomplete_refs:
+        findings.append(
+            ObserverEvaluationFinding(
+                kind="unknown",
+                subject="incomplete_step_evidence",
+                evaluation=build_observer_finding_evaluation(
+                    kind="unknown",
+                    subject="incomplete_step_evidence",
+                    goal_session_id=goal_session_id,
+                    workflow_run_id=workflow_run_id,
+                    step_id=step_id,
+                    event_payloads=event_payloads,
+                    evidence_payloads=evidence_payloads,
+                    observer_version=observer_version,
+                    policy=policy,
+                    profile=profile,
+                    mode=mode,
+                    root_cause_class=RootCauseClass.EVAL,
+                    suggested_change_layer=SuggestedChangeLayer.EVAL,
+                ),
+                evidence_refs=incomplete_refs,
+                confidence=Confidence.LOW,
+                observer_version=observer_version,
+                policy=policy,
+                profile=profile,
+                mode=mode,
+            )
+        )
+
+    if native_boundary_refs:
+        findings.append(
+            ObserverEvaluationFinding(
+                kind="unobserved",
+                subject="external_agent_execution",
+                evaluation=build_observer_finding_evaluation(
+                    kind="unobserved",
+                    subject="external_agent_execution",
+                    goal_session_id=goal_session_id,
+                    workflow_run_id=workflow_run_id,
+                    step_id=step_id,
+                    event_payloads=event_payloads,
+                    evidence_payloads=evidence_payloads,
+                    observer_version=observer_version,
+                    policy=policy,
+                    profile=profile,
+                    mode=mode,
+                    root_cause_class=RootCauseClass.TOOL,
+                    suggested_change_layer=SuggestedChangeLayer.WORKFLOW,
+                ),
+                evidence_refs=native_boundary_refs,
+                confidence=Confidence.MEDIUM,
+                observer_version=observer_version,
+                policy=policy,
+                profile=profile,
+                mode=mode,
+            )
+        )
+
+    return tuple(findings)
+
+
+def latest_observed_at(
+    *,
+    event_payloads: Sequence[Mapping[str, object]],
+    evidence_payloads: Sequence[Mapping[str, object]],
+) -> str:
+    """Return the latest canonical timestamp across one fact-layer replay input."""
+    timestamps = [
+        str(payload["timestamp"])
+        for payload in event_payloads
+        if payload.get("timestamp") is not None
+    ]
+    timestamps.extend(
+        str(payload.get("updated_at") or payload.get("created_at"))
+        for payload in evidence_payloads
+        if payload.get("updated_at") is not None or payload.get("created_at") is not None
+    )
+    if not timestamps:
+        return utc_now_z()
+    return max(timestamps)
 
 
 def _validate_source_pair(
@@ -256,3 +530,9 @@ def _is_runtime_owned_workflow_event(event: Mapping[str, object]) -> bool:
         and event.get("capture_mode") == "auto"
         and event.get("confidence") == "high"
     )
+
+
+def _scope_level(*, step_id: str | None) -> ScopeLevel:
+    if step_id is not None:
+        return ScopeLevel.STEP
+    return ScopeLevel.RUN

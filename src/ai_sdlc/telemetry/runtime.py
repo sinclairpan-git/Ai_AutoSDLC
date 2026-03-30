@@ -29,6 +29,7 @@ from ai_sdlc.telemetry.ids import (
     new_workflow_run_id,
     validate_telemetry_id,
 )
+from ai_sdlc.telemetry.observer import ObserverTrigger
 from ai_sdlc.telemetry.store import TelemetryStore
 from ai_sdlc.telemetry.writer import TelemetryWriter
 
@@ -59,6 +60,7 @@ class RuntimeTelemetry:
         self._step_ids: dict[str, str] = {}
         self._finished_steps: set[str] = set()
         self._run_closed = False
+        self._observer_triggers: list[ObserverTrigger] = []
         self.store.ensure_initialized()
 
     def ensure_initialized(self) -> dict:
@@ -222,16 +224,23 @@ class RuntimeTelemetry:
             or self._run_closed
         ):
             return
+        goal_session_id = self.goal_session_id
+        workflow_run_id = self.workflow_run_id
         self.writer.write_event(
             TelemetryEvent(
                 scope_level=ScopeLevel.RUN,
-                goal_session_id=self.goal_session_id,
-                workflow_run_id=self.workflow_run_id,
+                goal_session_id=goal_session_id,
+                workflow_run_id=workflow_run_id,
                 trace_layer=TraceLayer.WORKFLOW,
                 actor_type=ActorType.FRAMEWORK_RUNTIME,
                 confidence=Confidence.HIGH,
                 status=status,
             )
+        )
+        self._queue_observer_trigger(
+            scope_level=ScopeLevel.RUN,
+            goal_session_id=goal_session_id,
+            workflow_run_id=workflow_run_id,
         )
         self.workflow_run_id = None
         self._step_ids = {}
@@ -279,11 +288,13 @@ class RuntimeTelemetry:
             or self.workflow_run_id is None
         ):
             return None
+        goal_session_id = self.goal_session_id
+        workflow_run_id = self.workflow_run_id
         self.writer.write_event(
             TelemetryEvent(
                 scope_level=ScopeLevel.STEP,
-                goal_session_id=self.goal_session_id,
-                workflow_run_id=self.workflow_run_id,
+                goal_session_id=goal_session_id,
+                workflow_run_id=workflow_run_id,
                 step_id=step_id,
                 trace_layer=TraceLayer.WORKFLOW,
                 actor_type=ActorType.FRAMEWORK_RUNTIME,
@@ -291,8 +302,21 @@ class RuntimeTelemetry:
                 status=self._verdict_status(verdict),
             )
         )
+        self._queue_observer_trigger(
+            scope_level=ScopeLevel.STEP,
+            goal_session_id=goal_session_id,
+            workflow_run_id=workflow_run_id,
+            step_id=step_id,
+            stage=stage,
+        )
         self._finished_steps.add(stage)
         return step_id
+
+    def drain_observer_triggers(self) -> tuple[ObserverTrigger, ...]:
+        """Return and clear queued async observer triggers."""
+        queued = tuple(self._observer_triggers)
+        self._observer_triggers.clear()
+        return queued
 
     def record_tool_event(
         self,
@@ -479,6 +503,25 @@ class RuntimeTelemetry:
     def _validate_terminal_status(self, status: TelemetryEventStatus) -> None:
         if status is TelemetryEventStatus.STARTED:
             raise ValueError("close-session status must be a terminal status")
+
+    def _queue_observer_trigger(
+        self,
+        *,
+        scope_level: ScopeLevel,
+        goal_session_id: str,
+        workflow_run_id: str,
+        step_id: str | None = None,
+        stage: str | None = None,
+    ) -> None:
+        self._observer_triggers.append(
+            ObserverTrigger(
+                goal_session_id=goal_session_id,
+                workflow_run_id=workflow_run_id,
+                scope_level=scope_level,
+                step_id=step_id,
+                stage=stage,
+            )
+        )
 
     def _session_started(self, goal_session_id: str) -> bool:
         return self._session_marker(goal_session_id, TelemetryEventStatus.STARTED)
