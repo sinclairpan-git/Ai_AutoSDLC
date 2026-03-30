@@ -7,7 +7,10 @@ import json
 import typer
 from rich.console import Console
 
-from ai_sdlc.core.verify_constraints import build_constraint_report
+from ai_sdlc.core.verify_constraints import (
+    build_constraint_report,
+    build_verification_governance_bundle,
+)
 from ai_sdlc.telemetry.contracts import Evidence, TelemetryEvent
 from ai_sdlc.telemetry.detectors import escalate_hard_gate_violation
 from ai_sdlc.telemetry.enums import (
@@ -71,6 +74,11 @@ def verify_constraints(
 
     report = build_constraint_report(root)
     blockers = list(report.blockers)
+    governance = build_verification_governance_bundle(
+        report,
+        decision_subject=f"verify:{root}",
+        evidence_refs=(),
+    )
     telemetry = RuntimeTelemetry(root)
     goal_session_id = telemetry.open_session()
     evaluation_event = TelemetryEvent(
@@ -99,6 +107,17 @@ def verify_constraints(
         digest=report_digest,
     )
     telemetry.writer.write_evidence(report_evidence)
+    governance = build_verification_governance_bundle(
+        report,
+        decision_subject=f"verify:{root}",
+        evidence_refs=(report_evidence.evidence_id,),
+    )
+    effective_blockers = (
+        blockers
+        if governance["gate_decision_payload"]["decision_result"] == "block"
+        else []
+    )
+    advisories = list(governance.get("advisories", ()))
 
     evaluation = build_verify_constraint_evaluation(
         report,
@@ -129,8 +148,9 @@ def verify_constraints(
         typer.echo(
             json.dumps(
                 {
-                    "ok": len(blockers) == 0,
-                    "blockers": blockers,
+                    "ok": len(effective_blockers) == 0,
+                    "blockers": effective_blockers,
+                    "advisories": advisories,
                     "root": str(root),
                     "verification_gate": {
                         "name": report.gate_name,
@@ -139,6 +159,7 @@ def verify_constraints(
                         "coverage_gaps": list(report.coverage_gaps),
                         "release_gate": report.release_gate,
                     },
+                    "governance": governance,
                     "telemetry": {
                         "goal_session_id": goal_session_id,
                         "event_id": evaluation_event.event_id,
@@ -153,14 +174,18 @@ def verify_constraints(
             )
         )
     else:
-        if blockers:
+        if effective_blockers:
             console.print("[bold red]Constraint violations[/bold red]")
-            for b in blockers:
+            for b in effective_blockers:
                 console.print(f"  {b}")
         else:
             console.print("[green]verify constraints: no BLOCKERs.[/green]")
+            for advisory in advisories:
+                console.print(f"[yellow]{advisory}[/yellow]")
             if report.release_gate is not None:
                 verdict = str(report.release_gate.get("overall_verdict", "UNKNOWN"))
                 console.print(f"[cyan]release gate: {verdict}[/cyan]")
 
-    raise typer.Exit(code=1 if blockers else 0)
+    raise typer.Exit(
+        code=1 if governance["gate_decision_payload"]["decision_result"] == "block" else 0
+    )

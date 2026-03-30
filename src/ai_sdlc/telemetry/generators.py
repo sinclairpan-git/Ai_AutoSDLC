@@ -6,8 +6,8 @@ import hashlib
 import json
 from collections.abc import Mapping, Sequence
 from dataclasses import asdict
+from typing import TYPE_CHECKING
 
-from ai_sdlc.core.verify_constraints import ConstraintReport
 from ai_sdlc.telemetry.clock import utc_now_z
 from ai_sdlc.telemetry.contracts import Evaluation, Violation
 from ai_sdlc.telemetry.enums import (
@@ -17,6 +17,9 @@ from ai_sdlc.telemetry.enums import (
     ViolationRiskLevel,
     ViolationStatus,
 )
+
+if TYPE_CHECKING:
+    from ai_sdlc.core.verify_constraints import ConstraintReport
 
 _CONTROL_POINT_LOCATOR_VERSION = "v1"
 _GATE_CONTROL_POINTS_BY_VERDICT = {

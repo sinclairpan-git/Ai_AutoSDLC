@@ -454,6 +454,68 @@ class TestCliVerifyConstraints:
         assert payload["verification_gate"]["name"] == "Verification Gate"
         assert payload["verification_gate"]["source_name"] == "verify constraints"
         assert "required_governance_files" in payload["verification_gate"]["check_objects"]
+        assert payload["governance"]["gate_decision_payload"]["decision_subject"].startswith(
+            "verify:"
+        )
+        assert payload["governance"]["gate_decision_payload"]["confidence"] == "high"
+        assert payload["governance"]["gate_decision_payload"]["source_closure_status"] == "closed"
+        assert payload["governance"]["gate_decision_payload"]["observer_version"] == "v1"
+
+    def test_exit_0_when_governance_bundle_is_advisory_even_if_raw_report_has_blockers(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        init_project(tmp_path)
+        save_checkpoint(
+            tmp_path,
+            Checkpoint(
+                current_stage="init",
+                feature=FeatureInfo(
+                    id="001",
+                    spec_dir="specs/missing-wi",
+                    design_branch="d",
+                    feature_branch="f",
+                    current_branch="main",
+                ),
+            ),
+        )
+        monkeypatch.chdir(tmp_path)
+
+        from ai_sdlc.cli import verify_cmd
+
+        def _fake_governance_bundle(report, **kwargs):
+            return {
+                "audit_summary": {"audit_status": "inconclusive"},
+                "gate_decision_payload": {
+                    "decision_subject": "verify:/tmp/project",
+                    "decision_result": "advisory",
+                    "confidence": "high",
+                    "evidence_refs": ["evd_0123456789abcdef0123456789abcdef"],
+                    "source_closure_status": "incomplete",
+                    "observer_version": "v1",
+                    "policy": "default",
+                    "profile": "self_hosting",
+                    "mode": "lite",
+                    "generated_at": "2026-03-30T00:00:00Z",
+                },
+                "advisories": ["observer bundle incomplete"],
+            }
+
+        monkeypatch.setattr(
+            verify_cmd,
+            "build_verification_governance_bundle",
+            _fake_governance_bundle,
+        )
+
+        result = runner.invoke(app, ["verify", "constraints", "--json"])
+
+        assert result.exit_code == 0
+        payload = json.loads(result.output)
+        assert payload["blockers"] == []
+        assert payload["governance"]["gate_decision_payload"]["decision_result"] == "advisory"
+        assert payload["governance"]["gate_decision_payload"]["source_closure_status"] == (
+            "incomplete"
+        )
+        assert payload["advisories"] == ["observer bundle incomplete"]
 
     def test_exit_1_when_003_feature_contract_surfaces_missing(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch

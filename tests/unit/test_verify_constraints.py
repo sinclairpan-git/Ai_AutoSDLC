@@ -7,6 +7,8 @@ from pathlib import Path
 from ai_sdlc.context.state import save_checkpoint
 from ai_sdlc.core.verify_constraints import (
     build_constraint_report,
+    build_verification_gate_context,
+    build_verification_governance_bundle,
     collect_constraint_blockers,
 )
 from ai_sdlc.models.state import Checkpoint, FeatureInfo
@@ -837,6 +839,72 @@ def test_003_feature_contract_passes_when_all_surfaces_present(tmp_path: Path) -
     assert collect_constraint_blockers(tmp_path) == []
     assert report.release_gate is not None
     assert report.release_gate["overall_verdict"] == "PASS"
+
+
+def test_build_verification_governance_bundle_emits_gate_capable_payload(
+    tmp_path: Path,
+) -> None:
+    report = build_constraint_report(tmp_path)
+
+    governance = build_verification_governance_bundle(
+        report,
+        decision_subject="verify:/tmp/project",
+        evidence_refs=("evd_0123456789abcdef0123456789abcdef",),
+    )
+
+    payload = governance["gate_decision_payload"]
+    assert payload["decision_subject"] == "verify:/tmp/project"
+    assert payload["confidence"] == "high"
+    assert payload["evidence_refs"] == ["evd_0123456789abcdef0123456789abcdef"]
+    assert payload["source_closure_status"] == "closed"
+    assert payload["observer_version"] == "v1"
+    assert payload["policy"] == "default"
+    assert payload["profile"] == "self_hosting"
+    assert payload["mode"] == "lite"
+    assert governance["audit_summary"]["formal_outputs"] == [
+        "violation",
+        "audit_summary",
+        "gate_decision_payload",
+    ]
+
+
+def test_build_verification_gate_context_degrades_to_advisory_when_governance_is_incomplete(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    def _fake_governance_bundle(report, **kwargs):
+        return {
+            "audit_summary": {"audit_status": "inconclusive"},
+            "gate_decision_payload": {
+                "decision_subject": "verify:/tmp/project",
+                "decision_result": "advisory",
+                "confidence": "high",
+                "evidence_refs": ["evd_0123456789abcdef0123456789abcdef"],
+                "source_closure_status": "incomplete",
+                "observer_version": "v1",
+                "policy": "default",
+                "profile": "self_hosting",
+                "mode": "lite",
+                "generated_at": "2026-03-30T00:00:00Z",
+            },
+            "advisories": ("observer bundle incomplete",),
+        }
+
+    monkeypatch.setattr(
+        "ai_sdlc.core.verify_constraints.build_verification_governance_bundle",
+        _fake_governance_bundle,
+    )
+
+    context = build_verification_gate_context(tmp_path)
+
+    assert context["constraint_blockers"] == ()
+    assert context["coverage_gaps"] == ()
+    assert context["verification_governance"]["gate_decision_payload"]["decision_result"] == (
+        "advisory"
+    )
+    assert context["verification_governance"]["advisories"] == (
+        "observer bundle incomplete",
+    )
 
 
 def test_003_release_gate_blocks_when_evidence_verdict_is_block(tmp_path: Path) -> None:

@@ -13,6 +13,25 @@ from ai_sdlc.gates.task_ac_checks import (
     first_task_missing_acceptance,
 )
 from ai_sdlc.models.state import Checkpoint
+from ai_sdlc.telemetry.clock import utc_now_z
+from ai_sdlc.telemetry.contracts import Evaluation, Violation
+from ai_sdlc.telemetry.enums import (
+    Confidence,
+    EvaluationResult,
+    EvaluationStatus,
+    RootCauseClass,
+    ScopeLevel,
+    SuggestedChangeLayer,
+    ViolationRiskLevel,
+    ViolationStatus,
+)
+from ai_sdlc.telemetry.generators import (
+    build_gate_decision_payload,
+    build_observer_audit_summary,
+    constraint_report_digest,
+    observer_evaluation_id,
+    observer_violation_id,
+)
 
 CONSTITUTION_REL = Path(".ai-sdlc") / "memory" / "constitution.md"
 PIPELINE_RULE_REL = Path("src") / "ai_sdlc" / "rules" / "pipeline.md"
@@ -227,12 +246,127 @@ def build_constraint_report(root: Path) -> ConstraintReport:
 def build_verification_gate_context(root: Path) -> dict[str, object]:
     """Build the explicit Verification Gate context consumed by runner and gate CLI."""
     report = build_constraint_report(root)
+    governance = build_verification_governance_bundle(
+        report,
+        decision_subject=f"verify:{root}",
+        evidence_refs=("verify-constraints:structured-report",),
+    )
+    decision_result = str(governance["gate_decision_payload"]["decision_result"])
     return {
         "verification_sources": (report.source_name,),
         "verification_check_objects": report.check_objects,
-        "constraint_blockers": report.blockers,
-        "coverage_gaps": report.coverage_gaps,
+        "constraint_blockers": report.blockers if decision_result == "block" else (),
+        "coverage_gaps": report.coverage_gaps if decision_result == "block" else (),
         "release_gate": report.release_gate,
+        "verification_governance": governance,
+    }
+
+
+def build_verification_governance_bundle(
+    report: ConstraintReport,
+    *,
+    decision_subject: str,
+    evidence_refs: tuple[str, ...] | list[str],
+    source_closure_status: str = "closed",
+    observer_version: str = "v1",
+    policy: str = "default",
+    profile: str = "self_hosting",
+    mode: str = "lite",
+) -> dict[str, object]:
+    """Build the minimal governance bundle consumed by verify/close/release surfaces."""
+    report_digest = constraint_report_digest(report)
+    goal_session_id = f"gs_{report_digest.removeprefix('sha256:')[:32]}"
+    generated_at = utc_now_z()
+    evidence_refs = tuple(str(ref) for ref in evidence_refs if str(ref))
+    effective_source_closure_status = (
+        source_closure_status if evidence_refs else "incomplete"
+    )
+    evaluation = Evaluation(
+        scope_level=ScopeLevel.SESSION,
+        goal_session_id=goal_session_id,
+        created_at=generated_at,
+        updated_at=generated_at,
+        evaluation_id=observer_evaluation_id(
+            kind="verify_constraints",
+            subject=decision_subject,
+            facts_digest=report_digest,
+            observer_version=observer_version,
+            policy=policy,
+            profile=profile,
+            mode=mode,
+        ),
+        result=(
+            EvaluationResult.WARNING
+            if report.blockers or report.coverage_gaps
+            else EvaluationResult.PASSED
+        ),
+        status=(
+            EvaluationStatus.FAILED
+            if report.blockers or report.coverage_gaps
+            else EvaluationStatus.PASSED
+        ),
+        root_cause_class=(
+            RootCauseClass.RULE_POLICY if report.blockers else RootCauseClass.EVAL
+        )
+        if report.blockers or report.coverage_gaps
+        else None,
+        suggested_change_layer=(
+            SuggestedChangeLayer.RULE_POLICY
+            if report.blockers
+            else SuggestedChangeLayer.EVAL
+        )
+        if report.blockers or report.coverage_gaps
+        else None,
+    )
+    violations: list[Violation] = []
+    if report.blockers:
+        violations.append(
+            Violation(
+                scope_level=ScopeLevel.SESSION,
+                goal_session_id=goal_session_id,
+                created_at=generated_at,
+                updated_at=generated_at,
+                violation_id=observer_violation_id(
+                    kind="verify_constraints_blockers",
+                    source_evaluation_id=evaluation.evaluation_id,
+                    observer_version=observer_version,
+                    policy=policy,
+                    profile=profile,
+                    mode=mode,
+                ),
+                status=ViolationStatus.OPEN,
+                risk_level=ViolationRiskLevel.HIGH,
+                root_cause_class=RootCauseClass.RULE_POLICY,
+            )
+        )
+    advisories: list[str] = []
+    if effective_source_closure_status != "closed":
+        advisories.append(
+            "governance payload advisory: "
+            f"source_closure_status={effective_source_closure_status}"
+        )
+    gate_decision_payload = build_gate_decision_payload(
+        decision_subject=decision_subject,
+        violations=violations,
+        confidence=Confidence.HIGH,
+        evidence_refs=evidence_refs,
+        source_closure_status=effective_source_closure_status,
+        observer_version=observer_version,
+        policy=policy,
+        profile=profile,
+        mode=mode,
+        generated_at=generated_at,
+    )
+    return {
+        "audit_summary": build_observer_audit_summary(
+            evaluations=[evaluation],
+            violations=violations,
+            coverage_gap_count=len(report.coverage_gaps),
+            unknown_count=0,
+            unobserved_count=0,
+        ),
+        "gate_decision_payload": gate_decision_payload,
+        "advisories": tuple(advisories),
     }
 
 
