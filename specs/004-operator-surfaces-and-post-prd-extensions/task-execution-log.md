@@ -523,6 +523,6 @@
 
 #### 9.6 归档后动作
 
-- **已完成 git 提交**：否（待本轮 docs-only backfill 一并提交）
-- **提交哈希**：待提交
+- **已完成 git 提交**：是
+- **提交哈希**：`6012f14`（`docs: backfill 004 retrospective execution evidence`）
 - **是否继续下一批**：可停止；`004` retrospective evidence backfill 已完成。
