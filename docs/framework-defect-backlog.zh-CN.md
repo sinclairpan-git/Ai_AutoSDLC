@@ -39,6 +39,15 @@
   - `wi_id`
   - `legacy_ref`
   - `owner`
+  - `related_doc`
+  - `detection_surface`
+  - `trace_anchor`
+  - `observed_scope`
+  - `subject_ref`
+  - `chain_status`
+  - `highest_confidence_source`
+  - `key_gaps`
+  - `evidence_refs`
 
 ### 字段约定
 
@@ -58,6 +67,23 @@
 - `是否需要回归测试补充`：使用 `是：...` / `否：...`。
 - `状态`：建议使用 `open / planned / in_progress / closed / migrated`。
 - 若条目对应的是“已被拦截且已修复”的违约，`状态` 可记为 `closed`，但正文仍必须写清：`现象`、`根因分类`、`未来杜绝方案摘要`，以及未来如何杜绝同类问题再次出现（应落到 `rule / policy`、`middleware`、`workflow`、`tool`、`eval` 等字段）。
+- `related_doc`：记录与该条目直接相关的规则、代码、spec、plan、tasks、execution-log 或用户文档，优先写 canonical 路径，而不是会话描述。
+- `detection_surface`：记录首次稳定暴露该问题的面，建议使用 `user_review`、`self_review`、`observer`、`close-check`、`verify constraints`、`doctor`、`release gate` 等 bounded 名称；可多值并列。
+- `trace_anchor`：记录这条缺陷对应的稳定锚点。优先使用 repo 内可复核的 bounded anchor，如 `rev:<commit>`、`goal_session:<id>`、`run:<id>`、`step:<id>`；若只有人工复盘，可写 `manual_review_only`。
+- `observed_scope`：说明问题是在 `revision / repo / session / run / step` 哪一层被观察到；若并非由运行期 telemetry 暴露，而是人工或 review 首次识别，可写 `manual_review`。
+- `subject_ref`：若该问题已能映射到 provenance inspection subject，则记录一个稳定 `subject_ref`，用于后续执行 `provenance summary / explain / gaps` 回放；没有可稳定映射的 subject 时可留空。
+- `chain_status`：若已有 provenance inspection 结论，沿用 `closed / partial / unknown`；没有 provenance 结论时不要臆造 `closed`，宁可省略或在正文说明“当前无 provenance 结论”。
+- `highest_confidence_source`：若 inspection 已给出最高置信来源，直接记录其 bounded 值；否则留空，不做主观归因升级。
+- `key_gaps`：优先记录当前阻止更强结论的 gap 语义与关键位置，建议沿用 `unknown / unobserved / incomplete / unsupported`；如无 gap，可写 `无`。
+- `evidence_refs`：优先记录 canonical evidence id、稳定 command output anchor 或等价只读证据引用；若当前仅有人审结论、没有 canonical evidence，应显式写 `manual_review_only`，不要伪装成 trace 完整闭环。
+
+### Trace / Provenance 填写原则
+
+- backlog 仍是 remediation / governance 输入池，不是 telemetry 数据库；新增 trace 字段的目标是让条目更可审计，而不是复制整份运行日志。
+- 只要仓库里已经存在 telemetry / provenance 只读结论，优先引用 bounded 输出，而不是在 backlog 里重新自由描述一遍调用链。
+- `chain_status`、`key_gaps`、`highest_confidence_source` 反映的是“证据链闭合程度”，不等于“缺陷是否已关闭”；缺陷是否收口仍以 `状态`、`收口说明`、验证结果和主线事实为准。
+- 当前 provenance 仍是 Phase 1 read-only / advisory-only 能力，且不是 host-native full coverage；因此“没有 provenance 证据”不能被写成“问题不存在”，而 `partial / unknown` 也不应被误写成实现失败。
+- 若条目来自人工 review、用户追问或代码审查，而非 observer 自动暴露，仍应照常登记 backlog；trace 字段此时用于披露证据边界，而不是把人工发现硬包装成自动检测。
 
 ### 迁移说明
 
@@ -89,6 +115,14 @@
 - owner: codex
 - wi_id: 006-provenance-trace-phase-1
 - related_doc: src/ai_sdlc/rules/pipeline.md, docs/框架自迭代开发与发布约定.md, docs/framework-defect-backlog.zh-CN.md, specs/006-provenance-trace-phase-1/spec.md, specs/006-provenance-trace-phase-1/plan.md, specs/006-provenance-trace-phase-1/tasks.md
+- detection_surface: user_review, self_review
+- trace_anchor: manual_review_only
+- observed_scope: manual_review
+- subject_ref: 无（当前无稳定 provenance inspection subject）
+- chain_status: unknown（当前只完成人工复盘，未形成可回放 provenance subject）
+- highest_confidence_source: 无（当前无 provenance inspection 输出）
+- key_gaps: unsupported: 宿主 skill handoff / repo execute authorization 冲突当前未落成 canonical provenance subject
+- evidence_refs: manual_review_only
 - 现象: 在 provenance trace 这条 framework capability 上，spec 与 implementation plan 已冻结后，代理沿着宿主 superpowers skill 的默认 handoff 继续推进，把“Inline Execution / Subagent-Driven”表述成自然下一步；如果用户没有当场拦截，会从 `docs/superpowers/plans/*.md` 的 plan 完成态直接滑向开发编码阶段，而不是停留在 plan review / repo 真值对账状态。
 - 触发场景: 宿主 skill（尤其 `brainstorming` / `writing-plans`）把“plan complete -> implementation handoff”视为默认工作流，而仓库规则只把 `docs/superpowers/specs/*.md` 与 `docs/superpowers/plans/*.md` 视为 design input。两层约束缺少“谁只管工作流、谁定义法定 execute 真值”的显式收束时，执行侧会沿宿主 workflow 继续推进。
 - 影响范围: 仓库阶段真值被宿主 workflow 稀释、用户 review spec/plan 时被误导为“下一步默认就是编码”、`explicit execute authorization` 语义变弱，以及“plan 已冻结”被错误外推成“已授权进入实现”。
@@ -114,6 +148,14 @@
 - owner: codex
 - wi_id: 007-branch-lifecycle-truth-guard
 - related_doc: src/ai_sdlc/rules/git-branch.md, src/ai_sdlc/rules/pipeline.md, docs/框架自迭代开发与发布约定.md, docs/superpowers/plans/2026-03-31-branch-lifecycle-truth-guard.md, specs/007-branch-lifecycle-truth-guard/spec.md, specs/007-branch-lifecycle-truth-guard/plan.md, specs/007-branch-lifecycle-truth-guard/tasks.md
+- detection_surface: user_review, self_review
+- trace_anchor: manual_review_only, rev:4fc4d4e
+- observed_scope: repo
+- subject_ref: 无（当前以 branch inventory / branch-check bounded surface 为准）
+- chain_status: unknown（当前不通过 provenance inspection 建模）
+- highest_confidence_source: 无（当前无 provenance inspection 输出）
+- key_gaps: unsupported: branch/worktree lifecycle 当前不映射为 provenance subject；unobserved: 旧流程缺少 canonical disposition truth
+- evidence_refs: command:uv run ai-sdlc workitem branch-check --wi specs/007-branch-lifecycle-truth-guard --json
 - 现象: 仓库中可以长期残留只存在于本地或远端、且与 `main` 已明显偏离的分支 / worktree；即便相关工作项已经收口或主线已有后续实现，现有框架也不会通过 `verify constraints`、`close-check`、`status --json` 或 `doctor` 主动暴露这些“未处置分支真值”，最终仍需依赖人工执行 `git branch`、`git worktree list`、`git rev-list --left-right --count` 才能发现。
 - 触发场景: 独立 worktree 或 feature scratch 分支完成了局部实现、验证或文档回填，但 branch close-out 没有与主线合流、execution-log 归档、任务对账和 disposition（`merged / archived / deleted`）放在同一轮法定尾部动作里完成；同时 `git-branch.md` 只建模 `design/NNN` 与 `feature/NNN`，没有把 `codex/*`、backup、历史 feature 分支和 worktree 生命周期纳入正式 guardrail。
 - 影响范围: 主线真值判断、close-out 可信度、用户对“分支已实现”与“主线已兑现”的区分、历史 worktree 清理成本，以及后续 framework capability 是否仍被旧分支误表示为“已有未合并实现”的治理判断。
@@ -139,6 +181,14 @@
 - owner: codex
 - wi_id: 008-direct-formal-workitem-entry
 - related_doc: src/ai_sdlc/rules/pipeline.md, docs/框架自迭代开发与发布约定.md, docs/framework-defect-backlog.zh-CN.md, specs/008-direct-formal-workitem-entry/spec.md, specs/008-direct-formal-workitem-entry/plan.md, specs/008-direct-formal-workitem-entry/tasks.md
+- detection_surface: user_review, self_review
+- trace_anchor: manual_review_only, rev:b66f7e6
+- observed_scope: repo
+- subject_ref: 无（当前无稳定 provenance inspection subject）
+- chain_status: unknown（当前以 formal docs / CLI truth 为准）
+- highest_confidence_source: 无（当前无 provenance inspection 输出）
+- key_gaps: unsupported: docs/superpowers draft path 与 formal work item 入口冲突当前不映射为 provenance subject；unobserved: 旧流程未提供 canonical direct-formal entry
+- evidence_refs: command:uv run ai-sdlc workitem init --title "<新的 framework capability 标题>"
 - 现象: 即使已经把“`docs/superpowers/specs/*.md` 与 `docs/superpowers/plans/*.md` 只是 design input、不是 execute 真值”写进规则，新的 framework capability 仍常常先在 `docs/superpowers/*` 下生成一套 design / implementation 文档，等到仓库审核或准备执行时，再人工补一套 `specs/<WI>/spec.md + plan.md + tasks.md`。结果不是直接违规进入 execute，而是形成双轨产物、重复搬运和 traceability 噪音。
 - 触发场景: 宿主 `brainstorming` / `writing-plans` skill 的默认保存路径仍指向 `docs/superpowers/*`，而仓库法定执行真值又要求回到 `specs/<WI>/...`。当前规则虽然已阻止“只有 superpowers plan 就进入实现”，但还没有提供一个 direct-to-formal 的 canonical entry path，因此实际操作往往变成“先写 superpowers，再 formalize 到 work item”。
 - 影响范围: spec/plan/tasks 的重复维护成本、formal work item 生成延迟、review 面噪音、agent 工作流与仓库真值之间的额外摩擦，以及“哪个文件才是 canonical spec/plan”的认知负担。
@@ -164,6 +214,14 @@
 - owner: codex
 - wi_id: 006-provenance-trace-phase-1
 - related_doc: src/ai_sdlc/branch/git_client.py, src/ai_sdlc/core/workitem_truth.py, src/ai_sdlc/cli/workitem_cmd.py, tests/integration/test_cli_workitem_truth_check.py, tests/unit/test_command_names.py, docs/USER_GUIDE.zh-CN.md, docs/框架自迭代开发与发布约定.md
+- detection_surface: user_review, self_review
+- trace_anchor: rev:67dda48
+- observed_scope: revision
+- subject_ref: 无（当前以 revision-scoped truth-check 为准）
+- chain_status: unknown（当前不通过 provenance inspection 建模）
+- highest_confidence_source: 无（当前无 provenance inspection 输出）
+- key_gaps: unobserved: 当时缺少 revision-scoped truth preflight；unsupported: 该误判属于 revision truth surface，不是 provenance subject
+- evidence_refs: command:uv run ai-sdlc workitem truth-check --wi specs/006-provenance-trace-phase-1 --rev 67dda48
 - 现象: 用户明确指向分支 `codex/006-provenance-trace-phase-1` 与提交 `67dda48`，且该修订只包含 `spec.md / plan.md / tasks.md` 的 formal freeze；但代理先扫描当前工作区 `main` 上的其他 work item 证据，并一度把 `008` 的实现、`task-execution-log.md` 与收口状态外推到 `006`，误表述成“这条线很可能不是待执行，而是已实现待核验/收口”。
 - 触发场景: 用户给出了明确的 branch、commit 或 work item 锚点，但代理没有先绑定 `revision -> work item -> execution evidence` 查询上下文，就直接读取当前 checkout 的 `specs/*`、close-check 结果和现成 execution-log；仓库也缺少“当前 HEAD 与用户指定 revision 不一致”时的显式告警和只读 preflight。
 - 影响范围: work item 阶段真值、execute 授权判断、是否已开始实施/是否仅 formal freeze 的口径、close-out 可信度，以及用户对“当前到底在讨论哪条线”的信任。
