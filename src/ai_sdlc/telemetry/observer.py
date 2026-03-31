@@ -17,6 +17,8 @@ from ai_sdlc.telemetry.evaluators import (
     classify_unknown_family_outputs,
 )
 from ai_sdlc.telemetry.generators import observer_facts_digest
+from ai_sdlc.telemetry.provenance_contracts import ProvenanceAssessment, ProvenanceGapFinding
+from ai_sdlc.telemetry.provenance_observer import observe_provenance_step
 from ai_sdlc.telemetry.store import TelemetryStore
 
 
@@ -57,6 +59,8 @@ class StepObserverResult:
     unobserved: tuple[ObserverEvaluationFinding, ...]
     mismatch_findings: tuple[MismatchFinding, ...]
     source_evidence_refs: tuple[str, ...]
+    provenance_assessments: tuple[ProvenanceAssessment, ...] = ()
+    provenance_gaps: tuple[ProvenanceGapFinding, ...] = ()
 
 
 class TelemetryObserver:
@@ -136,6 +140,12 @@ class TelemetryObserver:
                 if payload.get("evidence_id") is not None
             )
         )
+        provenance = observe_provenance_step(
+            self.store,
+            goal_session_id=goal_session_id,
+            workflow_run_id=workflow_run_id,
+            step_id=step_id,
+        )
         return StepObserverResult(
             conditions=self.conditions,
             goal_session_id=goal_session_id,
@@ -152,6 +162,8 @@ class TelemetryObserver:
             ),
             mismatch_findings=mismatch_findings,
             source_evidence_refs=source_evidence_refs,
+            provenance_assessments=provenance.assessments,
+            provenance_gaps=provenance.gaps,
         )
 
     def _load_step_event_payloads(

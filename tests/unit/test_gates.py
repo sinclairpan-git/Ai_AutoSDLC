@@ -267,6 +267,20 @@ class TestExecuteGate:
         )
         assert result.verdict == GateVerdict.PASS
 
+    def test_stays_local_and_advisory_only_even_with_provenance_phase1_payload(self) -> None:
+        result = ExecuteGate().check(
+            {
+                "tests_passed": True,
+                "committed": True,
+                "logged": True,
+                "provenance_phase1": {
+                    "decision_result": "block",
+                    "enforced": False,
+                },
+            }
+        )
+        assert result.verdict == GateVerdict.PASS
+
 
 def test_release_gate_governance_payload_reuses_gate_capable_minimum_fields() -> None:
     report = ReleaseGateReport(

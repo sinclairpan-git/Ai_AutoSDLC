@@ -1014,6 +1014,23 @@ def test_build_verification_gate_context_degrades_to_advisory_when_governance_is
     )
 
 
+def test_build_verification_gate_context_keeps_phase1_provenance_advisory_only(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    monkeypatch.setenv("AI_SDLC_ENABLE_PROVENANCE_GATE", "1")
+    mem = tmp_path / ".ai-sdlc" / "memory"
+    mem.mkdir(parents=True)
+    (mem / "constitution.md").write_text("# Constitution\n", encoding="utf-8")
+
+    context = build_verification_gate_context(tmp_path)
+
+    assert context["constraint_blockers"] == ()
+    assert context["coverage_gaps"] == ()
+    assert context["provenance_phase1"]["decision_result"] == "advisory"
+    assert context["provenance_phase1"]["enforced"] is False
+
+
 def test_003_release_gate_blocks_when_evidence_verdict_is_block(tmp_path: Path) -> None:
     _write_003_checkpoint(tmp_path)
     _write_003_feature_contract_surfaces(tmp_path, release_gate_verdict="BLOCK")

@@ -10,6 +10,7 @@ from typing import Any
 
 from ai_sdlc.branch.git_client import GitClient, GitError
 from ai_sdlc.core.plan_check import resolve_plan_path_from_wi, run_plan_check
+from ai_sdlc.core.provenance_gate import load_phase1_provenance_gate_payload
 from ai_sdlc.core.release_gate import (
     ReleaseGateParseError,
     build_release_gate_governance_payload,
@@ -562,6 +563,18 @@ def run_close_check(*, cwd: Path | None, wi: Path, all_docs: bool = False) -> Cl
                 blockers.append(
                     "BLOCKER: verification governance gate decision blocked close-check"
                 )
+
+    provenance_phase1 = load_phase1_provenance_gate_payload(root)
+    checks.append(
+        {
+            "name": "provenance_phase1",
+            "ok": True,
+            "detail": (
+                f"{provenance_phase1.get('decision_result', 'advisory')}; "
+                "Phase 1 remains advisory-only and outside the default blocker path"
+            ),
+        }
+    )
 
     doc_violations = _docs_consistency_violations(root, wi_dir, all_docs=all_docs)
     docs_ok = len(doc_violations) == 0
