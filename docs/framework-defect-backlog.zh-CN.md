@@ -101,7 +101,8 @@
 - 来源: self_review, user_review
 - 状态: planned
 - owner: codex
-- related_doc: src/ai_sdlc/rules/git-branch.md, src/ai_sdlc/rules/pipeline.md, docs/框架自迭代开发与发布约定.md, docs/superpowers/plans/2026-03-31-branch-lifecycle-truth-guard.md
+- wi_id: 007-branch-lifecycle-truth-guard
+- related_doc: src/ai_sdlc/rules/git-branch.md, src/ai_sdlc/rules/pipeline.md, docs/框架自迭代开发与发布约定.md, docs/superpowers/plans/2026-03-31-branch-lifecycle-truth-guard.md, specs/007-branch-lifecycle-truth-guard/spec.md, specs/007-branch-lifecycle-truth-guard/plan.md, specs/007-branch-lifecycle-truth-guard/tasks.md
 - 现象: 仓库中可以长期残留只存在于本地或远端、且与 `main` 已明显偏离的分支 / worktree；即便相关工作项已经收口或主线已有后续实现，现有框架也不会通过 `verify constraints`、`close-check`、`status --json` 或 `doctor` 主动暴露这些“未处置分支真值”，最终仍需依赖人工执行 `git branch`、`git worktree list`、`git rev-list --left-right --count` 才能发现。
 - 触发场景: 独立 worktree 或 feature scratch 分支完成了局部实现、验证或文档回填，但 branch close-out 没有与主线合流、execution-log 归档、任务对账和 disposition（`merged / archived / deleted`）放在同一轮法定尾部动作里完成；同时 `git-branch.md` 只建模 `design/NNN` 与 `feature/NNN`，没有把 `codex/*`、backup、历史 feature 分支和 worktree 生命周期纳入正式 guardrail。
 - 影响范围: 主线真值判断、close-out 可信度、用户对“分支已实现”与“主线已兑现”的区分、历史 worktree 清理成本，以及后续 framework capability 是否仍被旧分支误表示为“已有未合并实现”的治理判断。
