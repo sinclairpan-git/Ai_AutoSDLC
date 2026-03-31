@@ -65,6 +65,7 @@
 
 - `tasks.md` 同步状态：`已同步` / `未同步（原因）`
 - `related_plan`（如存在）同步状态：`已对账` / `存在漂移（BLOCKER）`
+- 关联 branch/worktree disposition 计划：`merged` / `archived` / `deleted` / `待最终收口`
 - 说明：
 
 #### 2.6 自动决策记录（如有）
@@ -79,4 +80,6 @@
 
 - 已完成 git 提交：`是` / `否`（须与 **本批唯一一次** commit 对齐）
 - 提交哈希：`xxxxxxx`（**仅在**上述 commit **成功之后** 填写 **一次**；不要求归档草稿中预填哈希后再二次修订）
+- 当前批次 branch disposition 状态：`待最终收口` / `merged` / `archived` / `deleted`
+- 当前批次 worktree disposition 状态：`待最终收口` / `removed` / `retained（原因）`
 - 是否继续下一批：`是` / `阻断`

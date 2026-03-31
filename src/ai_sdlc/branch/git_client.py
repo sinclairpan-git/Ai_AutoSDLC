@@ -36,6 +36,36 @@ class IndexLockInspection:
     active_processes: tuple[str, ...] = ()
 
 
+@dataclass(frozen=True, slots=True)
+class LocalBranchInspection:
+    """Read-only snapshot of one local branch."""
+
+    name: str
+    head_commit: str
+    is_current: bool
+    upstream: str | None
+    worktree_path: Path | None
+
+
+@dataclass(frozen=True, slots=True)
+class WorktreeInspection:
+    """Read-only snapshot of one registered worktree."""
+
+    path: Path
+    head_commit: str
+    branch: str | None
+
+
+@dataclass(frozen=True, slots=True)
+class BranchDivergence:
+    """Ahead/behind counts for ``branch`` relative to ``base``."""
+
+    branch: str
+    base: str
+    ahead_of_base: int
+    behind_base: int
+
+
 class GitClient:
     """Thin wrapper around git CLI commands."""
 
@@ -321,6 +351,83 @@ class GitClient:
         """Check if there are uncommitted changes in the working tree."""
         status = self._run("status", "--porcelain")
         return len(status) > 0
+
+    def list_worktrees(self) -> tuple[WorktreeInspection, ...]:
+        """Return registered worktrees from ``git worktree list --porcelain``."""
+        raw = self._run("worktree", "list", "--porcelain")
+        items: list[WorktreeInspection] = []
+        current_path: Path | None = None
+        current_head = ""
+        current_branch: str | None = None
+
+        def _flush() -> None:
+            if current_path is None:
+                return
+            items.append(
+                WorktreeInspection(
+                    path=current_path,
+                    head_commit=current_head,
+                    branch=current_branch,
+                )
+            )
+
+        for line in raw.splitlines():
+            if not line.strip():
+                _flush()
+                current_path = None
+                current_head = ""
+                current_branch = None
+                continue
+            if line.startswith("worktree "):
+                current_path = Path(line.removeprefix("worktree ").strip()).resolve()
+            elif line.startswith("HEAD "):
+                current_head = line.removeprefix("HEAD ").strip()
+            elif line.startswith("branch "):
+                ref = line.removeprefix("branch ").strip()
+                current_branch = ref.removeprefix("refs/heads/")
+
+        _flush()
+        return tuple(items)
+
+    def list_local_branches(self) -> tuple[LocalBranchInspection, ...]:
+        """Return local branches with upstream and worktree binding."""
+        worktree_by_branch = {
+            item.branch: item.path
+            for item in self.list_worktrees()
+            if item.branch is not None
+        }
+        raw = self._run(
+            "for-each-ref",
+            "--format=%(refname:short)%00%(objectname:short)%00%(upstream:short)%00%(HEAD)",
+            "refs/heads",
+        )
+        items: list[LocalBranchInspection] = []
+        for line in raw.splitlines():
+            if not line:
+                continue
+            name, head_commit, upstream, head_marker = line.split("\0")
+            normalized_upstream = upstream or None
+            items.append(
+                LocalBranchInspection(
+                    name=name,
+                    head_commit=head_commit,
+                    is_current=head_marker.strip() == "*",
+                    upstream=normalized_upstream,
+                    worktree_path=worktree_by_branch.get(name),
+                )
+            )
+        return tuple(sorted(items, key=lambda item: item.name))
+
+    def branch_divergence(self, branch: str, *, base: str = "main") -> BranchDivergence:
+        """Return ahead/behind counts for ``branch`` relative to ``base``."""
+        raw = self._run("rev-list", "--left-right", "--count", f"{base}...{branch}")
+        behind_raw, ahead_raw = raw.split()
+        return BranchDivergence(
+            branch=branch,
+            base=base,
+            ahead_of_base=int(ahead_raw),
+            behind_base=int(behind_raw),
+        )
 
     def add_and_commit(self, message: str, paths: list[str] | None = None) -> str:
         """Stage files and commit.

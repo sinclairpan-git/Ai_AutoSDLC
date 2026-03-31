@@ -19,7 +19,10 @@ from ai_sdlc.core.reviewer_gate import (
     ReviewerGateOutcomeKind,
     evaluate_reviewer_gate,
 )
-from ai_sdlc.core.workitem_traceability import analyze_completion_truth
+from ai_sdlc.core.workitem_traceability import (
+    analyze_completion_truth,
+    evaluate_work_item_branch_lifecycle,
+)
 from ai_sdlc.models.work import WorkItemStatus
 from ai_sdlc.utils.helpers import find_project_root
 
@@ -75,6 +78,32 @@ class CloseCheckResult:
             "checks": self.checks,
             "wi_dir": str(self.wi_dir) if self.wi_dir else None,
             "error": self.error,
+        }
+
+
+@dataclass
+class BranchCheckResult:
+    """Result payload for `workitem branch-check`."""
+
+    ok: bool
+    blockers: list[str] = field(default_factory=list)
+    warnings: list[str] = field(default_factory=list)
+    entries: list[dict[str, Any]] = field(default_factory=list)
+    wi_dir: Path | None = None
+    error: str | None = None
+    branch_disposition: str | None = None
+    worktree_disposition: str | None = None
+
+    def to_json_dict(self) -> dict[str, Any]:
+        return {
+            "ok": self.ok,
+            "blockers": self.blockers,
+            "warnings": self.warnings,
+            "entries": self.entries,
+            "wi_dir": str(self.wi_dir) if self.wi_dir else None,
+            "error": self.error,
+            "branch_disposition": self.branch_disposition,
+            "worktree_disposition": self.worktree_disposition,
         }
 
 
@@ -221,6 +250,39 @@ def load_verification_governance_bundle(
 ) -> dict[str, object] | None:
     """Return a bounded verification governance bundle when one is available."""
     return None
+
+
+def run_branch_check(*, cwd: Path | None, wi: Path) -> BranchCheckResult:
+    """Run read-only work-item scoped branch lifecycle checks."""
+    start = (cwd or Path.cwd()).resolve()
+    root = find_project_root(start)
+    if root is None:
+        return BranchCheckResult(
+            ok=False,
+            error="Not inside an AI-SDLC project (.ai-sdlc/ not found).",
+        )
+
+    wi_dir = wi if wi.is_absolute() else (start / wi).resolve()
+    if not wi_dir.is_dir():
+        return BranchCheckResult(
+            ok=False,
+            wi_dir=wi_dir,
+            error=f"Work item directory not found: {wi_dir}",
+        )
+
+    exec_log = wi_dir / "task-execution-log.md"
+    log_text = exec_log.read_text(encoding="utf-8") if exec_log.is_file() else None
+    lifecycle = evaluate_work_item_branch_lifecycle(root=root, wi_dir=wi_dir, log_text=log_text)
+    return BranchCheckResult(
+        ok=lifecycle.ok,
+        blockers=lifecycle.blockers,
+        warnings=lifecycle.warnings,
+        entries=[item.to_json_dict() for item in lifecycle.entries],
+        wi_dir=wi_dir,
+        error=None,
+        branch_disposition=lifecycle.branch_disposition,
+        worktree_disposition=lifecycle.worktree_disposition,
+    )
 
 
 def run_close_check(*, cwd: Path | None, wi: Path, all_docs: bool = False) -> CloseCheckResult:
@@ -400,6 +462,20 @@ def run_close_check(*, cwd: Path | None, wi: Path, all_docs: bool = False) -> Cl
             }
         )
 
+        branch_lifecycle = evaluate_work_item_branch_lifecycle(
+            root=root,
+            wi_dir=wi_dir,
+            log_text=log_text,
+        )
+        checks.append(
+            {
+                "name": "branch_lifecycle",
+                "ok": branch_lifecycle.ok,
+                "detail": branch_lifecycle.summary_detail(),
+            }
+        )
+        blockers.extend(branch_lifecycle.blockers)
+
     if _requires_release_gate(wi_dir):
         release_gate_path = wi_dir / RELEASE_GATE_EVIDENCE_FILE
         if not release_gate_path.is_file():
@@ -524,4 +600,8 @@ def run_close_check(*, cwd: Path | None, wi: Path, all_docs: bool = False) -> Cl
 
 
 def format_close_check_json(result: CloseCheckResult) -> str:
+    return json.dumps(result.to_json_dict(), ensure_ascii=False, indent=2)
+
+
+def format_branch_check_json(result: BranchCheckResult) -> str:
     return json.dumps(result.to_json_dict(), ensure_ascii=False, indent=2)

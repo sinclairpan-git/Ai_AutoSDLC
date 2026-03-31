@@ -35,6 +35,9 @@ def _write_execution_log(
         "uv run ai-sdlc verify constraints",
     ),
     changed_paths: tuple[str, ...] = ("src/example.py", "tests/test_example.py"),
+    branch_disposition_plan: str = "待最终收口",
+    branch_disposition_status: str = "待最终收口",
+    worktree_disposition_status: str = "待最终收口",
 ) -> None:
     committed_text = "是" if git_committed else "否"
     rendered_hash = f"`{commit_hash}`" if commit_hash != "N/A" else "N/A"
@@ -50,9 +53,12 @@ def _write_execution_log(
         f"- **改动范围**：{path_text}\n"
         "#### 2.4 代码审查（`rules/code-review.md` 摘要）\n"
         "#### 2.5 任务/计划同步状态（Mandatory）\n"
+        f"- 关联 branch/worktree disposition 计划：`{branch_disposition_plan}`\n"
         "#### 2.8 归档后动作\n"
         f"- **已完成 git 提交**：{committed_text}\n"
-        f"- **提交哈希**：{rendered_hash}\n",
+        f"- **提交哈希**：{rendered_hash}\n"
+        f"- 当前批次 branch disposition 状态：`{branch_disposition_status}`\n"
+        f"- 当前批次 worktree disposition 状态：`{worktree_disposition_status}`\n",
         encoding="utf-8",
     )
 
@@ -130,6 +136,9 @@ def _setup_repo(
         "uv run ai-sdlc verify constraints",
     ),
     changed_paths: tuple[str, ...] = ("src/example.py", "tests/test_example.py"),
+    branch_disposition_plan: str = "待最终收口",
+    branch_disposition_status: str = "待最终收口",
+    worktree_disposition_status: str = "待最终收口",
 ) -> None:
     subprocess.run(["git", "init"], cwd=root, check=True, capture_output=True)
     subprocess.run(
@@ -178,6 +187,9 @@ def _setup_repo(
         verification_profile=verification_profile,
         verification_commands=verification_commands,
         changed_paths=changed_paths,
+        branch_disposition_plan=branch_disposition_plan,
+        branch_disposition_status=branch_disposition_status,
+        worktree_disposition_status=worktree_disposition_status,
     )
 
     (root / "README.md").write_text("# R\n", encoding="utf-8")
@@ -199,6 +211,9 @@ def _setup_repo(
             verification_profile=verification_profile,
             verification_commands=verification_commands,
             changed_paths=changed_paths,
+            branch_disposition_plan=branch_disposition_plan,
+            branch_disposition_status=branch_disposition_status,
+            worktree_disposition_status=worktree_disposition_status,
         )
         subprocess.run(
             ["git", "add", f"{wi_rel}/task-execution-log.md"],
@@ -212,6 +227,24 @@ def _setup_repo(
             check=True,
             capture_output=True,
         )
+
+
+def _create_branch_ahead_of_main(root: Path, branch_name: str) -> None:
+    subprocess.run(
+        ["git", "checkout", "-b", branch_name],
+        cwd=root,
+        check=True,
+        capture_output=True,
+    )
+    (root / "scratch.txt").write_text(f"{branch_name}\n", encoding="utf-8")
+    subprocess.run(["git", "add", "."], cwd=root, check=True, capture_output=True)
+    subprocess.run(
+        ["git", "commit", "-m", f"feat: {branch_name}"],
+        cwd=root,
+        check=True,
+        capture_output=True,
+    )
+    subprocess.run(["git", "checkout", "main"], cwd=root, check=True, capture_output=True)
 
 
 def test_close_check_blocker_tasks_incomplete(tmp_path: Path) -> None:
@@ -256,6 +289,70 @@ def test_close_check_pass_when_all_requirements_met(tmp_path: Path) -> None:
     assert r.error is None
     assert r.ok is True
     assert r.blockers == []
+
+
+def test_close_check_blocks_when_associated_branch_is_ahead_and_undisposed(
+    tmp_path: Path,
+) -> None:
+    root = tmp_path / "repo3a"
+    root.mkdir()
+    _setup_repo(
+        root,
+        tasks_body="- [x] done\n### Task 1.1\n- **验收标准（AC）**：ok",
+        plan_status="completed",
+    )
+    _create_branch_ahead_of_main(root, "codex/001-branch-lifecycle-demo")
+
+    r = run_close_check(cwd=root, wi=Path("specs/001-wi"))
+
+    assert r.ok is False
+    assert any("branch lifecycle" in b.lower() for b in r.blockers)
+    assert any("codex/001-branch-lifecycle-demo" in b for b in r.blockers)
+
+
+def test_close_check_accepts_archived_associated_branch_without_escalating_to_blocker(
+    tmp_path: Path,
+) -> None:
+    root = tmp_path / "repo3aa"
+    root.mkdir()
+    _setup_repo(
+        root,
+        tasks_body="- [x] done\n### Task 1.1\n- **验收标准（AC）**：ok",
+        plan_status="completed",
+        branch_disposition_plan="archived",
+        branch_disposition_status="archived",
+        worktree_disposition_status="retained（对照保留）",
+    )
+    _create_branch_ahead_of_main(root, "codex/001-branch-lifecycle-demo")
+
+    r = run_close_check(cwd=root, wi=Path("specs/001-wi"))
+
+    assert r.ok is True
+    assert r.blockers == []
+    branch_check = next(item for item in r.checks if item["name"] == "branch_lifecycle")
+    assert branch_check["ok"] is True
+    assert "archived" in str(branch_check["detail"])
+
+
+def test_close_check_ignores_unrelated_historical_branch_inventory(
+    tmp_path: Path,
+) -> None:
+    root = tmp_path / "repo3ab"
+    root.mkdir()
+    _setup_repo(
+        root,
+        tasks_body="- [x] done\n### Task 1.1\n- **验收标准（AC）**：ok",
+        plan_status="completed",
+    )
+    _create_branch_ahead_of_main(root, "codex/999-legacy-scratch")
+
+    r = run_close_check(cwd=root, wi=Path("specs/001-wi"))
+
+    assert r.ok is True
+    assert r.blockers == []
+    branch_check = next(item for item in r.checks if item["name"] == "branch_lifecycle")
+    assert branch_check["ok"] is True
+    assert "no associated branch/worktree drift" in str(branch_check["detail"])
 
 
 def test_close_check_blocks_when_verification_governance_source_closure_is_incomplete(

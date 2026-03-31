@@ -42,7 +42,7 @@
 
 17. **框架缺陷 / 违约转待办**：当出现以下任一情形时，须在 `docs/framework-defect-backlog.zh-CN.md` 追加一条结构化 backlog：① 用户明确要求记录该缺陷/违约；② `gate` / `verify` / `close-check` 等门禁因框架缺口、状态漂移、规则矛盾而阻断；③ 自检或回顾发现曾跳过本文件或宪章中的强制顺序。即使该违约已被门禁、review 或自检及时拦下，并在当前迭代内修复，只要它真实出现过且暴露出框架缺口，仍必须登记，不得因“已修复”而省略。顺序固定为：`识别违约 -> 写 backlog 条目 -> 只读校验 -> 再讨论补正/修复/计划`，不得继续停留在口头承认或等待用户二次提醒。条目至少包含：现象、触发场景、影响范围、根因分类、`未来杜绝方案摘要`、建议改动层级、`prompt / context`、`rule / policy`、`middleware`、`workflow`、`tool`、`eval`、风险等级、可验证成功标准、是否需要回归测试补充；其中 `未来杜绝方案摘要` 负责概括防复发方案，而 `rule / policy`、`middleware`、`workflow`、`tool`、`eval` 应明确写出未来杜绝同类问题的具体落点。历史兼容来源见 `rules/agent-skip-registry.zh.md`。该登记作为框架演进输入，**不替代** `verification.md` 与自动化测试。
 
-18. **close 前工作项与计划对账**：进入 **close** 阶段前，须核对 `specs/<WI>/tasks.md` 中任务完成情况与（若存在）`related_plan` 指向的外部计划之待办状态是否已与 Git 事实一致，或已登记延期原因；与「归档先于继续」一致。
+18. **close 前工作项、计划与分支处置对账**：进入 **close** 阶段前，须核对 `specs/<WI>/tasks.md` 中任务完成情况、（若存在）`related_plan` 指向的外部计划之待办状态，以及与当前 work item 明确关联的 branch/worktree disposition 是否已与 Git 事实一致，或已登记延期/保留原因；与「归档先于继续」一致。若当前 work item 仍有关联 scratch/worktree 分支相对 `main` 存在未处置偏离，不得把 close 表述为已完整收口。
 
 ## 阶段执行顺序
 

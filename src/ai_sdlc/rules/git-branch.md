@@ -8,7 +8,43 @@
 设计产物和开发代码分属不同分支。
 切换分支前必须 commit。
 切换分支后必须校验基线。
+分支 / worktree 必须有显式生命周期与收尾处置。
 ```
+
+## 生命周期类型
+
+框架内部至少承认以下 branch/worktree 生命周期类型：
+
+| 类型 | 典型命名 | 用途 | 是否可作为主线真值 |
+|------|----------|------|--------------------|
+| `design` | `design/NNN-*` | Stage 1-4 设计产物 | 否 |
+| `feature` | `feature/NNN-*` | Stage 5-6 开发实现 | 否 |
+| `scratch` | `codex/*`、临时 worktree 分支、实验性 topic 分支 | 临时执行容器、局部验证、隔离修改 | 否 |
+| `archive` | `backup-*`、明确标注保留的历史分支 | 归档、追溯、保留旧状态 | 否 |
+| `unmanaged` | 不符合上述命名且未登记用途的分支 | 历史遗留或人工创建分支 | 否 |
+
+说明：
+
+- 除 `main`（或团队约定的发布主线）外，其余类型都**不是**主线兑现真值。
+- `scratch` / `archive` / `unmanaged` 分支上的实现，默认只能表述为“分支存在”，不得外推成“主线已支持”。
+- 如果某个 branch/worktree 与当前 work item 相关，close 前必须有明确 disposition。
+
+## 收尾处置（Disposition）
+
+每个与 work item 明确关联的 branch/worktree，在 close 前都必须落到以下 disposition 之一：
+
+| disposition | 含义 | 是否等于已进入 `main` |
+|-------------|------|------------------------|
+| `merged` | 相关实现已进入 `main` 或项目约定主线 | 是 |
+| `archived` | 分支被有意保留用于追溯/对照，但不作为当前主线兑现真值 | 否 |
+| `deleted` | 本地或远端分支/工作树已移除，不再作为活动执行容器 | 不一定；需结合归档说明 |
+
+约束：
+
+- `archived` 是正式 disposition，但**不等于** `merged`。
+- `deleted` 也不自动等于 `merged`；若删除前未合主线，必须在归档中写清原因。
+- close-out 时不得只写“已清理分支”而不说明 disposition。
+- `scratch` / `codex/*` / worktree 分支允许存在，但只应作为临时执行容器；在当前 work item 收口前不得保持“未处置”。
 
 ## 分支结构
 
@@ -89,9 +125,23 @@ Stage 6 完成后，feature 分支可合并到 main
 2. 合并到 main：
    git checkout main
    git merge feature/NNN-short-name --no-ff -m "feat(NNN): complete implementation"
-3. 删除已合并的分支（可选）：
+3. 对当前 work item 相关分支写 disposition：
+   □ merged
+   □ archived（需说明为何保留且为何不等于主线真值）
+   □ deleted（需说明删除前是否已 merged）
+4. 如已 merged 且无需保留，删除分支/移除 worktree：
    git branch -d design/NNN-short-name
    git branch -d feature/NNN-short-name
+```
+
+### Scratch / Worktree 分支
+
+```
+当使用 codex/*、临时 topic 分支或 git worktree 时：
+  1. 创建时就要明确它服务于哪个 work item / 哪轮任务
+  2. 运行中的 scratch/worktree 分支只能承载局部实现与验证，不得被表述为主线已兑现
+  3. close 前必须明确它是 merged、archived 还是 deleted
+  4. 未关联到当前 work item 的历史 scratch/worktree 分支，至少要在 inventory 中可见
 ```
 
 ## 铁律一：切换前必须 commit
@@ -226,4 +276,9 @@ feature 分支上的 commit：
 
 异常 5：误在错误分支上工作（如在 main 上写了 spec）
   → git stash → git checkout 正确分支 → git stash pop → git add + commit
+
+异常 6：close 时发现仍有与当前 work item 关联的 scratch/worktree 分支未处置
+  → 阻断 close
+  → 明确其 disposition 为 merged / archived / deleted
+  → 再更新 execution-log / tasks / close surface
 ```
