@@ -59,8 +59,9 @@
 ## 下一波待修优先级（2026-03-31）
 
 - 当前待修：
-  - `FD-2026-03-31-003`
+  - `无`
 - 本轮已收口：
+  - `008` 线 `FD-2026-03-31-003`
   - `007` 线 `FD-2026-03-31-002`
   - `006` 线 `FD-2026-03-31-001`
   - `005` 线 `FD-2026-03-30-001`、`FD-2026-03-30-002`
@@ -125,7 +126,7 @@
 
 - 日期 (UTC): 2026-03-31
 - 来源: self_review, user_review
-- 状态: in_progress
+- 状态: closed
 - owner: codex
 - wi_id: 008-direct-formal-workitem-entry
 - related_doc: src/ai_sdlc/rules/pipeline.md, docs/框架自迭代开发与发布约定.md, docs/framework-defect-backlog.zh-CN.md, specs/008-direct-formal-workitem-entry/spec.md, specs/008-direct-formal-workitem-entry/plan.md, specs/008-direct-formal-workitem-entry/tasks.md
@@ -142,6 +143,7 @@
 - tool: `src/ai_sdlc/cli/workitem_cmd.py`、新增 work item scaffold helper、`templates/spec-template.md`、`templates/plan-template.md`、`templates/tasks-template.md`、`docs/USER_GUIDE.zh-CN.md`
 - eval: 新 framework capability 中“先写 `docs/superpowers/*` 再补 formal work item”的事件数、formal work item 从首次设计到落盘的延迟时间、需要重复搬运 spec/plan 内容的次数
 - 风险等级: 高
+- 收口说明（2026-03-31）: `src/ai_sdlc/core/workitem_scaffold.py`、`ai-sdlc workitem init`、`pipeline.md`、自迭代约定与用户文档已经把新 framework capability 的 canonical 入口统一到 `specs/<WI>/spec.md + plan.md + tasks.md`；当前 `008` 也已直接以 formal work item 启动并合流主线，不再依赖“先写 `docs/superpowers/*` 再 formalize”的双轨路径。
 - 可验证成功标准: 给定一个新的 framework capability 场景时，仓库可以直接生成 `specs/<WI>/spec.md + plan.md + tasks.md` 的 canonical skeleton，并把后续 review / execute 全部挂到这套 formal docs；不存在“必须先写 `docs/superpowers/*` 才能继续”的前置。若存在外部 design notes，它们也只作为 reference，而不是第二套 canonical 文档。
 - 是否需要回归测试补充: 是：补 direct-formal scaffold CLI、parser-friendly formal doc 生成、`related_doc / related_plan` 引用、以及“无须先写 `docs/superpowers/*`”的正反夹具。
 

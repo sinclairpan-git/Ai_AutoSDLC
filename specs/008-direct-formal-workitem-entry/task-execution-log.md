@@ -154,3 +154,71 @@
 - 当前批次 branch disposition 状态：`待最终收口`
 - 当前批次 worktree disposition 状态：`retained（当前执行分支）`
 - 是否继续下一批：`阻断`（等待 branch disposition 进入最终收口）
+
+### Batch 2026-03-31-003 | 008 mainline merge + disposition close-out
+
+#### 2.1 准备
+
+- **任务来源**：formal close-out（承接 [`tasks.md`](tasks.md) `T42` 之后的主线合流与 disposition 收束）
+- **目标**：把 `codex/008-direct-formal-workitem-entry` 合流到 `main`，并把 direct-formal canonical truth 的 branch/worktree disposition 收口为正式 `merged / removed`。
+- **预读范围**：[`tasks.md`](tasks.md)、[`../../docs/framework-defect-backlog.zh-CN.md`](../../docs/framework-defect-backlog.zh-CN.md)、[`../../src/ai_sdlc/rules/pipeline.md`](../../src/ai_sdlc/rules/pipeline.md)、[`../../src/ai_sdlc/rules/git-branch.md`](../../src/ai_sdlc/rules/git-branch.md)
+- **激活的规则**：single canonical doc set；close-out 以 mainline commits、execution-log disposition marker 与 bounded read surface 共同为准。
+- **验证画像**：`code-change`
+
+#### 2.2 统一验证命令
+
+- **主线合流**
+  - 命令：`git merge --no-ff codex/008-direct-formal-workitem-entry -m "merge: integrate direct formal workitem entry"`
+  - 结果：成功，生成 `main` 上的 merge commit `ff25bae`
+- **V1（全量回归）**
+  - 命令：`uv run pytest -q`
+  - 结果：`949 passed in 32.75s`
+- **Lint**
+  - 命令：`uv run ruff check src tests`
+  - 结果：`All checks passed!`
+- **治理只读校验**
+  - 命令：`uv run ai-sdlc verify constraints`
+  - 结果：`verify constraints: no BLOCKERs.`
+- **Close truth**
+  - 命令：`uv run ai-sdlc workitem close-check --wi specs/008-direct-formal-workitem-entry`
+  - 结果：在本批归档提交后，只剩 branch disposition 收口前的预期 blocker；补齐 disposition 后应进入 `ready for completion`
+
+#### 2.3 任务记录
+
+##### 008 close-out | mainline merge + disposition truth
+
+- **改动范围**：[`task-execution-log.md`](task-execution-log.md)、[`../../docs/framework-defect-backlog.zh-CN.md`](../../docs/framework-defect-backlog.zh-CN.md)
+- **改动内容**：将 `008` 合流主线，并把 defect/backlog 与 execution-log 中的 branch lifecycle 真值从 `待最终收口` 收束为正式 close-out。
+- **新增/调整的测试**：无新增测试；以 merge 后全量回归、`verify constraints`、`close-check` 与 `branch-check` 为准。
+- **测试结果**：通过。
+- **是否符合任务目标**：符合。
+
+#### 2.4 代码审查（Mandatory）
+
+- **宪章/规格对齐**：`008` 的 canonical 入口、CLI、rules/docs 与 formal close-out 语义一致，没有重新引入双轨文档路径。
+- **代码质量**：close-out 仅补归档和 defect 状态，不修改已验证实现逻辑。
+- **测试质量**：merge 后继续使用全量 `pytest`、`ruff`、`verify constraints` 与 work item scoped bounded checks。
+- **结论**：`无 Critical 阻塞项`
+
+#### 2.5 任务/计划同步状态（Mandatory）
+
+- `tasks.md` 同步状态：`已同步`
+- `related_plan`（如存在）同步状态：`已对账`
+- 关联 branch/worktree disposition 计划：`merged`
+- 说明：本批完成后，`008` 不再以分支态存在于 canonical truth；若本地分支继续保留，也只属清理动作，不再影响主线兑现真值。
+
+#### 2.6 自动决策记录（如有）
+
+- 无
+
+#### 2.7 批次结论
+
+- `008` 已在 `main` 上兑现 direct-formal canonical entry，branch/worktree disposition 进入正式 close-out。
+
+#### 2.8 归档后动作
+
+- **已完成 git 提交**：是
+- **提交哈希**：`ff25bae`
+- 当前批次 branch disposition 状态：`merged`
+- 当前批次 worktree disposition 状态：`removed`
+- 是否继续下一批：`阻断`（等待本地分支删除与最终只读复核）
