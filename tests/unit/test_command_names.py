@@ -9,6 +9,7 @@ def test_collect_flat_command_strings_includes_nested_subcommands() -> None:
     cmds = collect_flat_command_strings()
     assert "ai-sdlc verify constraints" in cmds
     assert "ai-sdlc workitem close-check" in cmds
+    assert "ai-sdlc workitem init" in cmds
     assert "ai-sdlc workitem plan-check" in cmds
     assert "ai-sdlc gate check" in cmds
     assert len(cmds) > 5
