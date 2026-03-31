@@ -634,6 +634,7 @@ python -m ai_sdlc telemetry close-session --goal-session-id <gs_id> --status suc
 | program integrate --dry-run | `python -m ai_sdlc program integrate --dry-run` | guarded integration runbook 预览 | **可能写 adapter**；若带 `--report`，还会写 report 文件 |
 | program integrate --execute --yes | `python -m ai_sdlc program integrate --execute --yes` | guarded execute gate | **可能写 adapter**；当前会做 gate 校验与可选 report 写入，不会直接替你修改各 spec 内容 |
 | manual telemetry | `python -m ai_sdlc telemetry open-session`、`record-*`、`close-session` | operator evidence write | **会写 telemetry**：落到 `.ai-sdlc/local/telemetry/` 与派生 indexes；CLI 入口本身也可能先触发 adapter apply |
+| workitem init | `python -m ai_sdlc workitem init --title "新 capability 标题"` | direct-formal 初始化 formal work item | **会写 formal docs**：直接创建 `specs/<WI>/spec.md`、`plan.md`、`tasks.md`；不会要求先写 `docs/superpowers/*` |
 | workitem branch-check | `python -m ai_sdlc workitem branch-check --wi specs/<WI>/` | work item 关联 branch/worktree 只读盘点 | **命令主体只读，但可能写 adapter**：回答当前 WI 尚有哪些未处置 branch/worktree，以及它们相对 `main` 的 divergence 与 disposition |
 | workitem close-check | `python -m ai_sdlc workitem close-check --wi specs/<WI>/` | work item 收口真值核验 | **命令主体只读，但可能写 adapter**：会核对 tasks / planned batch / traceability / execution-log / fresh verification / git closure / branch lifecycle disposition truth；若关联 scratch/worktree 分支仍未处置且相对 `main` 存在漂移，会返回 `BLOCKER` |
 | offline build | `./packaging/offline/build_offline_bundle.sh` | 分发打包 | **会写本地构建产物**：写 `dist/`、`dist-offline/` 和 bundle archives，不修改业务仓源码 |
@@ -648,6 +649,10 @@ python -m ai_sdlc telemetry close-session --goal-session-id <gs_id> --status suc
 
 如果你是在 **AI-SDLC 仓库里开发 AI-SDLC 自身**，`verify` 和 `close` 最容易被混淆的地方是：
 
+- `uv run ai-sdlc workitem init --title "<新的 framework capability 标题>"`
+  - 这是**新 framework capability 的 direct-formal 入口**。
+  - 它会直接在 `specs/<WI>/` 下创建 canonical `spec.md / plan.md / tasks.md`。
+  - 如果你手头已有 `docs/superpowers/*` 设计稿，它们最多只应作为 `related_doc / related_plan` 被引用，不应再复制成第二套 canonical 文档。
 - `uv run ai-sdlc verify constraints`
   - 这是**仓库级规则 / 治理只读校验**。
   - 它负责检查 verification profile、PR checklist、bounded surface / telemetry governance 等规则面是否一致。
@@ -679,6 +684,20 @@ git status --short
 - 它用于确认 telemetry smoke、CLI smoke、或其他真实运行命令没有把工作树弄脏。
 - `.ai-sdlc/local/` 应继续被视为本地运行态目录并保持忽略；如果 smoke 后工作树不干净，先处理漂移，再声称收口。
 - 如果本轮还改了 close 阶段文档、`related_plan` 或 `task-execution-log.md`，应在**完成最终 git 提交后**再补跑一次 `workitem close-check`。
+
+如果这轮工作是“创建新的 framework capability”，常见的 direct-formal 起手顺序是：
+
+```bash
+uv run ai-sdlc workitem init --title "<新的 framework capability 标题>"
+uv run ai-sdlc verify constraints
+uv run ai-sdlc workitem branch-check --wi specs/<WI>
+```
+
+这条路径的重点是：
+
+- 先把 canonical spec/plan/tasks 直接写进 `specs/<WI>/`
+- 再围绕这套 formal docs 做 review / verify / execute
+- 不再要求“先写 `docs/superpowers/*`，再 formalize 一遍”
 
 ## 框架自身开发补充
 

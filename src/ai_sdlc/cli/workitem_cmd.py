@@ -18,12 +18,82 @@ from ai_sdlc.core.close_check import (
     run_close_check,
 )
 from ai_sdlc.core.plan_check import PlanCheckResult, format_json, run_plan_check
+from ai_sdlc.core.workitem_scaffold import WorkitemScaffolder, WorkitemScaffoldError
 from ai_sdlc.utils.helpers import find_project_root, now_iso
 
 workitem_app = typer.Typer(
-    help="Work item metadata, plan reconciliation (FR-087), and checkpoint linkage (FR-088).",
+    help=(
+        "Work item canonical docs, plan reconciliation (FR-087), "
+        "branch lifecycle truth, and checkpoint linkage (FR-088)."
+    ),
 )
 console = Console()
+
+
+@workitem_app.command(
+    "init",
+    help=(
+        "Create canonical formal docs directly under specs/<WI>/ "
+        "(spec.md + plan.md + tasks.md). Does not create docs/superpowers/*."
+    ),
+)
+def workitem_init(
+    title: str = typer.Option(
+        ...,
+        "--title",
+        help="Human-readable work item title used in generated formal docs.",
+    ),
+    wi_id: str | None = typer.Option(
+        None,
+        "--wi-id",
+        help="Optional explicit work item id in `NNN-short-name` form.",
+    ),
+    input_text: str | None = typer.Option(
+        None,
+        "--input",
+        help="Optional input/brief shown in the generated spec.md.",
+    ),
+    related_plan: str | None = typer.Option(
+        None,
+        "--related-plan",
+        help="Optional external design/plan reference stored as reference-only metadata.",
+    ),
+    related_doc: list[str] | None = typer.Option(
+        None,
+        "--related-doc",
+        help="Optional external design/doc reference. Can be provided multiple times.",
+    ),
+) -> None:
+    """Direct-formal work item entry for new framework capabilities."""
+    root = find_project_root()
+    if root is None:
+        console.print("[red]Not inside an AI-SDLC project.[/red]")
+        raise typer.Exit(code=1)
+
+    try:
+        result = WorkitemScaffolder().scaffold(
+            root=root,
+            title=title,
+            wi_id=wi_id,
+            input_text=input_text,
+            related_plan=related_plan,
+            related_docs=tuple(related_doc or ()),
+        )
+    except WorkitemScaffoldError as exc:
+        console.print(f"[red]{exc}[/red]")
+        raise typer.Exit(code=1) from exc
+
+    console.print(
+        "[green]Created canonical formal docs under "
+        f"{result.spec_dir.relative_to(root)}[/green]"
+    )
+    for path in result.created_paths:
+        console.print(f"  - {path.relative_to(root)}")
+    if related_plan or related_doc:
+        console.print(
+            "[dim]External design inputs were recorded as references only; "
+            "no second canonical doc set was created.[/dim]"
+        )
 
 
 @workitem_app.command(

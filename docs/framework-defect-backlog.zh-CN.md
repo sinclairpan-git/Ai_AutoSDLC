@@ -59,7 +59,7 @@
 ## 下一波待修优先级（2026-03-31）
 
 - 当前待修：
-  - `无`
+  - `FD-2026-03-31-003`
 - 本轮已收口：
   - `007` 线 `FD-2026-03-31-002`
   - `006` 线 `FD-2026-03-31-001`
@@ -120,6 +120,30 @@
 - 收口说明（2026-03-31）: `007` 已把 branch/worktree inventory、disposition parsing、`workitem branch-check`、`close-check`、`verify constraints`、`status --json` 与 `doctor` 的 branch lifecycle bounded surfaces 正式落到主线；`git-branch.md`、`pipeline.md`、用户文档与自迭代约定也已同步收紧。当前 work item 已合流 `main`，execution log 已补齐 `merged / removed` disposition 真值，本条 defect 不再停留在 planned。
 - 可验证成功标准: 给定一个 work item 关联的 scratch/worktree 分支仍比 `main` 多提交、且未登记 `merged / archived / deleted` disposition 时，`close-check` 或等价 branch-check 必须返回明确 blocker 或 warning；`status --json` / `doctor` 至少能稳定暴露 branch inventory 摘要；当分支已合回主线或已完成归档处置后，相关告警消失。
 - 是否需要回归测试补充: 是：补 `branch inventory`、`branch-vs-main divergence`、`unresolved worktree disposition`、`archived-but-not-merged`、`unrelated historical branch only warns` 等正反夹具。
+
+## FD-2026-03-31-003 | 新 framework capability 仍默认先写入 `docs/superpowers/*` 再补 formal work item，导致双轨产物和重复劳动
+
+- 日期 (UTC): 2026-03-31
+- 来源: self_review, user_review
+- 状态: in_progress
+- owner: codex
+- wi_id: 008-direct-formal-workitem-entry
+- related_doc: src/ai_sdlc/rules/pipeline.md, docs/框架自迭代开发与发布约定.md, docs/framework-defect-backlog.zh-CN.md, specs/008-direct-formal-workitem-entry/spec.md, specs/008-direct-formal-workitem-entry/plan.md, specs/008-direct-formal-workitem-entry/tasks.md
+- 现象: 即使已经把“`docs/superpowers/specs/*.md` 与 `docs/superpowers/plans/*.md` 只是 design input、不是 execute 真值”写进规则，新的 framework capability 仍常常先在 `docs/superpowers/*` 下生成一套 design / implementation 文档，等到仓库审核或准备执行时，再人工补一套 `specs/<WI>/spec.md + plan.md + tasks.md`。结果不是直接违规进入 execute，而是形成双轨产物、重复搬运和 traceability 噪音。
+- 触发场景: 宿主 `brainstorming` / `writing-plans` skill 的默认保存路径仍指向 `docs/superpowers/*`，而仓库法定执行真值又要求回到 `specs/<WI>/...`。当前规则虽然已阻止“只有 superpowers plan 就进入实现”，但还没有提供一个 direct-to-formal 的 canonical entry path，因此实际操作往往变成“先写 superpowers，再 formalize 到 work item”。
+- 影响范围: spec/plan/tasks 的重复维护成本、formal work item 生成延迟、review 面噪音、agent 工作流与仓库真值之间的额外摩擦，以及“哪个文件才是 canonical spec/plan”的认知负担。
+- 根因分类: A, B, C, H
+- 未来杜绝方案摘要: 对新 framework capability，canonical spec/plan/tasks 应从一开始就直接落到 `specs/<WI>/`，而不是先把 `docs/superpowers/*` 当作最终落点。框架需要提供 direct-formal scaffold / init path，使 formal work item 成为默认入口；`docs/superpowers/*` 如继续存在，只能作为草稿、参考或可选设计输入，而不是必须先写一套再搬运。
+- 建议改动层级: rule / policy, middleware, workflow, tool, eval
+- prompt / context: 当用户要求“先 spec/plan/tasks”或正在做 framework capability design freeze 时，默认动作应直接创建 formal `specs/<WI>/spec.md + plan.md + tasks.md`，而不是先在 `docs/superpowers/*` 生成 canonical 文档再补录。
+- rule / policy: 在 `pipeline.md` 与自迭代约定中，把“新 framework capability 的 canonical 设计/计划入口直接位于 `specs/<WI>/`”写成显式规则；`docs/superpowers/*` 若存在，仅能作为 design input / auxiliary reference。
+- middleware: 提供 direct-formal 的 work item scaffold/init 能力，使用现有 spec/plan/tasks 模板一次性创建 parser-friendly formal docs，并允许可选挂接 `related_doc` / `related_plan` 引用，而不是强制复制内容。
+- workflow: 顺序应收紧为 `allocate WI -> init formal spec/plan/tasks -> review / freeze -> execute`；若有 superpowers 草稿，只能选择“引用”而不是“再抄一套”。
+- tool: `src/ai_sdlc/cli/workitem_cmd.py`、新增 work item scaffold helper、`templates/spec-template.md`、`templates/plan-template.md`、`templates/tasks-template.md`、`docs/USER_GUIDE.zh-CN.md`
+- eval: 新 framework capability 中“先写 `docs/superpowers/*` 再补 formal work item”的事件数、formal work item 从首次设计到落盘的延迟时间、需要重复搬运 spec/plan 内容的次数
+- 风险等级: 高
+- 可验证成功标准: 给定一个新的 framework capability 场景时，仓库可以直接生成 `specs/<WI>/spec.md + plan.md + tasks.md` 的 canonical skeleton，并把后续 review / execute 全部挂到这套 formal docs；不存在“必须先写 `docs/superpowers/*` 才能继续”的前置。若存在外部 design notes，它们也只作为 reference，而不是第二套 canonical 文档。
+- 是否需要回归测试补充: 是：补 direct-formal scaffold CLI、parser-friendly formal doc 生成、`related_doc / related_plan` 引用、以及“无须先写 `docs/superpowers/*`”的正反夹具。
 
 ## FD-2026-03-30-001 | 新 framework capability 的 architecture/plan 已冻结，但仍把 `docs/superpowers/plans/*.md` 误当作可直接进入实施的法定入口，未先落到 `specs/<WI>/tasks.md`
 
