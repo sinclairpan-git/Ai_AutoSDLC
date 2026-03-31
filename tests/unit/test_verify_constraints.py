@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import subprocess
 from pathlib import Path
 
 from ai_sdlc.context.state import save_checkpoint
@@ -254,6 +255,112 @@ def _write_003_checkpoint(root: Path) -> None:
         ),
     )
     save_checkpoint(root, cp)
+
+
+def _init_git_repo(root: Path) -> None:
+    subprocess.run(["git", "init"], cwd=root, check=True, capture_output=True)
+    subprocess.run(
+        ["git", "config", "user.email", "t@t.com"],
+        cwd=root,
+        check=True,
+        capture_output=True,
+    )
+    subprocess.run(
+        ["git", "config", "user.name", "T"],
+        cwd=root,
+        check=True,
+        capture_output=True,
+    )
+
+
+def _commit_all(root: Path, message: str) -> None:
+    subprocess.run(["git", "add", "."], cwd=root, check=True, capture_output=True)
+    subprocess.run(["git", "commit", "-m", message], cwd=root, check=True, capture_output=True)
+
+
+def _create_branch_ahead_of_main(root: Path, branch_name: str) -> None:
+    subprocess.run(
+        ["git", "checkout", "-b", branch_name],
+        cwd=root,
+        check=True,
+        capture_output=True,
+    )
+    (root / "scratch.txt").write_text(f"{branch_name}\n", encoding="utf-8")
+    subprocess.run(["git", "add", "."], cwd=root, check=True, capture_output=True)
+    subprocess.run(
+        ["git", "commit", "-m", f"feat: {branch_name}"],
+        cwd=root,
+        check=True,
+        capture_output=True,
+    )
+    subprocess.run(["git", "checkout", "main"], cwd=root, check=True, capture_output=True)
+
+
+def _write_branch_lifecycle_fixture(
+    root: Path,
+    *,
+    wi_name: str = "001-wi",
+    branch_disposition_status: str = "待最终收口",
+) -> None:
+    _init_git_repo(root)
+    mem = root / ".ai-sdlc" / "memory"
+    mem.mkdir(parents=True, exist_ok=True)
+    (mem / "constitution.md").write_text("# Constitution\n", encoding="utf-8")
+    _write_framework_backlog(
+        root,
+        (
+            "- 现象: 发现框架缺陷\n"
+            "- 触发场景: 用户要求登记\n"
+            "- 影响范围: 规则与流程\n"
+            "- 根因分类: B\n"
+            "- 建议改动层级: rule / policy, workflow\n"
+            "- prompt / context: 会话内发现偏离\n"
+            "- rule / policy: pipeline.md 条款 17\n"
+            "- middleware: 无\n"
+            "- workflow: 需登记再继续\n"
+            "- tool: ai-sdlc verify constraints\n"
+            "- eval: 结构化字段完整率\n"
+            "- 风险等级: 中\n"
+            "- 可验证成功标准: verify constraints 无 BLOCKER\n"
+            "- 是否需要回归测试补充: 是\n"
+        ),
+    )
+    _write_verification_profile_docs(root)
+    _write_doc_first_rule_surfaces(root)
+
+    wi_dir = root / "specs" / wi_name
+    wi_dir.mkdir(parents=True, exist_ok=True)
+    (wi_dir / "tasks.md").write_text(
+        "### Task 1.1 — 示例\n"
+        "- **依赖**：无\n"
+        "- **验收标准（AC）**：\n"
+        "  1. 示例\n",
+        encoding="utf-8",
+    )
+    (wi_dir / "task-execution-log.md").write_text(
+        "# Log\n\n"
+        "### Batch 2026-03-31-001 | Batch 1 demo\n\n"
+        "#### 2.5 任务/计划同步状态（Mandatory）\n"
+        "- 关联 branch/worktree disposition 计划：`待最终收口`\n"
+        "#### 2.8 归档后动作\n"
+        f"- 当前批次 branch disposition 状态：`{branch_disposition_status}`\n"
+        "- 当前批次 worktree disposition 状态：`待最终收口`\n",
+        encoding="utf-8",
+    )
+    save_checkpoint(
+        root,
+        Checkpoint(
+            current_stage="verify",
+            feature=FeatureInfo(
+                id=wi_name.split("-", 1)[0],
+                spec_dir=f"specs/{wi_name}",
+                design_branch=f"design/{wi_name}",
+                feature_branch=f"feature/{wi_name}",
+                current_branch="main",
+            ),
+        ),
+    )
+    _commit_all(root, "docs: seed branch lifecycle fixture")
 
 
 def test_blocker_missing_constitution(tmp_path: Path) -> None:
@@ -917,3 +1024,37 @@ def test_003_release_gate_blocks_when_evidence_verdict_is_block(tmp_path: Path) 
     assert report.release_gate is not None
     assert report.release_gate["overall_verdict"] == "BLOCK"
     assert any("release gate portability -> BLOCK" in blocker for blocker in blockers)
+
+
+def test_collect_constraint_blockers_includes_active_work_item_branch_lifecycle_drift(
+    tmp_path: Path,
+) -> None:
+    _write_branch_lifecycle_fixture(tmp_path)
+    _create_branch_ahead_of_main(tmp_path, "codex/001-verify-drift")
+
+    blockers = collect_constraint_blockers(tmp_path)
+
+    assert any("branch lifecycle" in item.lower() for item in blockers)
+    assert any("codex/001-verify-drift" in item for item in blockers)
+
+
+def test_collect_constraint_blockers_does_not_escalate_archived_branch_lifecycle(
+    tmp_path: Path,
+) -> None:
+    _write_branch_lifecycle_fixture(tmp_path, branch_disposition_status="archived")
+    _create_branch_ahead_of_main(tmp_path, "codex/001-verify-archived")
+
+    blockers = collect_constraint_blockers(tmp_path)
+
+    assert all("branch lifecycle" not in item.lower() for item in blockers)
+
+
+def test_collect_constraint_blockers_ignores_unrelated_historical_branch_lifecycle(
+    tmp_path: Path,
+) -> None:
+    _write_branch_lifecycle_fixture(tmp_path)
+    _create_branch_ahead_of_main(tmp_path, "codex/999-legacy-branch")
+
+    blockers = collect_constraint_blockers(tmp_path)
+
+    assert all("branch lifecycle" not in item.lower() for item in blockers)

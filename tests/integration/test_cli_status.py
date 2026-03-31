@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import os
+import subprocess
 import time
 from pathlib import Path
 from unittest.mock import patch
@@ -89,6 +90,88 @@ def _write_specs_dir_legacy_artifacts(root: Path, work_item_id: str = "LEGACY-00
         "  1. 示例\n",
         encoding="utf-8",
     )
+
+
+def _init_git_repo(root: Path) -> None:
+    subprocess.run(["git", "init"], cwd=root, check=True, capture_output=True)
+    subprocess.run(
+        ["git", "config", "user.email", "t@t.com"],
+        cwd=root,
+        check=True,
+        capture_output=True,
+    )
+    subprocess.run(
+        ["git", "config", "user.name", "T"],
+        cwd=root,
+        check=True,
+        capture_output=True,
+    )
+
+
+def _commit_all(root: Path, message: str) -> None:
+    subprocess.run(["git", "add", "."], cwd=root, check=True, capture_output=True)
+    subprocess.run(["git", "commit", "-m", message], cwd=root, check=True, capture_output=True)
+
+
+def _create_branch_ahead_of_main(root: Path, branch_name: str) -> None:
+    subprocess.run(
+        ["git", "checkout", "-b", branch_name],
+        cwd=root,
+        check=True,
+        capture_output=True,
+    )
+    (root / "scratch.txt").write_text(f"{branch_name}\n", encoding="utf-8")
+    subprocess.run(["git", "add", "."], cwd=root, check=True, capture_output=True)
+    subprocess.run(
+        ["git", "commit", "-m", f"feat: {branch_name}"],
+        cwd=root,
+        check=True,
+        capture_output=True,
+    )
+    subprocess.run(["git", "checkout", "main"], cwd=root, check=True, capture_output=True)
+
+
+def _write_branch_lifecycle_fixture(
+    root: Path,
+    *,
+    wi_name: str = "001-wi",
+    branch_disposition_status: str = "待最终收口",
+) -> None:
+    _init_git_repo(root)
+    init_project(root)
+    wi_dir = root / "specs" / wi_name
+    wi_dir.mkdir(parents=True, exist_ok=True)
+    (wi_dir / "tasks.md").write_text(
+        "### Task 1.1 — 示例\n"
+        "- **依赖**：无\n"
+        "- **验收标准（AC）**：\n"
+        "  1. 示例\n",
+        encoding="utf-8",
+    )
+    (wi_dir / "task-execution-log.md").write_text(
+        "# Log\n\n"
+        "### Batch 2026-03-31-001 | Batch 1 demo\n\n"
+        "#### 2.5 任务/计划同步状态（Mandatory）\n"
+        "- 关联 branch/worktree disposition 计划：`待最终收口`\n"
+        "#### 2.8 归档后动作\n"
+        f"- 当前批次 branch disposition 状态：`{branch_disposition_status}`\n"
+        "- 当前批次 worktree disposition 状态：`待最终收口`\n",
+        encoding="utf-8",
+    )
+    save_checkpoint(
+        root,
+        Checkpoint(
+            current_stage="verify",
+            feature=FeatureInfo(
+                id=wi_name.split("-", 1)[0],
+                spec_dir=f"specs/{wi_name}",
+                design_branch=f"design/{wi_name}",
+                feature_branch=f"feature/{wi_name}",
+                current_branch="main",
+            ),
+        ),
+    )
+    _commit_all(root, "docs: seed branch lifecycle status fixture")
 
 
 class TestCliStatus:
@@ -260,7 +343,7 @@ class TestCliStatus:
 
         assert result.exit_code == 0
         payload = json.loads(result.output)
-        assert set(payload) == {"telemetry"}
+        assert set(payload) == {"telemetry", "branch_lifecycle"}
         telemetry = payload["telemetry"]
         assert telemetry["state"] == "ready"
         assert telemetry["current"] == {
@@ -282,6 +365,7 @@ class TestCliStatus:
             "last_event_id": "evt_02",
             "last_timestamp": "2026-03-27T09:00:00Z",
         }
+        assert payload["branch_lifecycle"]["state"] == "unavailable"
 
     def test_status_shows_p1_artifact_surfaces(self, tmp_path: Path) -> None:
         init_project(tmp_path)
@@ -862,6 +946,22 @@ def test_status_json_fallback_latest_scope_ids_follow_fresh_writes_without_index
     assert payload["current"]["sessions"]["latest_goal_session_id"] == session_a
     assert payload["current"]["runs"]["latest_workflow_run_id"] == run_a
     assert payload["current"]["steps"]["latest_step_id"] == step_a
+
+    def test_status_json_includes_bounded_branch_lifecycle_summary(
+        self, tmp_path: Path
+    ) -> None:
+        _write_branch_lifecycle_fixture(tmp_path)
+        _create_branch_ahead_of_main(tmp_path, "codex/001-status-drift")
+
+        with patch("ai_sdlc.cli.commands.find_project_root", return_value=tmp_path):
+            result = runner.invoke(app, ["status", "--json"])
+
+        assert result.exit_code == 0
+        payload = json.loads(result.output)
+        assert payload["branch_lifecycle"]["state"] == "ready"
+        assert payload["branch_lifecycle"]["blocking_count"] == 1
+        assert payload["branch_lifecycle"]["active_work_item"] == "001-wi"
+        assert payload["branch_lifecycle"]["sample_entries"][0]["name"] == "codex/001-status-drift"
 
 
 def test_status_json_latest_summary_falls_back_to_canonical_snapshots_without_indexes(

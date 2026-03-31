@@ -6,8 +6,10 @@ import re
 from dataclasses import dataclass
 from pathlib import Path
 
+from ai_sdlc.branch.git_client import GitError
 from ai_sdlc.context.state import load_checkpoint
 from ai_sdlc.core.release_gate import ReleaseGateParseError, load_release_gate_report
+from ai_sdlc.core.workitem_traceability import evaluate_work_item_branch_lifecycle
 from ai_sdlc.gates.task_ac_checks import (
     first_doc_first_task_scope_violation,
     first_task_missing_acceptance,
@@ -101,6 +103,7 @@ VERIFICATION_GATE_OBJECTS = (
     "doc_first_surfaces",
     "verification_profiles",
     FEATURE_CONTRACT_SURFACE_OBJECT,
+    "branch_lifecycle",
     "checkpoint_spec_dir",
     "tasks_acceptance",
     "skip_registry_mapping",
@@ -421,9 +424,28 @@ def collect_constraint_blockers(root: Path) -> list[str]:
             )
 
     blockers.extend(_skip_registry_mapping_blockers(root, spec_path, cp))
+    blockers.extend(_branch_lifecycle_blockers(root, spec_path))
     blockers.extend(_feature_contract_blockers(root, cp))
     blockers.extend(_release_gate_blockers(root, cp))
     return blockers
+
+
+def _branch_lifecycle_blockers(root: Path, spec_path: Path) -> list[str]:
+    """Return blockers for unresolved active-work-item branch lifecycle drift."""
+    if not (root / ".git").exists():
+        return []
+
+    exec_log = spec_path / "task-execution-log.md"
+    log_text = exec_log.read_text(encoding="utf-8") if exec_log.is_file() else None
+    try:
+        result = evaluate_work_item_branch_lifecycle(
+            root=root,
+            wi_dir=spec_path,
+            log_text=log_text,
+        )
+    except GitError:
+        return []
+    return list(result.blockers)
 
 
 def _feature_contract_blockers(root: Path, checkpoint: Checkpoint | None) -> list[str]:

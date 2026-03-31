@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import subprocess
 import time
 from pathlib import Path
 
@@ -10,6 +11,8 @@ import pytest
 from typer.testing import CliRunner
 
 from ai_sdlc.cli.main import app
+from ai_sdlc.context.state import save_checkpoint
+from ai_sdlc.models.state import Checkpoint, FeatureInfo
 from ai_sdlc.routers.bootstrap import init_project
 from ai_sdlc.telemetry import readiness
 from ai_sdlc.telemetry.paths import (
@@ -19,6 +22,88 @@ from ai_sdlc.telemetry.paths import (
 )
 
 runner = CliRunner()
+
+
+def _init_git_repo(root: Path) -> None:
+    subprocess.run(["git", "init"], cwd=root, check=True, capture_output=True)
+    subprocess.run(
+        ["git", "config", "user.email", "t@t.com"],
+        cwd=root,
+        check=True,
+        capture_output=True,
+    )
+    subprocess.run(
+        ["git", "config", "user.name", "T"],
+        cwd=root,
+        check=True,
+        capture_output=True,
+    )
+
+
+def _commit_all(root: Path, message: str) -> None:
+    subprocess.run(["git", "add", "."], cwd=root, check=True, capture_output=True)
+    subprocess.run(["git", "commit", "-m", message], cwd=root, check=True, capture_output=True)
+
+
+def _create_branch_ahead_of_main(root: Path, branch_name: str) -> None:
+    subprocess.run(
+        ["git", "checkout", "-b", branch_name],
+        cwd=root,
+        check=True,
+        capture_output=True,
+    )
+    (root / "scratch.txt").write_text(f"{branch_name}\n", encoding="utf-8")
+    subprocess.run(["git", "add", "."], cwd=root, check=True, capture_output=True)
+    subprocess.run(
+        ["git", "commit", "-m", f"feat: {branch_name}"],
+        cwd=root,
+        check=True,
+        capture_output=True,
+    )
+    subprocess.run(["git", "checkout", "main"], cwd=root, check=True, capture_output=True)
+
+
+def _write_branch_lifecycle_fixture(
+    root: Path,
+    *,
+    wi_name: str = "001-wi",
+    branch_disposition_status: str = "待最终收口",
+) -> None:
+    _init_git_repo(root)
+    init_project(root)
+    wi_dir = root / "specs" / wi_name
+    wi_dir.mkdir(parents=True, exist_ok=True)
+    (wi_dir / "tasks.md").write_text(
+        "### Task 1.1 — 示例\n"
+        "- **依赖**：无\n"
+        "- **验收标准（AC）**：\n"
+        "  1. 示例\n",
+        encoding="utf-8",
+    )
+    (wi_dir / "task-execution-log.md").write_text(
+        "# Log\n\n"
+        "### Batch 2026-03-31-001 | Batch 1 demo\n\n"
+        "#### 2.5 任务/计划同步状态（Mandatory）\n"
+        "- 关联 branch/worktree disposition 计划：`待最终收口`\n"
+        "#### 2.8 归档后动作\n"
+        f"- 当前批次 branch disposition 状态：`{branch_disposition_status}`\n"
+        "- 当前批次 worktree disposition 状态：`待最终收口`\n",
+        encoding="utf-8",
+    )
+    save_checkpoint(
+        root,
+        Checkpoint(
+            current_stage="verify",
+            feature=FeatureInfo(
+                id=wi_name.split("-", 1)[0],
+                spec_dir=f"specs/{wi_name}",
+                design_branch=f"design/{wi_name}",
+                feature_branch=f"feature/{wi_name}",
+                current_branch="main",
+            ),
+        ),
+    )
+    _commit_all(root, "docs: seed branch lifecycle doctor fixture")
 
 
 def _seed_bounded_event_fixture(root: Path) -> str:
@@ -88,6 +173,20 @@ def test_doctor_reports_telemetry_readiness_without_initializing_telemetry(
     assert "status --json surface" in result.output
     assert "not_initialized" in result.output
     assert telemetry_root.exists() is False
+
+
+def test_doctor_reports_branch_lifecycle_readiness_row(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _write_branch_lifecycle_fixture(tmp_path)
+    _create_branch_ahead_of_main(tmp_path, "codex/001-doctor-drift")
+    monkeypatch.chdir(tmp_path)
+
+    result = runner.invoke(app, ["doctor"])
+
+    assert result.exit_code == 0
+    assert "branch lifecycle readiness" in result.output
+    assert "codex/001-doctor-drift" in result.output
 
 
 def test_doctor_real_cli_path_does_not_mutate_project_config(
