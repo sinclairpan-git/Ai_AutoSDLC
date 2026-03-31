@@ -18,6 +18,11 @@ from ai_sdlc.core.close_check import (
     run_close_check,
 )
 from ai_sdlc.core.plan_check import PlanCheckResult, format_json, run_plan_check
+from ai_sdlc.core.workitem_truth import (
+    WorkitemTruthResult,
+    format_truth_check_json,
+    run_truth_check,
+)
 from ai_sdlc.utils.helpers import find_project_root, now_iso
 
 workitem_app = typer.Typer(
@@ -218,6 +223,84 @@ def _print_branch_table(result: BranchCheckResult) -> None:
         console.print("[bold yellow]Warnings[/bold yellow]")
         for warning in result.warnings:
             console.print(f"  {warning}")
+
+
+@workitem_app.command(
+    "truth-check",
+    help=(
+        "Read-only: classify one work item's execution truth for the current checkout "
+        "or a specific git revision."
+    ),
+)
+def workitem_truth_check(
+    wi: Path = typer.Option(
+        ...,
+        "--wi",
+        help="Path to specs/<WI>/ directory to inspect.",
+    ),
+    rev: str | None = typer.Option(
+        None,
+        "--rev",
+        help="Optional git branch / commit / tag to inspect instead of the current checkout.",
+    ),
+    as_json: bool = typer.Option(
+        False,
+        "--json",
+        help="Machine-readable truth report. Read-only.",
+    ),
+) -> None:
+    """Read-only work item truth classification anchored to one revision."""
+    result = run_truth_check(cwd=Path.cwd(), wi=wi, rev=rev)
+
+    if as_json:
+        console.print(format_truth_check_json(result), soft_wrap=True)
+    else:
+        _print_truth_table(result)
+
+    if result.error:
+        raise typer.Exit(code=1)
+    raise typer.Exit(code=0)
+
+
+def _print_truth_table(result: WorkitemTruthResult) -> None:
+    table = Table(title="workitem truth-check (read-only)")
+    table.add_column("Field", style="cyan")
+    table.add_column("Value")
+
+    table.add_row("Work item", str(result.wi_path or "unknown"))
+    table.add_row("Requested rev", str(result.requested_revision or "HEAD"))
+    table.add_row("Resolved rev", str(result.resolved_revision or "unknown"))
+    table.add_row("Current branch", str(result.current_branch or "unknown"))
+    table.add_row("Current HEAD", str(result.head_revision or "unknown"))
+    table.add_row("HEAD matches rev", "yes" if result.head_matches_revision else "no")
+    table.add_row("Classification", str(result.classification or "unknown"))
+    table.add_row("Execute started", "yes" if result.execution_started else "no")
+    table.add_row("Contained in main", "yes" if result.contained_in_main else "no")
+    table.add_row(
+        "Ahead / behind main",
+        f"{result.ahead_of_main or 0} / {result.behind_of_main or 0}",
+    )
+    table.add_row(
+        "Formal docs",
+        ", ".join(
+            f"{name}={'yes' if present else 'no'}"
+            for name, present in result.formal_docs.items()
+        ),
+    )
+    table.add_row("Detail", str(result.detail or result.error or ""))
+    console.print(table)
+
+    if result.code_paths:
+        console.print("[dim]Code paths:[/dim]")
+        for path in result.code_paths:
+            console.print(f"  - {path}")
+    if result.test_paths:
+        console.print("[dim]Test paths:[/dim]")
+        for path in result.test_paths:
+            console.print(f"  - {path}")
+    if result.error:
+        console.print(f"[bold red]ERROR[/bold red] {result.error}")
+
 
 @workitem_app.command(
     "link",

@@ -43,6 +43,15 @@
 ### 字段约定
 
 - `根因分类`：沿用 legacy registry 的 A-H 归类，可多选。
+- `根因分类` 字典（沿用 [`src/ai_sdlc/rules/agent-skip-registry.zh.md`](../src/ai_sdlc/rules/agent-skip-registry.zh.md)）：
+  - `A`：隐性目标（求快、求一次答完）压过强制顺序
+  - `B`：软约束（仅 Markdown）无失败即停的硬闸门
+  - `C`：词汇碰撞（如 `plan` 指宿主提纲 vs `specs/.../plan.md`）
+  - `D`：工具语义误解（如 `stage run` vs `run`）
+  - `E`：多真值来源下选错依据（checkpoint vs 手写 YAML）
+  - `F`：宿主平台专有流程被当成通用规范
+  - `G`：其他（需在条目正文注明）
+  - `H`：计划/任务状态未与仓库事实同步（如实现已存在但 `tasks.md`、execution-log、计划状态未对齐）
 - `未来杜绝方案摘要`：用 1-3 句概括“以后靠什么约束/机制杜绝同类问题再发生”；详细落地仍应展开到 `rule / policy`、`middleware`、`workflow`、`tool`、`eval` 字段。
 - `建议改动层级`：从 `prompt / context`、`rule / policy`、`middleware`、`workflow`、`tool`、`eval` 中选择一项或多项。
 - `风险等级`：建议使用 `低 / 中 / 高 / 极高`。
@@ -61,6 +70,7 @@
 - 当前待修：
   - `无`
 - 本轮已收口：
+  - `006` 线 `FD-2026-03-31-004`
   - `007` 线 `FD-2026-03-31-002`
   - `006` 线 `FD-2026-03-31-001`
   - `005` 线 `FD-2026-03-30-001`、`FD-2026-03-30-002`
@@ -120,6 +130,31 @@
 - 收口说明（2026-03-31）: `007` 已把 branch/worktree inventory、disposition parsing、`workitem branch-check`、`close-check`、`verify constraints`、`status --json` 与 `doctor` 的 branch lifecycle bounded surfaces 正式落到主线；`git-branch.md`、`pipeline.md`、用户文档与自迭代约定也已同步收紧。当前 work item 已合流 `main`，execution log 已补齐 `merged / removed` disposition 真值，本条 defect 不再停留在 planned。
 - 可验证成功标准: 给定一个 work item 关联的 scratch/worktree 分支仍比 `main` 多提交、且未登记 `merged / archived / deleted` disposition 时，`close-check` 或等价 branch-check 必须返回明确 blocker 或 warning；`status --json` / `doctor` 至少能稳定暴露 branch inventory 摘要；当分支已合回主线或已完成归档处置后，相关告警消失。
 - 是否需要回归测试补充: 是：补 `branch inventory`、`branch-vs-main divergence`、`unresolved worktree disposition`、`archived-but-not-merged`、`unrelated historical branch only warns` 等正反夹具。
+
+## FD-2026-03-31-004 | 未先绑定用户指定 branch/commit/work item，就用当前工作区证据误判 execute 状态
+
+- 日期 (UTC): 2026-03-31
+- 来源: self_review, user_review
+- 状态: closed
+- owner: codex
+- wi_id: 006-provenance-trace-phase-1
+- related_doc: src/ai_sdlc/branch/git_client.py, src/ai_sdlc/core/workitem_truth.py, src/ai_sdlc/cli/workitem_cmd.py, tests/integration/test_cli_workitem_truth_check.py, tests/unit/test_command_names.py, docs/USER_GUIDE.zh-CN.md, docs/框架自迭代开发与发布约定.md
+- 现象: 用户明确指向分支 `codex/006-provenance-trace-phase-1` 与提交 `67dda48`，且该修订只包含 `spec.md / plan.md / tasks.md` 的 formal freeze；但代理先扫描当前工作区 `main` 上的其他 work item 证据，并一度把 `008` 的实现、`task-execution-log.md` 与收口状态外推到 `006`，误表述成“这条线很可能不是待执行，而是已实现待核验/收口”。
+- 触发场景: 用户给出了明确的 branch、commit 或 work item 锚点，但代理没有先绑定 `revision -> work item -> execution evidence` 查询上下文，就直接读取当前 checkout 的 `specs/*`、close-check 结果和现成 execution-log；仓库也缺少“当前 HEAD 与用户指定 revision 不一致”时的显式告警和只读 preflight。
+- 影响范围: work item 阶段真值、execute 授权判断、是否已开始实施/是否仅 formal freeze 的口径、close-out 可信度，以及用户对“当前到底在讨论哪条线”的信任。
+- 根因分类: A, B, D, H
+- 未来杜绝方案摘要: 只要用户给出 branch、commit、work item 目录中的任一锚点，所有阶段判断都必须先锚定到该 revision 的 formal docs、execution-log 与代码/测试变更面，再决定是否已经进入 execute。不得把当前 cwd、`main` 或其他 work item 的证据跨上下文套用到目标 work item。
+- 建议改动层级: prompt / context, rule / policy, middleware, workflow, tool, eval
+- prompt / context: 只要问题涉及“这条线现在处于什么阶段”“有没有执行过”“是否可以开始执行”，且用户给出了 branch / commit / WI id 任一锚点，代理必须先复述并绑定该锚点；在核对完成前，不得引用当前工作区里其他 work item 的 execution evidence 作为结论。
+- rule / policy: 把“阶段真值查询必须以用户指定 revision / WI 为先”写成显式规则；若当前工作区 HEAD 与用户指定 branch/commit 不一致，默认动作必须先说明正在跨 revision 核对，并禁止把当前分支状态外推成目标 WI 的 execute 状态。
+- middleware: 增加 branch/commit-scoped truth resolver 或 preflight，能从指定 revision 只读提取 `spec.md`、`plan.md`、`tasks.md`、`task-execution-log.md` 是否存在，以及 `src/`、`tests/`、`docs/` 的变更分布，输出 `formal_freeze_only / branch_only_implemented / mainline_merged` 等 bounded classification。
+- workflow: 顺序应收紧为 `bind target revision -> locate formal work item -> inspect task-execution-log presence -> inspect code/test diff -> inspect branch/main relationship -> then state execute status`；不得先扫描当前仓库已有 work item，再反推用户正在询问的目标线状态。
+- tool: `src/ai_sdlc/branch/git_client.py`、`src/ai_sdlc/core/workitem_truth.py`、`src/ai_sdlc/cli/workitem_cmd.py`、`ai-sdlc workitem truth-check --wi specs/<WI> --rev <branch|commit>`
+- eval: “用户已指定 revision 但代理仍引用当前 checkout 真值”的事件数、cross-work-item execute 误判次数、HEAD/revision mismatch 被自动识别并显式披露的命中率
+- 风险等级: 高
+- 收口说明（2026-03-31）: 已新增只读 `ai-sdlc workitem truth-check`，可在当前 checkout 或指定 `--rev` 上解析 formal docs、`task-execution-log.md`、相对 `main` 的 divergence 与代码/测试变更面，并输出 `formal_freeze_only`、`branch_only_implemented`、`mainline_merged` 三类 bounded classification；当当前 HEAD 与目标 revision 不一致时，结果会显式暴露 mismatch，而不是再把当前工作区证据外推到目标 work item。对应 focused regression：`uv run pytest tests/integration/test_cli_workitem_truth_check.py tests/unit/test_command_names.py -q` 通过，`uv run ruff check src/ai_sdlc/branch/git_client.py src/ai_sdlc/core/workitem_truth.py src/ai_sdlc/cli/workitem_cmd.py tests/integration/test_cli_workitem_truth_check.py tests/unit/test_command_names.py` 通过。
+- 可验证成功标准: 给定用户指定 `codex/006-provenance-trace-phase-1` / `67dda48`，且该修订只有 `spec.md`、`plan.md`、`tasks.md`、不存在 `task-execution-log.md`、也无 `src/` / `tests/` 变更时，代理必须明确回答“formal freeze 已完成，但 execute 尚未开始”，即使当前 `main` 上存在其他 work item 的实现与 execution-log 也不得外推。若用户指定的 revision 与当前工作区 HEAD 不一致，响应中必须显式披露该不一致及实际核对的绝对锚点。
+- 是否需要回归测试补充: 已完成：补 branch/commit-scoped 阶段真值正反夹具，覆盖“当前 HEAD=main，但目标 revision 只有 formal docs”“目标分支仅实现未合主线”“目标 revision 已有 execution-log 与代码变更”三类场景。
 
 ## FD-2026-03-30-001 | 新 framework capability 的 architecture/plan 已冻结，但仍把 `docs/superpowers/plans/*.md` 误当作可直接进入实施的法定入口，未先落到 `specs/<WI>/tasks.md`
 
