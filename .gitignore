@@ -4,6 +4,7 @@ __pycache__/
 # Local project config (IDE detection timestamps); recreated by init / adapter — see project-config.example.yaml
 .ai-sdlc/project/config/project-config.yaml
 .ai-sdlc/local/
+.superpowers/
 
 .venv/
 .worktrees/

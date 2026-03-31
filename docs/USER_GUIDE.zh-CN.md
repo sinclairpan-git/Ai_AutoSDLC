@@ -603,9 +603,9 @@ python -m ai_sdlc telemetry close-session --goal-session-id <gs_id> --status suc
 
 ### 4) `status --json` 与 `doctor` 的边界
 
-- `python -m ai_sdlc status --json` 只输出 bounded telemetry surface：只读 manifest + latest index summaries。
+- `python -m ai_sdlc status --json` 只输出 bounded read surface：包含 telemetry 摘要，以及当前 active work item 的 bounded branch lifecycle summary。
 - telemetry 缺失时会返回 `not_initialized`，并且不会创建 `.ai-sdlc/local/telemetry/`。
-- `python -m ai_sdlc doctor` 的 telemetry readiness 仅做只读诊断：root 可写性、manifest 状态、registry 可解析性、writer path 有效性、resolver 健康、`status --json` surface 可用性。
+- `python -m ai_sdlc doctor` 的 telemetry readiness 仅做只读诊断：root 可写性、manifest 状态、registry 可解析性、writer path 有效性、resolver 健康、`status --json` surface 可用性，以及 branch lifecycle readiness。
 - `doctor` 不会深度扫描 trace，不会隐式 rebuild indexes，也不会隐式初始化 telemetry 根目录。
 
 ### 5) `scan` 的边界
@@ -623,10 +623,10 @@ python -m ai_sdlc telemetry close-session --goal-session-id <gs_id> --status suc
 
 | Surface | 典型命令 | 主定位 | 仓库/本地状态影响 |
 |---|---|---|---|
-| bounded telemetry status | `python -m ai_sdlc status --json` | 只读 telemetry 摘要 | **只读**：不初始化 telemetry root，不 rebuild indexes，不触发 adapter |
-| doctor | `python -m ai_sdlc doctor` | 只读诊断 | **只读**：不 deep scan trace，不触发 adapter |
+| bounded telemetry status | `python -m ai_sdlc status --json` | 只读 telemetry + branch lifecycle 摘要 | **只读**：不初始化 telemetry root，不 rebuild indexes，不触发 adapter |
+| doctor | `python -m ai_sdlc doctor` | 只读诊断 | **只读**：不 deep scan trace，不触发 adapter；会显示 branch lifecycle readiness |
 | scan | `python -m ai_sdlc scan <path>` | operator / analysis | **analysis-only**：深度读取代码库并打印摘要；不初始化 `.ai-sdlc/`，不触发 adapter |
-| verify constraints | `python -m ai_sdlc verify constraints` | 仓库级规则 / 治理只读校验 | **只读**：不触发 adapter，不写 telemetry；但它不替代代码变更场景下的 `pytest` / `ruff` |
+| verify constraints | `python -m ai_sdlc verify constraints` | 仓库级规则 / 治理只读校验 | **只读**：不触发 adapter；当前会额外暴露 active work item 的 branch lifecycle governance，但不替代代码变更场景下的 `pytest` / `ruff` |
 | stage show / status | `python -m ai_sdlc stage show <stage>` / `stage status` | 阶段查看 | **可能写 adapter**：命令主体只读，但在已初始化项目中可能先触发一次 IDE adapter 幂等 apply |
 | stage run --dry-run | `python -m ai_sdlc stage run <stage> --dry-run` | 阶段预演 | **可能写 adapter**：命令本身只展示清单，不执行阶段步骤；但仍可能先触发 adapter apply |
 | stage run | `python -m ai_sdlc stage run <stage>` | 阶段调度入口 | **可能写 adapter**：命令本身输出清单与引导，不自动替你执行步骤；但仍可能先触发 adapter apply |
@@ -634,7 +634,8 @@ python -m ai_sdlc telemetry close-session --goal-session-id <gs_id> --status suc
 | program integrate --dry-run | `python -m ai_sdlc program integrate --dry-run` | guarded integration runbook 预览 | **可能写 adapter**；若带 `--report`，还会写 report 文件 |
 | program integrate --execute --yes | `python -m ai_sdlc program integrate --execute --yes` | guarded execute gate | **可能写 adapter**；当前会做 gate 校验与可选 report 写入，不会直接替你修改各 spec 内容 |
 | manual telemetry | `python -m ai_sdlc telemetry open-session`、`record-*`、`close-session` | operator evidence write | **会写 telemetry**：落到 `.ai-sdlc/local/telemetry/` 与派生 indexes；CLI 入口本身也可能先触发 adapter apply |
-| workitem close-check | `python -m ai_sdlc workitem close-check --wi specs/<WI>/` | work item 收口真值核验 | **命令主体只读，但可能写 adapter**：会核对 tasks / planned batch / traceability / execution-log / fresh verification / git closure；若 latest batch 尚未最终提交或工作树 dirty，会返回 `BLOCKER` |
+| workitem branch-check | `python -m ai_sdlc workitem branch-check --wi specs/<WI>/` | work item 关联 branch/worktree 只读盘点 | **命令主体只读，但可能写 adapter**：回答当前 WI 尚有哪些未处置 branch/worktree，以及它们相对 `main` 的 divergence 与 disposition |
+| workitem close-check | `python -m ai_sdlc workitem close-check --wi specs/<WI>/` | work item 收口真值核验 | **命令主体只读，但可能写 adapter**：会核对 tasks / planned batch / traceability / execution-log / fresh verification / git closure / branch lifecycle disposition truth；若关联 scratch/worktree 分支仍未处置且相对 `main` 存在漂移，会返回 `BLOCKER` |
 | offline build | `./packaging/offline/build_offline_bundle.sh` | 分发打包 | **会写本地构建产物**：写 `dist/`、`dist-offline/` 和 bundle archives，不修改业务仓源码 |
 | offline install | `./install_offline.sh` / `install_offline.ps1` / `install_offline.bat` | bundle 本地安装 | **会写 bundle 目录**：创建 `.venv/` 并安装 wheel；不会替目标业务仓初始化 AI-SDLC |
 
@@ -653,8 +654,12 @@ python -m ai_sdlc telemetry close-session --goal-session-id <gs_id> --status suc
   - 它不会替代代码改动场景下的 `uv run pytest -q` 和 `uv run ruff check src tests`。
 - `uv run ai-sdlc workitem close-check --wi specs/<WI>/`
   - 这是**work item 级收口真值核验**。
-  - 它看的不是“你是不是写了几段 execution log”，而是该 work item 的 tasks 完成度、planned batch coverage、FR / SC traceability、latest batch 的 fresh verification、`related_plan` 对账，以及最终 `git closure`。
+  - 它看的不是“你是不是写了几段 execution log”，而是该 work item 的 tasks 完成度、planned batch coverage、FR / SC traceability、latest batch 的 fresh verification、`related_plan` 对账、branch disposition truth，以及最终 `git closure`。
   - 如果 latest batch 还没完成最终 `git commit`，或者仓库工作树仍 dirty，`close-check` 返回 `BLOCKER` 是符合预期的。
+- `uv run ai-sdlc workitem branch-check --wi specs/<WI>/`
+  - 这是**work item 级 branch/worktree 只读盘点面**。
+  - 它回答“这个 work item 当前还有哪些未处置 branch/worktree”，并显示它们相对 `main` 的 ahead/behind、worktree 绑定与 disposition。
+  - `branch-check` 不会自动 merge / delete / prune / archive；它只是把 disposition 真值显式化。
 - `uv run ai-sdlc workitem close-check --wi specs/<WI>/ --all-docs`
   - 默认只扫 `specs/<WI>/*.md`，以及 `docs/pull-request-checklist.zh.md`、`docs/USER_GUIDE.zh-CN.md`。
   - 只有当你需要做全仓 `docs/**/*.md` wording drift 复核时，才加 `--all-docs`。
@@ -665,6 +670,7 @@ python -m ai_sdlc telemetry close-session --goal-session-id <gs_id> --status suc
 uv run pytest -q
 uv run ruff check src tests
 uv run ai-sdlc verify constraints
+uv run ai-sdlc workitem branch-check --wi specs/<WI>
 git status --short
 ```
 
