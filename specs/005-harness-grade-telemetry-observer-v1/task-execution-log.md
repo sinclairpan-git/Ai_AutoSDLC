@@ -293,7 +293,7 @@
 
 ##### Task 1.1 / 1.2 / 2.1 | telemetry policy backfill 与 formal closeout 同步
 
-- **改动范围**：[`../../src/ai_sdlc/rules/pipeline.md`](../../src/ai_sdlc/rules/pipeline.md)、[`../../docs/框架自迭代开发与发布约定.md`](../../docs/框架自迭代开发与发布约定.md)、[`../../docs/framework-defect-backlog.zh-CN.md`](../../docs/framework-defect-backlog.zh-CN.md)、[`task-execution-log.md`](task-execution-log.md)
+- **改动范围**：`../../src/ai_sdlc/rules/pipeline.md`、`../../docs/框架自迭代开发与发布约定.md`、`../../docs/framework-defect-backlog.zh-CN.md`、`task-execution-log.md`
 - **改动内容**：
   - 本地 `main` 已通过 merge commit `98e5411` 把 `7be3b85`（`feat: backfill telemetry policy contracts`）并回主线，补齐 `ProjectConfig` 的 `telemetry_profile` / `telemetry_mode` 默认值、runtime policy binding、`TraceContext` / `ModeChangeRecord` / `GateDecisionPayload` 合同，以及 observer trigger point / gate consumption point 在运行时元数据上的显式区分。
   - 在 `pipeline.md` 与 `框架自迭代开发与发布约定.md` 中，把“`docs/superpowers/specs/*.md` / `docs/superpowers/plans/*.md` 只是 design input，不是法定执行真值”以及“识别违约后必须先写 backlog 再继续讨论补正”的顺序收紧成显式规则。
@@ -327,5 +327,5 @@
 #### 5.8 归档后动作
 
 - **已完成 git 提交**：是
-- **提交哈希**：本批唯一语义提交为 rules/docs formal closeout sync commit；完整 SHA 以当前 `HEAD`（`git rev-parse HEAD`）为准
+- **提交哈希**：本批 latest closeout commit 的完整 SHA 以当前 `HEAD`（`git rev-parse HEAD`）为准
 - **是否继续下一批**：否；本批提交完成后执行 `uv run ai-sdlc workitem close-check --wi specs/005-harness-grade-telemetry-observer-v1`
