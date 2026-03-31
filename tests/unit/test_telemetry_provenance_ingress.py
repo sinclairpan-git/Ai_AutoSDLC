@@ -136,26 +136,178 @@ def test_injected_adapters_normalize_four_trace_types(
     assert result.gaps == ()
 
 
-def test_unknown_mode_emits_gap_instead_of_fake_fact() -> None:
+@pytest.mark.parametrize(
+    (
+        "adapter_kind",
+        "payload",
+        "node_kind",
+        "relation_kind",
+        "basis_object_ref",
+        "basis_evidence_ref",
+    ),
+    [
+        (
+            "conversation_message",
+            {
+                "mode": "inferred",
+                "scope_level": "step",
+                "goal_session_id": "gs_0123456789abcdef0123456789abcdef",
+                "workflow_run_id": "wr_0123456789abcdef0123456789abcdef",
+                "step_id": "st_0123456789abcdef0123456789abcdef",
+                "node_id": "pn_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+                "edge_id": "pe_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+                "evidence_id": "evd_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+                "message_id": "msg-inferred-001",
+                "role": "user",
+                "content_digest": "sha256:msg-inferred-001",
+                "target_ref": "event:evt_0123456789abcdef0123456789abcdef",
+                "observed_at": "2026-03-31T10:00:00Z",
+                "basis_refs": (
+                    "event:evt_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+                    "evd_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+                ),
+            },
+            ProvenanceNodeKind.CONVERSATION_MESSAGE,
+            ProvenanceRelationKind.TRIGGERED_BY,
+            "event:evt_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "evd_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        ),
+        (
+            "skill_invocation",
+            {
+                "mode": "inferred",
+                "scope_level": "step",
+                "goal_session_id": "gs_0123456789abcdef0123456789abcdef",
+                "workflow_run_id": "wr_0123456789abcdef0123456789abcdef",
+                "step_id": "st_0123456789abcdef0123456789abcdef",
+                "node_id": "pn_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+                "edge_id": "pe_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+                "evidence_id": "evd_cccccccccccccccccccccccccccccccc",
+                "invocation_id": "skill-inferred-001",
+                "skill_name": "requesting-code-review",
+                "caller_ref": "event:evt_0123456789abcdef0123456789abcdef",
+                "observed_at": "2026-03-31T10:00:00Z",
+                "basis_refs": (
+                    "evaluation:eval_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+                    "evd_dddddddddddddddddddddddddddddddd",
+                ),
+            },
+            ProvenanceNodeKind.SKILL_INVOCATION,
+            ProvenanceRelationKind.INVOKED,
+            "evaluation:eval_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "evd_dddddddddddddddddddddddddddddddd",
+        ),
+        (
+            "rule_reference",
+            {
+                "mode": "inferred",
+                "scope_level": "step",
+                "goal_session_id": "gs_0123456789abcdef0123456789abcdef",
+                "workflow_run_id": "wr_0123456789abcdef0123456789abcdef",
+                "step_id": "st_0123456789abcdef0123456789abcdef",
+                "node_id": "pn_cccccccccccccccccccccccccccccccc",
+                "edge_id": "pe_cccccccccccccccccccccccccccccccc",
+                "evidence_id": "evd_eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+                "rule_path": "src/ai_sdlc/rules/pipeline.md",
+                "anchor": "verify-constraints",
+                "subject_ref": "evaluation:eval_0123456789abcdef0123456789abcdef",
+                "observed_at": "2026-03-31T10:00:00Z",
+                "basis_refs": (
+                    "artifact:art_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+                    "evd_ffffffffffffffffffffffffffffffff",
+                ),
+            },
+            ProvenanceNodeKind.RULE_REFERENCE,
+            ProvenanceRelationKind.CITES,
+            "artifact:art_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "evd_ffffffffffffffffffffffffffffffff",
+        ),
+    ],
+)
+def test_inferred_adapters_normalize_with_explicit_basis_refs(
+    adapter_kind: str,
+    payload: dict[str, object],
+    node_kind: ProvenanceNodeKind,
+    relation_kind: ProvenanceRelationKind,
+    basis_object_ref: str,
+    basis_evidence_ref: str,
+) -> None:
+    result = adapt_trace(adapter_kind, payload)
+
+    assert result.nodes[0].node_kind is node_kind
+    assert result.nodes[0].ingress_kind is IngressKind.INFERRED
+    assert result.edges[0].relation_kind is relation_kind
+    assert result.edges[0].ingress_kind is IngressKind.INFERRED
+    assert basis_object_ref in result.nodes[0].source_object_refs
+    assert basis_evidence_ref in result.nodes[0].source_evidence_refs
+    assert result.evidence[0].locator.startswith(f"prov://inference/{adapter_kind}/")
+    assert result.parse_failures == ()
+    assert result.gaps == ()
+
+
+@pytest.mark.parametrize(
+    ("adapter_kind", "payload", "gap_kind"),
+    [
+        (
+            "conversation_message",
+            {
+                "mode": "unknown",
+                "scope_level": "step",
+                "goal_session_id": "gs_0123456789abcdef0123456789abcdef",
+                "workflow_run_id": "wr_0123456789abcdef0123456789abcdef",
+                "step_id": "st_0123456789abcdef0123456789abcdef",
+                "subject_ref": "event:evt_0123456789abcdef0123456789abcdef",
+                "gap_location": "conversation.trigger",
+                "detail": {"reason": "message_missing"},
+            },
+            ProvenanceGapKind.UNKNOWN,
+        ),
+        (
+            "skill_invocation",
+            {
+                "mode": "unsupported",
+                "scope_level": "step",
+                "goal_session_id": "gs_0123456789abcdef0123456789abcdef",
+                "workflow_run_id": "wr_0123456789abcdef0123456789abcdef",
+                "step_id": "st_0123456789abcdef0123456789abcdef",
+                "subject_ref": "event:evt_0123456789abcdef0123456789abcdef",
+                "gap_location": "skill.segment",
+                "detail": {"reason": "host_skill_ingress_missing"},
+            },
+            ProvenanceGapKind.UNSUPPORTED,
+        ),
+        (
+            "rule_reference",
+            {
+                "mode": "unobserved",
+                "scope_level": "step",
+                "goal_session_id": "gs_0123456789abcdef0123456789abcdef",
+                "workflow_run_id": "wr_0123456789abcdef0123456789abcdef",
+                "step_id": "st_0123456789abcdef0123456789abcdef",
+                "subject_ref": "evaluation:eval_0123456789abcdef0123456789abcdef",
+                "gap_location": "rule.segment",
+                "detail": {"reason": "citation_not_observed"},
+            },
+            ProvenanceGapKind.UNOBSERVED,
+        ),
+    ],
+)
+def test_gap_modes_emit_gap_instead_of_fake_fact(
+    adapter_kind: str,
+    payload: dict[str, object],
+    gap_kind: ProvenanceGapKind,
+) -> None:
     result = adapt_trace(
-        "conversation_message",
-        {
-            "mode": "unknown",
-            "scope_level": "step",
-            "goal_session_id": "gs_0123456789abcdef0123456789abcdef",
-            "workflow_run_id": "wr_0123456789abcdef0123456789abcdef",
-            "step_id": "st_0123456789abcdef0123456789abcdef",
-            "subject_ref": "event:evt_0123456789abcdef0123456789abcdef",
-            "gap_location": "conversation.trigger",
-            "detail": {"reason": "message_missing"},
-        },
+        adapter_kind,
+        payload,
     )
 
     assert result.nodes == ()
     assert result.edges == ()
     assert result.evidence == ()
     assert result.parse_failures == ()
-    assert result.gaps[0].gap_kind is ProvenanceGapKind.UNKNOWN
+    assert result.gaps[0].gap_kind is gap_kind
+    assert result.gaps[0].source_object_refs == (str(payload["subject_ref"]),)
 
 
 def test_missing_target_ref_becomes_parse_failure() -> None:

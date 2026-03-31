@@ -51,6 +51,11 @@ _STABLE_KEY_FIELD = {
     "exec_command_bridge": "bridge_call_id",
     "rule_reference": "rule_path",
 }
+_GAP_KIND_BY_MODE = {
+    "unknown": ProvenanceGapKind.UNKNOWN,
+    "unobserved": ProvenanceGapKind.UNOBSERVED,
+    "unsupported": ProvenanceGapKind.UNSUPPORTED,
+}
 
 
 def adapt_trace(adapter_kind: str, payload: dict[str, Any]) -> ProvenanceIngressResult:
@@ -61,26 +66,14 @@ def adapt_trace(adapter_kind: str, payload: dict[str, Any]) -> ProvenanceIngress
     step_id = payload.get("step_id")
     mode = str(payload["mode"])
 
-    if mode == "unknown":
-        return ProvenanceIngressResult(
+    if mode in _GAP_KIND_BY_MODE:
+        return _gap_result(
             scope_level=scope_level,
             goal_session_id=goal_session_id,
             workflow_run_id=workflow_run_id,
             step_id=step_id,
-            gaps=(
-                ProvenanceGapFinding(
-                    subject_ref=str(payload["subject_ref"]),
-                    gap_kind=ProvenanceGapKind.UNKNOWN,
-                    gap_location=str(payload["gap_location"]),
-                    expected_relation=None,
-                    confidence=Confidence.LOW,
-                    detail=dict(payload.get("detail", {})),
-                    source_object_refs=(
-                        str(payload["subject_ref"]),
-                    ),
-                    source_evidence_refs=(),
-                ),
-            ),
+            payload=payload,
+            gap_kind=_GAP_KIND_BY_MODE[mode],
         )
 
     required_ref_field = _PRIMARY_REF_FIELD[adapter_kind]
@@ -222,4 +215,40 @@ def _parse_failure(
         workflow_run_id=workflow_run_id,
         step_id=step_id,
         parse_failures=(ProvenanceParseFailure(code=code),),
+    )
+
+
+def _gap_result(
+    *,
+    scope_level: ScopeLevel,
+    goal_session_id: str,
+    workflow_run_id: str | None,
+    step_id: str | None,
+    payload: dict[str, Any],
+    gap_kind: ProvenanceGapKind,
+) -> ProvenanceIngressResult:
+    subject_ref = str(payload["subject_ref"])
+    expected_relation_raw = payload.get("expected_relation")
+    expected_relation = (
+        None
+        if expected_relation_raw is None
+        else ProvenanceRelationKind(str(expected_relation_raw))
+    )
+    return ProvenanceIngressResult(
+        scope_level=scope_level,
+        goal_session_id=goal_session_id,
+        workflow_run_id=workflow_run_id,
+        step_id=step_id,
+        gaps=(
+            ProvenanceGapFinding(
+                subject_ref=subject_ref,
+                gap_kind=gap_kind,
+                gap_location=str(payload["gap_location"]),
+                expected_relation=expected_relation,
+                confidence=Confidence(str(payload.get("confidence", "low"))),
+                detail=dict(payload.get("detail", {})),
+                source_object_refs=(subject_ref,),
+                source_evidence_refs=(),
+            ),
+        ),
     )

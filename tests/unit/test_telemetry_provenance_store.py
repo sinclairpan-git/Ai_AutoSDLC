@@ -387,6 +387,48 @@ def test_mutable_provenance_objects_write_current_snapshots_and_revisions(
     assert _read_ndjson(revisions_path)[-1] == updated_record.model_dump(mode="json")
 
 
+def test_explicit_unsupported_gap_persists_as_gap_not_chain_status(tmp_path: Path) -> None:
+    store = TelemetryStore(tmp_path)
+    writer = TelemetryWriter(store)
+    provenance_store = ProvenanceStore(store)
+
+    node = writer.write_provenance_node(_node())
+    gap = ProvenanceGapFinding(
+        gap_id="pg_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        subject_ref=f"provenance_node:{node.node_id}",
+        gap_kind=ProvenanceGapKind.UNSUPPORTED,
+        gap_location="skill.segment",
+        expected_relation=ProvenanceRelationKind.INVOKED,
+        confidence=Confidence.LOW,
+        detail={"reason": "host_skill_ingress_missing"},
+        source_object_refs=("event:evt_0123456789abcdef0123456789abcdef",),
+        source_evidence_refs=("evd_0123456789abcdef0123456789abcdef",),
+    )
+
+    written = writer.write_provenance_gap(
+        gap,
+        scope_level=ScopeLevel.STEP,
+        goal_session_id="gs_0123456789abcdef0123456789abcdef",
+        workflow_run_id="wr_0123456789abcdef0123456789abcdef",
+        step_id="st_0123456789abcdef0123456789abcdef",
+    )
+
+    snapshot = _read_json(
+        provenance_store.current_object_path(
+            "provenance_gap",
+            object_id=gap.gap_id,
+            scope_level=ScopeLevel.STEP,
+            goal_session_id="gs_0123456789abcdef0123456789abcdef",
+            workflow_run_id="wr_0123456789abcdef0123456789abcdef",
+            step_id="st_0123456789abcdef0123456789abcdef",
+        )
+    )
+
+    assert written.gap_kind is ProvenanceGapKind.UNSUPPORTED
+    assert snapshot["gap_kind"] == "unsupported"
+    assert "chain_status" not in snapshot
+
+
 def test_provenance_locators_round_trip_through_evidence_resolution(tmp_path: Path) -> None:
     store = TelemetryStore(tmp_path)
     writer = TelemetryWriter(store)
