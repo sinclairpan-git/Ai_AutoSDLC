@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from ai_sdlc.core.provenance_gate import build_phase1_provenance_gate_payload
 from ai_sdlc.telemetry.enums import (
     Confidence,
     ProvenanceCandidateResult,
@@ -16,7 +17,6 @@ from ai_sdlc.telemetry.provenance_contracts import (
 )
 from ai_sdlc.telemetry.provenance_governance import build_provenance_governance_hooks
 from ai_sdlc.telemetry.provenance_observer import ProvenanceObserverResult
-from ai_sdlc.core.provenance_gate import build_phase1_provenance_gate_payload
 
 
 def test_provenance_governance_hooks_are_gate_capable_but_non_blocking() -> None:

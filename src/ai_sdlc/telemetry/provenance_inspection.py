@@ -8,7 +8,10 @@ from typing import Any
 from pydantic import BaseModel, ConfigDict, Field
 
 from ai_sdlc.telemetry.enums import ProvenanceChainStatus, ProvenanceNodeKind
-from ai_sdlc.telemetry.provenance_contracts import ProvenanceGapFinding, ProvenanceNodeFact
+from ai_sdlc.telemetry.provenance_contracts import (
+    ProvenanceGapFinding,
+    ProvenanceNodeFact,
+)
 from ai_sdlc.telemetry.provenance_resolver import ProvenanceResolver
 from ai_sdlc.telemetry.provenance_store import ProvenanceStore
 from ai_sdlc.telemetry.resolver import SourceResolver

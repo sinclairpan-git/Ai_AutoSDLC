@@ -23,7 +23,10 @@ from ai_sdlc.telemetry.enums import (
     ProvenanceNodeKind,
     ProvenanceRelationKind,
 )
-from ai_sdlc.telemetry.provenance_contracts import ProvenanceEdgeFact, ProvenanceNodeFact
+from ai_sdlc.telemetry.provenance_contracts import (
+    ProvenanceEdgeFact,
+    ProvenanceNodeFact,
+)
 from ai_sdlc.telemetry.store import TelemetryStore
 from ai_sdlc.telemetry.writer import TelemetryWriter
 
@@ -108,6 +111,7 @@ def test_help_exposes_read_only_provenance_surface() -> None:
     assert "explain" in out
     assert "gaps" in out
     assert "read-only" in out
+    assert "inject" not in out
 
 
 def test_provenance_summary_supports_text_and_json(
@@ -143,6 +147,30 @@ def test_provenance_summary_supports_text_and_json(
     ]
     assert payload["subject_ref"] == subject_ref
     assert payload["triggered_by"] == ["prov://conversation/message-001"]
+
+
+def test_provenance_explain_and_gaps_stay_on_the_daily_read_surface(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    init_project(tmp_path)
+    subject_ref = _write_cli_fixture(tmp_path)
+    monkeypatch.chdir(tmp_path)
+
+    with patch("ai_sdlc.cli.main.run_ide_adapter_if_initialized"):
+        explain_result = runner.invoke(
+            app,
+            ["provenance", "explain", "--subject-ref", subject_ref],
+        )
+        gaps_result = runner.invoke(
+            app,
+            ["provenance", "gaps", "--subject-ref", subject_ref, "--json"],
+        )
+
+    assert explain_result.exit_code == 0
+    assert "Overall chain status" in explain_result.output
+    assert gaps_result.exit_code == 0
+    payload = json.loads(gaps_result.output)
+    assert payload["subject_ref"] == subject_ref
 
 
 def test_provenance_summary_does_not_trigger_ide_adapter_writes(

@@ -4,7 +4,12 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from ai_sdlc.telemetry.contracts import CaptureMode, Evidence, ScopeLevel, TelemetryEvent
+from ai_sdlc.telemetry.contracts import (
+    CaptureMode,
+    Evidence,
+    ScopeLevel,
+    TelemetryEvent,
+)
 from ai_sdlc.telemetry.enums import (
     Confidence,
     IngressKind,

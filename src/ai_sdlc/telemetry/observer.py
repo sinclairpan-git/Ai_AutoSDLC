@@ -17,7 +17,10 @@ from ai_sdlc.telemetry.evaluators import (
     classify_unknown_family_outputs,
 )
 from ai_sdlc.telemetry.generators import observer_facts_digest
-from ai_sdlc.telemetry.provenance_contracts import ProvenanceAssessment, ProvenanceGapFinding
+from ai_sdlc.telemetry.provenance_contracts import (
+    ProvenanceAssessment,
+    ProvenanceGapFinding,
+)
 from ai_sdlc.telemetry.provenance_observer import observe_provenance_step
 from ai_sdlc.telemetry.store import TelemetryStore
 

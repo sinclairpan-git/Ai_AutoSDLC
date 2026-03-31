@@ -6,7 +6,10 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from ai_sdlc.telemetry.contracts import ScopeLevel
-from ai_sdlc.telemetry.provenance_contracts import ProvenanceAssessment, ProvenanceGapFinding
+from ai_sdlc.telemetry.provenance_contracts import (
+    ProvenanceAssessment,
+    ProvenanceGapFinding,
+)
 from ai_sdlc.telemetry.provenance_resolver import ProvenanceResolver
 from ai_sdlc.telemetry.provenance_store import ProvenanceStore
 from ai_sdlc.telemetry.store import TelemetryStore

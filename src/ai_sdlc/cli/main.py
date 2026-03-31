@@ -13,8 +13,8 @@ from ai_sdlc.cli.commands import (
     status_command,
 )
 from ai_sdlc.cli.doctor_cmd import doctor_command
-from ai_sdlc.cli.provenance_cmd import provenance_app
 from ai_sdlc.cli.program_cmd import program_app
+from ai_sdlc.cli.provenance_cmd import provenance_app
 from ai_sdlc.cli.run_cmd import run_command
 from ai_sdlc.cli.stage_cmd import stage_app
 from ai_sdlc.cli.sub_apps import gate_app, rules_app, studio_app

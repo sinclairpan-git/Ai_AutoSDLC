@@ -596,6 +596,30 @@ python -m ai_sdlc telemetry close-session --goal-session-id <gs_id> --status suc
 
 这里的 `record-evaluation` 对应 telemetry 治理对象里的“评估结论”；CLI 沿用内部 `evaluation` 命名，而不是额外引入 `assessment` 别名。
 
+### 2.5) provenance read-only 审计面
+
+在仓库根目录终端执行：
+
+```bash
+python -m ai_sdlc provenance summary --subject-ref <provenance_ref>
+python -m ai_sdlc provenance explain --subject-ref <provenance_ref>
+python -m ai_sdlc provenance gaps --subject-ref <provenance_ref>
+python -m ai_sdlc provenance summary --subject-ref <provenance_ref> --json
+```
+
+这一组命令的定位是：
+
+- `summary`：日常快速看 provenance 链路概况。
+- `explain`：展开 assessment，确认总体链状态、最高置信来源和关键缺口。
+- `gaps`：只看当前阻止更高置信结论的 provenance 缺口。
+
+Phase 1 的边界要记住：
+
+- 这是 **只读** 审计面，不会 graph rewrite、repair、implicit rebuild 或初始化 provenance 根目录。
+- 它不会把 provenance candidate 自动提升成 `verify / close-check / release` 的默认 blocker。
+- 当前没有 host-native full coverage；缺失链路可能表现为 `unknown / unobserved / unsupported`。
+- `manual injection` 仍只是测试 / 诊断 / 回放入口，不是日常业务入口；日常面就是 `summary / explain / gaps`。
+
 ### 3) `accepted` 的含义
 
 - `accepted` 表示“风险被接受/债务被接受”，不是“问题已解决”。
@@ -624,6 +648,7 @@ python -m ai_sdlc telemetry close-session --goal-session-id <gs_id> --status suc
 | Surface | 典型命令 | 主定位 | 仓库/本地状态影响 |
 |---|---|---|---|
 | bounded telemetry status | `python -m ai_sdlc status --json` | 只读 telemetry + branch lifecycle 摘要 | **只读**：不初始化 telemetry root，不 rebuild indexes，不触发 adapter |
+| provenance inspection | `python -m ai_sdlc provenance summary` / `explain` / `gaps` | provenance read-only 审计 | **只读**：不触发 adapter，不 repair graph，不把 candidate 提升成默认 blocker |
 | doctor | `python -m ai_sdlc doctor` | 只读诊断 | **只读**：不 deep scan trace，不触发 adapter；会显示 branch lifecycle readiness |
 | scan | `python -m ai_sdlc scan <path>` | operator / analysis | **analysis-only**：深度读取代码库并打印摘要；不初始化 `.ai-sdlc/`，不触发 adapter |
 | verify constraints | `python -m ai_sdlc verify constraints` | 仓库级规则 / 治理只读校验 | **只读**：不触发 adapter；当前会额外暴露 active work item 的 branch lifecycle governance，但不替代代码变更场景下的 `pytest` / `ruff` |
