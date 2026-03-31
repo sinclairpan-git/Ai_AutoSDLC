@@ -272,3 +272,60 @@
 - **已完成 git 提交**：是
 - **提交哈希**：本批唯一一次语义提交为 `docs: close out 005 harness telemetry observer v1`；完整 SHA 以当前 `HEAD`（`git rev-parse HEAD`）为准
 - **是否继续下一批**：阻断，待本批文档与归档提交完成后执行 `workitem close-check`
+
+### Batch 2026-03-31-004 | 005 telemetry policy backfill formal closeout sync
+
+#### 5.1 准备
+
+- **任务来源**：[`tasks.md`](tasks.md) Task `1.1`、Task `1.2`、Task `2.1`
+- **目标**：把 `main` 上新合入的 telemetry policy / profile-mode backfill 重新挂回 `005` 的正式执行真值，同时把 `FD-2026-03-30-001` / `FD-2026-03-30-002` 的流程修复同步进规则与 backlog。
+- **预读范围**：[`tasks.md`](tasks.md)、[`task-execution-log.md`](task-execution-log.md)、[`../../docs/framework-defect-backlog.zh-CN.md`](../../docs/framework-defect-backlog.zh-CN.md)、[`../../docs/框架自迭代开发与发布约定.md`](../../docs/框架自迭代开发与发布约定.md)、[`../../src/ai_sdlc/rules/pipeline.md`](../../src/ai_sdlc/rules/pipeline.md)
+- **激活的规则**：fresh verification；宿主规划与仓库阶段区分；框架缺陷 / 违约转待办；task/execution-log 单一真值。
+- **验证画像**：`rules-only`
+
+#### 5.2 统一验证命令
+
+- **治理只读校验**
+  - 命令：`uv run ai-sdlc verify constraints`
+  - 结果：**verify constraints: no BLOCKERs.**
+
+#### 5.3 任务记录
+
+##### Task 1.1 / 1.2 / 2.1 | telemetry policy backfill 与 formal closeout 同步
+
+- **改动范围**：[`../../src/ai_sdlc/rules/pipeline.md`](../../src/ai_sdlc/rules/pipeline.md)、[`../../docs/框架自迭代开发与发布约定.md`](../../docs/框架自迭代开发与发布约定.md)、[`../../docs/framework-defect-backlog.zh-CN.md`](../../docs/framework-defect-backlog.zh-CN.md)、[`task-execution-log.md`](task-execution-log.md)
+- **改动内容**：
+  - 本地 `main` 已通过 merge commit `98e5411` 把 `7be3b85`（`feat: backfill telemetry policy contracts`）并回主线，补齐 `ProjectConfig` 的 `telemetry_profile` / `telemetry_mode` 默认值、runtime policy binding、`TraceContext` / `ModeChangeRecord` / `GateDecisionPayload` 合同，以及 observer trigger point / gate consumption point 在运行时元数据上的显式区分。
+  - 在 `pipeline.md` 与 `框架自迭代开发与发布约定.md` 中，把“`docs/superpowers/specs/*.md` / `docs/superpowers/plans/*.md` 只是 design input，不是法定执行真值”以及“识别违约后必须先写 backlog 再继续讨论补正”的顺序收紧成显式规则。
+  - 在 framework defect backlog 中正式关闭 `FD-2026-03-30-001` / `FD-2026-03-30-002`，避免 `005` 已补齐 formal truth 但流程缺陷台账仍停留在 `open`。
+- **新增/调整的测试**：无新增运行时代码测试；本批以规则文档同步、defect 状态回写与只读校验为主。
+- **执行的命令**：见治理只读校验。
+- **测试结果**：通过。fresh `verify constraints` 已确认规则面无 BLOCKER；本批提交后再以 `workitem close-check` 完成最终只读复核。
+- **是否符合任务目标**：符合。`005` 现仅剩 latest batch 文档回写、规则同步与 close-check 复核即可完成 formal closeout。
+
+#### 5.4 代码审查（摘要）
+
+- **宪章/规格对齐**：本批没有扩展 telemetry 能力，只把已经在 `main` 上存在的 telemetry policy backfill 纳入 `005` 的 execution truth，并把流程修复回写到规则面。
+- **代码质量**：主线仍保留当前 async observer trigger queue 语义，没有把旧分支实现错误回卷进来。
+- **测试质量**：上一轮 code-change merge 已完成 full regression；本批只要求 rules/doc sync 的 fresh read-only verification。
+- **结论**：无新的功能阻塞；latest gap 已收敛为 formal closeout 文档与 close-check 证据同步。
+
+#### 5.5 任务/计划同步状态
+
+- `tasks.md` 同步状态：`已同步`（本批未新增任务，只回写已完成能力的 formal closeout）。
+- `related_plan`（如存在）同步状态：`已对账`（当前 work item 未声明 `related_plan`）。
+- `framework-defect-backlog.zh-CN.md` 同步状态：`已同步`（`FD-2026-03-30-001` / `002` 已回写收口说明）。
+
+#### 5.6 自动决策记录（如有）
+
+- AD-001：本批选择把 telemetry policy backfill 作为 `005` 的 formal closeout sync，而不是重开新的 capability work item → 理由：代码能力已经并入 `main`，当前缺口只在 execution truth 与 defect 台账，没有理由制造第二条并行真值链。
+
+#### 5.7 批次结论
+
+- `005` 的 telemetry traces 升级链已具备代码、测试与 formal work item 三个层面的闭环；本批提交后的 fresh close-check 将作为最终只读复核。
+
+#### 5.8 归档后动作
+
+- **已完成 git 提交**：是
+- **提交哈希**：本批唯一语义提交为 rules/docs formal closeout sync commit；完整 SHA 以当前 `HEAD`（`git rev-parse HEAD`）为准
+- **是否继续下一批**：否；本批提交完成后执行 `uv run ai-sdlc workitem close-check --wi specs/005-harness-grade-telemetry-observer-v1`
