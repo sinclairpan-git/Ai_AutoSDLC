@@ -78,7 +78,7 @@
 - 状态: closed
 - owner: codex
 - wi_id: 006-provenance-trace-phase-1
-- related_doc: src/ai_sdlc/rules/pipeline.md, docs/框架自迭代开发与发布约定.md, docs/framework-defect-backlog.zh-CN.md
+- related_doc: src/ai_sdlc/rules/pipeline.md, docs/框架自迭代开发与发布约定.md, docs/framework-defect-backlog.zh-CN.md, specs/006-provenance-trace-phase-1/spec.md, specs/006-provenance-trace-phase-1/plan.md, specs/006-provenance-trace-phase-1/tasks.md
 - 现象: 在 provenance trace 这条 framework capability 上，spec 与 implementation plan 已冻结后，代理沿着宿主 superpowers skill 的默认 handoff 继续推进，把“Inline Execution / Subagent-Driven”表述成自然下一步；如果用户没有当场拦截，会从 `docs/superpowers/plans/*.md` 的 plan 完成态直接滑向开发编码阶段，而不是停留在 plan review / repo 真值对账状态。
 - 触发场景: 宿主 skill（尤其 `brainstorming` / `writing-plans`）把“plan complete -> implementation handoff”视为默认工作流，而仓库规则只把 `docs/superpowers/specs/*.md` 与 `docs/superpowers/plans/*.md` 视为 design input。两层约束缺少“谁只管工作流、谁定义法定 execute 真值”的显式收束时，执行侧会沿宿主 workflow 继续推进。
 - 影响范围: 仓库阶段真值被宿主 workflow 稀释、用户 review spec/plan 时被误导为“下一步默认就是编码”、`explicit execute authorization` 语义变弱，以及“plan 已冻结”被错误外推成“已授权进入实现”。
