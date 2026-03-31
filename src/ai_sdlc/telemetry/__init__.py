@@ -55,6 +55,7 @@ from ai_sdlc.telemetry.ids import (
     new_workflow_run_id,
     validate_telemetry_id,
 )
+from ai_sdlc.telemetry.provenance_adapters import adapt_trace
 from ai_sdlc.telemetry.provenance_contracts import (
     APPEND_ONLY_PROVENANCE_OBJECTS,
     MUTABLE_PROVENANCE_OBJECTS,
@@ -63,6 +64,14 @@ from ai_sdlc.telemetry.provenance_contracts import (
     ProvenanceGapFinding,
     ProvenanceGovernanceHook,
     ProvenanceNodeFact,
+)
+from ai_sdlc.telemetry.provenance_ingress import (
+    PendingProvenanceEdge,
+    PendingProvenanceNode,
+    ProvenanceIngressResult,
+    ProvenanceIngressWriteResult,
+    ProvenanceParseFailure,
+    apply_ingress_result,
 )
 from ai_sdlc.telemetry.registry import (
     CCPRegistry,
@@ -92,14 +101,19 @@ __all__ = [
     "IngressKind",
     "MUTABLE_OBJECTS",
     "MUTABLE_PROVENANCE_OBJECTS",
+    "PendingProvenanceEdge",
+    "PendingProvenanceNode",
     "ProvenanceAssessment",
     "ProvenanceCandidateResult",
     "ProvenanceChainStatus",
     "ProvenanceEdgeFact",
     "ProvenanceGapFinding",
+    "ProvenanceIngressResult",
+    "ProvenanceIngressWriteResult",
     "ProvenanceGovernanceHook",
     "ProvenanceNodeFact",
     "ProvenanceNodeKind",
+    "ProvenanceParseFailure",
     "ProvenanceGapKind",
     "ProvenanceRelationKind",
     "RootCauseClass",
@@ -129,6 +143,8 @@ __all__ = [
     "new_violation_id",
     "new_workflow_run_id",
     "utc_now_z",
+    "adapt_trace",
+    "apply_ingress_result",
     "validate_utc_z_timestamp",
     "validate_telemetry_id",
 ]
