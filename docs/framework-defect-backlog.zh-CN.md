@@ -125,7 +125,7 @@
 
 - 日期 (UTC): 2026-03-31
 - 来源: self_review, user_review
-- 状态: planned
+- 状态: in_progress
 - owner: codex
 - wi_id: 008-direct-formal-workitem-entry
 - related_doc: src/ai_sdlc/rules/pipeline.md, docs/框架自迭代开发与发布约定.md, docs/framework-defect-backlog.zh-CN.md, specs/008-direct-formal-workitem-entry/spec.md, specs/008-direct-formal-workitem-entry/plan.md, specs/008-direct-formal-workitem-entry/tasks.md
