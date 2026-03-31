@@ -140,3 +140,77 @@
 - 当前批次 branch disposition 状态：`archived`
 - 当前批次 worktree disposition 状态：`retained（对照保留）`
 - 是否继续下一批：`阻断`（等待后续集成处置）
+
+### Batch 2026-03-31-002 | 006 mainline merge + disposition close-out
+
+#### 2.1 准备
+
+- **任务来源**：formal close-out（承接 [`tasks.md`](tasks.md) `T62` 之后的主线合流与 disposition 收口）
+- **目标**：把 `006` provenance Phase 1 合流到 `main`，并将 execution-log 的 branch/worktree disposition 真值从 `archived / retained（对照保留）` 收束为正式 `merged / removed`。
+- **预读范围**：[`tasks.md`](tasks.md)、[`task-execution-log.md`](task-execution-log.md)、[`../../docs/framework-defect-backlog.zh-CN.md`](../../docs/framework-defect-backlog.zh-CN.md)、[`../../src/ai_sdlc/rules/git-branch.md`](../../src/ai_sdlc/rules/git-branch.md)、[`../../src/ai_sdlc/core/workitem_traceability.py`](../../src/ai_sdlc/core/workitem_traceability.py)
+- **激活的规则**：mainline truth 优先；branch/worktree explicit disposition；fresh verification before completion；close-out 不得只凭历史 worktree 存在性推断未收口。
+- **验证画像**：`code-change`
+
+#### 2.2 统一验证命令
+
+- **主线合流验证**
+  - 命令：`git merge --no-ff codex/006-provenance-trace-phase-1`
+  - 结果：成功生成 `main` 上的 merge commit `2732b3b`，并将 provenance Phase 1 的 formal/doc/code/test 改动合入主线。
+- **V1（仓库级全量回归）**
+  - 命令：`uv run pytest -q`
+  - 结果：`1004 passed in 39.76s`
+- **Lint**
+  - 命令：`uv run ruff check src tests`
+  - 结果：`All checks passed!`
+- **治理只读校验**
+  - 命令：`uv run ai-sdlc verify constraints`
+  - 结果：`verify constraints: no BLOCKERs.`
+- **Disposition inventory**
+  - 命令：`git worktree list`
+  - 结果：只剩 `main` worktree。
+  - 命令：`git branch --list 'codex/006-provenance-trace-phase-1'`
+  - 结果：无输出，feature scratch branch 已移除。
+
+#### 2.3 任务记录
+
+##### Formal close-out | main merge + execution-log disposition truth
+
+- **改动范围**：[`task-execution-log.md`](task-execution-log.md)
+- **改动内容**：
+  - 记录 `2732b3b` 作为 `006` provenance Phase 1 的 mainline merge anchor。
+  - 将当前批次的 branch/worktree disposition 真值正式刷新为 `merged / removed`。
+  - 归档 merged-tree 下的 fresh regression、lint、治理只读校验与 inventory cleanup 证据。
+- **新增/调整的测试**：无新增测试文件；以 merged-tree fresh verification 与 Git inventory cleanup 结果为准。
+- **执行的命令**：见主线合流验证 / V1 / Lint / 治理只读校验 / Disposition inventory。
+- **测试结果**：通过。merged tree 的 `pytest -q`、`ruff check`、`verify constraints` 全绿，且 `006` 关联的 branch/worktree 已退出 Git inventory。
+- **是否符合任务目标**：符合。
+
+#### 2.4 代码审查（Mandatory）
+
+- **宪章/规格对齐**：本批只做主线合流与 disposition 收口，不改变 provenance Phase 1 的 read-only / advisory 语义。
+- **代码质量**：合流后的 `main` 同时保留 provenance CLI、truth-check 与 direct-formal workitem surfaces，没有因冲突解决丢失既有主线能力。
+- **测试质量**：merged tree 已完成 fresh 全量 `pytest`、`ruff` 与 `verify constraints`；close truth 同时有 Git inventory cleanup 佐证。
+- **结论**：`无 Critical 阻塞项`
+
+#### 2.5 任务/计划同步状态（Mandatory）
+
+- `tasks.md` 同步状态：`已同步`
+- `related_plan`（如存在）同步状态：`已对账`
+- 关联 branch/worktree disposition 计划：`merged / removed`
+- 说明：`006` 已进入主线 close-out；当前 work item 不再依赖保留的 scratch branch/worktree 作为真值载体。
+
+#### 2.6 自动决策记录（如有）
+
+- AD-002：主线合流后，`006` 的 disposition 不再保留 `archived / retained（对照保留）`，而是切换为 `merged / removed`。理由：`main` 已拥有 provenance Phase 1 的 canonical truth，继续保留 scratch branch 只会制造第二真值来源。
+
+#### 2.7 批次结论
+
+- `006` provenance Phase 1 已合流 `main`，formal work item、用户文档、CLI、observer/governance advisory surface 与 close truth 现已统一收束到主线。
+
+#### 2.8 归档后动作
+
+- **已完成 git 提交**：是
+- **提交哈希**：`2732b3b`
+- 当前批次 branch disposition 状态：`merged`
+- 当前批次 worktree disposition 状态：`removed`
+- 是否继续下一批：`否`
