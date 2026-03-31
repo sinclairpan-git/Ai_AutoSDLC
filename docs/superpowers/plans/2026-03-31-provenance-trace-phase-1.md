@@ -37,7 +37,7 @@
 - `src/ai_sdlc/telemetry/provenance_inspection.py`: build `chain view`, `assessment view`, and `gap view`.
 - `src/ai_sdlc/telemetry/provenance_observer.py`: generate provenance-specific enrichments from persisted provenance graphs.
 - `src/ai_sdlc/telemetry/provenance_governance.py`: create provenance blocker candidates and governance-ready hooks without changing default gates.
-- `src/ai_sdlc/core/provenance_gate.py`: freeze the future gate-consumption interface as no-op/read-only in Phase 1.
+- `src/ai_sdlc/core/provenance_gate.py`: freeze the future gate-consumption interface as an empty interface or read-only adapter in Phase 1; do not implement a full blocker module yet.
 - `src/ai_sdlc/cli/provenance_cmd.py`: add read-only `summary / explain / gaps / --json`.
 - `src/ai_sdlc/cli/main.py`: register the new `provenance` Typer app.
 - `src/ai_sdlc/cli/command_names.py`: keep flat command discovery aligned with the new CLI surface.
@@ -102,6 +102,7 @@ Cover:
 - stable provenance ID prefixes and validation
 - `TraceContext` reuse with `goal_session_id / workflow_run_id / step_id / worker_id / agent_id / parent_event_id`
 - `<object_type>:<object_id>` source-object refs and stable `evidence_id` refs
+- machine-readable serialization/snapshot shape stability for provenance IDs, refs, and enum literals
 - append-only vs mutable provenance object categories
 - `source_closure_status` reuse of `unknown | incomplete | closed`
 - structured-first `detail` and `advisories` constraints
@@ -151,6 +152,7 @@ Cover:
 - mutable assessment/gap/hook current+revisions writes
 - writer-assigned session-local `ingestion_order`
 - duplicate injected replay idempotence/dedupe behavior
+- `source_closure_status` reusing telemetry baseline values without being conflated with provenance `chain_status`
 - orphan edge, dangling node, and missing telemetry-object detection
 - stable machine-readable resolver failure classes
 - `closed / partial / unknown` chain-status derivation without treating `unsupported` as a chain status
@@ -199,6 +201,7 @@ Cover:
 - `unknown` generating explicit gaps instead of fake facts
 - missing `target_ref` becoming `parse failure`
 - `exec_command bridge` inference refusing to derive bridge links from raw command text alone
+- duplicate injected replay never silently upgrading provenance confidence
 - ingress never assigning `ingestion_order` or emitting assessments/governance hooks
 
 - [ ] **Step 2: Run the ingress/adapter tests and confirm they fail**
@@ -245,6 +248,7 @@ Cover:
 - `summary`, `explain`, `gaps`, and `--json` answering the 5 required inspection questions
 - stable `assessment view` with `overall chain status`, `highest confidence source`, and `key gaps`
 - JSON field/ordering stability for snapshot-friendly automation
+- human-facing assessment/gap views and `--json` expressing the same chain/gap semantics
 - read-only behavior with no graph rewrite, repair, implicit rebuild, or implicit init side effects
 - flat command discovery including the new CLI paths
 
@@ -296,6 +300,7 @@ git commit -m "feat: add provenance inspection cli"
 Cover:
 - provenance assessment and gap findings enriching existing evaluation/report surfaces
 - provenance governance hooks carrying gate-capable fields without becoming published artifacts by default
+- negative coverage that Phase 1 provenance hooks/candidates do not enter published governance artifact semantics
 - verify/close/release continuing to ignore provenance candidates for default blocker decisions
 - provenance-specific findings enriching but not overriding current evaluation truth
 
@@ -309,7 +314,7 @@ Expected: FAIL because provenance observer/governance modules and guardrails do 
 Implement:
 - provenance assessment generation from stored provenance graphs
 - governance-ready hook/candidate generation
-- no-op/read-only `provenance_gate` interface for future consumption
+- empty-interface or read-only-adapter `provenance_gate` surface for future consumption
 - explicit non-override and non-blocking guardrails in verify/close/release integration points
 
 - [ ] **Step 4: Re-run the observer/governance tests**
@@ -350,6 +355,7 @@ Document:
 - `ai-sdlc provenance explain`
 - `ai-sdlc provenance gaps`
 - Phase 1 limits: read-only, no host-native full coverage, no default blocker behavior, manual injection is not a normal business entrypoint
+- CLI discoverability should keep `summary / explain / gaps` as the day-to-day surface and must not present manual injection as a normal primary workflow
 
 - [ ] **Step 3: Run the targeted provenance suite**
 
