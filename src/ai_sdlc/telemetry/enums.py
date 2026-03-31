@@ -32,12 +32,29 @@ class Confidence(str, Enum):
     LOW = "low"
 
 
+class TelemetryProfile(str, Enum):
+    SELF_HOSTING = "self_hosting"
+    EXTERNAL_PROJECT = "external_project"
+
+
+class TelemetryMode(str, Enum):
+    LITE = "lite"
+    STRICT = "strict"
+    FORENSICS = "forensics"
+
+
 class TraceLayer(str, Enum):
     WORKFLOW = "workflow"
     AGENT_ACTION = "agent_action"
     TOOL = "tool"
     HUMAN = "human"
     EVALUATION = "evaluation"
+
+
+class TriggerPointType(str, Enum):
+    COLLECTOR = "collector"
+    OBSERVER_ASYNC = "observer_async"
+    GATE_CONSUMPTION = "gate_consumption"
 
 
 class TelemetryEventStatus(str, Enum):
@@ -116,6 +133,15 @@ class ArtifactStorageScope(str, Enum):
     EXPORTABLE = "exportable"
 
 
+class GovernanceReviewStatus(str, Enum):
+    DRAFT = "draft"
+    REVIEWED = "reviewed"
+    ACCEPTED = "accepted"
+    FIXED = "fixed"
+    DISMISSED = "dismissed"
+    WAIVED = "waived"
+
+
 class SourceClosureStatus(str, Enum):
     UNKNOWN = "unknown"
     INCOMPLETE = "incomplete"
@@ -147,6 +173,13 @@ class SuggestedChangeLayer(str, Enum):
     WORKFLOW = "workflow"
     TOOL = "tool"
     EVAL = "eval"
+
+
+class GateDecisionResult(str, Enum):
+    ADVISORY = "advisory"
+    ALLOW = "allow"
+    WARN = "warn"
+    BLOCK = "block"
 
 
 class TelemetryObjectCategory(str, Enum):

@@ -26,12 +26,18 @@ from ai_sdlc.telemetry.enums import (
     EvaluationResult,
     EvaluationStatus,
     EvidenceStatus,
+    GateDecisionResult,
+    GovernanceReviewStatus,
     RootCauseClass,
     ScopeLevel,
+    SourceClosureStatus,
     SuggestedChangeLayer,
     TelemetryEventStatus,
+    TelemetryMode,
     TelemetryObjectCategory,
+    TelemetryProfile,
     TraceLayer,
+    TriggerPointType,
     ViolationRiskLevel,
     ViolationStatus,
 )
@@ -52,6 +58,7 @@ _FIELD_PREFIXES = {
     "goal_session_id": ID_PREFIXES["goal_session_id"],
     "workflow_run_id": ID_PREFIXES["workflow_run_id"],
     "step_id": ID_PREFIXES["step_id"],
+    "parent_event_id": ID_PREFIXES["event_id"],
     "event_id": ID_PREFIXES["event_id"],
     "evidence_id": ID_PREFIXES["evidence_id"],
     "evaluation_id": ID_PREFIXES["evaluation_id"],
@@ -66,6 +73,38 @@ _SOURCE_OBJECT_KIND_PREFIXES = {
     "violation": ID_PREFIXES["violation_id"],
     "artifact": ID_PREFIXES["artifact_id"],
 }
+
+
+def _normalize_evidence_refs(
+    value: object, *, require_non_empty: bool = False
+) -> tuple[str, ...]:
+    if value is None:
+        if require_non_empty:
+            raise ValueError("evidence_refs must not be empty")
+        return ()
+    if isinstance(value, str):
+        raise ValueError("evidence refs must be an iterable of evidence IDs")
+    refs = tuple(value)
+    if require_non_empty and not refs:
+        raise ValueError("evidence_refs must not be empty")
+    if len(set(refs)) != len(refs):
+        raise ValueError("evidence refs must not contain duplicates")
+    for ref in refs:
+        validate_telemetry_id(ref, ID_PREFIXES["evidence_id"])
+    return refs
+
+
+def _normalize_object_refs(value: object) -> tuple[str, ...]:
+    if value is None:
+        return ()
+    if isinstance(value, str):
+        raise ValueError("source object refs must be an iterable of source references")
+    refs = tuple(value)
+    if len(set(refs)) != len(refs):
+        raise ValueError("source object refs must not contain duplicates")
+    for ref in refs:
+        _validate_object_ref(ref)
+    return refs
 
 
 class TelemetryRecord(BaseModel):
@@ -222,6 +261,81 @@ class TelemetryScope(TelemetryRecord):
     allowed_update_fields: ClassVar[frozenset[str] | None] = None
 
 
+class TraceContext(BaseModel):
+    """Stable trace-context contract shared across runtime and gate events."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    goal_session_id: str
+    workflow_run_id: str | None = None
+    step_id: str | None = None
+    worker_id: str | None = None
+    agent_id: str | None = None
+    parent_event_id: str | None = None
+
+    @field_validator(
+        "goal_session_id",
+        "workflow_run_id",
+        "step_id",
+        "parent_event_id",
+        mode="before",
+    )
+    @classmethod
+    def _validate_trace_context_ids(
+        cls, value: str | None, info: ValidationInfo
+    ) -> str | None:
+        if value is None:
+            return value
+        return validate_telemetry_id(value, _FIELD_PREFIXES[info.field_name])
+
+
+class ModeChangeRecord(BaseModel):
+    """Minimum structured record for runtime telemetry mode changes."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    old_mode: TelemetryMode
+    new_mode: TelemetryMode
+    changed_at: str
+    changed_by: str
+    reason: str
+    applicable_scope: ScopeLevel
+
+    @field_validator("changed_at", mode="before")
+    @classmethod
+    def _validate_changed_at(cls, value: str) -> str:
+        return validate_utc_z_timestamp(value)
+
+
+class GateDecisionPayload(BaseModel):
+    """Minimum gate-capable governance payload."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    decision_subject: str
+    decision_result: GateDecisionResult = GateDecisionResult.ADVISORY
+    confidence: Confidence
+    evidence_refs: tuple[str, ...]
+    source_object_refs: tuple[str, ...] = Field(default_factory=tuple)
+    source_closure_status: SourceClosureStatus = SourceClosureStatus.UNKNOWN
+    observer_version: str
+    policy_name: str
+    trigger_point_type: TriggerPointType = TriggerPointType.GATE_CONSUMPTION
+    profile: TelemetryProfile
+    mode: TelemetryMode
+    governance_review_status: GovernanceReviewStatus = GovernanceReviewStatus.DRAFT
+
+    @field_validator("evidence_refs", mode="before")
+    @classmethod
+    def _validate_evidence_refs(cls, value: object) -> tuple[str, ...]:
+        return _normalize_evidence_refs(value, require_non_empty=True)
+
+    @field_validator("source_object_refs", mode="before")
+    @classmethod
+    def _validate_source_object_refs(cls, value: object) -> tuple[str, ...]:
+        return _normalize_object_refs(value)
+
+
 class TelemetryEvent(TelemetryRecord):
     object_category: ClassVar[TelemetryObjectCategory] = TelemetryObjectCategory.APPEND_ONLY
     allowed_update_fields: ClassVar[frozenset[str] | None] = frozenset()
@@ -234,6 +348,11 @@ class TelemetryEvent(TelemetryRecord):
     trace_layer: TraceLayer = TraceLayer.WORKFLOW
     status: TelemetryEventStatus = TelemetryEventStatus.STARTED
     timestamp: str = Field(default_factory=utc_now_z)
+    profile: TelemetryProfile | None = None
+    mode: TelemetryMode | None = None
+    trigger_point_type: TriggerPointType = TriggerPointType.COLLECTOR
+    trace_context: TraceContext | None = None
+    mode_change: ModeChangeRecord | None = None
 
 
 class Evidence(TelemetryRecord):
@@ -262,6 +381,8 @@ class Evaluation(TelemetryRecord):
     status: EvaluationStatus = EvaluationStatus.PENDING
     root_cause_class: RootCauseClass | None = None
     suggested_change_layer: SuggestedChangeLayer | None = None
+    source_closure_status: SourceClosureStatus = SourceClosureStatus.UNKNOWN
+    governance_review_status: GovernanceReviewStatus = GovernanceReviewStatus.DRAFT
 
 
 class Violation(TelemetryRecord):
@@ -272,6 +393,8 @@ class Violation(TelemetryRecord):
     status: ViolationStatus = ViolationStatus.OPEN
     risk_level: ViolationRiskLevel = ViolationRiskLevel.MEDIUM
     root_cause_class: RootCauseClass | None = None
+    source_closure_status: SourceClosureStatus = SourceClosureStatus.UNKNOWN
+    governance_review_status: GovernanceReviewStatus = GovernanceReviewStatus.DRAFT
 
 
 class Artifact(TelemetryRecord):
@@ -283,36 +406,20 @@ class Artifact(TelemetryRecord):
     artifact_type: ArtifactType = ArtifactType.REPORT
     artifact_role: ArtifactRole = ArtifactRole.AUDIT
     storage_scope: ArtifactStorageScope = ArtifactStorageScope.PROJECT_LOCAL
+    governance_review_status: GovernanceReviewStatus = GovernanceReviewStatus.DRAFT
+    source_closure_status: SourceClosureStatus = SourceClosureStatus.UNKNOWN
     source_evidence_refs: tuple[str, ...] = Field(default_factory=tuple)
     source_object_refs: tuple[str, ...] = Field(default_factory=tuple)
 
     @field_validator("source_evidence_refs", mode="before")
     @classmethod
     def _normalize_source_evidence_refs(cls, value: object) -> tuple[str, ...]:
-        if value is None:
-            return ()
-        if isinstance(value, str):
-            raise ValueError("source_evidence_refs must be an iterable of evidence IDs")
-        refs = tuple(value)
-        if len(set(refs)) != len(refs):
-            raise ValueError("source_evidence_refs must not contain duplicates")
-        for ref in refs:
-            validate_telemetry_id(ref, ID_PREFIXES["evidence_id"])
-        return refs
+        return _normalize_evidence_refs(value)
 
     @field_validator("source_object_refs", mode="before")
     @classmethod
     def _normalize_source_object_refs(cls, value: object) -> tuple[str, ...]:
-        if value is None:
-            return ()
-        if isinstance(value, str):
-            raise ValueError("source_object_refs must be an iterable of source references")
-        refs = tuple(value)
-        if len(set(refs)) != len(refs):
-            raise ValueError("source_object_refs must not contain duplicates")
-        for ref in refs:
-            _validate_object_ref(ref)
-        return refs
+        return _normalize_object_refs(value)
 
 
 def _parse_utc_z_timestamp(value: str) -> datetime:

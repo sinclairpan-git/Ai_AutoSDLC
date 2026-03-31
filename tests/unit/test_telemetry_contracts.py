@@ -14,10 +14,13 @@ from ai_sdlc.telemetry.contracts import (
     Artifact,
     Evaluation,
     Evidence,
+    GateDecisionPayload,
+    ModeChangeRecord,
     ScopeLevel,
     TelemetryEvent,
     TelemetryObjectCategory,
     TelemetryScope,
+    TraceContext,
     Violation,
 )
 from ai_sdlc.telemetry.enums import (
@@ -31,10 +34,16 @@ from ai_sdlc.telemetry.enums import (
     EvaluationResult,
     EvaluationStatus,
     EvidenceStatus,
+    GateDecisionResult,
+    GovernanceReviewStatus,
     RootCauseClass,
+    SourceClosureStatus,
     SuggestedChangeLayer,
     TelemetryEventStatus,
+    TelemetryMode,
+    TelemetryProfile,
     TraceLayer,
+    TriggerPointType,
     ViolationRiskLevel,
     ViolationStatus,
 )
@@ -71,12 +80,26 @@ def test_frozen_enum_values_from_approved_spec() -> None:
         "inferred",
     ]
     assert [member.value for member in Confidence] == ["high", "medium", "low"]
+    assert [member.value for member in TelemetryProfile] == [
+        "self_hosting",
+        "external_project",
+    ]
+    assert [member.value for member in TelemetryMode] == [
+        "lite",
+        "strict",
+        "forensics",
+    ]
     assert [member.value for member in TraceLayer] == [
         "workflow",
         "agent_action",
         "tool",
         "human",
         "evaluation",
+    ]
+    assert [member.value for member in TriggerPointType] == [
+        "collector",
+        "observer_async",
+        "gate_consumption",
     ]
     assert [member.value for member in TelemetryEventStatus] == [
         "started",
@@ -143,6 +166,25 @@ def test_frozen_enum_values_from_approved_spec() -> None:
         "project_committable",
         "project_local",
         "exportable",
+    ]
+    assert [member.value for member in GovernanceReviewStatus] == [
+        "draft",
+        "reviewed",
+        "accepted",
+        "fixed",
+        "dismissed",
+        "waived",
+    ]
+    assert [member.value for member in SourceClosureStatus] == [
+        "unknown",
+        "incomplete",
+        "closed",
+    ]
+    assert [member.value for member in GateDecisionResult] == [
+        "advisory",
+        "allow",
+        "warn",
+        "block",
     ]
     assert [member.value for member in RootCauseClass] == [
         "prompt",
@@ -535,6 +577,72 @@ def test_append_only_vs_mutable_object_categories() -> None:
     assert Evaluation.object_category is TelemetryObjectCategory.MUTABLE
     assert Violation.object_category is TelemetryObjectCategory.MUTABLE
     assert Artifact.object_category is TelemetryObjectCategory.MUTABLE
+
+
+def test_trace_context_contract_tracks_worker_agent_and_parent_event() -> None:
+    context = TraceContext(
+        goal_session_id="gs_0123456789abcdef0123456789abcdef",
+        workflow_run_id="wr_0123456789abcdef0123456789abcdef",
+        step_id="st_0123456789abcdef0123456789abcdef",
+        worker_id="worker-007",
+        agent_id="codex-agent",
+        parent_event_id="evt_0123456789abcdef0123456789abcdef",
+    )
+
+    assert context.goal_session_id == "gs_0123456789abcdef0123456789abcdef"
+    assert context.worker_id == "worker-007"
+    assert context.agent_id == "codex-agent"
+    assert context.parent_event_id == "evt_0123456789abcdef0123456789abcdef"
+
+
+def test_mode_change_record_requires_minimum_contract_shape() -> None:
+    record = ModeChangeRecord(
+        old_mode=TelemetryMode.LITE,
+        new_mode=TelemetryMode.STRICT,
+        changed_at="2026-03-30T12:00:00Z",
+        changed_by="codex",
+        reason="verify phase escalation",
+        applicable_scope=ScopeLevel.RUN,
+    )
+
+    assert record.old_mode is TelemetryMode.LITE
+    assert record.new_mode is TelemetryMode.STRICT
+    assert record.applicable_scope is ScopeLevel.RUN
+
+
+def test_gate_decision_payload_requires_gate_capable_minimum_fields() -> None:
+    payload = GateDecisionPayload(
+        decision_subject="verify_constraints",
+        decision_result=GateDecisionResult.BLOCK,
+        confidence=Confidence.HIGH,
+        evidence_refs=("evd_0123456789abcdef0123456789abcdef",),
+        source_closure_status=SourceClosureStatus.CLOSED,
+        observer_version="observer-v1",
+        policy_name="self_hosting-default",
+        profile=TelemetryProfile.SELF_HOSTING,
+        mode=TelemetryMode.STRICT,
+    )
+
+    assert payload.decision_result is GateDecisionResult.BLOCK
+    assert payload.source_closure_status is SourceClosureStatus.CLOSED
+    assert payload.profile is TelemetryProfile.SELF_HOSTING
+    assert payload.mode is TelemetryMode.STRICT
+
+
+@pytest.mark.parametrize("record_cls", [Evaluation, Violation, Artifact])
+def test_governance_objects_default_to_unknown_source_closure_and_draft_review(
+    record_cls: type[Evaluation] | type[Violation] | type[Artifact],
+) -> None:
+    record = record_cls(
+        scope_level=ScopeLevel.RUN,
+        goal_session_id="gs_0123456789abcdef0123456789abcdef",
+        workflow_run_id="wr_0123456789abcdef0123456789abcdef",
+        created_at="2026-03-27T10:00:00Z",
+        updated_at="2026-03-27T10:00:00Z",
+    )
+
+    assert record.source_closure_status is SourceClosureStatus.UNKNOWN
+    assert record.governance_review_status is GovernanceReviewStatus.DRAFT
 
 
 def test_ccp_registry_minimum_evidence_closure_defaults() -> None:

@@ -9,12 +9,15 @@ from unittest.mock import MagicMock
 import pytest
 
 from ai_sdlc.context.state import load_checkpoint, save_checkpoint
+from ai_sdlc.core.config import save_project_config
 from ai_sdlc.core.runner import PipelineHaltError, SDLCRunner
 from ai_sdlc.core.state_machine import save_work_item
 from ai_sdlc.models.gate import GateCheck, GateResult, GateVerdict
+from ai_sdlc.models.project import ProjectConfig
 from ai_sdlc.models.scanner import KnowledgeRefreshLog, RefreshEntry, RefreshLevel
 from ai_sdlc.models.state import Checkpoint, FeatureInfo
 from ai_sdlc.models.work import WorkItem, WorkItemSource, WorkItemStatus, WorkType
+from ai_sdlc.telemetry.enums import TelemetryMode, TelemetryProfile
 from ai_sdlc.telemetry.paths import telemetry_local_root, telemetry_manifest_path
 
 
@@ -205,6 +208,81 @@ class TestConfirmMode:
         assert [event["status"] for event in session_events] == ["started"]
         assert run_events[0]["status"] == "started"
         assert run_events[-1]["status"] == "succeeded"
+
+    def test_run_binds_profile_mode_and_trace_context_into_runtime_events(
+        self, tmp_path: Path
+    ) -> None:
+        _bootstrap_project(tmp_path)
+        save_project_config(
+            tmp_path,
+            ProjectConfig(
+                telemetry_profile=TelemetryProfile.SELF_HOSTING,
+                telemetry_mode=TelemetryMode.LITE,
+            ),
+        )
+
+        runner = SDLCRunner(tmp_path)
+        pass_result = GateResult(
+            stage="init",
+            verdict=GateVerdict.PASS,
+            checks=[GateCheck(name="ok", passed=True)],
+        )
+        runner._run_gate = MagicMock(return_value=pass_result)
+
+        runner.run(mode="auto")
+
+        manifest = _read_json(telemetry_manifest_path(tmp_path))
+        goal_session_id = next(iter(manifest["sessions"]))
+        workflow_run_id = next(iter(manifest["runs"]))
+        step_id = next(iter(manifest["steps"]))
+
+        session_events = _read_ndjson(
+            telemetry_local_root(tmp_path)
+            / "sessions"
+            / goal_session_id
+            / "events.ndjson"
+        )
+        run_events = _read_ndjson(
+            telemetry_local_root(tmp_path)
+            / "sessions"
+            / goal_session_id
+            / "runs"
+            / workflow_run_id
+            / "events.ndjson"
+        )
+        step_events = _read_ndjson(
+            telemetry_local_root(tmp_path)
+            / "sessions"
+            / goal_session_id
+            / "runs"
+            / workflow_run_id
+            / "steps"
+            / step_id
+            / "events.ndjson"
+        )
+
+        assert session_events[0]["profile"] == "self_hosting"
+        assert session_events[0]["mode"] == "lite"
+        assert session_events[0]["trace_context"] == {
+            "goal_session_id": goal_session_id,
+            "workflow_run_id": None,
+            "step_id": None,
+            "worker_id": None,
+            "agent_id": None,
+            "parent_event_id": None,
+        }
+
+        assert run_events[0]["profile"] == "self_hosting"
+        assert run_events[0]["mode"] == "lite"
+        assert run_events[0]["trace_context"]["goal_session_id"] == goal_session_id
+        assert run_events[0]["trace_context"]["workflow_run_id"] == workflow_run_id
+
+        workflow_step_events = [
+            event for event in step_events if event["trace_layer"] == "workflow"
+        ]
+        assert workflow_step_events[0]["trigger_point_type"] == "collector"
+        assert workflow_step_events[-1]["trigger_point_type"] == "observer_async"
+        assert workflow_step_events[-1]["trace_context"]["step_id"] == step_id
 
     def test_confirm_pause_closes_workflow_run_as_blocked(self, tmp_path: Path) -> None:
         _bootstrap_project(tmp_path)
@@ -405,6 +483,7 @@ class TestConfirmMode:
         assert gate_events[0]["actor_type"] == "framework_runtime"
         assert gate_events[0]["capture_mode"] == "auto"
         assert gate_events[0]["confidence"] == "high"
+        assert gate_events[0]["trigger_point_type"] == "gate_consumption"
         assert gate_locators == [f"ccp:v1:gate_hit:event:{gate_events[0]['event_id']}"]
         assert gate_evidence[0]["digest"]
 

@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any
 
 from ai_sdlc.context.state import load_checkpoint, save_checkpoint
+from ai_sdlc.core.config import load_project_config
 from ai_sdlc.core.dispatcher import StageDispatcher
 from ai_sdlc.core.executor import Executor
 from ai_sdlc.core.state_machine import load_work_item, work_item_path
@@ -39,6 +40,7 @@ from ai_sdlc.models.state import (
 )
 from ai_sdlc.models.work import WorkType
 from ai_sdlc.telemetry.enums import TelemetryEventStatus
+from ai_sdlc.telemetry.policy import resolve_runtime_telemetry_policy
 from ai_sdlc.telemetry.runtime import RuntimeTelemetry
 from ai_sdlc.utils.helpers import now_iso
 
@@ -114,7 +116,12 @@ class SDLCRunner:
         start_idx = self._stage_index(cp.current_stage)
         run_open = False
         if not dry_run:
-            self._telemetry.open_workflow_run()
+            policy = resolve_runtime_telemetry_policy(load_project_config(self.root))
+            self._telemetry.open_workflow_run(
+                profile=policy.profile,
+                mode=policy.mode,
+                mode_change=policy.mode_change,
+            )
             run_open = True
 
         try:

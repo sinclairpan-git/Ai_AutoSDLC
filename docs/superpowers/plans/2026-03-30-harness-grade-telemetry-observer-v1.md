@@ -28,10 +28,13 @@ These decisions are marked `must-before-v1` in the design doc and should be froz
 
 - Manual input CLI baseline: V1 should keep the current minimal surface of `open-session`, `close-session`, `record-event`, `record-evidence`, `record-evaluation`, and `record-violation`; do not expand to a broader note/comment surface unless a failing test proves a real gap.
 - `incident report` status: V1 should treat `incident report` as a `contract-preserved deferred artifact`; `violation`, `audit summary`, and `gate decision payload` are the formal minimum governance outputs.
+- `evaluation summary` status: V1 should treat `evaluation summary` as a `contract-preserved deferred artifact` rather than a required formal governance output.
 
 If either decision changes, update the design doc decision log first and then regenerate the affected tasks in this plan before writing code.
 
 Task 1 is therefore a real blocking gate. Do not start Task 2 or later code changes until Task 1 Step 1 has landed in the design doc and the updated decision log is committed.
+
+Formal execution truth for this capability lives in `specs/005-harness-grade-telemetry-observer-v1/`. Treat this superpowers plan as planning input and task map only. Do not bypass `specs/005-harness-grade-telemetry-observer-v1/tasks.md` when entering implementation.
 
 ## Owner Boundaries
 
