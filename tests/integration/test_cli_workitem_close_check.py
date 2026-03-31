@@ -44,6 +44,9 @@ def _write_execution_log(
         "uv run ai-sdlc verify constraints",
     ),
     changed_paths: tuple[str, ...] = ("src/example.py", "tests/test_example.py"),
+    branch_disposition_plan: str = "待最终收口",
+    branch_disposition_status: str = "待最终收口",
+    worktree_disposition_status: str = "待最终收口",
 ) -> None:
     committed_text = "是" if git_committed else "否"
     rendered_hash = f"`{commit_hash}`" if commit_hash != "N/A" else "N/A"
@@ -59,9 +62,12 @@ def _write_execution_log(
         f"- **改动范围**：{path_text}\n"
         "#### 2.4 代码审查（`rules/code-review.md` 摘要）\n"
         "#### 2.5 任务/计划同步状态（Mandatory）\n"
+        f"- 关联 branch/worktree disposition 计划：`{branch_disposition_plan}`\n"
         "#### 2.8 归档后动作\n"
         f"- **已完成 git 提交**：{committed_text}\n"
-        f"- **提交哈希**：{rendered_hash}\n",
+        f"- **提交哈希**：{rendered_hash}\n"
+        f"- 当前批次 branch disposition 状态：`{branch_disposition_status}`\n"
+        f"- 当前批次 worktree disposition 状态：`{worktree_disposition_status}`\n",
         encoding="utf-8",
     )
 
@@ -139,6 +145,9 @@ def _setup_repo(
         "uv run ai-sdlc verify constraints",
     ),
     changed_paths: tuple[str, ...] = ("src/example.py", "tests/test_example.py"),
+    branch_disposition_plan: str = "待最终收口",
+    branch_disposition_status: str = "待最终收口",
+    worktree_disposition_status: str = "待最终收口",
 ) -> None:
     subprocess.run(["git", "init"], cwd=root, check=True, capture_output=True)
     subprocess.run(
@@ -187,6 +196,9 @@ def _setup_repo(
         verification_profile=verification_profile,
         verification_commands=verification_commands,
         changed_paths=changed_paths,
+        branch_disposition_plan=branch_disposition_plan,
+        branch_disposition_status=branch_disposition_status,
+        worktree_disposition_status=worktree_disposition_status,
     )
 
     (root / "README.md").write_text("# R\n", encoding="utf-8")
@@ -208,6 +220,9 @@ def _setup_repo(
             verification_profile=verification_profile,
             verification_commands=verification_commands,
             changed_paths=changed_paths,
+            branch_disposition_plan=branch_disposition_plan,
+            branch_disposition_status=branch_disposition_status,
+            worktree_disposition_status=worktree_disposition_status,
         )
         subprocess.run(
             ["git", "add", f"{wi_rel}/task-execution-log.md"],
@@ -221,6 +236,42 @@ def _setup_repo(
             check=True,
             capture_output=True,
         )
+
+
+def _create_branch_ahead_of_main(root: Path, branch_name: str) -> None:
+    subprocess.run(
+        ["git", "checkout", "-b", branch_name],
+        cwd=root,
+        check=True,
+        capture_output=True,
+    )
+    (root / "scratch.txt").write_text(f"{branch_name}\n", encoding="utf-8")
+    subprocess.run(["git", "add", "."], cwd=root, check=True, capture_output=True)
+    subprocess.run(
+        ["git", "commit", "-m", f"feat: {branch_name}"],
+        cwd=root,
+        check=True,
+        capture_output=True,
+    )
+    subprocess.run(["git", "checkout", "main"], cwd=root, check=True, capture_output=True)
+
+
+def _create_worktree_branch_ahead_of_main(root: Path, branch_name: str, worktree_path: Path) -> None:
+    subprocess.run(["git", "branch", branch_name], cwd=root, check=True, capture_output=True)
+    subprocess.run(
+        ["git", "worktree", "add", str(worktree_path), branch_name],
+        cwd=root,
+        check=True,
+        capture_output=True,
+    )
+    (worktree_path / "scratch.txt").write_text(f"{branch_name}\n", encoding="utf-8")
+    subprocess.run(["git", "add", "."], cwd=worktree_path, check=True, capture_output=True)
+    subprocess.run(
+        ["git", "commit", "-m", f"feat: {branch_name}"],
+        cwd=worktree_path,
+        check=True,
+        capture_output=True,
+    )
 
 
 class TestCliWorkitemCloseCheck:
@@ -868,3 +919,72 @@ class TestCliWorkitemCloseCheck:
         result = runner.invoke(app, ["workitem", "close-check", "--wi", wi_rel])
         assert result.exit_code == 1
         assert "revise" in result.output.lower()
+
+    def test_exit_1_when_close_check_finds_unresolved_associated_branch(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        root = tmp_path / "r10"
+        root.mkdir()
+        _setup_repo(
+            root,
+            tasks_body="- [x] done\n### Task 1.1\n- **验收标准（AC）**：ok",
+            plan_status="completed",
+        )
+        _create_branch_ahead_of_main(root, "codex/001-branch-check-demo")
+        monkeypatch.chdir(root)
+
+        result = runner.invoke(app, ["workitem", "close-check", "--wi", "specs/001-wi"])
+
+        assert result.exit_code == 1
+        assert "branch_lifecycle" in result.output
+        assert "codex/001-branch-check-demo" in result.output
+
+    def test_branch_check_reports_unresolved_associated_worktree_in_json(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        root = tmp_path / "r11"
+        root.mkdir()
+        _setup_repo(
+            root,
+            tasks_body="- [x] done\n### Task 1.1\n- **验收标准（AC）**：ok",
+            plan_status="completed",
+        )
+        worktree_path = tmp_path / "r11-worktree"
+        _create_worktree_branch_ahead_of_main(
+            root,
+            "codex/001-worktree-demo",
+            worktree_path,
+        )
+        monkeypatch.chdir(root)
+
+        result = runner.invoke(
+            app,
+            ["workitem", "branch-check", "--wi", "specs/001-wi", "--json"],
+        )
+
+        assert result.exit_code == 1
+        assert '"ok": false' in result.output
+        assert '"name": "codex/001-worktree-demo"' in result.output
+        assert str(worktree_path) in result.output
+
+    def test_branch_check_ignores_unrelated_historical_branch(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        root = tmp_path / "r12"
+        root.mkdir()
+        _setup_repo(
+            root,
+            tasks_body="- [x] done\n### Task 1.1\n- **验收标准（AC）**：ok",
+            plan_status="completed",
+        )
+        _create_branch_ahead_of_main(root, "codex/999-legacy-branch")
+        monkeypatch.chdir(root)
+
+        result = runner.invoke(
+            app,
+            ["workitem", "branch-check", "--wi", "specs/001-wi", "--json"],
+        )
+
+        assert result.exit_code == 0
+        assert '"ok": true' in result.output
+        assert "codex/999-legacy-branch" not in result.output

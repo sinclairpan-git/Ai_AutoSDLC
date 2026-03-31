@@ -8,6 +8,9 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
+from ai_sdlc.branch.git_client import GitError
+from ai_sdlc.context.state import load_checkpoint
+from ai_sdlc.core.workitem_traceability import evaluate_work_item_branch_lifecycle
 from ai_sdlc.telemetry.contracts import ScopeLevel
 from ai_sdlc.telemetry.paths import (
     telemetry_indexes_root,
@@ -27,6 +30,7 @@ def build_status_json_surface(repo_root: Path) -> dict[str, Any]:
     """Return bounded telemetry status JSON without implicit init/rebuild."""
     manifest_state = _load_manifest_state(repo_root)
     store = TelemetryStore(repo_root)
+    branch_lifecycle = _build_branch_lifecycle_surface(repo_root)
     derived_indexes: dict[str, dict[str, Any]] | None = None
 
     def _derived_index_payloads() -> dict[str, dict[str, Any]]:
@@ -42,7 +46,8 @@ def build_status_json_surface(repo_root: Path) -> dict[str, Any]:
                 "state": "not_initialized",
                 "current": None,
                 "latest": None,
-            }
+            },
+            "branch_lifecycle": branch_lifecycle,
         }
     if manifest_state["state"] != "loaded":
         return {
@@ -51,7 +56,8 @@ def build_status_json_surface(repo_root: Path) -> dict[str, Any]:
                 "current": None,
                 "latest": None,
                 "error": manifest_state.get("error"),
-            }
+            },
+            "branch_lifecycle": branch_lifecycle,
         }
 
     manifest = manifest_state["manifest"]
@@ -101,7 +107,8 @@ def build_status_json_surface(repo_root: Path) -> dict[str, Any]:
                 repo_root,
                 derived_index_payloads=_derived_index_payloads,
             ),
-        }
+        },
+        "branch_lifecycle": branch_lifecycle,
     }
 
 
@@ -139,6 +146,11 @@ def build_doctor_readiness_items(repo_root: Path | None) -> list[dict[str, str]]
                 "state": "unavailable",
                 "detail": "not inside an AI-SDLC project",
             },
+            {
+                "name": "branch lifecycle readiness",
+                "state": "unavailable",
+                "detail": "not inside an AI-SDLC project",
+            },
         ]
 
     root_check = _telemetry_root_writable(repo_root)
@@ -148,6 +160,7 @@ def build_doctor_readiness_items(repo_root: Path | None) -> list[dict[str, str]]
     writer_path_check = _writer_path_check(repo_root)
     resolver_check = _resolver_check(repo_root)
     status_surface_check = _status_surface_check(repo_root)
+    branch_lifecycle_check = _branch_lifecycle_check(repo_root)
     return [
         root_check,
         manifest_check,
@@ -155,7 +168,123 @@ def build_doctor_readiness_items(repo_root: Path | None) -> list[dict[str, str]]
         writer_path_check,
         resolver_check,
         status_surface_check,
+        branch_lifecycle_check,
     ]
+
+
+def _build_branch_lifecycle_surface(repo_root: Path) -> dict[str, Any]:
+    checkpoint = load_checkpoint(repo_root)
+    if checkpoint is None or checkpoint.feature is None:
+        return {
+            "state": "unavailable",
+            "active_work_item": None,
+            "blocking_count": 0,
+            "warning_count": 0,
+            "associated_count": 0,
+            "sample_entries": [],
+            "detail": "no active work item checkpoint",
+        }
+
+    spec_dir_raw = (checkpoint.feature.spec_dir or "").strip()
+    if not spec_dir_raw or spec_dir_raw == "specs/unknown":
+        return {
+            "state": "unavailable",
+            "active_work_item": None,
+            "blocking_count": 0,
+            "warning_count": 0,
+            "associated_count": 0,
+            "sample_entries": [],
+            "detail": "checkpoint has no concrete spec_dir",
+        }
+
+    wi_dir = (repo_root / spec_dir_raw).resolve()
+    if not wi_dir.is_dir() or not (repo_root / ".git").exists():
+        return {
+            "state": "unavailable",
+            "active_work_item": wi_dir.name if wi_dir.name else None,
+            "blocking_count": 0,
+            "warning_count": 0,
+            "associated_count": 0,
+            "sample_entries": [],
+            "detail": "branch lifecycle inventory unavailable",
+        }
+
+    exec_log = wi_dir / "task-execution-log.md"
+    log_text = exec_log.read_text(encoding="utf-8") if exec_log.is_file() else None
+    try:
+        result = evaluate_work_item_branch_lifecycle(
+            root=repo_root,
+            wi_dir=wi_dir,
+            log_text=log_text,
+        )
+    except GitError:
+        return {
+            "state": "unavailable",
+            "active_work_item": wi_dir.name,
+            "blocking_count": 0,
+            "warning_count": 0,
+            "associated_count": 0,
+            "sample_entries": [],
+            "detail": "branch lifecycle inventory unavailable",
+        }
+    return {
+        "state": "ready",
+        "active_work_item": wi_dir.name,
+        "blocking_count": len(result.blockers),
+        "warning_count": len(result.warnings),
+        "associated_count": len(result.entries),
+        "branch_disposition": result.branch_disposition,
+        "worktree_disposition": result.worktree_disposition,
+        "sample_entries": [item.to_json_dict() for item in result.entries[:_SAMPLE_LIMIT]],
+        "detail": result.summary_detail(),
+    }
+
+
+def _branch_lifecycle_check(repo_root: Path) -> dict[str, str]:
+    surface = _build_branch_lifecycle_surface(repo_root)
+    state = str(surface.get("state", "unavailable"))
+    if state != "ready":
+        return {
+            "name": "branch lifecycle readiness",
+            "state": "unavailable",
+            "detail": str(surface.get("detail", "branch lifecycle inventory unavailable")),
+        }
+
+    blocking_count = int(surface.get("blocking_count", 0))
+    warning_count = int(surface.get("warning_count", 0))
+    sample_entries = surface.get("sample_entries", [])
+    first_name = ""
+    if isinstance(sample_entries, list) and sample_entries:
+        first = sample_entries[0]
+        if isinstance(first, dict):
+            first_name = str(first.get("name", ""))
+    if blocking_count > 0:
+        detail = (
+            f"{surface.get('active_work_item')} has {blocking_count} blocking branch lifecycle finding(s)"
+        )
+        if first_name:
+            detail += f"; first={first_name}"
+        return {
+            "name": "branch lifecycle readiness",
+            "state": "warn",
+            "detail": detail,
+        }
+    if warning_count > 0:
+        detail = (
+            f"{surface.get('active_work_item')} has {warning_count} warning branch lifecycle finding(s)"
+        )
+        if first_name:
+            detail += f"; first={first_name}"
+        return {
+            "name": "branch lifecycle readiness",
+            "state": "warn",
+            "detail": detail,
+        }
+    return {
+        "name": "branch lifecycle readiness",
+        "state": "ok",
+        "detail": str(surface.get("detail", "no associated branch/worktree drift")),
+    }
 
 
 def _current_bucket_summary(

@@ -8,6 +8,9 @@
 {% for batch in batches %}
 ## 批次 {{ batch.batch_id }}（阶段 {{ batch.phase }}）
 
+- 关联 branch disposition：{{ batch.branch_disposition | default('待最终收口') }}
+- 关联 worktree disposition：{{ batch.worktree_disposition | default('待最终收口') }}
+
 | 任务 | 状态 | 开始 | 完成 |
 |------|------|------|------|
 {% for task_id in batch.tasks %}

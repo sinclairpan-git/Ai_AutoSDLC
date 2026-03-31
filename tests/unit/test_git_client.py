@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import subprocess
 import threading
 import time
 from pathlib import Path
@@ -191,3 +192,102 @@ def test_remove_stale_index_lock_blocks_when_process_still_active(
 
     with pytest.raises(GitError, match="Active git process appears to hold .git/index.lock"):
         git.remove_stale_index_lock()
+
+
+def test_list_local_branches_includes_worktree_binding(git_repo: Path, tmp_path: Path) -> None:
+    subprocess.run(
+        ["git", "branch", "codex/demo-scratch"],
+        cwd=git_repo,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    scratch_tree = tmp_path / "scratch-tree"
+    subprocess.run(
+        ["git", "worktree", "add", str(scratch_tree), "codex/demo-scratch"],
+        cwd=git_repo,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+
+    branches = GitClient(git_repo).list_local_branches()
+
+    branch_names = [item.name for item in branches]
+    assert branch_names == sorted(branch_names)
+
+    scratch = next(item for item in branches if item.name == "codex/demo-scratch")
+    assert scratch.upstream is None
+    assert scratch.worktree_path == scratch_tree.resolve()
+
+
+def test_branch_divergence_against_main_reports_ahead_and_behind(git_repo: Path) -> None:
+    subprocess.run(
+        ["git", "checkout", "-b", "feature/diverge-demo"],
+        cwd=git_repo,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    (git_repo / "feature.txt").write_text("feature\n", encoding="utf-8")
+    subprocess.run(["git", "add", "feature.txt"], cwd=git_repo, check=True, capture_output=True)
+    subprocess.run(
+        ["git", "commit", "-m", "feature commit"],
+        cwd=git_repo,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    subprocess.run(
+        ["git", "checkout", "main"],
+        cwd=git_repo,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    (git_repo / "main.txt").write_text("main\n", encoding="utf-8")
+    subprocess.run(["git", "add", "main.txt"], cwd=git_repo, check=True, capture_output=True)
+    subprocess.run(
+        ["git", "commit", "-m", "main commit"],
+        cwd=git_repo,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+
+    divergence = GitClient(git_repo).branch_divergence("feature/diverge-demo", base="main")
+
+    assert divergence.branch == "feature/diverge-demo"
+    assert divergence.base == "main"
+    assert divergence.ahead_of_base == 1
+    assert divergence.behind_base == 1
+
+
+def test_list_worktrees_returns_paths_and_checked_out_branches(
+    git_repo: Path, tmp_path: Path
+) -> None:
+    subprocess.run(
+        ["git", "branch", "codex/worktree-demo"],
+        cwd=git_repo,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    scratch_tree = tmp_path / "worktree-demo"
+    subprocess.run(
+        ["git", "worktree", "add", str(scratch_tree), "codex/worktree-demo"],
+        cwd=git_repo,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+
+    worktrees = GitClient(git_repo).list_worktrees()
+
+    assert any(
+        item.path == git_repo.resolve() and item.branch == "main" for item in worktrees
+    )
+    assert any(
+        item.path == scratch_tree.resolve() and item.branch == "codex/worktree-demo"
+        for item in worktrees
+    )

@@ -10,8 +10,11 @@ from rich.table import Table
 
 from ai_sdlc.context.state import load_checkpoint, save_checkpoint
 from ai_sdlc.core.close_check import (
+    BranchCheckResult,
     CloseCheckResult,
+    format_branch_check_json,
     format_close_check_json,
+    run_branch_check,
     run_close_check,
 )
 from ai_sdlc.core.plan_check import PlanCheckResult, format_json, run_plan_check
@@ -60,13 +63,13 @@ def workitem_plan_check(
 
     if result.error:
         if as_json:
-            console.print(format_json(result))
+            console.print(format_json(result), soft_wrap=True)
         else:
             console.print(f"[red]{result.error}[/red]")
         raise typer.Exit(code=1)
 
     if as_json:
-        console.print(format_json(result))
+        console.print(format_json(result), soft_wrap=True)
     else:
         _print_table(result)
 
@@ -124,7 +127,7 @@ def workitem_close_check(
     result = run_close_check(cwd=Path.cwd(), wi=wi, all_docs=all_docs)
 
     if as_json:
-        console.print(format_close_check_json(result))
+        console.print(format_close_check_json(result), soft_wrap=True)
     else:
         _print_close_table(result)
 
@@ -153,6 +156,68 @@ def _print_close_table(result: CloseCheckResult) -> None:
         console.print("[bold red]BLOCKERs[/bold red]")
         for b in result.blockers:
             console.print(f"  {b}")
+
+
+@workitem_app.command(
+    "branch-check",
+    help=(
+        "Read-only: report branch/worktree lifecycle drift associated with one work item. "
+        "Does not write checkpoint or perform Git cleanup."
+    ),
+)
+def workitem_branch_check(
+    wi: Path = typer.Option(
+        ...,
+        "--wi",
+        help="Path to specs/<WI>/ directory to inspect for branch/worktree lifecycle drift.",
+    ),
+    as_json: bool = typer.Option(
+        False,
+        "--json",
+        help="Machine-readable branch lifecycle report. Read-only.",
+    ),
+) -> None:
+    """Read-only branch lifecycle truth for one work item."""
+    result = run_branch_check(cwd=Path.cwd(), wi=wi)
+
+    if as_json:
+        console.print(format_branch_check_json(result), soft_wrap=True)
+    else:
+        _print_branch_table(result)
+
+    if result.error:
+        raise typer.Exit(code=1)
+    raise typer.Exit(code=0 if result.ok else 1)
+
+
+def _print_branch_table(result: BranchCheckResult) -> None:
+    table = Table(title="workitem branch-check (read-only)")
+    table.add_column("Branch", style="cyan")
+    table.add_column("Kind")
+    table.add_column("Ahead")
+    table.add_column("Disposition")
+    table.add_column("Status")
+    table.add_column("Detail")
+
+    for item in result.entries:
+        table.add_row(
+            str(item.get("name", "unknown")),
+            str(item.get("kind", "")),
+            str(item.get("ahead_of_main", "")),
+            str(item.get("branch_disposition") or "unknown"),
+            str(item.get("status", "")),
+            str(item.get("detail", "")),
+        )
+    console.print(table)
+
+    if result.blockers:
+        console.print("[bold red]BLOCKERs[/bold red]")
+        for blocker in result.blockers:
+            console.print(f"  {blocker}")
+    elif result.warnings:
+        console.print("[bold yellow]Warnings[/bold yellow]")
+        for warning in result.warnings:
+            console.print(f"  {warning}")
 
 @workitem_app.command(
     "link",

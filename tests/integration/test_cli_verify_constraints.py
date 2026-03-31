@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import subprocess
 import time
 from pathlib import Path
 from unittest.mock import patch
@@ -116,6 +117,93 @@ def _write_doc_first_rule_surfaces(
             "禁止默认修改 `src/`、`tests/`。\n"
         )
     (rules_dir / "agent-skip-registry.zh.md").write_text(skip_registry, encoding="utf-8")
+
+
+def _init_git_repo(root: Path) -> None:
+    subprocess.run(["git", "init"], cwd=root, check=True, capture_output=True)
+    subprocess.run(
+        ["git", "config", "user.email", "t@t.com"],
+        cwd=root,
+        check=True,
+        capture_output=True,
+    )
+    subprocess.run(
+        ["git", "config", "user.name", "T"],
+        cwd=root,
+        check=True,
+        capture_output=True,
+    )
+
+
+def _commit_all(root: Path, message: str) -> None:
+    subprocess.run(["git", "add", "."], cwd=root, check=True, capture_output=True)
+    subprocess.run(["git", "commit", "-m", message], cwd=root, check=True, capture_output=True)
+
+
+def _create_branch_ahead_of_main(root: Path, branch_name: str) -> None:
+    subprocess.run(
+        ["git", "checkout", "-b", branch_name],
+        cwd=root,
+        check=True,
+        capture_output=True,
+    )
+    (root / "scratch.txt").write_text(f"{branch_name}\n", encoding="utf-8")
+    subprocess.run(["git", "add", "."], cwd=root, check=True, capture_output=True)
+    subprocess.run(
+        ["git", "commit", "-m", f"feat: {branch_name}"],
+        cwd=root,
+        check=True,
+        capture_output=True,
+    )
+    subprocess.run(["git", "checkout", "main"], cwd=root, check=True, capture_output=True)
+
+
+def _write_branch_lifecycle_fixture(
+    root: Path,
+    *,
+    wi_name: str = "001-wi",
+    branch_disposition_status: str = "待最终收口",
+) -> None:
+    _init_git_repo(root)
+    init_project(root)
+    _minimal_constitution(root)
+    _framework_backlog(root, include_eval=True)
+    _write_verification_profile_docs(root)
+    _write_doc_first_rule_surfaces(root)
+
+    wi_dir = root / "specs" / wi_name
+    wi_dir.mkdir(parents=True, exist_ok=True)
+    (wi_dir / "tasks.md").write_text(
+        "### Task 1.1 — 示例\n"
+        "- **依赖**：无\n"
+        "- **验收标准（AC）**：\n"
+        "  1. 示例\n",
+        encoding="utf-8",
+    )
+    (wi_dir / "task-execution-log.md").write_text(
+        "# Log\n\n"
+        "### Batch 2026-03-31-001 | Batch 1 demo\n\n"
+        "#### 2.5 任务/计划同步状态（Mandatory）\n"
+        "- 关联 branch/worktree disposition 计划：`待最终收口`\n"
+        "#### 2.8 归档后动作\n"
+        f"- 当前批次 branch disposition 状态：`{branch_disposition_status}`\n"
+        "- 当前批次 worktree disposition 状态：`待最终收口`\n",
+        encoding="utf-8",
+    )
+    save_checkpoint(
+        root,
+        Checkpoint(
+            current_stage="verify",
+            feature=FeatureInfo(
+                id=wi_name.split("-", 1)[0],
+                spec_dir=f"specs/{wi_name}",
+                design_branch=f"design/{wi_name}",
+                feature_branch=f"feature/{wi_name}",
+                current_branch="main",
+            ),
+        ),
+    )
+    _commit_all(root, "docs: seed branch lifecycle verify fixture")
 
 
 def _write_003_feature_contract_surfaces(
@@ -795,3 +883,30 @@ class TestCliVerifyConstraints:
         payload = json.loads(result.output)
         assert payload["ok"] is True
         assert payload["blockers"] == []
+
+    def test_verify_constraints_reports_branch_lifecycle_blocker_for_active_work_item(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        _write_branch_lifecycle_fixture(tmp_path)
+        _create_branch_ahead_of_main(tmp_path, "codex/001-verify-drift")
+        monkeypatch.chdir(tmp_path)
+
+        result = runner.invoke(app, ["verify", "constraints", "--json"])
+
+        assert result.exit_code == 1
+        payload = json.loads(result.output)
+        assert any("branch lifecycle" in item.lower() for item in payload["blockers"])
+        assert any("codex/001-verify-drift" in item for item in payload["blockers"])
+
+    def test_verify_constraints_does_not_block_on_archived_branch_lifecycle(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        _write_branch_lifecycle_fixture(tmp_path, branch_disposition_status="archived")
+        _create_branch_ahead_of_main(tmp_path, "codex/001-verify-archived")
+        monkeypatch.chdir(tmp_path)
+
+        result = runner.invoke(app, ["verify", "constraints", "--json"])
+
+        payload = json.loads(result.output)
+        assert result.exit_code == 0
+        assert all("branch lifecycle" not in item.lower() for item in payload["blockers"])
