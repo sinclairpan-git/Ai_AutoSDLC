@@ -336,6 +336,22 @@ class GitClient:
         except GitError:
             return False
 
+    def revision_exists(self, revision: str) -> bool:
+        """Return whether ``revision`` resolves to a commit."""
+        try:
+            self._run("rev-parse", "--verify", f"{revision}^{{commit}}")
+            return True
+        except GitError:
+            return False
+
+    def resolve_revision(self, revision: str, *, short: bool = False) -> str:
+        """Resolve ``revision`` to a commit hash."""
+        args = ["rev-parse"]
+        if short:
+            args.append("--short")
+        args.extend(["--verify", f"{revision}^{{commit}}"])
+        return self._run(*args)
+
     def create_branch(self, name: str, *, checkout: bool = True) -> None:
         """Create a new branch, optionally checking it out."""
         if checkout:
@@ -351,6 +367,66 @@ class GitClient:
         """Check if there are uncommitted changes in the working tree."""
         status = self._run("status", "--porcelain")
         return len(status) > 0
+
+    def merge_base(self, left: str, right: str) -> str:
+        """Return the merge-base commit for ``left`` and ``right``."""
+        return self._run("merge-base", left, right)
+
+    def is_ancestor(self, ancestor: str, descendant: str) -> bool:
+        """Return whether ``ancestor`` is contained in ``descendant`` history."""
+        result = subprocess.run(
+            ["git", "merge-base", "--is-ancestor", ancestor, descendant],
+            cwd=self.repo_path,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        if result.returncode == 0:
+            return True
+        if result.returncode == 1:
+            return False
+        raise GitError(
+            "git merge-base --is-ancestor failed "
+            f"(exit {result.returncode}): {result.stderr.strip()}"
+        )
+
+    def changed_paths(self, base: str, target: str) -> tuple[str, ...]:
+        """Return repo-relative changed paths between ``base`` and ``target``."""
+        raw = self._run("diff", "--name-only", f"{base}..{target}")
+        return tuple(path for path in raw.splitlines() if path.strip())
+
+    def revision_divergence(self, revision: str, *, base: str = "main") -> BranchDivergence:
+        """Return ahead/behind counts for ``revision`` relative to ``base``."""
+        raw = self._run("rev-list", "--left-right", "--count", f"{base}...{revision}")
+        behind_raw, ahead_raw = raw.split()
+        return BranchDivergence(
+            branch=revision,
+            base=base,
+            ahead_of_base=int(ahead_raw),
+            behind_base=int(behind_raw),
+        )
+
+    def path_exists_at_revision(self, revision: str, path: str) -> bool:
+        """Return whether ``path`` exists at ``revision``."""
+        result = subprocess.run(
+            ["git", "cat-file", "-e", f"{revision}:{path}"],
+            cwd=self.repo_path,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        if result.returncode == 0:
+            return True
+        if result.returncode == 128:
+            return False
+        raise GitError(
+            f"git cat-file -e {revision}:{path} failed (exit {result.returncode}): "
+            f"{result.stderr.strip()}"
+        )
+
+    def read_file_at_revision(self, revision: str, path: str) -> str:
+        """Return file contents for ``path`` at ``revision``."""
+        return self._run("show", f"{revision}:{path}")
 
     def list_worktrees(self) -> tuple[WorktreeInspection, ...]:
         """Return registered worktrees from ``git worktree list --porcelain``."""

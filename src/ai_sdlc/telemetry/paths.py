@@ -40,3 +40,8 @@ def step_root(
 ) -> Path:
     """Return the filesystem root for a workflow step."""
     return run_root(repo_root, goal_session_id, workflow_run_id) / "steps" / step_id
+
+
+def provenance_root(scope_root: Path) -> Path:
+    """Return the provenance subtree for a telemetry scope."""
+    return scope_root / "provenance"

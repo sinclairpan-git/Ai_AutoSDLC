@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from datetime import datetime
 from typing import Any, ClassVar, Self
 
@@ -66,45 +67,140 @@ _FIELD_PREFIXES = {
     "artifact_id": ID_PREFIXES["artifact_id"],
 }
 
-_SOURCE_OBJECT_KIND_PREFIXES = {
+SOURCE_OBJECT_KIND_PREFIXES = {
     "event": ID_PREFIXES["event_id"],
     "telemetry_event": ID_PREFIXES["event_id"],
+    "evidence": ID_PREFIXES["evidence_id"],
     "evaluation": ID_PREFIXES["evaluation_id"],
     "violation": ID_PREFIXES["violation_id"],
     "artifact": ID_PREFIXES["artifact_id"],
 }
 
+PROVENANCE_OBJECT_KIND_PREFIXES = {
+    "provenance_node": ID_PREFIXES["provenance_node_id"],
+    "provenance_edge": ID_PREFIXES["provenance_edge_id"],
+    "provenance_assessment": ID_PREFIXES["provenance_assessment_id"],
+    "provenance_gap": ID_PREFIXES["provenance_gap_id"],
+    "provenance_hook": ID_PREFIXES["provenance_hook_id"],
+}
 
-def _normalize_evidence_refs(
-    value: object, *, require_non_empty: bool = False
+CANONICAL_OBJECT_KIND_PREFIXES = {
+    **SOURCE_OBJECT_KIND_PREFIXES,
+    **PROVENANCE_OBJECT_KIND_PREFIXES,
+}
+
+
+def normalize_evidence_refs(
+    value: object,
+    *,
+    field_name: str = "evidence_refs",
+    require_non_empty: bool = False,
 ) -> tuple[str, ...]:
     if value is None:
         if require_non_empty:
-            raise ValueError("evidence_refs must not be empty")
+            raise ValueError(f"{field_name} must not be empty")
         return ()
     if isinstance(value, str):
-        raise ValueError("evidence refs must be an iterable of evidence IDs")
+        raise ValueError(f"{field_name} must be an iterable of evidence IDs")
     refs = tuple(value)
     if require_non_empty and not refs:
-        raise ValueError("evidence_refs must not be empty")
+        raise ValueError(f"{field_name} must not be empty")
     if len(set(refs)) != len(refs):
-        raise ValueError("evidence refs must not contain duplicates")
+        raise ValueError(f"{field_name} must not contain duplicates")
     for ref in refs:
         validate_telemetry_id(ref, ID_PREFIXES["evidence_id"])
     return refs
 
 
-def _normalize_object_refs(value: object) -> tuple[str, ...]:
+def validate_object_ref(
+    value: str,
+    *,
+    field_name: str = "source_object_refs",
+    allowed_kinds: frozenset[str] | None = None,
+) -> str:
+    """Validate a canonical '<kind>:<id>' object reference."""
+    if ":" not in value:
+        raise ValueError(f"{field_name} entries must use '<kind>:<source_ref>' format")
+    source_kind, source_ref = value.split(":", 1)
+    prefix = CANONICAL_OBJECT_KIND_PREFIXES.get(source_kind)
+    if prefix is None or (allowed_kinds is not None and source_kind not in allowed_kinds):
+        raise ValueError(f"unsupported {field_name} kind: {source_kind!r}")
+    validate_telemetry_id(source_ref, prefix)
+    return value
+
+
+def normalize_object_refs(
+    value: object,
+    *,
+    field_name: str = "source_object_refs",
+    allowed_kinds: frozenset[str] | None = None,
+    require_non_empty: bool = False,
+) -> tuple[str, ...]:
     if value is None:
+        if require_non_empty:
+            raise ValueError(f"{field_name} must not be empty")
         return ()
     if isinstance(value, str):
-        raise ValueError("source object refs must be an iterable of source references")
+        raise ValueError(f"{field_name} must be an iterable of source references")
     refs = tuple(value)
+    if require_non_empty and not refs:
+        raise ValueError(f"{field_name} must not be empty")
     if len(set(refs)) != len(refs):
-        raise ValueError("source object refs must not contain duplicates")
+        raise ValueError(f"{field_name} must not contain duplicates")
     for ref in refs:
-        _validate_object_ref(ref)
+        validate_object_ref(ref, field_name=field_name, allowed_kinds=allowed_kinds)
     return refs
+
+
+def validate_scope_trace_context(
+    scope_level: ScopeLevel,
+    *,
+    goal_session_id: str | None,
+    workflow_run_id: str | None,
+    step_id: str | None,
+) -> None:
+    """Enforce the canonical session/run/step chain discipline."""
+    if scope_level is ScopeLevel.SESSION:
+        if goal_session_id is None:
+            raise ValueError("session scope requires goal_session_id")
+        if workflow_run_id is not None or step_id is not None:
+            raise ValueError("session scope must not require workflow_run_id or step_id")
+    elif scope_level is ScopeLevel.RUN:
+        if goal_session_id is None or workflow_run_id is None:
+            raise ValueError("run scope requires goal_session_id and workflow_run_id")
+        if step_id is not None:
+            raise ValueError("run scope must not require step_id")
+    elif scope_level is ScopeLevel.STEP:
+        if goal_session_id is None or workflow_run_id is None or step_id is None:
+            raise ValueError("step scope requires goal_session_id, workflow_run_id, and step_id")
+    else:  # pragma: no cover - Enum prevents this
+        raise ValueError(f"unsupported scope level: {scope_level!r}")
+
+
+def normalize_structured_mapping(value: object, *, field_name: str) -> dict[str, Any]:
+    """Freeze a machine-readable mapping payload into a plain dict."""
+    if not isinstance(value, Mapping):
+        raise ValueError(f"{field_name} must be a mapping")
+    return dict(value)
+
+
+def normalize_structured_mappings(
+    value: object | None,
+    *,
+    field_name: str,
+) -> tuple[dict[str, Any], ...]:
+    """Normalize a list of machine-readable advisory/detail payloads."""
+    if value is None:
+        return ()
+    if isinstance(value, (str, Mapping)):
+        raise ValueError(f"{field_name} entries must be mappings")
+    items = tuple(value)
+    normalized: list[dict[str, Any]] = []
+    for item in items:
+        if not isinstance(item, Mapping):
+            raise ValueError(f"{field_name} entries must be mappings")
+        normalized.append(dict(item))
+    return tuple(normalized)
 
 
 class TelemetryRecord(BaseModel):
@@ -182,27 +278,12 @@ class TelemetryRecord(BaseModel):
 
     @model_validator(mode="after")
     def _validate_scope_and_timestamps(self) -> TelemetryRecord:
-        if self.scope_level is ScopeLevel.SESSION:
-            if self.goal_session_id is None:
-                raise ValueError("session scope requires goal_session_id")
-            if self.workflow_run_id is not None or self.step_id is not None:
-                raise ValueError("session scope must not require workflow_run_id or step_id")
-        elif self.scope_level is ScopeLevel.RUN:
-            if self.goal_session_id is None or self.workflow_run_id is None:
-                raise ValueError("run scope requires goal_session_id and workflow_run_id")
-            if self.step_id is not None:
-                raise ValueError("run scope must not require step_id")
-        elif self.scope_level is ScopeLevel.STEP:
-            if (
-                self.goal_session_id is None
-                or self.workflow_run_id is None
-                or self.step_id is None
-            ):
-                raise ValueError(
-                    "step scope requires goal_session_id, workflow_run_id, and step_id"
-                )
-        else:  # pragma: no cover - Enum prevents this
-            raise ValueError(f"unsupported scope level: {self.scope_level!r}")
+        validate_scope_trace_context(
+            self.scope_level,
+            goal_session_id=self.goal_session_id,
+            workflow_run_id=self.workflow_run_id,
+            step_id=self.step_id,
+        )
 
         created_at = _parse_utc_z_timestamp(self.created_at)
         updated_at = _parse_utc_z_timestamp(self.updated_at or self.created_at)
@@ -328,12 +409,20 @@ class GateDecisionPayload(BaseModel):
     @field_validator("evidence_refs", mode="before")
     @classmethod
     def _validate_evidence_refs(cls, value: object) -> tuple[str, ...]:
-        return _normalize_evidence_refs(value, require_non_empty=True)
+        return normalize_evidence_refs(
+            value,
+            field_name="evidence_refs",
+            require_non_empty=True,
+        )
 
     @field_validator("source_object_refs", mode="before")
     @classmethod
     def _validate_source_object_refs(cls, value: object) -> tuple[str, ...]:
-        return _normalize_object_refs(value)
+        return normalize_object_refs(
+            value,
+            field_name="source_object_refs",
+            allowed_kinds=frozenset(SOURCE_OBJECT_KIND_PREFIXES),
+        )
 
 
 class TelemetryEvent(TelemetryRecord):
@@ -414,26 +503,21 @@ class Artifact(TelemetryRecord):
     @field_validator("source_evidence_refs", mode="before")
     @classmethod
     def _normalize_source_evidence_refs(cls, value: object) -> tuple[str, ...]:
-        return _normalize_evidence_refs(value)
+        return normalize_evidence_refs(
+            value,
+            field_name="source_evidence_refs",
+        )
 
     @field_validator("source_object_refs", mode="before")
     @classmethod
     def _normalize_source_object_refs(cls, value: object) -> tuple[str, ...]:
-        return _normalize_object_refs(value)
+        return normalize_object_refs(
+            value,
+            field_name="source_object_refs",
+            allowed_kinds=frozenset(SOURCE_OBJECT_KIND_PREFIXES),
+        )
 
 
 def _parse_utc_z_timestamp(value: str) -> datetime:
     """Parse a UTC RFC3339 Z timestamp into an aware datetime."""
     return datetime.fromisoformat(value.removesuffix("Z") + "+00:00")
-
-
-def _validate_object_ref(value: str) -> str:
-    """Validate a canonical source-object reference."""
-    if ":" not in value:
-        raise ValueError("source_object_refs entries must use '<kind>:<source_ref>' format")
-    source_kind, source_ref = value.split(":", 1)
-    prefix = _SOURCE_OBJECT_KIND_PREFIXES.get(source_kind)
-    if prefix is None:
-        raise ValueError(f"unsupported source_object_refs kind: {source_kind!r}")
-    validate_telemetry_id(source_ref, prefix)
-    return value

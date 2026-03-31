@@ -785,6 +785,32 @@ def test_close_check_docs_consistency_pass_after_fix(tmp_path: Path) -> None:
     assert r.ok is True
 
 
+def test_close_check_does_not_block_on_phase1_provenance_payload(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    root = tmp_path / "repo5b"
+    root.mkdir()
+    _setup_repo(
+        root,
+        tasks_body="- [x] done\n### Task 1.1\n- **验收标准（AC）**：ok",
+        plan_status="completed",
+    )
+
+    monkeypatch.setattr(
+        "ai_sdlc.core.close_check.load_phase1_provenance_gate_payload",
+        lambda *_args, **_kwargs: {
+            "decision_result": "block",
+            "enforced": False,
+            "reason": "phase1_read_only",
+        },
+    )
+
+    r = run_close_check(cwd=root, wi=Path("specs/001-wi"))
+    assert r.ok is True
+    assert all("provenance" not in blocker.lower() for blocker in r.blockers)
+
+
 def test_close_check_default_skips_unlisted_docs_sc021(tmp_path: Path) -> None:
     """FR-096: random docs/** files are not scanned unless --all-docs."""
     root = tmp_path / "repo6"

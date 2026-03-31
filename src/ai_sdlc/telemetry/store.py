@@ -429,6 +429,28 @@ class TelemetryStore:
             step_id=record.step_id,
         )
 
+    def scope_chain_from_path(self, path: Path) -> tuple[ScopeLevel, str, str | None, str | None]:
+        """Derive the canonical scope chain from an on-disk telemetry path."""
+        relative = path.resolve().relative_to(self.local_root.resolve())
+        parts = relative.parts
+        if len(parts) < 2 or parts[0] != "sessions":
+            raise ValueError(f"path is outside telemetry sessions root: {path}")
+
+        goal_session_id = parts[1]
+        workflow_run_id: str | None = None
+        step_id: str | None = None
+
+        if len(parts) >= 4 and parts[2] == "runs":
+            workflow_run_id = parts[3]
+        if len(parts) >= 6 and parts[4] == "steps":
+            step_id = parts[5]
+
+        if step_id is not None:
+            return (ScopeLevel.STEP, goal_session_id, workflow_run_id, step_id)
+        if workflow_run_id is not None:
+            return (ScopeLevel.RUN, goal_session_id, workflow_run_id, None)
+        return (ScopeLevel.SESSION, goal_session_id, None, None)
+
     def _kind_for_record(self, record: TelemetryEvent | Evidence | Evaluation | Violation | Artifact) -> str:
         if isinstance(record, TelemetryEvent):
             return "telemetry_event"

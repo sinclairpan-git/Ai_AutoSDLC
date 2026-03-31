@@ -8,6 +8,7 @@ from pathlib import Path
 
 from ai_sdlc.branch.git_client import GitError
 from ai_sdlc.context.state import load_checkpoint
+from ai_sdlc.core.provenance_gate import load_phase1_provenance_gate_payload
 from ai_sdlc.core.release_gate import ReleaseGateParseError, load_release_gate_report
 from ai_sdlc.core.workitem_traceability import evaluate_work_item_branch_lifecycle
 from ai_sdlc.gates.task_ac_checks import (
@@ -262,6 +263,7 @@ def build_verification_gate_context(root: Path) -> dict[str, object]:
         "coverage_gaps": report.coverage_gaps if decision_result == "block" else (),
         "release_gate": report.release_gate,
         "verification_governance": governance,
+        "provenance_phase1": load_phase1_provenance_gate_payload(root),
     }
 
 

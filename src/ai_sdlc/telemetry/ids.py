@@ -14,6 +14,11 @@ ID_PREFIXES = {
     "evaluation_id": "eval_",
     "violation_id": "vio_",
     "artifact_id": "art_",
+    "provenance_node_id": "pn_",
+    "provenance_edge_id": "pe_",
+    "provenance_assessment_id": "pa_",
+    "provenance_gap_id": "pg_",
+    "provenance_hook_id": "ph_",
 }
 
 _PREFIXES = tuple(sorted(ID_PREFIXES.values(), key=len, reverse=True))
@@ -71,3 +76,23 @@ def new_violation_id() -> str:
 
 def new_artifact_id() -> str:
     return new_prefixed_id(ID_PREFIXES["artifact_id"])
+
+
+def new_provenance_node_id() -> str:
+    return new_prefixed_id(ID_PREFIXES["provenance_node_id"])
+
+
+def new_provenance_edge_id() -> str:
+    return new_prefixed_id(ID_PREFIXES["provenance_edge_id"])
+
+
+def new_provenance_assessment_id() -> str:
+    return new_prefixed_id(ID_PREFIXES["provenance_assessment_id"])
+
+
+def new_provenance_gap_id() -> str:
+    return new_prefixed_id(ID_PREFIXES["provenance_gap_id"])
+
+
+def new_provenance_hook_id() -> str:
+    return new_prefixed_id(ID_PREFIXES["provenance_hook_id"])

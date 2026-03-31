@@ -596,6 +596,30 @@ python -m ai_sdlc telemetry close-session --goal-session-id <gs_id> --status suc
 
 这里的 `record-evaluation` 对应 telemetry 治理对象里的“评估结论”；CLI 沿用内部 `evaluation` 命名，而不是额外引入 `assessment` 别名。
 
+### 2.5) provenance read-only 审计面
+
+在仓库根目录终端执行：
+
+```bash
+python -m ai_sdlc provenance summary --subject-ref <provenance_ref>
+python -m ai_sdlc provenance explain --subject-ref <provenance_ref>
+python -m ai_sdlc provenance gaps --subject-ref <provenance_ref>
+python -m ai_sdlc provenance summary --subject-ref <provenance_ref> --json
+```
+
+这一组命令的定位是：
+
+- `summary`：日常快速看 provenance 链路概况。
+- `explain`：展开 assessment，确认总体链状态、最高置信来源和关键缺口。
+- `gaps`：只看当前阻止更高置信结论的 provenance 缺口。
+
+Phase 1 的边界要记住：
+
+- 这是 **只读** 审计面，不会 graph rewrite、repair、implicit rebuild 或初始化 provenance 根目录。
+- 它不会把 provenance candidate 自动提升成 `verify / close-check / release` 的默认 blocker。
+- 当前没有 host-native full coverage；缺失链路可能表现为 `unknown / unobserved / unsupported`。
+- `manual injection` 仍只是测试 / 诊断 / 回放入口，不是日常业务入口；日常面就是 `summary / explain / gaps`。
+
 ### 3) `accepted` 的含义
 
 - `accepted` 表示“风险被接受/债务被接受”，不是“问题已解决”。
@@ -624,6 +648,7 @@ python -m ai_sdlc telemetry close-session --goal-session-id <gs_id> --status suc
 | Surface | 典型命令 | 主定位 | 仓库/本地状态影响 |
 |---|---|---|---|
 | bounded telemetry status | `python -m ai_sdlc status --json` | 只读 telemetry + branch lifecycle 摘要 | **只读**：不初始化 telemetry root，不 rebuild indexes，不触发 adapter |
+| provenance inspection | `python -m ai_sdlc provenance summary` / `explain` / `gaps` | provenance read-only 审计 | **只读**：不触发 adapter，不 repair graph，不把 candidate 提升成默认 blocker |
 | doctor | `python -m ai_sdlc doctor` | 只读诊断 | **只读**：不 deep scan trace，不触发 adapter；会显示 branch lifecycle readiness |
 | scan | `python -m ai_sdlc scan <path>` | operator / analysis | **analysis-only**：深度读取代码库并打印摘要；不初始化 `.ai-sdlc/`，不触发 adapter |
 | verify constraints | `python -m ai_sdlc verify constraints` | 仓库级规则 / 治理只读校验 | **只读**：不触发 adapter；当前会额外暴露 active work item 的 branch lifecycle governance，但不替代代码变更场景下的 `pytest` / `ruff` |
@@ -635,6 +660,7 @@ python -m ai_sdlc telemetry close-session --goal-session-id <gs_id> --status suc
 | program integrate --execute --yes | `python -m ai_sdlc program integrate --execute --yes` | guarded execute gate | **可能写 adapter**；当前会做 gate 校验与可选 report 写入，不会直接替你修改各 spec 内容 |
 | manual telemetry | `python -m ai_sdlc telemetry open-session`、`record-*`、`close-session` | operator evidence write | **会写 telemetry**：落到 `.ai-sdlc/local/telemetry/` 与派生 indexes；CLI 入口本身也可能先触发 adapter apply |
 | workitem init | `python -m ai_sdlc workitem init --title "新 capability 标题"` | direct-formal 初始化 formal work item | **会写 formal docs**：直接创建 `specs/<WI>/spec.md`、`plan.md`、`tasks.md`；不会要求先写 `docs/superpowers/*` |
+| workitem truth-check | `python -m ai_sdlc workitem truth-check --wi specs/<WI>/ --rev <branch|commit>` | work item 指定 revision 的阶段真值核验 | **命令主体只读，但可能写 adapter**：绑定用户指定 branch/commit 后，回答该 WI 在目标 revision 上是 `formal_freeze_only`、`branch_only_implemented` 还是 `mainline_merged`，并显式披露 HEAD/revision mismatch |
 | workitem branch-check | `python -m ai_sdlc workitem branch-check --wi specs/<WI>/` | work item 关联 branch/worktree 只读盘点 | **命令主体只读，但可能写 adapter**：回答当前 WI 尚有哪些未处置 branch/worktree，以及它们相对 `main` 的 divergence 与 disposition |
 | workitem close-check | `python -m ai_sdlc workitem close-check --wi specs/<WI>/` | work item 收口真值核验 | **命令主体只读，但可能写 adapter**：会核对 tasks / planned batch / traceability / execution-log / fresh verification / git closure / branch lifecycle disposition truth；若关联 scratch/worktree 分支仍未处置且相对 `main` 存在漂移，会返回 `BLOCKER` |
 | offline build | `./packaging/offline/build_offline_bundle.sh` | 分发打包 | **会写本地构建产物**：写 `dist/`、`dist-offline/` 和 bundle archives，不修改业务仓源码 |
@@ -665,6 +691,10 @@ python -m ai_sdlc telemetry close-session --goal-session-id <gs_id> --status suc
   - 这是**work item 级 branch/worktree 只读盘点面**。
   - 它回答“这个 work item 当前还有哪些未处置 branch/worktree”，并显示它们相对 `main` 的 ahead/behind、worktree 绑定与 disposition。
   - `branch-check` 不会自动 merge / delete / prune / archive；它只是把 disposition 真值显式化。
+- `uv run ai-sdlc workitem truth-check --wi specs/<WI>/ --rev <branch|commit>`
+  - 这是**work item 级 revision-scoped 阶段真值面**。
+  - 它回答“指定的 branch/commit 上，这个 WI 只是 formal freeze、已经在分支实现，还是已进 `main`”，并显式披露当前 HEAD 是否与目标 revision 一致。
+  - 当你在 `main` 上审查另一个分支或历史提交时，优先先跑 `truth-check`，不要把当前 checkout 的 execution evidence 直接外推到目标 revision。
 - `uv run ai-sdlc workitem close-check --wi specs/<WI>/ --all-docs`
   - 默认只扫 `specs/<WI>/*.md`，以及 `docs/pull-request-checklist.zh.md`、`docs/USER_GUIDE.zh-CN.md`。
   - 只有当你需要做全仓 `docs/**/*.md` wording drift 复核时，才加 `--all-docs`。
@@ -675,6 +705,7 @@ python -m ai_sdlc telemetry close-session --goal-session-id <gs_id> --status suc
 uv run pytest -q
 uv run ruff check src tests
 uv run ai-sdlc verify constraints
+uv run ai-sdlc workitem truth-check --wi specs/<WI> --rev <branch-or-commit>
 uv run ai-sdlc workitem branch-check --wi specs/<WI>
 git status --short
 ```

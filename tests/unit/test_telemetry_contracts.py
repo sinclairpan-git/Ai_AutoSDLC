@@ -243,6 +243,11 @@ def test_id_prefix_constants_are_frozen_once() -> None:
         "evaluation_id": "eval_",
         "violation_id": "vio_",
         "artifact_id": "art_",
+        "provenance_node_id": "pn_",
+        "provenance_edge_id": "pe_",
+        "provenance_assessment_id": "pa_",
+        "provenance_gap_id": "pg_",
+        "provenance_hook_id": "ph_",
     }
 
 
@@ -616,6 +621,10 @@ def test_gate_decision_payload_requires_gate_capable_minimum_fields() -> None:
         decision_result=GateDecisionResult.BLOCK,
         confidence=Confidence.HIGH,
         evidence_refs=("evd_0123456789abcdef0123456789abcdef",),
+        source_object_refs=(
+            "event:evt_0123456789abcdef0123456789abcdef",
+            "evidence:evd_0123456789abcdef0123456789abcdef",
+        ),
         source_closure_status=SourceClosureStatus.CLOSED,
         observer_version="observer-v1",
         policy_name="self_hosting-default",
@@ -625,6 +634,10 @@ def test_gate_decision_payload_requires_gate_capable_minimum_fields() -> None:
 
     assert payload.decision_result is GateDecisionResult.BLOCK
     assert payload.source_closure_status is SourceClosureStatus.CLOSED
+    assert payload.source_object_refs == (
+        "event:evt_0123456789abcdef0123456789abcdef",
+        "evidence:evd_0123456789abcdef0123456789abcdef",
+    )
     assert payload.profile is TelemetryProfile.SELF_HOSTING
     assert payload.mode is TelemetryMode.STRICT
 
