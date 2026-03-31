@@ -111,7 +111,7 @@ py -3.11 -m venv .venv
 Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
 .\.venv\Scripts\Activate.ps1
 python -m pip install -U pip
-pip install "https://github.com/sinclairpan-git/Ai_AutoSDLC/archive/refs/tags/v0.2.5.zip"
+pip install "https://github.com/sinclairpan-git/Ai_AutoSDLC/archive/refs/tags/v0.3.0.zip"
 ```
 
 **macOS 直接复制：**
@@ -120,7 +120,7 @@ pip install "https://github.com/sinclairpan-git/Ai_AutoSDLC/archive/refs/tags/v0
 python3 -m venv .venv
 source .venv/bin/activate
 python -m pip install -U pip
-pip install "https://github.com/sinclairpan-git/Ai_AutoSDLC/archive/refs/tags/v0.2.5.zip"
+pip install "https://github.com/sinclairpan-git/Ai_AutoSDLC/archive/refs/tags/v0.3.0.tar.gz"
 ```
 
 **执行成功以后，你应该看到：**
@@ -138,6 +138,37 @@ Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
 ```
 
 - 如果 `pip install` 网络失败，说明当前机器访问 GitHub 有问题。先解决网络，再重试安装。
+
+**如果你已经装过旧版本，想直接升级：**
+
+前提：
+
+- 当前项目目录里已经有 `.venv`
+- 下面命令是在项目根目录执行
+
+**Windows 升级直接复制：**
+
+```powershell
+.\.venv\Scripts\Activate.ps1
+python -m pip install -U pip
+pip install --upgrade --force-reinstall "https://github.com/sinclairpan-git/Ai_AutoSDLC/archive/refs/tags/v0.3.0.zip"
+```
+
+**Linux 升级直接复制：**
+
+```bash
+source .venv/bin/activate
+python -m pip install -U pip
+pip install --upgrade --force-reinstall "https://github.com/sinclairpan-git/Ai_AutoSDLC/archive/refs/tags/v0.3.0.tar.gz"
+```
+
+**macOS 升级直接复制：**
+
+```bash
+source .venv/bin/activate
+python -m pip install -U pip
+pip install --upgrade --force-reinstall "https://github.com/sinclairpan-git/Ai_AutoSDLC/archive/refs/tags/v0.3.0.tar.gz"
+```
 
 ### 第 5 步：验证 AI-SDLC 安装成功
 
@@ -395,7 +426,7 @@ py -3.11 -m venv .venv
 Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
 .\.venv\Scripts\Activate.ps1
 python -m pip install -U pip
-pip install "https://github.com/sinclairpan-git/Ai_AutoSDLC/archive/refs/tags/v0.2.5.zip"
+pip install "https://github.com/sinclairpan-git/Ai_AutoSDLC/archive/refs/tags/v0.3.0.zip"
 ```
 
 **macOS 直接复制：**
@@ -404,13 +435,44 @@ pip install "https://github.com/sinclairpan-git/Ai_AutoSDLC/archive/refs/tags/v0
 python3 -m venv .venv
 source .venv/bin/activate
 python -m pip install -U pip
-pip install "https://github.com/sinclairpan-git/Ai_AutoSDLC/archive/refs/tags/v0.2.5.zip"
+pip install "https://github.com/sinclairpan-git/Ai_AutoSDLC/archive/refs/tags/v0.3.0.tar.gz"
 ```
 
 **执行成功以后，你应该看到：**
 
 - 项目根目录里出现 `.venv`
 - `pip install` 完成，没有报错
+
+**如果你已经装过旧版本，想直接升级：**
+
+前提：
+
+- 当前项目目录里已经有 `.venv`
+- 下面命令是在项目根目录执行
+
+**Windows 升级直接复制：**
+
+```powershell
+.\.venv\Scripts\Activate.ps1
+python -m pip install -U pip
+pip install --upgrade --force-reinstall "https://github.com/sinclairpan-git/Ai_AutoSDLC/archive/refs/tags/v0.3.0.zip"
+```
+
+**Linux 升级直接复制：**
+
+```bash
+source .venv/bin/activate
+python -m pip install -U pip
+pip install --upgrade --force-reinstall "https://github.com/sinclairpan-git/Ai_AutoSDLC/archive/refs/tags/v0.3.0.tar.gz"
+```
+
+**macOS 升级直接复制：**
+
+```bash
+source .venv/bin/activate
+python -m pip install -U pip
+pip install --upgrade --force-reinstall "https://github.com/sinclairpan-git/Ai_AutoSDLC/archive/refs/tags/v0.3.0.tar.gz"
+```
 
 ### 第 5 步：验证安装成功
 
