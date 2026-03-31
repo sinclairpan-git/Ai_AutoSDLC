@@ -40,6 +40,8 @@ Phase 1 明确是 `gate-capable but read-only`：
 - `confidence` 分层语义固定：
   - facts 层上的 `confidence` 表示观测来源 / 记录可靠度。
   - interpretation / governance 层上的 `confidence` 表示解释或治理结论置信度。
+- `ingress_kind` 最小值域固定为 `auto | injected | inferred`。
+  - `unknown` 只表示 gap / placeholder 语义，不是完整 ingress fact kind。
 - `scope_level` Phase 1 只复用现有 `session | run | step`，不新增 provenance 专用层级。
 - `ingestion_order` 固定为 session-local 单调递增排序号，由 writer 分配；同一写入批次按 append 顺序稳定排序。
 - `relation_kind` 的命名统一按 `from_ref -> to_ref` 方向解释。
@@ -142,6 +144,7 @@ Phase 1 明确是 `gate-capable but read-only`：
 - 核心约束：
   - `mutable current + revisions`
   - `chain_status` 只做总体闭合度摘要，V1 固定为 `closed | partial | unknown`
+  - `highest_confidence_source` 表示当前 assessment 所依赖的最高置信来源类别，或其代表性来源引用摘要
   - 只能 enrich，不能 override 现有 evaluation 主结果
   - 不得由 ingress adapter 直接生成
 - 和现有 telemetry 的关系：
@@ -177,6 +180,7 @@ Phase 1 明确是 `gate-capable but read-only`：
     - `incomplete`
     - `unsupported`
   - `unsupported` 只表示“当前 ingress / host capability 根本不支持提供该段链路”
+  - `detail` 优先结构化、机器可消费；必要时可附带人类可读补充说明
   - 具体原因分类只由 gap 承担，不由 `chain_status` 承担
 - 和现有 telemetry 的关系：
   - 可挂到 provenance node/edge
@@ -210,6 +214,7 @@ Phase 1 明确是 `gate-capable but read-only`：
     - `advisory`
     - `warning`
     - `blocker_candidate`
+  - `policy_name` 表示 policy 的稳定标识，和现有 `policy / profile / mode` 口径对齐
   - Phase 1 只读可见，不自动进入 gate
   - 追加 provenance 维度，不改写现有 violation 真值
   - candidate 可生成，不等于默认可发布
@@ -343,6 +348,7 @@ Phase 1 明确是 `gate-capable but read-only`：
     - 对接现有 `event / evidence / evaluation / violation / artifact`
   - 第一阶段启用范围：
     - 检出孤儿边、悬空节点、指向不存在 telemetry object 的 edge
+    - 输出稳定的 machine-readable failure class，供 inspection 与 snapshot tests 消费
   - 第二阶段扩展位：
     - 追加 host-aware resolution helpers
 
@@ -433,6 +439,7 @@ Phase 1 明确是 `gate-capable but read-only`：
   - 悬空节点
   - 指向不存在 telemetry object 的 edge
   - 无法挂回 `trace_context` 的 provenance object
+- 上述 failure class 的分类值和输出结构必须稳定，适合 snapshot tests 与 downstream inspection 消费。
 - closure 状态至少区分 `closed | partial | unknown`。
 - integrity / closure 失败结果必须进入 `assessment / gap / finding`，不得伪造 fact。
 - `unsupported` 只能表示 host capability 不支持，不得和 `unknown / unobserved / incomplete` 混用。
@@ -460,6 +467,7 @@ Phase 1 明确是 `gate-capable but read-only`：
   - `skill invocation`
   - `exec_command bridge`
   - `rule provenance`
+- 每条链至少要有一组能闭包的正样本和一组显式缺口/失败的负样本。
 - 每条链都必须证明：
   - 能落盘
   - 能解析
@@ -484,6 +492,7 @@ Phase 1 明确是 `gate-capable but read-only`：
 
 - `cites`：主体显式引用规则/文档。
 - `supports`：规则/文档作为某个 assessment / candidate 的支持依据。
+- 对 `auto` 来源，Phase 1 的 `unsupported` 是允许的正式结果，表示宿主 ingress 尚未接入，不代表 contract 失败。
 
 ### 5.2 Matrix
 
@@ -555,7 +564,7 @@ Phase 1 明确是 `gate-capable but read-only`：
   - `宿主未提供`
   - `宿主明确否认`
 - 二者不能都落成 `unknown`。
-- `宿主明确否认` 应进入可区分的负向事实或解释结果，而不是被静默吞掉。
+- `宿主明确否认` 在 Phase 2 可落成单独的负向事实或负向解释对象，但 Phase 1 不冻结其具体对象模型。
 
 ### 6.4 Injected Paths That Stay Or Recede
 
