@@ -353,7 +353,7 @@
 
 ##### Legacy scratch branch closeout | codex/005-b1-t11
 
-- **改动范围**：[`task-execution-log.md`](task-execution-log.md)
+- **改动范围**：`task-execution-log.md`
 - **改动内容**：
   - 将 `codex/005-b1-t11` 明确处置为 `deleted`。
   - 说明该分支承载的是早期 telemetry policy/profile-mode 旧实现链；当前主线已由后续提交链完成吸收并形成新的 formal truth，因此该旧 scratch 分支不再保留。
@@ -387,7 +387,7 @@
 
 - **已完成 git 提交**：是
 - **提交哈希**：本批 latest closeout commit 的完整 SHA 以当前 `HEAD`（`git rev-parse HEAD`）为准
-- **改动范围**：[`task-execution-log.md`](task-execution-log.md)
+- **改动范围**：`task-execution-log.md`
 - 当前批次 branch disposition 状态：`deleted`
 - 当前批次 worktree disposition 状态：`removed`
 - **是否继续下一批**：否
