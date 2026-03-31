@@ -26,6 +26,12 @@ class CaptureMode(str, Enum):
     INFERRED = "inferred"
 
 
+class IngressKind(str, Enum):
+    AUTO = "auto"
+    INJECTED = "injected"
+    INFERRED = "inferred"
+
+
 class Confidence(str, Enum):
     HIGH = "high"
     MEDIUM = "medium"
@@ -146,6 +152,43 @@ class SourceClosureStatus(str, Enum):
     UNKNOWN = "unknown"
     INCOMPLETE = "incomplete"
     CLOSED = "closed"
+
+
+class ProvenanceChainStatus(str, Enum):
+    CLOSED = "closed"
+    PARTIAL = "partial"
+    UNKNOWN = "unknown"
+
+
+class ProvenanceNodeKind(str, Enum):
+    TRIGGER_POINT = "trigger_point"
+    CONVERSATION_MESSAGE = "conversation_message"
+    SKILL_INVOCATION = "skill_invocation"
+    EXEC_COMMAND_BRIDGE = "exec_command_bridge"
+    RULE_REFERENCE = "rule_reference"
+
+
+class ProvenanceRelationKind(str, Enum):
+    TRIGGERED_BY = "triggered_by"
+    INVOKED = "invoked"
+    BRIDGED_TO = "bridged_to"
+    CITES = "cites"
+    DERIVED_FROM = "derived_from"
+    SUPPORTS = "supports"
+    PRODUCED = "produced"
+
+
+class ProvenanceGapKind(str, Enum):
+    UNKNOWN = "unknown"
+    UNOBSERVED = "unobserved"
+    INCOMPLETE = "incomplete"
+    UNSUPPORTED = "unsupported"
+
+
+class ProvenanceCandidateResult(str, Enum):
+    ADVISORY = "advisory"
+    WARNING = "warning"
+    BLOCKER_CANDIDATE = "blocker_candidate"
 
 
 class HardFailCategory(str, Enum):
