@@ -7,7 +7,13 @@ from collections.abc import Iterable
 from dataclasses import dataclass
 from pathlib import Path
 
-from ai_sdlc.telemetry.contracts import Evidence, ScopeLevel, TelemetryEvent
+from ai_sdlc.telemetry.contracts import (
+    Evidence,
+    ModeChangeRecord,
+    ScopeLevel,
+    TelemetryEvent,
+    TraceContext,
+)
 from ai_sdlc.telemetry.control_points import build_canonical_control_point_event
 from ai_sdlc.telemetry.enums import (
     ActorType,
@@ -15,7 +21,10 @@ from ai_sdlc.telemetry.enums import (
     Confidence,
     EvidenceStatus,
     TelemetryEventStatus,
+    TelemetryMode,
+    TelemetryProfile,
     TraceLayer,
+    TriggerPointType,
 )
 from ai_sdlc.telemetry.generators import (
     control_point_evidence_digest,
@@ -60,6 +69,12 @@ class RuntimeTelemetry:
         self._step_ids: dict[str, str] = {}
         self._finished_steps: set[str] = set()
         self._run_closed = False
+        self.profile = TelemetryProfile.SELF_HOSTING
+        self.mode = TelemetryMode.LITE
+        self._pending_mode_change: ModeChangeRecord | None = None
+        self._last_session_event_id: str | None = None
+        self._last_run_event_id: str | None = None
+        self._last_step_event_ids: dict[str, str] = {}
         self._observer_triggers: list[ObserverTrigger] = []
         self.store.ensure_initialized()
 
@@ -67,25 +82,55 @@ class RuntimeTelemetry:
         """Ensure the minimal telemetry root exists."""
         return self.store.ensure_initialized()
 
-    def open_workflow_run(self) -> WorkflowRunContext:
+    def bind_policy(
+        self,
+        *,
+        profile: TelemetryProfile,
+        mode: TelemetryMode,
+        mode_change: ModeChangeRecord | None = None,
+    ) -> None:
+        """Bind runtime telemetry policy for subsequent lifecycle writes."""
+        self.profile = profile
+        self.mode = mode
+        self._pending_mode_change = mode_change
+
+    def open_workflow_run(
+        self,
+        *,
+        profile: TelemetryProfile | None = None,
+        mode: TelemetryMode | None = None,
+        mode_change: ModeChangeRecord | None = None,
+    ) -> WorkflowRunContext:
         """Open the active session and workflow run if missing."""
+        if profile is not None and mode is not None:
+            self.bind_policy(profile=profile, mode=mode, mode_change=mode_change)
         goal_session_id = self.open_session()
         if self.workflow_run_id is None:
             self._step_ids = {}
             self._finished_steps = set()
+            self._last_step_event_ids = {}
             self._run_closed = False
             self.workflow_run_id = new_workflow_run_id()
-            self.writer.write_event(
-                TelemetryEvent(
-                    scope_level=ScopeLevel.RUN,
-                    goal_session_id=goal_session_id,
+            event = TelemetryEvent(
+                scope_level=ScopeLevel.RUN,
+                goal_session_id=goal_session_id,
+                workflow_run_id=self.workflow_run_id,
+                profile=self.profile,
+                mode=self.mode,
+                trace_layer=TraceLayer.WORKFLOW,
+                trigger_point_type=TriggerPointType.COLLECTOR,
+                trace_context=self._trace_context(
                     workflow_run_id=self.workflow_run_id,
-                    trace_layer=TraceLayer.WORKFLOW,
-                    actor_type=ActorType.FRAMEWORK_RUNTIME,
-                    confidence=Confidence.HIGH,
-                    status=TelemetryEventStatus.STARTED,
-                )
+                    parent_event_id=self._last_session_event_id,
+                ),
+                mode_change=self._pending_mode_change,
+                actor_type=ActorType.FRAMEWORK_RUNTIME,
+                confidence=Confidence.HIGH,
+                status=TelemetryEventStatus.STARTED,
             )
+            self.writer.write_event(event)
+            self._last_run_event_id = event.event_id
+            self._pending_mode_change = None
         return WorkflowRunContext(
             goal_session_id=goal_session_id,
             workflow_run_id=self.workflow_run_id,
@@ -95,16 +140,20 @@ class RuntimeTelemetry:
         """Open the active goal session if missing."""
         if self.goal_session_id is None:
             self.goal_session_id = new_goal_session_id()
-            self.writer.write_event(
-                TelemetryEvent(
-                    scope_level=ScopeLevel.SESSION,
-                    goal_session_id=self.goal_session_id,
-                    trace_layer=TraceLayer.WORKFLOW,
-                    actor_type=ActorType.FRAMEWORK_RUNTIME,
-                    confidence=Confidence.HIGH,
-                    status=TelemetryEventStatus.STARTED,
-                )
+            event = TelemetryEvent(
+                scope_level=ScopeLevel.SESSION,
+                goal_session_id=self.goal_session_id,
+                profile=self.profile,
+                mode=self.mode,
+                trace_layer=TraceLayer.WORKFLOW,
+                trigger_point_type=TriggerPointType.COLLECTOR,
+                trace_context=self._trace_context(),
+                actor_type=ActorType.FRAMEWORK_RUNTIME,
+                confidence=Confidence.HIGH,
+                status=TelemetryEventStatus.STARTED,
             )
+            self.writer.write_event(event)
+            self._last_session_event_id = event.event_id
         return self.goal_session_id
 
     def close_session(
@@ -123,22 +172,30 @@ class RuntimeTelemetry:
         if self._session_has_open_workflow_run(session_id):
             raise ValueError("workflow run is still open")
 
-        self.writer.write_event(
-            TelemetryEvent(
-                scope_level=ScopeLevel.SESSION,
-                goal_session_id=session_id,
-                trace_layer=TraceLayer.WORKFLOW,
-                actor_type=ActorType.FRAMEWORK_RUNTIME,
-                confidence=Confidence.HIGH,
-                status=status,
-            )
+        event = TelemetryEvent(
+            scope_level=ScopeLevel.SESSION,
+            goal_session_id=session_id,
+            profile=self.profile,
+            mode=self.mode,
+            trace_layer=TraceLayer.WORKFLOW,
+            trigger_point_type=TriggerPointType.COLLECTOR,
+            trace_context=self._trace_context(
+                parent_event_id=self._last_session_event_id
+            ),
+            actor_type=ActorType.FRAMEWORK_RUNTIME,
+            confidence=Confidence.HIGH,
+            status=status,
         )
+        self.writer.write_event(event)
         if self.goal_session_id == session_id:
             self.workflow_run_id = None
             self._step_ids = {}
             self._finished_steps = set()
+            self._last_step_event_ids = {}
             self._run_closed = True
             self.goal_session_id = None
+            self._last_session_event_id = None
+            self._last_run_event_id = None
         return session_id
 
     def validate_manual_scope(
@@ -224,27 +281,32 @@ class RuntimeTelemetry:
             or self._run_closed
         ):
             return
-        goal_session_id = self.goal_session_id
-        workflow_run_id = self.workflow_run_id
-        self.writer.write_event(
-            TelemetryEvent(
-                scope_level=ScopeLevel.RUN,
-                goal_session_id=goal_session_id,
-                workflow_run_id=workflow_run_id,
-                trace_layer=TraceLayer.WORKFLOW,
-                actor_type=ActorType.FRAMEWORK_RUNTIME,
-                confidence=Confidence.HIGH,
-                status=status,
-            )
+        event = TelemetryEvent(
+            scope_level=ScopeLevel.RUN,
+            goal_session_id=self.goal_session_id,
+            workflow_run_id=self.workflow_run_id,
+            profile=self.profile,
+            mode=self.mode,
+            trace_layer=TraceLayer.WORKFLOW,
+            trigger_point_type=TriggerPointType.COLLECTOR,
+            trace_context=self._trace_context(
+                workflow_run_id=self.workflow_run_id,
+                parent_event_id=self._last_run_event_id,
+            ),
+            actor_type=ActorType.FRAMEWORK_RUNTIME,
+            confidence=Confidence.HIGH,
+            status=status,
         )
+        self.writer.write_event(event)
         self._queue_observer_trigger(
             scope_level=ScopeLevel.RUN,
-            goal_session_id=goal_session_id,
-            workflow_run_id=workflow_run_id,
+            goal_session_id=self.goal_session_id,
+            workflow_run_id=self.workflow_run_id,
         )
         self.workflow_run_id = None
         self._step_ids = {}
         self._finished_steps = set()
+        self._last_step_event_ids = {}
         self._run_closed = True
 
     def begin_step(self, stage: str) -> str | None:
@@ -255,18 +317,26 @@ class RuntimeTelemetry:
         if step_id is None:
             step_id = new_step_id()
             self._step_ids[stage] = step_id
-            self.writer.write_event(
-                TelemetryEvent(
-                    scope_level=ScopeLevel.STEP,
-                    goal_session_id=self.goal_session_id,
+            event = TelemetryEvent(
+                scope_level=ScopeLevel.STEP,
+                goal_session_id=self.goal_session_id,
+                workflow_run_id=self.workflow_run_id,
+                step_id=step_id,
+                profile=self.profile,
+                mode=self.mode,
+                trace_layer=TraceLayer.WORKFLOW,
+                trigger_point_type=TriggerPointType.COLLECTOR,
+                trace_context=self._trace_context(
                     workflow_run_id=self.workflow_run_id,
                     step_id=step_id,
-                    trace_layer=TraceLayer.WORKFLOW,
-                    actor_type=ActorType.FRAMEWORK_RUNTIME,
-                    confidence=Confidence.HIGH,
-                    status=TelemetryEventStatus.STARTED,
-                )
+                    parent_event_id=self._last_run_event_id,
+                ),
+                actor_type=ActorType.FRAMEWORK_RUNTIME,
+                confidence=Confidence.HIGH,
+                status=TelemetryEventStatus.STARTED,
             )
+            self.writer.write_event(event)
+            self._last_step_event_ids[step_id] = event.event_id
         return step_id
 
     def open_step_scope(self, stage: str) -> tuple[WorkflowRunContext, str]:
@@ -288,24 +358,30 @@ class RuntimeTelemetry:
             or self.workflow_run_id is None
         ):
             return None
-        goal_session_id = self.goal_session_id
-        workflow_run_id = self.workflow_run_id
-        self.writer.write_event(
-            TelemetryEvent(
-                scope_level=ScopeLevel.STEP,
-                goal_session_id=goal_session_id,
-                workflow_run_id=workflow_run_id,
+        event = TelemetryEvent(
+            scope_level=ScopeLevel.STEP,
+            goal_session_id=self.goal_session_id,
+            workflow_run_id=self.workflow_run_id,
+            step_id=step_id,
+            profile=self.profile,
+            mode=self.mode,
+            trace_layer=TraceLayer.WORKFLOW,
+            trigger_point_type=TriggerPointType.OBSERVER_ASYNC,
+            trace_context=self._trace_context(
+                workflow_run_id=self.workflow_run_id,
                 step_id=step_id,
-                trace_layer=TraceLayer.WORKFLOW,
-                actor_type=ActorType.FRAMEWORK_RUNTIME,
-                confidence=Confidence.HIGH,
-                status=self._verdict_status(verdict),
-            )
+                parent_event_id=self._last_step_event_ids.get(step_id),
+            ),
+            actor_type=ActorType.FRAMEWORK_RUNTIME,
+            confidence=Confidence.HIGH,
+            status=self._verdict_status(verdict),
         )
+        self.writer.write_event(event)
+        self._last_step_event_ids[step_id] = event.event_id
         self._queue_observer_trigger(
             scope_level=ScopeLevel.STEP,
-            goal_session_id=goal_session_id,
-            workflow_run_id=workflow_run_id,
+            goal_session_id=self.goal_session_id,
+            workflow_run_id=self.workflow_run_id,
             step_id=step_id,
             stage=stage,
         )
@@ -337,12 +413,21 @@ class RuntimeTelemetry:
             goal_session_id=self.goal_session_id,
             workflow_run_id=self.workflow_run_id,
             step_id=step_id,
+            profile=self.profile,
+            mode=self.mode,
             trace_layer=TraceLayer.TOOL,
+            trigger_point_type=TriggerPointType.COLLECTOR,
+            trace_context=self._trace_context(
+                workflow_run_id=self.workflow_run_id,
+                step_id=step_id,
+                parent_event_id=self._last_step_event_ids.get(step_id),
+            ),
             actor_type=actor_type,
             confidence=Confidence.MEDIUM,
             status=status,
         )
         self.writer.write_event(event)
+        self._last_step_event_ids[step_id] = event.event_id
         return event
 
     def record_tool_evidence(
@@ -426,8 +511,16 @@ class RuntimeTelemetry:
             goal_session_id=self.goal_session_id,
             workflow_run_id=self.workflow_run_id,
             step_id=step_id,
+            profile=self.profile,
+            mode=self.mode,
+            trace_context=self._trace_context(
+                workflow_run_id=self.workflow_run_id,
+                step_id=step_id,
+                parent_event_id=self._last_step_event_ids.get(step_id),
+            ),
         )
         self.writer.write_event(event)
+        self._last_step_event_ids[step_id] = event.event_id
         evidence = self._record_control_point_evidence(
             scope_level=ScopeLevel.STEP,
             workflow_run_id=event.workflow_run_id,
@@ -442,6 +535,24 @@ class RuntimeTelemetry:
             },
         )
         return event, evidence
+
+    def _trace_context(
+        self,
+        *,
+        workflow_run_id: str | None = None,
+        step_id: str | None = None,
+        parent_event_id: str | None = None,
+    ) -> TraceContext | None:
+        if self.goal_session_id is None:
+            return None
+        return TraceContext(
+            goal_session_id=self.goal_session_id,
+            workflow_run_id=workflow_run_id,
+            step_id=step_id,
+            worker_id=None,
+            agent_id=None,
+            parent_event_id=parent_event_id,
+        )
 
     def _record_control_point_evidence(
         self,

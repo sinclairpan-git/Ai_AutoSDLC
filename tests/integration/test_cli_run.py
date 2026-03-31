@@ -10,10 +10,17 @@ from typer.testing import CliRunner
 
 from ai_sdlc.cli.main import app
 from ai_sdlc.context.state import load_checkpoint, save_checkpoint
+from ai_sdlc.core.config import save_project_config
 from ai_sdlc.core.runner import SDLCRunner
 from ai_sdlc.models.gate import GateCheck, GateResult, GateVerdict
+from ai_sdlc.models.project import ProjectConfig
 from ai_sdlc.models.state import Checkpoint, FeatureInfo
-from ai_sdlc.telemetry.paths import telemetry_manifest_path, telemetry_reports_root
+from ai_sdlc.telemetry.enums import TelemetryMode, TelemetryProfile
+from ai_sdlc.telemetry.paths import (
+    telemetry_local_root,
+    telemetry_manifest_path,
+    telemetry_reports_root,
+)
 
 runner = CliRunner()
 
@@ -179,6 +186,54 @@ class TestRunCommand:
         assert cp.execute_progress.total_batches == 2
         assert cp.execute_progress.completed_batches == 2
         assert cp.execute_progress.last_committed_task == "T003"
+
+    def test_run_binds_telemetry_profile_and_mode_from_project_config(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.chdir(tmp_path)
+        assert runner.invoke(app, ["init", "."]).exit_code == 0
+        save_project_config(
+            tmp_path,
+            ProjectConfig(
+                telemetry_profile=TelemetryProfile.EXTERNAL_PROJECT,
+                telemetry_mode=TelemetryMode.STRICT,
+            ),
+        )
+
+        original_run_gate = SDLCRunner._run_gate
+
+        def gate_wrapper(self: SDLCRunner, stage: str, cp: Checkpoint) -> GateResult:
+            if stage == "init":
+                return original_run_gate(self, stage, cp)
+            return GateResult(
+                stage=stage,
+                verdict=GateVerdict.PASS,
+                checks=[GateCheck(name=f"{stage}_ok", passed=True)],
+            )
+
+        monkeypatch.setattr(SDLCRunner, "_run_gate", gate_wrapper)
+
+        result = runner.invoke(app, ["run"])
+        assert result.exit_code == 0
+
+        manifest = json.loads(
+            telemetry_manifest_path(tmp_path).read_text(encoding="utf-8")
+        )
+        goal_session_id = next(iter(manifest["sessions"]))
+        workflow_run_id = next(iter(manifest["runs"]))
+        run_event = json.loads(
+            (
+                telemetry_local_root(tmp_path)
+                / "sessions"
+                / goal_session_id
+                / "runs"
+                / workflow_run_id
+                / "events.ndjson"
+            ).read_text(encoding="utf-8").splitlines()[0]
+        )
+
+        assert run_event["profile"] == "external_project"
+        assert run_event["mode"] == "strict"
 
     def test_run_dry_run_guides_user_when_legacy_reconcile_is_needed(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch

@@ -5,14 +5,17 @@ from __future__ import annotations
 from collections.abc import Mapping
 from typing import Any
 
-from ai_sdlc.telemetry.contracts import TelemetryEvent
+from ai_sdlc.telemetry.contracts import TelemetryEvent, TraceContext
 from ai_sdlc.telemetry.enums import (
     ActorType,
     CaptureMode,
     Confidence,
     ScopeLevel,
     TelemetryEventStatus,
+    TelemetryMode,
+    TelemetryProfile,
     TraceLayer,
+    TriggerPointType,
 )
 
 _CANONICAL_EVENT_FIELDS: dict[str, dict[str, Any]] = {
@@ -22,6 +25,7 @@ _CANONICAL_EVENT_FIELDS: dict[str, dict[str, Any]] = {
         "actor_type": ActorType.FRAMEWORK_RUNTIME,
         "capture_mode": CaptureMode.AUTO,
         "confidence": Confidence.HIGH,
+        "trigger_point_type": TriggerPointType.GATE_CONSUMPTION,
         "status": TelemetryEventStatus.SUCCEEDED,
     },
     "gate_blocked": {
@@ -30,6 +34,7 @@ _CANONICAL_EVENT_FIELDS: dict[str, dict[str, Any]] = {
         "actor_type": ActorType.FRAMEWORK_RUNTIME,
         "capture_mode": CaptureMode.AUTO,
         "confidence": Confidence.HIGH,
+        "trigger_point_type": TriggerPointType.GATE_CONSUMPTION,
         "status": TelemetryEventStatus.BLOCKED,
     },
     "audit_report_generated": {
@@ -38,6 +43,7 @@ _CANONICAL_EVENT_FIELDS: dict[str, dict[str, Any]] = {
         "actor_type": ActorType.FRAMEWORK_RUNTIME,
         "capture_mode": CaptureMode.AUTO,
         "confidence": Confidence.HIGH,
+        "trigger_point_type": TriggerPointType.GATE_CONSUMPTION,
         "status": TelemetryEventStatus.SUCCEEDED,
     },
 }
@@ -49,6 +55,9 @@ def build_canonical_control_point_event(
     goal_session_id: str,
     workflow_run_id: str | None = None,
     step_id: str | None = None,
+    profile: TelemetryProfile | None = None,
+    mode: TelemetryMode | None = None,
+    trace_context: TraceContext | None = None,
 ) -> TelemetryEvent:
     """Construct the canonical event shape for a supported control point."""
     payload = canonical_control_point_event_fields(control_point_name)
@@ -58,6 +67,9 @@ def build_canonical_control_point_event(
         goal_session_id=goal_session_id,
         workflow_run_id=workflow_run_id,
         step_id=step_id,
+        profile=profile,
+        mode=mode,
+        trace_context=trace_context,
         **payload,
     )
 

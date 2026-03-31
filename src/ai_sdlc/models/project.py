@@ -6,6 +6,8 @@ from enum import Enum
 
 from pydantic import BaseModel, field_validator
 
+from ai_sdlc.telemetry.enums import TelemetryMode, TelemetryProfile
+
 
 class ProjectStatus(str, Enum):
     UNINITIALIZED = "uninitialized"
@@ -48,3 +50,5 @@ class ProjectConfig(BaseModel):
     adapter_applied: str = ""
     adapter_version: str = ""
     adapter_applied_at: str = ""
+    telemetry_profile: TelemetryProfile = TelemetryProfile.SELF_HOSTING
+    telemetry_mode: TelemetryMode = TelemetryMode.LITE

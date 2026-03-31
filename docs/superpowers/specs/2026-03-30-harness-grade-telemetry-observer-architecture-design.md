@@ -721,6 +721,7 @@ Open Questions 不得反向打开已在 Sections 1-7 冻结的边界。Decision 
 - `execute` 默认 advisory-only
 - V1 manual input surface 保持最小 CLI 形态：`open-session`、`close-session`、`record-event`、`record-evidence`、`record-evaluation`、`record-violation`
 - V1 中 `incident report` 保持 `contract-preserved deferred artifact`，不作为必须正式启用的治理产物
+- V1 中 `evaluation summary` 保持 `contract-preserved deferred artifact`，不作为必须正式启用的治理产物
 - deferred capability 必须 `contract-preserved`
 
 ## Appendices
