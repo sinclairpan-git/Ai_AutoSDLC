@@ -56,11 +56,12 @@
 - 迁移补齐的字段若原始材料未显式给出，会以“基于历史记录推断”的方式写入，但会保留 `legacy_ref`。
 - 新增条目应直接写入本文件；若需要回溯历史来源，再反向链接到 legacy registry。
 
-## 下一波待修优先级（2026-03-29）
+## 下一波待修优先级（2026-03-31）
 
 - 当前待修：
   - 无
 - 本轮已收口：
+  - `006` 线 `FD-2026-03-31-001`
   - `005` 线 `FD-2026-03-30-001`、`FD-2026-03-30-002`
   - `003` 线 `FD-2026-03-29-001`、`FD-2026-03-29-002`、`FD-2026-03-29-003`
   - `003` 线 `FD-2026-03-27-011`、`FD-2026-03-27-012`
@@ -68,6 +69,31 @@
 - 挂靠原则：
   - `003` 线：已全部收口
   - `004` 线：已全部收口
+
+## FD-2026-03-31-001 | 宿主 skills 的默认 workflow 会把 superpowers plan 完成态继续推向 execute 倾向，稀释仓库法定阶段真值
+
+- 日期 (UTC): 2026-03-31
+- 来源: self_review, user_review
+- 状态: closed
+- owner: codex
+- wi_id: 006-provenance-trace-phase-1
+- related_doc: src/ai_sdlc/rules/pipeline.md, docs/框架自迭代开发与发布约定.md, docs/framework-defect-backlog.zh-CN.md
+- 现象: 在 provenance trace 这条 framework capability 上，spec 与 implementation plan 已冻结后，代理沿着宿主 superpowers skill 的默认 handoff 继续推进，把“Inline Execution / Subagent-Driven”表述成自然下一步；如果用户没有当场拦截，会从 `docs/superpowers/plans/*.md` 的 plan 完成态直接滑向开发编码阶段，而不是停留在 plan review / repo 真值对账状态。
+- 触发场景: 宿主 skill（尤其 `brainstorming` / `writing-plans`）把“plan complete -> implementation handoff”视为默认工作流，而仓库规则只把 `docs/superpowers/specs/*.md` 与 `docs/superpowers/plans/*.md` 视为 design input。两层约束缺少“谁只管工作流、谁定义法定 execute 真值”的显式收束时，执行侧会沿宿主 workflow 继续推进。
+- 影响范围: 仓库阶段真值被宿主 workflow 稀释、用户 review spec/plan 时被误导为“下一步默认就是编码”、`explicit execute authorization` 语义变弱，以及“plan 已冻结”被错误外推成“已授权进入实现”。
+- 根因分类: A, B, C, F, H
+- 未来杜绝方案摘要: 必须明确“宿主 skills / workflow 只约束 agent 的工作方式，不改变仓库法定阶段真值”；superpowers spec/plan 完成后的默认下一步应停在 review / 对账 / 等待用户明确 execute 指令，而不是自动 handoff 到编码。只有同时满足“用户明确要求进入实现”和“repo 法定 execute 前置已成立”时，才允许进入开发编码阶段。
+- 建议改动层级: prompt / context, rule / policy, workflow, tool, eval
+- prompt / context: 当宿主 skill 给出 implementation handoff、执行选项或“next step”提示时，必须先用仓库阶段真值过滤；若当前仍在 spec/plan review、流程讨论或 docs-only 修正中，默认动作保持在文档/规则层，不得把编码作为自然下一步。
+- rule / policy: 在 `pipeline.md` 与框架自迭代约定中显式写明：宿主 skill 的 terminal state、plan-complete 提示、execution options 均不构成 execute 授权；repo 阶段切换仍以用户明确指令与 `tasks.md` / gate readiness 等法定前置为准。
+- middleware: 后续 provenance / traceability 应把“宿主 skill 触发了什么工作流建议、最终又被哪条 repo 规则拦住或允许”落成正式可审计链路；必要时增加 execute 前 preflight，识别“只有 superpowers plan、没有 explicit execute authorization / repo 前置”的场景。
+- workflow: 顺序应收紧为 `spec freeze -> plan freeze -> user review / repo truth check -> explicit execute authorization -> verify / execute`，而不是 `plan complete -> implementation handoff -> coding`。
+- tool: `src/ai_sdlc/rules/pipeline.md`、`docs/框架自迭代开发与发布约定.md`、后续 provenance inspection / preflight / execute guard surfaces
+- eval: “plan 完成后在无明确 execute 授权下继续向编码推进”的事件数、需要用户手动拦截的次数、宿主 workflow 与 repo 真值冲突被自动识别/阻断的命中率
+- 风险等级: 极高
+- 收口说明（2026-03-31）: `src/ai_sdlc/rules/pipeline.md` 与 `docs/框架自迭代开发与发布约定.md` 已补充显式规则，声明宿主 skills / plan-complete prompts 只是工作流提示，不等于 execute 授权；spec/plan 完成后默认必须停在 review / 对账状态，只有用户明确要求进入实现且 repo 前置满足时，才能继续编码。本次违约已被正式登记，即使同轮被用户及时拦下也不再只留会话备注。
+- 可验证成功标准: 当会话中只有 superpowers spec/plan 完成、但用户仍在 review 文档或讨论流程时，代理不得把编码表述为默认下一步；若用户未明确要求进入实现，或 repo 未满足法定 execute 前置，代理必须停在文档/对账/规则修正状态。只有在用户明确要求实现且前置满足后，才允许进入 execute。
+- 是否需要回归测试补充: 是：补一类流程级正反夹具，验证“plan complete 但无 explicit execute authorization”会被识别为仍停留在 docs/review 状态；后续 provenance trace 还应补 `skill invocation / rule provenance / conversation trigger` 链路，用于审计这类阶段切换。
 
 ## FD-2026-03-30-001 | 新 framework capability 的 architecture/plan 已冻结，但仍把 `docs/superpowers/plans/*.md` 误当作可直接进入实施的法定入口，未先落到 `specs/<WI>/tasks.md`
 
