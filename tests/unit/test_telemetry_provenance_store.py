@@ -7,7 +7,12 @@ from pathlib import Path
 
 import pytest
 
-from ai_sdlc.telemetry.contracts import Evidence, ScopeLevel, TraceContext
+from ai_sdlc.telemetry.contracts import (
+    Evidence,
+    ScopeLevel,
+    TelemetryEvent,
+    TraceContext,
+)
 from ai_sdlc.telemetry.enums import (
     Confidence,
     IngressKind,
@@ -25,6 +30,7 @@ from ai_sdlc.telemetry.provenance_contracts import (
     ProvenanceGovernanceHook,
     ProvenanceNodeFact,
 )
+from ai_sdlc.telemetry.provenance_resolver import ProvenanceResolver
 from ai_sdlc.telemetry.provenance_store import ProvenanceStore
 from ai_sdlc.telemetry.resolver import SourceResolver
 from ai_sdlc.telemetry.store import TelemetryStore
@@ -402,3 +408,152 @@ def test_provenance_locators_round_trip_through_evidence_resolution(tmp_path: Pa
     resolved = resolver.resolve("evidence", evidence.evidence_id)
 
     assert resolved.payload["locator"] == "prov://conversation/message-001"
+
+
+def test_provenance_resolver_distinguishes_parse_failure_from_closure_failures(
+    tmp_path: Path,
+) -> None:
+    resolver = ProvenanceResolver(TelemetryStore(tmp_path))
+
+    report = resolver.resolve_subject("not-a-canonical-ref")
+
+    assert report.assessment is None
+    assert report.gaps == ()
+    assert report.chain_status is ProvenanceChainStatus.UNKNOWN
+    assert report.model_dump(mode="json")["failures"] == [
+        {
+            "category": "parse_failure",
+            "code": "invalid_subject_ref",
+            "subject_ref": "not-a-canonical-ref",
+            "object_ref": None,
+            "detail": {},
+        }
+    ]
+
+
+def test_provenance_resolver_reports_dangling_node_and_missing_trace_context(
+    tmp_path: Path,
+) -> None:
+    store = TelemetryStore(tmp_path)
+    writer = TelemetryWriter(store)
+    resolver = ProvenanceResolver(store)
+    writer.write_event(
+        TelemetryEvent(
+            event_id="evt_0123456789abcdef0123456789abcdef",
+            scope_level=ScopeLevel.STEP,
+            goal_session_id="gs_0123456789abcdef0123456789abcdef",
+            workflow_run_id="wr_0123456789abcdef0123456789abcdef",
+            step_id="st_0123456789abcdef0123456789abcdef",
+            created_at="2026-03-31T10:00:00Z",
+            updated_at="2026-03-31T10:00:00Z",
+            timestamp="2026-03-31T10:00:00Z",
+        )
+    )
+    writer.write_evidence(
+        Evidence(
+            evidence_id="evd_0123456789abcdef0123456789abcdef",
+            scope_level=ScopeLevel.STEP,
+            goal_session_id="gs_0123456789abcdef0123456789abcdef",
+            workflow_run_id="wr_0123456789abcdef0123456789abcdef",
+            step_id="st_0123456789abcdef0123456789abcdef",
+            locator="prov://skill/invocation-001",
+            digest="sha256:abc123",
+            created_at="2026-03-31T10:00:00Z",
+            updated_at="2026-03-31T10:00:00Z",
+        )
+    )
+    node = ProvenanceNodeFact(
+        node_id="pn_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        node_kind=ProvenanceNodeKind.SKILL_INVOCATION,
+        ingress_kind=IngressKind.INJECTED,
+        confidence=Confidence.MEDIUM,
+        scope_level=ScopeLevel.STEP,
+        trace_context=TraceContext(
+            goal_session_id="gs_0123456789abcdef0123456789abcdef",
+            workflow_run_id="wr_0123456789abcdef0123456789abcdef",
+            step_id="st_0123456789abcdef0123456789abcdef",
+            worker_id="worker-007",
+            agent_id="codex-agent",
+            parent_event_id="evt_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        ),
+        observed_at="2026-03-31T10:00:00Z",
+        ingestion_order=0,
+        source_object_refs=("event:evt_0123456789abcdef0123456789abcdef",),
+        source_evidence_refs=("evd_0123456789abcdef0123456789abcdef",),
+    )
+
+    writer.write_provenance_node(node)
+    report = resolver.resolve_subject(f"provenance_node:{node.node_id}")
+
+    assert report.assessment is not None
+    assert report.assessment.chain_status is ProvenanceChainStatus.UNKNOWN
+    assert [failure.code for failure in report.failures] == [
+        "dangling_node",
+        "missing_trace_context",
+    ]
+    assert [gap.gap_kind for gap in report.gaps] == [
+        ProvenanceGapKind.UNOBSERVED,
+        ProvenanceGapKind.UNKNOWN,
+    ]
+
+
+def test_provenance_resolver_reports_orphan_edges_and_missing_telemetry_objects(
+    tmp_path: Path,
+) -> None:
+    store = TelemetryStore(tmp_path)
+    writer = TelemetryWriter(store)
+    resolver = ProvenanceResolver(store)
+    writer.write_event(
+        TelemetryEvent(
+            event_id="evt_0123456789abcdef0123456789abcdef",
+            scope_level=ScopeLevel.STEP,
+            goal_session_id="gs_0123456789abcdef0123456789abcdef",
+            workflow_run_id="wr_0123456789abcdef0123456789abcdef",
+            step_id="st_0123456789abcdef0123456789abcdef",
+            created_at="2026-03-31T10:00:00Z",
+            updated_at="2026-03-31T10:00:00Z",
+            timestamp="2026-03-31T10:00:00Z",
+        )
+    )
+    writer.write_evidence(
+        Evidence(
+            evidence_id="evd_0123456789abcdef0123456789abcdef",
+            scope_level=ScopeLevel.STEP,
+            goal_session_id="gs_0123456789abcdef0123456789abcdef",
+            workflow_run_id="wr_0123456789abcdef0123456789abcdef",
+            step_id="st_0123456789abcdef0123456789abcdef",
+            locator="prov://exec-bridge/bridge-001",
+            digest="sha256:def456",
+            created_at="2026-03-31T10:00:00Z",
+            updated_at="2026-03-31T10:00:00Z",
+        )
+    )
+    edge = ProvenanceEdgeFact(
+        edge_id="pe_cccccccccccccccccccccccccccccccc",
+        relation_kind=ProvenanceRelationKind.DERIVED_FROM,
+        from_ref="provenance_node:pn_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        to_ref="evaluation:eval_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        ingress_kind=IngressKind.INJECTED,
+        confidence=Confidence.MEDIUM,
+        observed_at="2026-03-31T10:00:00Z",
+        ingestion_order=0,
+        source_object_refs=("event:evt_0123456789abcdef0123456789abcdef",),
+        source_evidence_refs=("evd_0123456789abcdef0123456789abcdef",),
+    )
+
+    writer.write_provenance_edge(
+        edge,
+        scope_level=ScopeLevel.STEP,
+        goal_session_id="gs_0123456789abcdef0123456789abcdef",
+        workflow_run_id="wr_0123456789abcdef0123456789abcdef",
+        step_id="st_0123456789abcdef0123456789abcdef",
+    )
+    report = resolver.resolve_subject(f"provenance_edge:{edge.edge_id}")
+
+    assert report.assessment is not None
+    assert report.assessment.chain_status is ProvenanceChainStatus.PARTIAL
+    assert [failure.code for failure in report.failures] == [
+        "missing_telemetry_object",
+        "orphan_edge",
+    ]
+    assert {gap.gap_kind for gap in report.gaps} == {ProvenanceGapKind.INCOMPLETE}
