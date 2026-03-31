@@ -43,6 +43,7 @@ Phase 1 明确是 `gate-capable but read-only`：
 - `ingress_kind` 最小值域固定为 `auto | injected | inferred`。
   - `unknown` 只表示 gap / placeholder 语义，不是完整 ingress fact kind。
 - `scope_level` Phase 1 只复用现有 `session | run | step`，不新增 provenance 专用层级。
+- `source_closure_status` 复用现有 telemetry baseline 的最小值域：`unknown | incomplete | closed`。
 - provenance 复用的最小 `trace_context` 字段至少包括：
   - `goal_session_id`
   - `workflow_run_id`
@@ -512,6 +513,7 @@ Phase 1 明确是 `gate-capable but read-only`：
 
 ### 5.2 Matrix
 
+- `chain_status` 的正式枚举仍然只有 `closed | partial | unknown`；`unsupported` 是 gap 语义，不是 `chain_status` 值。
 - 表格中的“最低可接受 confidence”表示该来源质量下的默认最低口径，不代表所有实例都必须达到该值；具体 confidence 仍由可用 evidence 与 closure 完整度共同决定。
 
 | Trace | Source | V1 必测 | 最小输入形态 | 预期落盘对象 | 默认 chain_status | 最低可接受 confidence | 预期 inspection / closure 结果 |
@@ -583,6 +585,7 @@ Phase 1 明确是 `gate-capable but read-only`：
   - `宿主明确否认`
 - 二者不能都落成 `unknown`。
 - `宿主明确否认` 在 Phase 2 可落成单独的负向事实或负向解释对象，但 Phase 1 不冻结其具体对象模型。
+- 该负向对象的最终落点应在 implementation planning 中作为显式 decision item 收敛，而不是在 Phase 2 启动时临时回头重议。
 
 ### 6.4 Injected Paths That Stay Or Recede
 
@@ -615,3 +618,4 @@ Phase 1 明确是 `gate-capable but read-only`：
 - 自动 root cause / remediation 生成
 - `execute` 面 provenance 阻断
 - 因宿主原生接入而删除 injected / replay / manual validation 路径
+- 把 `manual injection` 误用成默认业务入口；它在 Phase 1 只作为测试、诊断和回放手段保留
