@@ -59,8 +59,9 @@
 ## 下一波待修优先级（2026-03-31）
 
 - 当前待修：
-  - `FD-2026-03-31-002`
+  - `无`
 - 本轮已收口：
+  - `007` 线 `FD-2026-03-31-002`
   - `006` 线 `FD-2026-03-31-001`
   - `005` 线 `FD-2026-03-30-001`、`FD-2026-03-30-002`
   - `003` 线 `FD-2026-03-29-001`、`FD-2026-03-29-002`、`FD-2026-03-29-003`
@@ -99,7 +100,7 @@
 
 - 日期 (UTC): 2026-03-31
 - 来源: self_review, user_review
-- 状态: planned
+- 状态: closed
 - owner: codex
 - wi_id: 007-branch-lifecycle-truth-guard
 - related_doc: src/ai_sdlc/rules/git-branch.md, src/ai_sdlc/rules/pipeline.md, docs/框架自迭代开发与发布约定.md, docs/superpowers/plans/2026-03-31-branch-lifecycle-truth-guard.md, specs/007-branch-lifecycle-truth-guard/spec.md, specs/007-branch-lifecycle-truth-guard/plan.md, specs/007-branch-lifecycle-truth-guard/tasks.md
@@ -116,6 +117,7 @@
 - tool: `src/ai_sdlc/branch/git_client.py`、新增 branch inventory helper、`src/ai_sdlc/core/close_check.py`、`src/ai_sdlc/core/verify_constraints.py`、`src/ai_sdlc/telemetry/readiness.py`、`ai-sdlc workitem branch-check`（或等价只读面）
 - eval: work-item 关联分支未处置次数、长期偏离 `main` 的本地分支数、close 前 branch disposition 缺口检出率、需要人工巡检后才发现的遗留 worktree 次数
 - 风险等级: 高
+- 收口说明（2026-03-31）: `007` 已把 branch/worktree inventory、disposition parsing、`workitem branch-check`、`close-check`、`verify constraints`、`status --json` 与 `doctor` 的 branch lifecycle bounded surfaces 正式落到主线；`git-branch.md`、`pipeline.md`、用户文档与自迭代约定也已同步收紧。当前 work item 已合流 `main`，execution log 已补齐 `merged / removed` disposition 真值，本条 defect 不再停留在 planned。
 - 可验证成功标准: 给定一个 work item 关联的 scratch/worktree 分支仍比 `main` 多提交、且未登记 `merged / archived / deleted` disposition 时，`close-check` 或等价 branch-check 必须返回明确 blocker 或 warning；`status --json` / `doctor` 至少能稳定暴露 branch inventory 摘要；当分支已合回主线或已完成归档处置后，相关告警消失。
 - 是否需要回归测试补充: 是：补 `branch inventory`、`branch-vs-main divergence`、`unresolved worktree disposition`、`archived-but-not-merged`、`unrelated historical branch only warns` 等正反夹具。
 

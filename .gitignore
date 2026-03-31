@@ -5,6 +5,7 @@ __pycache__/
 .ai-sdlc/project/config/project-config.yaml
 .ai-sdlc/local/
 .superpowers/
+.playwright-cli/
 
 .venv/
 .worktrees/

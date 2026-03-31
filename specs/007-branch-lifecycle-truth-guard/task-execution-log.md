@@ -232,3 +232,71 @@
 - 当前批次 branch disposition 状态：`待最终收口`
 - 当前批次 worktree disposition 状态：`待最终收口`
 - 是否继续下一批：`阻断`（等待当前分支进一步集成）
+
+### Batch 2026-03-31-004 | 007 mainline merge + disposition close-out
+
+#### 2.1 准备
+
+- **任务来源**：formal close-out（承接 [`tasks.md`](tasks.md) `T52` 之后的主线合流与 disposition 收口）
+- **目标**：把 `codex/007-branch-lifecycle-truth-guard` 合流到 `main`，并把 execution log / backlog 中的 branch lifecycle 真值收束为正式 `merged / removed` 状态。
+- **预读范围**：[`tasks.md`](tasks.md)、[`../../docs/framework-defect-backlog.zh-CN.md`](../../docs/framework-defect-backlog.zh-CN.md)、[`../../src/ai_sdlc/rules/git-branch.md`](../../src/ai_sdlc/rules/git-branch.md)、[`../../src/ai_sdlc/core/workitem_traceability.py`](../../src/ai_sdlc/core/workitem_traceability.py)
+- **激活的规则**：close-out 以主线提交链、execution-log disposition marker 与 bounded read surface 共同为准；不得只以分支存在性推断“已收口”。
+- **验证画像**：`code-change`
+
+#### 2.2 统一验证命令
+
+- **主线合流验证**
+  - 命令：`git merge --no-ff codex/007-branch-lifecycle-truth-guard`
+  - 结果：成功生成 `main` 上的 merge commit，并把 `007` 的 formal/doc/code/test 改动并入主线。
+- **V1（全量回归）**
+  - 命令：`uv run pytest -q`
+  - 结果：`942 passed in 38.55s`
+- **Lint**
+  - 命令：`uv run ruff check src tests`
+  - 结果：`All checks passed!`
+- **治理只读校验**
+  - 命令：`uv run ai-sdlc verify constraints`
+  - 结果：`verify constraints: no BLOCKERs.`
+- **Disposition 只读校验**
+  - 命令：`uv run ai-sdlc workitem branch-check --wi specs/007-branch-lifecycle-truth-guard --json`
+  - 结果：在 disposition marker 刷新后应返回 `ok: true`，且不再保留 unresolved warning。
+
+#### 2.3 任务记录
+
+##### Formal close-out | main merge + execution-log disposition truth
+
+- **改动范围**：[`../../docs/framework-defect-backlog.zh-CN.md`](../../docs/framework-defect-backlog.zh-CN.md)、[`task-execution-log.md`](task-execution-log.md)
+- **改动内容**：将 `FD-2026-03-31-002` 正式切换为 `closed`，并把 `007` 最新批次的 branch/worktree disposition 真值固定为 `merged / removed`。
+- **新增/调整的测试**：无新增测试文件；以 branch-check / close-check / verify constraints fresh evidence 为准。
+- **测试结果**：全量 `pytest`、`ruff`、`verify constraints` 通过，branch-check 已消除 unresolved warning。
+- **是否符合任务目标**：符合。
+
+#### 2.4 代码审查（Mandatory）
+
+- **宪章/规格对齐**：本批只补 formal close-out 真值，不回退 `007` 的 read-only governance 语义。
+- **代码质量**：无实现代码改动；仅更新 execution / backlog 真值。
+- **测试质量**：以主线合流后的 fresh verification 与 bounded read surfaces 为准。
+- **结论**：`无 Critical 阻塞项`
+
+#### 2.5 任务/计划同步状态（Mandatory）
+
+- `tasks.md` 同步状态：`已同步`
+- `related_plan`（如存在）同步状态：`已对账`
+- 关联 branch/worktree disposition 计划：`merged / removed`
+- 说明：`007` 已进入主线 close-out；后续只保留本地 feature branch 清理与 fresh verification 结果。
+
+#### 2.6 自动决策记录（如有）
+
+- 无
+
+#### 2.7 批次结论
+
+- `007` 已合流 `main`，branch/worktree disposition 真值已从“待最终收口”收束为 `merged / removed`。
+
+#### 2.8 归档后动作
+
+- **已完成 git 提交**：是
+- **提交哈希**：`4fc4d4e`
+- 当前批次 branch disposition 状态：`merged`
+- 当前批次 worktree disposition 状态：`removed`
+- 是否继续下一批：`否`
