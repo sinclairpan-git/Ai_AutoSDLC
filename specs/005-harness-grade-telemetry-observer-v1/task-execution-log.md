@@ -329,3 +329,65 @@
 - **已完成 git 提交**：是
 - **提交哈希**：本批 latest closeout commit 的完整 SHA 以当前 `HEAD`（`git rev-parse HEAD`）为准
 - **是否继续下一批**：否；本批提交完成后执行 `uv run ai-sdlc workitem close-check --wi specs/005-harness-grade-telemetry-observer-v1`
+
+### Batch 2026-03-31-005 | 005 legacy scratch branch disposition closeout
+
+#### 6.1 准备
+
+- **任务来源**：formal close-out（历史 scratch branch disposition 清理）
+- **目标**：把遗留本地分支 `codex/005-b1-t11` 的 disposition 正式写回 `005` execution truth，并说明该分支已被主线后续实现链吸收，不再保留为活动执行容器。
+- **预读范围**：[`tasks.md`](tasks.md)、[`task-execution-log.md`](task-execution-log.md)、[`../../src/ai_sdlc/rules/git-branch.md`](../../src/ai_sdlc/rules/git-branch.md)
+- **激活的规则**：scratch branch 不是主线真值；分支处置必须显式记录为 `merged / archived / deleted`；不得让历史分支长期处于“存在但无人负责解释”的状态。
+- **验证画像**：`docs-only`
+
+#### 6.2 统一验证命令
+
+- **治理只读校验**
+  - 命令：`uv run ai-sdlc verify constraints`
+  - 结果：以本批提交后的 fresh 只读校验为准。
+- **分支偏离核实**
+  - 命令：`git rev-list --left-right --count main...codex/005-b1-t11`
+  - 结果：`32 3`；确认该分支相对当前 `main` 为旧分叉，且仅剩 3 个未沿原提交链合流的历史提交。
+
+#### 6.3 任务记录
+
+##### Legacy scratch branch closeout | codex/005-b1-t11
+
+- **改动范围**：[`task-execution-log.md`](task-execution-log.md)
+- **改动内容**：
+  - 将 `codex/005-b1-t11` 明确处置为 `deleted`。
+  - 说明该分支承载的是早期 telemetry policy/profile-mode 旧实现链；当前主线已由后续提交链完成吸收并形成新的 formal truth，因此该旧 scratch 分支不再保留。
+- **新增/调整的测试**：无新增测试；本批只涉及 formal execution truth 回写与本地分支清理。
+- **测试结果**：以 fresh `verify constraints` 与分支删除后的 clean inventory 为准。
+- **是否符合任务目标**：符合。
+
+#### 6.4 代码审查（摘要）
+
+- **宪章/规格对齐**：本批不回改 `005` 功能实现，只清理历史 scratch truth carrier。
+- **代码质量**：无运行时代码变更。
+- **测试质量**：以 fresh 只读治理校验与 clean branch inventory 为准。
+- **结论**：无新的阻塞项。
+
+#### 6.5 任务/计划同步状态
+
+- `tasks.md` 同步状态：`已同步`
+- `related_plan`（如存在）同步状态：`已对账`
+- 关联 branch/worktree disposition 计划：`deleted / removed`
+- 说明：`codex/005-b1-t11` 不再作为 `005` 的活动执行容器或主线兑现载体保留。
+
+#### 6.6 自动决策记录（如有）
+
+- AD-001：本批选择将 `codex/005-b1-t11` 记为 `deleted` 而非 `merged` / `archived` → 理由：该分支的有效能力已由后续主线提交链吸收，但它自身并未按原提交链直接合流；继续保留只会维持无效视觉噪音。
+
+#### 6.7 批次结论
+
+- `005` 的旧 scratch 分支 `codex/005-b1-t11` 已完成 formal disposition closeout；后续只保留主线真值，不再保留该历史分支。
+
+#### 6.8 归档后动作
+
+- **已完成 git 提交**：是
+- **提交哈希**：本批 latest closeout commit 的完整 SHA 以当前 `HEAD`（`git rev-parse HEAD`）为准
+- **改动范围**：[`task-execution-log.md`](task-execution-log.md)
+- 当前批次 branch disposition 状态：`deleted`
+- 当前批次 worktree disposition 状态：`removed`
+- **是否继续下一批**：否
