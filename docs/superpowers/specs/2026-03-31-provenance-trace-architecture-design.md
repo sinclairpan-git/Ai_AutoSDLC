@@ -43,9 +43,19 @@ Phase 1 明确是 `gate-capable but read-only`：
 - `ingress_kind` 最小值域固定为 `auto | injected | inferred`。
   - `unknown` 只表示 gap / placeholder 语义，不是完整 ingress fact kind。
 - `scope_level` Phase 1 只复用现有 `session | run | step`，不新增 provenance 专用层级。
+- provenance 复用的最小 `trace_context` 字段至少包括：
+  - `goal_session_id`
+  - `workflow_run_id`
+  - `step_id`
+  - `worker_id`
+  - `agent_id`
+  - `parent_event_id`
 - `ingestion_order` 固定为 session-local 单调递增排序号，由 writer 分配；同一写入批次按 append 顺序稳定排序。
 - `relation_kind` 的命名统一按 `from_ref -> to_ref` 方向解释。
 - 对 `injected / inferred` 的 node/edge，`source_object_refs` 与 `source_evidence_refs` 至少一类必须存在，不能同时为空。
+- ref 格式固定为：
+  - `source_object_refs` 使用 `<object_type>:<object_id>`
+  - `source_evidence_refs` 使用稳定 `evidence_id`
 
 ### 2.2 ProvenanceNodeFact
 
@@ -215,6 +225,7 @@ Phase 1 明确是 `gate-capable but read-only`：
     - `warning`
     - `blocker_candidate`
   - `policy_name` 表示 policy 的稳定标识，和现有 `policy / profile / mode` 口径对齐
+  - `advisories` 优先结构化、机器可消费；可选附带人类可读摘要
   - Phase 1 只读可见，不自动进入 gate
   - 追加 provenance 维度，不改写现有 violation 真值
   - candidate 可生成，不等于默认可发布
@@ -360,6 +371,7 @@ Phase 1 明确是 `gate-capable but read-only`：
   - 不该做什么：
     - 不写状态
     - 不触发隐式 rebuild / init
+    - 不做 graph rewrite / graph repair / 自动补链
   - 与现有 telemetry 的交互：
     - 只读 provenance store/resolver 与现有 telemetry objects
   - 第一阶段启用范围：
@@ -468,6 +480,10 @@ Phase 1 明确是 `gate-capable but read-only`：
   - `exec_command bridge`
   - `rule provenance`
 - 每条链至少要有一组能闭包的正样本和一组显式缺口/失败的负样本。
+- 负样本至少要覆盖以下分离语义，而不是全部压成同一种失败：
+  - `parse failure`
+  - `unsupported`
+  - `unknown / unobserved`
 - 每条链都必须证明：
   - 能落盘
   - 能解析
@@ -495,6 +511,8 @@ Phase 1 明确是 `gate-capable but read-only`：
 - 对 `auto` 来源，Phase 1 的 `unsupported` 是允许的正式结果，表示宿主 ingress 尚未接入，不代表 contract 失败。
 
 ### 5.2 Matrix
+
+- 表格中的“最低可接受 confidence”表示该来源质量下的默认最低口径，不代表所有实例都必须达到该值；具体 confidence 仍由可用 evidence 与 closure 完整度共同决定。
 
 | Trace | Source | V1 必测 | 最小输入形态 | 预期落盘对象 | 默认 chain_status | 最低可接受 confidence | 预期 inspection / closure 结果 |
 | --- | --- | --- | --- | --- | --- | --- | --- |
