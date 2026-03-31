@@ -152,6 +152,7 @@ Cover:
 - mutable assessment/gap/hook current+revisions writes
 - writer-assigned session-local `ingestion_order`
 - same-input replay producing stable, predictable `ingestion_order` assignment and downstream inspection ordering semantics
+- that replay determinism holding both for persisted node/edge ordering and for `chain / assessment / gap` inspection view ordering
 - duplicate injected replay idempotence/dedupe behavior
 - `source_closure_status` reusing telemetry baseline values without being conflated with provenance `chain_status`
 - orphan edge, dangling node, and missing telemetry-object detection
@@ -199,7 +200,7 @@ git commit -m "feat: add provenance telemetry persistence"
 Cover:
 - injected `conversation/message`, `skill invocation`, `exec_command bridge`, and `rule provenance`
 - inferred provenance with required inference basis refs
-- `unknown` generating explicit gaps instead of fake facts or placeholder node/edge facts
+- `unknown` generating explicit gaps instead of fake facts or placeholder `ProvenanceNodeFact / ProvenanceEdgeFact`
 - missing `target_ref` becoming `parse failure`
 - `exec_command bridge` inference refusing to derive bridge links from raw command text alone
 - duplicate injected replay never silently upgrading provenance confidence
@@ -304,6 +305,7 @@ Cover:
 - provenance governance hooks carrying gate-capable fields without becoming published artifacts by default
 - negative coverage that Phase 1 provenance hooks/candidates do not enter published governance artifact semantics
 - negative coverage that no hidden flag, env toggle, or experimental configuration path can promote provenance hooks into default blocker semantics
+- `provenance_gate.py` Phase 1 remaining contract-only or read-only, with no active decision logic requirement
 - verify/close/release continuing to ignore provenance candidates for default blocker decisions
 - provenance-specific findings enriching but not overriding current evaluation truth
 
@@ -360,6 +362,7 @@ Document:
 - minimal CLI smoke examples such as `ai-sdlc provenance summary --json` and `ai-sdlc provenance gaps`
 - Phase 1 limits: read-only, no host-native full coverage, no default blocker behavior, manual injection is not a normal business entrypoint
 - CLI discoverability should keep `summary / explain / gaps` as the day-to-day surface and must not present manual injection as a normal primary workflow
+- docs examples, integration-test smoke commands, and command-discovery wording should stay aligned on the same canonical provenance CLI surface
 
 - [ ] **Step 3: Run the targeted provenance suite**
 
