@@ -59,7 +59,7 @@
 ## 下一波待修优先级（2026-03-31）
 
 - 当前待修：
-  - 无
+  - `FD-2026-03-31-002`
 - 本轮已收口：
   - `006` 线 `FD-2026-03-31-001`
   - `005` 线 `FD-2026-03-30-001`、`FD-2026-03-30-002`
@@ -94,6 +94,29 @@
 - 收口说明（2026-03-31）: `src/ai_sdlc/rules/pipeline.md` 与 `docs/框架自迭代开发与发布约定.md` 已补充显式规则，声明宿主 skills / plan-complete prompts 只是工作流提示，不等于 execute 授权；spec/plan 完成后默认必须停在 review / 对账状态，只有用户明确要求进入实现且 repo 前置满足时，才能继续编码。本次违约已被正式登记，即使同轮被用户及时拦下也不再只留会话备注。
 - 可验证成功标准: 当会话中只有 superpowers spec/plan 完成、但用户仍在 review 文档或讨论流程时，代理不得把编码表述为默认下一步；若用户未明确要求进入实现，或 repo 未满足法定 execute 前置，代理必须停在文档/对账/规则修正状态。只有在用户明确要求实现且前置满足后，才允许进入 execute。
 - 是否需要回归测试补充: 是：补一类流程级正反夹具，验证“plan complete 但无 explicit execute authorization”会被识别为仍停留在 docs/review 状态；后续 provenance trace 还应补 `skill invocation / rule provenance / conversation trigger` 链路，用于审计这类阶段切换。
+
+## FD-2026-03-31-002 | 分支 / worktree 生命周期未被正式门禁化，导致长期偏离 `main` 的遗留分支只能靠人工巡检发现
+
+- 日期 (UTC): 2026-03-31
+- 来源: self_review, user_review
+- 状态: planned
+- owner: codex
+- related_doc: src/ai_sdlc/rules/git-branch.md, src/ai_sdlc/rules/pipeline.md, docs/框架自迭代开发与发布约定.md, docs/superpowers/plans/2026-03-31-branch-lifecycle-truth-guard.md
+- 现象: 仓库中可以长期残留只存在于本地或远端、且与 `main` 已明显偏离的分支 / worktree；即便相关工作项已经收口或主线已有后续实现，现有框架也不会通过 `verify constraints`、`close-check`、`status --json` 或 `doctor` 主动暴露这些“未处置分支真值”，最终仍需依赖人工执行 `git branch`、`git worktree list`、`git rev-list --left-right --count` 才能发现。
+- 触发场景: 独立 worktree 或 feature scratch 分支完成了局部实现、验证或文档回填，但 branch close-out 没有与主线合流、execution-log 归档、任务对账和 disposition（`merged / archived / deleted`）放在同一轮法定尾部动作里完成；同时 `git-branch.md` 只建模 `design/NNN` 与 `feature/NNN`，没有把 `codex/*`、backup、历史 feature 分支和 worktree 生命周期纳入正式 guardrail。
+- 影响范围: 主线真值判断、close-out 可信度、用户对“分支已实现”与“主线已兑现”的区分、历史 worktree 清理成本，以及后续 framework capability 是否仍被旧分支误表示为“已有未合并实现”的治理判断。
+- 根因分类: A, B, D, H
+- 未来杜绝方案摘要: 必须把 branch/worktree inventory 与 disposition 升格为正式框架约束，而不是 Git 使用习惯。框架需要显式建模 `design / feature / scratch / archive` 等生命周期类型，并在 close 前检查“关联分支是否已合流或已归档说明”；对长期偏离 `main` 的遗留分支，至少要在 read-only surface 中持续暴露，在 work item close-out 中对关联分支给出 blocker 或高优先级告警。
+- 建议改动层级: rule / policy, middleware, workflow, tool, eval
+- prompt / context: 当代理基于某个分支或 worktree 回答“已实现 / 已收口 / 还有未合内容”时，必须明确区分“仅分支存在”与“主线已兑现”，不得把本地 scratch 分支事实外推成主线真值。
+- rule / policy: 扩展 `git-branch.md` 与 `pipeline.md`，把 branch/worktree close-out 从“可选清理”提升为正式 disposition 约束；close 前必须说明关联分支是 `merged`、`archived` 还是 `deleted`，否则不得宣称收口完整。
+- middleware: 为分支治理增加只读 inventory / divergence helper，统一产出 branch kind、upstream、worktree 绑定、相对 `main` 的 ahead/behind、以及是否缺失 disposition；不得靠会话临时命令拼接判断。
+- workflow: 顺序应收紧为 `branch/worktree create -> implementation / docs update -> main merge or archive decision -> execution-log / tasks 对账 -> close-check`；若某分支仍仅存在于本地 scratch/worktree 且未处置，最终答复必须披露“尚未完成 branch close-out”。
+- tool: `src/ai_sdlc/branch/git_client.py`、新增 branch inventory helper、`src/ai_sdlc/core/close_check.py`、`src/ai_sdlc/core/verify_constraints.py`、`src/ai_sdlc/telemetry/readiness.py`、`ai-sdlc workitem branch-check`（或等价只读面）
+- eval: work-item 关联分支未处置次数、长期偏离 `main` 的本地分支数、close 前 branch disposition 缺口检出率、需要人工巡检后才发现的遗留 worktree 次数
+- 风险等级: 高
+- 可验证成功标准: 给定一个 work item 关联的 scratch/worktree 分支仍比 `main` 多提交、且未登记 `merged / archived / deleted` disposition 时，`close-check` 或等价 branch-check 必须返回明确 blocker 或 warning；`status --json` / `doctor` 至少能稳定暴露 branch inventory 摘要；当分支已合回主线或已完成归档处置后，相关告警消失。
+- 是否需要回归测试补充: 是：补 `branch inventory`、`branch-vs-main divergence`、`unresolved worktree disposition`、`archived-but-not-merged`、`unrelated historical branch only warns` 等正反夹具。
 
 ## FD-2026-03-30-001 | 新 framework capability 的 architecture/plan 已冻结，但仍把 `docs/superpowers/plans/*.md` 误当作可直接进入实施的法定入口，未先落到 `specs/<WI>/tasks.md`
 
