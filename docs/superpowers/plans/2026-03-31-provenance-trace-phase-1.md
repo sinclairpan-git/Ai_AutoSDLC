@@ -151,6 +151,7 @@ Cover:
 - append-only node/edge writes
 - mutable assessment/gap/hook current+revisions writes
 - writer-assigned session-local `ingestion_order`
+- same-input replay producing stable, predictable `ingestion_order` assignment and downstream inspection ordering semantics
 - duplicate injected replay idempotence/dedupe behavior
 - `source_closure_status` reusing telemetry baseline values without being conflated with provenance `chain_status`
 - orphan edge, dangling node, and missing telemetry-object detection
@@ -198,7 +199,7 @@ git commit -m "feat: add provenance telemetry persistence"
 Cover:
 - injected `conversation/message`, `skill invocation`, `exec_command bridge`, and `rule provenance`
 - inferred provenance with required inference basis refs
-- `unknown` generating explicit gaps instead of fake facts
+- `unknown` generating explicit gaps instead of fake facts or placeholder node/edge facts
 - missing `target_ref` becoming `parse failure`
 - `exec_command bridge` inference refusing to derive bridge links from raw command text alone
 - duplicate injected replay never silently upgrading provenance confidence
@@ -247,6 +248,7 @@ git commit -m "feat: add provenance ingress adapters"
 Cover:
 - `summary`, `explain`, `gaps`, and `--json` answering the 5 required inspection questions
 - stable `assessment view` with `overall chain status`, `highest confidence source`, and `key gaps`
+- stable field names and field order for those three assessment summary sections, suitable for snapshot assertions
 - JSON field/ordering stability for snapshot-friendly automation
 - human-facing assessment/gap views and `--json` expressing the same chain/gap semantics
 - read-only behavior with no graph rewrite, repair, implicit rebuild, or implicit init side effects
@@ -301,6 +303,7 @@ Cover:
 - provenance assessment and gap findings enriching existing evaluation/report surfaces
 - provenance governance hooks carrying gate-capable fields without becoming published artifacts by default
 - negative coverage that Phase 1 provenance hooks/candidates do not enter published governance artifact semantics
+- negative coverage that no hidden flag, env toggle, or experimental configuration path can promote provenance hooks into default blocker semantics
 - verify/close/release continuing to ignore provenance candidates for default blocker decisions
 - provenance-specific findings enriching but not overriding current evaluation truth
 
@@ -354,6 +357,7 @@ Document:
 - `ai-sdlc provenance summary`
 - `ai-sdlc provenance explain`
 - `ai-sdlc provenance gaps`
+- minimal CLI smoke examples such as `ai-sdlc provenance summary --json` and `ai-sdlc provenance gaps`
 - Phase 1 limits: read-only, no host-native full coverage, no default blocker behavior, manual injection is not a normal business entrypoint
 - CLI discoverability should keep `summary / explain / gaps` as the day-to-day surface and must not present manual injection as a normal primary workflow
 
