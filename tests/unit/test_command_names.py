@@ -12,4 +12,7 @@ def test_collect_flat_command_strings_includes_nested_subcommands() -> None:
     assert "ai-sdlc workitem plan-check" in cmds
     assert "ai-sdlc workitem truth-check" in cmds
     assert "ai-sdlc gate check" in cmds
+    assert "ai-sdlc provenance summary" in cmds
+    assert "ai-sdlc provenance explain" in cmds
+    assert "ai-sdlc provenance gaps" in cmds
     assert len(cmds) > 5

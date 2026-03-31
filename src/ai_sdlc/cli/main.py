@@ -13,6 +13,7 @@ from ai_sdlc.cli.commands import (
     status_command,
 )
 from ai_sdlc.cli.doctor_cmd import doctor_command
+from ai_sdlc.cli.provenance_cmd import provenance_app
 from ai_sdlc.cli.program_cmd import program_app
 from ai_sdlc.cli.run_cmd import run_command
 from ai_sdlc.cli.stage_cmd import stage_app
@@ -37,7 +38,7 @@ def _global_before_command(ctx: typer.Context) -> None:
     if ctx.invoked_subcommand is None:
         return
     # Read-only and analysis surfaces must not trigger adapter writes.
-    if ctx.invoked_subcommand in ("init", "doctor", "status", "scan", "verify"):
+    if ctx.invoked_subcommand in ("init", "doctor", "status", "scan", "verify", "provenance"):
         return
     run_ide_adapter_if_initialized(console=_hook_console)
 
@@ -58,6 +59,7 @@ app.add_typer(program_app, name="program")
 app.add_typer(workitem_app, name="workitem")
 app.add_typer(verify_app, name="verify")
 app.add_typer(telemetry_app, name="telemetry")
+app.add_typer(provenance_app, name="provenance")
 app.add_typer(trace_app, name="trace")
 
 if __name__ == "__main__":
