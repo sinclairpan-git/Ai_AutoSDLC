@@ -19,6 +19,7 @@ Batch 1: provider truth freeze
 Batch 2: mapping / whitelist / isolation freeze
 Batch 3: implementation handoff and verification freeze
 Batch 4: provider profile models slice
+Batch 5: provider profile artifact slice
 ```
 
 ---
@@ -29,8 +30,10 @@ Batch 4: provider profile models slice
 - `016` 不得重新定义 `015` 已冻结的 UI Kernel truth 或 `011` 已冻结的 Contract truth。
 - `016` 不得在当前 child work item 中直接进入 business project runtime 包、完整 Vue2 wrapper、generation 约束、gate diagnostics 或 modern provider 实现。
 - `Batch 4` 只允许写入 `src/ai_sdlc/models/frontend_provider_profile.py`、`src/ai_sdlc/models/__init__.py`、`tests/unit/test_frontend_provider_profile_models.py`、`specs/016-frontend-enterprise-vue2-provider-baseline/task-execution-log.md`，以及为本批边界服务的 `plan.md / tasks.md`。
+- `Batch 5` 只允许写入 `src/ai_sdlc/generators/frontend_provider_profile_artifacts.py`、`src/ai_sdlc/generators/__init__.py`、`tests/unit/test_frontend_provider_profile_artifacts.py`、`specs/016-frontend-enterprise-vue2-provider-baseline/task-execution-log.md`，以及为本批边界服务的 `plan.md / tasks.md`。
 - `016` 只冻结 Provider profile baseline，不默认决定任何 `src/` / `tests/` runtime side effect。
 - 当前首批实现只放行 Provider profile 模型/标准体，不放行 runtime wrapper、generation 或 gate 实现。
+- 当前第二批实现只放行 Provider profile artifact instantiation，不放行 runtime wrapper、generation runtime 或 gate 实现。
 - 只有在用户明确要求进入实现，且 `016` formal docs 已通过门禁后，才允许进入 `src/` / `tests/` 级实现。
 
 ---
@@ -204,3 +207,46 @@ Batch 4: provider profile models slice
   2. `uv run ruff check src tests`、`git diff --check -- specs/016-frontend-enterprise-vue2-provider-baseline src/ai_sdlc/models tests/unit` 与 `uv run ai-sdlc verify constraints` 通过
   3. `task-execution-log.md` 追加记录当前 implementation batch 的 touched files、验证命令与结论
 - **验证**：`uv run pytest tests/unit/test_frontend_provider_profile_models.py -q`, `uv run ruff check src tests`, `git diff --check -- specs/016-frontend-enterprise-vue2-provider-baseline src/ai_sdlc/models tests/unit`, `uv run ai-sdlc verify constraints`
+
+---
+
+## Batch 5：provider profile artifact slice
+
+### Task 5.1 先写 failing tests 固定 Provider artifact file set 与 payload 语义
+
+- **任务编号**：T51
+- **优先级**：P0
+- **依赖**：T43
+- **文件**：`tests/unit/test_frontend_provider_profile_artifacts.py`
+- **可并行**：否
+- **验收标准**：
+  1. 单测明确覆盖 `providers/frontend/enterprise-vue2/**` 的最小 artifact 文件集合
+  2. 单测明确覆盖 mappings、whitelist、risk isolation 与 legacy adapter 的 artifact payload
+  3. 首次运行定向测试时必须出现预期失败，证明 Provider artifact instantiation 尚未实现
+- **验证**：`uv run pytest tests/unit/test_frontend_provider_profile_artifacts.py -q`
+
+### Task 5.2 实现最小 Provider artifact instantiation
+
+- **任务编号**：T52
+- **优先级**：P0
+- **依赖**：T51
+- **文件**：`src/ai_sdlc/generators/frontend_provider_profile_artifacts.py`, `src/ai_sdlc/generators/__init__.py`
+- **可并行**：否
+- **验收标准**：
+  1. 提供 Provider artifact root 与 materialize helper，并把 `EnterpriseVue2ProviderProfile` 物化为 canonical artifact tree
+  2. artifact file set 至少覆盖 manifest、mappings、whitelist、risk isolation 与 legacy adapter
+  3. 实现只停留在 artifact instantiation 层，不引入 runtime wrapper、generation runtime 或 gate 逻辑
+- **验证**：`uv run pytest tests/unit/test_frontend_provider_profile_artifacts.py -q`
+
+### Task 5.3 Fresh verify 并追加 artifact batch 归档
+
+- **任务编号**：T53
+- **优先级**：P0
+- **依赖**：T52
+- **文件**：`specs/016-frontend-enterprise-vue2-provider-baseline/task-execution-log.md`
+- **可并行**：否
+- **验收标准**：
+  1. `uv run pytest tests/unit/test_frontend_provider_profile_artifacts.py -q` 通过
+  2. `uv run ruff check src tests`、`git diff --check -- specs/016-frontend-enterprise-vue2-provider-baseline src/ai_sdlc/generators tests/unit` 与 `uv run ai-sdlc verify constraints` 通过
+  3. `task-execution-log.md` 追加记录当前 artifact batch 的 touched files、验证命令与结论
+- **验证**：`uv run pytest tests/unit/test_frontend_provider_profile_artifacts.py -q`, `uv run ruff check src tests`, `git diff --check -- specs/016-frontend-enterprise-vue2-provider-baseline src/ai_sdlc/generators tests/unit`, `uv run ai-sdlc verify constraints`

@@ -31,7 +31,7 @@ related_doc:
 - 再冻结映射原则、白名单包装、危险能力隔离与 Legacy Adapter 边界
 - 最后给出后续 `models / runtime profile / tests` 的推荐文件面与测试矩阵
 
-当前 formal baseline 已完成。经用户明确要求连续推进 MVP 后，当前允许继续进入第一批实现切片：`Provider profile models`，把 `Ui* -> 企业实现` 映射、白名单包装范围、危险能力隔离与 Legacy Adapter 边界收敛到共享 `models/`；不同时触碰业务项目 runtime 包、generation 约束或 gate diagnostics。
+当前 formal baseline 与第一批 `Provider profile models` 实现切片已完成。经用户明确要求连续推进 MVP 后，当前允许继续进入下一批实现切片：`Provider profile artifacts`，把 `Ui* -> 企业实现` 映射、白名单包装范围、危险能力隔离与 Legacy Adapter 边界实例化为可复用 artifact；不同时触碰业务项目 runtime wrapper、generation runtime 或 gate diagnostics。
 
 ## 技术背景
 
@@ -81,10 +81,11 @@ src/ai_sdlc/
 ├── models/
 │   └── frontend_provider_profile.py           # Ui* -> 企业实现映射 / whitelist / isolation / legacy adapter profile
 └── generators/
-    └── ...                                    # downstream only
+    └── frontend_provider_profile_artifacts.py # current slice: Provider profile artifact instantiation
 
 tests/
-└── unit/test_frontend_provider_profile_models.py
+├── unit/test_frontend_provider_profile_models.py
+└── unit/test_frontend_provider_profile_artifacts.py
 ```
 
 ## 开始执行前必须锁定的阻断决策
@@ -145,6 +146,13 @@ tests/
 **验证方式**：定向 `pytest`、`uv run ruff check src tests`、`git diff --check`、`uv run ai-sdlc verify constraints`。
 **回退方式**：仅回退本阶段涉及的 `models/`、`tests/` 与 execution log 变更。
 
+### Phase 5：Provider profile artifact slice
+
+**目标**：把 Provider profile 的结构化模型物化为可被 generation / gate / runtime wrapper 消费的实例化 artifact，建立 `providers/frontend/enterprise-vue2/**` 的最小落盘语义。
+**产物**：`src/ai_sdlc/generators/frontend_provider_profile_artifacts.py`、可选 `src/ai_sdlc/generators/__init__.py` 导出、`tests/unit/test_frontend_provider_profile_artifacts.py`。
+**验证方式**：定向 `pytest`、`uv run ruff check src tests`、`git diff --check`、`uv run ai-sdlc verify constraints`。
+**回退方式**：仅回退本阶段涉及的 `generators/`、`tests/` 与 execution log 变更。
+
 ## 工作流计划
 
 ### 工作流 A：Provider truth freeze
@@ -175,6 +183,13 @@ tests/
 **验证方式**：`tests/unit/test_frontend_provider_profile_models.py` + fresh `ruff` / `verify constraints`。
 **回退方式**：不触发 runtime wrapper、generation 或 gate 实现。
 
+### 工作流 E：Provider profile artifact slice
+
+**范围**：将 `EnterpriseVue2ProviderProfile` 物化为 mapping、whitelist、risk isolation 与 legacy adapter artifact。
+**影响范围**：后续 generation whitelist、runtime wrapper 与 gate/compatibility 的 artifact-driven 输入基线。
+**验证方式**：`tests/unit/test_frontend_provider_profile_artifacts.py` + fresh `ruff` / `verify constraints`。
+**回退方式**：不触发 runtime wrapper、generation runtime 或 gate verdict 实现。
+
 ## 关键路径验证策略
 
 | 关键路径 | 主验证方式 | 次验证方式 |
@@ -185,3 +200,4 @@ tests/
 | isolation and legacy boundary clarity | scope review | 术语对账 |
 | downstream handoff clarity | file-map review | 人工审阅 |
 | provider profile model correctness | `uv run pytest tests/unit/test_frontend_provider_profile_models.py -q` | model payload / builder review |
+| provider artifact correctness | `uv run pytest tests/unit/test_frontend_provider_profile_artifacts.py -q` | artifact file layout / yaml payload review |

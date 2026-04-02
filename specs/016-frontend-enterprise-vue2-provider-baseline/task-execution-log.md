@@ -189,3 +189,96 @@
 - **提交哈希**：`42bc8cf`（`feat(models): add enterprise vue2 provider profile slice`）
 - **改动范围**：`specs/016-frontend-enterprise-vue2-provider-baseline/plan.md`、`specs/016-frontend-enterprise-vue2-provider-baseline/tasks.md`、`specs/016-frontend-enterprise-vue2-provider-baseline/task-execution-log.md`、`src/ai_sdlc/models/frontend_provider_profile.py`、`src/ai_sdlc/models/__init__.py`、`tests/unit/test_frontend_provider_profile_models.py`
 - **是否继续下一批**：按用户授权连续推进（优先扩 `016` 的 Provider artifact/profile handoff，再进入 generation governance）
+
+### Batch 2026-04-03-003 | 016 Provider profile artifact slice
+
+#### 2.1 准备
+
+- **任务来源**：[`tasks.md`](tasks.md) `T51`、`T52`、`T53`
+- **目标**：把 `EnterpriseVue2ProviderProfile` 物化为 `providers/frontend/enterprise-vue2/**` 的实例化 artifact，使后续 generation、runtime wrapper 与 gate/compatibility 可以消费同一套 Provider artifact，而不是直接耦合 Python builder。
+- **预读范围**：[`spec.md`](spec.md)、[`plan.md`](plan.md)、[`tasks.md`](tasks.md)、`src/ai_sdlc/models/frontend_provider_profile.py`、`src/ai_sdlc/generators/frontend_ui_kernel_artifacts.py`、冻结设计稿第 10 章 Provider 片段
+- **激活的规则**：TDD red-green；artifact-driven baseline；single canonical truth；verification-before-completion
+- **验证画像**：`code-change`
+
+#### 2.2 统一验证命令
+
+- **V1（Batch 5 parser 结构校验）**
+  - 命令：`uv run python -c "from pathlib import Path; from ai_sdlc.generators.doc_gen import TasksParser; plan = TasksParser().parse(Path('specs/016-frontend-enterprise-vue2-provider-baseline/tasks.md')); print({'total_tasks': plan.total_tasks, 'total_batches': plan.total_batches, 'batches': [batch.tasks for batch in plan.batches]})"`
+  - 结果：`{'total_tasks': 15, 'total_batches': 5, 'batches': [['T11', 'T12', 'T13'], ['T21', 'T22', 'T23'], ['T31', 'T32', 'T33'], ['T41', 'T42', 'T43'], ['T51', 'T52', 'T53']]}`
+- **V2（RED：Provider artifacts 定向测试）**
+  - 命令：`uv run pytest tests/unit/test_frontend_provider_profile_artifacts.py -q`
+  - 结果：`ModuleNotFoundError: No module named 'ai_sdlc.generators.frontend_provider_profile_artifacts'`
+- **V3（GREEN：Provider artifacts 定向测试）**
+  - 命令：`uv run pytest tests/unit/test_frontend_provider_profile_artifacts.py -q`
+  - 结果：`3 passed in 0.16s`
+- **V4（静态检查）**
+  - 命令：`uv run ruff check src tests`
+  - 结果：`All checks passed!`
+- **V5（Markdown / code diff hygiene）**
+  - 命令：`git diff --check -- specs/016-frontend-enterprise-vue2-provider-baseline src/ai_sdlc/generators tests/unit`
+  - 结果：无输出。
+- **V6（治理只读校验）**
+  - 命令：`uv run ai-sdlc verify constraints`
+  - 结果：`verify constraints: no BLOCKERs.`
+
+#### 2.3 任务记录
+
+##### T51 | 先写 failing tests 固定 Provider artifact file set 与 payload 语义
+
+- **改动范围**：`tests/unit/test_frontend_provider_profile_artifacts.py`
+- **改动内容**：
+  - 新增 Provider artifact 单测，先固定 `providers/frontend/enterprise-vue2/**` 的文件集合、manifest、mappings、whitelist、risk isolation 与 legacy adapter payload。
+  - 首次运行测试时命中 `ModuleNotFoundError`，证明 `frontend_provider_profile_artifacts.py` 尚未实现，RED 成立。
+- **新增/调整的测试**：新增 `tests/unit/test_frontend_provider_profile_artifacts.py`。
+- **测试结果**：RED 成立，报错为 `ModuleNotFoundError: No module named 'ai_sdlc.generators.frontend_provider_profile_artifacts'`。
+- **是否符合任务目标**：符合。
+
+##### T52 | 实现最小 Provider artifact instantiation
+
+- **改动范围**：`src/ai_sdlc/generators/frontend_provider_profile_artifacts.py`、`src/ai_sdlc/generators/__init__.py`
+- **改动内容**：
+  - 新增 `frontend_provider_profile_root()` 与 `materialize_frontend_provider_profile_artifacts()`，把 `EnterpriseVue2ProviderProfile` 物化为 `providers/frontend/enterprise-vue2/provider.manifest.yaml`、`mappings.yaml`、`whitelist.yaml`、`risk-isolation.yaml` 与 `legacy-adapter.yaml`。
+  - `generators/__init__.py` 增加 Provider artifact helper 导出，便于后续 generation、runtime wrapper 与 gate/compatibility 复用统一入口。
+- **新增/调整的测试**：复用 `tests/unit/test_frontend_provider_profile_artifacts.py`
+- **测试结果**：`3 passed in 0.16s`
+- **是否符合任务目标**：符合。
+
+##### T53 | Fresh verify 并追加 artifact batch 归档
+
+- **改动范围**：`specs/016-frontend-enterprise-vue2-provider-baseline/plan.md`、`specs/016-frontend-enterprise-vue2-provider-baseline/tasks.md`、`specs/016-frontend-enterprise-vue2-provider-baseline/task-execution-log.md`
+- **改动内容**：
+  - 将 Batch 5 正式加入 `plan.md / tasks.md`，把 `Provider profile artifact slice` 的 scope、文件面、验证面和执行护栏写成 formal truth。
+  - 回填本批 parser / RED / GREEN / static / diff hygiene / governance 验证结果，并归档 touched files 与 artifact-driven 决策理由。
+- **新增/调整的测试**：无新增测试文件；以本批 fresh verification 命令为准。
+- **测试结果**：全部通过。
+- **是否符合任务目标**：符合。
+
+#### 2.4 代码审查（Mandatory）
+
+- **宪章/规格对齐**：本批只实现 Provider artifact instantiation，没有越界到 runtime wrapper、generation runtime 或 gate。
+- **代码质量**：artifact file set 与 payload 语义清晰，保持 `artifact-driven` 主链，不直接耦合业务项目 runtime 细节。
+- **测试质量**：先 RED 再 GREEN，覆盖文件布局与关键 payload 字段，并补充 fresh `ruff`、`diff --check` 与 `verify constraints`。
+- **结论**：`无 Critical 阻塞项`
+
+#### 2.5 任务/计划同步状态（Mandatory）
+
+- `tasks.md` 同步状态：`已同步`
+- `plan.md` 同步状态：`已同步`
+- `spec.md` 同步状态：`无需变更`
+- 关联 branch/worktree disposition 计划：`retained（沿用当前 009/011/012/013/014/015/016 工作分支）`
+- 说明：`016` 已从 Provider profile models 继续进入 Provider artifact slice，但 runtime wrapper、generation runtime 与 gate 仍未放行。`
+
+#### 2.6 自动决策记录（如有）
+
+- AD-003：先把 Provider profile 落为 `providers/frontend/enterprise-vue2/**` artifact，再进入 generation governance。理由：保持 `artifact-driven` 主链，避免 generation/gate 直接耦合 Python builder。
+
+#### 2.7 批次结论
+
+- `016` 已具备可被下游复用的 Provider artifact tree，后续 generation whitelist、runtime wrapper 与 gate/compatibility 可以消费 `providers/frontend/enterprise-vue2/**`，而不必直接绑定 Python builder。
+
+#### 2.8 归档后动作
+
+- **已完成 git 提交**：否（提交动作紧随本次归档后执行）
+- **提交哈希**：待补充（提交后回填）
+- **改动范围**：`specs/016-frontend-enterprise-vue2-provider-baseline/plan.md`、`specs/016-frontend-enterprise-vue2-provider-baseline/tasks.md`、`specs/016-frontend-enterprise-vue2-provider-baseline/task-execution-log.md`、`src/ai_sdlc/generators/frontend_provider_profile_artifacts.py`、`src/ai_sdlc/generators/__init__.py`、`tests/unit/test_frontend_provider_profile_artifacts.py`
+- **是否继续下一批**：按用户授权连续推进（下一优先级是 generation governance baseline）
