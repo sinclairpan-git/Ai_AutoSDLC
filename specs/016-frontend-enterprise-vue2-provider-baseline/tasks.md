@@ -18,6 +18,7 @@ related_doc:
 Batch 1: provider truth freeze
 Batch 2: mapping / whitelist / isolation freeze
 Batch 3: implementation handoff and verification freeze
+Batch 4: provider profile models slice
 ```
 
 ---
@@ -27,7 +28,9 @@ Batch 3: implementation handoff and verification freeze
 - `Batch 1 ~ 3` 只允许推进 `spec.md / plan.md / tasks.md` 与 append-only `task-execution-log.md`。
 - `016` 不得重新定义 `015` 已冻结的 UI Kernel truth 或 `011` 已冻结的 Contract truth。
 - `016` 不得在当前 child work item 中直接进入 business project runtime 包、完整 Vue2 wrapper、generation 约束、gate diagnostics 或 modern provider 实现。
+- `Batch 4` 只允许写入 `src/ai_sdlc/models/frontend_provider_profile.py`、`src/ai_sdlc/models/__init__.py`、`tests/unit/test_frontend_provider_profile_models.py`、`specs/016-frontend-enterprise-vue2-provider-baseline/task-execution-log.md`，以及为本批边界服务的 `plan.md / tasks.md`。
 - `016` 只冻结 Provider profile baseline，不默认决定任何 `src/` / `tests/` runtime side effect。
+- 当前首批实现只放行 Provider profile 模型/标准体，不放行 runtime wrapper、generation 或 gate 实现。
 - 只有在用户明确要求进入实现，且 `016` formal docs 已通过门禁后，才允许进入 `src/` / `tests/` 级实现。
 
 ---
@@ -158,3 +161,46 @@ Batch 3: implementation handoff and verification freeze
   2. `spec.md / plan.md / tasks.md` 对 Provider truth、mapping、whitelist / isolation 与 handoff 保持单一真值
   3. 当前分支上的 `016` formal docs 可作为后续进入 Provider profile 实现的稳定基线
 - **验证**：`uv run ai-sdlc verify constraints`, `git status --short`
+
+---
+
+## Batch 4：provider profile models slice
+
+### Task 4.1 先写 failing tests 固定 Provider profile / MVP builder 语义
+
+- **任务编号**：T41
+- **优先级**：P0
+- **依赖**：T33
+- **文件**：`tests/unit/test_frontend_provider_profile_models.py`
+- **可并行**：否
+- **验收标准**：
+  1. 单测明确覆盖 MVP `Ui* -> 企业实现` 映射集合、白名单包装范围、危险能力隔离与 Legacy Adapter policy
+  2. 单测明确覆盖重复 mapping / whitelist component id 的失败语义
+  3. 首次运行定向测试时必须出现预期失败，证明 Provider profile models 尚未实现
+- **验证**：`uv run pytest tests/unit/test_frontend_provider_profile_models.py -q`
+
+### Task 4.2 实现最小 Provider profile models / MVP builder
+
+- **任务编号**：T42
+- **优先级**：P0
+- **依赖**：T41
+- **文件**：`src/ai_sdlc/models/frontend_provider_profile.py`, `src/ai_sdlc/models/__init__.py`
+- **可并行**：否
+- **验收标准**：
+  1. 模型明确承载 `Ui* -> 企业实现` 映射、白名单包装范围、危险能力隔离与 Legacy Adapter policy
+  2. 提供 MVP baseline builder，并落实首批映射建议与 `no full Vue.use` 边界
+  3. 实现只停留在结构化模型层，不引入 runtime wrapper、generation 或 gate 逻辑
+- **验证**：`uv run pytest tests/unit/test_frontend_provider_profile_models.py -q`
+
+### Task 4.3 Fresh verify 并追加 implementation batch 归档
+
+- **任务编号**：T43
+- **优先级**：P0
+- **依赖**：T42
+- **文件**：`specs/016-frontend-enterprise-vue2-provider-baseline/task-execution-log.md`
+- **可并行**：否
+- **验收标准**：
+  1. `uv run pytest tests/unit/test_frontend_provider_profile_models.py -q` 通过
+  2. `uv run ruff check src tests`、`git diff --check -- specs/016-frontend-enterprise-vue2-provider-baseline src/ai_sdlc/models tests/unit` 与 `uv run ai-sdlc verify constraints` 通过
+  3. `task-execution-log.md` 追加记录当前 implementation batch 的 touched files、验证命令与结论
+- **验证**：`uv run pytest tests/unit/test_frontend_provider_profile_models.py -q`, `uv run ruff check src tests`, `git diff --check -- specs/016-frontend-enterprise-vue2-provider-baseline src/ai_sdlc/models tests/unit`, `uv run ai-sdlc verify constraints`

@@ -74,7 +74,7 @@ specs/016-frontend-enterprise-vue2-provider-baseline/
 └── task-execution-log.md
 ```
 
-### 推荐的当前实现触点
+### 当前激活的实现触点
 
 ```text
 src/ai_sdlc/
@@ -138,6 +138,13 @@ tests/
 **验证方式**：formal docs review + `verify constraints`。  
 **回退方式**：仅回退 planning baseline。
 
+### Phase 4：Provider profile models slice
+
+**目标**：落下 enterprise-vue2 Provider 的最小结构化模型与 MVP builder，先稳定 `Ui* -> 企业实现` 映射、白名单包装范围、危险能力隔离与 Legacy Adapter 边界。
+**产物**：`src/ai_sdlc/models/frontend_provider_profile.py`、`tests/unit/test_frontend_provider_profile_models.py`、`src/ai_sdlc/models/__init__.py`。
+**验证方式**：定向 `pytest`、`uv run ruff check src tests`、`git diff --check`、`uv run ai-sdlc verify constraints`。
+**回退方式**：仅回退本阶段涉及的 `models/`、`tests/` 与 execution log 变更。
+
 ## 工作流计划
 
 ### 工作流 A：Provider truth freeze
@@ -161,6 +168,13 @@ tests/
 **验证方式**：file-map review + tests matrix review。  
 **回退方式**：不进入 Provider runtime / gate / generation 实现。
 
+### 工作流 D：Provider profile models slice
+
+**范围**：`Ui* -> 企业实现` 映射模型、白名单包装对象、危险能力隔离与 Legacy Adapter policy。
+**影响范围**：后续 Provider artifact、runtime wrapper、generation whitelist 与 compatibility gate 的上游真值。
+**验证方式**：`tests/unit/test_frontend_provider_profile_models.py` + fresh `ruff` / `verify constraints`。
+**回退方式**：不触发 runtime wrapper、generation 或 gate 实现。
+
 ## 关键路径验证策略
 
 | 关键路径 | 主验证方式 | 次验证方式 |
@@ -170,3 +184,4 @@ tests/
 | mapping and whitelist clarity | contract review | 测试矩阵回挂 |
 | isolation and legacy boundary clarity | scope review | 术语对账 |
 | downstream handoff clarity | file-map review | 人工审阅 |
+| provider profile model correctness | `uv run pytest tests/unit/test_frontend_provider_profile_models.py -q` | model payload / builder review |

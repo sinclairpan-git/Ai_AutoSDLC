@@ -16,6 +16,14 @@ from ai_sdlc.models.frontend_contracts import (
     ValidationFieldRule,
     WhitelistReference,
 )
+from ai_sdlc.models.frontend_provider_profile import (
+    EnterpriseVue2ProviderProfile,
+    LegacyAdapterPolicy,
+    ProviderMapping,
+    ProviderRiskIsolationPolicy,
+    ProviderWhitelistEntry,
+    build_mvp_enterprise_vue2_provider_profile,
+)
 from ai_sdlc.models.frontend_ui_kernel import (
     FrontendUiKernelSet,
     KernelInteractionBaseline,
@@ -115,6 +123,7 @@ __all__ = [
     "ContractRuleBundle",
     "DependencyInfo",
     "DiscoveredTestFile",
+    "EnterpriseVue2ProviderProfile",
     "ExecuteProgress",
     "ExecutionBatch",
     "ExecutionPath",
@@ -142,6 +151,7 @@ __all__ = [
     "KnowledgeRefreshLog",
     "KernelInteractionBaseline",
     "KernelStateBaseline",
+    "LegacyAdapterPolicy",
     "MaintenanceBrief",
     "MaintenancePlan",
     "MaintenanceTask",
@@ -160,6 +170,9 @@ __all__ = [
     "ProjectConfig",
     "ProjectState",
     "ProjectStatus",
+    "ProviderMapping",
+    "ProviderRiskIsolationPolicy",
+    "ProviderWhitelistEntry",
     "RebaselineRecord",
     "RecipeDeclaration",
     "PageRecipeStandard",
@@ -187,4 +200,5 @@ __all__ = [
     "WorkerAssignment",
     "WorkingSet",
     "build_mvp_frontend_ui_kernel",
+    "build_mvp_enterprise_vue2_provider_profile",
 ]
