@@ -84,6 +84,36 @@ docs/
 | future kernel/provider surface | 定义 Kernel / Provider / legacy adapter 的标准与边界 | 不得由 Provider 或公司组件库反向主导 Kernel |
 | future gate surface | 定义 gate matrix、compatibility execution policy、report/fix truth | 不得新增第二套 compatibility rules 或第二套 gate system |
 
+## 五条主 workstream 切分矩阵
+
+| Workstream | 当前冻结内容 | 依赖关系 | 推荐的下游承接面 | `009` 内禁止越界项 |
+|------------|--------------|----------|------------------|--------------------|
+| Contract | Contract shape、legacy 扩展字段、authoring truth order | `PRD/spec` | 下游 Contract/Schema work item | 不直接写生成器、Provider、运行时代码 |
+| UI Kernel | `Ui*` 协议、recipe standard body、状态/交互底线 | Contract | 下游 Kernel standard work item | 不直接包装公司组件库 |
+| enterprise-vue2 Provider | Provider profile、白名单包装、Legacy Adapter 边界 | UI Kernel、Compatibility Context | 下游 Vue2 provider work item | 不直接开启 modern provider 路线 |
+| 前端生成约束 | 生成纪律、白名单、contract-to-code 最小输出边界 | Contract、UI Kernel、Provider | 下游 generation governance work item | 不直接实现完整生成 runtime |
+| Gate-Recheck-Auto-fix | gate matrix、compatibility execution policy、recheck / auto-fix 边界 | Contract、代码、Provider | 下游 gate / diagnostics work item | 不新增第二套 gate system |
+
+当前 work item 只负责把这五条主线切成可 formalize 的 execution surface。任何真正的 `src/` / `tests/` 开发，都应在这些下游 work item 中进行。
+
+## 交付分层（MVP / P1 / P2）
+
+| 层级 | 计划口径 | 主要交付 | 明确推迟 |
+|------|----------|----------|----------|
+| MVP | `Vue2 企业项目 + 最小治理闭环 + legacy 轻量兼容` | Contract 基础形状、UI Kernel 标准本体、enterprise-vue2 Provider profile、Compatibility Context、统一 gate matrix 的兼容执行口径 | modern provider、终局 token 平台、全量 legacy 迁移 |
+| P1 | 体验稳定层 / 诊断层补强 | richer recipe coverage、gate diagnostics、recheck ergonomics、治理反馈闭环 | multi-provider runtime、终局迁移平台 |
+| P2 | runtime 与迁移能力扩展 | modern provider、design token platform、迁移加速器、更多 provider/runtime 演进 | 改写 MVP 的单一真值顺序 |
+
+## 下一阶段执行前提与 handoff
+
+- `009` 本身只负责 formal baseline、workstream slicing、legacy / compatibility freeze 和 verify handoff。
+- 后续任何 `src/` / `tests/` 实现前，都必须先创建 downstream child work item，并把 `009` 作为其上游 formal baseline。
+- 当前阶段的只读 handoff 命令固定为：
+  - `uv run ai-sdlc verify constraints`
+  - `uv run ai-sdlc workitem truth-check --wi specs/009-frontend-governance-ui-kernel`
+  - `git status --short`
+- 只有当用户明确要求进入实现，且下游 work item 的 `spec.md / plan.md / tasks.md` 已创建并过门禁后，才允许从本 baseline 切到编码执行。
+
 ## 阶段计划
 
 ### Phase 0：Formal baseline freeze
@@ -102,8 +132,8 @@ docs/
 
 ### Phase 2：Execution handoff baseline
 
-**目标**：为后续 design/decompose/verify 阶段提供统一执行前提和只读验证基线。  
-**产物**：执行顺序、验证命令、下一阶段前置约束。  
+**目标**：为后续 design/decompose/verify 阶段提供统一执行前提、只读验证基线和 child work item handoff 规则。
+**产物**：执行顺序、验证命令、下一阶段前置约束、downstream handoff 口径。
 **验证方式**：formal docs review + `verify constraints`。  
 **回退方式**：仅回退 planning baseline。
 
@@ -137,7 +167,7 @@ docs/
 | formal single truth | 文档对账 | `uv run ai-sdlc verify constraints` |
 | legacy policy consistency | 术语与口径搜索 | 人工审阅 |
 | recipe / contract / provider 边界 | `spec.md / plan.md / tasks.md` 交叉引用检查 | 人工审阅 |
-| next-step readiness | tasks batch / dependency review | `git status --short` |
+| next-step readiness | tasks batch / dependency review | `uv run ai-sdlc workitem truth-check --wi specs/009-frontend-governance-ui-kernel`, `git status --short` |
 
 ## 已锁定决策
 
@@ -152,4 +182,4 @@ docs/
 1. 先冻结 `009` formal spec/plan/tasks，避免 canonical truth 继续缺位。
 2. 再将大方案收敛为五条 workstream：Contract、UI Kernel、enterprise-vue2 Provider、前端生成约束、Gate/Compatibility。
 3. 再把 legacy 线织入这些 workstream，确保它不是附会补丁而是内建边界。
-4. 完成 formal baseline 校验后，再决定后续是继续在 `009` 下执行，还是拆成更细的 implementation work item。
+4. 完成 formal baseline 校验后，优先拆出 downstream child work item，再进入 `src/` / `tests/` 级实现；`009` 自身保留为母规格与治理基线。
