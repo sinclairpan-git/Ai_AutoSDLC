@@ -91,7 +91,7 @@
 
 #### 2.8 归档后动作
 
-- **已完成 git 提交**：否（提交动作紧随本次归档后执行）
-- **提交哈希**：待补充（提交后回填）
+- **已完成 git 提交**：是
+- **提交哈希**：`702a401`（`docs(018): formalize frontend gate compatibility baseline`）
 - **改动范围**：`specs/018-frontend-gate-compatibility-baseline/spec.md`、`specs/018-frontend-gate-compatibility-baseline/plan.md`、`specs/018-frontend-gate-compatibility-baseline/tasks.md`、`specs/018-frontend-gate-compatibility-baseline/task-execution-log.md`
 - **是否继续下一批**：按用户授权连续推进（优先转入 gate matrix / report models slice）
