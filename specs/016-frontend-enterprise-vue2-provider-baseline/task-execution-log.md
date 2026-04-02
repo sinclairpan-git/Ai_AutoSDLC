@@ -278,7 +278,7 @@
 
 #### 2.8 归档后动作
 
-- **已完成 git 提交**：否（提交动作紧随本次归档后执行）
-- **提交哈希**：待补充（提交后回填）
+- **已完成 git 提交**：是
+- **提交哈希**：`9549110`（`feat(generators): add enterprise vue2 provider artifacts`）
 - **改动范围**：`specs/016-frontend-enterprise-vue2-provider-baseline/plan.md`、`specs/016-frontend-enterprise-vue2-provider-baseline/tasks.md`、`specs/016-frontend-enterprise-vue2-provider-baseline/task-execution-log.md`、`src/ai_sdlc/generators/frontend_provider_profile_artifacts.py`、`src/ai_sdlc/generators/__init__.py`、`tests/unit/test_frontend_provider_profile_artifacts.py`
 - **是否继续下一批**：按用户授权连续推进（下一优先级是 generation governance baseline）
