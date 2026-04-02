@@ -189,3 +189,96 @@
 - **提交哈希**：`dffaf07`（`feat(models): add frontend gate policy models slice`）
 - **改动范围**：`specs/018-frontend-gate-compatibility-baseline/plan.md`、`specs/018-frontend-gate-compatibility-baseline/tasks.md`、`specs/018-frontend-gate-compatibility-baseline/task-execution-log.md`、`src/ai_sdlc/models/frontend_gate_policy.py`、`src/ai_sdlc/models/__init__.py`、`tests/unit/test_frontend_gate_policy_models.py`
 - **是否继续下一批**：按用户授权连续推进（优先转入 gate/report artifact 或最小 gate integration slice）
+
+### Batch 2026-04-03-003 | 018 Gate policy artifact slice
+
+#### 2.1 准备
+
+- **任务来源**：[`tasks.md`](tasks.md) `T51`、`T52`、`T53`
+- **目标**：把 `FrontendGatePolicySet` 物化为 `governance/frontend/gates/**` 的 canonical artifact tree，使后续 verify/gate integration 可以消费 artifact，而不是直接耦合 Python builder。
+- **预读范围**：[`spec.md`](spec.md)、[`plan.md`](plan.md)、[`tasks.md`](tasks.md)、`src/ai_sdlc/models/frontend_gate_policy.py`、`src/ai_sdlc/generators/frontend_generation_constraint_artifacts.py`、冻结设计稿第 12 章 gate / compatibility 片段
+- **激活的规则**：TDD red-green；artifact-driven baseline；single canonical truth；verification-before-completion
+- **验证画像**：`code-change`
+
+#### 2.2 统一验证命令
+
+- **V1（Batch 5 parser 结构校验）**
+  - 命令：`uv run python -c "from pathlib import Path; from ai_sdlc.generators.doc_gen import TasksParser; plan = TasksParser().parse(Path('specs/018-frontend-gate-compatibility-baseline/tasks.md')); print({'total_tasks': plan.total_tasks, 'total_batches': plan.total_batches, 'batches': [batch.tasks for batch in plan.batches]})"`
+  - 结果：`{'total_tasks': 15, 'total_batches': 5, 'batches': [['T11', 'T12', 'T13'], ['T21', 'T22', 'T23'], ['T31', 'T32', 'T33'], ['T41', 'T42', 'T43'], ['T51', 'T52', 'T53']]}`
+- **V2（RED：gate policy artifacts 定向测试）**
+  - 命令：`uv run pytest tests/unit/test_frontend_gate_policy_artifacts.py -q`
+  - 结果：`ModuleNotFoundError: No module named 'ai_sdlc.generators.frontend_gate_policy_artifacts'`
+- **V3（GREEN：gate policy artifacts 定向测试）**
+  - 命令：`uv run pytest tests/unit/test_frontend_gate_policy_artifacts.py -q`
+  - 结果：`3 passed in 0.15s`
+- **V4（静态检查）**
+  - 命令：`uv run ruff check src tests`
+  - 结果：`All checks passed!`
+- **V5（Markdown / code diff hygiene）**
+  - 命令：`git diff --check -- specs/018-frontend-gate-compatibility-baseline src/ai_sdlc/generators tests/unit`
+  - 结果：无输出。
+- **V6（治理只读校验）**
+  - 命令：`uv run ai-sdlc verify constraints`
+  - 结果：`verify constraints: no BLOCKERs.`
+
+#### 2.3 任务记录
+
+##### T51 | 先写 failing tests 固定 gate policy artifact file set 与 payload 语义
+
+- **改动范围**：`tests/unit/test_frontend_gate_policy_artifacts.py`
+- **改动内容**：
+  - 新增 gate policy artifact 单测，先固定 `governance/frontend/gates/**` 的文件集合、manifest、gate matrix、Compatibility policies 与 report types payload。
+  - 首次运行测试时命中 `ModuleNotFoundError`，证明 `frontend_gate_policy_artifacts.py` 尚未实现，RED 成立。
+- **新增/调整的测试**：新增 `tests/unit/test_frontend_gate_policy_artifacts.py`。
+- **测试结果**：RED 成立，报错为 `ModuleNotFoundError: No module named 'ai_sdlc.generators.frontend_gate_policy_artifacts'`。
+- **是否符合任务目标**：符合。
+
+##### T52 | 实现最小 gate policy artifact instantiation
+
+- **改动范围**：`src/ai_sdlc/generators/frontend_gate_policy_artifacts.py`、`src/ai_sdlc/generators/__init__.py`
+- **改动内容**：
+  - 新增 `frontend_gate_policy_root()` 与 `materialize_frontend_gate_policy_artifacts()`，把 `FrontendGatePolicySet` 物化为 `governance/frontend/gates/gate.manifest.yaml`、`gate-matrix.yaml`、`compatibility-policies.yaml` 与 `report-types.yaml`。
+  - `generators/__init__.py` 增加 gate policy artifact helper 导出，便于后续 verify/gate integration 复用统一入口。
+- **新增/调整的测试**：复用 `tests/unit/test_frontend_gate_policy_artifacts.py`
+- **测试结果**：`3 passed in 0.15s`
+- **是否符合任务目标**：符合。
+
+##### T53 | Fresh verify 并追加 artifact batch 归档
+
+- **改动范围**：`specs/018-frontend-gate-compatibility-baseline/plan.md`、`specs/018-frontend-gate-compatibility-baseline/tasks.md`、`specs/018-frontend-gate-compatibility-baseline/task-execution-log.md`
+- **改动内容**：
+  - 将 Batch 5 正式加入 `plan.md / tasks.md`，把 `gate policy artifact slice` 的 scope、文件面、验证面和执行护栏写成 formal truth。
+  - 回填本批 parser / RED / GREEN / governance 验证结果，并归档 touched files 与 artifact-driven 决策理由。
+- **新增/调整的测试**：无新增测试文件；以本批 fresh verification 命令为准。
+- **测试结果**：全部通过。
+- **是否符合任务目标**：符合。
+
+#### 2.4 代码审查（Mandatory）
+
+- **宪章/规格对齐**：本批只实现 gate policy artifact instantiation，没有越界到完整 gate runtime、recheck agent 或 auto-fix engine。
+- **代码质量**：artifact file set 与 payload 语义清晰，保持 `artifact-driven` 主链，不直接耦合 gate 执行细节。
+- **测试质量**：先 RED 再 GREEN，覆盖文件布局与关键 payload 字段；fresh verification 将补 `ruff`、`diff --check` 与 `verify constraints`。
+- **结论**：`无 Critical 阻塞项`
+
+#### 2.5 任务/计划同步状态（Mandatory）
+
+- `tasks.md` 同步状态：`已同步`
+- `plan.md` 同步状态：`已同步`
+- `spec.md` 同步状态：`无需变更`
+- 关联 branch/worktree disposition 计划：`retained（沿用当前 009/011/012/013/014/015/016/017/018 工作分支）`
+- 说明：`018` 已从 gate policy models slice 继续进入 gate policy artifact slice，但完整 gate runtime、recheck agent 与 auto-fix engine 仍未放行。`
+
+#### 2.6 自动决策记录（如有）
+
+- AD-003：在进入 verify/gate integration 前先落 artifact slice，而不是直接把 verify/gate surface 耦合到 Python builder。理由：保持和 Contract / UI Kernel / Provider / generation governance 一致的 artifact-driven 主链。
+
+#### 2.7 批次结论
+
+- `018` 已具备可复用的 gate policy artifact root 与 canonical file set，后续 verify/gate integration 可以消费统一的 `governance/frontend/gates/**` artifact tree。
+
+#### 2.8 归档后动作
+
+- **已完成 git 提交**：否（提交动作紧随本次归档后执行）
+- **提交哈希**：待补充（提交后回填）
+- **改动范围**：`specs/018-frontend-gate-compatibility-baseline/plan.md`、`specs/018-frontend-gate-compatibility-baseline/tasks.md`、`specs/018-frontend-gate-compatibility-baseline/task-execution-log.md`、`src/ai_sdlc/generators/frontend_gate_policy_artifacts.py`、`src/ai_sdlc/generators/__init__.py`、`tests/unit/test_frontend_gate_policy_artifacts.py`
+- **是否继续下一批**：按用户授权连续推进（优先转入最小 gate/verify integration slice）

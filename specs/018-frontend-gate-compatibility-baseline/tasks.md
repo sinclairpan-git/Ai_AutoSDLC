@@ -18,6 +18,7 @@ Batch 1: gate truth freeze
 Batch 2: matrix / output / recheck / fix boundary freeze
 Batch 3: implementation handoff and verification freeze
 Batch 4: gate matrix and report models slice
+Batch 5: gate policy artifact slice
 ```
 
 ---
@@ -29,8 +30,10 @@ Batch 4: gate matrix and report models slice
 - `018` 不得在当前 child work item 中直接进入完整 gate runtime、recheck agent、auto-fix engine 或第二套 compatibility rules 实现。
 - `018` 只冻结 gate / compatibility baseline，不默认决定任何 `src/` / `tests/` runtime side effect。
 - `Batch 4` 只允许写入 `src/ai_sdlc/models/frontend_gate_policy.py`、`src/ai_sdlc/models/__init__.py`、`tests/unit/test_frontend_gate_policy_models.py`、`specs/018-frontend-gate-compatibility-baseline/task-execution-log.md`，以及为本批边界服务的 `plan.md / tasks.md`。
+- `Batch 5` 只允许写入 `src/ai_sdlc/generators/frontend_gate_policy_artifacts.py`、`src/ai_sdlc/generators/__init__.py`、`tests/unit/test_frontend_gate_policy_artifacts.py`、`specs/018-frontend-gate-compatibility-baseline/task-execution-log.md`，以及为本批边界服务的 `plan.md / tasks.md`。
 - 只有在用户明确要求进入实现，且 `018` formal docs 已通过门禁后，才允许进入 `src/` / `tests/` 级实现。
 - 当前首批实现只放行 gate matrix / compatibility policy / report models，不放行完整 gate runtime、recheck agent 或 auto-fix engine。
+- 当前第二批实现只放行 gate policy artifact instantiation，不放行完整 gate runtime、recheck agent 或 auto-fix engine。
 
 ---
 
@@ -203,3 +206,46 @@ Batch 4: gate matrix and report models slice
   2. `uv run ruff check src tests`、`git diff --check -- specs/018-frontend-gate-compatibility-baseline src/ai_sdlc/models tests/unit` 与 `uv run ai-sdlc verify constraints` 通过
   3. `task-execution-log.md` 追加记录当前 implementation batch 的 touched files、验证命令与结论
 - **验证**：`uv run pytest tests/unit/test_frontend_gate_policy_models.py -q`, `uv run ruff check src tests`, `git diff --check -- specs/018-frontend-gate-compatibility-baseline src/ai_sdlc/models tests/unit`, `uv run ai-sdlc verify constraints`
+
+---
+
+## Batch 5：gate policy artifact slice
+
+### Task 5.1 先写 failing tests 固定 gate policy artifact file set 与 payload 语义
+
+- **任务编号**：T51
+- **优先级**：P0
+- **依赖**：T43
+- **文件**：`tests/unit/test_frontend_gate_policy_artifacts.py`
+- **可并行**：否
+- **验收标准**：
+  1. 单测明确覆盖 `governance/frontend/gates/**` 的最小 artifact 文件集合
+  2. 单测明确覆盖 gate matrix、Compatibility policies 与 report types 的 artifact payload
+  3. 首次运行定向测试时必须出现预期失败，证明 `frontend_gate_policy_artifacts.py` 尚未实现
+- **验证**：`uv run pytest tests/unit/test_frontend_gate_policy_artifacts.py -q`
+
+### Task 5.2 实现最小 gate policy artifact instantiation
+
+- **任务编号**：T52
+- **优先级**：P0
+- **依赖**：T51
+- **文件**：`src/ai_sdlc/generators/frontend_gate_policy_artifacts.py`, `src/ai_sdlc/generators/__init__.py`
+- **可并行**：否
+- **验收标准**：
+  1. 提供 gate policy artifact root 与 materialize helper，并把 `FrontendGatePolicySet` 物化为 canonical artifact tree
+  2. artifact file set 至少覆盖 manifest、gate matrix、Compatibility policies 与 report types
+  3. 实现只停留在 artifact instantiation 层，不引入完整 gate runtime、recheck agent 或 auto-fix engine
+- **验证**：`uv run pytest tests/unit/test_frontend_gate_policy_artifacts.py -q`
+
+### Task 5.3 Fresh verify 并追加 artifact batch 归档
+
+- **任务编号**：T53
+- **优先级**：P0
+- **依赖**：T52
+- **文件**：`specs/018-frontend-gate-compatibility-baseline/task-execution-log.md`
+- **可并行**：否
+- **验收标准**：
+  1. `uv run pytest tests/unit/test_frontend_gate_policy_artifacts.py -q` 通过
+  2. `uv run ruff check src tests`、`git diff --check -- specs/018-frontend-gate-compatibility-baseline src/ai_sdlc/generators tests/unit` 与 `uv run ai-sdlc verify constraints` 通过
+  3. `task-execution-log.md` 追加记录当前 artifact batch 的 touched files、验证命令与结论
+- **验证**：`uv run pytest tests/unit/test_frontend_gate_policy_artifacts.py -q`, `uv run ruff check src tests`, `git diff --check -- specs/018-frontend-gate-compatibility-baseline src/ai_sdlc/generators tests/unit`, `uv run ai-sdlc verify constraints`

@@ -29,7 +29,7 @@ related_doc:
 - 再冻结 MVP gate matrix、结构化输出、Recheck 和 Auto-fix 边界
 - 最后给出后续 `models / reports / gates / tests` 的推荐文件面与测试矩阵
 
-当前 formal baseline 已完成。经用户明确要求连续推进 MVP 后，当前允许继续进入第一批实现切片：`gate matrix and report models`，把 MVP gate matrix、Compatibility 执行口径和结构化输出收敛到共享 `models/`；不同时触碰完整 gate execution runtime 或 auto-fix engine。
+当前 formal baseline 与第一批 `gate matrix and report models` 实现切片已完成。经用户明确要求连续推进 MVP 后，当前允许继续进入下一批实现切片：`gate policy artifacts`，把 gate matrix、Compatibility 执行策略与 report types 物化为 canonical artifact；不同时触碰完整 gate execution runtime 或 auto-fix engine。
 
 ## 技术背景
 
@@ -55,11 +55,14 @@ specs/018-frontend-gate-compatibility-baseline/
 
 ```text
 src/ai_sdlc/
-└── models/
-    └── frontend_gate_policy.py               # gate matrix / compatibility policy / report models
+├── models/
+│   └── frontend_gate_policy.py               # gate matrix / compatibility policy / report models
+└── generators/
+    └── frontend_gate_policy_artifacts.py     # current slice: gate policy artifact instantiation
 
 tests/
-└── unit/test_frontend_gate_policy_models.py
+├── unit/test_frontend_gate_policy_models.py
+└── unit/test_frontend_gate_policy_artifacts.py
 ```
 
 ## 阶段计划
@@ -99,6 +102,13 @@ tests/
 **验证方式**：定向 `pytest`、`uv run ruff check src tests`、`git diff --check`、`uv run ai-sdlc verify constraints`。
 **回退方式**：仅回退本阶段涉及的 `models/`、`tests/` 与 execution log 变更。
 
+### Phase 5：Gate policy artifact slice
+
+**目标**：把共享 gate policy / compatibility policy / report types 物化为 `governance/frontend/gates/**` 的 canonical artifact tree，使后续 verify/gate integration 消费 artifact 而不是直接耦合 Python builder。
+**产物**：`src/ai_sdlc/generators/frontend_gate_policy_artifacts.py`、可选 `src/ai_sdlc/generators/__init__.py` 导出、`tests/unit/test_frontend_gate_policy_artifacts.py`。
+**验证方式**：定向 `pytest`、`uv run ruff check src tests`、`git diff --check`、`uv run ai-sdlc verify constraints`。
+**回退方式**：仅回退本阶段涉及的 `generators/`、`tests/` 与 execution log 变更。
+
 ## 关键路径验证策略
 
 | 关键路径 | 主验证方式 | 次验证方式 |
@@ -108,3 +118,4 @@ tests/
 | report boundary clarity | contract review | 测试矩阵回挂 |
 | downstream handoff clarity | file-map review | 人工审阅 |
 | gate matrix model correctness | `uv run pytest tests/unit/test_frontend_gate_policy_models.py -q` | model payload / builder review |
+| gate policy artifact correctness | `uv run pytest tests/unit/test_frontend_gate_policy_artifacts.py -q` | artifact file layout / yaml payload review |
