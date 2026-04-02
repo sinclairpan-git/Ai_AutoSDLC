@@ -32,7 +32,7 @@ related_doc:
 - 再冻结 `Ui*` 协议、page recipe 标准本体、状态/交互/Theme-Token 边界
 - 最后给出后续 `models / provider / gates / tests` 的推荐文件面与测试矩阵
 
-当前 formal baseline 已完成。经用户明确要求连续推进 MVP 后，当前只允许进入第一批实现切片：`Kernel models`，把 `Ui*` 协议、三个 MVP page recipe 标准本体、状态底线与交互底线收敛到共享 `models/`；不同时触碰 Provider、Gate、生成器或 runtime 组件实现。
+当前 formal baseline 与第一批 `Kernel models` 实现切片已完成。经用户明确要求连续推进 MVP 后，当前只允许进入下一批实现切片：`Kernel artifacts`，把 `Ui*` 协议、page recipe 标准本体、状态底线与交互底线实例化为可复用 artifact；不同时触碰 Provider、Gate、生成器 runtime 或前端组件实现。
 
 ## 技术背景
 
@@ -74,19 +74,22 @@ specs/015-frontend-ui-kernel-standard-baseline/
 └── task-execution-log.md
 ```
 
-### 推荐的后续实现触点
+### 当前激活的实现触点
 
 ```text
 src/ai_sdlc/
 ├── models/
 │   └── frontend_ui_kernel.py                  # Ui* 协议 / page recipe / state baseline 模型
+├── generators/
+│   └── frontend_ui_kernel_artifacts.py        # current slice: Kernel artifact instantiation
 ├── gates/
 │   └── frontend_contract_gate.py              # downstream only; not owned by first Kernel baseline slice
 └── generators/
     └── ...                                    # downstream only
 
 tests/
-└── unit/test_frontend_ui_kernel_models.py
+├── unit/test_frontend_ui_kernel_models.py
+└── unit/test_frontend_ui_kernel_artifacts.py
 ```
 
 ## 开始执行前必须锁定的阻断决策
@@ -145,6 +148,13 @@ tests/
 **验证方式**：定向 `pytest`、`uv run ruff check src tests`、`git diff --check`、`uv run ai-sdlc verify constraints`。
 **回退方式**：仅回退本阶段涉及的 `models/`、`tests/` 与 execution log 变更。
 
+### Phase 5：Kernel artifact slice
+
+**目标**：把 UI Kernel 的结构化模型物化为可被下游 Provider / generation / gate 消费的实例化 artifact，建立 `kernel/frontend/**` 的最小落盘语义。
+**产物**：`src/ai_sdlc/generators/frontend_ui_kernel_artifacts.py`、可选 `src/ai_sdlc/generators/__init__.py` 导出、`tests/unit/test_frontend_ui_kernel_artifacts.py`。
+**验证方式**：定向 `pytest`、`uv run ruff check src tests`、`git diff --check`、`uv run ai-sdlc verify constraints`。
+**回退方式**：仅回退本阶段涉及的 `generators/`、`tests/` 与 execution log 变更。
+
 ## 工作流计划
 
 ### 工作流 A：Kernel truth freeze
@@ -175,6 +185,13 @@ tests/
 **验证方式**：`tests/unit/test_frontend_ui_kernel_models.py` + fresh `ruff` / `verify constraints`。
 **回退方式**：不触发 Provider、Gate、generation 或 runtime 组件实现。
 
+### 工作流 E：Kernel artifact slice
+
+**范围**：将 `FrontendUiKernelSet` 物化为语义组件目录、page recipe artifact 与状态 / 交互 baseline artifact。
+**影响范围**：后续 Provider profile、generation governance 与 verify/gate 的 artifact-driven 输入基线。
+**验证方式**：`tests/unit/test_frontend_ui_kernel_artifacts.py` + fresh `ruff` / `verify constraints`。
+**回退方式**：不触发 Provider mapping、Gate verdict 或 runtime wrapper 实现。
+
 ## 关键路径验证策略
 
 | 关键路径 | 主验证方式 | 次验证方式 |
@@ -185,3 +202,4 @@ tests/
 | state/interaction/theme boundary clarity | contract review | 测试矩阵回挂 |
 | downstream handoff clarity | file-map review | 人工审阅 |
 | kernel model correctness | `uv run pytest tests/unit/test_frontend_ui_kernel_models.py -q` | model payload / MVP builder review |
+| kernel artifact correctness | `uv run pytest tests/unit/test_frontend_ui_kernel_artifacts.py -q` | artifact file layout / yaml payload review |
