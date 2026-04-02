@@ -200,3 +200,105 @@
 - **提交哈希**：本批唯一一次语义提交为 `feat(models): add frontend contract models slice`；完整 SHA 以该提交后的 `HEAD`（`git rev-parse HEAD`）为准
 - **改动范围**：`specs/011-frontend-contract-authoring-baseline/plan.md`、`specs/011-frontend-contract-authoring-baseline/tasks.md`、`specs/011-frontend-contract-authoring-baseline/task-execution-log.md`、`src/ai_sdlc/models/frontend_contracts.py`、`src/ai_sdlc/models/__init__.py`、`tests/unit/test_frontend_contract_models.py`
 - **是否继续下一批**：待用户决定（建议转入 Contract artifact instantiation）
+
+### Batch 2026-04-02-003 | 011 Contract artifact instantiation slice
+
+#### 2.1 准备
+
+- **任务来源**：[`tasks.md`](tasks.md) `T51`、`T52`、`T53`
+- **目标**：在不越界到 drift helpers / gates 的前提下，把 `Frontend Contract Set` 物化为 `contracts/frontend/**` 下的 page/module 级实例化 artifact。
+- **预读范围**：[`spec.md`](spec.md)、[`plan.md`](plan.md)、[`tasks.md`](tasks.md)、[`../../docs/superpowers/specs/2026-04-02-ai-autosdlc-frontend-governance-ui-kernel-design.md`](../../docs/superpowers/specs/2026-04-02-ai-autosdlc-frontend-governance-ui-kernel-design.md)、`src/ai_sdlc/generators/doc_gen.py`、`src/ai_sdlc/core/p1_artifacts.py`、`tests/unit/test_p1_artifacts.py`
+- **激活的规则**：TDD red-green；single canonical truth；artifact-instantiation-only；verification before completion
+- **验证画像**：`code-change`
+
+#### 2.2 统一验证命令
+
+- **V1（Batch 5 parser 结构校验）**
+  - 命令：`uv run python -c "from pathlib import Path; from ai_sdlc.generators.doc_gen import TasksParser; plan = TasksParser().parse(Path('specs/011-frontend-contract-authoring-baseline/tasks.md')); print({'total_tasks': plan.total_tasks, 'total_batches': plan.total_batches, 'batches': [batch.tasks for batch in plan.batches]})"`
+  - 结果：`{'total_tasks': 15, 'total_batches': 5, 'batches': [['T11', 'T12', 'T13'], ['T21', 'T22', 'T23'], ['T31', 'T32', 'T33'], ['T41', 'T42', 'T43'], ['T51', 'T52', 'T53']]}`
+- **V2（RED：定向测试必须先失败）**
+  - 命令：`uv run pytest tests/unit/test_frontend_contract_artifacts.py -q`
+  - 结果：失败；`ModuleNotFoundError: No module named 'ai_sdlc.generators.frontend_contract_artifacts'`
+- **V3（GREEN：artifact instantiation 定向测试）**
+  - 命令：`uv run pytest tests/unit/test_frontend_contract_artifacts.py -q`
+  - 结果：`3 passed in 0.13s`
+- **V4（回归：models + artifacts）**
+  - 命令：`uv run pytest tests/unit/test_models.py tests/unit/test_frontend_contract_models.py tests/unit/test_frontend_contract_artifacts.py -q`
+  - 结果：`39 passed in 0.18s`
+- **V5（静态检查）**
+  - 命令：`uv run ruff check src tests`
+  - 结果：`All checks passed!`
+- **V6（Markdown / code diff hygiene）**
+  - 命令：`git diff --check -- specs/011-frontend-contract-authoring-baseline src/ai_sdlc/generators tests/unit`
+  - 结果：无输出。
+- **V7（治理只读校验）**
+  - 命令：`uv run ai-sdlc verify constraints`
+  - 结果：`verify constraints: no BLOCKERs.`
+
+#### 2.3 任务记录
+
+##### T51 | 先写 failing tests 固定 artifact 文件布局与 YAML 形状
+
+- **改动范围**：`tests/unit/test_frontend_contract_artifacts.py`
+- **改动内容**：
+  - 先定义 `contracts/frontend/pages/<page_id>/...` 与 `contracts/frontend/modules/<module_id>/...` 的最小文件集。
+  - 用测试锁定 `page.metadata.yaml`、`page.recipe.yaml`、`page.i18n.yaml`、`form.validation.yaml`、`frontend.rules.yaml`、`component-whitelist.ref.yaml`、`token-rules.ref.yaml` 的 payload 形状。
+  - 明确 legacy 扩展字段在 page metadata / module contract artifact 中保留，而不是新增平行迁移 artifact。
+- **新增/调整的测试**：新增 `tests/unit/test_frontend_contract_artifacts.py`
+- **测试结果**：RED 已确认。
+- **是否符合任务目标**：符合。
+
+##### T52 | 实现最小 frontend_contract_artifacts generator
+
+- **改动范围**：`src/ai_sdlc/generators/frontend_contract_artifacts.py`、`src/ai_sdlc/generators/__init__.py`
+- **改动内容**：
+  - 新增 `materialize_frontend_contract_artifacts()`，将 `FrontendContractSet` 物化到 `contracts/frontend/pages/<page_id>/...` 与 `contracts/frontend/modules/<module_id>/...`。
+  - 将 `PageContract` 拆分为 metadata、recipe、i18n、validation、frontend rules、whitelist ref、token rules ref 七类 page artifact。
+  - 将 module 级共享规则、recipe declarations 和 legacy context 落到 `module.contract.yaml`，避免 module 语义退回自由文本。
+- **新增/调整的测试**：复用 `tests/unit/test_frontend_contract_artifacts.py`
+- **测试结果**：通过。
+- **是否符合任务目标**：符合。
+
+##### T53 | Fresh verify 并追加 artifact batch 归档
+
+- **改动范围**：`specs/011-frontend-contract-authoring-baseline/plan.md`、`specs/011-frontend-contract-authoring-baseline/tasks.md`、`specs/011-frontend-contract-authoring-baseline/task-execution-log.md`
+- **改动内容**：
+  - 将 `011` formal docs 扩到 `Batch 5: contract artifact instantiation slice`，并把只放行 generator/tests 的边界写死。
+  - 记录本批 RED/GREEN、fresh verification、artifact 布局口径和后续 handoff。
+  - 保持 `011` 不越界到 `core / gates`。
+- **新增/调整的测试**：无新增测试文件；以本批 fresh verification 命令为准。
+- **测试结果**：通过。
+- **是否符合任务目标**：符合。
+
+#### 2.4 代码审查（Mandatory）
+
+- **宪章/规格对齐**：本批只进入 `frontend_contract_artifacts` 切片，没有跨到 drift helpers、gate surface 或 runtime。
+- **代码质量**：artifact 文件名与设计冻结稿中的 MVP artifact 列表一致；module artifact 采用单文件承载共享规则和 legacy context，避免平行 artifact 膨胀。
+- **测试质量**：已完成 RED/GREEN、fresh 回归、`ruff`、`diff --check` 与 `verify constraints`。
+- **结论**：`无 Critical 阻塞项`
+
+#### 2.5 任务/计划同步状态（Mandatory）
+
+- `tasks.md` 同步状态：`已同步`
+- `plan.md` 同步状态：`已同步`
+- `spec.md` 同步状态：`无需变更`
+- 关联 branch/worktree disposition 计划：`retained（沿用当前 009/011 工作分支）`
+- 说明：`011` 已从 models slice 进入 artifact instantiation slice，但 core/gates 仍未放行。`
+
+#### 2.6 自动决策记录（如有）
+
+- AD-006：page 级 artifact 目录使用 `contracts/frontend/pages/<page_id>/...`。理由：文件布局直接对齐页面执行单元，便于后续 `decompose / verify` 按页面消费。
+- AD-007：module 级 artifact 暂以 `module.contract.yaml` 单文件承载。理由：当前目标是最小实例化切片，先保留 module 级共享规则与 legacy context 的结构化真值，不额外拆分多文件。
+- AD-008：legacy 扩展字段落在 `page.metadata.yaml` 和 `module.contract.yaml`，不新建独立迁移 artifact。理由：保持与 `011` 规格一致的“page/module contract extension fields”口径。
+
+#### 2.7 批次结论
+
+- `011` 当前已具备把 `Frontend Contract Set` 物化为 page/module 级 YAML artifact 的最小 generator。
+- 后续若继续推进 `011`，下一批应优先进入 `core/frontend_contract_drift.py`，把 artifact 与实现的偏差识别产品化。
+
+#### 2.8 归档后动作
+
+- **已完成 git 提交**：是
+- **提交哈希**：本批唯一一次语义提交预期为 `feat(generators): add frontend contract artifact instantiation`；完整 SHA 以该提交后的 `HEAD`（`git rev-parse HEAD`）为准
+- **改动范围**：`specs/011-frontend-contract-authoring-baseline/plan.md`、`specs/011-frontend-contract-authoring-baseline/tasks.md`、`specs/011-frontend-contract-authoring-baseline/task-execution-log.md`、`src/ai_sdlc/generators/frontend_contract_artifacts.py`、`src/ai_sdlc/generators/__init__.py`、`tests/unit/test_frontend_contract_artifacts.py`
+- **是否继续下一批**：待用户决定（建议转入 Contract drift helpers）

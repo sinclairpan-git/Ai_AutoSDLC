@@ -18,6 +18,7 @@ Batch 1: contract truth surface freeze
 Batch 2: artifact chain and legacy extension baseline
 Batch 3: implementation handoff and first-slice gate freeze
 Batch 4: contract model slice
+Batch 5: contract artifact instantiation slice
 ```
 
 ---
@@ -26,8 +27,10 @@ Batch 4: contract model slice
 
 - `Batch 1 ~ 3` 只允许推进 `spec.md / plan.md / tasks.md` 与 append-only `task-execution-log.md`。
 - `Batch 4` 只允许写入 `src/ai_sdlc/models/frontend_contracts.py`、`src/ai_sdlc/models/__init__.py`、`tests/unit/test_frontend_contract_models.py` 与 append-only `task-execution-log.md`。
+- `Batch 5` 只允许写入 `src/ai_sdlc/generators/frontend_contract_artifacts.py`、可选 `src/ai_sdlc/generators/__init__.py`、`tests/unit/test_frontend_contract_artifacts.py`、`specs/011-frontend-contract-authoring-baseline/task-execution-log.md`，以及为本批边界服务的 `plan.md / tasks.md`。
 - `011` 不得把 UI Kernel、Provider、Gate 或 runtime 代码混入当前 child work item 的 formal baseline。
 - 当前首批实现只放行 Contract models / serialization；`generators / core / gates` 仍属于后续批次。
+- 当前下一批实现只放行 Contract artifact instantiation；`core / gates` 仍属于后续批次。
 - 只有在用户明确要求进入实现，且 `011` formal docs 已通过门禁后，才允许进入 `src/` / `tests/` 级实现。
 
 ---
@@ -201,3 +204,46 @@ Batch 4: contract model slice
   2. `git diff --check -- specs/011-frontend-contract-authoring-baseline src/ai_sdlc/models tests/unit` 无输出，且 `uv run ai-sdlc verify constraints` 通过
   3. `task-execution-log.md` 追加记录当前 implementation batch 的 touched files、验证命令与结论
 - **验证**：`uv run pytest tests/unit/test_frontend_contract_models.py -q`, `git diff --check -- specs/011-frontend-contract-authoring-baseline src/ai_sdlc/models tests/unit`, `uv run ai-sdlc verify constraints`
+
+---
+
+## Batch 5：contract artifact instantiation slice
+
+### Task 5.1 先写 failing tests 固定 artifact 文件布局与 YAML 形状
+
+- **任务编号**：T51
+- **优先级**：P0
+- **依赖**：T43
+- **文件**：`tests/unit/test_frontend_contract_artifacts.py`
+- **可并行**：否
+- **验收标准**：
+  1. 单测明确覆盖 page/module contract 的最小 artifact 文件集与目录布局
+  2. 单测明确覆盖 `page.metadata.yaml`、`page.recipe.yaml`、`page.i18n.yaml`、`form.validation.yaml`、`frontend.rules.yaml`、`component-whitelist.ref.yaml`、`token-rules.ref.yaml` 的 YAML shape
+  3. 首次运行定向测试时必须出现预期失败，证明 generator 尚未实现
+- **验证**：`uv run pytest tests/unit/test_frontend_contract_artifacts.py -q`
+
+### Task 5.2 实现最小 frontend_contract_artifacts generator
+
+- **任务编号**：T52
+- **优先级**：P0
+- **依赖**：T51
+- **文件**：`src/ai_sdlc/generators/frontend_contract_artifacts.py`, `src/ai_sdlc/generators/__init__.py`
+- **可并行**：否
+- **验收标准**：
+  1. `frontend_contract_artifacts.py` 可将 `FrontendContractSet` 物化为 `contracts/frontend/pages/<page_id>/...` 与 `contracts/frontend/modules/<module_id>/...` 下的最小 artifact 集
+  2. generator 生成的 YAML payload 保留 `recipe declaration`、`legacy_context`、`i18n / validation / hard_rules / whitelist_ref / token_rules_ref` 的结构化语义
+  3. 相关入口可被测试与后续 stage 集成稳定导入
+- **验证**：`uv run pytest tests/unit/test_frontend_contract_artifacts.py -q`
+
+### Task 5.3 Fresh verify 并追加 artifact batch 归档
+
+- **任务编号**：T53
+- **优先级**：P0
+- **依赖**：T52
+- **文件**：`specs/011-frontend-contract-authoring-baseline/task-execution-log.md`
+- **可并行**：否
+- **验收标准**：
+  1. `uv run pytest tests/unit/test_frontend_contract_models.py tests/unit/test_frontend_contract_artifacts.py -q` 通过
+  2. `uv run ruff check src tests`、`git diff --check -- specs/011-frontend-contract-authoring-baseline src/ai_sdlc/generators tests/unit` 与 `uv run ai-sdlc verify constraints` 通过
+  3. `task-execution-log.md` 追加记录当前 artifact instantiation batch 的 touched files、验证命令与结论
+- **验证**：`uv run pytest tests/unit/test_frontend_contract_models.py tests/unit/test_frontend_contract_artifacts.py -q`, `uv run ruff check src tests`, `git diff --check -- specs/011-frontend-contract-authoring-baseline src/ai_sdlc/generators tests/unit`, `uv run ai-sdlc verify constraints`

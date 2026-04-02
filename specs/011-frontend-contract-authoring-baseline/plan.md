@@ -81,6 +81,18 @@ tests/unit/
 └── test_frontend_contract_models.py   # current slice: model shape / validation / roundtrip
 ```
 
+### 当前建议进入的下一批实现触点
+
+```text
+src/ai_sdlc/generators/
+├── frontend_contract_artifacts.py     # next slice: contract artifact instantiation
+└── __init__.py                        # optional generator export
+
+tests/unit/
+└── test_frontend_contract_artifacts.py
+                                        # next slice: artifact file layout / yaml shape / roundtrip
+```
+
 ### 后续推荐的扩展实现触点
 
 ```text
@@ -170,6 +182,13 @@ contracts/
 **验证方式**：定向 `pytest`、`git diff --check`、`uv run ai-sdlc verify constraints`。
 **回退方式**：仅回退本阶段涉及的 `models/`、`tests/` 与 execution log 变更。
 
+### Phase 5：Contract artifact instantiation slice
+
+**目标**：把 `Frontend Contract Set` 落成 page/module 级实例化 artifact 文件集，建立 `contracts/frontend/**` 的最小落盘语义。
+**产物**：`src/ai_sdlc/generators/frontend_contract_artifacts.py`、可选 `src/ai_sdlc/generators/__init__.py` 导出、`tests/unit/test_frontend_contract_artifacts.py`。
+**验证方式**：定向 `pytest`、`uv run ruff check src tests`、`git diff --check`、`uv run ai-sdlc verify constraints`。
+**回退方式**：仅回退本阶段涉及的 `generators/`、`tests/` 与 execution log 变更。
+
 ## 工作流计划
 
 ### 工作流 A：Contract object authoring baseline
@@ -200,6 +219,13 @@ contracts/
 **验证方式**：`tests/unit/test_frontend_contract_models.py` + fresh `verify constraints`。
 **回退方式**：不触发 `generators / core / gates` 写入。
 
+### 工作流 E：Contract artifact instantiation slice
+
+**范围**：将 `PageContract / ModuleContract` 物化为 `page.metadata.yaml`、`page.recipe.yaml`、`page.i18n.yaml`、`form.validation.yaml`、`frontend.rules.yaml`、`component-whitelist.ref.yaml`、`token-rules.ref.yaml` 与模块级 contract artifact。
+**影响范围**：`refine / design` 到 `decompose / verify` 的 artifact 消费面，以及后续 drift/gate 的输入基线。
+**验证方式**：`tests/unit/test_frontend_contract_artifacts.py` + fresh `ruff` / `verify constraints`。
+**回退方式**：不触发 drift helpers 或 gate surface 写入。
+
 ## 关键路径验证策略
 
 | 关键路径 | 主验证方式 | 次验证方式 |
@@ -209,6 +235,7 @@ contracts/
 | artifact chain 一致性 | stage 关系检查 | 术语搜索 |
 | legacy 扩展字段收敛 | 全文术语检查 | 人工审阅 |
 | model slice shape / validation | `uv run pytest tests/unit/test_frontend_contract_models.py -q` | roundtrip review |
+| artifact instantiation layout | `uv run pytest tests/unit/test_frontend_contract_artifacts.py -q` | YAML payload review |
 | next-step readiness | `uv run ai-sdlc verify constraints` | `git status --short` |
 
 ## 已锁定决策
@@ -219,6 +246,7 @@ contracts/
 - Contract 模型、artifact 实例化、drift 检查和 stage integration 是后续实现的主路径
 - legacy 扩展字段优先留在 Contract 层，而不是单独拉出迁移专用 artifact
 - 当前首批实现只覆盖 `models + serialization`，不同时推进 `generators / core / gates`
+- 下一批只放行 `frontend_contract_artifacts`，不同时推进 drift helpers 或 gate integration
 
 ## 实施顺序建议
 
@@ -227,4 +255,5 @@ contracts/
 3. 再冻结 Contract 的 artifact 链路、drift 口径和 legacy 扩展字段。
 4. formal baseline 校验完成后，只放行 `models + serialization` 首切片，不直接混做 artifact instantiation 或 drift/gate。
 5. 先以 TDD 落 `Frontend Contract Set / Page Contract / Module Contract / Contract Rule Bundle / Contract Legacy Context` 模型与导出。
-6. 待 model slice 稳定后，再决定是否进入 `generators/frontend_contract_artifacts.py` 等下游实现。
+6. model slice 稳定后，只放行 `generators/frontend_contract_artifacts.py`，先把 page/module contract 落成实例化 artifact。
+7. artifact instantiation 稳定后，再决定是否进入 `core/frontend_contract_drift.py` 与 `gates/frontend_contract_gate.py`。
