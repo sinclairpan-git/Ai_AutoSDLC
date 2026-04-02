@@ -19,6 +19,7 @@ Batch 1: generation truth freeze
 Batch 2: constraint object and ordering freeze
 Batch 3: implementation handoff and verification freeze
 Batch 4: generation constraint models slice
+Batch 5: generation constraint artifact slice
 ```
 
 ---
@@ -29,8 +30,10 @@ Batch 4: generation constraint models slice
 - `017` 不得重新定义 `011` Contract truth、`015` UI Kernel truth 或 `016` Provider truth。
 - `017` 不得在当前 child work item 中直接进入完整生成 runtime、gate diagnostics、recheck / auto-fix 或 business project 代码生成实现。
 - `Batch 4` 只允许写入 `src/ai_sdlc/models/frontend_generation_constraints.py`、`src/ai_sdlc/models/__init__.py`、`tests/unit/test_frontend_generation_constraints.py`、`specs/017-frontend-generation-governance-baseline/task-execution-log.md`，以及为本批边界服务的 `plan.md / tasks.md`。
+- `Batch 5` 只允许写入 `src/ai_sdlc/generators/frontend_generation_constraint_artifacts.py`、`src/ai_sdlc/generators/__init__.py`、`tests/unit/test_frontend_generation_constraint_artifacts.py`、`specs/017-frontend-generation-governance-baseline/task-execution-log.md`，以及为本批边界服务的 `plan.md / tasks.md`。
 - `017` 只冻结 generation governance baseline，不默认决定任何 `src/` / `tests/` runtime side effect。
 - 当前首批实现只放行 generation constraint 模型/标准体，不放行完整生成 runtime、gate 或 auto-fix 实现。
+- 当前第二批实现只放行 generation constraint artifact instantiation，不放行完整生成 runtime、gate verdict 或 auto-fix 实现。
 - 只有在用户明确要求进入实现，且 `017` formal docs 已通过门禁后，才允许进入 `src/` / `tests/` 级实现。
 
 ---
@@ -204,3 +207,46 @@ Batch 4: generation constraint models slice
   2. `uv run ruff check src tests`、`git diff --check -- specs/017-frontend-generation-governance-baseline src/ai_sdlc/models tests/unit` 与 `uv run ai-sdlc verify constraints` 通过
   3. `task-execution-log.md` 追加记录当前 implementation batch 的 touched files、验证命令与结论
 - **验证**：`uv run pytest tests/unit/test_frontend_generation_constraints.py -q`, `uv run ruff check src tests`, `git diff --check -- specs/017-frontend-generation-governance-baseline src/ai_sdlc/models tests/unit`, `uv run ai-sdlc verify constraints`
+
+---
+
+## Batch 5：generation constraint artifact slice
+
+### Task 5.1 先写 failing tests 固定 generation artifact file set 与 payload 语义
+
+- **任务编号**：T51
+- **优先级**：P0
+- **依赖**：T43
+- **文件**：`tests/unit/test_frontend_generation_constraint_artifacts.py`
+- **可并行**：否
+- **验收标准**：
+  1. 单测明确覆盖 `governance/frontend/generation/**` 的最小 artifact 文件集合
+  2. 单测明确覆盖 recipe、whitelist、hard rules、token rules 与 exceptions 的 artifact payload
+  3. 首次运行定向测试时必须出现预期失败，证明 generation constraint artifact instantiation 尚未实现
+- **验证**：`uv run pytest tests/unit/test_frontend_generation_constraint_artifacts.py -q`
+
+### Task 5.2 实现最小 generation artifact instantiation
+
+- **任务编号**：T52
+- **优先级**：P0
+- **依赖**：T51
+- **文件**：`src/ai_sdlc/generators/frontend_generation_constraint_artifacts.py`, `src/ai_sdlc/generators/__init__.py`
+- **可并行**：否
+- **验收标准**：
+  1. 提供 generation artifact root 与 materialize helper，并把 `FrontendGenerationConstraintSet` 物化为 canonical artifact tree
+  2. artifact file set 至少覆盖 manifest、recipe、whitelist、hard rules、token rules 与 exceptions
+  3. 实现只停留在 artifact instantiation 层，不引入完整生成 runtime、gate verdict 或 auto-fix 逻辑
+- **验证**：`uv run pytest tests/unit/test_frontend_generation_constraint_artifacts.py -q`
+
+### Task 5.3 Fresh verify 并追加 artifact batch 归档
+
+- **任务编号**：T53
+- **优先级**：P0
+- **依赖**：T52
+- **文件**：`specs/017-frontend-generation-governance-baseline/task-execution-log.md`
+- **可并行**：否
+- **验收标准**：
+  1. `uv run pytest tests/unit/test_frontend_generation_constraint_artifacts.py -q` 通过
+  2. `uv run ruff check src tests`、`git diff --check -- specs/017-frontend-generation-governance-baseline src/ai_sdlc/generators tests/unit` 与 `uv run ai-sdlc verify constraints` 通过
+  3. `task-execution-log.md` 追加记录当前 artifact batch 的 touched files、验证命令与结论
+- **验证**：`uv run pytest tests/unit/test_frontend_generation_constraint_artifacts.py -q`, `uv run ruff check src tests`, `git diff --check -- specs/017-frontend-generation-governance-baseline src/ai_sdlc/generators tests/unit`, `uv run ai-sdlc verify constraints`

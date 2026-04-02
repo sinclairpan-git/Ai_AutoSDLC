@@ -31,7 +31,7 @@ related_doc:
 - 再冻结 recipe / whitelist / hard rules / token rules / exceptions 五类约束对象
 - 最后给出后续 `models / artifacts / tests` 的推荐文件面与测试矩阵
 
-当前 formal baseline 已完成。经用户明确要求连续推进 MVP 后，当前允许继续进入第一批实现切片：`generation constraint models`，把 recipe / whitelist / hard rules / token rules / exceptions 收敛到共享 `models/`；不同时触碰完整生成 runtime、gate 或 recheck / auto-fix。
+当前 formal baseline 与第一批 `generation constraint models` 实现切片已完成。经用户明确要求连续推进 MVP 后，当前允许继续进入下一批实现切片：`generation constraint artifacts`，把 recipe / whitelist / hard rules / token rules / exceptions 实例化为可被 gate/compatibility 消费的 artifact；不同时触碰完整生成 runtime、gate verdict 或 auto-fix 实现。
 
 ## 技术背景
 
@@ -58,11 +58,15 @@ specs/017-frontend-generation-governance-baseline/
 
 ```text
 src/ai_sdlc/
-└── models/
-    └── frontend_generation_constraints.py     # recipe / whitelist / hard rules / token rules / exceptions
+├── models/
+│   └── frontend_generation_constraints.py     # recipe / whitelist / hard rules / token rules / exceptions
+└── generators/
+    └── frontend_generation_constraint_artifacts.py
+                                            # current slice: generation constraint artifact instantiation
 
 tests/
-└── unit/test_frontend_generation_constraints.py
+├── unit/test_frontend_generation_constraints.py
+└── unit/test_frontend_generation_constraint_artifacts.py
 ```
 
 ## 阶段计划
@@ -102,6 +106,13 @@ tests/
 **验证方式**：定向 `pytest`、`uv run ruff check src tests`、`git diff --check`、`uv run ai-sdlc verify constraints`。
 **回退方式**：仅回退本阶段涉及的 `models/`、`tests/` 与 execution log 变更。
 
+### Phase 5：Generation constraint artifact slice
+
+**目标**：把 generation governance 的结构化模型物化为可被 gate/compatibility 与后续生成链路消费的实例化 artifact，建立 `governance/frontend/generation/**` 的最小落盘语义。
+**产物**：`src/ai_sdlc/generators/frontend_generation_constraint_artifacts.py`、可选 `src/ai_sdlc/generators/__init__.py` 导出、`tests/unit/test_frontend_generation_constraint_artifacts.py`。
+**验证方式**：定向 `pytest`、`uv run ruff check src tests`、`git diff --check`、`uv run ai-sdlc verify constraints`。
+**回退方式**：仅回退本阶段涉及的 `generators/`、`tests/` 与 execution log 变更。
+
 ## 关键路径验证策略
 
 | 关键路径 | 主验证方式 | 次验证方式 |
@@ -112,3 +123,4 @@ tests/
 | hard rules and exception boundary clarity | scope review | 术语对账 |
 | downstream handoff clarity | file-map review | 人工审阅 |
 | generation constraint model correctness | `uv run pytest tests/unit/test_frontend_generation_constraints.py -q` | model payload / builder review |
+| generation artifact correctness | `uv run pytest tests/unit/test_frontend_generation_constraint_artifacts.py -q` | artifact file layout / yaml payload review |

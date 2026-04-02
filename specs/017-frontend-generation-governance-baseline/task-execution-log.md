@@ -189,3 +189,96 @@
 - **提交哈希**：`4ac101b`（`feat(models): add frontend generation governance slice`）
 - **改动范围**：`specs/017-frontend-generation-governance-baseline/plan.md`、`specs/017-frontend-generation-governance-baseline/tasks.md`、`specs/017-frontend-generation-governance-baseline/task-execution-log.md`、`src/ai_sdlc/models/frontend_generation_constraints.py`、`src/ai_sdlc/models/__init__.py`、`tests/unit/test_frontend_generation_constraints.py`
 - **是否继续下一批**：按用户授权连续推进（优先扩 `017` 的 generation artifact slice，再进入 gate/compatibility baseline）
+
+### Batch 2026-04-03-003 | 017 Generation constraint artifact slice
+
+#### 2.1 准备
+
+- **任务来源**：[`tasks.md`](tasks.md) `T51`、`T52`、`T53`
+- **目标**：把 `FrontendGenerationConstraintSet` 物化为 `governance/frontend/generation/**` 的实例化 artifact，使后续 gate/compatibility 与生成链路可以消费同一套 generation control plane，而不是直接耦合 Python builder。
+- **预读范围**：[`spec.md`](spec.md)、[`plan.md`](plan.md)、[`tasks.md`](tasks.md)、`src/ai_sdlc/models/frontend_generation_constraints.py`、`src/ai_sdlc/generators/frontend_provider_profile_artifacts.py`、冻结设计稿第 11 章 generation governance 片段
+- **激活的规则**：TDD red-green；artifact-driven baseline；single canonical truth；verification-before-completion
+- **验证画像**：`code-change`
+
+#### 2.2 统一验证命令
+
+- **V1（Batch 5 parser 结构校验）**
+  - 命令：`uv run python -c "from pathlib import Path; from ai_sdlc.generators.doc_gen import TasksParser; plan = TasksParser().parse(Path('specs/017-frontend-generation-governance-baseline/tasks.md')); print({'total_tasks': plan.total_tasks, 'total_batches': plan.total_batches, 'batches': [batch.tasks for batch in plan.batches]})"`
+  - 结果：`{'total_tasks': 15, 'total_batches': 5, 'batches': [['T11', 'T12', 'T13'], ['T21', 'T22', 'T23'], ['T31', 'T32', 'T33'], ['T41', 'T42', 'T43'], ['T51', 'T52', 'T53']]}`
+- **V2（RED：generation artifacts 定向测试）**
+  - 命令：`uv run pytest tests/unit/test_frontend_generation_constraint_artifacts.py -q`
+  - 结果：`ModuleNotFoundError: No module named 'ai_sdlc.generators.frontend_generation_constraint_artifacts'`
+- **V3（GREEN：generation artifacts 定向测试）**
+  - 命令：`uv run pytest tests/unit/test_frontend_generation_constraint_artifacts.py -q`
+  - 结果：`3 passed in 0.15s`
+- **V4（静态检查）**
+  - 命令：`uv run ruff check src tests`
+  - 结果：`All checks passed!`
+- **V5（Markdown / code diff hygiene）**
+  - 命令：`git diff --check -- specs/017-frontend-generation-governance-baseline src/ai_sdlc/generators tests/unit`
+  - 结果：无输出。
+- **V6（治理只读校验）**
+  - 命令：`uv run ai-sdlc verify constraints`
+  - 结果：`verify constraints: no BLOCKERs.`
+
+#### 2.3 任务记录
+
+##### T51 | 先写 failing tests 固定 generation artifact file set 与 payload 语义
+
+- **改动范围**：`tests/unit/test_frontend_generation_constraint_artifacts.py`
+- **改动内容**：
+  - 新增 generation artifact 单测，先固定 `governance/frontend/generation/**` 的文件集合、manifest、recipe、whitelist、hard rules、token rules 与 exceptions payload。
+  - 首次运行测试时命中 `ModuleNotFoundError`，证明 `frontend_generation_constraint_artifacts.py` 尚未实现，RED 成立。
+- **新增/调整的测试**：新增 `tests/unit/test_frontend_generation_constraint_artifacts.py`。
+- **测试结果**：RED 成立，报错为 `ModuleNotFoundError: No module named 'ai_sdlc.generators.frontend_generation_constraint_artifacts'`。
+- **是否符合任务目标**：符合。
+
+##### T52 | 实现最小 generation artifact instantiation
+
+- **改动范围**：`src/ai_sdlc/generators/frontend_generation_constraint_artifacts.py`、`src/ai_sdlc/generators/__init__.py`
+- **改动内容**：
+  - 新增 `frontend_generation_governance_root()` 与 `materialize_frontend_generation_constraint_artifacts()`，把 `FrontendGenerationConstraintSet` 物化为 `governance/frontend/generation/generation.manifest.yaml`、`recipe.yaml`、`whitelist.yaml`、`hard-rules.yaml`、`token-rules.yaml` 与 `exceptions.yaml`。
+  - `generators/__init__.py` 增加 generation governance artifact helper 导出，便于后续 gate/compatibility 与生成链路复用统一入口。
+- **新增/调整的测试**：复用 `tests/unit/test_frontend_generation_constraint_artifacts.py`
+- **测试结果**：`3 passed in 0.15s`
+- **是否符合任务目标**：符合。
+
+##### T53 | Fresh verify 并追加 artifact batch 归档
+
+- **改动范围**：`specs/017-frontend-generation-governance-baseline/plan.md`、`specs/017-frontend-generation-governance-baseline/tasks.md`、`specs/017-frontend-generation-governance-baseline/task-execution-log.md`
+- **改动内容**：
+  - 将 Batch 5 正式加入 `plan.md / tasks.md`，把 `generation constraint artifact slice` 的 scope、文件面、验证面和执行护栏写成 formal truth。
+  - 回填本批 parser / RED / GREEN / static / diff hygiene / governance 验证结果，并归档 touched files 与 artifact-driven 决策理由。
+- **新增/调整的测试**：无新增测试文件；以本批 fresh verification 命令为准。
+- **测试结果**：全部通过。
+- **是否符合任务目标**：符合。
+
+#### 2.4 代码审查（Mandatory）
+
+- **宪章/规格对齐**：本批只实现 generation artifact instantiation，没有越界到完整生成 runtime、gate verdict 或 auto-fix。
+- **代码质量**：artifact file set 与 payload 语义清晰，保持 `artifact-driven` 主链，不直接耦合 gate 实现细节。
+- **测试质量**：先 RED 再 GREEN，覆盖文件布局与关键 payload 字段，并补充 fresh `ruff`、`diff --check` 与 `verify constraints`。
+- **结论**：`无 Critical 阻塞项`
+
+#### 2.5 任务/计划同步状态（Mandatory）
+
+- `tasks.md` 同步状态：`已同步`
+- `plan.md` 同步状态：`已同步`
+- `spec.md` 同步状态：`无需变更`
+- 关联 branch/worktree disposition 计划：`retained（沿用当前 009/011/012/013/014/015/016/017 工作分支）`
+- 说明：`017` 已从 generation constraint models 继续进入 generation artifact slice，但完整生成 runtime、gate verdict 与 auto-fix 仍未放行。`
+
+#### 2.6 自动决策记录（如有）
+
+- AD-003：先把 generation control plane 落为 `governance/frontend/generation/**` artifact，再进入 gate/compatibility baseline。理由：保持 `artifact-driven` 主链，避免 gate 直接耦合 Python builder。
+
+#### 2.7 批次结论
+
+- `017` 已具备可被下游复用的 generation governance artifact tree，后续 gate/compatibility 与生成链路可以消费 `governance/frontend/generation/**`，而不必直接绑定 Python builder。
+
+#### 2.8 归档后动作
+
+- **已完成 git 提交**：否（提交动作紧随本次归档后执行）
+- **提交哈希**：待补充（提交后回填）
+- **改动范围**：`specs/017-frontend-generation-governance-baseline/plan.md`、`specs/017-frontend-generation-governance-baseline/tasks.md`、`specs/017-frontend-generation-governance-baseline/task-execution-log.md`、`src/ai_sdlc/generators/frontend_generation_constraint_artifacts.py`、`src/ai_sdlc/generators/__init__.py`、`tests/unit/test_frontend_generation_constraint_artifacts.py`
+- **是否继续下一批**：按用户授权连续推进（下一优先级是 gate/compatibility baseline）
