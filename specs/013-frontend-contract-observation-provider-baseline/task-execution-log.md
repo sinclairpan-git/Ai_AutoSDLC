@@ -98,3 +98,103 @@
 - **提交哈希**：本批唯一一次语义提交预期为 `docs(013): formalize frontend contract observation provider baseline`；完整 SHA 以该提交后的 `HEAD`（`git rev-parse HEAD`）为准
 - **改动范围**：`specs/013-frontend-contract-observation-provider-baseline/spec.md`、`specs/013-frontend-contract-observation-provider-baseline/plan.md`、`specs/013-frontend-contract-observation-provider-baseline/tasks.md`、`specs/013-frontend-contract-observation-provider-baseline/task-execution-log.md`
 - **是否继续下一批**：待用户决定（建议转入 provider contract / artifact IO implementation slice）
+
+### Batch 2026-04-02-002 | 013 Provider contract / artifact IO slice
+
+#### 2.1 准备
+
+- **任务来源**：[`tasks.md`](tasks.md) `T41`、`T42`、`T43`
+- **目标**：在不越界到 scanner candidate、CLI、registry 或 `012` verify mainline 的前提下，落下 observation provider 的 canonical artifact path、artifact envelope、provenance/freshness 与 JSON read/write helper。
+- **预读范围**：[`spec.md`](spec.md)、[`plan.md`](plan.md)、[`tasks.md`](tasks.md)、`src/ai_sdlc/core/frontend_contract_drift.py`、`src/ai_sdlc/core/verify_constraints.py`、`src/ai_sdlc/core/frontend_contract_verification.py`、`tests/unit/test_frontend_contract_drift.py`
+- **激活的规则**：TDD red-green；single canonical truth；verification-before-completion
+- **验证画像**：`code-change`
+
+#### 2.2 统一验证命令
+
+- **V1（Batch 4 parser 结构校验）**
+  - 命令：`uv run python -c "from pathlib import Path; from ai_sdlc.generators.doc_gen import TasksParser; plan = TasksParser().parse(Path('specs/013-frontend-contract-observation-provider-baseline/tasks.md')); print({'total_tasks': plan.total_tasks, 'total_batches': plan.total_batches, 'batches': [batch.tasks for batch in plan.batches]})"`
+  - 结果：`{'total_tasks': 12, 'total_batches': 4, 'batches': [['T11', 'T12', 'T13'], ['T21', 'T22', 'T23'], ['T31', 'T32', 'T33'], ['T41', 'T42', 'T43']]}`
+- **V2（RED：provider helper 定向测试）**
+  - 命令：`uv run pytest tests/unit/test_frontend_contract_observation_provider.py -q`
+  - 结果：失败；`ModuleNotFoundError: No module named 'ai_sdlc.core.frontend_contract_observation_provider'`
+- **V3（GREEN：provider helper 定向测试）**
+  - 命令：`uv run pytest tests/unit/test_frontend_contract_observation_provider.py -q`
+  - 结果：`5 passed in 0.03s`
+- **V4（静态检查）**
+  - 命令：`uv run ruff check src tests`
+  - 结果：`All checks passed!`
+- **V5（Markdown / code diff hygiene）**
+  - 命令：`git diff --check -- specs/013-frontend-contract-observation-provider-baseline src/ai_sdlc/core tests/unit`
+  - 结果：无输出。
+- **V6（治理只读校验）**
+  - 命令：`uv run ai-sdlc verify constraints`
+  - 结果：`verify constraints: no BLOCKERs.`
+
+#### 2.3 任务记录
+
+##### T41 | 先写 failing tests 固定 artifact contract / round-trip 语义
+
+- **改动范围**：`tests/unit/test_frontend_contract_observation_provider.py`
+- **改动内容**：
+  - 先定义 canonical file naming、artifact envelope、provenance/freshness 与 observation round-trip 的最小行为。
+  - 用测试锁定 provenance 缺失、freshness.generated_at 缺失与 observation payload 非法时的失败语义。
+  - 确认首次执行时因 helper 模块缺失而 RED。
+- **新增/调整的测试**：新增 `tests/unit/test_frontend_contract_observation_provider.py`
+- **测试结果**：RED 已确认。
+- **是否符合任务目标**：符合。
+
+##### T42 | 实现最小 provider contract / artifact IO helper
+
+- **改动范围**：`src/ai_sdlc/core/frontend_contract_observation_provider.py`
+- **改动内容**：
+  - 新增 `FrontendContractObservationArtifact`、`ObservationProviderProvenance` 与 `ObservationFreshnessMarker` 三个结构化 dataclass。
+  - 新增 `observation_artifact_path()`、`build_frontend_contract_observation_artifact()`、`write_frontend_contract_observation_artifact()`、`load_frontend_contract_observation_artifact()`。
+  - 锁定 canonical 文件名 `frontend-contract-observations.json` 与 schema version `frontend-contract-observations/v1`。
+  - 保持 helper 只做 provider contract / artifact IO，不触碰 scanner candidate、CLI 或 `012` verify mainline。
+- **新增/调整的测试**：复用 `tests/unit/test_frontend_contract_observation_provider.py`
+- **测试结果**：通过。
+- **是否符合任务目标**：符合。
+
+##### T43 | Fresh verify 并追加 implementation batch 归档
+
+- **改动范围**：`specs/013-frontend-contract-observation-provider-baseline/plan.md`、`specs/013-frontend-contract-observation-provider-baseline/tasks.md`、`specs/013-frontend-contract-observation-provider-baseline/task-execution-log.md`
+- **改动内容**：
+  - 将 `013` formal docs 扩到 `Batch 4: provider contract / artifact IO slice`，并把只放行 `core/` helper 与对应 tests 的边界写死。
+  - 记录本批 RED/GREEN、fresh verification 和 provider artifact helper 的只读边界。
+  - 保持 `013` 不越界到 scanner candidate、CLI、registry 或 `012` verify mainline。
+- **新增/调整的测试**：无新增测试文件；以本批 fresh verification 命令为准。
+- **测试结果**：通过。
+- **是否符合任务目标**：符合。
+
+#### 2.4 代码审查（Mandatory）
+
+- **宪章/规格对齐**：本批只进入 provider contract / artifact IO helper 切片，没有跨到 scanner candidate、CLI、registry 或 `012` verify mainline。
+- **代码质量**：artifact envelope 与 `PageImplementationObservation` 保持同一结构化真值，没有引入 scanner 私有格式。
+- **测试质量**：已完成 RED/GREEN、`ruff`、`diff --check` 与 `verify constraints`。
+- **结论**：`无 Critical 阻塞项`
+
+#### 2.5 任务/计划同步状态（Mandatory）
+
+- `tasks.md` 同步状态：`已同步`
+- `plan.md` 同步状态：`已同步`
+- `spec.md` 同步状态：`无需变更`
+- 关联 branch/worktree disposition 计划：`retained（沿用当前 009/011/012/013 工作分支）`
+- 说明：`013` 已从 docs-only baseline 进入首批 provider helper slice，但 scanner candidate 与 downstream verify attachment 仍未放行。`
+
+#### 2.6 自动决策记录（如有）
+
+- AD-004：首批实现只落 `core/frontend_contract_observation_provider.py`，不同时推进 scanner candidate、CLI 或 `012` verify mainline。理由：先稳住共享 observation artifact 合同，避免跨多个所有权边界。
+- AD-005：provider artifact 强制要求结构化 provenance 与 freshness 字段。理由：避免来源不明或过期 observation 在下游被静默当成当前真值。
+- AD-006：当前 helper 直接复用 `PageImplementationObservation` 作为 payload 实体，不新造 scanner 私有数据结构。理由：保持 provider 输出与 drift / verify 消费面只有一套 canonical observation shape。
+
+#### 2.7 批次结论
+
+- `013` 当前已具备 observation provider 的最小 artifact IO helper，可作为后续 manual/export provider 与 scanner candidate 的共享合同。
+- 后续若继续推进，应优先进入 scanner candidate slice，或在下游工单中把 `012` observation consumer 切到该 canonical artifact loader。
+
+#### 2.8 归档后动作
+
+- **已完成 git 提交**：是
+- **提交哈希**：本批唯一一次语义提交预期为 `feat(core): add frontend contract observation provider helpers`；完整 SHA 以该提交后的 `HEAD`（`git rev-parse HEAD`）为准
+- **改动范围**：`specs/013-frontend-contract-observation-provider-baseline/plan.md`、`specs/013-frontend-contract-observation-provider-baseline/tasks.md`、`specs/013-frontend-contract-observation-provider-baseline/task-execution-log.md`、`src/ai_sdlc/core/frontend_contract_observation_provider.py`、`tests/unit/test_frontend_contract_observation_provider.py`
+- **是否继续下一批**：待用户决定（建议转入 scanner candidate slice，或另拆 consumer migration）

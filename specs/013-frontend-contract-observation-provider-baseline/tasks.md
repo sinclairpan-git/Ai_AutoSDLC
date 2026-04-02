@@ -19,6 +19,7 @@ related_doc:
 Batch 1: provider truth freeze
 Batch 2: artifact envelope and provenance baseline
 Batch 3: implementation handoff and verification freeze
+Batch 4: provider contract / artifact IO slice
 ```
 
 ---
@@ -26,9 +27,11 @@ Batch 3: implementation handoff and verification freeze
 ## 执行护栏
 
 - `Batch 1 ~ 3` 只允许推进 `spec.md / plan.md / tasks.md` 与 append-only `task-execution-log.md`。
+- `Batch 4` 只允许写入 `src/ai_sdlc/core/frontend_contract_observation_provider.py`、`tests/unit/test_frontend_contract_observation_provider.py`、`specs/013-frontend-contract-observation-provider-baseline/task-execution-log.md`，以及为本批边界服务的 `plan.md / tasks.md`。
 - `013` 不得把 scanner runtime、provider runtime、verify mainline、registry attachment、auto-fix 或 remediation workflow 混入当前 child work item 的 formal baseline。
 - `013` 不得改写 `011` 已冻结的 contract artifact truth 或 `012` 已冻结的 verify integration truth。
 - `013` 只冻结 observation provider baseline，不默认决定 active consumer path 或新的 CLI command surface。
+- 当前首批实现只放行 provider contract / artifact IO，不放行 scanner candidate、CLI、registry 或 `012` verify mainline。
 - 只有在用户明确要求进入实现，且 `013` formal docs 已通过门禁后，才允许进入 `src/` / `tests/` 级实现。
 
 ---
@@ -159,3 +162,46 @@ Batch 3: implementation handoff and verification freeze
   2. `spec.md / plan.md / tasks.md` 对 provider truth、artifact envelope、scanner separation 与 handoff 保持单一真值
   3. 当前分支上的 `013` formal docs 可作为后续进入 provider/scanner 实现的稳定基线
 - **验证**：`uv run ai-sdlc verify constraints`, `git status --short`
+
+---
+
+## Batch 4：provider contract / artifact IO slice
+
+### Task 4.1 先写 failing tests 固定 artifact contract / round-trip 语义
+
+- **任务编号**：T41
+- **优先级**：P0
+- **依赖**：T33
+- **文件**：`tests/unit/test_frontend_contract_observation_provider.py`
+- **可并行**：否
+- **验收标准**：
+  1. 单测明确覆盖 canonical file naming、artifact envelope、provenance/freshness 与 observation round-trip
+  2. 单测明确覆盖 provenance 缺失、freshness 缺失与 observation payload 非法时的失败语义
+  3. 首次运行定向测试时必须出现预期失败，证明 provider helper 尚未实现
+- **验证**：`uv run pytest tests/unit/test_frontend_contract_observation_provider.py -q`
+
+### Task 4.2 实现最小 provider contract / artifact IO helper
+
+- **任务编号**：T42
+- **优先级**：P0
+- **依赖**：T41
+- **文件**：`src/ai_sdlc/core/frontend_contract_observation_provider.py`
+- **可并行**：否
+- **验收标准**：
+  1. helper 提供 canonical artifact path、provider artifact dataclass 与 JSON read/write round-trip
+  2. helper 明确输出/读取 provenance、freshness 与 `PageImplementationObservation` payload
+  3. helper 只负责 provider contract / artifact IO，不引入 scanner candidate、CLI 或 `012` verify mainline 改动
+- **验证**：`uv run pytest tests/unit/test_frontend_contract_observation_provider.py -q`
+
+### Task 4.3 Fresh verify 并追加 implementation batch 归档
+
+- **任务编号**：T43
+- **优先级**：P0
+- **依赖**：T42
+- **文件**：`specs/013-frontend-contract-observation-provider-baseline/task-execution-log.md`
+- **可并行**：否
+- **验收标准**：
+  1. `uv run pytest tests/unit/test_frontend_contract_observation_provider.py -q` 通过
+  2. `uv run ruff check src tests`、`git diff --check -- specs/013-frontend-contract-observation-provider-baseline src/ai_sdlc/core tests/unit` 与 `uv run ai-sdlc verify constraints` 通过
+  3. `task-execution-log.md` 追加记录当前 implementation batch 的 touched files、验证命令与结论
+- **验证**：`uv run pytest tests/unit/test_frontend_contract_observation_provider.py -q`, `uv run ruff check src tests`, `git diff --check -- specs/013-frontend-contract-observation-provider-baseline src/ai_sdlc/core tests/unit`, `uv run ai-sdlc verify constraints`

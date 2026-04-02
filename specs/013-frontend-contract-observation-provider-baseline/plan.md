@@ -31,7 +31,7 @@ related_doc:
 - 再冻结 artifact envelope、provenance 与 freshness 语义
 - 最后给出后续 `core / scanners / cli / tests` 的推荐文件面与测试矩阵
 
-当前阶段只允许推进 docs-only baseline，不直接承诺 scanner 或 provider runtime 实现。
+当前 formal baseline 已完成。经用户明确要求继续后，当前只允许进入第一批实现切片：`provider contract / artifact IO`，不同时触碰 scanner candidate、CLI 或 `012` verify mainline。
 
 ## 技术背景
 
@@ -166,6 +166,13 @@ tests/
 **验证方式**：formal docs review + `verify constraints`。  
 **回退方式**：仅回退 planning baseline。
 
+### Phase 4：Provider contract / artifact IO slice
+
+**目标**：落下 observation provider 的最小结构化 artifact contract、canonical path helper 与 JSON read/write 语义，先稳定 envelope、provenance、freshness 与 observation round-trip。
+**产物**：`src/ai_sdlc/core/frontend_contract_observation_provider.py`、`tests/unit/test_frontend_contract_observation_provider.py`。
+**验证方式**：定向 `pytest`、`uv run ruff check src tests`、`git diff --check`、`uv run ai-sdlc verify constraints`。
+**回退方式**：仅回退本阶段涉及的 `core/`、`tests/` 与 execution log 变更。
+
 ## 工作流计划
 
 ### 工作流 A：Provider truth freeze
@@ -189,6 +196,13 @@ tests/
 **验证方式**：file-map review + tests matrix review。  
 **回退方式**：不进入 scanner/provider runtime。
 
+### 工作流 D：Provider contract / artifact IO slice
+
+**范围**：定义 canonical artifact 文件名、artifact envelope、provenance/freshness dataclass 与 JSON read/write helper。
+**影响范围**：后续 scanner candidate、manual/export provider 与下游 verify consumer 的共享 observation artifact 合同。
+**验证方式**：`tests/unit/test_frontend_contract_observation_provider.py` + fresh `ruff` / `verify constraints`。
+**回退方式**：不触发 scanner runtime、CLI、registry 或 `012` verify mainline 写入。
+
 ## 关键路径验证策略
 
 | 关键路径 | 主验证方式 | 次验证方式 |
@@ -198,6 +212,7 @@ tests/
 | artifact envelope completeness | artifact contract review | 实体清单对账 |
 | provenance/freshness honesty | 语义对账 | 测试矩阵回挂 |
 | downstream handoff clarity | file-map review | 人工审阅 |
+| provider artifact contract correctness | `uv run pytest tests/unit/test_frontend_contract_observation_provider.py -q` | artifact payload review |
 
 ## 已锁定决策
 
@@ -205,7 +220,7 @@ tests/
 - provider 输出必须是结构化 observation artifact，不是 scanner 私有输出
 - `frontend-contract-observations.json` 只先冻结 canonical artifact naming/envelope，不在当前 work item 中重写 `012` 的 active consumer attachment
 - scanner 只是 candidate provider；manual/export provider 同样合法
-- 当前阶段只放行 docs-only formal baseline，不进入 `core/`、`scanners/`、CLI 或 tests 实现
+- 当前第一批实现只放行 `core/frontend_contract_observation_provider.py` 与 `tests/unit/test_frontend_contract_observation_provider.py`，不放行 scanner candidate、CLI、registry 或 `012` verify mainline
 
 ## 实施顺序建议
 
