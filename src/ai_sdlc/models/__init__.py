@@ -16,6 +16,14 @@ from ai_sdlc.models.frontend_contracts import (
     ValidationFieldRule,
     WhitelistReference,
 )
+from ai_sdlc.models.frontend_ui_kernel import (
+    FrontendUiKernelSet,
+    KernelInteractionBaseline,
+    KernelStateBaseline,
+    PageRecipeStandard,
+    UiProtocolComponent,
+    build_mvp_frontend_ui_kernel,
+)
 from ai_sdlc.models.gate import (
     GateCheck,
     GateResult,
@@ -115,6 +123,7 @@ __all__ = [
     "FeatureInfo",
     "FileInfo",
     "FrontendContractSet",
+    "FrontendUiKernelSet",
     "FreezeSnapshot",
     "GateCheck",
     "GateResult",
@@ -131,6 +140,8 @@ __all__ = [
     "InterfaceContract",
     "KnowledgeBaselineState",
     "KnowledgeRefreshLog",
+    "KernelInteractionBaseline",
+    "KernelStateBaseline",
     "MaintenanceBrief",
     "MaintenancePlan",
     "MaintenanceTask",
@@ -151,6 +162,7 @@ __all__ = [
     "ProjectStatus",
     "RebaselineRecord",
     "RecipeDeclaration",
+    "PageRecipeStandard",
     "RefreshEntry",
     "RefreshLevel",
     "ResumePack",
@@ -164,6 +176,7 @@ __all__ = [
     "Task",
     "TaskStatus",
     "TokenRulesReference",
+    "UiProtocolComponent",
     "ValidationContract",
     "ValidationFieldRule",
     "WhitelistReference",
@@ -173,4 +186,5 @@ __all__ = [
     "WorkType",
     "WorkerAssignment",
     "WorkingSet",
+    "build_mvp_frontend_ui_kernel",
 ]

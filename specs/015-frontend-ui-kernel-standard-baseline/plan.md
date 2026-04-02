@@ -32,7 +32,7 @@ related_doc:
 - 再冻结 `Ui*` 协议、page recipe 标准本体、状态/交互/Theme-Token 边界
 - 最后给出后续 `models / provider / gates / tests` 的推荐文件面与测试矩阵
 
-当前阶段只允许 docs-only 落盘，不直接进入 `src/` / `tests/` 实现。
+当前 formal baseline 已完成。经用户明确要求连续推进 MVP 后，当前只允许进入第一批实现切片：`Kernel models`，把 `Ui*` 协议、三个 MVP page recipe 标准本体、状态底线与交互底线收敛到共享 `models/`；不同时触碰 Provider、Gate、生成器或 runtime 组件实现。
 
 ## 技术背景
 
@@ -138,6 +138,13 @@ tests/
 **验证方式**：formal docs review + `verify constraints`。  
 **回退方式**：仅回退 planning baseline。
 
+### Phase 4：Kernel models slice
+
+**目标**：落下 UI Kernel 的最小结构化模型与 MVP baseline builder，先稳定 `Ui*` 协议、`ListPage / FormPage / DetailPage`、状态底线与交互底线。
+**产物**：`src/ai_sdlc/models/frontend_ui_kernel.py`、`tests/unit/test_frontend_ui_kernel_models.py`、`src/ai_sdlc/models/__init__.py`。
+**验证方式**：定向 `pytest`、`uv run ruff check src tests`、`git diff --check`、`uv run ai-sdlc verify constraints`。
+**回退方式**：仅回退本阶段涉及的 `models/`、`tests/` 与 execution log 变更。
+
 ## 工作流计划
 
 ### 工作流 A：Kernel truth freeze
@@ -161,6 +168,13 @@ tests/
 **验证方式**：file-map review + tests matrix review。  
 **回退方式**：不进入 Kernel model/runtime 实现。
 
+### 工作流 D：Kernel models slice
+
+**范围**：`Ui*` 协议模型、MVP page recipe 标准体、状态/交互 baseline 与 MVP builder。
+**影响范围**：后续 Provider profile、Gate baseline、generation governance 与 Contract-to-Kernel 对齐面。
+**验证方式**：`tests/unit/test_frontend_ui_kernel_models.py` + fresh `ruff` / `verify constraints`。
+**回退方式**：不触发 Provider、Gate、generation 或 runtime 组件实现。
+
 ## 关键路径验证策略
 
 | 关键路径 | 主验证方式 | 次验证方式 |
@@ -170,3 +184,4 @@ tests/
 | provider neutrality | scope review | 术语对账 |
 | state/interaction/theme boundary clarity | contract review | 测试矩阵回挂 |
 | downstream handoff clarity | file-map review | 人工审阅 |
+| kernel model correctness | `uv run pytest tests/unit/test_frontend_ui_kernel_models.py -q` | model payload / MVP builder review |
