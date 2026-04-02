@@ -96,7 +96,7 @@
 
 - **已完成 git 提交**：是
 - **提交哈希**：`9308c8b`（`docs(009): freeze governance workstream handoff`，本批 docs-only baseline 锚点）
-- **改动范围**：[`spec.md`](spec.md)、[`plan.md`](plan.md)、[`tasks.md`](tasks.md)、[`task-execution-log.md`](task-execution-log.md)
+- **改动范围**：`specs/009-frontend-governance-ui-kernel/spec.md`、`specs/009-frontend-governance-ui-kernel/plan.md`、`specs/009-frontend-governance-ui-kernel/tasks.md`、`specs/009-frontend-governance-ui-kernel/task-execution-log.md`
 - 当前批次 branch disposition 状态：`archived`
 - 当前批次 worktree disposition 状态：`retained（当前执行分支）`
 - **是否继续下一批**：是（建议转入 `Contract` child work item formalization）
