@@ -404,3 +404,105 @@
 - **提交哈希**：本批唯一一次语义提交预期为 `feat(core): add frontend contract drift helpers`；完整 SHA 以该提交后的 `HEAD`（`git rev-parse HEAD`）为准
 - **改动范围**：`specs/011-frontend-contract-authoring-baseline/plan.md`、`specs/011-frontend-contract-authoring-baseline/tasks.md`、`specs/011-frontend-contract-authoring-baseline/task-execution-log.md`、`src/ai_sdlc/core/frontend_contract_drift.py`、`tests/unit/test_frontend_contract_drift.py`
 - **是否继续下一批**：待用户决定（建议转入 Contract gate surface）
+
+### Batch 2026-04-02-005 | 011 Contract gate surface slice
+
+#### 2.1 准备
+
+- **任务来源**：[`tasks.md`](tasks.md) `T71`、`T72`、`T73`
+- **目标**：在不越界到 registry 接线、pipeline 挂载、自动修复或源码扫描的前提下，把 contract artifact presence、implementation observation declaration 与 drift-free 判定汇总成最小 contract-aware gate surface。
+- **预读范围**：[`spec.md`](spec.md)、[`plan.md`](plan.md)、[`tasks.md`](tasks.md)、[`../../docs/superpowers/specs/2026-04-02-ai-autosdlc-frontend-governance-ui-kernel-design.md`](../../docs/superpowers/specs/2026-04-02-ai-autosdlc-frontend-governance-ui-kernel-design.md)、`src/ai_sdlc/gates/pipeline_gates.py`、`src/ai_sdlc/generators/frontend_contract_artifacts.py`、`src/ai_sdlc/core/frontend_contract_drift.py`
+- **激活的规则**：TDD red-green；single canonical truth；gate-surface-only；verification before completion
+- **验证画像**：`code-change`
+
+#### 2.2 统一验证命令
+
+- **V1（Batch 7 parser 结构校验）**
+  - 命令：`uv run python -c "from pathlib import Path; from ai_sdlc.generators.doc_gen import TasksParser; plan = TasksParser().parse(Path('specs/011-frontend-contract-authoring-baseline/tasks.md')); print({'total_tasks': plan.total_tasks, 'total_batches': plan.total_batches, 'batches': [batch.tasks for batch in plan.batches]})"`
+  - 结果：`{'total_tasks': 21, 'total_batches': 7, 'batches': [['T11', 'T12', 'T13'], ['T21', 'T22', 'T23'], ['T31', 'T32', 'T33'], ['T41', 'T42', 'T43'], ['T51', 'T52', 'T53'], ['T61', 'T62', 'T63'], ['T71', 'T72', 'T73']]}`
+- **V2（RED：定向测试必须先失败）**
+  - 命令：`uv run pytest tests/unit/test_frontend_contract_gate.py -q`
+  - 结果：失败；`ModuleNotFoundError: No module named 'ai_sdlc.gates.frontend_contract_gate'`
+- **V3（GREEN：gate surface 定向测试）**
+  - 命令：`uv run pytest tests/unit/test_frontend_contract_gate.py -q`
+  - 结果：`4 passed in 0.16s`
+- **V4（回归：models + artifacts + drift + gate）**
+  - 命令：`uv run pytest tests/unit/test_models.py tests/unit/test_frontend_contract_models.py tests/unit/test_frontend_contract_artifacts.py tests/unit/test_frontend_contract_drift.py tests/unit/test_frontend_contract_gate.py -q`
+  - 结果：`46 passed in 0.17s`
+- **V5（静态检查）**
+  - 命令：`uv run ruff check src tests`
+  - 结果：`All checks passed!`
+- **V6（Markdown / code diff hygiene）**
+  - 命令：`git diff --check -- specs/011-frontend-contract-authoring-baseline src/ai_sdlc/gates tests/unit`
+  - 结果：无输出。
+- **V7（治理只读校验）**
+  - 命令：`uv run ai-sdlc verify constraints`
+  - 结果：`verify constraints: no BLOCKERs.`
+
+#### 2.3 任务记录
+
+##### T71 | 先写 failing tests 固定 gate surface 输入与 verdict 语义
+
+- **改动范围**：`tests/unit/test_frontend_contract_gate.py`
+- **改动内容**：
+  - 先定义 artifact、observation 与 drift 全部对齐时的 PASS 基线。
+  - 用测试锁定 `contract_artifacts_present`、`implementation_observations_declared` 与 `contract_drift_free` 三个最小 gate checks。
+  - 覆盖 drift、缺失 contract artifact、缺失 observation 三类 RETRY 场景。
+- **新增/调整的测试**：新增 `tests/unit/test_frontend_contract_gate.py`
+- **测试结果**：RED 已确认。
+- **是否符合任务目标**：符合。
+
+##### T72 | 实现最小 frontend_contract_gate
+
+- **改动范围**：`src/ai_sdlc/gates/frontend_contract_gate.py`
+- **改动内容**：
+  - 新增 `FrontendContractGate.check()`，把 contract artifact presence、implementation observation declaration 与 drift-free 判定汇总成结构化 `GateResult / GateCheck`。
+  - 复用 `frontend_contracts_root()` 和 `detect_frontend_contract_drift()`，避免重新发明 contract artifact 路径和 drift 规则。
+  - 失败时输出压缩 drift 摘要，供后续 verify surface 消费，但不引入 registry 注册、pipeline 挂载、自动修复或源码扫描。
+- **新增/调整的测试**：复用 `tests/unit/test_frontend_contract_gate.py`
+- **测试结果**：通过。
+- **是否符合任务目标**：符合。
+
+##### T73 | Fresh verify 并追加 gate batch 归档
+
+- **改动范围**：`specs/011-frontend-contract-authoring-baseline/spec.md`、`specs/011-frontend-contract-authoring-baseline/plan.md`、`specs/011-frontend-contract-authoring-baseline/tasks.md`、`specs/011-frontend-contract-authoring-baseline/task-execution-log.md`
+- **改动内容**：
+  - 将 `011` formal docs 扩到 `Batch 7: contract gate surface slice`，并把最小 contract-aware gate surface 的 scope 与禁止事项写死。
+  - 记录本批 RED/GREEN、fresh verification 和 gate surface 的只读汇总边界。
+  - 保持 `011` 不越界到 registry、pipeline integration、auto-fix 或 scanner。
+- **新增/调整的测试**：无新增回归测试文件；以本批 fresh verification 命令为准。
+- **测试结果**：通过。
+- **是否符合任务目标**：符合。
+
+#### 2.4 代码审查（Mandatory）
+
+- **宪章/规格对齐**：本批只进入 `frontend_contract_gate` 切片，没有跨到 registry、pipeline integration、scanner 或 runtime。
+- **代码质量**：gate 直接消费 `contracts/frontend/**` artifact 与结构化 observation，并把 drift helper 结果汇总成 `GateResult`，没有复制另一套 contract truth。
+- **测试质量**：已完成 RED/GREEN、fresh 回归、`ruff`、`diff --check` 与 `verify constraints`。
+- **结论**：`无 Critical 阻塞项`
+
+#### 2.5 任务/计划同步状态（Mandatory）
+
+- `tasks.md` 同步状态：`已同步`
+- `plan.md` 同步状态：`已同步`
+- `spec.md` 同步状态：`已同步`
+- 关联 branch/worktree disposition 计划：`retained（沿用当前 009/011 工作分支）`
+- 说明：`011` 已从 drift helper slice 进入最小 contract gate surface slice，但 registry/pipeline integration 仍未放行。`
+
+#### 2.6 自动决策记录（如有）
+
+- AD-012：`frontend_contract_gate` 只输出 `contract_artifacts_present`、`implementation_observations_declared` 与 `contract_drift_free` 三个最小 checks。理由：当前目标是建立最小 verify surface，不预支后续 registry/pipeline 级扩张。
+- AD-013：gate 优先复用 `frontend_contracts_root()` 与 `detect_frontend_contract_drift()`。理由：保持 artifact 路径与 drift 口径只有一套 canonical implementation。
+- AD-014：当 artifact 或 observation 前置条件不满足时，`contract_drift_free` 直接返回前置条件缺失信息而不是伪造 PASS。理由：verify surface 必须显式暴露“无法比较”的真实状态。
+
+#### 2.7 批次结论
+
+- `011` 当前已具备最小 contract-aware gate surface，可把 contract artifact、implementation observation 和 drift-free 判定汇总成只读 verdict。
+- 后续若继续推进 `011`，下一批应优先决定是进入 verify integration / registry 挂载，还是拆出下游 child work item 承接 scanner 与 fix-loop。
+
+#### 2.8 归档后动作
+
+- **已完成 git 提交**：是
+- **提交哈希**：本批唯一一次语义提交预期为 `feat(gates): add frontend contract gate surface`；完整 SHA 以该提交后的 `HEAD`（`git rev-parse HEAD`）为准
+- **改动范围**：`specs/011-frontend-contract-authoring-baseline/spec.md`、`specs/011-frontend-contract-authoring-baseline/plan.md`、`specs/011-frontend-contract-authoring-baseline/tasks.md`、`specs/011-frontend-contract-authoring-baseline/task-execution-log.md`、`src/ai_sdlc/gates/frontend_contract_gate.py`、`tests/unit/test_frontend_contract_gate.py`
+- **是否继续下一批**：待用户决定（建议先评估 verify integration / child work item 拆分）

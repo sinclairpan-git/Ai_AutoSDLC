@@ -20,6 +20,7 @@ Batch 3: implementation handoff and first-slice gate freeze
 Batch 4: contract model slice
 Batch 5: contract artifact instantiation slice
 Batch 6: contract drift helper slice
+Batch 7: contract gate surface slice
 ```
 
 ---
@@ -30,10 +31,12 @@ Batch 6: contract drift helper slice
 - `Batch 4` 只允许写入 `src/ai_sdlc/models/frontend_contracts.py`、`src/ai_sdlc/models/__init__.py`、`tests/unit/test_frontend_contract_models.py` 与 append-only `task-execution-log.md`。
 - `Batch 5` 只允许写入 `src/ai_sdlc/generators/frontend_contract_artifacts.py`、可选 `src/ai_sdlc/generators/__init__.py`、`tests/unit/test_frontend_contract_artifacts.py`、`specs/011-frontend-contract-authoring-baseline/task-execution-log.md`，以及为本批边界服务的 `plan.md / tasks.md`。
 - `Batch 6` 只允许写入 `src/ai_sdlc/core/frontend_contract_drift.py`、`tests/unit/test_frontend_contract_drift.py`、`specs/011-frontend-contract-authoring-baseline/task-execution-log.md`，以及为本批边界服务的 `plan.md / tasks.md`。
+- `Batch 7` 只允许写入 `src/ai_sdlc/gates/frontend_contract_gate.py`、`tests/unit/test_frontend_contract_gate.py`、`specs/011-frontend-contract-authoring-baseline/task-execution-log.md`，以及为本批边界服务的 `spec.md / plan.md / tasks.md`。
 - `011` 不得把 UI Kernel、Provider、Gate 或 runtime 代码混入当前 child work item 的 formal baseline。
 - 当前首批实现只放行 Contract models / serialization；`generators / core / gates` 仍属于后续批次。
 - 当前下一批实现只放行 Contract artifact instantiation；`core / gates` 仍属于后续批次。
 - 当前 drift 批次只放行只读 helper，不放行 gate verdict、自动回写或源码扫描器。
+- 当前 gate 批次只放行最小 contract-aware gate surface，不放行 registry 注册、pipeline 挂载、自动回写或源码扫描器。
 - 只有在用户明确要求进入实现，且 `011` formal docs 已通过门禁后，才允许进入 `src/` / `tests/` 级实现。
 
 ---
@@ -293,3 +296,46 @@ Batch 6: contract drift helper slice
   2. `uv run ruff check src tests`、`git diff --check -- specs/011-frontend-contract-authoring-baseline src/ai_sdlc/core tests/unit` 与 `uv run ai-sdlc verify constraints` 通过
   3. `task-execution-log.md` 追加记录当前 drift helper batch 的 touched files、验证命令与结论
 - **验证**：`uv run pytest tests/unit/test_frontend_contract_models.py tests/unit/test_frontend_contract_artifacts.py tests/unit/test_frontend_contract_drift.py -q`, `uv run ruff check src tests`, `git diff --check -- specs/011-frontend-contract-authoring-baseline src/ai_sdlc/core tests/unit`, `uv run ai-sdlc verify constraints`
+
+---
+
+## Batch 7：contract gate surface slice
+
+### Task 7.1 先写 failing tests 固定 gate surface 输入与 verdict 语义
+
+- **任务编号**：T71
+- **优先级**：P0
+- **依赖**：T63
+- **文件**：`tests/unit/test_frontend_contract_gate.py`
+- **可并行**：否
+- **验收标准**：
+  1. 单测明确覆盖 artifact、observation 与 drift 全部对齐时的 PASS 场景
+  2. 单测明确覆盖存在 drift、缺失 contract artifact 或缺失 observation 时的 RETRY 场景
+  3. 首次运行定向测试时必须出现预期失败，证明 gate surface 尚未实现
+- **验证**：`uv run pytest tests/unit/test_frontend_contract_gate.py -q`
+
+### Task 7.2 实现最小 frontend_contract_gate
+
+- **任务编号**：T72
+- **优先级**：P0
+- **依赖**：T71
+- **文件**：`src/ai_sdlc/gates/frontend_contract_gate.py`
+- **可并行**：否
+- **验收标准**：
+  1. `frontend_contract_gate.py` 提供最小 contract-aware gate surface，可汇总 contract artifact presence、observation declaration 与 drift-free verdict
+  2. gate 输出使用结构化 `GateResult / GateCheck`，并在失败时暴露足够的 drift 摘要供后续 verify surface 消费
+  3. gate 只做只读汇总，不引入 registry 注册、pipeline 挂载、自动修复或源码扫描
+- **验证**：`uv run pytest tests/unit/test_frontend_contract_gate.py -q`
+
+### Task 7.3 Fresh verify 并追加 gate batch 归档
+
+- **任务编号**：T73
+- **优先级**：P0
+- **依赖**：T72
+- **文件**：`specs/011-frontend-contract-authoring-baseline/task-execution-log.md`
+- **可并行**：否
+- **验收标准**：
+  1. `uv run pytest tests/unit/test_models.py tests/unit/test_frontend_contract_models.py tests/unit/test_frontend_contract_artifacts.py tests/unit/test_frontend_contract_drift.py tests/unit/test_frontend_contract_gate.py -q` 通过
+  2. `uv run ruff check src tests`、`git diff --check -- specs/011-frontend-contract-authoring-baseline src/ai_sdlc/gates tests/unit` 与 `uv run ai-sdlc verify constraints` 通过
+  3. `task-execution-log.md` 追加记录当前 gate surface batch 的 touched files、验证命令与结论
+- **验证**：`uv run pytest tests/unit/test_models.py tests/unit/test_frontend_contract_models.py tests/unit/test_frontend_contract_artifacts.py tests/unit/test_frontend_contract_drift.py tests/unit/test_frontend_contract_gate.py -q`, `uv run ruff check src tests`, `git diff --check -- specs/011-frontend-contract-authoring-baseline src/ai_sdlc/gates tests/unit`, `uv run ai-sdlc verify constraints`

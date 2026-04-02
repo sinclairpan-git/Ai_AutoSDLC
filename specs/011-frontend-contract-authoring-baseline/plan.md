@@ -24,7 +24,7 @@ related_doc:
 - 再冻结 legacy 扩展字段和 drift 处理口径
 - 最后给出实现前的最小文件面与验证基线
 
-该计划已完成 formal baseline。经用户明确要求继续后，当前只允许进入首批 `Contract model + serialization` 切片，不直接展开 `generators / core / gates` 或 runtime 级实现。
+该计划已完成 formal baseline，并已按用户明确要求依次落完 `models / artifacts / drift helper` 三个实现切片。当前只允许继续进入最小 `contract-aware gate surface` 切片，不做 registry 接线、pipeline 挂载、源码扫描或 auto-fix 级实现。
 
 ## 技术背景
 
@@ -43,7 +43,7 @@ related_doc:
 - `recipe declaration` 只能在 Contract 层，不能写回 UI Kernel 标准本体
 - Contract 必须进入现有 artifact 链路，不得另起独立前端流水线
 - legacy 信息必须优先作为 `page/module contract` 扩展字段承载
-- 当前阶段只冻结 formal baseline，不直接承诺完整 schema/runtime 实现
+- 当前阶段只承诺 Contract 主线的最小实现闭环，不直接承诺完整 schema/runtime 或全量 gate system 实现
 
 ## 宪章检查
 
@@ -96,11 +96,11 @@ tests/unit/
 ### 当前建议进入的后续实现触点
 
 ```text
-src/ai_sdlc/core/
-└── frontend_contract_drift.py         # next slice: artifact-vs-observation drift helpers
+src/ai_sdlc/gates/
+└── frontend_contract_gate.py          # next slice: contract-aware verify surface
 
 tests/unit/
-└── test_frontend_contract_drift.py    # next slice: drift positive/negative coverage
+└── test_frontend_contract_gate.py     # next slice: gate verdict / artifact / drift aggregation
 ```
 
 ### 后续推荐的扩展实现触点
@@ -115,7 +115,7 @@ src/ai_sdlc/
 ├── core/
 │   └── frontend_contract_drift.py    # contract-vs-code drift helpers
 ├── gates/
-│   └── frontend_contract_gate.py     # later contract-aware verify/gate surface
+│   └── frontend_contract_gate.py     # minimal contract-aware verify surface
 └── rules/
     └── pipeline.md                   # contract artifact consumption wording
 
@@ -206,6 +206,13 @@ contracts/
 **验证方式**：定向 `pytest`、`uv run ruff check src tests`、`git diff --check`、`uv run ai-sdlc verify constraints`。
 **回退方式**：仅回退本阶段涉及的 `core/`、`tests/` 与 execution log 变更。
 
+### Phase 7：Contract gate surface slice
+
+**目标**：把 contract artifact presence、implementation observation declaration 与 drift-free 判定汇总成最小 `contract-aware gate surface`，供后续 `verify`/Fix Loop 消费。
+**产物**：`src/ai_sdlc/gates/frontend_contract_gate.py`、`tests/unit/test_frontend_contract_gate.py`。
+**验证方式**：定向 `pytest`、`uv run ruff check src tests`、`git diff --check`、`uv run ai-sdlc verify constraints`。
+**回退方式**：仅回退本阶段涉及的 `gates/`、`tests/`、formal docs 与 execution log 变更。
+
 ## 工作流计划
 
 ### 工作流 A：Contract object authoring baseline
@@ -250,6 +257,13 @@ contracts/
 **验证方式**：`tests/unit/test_frontend_contract_drift.py` + fresh `ruff` / `verify constraints`。
 **回退方式**：不触发 gate verdict 或自动回写实现。
 
+### 工作流 G：Contract gate surface slice
+
+**范围**：把 `contracts/frontend/**` artifact presence、结构化 observation 与 drift helper 输出汇总成只读 gate verdict。
+**影响范围**：后续 `verify`、`review`、Fix Loop 与显式 contract governance 的最小 gate 输入面。
+**验证方式**：`tests/unit/test_frontend_contract_gate.py` + fresh `ruff` / `verify constraints`。
+**回退方式**：不触发 registry 注册、pipeline 挂载、自动回写或源码扫描。
+
 ## 关键路径验证策略
 
 | 关键路径 | 主验证方式 | 次验证方式 |
@@ -261,6 +275,7 @@ contracts/
 | model slice shape / validation | `uv run pytest tests/unit/test_frontend_contract_models.py -q` | roundtrip review |
 | artifact instantiation layout | `uv run pytest tests/unit/test_frontend_contract_artifacts.py -q` | YAML payload review |
 | drift helper correctness | `uv run pytest tests/unit/test_frontend_contract_drift.py -q` | record payload review |
+| gate surface correctness | `uv run pytest tests/unit/test_frontend_contract_gate.py -q` | verdict/check payload review |
 | next-step readiness | `uv run ai-sdlc verify constraints` | `git status --short` |
 
 ## 已锁定决策
@@ -273,6 +288,7 @@ contracts/
 - 当前首批实现只覆盖 `models + serialization`，不同时推进 `generators / core / gates`
 - 下一批只放行 `frontend_contract_artifacts`，不同时推进 drift helpers 或 gate integration
 - drift helper 当前只接受结构化 observation 输入，不直接承担源码扫描、gate verdict 或自动修复
+- contract-aware gate surface 只允许汇总 artifact presence、observation declaration 和 drift-free 结果，不做 registry 接线、pipeline 挂载或 auto-fix
 
 ## 实施顺序建议
 
@@ -283,4 +299,5 @@ contracts/
 5. 先以 TDD 落 `Frontend Contract Set / Page Contract / Module Contract / Contract Rule Bundle / Contract Legacy Context` 模型与导出。
 6. model slice 稳定后，只放行 `generators/frontend_contract_artifacts.py`，先把 page/module contract 落成实例化 artifact。
 7. artifact instantiation 稳定后，只放行 `core/frontend_contract_drift.py`，先建立 artifact-vs-observation 的只读 drift 判定。
-8. drift helper 稳定后，再决定是否进入 `gates/frontend_contract_gate.py`。
+8. drift helper 稳定后，只放行 `gates/frontend_contract_gate.py` 的最小 gate surface，不混入 registry 接线、pipeline 挂载或 auto-fix。
+9. gate surface 稳定后，再决定是否继续拆下游 verify integration / scanner / fix-loop work item。

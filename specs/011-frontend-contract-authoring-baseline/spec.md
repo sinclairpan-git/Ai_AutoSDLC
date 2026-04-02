@@ -5,7 +5,7 @@
 **状态**：已冻结（formal baseline）  
 **输入**：[`../009-frontend-governance-ui-kernel/spec.md`](../009-frontend-governance-ui-kernel/spec.md)、[`../009-frontend-governance-ui-kernel/plan.md`](../009-frontend-governance-ui-kernel/plan.md)、[`../../docs/superpowers/specs/2026-04-02-ai-autosdlc-frontend-governance-ui-kernel-design.md`](../../docs/superpowers/specs/2026-04-02-ai-autosdlc-frontend-governance-ui-kernel-design.md)
 
-> 口径：本 work item 是 `009-frontend-governance-ui-kernel` 下游的第一个 child work item，用于把 `Contract` 主线收敛成单一 formal baseline。它不是 UI Kernel、Provider 或 Gate 的替代实现，也不是直接建设完整前端 runtime，而是先把 Contract 真值面、artifact 链路、legacy 扩展字段和 drift 口径正式冻结。
+> 口径：本 work item 是 `009-frontend-governance-ui-kernel` 下游的第一个 child work item，用于把 `Contract` 主线收敛成单一 formal baseline。它不是 UI Kernel、Provider 或完整 Gate 系统的替代实现，也不是直接建设完整前端 runtime，而是先把 Contract 真值面、artifact 链路、legacy 扩展字段、drift 口径，以及最小 contract-aware gate surface 正式冻结。
 
 ## 问题定义
 
@@ -30,11 +30,11 @@
   - 锁定 Contract 在 `refine / design / decompose / verify / execute / close` 中的 artifact 链路位置
   - 锁定 `Contract drift` 的正式处理口径：`回写 Contract` 或 `修正实现代码`
   - 锁定 MVP 阶段 legacy 相关信息以 `page/module contract` 扩展字段承载的单一路径
-  - 为后续模型、实例化、序列化、drift 检查与验证测试提供 formal baseline
+  - 为后续模型、实例化、序列化、drift 检查、最小 contract-aware gate surface 与验证测试提供 formal baseline
 - **不覆盖**：
   - 定义 `Ui*` 协议、page recipe 标准本体和状态/交互底线
   - 定义 `enterprise-vue2 provider` 的映射、wrapper 或 runtime 包装
-  - 定义 Gate / Recheck / Auto-fix 的完整策略与执行实现
+  - 定义 Gate / Recheck / Auto-fix 的完整策略、pipeline 接线与自动执行实现
   - 直接实现页面生成 runtime、完整 schema 引擎或前端 monorepo
   - 为 legacy 再建立第二套平行 contract / artifact 体系
 
@@ -85,7 +85,7 @@
 |----|------|
 | FR-011-001 | 系统必须把 `009` 的 `Contract` 主线转为 `specs/011/...` 下的 canonical formal truth |
 | FR-011-002 | `011` 必须明确覆盖 `page/module metadata`、`recipe declaration`、`i18n`、`validation`、`hard rules`、`whitelist`、`token refs/rules` 与 legacy 扩展字段 |
-| FR-011-003 | `011` 必须明确本次 work item 的非目标，包括 UI Kernel 标准本体、Provider 映射、Gate / Recheck / Auto-fix 实现与完整前端 runtime |
+| FR-011-003 | `011` 必须明确本次 work item 的非目标，包括 UI Kernel 标准本体、Provider 映射、Gate / Recheck / Auto-fix 的完整策略与 pipeline 接线实现，以及完整前端 runtime |
 
 ### Contract Object Model And Boundary
 
@@ -112,7 +112,7 @@
 |----|------|
 | FR-011-013 | `011` 必须明确 `compatibility_profile / migration_level / legacy_boundary_ref / migration_scope` 等 legacy 信息优先作为 `page/module contract` 扩展字段承载 |
 | FR-011-014 | `011` 必须为后续 Contract 模型、实例化、序列化与 drift 检查实现提供单一 formal baseline |
-| FR-011-015 | `011` 必须明确后续实现的最小验证面至少覆盖模型形状、序列化、stage integration、legacy 扩展字段和 drift 正反向场景 |
+| FR-011-015 | `011` 必须明确后续实现的最小验证面至少覆盖模型形状、序列化、stage integration、legacy 扩展字段、drift 正反向场景和最小 contract-aware gate 汇总面 |
 
 ## 关键实体
 
@@ -131,3 +131,4 @@
 - **SC-011-004**：legacy 相关信息始终作为 `page/module contract` 扩展字段承载，不形成第二套平行 contract / artifact 系统
 - **SC-011-005**：`refine / design / decompose / verify / execute / close` 与 Contract 的关系在 formal docs 中可被直接引用
 - **SC-011-006**：后续实现团队能够从 `011` 直接读出模型、实例化、drift 检查和测试面的最小边界，而不需要重新发明对象模型
+- **SC-011-007**：后续实现团队能够从 `011` 直接读出最小 contract-aware gate surface 的输入、输出与禁止事项，而不把它误扩成 registry 接线、auto-fix 或源码扫描器
