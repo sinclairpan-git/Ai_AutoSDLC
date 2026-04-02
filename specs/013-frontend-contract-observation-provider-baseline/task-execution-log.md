@@ -198,3 +198,102 @@
 - **提交哈希**：本批唯一一次语义提交预期为 `feat(core): add frontend contract observation provider helpers`；完整 SHA 以该提交后的 `HEAD`（`git rev-parse HEAD`）为准
 - **改动范围**：`specs/013-frontend-contract-observation-provider-baseline/plan.md`、`specs/013-frontend-contract-observation-provider-baseline/tasks.md`、`specs/013-frontend-contract-observation-provider-baseline/task-execution-log.md`、`src/ai_sdlc/core/frontend_contract_observation_provider.py`、`tests/unit/test_frontend_contract_observation_provider.py`
 - **是否继续下一批**：待用户决定（建议转入 scanner candidate slice，或另拆 consumer migration）
+
+### Batch 2026-04-02-003 | 013 Scanner candidate slice
+
+#### 2.1 准备
+
+- **任务来源**：[`tasks.md`](tasks.md) `T51`、`T52`、`T53`
+- **目标**：在不越界到 CLI、registry 或 `012` verify mainline 的前提下，落下 frontend contract scanner 的最小候选实现，扫描源码中的结构化 observation 注释块，并复用 provider helper 物化 canonical artifact。
+- **预读范围**：[`spec.md`](spec.md)、[`plan.md`](plan.md)、[`tasks.md`](tasks.md)、`src/ai_sdlc/core/frontend_contract_observation_provider.py`、`src/ai_sdlc/core/frontend_contract_drift.py`、`src/ai_sdlc/scanners/file_scanner.py`、`src/ai_sdlc/scanners/ast_scanner.py`、`tests/unit/test_scanners.py`
+- **激活的规则**：TDD red-green；single canonical truth；verification-before-completion
+- **验证画像**：`code-change`
+
+#### 2.2 统一验证命令
+
+- **V1（Batch 5 parser 结构校验）**
+  - 命令：`uv run python -c "from pathlib import Path; from ai_sdlc.generators.doc_gen import TasksParser; plan = TasksParser().parse(Path('specs/013-frontend-contract-observation-provider-baseline/tasks.md')); print({'total_tasks': plan.total_tasks, 'total_batches': plan.total_batches, 'batches': [batch.tasks for batch in plan.batches]})"`
+  - 结果：`{'total_tasks': 15, 'total_batches': 5, 'batches': [['T11', 'T12', 'T13'], ['T21', 'T22', 'T23'], ['T31', 'T32', 'T33'], ['T41', 'T42', 'T43'], ['T51', 'T52', 'T53']]}`
+- **V2（RED：scanner candidate 定向测试）**
+  - 命令：`uv run pytest tests/unit/test_frontend_contract_scanner.py -q`
+  - 结果：失败；`ModuleNotFoundError: No module named 'ai_sdlc.scanners.frontend_contract_scanner'`
+- **V3（GREEN：scanner candidate 定向测试）**
+  - 命令：`uv run pytest tests/unit/test_frontend_contract_scanner.py -q`
+  - 结果：`6 passed in 0.13s`
+- **V4（静态检查）**
+  - 命令：`uv run ruff check src tests`
+  - 结果：`All checks passed!`
+- **V5（Markdown / code diff hygiene）**
+  - 命令：`git diff --check -- specs/013-frontend-contract-observation-provider-baseline src/ai_sdlc/scanners tests/unit`
+  - 结果：无输出。
+- **V6（治理只读校验）**
+  - 命令：`uv run ai-sdlc verify constraints`
+  - 结果：`verify constraints: no BLOCKERs.`
+
+#### 2.3 任务记录
+
+##### T51 | 先写 failing tests 固定 scanner candidate 语义
+
+- **改动范围**：`tests/unit/test_frontend_contract_scanner.py`
+- **改动内容**：
+  - 先定义结构化 observation 注释块的扫描、scanner provenance、artifact materialization 与忽略无标记文件的最小行为。
+  - 用测试锁定重复 `page_id` 与非法 JSON block 的失败语义。
+  - 确认首次执行时因 scanner 模块缺失而 RED。
+- **新增/调整的测试**：新增 `tests/unit/test_frontend_contract_scanner.py`
+- **测试结果**：RED 已确认。
+- **是否符合任务目标**：符合。
+
+##### T52 | 实现最小 scanner candidate
+
+- **改动范围**：`src/ai_sdlc/scanners/frontend_contract_scanner.py`
+- **改动内容**：
+  - 新增 `FrontendContractScannerResult`，并实现 `scan_frontend_contract_observations()`，只扫描 `.js/.jsx/.ts/.tsx/.vue/.mjs/.cjs` 源码中的 `ai-sdlc:frontend-contract-observation` 结构化注释块。
+  - 新增 `build_frontend_contract_scanner_artifact()` 与 `write_frontend_contract_scanner_artifact()`，复用 provider helper 物化 canonical artifact。
+  - 对重复 `page_id`、非法 JSON block 与非法 observation payload 给出显式失败，而不是静默吞掉。
+- **新增/调整的测试**：复用 `tests/unit/test_frontend_contract_scanner.py`
+- **测试结果**：通过。
+- **是否符合任务目标**：符合。
+
+##### T53 | Fresh verify 并追加 implementation batch 归档
+
+- **改动范围**：`specs/013-frontend-contract-observation-provider-baseline/plan.md`、`specs/013-frontend-contract-observation-provider-baseline/tasks.md`、`specs/013-frontend-contract-observation-provider-baseline/task-execution-log.md`
+- **改动内容**：
+  - 将 `013` formal docs 扩到 `Batch 5: scanner candidate slice`，并把只放行 `scanners/` helper 与对应 tests 的边界写死。
+  - 记录本批 RED/GREEN、fresh verification 和 scanner candidate 的收窄语义。
+  - 保持 `013` 不越界到 CLI、registry 或 `012` verify mainline。
+- **新增/调整的测试**：无新增测试文件；以本批 fresh verification 命令为准。
+- **测试结果**：通过。
+- **是否符合任务目标**：符合。
+
+#### 2.4 代码审查（Mandatory）
+
+- **宪章/规格对齐**：本批只进入 scanner candidate 切片，没有跨到 CLI、registry 或 `012` verify mainline。
+- **代码质量**：scanner 直接复用既有 provider artifact contract，没有发明第二套 observation payload。
+- **测试质量**：已完成 RED/GREEN、`ruff`、`diff --check` 与 `verify constraints`。
+- **结论**：`无 Critical 阻塞项`
+
+#### 2.5 任务/计划同步状态（Mandatory）
+
+- `tasks.md` 同步状态：`已同步`
+- `plan.md` 同步状态：`已同步`
+- `spec.md` 同步状态：`无需变更`
+- 关联 branch/worktree disposition 计划：`retained（沿用当前 009/011/012/013 工作分支）`
+- 说明：`013` 已从 provider helper slice 进入 scanner candidate slice，但 CLI 与 downstream consumer migration 仍未放行。`
+
+#### 2.6 自动决策记录（如有）
+
+- AD-007：scanner 语义收窄为“扫描结构化 observation 注释块”，不做框架特定 AST 解析。理由：当前批次目标是稳定 candidate provider 合同，而不是引入脆弱的框架启发式。
+- AD-008：scanner 直接复用 provider helper 物化 artifact，而不是自己再定义第二套 artifact writer。理由：保持 canonical observation artifact 只有一套写入语义。
+- AD-009：重复 `page_id` 与非法 JSON block 直接失败。理由：这是 candidate provider 的真值输入，静默跳过会掩盖扫描结果不可信的问题。
+
+#### 2.7 批次结论
+
+- `013` 当前已具备 scanner 作为 candidate provider 的最小实现，可从源码中的结构化 observation 注释块生成 canonical artifact。
+- 后续若继续推进，应优先决定是扩 CLI/export surface，还是在下游工单中把 `012` observation consumer 切到 canonical artifact loader。
+
+#### 2.8 归档后动作
+
+- **已完成 git 提交**：是
+- **提交哈希**：本批唯一一次语义提交预期为 `feat(scanners): add frontend contract scanner candidate`；完整 SHA 以该提交后的 `HEAD`（`git rev-parse HEAD`）为准
+- **改动范围**：`specs/013-frontend-contract-observation-provider-baseline/plan.md`、`specs/013-frontend-contract-observation-provider-baseline/tasks.md`、`specs/013-frontend-contract-observation-provider-baseline/task-execution-log.md`、`src/ai_sdlc/scanners/frontend_contract_scanner.py`、`tests/unit/test_frontend_contract_scanner.py`
+- **是否继续下一批**：待用户决定（建议进入 consumer migration 或另拆 CLI/export slice）
