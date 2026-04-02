@@ -95,6 +95,8 @@
 
 - 当前待修：
   - `009` 线 `FD-2026-04-02-001`
+  - `009` 线 `FD-2026-04-02-002`
+  - `009` 线 `FD-2026-04-02-003`
 - 本轮已收口：
   - `008` 线 `FD-2026-03-31-003`
   - `007` 线 `FD-2026-03-31-002`
@@ -138,6 +140,70 @@
 - 风险等级: 中
 - 可验证成功标准: 给定“仓库存在历史 `.ai-sdlc` 痕迹但缺 `.ai-sdlc/project/config/project-state.yaml`”的夹具时，`ai-sdlc workitem init` 不再只抛出底层缺文件错误，而会明确给出“先执行 `ai-sdlc init .`”的 formal guidance，或直接输出结构化 reconcile 状态；用户文档在 `workitem init` 条目中也明确写出该前置条件。给定已 formal init 的项目时，`workitem init` 仍按当前 direct-formal 入口正常生成 `specs/<WI>/spec.md + plan.md + tasks.md`。
 - 是否需要回归测试补充: 是：补“existing project with legacy `.ai-sdlc` traces but missing `project-state.yaml`”的 CLI 夹具，覆盖 `workitem init` 的 guidance 文案、`ai-sdlc init .` 衔接路径，以及用户文档/帮助文本的一致性检查。
+
+## FD-2026-04-02-002 | VS Code + Codex 插件组合场景被误识别为 VS Code 适配，导致框架约束未真正注入 Codex 对话入口
+
+- 日期 (UTC): 2026-04-02
+- 来源: user_review, self_review
+- 状态: open
+- owner: codex
+- wi_id: 009-frontend-governance-ui-kernel
+- related_doc: src/ai_sdlc/integrations/ide_adapter.py, src/ai_sdlc/adapters/vscode/AI-SDLC.md, src/ai_sdlc/adapters/codex/AI-SDLC.md, docs/USER_GUIDE.zh-CN.md, tests/unit/test_ide_adapter.py, tests/integration/test_cli_ide_adapter.py, tests/integration/test_cli_run.py, docs/framework-defect-backlog.zh-CN.md
+- detection_surface: user_review, self_review
+- trace_anchor: rev:783f688
+- observed_scope: repo
+- subject_ref: 无（当前无稳定 provenance inspection subject）
+- chain_status: unknown（当前以代码实现、文档和测试覆盖复盘为准）
+- highest_confidence_source: 无（当前无 provenance inspection 输出）
+- key_gaps: unsupported: “VS Code 作为编辑器宿主 + Codex 作为对话代理宿主”未被建模为组合场景；unobserved: 现有测试只覆盖单一 VS Code / 单一 Codex / Cursor>VSCode 优先级，未覆盖 `.vscode + .codex` 或 `TERM_PROGRAM=vscode + OPENAI_CODEX=1`；ambiguous: 用户文档默认把“先打开 IDE 再 init”视为足够条件，但未说明当编辑器宿主与 AI 代理宿主不同步时，适配文件可能落到错误入口
+- evidence_refs: file:src/ai_sdlc/integrations/ide_adapter.py; command:uv run ai-sdlc init .; command:uv run ai-sdlc run --dry-run; file:src/ai_sdlc/adapters/vscode/AI-SDLC.md; file:src/ai_sdlc/adapters/codex/AI-SDLC.md
+- 现象: 用户在 VS Code 中使用 Codex 插件时，执行 `init` 和 `run --dry-run` 后，`.ai-sdlc/` 和 project state 等初始化目录会正常生成，但 Codex 聊天并没有按照 AI-SDLC 约束推进开发。复盘现有实现可见，IDE 检测优先级把 `.vscode` / `TERM_PROGRAM=vscode` 放在 `.codex` / `OPENAI_CODEX` 之前，导致框架常只安装 `.vscode/AI-SDLC.md`，而不是 Codex 实际消费的 `.codex/AI-SDLC.md`。
+- 触发场景: 项目在 VS Code 中打开，存在 `.vscode/` 或终端环境暴露 `TERM_PROGRAM=vscode`；同时用户实际通过 Codex 插件进行对话开发。执行 `ai-sdlc init .` 或后续会触发 IDE adapter 的命令时，当前实现先把宿主识别为 VS Code，而不是 Codex，因此约束提示落到了 VS Code 适配文件，而未真正注入 Codex 对话入口。
+- 影响范围: VS Code + Codex 插件组合场景下的 adapter 注入正确性、用户对“init/dry-run 已成功但约束未生效”的信任、IDE 识别模型的正确性，以及后续对多宿主 / 多代理场景的可扩展性。若不修复，用户会误以为框架已接管对话，而实际上真正的 AI 代理侧并未收到约束。
+- 根因分类: D, E, H
+- 未来杜绝方案摘要: adapter 选择目标必须收敛为“实际消费约束的 AI 代理入口”，而不是外层编辑器宿主。`init` 时应提供一个可交互的适配方案选择器：自动识别结果只负责默认聚焦，不自动确认；用户可用上下方向键和回车在 `Claude Code / Codex / Cursor / VS Code / 其他-通用` 中显式确认，也可通过命令行参数手动指定。对 `VS Code + Codex 插件`、`VS Code + Claude Code 插件` 这类组合场景，应分别选择 `Codex` 或 `Claude Code`，而不是 `VS Code`。非交互环境下必须有明确 fallback，不能强依赖交互。
+- 建议改动层级: rule / policy, middleware, workflow, tool, eval
+- prompt / context: 当用户处于“VS Code + Codex 插件”或“VS Code + Claude Code 插件”这类组合场景时，框架不能把“打开的是 VS Code”直接等同于“约束应写入 VS Code adapter”。上下文必须优先回答“当前实际用于聊天开发的 AI 代理入口是谁”，并把选择权明确交给用户确认。
+- rule / policy: 在用户文档和适配规则中明确：adapter 选择目标是**实际消费约束的 AI 代理入口**，不是单纯的编辑器外壳。对存在多个候选宿主的场景，默认应进入“自动识别 + 用户确认”的选择流程，而不是静默按固定优先级落盘。列表只保留 `Claude Code / Codex / Cursor / VS Code / 其他-通用` 五项，不再把“VS Code + 某插件”拆成组合选项；若无交互能力，则要求通过 `--ide` 或等价参数显式指定，或退回 deterministic fallback 并清楚提示。
+- middleware: `ide_adapter` 需要从单一 `detect_ide() -> IDEKind` 模型演进为“候选方案收集 + 默认候选排序 + 用户确认 / 手动指定”的流程。建议新增交互式 adapter selector：启动时列表显示 `Claude Code`、`Codex`、`Cursor`、`VS Code`、`其他-通用`，自动检测命中的方案仅做默认聚焦，不自动确认；用户可通过上下方向键与回车选择，也可通过 `--ide claude-code|codex|cursor|vscode|generic` 直接指定。选择器的文案应聚焦“请选择当前实际用于聊天开发的 AI 代理入口”，而不是“请选择 IDE”。非 TTY / CI 场景下不得阻塞等待交互，应按显式参数优先、其后采用 deterministic fallback，并打印清晰提示。
+- workflow: `ai-sdlc init .` 应收敛为 `探测候选 AI 代理入口 -> 默认聚焦推荐项 -> 用户确认/手动指定 -> 安装对应 adapter -> 后续 dry-run / run 使用同一已确认结果`。若后续检测到宿主变化，也应允许显式重新选择，而不是继续沿用历史错误判定。`run --dry-run` 等非只读入口应尊重已确认的 adapter 选择结果，而不是重新静默改判。
+- tool: src/ai_sdlc/integrations/ide_adapter.py, src/ai_sdlc/cli/commands.py, src/ai_sdlc/cli/cli_hooks.py, src/ai_sdlc/adapters/vscode/AI-SDLC.md, src/ai_sdlc/adapters/codex/AI-SDLC.md, docs/USER_GUIDE.zh-CN.md, tests/unit/test_ide_adapter.py, tests/integration/test_cli_ide_adapter.py, tests/integration/test_cli_run.py
+- eval: mixed-host-adapter-mismatch 次数、VS Code + Codex 场景首次适配成功率、`.codex/AI-SDLC.md` 缺失但 `.vscode/AI-SDLC.md` 已生成的误装率、用户手动重新适配次数、非交互环境下 adapter 选择失败次数
+- 风险等级: 高
+- 可验证成功标准: 给定 `.vscode + .codex` 并存或 `TERM_PROGRAM=vscode + OPENAI_CODEX=1` 的夹具时，`ai-sdlc init .` 不再静默只安装 VS Code adapter，而会默认聚焦 `Codex` 并要求用户确认，或允许通过 `--ide codex` 明确指定；确认后 `.codex/AI-SDLC.md` 必须存在，且后续 `run --dry-run` 不会把适配重新改回 VS Code。给定非交互环境时，CLI 不会卡在选择器上，而会要求显式 `--ide` 或采用可解释的 fallback。现有单一 IDE 场景（Cursor、VS Code、Codex、Claude Code、generic）仍保持幂等与不覆盖用户改动。
+- 是否需要回归测试补充: 是：补混合宿主夹具（`.vscode + .codex`、`TERM_PROGRAM=vscode + OPENAI_CODEX=1`）、交互选择器默认聚焦与回车确认流程、`--ide` 显式指定路径、非 TTY fallback 路径、以及“已选择 Codex 后 subsequent run 不被静默改判”为 VS Code 的回归测试。
+
+## FD-2026-04-02-003 | Codex 插件即使已读取 `.codex/AI-SDLC.md` 并执行 `run --dry-run`，仍会把适配提示当软参考，缺少可验证的治理激活合同
+
+- 日期 (UTC): 2026-04-02
+- 来源: production_report, user_review, self_review
+- 状态: open
+- owner: codex
+- wi_id: 009-frontend-governance-ui-kernel
+- related_doc: src/ai_sdlc/adapters/codex/AI-SDLC.md, docs/USER_GUIDE.zh-CN.md, src/ai_sdlc/integrations/ide_adapter.py, docs/framework-defect-backlog.zh-CN.md
+- detection_surface: production_report, user_review
+- trace_anchor: manual_review_only
+- observed_scope: manual_review
+- subject_ref: 无（当前无插件级可回放 subject）
+- chain_status: unknown（当前以用户截图与行为复盘为准）
+- highest_confidence_source: 无（当前无插件级 activation telemetry 输出）
+- key_gaps: unsupported: 当前框架没有“adapter installed / adapter file read / governance activated”三层状态区分；unobserved: 缺少插件是否真正采纳约束的 activation handshake；ambiguous: 文档与实现默认把“写入 `.codex/AI-SDLC.md`”近似等同于“Codex 将按框架约束开发”
+- evidence_refs: image:用户截图显示已运行 `Get-Content .codex/AI-SDLC.md`、已运行 `python -m ai_sdlc run --dry-run`，但后续仍直接继续实现；file:src/ai_sdlc/adapters/codex/AI-SDLC.md
+- 现象: 在用户提供的生产截图中，Codex 插件已经读取了 `.codex/AI-SDLC.md`，并执行了 `python -m ai_sdlc run --dry-run`，说明“适配文件存在”和“启动入口被执行”这两步都已发生；但随后的对话仍直接进入普通编码路径，并明确表示“启动入口已经通过，可以继续按现有流程往下做”，没有真正进入 AI-SDLC 的框架约束链。这说明当前适配文件对 Codex 插件而言最多只是软提示，而不是可验证、可阻断、可判定的治理激活合同。
+- 触发场景: 用户在 Codex 插件中手动建立 `.codex/AI-SDLC.md`，或由框架自动安装该文件后，直接在聊天中输入需求；插件会读取适配文件，也可能按提示运行一次 `ai-sdlc run --dry-run`，但之后并未把“必须继续遵守框架约束、不得直接脱离 Contract / stage / gate 链路”当作硬执行前提。
+- 影响范围: Codex 适配的可信度、用户对“init / dry-run 成功是否代表框架已接管”的理解、框架对外宣称的 IDE/agent 适配能力，以及所有依赖 `.codex/AI-SDLC.md` 的治理场景。若不修复，用户即使正确安装并选择 Codex adapter，也仍可能得到“看起来读了文件、实际上继续自由编码”的假激活结果。
+- 根因分类: B, D, E, F, H
+- 未来杜绝方案摘要: 框架必须停止把“adapter 文件已写入/已读取”当作“治理已激活”的等价条件。需要新增可验证的 activation contract，至少区分 `adapter_installed`、`adapter_acknowledged`、`governance_activated` 三层状态；如果 Codex 插件无法提供可靠 handshake，就必须在产品口径上明确它当前只是软提示适配，而不是已可证明生效的硬约束接管。
+- 建议改动层级: rule / policy, middleware, workflow, tool, eval
+- prompt / context: 当用户看到 `.codex/AI-SDLC.md` 已存在，或插件已读取该文件并执行过 `run --dry-run` 时，框架不能默认宣称“约束已经生效”。上下文必须区分“提示已展示”和“治理已激活”，并对后者要求额外证据。
+- rule / policy: 在用户文档、适配规则和产品说明里明确：当前 Codex/Claude 类 adapter 若仅通过本地 Markdown 提示文件接入，则默认只代表“提示面已安装”，不等于“框架约束已被代理硬采纳”。除非后续补上 activation contract，否则不得把这类 adapter 描述为已经可靠接管对话执行。
+- middleware: 为 adapter 引入 activation state 模型，例如 `installed / acknowledged / activated`，并让后续 `run --dry-run`、`status` 或显式握手命令能够更新该状态。若目标代理产品无法反馈已采纳约束，则框架应显式停留在 `installed` 或 `acknowledged`，而不是虚构 `activated`。
+- workflow: 用户在聊天中输入需求后，框架应有一条可验证的“激活确认”路径，而不是只要求读文件和跑 dry-run。若没有激活确认能力，工作流必须退回到“软提示 + 人工确认”模式，并在文案上明确当前仍存在代理不遵守框架约束的风险。
+- tool: src/ai_sdlc/adapters/codex/AI-SDLC.md, src/ai_sdlc/integrations/ide_adapter.py, docs/USER_GUIDE.zh-CN.md, future activation handshake / status surface
+- eval: adapter-installed-but-not-activated 次数、Codex 读取 adapter 后仍偏离框架链路的事件数、用户误以为“dry-run 成功=治理已接管”的次数、是否存在可验证 activation signal
+- 风险等级: 高
+- 可验证成功标准: 给定 Codex 插件场景时，框架能够明确区分“文件已安装”“插件已读取”“治理已激活”三层状态；若插件无法提供 activation signal，产品文档与 CLI 状态不会再把 `.codex/AI-SDLC.md` 存在或 `run --dry-run` 执行成功表述为“约束已生效”。若后续提供 handshake，则在用户输入需求后可通过稳定信号证明 Codex 已进入框架治理路径。
+- 是否需要回归测试补充: 是：补 activation-state contract 的单元/集成测试，以及“adapter 文件存在 + dry-run 成功但未获得 activation signal”时不得误报已激活的回归测试。
 
 ## FD-2026-03-31-001 | 宿主 skills 的默认 workflow 会把 superpowers plan 完成态继续推向 execute 倾向，稀释仓库法定阶段真值
 
