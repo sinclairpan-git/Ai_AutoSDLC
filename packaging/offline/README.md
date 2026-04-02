@@ -27,8 +27,8 @@ chmod +x packaging/offline/build_offline_bundle.sh
 ### Linux/macOS
 
 ```bash
-tar xzf ai-sdlc-offline-0.2.0.tar.gz
-cd ai-sdlc-offline-0.2.0
+tar xzf ai-sdlc-offline-0.3.1.tar.gz
+cd ai-sdlc-offline-0.3.1
 chmod +x install_offline.sh
 ./install_offline.sh
 ```
