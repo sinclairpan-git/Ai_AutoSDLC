@@ -111,6 +111,9 @@ tests/
 ├── unit/test_verify_constraints.py               # later slice
 ├── unit/test_gates.py                            # later slice
 └── integration/test_cli_verify_constraints.py    # later slice
+
+specs/012-frontend-contract-verify-integration/
+└── frontend-contract-observations.json           # current verify_constraints slice 的最小结构化 observation 输入边界
 ```
 
 ## 开始执行前必须锁定的阻断决策
@@ -120,6 +123,7 @@ tests/
 - observation 输入边界与 scanner 实现必须分离
 - 缺失 artifact、缺失 observation 或 drift 未清必须被诚实暴露
 - 若无充分理由，不新增新的 registry stage 名称
+- `verify_constraints` 当前只允许对 active `012` 挂接 frontend contract verification，避免把 contract 缺口扩成全局规则
 
 未锁定上述决策前，不得进入 `012` 的代码实现。
 
@@ -130,7 +134,7 @@ tests/
 | verification source contract | 定义 contract-aware source / check objects / coverage gaps | 不得把 contract 状态继续隐藏在自由文本或 helper 内部 |
 | gate aggregation | 定义 `VerificationGate / VerifyGate` 如何消费 contract-aware 结果 | 不得另起新 stage 或复制第二套 verification 规则 |
 | CLI surface | 定义 terminal / JSON verify 如何显示 contract 状态 | 不得误报 PASS 或掩盖“无法比较”的真实状态 |
-| observation boundary | 定义结构化 observation 输入消费面 | 不得在当前 work item 中顺手实现 scanner |
+| observation boundary | 定义结构化 observation 输入消费面；当前最小输入文件为 `specs/012-frontend-contract-verify-integration/frontend-contract-observations.json` | 不得在当前 work item 中顺手实现 scanner |
 | downstream remediation handoff | 明确 scanner / fix-loop / auto-fix 的下游边界 | 不得把 remediation 逻辑混入 verify integration |
 
 ## 阶段计划
@@ -200,6 +204,13 @@ tests/
 **验证方式**：`tests/unit/test_frontend_contract_verification.py` + fresh `ruff` / `verify constraints`。
 **回退方式**：不触发 `verify_constraints`、`pipeline_gates.py`、CLI 或 registry 写入。
 
+### 工作流 E：verify_constraints attachment slice
+
+**范围**：把 `frontend_contract_verification` helper 以 active-`012` scoped attachment 的方式接入 `verify_constraints`，并定义 `frontend-contract-observations.json` 的最小结构化输入边界。
+**影响范围**：`verify constraints` 的 source、check object、coverage gap、context payload 与 unit tests。
+**验证方式**：`tests/unit/test_verify_constraints.py` + fresh `ruff` / `verify constraints`。
+**回退方式**：不触发 `pipeline_gates.py`、CLI、registry 或 scanner。
+
 ## 关键路径验证策略
 
 | 关键路径 | 主验证方式 | 次验证方式 |
@@ -210,6 +221,7 @@ tests/
 | CLI surface honesty | 终端 / JSON 口径对账 | 集成测试矩阵 |
 | downstream handoff clarity | file-map review | 人工审阅 |
 | report/context helper correctness | `uv run pytest tests/unit/test_frontend_contract_verification.py -q` | report payload review |
+| verify_constraints attachment correctness | `uv run pytest tests/unit/test_verify_constraints.py -q` | scoped activation / payload review |
 
 ## 已锁定决策
 
@@ -218,6 +230,7 @@ tests/
 - `frontend_contract_gate` 只作为上游输入，不直接冒充最终 verify surface
 - scanner / fix-loop / auto-fix 保持在下游 work item
 - 当前首批实现只放行 `core/frontend_contract_verification.py` report/context helper，不同时推进 `verify_constraints`、`pipeline_gates` 或 CLI
+- 下一批实现只放行 `core/verify_constraints.py` 与 `tests/unit/test_verify_constraints.py`，并把 attachment 激活条件限定为 active `012`
 
 ## 实施顺序建议
 

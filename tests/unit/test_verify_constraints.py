@@ -2,10 +2,15 @@
 
 from __future__ import annotations
 
+import json
 import subprocess
 from pathlib import Path
 
 from ai_sdlc.context.state import save_checkpoint
+from ai_sdlc.core.frontend_contract_verification import (
+    FRONTEND_CONTRACT_CHECK_OBJECTS,
+    FRONTEND_CONTRACT_SOURCE_NAME,
+)
 from ai_sdlc.core.verify_constraints import (
     build_constraint_report,
     build_verification_gate_context,
@@ -255,6 +260,75 @@ def _write_003_checkpoint(root: Path) -> None:
         ),
     )
     save_checkpoint(root, cp)
+
+
+def _write_012_checkpoint(root: Path) -> None:
+    mem = root / ".ai-sdlc" / "memory"
+    mem.mkdir(parents=True, exist_ok=True)
+    (mem / "constitution.md").write_text("# C\n", encoding="utf-8")
+
+    spec = root / "specs" / "012-frontend-contract-verify-integration"
+    spec.mkdir(parents=True, exist_ok=True)
+
+    cp = Checkpoint(
+        current_stage="verify",
+        feature=FeatureInfo(
+            id="012",
+            spec_dir="specs/012-frontend-contract-verify-integration",
+            design_branch="d",
+            feature_branch="f",
+            current_branch="main",
+        ),
+    )
+    save_checkpoint(root, cp)
+
+
+def _write_minimal_frontend_contract_page_artifacts(
+    root: Path, *, page_id: str = "user-create", recipe_id: str = "form-create"
+) -> None:
+    page_dir = root / "contracts" / "frontend" / "pages" / page_id
+    page_dir.mkdir(parents=True, exist_ok=True)
+    (page_dir / "page.metadata.yaml").write_text(
+        f"page_id: {page_id}\npage_type: form\n",
+        encoding="utf-8",
+    )
+    (page_dir / "page.recipe.yaml").write_text(
+        f"recipe_id: {recipe_id}\nrequired_regions:\n  - form\n",
+        encoding="utf-8",
+    )
+
+
+def _write_012_frontend_contract_observations(
+    root: Path,
+    *,
+    page_id: str = "user-create",
+    recipe_id: str = "form-create",
+) -> None:
+    path = (
+        root
+        / "specs"
+        / "012-frontend-contract-verify-integration"
+        / "frontend-contract-observations.json"
+    )
+    path.write_text(
+        json.dumps(
+            {
+                "observations": [
+                    {
+                        "page_id": page_id,
+                        "recipe_id": recipe_id,
+                        "i18n_keys": [],
+                        "validation_fields": [],
+                        "new_legacy_usages": [],
+                    }
+                ]
+            },
+            ensure_ascii=False,
+            indent=2,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
 
 
 def _init_git_repo(root: Path) -> None:
@@ -946,6 +1020,83 @@ def test_003_feature_contract_passes_when_all_surfaces_present(tmp_path: Path) -
     assert collect_constraint_blockers(tmp_path) == []
     assert report.release_gate is not None
     assert report.release_gate["overall_verdict"] == "PASS"
+
+
+def test_frontend_contract_verification_not_activated_for_non_012_work_item(
+    tmp_path: Path,
+) -> None:
+    mem = tmp_path / ".ai-sdlc" / "memory"
+    mem.mkdir(parents=True, exist_ok=True)
+    (mem / "constitution.md").write_text("# C\n", encoding="utf-8")
+
+    spec = tmp_path / "specs" / "001-wi"
+    spec.mkdir(parents=True, exist_ok=True)
+    save_checkpoint(
+        tmp_path,
+        Checkpoint(
+            current_stage="verify",
+            feature=FeatureInfo(
+                id="001",
+                spec_dir="specs/001-wi",
+                design_branch="d",
+                feature_branch="f",
+                current_branch="main",
+            ),
+        ),
+    )
+    _write_minimal_frontend_contract_page_artifacts(tmp_path)
+
+    report = build_constraint_report(tmp_path)
+    context = build_verification_gate_context(tmp_path)
+
+    assert FRONTEND_CONTRACT_CHECK_OBJECTS[0] not in report.check_objects
+    assert FRONTEND_CONTRACT_SOURCE_NAME not in context["verification_sources"]
+    assert "frontend_contract_verification" not in context
+
+
+def test_012_frontend_contract_verification_surfaces_missing_observations_gap(
+    tmp_path: Path,
+) -> None:
+    _write_012_checkpoint(tmp_path)
+    _write_minimal_frontend_contract_page_artifacts(tmp_path)
+
+    report = build_constraint_report(tmp_path)
+    context = build_verification_gate_context(tmp_path)
+
+    assert report.coverage_gaps == ("frontend_contract_observations",)
+    assert report.check_objects[-3:] == FRONTEND_CONTRACT_CHECK_OBJECTS
+    assert any(
+        "frontend contract observations unavailable" in blocker
+        for blocker in report.blockers
+    )
+    assert context["verification_sources"] == (
+        "verify constraints",
+        FRONTEND_CONTRACT_SOURCE_NAME,
+    )
+    assert context["frontend_contract_verification"]["coverage_gaps"] == [
+        "frontend_contract_observations"
+    ]
+
+
+def test_012_frontend_contract_verification_passes_with_structured_observations(
+    tmp_path: Path,
+) -> None:
+    _write_012_checkpoint(tmp_path)
+    _write_minimal_frontend_contract_page_artifacts(tmp_path)
+    _write_012_frontend_contract_observations(tmp_path)
+
+    report = build_constraint_report(tmp_path)
+    context = build_verification_gate_context(tmp_path)
+
+    assert report.coverage_gaps == ()
+    assert report.blockers == ()
+    assert report.check_objects[-3:] == FRONTEND_CONTRACT_CHECK_OBJECTS
+    assert context["verification_sources"] == (
+        "verify constraints",
+        FRONTEND_CONTRACT_SOURCE_NAME,
+    )
+    assert context["frontend_contract_verification"]["gate_verdict"] == "PASS"
+    assert context["frontend_contract_verification"]["coverage_gaps"] == []
 
 
 def test_build_verification_governance_bundle_emits_gate_capable_payload(

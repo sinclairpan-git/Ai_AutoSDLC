@@ -8,7 +8,7 @@ related_doc:
 # 任务分解：Frontend Contract Verify Integration
 
 **编号**：`012-frontend-contract-verify-integration` | **日期**：2026-04-02  
-**来源**：plan.md + spec.md（FR-012-001 ~ FR-012-015 / SC-012-001 ~ SC-012-005）
+**来源**：plan.md + spec.md（FR-012-001 ~ FR-012-018 / SC-012-001 ~ SC-012-005）
 
 ---
 
@@ -19,6 +19,7 @@ Batch 1: verify surface truth freeze
 Batch 2: CLI and attachment baseline
 Batch 3: implementation handoff and verification freeze
 Batch 4: frontend contract verification report slice
+Batch 5: verify_constraints scoped attachment slice
 ```
 
 ---
@@ -27,10 +28,12 @@ Batch 4: frontend contract verification report slice
 
 - `Batch 1 ~ 3` 只允许推进 `spec.md / plan.md / tasks.md` 与 append-only `task-execution-log.md`。
 - `Batch 4` 只允许写入 `src/ai_sdlc/core/frontend_contract_verification.py`、`tests/unit/test_frontend_contract_verification.py`、`specs/012-frontend-contract-verify-integration/task-execution-log.md`，以及为本批边界服务的 `plan.md / tasks.md`。
+- `Batch 5` 只允许写入 `src/ai_sdlc/core/verify_constraints.py`、`tests/unit/test_verify_constraints.py`、`specs/012-frontend-contract-verify-integration/task-execution-log.md`，以及为本批边界服务的 `spec.md / plan.md / tasks.md`。
 - `012` 不得把 scanner、fix-loop、auto-fix、contract writeback 或 runtime 代码混入当前 child work item 的 formal baseline。
 - `012` 不得默认扩张为新的 verify stage / gate system；若需触及 registry，只能作为复用现有 `verify / verification` stage 的附件策略。
 - `012` 只冻结 frontend contract verify integration，不回写 `011` 已冻结的 contract truth 本体。
 - 当前首批实现只放行 verify report/context helper，不放行 `verify_constraints`、`pipeline_gates.py`、CLI 或 registry 写入。
+- 当前第二批实现只放行 active-`012` scoped 的 `verify_constraints` attachment，不放行 `pipeline_gates.py`、CLI、registry 或 scanner。
 - 只有在用户明确要求进入实现，且 `012` formal docs 已通过门禁后，才允许进入 `src/` / `tests/` 级实现。
 
 ---
@@ -204,3 +207,46 @@ Batch 4: frontend contract verification report slice
   2. `uv run ruff check src tests`、`git diff --check -- specs/012-frontend-contract-verify-integration src/ai_sdlc/core tests/unit` 与 `uv run ai-sdlc verify constraints` 通过
   3. `task-execution-log.md` 追加记录当前 implementation batch 的 touched files、验证命令与结论
 - **验证**：`uv run pytest tests/unit/test_frontend_contract_verification.py -q`, `uv run ruff check src tests`, `git diff --check -- specs/012-frontend-contract-verify-integration src/ai_sdlc/core tests/unit`, `uv run ai-sdlc verify constraints`
+
+---
+
+## Batch 5：verify_constraints scoped attachment slice
+
+### Task 5.1 先写 failing tests 固定 active-012 scoped attachment 语义
+
+- **任务编号**：T51
+- **优先级**：P0
+- **依赖**：T43
+- **文件**：`tests/unit/test_verify_constraints.py`
+- **可并行**：否
+- **验收标准**：
+  1. 单测明确覆盖非 `012` work item 不激活 frontend contract verification 的隔离语义
+  2. 单测明确覆盖 active `012` 下缺失 `frontend-contract-observations.json` 时的 `coverage_gaps / blockers / verification_sources` 行为
+  3. 单测明确覆盖 active `012` 下 observation 文件存在且匹配 contract artifact 时的 PASS 路径
+- **验证**：`uv run pytest tests/unit/test_verify_constraints.py -q`
+
+### Task 5.2 实现最小 verify_constraints attachment
+
+- **任务编号**：T52
+- **优先级**：P0
+- **依赖**：T51
+- **文件**：`src/ai_sdlc/core/verify_constraints.py`
+- **可并行**：否
+- **验收标准**：
+  1. `verify_constraints.py` 仅在 active work item 命中 `012` 时挂接 frontend contract verification
+  2. `verify_constraints.py` 复用 `frontend_contract_verification` helper，并从 active spec 目录下的 `frontend-contract-observations.json` 读取结构化 observation 输入
+  3. `verify_constraints.py` 将 frontend contract source、check objects、coverage gaps 与 blocker/context payload 接入现有结构，而不触碰 `pipeline_gates.py`、CLI、registry 或 scanner
+- **验证**：`uv run pytest tests/unit/test_verify_constraints.py -q`
+
+### Task 5.3 Fresh verify 并追加 implementation batch 归档
+
+- **任务编号**：T53
+- **优先级**：P0
+- **依赖**：T52
+- **文件**：`specs/012-frontend-contract-verify-integration/task-execution-log.md`
+- **可并行**：否
+- **验收标准**：
+  1. `uv run pytest tests/unit/test_verify_constraints.py -q` 通过
+  2. `uv run ruff check src tests`、`git diff --check -- specs/012-frontend-contract-verify-integration src/ai_sdlc/core tests/unit` 与 `uv run ai-sdlc verify constraints` 通过
+  3. `task-execution-log.md` 追加记录 active-`012` scoped attachment 的 touched files、验证命令与结论
+- **验证**：`uv run pytest tests/unit/test_verify_constraints.py -q`, `uv run ruff check src tests`, `git diff --check -- specs/012-frontend-contract-verify-integration src/ai_sdlc/core tests/unit`, `uv run ai-sdlc verify constraints`

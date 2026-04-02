@@ -110,6 +110,9 @@
 | FR-012-010 | `012` 必须明确 scanner 只是下游 observation provider 的一种候选实现，不属于当前 work item 的正式范围 |
 | FR-012-011 | `012` 必须明确优先复用现有 `verify / verification` stage，而不是默认新增 stage 或 gate registry 分支 |
 | FR-012-012 | `012` 必须明确 CLI terminal / JSON surface 需要暴露 frontend contract verification 的最小摘要 |
+| FR-012-016 | 当前 `verify_constraints` 切片只允许在 active work item 命中 `012` 时挂接 frontend contract verification，不得把 contract 缺口升级成所有仓库默认 blocker |
+| FR-012-017 | 当前 `verify_constraints` 切片必须从 active `012` spec 目录下的 `frontend-contract-observations.json` 消费结构化 observation 输入；该文件只定义输入边界，不等价于 scanner 实现 |
+| FR-012-018 | 若 active `012` 下缺失 `frontend-contract-observations.json`，`verify_constraints` 必须把它诚实暴露为 `frontend_contract_observations` coverage gap，而不是静默跳过 |
 
 ### Implementation Handoff
 
@@ -126,6 +129,7 @@
 - **Frontend Contract Check Object**：承载 `verify constraints` / `VerificationGate` 中与 frontend contract 相关的显式检查对象
 - **Frontend Contract Coverage Gap**：承载“无法比较”或“未接线”的结构化缺口，而不是静默忽略
 - **Observation Input Boundary**：承载 `PageImplementationObservation` 或等价结构化输入的消费边界
+- **Frontend Contract Observation Input File**：承载 active `012` spec 目录下 `frontend-contract-observations.json` 的最小结构化 observation 输入边界
 - **Verify Integration Attachment Strategy**：承载 frontend contract verification 挂接到 `verify constraints`、`VerificationGate / VerifyGate` 与 CLI 的正式方式
 
 ## 成功标准

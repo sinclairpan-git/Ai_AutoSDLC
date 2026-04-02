@@ -197,3 +197,103 @@
 - **提交哈希**：本批唯一一次语义提交预期为 `feat(core): add frontend contract verification helpers`；完整 SHA 以该提交后的 `HEAD`（`git rev-parse HEAD`）为准
 - **改动范围**：`specs/012-frontend-contract-verify-integration/plan.md`、`specs/012-frontend-contract-verify-integration/tasks.md`、`specs/012-frontend-contract-verify-integration/task-execution-log.md`、`src/ai_sdlc/core/frontend_contract_verification.py`、`tests/unit/test_frontend_contract_verification.py`
 - **是否继续下一批**：待用户决定（建议转入 verify_constraints integration）
+
+### Batch 2026-04-02-003 | 012 verify_constraints scoped attachment slice
+
+#### 2.1 准备
+
+- **任务来源**：[`tasks.md`](tasks.md) `T51`、`T52`、`T53`
+- **目标**：在不越界到 `pipeline_gates.py`、CLI、registry 或 scanner 的前提下，把 frontend contract verification 以 active-`012` scoped attachment 的方式接入 `verify_constraints`，并冻结 `frontend-contract-observations.json` 的最小结构化输入边界。
+- **预读范围**：[`spec.md`](spec.md)、[`plan.md`](plan.md)、[`tasks.md`](tasks.md)、`src/ai_sdlc/core/frontend_contract_verification.py`、`src/ai_sdlc/core/verify_constraints.py`、`tests/unit/test_verify_constraints.py`
+- **激活的规则**：TDD red-green；single canonical truth；verification-before-completion
+- **验证画像**：`code-change`
+
+#### 2.2 统一验证命令
+
+- **V1（Batch 5 parser 结构校验）**
+  - 命令：`uv run python -c "from pathlib import Path; from ai_sdlc.generators.doc_gen import TasksParser; plan = TasksParser().parse(Path('specs/012-frontend-contract-verify-integration/tasks.md')); print({'total_tasks': plan.total_tasks, 'total_batches': plan.total_batches, 'batches': [batch.tasks for batch in plan.batches]})"`
+  - 结果：`{'total_tasks': 15, 'total_batches': 5, 'batches': [['T11', 'T12', 'T13'], ['T21', 'T22', 'T23'], ['T31', 'T32', 'T33'], ['T41', 'T42', 'T43'], ['T51', 'T52', 'T53']]}`
+- **V2（RED：verify_constraints attachment 定向测试）**
+  - 命令：`uv run pytest tests/unit/test_verify_constraints.py -q`
+  - 结果：失败；`test_012_frontend_contract_verification_surfaces_missing_observations_gap` 与 `test_012_frontend_contract_verification_passes_with_structured_observations` 未满足，证明 scoped attachment 尚未实现。
+- **V3（GREEN：Batch 5 定向测试）**
+  - 命令：`uv run pytest tests/unit/test_verify_constraints.py -q`
+  - 结果：`34 passed in 0.99s`
+- **V4（Batch 4+5 回归）**
+  - 命令：`uv run pytest tests/unit/test_frontend_contract_verification.py tests/unit/test_verify_constraints.py -q`
+  - 结果：`38 passed in 1.08s`
+- **V5（静态检查）**
+  - 命令：`uv run ruff check src tests`
+  - 结果：`All checks passed!`
+- **V6（治理只读校验）**
+  - 命令：`uv run ai-sdlc verify constraints`
+  - 结果：`verify constraints: no BLOCKERs.`
+
+#### 2.3 任务记录
+
+##### T51 | 先写 failing tests 固定 active-012 scoped attachment 语义
+
+- **改动范围**：`tests/unit/test_verify_constraints.py`
+- **改动内容**：
+  - 新增 non-`012` work item 不激活 frontend contract verification 的隔离测试，防止 contract 校验误伤所有仓库。
+  - 新增 active `012` 下 artifact 存在但 observation 文件缺失时的 `coverage_gaps / blockers / verification_sources` 测试。
+  - 新增 active `012` 下 `frontend-contract-observations.json` 与 contract artifact 对齐时的 PASS 测试。
+- **新增/调整的测试**：扩展 `tests/unit/test_verify_constraints.py`
+- **测试结果**：RED 已确认。
+- **是否符合任务目标**：符合。
+
+##### T52 | 实现最小 verify_constraints attachment
+
+- **改动范围**：`src/ai_sdlc/core/verify_constraints.py`
+- **改动内容**：
+  - 新增 active-`012` scoped attachment 解析，只在 active work item 命中 `012` 时挂接 frontend contract verification。
+  - 新增 `frontend-contract-observations.json` 读取逻辑，将 active spec 目录下的结构化 observation 输入翻译为 `PageImplementationObservation`。
+  - 将 frontend contract 的 source、check objects、coverage gaps、blockers 与 JSON payload 接入现有 `build_constraint_report()` / `build_verification_gate_context()`，同时保持 `verify constraints` 作为主 source。
+  - 对 malformed observation 输入增加诚实 blocker 文案，但不把 scanner/provider 实现混进当前批次。
+- **新增/调整的测试**：复用 `tests/unit/test_verify_constraints.py`
+- **测试结果**：通过。
+- **是否符合任务目标**：符合。
+
+##### T53 | Fresh verify 并追加 implementation batch 归档
+
+- **改动范围**：`specs/012-frontend-contract-verify-integration/spec.md`、`specs/012-frontend-contract-verify-integration/plan.md`、`specs/012-frontend-contract-verify-integration/tasks.md`、`specs/012-frontend-contract-verify-integration/task-execution-log.md`
+- **改动内容**：
+  - 将 `012` formal docs 扩到 `Batch 5: verify_constraints scoped attachment slice`，补充 active-`012` 激活条件与 `frontend-contract-observations.json` 输入边界。
+  - 记录 Batch 5 的 RED/GREEN、回归命令和 scoped attachment 决策。
+  - 中途发现 `verify_constraints.py` import order 的 `ruff` 问题，已用 `uv run ruff check --fix src/ai_sdlc/core/verify_constraints.py` 修正后重新执行 fresh verification。
+- **新增/调整的测试**：无新增测试文件；以本批 fresh verification 命令为准。
+- **测试结果**：通过。
+- **是否符合任务目标**：符合。
+
+#### 2.4 代码审查（Mandatory）
+
+- **宪章/规格对齐**：本批只进入 active-`012` scoped 的 `verify_constraints` attachment，没有跨到 `pipeline_gates.py`、CLI、registry 或 scanner。
+- **代码质量**：attachment 直接复用 `frontend_contract_verification` helper，没有复制第二套 contract truth；observation 文件只定义结构化输入边界，不承担 scanner 语义。
+- **测试质量**：已完成 RED/GREEN、Batch 4+5 回归、`ruff` 与 `verify constraints`。
+- **结论**：`无 Critical 阻塞项`
+
+#### 2.5 任务/计划同步状态（Mandatory）
+
+- `tasks.md` 同步状态：`已同步`
+- `plan.md` 同步状态：`已同步`
+- `spec.md` 同步状态：`已同步`
+- 关联 branch/worktree disposition 计划：`retained（沿用当前 009/011/012 工作分支）`
+- 说明：`012` 已进入 verify mainline 的第一批 scoped attachment，但 `VerificationGate / VerifyGate` 与 CLI surface 仍留在后续批次。`
+
+#### 2.6 自动决策记录（如有）
+
+- AD-007：frontend contract verification 只在 active `012` work item 下挂接到 `verify_constraints`。理由：当前目标是 self-hosting child WI 集成，不把 contract 缺口升级成全局 blocker。
+- AD-008：当前最小 observation 输入边界固定为 active spec 目录下的 `frontend-contract-observations.json`。理由：先冻结结构化消费面，再把 scanner/provider 留给下游 work item。
+- AD-009：`build_verification_gate_context()` 同时保留 `verify constraints` 主 source，并追加 frontend contract supplemental source/payload。理由：保持现有 verification 主链结构不变，同时诚实暴露 contract-aware 结果。
+
+#### 2.7 批次结论
+
+- `012` 当前已把 frontend contract verification 接入 `verify_constraints` 的 source / check objects / coverage gaps / context payload。
+- 后续若继续推进，应优先进入 `pipeline_gates.py` 与 `test_gates.py`，把 scoped attachment 结果接入 `VerificationGate / VerifyGate`。
+
+#### 2.8 归档后动作
+
+- **已完成 git 提交**：是
+- **提交哈希**：本批唯一一次语义提交预期为 `feat(core): integrate frontend contract verification into constraints`；完整 SHA 以该提交后的 `HEAD`（`git rev-parse HEAD`）为准
+- **改动范围**：`specs/012-frontend-contract-verify-integration/spec.md`、`specs/012-frontend-contract-verify-integration/plan.md`、`specs/012-frontend-contract-verify-integration/tasks.md`、`specs/012-frontend-contract-verify-integration/task-execution-log.md`、`src/ai_sdlc/core/verify_constraints.py`、`tests/unit/test_verify_constraints.py`
+- **是否继续下一批**：待用户决定（建议转入 `VerificationGate / VerifyGate` aggregation）
