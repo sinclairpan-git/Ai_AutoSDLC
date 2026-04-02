@@ -13,6 +13,7 @@ from typer.testing import CliRunner
 
 from ai_sdlc.cli.main import app
 from ai_sdlc.context.state import save_checkpoint
+from ai_sdlc.core.frontend_contract_verification import FRONTEND_CONTRACT_SOURCE_NAME
 from ai_sdlc.models.state import Checkpoint, FeatureInfo
 from ai_sdlc.routers.bootstrap import init_project
 
@@ -156,6 +157,69 @@ def _create_branch_ahead_of_main(root: Path, branch_name: str) -> None:
         capture_output=True,
     )
     subprocess.run(["git", "checkout", "main"], cwd=root, check=True, capture_output=True)
+
+
+def _write_012_checkpoint(root: Path) -> None:
+    spec = root / "specs" / "012-frontend-contract-verify-integration"
+    spec.mkdir(parents=True, exist_ok=True)
+    save_checkpoint(
+        root,
+        Checkpoint(
+            current_stage="verify",
+            feature=FeatureInfo(
+                id="012",
+                spec_dir="specs/012-frontend-contract-verify-integration",
+                design_branch="d",
+                feature_branch="f",
+                current_branch="main",
+            ),
+        ),
+    )
+
+
+def _write_012_frontend_contract_page_artifacts(
+    root: Path, *, page_id: str = "user-create", recipe_id: str = "form-create"
+) -> None:
+    page_dir = root / "contracts" / "frontend" / "pages" / page_id
+    page_dir.mkdir(parents=True, exist_ok=True)
+    (page_dir / "page.metadata.yaml").write_text(
+        f"page_id: {page_id}\npage_type: form\n",
+        encoding="utf-8",
+    )
+    (page_dir / "page.recipe.yaml").write_text(
+        f"recipe_id: {recipe_id}\nrequired_regions:\n  - form\n",
+        encoding="utf-8",
+    )
+
+
+def _write_012_frontend_contract_observations(
+    root: Path, *, page_id: str = "user-create", recipe_id: str = "form-create"
+) -> None:
+    path = (
+        root
+        / "specs"
+        / "012-frontend-contract-verify-integration"
+        / "frontend-contract-observations.json"
+    )
+    path.write_text(
+        json.dumps(
+            {
+                "observations": [
+                    {
+                        "page_id": page_id,
+                        "recipe_id": recipe_id,
+                        "i18n_keys": [],
+                        "validation_fields": [],
+                        "new_legacy_usages": [],
+                    }
+                ]
+            },
+            ensure_ascii=False,
+            indent=2,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
 
 
 def _write_branch_lifecycle_fixture(
@@ -638,6 +702,64 @@ class TestCliVerifyConstraints:
             "backend delegation/fallback",
             "release-gate evidence",
         ]
+
+    def test_json_output_exposes_012_frontend_contract_summary_when_observations_missing(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        init_project(tmp_path)
+        _minimal_constitution(tmp_path)
+        _write_012_checkpoint(tmp_path)
+        _write_012_frontend_contract_page_artifacts(tmp_path)
+        monkeypatch.chdir(tmp_path)
+
+        result = runner.invoke(app, ["verify", "constraints", "--json"])
+
+        assert result.exit_code == 1
+        payload = json.loads(result.output)
+        assert payload["verification_gate"]["sources"] == [
+            "verify constraints",
+            FRONTEND_CONTRACT_SOURCE_NAME,
+        ]
+        assert payload["frontend_contract_verification"]["gate_verdict"] == "RETRY"
+        assert payload["frontend_contract_verification"]["coverage_gaps"] == [
+            "frontend_contract_observations"
+        ]
+
+    def test_json_output_exposes_012_frontend_contract_summary_when_contracts_match(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        init_project(tmp_path)
+        _minimal_constitution(tmp_path)
+        _write_012_checkpoint(tmp_path)
+        _write_012_frontend_contract_page_artifacts(tmp_path)
+        _write_012_frontend_contract_observations(tmp_path)
+        monkeypatch.chdir(tmp_path)
+
+        result = runner.invoke(app, ["verify", "constraints", "--json"])
+
+        assert result.exit_code == 0
+        payload = json.loads(result.output)
+        assert payload["verification_gate"]["sources"] == [
+            "verify constraints",
+            FRONTEND_CONTRACT_SOURCE_NAME,
+        ]
+        assert payload["frontend_contract_verification"]["gate_verdict"] == "PASS"
+        assert payload["frontend_contract_verification"]["coverage_gaps"] == []
+
+    def test_terminal_output_exposes_012_frontend_contract_summary(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        init_project(tmp_path)
+        _minimal_constitution(tmp_path)
+        _write_012_checkpoint(tmp_path)
+        _write_012_frontend_contract_page_artifacts(tmp_path)
+        _write_012_frontend_contract_observations(tmp_path)
+        monkeypatch.chdir(tmp_path)
+
+        result = runner.invoke(app, ["verify", "constraints"])
+
+        assert result.exit_code == 0
+        assert "frontend contract verification: PASS" in result.output
 
     def test_exit_0_when_003_feature_contract_surfaces_complete(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch

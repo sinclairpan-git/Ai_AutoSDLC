@@ -21,6 +21,7 @@ Batch 3: implementation handoff and verification freeze
 Batch 4: frontend contract verification report slice
 Batch 5: verify_constraints scoped attachment slice
 Batch 6: verification gate aggregation slice
+Batch 7: cli verify surface slice
 ```
 
 ---
@@ -31,12 +32,14 @@ Batch 6: verification gate aggregation slice
 - `Batch 4` 只允许写入 `src/ai_sdlc/core/frontend_contract_verification.py`、`tests/unit/test_frontend_contract_verification.py`、`specs/012-frontend-contract-verify-integration/task-execution-log.md`，以及为本批边界服务的 `plan.md / tasks.md`。
 - `Batch 5` 只允许写入 `src/ai_sdlc/core/verify_constraints.py`、`tests/unit/test_verify_constraints.py`、`specs/012-frontend-contract-verify-integration/task-execution-log.md`，以及为本批边界服务的 `spec.md / plan.md / tasks.md`。
 - `Batch 6` 只允许写入 `src/ai_sdlc/gates/pipeline_gates.py`、`tests/unit/test_gates.py`、`specs/012-frontend-contract-verify-integration/task-execution-log.md`，以及为本批边界服务的 `plan.md / tasks.md`。
+- `Batch 7` 只允许写入 `src/ai_sdlc/cli/verify_cmd.py`、`tests/integration/test_cli_verify_constraints.py`、`specs/012-frontend-contract-verify-integration/task-execution-log.md`，以及为本批边界服务的 `plan.md / tasks.md`。
 - `012` 不得把 scanner、fix-loop、auto-fix、contract writeback 或 runtime 代码混入当前 child work item 的 formal baseline。
 - `012` 不得默认扩张为新的 verify stage / gate system；若需触及 registry，只能作为复用现有 `verify / verification` stage 的附件策略。
 - `012` 只冻结 frontend contract verify integration，不回写 `011` 已冻结的 contract truth 本体。
 - 当前首批实现只放行 verify report/context helper，不放行 `verify_constraints`、`pipeline_gates.py`、CLI 或 registry 写入。
 - 当前第二批实现只放行 active-`012` scoped 的 `verify_constraints` attachment，不放行 `pipeline_gates.py`、CLI、registry 或 scanner。
 - 当前第三批实现只放行 `VerificationGate / VerifyGate` aggregation，不放行 CLI、registry 或 scanner。
+- 当前第四批实现只放行 CLI verify surface，不放行 registry、scanner 或新的 verify stage。
 - 只有在用户明确要求进入实现，且 `012` formal docs 已通过门禁后，才允许进入 `src/` / `tests/` 级实现。
 
 ---
@@ -296,3 +299,46 @@ Batch 6: verification gate aggregation slice
   2. `uv run ruff check src tests`、`git diff --check -- specs/012-frontend-contract-verify-integration src/ai_sdlc/gates tests/unit` 与 `uv run ai-sdlc verify constraints` 通过
   3. `task-execution-log.md` 追加记录 gate aggregation 的 touched files、验证命令与结论
 - **验证**：`uv run pytest tests/unit/test_gates.py -q`, `uv run pytest tests/unit/test_frontend_contract_verification.py tests/unit/test_verify_constraints.py tests/unit/test_gates.py -q`, `uv run ruff check src tests`, `git diff --check -- specs/012-frontend-contract-verify-integration src/ai_sdlc/gates tests/unit`, `uv run ai-sdlc verify constraints`
+
+---
+
+## Batch 7：cli verify surface slice
+
+### Task 7.1 先写 failing tests 固定 terminal / JSON summary 语义
+
+- **任务编号**：T71
+- **优先级**：P0
+- **依赖**：T63
+- **文件**：`tests/integration/test_cli_verify_constraints.py`
+- **可并行**：否
+- **验收标准**：
+  1. 集成测试明确覆盖 active `012` 且 observation 缺失时，`--json` 输出必须包含 frontend contract verification summary
+  2. 集成测试明确覆盖 active `012` 且 observation 对齐时，`--json` 输出必须暴露 frontend contract PASS summary
+  3. 集成测试明确覆盖 terminal surface 至少输出一条 frontend contract verification 摘要行
+- **验证**：`uv run pytest tests/integration/test_cli_verify_constraints.py -q`
+
+### Task 7.2 实现最小 CLI verify summary 输出
+
+- **任务编号**：T72
+- **优先级**：P0
+- **依赖**：T71
+- **文件**：`src/ai_sdlc/cli/verify_cmd.py`
+- **可并行**：否
+- **验收标准**：
+  1. `verify_cmd.py` 在 `--json` 输出中暴露 frontend contract verification summary，且不伪造不存在的 contract payload
+  2. `verify_cmd.py` 在 terminal 输出中暴露最小 frontend contract summary 行
+  3. 实现只消费现有 `build_verification_gate_context()` / verify payload，不复制 `verify_constraints` 或 `pipeline_gates` 的 contract truth
+- **验证**：`uv run pytest tests/integration/test_cli_verify_constraints.py -q`
+
+### Task 7.3 Fresh verify 并追加 implementation batch 归档
+
+- **任务编号**：T73
+- **优先级**：P0
+- **依赖**：T72
+- **文件**：`specs/012-frontend-contract-verify-integration/task-execution-log.md`
+- **可并行**：否
+- **验收标准**：
+  1. `uv run pytest tests/integration/test_cli_verify_constraints.py -q` 与必要的 frontend contract regression 通过
+  2. `uv run ruff check src tests`、`git diff --check -- specs/012-frontend-contract-verify-integration src/ai_sdlc/cli tests/integration` 与 `uv run ai-sdlc verify constraints` 通过
+  3. `task-execution-log.md` 追加记录 CLI summary slice 的 touched files、验证命令与结论
+- **验证**：`uv run pytest tests/integration/test_cli_verify_constraints.py -q`, `uv run pytest tests/unit/test_frontend_contract_verification.py tests/unit/test_verify_constraints.py tests/unit/test_gates.py tests/integration/test_cli_verify_constraints.py -q`, `uv run ruff check src tests`, `git diff --check -- specs/012-frontend-contract-verify-integration src/ai_sdlc/cli tests/integration`, `uv run ai-sdlc verify constraints`

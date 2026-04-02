@@ -396,3 +396,108 @@
 - **提交哈希**：本批唯一一次语义提交预期为 `feat(gates): aggregate frontend contract verification in verify gates`；完整 SHA 以该提交后的 `HEAD`（`git rev-parse HEAD`）为准
 - **改动范围**：`specs/012-frontend-contract-verify-integration/plan.md`、`specs/012-frontend-contract-verify-integration/tasks.md`、`specs/012-frontend-contract-verify-integration/task-execution-log.md`、`src/ai_sdlc/gates/pipeline_gates.py`、`tests/unit/test_gates.py`
 - **是否继续下一批**：待用户决定（建议转入 CLI verify surface）
+
+### Batch 2026-04-02-005 | 012 cli verify surface slice
+
+#### 2.1 准备
+
+- **任务来源**：[`tasks.md`](tasks.md) `T71`、`T72`、`T73`
+- **目标**：在不越界到 registry、scanner 或新的 verify stage 的前提下，把 frontend contract verification summary 正式暴露到 `ai-sdlc verify constraints` 的 terminal / JSON surface。
+- **预读范围**：[`plan.md`](plan.md)、[`tasks.md`](tasks.md)、`src/ai_sdlc/cli/verify_cmd.py`、`src/ai_sdlc/core/verify_constraints.py`、`tests/integration/test_cli_verify_constraints.py`
+- **激活的规则**：TDD red-green；single canonical truth；verification-before-completion
+- **验证画像**：`code-change`
+
+#### 2.2 统一验证命令
+
+- **V1（Batch 7 parser 结构校验）**
+  - 命令：`uv run python -c "from pathlib import Path; from ai_sdlc.generators.doc_gen import TasksParser; plan = TasksParser().parse(Path('specs/012-frontend-contract-verify-integration/tasks.md')); print({'total_tasks': plan.total_tasks, 'total_batches': plan.total_batches, 'batches': [batch.tasks for batch in plan.batches]})"`
+  - 结果：`{'total_tasks': 21, 'total_batches': 7, 'batches': [['T11', 'T12', 'T13'], ['T21', 'T22', 'T23'], ['T31', 'T32', 'T33'], ['T41', 'T42', 'T43'], ['T51', 'T52', 'T53'], ['T61', 'T62', 'T63'], ['T71', 'T72', 'T73']]}`
+- **V2（RED：012 CLI summary 定向测试）**
+  - 命令：`uv run pytest tests/integration/test_cli_verify_constraints.py -q -k "012_frontend_contract"`
+  - 结果：失败；JSON surface 缺少 `verification_gate.sources` / `frontend_contract_verification`，terminal surface 缺少 `frontend contract verification: PASS` 摘要行。
+- **V3（GREEN：012 CLI summary 定向测试）**
+  - 命令：`uv run pytest tests/integration/test_cli_verify_constraints.py -q -k "012_frontend_contract"`
+  - 结果：`3 passed, 24 deselected in 0.24s`
+- **V4（CLI integration 回归）**
+  - 命令：`uv run pytest tests/integration/test_cli_verify_constraints.py -q`
+  - 结果：`27 passed in 2.88s`
+- **V5（Frontend contract 相关回归）**
+  - 命令：`uv run pytest tests/unit/test_frontend_contract_verification.py tests/unit/test_verify_constraints.py tests/unit/test_gates.py tests/integration/test_cli_verify_constraints.py -q`
+  - 结果：`122 passed in 3.84s`
+- **V6（静态检查）**
+  - 命令：`uv run ruff check src tests`
+  - 结果：`All checks passed!`
+- **V7（diff hygiene）**
+  - 命令：`git diff --check -- specs/012-frontend-contract-verify-integration src/ai_sdlc/cli tests/integration`
+  - 结果：无输出。
+- **V8（治理只读校验）**
+  - 命令：`uv run ai-sdlc verify constraints`
+  - 结果：`verify constraints: no BLOCKERs.`
+
+#### 2.3 任务记录
+
+##### T71 | 先写 failing tests 固定 terminal / JSON summary 语义
+
+- **改动范围**：`tests/integration/test_cli_verify_constraints.py`
+- **改动内容**：
+  - 新增 active `012` 且 observation 缺失时，`--json` 输出必须包含 frontend contract summary 的集成测试。
+  - 新增 active `012` 且 contract/observation 对齐时，`--json` 输出必须暴露 PASS summary 的集成测试。
+  - 新增 terminal surface 至少输出一条 `frontend contract verification: PASS` 摘要行的集成测试。
+- **新增/调整的测试**：扩展 `tests/integration/test_cli_verify_constraints.py`
+- **测试结果**：RED 已确认。
+- **是否符合任务目标**：符合。
+
+##### T72 | 实现最小 CLI verify summary 输出
+
+- **改动范围**：`src/ai_sdlc/cli/verify_cmd.py`
+- **改动内容**：
+  - CLI 侧复用 `build_verification_gate_context()`，提取 `verification_sources` 与 `frontend_contract_verification` payload。
+  - `--json` 输出新增 `verification_gate.sources`，并在存在 payload 时暴露 `frontend_contract_verification`。
+  - terminal surface 在存在 payload 时新增最小 summary 行，PASS 直接输出 verdict，RETRY 场景附带 coverage gap / blocker 摘要。
+- **新增/调整的测试**：复用 `tests/integration/test_cli_verify_constraints.py`
+- **测试结果**：通过。
+- **是否符合任务目标**：符合。
+
+##### T73 | Fresh verify 并追加 implementation batch 归档
+
+- **改动范围**：`specs/012-frontend-contract-verify-integration/plan.md`、`specs/012-frontend-contract-verify-integration/tasks.md`、`specs/012-frontend-contract-verify-integration/task-execution-log.md`
+- **改动内容**：
+  - 将 `012` formal docs 扩到 `Batch 7: cli verify surface slice`，限定只改 `verify_cmd.py` 与 `test_cli_verify_constraints.py`。
+  - 记录 CLI summary slice 的 RED/GREEN、fresh verification 与 operator-facing 输出边界。
+  - 保持 registry、scanner 与新的 verify stage 仍然留在后续批次。
+- **新增/调整的测试**：无新增测试文件；以本批 fresh verification 命令为准。
+- **测试结果**：通过。
+- **是否符合任务目标**：符合。
+
+#### 2.4 代码审查（Mandatory）
+
+- **宪章/规格对齐**：本批只进入 CLI verify surface，没有跨到 registry、scanner 或新的 verify stage。
+- **代码质量**：CLI 层只消费现有 `build_verification_gate_context()` / verify payload，不复制 `verify_constraints` 或 gate 层的 contract truth。
+- **测试质量**：已完成 RED/GREEN、27 条 CLI integration、122 条相关回归、`ruff`、`diff --check` 与 `verify constraints`。
+- **结论**：`无 Critical 阻塞项`
+
+#### 2.5 任务/计划同步状态（Mandatory）
+
+- `tasks.md` 同步状态：`已同步`
+- `plan.md` 同步状态：`已同步`
+- `spec.md` 同步状态：`无需变更`
+- 关联 branch/worktree disposition 计划：`retained（沿用当前 009/011/012 工作分支）`
+- 说明：`012` 已进入 operator-facing CLI summary 切片，但 registry / scanner 仍留在后续批次。`
+
+#### 2.6 自动决策记录（如有）
+
+- AD-013：CLI JSON surface 通过 `verification_gate.sources` 暴露多 source 口径，并单独暴露 `frontend_contract_verification` payload。理由：保持已有 `verification_gate.source_name` 兼容，同时不把 supplemental summary 挤成单个字符串。
+- AD-014：terminal surface 只输出一条最小 frontend contract summary 行；RETRY 时优先附带 coverage gap，再退化为 blocker 摘要。理由：保证 operator 可读，同时避免重复打印整段 blocker 列表。
+- AD-015：CLI 层直接复用 `build_verification_gate_context()`。理由：operator-facing 输出应消费现有 canonical verify payload，而不是另拼一套 contract summary。
+
+#### 2.7 批次结论
+
+- `012` 当前已把 frontend contract verification summary 接到 `ai-sdlc verify constraints` 的 terminal / JSON surface。
+- 后续若继续推进，应优先评估是否需要 registry/scan provider 子工单，而不是继续在 `012` 内扩张。
+
+#### 2.8 归档后动作
+
+- **已完成 git 提交**：是
+- **提交哈希**：本批唯一一次语义提交预期为 `feat(cli): expose frontend contract verification summary`；完整 SHA 以该提交后的 `HEAD`（`git rev-parse HEAD`）为准
+- **改动范围**：`specs/012-frontend-contract-verify-integration/plan.md`、`specs/012-frontend-contract-verify-integration/tasks.md`、`specs/012-frontend-contract-verify-integration/task-execution-log.md`、`src/ai_sdlc/cli/verify_cmd.py`、`tests/integration/test_cli_verify_constraints.py`
+- **是否继续下一批**：待用户决定（建议在 `012` 这里收口，后续另拆 provider / registry 子工单）

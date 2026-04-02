@@ -107,7 +107,7 @@ src/ai_sdlc/
 │   ├── frontend_contract_gate.py           # existing upstream gate surface
 │   └── pipeline_gates.py                   # next slice: VerificationGate / VerifyGate aggregation
 ├── cli/
-│   └── verify_cmd.py                       # later slice: terminal / json verify surface
+│   └── verify_cmd.py                       # next slice: terminal / json verify surface
 └── gates/
     └── registry.py                         # only if attachment strategy truly requires registry touch
 
@@ -115,7 +115,7 @@ tests/
 ├── unit/test_frontend_contract_verification.py   # current slice
 ├── unit/test_verify_constraints.py               # later slice
 ├── unit/test_gates.py                            # next slice
-└── integration/test_cli_verify_constraints.py    # later slice
+└── integration/test_cli_verify_constraints.py    # next slice
 
 specs/012-frontend-contract-verify-integration/
 └── frontend-contract-observations.json           # current verify_constraints slice 的最小结构化 observation 输入边界
@@ -223,6 +223,13 @@ specs/012-frontend-contract-verify-integration/
 **验证方式**：`tests/unit/test_gates.py` + focused regression + fresh `ruff` / `verify constraints`。
 **回退方式**：不触发 CLI、registry 或 scanner。
 
+### 工作流 G：CLI verify surface slice
+
+**范围**：把 frontend contract verification summary 正式暴露到 `ai-sdlc verify constraints` 的 terminal / JSON surface。
+**影响范围**：`verify_cmd.py`、`tests/integration/test_cli_verify_constraints.py` 与 operator-facing verify 输出。
+**验证方式**：`tests/integration/test_cli_verify_constraints.py` + focused regression + fresh `ruff` / `verify constraints`。
+**回退方式**：不触发 registry、scanner 或新的 verify stage。
+
 ## 关键路径验证策略
 
 | 关键路径 | 主验证方式 | 次验证方式 |
@@ -235,6 +242,7 @@ specs/012-frontend-contract-verify-integration/
 | report/context helper correctness | `uv run pytest tests/unit/test_frontend_contract_verification.py -q` | report payload review |
 | verify_constraints attachment correctness | `uv run pytest tests/unit/test_verify_constraints.py -q` | scoped activation / payload review |
 | gate aggregation correctness | `uv run pytest tests/unit/test_gates.py -q` | frontend contract gate-check summary review |
+| cli surface correctness | `uv run pytest tests/integration/test_cli_verify_constraints.py -q` | terminal / JSON summary review |
 
 ## 已锁定决策
 
@@ -245,6 +253,7 @@ specs/012-frontend-contract-verify-integration/
 - 当前首批实现只放行 `core/frontend_contract_verification.py` report/context helper，不同时推进 `verify_constraints`、`pipeline_gates` 或 CLI
 - 下一批实现只放行 `core/verify_constraints.py` 与 `tests/unit/test_verify_constraints.py`，并把 attachment 激活条件限定为 active `012`
 - 当前第三批实现只放行 `gates/pipeline_gates.py` 与 `tests/unit/test_gates.py`，把 frontend contract payload 收敛进 `VerificationGate / VerifyGate`
+- 当前第四批实现只放行 `cli/verify_cmd.py` 与 `tests/integration/test_cli_verify_constraints.py`，把 frontend contract summary 暴露到 terminal / JSON surface
 
 ## 实施顺序建议
 
