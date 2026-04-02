@@ -94,8 +94,8 @@
 
 #### 2.8 归档后动作
 
-- **已完成 git 提交**：否（待本轮归档提交）
-- **提交哈希**：待提交
+- **已完成 git 提交**：是
+- **提交哈希**：`9308c8b`（`docs(009): freeze governance workstream handoff`，本批 docs-only baseline 锚点）
 - **改动范围**：[`spec.md`](spec.md)、[`plan.md`](plan.md)、[`tasks.md`](tasks.md)、[`task-execution-log.md`](task-execution-log.md)
 - 当前批次 branch disposition 状态：`archived`
 - 当前批次 worktree disposition 状态：`retained（当前执行分支）`
