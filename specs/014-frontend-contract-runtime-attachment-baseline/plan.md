@@ -34,7 +34,7 @@ related_doc:
 - 再冻结 attachment trigger、scope、failure honesty 与 ownership 顺序
 - 最后给出后续 `core / cli / runner / tests` 的推荐文件面与测试矩阵
 
-当前阶段只允许 docs-only 落盘，不直接进入 `src/` / `tests/` 实现。
+当前 formal baseline 已完成。经用户明确要求继续后，当前只允许进入第一批实现切片：`runtime attachment helper`，把 scope resolution、artifact path resolution、missing/stale honesty 与 explicit opt-in policy 收敛到共享 `core/` helper；不同时触碰 `run_cmd.py`、`runner.py` 或 `program_cmd.py` 的 runtime wiring。
 
 ## 技术背景
 
@@ -168,6 +168,13 @@ tests/
 **验证方式**：formal docs review + `verify constraints`。  
 **回退方式**：仅回退 planning baseline。
 
+### Phase 4：Runtime attachment helper slice
+
+**目标**：落下 runtime attachment 的最小共享 helper，先稳定 active `spec_dir` scope resolution、canonical artifact path resolution、missing/invalid artifact honesty、freshness 可判断性与显式 opt-in policy。
+**产物**：`src/ai_sdlc/core/frontend_contract_runtime_attachment.py`、`tests/unit/test_frontend_contract_runtime_attachment.py`。
+**验证方式**：定向 `pytest`、`uv run ruff check src tests`、`git diff --check`、`uv run ai-sdlc verify constraints`。
+**回退方式**：仅回退本阶段涉及的 `core/`、`tests/` 与 execution log 变更。
+
 ## 工作流计划
 
 ### 工作流 A：Runtime attachment truth freeze
@@ -191,6 +198,13 @@ tests/
 **验证方式**：file-map review + tests matrix review。  
 **回退方式**：不进入 runtime wiring 实现。
 
+### 工作流 D：Runtime attachment helper slice
+
+**范围**：active `spec_dir` 解析、canonical artifact path 解析、invalid/missing artifact honesty、freshness 可判断性与 explicit opt-in write policy。
+**影响范围**：后续 `run_cmd.py` / `runner.py` wiring、read-only attachment consumption 与 runtime-side failure surfacing。
+**验证方式**：`tests/unit/test_frontend_contract_runtime_attachment.py` + fresh `ruff` / `verify constraints`。
+**回退方式**：不触发 scanner/provider 写入，不引入 `run` / `program` runtime side effects。
+
 ## 关键路径验证策略
 
 | 关键路径 | 主验证方式 | 次验证方式 |
@@ -200,6 +214,7 @@ tests/
 | active `spec_dir` scope/locality clarity | contract review | 文件面/路径对账 |
 | failure honesty / freshness guard | 语义对账 | 测试矩阵回挂 |
 | downstream handoff clarity | file-map review | 人工审阅 |
+| runtime attachment helper correctness | `uv run pytest tests/unit/test_frontend_contract_runtime_attachment.py -q` | attachment status / policy review |
 
 ## 当前建议的下游实现起点
 

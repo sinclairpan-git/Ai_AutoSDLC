@@ -98,3 +98,104 @@
 - **提交哈希**：本批唯一一次语义提交预期为 `docs(014): formalize frontend contract runtime attachment baseline`；完整 SHA 以该提交后的 `HEAD`（`git rev-parse HEAD`）为准
 - **改动范围**：`specs/014-frontend-contract-runtime-attachment-baseline/spec.md`、`specs/014-frontend-contract-runtime-attachment-baseline/plan.md`、`specs/014-frontend-contract-runtime-attachment-baseline/tasks.md`、`specs/014-frontend-contract-runtime-attachment-baseline/task-execution-log.md`
 - **是否继续下一批**：待用户决定（建议转入 runtime attachment helper / runner wiring implementation slice）
+
+### Batch 2026-04-03-002 | 014 Runtime attachment helper slice
+
+#### 2.1 准备
+
+- **任务来源**：[`tasks.md`](tasks.md) `T41`、`T42`、`T43`
+- **目标**：在不越界到 `run_cmd.py`、`runner.py`、`program_cmd.py`、registry 或 remediation 的前提下，落下 runtime attachment 的最小共享 helper，稳定 scope resolution、artifact path resolution、missing/invalid artifact honesty、freshness status 与 explicit opt-in write policy。
+- **预读范围**：[`spec.md`](spec.md)、[`plan.md`](plan.md)、[`tasks.md`](tasks.md)、`src/ai_sdlc/core/frontend_contract_observation_provider.py`、`src/ai_sdlc/core/verify_constraints.py`、`src/ai_sdlc/core/runner.py`、`src/ai_sdlc/cli/run_cmd.py`、`tests/unit/test_frontend_contract_observation_provider.py`、`tests/unit/test_verify_constraints.py`
+- **激活的规则**：TDD red-green；single canonical truth；verification-before-completion
+- **验证画像**：`code-change`
+
+#### 2.2 统一验证命令
+
+- **V1（Batch 4 parser 结构校验）**
+  - 命令：`uv run python -c "from pathlib import Path; from ai_sdlc.generators.doc_gen import TasksParser; plan = TasksParser().parse(Path('specs/014-frontend-contract-runtime-attachment-baseline/tasks.md')); print({'total_tasks': plan.total_tasks, 'total_batches': plan.total_batches, 'batches': [batch.tasks for batch in plan.batches]})"`
+  - 结果：`{'total_tasks': 12, 'total_batches': 4, 'batches': [['T11', 'T12', 'T13'], ['T21', 'T22', 'T23'], ['T31', 'T32', 'T33'], ['T41', 'T42', 'T43']]}`
+- **V2（RED：runtime attachment helper 定向测试）**
+  - 命令：`uv run pytest tests/unit/test_frontend_contract_runtime_attachment.py -q`
+  - 结果：失败；`ModuleNotFoundError: No module named 'ai_sdlc.core.frontend_contract_runtime_attachment'`
+- **V3（GREEN：runtime attachment helper 定向测试）**
+  - 命令：`uv run pytest tests/unit/test_frontend_contract_runtime_attachment.py -q`
+  - 结果：`7 passed in 0.13s`
+- **V4（静态检查）**
+  - 命令：`uv run ruff check src tests`
+  - 结果：`All checks passed!`
+- **V5（Markdown / code diff hygiene）**
+  - 命令：`git diff --check -- specs/014-frontend-contract-runtime-attachment-baseline src/ai_sdlc/core tests/unit`
+  - 结果：无输出。
+- **V6（治理只读校验）**
+  - 命令：`uv run ai-sdlc verify constraints`
+  - 结果：`verify constraints: no BLOCKERs.`
+
+#### 2.3 任务记录
+
+##### T41 | 先写 failing tests 固定 runtime attachment helper 语义
+
+- **改动范围**：`tests/unit/test_frontend_contract_runtime_attachment.py`
+- **改动内容**：
+  - 先定义 checkpoint / explicit `spec_dir` scope resolution、canonical artifact path、missing/invalid artifact honesty、timestamp-only freshness 与 explicit opt-in write policy 的最小行为。
+  - 用测试锁定 explicit `spec_dir` 越界 root 的拒绝语义，以及 explicit input 优先于 checkpoint 的优先级。
+  - 确认首次执行时因 helper 模块缺失而 RED。
+- **新增/调整的测试**：新增 `tests/unit/test_frontend_contract_runtime_attachment.py`
+- **测试结果**：RED 已确认。
+- **是否符合任务目标**：符合。
+
+##### T42 | 实现最小 runtime attachment helper
+
+- **改动范围**：`src/ai_sdlc/core/frontend_contract_runtime_attachment.py`
+- **改动内容**：
+  - 新增 `FrontendContractRuntimeAttachmentScope` 与 `FrontendContractRuntimeAttachment` 两个结构化 dataclass。
+  - 新增 `resolve_frontend_contract_runtime_attachment_scope()` 与 `build_frontend_contract_runtime_attachment()`，统一 explicit `spec_dir` / checkpoint scope 解析、canonical artifact path 解析与 read-mostly attachment 状态。
+  - 显式暴露 `missing_scope`、`scope_outside_root`、`missing_artifact`、`invalid_artifact`、`attached` 五类状态，以及 `timestamp_only` / `verifiable` freshness status。
+  - 保持 helper 只做 runtime attachment contract / policy / honesty 聚合，不触碰 `run_cmd.py`、`runner.py`、`program_cmd.py` 或 scanner/provider 写入。
+- **新增/调整的测试**：复用 `tests/unit/test_frontend_contract_runtime_attachment.py`
+- **测试结果**：通过。
+- **是否符合任务目标**：符合。
+
+##### T43 | Fresh verify 并追加 implementation batch 归档
+
+- **改动范围**：`specs/014-frontend-contract-runtime-attachment-baseline/plan.md`、`specs/014-frontend-contract-runtime-attachment-baseline/tasks.md`、`specs/014-frontend-contract-runtime-attachment-baseline/task-execution-log.md`
+- **改动内容**：
+  - 将 `014` formal docs 扩到 `Batch 4: runtime attachment helper slice`，并把只放行 `core/` helper 与对应 tests 的边界写死。
+  - 记录本批 RED/GREEN、fresh verification 与 helper 的 read-mostly / explicit opt-in 语义。
+  - 保持 `014` 不越界到 `run_cmd.py`、`runner.py`、`program_cmd.py`、registry 或 remediation。
+- **新增/调整的测试**：无新增测试文件；以本批 fresh verification 命令为准。
+- **测试结果**：通过。
+- **是否符合任务目标**：符合。
+
+#### 2.4 代码审查（Mandatory）
+
+- **宪章/规格对齐**：本批只进入 runtime attachment helper 切片，没有跨到 `run`/`runner` wiring、verify/gate 重写、registry 或 remediation。
+- **代码质量**：helper 只复用 canonical observation artifact contract，没有引入 runner/program 私有 observation 格式。
+- **测试质量**：已完成 RED/GREEN、`ruff`、`diff --check` 与 `verify constraints`。
+- **结论**：`无 Critical 阻塞项`
+
+#### 2.5 任务/计划同步状态（Mandatory）
+
+- `tasks.md` 同步状态：`已同步`
+- `plan.md` 同步状态：`已同步`
+- `spec.md` 同步状态：`无需变更`
+- 关联 branch/worktree disposition 计划：`retained（沿用当前 009/011/012/013/014 工作分支）`
+- 说明：`014` 已从 docs-only baseline 进入首批 runtime attachment helper slice，但 runner/program wiring 仍未放行。`
+
+#### 2.6 自动决策记录（如有）
+
+- AD-004：首批实现只落 `core/frontend_contract_runtime_attachment.py`，不同时推进 `run_cmd.py`、`runner.py` 或 `program_cmd.py`。理由：先稳住共享 runtime attachment contract，避免跨多个所有权边界。
+- AD-005：helper 只提供显式 scope/path/policy/status，不直接触发 scanner/provider 写入。理由：保持当前切片仍是 read-mostly attachment baseline，而不是新的 runtime side-effect surface。
+- AD-006：explicit `spec_dir` 若越出 project root，helper 直接拒绝并返回 `scope_outside_root`。理由：防止 runtime attachment 静默跨 spec 或跨项目写入。
+- AD-007：当 artifact 只有 `generated_at` 而缺 `source_digest/source_revision` 时，helper 以 `timestamp_only` freshness 与 advisory 暴露，而不是假装 freshness fully verifiable。理由：把 stale/uncertain honesty 留在结构化状态里，供下游 wiring 决策。
+
+#### 2.7 批次结论
+
+- `014` 当前已具备最小 runtime attachment helper，可作为后续 `run_cmd.py` / `runner.py` wiring 的共享 attachment contract。
+- 后续若继续推进，应优先进入 runner wiring slice，而不是回头扩张 provider/export 或 program orchestration。
+
+#### 2.8 归档后动作
+
+- **已完成 git 提交**：是
+- **提交哈希**：本批唯一一次语义提交预期为 `feat(core): add frontend contract runtime attachment helper`；完整 SHA 以该提交后的 `HEAD`（`git rev-parse HEAD`）为准
+- **改动范围**：`specs/014-frontend-contract-runtime-attachment-baseline/plan.md`、`specs/014-frontend-contract-runtime-attachment-baseline/tasks.md`、`specs/014-frontend-contract-runtime-attachment-baseline/task-execution-log.md`、`src/ai_sdlc/core/frontend_contract_runtime_attachment.py`、`tests/unit/test_frontend_contract_runtime_attachment.py`
+- **是否继续下一批**：待用户决定（建议转入 runner wiring slice，或继续保持 helper-only baseline）

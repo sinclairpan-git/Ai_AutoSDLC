@@ -20,6 +20,7 @@ related_doc:
 Batch 1: runtime attachment truth freeze
 Batch 2: attachment contract and failure honesty baseline
 Batch 3: implementation handoff and verification freeze
+Batch 4: runtime attachment helper slice
 ```
 
 ---
@@ -32,6 +33,8 @@ Batch 3: implementation handoff and verification freeze
 - `014` 不得在当前 child work item 中直接启用 runner 自动扫描、program auto-integration、registry attachment、auto-refresh、auto-fix 或 remediation workflow。
 - `014` 不得默认扩张新的顶层命令面；现有 `scan` export surface 只作为上游显式入口被引用。
 - `014` 只冻结 runtime attachment baseline，不默认决定任何未显式授权的 runtime side effect。
+- `Batch 4` 只允许写入 `src/ai_sdlc/core/frontend_contract_runtime_attachment.py`、`tests/unit/test_frontend_contract_runtime_attachment.py`、`specs/014-frontend-contract-runtime-attachment-baseline/task-execution-log.md`，以及为本批边界服务的 `plan.md / tasks.md`。
+- 当前首批实现只放行 runtime attachment helper，不放行 `run_cmd.py`、`runner.py`、`program_cmd.py`、registry 或 remediation。
 - 只有在用户明确要求进入实现，且 `014` formal docs 已通过门禁后，才允许进入 `src/` / `tests/` 级实现。
 
 ---
@@ -162,3 +165,46 @@ Batch 3: implementation handoff and verification freeze
   2. `spec.md / plan.md / tasks.md` 对 runtime attachment truth、scope/locality、failure honesty 与 handoff 保持单一真值
   3. 当前分支上的 `014` formal docs 可作为后续进入 runtime attachment helper / runner wiring 实现的稳定基线
 - **验证**：`uv run ai-sdlc verify constraints`, `git status --short`
+
+---
+
+## Batch 4：runtime attachment helper slice
+
+### Task 4.1 先写 failing tests 固定 runtime attachment helper 语义
+
+- **任务编号**：T41
+- **优先级**：P0
+- **依赖**：T33
+- **文件**：`tests/unit/test_frontend_contract_runtime_attachment.py`
+- **可并行**：否
+- **验收标准**：
+  1. 单测明确覆盖 explicit `spec_dir` 与 checkpoint scope resolution、canonical artifact path resolution、missing/invalid artifact honesty 与 freshness 可判断性
+  2. 单测明确覆盖 explicit opt-in write policy 与 explicit `spec_dir` 越界 root 的拒绝语义
+  3. 首次运行定向测试时必须出现预期失败，证明 runtime attachment helper 尚未实现
+- **验证**：`uv run pytest tests/unit/test_frontend_contract_runtime_attachment.py -q`
+
+### Task 4.2 实现最小 runtime attachment helper
+
+- **任务编号**：T42
+- **优先级**：P0
+- **依赖**：T41
+- **文件**：`src/ai_sdlc/core/frontend_contract_runtime_attachment.py`
+- **可并行**：否
+- **验收标准**：
+  1. helper 提供 active `spec_dir` / explicit `spec_dir` scope resolution、canonical artifact path resolution 与结构化 attachment status
+  2. helper 显式暴露 missing/invalid artifact honesty、freshness status 与 explicit opt-in write policy
+  3. helper 只负责 runtime attachment helper 本身，不引入 `run_cmd.py`、`runner.py`、`program_cmd.py` 或新的 runtime side effects
+- **验证**：`uv run pytest tests/unit/test_frontend_contract_runtime_attachment.py -q`
+
+### Task 4.3 Fresh verify 并追加 implementation batch 归档
+
+- **任务编号**：T43
+- **优先级**：P0
+- **依赖**：T42
+- **文件**：`specs/014-frontend-contract-runtime-attachment-baseline/task-execution-log.md`
+- **可并行**：否
+- **验收标准**：
+  1. `uv run pytest tests/unit/test_frontend_contract_runtime_attachment.py -q` 通过
+  2. `uv run ruff check src tests`、`git diff --check -- specs/014-frontend-contract-runtime-attachment-baseline src/ai_sdlc/core tests/unit` 与 `uv run ai-sdlc verify constraints` 通过
+  3. `task-execution-log.md` 追加记录当前 implementation batch 的 touched files、验证命令与结论
+- **验证**：`uv run pytest tests/unit/test_frontend_contract_runtime_attachment.py -q`, `uv run ruff check src tests`, `git diff --check -- specs/014-frontend-contract-runtime-attachment-baseline src/ai_sdlc/core tests/unit`, `uv run ai-sdlc verify constraints`
