@@ -188,7 +188,7 @@
 
 #### 2.8 归档后动作
 
-- **已完成 git 提交**：否（提交动作紧随本次归档后执行）
-- **提交哈希**：待补充（提交后回填）
+- **已完成 git 提交**：是
+- **提交哈希**：`1457ddb`（`feat(models): add frontend ui kernel models slice`）
 - **改动范围**：`specs/015-frontend-ui-kernel-standard-baseline/plan.md`、`specs/015-frontend-ui-kernel-standard-baseline/tasks.md`、`specs/015-frontend-ui-kernel-standard-baseline/task-execution-log.md`、`src/ai_sdlc/models/frontend_ui_kernel.py`、`src/ai_sdlc/models/__init__.py`、`tests/unit/test_frontend_ui_kernel_models.py`
 - **是否继续下一批**：按用户授权连续推进（优先扩 `015` 的 Kernel artifact / handoff slice，再进入 Provider baseline）
