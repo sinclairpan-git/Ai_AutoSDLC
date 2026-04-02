@@ -20,6 +20,7 @@ Batch 2: CLI and attachment baseline
 Batch 3: implementation handoff and verification freeze
 Batch 4: frontend contract verification report slice
 Batch 5: verify_constraints scoped attachment slice
+Batch 6: verification gate aggregation slice
 ```
 
 ---
@@ -29,11 +30,13 @@ Batch 5: verify_constraints scoped attachment slice
 - `Batch 1 ~ 3` 只允许推进 `spec.md / plan.md / tasks.md` 与 append-only `task-execution-log.md`。
 - `Batch 4` 只允许写入 `src/ai_sdlc/core/frontend_contract_verification.py`、`tests/unit/test_frontend_contract_verification.py`、`specs/012-frontend-contract-verify-integration/task-execution-log.md`，以及为本批边界服务的 `plan.md / tasks.md`。
 - `Batch 5` 只允许写入 `src/ai_sdlc/core/verify_constraints.py`、`tests/unit/test_verify_constraints.py`、`specs/012-frontend-contract-verify-integration/task-execution-log.md`，以及为本批边界服务的 `spec.md / plan.md / tasks.md`。
+- `Batch 6` 只允许写入 `src/ai_sdlc/gates/pipeline_gates.py`、`tests/unit/test_gates.py`、`specs/012-frontend-contract-verify-integration/task-execution-log.md`，以及为本批边界服务的 `plan.md / tasks.md`。
 - `012` 不得把 scanner、fix-loop、auto-fix、contract writeback 或 runtime 代码混入当前 child work item 的 formal baseline。
 - `012` 不得默认扩张为新的 verify stage / gate system；若需触及 registry，只能作为复用现有 `verify / verification` stage 的附件策略。
 - `012` 只冻结 frontend contract verify integration，不回写 `011` 已冻结的 contract truth 本体。
 - 当前首批实现只放行 verify report/context helper，不放行 `verify_constraints`、`pipeline_gates.py`、CLI 或 registry 写入。
 - 当前第二批实现只放行 active-`012` scoped 的 `verify_constraints` attachment，不放行 `pipeline_gates.py`、CLI、registry 或 scanner。
+- 当前第三批实现只放行 `VerificationGate / VerifyGate` aggregation，不放行 CLI、registry 或 scanner。
 - 只有在用户明确要求进入实现，且 `012` formal docs 已通过门禁后，才允许进入 `src/` / `tests/` 级实现。
 
 ---
@@ -250,3 +253,46 @@ Batch 5: verify_constraints scoped attachment slice
   2. `uv run ruff check src tests`、`git diff --check -- specs/012-frontend-contract-verify-integration src/ai_sdlc/core tests/unit` 与 `uv run ai-sdlc verify constraints` 通过
   3. `task-execution-log.md` 追加记录 active-`012` scoped attachment 的 touched files、验证命令与结论
 - **验证**：`uv run pytest tests/unit/test_verify_constraints.py -q`, `uv run ruff check src tests`, `git diff --check -- specs/012-frontend-contract-verify-integration src/ai_sdlc/core tests/unit`, `uv run ai-sdlc verify constraints`
+
+---
+
+## Batch 6：verification gate aggregation slice
+
+### Task 6.1 先写 failing tests 固定 contract-aware gate summary 语义
+
+- **任务编号**：T61
+- **优先级**：P0
+- **依赖**：T53
+- **文件**：`tests/unit/test_gates.py`
+- **可并行**：否
+- **验收标准**：
+  1. 单测明确覆盖 `VerifyGate` 在 frontend contract payload 为 PASS 时的正向路径
+  2. 单测明确覆盖 frontend contract source 已声明但 summary payload 缺失时的 RETRY 行为
+  3. 单测明确覆盖 frontend contract payload 自身带 gap/blocker 时，`VerificationGate` 必须显式消费该 payload 而不是只依赖通用 blocker/gap 字段
+- **验证**：`uv run pytest tests/unit/test_gates.py -q`
+
+### Task 6.2 实现最小 VerificationGate / VerifyGate aggregation
+
+- **任务编号**：T62
+- **优先级**：P0
+- **依赖**：T61
+- **文件**：`src/ai_sdlc/gates/pipeline_gates.py`
+- **可并行**：否
+- **验收标准**：
+  1. `VerificationGate` 在存在 frontend contract source 或 `frontend_contract_verification` payload 时，显式生成 contract-aware gate checks
+  2. `VerificationGate` / `VerifyGate` 在 frontend contract payload 缺失或 verdict 非 PASS 时返回 RETRY
+  3. 实现只消费现有 payload，不复制 `verify_constraints` 或 helper 的 contract truth，也不触碰 CLI、registry 或 scanner
+- **验证**：`uv run pytest tests/unit/test_gates.py -q`
+
+### Task 6.3 Fresh verify 并追加 implementation batch 归档
+
+- **任务编号**：T63
+- **优先级**：P0
+- **依赖**：T62
+- **文件**：`specs/012-frontend-contract-verify-integration/task-execution-log.md`
+- **可并行**：否
+- **验收标准**：
+  1. `uv run pytest tests/unit/test_gates.py -q` 与必要的 frontend contract regression 通过
+  2. `uv run ruff check src tests`、`git diff --check -- specs/012-frontend-contract-verify-integration src/ai_sdlc/gates tests/unit` 与 `uv run ai-sdlc verify constraints` 通过
+  3. `task-execution-log.md` 追加记录 gate aggregation 的 touched files、验证命令与结论
+- **验证**：`uv run pytest tests/unit/test_gates.py -q`, `uv run pytest tests/unit/test_frontend_contract_verification.py tests/unit/test_verify_constraints.py tests/unit/test_gates.py -q`, `uv run ruff check src tests`, `git diff --check -- specs/012-frontend-contract-verify-integration src/ai_sdlc/gates tests/unit`, `uv run ai-sdlc verify constraints`

@@ -297,3 +297,102 @@
 - **提交哈希**：本批唯一一次语义提交预期为 `feat(core): integrate frontend contract verification into constraints`；完整 SHA 以该提交后的 `HEAD`（`git rev-parse HEAD`）为准
 - **改动范围**：`specs/012-frontend-contract-verify-integration/spec.md`、`specs/012-frontend-contract-verify-integration/plan.md`、`specs/012-frontend-contract-verify-integration/tasks.md`、`specs/012-frontend-contract-verify-integration/task-execution-log.md`、`src/ai_sdlc/core/verify_constraints.py`、`tests/unit/test_verify_constraints.py`
 - **是否继续下一批**：待用户决定（建议转入 `VerificationGate / VerifyGate` aggregation）
+
+### Batch 2026-04-02-004 | 012 verification gate aggregation slice
+
+#### 2.1 准备
+
+- **任务来源**：[`tasks.md`](tasks.md) `T61`、`T62`、`T63`
+- **目标**：在不越界到 CLI、registry 或 scanner 的前提下，让 `VerificationGate / VerifyGate` 显式消费 `frontend_contract_verification` payload，并把 contract-aware 结果收敛成最小 gate checks。
+- **预读范围**：[`plan.md`](plan.md)、[`tasks.md`](tasks.md)、`src/ai_sdlc/gates/pipeline_gates.py`、`src/ai_sdlc/core/verify_constraints.py`、`tests/unit/test_gates.py`
+- **激活的规则**：TDD red-green；single canonical truth；verification-before-completion
+- **验证画像**：`code-change`
+
+#### 2.2 统一验证命令
+
+- **V1（Batch 6 parser 结构校验）**
+  - 命令：`uv run python -c "from pathlib import Path; from ai_sdlc.generators.doc_gen import TasksParser; plan = TasksParser().parse(Path('specs/012-frontend-contract-verify-integration/tasks.md')); print({'total_tasks': plan.total_tasks, 'total_batches': plan.total_batches, 'batches': [batch.tasks for batch in plan.batches]})"`
+  - 结果：`{'total_tasks': 18, 'total_batches': 6, 'batches': [['T11', 'T12', 'T13'], ['T21', 'T22', 'T23'], ['T31', 'T32', 'T33'], ['T41', 'T42', 'T43'], ['T51', 'T52', 'T53'], ['T61', 'T62', 'T63']]}`
+- **V2（RED：gate aggregation 定向测试）**
+  - 命令：`uv run pytest tests/unit/test_gates.py -q`
+  - 结果：失败；`test_passes_with_frontend_contract_summary_payload`、`test_retries_when_frontend_contract_source_has_no_summary_payload` 与 `test_retries_when_frontend_contract_summary_reports_gap` 未满足，证明 `VerificationGate` 尚未显式消费 contract-aware payload。
+- **V3（GREEN：Batch 6 定向测试）**
+  - 命令：`uv run pytest tests/unit/test_gates.py -q`
+  - 结果：`57 passed in 0.28s`
+- **V4（Batch 4+6 回归）**
+  - 命令：`uv run pytest tests/unit/test_frontend_contract_verification.py tests/unit/test_verify_constraints.py tests/unit/test_gates.py -q`
+  - 结果：`95 passed in 1.25s`
+- **V5（静态检查）**
+  - 命令：`uv run ruff check src tests`
+  - 结果：`All checks passed!`
+- **V6（治理只读校验）**
+  - 命令：`uv run ai-sdlc verify constraints`
+  - 结果：`verify constraints: no BLOCKERs.`
+
+#### 2.3 任务记录
+
+##### T61 | 先写 failing tests 固定 contract-aware gate summary 语义
+
+- **改动范围**：`tests/unit/test_gates.py`
+- **改动内容**：
+  - 新增 `VerifyGate` 在 frontend contract payload 为 PASS 时的正向路径测试。
+  - 新增 frontend contract source 已声明但 summary payload 缺失时的 RETRY 测试。
+  - 新增 frontend contract payload 自身带 `coverage_gaps / blockers` 时，`VerificationGate` 必须显式消费该 payload 的 RETRY 测试。
+- **新增/调整的测试**：扩展 `tests/unit/test_gates.py`
+- **测试结果**：RED 已确认。
+- **是否符合任务目标**：符合。
+
+##### T62 | 实现最小 VerificationGate / VerifyGate aggregation
+
+- **改动范围**：`src/ai_sdlc/gates/pipeline_gates.py`
+- **改动内容**：
+  - 让 `VerificationGate` 在发现 frontend contract source 或 payload 时追加 contract-aware gate checks。
+  - 新增 summary presence、source linkage、check objects linkage 与 status clear 四类最小 gate checks。
+  - 保持 `VerifyGate` 仍只委托 `VerificationGate`，不复制 `verify_constraints` 或 helper 的 contract truth。
+- **新增/调整的测试**：复用 `tests/unit/test_gates.py`
+- **测试结果**：通过。
+- **是否符合任务目标**：符合。
+
+##### T63 | Fresh verify 并追加 implementation batch 归档
+
+- **改动范围**：`specs/012-frontend-contract-verify-integration/plan.md`、`specs/012-frontend-contract-verify-integration/tasks.md`、`specs/012-frontend-contract-verify-integration/task-execution-log.md`
+- **改动内容**：
+  - 将 `012` formal docs 扩到 `Batch 6: verification gate aggregation slice`，限定只改 `pipeline_gates.py` 与 `test_gates.py`。
+  - 记录 gate aggregation 的 RED/GREEN、fresh verification 与 contract-aware payload aggregation 决策。
+  - 保持 CLI、registry 与 scanner 仍然留在后续批次。
+- **新增/调整的测试**：无新增测试文件；以本批 fresh verification 命令为准。
+- **测试结果**：通过。
+- **是否符合任务目标**：符合。
+
+#### 2.4 代码审查（Mandatory）
+
+- **宪章/规格对齐**：本批只进入 `VerificationGate / VerifyGate` aggregation，没有跨到 CLI、registry 或 scanner。
+- **代码质量**：gate 层只消费现有 `frontend_contract_verification` payload，不复制 `verify_constraints` 或 helper 的 contract truth。
+- **测试质量**：已完成 RED/GREEN、95 条相关回归、`ruff`、`diff --check` 与 `verify constraints`。
+- **结论**：`无 Critical 阻塞项`
+
+#### 2.5 任务/计划同步状态（Mandatory）
+
+- `tasks.md` 同步状态：`已同步`
+- `plan.md` 同步状态：`已同步`
+- `spec.md` 同步状态：`无需变更`
+- 关联 branch/worktree disposition 计划：`retained（沿用当前 009/011/012 工作分支）`
+- 说明：`012` 已进入 gate aggregation 切片，但 CLI surface 仍留在后续批次。`
+
+#### 2.6 自动决策记录（如有）
+
+- AD-010：`VerificationGate` 只在 source/payload 出现 frontend contract 语义时追加 contract-aware gate checks。理由：保持默认 verification surface 对非 `012` 场景无额外副作用。
+- AD-011：gate 层显式区分 summary declared、source linked、check objects linked 与 status clear。理由：让 gate failure 能反映是“没接线”还是“接线后不清洁”。
+- AD-012：`VerifyGate` 继续委托 `VerificationGate`，不新增第二套 verify gate 逻辑。理由：保持 `verify` / `verification` 主链单一真值。
+
+#### 2.7 批次结论
+
+- `012` 当前已把 frontend contract verification 从 `verify_constraints` 进一步接到 `VerificationGate / VerifyGate`。
+- 后续若继续推进，应优先进入 CLI verify surface，把 contract-aware summary 暴露到 terminal / JSON 输出。
+
+#### 2.8 归档后动作
+
+- **已完成 git 提交**：是
+- **提交哈希**：本批唯一一次语义提交预期为 `feat(gates): aggregate frontend contract verification in verify gates`；完整 SHA 以该提交后的 `HEAD`（`git rev-parse HEAD`）为准
+- **改动范围**：`specs/012-frontend-contract-verify-integration/plan.md`、`specs/012-frontend-contract-verify-integration/tasks.md`、`specs/012-frontend-contract-verify-integration/task-execution-log.md`、`src/ai_sdlc/gates/pipeline_gates.py`、`tests/unit/test_gates.py`
+- **是否继续下一批**：待用户决定（建议转入 CLI verify surface）

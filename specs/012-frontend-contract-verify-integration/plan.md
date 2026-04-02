@@ -32,7 +32,12 @@ related_doc:
 - 再冻结 verification surface / coverage gap / CLI 口径
 - 最后给出后续实现文件面与测试矩阵
 
-当前阶段的 formal baseline 已完成。经用户明确要求继续后，当前只允许进入第一批 `core/frontend_contract_verification.py` verify report/context helper 切片，不同时触碰 `verify_constraints`、`VerificationGate / VerifyGate` 或 CLI。
+当前阶段的 formal baseline 已完成，且前两批实现切片已经落下：
+
+- `core/frontend_contract_verification.py` report/context helper
+- active-`012` scoped 的 `verify_constraints.py` attachment
+
+经用户明确要求继续后，当前只允许进入下一批 `pipeline_gates.py` / `test_gates.py` 的 `VerificationGate / VerifyGate` aggregation 切片，不同时触碰 CLI 或 registry。
 
 ## 技术背景
 
@@ -100,7 +105,7 @@ src/ai_sdlc/
 │   └── verify_constraints.py               # next slice: verification source / check objects / coverage gaps
 ├── gates/
 │   ├── frontend_contract_gate.py           # existing upstream gate surface
-│   └── pipeline_gates.py                   # later slice: VerificationGate / VerifyGate aggregation
+│   └── pipeline_gates.py                   # next slice: VerificationGate / VerifyGate aggregation
 ├── cli/
 │   └── verify_cmd.py                       # later slice: terminal / json verify surface
 └── gates/
@@ -109,7 +114,7 @@ src/ai_sdlc/
 tests/
 ├── unit/test_frontend_contract_verification.py   # current slice
 ├── unit/test_verify_constraints.py               # later slice
-├── unit/test_gates.py                            # later slice
+├── unit/test_gates.py                            # next slice
 └── integration/test_cli_verify_constraints.py    # later slice
 
 specs/012-frontend-contract-verify-integration/
@@ -211,6 +216,13 @@ specs/012-frontend-contract-verify-integration/
 **验证方式**：`tests/unit/test_verify_constraints.py` + fresh `ruff` / `verify constraints`。
 **回退方式**：不触发 `pipeline_gates.py`、CLI、registry 或 scanner。
 
+### 工作流 F：VerificationGate / VerifyGate aggregation slice
+
+**范围**：让 `VerificationGate / VerifyGate` 显式消费 `frontend_contract_verification` summary payload，并把 contract-aware 结果收敛成最小 gate checks。
+**影响范围**：`pipeline_gates.py`、`tests/unit/test_gates.py` 与后续 CLI verify surface。
+**验证方式**：`tests/unit/test_gates.py` + focused regression + fresh `ruff` / `verify constraints`。
+**回退方式**：不触发 CLI、registry 或 scanner。
+
 ## 关键路径验证策略
 
 | 关键路径 | 主验证方式 | 次验证方式 |
@@ -222,6 +234,7 @@ specs/012-frontend-contract-verify-integration/
 | downstream handoff clarity | file-map review | 人工审阅 |
 | report/context helper correctness | `uv run pytest tests/unit/test_frontend_contract_verification.py -q` | report payload review |
 | verify_constraints attachment correctness | `uv run pytest tests/unit/test_verify_constraints.py -q` | scoped activation / payload review |
+| gate aggregation correctness | `uv run pytest tests/unit/test_gates.py -q` | frontend contract gate-check summary review |
 
 ## 已锁定决策
 
@@ -231,6 +244,7 @@ specs/012-frontend-contract-verify-integration/
 - scanner / fix-loop / auto-fix 保持在下游 work item
 - 当前首批实现只放行 `core/frontend_contract_verification.py` report/context helper，不同时推进 `verify_constraints`、`pipeline_gates` 或 CLI
 - 下一批实现只放行 `core/verify_constraints.py` 与 `tests/unit/test_verify_constraints.py`，并把 attachment 激活条件限定为 active `012`
+- 当前第三批实现只放行 `gates/pipeline_gates.py` 与 `tests/unit/test_gates.py`，把 frontend contract payload 收敛进 `VerificationGate / VerifyGate`
 
 ## 实施顺序建议
 

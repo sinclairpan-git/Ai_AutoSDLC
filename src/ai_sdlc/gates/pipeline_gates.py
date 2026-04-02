@@ -9,6 +9,7 @@ import re
 from pathlib import Path
 from typing import Any
 
+from ai_sdlc.core.frontend_contract_verification import FRONTEND_CONTRACT_SOURCE_NAME
 from ai_sdlc.gates.extra_gates import PostmortemGate
 from ai_sdlc.gates.task_ac_checks import (
     doc_first_execute_blocker,
@@ -333,6 +334,7 @@ class VerificationGate:
         objects = tuple(context.get("verification_check_objects", ()))
         blockers = tuple(context.get("constraint_blockers", ()))
         coverage_gaps = tuple(context.get("coverage_gaps", ()))
+        frontend_contract_payload = context.get("frontend_contract_verification")
 
         if sources or objects or "constraint_blockers" in context or "coverage_gaps" in context:
             surface_ok = bool(sources) and bool(objects)
@@ -381,6 +383,17 @@ class VerificationGate:
                     else "; ".join(coverage_gaps[:3]),
                 )
             )
+            if _frontend_contract_summary_requested(
+                sources=sources,
+                payload=frontend_contract_payload,
+            ):
+                checks.extend(
+                    _frontend_contract_gate_checks(
+                        sources=sources,
+                        objects=objects,
+                        payload=frontend_contract_payload,
+                    )
+                )
             verdict = GateVerdict.PASS if all(c.passed for c in checks) else GateVerdict.RETRY
             return GateResult(stage="verification", verdict=verdict, checks=checks)
 
@@ -414,6 +427,136 @@ class VerificationGate:
         all_passed = all(c.passed for c in checks)
         verdict = GateVerdict.PASS if all_passed else GateVerdict.RETRY
         return GateResult(stage="verification", verdict=verdict, checks=checks)
+
+
+def _frontend_contract_summary_requested(
+    *,
+    sources: tuple[str, ...],
+    payload: object,
+) -> bool:
+    return FRONTEND_CONTRACT_SOURCE_NAME in sources or isinstance(payload, dict)
+
+
+def _frontend_contract_gate_checks(
+    *,
+    sources: tuple[str, ...],
+    objects: tuple[str, ...],
+    payload: object,
+) -> list[GateCheck]:
+    if not isinstance(payload, dict):
+        return [
+            GateCheck(
+                name="frontend_contract_summary_declared",
+                passed=False,
+                message=(
+                    "frontend contract verification source declared but summary payload missing"
+                ),
+            ),
+            GateCheck(
+                name="frontend_contract_source_linked",
+                passed=FRONTEND_CONTRACT_SOURCE_NAME in sources,
+                message=""
+                if FRONTEND_CONTRACT_SOURCE_NAME in sources
+                else "frontend contract verification summary missing from verification_sources",
+            ),
+            GateCheck(
+                name="frontend_contract_status_clear",
+                passed=False,
+                message="frontend contract verification summary payload missing",
+            ),
+        ]
+
+    payload_source = str(payload.get("source_name", "")).strip()
+    payload_objects = _string_tuple(payload.get("check_objects", ()))
+    payload_blockers = _string_tuple(payload.get("blockers", ()))
+    payload_coverage_gaps = _string_tuple(payload.get("coverage_gaps", ()))
+    payload_gate_verdict = str(payload.get("gate_verdict", "")).strip()
+
+    summary_declared = (
+        bool(payload_source) and bool(payload_objects) and bool(payload_gate_verdict)
+    )
+    missing_payload_fields = [
+        field_name
+        for field_name, present in (
+            ("source_name", bool(payload_source)),
+            ("check_objects", bool(payload_objects)),
+            ("gate_verdict", bool(payload_gate_verdict)),
+        )
+        if not present
+    ]
+    source_linked = payload_source in sources
+    unlinked_objects = [name for name in payload_objects if name not in objects]
+    status_clear = (
+        payload_gate_verdict == GateVerdict.PASS.value
+        and not payload_blockers
+        and not payload_coverage_gaps
+    )
+
+    return [
+        GateCheck(
+            name="frontend_contract_summary_declared",
+            passed=summary_declared,
+            message=""
+            if summary_declared
+            else "frontend contract verification summary missing fields: "
+            + ", ".join(missing_payload_fields),
+        ),
+        GateCheck(
+            name="frontend_contract_source_linked",
+            passed=source_linked,
+            message=""
+            if source_linked
+            else "frontend contract verification summary not linked to verification_sources",
+        ),
+        GateCheck(
+            name="frontend_contract_check_objects_linked",
+            passed=summary_declared and not unlinked_objects,
+            message=""
+            if summary_declared and not unlinked_objects
+            else "frontend contract verification summary objects missing from verification_check_objects: "
+            + ", ".join(unlinked_objects or payload_objects),
+        ),
+        GateCheck(
+            name="frontend_contract_status_clear",
+            passed=status_clear,
+            message=""
+            if status_clear
+            else _summarize_frontend_contract_status(
+                gate_verdict=payload_gate_verdict,
+                blockers=payload_blockers,
+                coverage_gaps=payload_coverage_gaps,
+            ),
+        ),
+    ]
+
+
+def _string_tuple(value: object) -> tuple[str, ...]:
+    if not isinstance(value, (tuple, list)):
+        return ()
+    items: list[str] = []
+    for item in value:
+        text = str(item).strip()
+        if text:
+            items.append(text)
+    return tuple(items)
+
+
+def _summarize_frontend_contract_status(
+    *,
+    gate_verdict: str,
+    blockers: tuple[str, ...],
+    coverage_gaps: tuple[str, ...],
+) -> str:
+    details: list[str] = []
+    if gate_verdict:
+        details.append(f"gate_verdict={gate_verdict}")
+    if blockers:
+        details.append("blockers=" + "; ".join(blockers[:2]))
+    if coverage_gaps:
+        details.append("coverage_gaps=" + ", ".join(coverage_gaps[:3]))
+    if details:
+        return "frontend contract verification not clear: " + " | ".join(details)
+    return "frontend contract verification not clear"
 
 
 class ReviewGate:
