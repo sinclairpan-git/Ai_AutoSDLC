@@ -16,15 +16,18 @@ related_doc:
 ```text
 Batch 1: contract truth surface freeze
 Batch 2: artifact chain and legacy extension baseline
-Batch 3: implementation handoff and verify freeze
+Batch 3: implementation handoff and first-slice gate freeze
+Batch 4: contract model slice
 ```
 
 ---
 
 ## 执行护栏
 
-- `011` 当前只允许推进 `spec.md / plan.md / tasks.md` 这组 formal docs。
+- `Batch 1 ~ 3` 只允许推进 `spec.md / plan.md / tasks.md` 与 append-only `task-execution-log.md`。
+- `Batch 4` 只允许写入 `src/ai_sdlc/models/frontend_contracts.py`、`src/ai_sdlc/models/__init__.py`、`tests/unit/test_frontend_contract_models.py` 与 append-only `task-execution-log.md`。
 - `011` 不得把 UI Kernel、Provider、Gate 或 runtime 代码混入当前 child work item 的 formal baseline。
+- 当前首批实现只放行 Contract models / serialization；`generators / core / gates` 仍属于后续批次。
 - 只有在用户明确要求进入实现，且 `011` formal docs 已通过门禁后，才允许进入 `src/` / `tests/` 级实现。
 
 ---
@@ -115,7 +118,7 @@ Batch 3: implementation handoff and verify freeze
 
 ---
 
-## Batch 3：implementation handoff and verify freeze
+## Batch 3：implementation handoff and first-slice gate freeze
 
 ### Task 3.1 冻结后续实现文件面与 ownership 边界
 
@@ -139,7 +142,7 @@ Batch 3: implementation handoff and verify freeze
 - **可并行**：否
 - **验收标准**：
   1. formal docs 明确最小验证面至少覆盖模型形状、序列化、stage integration、legacy 扩展字段和 drift 正反向场景
-  2. `tasks.md` 明确当前仍停在 formal baseline，不直接进入实现
+  2. `tasks.md` 明确 formal baseline 完成后当前只放行 `models + serialization` 首切片
   3. formal docs 明确进入实现前至少要先通过 `uv run ai-sdlc verify constraints`
 - **验证**：测试矩阵对账
 
@@ -153,5 +156,48 @@ Batch 3: implementation handoff and verify freeze
 - **验收标准**：
   1. `uv run ai-sdlc verify constraints` 可通过
   2. `spec.md / plan.md / tasks.md` 对 Contract 边界、artifact 链路、legacy 扩展字段和 handoff 口径保持单一真值
-  3. 当前分支上的 `011` formal docs 可作为后续继续实现 Contract 主线的稳定基线
+  3. 当前分支上的 `011` formal docs 可作为后续进入 `models + serialization` 首切片的稳定基线
 - **验证**：`uv run ai-sdlc verify constraints`, `git status --short`
+
+---
+
+## Batch 4：contract model slice
+
+### Task 4.1 先写 failing tests 固定最小 Contract 模型形状
+
+- **任务编号**：T41
+- **优先级**：P0
+- **依赖**：T33
+- **文件**：`tests/unit/test_frontend_contract_models.py`
+- **可并行**：否
+- **验收标准**：
+  1. 单测明确覆盖 `FrontendContractSet / PageContract / ModuleContract / ContractRuleBundle / ContractLegacyContext` 的最小 roundtrip shape
+  2. 单测明确覆盖 `page metadata`、`recipe declaration`、legacy 扩展字段与 `i18n / validation` 关键校验关系
+  3. 首次运行定向测试时必须出现预期失败，证明当前能力尚未实现
+- **验证**：`uv run pytest tests/unit/test_frontend_contract_models.py -q`
+
+### Task 4.2 实现最小 Contract models 与导出面
+
+- **任务编号**：T42
+- **优先级**：P0
+- **依赖**：T41
+- **文件**：`src/ai_sdlc/models/frontend_contracts.py`, `src/ai_sdlc/models/__init__.py`
+- **可并行**：否
+- **验收标准**：
+  1. `frontend_contracts.py` 提供 `Frontend Contract Set`、`Page/Module Contract`、`Contract Rule Bundle`、`Contract Legacy Context` 及其最小子对象模型
+  2. `PageContract` 的 `page metadata` 与 `recipe declaration` 为必备结构，且 `requires_validation / uses_i18n` 与规则对象的关系可被模型校验
+  3. 相关模型可同时从 `ai_sdlc.models.frontend_contracts` 与 `ai_sdlc.models` 稳定导入
+- **验证**：`uv run pytest tests/unit/test_frontend_contract_models.py -q`
+
+### Task 4.3 Fresh verify 并追加 implementation batch 归档
+
+- **任务编号**：T43
+- **优先级**：P0
+- **依赖**：T42
+- **文件**：`specs/011-frontend-contract-authoring-baseline/task-execution-log.md`
+- **可并行**：否
+- **验收标准**：
+  1. `uv run pytest tests/unit/test_frontend_contract_models.py -q` 通过
+  2. `git diff --check -- specs/011-frontend-contract-authoring-baseline src/ai_sdlc/models tests/unit` 无输出，且 `uv run ai-sdlc verify constraints` 通过
+  3. `task-execution-log.md` 追加记录当前 implementation batch 的 touched files、验证命令与结论
+- **验证**：`uv run pytest tests/unit/test_frontend_contract_models.py -q`, `git diff --check -- specs/011-frontend-contract-authoring-baseline src/ai_sdlc/models tests/unit`, `uv run ai-sdlc verify constraints`

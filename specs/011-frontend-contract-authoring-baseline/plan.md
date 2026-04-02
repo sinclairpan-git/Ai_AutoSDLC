@@ -24,7 +24,7 @@ related_doc:
 - 再冻结 legacy 扩展字段和 drift 处理口径
 - 最后给出实现前的最小文件面与验证基线
 
-该计划当前先停在 formal baseline 与 implementation handoff，不直接进入 `src/` / `tests/` 代码实现。
+该计划已完成 formal baseline。经用户明确要求继续后，当前只允许进入首批 `Contract model + serialization` 切片，不直接展开 `generators / core / gates` 或 runtime 级实现。
 
 ## 技术背景
 
@@ -63,10 +63,25 @@ related_doc:
 specs/011-frontend-contract-authoring-baseline/
 ├── spec.md
 ├── plan.md
-└── tasks.md
+├── tasks.md
+└── task-execution-log.md
 ```
 
-### 推荐的后续实现触点
+### 当前激活的首批实现触点
+
+```text
+specs/011-frontend-contract-authoring-baseline/
+└── task-execution-log.md              # append-only execution evidence
+
+src/ai_sdlc/models/
+├── frontend_contracts.py              # current slice: contract object models
+└── __init__.py                        # current slice: model exports
+
+tests/unit/
+└── test_frontend_contract_models.py   # current slice: model shape / validation / roundtrip
+```
+
+### 后续推荐的扩展实现触点
 
 ```text
 src/ai_sdlc/
@@ -148,6 +163,13 @@ contracts/
 **验证方式**：formal docs review + `verify constraints`。  
 **回退方式**：仅回退 planning baseline。
 
+### Phase 4：Contract model slice implementation
+
+**目标**：以最小代码切片落下 `Frontend Contract Set / Page Contract / Module Contract / Contract Rule Bundle / Contract Legacy Context` 的模型与序列化边界。
+**产物**：`src/ai_sdlc/models/frontend_contracts.py`、`src/ai_sdlc/models/__init__.py` 导出、`tests/unit/test_frontend_contract_models.py`。
+**验证方式**：定向 `pytest`、`git diff --check`、`uv run ai-sdlc verify constraints`。
+**回退方式**：仅回退本阶段涉及的 `models/`、`tests/` 与 execution log 变更。
+
 ## 工作流计划
 
 ### 工作流 A：Contract object authoring baseline
@@ -171,6 +193,13 @@ contracts/
 **验证方式**：legacy 术语一致性与 file-map 审阅。  
 **回退方式**：不写入任何 runtime 代码。
 
+### 工作流 D：Contract model and serialization slice
+
+**范围**：`Frontend Contract Set`、`Page/Module Contract`、`Contract Rule Bundle`、`Contract Legacy Context` 与其最小跨字段校验。
+**影响范围**：后续 artifact instantiation、drift control 与 stage integration 的上游对象真值。
+**验证方式**：`tests/unit/test_frontend_contract_models.py` + fresh `verify constraints`。
+**回退方式**：不触发 `generators / core / gates` 写入。
+
 ## 关键路径验证策略
 
 | 关键路径 | 主验证方式 | 次验证方式 |
@@ -179,6 +208,7 @@ contracts/
 | MVP Contract 对象覆盖 | object matrix 对账 | 设计稿回挂复核 |
 | artifact chain 一致性 | stage 关系检查 | 术语搜索 |
 | legacy 扩展字段收敛 | 全文术语检查 | 人工审阅 |
+| model slice shape / validation | `uv run pytest tests/unit/test_frontend_contract_models.py -q` | roundtrip review |
 | next-step readiness | `uv run ai-sdlc verify constraints` | `git status --short` |
 
 ## 已锁定决策
@@ -188,10 +218,13 @@ contracts/
 - `recipe declaration` 必须归 Contract，不得在后续实现中混入 UI Kernel
 - Contract 模型、artifact 实例化、drift 检查和 stage integration 是后续实现的主路径
 - legacy 扩展字段优先留在 Contract 层，而不是单独拉出迁移专用 artifact
+- 当前首批实现只覆盖 `models + serialization`，不同时推进 `generators / core / gates`
 
 ## 实施顺序建议
 
 1. 先冻结 `011` formal spec/plan/tasks，确保 Contract 主线有独立 canonical truth。
 2. 再冻结 `page/module contract`、规则对象与 `recipe declaration` 的对象边界。
 3. 再冻结 Contract 的 artifact 链路、drift 口径和 legacy 扩展字段。
-4. 完成 formal baseline 校验后，再决定是否在 `011` 内继续进入模型/实例化实现。
+4. formal baseline 校验完成后，只放行 `models + serialization` 首切片，不直接混做 artifact instantiation 或 drift/gate。
+5. 先以 TDD 落 `Frontend Contract Set / Page Contract / Module Contract / Contract Rule Bundle / Contract Legacy Context` 模型与导出。
+6. 待 model slice 稳定后，再决定是否进入 `generators/frontend_contract_artifacts.py` 等下游实现。
