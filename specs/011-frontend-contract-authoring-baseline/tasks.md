@@ -19,6 +19,7 @@ Batch 2: artifact chain and legacy extension baseline
 Batch 3: implementation handoff and first-slice gate freeze
 Batch 4: contract model slice
 Batch 5: contract artifact instantiation slice
+Batch 6: contract drift helper slice
 ```
 
 ---
@@ -28,9 +29,11 @@ Batch 5: contract artifact instantiation slice
 - `Batch 1 ~ 3` 只允许推进 `spec.md / plan.md / tasks.md` 与 append-only `task-execution-log.md`。
 - `Batch 4` 只允许写入 `src/ai_sdlc/models/frontend_contracts.py`、`src/ai_sdlc/models/__init__.py`、`tests/unit/test_frontend_contract_models.py` 与 append-only `task-execution-log.md`。
 - `Batch 5` 只允许写入 `src/ai_sdlc/generators/frontend_contract_artifacts.py`、可选 `src/ai_sdlc/generators/__init__.py`、`tests/unit/test_frontend_contract_artifacts.py`、`specs/011-frontend-contract-authoring-baseline/task-execution-log.md`，以及为本批边界服务的 `plan.md / tasks.md`。
+- `Batch 6` 只允许写入 `src/ai_sdlc/core/frontend_contract_drift.py`、`tests/unit/test_frontend_contract_drift.py`、`specs/011-frontend-contract-authoring-baseline/task-execution-log.md`，以及为本批边界服务的 `plan.md / tasks.md`。
 - `011` 不得把 UI Kernel、Provider、Gate 或 runtime 代码混入当前 child work item 的 formal baseline。
 - 当前首批实现只放行 Contract models / serialization；`generators / core / gates` 仍属于后续批次。
 - 当前下一批实现只放行 Contract artifact instantiation；`core / gates` 仍属于后续批次。
+- 当前 drift 批次只放行只读 helper，不放行 gate verdict、自动回写或源码扫描器。
 - 只有在用户明确要求进入实现，且 `011` formal docs 已通过门禁后，才允许进入 `src/` / `tests/` 级实现。
 
 ---
@@ -247,3 +250,46 @@ Batch 5: contract artifact instantiation slice
   2. `uv run ruff check src tests`、`git diff --check -- specs/011-frontend-contract-authoring-baseline src/ai_sdlc/generators tests/unit` 与 `uv run ai-sdlc verify constraints` 通过
   3. `task-execution-log.md` 追加记录当前 artifact instantiation batch 的 touched files、验证命令与结论
 - **验证**：`uv run pytest tests/unit/test_frontend_contract_models.py tests/unit/test_frontend_contract_artifacts.py -q`, `uv run ruff check src tests`, `git diff --check -- specs/011-frontend-contract-authoring-baseline src/ai_sdlc/generators tests/unit`, `uv run ai-sdlc verify constraints`
+
+---
+
+## Batch 6：contract drift helper slice
+
+### Task 6.1 先写 failing tests 固定 drift record 与 observation 语义
+
+- **任务编号**：T61
+- **优先级**：P0
+- **依赖**：T53
+- **文件**：`tests/unit/test_frontend_contract_drift.py`
+- **可并行**：否
+- **验收标准**：
+  1. 单测明确覆盖 page artifact 与 observation 匹配时的无漂移场景
+  2. 单测明确覆盖 recipe mismatch、缺失 i18n key、缺失 validation field、增量治理下 legacy 扩散等正向漂移场景
+  3. 首次运行定向测试时必须出现预期失败，证明 drift helper 尚未实现
+- **验证**：`uv run pytest tests/unit/test_frontend_contract_drift.py -q`
+
+### Task 6.2 实现最小 frontend_contract_drift helper
+
+- **任务编号**：T62
+- **优先级**：P0
+- **依赖**：T61
+- **文件**：`src/ai_sdlc/core/frontend_contract_drift.py`
+- **可并行**：否
+- **验收标准**：
+  1. `frontend_contract_drift.py` 提供结构化 observation 输入、drift record 输出和 page/root 级检测入口
+  2. 每条 drift record 明确 `field_path`、`expected`、`actual` 与 `update_contract / fix_implementation` 二选一处理口径
+  3. helper 只做只读判定，不引入 gate verdict、自动修复或源码扫描
+- **验证**：`uv run pytest tests/unit/test_frontend_contract_drift.py -q`
+
+### Task 6.3 Fresh verify 并追加 drift batch 归档
+
+- **任务编号**：T63
+- **优先级**：P0
+- **依赖**：T62
+- **文件**：`specs/011-frontend-contract-authoring-baseline/task-execution-log.md`
+- **可并行**：否
+- **验收标准**：
+  1. `uv run pytest tests/unit/test_frontend_contract_models.py tests/unit/test_frontend_contract_artifacts.py tests/unit/test_frontend_contract_drift.py -q` 通过
+  2. `uv run ruff check src tests`、`git diff --check -- specs/011-frontend-contract-authoring-baseline src/ai_sdlc/core tests/unit` 与 `uv run ai-sdlc verify constraints` 通过
+  3. `task-execution-log.md` 追加记录当前 drift helper batch 的 touched files、验证命令与结论
+- **验证**：`uv run pytest tests/unit/test_frontend_contract_models.py tests/unit/test_frontend_contract_artifacts.py tests/unit/test_frontend_contract_drift.py -q`, `uv run ruff check src tests`, `git diff --check -- specs/011-frontend-contract-authoring-baseline src/ai_sdlc/core tests/unit`, `uv run ai-sdlc verify constraints`

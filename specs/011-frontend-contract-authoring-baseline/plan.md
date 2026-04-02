@@ -93,6 +93,16 @@ tests/unit/
                                         # next slice: artifact file layout / yaml shape / roundtrip
 ```
 
+### 当前建议进入的后续实现触点
+
+```text
+src/ai_sdlc/core/
+└── frontend_contract_drift.py         # next slice: artifact-vs-observation drift helpers
+
+tests/unit/
+└── test_frontend_contract_drift.py    # next slice: drift positive/negative coverage
+```
+
 ### 后续推荐的扩展实现触点
 
 ```text
@@ -189,6 +199,13 @@ contracts/
 **验证方式**：定向 `pytest`、`uv run ruff check src tests`、`git diff --check`、`uv run ai-sdlc verify constraints`。
 **回退方式**：仅回退本阶段涉及的 `generators/`、`tests/` 与 execution log 变更。
 
+### Phase 6：Contract drift helper slice
+
+**目标**：建立 page 级 contract artifact 与实现 observation 之间的最小 drift 判定面，并把处理口径固定为 `update_contract / fix_implementation` 二选一。
+**产物**：`src/ai_sdlc/core/frontend_contract_drift.py`、`tests/unit/test_frontend_contract_drift.py`。
+**验证方式**：定向 `pytest`、`uv run ruff check src tests`、`git diff --check`、`uv run ai-sdlc verify constraints`。
+**回退方式**：仅回退本阶段涉及的 `core/`、`tests/` 与 execution log 变更。
+
 ## 工作流计划
 
 ### 工作流 A：Contract object authoring baseline
@@ -226,6 +243,13 @@ contracts/
 **验证方式**：`tests/unit/test_frontend_contract_artifacts.py` + fresh `ruff` / `verify constraints`。
 **回退方式**：不触发 drift helpers 或 gate surface 写入。
 
+### 工作流 F：Contract drift helper slice
+
+**范围**：定义 `PageImplementationObservation`、`FrontendContractDriftRecord` 与 page/module artifact 对 observation 的最小 drift 判定。
+**影响范围**：后续 `verify`、`execute`、Fix Loop 与 `frontend_contract_gate` 的上游只读诊断输入。
+**验证方式**：`tests/unit/test_frontend_contract_drift.py` + fresh `ruff` / `verify constraints`。
+**回退方式**：不触发 gate verdict 或自动回写实现。
+
 ## 关键路径验证策略
 
 | 关键路径 | 主验证方式 | 次验证方式 |
@@ -236,6 +260,7 @@ contracts/
 | legacy 扩展字段收敛 | 全文术语检查 | 人工审阅 |
 | model slice shape / validation | `uv run pytest tests/unit/test_frontend_contract_models.py -q` | roundtrip review |
 | artifact instantiation layout | `uv run pytest tests/unit/test_frontend_contract_artifacts.py -q` | YAML payload review |
+| drift helper correctness | `uv run pytest tests/unit/test_frontend_contract_drift.py -q` | record payload review |
 | next-step readiness | `uv run ai-sdlc verify constraints` | `git status --short` |
 
 ## 已锁定决策
@@ -247,6 +272,7 @@ contracts/
 - legacy 扩展字段优先留在 Contract 层，而不是单独拉出迁移专用 artifact
 - 当前首批实现只覆盖 `models + serialization`，不同时推进 `generators / core / gates`
 - 下一批只放行 `frontend_contract_artifacts`，不同时推进 drift helpers 或 gate integration
+- drift helper 当前只接受结构化 observation 输入，不直接承担源码扫描、gate verdict 或自动修复
 
 ## 实施顺序建议
 
@@ -256,4 +282,5 @@ contracts/
 4. formal baseline 校验完成后，只放行 `models + serialization` 首切片，不直接混做 artifact instantiation 或 drift/gate。
 5. 先以 TDD 落 `Frontend Contract Set / Page Contract / Module Contract / Contract Rule Bundle / Contract Legacy Context` 模型与导出。
 6. model slice 稳定后，只放行 `generators/frontend_contract_artifacts.py`，先把 page/module contract 落成实例化 artifact。
-7. artifact instantiation 稳定后，再决定是否进入 `core/frontend_contract_drift.py` 与 `gates/frontend_contract_gate.py`。
+7. artifact instantiation 稳定后，只放行 `core/frontend_contract_drift.py`，先建立 artifact-vs-observation 的只读 drift 判定。
+8. drift helper 稳定后，再决定是否进入 `gates/frontend_contract_gate.py`。

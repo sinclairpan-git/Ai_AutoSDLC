@@ -302,3 +302,105 @@
 - **提交哈希**：本批唯一一次语义提交预期为 `feat(generators): add frontend contract artifact instantiation`；完整 SHA 以该提交后的 `HEAD`（`git rev-parse HEAD`）为准
 - **改动范围**：`specs/011-frontend-contract-authoring-baseline/plan.md`、`specs/011-frontend-contract-authoring-baseline/tasks.md`、`specs/011-frontend-contract-authoring-baseline/task-execution-log.md`、`src/ai_sdlc/generators/frontend_contract_artifacts.py`、`src/ai_sdlc/generators/__init__.py`、`tests/unit/test_frontend_contract_artifacts.py`
 - **是否继续下一批**：待用户决定（建议转入 Contract drift helpers）
+
+### Batch 2026-04-02-004 | 011 Contract drift helper slice
+
+#### 2.1 准备
+
+- **任务来源**：[`tasks.md`](tasks.md) `T61`、`T62`、`T63`
+- **目标**：在不越界到 gate verdict、自动修复或源码扫描的前提下，建立 page 级 contract artifact 与实现 observation 之间的最小 drift 判定面。
+- **预读范围**：[`spec.md`](spec.md)、[`plan.md`](plan.md)、[`tasks.md`](tasks.md)、[`../../docs/superpowers/specs/2026-04-02-ai-autosdlc-frontend-governance-ui-kernel-design.md`](../../docs/superpowers/specs/2026-04-02-ai-autosdlc-frontend-governance-ui-kernel-design.md)、`src/ai_sdlc/core/plan_check.py`、`src/ai_sdlc/core/reconcile.py`
+- **激活的规则**：TDD red-green；single canonical truth；drift-helper-only；verification before completion
+- **验证画像**：`code-change`
+
+#### 2.2 统一验证命令
+
+- **V1（Batch 6 parser 结构校验）**
+  - 命令：`uv run python -c "from pathlib import Path; from ai_sdlc.generators.doc_gen import TasksParser; plan = TasksParser().parse(Path('specs/011-frontend-contract-authoring-baseline/tasks.md')); print({'total_tasks': plan.total_tasks, 'total_batches': plan.total_batches, 'batches': [batch.tasks for batch in plan.batches]})"`
+  - 结果：`{'total_tasks': 18, 'total_batches': 6, 'batches': [['T11', 'T12', 'T13'], ['T21', 'T22', 'T23'], ['T31', 'T32', 'T33'], ['T41', 'T42', 'T43'], ['T51', 'T52', 'T53'], ['T61', 'T62', 'T63']]}`
+- **V2（RED：定向测试必须先失败）**
+  - 命令：`uv run pytest tests/unit/test_frontend_contract_drift.py -q`
+  - 结果：失败；`ModuleNotFoundError: No module named 'ai_sdlc.core.frontend_contract_drift'`
+- **V3（GREEN：drift helper 定向测试）**
+  - 命令：`uv run pytest tests/unit/test_frontend_contract_drift.py -q`
+  - 结果：`3 passed in 0.17s`
+- **V4（回归：models + artifacts + drift）**
+  - 命令：`uv run pytest tests/unit/test_models.py tests/unit/test_frontend_contract_models.py tests/unit/test_frontend_contract_artifacts.py tests/unit/test_frontend_contract_drift.py -q`
+  - 结果：`42 passed in 0.19s`
+- **V5（静态检查）**
+  - 命令：`uv run ruff check src tests`
+  - 结果：`All checks passed!`
+- **V6（Markdown / code diff hygiene）**
+  - 命令：`git diff --check -- specs/011-frontend-contract-authoring-baseline src/ai_sdlc/core tests/unit`
+  - 结果：无输出。
+- **V7（治理只读校验）**
+  - 命令：`uv run ai-sdlc verify constraints`
+  - 结果：`verify constraints: no BLOCKERs.`
+
+#### 2.3 任务记录
+
+##### T61 | 先写 failing tests 固定 drift record 与 observation 语义
+
+- **改动范围**：`tests/unit/test_frontend_contract_drift.py`
+- **改动内容**：
+  - 先定义“artifact 与 observation 完全一致时无漂移”的负向基线。
+  - 用测试锁定 `recipe_mismatch`、`missing_i18n_keys`、`missing_validation_fields`、`legacy_expansion` 与 `implementation_missing` 的最小判定面。
+  - 明确每条漂移记录都只能回到 `update_contract / fix_implementation` 二选一。
+- **新增/调整的测试**：新增 `tests/unit/test_frontend_contract_drift.py`
+- **测试结果**：RED 已确认。
+- **是否符合任务目标**：符合。
+
+##### T62 | 实现最小 frontend_contract_drift helper
+
+- **改动范围**：`src/ai_sdlc/core/frontend_contract_drift.py`
+- **改动内容**：
+  - 新增 `PageImplementationObservation` 与 `FrontendContractDriftRecord`，为后续 verify/gate 提供结构化输入与只读输出。
+  - 实现 page 级 artifact 加载与 comparison logic，覆盖 recipe mismatch、缺失 i18n key、缺失 validation field、增量治理下 legacy 扩散。
+  - 实现 root 级 `detect_frontend_contract_drift()`，补齐“contracted page 没有实现 observation”与“uncontracted page”两类聚合判断。
+- **新增/调整的测试**：复用 `tests/unit/test_frontend_contract_drift.py`
+- **测试结果**：通过。
+- **是否符合任务目标**：符合。
+
+##### T63 | Fresh verify 并追加 drift batch 归档
+
+- **改动范围**：`specs/011-frontend-contract-authoring-baseline/plan.md`、`specs/011-frontend-contract-authoring-baseline/tasks.md`、`specs/011-frontend-contract-authoring-baseline/task-execution-log.md`
+- **改动内容**：
+  - 将 `011` formal docs 扩到 `Batch 6: contract drift helper slice`，并把只放行 `core/` 只读 helper 与对应 tests 的边界写死。
+  - 记录本批 RED/GREEN、fresh verification 和 drift helper 的只读边界。
+  - 保持 `011` 不越界到 gate verdict 或自动回写实现。
+- **新增/调整的测试**：无新增测试文件；以本批 fresh verification 命令为准。
+- **测试结果**：通过。
+- **是否符合任务目标**：符合。
+
+#### 2.4 代码审查（Mandatory）
+
+- **宪章/规格对齐**：本批只进入 `frontend_contract_drift` 切片，没有跨到 gate、源码扫描器或 runtime。
+- **代码质量**：drift helper 直接消费 `contracts/frontend/pages/<page_id>/...` artifact 和结构化 observation，输出结构化 drift record，不把诊断逻辑再退回自由文本。
+- **测试质量**：已完成 RED/GREEN、fresh 回归、`ruff`、`diff --check` 与 `verify constraints`。
+- **结论**：`无 Critical 阻塞项`
+
+#### 2.5 任务/计划同步状态（Mandatory）
+
+- `tasks.md` 同步状态：`已同步`
+- `plan.md` 同步状态：`已同步`
+- `spec.md` 同步状态：`无需变更`
+- 关联 branch/worktree disposition 计划：`retained（沿用当前 009/011 工作分支）`
+- 说明：`011` 已从 artifact instantiation slice 进入 drift helper slice，但 gate 仍未放行。`
+
+#### 2.6 自动决策记录（如有）
+
+- AD-009：drift helper 当前接受结构化 `PageImplementationObservation`，不直接解析源码。理由：先把判定合同和输出结构稳定下来，再决定后续 observation 如何由 scanner/gate 提供。
+- AD-010：将 drift 处理口径固定为 `update_contract / fix_implementation`，并作为每条 drift record 的默认 resolution options 输出。理由：直接对齐 `011` 已冻结的二选一真值。
+- AD-011：root 级 drift 检测额外纳入 `implementation_missing` 和 `uncontracted_page`。理由：这两类偏差是 `verify / execute` 前最常见的 contract-vs-implementation 缺口。
+
+#### 2.7 批次结论
+
+- `011` 当前已具备 page artifact 对 implementation observation 的最小只读 drift 判定能力。
+- 后续若继续推进 `011`，下一批应优先进入 `gates/frontend_contract_gate.py`，把 drift / artifact / contract 检查汇总成 verify surface。
+
+#### 2.8 归档后动作
+
+- **已完成 git 提交**：是
+- **提交哈希**：本批唯一一次语义提交预期为 `feat(core): add frontend contract drift helpers`；完整 SHA 以该提交后的 `HEAD`（`git rev-parse HEAD`）为准
+- **改动范围**：`specs/011-frontend-contract-authoring-baseline/plan.md`、`specs/011-frontend-contract-authoring-baseline/tasks.md`、`specs/011-frontend-contract-authoring-baseline/task-execution-log.md`、`src/ai_sdlc/core/frontend_contract_drift.py`、`tests/unit/test_frontend_contract_drift.py`
+- **是否继续下一批**：待用户决定（建议转入 Contract gate surface）
