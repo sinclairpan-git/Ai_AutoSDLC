@@ -466,7 +466,7 @@
 
 #### 2.8 归档后动作
 
-- **已完成 git 提交**：否（提交动作紧随本次归档后执行）
-- **提交哈希**：待补充（提交后回填）
+- **已完成 git 提交**：是
+- **提交哈希**：`e214898`（`feat(core): attach frontend gate verification to constraints`）
 - **改动范围**：`specs/018-frontend-gate-compatibility-baseline/plan.md`、`specs/018-frontend-gate-compatibility-baseline/tasks.md`、`specs/018-frontend-gate-compatibility-baseline/task-execution-log.md`、`src/ai_sdlc/core/verify_constraints.py`、`tests/unit/test_verify_constraints.py`
 - **是否继续下一批**：按用户授权连续推进（优先转入 `VerificationGate` 聚合）
