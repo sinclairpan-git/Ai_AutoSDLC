@@ -32,7 +32,7 @@ related_doc:
 - 再冻结 verification surface / coverage gap / CLI 口径
 - 最后给出后续实现文件面与测试矩阵
 
-当前阶段只冻结 formal baseline，不直接进入 `src/` / `tests/` 级实现。
+当前阶段的 formal baseline 已完成。经用户明确要求继续后，当前只允许进入第一批 `core/frontend_contract_verification.py` verify report/context helper 切片，不同时触碰 `verify_constraints`、`VerificationGate / VerifyGate` 或 CLI。
 
 ## 技术背景
 
@@ -96,21 +96,21 @@ src/ai_sdlc/
 ```text
 src/ai_sdlc/
 ├── core/
-│   ├── frontend_contract_verification.py   # contract verify report / context builder
-│   └── verify_constraints.py               # verification source / check objects / coverage gaps
+│   ├── frontend_contract_verification.py   # current slice: contract verify report / context builder
+│   └── verify_constraints.py               # next slice: verification source / check objects / coverage gaps
 ├── gates/
 │   ├── frontend_contract_gate.py           # existing upstream gate surface
-│   └── pipeline_gates.py                   # VerificationGate / VerifyGate aggregation
+│   └── pipeline_gates.py                   # later slice: VerificationGate / VerifyGate aggregation
 ├── cli/
-│   └── verify_cmd.py                       # terminal / json verify surface
+│   └── verify_cmd.py                       # later slice: terminal / json verify surface
 └── gates/
     └── registry.py                         # only if attachment strategy truly requires registry touch
 
 tests/
-├── unit/test_frontend_contract_verification.py
-├── unit/test_verify_constraints.py
-├── unit/test_gates.py
-└── integration/test_cli_verify_constraints.py
+├── unit/test_frontend_contract_verification.py   # current slice
+├── unit/test_verify_constraints.py               # later slice
+├── unit/test_gates.py                            # later slice
+└── integration/test_cli_verify_constraints.py    # later slice
 ```
 
 ## 开始执行前必须锁定的阻断决策
@@ -163,6 +163,13 @@ tests/
 **验证方式**：formal docs review + `verify constraints`。  
 **回退方式**：仅回退 planning baseline。
 
+### Phase 4：Frontend contract verification report slice
+
+**目标**：落下 `frontend_contract_gate` 到 verify integration 之间的最小结构化 report/context helper，先稳定 `source / check_objects / blockers / coverage_gaps` 的翻译合同。
+**产物**：`src/ai_sdlc/core/frontend_contract_verification.py`、`tests/unit/test_frontend_contract_verification.py`。
+**验证方式**：定向 `pytest`、`uv run ruff check src tests`、`git diff --check`、`uv run ai-sdlc verify constraints`。
+**回退方式**：仅回退本阶段涉及的 `core/`、`tests/` 与 execution log 变更。
+
 ## 工作流计划
 
 ### 工作流 A：Verify surface contract freeze
@@ -186,6 +193,13 @@ tests/
 **验证方式**：file-map review + tests matrix review。  
 **回退方式**：不进入 scanner / fix-loop / auto-fix。
 
+### 工作流 D：Frontend contract verification report slice
+
+**范围**：将 `frontend_contract_gate` 的 check/verdict 结果翻译成 verify integration 可消费的结构化 report/context。
+**影响范围**：后续 `verify_constraints`、`VerificationGate / VerifyGate` 与 CLI verify 的上游 contract-aware 输入面。
+**验证方式**：`tests/unit/test_frontend_contract_verification.py` + fresh `ruff` / `verify constraints`。
+**回退方式**：不触发 `verify_constraints`、`pipeline_gates.py`、CLI 或 registry 写入。
+
 ## 关键路径验证策略
 
 | 关键路径 | 主验证方式 | 次验证方式 |
@@ -195,6 +209,7 @@ tests/
 | stage reuse vs new stage | attachment strategy review | 人工审阅 |
 | CLI surface honesty | 终端 / JSON 口径对账 | 集成测试矩阵 |
 | downstream handoff clarity | file-map review | 人工审阅 |
+| report/context helper correctness | `uv run pytest tests/unit/test_frontend_contract_verification.py -q` | report payload review |
 
 ## 已锁定决策
 
@@ -202,7 +217,7 @@ tests/
 - frontend contract verification 必须复用现有 `verify constraints` 与 `VerificationGate / VerifyGate`
 - `frontend_contract_gate` 只作为上游输入，不直接冒充最终 verify surface
 - scanner / fix-loop / auto-fix 保持在下游 work item
-- 当前只冻结 formal baseline，不直接放行 `src/` / `tests/` 实现
+- 当前首批实现只放行 `core/frontend_contract_verification.py` report/context helper，不同时推进 `verify_constraints`、`pipeline_gates` 或 CLI
 
 ## 实施顺序建议
 
@@ -210,3 +225,4 @@ tests/
 2. 再冻结 contract-aware verification source、check object、coverage gap 与 honest-failure 口径。
 3. 再冻结 `VerificationGate / VerifyGate`、CLI surface 与 stage attachment 边界。
 4. 最后冻结推荐文件面、最小测试矩阵与下游 scanner/fix-loop handoff。
+5. formal baseline 稳定后，先以 TDD 落 `core/frontend_contract_verification.py`，只稳定 report/context helper，不直接改 verify mainline。

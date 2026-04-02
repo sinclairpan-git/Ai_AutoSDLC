@@ -18,6 +18,7 @@ related_doc:
 Batch 1: verify surface truth freeze
 Batch 2: CLI and attachment baseline
 Batch 3: implementation handoff and verification freeze
+Batch 4: frontend contract verification report slice
 ```
 
 ---
@@ -25,9 +26,11 @@ Batch 3: implementation handoff and verification freeze
 ## 执行护栏
 
 - `Batch 1 ~ 3` 只允许推进 `spec.md / plan.md / tasks.md` 与 append-only `task-execution-log.md`。
+- `Batch 4` 只允许写入 `src/ai_sdlc/core/frontend_contract_verification.py`、`tests/unit/test_frontend_contract_verification.py`、`specs/012-frontend-contract-verify-integration/task-execution-log.md`，以及为本批边界服务的 `plan.md / tasks.md`。
 - `012` 不得把 scanner、fix-loop、auto-fix、contract writeback 或 runtime 代码混入当前 child work item 的 formal baseline。
 - `012` 不得默认扩张为新的 verify stage / gate system；若需触及 registry，只能作为复用现有 `verify / verification` stage 的附件策略。
 - `012` 只冻结 frontend contract verify integration，不回写 `011` 已冻结的 contract truth 本体。
+- 当前首批实现只放行 verify report/context helper，不放行 `verify_constraints`、`pipeline_gates.py`、CLI 或 registry 写入。
 - 只有在用户明确要求进入实现，且 `012` formal docs 已通过门禁后，才允许进入 `src/` / `tests/` 级实现。
 
 ---
@@ -158,3 +161,46 @@ Batch 3: implementation handoff and verification freeze
   2. `spec.md / plan.md / tasks.md` 对 verify truth、attachment、CLI 口径和 handoff 保持单一真值
   3. 当前分支上的 `012` formal docs 可作为后续进入 verify integration 实现的稳定基线
 - **验证**：`uv run ai-sdlc verify constraints`, `git status --short`
+
+---
+
+## Batch 4：frontend contract verification report slice
+
+### Task 4.1 先写 failing tests 固定 verify report / context 语义
+
+- **任务编号**：T41
+- **优先级**：P0
+- **依赖**：T33
+- **文件**：`tests/unit/test_frontend_contract_verification.py`
+- **可并行**：否
+- **验收标准**：
+  1. 单测明确覆盖 PASS、artifact 缺失、observation 缺失与 drift 未清时的 report / context 输出
+  2. 单测明确覆盖 `source_name / check_objects / blockers / coverage_gaps` 的最小翻译合同
+  3. 首次运行定向测试时必须出现预期失败，证明 report/context helper 尚未实现
+- **验证**：`uv run pytest tests/unit/test_frontend_contract_verification.py -q`
+
+### Task 4.2 实现最小 frontend_contract_verification helper
+
+- **任务编号**：T42
+- **优先级**：P0
+- **依赖**：T41
+- **文件**：`src/ai_sdlc/core/frontend_contract_verification.py`
+- **可并行**：否
+- **验收标准**：
+  1. helper 提供结构化 verify report 与 context builder，可消费 `frontend_contract_gate` 结果
+  2. helper 明确输出 frontend contract verification 的 source、check objects、blockers 与 coverage gaps
+  3. helper 只负责 report/context 翻译，不引入 `verify_constraints`、`pipeline_gates`、CLI 或 registry 改动
+- **验证**：`uv run pytest tests/unit/test_frontend_contract_verification.py -q`
+
+### Task 4.3 Fresh verify 并追加 implementation batch 归档
+
+- **任务编号**：T43
+- **优先级**：P0
+- **依赖**：T42
+- **文件**：`specs/012-frontend-contract-verify-integration/task-execution-log.md`
+- **可并行**：否
+- **验收标准**：
+  1. `uv run pytest tests/unit/test_frontend_contract_verification.py -q` 通过
+  2. `uv run ruff check src tests`、`git diff --check -- specs/012-frontend-contract-verify-integration src/ai_sdlc/core tests/unit` 与 `uv run ai-sdlc verify constraints` 通过
+  3. `task-execution-log.md` 追加记录当前 implementation batch 的 touched files、验证命令与结论
+- **验证**：`uv run pytest tests/unit/test_frontend_contract_verification.py -q`, `uv run ruff check src tests`, `git diff --check -- specs/012-frontend-contract-verify-integration src/ai_sdlc/core tests/unit`, `uv run ai-sdlc verify constraints`

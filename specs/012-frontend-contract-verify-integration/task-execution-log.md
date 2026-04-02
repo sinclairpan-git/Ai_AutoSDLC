@@ -98,3 +98,102 @@
 - **提交哈希**：本批唯一一次语义提交预期为 `docs(012): formalize frontend contract verify integration`；完整 SHA 以该提交后的 `HEAD`（`git rev-parse HEAD`）为准
 - **改动范围**：`specs/012-frontend-contract-verify-integration/spec.md`、`specs/012-frontend-contract-verify-integration/plan.md`、`specs/012-frontend-contract-verify-integration/tasks.md`、`specs/012-frontend-contract-verify-integration/task-execution-log.md`
 - **是否继续下一批**：待用户决定（建议转入 012 implementation slice）
+
+### Batch 2026-04-02-002 | 012 Frontend contract verification report slice
+
+#### 2.1 准备
+
+- **任务来源**：[`tasks.md`](tasks.md) `T41`、`T42`、`T43`
+- **目标**：在不越界到 `verify_constraints`、`VerificationGate / VerifyGate`、CLI 或 registry 的前提下，落下 frontend contract verify report/context helper，稳定 `source / check_objects / blockers / coverage_gaps` 的翻译合同。
+- **预读范围**：[`spec.md`](spec.md)、[`plan.md`](plan.md)、[`tasks.md`](tasks.md)、[`../011-frontend-contract-authoring-baseline/spec.md`](../011-frontend-contract-authoring-baseline/spec.md)、`src/ai_sdlc/gates/frontend_contract_gate.py`、`src/ai_sdlc/core/frontend_contract_drift.py`、`src/ai_sdlc/core/verify_constraints.py`
+- **激活的规则**：TDD red-green；single canonical truth；verification-before-completion
+- **验证画像**：`code-change`
+
+#### 2.2 统一验证命令
+
+- **V1（Batch 4 parser 结构校验）**
+  - 命令：`uv run python -c "from pathlib import Path; from ai_sdlc.generators.doc_gen import TasksParser; plan = TasksParser().parse(Path('specs/012-frontend-contract-verify-integration/tasks.md')); print({'total_tasks': plan.total_tasks, 'total_batches': plan.total_batches, 'batches': [batch.tasks for batch in plan.batches]})"`
+  - 结果：`{'total_tasks': 12, 'total_batches': 4, 'batches': [['T11', 'T12', 'T13'], ['T21', 'T22', 'T23'], ['T31', 'T32', 'T33'], ['T41', 'T42', 'T43']]}`
+- **V2（RED：定向测试必须先失败）**
+  - 命令：`uv run pytest tests/unit/test_frontend_contract_verification.py -q`
+  - 结果：失败；`ModuleNotFoundError: No module named 'ai_sdlc.core.frontend_contract_verification'`
+- **V3（GREEN：verification helper 定向测试）**
+  - 命令：`uv run pytest tests/unit/test_frontend_contract_verification.py -q`
+  - 结果：`4 passed in 0.17s`
+- **V4（静态检查）**
+  - 命令：`uv run ruff check src tests`
+  - 结果：`All checks passed!`
+- **V5（Markdown / code diff hygiene）**
+  - 命令：`git diff --check -- specs/012-frontend-contract-verify-integration src/ai_sdlc/core tests/unit`
+  - 结果：无输出。
+- **V6（治理只读校验）**
+  - 命令：`uv run ai-sdlc verify constraints`
+  - 结果：`verify constraints: no BLOCKERs.`
+
+#### 2.3 任务记录
+
+##### T41 | 先写 failing tests 固定 verify report / context 语义
+
+- **改动范围**：`tests/unit/test_frontend_contract_verification.py`
+- **改动内容**：
+  - 先定义 PASS、artifact 缺失、observation 缺失与 drift 未清四种最小 report/context 场景。
+  - 用测试锁定 `FRONTEND_CONTRACT_SOURCE_NAME`、`FRONTEND_CONTRACT_CHECK_OBJECTS`、`blockers`、`coverage_gaps` 与 context 输出键。
+  - 确认首次执行时因 helper 模块缺失而 RED。
+- **新增/调整的测试**：新增 `tests/unit/test_frontend_contract_verification.py`
+- **测试结果**：RED 已确认。
+- **是否符合任务目标**：符合。
+
+##### T42 | 实现最小 frontend_contract_verification helper
+
+- **改动范围**：`src/ai_sdlc/core/frontend_contract_verification.py`
+- **改动内容**：
+  - 新增 `FrontendContractVerificationReport`，把 contract-aware verify 中间层收敛成结构化 dataclass。
+  - 新增 `build_frontend_contract_verification_report()` 与 `build_frontend_contract_verification_context()`，复用 `FrontendContractGate` 结果翻译出 `source / check_objects / blockers / coverage_gaps`。
+  - 保持 helper 只做 report/context 翻译，不触碰 `verify_constraints`、`pipeline_gates.py`、CLI 或 registry。
+- **新增/调整的测试**：复用 `tests/unit/test_frontend_contract_verification.py`
+- **测试结果**：通过。
+- **是否符合任务目标**：符合。
+
+##### T43 | Fresh verify 并追加 implementation batch 归档
+
+- **改动范围**：`specs/012-frontend-contract-verify-integration/plan.md`、`specs/012-frontend-contract-verify-integration/tasks.md`、`specs/012-frontend-contract-verify-integration/task-execution-log.md`
+- **改动内容**：
+  - 将 `012` formal docs 扩到 `Batch 4: frontend contract verification report slice`，并把只放行 `core/` helper 与对应 tests 的边界写死。
+  - 记录本批 RED/GREEN、fresh verification 和 report/context helper 的只读边界。
+  - 保持 `012` 不越界到 `verify_constraints`、`VerificationGate / VerifyGate`、CLI 或 registry。
+- **新增/调整的测试**：无新增测试文件；以本批 fresh verification 命令为准。
+- **测试结果**：通过。
+- **是否符合任务目标**：符合。
+
+#### 2.4 代码审查（Mandatory）
+
+- **宪章/规格对齐**：本批只进入 `frontend_contract_verification` helper 切片，没有跨到 `verify_constraints`、`VerificationGate / VerifyGate`、CLI、scanner 或 runtime。
+- **代码质量**：helper 复用现有 `FrontendContractGate`，没有复制第二套 contract truth；输出字段直接对齐后续 verify integration 所需的最小面。
+- **测试质量**：已完成 RED/GREEN、`ruff`、`diff --check` 与 `verify constraints`。
+- **结论**：`无 Critical 阻塞项`
+
+#### 2.5 任务/计划同步状态（Mandatory）
+
+- `tasks.md` 同步状态：`已同步`
+- `plan.md` 同步状态：`已同步`
+- `spec.md` 同步状态：`无需变更`
+- 关联 branch/worktree disposition 计划：`retained（沿用当前 009/011/012 工作分支）`
+- 说明：`012` 已从 docs-only baseline 进入首批 core helper slice，但 verify mainline integration 仍未放行。`
+
+#### 2.6 自动决策记录（如有）
+
+- AD-004：首批实现只落 `core/frontend_contract_verification.py`，不同时推进 `verify_constraints`、`pipeline_gates.py` 或 CLI。理由：先稳住 contract-aware verify 中间层，避免一次跨多个所有权边界。
+- AD-005：helper 直接复用 `FrontendContractGate`，而不是自行重复解析 artifact/drift。理由：保持 contract-aware truth 只有一套 canonical implementation。
+- AD-006：artifact 缺失与 observation 缺失被翻译为 `coverage_gaps`，而 drift 未清只进入 blocker。理由：这两类问题分别对应“无法比较”和“比较后失败”两种不同的 verify 语义。
+
+#### 2.7 批次结论
+
+- `012` 当前已具备 contract-aware verify report/context helper，可作为后续接入 `verify constraints` 与 `VerificationGate` 的上游输入面。
+- 后续若继续推进，应优先进入 `verify_constraints.py`，把该 report/context 接到现有 verification source / check objects / coverage gaps。
+
+#### 2.8 归档后动作
+
+- **已完成 git 提交**：是
+- **提交哈希**：本批唯一一次语义提交预期为 `feat(core): add frontend contract verification helpers`；完整 SHA 以该提交后的 `HEAD`（`git rev-parse HEAD`）为准
+- **改动范围**：`specs/012-frontend-contract-verify-integration/plan.md`、`specs/012-frontend-contract-verify-integration/tasks.md`、`specs/012-frontend-contract-verify-integration/task-execution-log.md`、`src/ai_sdlc/core/frontend_contract_verification.py`、`tests/unit/test_frontend_contract_verification.py`
+- **是否继续下一批**：待用户决定（建议转入 verify_constraints integration）
