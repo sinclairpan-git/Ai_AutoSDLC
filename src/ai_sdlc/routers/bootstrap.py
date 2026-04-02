@@ -33,7 +33,12 @@ def detect_project_state(root: Path) -> str:
     return GREENFIELD
 
 
-def init_project(root: Path, project_name: str = "") -> ProjectState:
+def init_project(
+    root: Path,
+    project_name: str = "",
+    *,
+    agent_target: str | None = None,
+) -> ProjectState:
     """Initialize AI-SDLC in a project directory.
 
     Creates the .ai-sdlc/ directory structure and writes initial project-state.yaml.
@@ -93,7 +98,7 @@ def init_project(root: Path, project_name: str = "") -> ProjectState:
 
     from ai_sdlc.integrations.ide_adapter import ensure_ide_adaptation
 
-    ensure_ide_adaptation(root)
+    ensure_ide_adaptation(root, agent_target=agent_target)
 
     logger.info("Initialized AI-SDLC project '%s' at %s", project_name, root)
     return state

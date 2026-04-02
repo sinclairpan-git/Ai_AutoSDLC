@@ -20,7 +20,14 @@
 - 不是 PowerShell 识别 IDE。
 - AI-SDLC 识别的是项目里的 IDE 标记目录，例如 `.cursor`、`.codex`、`.claude`、`.vscode`。
 - 所以最稳的做法是：**先用你的 IDE 打开项目文件夹一次，再去终端跑 `init`。**
-- 如果你先在 PowerShell 跑了 `init`，后面才打开 IDE，也没关系。打开 IDE 以后，再在终端执行一次 `python -m ai_sdlc status`，AI-SDLC 仍然可以补装 IDE 适配文件。
+- 如果你先在 PowerShell 跑了 `init`，后面才打开 IDE，也没关系。打开 IDE 以后，再在终端执行一次 `python -m ai_sdlc status`，AI-SDLC 仍然可以补装 IDE 适配文件；补装完以后，再执行一次 `python -m ai_sdlc adapter activate`。
+
+如果你问“AI-SDLC 到底应该认哪个工具”，答案是：
+
+- 认的是你**真正用来聊天输入需求的 AI 入口**，不是最外层编辑器壳。
+- 例如你在 VS Code 里用 Codex 聊天，AI-SDLC 应该认 `codex`，不是只认 `vscode`。
+- 例如你在 VS Code 里用 Claude Code 聊天，AI-SDLC 应该认 `claude_code`。
+- 如果自动识别错了，也不用怕，后面可以用 `python -m ai_sdlc adapter select --agent-target codex` 这类命令改正。
 
 ## 第一章：空项目完整演练
 
@@ -222,11 +229,33 @@ python -m ai_sdlc --help
 python -m ai_sdlc init .
 ```
 
+如果你非常确定自己真正聊天的工具是谁，也可以第一次就直接指定。例如你是在 VS Code 里用 Codex 聊天，可以直接执行：
+
+```bash
+python -m ai_sdlc init . --agent-target codex
+```
+
 **执行成功以后，你应该看到：**
 
 - 输出里出现 `Initialized AI-SDLC project`
 - 当前项目目录里出现 `.ai-sdlc`
-- 如果你前面已经用 Cursor / Codex / Claude Code 打开过这个项目，输出里还可能出现 `IDE 适配`
+- 输出的下一步提示里会出现 `adapter activate`
+
+你可以把结果大致对照成下面这样：
+
+```text
+╭─ ai-sdlc init ─────────────────────────╮
+│ Initialized AI-SDLC project            │
+│   Name: ui-test-platform               │
+│   Path: .../ui-test-platform/.ai-sdlc  │
+│                                        │
+│ Next step:                             │
+│   Acknowledge adapter:                 │
+│     ai-sdlc adapter activate           │
+│   Start framework in safe mode:        │
+│     ai-sdlc run --dry-run              │
+╰────────────────────────────────────────╯
+```
 
 **如果你前面忘了先打开 IDE：**
 
@@ -240,8 +269,60 @@ python -m ai_sdlc status
 
 - `status` 正常输出项目状态
 - IDE 适配文件有机会在这一步补装
+- 但这一步还不算“已认可”，后面还要执行一次 `adapter activate`
 
-### 第 7 步：现在不要聊天，先在终端里做一次预演启动
+你可以把结果大致对照成下面这样：
+
+```text
+AI-SDLC Status
+Project        ui-test-platform
+Status         initialized
+Pipeline Stage init
+```
+
+### 第 7 步：先确认 adapter 已被宿主认可
+
+**这一步在哪执行：**
+
+- 终端
+- 不在 IDE 聊天输入框执行
+
+**Windows / macOS 都直接复制：**
+
+```bash
+python -m ai_sdlc adapter activate
+```
+
+**执行成功以后，你应该看到：**
+
+- 输出里出现 `Adapter acknowledged`
+- 行尾会看到类似 `(acknowledged)` 的状态字样
+
+你可以把结果大致对照成下面这样：
+
+```text
+IDE adapter (codex): installed 1 file(s)
+Adapter acknowledged: codex (acknowledged)
+```
+
+**如果你怀疑它认错了工具：**
+
+比如你实际在 VS Code 里用的是 Codex，而不是只想装 VS Code 工作区提示，那么不要硬着头皮往下走。先改成真正的聊天工具，再重新激活：
+
+```bash
+python -m ai_sdlc adapter select --agent-target codex
+python -m ai_sdlc adapter activate --agent-target codex
+```
+
+选项常见值只有 5 个：
+
+- `cursor`
+- `codex`
+- `claude_code`
+- `vscode`
+- `generic`
+
+### 第 8 步：现在不要聊天，先在终端里做一次预演启动
 
 **这一步在哪执行：**
 
@@ -266,14 +347,31 @@ python -m ai_sdlc run --dry-run
 - 命令执行结束，回到终端提示符
 - 没有出现 `No module named ai_sdlc`
 - 没有出现 `Not inside an AI-SDLC project`
+- 如果是正常预演，最后一般会看到 `Pipeline completed.`
+
+你可以把结果大致对照成下面这样：
+
+```text
+Pipeline completed. Stage: verify
+```
 
 **如果报错说需要 `recover --reconcile`：**
 
-直接复制下面三条：
+直接复制下面四条：
 
 ```bash
 python -m ai_sdlc recover --reconcile
 python -m ai_sdlc status
+python -m ai_sdlc adapter activate
+python -m ai_sdlc run --dry-run
+```
+
+**如果它提示你先执行 `adapter activate`：**
+
+这不是坏事，说明 AI-SDLC 只是在保护你，不让你跳过 adapter 认可步骤。直接回到上一步，再执行一遍：
+
+```bash
+python -m ai_sdlc adapter activate
 python -m ai_sdlc run --dry-run
 ```
 
@@ -285,6 +383,7 @@ python -m ai_sdlc run --dry-run
 ```bash
 python -m ai_sdlc init .
 python -m ai_sdlc status
+python -m ai_sdlc adapter activate
 python -m ai_sdlc run --dry-run
 ```
 
@@ -292,10 +391,11 @@ python -m ai_sdlc run --dry-run
 
 ```bash
 python -m ai_sdlc recover --reconcile
+python -m ai_sdlc adapter activate
 python -m ai_sdlc run --dry-run
 ```
 
-### 第 8 步：到这里，才切换到 IDE 聊天输入框
+### 第 9 步：到这里，才切换到 IDE 聊天输入框
 
 **这一步在哪执行：**
 
@@ -307,6 +407,7 @@ python -m ai_sdlc run --dry-run
 - 安装
 - 验证
 - 初始化
+- adapter 认可
 - 预演启动
 
 现在你可以开始需求沟通、需求扩展、拆解和设计。
@@ -316,7 +417,8 @@ python -m ai_sdlc run --dry-run
 ```text
 我已经在这个项目根目录执行过：
 1. python -m ai_sdlc init .
-2. python -m ai_sdlc run --dry-run
+2. python -m ai_sdlc adapter activate
+3. python -m ai_sdlc run --dry-run
 
 现在我要开始一个新需求。
 需求是：我想开发一个全自动的UI测试平台。
@@ -331,7 +433,8 @@ python -m ai_sdlc run --dry-run
 ```text
 我已经在这个项目根目录执行过：
 1. python -m ai_sdlc init .
-2. python -m ai_sdlc run --dry-run
+2. python -m ai_sdlc adapter activate
+3. python -m ai_sdlc run --dry-run
 
 我现在会上传一份 PRD。
 请先基于这份 PRD 做需求澄清、范围确认和设计，不要直接开始写代码。
@@ -343,8 +446,9 @@ python -m ai_sdlc run --dry-run
 
 - 安装命令在终端执行
 - 初始化命令在终端执行
+- `adapter activate` 在终端执行
 - `run --dry-run` 在终端执行
-- 只有 `init` 和 `run --dry-run` 做完以后，才进入 IDE 聊天输入框说需求
+- 至少要把 `init`、`adapter activate`、`run --dry-run` 做完以后，才进入 IDE 聊天输入框说需求
 
 ## 第二章：已有项目完整演练
 
@@ -524,11 +628,33 @@ python -m ai_sdlc --help
 python -m ai_sdlc init .
 ```
 
+如果你非常确定自己真正聊天的工具是谁，也可以第一次就直接指定。例如你是在 VS Code 里用 Codex 聊天，可以直接执行：
+
+```bash
+python -m ai_sdlc init . --agent-target codex
+```
+
 **执行成功以后，你应该看到：**
 
 - 输出里出现 `Initialized AI-SDLC project`
 - 项目根目录里出现 `.ai-sdlc`
 - 由于这是已有项目，输出里可能会出现 existing project / deep scan / baseline 之类的信息
+
+你可以把结果大致对照成下面这样：
+
+```text
+╭─ ai-sdlc init ─────────────────────────────╮
+│ Detected existing project                  │
+│ Initialized AI-SDLC project                │
+│   Path: .../my-existing-project/.ai-sdlc   │
+│                                            │
+│ Next step:                                 │
+│   Acknowledge adapter:                     │
+│     ai-sdlc adapter activate               │
+│   Start framework in safe mode:            │
+│     ai-sdlc run --dry-run                  │
+╰────────────────────────────────────────────╯
+```
 
 ### 第 7 步：看一下当前状态
 
@@ -546,8 +672,49 @@ python -m ai_sdlc status
 
 - 一张项目状态表
 - 说明 AI-SDLC 已经认到这个已有项目了
+- 如果你刚才是先 `init`、后打开 IDE，这一步也可能顺手补装 adapter 文件；补装完以后，下一步仍然要执行 `adapter activate`
 
-### 第 8 步：先在终端做一次预演启动
+你可以把结果大致对照成下面这样：
+
+```text
+AI-SDLC Status
+Project        my-existing-project
+Status         initialized
+Pipeline Stage init
+```
+
+### 第 8 步：先确认 adapter 已被宿主认可
+
+**这一步在哪执行：**
+
+- 终端
+- 不在 IDE 聊天输入框执行
+
+**Windows / macOS 都直接复制：**
+
+```bash
+python -m ai_sdlc adapter activate
+```
+
+**执行成功以后，你应该看到：**
+
+- 输出里出现 `Adapter acknowledged`
+- 行尾会看到类似 `(acknowledged)` 的状态字样
+
+你可以把结果大致对照成下面这样：
+
+```text
+Adapter acknowledged: codex (acknowledged)
+```
+
+**如果你怀疑它认错了工具：**
+
+```bash
+python -m ai_sdlc adapter select --agent-target codex
+python -m ai_sdlc adapter activate --agent-target codex
+```
+
+### 第 9 步：先在终端做一次预演启动
 
 **这一步在哪执行：**
 
@@ -571,6 +738,13 @@ python -m ai_sdlc run --dry-run
 - 命令执行结束，回到终端提示符
 - 没有出现 `No module named ai_sdlc`
 - 没有出现 `Not inside an AI-SDLC project`
+- 如果是正常预演，最后一般会看到 `Pipeline completed.`
+
+你可以把结果大致对照成下面这样：
+
+```text
+Pipeline completed. Stage: verify
+```
 
 **如果报错说需要 `recover --reconcile`：**
 
@@ -579,10 +753,18 @@ python -m ai_sdlc run --dry-run
 ```bash
 python -m ai_sdlc recover --reconcile
 python -m ai_sdlc status
+python -m ai_sdlc adapter activate
 python -m ai_sdlc run --dry-run
 ```
 
-### 第 9 步：到这里，才切换到 IDE 聊天输入框
+**如果它提示你先执行 `adapter activate`：**
+
+```bash
+python -m ai_sdlc adapter activate
+python -m ai_sdlc run --dry-run
+```
+
+### 第 10 步：到这里，才切换到 IDE 聊天输入框
 
 **这一步在哪执行：**
 
@@ -595,6 +777,7 @@ python -m ai_sdlc run --dry-run
 - 验证
 - 初始化
 - 状态检查
+- adapter 认可
 - 预演启动
 
 现在可以开始在聊天输入框里说增量需求。
@@ -605,7 +788,8 @@ python -m ai_sdlc run --dry-run
 我已经在这个已有项目根目录执行过：
 1. python -m ai_sdlc init .
 2. python -m ai_sdlc status
-3. python -m ai_sdlc run --dry-run
+3. python -m ai_sdlc adapter activate
+4. python -m ai_sdlc run --dry-run
 
 现在我要做一个增量需求。
 需求是：我想新增一个E2E的UI测试场景覆盖。
@@ -621,7 +805,8 @@ python -m ai_sdlc run --dry-run
 我已经在这个已有项目根目录执行过：
 1. python -m ai_sdlc init .
 2. python -m ai_sdlc status
-3. python -m ai_sdlc run --dry-run
+3. python -m ai_sdlc adapter activate
+4. python -m ai_sdlc run --dry-run
 
 我现在会上传一份已有需求说明或 PRD。
 请先基于它做增量需求分析、影响分析、拆解和设计，不要直接写代码。
@@ -633,6 +818,7 @@ python -m ai_sdlc run --dry-run
 
 - 命令还是在终端执行
 - 初始化还是在终端执行
+- `adapter activate` 还是在终端执行
 - `run --dry-run` 还是在终端执行
 - 真正开始需求沟通，是在 IDE 聊天输入框里执行自然语言对话
 
@@ -704,12 +890,15 @@ Phase 1 的边界要记住：
 
 先看一个总规则：
 
-- 在已初始化项目里，除 `init`、`doctor`、`status`、`scan`、`verify` 外，CLI 默认会先尝试一次 **IDE adapter 幂等 apply**。
+- 在已初始化项目里，除 `adapter`、`init`、`doctor`、`status`、`scan`、`verify` 外，CLI 默认会先尝试一次 **IDE adapter 幂等 apply**。
 - 这意味着某些本来以“查看/规划”为主的命令，仍可能写入 `.cursor/`、`.vscode/`、`.codex/`、`.claude/` 或 `.ai-sdlc/project/config/project-config.yaml` 里的 adapter 元数据。
 
 | Surface | 典型命令 | 主定位 | 仓库/本地状态影响 |
 |---|---|---|---|
 | bounded telemetry status | `python -m ai_sdlc status --json` | 只读 telemetry + branch lifecycle 摘要 | **只读**：不初始化 telemetry root，不 rebuild indexes，不触发 adapter |
+| adapter status | `python -m ai_sdlc adapter status` | 查看当前选中的 adapter target 与 activation state | **只读**：读取 project config；不触发 adapter apply |
+| adapter select | `python -m ai_sdlc adapter select --agent-target codex` | 手工改正当前真正聊天的 AI 入口 | **会写 adapter config**：安装/补装目标 adapter 文件，并把 activation state 重置为 `installed` |
+| adapter activate | `python -m ai_sdlc adapter activate` | 把当前 adapter 明确记为“已认可” | **会写 adapter config**：必要时补装 adapter 文件，并把 activation state 推进到 `acknowledged` |
 | provenance inspection | `python -m ai_sdlc provenance summary` / `explain` / `gaps` | provenance read-only 审计 | **只读**：不触发 adapter，不 repair graph，不把 candidate 提升成默认 blocker |
 | doctor | `python -m ai_sdlc doctor` | 只读诊断 | **只读**：不 deep scan trace，不触发 adapter；会显示 branch lifecycle readiness |
 | scan | `python -m ai_sdlc scan <path>` | operator / analysis | **analysis-only**：深度读取代码库并打印摘要；不初始化 `.ai-sdlc/`，不触发 adapter |

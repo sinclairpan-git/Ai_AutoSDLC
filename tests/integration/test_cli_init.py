@@ -8,6 +8,7 @@ import pytest
 from typer.testing import CliRunner
 
 from ai_sdlc.cli.main import app
+from ai_sdlc.core.config import load_project_config
 
 runner = CliRunner()
 
@@ -35,6 +36,7 @@ class TestCliInit:
         assert result.exit_code == 0
         assert (tmp_path / ".ai-sdlc").is_dir()
         assert "Initialized" in result.output
+        assert "adapter activate" in result.output
         assert "ai-sdlc run --dry-run" in result.output
         assert "python -m ai_sdlc run --dry-run" in result.output
 
@@ -42,6 +44,7 @@ class TestCliInit:
         result = runner.invoke(app, ["init", str(initialized_project_dir)])
         assert result.exit_code == 0
         assert "already initialized" in result.output
+        assert "adapter activate" in result.output
         assert "ai-sdlc run --dry-run" in result.output
         assert "python -m ai_sdlc run --dry-run" in result.output
 
@@ -61,6 +64,15 @@ class TestCliInit:
         rule = tmp_path / ".cursor" / "rules" / "ai-sdlc.md"
         assert rule.is_file()
         assert "cursor" in result.output.lower()
+
+    def test_init_with_codex_marker_prefers_codex_target(self, tmp_path: Path) -> None:
+        (tmp_path / ".vscode").mkdir()
+        (tmp_path / ".codex").mkdir()
+        result = runner.invoke(app, ["init", str(tmp_path)])
+        assert result.exit_code == 0
+        assert (tmp_path / ".codex" / "AI-SDLC.md").is_file()
+        cfg = load_project_config(tmp_path)
+        assert cfg.agent_target == "codex"
 
     def test_init_generic_hint_without_ide_dirs(self, tmp_path: Path) -> None:
         result = runner.invoke(app, ["init", str(tmp_path)])

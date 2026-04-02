@@ -42,6 +42,7 @@ from ai_sdlc.generators.index_gen import (
     save_index,
 )
 from ai_sdlc.integrations.ide_adapter import (
+    IDEKind,
     ensure_ide_adaptation,
     format_adapter_notice,
 )
@@ -64,6 +65,7 @@ console = Console()
 def _startup_next_step_hint() -> str:
     return (
         "\n\n[bold]Next step:[/bold]\n"
+        "  Acknowledge adapter: [cyan]ai-sdlc adapter activate[/cyan]\n"
         "  Start framework in safe mode: [cyan]ai-sdlc run --dry-run[/cyan]\n"
         "  Or stage-by-stage: [cyan]ai-sdlc stage run init --dry-run[/cyan]\n"
         "  If `ai-sdlc` is not on PATH, use the venv's Python:\n"
@@ -143,6 +145,11 @@ def _print_resume_pack_event(message: str) -> None:
 
 def init_command(
     path: str = typer.Argument(".", help="Project directory to initialize."),
+    agent_target: IDEKind | None = typer.Option(
+        None,
+        "--agent-target",
+        help="Explicit IDE/agent target to install instead of auto-detection.",
+    ),
 ) -> None:
     """Initialize AI-SDLC in a project directory.
 
@@ -156,7 +163,7 @@ def init_command(
 
     project_type = detect_project_state(root)
     if project_type == EXISTING_INITIALIZED:
-        ensure_ide_adaptation(root)
+        ensure_ide_adaptation(root, agent_target=agent_target)
         console.print(
             Panel(
                 f"Project already initialized at [bold]{root}[/bold]"
@@ -171,7 +178,7 @@ def init_command(
     if is_existing:
         console.print("[bold]Detected existing project — running deep scan...[/bold]")
 
-    state = init_project(root)
+    state = init_project(root, agent_target=agent_target.value if agent_target else None)
     cfg = load_project_config(root)
     if cfg.detected_ide:
         console.print(f"[dim]IDE 适配: {cfg.detected_ide}[/dim]")

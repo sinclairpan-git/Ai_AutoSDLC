@@ -86,9 +86,23 @@ class TestRunCommand:
         monkeypatch.chdir(tmp_path)
         assert runner.invoke(app, ["init", "."]).exit_code == 0
         (tmp_path / ".codex").mkdir()
-        assert runner.invoke(app, ["run", "--dry-run"]).exit_code == 0
+        result = runner.invoke(app, ["run", "--dry-run"])
+        assert result.exit_code == 1
+        assert "adapter activate" in result.output
         doc = tmp_path / ".codex" / "AI-SDLC.md"
         assert doc.is_file()
+
+    def test_run_dry_run_continues_after_adapter_activation(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.chdir(tmp_path)
+        assert runner.invoke(app, ["init", ".", "--agent-target", "codex"]).exit_code == 0
+        assert runner.invoke(app, ["adapter", "activate", "--agent-target", "codex"]).exit_code == 0
+
+        result = runner.invoke(app, ["run", "--dry-run"])
+
+        assert result.exit_code == 0
+        assert "Pipeline completed." in result.output
 
     def test_run_dry_run_lazy_inits_telemetry_without_governance_artifacts(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch

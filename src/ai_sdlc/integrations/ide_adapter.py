@@ -9,6 +9,7 @@ from enum import Enum
 from pathlib import Path
 
 from ai_sdlc.core.config import load_project_config, save_project_config
+from ai_sdlc.models.project import ActivationState, AdapterSupportTier
 from ai_sdlc.utils.helpers import AI_SDLC_DIR, now_iso
 
 logger = logging.getLogger(__name__)
@@ -57,8 +58,8 @@ def detect_ide(root: Path) -> IDEKind:
     """Detect IDE from project markers first, then environment hints."""
     markers: list[tuple[str, IDEKind]] = [
         (".cursor", IDEKind.CURSOR),
-        (".vscode", IDEKind.VSCODE),
         (".codex", IDEKind.CODEX),
+        (".vscode", IDEKind.VSCODE),
         (".claude", IDEKind.CLAUDE_CODE),
     ]
     for dirname, kind in markers:
@@ -108,20 +109,81 @@ def apply_adapter(root: Path, ide: IDEKind) -> ApplyResult:
     return result
 
 
-def _persist_config(root: Path, ide: IDEKind, result: ApplyResult) -> None:
+def _coerce_ide_kind(value: IDEKind | str | None) -> IDEKind | None:
+    """Normalize a persisted or CLI-provided target into ``IDEKind``."""
+    if value is None:
+        return None
+    if isinstance(value, IDEKind):
+        return value
+    raw = str(value).strip().lower()
+    if not raw:
+        return None
+    return IDEKind(raw)
+
+
+def _resolve_agent_target(
+    root: Path,
+    cfg_agent_target: str,
+    explicit_target: IDEKind | str | None,
+) -> tuple[IDEKind, IDEKind]:
+    """Prefer explicit selection, then persisted non-generic choice, then detection."""
+    detected = detect_ide(root)
+    explicit = _coerce_ide_kind(explicit_target)
+    persisted = _coerce_ide_kind(cfg_agent_target)
+    if explicit is not None:
+        return detected, explicit
+    if persisted is not None and persisted != IDEKind.GENERIC:
+        return detected, persisted
+    return detected, detected
+
+
+def _next_activation_state(
+    cfg_agent_target: str,
+    cfg_activation_state: str,
+    target: IDEKind,
+) -> str:
+    """Preserve acknowledged/activated state only when the target stays unchanged."""
+    if (
+        cfg_agent_target == target.value
+        and cfg_activation_state
+        in {ActivationState.ACKNOWLEDGED.value, ActivationState.ACTIVATED.value}
+    ):
+        return cfg_activation_state
+    return ActivationState.INSTALLED.value
+
+
+def _persist_config(
+    root: Path,
+    *,
+    detected_ide: IDEKind,
+    agent_target: IDEKind,
+    result: ApplyResult,
+) -> None:
     cfg = load_project_config(root)
+    activation_state = _next_activation_state(
+        cfg.agent_target,
+        cfg.adapter_activation_state,
+        agent_target,
+    )
     cfg = cfg.model_copy(
         update={
-            "detected_ide": ide.value,
-            "adapter_applied": ide.value,
+            "detected_ide": detected_ide.value,
+            "agent_target": agent_target.value,
+            "adapter_applied": agent_target.value,
             "adapter_version": ADAPTER_VERSION,
             "adapter_applied_at": now_iso(),
+            "adapter_activation_state": activation_state,
+            "adapter_support_tier": AdapterSupportTier.SOFT_INSTALLED.value,
         }
     )
     save_project_config(root, cfg)
 
 
-def ensure_ide_adaptation(root: Path | None) -> ApplyResult:
+def ensure_ide_adaptation(
+    root: Path | None,
+    *,
+    agent_target: IDEKind | str | None = None,
+) -> ApplyResult:
     """Run detection + idempotent install when project has .ai-sdlc/."""
     if root is None:
         return ApplyResult(
@@ -137,9 +199,37 @@ def ensure_ide_adaptation(root: Path | None) -> ApplyResult:
             message="project not initialized",
         )
 
-    ide = detect_ide(root)
-    result = apply_adapter(root, ide)
-    _persist_config(root, ide, result)
+    cfg = load_project_config(root)
+    detected_ide, selected_target = _resolve_agent_target(
+        root,
+        cfg.agent_target,
+        agent_target,
+    )
+    result = apply_adapter(root, selected_target)
+    _persist_config(
+        root,
+        detected_ide=detected_ide,
+        agent_target=selected_target,
+        result=result,
+    )
+    return result
+
+
+def acknowledge_adapter(
+    root: Path,
+    *,
+    agent_target: IDEKind | str | None = None,
+) -> ApplyResult:
+    """Persist an explicit user acknowledgement for the selected adapter."""
+    result = ensure_ide_adaptation(root, agent_target=agent_target)
+    cfg = load_project_config(root)
+    cfg = cfg.model_copy(
+        update={
+            "adapter_activation_state": ActivationState.ACKNOWLEDGED.value,
+            "adapter_support_tier": AdapterSupportTier.SOFT_INSTALLED.value,
+        }
+    )
+    save_project_config(root, cfg)
     return result
 
 

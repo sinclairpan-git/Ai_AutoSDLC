@@ -5,6 +5,7 @@
 - 先读 `.ai-sdlc/memory/constitution.md`。
 - **终端约定**：在已激活、已安装 CLI 的 venv 终端中运行；若 `ai-sdlc` 不在 PATH，使用 `python -m ai_sdlc ...`（等价）。
 - 按阶段执行：终端运行 `ai-sdlc stage show <init|refine|design|decompose|verify|execute|close>` 查看当前阶段清单。
+- 先确认适配已被宿主认可：`ai-sdlc adapter activate`。
 - 启动入口（先执行）：`ai-sdlc run --dry-run` 或 `python -m ai_sdlc run --dry-run`。
 - 全量门禁编排：`ai-sdlc run`。
 

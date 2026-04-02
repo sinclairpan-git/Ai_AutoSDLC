@@ -7,9 +7,10 @@ globs: ["**/specs/**", "**/.ai-sdlc/**"]
 
 1. 遵守产品内置规则：优先阅读 `src/ai_sdlc/rules/`（若作为依赖安装则参考包内 rules）及项目 `.ai-sdlc/memory/constitution.md`；阶段顺序见 `rules/pipeline.md`（含 design→decompose→verify→execute）。框架缺陷 / 违约主 backlog 见 `docs/framework-defect-backlog.zh-CN.md`，历史兼容登记见 `rules/agent-skip-registry.zh.md`。
 2. **终端约定**：引导用户在**已激活且已安装 CLI 的 venv** 的终端里执行命令；聊天里可复制完整命令，但不要假设对话环境已具备 shell PATH。若 `ai-sdlc` 不在 PATH，使用 `python -m ai_sdlc ...`（与 `ai-sdlc` 等价）。
-3. 启动入口（先执行）：`ai-sdlc run --dry-run` 或 `python -m ai_sdlc run --dry-run`；通过后再执行 `ai-sdlc run`。
-4. 使用 `ai-sdlc stage show <阶段名>` 按阶段加载清单。
-5. 当用户输入任何需求/任务描述时，先引导执行上述启动入口（优先给出用户环境可用的那一种写法），再推进后续阶段。
-6. 产物目录：`specs/<工作项>/` 与 `.ai-sdlc/` 分离；不要混用工程约束目录与产物。
+3. 先确认适配已被宿主认可：`ai-sdlc adapter activate`。
+4. 启动入口（先执行）：`ai-sdlc run --dry-run` 或 `python -m ai_sdlc run --dry-run`；通过后再执行 `ai-sdlc run`。
+5. 使用 `ai-sdlc stage show <阶段名>` 按阶段加载清单。
+6. 当用户输入任何需求/任务描述时，先引导执行上述启动入口（优先给出用户环境可用的那一种写法），再推进后续阶段。
+7. 产物目录：`specs/<工作项>/` 与 `.ai-sdlc/` 分离；不要混用工程约束目录与产物。
 
 （本文件由 `ai-sdlc` 首次命令/init 自动安装；若你已自定义同名文件，框架不会覆盖。）

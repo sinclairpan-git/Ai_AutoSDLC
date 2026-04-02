@@ -6,13 +6,31 @@ from typing import Any
 
 import typer
 from rich.console import Console
+from rich.panel import Panel
 
 from ai_sdlc.cli.commands import _print_reconcile_guidance
+from ai_sdlc.core.config import load_project_config
 from ai_sdlc.core.reconcile import detect_reconcile_hint
 from ai_sdlc.core.runner import PipelineHaltError, SDLCRunner
+from ai_sdlc.integrations.ide_adapter import IDEKind
+from ai_sdlc.models.project import ActivationState
 from ai_sdlc.utils.helpers import find_project_root
 
 console = Console()
+
+
+def _adapter_activation_block_message(root: object) -> str | None:
+    """Return a user-facing blocker when the selected adapter is only installed."""
+    cfg = load_project_config(root)
+    if not cfg.agent_target or cfg.agent_target == IDEKind.GENERIC.value:
+        return None
+    if cfg.adapter_activation_state not in ("", ActivationState.INSTALLED.value):
+        return None
+    return (
+        f"Adapter target '{cfg.agent_target}' is installed but not yet acknowledged.\n"
+        f"Run `ai-sdlc adapter activate --agent-target {cfg.agent_target}` "
+        "before continuing with `ai-sdlc run`."
+    )
 
 
 def _confirm_callback(stage: str, _result: Any) -> bool:
@@ -50,6 +68,17 @@ def run_command(
         )
         console.print(
             "[yellow]已停止当前运行，避免基于过时 checkpoint 继续执行。[/yellow]"
+        )
+        raise typer.Exit(code=1)
+
+    block_message = _adapter_activation_block_message(root)
+    if block_message is not None:
+        console.print(
+            Panel(
+                block_message,
+                title="ai-sdlc run",
+                border_style="yellow",
+            )
         )
         raise typer.Exit(code=1)
 

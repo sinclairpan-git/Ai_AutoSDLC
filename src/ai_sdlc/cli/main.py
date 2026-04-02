@@ -3,6 +3,7 @@
 import typer
 from rich.console import Console
 
+from ai_sdlc.cli.adapter_cmd import adapter_app
 from ai_sdlc.cli.cli_hooks import run_ide_adapter_if_initialized
 from ai_sdlc.cli.commands import (
     index_command,
@@ -38,7 +39,15 @@ def _global_before_command(ctx: typer.Context) -> None:
     if ctx.invoked_subcommand is None:
         return
     # Read-only and analysis surfaces must not trigger adapter writes.
-    if ctx.invoked_subcommand in ("init", "doctor", "status", "scan", "verify", "provenance"):
+    if ctx.invoked_subcommand in (
+        "adapter",
+        "init",
+        "doctor",
+        "status",
+        "scan",
+        "verify",
+        "provenance",
+    ):
         return
     run_ide_adapter_if_initialized(console=_hook_console)
 
@@ -51,6 +60,7 @@ app.command(name="index")(index_command)
 app.command(name="scan")(scan_command)
 app.command(name="refresh")(refresh_command)
 app.command(name="run")(run_command)
+app.add_typer(adapter_app, name="adapter")
 app.add_typer(gate_app, name="gate")
 app.add_typer(rules_app, name="rules")
 app.add_typer(studio_app, name="studio")

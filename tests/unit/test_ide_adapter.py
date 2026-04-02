@@ -12,6 +12,7 @@ from ai_sdlc.integrations.ide_adapter import (
     detect_ide,
     ensure_ide_adaptation,
 )
+from ai_sdlc.models.project import ActivationState, AdapterSupportTier
 from ai_sdlc.routers.bootstrap import init_project
 from ai_sdlc.utils.helpers import AI_SDLC_DIR
 
@@ -54,6 +55,11 @@ class TestDetectIde:
         (tmp_path / ".vscode").mkdir()
         (tmp_path / ".cursor").mkdir()
         assert detect_ide(tmp_path) == IDEKind.CURSOR
+
+    def test_priority_codex_over_vscode(self, tmp_path: Path) -> None:
+        (tmp_path / ".vscode").mkdir()
+        (tmp_path / ".codex").mkdir()
+        assert detect_ide(tmp_path) == IDEKind.CODEX
 
     def test_generic_no_markers(self, tmp_path: Path) -> None:
         assert detect_ide(tmp_path) == IDEKind.GENERIC
@@ -107,7 +113,9 @@ class TestApplyAdapter:
         assert f.read_text(encoding="utf-8") == "user content"
         assert str(f) in r.skipped_user_modified
 
-    def test_all_ide_templates_include_safe_start_command(self, tmp_path: Path) -> None:
+    def test_all_ide_templates_include_activation_then_safe_start(
+        self, tmp_path: Path
+    ) -> None:
         (tmp_path / AI_SDLC_DIR).mkdir(parents=True)
         targets = [
             (IDEKind.CURSOR, tmp_path / ".cursor" / "rules" / "ai-sdlc.md"),
@@ -118,6 +126,8 @@ class TestApplyAdapter:
         for ide, path in targets:
             apply_adapter(tmp_path, ide)
             text = path.read_text(encoding="utf-8")
+            if ide != IDEKind.GENERIC:
+                assert "ai-sdlc adapter activate" in text
             assert "ai-sdlc run --dry-run" in text
             assert "python -m ai_sdlc run --dry-run" in text
 
@@ -135,3 +145,17 @@ class TestEnsureIdeAdaptation:
 
         cfg = load_project_config(tmp_path)
         assert cfg.detected_ide == IDEKind.GENERIC.value
+        assert cfg.agent_target == IDEKind.GENERIC.value
+        assert cfg.adapter_activation_state == ActivationState.INSTALLED.value
+        assert cfg.adapter_support_tier == AdapterSupportTier.SOFT_INSTALLED.value
+
+    def test_explicit_agent_target_persists_installed_state(self, tmp_path: Path) -> None:
+        init_project(tmp_path)
+        from ai_sdlc.core.config import load_project_config
+
+        ensure_ide_adaptation(tmp_path, agent_target=IDEKind.CODEX)
+        cfg = load_project_config(tmp_path)
+        assert cfg.agent_target == IDEKind.CODEX.value
+        assert cfg.adapter_applied == IDEKind.CODEX.value
+        assert cfg.adapter_activation_state == ActivationState.INSTALLED.value
+        assert cfg.adapter_support_tier == AdapterSupportTier.SOFT_INSTALLED.value

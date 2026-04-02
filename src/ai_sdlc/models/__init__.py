@@ -8,7 +8,13 @@ from ai_sdlc.models.gate import (
     GovernanceState,
 )
 from ai_sdlc.models.program import ProgramManifest, ProgramSpecRef
-from ai_sdlc.models.project import ProjectConfig, ProjectState, ProjectStatus
+from ai_sdlc.models.project import (
+    ActivationState,
+    AdapterSupportTier,
+    ProjectConfig,
+    ProjectState,
+    ProjectStatus,
+)
 from ai_sdlc.models.scanner import (
     ApiEndpoint,
     DependencyInfo,
@@ -72,6 +78,8 @@ from ai_sdlc.models.work import (
 
 __all__ = [
     "ApiEndpoint",
+    "ActivationState",
+    "AdapterSupportTier",
     "ChangeRequest",
     "Checkpoint",
     "ClarificationState",

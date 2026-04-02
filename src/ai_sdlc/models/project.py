@@ -14,6 +14,21 @@ class ProjectStatus(str, Enum):
     INITIALIZED = "initialized"
 
 
+class ActivationState(str, Enum):
+    """Observed activation depth for the selected IDE adapter."""
+
+    INSTALLED = "installed"
+    ACKNOWLEDGED = "acknowledged"
+    ACTIVATED = "activated"
+
+
+class AdapterSupportTier(str, Enum):
+    """How strongly the selected adapter can enforce the workflow."""
+
+    SOFT_INSTALLED = "soft_installed"
+    HARD_ACTIVATED = "hard_activated"
+
+
 class ProjectState(BaseModel):
     """Represents the project initialization state stored in project-state.yaml."""
 
@@ -47,8 +62,11 @@ class ProjectConfig(BaseModel):
     document_locale: str = "zh-CN"
     # Auto IDE adapter (first command + init)
     detected_ide: str = ""
+    agent_target: str = ""
     adapter_applied: str = ""
     adapter_version: str = ""
     adapter_applied_at: str = ""
+    adapter_activation_state: str = ""
+    adapter_support_tier: str = ""
     telemetry_profile: TelemetryProfile = TelemetryProfile.SELF_HOSTING
     telemetry_mode: TelemetryMode = TelemetryMode.LITE

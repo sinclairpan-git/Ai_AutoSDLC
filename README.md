@@ -45,10 +45,21 @@ After initializing your project, explicitly start the pipeline from CLI:
 
 ```bash
 ai-sdlc init .
+ai-sdlc adapter activate
 ai-sdlc run --dry-run
 ```
 
 `--dry-run` is the recommended safe entry. It validates stage routing and gates before real execution.
+
+If your outer editor and real AI chat host are different, prefer selecting the actual chat host explicitly. For example, when you use Codex inside VS Code:
+
+```bash
+ai-sdlc init . --agent-target codex
+ai-sdlc adapter activate --agent-target codex
+ai-sdlc run --dry-run
+```
+
+Use `ai-sdlc adapter status` to inspect the current `agent_target` and activation state, or `ai-sdlc adapter select --agent-target <target>` to correct a wrong target before `run --dry-run`.
 
 ## Stage-based dispatch (LLM-friendly)
 
@@ -93,7 +104,7 @@ uv run mypy src/ai_sdlc/
 
 ### Local `project-config.yaml`
 
-The file `.ai-sdlc/project/config/project-config.yaml` holds IDE detection metadata and timestamps. It is **gitignored** in this repo; use `.ai-sdlc/project/config/project-config.example.yaml` as the schema reference. Running `ai-sdlc init` (or any path that runs IDE adaptation) recreates it. Missing file ⇒ `load_project_config` returns Pydantic defaults.
+The file `.ai-sdlc/project/config/project-config.yaml` holds IDE detection metadata, the selected `agent_target`, adapter activation state, and timestamps. It is **gitignored** in this repo; use `.ai-sdlc/project/config/project-config.example.yaml` as the schema reference. Running `ai-sdlc init` (or any path that runs IDE adaptation) recreates it. Missing file ⇒ `load_project_config` returns Pydantic defaults.
 
 ### Git branches
 

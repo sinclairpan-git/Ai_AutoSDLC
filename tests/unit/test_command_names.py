@@ -7,6 +7,9 @@ from ai_sdlc.cli.command_names import collect_flat_command_strings
 
 def test_collect_flat_command_strings_includes_nested_subcommands() -> None:
     cmds = collect_flat_command_strings()
+    assert "ai-sdlc adapter activate" in cmds
+    assert "ai-sdlc adapter select" in cmds
+    assert "ai-sdlc adapter status" in cmds
     assert "ai-sdlc verify constraints" in cmds
     assert "ai-sdlc workitem close-check" in cmds
     assert "ai-sdlc workitem init" in cmds
