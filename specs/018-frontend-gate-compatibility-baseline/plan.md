@@ -91,3 +91,20 @@ tests/
 **产物**：implementation touchpoints、tests matrix、execute handoff baseline。  
 **验证方式**：formal docs review + `verify constraints`。  
 **回退方式**：仅回退 planning baseline。
+
+### Phase 4：Gate matrix and report models slice
+
+**目标**：落下 MVP gate matrix、Compatibility 执行策略与机器可消费 report payload 的共享结构化模型，先稳定 `018` 的 policy/report truth，不直接进入完整 gate runtime。
+**产物**：`src/ai_sdlc/models/frontend_gate_policy.py`、`tests/unit/test_frontend_gate_policy_models.py`、`src/ai_sdlc/models/__init__.py`。
+**验证方式**：定向 `pytest`、`uv run ruff check src tests`、`git diff --check`、`uv run ai-sdlc verify constraints`。
+**回退方式**：仅回退本阶段涉及的 `models/`、`tests/` 与 execution log 变更。
+
+## 关键路径验证策略
+
+| 关键路径 | 主验证方式 | 次验证方式 |
+|----------|------------|------------|
+| gate truth order | 文档交叉引用检查 | 人工审阅 |
+| explicit compatibility wording | formal wording review | 人工审阅 |
+| report boundary clarity | contract review | 测试矩阵回挂 |
+| downstream handoff clarity | file-map review | 人工审阅 |
+| gate matrix model correctness | `uv run pytest tests/unit/test_frontend_gate_policy_models.py -q` | model payload / builder review |
