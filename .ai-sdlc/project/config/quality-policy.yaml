@@ -1,0 +1,5 @@
+max_debug_rounds: 3
+max_halts_before_circuit_break: 2
+min_test_coverage: 0
+require_lint_pass: true
+require_tests: true

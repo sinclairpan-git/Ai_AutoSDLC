@@ -1,0 +1,12 @@
+api_endpoints_found: 2
+completed: true
+completed_at: '2026-04-02T05:21:58+00:00'
+dependencies_found: 5
+languages_detected:
+- html
+- shell
+- python
+risks_found: 45
+test_files_found: 135
+total_files_scanned: 420
+total_lines: 25686

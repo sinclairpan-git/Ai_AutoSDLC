@@ -1,0 +1,21 @@
+{
+  "total_endpoints": 2,
+  "endpoints": [
+    {
+      "method": "GET",
+      "path": "/path",
+      "handler": "",
+      "source_file": "src/ai_sdlc/scanners/api_scanner.py",
+      "line_number": 13,
+      "framework": "flask"
+    },
+    {
+      "method": "GET",
+      "path": "/path",
+      "handler": "",
+      "source_file": "src/ai_sdlc/scanners/api_scanner.py",
+      "line_number": 19,
+      "framework": "flask"
+    }
+  ]
+}

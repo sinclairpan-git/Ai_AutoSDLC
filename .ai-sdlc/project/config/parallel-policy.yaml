@@ -1,0 +1,5 @@
+enabled: false
+max_workers: 3
+merge_strategy: sequential
+require_contract_freeze: true
+require_overlap_check: true

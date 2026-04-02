@@ -1,0 +1,4 @@
+dev_branch_prefix: feature/
+docs_branch_prefix: design/
+main_branch: main
+require_clean_worktree: true

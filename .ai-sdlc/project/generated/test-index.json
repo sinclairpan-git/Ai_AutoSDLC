@@ -1,0 +1,1849 @@
+{
+  "total_test_files": 135,
+  "total_test_functions": 950,
+  "test_files": [
+    {
+      "path": "docs/superpowers/specs/2026-03-27-telemetry-trace-governance-design.md",
+      "framework": "",
+      "test_count": 0,
+      "test_names": []
+    },
+    {
+      "path": "docs/superpowers/specs/2026-03-29-003-runtime-contract-remediation-design.md",
+      "framework": "",
+      "test_count": 0,
+      "test_names": []
+    },
+    {
+      "path": "docs/superpowers/specs/2026-03-30-harness-grade-telemetry-observer-architecture-design.md",
+      "framework": "",
+      "test_count": 0,
+      "test_names": []
+    },
+    {
+      "path": "docs/superpowers/specs/2026-03-31-provenance-trace-architecture-design.md",
+      "framework": "",
+      "test_count": 0,
+      "test_names": []
+    },
+    {
+      "path": "docs/superpowers/specs/2026-04-02-ai-autosdlc-frontend-governance-ui-kernel-design.md",
+      "framework": "",
+      "test_count": 0,
+      "test_names": []
+    },
+    {
+      "path": "specs/.DS_Store",
+      "framework": "",
+      "test_count": 0,
+      "test_names": []
+    },
+    {
+      "path": "specs/001-ai-sdlc-framework/adr-001-pipeline-vs-runner.md",
+      "framework": "",
+      "test_count": 0,
+      "test_names": []
+    },
+    {
+      "path": "specs/001-ai-sdlc-framework/data-model.md",
+      "framework": "",
+      "test_count": 0,
+      "test_names": []
+    },
+    {
+      "path": "specs/001-ai-sdlc-framework/implementation-drift-matrix.md",
+      "framework": "",
+      "test_count": 0,
+      "test_names": []
+    },
+    {
+      "path": "specs/001-ai-sdlc-framework/plan.md",
+      "framework": "",
+      "test_count": 0,
+      "test_names": []
+    },
+    {
+      "path": "specs/001-ai-sdlc-framework/portability-audit-T10.md",
+      "framework": "",
+      "test_count": 0,
+      "test_names": []
+    },
+    {
+      "path": "specs/001-ai-sdlc-framework/quickstart.md",
+      "framework": "",
+      "test_count": 0,
+      "test_names": []
+    },
+    {
+      "path": "specs/001-ai-sdlc-framework/research-pipeline-vs-runner.md",
+      "framework": "",
+      "test_count": 0,
+      "test_names": []
+    },
+    {
+      "path": "specs/001-ai-sdlc-framework/research.md",
+      "framework": "",
+      "test_count": 0,
+      "test_names": []
+    },
+    {
+      "path": "specs/001-ai-sdlc-framework/spec.md",
+      "framework": "",
+      "test_count": 0,
+      "test_names": []
+    },
+    {
+      "path": "specs/001-ai-sdlc-framework/task-execution-log.md",
+      "framework": "",
+      "test_count": 0,
+      "test_names": []
+    },
+    {
+      "path": "specs/001-ai-sdlc-framework/tasks.md",
+      "framework": "",
+      "test_count": 0,
+      "test_names": []
+    },
+    {
+      "path": "specs/002-p1-capabilities/plan.md",
+      "framework": "",
+      "test_count": 0,
+      "test_names": []
+    },
+    {
+      "path": "specs/002-p1-capabilities/spec.md",
+      "framework": "",
+      "test_count": 0,
+      "test_names": []
+    },
+    {
+      "path": "specs/002-p1-capabilities/task-execution-log.md",
+      "framework": "",
+      "test_count": 0,
+      "test_names": []
+    },
+    {
+      "path": "specs/002-p1-capabilities/tasks.md",
+      "framework": "",
+      "test_count": 0,
+      "test_names": []
+    },
+    {
+      "path": "specs/003-cross-cutting-authoring-and-extension-contracts/plan.md",
+      "framework": "",
+      "test_count": 0,
+      "test_names": []
+    },
+    {
+      "path": "specs/003-cross-cutting-authoring-and-extension-contracts/release-gate-evidence.md",
+      "framework": "",
+      "test_count": 0,
+      "test_names": []
+    },
+    {
+      "path": "specs/003-cross-cutting-authoring-and-extension-contracts/spec.md",
+      "framework": "",
+      "test_count": 0,
+      "test_names": []
+    },
+    {
+      "path": "specs/003-cross-cutting-authoring-and-extension-contracts/task-execution-log.md",
+      "framework": "",
+      "test_count": 0,
+      "test_names": []
+    },
+    {
+      "path": "specs/003-cross-cutting-authoring-and-extension-contracts/tasks.md",
+      "framework": "",
+      "test_count": 0,
+      "test_names": []
+    },
+    {
+      "path": "specs/004-operator-surfaces-and-post-prd-extensions/plan.md",
+      "framework": "",
+      "test_count": 0,
+      "test_names": []
+    },
+    {
+      "path": "specs/004-operator-surfaces-and-post-prd-extensions/spec.md",
+      "framework": "",
+      "test_count": 0,
+      "test_names": []
+    },
+    {
+      "path": "specs/004-operator-surfaces-and-post-prd-extensions/task-execution-log.md",
+      "framework": "",
+      "test_count": 0,
+      "test_names": []
+    },
+    {
+      "path": "specs/004-operator-surfaces-and-post-prd-extensions/tasks.md",
+      "framework": "",
+      "test_count": 0,
+      "test_names": []
+    },
+    {
+      "path": "specs/005-harness-grade-telemetry-observer-v1/plan.md",
+      "framework": "",
+      "test_count": 0,
+      "test_names": []
+    },
+    {
+      "path": "specs/005-harness-grade-telemetry-observer-v1/spec.md",
+      "framework": "",
+      "test_count": 0,
+      "test_names": []
+    },
+    {
+      "path": "specs/005-harness-grade-telemetry-observer-v1/task-execution-log.md",
+      "framework": "",
+      "test_count": 0,
+      "test_names": []
+    },
+    {
+      "path": "specs/005-harness-grade-telemetry-observer-v1/tasks.md",
+      "framework": "",
+      "test_count": 0,
+      "test_names": []
+    },
+    {
+      "path": "specs/006-provenance-trace-phase-1/plan.md",
+      "framework": "",
+      "test_count": 0,
+      "test_names": []
+    },
+    {
+      "path": "specs/006-provenance-trace-phase-1/spec.md",
+      "framework": "",
+      "test_count": 0,
+      "test_names": []
+    },
+    {
+      "path": "specs/006-provenance-trace-phase-1/task-execution-log.md",
+      "framework": "",
+      "test_count": 0,
+      "test_names": []
+    },
+    {
+      "path": "specs/006-provenance-trace-phase-1/tasks.md",
+      "framework": "",
+      "test_count": 0,
+      "test_names": []
+    },
+    {
+      "path": "specs/007-branch-lifecycle-truth-guard/plan.md",
+      "framework": "",
+      "test_count": 0,
+      "test_names": []
+    },
+    {
+      "path": "specs/007-branch-lifecycle-truth-guard/spec.md",
+      "framework": "",
+      "test_count": 0,
+      "test_names": []
+    },
+    {
+      "path": "specs/007-branch-lifecycle-truth-guard/task-execution-log.md",
+      "framework": "",
+      "test_count": 0,
+      "test_names": []
+    },
+    {
+      "path": "specs/007-branch-lifecycle-truth-guard/tasks.md",
+      "framework": "",
+      "test_count": 0,
+      "test_names": []
+    },
+    {
+      "path": "specs/008-direct-formal-workitem-entry/plan.md",
+      "framework": "",
+      "test_count": 0,
+      "test_names": []
+    },
+    {
+      "path": "specs/008-direct-formal-workitem-entry/spec.md",
+      "framework": "",
+      "test_count": 0,
+      "test_names": []
+    },
+    {
+      "path": "specs/008-direct-formal-workitem-entry/task-execution-log.md",
+      "framework": "",
+      "test_count": 0,
+      "test_names": []
+    },
+    {
+      "path": "specs/008-direct-formal-workitem-entry/tasks.md",
+      "framework": "",
+      "test_count": 0,
+      "test_names": []
+    },
+    {
+      "path": "src/ai_sdlc/scanners/test_scanner.py",
+      "framework": "pytest",
+      "test_count": 0,
+      "test_names": []
+    },
+    {
+      "path": "tests/__init__.py",
+      "framework": "pytest",
+      "test_count": 0,
+      "test_names": []
+    },
+    {
+      "path": "tests/conftest.py",
+      "framework": "pytest",
+      "test_count": 0,
+      "test_names": []
+    },
+    {
+      "path": "tests/flow/__init__.py",
+      "framework": "pytest",
+      "test_count": 0,
+      "test_names": []
+    },
+    {
+      "path": "tests/flow/test_docs_dev_flow.py",
+      "framework": "pytest",
+      "test_count": 1,
+      "test_names": [
+        "test_full_lifecycle"
+      ]
+    },
+    {
+      "path": "tests/flow/test_execution_flow.py",
+      "framework": "pytest",
+      "test_count": 2,
+      "test_names": [
+        "test_full_execution_lifecycle",
+        "test_partial_failure_and_recovery"
+      ]
+    },
+    {
+      "path": "tests/flow/test_existing_project_flow.py",
+      "framework": "pytest",
+      "test_count": 3,
+      "test_names": [
+        "test_full_existing_project_init",
+        "test_greenfield_skips_scan",
+        "test_idempotent_init"
+      ]
+    },
+    {
+      "path": "tests/flow/test_incident_flow.py",
+      "framework": "pytest",
+      "test_count": 3,
+      "test_names": [
+        "test_incident_to_artifacts",
+        "test_incident_cannot_go_to_prd",
+        "test_uninitialized_project_blocked"
+      ]
+    },
+    {
+      "path": "tests/flow/test_init_flow.py",
+      "framework": "pytest",
+      "test_count": 2,
+      "test_names": [
+        "test_greenfield_init_and_verify",
+        "test_double_init_idempotent"
+      ]
+    },
+    {
+      "path": "tests/flow/test_knowledge_refresh_flow.py",
+      "framework": "pytest",
+      "test_count": 3,
+      "test_names": [
+        "test_full_refresh_lifecycle",
+        "test_spec_change_triggers_l3",
+        "test_refresh_log_accumulates"
+      ]
+    },
+    {
+      "path": "tests/flow/test_new_requirement_flow.py",
+      "framework": "pytest",
+      "test_count": 2,
+      "test_names": [
+        "test_intake_to_governance",
+        "test_uncertain_requires_confirmation"
+      ]
+    },
+    {
+      "path": "tests/flow/test_parallel_flow.py",
+      "framework": "pytest",
+      "test_count": 4,
+      "test_names": [
+        "test_clean_parallel_flow",
+        "test_conflict_detection_flow",
+        "test_mixed_sequential_parallel",
+        "test_disabled_policy_single_flow"
+      ]
+    },
+    {
+      "path": "tests/flow/test_recover_flow.py",
+      "framework": "pytest",
+      "test_count": 3,
+      "test_names": [
+        "test_interrupt_at_design_and_recover",
+        "test_no_checkpoint_means_no_recovery",
+        "test_recover_prefers_work_item_working_set_and_latest_summary"
+      ]
+    },
+    {
+      "path": "tests/integration/__init__.py",
+      "framework": "pytest",
+      "test_count": 0,
+      "test_names": []
+    },
+    {
+      "path": "tests/integration/test_cli_doctor.py",
+      "framework": "pytest",
+      "test_count": 10,
+      "test_names": [
+        "test_doctor_runs_and_prints_python",
+        "test_doctor_reports_telemetry_readiness_without_initializing_telemetry",
+        "test_doctor_reports_branch_lifecycle_readiness_row",
+        "test_doctor_real_cli_path_does_not_mutate_project_config",
+        "test_doctor_does_not_recreate_missing_indexes_when_reading_status_surface",
+        "test_doctor_resolver_health_exercises_supported_source_resolution",
+        "test_doctor_resolver_health_probe_is_bounded_without_recursive_store_scan",
+        "test_doctor_resolver_health_checks_multiple_manifest_listed_scope_paths",
+        "test_doctor_resolver_health_does_not_parse_trace_payloads",
+        "test_doctor_resolver_health_is_not_ok_when_timeline_event_id_is_absent_from_candidate_stream"
+      ]
+    },
+    {
+      "path": "tests/integration/test_cli_ide_adapter.py",
+      "framework": "pytest",
+      "test_count": 2,
+      "test_names": [
+        "test_status_installs_vscode_file_after_marker_added",
+        "test_status_json_does_not_install_vscode_file"
+      ]
+    },
+    {
+      "path": "tests/integration/test_cli_index_gate.py",
+      "framework": "pytest",
+      "test_count": 2,
+      "test_names": [
+        "test_index_rebuilds_base_and_extended_indexes",
+        "test_gate_alias_runs_without_check_subcommand"
+      ]
+    },
+    {
+      "path": "tests/integration/test_cli_init.py",
+      "framework": "pytest",
+      "test_count": 6,
+      "test_names": [
+        "test_init_empty_dir",
+        "test_init_already_initialized",
+        "test_init_nonexistent_dir",
+        "test_init_default_project_name",
+        "test_init_with_cursor_dir_installs_rule",
+        "test_init_generic_hint_without_ide_dirs"
+      ]
+    },
+    {
+      "path": "tests/integration/test_cli_module_invocation.py",
+      "framework": "pytest",
+      "test_count": 2,
+      "test_names": [
+        "test_python_m_ai_sdlc_help_exits_zero",
+        "test_python_m_ai_sdlc_no_args_shows_help"
+      ]
+    },
+    {
+      "path": "tests/integration/test_cli_program.py",
+      "framework": "pytest",
+      "test_count": 7,
+      "test_names": [
+        "test_program_validate_pass",
+        "test_program_validate_fail_cycle",
+        "test_program_status_and_plan",
+        "test_program_integrate_dry_run_with_report",
+        "test_program_integrate_execute_is_blocked",
+        "test_program_integrate_execute_success",
+        "test_program_integrate_execute_gate_fail_not_closed"
+      ]
+    },
+    {
+      "path": "tests/integration/test_cli_provenance.py",
+      "framework": "pytest",
+      "test_count": 4,
+      "test_names": [
+        "test_help_exposes_read_only_provenance_surface",
+        "test_provenance_summary_supports_text_and_json",
+        "test_provenance_explain_and_gaps_stay_on_the_daily_read_surface",
+        "test_provenance_summary_does_not_trigger_ide_adapter_writes"
+      ]
+    },
+    {
+      "path": "tests/integration/test_cli_recover.py",
+      "framework": "pytest",
+      "test_count": 9,
+      "test_names": [
+        "test_recover_with_resume_pack",
+        "test_recover_missing_resume_pack",
+        "test_recover_corrupted_resume_pack",
+        "test_recover_stale_resume_pack_rebuilds_and_uses_latest_batch",
+        "test_recover_reconcile_updates_legacy_checkpoint",
+        "test_recover_prompts_and_applies_reconcile_for_legacy_artifacts",
+        "test_recover_stops_until_reconcile_is_applied_for_legacy_artifacts",
+        "test_recover_invalid_checkpoint_fails",
+        "test_recover_displays_branch_binding_and_governance"
+      ]
+    },
+    {
+      "path": "tests/integration/test_cli_run.py",
+      "framework": "pytest",
+      "test_count": 9,
+      "test_names": [
+        "test_run_outside_project",
+        "test_run_help",
+        "test_run_triggers_ide_adapter_after_codex_marker",
+        "test_run_dry_run_lazy_inits_telemetry_without_governance_artifacts",
+        "test_run_non_dry_run_does_not_halt_init_when_git_repo_is_missing",
+        "test_run_non_dry_run_executes_batches_updates_checkpoint_and_summary",
+        "test_run_binds_telemetry_profile_and_mode_from_project_config",
+        "test_run_dry_run_guides_user_when_legacy_reconcile_is_needed",
+        "test_run_dry_run_continues_after_reconcile"
+      ]
+    },
+    {
+      "path": "tests/integration/test_cli_scan.py",
+      "framework": "pytest",
+      "test_count": 2,
+      "test_names": [
+        "test_scan_reports_results_for_uninitialized_path",
+        "test_scan_is_analysis_only_and_skips_ide_adapter_paths_on_initialized_project"
+      ]
+    },
+    {
+      "path": "tests/integration/test_cli_stage.py",
+      "framework": "pytest",
+      "test_count": 7,
+      "test_names": [
+        "test_stage_help",
+        "test_stage_show_outside_project",
+        "test_stage_show_init_inside_project",
+        "test_stage_status_inside_project",
+        "test_stage_run_dry_run",
+        "test_stage_show_triggers_ide_adapter_after_claude_marker",
+        "test_stage_run_guides_user_when_legacy_reconcile_is_needed"
+      ]
+    },
+    {
+      "path": "tests/integration/test_cli_status.py",
+      "framework": "pytest",
+      "test_count": 21,
+      "test_names": [
+        "test_status_initialized",
+        "test_status_not_initialized",
+        "test_status_guides_user_when_legacy_artifacts_need_reconcile",
+        "test_status_guides_user_when_blank_checkpoint_needs_reconcile",
+        "test_status_json_reports_not_initialized_when_telemetry_is_absent",
+        "test_status_shows_reconciled_specs_dir_after_recover",
+        "test_status_json_returns_bounded_latest_and_current_summary",
+        "test_status_shows_p1_artifact_surfaces",
+        "test_status_displays_governance_and_docs_baseline_binding",
+        "test_status_reads_formal_execute_artifacts",
+        "test_status_rebuilds_stale_resume_pack_without_mutating_checkpoint",
+        "test_status_json_real_cli_path_does_not_mutate_project_config",
+        "test_status_json_latest_scope_ids_do_not_depend_on_manifest_key_order",
+        "test_status_json_contract_is_available_when_project_state_is_uninitialized",
+        "test_status_json_reflects_fresh_writes_without_manual_rebuild",
+        "test_status_json_latest_scope_ids_follow_fresh_writes_on_existing_scope",
+        "test_status_json_fallback_latest_scope_ids_follow_fresh_writes_without_indexes",
+        "test_status_json_includes_bounded_branch_lifecycle_summary",
+        "test_status_json_latest_summary_falls_back_to_canonical_snapshots_without_indexes",
+        "test_status_json_fallback_does_not_recreate_missing_indexes",
+        "test_status_json_fallback_latest_scope_ids_ignore_misleading_mtime"
+      ]
+    },
+    {
+      "path": "tests/integration/test_cli_telemetry.py",
+      "framework": "pytest",
+      "test_count": 19,
+      "test_names": [
+        "test_help_exposes_only_the_frozen_minimal_manual_surface",
+        "test_open_session_writes_session_started_event",
+        "test_record_event_writes_manual_event_for_session_scope",
+        "test_record_evidence_writes_manual_evidence_for_session_scope",
+        "test_record_evaluation_writes_manual_evaluation_for_run_scope",
+        "test_record_violation_writes_manual_violation_for_step_scope",
+        "test_close_session_writes_terminal_session_event",
+        "test_record_event_rejects_fresh_session_id",
+        "test_record_evidence_rejects_fresh_session_id",
+        "test_close_session_rejects_fresh_session_id",
+        "test_close_session_rejects_started_status",
+        "test_record_event_rejects_runtime_owned_lifecycle_shape",
+        "test_record_event_rejects_fresh_run_id",
+        "test_record_evidence_rejects_fresh_run_and_step_ids",
+        "test_close_session_rejects_manual_run_succeeded_while_runtime_run_open",
+        "test_record_event_rejects_after_session_close",
+        "test_second_close_session_is_rejected",
+        "test_close_session_rejects_open_workflow_run",
+        "test_invalid_scope_or_session_id_is_rejected"
+      ]
+    },
+    {
+      "path": "tests/integration/test_cli_trace.py",
+      "framework": "pytest",
+      "test_count": 3,
+      "test_names": [
+        "test_trace_exec_runs_command_and_records_contextual_facts",
+        "test_trace_test_records_test_result_fact",
+        "test_trace_patch_records_patch_and_file_write_facts"
+      ]
+    },
+    {
+      "path": "tests/integration/test_cli_verify_constraints.py",
+      "framework": "pytest",
+      "test_count": 24,
+      "test_names": [
+        "test_exit_1_missing_constitution",
+        "test_exit_1_spec_conflict",
+        "test_exit_0_ok",
+        "test_exit_1_tasks_missing_acceptance",
+        "test_json_output",
+        "test_json_output_exposes_verification_gate_surface",
+        "test_exit_0_when_governance_bundle_is_advisory_even_if_raw_report_has_blockers",
+        "test_exit_1_when_003_feature_contract_surfaces_missing",
+        "test_json_output_exposes_003_feature_contract_coverage_gaps",
+        "test_exit_0_when_003_feature_contract_surfaces_complete",
+        "test_exit_1_when_003_backend_runtime_evidence_missing",
+        "test_exit_1_when_003_reviewer_runtime_evidence_missing",
+        "test_exit_1_when_003_release_gate_verdict_is_block",
+        "test_exit_1_when_003_feature_contract_surfaces_missing_but_feature_id_is_unknown",
+        "test_json_output_outside_project_includes_root",
+        "test_exit_1_when_verification_profile_docs_incomplete",
+        "test_exit_1_when_skip_registry_unmapped",
+        "test_exit_1_when_framework_backlog_missing_required_field",
+        "test_exit_0_when_framework_backlog_well_formed",
+        "test_exit_1_when_doc_first_pipeline_terms_missing",
+        "test_exit_1_when_doc_first_task_targets_code",
+        "test_verify_constraints_real_cli_path_does_not_mutate_ide_adapter_files",
+        "test_verify_constraints_reports_branch_lifecycle_blocker_for_active_work_item",
+        "test_verify_constraints_does_not_block_on_archived_branch_lifecycle"
+      ]
+    },
+    {
+      "path": "tests/integration/test_cli_workitem_close_check.py",
+      "framework": "pytest",
+      "test_count": 28,
+      "test_names": [
+        "test_exit_1_when_tasks_incomplete",
+        "test_exit_0_when_all_green",
+        "test_exit_1_when_verification_governance_source_closure_is_incomplete",
+        "test_exit_1_when_git_closeout_not_committed",
+        "test_exit_1_when_worktree_dirty_after_git_closeout",
+        "test_exit_1_when_verification_profile_missing",
+        "test_exit_0_when_completion_truth_is_not_opted_in_for_001_style_history",
+        "test_exit_0_when_explicit_execution_batch_range_covers_planned_batches",
+        "test_exit_0_when_generic_archive_headers_do_not_count_as_batches",
+        "test_exit_1_when_completion_truth_reopened_status_note",
+        "test_exit_0_when_in_progress_history_is_not_a_reopen_signal",
+        "test_exit_0_when_001_style_history_has_no_status_correction",
+        "test_exit_0_when_explicit_batch_coverage_is_missing_without_status_correction",
+        "test_exit_1_when_003_status_correction_is_explicit",
+        "test_exit_0_for_docs_only_profile_with_minimal_evidence",
+        "test_exit_1_when_docs_only_profile_missing_verify_constraints",
+        "test_json_output_has_required_fields",
+        "test_help_mentions_close_stage_and_read_only",
+        "test_exit_1_when_docs_claim_unimplemented_but_command_exists",
+        "test_exit_0_when_violation_only_in_unlisted_deep_docs",
+        "test_exit_1_when_deep_docs_violation_with_all_docs_flag",
+        "test_help_mentions_all_docs_option",
+        "test_exit_1_when_003_pre_close_approval_missing",
+        "test_exit_0_when_003_pre_close_approval_present",
+        "test_exit_1_when_003_pre_close_revise_denied",
+        "test_exit_1_when_close_check_finds_unresolved_associated_branch",
+        "test_branch_check_reports_unresolved_associated_worktree_in_json",
+        "test_branch_check_ignores_unrelated_historical_branch"
+      ]
+    },
+    {
+      "path": "tests/integration/test_cli_workitem_init.py",
+      "framework": "pytest",
+      "test_count": 4,
+      "test_names": [
+        "test_workitem_init_generates_direct_formal_docs",
+        "test_workitem_init_auto_generated_id_updates_project_state",
+        "test_workitem_init_rejects_duplicate_initialization",
+        "test_workitem_init_requires_title"
+      ]
+    },
+    {
+      "path": "tests/integration/test_cli_workitem_link.py",
+      "framework": "pytest",
+      "test_count": 4,
+      "test_names": [
+        "test_workitem_link_updates_checkpoint",
+        "test_workitem_link_requires_arg",
+        "test_status_without_links_unchanged",
+        "test_status_shows_latest_reviewer_decision"
+      ]
+    },
+    {
+      "path": "tests/integration/test_cli_workitem_plan_check.py",
+      "framework": "pytest",
+      "test_count": 6,
+      "test_names": [
+        "test_plan_check_exit_1_drift_sc011",
+        "test_plan_check_exit_0_clean",
+        "test_plan_check_json_drift",
+        "test_plan_check_explicit_plan",
+        "test_plan_check_both_flags_exit_2",
+        "test_help_mentions_read_only"
+      ]
+    },
+    {
+      "path": "tests/integration/test_cli_workitem_truth_check.py",
+      "framework": "pytest",
+      "test_count": 3,
+      "test_names": [
+        "test_truth_check_uses_requested_revision_instead_of_current_checkout",
+        "test_truth_check_reports_branch_only_implemented_for_unmerged_revision",
+        "test_truth_check_reports_mainline_merged_when_revision_is_on_main"
+      ]
+    },
+    {
+      "path": "tests/integration/test_offline_bundle_scripts.py",
+      "framework": "pytest",
+      "test_count": 3,
+      "test_names": [
+        "test_build_offline_bundle_emits_platform_manifest_and_archives",
+        "test_install_offline_rejects_platform_manifest_mismatch",
+        "test_install_offline_accepts_matching_platform_manifest"
+      ]
+    },
+    {
+      "path": "tests/unit/__init__.py",
+      "framework": "pytest",
+      "test_count": 0,
+      "test_names": []
+    },
+    {
+      "path": "tests/unit/test_backend_routing.py",
+      "framework": "pytest",
+      "test_count": 5,
+      "test_names": [
+        "test_generate_spec_delegates_to_plugin",
+        "test_generate_plan_falls_back_to_native_when_plugin_missing_capability",
+        "test_generate_tasks_blocks_when_policy_disallows_plugin",
+        "test_safe_plugin_failure_falls_back_to_native",
+        "test_unsafe_plugin_failure_blocks"
+      ]
+    },
+    {
+      "path": "tests/unit/test_backends.py",
+      "framework": "pytest",
+      "test_count": 25,
+      "test_names": [
+        "test_native_is_backend",
+        "test_capability_declaration_includes_contract_markers",
+        "test_generate_spec",
+        "test_generate_plan",
+        "test_generate_tasks",
+        "test_execute_task_returns_pending",
+        "test_generate_index_empty_project",
+        "test_default_is_native",
+        "test_get_native",
+        "test_get_missing_raises",
+        "test_register_custom",
+        "test_set_default",
+        "test_set_default_unregistered_raises",
+        "test_available",
+        "test_select_backend_delegates_when_plugin_covers_required_capabilities",
+        "test_select_backend_falls_back_to_native_when_plugin_missing",
+        "test_select_backend_blocks_when_fallback_disallowed",
+        "test_select_backend_blocks_when_plugin_missing_and_native_also_missing",
+        "test_select_backend_blocks_when_missing_backend_and_native_also_missing",
+        "test_select_backend_blocks_when_plugin_missing_capabilities_and_fallback_disabled",
+        "test_select_backend_falls_back_when_plugin_failure_is_safe",
+        "test_select_backend_blocks_when_safe_plugin_failure_cannot_fallback_to_native",
+        "test_select_backend_blocks_when_safe_plugin_failure_but_policy_disables_fallback",
+        "test_select_backend_preserves_plugin_capability_truth_on_unsafe_failure",
+        "test_select_backend_blocks_when_plugin_failure_is_unsafe"
+      ]
+    },
+    {
+      "path": "tests/unit/test_bootstrap_router.py",
+      "framework": "pytest",
+      "test_count": 9,
+      "test_names": [
+        "test_greenfield",
+        "test_existing_initialized",
+        "test_existing_uninitialized",
+        "test_existing_with_pyproject",
+        "test_existing_with_src_dir",
+        "test_init_greenfield",
+        "test_init_idempotent",
+        "test_init_uses_dirname_as_default",
+        "test_init_creates_work_items_dir"
+      ]
+    },
+    {
+      "path": "tests/unit/test_branch_inventory.py",
+      "framework": "pytest",
+      "test_count": 3,
+      "test_names": [
+        "test_classify_branch_kind_covers_design_feature_scratch_archive_and_unmanaged",
+        "test_sort_branch_inventory_is_stable_by_kind_then_name",
+        "test_branch_inventory_entry_exposes_machine_readable_dict"
+      ]
+    },
+    {
+      "path": "tests/unit/test_branch_manager.py",
+      "framework": "pytest",
+      "test_count": 25,
+      "test_names": [
+        "test_create_docs_branch",
+        "test_create_dev_branch",
+        "test_switch_to_docs",
+        "test_switch_to_docs_falls_back_to_legacy_design_branch",
+        "test_switch_to_dev",
+        "test_uncommitted_changes_block_switch",
+        "test_merge_to_main",
+        "test_check_baseline_pass",
+        "test_check_baseline_fail",
+        "test_idempotent_create",
+        "test_create_docs_branch_requires_frozen_governance",
+        "test_create_docs_branch_protects_governance_inputs",
+        "test_switch_to_dev_spec_dir_baseline_pass",
+        "test_switch_to_dev_spec_dir_baseline_fails",
+        "test_switch_to_dev_protects_spec_and_plan",
+        "test_switch_to_dev_blocks_template_write_to_protected_spec",
+        "test_switch_to_dev_blocks_direct_write_to_protected_spec",
+        "test_switch_to_dev_requires_frozen_governance",
+        "test_switch_to_dev_rolls_back_checkout_when_baseline_fails",
+        "test_switch_to_dev_updates_checkpoint_and_resume_pack",
+        "test_create_hotfix_branch_new",
+        "test_create_hotfix_branch_exists",
+        "test_create_release_branch_new",
+        "test_create_release_branch_exists",
+        "test_file_guard_property"
+      ]
+    },
+    {
+      "path": "tests/unit/test_business_rules.py",
+      "framework": "pytest",
+      "test_count": 18,
+      "test_names": [
+        "test_br001_empty_dir_is_greenfield",
+        "test_br002_code_dir_is_uninitialized",
+        "test_br003_uninitialized_blocks_studio",
+        "test_br004_issue_keywords_production_issue",
+        "test_br005_uncertain_needs_confirmation",
+        "test_br006_uncertain_halts_after_2_rounds",
+        "test_br010_governance_requires_all_present",
+        "test_br012_constitution_protected",
+        "test_br020_uncommitted_blocks_switch",
+        "test_br022_spec_plan_protected_on_dev",
+        "test_br030_halt_after_3_debug_rounds",
+        "test_br031_circuit_breaker",
+        "test_br032_log_before_commit",
+        "test_br033_production_issue_not_prd",
+        "test_br040_resume_pack_restores_stage",
+        "test_br050_refresh_blocks_completion",
+        "test_br051_l0_skip_via_state_machine",
+        "test_br052_refresh_log_appended"
+      ]
+    },
+    {
+      "path": "tests/unit/test_checkpoint_fr088.py",
+      "framework": "pytest",
+      "test_count": 2,
+      "test_names": [
+        "test_load_legacy_checkpoint_without_link_fields",
+        "test_save_link_fields_roundtrip"
+      ]
+    },
+    {
+      "path": "tests/unit/test_close_check.py",
+      "framework": "pytest",
+      "test_count": 32,
+      "test_names": [
+        "test_close_check_blocker_tasks_incomplete",
+        "test_close_check_blocker_related_plan_drift",
+        "test_close_check_pass_when_all_requirements_met",
+        "test_close_check_blocks_when_associated_branch_is_ahead_and_undisposed",
+        "test_close_check_accepts_archived_associated_branch_without_escalating_to_blocker",
+        "test_close_check_ignores_unrelated_historical_branch_inventory",
+        "test_close_check_blocks_when_verification_governance_source_closure_is_incomplete",
+        "test_close_check_blocker_when_git_closeout_not_committed",
+        "test_close_check_blocker_when_worktree_dirty_after_git_closeout",
+        "test_close_check_blocker_when_latest_batch_missing_verification_profile",
+        "test_extract_execution_batches_handles_realistic_header_formats",
+        "test_close_check_passes_when_explicit_execution_batch_range_covers_planned_batches",
+        "test_close_check_blocker_when_in_progress_history_is_not_a_reopen_signal",
+        "test_close_check_passes_for_001_style_history_without_status_correction",
+        "test_close_check_passes_when_latest_only_batch_without_status_correction",
+        "test_close_check_blocker_when_003_status_correction_is_explicit",
+        "test_close_check_passes_when_generic_archive_headers_do_not_count_as_batches",
+        "test_close_check_pass_for_docs_only_profile_with_minimal_evidence",
+        "test_close_check_blocker_when_docs_only_profile_missing_verify_constraints",
+        "test_close_check_blocker_when_docs_only_profile_masks_code_changes",
+        "test_close_check_blocker_docs_claim_not_implemented_for_registered_command",
+        "test_close_check_docs_consistency_pass_after_fix",
+        "test_close_check_does_not_block_on_phase1_provenance_payload",
+        "test_close_check_default_skips_unlisted_docs_sc021",
+        "test_close_check_all_docs_finds_deep_violation_sc021",
+        "test_close_check_whitelist_user_guide_scanned",
+        "test_close_check_respects_synthetic_command_from_registry_sc023",
+        "test_close_check_blocks_when_003_release_gate_evidence_missing",
+        "test_close_check_blocks_when_release_gate_verdict_is_block",
+        "test_close_check_blocks_003_when_pre_close_approval_missing",
+        "test_close_check_passes_003_when_pre_close_approved",
+        "test_close_check_blocks_003_when_pre_close_is_revise"
+      ]
+    },
+    {
+      "path": "tests/unit/test_command_names.py",
+      "framework": "pytest",
+      "test_count": 1,
+      "test_names": [
+        "test_collect_flat_command_strings_includes_nested_subcommands"
+      ]
+    },
+    {
+      "path": "tests/unit/test_context_state.py",
+      "framework": "pytest",
+      "test_count": 16,
+      "test_names": [
+        "test_save_and_load",
+        "test_load_nonexistent",
+        "test_backup_created",
+        "test_update_stage",
+        "test_update_stage_no_checkpoint",
+        "test_corrupt_fallback_to_backup",
+        "test_strict_load_rejects_invalid_stage",
+        "test_strict_load_rejects_missing_spec_dir",
+        "test_build_from_checkpoint",
+        "test_build_no_checkpoint",
+        "test_save_resume_pack",
+        "test_load_resume_pack_round_trip",
+        "test_load_resume_pack_missing_rebuilds_from_checkpoint",
+        "test_load_resume_pack_corrupted_rebuilds_from_checkpoint",
+        "test_load_resume_pack_stale_rebuilds_from_latest_checkpoint",
+        "test_load_resume_pack_incompatible_checkpoint_fails"
+      ]
+    },
+    {
+      "path": "tests/unit/test_dispatcher.py",
+      "framework": "pytest",
+      "test_count": 11,
+      "test_names": [
+        "test_load_manifest_execute",
+        "test_invalid_stage_raises",
+        "test_check_prerequisites_refine_needs_init",
+        "test_check_prerequisites_satisfied",
+        "test_begin_record_summarize",
+        "test_get_rules_content_non_empty",
+        "test_format_checklist_contains_stage_name",
+        "test_get_stage_status_completed_and_in_progress",
+        "test_find_manifest_path_package",
+        "test_all_valid_stages_have_manifests",
+        "test_begin_and_finish_stage_write_step_lifecycle_once"
+      ]
+    },
+    {
+      "path": "tests/unit/test_doc_gen.py",
+      "framework": "pytest",
+      "test_count": 16,
+      "test_names": [
+        "test_template_renders_minimal_context",
+        "test_template_renders_full_context",
+        "test_scaffold_creates_four_files",
+        "test_scaffold_skips_existing_idempotent",
+        "test_scaffold_returns_only_newly_created_paths",
+        "test_render_uses_context_backend_selection_and_records_decisions",
+        "test_render_falls_back_to_native_using_custom_template_gen",
+        "test_render_blocks_when_context_policy_disallows_plugin",
+        "test_scaffold_populates_backend_decisions_via_context",
+        "test_normal_parse_four_tasks_two_phases",
+        "test_missing_optional_fields_defaults",
+        "test_empty_file_returns_empty_plan",
+        "test_file_not_found_returns_empty_plan",
+        "test_chinese_and_english_field_names",
+        "test_depends_wu_is_empty_list",
+        "test_batch_grouping_same_phase_same_batch"
+      ]
+    },
+    {
+      "path": "tests/unit/test_executor.py",
+      "framework": "pytest",
+      "test_count": 27,
+      "test_names": [
+        "test_advance_through_two_batches",
+        "test_completed_task_resets_consecutive_halts",
+        "test_last_committed_task_tracks_completion",
+        "test_task_halted_after_max_debug_rounds",
+        "test_failed_task_stays_failed_before_limit",
+        "test_circuit_breaker_on_consecutive_halts",
+        "test_halt_then_complete_resets_breaker",
+        "test_batch_not_ready_with_pending_tasks",
+        "test_advance_batch_when_all_done_returns_none",
+        "test_halted_task_allows_batch_advance",
+        "test_run_splits_batches_writes_log_commits_and_summary",
+        "test_run_halts_task_after_configured_debug_limit",
+        "test_run_stops_when_circuit_breaker_triggers",
+        "test_run_persists_formal_truth_surfaces_for_active_work_item",
+        "test_not_complete_initially",
+        "test_complete_after_all_batches",
+        "test_unknown_task_raises_key_error",
+        "test_advance_terminal_task_is_noop",
+        "test_creates_file_if_not_exists",
+        "test_log_task_appends_entry",
+        "test_log_task_with_details",
+        "test_log_batch_appends_summary",
+        "test_get_last_log_timestamp",
+        "test_multiple_logs_accumulate",
+        "test_existing_file_not_overwritten",
+        "test_executor_emits_only_tool_events_and_evidence",
+        "test_circuit_breaker_failure_still_emits_tool_event_and_evidence"
+      ]
+    },
+    {
+      "path": "tests/unit/test_existing_project_init.py",
+      "framework": "pytest",
+      "test_count": 13,
+      "test_names": [
+        "test_engineering_corpus_has_10_sections",
+        "test_codebase_summary_stats",
+        "test_project_brief_primary_language",
+        "test_save_corpus_files",
+        "test_generates_5_index_files",
+        "test_api_index_content",
+        "test_dependency_index_content",
+        "test_scan_python_project",
+        "test_scan_empty_dir",
+        "test_full_init_flow",
+        "test_policy_files_not_overwritten",
+        "test_init_existing_project_triggers_scan",
+        "test_greenfield_does_not_trigger_scan"
+      ]
+    },
+    {
+      "path": "tests/unit/test_file_guard.py",
+      "framework": "pytest",
+      "test_count": 13,
+      "test_names": [
+        "test_protect_marks_path_protected",
+        "test_guard_write_protected_raises",
+        "test_guard_write_unprotected_ok",
+        "test_unprotect_removes_protection",
+        "test_protected_paths_is_frozenset",
+        "test_path_normalization_collapses_dotdot",
+        "test_path_traversal_normalization",
+        "test_write_text_protected_raises_and_does_not_write",
+        "test_write_text_unprotected_persists_content",
+        "test_path_write_text_protected_raises",
+        "test_path_write_bytes_protected_raises",
+        "test_open_write_protected_raises",
+        "test_replace_into_protected_target_raises"
+      ]
+    },
+    {
+      "path": "tests/unit/test_gates.py",
+      "framework": "pytest",
+      "test_count": 63,
+      "test_names": [
+        "test_register_and_get",
+        "test_get_missing",
+        "test_check_missing_raises",
+        "test_stages_list",
+        "test_explicit_gate_surfaces_are_registered",
+        "test_pass",
+        "test_pass_initialized_project_without_git_repo",
+        "test_fail_no_ai_sdlc",
+        "test_fail_when_constitution_has_too_few_principles",
+        "test_fail_when_tech_stack_has_no_source",
+        "test_pass",
+        "test_fail_no_spec",
+        "test_fail_needs_clarification",
+        "test_fail_when_user_story_has_no_acceptance_scenario",
+        "test_pass",
+        "test_pass",
+        "test_fail_missing",
+        "test_pass",
+        "test_fail_missing_task_acceptance",
+        "test_fail_no_tasks",
+        "test_pass",
+        "test_fail_critical",
+        "test_fail_too_many_high",
+        "test_blocks_when_constraint_blockers_exist",
+        "test_requires_review_evidence",
+        "test_passes_with_review_evidence",
+        "test_pass",
+        "test_stays_local_and_advisory_only_even_with_governance_payload",
+        "test_stays_local_and_advisory_only_even_with_provenance_phase1_payload",
+        "test_release_gate_governance_payload_reuses_gate_capable_minimum_fields",
+        "test_fail_tests",
+        "test_fail_without_build_success",
+        "test_log_before_commit_pass",
+        "test_log_before_commit_fail",
+        "test_log_before_commit_skip_when_absent",
+        "test_fail_when_decompose_prerequisite_missing_acceptance",
+        "test_pass_when_decompose_prerequisite_ok",
+        "test_fail_when_target_task_is_doc_first",
+        "test_fail_when_target_doc_first_task_touches_forbidden_paths",
+        "test_pass",
+        "test_fail_when_postmortem_is_incomplete",
+        "test_fail_no_summary",
+        "test_blocks_when_knowledge_refresh_is_pending",
+        "test_halts_if_not_initialized",
+        "test_passes_if_initialized_no_changes",
+        "test_halts_if_spec_changed",
+        "test_halts_on_significant_file_changes",
+        "test_passes_on_insignificant_changes",
+        "test_passes_without_policy",
+        "test_passes_when_disabled",
+        "test_halts_when_overlap_check_missing",
+        "test_halts_on_file_conflicts",
+        "test_halts_when_contracts_not_frozen",
+        "test_passes_all_checks",
+        "test_default_has_knowledge_baseline_item",
+        "test_required_items_by_work_type",
+        "test_all_required_present_false",
+        "test_all_required_present_true",
+        "test_complete_postmortem_passes",
+        "test_missing_file_retries",
+        "test_empty_root_cause_section_retries",
+        "test_todo_in_lessons_learned_retries",
+        "test_no_postmortem_path_retries"
+      ]
+    },
+    {
+      "path": "tests/unit/test_git_client.py",
+      "framework": "pytest",
+      "test_count": 11,
+      "test_names": [
+        "test_is_write_command_classifies_git_mutations",
+        "test_add_and_commit_runs_add_status_diff_commit_sequence",
+        "test_write_commands_are_serialized_per_repo",
+        "test_clear_stale_repo_write_lock_ignores_raced_file_removal",
+        "test_clear_stale_repo_write_lock_keeps_incomplete_payload",
+        "test_inspect_index_lock_marks_active_git_process",
+        "test_remove_stale_index_lock_requires_no_active_git_process",
+        "test_remove_stale_index_lock_blocks_when_process_still_active",
+        "test_list_local_branches_includes_worktree_binding",
+        "test_branch_divergence_against_main_reports_ahead_and_behind",
+        "test_list_worktrees_returns_paths_and_checked_out_branches"
+      ]
+    },
+    {
+      "path": "tests/unit/test_governance_guard.py",
+      "framework": "pytest",
+      "test_count": 5,
+      "test_names": [
+        "test_check_passes_when_all_required_items_exist",
+        "test_check_lists_all_missing_items",
+        "test_freeze_writes_governance_yaml_with_verified_items",
+        "test_freeze_raises_when_any_required_item_missing",
+        "test_legacy_check_governance_wrapper_delegates_to_new_contract"
+      ]
+    },
+    {
+      "path": "tests/unit/test_ide_adapter.py",
+      "framework": "pytest",
+      "test_count": 16,
+      "test_names": [
+        "test_cursor_dir",
+        "test_vscode_dir",
+        "test_codex_dir",
+        "test_claude_dir",
+        "test_priority_cursor_over_vscode",
+        "test_generic_no_markers",
+        "test_cursor_env_hint",
+        "test_vscode_env_ipc",
+        "test_codex_env",
+        "test_claude_code_env",
+        "test_writes_cursor_rule",
+        "test_idempotent_second_run",
+        "test_skips_user_modified",
+        "test_all_ide_templates_include_safe_start_command",
+        "test_skips_without_ai_sdlc",
+        "test_init_applies_generic_when_no_ide_dirs"
+      ]
+    },
+    {
+      "path": "tests/unit/test_knowledge.py",
+      "framework": "pytest",
+      "test_count": 19,
+      "test_names": [
+        "test_load_missing_returns_defaults",
+        "test_initialize_and_load",
+        "test_save_and_load_roundtrip",
+        "test_bump_corpus_version",
+        "test_bump_index_version",
+        "test_bump_both",
+        "test_no_changes_returns_l0",
+        "test_insignificant_files_returns_l0",
+        "test_structural_change_returns_l1",
+        "test_implementation_change_returns_l2",
+        "test_task_plan_change_returns_l2",
+        "test_spec_change_returns_l3",
+        "test_governance_change_returns_l3",
+        "test_spec_overrides_file_changes",
+        "test_l0_noop",
+        "test_l1_updates_indexes",
+        "test_l2_updates_corpus_partial",
+        "test_l3_full_corpus_refresh",
+        "test_refresh_log_appended"
+      ]
+    },
+    {
+      "path": "tests/unit/test_models.py",
+      "framework": "pytest",
+      "test_count": 31,
+      "test_names": [
+        "test_project_state_defaults",
+        "test_project_state_roundtrip",
+        "test_project_config_defaults",
+        "test_work_type_values",
+        "test_severity_values",
+        "test_work_item_creation",
+        "test_work_item_roundtrip",
+        "test_all_work_item_statuses",
+        "test_governance_state_defaults",
+        "test_governance_item_defaults",
+        "test_governance_roundtrip",
+        "test_task_defaults",
+        "test_execution_batch",
+        "test_execution_plan",
+        "test_task_status_values",
+        "test_runtime_state_defaults",
+        "test_runtime_state_debug_rounds",
+        "test_working_set_defaults",
+        "test_resume_pack",
+        "test_completed_stage",
+        "test_feature_info",
+        "test_checkpoint_full",
+        "test_checkpoint_no_execute_progress",
+        "test_multi_agent_defaults",
+        "test_gate_verdict_values",
+        "test_gate_result",
+        "test_gate_result_retry",
+        "test_prd_readiness_pass",
+        "test_prd_readiness_fail",
+        "test_prd_draft_and_final_models",
+        "test_prd_authoring_and_reviewer_models"
+      ]
+    },
+    {
+      "path": "tests/unit/test_p1_artifacts.py",
+      "framework": "pytest",
+      "test_count": 7,
+      "test_names": [
+        "test_save_and_load_resume_point",
+        "test_save_and_load_reviewer_decisions_per_checkpoint",
+        "test_load_latest_reviewer_decision_falls_back_to_legacy_file",
+        "test_legacy_reviewer_decision_does_not_satisfy_wrong_checkpoint",
+        "test_legacy_reviewer_decision_does_not_satisfy_checkpoint_specific_loader",
+        "test_save_and_load_execution_path",
+        "test_save_and_load_parallel_coordination_artifact"
+      ]
+    },
+    {
+      "path": "tests/unit/test_p1_models.py",
+      "framework": "pytest",
+      "test_count": 37,
+      "test_names": [
+        "test_enum_values",
+        "test_comparison",
+        "test_baseline_defaults",
+        "test_refresh_entry",
+        "test_refresh_log_append",
+        "test_brief_defaults",
+        "test_analysis",
+        "test_fix_plan_with_tasks",
+        "test_postmortem",
+        "test_resume_point_from_legacy_string",
+        "test_freeze_snapshot",
+        "test_impact_analysis",
+        "test_change_request_full",
+        "test_rebaseline_record",
+        "test_execution_path",
+        "test_brief",
+        "test_small_task_graph_count",
+        "test_plan",
+        "test_policy_defaults",
+        "test_contract",
+        "test_worker_assignment",
+        "test_overlap_result",
+        "test_merge_simulation_success",
+        "test_file_info",
+        "test_dependency_info",
+        "test_api_endpoint",
+        "test_symbol_info",
+        "test_discovered_test_file",
+        "test_risk_item",
+        "test_scan_result_aggregated",
+        "test_task_parallel_defaults",
+        "test_task_with_parallel_config",
+        "test_project_not_initialized",
+        "test_studio_routing_error",
+        "test_refresh_required",
+        "test_governance_not_frozen",
+        "test_protocol_compliance"
+      ]
+    },
+    {
+      "path": "tests/unit/test_parallel.py",
+      "framework": "pytest",
+      "test_count": 22,
+      "test_names": [
+        "test_disabled_policy_single_group",
+        "test_empty_tasks",
+        "test_no_overlap_creates_one_group",
+        "test_overlap_creates_separate_groups",
+        "test_sequential_tasks_in_separate_group",
+        "test_respects_max_workers",
+        "test_all_sequential",
+        "test_file_ownership",
+        "test_assigns_branches",
+        "test_sequential_group_uses_dev_branch",
+        "test_forbidden_paths_computed",
+        "test_assigns_worker_index_and_parallel_group",
+        "test_emit_worker_lifecycle_fact_records_worker_id_in_fact_layer",
+        "test_native_backend_records_delegation_boundary_without_completion",
+        "test_no_overlaps",
+        "test_detects_overlap",
+        "test_recommendation_text",
+        "test_clean_merge",
+        "test_conflict_predicted",
+        "test_empty_assignments",
+        "test_merge_order_sequential_first",
+        "test_builds_and_persists_coordination_artifact"
+      ]
+    },
+    {
+      "path": "tests/unit/test_plan_check.py",
+      "framework": "pytest",
+      "test_count": 6,
+      "test_names": [
+        "test_count_pending_todos",
+        "test_parse_markdown_frontmatter",
+        "test_resolve_plan_path_from_wi",
+        "test_run_plan_check_drift_pending_and_dirty",
+        "test_run_plan_check_no_drift_pending_clean_tree",
+        "test_git_changed_paths_empty_when_not_git"
+      ]
+    },
+    {
+      "path": "tests/unit/test_prd_studio.py",
+      "framework": "pytest",
+      "test_count": 13,
+      "test_names": [
+        "test_complete_prd_passes",
+        "test_missing_sections_fails",
+        "test_empty_file_fails",
+        "test_nonexistent_file_fails",
+        "test_tbd_markers_fail",
+        "test_alternative_section_names",
+        "test_review_accepts_content_and_returns_structured_output",
+        "test_adapter_accepts_path_and_string_path",
+        "test_adapter_accepts_idea_string_for_authoring",
+        "test_adapter_pathlike_string_preserves_missing_file_failure",
+        "test_draft_from_idea_creates_placeholders_and_metadata",
+        "test_draft_can_be_promoted_to_final_prd",
+        "test_reviewer_decision_can_record_checkpoint_and_next_action"
+      ]
+    },
+    {
+      "path": "tests/unit/test_program_service.py",
+      "framework": "pytest",
+      "test_count": 7,
+      "test_names": [
+        "test_validate_manifest_ok",
+        "test_validate_manifest_cycle",
+        "test_topo_tiers",
+        "test_build_status_counts_and_blockers",
+        "test_build_integration_dry_run",
+        "test_execution_gates_require_all_specs_closed",
+        "test_execution_gates_pass_when_closed"
+      ]
+    },
+    {
+      "path": "tests/unit/test_project_config.py",
+      "framework": "pytest",
+      "test_count": 4,
+      "test_names": [
+        "test_load_project_config_missing_file_returns_defaults",
+        "test_save_project_config_creates_file",
+        "test_ensure_ide_adaptation_writes_config_when_missing",
+        "test_project_config_template_freezes_telemetry_defaults"
+      ]
+    },
+    {
+      "path": "tests/unit/test_reconcile.py",
+      "framework": "pytest",
+      "test_count": 4,
+      "test_names": [
+        "test_detect_reconcile_hint_for_legacy_root_layout",
+        "test_detect_reconcile_hint_for_specs_dir_layout_without_checkpoint",
+        "test_reconcile_checkpoint_updates_stale_legacy_state",
+        "test_reconcile_checkpoint_ignores_legacy_project_state_residue"
+      ]
+    },
+    {
+      "path": "tests/unit/test_reviewer_gate.py",
+      "framework": "pytest",
+      "test_count": 6,
+      "test_names": [
+        "test_required_reviewer_checkpoint_mapping",
+        "test_gate_allows_matching_approve",
+        "test_gate_denies_missing_approval",
+        "test_gate_ignores_legacy_only_artifact_for_target_checkpoint",
+        "test_gate_denies_revise",
+        "test_gate_denies_block"
+      ]
+    },
+    {
+      "path": "tests/unit/test_rules_loader.py",
+      "framework": "pytest",
+      "test_count": 8,
+      "test_names": [
+        "test_list_rules_at_least_thirteen",
+        "test_load_rule_pipeline_contains_title_phrase",
+        "test_load_rule_nonexistent_raises",
+        "test_get_active_rules_execute_includes_expected",
+        "test_get_active_rules_verify_includes_expected",
+        "test_get_active_rules_unknown_stage_only_all_rules",
+        "test_get_rule_title_pipeline",
+        "test_custom_rules_dir_tmp_path"
+      ]
+    },
+    {
+      "path": "tests/unit/test_runner_confirm.py",
+      "framework": "pytest",
+      "test_count": 14,
+      "test_names": [
+        "test_close_context_includes_incident_postmortem_and_refresh_entry",
+        "test_confirm_callback_pauses_pipeline",
+        "test_auto_mode_ignores_callback",
+        "test_run_creates_goal_session_and_workflow_run_telemetry",
+        "test_run_binds_profile_mode_and_trace_context_into_runtime_events",
+        "test_confirm_pause_closes_workflow_run_as_blocked",
+        "test_retry_exhaustion_closes_step_as_blocked",
+        "test_halt_closes_step_and_run_as_blocked",
+        "test_unexpected_stage_error_closes_step_as_failed",
+        "test_reusing_runner_allocates_a_fresh_workflow_run_id",
+        "test_pass_gate_persists_gate_hit_control_point",
+        "test_retry_exhaustion_persists_gate_blocked_control_point_per_attempt",
+        "test_halt_persists_gate_blocked_control_point",
+        "test_retry_then_pass_persists_gate_blocked_and_gate_hit"
+      ]
+    },
+    {
+      "path": "tests/unit/test_scanners.py",
+      "framework": "pytest",
+      "test_count": 34,
+      "test_names": [
+        "test_empty_dir",
+        "test_python_file_detection",
+        "test_ignores_git_dir",
+        "test_ignores_node_modules",
+        "test_multi_language_project",
+        "test_test_file_detection",
+        "test_config_file_detection",
+        "test_line_counting",
+        "test_no_manifests",
+        "test_package_json",
+        "test_requirements_txt",
+        "test_go_mod",
+        "test_cargo_toml",
+        "test_corrupt_package_json",
+        "test_multiple_manifests",
+        "test_python_class_and_function",
+        "test_python_private_symbols",
+        "test_python_decorators",
+        "test_js_export_detection",
+        "test_java_class_detection",
+        "test_go_exported_types",
+        "test_syntax_error_handled",
+        "test_skips_non_source",
+        "test_fastapi_routes",
+        "test_flask_routes",
+        "test_express_routes",
+        "test_no_apis_in_non_source",
+        "test_python_test_detection",
+        "test_js_test_detection",
+        "test_go_test_detection",
+        "test_skips_non_test_files",
+        "test_large_file_detection",
+        "test_todo_density",
+        "test_no_risks_in_clean_project"
+      ]
+    },
+    {
+      "path": "tests/unit/test_state_machine.py",
+      "framework": "pytest",
+      "test_count": 13,
+      "test_names": [
+        "test_legal_transition",
+        "test_illegal_transition_raises",
+        "test_created_has_one_target",
+        "test_dev_executing_has_three_targets",
+        "test_completed_is_terminal",
+        "test_failed_is_terminal",
+        "test_archiving_has_two_targets",
+        "test_transition_work_item_persists_status",
+        "test_illegal_transition_does_not_mutate_disk",
+        "test_gated_transition_requires_matching_checkpoint_approval",
+        "test_transition_work_item_denies_revise_gate",
+        "test_transition_work_item_denies_block_gate",
+        "test_cross_stage_chain_persists_until_completed"
+      ]
+    },
+    {
+      "path": "tests/unit/test_studios.py",
+      "framework": "pytest",
+      "test_count": 22,
+      "test_names": [
+        "test_process_returns_artifacts",
+        "test_fix_plan_has_3_tasks",
+        "test_saves_files_when_root_provided",
+        "test_rejects_wrong_input_type",
+        "test_postmortem_has_todo_placeholders",
+        "test_process_returns_artifacts",
+        "test_change_request_updated",
+        "test_saves_files_when_root_provided",
+        "test_rejects_wrong_input_type",
+        "test_process_returns_plan",
+        "test_tasks_have_dependencies",
+        "test_saves_file_when_root_provided",
+        "test_rejects_wrong_input_type",
+        "test_routes_incident_to_incident_studio",
+        "test_routes_change_to_change_studio",
+        "test_routes_maintenance_to_maintenance_studio",
+        "test_routes_new_requirement_to_prd_studio",
+        "test_routes_new_requirement_idea_string_to_prd_authoring",
+        "test_rejects_uncertain_type",
+        "test_rejects_uninitialized_project",
+        "test_br033_production_issue_not_to_prd",
+        "test_get_studio_for_type"
+      ]
+    },
+    {
+      "path": "tests/unit/test_task_ac_checks.py",
+      "framework": "pytest",
+      "test_count": 10,
+      "test_names": [
+        "test_no_tasks_returns_none",
+        "test_first_task_missing_acceptance_detected",
+        "test_pass_with_yanshou",
+        "test_pass_with_verification_field",
+        "test_pass_with_standalone_ac_token",
+        "test_doc_first_scope_violation_detected_for_code_path",
+        "test_doc_first_scope_violation_ignores_rule_markdown",
+        "test_doc_first_execute_blocker_matches_runtime_task_id",
+        "test_doc_first_execute_blocker_reports_forbidden_touched_paths",
+        "test_next_pending_task_ref_uses_current_batch_and_last_committed"
+      ]
+    },
+    {
+      "path": "tests/unit/test_telemetry_collectors.py",
+      "framework": "pytest",
+      "test_count": 3,
+      "test_names": [
+        "test_collect_command_records_tool_fact_and_raw_output_evidence",
+        "test_collect_test_records_test_result_fact_without_governance_objects",
+        "test_collect_patch_records_patch_and_derived_file_write_facts"
+      ]
+    },
+    {
+      "path": "tests/unit/test_telemetry_contracts.py",
+      "framework": "pytest",
+      "test_count": 21,
+      "test_names": [
+        "test_frozen_enum_values_from_approved_spec",
+        "test_id_prefix_and_pattern_validation",
+        "test_id_prefix_constants_are_frozen_once",
+        "test_scope_level_required_field_rules",
+        "test_scope_level_missing_required_fields",
+        "test_rejected_validated_update_does_not_leak_fields_set_state",
+        "test_mutable_records_reject_updated_at_before_created_at",
+        "test_evidence_forbidden_mutation_is_rejected",
+        "test_mutable_validated_update_preserves_identity_and_chain",
+        "test_artifact_lifecycle_updates_cannot_rewrite_source_refs",
+        "test_mutable_validated_update_blocks_identity_parent_chain_and_created_at_rewrites",
+        "test_evidence_locator_digest_backfill_works",
+        "test_telemetry_model_copy_update_is_blocked",
+        "test_rfc3339_utc_z_timestamps",
+        "test_append_only_vs_mutable_object_categories",
+        "test_trace_context_contract_tracks_worker_agent_and_parent_event",
+        "test_mode_change_record_requires_minimum_contract_shape",
+        "test_gate_decision_payload_requires_gate_capable_minimum_fields",
+        "test_governance_objects_default_to_unknown_source_closure_and_draft_review",
+        "test_ccp_registry_minimum_evidence_closure_defaults",
+        "test_ccp_registry_supports_partial_control_point_overrides"
+      ]
+    },
+    {
+      "path": "tests/unit/test_telemetry_governance.py",
+      "framework": "pytest",
+      "test_count": 16,
+      "test_names": [
+        "test_build_verify_constraint_evaluation_uses_trace_event_and_evidence",
+        "test_calculate_ccp_coverage_gaps_from_raw_trace_locators",
+        "test_gate_reason_evidence_only_satisfies_the_named_control_point",
+        "test_malformed_or_unresolvable_control_point_locators_do_not_satisfy_ccps",
+        "test_gate_and_audit_ccps_require_canonical_runtime_event_shapes",
+        "test_gate_and_audit_ccps_require_minimum_evidence_closure",
+        "test_default_registry_event_only_ccps_are_proven_from_raw_workflow_events",
+        "test_default_registry_tool_ccps_are_proven_only_when_canonical_trace_exists",
+        "test_escalate_hard_gate_to_violation",
+        "test_merge_repeated_violation_hits_in_one_parent_chain",
+        "test_inferred_only_cannot_close_high_or_critical_violation",
+        "test_observer_facts_digest_is_stable_across_payload_order",
+        "test_native_delegation_boundary_surfaces_unobserved_and_mismatch_findings",
+        "test_generate_observer_violations_from_mismatch_findings",
+        "test_build_observer_audit_summary_preserves_deferred_outputs",
+        "test_gate_decision_payload_blocks_only_when_sources_are_closed"
+      ]
+    },
+    {
+      "path": "tests/unit/test_telemetry_observer.py",
+      "framework": "pytest",
+      "test_count": 4,
+      "test_names": [
+        "test_finish_step_queues_observer_trigger_after_terminal_workflow_append",
+        "test_observe_step_is_reproducible_and_read_only_for_same_fact_layer",
+        "test_observe_step_emits_unknown_unobserved_and_mismatch_outputs",
+        "test_observe_step_emits_coverage_gap_when_no_canonical_tool_observation_exists"
+      ]
+    },
+    {
+      "path": "tests/unit/test_telemetry_policy.py",
+      "framework": "pytest",
+      "test_count": 2,
+      "test_names": [
+        "test_resolve_runtime_telemetry_policy_uses_project_defaults",
+        "test_resolve_runtime_telemetry_policy_records_explicit_mode_change"
+      ]
+    },
+    {
+      "path": "tests/unit/test_telemetry_provenance_contracts.py",
+      "framework": "pytest",
+      "test_count": 10,
+      "test_names": [
+        "test_provenance_enum_values_are_frozen_from_phase_1_spec",
+        "test_provenance_id_prefixes_and_validation_are_stable",
+        "test_provenance_id_prefix_constants_are_frozen_once",
+        "test_provenance_node_fact_snapshot_shape_is_stable",
+        "test_provenance_edge_fact_snapshot_shape_is_stable",
+        "test_injected_and_inferred_facts_require_basis_refs",
+        "test_provenance_node_scope_level_reuses_trace_context_chain_rules",
+        "test_source_closure_status_and_chain_status_have_distinct_domains",
+        "test_gap_detail_and_governance_advisories_must_be_structured",
+        "test_append_only_vs_mutable_provenance_object_categories"
+      ]
+    },
+    {
+      "path": "tests/unit/test_telemetry_provenance_governance.py",
+      "framework": "pytest",
+      "test_count": 1,
+      "test_names": [
+        "test_provenance_governance_hooks_are_gate_capable_but_non_blocking"
+      ]
+    },
+    {
+      "path": "tests/unit/test_telemetry_provenance_ingress.py",
+      "framework": "pytest",
+      "test_count": 8,
+      "test_names": [
+        "test_injected_adapters_normalize_four_trace_types",
+        "test_inferred_adapters_normalize_with_explicit_basis_refs",
+        "test_gap_modes_emit_gap_instead_of_fake_fact",
+        "test_missing_target_ref_becomes_parse_failure",
+        "test_inferred_edges_require_explicit_basis_refs",
+        "test_exec_bridge_inference_refuses_raw_command_text_without_bridge_basis",
+        "test_duplicate_injected_replay_never_silently_upgrades_confidence",
+        "test_apply_ingress_result_only_writes_facts_evidence_and_gaps"
+      ]
+    },
+    {
+      "path": "tests/unit/test_telemetry_provenance_inspection.py",
+      "framework": "pytest",
+      "test_count": 3,
+      "test_names": [
+        "test_inspection_view_answers_required_questions_with_stable_json_shape",
+        "test_human_views_match_summary_and_gap_semantics",
+        "test_inspection_is_read_only_for_existing_scope"
+      ]
+    },
+    {
+      "path": "tests/unit/test_telemetry_provenance_observer.py",
+      "framework": "pytest",
+      "test_count": 1,
+      "test_names": [
+        "test_observe_provenance_step_enriches_with_assessments_and_gaps"
+      ]
+    },
+    {
+      "path": "tests/unit/test_telemetry_provenance_store.py",
+      "framework": "pytest",
+      "test_count": 9,
+      "test_names": [
+        "test_provenance_node_and_edge_facts_are_append_only_ndjson",
+        "test_writer_assigns_session_local_ingestion_order_across_scopes",
+        "test_duplicate_injected_replay_is_idempotent_and_cannot_upgrade_confidence",
+        "test_mutable_provenance_objects_write_current_snapshots_and_revisions",
+        "test_explicit_unsupported_gap_persists_as_gap_not_chain_status",
+        "test_provenance_locators_round_trip_through_evidence_resolution",
+        "test_provenance_resolver_distinguishes_parse_failure_from_closure_failures",
+        "test_provenance_resolver_reports_dangling_node_and_missing_trace_context",
+        "test_provenance_resolver_reports_orphan_edges_and_missing_telemetry_objects"
+      ]
+    },
+    {
+      "path": "tests/unit/test_telemetry_publisher.py",
+      "framework": "pytest",
+      "test_count": 19,
+      "test_names": [
+        "test_generate_run_reports_includes_evaluation_summary_and_audit_report",
+        "test_publish_promotes_artifact_when_source_closure_is_valid",
+        "test_publish_audit_report_emits_audit_report_generated_control_point",
+        "test_publish_non_audit_report_does_not_emit_audit_report_generated_control_point",
+        "test_publish_step_scope_audit_report_does_not_emit_audit_report_generated_control_point",
+        "test_publish_promotes_run_artifact_with_same_run_step_sources",
+        "test_publish_with_invalid_source_refs_keeps_artifact_below_published",
+        "test_publish_with_broken_resolver_marks_source_closure_unknown_and_records_candidate",
+        "test_revalidate_downgrades_previously_published_artifact_when_refs_break",
+        "test_evaluation_summary_contains_minimal_coverage_and_evidence_quality_views",
+        "test_accepted_violation_remains_open_debt_not_resolved_in_audit_report",
+        "test_violation_summary_includes_status_risk_and_open_item_rollups",
+        "test_audit_report_marks_failed_evaluation_as_issues_found_without_violations",
+        "test_audit_report_does_not_mark_pending_only_evaluations_clean",
+        "test_audit_report_does_not_mark_waived_not_applicable_clean",
+        "test_audit_report_does_not_mark_warning_clean",
+        "test_audit_report_keeps_blocked_priority_over_non_passing_evaluation",
+        "test_evaluation_summary_pending_is_non_passing_and_not_covered",
+        "test_evaluation_summary_waived_not_applicable_is_non_passing_and_not_covered"
+      ]
+    },
+    {
+      "path": "tests/unit/test_telemetry_store.py",
+      "framework": "pytest",
+      "test_count": 23,
+      "test_names": [
+        "test_lazy_init_creates_only_local_telemetry_root_and_manifest",
+        "test_store_classifies_hard_fail_default_integrity_failures",
+        "test_store_does_not_classify_lookup_miss_as_hard_fail_default",
+        "test_register_scope_rejects_child_ids_that_contradict_scope_level",
+        "test_event_streams_are_append_only_ndjson",
+        "test_event_ids_are_globally_unique_across_chains",
+        "test_evidence_allows_same_id_backfill_on_the_same_chain",
+        "test_cross_chain_duplicate_evidence_ids_are_rejected",
+        "test_evidence_rejects_rebinding_filled_locator_or_digest_on_same_chain",
+        "test_evidence_rejects_same_chain_repeat_with_earlier_updated_at",
+        "test_mutable_objects_write_revision_before_current_snapshot",
+        "test_cross_chain_parent_mismatches_are_rejected",
+        "test_writer_rejects_direct_published_artifact_without_source_closure",
+        "test_writer_rejects_cross_run_source_refs_for_published_artifact",
+        "test_source_resolver_uses_source_kind_and_source_ref",
+        "test_source_resolver_returns_latest_legal_evidence_payload_after_backfill",
+        "test_source_resolver_rejects_illegal_evidence_rebind_history",
+        "test_source_resolver_rejects_evidence_history_with_backward_updated_at",
+        "test_source_resolver_rejects_ambiguous_append_only_source_refs",
+        "test_rebuild_indexes_restores_deleted_index_directory",
+        "test_writer_refreshes_indexes_without_manual_rebuild",
+        "test_derive_index_payloads_match_canonical_latest_truth_without_index_files",
+        "test_only_writer_exposes_public_object_persistence_api"
+      ]
+    },
+    {
+      "path": "tests/unit/test_verify_constraints.py",
+      "framework": "pytest",
+      "test_count": 31,
+      "test_names": [
+        "test_blocker_missing_constitution",
+        "test_blocker_spec_dir_missing",
+        "test_pass_constitution_and_spec_dir",
+        "test_structured_constraint_report_preserves_blockers",
+        "test_skip_registry_historical_unmapped_rows_ignored_sc020",
+        "test_skip_registry_blocker_only_matching_wi_row_sc020",
+        "test_skip_registry_linked_wi_id_over_spec_basename",
+        "test_blocker_tasks_md_missing_task_acceptance",
+        "test_blocker_skip_registry_unmapped_to_spec_or_tasks",
+        "test_pass_skip_registry_with_mapped_refs",
+        "test_framework_backlog_missing_required_fields_blocks",
+        "test_framework_backlog_well_formed_passes",
+        "test_verification_profile_docs_block_when_rules_surface_missing_profile",
+        "test_verification_profile_docs_block_when_checklist_missing_code_change",
+        "test_verification_profile_docs_pass_when_both_surfaces_complete",
+        "test_doc_first_rule_surfaces_block_when_pipeline_terms_missing",
+        "test_doc_first_rule_surfaces_block_when_doc_first_task_targets_code",
+        "test_doc_first_rule_surfaces_pass_with_consistent_terms_and_docs_scope",
+        "test_003_feature_contract_blocks_when_draft_prd_surfaces_missing",
+        "test_003_feature_contract_blocks_when_reviewer_surface_missing",
+        "test_003_feature_contract_blocks_when_backend_surface_missing",
+        "test_003_feature_contract_blocks_when_release_gate_surface_missing",
+        "test_003_feature_contract_blocks_when_feature_id_unknown_but_spec_dir_points_to_003",
+        "test_003_feature_contract_passes_when_all_surfaces_present",
+        "test_build_verification_governance_bundle_emits_gate_capable_payload",
+        "test_build_verification_gate_context_degrades_to_advisory_when_governance_is_incomplete",
+        "test_build_verification_gate_context_keeps_phase1_provenance_advisory_only",
+        "test_003_release_gate_blocks_when_evidence_verdict_is_block",
+        "test_collect_constraint_blockers_includes_active_work_item_branch_lifecycle_drift",
+        "test_collect_constraint_blockers_does_not_escalate_archived_branch_lifecycle",
+        "test_collect_constraint_blockers_ignores_unrelated_historical_branch_lifecycle"
+      ]
+    },
+    {
+      "path": "tests/unit/test_work_intake_router.py",
+      "framework": "pytest",
+      "test_count": 21,
+      "test_names": [
+        "test_format",
+        "test_padding",
+        "test_new_requirement",
+        "test_production_issue",
+        "test_change_request",
+        "test_maintenance_task",
+        "test_uncertain_no_keywords",
+        "test_production_issue_english",
+        "test_new_requirement_prd",
+        "test_maintenance_performance",
+        "test_title_extraction",
+        "test_title_truncation",
+        "test_created_status",
+        "test_low_confidence_non_uncertain_requires_confirmation",
+        "test_intake_assigns_id_and_persists_project_state",
+        "test_intake_rolls_back_when_project_state_save_fails",
+        "test_uncertain_intake_persists_candidate_types",
+        "test_clarify_resolves_on_round_1",
+        "test_clarify_halts_after_max_rounds",
+        "test_clarify_noop_for_non_uncertain",
+        "test_clarify_tracks_responses"
+      ]
+    },
+    {
+      "path": "tests/unit/test_workitem_scaffold.py",
+      "framework": "pytest",
+      "test_count": 3,
+      "test_names": [
+        "test_scaffold_generates_parser_friendly_formal_docs_with_refs",
+        "test_scaffold_explicit_wi_id_preserves_stable_shape_and_advances_seq",
+        "test_scaffold_rejects_duplicate_canonical_doc_set"
+      ]
+    },
+    {
+      "path": "tests/unit/test_yaml_store.py",
+      "framework": "pytest",
+      "test_count": 9,
+      "test_names": [
+        "test_load_nonexistent_returns_default_model",
+        "test_load_nonexistent_returns_explicit_default",
+        "test_load_valid_yaml",
+        "test_load_empty_yaml",
+        "test_load_legacy_planning_status_maps_to_initialized",
+        "test_load_corrupt_yaml_raises",
+        "test_save_and_load_roundtrip",
+        "test_save_creates_parent_dirs",
+        "test_save_overwrites_existing"
+      ]
+    }
+  ]
+}

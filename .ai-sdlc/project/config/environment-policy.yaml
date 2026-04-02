@@ -1,0 +1,5 @@
+ci_required: false
+python_version: 3.11+
+target_platforms:
+- macos
+- linux

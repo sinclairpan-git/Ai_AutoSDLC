@@ -1,0 +1,122 @@
+{
+  "entry_points": [
+    {
+      "path": "src/ai_sdlc/__main__.py",
+      "language": "python",
+      "lines": 6
+    },
+    {
+      "path": "src/ai_sdlc/cli/main.py",
+      "language": "python",
+      "lines": 66
+    }
+  ],
+  "config_files": [
+    {
+      "path": "pyproject.toml",
+      "language": "toml"
+    }
+  ],
+  "largest_files": [
+    {
+      "path": "src/ai_sdlc/core/verify_constraints.py",
+      "language": "python",
+      "lines": 787
+    },
+    {
+      "path": "src/ai_sdlc/core/executor.py",
+      "language": "python",
+      "lines": 763
+    },
+    {
+      "path": "src/ai_sdlc/telemetry/runtime.py",
+      "language": "python",
+      "lines": 716
+    },
+    {
+      "path": "src/ai_sdlc/telemetry/readiness.py",
+      "language": "python",
+      "lines": 691
+    },
+    {
+      "path": "src/ai_sdlc/gates/pipeline_gates.py",
+      "language": "python",
+      "lines": 657
+    },
+    {
+      "path": "src/ai_sdlc/core/close_check.py",
+      "language": "python",
+      "lines": 620
+    },
+    {
+      "path": "src/ai_sdlc/cli/commands.py",
+      "language": "python",
+      "lines": 605
+    },
+    {
+      "path": "src/ai_sdlc/context/state.py",
+      "language": "python",
+      "lines": 587
+    },
+    {
+      "path": "src/ai_sdlc/backends/native.py",
+      "language": "python",
+      "lines": 583
+    },
+    {
+      "path": "src/ai_sdlc/telemetry/store.py",
+      "language": "python",
+      "lines": 558
+    },
+    {
+      "path": "src/ai_sdlc/branch/git_client.py",
+      "language": "python",
+      "lines": 551
+    },
+    {
+      "path": "src/ai_sdlc/telemetry/evaluators.py",
+      "language": "python",
+      "lines": 538
+    },
+    {
+      "path": "src/ai_sdlc/telemetry/contracts.py",
+      "language": "python",
+      "lines": 523
+    },
+    {
+      "path": "src/ai_sdlc/models/work.py",
+      "language": "python",
+      "lines": 485
+    },
+    {
+      "path": "src/ai_sdlc/telemetry/generators.py",
+      "language": "python",
+      "lines": 466
+    },
+    {
+      "path": "src/ai_sdlc/core/runner.py",
+      "language": "python",
+      "lines": 432
+    },
+    {
+      "path": "src/ai_sdlc/cli/workitem_cmd.py",
+      "language": "python",
+      "lines": 430
+    },
+    {
+      "path": "src/ai_sdlc/telemetry/writer.py",
+      "language": "python",
+      "lines": 413
+    },
+    {
+      "path": "src/ai_sdlc/core/workitem_traceability.py",
+      "language": "python",
+      "lines": 410
+    },
+    {
+      "path": ".superpowers/brainstorm/83637-1774953116/architecture-static-review.html",
+      "language": "html",
+      "lines": 398
+    }
+  ]
+}

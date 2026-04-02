@@ -1,0 +1,37 @@
+{
+  "total_dependencies": 5,
+  "ecosystems": {
+    "pypi": [
+      {
+        "name": "typer",
+        "version": ">=0.9.0",
+        "is_dev": false,
+        "source_file": "pyproject.toml"
+      },
+      {
+        "name": "pyyaml",
+        "version": ">=6.0",
+        "is_dev": false,
+        "source_file": "pyproject.toml"
+      },
+      {
+        "name": "pydantic",
+        "version": ">=2.0",
+        "is_dev": false,
+        "source_file": "pyproject.toml"
+      },
+      {
+        "name": "jinja2",
+        "version": ">=3.1",
+        "is_dev": false,
+        "source_file": "pyproject.toml"
+      },
+      {
+        "name": "rich",
+        "version": ">=13.0",
+        "is_dev": false,
+        "source_file": "pyproject.toml"
+      }
+    ]
+  }
+}
