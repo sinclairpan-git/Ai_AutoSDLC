@@ -185,7 +185,7 @@
 
 #### 2.8 归档后动作
 
-- **已完成 git 提交**：否（提交动作紧随本次归档后执行）
-- **提交哈希**：待补充（提交后回填）
+- **已完成 git 提交**：是
+- **提交哈希**：`42bc8cf`（`feat(models): add enterprise vue2 provider profile slice`）
 - **改动范围**：`specs/016-frontend-enterprise-vue2-provider-baseline/plan.md`、`specs/016-frontend-enterprise-vue2-provider-baseline/tasks.md`、`specs/016-frontend-enterprise-vue2-provider-baseline/task-execution-log.md`、`src/ai_sdlc/models/frontend_provider_profile.py`、`src/ai_sdlc/models/__init__.py`、`tests/unit/test_frontend_provider_profile_models.py`
 - **是否继续下一批**：按用户授权连续推进（优先扩 `016` 的 Provider artifact/profile handoff，再进入 generation governance）
