@@ -281,7 +281,7 @@
 
 #### 2.8 归档后动作
 
-- **已完成 git 提交**：否（提交动作紧随本次归档后执行）
-- **提交哈希**：待补充（提交后回填）
+- **已完成 git 提交**：是
+- **提交哈希**：`0e1cf1b`（`feat(generators): add frontend ui kernel artifact instantiation`）
 - **改动范围**：`specs/015-frontend-ui-kernel-standard-baseline/plan.md`、`specs/015-frontend-ui-kernel-standard-baseline/tasks.md`、`specs/015-frontend-ui-kernel-standard-baseline/task-execution-log.md`、`src/ai_sdlc/generators/frontend_ui_kernel_artifacts.py`、`src/ai_sdlc/generators/__init__.py`、`tests/unit/test_frontend_ui_kernel_artifacts.py`
 - **是否继续下一批**：按用户授权连续推进（优先拆 `enterprise-vue2 Provider` child work item，再补 Provider baseline）
