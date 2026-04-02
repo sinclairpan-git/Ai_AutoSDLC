@@ -29,7 +29,7 @@ related_doc:
 - 再冻结 MVP gate matrix、结构化输出、Recheck 和 Auto-fix 边界
 - 最后给出后续 `models / reports / gates / tests` 的推荐文件面与测试矩阵
 
-当前 formal baseline、`gate matrix and report models` 与 `gate policy artifacts` 实现切片已完成。经用户明确要求连续推进 MVP 后，当前允许继续进入下一批实现切片：`frontend gate verification helper`，把 gate policy artifact、generation artifact 与 contract verification 聚合成 scoped verify payload；不同时触碰完整 gate execution runtime 或 auto-fix engine。
+当前 formal baseline、`gate matrix and report models`、`gate policy artifacts` 与 `frontend gate verification helper` 实现切片已完成。经用户明确要求连续推进 MVP 后，当前允许继续进入下一批实现切片：`verify constraints attachment`，把 scoped frontend gate summary 正式挂到 active `018` 的 verify surface；不同时触碰完整 gate execution runtime 或 auto-fix engine。
 
 ## 技术背景
 
@@ -60,12 +60,14 @@ src/ai_sdlc/
 ├── generators/
 │   └── frontend_gate_policy_artifacts.py
 └── core/
-    └── frontend_gate_verification.py         # current slice: gate verification helper
+    ├── frontend_gate_verification.py
+    └── verify_constraints.py                 # current slice: frontend gate verify attachment
 
 tests/
 ├── unit/test_frontend_gate_policy_models.py
 ├── unit/test_frontend_gate_policy_artifacts.py
-└── unit/test_frontend_gate_verification.py
+├── unit/test_frontend_gate_verification.py
+└── unit/test_verify_constraints.py
 ```
 
 ## 阶段计划
@@ -119,6 +121,13 @@ tests/
 **验证方式**：定向 `pytest`、`uv run ruff check src tests`、`git diff --check`、`uv run ai-sdlc verify constraints`。
 **回退方式**：仅回退本阶段涉及的 `core/`、`tests/` 与 execution log 变更。
 
+### Phase 7：Verify constraints attachment slice
+
+**目标**：将 scoped frontend gate summary 接到 `build_constraint_report()` 与 `build_verification_gate_context()`，让 active `018` 在 verify surface 上具备真实 frontend gate summary。
+**产物**：`src/ai_sdlc/core/verify_constraints.py`、`tests/unit/test_verify_constraints.py`。
+**验证方式**：定向 `pytest`、`uv run ruff check src tests`、`git diff --check`、`uv run ai-sdlc verify constraints`。
+**回退方式**：仅回退本阶段涉及的 `core/`、`tests/` 与 execution log 变更。
+
 ## 关键路径验证策略
 
 | 关键路径 | 主验证方式 | 次验证方式 |
@@ -130,3 +139,4 @@ tests/
 | gate matrix model correctness | `uv run pytest tests/unit/test_frontend_gate_policy_models.py -q` | model payload / builder review |
 | gate policy artifact correctness | `uv run pytest tests/unit/test_frontend_gate_policy_artifacts.py -q` | artifact file layout / yaml payload review |
 | frontend gate verification helper correctness | `uv run pytest tests/unit/test_frontend_gate_verification.py -q` | scoped verify payload review |
+| frontend gate verify attachment correctness | `uv run pytest tests/unit/test_verify_constraints.py -q` | active `018` verify surface review |

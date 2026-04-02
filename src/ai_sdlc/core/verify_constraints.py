@@ -15,6 +15,10 @@ from ai_sdlc.core.frontend_contract_verification import (
     FrontendContractVerificationReport,
     build_frontend_contract_verification_report,
 )
+from ai_sdlc.core.frontend_gate_verification import (
+    FrontendGateVerificationReport,
+    build_frontend_gate_verification_report,
+)
 from ai_sdlc.core.provenance_gate import load_phase1_provenance_gate_payload
 from ai_sdlc.core.release_gate import ReleaseGateParseError, load_release_gate_report
 from ai_sdlc.core.workitem_traceability import evaluate_work_item_branch_lifecycle
@@ -246,18 +250,28 @@ def build_constraint_report(root: Path) -> ConstraintReport:
     """Build a structured report for verify constraints."""
     checkpoint = load_checkpoint(root)
     frontend_contract_report = _frontend_contract_attachment_report(root, checkpoint)
+    frontend_gate_report = _frontend_gate_attachment_report(root, checkpoint)
     return ConstraintReport(
         root=str(root),
         gate_name="Verification Gate",
         source_name="verify constraints",
         check_objects=_merge_unique_strings(
-            VERIFICATION_GATE_OBJECTS,
-            frontend_contract_report.check_objects if frontend_contract_report else (),
+            _merge_unique_strings(
+                VERIFICATION_GATE_OBJECTS,
+                frontend_contract_report.check_objects if frontend_contract_report else (),
+            ),
+            frontend_gate_report.check_objects if frontend_gate_report else (),
         ),
-        blockers=tuple(collect_constraint_blockers(root)),
+        blockers=_merge_unique_strings(
+            tuple(collect_constraint_blockers(root)),
+            frontend_gate_report.blockers if frontend_gate_report else (),
+        ),
         coverage_gaps=_merge_unique_strings(
             _feature_contract_coverage_gaps(root, checkpoint),
-            frontend_contract_report.coverage_gaps if frontend_contract_report else (),
+            _merge_unique_strings(
+                frontend_contract_report.coverage_gaps if frontend_contract_report else (),
+                frontend_gate_report.coverage_gaps if frontend_gate_report else (),
+            ),
         ),
         release_gate=_release_gate_surface(root, checkpoint),
     )
@@ -268,6 +282,7 @@ def build_verification_gate_context(root: Path) -> dict[str, object]:
     report = build_constraint_report(root)
     checkpoint = load_checkpoint(root)
     frontend_contract_report = _frontend_contract_attachment_report(root, checkpoint)
+    frontend_gate_report = _frontend_gate_attachment_report(root, checkpoint)
     governance = build_verification_governance_bundle(
         report,
         decision_subject=f"verify:{root}",
@@ -276,8 +291,13 @@ def build_verification_gate_context(root: Path) -> dict[str, object]:
     decision_result = str(governance["gate_decision_payload"]["decision_result"])
     context: dict[str, object] = {
         "verification_sources": _merge_unique_strings(
-            (report.source_name,),
-            (frontend_contract_report.source_name,) if frontend_contract_report else (),
+            _merge_unique_strings(
+                (report.source_name,),
+                (frontend_contract_report.source_name,)
+                if frontend_contract_report
+                else (),
+            ),
+            (frontend_gate_report.source_name,) if frontend_gate_report else (),
         ),
         "verification_check_objects": report.check_objects,
         "constraint_blockers": report.blockers if decision_result == "block" else (),
@@ -290,6 +310,8 @@ def build_verification_gate_context(root: Path) -> dict[str, object]:
         context["frontend_contract_verification"] = (
             frontend_contract_report.to_json_dict()
         )
+    if frontend_gate_report is not None:
+        context["frontend_gate_verification"] = frontend_gate_report.to_json_dict()
     return context
 
 
@@ -545,6 +567,34 @@ def _frontend_contract_attachment_report(
     )
 
 
+def _frontend_gate_attachment_report(
+    root: Path,
+    checkpoint: Checkpoint | None,
+) -> FrontendGateVerificationReport | None:
+    """Resolve the scoped frontend gate verify attachment for active 018 only."""
+    work_item_id = _effective_feature_contract_wi_id(checkpoint)
+    if not _is_018_work_item(work_item_id):
+        return None
+
+    observations_path = _frontend_contract_observation_path(root, checkpoint)
+    observations: list = []
+    load_error: str | None = None
+    if observations_path is not None and observations_path.is_file():
+        try:
+            observations = _load_frontend_contract_observations(observations_path)
+        except ValueError as exc:
+            load_error = str(exc)
+
+    report = build_frontend_gate_verification_report(root, observations)
+    if load_error is None or observations_path is None:
+        return report
+    return _invalid_frontend_gate_observation_report(
+        report,
+        observations_path=observations_path,
+        error_message=load_error,
+    )
+
+
 def _frontend_contract_observation_path(
     root: Path,
     checkpoint: Checkpoint | None,
@@ -601,6 +651,63 @@ def _invalid_frontend_contract_observation_report(
     )
 
 
+def _invalid_frontend_gate_observation_report(
+    report: FrontendGateVerificationReport,
+    *,
+    observations_path: Path,
+    error_message: str,
+) -> FrontendGateVerificationReport:
+    """Preserve scoped gate attachment while surfacing malformed observation input honestly."""
+    observation_blocker = (
+        "BLOCKER: frontend gate prerequisite failed: "
+        "frontend contract verification not clear: "
+        "invalid structured observation input "
+        f"{observations_path.as_posix()}: {error_message}"
+    )
+    blockers: list[str] = []
+    replaced = False
+    for blocker in report.blockers:
+        if "frontend contract verification not clear:" in blocker:
+            blockers.append(observation_blocker)
+            replaced = True
+        else:
+            blockers.append(blocker)
+    if not replaced:
+        blockers.append(observation_blocker)
+
+    upstream_contract = dict(report.upstream_contract_verification)
+    upstream_blockers = [
+        observation_blocker,
+        *[
+            item
+            for item in _string_tuple(upstream_contract.get("blockers", ()))
+            if "invalid structured observation input" not in item
+        ],
+    ]
+    upstream_contract["blockers"] = list(_merge_unique_strings(tuple(upstream_blockers), ()))
+    upstream_contract["coverage_gaps"] = list(
+        _merge_unique_strings(
+            _string_tuple(upstream_contract.get("coverage_gaps", ())),
+            ("frontend_contract_observations",),
+        )
+    )
+
+    return FrontendGateVerificationReport(
+        gate_policy_root=report.gate_policy_root,
+        generation_root=report.generation_root,
+        source_name=report.source_name,
+        check_objects=report.check_objects,
+        blockers=tuple(blockers),
+        coverage_gaps=_merge_unique_strings(
+            report.coverage_gaps,
+            ("frontend_contract_observations",),
+        ),
+        advisory_checks=report.advisory_checks,
+        gate_result=report.gate_result,
+        upstream_contract_verification=upstream_contract,
+    )
+
+
 def _feature_contract_surfaces_for_work_item(
     work_item_id: str,
 ) -> tuple[FeatureContractSurface, ...]:
@@ -646,6 +753,11 @@ def _is_012_work_item(work_item_id: str) -> bool:
     return normalized == "012" or normalized.startswith("012-") or normalized.startswith("012/")
 
 
+def _is_018_work_item(work_item_id: str) -> bool:
+    normalized = work_item_id.strip()
+    return normalized == "018" or normalized.startswith("018-") or normalized.startswith("018/")
+
+
 def _effective_feature_contract_wi_id(checkpoint: Checkpoint | None) -> str:
     """Resolve the active work-item id for feature-contract coverage."""
     if checkpoint is None:
@@ -662,6 +774,17 @@ def _merge_unique_strings(
         if item and item not in merged:
             merged.append(item)
     return tuple(merged)
+
+
+def _string_tuple(value: object) -> tuple[str, ...]:
+    if not isinstance(value, (list, tuple)):
+        return ()
+    items: list[str] = []
+    for item in value:
+        text = str(item).strip()
+        if text:
+            items.append(text)
+    return tuple(items)
 
 
 def _release_gate_surface(

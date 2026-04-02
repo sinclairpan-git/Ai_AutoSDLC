@@ -376,3 +376,97 @@
 - **提交哈希**：`48f1290`（`feat(core): add frontend gate verification helper`）
 - **改动范围**：`specs/018-frontend-gate-compatibility-baseline/plan.md`、`specs/018-frontend-gate-compatibility-baseline/tasks.md`、`specs/018-frontend-gate-compatibility-baseline/task-execution-log.md`、`src/ai_sdlc/core/frontend_gate_verification.py`、`tests/unit/test_frontend_gate_verification.py`
 - **是否继续下一批**：按用户授权连续推进（优先转入 `verify_constraints` 接线）
+
+### Batch 2026-04-03-005 | 018 Verify constraints attachment slice
+
+#### 2.1 准备
+
+- **任务来源**：[`tasks.md`](tasks.md) `T71`、`T72`、`T73`
+- **目标**：把 scoped frontend gate summary 正式挂到 active `018` 的 `build_constraint_report()` 与 `build_verification_gate_context()`，使 verify surface 能暴露真实的 frontend gate payload。
+- **预读范围**：[`spec.md`](spec.md)、[`plan.md`](plan.md)、[`tasks.md`](tasks.md)、`src/ai_sdlc/core/frontend_gate_verification.py`、`src/ai_sdlc/core/verify_constraints.py`、`tests/unit/test_verify_constraints.py`
+- **激活的规则**：TDD red-green；single canonical truth；verification-before-completion
+- **验证画像**：`code-change`
+
+#### 2.2 统一验证命令
+
+- **V1（Batch 7 parser 结构校验）**
+  - 命令：`uv run python -c "from pathlib import Path; from ai_sdlc.generators.doc_gen import TasksParser; plan = TasksParser().parse(Path('specs/018-frontend-gate-compatibility-baseline/tasks.md')); print({'total_tasks': plan.total_tasks, 'total_batches': plan.total_batches, 'batches': [batch.tasks for batch in plan.batches]})"`
+  - 结果：`{'total_tasks': 21, 'total_batches': 7, 'batches': [['T11', 'T12', 'T13'], ['T21', 'T22', 'T23'], ['T31', 'T32', 'T33'], ['T41', 'T42', 'T43'], ['T51', 'T52', 'T53'], ['T61', 'T62', 'T63'], ['T71', 'T72', 'T73']]}`
+- **V2（RED：verify constraints 的 018 定向测试）**
+  - 命令：`uv run pytest tests/unit/test_verify_constraints.py -q -k "018_frontend_gate_verification"`
+  - 结果：`3 failed, 35 deselected in 0.30s`
+- **V3（GREEN：verify constraints 全量单测）**
+  - 命令：`uv run pytest tests/unit/test_verify_constraints.py -q`
+  - 结果：`38 passed in 1.24s`
+- **V4（静态检查）**
+  - 命令：`uv run ruff check src tests`
+  - 结果：`All checks passed!`
+- **V5（Markdown / code diff hygiene）**
+  - 命令：`git diff --check -- specs/018-frontend-gate-compatibility-baseline src/ai_sdlc/core tests/unit`
+  - 结果：无输出。
+- **V6（治理只读校验）**
+  - 命令：`uv run ai-sdlc verify constraints`
+  - 结果：`verify constraints: no BLOCKERs.`
+
+#### 2.3 任务记录
+
+##### T71 | 先写 failing tests 固定 active 018 verify surface 语义
+
+- **改动范围**：`tests/unit/test_verify_constraints.py`
+- **改动内容**：
+  - 新增 active `018` 的 verify surface 单测，先固定 gate policy 缺失、全部前置满足与 observation artifact 非 canonical 的行为。
+  - 首次运行定向测试时命中 `3 failed`，证明 `verify_constraints` 尚未接入 frontend gate summary，RED 成立。
+- **新增/调整的测试**：扩展 `tests/unit/test_verify_constraints.py`。
+- **测试结果**：RED 成立，失败点集中在 `report.coverage_gaps`、`report.check_objects` 与 `frontend_gate_verification` payload 尚未挂接。
+- **是否符合任务目标**：符合。
+
+##### T72 | 实现最小 verify constraints attachment
+
+- **改动范围**：`src/ai_sdlc/core/verify_constraints.py`
+- **改动内容**：
+  - 新增 active `018` 的 `_frontend_gate_attachment_report()` 与 invalid observation honesty wrapper。
+  - `build_constraint_report()` 现在会在 active `018` 时合并 frontend gate summary 的 `check_objects / blockers / coverage_gaps`。
+  - `build_verification_gate_context()` 现在会在 active `018` 时暴露 `frontend_gate_verification` payload，并保持非 `018` 路径不变。
+- **新增/调整的测试**：复用 `tests/unit/test_verify_constraints.py`
+- **测试结果**：`38 passed in 1.24s`
+- **是否符合任务目标**：符合。
+
+##### T73 | Fresh verify 并追加 attachment batch 归档
+
+- **改动范围**：`specs/018-frontend-gate-compatibility-baseline/plan.md`、`specs/018-frontend-gate-compatibility-baseline/tasks.md`、`specs/018-frontend-gate-compatibility-baseline/task-execution-log.md`
+- **改动内容**：
+  - 将 Batch 7 正式加入 `plan.md / tasks.md`，把 `verify constraints attachment slice` 的 scope、验证面和执行护栏写成 formal truth。
+  - 回填本批 parser / RED / GREEN / static / diff hygiene / governance 验证结果，并归档 touched files 与 scoped attachment 边界。
+- **新增/调整的测试**：无新增测试文件；以本批 fresh verification 命令为准。
+- **测试结果**：全部通过。
+- **是否符合任务目标**：符合。
+
+#### 2.4 代码审查（Mandatory）
+
+- **宪章/规格对齐**：本批只实现 active `018` 的 scoped verify attachment，没有越界到 `VerificationGate`、CLI 或完整 gate runtime。
+- **代码质量**：attachment 复用既有 helper，并通过 work-item scoped 分支保持非 `018` 路径不受影响。
+- **测试质量**：先 RED 再 GREEN，覆盖 active `018` 的三类关键场景，并补 fresh `ruff`、`diff --check` 与 `verify constraints`。
+- **结论**：`无 Critical 阻塞项`
+
+#### 2.5 任务/计划同步状态（Mandatory）
+
+- `tasks.md` 同步状态：`已同步`
+- `plan.md` 同步状态：`已同步`
+- `spec.md` 同步状态：`无需变更`
+- 关联 branch/worktree disposition 计划：`retained（沿用当前 009/011/012/013/014/015/016/017/018 工作分支）`
+- 说明：`018` 已经把 frontend gate summary 接到了 verify core surface，但 `VerificationGate` 和 CLI 仍待后续批次承接。`
+
+#### 2.6 自动决策记录（如有）
+
+- AD-005：在 `verify_constraints` 层保留 invalid structured observation honesty wrapper，而不是把 malformed observation 输入吞成“无 observations”。理由：保持与 `012` 一致的 failure honesty。
+
+#### 2.7 批次结论
+
+- `018` 已具备 active work-item scoped 的 frontend gate verify attachment，后续 `VerificationGate` / CLI 只需要消费既有 payload，不需要再定义第三套 summary 结构。
+
+#### 2.8 归档后动作
+
+- **已完成 git 提交**：否（提交动作紧随本次归档后执行）
+- **提交哈希**：待补充（提交后回填）
+- **改动范围**：`specs/018-frontend-gate-compatibility-baseline/plan.md`、`specs/018-frontend-gate-compatibility-baseline/tasks.md`、`specs/018-frontend-gate-compatibility-baseline/task-execution-log.md`、`src/ai_sdlc/core/verify_constraints.py`、`tests/unit/test_verify_constraints.py`
+- **是否继续下一批**：按用户授权连续推进（优先转入 `VerificationGate` 聚合）

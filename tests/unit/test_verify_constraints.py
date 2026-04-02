@@ -16,11 +16,25 @@ from ai_sdlc.core.frontend_contract_verification import (
     FRONTEND_CONTRACT_CHECK_OBJECTS,
     FRONTEND_CONTRACT_SOURCE_NAME,
 )
+from ai_sdlc.core.frontend_gate_verification import (
+    FRONTEND_GATE_CHECK_OBJECTS,
+    FRONTEND_GATE_SOURCE_NAME,
+)
 from ai_sdlc.core.verify_constraints import (
     build_constraint_report,
     build_verification_gate_context,
     build_verification_governance_bundle,
     collect_constraint_blockers,
+)
+from ai_sdlc.generators.frontend_gate_policy_artifacts import (
+    materialize_frontend_gate_policy_artifacts,
+)
+from ai_sdlc.generators.frontend_generation_constraint_artifacts import (
+    materialize_frontend_generation_constraint_artifacts,
+)
+from ai_sdlc.models.frontend_gate_policy import build_mvp_frontend_gate_policy
+from ai_sdlc.models.frontend_generation_constraints import (
+    build_mvp_frontend_generation_constraints,
 )
 from ai_sdlc.models.state import Checkpoint, FeatureInfo
 
@@ -288,6 +302,27 @@ def _write_012_checkpoint(root: Path) -> None:
     save_checkpoint(root, cp)
 
 
+def _write_018_checkpoint(root: Path) -> None:
+    mem = root / ".ai-sdlc" / "memory"
+    mem.mkdir(parents=True, exist_ok=True)
+    (mem / "constitution.md").write_text("# C\n", encoding="utf-8")
+
+    spec = root / "specs" / "018-frontend-gate-compatibility-baseline"
+    spec.mkdir(parents=True, exist_ok=True)
+
+    cp = Checkpoint(
+        current_stage="verify",
+        feature=FeatureInfo(
+            id="018",
+            spec_dir="specs/018-frontend-gate-compatibility-baseline",
+            design_branch="d",
+            feature_branch="f",
+            current_branch="main",
+        ),
+    )
+    save_checkpoint(root, cp)
+
+
 def _write_minimal_frontend_contract_page_artifacts(
     root: Path, *, page_id: str = "user-create", recipe_id: str = "form-create"
 ) -> None:
@@ -329,6 +364,45 @@ def _write_012_frontend_contract_observations(
         generated_at="2026-04-02T14:30:00Z",
     )
     write_frontend_contract_observation_artifact(spec_dir, artifact)
+
+
+def _write_018_frontend_contract_observations(
+    root: Path,
+    *,
+    page_id: str = "user-create",
+    recipe_id: str = "form-create",
+) -> None:
+    spec_dir = (
+        root
+        / "specs"
+        / "018-frontend-gate-compatibility-baseline"
+    )
+    artifact = build_frontend_contract_observation_artifact(
+        observations=[
+            PageImplementationObservation(
+                page_id=page_id,
+                recipe_id=recipe_id,
+                i18n_keys=[],
+                validation_fields=[],
+                new_legacy_usages=[],
+            )
+        ],
+        provider_kind="manual",
+        provider_name="test-fixture",
+        generated_at="2026-04-03T14:30:00Z",
+    )
+    write_frontend_contract_observation_artifact(spec_dir, artifact)
+
+
+def _write_018_gate_artifacts(root: Path) -> None:
+    materialize_frontend_gate_policy_artifacts(
+        root,
+        build_mvp_frontend_gate_policy(),
+    )
+    materialize_frontend_generation_constraint_artifacts(
+        root,
+        build_mvp_frontend_generation_constraints(),
+    )
 
 
 def _init_git_repo(root: Path) -> None:
@@ -1140,6 +1214,91 @@ def test_012_frontend_contract_verification_rejects_noncanonical_observation_art
         for blocker in report.blockers
     )
     assert context["frontend_contract_verification"]["coverage_gaps"] == [
+        "frontend_contract_observations"
+    ]
+
+
+def test_018_frontend_gate_verification_surfaces_missing_gate_policy_gap(
+    tmp_path: Path,
+) -> None:
+    _write_018_checkpoint(tmp_path)
+    _write_minimal_frontend_contract_page_artifacts(tmp_path)
+    materialize_frontend_generation_constraint_artifacts(
+        tmp_path,
+        build_mvp_frontend_generation_constraints(),
+    )
+    _write_018_frontend_contract_observations(tmp_path)
+
+    report = build_constraint_report(tmp_path)
+    context = build_verification_gate_context(tmp_path)
+
+    assert "frontend_gate_policy_artifacts" in report.coverage_gaps
+    assert FRONTEND_GATE_SOURCE_NAME in context["verification_sources"]
+    assert context["frontend_gate_verification"]["coverage_gaps"] == [
+        "frontend_gate_policy_artifacts"
+    ]
+
+
+def test_018_frontend_gate_verification_passes_with_artifacts_and_observations(
+    tmp_path: Path,
+) -> None:
+    _write_018_checkpoint(tmp_path)
+    _write_minimal_frontend_contract_page_artifacts(tmp_path)
+    _write_018_gate_artifacts(tmp_path)
+    _write_018_frontend_contract_observations(tmp_path)
+
+    report = build_constraint_report(tmp_path)
+    context = build_verification_gate_context(tmp_path)
+
+    assert report.coverage_gaps == ()
+    assert report.blockers == ()
+    assert report.check_objects[-3:] == FRONTEND_GATE_CHECK_OBJECTS
+    assert context["verification_sources"] == (
+        "verify constraints",
+        FRONTEND_GATE_SOURCE_NAME,
+    )
+    assert context["frontend_gate_verification"]["gate_verdict"] == "PASS"
+    assert context["frontend_gate_verification"]["coverage_gaps"] == []
+
+
+def test_018_frontend_gate_verification_rejects_noncanonical_observation_artifact(
+    tmp_path: Path,
+) -> None:
+    _write_018_checkpoint(tmp_path)
+    _write_minimal_frontend_contract_page_artifacts(tmp_path)
+    _write_018_gate_artifacts(tmp_path)
+    path = (
+        tmp_path
+        / "specs"
+        / "018-frontend-gate-compatibility-baseline"
+        / "frontend-contract-observations.json"
+    )
+    path.write_text(
+        json.dumps(
+            {
+                "observations": [
+                    {
+                        "page_id": "user-create",
+                        "recipe_id": "form-create",
+                        "i18n_keys": [],
+                        "validation_fields": [],
+                        "new_legacy_usages": [],
+                    }
+                ]
+            },
+            ensure_ascii=False,
+            indent=2,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    report = build_constraint_report(tmp_path)
+    context = build_verification_gate_context(tmp_path)
+
+    assert "frontend_contract_observations" in report.coverage_gaps
+    assert any("invalid structured observation input" in blocker for blocker in report.blockers)
+    assert context["frontend_gate_verification"]["coverage_gaps"] == [
         "frontend_contract_observations"
     ]
 
