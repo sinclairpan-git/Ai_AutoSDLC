@@ -13,6 +13,11 @@ from typer.testing import CliRunner
 
 from ai_sdlc.cli.main import app
 from ai_sdlc.context.state import save_checkpoint
+from ai_sdlc.core.frontend_contract_drift import PageImplementationObservation
+from ai_sdlc.core.frontend_contract_observation_provider import (
+    build_frontend_contract_observation_artifact,
+    write_frontend_contract_observation_artifact,
+)
 from ai_sdlc.core.frontend_contract_verification import FRONTEND_CONTRACT_SOURCE_NAME
 from ai_sdlc.models.state import Checkpoint, FeatureInfo
 from ai_sdlc.routers.bootstrap import init_project
@@ -195,31 +200,24 @@ def _write_012_frontend_contract_page_artifacts(
 def _write_012_frontend_contract_observations(
     root: Path, *, page_id: str = "user-create", recipe_id: str = "form-create"
 ) -> None:
-    path = (
-        root
-        / "specs"
-        / "012-frontend-contract-verify-integration"
-        / "frontend-contract-observations.json"
+    spec_dir = (
+        root / "specs" / "012-frontend-contract-verify-integration"
     )
-    path.write_text(
-        json.dumps(
-            {
-                "observations": [
-                    {
-                        "page_id": page_id,
-                        "recipe_id": recipe_id,
-                        "i18n_keys": [],
-                        "validation_fields": [],
-                        "new_legacy_usages": [],
-                    }
-                ]
-            },
-            ensure_ascii=False,
-            indent=2,
-        )
-        + "\n",
-        encoding="utf-8",
+    artifact = build_frontend_contract_observation_artifact(
+        observations=[
+            PageImplementationObservation(
+                page_id=page_id,
+                recipe_id=recipe_id,
+                i18n_keys=[],
+                validation_fields=[],
+                new_legacy_usages=[],
+            )
+        ],
+        provider_kind="manual",
+        provider_name="test-fixture",
+        generated_at="2026-04-02T14:30:00Z",
     )
+    write_frontend_contract_observation_artifact(spec_dir, artifact)
 
 
 def _write_branch_lifecycle_fixture(

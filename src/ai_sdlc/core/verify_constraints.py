@@ -2,14 +2,15 @@
 
 from __future__ import annotations
 
-import json
 import re
 from dataclasses import dataclass
 from pathlib import Path
 
 from ai_sdlc.branch.git_client import GitError
 from ai_sdlc.context.state import load_checkpoint
-from ai_sdlc.core.frontend_contract_drift import PageImplementationObservation
+from ai_sdlc.core.frontend_contract_observation_provider import (
+    load_frontend_contract_observation_artifact,
+)
 from ai_sdlc.core.frontend_contract_verification import (
     FrontendContractVerificationReport,
     build_frontend_contract_verification_report,
@@ -523,7 +524,7 @@ def _frontend_contract_attachment_report(
         return None
 
     observations_path = _frontend_contract_observation_path(root, checkpoint)
-    observations: list[PageImplementationObservation] = []
+    observations: list = []
     load_error: str | None = None
     if observations_path is not None and observations_path.is_file():
         try:
@@ -558,26 +559,10 @@ def _frontend_contract_observation_path(
 
 def _load_frontend_contract_observations(
     path: Path,
-) -> list[PageImplementationObservation]:
-    """Load structured observations from the active 012 input file."""
-    try:
-        raw = json.loads(path.read_text(encoding="utf-8"))
-    except json.JSONDecodeError as exc:
-        raise ValueError(f"invalid JSON ({exc.msg})") from exc
-
-    payload = raw.get("observations") if isinstance(raw, dict) else raw
-    if not isinstance(payload, list):
-        raise ValueError("expected top-level `observations` list")
-
-    observations: list[PageImplementationObservation] = []
-    for index, item in enumerate(payload):
-        if not isinstance(item, dict):
-            raise ValueError(f"observations[{index}] must be an object")
-        try:
-            observations.append(PageImplementationObservation(**item))
-        except TypeError as exc:
-            raise ValueError(f"observations[{index}] invalid: {exc}") from exc
-    return observations
+) -> list:
+    """Load structured observations from the active 012 canonical artifact."""
+    artifact = load_frontend_contract_observation_artifact(path)
+    return list(artifact.observations)
 
 
 def _invalid_frontend_contract_observation_report(

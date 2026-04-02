@@ -21,6 +21,7 @@ Batch 2: artifact envelope and provenance baseline
 Batch 3: implementation handoff and verification freeze
 Batch 4: provider contract / artifact IO slice
 Batch 5: scanner candidate slice
+Batch 6: canonical consumer migration slice
 ```
 
 ---
@@ -30,11 +31,13 @@ Batch 5: scanner candidate slice
 - `Batch 1 ~ 3` 只允许推进 `spec.md / plan.md / tasks.md` 与 append-only `task-execution-log.md`。
 - `Batch 4` 只允许写入 `src/ai_sdlc/core/frontend_contract_observation_provider.py`、`tests/unit/test_frontend_contract_observation_provider.py`、`specs/013-frontend-contract-observation-provider-baseline/task-execution-log.md`，以及为本批边界服务的 `plan.md / tasks.md`。
 - `Batch 5` 只允许写入 `src/ai_sdlc/scanners/frontend_contract_scanner.py`、`tests/unit/test_frontend_contract_scanner.py`、`specs/013-frontend-contract-observation-provider-baseline/task-execution-log.md`，以及为本批边界服务的 `plan.md / tasks.md`。
+- `Batch 6` 只允许写入 `src/ai_sdlc/core/verify_constraints.py`、`tests/unit/test_verify_constraints.py`、`tests/integration/test_cli_verify_constraints.py`、`specs/013-frontend-contract-observation-provider-baseline/task-execution-log.md`，以及为本批边界服务的 `plan.md / tasks.md`。
 - `013` 不得把 scanner runtime、provider runtime、verify mainline、registry attachment、auto-fix 或 remediation workflow 混入当前 child work item 的 formal baseline。
 - `013` 不得改写 `011` 已冻结的 contract artifact truth 或 `012` 已冻结的 verify integration truth。
 - `013` 只冻结 observation provider baseline，不默认决定 active consumer path 或新的 CLI command surface。
 - 当前首批实现只放行 provider contract / artifact IO，不放行 scanner candidate、CLI、registry 或 `012` verify mainline。
 - 当前第二批实现只放行 scanner candidate，不放行 CLI、registry 或 `012` verify mainline。
+- 当前第三批实现只放行 canonical consumer migration，不放行 gate/CLI surface 语义扩张。
 - 只有在用户明确要求进入实现，且 `013` formal docs 已通过门禁后，才允许进入 `src/` / `tests/` 级实现。
 
 ---
@@ -251,3 +254,46 @@ Batch 5: scanner candidate slice
   2. `uv run ruff check src tests`、`git diff --check -- specs/013-frontend-contract-observation-provider-baseline src/ai_sdlc/scanners tests/unit` 与 `uv run ai-sdlc verify constraints` 通过
   3. `task-execution-log.md` 追加记录当前 implementation batch 的 touched files、验证命令与结论
 - **验证**：`uv run pytest tests/unit/test_frontend_contract_scanner.py -q`, `uv run ruff check src tests`, `git diff --check -- specs/013-frontend-contract-observation-provider-baseline src/ai_sdlc/scanners tests/unit`, `uv run ai-sdlc verify constraints`
+
+---
+
+## Batch 6：canonical consumer migration slice
+
+### Task 6.1 先写 failing tests 固定 canonical consumer 语义
+
+- **任务编号**：T61
+- **优先级**：P0
+- **依赖**：T53
+- **文件**：`tests/unit/test_verify_constraints.py`, `tests/integration/test_cli_verify_constraints.py`
+- **可并行**：否
+- **验收标准**：
+  1. 单测明确覆盖 active `012` 下 canonical artifact 可通过 verify，而缺失 provenance/freshness 的旧式 observation 文件会被拒绝
+  2. integration fixture 切到 canonical artifact 后，CLI summary 行为保持既有口径
+  3. 首次运行定向测试时必须出现预期失败，证明 consumer 尚未切到 canonical loader
+- **验证**：`uv run pytest tests/unit/test_verify_constraints.py tests/integration/test_cli_verify_constraints.py -q`
+
+### Task 6.2 实现最小 canonical consumer migration
+
+- **任务编号**：T62
+- **优先级**：P0
+- **依赖**：T61
+- **文件**：`src/ai_sdlc/core/verify_constraints.py`
+- **可并行**：否
+- **验收标准**：
+  1. `verify_constraints` 复用 canonical observation artifact loader，而不是保留私有 JSON parser
+  2. 缺失 provenance/freshness 的旧式 observation 文件会被诚实暴露为 invalid structured observation input
+  3. 迁移只作用于 observation consumer，不引入 gate/CLI surface 语义扩张
+- **验证**：`uv run pytest tests/unit/test_verify_constraints.py tests/integration/test_cli_verify_constraints.py -q`
+
+### Task 6.3 Fresh verify 并追加 implementation batch 归档
+
+- **任务编号**：T63
+- **优先级**：P0
+- **依赖**：T62
+- **文件**：`specs/013-frontend-contract-observation-provider-baseline/task-execution-log.md`
+- **可并行**：否
+- **验收标准**：
+  1. `uv run pytest tests/unit/test_verify_constraints.py tests/integration/test_cli_verify_constraints.py -q` 通过
+  2. `uv run ruff check src tests`、`git diff --check -- specs/013-frontend-contract-observation-provider-baseline src/ai_sdlc/core tests/unit tests/integration` 与 `uv run ai-sdlc verify constraints` 通过
+  3. `task-execution-log.md` 追加记录当前 implementation batch 的 touched files、验证命令与结论
+- **验证**：`uv run pytest tests/unit/test_verify_constraints.py tests/integration/test_cli_verify_constraints.py -q`, `uv run ruff check src tests`, `git diff --check -- specs/013-frontend-contract-observation-provider-baseline src/ai_sdlc/core tests/unit tests/integration`, `uv run ai-sdlc verify constraints`

@@ -7,6 +7,11 @@ import subprocess
 from pathlib import Path
 
 from ai_sdlc.context.state import save_checkpoint
+from ai_sdlc.core.frontend_contract_drift import PageImplementationObservation
+from ai_sdlc.core.frontend_contract_observation_provider import (
+    build_frontend_contract_observation_artifact,
+    write_frontend_contract_observation_artifact,
+)
 from ai_sdlc.core.frontend_contract_verification import (
     FRONTEND_CONTRACT_CHECK_OBJECTS,
     FRONTEND_CONTRACT_SOURCE_NAME,
@@ -304,31 +309,26 @@ def _write_012_frontend_contract_observations(
     page_id: str = "user-create",
     recipe_id: str = "form-create",
 ) -> None:
-    path = (
+    spec_dir = (
         root
         / "specs"
         / "012-frontend-contract-verify-integration"
-        / "frontend-contract-observations.json"
     )
-    path.write_text(
-        json.dumps(
-            {
-                "observations": [
-                    {
-                        "page_id": page_id,
-                        "recipe_id": recipe_id,
-                        "i18n_keys": [],
-                        "validation_fields": [],
-                        "new_legacy_usages": [],
-                    }
-                ]
-            },
-            ensure_ascii=False,
-            indent=2,
-        )
-        + "\n",
-        encoding="utf-8",
+    artifact = build_frontend_contract_observation_artifact(
+        observations=[
+            PageImplementationObservation(
+                page_id=page_id,
+                recipe_id=recipe_id,
+                i18n_keys=[],
+                validation_fields=[],
+                new_legacy_usages=[],
+            )
+        ],
+        provider_kind="manual",
+        provider_name="test-fixture",
+        generated_at="2026-04-02T14:30:00Z",
     )
+    write_frontend_contract_observation_artifact(spec_dir, artifact)
 
 
 def _init_git_repo(root: Path) -> None:
@@ -1097,6 +1097,51 @@ def test_012_frontend_contract_verification_passes_with_structured_observations(
     )
     assert context["frontend_contract_verification"]["gate_verdict"] == "PASS"
     assert context["frontend_contract_verification"]["coverage_gaps"] == []
+
+
+def test_012_frontend_contract_verification_rejects_noncanonical_observation_artifact(
+    tmp_path: Path,
+) -> None:
+    _write_012_checkpoint(tmp_path)
+    _write_minimal_frontend_contract_page_artifacts(tmp_path)
+    path = (
+        tmp_path
+        / "specs"
+        / "012-frontend-contract-verify-integration"
+        / "frontend-contract-observations.json"
+    )
+    path.write_text(
+        json.dumps(
+            {
+                "observations": [
+                    {
+                        "page_id": "user-create",
+                        "recipe_id": "form-create",
+                        "i18n_keys": [],
+                        "validation_fields": [],
+                        "new_legacy_usages": [],
+                    }
+                ]
+            },
+            ensure_ascii=False,
+            indent=2,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    report = build_constraint_report(tmp_path)
+    context = build_verification_gate_context(tmp_path)
+
+    assert report.coverage_gaps == ("frontend_contract_observations",)
+    assert any("invalid structured observation input" in blocker for blocker in report.blockers)
+    assert any(
+        "schema_version" in blocker or "provenance" in blocker or "freshness" in blocker
+        for blocker in report.blockers
+    )
+    assert context["frontend_contract_verification"]["coverage_gaps"] == [
+        "frontend_contract_observations"
+    ]
 
 
 def test_build_verification_governance_bundle_emits_gate_capable_payload(

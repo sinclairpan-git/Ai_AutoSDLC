@@ -297,3 +297,102 @@
 - **提交哈希**：本批唯一一次语义提交预期为 `feat(scanners): add frontend contract scanner candidate`；完整 SHA 以该提交后的 `HEAD`（`git rev-parse HEAD`）为准
 - **改动范围**：`specs/013-frontend-contract-observation-provider-baseline/plan.md`、`specs/013-frontend-contract-observation-provider-baseline/tasks.md`、`specs/013-frontend-contract-observation-provider-baseline/task-execution-log.md`、`src/ai_sdlc/scanners/frontend_contract_scanner.py`、`tests/unit/test_frontend_contract_scanner.py`
 - **是否继续下一批**：待用户决定（建议进入 consumer migration 或另拆 CLI/export slice）
+
+### Batch 2026-04-02-004 | 013 Canonical consumer migration slice
+
+#### 2.1 准备
+
+- **任务来源**：[`tasks.md`](tasks.md) `T61`、`T62`、`T63`
+- **目标**：在不越界到 gate/CLI surface 扩张的前提下，把 `verify_constraints` 的 observation 输入读取切到 canonical loader，并把 verify/CLI fixtures 更新为 canonical artifact。
+- **预读范围**：[`spec.md`](spec.md)、[`plan.md`](plan.md)、[`tasks.md`](tasks.md)、`src/ai_sdlc/core/frontend_contract_observation_provider.py`、`src/ai_sdlc/core/verify_constraints.py`、`tests/unit/test_verify_constraints.py`、`tests/integration/test_cli_verify_constraints.py`
+- **激活的规则**：TDD red-green；single canonical truth；verification-before-completion
+- **验证画像**：`code-change`
+
+#### 2.2 统一验证命令
+
+- **V1（Batch 6 parser 结构校验）**
+  - 命令：`uv run python -c "from pathlib import Path; from ai_sdlc.generators.doc_gen import TasksParser; plan = TasksParser().parse(Path('specs/013-frontend-contract-observation-provider-baseline/tasks.md')); print({'total_tasks': plan.total_tasks, 'total_batches': plan.total_batches, 'batches': [batch.tasks for batch in plan.batches]})"`
+  - 结果：`{'total_tasks': 18, 'total_batches': 6, 'batches': [['T11', 'T12', 'T13'], ['T21', 'T22', 'T23'], ['T31', 'T32', 'T33'], ['T41', 'T42', 'T43'], ['T51', 'T52', 'T53'], ['T61', 'T62', 'T63']]}`
+- **V2（RED：consumer migration 定向测试）**
+  - 命令：`uv run pytest tests/unit/test_verify_constraints.py tests/integration/test_cli_verify_constraints.py -q`
+  - 结果：失败；`test_012_frontend_contract_verification_rejects_noncanonical_observation_artifact` 断言未满足，证明旧式 `{"observations": [...]}` 文件仍被当作合法输入。
+- **V3（GREEN：consumer migration 定向测试）**
+  - 命令：`uv run pytest tests/unit/test_verify_constraints.py tests/integration/test_cli_verify_constraints.py -q`
+  - 结果：`62 passed in 3.58s`
+- **V4（静态检查）**
+  - 命令：`uv run ruff check src tests`
+  - 结果：`All checks passed!`
+- **V5（Markdown / code diff hygiene）**
+  - 命令：`git diff --check -- specs/013-frontend-contract-observation-provider-baseline src/ai_sdlc/core tests/unit tests/integration`
+  - 结果：无输出。
+- **V6（治理只读校验）**
+  - 命令：`uv run ai-sdlc verify constraints`
+  - 结果：`verify constraints: no BLOCKERs.`
+
+#### 2.3 任务记录
+
+##### T61 | 先写 failing tests 固定 canonical consumer 语义
+
+- **改动范围**：`tests/unit/test_verify_constraints.py`、`tests/integration/test_cli_verify_constraints.py`
+- **改动内容**：
+  - 把 `012` fixtures 切到 canonical observation artifact writer，而不是手写自由 JSON。
+  - 新增非 canonical artifact 被拒绝的单测，锁定旧式 `{"observations": [...]}` 文件必须被诚实暴露为 invalid structured observation input。
+  - 确认首次执行时 consumer migration 红在“旧式输入仍被接受”。
+- **新增/调整的测试**：更新 `tests/unit/test_verify_constraints.py`、`tests/integration/test_cli_verify_constraints.py`
+- **测试结果**：RED 已确认。
+- **是否符合任务目标**：符合。
+
+##### T62 | 实现最小 canonical consumer migration
+
+- **改动范围**：`src/ai_sdlc/core/verify_constraints.py`
+- **改动内容**：
+  - 让 `_load_frontend_contract_observations()` 复用 `load_frontend_contract_observation_artifact()`，不再保留私有 JSON parser。
+  - 保持 active `012` scoped attachment、blocker/gap surface 与 verify/CLI summary 既有口径不变。
+  - 让缺失 canonical metadata 的旧式 observation 文件被显式暴露为 invalid structured observation input。
+- **新增/调整的测试**：复用 `tests/unit/test_verify_constraints.py`、`tests/integration/test_cli_verify_constraints.py`
+- **测试结果**：通过。
+- **是否符合任务目标**：符合。
+
+##### T63 | Fresh verify 并追加 implementation batch 归档
+
+- **改动范围**：`specs/013-frontend-contract-observation-provider-baseline/plan.md`、`specs/013-frontend-contract-observation-provider-baseline/tasks.md`、`specs/013-frontend-contract-observation-provider-baseline/task-execution-log.md`
+- **改动内容**：
+  - 将 `013` formal docs 扩到 `Batch 6: canonical consumer migration slice`，并把只放行 `verify_constraints` 与相关 tests 的边界写死。
+  - 记录本批 RED/GREEN、fresh verification 与 canonical loader migration 语义。
+  - 保持 `013` 不越界到 gate/CLI surface 语义扩张。
+- **新增/调整的测试**：无新增测试文件；以本批 fresh verification 命令为准。
+- **测试结果**：通过。
+- **是否符合任务目标**：符合。
+
+#### 2.4 代码审查（Mandatory）
+
+- **宪章/规格对齐**：本批只进入 canonical consumer migration 切片，没有跨到 gate aggregation 语义变更、CLI surface 扩张或 registry。
+- **代码质量**：`verify_constraints` 直接复用 canonical loader，消除了 observation consumer 的私有 parser 分叉。
+- **测试质量**：已完成 RED/GREEN、`ruff`、`diff --check` 与 `verify constraints`。
+- **结论**：`无 Critical 阻塞项`
+
+#### 2.5 任务/计划同步状态（Mandatory）
+
+- `tasks.md` 同步状态：`已同步`
+- `plan.md` 同步状态：`已同步`
+- `spec.md` 同步状态：`无需变更`
+- 关联 branch/worktree disposition 计划：`retained（沿用当前 009/011/012/013 工作分支）`
+- 说明：`013` 已从 scanner candidate 进入 canonical consumer migration，但 gate/CLI surface 语义扩张仍未放行。`
+
+#### 2.6 自动决策记录（如有）
+
+- AD-010：consumer migration 直接切到 canonical loader，不保留第二套私有 parser。理由：provider contract 已冻结且已实现，继续保留私有 parser 会维持双重真值。
+- AD-011：verify/CLI fixtures 同步切到 canonical artifact writer。理由：测试应覆盖正式 contract，而不是继续依赖历史临时格式。
+- AD-012：对非 canonical artifact 的断言只要求命中 canonical metadata 缺失，而不绑定具体字段顺序。理由：loader 的首个失败字段可能是 `schema_version`、`provenance` 或 `freshness`，但三者都属于同一 canonical contract。
+
+#### 2.7 批次结论
+
+- `013` 当前已把 active `012` observation consumer 切到 canonical loader，provider / scanner / consumer 三层输入输出合同已收敛到同一 artifact 真值。
+- 后续若继续推进，应优先决定是否扩 CLI/export surface，还是把 scanner candidate 接入更正式的执行入口。
+
+#### 2.8 归档后动作
+
+- **已完成 git 提交**：是
+- **提交哈希**：本批唯一一次语义提交预期为 `feat(core): migrate frontend contract consumer to canonical loader`；完整 SHA 以该提交后的 `HEAD`（`git rev-parse HEAD`）为准
+- **改动范围**：`specs/013-frontend-contract-observation-provider-baseline/plan.md`、`specs/013-frontend-contract-observation-provider-baseline/tasks.md`、`specs/013-frontend-contract-observation-provider-baseline/task-execution-log.md`、`src/ai_sdlc/core/verify_constraints.py`、`tests/unit/test_verify_constraints.py`、`tests/integration/test_cli_verify_constraints.py`
+- **是否继续下一批**：待用户决定（建议进入 CLI/export slice，或另拆 runtime attachment）
