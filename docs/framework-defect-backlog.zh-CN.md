@@ -94,7 +94,7 @@
 ## 下一波待修优先级（2026-03-31）
 
 - 当前待修：
-  - `无`
+  - `009` 线 `FD-2026-04-02-001`
 - 本轮已收口：
   - `008` 线 `FD-2026-03-31-003`
   - `007` 线 `FD-2026-03-31-002`
@@ -106,6 +106,38 @@
 - 挂靠原则：
   - `003` 线：已全部收口
   - `004` 线：已全部收口
+
+## FD-2026-04-02-001 | 自迭代仓库存在历史 `.ai-sdlc` 痕迹但缺 formal bootstrap 标记时，direct-formal workitem 入口会先撞硬前置且缺少引导
+
+- 日期 (UTC): 2026-04-02
+- 来源: self_review, user_review
+- 状态: open
+- owner: codex
+- wi_id: 009-frontend-governance-ui-kernel
+- related_doc: src/ai_sdlc/core/workitem_scaffold.py, src/ai_sdlc/routers/bootstrap.py, docs/USER_GUIDE.zh-CN.md, src/ai_sdlc/rules/pipeline.md, docs/framework-defect-backlog.zh-CN.md, specs/009-frontend-governance-ui-kernel/spec.md, specs/009-frontend-governance-ui-kernel/plan.md, specs/009-frontend-governance-ui-kernel/tasks.md
+- detection_surface: self_review, user_review
+- trace_anchor: rev:697ae34
+- observed_scope: repo
+- subject_ref: 无（当前无稳定 provenance inspection subject）
+- chain_status: unknown（当前以 CLI 行为与 formal docs 复盘为准）
+- highest_confidence_source: 无（当前无 provenance inspection 输出）
+- key_gaps: unsupported: “已有 `.ai-sdlc` 历史痕迹但缺 `project-state.yaml`” 未被识别为需要 formal bootstrap reconcile 的自解释状态；unobserved: `workitem init` 未输出“先运行 `ai-sdlc init .`”的显式引导；ambiguous: `stage run init` / `stage show init` 容易被误读为 formal 初始化落盘入口
+- evidence_refs: command:uv run ai-sdlc workitem init --title "前端治理与 UI Kernel"; command:uv run ai-sdlc init .; file:.ai-sdlc/project/config/project-state.yaml
+- 现象: 在 AI-SDLC 框架自身的自迭代仓库中，虽然仓库长期存在 `.ai-sdlc` 相关目录和历史使用痕迹，操作者从语义上会自然认为“项目本身已经初始化过”；但 `ai-sdlc workitem init` 仍会先因为 `.ai-sdlc/project/config/project-state.yaml` 缺失而直接报错，且错误信息只暴露底层文件前置，不明确指出“这是 formal bootstrap 未完成、需要先执行 `ai-sdlc init .` 的场景”。结果是 direct-formal 入口先撞硬前置，操作者必须自行推断该走 formal init，而不是被 CLI 明确引导。
+- 触发场景: 在框架自身仓库里继续做自迭代能力时，用户要求“按框架约束继续下一步”，代理按 canonical 入口直接执行 `uv run ai-sdlc workitem init ...`；仓库存在历史 `.ai-sdlc` 痕迹，但缺当前 bootstrap 所要求的 `project-state.yaml` 与 project baseline 资产，于是 `workitem init` 按“未初始化项目”处理并停止。与此同时，用户文档把 `workitem init` 描述为 direct-formal canonical 入口，但没有把“必须先 `ai-sdlc init .`”作为显式首要前提写死。
+- 影响范围: direct-formal work item 入口的可用性与可理解性、自迭代仓库的 onboarding 体验、用户对“项目已在用”和“formal bootstrap 已完成”之间差异的理解，以及 CLI/文档/规则的一致性。若该缺口持续存在，未来在其他已有 `.ai-sdlc` 历史痕迹但缺 formal state 的仓库里会重复出现同类阻塞，并增加把 `stage run init`、宿主工作流提示或手工补文件误当成正确修复路径的风险。
+- 根因分类: D, E, H
+- 未来杜绝方案摘要: 框架需要把“历史上已在用，但缺当前 formal bootstrap 标记”的仓库识别为一个明确的中间状态，并在 direct-formal 入口上提供可操作 guidance，而不是只抛出底层缺文件错误。用户文档也需要把 `workitem init` 的适用前提显式补齐，避免 direct-formal canonical 入口与 formal bootstrap 前置之间继续靠人工推断衔接。
+- 建议改动层级: rule / policy, middleware, workflow, tool, eval
+- prompt / context: 当用户在框架自身仓库里要求“按框架约束继续下一步”或“直接进入 formal work item”时，代理不应假设“仓库既然一直在自迭代就一定已经 formal init 完成”；同时 CLI 不应把这种差异只隐藏为底层文件缺失。上下文应显式区分“历史 `.ai-sdlc` 痕迹”与“当前 formal bootstrap 已完成”的差异。
+- rule / policy: 在 `pipeline.md`、用户指南与自迭代约定中补充 direct-formal 入口的前置条件：`workitem init` 只适用于已完成 `ai-sdlc init` 的项目；对“已有 `.ai-sdlc` 痕迹但缺 `project-state.yaml`”的场景，应视为 formal bootstrap 缺口，而不是要求操作者自行推断。若后续定义 `existing_project_partially_initialized` 一类状态，也应在规则中明确其与 direct-formal 的衔接关系。
+- middleware: bootstrap/router 层应能识别“历史 `.ai-sdlc` 痕迹 + 缺 formal state”这一 reconcile 场景，并向上层命令返回结构化状态，而不是仅在 `workitem_scaffold` 里做文件存在判断。`workitem init` 失败时应输出明确下一步，例如“Project found but formal bootstrap incomplete. Run `ai-sdlc init .` first.”，必要时可附带 bounded reconcile hint。
+- workflow: direct-formal canonical 路径应收敛为 `确认 formal bootstrap -> workitem init -> freeze spec/plan/tasks`。对于框架自身这类自迭代仓库，若发现历史 `.ai-sdlc` 痕迹但 formal bootstrap 缺失，应先进入“补 formal init / reconcile”而不是让操作者在 `workitem init` 失败后自行摸索。`stage run init` / `stage show init` 的说明也应明确它们不是 formal 初始化落盘入口。
+- tool: src/ai_sdlc/core/workitem_scaffold.py, src/ai_sdlc/routers/bootstrap.py, src/ai_sdlc/cli/workitem_cmd.py, src/ai_sdlc/cli/commands.py, docs/USER_GUIDE.zh-CN.md, docs/框架自迭代开发与发布约定.md
+- eval: direct-formal-init-precondition-fail 次数、自迭代仓库 “existing project but missing formal bootstrap” 场景的首次成功率、`workitem init` 失败后仍需人工判读下一步的次数、是否出现把 `stage run init` 误当成 formal 初始化入口的复现事件
+- 风险等级: 中
+- 可验证成功标准: 给定“仓库存在历史 `.ai-sdlc` 痕迹但缺 `.ai-sdlc/project/config/project-state.yaml`”的夹具时，`ai-sdlc workitem init` 不再只抛出底层缺文件错误，而会明确给出“先执行 `ai-sdlc init .`”的 formal guidance，或直接输出结构化 reconcile 状态；用户文档在 `workitem init` 条目中也明确写出该前置条件。给定已 formal init 的项目时，`workitem init` 仍按当前 direct-formal 入口正常生成 `specs/<WI>/spec.md + plan.md + tasks.md`。
+- 是否需要回归测试补充: 是：补“existing project with legacy `.ai-sdlc` traces but missing `project-state.yaml`”的 CLI 夹具，覆盖 `workitem init` 的 guidance 文案、`ai-sdlc init .` 衔接路径，以及用户文档/帮助文本的一致性检查。
 
 ## FD-2026-03-31-001 | 宿主 skills 的默认 workflow 会把 superpowers plan 完成态继续推向 execute 倾向，稀释仓库法定阶段真值
 
