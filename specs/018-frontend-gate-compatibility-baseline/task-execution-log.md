@@ -282,3 +282,97 @@
 - **提交哈希**：`f3fd144`（`feat(generators): add frontend gate policy artifacts`）
 - **改动范围**：`specs/018-frontend-gate-compatibility-baseline/plan.md`、`specs/018-frontend-gate-compatibility-baseline/tasks.md`、`specs/018-frontend-gate-compatibility-baseline/task-execution-log.md`、`src/ai_sdlc/generators/frontend_gate_policy_artifacts.py`、`src/ai_sdlc/generators/__init__.py`、`tests/unit/test_frontend_gate_policy_artifacts.py`
 - **是否继续下一批**：按用户授权连续推进（优先转入最小 gate/verify integration slice）
+
+### Batch 2026-04-03-004 | 018 Frontend gate verification helper slice
+
+#### 2.1 准备
+
+- **任务来源**：[`tasks.md`](tasks.md) `T61`、`T62`、`T63`
+- **目标**：提供 scoped `frontend gate verification` helper，把 gate policy artifact、generation governance artifact 与 contract verification 聚合成 verify 可消费的统一 report/context，而不进入完整 gate runtime。
+- **预读范围**：[`spec.md`](spec.md)、[`plan.md`](plan.md)、[`tasks.md`](tasks.md)、`src/ai_sdlc/core/frontend_contract_verification.py`、`src/ai_sdlc/core/verify_constraints.py`、冻结设计稿第 12 章 gate / compatibility 片段
+- **激活的规则**：TDD red-green；artifact-driven baseline；single canonical truth；verification-before-completion
+- **验证画像**：`code-change`
+
+#### 2.2 统一验证命令
+
+- **V1（Batch 6 parser 结构校验）**
+  - 命令：`uv run python -c "from pathlib import Path; from ai_sdlc.generators.doc_gen import TasksParser; plan = TasksParser().parse(Path('specs/018-frontend-gate-compatibility-baseline/tasks.md')); print({'total_tasks': plan.total_tasks, 'total_batches': plan.total_batches, 'batches': [batch.tasks for batch in plan.batches]})"`
+  - 结果：`{'total_tasks': 18, 'total_batches': 6, 'batches': [['T11', 'T12', 'T13'], ['T21', 'T22', 'T23'], ['T31', 'T32', 'T33'], ['T41', 'T42', 'T43'], ['T51', 'T52', 'T53'], ['T61', 'T62', 'T63']]}`
+- **V2（RED：frontend gate verification 定向测试）**
+  - 命令：`uv run pytest tests/unit/test_frontend_gate_verification.py -q`
+  - 结果：`ModuleNotFoundError: No module named 'ai_sdlc.core.frontend_gate_verification'`
+- **V3（GREEN：frontend gate verification 定向测试）**
+  - 命令：`uv run pytest tests/unit/test_frontend_gate_verification.py -q`
+  - 结果：`4 passed in 0.16s`
+- **V4（静态检查）**
+  - 命令：`uv run ruff check src tests`
+  - 结果：`All checks passed!`
+- **V5（Markdown / code diff hygiene）**
+  - 命令：`git diff --check -- specs/018-frontend-gate-compatibility-baseline src/ai_sdlc/core tests/unit`
+  - 结果：无输出。
+- **V6（治理只读校验）**
+  - 命令：`uv run ai-sdlc verify constraints`
+  - 结果：`verify constraints: no BLOCKERs.`
+
+#### 2.3 任务记录
+
+##### T61 | 先写 failing tests 固定 scoped frontend gate verification helper 语义
+
+- **改动范围**：`tests/unit/test_frontend_gate_verification.py`
+- **改动内容**：
+  - 新增 helper 单测，先固定 gate policy artifact 缺失、generation artifact 缺失、contract prerequisite 未清以及全部前提满足时的 PASS 语义。
+  - 首次运行测试时命中 `ModuleNotFoundError`，证明 `frontend_gate_verification.py` 尚未实现，RED 成立。
+- **新增/调整的测试**：新增 `tests/unit/test_frontend_gate_verification.py`。
+- **测试结果**：RED 成立，报错为 `ModuleNotFoundError: No module named 'ai_sdlc.core.frontend_gate_verification'`。
+- **是否符合任务目标**：符合。
+
+##### T62 | 实现最小 frontend gate verification helper
+
+- **改动范围**：`src/ai_sdlc/core/frontend_gate_verification.py`
+- **改动内容**：
+  - 新增 `FrontendGateVerificationReport`、`build_frontend_gate_verification_report()` 与 `build_frontend_gate_verification_context()`。
+  - helper 聚合 gate policy artifact presence、generation governance artifact presence 与 `build_frontend_contract_verification_report()` 的前置结论，输出统一 `blockers / coverage_gaps / gate_checks / gate_verdict` payload。
+  - 实现保持 `018` scoped、artifact-driven，只提供 verify-ready helper，不引入完整 gate runtime。
+- **新增/调整的测试**：复用 `tests/unit/test_frontend_gate_verification.py`
+- **测试结果**：`4 passed in 0.16s`
+- **是否符合任务目标**：符合。
+
+##### T63 | Fresh verify 并追加 helper batch 归档
+
+- **改动范围**：`specs/018-frontend-gate-compatibility-baseline/plan.md`、`specs/018-frontend-gate-compatibility-baseline/tasks.md`、`specs/018-frontend-gate-compatibility-baseline/task-execution-log.md`
+- **改动内容**：
+  - 将 Batch 6 正式加入 `plan.md / tasks.md`，把 `frontend gate verification helper slice` 的 scope、验证面和执行护栏写成 formal truth。
+  - 回填本批 parser / RED / GREEN / static / diff hygiene / governance 验证结果，并归档 touched files 与 helper 边界。
+- **新增/调整的测试**：无新增测试文件；以本批 fresh verification 命令为准。
+- **测试结果**：全部通过。
+- **是否符合任务目标**：符合。
+
+#### 2.4 代码审查（Mandatory）
+
+- **宪章/规格对齐**：本批只实现 scoped frontend gate verification helper，没有越界到完整 gate runtime、recheck agent 或 auto-fix engine。
+- **代码质量**：helper 复用已有 contract verification surface，并保持 artifact-driven prerequisite 判断，不引入平行真值。
+- **测试质量**：先 RED 再 GREEN，覆盖三类失败前提和一类成功路径，并补 fresh `ruff`、`diff --check` 与 `verify constraints`。
+- **结论**：`无 Critical 阻塞项`
+
+#### 2.5 任务/计划同步状态（Mandatory）
+
+- `tasks.md` 同步状态：`已同步`
+- `plan.md` 同步状态：`已同步`
+- `spec.md` 同步状态：`无需变更`
+- 关联 branch/worktree disposition 计划：`retained（沿用当前 009/011/012/013/014/015/016/017/018 工作分支）`
+- 说明：`018` 已从 policy artifact slice 继续进入 frontend gate verification helper slice，但 `verify_constraints`、`VerificationGate` 与 CLI 接线仍待后续批次承接。`
+
+#### 2.6 自动决策记录（如有）
+
+- AD-004：先落 helper，再接 `verify_constraints / VerificationGate / CLI`。理由：先稳定 scoped report/context 形状，避免在多层接线时重复定义 payload。
+
+#### 2.7 批次结论
+
+- `018` 已具备可复用的 frontend gate verification helper，后续 `verify_constraints` 与 `VerificationGate` 可以直接消费统一的 gate summary payload。
+
+#### 2.8 归档后动作
+
+- **已完成 git 提交**：否（提交动作紧随本次归档后执行）
+- **提交哈希**：待补充（提交后回填）
+- **改动范围**：`specs/018-frontend-gate-compatibility-baseline/plan.md`、`specs/018-frontend-gate-compatibility-baseline/tasks.md`、`specs/018-frontend-gate-compatibility-baseline/task-execution-log.md`、`src/ai_sdlc/core/frontend_gate_verification.py`、`tests/unit/test_frontend_gate_verification.py`
+- **是否继续下一批**：按用户授权连续推进（优先转入 `verify_constraints` 接线）

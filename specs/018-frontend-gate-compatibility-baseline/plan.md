@@ -29,7 +29,7 @@ related_doc:
 - 再冻结 MVP gate matrix、结构化输出、Recheck 和 Auto-fix 边界
 - 最后给出后续 `models / reports / gates / tests` 的推荐文件面与测试矩阵
 
-当前 formal baseline 与第一批 `gate matrix and report models` 实现切片已完成。经用户明确要求连续推进 MVP 后，当前允许继续进入下一批实现切片：`gate policy artifacts`，把 gate matrix、Compatibility 执行策略与 report types 物化为 canonical artifact；不同时触碰完整 gate execution runtime 或 auto-fix engine。
+当前 formal baseline、`gate matrix and report models` 与 `gate policy artifacts` 实现切片已完成。经用户明确要求连续推进 MVP 后，当前允许继续进入下一批实现切片：`frontend gate verification helper`，把 gate policy artifact、generation artifact 与 contract verification 聚合成 scoped verify payload；不同时触碰完整 gate execution runtime 或 auto-fix engine。
 
 ## 技术背景
 
@@ -57,12 +57,15 @@ specs/018-frontend-gate-compatibility-baseline/
 src/ai_sdlc/
 ├── models/
 │   └── frontend_gate_policy.py               # gate matrix / compatibility policy / report models
-└── generators/
-    └── frontend_gate_policy_artifacts.py     # current slice: gate policy artifact instantiation
+├── generators/
+│   └── frontend_gate_policy_artifacts.py
+└── core/
+    └── frontend_gate_verification.py         # current slice: gate verification helper
 
 tests/
 ├── unit/test_frontend_gate_policy_models.py
-└── unit/test_frontend_gate_policy_artifacts.py
+├── unit/test_frontend_gate_policy_artifacts.py
+└── unit/test_frontend_gate_verification.py
 ```
 
 ## 阶段计划
@@ -109,6 +112,13 @@ tests/
 **验证方式**：定向 `pytest`、`uv run ruff check src tests`、`git diff --check`、`uv run ai-sdlc verify constraints`。
 **回退方式**：仅回退本阶段涉及的 `generators/`、`tests/` 与 execution log 变更。
 
+### Phase 6：Frontend gate verification helper slice
+
+**目标**：提供 work-item-scoped 的 `frontend gate verification` helper，把 gate policy artifact、generation governance artifact 与 contract verification 聚合为 verify 可消费的统一 report/context，而不直接实现完整 gate runtime。
+**产物**：`src/ai_sdlc/core/frontend_gate_verification.py`、`tests/unit/test_frontend_gate_verification.py`。
+**验证方式**：定向 `pytest`、`uv run ruff check src tests`、`git diff --check`、`uv run ai-sdlc verify constraints`。
+**回退方式**：仅回退本阶段涉及的 `core/`、`tests/` 与 execution log 变更。
+
 ## 关键路径验证策略
 
 | 关键路径 | 主验证方式 | 次验证方式 |
@@ -119,3 +129,4 @@ tests/
 | downstream handoff clarity | file-map review | 人工审阅 |
 | gate matrix model correctness | `uv run pytest tests/unit/test_frontend_gate_policy_models.py -q` | model payload / builder review |
 | gate policy artifact correctness | `uv run pytest tests/unit/test_frontend_gate_policy_artifacts.py -q` | artifact file layout / yaml payload review |
+| frontend gate verification helper correctness | `uv run pytest tests/unit/test_frontend_gate_verification.py -q` | scoped verify payload review |
