@@ -31,7 +31,7 @@ related_doc:
 - 再冻结 artifact envelope、provenance 与 freshness 语义
 - 最后给出后续 `core / scanners / cli / tests` 的推荐文件面与测试矩阵
 
-当前 formal baseline 已完成，且前两批实现切片已落下 `provider contract / artifact IO` 与 `scanner candidate`。经用户明确要求继续后，当前只允许进入第三批实现切片：`canonical consumer migration`，把 `verify_constraints` 的 observation 读取逻辑切到 canonical loader；不同时触碰 gate/CLI 行为扩张。
+当前 formal baseline 已完成，且前三批实现切片已落下 `provider contract / artifact IO`、`scanner candidate` 与 `canonical consumer migration`。经用户明确要求继续后，当前只允许进入第四批实现切片：`CLI/export surface`，把 scanner/provider 生成 canonical artifact 的入口挂到现有 `scan` 命令；不同时触碰 gate/verify 语义扩张。
 
 ## 技术背景
 
@@ -187,6 +187,13 @@ tests/
 **验证方式**：定向 `pytest`、`uv run ruff check src tests`、`git diff --check`、`uv run ai-sdlc verify constraints`。
 **回退方式**：仅回退本阶段涉及的 `core/`、`tests/` 与 execution log 变更。
 
+### Phase 7：CLI / export surface slice
+
+**目标**：在不新建顶层命令的前提下，为现有 `scan` 命令增加 frontend contract export 模式，让 scanner/provider 可物化 canonical artifact。
+**产物**：`src/ai_sdlc/cli/commands.py`、`tests/integration/test_cli_scan.py`。
+**验证方式**：定向 `pytest`、`uv run ruff check src tests`、`git diff --check`、`uv run ai-sdlc verify constraints`。
+**回退方式**：仅回退本阶段涉及的 `cli/`、`tests/` 与 execution log 变更。
+
 ## 工作流计划
 
 ### 工作流 A：Provider truth freeze
@@ -231,6 +238,13 @@ tests/
 **验证方式**：`tests/unit/test_verify_constraints.py`、`tests/integration/test_cli_verify_constraints.py` + fresh `ruff` / `verify constraints`。
 **回退方式**：不触发 gate aggregation 语义变更、CLI surface 扩张或 registry 写入。
 
+### 工作流 G：CLI / export surface slice
+
+**范围**：为 `scan` 命令增加 frontend contract export 模式，调用 scanner/provider helper 生成 canonical artifact，并保持 analysis-only 语义。
+**影响范围**：operator-facing export entrypoint、`tests/integration/test_cli_scan.py` 与 scanner/provider 的可调用性。
+**验证方式**：`tests/integration/test_cli_scan.py` + fresh `ruff` / `verify constraints`。
+**回退方式**：不新建顶层命令，不扩张 verify/gate 语义，不触发 IDE adapter 写入。
+
 ## 关键路径验证策略
 
 | 关键路径 | 主验证方式 | 次验证方式 |
@@ -243,6 +257,7 @@ tests/
 | provider artifact contract correctness | `uv run pytest tests/unit/test_frontend_contract_observation_provider.py -q` | artifact payload review |
 | scanner candidate correctness | `uv run pytest tests/unit/test_frontend_contract_scanner.py -q` | scanned observation/artifact review |
 | consumer migration correctness | `uv run pytest tests/unit/test_verify_constraints.py tests/integration/test_cli_verify_constraints.py -q` | canonical loader / malformed artifact review |
+| cli export correctness | `uv run pytest tests/integration/test_cli_scan.py -q` | exported artifact / analysis-only review |
 
 ## 已锁定决策
 
@@ -253,6 +268,7 @@ tests/
 - 当前第一批实现只放行 `core/frontend_contract_observation_provider.py` 与 `tests/unit/test_frontend_contract_observation_provider.py`，不放行 scanner candidate、CLI、registry 或 `012` verify mainline
 - 当前第二批实现只放行 `scanners/frontend_contract_scanner.py` 与 `tests/unit/test_frontend_contract_scanner.py`，并复用已有 provider helper 物化 artifact；不放行 CLI、registry 或 `012` verify mainline
 - 当前第三批实现只放行 `core/verify_constraints.py`、`tests/unit/test_verify_constraints.py` 与 `tests/integration/test_cli_verify_constraints.py` 的 canonical consumer migration，不放行 gate/CLI surface 语义扩张
+- 当前第四批实现只放行 `cli/commands.py` 与 `tests/integration/test_cli_scan.py` 的 export surface，不放行新的顶层命令、gate/verify 语义扩张或 registry
 
 ## 实施顺序建议
 

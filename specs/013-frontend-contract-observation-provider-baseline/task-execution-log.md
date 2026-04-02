@@ -396,3 +396,102 @@
 - **提交哈希**：本批唯一一次语义提交预期为 `feat(core): migrate frontend contract consumer to canonical loader`；完整 SHA 以该提交后的 `HEAD`（`git rev-parse HEAD`）为准
 - **改动范围**：`specs/013-frontend-contract-observation-provider-baseline/plan.md`、`specs/013-frontend-contract-observation-provider-baseline/tasks.md`、`specs/013-frontend-contract-observation-provider-baseline/task-execution-log.md`、`src/ai_sdlc/core/verify_constraints.py`、`tests/unit/test_verify_constraints.py`、`tests/integration/test_cli_verify_constraints.py`
 - **是否继续下一批**：待用户决定（建议进入 CLI/export slice，或另拆 runtime attachment）
+
+### Batch 2026-04-02-005 | 013 CLI / export surface slice
+
+#### 2.1 准备
+
+- **任务来源**：[`tasks.md`](tasks.md) `T71`、`T72`、`T73`
+- **目标**：在不新增顶层命令、不扩张 verify/gate 语义的前提下，为现有 `scan` 命令增加 frontend contract export 模式，让 scanner/provider 可物化 canonical artifact。
+- **预读范围**：[`spec.md`](spec.md)、[`plan.md`](plan.md)、[`tasks.md`](tasks.md)、`src/ai_sdlc/cli/commands.py`、`src/ai_sdlc/scanners/frontend_contract_scanner.py`、`src/ai_sdlc/core/frontend_contract_observation_provider.py`、`tests/integration/test_cli_scan.py`
+- **激活的规则**：TDD red-green；single canonical truth；verification-before-completion
+- **验证画像**：`code-change`
+
+#### 2.2 统一验证命令
+
+- **V1（Batch 7 parser 结构校验）**
+  - 命令：`uv run python -c "from pathlib import Path; from ai_sdlc.generators.doc_gen import TasksParser; plan = TasksParser().parse(Path('specs/013-frontend-contract-observation-provider-baseline/tasks.md')); print({'total_tasks': plan.total_tasks, 'total_batches': plan.total_batches, 'batches': [batch.tasks for batch in plan.batches]})"`
+  - 结果：`{'total_tasks': 21, 'total_batches': 7, 'batches': [['T11', 'T12', 'T13'], ['T21', 'T22', 'T23'], ['T31', 'T32', 'T33'], ['T41', 'T42', 'T43'], ['T51', 'T52', 'T53'], ['T61', 'T62', 'T63'], ['T71', 'T72', 'T73']]}`
+- **V2（RED：CLI export 定向测试）**
+  - 命令：`uv run pytest tests/integration/test_cli_scan.py -q`
+  - 结果：失败；frontend contract export 相关三条测试退出码为 `2`，说明 `scan` 尚未识别 `--frontend-contract-spec-dir` / `--frontend-contract-generated-at`。
+- **V3（GREEN：CLI export 定向测试）**
+  - 命令：`uv run pytest tests/integration/test_cli_scan.py -q`
+  - 结果：`5 passed in 0.21s`
+- **V4（静态检查）**
+  - 命令：`uv run ruff check src tests`
+  - 结果：`All checks passed!`
+- **V5（Markdown / code diff hygiene）**
+  - 命令：`git diff --check -- specs/013-frontend-contract-observation-provider-baseline src/ai_sdlc/cli tests/integration`
+  - 结果：无输出。
+- **V6（治理只读校验）**
+  - 命令：`uv run ai-sdlc verify constraints`
+  - 结果：`verify constraints: no BLOCKERs.`
+
+#### 2.3 任务记录
+
+##### T71 | 先写 failing tests 固定 CLI export 语义
+
+- **改动范围**：`tests/integration/test_cli_scan.py`
+- **改动内容**：
+  - 先定义 `scan` 的 frontend contract export 模式，锁定 canonical artifact 落盘、invalid annotation failure 与 analysis-only 语义。
+  - 用 integration 测试锁定 export 模式仍不得触发 IDE adapter 写入。
+  - 确认首次执行时因 `scan` 尚未识别 export 选项而 RED。
+- **新增/调整的测试**：扩展 `tests/integration/test_cli_scan.py`
+- **测试结果**：RED 已确认。
+- **是否符合任务目标**：符合。
+
+##### T72 | 实现最小 CLI / export surface
+
+- **改动范围**：`src/ai_sdlc/cli/commands.py`
+- **改动内容**：
+  - 为现有 `scan` 命令增加 `--frontend-contract-spec-dir` 与 `--frontend-contract-generated-at` 模式分支。
+  - export 模式直接调用 scanner/provider helper 生成 canonical artifact，并在 terminal surface 输出导出摘要。
+  - 保持 `scan` 仍是 analysis-only surface，不新增顶层命令，也不扩张 verify/gate 语义。
+- **新增/调整的测试**：复用 `tests/integration/test_cli_scan.py`
+- **测试结果**：通过。
+- **是否符合任务目标**：符合。
+
+##### T73 | Fresh verify 并追加 implementation batch 归档
+
+- **改动范围**：`specs/013-frontend-contract-observation-provider-baseline/plan.md`、`specs/013-frontend-contract-observation-provider-baseline/tasks.md`、`specs/013-frontend-contract-observation-provider-baseline/task-execution-log.md`
+- **改动内容**：
+  - 将 `013` formal docs 扩到 `Batch 7: cli / export surface slice`，并把只放行 `cli/commands.py` 与 `tests/integration/test_cli_scan.py` 的边界写死。
+  - 记录本批 RED/GREEN、fresh verification 与 export surface 的收窄语义。
+  - 保持 `013` 不越界到 verify/gate 语义扩张或新的顶层命令。
+- **新增/调整的测试**：无新增测试文件；以本批 fresh verification 命令为准。
+- **测试结果**：通过。
+- **是否符合任务目标**：符合。
+
+#### 2.4 代码审查（Mandatory）
+
+- **宪章/规格对齐**：本批只进入 CLI/export surface 切片，没有跨到 verify/gate 语义扩张或 registry。
+- **代码质量**：CLI 直接复用 scanner/provider helper，没有引入第三套 artifact writer。
+- **测试质量**：已完成 RED/GREEN、`ruff`、`diff --check` 与 `verify constraints`。
+- **结论**：`无 Critical 阻塞项`
+
+#### 2.5 任务/计划同步状态（Mandatory）
+
+- `tasks.md` 同步状态：`已同步`
+- `plan.md` 同步状态：`已同步`
+- `spec.md` 同步状态：`无需变更`
+- 关联 branch/worktree disposition 计划：`retained（沿用当前 009/011/012/013 工作分支）`
+- 说明：`013` 已从 canonical consumer migration 进入 CLI/export surface，但更正式的 runtime attachment 仍未放行。`
+
+#### 2.6 自动决策记录（如有）
+
+- AD-013：CLI/export surface 直接挂到现有 `scan` 命令，而不是新建顶层命令。理由：复用既有 analysis-only / no-adapter-write 语义，降低命令面扩张成本。
+- AD-014：export 模式使用显式 `--frontend-contract-spec-dir` 进入，不改变默认 deep scan 行为。理由：避免现有 `scan` 用户路径发生语义漂移。
+- AD-015：export 模式只暴露 artifact 物化入口，不顺手扩张 verify/gate 或 registry。理由：保持 `013` 仍是 provider baseline，而不是新的 orchestration work item。
+
+#### 2.7 批次结论
+
+- `013` 当前已具备 operator-facing 的 CLI/export 入口，可通过现有 `scan` 命令物化 canonical frontend contract observations artifact。
+- 后续若继续推进，应优先决定是否把该 export surface 接入更正式的 runtime attachment，或另拆下游 orchestrator work item。
+
+#### 2.8 归档后动作
+
+- **已完成 git 提交**：是
+- **提交哈希**：本批唯一一次语义提交预期为 `feat(cli): add frontend contract scan export mode`；完整 SHA 以该提交后的 `HEAD`（`git rev-parse HEAD`）为准
+- **改动范围**：`specs/013-frontend-contract-observation-provider-baseline/plan.md`、`specs/013-frontend-contract-observation-provider-baseline/tasks.md`、`specs/013-frontend-contract-observation-provider-baseline/task-execution-log.md`、`src/ai_sdlc/cli/commands.py`、`tests/integration/test_cli_scan.py`
+- **是否继续下一批**：待用户决定（建议另拆 runtime attachment / orchestration work item）

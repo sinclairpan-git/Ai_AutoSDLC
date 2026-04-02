@@ -24,6 +24,9 @@ from ai_sdlc.context.state import (
     load_working_set,
 )
 from ai_sdlc.core.config import load_project_config, load_project_state
+from ai_sdlc.core.frontend_contract_observation_provider import (
+    load_frontend_contract_observation_artifact,
+)
 from ai_sdlc.core.p1_artifacts import (
     load_execution_path,
     load_latest_reviewer_decision,
@@ -56,6 +59,10 @@ from ai_sdlc.routers.bootstrap import (
     init_project,
 )
 from ai_sdlc.routers.existing_project_init import run_full_scan
+from ai_sdlc.scanners.frontend_contract_scanner import (
+    write_frontend_contract_scanner_artifact,
+)
+from ai_sdlc.telemetry.clock import utc_now_z
 from ai_sdlc.telemetry.readiness import build_status_json_surface
 from ai_sdlc.utils.helpers import AI_SDLC_DIR, find_project_root
 
@@ -506,12 +513,48 @@ def index_command() -> None:
 
 def scan_command(
     path: str = typer.Argument(".", help="Project directory to scan."),
+    frontend_contract_spec_dir: str | None = typer.Option(
+        None,
+        "--frontend-contract-spec-dir",
+        help=(
+            "Write canonical frontend contract observations into the given spec "
+            "directory using the frontend contract scanner candidate."
+        ),
+    ),
+    frontend_contract_generated_at: str | None = typer.Option(
+        None,
+        "--frontend-contract-generated-at",
+        help="Override generated_at for frontend contract export mode.",
+    ),
 ) -> None:
     """Run a deep project scan and display results."""
     root = Path(path).resolve()
     if not root.is_dir():
         console.print(f"[red]Error: {root} is not a directory[/red]")
         raise typer.Exit(code=2)
+
+    if frontend_contract_spec_dir is not None:
+        spec_dir = Path(frontend_contract_spec_dir).expanduser().resolve()
+        generated_at = frontend_contract_generated_at or utc_now_z()
+        console.print(
+            f"[bold]Scanning frontend contract observations at {root}...[/bold]"
+        )
+        try:
+            artifact_path = write_frontend_contract_scanner_artifact(
+                root,
+                spec_dir,
+                generated_at=generated_at,
+            )
+            artifact = load_frontend_contract_observation_artifact(artifact_path)
+        except Exception as exc:
+            console.print(f"[red]Frontend contract scan failed: {exc}[/red]")
+            raise typer.Exit(code=1) from None
+
+        console.print(
+            "[green]Frontend contract observations exported:[/green] "
+            f"{len(artifact.observations)} observations -> {artifact_path}"
+        )
+        raise typer.Exit(code=0)
 
     console.print(f"[bold]Scanning project at {root}...[/bold]")
     try:
