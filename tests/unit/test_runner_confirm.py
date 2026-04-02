@@ -10,6 +10,11 @@ import pytest
 
 from ai_sdlc.context.state import load_checkpoint, save_checkpoint
 from ai_sdlc.core.config import save_project_config
+from ai_sdlc.core.frontend_contract_drift import PageImplementationObservation
+from ai_sdlc.core.frontend_contract_observation_provider import (
+    build_frontend_contract_observation_artifact,
+    write_frontend_contract_observation_artifact,
+)
 from ai_sdlc.core.runner import PipelineHaltError, SDLCRunner
 from ai_sdlc.core.state_machine import save_work_item
 from ai_sdlc.models.gate import GateCheck, GateResult, GateVerdict
@@ -122,6 +127,78 @@ class TestConfirmMode:
         assert ctx["postmortem_path"] == ".ai-sdlc/work-items/WI-INC-001/postmortem.md"
         assert ctx["knowledge_refresh_level"] == 2
         assert ctx["knowledge_refresh_completed"] is True
+
+    def test_verify_context_includes_frontend_contract_runtime_attachment_for_active_014(
+        self, tmp_path: Path
+    ) -> None:
+        _bootstrap_project(tmp_path)
+        spec_dir = tmp_path / "specs" / "014-runtime-attachment"
+        artifact = build_frontend_contract_observation_artifact(
+            observations=[
+                PageImplementationObservation(
+                    page_id="user-create",
+                    recipe_id="form-create",
+                    i18n_keys=["user.create.submit"],
+                    validation_fields=["username"],
+                )
+            ],
+            provider_kind="scanner",
+            provider_name="frontend-contract-scanner",
+            generated_at="2026-04-03T10:00:00Z",
+            source_digest="sha256:runner-context",
+        )
+        write_frontend_contract_observation_artifact(spec_dir, artifact)
+        save_checkpoint(
+            tmp_path,
+            Checkpoint(
+                current_stage="verify",
+                feature=FeatureInfo(
+                    id="014-runtime-attachment",
+                    spec_dir="specs/014-runtime-attachment",
+                    design_branch="design/014-runtime-attachment",
+                    feature_branch="feature/014-runtime-attachment",
+                    current_branch="feature/014-runtime-attachment",
+                ),
+            ),
+        )
+
+        runner = SDLCRunner(tmp_path)
+        cp = load_checkpoint(tmp_path)
+        assert cp is not None
+
+        ctx = runner._build_context("verify", cp)
+
+        attachment = ctx["frontend_contract_runtime_attachment"]
+        assert attachment["status"] == "attached"
+        assert attachment["scope"]["scope_source"] == "checkpoint"
+        assert attachment["observation_count"] == 1
+        assert attachment["freshness_status"] == "verifiable"
+
+    def test_verify_context_skips_frontend_contract_runtime_attachment_for_non_014(
+        self, tmp_path: Path
+    ) -> None:
+        _bootstrap_project(tmp_path)
+        save_checkpoint(
+            tmp_path,
+            Checkpoint(
+                current_stage="verify",
+                feature=FeatureInfo(
+                    id="013-observation-provider",
+                    spec_dir="specs/013-observation-provider",
+                    design_branch="design/013-observation-provider",
+                    feature_branch="feature/013-observation-provider",
+                    current_branch="feature/013-observation-provider",
+                ),
+            ),
+        )
+
+        runner = SDLCRunner(tmp_path)
+        cp = load_checkpoint(tmp_path)
+        assert cp is not None
+
+        ctx = runner._build_context("verify", cp)
+
+        assert "frontend_contract_runtime_attachment" not in ctx
 
     def test_confirm_callback_pauses_pipeline(self, tmp_path: Path) -> None:
         """Pipeline pauses when confirm callback returns False."""

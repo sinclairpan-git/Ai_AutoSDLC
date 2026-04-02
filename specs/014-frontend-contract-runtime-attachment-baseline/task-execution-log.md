@@ -199,3 +199,104 @@
 - **提交哈希**：本批唯一一次语义提交预期为 `feat(core): add frontend contract runtime attachment helper`；完整 SHA 以该提交后的 `HEAD`（`git rev-parse HEAD`）为准
 - **改动范围**：`specs/014-frontend-contract-runtime-attachment-baseline/plan.md`、`specs/014-frontend-contract-runtime-attachment-baseline/tasks.md`、`specs/014-frontend-contract-runtime-attachment-baseline/task-execution-log.md`、`src/ai_sdlc/core/frontend_contract_runtime_attachment.py`、`tests/unit/test_frontend_contract_runtime_attachment.py`
 - **是否继续下一批**：待用户决定（建议转入 runner wiring slice，或继续保持 helper-only baseline）
+
+### Batch 2026-04-03-003 | 014 Runner verify-context wiring slice
+
+#### 2.1 准备
+
+- **任务来源**：[`tasks.md`](tasks.md) `T51`、`T52`、`T53`
+- **目标**：在不越界到 `run_cmd.py` CLI wording、`program_cmd.py`、registry、scanner/provider 写入或 gate verdict 改写的前提下，把 runtime attachment helper 以 read-only 方式接入 `SDLCRunner` 的 verify-stage context。
+- **预读范围**：[`spec.md`](spec.md)、[`plan.md`](plan.md)、[`tasks.md`](tasks.md)、`src/ai_sdlc/core/frontend_contract_runtime_attachment.py`、`src/ai_sdlc/core/runner.py`、`src/ai_sdlc/core/verify_constraints.py`、`tests/unit/test_runner_confirm.py`
+- **激活的规则**：TDD red-green；single canonical truth；verification-before-completion
+- **验证画像**：`code-change`
+
+#### 2.2 统一验证命令
+
+- **V1（Batch 5 parser 结构校验）**
+  - 命令：`uv run python -c "from pathlib import Path; from ai_sdlc.generators.doc_gen import TasksParser; plan = TasksParser().parse(Path('specs/014-frontend-contract-runtime-attachment-baseline/tasks.md')); print({'total_tasks': plan.total_tasks, 'total_batches': plan.total_batches, 'batches': [batch.tasks for batch in plan.batches]})"`
+  - 结果：`{'total_tasks': 15, 'total_batches': 5, 'batches': [['T11', 'T12', 'T13'], ['T21', 'T22', 'T23'], ['T31', 'T32', 'T33'], ['T41', 'T42', 'T43'], ['T51', 'T52', 'T53']]}`
+- **V2（RED：runner verify-context 定向测试）**
+  - 命令：`uv run pytest tests/unit/test_runner_confirm.py -q`
+  - 结果：失败；`KeyError: 'frontend_contract_runtime_attachment'`
+- **V3（GREEN：runner verify-context 定向测试）**
+  - 命令：`uv run pytest tests/unit/test_runner_confirm.py -q`
+  - 结果：`16 passed in 1.07s`
+- **V4（静态检查）**
+  - 命令：`uv run ruff check src tests`
+  - 结果：`All checks passed!`
+- **V5（Markdown / code diff hygiene）**
+  - 命令：`git diff --check -- specs/014-frontend-contract-runtime-attachment-baseline src/ai_sdlc/core tests/unit`
+  - 结果：无输出。
+- **V6（治理只读校验）**
+  - 命令：`uv run ai-sdlc verify constraints`
+  - 结果：`verify constraints: no BLOCKERs.`
+- **V7（跨 helper / runner / CLI run 的扩大 fresh 验证）**
+  - 命令：`uv run pytest tests/unit/test_frontend_contract_runtime_attachment.py tests/unit/test_runner_confirm.py tests/integration/test_cli_run.py -q`
+  - 结果：`33 passed in 2.32s`
+
+#### 2.3 任务记录
+
+##### T51 | 先写 failing tests 固定 runner verify-context attachment 语义
+
+- **改动范围**：`tests/unit/test_runner_confirm.py`
+- **改动内容**：
+  - 先定义 active `014` scope 时 `SDLCRunner._build_context("verify", cp)` 必须附带 `frontend_contract_runtime_attachment` payload。
+  - 用测试锁定 non-`014` scope 不应被无差别注入该 payload。
+  - 确认首次执行时因 verify context 尚未接线而 RED，失败点是缺少 `frontend_contract_runtime_attachment` key。
+- **新增/调整的测试**：扩展 `tests/unit/test_runner_confirm.py`
+- **测试结果**：RED 已确认。
+- **是否符合任务目标**：符合。
+
+##### T52 | 实现最小 runner verify-context wiring
+
+- **改动范围**：`src/ai_sdlc/core/runner.py`、`src/ai_sdlc/core/frontend_contract_runtime_attachment.py`
+- **改动内容**：
+  - 在 `frontend_contract_runtime_attachment.py` 增加 `to_json_dict()` 序列化与 `is_frontend_contract_runtime_attachment_work_item()` scope 判定，避免 runner 内部重复拼装 payload。
+  - 在 `SDLCRunner._build_context("verify", cp)` 中，仅当 active checkpoint 属于 `014` 时，注入结构化 `frontend_contract_runtime_attachment` payload。
+  - wiring 保持 read-only，不改 gate verdict、CLI wording，也不触发 scanner/provider 写入。
+- **新增/调整的测试**：复用 `tests/unit/test_runner_confirm.py`
+- **测试结果**：通过。
+- **是否符合任务目标**：符合。
+
+##### T53 | Fresh verify 并追加 implementation batch 归档
+
+- **改动范围**：`specs/014-frontend-contract-runtime-attachment-baseline/plan.md`、`specs/014-frontend-contract-runtime-attachment-baseline/tasks.md`、`specs/014-frontend-contract-runtime-attachment-baseline/task-execution-log.md`
+- **改动内容**：
+  - 将 `014` formal docs 扩到 `Batch 5: runner verify-context wiring slice`，并把只放行 `core/runner.py`、`core/frontend_contract_runtime_attachment.py` 与 `tests/unit/test_runner_confirm.py` 的边界写死。
+  - 记录本批 RED/GREEN、fresh verification 与 read-only runner verify-context 语义。
+  - 追加一轮跨 helper / runner / CLI run 的扩大 fresh 验证，证明这批 wiring 没有破坏现有 `run` 主线。
+- **新增/调整的测试**：无新增测试文件；以本批 fresh verification 命令为准。
+- **测试结果**：通过。
+- **是否符合任务目标**：符合。
+
+#### 2.4 代码审查（Mandatory）
+
+- **宪章/规格对齐**：本批只进入 runner verify-context wiring，没有跨到 `run_cmd.py` 用户面、`program_cmd.py`、registry、scanner/provider 写入或 gate verdict 改写。
+- **代码质量**：runner 只接入结构化 payload，不引入新的 runtime side effects；scope 判定和 payload 序列化保持在 attachment helper 内聚。
+- **测试质量**：已完成 RED/GREEN、扩大 `pytest` 回归、`ruff`、`diff --check` 与 `verify constraints`。
+- **结论**：`无 Critical 阻塞项`
+
+#### 2.5 任务/计划同步状态（Mandatory）
+
+- `tasks.md` 同步状态：`已同步`
+- `plan.md` 同步状态：`已同步`
+- `spec.md` 同步状态：`无需变更`
+- 关联 branch/worktree disposition 计划：`retained（沿用当前 009/011/012/013/014 工作分支）`
+- 说明：`014` 已从 helper slice 进入 runner verify-context wiring，但 `run_cmd.py` 用户面与 program orchestration 仍未放行。`
+
+#### 2.6 自动决策记录（如有）
+
+- AD-008：runner wiring 只进入 verify-stage context，不进入 CLI wording 或 gate verdict。理由：先把 runtime attachment 状态接入正式 context，再决定是否扩张用户面或 gate 语义。
+- AD-009：non-`014` scope 明确不注入 `frontend_contract_runtime_attachment` payload。理由：保持 scoped attachment，不污染其他 work item 的 verify context。
+
+#### 2.7 批次结论
+
+- `014` 当前已具备 helper + runner verify-context 的最小主链，runtime attachment 状态已能进入正式 pipeline context。
+- 后续若继续推进，应优先决定是补 `run_cmd.py` 用户面提示，还是直接结束 `014` 并切到下一个 MVP workstream。
+
+#### 2.8 归档后动作
+
+- **已完成 git 提交**：是
+- **提交哈希**：本批唯一一次语义提交预期为 `feat(core): wire runtime attachment into runner verify context`；完整 SHA 以该提交后的 `HEAD`（`git rev-parse HEAD`）为准
+- **改动范围**：`specs/014-frontend-contract-runtime-attachment-baseline/plan.md`、`specs/014-frontend-contract-runtime-attachment-baseline/tasks.md`、`specs/014-frontend-contract-runtime-attachment-baseline/task-execution-log.md`、`src/ai_sdlc/core/frontend_contract_runtime_attachment.py`、`src/ai_sdlc/core/runner.py`、`tests/unit/test_runner_confirm.py`
+- **是否继续下一批**：按用户授权连续推进（下一优先级是 `run_cmd.py` 用户面，或在 `014` 达到 MVP 最小闭环后转入下一个 MVP downstream work item）

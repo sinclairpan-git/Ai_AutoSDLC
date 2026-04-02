@@ -41,6 +41,14 @@ class FrontendContractRuntimeAttachmentScope:
     work_item_id: str
     blockers: tuple[str, ...] = ()
 
+    def to_json_dict(self) -> dict[str, object]:
+        return {
+            "spec_dir": str(self.spec_dir) if self.spec_dir is not None else None,
+            "scope_source": self.scope_source,
+            "work_item_id": self.work_item_id,
+            "blockers": list(self.blockers),
+        }
+
 
 @dataclass(frozen=True, slots=True)
 class FrontendContractRuntimeAttachment:
@@ -62,6 +70,35 @@ class FrontendContractRuntimeAttachment:
         if self.artifact is None:
             return ()
         return self.artifact.observations
+
+    def to_json_dict(self) -> dict[str, object]:
+        payload: dict[str, object] = {
+            "status": self.status,
+            "scope": self.scope.to_json_dict(),
+            "artifact_path": (
+                str(self.artifact_path) if self.artifact_path is not None else None
+            ),
+            "blockers": list(self.blockers),
+            "advisories": list(self.advisories),
+            "coverage_gaps": list(self.coverage_gaps),
+            "freshness_status": self.freshness_status,
+            "allow_artifact_write": self.allow_artifact_write,
+            "write_policy": self.write_policy,
+            "observation_count": len(self.observations),
+        }
+        if self.artifact is not None:
+            payload["provenance"] = {
+                "provider_kind": self.artifact.provenance.provider_kind,
+                "provider_name": self.artifact.provenance.provider_name,
+                "provider_version": self.artifact.provenance.provider_version,
+                "source_ref": self.artifact.provenance.source_ref,
+            }
+            payload["freshness"] = {
+                "generated_at": self.artifact.freshness.generated_at,
+                "source_digest": self.artifact.freshness.source_digest,
+                "source_revision": self.artifact.freshness.source_revision,
+            }
+        return payload
 
 
 def resolve_frontend_contract_runtime_attachment_scope(
@@ -163,6 +200,23 @@ def build_frontend_contract_runtime_attachment(
         coverage_gaps=coverage_gaps,
         freshness_status=freshness_status,
         allow_artifact_write=allow_artifact_write,
+    )
+
+
+def is_frontend_contract_runtime_attachment_work_item(
+    checkpoint: Checkpoint | None,
+) -> bool:
+    """Return True when the active checkpoint scope belongs to work item 014."""
+
+    if checkpoint is None or checkpoint.feature is None:
+        return False
+    feature_id = (checkpoint.feature.id or "").strip()
+    spec_dir = (checkpoint.feature.spec_dir or "").strip()
+    return (
+        feature_id == "014"
+        or feature_id.startswith("014-")
+        or spec_dir == "specs/014"
+        or spec_dir.startswith("specs/014-")
     )
 
 
@@ -277,5 +331,6 @@ __all__ = [
     "FrontendContractRuntimeAttachment",
     "FrontendContractRuntimeAttachmentScope",
     "build_frontend_contract_runtime_attachment",
+    "is_frontend_contract_runtime_attachment_work_item",
     "resolve_frontend_contract_runtime_attachment_scope",
 ]

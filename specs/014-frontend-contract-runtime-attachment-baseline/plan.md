@@ -175,6 +175,13 @@ tests/
 **验证方式**：定向 `pytest`、`uv run ruff check src tests`、`git diff --check`、`uv run ai-sdlc verify constraints`。
 **回退方式**：仅回退本阶段涉及的 `core/`、`tests/` 与 execution log 变更。
 
+### Phase 5：Runner verify-context wiring slice
+
+**目标**：把 runtime attachment helper 以 read-only 方式接入 `SDLCRunner` 的 verify-stage context，让 active `014` scope 的 runtime attachment status 进入正式 pipeline context，但不改 gate verdict、CLI wording 或 program orchestration。
+**产物**：`src/ai_sdlc/core/runner.py`、`src/ai_sdlc/core/frontend_contract_runtime_attachment.py`、`tests/unit/test_runner_confirm.py`。
+**验证方式**：定向 `pytest`、`uv run ruff check src tests`、`git diff --check`、`uv run ai-sdlc verify constraints`。
+**回退方式**：仅回退本阶段涉及的 `core/`、`tests/` 与 execution log 变更。
+
 ## 工作流计划
 
 ### 工作流 A：Runtime attachment truth freeze
@@ -205,6 +212,13 @@ tests/
 **验证方式**：`tests/unit/test_frontend_contract_runtime_attachment.py` + fresh `ruff` / `verify constraints`。
 **回退方式**：不触发 scanner/provider 写入，不引入 `run` / `program` runtime side effects。
 
+### 工作流 E：Runner verify-context wiring slice
+
+**范围**：active `014` scope 的 runtime attachment payload 进入 `SDLCRunner._build_context("verify", ...)`，保持 read-only，不改 gate verdict 或 CLI surface。
+**影响范围**：runner verify-stage context、后续 gate/runtime consumer 的 context 可见性，以及 active/non-active work item 的 scoped attachment 行为。
+**验证方式**：`tests/unit/test_runner_confirm.py` + fresh `ruff` / `verify constraints`。
+**回退方式**：不修改 `run_cmd.py` / `program_cmd.py` 用户面，不触发 scanner/provider 写入。
+
 ## 关键路径验证策略
 
 | 关键路径 | 主验证方式 | 次验证方式 |
@@ -215,6 +229,7 @@ tests/
 | failure honesty / freshness guard | 语义对账 | 测试矩阵回挂 |
 | downstream handoff clarity | file-map review | 人工审阅 |
 | runtime attachment helper correctness | `uv run pytest tests/unit/test_frontend_contract_runtime_attachment.py -q` | attachment status / policy review |
+| runner verify-context attachment correctness | `uv run pytest tests/unit/test_runner_confirm.py -q` | verify context payload review |
 
 ## 当前建议的下游实现起点
 

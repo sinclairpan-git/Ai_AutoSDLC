@@ -21,6 +21,7 @@ Batch 1: runtime attachment truth freeze
 Batch 2: attachment contract and failure honesty baseline
 Batch 3: implementation handoff and verification freeze
 Batch 4: runtime attachment helper slice
+Batch 5: runner verify-context wiring slice
 ```
 
 ---
@@ -34,7 +35,9 @@ Batch 4: runtime attachment helper slice
 - `014` 不得默认扩张新的顶层命令面；现有 `scan` export surface 只作为上游显式入口被引用。
 - `014` 只冻结 runtime attachment baseline，不默认决定任何未显式授权的 runtime side effect。
 - `Batch 4` 只允许写入 `src/ai_sdlc/core/frontend_contract_runtime_attachment.py`、`tests/unit/test_frontend_contract_runtime_attachment.py`、`specs/014-frontend-contract-runtime-attachment-baseline/task-execution-log.md`，以及为本批边界服务的 `plan.md / tasks.md`。
+- `Batch 5` 只允许写入 `src/ai_sdlc/core/frontend_contract_runtime_attachment.py`、`src/ai_sdlc/core/runner.py`、`tests/unit/test_runner_confirm.py`、`specs/014-frontend-contract-runtime-attachment-baseline/task-execution-log.md`，以及为本批边界服务的 `plan.md / tasks.md`。
 - 当前首批实现只放行 runtime attachment helper，不放行 `run_cmd.py`、`runner.py`、`program_cmd.py`、registry 或 remediation。
+- 当前第二批实现只放行 runner verify-context wiring，不放行 `run_cmd.py` CLI wording、`program_cmd.py`、registry、scanner/provider 写入或 gate verdict 改写。
 - 只有在用户明确要求进入实现，且 `014` formal docs 已通过门禁后，才允许进入 `src/` / `tests/` 级实现。
 
 ---
@@ -208,3 +211,46 @@ Batch 4: runtime attachment helper slice
   2. `uv run ruff check src tests`、`git diff --check -- specs/014-frontend-contract-runtime-attachment-baseline src/ai_sdlc/core tests/unit` 与 `uv run ai-sdlc verify constraints` 通过
   3. `task-execution-log.md` 追加记录当前 implementation batch 的 touched files、验证命令与结论
 - **验证**：`uv run pytest tests/unit/test_frontend_contract_runtime_attachment.py -q`, `uv run ruff check src tests`, `git diff --check -- specs/014-frontend-contract-runtime-attachment-baseline src/ai_sdlc/core tests/unit`, `uv run ai-sdlc verify constraints`
+
+---
+
+## Batch 5：runner verify-context wiring slice
+
+### Task 5.1 先写 failing tests 固定 runner verify-context attachment 语义
+
+- **任务编号**：T51
+- **优先级**：P0
+- **依赖**：T43
+- **文件**：`tests/unit/test_runner_confirm.py`
+- **可并行**：否
+- **验收标准**：
+  1. 单测明确覆盖 active `014` scope 时，`SDLCRunner._build_context("verify", cp)` 会附带 `frontend_contract_runtime_attachment` payload
+  2. 单测明确覆盖 non-`014` scope 时，不应无差别附带该 payload
+  3. 首次运行定向测试时必须出现预期失败，证明 runner wiring 尚未实现
+- **验证**：`uv run pytest tests/unit/test_runner_confirm.py -q`
+
+### Task 5.2 实现最小 runner verify-context wiring
+
+- **任务编号**：T52
+- **优先级**：P0
+- **依赖**：T51
+- **文件**：`src/ai_sdlc/core/runner.py`, `src/ai_sdlc/core/frontend_contract_runtime_attachment.py`
+- **可并行**：否
+- **验收标准**：
+  1. `SDLCRunner` 在 active `014` scope 的 verify-stage context 中注入结构化 runtime attachment payload
+  2. wiring 保持 read-only，不改 gate verdict、CLI wording 或 scanner/provider side effects
+  3. non-`014` scope 不应被无差别注入 frontend contract runtime attachment payload
+- **验证**：`uv run pytest tests/unit/test_runner_confirm.py -q`
+
+### Task 5.3 Fresh verify 并追加 implementation batch 归档
+
+- **任务编号**：T53
+- **优先级**：P0
+- **依赖**：T52
+- **文件**：`specs/014-frontend-contract-runtime-attachment-baseline/task-execution-log.md`
+- **可并行**：否
+- **验收标准**：
+  1. `uv run pytest tests/unit/test_runner_confirm.py -q` 通过
+  2. `uv run ruff check src tests`、`git diff --check -- specs/014-frontend-contract-runtime-attachment-baseline src/ai_sdlc/core tests/unit` 与 `uv run ai-sdlc verify constraints` 通过
+  3. `task-execution-log.md` 追加记录当前 implementation batch 的 touched files、验证命令与结论
+- **验证**：`uv run pytest tests/unit/test_runner_confirm.py -q`, `uv run ruff check src tests`, `git diff --check -- specs/014-frontend-contract-runtime-attachment-baseline src/ai_sdlc/core tests/unit`, `uv run ai-sdlc verify constraints`
