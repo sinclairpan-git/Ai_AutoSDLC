@@ -95,6 +95,13 @@ tests/
 **验证方式**：formal docs review + `verify constraints`。  
 **回退方式**：仅回退 planning baseline。
 
+### Phase 4：Generation constraint models slice
+
+**目标**：落下 generation governance 的最小结构化模型与 MVP builder，先稳定 recipe / whitelist / hard rules / token rules / exceptions 的上游控制面。
+**产物**：`src/ai_sdlc/models/frontend_generation_constraints.py`、`tests/unit/test_frontend_generation_constraints.py`、`src/ai_sdlc/models/__init__.py`。
+**验证方式**：定向 `pytest`、`uv run ruff check src tests`、`git diff --check`、`uv run ai-sdlc verify constraints`。
+**回退方式**：仅回退本阶段涉及的 `models/`、`tests/` 与 execution log 变更。
+
 ## 关键路径验证策略
 
 | 关键路径 | 主验证方式 | 次验证方式 |
@@ -104,3 +111,4 @@ tests/
 | constraint object clarity | contract review | 测试矩阵回挂 |
 | hard rules and exception boundary clarity | scope review | 术语对账 |
 | downstream handoff clarity | file-map review | 人工审阅 |
+| generation constraint model correctness | `uv run pytest tests/unit/test_frontend_generation_constraints.py -q` | model payload / builder review |

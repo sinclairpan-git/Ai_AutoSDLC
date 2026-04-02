@@ -18,6 +18,7 @@ related_doc:
 Batch 1: generation truth freeze
 Batch 2: constraint object and ordering freeze
 Batch 3: implementation handoff and verification freeze
+Batch 4: generation constraint models slice
 ```
 
 ---
@@ -27,7 +28,9 @@ Batch 3: implementation handoff and verification freeze
 - `Batch 1 ~ 3` 只允许推进 `spec.md / plan.md / tasks.md` 与 append-only `task-execution-log.md`。
 - `017` 不得重新定义 `011` Contract truth、`015` UI Kernel truth 或 `016` Provider truth。
 - `017` 不得在当前 child work item 中直接进入完整生成 runtime、gate diagnostics、recheck / auto-fix 或 business project 代码生成实现。
+- `Batch 4` 只允许写入 `src/ai_sdlc/models/frontend_generation_constraints.py`、`src/ai_sdlc/models/__init__.py`、`tests/unit/test_frontend_generation_constraints.py`、`specs/017-frontend-generation-governance-baseline/task-execution-log.md`，以及为本批边界服务的 `plan.md / tasks.md`。
 - `017` 只冻结 generation governance baseline，不默认决定任何 `src/` / `tests/` runtime side effect。
+- 当前首批实现只放行 generation constraint 模型/标准体，不放行完整生成 runtime、gate 或 auto-fix 实现。
 - 只有在用户明确要求进入实现，且 `017` formal docs 已通过门禁后，才允许进入 `src/` / `tests/` 级实现。
 
 ---
@@ -158,3 +161,46 @@ Batch 3: implementation handoff and verification freeze
   2. `spec.md / plan.md / tasks.md` 对 generation truth、constraint object、ordering 与 handoff 保持单一真值
   3. 当前分支上的 `017` formal docs 可作为后续进入 generation constraint 实现的稳定基线
 - **验证**：`uv run ai-sdlc verify constraints`, `git status --short`
+
+---
+
+## Batch 4：generation constraint models slice
+
+### Task 4.1 先写 failing tests 固定 generation constraint / MVP builder 语义
+
+- **任务编号**：T41
+- **优先级**：P0
+- **依赖**：T33
+- **文件**：`tests/unit/test_frontend_generation_constraints.py`
+- **可并行**：否
+- **验收标准**：
+  1. 单测明确覆盖 MVP recipe 范围、whitelist 组件集合、Hard Rules、token rules 与 exceptions 边界
+  2. 单测明确覆盖重复 Hard Rule id 的失败语义
+  3. 首次运行定向测试时必须出现预期失败，证明 generation constraint models 尚未实现
+- **验证**：`uv run pytest tests/unit/test_frontend_generation_constraints.py -q`
+
+### Task 4.2 实现最小 generation constraint models / MVP builder
+
+- **任务编号**：T42
+- **优先级**：P0
+- **依赖**：T41
+- **文件**：`src/ai_sdlc/models/frontend_generation_constraints.py`, `src/ai_sdlc/models/__init__.py`
+- **可并行**：否
+- **验收标准**：
+  1. 模型明确承载 recipe、whitelist、hard rules、token rules 与 exceptions 的上游控制面
+  2. 提供 MVP baseline builder，并落实 `Contract -> Kernel -> Whitelist -> Hard Rules -> Token Rules -> Exceptions` 顺序
+  3. 实现只停留在结构化模型层，不引入完整生成 runtime、gate 或 auto-fix 逻辑
+- **验证**：`uv run pytest tests/unit/test_frontend_generation_constraints.py -q`
+
+### Task 4.3 Fresh verify 并追加 implementation batch 归档
+
+- **任务编号**：T43
+- **优先级**：P0
+- **依赖**：T42
+- **文件**：`specs/017-frontend-generation-governance-baseline/task-execution-log.md`
+- **可并行**：否
+- **验收标准**：
+  1. `uv run pytest tests/unit/test_frontend_generation_constraints.py -q` 通过
+  2. `uv run ruff check src tests`、`git diff --check -- specs/017-frontend-generation-governance-baseline src/ai_sdlc/models tests/unit` 与 `uv run ai-sdlc verify constraints` 通过
+  3. `task-execution-log.md` 追加记录当前 implementation batch 的 touched files、验证命令与结论
+- **验证**：`uv run pytest tests/unit/test_frontend_generation_constraints.py -q`, `uv run ruff check src tests`, `git diff --check -- specs/017-frontend-generation-governance-baseline src/ai_sdlc/models tests/unit`, `uv run ai-sdlc verify constraints`
