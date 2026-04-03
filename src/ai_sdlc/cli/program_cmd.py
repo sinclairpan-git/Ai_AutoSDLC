@@ -2501,6 +2501,7 @@ def program_final_proof_publication(
             console.print(f"  - {warning}")
 
     publication_result = None
+    publication_artifact_path: Path | None = None
     if not dry_run:
         if not yes:
             console.print(
@@ -2512,7 +2513,17 @@ def program_final_proof_publication(
             request=request,
             confirmed=True,
         )
+        publication_artifact_path = svc.write_frontend_final_proof_publication_artifact(
+            mf,
+            request=request,
+            result=publication_result,
+        )
         _render_frontend_final_proof_publication_result(publication_result)
+        console.print("\n[bold cyan]Frontend Final Proof Publication Artifact[/bold cyan]")
+        console.print(
+            f"  - saved: {publication_artifact_path.relative_to(root)}",
+            markup=False,
+        )
 
     if report:
         report_path = root / report
@@ -2581,6 +2592,11 @@ def program_final_proof_publication(
                 lines.extend(
                     [f"  - {item}" for item in publication_result.remaining_blockers]
                 )
+            lines.append("")
+        if publication_artifact_path is not None:
+            lines.append("## Frontend Final Proof Publication Artifact")
+            lines.append("")
+            lines.append(f"- `{publication_artifact_path.relative_to(root)}`")
             lines.append("")
         if request.warnings or (
             publication_result is not None and publication_result.warnings

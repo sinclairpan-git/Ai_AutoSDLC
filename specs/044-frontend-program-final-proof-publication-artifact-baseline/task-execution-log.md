@@ -65,3 +65,87 @@
 
 - `044` 的 final proof publication artifact truth、write boundary 与 downstream final proof closure 边界已经冻结。
 - 下游实现起点明确为 `ProgramService` final proof publication artifact writer，其后再进入 CLI artifact output surface。
+
+## Batch 2026-04-03-002
+
+- **时间**：2026-04-03 23:26:01 +0800
+- **目标**：在 `ProgramService` 中落下 canonical final proof publication artifact writer，不改变 `043` truth，也不越界到 final proof closure / archive proof。
+- **范围**：
+  - `src/ai_sdlc/core/program_service.py`
+  - `tests/unit/test_program_service.py`
+  - `specs/044-frontend-program-final-proof-publication-artifact-baseline/task-execution-log.md`
+- **激活的规则**：
+  - test-driven-development
+  - artifact materialization only
+  - no final proof closure in current batch
+
+### Completed Tasks
+
+#### T41 | 先写 failing tests 固定 final proof publication artifact writer 语义
+
+- 新增 `test_write_frontend_final_proof_publication_artifact_emits_canonical_yaml`，固定 canonical path、request/result linkage 与 payload 字段。
+- 复用 `test_execute_frontend_final_proof_publication_does_not_write_artifact_by_default`，继续固定 execute result 不会默认隐式落盘。
+- 首次 RED 结果：
+  - `uv run pytest tests/unit/test_program_service.py -q -k "final_proof_publication and artifact"` -> `1 failed, 1 passed, 58 deselected`
+  - 失败原因：`ProgramService` 缺少 `write_frontend_final_proof_publication_artifact`
+
+#### T42 | 实现最小 final proof publication artifact writer
+
+- 在 `program_service.py` 新增 `PROGRAM_FRONTEND_FINAL_PROOF_PUBLICATION_ARTIFACT_REL_PATH`。
+- 新增 `write_frontend_final_proof_publication_artifact()`，只从 `043` request/result materialize canonical artifact。
+- 新增 `_build_frontend_final_proof_publication_artifact_payload()`，统一 artifact payload、warnings 与 source linkage。
+
+#### T43 | Fresh verify 并追加 implementation batch 归档
+
+- 定向单测转绿：
+  - `uv run pytest tests/unit/test_program_service.py -q -k "final_proof_publication and artifact"` -> `2 passed, 58 deselected`
+
+### Outcome
+
+- `ProgramService` 已具备 final proof publication artifact writer，CLI 可以直接消费这套 execute artifact truth。
+
+## Batch 2026-04-03-003
+
+- **时间**：2026-04-03 23:26:01 +0800
+- **目标**：把 final proof publication artifact 暴露到独立 CLI execute surface，要求显式确认，并诚实回报 artifact path 与 deferred result。
+- **范围**：
+  - `src/ai_sdlc/cli/program_cmd.py`
+  - `tests/integration/test_cli_program.py`
+  - `specs/044-frontend-program-final-proof-publication-artifact-baseline/task-execution-log.md`
+- **激活的规则**：
+  - test-driven-development
+  - explicit execute surface
+  - no final proof closure in current batch
+
+### Completed Tasks
+
+#### T51 | 先写 failing tests 固定 CLI artifact 输出语义
+
+- 新增 `test_program_final_proof_publication_dry_run_does_not_write_artifact`，固定默认 dry-run 不写出 artifact。
+- 新增 `test_program_final_proof_publication_execute_writes_publication_artifact`，固定 `--execute --yes` 下的 artifact path 输出与 report 落盘。
+- 首次 RED 结果：
+  - `uv run pytest tests/integration/test_cli_program.py -q -k "final_proof_publication and (artifact or does_not_write_artifact)"` -> `1 failed, 1 passed, 60 deselected`
+  - 失败原因：`program final-proof-publication --execute --yes` 尚未写出 `.ai-sdlc/memory/frontend-final-proof-publication/latest.yaml`
+
+#### T52 | 实现最小 final proof publication artifact CLI surface
+
+- 在 `program_cmd.py` 让 `program final-proof-publication --execute --yes` 写出 canonical final proof publication artifact。
+- execute 成功后新增 `Frontend Final Proof Publication Artifact` 终端输出。
+- report 写入新增 artifact section，但保持 deferred result 语义，不误表述为 final proof closure 已完成。
+
+#### T53 | Fresh verify 并追加 CLI batch 归档
+
+- 定向集成转绿：
+  - `uv run pytest tests/integration/test_cli_program.py -q -k "final_proof_publication and (artifact or does_not_write_artifact)"` -> `2 passed, 60 deselected`
+- full fresh verify：
+  - `uv run pytest tests/unit/test_program_service.py -q` -> `60 passed`
+  - `uv run pytest tests/integration/test_cli_program.py -q` -> `62 passed`
+  - `uv run ruff check src tests` -> `All checks passed!`
+  - `uv run python -c "from pathlib import Path; from ai_sdlc.generators.doc_gen import TasksParser; plan = TasksParser().parse(Path('specs/044-frontend-program-final-proof-publication-artifact-baseline/tasks.md')); print({'total_tasks': plan.total_tasks, 'total_batches': plan.total_batches})"` -> `{'total_tasks': 15, 'total_batches': 5}`
+  - `uv run ai-sdlc verify constraints` -> `verify constraints: no BLOCKERs.`
+  - `git diff --check -- specs/044-frontend-program-final-proof-publication-artifact-baseline src/ai_sdlc/core/program_service.py src/ai_sdlc/cli/program_cmd.py tests/unit/test_program_service.py tests/integration/test_cli_program.py` -> 无输出
+
+### Outcome
+
+- `044` 已形成 docs -> service artifact writer -> CLI artifact output/report 的闭环。
+- 下游可以继续拆 final proof closure / archive-proof baseline，而不需要再从临时 CLI 文本反推 final proof publication truth。

@@ -74,6 +74,9 @@ PROGRAM_FRONTEND_WRITEBACK_PERSISTENCE_ARTIFACT_REL_PATH = (
 PROGRAM_FRONTEND_PERSISTED_WRITE_PROOF_ARTIFACT_REL_PATH = (
     ".ai-sdlc/memory/frontend-persisted-write-proof/latest.yaml"
 )
+PROGRAM_FRONTEND_FINAL_PROOF_PUBLICATION_ARTIFACT_REL_PATH = (
+    ".ai-sdlc/memory/frontend-final-proof-publication/latest.yaml"
+)
 PROGRAM_FRONTEND_PROVIDER_RUNTIME_DEFERRED_SUMMARY = (
     "no patches generated in guarded provider runtime baseline"
 )
@@ -2947,6 +2950,49 @@ class ProgramService:
             },
         )
 
+    def write_frontend_final_proof_publication_artifact(
+        self,
+        manifest: ProgramManifest,
+        *,
+        request: ProgramFrontendFinalProofPublicationRequest | None = None,
+        result: ProgramFrontendFinalProofPublicationResult | None = None,
+        generated_at: str | None = None,
+        output_path: Path | None = None,
+    ) -> Path:
+        """Persist the canonical final proof publication artifact."""
+        effective_generated_at = generated_at or utc_now_z()
+        effective_request = request or self.build_frontend_final_proof_publication_request(
+            manifest
+        )
+        effective_result = result or self.execute_frontend_final_proof_publication(
+            manifest,
+            request=effective_request,
+            confirmed=not effective_request.confirmation_required,
+        )
+        if effective_request.confirmation_required and not effective_result.confirmed:
+            raise ValueError(
+                "final proof publication artifact requires an explicitly confirmed result"
+            )
+
+        artifact_path = output_path or (
+            self.root / PROGRAM_FRONTEND_FINAL_PROOF_PUBLICATION_ARTIFACT_REL_PATH
+        )
+        if not artifact_path.is_absolute():
+            artifact_path = self.root / artifact_path
+        relative_artifact_path = _relative_to_root_or_str(self.root, artifact_path)
+        payload = self._build_frontend_final_proof_publication_artifact_payload(
+            request=effective_request,
+            result=effective_result,
+            generated_at=effective_generated_at,
+            artifact_path=relative_artifact_path,
+        )
+        artifact_path.parent.mkdir(parents=True, exist_ok=True)
+        artifact_path.write_text(
+            yaml.safe_dump(payload, sort_keys=False, allow_unicode=True),
+            encoding="utf-8",
+        )
+        return artifact_path
+
     def evaluate_execute_gates(
         self, manifest: ProgramManifest, *, allow_dirty: bool = False
     ) -> ProgramExecuteGates:
@@ -3570,6 +3616,50 @@ class ProgramService:
                     "spec_id": step.spec_id,
                     "path": step.path,
                     "proof_state": step.proof_state,
+                    "pending_inputs": list(step.pending_inputs),
+                    "suggested_next_actions": list(step.suggested_next_actions),
+                    "source_linkage": dict(step.source_linkage),
+                }
+                for step in request.steps
+            ],
+            "source_linkage": source_linkage,
+        }
+
+    def _build_frontend_final_proof_publication_artifact_payload(
+        self,
+        *,
+        request: ProgramFrontendFinalProofPublicationRequest,
+        result: ProgramFrontendFinalProofPublicationResult,
+        generated_at: str,
+        artifact_path: str,
+    ) -> dict[str, object]:
+        source_linkage = {
+            **dict(request.source_linkage),
+            **dict(result.source_linkage),
+            "final_proof_publication_artifact_path": artifact_path,
+            "final_proof_publication_artifact_generated_at": generated_at,
+        }
+        return {
+            "generated_at": generated_at,
+            "manifest_path": _relative_to_root_or_str(self.root, self.manifest_path),
+            "artifact_source_path": request.artifact_source_path,
+            "artifact_generated_at": request.artifact_generated_at,
+            "required": request.required,
+            "confirmation_required": request.confirmation_required,
+            "confirmed": result.confirmed,
+            "proof_state": request.proof_state,
+            "publication_state": result.publication_state,
+            "publication_result": result.publication_result,
+            "publication_summaries": list(result.publication_summaries),
+            "existing_written_paths": list(request.written_paths),
+            "written_paths": list(result.written_paths),
+            "remaining_blockers": list(result.remaining_blockers),
+            "warnings": _unique_strings([*request.warnings, *result.warnings]),
+            "steps": [
+                {
+                    "spec_id": step.spec_id,
+                    "path": step.path,
+                    "publication_state": step.publication_state,
                     "pending_inputs": list(step.pending_inputs),
                     "suggested_next_actions": list(step.suggested_next_actions),
                     "source_linkage": dict(step.source_linkage),
