@@ -8,6 +8,21 @@ from unittest.mock import patch
 from typer.testing import CliRunner
 
 from ai_sdlc.cli.main import app
+from ai_sdlc.core.frontend_contract_drift import PageImplementationObservation
+from ai_sdlc.core.frontend_contract_observation_provider import (
+    build_frontend_contract_observation_artifact,
+    write_frontend_contract_observation_artifact,
+)
+from ai_sdlc.generators.frontend_gate_policy_artifacts import (
+    materialize_frontend_gate_policy_artifacts,
+)
+from ai_sdlc.generators.frontend_generation_constraint_artifacts import (
+    materialize_frontend_generation_constraint_artifacts,
+)
+from ai_sdlc.models.frontend_gate_policy import build_mvp_frontend_gate_policy
+from ai_sdlc.models.frontend_generation_constraints import (
+    build_mvp_frontend_generation_constraints,
+)
 
 runner = CliRunner()
 
@@ -32,6 +47,60 @@ specs:
 """.strip()
         + "\n",
         encoding="utf-8",
+    )
+
+
+def _write_minimal_frontend_contract_page_artifacts(
+    root: Path,
+    *,
+    page_id: str = "user-create",
+    recipe_id: str = "form-create",
+) -> None:
+    page_dir = root / "contracts" / "frontend" / "pages" / page_id
+    page_dir.mkdir(parents=True, exist_ok=True)
+    (page_dir / "page.metadata.yaml").write_text(
+        f"page_id: {page_id}\npage_type: form\n",
+        encoding="utf-8",
+    )
+    (page_dir / "page.recipe.yaml").write_text(
+        f"recipe_id: {recipe_id}\nrequired_regions:\n  - form\n",
+        encoding="utf-8",
+    )
+
+
+def _write_frontend_contract_observations(
+    spec_dir: Path,
+    *,
+    page_id: str = "user-create",
+    recipe_id: str = "form-create",
+) -> None:
+    artifact = build_frontend_contract_observation_artifact(
+        observations=[
+            PageImplementationObservation(
+                page_id=page_id,
+                recipe_id=recipe_id,
+                i18n_keys=[],
+                validation_fields=[],
+                new_legacy_usages=[],
+            )
+        ],
+        provider_kind="manual",
+        provider_name="test-fixture",
+        generated_at="2026-04-03T15:30:00Z",
+        source_digest="sha256:cli-program",
+        source_revision="rev-cli-program",
+    )
+    write_frontend_contract_observation_artifact(spec_dir, artifact)
+
+
+def _write_frontend_gate_artifacts(root: Path) -> None:
+    materialize_frontend_gate_policy_artifacts(
+        root,
+        build_mvp_frontend_gate_policy(),
+    )
+    materialize_frontend_generation_constraint_artifacts(
+        root,
+        build_mvp_frontend_generation_constraints(),
     )
 
 
@@ -91,6 +160,23 @@ specs:
         assert "Program Plan" in plan.output
         assert "003-enroll" in plan.output
 
+    def test_program_status_exposes_frontend_readiness(
+        self, initialized_project_dir: Path
+    ) -> None:
+        root = initialized_project_dir
+        _write_manifest(root)
+        _write_minimal_frontend_contract_page_artifacts(root)
+        _write_frontend_gate_artifacts(root)
+        _write_frontend_contract_observations(root / "specs" / "001-auth")
+
+        with patch("ai_sdlc.cli.program_cmd.find_project_root", return_value=root):
+            result = runner.invoke(app, ["program", "status"])
+
+        assert result.exit_code == 0
+        assert "Frontend" in result.output
+        assert "ready" in result.output
+        assert "missing_artifact" in result.output
+
     def test_program_integrate_dry_run_with_report(
         self, initialized_project_dir: Path
     ) -> None:
@@ -111,6 +197,20 @@ specs:
         assert result.exit_code == 0
         assert "Program Integrate Dry-Run" in result.output
         assert (root / report_rel).is_file()
+
+    def test_program_integrate_dry_run_exposes_frontend_hint(
+        self, initialized_project_dir: Path
+    ) -> None:
+        root = initialized_project_dir
+        _write_manifest(root)
+
+        with patch("ai_sdlc.cli.program_cmd.find_project_root", return_value=root):
+            result = runner.invoke(app, ["program", "integrate", "--dry-run"])
+
+        assert result.exit_code == 0
+        assert "Frontend Hint" in result.output
+        assert "missing_artifact" in result.output
+        assert "frontend_contract_observations" in result.output
 
     def test_program_integrate_execute_is_blocked(
         self, initialized_project_dir: Path

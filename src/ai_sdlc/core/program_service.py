@@ -7,7 +7,22 @@ from pathlib import Path
 
 from ai_sdlc.branch.git_client import GitClient, GitError
 from ai_sdlc.core.config import YamlStore
+from ai_sdlc.core.frontend_contract_runtime_attachment import (
+    FRONTEND_CONTRACT_RUNTIME_ATTACHMENT_STATUS_ATTACHED,
+    build_frontend_contract_runtime_attachment,
+)
+from ai_sdlc.core.frontend_gate_verification import (
+    FRONTEND_GATE_SOURCE_NAME,
+    build_frontend_gate_verification_report,
+)
 from ai_sdlc.models.program import ProgramManifest, ProgramSpecRef
+
+PROGRAM_FRONTEND_READINESS_READY = "ready"
+PROGRAM_FRONTEND_READINESS_RETRY = "retry"
+PROGRAM_FRONTEND_GATE_VERDICT_UNRESOLVED = "UNRESOLVED"
+PROGRAM_FRONTEND_RUNTIME_ATTACHMENT_SOURCE_NAME = (
+    "frontend contract runtime attachment"
+)
 
 
 @dataclass
@@ -15,6 +30,16 @@ class ProgramValidationResult:
     valid: bool
     errors: list[str] = field(default_factory=list)
     warnings: list[str] = field(default_factory=list)
+
+
+@dataclass
+class ProgramFrontendReadiness:
+    state: str
+    attachment_status: str
+    gate_verdict: str
+    coverage_gaps: list[str] = field(default_factory=list)
+    blockers: list[str] = field(default_factory=list)
+    source_linkage: dict[str, str] = field(default_factory=dict)
 
 
 @dataclass
@@ -26,6 +51,7 @@ class ProgramSpecStatus:
     completed_tasks: int
     total_tasks: int
     blocked_by: list[str] = field(default_factory=list)
+    frontend_readiness: ProgramFrontendReadiness | None = None
 
 
 @dataclass
@@ -36,6 +62,7 @@ class ProgramIntegrationStep:
     path: str
     verification_commands: list[str] = field(default_factory=list)
     archive_checks: list[str] = field(default_factory=list)
+    frontend_readiness: ProgramFrontendReadiness | None = None
 
 
 @dataclass
@@ -168,6 +195,7 @@ class ProgramService:
                 if tasks_md.exists():
                     completed, total = _task_counts(tasks_md)
 
+            frontend_readiness = self._build_frontend_readiness(spec_dir)
             statuses[spec.id] = ProgramSpecStatus(
                 spec_id=spec.id,
                 path=spec.path,
@@ -175,6 +203,7 @@ class ProgramService:
                 stage_hint=stage_hint,
                 completed_tasks=completed,
                 total_tasks=total,
+                frontend_readiness=frontend_readiness,
             )
 
         for spec in manifest.specs:
@@ -226,6 +255,7 @@ class ProgramService:
                             "development-summary present or updated",
                             "PRD traceability matrix updated",
                         ],
+                        frontend_readiness=row.frontend_readiness if row else None,
                     )
                 )
                 order += 1
@@ -264,6 +294,59 @@ class ProgramService:
             failed=failed,
             warnings=warnings,
         )
+
+    def _build_frontend_readiness(self, spec_dir: Path) -> ProgramFrontendReadiness:
+        attachment = build_frontend_contract_runtime_attachment(
+            self.root,
+            explicit_spec_dir=spec_dir,
+        )
+        coverage_gaps = _unique_strings(attachment.coverage_gaps)
+        blockers = _unique_strings(attachment.blockers)
+        gate_verdict = PROGRAM_FRONTEND_GATE_VERDICT_UNRESOLVED
+
+        if attachment.status == FRONTEND_CONTRACT_RUNTIME_ATTACHMENT_STATUS_ATTACHED:
+            gate_report = build_frontend_gate_verification_report(
+                self.root,
+                list(attachment.observations),
+            )
+            gate_verdict = gate_report.gate_result.verdict.value
+            coverage_gaps = _unique_strings(
+                [*coverage_gaps, *gate_report.coverage_gaps]
+            )
+            blockers = _unique_strings([*blockers, *gate_report.blockers])
+
+        return ProgramFrontendReadiness(
+            state=self._frontend_readiness_state(
+                attachment_status=attachment.status,
+                gate_verdict=gate_verdict,
+                coverage_gaps=coverage_gaps,
+                blockers=blockers,
+            ),
+            attachment_status=attachment.status,
+            gate_verdict=gate_verdict,
+            coverage_gaps=coverage_gaps,
+            blockers=blockers,
+            source_linkage={
+                "runtime_attachment_source": PROGRAM_FRONTEND_RUNTIME_ATTACHMENT_SOURCE_NAME,
+                "runtime_attachment_status": attachment.status,
+                "frontend_gate_source": FRONTEND_GATE_SOURCE_NAME,
+                "frontend_gate_verdict": gate_verdict,
+            },
+        )
+
+    def _frontend_readiness_state(
+        self,
+        *,
+        attachment_status: str,
+        gate_verdict: str,
+        coverage_gaps: list[str],
+        blockers: list[str],
+    ) -> str:
+        if attachment_status != FRONTEND_CONTRACT_RUNTIME_ATTACHMENT_STATUS_ATTACHED:
+            return attachment_status
+        if gate_verdict == "PASS" and not coverage_gaps and not blockers:
+            return PROGRAM_FRONTEND_READINESS_READY
+        return PROGRAM_FRONTEND_READINESS_RETRY
 
     def _build_graph(self, manifest: ProgramManifest) -> dict[str, list[str]]:
         return {spec.id: list(spec.depends_on) for spec in manifest.specs}
@@ -312,3 +395,12 @@ def _task_counts(tasks_md: Path) -> tuple[int, int]:
         elif s.startswith("- [ ]"):
             total += 1
     return completed, total
+
+
+def _unique_strings(values: list[str] | tuple[str, ...]) -> list[str]:
+    unique: list[str] = []
+    for value in values:
+        text = str(value).strip()
+        if text and text not in unique:
+            unique.append(text)
+    return unique

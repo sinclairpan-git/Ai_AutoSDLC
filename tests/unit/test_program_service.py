@@ -4,7 +4,22 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from ai_sdlc.core.frontend_contract_drift import PageImplementationObservation
+from ai_sdlc.core.frontend_contract_observation_provider import (
+    build_frontend_contract_observation_artifact,
+    write_frontend_contract_observation_artifact,
+)
 from ai_sdlc.core.program_service import ProgramService
+from ai_sdlc.generators.frontend_gate_policy_artifacts import (
+    materialize_frontend_gate_policy_artifacts,
+)
+from ai_sdlc.generators.frontend_generation_constraint_artifacts import (
+    materialize_frontend_generation_constraint_artifacts,
+)
+from ai_sdlc.models.frontend_gate_policy import build_mvp_frontend_gate_policy
+from ai_sdlc.models.frontend_generation_constraints import (
+    build_mvp_frontend_generation_constraints,
+)
 from ai_sdlc.models.program import ProgramManifest, ProgramSpecRef
 
 
@@ -102,6 +117,52 @@ def test_build_integration_dry_run(tmp_path: Path) -> None:
     assert plan.steps[2].tier == 1
 
 
+def test_build_status_surfaces_ready_frontend_readiness_per_spec(tmp_path: Path) -> None:
+    for p in ("specs/001-auth", "specs/002-course", "specs/003-enroll"):
+        (tmp_path / p).mkdir(parents=True)
+    _write_minimal_frontend_contract_page_artifacts(tmp_path)
+    materialize_frontend_gate_policy_artifacts(
+        tmp_path,
+        build_mvp_frontend_gate_policy(),
+    )
+    materialize_frontend_generation_constraint_artifacts(
+        tmp_path,
+        build_mvp_frontend_generation_constraints(),
+    )
+    _write_frontend_contract_observations(tmp_path / "specs" / "001-auth")
+
+    svc = ProgramService(tmp_path)
+    rows = svc.build_status(_manifest())
+    by = {r.spec_id: r for r in rows}
+
+    readiness = by["001-auth"].frontend_readiness
+    assert readiness is not None
+    assert readiness.state == "ready"
+    assert readiness.coverage_gaps == []
+    assert readiness.blockers == []
+    assert readiness.source_linkage["runtime_attachment_status"] == "attached"
+    assert readiness.source_linkage["frontend_gate_verdict"] == "PASS"
+
+
+def test_build_status_surfaces_frontend_readiness_gap_when_attachment_missing(
+    tmp_path: Path,
+) -> None:
+    for p in ("specs/001-auth", "specs/002-course", "specs/003-enroll"):
+        (tmp_path / p).mkdir(parents=True)
+
+    svc = ProgramService(tmp_path)
+    rows = svc.build_status(_manifest())
+    by = {r.spec_id: r for r in rows}
+
+    readiness = by["001-auth"].frontend_readiness
+    assert readiness is not None
+    assert readiness.state == "missing_artifact"
+    assert "frontend_contract_observations" in readiness.coverage_gaps
+    assert "missing canonical observation artifact" in readiness.blockers[0]
+    assert readiness.source_linkage["runtime_attachment_status"] == "missing_artifact"
+    assert readiness.source_linkage["frontend_gate_verdict"] == "UNRESOLVED"
+
+
 def test_execution_gates_require_all_specs_closed(tmp_path: Path) -> None:
     for p in ("specs/001-auth", "specs/002-course", "specs/003-enroll"):
         (tmp_path / p).mkdir(parents=True)
@@ -127,3 +188,46 @@ def test_execution_gates_pass_when_closed(tmp_path: Path) -> None:
     svc = ProgramService(tmp_path)
     gates = svc.evaluate_execute_gates(_manifest(), allow_dirty=True)
     assert gates.passed is True
+
+
+def _write_minimal_frontend_contract_page_artifacts(
+    root: Path,
+    *,
+    page_id: str = "user-create",
+    recipe_id: str = "form-create",
+) -> None:
+    page_dir = root / "contracts" / "frontend" / "pages" / page_id
+    page_dir.mkdir(parents=True, exist_ok=True)
+    (page_dir / "page.metadata.yaml").write_text(
+        f"page_id: {page_id}\npage_type: form\n",
+        encoding="utf-8",
+    )
+    (page_dir / "page.recipe.yaml").write_text(
+        f"recipe_id: {recipe_id}\nrequired_regions:\n  - form\n",
+        encoding="utf-8",
+    )
+
+
+def _write_frontend_contract_observations(
+    spec_dir: Path,
+    *,
+    page_id: str = "user-create",
+    recipe_id: str = "form-create",
+) -> None:
+    artifact = build_frontend_contract_observation_artifact(
+        observations=[
+            PageImplementationObservation(
+                page_id=page_id,
+                recipe_id=recipe_id,
+                i18n_keys=[],
+                validation_fields=[],
+                new_legacy_usages=[],
+            )
+        ],
+        provider_kind="manual",
+        provider_name="test-fixture",
+        generated_at="2026-04-03T15:00:00Z",
+        source_digest="sha256:program-service",
+        source_revision="rev-program-service",
+    )
+    write_frontend_contract_observation_artifact(spec_dir, artifact)

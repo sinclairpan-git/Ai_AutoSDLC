@@ -30,7 +30,7 @@ related_doc:
 - 再冻结 readiness input、status/plan/integrate responsibility 与 execute guard
 - 最后给出后续 `core / cli / tests` 的推荐文件面与测试矩阵
 
-当前阶段只完成 canonical formal baseline，不直接进入 `src/` / `tests/` 实现。
+当前 formal baseline 已完成。经用户明确要求连续推进 MVP 后，当前允许继续进入首批实现切片：`program frontend readiness aggregation`，先在 `ProgramService` 中落 per-spec frontend readiness truth；随后再进入 `program` CLI 的 status / integrate dry-run surface。当前仍不直接进入 execute runtime。
 
 ## 技术背景
 
@@ -73,9 +73,9 @@ src/ai_sdlc/
 ```text
 src/ai_sdlc/
 ├── core/
-│   └── program_service.py                   # per-spec frontend readiness aggregation
+│   └── program_service.py                   # current slice: per-spec frontend readiness aggregation
 └── cli/
-    └── program_cmd.py                       # status / integrate dry-run frontend readiness surface
+    └── program_cmd.py                       # next slice: status / integrate dry-run frontend readiness surface
 
 tests/
 ├── unit/test_program_service.py
@@ -131,6 +131,20 @@ tests/
 **验证方式**：formal docs review + `verify constraints`。  
 **回退方式**：仅回退 planning baseline。
 
+### Phase 4：Program frontend readiness aggregation slice
+
+**目标**：在 `ProgramService` 中落 per-spec frontend readiness aggregation，统一消费 `014` runtime attachment 与 `018` frontend gate summary truth，并保持 readiness 按 spec 粒度暴露。
+**产物**：`src/ai_sdlc/core/program_service.py`、`tests/unit/test_program_service.py`。
+**验证方式**：定向 `pytest`、`uv run ruff check src tests`、`git diff --check`、`uv run ai-sdlc verify constraints`。
+**回退方式**：仅回退本阶段涉及的 `core/`、`tests/` 与 execution log 变更。
+
+### Phase 5：Program CLI frontend readiness surface slice
+
+**目标**：把 per-spec frontend readiness 暴露到 `program status` 与 `program integrate --dry-run` 的终端输出，让 operator 能直接看到 frontend readiness 与最小 hint，而不进入 execute runtime。
+**产物**：`src/ai_sdlc/cli/program_cmd.py`、`tests/integration/test_cli_program.py`。
+**验证方式**：定向 `pytest`、`uv run ruff check src tests`、`git diff --check`、`uv run ai-sdlc verify constraints`。
+**回退方式**：仅回退本阶段涉及的 `cli/`、`tests/` 与 execution log 变更。
+
 ## 工作流计划
 
 ### 工作流 A：Program frontend truth freeze
@@ -154,6 +168,20 @@ tests/
 **验证方式**：file-map review + tests matrix review。  
 **回退方式**：不进入 execute runtime 实现。
 
+### 工作流 D：Program frontend readiness aggregation slice
+
+**范围**：per-spec frontend readiness aggregation、source linkage、honesty surfacing 与 program-level frontend status object。
+**影响范围**：后续 `program status`、`program integrate --dry-run` 与 execute guard 的 frontend data source。
+**验证方式**：`tests/unit/test_program_service.py` + fresh `ruff` / `verify constraints`。
+**回退方式**：不改 `program_cmd.py` 或 execute runtime。
+
+### 工作流 E：Program CLI frontend readiness surface slice
+
+**范围**：`program status`、`program integrate --dry-run` 的 frontend readiness 展示与 hint surface。
+**影响范围**：operator-facing program CLI，可见性提升但不新增 runtime side effect。
+**验证方式**：`tests/integration/test_cli_program.py` + fresh `ruff` / `verify constraints`。
+**回退方式**：不修改 execute runtime gate。
+
 ## 关键路径验证策略
 
 | 关键路径 | 主验证方式 | 次验证方式 |
@@ -163,6 +191,8 @@ tests/
 | status / integrate responsibility clarity | contract review | file-map review |
 | execute guard clarity | formal docs review | 人工审阅 |
 | downstream handoff clarity | tasks / plan 对账 | `uv run ai-sdlc verify constraints` |
+| program frontend readiness aggregation correctness | `uv run pytest tests/unit/test_program_service.py -q` | readiness payload / source linkage review |
+| program CLI frontend readiness surface correctness | `uv run pytest tests/integration/test_cli_program.py -q` | terminal wording / hint surface review |
 
 ## 当前建议的下游实现起点
 

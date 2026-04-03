@@ -16,6 +16,8 @@ related_doc:
 Batch 1: program frontend baseline freeze
 Batch 2: readiness / status / integrate boundary freeze
 Batch 3: implementation handoff and verification freeze
+Batch 4: program frontend readiness aggregation slice
+Batch 5: program CLI frontend readiness surface slice
 ```
 
 ---
@@ -27,6 +29,10 @@ Batch 3: implementation handoff and verification freeze
 - `019` 不得改写 `018` 已冻结的 frontend gate summary truth。
 - `019` 不得在当前 child work item 中直接启用 program auto-scan、program auto-attach、program auto-fix、registry 或 cross-spec writeback。
 - `019` 不得默认扩张 `program --execute` 为新的前端自动编排入口。
+- `Batch 4` 只允许写入 `src/ai_sdlc/core/program_service.py`、`tests/unit/test_program_service.py`、`specs/019-frontend-program-orchestration-baseline/task-execution-log.md`，以及为本批边界服务的 `plan.md / tasks.md`。
+- `Batch 5` 只允许写入 `src/ai_sdlc/cli/program_cmd.py`、`tests/integration/test_cli_program.py`、`specs/019-frontend-program-orchestration-baseline/task-execution-log.md`，以及为本批边界服务的 `plan.md / tasks.md`。
+- 当前首批实现只放行 `ProgramService` 的 per-spec frontend readiness aggregation，不放行 CLI execute runtime 或 writeback。
+- 当前第二批实现只放行 `program status / integrate --dry-run` 的 frontend readiness surface，不放行 execute runtime、registry 或 auto-fix。
 
 ---
 
@@ -156,3 +162,89 @@ Batch 3: implementation handoff and verification freeze
   2. `spec.md / plan.md / tasks.md` 对 program-level frontend orchestration truth、honesty 与 handoff 保持单一真值
   3. 当前分支上的 `019` formal docs 可作为后续进入 program readiness aggregation 实现的稳定基线
 - **验证**：`uv run ai-sdlc verify constraints`, `git status --short`
+
+---
+
+## Batch 4：program frontend readiness aggregation slice
+
+### Task 4.1 先写 failing tests 固定 per-spec frontend readiness aggregation 语义
+
+- **任务编号**：T41
+- **优先级**：P0
+- **依赖**：T33
+- **文件**：`tests/unit/test_program_service.py`
+- **可并行**：否
+- **验收标准**：
+  1. 单测明确覆盖 frontend-ready spec 的 per-spec readiness 聚合
+  2. 单测明确覆盖 frontend artifact 缺失时的缺口与 blocker 聚合
+  3. 首次运行定向测试时必须出现预期失败，证明 `program_service.py` 尚未聚合 frontend readiness
+- **验证**：`uv run pytest tests/unit/test_program_service.py -q`
+
+### Task 4.2 实现最小 program frontend readiness aggregation
+
+- **任务编号**：T42
+- **优先级**：P0
+- **依赖**：T41
+- **文件**：`src/ai_sdlc/core/program_service.py`
+- **可并行**：否
+- **验收标准**：
+  1. `ProgramService` 能按 spec 粒度聚合 frontend readiness，并消费 `014` / `018` 既有 truth
+  2. readiness payload 至少暴露 state、coverage gaps、blockers 与 source linkage
+  3. 实现保持只读聚合，不引入 program execute runtime 或 writeback
+- **验证**：`uv run pytest tests/unit/test_program_service.py -q`
+
+### Task 4.3 Fresh verify 并追加 implementation batch 归档
+
+- **任务编号**：T43
+- **优先级**：P0
+- **依赖**：T42
+- **文件**：`specs/019-frontend-program-orchestration-baseline/task-execution-log.md`
+- **可并行**：否
+- **验收标准**：
+  1. `uv run pytest tests/unit/test_program_service.py -q` 通过
+  2. `uv run ruff check src tests`、`git diff --check -- specs/019-frontend-program-orchestration-baseline src/ai_sdlc/core tests/unit` 与 `uv run ai-sdlc verify constraints` 通过
+  3. `task-execution-log.md` 追加记录当前 implementation batch 的 touched files、验证命令与结论
+- **验证**：`uv run pytest tests/unit/test_program_service.py -q`, `uv run ruff check src tests`, `git diff --check -- specs/019-frontend-program-orchestration-baseline src/ai_sdlc/core tests/unit`, `uv run ai-sdlc verify constraints`
+
+---
+
+## Batch 5：program CLI frontend readiness surface slice
+
+### Task 5.1 先写 failing tests 固定 program CLI 的 frontend readiness 输出语义
+
+- **任务编号**：T51
+- **优先级**：P0
+- **依赖**：T43
+- **文件**：`tests/integration/test_cli_program.py`
+- **可并行**：否
+- **验收标准**：
+  1. 集成测试明确覆盖 `program status` 的 frontend readiness 输出
+  2. 集成测试明确覆盖 `program integrate --dry-run` 的 frontend hint 输出
+  3. 首次运行定向测试时必须出现预期失败，证明 `program_cmd.py` 尚未渲染 frontend readiness
+- **验证**：`uv run pytest tests/integration/test_cli_program.py -q`
+
+### Task 5.2 实现最小 program CLI frontend readiness surface
+
+- **任务编号**：T52
+- **优先级**：P0
+- **依赖**：T51
+- **文件**：`src/ai_sdlc/cli/program_cmd.py`
+- **可并行**：否
+- **验收标准**：
+  1. `program status` 能暴露 per-spec frontend readiness
+  2. `program integrate --dry-run` 能暴露最小 frontend hint，而不进入 execute runtime
+  3. 实现保持 scoped user-facing surface，不改写 manifest 语义或 execute gate
+- **验证**：`uv run pytest tests/integration/test_cli_program.py -q`
+
+### Task 5.3 Fresh verify 并追加 CLI batch 归档
+
+- **任务编号**：T53
+- **优先级**：P0
+- **依赖**：T52
+- **文件**：`specs/019-frontend-program-orchestration-baseline/task-execution-log.md`
+- **可并行**：否
+- **验收标准**：
+  1. `uv run pytest tests/integration/test_cli_program.py -q` 通过
+  2. `uv run ruff check src tests`、`git diff --check -- specs/019-frontend-program-orchestration-baseline src/ai_sdlc/cli tests/integration` 与 `uv run ai-sdlc verify constraints` 通过
+  3. `task-execution-log.md` 追加记录当前 CLI batch 的 touched files、验证命令与结论
+- **验证**：`uv run pytest tests/integration/test_cli_program.py -q`, `uv run ruff check src tests`, `git diff --check -- specs/019-frontend-program-orchestration-baseline src/ai_sdlc/cli tests/integration`, `uv run ai-sdlc verify constraints`

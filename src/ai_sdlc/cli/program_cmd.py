@@ -8,7 +8,7 @@ import typer
 from rich.console import Console
 from rich.table import Table
 
-from ai_sdlc.core.program_service import ProgramService
+from ai_sdlc.core.program_service import ProgramFrontendReadiness, ProgramService
 from ai_sdlc.utils.helpers import find_project_root
 
 program_app = typer.Typer(help="Program-level planning across multiple specs")
@@ -89,6 +89,7 @@ def program_status(
     table.add_column("Stage")
     table.add_column("Tasks")
     table.add_column("Blocked By")
+    table.add_column("Frontend")
 
     for row in rows:
         tasks = (
@@ -98,9 +99,17 @@ def program_status(
         stage = row.stage_hint
         if not row.exists:
             stage = "missing_path"
-        table.add_row(row.spec_id, row.path, stage, tasks, blocked)
+        table.add_row(
+            row.spec_id,
+            row.path,
+            stage,
+            tasks,
+            blocked,
+            _format_frontend_readiness(row.frontend_readiness),
+        )
 
     console.print(table)
+    _render_frontend_status_lines(rows)
 
     if not result.valid:
         console.print(
@@ -210,6 +219,7 @@ def program_integrate(
     table.add_column("Path")
     table.add_column("Verification")
     table.add_column("Archive Checks")
+    table.add_column("Frontend Hint")
     for step in plan.steps:
         table.add_row(
             str(step.order),
@@ -218,9 +228,11 @@ def program_integrate(
             step.path,
             " ; ".join(step.verification_commands),
             " ; ".join(step.archive_checks),
+            _format_frontend_readiness(step.frontend_readiness),
         )
     table.title = mode_title
     console.print(table)
+    _render_frontend_integrate_lines(plan.steps)
 
     if plan.warnings:
         console.print("\n[bold yellow]Warnings[/bold yellow]")
@@ -244,6 +256,7 @@ def program_integrate(
                 [
                     f"### {step.order}. {step.spec_id} (tier {step.tier})",
                     f"- Path: `{step.path}`",
+                    f"- Frontend: `{_format_frontend_readiness(step.frontend_readiness)}`",
                     "- Verification:",
                 ]
             )
@@ -284,3 +297,39 @@ def program_integrate(
     )
 
     raise typer.Exit(code=0)
+
+
+def _format_frontend_readiness(readiness: ProgramFrontendReadiness | None) -> str:
+    if readiness is None:
+        return "-"
+
+    details: list[str] = []
+    if readiness.coverage_gaps:
+        details.append(", ".join(readiness.coverage_gaps[:2]))
+    elif readiness.state != "ready" and readiness.blockers:
+        details.append(readiness.blockers[0])
+
+    suffix = f" [{'; '.join(details)}]" if details else ""
+    return f"{readiness.state}{suffix}"
+
+
+def _render_frontend_status_lines(rows: list[object]) -> None:
+    console.print("\n[bold cyan]Frontend Readiness[/bold cyan]")
+    for row in rows:
+        spec_id = str(getattr(row, "spec_id", "")).strip() or "unknown-spec"
+        readiness = getattr(row, "frontend_readiness", None)
+        console.print(
+            f"  - {spec_id}: {_format_frontend_readiness(readiness)}",
+            markup=False,
+        )
+
+
+def _render_frontend_integrate_lines(steps: list[object]) -> None:
+    console.print("\n[bold cyan]Frontend Hints[/bold cyan]")
+    for step in steps:
+        spec_id = str(getattr(step, "spec_id", "")).strip() or "unknown-spec"
+        readiness = getattr(step, "frontend_readiness", None)
+        console.print(
+            f"  - {spec_id}: {_format_frontend_readiness(readiness)}",
+            markup=False,
+        )
