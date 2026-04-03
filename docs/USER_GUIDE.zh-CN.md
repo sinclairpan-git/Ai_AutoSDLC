@@ -118,7 +118,7 @@ py -3.11 -m venv .venv
 Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
 .\.venv\Scripts\Activate.ps1
 python -m pip install -U pip
-pip install "https://github.com/sinclairpan-git/Ai_AutoSDLC/archive/refs/tags/v0.3.1.zip"
+pip install "https://github.com/sinclairpan-git/Ai_AutoSDLC/archive/refs/tags/v0.4.0.zip"
 ```
 
 **macOS 直接复制：**
@@ -127,7 +127,7 @@ pip install "https://github.com/sinclairpan-git/Ai_AutoSDLC/archive/refs/tags/v0
 python3 -m venv .venv
 source .venv/bin/activate
 python -m pip install -U pip
-pip install "https://github.com/sinclairpan-git/Ai_AutoSDLC/archive/refs/tags/v0.3.1.tar.gz"
+pip install "https://github.com/sinclairpan-git/Ai_AutoSDLC/archive/refs/tags/v0.4.0.tar.gz"
 ```
 
 **执行成功以后，你应该看到：**
@@ -158,7 +158,7 @@ Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
 ```powershell
 .\.venv\Scripts\Activate.ps1
 python -m pip install -U pip
-pip install --upgrade --force-reinstall "https://github.com/sinclairpan-git/Ai_AutoSDLC/archive/refs/tags/v0.3.1.zip"
+pip install --upgrade --force-reinstall "https://github.com/sinclairpan-git/Ai_AutoSDLC/archive/refs/tags/v0.4.0.zip"
 ```
 
 **Linux 升级直接复制：**
@@ -166,7 +166,7 @@ pip install --upgrade --force-reinstall "https://github.com/sinclairpan-git/Ai_A
 ```bash
 source .venv/bin/activate
 python -m pip install -U pip
-pip install --upgrade --force-reinstall "https://github.com/sinclairpan-git/Ai_AutoSDLC/archive/refs/tags/v0.3.1.tar.gz"
+pip install --upgrade --force-reinstall "https://github.com/sinclairpan-git/Ai_AutoSDLC/archive/refs/tags/v0.4.0.tar.gz"
 ```
 
 **macOS 升级直接复制：**
@@ -174,7 +174,7 @@ pip install --upgrade --force-reinstall "https://github.com/sinclairpan-git/Ai_A
 ```bash
 source .venv/bin/activate
 python -m pip install -U pip
-pip install --upgrade --force-reinstall "https://github.com/sinclairpan-git/Ai_AutoSDLC/archive/refs/tags/v0.3.1.tar.gz"
+pip install --upgrade --force-reinstall "https://github.com/sinclairpan-git/Ai_AutoSDLC/archive/refs/tags/v0.4.0.tar.gz"
 ```
 
 ### 第 5 步：验证 AI-SDLC 安装成功
@@ -534,7 +534,7 @@ py -3.11 -m venv .venv
 Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
 .\.venv\Scripts\Activate.ps1
 python -m pip install -U pip
-pip install "https://github.com/sinclairpan-git/Ai_AutoSDLC/archive/refs/tags/v0.3.1.zip"
+pip install "https://github.com/sinclairpan-git/Ai_AutoSDLC/archive/refs/tags/v0.4.0.zip"
 ```
 
 **macOS 直接复制：**
@@ -543,7 +543,7 @@ pip install "https://github.com/sinclairpan-git/Ai_AutoSDLC/archive/refs/tags/v0
 python3 -m venv .venv
 source .venv/bin/activate
 python -m pip install -U pip
-pip install "https://github.com/sinclairpan-git/Ai_AutoSDLC/archive/refs/tags/v0.3.1.tar.gz"
+pip install "https://github.com/sinclairpan-git/Ai_AutoSDLC/archive/refs/tags/v0.4.0.tar.gz"
 ```
 
 **执行成功以后，你应该看到：**
@@ -563,7 +563,7 @@ pip install "https://github.com/sinclairpan-git/Ai_AutoSDLC/archive/refs/tags/v0
 ```powershell
 .\.venv\Scripts\Activate.ps1
 python -m pip install -U pip
-pip install --upgrade --force-reinstall "https://github.com/sinclairpan-git/Ai_AutoSDLC/archive/refs/tags/v0.3.1.zip"
+pip install --upgrade --force-reinstall "https://github.com/sinclairpan-git/Ai_AutoSDLC/archive/refs/tags/v0.4.0.zip"
 ```
 
 **Linux 升级直接复制：**
@@ -571,7 +571,7 @@ pip install --upgrade --force-reinstall "https://github.com/sinclairpan-git/Ai_A
 ```bash
 source .venv/bin/activate
 python -m pip install -U pip
-pip install --upgrade --force-reinstall "https://github.com/sinclairpan-git/Ai_AutoSDLC/archive/refs/tags/v0.3.1.tar.gz"
+pip install --upgrade --force-reinstall "https://github.com/sinclairpan-git/Ai_AutoSDLC/archive/refs/tags/v0.4.0.tar.gz"
 ```
 
 **macOS 升级直接复制：**
@@ -579,7 +579,7 @@ pip install --upgrade --force-reinstall "https://github.com/sinclairpan-git/Ai_A
 ```bash
 source .venv/bin/activate
 python -m pip install -U pip
-pip install --upgrade --force-reinstall "https://github.com/sinclairpan-git/Ai_AutoSDLC/archive/refs/tags/v0.3.1.tar.gz"
+pip install --upgrade --force-reinstall "https://github.com/sinclairpan-git/Ai_AutoSDLC/archive/refs/tags/v0.4.0.tar.gz"
 ```
 
 ### 第 5 步：验证安装成功
