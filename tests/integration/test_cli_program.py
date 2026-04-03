@@ -524,6 +524,57 @@ specs:
         assert ".ai-sdlc/memory/frontend-remediation/latest.yaml" in report
         assert "materialize frontend contract observations" in report
 
+    def test_program_provider_runtime_execute_requires_explicit_confirmation(
+        self, initialized_project_dir: Path
+    ) -> None:
+        root = initialized_project_dir
+        _write_manifest(root)
+        _write_frontend_remediation_writeback_artifact(
+            root,
+            passed=False,
+            remaining_blockers=["spec 001-auth remediation still required"],
+        )
+
+        with patch("ai_sdlc.cli.program_cmd.find_project_root", return_value=root):
+            result = runner.invoke(app, ["program", "provider-runtime", "--execute"])
+
+        assert result.exit_code == 2
+        assert "--yes" in result.output
+
+    def test_program_provider_runtime_execute_surfaces_deferred_result(
+        self, initialized_project_dir: Path
+    ) -> None:
+        root = initialized_project_dir
+        _write_manifest(root)
+        _write_frontend_remediation_writeback_artifact(
+            root,
+            passed=False,
+            remaining_blockers=["spec 001-auth remediation still required"],
+        )
+        report_rel = ".ai-sdlc/memory/frontend-provider-runtime.md"
+
+        with patch("ai_sdlc.cli.program_cmd.find_project_root", return_value=root):
+            result = runner.invoke(
+                app,
+                [
+                    "program",
+                    "provider-runtime",
+                    "--execute",
+                    "--yes",
+                    "--report",
+                    report_rel,
+                ],
+            )
+
+        assert result.exit_code == 1
+        assert "Program Frontend Provider Runtime Execute" in result.output
+        assert "deferred" in result.output
+        assert "no patches generated in guarded provider runtime baseline" in result.output
+        report = (root / report_rel).read_text(encoding="utf-8")
+        assert "Frontend Provider Runtime Result" in report
+        assert "deferred" in report
+        assert "no patches generated in guarded provider runtime baseline" in report
+
 
 def _write_frontend_remediation_writeback_artifact(
     root: Path,

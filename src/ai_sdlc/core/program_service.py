@@ -50,6 +50,9 @@ PROGRAM_FRONTEND_GOVERNANCE_MATERIALIZE_COMMAND = (
 PROGRAM_FRONTEND_REMEDIATION_WRITEBACK_REL_PATH = (
     ".ai-sdlc/memory/frontend-remediation/latest.yaml"
 )
+PROGRAM_FRONTEND_PROVIDER_RUNTIME_DEFERRED_SUMMARY = (
+    "no patches generated in guarded provider runtime baseline"
+)
 
 
 @dataclass
@@ -152,6 +155,42 @@ class ProgramFrontendProviderHandoff:
     writeback_artifact_path: str
     writeback_generated_at: str
     steps: list[ProgramFrontendProviderHandoffStep] = field(default_factory=list)
+    remaining_blockers: list[str] = field(default_factory=list)
+    warnings: list[str] = field(default_factory=list)
+    source_linkage: dict[str, str] = field(default_factory=dict)
+
+
+@dataclass
+class ProgramFrontendProviderRuntimeRequestStep:
+    spec_id: str
+    path: str
+    pending_inputs: list[str] = field(default_factory=list)
+    suggested_next_actions: list[str] = field(default_factory=list)
+    source_linkage: dict[str, str] = field(default_factory=dict)
+
+
+@dataclass
+class ProgramFrontendProviderRuntimeRequest:
+    required: bool
+    confirmation_required: bool
+    provider_execution_state: str
+    handoff_source_path: str
+    handoff_generated_at: str
+    steps: list[ProgramFrontendProviderRuntimeRequestStep] = field(
+        default_factory=list
+    )
+    remaining_blockers: list[str] = field(default_factory=list)
+    warnings: list[str] = field(default_factory=list)
+    source_linkage: dict[str, str] = field(default_factory=dict)
+
+
+@dataclass
+class ProgramFrontendProviderRuntimeResult:
+    passed: bool
+    confirmed: bool
+    provider_execution_state: str
+    invocation_result: str
+    patch_summaries: list[str] = field(default_factory=list)
     remaining_blockers: list[str] = field(default_factory=list)
     warnings: list[str] = field(default_factory=list)
     source_linkage: dict[str, str] = field(default_factory=dict)
@@ -588,6 +627,121 @@ class ProgramService:
             remaining_blockers=remaining_blockers,
             warnings=warnings,
             source_linkage=source_linkage,
+        )
+
+    def build_frontend_provider_runtime_request(
+        self,
+        manifest: ProgramManifest,
+        *,
+        handoff: ProgramFrontendProviderHandoff | None = None,
+    ) -> ProgramFrontendProviderRuntimeRequest:
+        """Build the guarded provider runtime request from readonly handoff truth."""
+        effective_handoff = handoff or self.build_frontend_provider_handoff(manifest)
+        source_linkage = dict(effective_handoff.source_linkage)
+        source_linkage.update(
+            {
+                "provider_runtime_state": "not_started",
+                "confirmation_required": str(effective_handoff.required).lower(),
+            }
+        )
+        steps = [
+            ProgramFrontendProviderRuntimeRequestStep(
+                spec_id=step.spec_id,
+                path=step.path,
+                pending_inputs=list(step.pending_inputs),
+                suggested_next_actions=list(step.suggested_next_actions),
+                source_linkage={
+                    **dict(step.source_linkage),
+                    "provider_runtime_state": "not_started",
+                    "confirmation_required": str(effective_handoff.required).lower(),
+                },
+            )
+            for step in effective_handoff.steps
+        ]
+        return ProgramFrontendProviderRuntimeRequest(
+            required=effective_handoff.required,
+            confirmation_required=effective_handoff.required,
+            provider_execution_state="not_started",
+            handoff_source_path=effective_handoff.writeback_artifact_path,
+            handoff_generated_at=effective_handoff.writeback_generated_at,
+            steps=steps,
+            remaining_blockers=list(effective_handoff.remaining_blockers),
+            warnings=list(effective_handoff.warnings),
+            source_linkage=source_linkage,
+        )
+
+    def execute_frontend_provider_runtime(
+        self,
+        manifest: ProgramManifest,
+        *,
+        request: ProgramFrontendProviderRuntimeRequest | None = None,
+        confirmed: bool = False,
+    ) -> ProgramFrontendProviderRuntimeResult:
+        """Execute the guarded provider runtime without invoking provider/code rewrite."""
+        effective_request = request or self.build_frontend_provider_runtime_request(
+            manifest
+        )
+        if effective_request.warnings and not effective_request.handoff_generated_at:
+            return ProgramFrontendProviderRuntimeResult(
+                passed=False,
+                confirmed=confirmed,
+                provider_execution_state="blocked",
+                invocation_result="blocked",
+                remaining_blockers=list(effective_request.remaining_blockers),
+                warnings=list(effective_request.warnings),
+                source_linkage={
+                    **dict(effective_request.source_linkage),
+                    "provider_runtime_state": "blocked",
+                    "invocation_result": "blocked",
+                },
+            )
+        if not effective_request.required:
+            return ProgramFrontendProviderRuntimeResult(
+                passed=True,
+                confirmed=confirmed,
+                provider_execution_state="not_started",
+                invocation_result="skipped",
+                remaining_blockers=[],
+                warnings=list(effective_request.warnings),
+                source_linkage={
+                    **dict(effective_request.source_linkage),
+                    "provider_runtime_state": "not_started",
+                    "invocation_result": "skipped",
+                },
+            )
+        if not confirmed:
+            return ProgramFrontendProviderRuntimeResult(
+                passed=False,
+                confirmed=False,
+                provider_execution_state="confirmation_required",
+                invocation_result="blocked",
+                remaining_blockers=list(effective_request.remaining_blockers),
+                warnings=[
+                    *effective_request.warnings,
+                    "provider runtime requires explicit confirmation",
+                ],
+                source_linkage={
+                    **dict(effective_request.source_linkage),
+                    "provider_runtime_state": "confirmation_required",
+                    "invocation_result": "blocked",
+                },
+            )
+        return ProgramFrontendProviderRuntimeResult(
+            passed=False,
+            confirmed=True,
+            provider_execution_state="deferred",
+            invocation_result="deferred",
+            patch_summaries=[PROGRAM_FRONTEND_PROVIDER_RUNTIME_DEFERRED_SUMMARY],
+            remaining_blockers=list(effective_request.remaining_blockers),
+            warnings=[
+                *effective_request.warnings,
+                "guarded provider runtime baseline does not invoke provider yet",
+            ],
+            source_linkage={
+                **dict(effective_request.source_linkage),
+                "provider_runtime_state": "deferred",
+                "invocation_result": "deferred",
+            },
         )
 
     def evaluate_execute_gates(

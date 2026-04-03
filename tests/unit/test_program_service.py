@@ -440,6 +440,58 @@ def test_build_frontend_provider_handoff_is_not_required_when_writeback_is_clean
     assert handoff.remaining_blockers == []
 
 
+def test_build_frontend_provider_runtime_request_requires_explicit_confirmation(
+    tmp_path: Path,
+) -> None:
+    for p in ("specs/001-auth", "specs/002-course", "specs/003-enroll"):
+        (tmp_path / p).mkdir(parents=True)
+    _write_frontend_remediation_writeback_artifact(
+        tmp_path,
+        passed=False,
+        remaining_blockers=["spec 001-auth remediation still required"],
+    )
+
+    svc = ProgramService(tmp_path)
+    request = svc.build_frontend_provider_runtime_request(_manifest())
+
+    assert request.required is True
+    assert request.confirmation_required is True
+    assert request.provider_execution_state == "not_started"
+    assert request.handoff_source_path == ".ai-sdlc/memory/frontend-remediation/latest.yaml"
+    assert request.handoff_generated_at == "2026-04-03T18:00:00Z"
+    assert request.remaining_blockers == ["spec 001-auth remediation still required"]
+    assert [step.spec_id for step in request.steps] == ["001-auth", "002-course"]
+    assert request.steps[0].pending_inputs == ["frontend_contract_observations"]
+    assert (
+        request.steps[0].source_linkage["provider_runtime_state"] == "not_started"
+    )
+
+
+def test_execute_frontend_provider_runtime_returns_deferred_result_when_confirmed(
+    tmp_path: Path,
+) -> None:
+    for p in ("specs/001-auth", "specs/002-course", "specs/003-enroll"):
+        (tmp_path / p).mkdir(parents=True)
+    _write_frontend_remediation_writeback_artifact(
+        tmp_path,
+        passed=False,
+        remaining_blockers=["spec 001-auth remediation still required"],
+    )
+
+    svc = ProgramService(tmp_path)
+    result = svc.execute_frontend_provider_runtime(_manifest(), confirmed=True)
+
+    assert result.passed is False
+    assert result.confirmed is True
+    assert result.provider_execution_state == "deferred"
+    assert result.invocation_result == "deferred"
+    assert result.patch_summaries == [
+        "no patches generated in guarded provider runtime baseline"
+    ]
+    assert result.remaining_blockers == ["spec 001-auth remediation still required"]
+    assert result.source_linkage["provider_runtime_state"] == "deferred"
+
+
 def test_build_status_surfaces_ready_frontend_readiness_per_spec(tmp_path: Path) -> None:
     for p in ("specs/001-auth", "specs/002-course", "specs/003-enroll"):
         (tmp_path / p).mkdir(parents=True)
