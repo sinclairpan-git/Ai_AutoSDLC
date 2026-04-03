@@ -8,7 +8,11 @@ import typer
 from rich.console import Console
 from rich.table import Table
 
-from ai_sdlc.core.program_service import ProgramFrontendReadiness, ProgramService
+from ai_sdlc.core.program_service import (
+    ProgramFrontendReadiness,
+    ProgramFrontendRemediationInput,
+    ProgramService,
+)
 from ai_sdlc.utils.helpers import find_project_root
 
 program_app = typer.Typer(help="Program-level planning across multiple specs")
@@ -270,6 +274,12 @@ def program_integrate(
                 lines.extend([f"  - `{cmd}`" for cmd in handoff.recommended_commands])
             lines.append("")
         if not dry_run:
+            remediation_lines = _frontend_remediation_report_lines(plan.steps)
+            if remediation_lines:
+                lines.append("## Frontend Remediation Handoff")
+                lines.append("")
+                lines.extend(remediation_lines)
+                lines.append("")
             handoff_lines = _frontend_recheck_report_lines(plan.steps)
             if handoff_lines:
                 lines.append("## Frontend Recheck Handoff")
@@ -302,6 +312,7 @@ def program_integrate(
         console.print("\n[bold red]Execution gates failed[/bold red]")
         for item in gates.failed:
             console.print(f"  - {item}")
+        _render_frontend_remediation_handoff(plan.steps)
         raise typer.Exit(code=1)
 
     _render_frontend_recheck_handoff(plan.steps)
@@ -370,6 +381,16 @@ def _render_frontend_recheck_handoff(steps: list[object]) -> None:
         console.print(line, markup=False)
 
 
+def _render_frontend_remediation_handoff(steps: list[object]) -> None:
+    handoff_lines = _frontend_remediation_output_lines(steps)
+    if not handoff_lines:
+        return
+
+    console.print("\n[bold cyan]Frontend Remediation Handoff[/bold cyan]")
+    for line in handoff_lines:
+        console.print(line, markup=False)
+
+
 def _frontend_recheck_output_lines(steps: list[object]) -> list[str]:
     lines: list[str] = []
     for step in steps:
@@ -383,6 +404,35 @@ def _frontend_recheck_output_lines(steps: list[object]) -> list[str]:
     return lines
 
 
+def _format_frontend_remediation(
+    remediation: ProgramFrontendRemediationInput | None,
+) -> str:
+    if remediation is None:
+        return "-"
+
+    details: list[str] = []
+    if remediation.fix_inputs:
+        details.append(", ".join(remediation.fix_inputs[:2]))
+    elif remediation.blockers:
+        details.append(remediation.blockers[0])
+
+    suffix = f" [{'; '.join(details)}]" if details else ""
+    return f"{remediation.state}{suffix}"
+
+
+def _frontend_remediation_output_lines(steps: list[object]) -> list[str]:
+    lines: list[str] = []
+    for step in steps:
+        remediation = getattr(step, "frontend_remediation_input", None)
+        if remediation is None:
+            continue
+        spec_id = str(getattr(step, "spec_id", "")).strip() or "unknown-spec"
+        lines.append(f"  - {spec_id}: {_format_frontend_remediation(remediation)}")
+        for action in getattr(remediation, "suggested_actions", ())[:3]:
+            lines.append(f"    action: {action}")
+    return lines
+
+
 def _frontend_recheck_report_lines(steps: list[object]) -> list[str]:
     lines: list[str] = []
     for step in steps:
@@ -393,4 +443,17 @@ def _frontend_recheck_report_lines(steps: list[object]) -> list[str]:
         lines.append(f"- {spec_id}: {getattr(handoff, 'reason', '')}")
         for command in getattr(handoff, "recommended_commands", ()):
             lines.append(f"  - `{command}`")
+    return lines
+
+
+def _frontend_remediation_report_lines(steps: list[object]) -> list[str]:
+    lines: list[str] = []
+    for step in steps:
+        remediation = getattr(step, "frontend_remediation_input", None)
+        if remediation is None:
+            continue
+        spec_id = str(getattr(step, "spec_id", "")).strip() or "unknown-spec"
+        lines.append(f"- {spec_id}: {_format_frontend_remediation(remediation)}")
+        for action in getattr(remediation, "suggested_actions", ()):
+            lines.append(f"  - {action}")
     return lines

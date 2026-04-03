@@ -64,6 +64,15 @@ class ProgramFrontendRecheckHandoff:
 
 
 @dataclass
+class ProgramFrontendRemediationInput:
+    state: str
+    fix_inputs: list[str] = field(default_factory=list)
+    blockers: list[str] = field(default_factory=list)
+    suggested_actions: list[str] = field(default_factory=list)
+    source_linkage: dict[str, str] = field(default_factory=dict)
+
+
+@dataclass
 class ProgramIntegrationStep:
     order: int
     tier: int
@@ -73,6 +82,7 @@ class ProgramIntegrationStep:
     archive_checks: list[str] = field(default_factory=list)
     frontend_readiness: ProgramFrontendReadiness | None = None
     frontend_recheck_handoff: ProgramFrontendRecheckHandoff | None = None
+    frontend_remediation_input: ProgramFrontendRemediationInput | None = None
 
 
 @dataclass
@@ -271,6 +281,11 @@ class ProgramService:
                                 row.frontend_readiness if row else None
                             )
                         ),
+                        frontend_remediation_input=(
+                            self._build_frontend_remediation_input(
+                                row.frontend_readiness if row else None
+                            )
+                        ),
                     )
                 )
                 order += 1
@@ -382,6 +397,36 @@ class ProgramService:
             required=True,
             reason="re-run frontend verification after execute before close",
             recommended_commands=[PROGRAM_FRONTEND_RECHECK_COMMAND],
+            source_linkage=dict(readiness.source_linkage),
+        )
+
+    def _build_frontend_remediation_input(
+        self,
+        readiness: ProgramFrontendReadiness | None,
+    ) -> ProgramFrontendRemediationInput | None:
+        if readiness is None or readiness.state == PROGRAM_FRONTEND_READINESS_READY:
+            return None
+
+        fix_inputs = _unique_strings(readiness.coverage_gaps)
+        if not fix_inputs:
+            fix_inputs = [readiness.state]
+
+        suggested_actions: list[str] = []
+        if "frontend_contract_observations" in fix_inputs:
+            suggested_actions.append("materialize frontend contract observations")
+        if "frontend_gate_policy_artifacts" in fix_inputs:
+            suggested_actions.append("materialize frontend gate policy artifacts")
+        if "frontend_generation_governance_artifacts" in fix_inputs:
+            suggested_actions.append("materialize frontend generation governance artifacts")
+        if not suggested_actions:
+            suggested_actions.append("resolve frontend blockers")
+        suggested_actions.append("re-run ai-sdlc verify constraints")
+
+        return ProgramFrontendRemediationInput(
+            state="required",
+            fix_inputs=fix_inputs,
+            blockers=list(readiness.blockers),
+            suggested_actions=suggested_actions,
             source_linkage=dict(readiness.source_linkage),
         )
 

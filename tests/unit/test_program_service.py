@@ -162,6 +162,51 @@ def test_build_integration_dry_run_skips_frontend_recheck_handoff_when_not_ready
     assert step.frontend_recheck_handoff is None
 
 
+def test_build_integration_dry_run_surfaces_frontend_remediation_input_when_not_ready(
+    tmp_path: Path,
+) -> None:
+    for p in ("specs/001-auth", "specs/002-course", "specs/003-enroll"):
+        (tmp_path / p).mkdir(parents=True)
+
+    svc = ProgramService(tmp_path)
+    plan = svc.build_integration_dry_run(_manifest())
+
+    step = next(item for item in plan.steps if item.spec_id == "001-auth")
+    remediation = step.frontend_remediation_input
+    assert remediation is not None
+    assert remediation.state == "required"
+    assert "frontend_contract_observations" in remediation.fix_inputs
+    assert "materialize frontend contract observations" in remediation.suggested_actions
+    assert remediation.source_linkage["runtime_attachment_status"] == "missing_artifact"
+
+
+def test_build_integration_dry_run_skips_frontend_remediation_input_when_ready(
+    tmp_path: Path,
+) -> None:
+    for p in ("specs/001-auth", "specs/002-course", "specs/003-enroll"):
+        (tmp_path / p).mkdir(parents=True)
+    for spec in ("001-auth", "002-course", "003-enroll"):
+        (tmp_path / "specs" / spec / "development-summary.md").write_text(
+            "ok\n", encoding="utf-8"
+        )
+        _write_frontend_contract_observations(tmp_path / "specs" / spec)
+    _write_minimal_frontend_contract_page_artifacts(tmp_path)
+    materialize_frontend_gate_policy_artifacts(
+        tmp_path,
+        build_mvp_frontend_gate_policy(),
+    )
+    materialize_frontend_generation_constraint_artifacts(
+        tmp_path,
+        build_mvp_frontend_generation_constraints(),
+    )
+
+    svc = ProgramService(tmp_path)
+    plan = svc.build_integration_dry_run(_manifest())
+
+    step = next(item for item in plan.steps if item.spec_id == "001-auth")
+    assert step.frontend_remediation_input is None
+
+
 def test_build_status_surfaces_ready_frontend_readiness_per_spec(tmp_path: Path) -> None:
     for p in ("specs/001-auth", "specs/002-course", "specs/003-enroll"):
         (tmp_path / p).mkdir(parents=True)

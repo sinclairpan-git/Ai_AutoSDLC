@@ -28,7 +28,7 @@ related_doc:
 - 再冻结 remediation input、fix input packaging 与 handoff responsibility
 - 最后给出后续 `core / cli / tests` 的推荐文件面与测试矩阵
 
-当前阶段只冻结 formal baseline，不直接进入 `src/` / `tests/` 实现。
+当前 formal baseline 已完成。经用户明确要求连续推进 MVP 后，当前允许继续进入首批实现切片：`program remediation input packaging`，先在 `ProgramService` 中落 per-spec remediation input / fix-input packaging；随后再进入 execute CLI / report 的 remediation handoff surface。当前仍不直接进入 auto-fix engine 或 writeback runtime。
 
 ## 技术背景
 
@@ -68,9 +68,9 @@ src/ai_sdlc/
 ```text
 src/ai_sdlc/
 ├── core/
-│   └── program_service.py                   # future remediation input packaging
+│   └── program_service.py                   # current slice: remediation input packaging
 └── cli/
-    └── program_cmd.py                       # future remediation handoff / operator surface
+    └── program_cmd.py                       # next slice: remediation handoff / operator surface
 
 tests/
 ├── unit/test_program_service.py
@@ -126,6 +126,20 @@ tests/
 **验证方式**：formal docs review + `verify constraints`。  
 **回退方式**：仅回退 planning baseline。
 
+### Phase 4：Program remediation input packaging slice
+
+**目标**：在 `ProgramService` 中为 frontend-not-ready integration steps 落下 remediation input / fix-input packaging truth，统一消费 `020` readiness / handoff truth，并保持只读 packaging。
+**产物**：`src/ai_sdlc/core/program_service.py`、`tests/unit/test_program_service.py`。
+**验证方式**：定向 `pytest`、`uv run ruff check src tests`、`git diff --check`、`uv run ai-sdlc verify constraints`。
+**回退方式**：仅回退本阶段涉及的 `core/`、`tests/` 与 execution log 变更。
+
+### Phase 5：Program execute CLI/report remediation handoff surface slice
+
+**目标**：把 remediation input / suggested actions 暴露到 `program integrate --execute` 的终端输出和 report 中，让 operator 能直接看到 bounded remediation handoff，而不进入 auto-fix engine。
+**产物**：`src/ai_sdlc/cli/program_cmd.py`、`tests/integration/test_cli_program.py`。
+**验证方式**：定向 `pytest`、`uv run ruff check src tests`、`git diff --check`、`uv run ai-sdlc verify constraints`。
+**回退方式**：仅回退本阶段涉及的 `cli/`、`tests/` 与 execution log 变更。
+
 ## 工作流计划
 
 ### 工作流 A：Remediation truth freeze
@@ -149,6 +163,20 @@ tests/
 **验证方式**：file-map review + tests matrix review。  
 **回退方式**：不进入 auto-fix runtime 实现。
 
+### 工作流 D：Program remediation input packaging slice
+
+**范围**：per-spec remediation input、fix-input packaging、suggested actions 与 source linkage reuse。
+**影响范围**：后续 execute CLI / report remediation handoff 的 data source。
+**验证方式**：`tests/unit/test_program_service.py` + fresh `ruff` / `verify constraints`。
+**回退方式**：不改 execute gate / recheck truth。
+
+### 工作流 E：Program execute CLI/report remediation handoff surface slice
+
+**范围**：`program integrate --execute` 的 remediation handoff 输出与 report surface。
+**影响范围**：operator-facing remediation guidance，可见性提升但不新增 runtime side effect。
+**验证方式**：`tests/integration/test_cli_program.py` + fresh `ruff` / `verify constraints`。
+**回退方式**：不进入 auto-fix / writeback runtime。
+
 ## 关键路径验证策略
 
 | 关键路径 | 主验证方式 | 次验证方式 |
@@ -158,9 +186,12 @@ tests/
 | fix-input packaging clarity | contract review | file-map review |
 | remediation honesty | formal docs review | 人工审阅 |
 | downstream auto-fix handoff clarity | tasks / plan 对账 | `uv run ai-sdlc verify constraints` |
+| program remediation input packaging correctness | `uv run pytest tests/unit/test_program_service.py -q` | remediation payload / source linkage review |
+| program execute CLI/report remediation surface correctness | `uv run pytest tests/integration/test_cli_program.py -q` | terminal wording / report review |
 
 ## 当前建议的下游实现起点
 
 - 先在 `program_service.py` 定义 per-spec remediation input / fix-input packaging
 - 再把 remediation handoff 暴露到 CLI / report surface
+- auto-fix engine 与 writeback runtime 仍应作为后续 guarded child work item 单独承接
 - auto-fix engine 与 writeback runtime 仍应作为后续 guarded child work item 单独承接

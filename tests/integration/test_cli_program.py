@@ -243,6 +243,27 @@ specs:
         assert "missing_artifact" in result.output
         assert "frontend_contract_observations" in result.output
 
+    def test_program_integrate_execute_surfaces_frontend_remediation_handoff(
+        self, initialized_project_dir: Path
+    ) -> None:
+        root = initialized_project_dir
+        _write_manifest(root)
+        for spec in ("001-auth", "002-course", "003-enroll"):
+            (root / "specs" / spec / "development-summary.md").write_text(
+                "done\n", encoding="utf-8"
+            )
+
+        with patch("ai_sdlc.cli.program_cmd.find_project_root", return_value=root):
+            result = runner.invoke(
+                app,
+                ["program", "integrate", "--execute", "--yes", "--allow-dirty"],
+            )
+
+        assert result.exit_code == 1
+        assert "Frontend Remediation Handoff" in result.output
+        assert "materialize frontend contract observations" in result.output
+        assert "re-run ai-sdlc verify constraints" in result.output
+
     def test_program_integrate_execute_surfaces_frontend_preflight_pass(
         self, initialized_project_dir: Path
     ) -> None:
@@ -321,6 +342,37 @@ specs:
         report = (root / report_rel).read_text(encoding="utf-8")
         assert "Frontend Recheck Handoff" in report
         assert "uv run ai-sdlc verify constraints" in report
+
+    def test_program_integrate_execute_failure_report_surfaces_remediation_handoff(
+        self, initialized_project_dir: Path
+    ) -> None:
+        root = initialized_project_dir
+        _write_manifest(root)
+        for spec in ("001-auth", "002-course", "003-enroll"):
+            (root / "specs" / spec / "development-summary.md").write_text(
+                "done\n", encoding="utf-8"
+            )
+        report_rel = ".ai-sdlc/memory/program-integrate-execute-failure.md"
+
+        with patch("ai_sdlc.cli.program_cmd.find_project_root", return_value=root):
+            result = runner.invoke(
+                app,
+                [
+                    "program",
+                    "integrate",
+                    "--execute",
+                    "--yes",
+                    "--allow-dirty",
+                    "--report",
+                    report_rel,
+                ],
+            )
+
+        assert result.exit_code == 1
+        report = (root / report_rel).read_text(encoding="utf-8")
+        assert "Frontend Remediation Handoff" in report
+        assert "materialize frontend contract observations" in report
+        assert "re-run ai-sdlc verify constraints" in report
 
     def test_program_integrate_execute_gate_fail_not_closed(
         self, initialized_project_dir: Path

@@ -16,6 +16,8 @@ related_doc:
 Batch 1: remediation runtime truth freeze
 Batch 2: remediation input / handoff boundary freeze
 Batch 3: implementation handoff and verification freeze
+Batch 4: program remediation input packaging slice
+Batch 5: program execute CLI/report remediation handoff surface slice
 ```
 
 ---
@@ -28,7 +30,10 @@ Batch 3: implementation handoff and verification freeze
 - `021` 不得改写 `020` 已冻结的 execute / recheck truth。
 - `021` 不得在当前 child work item 中直接启用 scanner/provider 写入、auto-fix、registry 或 cross-spec writeback。
 - `021` 不得把 remediation runtime 扩张成新的默认前端自动编排入口。
-- 当前 docs baseline 只冻结 remediation input / fix-input packaging / handoff 边界，不放行任何 `src/` / `tests/` 实现。
+- `Batch 4` 只允许写入 `src/ai_sdlc/core/program_service.py`、`tests/unit/test_program_service.py`、`specs/021-frontend-program-remediation-runtime-baseline/task-execution-log.md`，以及为本批边界服务的 `plan.md / tasks.md`。
+- `Batch 5` 只允许写入 `src/ai_sdlc/cli/program_cmd.py`、`tests/integration/test_cli_program.py`、`specs/021-frontend-program-remediation-runtime-baseline/task-execution-log.md`，以及为本批边界服务的 `plan.md / tasks.md`。
+- 当前首批实现只放行 `ProgramService` 的 remediation input packaging，不放行 auto-fix、writeback 或 provider runtime。
+- 当前第二批实现只放行 execute CLI / report 的 remediation handoff surface，不放行 auto-fix、writeback 或 provider runtime。
 
 ---
 
@@ -158,3 +163,89 @@ Batch 3: implementation handoff and verification freeze
   2. `spec.md / plan.md / tasks.md` 对 remediation runtime、fix-input packaging 与 handoff 保持单一真值
   3. 当前分支上的 `021` formal docs 可作为后续进入 remediation input 实现的稳定基线
 - **验证**：`uv run ai-sdlc verify constraints`, `git status --short`
+
+---
+
+## Batch 4：program remediation input packaging slice
+
+### Task 4.1 先写 failing tests 固定 remediation input packaging 语义
+
+- **任务编号**：T41
+- **优先级**：P0
+- **依赖**：T33
+- **文件**：`tests/unit/test_program_service.py`
+- **可并行**：否
+- **验收标准**：
+  1. 单测明确覆盖 frontend not-ready step 的 remediation input packaging
+  2. 单测明确覆盖 frontend ready step 不生成 remediation input
+  3. 首次运行定向测试时必须出现预期失败，证明 `ProgramIntegrationStep` 尚未暴露 remediation input
+- **验证**：`uv run pytest tests/unit/test_program_service.py -q`
+
+### Task 4.2 实现最小 remediation input / fix-input packaging
+
+- **任务编号**：T42
+- **优先级**：P0
+- **依赖**：T41
+- **文件**：`src/ai_sdlc/core/program_service.py`
+- **可并行**：否
+- **验收标准**：
+  1. frontend not-ready integration step 能暴露 remediation input / fix-input packaging
+  2. payload 至少包含 remediation state、fix inputs、suggested actions 与 source linkage
+  3. 实现保持 packaging-only，不引入 auto-fix、writeback 或 provider runtime
+- **验证**：`uv run pytest tests/unit/test_program_service.py -q`
+
+### Task 4.3 Fresh verify 并追加 implementation batch 归档
+
+- **任务编号**：T43
+- **优先级**：P0
+- **依赖**：T42
+- **文件**：`specs/021-frontend-program-remediation-runtime-baseline/task-execution-log.md`
+- **可并行**：否
+- **验收标准**：
+  1. `uv run pytest tests/unit/test_program_service.py -q` 通过
+  2. `uv run ruff check src tests`、`git diff --check -- specs/021-frontend-program-remediation-runtime-baseline src/ai_sdlc/core tests/unit` 与 `uv run ai-sdlc verify constraints` 通过
+  3. `task-execution-log.md` 追加记录当前 implementation batch 的 touched files、验证命令与结论
+- **验证**：`uv run pytest tests/unit/test_program_service.py -q`, `uv run ruff check src tests`, `git diff --check -- specs/021-frontend-program-remediation-runtime-baseline src/ai_sdlc/core tests/unit`, `uv run ai-sdlc verify constraints`
+
+---
+
+## Batch 5：program execute CLI/report remediation handoff surface slice
+
+### Task 5.1 先写 failing tests 固定 remediation handoff 输出语义
+
+- **任务编号**：T51
+- **优先级**：P0
+- **依赖**：T43
+- **文件**：`tests/integration/test_cli_program.py`
+- **可并行**：否
+- **验收标准**：
+  1. 集成测试明确覆盖 `program integrate --execute` 失败路径的 remediation handoff 输出
+  2. 集成测试明确覆盖 execute report 中的 remediation handoff
+  3. 首次运行定向测试时必须出现预期失败，证明 execute CLI / report 尚未渲染 remediation handoff
+- **验证**：`uv run pytest tests/integration/test_cli_program.py -q`
+
+### Task 5.2 实现最小 execute CLI / report remediation handoff surface
+
+- **任务编号**：T52
+- **优先级**：P0
+- **依赖**：T51
+- **文件**：`src/ai_sdlc/cli/program_cmd.py`
+- **可并行**：否
+- **验收标准**：
+  1. `program integrate --execute` 失败路径能暴露 remediation handoff
+  2. report 输出能暴露 remediation handoff 的最小后续动作
+  3. 实现保持 scoped user-facing surface，不进入 auto-fix / writeback runtime
+- **验证**：`uv run pytest tests/integration/test_cli_program.py -q`
+
+### Task 5.3 Fresh verify 并追加 CLI batch 归档
+
+- **任务编号**：T53
+- **优先级**：P0
+- **依赖**：T52
+- **文件**：`specs/021-frontend-program-remediation-runtime-baseline/task-execution-log.md`
+- **可并行**：否
+- **验收标准**：
+  1. `uv run pytest tests/integration/test_cli_program.py -q` 通过
+  2. `uv run ruff check src tests`、`git diff --check -- specs/021-frontend-program-remediation-runtime-baseline src/ai_sdlc/cli tests/integration` 与 `uv run ai-sdlc verify constraints` 通过
+  3. `task-execution-log.md` 追加记录当前 CLI batch 的 touched files、验证命令与结论
+- **验证**：`uv run pytest tests/integration/test_cli_program.py -q`, `uv run ruff check src tests`, `git diff --check -- specs/021-frontend-program-remediation-runtime-baseline src/ai_sdlc/cli tests/integration`, `uv run ai-sdlc verify constraints`
