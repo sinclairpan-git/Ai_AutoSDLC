@@ -15,7 +15,22 @@ from ai_sdlc.core.frontend_gate_verification import (
     FRONTEND_GATE_SOURCE_NAME,
     build_frontend_gate_verification_report,
 )
+from ai_sdlc.core.verify_constraints import build_constraint_report
+from ai_sdlc.generators.frontend_gate_policy_artifacts import (
+    materialize_frontend_gate_policy_artifacts,
+)
+from ai_sdlc.generators.frontend_generation_constraint_artifacts import (
+    materialize_frontend_generation_constraint_artifacts,
+)
+from ai_sdlc.models.frontend_gate_policy import build_mvp_frontend_gate_policy
+from ai_sdlc.models.frontend_generation_constraints import (
+    build_mvp_frontend_generation_constraints,
+)
 from ai_sdlc.models.program import ProgramManifest, ProgramSpecRef
+from ai_sdlc.scanners.frontend_contract_scanner import (
+    write_frontend_contract_scanner_artifact,
+)
+from ai_sdlc.telemetry.clock import utc_now_z
 
 PROGRAM_FRONTEND_READINESS_READY = "ready"
 PROGRAM_FRONTEND_READINESS_RETRY = "retry"
@@ -24,6 +39,12 @@ PROGRAM_FRONTEND_RUNTIME_ATTACHMENT_SOURCE_NAME = (
     "frontend contract runtime attachment"
 )
 PROGRAM_FRONTEND_RECHECK_COMMAND = "uv run ai-sdlc verify constraints"
+PROGRAM_FRONTEND_SCAN_COMMAND_PREFIX = (
+    "uv run ai-sdlc scan . --frontend-contract-spec-dir "
+)
+PROGRAM_FRONTEND_GOVERNANCE_MATERIALIZE_COMMAND = (
+    "uv run ai-sdlc rules materialize-frontend-mvp"
+)
 
 
 @dataclass
@@ -71,6 +92,43 @@ class ProgramFrontendRemediationInput:
     suggested_actions: list[str] = field(default_factory=list)
     recommended_commands: list[str] = field(default_factory=list)
     source_linkage: dict[str, str] = field(default_factory=dict)
+
+
+@dataclass
+class ProgramFrontendRemediationRunbookStep:
+    spec_id: str
+    path: str
+    state: str
+    fix_inputs: list[str] = field(default_factory=list)
+    suggested_actions: list[str] = field(default_factory=list)
+    action_commands: list[str] = field(default_factory=list)
+    source_linkage: dict[str, str] = field(default_factory=dict)
+
+
+@dataclass
+class ProgramFrontendRemediationRunbook:
+    steps: list[ProgramFrontendRemediationRunbookStep] = field(default_factory=list)
+    action_commands: list[str] = field(default_factory=list)
+    follow_up_commands: list[str] = field(default_factory=list)
+    warnings: list[str] = field(default_factory=list)
+
+
+@dataclass
+class ProgramFrontendRemediationCommandResult:
+    command: str
+    status: str
+    written_paths: list[str] = field(default_factory=list)
+    blockers: list[str] = field(default_factory=list)
+    summary: str = ""
+
+
+@dataclass
+class ProgramFrontendRemediationExecutionResult:
+    passed: bool
+    command_results: list[ProgramFrontendRemediationCommandResult] = field(
+        default_factory=list
+    )
+    blockers: list[str] = field(default_factory=list)
 
 
 @dataclass
@@ -296,6 +354,96 @@ class ProgramService:
             warnings.append("no integration steps computed from manifest")
         return ProgramIntegrationPlan(steps=steps, warnings=warnings)
 
+    def build_frontend_remediation_runbook(
+        self,
+        manifest: ProgramManifest,
+    ) -> ProgramFrontendRemediationRunbook:
+        """Build a bounded remediation runbook from current frontend gaps."""
+        plan = self.build_integration_dry_run(manifest)
+        steps: list[ProgramFrontendRemediationRunbookStep] = []
+        action_commands: list[str] = []
+        follow_up_commands: list[str] = []
+
+        for step in plan.steps:
+            remediation = step.frontend_remediation_input
+            if remediation is None:
+                continue
+
+            step_action_commands = [
+                command
+                for command in remediation.recommended_commands
+                if command != PROGRAM_FRONTEND_RECHECK_COMMAND
+            ]
+            if PROGRAM_FRONTEND_RECHECK_COMMAND in remediation.recommended_commands:
+                follow_up_commands.append(PROGRAM_FRONTEND_RECHECK_COMMAND)
+
+            steps.append(
+                ProgramFrontendRemediationRunbookStep(
+                    spec_id=step.spec_id,
+                    path=step.path,
+                    state=remediation.state,
+                    fix_inputs=list(remediation.fix_inputs),
+                    suggested_actions=list(remediation.suggested_actions),
+                    action_commands=step_action_commands,
+                    source_linkage=dict(remediation.source_linkage),
+                )
+            )
+            action_commands.extend(step_action_commands)
+
+        return ProgramFrontendRemediationRunbook(
+            steps=steps,
+            action_commands=_unique_strings(action_commands),
+            follow_up_commands=_unique_strings(follow_up_commands),
+            warnings=list(plan.warnings),
+        )
+
+    def execute_frontend_remediation_runbook(
+        self,
+        manifest: ProgramManifest,
+        *,
+        generated_at: str | None = None,
+    ) -> ProgramFrontendRemediationExecutionResult:
+        """Execute the bounded remediation runbook using only known commands."""
+        runbook = self.build_frontend_remediation_runbook(manifest)
+        command_results: list[ProgramFrontendRemediationCommandResult] = []
+        blockers: list[str] = []
+        effective_generated_at = generated_at or utc_now_z()
+
+        for command in runbook.action_commands:
+            result = self._execute_known_frontend_remediation_command(
+                command,
+                generated_at=effective_generated_at,
+            )
+            command_results.append(result)
+            if result.status == "failed":
+                blockers.extend(result.blockers)
+
+        if not blockers:
+            for command in runbook.follow_up_commands:
+                result = self._execute_known_frontend_remediation_command(
+                    command,
+                    generated_at=effective_generated_at,
+                )
+                command_results.append(result)
+                if result.status == "failed":
+                    blockers.extend(result.blockers)
+
+        remaining = self.build_frontend_remediation_runbook(manifest)
+        if remaining.steps:
+            blockers.extend(
+                [
+                    f"spec {step.spec_id} remediation still required "
+                    f"(fix_inputs={','.join(step.fix_inputs[:2])})"
+                    for step in remaining.steps
+                ]
+            )
+
+        return ProgramFrontendRemediationExecutionResult(
+            passed=not blockers,
+            command_results=command_results,
+            blockers=_unique_strings(blockers),
+        )
+
     def evaluate_execute_gates(
         self, manifest: ProgramManifest, *, allow_dirty: bool = False
     ) -> ProgramExecuteGates:
@@ -445,6 +593,100 @@ class ProgramService:
             recommended_commands=_unique_strings(recommended_commands),
             source_linkage=dict(readiness.source_linkage),
         )
+
+    def _execute_known_frontend_remediation_command(
+        self,
+        command: str,
+        *,
+        generated_at: str,
+    ) -> ProgramFrontendRemediationCommandResult:
+        command = str(command).strip()
+        if not command:
+            return ProgramFrontendRemediationCommandResult(
+                command="",
+                status="failed",
+                blockers=["empty remediation command"],
+                summary="empty remediation command",
+            )
+
+        if command.startswith(PROGRAM_FRONTEND_SCAN_COMMAND_PREFIX):
+            spec_path = command.removeprefix(PROGRAM_FRONTEND_SCAN_COMMAND_PREFIX).strip()
+            try:
+                spec_dir = self._resolve_spec_dir(spec_path)
+                artifact_path = write_frontend_contract_scanner_artifact(
+                    self.root,
+                    spec_dir,
+                    generated_at=generated_at,
+                )
+            except Exception as exc:
+                return ProgramFrontendRemediationCommandResult(
+                    command=command,
+                    status="failed",
+                    blockers=[f"{command}: {exc}"],
+                    summary=str(exc),
+                )
+            return ProgramFrontendRemediationCommandResult(
+                command=command,
+                status="executed",
+                written_paths=[str(artifact_path.relative_to(self.root))],
+                summary="frontend contract observations materialized",
+            )
+
+        if command == PROGRAM_FRONTEND_GOVERNANCE_MATERIALIZE_COMMAND:
+            try:
+                paths = [
+                    *materialize_frontend_gate_policy_artifacts(
+                        self.root,
+                        build_mvp_frontend_gate_policy(),
+                    ),
+                    *materialize_frontend_generation_constraint_artifacts(
+                        self.root,
+                        build_mvp_frontend_generation_constraints(),
+                    ),
+                ]
+            except Exception as exc:
+                return ProgramFrontendRemediationCommandResult(
+                    command=command,
+                    status="failed",
+                    blockers=[f"{command}: {exc}"],
+                    summary=str(exc),
+                )
+            return ProgramFrontendRemediationCommandResult(
+                command=command,
+                status="executed",
+                written_paths=[str(path.relative_to(self.root)) for path in paths],
+                summary=f"materialized {len(paths)} frontend governance artifacts",
+            )
+
+        if command == PROGRAM_FRONTEND_RECHECK_COMMAND:
+            report = build_constraint_report(self.root)
+            if report.blockers:
+                return ProgramFrontendRemediationCommandResult(
+                    command=command,
+                    status="failed",
+                    blockers=list(report.blockers),
+                    summary=str(report.blockers[0]),
+                )
+            return ProgramFrontendRemediationCommandResult(
+                command=command,
+                status="passed",
+                summary="verify constraints: no BLOCKERs.",
+            )
+
+        return ProgramFrontendRemediationCommandResult(
+            command=command,
+            status="failed",
+            blockers=[f"unsupported remediation command: {command}"],
+            summary=f"unsupported remediation command: {command}",
+        )
+
+    def _resolve_spec_dir(self, spec_path: str) -> Path:
+        path = (self.root / spec_path).resolve()
+        try:
+            path.relative_to(self.root)
+        except ValueError as exc:
+            raise ValueError(f"spec path outside project root: {spec_path}") from exc
+        return path
 
     def _build_graph(self, manifest: ProgramManifest) -> dict[str, list[str]]:
         return {spec.id: list(spec.depends_on) for spec in manifest.specs}

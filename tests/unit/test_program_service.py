@@ -7,6 +7,7 @@ from pathlib import Path
 from ai_sdlc.core.frontend_contract_drift import PageImplementationObservation
 from ai_sdlc.core.frontend_contract_observation_provider import (
     build_frontend_contract_observation_artifact,
+    observation_artifact_path,
     write_frontend_contract_observation_artifact,
 )
 from ai_sdlc.core.program_service import ProgramService
@@ -235,6 +236,70 @@ def test_build_integration_dry_run_binds_governance_materialization_command_when
     assert remediation.recommended_commands[-1] == "uv run ai-sdlc verify constraints"
 
 
+def test_build_frontend_remediation_runbook_collects_action_commands_and_follow_up_verify(
+    tmp_path: Path,
+) -> None:
+    for p in ("specs/001-auth", "specs/002-course", "specs/003-enroll"):
+        (tmp_path / p).mkdir(parents=True)
+    _write_minimal_frontend_contract_page_artifacts(tmp_path)
+    _write_frontend_contract_source_annotation(tmp_path)
+    for spec in ("002-course", "003-enroll"):
+        _write_frontend_contract_observations(tmp_path / "specs" / spec)
+
+    svc = ProgramService(tmp_path)
+    runbook = svc.build_frontend_remediation_runbook(_manifest())
+
+    assert [step.spec_id for step in runbook.steps] == [
+        "001-auth",
+        "002-course",
+        "003-enroll",
+    ]
+    assert (
+        "uv run ai-sdlc scan . --frontend-contract-spec-dir specs/001-auth"
+        in runbook.action_commands
+    )
+    assert "uv run ai-sdlc rules materialize-frontend-mvp" in runbook.action_commands
+    assert runbook.follow_up_commands == ["uv run ai-sdlc verify constraints"]
+
+
+def test_execute_frontend_remediation_runbook_materializes_bounded_commands_and_verifies(
+    tmp_path: Path,
+) -> None:
+    for p in ("specs/001-auth", "specs/002-course", "specs/003-enroll"):
+        (tmp_path / p).mkdir(parents=True)
+    _write_minimal_constitution(tmp_path)
+    _write_minimal_frontend_contract_page_artifacts(tmp_path)
+    _write_frontend_contract_source_annotation(tmp_path)
+    for spec in ("002-course", "003-enroll"):
+        _write_frontend_contract_observations(tmp_path / "specs" / spec)
+
+    svc = ProgramService(tmp_path)
+    result = svc.execute_frontend_remediation_runbook(
+        _manifest(),
+        generated_at="2026-04-03T17:30:00Z",
+    )
+
+    assert result.passed is True
+    assert (
+        observation_artifact_path(tmp_path / "specs" / "001-auth").is_file()
+    )
+    assert (tmp_path / "governance" / "frontend" / "gates" / "gate.manifest.yaml").is_file()
+    assert (
+        tmp_path / "governance" / "frontend" / "generation" / "generation.manifest.yaml"
+    ).is_file()
+    assert any(
+        item.command == "uv run ai-sdlc rules materialize-frontend-mvp"
+        and item.status == "executed"
+        for item in result.command_results
+    )
+    assert any(
+        item.command == "uv run ai-sdlc verify constraints"
+        and item.status == "passed"
+        for item in result.command_results
+    )
+    assert result.blockers == []
+
+
 def test_build_status_surfaces_ready_frontend_readiness_per_spec(tmp_path: Path) -> None:
     for p in ("specs/001-auth", "specs/002-course", "specs/003-enroll"):
         (tmp_path / p).mkdir(parents=True)
@@ -400,3 +465,32 @@ def _write_frontend_contract_observations(
         source_revision="rev-program-service",
     )
     write_frontend_contract_observation_artifact(spec_dir, artifact)
+
+
+def _write_frontend_contract_source_annotation(
+    root: Path,
+    *,
+    page_id: str = "user-create",
+    recipe_id: str = "form-create",
+) -> None:
+    src_dir = root / "src"
+    src_dir.mkdir(parents=True, exist_ok=True)
+    (src_dir / "UserCreate.vue").write_text(
+        f"""
+        <!-- ai-sdlc:frontend-contract-observation
+        {{
+          "page_id": "{page_id}",
+          "recipe_id": "{recipe_id}",
+          "i18n_keys": ["user.create.submit"],
+          "validation_fields": ["username"]
+        }}
+        -->
+        """,
+        encoding="utf-8",
+    )
+
+
+def _write_minimal_constitution(root: Path) -> None:
+    memory_dir = root / ".ai-sdlc" / "memory"
+    memory_dir.mkdir(parents=True, exist_ok=True)
+    (memory_dir / "constitution.md").write_text("# Constitution\n", encoding="utf-8")

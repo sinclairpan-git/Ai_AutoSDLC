@@ -11,6 +11,7 @@ from ai_sdlc.cli.main import app
 from ai_sdlc.core.frontend_contract_drift import PageImplementationObservation
 from ai_sdlc.core.frontend_contract_observation_provider import (
     build_frontend_contract_observation_artifact,
+    observation_artifact_path,
     write_frontend_contract_observation_artifact,
 )
 from ai_sdlc.generators.frontend_gate_policy_artifacts import (
@@ -101,6 +102,29 @@ def _write_frontend_gate_artifacts(root: Path) -> None:
     materialize_frontend_generation_constraint_artifacts(
         root,
         build_mvp_frontend_generation_constraints(),
+    )
+
+
+def _write_frontend_contract_source_annotation(
+    root: Path,
+    *,
+    page_id: str = "user-create",
+    recipe_id: str = "form-create",
+) -> None:
+    src_dir = root / "src"
+    src_dir.mkdir(parents=True, exist_ok=True)
+    (src_dir / "UserCreate.vue").write_text(
+        f"""
+        <!-- ai-sdlc:frontend-contract-observation
+        {{
+          "page_id": "{page_id}",
+          "recipe_id": "{recipe_id}",
+          "i18n_keys": ["user.create.submit"],
+          "validation_fields": ["username"]
+        }}
+        -->
+        """,
+        encoding="utf-8",
     )
 
 
@@ -397,3 +421,45 @@ specs:
             )
         assert result.exit_code == 1
         assert "Execution gates failed" in result.output
+
+    def test_program_remediate_dry_run_surfaces_frontend_runbook(
+        self, initialized_project_dir: Path
+    ) -> None:
+        root = initialized_project_dir
+        _write_manifest(root)
+        _write_minimal_frontend_contract_page_artifacts(root)
+        _write_frontend_contract_source_annotation(root)
+        for spec in ("002-course", "003-enroll"):
+            _write_frontend_contract_observations(root / "specs" / spec)
+
+        with patch("ai_sdlc.cli.program_cmd.find_project_root", return_value=root):
+            result = runner.invoke(app, ["program", "remediate", "--dry-run"])
+
+        assert result.exit_code == 0
+        assert "Program Frontend Remediation Dry-Run" in result.output
+        assert "uv run ai-sdlc scan . --frontend-contract-spec-dir specs/001-auth" in result.output
+        assert "uv run ai-sdlc rules materialize-frontend-mvp" in result.output
+        assert "uv run ai-sdlc verify constraints" in result.output
+
+    def test_program_remediate_execute_runs_bounded_frontend_commands(
+        self, initialized_project_dir: Path
+    ) -> None:
+        root = initialized_project_dir
+        _write_manifest(root)
+        _write_minimal_frontend_contract_page_artifacts(root)
+        _write_frontend_contract_source_annotation(root)
+        for spec in ("002-course", "003-enroll"):
+            _write_frontend_contract_observations(root / "specs" / spec)
+
+        with patch("ai_sdlc.cli.program_cmd.find_project_root", return_value=root):
+            result = runner.invoke(
+                app,
+                ["program", "remediate", "--execute", "--yes"],
+            )
+
+        assert result.exit_code == 0
+        assert "Frontend remediation execute completed" in result.output
+        assert "uv run ai-sdlc rules materialize-frontend-mvp" in result.output
+        assert "uv run ai-sdlc verify constraints" in result.output
+        assert observation_artifact_path(root / "specs" / "001-auth").is_file()
+        assert (root / "governance" / "frontend" / "gates" / "gate.manifest.yaml").is_file()

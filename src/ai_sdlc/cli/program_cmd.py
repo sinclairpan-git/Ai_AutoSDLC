@@ -324,6 +324,157 @@ def program_integrate(
     raise typer.Exit(code=0)
 
 
+@program_app.command("remediate")
+def program_remediate(
+    manifest: str = typer.Option(
+        "program-manifest.yaml",
+        "--manifest",
+        help="Path to program manifest relative to project root.",
+    ),
+    dry_run: bool = typer.Option(
+        True,
+        "--dry-run/--execute",
+        help="Preview remediation runbook or explicitly execute bounded remediation commands.",
+    ),
+    report: str = typer.Option(
+        "",
+        "--report",
+        help="Optional report output path relative to project root.",
+    ),
+    yes: bool = typer.Option(
+        False,
+        "--yes",
+        help="Confirm bounded remediation execute mode.",
+    ),
+) -> None:
+    """Preview or execute the bounded frontend remediation runbook."""
+    root = _resolve_root()
+    svc = ProgramService(root, root / manifest)
+
+    try:
+        mf = svc.load_manifest()
+    except Exception as exc:
+        console.print(f"[red]Failed to load manifest: {exc}[/red]")
+        raise typer.Exit(code=2) from None
+
+    result = svc.validate_manifest(mf)
+    if not result.valid:
+        console.print("[bold red]Manifest invalid; cannot build remediation runbook.[/bold red]")
+        for e in result.errors:
+            console.print(f"  - {e}")
+        raise typer.Exit(code=1)
+
+    runbook = svc.build_frontend_remediation_runbook(mf)
+    mode_title = (
+        "Program Frontend Remediation Dry-Run"
+        if dry_run
+        else "Program Frontend Remediation Execute"
+    )
+
+    if not runbook.steps:
+        console.print("[green]No frontend remediation steps generated.[/green]")
+        raise typer.Exit(code=0)
+
+    table = Table(title=mode_title)
+    table.add_column("Spec")
+    table.add_column("Path")
+    table.add_column("Fix Inputs")
+    table.add_column("Action Commands")
+    for step in runbook.steps:
+        table.add_row(
+            step.spec_id,
+            step.path,
+            ", ".join(step.fix_inputs[:3]) or "-",
+            " ; ".join(step.action_commands) or "-",
+        )
+    console.print(table)
+    if runbook.action_commands:
+        console.print("\n[bold cyan]Frontend Remediation Actions[/bold cyan]")
+        for command in runbook.action_commands:
+            console.print(f"  - {command}", markup=False)
+
+    if runbook.follow_up_commands:
+        console.print("\n[bold cyan]Frontend Remediation Follow-Up[/bold cyan]")
+        for command in runbook.follow_up_commands:
+            console.print(f"  - {command}", markup=False)
+
+    if runbook.warnings:
+        console.print("\n[bold yellow]Warnings[/bold yellow]")
+        for warning in runbook.warnings:
+            console.print(f"  - {warning}")
+
+    execution_result = None
+    if not dry_run:
+        if not yes:
+            console.print(
+                "[bold yellow]`--execute` requires explicit confirmation via `--yes`.[/bold yellow]"
+            )
+            raise typer.Exit(code=2)
+        execution_result = svc.execute_frontend_remediation_runbook(mf)
+        _render_frontend_remediation_execution_result(execution_result.command_results)
+        if execution_result.blockers:
+            console.print("\n[bold red]Remaining Frontend Remediation Blockers[/bold red]")
+            for blocker in execution_result.blockers:
+                console.print(f"  - {blocker}")
+
+    if report:
+        report_path = root / report
+        report_path.parent.mkdir(parents=True, exist_ok=True)
+        lines: list[str] = [
+            f"# {mode_title}",
+            "",
+            f"- Manifest: `{manifest}`",
+            f"- Mode: `{'dry-run' if dry_run else 'execute'}`",
+            "",
+            "## Steps",
+            "",
+        ]
+        for step in runbook.steps:
+            lines.extend(
+                [
+                    f"### {step.spec_id}",
+                    f"- Path: `{step.path}`",
+                    f"- Fix inputs: `{', '.join(step.fix_inputs) or '-'}`",
+                    "- Action commands:",
+                ]
+            )
+            lines.extend([f"  - `{command}`" for command in step.action_commands])
+            lines.append("")
+        if runbook.follow_up_commands:
+            lines.append("## Follow-Up Commands")
+            lines.append("")
+            lines.extend([f"- `{command}`" for command in runbook.follow_up_commands])
+            lines.append("")
+        if execution_result is not None:
+            lines.append("## Command Results")
+            lines.append("")
+            for item in execution_result.command_results:
+                lines.append(f"- `{item.command}` -> `{item.status}`")
+                for path in item.written_paths:
+                    lines.append(f"  - wrote `{path}`")
+                if item.summary:
+                    lines.append(f"  - {item.summary}")
+            lines.append("")
+            if execution_result.blockers:
+                lines.append("## Remaining Blockers")
+                lines.append("")
+                lines.extend([f"- {blocker}" for blocker in execution_result.blockers])
+                lines.append("")
+        report_path.write_text("\n".join(lines), encoding="utf-8")
+        console.print(f"\n[green]Report written:[/green] {report_path}")
+
+    if dry_run:
+        raise typer.Exit(code=0)
+
+    assert execution_result is not None
+    if execution_result.passed:
+        console.print("\n[bold green]Frontend remediation execute completed[/bold green]")
+        raise typer.Exit(code=0)
+
+    console.print("\n[bold red]Frontend remediation execute incomplete[/bold red]")
+    raise typer.Exit(code=1)
+
+
 def _format_frontend_readiness(readiness: ProgramFrontendReadiness | None) -> str:
     if readiness is None:
         return "-"
@@ -461,3 +612,19 @@ def _frontend_remediation_report_lines(steps: list[object]) -> list[str]:
         for command in getattr(remediation, "recommended_commands", ()):
             lines.append(f"  - `{command}`")
     return lines
+
+
+def _render_frontend_remediation_execution_result(results: list[object]) -> None:
+    if not results:
+        return
+
+    console.print("\n[bold cyan]Frontend Remediation Command Results[/bold cyan]")
+    for item in results:
+        command = str(getattr(item, "command", "")).strip()
+        status = str(getattr(item, "status", "")).strip() or "unknown"
+        console.print(f"  - {command} -> {status}", markup=False)
+        for path in getattr(item, "written_paths", ())[:4]:
+            console.print(f"    wrote: {path}", markup=False)
+        summary = str(getattr(item, "summary", "")).strip()
+        if summary:
+            console.print(f"    summary: {summary}", markup=False)
