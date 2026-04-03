@@ -1245,6 +1245,7 @@ def program_cross_spec_writeback(
             console.print(f"  - {warning}")
 
     writeback_result = None
+    writeback_artifact_path: Path | None = None
     if not dry_run:
         if not yes:
             console.print(
@@ -1256,7 +1257,17 @@ def program_cross_spec_writeback(
             request=request,
             confirmed=True,
         )
+        writeback_artifact_path = svc.write_frontend_cross_spec_writeback_artifact(
+            mf,
+            request=request,
+            result=writeback_result,
+        )
         _render_frontend_cross_spec_writeback_result(writeback_result)
+        console.print("\n[bold cyan]Frontend Cross-Spec Writeback Artifact[/bold cyan]")
+        console.print(
+            f"  - saved: {writeback_artifact_path.relative_to(root)}",
+            markup=False,
+        )
 
     if report:
         report_path = root / report
@@ -1319,6 +1330,11 @@ def program_cross_spec_writeback(
                 lines.extend(
                     [f"  - {item}" for item in writeback_result.remaining_blockers]
                 )
+            lines.append("")
+        if writeback_artifact_path is not None:
+            lines.append("## Frontend Cross-Spec Writeback Artifact")
+            lines.append("")
+            lines.append(f"- `{writeback_artifact_path.relative_to(root)}`")
             lines.append("")
         if request.warnings or (writeback_result is not None and writeback_result.warnings):
             lines.append("## Warnings")
