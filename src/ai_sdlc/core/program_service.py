@@ -104,6 +104,9 @@ PROGRAM_FRONTEND_PERSISTED_WRITE_PROOF_DEFERRED_SUMMARY = (
 PROGRAM_FRONTEND_FINAL_PROOF_PUBLICATION_DEFERRED_SUMMARY = (
     "no final proof publication actions executed in final proof publication baseline"
 )
+PROGRAM_FRONTEND_FINAL_PROOF_CLOSURE_DEFERRED_SUMMARY = (
+    "no final proof closure actions executed in final proof closure baseline"
+)
 
 
 @dataclass
@@ -583,6 +586,46 @@ class ProgramFrontendFinalProofPublicationResult:
     publication_state: str
     publication_result: str
     publication_summaries: list[str] = field(default_factory=list)
+    written_paths: list[str] = field(default_factory=list)
+    remaining_blockers: list[str] = field(default_factory=list)
+    warnings: list[str] = field(default_factory=list)
+    source_linkage: dict[str, str] = field(default_factory=dict)
+
+
+@dataclass
+class ProgramFrontendFinalProofClosureRequestStep:
+    spec_id: str
+    path: str
+    closure_state: str
+    pending_inputs: list[str] = field(default_factory=list)
+    suggested_next_actions: list[str] = field(default_factory=list)
+    source_linkage: dict[str, str] = field(default_factory=dict)
+
+
+@dataclass
+class ProgramFrontendFinalProofClosureRequest:
+    required: bool
+    confirmation_required: bool
+    closure_state: str
+    publication_state: str
+    artifact_source_path: str
+    artifact_generated_at: str
+    written_paths: list[str] = field(default_factory=list)
+    steps: list[ProgramFrontendFinalProofClosureRequestStep] = field(
+        default_factory=list
+    )
+    remaining_blockers: list[str] = field(default_factory=list)
+    warnings: list[str] = field(default_factory=list)
+    source_linkage: dict[str, str] = field(default_factory=dict)
+
+
+@dataclass
+class ProgramFrontendFinalProofClosureResult:
+    passed: bool
+    confirmed: bool
+    closure_state: str
+    closure_result: str
+    closure_summaries: list[str] = field(default_factory=list)
     written_paths: list[str] = field(default_factory=list)
     remaining_blockers: list[str] = field(default_factory=list)
     warnings: list[str] = field(default_factory=list)
@@ -2993,6 +3036,190 @@ class ProgramService:
         )
         return artifact_path
 
+    def build_frontend_final_proof_closure_request(
+        self,
+        manifest: ProgramManifest,
+        *,
+        artifact_path: Path | None = None,
+    ) -> ProgramFrontendFinalProofClosureRequest:
+        """Build the final proof closure request from final proof publication artifact."""
+        effective_artifact_path = artifact_path or (
+            self.root / PROGRAM_FRONTEND_FINAL_PROOF_PUBLICATION_ARTIFACT_REL_PATH
+        )
+        if not effective_artifact_path.is_absolute():
+            effective_artifact_path = self.root / effective_artifact_path
+
+        relative_artifact_path = _relative_to_root_or_str(
+            self.root, effective_artifact_path
+        )
+        payload, warnings = self._load_frontend_final_proof_publication_artifact_payload(
+            effective_artifact_path
+        )
+        if payload is None:
+            return ProgramFrontendFinalProofClosureRequest(
+                required=False,
+                confirmation_required=False,
+                closure_state="missing_artifact",
+                publication_state="missing_artifact",
+                artifact_source_path=relative_artifact_path,
+                artifact_generated_at="",
+                warnings=warnings,
+                source_linkage={
+                    "final_proof_publication_artifact_path": relative_artifact_path,
+                    "closure_state": "missing_artifact",
+                },
+            )
+
+        artifact_generated_at = str(payload.get("generated_at", "")).strip()
+        publication_state = (
+            str(payload.get("publication_state", "")).strip() or "unknown"
+        )
+        written_paths = _unique_strings(
+            [
+                *_normalize_string_list(payload.get("existing_written_paths", [])),
+                *_normalize_string_list(payload.get("written_paths", [])),
+            ]
+        )
+        remaining_blockers = _normalize_string_list(payload.get("remaining_blockers", []))
+        steps: list[ProgramFrontendFinalProofClosureRequestStep] = []
+        spec_by_id = {spec.id: spec for spec in manifest.specs}
+        for step_payload in _normalize_mapping_list(payload.get("steps", [])):
+            spec_id = str(step_payload.get("spec_id", "")).strip()
+            if not spec_id:
+                continue
+            path = str(step_payload.get("path", "")).strip()
+            if not path:
+                spec = spec_by_id.get(spec_id)
+                path = spec.path if spec is not None else ""
+            source_linkage = _normalize_string_mapping(
+                step_payload.get("source_linkage", {})
+            )
+            source_linkage.update(
+                {
+                    "final_proof_publication_artifact_path": relative_artifact_path,
+                    "final_proof_publication_artifact_generated_at": artifact_generated_at,
+                    "closure_state": "not_started",
+                }
+            )
+            steps.append(
+                ProgramFrontendFinalProofClosureRequestStep(
+                    spec_id=spec_id,
+                    path=path,
+                    closure_state="not_started",
+                    pending_inputs=_normalize_string_list(
+                        step_payload.get("pending_inputs", [])
+                    ),
+                    suggested_next_actions=_normalize_string_list(
+                        step_payload.get("suggested_next_actions", [])
+                    ),
+                    source_linkage=source_linkage,
+                )
+            )
+
+        required = bool(steps or written_paths or remaining_blockers)
+        source_linkage = _normalize_string_mapping(payload.get("source_linkage", {}))
+        source_linkage.update(
+            {
+                "final_proof_publication_artifact_path": relative_artifact_path,
+                "final_proof_publication_artifact_generated_at": artifact_generated_at,
+                "closure_state": "not_started",
+                "confirmation_required": str(required).lower(),
+            }
+        )
+        return ProgramFrontendFinalProofClosureRequest(
+            required=required,
+            confirmation_required=required,
+            closure_state="not_started",
+            publication_state=publication_state,
+            artifact_source_path=relative_artifact_path,
+            artifact_generated_at=artifact_generated_at,
+            written_paths=written_paths,
+            steps=steps,
+            remaining_blockers=remaining_blockers,
+            warnings=_unique_strings(
+                [*warnings, *_normalize_string_list(payload.get("warnings", []))]
+            ),
+            source_linkage=source_linkage,
+        )
+
+    def execute_frontend_final_proof_closure(
+        self,
+        manifest: ProgramManifest,
+        *,
+        request: ProgramFrontendFinalProofClosureRequest | None = None,
+        confirmed: bool = False,
+    ) -> ProgramFrontendFinalProofClosureResult:
+        """Execute the final proof closure baseline without closure artifact persistence."""
+        effective_request = request or self.build_frontend_final_proof_closure_request(
+            manifest
+        )
+        if effective_request.warnings and not effective_request.artifact_generated_at:
+            return ProgramFrontendFinalProofClosureResult(
+                passed=False,
+                confirmed=confirmed,
+                closure_state="blocked",
+                closure_result="blocked",
+                written_paths=list(effective_request.written_paths),
+                remaining_blockers=list(effective_request.remaining_blockers),
+                warnings=list(effective_request.warnings),
+                source_linkage={
+                    **dict(effective_request.source_linkage),
+                    "closure_state": "blocked",
+                    "closure_result": "blocked",
+                },
+            )
+        if not effective_request.required:
+            return ProgramFrontendFinalProofClosureResult(
+                passed=True,
+                confirmed=confirmed,
+                closure_state="not_started",
+                closure_result="skipped",
+                written_paths=list(effective_request.written_paths),
+                remaining_blockers=[],
+                warnings=list(effective_request.warnings),
+                source_linkage={
+                    **dict(effective_request.source_linkage),
+                    "closure_state": "not_started",
+                    "closure_result": "skipped",
+                },
+            )
+        if not confirmed:
+            return ProgramFrontendFinalProofClosureResult(
+                passed=False,
+                confirmed=False,
+                closure_state="confirmation_required",
+                closure_result="blocked",
+                written_paths=list(effective_request.written_paths),
+                remaining_blockers=list(effective_request.remaining_blockers),
+                warnings=[
+                    *effective_request.warnings,
+                    "final proof closure orchestration requires explicit confirmation",
+                ],
+                source_linkage={
+                    **dict(effective_request.source_linkage),
+                    "closure_state": "confirmation_required",
+                    "closure_result": "blocked",
+                },
+            )
+        return ProgramFrontendFinalProofClosureResult(
+            passed=False,
+            confirmed=True,
+            closure_state="deferred",
+            closure_result="deferred",
+            closure_summaries=[PROGRAM_FRONTEND_FINAL_PROOF_CLOSURE_DEFERRED_SUMMARY],
+            written_paths=[],
+            remaining_blockers=list(effective_request.remaining_blockers),
+            warnings=[
+                *effective_request.warnings,
+                "final proof closure baseline does not persist closure artifacts yet",
+            ],
+            source_linkage={
+                **dict(effective_request.source_linkage),
+                "closure_state": "deferred",
+                "closure_result": "deferred",
+            },
+        )
+
     def evaluate_execute_gates(
         self, manifest: ProgramManifest, *, allow_dirty: bool = False
     ) -> ProgramExecuteGates:
@@ -3952,6 +4179,38 @@ class ProgramService:
                 None,
                 [
                     "invalid persisted write proof artifact: "
+                    + _relative_to_root_or_str(self.root, artifact_path)
+                ],
+            )
+        return payload, []
+
+    def _load_frontend_final_proof_publication_artifact_payload(
+        self,
+        artifact_path: Path,
+    ) -> tuple[dict[str, object] | None, list[str]]:
+        if not artifact_path.exists():
+            return (
+                None,
+                [
+                    "missing final proof publication artifact: "
+                    + _relative_to_root_or_str(self.root, artifact_path)
+                ],
+            )
+        try:
+            payload = yaml.safe_load(artifact_path.read_text(encoding="utf-8"))
+        except Exception as exc:
+            return (
+                None,
+                [
+                    "invalid final proof publication artifact: "
+                    + f"{_relative_to_root_or_str(self.root, artifact_path)} ({exc})"
+                ],
+            )
+        if not isinstance(payload, dict):
+            return (
+                None,
+                [
+                    "invalid final proof publication artifact: "
                     + _relative_to_root_or_str(self.root, artifact_path)
                 ],
             )

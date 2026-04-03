@@ -1702,6 +1702,88 @@ def test_write_frontend_final_proof_publication_artifact_emits_canonical_yaml(
     )
 
 
+def test_build_frontend_final_proof_closure_request_requires_explicit_confirmation(
+    tmp_path: Path,
+) -> None:
+    for p in ("specs/001-auth", "specs/002-course", "specs/003-enroll"):
+        (tmp_path / p).mkdir(parents=True)
+    _write_frontend_final_proof_publication_artifact(
+        tmp_path,
+        publication_result="deferred",
+        publication_state="deferred",
+        remaining_blockers=["spec 001-auth remediation still required"],
+    )
+
+    svc = ProgramService(tmp_path)
+    request = svc.build_frontend_final_proof_closure_request(_manifest())
+
+    assert request.required is True
+    assert request.confirmation_required is True
+    assert request.closure_state == "not_started"
+    assert request.publication_state == "deferred"
+    assert (
+        request.artifact_source_path
+        == ".ai-sdlc/memory/frontend-final-proof-publication/latest.yaml"
+    )
+    assert request.artifact_generated_at == "2026-04-04T03:00:00Z"
+    assert request.written_paths == []
+    assert request.steps[0].spec_id == "001-auth"
+    assert request.steps[0].closure_state == "not_started"
+    assert request.steps[0].source_linkage["closure_state"] == "not_started"
+
+
+def test_execute_frontend_final_proof_closure_returns_deferred_result_when_confirmed(
+    tmp_path: Path,
+) -> None:
+    for p in ("specs/001-auth", "specs/002-course", "specs/003-enroll"):
+        (tmp_path / p).mkdir(parents=True)
+    _write_frontend_final_proof_publication_artifact(
+        tmp_path,
+        publication_result="deferred",
+        publication_state="deferred",
+        remaining_blockers=["spec 001-auth remediation still required"],
+    )
+
+    svc = ProgramService(tmp_path)
+    result = svc.execute_frontend_final_proof_closure(_manifest(), confirmed=True)
+
+    assert result.passed is False
+    assert result.confirmed is True
+    assert result.closure_state == "deferred"
+    assert result.closure_result == "deferred"
+    assert result.closure_summaries == [
+        "no final proof closure actions executed in final proof closure baseline"
+    ]
+    assert result.written_paths == []
+    assert result.remaining_blockers == ["spec 001-auth remediation still required"]
+    assert result.source_linkage["closure_state"] == "deferred"
+
+
+def test_execute_frontend_final_proof_closure_does_not_write_artifact_by_default(
+    tmp_path: Path,
+) -> None:
+    for p in ("specs/001-auth", "specs/002-course", "specs/003-enroll"):
+        (tmp_path / p).mkdir(parents=True)
+    _write_frontend_final_proof_publication_artifact(
+        tmp_path,
+        publication_result="deferred",
+        publication_state="deferred",
+        remaining_blockers=["spec 001-auth remediation still required"],
+    )
+
+    svc = ProgramService(tmp_path)
+    result = svc.execute_frontend_final_proof_closure(_manifest(), confirmed=True)
+
+    assert result.closure_state == "deferred"
+    assert not (
+        tmp_path
+        / ".ai-sdlc"
+        / "memory"
+        / "frontend-final-proof-closure"
+        / "latest.yaml"
+    ).exists()
+
+
 def test_build_status_surfaces_ready_frontend_readiness_per_spec(tmp_path: Path) -> None:
     for p in ("specs/001-auth", "specs/002-course", "specs/003-enroll"):
         (tmp_path / p).mkdir(parents=True)
@@ -2470,6 +2552,70 @@ def _write_frontend_persisted_write_proof_artifact(
                     "proof_result": proof_result,
                     "writeback_persistence_artifact_path": ".ai-sdlc/memory/frontend-writeback-persistence/latest.yaml",
                     "persisted_write_proof_artifact_path": ".ai-sdlc/memory/frontend-persisted-write-proof/latest.yaml",
+                },
+            },
+            sort_keys=False,
+            allow_unicode=True,
+        ),
+        encoding="utf-8",
+    )
+
+
+def _write_frontend_final_proof_publication_artifact(
+    root: Path,
+    *,
+    publication_result: str,
+    publication_state: str,
+    remaining_blockers: list[str],
+) -> None:
+    artifact_path = (
+        root / ".ai-sdlc" / "memory" / "frontend-final-proof-publication" / "latest.yaml"
+    )
+    artifact_path.parent.mkdir(parents=True, exist_ok=True)
+    artifact_path.write_text(
+        yaml.safe_dump(
+            {
+                "generated_at": "2026-04-04T03:00:00Z",
+                "manifest_path": "program-manifest.yaml",
+                "artifact_source_path": ".ai-sdlc/memory/frontend-persisted-write-proof/latest.yaml",
+                "artifact_generated_at": "2026-04-04T02:00:00Z",
+                "required": True,
+                "confirmation_required": True,
+                "confirmed": True,
+                "proof_state": "deferred",
+                "publication_state": publication_state,
+                "publication_result": publication_result,
+                "publication_summaries": [
+                    "no final proof publication actions executed in final proof publication baseline"
+                ],
+                "existing_written_paths": [],
+                "written_paths": [],
+                "remaining_blockers": list(remaining_blockers),
+                "warnings": [
+                    "final proof publication baseline does not persist publication artifacts yet"
+                ],
+                "steps": [
+                    {
+                        "spec_id": "001-auth",
+                        "path": "specs/001-auth",
+                        "publication_state": publication_state,
+                        "pending_inputs": ["frontend_contract_observations"],
+                        "suggested_next_actions": [
+                            "materialize final proof closure review context",
+                            "re-run ai-sdlc verify constraints",
+                        ],
+                        "source_linkage": {
+                            "publication_state": publication_state,
+                            "persisted_write_proof_artifact_path": ".ai-sdlc/memory/frontend-persisted-write-proof/latest.yaml",
+                        },
+                    }
+                ],
+                "source_linkage": {
+                    "proof_state": "deferred",
+                    "publication_state": publication_state,
+                    "publication_result": publication_result,
+                    "persisted_write_proof_artifact_path": ".ai-sdlc/memory/frontend-persisted-write-proof/latest.yaml",
+                    "final_proof_publication_artifact_path": ".ai-sdlc/memory/frontend-final-proof-publication/latest.yaml",
                 },
             },
             sort_keys=False,
