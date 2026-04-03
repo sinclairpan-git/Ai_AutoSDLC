@@ -25,6 +25,7 @@ from ai_sdlc.core.p1_artifacts import (
     save_parallel_coordination_artifact,
     save_resume_point,
 )
+from ai_sdlc.integrations.ide_adapter import acknowledge_adapter
 from ai_sdlc.models.gate import GovernanceItem, GovernanceState
 from ai_sdlc.models.project import ProjectState, ProjectStatus
 from ai_sdlc.models.state import (
@@ -187,6 +188,20 @@ class TestCliStatus:
             assert result.exit_code == 0
             assert "AI-SDLC Status" in result.output
             assert tmp_path.name in result.output
+
+    def test_status_displays_adapter_target_and_activation_truth(
+        self, tmp_path: Path
+    ) -> None:
+        init_project(tmp_path, agent_target="codex")
+        acknowledge_adapter(tmp_path, agent_target="codex")
+
+        with patch("ai_sdlc.cli.commands.find_project_root", return_value=tmp_path):
+            result = runner.invoke(app, ["status"])
+
+        assert result.exit_code == 0
+        assert "Agent Target" in result.output
+        assert "codex" in result.output
+        assert "acknowledged" in result.output
 
     def test_status_not_initialized(self) -> None:
         with patch("ai_sdlc.cli.commands.find_project_root", return_value=None):

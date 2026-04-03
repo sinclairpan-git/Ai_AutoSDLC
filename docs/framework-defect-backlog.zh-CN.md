@@ -95,9 +95,8 @@
 
 - 当前待修：
   - `009` 线 `FD-2026-04-02-001`
-  - `009` 线 `FD-2026-04-02-002`
-  - `009` 线 `FD-2026-04-02-003`
 - 本轮已收口：
+  - `010` 线 `FD-2026-04-02-002`、`FD-2026-04-02-003`、`FD-2026-04-02-004`、`FD-2026-04-03-005`
   - `008` 线 `FD-2026-03-31-003`
   - `007` 线 `FD-2026-03-31-002`
   - `006` 线 `FD-2026-03-31-004`、`FD-2026-03-31-001`
@@ -145,7 +144,7 @@
 
 - 日期 (UTC): 2026-04-02
 - 来源: user_review, self_review
-- 状态: open
+- 状态: closed
 - owner: codex
 - wi_id: 009-frontend-governance-ui-kernel
 - related_doc: src/ai_sdlc/integrations/ide_adapter.py, src/ai_sdlc/adapters/vscode/AI-SDLC.md, src/ai_sdlc/adapters/codex/AI-SDLC.md, docs/USER_GUIDE.zh-CN.md, tests/unit/test_ide_adapter.py, tests/integration/test_cli_ide_adapter.py, tests/integration/test_cli_run.py, docs/framework-defect-backlog.zh-CN.md
@@ -204,6 +203,72 @@
 - 风险等级: 高
 - 可验证成功标准: 给定 Codex 插件场景时，框架能够明确区分“文件已安装”“插件已读取”“治理已激活”三层状态；若插件无法提供 activation signal，产品文档与 CLI 状态不会再把 `.codex/AI-SDLC.md` 存在或 `run --dry-run` 执行成功表述为“约束已生效”。若后续提供 handshake，则在用户输入需求后可通过稳定信号证明 Codex 已进入框架治理路径。
 - 是否需要回归测试补充: 是：补 activation-state contract 的单元/集成测试，以及“adapter 文件存在 + dry-run 成功但未获得 activation signal”时不得误报已激活的回归测试。
+
+## FD-2026-04-02-004 | Windows 下 project-config.yaml 原子替换易因句柄占用失败，且 adapter 元数据存在无差别重写
+
+- 日期 (UTC): 2026-04-02
+- 来源: user_review, self_review
+- 状态: closed
+- owner: codex
+- wi_id: 010-agent-adapter-activation-contract
+- related_doc: src/ai_sdlc/core/config.py, src/ai_sdlc/integrations/ide_adapter.py, tests/unit/test_project_config.py, tests/integration/test_cli_status.py, tests/integration/test_cli_doctor.py, docs/USER_GUIDE.zh-CN.md, docs/framework-defect-backlog.zh-CN.md
+- detection_surface: user_review, self_review
+- trace_anchor: rev:5dc28b8
+- observed_scope: repo
+- subject_ref: 无（当前无稳定 provenance inspection subject）
+- chain_status: unknown（当前以代码实现、平台语义与测试覆盖复盘为准）
+- highest_confidence_source: 无（当前无 provenance inspection 输出）
+- key_gaps: unsupported: `YamlStore.save()` 当前没有 “serialize -> compare -> conditional write” no-op 路径；unsupported: `Path.replace()` 的 Windows `PermissionError` 当前没有 bounded retry/backoff；unobserved: 现有测试未覆盖 “内容未变不写” 与 “replace 短暂失败后重试成功”；ambiguous: adapter 持久化目前会在配置字段未变时刷新 `adapter_applied_at` 并强制落盘
+- evidence_refs: file:src/ai_sdlc/core/config.py; file:src/ai_sdlc/integrations/ide_adapter.py; file:tests/unit/test_project_config.py; file:tests/integration/test_cli_status.py; file:tests/integration/test_cli_doctor.py
+- 现象: 生产环境用户在 Windows 上使用框架时，写回 `.ai-sdlc/project/config/project-config.yaml` 会间歇性触发 `PermissionError: [WinError 5]`。文件本身未只读时仍会失败，且同目录可见残留临时文件，表现更符合“原子替换阶段撞上目标文件句柄占用”而非静态权限配置错误。复盘当前实现可见，`YamlStore.save()` 每次都会写临时文件并直接 `Path.replace()`，同时 `ide_adapter` 在状态未变时仍会刷新 `adapter_applied_at` 并保存，放大了无意义写入与撞锁概率。
+- 触发场景: 已初始化项目中执行会触发 IDE adapter 元数据持久化的命令；当 IDE、索引器、杀软、同步工具或并发的 `ai-sdlc` 进程短暂持有 `project-config.yaml` 句柄时，`tempfile.NamedTemporaryFile(..., delete=False)` 生成的临时文件在 `Path(tmp).replace(path)` 阶段失败。重复调用 `status`、`doctor`、adapter 相关命令时，即使配置语义未变化，也可能因为时间戳刷新而再次写同一文件。
+- 影响范围: Windows 生产用户的 CLI 稳定性、operator 对“只读/轻量命令”的预期、adapter 元数据持久化可靠性，以及项目配置文件的跨平台兼容性。若不修复，轻量命令会继续制造不必要写入，并在 Windows 平台周期性触发 `WinError 5`。
+- 根因分类: B, D, G（G: Windows 文件锁语义与当前写策略不兼容）
+- 未来杜绝方案摘要: 将 `project-config.yaml` 的写路径收敛为“序列化到内存 -> 内容未变化则跳过写入 -> 必要时再落盘”，并把 Windows `replace` 的短暂句柄占用视为受支持的兼容性约束，增加 bounded retry/backoff。adapter 持久化也必须只在配置字段真实变化时才刷新时间戳并保存，避免无意义重写放大平台问题。
+- 建议改动层级: rule / policy, middleware, workflow, tool, eval
+- prompt / context: `project-config.yaml` 是本地运行态元数据，不应因为重复执行轻量命令而被无条件重写；Windows 上“文件存在且非只读”也不代表可安全 `replace`。
+- rule / policy: 本地运行态 YAML 的持久化必须满足“无状态变化不落盘”；对 Windows 兼容路径，允许针对短暂锁冲突做有界重试，但不得吞掉持续性权限错误。
+- middleware: 为 YAML store 增加 `serialize -> compare -> conditional write` 路径；在 `replace` 阶段对 `PermissionError` 做短退避重试，并在失败时保留可诊断上下文。`ide_adapter` 只在配置字段真实变化时才更新 `adapter_applied_at` 并保存。
+- workflow: 将“Windows 句柄占用下的配置持久化”纳入跨平台回归清单；排查此类问题时优先核对是否存在无意义重写，而不是先假设 ACL 或只读属性错误。
+- tool: src/ai_sdlc/core/config.py, src/ai_sdlc/integrations/ide_adapter.py, tests/unit/test_project_config.py, tests/integration/test_cli_status.py, tests/integration/test_cli_doctor.py
+- eval: project-config-write-noop 命中率、Windows replace 重试成功率、`WinError 5` 复现次数、重复命令导致的 `project-config.yaml` 改写次数
+- 风险等级: 中
+- 收口说明（2026-04-03）: `YamlStore.save()` 已补 `serialize -> compare -> conditional write`，并为 Windows `PermissionError` 添加 bounded retry/backoff；`ide_adapter` 现在只在配置字段真实变化时刷新 `adapter_applied_at`。对应单测已覆盖 no-op save、Windows replace retry，以及重复 adapter 持久化不刷新时间戳。
+- 可验证成功标准: 在配置内容未变化时，重复执行相关命令不会改写 `project-config.yaml`；模拟一次或多次短暂 `PermissionError` 后，保存路径可在有界重试内恢复成功；持续性权限问题仍会显式报错。
+- 是否需要回归测试补充: 是：补 YAML save 的 no-op 与 Windows replace 重试单测，以及重复 CLI 调用不改写 project-config 的集成回归。
+
+## FD-2026-04-03-005 | Adapter activation contract 实现偏移：init 交互式选择器未落地，显式参数路径取代了主 UX
+
+- 日期 (UTC): 2026-04-03
+- 来源: user_review, self_review
+- 状态: closed
+- owner: codex
+- wi_id: 010-agent-adapter-activation-contract
+- related_doc: specs/010-agent-adapter-activation-contract/spec.md, specs/010-agent-adapter-activation-contract/plan.md, specs/010-agent-adapter-activation-contract/tasks.md, src/ai_sdlc/cli/commands.py, src/ai_sdlc/cli/adapter_cmd.py, tests/integration/test_cli_adapter.py, tests/integration/test_cli_init.py, tests/unit/test_ide_adapter.py, docs/USER_GUIDE.zh-CN.md, docs/framework-defect-backlog.zh-CN.md
+- detection_surface: user_review, self_review
+- trace_anchor: rev:5dc28b8
+- observed_scope: repo
+- subject_ref: 无（当前无稳定 provenance inspection subject）
+- chain_status: unknown（当前以 formal docs、CLI 实现、测试与用户文档复盘为准）
+- highest_confidence_source: 无（当前无 provenance inspection 输出）
+- key_gaps: unsupported: `init` 当前没有实现 formal spec 要求的交互式五项 selector；unsupported: 现有测试只锁住 `--agent-target` 显式路径，没有锁住 “TTY 下 selector 默认聚焦 + 上下键确认” 主路径；ambiguous: 用户文档把 `adapter select --agent-target ...` 教成主要纠偏方式；incomplete: `010` formal docs 已冻结，但缺少 `task-execution-log.md`，close-check 仍无法证明实现与工单收口一致
+- evidence_refs: file:specs/010-agent-adapter-activation-contract/spec.md; file:src/ai_sdlc/cli/commands.py; file:src/ai_sdlc/cli/adapter_cmd.py; file:tests/integration/test_cli_adapter.py; file:tests/integration/test_cli_init.py; file:docs/USER_GUIDE.zh-CN.md; command:uv run ai-sdlc workitem close-check --wi specs/010-agent-adapter-activation-contract
+- 现象: `010` formal truth 明确要求 `ai-sdlc init` 提供交互式 AI 代理入口选择器，自动探测只负责默认聚焦，用户通过上下方向键和回车确认；当前实现没有 selector，主要依赖 `--agent-target` 与 `adapter select --agent-target ...` 完成选择，产品形态与需求不一致。当前代码把显式参数 fallback/override 做成了主 UX，导致用户必须记住命令值，而不是通过直观选项完成确认。
+- 触发场景: operator 在交互式终端首次执行 `ai-sdlc init .`，期望看到固定五项列表并确认真实聊天 AI 入口；实际 CLI 直接走自动探测或要求手工输入参数，没有进入选择器。后续用户文档和测试也都围绕显式参数路径展开，进一步固化了偏差。
+- 影响范围: adapter activation contract 的主 UX、mixed-host 场景下的目标确认可信度、用户对框架“认的是谁”的理解、USER_GUIDE 教程路径、以及 `010` 工单的 formal truth 与实现一致性。若不修复，用户会持续把命令参数当作“唯一修正方法”，而不是得到预期的交互式产品形态。
+- 根因分类: B, D, H
+- 未来杜绝方案摘要: 当 spec 明确要求交互式 selector 时，显式命令参数只能作为 non-interactive fallback 或 override，不得替代主交互路径。实现必须先把主 UX、fallback UX、测试矩阵和 work item execution evidence 对齐，再允许 close。
+- 建议改动层级: rule / policy, workflow, tool, eval
+- prompt / context: “有 `--agent-target` 可用”不等于“交互式 selector 已实现”；当 spec 写的是交互确认流程时，评估实现是否完成必须优先检查主 UX 是否存在。
+- rule / policy: 若 formal spec 写明 `init` 提供交互式选择器，且自动探测仅用于默认聚焦，则任何只提供显式参数的实现都不得视为已满足 FR；`adapter select` 也不能反向替代 `init` 主入口的交互体验。
+- middleware: 抽出统一的 agent-target selector helper，承载 fixed options、default focus、TTY/非 TTY 分流、用户确认结果与 fallback 原因；让 `init` 和后续显式改选路径复用同一 selector truth。
+- workflow: `010` 必须回到正式 execute 路径，按 `T21 / T22 / T32` 补 selector、CLI surface 和回归矩阵，并补 `task-execution-log.md`，不得继续以散落代码替代 work item 收口。
+- tool: src/ai_sdlc/cli/commands.py, src/ai_sdlc/cli/adapter_cmd.py, src/ai_sdlc/integrations/ide_adapter.py, tests/integration/test_cli_init.py, tests/integration/test_cli_adapter.py, tests/unit/test_ide_adapter.py, docs/USER_GUIDE.zh-CN.md
+- eval: TTY selector 回归通过率、mixed-host 默认聚焦命中率、non-interactive fallback 成功率、用户通过 `adapter select --agent-target ...` 手工纠偏次数、`010` formal docs 与实现一致性检查命中率
+- 风险等级: 高
+- 收口说明（2026-04-03）: `init` 与 `adapter select` 现在共享交互式五项 selector；TTY 下默认进入选项确认，`--agent-target` 退回 non-interactive fallback/override。mixed-host env precedence、selector 回归、CLI 文档与 `010` formal docs 已同步补齐，`010` 不再停留在 `formal_freeze_only`。
+- 可验证成功标准: 在交互式 TTY 中执行 `ai-sdlc init .` 时，CLI 会展示五项固定列表，自动探测只做默认聚焦，用户可通过上下方向键与回车确认；在非交互环境中，CLI 不会卡住，而是优先接受 `--agent-target`，否则走 deterministic fallback 并打印说明；`adapter select --agent-target ...` 仍可作为显式纠正路径，但不再替代主 UX。
+- 是否需要回归测试补充: 是：补 `init` 交互 selector、mixed-host 默认聚焦、non-interactive fallback、`adapter select` 二次改选，以及 USER_GUIDE/command surface 一致性回归。
 
 ## FD-2026-03-31-001 | 宿主 skills 的默认 workflow 会把 superpowers plan 完成态继续推向 execute 倾向，稀释仓库法定阶段真值
 

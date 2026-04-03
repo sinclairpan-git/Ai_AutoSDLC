@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from ai_sdlc.core import config as config_module
 from ai_sdlc.core.config import load_project_config, save_project_config
 from ai_sdlc.integrations.ide_adapter import ensure_ide_adaptation
 from ai_sdlc.models.project import ProjectConfig
@@ -37,6 +38,48 @@ def test_save_project_config_creates_file(tmp_path: Path) -> None:
     assert again.adapter_applied == "vscode"
     assert again.telemetry_profile is TelemetryProfile.EXTERNAL_PROJECT
     assert again.telemetry_mode is TelemetryMode.STRICT
+
+
+def test_save_project_config_skips_atomic_replace_when_content_is_unchanged(
+    tmp_path: Path, monkeypatch
+) -> None:
+    cfg = ProjectConfig(
+        detected_ide="vscode",
+        adapter_applied="vscode",
+    )
+    save_project_config(tmp_path, cfg)
+
+    def _unexpected_replace(self: Path, target: Path) -> Path:
+        raise AssertionError("replace should not run for a no-op save")
+
+    monkeypatch.setattr(Path, "replace", _unexpected_replace)
+    save_project_config(tmp_path, cfg)
+
+
+def test_save_project_config_retries_windows_replace_permission_error(
+    tmp_path: Path, monkeypatch
+) -> None:
+    cfg = ProjectConfig(
+        detected_ide="vscode",
+        adapter_applied="vscode",
+    )
+    original_replace = Path.replace
+    calls = {"count": 0}
+
+    def _flaky_replace(self: Path, target: Path) -> Path:
+        calls["count"] += 1
+        if calls["count"] < 3:
+            raise PermissionError("[WinError 5] Access is denied")
+        return original_replace(self, target)
+
+    monkeypatch.setattr(config_module, "_IS_WINDOWS", True)
+    monkeypatch.setattr(config_module.time, "sleep", lambda _delay: None)
+    monkeypatch.setattr(Path, "replace", _flaky_replace)
+
+    save_project_config(tmp_path, cfg)
+
+    assert calls["count"] == 3
+    assert load_project_config(tmp_path).detected_ide == "vscode"
 
 
 def test_ensure_ide_adaptation_writes_config_when_missing(tmp_path: Path) -> None:

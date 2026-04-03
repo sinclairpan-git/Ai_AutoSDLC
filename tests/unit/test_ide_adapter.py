@@ -80,9 +80,23 @@ class TestDetectIde:
         monkeypatch.setenv("OPENAI_CODEX", "1")
         assert detect_ide(tmp_path) == IDEKind.CODEX
 
+    def test_codex_env_wins_over_vscode_host_env(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setenv("TERM_PROGRAM", "vscode")
+        monkeypatch.setenv("OPENAI_CODEX", "1")
+        assert detect_ide(tmp_path) == IDEKind.CODEX
+
     def test_claude_code_env(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
+        monkeypatch.setenv("CLAUDE_CODE_ENTRYPOINT", "cli")
+        assert detect_ide(tmp_path) == IDEKind.CLAUDE_CODE
+
+    def test_claude_code_env_wins_over_vscode_host_env(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setenv("TERM_PROGRAM", "vscode")
         monkeypatch.setenv("CLAUDE_CODE_ENTRYPOINT", "cli")
         assert detect_ide(tmp_path) == IDEKind.CLAUDE_CODE
 
@@ -159,3 +173,23 @@ class TestEnsureIdeAdaptation:
         assert cfg.adapter_applied == IDEKind.CODEX.value
         assert cfg.adapter_activation_state == ActivationState.INSTALLED.value
         assert cfg.adapter_support_tier == AdapterSupportTier.SOFT_INSTALLED.value
+
+    def test_repeated_adaptation_does_not_refresh_timestamp_without_state_change(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        (tmp_path / ".codex").mkdir()
+        init_project(tmp_path)
+        from ai_sdlc.core.config import load_project_config
+
+        before = load_project_config(tmp_path)
+        assert before.adapter_applied_at != ""
+
+        monkeypatch.setattr(
+            "ai_sdlc.integrations.ide_adapter.now_iso",
+            lambda: "2099-01-01T00:00:00+00:00",
+        )
+
+        ensure_ide_adaptation(tmp_path)
+        after = load_project_config(tmp_path)
+
+        assert after.adapter_applied_at == before.adapter_applied_at

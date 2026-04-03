@@ -18,7 +18,12 @@ related_doc:
 - 再引入 activation state / evidence / support tier
 - 再引入 activation gate，避免把 `installed` 误报成 `activated`
 
-该计划不是直接实现全部代码，而是先把后续实现必须遵守的产品合同、状态模型、CLI 入口和测试基线正式写入 `specs/010/...`。
+当前分支已基于这套 formal baseline 继续进入实现，范围锁定为：
+
+- `project-config.yaml` 的 no-op / Windows retry 持久化硬化
+- `init` / `adapter select` 的交互式 agent-target selector
+- `adapter activate / adapter status / status` 的 activation truth surface
+- `010` execution evidence、USER_GUIDE 与 backlog 台账收口
 
 ## 技术背景
 
@@ -26,11 +31,11 @@ related_doc:
 **主要依赖**：现有 `ai-sdlc` CLI、project config/state 落盘机制、adapter template bundle、用户指南与 backlog  
 **现有基础**：
 
-- [`src/ai_sdlc/integrations/ide_adapter.py`](../../src/ai_sdlc/integrations/ide_adapter.py) 当前负责 auto-detect + 写入 adapter 模板 + 更新 `project-config.yaml`
-- [`src/ai_sdlc/cli/commands.py`](../../src/ai_sdlc/cli/commands.py) 当前在 `init` 与部分入口中调用 adapter apply，但没有 activation contract
+- [`src/ai_sdlc/integrations/ide_adapter.py`](../../src/ai_sdlc/integrations/ide_adapter.py) 当前负责 target detect + 写入 adapter 模板 + 更新 `project-config.yaml`
+- [`src/ai_sdlc/cli/commands.py`](../../src/ai_sdlc/cli/commands.py) 当前在 `init` 与部分入口中调用 adapter apply，并已需要和 selector / status truth 对齐
 - [`src/ai_sdlc/cli/cli_hooks.py`](../../src/ai_sdlc/cli/cli_hooks.py) 当前只负责已初始化项目上的 adapter 幂等 apply
-- [`src/ai_sdlc/models/project.py`](../../src/ai_sdlc/models/project.py) 当前只持有 `detected_ide / adapter_applied / adapter_version / adapter_applied_at`
-- `src/ai_sdlc/adapters/*/AI-SDLC.md` 当前只是提示代理执行 `run --dry-run`
+- [`src/ai_sdlc/models/project.py`](../../src/ai_sdlc/models/project.py) 需要承载 activation source / evidence / support tier 等运行态元数据
+- `src/ai_sdlc/adapters/*/AI-SDLC.md` 当前已切到“先 activate，再 dry-run”的软接入提示语义
 
 **目标平台**：AI-SDLC 框架仓库自身，面向 `Codex / Claude Code / Cursor / VS Code / generic` 的入口接入合同  
 **主要约束**：
@@ -153,6 +158,20 @@ src/ai_sdlc/
 **验证方式**：formal docs review + `verify constraints`。  
 **回退方式**：仅回退 planning baseline。
 
+### Phase 4：Persistence durability implementation
+
+**目标**：落下 `project-config.yaml` 的 no-op save、Windows bounded retry，以及 adapter timestamp no-op 约束。
+**产物**：`core/config.py`、`integrations/ide_adapter.py`、对应 unit tests。
+**验证方式**：`uv run pytest tests/unit/test_project_config.py tests/unit/test_ide_adapter.py -q`。
+**回退方式**：回退 config / adapter persistence 改动。
+
+### Phase 5：Selector and activation truth implementation
+
+**目标**：落下交互式 selector、mixed-host env precedence、activation evidence/status surfaces。
+**产物**：`integrations/agent_target.py`、CLI wiring、project config metadata、status/user guide/backlog 收口。
+**验证方式**：selector/adapter/status integration tests + `ruff` + `verify constraints` + `workitem close-check`。
+**回退方式**：回退 selector / CLI / docs / backlog 改动。
+
 ## 工作流计划
 
 ### 工作流 A：Selection contract freeze
@@ -176,6 +195,20 @@ src/ai_sdlc/
 **验证方式**：兼容性规则审阅。  
 **回退方式**：不写入新配置字段。
 
+### 工作流 D：Persistence durability hardening
+
+**范围**：YAML save no-op、Windows replace retry、adapter_applied_at no-op refresh。
+**影响范围**：`project-config.yaml` 落盘稳定性、重复命令幂等性、Windows 兼容性。
+**验证方式**：unit tests + real CLI no-mutation 回归。
+**回退方式**：回退 config store 与 adapter persistence。
+
+### 工作流 E：Selector / activation truth wiring
+
+**范围**：交互式 selector、non-interactive fallback、status truth surface、activation metadata。
+**影响范围**：`init`、`adapter select`、`adapter activate`、`adapter status`、`status`、USER_GUIDE。
+**验证方式**：integration tests + docs/backlog 对账。
+**回退方式**：回退 selector helper 与 CLI wiring。
+
 ## 关键路径验证策略
 
 | 关键路径 | 主验证方式 | 次验证方式 |
@@ -196,7 +229,8 @@ src/ai_sdlc/
 
 ## 实施顺序建议
 
-1. 先冻结 `010` formal spec/plan/tasks，明确当前要修的是“入口接管合同”，不是“adapter 文件再多装一个”。
-2. 再冻结 `Editor Host / Agent Target / Activation State / Support Tier / Gate Policy` 的正式对象模型。
-3. 再冻结 `init` 交互选择、显式参数、non-interactive fallback 与 activation handshake 的 CLI 合同。
-4. 最后再冻结 adapter 模板重写、旧项目迁移与 mixed host / installed-only / non-interactive 的回归矩阵。
+1. 先用 `010` formal docs 锁定 owner truth，明确当前要修的是“入口接管合同”，不是“adapter 文件再多装一个”。
+2. 先落 `project-config.yaml` durability hardening，避免 selector / status 线继续放大无意义重写。
+3. 再落 `init` 交互选择、`adapter select` 二次改选与 mixed-host fallback。
+4. 再把 activation evidence / support tier / status truth surface 连到 `adapter activate / adapter status / status`。
+5. 最后统一回填 USER_GUIDE、backlog、`task-execution-log.md` 并通过 `close-check` 收口。
