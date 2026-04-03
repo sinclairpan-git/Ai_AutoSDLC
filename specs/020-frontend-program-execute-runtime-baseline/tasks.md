@@ -16,6 +16,8 @@ related_doc:
 Batch 1: execute runtime truth freeze
 Batch 2: execute / recheck / remediation boundary freeze
 Batch 3: implementation handoff and verification freeze
+Batch 4: program frontend execute preflight slice
+Batch 5: program execute CLI frontend gate surface slice
 ```
 
 ---
@@ -28,7 +30,10 @@ Batch 3: implementation handoff and verification freeze
 - `020` 不得改写 `019` 已冻结的 per-spec readiness truth。
 - `020` 不得在当前 child work item 中直接启用 scanner/provider 写入、auto-attach、auto-fix、registry 或 cross-spec writeback。
 - `020` 不得把 `program --execute` 扩张成新的默认前端自动编排入口。
-- 当前 docs baseline 只冻结 execute preflight / recheck / remediation hint 边界，不放行任何 `src/` / `tests/` 实现。
+- `Batch 4` 只允许写入 `src/ai_sdlc/core/program_service.py`、`tests/unit/test_program_service.py`、`specs/020-frontend-program-execute-runtime-baseline/task-execution-log.md`，以及为本批边界服务的 `plan.md / tasks.md`。
+- `Batch 5` 只允许写入 `src/ai_sdlc/cli/program_cmd.py`、`tests/integration/test_cli_program.py`、`specs/020-frontend-program-execute-runtime-baseline/task-execution-log.md`，以及为本批边界服务的 `plan.md / tasks.md`。
+- 当前首批实现只放行 `ProgramService` 的 frontend execute preflight，不放行 recheck loop runtime 或 auto-fix。
+- 当前第二批实现只放行 `program integrate --execute` 的 frontend gate / remediation hint surface，不放行 auto-fix、writeback 或 recheck loop。
 
 ---
 
@@ -158,3 +163,89 @@ Batch 3: implementation handoff and verification freeze
   2. `spec.md / plan.md / tasks.md` 对 execute runtime、recheck 与 remediation hint 保持单一真值
   3. 当前分支上的 `020` formal docs 可作为后续进入 execute preflight 实现的稳定基线
 - **验证**：`uv run ai-sdlc verify constraints`, `git status --short`
+
+---
+
+## Batch 4：program frontend execute preflight slice
+
+### Task 4.1 先写 failing tests 固定 frontend execute preflight 语义
+
+- **任务编号**：T41
+- **优先级**：P0
+- **依赖**：T33
+- **文件**：`tests/unit/test_program_service.py`
+- **可并行**：否
+- **验收标准**：
+  1. 单测明确覆盖 spec 已 close 但 frontend readiness 不 clear 时的 execute 阻断
+  2. 单测明确覆盖 spec 已 close 且 frontend readiness ready 时的 execute 放行
+  3. 首次运行定向测试时必须出现预期失败，证明 `evaluate_execute_gates()` 尚未消费 frontend readiness
+- **验证**：`uv run pytest tests/unit/test_program_service.py -q`
+
+### Task 4.2 实现最小 frontend execute preflight
+
+- **任务编号**：T42
+- **优先级**：P0
+- **依赖**：T41
+- **文件**：`src/ai_sdlc/core/program_service.py`
+- **可并行**：否
+- **验收标准**：
+  1. `ProgramService.evaluate_execute_gates()` 能按 spec 粒度消费 frontend readiness truth
+  2. execute gate 至少能诚实暴露 frontend execute blockers 与最小 remediation hint
+  3. 实现保持只读 preflight，不引入 recheck loop、auto-fix 或 writeback
+- **验证**：`uv run pytest tests/unit/test_program_service.py -q`
+
+### Task 4.3 Fresh verify 并追加 implementation batch 归档
+
+- **任务编号**：T43
+- **优先级**：P0
+- **依赖**：T42
+- **文件**：`specs/020-frontend-program-execute-runtime-baseline/task-execution-log.md`
+- **可并行**：否
+- **验收标准**：
+  1. `uv run pytest tests/unit/test_program_service.py -q` 通过
+  2. `uv run ruff check src tests`、`git diff --check -- specs/020-frontend-program-execute-runtime-baseline src/ai_sdlc/core tests/unit` 与 `uv run ai-sdlc verify constraints` 通过
+  3. `task-execution-log.md` 追加记录当前 implementation batch 的 touched files、验证命令与结论
+- **验证**：`uv run pytest tests/unit/test_program_service.py -q`, `uv run ruff check src tests`, `git diff --check -- specs/020-frontend-program-execute-runtime-baseline src/ai_sdlc/core tests/unit`, `uv run ai-sdlc verify constraints`
+
+---
+
+## Batch 5：program execute CLI frontend gate surface slice
+
+### Task 5.1 先写 failing tests 固定 execute CLI frontend gate 输出语义
+
+- **任务编号**：T51
+- **优先级**：P0
+- **依赖**：T43
+- **文件**：`tests/integration/test_cli_program.py`
+- **可并行**：否
+- **验收标准**：
+  1. 集成测试明确覆盖 `program integrate --execute` 的 frontend execute gate 阻断输出
+  2. 集成测试明确覆盖 ready frontend execute preflight 的通过输出
+  3. 首次运行定向测试时必须出现预期失败，证明 execute CLI 尚未渲染 frontend gate surface
+- **验证**：`uv run pytest tests/integration/test_cli_program.py -q`
+
+### Task 5.2 实现最小 execute CLI frontend gate surface
+
+- **任务编号**：T52
+- **优先级**：P0
+- **依赖**：T51
+- **文件**：`src/ai_sdlc/cli/program_cmd.py`
+- **可并行**：否
+- **验收标准**：
+  1. `program integrate --execute` 能暴露 frontend execute gate 的阻断或通过信息
+  2. 失败时能暴露最小 remediation hint，而不触发 auto-fix 或 recheck loop
+  3. 实现保持 scoped user-facing surface，不改写 dry-run/status truth
+- **验证**：`uv run pytest tests/integration/test_cli_program.py -q`
+
+### Task 5.3 Fresh verify 并追加 CLI batch 归档
+
+- **任务编号**：T53
+- **优先级**：P0
+- **依赖**：T52
+- **文件**：`specs/020-frontend-program-execute-runtime-baseline/task-execution-log.md`
+- **可并行**：否
+- **验收标准**：
+  1. `uv run pytest tests/integration/test_cli_program.py -q` 通过
+  2. `uv run ruff check src tests`、`git diff --check -- specs/020-frontend-program-execute-runtime-baseline src/ai_sdlc/cli tests/integration` 与 `uv run ai-sdlc verify constraints` 通过
+  3. `task-execution-log.md` 追加记录当前 CLI batch 的 touched files、验证命令与结论
+- **验证**：`uv run pytest tests/integration/test_cli_program.py -q`, `uv run ruff check src tests`, `git diff --check -- specs/020-frontend-program-execute-runtime-baseline src/ai_sdlc/cli tests/integration`, `uv run ai-sdlc verify constraints`

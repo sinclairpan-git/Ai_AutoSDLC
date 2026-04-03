@@ -185,9 +185,60 @@ def test_execution_gates_pass_when_closed(tmp_path: Path) -> None:
         (tmp_path / "specs" / spec / "development-summary.md").write_text(
             "ok\n", encoding="utf-8"
         )
+        _write_frontend_contract_observations(tmp_path / "specs" / spec)
+    _write_minimal_frontend_contract_page_artifacts(tmp_path)
+    materialize_frontend_gate_policy_artifacts(
+        tmp_path,
+        build_mvp_frontend_gate_policy(),
+    )
+    materialize_frontend_generation_constraint_artifacts(
+        tmp_path,
+        build_mvp_frontend_generation_constraints(),
+    )
     svc = ProgramService(tmp_path)
     gates = svc.evaluate_execute_gates(_manifest(), allow_dirty=True)
     assert gates.passed is True
+
+
+def test_execution_gates_fail_when_frontend_readiness_not_clear(tmp_path: Path) -> None:
+    for p in ("specs/001-auth", "specs/002-course", "specs/003-enroll"):
+        (tmp_path / p).mkdir(parents=True)
+    for spec in ("001-auth", "002-course", "003-enroll"):
+        (tmp_path / "specs" / spec / "development-summary.md").write_text(
+            "ok\n", encoding="utf-8"
+        )
+
+    svc = ProgramService(tmp_path)
+    gates = svc.evaluate_execute_gates(_manifest(), allow_dirty=True)
+
+    assert gates.passed is False
+    assert any("frontend execute gate not clear" in item for item in gates.failed)
+    assert any("missing_artifact" in item for item in gates.failed)
+
+
+def test_execution_gates_pass_when_closed_and_frontend_ready(tmp_path: Path) -> None:
+    for p in ("specs/001-auth", "specs/002-course", "specs/003-enroll"):
+        (tmp_path / p).mkdir(parents=True)
+    for spec in ("001-auth", "002-course", "003-enroll"):
+        (tmp_path / "specs" / spec / "development-summary.md").write_text(
+            "ok\n", encoding="utf-8"
+        )
+        _write_frontend_contract_observations(tmp_path / "specs" / spec)
+    _write_minimal_frontend_contract_page_artifacts(tmp_path)
+    materialize_frontend_gate_policy_artifacts(
+        tmp_path,
+        build_mvp_frontend_gate_policy(),
+    )
+    materialize_frontend_generation_constraint_artifacts(
+        tmp_path,
+        build_mvp_frontend_generation_constraints(),
+    )
+
+    svc = ProgramService(tmp_path)
+    gates = svc.evaluate_execute_gates(_manifest(), allow_dirty=True)
+
+    assert gates.passed is True
+    assert not any("frontend execute gate not clear" in item for item in gates.failed)
 
 
 def _write_minimal_frontend_contract_page_artifacts(

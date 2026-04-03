@@ -279,6 +279,14 @@ class ProgramService:
                 failed.append(
                     f"spec {row.spec_id} is blocked by unresolved deps: {', '.join(row.blocked_by)}"
                 )
+            if (
+                row.frontend_readiness is not None
+                and row.frontend_readiness.state != PROGRAM_FRONTEND_READINESS_READY
+            ):
+                failed.append(
+                    f"spec {row.spec_id} frontend execute gate not clear "
+                    f"({_summarize_frontend_execute_gate(row.frontend_readiness)})"
+                )
 
         if not allow_dirty:
             try:
@@ -404,3 +412,14 @@ def _unique_strings(values: list[str] | tuple[str, ...]) -> list[str]:
         if text and text not in unique:
             unique.append(text)
     return unique
+
+
+def _summarize_frontend_execute_gate(
+    readiness: ProgramFrontendReadiness,
+) -> str:
+    details = [f"state={readiness.state}"]
+    if readiness.coverage_gaps:
+        details.append("coverage_gaps=" + ",".join(readiness.coverage_gaps[:2]))
+    elif readiness.blockers:
+        details.append("remediation_hint=" + readiness.blockers[0])
+    return "; ".join(details)

@@ -31,7 +31,7 @@ related_doc:
 - 再冻结 execute preflight、recheck handoff 与 remediation hint 的 responsibility
 - 最后给出后续 `core / cli / tests` 的推荐文件面与测试矩阵
 
-当前阶段只冻结 formal baseline，不直接进入 `src/` / `tests/` 实现。
+当前 formal baseline 已完成。经用户明确要求连续推进 MVP 后，当前允许继续进入首批实现切片：`program frontend execute preflight`，先在 `ProgramService` 中落 per-spec frontend execute gate；随后再进入 `program integrate --execute` 的 CLI surface。当前仍不直接进入 recheck loop runtime 或 auto-fix engine。
 
 ## 技术背景
 
@@ -73,9 +73,9 @@ src/ai_sdlc/
 ```text
 src/ai_sdlc/
 ├── core/
-│   └── program_service.py                   # current execute gate / future frontend execute preflight
+│   └── program_service.py                   # current slice: frontend execute preflight
 └── cli/
-    └── program_cmd.py                       # execute preflight / recheck / remediation surface
+    └── program_cmd.py                       # next slice: execute frontend gate / hint surface
 
 tests/
 ├── unit/test_program_service.py
@@ -131,6 +131,20 @@ tests/
 **验证方式**：formal docs review + `verify constraints`。  
 **回退方式**：仅回退 planning baseline。
 
+### Phase 4：Program frontend execute preflight slice
+
+**目标**：在 `ProgramService` 中落 per-spec frontend execute gate，统一消费 `019` readiness truth，并将 frontend execute blockers 纳入 `program --execute` preflight。
+**产物**：`src/ai_sdlc/core/program_service.py`、`tests/unit/test_program_service.py`。
+**验证方式**：定向 `pytest`、`uv run ruff check src tests`、`git diff --check`、`uv run ai-sdlc verify constraints`。
+**回退方式**：仅回退本阶段涉及的 `core/`、`tests/` 与 execution log 变更。
+
+### Phase 5：Program execute CLI frontend gate surface slice
+
+**目标**：把 frontend execute preflight 的阻断与 hint 暴露到 `program integrate --execute` 的终端输出，使 operator 能直接看到 frontend execute gate，不进入 recheck loop runtime。
+**产物**：`src/ai_sdlc/cli/program_cmd.py`、`tests/integration/test_cli_program.py`。
+**验证方式**：定向 `pytest`、`uv run ruff check src tests`、`git diff --check`、`uv run ai-sdlc verify constraints`。
+**回退方式**：仅回退本阶段涉及的 `cli/`、`tests/` 与 execution log 变更。
+
 ## 工作流计划
 
 ### 工作流 A：Execute truth freeze
@@ -154,6 +168,20 @@ tests/
 **验证方式**：file-map review + tests matrix review。  
 **回退方式**：不进入 auto-fix runtime 实现。
 
+### 工作流 D：Program frontend execute preflight slice
+
+**范围**：per-spec frontend execute gate、frontend execute blockers 与 source linkage reuse。
+**影响范围**：后续 `program integrate --execute` 的 frontend preflight data source。
+**验证方式**：`tests/unit/test_program_service.py` + fresh `ruff` / `verify constraints`。
+**回退方式**：不改 `program_cmd.py` 的 execute surface。
+
+### 工作流 E：Program execute CLI frontend gate surface slice
+
+**范围**：`program integrate --execute` 的 frontend gate 输出与最小 remediation hint。
+**影响范围**：operator-facing execute preflight，可见性提升但不新增 auto-fix / recheck loop。
+**验证方式**：`tests/integration/test_cli_program.py` + fresh `ruff` / `verify constraints`。
+**回退方式**：不修改 dry-run / status truth。
+
 ## 关键路径验证策略
 
 | 关键路径 | 主验证方式 | 次验证方式 |
@@ -163,9 +191,11 @@ tests/
 | recheck handoff clarity | contract review | file-map review |
 | remediation hint honesty | formal docs review | 人工审阅 |
 | downstream auto-fix handoff clarity | tasks / plan 对账 | `uv run ai-sdlc verify constraints` |
+| program frontend execute preflight correctness | `uv run pytest tests/unit/test_program_service.py -q` | execute gate payload / blockers review |
+| program execute CLI frontend gate correctness | `uv run pytest tests/integration/test_cli_program.py -q` | terminal wording / exit-code review |
 
 ## 当前建议的下游实现起点
 
-- 先在 `program_service.py` 定义 per-spec frontend execute gate 与 recheck handoff payload
+- 先在 `program_service.py` 定义 per-spec frontend execute gate
 - 再把 execute preflight / remediation hint 暴露到 `program integrate --execute`
 - auto-fix engine 与 writeback runtime 仍应作为后续 guarded child work item 单独承接

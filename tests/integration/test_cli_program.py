@@ -222,13 +222,61 @@ specs:
         assert result.exit_code == 2
         assert "requires explicit confirmation" in result.output
 
-    def test_program_integrate_execute_success(self, initialized_project_dir: Path) -> None:
+    def test_program_integrate_execute_surfaces_frontend_preflight_failure(
+        self, initialized_project_dir: Path
+    ) -> None:
         root = initialized_project_dir
         _write_manifest(root)
         for spec in ("001-auth", "002-course", "003-enroll"):
             (root / "specs" / spec / "development-summary.md").write_text(
                 "done\n", encoding="utf-8"
             )
+
+        with patch("ai_sdlc.cli.program_cmd.find_project_root", return_value=root):
+            result = runner.invoke(
+                app,
+                ["program", "integrate", "--execute", "--yes", "--allow-dirty"],
+            )
+
+        assert result.exit_code == 1
+        assert "Frontend Execute Preflight" in result.output
+        assert "missing_artifact" in result.output
+        assert "frontend_contract_observations" in result.output
+
+    def test_program_integrate_execute_surfaces_frontend_preflight_pass(
+        self, initialized_project_dir: Path
+    ) -> None:
+        root = initialized_project_dir
+        _write_manifest(root)
+        _write_minimal_frontend_contract_page_artifacts(root)
+        _write_frontend_gate_artifacts(root)
+        for spec in ("001-auth", "002-course", "003-enroll"):
+            (root / "specs" / spec / "development-summary.md").write_text(
+                "done\n", encoding="utf-8"
+            )
+            _write_frontend_contract_observations(root / "specs" / spec)
+
+        with patch("ai_sdlc.cli.program_cmd.find_project_root", return_value=root):
+            result = runner.invoke(
+                app,
+                ["program", "integrate", "--execute", "--yes", "--allow-dirty"],
+            )
+
+        assert result.exit_code == 0
+        assert "Frontend Execute Preflight" in result.output
+        assert "ready" in result.output
+        assert "Execution gates passed" in result.output
+
+    def test_program_integrate_execute_success(self, initialized_project_dir: Path) -> None:
+        root = initialized_project_dir
+        _write_manifest(root)
+        _write_minimal_frontend_contract_page_artifacts(root)
+        _write_frontend_gate_artifacts(root)
+        for spec in ("001-auth", "002-course", "003-enroll"):
+            (root / "specs" / spec / "development-summary.md").write_text(
+                "done\n", encoding="utf-8"
+            )
+            _write_frontend_contract_observations(root / "specs" / spec)
         report_rel = ".ai-sdlc/memory/program-integrate-execute.md"
         with patch("ai_sdlc.cli.program_cmd.find_project_root", return_value=root):
             result = runner.invoke(

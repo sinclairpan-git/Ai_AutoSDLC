@@ -280,6 +280,7 @@ def program_integrate(
         )
         raise typer.Exit(code=2)
 
+    _render_frontend_execute_preflight(plan.steps)
     gates = svc.evaluate_execute_gates(mf, allow_dirty=allow_dirty)
     if gates.warnings:
         console.print("\n[bold yellow]Gate warnings[/bold yellow]")
@@ -326,6 +327,17 @@ def _render_frontend_status_lines(rows: list[object]) -> None:
 
 def _render_frontend_integrate_lines(steps: list[object]) -> None:
     console.print("\n[bold cyan]Frontend Hints[/bold cyan]")
+    for step in steps:
+        spec_id = str(getattr(step, "spec_id", "")).strip() or "unknown-spec"
+        readiness = getattr(step, "frontend_readiness", None)
+        console.print(
+            f"  - {spec_id}: {_format_frontend_readiness(readiness)}",
+            markup=False,
+        )
+
+
+def _render_frontend_execute_preflight(steps: list[object]) -> None:
+    console.print("\n[bold cyan]Frontend Execute Preflight[/bold cyan]")
     for step in steps:
         spec_id = str(getattr(step, "spec_id", "")).strip() or "unknown-spec"
         readiness = getattr(step, "frontend_readiness", None)
