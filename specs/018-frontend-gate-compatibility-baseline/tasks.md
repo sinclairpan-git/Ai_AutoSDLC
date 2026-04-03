@@ -22,6 +22,7 @@ Batch 5: gate policy artifact slice
 Batch 6: frontend gate verification helper slice
 Batch 7: verify constraints attachment slice
 Batch 8: VerificationGate aggregation slice
+Batch 9: verify CLI summary surface slice
 ```
 
 ---
@@ -37,12 +38,14 @@ Batch 8: VerificationGate aggregation slice
 - `Batch 6` 只允许写入 `src/ai_sdlc/core/frontend_gate_verification.py`、`tests/unit/test_frontend_gate_verification.py`、`specs/018-frontend-gate-compatibility-baseline/task-execution-log.md`，以及为本批边界服务的 `plan.md / tasks.md`。
 - `Batch 7` 只允许写入 `src/ai_sdlc/core/verify_constraints.py`、`tests/unit/test_verify_constraints.py`、`specs/018-frontend-gate-compatibility-baseline/task-execution-log.md`，以及为本批边界服务的 `plan.md / tasks.md`。
 - `Batch 8` 只允许写入 `src/ai_sdlc/gates/pipeline_gates.py`、`tests/unit/test_gates.py`、`specs/018-frontend-gate-compatibility-baseline/task-execution-log.md`，以及为本批边界服务的 `plan.md / tasks.md`。
+- `Batch 9` 只允许写入 `src/ai_sdlc/cli/verify_cmd.py`、`tests/integration/test_cli_verify_constraints.py`、`specs/018-frontend-gate-compatibility-baseline/task-execution-log.md`，以及为本批边界服务的 `plan.md / tasks.md`。
 - 只有在用户明确要求进入实现，且 `018` formal docs 已通过门禁后，才允许进入 `src/` / `tests/` 级实现。
 - 当前首批实现只放行 gate matrix / compatibility policy / report models，不放行完整 gate runtime、recheck agent 或 auto-fix engine。
 - 当前第二批实现只放行 gate policy artifact instantiation，不放行完整 gate runtime、recheck agent 或 auto-fix engine。
 - 当前第三批实现只放行 frontend gate verification helper，不放行完整 gate runtime、recheck agent 或 auto-fix engine。
 - 当前第四批实现只放行 `verify_constraints` 的 scoped attachment，不放行 `VerificationGate` / CLI / 完整 gate runtime。
 - 当前第五批实现只放行 `VerificationGate / VerifyGate` 的 scoped aggregation，不放行 CLI surface 或完整 gate runtime。
+- 当前第六批实现只放行 verify CLI 的 scoped summary 渲染，不放行新的 JSON schema、完整 gate runtime 或 auto-fix engine。
 
 ---
 
@@ -387,3 +390,46 @@ Batch 8: VerificationGate aggregation slice
   2. `uv run ruff check src tests`、`git diff --check -- specs/018-frontend-gate-compatibility-baseline src/ai_sdlc/gates tests/unit` 与 `uv run ai-sdlc verify constraints` 通过
   3. `task-execution-log.md` 追加记录当前 aggregation batch 的 touched files、验证命令与结论
 - **验证**：`uv run pytest tests/unit/test_gates.py -q`, `uv run ruff check src tests`, `git diff --check -- specs/018-frontend-gate-compatibility-baseline src/ai_sdlc/gates tests/unit`, `uv run ai-sdlc verify constraints`
+
+---
+
+## Batch 9：verify CLI summary surface slice
+
+### Task 9.1 先写 failing tests 固定 frontend gate summary 的终端输出语义
+
+- **任务编号**：T91
+- **优先级**：P0
+- **依赖**：T83
+- **文件**：`tests/integration/test_cli_verify_constraints.py`
+- **可并行**：否
+- **验收标准**：
+  1. 集成测试明确覆盖 active `018` 且 gate artifacts 完整时的 PASS 终端输出
+  2. 集成测试明确覆盖 active `018` 且 gate policy artifacts 缺失时的 RETRY 终端输出与 coverage gap 摘要
+  3. 首次运行定向测试时必须出现预期失败，证明 `verify_cmd.py` 尚未渲染 frontend gate summary
+- **验证**：`uv run pytest tests/integration/test_cli_verify_constraints.py -q -k "018_frontend_gate"`
+
+### Task 9.2 实现最小 verify CLI summary 渲染
+
+- **任务编号**：T92
+- **优先级**：P0
+- **依赖**：T91
+- **文件**：`src/ai_sdlc/cli/verify_cmd.py`
+- **可并行**：否
+- **验收标准**：
+  1. `ai-sdlc verify constraints` 的终端输出能在 active `018` 时显示 `frontend gate verification` verdict
+  2. 终端输出能在非 PASS 路径展示最小 coverage gap 或 blocker 摘要，而不改写现有 JSON payload 结构
+  3. 实现保持 scoped summary surface，不引入新的 gate runtime 或第二套 frontend gate summary 结构
+- **验证**：`uv run pytest tests/integration/test_cli_verify_constraints.py -q -k "018_frontend_gate"`
+
+### Task 9.3 Fresh verify 并追加 CLI batch 归档
+
+- **任务编号**：T93
+- **优先级**：P0
+- **依赖**：T92
+- **文件**：`specs/018-frontend-gate-compatibility-baseline/task-execution-log.md`
+- **可并行**：否
+- **验收标准**：
+  1. `uv run pytest tests/integration/test_cli_verify_constraints.py -q -k "018_frontend_gate"` 通过
+  2. `uv run ruff check src tests`、`git diff --check -- specs/018-frontend-gate-compatibility-baseline src/ai_sdlc/cli tests/integration` 与 `uv run ai-sdlc verify constraints` 通过
+  3. `task-execution-log.md` 追加记录当前 CLI batch 的 touched files、验证命令与结论
+- **验证**：`uv run pytest tests/integration/test_cli_verify_constraints.py -q -k "018_frontend_gate"`, `uv run ruff check src tests`, `git diff --check -- specs/018-frontend-gate-compatibility-baseline src/ai_sdlc/cli tests/integration`, `uv run ai-sdlc verify constraints`

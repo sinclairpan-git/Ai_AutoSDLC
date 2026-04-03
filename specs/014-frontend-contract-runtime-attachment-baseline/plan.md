@@ -34,7 +34,7 @@ related_doc:
 - 再冻结 attachment trigger、scope、failure honesty 与 ownership 顺序
 - 最后给出后续 `core / cli / runner / tests` 的推荐文件面与测试矩阵
 
-当前 formal baseline 已完成。经用户明确要求继续后，当前只允许进入第一批实现切片：`runtime attachment helper`，把 scope resolution、artifact path resolution、missing/stale honesty 与 explicit opt-in policy 收敛到共享 `core/` helper；不同时触碰 `run_cmd.py`、`runner.py` 或 `program_cmd.py` 的 runtime wiring。
+当前 formal baseline、`runtime attachment helper` 与 `runner verify-context wiring` 实现切片已完成。经用户明确要求连续推进 MVP 后，当前允许继续进入下一批实现切片：`run CLI attachment summary surface`，把 runtime attachment 状态正式暴露到 `ai-sdlc run` 的终端用户面；不同时触碰 `program_cmd.py`、registry、scanner/provider 写入或新的 gate verdict。
 
 ## 技术背景
 
@@ -102,10 +102,10 @@ src/ai_sdlc/
 src/ai_sdlc/
 ├── core/
 │   ├── frontend_contract_runtime_attachment.py      # scope resolution / attachment policy / orchestration helper
-│   └── runner.py                                    # only when runtime attachment truly needs pipeline wiring
+│   └── runner.py                                    # verify-stage runtime attachment context
 ├── cli/
 │   ├── commands.py                                  # only if explicit export handoff needs refinement
-│   ├── run_cmd.py                                   # only when run surface needs explicit frontend-contract options
+│   ├── run_cmd.py                                   # current slice: runtime attachment CLI summary surface
 │   └── program_cmd.py                               # downstream only; not owned by first implementation slice
 └── integrations/
     └── ...                                          # reserved for downstream work items only
@@ -182,6 +182,13 @@ tests/
 **验证方式**：定向 `pytest`、`uv run ruff check src tests`、`git diff --check`、`uv run ai-sdlc verify constraints`。
 **回退方式**：仅回退本阶段涉及的 `core/`、`tests/` 与 execution log 变更。
 
+### Phase 6：Run CLI attachment summary surface slice
+
+**目标**：把 active `014` scope 的 runtime attachment status 暴露到 `ai-sdlc run` 的终端输出，让 operator 在不读取 runner internal context 的前提下也能看到 `attached / missing_artifact / invalid_artifact` 等状态与最小 gap 摘要。
+**产物**：`src/ai_sdlc/cli/run_cmd.py`、`tests/integration/test_cli_run.py`。
+**验证方式**：定向 `pytest`、`uv run ruff check src tests`、`git diff --check`、`uv run ai-sdlc verify constraints`。
+**回退方式**：仅回退本阶段涉及的 `cli/`、`tests/` 与 execution log 变更。
+
 ## 工作流计划
 
 ### 工作流 A：Runtime attachment truth freeze
@@ -230,6 +237,7 @@ tests/
 | downstream handoff clarity | file-map review | 人工审阅 |
 | runtime attachment helper correctness | `uv run pytest tests/unit/test_frontend_contract_runtime_attachment.py -q` | attachment status / policy review |
 | runner verify-context attachment correctness | `uv run pytest tests/unit/test_runner_confirm.py -q` | verify context payload review |
+| run CLI attachment summary correctness | `uv run pytest tests/integration/test_cli_run.py -q -k "runtime_attachment"` | terminal wording / scoped rendering review |
 
 ## 当前建议的下游实现起点
 

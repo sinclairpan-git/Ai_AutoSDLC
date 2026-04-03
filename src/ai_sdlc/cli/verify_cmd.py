@@ -79,6 +79,7 @@ def verify_constraints(
         verification_context.get("verification_sources", (report.source_name,))
     )
     frontend_contract_summary = verification_context.get("frontend_contract_verification")
+    frontend_gate_summary = verification_context.get("frontend_gate_verification")
     blockers = list(report.blockers)
     governance = build_verification_governance_bundle(
         report,
@@ -194,6 +195,7 @@ def verify_constraints(
                 verdict = str(report.release_gate.get("overall_verdict", "UNKNOWN"))
                 console.print(f"[cyan]release gate: {verdict}[/cyan]")
         _render_frontend_contract_summary(frontend_contract_summary)
+        _render_frontend_gate_summary(frontend_gate_summary)
 
     raise typer.Exit(
         code=1 if governance["gate_decision_payload"]["decision_result"] == "block" else 0
@@ -201,6 +203,14 @@ def verify_constraints(
 
 
 def _render_frontend_contract_summary(summary: object) -> None:
+    _render_frontend_summary("frontend contract verification", summary)
+
+
+def _render_frontend_gate_summary(summary: object) -> None:
+    _render_frontend_summary("frontend gate verification", summary)
+
+
+def _render_frontend_summary(label: str, summary: object) -> None:
     if not isinstance(summary, dict):
         return
 
@@ -214,7 +224,7 @@ def _render_frontend_contract_summary(summary: object) -> None:
         details.append("blockers: " + "; ".join(blockers[:1]))
     suffix = f" ({'; '.join(details)})" if details else ""
     style = "green" if verdict == "PASS" else "yellow"
-    console.print(f"[{style}]frontend contract verification: {verdict}{suffix}[/{style}]")
+    console.print(f"[{style}]{label}: {verdict}{suffix}[/{style}]")
 
 
 def _string_list(value: object) -> list[str]:

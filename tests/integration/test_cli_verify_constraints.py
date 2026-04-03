@@ -19,6 +19,16 @@ from ai_sdlc.core.frontend_contract_observation_provider import (
     write_frontend_contract_observation_artifact,
 )
 from ai_sdlc.core.frontend_contract_verification import FRONTEND_CONTRACT_SOURCE_NAME
+from ai_sdlc.generators.frontend_gate_policy_artifacts import (
+    materialize_frontend_gate_policy_artifacts,
+)
+from ai_sdlc.generators.frontend_generation_constraint_artifacts import (
+    materialize_frontend_generation_constraint_artifacts,
+)
+from ai_sdlc.models.frontend_gate_policy import build_mvp_frontend_gate_policy
+from ai_sdlc.models.frontend_generation_constraints import (
+    build_mvp_frontend_generation_constraints,
+)
 from ai_sdlc.models.state import Checkpoint, FeatureInfo
 from ai_sdlc.routers.bootstrap import init_project
 
@@ -218,6 +228,58 @@ def _write_012_frontend_contract_observations(
         generated_at="2026-04-02T14:30:00Z",
     )
     write_frontend_contract_observation_artifact(spec_dir, artifact)
+
+
+def _write_018_checkpoint(root: Path) -> None:
+    spec = root / "specs" / "018-frontend-gate-compatibility-baseline"
+    spec.mkdir(parents=True, exist_ok=True)
+    save_checkpoint(
+        root,
+        Checkpoint(
+            current_stage="verify",
+            feature=FeatureInfo(
+                id="018",
+                spec_dir="specs/018-frontend-gate-compatibility-baseline",
+                design_branch="d",
+                feature_branch="f",
+                current_branch="main",
+            ),
+        ),
+    )
+
+
+def _write_018_frontend_contract_observations(
+    root: Path, *, page_id: str = "user-create", recipe_id: str = "form-create"
+) -> None:
+    spec_dir = (
+        root / "specs" / "018-frontend-gate-compatibility-baseline"
+    )
+    artifact = build_frontend_contract_observation_artifact(
+        observations=[
+            PageImplementationObservation(
+                page_id=page_id,
+                recipe_id=recipe_id,
+                i18n_keys=[],
+                validation_fields=[],
+                new_legacy_usages=[],
+            )
+        ],
+        provider_kind="manual",
+        provider_name="test-fixture",
+        generated_at="2026-04-03T14:30:00Z",
+    )
+    write_frontend_contract_observation_artifact(spec_dir, artifact)
+
+
+def _write_018_gate_artifacts(root: Path) -> None:
+    materialize_frontend_gate_policy_artifacts(
+        root,
+        build_mvp_frontend_gate_policy(),
+    )
+    materialize_frontend_generation_constraint_artifacts(
+        root,
+        build_mvp_frontend_generation_constraints(),
+    )
 
 
 def _write_branch_lifecycle_fixture(
@@ -758,6 +820,43 @@ class TestCliVerifyConstraints:
 
         assert result.exit_code == 0
         assert "frontend contract verification: PASS" in result.output
+
+    def test_terminal_output_exposes_018_frontend_gate_summary_when_ready(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        init_project(tmp_path)
+        _minimal_constitution(tmp_path)
+        _write_018_checkpoint(tmp_path)
+        _write_012_frontend_contract_page_artifacts(tmp_path)
+        _write_018_gate_artifacts(tmp_path)
+        _write_018_frontend_contract_observations(tmp_path)
+        monkeypatch.chdir(tmp_path)
+
+        result = runner.invoke(app, ["verify", "constraints"])
+
+        assert result.exit_code == 0
+        assert "frontend gate verification: PASS" in result.output
+
+    def test_terminal_output_exposes_018_frontend_gate_retry_summary_when_policy_missing(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        init_project(tmp_path)
+        _minimal_constitution(tmp_path)
+        _write_018_checkpoint(tmp_path)
+        _write_012_frontend_contract_page_artifacts(tmp_path)
+        materialize_frontend_generation_constraint_artifacts(
+            tmp_path,
+            build_mvp_frontend_generation_constraints(),
+        )
+        _write_018_frontend_contract_observations(tmp_path)
+        monkeypatch.chdir(tmp_path)
+
+        result = runner.invoke(app, ["verify", "constraints"])
+
+        assert result.exit_code == 1
+        assert "frontend gate verification: RETRY" in result.output
+        assert "coverage gaps:" in result.output
+        assert "frontend_gate_policy_artifacts" in result.output
 
     def test_exit_0_when_003_feature_contract_surfaces_complete(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch

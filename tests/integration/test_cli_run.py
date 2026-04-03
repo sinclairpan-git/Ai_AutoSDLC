@@ -11,6 +11,11 @@ from typer.testing import CliRunner
 from ai_sdlc.cli.main import app
 from ai_sdlc.context.state import load_checkpoint, save_checkpoint
 from ai_sdlc.core.config import save_project_config
+from ai_sdlc.core.frontend_contract_drift import PageImplementationObservation
+from ai_sdlc.core.frontend_contract_observation_provider import (
+    build_frontend_contract_observation_artifact,
+    write_frontend_contract_observation_artifact,
+)
 from ai_sdlc.core.runner import SDLCRunner
 from ai_sdlc.models.gate import GateCheck, GateResult, GateVerdict
 from ai_sdlc.models.project import ProjectConfig
@@ -44,6 +49,21 @@ def _clear_ide_env(monkeypatch: pytest.MonkeyPatch) -> None:
 
 class TestRunCommand:
     @staticmethod
+    def _force_passing_gates(monkeypatch: pytest.MonkeyPatch) -> None:
+        original_run_gate = SDLCRunner._run_gate
+
+        def gate_wrapper(self: SDLCRunner, stage: str, cp: Checkpoint) -> GateResult:
+            if stage == "init":
+                return original_run_gate(self, stage, cp)
+            return GateResult(
+                stage=stage,
+                verdict=GateVerdict.PASS,
+                checks=[GateCheck(name=f"{stage}_ok", passed=True)],
+            )
+
+        monkeypatch.setattr(SDLCRunner, "_run_gate", gate_wrapper)
+
+    @staticmethod
     def _write_pipeline_config(
         root: Path,
         *,
@@ -68,6 +88,43 @@ class TestRunCommand:
             ),
             encoding="utf-8",
         )
+
+    @staticmethod
+    def _write_014_checkpoint(root: Path) -> None:
+        spec = root / "specs" / "014-runtime-attachment"
+        spec.mkdir(parents=True, exist_ok=True)
+        save_checkpoint(
+            root,
+            Checkpoint(
+                current_stage="verify",
+                feature=FeatureInfo(
+                    id="014-runtime-attachment",
+                    spec_dir="specs/014-runtime-attachment",
+                    design_branch="design/014-runtime-attachment",
+                    feature_branch="feature/014-runtime-attachment",
+                    current_branch="feature/014-runtime-attachment",
+                ),
+            ),
+        )
+
+    @staticmethod
+    def _write_014_frontend_contract_observations(root: Path) -> None:
+        spec_dir = root / "specs" / "014-runtime-attachment"
+        artifact = build_frontend_contract_observation_artifact(
+            observations=[
+                PageImplementationObservation(
+                    page_id="user-create",
+                    recipe_id="form-create",
+                    i18n_keys=["user.create.submit"],
+                    validation_fields=["username"],
+                )
+            ],
+            provider_kind="scanner",
+            provider_name="frontend-contract-scanner",
+            generated_at="2026-04-03T10:00:00Z",
+            source_digest="sha256:cli-run",
+        )
+        write_frontend_contract_observation_artifact(spec_dir, artifact)
 
     def test_run_outside_project(self, tmp_path: Path) -> None:
         """Not inside a project → exit 1 (not found) or 2 (halt), never success."""
@@ -328,3 +385,32 @@ class TestRunCommand:
         result = runner.invoke(app, ["run", "--dry-run"])
         assert result.exit_code == 0
         assert "Pipeline completed. Stage: verify" in result.output
+
+    def test_run_dry_run_exposes_014_runtime_attachment_summary_when_attached(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.chdir(tmp_path)
+        assert runner.invoke(app, ["init", "."]).exit_code == 0
+        self._write_014_checkpoint(tmp_path)
+        self._write_014_frontend_contract_observations(tmp_path)
+        self._force_passing_gates(monkeypatch)
+
+        result = runner.invoke(app, ["run", "--dry-run"])
+
+        assert result.exit_code == 0
+        assert "frontend contract runtime attachment: attached" in result.output
+
+    def test_run_dry_run_exposes_014_runtime_attachment_gap_when_artifact_missing(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.chdir(tmp_path)
+        assert runner.invoke(app, ["init", "."]).exit_code == 0
+        self._write_014_checkpoint(tmp_path)
+        self._force_passing_gates(monkeypatch)
+
+        result = runner.invoke(app, ["run", "--dry-run"])
+
+        assert result.exit_code == 0
+        assert "frontend contract runtime attachment: missing_artifact" in result.output
+        assert "coverage gaps:" in result.output
+        assert "frontend_contract_observations" in result.output

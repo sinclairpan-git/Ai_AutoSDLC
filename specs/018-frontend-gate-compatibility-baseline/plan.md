@@ -29,7 +29,7 @@ related_doc:
 - 再冻结 MVP gate matrix、结构化输出、Recheck 和 Auto-fix 边界
 - 最后给出后续 `models / reports / gates / tests` 的推荐文件面与测试矩阵
 
-当前 formal baseline、`gate matrix and report models`、`gate policy artifacts`、`frontend gate verification helper` 与 `verify constraints attachment` 实现切片已完成。经用户明确要求连续推进 MVP 后，当前允许继续进入下一批实现切片：`VerificationGate aggregation`，把 frontend gate summary 正式并进 gate layer；不同时触碰完整 gate execution runtime 或 auto-fix engine。
+当前 formal baseline、`gate matrix and report models`、`gate policy artifacts`、`frontend gate verification helper`、`verify constraints attachment` 与 `VerificationGate aggregation` 实现切片已完成。经用户明确要求连续推进 MVP 后，当前允许继续进入下一批实现切片：`verify CLI summary surface`，把 frontend gate summary 正式暴露到 `ai-sdlc verify constraints` 的终端用户面；不同时触碰新的 JSON schema、完整 gate execution runtime 或 auto-fix engine。
 
 ## 技术背景
 
@@ -62,15 +62,18 @@ src/ai_sdlc/
 ├── core/
 │   ├── frontend_gate_verification.py
 │   └── verify_constraints.py
+├── cli/
+│   └── verify_cmd.py                         # current slice: frontend gate CLI summary surface
 └── gates/
-    └── pipeline_gates.py                     # current slice: frontend gate summary aggregation
+    └── pipeline_gates.py
 
 tests/
 ├── unit/test_frontend_gate_policy_models.py
 ├── unit/test_frontend_gate_policy_artifacts.py
 ├── unit/test_frontend_gate_verification.py
 ├── unit/test_verify_constraints.py
-└── unit/test_gates.py
+├── unit/test_gates.py
+└── integration/test_cli_verify_constraints.py
 ```
 
 ## 阶段计划
@@ -138,6 +141,13 @@ tests/
 **验证方式**：定向 `pytest`、`uv run ruff check src tests`、`git diff --check`、`uv run ai-sdlc verify constraints`。
 **回退方式**：仅回退本阶段涉及的 `gates/`、`tests/` 与 execution log 变更。
 
+### Phase 9：Verify CLI summary surface slice
+
+**目标**：将 scoped frontend gate summary 暴露到 `ai-sdlc verify constraints` 的终端输出，使 operator 在不读取 JSON payload 的前提下也能直接看到 frontend gate verdict 与 coverage gap 摘要。
+**产物**：`src/ai_sdlc/cli/verify_cmd.py`、`tests/integration/test_cli_verify_constraints.py`。
+**验证方式**：定向 `pytest`、`uv run ruff check src tests`、`git diff --check`、`uv run ai-sdlc verify constraints`。
+**回退方式**：仅回退本阶段涉及的 `cli/`、`tests/` 与 execution log 变更。
+
 ## 关键路径验证策略
 
 | 关键路径 | 主验证方式 | 次验证方式 |
@@ -151,3 +161,4 @@ tests/
 | frontend gate verification helper correctness | `uv run pytest tests/unit/test_frontend_gate_verification.py -q` | scoped verify payload review |
 | frontend gate verify attachment correctness | `uv run pytest tests/unit/test_verify_constraints.py -q` | active `018` verify surface review |
 | frontend gate verification aggregation correctness | `uv run pytest tests/unit/test_gates.py -q` | VerificationGate / VerifyGate payload review |
+| frontend gate CLI summary correctness | `uv run pytest tests/integration/test_cli_verify_constraints.py -q -k "018_frontend_gate"` | terminal wording / exit-code review |

@@ -564,3 +564,102 @@
 - **提交哈希**：`3552850`（`feat(gates): aggregate frontend gate verification in verify gates`）
 - **改动范围**：`specs/018-frontend-gate-compatibility-baseline/plan.md`、`specs/018-frontend-gate-compatibility-baseline/tasks.md`、`specs/018-frontend-gate-compatibility-baseline/task-execution-log.md`、`src/ai_sdlc/gates/pipeline_gates.py`、`tests/unit/test_gates.py`
 - **是否继续下一批**：按用户授权连续推进（优先转入 CLI summary surface 或下游 runtime child work item）
+
+### Batch 2026-04-03-007 | 018 Verify CLI summary surface slice
+
+#### 2.1 准备
+
+- **任务来源**：[`tasks.md`](tasks.md) `T91`、`T92`、`T93`
+- **目标**：把 scoped `frontend_gate_verification` summary 正式暴露到 `ai-sdlc verify constraints` 的终端输出，让 operator 不读取 JSON payload 也能直接看到 frontend gate verdict 与最小 gap 摘要。
+- **预读范围**：[`spec.md`](spec.md)、[`plan.md`](plan.md)、[`tasks.md`](tasks.md)、`src/ai_sdlc/cli/verify_cmd.py`、`src/ai_sdlc/core/verify_constraints.py`、`tests/integration/test_cli_verify_constraints.py`
+- **激活的规则**：TDD red-green；single canonical truth；verification-before-completion
+- **验证画像**：`code-change`
+
+#### 2.2 统一验证命令
+
+- **V1（Batch 9 parser 结构校验）**
+  - 命令：`uv run python -c "from pathlib import Path; from ai_sdlc.generators.doc_gen import TasksParser; plan = TasksParser().parse(Path('specs/018-frontend-gate-compatibility-baseline/tasks.md')); print({'total_tasks': plan.total_tasks, 'total_batches': plan.total_batches, 'batches': [batch.tasks for batch in plan.batches]})"`
+  - 结果：`{'total_tasks': 27, 'total_batches': 9, 'batches': [['T11', 'T12', 'T13'], ['T21', 'T22', 'T23'], ['T31', 'T32', 'T33'], ['T41', 'T42', 'T43'], ['T51', 'T52', 'T53'], ['T61', 'T62', 'T63'], ['T71', 'T72', 'T73'], ['T81', 'T82', 'T83'], ['T91', 'T92', 'T93']]}`
+- **V2（RED：018 CLI summary 定向测试）**
+  - 命令：`uv run pytest tests/integration/test_cli_verify_constraints.py -q -k "018_frontend_gate"`
+  - 结果：`2 failed, 27 deselected in 0.38s`
+- **V3（GREEN：018 CLI summary 定向测试）**
+  - 命令：`uv run pytest tests/integration/test_cli_verify_constraints.py -q -k "018_frontend_gate"`
+  - 结果：`2 passed, 27 deselected in 0.27s`
+- **V4（GREEN：verify CLI integration 全量回归）**
+  - 命令：`uv run pytest tests/integration/test_cli_verify_constraints.py -q`
+  - 结果：`29 passed in 2.86s`
+- **V5（静态检查）**
+  - 命令：`uv run ruff check src tests`
+  - 结果：`All checks passed!`
+- **V6（Markdown / code diff hygiene）**
+  - 命令：`git diff --check -- specs/018-frontend-gate-compatibility-baseline src/ai_sdlc/cli tests/integration`
+  - 结果：无输出。
+- **V7（治理只读校验）**
+  - 命令：`uv run ai-sdlc verify constraints`
+  - 结果：`verify constraints: no BLOCKERs.`
+
+#### 2.3 任务记录
+
+##### T91 | 先写 failing tests 固定 frontend gate summary 的终端输出语义
+
+- **改动范围**：`tests/integration/test_cli_verify_constraints.py`
+- **改动内容**：
+  - 新增 active `018` 的 CLI 集成测试，先固定 frontend gate ready 时的 PASS 终端输出。
+  - 新增 gate policy artifacts 缺失时的 RETRY 终端输出与 coverage gap 摘要断言。
+  - 首次运行定向测试时命中 `2 failed`，证明 `verify_cmd.py` 尚未渲染 frontend gate summary，RED 成立。
+- **新增/调整的测试**：扩展 `tests/integration/test_cli_verify_constraints.py`。
+- **测试结果**：RED 成立，失败点集中在 `frontend gate verification` summary 尚未出现在终端输出。
+- **是否符合任务目标**：符合。
+
+##### T92 | 实现最小 verify CLI summary 渲染
+
+- **改动范围**：`src/ai_sdlc/cli/verify_cmd.py`
+- **改动内容**：
+  - 从 `build_verification_gate_context()` 读取 `frontend_gate_verification` payload。
+  - 复用统一 summary 渲染路径，在终端输出中新增 `frontend gate verification: <VERDICT>` 行，并在非 PASS 路径显示最小 coverage gap / blocker 摘要。
+  - 实现保持 scoped user-facing summary，不改变 `--json` payload 结构，也不新增新的 gate runtime 逻辑。
+- **新增/调整的测试**：复用 `tests/integration/test_cli_verify_constraints.py`
+- **测试结果**：`2 passed, 27 deselected in 0.27s`
+- **是否符合任务目标**：符合。
+
+##### T93 | Fresh verify 并追加 CLI batch 归档
+
+- **改动范围**：`specs/018-frontend-gate-compatibility-baseline/plan.md`、`specs/018-frontend-gate-compatibility-baseline/tasks.md`、`specs/018-frontend-gate-compatibility-baseline/task-execution-log.md`
+- **改动内容**：
+  - 将 Batch 9 正式加入 `plan.md / tasks.md`，把 `verify CLI summary surface` 的 scope、文件面、验证面和执行护栏写成 formal truth。
+  - 回填本批 parser / RED / GREEN / integration / static / diff hygiene / governance 验证结果，并归档 touched files 与 CLI user-surface 边界。
+- **新增/调整的测试**：无新增测试文件；以本批 fresh verification 命令为准。
+- **测试结果**：全部通过。
+- **是否符合任务目标**：符合。
+
+#### 2.4 代码审查（Mandatory）
+
+- **宪章/规格对齐**：本批只进入 `verify constraints` 的 CLI summary surface，没有越界到 JSON schema 改写、完整 gate runtime、recheck agent 或 auto-fix engine。
+- **代码质量**：frontend gate summary 复用现有 verify context 与统一 summary 渲染逻辑，不新增平行 payload 结构。
+- **测试质量**：先 RED 再 GREEN，覆盖 PASS 与 RETRY 两类终端输出路径，并补 fresh integration、`ruff`、`diff --check` 与 `verify constraints`。
+- **结论**：`无 Critical 阻塞项`
+
+#### 2.5 任务/计划同步状态（Mandatory）
+
+- `tasks.md` 同步状态：`已同步`
+- `plan.md` 同步状态：`已同步`
+- `spec.md` 同步状态：`无需变更`
+- 关联 branch/worktree disposition 计划：`retained（沿用当前 009/011/012/013/014/015/016/017/018 工作分支）`
+- 说明：`018` 已经把 frontend gate summary 暴露到 verify CLI 终端面，但更完整的 runtime / recheck / auto-fix 工单仍待下游承接。`
+
+#### 2.6 自动决策记录（如有）
+
+- AD-007：CLI slice 只渲染既有 `frontend_gate_verification` payload，而不新增第二套 CLI-only summary schema。理由：保持 verify core、gate layer 与用户面的 summary 真值单一。
+- AD-008：RETRY 场景只输出最小 coverage gap / blocker 摘要，不直接展开完整 multiline diagnostics。理由：先提供 operator 可见性，再把更重的诊断扩展留给后续 runtime / report 工单。
+
+#### 2.7 批次结论
+
+- `018` 已具备 frontend gate summary 的 CLI user-facing surface，operator 现在可以直接从 `ai-sdlc verify constraints` 终端输出看到 frontend gate 的 PASS / RETRY 状态与最小缺口摘要。
+
+#### 2.8 归档后动作
+
+- **已完成 git 提交**：否
+- **提交哈希**：待本批提交后生成
+- **改动范围**：`specs/018-frontend-gate-compatibility-baseline/plan.md`、`specs/018-frontend-gate-compatibility-baseline/tasks.md`、`specs/018-frontend-gate-compatibility-baseline/task-execution-log.md`、`src/ai_sdlc/cli/verify_cmd.py`、`tests/integration/test_cli_verify_constraints.py`
+- **是否继续下一批**：按用户授权连续推进（优先评估 `014` 的 `run_cmd.py` 用户面，或为 frontend runtime / recheck / auto-fix 新开下游 child work item）

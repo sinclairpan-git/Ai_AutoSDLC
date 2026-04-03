@@ -300,3 +300,102 @@
 - **提交哈希**：本批唯一一次语义提交预期为 `feat(core): wire runtime attachment into runner verify context`；完整 SHA 以该提交后的 `HEAD`（`git rev-parse HEAD`）为准
 - **改动范围**：`specs/014-frontend-contract-runtime-attachment-baseline/plan.md`、`specs/014-frontend-contract-runtime-attachment-baseline/tasks.md`、`specs/014-frontend-contract-runtime-attachment-baseline/task-execution-log.md`、`src/ai_sdlc/core/frontend_contract_runtime_attachment.py`、`src/ai_sdlc/core/runner.py`、`tests/unit/test_runner_confirm.py`
 - **是否继续下一批**：按用户授权连续推进（下一优先级是 `run_cmd.py` 用户面，或在 `014` 达到 MVP 最小闭环后转入下一个 MVP downstream work item）
+
+### Batch 2026-04-03-004 | 014 Run CLI attachment summary surface slice
+
+#### 2.1 准备
+
+- **任务来源**：[`tasks.md`](tasks.md) `T61`、`T62`、`T63`
+- **目标**：把 active `014` scope 的 runtime attachment status 正式暴露到 `ai-sdlc run` 的终端输出，让 operator 不读取 runner 内部 context 也能看到 `attached / missing_artifact` 状态与最小 gap 摘要。
+- **预读范围**：[`spec.md`](spec.md)、[`plan.md`](plan.md)、[`tasks.md`](tasks.md)、`src/ai_sdlc/cli/run_cmd.py`、`src/ai_sdlc/core/frontend_contract_runtime_attachment.py`、`src/ai_sdlc/core/runner.py`、`tests/integration/test_cli_run.py`
+- **激活的规则**：TDD red-green；single canonical truth；verification-before-completion
+- **验证画像**：`code-change`
+
+#### 2.2 统一验证命令
+
+- **V1（Batch 6 parser 结构校验）**
+  - 命令：`uv run python -c "from pathlib import Path; from ai_sdlc.generators.doc_gen import TasksParser; plan = TasksParser().parse(Path('specs/014-frontend-contract-runtime-attachment-baseline/tasks.md')); print({'total_tasks': plan.total_tasks, 'total_batches': plan.total_batches, 'batches': [batch.tasks for batch in plan.batches]})"`
+  - 结果：`{'total_tasks': 18, 'total_batches': 6, 'batches': [['T11', 'T12', 'T13'], ['T21', 'T22', 'T23'], ['T31', 'T32', 'T33'], ['T41', 'T42', 'T43'], ['T51', 'T52', 'T53'], ['T61', 'T62', 'T63']]}`
+- **V2（RED：014 run CLI summary 定向测试）**
+  - 命令：`uv run pytest tests/integration/test_cli_run.py -q -k "runtime_attachment"`
+  - 结果：`2 failed, 10 deselected in 0.34s`
+- **V3（GREEN：014 run CLI summary 定向测试）**
+  - 命令：`uv run pytest tests/integration/test_cli_run.py -q -k "runtime_attachment"`
+  - 结果：`2 passed, 10 deselected in 0.23s`
+- **V4（GREEN：run CLI integration 全量回归）**
+  - 命令：`uv run pytest tests/integration/test_cli_run.py -q`
+  - 结果：`12 passed in 1.33s`
+- **V5（静态检查）**
+  - 命令：`uv run ruff check src tests`
+  - 结果：`All checks passed!`
+- **V6（Markdown / code diff hygiene）**
+  - 命令：`git diff --check -- specs/014-frontend-contract-runtime-attachment-baseline src/ai_sdlc/cli tests/integration`
+  - 结果：无输出。
+- **V7（治理只读校验）**
+  - 命令：`uv run ai-sdlc verify constraints`
+  - 结果：`verify constraints: no BLOCKERs.`
+
+#### 2.3 任务记录
+
+##### T61 | 先写 failing tests 固定 runtime attachment 的 run 终端输出语义
+
+- **改动范围**：`tests/integration/test_cli_run.py`
+- **改动内容**：
+  - 新增 active `014` 且 runtime attachment 已 attached 时的 `run --dry-run` 终端输出断言。
+  - 新增 active `014` 且 observation artifact 缺失时的终端输出与最小 `coverage_gaps` 摘要断言。
+  - 首次运行定向测试时命中 `2 failed`，证明 `run_cmd.py` 尚未渲染 runtime attachment summary，RED 成立。
+- **新增/调整的测试**：扩展 `tests/integration/test_cli_run.py`。
+- **测试结果**：RED 成立，失败点集中在 `frontend contract runtime attachment` summary 尚未出现在终端输出。
+- **是否符合任务目标**：符合。
+
+##### T62 | 实现最小 run CLI attachment summary 渲染
+
+- **改动范围**：`src/ai_sdlc/cli/run_cmd.py`
+- **改动内容**：
+  - 在 `run` 命令完成后，对 active `014` scope 读取既有 runtime attachment helper，并输出 `frontend contract runtime attachment: <status>` 行。
+  - 在非 attached 路径显示最小 `coverage gaps` 或 blocker 摘要，但不改变 runner context、gate verdict 或任何 runtime side effect。
+  - 保持 CLI summary 只消费已冻结的 helper truth，不新增 CLI-only attachment schema。
+- **新增/调整的测试**：复用 `tests/integration/test_cli_run.py`
+- **测试结果**：`2 passed, 10 deselected in 0.23s`
+- **是否符合任务目标**：符合。
+
+##### T63 | Fresh verify 并追加 CLI batch 归档
+
+- **改动范围**：`specs/014-frontend-contract-runtime-attachment-baseline/plan.md`、`specs/014-frontend-contract-runtime-attachment-baseline/tasks.md`、`specs/014-frontend-contract-runtime-attachment-baseline/task-execution-log.md`
+- **改动内容**：
+  - 将 Batch 6 正式加入 `plan.md / tasks.md`，把 `run CLI attachment summary surface` 的 scope、文件面、验证面和执行护栏写成 formal truth。
+  - 回填本批 parser / RED / GREEN / integration / static / diff hygiene / governance 验证结果，并归档 touched files 与 CLI user-surface 边界。
+- **新增/调整的测试**：无新增测试文件；以本批 fresh verification 命令为准。
+- **测试结果**：全部通过。
+- **是否符合任务目标**：符合。
+
+#### 2.4 代码审查（Mandatory）
+
+- **宪章/规格对齐**：本批只进入 `run_cmd.py` 的 CLI summary surface，没有越界到 `program_cmd.py`、registry、scanner/provider 写入或新的 gate verdict。
+- **代码质量**：runtime attachment summary 复用既有 helper truth，不复制第二套 attachment payload。
+- **测试质量**：先 RED 再 GREEN，覆盖 attached 与 missing_artifact 两类终端输出路径，并补 fresh integration、`ruff`、`diff --check` 与 `verify constraints`。
+- **结论**：`无 Critical 阻塞项`
+
+#### 2.5 任务/计划同步状态（Mandatory）
+
+- `tasks.md` 同步状态：`已同步`
+- `plan.md` 同步状态：`已同步`
+- `spec.md` 同步状态：`无需变更`
+- 关联 branch/worktree disposition 计划：`retained（沿用当前 009/011/012/013/014/015/016/017/018 工作分支）`
+- 说明：`014` 已经把 runtime attachment status 暴露到 run CLI 终端面，但 `program_cmd.py` 与更重的 orchestration/runtime 工单仍待下游承接。`
+
+#### 2.6 自动决策记录（如有）
+
+- AD-010：CLI slice 只渲染既有 runtime attachment helper 的结构化状态，而不新增 CLI-only attachment schema。理由：保持 helper、runner context 与用户面的真值单一。
+- AD-011：非 attached 路径仅输出最小 coverage gap / blocker 摘要，不在 `run` 终端面展开完整 diagnostics。理由：先提供 operator 可见性，再把更重的诊断扩展留给下游 orchestration/runtime 工单。
+
+#### 2.7 批次结论
+
+- `014` 已具备 runtime attachment 的 run CLI user-facing surface，operator 现在可以直接从 `ai-sdlc run` 输出看到 attachment 是否已挂接，以及最小缺口摘要。
+
+#### 2.8 归档后动作
+
+- **已完成 git 提交**：否
+- **提交哈希**：待本批提交后生成
+- **改动范围**：`specs/014-frontend-contract-runtime-attachment-baseline/plan.md`、`specs/014-frontend-contract-runtime-attachment-baseline/tasks.md`、`specs/014-frontend-contract-runtime-attachment-baseline/task-execution-log.md`、`src/ai_sdlc/cli/run_cmd.py`、`tests/integration/test_cli_run.py`
+- **是否继续下一批**：按用户授权连续推进（优先评估 `program_cmd.py` 用户面，或为 frontend orchestration/runtime 新开下游 child work item）

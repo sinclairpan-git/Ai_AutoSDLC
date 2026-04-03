@@ -10,10 +10,15 @@ from rich.panel import Panel
 
 from ai_sdlc.cli.commands import _print_reconcile_guidance
 from ai_sdlc.core.config import load_project_config
+from ai_sdlc.core.frontend_contract_runtime_attachment import (
+    build_frontend_contract_runtime_attachment,
+    is_frontend_contract_runtime_attachment_work_item,
+)
 from ai_sdlc.core.reconcile import detect_reconcile_hint
 from ai_sdlc.core.runner import PipelineHaltError, SDLCRunner
 from ai_sdlc.integrations.ide_adapter import IDEKind
 from ai_sdlc.models.project import ActivationState
+from ai_sdlc.models.state import Checkpoint
 from ai_sdlc.utils.helpers import find_project_root
 
 console = Console()
@@ -90,6 +95,36 @@ def run_command(
         console.print(
             f"\n[bold green]Pipeline completed. Stage: {cp.current_stage}[/bold green]"
         )
+        _render_frontend_contract_runtime_attachment_summary(root, cp)
     except PipelineHaltError as exc:
         console.print(f"\n[bold red]Pipeline halted: {exc}[/bold red]")
         raise typer.Exit(code=2) from None
+
+
+def _render_frontend_contract_runtime_attachment_summary(
+    root: object,
+    checkpoint: Checkpoint | None,
+) -> None:
+    if checkpoint is None or not is_frontend_contract_runtime_attachment_work_item(
+        checkpoint
+    ):
+        return
+
+    attachment = build_frontend_contract_runtime_attachment(
+        root,
+        checkpoint=checkpoint,
+    )
+    coverage_gaps = list(attachment.coverage_gaps[:3])
+    blockers = list(attachment.blockers[:1])
+    details: list[str] = []
+    if coverage_gaps:
+        details.append("coverage gaps: " + ", ".join(coverage_gaps))
+    elif blockers:
+        details.append("blockers: " + "; ".join(blockers))
+
+    suffix = f" ({'; '.join(details)})" if details else ""
+    style = "green" if attachment.status == "attached" else "yellow"
+    console.print(
+        f"[{style}]frontend contract runtime attachment: "
+        f"{attachment.status}{suffix}[/{style}]"
+    )
