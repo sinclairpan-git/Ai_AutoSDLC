@@ -23,6 +23,29 @@ def _no_ide_adapter_hook() -> None:
 
 
 class TestCliWorkitemInit:
+    def test_workitem_init_guides_formal_bootstrap_when_state_missing(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        root = tmp_path / "repo"
+        (root / ".ai-sdlc" / "project" / "config").mkdir(parents=True)
+        monkeypatch.chdir(root)
+
+        result = runner.invoke(
+            app,
+            [
+                "workitem",
+                "init",
+                "--title",
+                "Direct Formal Entry",
+            ],
+        )
+
+        assert result.exit_code == 1
+        assert "formal bootstrap" in result.output.lower()
+        assert "project-state.yaml" in result.output
+        assert "ai-sdlc init ." in result.output
+        assert not (root / "specs").exists()
+
     def test_workitem_init_generates_direct_formal_docs(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
@@ -128,4 +151,3 @@ class TestCliWorkitemInit:
 
         result = runner.invoke(app, ["workitem", "init"])
         assert result.exit_code == 2
-

@@ -8,7 +8,7 @@ from datetime import date
 from pathlib import Path
 
 from ai_sdlc.core.config import load_project_state, save_project_state
-from ai_sdlc.utils.helpers import PROJECT_STATE_PATH, slugify
+from ai_sdlc.utils.helpers import AI_SDLC_DIR, PROJECT_STATE_PATH, slugify
 
 _WI_ID_RE = re.compile(r"^(?P<seq>\d{3})-[a-z0-9]+(?:-[a-z0-9]+)*$")
 _PLACEHOLDER_RE = re.compile(r"\[[^\[\]\n]+\]")
@@ -51,9 +51,7 @@ class WorkitemScaffolder:
             raise WorkitemScaffoldError("title is required for direct-formal init")
         state_path = root / PROJECT_STATE_PATH
         if not state_path.is_file():
-            raise WorkitemScaffoldError(
-                "Not inside an initialized AI-SDLC project (.ai-sdlc/project/config/project-state.yaml not found)."
-            )
+            raise WorkitemScaffoldError(self._missing_bootstrap_message(root))
 
         state = load_project_state(root)
         work_item_id = self._resolve_work_item_id(
@@ -120,6 +118,18 @@ class WorkitemScaffolder:
             spec_dir=spec_dir,
             created_paths=canonical_paths,
             created_date=created_date,
+        )
+
+    def _missing_bootstrap_message(self, root: Path) -> str:
+        if (root / AI_SDLC_DIR).is_dir():
+            return (
+                "Project found but formal bootstrap is incomplete: "
+                "`.ai-sdlc/project/config/project-state.yaml` is missing. "
+                "Run `ai-sdlc init .` first, then retry `ai-sdlc workitem init`."
+            )
+        return (
+            "Not inside an initialized AI-SDLC project. "
+            "Run `ai-sdlc init .` first."
         )
 
     def _resolve_work_item_id(

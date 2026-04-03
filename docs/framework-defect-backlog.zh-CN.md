@@ -113,7 +113,7 @@
 
 - 日期 (UTC): 2026-04-02
 - 来源: self_review, user_review
-- 状态: open
+- 状态: closed
 - owner: codex
 - wi_id: 009-frontend-governance-ui-kernel
 - related_doc: src/ai_sdlc/core/workitem_scaffold.py, src/ai_sdlc/routers/bootstrap.py, docs/USER_GUIDE.zh-CN.md, src/ai_sdlc/rules/pipeline.md, docs/framework-defect-backlog.zh-CN.md, specs/009-frontend-governance-ui-kernel/spec.md, specs/009-frontend-governance-ui-kernel/plan.md, specs/009-frontend-governance-ui-kernel/tasks.md

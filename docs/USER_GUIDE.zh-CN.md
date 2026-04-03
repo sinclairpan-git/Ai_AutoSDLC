@@ -910,7 +910,7 @@ Phase 1 的边界要记住：
 | program integrate --dry-run | `python -m ai_sdlc program integrate --dry-run` | guarded integration runbook 预览 | **可能写 adapter**；若带 `--report`，还会写 report 文件 |
 | program integrate --execute --yes | `python -m ai_sdlc program integrate --execute --yes` | guarded execute gate | **可能写 adapter**；当前会做 gate 校验与可选 report 写入，不会直接替你修改各 spec 内容 |
 | manual telemetry | `python -m ai_sdlc telemetry open-session`、`record-*`、`close-session` | operator evidence write | **会写 telemetry**：落到 `.ai-sdlc/local/telemetry/` 与派生 indexes；CLI 入口本身也可能先触发 adapter apply |
-| workitem init | `python -m ai_sdlc workitem init --title "新 capability 标题"` | direct-formal 初始化 formal work item | **会写 formal docs**：直接创建 `specs/<WI>/spec.md`、`plan.md`、`tasks.md`；不会要求先写 `docs/superpowers/*` |
+| workitem init | `python -m ai_sdlc workitem init --title "新 capability 标题"` | direct-formal 初始化 formal work item | **会写 formal docs**：仅适用于已完成 `ai-sdlc init .` 的项目；直接创建 `specs/<WI>/spec.md`、`plan.md`、`tasks.md`；不会要求先写 `docs/superpowers/*` |
 | workitem truth-check | `python -m ai_sdlc workitem truth-check --wi specs/<WI>/ --rev <branch|commit>` | work item 指定 revision 的阶段真值核验 | **命令主体只读，但可能写 adapter**：绑定用户指定 branch/commit 后，回答该 WI 在目标 revision 上是 `formal_freeze_only`、`branch_only_implemented` 还是 `mainline_merged`，并显式披露 HEAD/revision mismatch |
 | workitem branch-check | `python -m ai_sdlc workitem branch-check --wi specs/<WI>/` | work item 关联 branch/worktree 只读盘点 | **命令主体只读，但可能写 adapter**：回答当前 WI 尚有哪些未处置 branch/worktree，以及它们相对 `main` 的 divergence 与 disposition |
 | workitem close-check | `python -m ai_sdlc workitem close-check --wi specs/<WI>/` | work item 收口真值核验 | **命令主体只读，但可能写 adapter**：会核对 tasks / planned batch / traceability / execution-log / fresh verification / git closure / branch lifecycle disposition truth；若关联 scratch/worktree 分支仍未处置且相对 `main` 存在漂移，会返回 `BLOCKER` |
@@ -970,6 +970,7 @@ git status --short
 如果这轮工作是“创建新的 framework capability”，常见的 direct-formal 起手顺序是：
 
 ```bash
+uv run ai-sdlc init .
 uv run ai-sdlc workitem init --title "<新的 framework capability 标题>"
 uv run ai-sdlc verify constraints
 uv run ai-sdlc workitem branch-check --wi specs/<WI>
@@ -977,6 +978,7 @@ uv run ai-sdlc workitem branch-check --wi specs/<WI>
 
 这条路径的重点是：
 
+- `workitem init` 的前提是当前仓库已经完成 formal bootstrap；如果仓库只有历史 `.ai-sdlc` 痕迹但缺 `project-state.yaml`，应先执行 `uv run ai-sdlc init .`
 - 先把 canonical spec/plan/tasks 直接写进 `specs/<WI>/`
 - 再围绕这套 formal docs 做 review / verify / execute
 - 不再要求“先写 `docs/superpowers/*`，再 formalize 一遍”
