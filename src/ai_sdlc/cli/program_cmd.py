@@ -2298,6 +2298,7 @@ def program_persisted_write_proof(
             console.print(f"  - {warning}")
 
     proof_result = None
+    proof_artifact_path: Path | None = None
     if not dry_run:
         if not yes:
             console.print(
@@ -2309,7 +2310,17 @@ def program_persisted_write_proof(
             request=request,
             confirmed=True,
         )
+        proof_artifact_path = svc.write_frontend_persisted_write_proof_artifact(
+            mf,
+            request=request,
+            result=proof_result,
+        )
         _render_frontend_persisted_write_proof_result(proof_result)
+        console.print("\n[bold cyan]Frontend Persisted Write Proof Artifact[/bold cyan]")
+        console.print(
+            f"  - saved: {proof_artifact_path.relative_to(root)}",
+            markup=False,
+        )
 
     if report:
         report_path = root / report
@@ -2366,6 +2377,11 @@ def program_persisted_write_proof(
             if proof_result.remaining_blockers:
                 lines.append("- Remaining blockers:")
                 lines.extend([f"  - {item}" for item in proof_result.remaining_blockers])
+            lines.append("")
+        if proof_artifact_path is not None:
+            lines.append("## Frontend Persisted Write Proof Artifact")
+            lines.append("")
+            lines.append(f"- `{proof_artifact_path.relative_to(root)}`")
             lines.append("")
         if request.warnings or (proof_result is not None and proof_result.warnings):
             lines.append("## Warnings")
