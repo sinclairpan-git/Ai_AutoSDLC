@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import json
-import sys
 from pathlib import Path
 
 import typer
@@ -41,8 +40,14 @@ from ai_sdlc.generators.index_gen import (
     generate_index,
     save_index,
 )
+from ai_sdlc.integrations.agent_target import (
+    agent_target_label,
+    interactive_select_agent_target,
+    is_interactive_terminal,
+)
 from ai_sdlc.integrations.ide_adapter import (
     IDEKind,
+    detect_ide,
     ensure_ide_adaptation,
     format_adapter_notice,
 )
@@ -74,10 +79,7 @@ def _startup_next_step_hint() -> str:
 
 
 def _is_interactive_terminal() -> bool:
-    try:
-        return sys.stdin.isatty() and sys.stdout.isatty()
-    except Exception:
-        return False
+    return is_interactive_terminal()
 
 
 def _surface_work_item_id(cp: Checkpoint | None) -> str | None:
@@ -178,10 +180,32 @@ def init_command(
     if is_existing:
         console.print("[bold]Detected existing project — running deep scan...[/bold]")
 
-    state = init_project(root, agent_target=agent_target.value if agent_target else None)
+    target_note = ""
+    selected_target = agent_target
+    if selected_target is None:
+        detected_target = detect_ide(root)
+        if _is_interactive_terminal():
+            selected_target = interactive_select_agent_target(detected_target)
+            target_note = (
+                f"[dim]AI 代理入口: {agent_target_label(selected_target)} "
+                f"(detected default: {agent_target_label(detected_target)})[/dim]"
+            )
+        else:
+            selected_target = detected_target
+            target_note = (
+                f"[dim]AI 代理入口: {agent_target_label(selected_target)} "
+                "(non-interactive fallback)[/dim]"
+            )
+    else:
+        target_note = (
+            f"[dim]AI 代理入口: {agent_target_label(selected_target)} "
+            "(explicit override)[/dim]"
+        )
+
+    state = init_project(root, agent_target=selected_target.value if selected_target else None)
     cfg = load_project_config(root)
-    if cfg.detected_ide:
-        console.print(f"[dim]IDE 适配: {cfg.detected_ide}[/dim]")
+    if target_note:
+        console.print(target_note)
 
     info = (
         f"[green]Initialized AI-SDLC project[/green]\n"
@@ -189,6 +213,10 @@ def init_command(
         f"  Type: {project_type}\n"
         f"  Path: {root / '.ai-sdlc'}"
     )
+    if cfg.agent_target:
+        info += f"\n  Agent Target: {cfg.agent_target}"
+    if cfg.detected_ide and cfg.detected_ide != cfg.agent_target:
+        info += f"\n  Detected Host: {cfg.detected_ide}"
     if is_existing:
         info += "\n  [dim]Knowledge baseline generated (corpus + indexes)[/dim]"
     info += _startup_next_step_hint()
@@ -226,6 +254,7 @@ def status_command(
         console.print(note)
 
     state = load_project_state(root)
+    cfg = load_project_config(root)
     if state.status == ProjectStatus.UNINITIALIZED:
         console.print("[yellow]Project found but not initialized.[/yellow]")
         raise typer.Exit(code=1)
@@ -239,6 +268,10 @@ def status_command(
     table.add_row("Status", state.status.value)
     table.add_row("Version", state.version)
     table.add_row("Next WI Seq", str(state.next_work_item_seq))
+    table.add_row("Agent Target", cfg.agent_target or "-")
+    table.add_row("Adapter State", cfg.adapter_activation_state or "-")
+    table.add_row("Support Tier", cfg.adapter_support_tier or "-")
+    table.add_row("Activation Source", cfg.adapter_activation_source or "-")
 
     resume_pack = None
     checkpoint_usable = not (hint is not None and hint.checkpoint_stage == "missing")

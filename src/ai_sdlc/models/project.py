@@ -26,6 +26,8 @@ class AdapterSupportTier(str, Enum):
     """How strongly the selected adapter can enforce the workflow."""
 
     SOFT_INSTALLED = "soft_installed"
+    ACKNOWLEDGED_ACTIVATION = "acknowledged_activation"
+    VERIFIED_ACTIVATION = "verified_activation"
     HARD_ACTIVATED = "hard_activated"
 
 
@@ -68,5 +70,9 @@ class ProjectConfig(BaseModel):
     adapter_applied_at: str = ""
     adapter_activation_state: str = ""
     adapter_support_tier: str = ""
+    agent_target_source: str = ""
+    adapter_activation_source: str = ""
+    adapter_activation_evidence: str = ""
+    adapter_activated_at: str = ""
     telemetry_profile: TelemetryProfile = TelemetryProfile.SELF_HOSTING
     telemetry_mode: TelemetryMode = TelemetryMode.LITE

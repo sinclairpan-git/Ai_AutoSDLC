@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import logging
+import os
 import tempfile
+import time
 from pathlib import Path
 from typing import TypeVar
 
@@ -16,6 +18,8 @@ from ai_sdlc.utils.helpers import PROJECT_CONFIG_PATH, PROJECT_STATE_PATH
 logger = logging.getLogger(__name__)
 
 T = TypeVar("T", bound=BaseModel)
+_IS_WINDOWS = os.name == "nt"
+_WINDOWS_REPLACE_DELAYS = (0.05, 0.1, 0.2)
 
 
 class YamlStoreError(Exception):
@@ -62,7 +66,10 @@ class YamlStore:
     def save(path: Path, model: BaseModel) -> None:
         """Save a Pydantic model to a YAML file with atomic write."""
         path.parent.mkdir(parents=True, exist_ok=True)
-        data = model.model_dump(mode="json")
+        serialized = YamlStore._serialize_model(model)
+
+        if path.exists() and path.read_text(encoding="utf-8") == serialized:
+            return
 
         tmp_fd = tempfile.NamedTemporaryFile(
             mode="w",
@@ -72,18 +79,41 @@ class YamlStore:
             encoding="utf-8",
         )
         try:
-            yaml.dump(
-                data,
-                tmp_fd,
-                default_flow_style=False,
-                allow_unicode=True,
-                sort_keys=False,
-            )
+            tmp_fd.write(serialized)
             tmp_fd.close()
-            Path(tmp_fd.name).replace(path)
+            YamlStore._replace_with_retry(Path(tmp_fd.name), path)
         except Exception:
             Path(tmp_fd.name).unlink(missing_ok=True)
             raise
+
+    @staticmethod
+    def _serialize_model(model: BaseModel) -> str:
+        data = model.model_dump(mode="json")
+        return yaml.dump(
+            data,
+            default_flow_style=False,
+            allow_unicode=True,
+            sort_keys=False,
+        )
+
+    @staticmethod
+    def _replace_with_retry(source: Path, destination: Path) -> None:
+        try:
+            source.replace(destination)
+            return
+        except PermissionError:
+            if not _IS_WINDOWS:
+                raise
+
+        for delay in _WINDOWS_REPLACE_DELAYS:
+            time.sleep(delay)
+            try:
+                source.replace(destination)
+                return
+            except PermissionError:
+                continue
+
+        source.replace(destination)
 
 
 # ── project config helpers ──

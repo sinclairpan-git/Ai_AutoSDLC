@@ -3,26 +3,17 @@
 from __future__ import annotations
 
 import logging
-import os
 from dataclasses import dataclass, field
-from enum import Enum
 from pathlib import Path
 
 from ai_sdlc.core.config import load_project_config, save_project_config
+from ai_sdlc.integrations.agent_target import IDEKind, detect_agent_target
 from ai_sdlc.models.project import ActivationState, AdapterSupportTier
-from ai_sdlc.utils.helpers import AI_SDLC_DIR, now_iso
+from ai_sdlc.utils.helpers import AI_SDLC_DIR, PROJECT_CONFIG_PATH, now_iso
 
 logger = logging.getLogger(__name__)
 
 ADAPTER_VERSION = "1"
-
-
-class IDEKind(str, Enum):
-    CURSOR = "cursor"
-    VSCODE = "vscode"
-    CODEX = "codex"
-    CLAUDE_CODE = "claude_code"
-    GENERIC = "generic"
 
 
 @dataclass
@@ -56,29 +47,7 @@ def _install_pairs(ide: IDEKind) -> list[tuple[str, str]]:
 
 def detect_ide(root: Path) -> IDEKind:
     """Detect IDE from project markers first, then environment hints."""
-    markers: list[tuple[str, IDEKind]] = [
-        (".cursor", IDEKind.CURSOR),
-        (".codex", IDEKind.CODEX),
-        (".vscode", IDEKind.VSCODE),
-        (".claude", IDEKind.CLAUDE_CODE),
-    ]
-    for dirname, kind in markers:
-        if (root / dirname).is_dir():
-            return kind
-
-    env = os.environ
-    if env.get("CURSOR_TRACE_ID") or env.get("CURSOR_AGENT"):
-        return IDEKind.CURSOR
-    if env.get("VSCODE_IPC_HOOK_CLI"):
-        return IDEKind.VSCODE
-    if env.get("TERM_PROGRAM", "").lower() == "vscode":
-        return IDEKind.VSCODE
-    if env.get("OPENAI_CODEX") or env.get("CODEX_CLI_READY"):
-        return IDEKind.CODEX
-    if env.get("CLAUDE_CODE_ENTRYPOINT") or env.get("CLAUDECODE"):
-        return IDEKind.CLAUDE_CODE
-
-    return IDEKind.GENERIC
+    return detect_agent_target(root)
 
 
 def _sync_file(bundle: Path, dest: Path, result: ApplyResult) -> None:
@@ -165,17 +134,28 @@ def _persist_config(
         cfg.adapter_activation_state,
         agent_target,
     )
-    cfg = cfg.model_copy(
-        update={
-            "detected_ide": detected_ide.value,
-            "agent_target": agent_target.value,
-            "adapter_applied": agent_target.value,
-            "adapter_version": ADAPTER_VERSION,
-            "adapter_applied_at": now_iso(),
-            "adapter_activation_state": activation_state,
-            "adapter_support_tier": AdapterSupportTier.SOFT_INSTALLED.value,
-        }
+    updates = {
+        "detected_ide": detected_ide.value,
+        "agent_target": agent_target.value,
+        "adapter_applied": agent_target.value,
+        "adapter_version": ADAPTER_VERSION,
+        "adapter_activation_state": activation_state,
+        "adapter_support_tier": AdapterSupportTier.SOFT_INSTALLED.value,
+        "adapter_activation_source": "",
+        "adapter_activation_evidence": "",
+        "adapter_activated_at": "",
+    }
+    config_path = root / PROJECT_CONFIG_PATH
+    state_changed = (
+        not config_path.is_file()
+        or not cfg.adapter_applied_at
+        or any(getattr(cfg, field_name) != value for field_name, value in updates.items())
     )
+    if not state_changed:
+        return
+
+    updates["adapter_applied_at"] = now_iso()
+    cfg = cfg.model_copy(update=updates)
     save_project_config(root, cfg)
 
 
@@ -226,7 +206,10 @@ def acknowledge_adapter(
     cfg = cfg.model_copy(
         update={
             "adapter_activation_state": ActivationState.ACKNOWLEDGED.value,
-            "adapter_support_tier": AdapterSupportTier.SOFT_INSTALLED.value,
+            "adapter_support_tier": AdapterSupportTier.ACKNOWLEDGED_ACTIVATION.value,
+            "adapter_activation_source": "operator_cli",
+            "adapter_activation_evidence": "ai-sdlc adapter activate",
+            "adapter_activated_at": now_iso(),
         }
     )
     save_project_config(root, cfg)

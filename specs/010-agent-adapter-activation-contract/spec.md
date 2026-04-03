@@ -2,7 +2,7 @@
 
 **功能编号**：`010-agent-adapter-activation-contract`  
 **创建日期**：2026-04-02  
-**状态**：已冻结（formal baseline）  
+**状态**：已实现（branch remediation）
 **输入**：[`../../docs/framework-defect-backlog.zh-CN.md`](../../docs/framework-defect-backlog.zh-CN.md)、[`../../docs/USER_GUIDE.zh-CN.md`](../../docs/USER_GUIDE.zh-CN.md)、[`../../src/ai_sdlc/integrations/ide_adapter.py`](../../src/ai_sdlc/integrations/ide_adapter.py)、[`../../src/ai_sdlc/cli/commands.py`](../../src/ai_sdlc/cli/commands.py)
 
 > 口径：本 work item 不是修一个“识别顺序小 bug”，而是把框架入口适配从“文件注入型软提示”升级为“AI 代理入口选择 + activation handshake + activation state + activation gate”的正式合同。若该合同缺位，`init / dry-run` 成功也不能代表框架已真正接管开发链路。
@@ -32,6 +32,7 @@
   - 定义 `adapter activate / status / activation gate` 的产品合同
   - 定义 mixed host 场景下的正确判定方式，例如 `VS Code + Codex` 应选 `Codex`
   - 定义旧项目从“只有 adapter_applied 元数据”迁移到新状态模型的回写规则
+  - 定义 `project-config.yaml` 在 adapter 持久化场景下的 no-op 保存与 Windows replace 兼容约束
   - 为后续 CLI、adapter 模板、status/run/doctor、测试与用户文档改造提供 canonical formal baseline
 - **不覆盖**：
   - 与第三方插件做原生 API 级双向集成
@@ -146,6 +147,14 @@
 | FR-010-023 | 系统必须补非交互 `--agent-target` 与 fallback 行为测试 |
 | FR-010-024 | 系统必须补 activation gate 的正反向测试，证明未激活时不会误报“已接管” |
 
+### Persistence Durability
+
+| ID | 需求 |
+|----|------|
+| FR-010-025 | 系统必须在 `project-config.yaml` 序列化内容未变化时跳过写入，避免重复命令无差别改写配置 |
+| FR-010-026 | 系统必须对 Windows `Path.replace()` 的短暂 `PermissionError` 提供 bounded retry/backoff，并在持续性权限错误时显式失败 |
+| FR-010-027 | adapter 持久化只有在配置字段真实变化时才允许刷新 `adapter_applied_at` 并落盘 |
+
 ## 关键实体
 
 - **Editor Host**：外层编辑器宿主，例如 `vscode`、`cursor` 或无宿主环境；用于记录运行环境，但不决定最终约束消费入口
@@ -163,3 +172,4 @@
 - **SC-010-003**：operator 能在交互式 `init` 中通过固定五项列表完成确认，并在非交互场景中通过显式参数稳定复现同一结果  
 - **SC-010-004**：adapter 模板、CLI 状态面与 activation gate 三者对“installed / acknowledged / activated”的表述保持单一真值  
 - **SC-010-005**：旧项目迁移后默认进入 `installed` 或等价软接入状态，不会因历史 `.codex/AI-SDLC.md` 或 `run --dry-run` 记录被误推断为 `activated`
+- **SC-010-006**：在配置语义未变化时，重复执行 adapter 相关命令不会改写 `project-config.yaml`；模拟 Windows replace 短暂失败时，保存路径可在 bounded retry 内恢复成功

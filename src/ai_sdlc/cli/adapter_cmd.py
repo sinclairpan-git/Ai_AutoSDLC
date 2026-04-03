@@ -9,6 +9,10 @@ from rich.console import Console
 from rich.table import Table
 
 from ai_sdlc.core.config import load_project_config
+from ai_sdlc.integrations.agent_target import (
+    interactive_select_agent_target,
+    is_interactive_terminal,
+)
 from ai_sdlc.integrations.ide_adapter import (
     IDEKind,
     acknowledge_adapter,
@@ -31,17 +35,30 @@ def _require_project_root() -> object:
     return root
 
 
+def _is_interactive_terminal() -> bool:
+    return is_interactive_terminal()
+
+
 @adapter_app.command(name="select")
 def adapter_select(
-    agent_target: IDEKind = typer.Option(
-        ...,
+    agent_target: IDEKind | None = typer.Option(
+        None,
         "--agent-target",
         help="Adapter target to persist for this project.",
     ),
 ) -> None:
     """Persist the desired adapter target and install its files."""
     root = _require_project_root()
-    result = ensure_ide_adaptation(root, agent_target=agent_target)
+    selected_target = agent_target
+    if selected_target is None:
+        if not _is_interactive_terminal():
+            console.print(
+                "[red]Specify --agent-target in non-interactive mode, or rerun in a TTY.[/red]"
+            )
+            raise typer.Exit(code=2)
+        selected_target = interactive_select_agent_target(detect_ide(root))
+
+    result = ensure_ide_adaptation(root, agent_target=selected_target)
     note = format_adapter_notice(result)
     if note:
         console.print(note)
@@ -84,6 +101,9 @@ def adapter_status(
         "adapter_applied": cfg.adapter_applied,
         "adapter_activation_state": cfg.adapter_activation_state,
         "adapter_support_tier": cfg.adapter_support_tier,
+        "adapter_activation_source": cfg.adapter_activation_source,
+        "adapter_activation_evidence": cfg.adapter_activation_evidence,
+        "adapter_activated_at": cfg.adapter_activated_at,
     }
     if as_json:
         typer.echo(json.dumps(payload))

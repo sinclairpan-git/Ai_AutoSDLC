@@ -27,7 +27,7 @@
 - 认的是你**真正用来聊天输入需求的 AI 入口**，不是最外层编辑器壳。
 - 例如你在 VS Code 里用 Codex 聊天，AI-SDLC 应该认 `codex`，不是只认 `vscode`。
 - 例如你在 VS Code 里用 Claude Code 聊天，AI-SDLC 应该认 `claude_code`。
-- 如果自动识别错了，也不用怕，后面可以用 `python -m ai_sdlc adapter select --agent-target codex` 这类命令改正。
+- 如果自动识别错了，也不用怕。交互式 `init` 会先给你一个五项列表；如果后面还想改，可以直接运行 `python -m ai_sdlc adapter select` 进入同一个列表，`--agent-target` 只作为非交互 override。
 
 ## 第一章：空项目完整演练
 
@@ -229,6 +229,8 @@ python -m ai_sdlc --help
 python -m ai_sdlc init .
 ```
 
+如果当前终端是交互式 TTY，`init` 会先给你一个五项 selector，自动识别只负责默认聚焦，不会替你自动确认。
+
 如果你非常确定自己真正聊天的工具是谁，也可以第一次就直接指定。例如你是在 VS Code 里用 Codex 聊天，可以直接执行：
 
 ```bash
@@ -310,11 +312,13 @@ Adapter acknowledged: codex (acknowledged)
 比如你实际在 VS Code 里用的是 Codex，而不是只想装 VS Code 工作区提示，那么不要硬着头皮往下走。先改成真正的聊天工具，再重新激活：
 
 ```bash
-python -m ai_sdlc adapter select --agent-target codex
+python -m ai_sdlc adapter select
 python -m ai_sdlc adapter activate --agent-target codex
 ```
 
-选项常见值只有 5 个：
+`adapter select` 会进入和 `init` 相同的五项列表；如果你在 CI 或非交互终端里操作，再改用 `--agent-target` 明确指定。
+
+选项固定只有 5 个：
 
 - `cursor`
 - `codex`
@@ -628,6 +632,8 @@ python -m ai_sdlc --help
 python -m ai_sdlc init .
 ```
 
+如果当前终端是交互式 TTY，`init` 会先给你一个五项 selector，自动识别只负责默认聚焦，不会替你自动确认。
+
 如果你非常确定自己真正聊天的工具是谁，也可以第一次就直接指定。例如你是在 VS Code 里用 Codex 聊天，可以直接执行：
 
 ```bash
@@ -710,7 +716,7 @@ Adapter acknowledged: codex (acknowledged)
 **如果你怀疑它认错了工具：**
 
 ```bash
-python -m ai_sdlc adapter select --agent-target codex
+python -m ai_sdlc adapter select
 python -m ai_sdlc adapter activate --agent-target codex
 ```
 
@@ -897,7 +903,7 @@ Phase 1 的边界要记住：
 |---|---|---|---|
 | bounded telemetry status | `python -m ai_sdlc status --json` | 只读 telemetry + branch lifecycle 摘要 | **只读**：不初始化 telemetry root，不 rebuild indexes，不触发 adapter |
 | adapter status | `python -m ai_sdlc adapter status` | 查看当前选中的 adapter target 与 activation state | **只读**：读取 project config；不触发 adapter apply |
-| adapter select | `python -m ai_sdlc adapter select --agent-target codex` | 手工改正当前真正聊天的 AI 入口 | **会写 adapter config**：安装/补装目标 adapter 文件，并把 activation state 重置为 `installed` |
+| adapter select | `python -m ai_sdlc adapter select` | 手工改正当前真正聊天的 AI 入口 | **会写 adapter config**：TTY 下进入与 `init` 相同的五项 selector；非交互时可配合 `--agent-target` 显式指定，并把 activation state 重置为 `installed` |
 | adapter activate | `python -m ai_sdlc adapter activate` | 把当前 adapter 明确记为“已认可” | **会写 adapter config**：必要时补装 adapter 文件，并把 activation state 推进到 `acknowledged` |
 | provenance inspection | `python -m ai_sdlc provenance summary` / `explain` / `gaps` | provenance read-only 审计 | **只读**：不触发 adapter，不 repair graph，不把 candidate 提升成默认 blocker |
 | doctor | `python -m ai_sdlc doctor` | 只读诊断 | **只读**：不 deep scan trace，不触发 adapter；会显示 branch lifecycle readiness |
