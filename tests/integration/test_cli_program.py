@@ -267,6 +267,30 @@ specs:
         assert "ready" in result.output
         assert "Execution gates passed" in result.output
 
+    def test_program_integrate_execute_surfaces_frontend_recheck_handoff(
+        self, initialized_project_dir: Path
+    ) -> None:
+        root = initialized_project_dir
+        _write_manifest(root)
+        _write_minimal_frontend_contract_page_artifacts(root)
+        _write_frontend_gate_artifacts(root)
+        for spec in ("001-auth", "002-course", "003-enroll"):
+            (root / "specs" / spec / "development-summary.md").write_text(
+                "done\n", encoding="utf-8"
+            )
+            _write_frontend_contract_observations(root / "specs" / spec)
+
+        with patch("ai_sdlc.cli.program_cmd.find_project_root", return_value=root):
+            result = runner.invoke(
+                app,
+                ["program", "integrate", "--execute", "--yes", "--allow-dirty"],
+            )
+
+        assert result.exit_code == 0
+        assert "Frontend Recheck Handoff" in result.output
+        assert "001-auth" in result.output
+        assert "uv run ai-sdlc verify constraints" in result.output
+
     def test_program_integrate_execute_success(self, initialized_project_dir: Path) -> None:
         root = initialized_project_dir
         _write_manifest(root)
@@ -294,6 +318,9 @@ specs:
         assert result.exit_code == 0
         assert "Program Integrate Execute (Guarded)" in result.output
         assert (root / report_rel).is_file()
+        report = (root / report_rel).read_text(encoding="utf-8")
+        assert "Frontend Recheck Handoff" in report
+        assert "uv run ai-sdlc verify constraints" in report
 
     def test_program_integrate_execute_gate_fail_not_closed(
         self, initialized_project_dir: Path

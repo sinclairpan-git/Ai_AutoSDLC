@@ -31,7 +31,7 @@ related_doc:
 - 再冻结 execute preflight、recheck handoff 与 remediation hint 的 responsibility
 - 最后给出后续 `core / cli / tests` 的推荐文件面与测试矩阵
 
-当前 formal baseline 已完成。经用户明确要求连续推进 MVP 后，当前允许继续进入首批实现切片：`program frontend execute preflight`，先在 `ProgramService` 中落 per-spec frontend execute gate；随后再进入 `program integrate --execute` 的 CLI surface。当前仍不直接进入 recheck loop runtime 或 auto-fix engine。
+当前 formal baseline、`program frontend execute preflight` 与 execute CLI frontend gate surface 已完成。经用户明确要求连续推进 MVP 后，当前允许继续进入下一批实现切片：`program frontend recheck handoff`，先在 `ProgramService` 中落 per-step recheck handoff truth；随后再进入 execute CLI / report surface。当前仍不直接进入 recheck loop runtime 或 auto-fix engine。
 
 ## 技术背景
 
@@ -73,9 +73,9 @@ src/ai_sdlc/
 ```text
 src/ai_sdlc/
 ├── core/
-│   └── program_service.py                   # current slice: frontend execute preflight
+│   └── program_service.py                   # current slice: frontend recheck handoff
 └── cli/
-    └── program_cmd.py                       # next slice: execute frontend gate / hint surface
+    └── program_cmd.py                       # next slice: execute recheck handoff / report surface
 
 tests/
 ├── unit/test_program_service.py
@@ -145,6 +145,20 @@ tests/
 **验证方式**：定向 `pytest`、`uv run ruff check src tests`、`git diff --check`、`uv run ai-sdlc verify constraints`。
 **回退方式**：仅回退本阶段涉及的 `cli/`、`tests/` 与 execution log 变更。
 
+### Phase 6：Program frontend recheck handoff slice
+
+**目标**：在 `ProgramService` 中为 execute-ready integration steps 落下 frontend recheck handoff truth，提供 recheck_required、reason、recommended_commands 与 source linkage，而不进入 recheck loop runtime。
+**产物**：`src/ai_sdlc/core/program_service.py`、`tests/unit/test_program_service.py`。
+**验证方式**：定向 `pytest`、`uv run ruff check src tests`、`git diff --check`、`uv run ai-sdlc verify constraints`。
+**回退方式**：仅回退本阶段涉及的 `core/`、`tests/` 与 execution log 变更。
+
+### Phase 7：Program execute CLI/frontend report recheck surface slice
+
+**目标**：把 frontend recheck handoff 暴露到 `program integrate --execute` 的终端输出和 report 中，让 operator 在 execute gate 通过后能直接看到后续复查要求，而不进入 recheck loop runtime。
+**产物**：`src/ai_sdlc/cli/program_cmd.py`、`tests/integration/test_cli_program.py`。
+**验证方式**：定向 `pytest`、`uv run ruff check src tests`、`git diff --check`、`uv run ai-sdlc verify constraints`。
+**回退方式**：仅回退本阶段涉及的 `cli/`、`tests/` 与 execution log 变更。
+
 ## 工作流计划
 
 ### 工作流 A：Execute truth freeze
@@ -182,6 +196,20 @@ tests/
 **验证方式**：`tests/integration/test_cli_program.py` + fresh `ruff` / `verify constraints`。
 **回退方式**：不修改 dry-run / status truth。
 
+### 工作流 F：Program frontend recheck handoff slice
+
+**范围**：per-step frontend recheck handoff、recommended verification commands 与 source linkage reuse。
+**影响范围**：后续 execute CLI / report 的 frontend recheck data source。
+**验证方式**：`tests/unit/test_program_service.py` + fresh `ruff` / `verify constraints`。
+**回退方式**：不改 execute gate verdict 语义。
+
+### 工作流 G：Program execute CLI/frontend report recheck surface slice
+
+**范围**：`program integrate --execute` 的 frontend recheck handoff 输出与 report surface。
+**影响范围**：operator-facing execute follow-up guidance，可见性提升但不新增 runtime side effect。
+**验证方式**：`tests/integration/test_cli_program.py` + fresh `ruff` / `verify constraints`。
+**回退方式**：不进入 recheck loop 或 auto-fix runtime。
+
 ## 关键路径验证策略
 
 | 关键路径 | 主验证方式 | 次验证方式 |
@@ -193,9 +221,13 @@ tests/
 | downstream auto-fix handoff clarity | tasks / plan 对账 | `uv run ai-sdlc verify constraints` |
 | program frontend execute preflight correctness | `uv run pytest tests/unit/test_program_service.py -q` | execute gate payload / blockers review |
 | program execute CLI frontend gate correctness | `uv run pytest tests/integration/test_cli_program.py -q` | terminal wording / exit-code review |
+| program frontend recheck handoff correctness | `uv run pytest tests/unit/test_program_service.py -q` | recheck payload / source linkage review |
+| program execute CLI/frontend report recheck surface correctness | `uv run pytest tests/integration/test_cli_program.py -q` | terminal wording / report review |
 
 ## 当前建议的下游实现起点
 
 - 先在 `program_service.py` 定义 per-spec frontend execute gate
 - 再把 execute preflight / remediation hint 暴露到 `program integrate --execute`
+- 再在 `program_service.py` 定义 execute-ready step 的 frontend recheck handoff
+- 最后把 recheck handoff 暴露到 execute CLI / report surface
 - auto-fix engine 与 writeback runtime 仍应作为后续 guarded child work item 单独承接

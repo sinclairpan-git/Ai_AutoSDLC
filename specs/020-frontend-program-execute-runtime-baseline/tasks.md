@@ -18,6 +18,8 @@ Batch 2: execute / recheck / remediation boundary freeze
 Batch 3: implementation handoff and verification freeze
 Batch 4: program frontend execute preflight slice
 Batch 5: program execute CLI frontend gate surface slice
+Batch 6: program frontend recheck handoff slice
+Batch 7: program execute CLI/frontend report recheck surface slice
 ```
 
 ---
@@ -32,8 +34,12 @@ Batch 5: program execute CLI frontend gate surface slice
 - `020` 不得把 `program --execute` 扩张成新的默认前端自动编排入口。
 - `Batch 4` 只允许写入 `src/ai_sdlc/core/program_service.py`、`tests/unit/test_program_service.py`、`specs/020-frontend-program-execute-runtime-baseline/task-execution-log.md`，以及为本批边界服务的 `plan.md / tasks.md`。
 - `Batch 5` 只允许写入 `src/ai_sdlc/cli/program_cmd.py`、`tests/integration/test_cli_program.py`、`specs/020-frontend-program-execute-runtime-baseline/task-execution-log.md`，以及为本批边界服务的 `plan.md / tasks.md`。
+- `Batch 6` 只允许写入 `src/ai_sdlc/core/program_service.py`、`tests/unit/test_program_service.py`、`specs/020-frontend-program-execute-runtime-baseline/task-execution-log.md`，以及为本批边界服务的 `plan.md / tasks.md`。
+- `Batch 7` 只允许写入 `src/ai_sdlc/cli/program_cmd.py`、`tests/integration/test_cli_program.py`、`specs/020-frontend-program-execute-runtime-baseline/task-execution-log.md`，以及为本批边界服务的 `plan.md / tasks.md`。
 - 当前首批实现只放行 `ProgramService` 的 frontend execute preflight，不放行 recheck loop runtime 或 auto-fix。
 - 当前第二批实现只放行 `program integrate --execute` 的 frontend gate / remediation hint surface，不放行 auto-fix、writeback 或 recheck loop。
+- 当前第三批实现只放行 `ProgramService` 的 frontend recheck handoff truth，不放行 recheck loop runtime 或 auto-fix。
+- 当前第四批实现只放行 execute CLI / report 的 recheck handoff surface，不放行 recheck loop、auto-fix 或 writeback。
 
 ---
 
@@ -242,6 +248,92 @@ Batch 5: program execute CLI frontend gate surface slice
 - **任务编号**：T53
 - **优先级**：P0
 - **依赖**：T52
+- **文件**：`specs/020-frontend-program-execute-runtime-baseline/task-execution-log.md`
+- **可并行**：否
+- **验收标准**：
+  1. `uv run pytest tests/integration/test_cli_program.py -q` 通过
+  2. `uv run ruff check src tests`、`git diff --check -- specs/020-frontend-program-execute-runtime-baseline src/ai_sdlc/cli tests/integration` 与 `uv run ai-sdlc verify constraints` 通过
+  3. `task-execution-log.md` 追加记录当前 CLI batch 的 touched files、验证命令与结论
+- **验证**：`uv run pytest tests/integration/test_cli_program.py -q`, `uv run ruff check src tests`, `git diff --check -- specs/020-frontend-program-execute-runtime-baseline src/ai_sdlc/cli tests/integration`, `uv run ai-sdlc verify constraints`
+
+---
+
+## Batch 6：program frontend recheck handoff slice
+
+### Task 6.1 先写 failing tests 固定 frontend recheck handoff 语义
+
+- **任务编号**：T61
+- **优先级**：P0
+- **依赖**：T53
+- **文件**：`tests/unit/test_program_service.py`
+- **可并行**：否
+- **验收标准**：
+  1. 单测明确覆盖 execute-ready step 的 frontend recheck handoff
+  2. 单测明确覆盖 frontend not-ready step 不生成 recheck handoff
+  3. 首次运行定向测试时必须出现预期失败，证明 `ProgramIntegrationStep` 尚未暴露 recheck handoff
+- **验证**：`uv run pytest tests/unit/test_program_service.py -q`
+
+### Task 6.2 实现最小 frontend recheck handoff truth
+
+- **任务编号**：T62
+- **优先级**：P0
+- **依赖**：T61
+- **文件**：`src/ai_sdlc/core/program_service.py`
+- **可并行**：否
+- **验收标准**：
+  1. execute-ready integration step 能暴露 frontend recheck handoff
+  2. handoff 至少包含 required、reason、recommended_commands 与 source linkage
+  3. 实现保持 handoff-only，不引入 recheck loop、auto-fix 或 writeback
+- **验证**：`uv run pytest tests/unit/test_program_service.py -q`
+
+### Task 6.3 Fresh verify 并追加 implementation batch 归档
+
+- **任务编号**：T63
+- **优先级**：P0
+- **依赖**：T62
+- **文件**：`specs/020-frontend-program-execute-runtime-baseline/task-execution-log.md`
+- **可并行**：否
+- **验收标准**：
+  1. `uv run pytest tests/unit/test_program_service.py -q` 通过
+  2. `uv run ruff check src tests`、`git diff --check -- specs/020-frontend-program-execute-runtime-baseline src/ai_sdlc/core tests/unit` 与 `uv run ai-sdlc verify constraints` 通过
+  3. `task-execution-log.md` 追加记录当前 implementation batch 的 touched files、验证命令与结论
+- **验证**：`uv run pytest tests/unit/test_program_service.py -q`, `uv run ruff check src tests`, `git diff --check -- specs/020-frontend-program-execute-runtime-baseline src/ai_sdlc/core tests/unit`, `uv run ai-sdlc verify constraints`
+
+---
+
+## Batch 7：program execute CLI/frontend report recheck surface slice
+
+### Task 7.1 先写 failing tests 固定 execute CLI / report recheck 输出语义
+
+- **任务编号**：T71
+- **优先级**：P0
+- **依赖**：T63
+- **文件**：`tests/integration/test_cli_program.py`
+- **可并行**：否
+- **验收标准**：
+  1. 集成测试明确覆盖 `program integrate --execute` 的 frontend recheck handoff 输出
+  2. 集成测试明确覆盖 execute report 中的 frontend recheck handoff
+  3. 首次运行定向测试时必须出现预期失败，证明 execute CLI / report 尚未渲染 recheck handoff
+- **验证**：`uv run pytest tests/integration/test_cli_program.py -q`
+
+### Task 7.2 实现最小 execute CLI / report recheck surface
+
+- **任务编号**：T72
+- **优先级**：P0
+- **依赖**：T71
+- **文件**：`src/ai_sdlc/cli/program_cmd.py`
+- **可并行**：否
+- **验收标准**：
+  1. `program integrate --execute` 能暴露 frontend recheck handoff
+  2. report 输出能暴露 recheck handoff 的最小后续动作
+  3. 实现保持 scoped user-facing surface，不进入 recheck loop 或 auto-fix runtime
+- **验证**：`uv run pytest tests/integration/test_cli_program.py -q`
+
+### Task 7.3 Fresh verify 并追加 CLI batch 归档
+
+- **任务编号**：T73
+- **优先级**：P0
+- **依赖**：T72
 - **文件**：`specs/020-frontend-program-execute-runtime-baseline/task-execution-log.md`
 - **可并行**：否
 - **验收标准**：

@@ -263,7 +263,19 @@ def program_integrate(
             lines.extend([f"  - `{cmd}`" for cmd in step.verification_commands])
             lines.append("- Archive checks:")
             lines.extend([f"  - {item}" for item in step.archive_checks])
+            handoff = getattr(step, "frontend_recheck_handoff", None)
+            if not dry_run and handoff is not None:
+                lines.append("- Frontend recheck handoff:")
+                lines.append(f"  - {handoff.reason}")
+                lines.extend([f"  - `{cmd}`" for cmd in handoff.recommended_commands])
             lines.append("")
+        if not dry_run:
+            handoff_lines = _frontend_recheck_report_lines(plan.steps)
+            if handoff_lines:
+                lines.append("## Frontend Recheck Handoff")
+                lines.append("")
+                lines.extend(handoff_lines)
+                lines.append("")
         if plan.warnings:
             lines.append("## Warnings")
             lines.extend([f"- {w}" for w in plan.warnings])
@@ -292,6 +304,7 @@ def program_integrate(
             console.print(f"  - {item}")
         raise typer.Exit(code=1)
 
+    _render_frontend_recheck_handoff(plan.steps)
     console.print("\n[bold green]Execution gates passed[/bold green]")
     console.print(
         "Guarded execute completed: runbook generated and gates validated."
@@ -345,3 +358,39 @@ def _render_frontend_execute_preflight(steps: list[object]) -> None:
             f"  - {spec_id}: {_format_frontend_readiness(readiness)}",
             markup=False,
         )
+
+
+def _render_frontend_recheck_handoff(steps: list[object]) -> None:
+    handoff_lines = _frontend_recheck_output_lines(steps)
+    if not handoff_lines:
+        return
+
+    console.print("\n[bold cyan]Frontend Recheck Handoff[/bold cyan]")
+    for line in handoff_lines:
+        console.print(line, markup=False)
+
+
+def _frontend_recheck_output_lines(steps: list[object]) -> list[str]:
+    lines: list[str] = []
+    for step in steps:
+        handoff = getattr(step, "frontend_recheck_handoff", None)
+        if handoff is None:
+            continue
+        spec_id = str(getattr(step, "spec_id", "")).strip() or "unknown-spec"
+        lines.append(f"  - {spec_id}: {getattr(handoff, 'reason', '')}")
+        for command in getattr(handoff, "recommended_commands", ())[:2]:
+            lines.append(f"    command: {command}")
+    return lines
+
+
+def _frontend_recheck_report_lines(steps: list[object]) -> list[str]:
+    lines: list[str] = []
+    for step in steps:
+        handoff = getattr(step, "frontend_recheck_handoff", None)
+        if handoff is None:
+            continue
+        spec_id = str(getattr(step, "spec_id", "")).strip() or "unknown-spec"
+        lines.append(f"- {spec_id}: {getattr(handoff, 'reason', '')}")
+        for command in getattr(handoff, "recommended_commands", ()):
+            lines.append(f"  - `{command}`")
+    return lines

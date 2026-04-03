@@ -23,6 +23,7 @@ PROGRAM_FRONTEND_GATE_VERDICT_UNRESOLVED = "UNRESOLVED"
 PROGRAM_FRONTEND_RUNTIME_ATTACHMENT_SOURCE_NAME = (
     "frontend contract runtime attachment"
 )
+PROGRAM_FRONTEND_RECHECK_COMMAND = "uv run ai-sdlc verify constraints"
 
 
 @dataclass
@@ -55,6 +56,14 @@ class ProgramSpecStatus:
 
 
 @dataclass
+class ProgramFrontendRecheckHandoff:
+    required: bool
+    reason: str
+    recommended_commands: list[str] = field(default_factory=list)
+    source_linkage: dict[str, str] = field(default_factory=dict)
+
+
+@dataclass
 class ProgramIntegrationStep:
     order: int
     tier: int
@@ -63,6 +72,7 @@ class ProgramIntegrationStep:
     verification_commands: list[str] = field(default_factory=list)
     archive_checks: list[str] = field(default_factory=list)
     frontend_readiness: ProgramFrontendReadiness | None = None
+    frontend_recheck_handoff: ProgramFrontendRecheckHandoff | None = None
 
 
 @dataclass
@@ -256,6 +266,11 @@ class ProgramService:
                             "PRD traceability matrix updated",
                         ],
                         frontend_readiness=row.frontend_readiness if row else None,
+                        frontend_recheck_handoff=(
+                            self._build_frontend_recheck_handoff(
+                                row.frontend_readiness if row else None
+                            )
+                        ),
                     )
                 )
                 order += 1
@@ -355,6 +370,20 @@ class ProgramService:
         if gate_verdict == "PASS" and not coverage_gaps and not blockers:
             return PROGRAM_FRONTEND_READINESS_READY
         return PROGRAM_FRONTEND_READINESS_RETRY
+
+    def _build_frontend_recheck_handoff(
+        self,
+        readiness: ProgramFrontendReadiness | None,
+    ) -> ProgramFrontendRecheckHandoff | None:
+        if readiness is None or readiness.state != PROGRAM_FRONTEND_READINESS_READY:
+            return None
+
+        return ProgramFrontendRecheckHandoff(
+            required=True,
+            reason="re-run frontend verification after execute before close",
+            recommended_commands=[PROGRAM_FRONTEND_RECHECK_COMMAND],
+            source_linkage=dict(readiness.source_linkage),
+        )
 
     def _build_graph(self, manifest: ProgramManifest) -> dict[str, list[str]]:
         return {spec.id: list(spec.depends_on) for spec in manifest.specs}
