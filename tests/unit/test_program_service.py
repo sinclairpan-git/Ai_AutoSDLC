@@ -613,6 +613,62 @@ def test_build_frontend_provider_patch_handoff_warns_when_runtime_artifact_missi
     assert "missing provider runtime artifact" in handoff.warnings[0]
 
 
+def test_build_frontend_provider_patch_apply_request_requires_explicit_confirmation(
+    tmp_path: Path,
+) -> None:
+    for p in ("specs/001-auth", "specs/002-course", "specs/003-enroll"):
+        (tmp_path / p).mkdir(parents=True)
+    _write_frontend_provider_runtime_artifact(
+        tmp_path,
+        invocation_result="deferred",
+        provider_execution_state="deferred",
+        remaining_blockers=["spec 001-auth remediation still required"],
+    )
+
+    svc = ProgramService(tmp_path)
+    request = svc.build_frontend_provider_patch_apply_request(_manifest())
+
+    assert request.required is True
+    assert request.confirmation_required is True
+    assert request.patch_apply_state == "not_started"
+    assert (
+        request.handoff_source_path
+        == ".ai-sdlc/memory/frontend-provider-runtime/latest.yaml"
+    )
+    assert request.handoff_generated_at == "2026-04-03T19:00:00Z"
+    assert request.patch_availability_state == "deferred"
+    assert [step.spec_id for step in request.steps] == ["001-auth"]
+    assert request.steps[0].patch_availability_state == "deferred"
+    assert (
+        request.steps[0].source_linkage["patch_apply_state"] == "not_started"
+    )
+
+
+def test_execute_frontend_provider_patch_apply_returns_deferred_result_when_confirmed(
+    tmp_path: Path,
+) -> None:
+    for p in ("specs/001-auth", "specs/002-course", "specs/003-enroll"):
+        (tmp_path / p).mkdir(parents=True)
+    _write_frontend_provider_runtime_artifact(
+        tmp_path,
+        invocation_result="deferred",
+        provider_execution_state="deferred",
+        remaining_blockers=["spec 001-auth remediation still required"],
+    )
+
+    svc = ProgramService(tmp_path)
+    result = svc.execute_frontend_provider_patch_apply(_manifest(), confirmed=True)
+
+    assert result.passed is False
+    assert result.confirmed is True
+    assert result.patch_apply_state == "deferred"
+    assert result.apply_result == "deferred"
+    assert result.apply_summaries == ["no files written in guarded patch apply baseline"]
+    assert result.written_paths == []
+    assert result.remaining_blockers == ["spec 001-auth remediation still required"]
+    assert result.source_linkage["patch_apply_state"] == "deferred"
+
+
 def test_build_status_surfaces_ready_frontend_readiness_per_spec(tmp_path: Path) -> None:
     for p in ("specs/001-auth", "specs/002-course", "specs/003-enroll"):
         (tmp_path / p).mkdir(parents=True)

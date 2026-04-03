@@ -65,3 +65,87 @@
 
 - `029` 的 guarded patch apply truth、explicit guard 与 downstream writeback 边界已经冻结。
 - 下游实现起点明确为 `ProgramService` apply request/result packaging，其后再进入 CLI apply surface。
+
+## Batch 2026-04-03-002
+
+- **时间**：2026-04-03 21:40:00 +0800
+- **目标**：在 `ProgramService` 中落下 guarded patch apply request/result packaging，不改变 `028` patch handoff truth，也不越界到 cross-spec writeback。
+- **范围**：
+  - `src/ai_sdlc/core/program_service.py`
+  - `tests/unit/test_program_service.py`
+  - `specs/029-frontend-program-guarded-patch-apply-baseline/task-execution-log.md`
+- **激活的规则**：
+  - test-driven-development
+  - explicit confirmation guard
+  - no cross-spec writeback in current batch
+
+### Completed Tasks
+
+#### T41 | 先写 failing tests 固定 guarded patch apply request/result 语义
+
+- 新增 `test_build_frontend_provider_patch_apply_request_requires_explicit_confirmation`，固定 handoff linkage、patch availability 与 explicit confirmation guard。
+- 新增 `test_execute_frontend_provider_patch_apply_returns_deferred_result_when_confirmed`，固定 deferred apply result、written paths 与 remaining blockers。
+- 首次 RED 结果：
+  - `uv run pytest tests/unit/test_program_service.py -q -k "provider_patch_apply"` -> `2 failed, 28 deselected`
+  - 失败原因：`ProgramService` 缺少 `build_frontend_provider_patch_apply_request` 与 `execute_frontend_provider_patch_apply`
+
+#### T42 | 实现最小 guarded patch apply packaging
+
+- 在 `program_service.py` 新增 `ProgramFrontendProviderPatchApplyRequestStep` / `ProgramFrontendProviderPatchApplyRequest` / `ProgramFrontendProviderPatchApplyResult` dataclass。
+- 新增 `build_frontend_provider_patch_apply_request()`，只消费 readonly patch handoff truth。
+- 新增 `execute_frontend_provider_patch_apply()`，当前只返回 deferred 结果，不真实写文件。
+
+#### T43 | Fresh verify 并追加 implementation batch 归档
+
+- 定向单测转绿：
+  - `uv run pytest tests/unit/test_program_service.py -q -k "provider_patch_apply"` -> `2 passed, 28 deselected`
+
+### Outcome
+
+- `ProgramService` 已具备 guarded patch apply request/result packaging，CLI 可以直接消费这套 execute truth。
+
+## Batch 2026-04-03-003
+
+- **时间**：2026-04-03 21:47:00 +0800
+- **目标**：把 guarded patch apply 暴露到独立 CLI execute surface，要求显式确认，并诚实回报 deferred 结果。
+- **范围**：
+  - `src/ai_sdlc/cli/program_cmd.py`
+  - `tests/integration/test_cli_program.py`
+  - `specs/029-frontend-program-guarded-patch-apply-baseline/task-execution-log.md`
+- **激活的规则**：
+  - test-driven-development
+  - explicit execute surface
+  - no cross-spec writeback in current batch
+
+### Completed Tasks
+
+#### T51 | 先写 failing tests 固定 CLI apply 输出语义
+
+- 新增 `test_program_provider_patch_apply_execute_requires_explicit_confirmation`，固定 `--execute` 未确认时的 exit code 与 `--yes` 提示。
+- 新增 `test_program_provider_patch_apply_execute_surfaces_deferred_result`，固定 `provider-patch-apply --execute --yes` 的 deferred result / report 文案。
+- 首次 RED 结果：
+  - `uv run pytest tests/integration/test_cli_program.py -q -k "provider_patch_apply"` -> `2 failed, 24 deselected`
+  - 失败原因：CLI 缺少 `program provider-patch-apply`
+
+#### T52 | 实现最小 guarded patch apply CLI surface
+
+- 在 `program_cmd.py` 新增 `program provider-patch-apply`。
+- 当前 surface 支持 dry-run / `--execute --yes` / `--report`，并输出 `Frontend Provider Patch Apply Result`。
+- execute 结果保持 deferred，不把 apply 误表述成更宽的 writeback orchestration 已完成。
+
+#### T53 | Fresh verify 并追加 CLI batch 归档
+
+- 定向集成转绿：
+  - `uv run pytest tests/integration/test_cli_program.py -q -k "provider_patch_apply"` -> `2 passed, 24 deselected`
+- full fresh verify：
+  - `uv run pytest tests/unit/test_program_service.py -q` -> `30 passed`
+  - `uv run pytest tests/integration/test_cli_program.py -q` -> `26 passed`
+  - `uv run ruff check src tests` -> `All checks passed!`
+  - `uv run python -c "from pathlib import Path; from ai_sdlc.generators.doc_gen import TasksParser; plan = TasksParser().parse(Path('specs/029-frontend-program-guarded-patch-apply-baseline/tasks.md')); print({'total_tasks': plan.total_tasks, 'total_batches': plan.total_batches})"` -> `{'total_tasks': 15, 'total_batches': 5}`
+  - `uv run ai-sdlc verify constraints` -> `verify constraints: no BLOCKERs.`
+  - `git diff --check -- specs/029-frontend-program-guarded-patch-apply-baseline src/ai_sdlc/core/program_service.py src/ai_sdlc/cli/program_cmd.py tests/unit/test_program_service.py tests/integration/test_cli_program.py` -> 无输出
+
+### Outcome
+
+- `029` 已形成 docs -> service apply request/result -> CLI execute surface 的闭环。
+- 下游可以继续拆 `030` 的 cross-spec writeback/runtime orchestration child work item，而不需要再从 apply surface 反推 truth。

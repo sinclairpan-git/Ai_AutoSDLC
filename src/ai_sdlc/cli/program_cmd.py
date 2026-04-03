@@ -954,6 +954,189 @@ def program_provider_patch_handoff(
     raise typer.Exit(code=0)
 
 
+@program_app.command("provider-patch-apply")
+def program_provider_patch_apply(
+    manifest: str = typer.Option(
+        "program-manifest.yaml",
+        "--manifest",
+        help="Path to program manifest relative to project root.",
+    ),
+    dry_run: bool = typer.Option(
+        True,
+        "--dry-run/--execute",
+        help="Preview guarded provider patch apply request or explicitly execute the guarded apply baseline.",
+    ),
+    report: str = typer.Option(
+        "",
+        "--report",
+        help="Optional report output path relative to project root.",
+    ),
+    yes: bool = typer.Option(
+        False,
+        "--yes",
+        help="Confirm guarded provider patch apply execute mode.",
+    ),
+) -> None:
+    """Preview or execute the guarded frontend provider patch apply baseline."""
+    root = _resolve_root()
+    svc = ProgramService(root, root / manifest)
+
+    try:
+        mf = svc.load_manifest()
+    except Exception as exc:
+        console.print(f"[red]Failed to load manifest: {exc}[/red]")
+        raise typer.Exit(code=2) from None
+
+    result = svc.validate_manifest(mf)
+    if not result.valid:
+        console.print(
+            "[bold red]Manifest invalid; cannot build provider patch apply.[/bold red]"
+        )
+        for e in result.errors:
+            console.print(f"  - {e}")
+        raise typer.Exit(code=1)
+
+    request = svc.build_frontend_provider_patch_apply_request(mf)
+    mode_title = (
+        "Program Frontend Provider Patch Apply Dry-Run"
+        if dry_run
+        else "Program Frontend Provider Patch Apply Execute"
+    )
+
+    if request.steps:
+        table = Table(title=mode_title)
+        table.add_column("Spec")
+        table.add_column("Path")
+        table.add_column("Patch Availability")
+        table.add_column("Pending Inputs")
+        table.add_column("Next Actions")
+        for step in request.steps:
+            table.add_row(
+                step.spec_id,
+                step.path,
+                step.patch_availability_state,
+                ", ".join(step.pending_inputs) or "-",
+                " ; ".join(step.suggested_next_actions) or "-",
+            )
+        console.print(table)
+    else:
+        console.print("[green]No guarded frontend provider patch apply steps required.[/green]")
+
+    console.print("\n[bold cyan]Frontend Provider Patch Apply Guard[/bold cyan]")
+    console.print(f"  - source handoff: {request.handoff_source_path}", markup=False)
+    console.print(
+        f"  - patch apply state: {request.patch_apply_state}",
+        markup=False,
+    )
+    console.print(
+        f"  - patch availability: {request.patch_availability_state}",
+        markup=False,
+    )
+    console.print(
+        f"  - confirmation required: {str(request.confirmation_required).lower()}",
+        markup=False,
+    )
+    if request.handoff_generated_at:
+        console.print(
+            f"  - handoff generated_at: {request.handoff_generated_at}",
+            markup=False,
+        )
+    for blocker in request.remaining_blockers:
+        console.print(f"  - blocker: {blocker}", markup=False)
+
+    if request.warnings:
+        console.print("\n[bold yellow]Warnings[/bold yellow]")
+        for warning in request.warnings:
+            console.print(f"  - {warning}")
+
+    apply_result = None
+    if not dry_run:
+        if not yes:
+            console.print(
+                "[bold yellow]`--execute` requires explicit confirmation via `--yes`.[/bold yellow]"
+            )
+            raise typer.Exit(code=2)
+        apply_result = svc.execute_frontend_provider_patch_apply(
+            mf,
+            request=request,
+            confirmed=True,
+        )
+        _render_frontend_provider_patch_apply_result(apply_result)
+
+    if report:
+        report_path = root / report
+        report_path.parent.mkdir(parents=True, exist_ok=True)
+        lines: list[str] = [
+            f"# {mode_title}",
+            "",
+            f"- Manifest: `{manifest}`",
+            f"- Source handoff: `{request.handoff_source_path}`",
+            f"- Patch apply state: `{request.patch_apply_state}`",
+            f"- Patch availability: `{request.patch_availability_state}`",
+            f"- Confirmation required: `{str(request.confirmation_required).lower()}`",
+        ]
+        if request.handoff_generated_at:
+            lines.append(f"- Handoff generated_at: `{request.handoff_generated_at}`")
+        lines.append("")
+        if request.steps:
+            lines.append("## Steps")
+            lines.append("")
+            for step in request.steps:
+                lines.extend(
+                    [
+                        f"### {step.spec_id}",
+                        f"- Path: `{step.path}`",
+                        f"- Patch availability: `{step.patch_availability_state}`",
+                        f"- Pending inputs: `{', '.join(step.pending_inputs) or '-'}`",
+                        "- Suggested next actions:",
+                    ]
+                )
+                lines.extend([f"  - {action}" for action in step.suggested_next_actions])
+                lines.append("")
+        if request.remaining_blockers:
+            lines.append("## Remaining Blockers")
+            lines.append("")
+            lines.extend([f"- {blocker}" for blocker in request.remaining_blockers])
+            lines.append("")
+        if apply_result is not None:
+            lines.append("## Frontend Provider Patch Apply Result")
+            lines.append("")
+            lines.append(f"- Apply result: `{apply_result.apply_result}`")
+            lines.append(f"- Patch apply state: `{apply_result.patch_apply_state}`")
+            lines.append(f"- Confirmed: `{str(apply_result.confirmed).lower()}`")
+            if apply_result.apply_summaries:
+                lines.append("- Apply summaries:")
+                lines.extend([f"  - {item}" for item in apply_result.apply_summaries])
+            if apply_result.written_paths:
+                lines.append("- Written paths:")
+                lines.extend([f"  - {item}" for item in apply_result.written_paths])
+            if apply_result.remaining_blockers:
+                lines.append("- Remaining blockers:")
+                lines.extend([f"  - {item}" for item in apply_result.remaining_blockers])
+            lines.append("")
+        if request.warnings or (apply_result is not None and apply_result.warnings):
+            lines.append("## Warnings")
+            lines.append("")
+            warning_lines = list(request.warnings)
+            if apply_result is not None:
+                warning_lines.extend(apply_result.warnings)
+            lines.extend([f"- {warning}" for warning in warning_lines])
+            lines.append("")
+        report_path.write_text("\n".join(lines), encoding="utf-8")
+        console.print(f"\n[green]Report written:[/green] {report_path}")
+
+    if dry_run:
+        raise typer.Exit(code=0)
+
+    assert apply_result is not None
+    if apply_result.passed:
+        console.print("\n[bold green]Frontend provider patch apply completed[/bold green]")
+        raise typer.Exit(code=0)
+
+    console.print("\n[bold red]Frontend provider patch apply incomplete[/bold red]")
+    raise typer.Exit(code=1)
+
+
 def _format_frontend_readiness(readiness: ProgramFrontendReadiness | None) -> str:
     if readiness is None:
         return "-"
@@ -1126,6 +1309,31 @@ def _render_frontend_provider_runtime_result(result: object) -> None:
     )
     for summary in getattr(result, "patch_summaries", ()):
         console.print(f"  - patch summary: {summary}", markup=False)
+    for blocker in getattr(result, "remaining_blockers", ()):
+        console.print(f"  - blocker: {blocker}", markup=False)
+    for warning in getattr(result, "warnings", ()):
+        console.print(f"  - warning: {warning}", markup=False)
+
+
+def _render_frontend_provider_patch_apply_result(result: object) -> None:
+    console.print("\n[bold cyan]Frontend Provider Patch Apply Result[/bold cyan]")
+    console.print(
+        f"  - apply result: {getattr(result, 'apply_result', 'unknown')}",
+        markup=False,
+    )
+    console.print(
+        "  - patch apply state: "
+        + str(getattr(result, "patch_apply_state", "unknown")),
+        markup=False,
+    )
+    console.print(
+        f"  - confirmed: {str(getattr(result, 'confirmed', False)).lower()}",
+        markup=False,
+    )
+    for summary in getattr(result, "apply_summaries", ()):
+        console.print(f"  - apply summary: {summary}", markup=False)
+    for path in getattr(result, "written_paths", ()):
+        console.print(f"  - wrote: {path}", markup=False)
     for blocker in getattr(result, "remaining_blockers", ()):
         console.print(f"  - blocker: {blocker}", markup=False)
     for warning in getattr(result, "warnings", ()):

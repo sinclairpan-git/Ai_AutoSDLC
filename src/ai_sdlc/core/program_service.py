@@ -56,6 +56,9 @@ PROGRAM_FRONTEND_PROVIDER_RUNTIME_ARTIFACT_REL_PATH = (
 PROGRAM_FRONTEND_PROVIDER_RUNTIME_DEFERRED_SUMMARY = (
     "no patches generated in guarded provider runtime baseline"
 )
+PROGRAM_FRONTEND_PATCH_APPLY_DEFERRED_SUMMARY = (
+    "no files written in guarded patch apply baseline"
+)
 
 
 @dataclass
@@ -217,6 +220,45 @@ class ProgramFrontendProviderPatchHandoff:
     runtime_generated_at: str
     steps: list[ProgramFrontendProviderPatchHandoffStep] = field(default_factory=list)
     patch_summaries: list[str] = field(default_factory=list)
+    remaining_blockers: list[str] = field(default_factory=list)
+    warnings: list[str] = field(default_factory=list)
+    source_linkage: dict[str, str] = field(default_factory=dict)
+
+
+@dataclass
+class ProgramFrontendProviderPatchApplyRequestStep:
+    spec_id: str
+    path: str
+    patch_availability_state: str
+    pending_inputs: list[str] = field(default_factory=list)
+    suggested_next_actions: list[str] = field(default_factory=list)
+    source_linkage: dict[str, str] = field(default_factory=dict)
+
+
+@dataclass
+class ProgramFrontendProviderPatchApplyRequest:
+    required: bool
+    confirmation_required: bool
+    patch_apply_state: str
+    patch_availability_state: str
+    handoff_source_path: str
+    handoff_generated_at: str
+    steps: list[ProgramFrontendProviderPatchApplyRequestStep] = field(
+        default_factory=list
+    )
+    remaining_blockers: list[str] = field(default_factory=list)
+    warnings: list[str] = field(default_factory=list)
+    source_linkage: dict[str, str] = field(default_factory=dict)
+
+
+@dataclass
+class ProgramFrontendProviderPatchApplyResult:
+    passed: bool
+    confirmed: bool
+    patch_apply_state: str
+    apply_result: str
+    apply_summaries: list[str] = field(default_factory=list)
+    written_paths: list[str] = field(default_factory=list)
     remaining_blockers: list[str] = field(default_factory=list)
     warnings: list[str] = field(default_factory=list)
     source_linkage: dict[str, str] = field(default_factory=dict)
@@ -902,6 +944,124 @@ class ProgramService:
                 [*warnings, *_normalize_string_list(payload.get("warnings", []))]
             ),
             source_linkage=source_linkage,
+        )
+
+    def build_frontend_provider_patch_apply_request(
+        self,
+        manifest: ProgramManifest,
+        *,
+        handoff: ProgramFrontendProviderPatchHandoff | None = None,
+    ) -> ProgramFrontendProviderPatchApplyRequest:
+        """Build the guarded patch apply request from readonly patch handoff truth."""
+        effective_handoff = handoff or self.build_frontend_provider_patch_handoff(manifest)
+        source_linkage = dict(effective_handoff.source_linkage)
+        source_linkage.update(
+            {
+                "patch_apply_state": "not_started",
+                "confirmation_required": str(effective_handoff.required).lower(),
+            }
+        )
+        steps = [
+            ProgramFrontendProviderPatchApplyRequestStep(
+                spec_id=step.spec_id,
+                path=step.path,
+                patch_availability_state=step.patch_availability_state,
+                pending_inputs=list(step.pending_inputs),
+                suggested_next_actions=list(step.suggested_next_actions),
+                source_linkage={
+                    **dict(step.source_linkage),
+                    "patch_apply_state": "not_started",
+                    "confirmation_required": str(effective_handoff.required).lower(),
+                },
+            )
+            for step in effective_handoff.steps
+        ]
+        return ProgramFrontendProviderPatchApplyRequest(
+            required=effective_handoff.required,
+            confirmation_required=effective_handoff.required,
+            patch_apply_state="not_started",
+            patch_availability_state=effective_handoff.patch_availability_state,
+            handoff_source_path=effective_handoff.runtime_artifact_path,
+            handoff_generated_at=effective_handoff.runtime_generated_at,
+            steps=steps,
+            remaining_blockers=list(effective_handoff.remaining_blockers),
+            warnings=list(effective_handoff.warnings),
+            source_linkage=source_linkage,
+        )
+
+    def execute_frontend_provider_patch_apply(
+        self,
+        manifest: ProgramManifest,
+        *,
+        request: ProgramFrontendProviderPatchApplyRequest | None = None,
+        confirmed: bool = False,
+    ) -> ProgramFrontendProviderPatchApplyResult:
+        """Execute the guarded patch apply baseline without writing files yet."""
+        effective_request = request or self.build_frontend_provider_patch_apply_request(
+            manifest
+        )
+        if effective_request.warnings and not effective_request.handoff_generated_at:
+            return ProgramFrontendProviderPatchApplyResult(
+                passed=False,
+                confirmed=confirmed,
+                patch_apply_state="blocked",
+                apply_result="blocked",
+                remaining_blockers=list(effective_request.remaining_blockers),
+                warnings=list(effective_request.warnings),
+                source_linkage={
+                    **dict(effective_request.source_linkage),
+                    "patch_apply_state": "blocked",
+                    "apply_result": "blocked",
+                },
+            )
+        if not effective_request.required:
+            return ProgramFrontendProviderPatchApplyResult(
+                passed=True,
+                confirmed=confirmed,
+                patch_apply_state="not_started",
+                apply_result="skipped",
+                remaining_blockers=[],
+                warnings=list(effective_request.warnings),
+                source_linkage={
+                    **dict(effective_request.source_linkage),
+                    "patch_apply_state": "not_started",
+                    "apply_result": "skipped",
+                },
+            )
+        if not confirmed:
+            return ProgramFrontendProviderPatchApplyResult(
+                passed=False,
+                confirmed=False,
+                patch_apply_state="confirmation_required",
+                apply_result="blocked",
+                remaining_blockers=list(effective_request.remaining_blockers),
+                warnings=[
+                    *effective_request.warnings,
+                    "provider patch apply requires explicit confirmation",
+                ],
+                source_linkage={
+                    **dict(effective_request.source_linkage),
+                    "patch_apply_state": "confirmation_required",
+                    "apply_result": "blocked",
+                },
+            )
+        return ProgramFrontendProviderPatchApplyResult(
+            passed=False,
+            confirmed=True,
+            patch_apply_state="deferred",
+            apply_result="deferred",
+            apply_summaries=[PROGRAM_FRONTEND_PATCH_APPLY_DEFERRED_SUMMARY],
+            written_paths=[],
+            remaining_blockers=list(effective_request.remaining_blockers),
+            warnings=[
+                *effective_request.warnings,
+                "guarded patch apply baseline does not apply patches yet",
+            ],
+            source_linkage={
+                **dict(effective_request.source_linkage),
+                "patch_apply_state": "deferred",
+                "apply_result": "deferred",
+            },
         )
 
     def evaluate_execute_gates(
