@@ -65,3 +65,89 @@
 
 - `043` 的 final proof publication orchestration truth、explicit guard 与 downstream publication artifact persistence 边界已经冻结。
 - 下游实现起点明确为 `ProgramService` final proof publication request/result packaging，其后再进入 CLI execute surface。
+
+## Batch 2026-04-03-002
+
+- **时间**：2026-04-03 23:18:10 +0800
+- **目标**：在 `ProgramService` 中落下 final proof publication request/result packaging，只消费 `042` artifact truth，不引入 publication artifact persistence。
+- **范围**：
+  - `src/ai_sdlc/core/program_service.py`
+  - `tests/unit/test_program_service.py`
+  - `specs/043-frontend-program-final-proof-publication-orchestration-baseline/task-execution-log.md`
+- **激活的规则**：
+  - test-driven-development
+  - orchestration packaging only
+  - no publication artifact persistence in current batch
+
+### Completed Tasks
+
+#### T41 | 先写 failing tests 固定 final proof publication request/result 语义
+
+- 新增 `test_build_frontend_final_proof_publication_request_requires_explicit_confirmation`，固定 artifact linkage、publication state 与 confirmation guard。
+- 新增 `test_execute_frontend_final_proof_publication_returns_deferred_result_when_confirmed`，固定 execute 后的 deferred publication result。
+- 新增 `test_execute_frontend_final_proof_publication_does_not_write_artifact_by_default`，固定当前 baseline 不会隐式写出 publication artifact。
+- 首次 RED 结果：
+  - `uv run pytest tests/unit/test_program_service.py -q -k "final_proof_publication"` -> `3 failed, 56 deselected`
+  - 失败原因：`ProgramService` 缺少 `build_frontend_final_proof_publication_request` 与 `execute_frontend_final_proof_publication`
+
+#### T42 | 实现最小 final proof publication packaging
+
+- 在 `program_service.py` 新增 final proof publication dataclass、deferred summary 常量与 persisted write proof artifact loader。
+- 新增 `build_frontend_final_proof_publication_request()`，只从 `.ai-sdlc/memory/frontend-persisted-write-proof/latest.yaml` 生成 request truth。
+- 新增 `execute_frontend_final_proof_publication()`，保持 explicit confirmation guard 与 deferred result honesty，不越界到 publication artifact persistence。
+
+#### T43 | Fresh verify 并追加 implementation batch 归档
+
+- 定向单测转绿：
+  - `uv run pytest tests/unit/test_program_service.py -q -k "final_proof_publication"` -> `3 passed, 56 deselected`
+
+### Outcome
+
+- `ProgramService` 已具备 final proof publication request/result packaging，CLI 可以直接在这层 truth 之上暴露 execute surface。
+
+## Batch 2026-04-03-003
+
+- **时间**：2026-04-03 23:18:10 +0800
+- **目标**：把 final proof publication 暴露到独立 CLI execute surface，要求显式确认，并诚实回报 deferred result 与 report，不写出 publication artifact。
+- **范围**：
+  - `src/ai_sdlc/cli/program_cmd.py`
+  - `tests/integration/test_cli_program.py`
+  - `specs/043-frontend-program-final-proof-publication-orchestration-baseline/task-execution-log.md`
+- **激活的规则**：
+  - test-driven-development
+  - explicit execute surface
+  - no publication artifact persistence in current batch
+
+### Completed Tasks
+
+#### T51 | 先写 failing tests 固定 CLI final proof publication 输出语义
+
+- 新增 `test_program_final_proof_publication_execute_requires_explicit_confirmation`，固定 `--execute` 必须配合 `--yes`。
+- 新增 `test_program_final_proof_publication_dry_run_surfaces_preview`，固定 dry-run preview 与 source artifact 输出。
+- 新增 `test_program_final_proof_publication_execute_surfaces_deferred_result`，固定 execute 后的 deferred result 与 report 内容。
+- 首次 RED 结果：
+  - `uv run pytest tests/integration/test_cli_program.py -q -k "final_proof_publication"` -> `3 failed, 57 deselected`
+  - 失败原因：CLI 尚未注册 `program final-proof-publication`
+
+#### T52 | 实现最小 final proof publication CLI surface
+
+- 在 `program_cmd.py` 新增 `program final-proof-publication`，支持 dry-run、`--execute --yes` 和 `--report`。
+- 新增 `Frontend Final Proof Publication Guard` 与 `Frontend Final Proof Publication Result` 输出。
+- 额外对长 summary/warning 行启用 `soft_wrap=True`，避免 `rich` 在 captured output 中硬折行导致结果断言失真。
+
+#### T53 | Fresh verify 并追加 CLI batch 归档
+
+- 定向集成转绿：
+  - `uv run pytest tests/integration/test_cli_program.py -q -k "final_proof_publication"` -> `3 passed, 57 deselected`
+- full fresh verify：
+  - `uv run pytest tests/unit/test_program_service.py -q` -> `59 passed`
+  - `uv run pytest tests/integration/test_cli_program.py -q` -> `60 passed`
+  - `uv run ruff check src tests` -> `All checks passed!`
+  - `uv run python -c "from pathlib import Path; from ai_sdlc.generators.doc_gen import TasksParser; plan = TasksParser().parse(Path('specs/043-frontend-program-final-proof-publication-orchestration-baseline/tasks.md')); print({'total_tasks': plan.total_tasks, 'total_batches': plan.total_batches})"` -> `{'total_tasks': 15, 'total_batches': 5}`
+  - `uv run ai-sdlc verify constraints` -> `verify constraints: no BLOCKERs.`
+  - `git diff --check -- specs/043-frontend-program-final-proof-publication-orchestration-baseline src/ai_sdlc/core/program_service.py src/ai_sdlc/cli/program_cmd.py tests/unit/test_program_service.py tests/integration/test_cli_program.py` -> 无输出
+
+### Outcome
+
+- `043` 已形成 docs -> service packaging -> CLI execute/report 的闭环。
+- 下游可以继续拆 publication artifact persistence baseline，而不需要再从临时 CLI 文本反推 final proof publication truth。
