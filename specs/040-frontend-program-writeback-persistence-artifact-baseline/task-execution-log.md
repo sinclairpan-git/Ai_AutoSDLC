@@ -65,3 +65,87 @@
 
 - `040` 的 writeback persistence artifact truth、write boundary 与 downstream persisted write proof 边界已经冻结。
 - 下游实现起点明确为 `ProgramService` writeback persistence artifact writer，其后再进入 CLI artifact output surface。
+
+## Batch 2026-04-03-002
+
+- **时间**：2026-04-03 21:10:05 +0800
+- **目标**：在 `ProgramService` 中落下 canonical writeback persistence artifact writer，不改变 `039` truth，也不越界到 persisted write proof / proof artifact。
+- **范围**：
+  - `src/ai_sdlc/core/program_service.py`
+  - `tests/unit/test_program_service.py`
+  - `specs/040-frontend-program-writeback-persistence-artifact-baseline/task-execution-log.md`
+- **激活的规则**：
+  - test-driven-development
+  - artifact materialization only
+  - no persisted write proof in current batch
+
+### Completed Tasks
+
+#### T41 | 先写 failing tests 固定 writeback persistence artifact writer 语义
+
+- 新增 `test_write_frontend_writeback_persistence_artifact_emits_canonical_yaml`，固定 canonical path、request/result linkage 与 payload 字段。
+- 新增 `test_execute_frontend_writeback_persistence_does_not_write_artifact_by_default`，固定 execute result 不会默认隐式落盘。
+- 首次 RED 结果：
+  - `uv run pytest tests/unit/test_program_service.py -q -k "writeback_persistence and (artifact or does_not_write_artifact)"` -> `1 failed, 1 passed, 50 deselected`
+  - 失败原因：`ProgramService` 缺少 `write_frontend_writeback_persistence_artifact`
+
+#### T42 | 实现最小 writeback persistence artifact writer
+
+- 在 `program_service.py` 新增 `PROGRAM_FRONTEND_WRITEBACK_PERSISTENCE_ARTIFACT_REL_PATH`。
+- 新增 `write_frontend_writeback_persistence_artifact()`，只从 `039` request/result materialize canonical artifact。
+- 新增 `_build_frontend_writeback_persistence_artifact_payload()`，统一 artifact payload、warnings 与 source linkage。
+
+#### T43 | Fresh verify 并追加 implementation batch 归档
+
+- 定向单测转绿：
+  - `uv run pytest tests/unit/test_program_service.py -q -k "writeback_persistence and (artifact or does_not_write_artifact)"` -> `2 passed, 50 deselected`
+
+### Outcome
+
+- `ProgramService` 已具备 writeback persistence artifact writer，CLI 可以直接消费这套 execute artifact truth。
+
+## Batch 2026-04-03-003
+
+- **时间**：2026-04-03 21:10:05 +0800
+- **目标**：把 writeback persistence artifact 暴露到独立 CLI execute surface，要求显式确认，并诚实回报 artifact path 与 deferred result。
+- **范围**：
+  - `src/ai_sdlc/cli/program_cmd.py`
+  - `tests/integration/test_cli_program.py`
+  - `specs/040-frontend-program-writeback-persistence-artifact-baseline/task-execution-log.md`
+- **激活的规则**：
+  - test-driven-development
+  - explicit execute surface
+  - no persisted write proof in current batch
+
+### Completed Tasks
+
+#### T51 | 先写 failing tests 固定 CLI artifact 输出语义
+
+- 新增 `test_program_writeback_persistence_dry_run_does_not_write_artifact`，固定默认 dry-run 不写出 artifact。
+- 新增 `test_program_writeback_persistence_execute_writes_persistence_artifact`，固定 `--execute --yes` 下的 artifact path 输出与 report 落盘。
+- 首次 RED 结果：
+  - `uv run pytest tests/integration/test_cli_program.py -q -k "writeback_persistence and (artifact or does_not_write_artifact)"` -> `1 failed, 1 passed, 50 deselected`
+  - 失败原因：`program writeback-persistence --execute --yes` 尚未写出 `.ai-sdlc/memory/frontend-writeback-persistence/latest.yaml`
+
+#### T52 | 实现最小 writeback persistence artifact CLI surface
+
+- 在 `program_cmd.py` 让 `program writeback-persistence --execute --yes` 写出 canonical writeback persistence artifact。
+- execute 成功后新增 `Frontend Writeback Persistence Artifact` 终端输出。
+- report 写入新增 artifact section，但保持 deferred result 语义，不误表述为 persisted write proof 已完成。
+
+#### T53 | Fresh verify 并追加 CLI batch 归档
+
+- 定向集成转绿：
+  - `uv run pytest tests/integration/test_cli_program.py -q -k "writeback_persistence and (artifact or does_not_write_artifact)"` -> `2 passed, 50 deselected`
+- full fresh verify：
+  - `uv run pytest tests/unit/test_program_service.py -q` -> `52 passed`
+  - `uv run pytest tests/integration/test_cli_program.py -q` -> `52 passed`
+  - `uv run ruff check src tests` -> `All checks passed!`
+  - `uv run python -c "from pathlib import Path; from ai_sdlc.generators.doc_gen import TasksParser; plan = TasksParser().parse(Path('specs/040-frontend-program-writeback-persistence-artifact-baseline/tasks.md')); print({'total_tasks': plan.total_tasks, 'total_batches': plan.total_batches})"` -> `{'total_tasks': 15, 'total_batches': 5}`
+  - `uv run ai-sdlc verify constraints` -> `verify constraints: no BLOCKERs.`
+  - `git diff --check -- specs/040-frontend-program-writeback-persistence-artifact-baseline src/ai_sdlc/core/program_service.py src/ai_sdlc/cli/program_cmd.py tests/unit/test_program_service.py tests/integration/test_cli_program.py` -> 无输出
+
+### Outcome
+
+- `040` 已形成 docs -> service artifact writer -> CLI artifact output/report 的闭环。
+- 下游可以继续拆 persisted write proof / artifact baseline，而不需要再从临时 CLI 文本反推 writeback persistence truth。

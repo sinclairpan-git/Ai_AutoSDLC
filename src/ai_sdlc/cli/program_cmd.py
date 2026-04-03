@@ -2087,6 +2087,7 @@ def program_writeback_persistence(
             console.print(f"  - {warning}")
 
     persistence_result = None
+    persistence_artifact_path: Path | None = None
     if not dry_run:
         if not yes:
             console.print(
@@ -2098,7 +2099,17 @@ def program_writeback_persistence(
             request=request,
             confirmed=True,
         )
+        persistence_artifact_path = svc.write_frontend_writeback_persistence_artifact(
+            mf,
+            request=request,
+            result=persistence_result,
+        )
         _render_frontend_writeback_persistence_result(persistence_result)
+        console.print("\n[bold cyan]Frontend Writeback Persistence Artifact[/bold cyan]")
+        console.print(
+            f"  - saved: {persistence_artifact_path.relative_to(root)}",
+            markup=False,
+        )
 
     if report:
         report_path = root / report
@@ -2161,6 +2172,11 @@ def program_writeback_persistence(
                 lines.extend(
                     [f"  - {item}" for item in persistence_result.remaining_blockers]
                 )
+            lines.append("")
+        if persistence_artifact_path is not None:
+            lines.append("## Frontend Writeback Persistence Artifact")
+            lines.append("")
+            lines.append(f"- `{persistence_artifact_path.relative_to(root)}`")
             lines.append("")
         if request.warnings or (
             persistence_result is not None and persistence_result.warnings

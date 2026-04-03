@@ -68,6 +68,9 @@ PROGRAM_FRONTEND_BROADER_GOVERNANCE_ARTIFACT_REL_PATH = (
 PROGRAM_FRONTEND_FINAL_GOVERNANCE_ARTIFACT_REL_PATH = (
     ".ai-sdlc/memory/frontend-final-governance/latest.yaml"
 )
+PROGRAM_FRONTEND_WRITEBACK_PERSISTENCE_ARTIFACT_REL_PATH = (
+    ".ai-sdlc/memory/frontend-writeback-persistence/latest.yaml"
+)
 PROGRAM_FRONTEND_PROVIDER_RUNTIME_DEFERRED_SUMMARY = (
     "no patches generated in guarded provider runtime baseline"
 )
@@ -2403,6 +2406,49 @@ class ProgramService:
             },
         )
 
+    def write_frontend_writeback_persistence_artifact(
+        self,
+        manifest: ProgramManifest,
+        *,
+        request: ProgramFrontendWritebackPersistenceRequest | None = None,
+        result: ProgramFrontendWritebackPersistenceResult | None = None,
+        generated_at: str | None = None,
+        output_path: Path | None = None,
+    ) -> Path:
+        """Persist the canonical writeback persistence artifact."""
+        effective_generated_at = generated_at or utc_now_z()
+        effective_request = request or self.build_frontend_writeback_persistence_request(
+            manifest
+        )
+        effective_result = result or self.execute_frontend_writeback_persistence(
+            manifest,
+            request=effective_request,
+            confirmed=not effective_request.confirmation_required,
+        )
+        if effective_request.confirmation_required and not effective_result.confirmed:
+            raise ValueError(
+                "writeback persistence artifact requires an explicitly confirmed result"
+            )
+
+        artifact_path = output_path or (
+            self.root / PROGRAM_FRONTEND_WRITEBACK_PERSISTENCE_ARTIFACT_REL_PATH
+        )
+        if not artifact_path.is_absolute():
+            artifact_path = self.root / artifact_path
+        relative_artifact_path = _relative_to_root_or_str(self.root, artifact_path)
+        payload = self._build_frontend_writeback_persistence_artifact_payload(
+            request=effective_request,
+            result=effective_result,
+            generated_at=effective_generated_at,
+            artifact_path=relative_artifact_path,
+        )
+        artifact_path.parent.mkdir(parents=True, exist_ok=True)
+        artifact_path.write_text(
+            yaml.safe_dump(payload, sort_keys=False, allow_unicode=True),
+            encoding="utf-8",
+        )
+        return artifact_path
+
     def evaluate_execute_gates(
         self, manifest: ProgramManifest, *, allow_dirty: bool = False
     ) -> ProgramExecuteGates:
@@ -2938,6 +2984,50 @@ class ProgramService:
                     "spec_id": step.spec_id,
                     "path": step.path,
                     "final_governance_state": step.final_governance_state,
+                    "pending_inputs": list(step.pending_inputs),
+                    "suggested_next_actions": list(step.suggested_next_actions),
+                    "source_linkage": dict(step.source_linkage),
+                }
+                for step in request.steps
+            ],
+            "source_linkage": source_linkage,
+        }
+
+    def _build_frontend_writeback_persistence_artifact_payload(
+        self,
+        *,
+        request: ProgramFrontendWritebackPersistenceRequest,
+        result: ProgramFrontendWritebackPersistenceResult,
+        generated_at: str,
+        artifact_path: str,
+    ) -> dict[str, object]:
+        source_linkage = {
+            **dict(request.source_linkage),
+            **dict(result.source_linkage),
+            "writeback_persistence_artifact_path": artifact_path,
+            "writeback_persistence_artifact_generated_at": generated_at,
+        }
+        return {
+            "generated_at": generated_at,
+            "manifest_path": _relative_to_root_or_str(self.root, self.manifest_path),
+            "artifact_source_path": request.artifact_source_path,
+            "artifact_generated_at": request.artifact_generated_at,
+            "required": request.required,
+            "confirmation_required": request.confirmation_required,
+            "confirmed": result.confirmed,
+            "final_governance_state": request.final_governance_state,
+            "persistence_state": result.persistence_state,
+            "persistence_result": result.persistence_result,
+            "persistence_summaries": list(result.persistence_summaries),
+            "existing_written_paths": list(request.written_paths),
+            "written_paths": list(result.written_paths),
+            "remaining_blockers": list(result.remaining_blockers),
+            "warnings": _unique_strings([*request.warnings, *result.warnings]),
+            "steps": [
+                {
+                    "spec_id": step.spec_id,
+                    "path": step.path,
+                    "persistence_state": step.persistence_state,
                     "pending_inputs": list(step.pending_inputs),
                     "suggested_next_actions": list(step.suggested_next_actions),
                     "source_linkage": dict(step.source_linkage),
