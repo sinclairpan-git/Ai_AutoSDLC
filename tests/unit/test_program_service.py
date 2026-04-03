@@ -1022,6 +1022,63 @@ def test_execute_frontend_guarded_registry_does_not_write_artifact_by_default(
     ).exists()
 
 
+def test_build_frontend_broader_governance_request_requires_explicit_confirmation(
+    tmp_path: Path,
+) -> None:
+    for p in ("specs/001-auth", "specs/002-course", "specs/003-enroll"):
+        (tmp_path / p).mkdir(parents=True)
+    _write_frontend_guarded_registry_artifact(
+        tmp_path,
+        registry_result="deferred",
+        registry_state="deferred",
+        remaining_blockers=["spec 001-auth remediation still required"],
+    )
+
+    svc = ProgramService(tmp_path)
+    request = svc.build_frontend_broader_governance_request(_manifest())
+
+    assert request.required is True
+    assert request.confirmation_required is True
+    assert request.governance_state == "not_started"
+    assert request.registry_state == "deferred"
+    assert (
+        request.artifact_source_path
+        == ".ai-sdlc/memory/frontend-guarded-registry/latest.yaml"
+    )
+    assert request.artifact_generated_at == "2026-04-03T22:00:00Z"
+    assert request.written_paths == []
+    assert request.steps[0].spec_id == "001-auth"
+    assert request.steps[0].governance_state == "not_started"
+    assert request.steps[0].source_linkage["governance_state"] == "not_started"
+
+
+def test_execute_frontend_broader_governance_returns_deferred_result_when_confirmed(
+    tmp_path: Path,
+) -> None:
+    for p in ("specs/001-auth", "specs/002-course", "specs/003-enroll"):
+        (tmp_path / p).mkdir(parents=True)
+    _write_frontend_guarded_registry_artifact(
+        tmp_path,
+        registry_result="deferred",
+        registry_state="deferred",
+        remaining_blockers=["spec 001-auth remediation still required"],
+    )
+
+    svc = ProgramService(tmp_path)
+    result = svc.execute_frontend_broader_governance(_manifest(), confirmed=True)
+
+    assert result.passed is False
+    assert result.confirmed is True
+    assert result.governance_state == "deferred"
+    assert result.governance_result == "deferred"
+    assert result.governance_summaries == [
+        "no broader governance actions executed in broader governance baseline"
+    ]
+    assert result.written_paths == []
+    assert result.remaining_blockers == ["spec 001-auth remediation still required"]
+    assert result.source_linkage["governance_state"] == "deferred"
+
+
 def test_build_status_surfaces_ready_frontend_readiness_per_spec(tmp_path: Path) -> None:
     for p in ("specs/001-auth", "specs/002-course", "specs/003-enroll"):
         (tmp_path / p).mkdir(parents=True)

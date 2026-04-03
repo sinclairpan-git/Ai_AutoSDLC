@@ -74,6 +74,9 @@ PROGRAM_FRONTEND_CROSS_SPEC_WRITEBACK_DEFERRED_SUMMARY = (
 PROGRAM_FRONTEND_GUARDED_REGISTRY_DEFERRED_SUMMARY = (
     "no registry updates executed in guarded registry baseline"
 )
+PROGRAM_FRONTEND_BROADER_GOVERNANCE_DEFERRED_SUMMARY = (
+    "no broader governance actions executed in broader governance baseline"
+)
 
 
 @dataclass
@@ -353,6 +356,46 @@ class ProgramFrontendGuardedRegistryResult:
     registry_state: str
     registry_result: str
     registry_summaries: list[str] = field(default_factory=list)
+    written_paths: list[str] = field(default_factory=list)
+    remaining_blockers: list[str] = field(default_factory=list)
+    warnings: list[str] = field(default_factory=list)
+    source_linkage: dict[str, str] = field(default_factory=dict)
+
+
+@dataclass
+class ProgramFrontendBroaderGovernanceRequestStep:
+    spec_id: str
+    path: str
+    governance_state: str
+    pending_inputs: list[str] = field(default_factory=list)
+    suggested_next_actions: list[str] = field(default_factory=list)
+    source_linkage: dict[str, str] = field(default_factory=dict)
+
+
+@dataclass
+class ProgramFrontendBroaderGovernanceRequest:
+    required: bool
+    confirmation_required: bool
+    governance_state: str
+    registry_state: str
+    artifact_source_path: str
+    artifact_generated_at: str
+    written_paths: list[str] = field(default_factory=list)
+    steps: list[ProgramFrontendBroaderGovernanceRequestStep] = field(
+        default_factory=list
+    )
+    remaining_blockers: list[str] = field(default_factory=list)
+    warnings: list[str] = field(default_factory=list)
+    source_linkage: dict[str, str] = field(default_factory=dict)
+
+
+@dataclass
+class ProgramFrontendBroaderGovernanceResult:
+    passed: bool
+    confirmed: bool
+    governance_state: str
+    governance_result: str
+    governance_summaries: list[str] = field(default_factory=list)
     written_paths: list[str] = field(default_factory=list)
     remaining_blockers: list[str] = field(default_factory=list)
     warnings: list[str] = field(default_factory=list)
@@ -1636,6 +1679,182 @@ class ProgramService:
         )
         return artifact_path
 
+    def build_frontend_broader_governance_request(
+        self,
+        manifest: ProgramManifest,
+        *,
+        artifact_path: Path | None = None,
+    ) -> ProgramFrontendBroaderGovernanceRequest:
+        """Build the broader governance request from guarded registry artifact."""
+        effective_artifact_path = artifact_path or (
+            self.root / PROGRAM_FRONTEND_GUARDED_REGISTRY_ARTIFACT_REL_PATH
+        )
+        if not effective_artifact_path.is_absolute():
+            effective_artifact_path = self.root / effective_artifact_path
+
+        relative_artifact_path = _relative_to_root_or_str(self.root, effective_artifact_path)
+        payload, warnings = self._load_frontend_guarded_registry_artifact_payload(
+            effective_artifact_path
+        )
+        if payload is None:
+            return ProgramFrontendBroaderGovernanceRequest(
+                required=False,
+                confirmation_required=False,
+                governance_state="missing_artifact",
+                registry_state="missing_artifact",
+                artifact_source_path=relative_artifact_path,
+                artifact_generated_at="",
+                warnings=warnings,
+                source_linkage={
+                    "guarded_registry_artifact_path": relative_artifact_path,
+                    "governance_state": "missing_artifact",
+                },
+            )
+
+        artifact_generated_at = str(payload.get("generated_at", "")).strip()
+        registry_state = str(payload.get("registry_state", "")).strip() or "unknown"
+        written_paths = _unique_strings(
+            [
+                *_normalize_string_list(payload.get("existing_written_paths", [])),
+                *_normalize_string_list(payload.get("written_paths", [])),
+            ]
+        )
+        remaining_blockers = _normalize_string_list(payload.get("remaining_blockers", []))
+        steps: list[ProgramFrontendBroaderGovernanceRequestStep] = []
+        spec_by_id = {spec.id: spec for spec in manifest.specs}
+        for step_payload in _normalize_mapping_list(payload.get("steps", [])):
+            spec_id = str(step_payload.get("spec_id", "")).strip()
+            if not spec_id:
+                continue
+            path = str(step_payload.get("path", "")).strip()
+            if not path:
+                spec = spec_by_id.get(spec_id)
+                path = spec.path if spec is not None else ""
+            source_linkage = _normalize_string_mapping(step_payload.get("source_linkage", {}))
+            source_linkage.update(
+                {
+                    "guarded_registry_artifact_path": relative_artifact_path,
+                    "guarded_registry_artifact_generated_at": artifact_generated_at,
+                    "governance_state": "not_started",
+                }
+            )
+            steps.append(
+                ProgramFrontendBroaderGovernanceRequestStep(
+                    spec_id=spec_id,
+                    path=path,
+                    governance_state="not_started",
+                    pending_inputs=_normalize_string_list(
+                        step_payload.get("pending_inputs", [])
+                    ),
+                    suggested_next_actions=_normalize_string_list(
+                        step_payload.get("suggested_next_actions", [])
+                    ),
+                    source_linkage=source_linkage,
+                )
+            )
+
+        required = bool(steps or written_paths or remaining_blockers)
+        source_linkage = _normalize_string_mapping(payload.get("source_linkage", {}))
+        source_linkage.update(
+            {
+                "guarded_registry_artifact_path": relative_artifact_path,
+                "guarded_registry_artifact_generated_at": artifact_generated_at,
+                "governance_state": "not_started",
+                "confirmation_required": str(required).lower(),
+            }
+        )
+        return ProgramFrontendBroaderGovernanceRequest(
+            required=required,
+            confirmation_required=required,
+            governance_state="not_started",
+            registry_state=registry_state,
+            artifact_source_path=relative_artifact_path,
+            artifact_generated_at=artifact_generated_at,
+            written_paths=written_paths,
+            steps=steps,
+            remaining_blockers=remaining_blockers,
+            warnings=_unique_strings([*warnings, *_normalize_string_list(payload.get("warnings", []))]),
+            source_linkage=source_linkage,
+        )
+
+    def execute_frontend_broader_governance(
+        self,
+        manifest: ProgramManifest,
+        *,
+        request: ProgramFrontendBroaderGovernanceRequest | None = None,
+        confirmed: bool = False,
+    ) -> ProgramFrontendBroaderGovernanceResult:
+        """Execute the broader governance baseline without final execution yet."""
+        effective_request = request or self.build_frontend_broader_governance_request(
+            manifest
+        )
+        if effective_request.warnings and not effective_request.artifact_generated_at:
+            return ProgramFrontendBroaderGovernanceResult(
+                passed=False,
+                confirmed=confirmed,
+                governance_state="blocked",
+                governance_result="blocked",
+                written_paths=list(effective_request.written_paths),
+                remaining_blockers=list(effective_request.remaining_blockers),
+                warnings=list(effective_request.warnings),
+                source_linkage={
+                    **dict(effective_request.source_linkage),
+                    "governance_state": "blocked",
+                    "governance_result": "blocked",
+                },
+            )
+        if not effective_request.required:
+            return ProgramFrontendBroaderGovernanceResult(
+                passed=True,
+                confirmed=confirmed,
+                governance_state="not_started",
+                governance_result="skipped",
+                written_paths=list(effective_request.written_paths),
+                remaining_blockers=[],
+                warnings=list(effective_request.warnings),
+                source_linkage={
+                    **dict(effective_request.source_linkage),
+                    "governance_state": "not_started",
+                    "governance_result": "skipped",
+                },
+            )
+        if not confirmed:
+            return ProgramFrontendBroaderGovernanceResult(
+                passed=False,
+                confirmed=False,
+                governance_state="confirmation_required",
+                governance_result="blocked",
+                written_paths=list(effective_request.written_paths),
+                remaining_blockers=list(effective_request.remaining_blockers),
+                warnings=[
+                    *effective_request.warnings,
+                    "broader governance orchestration requires explicit confirmation",
+                ],
+                source_linkage={
+                    **dict(effective_request.source_linkage),
+                    "governance_state": "confirmation_required",
+                    "governance_result": "blocked",
+                },
+            )
+        return ProgramFrontendBroaderGovernanceResult(
+            passed=False,
+            confirmed=True,
+            governance_state="deferred",
+            governance_result="deferred",
+            governance_summaries=[PROGRAM_FRONTEND_BROADER_GOVERNANCE_DEFERRED_SUMMARY],
+            written_paths=[],
+            remaining_blockers=list(effective_request.remaining_blockers),
+            warnings=[
+                *effective_request.warnings,
+                "broader governance baseline does not execute final governance actions yet",
+            ],
+            source_linkage={
+                **dict(effective_request.source_linkage),
+                "governance_state": "deferred",
+                "governance_result": "deferred",
+            },
+        )
+
     def evaluate_execute_gates(
         self, manifest: ProgramManifest, *, allow_dirty: bool = False
     ) -> ProgramExecuteGates:
@@ -2215,6 +2434,38 @@ class ProgramService:
                 None,
                 [
                     "invalid cross-spec writeback artifact: "
+                    + _relative_to_root_or_str(self.root, artifact_path)
+                ],
+            )
+        return payload, []
+
+    def _load_frontend_guarded_registry_artifact_payload(
+        self,
+        artifact_path: Path,
+    ) -> tuple[dict[str, object] | None, list[str]]:
+        if not artifact_path.exists():
+            return (
+                None,
+                [
+                    "missing guarded registry artifact: "
+                    + _relative_to_root_or_str(self.root, artifact_path)
+                ],
+            )
+        try:
+            payload = yaml.safe_load(artifact_path.read_text(encoding="utf-8"))
+        except Exception as exc:
+            return (
+                None,
+                [
+                    "invalid guarded registry artifact: "
+                    + f"{_relative_to_root_or_str(self.root, artifact_path)} ({exc})"
+                ],
+            )
+        if not isinstance(payload, dict):
+            return (
+                None,
+                [
+                    "invalid guarded registry artifact: "
                     + _relative_to_root_or_str(self.root, artifact_path)
                 ],
             )
