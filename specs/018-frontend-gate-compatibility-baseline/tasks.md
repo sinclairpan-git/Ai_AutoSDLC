@@ -21,6 +21,7 @@ Batch 4: gate matrix and report models slice
 Batch 5: gate policy artifact slice
 Batch 6: frontend gate verification helper slice
 Batch 7: verify constraints attachment slice
+Batch 8: VerificationGate aggregation slice
 ```
 
 ---
@@ -35,11 +36,13 @@ Batch 7: verify constraints attachment slice
 - `Batch 5` 只允许写入 `src/ai_sdlc/generators/frontend_gate_policy_artifacts.py`、`src/ai_sdlc/generators/__init__.py`、`tests/unit/test_frontend_gate_policy_artifacts.py`、`specs/018-frontend-gate-compatibility-baseline/task-execution-log.md`，以及为本批边界服务的 `plan.md / tasks.md`。
 - `Batch 6` 只允许写入 `src/ai_sdlc/core/frontend_gate_verification.py`、`tests/unit/test_frontend_gate_verification.py`、`specs/018-frontend-gate-compatibility-baseline/task-execution-log.md`，以及为本批边界服务的 `plan.md / tasks.md`。
 - `Batch 7` 只允许写入 `src/ai_sdlc/core/verify_constraints.py`、`tests/unit/test_verify_constraints.py`、`specs/018-frontend-gate-compatibility-baseline/task-execution-log.md`，以及为本批边界服务的 `plan.md / tasks.md`。
+- `Batch 8` 只允许写入 `src/ai_sdlc/gates/pipeline_gates.py`、`tests/unit/test_gates.py`、`specs/018-frontend-gate-compatibility-baseline/task-execution-log.md`，以及为本批边界服务的 `plan.md / tasks.md`。
 - 只有在用户明确要求进入实现，且 `018` formal docs 已通过门禁后，才允许进入 `src/` / `tests/` 级实现。
 - 当前首批实现只放行 gate matrix / compatibility policy / report models，不放行完整 gate runtime、recheck agent 或 auto-fix engine。
 - 当前第二批实现只放行 gate policy artifact instantiation，不放行完整 gate runtime、recheck agent 或 auto-fix engine。
 - 当前第三批实现只放行 frontend gate verification helper，不放行完整 gate runtime、recheck agent 或 auto-fix engine。
 - 当前第四批实现只放行 `verify_constraints` 的 scoped attachment，不放行 `VerificationGate` / CLI / 完整 gate runtime。
+- 当前第五批实现只放行 `VerificationGate / VerifyGate` 的 scoped aggregation，不放行 CLI surface 或完整 gate runtime。
 
 ---
 
@@ -341,3 +344,46 @@ Batch 7: verify constraints attachment slice
   2. `uv run ruff check src tests`、`git diff --check -- specs/018-frontend-gate-compatibility-baseline src/ai_sdlc/core tests/unit` 与 `uv run ai-sdlc verify constraints` 通过
   3. `task-execution-log.md` 追加记录当前 attachment batch 的 touched files、验证命令与结论
 - **验证**：`uv run pytest tests/unit/test_verify_constraints.py -q`, `uv run ruff check src tests`, `git diff --check -- specs/018-frontend-gate-compatibility-baseline src/ai_sdlc/core tests/unit`, `uv run ai-sdlc verify constraints`
+
+---
+
+## Batch 8：VerificationGate aggregation slice
+
+### Task 8.1 先写 failing tests 固定 frontend gate summary 的 gate-level 语义
+
+- **任务编号**：T81
+- **优先级**：P0
+- **依赖**：T73
+- **文件**：`tests/unit/test_gates.py`
+- **可并行**：否
+- **验收标准**：
+  1. 单测明确覆盖 `VerificationGate / VerifyGate` 对 `frontend_gate_verification` payload 的 presence、linkage 与 clear status 检查
+  2. 单测明确覆盖 summary payload 缺失与 summary 报告 gap 的 RETRY 语义
+  3. 首次运行定向测试时必须出现预期失败，证明 `pipeline_gates.py` 尚未识别 frontend gate summary
+- **验证**：`uv run pytest tests/unit/test_gates.py -q`
+
+### Task 8.2 实现最小 VerificationGate aggregation
+
+- **任务编号**：T82
+- **优先级**：P0
+- **依赖**：T81
+- **文件**：`src/ai_sdlc/gates/pipeline_gates.py`
+- **可并行**：否
+- **验收标准**：
+  1. `VerificationGate` 能识别 `frontend_gate_verification` payload，并增加 summary declared / source linked / check objects linked / status clear 检查
+  2. `VerifyGate` 继续复用 `VerificationGate`，不复制第二套 frontend gate 逻辑
+  3. 实现保持 scoped aggregation，不引入完整 gate runtime
+- **验证**：`uv run pytest tests/unit/test_gates.py -q`
+
+### Task 8.3 Fresh verify 并追加 aggregation batch 归档
+
+- **任务编号**：T83
+- **优先级**：P0
+- **依赖**：T82
+- **文件**：`specs/018-frontend-gate-compatibility-baseline/task-execution-log.md`
+- **可并行**：否
+- **验收标准**：
+  1. `uv run pytest tests/unit/test_gates.py -q` 通过
+  2. `uv run ruff check src tests`、`git diff --check -- specs/018-frontend-gate-compatibility-baseline src/ai_sdlc/gates tests/unit` 与 `uv run ai-sdlc verify constraints` 通过
+  3. `task-execution-log.md` 追加记录当前 aggregation batch 的 touched files、验证命令与结论
+- **验证**：`uv run pytest tests/unit/test_gates.py -q`, `uv run ruff check src tests`, `git diff --check -- specs/018-frontend-gate-compatibility-baseline src/ai_sdlc/gates tests/unit`, `uv run ai-sdlc verify constraints`

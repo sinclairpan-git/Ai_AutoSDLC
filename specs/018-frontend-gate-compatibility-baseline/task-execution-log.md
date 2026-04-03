@@ -470,3 +470,97 @@
 - **提交哈希**：`e214898`（`feat(core): attach frontend gate verification to constraints`）
 - **改动范围**：`specs/018-frontend-gate-compatibility-baseline/plan.md`、`specs/018-frontend-gate-compatibility-baseline/tasks.md`、`specs/018-frontend-gate-compatibility-baseline/task-execution-log.md`、`src/ai_sdlc/core/verify_constraints.py`、`tests/unit/test_verify_constraints.py`
 - **是否继续下一批**：按用户授权连续推进（优先转入 `VerificationGate` 聚合）
+
+### Batch 2026-04-03-006 | 018 VerificationGate aggregation slice
+
+#### 2.1 准备
+
+- **任务来源**：[`tasks.md`](tasks.md) `T81`、`T82`、`T83`
+- **目标**：把 `frontend_gate_verification` summary 正式并入 `VerificationGate / VerifyGate` 的 gate checks，使 gate layer 能识别 frontend gate summary 的 presence、linkage 与 clear status。
+- **预读范围**：[`spec.md`](spec.md)、[`plan.md`](plan.md)、[`tasks.md`](tasks.md)、`src/ai_sdlc/core/frontend_gate_verification.py`、`src/ai_sdlc/gates/pipeline_gates.py`、`tests/unit/test_gates.py`
+- **激活的规则**：TDD red-green；single canonical truth；verification-before-completion
+- **验证画像**：`code-change`
+
+#### 2.2 统一验证命令
+
+- **V1（Batch 8 parser 结构校验）**
+  - 命令：`uv run python -c "from pathlib import Path; from ai_sdlc.generators.doc_gen import TasksParser; plan = TasksParser().parse(Path('specs/018-frontend-gate-compatibility-baseline/tasks.md')); print({'total_tasks': plan.total_tasks, 'total_batches': plan.total_batches, 'batches': [batch.tasks for batch in plan.batches]})"`
+  - 结果：`{'total_tasks': 24, 'total_batches': 8, 'batches': [['T11', 'T12', 'T13'], ['T21', 'T22', 'T23'], ['T31', 'T32', 'T33'], ['T41', 'T42', 'T43'], ['T51', 'T52', 'T53'], ['T61', 'T62', 'T63'], ['T71', 'T72', 'T73'], ['T81', 'T82', 'T83']]}`
+- **V2（RED：VerificationGate 的 frontend gate 定向测试）**
+  - 命令：`uv run pytest tests/unit/test_gates.py -q -k "frontend_gate"`
+  - 结果：`3 failed, 57 deselected in 0.26s`
+- **V3（GREEN：gates 全量单测）**
+  - 命令：`uv run pytest tests/unit/test_gates.py -q`
+  - 结果：`60 passed in 0.30s`
+- **V4（静态检查）**
+  - 命令：`uv run ruff check src tests`
+  - 结果：`All checks passed!`
+- **V5（Markdown / code diff hygiene）**
+  - 命令：`git diff --check -- specs/018-frontend-gate-compatibility-baseline src/ai_sdlc/gates tests/unit`
+  - 结果：无输出。
+- **V6（治理只读校验）**
+  - 命令：`uv run ai-sdlc verify constraints`
+  - 结果：`verify constraints: no BLOCKERs.`
+
+#### 2.3 任务记录
+
+##### T81 | 先写 failing tests 固定 gate-level frontend gate summary 行为
+
+- **改动范围**：`tests/unit/test_gates.py`
+- **改动内容**：
+  - 扩展 `VerifyGate / VerificationGate` 单测，先固定 frontend gate summary 成功路径、summary 缺失时的 RETRY，以及 summary 带 blocker / coverage gap 时的 RETRY 行为。
+  - 首次运行定向测试时命中 `3 failed`，证明 `pipeline_gates.py` 尚未接入 frontend gate summary，RED 成立。
+- **新增/调整的测试**：扩展 `tests/unit/test_gates.py`
+- **测试结果**：RED 成立，失败点集中在 `frontend_gate_summary_declared` 缺失，以及 `VerificationGate` 仍把 frontend gate source 当作 PASS 路径。
+- **是否符合任务目标**：符合。
+
+##### T82 | 实现最小 VerificationGate aggregation
+
+- **改动范围**：`src/ai_sdlc/gates/pipeline_gates.py`
+- **改动内容**：
+  - 新增 `FRONTEND_GATE_SOURCE_NAME` import，并在 `VerificationGate.check()` 中读取 `frontend_gate_verification` payload。
+  - 新增 `_frontend_gate_summary_requested()`、`_frontend_gate_gate_checks()` 与 `_summarize_frontend_gate_status()`，使 `VerificationGate / VerifyGate` 能输出 `frontend_gate_summary_declared`、`frontend_gate_source_linked`、`frontend_gate_check_objects_linked` 与 `frontend_gate_status_clear` 四类 checks。
+  - 实现保持和 frontend contract aggregation 一致的 scoped pattern，不复制第二套 `VerifyGate` 逻辑，也不扩展到完整 gate runtime。
+- **新增/调整的测试**：复用 `tests/unit/test_gates.py`
+- **测试结果**：`60 passed in 0.30s`
+- **是否符合任务目标**：符合。
+
+##### T83 | Fresh verify 并追加 aggregation batch 归档
+
+- **改动范围**：`specs/018-frontend-gate-compatibility-baseline/plan.md`、`specs/018-frontend-gate-compatibility-baseline/tasks.md`、`specs/018-frontend-gate-compatibility-baseline/task-execution-log.md`
+- **改动内容**：
+  - 将 Batch 8 正式加入 `plan.md / tasks.md`，把 `VerificationGate aggregation slice` 的 scope、验证面和执行护栏写成 formal truth。
+  - 回填本批 parser / RED / GREEN / static / diff hygiene / governance 验证结果，并归档 touched files 与 gate-level aggregation 边界。
+- **新增/调整的测试**：无新增测试文件；以本批 fresh verification 命令为准。
+- **测试结果**：全部通过。
+- **是否符合任务目标**：符合。
+
+#### 2.4 代码审查（Mandatory）
+
+- **宪章/规格对齐**：本批只实现 `VerificationGate / VerifyGate` 的 scoped frontend gate aggregation，没有越界到 CLI、完整 gate runtime、recheck agent 或 auto-fix engine。
+- **代码质量**：frontend gate aggregation 复用既有 contract aggregation 模式，保持单一 summary payload 真值，不复制第二套 gate surface。
+- **测试质量**：先 RED 再 GREEN，覆盖 summary 缺失、summary 不清与成功路径，并补 fresh `ruff`、`diff --check` 与 `verify constraints`。
+- **结论**：`无 Critical 阻塞项`
+
+#### 2.5 任务/计划同步状态（Mandatory）
+
+- `tasks.md` 同步状态：`已同步`
+- `plan.md` 同步状态：`已同步`
+- `spec.md` 同步状态：`无需变更`
+- 关联 branch/worktree disposition 计划：`retained（沿用当前 009/011/012/013/014/015/016/017/018 工作分支）`
+- 说明：`018` 已经把 frontend gate summary 接到了 gate layer，但 CLI surface 与后续 runtime / recheck / fix 工单仍待后续批次承接。`
+
+#### 2.6 自动决策记录（如有）
+
+- AD-006：沿用 frontend contract aggregation 模式把 frontend gate summary 接到 `VerificationGate / VerifyGate`，而不是另起独立 gate surface。理由：保持 verify/gate 层 summary payload 的单一结构和可比性。
+
+#### 2.7 批次结论
+
+- `018` 已具备 frontend gate summary 的 gate-level aggregation，后续 CLI 或 runtime 只需消费现有 verify/gate payload，不需要再定义第三套 gate summary 结构。
+
+#### 2.8 归档后动作
+
+- **已完成 git 提交**：否（待本批 commit）
+- **提交哈希**：`待补充`
+- **改动范围**：`specs/018-frontend-gate-compatibility-baseline/plan.md`、`specs/018-frontend-gate-compatibility-baseline/tasks.md`、`specs/018-frontend-gate-compatibility-baseline/task-execution-log.md`、`src/ai_sdlc/gates/pipeline_gates.py`、`tests/unit/test_gates.py`
+- **是否继续下一批**：按用户授权连续推进（优先转入 CLI summary surface 或下游 runtime child work item）
