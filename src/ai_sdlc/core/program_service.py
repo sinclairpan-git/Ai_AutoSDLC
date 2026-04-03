@@ -50,6 +50,9 @@ PROGRAM_FRONTEND_GOVERNANCE_MATERIALIZE_COMMAND = (
 PROGRAM_FRONTEND_REMEDIATION_WRITEBACK_REL_PATH = (
     ".ai-sdlc/memory/frontend-remediation/latest.yaml"
 )
+PROGRAM_FRONTEND_PROVIDER_RUNTIME_ARTIFACT_REL_PATH = (
+    ".ai-sdlc/memory/frontend-provider-runtime/latest.yaml"
+)
 PROGRAM_FRONTEND_PROVIDER_RUNTIME_DEFERRED_SUMMARY = (
     "no patches generated in guarded provider runtime baseline"
 )
@@ -744,6 +747,47 @@ class ProgramService:
             },
         )
 
+    def write_frontend_provider_runtime_artifact(
+        self,
+        manifest: ProgramManifest,
+        *,
+        request: ProgramFrontendProviderRuntimeRequest | None = None,
+        result: ProgramFrontendProviderRuntimeResult | None = None,
+        generated_at: str | None = None,
+        output_path: Path | None = None,
+    ) -> Path:
+        """Persist the canonical provider runtime artifact."""
+        effective_generated_at = generated_at or utc_now_z()
+        effective_request = request or self.build_frontend_provider_runtime_request(manifest)
+        effective_result = result or self.execute_frontend_provider_runtime(
+            manifest,
+            request=effective_request,
+            confirmed=not effective_request.confirmation_required,
+        )
+        if effective_request.confirmation_required and not effective_result.confirmed:
+            raise ValueError(
+                "provider runtime artifact requires an explicitly confirmed runtime result"
+            )
+
+        artifact_path = output_path or (
+            self.root / PROGRAM_FRONTEND_PROVIDER_RUNTIME_ARTIFACT_REL_PATH
+        )
+        if not artifact_path.is_absolute():
+            artifact_path = self.root / artifact_path
+        relative_artifact_path = _relative_to_root_or_str(self.root, artifact_path)
+        payload = self._build_frontend_provider_runtime_artifact_payload(
+            request=effective_request,
+            result=effective_result,
+            generated_at=effective_generated_at,
+            artifact_path=relative_artifact_path,
+        )
+        artifact_path.parent.mkdir(parents=True, exist_ok=True)
+        artifact_path.write_text(
+            yaml.safe_dump(payload, sort_keys=False, allow_unicode=True),
+            encoding="utf-8",
+        )
+        return artifact_path
+
     def evaluate_execute_gates(
         self, manifest: ProgramManifest, *, allow_dirty: bool = False
     ) -> ProgramExecuteGates:
@@ -1027,6 +1071,46 @@ class ProgramService:
                 ]
             ),
             "remaining_blockers": list(execution_result.blockers),
+        }
+
+    def _build_frontend_provider_runtime_artifact_payload(
+        self,
+        *,
+        request: ProgramFrontendProviderRuntimeRequest,
+        result: ProgramFrontendProviderRuntimeResult,
+        generated_at: str,
+        artifact_path: str,
+    ) -> dict[str, object]:
+        source_linkage = {
+            **dict(request.source_linkage),
+            **dict(result.source_linkage),
+            "provider_runtime_artifact_path": artifact_path,
+            "provider_runtime_artifact_generated_at": generated_at,
+        }
+        return {
+            "generated_at": generated_at,
+            "manifest_path": _relative_to_root_or_str(self.root, self.manifest_path),
+            "handoff_source_path": request.handoff_source_path,
+            "handoff_generated_at": request.handoff_generated_at,
+            "required": request.required,
+            "confirmation_required": request.confirmation_required,
+            "confirmed": result.confirmed,
+            "provider_execution_state": result.provider_execution_state,
+            "invocation_result": result.invocation_result,
+            "patch_summaries": list(result.patch_summaries),
+            "remaining_blockers": list(result.remaining_blockers),
+            "warnings": _unique_strings([*request.warnings, *result.warnings]),
+            "steps": [
+                {
+                    "spec_id": step.spec_id,
+                    "path": step.path,
+                    "pending_inputs": list(step.pending_inputs),
+                    "suggested_next_actions": list(step.suggested_next_actions),
+                    "source_linkage": dict(step.source_linkage),
+                }
+                for step in request.steps
+            ],
+            "source_linkage": source_linkage,
         }
 
     def _load_frontend_remediation_writeback_payload(

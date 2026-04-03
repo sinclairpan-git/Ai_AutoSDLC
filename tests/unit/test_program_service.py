@@ -492,6 +492,74 @@ def test_execute_frontend_provider_runtime_returns_deferred_result_when_confirme
     assert result.source_linkage["provider_runtime_state"] == "deferred"
 
 
+def test_write_frontend_provider_runtime_artifact_emits_canonical_yaml(
+    tmp_path: Path,
+) -> None:
+    for p in ("specs/001-auth", "specs/002-course", "specs/003-enroll"):
+        (tmp_path / p).mkdir(parents=True)
+    _write_frontend_remediation_writeback_artifact(
+        tmp_path,
+        passed=False,
+        remaining_blockers=["spec 001-auth remediation still required"],
+    )
+
+    svc = ProgramService(tmp_path)
+    request = svc.build_frontend_provider_runtime_request(_manifest())
+    result = svc.execute_frontend_provider_runtime(
+        _manifest(),
+        request=request,
+        confirmed=True,
+    )
+
+    artifact_path = svc.write_frontend_provider_runtime_artifact(
+        _manifest(),
+        request=request,
+        result=result,
+    )
+
+    assert artifact_path == (
+        tmp_path / ".ai-sdlc" / "memory" / "frontend-provider-runtime" / "latest.yaml"
+    )
+    payload = yaml.safe_load(artifact_path.read_text(encoding="utf-8"))
+    assert payload["manifest_path"] == "program-manifest.yaml"
+    assert (
+        payload["handoff_source_path"]
+        == ".ai-sdlc/memory/frontend-remediation/latest.yaml"
+    )
+    assert payload["provider_execution_state"] == "deferred"
+    assert payload["invocation_result"] == "deferred"
+    assert payload["confirmed"] is True
+    assert payload["patch_summaries"] == [
+        "no patches generated in guarded provider runtime baseline"
+    ]
+    assert payload["remaining_blockers"] == ["spec 001-auth remediation still required"]
+    assert payload["steps"][0]["spec_id"] == "001-auth"
+    assert (
+        payload["source_linkage"]["provider_runtime_artifact_path"]
+        == ".ai-sdlc/memory/frontend-provider-runtime/latest.yaml"
+    )
+
+
+def test_execute_frontend_provider_runtime_does_not_write_artifact_by_default(
+    tmp_path: Path,
+) -> None:
+    for p in ("specs/001-auth", "specs/002-course", "specs/003-enroll"):
+        (tmp_path / p).mkdir(parents=True)
+    _write_frontend_remediation_writeback_artifact(
+        tmp_path,
+        passed=False,
+        remaining_blockers=["spec 001-auth remediation still required"],
+    )
+
+    svc = ProgramService(tmp_path)
+    result = svc.execute_frontend_provider_runtime(_manifest(), confirmed=True)
+
+    assert result.provider_execution_state == "deferred"
+    assert not (
+        tmp_path / ".ai-sdlc" / "memory" / "frontend-provider-runtime" / "latest.yaml"
+    ).exists()
+
+
 def test_build_status_surfaces_ready_frontend_readiness_per_spec(tmp_path: Path) -> None:
     for p in ("specs/001-auth", "specs/002-course", "specs/003-enroll"):
         (tmp_path / p).mkdir(parents=True)

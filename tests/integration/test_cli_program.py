@@ -575,6 +575,65 @@ specs:
         assert "deferred" in report
         assert "no patches generated in guarded provider runtime baseline" in report
 
+    def test_program_provider_runtime_dry_run_does_not_write_artifact(
+        self, initialized_project_dir: Path
+    ) -> None:
+        root = initialized_project_dir
+        _write_manifest(root)
+        _write_frontend_remediation_writeback_artifact(
+            root,
+            passed=False,
+            remaining_blockers=["spec 001-auth remediation still required"],
+        )
+
+        with patch("ai_sdlc.cli.program_cmd.find_project_root", return_value=root):
+            result = runner.invoke(app, ["program", "provider-runtime"])
+
+        assert result.exit_code == 0
+        assert "Program Frontend Provider Runtime Dry-Run" in result.output
+        assert not (
+            root / ".ai-sdlc" / "memory" / "frontend-provider-runtime" / "latest.yaml"
+        ).exists()
+
+    def test_program_provider_runtime_execute_writes_runtime_artifact(
+        self, initialized_project_dir: Path
+    ) -> None:
+        root = initialized_project_dir
+        _write_manifest(root)
+        _write_frontend_remediation_writeback_artifact(
+            root,
+            passed=False,
+            remaining_blockers=["spec 001-auth remediation still required"],
+        )
+        report_rel = ".ai-sdlc/memory/frontend-provider-runtime.md"
+
+        with patch("ai_sdlc.cli.program_cmd.find_project_root", return_value=root):
+            result = runner.invoke(
+                app,
+                [
+                    "program",
+                    "provider-runtime",
+                    "--execute",
+                    "--yes",
+                    "--report",
+                    report_rel,
+                ],
+            )
+
+        artifact_path = (
+            root / ".ai-sdlc" / "memory" / "frontend-provider-runtime" / "latest.yaml"
+        )
+        assert result.exit_code == 1
+        assert artifact_path.is_file()
+        assert ".ai-sdlc/memory/frontend-provider-runtime/latest.yaml" in result.output
+        payload = yaml.safe_load(artifact_path.read_text(encoding="utf-8"))
+        assert payload["invocation_result"] == "deferred"
+        assert payload["provider_execution_state"] == "deferred"
+        assert payload["confirmed"] is True
+        report = (root / report_rel).read_text(encoding="utf-8")
+        assert "Frontend Provider Runtime Artifact" in report
+        assert ".ai-sdlc/memory/frontend-provider-runtime/latest.yaml" in report
+
 
 def _write_frontend_remediation_writeback_artifact(
     root: Path,

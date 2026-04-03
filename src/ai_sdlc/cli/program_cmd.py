@@ -714,6 +714,7 @@ def program_provider_runtime(
             console.print(f"  - {warning}")
 
     runtime_result = None
+    runtime_artifact_path: Path | None = None
     if not dry_run:
         if not yes:
             console.print(
@@ -725,7 +726,17 @@ def program_provider_runtime(
             request=request,
             confirmed=True,
         )
+        runtime_artifact_path = svc.write_frontend_provider_runtime_artifact(
+            mf,
+            request=request,
+            result=runtime_result,
+        )
         _render_frontend_provider_runtime_result(runtime_result)
+        console.print("\n[bold cyan]Frontend Provider Runtime Artifact[/bold cyan]")
+        console.print(
+            f"  - saved: {runtime_artifact_path.relative_to(root)}",
+            markup=False,
+        )
 
     if report:
         report_path = root / report
@@ -776,6 +787,11 @@ def program_provider_runtime(
                 lines.extend(
                     [f"  - {item}" for item in runtime_result.remaining_blockers]
                 )
+            lines.append("")
+        if runtime_artifact_path is not None:
+            lines.append("## Frontend Provider Runtime Artifact")
+            lines.append("")
+            lines.append(f"- `{runtime_artifact_path.relative_to(root)}`")
             lines.append("")
         if request.warnings or (runtime_result is not None and runtime_result.warnings):
             lines.append("## Warnings")
