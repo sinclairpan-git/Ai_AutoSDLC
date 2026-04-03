@@ -634,6 +634,47 @@ specs:
         assert "Frontend Provider Runtime Artifact" in report
         assert ".ai-sdlc/memory/frontend-provider-runtime/latest.yaml" in report
 
+    def test_program_provider_patch_handoff_surfaces_runtime_artifact(
+        self, initialized_project_dir: Path
+    ) -> None:
+        root = initialized_project_dir
+        _write_manifest(root)
+        _write_frontend_provider_runtime_artifact(
+            root,
+            invocation_result="deferred",
+            provider_execution_state="deferred",
+            remaining_blockers=["spec 001-auth remediation still required"],
+        )
+        report_rel = ".ai-sdlc/memory/frontend-provider-patch-handoff.md"
+
+        with patch("ai_sdlc.cli.program_cmd.find_project_root", return_value=root):
+            result = runner.invoke(
+                app,
+                ["program", "provider-patch-handoff", "--report", report_rel],
+            )
+
+        assert result.exit_code == 0
+        assert "Program Frontend Provider Patch Handoff" in result.output
+        assert ".ai-sdlc/memory/frontend-provider-runtime/latest.yaml" in result.output
+        assert "deferred" in result.output
+        assert "frontend_contract_observations" in result.output
+        report = (root / report_rel).read_text(encoding="utf-8")
+        assert "Frontend Provider Patch Handoff" in report
+        assert ".ai-sdlc/memory/frontend-provider-runtime/latest.yaml" in report
+        assert "deferred" in report
+
+    def test_program_provider_patch_handoff_fails_when_runtime_artifact_missing(
+        self, initialized_project_dir: Path
+    ) -> None:
+        root = initialized_project_dir
+        _write_manifest(root)
+
+        with patch("ai_sdlc.cli.program_cmd.find_project_root", return_value=root):
+            result = runner.invoke(app, ["program", "provider-patch-handoff"])
+
+        assert result.exit_code == 1
+        assert "missing provider runtime artifact" in result.output
+
 
 def _write_frontend_remediation_writeback_artifact(
     root: Path,
@@ -689,6 +730,65 @@ def _write_frontend_remediation_writeback_artifact(
                 ],
                 "written_paths": [],
                 "remaining_blockers": list(remaining_blockers),
+            },
+            sort_keys=False,
+            allow_unicode=True,
+        ),
+        encoding="utf-8",
+    )
+
+
+def _write_frontend_provider_runtime_artifact(
+    root: Path,
+    *,
+    invocation_result: str,
+    provider_execution_state: str,
+    remaining_blockers: list[str],
+) -> None:
+    artifact_path = (
+        root / ".ai-sdlc" / "memory" / "frontend-provider-runtime" / "latest.yaml"
+    )
+    artifact_path.parent.mkdir(parents=True, exist_ok=True)
+    artifact_path.write_text(
+        yaml.safe_dump(
+            {
+                "generated_at": "2026-04-03T19:00:00Z",
+                "manifest_path": "program-manifest.yaml",
+                "handoff_source_path": ".ai-sdlc/memory/frontend-remediation/latest.yaml",
+                "handoff_generated_at": "2026-04-03T18:00:00Z",
+                "required": True,
+                "confirmation_required": True,
+                "confirmed": True,
+                "provider_execution_state": provider_execution_state,
+                "invocation_result": invocation_result,
+                "patch_summaries": [
+                    "no patches generated in guarded provider runtime baseline"
+                ],
+                "remaining_blockers": list(remaining_blockers),
+                "warnings": [
+                    "guarded provider runtime baseline does not invoke provider yet"
+                ],
+                "steps": [
+                    {
+                        "spec_id": "001-auth",
+                        "path": "specs/001-auth",
+                        "pending_inputs": ["frontend_contract_observations"],
+                        "suggested_next_actions": [
+                            "materialize frontend contract observations",
+                            "re-run ai-sdlc verify constraints",
+                        ],
+                        "source_linkage": {
+                            "writeback_artifact_path": ".ai-sdlc/memory/frontend-remediation/latest.yaml",
+                            "provider_runtime_state": provider_execution_state,
+                        },
+                    }
+                ],
+                "source_linkage": {
+                    "writeback_artifact_path": ".ai-sdlc/memory/frontend-remediation/latest.yaml",
+                    "provider_runtime_state": provider_execution_state,
+                    "invocation_result": invocation_result,
+                    "provider_runtime_artifact_path": ".ai-sdlc/memory/frontend-provider-runtime/latest.yaml",
+                },
             },
             sort_keys=False,
             allow_unicode=True,

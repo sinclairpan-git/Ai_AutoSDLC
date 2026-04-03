@@ -65,3 +65,90 @@
 
 - `028` 的 patch handoff truth、readonly boundary 与 downstream patch-apply 边界已经冻结。
 - 下游实现起点明确为 `ProgramService` readonly patch handoff payload/build，其后再进入 CLI handoff surface。
+
+## Batch 2026-04-03-002
+
+- **时间**：2026-04-03 21:02:00 +0800
+- **目标**：在 `ProgramService` 中落下 readonly provider patch handoff payload/build，不改变 `027` runtime artifact truth，也不越界到 patch apply。
+- **范围**：
+  - `src/ai_sdlc/core/program_service.py`
+  - `tests/unit/test_program_service.py`
+  - `specs/028-frontend-program-provider-patch-handoff-baseline/task-execution-log.md`
+- **激活的规则**：
+  - test-driven-development
+  - readonly handoff packaging
+  - no patch apply in current batch
+
+### Completed Tasks
+
+#### T41 | 先写 failing tests 固定 provider patch handoff payload 语义
+
+- 新增 `test_build_frontend_provider_patch_handoff_packages_runtime_artifact`，固定 runtime artifact linkage、patch availability、pending inputs、remaining blockers 与 source linkage。
+- 新增 `test_build_frontend_provider_patch_handoff_warns_when_runtime_artifact_missing`，固定 missing-artifact 时的 warning / state 语义。
+- 首次 RED 结果：
+  - `uv run pytest tests/unit/test_program_service.py -q -k "provider_patch_handoff"` -> `2 failed, 26 deselected`
+  - 失败原因：`ProgramService` 缺少 `build_frontend_provider_patch_handoff`
+
+#### T42 | 实现最小 provider patch handoff packaging
+
+- 在 `program_service.py` 新增 `ProgramFrontendProviderPatchHandoffStep` / `ProgramFrontendProviderPatchHandoff` dataclass。
+- 新增 `build_frontend_provider_patch_handoff()`，只消费 `.ai-sdlc/memory/frontend-provider-runtime/latest.yaml`，生成 readonly handoff payload。
+- 新增 `_load_frontend_provider_runtime_artifact_payload()`，统一 missing/invalid artifact 语义。
+
+#### T43 | Fresh verify 并追加 implementation batch 归档
+
+- 定向单测转绿：
+  - `uv run pytest tests/unit/test_program_service.py -q -k "provider_patch_handoff"` -> `2 passed, 26 deselected`
+
+### Outcome
+
+- `ProgramService` 已具备 provider patch handoff payload/build，下游 CLI 可以直接消费同一份 readonly truth。
+
+## Batch 2026-04-03-003
+
+- **时间**：2026-04-03 21:09:00 +0800
+- **目标**：把 readonly provider patch handoff 暴露到独立 CLI surface 与 report，不偷渡 patch apply。
+- **范围**：
+  - `src/ai_sdlc/cli/program_cmd.py`
+  - `tests/integration/test_cli_program.py`
+  - `specs/028-frontend-program-provider-patch-handoff-baseline/task-execution-log.md`
+- **激活的规则**：
+  - test-driven-development
+  - readonly CLI surface
+  - no patch apply in current batch
+
+### Completed Tasks
+
+#### T51 | 先写 failing tests 固定 CLI patch handoff 输出语义
+
+- 新增 `test_program_provider_patch_handoff_surfaces_runtime_artifact`，固定 runtime artifact path、patch availability、pending inputs 与 report 语义。
+- 新增 `test_program_provider_patch_handoff_fails_when_runtime_artifact_missing`，固定 missing-artifact 时的 exit code / warning。
+- 首次 RED 结果：
+  - `uv run pytest tests/integration/test_cli_program.py -q -k "provider_patch_handoff"` -> `2 failed, 22 deselected`
+  - 失败原因：CLI 缺少 `program provider-patch-handoff`
+
+#### T52 | 实现最小 provider patch handoff CLI surface
+
+- 在 `program_cmd.py` 新增 `program provider-patch-handoff`。
+- 终端输出新增 readonly steps 列表，稳定展示 patch availability、pending inputs 与 next actions。
+- report 支持 `Frontend Provider Patch Handoff`、`Patch Summaries`、`Remaining Blockers` 与 `Warnings`。
+
+#### T53 | Fresh verify 并追加 CLI batch 归档
+
+- 首次 GREEN 前有一轮输出修正：
+  - `uv run pytest tests/integration/test_cli_program.py -q -k "provider_patch_handoff"` -> `1 failed, 1 passed, 22 deselected`
+  - 原因：表格输出未稳定包含 `frontend_contract_observations`，随后补充显式 step lines 修复。
+- 定向集成转绿：
+  - `uv run pytest tests/integration/test_cli_program.py -q -k "provider_patch_handoff"` -> `2 passed, 22 deselected`
+- full fresh verify：
+  - `uv run pytest tests/unit/test_program_service.py -q` -> `28 passed`
+  - `uv run pytest tests/integration/test_cli_program.py -q` -> `24 passed`
+  - `uv run ruff check src tests` -> `All checks passed!`
+  - `uv run python -c "from pathlib import Path; from ai_sdlc.generators.doc_gen import TasksParser; plan = TasksParser().parse(Path('specs/028-frontend-program-provider-patch-handoff-baseline/tasks.md')); print({'total_tasks': plan.total_tasks, 'total_batches': plan.total_batches})"` -> `{'total_tasks': 15, 'total_batches': 5}`
+  - `uv run ai-sdlc verify constraints` -> `verify constraints: no BLOCKERs.`
+  - `git diff --check -- specs/028-frontend-program-provider-patch-handoff-baseline src/ai_sdlc/core/program_service.py src/ai_sdlc/cli/program_cmd.py tests/unit/test_program_service.py tests/integration/test_cli_program.py` -> 无输出
+
+### Outcome
+
+- `028` 已形成 docs -> service readonly handoff -> CLI/report readonly surface 的闭环。
+- 下游可以继续拆 `029` 的 patch apply/runtime guard，不必再从 runtime artifact 或瞬时 CLI 输出反推 handoff truth。

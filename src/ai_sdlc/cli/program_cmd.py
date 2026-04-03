@@ -816,6 +816,144 @@ def program_provider_runtime(
     raise typer.Exit(code=1)
 
 
+@program_app.command("provider-patch-handoff")
+def program_provider_patch_handoff(
+    manifest: str = typer.Option(
+        "program-manifest.yaml",
+        "--manifest",
+        help="Path to program manifest relative to project root.",
+    ),
+    report: str = typer.Option(
+        "",
+        "--report",
+        help="Optional report output path relative to project root.",
+    ),
+) -> None:
+    """Show the readonly frontend provider patch handoff payload."""
+    root = _resolve_root()
+    svc = ProgramService(root, root / manifest)
+
+    try:
+        mf = svc.load_manifest()
+    except Exception as exc:
+        console.print(f"[red]Failed to load manifest: {exc}[/red]")
+        raise typer.Exit(code=2) from None
+
+    result = svc.validate_manifest(mf)
+    if not result.valid:
+        console.print(
+            "[bold red]Manifest invalid; cannot build provider patch handoff.[/bold red]"
+        )
+        for e in result.errors:
+            console.print(f"  - {e}")
+        raise typer.Exit(code=1)
+
+    handoff = svc.build_frontend_provider_patch_handoff(mf)
+
+    if handoff.steps:
+        table = Table(title="Program Frontend Provider Patch Handoff")
+        table.add_column("Spec")
+        table.add_column("Path")
+        table.add_column("Patch Availability")
+        table.add_column("Pending Inputs")
+        table.add_column("Next Actions")
+        for step in handoff.steps:
+            table.add_row(
+                step.spec_id,
+                step.path,
+                step.patch_availability_state,
+                ", ".join(step.pending_inputs) or "-",
+                " ; ".join(step.suggested_next_actions) or "-",
+            )
+        console.print(table)
+        console.print("\n[bold cyan]Frontend Provider Patch Handoff Steps[/bold cyan]")
+        for step in handoff.steps:
+            console.print(
+                f"  - {step.spec_id}: {step.path} [{step.patch_availability_state}]",
+                markup=False,
+            )
+            for pending in step.pending_inputs:
+                console.print(f"    pending input: {pending}", markup=False)
+            for action in step.suggested_next_actions:
+                console.print(f"    next action: {action}", markup=False)
+    else:
+        console.print("[green]No frontend provider patch handoff required.[/green]")
+
+    console.print("\n[bold cyan]Frontend Provider Patch Handoff[/bold cyan]")
+    console.print(
+        f"  - source runtime artifact: {handoff.runtime_artifact_path}",
+        markup=False,
+    )
+    console.print(
+        f"  - patch availability: {handoff.patch_availability_state}",
+        markup=False,
+    )
+    if handoff.runtime_generated_at:
+        console.print(
+            f"  - runtime generated_at: {handoff.runtime_generated_at}",
+            markup=False,
+        )
+    for summary in handoff.patch_summaries:
+        console.print(f"  - patch summary: {summary}", markup=False)
+    for blocker in handoff.remaining_blockers:
+        console.print(f"  - blocker: {blocker}", markup=False)
+
+    if handoff.warnings:
+        console.print("\n[bold yellow]Warnings[/bold yellow]")
+        for warning in handoff.warnings:
+            console.print(f"  - {warning}")
+
+    if report:
+        report_path = root / report
+        report_path.parent.mkdir(parents=True, exist_ok=True)
+        lines: list[str] = [
+            "# Program Frontend Provider Patch Handoff",
+            "",
+            f"- Manifest: `{manifest}`",
+            f"- Source runtime artifact: `{handoff.runtime_artifact_path}`",
+            f"- Patch availability: `{handoff.patch_availability_state}`",
+        ]
+        if handoff.runtime_generated_at:
+            lines.append(f"- Runtime generated_at: `{handoff.runtime_generated_at}`")
+        lines.append("")
+        if handoff.steps:
+            lines.append("## Steps")
+            lines.append("")
+            for step in handoff.steps:
+                lines.extend(
+                    [
+                        f"### {step.spec_id}",
+                        f"- Path: `{step.path}`",
+                        f"- Patch availability: `{step.patch_availability_state}`",
+                        f"- Pending inputs: `{', '.join(step.pending_inputs) or '-'}`",
+                        "- Suggested next actions:",
+                    ]
+                )
+                lines.extend([f"  - {action}" for action in step.suggested_next_actions])
+                lines.append("")
+        if handoff.patch_summaries:
+            lines.append("## Patch Summaries")
+            lines.append("")
+            lines.extend([f"- {summary}" for summary in handoff.patch_summaries])
+            lines.append("")
+        if handoff.remaining_blockers:
+            lines.append("## Remaining Blockers")
+            lines.append("")
+            lines.extend([f"- {blocker}" for blocker in handoff.remaining_blockers])
+            lines.append("")
+        if handoff.warnings:
+            lines.append("## Warnings")
+            lines.append("")
+            lines.extend([f"- {warning}" for warning in handoff.warnings])
+            lines.append("")
+        report_path.write_text("\n".join(lines), encoding="utf-8")
+        console.print(f"\n[green]Report written:[/green] {report_path}")
+
+    if handoff.warnings and not handoff.runtime_generated_at:
+        raise typer.Exit(code=1)
+    raise typer.Exit(code=0)
+
+
 def _format_frontend_readiness(readiness: ProgramFrontendReadiness | None) -> str:
     if readiness is None:
         return "-"

@@ -200,6 +200,29 @@ class ProgramFrontendProviderRuntimeResult:
 
 
 @dataclass
+class ProgramFrontendProviderPatchHandoffStep:
+    spec_id: str
+    path: str
+    patch_availability_state: str
+    pending_inputs: list[str] = field(default_factory=list)
+    suggested_next_actions: list[str] = field(default_factory=list)
+    source_linkage: dict[str, str] = field(default_factory=dict)
+
+
+@dataclass
+class ProgramFrontendProviderPatchHandoff:
+    required: bool
+    patch_availability_state: str
+    runtime_artifact_path: str
+    runtime_generated_at: str
+    steps: list[ProgramFrontendProviderPatchHandoffStep] = field(default_factory=list)
+    patch_summaries: list[str] = field(default_factory=list)
+    remaining_blockers: list[str] = field(default_factory=list)
+    warnings: list[str] = field(default_factory=list)
+    source_linkage: dict[str, str] = field(default_factory=dict)
+
+
+@dataclass
 class ProgramIntegrationStep:
     order: int
     tier: int
@@ -788,6 +811,99 @@ class ProgramService:
         )
         return artifact_path
 
+    def build_frontend_provider_patch_handoff(
+        self,
+        manifest: ProgramManifest,
+        *,
+        runtime_artifact_path: Path | None = None,
+    ) -> ProgramFrontendProviderPatchHandoff:
+        """Build a readonly provider patch handoff from runtime artifact truth."""
+        artifact_path = runtime_artifact_path or (
+            self.root / PROGRAM_FRONTEND_PROVIDER_RUNTIME_ARTIFACT_REL_PATH
+        )
+        if not artifact_path.is_absolute():
+            artifact_path = self.root / artifact_path
+
+        relative_artifact_path = _relative_to_root_or_str(self.root, artifact_path)
+        payload, warnings = self._load_frontend_provider_runtime_artifact_payload(
+            artifact_path
+        )
+        if payload is None:
+            return ProgramFrontendProviderPatchHandoff(
+                required=False,
+                patch_availability_state="missing_artifact",
+                runtime_artifact_path=relative_artifact_path,
+                runtime_generated_at="",
+                warnings=warnings,
+                source_linkage={
+                    "provider_runtime_artifact_path": relative_artifact_path,
+                    "provider_patch_handoff_state": "missing_artifact",
+                },
+            )
+
+        runtime_generated_at = str(payload.get("generated_at", "")).strip()
+        patch_availability_state = (
+            str(payload.get("invocation_result", "")).strip()
+            or str(payload.get("provider_execution_state", "")).strip()
+            or "unknown"
+        )
+        patch_summaries = _normalize_string_list(payload.get("patch_summaries", []))
+        remaining_blockers = _normalize_string_list(payload.get("remaining_blockers", []))
+        spec_by_id = {spec.id: spec for spec in manifest.specs}
+        steps: list[ProgramFrontendProviderPatchHandoffStep] = []
+        for step_payload in _normalize_mapping_list(payload.get("steps", [])):
+            spec_id = str(step_payload.get("spec_id", "")).strip()
+            if not spec_id:
+                continue
+            path = str(step_payload.get("path", "")).strip()
+            if not path:
+                spec = spec_by_id.get(spec_id)
+                path = spec.path if spec is not None else ""
+            source_linkage = _normalize_string_mapping(step_payload.get("source_linkage", {}))
+            source_linkage.update(
+                {
+                    "provider_runtime_artifact_path": relative_artifact_path,
+                    "provider_runtime_artifact_generated_at": runtime_generated_at,
+                    "provider_patch_handoff_state": patch_availability_state,
+                }
+            )
+            steps.append(
+                ProgramFrontendProviderPatchHandoffStep(
+                    spec_id=spec_id,
+                    path=path,
+                    patch_availability_state=patch_availability_state,
+                    pending_inputs=_normalize_string_list(
+                        step_payload.get("pending_inputs", [])
+                    ),
+                    suggested_next_actions=_normalize_string_list(
+                        step_payload.get("suggested_next_actions", [])
+                    ),
+                    source_linkage=source_linkage,
+                )
+            )
+
+        source_linkage = _normalize_string_mapping(payload.get("source_linkage", {}))
+        source_linkage.update(
+            {
+                "provider_runtime_artifact_path": relative_artifact_path,
+                "provider_runtime_artifact_generated_at": runtime_generated_at,
+                "provider_patch_handoff_state": patch_availability_state,
+            }
+        )
+        return ProgramFrontendProviderPatchHandoff(
+            required=bool(steps or patch_summaries or remaining_blockers),
+            patch_availability_state=patch_availability_state,
+            runtime_artifact_path=relative_artifact_path,
+            runtime_generated_at=runtime_generated_at,
+            steps=steps,
+            patch_summaries=patch_summaries,
+            remaining_blockers=remaining_blockers,
+            warnings=_unique_strings(
+                [*warnings, *_normalize_string_list(payload.get("warnings", []))]
+            ),
+            source_linkage=source_linkage,
+        )
+
     def evaluate_execute_gates(
         self, manifest: ProgramManifest, *, allow_dirty: bool = False
     ) -> ProgramExecuteGates:
@@ -1140,6 +1256,38 @@ class ProgramService:
                 None,
                 [
                     "invalid remediation writeback artifact: "
+                    + _relative_to_root_or_str(self.root, artifact_path)
+                ],
+            )
+        return payload, []
+
+    def _load_frontend_provider_runtime_artifact_payload(
+        self,
+        artifact_path: Path,
+    ) -> tuple[dict[str, object] | None, list[str]]:
+        if not artifact_path.exists():
+            return (
+                None,
+                [
+                    "missing provider runtime artifact: "
+                    + _relative_to_root_or_str(self.root, artifact_path)
+                ],
+            )
+        try:
+            payload = yaml.safe_load(artifact_path.read_text(encoding="utf-8"))
+        except Exception as exc:
+            return (
+                None,
+                [
+                    "invalid provider runtime artifact: "
+                    + f"{_relative_to_root_or_str(self.root, artifact_path)} ({exc})"
+                ],
+            )
+        if not isinstance(payload, dict):
+            return (
+                None,
+                [
+                    "invalid provider runtime artifact: "
                     + _relative_to_root_or_str(self.root, artifact_path)
                 ],
             )
