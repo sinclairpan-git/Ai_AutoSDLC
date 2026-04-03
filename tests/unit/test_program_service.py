@@ -387,6 +387,59 @@ def test_write_frontend_remediation_writeback_artifact_reuses_provided_execution
     assert payload["remaining_blockers"] == ["sentinel blocker"]
 
 
+def test_build_frontend_provider_handoff_packages_pending_inputs_from_writeback_artifact(
+    tmp_path: Path,
+) -> None:
+    for p in ("specs/001-auth", "specs/002-course", "specs/003-enroll"):
+        (tmp_path / p).mkdir(parents=True)
+    _write_frontend_remediation_writeback_artifact(
+        tmp_path,
+        passed=False,
+        remaining_blockers=["spec 001-auth remediation still required"],
+    )
+
+    svc = ProgramService(tmp_path)
+    handoff = svc.build_frontend_provider_handoff(_manifest())
+
+    assert handoff.required is True
+    assert handoff.provider_execution_state == "not_started"
+    assert (
+        handoff.writeback_artifact_path
+        == ".ai-sdlc/memory/frontend-remediation/latest.yaml"
+    )
+    assert handoff.writeback_generated_at == "2026-04-03T18:00:00Z"
+    assert handoff.remaining_blockers == ["spec 001-auth remediation still required"]
+    assert [step.spec_id for step in handoff.steps] == ["001-auth", "002-course"]
+    assert handoff.steps[0].pending_inputs == ["frontend_contract_observations"]
+    assert (
+        handoff.steps[0].source_linkage["writeback_artifact_path"]
+        == ".ai-sdlc/memory/frontend-remediation/latest.yaml"
+    )
+    assert (
+        handoff.steps[0].source_linkage["provider_execution_state"] == "not_started"
+    )
+
+
+def test_build_frontend_provider_handoff_is_not_required_when_writeback_is_clean(
+    tmp_path: Path,
+) -> None:
+    for p in ("specs/001-auth", "specs/002-course", "specs/003-enroll"):
+        (tmp_path / p).mkdir(parents=True)
+    _write_frontend_remediation_writeback_artifact(
+        tmp_path,
+        passed=True,
+        remaining_blockers=[],
+    )
+
+    svc = ProgramService(tmp_path)
+    handoff = svc.build_frontend_provider_handoff(_manifest())
+
+    assert handoff.required is False
+    assert handoff.provider_execution_state == "not_started"
+    assert handoff.steps == []
+    assert handoff.remaining_blockers == []
+
+
 def test_build_status_surfaces_ready_frontend_readiness_per_spec(tmp_path: Path) -> None:
     for p in ("specs/001-auth", "specs/002-course", "specs/003-enroll"):
         (tmp_path / p).mkdir(parents=True)
@@ -581,3 +634,81 @@ def _write_minimal_constitution(root: Path) -> None:
     memory_dir = root / ".ai-sdlc" / "memory"
     memory_dir.mkdir(parents=True, exist_ok=True)
     (memory_dir / "constitution.md").write_text("# Constitution\n", encoding="utf-8")
+
+
+def _write_frontend_remediation_writeback_artifact(
+    root: Path,
+    *,
+    passed: bool,
+    remaining_blockers: list[str],
+) -> None:
+    artifact_path = (
+        root / ".ai-sdlc" / "memory" / "frontend-remediation" / "latest.yaml"
+    )
+    artifact_path.parent.mkdir(parents=True, exist_ok=True)
+    artifact_path.write_text(
+        yaml.safe_dump(
+            {
+                "generated_at": "2026-04-03T18:00:00Z",
+                "manifest_path": "program-manifest.yaml",
+                "passed": passed,
+                "source_linkage": {
+                    "runbook_source": "program frontend remediation runbook",
+                    "execution_source": "program frontend remediation execution",
+                },
+                "steps": [
+                    {
+                        "spec_id": "001-auth",
+                        "path": "specs/001-auth",
+                        "state": "required",
+                        "fix_inputs": ["frontend_contract_observations"],
+                        "suggested_actions": [
+                            "materialize frontend contract observations",
+                            "re-run ai-sdlc verify constraints",
+                        ],
+                        "action_commands": [
+                            "uv run ai-sdlc scan . --frontend-contract-spec-dir specs/001-auth"
+                        ],
+                        "source_linkage": {
+                            "runtime_attachment_status": "missing_artifact",
+                            "frontend_gate_verdict": "UNRESOLVED",
+                        },
+                    },
+                    {
+                        "spec_id": "002-course",
+                        "path": "specs/002-course",
+                        "state": "required",
+                        "fix_inputs": ["frontend_gate_policy_artifacts"],
+                        "suggested_actions": [
+                            "materialize frontend gate policy artifacts"
+                        ],
+                        "action_commands": [
+                            "uv run ai-sdlc rules materialize-frontend-mvp"
+                        ],
+                        "source_linkage": {
+                            "runtime_attachment_status": "attached",
+                            "frontend_gate_verdict": "RETRY",
+                        },
+                    },
+                ],
+                "action_commands": [
+                    "uv run ai-sdlc scan . --frontend-contract-spec-dir specs/001-auth"
+                ],
+                "follow_up_commands": ["uv run ai-sdlc verify constraints"],
+                "command_results": [
+                    {
+                        "command": "uv run ai-sdlc verify constraints",
+                        "status": "failed" if remaining_blockers else "passed",
+                        "written_paths": [],
+                        "blockers": list(remaining_blockers),
+                        "summary": "verify constraints result",
+                    }
+                ],
+                "written_paths": [],
+                "remaining_blockers": list(remaining_blockers),
+            },
+            sort_keys=False,
+            allow_unicode=True,
+        ),
+        encoding="utf-8",
+    )

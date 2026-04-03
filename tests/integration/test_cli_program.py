@@ -495,3 +495,93 @@ specs:
             item["command"] == "uv run ai-sdlc verify constraints"
             for item in payload["command_results"]
         )
+
+    def test_program_provider_handoff_surfaces_pending_frontend_inputs(
+        self, initialized_project_dir: Path
+    ) -> None:
+        root = initialized_project_dir
+        _write_manifest(root)
+        _write_frontend_remediation_writeback_artifact(
+            root,
+            passed=False,
+            remaining_blockers=["spec 001-auth remediation still required"],
+        )
+        report_rel = ".ai-sdlc/memory/frontend-provider-handoff.md"
+
+        with patch("ai_sdlc.cli.program_cmd.find_project_root", return_value=root):
+            result = runner.invoke(
+                app,
+                ["program", "provider-handoff", "--report", report_rel],
+            )
+
+        assert result.exit_code == 0
+        assert "Program Frontend Provider Handoff" in result.output
+        assert ".ai-sdlc/memory/frontend-remediation/latest.yaml" in result.output
+        assert "frontend_contract_observations" in result.output
+        assert "not_started" in result.output
+        report = (root / report_rel).read_text(encoding="utf-8")
+        assert "Frontend Provider Handoff" in report
+        assert ".ai-sdlc/memory/frontend-remediation/latest.yaml" in report
+        assert "materialize frontend contract observations" in report
+
+
+def _write_frontend_remediation_writeback_artifact(
+    root: Path,
+    *,
+    passed: bool,
+    remaining_blockers: list[str],
+) -> None:
+    artifact_path = (
+        root / ".ai-sdlc" / "memory" / "frontend-remediation" / "latest.yaml"
+    )
+    artifact_path.parent.mkdir(parents=True, exist_ok=True)
+    artifact_path.write_text(
+        yaml.safe_dump(
+            {
+                "generated_at": "2026-04-03T18:00:00Z",
+                "manifest_path": "program-manifest.yaml",
+                "passed": passed,
+                "source_linkage": {
+                    "runbook_source": "program frontend remediation runbook",
+                    "execution_source": "program frontend remediation execution",
+                },
+                "steps": [
+                    {
+                        "spec_id": "001-auth",
+                        "path": "specs/001-auth",
+                        "state": "required",
+                        "fix_inputs": ["frontend_contract_observations"],
+                        "suggested_actions": [
+                            "materialize frontend contract observations",
+                            "re-run ai-sdlc verify constraints",
+                        ],
+                        "action_commands": [
+                            "uv run ai-sdlc scan . --frontend-contract-spec-dir specs/001-auth"
+                        ],
+                        "source_linkage": {
+                            "runtime_attachment_status": "missing_artifact",
+                            "frontend_gate_verdict": "UNRESOLVED",
+                        },
+                    }
+                ],
+                "action_commands": [
+                    "uv run ai-sdlc scan . --frontend-contract-spec-dir specs/001-auth"
+                ],
+                "follow_up_commands": ["uv run ai-sdlc verify constraints"],
+                "command_results": [
+                    {
+                        "command": "uv run ai-sdlc verify constraints",
+                        "status": "failed" if remaining_blockers else "passed",
+                        "written_paths": [],
+                        "blockers": list(remaining_blockers),
+                        "summary": "verify constraints result",
+                    }
+                ],
+                "written_paths": [],
+                "remaining_blockers": list(remaining_blockers),
+            },
+            sort_keys=False,
+            allow_unicode=True,
+        ),
+        encoding="utf-8",
+    )

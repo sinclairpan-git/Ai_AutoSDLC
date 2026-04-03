@@ -503,6 +503,129 @@ def program_remediate(
     raise typer.Exit(code=1)
 
 
+@program_app.command("provider-handoff")
+def program_provider_handoff(
+    manifest: str = typer.Option(
+        "program-manifest.yaml",
+        "--manifest",
+        help="Path to program manifest relative to project root.",
+    ),
+    report: str = typer.Option(
+        "",
+        "--report",
+        help="Optional report output path relative to project root.",
+    ),
+) -> None:
+    """Show the read-only frontend provider handoff payload."""
+    root = _resolve_root()
+    svc = ProgramService(root, root / manifest)
+
+    try:
+        mf = svc.load_manifest()
+    except Exception as exc:
+        console.print(f"[red]Failed to load manifest: {exc}[/red]")
+        raise typer.Exit(code=2) from None
+
+    result = svc.validate_manifest(mf)
+    if not result.valid:
+        console.print("[bold red]Manifest invalid; cannot build provider handoff.[/bold red]")
+        for e in result.errors:
+            console.print(f"  - {e}")
+        raise typer.Exit(code=1)
+
+    handoff = svc.build_frontend_provider_handoff(mf)
+
+    if handoff.steps:
+        table = Table(title="Program Frontend Provider Handoff")
+        table.add_column("Spec")
+        table.add_column("Path")
+        table.add_column("Pending Inputs")
+        table.add_column("Next Actions")
+        for step in handoff.steps:
+            table.add_row(
+                step.spec_id,
+                step.path,
+                ", ".join(step.pending_inputs) or "-",
+                " ; ".join(step.suggested_next_actions) or "-",
+            )
+        console.print(table)
+        console.print("\n[bold cyan]Frontend Provider Handoff Steps[/bold cyan]")
+        for step in handoff.steps:
+            console.print(f"  - {step.spec_id}: {step.path}", markup=False)
+            for pending in step.pending_inputs:
+                console.print(f"    pending input: {pending}", markup=False)
+            for action in step.suggested_next_actions:
+                console.print(f"    next action: {action}", markup=False)
+    else:
+        console.print("[green]No frontend provider handoff required.[/green]")
+
+    console.print("\n[bold cyan]Frontend Provider Handoff[/bold cyan]")
+    console.print(
+        f"  - source writeback: {handoff.writeback_artifact_path}",
+        markup=False,
+    )
+    console.print(
+        f"  - provider state: {handoff.provider_execution_state}",
+        markup=False,
+    )
+    if handoff.writeback_generated_at:
+        console.print(
+            f"  - writeback generated_at: {handoff.writeback_generated_at}",
+            markup=False,
+        )
+    for blocker in handoff.remaining_blockers:
+        console.print(f"  - blocker: {blocker}", markup=False)
+
+    if handoff.warnings:
+        console.print("\n[bold yellow]Warnings[/bold yellow]")
+        for warning in handoff.warnings:
+            console.print(f"  - {warning}")
+
+    if report:
+        report_path = root / report
+        report_path.parent.mkdir(parents=True, exist_ok=True)
+        lines: list[str] = [
+            "# Program Frontend Provider Handoff",
+            "",
+            f"- Manifest: `{manifest}`",
+            f"- Source writeback: `{handoff.writeback_artifact_path}`",
+            f"- Provider state: `{handoff.provider_execution_state}`",
+        ]
+        if handoff.writeback_generated_at:
+            lines.append(f"- Writeback generated_at: `{handoff.writeback_generated_at}`")
+        lines.append("")
+        if handoff.steps:
+            lines.append("## Steps")
+            lines.append("")
+            for step in handoff.steps:
+                lines.extend(
+                    [
+                        f"### {step.spec_id}",
+                        f"- Path: `{step.path}`",
+                        f"- Pending inputs: `{', '.join(step.pending_inputs) or '-'}`",
+                        "- Suggested next actions:",
+                    ]
+                )
+                lines.extend([f"  - {action}" for action in step.suggested_next_actions])
+                lines.append("")
+        if handoff.remaining_blockers:
+            lines.append("## Remaining Blockers")
+            lines.append("")
+            lines.extend([f"- {blocker}" for blocker in handoff.remaining_blockers])
+            lines.append("")
+        if handoff.warnings:
+            lines.append("## Warnings")
+            lines.append("")
+            lines.extend([f"- {warning}" for warning in handoff.warnings])
+            lines.append("")
+        report_path.write_text("\n".join(lines), encoding="utf-8")
+        console.print(f"\n[green]Report written:[/green] {report_path}")
+
+    if handoff.warnings and not handoff.writeback_generated_at:
+        raise typer.Exit(code=1)
+    raise typer.Exit(code=0)
+
+
 def _format_frontend_readiness(readiness: ProgramFrontendReadiness | None) -> str:
     if readiness is None:
         return "-"

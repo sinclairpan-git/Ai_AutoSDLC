@@ -137,6 +137,27 @@ class ProgramFrontendRemediationExecutionResult:
 
 
 @dataclass
+class ProgramFrontendProviderHandoffStep:
+    spec_id: str
+    path: str
+    pending_inputs: list[str] = field(default_factory=list)
+    suggested_next_actions: list[str] = field(default_factory=list)
+    source_linkage: dict[str, str] = field(default_factory=dict)
+
+
+@dataclass
+class ProgramFrontendProviderHandoff:
+    required: bool
+    provider_execution_state: str
+    writeback_artifact_path: str
+    writeback_generated_at: str
+    steps: list[ProgramFrontendProviderHandoffStep] = field(default_factory=list)
+    remaining_blockers: list[str] = field(default_factory=list)
+    warnings: list[str] = field(default_factory=list)
+    source_linkage: dict[str, str] = field(default_factory=dict)
+
+
+@dataclass
 class ProgramIntegrationStep:
     order: int
     tier: int
@@ -482,6 +503,93 @@ class ProgramService:
         )
         return artifact_path
 
+    def build_frontend_provider_handoff(
+        self,
+        manifest: ProgramManifest,
+        *,
+        writeback_path: Path | None = None,
+    ) -> ProgramFrontendProviderHandoff:
+        """Build a read-only provider handoff payload from remediation writeback."""
+        artifact_path = writeback_path or (
+            self.root / PROGRAM_FRONTEND_REMEDIATION_WRITEBACK_REL_PATH
+        )
+        if not artifact_path.is_absolute():
+            artifact_path = self.root / artifact_path
+
+        relative_artifact_path = _relative_to_root_or_str(self.root, artifact_path)
+        payload, warnings = self._load_frontend_remediation_writeback_payload(
+            artifact_path
+        )
+        if payload is None:
+            return ProgramFrontendProviderHandoff(
+                required=False,
+                provider_execution_state="not_started",
+                writeback_artifact_path=relative_artifact_path,
+                writeback_generated_at="",
+                warnings=warnings,
+                source_linkage={
+                    "writeback_artifact_path": relative_artifact_path,
+                    "provider_execution_state": "not_started",
+                },
+            )
+
+        remaining_blockers = _normalize_string_list(payload.get("remaining_blockers", []))
+        writeback_generated_at = str(payload.get("generated_at", "")).strip()
+        spec_by_id = {spec.id: spec for spec in manifest.specs}
+        steps: list[ProgramFrontendProviderHandoffStep] = []
+
+        if remaining_blockers:
+            for step_payload in _normalize_mapping_list(payload.get("steps", [])):
+                spec_id = str(step_payload.get("spec_id", "")).strip()
+                if not spec_id:
+                    continue
+                path = str(step_payload.get("path", "")).strip()
+                if not path:
+                    spec = spec_by_id.get(spec_id)
+                    path = spec.path if spec is not None else ""
+                source_linkage = _normalize_string_mapping(
+                    step_payload.get("source_linkage", {})
+                )
+                source_linkage.update(
+                    {
+                        "writeback_artifact_path": relative_artifact_path,
+                        "writeback_generated_at": writeback_generated_at,
+                        "provider_execution_state": "not_started",
+                    }
+                )
+                steps.append(
+                    ProgramFrontendProviderHandoffStep(
+                        spec_id=spec_id,
+                        path=path,
+                        pending_inputs=_normalize_string_list(
+                            step_payload.get("fix_inputs", [])
+                        ),
+                        suggested_next_actions=_normalize_string_list(
+                            step_payload.get("suggested_actions", [])
+                        ),
+                        source_linkage=source_linkage,
+                    )
+                )
+
+        source_linkage = _normalize_string_mapping(payload.get("source_linkage", {}))
+        source_linkage.update(
+            {
+                "writeback_artifact_path": relative_artifact_path,
+                "writeback_generated_at": writeback_generated_at,
+                "provider_execution_state": "not_started",
+            }
+        )
+        return ProgramFrontendProviderHandoff(
+            required=bool(remaining_blockers),
+            provider_execution_state="not_started",
+            writeback_artifact_path=relative_artifact_path,
+            writeback_generated_at=writeback_generated_at,
+            steps=steps,
+            remaining_blockers=remaining_blockers,
+            warnings=warnings,
+            source_linkage=source_linkage,
+        )
+
     def evaluate_execute_gates(
         self, manifest: ProgramManifest, *, allow_dirty: bool = False
     ) -> ProgramExecuteGates:
@@ -767,6 +875,38 @@ class ProgramService:
             "remaining_blockers": list(execution_result.blockers),
         }
 
+    def _load_frontend_remediation_writeback_payload(
+        self,
+        artifact_path: Path,
+    ) -> tuple[dict[str, object] | None, list[str]]:
+        if not artifact_path.exists():
+            return (
+                None,
+                [
+                    "missing remediation writeback artifact: "
+                    + _relative_to_root_or_str(self.root, artifact_path)
+                ],
+            )
+        try:
+            payload = yaml.safe_load(artifact_path.read_text(encoding="utf-8"))
+        except Exception as exc:
+            return (
+                None,
+                [
+                    "invalid remediation writeback artifact: "
+                    + f"{_relative_to_root_or_str(self.root, artifact_path)} ({exc})"
+                ],
+            )
+        if not isinstance(payload, dict):
+            return (
+                None,
+                [
+                    "invalid remediation writeback artifact: "
+                    + _relative_to_root_or_str(self.root, artifact_path)
+                ],
+            )
+        return payload, []
+
     def _resolve_spec_dir(self, spec_path: str) -> Path:
         path = (self.root / spec_path).resolve()
         try:
@@ -831,6 +971,34 @@ def _unique_strings(values: list[str] | tuple[str, ...]) -> list[str]:
         if text and text not in unique:
             unique.append(text)
     return unique
+
+
+def _normalize_string_list(value: object) -> list[str]:
+    if not isinstance(value, list):
+        return []
+    return _unique_strings([str(item) for item in value])
+
+
+def _normalize_mapping_list(value: object) -> list[dict[str, object]]:
+    if not isinstance(value, list):
+        return []
+    result: list[dict[str, object]] = []
+    for item in value:
+        if isinstance(item, dict):
+            result.append(item)
+    return result
+
+
+def _normalize_string_mapping(value: object) -> dict[str, str]:
+    if not isinstance(value, dict):
+        return {}
+    result: dict[str, str] = {}
+    for key, item in value.items():
+        key_text = str(key).strip()
+        item_text = str(item).strip()
+        if key_text and item_text:
+            result[key_text] = item_text
+    return result
 
 
 def _relative_to_root_or_str(root: Path, path: Path) -> str:
