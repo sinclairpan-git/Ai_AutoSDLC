@@ -1158,6 +1158,63 @@ def test_execute_frontend_broader_governance_does_not_write_artifact_by_default(
     ).exists()
 
 
+def test_build_frontend_final_governance_request_requires_explicit_confirmation(
+    tmp_path: Path,
+) -> None:
+    for p in ("specs/001-auth", "specs/002-course", "specs/003-enroll"):
+        (tmp_path / p).mkdir(parents=True)
+    _write_frontend_broader_governance_artifact(
+        tmp_path,
+        governance_result="deferred",
+        governance_state="deferred",
+        remaining_blockers=["spec 001-auth remediation still required"],
+    )
+
+    svc = ProgramService(tmp_path)
+    request = svc.build_frontend_final_governance_request(_manifest())
+
+    assert request.required is True
+    assert request.confirmation_required is True
+    assert request.final_governance_state == "not_started"
+    assert request.governance_state == "deferred"
+    assert (
+        request.artifact_source_path
+        == ".ai-sdlc/memory/frontend-broader-governance/latest.yaml"
+    )
+    assert request.artifact_generated_at == "2026-04-03T23:00:00Z"
+    assert request.written_paths == []
+    assert request.steps[0].spec_id == "001-auth"
+    assert request.steps[0].final_governance_state == "not_started"
+    assert request.steps[0].source_linkage["final_governance_state"] == "not_started"
+
+
+def test_execute_frontend_final_governance_returns_deferred_result_when_confirmed(
+    tmp_path: Path,
+) -> None:
+    for p in ("specs/001-auth", "specs/002-course", "specs/003-enroll"):
+        (tmp_path / p).mkdir(parents=True)
+    _write_frontend_broader_governance_artifact(
+        tmp_path,
+        governance_result="deferred",
+        governance_state="deferred",
+        remaining_blockers=["spec 001-auth remediation still required"],
+    )
+
+    svc = ProgramService(tmp_path)
+    result = svc.execute_frontend_final_governance(_manifest(), confirmed=True)
+
+    assert result.passed is False
+    assert result.confirmed is True
+    assert result.final_governance_state == "deferred"
+    assert result.final_governance_result == "deferred"
+    assert result.final_governance_summaries == [
+        "no final governance actions executed in final governance baseline"
+    ]
+    assert result.written_paths == []
+    assert result.remaining_blockers == ["spec 001-auth remediation still required"]
+    assert result.source_linkage["final_governance_state"] == "deferred"
+
+
 def test_build_status_surfaces_ready_frontend_readiness_per_spec(tmp_path: Path) -> None:
     for p in ("specs/001-auth", "specs/002-course", "specs/003-enroll"):
         (tmp_path / p).mkdir(parents=True)
@@ -1670,6 +1727,70 @@ def _write_frontend_guarded_registry_artifact(
                     "registry_result": registry_result,
                     "cross_spec_writeback_artifact_path": ".ai-sdlc/memory/frontend-cross-spec-writeback/latest.yaml",
                     "guarded_registry_artifact_path": ".ai-sdlc/memory/frontend-guarded-registry/latest.yaml",
+                },
+            },
+            sort_keys=False,
+            allow_unicode=True,
+        ),
+        encoding="utf-8",
+    )
+
+
+def _write_frontend_broader_governance_artifact(
+    root: Path,
+    *,
+    governance_result: str,
+    governance_state: str,
+    remaining_blockers: list[str],
+) -> None:
+    artifact_path = (
+        root / ".ai-sdlc" / "memory" / "frontend-broader-governance" / "latest.yaml"
+    )
+    artifact_path.parent.mkdir(parents=True, exist_ok=True)
+    artifact_path.write_text(
+        yaml.safe_dump(
+            {
+                "generated_at": "2026-04-03T23:00:00Z",
+                "manifest_path": "program-manifest.yaml",
+                "artifact_source_path": ".ai-sdlc/memory/frontend-guarded-registry/latest.yaml",
+                "artifact_generated_at": "2026-04-03T22:00:00Z",
+                "required": True,
+                "confirmation_required": True,
+                "confirmed": True,
+                "registry_state": "deferred",
+                "governance_state": governance_state,
+                "governance_result": governance_result,
+                "governance_summaries": [
+                    "no broader governance actions executed in broader governance baseline"
+                ],
+                "existing_written_paths": [],
+                "written_paths": [],
+                "remaining_blockers": list(remaining_blockers),
+                "warnings": [
+                    "broader governance baseline does not execute final governance actions yet"
+                ],
+                "steps": [
+                    {
+                        "spec_id": "001-auth",
+                        "path": "specs/001-auth",
+                        "governance_state": governance_state,
+                        "pending_inputs": ["frontend_contract_observations"],
+                        "suggested_next_actions": [
+                            "materialize broader governance review context",
+                            "re-run ai-sdlc verify constraints",
+                        ],
+                        "source_linkage": {
+                            "governance_state": governance_state,
+                            "guarded_registry_artifact_path": ".ai-sdlc/memory/frontend-guarded-registry/latest.yaml",
+                        },
+                    }
+                ],
+                "source_linkage": {
+                    "registry_state": "deferred",
+                    "governance_state": governance_state,
+                    "governance_result": governance_result,
+                    "guarded_registry_artifact_path": ".ai-sdlc/memory/frontend-guarded-registry/latest.yaml",
+                    "broader_governance_artifact_path": ".ai-sdlc/memory/frontend-broader-governance/latest.yaml",
                 },
             },
             sort_keys=False,
