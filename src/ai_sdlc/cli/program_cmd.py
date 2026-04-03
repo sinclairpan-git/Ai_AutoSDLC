@@ -1153,6 +1153,196 @@ def program_provider_patch_apply(
     raise typer.Exit(code=1)
 
 
+@program_app.command("cross-spec-writeback")
+def program_cross_spec_writeback(
+    manifest: str = typer.Option(
+        "program-manifest.yaml",
+        "--manifest",
+        help="Path to program manifest relative to project root.",
+    ),
+    dry_run: bool = typer.Option(
+        True,
+        "--dry-run/--execute",
+        help="Preview guarded cross-spec writeback request or explicitly execute the guarded writeback baseline.",
+    ),
+    report: str = typer.Option(
+        "",
+        "--report",
+        help="Optional report output path relative to project root.",
+    ),
+    yes: bool = typer.Option(
+        False,
+        "--yes",
+        help="Confirm guarded cross-spec writeback execute mode.",
+    ),
+) -> None:
+    """Preview or execute the guarded frontend cross-spec writeback baseline."""
+    root = _resolve_root()
+    svc = ProgramService(root, root / manifest)
+
+    try:
+        mf = svc.load_manifest()
+    except Exception as exc:
+        console.print(f"[red]Failed to load manifest: {exc}[/red]")
+        raise typer.Exit(code=2) from None
+
+    result = svc.validate_manifest(mf)
+    if not result.valid:
+        console.print(
+            "[bold red]Manifest invalid; cannot build cross-spec writeback.[/bold red]"
+        )
+        for e in result.errors:
+            console.print(f"  - {e}")
+        raise typer.Exit(code=1)
+
+    request = svc.build_frontend_cross_spec_writeback_request(mf)
+    mode_title = (
+        "Program Frontend Cross-Spec Writeback Dry-Run"
+        if dry_run
+        else "Program Frontend Cross-Spec Writeback Execute"
+    )
+
+    if request.steps:
+        table = Table(title=mode_title)
+        table.add_column("Spec")
+        table.add_column("Path")
+        table.add_column("Writeback State")
+        table.add_column("Pending Inputs")
+        table.add_column("Next Actions")
+        for step in request.steps:
+            table.add_row(
+                step.spec_id,
+                step.path,
+                step.writeback_state,
+                ", ".join(step.pending_inputs) or "-",
+                " ; ".join(step.suggested_next_actions) or "-",
+            )
+        console.print(table)
+    else:
+        console.print("[green]No guarded frontend cross-spec writeback steps required.[/green]")
+
+    console.print("\n[bold cyan]Frontend Cross-Spec Writeback Guard[/bold cyan]")
+    console.print(f"  - source artifact: {request.artifact_source_path}", markup=False)
+    console.print(f"  - writeback state: {request.writeback_state}", markup=False)
+    console.print(f"  - apply result: {request.apply_result}", markup=False)
+    console.print(
+        f"  - confirmation required: {str(request.confirmation_required).lower()}",
+        markup=False,
+    )
+    if request.artifact_generated_at:
+        console.print(
+            f"  - artifact generated_at: {request.artifact_generated_at}",
+            markup=False,
+        )
+    for path in request.written_paths:
+        console.print(f"  - existing written path: {path}", markup=False)
+    for blocker in request.remaining_blockers:
+        console.print(f"  - blocker: {blocker}", markup=False)
+
+    if request.warnings:
+        console.print("\n[bold yellow]Warnings[/bold yellow]")
+        for warning in request.warnings:
+            console.print(f"  - {warning}")
+
+    writeback_result = None
+    if not dry_run:
+        if not yes:
+            console.print(
+                "[bold yellow]`--execute` requires explicit confirmation via `--yes`.[/bold yellow]"
+            )
+            raise typer.Exit(code=2)
+        writeback_result = svc.execute_frontend_cross_spec_writeback(
+            mf,
+            request=request,
+            confirmed=True,
+        )
+        _render_frontend_cross_spec_writeback_result(writeback_result)
+
+    if report:
+        report_path = root / report
+        report_path.parent.mkdir(parents=True, exist_ok=True)
+        lines: list[str] = [
+            f"# {mode_title}",
+            "",
+            f"- Manifest: `{manifest}`",
+            f"- Source artifact: `{request.artifact_source_path}`",
+            f"- Writeback state: `{request.writeback_state}`",
+            f"- Apply result: `{request.apply_result}`",
+            f"- Confirmation required: `{str(request.confirmation_required).lower()}`",
+        ]
+        if request.artifact_generated_at:
+            lines.append(f"- Artifact generated_at: `{request.artifact_generated_at}`")
+        lines.append("")
+        if request.steps:
+            lines.append("## Steps")
+            lines.append("")
+            for step in request.steps:
+                lines.extend(
+                    [
+                        f"### {step.spec_id}",
+                        f"- Path: `{step.path}`",
+                        f"- Writeback state: `{step.writeback_state}`",
+                        f"- Pending inputs: `{', '.join(step.pending_inputs) or '-'}`",
+                        "- Suggested next actions:",
+                    ]
+                )
+                lines.extend([f"  - {action}" for action in step.suggested_next_actions])
+                lines.append("")
+        if request.written_paths:
+            lines.append("## Existing Written Paths")
+            lines.append("")
+            lines.extend([f"- {path}" for path in request.written_paths])
+            lines.append("")
+        if request.remaining_blockers:
+            lines.append("## Remaining Blockers")
+            lines.append("")
+            lines.extend([f"- {blocker}" for blocker in request.remaining_blockers])
+            lines.append("")
+        if writeback_result is not None:
+            lines.append("## Frontend Cross-Spec Writeback Result")
+            lines.append("")
+            lines.append(
+                f"- Orchestration result: `{writeback_result.orchestration_result}`"
+            )
+            lines.append(f"- Writeback state: `{writeback_result.writeback_state}`")
+            lines.append(f"- Confirmed: `{str(writeback_result.confirmed).lower()}`")
+            if writeback_result.orchestration_summaries:
+                lines.append("- Orchestration summaries:")
+                lines.extend(
+                    [f"  - {item}" for item in writeback_result.orchestration_summaries]
+                )
+            if writeback_result.written_paths:
+                lines.append("- Written paths:")
+                lines.extend([f"  - {item}" for item in writeback_result.written_paths])
+            if writeback_result.remaining_blockers:
+                lines.append("- Remaining blockers:")
+                lines.extend(
+                    [f"  - {item}" for item in writeback_result.remaining_blockers]
+                )
+            lines.append("")
+        if request.warnings or (writeback_result is not None and writeback_result.warnings):
+            lines.append("## Warnings")
+            lines.append("")
+            warning_lines = list(request.warnings)
+            if writeback_result is not None:
+                warning_lines.extend(writeback_result.warnings)
+            lines.extend([f"- {warning}" for warning in warning_lines])
+            lines.append("")
+        report_path.write_text("\n".join(lines), encoding="utf-8")
+        console.print(f"\n[green]Report written:[/green] {report_path}")
+
+    if dry_run:
+        raise typer.Exit(code=0)
+
+    assert writeback_result is not None
+    if writeback_result.passed:
+        console.print("\n[bold green]Frontend cross-spec writeback completed[/bold green]")
+        raise typer.Exit(code=0)
+
+    console.print("\n[bold red]Frontend cross-spec writeback incomplete[/bold red]")
+    raise typer.Exit(code=1)
+
+
 def _format_frontend_readiness(readiness: ProgramFrontendReadiness | None) -> str:
     if readiness is None:
         return "-"
@@ -1348,6 +1538,32 @@ def _render_frontend_provider_patch_apply_result(result: object) -> None:
     )
     for summary in getattr(result, "apply_summaries", ()):
         console.print(f"  - apply summary: {summary}", markup=False)
+    for path in getattr(result, "written_paths", ()):
+        console.print(f"  - wrote: {path}", markup=False)
+    for blocker in getattr(result, "remaining_blockers", ()):
+        console.print(f"  - blocker: {blocker}", markup=False)
+    for warning in getattr(result, "warnings", ()):
+        console.print(f"  - warning: {warning}", markup=False)
+
+
+def _render_frontend_cross_spec_writeback_result(result: object) -> None:
+    console.print("\n[bold cyan]Frontend Cross-Spec Writeback Result[/bold cyan]")
+    console.print(
+        "  - orchestration result: "
+        + str(getattr(result, "orchestration_result", "unknown")),
+        markup=False,
+    )
+    console.print(
+        "  - writeback state: "
+        + str(getattr(result, "writeback_state", "unknown")),
+        markup=False,
+    )
+    console.print(
+        f"  - confirmed: {str(getattr(result, 'confirmed', False)).lower()}",
+        markup=False,
+    )
+    for summary in getattr(result, "orchestration_summaries", ()):
+        console.print(f"  - {summary}", markup=False)
     for path in getattr(result, "written_paths", ()):
         console.print(f"  - wrote: {path}", markup=False)
     for blocker in getattr(result, "remaining_blockers", ()):

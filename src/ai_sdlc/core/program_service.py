@@ -62,6 +62,9 @@ PROGRAM_FRONTEND_PROVIDER_RUNTIME_DEFERRED_SUMMARY = (
 PROGRAM_FRONTEND_PATCH_APPLY_DEFERRED_SUMMARY = (
     "no files written in guarded patch apply baseline"
 )
+PROGRAM_FRONTEND_CROSS_SPEC_WRITEBACK_DEFERRED_SUMMARY = (
+    "no cross-spec writes executed in guarded writeback baseline"
+)
 
 
 @dataclass
@@ -261,6 +264,46 @@ class ProgramFrontendProviderPatchApplyResult:
     patch_apply_state: str
     apply_result: str
     apply_summaries: list[str] = field(default_factory=list)
+    written_paths: list[str] = field(default_factory=list)
+    remaining_blockers: list[str] = field(default_factory=list)
+    warnings: list[str] = field(default_factory=list)
+    source_linkage: dict[str, str] = field(default_factory=dict)
+
+
+@dataclass
+class ProgramFrontendCrossSpecWritebackRequestStep:
+    spec_id: str
+    path: str
+    writeback_state: str
+    pending_inputs: list[str] = field(default_factory=list)
+    suggested_next_actions: list[str] = field(default_factory=list)
+    source_linkage: dict[str, str] = field(default_factory=dict)
+
+
+@dataclass
+class ProgramFrontendCrossSpecWritebackRequest:
+    required: bool
+    confirmation_required: bool
+    writeback_state: str
+    apply_result: str
+    artifact_source_path: str
+    artifact_generated_at: str
+    written_paths: list[str] = field(default_factory=list)
+    steps: list[ProgramFrontendCrossSpecWritebackRequestStep] = field(
+        default_factory=list
+    )
+    remaining_blockers: list[str] = field(default_factory=list)
+    warnings: list[str] = field(default_factory=list)
+    source_linkage: dict[str, str] = field(default_factory=dict)
+
+
+@dataclass
+class ProgramFrontendCrossSpecWritebackResult:
+    passed: bool
+    confirmed: bool
+    writeback_state: str
+    orchestration_result: str
+    orchestration_summaries: list[str] = field(default_factory=list)
     written_paths: list[str] = field(default_factory=list)
     remaining_blockers: list[str] = field(default_factory=list)
     warnings: list[str] = field(default_factory=list)
@@ -1110,6 +1153,178 @@ class ProgramService:
         )
         return artifact_path
 
+    def build_frontend_cross_spec_writeback_request(
+        self,
+        manifest: ProgramManifest,
+        *,
+        artifact_path: Path | None = None,
+    ) -> ProgramFrontendCrossSpecWritebackRequest:
+        """Build the guarded cross-spec writeback request from patch apply artifact."""
+        effective_artifact_path = artifact_path or (
+            self.root / PROGRAM_FRONTEND_PROVIDER_PATCH_APPLY_ARTIFACT_REL_PATH
+        )
+        if not effective_artifact_path.is_absolute():
+            effective_artifact_path = self.root / effective_artifact_path
+
+        relative_artifact_path = _relative_to_root_or_str(self.root, effective_artifact_path)
+        payload, warnings = self._load_frontend_provider_patch_apply_artifact_payload(
+            effective_artifact_path
+        )
+        if payload is None:
+            return ProgramFrontendCrossSpecWritebackRequest(
+                required=False,
+                confirmation_required=False,
+                writeback_state="missing_artifact",
+                apply_result="missing_artifact",
+                artifact_source_path=relative_artifact_path,
+                artifact_generated_at="",
+                warnings=warnings,
+                source_linkage={
+                    "provider_patch_apply_artifact_path": relative_artifact_path,
+                    "cross_spec_writeback_state": "missing_artifact",
+                },
+            )
+
+        artifact_generated_at = str(payload.get("generated_at", "")).strip()
+        apply_result = str(payload.get("apply_result", "")).strip() or "unknown"
+        written_paths = _normalize_string_list(payload.get("written_paths", []))
+        remaining_blockers = _normalize_string_list(payload.get("remaining_blockers", []))
+        steps: list[ProgramFrontendCrossSpecWritebackRequestStep] = []
+        spec_by_id = {spec.id: spec for spec in manifest.specs}
+        for step_payload in _normalize_mapping_list(payload.get("steps", [])):
+            spec_id = str(step_payload.get("spec_id", "")).strip()
+            if not spec_id:
+                continue
+            path = str(step_payload.get("path", "")).strip()
+            if not path:
+                spec = spec_by_id.get(spec_id)
+                path = spec.path if spec is not None else ""
+            source_linkage = _normalize_string_mapping(step_payload.get("source_linkage", {}))
+            source_linkage.update(
+                {
+                    "provider_patch_apply_artifact_path": relative_artifact_path,
+                    "provider_patch_apply_artifact_generated_at": artifact_generated_at,
+                    "cross_spec_writeback_state": "not_started",
+                }
+            )
+            steps.append(
+                ProgramFrontendCrossSpecWritebackRequestStep(
+                    spec_id=spec_id,
+                    path=path,
+                    writeback_state="not_started",
+                    pending_inputs=_normalize_string_list(
+                        step_payload.get("pending_inputs", [])
+                    ),
+                    suggested_next_actions=_normalize_string_list(
+                        step_payload.get("suggested_next_actions", [])
+                    ),
+                    source_linkage=source_linkage,
+                )
+            )
+
+        source_linkage = _normalize_string_mapping(payload.get("source_linkage", {}))
+        source_linkage.update(
+            {
+                "provider_patch_apply_artifact_path": relative_artifact_path,
+                "provider_patch_apply_artifact_generated_at": artifact_generated_at,
+                "cross_spec_writeback_state": "not_started",
+                "confirmation_required": str(bool(steps or written_paths or remaining_blockers)).lower(),
+            }
+        )
+        return ProgramFrontendCrossSpecWritebackRequest(
+            required=bool(steps or written_paths or remaining_blockers),
+            confirmation_required=bool(steps or written_paths or remaining_blockers),
+            writeback_state="not_started",
+            apply_result=apply_result,
+            artifact_source_path=relative_artifact_path,
+            artifact_generated_at=artifact_generated_at,
+            written_paths=written_paths,
+            steps=steps,
+            remaining_blockers=remaining_blockers,
+            warnings=_unique_strings([*warnings, *_normalize_string_list(payload.get("warnings", []))]),
+            source_linkage=source_linkage,
+        )
+
+    def execute_frontend_cross_spec_writeback(
+        self,
+        manifest: ProgramManifest,
+        *,
+        request: ProgramFrontendCrossSpecWritebackRequest | None = None,
+        confirmed: bool = False,
+    ) -> ProgramFrontendCrossSpecWritebackResult:
+        """Execute the guarded cross-spec writeback baseline without writing files yet."""
+        effective_request = request or self.build_frontend_cross_spec_writeback_request(
+            manifest
+        )
+        if effective_request.warnings and not effective_request.artifact_generated_at:
+            return ProgramFrontendCrossSpecWritebackResult(
+                passed=False,
+                confirmed=confirmed,
+                writeback_state="blocked",
+                orchestration_result="blocked",
+                written_paths=list(effective_request.written_paths),
+                remaining_blockers=list(effective_request.remaining_blockers),
+                warnings=list(effective_request.warnings),
+                source_linkage={
+                    **dict(effective_request.source_linkage),
+                    "cross_spec_writeback_state": "blocked",
+                    "orchestration_result": "blocked",
+                },
+            )
+        if not effective_request.required:
+            return ProgramFrontendCrossSpecWritebackResult(
+                passed=True,
+                confirmed=confirmed,
+                writeback_state="not_started",
+                orchestration_result="skipped",
+                written_paths=list(effective_request.written_paths),
+                remaining_blockers=[],
+                warnings=list(effective_request.warnings),
+                source_linkage={
+                    **dict(effective_request.source_linkage),
+                    "cross_spec_writeback_state": "not_started",
+                    "orchestration_result": "skipped",
+                },
+            )
+        if not confirmed:
+            return ProgramFrontendCrossSpecWritebackResult(
+                passed=False,
+                confirmed=False,
+                writeback_state="confirmation_required",
+                orchestration_result="blocked",
+                written_paths=list(effective_request.written_paths),
+                remaining_blockers=list(effective_request.remaining_blockers),
+                warnings=[
+                    *effective_request.warnings,
+                    "cross-spec writeback requires explicit confirmation",
+                ],
+                source_linkage={
+                    **dict(effective_request.source_linkage),
+                    "cross_spec_writeback_state": "confirmation_required",
+                    "orchestration_result": "blocked",
+                },
+            )
+        return ProgramFrontendCrossSpecWritebackResult(
+            passed=False,
+            confirmed=True,
+            writeback_state="deferred",
+            orchestration_result="deferred",
+            orchestration_summaries=[
+                PROGRAM_FRONTEND_CROSS_SPEC_WRITEBACK_DEFERRED_SUMMARY
+            ],
+            written_paths=[],
+            remaining_blockers=list(effective_request.remaining_blockers),
+            warnings=[
+                *effective_request.warnings,
+                "guarded cross-spec writeback baseline does not execute writes yet",
+            ],
+            source_linkage={
+                **dict(effective_request.source_linkage),
+                "cross_spec_writeback_state": "deferred",
+                "orchestration_result": "deferred",
+            },
+        )
+
     def evaluate_execute_gates(
         self, manifest: ProgramManifest, *, allow_dirty: bool = False
     ) -> ProgramExecuteGates:
@@ -1537,6 +1752,38 @@ class ProgramService:
                 None,
                 [
                     "invalid provider runtime artifact: "
+                    + _relative_to_root_or_str(self.root, artifact_path)
+                ],
+            )
+        return payload, []
+
+    def _load_frontend_provider_patch_apply_artifact_payload(
+        self,
+        artifact_path: Path,
+    ) -> tuple[dict[str, object] | None, list[str]]:
+        if not artifact_path.exists():
+            return (
+                None,
+                [
+                    "missing provider patch apply artifact: "
+                    + _relative_to_root_or_str(self.root, artifact_path)
+                ],
+            )
+        try:
+            payload = yaml.safe_load(artifact_path.read_text(encoding="utf-8"))
+        except Exception as exc:
+            return (
+                None,
+                [
+                    "invalid provider patch apply artifact: "
+                    + f"{_relative_to_root_or_str(self.root, artifact_path)} ({exc})"
+                ],
+            )
+        if not isinstance(payload, dict):
+            return (
+                None,
+                [
+                    "invalid provider patch apply artifact: "
                     + _relative_to_root_or_str(self.root, artifact_path)
                 ],
             )

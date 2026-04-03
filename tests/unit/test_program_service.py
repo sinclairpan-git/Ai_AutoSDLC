@@ -748,6 +748,65 @@ def test_execute_frontend_provider_patch_apply_does_not_write_artifact_by_defaul
     ).exists()
 
 
+def test_build_frontend_cross_spec_writeback_request_requires_explicit_confirmation(
+    tmp_path: Path,
+) -> None:
+    for p in ("specs/001-auth", "specs/002-course", "specs/003-enroll"):
+        (tmp_path / p).mkdir(parents=True)
+    _write_frontend_provider_patch_apply_artifact(
+        tmp_path,
+        apply_result="deferred",
+        patch_apply_state="deferred",
+        remaining_blockers=["spec 001-auth remediation still required"],
+    )
+
+    svc = ProgramService(tmp_path)
+    request = svc.build_frontend_cross_spec_writeback_request(_manifest())
+
+    assert request.required is True
+    assert request.confirmation_required is True
+    assert request.writeback_state == "not_started"
+    assert (
+        request.artifact_source_path
+        == ".ai-sdlc/memory/frontend-provider-patch-apply/latest.yaml"
+    )
+    assert request.artifact_generated_at == "2026-04-03T20:00:00Z"
+    assert request.apply_result == "deferred"
+    assert request.written_paths == []
+    assert request.steps[0].spec_id == "001-auth"
+    assert request.steps[0].writeback_state == "not_started"
+    assert (
+        request.steps[0].source_linkage["cross_spec_writeback_state"] == "not_started"
+    )
+
+
+def test_execute_frontend_cross_spec_writeback_returns_deferred_result_when_confirmed(
+    tmp_path: Path,
+) -> None:
+    for p in ("specs/001-auth", "specs/002-course", "specs/003-enroll"):
+        (tmp_path / p).mkdir(parents=True)
+    _write_frontend_provider_patch_apply_artifact(
+        tmp_path,
+        apply_result="deferred",
+        patch_apply_state="deferred",
+        remaining_blockers=["spec 001-auth remediation still required"],
+    )
+
+    svc = ProgramService(tmp_path)
+    result = svc.execute_frontend_cross_spec_writeback(_manifest(), confirmed=True)
+
+    assert result.passed is False
+    assert result.confirmed is True
+    assert result.writeback_state == "deferred"
+    assert result.orchestration_result == "deferred"
+    assert result.orchestration_summaries == [
+        "no cross-spec writes executed in guarded writeback baseline"
+    ]
+    assert result.written_paths == []
+    assert result.remaining_blockers == ["spec 001-auth remediation still required"]
+    assert result.source_linkage["cross_spec_writeback_state"] == "deferred"
+
+
 def test_build_status_surfaces_ready_frontend_readiness_per_spec(tmp_path: Path) -> None:
     for p in ("specs/001-auth", "specs/002-course", "specs/003-enroll"):
         (tmp_path / p).mkdir(parents=True)
@@ -1072,6 +1131,68 @@ def _write_frontend_provider_runtime_artifact(
                     "provider_runtime_state": provider_execution_state,
                     "invocation_result": invocation_result,
                     "provider_runtime_artifact_path": ".ai-sdlc/memory/frontend-provider-runtime/latest.yaml",
+                },
+            },
+            sort_keys=False,
+            allow_unicode=True,
+        ),
+        encoding="utf-8",
+    )
+
+
+def _write_frontend_provider_patch_apply_artifact(
+    root: Path,
+    *,
+    apply_result: str,
+    patch_apply_state: str,
+    remaining_blockers: list[str],
+) -> None:
+    artifact_path = (
+        root / ".ai-sdlc" / "memory" / "frontend-provider-patch-apply" / "latest.yaml"
+    )
+    artifact_path.parent.mkdir(parents=True, exist_ok=True)
+    artifact_path.write_text(
+        yaml.safe_dump(
+            {
+                "generated_at": "2026-04-03T20:00:00Z",
+                "manifest_path": "program-manifest.yaml",
+                "handoff_source_path": ".ai-sdlc/memory/frontend-provider-runtime/latest.yaml",
+                "handoff_generated_at": "2026-04-03T19:00:00Z",
+                "required": True,
+                "confirmation_required": True,
+                "confirmed": True,
+                "patch_availability_state": "deferred",
+                "patch_apply_state": patch_apply_state,
+                "apply_result": apply_result,
+                "apply_summaries": [
+                    "no files written in guarded patch apply baseline"
+                ],
+                "written_paths": [],
+                "remaining_blockers": list(remaining_blockers),
+                "warnings": [
+                    "guarded patch apply baseline does not apply patches yet"
+                ],
+                "steps": [
+                    {
+                        "spec_id": "001-auth",
+                        "path": "specs/001-auth",
+                        "patch_availability_state": "deferred",
+                        "pending_inputs": ["frontend_contract_observations"],
+                        "suggested_next_actions": [
+                            "materialize frontend contract observations",
+                            "re-run ai-sdlc verify constraints",
+                        ],
+                        "source_linkage": {
+                            "provider_runtime_artifact_path": ".ai-sdlc/memory/frontend-provider-runtime/latest.yaml",
+                            "patch_apply_state": patch_apply_state,
+                        },
+                    }
+                ],
+                "source_linkage": {
+                    "provider_runtime_artifact_path": ".ai-sdlc/memory/frontend-provider-runtime/latest.yaml",
+                    "patch_apply_state": patch_apply_state,
+                    "apply_result": apply_result,
+                    "provider_patch_apply_artifact_path": ".ai-sdlc/memory/frontend-provider-patch-apply/latest.yaml",
                 },
             },
             sort_keys=False,
