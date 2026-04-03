@@ -943,6 +943,85 @@ def test_execute_frontend_guarded_registry_returns_deferred_result_when_confirme
     assert result.source_linkage["registry_state"] == "deferred"
 
 
+def test_write_frontend_guarded_registry_artifact_emits_canonical_yaml(
+    tmp_path: Path,
+) -> None:
+    for p in ("specs/001-auth", "specs/002-course", "specs/003-enroll"):
+        (tmp_path / p).mkdir(parents=True)
+    _write_frontend_cross_spec_writeback_artifact(
+        tmp_path,
+        orchestration_result="deferred",
+        writeback_state="deferred",
+        remaining_blockers=["spec 001-auth remediation still required"],
+    )
+
+    svc = ProgramService(tmp_path)
+    request = svc.build_frontend_guarded_registry_request(_manifest())
+    result = svc.execute_frontend_guarded_registry(
+        _manifest(),
+        request=request,
+        confirmed=True,
+    )
+
+    artifact_path = svc.write_frontend_guarded_registry_artifact(
+        _manifest(),
+        request=request,
+        result=result,
+    )
+
+    assert artifact_path == (
+        tmp_path
+        / ".ai-sdlc"
+        / "memory"
+        / "frontend-guarded-registry"
+        / "latest.yaml"
+    )
+    payload = yaml.safe_load(artifact_path.read_text(encoding="utf-8"))
+    assert payload["manifest_path"] == "program-manifest.yaml"
+    assert (
+        payload["artifact_source_path"]
+        == ".ai-sdlc/memory/frontend-cross-spec-writeback/latest.yaml"
+    )
+    assert payload["registry_state"] == "deferred"
+    assert payload["registry_result"] == "deferred"
+    assert payload["confirmed"] is True
+    assert payload["registry_summaries"] == [
+        "no registry updates executed in guarded registry baseline"
+    ]
+    assert payload["written_paths"] == []
+    assert payload["remaining_blockers"] == ["spec 001-auth remediation still required"]
+    assert payload["steps"][0]["spec_id"] == "001-auth"
+    assert (
+        payload["source_linkage"]["guarded_registry_artifact_path"]
+        == ".ai-sdlc/memory/frontend-guarded-registry/latest.yaml"
+    )
+
+
+def test_execute_frontend_guarded_registry_does_not_write_artifact_by_default(
+    tmp_path: Path,
+) -> None:
+    for p in ("specs/001-auth", "specs/002-course", "specs/003-enroll"):
+        (tmp_path / p).mkdir(parents=True)
+    _write_frontend_cross_spec_writeback_artifact(
+        tmp_path,
+        orchestration_result="deferred",
+        writeback_state="deferred",
+        remaining_blockers=["spec 001-auth remediation still required"],
+    )
+
+    svc = ProgramService(tmp_path)
+    result = svc.execute_frontend_guarded_registry(_manifest(), confirmed=True)
+
+    assert result.registry_state == "deferred"
+    assert not (
+        tmp_path
+        / ".ai-sdlc"
+        / "memory"
+        / "frontend-guarded-registry"
+        / "latest.yaml"
+    ).exists()
+
+
 def test_build_status_surfaces_ready_frontend_readiness_per_spec(tmp_path: Path) -> None:
     for p in ("specs/001-auth", "specs/002-course", "specs/003-enroll"):
         (tmp_path / p).mkdir(parents=True)
@@ -1392,6 +1471,69 @@ def _write_frontend_cross_spec_writeback_artifact(
                     "orchestration_result": orchestration_result,
                     "provider_patch_apply_artifact_path": ".ai-sdlc/memory/frontend-provider-patch-apply/latest.yaml",
                     "cross_spec_writeback_artifact_path": ".ai-sdlc/memory/frontend-cross-spec-writeback/latest.yaml",
+                },
+            },
+            sort_keys=False,
+            allow_unicode=True,
+        ),
+        encoding="utf-8",
+    )
+
+
+def _write_frontend_guarded_registry_artifact(
+    root: Path,
+    *,
+    registry_result: str,
+    registry_state: str,
+    remaining_blockers: list[str],
+) -> None:
+    artifact_path = (
+        root / ".ai-sdlc" / "memory" / "frontend-guarded-registry" / "latest.yaml"
+    )
+    artifact_path.parent.mkdir(parents=True, exist_ok=True)
+    artifact_path.write_text(
+        yaml.safe_dump(
+            {
+                "generated_at": "2026-04-03T22:00:00Z",
+                "manifest_path": "program-manifest.yaml",
+                "artifact_source_path": ".ai-sdlc/memory/frontend-cross-spec-writeback/latest.yaml",
+                "artifact_generated_at": "2026-04-03T21:00:00Z",
+                "required": True,
+                "confirmation_required": True,
+                "confirmed": True,
+                "writeback_state": "deferred",
+                "registry_state": registry_state,
+                "registry_result": registry_result,
+                "registry_summaries": [
+                    "no registry updates executed in guarded registry baseline"
+                ],
+                "existing_written_paths": [],
+                "written_paths": [],
+                "remaining_blockers": list(remaining_blockers),
+                "warnings": [
+                    "guarded registry baseline does not update registries yet"
+                ],
+                "steps": [
+                    {
+                        "spec_id": "001-auth",
+                        "path": "specs/001-auth",
+                        "registry_state": registry_state,
+                        "pending_inputs": ["frontend_contract_observations"],
+                        "suggested_next_actions": [
+                            "materialize frontend contract observations",
+                            "re-run ai-sdlc verify constraints",
+                        ],
+                        "source_linkage": {
+                            "registry_state": registry_state,
+                            "cross_spec_writeback_artifact_path": ".ai-sdlc/memory/frontend-cross-spec-writeback/latest.yaml",
+                        },
+                    }
+                ],
+                "source_linkage": {
+                    "registry_state": registry_state,
+                    "registry_result": registry_result,
+                    "cross_spec_writeback_artifact_path": ".ai-sdlc/memory/frontend-cross-spec-writeback/latest.yaml",
+                    "guarded_registry_artifact_path": ".ai-sdlc/memory/frontend-guarded-registry/latest.yaml",
                 },
             },
             sort_keys=False,

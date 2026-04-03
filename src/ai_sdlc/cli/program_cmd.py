@@ -1451,6 +1451,7 @@ def program_guarded_registry(
             console.print(f"  - {warning}")
 
     registry_result = None
+    registry_artifact_path: Path | None = None
     if not dry_run:
         if not yes:
             console.print(
@@ -1462,7 +1463,17 @@ def program_guarded_registry(
             request=request,
             confirmed=True,
         )
+        registry_artifact_path = svc.write_frontend_guarded_registry_artifact(
+            mf,
+            request=request,
+            result=registry_result,
+        )
         _render_frontend_guarded_registry_result(registry_result)
+        console.print("\n[bold cyan]Frontend Guarded Registry Artifact[/bold cyan]")
+        console.print(
+            f"  - saved: {registry_artifact_path.relative_to(root)}",
+            markup=False,
+        )
 
     if report:
         report_path = root / report
@@ -1519,6 +1530,11 @@ def program_guarded_registry(
             if registry_result.remaining_blockers:
                 lines.append("- Remaining blockers:")
                 lines.extend([f"  - {item}" for item in registry_result.remaining_blockers])
+            lines.append("")
+        if registry_artifact_path is not None:
+            lines.append("## Frontend Guarded Registry Artifact")
+            lines.append("")
+            lines.append(f"- `{registry_artifact_path.relative_to(root)}`")
             lines.append("")
         if request.warnings or (registry_result is not None and registry_result.warnings):
             lines.append("## Warnings")

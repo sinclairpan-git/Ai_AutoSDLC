@@ -991,6 +991,75 @@ specs:
         assert "deferred" in report
         assert "no registry updates executed in guarded registry baseline" in report
 
+    def test_program_guarded_registry_dry_run_does_not_write_artifact(
+        self, initialized_project_dir: Path
+    ) -> None:
+        root = initialized_project_dir
+        _write_manifest(root)
+        _write_frontend_cross_spec_writeback_artifact(
+            root,
+            orchestration_result="deferred",
+            writeback_state="deferred",
+            remaining_blockers=["spec 001-auth remediation still required"],
+        )
+
+        with patch("ai_sdlc.cli.program_cmd.find_project_root", return_value=root):
+            result = runner.invoke(app, ["program", "guarded-registry"])
+
+        assert result.exit_code == 0
+        assert "Program Frontend Guarded Registry Dry-Run" in result.output
+        assert not (
+            root
+            / ".ai-sdlc"
+            / "memory"
+            / "frontend-guarded-registry"
+            / "latest.yaml"
+        ).exists()
+
+    def test_program_guarded_registry_execute_writes_registry_artifact(
+        self, initialized_project_dir: Path
+    ) -> None:
+        root = initialized_project_dir
+        _write_manifest(root)
+        _write_frontend_cross_spec_writeback_artifact(
+            root,
+            orchestration_result="deferred",
+            writeback_state="deferred",
+            remaining_blockers=["spec 001-auth remediation still required"],
+        )
+        report_rel = ".ai-sdlc/memory/frontend-guarded-registry-artifact.md"
+
+        with patch("ai_sdlc.cli.program_cmd.find_project_root", return_value=root):
+            result = runner.invoke(
+                app,
+                [
+                    "program",
+                    "guarded-registry",
+                    "--execute",
+                    "--yes",
+                    "--report",
+                    report_rel,
+                ],
+            )
+
+        artifact_path = (
+            root
+            / ".ai-sdlc"
+            / "memory"
+            / "frontend-guarded-registry"
+            / "latest.yaml"
+        )
+        assert result.exit_code == 1
+        assert artifact_path.is_file()
+        assert ".ai-sdlc/memory/frontend-guarded-registry/latest.yaml" in result.output
+        payload = yaml.safe_load(artifact_path.read_text(encoding="utf-8"))
+        assert payload["registry_result"] == "deferred"
+        assert payload["registry_state"] == "deferred"
+        assert payload["confirmed"] is True
+        report = (root / report_rel).read_text(encoding="utf-8")
+        assert "Frontend Guarded Registry Artifact" in report
+        assert ".ai-sdlc/memory/frontend-guarded-registry/latest.yaml" in report
+
 
 def _write_frontend_remediation_writeback_artifact(
     root: Path,
@@ -1229,6 +1298,69 @@ def _write_frontend_cross_spec_writeback_artifact(
                     "orchestration_result": orchestration_result,
                     "provider_patch_apply_artifact_path": ".ai-sdlc/memory/frontend-provider-patch-apply/latest.yaml",
                     "cross_spec_writeback_artifact_path": ".ai-sdlc/memory/frontend-cross-spec-writeback/latest.yaml",
+                },
+            },
+            sort_keys=False,
+            allow_unicode=True,
+        ),
+        encoding="utf-8",
+    )
+
+
+def _write_frontend_guarded_registry_artifact(
+    root: Path,
+    *,
+    registry_result: str,
+    registry_state: str,
+    remaining_blockers: list[str],
+) -> None:
+    artifact_path = (
+        root / ".ai-sdlc" / "memory" / "frontend-guarded-registry" / "latest.yaml"
+    )
+    artifact_path.parent.mkdir(parents=True, exist_ok=True)
+    artifact_path.write_text(
+        yaml.safe_dump(
+            {
+                "generated_at": "2026-04-03T22:00:00Z",
+                "manifest_path": "program-manifest.yaml",
+                "artifact_source_path": ".ai-sdlc/memory/frontend-cross-spec-writeback/latest.yaml",
+                "artifact_generated_at": "2026-04-03T21:00:00Z",
+                "required": True,
+                "confirmation_required": True,
+                "confirmed": True,
+                "writeback_state": "deferred",
+                "registry_state": registry_state,
+                "registry_result": registry_result,
+                "registry_summaries": [
+                    "no registry updates executed in guarded registry baseline"
+                ],
+                "existing_written_paths": [],
+                "written_paths": [],
+                "remaining_blockers": list(remaining_blockers),
+                "warnings": [
+                    "guarded registry baseline does not update registries yet"
+                ],
+                "steps": [
+                    {
+                        "spec_id": "001-auth",
+                        "path": "specs/001-auth",
+                        "registry_state": registry_state,
+                        "pending_inputs": ["frontend_contract_observations"],
+                        "suggested_next_actions": [
+                            "materialize frontend contract observations",
+                            "re-run ai-sdlc verify constraints",
+                        ],
+                        "source_linkage": {
+                            "registry_state": registry_state,
+                            "cross_spec_writeback_artifact_path": ".ai-sdlc/memory/frontend-cross-spec-writeback/latest.yaml",
+                        },
+                    }
+                ],
+                "source_linkage": {
+                    "registry_state": registry_state,
+                    "registry_result": registry_result,
+                    "cross_spec_writeback_artifact_path": ".ai-sdlc/memory/frontend-cross-spec-writeback/latest.yaml",
+                    "guarded_registry_artifact_path": ".ai-sdlc/memory/frontend-guarded-registry/latest.yaml",
                 },
             },
             sort_keys=False,
