@@ -1815,8 +1815,15 @@ specs:
         assert result.exit_code == 0
         assert "Program Frontend Final Proof Closure Dry-Run" in result.output
         assert ".ai-sdlc/memory/frontend-final-proof-publication/latest.yaml" in result.output
+        assert not (
+            root
+            / ".ai-sdlc"
+            / "memory"
+            / "frontend-final-proof-closure"
+            / "latest.yaml"
+        ).exists()
 
-    def test_program_final_proof_closure_execute_surfaces_deferred_result(
+    def test_program_final_proof_closure_execute_writes_closure_artifact(
         self, initialized_project_dir: Path
     ) -> None:
         root = initialized_project_dir
@@ -1842,6 +1849,13 @@ specs:
                 ],
             )
 
+        artifact_path = (
+            root
+            / ".ai-sdlc"
+            / "memory"
+            / "frontend-final-proof-closure"
+            / "latest.yaml"
+        )
         assert result.exit_code == 1
         assert "Program Frontend Final Proof Closure Execute" in result.output
         assert "deferred" in result.output
@@ -1849,13 +1863,21 @@ specs:
             "no final proof closure actions executed in final proof closure baseline"
             in result.output
         )
+        assert artifact_path.is_file()
+        assert ".ai-sdlc/memory/frontend-final-proof-closure/latest.yaml" in result.output
+        payload = yaml.safe_load(artifact_path.read_text(encoding="utf-8"))
+        assert payload["closure_result"] == "deferred"
+        assert payload["closure_state"] == "deferred"
+        assert payload["confirmed"] is True
         report = (root / report_rel).read_text(encoding="utf-8")
         assert "Frontend Final Proof Closure Result" in report
+        assert "Frontend Final Proof Closure Artifact" in report
         assert "deferred" in report
         assert (
             "no final proof closure actions executed in final proof closure baseline"
             in report
         )
+        assert ".ai-sdlc/memory/frontend-final-proof-closure/latest.yaml" in report
 
 
 def _write_frontend_remediation_writeback_artifact(

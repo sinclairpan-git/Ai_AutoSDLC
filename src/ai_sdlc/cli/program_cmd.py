@@ -2715,6 +2715,7 @@ def program_final_proof_closure(
             console.print(f"  - {warning}")
 
     closure_result = None
+    closure_artifact_path: Path | None = None
     if not dry_run:
         if not yes:
             console.print(
@@ -2726,7 +2727,17 @@ def program_final_proof_closure(
             request=request,
             confirmed=True,
         )
+        closure_artifact_path = svc.write_frontend_final_proof_closure_artifact(
+            mf,
+            request=request,
+            result=closure_result,
+        )
         _render_frontend_final_proof_closure_result(closure_result)
+        console.print("\n[bold cyan]Frontend Final Proof Closure Artifact[/bold cyan]")
+        console.print(
+            f"  - saved: {closure_artifact_path.relative_to(root)}",
+            markup=False,
+        )
 
     if report:
         report_path = root / report
@@ -2785,6 +2796,11 @@ def program_final_proof_closure(
                 lines.extend(
                     [f"  - {item}" for item in closure_result.remaining_blockers]
                 )
+            lines.append("")
+        if closure_artifact_path is not None:
+            lines.append("## Frontend Final Proof Closure Artifact")
+            lines.append("")
+            lines.append(f"- `{closure_artifact_path.relative_to(root)}`")
             lines.append("")
         if request.warnings or (closure_result is not None and closure_result.warnings):
             lines.append("## Warnings")

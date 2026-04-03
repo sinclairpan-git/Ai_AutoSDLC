@@ -65,3 +65,88 @@
 
 - `046` 的 final proof closure artifact truth、write boundary 与 downstream archive proof 边界已经冻结。
 - 下游实现起点明确为 `ProgramService` final proof closure artifact writer，其后再进入 CLI artifact output surface。
+
+## Batch 2026-04-04-001
+
+- **时间**：2026-04-04 00:46:15 +0800
+- **目标**：完成 `ProgramService` final proof closure artifact writer，并以 red-green 方式固定 canonical YAML 语义。
+- **范围**：
+  - `tests/unit/test_program_service.py`
+  - `src/ai_sdlc/core/program_service.py`
+  - `specs/046-frontend-program-final-proof-closure-artifact-baseline/task-execution-log.md`
+- **激活的规则**：
+  - test-first red-green
+  - explicit execute confirmation only
+  - no implicit archive-proof side effect
+
+### Completed Tasks
+
+#### T41 | 先写 failing tests 固定 final proof closure artifact writer 语义
+
+- 新增 `test_write_frontend_final_proof_closure_artifact_emits_canonical_yaml`，固定 canonical path、request/result linkage、payload 字段与 blocker honesty。
+- 首次定向运行出现预期失败，证明 writer surface 仍未实现。
+
+#### T42 | 实现最小 final proof closure artifact writer
+
+- 在 `ProgramService` 中补充 closure artifact canonical 相对路径常量。
+- 新增 `write_frontend_final_proof_closure_artifact(...)` 与 payload builder，显式串联 request/result/source linkage，并保持 execute 默认不落盘。
+
+#### T43 | Fresh verify 并追加 ProgramService batch 归档
+
+- 重新运行定向与整文件单测，确认 writer slice 闭环且无回归。
+
+### Verification
+
+- `uv run pytest tests/unit/test_program_service.py -q -k final_proof_closure_artifact_emits_canonical_yaml` -> 首次失败：`AttributeError: 'ProgramService' object has no attribute 'write_frontend_final_proof_closure_artifact'`
+- `uv run pytest tests/unit/test_program_service.py -q -k final_proof_closure_artifact_emits_canonical_yaml` -> `1 passed, 63 deselected in 0.19s`
+- `uv run pytest tests/unit/test_program_service.py -q` -> `64 passed in 0.44s`
+
+### Outcome
+
+- final proof closure artifact 已具备独立 writer，输出字段对齐 `045` request/result truth。
+- execute 路径仍保持显式调用才写 artifact，不会偷偷扩张为默认 side effect。
+
+## Batch 2026-04-04-002
+
+- **时间**：2026-04-04 00:46:15 +0800
+- **目标**：完成 program final proof closure artifact CLI output surface，显式展示 artifact path 并落入 report。
+- **范围**：
+  - `tests/integration/test_cli_program.py`
+  - `src/ai_sdlc/cli/program_cmd.py`
+  - `specs/046-frontend-program-final-proof-closure-artifact-baseline/task-execution-log.md`
+- **激活的规则**：
+  - cli red-green verification
+  - dry-run stays preview-only
+  - report/output honesty
+
+### Completed Tasks
+
+#### T51 | 先写 failing tests 固定 CLI artifact 输出语义
+
+- 扩展 closure dry-run 集成测试，固定 preview 只读且不落盘 artifact。
+- 将 execute 集成测试升级为显式校验 closure artifact 文件、终端路径输出与 report 记录。
+- 首次定向运行出现预期失败，证明 CLI 尚未暴露该 artifact output surface。
+
+#### T52 | 实现最小 final proof closure artifact CLI surface
+
+- 在 `program final-proof-closure --execute --yes` 路径接入 closure artifact 写出。
+- 终端新增 `Frontend Final Proof Closure Artifact` 区块，report 新增 artifact path 记录，同时保留 closure result honesty。
+
+#### T53 | Fresh verify 并追加 CLI batch 归档
+
+- 重新运行 closure 定向集成测试、整份 CLI 集成测试及最终验证集，确认 CLI slice 收口。
+
+### Verification
+
+- `uv run pytest tests/integration/test_cli_program.py -q -k final_proof_closure` -> 首次失败：`assert artifact_path.is_file()`
+- `uv run pytest tests/integration/test_cli_program.py -q -k final_proof_closure` -> `3 passed, 62 deselected in 0.28s`
+- `uv run pytest tests/integration/test_cli_program.py -q` -> `65 passed in 1.36s`
+- `uv run pytest tests/unit/test_program_service.py -q` -> `64 passed in 0.44s`
+- `uv run ruff check src tests` -> `All checks passed!`
+- `git diff --check -- specs/046-frontend-program-final-proof-closure-artifact-baseline src/ai_sdlc/core src/ai_sdlc/cli tests/unit tests/integration` -> clean
+- `uv run ai-sdlc verify constraints` -> `verify constraints: no BLOCKERs.`
+
+### Outcome
+
+- final proof closure CLI 已在显式确认后的 execute 路径写出 canonical artifact，并在终端与 report 诚实展示 artifact path。
+- dry-run 仍保持 guard / preview 语义，不会默认写出 closure artifact。

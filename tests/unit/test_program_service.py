@@ -1784,6 +1784,67 @@ def test_execute_frontend_final_proof_closure_does_not_write_artifact_by_default
     ).exists()
 
 
+def test_write_frontend_final_proof_closure_artifact_emits_canonical_yaml(
+    tmp_path: Path,
+) -> None:
+    for p in ("specs/001-auth", "specs/002-course", "specs/003-enroll"):
+        (tmp_path / p).mkdir(parents=True)
+    _write_frontend_final_proof_publication_artifact(
+        tmp_path,
+        publication_result="deferred",
+        publication_state="deferred",
+        remaining_blockers=["spec 001-auth remediation still required"],
+    )
+
+    svc = ProgramService(tmp_path)
+    request = svc.build_frontend_final_proof_closure_request(_manifest())
+    result = svc.execute_frontend_final_proof_closure(
+        _manifest(),
+        request=request,
+        confirmed=True,
+    )
+
+    artifact_path = svc.write_frontend_final_proof_closure_artifact(
+        _manifest(),
+        request=request,
+        result=result,
+    )
+
+    assert artifact_path == (
+        tmp_path
+        / ".ai-sdlc"
+        / "memory"
+        / "frontend-final-proof-closure"
+        / "latest.yaml"
+    )
+    payload = yaml.safe_load(artifact_path.read_text(encoding="utf-8"))
+    assert payload["manifest_path"] == "program-manifest.yaml"
+    assert (
+        payload["artifact_source_path"]
+        == ".ai-sdlc/memory/frontend-final-proof-publication/latest.yaml"
+    )
+    assert payload["artifact_generated_at"] == "2026-04-04T03:00:00Z"
+    assert payload["publication_state"] == "deferred"
+    assert payload["closure_state"] == "deferred"
+    assert payload["closure_result"] == "deferred"
+    assert payload["confirmed"] is True
+    assert payload["closure_summaries"] == [
+        "no final proof closure actions executed in final proof closure baseline"
+    ]
+    assert payload["written_paths"] == []
+    assert payload["remaining_blockers"] == ["spec 001-auth remediation still required"]
+    assert payload["steps"][0]["spec_id"] == "001-auth"
+    assert payload["steps"][0]["closure_state"] == "not_started"
+    assert (
+        payload["source_linkage"]["final_proof_publication_artifact_path"]
+        == ".ai-sdlc/memory/frontend-final-proof-publication/latest.yaml"
+    )
+    assert (
+        payload["source_linkage"]["final_proof_closure_artifact_path"]
+        == ".ai-sdlc/memory/frontend-final-proof-closure/latest.yaml"
+    )
+
+
 def test_build_status_surfaces_ready_frontend_readiness_per_spec(tmp_path: Path) -> None:
     for p in ("specs/001-auth", "specs/002-course", "specs/003-enroll"):
         (tmp_path / p).mkdir(parents=True)
