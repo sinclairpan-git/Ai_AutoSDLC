@@ -6,6 +6,14 @@ from pathlib import Path
 
 import pytest
 
+from ai_sdlc.core.frontend_contract_verification import (
+    FRONTEND_CONTRACT_CHECK_OBJECTS,
+    FRONTEND_CONTRACT_SOURCE_NAME,
+)
+from ai_sdlc.core.frontend_gate_verification import (
+    FRONTEND_GATE_CHECK_OBJECTS,
+    FRONTEND_GATE_SOURCE_NAME,
+)
 from ai_sdlc.core.release_gate import (
     ReleaseGateCheck,
     ReleaseGateReport,
@@ -29,6 +37,40 @@ from ai_sdlc.gates.registry import GateRegistry, get_gate_by_stage
 from ai_sdlc.knowledge.engine import initialize_baseline
 from ai_sdlc.models.gate import GateVerdict, GovernanceState
 from ai_sdlc.models.state import OverlapResult, ParallelPolicy
+
+
+def _frontend_contract_summary_payload(
+    *,
+    gate_verdict: str = "PASS",
+    blockers: tuple[str, ...] = (),
+    coverage_gaps: tuple[str, ...] = (),
+) -> dict[str, object]:
+    return {
+        "source_name": FRONTEND_CONTRACT_SOURCE_NAME,
+        "check_objects": list(FRONTEND_CONTRACT_CHECK_OBJECTS),
+        "blockers": list(blockers),
+        "coverage_gaps": list(coverage_gaps),
+        "advisory_checks": [],
+        "gate_verdict": gate_verdict,
+        "gate_checks": [],
+    }
+
+
+def _frontend_gate_summary_payload(
+    *,
+    gate_verdict: str = "PASS",
+    blockers: tuple[str, ...] = (),
+    coverage_gaps: tuple[str, ...] = (),
+) -> dict[str, object]:
+    return {
+        "source_name": FRONTEND_GATE_SOURCE_NAME,
+        "check_objects": list(FRONTEND_GATE_CHECK_OBJECTS),
+        "blockers": list(blockers),
+        "coverage_gaps": list(coverage_gaps),
+        "advisory_checks": [],
+        "gate_verdict": gate_verdict,
+        "gate_checks": [],
+    }
 
 
 class TestGateRegistry:
@@ -212,6 +254,60 @@ class TestVerifyGate:
         assert result.verdict == GateVerdict.PASS
         assert any(c.name == "verification_surface_declared" and c.passed for c in result.checks)
 
+    def test_passes_with_frontend_contract_summary_payload(self) -> None:
+        result = VerifyGate().check(
+            {
+                "verification_check_objects": (
+                    "required_governance_files",
+                    *FRONTEND_CONTRACT_CHECK_OBJECTS,
+                ),
+                "verification_sources": (
+                    "verify constraints",
+                    FRONTEND_CONTRACT_SOURCE_NAME,
+                ),
+                "constraint_blockers": (),
+                "coverage_gaps": (),
+                "frontend_contract_verification": _frontend_contract_summary_payload(),
+            }
+        )
+
+        assert result.verdict == GateVerdict.PASS
+        assert any(
+            c.name == "frontend_contract_summary_declared" and c.passed
+            for c in result.checks
+        )
+        assert any(
+            c.name == "frontend_contract_status_clear" and c.passed
+            for c in result.checks
+        )
+
+    def test_passes_with_frontend_gate_summary_payload(self) -> None:
+        result = VerifyGate().check(
+            {
+                "verification_check_objects": (
+                    "required_governance_files",
+                    *FRONTEND_GATE_CHECK_OBJECTS,
+                ),
+                "verification_sources": (
+                    "verify constraints",
+                    FRONTEND_GATE_SOURCE_NAME,
+                ),
+                "constraint_blockers": (),
+                "coverage_gaps": (),
+                "frontend_gate_verification": _frontend_gate_summary_payload(),
+            }
+        )
+
+        assert result.verdict == GateVerdict.PASS
+        assert any(
+            c.name == "frontend_gate_summary_declared" and c.passed
+            for c in result.checks
+        )
+        assert any(
+            c.name == "frontend_gate_status_clear" and c.passed
+            for c in result.checks
+        )
+
     def test_fail_critical(self) -> None:
         result = VerifyGate().check({"critical_issues": 1, "high_issues": 0})
         assert result.verdict == GateVerdict.RETRY
@@ -234,6 +330,108 @@ class TestVerificationGate:
         assert result.stage == "verification"
         assert result.verdict == GateVerdict.RETRY
         assert any(c.name == "constraint_blockers_clear" and not c.passed for c in result.checks)
+
+    def test_retries_when_frontend_contract_source_has_no_summary_payload(self) -> None:
+        result = VerificationGate().check(
+            {
+                "verification_check_objects": (
+                    "required_governance_files",
+                    *FRONTEND_CONTRACT_CHECK_OBJECTS,
+                ),
+                "verification_sources": (
+                    "verify constraints",
+                    FRONTEND_CONTRACT_SOURCE_NAME,
+                ),
+                "constraint_blockers": (),
+                "coverage_gaps": (),
+            }
+        )
+
+        assert result.verdict == GateVerdict.RETRY
+        assert any(
+            c.name == "frontend_contract_summary_declared" and not c.passed
+            for c in result.checks
+        )
+
+    def test_retries_when_frontend_contract_summary_reports_gap(self) -> None:
+        result = VerificationGate().check(
+            {
+                "verification_check_objects": (
+                    "required_governance_files",
+                    *FRONTEND_CONTRACT_CHECK_OBJECTS,
+                ),
+                "verification_sources": (
+                    "verify constraints",
+                    FRONTEND_CONTRACT_SOURCE_NAME,
+                ),
+                "constraint_blockers": (),
+                "coverage_gaps": (),
+                "frontend_contract_verification": _frontend_contract_summary_payload(
+                    gate_verdict="RETRY",
+                    blockers=(
+                        "BLOCKER: frontend contract observations unavailable: no implementation observations declared",
+                    ),
+                    coverage_gaps=("frontend_contract_observations",),
+                ),
+            }
+        )
+
+        assert result.verdict == GateVerdict.RETRY
+        assert any(
+            c.name == "frontend_contract_status_clear" and not c.passed
+            for c in result.checks
+        )
+
+    def test_retries_when_frontend_gate_source_has_no_summary_payload(self) -> None:
+        result = VerificationGate().check(
+            {
+                "verification_check_objects": (
+                    "required_governance_files",
+                    *FRONTEND_GATE_CHECK_OBJECTS,
+                ),
+                "verification_sources": (
+                    "verify constraints",
+                    FRONTEND_GATE_SOURCE_NAME,
+                ),
+                "constraint_blockers": (),
+                "coverage_gaps": (),
+            }
+        )
+
+        assert result.verdict == GateVerdict.RETRY
+        assert any(
+            c.name == "frontend_gate_summary_declared" and not c.passed
+            for c in result.checks
+        )
+
+    def test_retries_when_frontend_gate_summary_reports_gap(self) -> None:
+        result = VerificationGate().check(
+            {
+                "verification_check_objects": (
+                    "required_governance_files",
+                    *FRONTEND_GATE_CHECK_OBJECTS,
+                ),
+                "verification_sources": (
+                    "verify constraints",
+                    FRONTEND_GATE_SOURCE_NAME,
+                ),
+                "constraint_blockers": (),
+                "coverage_gaps": (),
+                "frontend_gate_verification": _frontend_gate_summary_payload(
+                    gate_verdict="RETRY",
+                    blockers=(
+                        "BLOCKER: frontend gate policy artifacts unavailable: governance/frontend/gates not found",
+                    ),
+                    coverage_gaps=("frontend_gate_policy_artifacts",),
+                ),
+            }
+        )
+
+        assert result.verdict == GateVerdict.RETRY
+        assert any(
+            c.name == "frontend_gate_status_clear" and not c.passed
+            for c in result.checks
+        )
 
 
 class TestReviewGate:

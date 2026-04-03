@@ -8,6 +8,17 @@ from pathlib import Path
 
 from ai_sdlc.branch.git_client import GitError
 from ai_sdlc.context.state import load_checkpoint
+from ai_sdlc.core.frontend_contract_observation_provider import (
+    load_frontend_contract_observation_artifact,
+)
+from ai_sdlc.core.frontend_contract_verification import (
+    FrontendContractVerificationReport,
+    build_frontend_contract_verification_report,
+)
+from ai_sdlc.core.frontend_gate_verification import (
+    FrontendGateVerificationReport,
+    build_frontend_gate_verification_report,
+)
 from ai_sdlc.core.provenance_gate import load_phase1_provenance_gate_payload
 from ai_sdlc.core.release_gate import ReleaseGateParseError, load_release_gate_report
 from ai_sdlc.core.workitem_traceability import evaluate_work_item_branch_lifecycle
@@ -15,6 +26,7 @@ from ai_sdlc.gates.task_ac_checks import (
     first_doc_first_task_scope_violation,
     first_task_missing_acceptance,
 )
+from ai_sdlc.generators.frontend_contract_artifacts import frontend_contracts_root
 from ai_sdlc.models.state import Checkpoint
 from ai_sdlc.telemetry.clock import utc_now_z
 from ai_sdlc.telemetry.contracts import Evaluation, Violation
@@ -42,6 +54,7 @@ SKIP_REGISTRY_REL = Path("src") / "ai_sdlc" / "rules" / "agent-skip-registry.zh.
 FRAMEWORK_DEFECT_BACKLOG_REL = Path("docs") / "framework-defect-backlog.zh-CN.md"
 VERIFICATION_RULE_REL = Path("src") / "ai_sdlc" / "rules" / "verification.md"
 PR_CHECKLIST_REL = Path("docs") / "pull-request-checklist.zh.md"
+FRONTEND_CONTRACT_OBSERVATION_INPUT_FILE = "frontend-contract-observations.json"
 DOC_FIRST_SURFACES: dict[Path, tuple[str, ...]] = {
     PIPELINE_RULE_REL: (
         "先文档 / 先需求 / 先 spec-plan-tasks",
@@ -236,13 +249,30 @@ class ConstraintReport:
 def build_constraint_report(root: Path) -> ConstraintReport:
     """Build a structured report for verify constraints."""
     checkpoint = load_checkpoint(root)
+    frontend_contract_report = _frontend_contract_attachment_report(root, checkpoint)
+    frontend_gate_report = _frontend_gate_attachment_report(root, checkpoint)
     return ConstraintReport(
         root=str(root),
         gate_name="Verification Gate",
         source_name="verify constraints",
-        check_objects=VERIFICATION_GATE_OBJECTS,
-        blockers=tuple(collect_constraint_blockers(root)),
-        coverage_gaps=_feature_contract_coverage_gaps(root, checkpoint),
+        check_objects=_merge_unique_strings(
+            _merge_unique_strings(
+                VERIFICATION_GATE_OBJECTS,
+                frontend_contract_report.check_objects if frontend_contract_report else (),
+            ),
+            frontend_gate_report.check_objects if frontend_gate_report else (),
+        ),
+        blockers=_merge_unique_strings(
+            tuple(collect_constraint_blockers(root)),
+            frontend_gate_report.blockers if frontend_gate_report else (),
+        ),
+        coverage_gaps=_merge_unique_strings(
+            _feature_contract_coverage_gaps(root, checkpoint),
+            _merge_unique_strings(
+                frontend_contract_report.coverage_gaps if frontend_contract_report else (),
+                frontend_gate_report.coverage_gaps if frontend_gate_report else (),
+            ),
+        ),
         release_gate=_release_gate_surface(root, checkpoint),
     )
 
@@ -250,14 +280,25 @@ def build_constraint_report(root: Path) -> ConstraintReport:
 def build_verification_gate_context(root: Path) -> dict[str, object]:
     """Build the explicit Verification Gate context consumed by runner and gate CLI."""
     report = build_constraint_report(root)
+    checkpoint = load_checkpoint(root)
+    frontend_contract_report = _frontend_contract_attachment_report(root, checkpoint)
+    frontend_gate_report = _frontend_gate_attachment_report(root, checkpoint)
     governance = build_verification_governance_bundle(
         report,
         decision_subject=f"verify:{root}",
         evidence_refs=("verify-constraints:structured-report",),
     )
     decision_result = str(governance["gate_decision_payload"]["decision_result"])
-    return {
-        "verification_sources": (report.source_name,),
+    context: dict[str, object] = {
+        "verification_sources": _merge_unique_strings(
+            _merge_unique_strings(
+                (report.source_name,),
+                (frontend_contract_report.source_name,)
+                if frontend_contract_report
+                else (),
+            ),
+            (frontend_gate_report.source_name,) if frontend_gate_report else (),
+        ),
         "verification_check_objects": report.check_objects,
         "constraint_blockers": report.blockers if decision_result == "block" else (),
         "coverage_gaps": report.coverage_gaps if decision_result == "block" else (),
@@ -265,6 +306,13 @@ def build_verification_gate_context(root: Path) -> dict[str, object]:
         "verification_governance": governance,
         "provenance_phase1": load_phase1_provenance_gate_payload(root),
     }
+    if frontend_contract_report is not None:
+        context["frontend_contract_verification"] = (
+            frontend_contract_report.to_json_dict()
+        )
+    if frontend_gate_report is not None:
+        context["frontend_gate_verification"] = frontend_gate_report.to_json_dict()
+    return context
 
 
 def build_verification_governance_bundle(
@@ -428,6 +476,9 @@ def collect_constraint_blockers(root: Path) -> list[str]:
     blockers.extend(_skip_registry_mapping_blockers(root, spec_path, cp))
     blockers.extend(_branch_lifecycle_blockers(root, spec_path))
     blockers.extend(_feature_contract_blockers(root, cp))
+    frontend_contract_report = _frontend_contract_attachment_report(root, cp)
+    if frontend_contract_report is not None:
+        blockers.extend(frontend_contract_report.blockers)
     blockers.extend(_release_gate_blockers(root, cp))
     return blockers
 
@@ -485,6 +536,178 @@ def _feature_contract_coverage_gaps(
     return tuple(gaps)
 
 
+def _frontend_contract_attachment_report(
+    root: Path,
+    checkpoint: Checkpoint | None,
+) -> FrontendContractVerificationReport | None:
+    """Resolve the scoped frontend-contract verify attachment for active 012 only."""
+    work_item_id = _effective_feature_contract_wi_id(checkpoint)
+    if not _is_012_work_item(work_item_id):
+        return None
+
+    observations_path = _frontend_contract_observation_path(root, checkpoint)
+    observations: list = []
+    load_error: str | None = None
+    if observations_path is not None and observations_path.is_file():
+        try:
+            observations = _load_frontend_contract_observations(observations_path)
+        except ValueError as exc:
+            load_error = str(exc)
+
+    report = build_frontend_contract_verification_report(
+        frontend_contracts_root(root),
+        observations,
+    )
+    if load_error is None or observations_path is None:
+        return report
+    return _invalid_frontend_contract_observation_report(
+        report,
+        observations_path=observations_path,
+        error_message=load_error,
+    )
+
+
+def _frontend_gate_attachment_report(
+    root: Path,
+    checkpoint: Checkpoint | None,
+) -> FrontendGateVerificationReport | None:
+    """Resolve the scoped frontend gate verify attachment for active 018 only."""
+    work_item_id = _effective_feature_contract_wi_id(checkpoint)
+    if not _is_018_work_item(work_item_id):
+        return None
+
+    observations_path = _frontend_contract_observation_path(root, checkpoint)
+    observations: list = []
+    load_error: str | None = None
+    if observations_path is not None and observations_path.is_file():
+        try:
+            observations = _load_frontend_contract_observations(observations_path)
+        except ValueError as exc:
+            load_error = str(exc)
+
+    report = build_frontend_gate_verification_report(root, observations)
+    if load_error is None or observations_path is None:
+        return report
+    return _invalid_frontend_gate_observation_report(
+        report,
+        observations_path=observations_path,
+        error_message=load_error,
+    )
+
+
+def _frontend_contract_observation_path(
+    root: Path,
+    checkpoint: Checkpoint | None,
+) -> Path | None:
+    if checkpoint is None or checkpoint.feature is None:
+        return None
+    spec_dir_raw = (checkpoint.feature.spec_dir or "").strip()
+    if not spec_dir_raw:
+        return None
+    return root / spec_dir_raw / FRONTEND_CONTRACT_OBSERVATION_INPUT_FILE
+
+
+def _load_frontend_contract_observations(
+    path: Path,
+) -> list:
+    """Load structured observations from the active 012 canonical artifact."""
+    artifact = load_frontend_contract_observation_artifact(path)
+    return list(artifact.observations)
+
+
+def _invalid_frontend_contract_observation_report(
+    report: FrontendContractVerificationReport,
+    *,
+    observations_path: Path,
+    error_message: str,
+) -> FrontendContractVerificationReport:
+    """Preserve scoped attachment while surfacing malformed observation input honestly."""
+    observation_blocker = (
+        "BLOCKER: frontend contract observations unavailable: "
+        "invalid structured observation input "
+        f"{observations_path.as_posix()}: {error_message}"
+    )
+    blockers: list[str] = []
+    replaced = False
+    for blocker in report.blockers:
+        if blocker.startswith("BLOCKER: frontend contract observations unavailable:"):
+            blockers.append(observation_blocker)
+            replaced = True
+        else:
+            blockers.append(blocker)
+    if not replaced:
+        blockers.append(observation_blocker)
+    return FrontendContractVerificationReport(
+        contracts_root=report.contracts_root,
+        source_name=report.source_name,
+        check_objects=report.check_objects,
+        blockers=tuple(blockers),
+        coverage_gaps=_merge_unique_strings(
+            report.coverage_gaps,
+            ("frontend_contract_observations",),
+        ),
+        advisory_checks=report.advisory_checks,
+        gate_result=report.gate_result,
+    )
+
+
+def _invalid_frontend_gate_observation_report(
+    report: FrontendGateVerificationReport,
+    *,
+    observations_path: Path,
+    error_message: str,
+) -> FrontendGateVerificationReport:
+    """Preserve scoped gate attachment while surfacing malformed observation input honestly."""
+    observation_blocker = (
+        "BLOCKER: frontend gate prerequisite failed: "
+        "frontend contract verification not clear: "
+        "invalid structured observation input "
+        f"{observations_path.as_posix()}: {error_message}"
+    )
+    blockers: list[str] = []
+    replaced = False
+    for blocker in report.blockers:
+        if "frontend contract verification not clear:" in blocker:
+            blockers.append(observation_blocker)
+            replaced = True
+        else:
+            blockers.append(blocker)
+    if not replaced:
+        blockers.append(observation_blocker)
+
+    upstream_contract = dict(report.upstream_contract_verification)
+    upstream_blockers = [
+        observation_blocker,
+        *[
+            item
+            for item in _string_tuple(upstream_contract.get("blockers", ()))
+            if "invalid structured observation input" not in item
+        ],
+    ]
+    upstream_contract["blockers"] = list(_merge_unique_strings(tuple(upstream_blockers), ()))
+    upstream_contract["coverage_gaps"] = list(
+        _merge_unique_strings(
+            _string_tuple(upstream_contract.get("coverage_gaps", ())),
+            ("frontend_contract_observations",),
+        )
+    )
+
+    return FrontendGateVerificationReport(
+        gate_policy_root=report.gate_policy_root,
+        generation_root=report.generation_root,
+        source_name=report.source_name,
+        check_objects=report.check_objects,
+        blockers=tuple(blockers),
+        coverage_gaps=_merge_unique_strings(
+            report.coverage_gaps,
+            ("frontend_contract_observations",),
+        ),
+        advisory_checks=report.advisory_checks,
+        gate_result=report.gate_result,
+        upstream_contract_verification=upstream_contract,
+    )
+
+
 def _feature_contract_surfaces_for_work_item(
     work_item_id: str,
 ) -> tuple[FeatureContractSurface, ...]:
@@ -525,11 +748,43 @@ def _is_003_work_item(work_item_id: str) -> bool:
     return normalized == "003" or normalized.startswith("003-") or normalized.startswith("003/")
 
 
+def _is_012_work_item(work_item_id: str) -> bool:
+    normalized = work_item_id.strip()
+    return normalized == "012" or normalized.startswith("012-") or normalized.startswith("012/")
+
+
+def _is_018_work_item(work_item_id: str) -> bool:
+    normalized = work_item_id.strip()
+    return normalized == "018" or normalized.startswith("018-") or normalized.startswith("018/")
+
+
 def _effective_feature_contract_wi_id(checkpoint: Checkpoint | None) -> str:
     """Resolve the active work-item id for feature-contract coverage."""
     if checkpoint is None:
         return ""
     return _effective_wi_id_for_registry(checkpoint)
+
+
+def _merge_unique_strings(
+    primary: tuple[str, ...],
+    secondary: tuple[str, ...],
+) -> tuple[str, ...]:
+    merged: list[str] = []
+    for item in (*primary, *secondary):
+        if item and item not in merged:
+            merged.append(item)
+    return tuple(merged)
+
+
+def _string_tuple(value: object) -> tuple[str, ...]:
+    if not isinstance(value, (list, tuple)):
+        return ()
+    items: list[str] = []
+    for item in value:
+        text = str(item).strip()
+        if text:
+            items.append(text)
+    return tuple(items)
 
 
 def _release_gate_surface(

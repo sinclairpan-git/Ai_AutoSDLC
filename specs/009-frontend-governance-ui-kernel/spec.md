@@ -94,6 +94,9 @@
 |----|------|
 | FR-009-011 | `009` 必须把 legacy 相关信息的 MVP 承载方式收敛为 `page/module contract` 扩展字段优先，而不是独立平行 artifact 爆炸 |
 | FR-009-012 | `009` 必须输出可继续拆解的 formal `plan.md / tasks.md`，为后续 design/decompose/verify 提供单一基线 |
+| FR-009-013 | `009` 必须把五条主线冻结为可单独引用的 formal execution surface，并写清各自的边界、输入真值和后续 handoff 目标 |
+| FR-009-014 | `009` 必须明确 `MVP / P1 / P2` 的交付分层，其中 MVP 只覆盖 `Vue2 企业项目 + 最小治理闭环 + legacy 轻量兼容`，不得把 modern provider 路线偷渡进 MVP |
+| FR-009-015 | `009` 必须明确后续任何 `src/` / `tests/` 级实现，都应通过下游 child work item 或单独 formalize 的执行工单承接，而不是把 `009` 直接膨胀成运行时实现工单 |
 
 ## 关键实体
 
@@ -103,6 +106,41 @@
 - **Compatibility Context**：承载 `Compatibility Profile / Migration Level / Migration Scope / Legacy Boundary` 的兼容治理上下文
 - **Gate Matrix**：承载 `i18n / validation / recipe / whitelist / hard rules / token` 统一检查基线及其兼容执行口径
 
+## 五条主 workstream
+
+| Workstream | 当前 formal 边界 | 输入真值 | `009` 内冻结内容 | 明确不在 `009` 内直接实现 |
+|------------|------------------|----------|------------------|---------------------------|
+| Contract | `page/module metadata`、`recipe declaration`、`i18n / validation / hard rules / whitelist / token refs`、legacy 扩展字段 | `PRD/spec`、治理规则、domain requirement | 前端 contract shape、legacy 扩展字段承载规则、authoring truth order | 页面生成器、运行时 adapter、批量迁移器 |
+| UI Kernel | `Ui*` 协议、`page recipe standard body`、状态/交互底线、Theme/Token 边界 | Contract、设计冻结稿 | Kernel 标准本体、禁止 Provider 反向定义 Kernel 的边界 | 公司组件库直出、企业样式实现、modern runtime |
+| enterprise-vue2 Provider | `Ui* -> 企业实现` 映射、白名单包装、危险能力隔离、Legacy Adapter 边界 | UI Kernel、公司组件库能力盘点、Compatibility Context | Provider profile、Legacy Adapter 受控桥接口径 | modern provider runtime、全量组件库重构 |
+| 前端生成约束 | 生成器输出纪律、文件/组件白名单、recipe 对齐、Contract 到代码的最小产物约束 | Contract、UI Kernel、Provider profile | 生成约束的 formal baseline、不得以 prompt 替代 contract 的规则 | 完整生成器 runtime、自主推断业务逻辑 |
+| Gate-Recheck-Auto-fix | gate matrix、Compatibility 执行强度、diagnostics、recheck loop、bounded auto-fix policy | Contract、代码、Provider profile、Compatibility Context | 同一套 gate matrix 的兼容执行口径、recheck / auto-fix 的边界 | 第二套 compatibility rule system、隐式自修复 runtime |
+
+`009` 的职责是把以上五条主线冻结为后续可拆分、可 formalize、可 verify 的 execution surface，而不是在当前 work item 中直接落 `src/` / `tests/` 级实现。
+
+## 交付分层（MVP / P1 / P2）
+
+| 层级 | 目标 | 明确覆盖 | 明确不覆盖 |
+|------|------|----------|------------|
+| MVP | 建立 `Vue2 企业项目 + 最小治理闭环 + legacy 轻量兼容` 的首个可执行治理基线 | Contract 基础形状、UI Kernel 标准本体、enterprise-vue2 Provider profile、Compatibility Context、同一套 gate matrix 下的兼容执行口径 | modern provider runtime、全量 token 平台、全量 legacy 迁移、终局体验层 |
+| P1 | 在 MVP 真值不变的前提下补强体验稳定层与诊断能力 | 更完整的 recipe / gate diagnostics / recheck 策略、作者体验与治理反馈面 | 第二套 Contract / Kernel、本地 prompt truth |
+| P2 | 承接 modern provider 路线与更强迁移能力 | modern provider、设计 token 平台、迁移加速器、多 provider/runtime 演进 | 回写或改写 MVP 的单一真值顺序 |
+
+## Formal 真值顺序与执行前提
+
+1. `PRD/spec` 定义业务意图、页面目标和治理边界。
+2. `Contract` 将这些意图收敛成结构化真值，包括 `recipe declaration`、规则、扩展字段和允许的生成输入。
+3. `code / provider / runtime` 只能实现并满足 Contract，不得反向改写 Contract。
+4. Gate 以 `Contract <-> code` 对照为准，prompt、对话和临时推断都不是法定真值。
+5. `009` 当前只授权 formal freeze、design/decompose 和 verify handoff；任何后续 `src/` / `tests/` 实现必须先挂到新的 downstream work item，再进入 execute。
+
+## Verify / Decompose Handoff
+
+- 下一轮 design / decompose 的法定入口固定为 `specs/009-frontend-governance-ui-kernel/`，不回退到 `docs/superpowers/*`。
+- 推荐的只读 handoff 基线是：`uv run ai-sdlc verify constraints`、`uv run ai-sdlc workitem truth-check --wi specs/009-frontend-governance-ui-kernel`、`git status --short`。
+- 若要进入 `src/` / `tests/` 实现，应先围绕五条主线拆出 downstream child work item，并在其 `spec.md / plan.md / tasks.md` 中明确回挂 `009`。
+- `009` 自身保留为母规格与 formal governance baseline；后续实现不应再把它改写成“直接承载完整运行时”的工单。
+
 ## 成功标准
 
 - **SC-009-001**：`009` formal docs 可以独立表达前端治理与 UI Kernel 的核心边界，而不是仅依赖冻结设计稿正文  
@@ -110,3 +148,6 @@
 - **SC-009-003**：`Compatibility` 在 formal docs 中始终被表述为同一套 gate matrix 的兼容执行口径  
 - **SC-009-004**：`recipe standard` 与 `recipe declaration`、`Kernel` 与 `Provider`、`Core` 与 `Runtime` 的边界在 formal docs 中保持单一真值  
 - **SC-009-005**：`009` formal docs 足以支撑后续 design/decompose 继续细化，而无需再回到 `docs/superpowers/*` 建第二套 canonical 文档
+- **SC-009-006**：五条主 workstream 都能被独立引用，并能清楚回答“边界是什么、输入真值是什么、后续应由哪个下游工单承接”
+- **SC-009-007**：MVP / P1 / P2 的边界保持单一，MVP 不再被表述成“首版即终局能力”
+- **SC-009-008**：后续任何实现任务都必须显式回挂到 `009` 的下游 work item，而不是绕过 formalize 直接扩张 `009`

@@ -9,6 +9,7 @@ from rich.console import Console
 
 from ai_sdlc.core.verify_constraints import (
     build_constraint_report,
+    build_verification_gate_context,
     build_verification_governance_bundle,
 )
 from ai_sdlc.telemetry.contracts import Evidence, TelemetryEvent
@@ -73,6 +74,11 @@ def verify_constraints(
         raise typer.Exit(code=1)
 
     report = build_constraint_report(root)
+    verification_context = build_verification_gate_context(root)
+    verification_sources = tuple(
+        verification_context.get("verification_sources", (report.source_name,))
+    )
+    frontend_contract_summary = verification_context.get("frontend_contract_verification")
     blockers = list(report.blockers)
     governance = build_verification_governance_bundle(
         report,
@@ -155,10 +161,12 @@ def verify_constraints(
                     "verification_gate": {
                         "name": report.gate_name,
                         "source_name": report.source_name,
+                        "sources": list(verification_sources),
                         "check_objects": list(report.check_objects),
                         "coverage_gaps": list(report.coverage_gaps),
                         "release_gate": report.release_gate,
                     },
+                    "frontend_contract_verification": frontend_contract_summary,
                     "governance": governance,
                     "telemetry": {
                         "goal_session_id": goal_session_id,
@@ -185,7 +193,36 @@ def verify_constraints(
             if report.release_gate is not None:
                 verdict = str(report.release_gate.get("overall_verdict", "UNKNOWN"))
                 console.print(f"[cyan]release gate: {verdict}[/cyan]")
+        _render_frontend_contract_summary(frontend_contract_summary)
 
     raise typer.Exit(
         code=1 if governance["gate_decision_payload"]["decision_result"] == "block" else 0
     )
+
+
+def _render_frontend_contract_summary(summary: object) -> None:
+    if not isinstance(summary, dict):
+        return
+
+    verdict = str(summary.get("gate_verdict", "UNKNOWN")).strip() or "UNKNOWN"
+    coverage_gaps = _string_list(summary.get("coverage_gaps", ()))
+    blockers = _string_list(summary.get("blockers", ()))
+    details: list[str] = []
+    if coverage_gaps:
+        details.append("coverage gaps: " + ", ".join(coverage_gaps[:3]))
+    elif verdict != "PASS" and blockers:
+        details.append("blockers: " + "; ".join(blockers[:1]))
+    suffix = f" ({'; '.join(details)})" if details else ""
+    style = "green" if verdict == "PASS" else "yellow"
+    console.print(f"[{style}]frontend contract verification: {verdict}{suffix}[/{style}]")
+
+
+def _string_list(value: object) -> list[str]:
+    if not isinstance(value, (list, tuple)):
+        return []
+    items: list[str] = []
+    for item in value:
+        text = str(item).strip()
+        if text:
+            items.append(text)
+    return items
