@@ -5,6 +5,8 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from pathlib import Path
 
+import yaml
+
 from ai_sdlc.branch.git_client import GitClient, GitError
 from ai_sdlc.core.config import YamlStore
 from ai_sdlc.core.frontend_contract_runtime_attachment import (
@@ -44,6 +46,9 @@ PROGRAM_FRONTEND_SCAN_COMMAND_PREFIX = (
 )
 PROGRAM_FRONTEND_GOVERNANCE_MATERIALIZE_COMMAND = (
     "uv run ai-sdlc rules materialize-frontend-mvp"
+)
+PROGRAM_FRONTEND_REMEDIATION_WRITEBACK_REL_PATH = (
+    ".ai-sdlc/memory/frontend-remediation/latest.yaml"
 )
 
 
@@ -444,6 +449,39 @@ class ProgramService:
             blockers=_unique_strings(blockers),
         )
 
+    def write_frontend_remediation_writeback_artifact(
+        self,
+        manifest: ProgramManifest,
+        *,
+        runbook: ProgramFrontendRemediationRunbook | None = None,
+        execution_result: ProgramFrontendRemediationExecutionResult | None = None,
+        generated_at: str | None = None,
+        output_path: Path | None = None,
+    ) -> Path:
+        """Persist the canonical remediation writeback artifact."""
+        effective_generated_at = generated_at or utc_now_z()
+        effective_runbook = runbook or self.build_frontend_remediation_runbook(manifest)
+        result = execution_result or self.execute_frontend_remediation_runbook(
+            manifest,
+            generated_at=effective_generated_at,
+        )
+        payload = self._build_frontend_remediation_writeback_payload(
+            runbook=effective_runbook,
+            execution_result=result,
+            generated_at=effective_generated_at,
+        )
+        artifact_path = output_path or (
+            self.root / PROGRAM_FRONTEND_REMEDIATION_WRITEBACK_REL_PATH
+        )
+        if not artifact_path.is_absolute():
+            artifact_path = self.root / artifact_path
+        artifact_path.parent.mkdir(parents=True, exist_ok=True)
+        artifact_path.write_text(
+            yaml.safe_dump(payload, sort_keys=False, allow_unicode=True),
+            encoding="utf-8",
+        )
+        return artifact_path
+
     def evaluate_execute_gates(
         self, manifest: ProgramManifest, *, allow_dirty: bool = False
     ) -> ProgramExecuteGates:
@@ -680,6 +718,55 @@ class ProgramService:
             summary=f"unsupported remediation command: {command}",
         )
 
+    def _build_frontend_remediation_writeback_payload(
+        self,
+        *,
+        runbook: ProgramFrontendRemediationRunbook,
+        execution_result: ProgramFrontendRemediationExecutionResult,
+        generated_at: str,
+    ) -> dict[str, object]:
+        return {
+            "generated_at": generated_at,
+            "manifest_path": _relative_to_root_or_str(self.root, self.manifest_path),
+            "passed": execution_result.passed,
+            "source_linkage": {
+                "runbook_source": "program frontend remediation runbook",
+                "execution_source": "program frontend remediation execution",
+            },
+            "steps": [
+                {
+                    "spec_id": step.spec_id,
+                    "path": step.path,
+                    "state": step.state,
+                    "fix_inputs": list(step.fix_inputs),
+                    "suggested_actions": list(step.suggested_actions),
+                    "action_commands": list(step.action_commands),
+                    "source_linkage": dict(step.source_linkage),
+                }
+                for step in runbook.steps
+            ],
+            "action_commands": list(runbook.action_commands),
+            "follow_up_commands": list(runbook.follow_up_commands),
+            "command_results": [
+                {
+                    "command": item.command,
+                    "status": item.status,
+                    "written_paths": list(item.written_paths),
+                    "blockers": list(item.blockers),
+                    "summary": item.summary,
+                }
+                for item in execution_result.command_results
+            ],
+            "written_paths": _unique_strings(
+                [
+                    path
+                    for item in execution_result.command_results
+                    for path in item.written_paths
+                ]
+            ),
+            "remaining_blockers": list(execution_result.blockers),
+        }
+
     def _resolve_spec_dir(self, spec_path: str) -> Path:
         path = (self.root / spec_path).resolve()
         try:
@@ -744,6 +831,13 @@ def _unique_strings(values: list[str] | tuple[str, ...]) -> list[str]:
         if text and text not in unique:
             unique.append(text)
     return unique
+
+
+def _relative_to_root_or_str(root: Path, path: Path) -> str:
+    try:
+        return str(path.resolve().relative_to(root.resolve()))
+    except ValueError:
+        return str(path)
 
 
 def _summarize_frontend_execute_gate(

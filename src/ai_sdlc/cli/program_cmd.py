@@ -404,18 +404,32 @@ def program_remediate(
             console.print(f"  - {warning}")
 
     execution_result = None
+    runbook_for_writeback = None
     if not dry_run:
         if not yes:
             console.print(
                 "[bold yellow]`--execute` requires explicit confirmation via `--yes`.[/bold yellow]"
             )
             raise typer.Exit(code=2)
+        runbook_for_writeback = runbook
         execution_result = svc.execute_frontend_remediation_runbook(mf)
+        writeback_path = svc.write_frontend_remediation_writeback_artifact(
+            mf,
+            runbook=runbook_for_writeback,
+            execution_result=execution_result,
+        )
         _render_frontend_remediation_execution_result(execution_result.command_results)
         if execution_result.blockers:
             console.print("\n[bold red]Remaining Frontend Remediation Blockers[/bold red]")
             for blocker in execution_result.blockers:
                 console.print(f"  - {blocker}")
+        console.print(
+            "\n[bold cyan]Frontend Remediation Writeback[/bold cyan]"
+        )
+        console.print(
+            f"  - saved: {writeback_path.relative_to(root)}",
+            markup=False,
+        )
 
     if report:
         report_path = root / report
@@ -460,6 +474,12 @@ def program_remediate(
                 lines.append("")
                 lines.extend([f"- {blocker}" for blocker in execution_result.blockers])
                 lines.append("")
+            lines.append("## Writeback Artifact")
+            lines.append("")
+            lines.append(
+                f"- `{writeback_path.relative_to(root)}`"
+            )
+            lines.append("")
         report_path.write_text("\n".join(lines), encoding="utf-8")
         console.print(f"\n[green]Report written:[/green] {report_path}")
 
@@ -468,9 +488,17 @@ def program_remediate(
 
     assert execution_result is not None
     if execution_result.passed:
+        console.print(
+            f"Frontend remediation writeback saved: {writeback_path.relative_to(root)}",
+            markup=False,
+        )
         console.print("\n[bold green]Frontend remediation execute completed[/bold green]")
         raise typer.Exit(code=0)
 
+    console.print(
+        f"Frontend remediation writeback saved: {writeback_path.relative_to(root)}",
+        markup=False,
+    )
     console.print("\n[bold red]Frontend remediation execute incomplete[/bold red]")
     raise typer.Exit(code=1)
 

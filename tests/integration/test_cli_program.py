@@ -5,6 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 from unittest.mock import patch
 
+import yaml
 from typer.testing import CliRunner
 
 from ai_sdlc.cli.main import app
@@ -463,3 +464,34 @@ specs:
         assert "uv run ai-sdlc verify constraints" in result.output
         assert observation_artifact_path(root / "specs" / "001-auth").is_file()
         assert (root / "governance" / "frontend" / "gates" / "gate.manifest.yaml").is_file()
+
+    def test_program_remediate_execute_writes_canonical_writeback_artifact(
+        self, initialized_project_dir: Path
+    ) -> None:
+        root = initialized_project_dir
+        _write_manifest(root)
+        _write_minimal_frontend_contract_page_artifacts(root)
+        _write_frontend_contract_source_annotation(root)
+        for spec in ("002-course", "003-enroll"):
+            _write_frontend_contract_observations(root / "specs" / spec)
+
+        with patch("ai_sdlc.cli.program_cmd.find_project_root", return_value=root):
+            result = runner.invoke(
+                app,
+                ["program", "remediate", "--execute", "--yes"],
+            )
+
+        writeback_path = (
+            root / ".ai-sdlc" / "memory" / "frontend-remediation" / "latest.yaml"
+        )
+        assert result.exit_code == 0
+        assert "Frontend remediation writeback saved" in result.output
+        assert ".ai-sdlc/memory/frontend-remediation/latest.yaml" in result.output
+        assert writeback_path.is_file()
+        payload = yaml.safe_load(writeback_path.read_text(encoding="utf-8"))
+        assert payload["passed"] is True
+        assert payload["remaining_blockers"] == []
+        assert any(
+            item["command"] == "uv run ai-sdlc verify constraints"
+            for item in payload["command_results"]
+        )

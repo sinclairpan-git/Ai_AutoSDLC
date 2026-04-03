@@ -4,13 +4,19 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import yaml
+
 from ai_sdlc.core.frontend_contract_drift import PageImplementationObservation
 from ai_sdlc.core.frontend_contract_observation_provider import (
     build_frontend_contract_observation_artifact,
     observation_artifact_path,
     write_frontend_contract_observation_artifact,
 )
-from ai_sdlc.core.program_service import ProgramService
+from ai_sdlc.core.program_service import (
+    ProgramFrontendRemediationCommandResult,
+    ProgramFrontendRemediationExecutionResult,
+    ProgramService,
+)
 from ai_sdlc.generators.frontend_gate_policy_artifacts import (
     materialize_frontend_gate_policy_artifacts,
 )
@@ -298,6 +304,87 @@ def test_execute_frontend_remediation_runbook_materializes_bounded_commands_and_
         for item in result.command_results
     )
     assert result.blockers == []
+
+
+def test_write_frontend_remediation_writeback_artifact_emits_canonical_yaml(
+    tmp_path: Path,
+) -> None:
+    for p in ("specs/001-auth", "specs/002-course", "specs/003-enroll"):
+        (tmp_path / p).mkdir(parents=True)
+    _write_minimal_constitution(tmp_path)
+    _write_minimal_frontend_contract_page_artifacts(tmp_path)
+    _write_frontend_contract_source_annotation(tmp_path)
+    for spec in ("002-course", "003-enroll"):
+        _write_frontend_contract_observations(tmp_path / "specs" / spec)
+
+    svc = ProgramService(tmp_path)
+    runbook = svc.build_frontend_remediation_runbook(_manifest())
+    execution = svc.execute_frontend_remediation_runbook(
+        _manifest(),
+        generated_at="2026-04-03T16:00:00Z",
+    )
+
+    writeback_path = svc.write_frontend_remediation_writeback_artifact(
+        _manifest(),
+        runbook=runbook,
+        execution_result=execution,
+        generated_at="2026-04-03T16:00:00Z",
+    )
+
+    assert writeback_path == (
+        tmp_path / ".ai-sdlc" / "memory" / "frontend-remediation" / "latest.yaml"
+    )
+    payload = yaml.safe_load(writeback_path.read_text(encoding="utf-8"))
+    assert payload["generated_at"] == "2026-04-03T16:00:00Z"
+    assert payload["passed"] is True
+    assert payload["manifest_path"] == "program-manifest.yaml"
+    assert payload["remaining_blockers"] == []
+    assert payload["follow_up_commands"] == ["uv run ai-sdlc verify constraints"]
+    assert payload["written_paths"]
+    assert payload["steps"][0]["spec_id"] == "001-auth"
+    assert any(
+        item["command"] == "uv run ai-sdlc verify constraints"
+        for item in payload["command_results"]
+    )
+
+
+def test_write_frontend_remediation_writeback_artifact_reuses_provided_execution_result(
+    tmp_path: Path,
+) -> None:
+    for p in ("specs/001-auth", "specs/002-course", "specs/003-enroll"):
+        (tmp_path / p).mkdir(parents=True)
+
+    svc = ProgramService(tmp_path)
+    execution = ProgramFrontendRemediationExecutionResult(
+        passed=False,
+        command_results=[
+            ProgramFrontendRemediationCommandResult(
+                command="sentinel-command",
+                status="passed",
+                written_paths=["sentinel/path.yaml"],
+                summary="sentinel summary",
+            )
+        ],
+        blockers=["sentinel blocker"],
+    )
+
+    writeback_path = svc.write_frontend_remediation_writeback_artifact(
+        _manifest(),
+        execution_result=execution,
+        generated_at="2026-04-03T16:05:00Z",
+    )
+
+    payload = yaml.safe_load(writeback_path.read_text(encoding="utf-8"))
+    assert payload["command_results"] == [
+        {
+            "command": "sentinel-command",
+            "status": "passed",
+            "written_paths": ["sentinel/path.yaml"],
+            "blockers": [],
+            "summary": "sentinel summary",
+        }
+    ]
+    assert payload["remaining_blockers"] == ["sentinel blocker"]
 
 
 def test_build_status_surfaces_ready_frontend_readiness_per_spec(tmp_path: Path) -> None:
