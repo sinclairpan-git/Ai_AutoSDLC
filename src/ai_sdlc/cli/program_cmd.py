@@ -1862,6 +1862,7 @@ def program_final_governance(
             console.print(f"  - {warning}")
 
     final_governance_result = None
+    final_governance_artifact_path: Path | None = None
     if not dry_run:
         if not yes:
             console.print(
@@ -1873,7 +1874,17 @@ def program_final_governance(
             request=request,
             confirmed=True,
         )
+        final_governance_artifact_path = svc.write_frontend_final_governance_artifact(
+            mf,
+            request=request,
+            result=final_governance_result,
+        )
         _render_frontend_final_governance_result(final_governance_result)
+        console.print("\n[bold cyan]Frontend Final Governance Artifact[/bold cyan]")
+        console.print(
+            f"  - saved: {final_governance_artifact_path.relative_to(root)}",
+            markup=False,
+        )
 
     if report:
         report_path = root / report
@@ -1950,6 +1961,11 @@ def program_final_governance(
                         for item in final_governance_result.remaining_blockers
                     ]
                 )
+            lines.append("")
+        if final_governance_artifact_path is not None:
+            lines.append("## Frontend Final Governance Artifact")
+            lines.append("")
+            lines.append(f"- `{final_governance_artifact_path.relative_to(root)}`")
             lines.append("")
         if request.warnings or (
             final_governance_result is not None and final_governance_result.warnings
