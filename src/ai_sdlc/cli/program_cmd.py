@@ -1651,6 +1651,7 @@ def program_broader_governance(
             console.print(f"  - {warning}")
 
     governance_result = None
+    governance_artifact_path: Path | None = None
     if not dry_run:
         if not yes:
             console.print(
@@ -1662,7 +1663,17 @@ def program_broader_governance(
             request=request,
             confirmed=True,
         )
+        governance_artifact_path = svc.write_frontend_broader_governance_artifact(
+            mf,
+            request=request,
+            result=governance_result,
+        )
         _render_frontend_broader_governance_result(governance_result)
+        console.print("\n[bold cyan]Frontend Broader Governance Artifact[/bold cyan]")
+        console.print(
+            f"  - saved: {governance_artifact_path.relative_to(root)}",
+            markup=False,
+        )
 
     if report:
         report_path = root / report
@@ -1725,6 +1736,11 @@ def program_broader_governance(
                 lines.extend(
                     [f"  - {item}" for item in governance_result.remaining_blockers]
                 )
+            lines.append("")
+        if governance_artifact_path is not None:
+            lines.append("## Frontend Broader Governance Artifact")
+            lines.append("")
+            lines.append(f"- `{governance_artifact_path.relative_to(root)}`")
             lines.append("")
         if request.warnings or (
             governance_result is not None and governance_result.warnings

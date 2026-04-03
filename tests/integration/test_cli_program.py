@@ -1132,6 +1132,75 @@ specs:
         assert "deferred" in report
         assert "no broader governance actions executed in broader governance baseline" in report
 
+    def test_program_broader_governance_dry_run_does_not_write_artifact(
+        self, initialized_project_dir: Path
+    ) -> None:
+        root = initialized_project_dir
+        _write_manifest(root)
+        _write_frontend_guarded_registry_artifact(
+            root,
+            registry_result="deferred",
+            registry_state="deferred",
+            remaining_blockers=["spec 001-auth remediation still required"],
+        )
+
+        with patch("ai_sdlc.cli.program_cmd.find_project_root", return_value=root):
+            result = runner.invoke(app, ["program", "broader-governance"])
+
+        assert result.exit_code == 0
+        assert "Program Frontend Broader Governance Dry-Run" in result.output
+        assert not (
+            root
+            / ".ai-sdlc"
+            / "memory"
+            / "frontend-broader-governance"
+            / "latest.yaml"
+        ).exists()
+
+    def test_program_broader_governance_execute_writes_governance_artifact(
+        self, initialized_project_dir: Path
+    ) -> None:
+        root = initialized_project_dir
+        _write_manifest(root)
+        _write_frontend_guarded_registry_artifact(
+            root,
+            registry_result="deferred",
+            registry_state="deferred",
+            remaining_blockers=["spec 001-auth remediation still required"],
+        )
+        report_rel = ".ai-sdlc/memory/frontend-broader-governance-artifact.md"
+
+        with patch("ai_sdlc.cli.program_cmd.find_project_root", return_value=root):
+            result = runner.invoke(
+                app,
+                [
+                    "program",
+                    "broader-governance",
+                    "--execute",
+                    "--yes",
+                    "--report",
+                    report_rel,
+                ],
+            )
+
+        artifact_path = (
+            root
+            / ".ai-sdlc"
+            / "memory"
+            / "frontend-broader-governance"
+            / "latest.yaml"
+        )
+        assert result.exit_code == 1
+        assert artifact_path.is_file()
+        assert ".ai-sdlc/memory/frontend-broader-governance/latest.yaml" in result.output
+        payload = yaml.safe_load(artifact_path.read_text(encoding="utf-8"))
+        assert payload["governance_result"] == "deferred"
+        assert payload["governance_state"] == "deferred"
+        assert payload["confirmed"] is True
+        report = (root / report_rel).read_text(encoding="utf-8")
+        assert "Frontend Broader Governance Artifact" in report
+        assert ".ai-sdlc/memory/frontend-broader-governance/latest.yaml" in report
+
 
 def _write_frontend_remediation_writeback_artifact(
     root: Path,

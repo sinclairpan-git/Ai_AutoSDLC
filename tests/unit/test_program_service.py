@@ -1079,6 +1079,85 @@ def test_execute_frontend_broader_governance_returns_deferred_result_when_confir
     assert result.source_linkage["governance_state"] == "deferred"
 
 
+def test_write_frontend_broader_governance_artifact_emits_canonical_yaml(
+    tmp_path: Path,
+) -> None:
+    for p in ("specs/001-auth", "specs/002-course", "specs/003-enroll"):
+        (tmp_path / p).mkdir(parents=True)
+    _write_frontend_guarded_registry_artifact(
+        tmp_path,
+        registry_result="deferred",
+        registry_state="deferred",
+        remaining_blockers=["spec 001-auth remediation still required"],
+    )
+
+    svc = ProgramService(tmp_path)
+    request = svc.build_frontend_broader_governance_request(_manifest())
+    result = svc.execute_frontend_broader_governance(
+        _manifest(),
+        request=request,
+        confirmed=True,
+    )
+
+    artifact_path = svc.write_frontend_broader_governance_artifact(
+        _manifest(),
+        request=request,
+        result=result,
+    )
+
+    assert artifact_path == (
+        tmp_path
+        / ".ai-sdlc"
+        / "memory"
+        / "frontend-broader-governance"
+        / "latest.yaml"
+    )
+    payload = yaml.safe_load(artifact_path.read_text(encoding="utf-8"))
+    assert payload["manifest_path"] == "program-manifest.yaml"
+    assert (
+        payload["artifact_source_path"]
+        == ".ai-sdlc/memory/frontend-guarded-registry/latest.yaml"
+    )
+    assert payload["governance_state"] == "deferred"
+    assert payload["governance_result"] == "deferred"
+    assert payload["confirmed"] is True
+    assert payload["governance_summaries"] == [
+        "no broader governance actions executed in broader governance baseline"
+    ]
+    assert payload["written_paths"] == []
+    assert payload["remaining_blockers"] == ["spec 001-auth remediation still required"]
+    assert payload["steps"][0]["spec_id"] == "001-auth"
+    assert (
+        payload["source_linkage"]["broader_governance_artifact_path"]
+        == ".ai-sdlc/memory/frontend-broader-governance/latest.yaml"
+    )
+
+
+def test_execute_frontend_broader_governance_does_not_write_artifact_by_default(
+    tmp_path: Path,
+) -> None:
+    for p in ("specs/001-auth", "specs/002-course", "specs/003-enroll"):
+        (tmp_path / p).mkdir(parents=True)
+    _write_frontend_guarded_registry_artifact(
+        tmp_path,
+        registry_result="deferred",
+        registry_state="deferred",
+        remaining_blockers=["spec 001-auth remediation still required"],
+    )
+
+    svc = ProgramService(tmp_path)
+    result = svc.execute_frontend_broader_governance(_manifest(), confirmed=True)
+
+    assert result.governance_state == "deferred"
+    assert not (
+        tmp_path
+        / ".ai-sdlc"
+        / "memory"
+        / "frontend-broader-governance"
+        / "latest.yaml"
+    ).exists()
+
+
 def test_build_status_surfaces_ready_frontend_readiness_per_spec(tmp_path: Path) -> None:
     for p in ("specs/001-auth", "specs/002-course", "specs/003-enroll"):
         (tmp_path / p).mkdir(parents=True)
