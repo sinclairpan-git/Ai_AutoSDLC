@@ -1483,6 +1483,84 @@ specs:
         assert "Frontend Writeback Persistence Artifact" in report
         assert ".ai-sdlc/memory/frontend-writeback-persistence/latest.yaml" in report
 
+    def test_program_persisted_write_proof_execute_requires_explicit_confirmation(
+        self, initialized_project_dir: Path
+    ) -> None:
+        root = initialized_project_dir
+        _write_manifest(root)
+        _write_frontend_writeback_persistence_artifact(
+            root,
+            persistence_result="deferred",
+            persistence_state="deferred",
+            remaining_blockers=["spec 001-auth remediation still required"],
+        )
+
+        with patch("ai_sdlc.cli.program_cmd.find_project_root", return_value=root):
+            result = runner.invoke(app, ["program", "persisted-write-proof", "--execute"])
+
+        assert result.exit_code == 2
+        assert "--yes" in result.output
+
+    def test_program_persisted_write_proof_dry_run_surfaces_preview(
+        self, initialized_project_dir: Path
+    ) -> None:
+        root = initialized_project_dir
+        _write_manifest(root)
+        _write_frontend_writeback_persistence_artifact(
+            root,
+            persistence_result="deferred",
+            persistence_state="deferred",
+            remaining_blockers=["spec 001-auth remediation still required"],
+        )
+
+        with patch("ai_sdlc.cli.program_cmd.find_project_root", return_value=root):
+            result = runner.invoke(app, ["program", "persisted-write-proof"])
+
+        assert result.exit_code == 0
+        assert "Program Frontend Persisted Write Proof Dry-Run" in result.output
+        assert ".ai-sdlc/memory/frontend-writeback-persistence/latest.yaml" in result.output
+
+    def test_program_persisted_write_proof_execute_surfaces_deferred_result(
+        self, initialized_project_dir: Path
+    ) -> None:
+        root = initialized_project_dir
+        _write_manifest(root)
+        _write_frontend_writeback_persistence_artifact(
+            root,
+            persistence_result="deferred",
+            persistence_state="deferred",
+            remaining_blockers=["spec 001-auth remediation still required"],
+        )
+        report_rel = ".ai-sdlc/memory/frontend-persisted-write-proof.md"
+
+        with patch("ai_sdlc.cli.program_cmd.find_project_root", return_value=root):
+            result = runner.invoke(
+                app,
+                [
+                    "program",
+                    "persisted-write-proof",
+                    "--execute",
+                    "--yes",
+                    "--report",
+                    report_rel,
+                ],
+            )
+
+        assert result.exit_code == 1
+        assert "Program Frontend Persisted Write Proof Execute" in result.output
+        assert "deferred" in result.output
+        assert (
+            "no persisted write proof actions executed in persisted write proof baseline"
+            in result.output
+        )
+        report = (root / report_rel).read_text(encoding="utf-8")
+        assert "Frontend Persisted Write Proof Result" in report
+        assert "deferred" in report
+        assert (
+            "no persisted write proof actions executed in persisted write proof baseline"
+            in report
+        )
+
 
 def _write_frontend_remediation_writeback_artifact(
     root: Path,
@@ -1912,6 +1990,70 @@ def _write_frontend_final_governance_artifact(
                     "final_governance_result": final_governance_result,
                     "broader_governance_artifact_path": ".ai-sdlc/memory/frontend-broader-governance/latest.yaml",
                     "final_governance_artifact_path": ".ai-sdlc/memory/frontend-final-governance/latest.yaml",
+                },
+            },
+            sort_keys=False,
+            allow_unicode=True,
+        ),
+        encoding="utf-8",
+    )
+
+
+def _write_frontend_writeback_persistence_artifact(
+    root: Path,
+    *,
+    persistence_result: str,
+    persistence_state: str,
+    remaining_blockers: list[str],
+) -> None:
+    artifact_path = (
+        root / ".ai-sdlc" / "memory" / "frontend-writeback-persistence" / "latest.yaml"
+    )
+    artifact_path.parent.mkdir(parents=True, exist_ok=True)
+    artifact_path.write_text(
+        yaml.safe_dump(
+            {
+                "generated_at": "2026-04-04T01:00:00Z",
+                "manifest_path": "program-manifest.yaml",
+                "artifact_source_path": ".ai-sdlc/memory/frontend-final-governance/latest.yaml",
+                "artifact_generated_at": "2026-04-04T00:00:00Z",
+                "required": True,
+                "confirmation_required": True,
+                "confirmed": True,
+                "final_governance_state": "deferred",
+                "persistence_state": persistence_state,
+                "persistence_result": persistence_result,
+                "persistence_summaries": [
+                    "no writeback persistence actions executed in writeback persistence baseline"
+                ],
+                "existing_written_paths": [],
+                "written_paths": [],
+                "remaining_blockers": list(remaining_blockers),
+                "warnings": [
+                    "writeback persistence baseline does not produce persisted write proof yet"
+                ],
+                "steps": [
+                    {
+                        "spec_id": "001-auth",
+                        "path": "specs/001-auth",
+                        "persistence_state": persistence_state,
+                        "pending_inputs": ["frontend_contract_observations"],
+                        "suggested_next_actions": [
+                            "materialize persisted write proof review context",
+                            "re-run ai-sdlc verify constraints",
+                        ],
+                        "source_linkage": {
+                            "persistence_state": persistence_state,
+                            "final_governance_artifact_path": ".ai-sdlc/memory/frontend-final-governance/latest.yaml",
+                        },
+                    }
+                ],
+                "source_linkage": {
+                    "final_governance_state": "deferred",
+                    "persistence_state": persistence_state,
+                    "persistence_result": persistence_result,
+                    "final_governance_artifact_path": ".ai-sdlc/memory/frontend-final-governance/latest.yaml",
+                    "writeback_persistence_artifact_path": ".ai-sdlc/memory/frontend-writeback-persistence/latest.yaml",
                 },
             },
             sort_keys=False,
