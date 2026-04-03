@@ -1050,6 +1050,7 @@ def program_provider_patch_apply(
             console.print(f"  - {warning}")
 
     apply_result = None
+    apply_artifact_path: Path | None = None
     if not dry_run:
         if not yes:
             console.print(
@@ -1061,7 +1062,17 @@ def program_provider_patch_apply(
             request=request,
             confirmed=True,
         )
+        apply_artifact_path = svc.write_frontend_provider_patch_apply_artifact(
+            mf,
+            request=request,
+            result=apply_result,
+        )
         _render_frontend_provider_patch_apply_result(apply_result)
+        console.print("\n[bold cyan]Frontend Provider Patch Apply Artifact[/bold cyan]")
+        console.print(
+            f"  - saved: {apply_artifact_path.relative_to(root)}",
+            markup=False,
+        )
 
     if report:
         report_path = root / report
@@ -1113,6 +1124,11 @@ def program_provider_patch_apply(
             if apply_result.remaining_blockers:
                 lines.append("- Remaining blockers:")
                 lines.extend([f"  - {item}" for item in apply_result.remaining_blockers])
+            lines.append("")
+        if apply_artifact_path is not None:
+            lines.append("## Frontend Provider Patch Apply Artifact")
+            lines.append("")
+            lines.append(f"- `{apply_artifact_path.relative_to(root)}`")
             lines.append("")
         if request.warnings or (apply_result is not None and apply_result.warnings):
             lines.append("## Warnings")
