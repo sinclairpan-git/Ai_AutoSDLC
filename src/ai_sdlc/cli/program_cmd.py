@@ -1992,6 +1992,201 @@ def program_final_governance(
     raise typer.Exit(code=1)
 
 
+@program_app.command("writeback-persistence")
+def program_writeback_persistence(
+    manifest: str = typer.Option(
+        "program-manifest.yaml",
+        "--manifest",
+        help="Path to program manifest relative to project root.",
+    ),
+    dry_run: bool = typer.Option(
+        True,
+        "--dry-run/--execute",
+        help="Preview frontend writeback persistence orchestration or explicitly execute the writeback persistence baseline.",
+    ),
+    report: str = typer.Option(
+        "",
+        "--report",
+        help="Optional report output path relative to project root.",
+    ),
+    yes: bool = typer.Option(
+        False,
+        "--yes",
+        help="Confirm writeback persistence execute mode.",
+    ),
+) -> None:
+    """Preview or execute the frontend writeback persistence baseline."""
+    root = _resolve_root()
+    svc = ProgramService(root, root / manifest)
+
+    try:
+        mf = svc.load_manifest()
+    except Exception as exc:
+        console.print(f"[red]Failed to load manifest: {exc}[/red]")
+        raise typer.Exit(code=2) from None
+
+    result = svc.validate_manifest(mf)
+    if not result.valid:
+        console.print(
+            "[bold red]Manifest invalid; cannot build writeback persistence request.[/bold red]"
+        )
+        for e in result.errors:
+            console.print(f"  - {e}")
+        raise typer.Exit(code=1)
+
+    request = svc.build_frontend_writeback_persistence_request(mf)
+    mode_title = (
+        "Program Frontend Writeback Persistence Dry-Run"
+        if dry_run
+        else "Program Frontend Writeback Persistence Execute"
+    )
+
+    if request.steps:
+        table = Table(title=mode_title)
+        table.add_column("Spec")
+        table.add_column("Path")
+        table.add_column("Persistence State")
+        table.add_column("Pending Inputs")
+        table.add_column("Next Actions")
+        for step in request.steps:
+            table.add_row(
+                step.spec_id,
+                step.path,
+                step.persistence_state,
+                ", ".join(step.pending_inputs) or "-",
+                " ; ".join(step.suggested_next_actions) or "-",
+            )
+        console.print(table)
+    else:
+        console.print("[green]No frontend writeback persistence steps required.[/green]")
+
+    console.print("\n[bold cyan]Frontend Writeback Persistence Guard[/bold cyan]")
+    console.print(f"  - source artifact: {request.artifact_source_path}", markup=False)
+    console.print(f"  - persistence state: {request.persistence_state}", markup=False)
+    console.print(
+        f"  - final governance state: {request.final_governance_state}",
+        markup=False,
+    )
+    console.print(
+        f"  - confirmation required: {str(request.confirmation_required).lower()}",
+        markup=False,
+    )
+    if request.artifact_generated_at:
+        console.print(
+            f"  - artifact generated_at: {request.artifact_generated_at}",
+            markup=False,
+        )
+    for path in request.written_paths:
+        console.print(f"  - existing written path: {path}", markup=False)
+    for blocker in request.remaining_blockers:
+        console.print(f"  - blocker: {blocker}", markup=False)
+
+    if request.warnings:
+        console.print("\n[bold yellow]Warnings[/bold yellow]")
+        for warning in request.warnings:
+            console.print(f"  - {warning}")
+
+    persistence_result = None
+    if not dry_run:
+        if not yes:
+            console.print(
+                "[bold yellow]`--execute` requires explicit confirmation via `--yes`.[/bold yellow]"
+            )
+            raise typer.Exit(code=2)
+        persistence_result = svc.execute_frontend_writeback_persistence(
+            mf,
+            request=request,
+            confirmed=True,
+        )
+        _render_frontend_writeback_persistence_result(persistence_result)
+
+    if report:
+        report_path = root / report
+        report_path.parent.mkdir(parents=True, exist_ok=True)
+        lines: list[str] = [
+            f"# {mode_title}",
+            "",
+            f"- Manifest: `{manifest}`",
+            f"- Source artifact: `{request.artifact_source_path}`",
+            f"- Persistence state: `{request.persistence_state}`",
+            f"- Final governance state: `{request.final_governance_state}`",
+            f"- Confirmation required: `{str(request.confirmation_required).lower()}`",
+        ]
+        if request.artifact_generated_at:
+            lines.append(f"- Artifact generated_at: `{request.artifact_generated_at}`")
+        lines.append("")
+        if request.steps:
+            lines.append("## Steps")
+            lines.append("")
+            for step in request.steps:
+                lines.extend(
+                    [
+                        f"### {step.spec_id}",
+                        f"- Path: `{step.path}`",
+                        f"- Persistence state: `{step.persistence_state}`",
+                        f"- Pending inputs: `{', '.join(step.pending_inputs) or '-'}`",
+                        "- Suggested next actions:",
+                    ]
+                )
+                lines.extend([f"  - {action}" for action in step.suggested_next_actions])
+                lines.append("")
+        if request.written_paths:
+            lines.append("## Existing Written Paths")
+            lines.append("")
+            lines.extend([f"- {path}" for path in request.written_paths])
+            lines.append("")
+        if request.remaining_blockers:
+            lines.append("## Remaining Blockers")
+            lines.append("")
+            lines.extend([f"- {blocker}" for blocker in request.remaining_blockers])
+            lines.append("")
+        if persistence_result is not None:
+            lines.append("## Frontend Writeback Persistence Result")
+            lines.append("")
+            lines.append(
+                f"- Persistence result: `{persistence_result.persistence_result}`"
+            )
+            lines.append(f"- Persistence state: `{persistence_result.persistence_state}`")
+            lines.append(f"- Confirmed: `{str(persistence_result.confirmed).lower()}`")
+            if persistence_result.persistence_summaries:
+                lines.append("- Persistence summaries:")
+                lines.extend(
+                    [f"  - {item}" for item in persistence_result.persistence_summaries]
+                )
+            if persistence_result.written_paths:
+                lines.append("- Written paths:")
+                lines.extend([f"  - {item}" for item in persistence_result.written_paths])
+            if persistence_result.remaining_blockers:
+                lines.append("- Remaining blockers:")
+                lines.extend(
+                    [f"  - {item}" for item in persistence_result.remaining_blockers]
+                )
+            lines.append("")
+        if request.warnings or (
+            persistence_result is not None and persistence_result.warnings
+        ):
+            lines.append("## Warnings")
+            lines.append("")
+            warning_lines = list(request.warnings)
+            if persistence_result is not None:
+                warning_lines.extend(persistence_result.warnings)
+            lines.extend([f"- {warning}" for warning in warning_lines])
+            lines.append("")
+        report_path.write_text("\n".join(lines), encoding="utf-8")
+        console.print(f"\n[green]Report written:[/green] {report_path}")
+
+    if dry_run:
+        raise typer.Exit(code=0)
+
+    assert persistence_result is not None
+    if persistence_result.passed:
+        console.print("\n[bold green]Frontend writeback persistence completed[/bold green]")
+        raise typer.Exit(code=0)
+
+    console.print("\n[bold red]Frontend writeback persistence incomplete[/bold red]")
+    raise typer.Exit(code=1)
+
+
 def _format_frontend_readiness(readiness: ProgramFrontendReadiness | None) -> str:
     if readiness is None:
         return "-"
@@ -2290,6 +2485,32 @@ def _render_frontend_final_governance_result(result: object) -> None:
         markup=False,
     )
     for summary in getattr(result, "final_governance_summaries", ()):
+        console.print(f"  - {summary}", markup=False)
+    for path in getattr(result, "written_paths", ()):
+        console.print(f"  - wrote: {path}", markup=False)
+    for blocker in getattr(result, "remaining_blockers", ()):
+        console.print(f"  - blocker: {blocker}", markup=False)
+    for warning in getattr(result, "warnings", ()):
+        console.print(f"  - warning: {warning}", markup=False)
+
+
+def _render_frontend_writeback_persistence_result(result: object) -> None:
+    console.print("\n[bold cyan]Frontend Writeback Persistence Result[/bold cyan]")
+    console.print(
+        "  - persistence result: "
+        + str(getattr(result, "persistence_result", "unknown")),
+        markup=False,
+    )
+    console.print(
+        "  - persistence state: "
+        + str(getattr(result, "persistence_state", "unknown")),
+        markup=False,
+    )
+    console.print(
+        f"  - confirmed: {str(getattr(result, 'confirmed', False)).lower()}",
+        markup=False,
+    )
+    for summary in getattr(result, "persistence_summaries", ()):
         console.print(f"  - {summary}", markup=False)
     for path in getattr(result, "written_paths", ()):
         console.print(f"  - wrote: {path}", markup=False)

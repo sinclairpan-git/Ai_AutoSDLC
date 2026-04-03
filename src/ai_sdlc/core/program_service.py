@@ -86,6 +86,9 @@ PROGRAM_FRONTEND_BROADER_GOVERNANCE_DEFERRED_SUMMARY = (
 PROGRAM_FRONTEND_FINAL_GOVERNANCE_DEFERRED_SUMMARY = (
     "no final governance actions executed in final governance baseline"
 )
+PROGRAM_FRONTEND_WRITEBACK_PERSISTENCE_DEFERRED_SUMMARY = (
+    "no writeback persistence actions executed in writeback persistence baseline"
+)
 
 
 @dataclass
@@ -445,6 +448,46 @@ class ProgramFrontendFinalGovernanceResult:
     final_governance_state: str
     final_governance_result: str
     final_governance_summaries: list[str] = field(default_factory=list)
+    written_paths: list[str] = field(default_factory=list)
+    remaining_blockers: list[str] = field(default_factory=list)
+    warnings: list[str] = field(default_factory=list)
+    source_linkage: dict[str, str] = field(default_factory=dict)
+
+
+@dataclass
+class ProgramFrontendWritebackPersistenceRequestStep:
+    spec_id: str
+    path: str
+    persistence_state: str
+    pending_inputs: list[str] = field(default_factory=list)
+    suggested_next_actions: list[str] = field(default_factory=list)
+    source_linkage: dict[str, str] = field(default_factory=dict)
+
+
+@dataclass
+class ProgramFrontendWritebackPersistenceRequest:
+    required: bool
+    confirmation_required: bool
+    persistence_state: str
+    final_governance_state: str
+    artifact_source_path: str
+    artifact_generated_at: str
+    written_paths: list[str] = field(default_factory=list)
+    steps: list[ProgramFrontendWritebackPersistenceRequestStep] = field(
+        default_factory=list
+    )
+    remaining_blockers: list[str] = field(default_factory=list)
+    warnings: list[str] = field(default_factory=list)
+    source_linkage: dict[str, str] = field(default_factory=dict)
+
+
+@dataclass
+class ProgramFrontendWritebackPersistenceResult:
+    passed: bool
+    confirmed: bool
+    persistence_state: str
+    persistence_result: str
+    persistence_summaries: list[str] = field(default_factory=list)
     written_paths: list[str] = field(default_factory=list)
     remaining_blockers: list[str] = field(default_factory=list)
     warnings: list[str] = field(default_factory=list)
@@ -2174,6 +2217,192 @@ class ProgramService:
         )
         return artifact_path
 
+    def build_frontend_writeback_persistence_request(
+        self,
+        manifest: ProgramManifest,
+        *,
+        artifact_path: Path | None = None,
+    ) -> ProgramFrontendWritebackPersistenceRequest:
+        """Build the writeback persistence request from final governance artifact."""
+        effective_artifact_path = artifact_path or (
+            self.root / PROGRAM_FRONTEND_FINAL_GOVERNANCE_ARTIFACT_REL_PATH
+        )
+        if not effective_artifact_path.is_absolute():
+            effective_artifact_path = self.root / effective_artifact_path
+
+        relative_artifact_path = _relative_to_root_or_str(
+            self.root, effective_artifact_path
+        )
+        payload, warnings = self._load_frontend_final_governance_artifact_payload(
+            effective_artifact_path
+        )
+        if payload is None:
+            return ProgramFrontendWritebackPersistenceRequest(
+                required=False,
+                confirmation_required=False,
+                persistence_state="missing_artifact",
+                final_governance_state="missing_artifact",
+                artifact_source_path=relative_artifact_path,
+                artifact_generated_at="",
+                warnings=warnings,
+                source_linkage={
+                    "final_governance_artifact_path": relative_artifact_path,
+                    "persistence_state": "missing_artifact",
+                },
+            )
+
+        artifact_generated_at = str(payload.get("generated_at", "")).strip()
+        final_governance_state = (
+            str(payload.get("final_governance_state", "")).strip() or "unknown"
+        )
+        written_paths = _unique_strings(
+            [
+                *_normalize_string_list(payload.get("existing_written_paths", [])),
+                *_normalize_string_list(payload.get("written_paths", [])),
+            ]
+        )
+        remaining_blockers = _normalize_string_list(payload.get("remaining_blockers", []))
+        steps: list[ProgramFrontendWritebackPersistenceRequestStep] = []
+        spec_by_id = {spec.id: spec for spec in manifest.specs}
+        for step_payload in _normalize_mapping_list(payload.get("steps", [])):
+            spec_id = str(step_payload.get("spec_id", "")).strip()
+            if not spec_id:
+                continue
+            path = str(step_payload.get("path", "")).strip()
+            if not path:
+                spec = spec_by_id.get(spec_id)
+                path = spec.path if spec is not None else ""
+            source_linkage = _normalize_string_mapping(
+                step_payload.get("source_linkage", {})
+            )
+            source_linkage.update(
+                {
+                    "final_governance_artifact_path": relative_artifact_path,
+                    "final_governance_artifact_generated_at": artifact_generated_at,
+                    "persistence_state": "not_started",
+                }
+            )
+            steps.append(
+                ProgramFrontendWritebackPersistenceRequestStep(
+                    spec_id=spec_id,
+                    path=path,
+                    persistence_state="not_started",
+                    pending_inputs=_normalize_string_list(
+                        step_payload.get("pending_inputs", [])
+                    ),
+                    suggested_next_actions=_normalize_string_list(
+                        step_payload.get("suggested_next_actions", [])
+                    ),
+                    source_linkage=source_linkage,
+                )
+            )
+
+        required = bool(steps or written_paths or remaining_blockers)
+        source_linkage = _normalize_string_mapping(payload.get("source_linkage", {}))
+        source_linkage.update(
+            {
+                "final_governance_artifact_path": relative_artifact_path,
+                "final_governance_artifact_generated_at": artifact_generated_at,
+                "persistence_state": "not_started",
+                "confirmation_required": str(required).lower(),
+            }
+        )
+        return ProgramFrontendWritebackPersistenceRequest(
+            required=required,
+            confirmation_required=required,
+            persistence_state="not_started",
+            final_governance_state=final_governance_state,
+            artifact_source_path=relative_artifact_path,
+            artifact_generated_at=artifact_generated_at,
+            written_paths=written_paths,
+            steps=steps,
+            remaining_blockers=remaining_blockers,
+            warnings=_unique_strings(
+                [*warnings, *_normalize_string_list(payload.get("warnings", []))]
+            ),
+            source_linkage=source_linkage,
+        )
+
+    def execute_frontend_writeback_persistence(
+        self,
+        manifest: ProgramManifest,
+        *,
+        request: ProgramFrontendWritebackPersistenceRequest | None = None,
+        confirmed: bool = False,
+    ) -> ProgramFrontendWritebackPersistenceResult:
+        """Execute the writeback persistence baseline without proof yet."""
+        effective_request = request or self.build_frontend_writeback_persistence_request(
+            manifest
+        )
+        if effective_request.warnings and not effective_request.artifact_generated_at:
+            return ProgramFrontendWritebackPersistenceResult(
+                passed=False,
+                confirmed=confirmed,
+                persistence_state="blocked",
+                persistence_result="blocked",
+                written_paths=list(effective_request.written_paths),
+                remaining_blockers=list(effective_request.remaining_blockers),
+                warnings=list(effective_request.warnings),
+                source_linkage={
+                    **dict(effective_request.source_linkage),
+                    "persistence_state": "blocked",
+                    "persistence_result": "blocked",
+                },
+            )
+        if not effective_request.required:
+            return ProgramFrontendWritebackPersistenceResult(
+                passed=True,
+                confirmed=confirmed,
+                persistence_state="not_started",
+                persistence_result="skipped",
+                written_paths=list(effective_request.written_paths),
+                remaining_blockers=[],
+                warnings=list(effective_request.warnings),
+                source_linkage={
+                    **dict(effective_request.source_linkage),
+                    "persistence_state": "not_started",
+                    "persistence_result": "skipped",
+                },
+            )
+        if not confirmed:
+            return ProgramFrontendWritebackPersistenceResult(
+                passed=False,
+                confirmed=False,
+                persistence_state="confirmation_required",
+                persistence_result="blocked",
+                written_paths=list(effective_request.written_paths),
+                remaining_blockers=list(effective_request.remaining_blockers),
+                warnings=[
+                    *effective_request.warnings,
+                    "writeback persistence orchestration requires explicit confirmation",
+                ],
+                source_linkage={
+                    **dict(effective_request.source_linkage),
+                    "persistence_state": "confirmation_required",
+                    "persistence_result": "blocked",
+                },
+            )
+        return ProgramFrontendWritebackPersistenceResult(
+            passed=False,
+            confirmed=True,
+            persistence_state="deferred",
+            persistence_result="deferred",
+            persistence_summaries=[
+                PROGRAM_FRONTEND_WRITEBACK_PERSISTENCE_DEFERRED_SUMMARY
+            ],
+            written_paths=[],
+            remaining_blockers=list(effective_request.remaining_blockers),
+            warnings=[
+                *effective_request.warnings,
+                "writeback persistence baseline does not produce persisted write proof yet",
+            ],
+            source_linkage={
+                **dict(effective_request.source_linkage),
+                "persistence_state": "deferred",
+                "persistence_result": "deferred",
+            },
+        )
+
     def evaluate_execute_gates(
         self, manifest: ProgramManifest, *, allow_dirty: bool = False
     ) -> ProgramExecuteGates:
@@ -2905,6 +3134,38 @@ class ProgramService:
                 None,
                 [
                     "invalid broader governance artifact: "
+                    + _relative_to_root_or_str(self.root, artifact_path)
+                ],
+            )
+        return payload, []
+
+    def _load_frontend_final_governance_artifact_payload(
+        self,
+        artifact_path: Path,
+    ) -> tuple[dict[str, object] | None, list[str]]:
+        if not artifact_path.exists():
+            return (
+                None,
+                [
+                    "missing final governance artifact: "
+                    + _relative_to_root_or_str(self.root, artifact_path)
+                ],
+            )
+        try:
+            payload = yaml.safe_load(artifact_path.read_text(encoding="utf-8"))
+        except Exception as exc:
+            return (
+                None,
+                [
+                    "invalid final governance artifact: "
+                    + f"{_relative_to_root_or_str(self.root, artifact_path)} ({exc})"
+                ],
+            )
+        if not isinstance(payload, dict):
+            return (
+                None,
+                [
+                    "invalid final governance artifact: "
                     + _relative_to_root_or_str(self.root, artifact_path)
                 ],
             )
