@@ -560,7 +560,7 @@
 
 #### 2.8 归档后动作
 
-- **已完成 git 提交**：否（待本批 commit）
-- **提交哈希**：`待补充`
+- **已完成 git 提交**：是
+- **提交哈希**：`3552850`（`feat(gates): aggregate frontend gate verification in verify gates`）
 - **改动范围**：`specs/018-frontend-gate-compatibility-baseline/plan.md`、`specs/018-frontend-gate-compatibility-baseline/tasks.md`、`specs/018-frontend-gate-compatibility-baseline/task-execution-log.md`、`src/ai_sdlc/gates/pipeline_gates.py`、`tests/unit/test_gates.py`
 - **是否继续下一批**：按用户授权连续推进（优先转入 CLI summary surface 或下游 runtime child work item）
