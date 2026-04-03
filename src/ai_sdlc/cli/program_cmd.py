@@ -430,6 +430,8 @@ def _frontend_remediation_output_lines(steps: list[object]) -> list[str]:
         lines.append(f"  - {spec_id}: {_format_frontend_remediation(remediation)}")
         for action in getattr(remediation, "suggested_actions", ())[:3]:
             lines.append(f"    action: {action}")
+        for command in getattr(remediation, "recommended_commands", ())[:3]:
+            lines.append(f"    command: {command}")
     return lines
 
 
@@ -456,4 +458,6 @@ def _frontend_remediation_report_lines(steps: list[object]) -> list[str]:
         lines.append(f"- {spec_id}: {_format_frontend_remediation(remediation)}")
         for action in getattr(remediation, "suggested_actions", ()):
             lines.append(f"  - {action}")
+        for command in getattr(remediation, "recommended_commands", ()):
+            lines.append(f"  - `{command}`")
     return lines

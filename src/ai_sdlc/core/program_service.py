@@ -69,6 +69,7 @@ class ProgramFrontendRemediationInput:
     fix_inputs: list[str] = field(default_factory=list)
     blockers: list[str] = field(default_factory=list)
     suggested_actions: list[str] = field(default_factory=list)
+    recommended_commands: list[str] = field(default_factory=list)
     source_linkage: dict[str, str] = field(default_factory=dict)
 
 
@@ -283,7 +284,8 @@ class ProgramService:
                         ),
                         frontend_remediation_input=(
                             self._build_frontend_remediation_input(
-                                row.frontend_readiness if row else None
+                                row.frontend_readiness if row else None,
+                                spec.path,
                             )
                         ),
                     )
@@ -403,6 +405,7 @@ class ProgramService:
     def _build_frontend_remediation_input(
         self,
         readiness: ProgramFrontendReadiness | None,
+        spec_path: str,
     ) -> ProgramFrontendRemediationInput | None:
         if readiness is None or readiness.state == PROGRAM_FRONTEND_READINESS_READY:
             return None
@@ -422,11 +425,24 @@ class ProgramService:
             suggested_actions.append("resolve frontend blockers")
         suggested_actions.append("re-run ai-sdlc verify constraints")
 
+        recommended_commands: list[str] = []
+        if "frontend_contract_observations" in fix_inputs:
+            recommended_commands.append(
+                f"uv run ai-sdlc scan . --frontend-contract-spec-dir {spec_path}"
+            )
+        if (
+            "frontend_gate_policy_artifacts" in fix_inputs
+            or "frontend_generation_governance_artifacts" in fix_inputs
+        ):
+            recommended_commands.append("uv run ai-sdlc rules materialize-frontend-mvp")
+        recommended_commands.append(PROGRAM_FRONTEND_RECHECK_COMMAND)
+
         return ProgramFrontendRemediationInput(
             state="required",
             fix_inputs=fix_inputs,
             blockers=list(readiness.blockers),
             suggested_actions=suggested_actions,
+            recommended_commands=_unique_strings(recommended_commands),
             source_linkage=dict(readiness.source_linkage),
         )
 

@@ -262,6 +262,10 @@ specs:
         assert result.exit_code == 1
         assert "Frontend Remediation Handoff" in result.output
         assert "materialize frontend contract observations" in result.output
+        assert (
+            "uv run ai-sdlc scan . --frontend-contract-spec-dir specs/001-auth"
+            in result.output
+        )
         assert "re-run ai-sdlc verify constraints" in result.output
 
     def test_program_integrate_execute_surfaces_frontend_preflight_pass(
@@ -372,6 +376,10 @@ specs:
         report = (root / report_rel).read_text(encoding="utf-8")
         assert "Frontend Remediation Handoff" in report
         assert "materialize frontend contract observations" in report
+        assert (
+            "uv run ai-sdlc scan . --frontend-contract-spec-dir specs/001-auth"
+            in report
+        )
         assert "re-run ai-sdlc verify constraints" in report
 
     def test_program_integrate_execute_gate_fail_not_closed(

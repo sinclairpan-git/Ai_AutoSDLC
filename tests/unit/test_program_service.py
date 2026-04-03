@@ -177,6 +177,11 @@ def test_build_integration_dry_run_surfaces_frontend_remediation_input_when_not_
     assert remediation.state == "required"
     assert "frontend_contract_observations" in remediation.fix_inputs
     assert "materialize frontend contract observations" in remediation.suggested_actions
+    assert (
+        "uv run ai-sdlc scan . --frontend-contract-spec-dir specs/001-auth"
+        in remediation.recommended_commands
+    )
+    assert remediation.recommended_commands[-1] == "uv run ai-sdlc verify constraints"
     assert remediation.source_linkage["runtime_attachment_status"] == "missing_artifact"
 
 
@@ -205,6 +210,29 @@ def test_build_integration_dry_run_skips_frontend_remediation_input_when_ready(
 
     step = next(item for item in plan.steps if item.spec_id == "001-auth")
     assert step.frontend_remediation_input is None
+
+
+def test_build_integration_dry_run_binds_governance_materialization_command_when_gaps_present(
+    tmp_path: Path,
+) -> None:
+    for p in ("specs/001-auth", "specs/002-course", "specs/003-enroll"):
+        (tmp_path / p).mkdir(parents=True)
+    _write_minimal_frontend_contract_page_artifacts(tmp_path)
+    for spec in ("001-auth", "002-course", "003-enroll"):
+        _write_frontend_contract_observations(tmp_path / "specs" / spec)
+
+    svc = ProgramService(tmp_path)
+    plan = svc.build_integration_dry_run(_manifest())
+
+    step = next(item for item in plan.steps if item.spec_id == "001-auth")
+    remediation = step.frontend_remediation_input
+    assert remediation is not None
+    assert "frontend_gate_policy_artifacts" in remediation.fix_inputs
+    assert (
+        "uv run ai-sdlc rules materialize-frontend-mvp"
+        in remediation.recommended_commands
+    )
+    assert remediation.recommended_commands[-1] == "uv run ai-sdlc verify constraints"
 
 
 def test_build_status_surfaces_ready_frontend_readiness_per_spec(tmp_path: Path) -> None:

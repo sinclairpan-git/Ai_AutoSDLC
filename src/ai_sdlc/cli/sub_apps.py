@@ -24,6 +24,16 @@ from ai_sdlc.gates.pipeline_gates import (
 )
 from ai_sdlc.gates.registry import GateRegistry
 from ai_sdlc.gates.task_ac_checks import next_pending_task_ref
+from ai_sdlc.generators.frontend_gate_policy_artifacts import (
+    materialize_frontend_gate_policy_artifacts,
+)
+from ai_sdlc.generators.frontend_generation_constraint_artifacts import (
+    materialize_frontend_generation_constraint_artifacts,
+)
+from ai_sdlc.models.frontend_gate_policy import build_mvp_frontend_gate_policy
+from ai_sdlc.models.frontend_generation_constraints import (
+    build_mvp_frontend_generation_constraints,
+)
 from ai_sdlc.models.gate import GateVerdict
 from ai_sdlc.rules import RulesLoader
 from ai_sdlc.utils.helpers import find_project_root
@@ -271,6 +281,33 @@ def rules_active(
         table.add_row(name, title)
 
     console.print(table)
+
+
+@rules_app.command(name="materialize-frontend-mvp")
+def rules_materialize_frontend_mvp() -> None:
+    """Materialize canonical frontend governance MVP artifacts."""
+    root = find_project_root()
+    if root is None:
+        console.print("[red]Not inside an AI-SDLC project.[/red]")
+        raise typer.Exit(code=1)
+
+    paths = [
+        *materialize_frontend_gate_policy_artifacts(
+            root,
+            build_mvp_frontend_gate_policy(),
+        ),
+        *materialize_frontend_generation_constraint_artifacts(
+            root,
+            build_mvp_frontend_generation_constraints(),
+        ),
+    ]
+
+    console.print(
+        "[green]Frontend governance MVP artifacts materialized[/green] "
+        f"({len(paths)} files)"
+    )
+    for path in paths:
+        console.print(f"  - {path.relative_to(root)}")
 
 
 # ---------------------------------------------------------------------------
