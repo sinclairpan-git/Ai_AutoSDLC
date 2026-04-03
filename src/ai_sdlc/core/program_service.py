@@ -68,6 +68,9 @@ PROGRAM_FRONTEND_PATCH_APPLY_DEFERRED_SUMMARY = (
 PROGRAM_FRONTEND_CROSS_SPEC_WRITEBACK_DEFERRED_SUMMARY = (
     "no cross-spec writes executed in guarded writeback baseline"
 )
+PROGRAM_FRONTEND_GUARDED_REGISTRY_DEFERRED_SUMMARY = (
+    "no registry updates executed in guarded registry baseline"
+)
 
 
 @dataclass
@@ -307,6 +310,46 @@ class ProgramFrontendCrossSpecWritebackResult:
     writeback_state: str
     orchestration_result: str
     orchestration_summaries: list[str] = field(default_factory=list)
+    written_paths: list[str] = field(default_factory=list)
+    remaining_blockers: list[str] = field(default_factory=list)
+    warnings: list[str] = field(default_factory=list)
+    source_linkage: dict[str, str] = field(default_factory=dict)
+
+
+@dataclass
+class ProgramFrontendGuardedRegistryRequestStep:
+    spec_id: str
+    path: str
+    registry_state: str
+    pending_inputs: list[str] = field(default_factory=list)
+    suggested_next_actions: list[str] = field(default_factory=list)
+    source_linkage: dict[str, str] = field(default_factory=dict)
+
+
+@dataclass
+class ProgramFrontendGuardedRegistryRequest:
+    required: bool
+    confirmation_required: bool
+    registry_state: str
+    writeback_state: str
+    artifact_source_path: str
+    artifact_generated_at: str
+    written_paths: list[str] = field(default_factory=list)
+    steps: list[ProgramFrontendGuardedRegistryRequestStep] = field(
+        default_factory=list
+    )
+    remaining_blockers: list[str] = field(default_factory=list)
+    warnings: list[str] = field(default_factory=list)
+    source_linkage: dict[str, str] = field(default_factory=dict)
+
+
+@dataclass
+class ProgramFrontendGuardedRegistryResult:
+    passed: bool
+    confirmed: bool
+    registry_state: str
+    registry_result: str
+    registry_summaries: list[str] = field(default_factory=list)
     written_paths: list[str] = field(default_factory=list)
     remaining_blockers: list[str] = field(default_factory=list)
     warnings: list[str] = field(default_factory=list)
@@ -1371,6 +1414,182 @@ class ProgramService:
         )
         return artifact_path
 
+    def build_frontend_guarded_registry_request(
+        self,
+        manifest: ProgramManifest,
+        *,
+        artifact_path: Path | None = None,
+    ) -> ProgramFrontendGuardedRegistryRequest:
+        """Build the guarded registry request from cross-spec writeback artifact."""
+        effective_artifact_path = artifact_path or (
+            self.root / PROGRAM_FRONTEND_CROSS_SPEC_WRITEBACK_ARTIFACT_REL_PATH
+        )
+        if not effective_artifact_path.is_absolute():
+            effective_artifact_path = self.root / effective_artifact_path
+
+        relative_artifact_path = _relative_to_root_or_str(self.root, effective_artifact_path)
+        payload, warnings = self._load_frontend_cross_spec_writeback_artifact_payload(
+            effective_artifact_path
+        )
+        if payload is None:
+            return ProgramFrontendGuardedRegistryRequest(
+                required=False,
+                confirmation_required=False,
+                registry_state="missing_artifact",
+                writeback_state="missing_artifact",
+                artifact_source_path=relative_artifact_path,
+                artifact_generated_at="",
+                warnings=warnings,
+                source_linkage={
+                    "cross_spec_writeback_artifact_path": relative_artifact_path,
+                    "registry_state": "missing_artifact",
+                },
+            )
+
+        artifact_generated_at = str(payload.get("generated_at", "")).strip()
+        writeback_state = str(payload.get("writeback_state", "")).strip() or "unknown"
+        written_paths = _unique_strings(
+            [
+                *_normalize_string_list(payload.get("existing_written_paths", [])),
+                *_normalize_string_list(payload.get("written_paths", [])),
+            ]
+        )
+        remaining_blockers = _normalize_string_list(payload.get("remaining_blockers", []))
+        steps: list[ProgramFrontendGuardedRegistryRequestStep] = []
+        spec_by_id = {spec.id: spec for spec in manifest.specs}
+        for step_payload in _normalize_mapping_list(payload.get("steps", [])):
+            spec_id = str(step_payload.get("spec_id", "")).strip()
+            if not spec_id:
+                continue
+            path = str(step_payload.get("path", "")).strip()
+            if not path:
+                spec = spec_by_id.get(spec_id)
+                path = spec.path if spec is not None else ""
+            source_linkage = _normalize_string_mapping(step_payload.get("source_linkage", {}))
+            source_linkage.update(
+                {
+                    "cross_spec_writeback_artifact_path": relative_artifact_path,
+                    "cross_spec_writeback_artifact_generated_at": artifact_generated_at,
+                    "registry_state": "not_started",
+                }
+            )
+            steps.append(
+                ProgramFrontendGuardedRegistryRequestStep(
+                    spec_id=spec_id,
+                    path=path,
+                    registry_state="not_started",
+                    pending_inputs=_normalize_string_list(
+                        step_payload.get("pending_inputs", [])
+                    ),
+                    suggested_next_actions=_normalize_string_list(
+                        step_payload.get("suggested_next_actions", [])
+                    ),
+                    source_linkage=source_linkage,
+                )
+            )
+
+        required = bool(steps or written_paths or remaining_blockers)
+        source_linkage = _normalize_string_mapping(payload.get("source_linkage", {}))
+        source_linkage.update(
+            {
+                "cross_spec_writeback_artifact_path": relative_artifact_path,
+                "cross_spec_writeback_artifact_generated_at": artifact_generated_at,
+                "registry_state": "not_started",
+                "confirmation_required": str(required).lower(),
+            }
+        )
+        return ProgramFrontendGuardedRegistryRequest(
+            required=required,
+            confirmation_required=required,
+            registry_state="not_started",
+            writeback_state=writeback_state,
+            artifact_source_path=relative_artifact_path,
+            artifact_generated_at=artifact_generated_at,
+            written_paths=written_paths,
+            steps=steps,
+            remaining_blockers=remaining_blockers,
+            warnings=_unique_strings([*warnings, *_normalize_string_list(payload.get("warnings", []))]),
+            source_linkage=source_linkage,
+        )
+
+    def execute_frontend_guarded_registry(
+        self,
+        manifest: ProgramManifest,
+        *,
+        request: ProgramFrontendGuardedRegistryRequest | None = None,
+        confirmed: bool = False,
+    ) -> ProgramFrontendGuardedRegistryResult:
+        """Execute the guarded registry baseline without updating registries yet."""
+        effective_request = request or self.build_frontend_guarded_registry_request(
+            manifest
+        )
+        if effective_request.warnings and not effective_request.artifact_generated_at:
+            return ProgramFrontendGuardedRegistryResult(
+                passed=False,
+                confirmed=confirmed,
+                registry_state="blocked",
+                registry_result="blocked",
+                written_paths=list(effective_request.written_paths),
+                remaining_blockers=list(effective_request.remaining_blockers),
+                warnings=list(effective_request.warnings),
+                source_linkage={
+                    **dict(effective_request.source_linkage),
+                    "registry_state": "blocked",
+                    "registry_result": "blocked",
+                },
+            )
+        if not effective_request.required:
+            return ProgramFrontendGuardedRegistryResult(
+                passed=True,
+                confirmed=confirmed,
+                registry_state="not_started",
+                registry_result="skipped",
+                written_paths=list(effective_request.written_paths),
+                remaining_blockers=[],
+                warnings=list(effective_request.warnings),
+                source_linkage={
+                    **dict(effective_request.source_linkage),
+                    "registry_state": "not_started",
+                    "registry_result": "skipped",
+                },
+            )
+        if not confirmed:
+            return ProgramFrontendGuardedRegistryResult(
+                passed=False,
+                confirmed=False,
+                registry_state="confirmation_required",
+                registry_result="blocked",
+                written_paths=list(effective_request.written_paths),
+                remaining_blockers=list(effective_request.remaining_blockers),
+                warnings=[
+                    *effective_request.warnings,
+                    "guarded registry orchestration requires explicit confirmation",
+                ],
+                source_linkage={
+                    **dict(effective_request.source_linkage),
+                    "registry_state": "confirmation_required",
+                    "registry_result": "blocked",
+                },
+            )
+        return ProgramFrontendGuardedRegistryResult(
+            passed=False,
+            confirmed=True,
+            registry_state="deferred",
+            registry_result="deferred",
+            registry_summaries=[PROGRAM_FRONTEND_GUARDED_REGISTRY_DEFERRED_SUMMARY],
+            written_paths=[],
+            remaining_blockers=list(effective_request.remaining_blockers),
+            warnings=[
+                *effective_request.warnings,
+                "guarded registry baseline does not update registries yet",
+            ],
+            source_linkage={
+                **dict(effective_request.source_linkage),
+                "registry_state": "deferred",
+                "registry_result": "deferred",
+            },
+        )
+
     def evaluate_execute_gates(
         self, manifest: ProgramManifest, *, allow_dirty: bool = False
     ) -> ProgramExecuteGates:
@@ -1874,6 +2093,38 @@ class ProgramService:
                 None,
                 [
                     "invalid provider patch apply artifact: "
+                    + _relative_to_root_or_str(self.root, artifact_path)
+                ],
+            )
+        return payload, []
+
+    def _load_frontend_cross_spec_writeback_artifact_payload(
+        self,
+        artifact_path: Path,
+    ) -> tuple[dict[str, object] | None, list[str]]:
+        if not artifact_path.exists():
+            return (
+                None,
+                [
+                    "missing cross-spec writeback artifact: "
+                    + _relative_to_root_or_str(self.root, artifact_path)
+                ],
+            )
+        try:
+            payload = yaml.safe_load(artifact_path.read_text(encoding="utf-8"))
+        except Exception as exc:
+            return (
+                None,
+                [
+                    "invalid cross-spec writeback artifact: "
+                    + f"{_relative_to_root_or_str(self.root, artifact_path)} ({exc})"
+                ],
+            )
+        if not isinstance(payload, dict):
+            return (
+                None,
+                [
+                    "invalid cross-spec writeback artifact: "
                     + _relative_to_root_or_str(self.root, artifact_path)
                 ],
             )
