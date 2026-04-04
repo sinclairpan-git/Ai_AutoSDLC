@@ -36,6 +36,7 @@
   - `日期 (UTC)`
   - `来源`
   - `状态`
+  - `缺陷类型`
   - `wi_id`
   - `legacy_ref`
   - `owner`
@@ -66,6 +67,7 @@
 - `风险等级`：建议使用 `低 / 中 / 高 / 极高`。
 - `是否需要回归测试补充`：使用 `是：...` / `否：...`。
 - `状态`：建议使用 `open / planned / in_progress / closed / migrated`。
+- `缺陷类型`：建议使用稳定的 `snake_case` 标签，描述“这是什么缺陷族群”（如 `close_check_false_green`、`execution_log_contract_drift`）。若现有类型不能准确覆盖，可新增，但必须在条目正文或字段值中写清新类型的边界，避免把不同问题继续混成“其他”。
 - 若条目对应的是“已被拦截且已修复”的违约，`状态` 可记为 `closed`，但正文仍必须写清：`现象`、`根因分类`、`未来杜绝方案摘要`，以及未来如何杜绝同类问题再次出现（应落到 `rule / policy`、`middleware`、`workflow`、`tool`、`eval` 等字段）。
 - `related_doc`：记录与该条目直接相关的规则、代码、spec、plan、tasks、execution-log 或用户文档，优先写 canonical 路径，而不是会话描述。
 - `detection_surface`：记录首次稳定暴露该问题的面，建议使用 `user_review`、`self_review`、`observer`、`close-check`、`verify constraints`、`doctor`、`release gate` 等 bounded 名称；可多值并列。
@@ -96,6 +98,7 @@
 - 当前待修：
   - 无
 - 本轮已收口：
+  - `框架线` `FD-2026-04-04-001`
   - `009` 线 `FD-2026-04-02-001`
   - `010` 线 `FD-2026-04-02-002`、`FD-2026-04-02-003`、`FD-2026-04-02-004`、`FD-2026-04-03-005`
   - `008` 线 `FD-2026-03-31-003`
@@ -108,6 +111,40 @@
 - 挂靠原则：
   - `003` 线：已全部收口
   - `004` 线：已全部收口
+
+## FD-2026-04-04-001 | execution-log 模板、脚手架与 close-check 契约漂移，导致新旧 workitem 的收口证据格式系统性失配
+
+- 日期 (UTC): 2026-04-04
+- 来源: self_review, user_review
+- 状态: closed
+- 缺陷类型: execution_log_contract_drift
+- owner: codex
+- wi_id: 001-ai-sdlc-framework
+- related_doc: docs/framework-defect-backlog.zh-CN.md, src/ai_sdlc/templates/execution-log.md.j2, src/ai_sdlc/generators/doc_gen.py, src/ai_sdlc/core/workitem_scaffold.py, src/ai_sdlc/core/close_check.py, tests/unit/test_doc_gen.py, tests/unit/test_workitem_scaffold.py, tests/integration/test_cli_workitem_init.py, specs/014-frontend-contract-runtime-attachment-baseline/task-execution-log.md, specs/027-frontend-program-provider-runtime-artifact-baseline/task-execution-log.md
+- detection_surface: self_review, user_review, close-check
+- trace_anchor: rev:46b50e0
+- observed_scope: repo
+- subject_ref: 无（当前无稳定 provenance inspection subject）
+- chain_status: unknown（当前以 repo 内 contract、模板、scaffold 与 remediation commit 复盘为准）
+- highest_confidence_source: rev:46b50e0
+- key_gaps: split_truth: execution-log 的 canonical close-out 契约已在规则与 close-check 落地，但 `execution-log.md.j2`、`DocScaffolder` 与 direct-formal scaffold 没有同步到同一真值；unsupported: 新建 workitem 时缺少对 canonical `task-execution-log.md` 的强制生成与 mandatory close-out 字段预置；ambiguous: 历史 workitem 的最新 batch 格式不合规时，表面上像“文档欠补”，实际暴露的是模板/脚手架/生成器三处漂移
+- evidence_refs: rev:46b50e0; rev:045360b; file:src/ai_sdlc/templates/execution-log.md.j2; file:src/ai_sdlc/core/workitem_scaffold.py; file:src/ai_sdlc/generators/doc_gen.py; file:tests/unit/test_doc_gen.py; file:tests/unit/test_workitem_scaffold.py; file:tests/integration/test_cli_workitem_init.py
+- 现象: 在重新核对 frontend framework closure 时，一批 workitem 的 `task-execution-log.md` 无法通过当前 `close-check`：部分最新 batch 仍停留在旧极简格式，缺少 `统一验证命令`、`代码审查结论`、`任务/计划同步状态` 与 git close-out 字段；另一些则直接缺 canonical `task-execution-log.md` 起始模板。这不是单个文档遗漏，而是 execution-log 的模板、脚手架和检查契约已经分叉，导致“新生成的文档先天不合规，历史文档只能靠后补 remediation batch 才能过 gate”。
+- 触发场景: 在“总览规格状态已全部收口”之后，对 frontend workitems 再做全量 `close-check` 复核时，发现 `014`、`018-062` 这一批 workitem 的收口证据仍存在系统性失败；继续下钻可见当前规则与检查器要求的 mandatory close-out 字段，未被历史 `execution-log.md.j2` 和 direct-formal scaffold 同步生成。
+- 影响范围: 新建 workitem 的默认文档正确性、历史 workitem 的 close-check 通过率、execution-log 作为收口真值的可信度，以及“顶层 spec 看起来已闭环但底层 close-out 证据仍系统性失配”的治理判断。若不记录并修复，后续每次契约加严都会再次制造同类 backlog 欠账。
+- 根因分类: B, G（G: execution-log canonical contract drift across template / scaffold / generator surfaces）, H
+- 未来杜绝方案摘要: execution-log 的文件名、章节结构和 close-out mandatory 字段必须收敛到单一真值，由同一模板同时服务 legacy doc scaffold 与 direct-formal scaffold；一旦 close-check 契约升级，scaffold、模板、测试和历史回填必须作为同一收口链执行，不能再先改 gate、后补生成器。
+- 建议改动层级: rule / policy, workflow, tool, eval
+- prompt / context: 当用户或代理把“spec 已生成”“tasks 已完成”近似理解为“可收口”时，框架上下文必须提醒：`task-execution-log.md` 才是 close-out 真值的一部分，而且它的 scaffold 必须从首写开始就满足当前 mandatory contract，不能依赖事后人工补格式。
+- rule / policy: 明确 `task-execution-log.md` 是 execution log 的 canonical 文件名，且默认模板必须包含 `统一验证命令`、`代码审查结论`、`任务/计划同步状态`、`验证画像`、`已完成 git 提交`、`提交哈希` 等 mandatory close-out 字段；任何新的 close-check 契约升级，都必须同步更新模板、脚手架与回归测试。
+- middleware: 将 execution-log scaffold 统一到单一模板真值，禁止 legacy doc generator 与 direct-formal scaffold 各自产生不同结构；对新建 workitem，scaffold 必须直接生成 canonical `task-execution-log.md`，而不是依赖后续人工改名或补块。
+- workflow: 当 close-check 新增 mandatory contract 时，收口流程必须显式包含“模板/脚手架对齐检查 + 历史 workitem sweep + backlog 记账”三步；只有三步都完成，才能把问题记为真正 closed，而不是停留在“局部文档已补”。
+- tool: src/ai_sdlc/templates/execution-log.md.j2, src/ai_sdlc/core/workitem_scaffold.py, src/ai_sdlc/generators/doc_gen.py, src/ai_sdlc/core/close_check.py, tests/unit/test_doc_gen.py, tests/unit/test_workitem_scaffold.py, tests/integration/test_cli_workitem_init.py
+- eval: 新建 workitem 后 canonical `task-execution-log.md` 的 mandatory-field 命中率、`DocScaffolder` 与 direct-formal scaffold 的 execution-log 输出一致性、close-check 契约升级后的历史 workitem sweep 失败数、以及“模板变更但脚手架未变更”的 diff-time guard 次数
+- 风险等级: 高
+- 可验证成功标准: 1) 新执行 `ai-sdlc workitem init` 或等价脚手架入口时，生成的 `task-execution-log.md` 默认包含当前 close-check 所需的 mandatory close-out 字段与 canonical 文件名。 2) `DocScaffolder` 输出名与 direct-formal scaffold 输出名一致，不再存在 `execution-log.md` / `task-execution-log.md` 分叉。 3) 针对 execution-log scaffold 的单元/集成测试能在模板或输出名再次漂移时直接失败。 4) 历史受影响 workitem 的 remediation batch 已补齐并可被后续 close-check 复核通过。
+- 是否需要回归测试补充: 是：补 execution-log 模板内容断言、canonical 输出文件名断言、direct-formal scaffold 自动生成 `task-execution-log.md` 的集成测试，以及 close-check 契约升级后对历史 workitem sweep 的回归校验。
+- 收口说明（2026-04-04）: 已通过 `rev:46b50e0` 将 `execution-log.md.j2`、`DocScaffolder` 与 direct-formal `workitem_scaffold` 对齐到同一 canonical contract，并补上相应单元/集成测试；随后通过 `rev:045360b` 为历史受影响 frontend workitems 回填 remediation batch 的真实提交锚点。该缺陷已不再停留在“人工补文档”层，而是完成了框架真值修正与历史账务对齐。
 
 ## FD-2026-04-02-001 | 自迭代仓库存在历史 `.ai-sdlc` 痕迹但缺 formal bootstrap 标记时，direct-formal workitem 入口会先撞硬前置且缺少引导
 
