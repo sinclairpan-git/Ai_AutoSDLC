@@ -9,8 +9,10 @@ import pytest
 from ai_sdlc.integrations.ide_adapter import (
     IDEKind,
     apply_adapter,
+    build_adapter_governance_surface,
     detect_ide,
     ensure_ide_adaptation,
+    acknowledge_adapter,
 )
 from ai_sdlc.models.project import ActivationState, AdapterSupportTier
 from ai_sdlc.routers.bootstrap import init_project
@@ -142,8 +144,11 @@ class TestApplyAdapter:
             text = path.read_text(encoding="utf-8")
             if ide != IDEKind.GENERIC:
                 assert "ai-sdlc adapter activate" in text
+                assert "acknowledged" in text
             assert "ai-sdlc run --dry-run" in text
             assert "python -m ai_sdlc run --dry-run" in text
+            assert "soft_prompt_only" in text
+            assert "不证明治理激活" in text
 
 
 class TestEnsureIdeAdaptation:
@@ -193,3 +198,33 @@ class TestEnsureIdeAdaptation:
         after = load_project_config(tmp_path)
 
         assert after.adapter_applied_at == before.adapter_applied_at
+
+    def test_repeated_adaptation_preserves_acknowledged_support_tier(
+        self, tmp_path: Path
+    ) -> None:
+        (tmp_path / ".codex").mkdir()
+        init_project(tmp_path)
+        from ai_sdlc.core.config import load_project_config
+
+        acknowledge_adapter(tmp_path, agent_target=IDEKind.CODEX)
+        ensure_ide_adaptation(tmp_path, agent_target=IDEKind.CODEX)
+        cfg = load_project_config(tmp_path)
+
+        assert cfg.adapter_activation_state == ActivationState.ACKNOWLEDGED.value
+        assert (
+            cfg.adapter_support_tier
+            == AdapterSupportTier.ACKNOWLEDGED_ACTIVATION.value
+        )
+
+    def test_build_adapter_governance_surface_reports_soft_prompt_only(
+        self, tmp_path: Path
+    ) -> None:
+        (tmp_path / ".codex").mkdir()
+        init_project(tmp_path)
+
+        payload = build_adapter_governance_surface(tmp_path, detected_ide=IDEKind.CODEX)
+
+        assert payload["agent_target"] == IDEKind.CODEX.value
+        assert payload["governance_activation_state"] == "installed_only"
+        assert payload["governance_activation_verifiable"] is False
+        assert payload["governance_activation_mode"] == "soft_prompt_only"

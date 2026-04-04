@@ -50,6 +50,7 @@ from ai_sdlc.integrations.agent_target import (
 )
 from ai_sdlc.integrations.ide_adapter import (
     IDEKind,
+    build_adapter_governance_surface,
     detect_ide,
     ensure_ide_adaptation,
     format_adapter_notice,
@@ -77,10 +78,15 @@ console = Console()
 def _startup_next_step_hint() -> str:
     return (
         "\n\n[bold]Next step:[/bold]\n"
-        "  Acknowledge adapter: [cyan]ai-sdlc adapter activate[/cyan]\n"
-        "  Start framework in safe mode: [cyan]ai-sdlc run --dry-run[/cyan]\n"
+        "  Record operator acknowledgement: [cyan]ai-sdlc adapter activate[/cyan]\n"
+        "  Inspect adapter + governance status: [cyan]ai-sdlc adapter status[/cyan]\n"
+        "  Start framework with safe startup rehearsal only: "
+        "[cyan]ai-sdlc run --dry-run[/cyan]\n"
         "  Or stage-by-stage: [cyan]ai-sdlc stage run init --dry-run[/cyan]\n"
+        "  Current file-based adapters remain soft prompt only; "
+        "operator acknowledgement and dry-run are not governance proof.\n"
         "  If `ai-sdlc` is not on PATH, use the venv's Python:\n"
+        "  [cyan]python -m ai_sdlc adapter status[/cyan]\n"
         "  [cyan]python -m ai_sdlc run --dry-run[/cyan]"
     )
 
@@ -262,6 +268,7 @@ def status_command(
 
     state = load_project_state(root)
     cfg = load_project_config(root)
+    adapter_governance = build_adapter_governance_surface(root)
     if state.status == ProjectStatus.UNINITIALIZED:
         console.print("[yellow]Project found but not initialized.[/yellow]")
         raise typer.Exit(code=1)
@@ -275,10 +282,27 @@ def status_command(
     table.add_row("Status", state.status.value)
     table.add_row("Version", state.version)
     table.add_row("Next WI Seq", str(state.next_work_item_seq))
-    table.add_row("Agent Target", cfg.agent_target or "-")
-    table.add_row("Adapter State", cfg.adapter_activation_state or "-")
-    table.add_row("Support Tier", cfg.adapter_support_tier or "-")
-    table.add_row("Activation Source", cfg.adapter_activation_source or "-")
+    table.add_row("Agent Target", str(adapter_governance["agent_target"] or "-"))
+    table.add_row(
+        "Adapter State",
+        str(adapter_governance["adapter_activation_state"] or "-"),
+    )
+    table.add_row(
+        "Support Tier",
+        str(adapter_governance["adapter_support_tier"] or "-"),
+    )
+    table.add_row(
+        "Activation Source",
+        str(adapter_governance["adapter_activation_source"] or "-"),
+    )
+    table.add_row(
+        "Governance Activation",
+        str(adapter_governance["governance_activation_mode"]).replace("_", " "),
+    )
+    table.add_row(
+        "Governance Detail",
+        str(adapter_governance["governance_activation_detail"]),
+    )
 
     resume_pack = None
     checkpoint_usable = not (hint is not None and hint.checkpoint_stage == "missing")

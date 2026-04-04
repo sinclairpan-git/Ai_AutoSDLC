@@ -299,6 +299,8 @@ python -m ai_sdlc adapter activate
 
 - 输出里出现 `Adapter acknowledged`
 - 行尾会看到类似 `(acknowledged)` 的状态字样
+- 这只表示你在 CLI 里人工确认了当前 adapter target
+- 对目前的 Markdown / 文件型 adapter（`codex`、`cursor`、`claude_code`、`vscode`、`generic`），这还不是“宿主可验证激活”；治理侧仍按 `soft_prompt_only` 看待
 
 你可以把结果大致对照成下面这样：
 
@@ -343,6 +345,8 @@ python -m ai_sdlc run --dry-run
 
 - 这是“启动框架的预演”
 - 不是在这里输入需求
+- 它会检查阶段路由和 gate，但不会把 adapter 状态推进成“可验证激活”
+- 所以 `run --dry-run` 成功，不等于宿主已经对治理提示做了可核验握手
 - 不是在这里手工写 `spec.md`
 - 按当前框架设计，**第一次空项目 `init` 之后，不要求你先手工创建 `spec.md` 再执行这条命令**
 
@@ -904,7 +908,7 @@ Phase 1 的边界要记住：
 | bounded telemetry status | `python -m ai_sdlc status --json` | 只读 telemetry + branch lifecycle 摘要 | **只读**：不初始化 telemetry root，不 rebuild indexes，不触发 adapter |
 | adapter status | `python -m ai_sdlc adapter status` | 查看当前选中的 adapter target 与 activation state | **只读**：读取 project config；不触发 adapter apply |
 | adapter select | `python -m ai_sdlc adapter select` | 手工改正当前真正聊天的 AI 入口 | **会写 adapter config**：TTY 下进入与 `init` 相同的五项 selector；非交互时可配合 `--agent-target` 显式指定，并把 activation state 重置为 `installed` |
-| adapter activate | `python -m ai_sdlc adapter activate` | 把当前 adapter 明确记为“已认可” | **会写 adapter config**：必要时补装 adapter 文件，并把 activation state 推进到 `acknowledged` |
+| adapter activate | `python -m ai_sdlc adapter activate` | 把当前 adapter 明确记为“已人工确认” | **会写 adapter config**：必要时补装 adapter 文件，并把 activation state 推进到 `acknowledged`；对当前 Markdown / 文件型 adapter，这仍只是 `soft_prompt_only`，不是可验证治理激活 |
 | provenance inspection | `python -m ai_sdlc provenance summary` / `explain` / `gaps` | provenance read-only 审计 | **只读**：不触发 adapter，不 repair graph，不把 candidate 提升成默认 blocker |
 | doctor | `python -m ai_sdlc doctor` | 只读诊断 | **只读**：不 deep scan trace，不触发 adapter；会显示 branch lifecycle readiness |
 | scan | `python -m ai_sdlc scan <path>` | operator / analysis | **analysis-only**：深度读取代码库并打印摘要；不初始化 `.ai-sdlc/`，不触发 adapter |

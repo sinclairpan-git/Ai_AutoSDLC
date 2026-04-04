@@ -51,6 +51,8 @@ ai-sdlc run --dry-run
 
 `--dry-run` is the recommended safe entry. It validates stage routing and gates before real execution.
 
+`ai-sdlc adapter activate` only records operator acknowledgement for the selected adapter. For the current file-based adapters (`codex`, `cursor`, `claude_code`, `vscode`, `generic`), governance activation is not independently verifiable yet, so they remain `soft_prompt_only` until a reliable host handshake exists.
+
 If your outer editor and real AI chat host are different, prefer selecting the actual chat host explicitly. For example, when you use Codex inside VS Code:
 
 ```bash
@@ -59,7 +61,7 @@ ai-sdlc adapter activate --agent-target codex
 ai-sdlc run --dry-run
 ```
 
-Use `ai-sdlc adapter status` to inspect the current `agent_target` and activation state, or `ai-sdlc adapter select --agent-target <target>` to correct a wrong target before `run --dry-run`.
+Use `ai-sdlc adapter status` to inspect the current `agent_target`, raw adapter activation state, and derived governance activation mode, or `ai-sdlc adapter select --agent-target <target>` to correct a wrong target before `run --dry-run`. `run --dry-run` is a startup rehearsal only; it does not by itself prove governance activation.
 
 ## Stage-based dispatch (LLM-friendly)
 

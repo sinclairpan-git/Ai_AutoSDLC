@@ -10,7 +10,7 @@ from typer.testing import CliRunner
 
 from ai_sdlc.cli.main import app
 from ai_sdlc.context.state import load_checkpoint, save_checkpoint
-from ai_sdlc.core.config import save_project_config
+from ai_sdlc.core.config import load_project_config, save_project_config
 from ai_sdlc.core.frontend_contract_drift import PageImplementationObservation
 from ai_sdlc.core.frontend_contract_observation_provider import (
     build_frontend_contract_observation_artifact,
@@ -18,7 +18,7 @@ from ai_sdlc.core.frontend_contract_observation_provider import (
 )
 from ai_sdlc.core.runner import SDLCRunner
 from ai_sdlc.models.gate import GateCheck, GateResult, GateVerdict
-from ai_sdlc.models.project import ProjectConfig
+from ai_sdlc.models.project import ActivationState, AdapterSupportTier, ProjectConfig
 from ai_sdlc.models.state import Checkpoint, FeatureInfo
 from ai_sdlc.telemetry.enums import TelemetryMode, TelemetryProfile
 from ai_sdlc.telemetry.paths import (
@@ -160,6 +160,12 @@ class TestRunCommand:
 
         assert result.exit_code == 0
         assert "Pipeline completed." in result.output
+        cfg = load_project_config(tmp_path)
+        assert cfg.adapter_activation_state == ActivationState.ACKNOWLEDGED.value
+        assert (
+            cfg.adapter_support_tier
+            == AdapterSupportTier.ACKNOWLEDGED_ACTIVATION.value
+        )
 
     def test_run_dry_run_lazy_inits_telemetry_without_governance_artifacts(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch

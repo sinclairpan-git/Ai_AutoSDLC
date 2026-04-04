@@ -36,16 +36,28 @@ class TestCliInit:
         assert result.exit_code == 0
         assert (tmp_path / ".ai-sdlc").is_dir()
         assert "Initialized" in result.output
-        assert "adapter activate" in result.output
+        assert "Record operator acknowledgement" in result.output
+        assert "ai-sdlc adapter activate" in result.output
+        assert "Inspect adapter + governance status" in result.output
+        assert "ai-sdlc adapter status" in result.output
+        assert "safe startup rehearsal only" in result.output
         assert "ai-sdlc run --dry-run" in result.output
+        assert "not governance proof" in result.output
+        assert "python -m ai_sdlc adapter status" in result.output
         assert "python -m ai_sdlc run --dry-run" in result.output
 
     def test_init_already_initialized(self, initialized_project_dir: Path) -> None:
         result = runner.invoke(app, ["init", str(initialized_project_dir)])
         assert result.exit_code == 0
         assert "already initialized" in result.output
-        assert "adapter activate" in result.output
+        assert "Record operator acknowledgement" in result.output
+        assert "ai-sdlc adapter activate" in result.output
+        assert "Inspect adapter + governance status" in result.output
+        assert "ai-sdlc adapter status" in result.output
+        assert "safe startup rehearsal only" in result.output
         assert "ai-sdlc run --dry-run" in result.output
+        assert "not governance proof" in result.output
+        assert "python -m ai_sdlc adapter status" in result.output
         assert "python -m ai_sdlc run --dry-run" in result.output
 
     def test_init_nonexistent_dir(self, tmp_path: Path) -> None:

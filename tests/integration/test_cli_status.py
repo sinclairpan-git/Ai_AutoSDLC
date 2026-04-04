@@ -202,6 +202,9 @@ class TestCliStatus:
         assert "Agent Target" in result.output
         assert "codex" in result.output
         assert "acknowledged" in result.output
+        assert "Governance Activation" in result.output
+        assert "soft prompt only" in result.output
+        assert "not verifiable" in result.output
 
     def test_status_not_initialized(self) -> None:
         with patch("ai_sdlc.cli.commands.find_project_root", return_value=None):
@@ -254,7 +257,7 @@ class TestCliStatus:
     def test_status_json_reports_not_initialized_when_telemetry_is_absent(
         self, tmp_path: Path
     ) -> None:
-        init_project(tmp_path)
+        init_project(tmp_path, agent_target="codex")
         telemetry_root = telemetry_local_root(tmp_path)
         assert telemetry_root.exists() is False
 
@@ -266,6 +269,10 @@ class TestCliStatus:
         assert payload["telemetry"]["state"] == "not_initialized"
         assert payload["telemetry"]["current"] is None
         assert payload["telemetry"]["latest"] is None
+        assert payload["adapter_governance"]["agent_target"] == "codex"
+        assert payload["adapter_governance"]["adapter_activation_state"] == "installed"
+        assert payload["adapter_governance"]["governance_activation_state"] == "installed_only"
+        assert payload["adapter_governance"]["governance_activation_verifiable"] is False
         assert telemetry_root.exists() is False
 
     def test_status_shows_reconciled_specs_dir_after_recover(
@@ -289,7 +296,7 @@ class TestCliStatus:
     def test_status_json_returns_bounded_latest_and_current_summary(
         self, tmp_path: Path
     ) -> None:
-        init_project(tmp_path)
+        init_project(tmp_path, agent_target="codex")
         local_root = telemetry_local_root(tmp_path)
         local_root.mkdir(parents=True, exist_ok=True)
         manifest_path = local_root / "manifest.json"
@@ -358,7 +365,7 @@ class TestCliStatus:
 
         assert result.exit_code == 0
         payload = json.loads(result.output)
-        assert set(payload) == {"telemetry", "branch_lifecycle"}
+        assert set(payload) == {"telemetry", "branch_lifecycle", "adapter_governance"}
         telemetry = payload["telemetry"]
         assert telemetry["state"] == "ready"
         assert telemetry["current"] == {
@@ -381,6 +388,9 @@ class TestCliStatus:
             "last_timestamp": "2026-03-27T09:00:00Z",
         }
         assert payload["branch_lifecycle"]["state"] == "unavailable"
+        assert payload["adapter_governance"]["agent_target"] == "codex"
+        assert payload["adapter_governance"]["governance_activation_mode"] == "soft_prompt_only"
+        assert payload["adapter_governance"]["governance_activation_verifiable"] is False
 
     def test_status_shows_p1_artifact_surfaces(self, tmp_path: Path) -> None:
         init_project(tmp_path)

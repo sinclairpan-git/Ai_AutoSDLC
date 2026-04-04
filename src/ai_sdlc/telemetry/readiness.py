@@ -11,6 +11,7 @@ from typing import Any
 from ai_sdlc.branch.git_client import GitError
 from ai_sdlc.context.state import load_checkpoint
 from ai_sdlc.core.workitem_traceability import evaluate_work_item_branch_lifecycle
+from ai_sdlc.integrations.ide_adapter import build_adapter_governance_surface
 from ai_sdlc.telemetry.contracts import ScopeLevel
 from ai_sdlc.telemetry.paths import (
     telemetry_indexes_root,
@@ -31,6 +32,7 @@ def build_status_json_surface(repo_root: Path) -> dict[str, Any]:
     manifest_state = _load_manifest_state(repo_root)
     store = TelemetryStore(repo_root)
     branch_lifecycle = _build_branch_lifecycle_surface(repo_root)
+    adapter_governance = build_adapter_governance_surface(repo_root)
     derived_indexes: dict[str, dict[str, Any]] | None = None
 
     def _derived_index_payloads() -> dict[str, dict[str, Any]]:
@@ -48,6 +50,7 @@ def build_status_json_surface(repo_root: Path) -> dict[str, Any]:
                 "latest": None,
             },
             "branch_lifecycle": branch_lifecycle,
+            "adapter_governance": adapter_governance,
         }
     if manifest_state["state"] != "loaded":
         return {
@@ -58,6 +61,7 @@ def build_status_json_surface(repo_root: Path) -> dict[str, Any]:
                 "error": manifest_state.get("error"),
             },
             "branch_lifecycle": branch_lifecycle,
+            "adapter_governance": adapter_governance,
         }
 
     manifest = manifest_state["manifest"]
@@ -109,6 +113,7 @@ def build_status_json_surface(repo_root: Path) -> dict[str, Any]:
             ),
         },
         "branch_lifecycle": branch_lifecycle,
+        "adapter_governance": adapter_governance,
     }
 
 

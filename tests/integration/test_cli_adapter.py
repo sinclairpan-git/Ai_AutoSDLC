@@ -34,6 +34,30 @@ def _clear_ide_env(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 class TestCliAdapter:
+    def test_adapter_help_surfaces_governance_language(self) -> None:
+        result = runner.invoke(app, ["adapter", "--help"])
+
+        assert result.exit_code == 0
+        assert "Select, acknowledge, and inspect IDE adapters" not in result.output
+        assert "raw activation state" in result.output
+        assert "derived governance mode" in result.output
+        assert "operator acknowledgement" in result.output
+
+    def test_adapter_activate_help_describes_operator_acknowledgement(self) -> None:
+        result = runner.invoke(app, ["adapter", "activate", "--help"])
+
+        assert result.exit_code == 0
+        assert "acknowledged by the user" not in result.output
+        assert "operator acknowledgement" in result.output
+        assert "does not prove governance activation" in result.output
+
+    def test_adapter_status_help_describes_raw_and_derived_state(self) -> None:
+        result = runner.invoke(app, ["adapter", "status", "--help"])
+
+        assert result.exit_code == 0
+        assert "activation state" in result.output
+        assert "derived governance mode" in result.output
+
     def test_init_interactive_selector_persists_user_choice(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
@@ -122,3 +146,34 @@ class TestCliAdapter:
         assert payload["adapter_support_tier"] == AdapterSupportTier.SOFT_INSTALLED.value
         assert payload["adapter_activation_source"] == ""
         assert payload["adapter_activation_evidence"] == ""
+        assert payload["governance_activation_state"] == "installed_only"
+        assert payload["governance_activation_verifiable"] is False
+        assert payload["governance_activation_mode"] == "soft_prompt_only"
+        assert "not acknowledged" in payload["governance_activation_detail"]
+
+    def test_adapter_status_json_reports_acknowledged_but_not_verifiable_governance(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        assert (
+            runner.invoke(app, ["init", str(tmp_path), "--agent-target", "codex"]).exit_code
+            == 0
+        )
+        monkeypatch.chdir(tmp_path)
+        assert (
+            runner.invoke(app, ["adapter", "activate", "--agent-target", "codex"]).exit_code
+            == 0
+        )
+
+        result = runner.invoke(app, ["adapter", "status", "--json"])
+
+        assert result.exit_code == 0
+        payload = json.loads(result.output)
+        assert payload["adapter_activation_state"] == ActivationState.ACKNOWLEDGED.value
+        assert (
+            payload["adapter_support_tier"]
+            == AdapterSupportTier.ACKNOWLEDGED_ACTIVATION.value
+        )
+        assert payload["governance_activation_state"] == "acknowledged_only"
+        assert payload["governance_activation_verifiable"] is False
+        assert payload["governance_activation_mode"] == "soft_prompt_only"
+        assert "not verifiable" in payload["governance_activation_detail"]

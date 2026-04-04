@@ -5,6 +5,7 @@ from __future__ import annotations
 import logging
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import Any
 
 from ai_sdlc.core.config import load_project_config, save_project_config
 from ai_sdlc.integrations.agent_target import IDEKind, detect_agent_target
@@ -121,6 +122,113 @@ def _next_activation_state(
     return ActivationState.INSTALLED.value
 
 
+def _default_support_tier(activation_state: str) -> str:
+    """Backfill a support tier for legacy config states."""
+    if activation_state == ActivationState.ACTIVATED.value:
+        return AdapterSupportTier.VERIFIED_ACTIVATION.value
+    if activation_state == ActivationState.ACKNOWLEDGED.value:
+        return AdapterSupportTier.ACKNOWLEDGED_ACTIVATION.value
+    return AdapterSupportTier.SOFT_INSTALLED.value
+
+
+def _activation_metadata(
+    cfg_agent_target: str,
+    cfg_activation_state: str,
+    cfg_support_tier: str,
+    cfg_activation_source: str,
+    cfg_activation_evidence: str,
+    cfg_activated_at: str,
+    target: IDEKind,
+) -> dict[str, str]:
+    """Preserve activation evidence only while the target stays unchanged."""
+    activation_state = _next_activation_state(
+        cfg_agent_target,
+        cfg_activation_state,
+        target,
+    )
+    if activation_state in {
+        ActivationState.ACKNOWLEDGED.value,
+        ActivationState.ACTIVATED.value,
+    }:
+        return {
+            "adapter_activation_state": activation_state,
+            "adapter_support_tier": cfg_support_tier
+            or _default_support_tier(activation_state),
+            "adapter_activation_source": cfg_activation_source,
+            "adapter_activation_evidence": cfg_activation_evidence,
+            "adapter_activated_at": cfg_activated_at,
+        }
+    return {
+        "adapter_activation_state": ActivationState.INSTALLED.value,
+        "adapter_support_tier": AdapterSupportTier.SOFT_INSTALLED.value,
+        "adapter_activation_source": "",
+        "adapter_activation_evidence": "",
+        "adapter_activated_at": "",
+    }
+
+
+def build_adapter_governance_surface(
+    root: Path,
+    *,
+    detected_ide: IDEKind | str | None = None,
+) -> dict[str, Any]:
+    """Return persisted adapter facts plus derived governance truth."""
+    cfg = load_project_config(root)
+    resolved_detected_ide = cfg.detected_ide
+    if not resolved_detected_ide:
+        fallback = _coerce_ide_kind(detected_ide) or detect_ide(root)
+        resolved_detected_ide = fallback.value
+    agent_target = cfg.agent_target or resolved_detected_ide
+    activation_state = cfg.adapter_activation_state or ActivationState.INSTALLED.value
+    support_tier = cfg.adapter_support_tier or _default_support_tier(activation_state)
+    verifiable = activation_state == ActivationState.ACTIVATED.value or support_tier in {
+        AdapterSupportTier.VERIFIED_ACTIVATION.value,
+        AdapterSupportTier.HARD_ACTIVATED.value,
+    }
+    if verifiable:
+        governance_state = "activated"
+        governance_mode = (
+            "hard_activated"
+            if support_tier == AdapterSupportTier.HARD_ACTIVATED.value
+            else "verified_activation"
+        )
+        detail = "Governance activation is verifiable from persisted adapter evidence."
+        if cfg.adapter_activation_evidence:
+            detail = (
+                "Governance activation is verifiable from persisted adapter evidence: "
+                f"{cfg.adapter_activation_evidence}."
+            )
+    elif activation_state == ActivationState.ACKNOWLEDGED.value:
+        governance_state = "acknowledged_only"
+        governance_mode = "soft_prompt_only"
+        detail = (
+            "Adapter acknowledgment was recorded, but governance activation is not "
+            "verifiable; adapter remains soft prompt only."
+        )
+    else:
+        governance_state = "installed_only"
+        governance_mode = "soft_prompt_only"
+        detail = (
+            "Adapter is installed but not acknowledged, and governance activation is "
+            "not verifiable; adapter remains soft prompt only."
+        )
+
+    return {
+        "detected_ide": resolved_detected_ide,
+        "agent_target": agent_target,
+        "adapter_applied": cfg.adapter_applied,
+        "adapter_activation_state": activation_state,
+        "adapter_support_tier": support_tier,
+        "adapter_activation_source": cfg.adapter_activation_source,
+        "adapter_activation_evidence": cfg.adapter_activation_evidence,
+        "adapter_activated_at": cfg.adapter_activated_at,
+        "governance_activation_state": governance_state,
+        "governance_activation_verifiable": verifiable,
+        "governance_activation_mode": governance_mode,
+        "governance_activation_detail": detail,
+    }
+
+
 def _persist_config(
     root: Path,
     *,
@@ -129,22 +237,23 @@ def _persist_config(
     result: ApplyResult,
 ) -> None:
     cfg = load_project_config(root)
-    activation_state = _next_activation_state(
-        cfg.agent_target,
-        cfg.adapter_activation_state,
-        agent_target,
-    )
     updates = {
         "detected_ide": detected_ide.value,
         "agent_target": agent_target.value,
         "adapter_applied": agent_target.value,
         "adapter_version": ADAPTER_VERSION,
-        "adapter_activation_state": activation_state,
-        "adapter_support_tier": AdapterSupportTier.SOFT_INSTALLED.value,
-        "adapter_activation_source": "",
-        "adapter_activation_evidence": "",
-        "adapter_activated_at": "",
     }
+    updates.update(
+        _activation_metadata(
+            cfg.agent_target,
+            cfg.adapter_activation_state,
+            cfg.adapter_support_tier,
+            cfg.adapter_activation_source,
+            cfg.adapter_activation_evidence,
+            cfg.adapter_activated_at,
+            agent_target,
+        )
+    )
     config_path = root / PROJECT_CONFIG_PATH
     state_changed = (
         not config_path.is_file()

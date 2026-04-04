@@ -5,9 +5,11 @@
 - 约束：`.ai-sdlc/memory/constitution.md`
 - **终端约定**：在已激活 venv 且 CLI 可用的终端执行；若 `ai-sdlc` 不在 PATH，使用 `python -m ai_sdlc ...`。
 - 按阶段：`ai-sdlc stage show <阶段名>`
-- 先确认适配已被宿主认可：`ai-sdlc adapter activate`
-- 启动入口（先执行）：`ai-sdlc run --dry-run` 或 `python -m ai_sdlc run --dry-run`
+- 先记录当前 adapter 的人工确认：`ai-sdlc adapter activate`（会写成 `acknowledged`，不证明治理激活）
+- 启动入口（先执行）：`ai-sdlc run --dry-run` 或 `python -m ai_sdlc run --dry-run`（安全预演；不证明治理激活）
 - 全流程：`ai-sdlc run`
+
+当前 Claude Code adapter 仍是 Markdown / 文件提示面。除非后续接入可核验的宿主握手，否则治理侧都应按 `soft_prompt_only` 理解，而不是“宿主已验证激活”。
 
 当用户在对话中输入任何需求/任务时，先引导执行上述启动入口，通过后再进入后续设计、分解与实现。
 

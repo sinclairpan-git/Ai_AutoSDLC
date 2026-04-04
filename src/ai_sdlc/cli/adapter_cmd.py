@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from pathlib import Path
 
 import typer
 from rich.console import Console
@@ -16,6 +17,7 @@ from ai_sdlc.integrations.agent_target import (
 from ai_sdlc.integrations.ide_adapter import (
     IDEKind,
     acknowledge_adapter,
+    build_adapter_governance_surface,
     detect_ide,
     ensure_ide_adaptation,
     format_adapter_notice,
@@ -24,7 +26,12 @@ from ai_sdlc.utils.helpers import find_project_root
 
 console = Console()
 
-adapter_app = typer.Typer(help="Select, acknowledge, and inspect IDE adapters.")
+adapter_app = typer.Typer(
+    help=(
+        "Select adapters, record operator acknowledgement, and inspect raw "
+        "activation state plus derived governance mode."
+    )
+)
 
 
 def _require_project_root() -> object:
@@ -37,6 +44,11 @@ def _require_project_root() -> object:
 
 def _is_interactive_terminal() -> bool:
     return is_interactive_terminal()
+
+
+def _adapter_status_payload(root: Path) -> dict[str, object]:
+    detected_ide = detect_ide(root)
+    return build_adapter_governance_surface(root, detected_ide=detected_ide)
 
 
 @adapter_app.command(name="select")
@@ -74,16 +86,16 @@ def adapter_activate(
         help="Optionally override the current adapter target while acknowledging it.",
     ),
 ) -> None:
-    """Mark the current adapter instructions as acknowledged by the user."""
+    """Record operator acknowledgement. This does not prove governance activation."""
     root = _require_project_root()
     result = acknowledge_adapter(root, agent_target=agent_target)
     note = format_adapter_notice(result)
     if note:
         console.print(note)
-    cfg = load_project_config(root)
+    cfg = _adapter_status_payload(root)
     console.print(
         "[green]Adapter acknowledged:[/green] "
-        f"{cfg.agent_target} ({cfg.adapter_activation_state})"
+        f"{cfg['agent_target']} ({cfg['adapter_activation_state']})"
     )
 
 
@@ -91,20 +103,9 @@ def adapter_activate(
 def adapter_status(
     as_json: bool = typer.Option(False, "--json", help="Machine-readable adapter state."),
 ) -> None:
-    """Show the persisted adapter target and activation state."""
+    """Show raw activation state and derived governance mode."""
     root = _require_project_root()
-    cfg = load_project_config(root)
-    detected_ide = cfg.detected_ide or detect_ide(root).value
-    payload = {
-        "detected_ide": detected_ide,
-        "agent_target": cfg.agent_target or detected_ide,
-        "adapter_applied": cfg.adapter_applied,
-        "adapter_activation_state": cfg.adapter_activation_state,
-        "adapter_support_tier": cfg.adapter_support_tier,
-        "adapter_activation_source": cfg.adapter_activation_source,
-        "adapter_activation_evidence": cfg.adapter_activation_evidence,
-        "adapter_activated_at": cfg.adapter_activated_at,
-    }
+    payload = _adapter_status_payload(root)
     if as_json:
         typer.echo(json.dumps(payload))
         return
@@ -113,5 +114,5 @@ def adapter_status(
     table.add_column("Property", style="cyan")
     table.add_column("Value")
     for key, value in payload.items():
-        table.add_row(key, value or "-")
+        table.add_row(key, str(value) if value not in ("", None) else "-")
     console.print(table)
