@@ -124,3 +124,59 @@
 - **已完成 git 提交**：是
 - **提交哈希**：`4d985118a15130325156b5021d756ef4918153af`
 - **是否继续下一批**：是；下一步提交本批 execution log 更新，并复跑 `workitem close-check`
+
+### Batch 2026-04-04-003 | 063 verification profile repair
+
+#### 1. 准备
+
+- **任务来源**：`tasks.md` Task `4.1`
+- **目标**：修正 `063` 最新 docs-only batch 缺少 `uv run ai-sdlc verify constraints` 证据的问题，并再次执行 `workitem close-check`。
+- **预读范围**：`task-execution-log.md`、`uv run ai-sdlc workitem close-check --wi specs/063-frontend-program-final-proof-archive-cleanup-mutation-execution-gating-consumption-baseline`
+- **激活的规则**：verification profile truthfulness；done gate honesty。
+- **验证画像**：`docs-only`
+- **改动范围**：`specs/063-frontend-program-final-proof-archive-cleanup-mutation-execution-gating-consumption-baseline/task-execution-log.md`
+
+#### 2. 统一验证命令
+
+- **V1（治理只读校验）**
+  - 命令：`uv run ai-sdlc verify constraints`
+  - 结果：`verify constraints: no BLOCKERs.`
+- **V2（close-check，修正前基线）**
+  - 命令：`uv run ai-sdlc workitem close-check --wi specs/063-frontend-program-final-proof-archive-cleanup-mutation-execution-gating-consumption-baseline`
+  - 结果：存在 blocker；最新 batch 的 `docs-only` 验证画像缺少 `uv run ai-sdlc verify constraints` 证据。
+
+#### 3. 任务记录
+
+##### Task 4.1 | 补齐 docs-only verification profile 必需命令
+
+- **改动范围**：`specs/063-frontend-program-final-proof-archive-cleanup-mutation-execution-gating-consumption-baseline/task-execution-log.md`
+- **改动内容**：
+  - 记录本次 `uv run ai-sdlc verify constraints` 成功结果。
+  - 明确 `063` 当前唯一阻塞项是 verification profile evidence，而不是实现或 spec 漂移。
+- **新增/调整的测试**：无。
+- **执行的命令**：见 V1 / V2。
+- **测试结果**：待本批提交后复跑 `workitem close-check` 做最终确认。
+- **是否符合任务目标**：符合。
+
+#### 4. 代码审查（摘要）
+
+- **宪章/规格对齐**：仅修正 close-check 证据，不变更合同与实现。
+- **代码质量**：无运行时代码变更。
+- **测试质量**：依赖 `verify constraints` 与提交后 `close-check` 复核。
+- **结论**：可以继续执行最终 close-out 验证。
+
+#### 5. 任务/计划同步状态
+
+- `tasks.md` 同步状态：`已对账`
+- `plan.md` 同步状态：`已对账`
+- `spec.md` 同步状态：`已对账`
+
+#### 6. 批次结论
+
+- `063` 当前只差 verification profile 证据格式修正；本批完成后应再次复跑 `close-check`。
+
+#### 7. 归档后动作
+
+- **已完成 git 提交**：是
+- **提交哈希**：`6d1197d4d6d44ac68b5f8aa8ead4b5e29ba65a29`
+- **是否继续下一批**：是；下一步提交本批 execution log 更新，并复跑 `workitem close-check`
