@@ -710,19 +710,26 @@ python -m ai_sdlc adapter activate
 
 - 输出里出现 `Adapter acknowledged`
 - 行尾会看到类似 `(acknowledged)` 的状态字样
+- 这只表示你在 CLI 里人工确认了当前 adapter target
+- 对目前的 Markdown / 文件型 adapter（`codex`、`cursor`、`claude_code`、`vscode`、`generic`），这还不是“宿主可验证激活”；治理侧仍按 `soft_prompt_only` 看待
 
 你可以把结果大致对照成下面这样：
 
 ```text
+IDE adapter (codex): installed 1 file(s)
 Adapter acknowledged: codex (acknowledged)
 ```
 
 **如果你怀疑它认错了工具：**
 
+比如你实际在 VS Code 里用的是 Codex，而不是只想装 VS Code 工作区提示，那么不要硬着头皮往下走。先改成真正的聊天工具，再重新激活：
+
 ```bash
 python -m ai_sdlc adapter select
 python -m ai_sdlc adapter activate --agent-target codex
 ```
+
+`adapter select` 会进入和 `init` 相同的五项列表；如果你在 CI 或非交互终端里操作，再改用 `--agent-target` 明确指定。
 
 ### 第 9 步：先在终端做一次预演启动
 

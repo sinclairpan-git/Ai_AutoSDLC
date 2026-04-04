@@ -249,7 +249,7 @@
 
 - 日期 (UTC): 2026-04-02
 - 来源: production_report, user_review, self_review
-- 状态: open
+- 状态: closed
 - owner: codex
 - wi_id: 009-frontend-governance-ui-kernel
 - related_doc: src/ai_sdlc/adapters/codex/AI-SDLC.md, docs/USER_GUIDE.zh-CN.md, src/ai_sdlc/integrations/ide_adapter.py, docs/framework-defect-backlog.zh-CN.md
@@ -274,6 +274,7 @@
 - tool: src/ai_sdlc/adapters/codex/AI-SDLC.md, src/ai_sdlc/integrations/ide_adapter.py, docs/USER_GUIDE.zh-CN.md, future activation handshake / status surface
 - eval: adapter-installed-but-not-activated 次数、Codex 读取 adapter 后仍偏离框架链路的事件数、用户误以为“dry-run 成功=治理已接管”的次数、是否存在可验证 activation signal
 - 风险等级: 高
+- 收口说明（2026-04-05）: 当前主线已补齐 `adapter_activation_state`、`governance_activation_state` 与 `governance_activation_mode` 三层状态面，`adapter activate` 只会把文件型 adapter 推进到 `acknowledged`，`adapter status`、`init` next-step 提示、Codex/Cursor/Claude Code/VS Code adapter 模板与 `docs/USER_GUIDE.zh-CN.md` 也已统一明确：当前 Markdown / 文件型 adapter 仍是 `soft_prompt_only`，`run --dry-run` 与 operator acknowledgement 都不是治理激活证明。也就是说，本条 defect 所要求的“停止把 adapter 文件存在或 dry-run 成功表述为治理已生效”已完成收口；虽然宿主侧仍无可验证 handshake，但产品口径和状态真值已不再误报为已激活。
 - 可验证成功标准: 给定 Codex 插件场景时，框架能够明确区分“文件已安装”“插件已读取”“治理已激活”三层状态；若插件无法提供 activation signal，产品文档与 CLI 状态不会再把 `.codex/AI-SDLC.md` 存在或 `run --dry-run` 执行成功表述为“约束已生效”。若后续提供 handshake，则在用户输入需求后可通过稳定信号证明 Codex 已进入框架治理路径。
 - 是否需要回归测试补充: 是：补 activation-state contract 的单元/集成测试，以及“adapter 文件存在 + dry-run 成功但未获得 activation signal”时不得误报已激活的回归测试。
 
