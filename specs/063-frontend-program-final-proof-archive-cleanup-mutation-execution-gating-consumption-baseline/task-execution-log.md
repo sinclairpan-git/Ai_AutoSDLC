@@ -71,3 +71,56 @@
 - **已完成 git 提交**：否
 - **提交哈希**：待本批真实提交后补录
 - **是否继续下一批**：是；下一步执行真实 git close-out，并复跑 `workitem close-check`
+
+### Batch 2026-04-04-002 | 063 git close-out sync
+
+#### 1. 准备
+
+- **任务来源**：`tasks.md` Task `4.1`
+- **目标**：把 `063` close-check evidence normalization 的真实提交信息补录到 execution log，并在此基础上复跑 `workitem close-check`。
+- **预读范围**：`task-execution-log.md`、`git rev-parse HEAD`
+- **激活的规则**：git close-out truthfulness；done gate honesty。
+- **验证画像**：`docs-only`
+- **改动范围**：`specs/063-frontend-program-final-proof-archive-cleanup-mutation-execution-gating-consumption-baseline/task-execution-log.md`
+
+#### 2. 统一验证命令
+
+- **V1（git close-out 基线）**
+  - 命令：`git rev-parse HEAD`
+  - 结果：`4d985118a15130325156b5021d756ef4918153af`
+
+#### 3. 任务记录
+
+##### Task 4.1 | 补录真实提交哈希并准备最终 close-check
+
+- **改动范围**：`specs/063-frontend-program-final-proof-archive-cleanup-mutation-execution-gating-consumption-baseline/task-execution-log.md`
+- **改动内容**：
+  - 记录 `063` docs close-out 的真实提交 `4d985118a15130325156b5021d756ef4918153af`。
+  - 保持本批仍为 docs-only，不新增任何实现与行为变更。
+- **新增/调整的测试**：无。
+- **执行的命令**：见 V1。
+- **测试结果**：待本批提交后复跑 `workitem close-check` 进行最终确认。
+- **是否符合任务目标**：符合。
+
+#### 4. 代码审查（摘要）
+
+- **宪章/规格对齐**：仅同步 git close-out 真值，不修改 `063` 合同与代码。
+- **代码质量**：无运行时代码变更。
+- **测试质量**：依赖提交后 `close-check` 的最终复核。
+- **结论**：允许继续执行最终 close-out 验证。
+
+#### 5. 任务/计划同步状态
+
+- `tasks.md` 同步状态：`已对账`
+- `plan.md` 同步状态：`已对账`
+- `spec.md` 同步状态：`已对账`
+
+#### 6. 批次结论
+
+- `063` 的 docs close-out 已有真实提交，当前只剩提交后最终校验。
+
+#### 7. 归档后动作
+
+- **已完成 git 提交**：是
+- **提交哈希**：`4d985118a15130325156b5021d756ef4918153af`
+- **是否继续下一批**：是；下一步提交本批 execution log 更新，并复跑 `workitem close-check`
