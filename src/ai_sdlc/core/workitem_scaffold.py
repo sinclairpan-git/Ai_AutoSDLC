@@ -66,6 +66,7 @@ class WorkitemScaffolder:
             spec_dir / "spec.md",
             spec_dir / "plan.md",
             spec_dir / "tasks.md",
+            spec_dir / "task-execution-log.md",
         )
         if any(path.exists() for path in canonical_paths):
             raise WorkitemScaffoldError(
@@ -101,6 +102,14 @@ class WorkitemScaffolder:
                     created_date=created_date,
                     related_plan=related_plan,
                     related_docs=dedup_related_docs,
+                ),
+            ),
+            (
+                canonical_paths[3],
+                self._render_execution_log(
+                    work_item_id=work_item_id,
+                    title=title_clean,
+                    created_date=created_date,
                 ),
             ),
         )
@@ -267,12 +276,13 @@ class WorkitemScaffolder:
             f"specs/{work_item_id}/\n"
             "├── spec.md\n"
             "├── plan.md\n"
-            "└── tasks.md\n"
+            "├── tasks.md\n"
+            "└── task-execution-log.md\n"
             "```",
         )
         body = body.replace(
             "**产物**：research.md",
-            "**产物**：spec.md / plan.md / tasks.md",
+            "**产物**：spec.md / plan.md / tasks.md / task-execution-log.md",
             1,
         )
         body = _PLACEHOLDER_RE.sub("待补充", body)
@@ -308,7 +318,7 @@ class WorkitemScaffolder:
             "- **任务编号**：T11\n"
             "- **优先级**：P0\n"
             "- **依赖**：无\n"
-            "- **文件**：spec.md, plan.md, tasks.md\n"
+            "- **文件**：spec.md, plan.md, tasks.md, task-execution-log.md\n"
             "- **可并行**：否\n"
             "- **验收标准**：\n"
             f"  1. canonical formal docs 已直接位于 `specs/{work_item_id}/`\n"
@@ -322,7 +332,7 @@ class WorkitemScaffolder:
             "- **文件**：src/ai_sdlc/core/workitem_scaffold.py, tests/unit/test_workitem_scaffold.py\n"
             "- **可并行**：否\n"
             "- **验收标准**：\n"
-            "  1. helper 能稳定生成 parser-friendly `spec.md / plan.md / tasks.md`\n"
+            "  1. helper 能稳定生成 parser-friendly `spec.md / plan.md / tasks.md / task-execution-log.md`\n"
             "  2. helper 只引用 external design docs，不复制正文\n"
             "- **验证**：`uv run pytest tests/unit/test_workitem_scaffold.py -q`\n\n"
             "## Batch 3：docs alignment and focused verification\n\n"
@@ -338,6 +348,72 @@ class WorkitemScaffolder:
             "- **验证**：`uv run pytest tests/integration/test_cli_workitem_init.py tests/unit/test_command_names.py -q`\n"
         )
         return f"{self._render_frontmatter(related_plan, related_docs)}{body}"
+
+    def _render_execution_log(
+        self,
+        *,
+        work_item_id: str,
+        title: str,
+        created_date: str,
+    ) -> str:
+        template = self._load_template("execution-log-template.md")
+        rendered = template.replace(
+            "# Feature NNN 任务执行归档",
+            (
+                f"# 任务执行日志：{title}\n\n"
+                f"**功能编号**：`{work_item_id}`\n"
+                f"**创建日期**：{created_date}\n"
+                "**状态**：草稿"
+            ),
+            1,
+        )
+        replacements = {
+            "`NNN-feature-name`": f"`{work_item_id}`",
+            "### Batch YYYY-MM-DD-X | T0XX-T0YY": f"### Batch {created_date}-001 | T11-T31",
+            "- 覆盖任务：": "- 覆盖任务：`T11`、`T21`、`T31`",
+            "- 覆盖阶段：": "- 覆盖阶段：Batch 1-3 baseline scaffold",
+            "- 预读范围：": "- 预读范围：`spec.md`、`plan.md`、`tasks.md`、framework rules",
+            "- 激活的规则：": "- 激活的规则：`FR-086`、`FR-091`、`FR-097`",
+            "- 命令：": "- 命令：待执行",
+            "- 结果：": "- 结果：待执行",
+            "##### T0XX | 任务名称": "##### T11-T31 | direct-formal baseline scaffold",
+            "- 改动范围：": "- 改动范围：待补充",
+            "- 改动内容：": "- 改动内容：待补充",
+            "- 新增/调整的测试：": "- 新增/调整的测试：待补充",
+            "- 执行的命令：": "- 执行的命令：待补充",
+            "- 测试结果：": "- 测试结果：待补充",
+            "- 是否符合任务目标：": "- 是否符合任务目标：待确认",
+            "- 宪章/规格对齐：": "- 宪章/规格对齐：待补充",
+            "- 代码质量：": "- 代码质量：待补充",
+            "- 测试质量：": "- 测试质量：待补充",
+            "- 结论：`无 Critical 阻塞项` / `存在阻塞（需修复后重审）`": "- 结论：待补充",
+            "- `tasks.md` 同步状态：`已同步` / `未同步（原因）`": "- `tasks.md` 同步状态：待补充",
+            "- `related_plan`（如存在）同步状态：`已对账` / `存在漂移（BLOCKER）`": (
+                "- `related_plan`（如存在）同步状态：待补充"
+            ),
+            "- 关联 branch/worktree disposition 计划：`merged` / `archived` / `deleted` / `待最终收口`": (
+                "- 关联 branch/worktree disposition 计划：待最终收口"
+            ),
+            "- 说明：": "- 说明：待补充",
+            "无 / AD-001: ...": "无",
+            "-\n": "- 待补充\n",
+            "- 已完成 git 提交：`是` / `否`（须与 **本批唯一一次** commit 对齐）": (
+                "- 已完成 git 提交：否（须与 **本批唯一一次** commit 对齐）"
+            ),
+            "- 提交哈希：`xxxxxxx`（**仅在**上述 commit **成功之后** 填写 **一次**；不要求归档草稿中预填哈希后再二次修订）": (
+                "- 提交哈希：待本批提交后生成"
+            ),
+            "- 当前批次 branch disposition 状态：`待最终收口` / `merged` / `archived` / `deleted`": (
+                "- 当前批次 branch disposition 状态：待最终收口"
+            ),
+            "- 当前批次 worktree disposition 状态：`待最终收口` / `removed` / `retained（原因）`": (
+                "- 当前批次 worktree disposition 状态：待最终收口"
+            ),
+            "- 是否继续下一批：`是` / `阻断`": "- 是否继续下一批：待定",
+        }
+        for old, new in replacements.items():
+            rendered = rendered.replace(old, new)
+        return rendered
 
     def _render_frontmatter(
         self,

@@ -77,11 +77,18 @@ class TestCliWorkitemInit:
         assert (wi_dir / "spec.md").is_file()
         assert (wi_dir / "plan.md").is_file()
         assert (wi_dir / "tasks.md").is_file()
+        assert (wi_dir / "task-execution-log.md").is_file()
         assert not (root / "docs" / "superpowers" / "plans").exists()
 
         fm, _ = parse_markdown_frontmatter(wi_dir / "tasks.md")
         assert fm["related_plan"] == ".cursor/plans/direct-formal.md"
         assert fm["related_doc"] == ["docs/superpowers/specs/direct-formal-design.md"]
+
+        exec_log_text = (wi_dir / "task-execution-log.md").read_text(encoding="utf-8")
+        assert "统一验证命令" in exec_log_text
+        assert "代码审查结论" in exec_log_text
+        assert "任务/计划同步状态" in exec_log_text
+        assert "已完成 git 提交：否" in exec_log_text
 
     def test_workitem_init_auto_generated_id_updates_project_state(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch

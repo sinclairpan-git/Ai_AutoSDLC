@@ -115,7 +115,11 @@ def test_template_renders_minimal_context(template_name: str) -> None:
     if template_name != "execution-log.md.j2":
         assert "2026-01-01T00:00:00+00:00" in out
     else:
-        assert "待定" in out
+        assert "统一验证命令" in out
+        assert "代码审查" in out
+        assert "任务/计划同步状态" in out
+        assert "已完成 git 提交" in out
+        assert "待本批提交后生成" in out
 
 
 @pytest.mark.parametrize("template_name", TEMPLATES)
@@ -187,6 +191,10 @@ def test_template_renders_full_context(template_name: str) -> None:
     if template_name == "execution-log.md.j2":
         assert "B1" in out
         assert "T-1" in out
+        assert "统一验证命令" in out
+        assert "代码审查" in out
+        assert "任务/计划同步状态" in out
+        assert "已完成 git 提交" in out
 
 
 def test_scaffold_creates_four_files(tmp_path: Path) -> None:
@@ -198,10 +206,15 @@ def test_scaffold_creates_four_files(tmp_path: Path) -> None:
         "spec.md",
         "plan.md",
         "tasks.md",
-        "execution-log.md",
+        "task-execution-log.md",
     }
-    for name in ("spec.md", "plan.md", "tasks.md", "execution-log.md"):
+    for name in ("spec.md", "plan.md", "tasks.md", "task-execution-log.md"):
         assert (spec_dir / name).is_file()
+    log_text = (spec_dir / "task-execution-log.md").read_text(encoding="utf-8")
+    assert "统一验证命令" in log_text
+    assert "代码审查" in log_text
+    assert "任务/计划同步状态" in log_text
+    assert "已完成 git 提交" in log_text
 
 
 def test_scaffold_skips_existing_idempotent(tmp_path: Path) -> None:
@@ -222,7 +235,7 @@ def test_scaffold_returns_only_newly_created_paths(tmp_path: Path) -> None:
 
     created = scaffolder.scaffold(tmp_path, wid)
     assert len(created) == 3
-    assert {p.name for p in created} == {"plan.md", "tasks.md", "execution-log.md"}
+    assert {p.name for p in created} == {"plan.md", "tasks.md", "task-execution-log.md"}
     assert (spec_dir / "spec.md").read_text(encoding="utf-8") == "# existing\n"
 
 
@@ -266,7 +279,7 @@ def test_render_uses_context_backend_selection_and_records_decisions() -> None:
     assert decisions["spec.md"].decision_kind == BackendDecisionKind.DELEGATE
     assert decisions["plan.md"].decision_kind == BackendDecisionKind.DELEGATE
     assert decisions["tasks.md"].decision_kind == BackendDecisionKind.DELEGATE
-    assert decisions["execution-log.md"] is None
+    assert decisions["task-execution-log.md"] is None
     assert [call[0] for call in plugin.calls] == [
         "generate_spec",
         "generate_plan",
@@ -342,11 +355,11 @@ def test_scaffold_populates_backend_decisions_via_context(tmp_path: Path) -> Non
     assert decisions["spec.md"].decision_kind == BackendDecisionKind.DELEGATE
     assert decisions["plan.md"].decision_kind == BackendDecisionKind.DELEGATE
     assert decisions["tasks.md"].decision_kind == BackendDecisionKind.DELEGATE
-    assert decisions["execution-log.md"] is None
+    assert decisions["task-execution-log.md"] is None
     assert (tmp_path / "specs" / "WI-AUDIT-001" / "spec.md").read_text(encoding="utf-8") == "plugin spec"
     assert (tmp_path / "specs" / "WI-AUDIT-001" / "plan.md").read_text(encoding="utf-8") == "plugin plan"
     assert (tmp_path / "specs" / "WI-AUDIT-001" / "tasks.md").read_text(encoding="utf-8") == "plugin tasks"
-    assert (tmp_path / "specs" / "WI-AUDIT-001" / "execution-log.md").read_text(encoding="utf-8") == "template:execution-log.md.j2"
+    assert (tmp_path / "specs" / "WI-AUDIT-001" / "task-execution-log.md").read_text(encoding="utf-8") == "template:execution-log.md.j2"
     assert [call[0] for call in plugin.calls] == [
         "generate_spec",
         "generate_plan",

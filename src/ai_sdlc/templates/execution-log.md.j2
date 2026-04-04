@@ -1,23 +1,149 @@
-# 执行日志：{{ work_item_id }}
+# 任务执行日志：{{ project_name | default(work_item_id) }}
 
-**开始时间**：{{ started_at | default('待定') }}
-**状态**：进行中
+**功能编号**：`{{ work_item_id }}`
+**创建日期**：{{ created_at | default('待定') }}
+**状态**：草稿
 
----
+## 1. 归档规则
 
+- 本文件是 `{{ work_item_id }}` 的固定执行归档文件。
+- 后续每完成一批任务，都在**本文件末尾追加一个新的批次章节**。
+- 后续每一批任务开始前，必须先完成固定预读（PRD + 宪章 + 当前相关 spec 文档）。
+- 后续每一批任务结束后，必须按固定顺序执行：
+  - 先完成实现和验证
+  - 再把本批结果追加归档到本文件
+  - **单次提交（FR-097 / SC-022）**：将本批代码/测试与本次追加的归档段落、`tasks.md` 勾选 **合并为一次** `git commit`
+  - 只有在当前批次已经提交完成后，才能进入下一批任务
+
+## 2. 批次记录
+
+{% if batches %}
 {% for batch in batches %}
-## 批次 {{ batch.batch_id }}（阶段 {{ batch.phase }}）
+### Batch {{ batch.batch_id }} | {{ batch.tasks | join('-') }}
 
-- 关联 branch disposition：{{ batch.branch_disposition | default('待最终收口') }}
-- 关联 worktree disposition：{{ batch.worktree_disposition | default('待最终收口') }}
+#### 2.1 批次范围
 
-| 任务 | 状态 | 开始 | 完成 |
-|------|------|------|------|
+- 覆盖任务：{{ batch.tasks | join(', ') }}
+- 覆盖阶段：阶段 {{ batch.phase }}
+- 预读范围：待补充
+- 激活的规则：待补充
+
+#### 2.2 统一验证命令
+
+- `R1`（红灯验证，如有 TDD）
+  - 命令：待补充
+  - 结果：待补充
+- `V1`（定向验证）
+  - 命令：待补充
+  - 结果：待补充
+- `V2`（全量回归）
+  - 命令：待补充
+  - 结果：待补充
+
+#### 2.3 任务记录
+
 {% for task_id in batch.tasks %}
-| {{ task_id }} | {{ batch.status }} | {{ batch.started_at | default('-') }} | {{ batch.completed_at | default('-') }} |
-{% endfor %}
+##### {{ task_id }} | 待补任务名称
+
+- 改动范围：待补充
+- 改动内容：状态 `{{ batch.status }}`，开始 `{{ batch.started_at | default('-') }}`，完成 `{{ batch.completed_at | default('-') }}`
+- 新增/调整的测试：待补充
+- 执行的命令：待补充
+- 测试结果：待补充
+- 是否符合任务目标：待补充
 
 {% endfor %}
-{% if not batches %}
-_尚无执行记录_
+#### 2.4 代码审查结论（Mandatory）
+
+- 宪章/规格对齐：待补充
+- 代码质量：待补充
+- 测试质量：待补充
+- 结论：`无 Critical 阻塞项`
+
+#### 2.5 任务/计划同步状态（Mandatory）
+
+- `tasks.md` 同步状态：`未同步（待补充）`
+- `related_plan`（如存在）同步状态：`已对账`
+- 关联 branch/worktree disposition 计划：`待最终收口`
+- 说明：待补充
+
+#### 2.6 自动决策记录（如有）
+
+无
+
+#### 2.7 批次结论
+
+- 待补充
+
+#### 2.8 归档后动作
+
+- 已完成 git 提交：否
+- 提交哈希：待本批提交后生成
+- 当前批次 branch disposition 状态：待最终收口
+- 当前批次 worktree disposition 状态：待最终收口
+- 是否继续下一批：阻断
+
+{% endfor %}
+{% else %}
+### Batch {{ created_at[:10] if created_at else 'YYYY-MM-DD' }}-001 | T11-T31
+
+#### 2.1 批次范围
+
+- 覆盖任务：T11, T21, T31
+- 覆盖阶段：Batch 1-3
+- 预读范围：spec.md / plan.md / tasks.md / task-execution-log.md
+- 激活的规则：待补充
+
+#### 2.2 统一验证命令
+
+- `R1`（红灯验证，如有 TDD）
+  - 命令：待补充
+  - 结果：待补充
+- `V1`（定向验证）
+  - 命令：待补充
+  - 结果：待补充
+- `V2`（全量回归）
+  - 命令：待补充
+  - 结果：待补充
+
+#### 2.3 任务记录
+
+##### T11 | 待补任务名称
+
+- 改动范围：待补充
+- 改动内容：待补充
+- 新增/调整的测试：待补充
+- 执行的命令：待补充
+- 测试结果：待补充
+- 是否符合任务目标：待补充
+
+#### 2.4 代码审查结论（Mandatory）
+
+- 宪章/规格对齐：待补充
+- 代码质量：待补充
+- 测试质量：待补充
+- 结论：`无 Critical 阻塞项`
+
+#### 2.5 任务/计划同步状态（Mandatory）
+
+- `tasks.md` 同步状态：`未同步（待补充）`
+- `related_plan`（如存在）同步状态：`已对账`
+- 关联 branch/worktree disposition 计划：`待最终收口`
+- 说明：待补充
+
+#### 2.6 自动决策记录（如有）
+
+无
+
+#### 2.7 批次结论
+
+- 待补充
+
+#### 2.8 归档后动作
+
+- 已完成 git 提交：否
+- 提交哈希：待本批提交后生成
+- 当前批次 branch disposition 状态：待最终收口
+- 当前批次 worktree disposition 状态：待最终收口
+- 是否继续下一批：阻断
 {% endif %}

@@ -51,6 +51,7 @@ def test_scaffold_generates_parser_friendly_formal_docs_with_refs(
         "spec.md",
         "plan.md",
         "tasks.md",
+        "task-execution-log.md",
     )
     assert not (root / "docs" / "superpowers").exists()
 
@@ -72,13 +73,22 @@ def test_scaffold_generates_parser_friendly_formal_docs_with_refs(
     assert "[原则 2]" not in plan_body
     assert "specs/008-direct-formal-entry/" in plan_body
     assert "├── spec.md" in plan_body
-    assert "└── tasks.md" in plan_body
+    assert "├── tasks.md" in plan_body
+    assert "└── task-execution-log.md" in plan_body
 
     tasks_fm, tasks_body = parse_markdown_frontmatter(result.spec_dir / "tasks.md")
     assert tasks_fm == plan_fm
     assert tasks_body.lstrip().startswith("# 任务分解：Direct Formal Entry")
     assert "### Task 1.1 冻结 direct-formal 正式真值" in tasks_body
     assert "### Task 2.1 实现 direct-formal 脚手架" in tasks_body
+
+    exec_log_text = (result.spec_dir / "task-execution-log.md").read_text(encoding="utf-8")
+    assert "# 任务执行日志：Direct Formal Entry" in exec_log_text
+    assert f"**功能编号**：`{result.work_item_id}`" in exec_log_text
+    assert "统一验证命令" in exec_log_text
+    assert "代码审查结论" in exec_log_text
+    assert "任务/计划同步状态" in exec_log_text
+    assert "已完成 git 提交：否" in exec_log_text
 
     parsed = TasksParser().parse(result.spec_dir / "tasks.md")
     assert parsed.total_tasks == 3

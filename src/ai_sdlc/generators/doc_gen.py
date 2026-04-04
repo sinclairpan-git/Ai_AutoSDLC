@@ -42,14 +42,14 @@ class RenderResult:
 
 
 class DocScaffolder:
-    """Generate spec, plan, tasks, and execution-log scaffolds.
+    """Generate spec, plan, tasks, and task-execution-log scaffolds.
 
     Uses Jinja2 templates under ``ai_sdlc/templates`` and writes Markdown files
     under ``<root>/specs/<work_item_id>/``, skipping files that already exist.
     """
 
     TEMPLATES = ["spec.md.j2", "plan.md.j2", "tasks.md.j2", "execution-log.md.j2"]
-    OUTPUT_NAMES = ["spec.md", "plan.md", "tasks.md", "execution-log.md"]
+    OUTPUT_NAMES = ["spec.md", "plan.md", "tasks.md", "task-execution-log.md"]
 
     def __init__(
         self,
@@ -81,7 +81,7 @@ class DocScaffolder:
         if template_name == "execution-log.md.j2":
             decisions = self._backend_decisions(context)
             if decisions is not None:
-                decisions["execution-log.md"] = None
+                decisions["task-execution-log.md"] = None
         return RenderResult(content=rendered)
 
     def scaffold(
