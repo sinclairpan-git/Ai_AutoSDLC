@@ -1879,6 +1879,474 @@ specs:
         )
         assert ".ai-sdlc/memory/frontend-final-proof-closure/latest.yaml" in report
 
+    def test_program_final_proof_archive_execute_requires_explicit_confirmation(
+        self, initialized_project_dir: Path
+    ) -> None:
+        root = initialized_project_dir
+        _write_manifest(root)
+        _write_frontend_final_proof_closure_artifact(
+            root,
+            closure_result="deferred",
+            closure_state="deferred",
+            remaining_blockers=["spec 001-auth remediation still required"],
+        )
+
+        with patch("ai_sdlc.cli.program_cmd.find_project_root", return_value=root):
+            result = runner.invoke(app, ["program", "final-proof-archive", "--execute"])
+
+        assert result.exit_code == 2
+        assert "--yes" in result.output
+
+    def test_program_final_proof_archive_dry_run_surfaces_preview(
+        self, initialized_project_dir: Path
+    ) -> None:
+        root = initialized_project_dir
+        _write_manifest(root)
+        _write_frontend_final_proof_closure_artifact(
+            root,
+            closure_result="deferred",
+            closure_state="deferred",
+            remaining_blockers=["spec 001-auth remediation still required"],
+        )
+
+        with patch("ai_sdlc.cli.program_cmd.find_project_root", return_value=root):
+            result = runner.invoke(app, ["program", "final-proof-archive"])
+
+        assert result.exit_code == 0
+        assert "Program Frontend Final Proof Archive Dry-Run" in result.output
+        assert ".ai-sdlc/memory/frontend-final-proof-closure/latest.yaml" in result.output
+        assert not (
+            root
+            / ".ai-sdlc"
+            / "memory"
+            / "frontend-final-proof-archive"
+            / "latest.yaml"
+        ).exists()
+
+    def test_program_final_proof_archive_execute_writes_archive_artifact(
+        self, initialized_project_dir: Path
+    ) -> None:
+        root = initialized_project_dir
+        _write_manifest(root)
+        _write_frontend_final_proof_closure_artifact(
+            root,
+            closure_result="deferred",
+            closure_state="deferred",
+            remaining_blockers=["spec 001-auth remediation still required"],
+        )
+        report_rel = ".ai-sdlc/memory/frontend-final-proof-archive.md"
+
+        with patch("ai_sdlc.cli.program_cmd.find_project_root", return_value=root):
+            result = runner.invoke(
+                app,
+                [
+                    "program",
+                    "final-proof-archive",
+                    "--execute",
+                    "--yes",
+                    "--report",
+                    report_rel,
+                ],
+            )
+
+        artifact_path = (
+            root
+            / ".ai-sdlc"
+            / "memory"
+            / "frontend-final-proof-archive"
+            / "latest.yaml"
+        )
+        assert result.exit_code == 1
+        assert "Program Frontend Final Proof Archive Execute" in result.output
+        assert "deferred" in result.output
+        assert (
+            "no final proof archive actions executed in final proof archive baseline"
+            in result.output
+        )
+        assert artifact_path.is_file()
+        assert ".ai-sdlc/memory/frontend-final-proof-closure/latest.yaml" in result.output
+        assert ".ai-sdlc/memory/frontend-final-proof-archive/latest.yaml" in result.output
+        payload = yaml.safe_load(artifact_path.read_text(encoding="utf-8"))
+        assert payload["archive_result"] == "deferred"
+        assert payload["archive_state"] == "deferred"
+        assert payload["confirmed"] is True
+        report = (root / report_rel).read_text(encoding="utf-8")
+        assert "Frontend Final Proof Archive Result" in report
+        assert "Frontend Final Proof Archive Artifact" in report
+        assert "deferred" in report
+        assert (
+            "no final proof archive actions executed in final proof archive baseline"
+            in report
+        )
+        assert ".ai-sdlc/memory/frontend-final-proof-closure/latest.yaml" in report
+        assert ".ai-sdlc/memory/frontend-final-proof-archive/latest.yaml" in report
+
+    def test_program_final_proof_archive_thread_archive_execute_requires_explicit_confirmation(
+        self, initialized_project_dir: Path
+    ) -> None:
+        root = initialized_project_dir
+        _write_manifest(root)
+        _write_frontend_final_proof_archive_artifact(
+            root,
+            archive_result="deferred",
+            archive_state="deferred",
+            remaining_blockers=["spec 001-auth remediation still required"],
+        )
+
+        with patch("ai_sdlc.cli.program_cmd.find_project_root", return_value=root):
+            result = runner.invoke(
+                app,
+                ["program", "final-proof-archive-thread-archive", "--execute"],
+            )
+
+        assert result.exit_code == 2
+        assert "--yes" in result.output
+
+    def test_program_final_proof_archive_thread_archive_dry_run_surfaces_preview(
+        self, initialized_project_dir: Path
+    ) -> None:
+        root = initialized_project_dir
+        _write_manifest(root)
+        _write_frontend_final_proof_archive_artifact(
+            root,
+            archive_result="deferred",
+            archive_state="deferred",
+            remaining_blockers=["spec 001-auth remediation still required"],
+        )
+
+        with patch("ai_sdlc.cli.program_cmd.find_project_root", return_value=root):
+            result = runner.invoke(
+                app,
+                ["program", "final-proof-archive-thread-archive"],
+            )
+
+        assert result.exit_code == 0
+        assert "Program Frontend Final Proof Archive Thread Archive Dry-Run" in result.output
+        assert ".ai-sdlc/memory/frontend-final-proof-archive/latest.yaml" in result.output
+        assert "thread archive state: not_started" in result.output
+        assert not (
+            root
+            / ".ai-sdlc"
+            / "memory"
+            / "frontend-final-proof-archive-thread-archive"
+            / "latest.yaml"
+        ).exists()
+
+    def test_program_final_proof_archive_thread_archive_execute_reports_deferred_result(
+        self, initialized_project_dir: Path
+    ) -> None:
+        root = initialized_project_dir
+        _write_manifest(root)
+        _write_frontend_final_proof_archive_artifact(
+            root,
+            archive_result="deferred",
+            archive_state="deferred",
+            remaining_blockers=["spec 001-auth remediation still required"],
+        )
+        report_rel = ".ai-sdlc/memory/frontend-final-proof-archive-thread-archive.md"
+
+        with patch("ai_sdlc.cli.program_cmd.find_project_root", return_value=root):
+            result = runner.invoke(
+                app,
+                [
+                    "program",
+                    "final-proof-archive-thread-archive",
+                    "--execute",
+                    "--yes",
+                    "--report",
+                    report_rel,
+                ],
+            )
+
+        assert result.exit_code == 1
+        assert "Program Frontend Final Proof Archive Thread Archive Execute" in result.output
+        assert "Frontend Final Proof Archive Thread Archive Result" in result.output
+        assert "deferred" in result.output
+        assert (
+            "no thread archive actions executed in final proof archive thread archive baseline"
+            in result.output
+        )
+        assert (
+            "final proof archive thread archive baseline does not execute project cleanup actions yet"
+            in result.output
+        )
+        report = (root / report_rel).read_text(encoding="utf-8")
+        assert "Frontend Final Proof Archive Thread Archive Result" in report
+        assert "Frontend Final Proof Archive Artifact" in report
+        assert "deferred" in report
+        assert (
+            "no thread archive actions executed in final proof archive thread archive baseline"
+            in report
+        )
+        assert ".ai-sdlc/memory/frontend-final-proof-archive/latest.yaml" in report
+        assert not (
+            root
+            / ".ai-sdlc"
+            / "memory"
+            / "frontend-final-proof-archive-thread-archive"
+            / "latest.yaml"
+        ).exists()
+
+    def test_program_final_proof_archive_project_cleanup_execute_requires_explicit_confirmation(
+        self, initialized_project_dir: Path
+    ) -> None:
+        root = initialized_project_dir
+        _write_manifest(root)
+        _write_frontend_final_proof_archive_artifact(
+            root,
+            archive_result="deferred",
+            archive_state="deferred",
+            remaining_blockers=["spec 001-auth remediation still required"],
+        )
+
+        with patch("ai_sdlc.cli.program_cmd.find_project_root", return_value=root):
+            result = runner.invoke(
+                app,
+                ["program", "final-proof-archive-project-cleanup", "--execute"],
+            )
+
+        assert result.exit_code == 2
+        assert "--yes" in result.output
+
+    def test_program_final_proof_archive_project_cleanup_dry_run_surfaces_preview(
+        self, initialized_project_dir: Path
+    ) -> None:
+        root = initialized_project_dir
+        _write_manifest(root)
+        _write_frontend_final_proof_archive_artifact(
+            root,
+            archive_result="deferred",
+            archive_state="deferred",
+            remaining_blockers=["spec 001-auth remediation still required"],
+        )
+
+        with patch("ai_sdlc.cli.program_cmd.find_project_root", return_value=root):
+            result = runner.invoke(
+                app,
+                ["program", "final-proof-archive-project-cleanup"],
+            )
+
+        assert result.exit_code == 0
+        assert "Program Frontend Final Proof Archive Project Cleanup Dry-Run" in result.output
+        assert ".ai-sdlc/memory/frontend-final-proof-archive/latest.yaml" in result.output
+        assert "project cleanup state: not_started" in result.output
+        assert "thread archive state: deferred" in result.output
+        assert "cleanup targets state: missing" in result.output
+        assert "cleanup targets count: 0" in result.output
+        assert "cleanup target eligibility state: missing" in result.output
+        assert "cleanup target eligibility count: 0" in result.output
+        assert "cleanup preview plan state: missing" in result.output
+        assert "cleanup preview plan count: 0" in result.output
+        assert "cleanup mutation proposal state: missing" in result.output
+        assert "cleanup mutation proposal count: 0" in result.output
+        assert "cleanup mutation proposal approval state: missing" in result.output
+        assert "cleanup mutation proposal approval count: 0" in result.output
+        assert "cleanup mutation execution gating state: missing" in result.output
+        assert "cleanup mutation execution gating count: 0" in result.output
+        assert not (
+            root
+            / ".ai-sdlc"
+            / "memory"
+            / "frontend-final-proof-archive-project-cleanup"
+            / "latest.yaml"
+        ).exists()
+
+    def test_program_final_proof_archive_project_cleanup_execute_runs_canonical_gated_cleanup_mutations(
+        self, initialized_project_dir: Path
+    ) -> None:
+        root = initialized_project_dir
+        _write_manifest(root)
+        archive_report = root / "specs" / "001-auth" / "threads" / "archive-001.md"
+        archive_report.parent.mkdir(parents=True, exist_ok=True)
+        archive_report.write_text("# archived thread\n", encoding="utf-8")
+        spec_dir = root / "specs" / "002-course"
+        (spec_dir / "notes").mkdir(parents=True, exist_ok=True)
+        (spec_dir / "notes" / "todo.md").write_text("cleanup me\n", encoding="utf-8")
+        _write_frontend_final_proof_archive_artifact(
+            root,
+            archive_result="deferred",
+            archive_state="deferred",
+            remaining_blockers=["spec 001-auth remediation still required"],
+        )
+        _write_frontend_final_proof_archive_project_cleanup_seed_artifact(
+            root,
+            cleanup_targets=[
+                {
+                    "target_id": "cleanup-thread-archive-report",
+                    "path": "specs/001-auth/threads/archive-001.md",
+                    "kind": "thread_archive",
+                    "cleanup_action": "archive_thread_report",
+                },
+                {
+                    "target_id": "cleanup-spec-dir",
+                    "path": "specs/002-course",
+                    "kind": "spec_dir",
+                    "cleanup_action": "remove_spec_dir",
+                },
+            ],
+            cleanup_target_eligibility=[
+                {
+                    "target_id": "cleanup-thread-archive-report",
+                    "eligibility": "eligible",
+                    "reason": "thread archive report may proceed to preview planning truth",
+                },
+                {
+                    "target_id": "cleanup-spec-dir",
+                    "eligibility": "eligible",
+                    "reason": "explicit cleanup target may proceed to future planning truth",
+                },
+            ],
+            cleanup_preview_plan=[
+                {
+                    "target_id": "cleanup-thread-archive-report",
+                    "planned_action": "archive_thread_report",
+                    "reason": "preview canonical archive-only cleanup action",
+                },
+                {
+                    "target_id": "cleanup-spec-dir",
+                    "planned_action": "remove_spec_dir",
+                    "reason": "preview canonical spec cleanup action",
+                },
+            ],
+            cleanup_mutation_proposal=[
+                {
+                    "target_id": "cleanup-thread-archive-report",
+                    "proposed_action": "archive_thread_report",
+                    "reason": "proposal mirrors previewed archive-only cleanup action",
+                },
+                {
+                    "target_id": "cleanup-spec-dir",
+                    "proposed_action": "remove_spec_dir",
+                    "reason": "proposal mirrors previewed spec cleanup action",
+                },
+            ],
+            cleanup_mutation_proposal_approval=[
+                {
+                    "target_id": "cleanup-thread-archive-report",
+                    "approved_action": "archive_thread_report",
+                    "reason": "approval matches the proposed archive-only cleanup action",
+                },
+                {
+                    "target_id": "cleanup-spec-dir",
+                    "approved_action": "remove_spec_dir",
+                    "reason": "approval matches the proposed spec cleanup action",
+                },
+            ],
+            cleanup_mutation_execution_gating=[
+                {
+                    "target_id": "cleanup-thread-archive-report",
+                    "gated_action": "archive_thread_report",
+                    "reason": "execution gating matches the approved archive-only cleanup action",
+                },
+                {
+                    "target_id": "cleanup-spec-dir",
+                    "gated_action": "remove_spec_dir",
+                    "reason": "execution gating matches the approved spec cleanup action",
+                },
+            ],
+        )
+        report_rel = ".ai-sdlc/memory/frontend-final-proof-archive-project-cleanup.md"
+
+        with patch("ai_sdlc.cli.program_cmd.find_project_root", return_value=root):
+            result = runner.invoke(
+                app,
+                [
+                    "program",
+                    "final-proof-archive-project-cleanup",
+                    "--execute",
+                    "--yes",
+                    "--report",
+                    report_rel,
+                ],
+            )
+
+        artifact_path = (
+            root
+            / ".ai-sdlc"
+            / "memory"
+            / "frontend-final-proof-archive-project-cleanup"
+            / "latest.yaml"
+        )
+        assert result.exit_code == 0
+        assert "Program Frontend Final Proof Archive Project Cleanup Execute" in result.output
+        assert "Frontend Final Proof Archive Project Cleanup Result" in result.output
+        assert "project cleanup result: completed" in result.output
+        assert "project cleanup state: completed" in result.output
+        assert "cleanup targets state: listed" in result.output
+        assert "cleanup targets count: 2" in result.output
+        assert "cleanup target eligibility state: listed" in result.output
+        assert "cleanup target eligibility count: 2" in result.output
+        assert "cleanup preview plan state: listed" in result.output
+        assert "cleanup preview plan count: 2" in result.output
+        assert "cleanup mutation proposal state: listed" in result.output
+        assert "cleanup mutation proposal count: 2" in result.output
+        assert "cleanup mutation proposal approval state: listed" in result.output
+        assert "cleanup mutation proposal approval count: 2" in result.output
+        assert "cleanup mutation execution gating state: listed" in result.output
+        assert "cleanup mutation execution gating count: 2" in result.output
+        assert (
+            "executed 2 cleanup mutation(s) from canonical cleanup_mutation_execution_gating"
+            in result.output
+        )
+        assert "wrote: specs/001-auth/threads/archive-001.md" in result.output
+        assert "wrote: specs/002-course" in result.output
+        assert artifact_path.is_file()
+        payload = yaml.safe_load(artifact_path.read_text(encoding="utf-8"))
+        assert payload["project_cleanup_result"] == "completed"
+        assert payload["project_cleanup_state"] == "completed"
+        assert payload["cleanup_targets_state"] == "listed"
+        assert len(payload["cleanup_targets"]) == 2
+        assert payload["cleanup_target_eligibility_state"] == "listed"
+        assert len(payload["cleanup_target_eligibility"]) == 2
+        assert payload["cleanup_preview_plan_state"] == "listed"
+        assert len(payload["cleanup_preview_plan"]) == 2
+        assert payload["cleanup_mutation_proposal_state"] == "listed"
+        assert len(payload["cleanup_mutation_proposal"]) == 2
+        assert payload["cleanup_mutation_proposal_approval_state"] == "listed"
+        assert len(payload["cleanup_mutation_proposal_approval"]) == 2
+        assert payload["cleanup_mutation_execution_gating_state"] == "listed"
+        assert len(payload["cleanup_mutation_execution_gating"]) == 2
+        assert payload["confirmed"] is True
+        assert payload["written_paths"] == [
+            "specs/001-auth/threads/archive-001.md",
+            "specs/002-course",
+        ]
+        assert payload["remaining_blockers"] == []
+        assert payload["warnings"] == []
+        assert payload["source_linkage"]["project_cleanup_state"] == "completed"
+        assert payload["source_linkage"]["project_cleanup_result"] == "completed"
+        report = (root / report_rel).read_text(encoding="utf-8")
+        assert "Frontend Final Proof Archive Project Cleanup Result" in report
+        assert "Frontend Final Proof Archive Project Cleanup Artifact" in report
+        assert "Project cleanup result: `completed`" in report
+        assert "Project cleanup state: `completed`" in report
+        assert "Cleanup targets state: `listed`" in report
+        assert "Cleanup targets count: `2`" in report
+        assert "Cleanup target eligibility state: `listed`" in report
+        assert "Cleanup target eligibility count: `2`" in report
+        assert "Cleanup preview plan state: `listed`" in report
+        assert "Cleanup preview plan count: `2`" in report
+        assert "Cleanup mutation proposal state: `listed`" in report
+        assert "Cleanup mutation proposal count: `2`" in report
+        assert "Cleanup mutation proposal approval state: `listed`" in report
+        assert "Cleanup mutation proposal approval count: `2`" in report
+        assert "Cleanup mutation execution gating state: `listed`" in report
+        assert "Cleanup mutation execution gating count: `2`" in report
+        assert (
+            "executed 2 cleanup mutation(s) from canonical cleanup_mutation_execution_gating"
+            in report
+        )
+        assert "- Written paths:" in report
+        assert "  - specs/001-auth/threads/archive-001.md" in report
+        assert "  - specs/002-course" in report
+        assert ".ai-sdlc/memory/frontend-final-proof-archive/latest.yaml" in report
+        assert (
+            ".ai-sdlc/memory/frontend-final-proof-archive-project-cleanup/latest.yaml"
+            in report
+        )
+        assert not archive_report.exists()
+        assert not spec_dir.exists()
+
 
 def _write_frontend_remediation_writeback_artifact(
     root: Path,
@@ -2505,5 +2973,196 @@ def _write_frontend_final_proof_publication_artifact(
             sort_keys=False,
             allow_unicode=True,
         ),
+        encoding="utf-8",
+    )
+
+
+def _write_frontend_final_proof_closure_artifact(
+    root: Path,
+    *,
+    closure_result: str,
+    closure_state: str,
+    remaining_blockers: list[str],
+) -> None:
+    artifact_path = (
+        root / ".ai-sdlc" / "memory" / "frontend-final-proof-closure" / "latest.yaml"
+    )
+    artifact_path.parent.mkdir(parents=True, exist_ok=True)
+    artifact_path.write_text(
+        yaml.safe_dump(
+            {
+                "generated_at": "2026-04-04T04:00:00Z",
+                "manifest_path": "program-manifest.yaml",
+                "artifact_source_path": ".ai-sdlc/memory/frontend-final-proof-publication/latest.yaml",
+                "artifact_generated_at": "2026-04-04T03:00:00Z",
+                "required": True,
+                "confirmation_required": True,
+                "confirmed": True,
+                "publication_state": "deferred",
+                "closure_state": closure_state,
+                "closure_result": closure_result,
+                "closure_summaries": [
+                    "no final proof closure actions executed in final proof closure baseline"
+                ],
+                "written_paths": [],
+                "remaining_blockers": list(remaining_blockers),
+                "warnings": [
+                    "final proof closure baseline does not persist closure artifacts yet"
+                ],
+                "steps": [
+                    {
+                        "spec_id": "001-auth",
+                        "path": "specs/001-auth",
+                        "closure_state": "not_started",
+                        "pending_inputs": ["frontend_contract_observations"],
+                        "suggested_next_actions": [
+                            "materialize final proof archive review context",
+                            "re-run ai-sdlc verify constraints",
+                        ],
+                        "source_linkage": {
+                            "closure_state": closure_state,
+                            "final_proof_publication_artifact_path": ".ai-sdlc/memory/frontend-final-proof-publication/latest.yaml",
+                        },
+                    }
+                ],
+                "source_linkage": {
+                    "publication_state": "deferred",
+                    "closure_state": closure_state,
+                    "closure_result": closure_result,
+                    "final_proof_publication_artifact_path": ".ai-sdlc/memory/frontend-final-proof-publication/latest.yaml",
+                    "final_proof_closure_artifact_path": ".ai-sdlc/memory/frontend-final-proof-closure/latest.yaml",
+                },
+            },
+            sort_keys=False,
+            allow_unicode=True,
+        ),
+        encoding="utf-8",
+    )
+
+
+def _write_frontend_final_proof_archive_artifact(
+    root: Path,
+    *,
+    archive_result: str,
+    archive_state: str,
+    remaining_blockers: list[str],
+) -> None:
+    artifact_path = (
+        root / ".ai-sdlc" / "memory" / "frontend-final-proof-archive" / "latest.yaml"
+    )
+    artifact_path.parent.mkdir(parents=True, exist_ok=True)
+    artifact_path.write_text(
+        yaml.safe_dump(
+            {
+                "generated_at": "2026-04-04T05:00:00Z",
+                "manifest_path": "program-manifest.yaml",
+                "artifact_source_path": ".ai-sdlc/memory/frontend-final-proof-closure/latest.yaml",
+                "artifact_generated_at": "2026-04-04T04:00:00Z",
+                "required": True,
+                "confirmation_required": True,
+                "confirmed": True,
+                "closure_state": "deferred",
+                "archive_state": archive_state,
+                "archive_result": archive_result,
+                "archive_summaries": [
+                    "no final proof archive actions executed in final proof archive baseline"
+                ],
+                "existing_written_paths": [],
+                "written_paths": [],
+                "remaining_blockers": list(remaining_blockers),
+                "warnings": [
+                    "final proof archive baseline defers thread archive and cleanup actions"
+                ],
+                "steps": [
+                    {
+                        "spec_id": "001-auth",
+                        "path": "specs/001-auth",
+                        "archive_state": archive_state,
+                        "pending_inputs": ["frontend_contract_observations"],
+                        "suggested_next_actions": [
+                            "materialize final proof archive thread archive review context",
+                            "prepare bounded thread archive execution",
+                        ],
+                        "source_linkage": {
+                            "archive_state": archive_state,
+                            "final_proof_closure_artifact_path": ".ai-sdlc/memory/frontend-final-proof-closure/latest.yaml",
+                        },
+                    }
+                ],
+                "source_linkage": {
+                    "closure_state": "deferred",
+                    "archive_state": archive_state,
+                    "archive_result": archive_result,
+                    "final_proof_closure_artifact_path": ".ai-sdlc/memory/frontend-final-proof-closure/latest.yaml",
+                    "final_proof_archive_artifact_path": ".ai-sdlc/memory/frontend-final-proof-archive/latest.yaml",
+                },
+            },
+            sort_keys=False,
+            allow_unicode=True,
+        ),
+        encoding="utf-8",
+    )
+
+
+def _write_frontend_final_proof_archive_project_cleanup_seed_artifact(
+    root: Path,
+    *,
+    cleanup_targets: object,
+    cleanup_target_eligibility: object | None = None,
+    cleanup_preview_plan: object | None = None,
+    cleanup_mutation_proposal: object | None = None,
+    cleanup_mutation_proposal_approval: object | None = None,
+    cleanup_mutation_execution_gating: object | None = None,
+) -> None:
+    artifact_path = (
+        root / ".ai-sdlc" / "memory" / "frontend-final-proof-archive-project-cleanup" / "latest.yaml"
+    )
+    artifact_path.parent.mkdir(parents=True, exist_ok=True)
+    payload = {
+        "generated_at": "2026-04-04T07:00:00Z",
+        "manifest_path": "program-manifest.yaml",
+        "artifact_source_path": ".ai-sdlc/memory/frontend-final-proof-archive/latest.yaml",
+        "artifact_generated_at": "2026-04-04T05:00:00Z",
+        "required": True,
+        "confirmation_required": True,
+        "confirmed": True,
+        "thread_archive_state": "deferred",
+        "thread_archive_result": "deferred",
+        "project_cleanup_state": "deferred",
+        "project_cleanup_result": "deferred",
+        "cleanup_targets_state": "seeded",
+        "cleanup_targets": cleanup_targets,
+        "project_cleanup_summaries": [
+            "seeded cleanup target truth for CLI tests"
+        ],
+        "written_paths": [],
+        "remaining_blockers": ["spec 001-auth remediation still required"],
+        "warnings": [],
+        "steps": [],
+        "source_linkage": {
+            "thread_archive_state": "deferred",
+            "thread_archive_result": "deferred",
+            "project_cleanup_state": "deferred",
+            "project_cleanup_result": "deferred",
+            "final_proof_archive_artifact_path": ".ai-sdlc/memory/frontend-final-proof-archive/latest.yaml",
+            "final_proof_archive_project_cleanup_artifact_path": ".ai-sdlc/memory/frontend-final-proof-archive-project-cleanup/latest.yaml",
+        },
+    }
+    if cleanup_target_eligibility is not None:
+        payload["cleanup_target_eligibility"] = cleanup_target_eligibility
+    if cleanup_preview_plan is not None:
+        payload["cleanup_preview_plan"] = cleanup_preview_plan
+    if cleanup_mutation_proposal is not None:
+        payload["cleanup_mutation_proposal"] = cleanup_mutation_proposal
+    if cleanup_mutation_proposal_approval is not None:
+        payload["cleanup_mutation_proposal_approval"] = (
+            cleanup_mutation_proposal_approval
+        )
+    if cleanup_mutation_execution_gating is not None:
+        payload["cleanup_mutation_execution_gating"] = (
+            cleanup_mutation_execution_gating
+        )
+    artifact_path.write_text(
+        yaml.safe_dump(payload, sort_keys=False, allow_unicode=True),
         encoding="utf-8",
     )

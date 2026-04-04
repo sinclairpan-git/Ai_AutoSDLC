@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import shutil
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -80,6 +81,12 @@ PROGRAM_FRONTEND_FINAL_PROOF_PUBLICATION_ARTIFACT_REL_PATH = (
 PROGRAM_FRONTEND_FINAL_PROOF_CLOSURE_ARTIFACT_REL_PATH = (
     ".ai-sdlc/memory/frontend-final-proof-closure/latest.yaml"
 )
+PROGRAM_FRONTEND_FINAL_PROOF_ARCHIVE_ARTIFACT_REL_PATH = (
+    ".ai-sdlc/memory/frontend-final-proof-archive/latest.yaml"
+)
+PROGRAM_FRONTEND_FINAL_PROOF_ARCHIVE_PROJECT_CLEANUP_ARTIFACT_REL_PATH = (
+    ".ai-sdlc/memory/frontend-final-proof-archive-project-cleanup/latest.yaml"
+)
 PROGRAM_FRONTEND_PROVIDER_RUNTIME_DEFERRED_SUMMARY = (
     "no patches generated in guarded provider runtime baseline"
 )
@@ -109,6 +116,15 @@ PROGRAM_FRONTEND_FINAL_PROOF_PUBLICATION_DEFERRED_SUMMARY = (
 )
 PROGRAM_FRONTEND_FINAL_PROOF_CLOSURE_DEFERRED_SUMMARY = (
     "no final proof closure actions executed in final proof closure baseline"
+)
+PROGRAM_FRONTEND_FINAL_PROOF_ARCHIVE_DEFERRED_SUMMARY = (
+    "no final proof archive actions executed in final proof archive baseline"
+)
+PROGRAM_FRONTEND_FINAL_PROOF_ARCHIVE_THREAD_ARCHIVE_DEFERRED_SUMMARY = (
+    "no thread archive actions executed in final proof archive thread archive baseline"
+)
+PROGRAM_FRONTEND_FINAL_PROOF_ARCHIVE_PROJECT_CLEANUP_DEFERRED_SUMMARY = (
+    "no project cleanup actions executed in final proof archive project cleanup baseline"
 )
 
 
@@ -629,6 +645,150 @@ class ProgramFrontendFinalProofClosureResult:
     closure_state: str
     closure_result: str
     closure_summaries: list[str] = field(default_factory=list)
+    written_paths: list[str] = field(default_factory=list)
+    remaining_blockers: list[str] = field(default_factory=list)
+    warnings: list[str] = field(default_factory=list)
+    source_linkage: dict[str, str] = field(default_factory=dict)
+
+
+@dataclass
+class ProgramFrontendFinalProofArchiveRequestStep:
+    spec_id: str
+    path: str
+    archive_state: str
+    pending_inputs: list[str] = field(default_factory=list)
+    suggested_next_actions: list[str] = field(default_factory=list)
+    source_linkage: dict[str, str] = field(default_factory=dict)
+
+
+@dataclass
+class ProgramFrontendFinalProofArchiveRequest:
+    required: bool
+    confirmation_required: bool
+    archive_state: str
+    closure_state: str
+    artifact_source_path: str
+    artifact_generated_at: str
+    written_paths: list[str] = field(default_factory=list)
+    steps: list[ProgramFrontendFinalProofArchiveRequestStep] = field(
+        default_factory=list
+    )
+    remaining_blockers: list[str] = field(default_factory=list)
+    warnings: list[str] = field(default_factory=list)
+    source_linkage: dict[str, str] = field(default_factory=dict)
+
+
+@dataclass
+class ProgramFrontendFinalProofArchiveResult:
+    passed: bool
+    confirmed: bool
+    archive_state: str
+    archive_result: str
+    archive_summaries: list[str] = field(default_factory=list)
+    written_paths: list[str] = field(default_factory=list)
+    remaining_blockers: list[str] = field(default_factory=list)
+    warnings: list[str] = field(default_factory=list)
+    source_linkage: dict[str, str] = field(default_factory=dict)
+
+
+@dataclass
+class ProgramFrontendFinalProofArchiveThreadArchiveRequestStep:
+    spec_id: str
+    path: str
+    thread_archive_state: str
+    pending_inputs: list[str] = field(default_factory=list)
+    suggested_next_actions: list[str] = field(default_factory=list)
+    source_linkage: dict[str, str] = field(default_factory=dict)
+
+
+@dataclass
+class ProgramFrontendFinalProofArchiveThreadArchiveRequest:
+    required: bool
+    confirmation_required: bool
+    thread_archive_state: str
+    archive_state: str
+    artifact_source_path: str
+    artifact_generated_at: str
+    written_paths: list[str] = field(default_factory=list)
+    steps: list[ProgramFrontendFinalProofArchiveThreadArchiveRequestStep] = field(
+        default_factory=list
+    )
+    remaining_blockers: list[str] = field(default_factory=list)
+    warnings: list[str] = field(default_factory=list)
+    source_linkage: dict[str, str] = field(default_factory=dict)
+
+
+@dataclass
+class ProgramFrontendFinalProofArchiveThreadArchiveResult:
+    passed: bool
+    confirmed: bool
+    thread_archive_state: str
+    thread_archive_result: str
+    thread_archive_summaries: list[str] = field(default_factory=list)
+    written_paths: list[str] = field(default_factory=list)
+    remaining_blockers: list[str] = field(default_factory=list)
+    warnings: list[str] = field(default_factory=list)
+    source_linkage: dict[str, str] = field(default_factory=dict)
+
+
+@dataclass
+class ProgramFrontendFinalProofArchiveProjectCleanupRequestStep:
+    spec_id: str
+    path: str
+    project_cleanup_state: str
+    pending_inputs: list[str] = field(default_factory=list)
+    suggested_next_actions: list[str] = field(default_factory=list)
+    source_linkage: dict[str, str] = field(default_factory=dict)
+
+
+@dataclass
+class ProgramFrontendFinalProofArchiveProjectCleanupRequest:
+    required: bool
+    confirmation_required: bool
+    project_cleanup_state: str
+    thread_archive_state: str
+    cleanup_targets_state: str
+    cleanup_target_eligibility_state: str
+    cleanup_preview_plan_state: str
+    cleanup_mutation_proposal_state: str
+    cleanup_mutation_proposal_approval_state: str
+    cleanup_mutation_execution_gating_state: str
+    artifact_source_path: str
+    artifact_generated_at: str
+    written_paths: list[str] = field(default_factory=list)
+    cleanup_targets: list[object] = field(default_factory=list)
+    cleanup_target_eligibility: list[object] = field(default_factory=list)
+    cleanup_preview_plan: list[object] = field(default_factory=list)
+    cleanup_mutation_proposal: list[object] = field(default_factory=list)
+    cleanup_mutation_proposal_approval: list[object] = field(default_factory=list)
+    cleanup_mutation_execution_gating: list[object] = field(default_factory=list)
+    steps: list[ProgramFrontendFinalProofArchiveProjectCleanupRequestStep] = field(
+        default_factory=list
+    )
+    remaining_blockers: list[str] = field(default_factory=list)
+    warnings: list[str] = field(default_factory=list)
+    source_linkage: dict[str, str] = field(default_factory=dict)
+
+
+@dataclass
+class ProgramFrontendFinalProofArchiveProjectCleanupResult:
+    passed: bool
+    confirmed: bool
+    project_cleanup_state: str
+    project_cleanup_result: str
+    cleanup_targets_state: str
+    cleanup_target_eligibility_state: str
+    cleanup_preview_plan_state: str
+    cleanup_mutation_proposal_state: str
+    cleanup_mutation_proposal_approval_state: str
+    cleanup_mutation_execution_gating_state: str
+    project_cleanup_summaries: list[str] = field(default_factory=list)
+    cleanup_targets: list[object] = field(default_factory=list)
+    cleanup_target_eligibility: list[object] = field(default_factory=list)
+    cleanup_preview_plan: list[object] = field(default_factory=list)
+    cleanup_mutation_proposal: list[object] = field(default_factory=list)
+    cleanup_mutation_proposal_approval: list[object] = field(default_factory=list)
+    cleanup_mutation_execution_gating: list[object] = field(default_factory=list)
     written_paths: list[str] = field(default_factory=list)
     remaining_blockers: list[str] = field(default_factory=list)
     warnings: list[str] = field(default_factory=list)
@@ -3266,6 +3426,1207 @@ class ProgramService:
         )
         return artifact_path
 
+    def build_frontend_final_proof_archive_request(
+        self,
+        manifest: ProgramManifest,
+        *,
+        artifact_path: Path | None = None,
+    ) -> ProgramFrontendFinalProofArchiveRequest:
+        """Build the final proof archive request from final proof closure artifact."""
+        effective_artifact_path = artifact_path or (
+            self.root / PROGRAM_FRONTEND_FINAL_PROOF_CLOSURE_ARTIFACT_REL_PATH
+        )
+        if not effective_artifact_path.is_absolute():
+            effective_artifact_path = self.root / effective_artifact_path
+
+        relative_artifact_path = _relative_to_root_or_str(
+            self.root, effective_artifact_path
+        )
+        payload, warnings = self._load_frontend_final_proof_closure_artifact_payload(
+            effective_artifact_path
+        )
+        if payload is None:
+            return ProgramFrontendFinalProofArchiveRequest(
+                required=False,
+                confirmation_required=False,
+                archive_state="missing_artifact",
+                closure_state="missing_artifact",
+                artifact_source_path=relative_artifact_path,
+                artifact_generated_at="",
+                warnings=warnings,
+                source_linkage={
+                    "final_proof_closure_artifact_path": relative_artifact_path,
+                    "archive_state": "missing_artifact",
+                },
+            )
+
+        artifact_generated_at = str(payload.get("generated_at", "")).strip()
+        closure_state = str(payload.get("closure_state", "")).strip() or "unknown"
+        written_paths = _unique_strings(
+            [
+                *_normalize_string_list(payload.get("existing_written_paths", [])),
+                *_normalize_string_list(payload.get("written_paths", [])),
+            ]
+        )
+        remaining_blockers = _normalize_string_list(payload.get("remaining_blockers", []))
+        steps: list[ProgramFrontendFinalProofArchiveRequestStep] = []
+        spec_by_id = {spec.id: spec for spec in manifest.specs}
+        for step_payload in _normalize_mapping_list(payload.get("steps", [])):
+            spec_id = str(step_payload.get("spec_id", "")).strip()
+            if not spec_id:
+                continue
+            path = str(step_payload.get("path", "")).strip()
+            if not path:
+                spec = spec_by_id.get(spec_id)
+                path = spec.path if spec is not None else ""
+            source_linkage = _normalize_string_mapping(
+                step_payload.get("source_linkage", {})
+            )
+            source_linkage.update(
+                {
+                    "final_proof_closure_artifact_path": relative_artifact_path,
+                    "final_proof_closure_artifact_generated_at": artifact_generated_at,
+                    "archive_state": "not_started",
+                }
+            )
+            steps.append(
+                ProgramFrontendFinalProofArchiveRequestStep(
+                    spec_id=spec_id,
+                    path=path,
+                    archive_state="not_started",
+                    pending_inputs=_normalize_string_list(
+                        step_payload.get("pending_inputs", [])
+                    ),
+                    suggested_next_actions=_normalize_string_list(
+                        step_payload.get("suggested_next_actions", [])
+                    ),
+                    source_linkage=source_linkage,
+                )
+            )
+
+        required = bool(steps or written_paths or remaining_blockers)
+        source_linkage = _normalize_string_mapping(payload.get("source_linkage", {}))
+        source_linkage.update(
+            {
+                "final_proof_closure_artifact_path": relative_artifact_path,
+                "final_proof_closure_artifact_generated_at": artifact_generated_at,
+                "archive_state": "not_started",
+                "confirmation_required": str(required).lower(),
+            }
+        )
+        return ProgramFrontendFinalProofArchiveRequest(
+            required=required,
+            confirmation_required=required,
+            archive_state="not_started",
+            closure_state=closure_state,
+            artifact_source_path=relative_artifact_path,
+            artifact_generated_at=artifact_generated_at,
+            written_paths=written_paths,
+            steps=steps,
+            remaining_blockers=remaining_blockers,
+            warnings=_unique_strings(
+                [*warnings, *_normalize_string_list(payload.get("warnings", []))]
+            ),
+            source_linkage=source_linkage,
+        )
+
+    def execute_frontend_final_proof_archive(
+        self,
+        manifest: ProgramManifest,
+        *,
+        request: ProgramFrontendFinalProofArchiveRequest | None = None,
+        confirmed: bool = False,
+    ) -> ProgramFrontendFinalProofArchiveResult:
+        """Execute the final proof archive baseline."""
+        effective_request = request or self.build_frontend_final_proof_archive_request(
+            manifest
+        )
+        if effective_request.warnings and not effective_request.artifact_generated_at:
+            return ProgramFrontendFinalProofArchiveResult(
+                passed=False,
+                confirmed=confirmed,
+                archive_state="blocked",
+                archive_result="blocked",
+                written_paths=list(effective_request.written_paths),
+                remaining_blockers=list(effective_request.remaining_blockers),
+                warnings=list(effective_request.warnings),
+                source_linkage={
+                    **dict(effective_request.source_linkage),
+                    "archive_state": "blocked",
+                    "archive_result": "blocked",
+                },
+            )
+        if not effective_request.required:
+            return ProgramFrontendFinalProofArchiveResult(
+                passed=True,
+                confirmed=confirmed,
+                archive_state="not_started",
+                archive_result="skipped",
+                written_paths=list(effective_request.written_paths),
+                remaining_blockers=[],
+                warnings=list(effective_request.warnings),
+                source_linkage={
+                    **dict(effective_request.source_linkage),
+                    "archive_state": "not_started",
+                    "archive_result": "skipped",
+                },
+            )
+        if not confirmed:
+            return ProgramFrontendFinalProofArchiveResult(
+                passed=False,
+                confirmed=False,
+                archive_state="confirmation_required",
+                archive_result="blocked",
+                written_paths=list(effective_request.written_paths),
+                remaining_blockers=list(effective_request.remaining_blockers),
+                warnings=[
+                    *effective_request.warnings,
+                    "final proof archive orchestration requires explicit confirmation",
+                ],
+                source_linkage={
+                    **dict(effective_request.source_linkage),
+                    "archive_state": "confirmation_required",
+                    "archive_result": "blocked",
+                },
+            )
+        return ProgramFrontendFinalProofArchiveResult(
+            passed=False,
+            confirmed=True,
+            archive_state="deferred",
+            archive_result="deferred",
+            archive_summaries=[PROGRAM_FRONTEND_FINAL_PROOF_ARCHIVE_DEFERRED_SUMMARY],
+            written_paths=[],
+            remaining_blockers=list(effective_request.remaining_blockers),
+            warnings=[
+                *effective_request.warnings,
+                "final proof archive baseline defers thread archive and cleanup actions",
+            ],
+            source_linkage={
+                **dict(effective_request.source_linkage),
+                "archive_state": "deferred",
+                "archive_result": "deferred",
+            },
+        )
+
+    def write_frontend_final_proof_archive_artifact(
+        self,
+        manifest: ProgramManifest,
+        *,
+        request: ProgramFrontendFinalProofArchiveRequest | None = None,
+        result: ProgramFrontendFinalProofArchiveResult | None = None,
+        generated_at: str | None = None,
+        output_path: Path | None = None,
+    ) -> Path:
+        """Persist the canonical final proof archive artifact."""
+        effective_generated_at = generated_at or utc_now_z()
+        effective_request = request or self.build_frontend_final_proof_archive_request(
+            manifest
+        )
+        effective_result = result or self.execute_frontend_final_proof_archive(
+            manifest,
+            request=effective_request,
+            confirmed=not effective_request.confirmation_required,
+        )
+        if effective_request.confirmation_required and not effective_result.confirmed:
+            raise ValueError(
+                "final proof archive artifact requires an explicitly confirmed result"
+            )
+
+        artifact_path = output_path or (
+            self.root / PROGRAM_FRONTEND_FINAL_PROOF_ARCHIVE_ARTIFACT_REL_PATH
+        )
+        if not artifact_path.is_absolute():
+            artifact_path = self.root / artifact_path
+        relative_artifact_path = _relative_to_root_or_str(self.root, artifact_path)
+        payload = self._build_frontend_final_proof_archive_artifact_payload(
+            request=effective_request,
+            result=effective_result,
+            generated_at=effective_generated_at,
+            artifact_path=relative_artifact_path,
+        )
+        artifact_path.parent.mkdir(parents=True, exist_ok=True)
+        artifact_path.write_text(
+            yaml.safe_dump(payload, sort_keys=False, allow_unicode=True),
+            encoding="utf-8",
+        )
+        return artifact_path
+
+    def build_frontend_final_proof_archive_thread_archive_request(
+        self,
+        manifest: ProgramManifest,
+        *,
+        artifact_path: Path | None = None,
+    ) -> ProgramFrontendFinalProofArchiveThreadArchiveRequest:
+        """Build the thread archive request from final proof archive artifact."""
+        effective_artifact_path = artifact_path or (
+            self.root / PROGRAM_FRONTEND_FINAL_PROOF_ARCHIVE_ARTIFACT_REL_PATH
+        )
+        if not effective_artifact_path.is_absolute():
+            effective_artifact_path = self.root / effective_artifact_path
+
+        relative_artifact_path = _relative_to_root_or_str(
+            self.root, effective_artifact_path
+        )
+        payload, warnings = self._load_frontend_final_proof_archive_artifact_payload(
+            effective_artifact_path
+        )
+        if payload is None:
+            return ProgramFrontendFinalProofArchiveThreadArchiveRequest(
+                required=False,
+                confirmation_required=False,
+                thread_archive_state="missing_artifact",
+                archive_state="missing_artifact",
+                artifact_source_path=relative_artifact_path,
+                artifact_generated_at="",
+                warnings=warnings,
+                source_linkage={
+                    "final_proof_archive_artifact_path": relative_artifact_path,
+                    "thread_archive_state": "missing_artifact",
+                },
+            )
+
+        artifact_generated_at = str(payload.get("generated_at", "")).strip()
+        archive_state = str(payload.get("archive_state", "")).strip() or "unknown"
+        written_paths = _unique_strings(
+            [
+                *_normalize_string_list(payload.get("existing_written_paths", [])),
+                *_normalize_string_list(payload.get("written_paths", [])),
+            ]
+        )
+        remaining_blockers = _normalize_string_list(payload.get("remaining_blockers", []))
+        steps: list[ProgramFrontendFinalProofArchiveThreadArchiveRequestStep] = []
+        spec_by_id = {spec.id: spec for spec in manifest.specs}
+        for step_payload in _normalize_mapping_list(payload.get("steps", [])):
+            spec_id = str(step_payload.get("spec_id", "")).strip()
+            if not spec_id:
+                continue
+            path = str(step_payload.get("path", "")).strip()
+            if not path:
+                spec = spec_by_id.get(spec_id)
+                path = spec.path if spec is not None else ""
+            source_linkage = _normalize_string_mapping(
+                step_payload.get("source_linkage", {})
+            )
+            source_linkage.update(
+                {
+                    "final_proof_archive_artifact_path": relative_artifact_path,
+                    "final_proof_archive_artifact_generated_at": artifact_generated_at,
+                    "thread_archive_state": "not_started",
+                }
+            )
+            steps.append(
+                ProgramFrontendFinalProofArchiveThreadArchiveRequestStep(
+                    spec_id=spec_id,
+                    path=path,
+                    thread_archive_state="not_started",
+                    pending_inputs=_normalize_string_list(
+                        step_payload.get("pending_inputs", [])
+                    ),
+                    suggested_next_actions=_normalize_string_list(
+                        step_payload.get("suggested_next_actions", [])
+                    ),
+                    source_linkage=source_linkage,
+                )
+            )
+
+        required = bool(steps or written_paths or remaining_blockers)
+        source_linkage = _normalize_string_mapping(payload.get("source_linkage", {}))
+        source_linkage.update(
+            {
+                "final_proof_archive_artifact_path": relative_artifact_path,
+                "final_proof_archive_artifact_generated_at": artifact_generated_at,
+                "thread_archive_state": "not_started",
+                "confirmation_required": str(required).lower(),
+            }
+        )
+        return ProgramFrontendFinalProofArchiveThreadArchiveRequest(
+            required=required,
+            confirmation_required=required,
+            thread_archive_state="not_started",
+            archive_state=archive_state,
+            artifact_source_path=relative_artifact_path,
+            artifact_generated_at=artifact_generated_at,
+            written_paths=written_paths,
+            steps=steps,
+            remaining_blockers=remaining_blockers,
+            warnings=_unique_strings(
+                [*warnings, *_normalize_string_list(payload.get("warnings", []))]
+            ),
+            source_linkage=source_linkage,
+        )
+
+    def execute_frontend_final_proof_archive_thread_archive(
+        self,
+        manifest: ProgramManifest,
+        *,
+        request: ProgramFrontendFinalProofArchiveThreadArchiveRequest | None = None,
+        confirmed: bool = False,
+    ) -> ProgramFrontendFinalProofArchiveThreadArchiveResult:
+        """Execute the bounded thread archive baseline without project cleanup."""
+        effective_request = request or (
+            self.build_frontend_final_proof_archive_thread_archive_request(manifest)
+        )
+        if effective_request.warnings and not effective_request.artifact_generated_at:
+            return ProgramFrontendFinalProofArchiveThreadArchiveResult(
+                passed=False,
+                confirmed=confirmed,
+                thread_archive_state="blocked",
+                thread_archive_result="blocked",
+                written_paths=list(effective_request.written_paths),
+                remaining_blockers=list(effective_request.remaining_blockers),
+                warnings=list(effective_request.warnings),
+                source_linkage={
+                    **dict(effective_request.source_linkage),
+                    "thread_archive_state": "blocked",
+                    "thread_archive_result": "blocked",
+                },
+            )
+        if not effective_request.required:
+            return ProgramFrontendFinalProofArchiveThreadArchiveResult(
+                passed=True,
+                confirmed=confirmed,
+                thread_archive_state="not_started",
+                thread_archive_result="skipped",
+                written_paths=list(effective_request.written_paths),
+                remaining_blockers=[],
+                warnings=list(effective_request.warnings),
+                source_linkage={
+                    **dict(effective_request.source_linkage),
+                    "thread_archive_state": "not_started",
+                    "thread_archive_result": "skipped",
+                },
+            )
+        if not confirmed:
+            return ProgramFrontendFinalProofArchiveThreadArchiveResult(
+                passed=False,
+                confirmed=False,
+                thread_archive_state="confirmation_required",
+                thread_archive_result="blocked",
+                written_paths=list(effective_request.written_paths),
+                remaining_blockers=list(effective_request.remaining_blockers),
+                warnings=[
+                    *effective_request.warnings,
+                    "final proof archive thread archive requires explicit confirmation",
+                ],
+                source_linkage={
+                    **dict(effective_request.source_linkage),
+                    "thread_archive_state": "confirmation_required",
+                    "thread_archive_result": "blocked",
+                },
+            )
+        return ProgramFrontendFinalProofArchiveThreadArchiveResult(
+            passed=False,
+            confirmed=True,
+            thread_archive_state="deferred",
+            thread_archive_result="deferred",
+            thread_archive_summaries=[
+                PROGRAM_FRONTEND_FINAL_PROOF_ARCHIVE_THREAD_ARCHIVE_DEFERRED_SUMMARY
+            ],
+            written_paths=[],
+            remaining_blockers=list(effective_request.remaining_blockers),
+            warnings=[
+                *effective_request.warnings,
+                (
+                    "final proof archive thread archive baseline does not "
+                    "execute project cleanup actions yet"
+                ),
+            ],
+            source_linkage={
+                **dict(effective_request.source_linkage),
+                "thread_archive_state": "deferred",
+                "thread_archive_result": "deferred",
+            },
+        )
+
+    def build_frontend_final_proof_archive_project_cleanup_request(
+        self,
+        manifest: ProgramManifest,
+        *,
+        artifact_path: Path | None = None,
+    ) -> ProgramFrontendFinalProofArchiveProjectCleanupRequest:
+        """Build the bounded project cleanup request from final proof archive truth."""
+        effective_artifact_path = artifact_path or (
+            self.root / PROGRAM_FRONTEND_FINAL_PROOF_ARCHIVE_ARTIFACT_REL_PATH
+        )
+        if not effective_artifact_path.is_absolute():
+            effective_artifact_path = self.root / effective_artifact_path
+
+        thread_archive_request = self.build_frontend_final_proof_archive_thread_archive_request(
+            manifest,
+            artifact_path=effective_artifact_path,
+        )
+        thread_archive_result = self.execute_frontend_final_proof_archive_thread_archive(
+            manifest,
+            request=thread_archive_request,
+            confirmed=True,
+        )
+        (
+            cleanup_targets_state,
+            cleanup_targets,
+            cleanup_target_warnings,
+            cleanup_targets_source_path,
+        ) = self._resolve_frontend_final_proof_archive_cleanup_targets()
+        (
+            cleanup_target_eligibility_state,
+            cleanup_target_eligibility,
+            cleanup_target_eligibility_warnings,
+            cleanup_target_eligibility_source_path,
+        ) = self._resolve_frontend_final_proof_archive_cleanup_target_eligibility(
+            cleanup_targets=cleanup_targets
+        )
+        (
+            cleanup_preview_plan_state,
+            cleanup_preview_plan,
+            cleanup_preview_plan_warnings,
+            cleanup_preview_plan_source_path,
+        ) = self._resolve_frontend_final_proof_archive_cleanup_preview_plan(
+            cleanup_targets=cleanup_targets,
+            cleanup_target_eligibility=cleanup_target_eligibility,
+        )
+        (
+            cleanup_mutation_proposal_state,
+            cleanup_mutation_proposal,
+            cleanup_mutation_proposal_warnings,
+            cleanup_mutation_proposal_source_path,
+        ) = self._resolve_frontend_final_proof_archive_cleanup_mutation_proposal(
+            cleanup_targets=cleanup_targets,
+            cleanup_target_eligibility=cleanup_target_eligibility,
+            cleanup_preview_plan=cleanup_preview_plan,
+        )
+        (
+            cleanup_mutation_proposal_approval_state,
+            cleanup_mutation_proposal_approval,
+            cleanup_mutation_proposal_approval_warnings,
+            cleanup_mutation_proposal_approval_source_path,
+        ) = self._resolve_frontend_final_proof_archive_cleanup_mutation_proposal_approval(
+            cleanup_targets=cleanup_targets,
+            cleanup_target_eligibility=cleanup_target_eligibility,
+            cleanup_preview_plan=cleanup_preview_plan,
+            cleanup_mutation_proposal=cleanup_mutation_proposal,
+        )
+        (
+            cleanup_mutation_execution_gating_state,
+            cleanup_mutation_execution_gating,
+            cleanup_mutation_execution_gating_warnings,
+            cleanup_mutation_execution_gating_source_path,
+        ) = self._resolve_frontend_final_proof_archive_cleanup_mutation_execution_gating(
+            cleanup_targets=cleanup_targets,
+            cleanup_target_eligibility=cleanup_target_eligibility,
+            cleanup_preview_plan=cleanup_preview_plan,
+            cleanup_mutation_proposal_approval=cleanup_mutation_proposal_approval,
+        )
+        relative_artifact_path = _relative_to_root_or_str(
+            self.root, effective_artifact_path
+        )
+
+        if (
+            thread_archive_request.warnings
+            and not thread_archive_request.artifact_generated_at
+        ):
+            return ProgramFrontendFinalProofArchiveProjectCleanupRequest(
+                required=False,
+                confirmation_required=False,
+                project_cleanup_state="missing_artifact",
+                thread_archive_state=thread_archive_result.thread_archive_state,
+                cleanup_targets_state=cleanup_targets_state,
+                cleanup_target_eligibility_state=cleanup_target_eligibility_state,
+                cleanup_preview_plan_state=cleanup_preview_plan_state,
+                cleanup_mutation_proposal_state=cleanup_mutation_proposal_state,
+                cleanup_mutation_proposal_approval_state=(
+                    cleanup_mutation_proposal_approval_state
+                ),
+                cleanup_mutation_execution_gating_state=(
+                    cleanup_mutation_execution_gating_state
+                ),
+                artifact_source_path=relative_artifact_path,
+                artifact_generated_at="",
+                cleanup_targets=list(cleanup_targets),
+                cleanup_target_eligibility=list(cleanup_target_eligibility),
+                cleanup_preview_plan=list(cleanup_preview_plan),
+                cleanup_mutation_proposal=list(cleanup_mutation_proposal),
+                cleanup_mutation_proposal_approval=list(
+                    cleanup_mutation_proposal_approval
+                ),
+                cleanup_mutation_execution_gating=list(
+                    cleanup_mutation_execution_gating
+                ),
+                warnings=_unique_strings(
+                    [
+                        *thread_archive_request.warnings,
+                        *cleanup_target_warnings,
+                        *cleanup_target_eligibility_warnings,
+                        *cleanup_preview_plan_warnings,
+                        *cleanup_mutation_proposal_warnings,
+                        *cleanup_mutation_proposal_approval_warnings,
+                        *cleanup_mutation_execution_gating_warnings,
+                    ]
+                ),
+                source_linkage={
+                    **dict(thread_archive_request.source_linkage),
+                    **dict(thread_archive_result.source_linkage),
+                    "final_proof_archive_artifact_path": relative_artifact_path,
+                    "cleanup_targets_source_path": cleanup_targets_source_path,
+                    "cleanup_targets_state": cleanup_targets_state,
+                    "cleanup_target_eligibility_source_path": (
+                        cleanup_target_eligibility_source_path
+                    ),
+                    "cleanup_target_eligibility_state": (
+                        cleanup_target_eligibility_state
+                    ),
+                    "cleanup_preview_plan_source_path": cleanup_preview_plan_source_path,
+                    "cleanup_preview_plan_state": cleanup_preview_plan_state,
+                    "cleanup_mutation_proposal_source_path": (
+                        cleanup_mutation_proposal_source_path
+                    ),
+                    "cleanup_mutation_proposal_state": (
+                        cleanup_mutation_proposal_state
+                    ),
+                    "cleanup_mutation_proposal_approval_source_path": (
+                        cleanup_mutation_proposal_approval_source_path
+                    ),
+                    "cleanup_mutation_proposal_approval_state": (
+                        cleanup_mutation_proposal_approval_state
+                    ),
+                    "cleanup_mutation_execution_gating_source_path": (
+                        cleanup_mutation_execution_gating_source_path
+                    ),
+                    "cleanup_mutation_execution_gating_state": (
+                        cleanup_mutation_execution_gating_state
+                    ),
+                    "project_cleanup_state": "missing_artifact",
+                },
+            )
+
+        steps = [
+            ProgramFrontendFinalProofArchiveProjectCleanupRequestStep(
+                spec_id=step.spec_id,
+                path=step.path,
+                project_cleanup_state="not_started",
+                pending_inputs=list(step.pending_inputs),
+                suggested_next_actions=list(step.suggested_next_actions),
+                source_linkage={
+                    **dict(step.source_linkage),
+                    "final_proof_archive_artifact_path": relative_artifact_path,
+                    "thread_archive_state": thread_archive_result.thread_archive_state,
+                    "thread_archive_result": thread_archive_result.thread_archive_result,
+                    "cleanup_targets_state": cleanup_targets_state,
+                    "cleanup_target_eligibility_state": (
+                        cleanup_target_eligibility_state
+                    ),
+                    "cleanup_preview_plan_state": cleanup_preview_plan_state,
+                    "cleanup_mutation_proposal_state": (
+                        cleanup_mutation_proposal_state
+                    ),
+                    "cleanup_mutation_proposal_approval_state": (
+                        cleanup_mutation_proposal_approval_state
+                    ),
+                    "cleanup_mutation_execution_gating_state": (
+                        cleanup_mutation_execution_gating_state
+                    ),
+                    "project_cleanup_state": "not_started",
+                },
+            )
+            for step in thread_archive_request.steps
+        ]
+        required = bool(
+            steps
+            or thread_archive_request.written_paths
+            or thread_archive_result.remaining_blockers
+        )
+        source_linkage = {
+            **dict(thread_archive_request.source_linkage),
+            **dict(thread_archive_result.source_linkage),
+            "final_proof_archive_artifact_path": relative_artifact_path,
+            "final_proof_archive_artifact_generated_at": (
+                thread_archive_request.artifact_generated_at
+            ),
+            "cleanup_targets_source_path": cleanup_targets_source_path,
+            "cleanup_targets_state": cleanup_targets_state,
+            "cleanup_target_eligibility_source_path": (
+                cleanup_target_eligibility_source_path
+            ),
+            "cleanup_target_eligibility_state": cleanup_target_eligibility_state,
+            "cleanup_preview_plan_source_path": cleanup_preview_plan_source_path,
+            "cleanup_preview_plan_state": cleanup_preview_plan_state,
+            "cleanup_mutation_proposal_source_path": (
+                cleanup_mutation_proposal_source_path
+            ),
+            "cleanup_mutation_proposal_state": cleanup_mutation_proposal_state,
+            "cleanup_mutation_proposal_approval_source_path": (
+                cleanup_mutation_proposal_approval_source_path
+            ),
+            "cleanup_mutation_proposal_approval_state": (
+                cleanup_mutation_proposal_approval_state
+            ),
+            "cleanup_mutation_execution_gating_source_path": (
+                cleanup_mutation_execution_gating_source_path
+            ),
+            "cleanup_mutation_execution_gating_state": (
+                cleanup_mutation_execution_gating_state
+            ),
+            "thread_archive_state": thread_archive_result.thread_archive_state,
+            "thread_archive_result": thread_archive_result.thread_archive_result,
+            "project_cleanup_state": "not_started",
+            "confirmation_required": str(required).lower(),
+        }
+        return ProgramFrontendFinalProofArchiveProjectCleanupRequest(
+            required=required,
+            confirmation_required=required,
+            project_cleanup_state="not_started",
+            thread_archive_state=thread_archive_result.thread_archive_state,
+            cleanup_targets_state=cleanup_targets_state,
+            cleanup_target_eligibility_state=cleanup_target_eligibility_state,
+            cleanup_preview_plan_state=cleanup_preview_plan_state,
+            cleanup_mutation_proposal_state=cleanup_mutation_proposal_state,
+            cleanup_mutation_proposal_approval_state=(
+                cleanup_mutation_proposal_approval_state
+            ),
+            cleanup_mutation_execution_gating_state=(
+                cleanup_mutation_execution_gating_state
+            ),
+            artifact_source_path=relative_artifact_path,
+            artifact_generated_at=thread_archive_request.artifact_generated_at,
+            written_paths=list(thread_archive_request.written_paths),
+            cleanup_targets=list(cleanup_targets),
+            cleanup_target_eligibility=list(cleanup_target_eligibility),
+            cleanup_preview_plan=list(cleanup_preview_plan),
+            cleanup_mutation_proposal=list(cleanup_mutation_proposal),
+            cleanup_mutation_proposal_approval=list(
+                cleanup_mutation_proposal_approval
+            ),
+            cleanup_mutation_execution_gating=list(
+                cleanup_mutation_execution_gating
+            ),
+            steps=steps,
+            remaining_blockers=list(thread_archive_result.remaining_blockers),
+            warnings=_unique_strings(
+                [
+                    *thread_archive_request.warnings,
+                    *thread_archive_result.warnings,
+                    *cleanup_target_warnings,
+                    *cleanup_target_eligibility_warnings,
+                    *cleanup_preview_plan_warnings,
+                    *cleanup_mutation_proposal_warnings,
+                    *cleanup_mutation_proposal_approval_warnings,
+                    *cleanup_mutation_execution_gating_warnings,
+                ]
+            ),
+            source_linkage=source_linkage,
+        )
+
+    def execute_frontend_final_proof_archive_project_cleanup(
+        self,
+        manifest: ProgramManifest,
+        *,
+        request: ProgramFrontendFinalProofArchiveProjectCleanupRequest | None = None,
+        confirmed: bool = False,
+    ) -> ProgramFrontendFinalProofArchiveProjectCleanupResult:
+        """Execute the bounded project cleanup baseline without workspace mutations."""
+        effective_request = request or (
+            self.build_frontend_final_proof_archive_project_cleanup_request(manifest)
+        )
+        if effective_request.warnings and not effective_request.artifact_generated_at:
+            return ProgramFrontendFinalProofArchiveProjectCleanupResult(
+                passed=False,
+                confirmed=confirmed,
+                project_cleanup_state="blocked",
+                project_cleanup_result="blocked",
+                cleanup_targets_state=effective_request.cleanup_targets_state,
+                cleanup_target_eligibility_state=(
+                    effective_request.cleanup_target_eligibility_state
+                ),
+                cleanup_preview_plan_state=effective_request.cleanup_preview_plan_state,
+                cleanup_mutation_proposal_state=(
+                    effective_request.cleanup_mutation_proposal_state
+                ),
+                cleanup_mutation_proposal_approval_state=(
+                    effective_request.cleanup_mutation_proposal_approval_state
+                ),
+                cleanup_mutation_execution_gating_state=(
+                    effective_request.cleanup_mutation_execution_gating_state
+                ),
+                cleanup_targets=list(effective_request.cleanup_targets),
+                cleanup_target_eligibility=list(
+                    effective_request.cleanup_target_eligibility
+                ),
+                cleanup_preview_plan=list(effective_request.cleanup_preview_plan),
+                cleanup_mutation_proposal=list(
+                    effective_request.cleanup_mutation_proposal
+                ),
+                cleanup_mutation_proposal_approval=list(
+                    effective_request.cleanup_mutation_proposal_approval
+                ),
+                cleanup_mutation_execution_gating=list(
+                    effective_request.cleanup_mutation_execution_gating
+                ),
+                written_paths=list(effective_request.written_paths),
+                remaining_blockers=list(effective_request.remaining_blockers),
+                warnings=list(effective_request.warnings),
+                source_linkage={
+                    **dict(effective_request.source_linkage),
+                    "cleanup_targets_state": effective_request.cleanup_targets_state,
+                    "cleanup_target_eligibility_state": (
+                        effective_request.cleanup_target_eligibility_state
+                    ),
+                    "cleanup_preview_plan_state": (
+                        effective_request.cleanup_preview_plan_state
+                    ),
+                    "cleanup_mutation_proposal_state": (
+                        effective_request.cleanup_mutation_proposal_state
+                    ),
+                    "cleanup_mutation_proposal_approval_state": (
+                        effective_request.cleanup_mutation_proposal_approval_state
+                    ),
+                    "cleanup_mutation_execution_gating_state": (
+                        effective_request.cleanup_mutation_execution_gating_state
+                    ),
+                    "project_cleanup_state": "blocked",
+                    "project_cleanup_result": "blocked",
+                },
+            )
+        if not effective_request.required:
+            return ProgramFrontendFinalProofArchiveProjectCleanupResult(
+                passed=True,
+                confirmed=confirmed,
+                project_cleanup_state="not_started",
+                project_cleanup_result="skipped",
+                cleanup_targets_state=effective_request.cleanup_targets_state,
+                cleanup_target_eligibility_state=(
+                    effective_request.cleanup_target_eligibility_state
+                ),
+                cleanup_preview_plan_state=effective_request.cleanup_preview_plan_state,
+                cleanup_mutation_proposal_state=(
+                    effective_request.cleanup_mutation_proposal_state
+                ),
+                cleanup_mutation_proposal_approval_state=(
+                    effective_request.cleanup_mutation_proposal_approval_state
+                ),
+                cleanup_mutation_execution_gating_state=(
+                    effective_request.cleanup_mutation_execution_gating_state
+                ),
+                cleanup_targets=list(effective_request.cleanup_targets),
+                cleanup_target_eligibility=list(
+                    effective_request.cleanup_target_eligibility
+                ),
+                cleanup_preview_plan=list(effective_request.cleanup_preview_plan),
+                cleanup_mutation_proposal=list(
+                    effective_request.cleanup_mutation_proposal
+                ),
+                cleanup_mutation_proposal_approval=list(
+                    effective_request.cleanup_mutation_proposal_approval
+                ),
+                cleanup_mutation_execution_gating=list(
+                    effective_request.cleanup_mutation_execution_gating
+                ),
+                written_paths=list(effective_request.written_paths),
+                remaining_blockers=[],
+                warnings=list(effective_request.warnings),
+                source_linkage={
+                    **dict(effective_request.source_linkage),
+                    "cleanup_targets_state": effective_request.cleanup_targets_state,
+                    "cleanup_target_eligibility_state": (
+                        effective_request.cleanup_target_eligibility_state
+                    ),
+                    "cleanup_preview_plan_state": (
+                        effective_request.cleanup_preview_plan_state
+                    ),
+                    "cleanup_mutation_proposal_state": (
+                        effective_request.cleanup_mutation_proposal_state
+                    ),
+                    "cleanup_mutation_proposal_approval_state": (
+                        effective_request.cleanup_mutation_proposal_approval_state
+                    ),
+                    "cleanup_mutation_execution_gating_state": (
+                        effective_request.cleanup_mutation_execution_gating_state
+                    ),
+                    "project_cleanup_state": "not_started",
+                    "project_cleanup_result": "skipped",
+                },
+            )
+        if not confirmed:
+            return ProgramFrontendFinalProofArchiveProjectCleanupResult(
+                passed=False,
+                confirmed=False,
+                project_cleanup_state="confirmation_required",
+                project_cleanup_result="blocked",
+                cleanup_targets_state=effective_request.cleanup_targets_state,
+                cleanup_target_eligibility_state=(
+                    effective_request.cleanup_target_eligibility_state
+                ),
+                cleanup_preview_plan_state=effective_request.cleanup_preview_plan_state,
+                cleanup_mutation_proposal_state=(
+                    effective_request.cleanup_mutation_proposal_state
+                ),
+                cleanup_mutation_proposal_approval_state=(
+                    effective_request.cleanup_mutation_proposal_approval_state
+                ),
+                cleanup_mutation_execution_gating_state=(
+                    effective_request.cleanup_mutation_execution_gating_state
+                ),
+                cleanup_targets=list(effective_request.cleanup_targets),
+                cleanup_target_eligibility=list(
+                    effective_request.cleanup_target_eligibility
+                ),
+                cleanup_preview_plan=list(effective_request.cleanup_preview_plan),
+                cleanup_mutation_proposal=list(
+                    effective_request.cleanup_mutation_proposal
+                ),
+                cleanup_mutation_proposal_approval=list(
+                    effective_request.cleanup_mutation_proposal_approval
+                ),
+                cleanup_mutation_execution_gating=list(
+                    effective_request.cleanup_mutation_execution_gating
+                ),
+                written_paths=list(effective_request.written_paths),
+                remaining_blockers=list(effective_request.remaining_blockers),
+                warnings=[
+                    *effective_request.warnings,
+                    "final proof archive project cleanup requires explicit confirmation",
+                ],
+                source_linkage={
+                    **dict(effective_request.source_linkage),
+                    "cleanup_targets_state": effective_request.cleanup_targets_state,
+                    "cleanup_target_eligibility_state": (
+                        effective_request.cleanup_target_eligibility_state
+                    ),
+                    "cleanup_preview_plan_state": (
+                        effective_request.cleanup_preview_plan_state
+                    ),
+                    "cleanup_mutation_proposal_state": (
+                        effective_request.cleanup_mutation_proposal_state
+                    ),
+                    "cleanup_mutation_proposal_approval_state": (
+                        effective_request.cleanup_mutation_proposal_approval_state
+                    ),
+                    "cleanup_mutation_execution_gating_state": (
+                        effective_request.cleanup_mutation_execution_gating_state
+                    ),
+                    "project_cleanup_state": "confirmation_required",
+                    "project_cleanup_result": "blocked",
+                },
+            )
+        (
+            executed_paths,
+            remaining_blockers,
+            execution_warnings,
+            successful_mutations,
+            executable_mutations,
+        ) = self._execute_frontend_final_proof_archive_project_cleanup_mutations(
+            cleanup_targets=list(effective_request.cleanup_targets),
+            cleanup_mutation_execution_gating=list(
+                effective_request.cleanup_mutation_execution_gating
+            ),
+        )
+        total_mutations = len(effective_request.cleanup_mutation_execution_gating)
+        if total_mutations == 0:
+            project_cleanup_state = "blocked"
+            project_cleanup_result = "blocked"
+            summaries = [
+                "no cleanup mutations listed in canonical cleanup_mutation_execution_gating"
+            ]
+        elif successful_mutations == total_mutations:
+            project_cleanup_state = "completed"
+            project_cleanup_result = "completed"
+            summaries = [
+                "executed "
+                f"{total_mutations} cleanup mutation(s) from canonical "
+                "cleanup_mutation_execution_gating"
+            ]
+        elif successful_mutations > 0:
+            project_cleanup_state = "partial"
+            project_cleanup_result = "partial"
+            summaries = [
+                "executed "
+                f"{successful_mutations} of {total_mutations} cleanup mutation(s) "
+                "from canonical cleanup_mutation_execution_gating"
+            ]
+        elif executable_mutations > 0:
+            project_cleanup_state = "failed"
+            project_cleanup_result = "failed"
+            summaries = [
+                "executed "
+                f"0 of {total_mutations} cleanup mutation(s) from canonical "
+                "cleanup_mutation_execution_gating"
+            ]
+        else:
+            project_cleanup_state = "blocked"
+            project_cleanup_result = "blocked"
+            summaries = [
+                "no executable cleanup mutations available in canonical "
+                "cleanup_mutation_execution_gating"
+            ]
+        return ProgramFrontendFinalProofArchiveProjectCleanupResult(
+            passed=project_cleanup_result == "completed",
+            confirmed=True,
+            project_cleanup_state=project_cleanup_state,
+            project_cleanup_result=project_cleanup_result,
+            cleanup_targets_state=effective_request.cleanup_targets_state,
+            cleanup_target_eligibility_state=(
+                effective_request.cleanup_target_eligibility_state
+            ),
+            cleanup_preview_plan_state=effective_request.cleanup_preview_plan_state,
+            cleanup_mutation_proposal_state=(
+                effective_request.cleanup_mutation_proposal_state
+            ),
+            cleanup_mutation_proposal_approval_state=(
+                effective_request.cleanup_mutation_proposal_approval_state
+            ),
+            cleanup_mutation_execution_gating_state=(
+                effective_request.cleanup_mutation_execution_gating_state
+            ),
+            project_cleanup_summaries=summaries,
+            cleanup_targets=list(effective_request.cleanup_targets),
+            cleanup_target_eligibility=list(
+                effective_request.cleanup_target_eligibility
+            ),
+            cleanup_preview_plan=list(effective_request.cleanup_preview_plan),
+            cleanup_mutation_proposal=list(
+                effective_request.cleanup_mutation_proposal
+            ),
+            cleanup_mutation_proposal_approval=list(
+                effective_request.cleanup_mutation_proposal_approval
+            ),
+            cleanup_mutation_execution_gating=list(
+                effective_request.cleanup_mutation_execution_gating
+            ),
+            written_paths=executed_paths,
+            remaining_blockers=remaining_blockers,
+            warnings=_unique_strings(execution_warnings),
+            source_linkage={
+                **dict(effective_request.source_linkage),
+                "cleanup_targets_state": effective_request.cleanup_targets_state,
+                "cleanup_target_eligibility_state": (
+                    effective_request.cleanup_target_eligibility_state
+                ),
+                "cleanup_preview_plan_state": (
+                    effective_request.cleanup_preview_plan_state
+                ),
+                "cleanup_mutation_proposal_state": (
+                    effective_request.cleanup_mutation_proposal_state
+                ),
+                "cleanup_mutation_proposal_approval_state": (
+                    effective_request.cleanup_mutation_proposal_approval_state
+                ),
+                "cleanup_mutation_execution_gating_state": (
+                    effective_request.cleanup_mutation_execution_gating_state
+                ),
+                "project_cleanup_state": project_cleanup_state,
+                "project_cleanup_result": project_cleanup_result,
+            },
+        )
+
+    def _execute_frontend_final_proof_archive_project_cleanup_mutations(
+        self,
+        *,
+        cleanup_targets: list[object],
+        cleanup_mutation_execution_gating: list[object],
+    ) -> tuple[list[str], list[str], list[str], int, int]:
+        target_ids: set[str] = set()
+        duplicate_target_ids: set[str] = set()
+        cleanup_targets_by_id: dict[str, dict[str, object]] = {}
+        warnings: list[str] = []
+
+        for index, item in enumerate(cleanup_targets):
+            if not isinstance(item, dict):
+                warnings.append(
+                    "cleanup_targets "
+                    f"entry {index} is not a mapping and cannot be executed"
+                )
+                continue
+            target_id = str(item.get("target_id", "")).strip()
+            if not target_id:
+                warnings.append(
+                    "cleanup_targets "
+                    f"entry {index} is missing target_id and cannot be executed"
+                )
+                continue
+            if target_id in target_ids:
+                duplicate_target_ids.add(target_id)
+                continue
+            target_ids.add(target_id)
+            cleanup_targets_by_id[target_id] = item
+
+        gating_target_ids: set[str] = set()
+        duplicate_gating_target_ids: set[str] = set()
+        for item in cleanup_mutation_execution_gating:
+            if not isinstance(item, dict):
+                continue
+            target_id = str(item.get("target_id", "")).strip()
+            if not target_id:
+                continue
+            if target_id in gating_target_ids:
+                duplicate_gating_target_ids.add(target_id)
+                continue
+            gating_target_ids.add(target_id)
+
+        written_paths: list[str] = []
+        remaining_blockers: list[str] = []
+        successful_mutations = 0
+        executable_mutations = 0
+
+        for index, item in enumerate(cleanup_mutation_execution_gating):
+            if not isinstance(item, dict):
+                warnings.append(
+                    "cleanup_mutation_execution_gating "
+                    f"entry {index} is not a mapping and cannot be executed"
+                )
+                continue
+            target_id = str(item.get("target_id", "")).strip()
+            if not target_id:
+                warnings.append(
+                    "cleanup_mutation_execution_gating "
+                    f"entry {index} is missing target_id and cannot be executed"
+                )
+                continue
+            if target_id in duplicate_target_ids:
+                warnings.append(
+                    f"cleanup target {target_id} appears multiple times in canonical cleanup_targets"
+                )
+                remaining_blockers.append(target_id)
+                continue
+            if target_id in duplicate_gating_target_ids:
+                warnings.append(
+                    "cleanup mutation execution gating "
+                    f"target_id={target_id} appears multiple times in canonical "
+                    "cleanup_mutation_execution_gating"
+                )
+                remaining_blockers.append(target_id)
+                continue
+            target = cleanup_targets_by_id.get(target_id)
+            if target is None:
+                warnings.append(
+                    f"cleanup target {target_id} does not exist in canonical cleanup_targets"
+                )
+                remaining_blockers.append(target_id)
+                continue
+
+            path_text = str(target.get("path", "")).strip()
+            if not path_text:
+                warnings.append(
+                    f"cleanup target {target_id} is missing canonical path"
+                )
+                remaining_blockers.append(target_id)
+                continue
+            target_path = (self.root / path_text).resolve()
+            try:
+                target_path.relative_to(self.root)
+            except ValueError:
+                warnings.append(
+                    f"cleanup target {target_id} resolves outside workspace root: {path_text}"
+                )
+                remaining_blockers.append(target_id)
+                continue
+
+            kind = str(target.get("kind", "")).strip()
+            gated_action = str(item.get("gated_action", "")).strip()
+            expected_path_kind = ""
+            if kind == "thread_archive" and gated_action == "archive_thread_report":
+                expected_path_kind = "file"
+            elif kind == "spec_dir" and gated_action == "remove_spec_dir":
+                expected_path_kind = "directory"
+            else:
+                warnings.append(
+                    "cleanup target "
+                    f"{target_id} uses unsupported canonical mutation kind/action: "
+                    f"{kind}/{gated_action}"
+                )
+                remaining_blockers.append(target_id)
+                continue
+
+            executable_mutations += 1
+            relative_target_path = _relative_to_root_or_str(self.root, target_path)
+            if not target_path.exists():
+                warnings.append(
+                    f"cleanup target {target_id} is missing at {relative_target_path}"
+                )
+                remaining_blockers.append(target_id)
+                continue
+
+            if expected_path_kind == "file" and not target_path.is_file():
+                warnings.append(
+                    "cleanup target "
+                    f"{target_id} expected a file at {relative_target_path}"
+                )
+                remaining_blockers.append(target_id)
+                continue
+            if expected_path_kind == "directory" and not target_path.is_dir():
+                warnings.append(
+                    "cleanup target "
+                    f"{target_id} expected a directory at {relative_target_path}"
+                )
+                remaining_blockers.append(target_id)
+                continue
+
+            try:
+                if expected_path_kind == "file":
+                    target_path.unlink()
+                else:
+                    shutil.rmtree(target_path)
+            except OSError as exc:
+                warnings.append(
+                    "cleanup target "
+                    f"{target_id} failed to delete {relative_target_path} ({exc})"
+                )
+                remaining_blockers.append(target_id)
+                continue
+
+            successful_mutations += 1
+            written_paths.append(relative_target_path)
+
+        return (
+            _unique_strings(written_paths),
+            _unique_strings(remaining_blockers),
+            _unique_strings(warnings),
+            successful_mutations,
+            executable_mutations,
+        )
+
+    def write_frontend_final_proof_archive_project_cleanup_artifact(
+        self,
+        manifest: ProgramManifest,
+        *,
+        request: ProgramFrontendFinalProofArchiveProjectCleanupRequest | None = None,
+        result: ProgramFrontendFinalProofArchiveProjectCleanupResult | None = None,
+        generated_at: str | None = None,
+        output_path: Path | None = None,
+    ) -> Path:
+        """Persist the canonical final proof archive project cleanup artifact."""
+        effective_generated_at = generated_at or utc_now_z()
+        effective_request = request or (
+            self.build_frontend_final_proof_archive_project_cleanup_request(manifest)
+        )
+        effective_result = result or (
+            self.execute_frontend_final_proof_archive_project_cleanup(
+                manifest,
+                request=effective_request,
+                confirmed=not effective_request.confirmation_required,
+            )
+        )
+        if effective_request.confirmation_required and not effective_result.confirmed:
+            raise ValueError(
+                "final proof archive project cleanup artifact requires an explicitly confirmed result"
+            )
+
+        artifact_path = output_path or (
+            self.root
+            / PROGRAM_FRONTEND_FINAL_PROOF_ARCHIVE_PROJECT_CLEANUP_ARTIFACT_REL_PATH
+        )
+        if not artifact_path.is_absolute():
+            artifact_path = self.root / artifact_path
+        relative_artifact_path = _relative_to_root_or_str(self.root, artifact_path)
+        payload = self._build_frontend_final_proof_archive_project_cleanup_artifact_payload(
+            request=effective_request,
+            result=effective_result,
+            generated_at=effective_generated_at,
+            artifact_path=relative_artifact_path,
+        )
+        artifact_path.parent.mkdir(parents=True, exist_ok=True)
+        artifact_path.write_text(
+            yaml.safe_dump(payload, sort_keys=False, allow_unicode=True),
+            encoding="utf-8",
+        )
+        return artifact_path
+
     def evaluate_execute_gates(
         self, manifest: ProgramManifest, *, allow_dirty: bool = False
     ) -> ProgramExecuteGates:
@@ -3986,6 +5347,130 @@ class ProgramService:
             "source_linkage": source_linkage,
         }
 
+    def _build_frontend_final_proof_archive_artifact_payload(
+        self,
+        *,
+        request: ProgramFrontendFinalProofArchiveRequest,
+        result: ProgramFrontendFinalProofArchiveResult,
+        generated_at: str,
+        artifact_path: str,
+    ) -> dict[str, object]:
+        source_linkage = {
+            **dict(request.source_linkage),
+            **dict(result.source_linkage),
+            "final_proof_archive_artifact_path": artifact_path,
+            "final_proof_archive_artifact_generated_at": generated_at,
+        }
+        return {
+            "generated_at": generated_at,
+            "manifest_path": _relative_to_root_or_str(self.root, self.manifest_path),
+            "artifact_source_path": request.artifact_source_path,
+            "artifact_generated_at": request.artifact_generated_at,
+            "required": request.required,
+            "confirmation_required": request.confirmation_required,
+            "confirmed": result.confirmed,
+            "closure_state": request.closure_state,
+            "archive_state": result.archive_state,
+            "archive_result": result.archive_result,
+            "archive_summaries": list(result.archive_summaries),
+            "existing_written_paths": list(request.written_paths),
+            "written_paths": list(result.written_paths),
+            "remaining_blockers": list(result.remaining_blockers),
+            "warnings": _unique_strings([*request.warnings, *result.warnings]),
+            "steps": [
+                {
+                    "spec_id": step.spec_id,
+                    "path": step.path,
+                    "archive_state": step.archive_state,
+                    "pending_inputs": list(step.pending_inputs),
+                    "suggested_next_actions": list(step.suggested_next_actions),
+                    "source_linkage": dict(step.source_linkage),
+                }
+                for step in request.steps
+            ],
+            "source_linkage": source_linkage,
+        }
+
+    def _build_frontend_final_proof_archive_project_cleanup_artifact_payload(
+        self,
+        *,
+        request: ProgramFrontendFinalProofArchiveProjectCleanupRequest,
+        result: ProgramFrontendFinalProofArchiveProjectCleanupResult,
+        generated_at: str,
+        artifact_path: str,
+    ) -> dict[str, object]:
+        artifact_warnings = (
+            list(result.warnings)
+            if result.confirmed
+            and result.project_cleanup_result in {"completed", "partial", "failed"}
+            else [*request.warnings, *result.warnings]
+        )
+        source_linkage = {
+            **dict(request.source_linkage),
+            **dict(result.source_linkage),
+            "final_proof_archive_project_cleanup_artifact_path": artifact_path,
+            "final_proof_archive_project_cleanup_artifact_generated_at": generated_at,
+        }
+        return {
+            "generated_at": generated_at,
+            "manifest_path": _relative_to_root_or_str(self.root, self.manifest_path),
+            "artifact_source_path": request.artifact_source_path,
+            "artifact_generated_at": request.artifact_generated_at,
+            "required": request.required,
+            "confirmation_required": request.confirmation_required,
+            "confirmed": result.confirmed,
+            "thread_archive_state": str(
+                result.source_linkage.get(
+                    "thread_archive_state", request.thread_archive_state
+                )
+            ).strip()
+            or request.thread_archive_state,
+            "thread_archive_result": str(
+                result.source_linkage.get("thread_archive_result", "")
+            ).strip(),
+            "cleanup_targets_state": result.cleanup_targets_state,
+            "cleanup_targets": list(result.cleanup_targets),
+            "cleanup_target_eligibility_state": result.cleanup_target_eligibility_state,
+            "cleanup_target_eligibility": list(result.cleanup_target_eligibility),
+            "cleanup_preview_plan_state": result.cleanup_preview_plan_state,
+            "cleanup_preview_plan": list(result.cleanup_preview_plan),
+            "cleanup_mutation_proposal_state": (
+                result.cleanup_mutation_proposal_state
+            ),
+            "cleanup_mutation_proposal": list(result.cleanup_mutation_proposal),
+            "cleanup_mutation_proposal_approval_state": (
+                result.cleanup_mutation_proposal_approval_state
+            ),
+            "cleanup_mutation_proposal_approval": list(
+                result.cleanup_mutation_proposal_approval
+            ),
+            "cleanup_mutation_execution_gating_state": (
+                result.cleanup_mutation_execution_gating_state
+            ),
+            "cleanup_mutation_execution_gating": list(
+                result.cleanup_mutation_execution_gating
+            ),
+            "project_cleanup_state": result.project_cleanup_state,
+            "project_cleanup_result": result.project_cleanup_result,
+            "project_cleanup_summaries": list(result.project_cleanup_summaries),
+            "existing_written_paths": list(request.written_paths),
+            "written_paths": list(result.written_paths),
+            "remaining_blockers": list(result.remaining_blockers),
+            "warnings": _unique_strings(artifact_warnings),
+            "steps": [
+                {
+                    "spec_id": step.spec_id,
+                    "path": step.path,
+                    "project_cleanup_state": step.project_cleanup_state,
+                    "pending_inputs": list(step.pending_inputs),
+                    "suggested_next_actions": list(step.suggested_next_actions),
+                    "source_linkage": dict(step.source_linkage),
+                }
+                for step in request.steps
+            ],
+            "source_linkage": source_linkage,
+        }
+
     def _load_frontend_remediation_writeback_payload(
         self,
         artifact_path: Path,
@@ -4305,6 +5790,883 @@ class ProgramService:
                 ],
             )
         return payload, []
+
+    def _load_frontend_final_proof_closure_artifact_payload(
+        self,
+        artifact_path: Path,
+    ) -> tuple[dict[str, object] | None, list[str]]:
+        if not artifact_path.exists():
+            return (
+                None,
+                [
+                    "missing final proof closure artifact: "
+                    + _relative_to_root_or_str(self.root, artifact_path)
+                ],
+            )
+        try:
+            payload = yaml.safe_load(artifact_path.read_text(encoding="utf-8"))
+        except Exception as exc:
+            return (
+                None,
+                [
+                    "invalid final proof closure artifact: "
+                    + f"{_relative_to_root_or_str(self.root, artifact_path)} ({exc})"
+                ],
+            )
+        if not isinstance(payload, dict):
+            return (
+                None,
+                [
+                    "invalid final proof closure artifact: "
+                    + _relative_to_root_or_str(self.root, artifact_path)
+                ],
+            )
+        return payload, []
+
+    def _load_frontend_final_proof_archive_artifact_payload(
+        self,
+        artifact_path: Path,
+    ) -> tuple[dict[str, object] | None, list[str]]:
+        if not artifact_path.exists():
+            return (
+                None,
+                [
+                    "missing final proof archive artifact: "
+                    + _relative_to_root_or_str(self.root, artifact_path)
+                ],
+            )
+        try:
+            payload = yaml.safe_load(artifact_path.read_text(encoding="utf-8"))
+        except Exception as exc:
+            return (
+                None,
+                [
+                    "invalid final proof archive artifact: "
+                    + f"{_relative_to_root_or_str(self.root, artifact_path)} ({exc})"
+                ],
+            )
+        if not isinstance(payload, dict):
+            return (
+                None,
+                [
+                    "invalid final proof archive artifact: "
+                    + _relative_to_root_or_str(self.root, artifact_path)
+                ],
+            )
+        return payload, []
+
+    def _load_frontend_final_proof_archive_project_cleanup_artifact_payload(
+        self,
+        artifact_path: Path,
+    ) -> tuple[dict[str, object] | None, list[str]]:
+        if not artifact_path.exists():
+            return (
+                None,
+                [
+                    "missing final proof archive project cleanup artifact: "
+                    + _relative_to_root_or_str(self.root, artifact_path)
+                ],
+            )
+        try:
+            payload = yaml.safe_load(artifact_path.read_text(encoding="utf-8"))
+        except Exception as exc:
+            return (
+                None,
+                [
+                    "invalid final proof archive project cleanup artifact: "
+                    + f"{_relative_to_root_or_str(self.root, artifact_path)} ({exc})"
+                ],
+            )
+        if not isinstance(payload, dict):
+            return (
+                None,
+                [
+                    "invalid final proof archive project cleanup artifact: "
+                    + _relative_to_root_or_str(self.root, artifact_path)
+                ],
+            )
+        return payload, []
+
+    def _resolve_frontend_final_proof_archive_cleanup_targets(
+        self,
+    ) -> tuple[str, list[object], list[str], str]:
+        artifact_path = (
+            self.root / PROGRAM_FRONTEND_FINAL_PROOF_ARCHIVE_PROJECT_CLEANUP_ARTIFACT_REL_PATH
+        )
+        relative_artifact_path = _relative_to_root_or_str(self.root, artifact_path)
+        if not artifact_path.exists():
+            return "missing", [], [], relative_artifact_path
+
+        payload, warnings = self._load_frontend_final_proof_archive_project_cleanup_artifact_payload(
+            artifact_path
+        )
+        if payload is None:
+            return "missing", [], list(warnings), relative_artifact_path
+
+        cleanup_targets = payload.get("cleanup_targets")
+        if cleanup_targets is None:
+            return "missing", [], list(warnings), relative_artifact_path
+        if not isinstance(cleanup_targets, list):
+            return (
+                "missing",
+                [],
+                [
+                    *warnings,
+                    (
+                        "invalid final proof archive project cleanup artifact: "
+                        f"{relative_artifact_path} cleanup_targets must be a list"
+                    ),
+                ],
+                relative_artifact_path,
+            )
+
+        normalized_targets = list(cleanup_targets)
+        normalized_warnings = list(warnings)
+        for index, item in enumerate(normalized_targets):
+            if not isinstance(item, dict):
+                normalized_warnings.append(
+                    "invalid final proof archive project cleanup artifact: "
+                    f"{relative_artifact_path} cleanup_targets[{index}] "
+                    "should be a mapping"
+                )
+                continue
+            missing_keys = [
+                key for key in ("path", "kind") if not str(item.get(key, "")).strip()
+            ]
+            if missing_keys:
+                normalized_warnings.append(
+                    "invalid final proof archive project cleanup artifact: "
+                    f"{relative_artifact_path} cleanup_targets[{index}] "
+                    "missing required keys: "
+                    + ", ".join(missing_keys)
+                )
+
+        cleanup_targets_state = "empty" if not normalized_targets else "listed"
+        return (
+            cleanup_targets_state,
+            normalized_targets,
+            normalized_warnings,
+            relative_artifact_path,
+        )
+
+    def _resolve_frontend_final_proof_archive_cleanup_target_eligibility(
+        self,
+        *,
+        cleanup_targets: list[object] | None = None,
+    ) -> tuple[str, list[object], list[str], str]:
+        artifact_path = (
+            self.root / PROGRAM_FRONTEND_FINAL_PROOF_ARCHIVE_PROJECT_CLEANUP_ARTIFACT_REL_PATH
+        )
+        relative_artifact_path = _relative_to_root_or_str(self.root, artifact_path)
+        if not artifact_path.exists():
+            return "missing", [], [], relative_artifact_path
+
+        payload, warnings = self._load_frontend_final_proof_archive_project_cleanup_artifact_payload(
+            artifact_path
+        )
+        if payload is None:
+            return "missing", [], list(warnings), relative_artifact_path
+
+        cleanup_target_eligibility = payload.get("cleanup_target_eligibility")
+        if cleanup_target_eligibility is None:
+            return "missing", [], list(warnings), relative_artifact_path
+        if not isinstance(cleanup_target_eligibility, list):
+            return (
+                "missing",
+                [],
+                [
+                    *warnings,
+                    (
+                        "invalid final proof archive project cleanup artifact: "
+                        f"{relative_artifact_path} "
+                        "cleanup_target_eligibility must be a list"
+                    ),
+                ],
+                relative_artifact_path,
+            )
+
+        normalized_eligibility = list(cleanup_target_eligibility)
+        normalized_warnings = list(warnings)
+        cleanup_target_ids: set[str] = set()
+        eligibility_target_ids: set[str] = set()
+
+        for item in cleanup_targets or ():
+            if not isinstance(item, dict):
+                continue
+            target_id = str(item.get("target_id", "")).strip()
+            if target_id:
+                cleanup_target_ids.add(target_id)
+
+        for index, item in enumerate(normalized_eligibility):
+            if not isinstance(item, dict):
+                normalized_warnings.append(
+                    "invalid final proof archive project cleanup artifact: "
+                    f"{relative_artifact_path} cleanup_target_eligibility[{index}] "
+                    "should be a mapping"
+                )
+                continue
+            missing_keys = [
+                key
+                for key in ("target_id", "eligibility", "reason")
+                if not str(item.get(key, "")).strip()
+            ]
+            if missing_keys:
+                normalized_warnings.append(
+                    "invalid final proof archive project cleanup artifact: "
+                    f"{relative_artifact_path} cleanup_target_eligibility[{index}] "
+                    "missing required keys: "
+                    + ", ".join(missing_keys)
+                )
+            target_id = str(item.get("target_id", "")).strip()
+            if target_id:
+                eligibility_target_ids.add(target_id)
+
+        if (
+            cleanup_target_ids
+            and eligibility_target_ids
+            and cleanup_target_ids != eligibility_target_ids
+        ):
+            normalized_warnings.append(
+                "invalid final proof archive project cleanup artifact: "
+                f"{relative_artifact_path} "
+                "cleanup_target_eligibility target_id set does not match "
+                "cleanup_targets"
+            )
+
+        cleanup_target_eligibility_state = (
+            "empty" if not normalized_eligibility else "listed"
+        )
+        return (
+            cleanup_target_eligibility_state,
+            normalized_eligibility,
+            normalized_warnings,
+            relative_artifact_path,
+        )
+
+    def _resolve_frontend_final_proof_archive_cleanup_preview_plan(
+        self,
+        *,
+        cleanup_targets: list[object] | None = None,
+        cleanup_target_eligibility: list[object] | None = None,
+    ) -> tuple[str, list[object], list[str], str]:
+        artifact_path = (
+            self.root / PROGRAM_FRONTEND_FINAL_PROOF_ARCHIVE_PROJECT_CLEANUP_ARTIFACT_REL_PATH
+        )
+        relative_artifact_path = _relative_to_root_or_str(self.root, artifact_path)
+        if not artifact_path.exists():
+            return "missing", [], [], relative_artifact_path
+
+        payload, warnings = self._load_frontend_final_proof_archive_project_cleanup_artifact_payload(
+            artifact_path
+        )
+        if payload is None:
+            return "missing", [], list(warnings), relative_artifact_path
+
+        cleanup_preview_plan = payload.get("cleanup_preview_plan")
+        if cleanup_preview_plan is None:
+            return "missing", [], list(warnings), relative_artifact_path
+        if not isinstance(cleanup_preview_plan, list):
+            return (
+                "missing",
+                [],
+                [
+                    *warnings,
+                    (
+                        "invalid final proof archive project cleanup artifact: "
+                        f"{relative_artifact_path} cleanup_preview_plan must be a list"
+                    ),
+                ],
+                relative_artifact_path,
+            )
+
+        normalized_preview_plan = list(cleanup_preview_plan)
+        normalized_warnings = list(warnings)
+        cleanup_targets_by_id: dict[str, dict[str, object]] = {}
+        eligibility_by_target_id: dict[str, dict[str, object]] = {}
+
+        for item in cleanup_targets or ():
+            if not isinstance(item, dict):
+                continue
+            target_id = str(item.get("target_id", "")).strip()
+            if target_id:
+                cleanup_targets_by_id[target_id] = item
+
+        for item in cleanup_target_eligibility or ():
+            if not isinstance(item, dict):
+                continue
+            target_id = str(item.get("target_id", "")).strip()
+            if target_id:
+                eligibility_by_target_id[target_id] = item
+
+        for index, item in enumerate(normalized_preview_plan):
+            if not isinstance(item, dict):
+                normalized_warnings.append(
+                    "invalid final proof archive project cleanup artifact: "
+                    f"{relative_artifact_path} cleanup_preview_plan[{index}] "
+                    "should be a mapping"
+                )
+                continue
+            missing_keys = [
+                key
+                for key in ("target_id", "planned_action", "reason")
+                if not str(item.get(key, "")).strip()
+            ]
+            if missing_keys:
+                normalized_warnings.append(
+                    "invalid final proof archive project cleanup artifact: "
+                    f"{relative_artifact_path} cleanup_preview_plan[{index}] "
+                    "missing required keys: "
+                    + ", ".join(missing_keys)
+                )
+            target_id = str(item.get("target_id", "")).strip()
+            planned_action = str(item.get("planned_action", "")).strip()
+            if not target_id:
+                continue
+            target = cleanup_targets_by_id.get(target_id)
+            if target is None:
+                normalized_warnings.append(
+                    "invalid final proof archive project cleanup artifact: "
+                    f"{relative_artifact_path} cleanup_preview_plan "
+                    f"target_id={target_id} does not exist in cleanup_targets"
+                )
+                continue
+            eligibility = eligibility_by_target_id.get(target_id)
+            if str((eligibility or {}).get("eligibility", "")).strip() != "eligible":
+                normalized_warnings.append(
+                    "invalid final proof archive project cleanup artifact: "
+                    f"{relative_artifact_path} cleanup_preview_plan "
+                    f"target_id={target_id} is not eligible"
+                )
+            cleanup_action = str(target.get("cleanup_action", "")).strip()
+            if cleanup_action and planned_action and cleanup_action != planned_action:
+                normalized_warnings.append(
+                    "invalid final proof archive project cleanup artifact: "
+                    f"{relative_artifact_path} cleanup_preview_plan "
+                    f"target_id={target_id} planned_action does not match cleanup_action"
+                )
+
+        cleanup_preview_plan_state = (
+            "empty" if not normalized_preview_plan else "listed"
+        )
+        return (
+            cleanup_preview_plan_state,
+            normalized_preview_plan,
+            normalized_warnings,
+            relative_artifact_path,
+        )
+
+    def _resolve_frontend_final_proof_archive_cleanup_mutation_proposal(
+        self,
+        *,
+        cleanup_targets: list[object] | None = None,
+        cleanup_target_eligibility: list[object] | None = None,
+        cleanup_preview_plan: list[object] | None = None,
+    ) -> tuple[str, list[object], list[str], str]:
+        artifact_path = (
+            self.root / PROGRAM_FRONTEND_FINAL_PROOF_ARCHIVE_PROJECT_CLEANUP_ARTIFACT_REL_PATH
+        )
+        relative_artifact_path = _relative_to_root_or_str(self.root, artifact_path)
+        if not artifact_path.exists():
+            return "missing", [], [], relative_artifact_path
+
+        payload, warnings = self._load_frontend_final_proof_archive_project_cleanup_artifact_payload(
+            artifact_path
+        )
+        if payload is None:
+            return "missing", [], list(warnings), relative_artifact_path
+
+        cleanup_mutation_proposal = payload.get("cleanup_mutation_proposal")
+        if cleanup_mutation_proposal is None:
+            return "missing", [], list(warnings), relative_artifact_path
+        if not isinstance(cleanup_mutation_proposal, list):
+            return (
+                "missing",
+                [],
+                [
+                    *warnings,
+                    (
+                        "invalid final proof archive project cleanup artifact: "
+                        f"{relative_artifact_path} cleanup_mutation_proposal must be a list"
+                    ),
+                ],
+                relative_artifact_path,
+            )
+
+        normalized_proposal = list(cleanup_mutation_proposal)
+        normalized_warnings = list(warnings)
+        cleanup_targets_by_id: dict[str, dict[str, object]] = {}
+        eligibility_by_target_id: dict[str, dict[str, object]] = {}
+        preview_plan_by_target_id: dict[str, dict[str, object]] = {}
+
+        for item in cleanup_targets or ():
+            if not isinstance(item, dict):
+                continue
+            target_id = str(item.get("target_id", "")).strip()
+            if target_id:
+                cleanup_targets_by_id[target_id] = item
+
+        for item in cleanup_target_eligibility or ():
+            if not isinstance(item, dict):
+                continue
+            target_id = str(item.get("target_id", "")).strip()
+            if target_id:
+                eligibility_by_target_id[target_id] = item
+
+        for item in cleanup_preview_plan or ():
+            if not isinstance(item, dict):
+                continue
+            target_id = str(item.get("target_id", "")).strip()
+            if target_id:
+                preview_plan_by_target_id[target_id] = item
+
+        for index, item in enumerate(normalized_proposal):
+            if not isinstance(item, dict):
+                normalized_warnings.append(
+                    "invalid final proof archive project cleanup artifact: "
+                    f"{relative_artifact_path} cleanup_mutation_proposal[{index}] "
+                    "should be a mapping"
+                )
+                continue
+            missing_keys = [
+                key
+                for key in ("target_id", "proposed_action", "reason")
+                if not str(item.get(key, "")).strip()
+            ]
+            if missing_keys:
+                normalized_warnings.append(
+                    "invalid final proof archive project cleanup artifact: "
+                    f"{relative_artifact_path} cleanup_mutation_proposal[{index}] "
+                    "missing required keys: "
+                    + ", ".join(missing_keys)
+                )
+            target_id = str(item.get("target_id", "")).strip()
+            proposed_action = str(item.get("proposed_action", "")).strip()
+            if not target_id:
+                continue
+            target = cleanup_targets_by_id.get(target_id)
+            if target is None:
+                normalized_warnings.append(
+                    "invalid final proof archive project cleanup artifact: "
+                    f"{relative_artifact_path} cleanup_mutation_proposal "
+                    f"target_id={target_id} does not exist in cleanup_targets"
+                )
+                continue
+            eligibility = eligibility_by_target_id.get(target_id)
+            if str((eligibility or {}).get("eligibility", "")).strip() != "eligible":
+                normalized_warnings.append(
+                    "invalid final proof archive project cleanup artifact: "
+                    f"{relative_artifact_path} cleanup_mutation_proposal "
+                    f"target_id={target_id} is not eligible"
+                )
+            cleanup_action = str(target.get("cleanup_action", "")).strip()
+            if cleanup_action and proposed_action and cleanup_action != proposed_action:
+                normalized_warnings.append(
+                    "invalid final proof archive project cleanup artifact: "
+                    f"{relative_artifact_path} cleanup_mutation_proposal "
+                    f"target_id={target_id} proposed_action does not match cleanup_action"
+                )
+            preview_plan_item = preview_plan_by_target_id.get(target_id)
+            if preview_plan_item is None:
+                normalized_warnings.append(
+                    "invalid final proof archive project cleanup artifact: "
+                    f"{relative_artifact_path} cleanup_mutation_proposal "
+                    f"target_id={target_id} does not appear in cleanup_preview_plan"
+                )
+                continue
+            planned_action = str(preview_plan_item.get("planned_action", "")).strip()
+            if (
+                planned_action
+                and proposed_action
+                and planned_action != proposed_action
+                and cleanup_action == proposed_action
+            ):
+                normalized_warnings.append(
+                    "invalid final proof archive project cleanup artifact: "
+                    f"{relative_artifact_path} cleanup_mutation_proposal "
+                    f"target_id={target_id} proposed_action does not match cleanup_action"
+                )
+
+        cleanup_mutation_proposal_state = (
+            "empty" if not normalized_proposal else "listed"
+        )
+        return (
+            cleanup_mutation_proposal_state,
+            normalized_proposal,
+            normalized_warnings,
+            relative_artifact_path,
+        )
+
+    def _resolve_frontend_final_proof_archive_cleanup_mutation_proposal_approval(
+        self,
+        *,
+        cleanup_targets: list[object] | None = None,
+        cleanup_target_eligibility: list[object] | None = None,
+        cleanup_preview_plan: list[object] | None = None,
+        cleanup_mutation_proposal: list[object] | None = None,
+    ) -> tuple[str, list[object], list[str], str]:
+        artifact_path = (
+            self.root / PROGRAM_FRONTEND_FINAL_PROOF_ARCHIVE_PROJECT_CLEANUP_ARTIFACT_REL_PATH
+        )
+        relative_artifact_path = _relative_to_root_or_str(self.root, artifact_path)
+        if not artifact_path.exists():
+            return "missing", [], [], relative_artifact_path
+
+        payload, warnings = self._load_frontend_final_proof_archive_project_cleanup_artifact_payload(
+            artifact_path
+        )
+        if payload is None:
+            return "missing", [], list(warnings), relative_artifact_path
+
+        cleanup_mutation_proposal_approval = payload.get(
+            "cleanup_mutation_proposal_approval"
+        )
+        if cleanup_mutation_proposal_approval is None:
+            return "missing", [], list(warnings), relative_artifact_path
+        if not isinstance(cleanup_mutation_proposal_approval, list):
+            return (
+                "missing",
+                [],
+                [
+                    *warnings,
+                    (
+                        "invalid final proof archive project cleanup artifact: "
+                        f"{relative_artifact_path} cleanup_mutation_proposal_approval must be a list"
+                    ),
+                ],
+                relative_artifact_path,
+            )
+
+        normalized_approval = list(cleanup_mutation_proposal_approval)
+        normalized_warnings = list(warnings)
+        cleanup_targets_by_id: dict[str, dict[str, object]] = {}
+        eligibility_by_target_id: dict[str, dict[str, object]] = {}
+        preview_plan_by_target_id: dict[str, dict[str, object]] = {}
+        proposal_by_target_id: dict[str, dict[str, object]] = {}
+
+        for item in cleanup_targets or ():
+            if not isinstance(item, dict):
+                continue
+            target_id = str(item.get("target_id", "")).strip()
+            if target_id:
+                cleanup_targets_by_id[target_id] = item
+
+        for item in cleanup_target_eligibility or ():
+            if not isinstance(item, dict):
+                continue
+            target_id = str(item.get("target_id", "")).strip()
+            if target_id:
+                eligibility_by_target_id[target_id] = item
+
+        for item in cleanup_preview_plan or ():
+            if not isinstance(item, dict):
+                continue
+            target_id = str(item.get("target_id", "")).strip()
+            if target_id:
+                preview_plan_by_target_id[target_id] = item
+
+        for item in cleanup_mutation_proposal or ():
+            if not isinstance(item, dict):
+                continue
+            target_id = str(item.get("target_id", "")).strip()
+            if target_id:
+                proposal_by_target_id[target_id] = item
+
+        for index, item in enumerate(normalized_approval):
+            if not isinstance(item, dict):
+                normalized_warnings.append(
+                    "invalid final proof archive project cleanup artifact: "
+                    f"{relative_artifact_path} cleanup_mutation_proposal_approval[{index}] "
+                    "should be a mapping"
+                )
+                continue
+            missing_keys = [
+                key
+                for key in ("target_id", "approved_action", "reason")
+                if not str(item.get(key, "")).strip()
+            ]
+            if missing_keys:
+                normalized_warnings.append(
+                    "invalid final proof archive project cleanup artifact: "
+                    f"{relative_artifact_path} cleanup_mutation_proposal_approval[{index}] "
+                    "missing required keys: "
+                    + ", ".join(missing_keys)
+                )
+            target_id = str(item.get("target_id", "")).strip()
+            approved_action = str(item.get("approved_action", "")).strip()
+            if not target_id:
+                continue
+            target = cleanup_targets_by_id.get(target_id)
+            if target is None:
+                normalized_warnings.append(
+                    "invalid final proof archive project cleanup artifact: "
+                    f"{relative_artifact_path} cleanup_mutation_proposal_approval "
+                    f"target_id={target_id} does not exist in cleanup_targets"
+                )
+                proposal_item = proposal_by_target_id.get(target_id)
+                if proposal_item is None:
+                    normalized_warnings.append(
+                        "invalid final proof archive project cleanup artifact: "
+                        f"{relative_artifact_path} cleanup_mutation_proposal_approval "
+                        f"target_id={target_id} does not appear in cleanup_mutation_proposal"
+                    )
+                continue
+            eligibility = eligibility_by_target_id.get(target_id)
+            if str((eligibility or {}).get("eligibility", "")).strip() != "eligible":
+                normalized_warnings.append(
+                    "invalid final proof archive project cleanup artifact: "
+                    f"{relative_artifact_path} cleanup_mutation_proposal_approval "
+                    f"target_id={target_id} is not eligible"
+                )
+            preview_plan_item = preview_plan_by_target_id.get(target_id)
+            if preview_plan_item is None:
+                normalized_warnings.append(
+                    "invalid final proof archive project cleanup artifact: "
+                    f"{relative_artifact_path} cleanup_mutation_proposal_approval "
+                    f"target_id={target_id} does not appear in cleanup_preview_plan"
+                )
+            proposal_item = proposal_by_target_id.get(target_id)
+            if proposal_item is None:
+                normalized_warnings.append(
+                    "invalid final proof archive project cleanup artifact: "
+                    f"{relative_artifact_path} cleanup_mutation_proposal_approval "
+                    f"target_id={target_id} does not appear in cleanup_mutation_proposal"
+                )
+
+            cleanup_action = str(target.get("cleanup_action", "")).strip()
+            if cleanup_action and approved_action and cleanup_action != approved_action:
+                normalized_warnings.append(
+                    "invalid final proof archive project cleanup artifact: "
+                    f"{relative_artifact_path} cleanup_mutation_proposal_approval "
+                    f"target_id={target_id} approved_action does not match cleanup_action"
+                )
+            proposed_action = str((proposal_item or {}).get("proposed_action", "")).strip()
+            if (
+                proposal_item is not None
+                and proposed_action
+                and approved_action
+                and proposed_action != approved_action
+            ):
+                normalized_warnings.append(
+                    "invalid final proof archive project cleanup artifact: "
+                    f"{relative_artifact_path} cleanup_mutation_proposal_approval "
+                    f"target_id={target_id} approved_action does not match proposed_action"
+                )
+
+        cleanup_mutation_proposal_approval_state = (
+            "empty" if not normalized_approval else "listed"
+        )
+        return (
+            cleanup_mutation_proposal_approval_state,
+            normalized_approval,
+            normalized_warnings,
+            relative_artifact_path,
+        )
+
+    def _resolve_frontend_final_proof_archive_cleanup_mutation_execution_gating(
+        self,
+        *,
+        cleanup_targets: list[object] | None = None,
+        cleanup_target_eligibility: list[object] | None = None,
+        cleanup_preview_plan: list[object] | None = None,
+        cleanup_mutation_proposal_approval: list[object] | None = None,
+    ) -> tuple[str, list[object], list[str], str]:
+        artifact_path = (
+            self.root / PROGRAM_FRONTEND_FINAL_PROOF_ARCHIVE_PROJECT_CLEANUP_ARTIFACT_REL_PATH
+        )
+        relative_artifact_path = _relative_to_root_or_str(self.root, artifact_path)
+        if not artifact_path.exists():
+            return "missing", [], [], relative_artifact_path
+
+        payload, warnings = self._load_frontend_final_proof_archive_project_cleanup_artifact_payload(
+            artifact_path
+        )
+        if payload is None:
+            return "missing", [], list(warnings), relative_artifact_path
+
+        cleanup_mutation_execution_gating = payload.get(
+            "cleanup_mutation_execution_gating"
+        )
+        if cleanup_mutation_execution_gating is None:
+            return "missing", [], list(warnings), relative_artifact_path
+        if not isinstance(cleanup_mutation_execution_gating, list):
+            return (
+                "missing",
+                [],
+                [
+                    *warnings,
+                    (
+                        "invalid final proof archive project cleanup artifact: "
+                        f"{relative_artifact_path} cleanup_mutation_execution_gating must be a list"
+                    ),
+                ],
+                relative_artifact_path,
+            )
+
+        normalized_execution_gating = list(cleanup_mutation_execution_gating)
+        normalized_warnings = list(warnings)
+        cleanup_targets_by_id: dict[str, dict[str, object]] = {}
+        eligibility_by_target_id: dict[str, dict[str, object]] = {}
+        preview_plan_by_target_id: dict[str, dict[str, object]] = {}
+        approval_by_target_id: dict[str, dict[str, object]] = {}
+
+        for item in cleanup_targets or ():
+            if not isinstance(item, dict):
+                continue
+            target_id = str(item.get("target_id", "")).strip()
+            if target_id:
+                cleanup_targets_by_id[target_id] = item
+
+        for item in cleanup_target_eligibility or ():
+            if not isinstance(item, dict):
+                continue
+            target_id = str(item.get("target_id", "")).strip()
+            if target_id:
+                eligibility_by_target_id[target_id] = item
+
+        for item in cleanup_preview_plan or ():
+            if not isinstance(item, dict):
+                continue
+            target_id = str(item.get("target_id", "")).strip()
+            if target_id:
+                preview_plan_by_target_id[target_id] = item
+
+        for item in cleanup_mutation_proposal_approval or ():
+            if not isinstance(item, dict):
+                continue
+            target_id = str(item.get("target_id", "")).strip()
+            if target_id:
+                approval_by_target_id[target_id] = item
+
+        for index, item in enumerate(normalized_execution_gating):
+            if not isinstance(item, dict):
+                normalized_warnings.append(
+                    "invalid final proof archive project cleanup artifact: "
+                    f"{relative_artifact_path} cleanup_mutation_execution_gating[{index}] "
+                    "should be a mapping"
+                )
+                continue
+            missing_keys = [
+                key
+                for key in ("target_id", "gated_action", "reason")
+                if not str(item.get(key, "")).strip()
+            ]
+            if missing_keys:
+                normalized_warnings.append(
+                    "invalid final proof archive project cleanup artifact: "
+                    f"{relative_artifact_path} cleanup_mutation_execution_gating[{index}] "
+                    "missing required keys: "
+                    + ", ".join(missing_keys)
+                )
+            target_id = str(item.get("target_id", "")).strip()
+            gated_action = str(item.get("gated_action", "")).strip()
+            if not target_id:
+                continue
+            target = cleanup_targets_by_id.get(target_id)
+            approval_item = approval_by_target_id.get(target_id)
+            if target is None:
+                normalized_warnings.append(
+                    "invalid final proof archive project cleanup artifact: "
+                    f"{relative_artifact_path} cleanup_mutation_execution_gating "
+                    f"target_id={target_id} does not exist in cleanup_targets"
+                )
+                if approval_item is None:
+                    normalized_warnings.append(
+                        "invalid final proof archive project cleanup artifact: "
+                        f"{relative_artifact_path} cleanup_mutation_execution_gating "
+                        f"target_id={target_id} does not appear in cleanup_mutation_proposal_approval"
+                    )
+                continue
+            eligibility = eligibility_by_target_id.get(target_id)
+            if str((eligibility or {}).get("eligibility", "")).strip() != "eligible":
+                normalized_warnings.append(
+                    "invalid final proof archive project cleanup artifact: "
+                    f"{relative_artifact_path} cleanup_mutation_execution_gating "
+                    f"target_id={target_id} is not eligible"
+                )
+            preview_plan_item = preview_plan_by_target_id.get(target_id)
+            if preview_plan_item is None:
+                normalized_warnings.append(
+                    "invalid final proof archive project cleanup artifact: "
+                    f"{relative_artifact_path} cleanup_mutation_execution_gating "
+                    f"target_id={target_id} does not appear in cleanup_preview_plan"
+                )
+            if approval_item is None:
+                normalized_warnings.append(
+                    "invalid final proof archive project cleanup artifact: "
+                    f"{relative_artifact_path} cleanup_mutation_execution_gating "
+                    f"target_id={target_id} does not appear in cleanup_mutation_proposal_approval"
+                )
+
+            cleanup_action = str(target.get("cleanup_action", "")).strip()
+            if cleanup_action and gated_action and cleanup_action != gated_action:
+                normalized_warnings.append(
+                    "invalid final proof archive project cleanup artifact: "
+                    f"{relative_artifact_path} cleanup_mutation_execution_gating "
+                    f"target_id={target_id} gated_action does not match cleanup_action"
+                )
+            approved_action = str(
+                (approval_item or {}).get("approved_action", "")
+            ).strip()
+            if (
+                approval_item is not None
+                and approved_action
+                and gated_action
+                and approved_action != gated_action
+            ):
+                normalized_warnings.append(
+                    "invalid final proof archive project cleanup artifact: "
+                    f"{relative_artifact_path} cleanup_mutation_execution_gating "
+                    f"target_id={target_id} gated_action does not match approved_action"
+                )
+
+        cleanup_mutation_execution_gating_state = (
+            "empty" if not normalized_execution_gating else "listed"
+        )
+        return (
+            cleanup_mutation_execution_gating_state,
+            normalized_execution_gating,
+            normalized_warnings,
+            relative_artifact_path,
+        )
+
+    def _build_frontend_final_proof_archive_project_cleanup_eligibility_warnings(
+        self,
+        *,
+        cleanup_targets: list[object],
+        cleanup_target_eligibility: list[object],
+    ) -> list[str]:
+        target_index_by_id: dict[str, int] = {}
+        for index, item in enumerate(cleanup_targets):
+            if not isinstance(item, dict):
+                continue
+            target_id = str(item.get("target_id", "")).strip()
+            if target_id:
+                target_index_by_id[target_id] = index
+
+        warnings: list[str] = []
+        for item in cleanup_target_eligibility:
+            if not isinstance(item, dict):
+                continue
+            target_id = str(item.get("target_id", "")).strip()
+            eligibility = str(item.get("eligibility", "")).strip()
+            reason = str(item.get("reason", "")).strip()
+            target_index = target_index_by_id.get(target_id)
+            if target_index is None:
+                continue
+            if eligibility == "eligible":
+                warnings.append(
+                    "final proof archive project cleanup deferred: "
+                    f"cleanup_targets[{target_index}] target_id={target_id} "
+                    "is eligible for future child work but not for workspace "
+                    f"cleanup mutation in this baseline ({reason})"
+                )
+            elif eligibility == "blocked":
+                warnings.append(
+                    "final proof archive project cleanup blocked target: "
+                    f"cleanup_targets[{target_index}] target_id={target_id} "
+                    f"remains blocked ({reason})"
+                )
+        return warnings
 
     def _resolve_spec_dir(self, spec_path: str) -> Path:
         path = (self.root / spec_path).resolve()

@@ -2825,6 +2825,817 @@ def program_final_proof_closure(
     raise typer.Exit(code=1)
 
 
+@program_app.command("final-proof-archive")
+def program_final_proof_archive(
+    manifest: str = typer.Option(
+        "program-manifest.yaml",
+        "--manifest",
+        help="Path to program manifest relative to project root.",
+    ),
+    dry_run: bool = typer.Option(
+        True,
+        "--dry-run/--execute",
+        help="Preview frontend final proof archive orchestration or explicitly execute the final proof archive baseline.",
+    ),
+    report: str = typer.Option(
+        "",
+        "--report",
+        help="Optional report output path relative to project root.",
+    ),
+    yes: bool = typer.Option(
+        False,
+        "--yes",
+        help="Confirm final proof archive execute mode.",
+    ),
+) -> None:
+    """Preview or execute the frontend final proof archive baseline."""
+    root = _resolve_root()
+    svc = ProgramService(root, root / manifest)
+
+    try:
+        mf = svc.load_manifest()
+    except Exception as exc:
+        console.print(f"[red]Failed to load manifest: {exc}[/red]")
+        raise typer.Exit(code=2) from None
+
+    result = svc.validate_manifest(mf)
+    if not result.valid:
+        console.print(
+            "[bold red]Manifest invalid; cannot build final proof archive request.[/bold red]"
+        )
+        for e in result.errors:
+            console.print(f"  - {e}")
+        raise typer.Exit(code=1)
+
+    request = svc.build_frontend_final_proof_archive_request(mf)
+    mode_title = (
+        "Program Frontend Final Proof Archive Dry-Run"
+        if dry_run
+        else "Program Frontend Final Proof Archive Execute"
+    )
+
+    if request.steps:
+        table = Table(title=mode_title)
+        table.add_column("Spec")
+        table.add_column("Path")
+        table.add_column("Archive State")
+        table.add_column("Pending Inputs")
+        table.add_column("Next Actions")
+        for step in request.steps:
+            table.add_row(
+                step.spec_id,
+                step.path,
+                step.archive_state,
+                ", ".join(step.pending_inputs) or "-",
+                " ; ".join(step.suggested_next_actions) or "-",
+            )
+        console.print(table)
+    else:
+        console.print("[green]No frontend final proof archive steps required.[/green]")
+
+    console.print("\n[bold cyan]Frontend Final Proof Archive Guard[/bold cyan]")
+    console.print(f"  - source artifact: {request.artifact_source_path}", markup=False)
+    console.print(f"  - archive state: {request.archive_state}", markup=False)
+    console.print(f"  - closure state: {request.closure_state}", markup=False)
+    console.print(
+        f"  - confirmation required: {str(request.confirmation_required).lower()}",
+        markup=False,
+    )
+    if request.artifact_generated_at:
+        console.print(
+            f"  - artifact generated_at: {request.artifact_generated_at}",
+            markup=False,
+        )
+    for path in request.written_paths:
+        console.print(f"  - existing written path: {path}", markup=False)
+    for blocker in request.remaining_blockers:
+        console.print(f"  - blocker: {blocker}", markup=False)
+
+    if request.warnings:
+        console.print("\n[bold yellow]Warnings[/bold yellow]")
+        for warning in request.warnings:
+            console.print(f"  - {warning}")
+
+    archive_result = None
+    archive_artifact_path: Path | None = None
+    if not dry_run:
+        if not yes:
+            console.print(
+                "[bold yellow]`--execute` requires explicit confirmation via `--yes`.[/bold yellow]"
+            )
+            raise typer.Exit(code=2)
+        archive_result = svc.execute_frontend_final_proof_archive(
+            mf,
+            request=request,
+            confirmed=True,
+        )
+        archive_artifact_path = svc.write_frontend_final_proof_archive_artifact(
+            mf,
+            request=request,
+            result=archive_result,
+        )
+        _render_frontend_final_proof_archive_result(archive_result)
+        console.print("\n[bold cyan]Frontend Final Proof Archive Artifact[/bold cyan]")
+        console.print(
+            f"  - saved: {archive_artifact_path.relative_to(root)}",
+            markup=False,
+        )
+
+    if report:
+        report_path = root / report
+        report_path.parent.mkdir(parents=True, exist_ok=True)
+        lines: list[str] = [
+            f"# {mode_title}",
+            "",
+            f"- Manifest: `{manifest}`",
+            f"- Source artifact: `{request.artifact_source_path}`",
+            f"- Archive state: `{request.archive_state}`",
+            f"- Closure state: `{request.closure_state}`",
+            f"- Confirmation required: `{str(request.confirmation_required).lower()}`",
+        ]
+        if request.artifact_generated_at:
+            lines.append(f"- Artifact generated_at: `{request.artifact_generated_at}`")
+        lines.append("")
+        if request.steps:
+            lines.append("## Steps")
+            lines.append("")
+            for step in request.steps:
+                lines.extend(
+                    [
+                        f"### {step.spec_id}",
+                        f"- Path: `{step.path}`",
+                        f"- Archive state: `{step.archive_state}`",
+                        f"- Pending inputs: `{', '.join(step.pending_inputs) or '-'}`",
+                        "- Suggested next actions:",
+                    ]
+                )
+                lines.extend([f"  - {action}" for action in step.suggested_next_actions])
+                lines.append("")
+        if request.written_paths:
+            lines.append("## Existing Written Paths")
+            lines.append("")
+            lines.extend([f"- {path}" for path in request.written_paths])
+            lines.append("")
+        if request.remaining_blockers:
+            lines.append("## Remaining Blockers")
+            lines.append("")
+            lines.extend([f"- {blocker}" for blocker in request.remaining_blockers])
+            lines.append("")
+        if archive_result is not None:
+            lines.append("## Frontend Final Proof Archive Result")
+            lines.append("")
+            lines.append(f"- Archive result: `{archive_result.archive_result}`")
+            lines.append(f"- Archive state: `{archive_result.archive_state}`")
+            lines.append(f"- Confirmed: `{str(archive_result.confirmed).lower()}`")
+            if archive_result.archive_summaries:
+                lines.append("- Archive summaries:")
+                lines.extend([f"  - {item}" for item in archive_result.archive_summaries])
+            if archive_result.written_paths:
+                lines.append("- Written paths:")
+                lines.extend([f"  - {item}" for item in archive_result.written_paths])
+            if archive_result.remaining_blockers:
+                lines.append("- Remaining blockers:")
+                lines.extend(
+                    [f"  - {item}" for item in archive_result.remaining_blockers]
+                )
+            lines.append("")
+        if archive_artifact_path is not None:
+            lines.append("## Frontend Final Proof Archive Artifact")
+            lines.append("")
+            lines.append(f"- `{archive_artifact_path.relative_to(root)}`")
+            lines.append("")
+        if request.warnings or (archive_result is not None and archive_result.warnings):
+            lines.append("## Warnings")
+            lines.append("")
+            warning_lines = list(request.warnings)
+            if archive_result is not None:
+                warning_lines.extend(archive_result.warnings)
+            lines.extend([f"- {warning}" for warning in warning_lines])
+            lines.append("")
+        report_path.write_text("\n".join(lines), encoding="utf-8")
+        console.print(f"\n[green]Report written:[/green] {report_path}")
+
+    if dry_run:
+        raise typer.Exit(code=0)
+
+    assert archive_result is not None
+    if archive_result.passed:
+        console.print("\n[bold green]Frontend final proof archive completed[/bold green]")
+        raise typer.Exit(code=0)
+
+    console.print("\n[bold red]Frontend final proof archive incomplete[/bold red]")
+    raise typer.Exit(code=1)
+
+
+@program_app.command("final-proof-archive-thread-archive")
+def program_final_proof_archive_thread_archive(
+    manifest: str = typer.Option(
+        "program-manifest.yaml",
+        "--manifest",
+        help="Path to program manifest relative to project root.",
+    ),
+    dry_run: bool = typer.Option(
+        True,
+        "--dry-run/--execute",
+        help="Preview frontend final proof archive thread archive or explicitly execute the bounded thread archive baseline.",
+    ),
+    report: str = typer.Option(
+        "",
+        "--report",
+        help="Optional report output path relative to project root.",
+    ),
+    yes: bool = typer.Option(
+        False,
+        "--yes",
+        help="Confirm final proof archive thread archive execute mode.",
+    ),
+) -> None:
+    """Preview or execute the bounded frontend final proof archive thread archive baseline."""
+    root = _resolve_root()
+    svc = ProgramService(root, root / manifest)
+
+    try:
+        mf = svc.load_manifest()
+    except Exception as exc:
+        console.print(f"[red]Failed to load manifest: {exc}[/red]")
+        raise typer.Exit(code=2) from None
+
+    result = svc.validate_manifest(mf)
+    if not result.valid:
+        console.print(
+            "[bold red]Manifest invalid; cannot build final proof archive thread archive request.[/bold red]"
+        )
+        for e in result.errors:
+            console.print(f"  - {e}")
+        raise typer.Exit(code=1)
+
+    request = svc.build_frontend_final_proof_archive_thread_archive_request(mf)
+    mode_title = (
+        "Program Frontend Final Proof Archive Thread Archive Dry-Run"
+        if dry_run
+        else "Program Frontend Final Proof Archive Thread Archive Execute"
+    )
+
+    if request.steps:
+        table = Table(title=mode_title)
+        table.add_column("Spec")
+        table.add_column("Path")
+        table.add_column("Thread Archive State")
+        table.add_column("Pending Inputs")
+        table.add_column("Next Actions")
+        for step in request.steps:
+            table.add_row(
+                step.spec_id,
+                step.path,
+                step.thread_archive_state,
+                ", ".join(step.pending_inputs) or "-",
+                " ; ".join(step.suggested_next_actions) or "-",
+            )
+        console.print(table)
+    else:
+        console.print(
+            "[green]No frontend final proof archive thread archive steps required.[/green]"
+        )
+
+    console.print(
+        "\n[bold cyan]Frontend Final Proof Archive Thread Archive Guard[/bold cyan]"
+    )
+    console.print(f"  - source artifact: {request.artifact_source_path}", markup=False)
+    console.print(f"  - archive state: {request.archive_state}", markup=False)
+    console.print(
+        f"  - thread archive state: {request.thread_archive_state}",
+        markup=False,
+    )
+    console.print(
+        f"  - confirmation required: {str(request.confirmation_required).lower()}",
+        markup=False,
+    )
+    if request.artifact_generated_at:
+        console.print(
+            f"  - artifact generated_at: {request.artifact_generated_at}",
+            markup=False,
+        )
+    for path in request.written_paths:
+        console.print(f"  - existing written path: {path}", markup=False)
+    for blocker in request.remaining_blockers:
+        console.print(f"  - blocker: {blocker}", markup=False)
+
+    if request.warnings:
+        console.print("\n[bold yellow]Warnings[/bold yellow]")
+        for warning in request.warnings:
+            console.print(f"  - {warning}")
+
+    thread_archive_result = None
+    if not dry_run:
+        if not yes:
+            console.print(
+                "[bold yellow]`--execute` requires explicit confirmation via `--yes`.[/bold yellow]"
+            )
+            raise typer.Exit(code=2)
+        thread_archive_result = (
+            svc.execute_frontend_final_proof_archive_thread_archive(
+                mf,
+                request=request,
+                confirmed=True,
+            )
+        )
+        _render_frontend_final_proof_archive_thread_archive_result(
+            thread_archive_result
+        )
+
+    if report:
+        report_path = root / report
+        report_path.parent.mkdir(parents=True, exist_ok=True)
+        lines: list[str] = [
+            f"# {mode_title}",
+            "",
+            f"- Manifest: `{manifest}`",
+            f"- Source artifact: `{request.artifact_source_path}`",
+            f"- Archive state: `{request.archive_state}`",
+            f"- Thread archive state: `{request.thread_archive_state}`",
+            f"- Confirmation required: `{str(request.confirmation_required).lower()}`",
+        ]
+        if request.artifact_generated_at:
+            lines.append(f"- Artifact generated_at: `{request.artifact_generated_at}`")
+        lines.append("")
+        if request.steps:
+            lines.append("## Steps")
+            lines.append("")
+            for step in request.steps:
+                lines.extend(
+                    [
+                        f"### {step.spec_id}",
+                        f"- Path: `{step.path}`",
+                        f"- Thread archive state: `{step.thread_archive_state}`",
+                        f"- Pending inputs: `{', '.join(step.pending_inputs) or '-'}`",
+                        "- Suggested next actions:",
+                    ]
+                )
+                lines.extend([f"  - {action}" for action in step.suggested_next_actions])
+                lines.append("")
+        if request.written_paths:
+            lines.append("## Existing Written Paths")
+            lines.append("")
+            lines.extend([f"- {path}" for path in request.written_paths])
+            lines.append("")
+        if request.remaining_blockers:
+            lines.append("## Remaining Blockers")
+            lines.append("")
+            lines.extend([f"- {blocker}" for blocker in request.remaining_blockers])
+            lines.append("")
+        if thread_archive_result is not None:
+            lines.append("## Frontend Final Proof Archive Thread Archive Result")
+            lines.append("")
+            lines.append(
+                f"- Thread archive result: `{thread_archive_result.thread_archive_result}`"
+            )
+            lines.append(
+                f"- Thread archive state: `{thread_archive_result.thread_archive_state}`"
+            )
+            lines.append(
+                f"- Confirmed: `{str(thread_archive_result.confirmed).lower()}`"
+            )
+            if thread_archive_result.thread_archive_summaries:
+                lines.append("- Thread archive summaries:")
+                lines.extend(
+                    [
+                        f"  - {item}"
+                        for item in thread_archive_result.thread_archive_summaries
+                    ]
+                )
+            if thread_archive_result.written_paths:
+                lines.append("- Written paths:")
+                lines.extend(
+                    [f"  - {item}" for item in thread_archive_result.written_paths]
+                )
+            if thread_archive_result.remaining_blockers:
+                lines.append("- Remaining blockers:")
+                lines.extend(
+                    [
+                        f"  - {item}"
+                        for item in thread_archive_result.remaining_blockers
+                    ]
+                )
+            lines.append("")
+        lines.append("## Frontend Final Proof Archive Artifact")
+        lines.append("")
+        lines.append(f"- `{request.artifact_source_path}`")
+        lines.append("")
+        if request.warnings or (
+            thread_archive_result is not None and thread_archive_result.warnings
+        ):
+            lines.append("## Warnings")
+            lines.append("")
+            warning_lines = list(request.warnings)
+            if thread_archive_result is not None:
+                warning_lines.extend(thread_archive_result.warnings)
+            lines.extend([f"- {warning}" for warning in warning_lines])
+            lines.append("")
+        report_path.write_text("\n".join(lines), encoding="utf-8")
+        console.print(f"\n[green]Report written:[/green] {report_path}")
+
+    if dry_run:
+        raise typer.Exit(code=0)
+
+    assert thread_archive_result is not None
+    if thread_archive_result.passed:
+        console.print(
+            "\n[bold green]Frontend final proof archive thread archive completed[/bold green]"
+        )
+        raise typer.Exit(code=0)
+
+    console.print(
+        "\n[bold red]Frontend final proof archive thread archive incomplete[/bold red]"
+    )
+    raise typer.Exit(code=1)
+
+
+@program_app.command("final-proof-archive-project-cleanup")
+def program_final_proof_archive_project_cleanup(
+    manifest: str = typer.Option(
+        "program-manifest.yaml",
+        "--manifest",
+        help="Path to program manifest relative to project root.",
+    ),
+    dry_run: bool = typer.Option(
+        True,
+        "--dry-run/--execute",
+        help="Preview frontend final proof archive project cleanup or explicitly execute the bounded project cleanup baseline.",
+    ),
+    report: str = typer.Option(
+        "",
+        "--report",
+        help="Optional report output path relative to project root.",
+    ),
+    yes: bool = typer.Option(
+        False,
+        "--yes",
+        help="Confirm final proof archive project cleanup execute mode.",
+    ),
+) -> None:
+    """Preview or execute the bounded frontend final proof archive project cleanup baseline."""
+    root = _resolve_root()
+    svc = ProgramService(root, root / manifest)
+
+    try:
+        mf = svc.load_manifest()
+    except Exception as exc:
+        console.print(f"[red]Failed to load manifest: {exc}[/red]")
+        raise typer.Exit(code=2) from None
+
+    result = svc.validate_manifest(mf)
+    if not result.valid:
+        console.print(
+            "[bold red]Manifest invalid; cannot build final proof archive project cleanup request.[/bold red]"
+        )
+        for e in result.errors:
+            console.print(f"  - {e}")
+        raise typer.Exit(code=1)
+
+    request = svc.build_frontend_final_proof_archive_project_cleanup_request(mf)
+    mode_title = (
+        "Program Frontend Final Proof Archive Project Cleanup Dry-Run"
+        if dry_run
+        else "Program Frontend Final Proof Archive Project Cleanup Execute"
+    )
+
+    if request.steps:
+        table = Table(title=mode_title)
+        table.add_column("Spec")
+        table.add_column("Path")
+        table.add_column("Project Cleanup State")
+        table.add_column("Pending Inputs")
+        table.add_column("Next Actions")
+        for step in request.steps:
+            table.add_row(
+                step.spec_id,
+                step.path,
+                step.project_cleanup_state,
+                ", ".join(step.pending_inputs) or "-",
+                " ; ".join(step.suggested_next_actions) or "-",
+            )
+        console.print(table)
+    else:
+        console.print(
+            "[green]No frontend final proof archive project cleanup steps required.[/green]"
+        )
+
+    console.print(
+        "\n[bold cyan]Frontend Final Proof Archive Project Cleanup Guard[/bold cyan]"
+    )
+    console.print(f"  - source artifact: {request.artifact_source_path}", markup=False)
+    console.print(
+        f"  - project cleanup state: {request.project_cleanup_state}",
+        markup=False,
+    )
+    console.print(
+        f"  - thread archive state: {request.thread_archive_state}",
+        markup=False,
+    )
+    console.print(
+        f"  - cleanup targets state: {request.cleanup_targets_state}",
+        markup=False,
+    )
+    console.print(
+        f"  - cleanup targets count: {len(request.cleanup_targets)}",
+        markup=False,
+    )
+    console.print(
+        "  - cleanup target eligibility state: "
+        + str(request.cleanup_target_eligibility_state),
+        markup=False,
+    )
+    console.print(
+        "  - cleanup target eligibility count: "
+        + str(len(request.cleanup_target_eligibility)),
+        markup=False,
+    )
+    console.print(
+        "  - cleanup preview plan state: "
+        + str(request.cleanup_preview_plan_state),
+        markup=False,
+    )
+    console.print(
+        "  - cleanup preview plan count: "
+        + str(len(request.cleanup_preview_plan)),
+        markup=False,
+    )
+    console.print(
+        "  - cleanup mutation proposal state: "
+        + str(request.cleanup_mutation_proposal_state),
+        markup=False,
+    )
+    console.print(
+        "  - cleanup mutation proposal count: "
+        + str(len(request.cleanup_mutation_proposal)),
+        markup=False,
+    )
+    console.print(
+        "  - cleanup mutation proposal approval state: "
+        + str(request.cleanup_mutation_proposal_approval_state),
+        markup=False,
+    )
+    console.print(
+        "  - cleanup mutation proposal approval count: "
+        + str(len(request.cleanup_mutation_proposal_approval)),
+        markup=False,
+    )
+    console.print(
+        "  - cleanup mutation execution gating state: "
+        + str(request.cleanup_mutation_execution_gating_state),
+        markup=False,
+    )
+    console.print(
+        "  - cleanup mutation execution gating count: "
+        + str(len(request.cleanup_mutation_execution_gating)),
+        markup=False,
+    )
+    console.print(
+        f"  - confirmation required: {str(request.confirmation_required).lower()}",
+        markup=False,
+    )
+    if request.artifact_generated_at:
+        console.print(
+            f"  - artifact generated_at: {request.artifact_generated_at}",
+            markup=False,
+        )
+    for path in request.written_paths:
+        console.print(f"  - existing written path: {path}", markup=False)
+    for blocker in request.remaining_blockers:
+        console.print(f"  - blocker: {blocker}", markup=False)
+
+    if request.warnings:
+        console.print("\n[bold yellow]Warnings[/bold yellow]")
+        for warning in request.warnings:
+            console.print(f"  - {warning}")
+
+    project_cleanup_result = None
+    project_cleanup_artifact_path: Path | None = None
+    if not dry_run:
+        if not yes:
+            console.print(
+                "[bold yellow]`--execute` requires explicit confirmation via `--yes`.[/bold yellow]"
+            )
+            raise typer.Exit(code=2)
+        project_cleanup_result = (
+            svc.execute_frontend_final_proof_archive_project_cleanup(
+                mf,
+                request=request,
+                confirmed=True,
+            )
+        )
+        project_cleanup_artifact_path = (
+            svc.write_frontend_final_proof_archive_project_cleanup_artifact(
+                mf,
+                request=request,
+                result=project_cleanup_result,
+            )
+        )
+        _render_frontend_final_proof_archive_project_cleanup_result(
+            project_cleanup_result
+        )
+        console.print(
+            "\n[bold cyan]Frontend Final Proof Archive Project Cleanup Artifact[/bold cyan]"
+        )
+        console.print(
+            f"  - saved: {project_cleanup_artifact_path.relative_to(root)}",
+            markup=False,
+        )
+
+    if report:
+        report_path = root / report
+        report_path.parent.mkdir(parents=True, exist_ok=True)
+        lines: list[str] = [
+            f"# {mode_title}",
+            "",
+            f"- Manifest: `{manifest}`",
+            f"- Source artifact: `{request.artifact_source_path}`",
+            f"- Project cleanup state: `{request.project_cleanup_state}`",
+            f"- Thread archive state: `{request.thread_archive_state}`",
+            f"- Cleanup targets state: `{request.cleanup_targets_state}`",
+            f"- Cleanup targets count: `{len(request.cleanup_targets)}`",
+            (
+                "- Cleanup target eligibility state: "
+                + f"`{request.cleanup_target_eligibility_state}`"
+            ),
+            (
+                "- Cleanup target eligibility count: "
+                + f"`{len(request.cleanup_target_eligibility)}`"
+            ),
+            f"- Cleanup preview plan state: `{request.cleanup_preview_plan_state}`",
+            f"- Cleanup preview plan count: `{len(request.cleanup_preview_plan)}`",
+            (
+                "- Cleanup mutation proposal state: "
+                + f"`{request.cleanup_mutation_proposal_state}`"
+            ),
+            (
+                "- Cleanup mutation proposal count: "
+                + f"`{len(request.cleanup_mutation_proposal)}`"
+            ),
+            (
+                "- Cleanup mutation proposal approval state: "
+                + f"`{request.cleanup_mutation_proposal_approval_state}`"
+            ),
+            (
+                "- Cleanup mutation proposal approval count: "
+                + f"`{len(request.cleanup_mutation_proposal_approval)}`"
+            ),
+            (
+                "- Cleanup mutation execution gating state: "
+                + f"`{request.cleanup_mutation_execution_gating_state}`"
+            ),
+            (
+                "- Cleanup mutation execution gating count: "
+                + f"`{len(request.cleanup_mutation_execution_gating)}`"
+            ),
+            f"- Confirmation required: `{str(request.confirmation_required).lower()}`",
+        ]
+        if request.artifact_generated_at:
+            lines.append(f"- Artifact generated_at: `{request.artifact_generated_at}`")
+        lines.append("")
+        if request.steps:
+            lines.append("## Steps")
+            lines.append("")
+            for step in request.steps:
+                lines.extend(
+                    [
+                        f"### {step.spec_id}",
+                        f"- Path: `{step.path}`",
+                        f"- Project cleanup state: `{step.project_cleanup_state}`",
+                        f"- Pending inputs: `{', '.join(step.pending_inputs) or '-'}`",
+                        "- Suggested next actions:",
+                    ]
+                )
+                lines.extend([f"  - {action}" for action in step.suggested_next_actions])
+                lines.append("")
+        if request.written_paths:
+            lines.append("## Existing Written Paths")
+            lines.append("")
+            lines.extend([f"- {path}" for path in request.written_paths])
+            lines.append("")
+        if request.remaining_blockers:
+            lines.append("## Remaining Blockers")
+            lines.append("")
+            lines.extend([f"- {blocker}" for blocker in request.remaining_blockers])
+            lines.append("")
+        if project_cleanup_result is not None:
+            lines.append("## Frontend Final Proof Archive Project Cleanup Result")
+            lines.append("")
+            lines.append(
+                "- Project cleanup result: "
+                + f"`{project_cleanup_result.project_cleanup_result}`"
+            )
+            lines.append(
+                "- Project cleanup state: "
+                + f"`{project_cleanup_result.project_cleanup_state}`"
+            )
+            lines.append(
+                "- Cleanup targets state: "
+                + f"`{project_cleanup_result.cleanup_targets_state}`"
+            )
+            lines.append(
+                "- Cleanup targets count: "
+                + f"`{len(project_cleanup_result.cleanup_targets)}`"
+            )
+            lines.append(
+                "- Cleanup target eligibility state: "
+                + f"`{project_cleanup_result.cleanup_target_eligibility_state}`"
+            )
+            lines.append(
+                "- Cleanup target eligibility count: "
+                + f"`{len(project_cleanup_result.cleanup_target_eligibility)}`"
+            )
+            lines.append(
+                "- Cleanup preview plan state: "
+                + f"`{project_cleanup_result.cleanup_preview_plan_state}`"
+            )
+            lines.append(
+                "- Cleanup preview plan count: "
+                + f"`{len(project_cleanup_result.cleanup_preview_plan)}`"
+            )
+            lines.append(
+                "- Cleanup mutation proposal state: "
+                + f"`{project_cleanup_result.cleanup_mutation_proposal_state}`"
+            )
+            lines.append(
+                "- Cleanup mutation proposal count: "
+                + f"`{len(project_cleanup_result.cleanup_mutation_proposal)}`"
+            )
+            lines.append(
+                "- Cleanup mutation proposal approval state: "
+                + f"`{project_cleanup_result.cleanup_mutation_proposal_approval_state}`"
+            )
+            lines.append(
+                "- Cleanup mutation proposal approval count: "
+                + f"`{len(project_cleanup_result.cleanup_mutation_proposal_approval)}`"
+            )
+            lines.append(
+                "- Cleanup mutation execution gating state: "
+                + f"`{project_cleanup_result.cleanup_mutation_execution_gating_state}`"
+            )
+            lines.append(
+                "- Cleanup mutation execution gating count: "
+                + f"`{len(project_cleanup_result.cleanup_mutation_execution_gating)}`"
+            )
+            lines.append(
+                f"- Confirmed: `{str(project_cleanup_result.confirmed).lower()}`"
+            )
+            if project_cleanup_result.project_cleanup_summaries:
+                lines.append("- Project cleanup summaries:")
+                lines.extend(
+                    [
+                        f"  - {item}"
+                        for item in project_cleanup_result.project_cleanup_summaries
+                    ]
+                )
+            if project_cleanup_result.written_paths:
+                lines.append("- Written paths:")
+                lines.extend(
+                    [f"  - {item}" for item in project_cleanup_result.written_paths]
+                )
+            if project_cleanup_result.remaining_blockers:
+                lines.append("- Remaining blockers:")
+                lines.extend(
+                    [
+                        f"  - {item}"
+                        for item in project_cleanup_result.remaining_blockers
+                    ]
+                )
+            lines.append("")
+        if project_cleanup_artifact_path is not None:
+            lines.append("## Frontend Final Proof Archive Project Cleanup Artifact")
+            lines.append("")
+            lines.append(f"- `{project_cleanup_artifact_path.relative_to(root)}`")
+            lines.append("")
+        if request.warnings or (
+            project_cleanup_result is not None and project_cleanup_result.warnings
+        ):
+            lines.append("## Warnings")
+            lines.append("")
+            warning_lines = list(request.warnings)
+            if project_cleanup_result is not None:
+                warning_lines.extend(project_cleanup_result.warnings)
+            lines.extend([f"- {warning}" for warning in warning_lines])
+            lines.append("")
+        report_path.write_text("\n".join(lines), encoding="utf-8")
+        console.print(f"\n[green]Report written:[/green] {report_path}")
+
+    if dry_run:
+        raise typer.Exit(code=0)
+
+    assert project_cleanup_result is not None
+    if project_cleanup_result.passed:
+        console.print(
+            "\n[bold green]Frontend final proof archive project cleanup completed[/bold green]"
+        )
+        raise typer.Exit(code=0)
+
+    console.print(
+        "\n[bold red]Frontend final proof archive project cleanup incomplete[/bold red]"
+    )
+    raise typer.Exit(code=1)
+
+
 def _format_frontend_readiness(readiness: ProgramFrontendReadiness | None) -> str:
     if readiness is None:
         return "-"
@@ -3223,6 +4034,160 @@ def _render_frontend_final_proof_closure_result(result: object) -> None:
         markup=False,
     )
     for summary in getattr(result, "closure_summaries", ()):
+        console.print(f"  - {summary}", markup=False, soft_wrap=True)
+    for path in getattr(result, "written_paths", ()):
+        console.print(f"  - wrote: {path}", markup=False, soft_wrap=True)
+    for blocker in getattr(result, "remaining_blockers", ()):
+        console.print(f"  - blocker: {blocker}", markup=False, soft_wrap=True)
+    for warning in getattr(result, "warnings", ()):
+        console.print(f"  - warning: {warning}", markup=False, soft_wrap=True)
+
+
+def _render_frontend_final_proof_archive_result(result: object) -> None:
+    console.print("\n[bold cyan]Frontend Final Proof Archive Result[/bold cyan]")
+    console.print(
+        "  - archive result: " + str(getattr(result, "archive_result", "unknown")),
+        markup=False,
+    )
+    console.print(
+        "  - archive state: " + str(getattr(result, "archive_state", "unknown")),
+        markup=False,
+    )
+    console.print(
+        f"  - confirmed: {str(getattr(result, 'confirmed', False)).lower()}",
+        markup=False,
+    )
+    for summary in getattr(result, "archive_summaries", ()):
+        console.print(f"  - {summary}", markup=False, soft_wrap=True)
+    for path in getattr(result, "written_paths", ()):
+        console.print(f"  - wrote: {path}", markup=False, soft_wrap=True)
+    for blocker in getattr(result, "remaining_blockers", ()):
+        console.print(f"  - blocker: {blocker}", markup=False, soft_wrap=True)
+    for warning in getattr(result, "warnings", ()):
+        console.print(f"  - warning: {warning}", markup=False, soft_wrap=True)
+
+
+def _render_frontend_final_proof_archive_thread_archive_result(result: object) -> None:
+    console.print(
+        "\n[bold cyan]Frontend Final Proof Archive Thread Archive Result[/bold cyan]"
+    )
+    console.print(
+        "  - thread archive result: "
+        + str(getattr(result, "thread_archive_result", "unknown")),
+        markup=False,
+    )
+    console.print(
+        "  - thread archive state: "
+        + str(getattr(result, "thread_archive_state", "unknown")),
+        markup=False,
+    )
+    console.print(
+        f"  - confirmed: {str(getattr(result, 'confirmed', False)).lower()}",
+        markup=False,
+    )
+    for summary in getattr(result, "thread_archive_summaries", ()):
+        console.print(f"  - {summary}", markup=False, soft_wrap=True)
+    for path in getattr(result, "written_paths", ()):
+        console.print(f"  - wrote: {path}", markup=False, soft_wrap=True)
+    for blocker in getattr(result, "remaining_blockers", ()):
+        console.print(f"  - blocker: {blocker}", markup=False, soft_wrap=True)
+    for warning in getattr(result, "warnings", ()):
+        console.print(f"  - warning: {warning}", markup=False, soft_wrap=True)
+
+
+def _render_frontend_final_proof_archive_project_cleanup_result(
+    result: object,
+) -> None:
+    console.print(
+        "\n[bold cyan]Frontend Final Proof Archive Project Cleanup Result[/bold cyan]"
+    )
+    console.print(
+        "  - project cleanup result: "
+        + str(getattr(result, "project_cleanup_result", "unknown")),
+        markup=False,
+    )
+    console.print(
+        "  - project cleanup state: "
+        + str(getattr(result, "project_cleanup_state", "unknown")),
+        markup=False,
+    )
+    console.print(
+        "  - cleanup targets state: "
+        + str(getattr(result, "cleanup_targets_state", "unknown")),
+        markup=False,
+    )
+    console.print(
+        "  - cleanup targets count: "
+        + str(len(getattr(result, "cleanup_targets", ()))),
+        markup=False,
+    )
+    console.print(
+        "  - cleanup target eligibility state: "
+        + str(getattr(result, "cleanup_target_eligibility_state", "unknown")),
+        markup=False,
+    )
+    console.print(
+        "  - cleanup target eligibility count: "
+        + str(len(getattr(result, "cleanup_target_eligibility", ()))),
+        markup=False,
+    )
+    console.print(
+        "  - cleanup preview plan state: "
+        + str(getattr(result, "cleanup_preview_plan_state", "unknown")),
+        markup=False,
+    )
+    console.print(
+        "  - cleanup preview plan count: "
+        + str(len(getattr(result, "cleanup_preview_plan", ()))),
+        markup=False,
+    )
+    console.print(
+        "  - cleanup mutation proposal state: "
+        + str(getattr(result, "cleanup_mutation_proposal_state", "unknown")),
+        markup=False,
+    )
+    console.print(
+        "  - cleanup mutation proposal count: "
+        + str(len(getattr(result, "cleanup_mutation_proposal", ()))),
+        markup=False,
+    )
+    console.print(
+        "  - cleanup mutation proposal approval state: "
+        + str(
+            getattr(
+                result,
+                "cleanup_mutation_proposal_approval_state",
+                "unknown",
+            )
+        ),
+        markup=False,
+    )
+    console.print(
+        "  - cleanup mutation proposal approval count: "
+        + str(len(getattr(result, "cleanup_mutation_proposal_approval", ()))),
+        markup=False,
+    )
+    console.print(
+        "  - cleanup mutation execution gating state: "
+        + str(
+            getattr(
+                result,
+                "cleanup_mutation_execution_gating_state",
+                "unknown",
+            )
+        ),
+        markup=False,
+    )
+    console.print(
+        "  - cleanup mutation execution gating count: "
+        + str(len(getattr(result, "cleanup_mutation_execution_gating", ()))),
+        markup=False,
+    )
+    console.print(
+        f"  - confirmed: {str(getattr(result, 'confirmed', False)).lower()}",
+        markup=False,
+    )
+    for summary in getattr(result, "project_cleanup_summaries", ()):
         console.print(f"  - {summary}", markup=False, soft_wrap=True)
     for path in getattr(result, "written_paths", ()):
         console.print(f"  - wrote: {path}", markup=False, soft_wrap=True)

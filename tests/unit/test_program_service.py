@@ -1845,6 +1845,1352 @@ def test_write_frontend_final_proof_closure_artifact_emits_canonical_yaml(
     )
 
 
+def test_build_frontend_final_proof_archive_request_requires_explicit_confirmation(
+    tmp_path: Path,
+) -> None:
+    for p in ("specs/001-auth", "specs/002-course", "specs/003-enroll"):
+        (tmp_path / p).mkdir(parents=True)
+    _write_frontend_final_proof_closure_artifact(
+        tmp_path,
+        closure_result="deferred",
+        closure_state="deferred",
+        remaining_blockers=["spec 001-auth remediation still required"],
+    )
+
+    svc = ProgramService(tmp_path)
+    request = svc.build_frontend_final_proof_archive_request(_manifest())
+
+    assert request.required is True
+    assert request.confirmation_required is True
+    assert request.archive_state == "not_started"
+    assert request.closure_state == "deferred"
+    assert (
+        request.artifact_source_path
+        == ".ai-sdlc/memory/frontend-final-proof-closure/latest.yaml"
+    )
+    assert request.artifact_generated_at == "2026-04-04T04:00:00Z"
+    assert request.written_paths == []
+    assert request.steps[0].spec_id == "001-auth"
+    assert request.steps[0].archive_state == "not_started"
+    assert request.steps[0].source_linkage["archive_state"] == "not_started"
+
+
+def test_execute_frontend_final_proof_archive_returns_deferred_result_when_confirmed(
+    tmp_path: Path,
+) -> None:
+    for p in ("specs/001-auth", "specs/002-course", "specs/003-enroll"):
+        (tmp_path / p).mkdir(parents=True)
+    _write_frontend_final_proof_closure_artifact(
+        tmp_path,
+        closure_result="deferred",
+        closure_state="deferred",
+        remaining_blockers=["spec 001-auth remediation still required"],
+    )
+
+    svc = ProgramService(tmp_path)
+    result = svc.execute_frontend_final_proof_archive(_manifest(), confirmed=True)
+
+    assert result.passed is False
+    assert result.confirmed is True
+    assert result.archive_state == "deferred"
+    assert result.archive_result == "deferred"
+    assert result.archive_summaries == [
+        "no final proof archive actions executed in final proof archive baseline"
+    ]
+    assert result.written_paths == []
+    assert result.remaining_blockers == ["spec 001-auth remediation still required"]
+    assert result.source_linkage["archive_state"] == "deferred"
+
+
+def test_build_frontend_final_proof_archive_thread_archive_request_uses_archive_artifact(
+    tmp_path: Path,
+) -> None:
+    for p in ("specs/001-auth", "specs/002-course", "specs/003-enroll"):
+        (tmp_path / p).mkdir(parents=True)
+    _write_frontend_final_proof_archive_artifact(
+        tmp_path,
+        archive_result="deferred",
+        archive_state="deferred",
+        remaining_blockers=["spec 001-auth remediation still required"],
+    )
+
+    svc = ProgramService(tmp_path)
+    request = svc.build_frontend_final_proof_archive_thread_archive_request(_manifest())
+
+    assert request.required is True
+    assert request.confirmation_required is True
+    assert request.thread_archive_state == "not_started"
+    assert request.archive_state == "deferred"
+    assert (
+        request.artifact_source_path
+        == ".ai-sdlc/memory/frontend-final-proof-archive/latest.yaml"
+    )
+    assert request.artifact_generated_at == "2026-04-04T05:00:00Z"
+    assert request.written_paths == []
+    assert request.steps[0].spec_id == "001-auth"
+    assert request.steps[0].thread_archive_state == "not_started"
+    assert (
+        request.steps[0].source_linkage["final_proof_archive_artifact_path"]
+        == ".ai-sdlc/memory/frontend-final-proof-archive/latest.yaml"
+    )
+
+
+def test_execute_frontend_final_proof_archive_thread_archive_returns_deferred_result_when_confirmed(
+    tmp_path: Path,
+) -> None:
+    for p in ("specs/001-auth", "specs/002-course", "specs/003-enroll"):
+        (tmp_path / p).mkdir(parents=True)
+    _write_frontend_final_proof_archive_artifact(
+        tmp_path,
+        archive_result="deferred",
+        archive_state="deferred",
+        remaining_blockers=["spec 001-auth remediation still required"],
+    )
+
+    svc = ProgramService(tmp_path)
+    result = svc.execute_frontend_final_proof_archive_thread_archive(
+        _manifest(),
+        confirmed=True,
+    )
+
+    assert result.passed is False
+    assert result.confirmed is True
+    assert result.thread_archive_state == "deferred"
+    assert result.thread_archive_result == "deferred"
+    assert result.thread_archive_summaries == [
+        "no thread archive actions executed in final proof archive thread archive baseline"
+    ]
+    assert result.written_paths == []
+    assert result.remaining_blockers == ["spec 001-auth remediation still required"]
+    assert result.source_linkage["thread_archive_state"] == "deferred"
+    assert "project_cleanup_state" not in result.source_linkage
+    assert any(
+        "does not execute project cleanup actions yet" in item
+        for item in result.warnings
+    )
+
+
+def test_build_frontend_final_proof_archive_project_cleanup_request_uses_thread_archive_execute_truth(
+    tmp_path: Path,
+) -> None:
+    for p in ("specs/001-auth", "specs/002-course", "specs/003-enroll"):
+        (tmp_path / p).mkdir(parents=True)
+    _write_frontend_final_proof_archive_artifact(
+        tmp_path,
+        archive_result="deferred",
+        archive_state="deferred",
+        remaining_blockers=["spec 001-auth remediation still required"],
+    )
+
+    svc = ProgramService(tmp_path)
+    request = svc.build_frontend_final_proof_archive_project_cleanup_request(_manifest())
+
+    assert request.required is True
+    assert request.confirmation_required is True
+    assert request.project_cleanup_state == "not_started"
+    assert request.thread_archive_state == "deferred"
+    assert (
+        request.artifact_source_path
+        == ".ai-sdlc/memory/frontend-final-proof-archive/latest.yaml"
+    )
+    assert request.artifact_generated_at == "2026-04-04T05:00:00Z"
+    assert request.written_paths == []
+    assert request.cleanup_targets_state == "missing"
+    assert request.cleanup_targets == []
+    assert request.cleanup_target_eligibility_state == "missing"
+    assert request.cleanup_target_eligibility == []
+    assert request.cleanup_preview_plan_state == "missing"
+    assert request.cleanup_preview_plan == []
+    assert request.cleanup_mutation_proposal_state == "missing"
+    assert request.cleanup_mutation_proposal == []
+    assert request.cleanup_mutation_proposal_approval_state == "missing"
+    assert request.cleanup_mutation_proposal_approval == []
+    assert request.cleanup_mutation_execution_gating_state == "missing"
+    assert request.cleanup_mutation_execution_gating == []
+    assert request.steps[0].spec_id == "001-auth"
+    assert request.steps[0].project_cleanup_state == "not_started"
+    assert (
+        request.steps[0].source_linkage["thread_archive_result"] == "deferred"
+    )
+    assert (
+        request.steps[0].source_linkage["final_proof_archive_artifact_path"]
+        == ".ai-sdlc/memory/frontend-final-proof-archive/latest.yaml"
+    )
+    assert request.source_linkage["cleanup_targets_state"] == "missing"
+    assert request.source_linkage["cleanup_target_eligibility_state"] == "missing"
+    assert request.source_linkage["cleanup_preview_plan_state"] == "missing"
+    assert request.source_linkage["cleanup_mutation_proposal_state"] == "missing"
+    assert (
+        request.source_linkage["cleanup_mutation_proposal_approval_state"] == "missing"
+    )
+    assert (
+        request.source_linkage["cleanup_mutation_execution_gating_state"] == "missing"
+    )
+
+
+def test_build_frontend_final_proof_archive_project_cleanup_request_uses_explicit_empty_cleanup_targets(
+    tmp_path: Path,
+) -> None:
+    for p in ("specs/001-auth", "specs/002-course", "specs/003-enroll"):
+        (tmp_path / p).mkdir(parents=True)
+    _write_frontend_final_proof_archive_artifact(
+        tmp_path,
+        archive_result="deferred",
+        archive_state="deferred",
+        remaining_blockers=["spec 001-auth remediation still required"],
+    )
+    _write_frontend_final_proof_archive_project_cleanup_seed_artifact(
+        tmp_path,
+        cleanup_targets=[],
+        cleanup_target_eligibility=[],
+        cleanup_preview_plan=[],
+        cleanup_mutation_proposal=[],
+        cleanup_mutation_proposal_approval=[],
+        cleanup_mutation_execution_gating=[],
+    )
+
+    svc = ProgramService(tmp_path)
+    request = svc.build_frontend_final_proof_archive_project_cleanup_request(_manifest())
+
+    assert request.cleanup_targets_state == "empty"
+    assert request.cleanup_targets == []
+    assert request.cleanup_target_eligibility_state == "empty"
+    assert request.cleanup_target_eligibility == []
+    assert request.cleanup_preview_plan_state == "empty"
+    assert request.cleanup_preview_plan == []
+    assert request.cleanup_mutation_proposal_state == "empty"
+    assert request.cleanup_mutation_proposal == []
+    assert request.cleanup_mutation_proposal_approval_state == "empty"
+    assert request.cleanup_mutation_proposal_approval == []
+    assert request.cleanup_mutation_execution_gating_state == "empty"
+    assert request.cleanup_mutation_execution_gating == []
+    assert request.warnings == [
+        "final proof archive baseline defers thread archive and cleanup actions",
+        "final proof archive thread archive baseline does not execute project cleanup actions yet",
+    ]
+
+
+def test_build_frontend_final_proof_archive_project_cleanup_request_preserves_listed_cleanup_targets(
+    tmp_path: Path,
+) -> None:
+    for p in ("specs/001-auth", "specs/002-course", "specs/003-enroll"):
+        (tmp_path / p).mkdir(parents=True)
+    _write_frontend_final_proof_archive_artifact(
+        tmp_path,
+        archive_result="deferred",
+        archive_state="deferred",
+        remaining_blockers=["spec 001-auth remediation still required"],
+    )
+    cleanup_targets = [
+        {
+            "target_id": "cleanup-thread-archive-report",
+            "path": "specs/001-auth/threads/archive-001.md",
+            "kind": "thread_archive",
+        },
+        {
+            "target_id": "cleanup-spec-dir",
+            "path": "specs/002-course",
+            "kind": "spec_dir",
+        },
+    ]
+    cleanup_target_eligibility = [
+        {
+            "target_id": "cleanup-thread-archive-report",
+            "eligibility": "eligible",
+            "reason": "thread archive report may proceed to preview planning truth",
+        },
+        {
+            "target_id": "cleanup-spec-dir",
+            "eligibility": "eligible",
+            "reason": "explicit cleanup target may proceed to future planning truth",
+        },
+    ]
+    cleanup_preview_plan = [
+        {
+            "target_id": "cleanup-thread-archive-report",
+            "planned_action": "archive_thread_report",
+            "reason": "preview canonical archive-only cleanup action",
+        },
+        {
+            "target_id": "cleanup-spec-dir",
+            "planned_action": "remove_spec_dir",
+            "reason": "preview canonical spec cleanup action",
+        },
+    ]
+    cleanup_mutation_proposal = [
+        {
+            "target_id": "cleanup-thread-archive-report",
+            "proposed_action": "archive_thread_report",
+            "reason": "proposal mirrors previewed archive-only cleanup action",
+        },
+        {
+            "target_id": "cleanup-spec-dir",
+            "proposed_action": "remove_spec_dir",
+            "reason": "proposal mirrors previewed spec cleanup action",
+        },
+    ]
+    cleanup_mutation_proposal_approval = [
+        {
+            "target_id": "cleanup-thread-archive-report",
+            "approved_action": "archive_thread_report",
+            "reason": "explicit approval matches the proposed archive-only cleanup action",
+        },
+        {
+            "target_id": "cleanup-spec-dir",
+            "approved_action": "remove_spec_dir",
+            "reason": "explicit approval matches the proposed spec cleanup action",
+        },
+    ]
+    cleanup_mutation_execution_gating = [
+        {
+            "target_id": "cleanup-thread-archive-report",
+            "gated_action": "archive_thread_report",
+            "reason": "execution gating matches the approved archive-only cleanup action",
+        },
+        {
+            "target_id": "cleanup-spec-dir",
+            "gated_action": "remove_spec_dir",
+            "reason": "execution gating matches the approved spec cleanup action",
+        },
+    ]
+    cleanup_targets[0]["cleanup_action"] = "archive_thread_report"
+    cleanup_targets[1]["cleanup_action"] = "remove_spec_dir"
+    _write_frontend_final_proof_archive_project_cleanup_seed_artifact(
+        tmp_path,
+        cleanup_targets=cleanup_targets,
+        cleanup_target_eligibility=cleanup_target_eligibility,
+        cleanup_preview_plan=cleanup_preview_plan,
+        cleanup_mutation_proposal=cleanup_mutation_proposal,
+        cleanup_mutation_proposal_approval=cleanup_mutation_proposal_approval,
+        cleanup_mutation_execution_gating=cleanup_mutation_execution_gating,
+    )
+
+    svc = ProgramService(tmp_path)
+    request = svc.build_frontend_final_proof_archive_project_cleanup_request(_manifest())
+
+    assert request.cleanup_targets_state == "listed"
+    assert request.cleanup_targets == cleanup_targets
+    assert request.cleanup_target_eligibility_state == "listed"
+    assert request.cleanup_target_eligibility == cleanup_target_eligibility
+    assert request.cleanup_preview_plan_state == "listed"
+    assert request.cleanup_preview_plan == cleanup_preview_plan
+    assert request.cleanup_mutation_proposal_state == "listed"
+    assert request.cleanup_mutation_proposal == cleanup_mutation_proposal
+    assert request.cleanup_mutation_proposal_approval_state == "listed"
+    assert (
+        request.cleanup_mutation_proposal_approval
+        == cleanup_mutation_proposal_approval
+    )
+    assert request.cleanup_mutation_execution_gating_state == "listed"
+    assert (
+        request.cleanup_mutation_execution_gating
+        == cleanup_mutation_execution_gating
+    )
+    assert request.source_linkage["cleanup_target_eligibility_state"] == "listed"
+    assert request.source_linkage["cleanup_preview_plan_state"] == "listed"
+    assert request.source_linkage["cleanup_mutation_proposal_state"] == "listed"
+    assert (
+        request.source_linkage["cleanup_mutation_proposal_approval_state"] == "listed"
+    )
+    assert (
+        request.source_linkage["cleanup_mutation_execution_gating_state"] == "listed"
+    )
+
+
+def test_build_frontend_final_proof_archive_project_cleanup_request_warns_on_invalid_cleanup_target_eligibility_structure(
+    tmp_path: Path,
+) -> None:
+    for p in ("specs/001-auth", "specs/002-course", "specs/003-enroll"):
+        (tmp_path / p).mkdir(parents=True)
+    _write_frontend_final_proof_archive_artifact(
+        tmp_path,
+        archive_result="deferred",
+        archive_state="deferred",
+        remaining_blockers=["spec 001-auth remediation still required"],
+    )
+    _write_frontend_final_proof_archive_project_cleanup_seed_artifact(
+        tmp_path,
+        cleanup_targets=[],
+        cleanup_target_eligibility="cleanup-thread-archive-report",
+    )
+
+    svc = ProgramService(tmp_path)
+    request = svc.build_frontend_final_proof_archive_project_cleanup_request(_manifest())
+
+    assert request.cleanup_target_eligibility_state == "missing"
+    assert request.cleanup_target_eligibility == []
+    assert any(
+        "cleanup_target_eligibility must be a list" in item for item in request.warnings
+    )
+
+
+def test_build_frontend_final_proof_archive_project_cleanup_request_warns_on_misaligned_cleanup_target_eligibility(
+    tmp_path: Path,
+) -> None:
+    for p in ("specs/001-auth", "specs/002-course", "specs/003-enroll"):
+        (tmp_path / p).mkdir(parents=True)
+    _write_frontend_final_proof_archive_artifact(
+        tmp_path,
+        archive_result="deferred",
+        archive_state="deferred",
+        remaining_blockers=["spec 001-auth remediation still required"],
+    )
+    _write_frontend_final_proof_archive_project_cleanup_seed_artifact(
+        tmp_path,
+        cleanup_targets=[
+            {
+                "target_id": "cleanup-thread-archive-report",
+                "path": "specs/001-auth/threads/archive-001.md",
+                "kind": "thread_archive",
+            }
+        ],
+        cleanup_target_eligibility=[
+            {
+                "target_id": "cleanup-spec-dir",
+                "eligibility": "eligible",
+                "reason": "wrong target id",
+            }
+        ],
+    )
+
+    svc = ProgramService(tmp_path)
+    request = svc.build_frontend_final_proof_archive_project_cleanup_request(_manifest())
+
+    assert request.cleanup_target_eligibility_state == "listed"
+    assert len(request.cleanup_target_eligibility) == 1
+    assert any(
+        "cleanup_target_eligibility target_id set does not match cleanup_targets"
+        in item
+        for item in request.warnings
+    )
+
+
+def test_build_frontend_final_proof_archive_project_cleanup_request_warns_on_invalid_cleanup_preview_plan_structure(
+    tmp_path: Path,
+) -> None:
+    for p in ("specs/001-auth", "specs/002-course", "specs/003-enroll"):
+        (tmp_path / p).mkdir(parents=True)
+    _write_frontend_final_proof_archive_artifact(
+        tmp_path,
+        archive_result="deferred",
+        archive_state="deferred",
+        remaining_blockers=["spec 001-auth remediation still required"],
+    )
+    _write_frontend_final_proof_archive_project_cleanup_seed_artifact(
+        tmp_path,
+        cleanup_targets=[],
+        cleanup_target_eligibility=[],
+        cleanup_preview_plan="cleanup-thread-archive-report",
+    )
+
+    svc = ProgramService(tmp_path)
+    request = svc.build_frontend_final_proof_archive_project_cleanup_request(_manifest())
+
+    assert request.cleanup_preview_plan_state == "missing"
+    assert request.cleanup_preview_plan == []
+    assert any(
+        "cleanup_preview_plan must be a list" in item for item in request.warnings
+    )
+
+
+def test_build_frontend_final_proof_archive_project_cleanup_request_warns_on_invalid_cleanup_preview_plan_alignment(
+    tmp_path: Path,
+) -> None:
+    for p in ("specs/001-auth", "specs/002-course", "specs/003-enroll"):
+        (tmp_path / p).mkdir(parents=True)
+    _write_frontend_final_proof_archive_artifact(
+        tmp_path,
+        archive_result="deferred",
+        archive_state="deferred",
+        remaining_blockers=["spec 001-auth remediation still required"],
+    )
+    _write_frontend_final_proof_archive_project_cleanup_seed_artifact(
+        tmp_path,
+        cleanup_targets=[
+            {
+                "target_id": "cleanup-thread-archive-report",
+                "path": "specs/001-auth/threads/archive-001.md",
+                "kind": "thread_archive",
+                "cleanup_action": "archive_thread_report",
+            }
+        ],
+        cleanup_target_eligibility=[
+            {
+                "target_id": "cleanup-thread-archive-report",
+                "eligibility": "blocked",
+                "reason": "thread archive artifact remains deferred",
+            }
+        ],
+        cleanup_preview_plan=[
+            {
+                "target_id": "cleanup-thread-archive-report",
+                "planned_action": "remove_spec_dir",
+                "reason": "preview incorrectly proposes destructive cleanup",
+            },
+            {
+                "target_id": "cleanup-spec-dir",
+                "planned_action": "remove_spec_dir",
+                "reason": "preview references unknown target",
+            },
+        ],
+    )
+
+    svc = ProgramService(tmp_path)
+    request = svc.build_frontend_final_proof_archive_project_cleanup_request(_manifest())
+
+    assert request.cleanup_preview_plan_state == "listed"
+    assert len(request.cleanup_preview_plan) == 2
+    assert any(
+        "cleanup_preview_plan target_id=cleanup-thread-archive-report is not eligible"
+        in item
+        for item in request.warnings
+    )
+    assert any(
+        "cleanup_preview_plan target_id=cleanup-spec-dir does not exist in cleanup_targets"
+        in item
+        for item in request.warnings
+    )
+    assert any(
+        "cleanup_preview_plan target_id=cleanup-thread-archive-report planned_action does not match cleanup_action"
+        in item
+        for item in request.warnings
+    )
+
+
+def test_build_frontend_final_proof_archive_project_cleanup_request_warns_on_invalid_cleanup_mutation_proposal_structure(
+    tmp_path: Path,
+) -> None:
+    for p in ("specs/001-auth", "specs/002-course", "specs/003-enroll"):
+        (tmp_path / p).mkdir(parents=True)
+    _write_frontend_final_proof_archive_artifact(
+        tmp_path,
+        archive_result="deferred",
+        archive_state="deferred",
+        remaining_blockers=["spec 001-auth remediation still required"],
+    )
+    _write_frontend_final_proof_archive_project_cleanup_seed_artifact(
+        tmp_path,
+        cleanup_targets=[],
+        cleanup_target_eligibility=[],
+        cleanup_preview_plan=[],
+        cleanup_mutation_proposal="cleanup-thread-archive-report",
+    )
+
+    svc = ProgramService(tmp_path)
+    request = svc.build_frontend_final_proof_archive_project_cleanup_request(_manifest())
+
+    assert request.cleanup_mutation_proposal_state == "missing"
+    assert request.cleanup_mutation_proposal == []
+    assert any(
+        "cleanup_mutation_proposal must be a list" in item
+        for item in request.warnings
+    )
+
+
+def test_build_frontend_final_proof_archive_project_cleanup_request_warns_on_invalid_cleanup_mutation_proposal_alignment(
+    tmp_path: Path,
+) -> None:
+    for p in ("specs/001-auth", "specs/002-course", "specs/003-enroll"):
+        (tmp_path / p).mkdir(parents=True)
+    _write_frontend_final_proof_archive_artifact(
+        tmp_path,
+        archive_result="deferred",
+        archive_state="deferred",
+        remaining_blockers=["spec 001-auth remediation still required"],
+    )
+    _write_frontend_final_proof_archive_project_cleanup_seed_artifact(
+        tmp_path,
+        cleanup_targets=[
+            {
+                "target_id": "cleanup-thread-archive-report",
+                "path": "specs/001-auth/threads/archive-001.md",
+                "kind": "thread_archive",
+                "cleanup_action": "archive_thread_report",
+            }
+        ],
+        cleanup_target_eligibility=[
+            {
+                "target_id": "cleanup-thread-archive-report",
+                "eligibility": "blocked",
+                "reason": "thread archive artifact remains deferred",
+            }
+        ],
+        cleanup_preview_plan=[
+            {
+                "target_id": "cleanup-spec-dir",
+                "planned_action": "remove_spec_dir",
+                "reason": "preview references unknown target",
+            }
+        ],
+        cleanup_mutation_proposal=[
+            {
+                "target_id": "cleanup-thread-archive-report",
+                "proposed_action": "remove_spec_dir",
+                "reason": "proposal incorrectly changes cleanup action",
+            },
+            {
+                "target_id": "cleanup-spec-dir",
+                "proposed_action": "remove_spec_dir",
+                "reason": "proposal references unknown target",
+            },
+        ],
+    )
+
+    svc = ProgramService(tmp_path)
+    request = svc.build_frontend_final_proof_archive_project_cleanup_request(_manifest())
+
+    assert request.cleanup_mutation_proposal_state == "listed"
+    assert len(request.cleanup_mutation_proposal) == 2
+    assert any(
+        "cleanup_mutation_proposal target_id=cleanup-thread-archive-report is not eligible"
+        in item
+        for item in request.warnings
+    )
+    assert any(
+        "cleanup_mutation_proposal target_id=cleanup-thread-archive-report does not appear in cleanup_preview_plan"
+        in item
+        for item in request.warnings
+    )
+    assert any(
+        "cleanup_mutation_proposal target_id=cleanup-thread-archive-report proposed_action does not match cleanup_action"
+        in item
+        for item in request.warnings
+    )
+    assert any(
+        "cleanup_mutation_proposal target_id=cleanup-spec-dir does not exist in cleanup_targets"
+        in item
+        for item in request.warnings
+    )
+
+
+def test_build_frontend_final_proof_archive_project_cleanup_request_warns_on_invalid_cleanup_mutation_proposal_approval_structure(
+    tmp_path: Path,
+) -> None:
+    for p in ("specs/001-auth", "specs/002-course", "specs/003-enroll"):
+        (tmp_path / p).mkdir(parents=True)
+    _write_frontend_final_proof_archive_artifact(
+        tmp_path,
+        archive_result="deferred",
+        archive_state="deferred",
+        remaining_blockers=["spec 001-auth remediation still required"],
+    )
+    _write_frontend_final_proof_archive_project_cleanup_seed_artifact(
+        tmp_path,
+        cleanup_targets=[],
+        cleanup_target_eligibility=[],
+        cleanup_preview_plan=[],
+        cleanup_mutation_proposal=[],
+        cleanup_mutation_proposal_approval="cleanup-thread-archive-report",
+    )
+
+    svc = ProgramService(tmp_path)
+    request = svc.build_frontend_final_proof_archive_project_cleanup_request(_manifest())
+
+    assert request.cleanup_mutation_proposal_approval_state == "missing"
+    assert request.cleanup_mutation_proposal_approval == []
+    assert any(
+        "cleanup_mutation_proposal_approval must be a list" in item
+        for item in request.warnings
+    )
+
+
+def test_build_frontend_final_proof_archive_project_cleanup_request_warns_on_invalid_cleanup_mutation_proposal_approval_alignment(
+    tmp_path: Path,
+) -> None:
+    for p in ("specs/001-auth", "specs/002-course", "specs/003-enroll"):
+        (tmp_path / p).mkdir(parents=True)
+    _write_frontend_final_proof_archive_artifact(
+        tmp_path,
+        archive_result="deferred",
+        archive_state="deferred",
+        remaining_blockers=["spec 001-auth remediation still required"],
+    )
+    _write_frontend_final_proof_archive_project_cleanup_seed_artifact(
+        tmp_path,
+        cleanup_targets=[
+            {
+                "target_id": "cleanup-thread-archive-report",
+                "path": "specs/001-auth/threads/archive-001.md",
+                "kind": "thread_archive",
+                "cleanup_action": "archive_thread_report",
+            }
+        ],
+        cleanup_target_eligibility=[
+            {
+                "target_id": "cleanup-thread-archive-report",
+                "eligibility": "blocked",
+                "reason": "thread archive artifact remains deferred",
+            }
+        ],
+        cleanup_preview_plan=[
+            {
+                "target_id": "cleanup-spec-dir",
+                "planned_action": "remove_spec_dir",
+                "reason": "preview references unknown target",
+            }
+        ],
+        cleanup_mutation_proposal=[
+            {
+                "target_id": "cleanup-thread-archive-report",
+                "proposed_action": "archive_thread_report",
+                "reason": "proposal mirrors the canonical cleanup action",
+            }
+        ],
+        cleanup_mutation_proposal_approval=[
+            {
+                "target_id": "cleanup-thread-archive-report",
+                "approved_action": "remove_spec_dir",
+                "reason": "approval incorrectly changes cleanup action",
+            },
+            {
+                "target_id": "cleanup-spec-dir",
+                "approved_action": "remove_spec_dir",
+                "reason": "approval references unknown target",
+            },
+        ],
+    )
+
+    svc = ProgramService(tmp_path)
+    request = svc.build_frontend_final_proof_archive_project_cleanup_request(_manifest())
+
+    assert request.cleanup_mutation_proposal_approval_state == "listed"
+    assert len(request.cleanup_mutation_proposal_approval) == 2
+    assert any(
+        "cleanup_mutation_proposal_approval target_id=cleanup-thread-archive-report is not eligible"
+        in item
+        for item in request.warnings
+    )
+    assert any(
+        "cleanup_mutation_proposal_approval target_id=cleanup-thread-archive-report does not appear in cleanup_preview_plan"
+        in item
+        for item in request.warnings
+    )
+    assert any(
+        "cleanup_mutation_proposal_approval target_id=cleanup-thread-archive-report approved_action does not match cleanup_action"
+        in item
+        for item in request.warnings
+    )
+    assert any(
+        "cleanup_mutation_proposal_approval target_id=cleanup-thread-archive-report approved_action does not match proposed_action"
+        in item
+        for item in request.warnings
+    )
+    assert any(
+        "cleanup_mutation_proposal_approval target_id=cleanup-spec-dir does not exist in cleanup_targets"
+        in item
+        for item in request.warnings
+    )
+    assert any(
+        "cleanup_mutation_proposal_approval target_id=cleanup-spec-dir does not appear in cleanup_mutation_proposal"
+        in item
+        for item in request.warnings
+    )
+
+
+def test_build_frontend_final_proof_archive_project_cleanup_request_warns_on_invalid_cleanup_mutation_execution_gating_structure(
+    tmp_path: Path,
+) -> None:
+    for p in ("specs/001-auth", "specs/002-course", "specs/003-enroll"):
+        (tmp_path / p).mkdir(parents=True)
+    _write_frontend_final_proof_archive_artifact(
+        tmp_path,
+        archive_result="deferred",
+        archive_state="deferred",
+        remaining_blockers=["spec 001-auth remediation still required"],
+    )
+    _write_frontend_final_proof_archive_project_cleanup_seed_artifact(
+        tmp_path,
+        cleanup_targets=[],
+        cleanup_target_eligibility=[],
+        cleanup_preview_plan=[],
+        cleanup_mutation_proposal=[],
+        cleanup_mutation_proposal_approval=[],
+        cleanup_mutation_execution_gating="cleanup-thread-archive-report",
+    )
+
+    svc = ProgramService(tmp_path)
+    request = svc.build_frontend_final_proof_archive_project_cleanup_request(_manifest())
+
+    assert request.cleanup_mutation_execution_gating_state == "missing"
+    assert request.cleanup_mutation_execution_gating == []
+    assert any(
+        "cleanup_mutation_execution_gating must be a list" in item
+        for item in request.warnings
+    )
+
+
+def test_build_frontend_final_proof_archive_project_cleanup_request_warns_on_invalid_cleanup_mutation_execution_gating_alignment(
+    tmp_path: Path,
+) -> None:
+    for p in ("specs/001-auth", "specs/002-course", "specs/003-enroll"):
+        (tmp_path / p).mkdir(parents=True)
+    _write_frontend_final_proof_archive_artifact(
+        tmp_path,
+        archive_result="deferred",
+        archive_state="deferred",
+        remaining_blockers=["spec 001-auth remediation still required"],
+    )
+    _write_frontend_final_proof_archive_project_cleanup_seed_artifact(
+        tmp_path,
+        cleanup_targets=[
+            {
+                "target_id": "cleanup-thread-archive-report",
+                "path": "specs/001-auth/threads/archive-001.md",
+                "kind": "thread_archive",
+                "cleanup_action": "archive_thread_report",
+            }
+        ],
+        cleanup_target_eligibility=[
+            {
+                "target_id": "cleanup-thread-archive-report",
+                "eligibility": "blocked",
+                "reason": "thread archive artifact remains deferred",
+            }
+        ],
+        cleanup_preview_plan=[
+            {
+                "target_id": "cleanup-spec-dir",
+                "planned_action": "remove_spec_dir",
+                "reason": "preview references unknown target",
+            }
+        ],
+        cleanup_mutation_proposal=[
+            {
+                "target_id": "cleanup-thread-archive-report",
+                "proposed_action": "archive_thread_report",
+                "reason": "proposal mirrors the canonical cleanup action",
+            }
+        ],
+        cleanup_mutation_proposal_approval=[
+            {
+                "target_id": "cleanup-thread-archive-report",
+                "approved_action": "archive_thread_report",
+                "reason": "approval mirrors the canonical cleanup action",
+            }
+        ],
+        cleanup_mutation_execution_gating=[
+            {
+                "target_id": "cleanup-thread-archive-report",
+                "gated_action": "remove_spec_dir",
+                "reason": "execution gating incorrectly changes cleanup action",
+            },
+            {
+                "target_id": "cleanup-spec-dir",
+                "gated_action": "remove_spec_dir",
+                "reason": "execution gating references unknown target",
+            },
+        ],
+    )
+
+    svc = ProgramService(tmp_path)
+    request = svc.build_frontend_final_proof_archive_project_cleanup_request(_manifest())
+
+    assert request.cleanup_mutation_execution_gating_state == "listed"
+    assert len(request.cleanup_mutation_execution_gating) == 2
+    assert any(
+        "cleanup_mutation_execution_gating target_id=cleanup-thread-archive-report is not eligible"
+        in item
+        for item in request.warnings
+    )
+    assert any(
+        "cleanup_mutation_execution_gating target_id=cleanup-thread-archive-report does not appear in cleanup_preview_plan"
+        in item
+        for item in request.warnings
+    )
+    assert any(
+        "cleanup_mutation_execution_gating target_id=cleanup-thread-archive-report gated_action does not match cleanup_action"
+        in item
+        for item in request.warnings
+    )
+    assert any(
+        "cleanup_mutation_execution_gating target_id=cleanup-thread-archive-report gated_action does not match approved_action"
+        in item
+        for item in request.warnings
+    )
+    assert any(
+        "cleanup_mutation_execution_gating target_id=cleanup-spec-dir does not exist in cleanup_targets"
+        in item
+        for item in request.warnings
+    )
+    assert any(
+        "cleanup_mutation_execution_gating target_id=cleanup-spec-dir does not appear in cleanup_mutation_proposal_approval"
+        in item
+        for item in request.warnings
+    )
+
+
+def test_build_frontend_final_proof_archive_project_cleanup_request_warns_on_invalid_cleanup_targets_structure(
+    tmp_path: Path,
+) -> None:
+    for p in ("specs/001-auth", "specs/002-course", "specs/003-enroll"):
+        (tmp_path / p).mkdir(parents=True)
+    _write_frontend_final_proof_archive_artifact(
+        tmp_path,
+        archive_result="deferred",
+        archive_state="deferred",
+        remaining_blockers=["spec 001-auth remediation still required"],
+    )
+    _write_frontend_final_proof_archive_project_cleanup_seed_artifact(
+        tmp_path,
+        cleanup_targets="specs/001-auth",
+    )
+
+    svc = ProgramService(tmp_path)
+    request = svc.build_frontend_final_proof_archive_project_cleanup_request(_manifest())
+
+    assert request.cleanup_targets_state == "missing"
+    assert request.cleanup_targets == []
+    assert request.cleanup_target_eligibility_state == "missing"
+    assert request.cleanup_target_eligibility == []
+    assert any(
+        "cleanup_targets must be a list" in item for item in request.warnings
+    )
+
+
+def test_execute_frontend_final_proof_archive_project_cleanup_executes_canonical_gated_targets_when_confirmed(
+    tmp_path: Path,
+) -> None:
+    for p in ("specs/001-auth", "specs/002-course", "specs/003-enroll"):
+        (tmp_path / p).mkdir(parents=True)
+    archive_report = tmp_path / "specs" / "001-auth" / "threads" / "archive-001.md"
+    archive_report.parent.mkdir(parents=True, exist_ok=True)
+    archive_report.write_text("# archived thread\n", encoding="utf-8")
+    spec_dir = tmp_path / "specs" / "002-course"
+    (spec_dir / "notes").mkdir(parents=True, exist_ok=True)
+    (spec_dir / "notes" / "todo.md").write_text("cleanup me\n", encoding="utf-8")
+    _write_frontend_final_proof_archive_artifact(
+        tmp_path,
+        archive_result="deferred",
+        archive_state="deferred",
+        remaining_blockers=["spec 001-auth remediation still required"],
+    )
+    _write_frontend_final_proof_archive_project_cleanup_seed_artifact(
+        tmp_path,
+        cleanup_targets=[
+            {
+                "target_id": "cleanup-thread-archive-report",
+                "path": "specs/001-auth/threads/archive-001.md",
+                "kind": "thread_archive",
+                "cleanup_action": "archive_thread_report",
+            },
+            {
+                "target_id": "cleanup-spec-dir",
+                "path": "specs/002-course",
+                "kind": "spec_dir",
+                "cleanup_action": "remove_spec_dir",
+            },
+        ],
+        cleanup_target_eligibility=[
+            {
+                "target_id": "cleanup-thread-archive-report",
+                "eligibility": "eligible",
+                "reason": "thread archive report may proceed to preview planning truth",
+            },
+            {
+                "target_id": "cleanup-spec-dir",
+                "eligibility": "eligible",
+                "reason": "explicit cleanup target may proceed to future planning truth",
+            },
+        ],
+        cleanup_preview_plan=[
+            {
+                "target_id": "cleanup-thread-archive-report",
+                "planned_action": "archive_thread_report",
+                "reason": "preview canonical archive-only cleanup action",
+            },
+            {
+                "target_id": "cleanup-spec-dir",
+                "planned_action": "remove_spec_dir",
+                "reason": "preview canonical spec cleanup action",
+            },
+        ],
+        cleanup_mutation_proposal=[
+            {
+                "target_id": "cleanup-thread-archive-report",
+                "proposed_action": "archive_thread_report",
+                "reason": "proposal mirrors previewed archive-only cleanup action",
+            },
+            {
+                "target_id": "cleanup-spec-dir",
+                "proposed_action": "remove_spec_dir",
+                "reason": "proposal mirrors previewed spec cleanup action",
+            },
+        ],
+        cleanup_mutation_proposal_approval=[
+            {
+                "target_id": "cleanup-thread-archive-report",
+                "approved_action": "archive_thread_report",
+                "reason": "explicit approval matches the proposed archive-only cleanup action",
+            },
+            {
+                "target_id": "cleanup-spec-dir",
+                "approved_action": "remove_spec_dir",
+                "reason": "explicit approval matches the proposed spec cleanup action",
+            },
+        ],
+        cleanup_mutation_execution_gating=[
+            {
+                "target_id": "cleanup-thread-archive-report",
+                "gated_action": "archive_thread_report",
+                "reason": "execution gating matches the approved archive-only cleanup action",
+            },
+            {
+                "target_id": "cleanup-spec-dir",
+                "gated_action": "remove_spec_dir",
+                "reason": "execution gating matches the approved spec cleanup action",
+            },
+        ],
+    )
+
+    svc = ProgramService(tmp_path)
+    result = svc.execute_frontend_final_proof_archive_project_cleanup(
+        _manifest(),
+        confirmed=True,
+    )
+
+    assert result.passed is True
+    assert result.confirmed is True
+    assert result.project_cleanup_state == "completed"
+    assert result.project_cleanup_result == "completed"
+    assert result.project_cleanup_summaries == [
+        "executed 2 cleanup mutation(s) from canonical cleanup_mutation_execution_gating"
+    ]
+    assert result.cleanup_targets_state == "listed"
+    assert len(result.cleanup_targets) == 2
+    assert result.cleanup_target_eligibility_state == "listed"
+    assert len(result.cleanup_target_eligibility) == 2
+    assert result.cleanup_preview_plan_state == "listed"
+    assert len(result.cleanup_preview_plan) == 2
+    assert result.cleanup_mutation_proposal_state == "listed"
+    assert len(result.cleanup_mutation_proposal) == 2
+    assert result.cleanup_mutation_proposal_approval_state == "listed"
+    assert len(result.cleanup_mutation_proposal_approval) == 2
+    assert result.cleanup_mutation_execution_gating_state == "listed"
+    assert len(result.cleanup_mutation_execution_gating) == 2
+    assert result.written_paths == [
+        "specs/001-auth/threads/archive-001.md",
+        "specs/002-course",
+    ]
+    assert result.remaining_blockers == []
+    assert result.source_linkage["thread_archive_state"] == "deferred"
+    assert result.source_linkage["project_cleanup_state"] == "completed"
+    assert result.source_linkage["project_cleanup_result"] == "completed"
+    assert result.source_linkage["cleanup_targets_state"] == "listed"
+    assert result.source_linkage["cleanup_target_eligibility_state"] == "listed"
+    assert result.source_linkage["cleanup_preview_plan_state"] == "listed"
+    assert result.source_linkage["cleanup_mutation_proposal_state"] == "listed"
+    assert (
+        result.source_linkage["cleanup_mutation_proposal_approval_state"] == "listed"
+    )
+    assert (
+        result.source_linkage["cleanup_mutation_execution_gating_state"] == "listed"
+    )
+    assert result.warnings == []
+    assert not archive_report.exists()
+    assert not spec_dir.exists()
+
+
+def test_execute_frontend_final_proof_archive_project_cleanup_returns_partial_result_when_a_target_is_missing(
+    tmp_path: Path,
+) -> None:
+    for p in ("specs/001-auth", "specs/002-course", "specs/003-enroll"):
+        (tmp_path / p).mkdir(parents=True)
+    spec_dir = tmp_path / "specs" / "002-course"
+    (spec_dir / "notes").mkdir(parents=True, exist_ok=True)
+    (spec_dir / "notes" / "todo.md").write_text("cleanup me\n", encoding="utf-8")
+    _write_frontend_final_proof_archive_artifact(
+        tmp_path,
+        archive_result="deferred",
+        archive_state="deferred",
+        remaining_blockers=["spec 001-auth remediation still required"],
+    )
+    _write_frontend_final_proof_archive_project_cleanup_seed_artifact(
+        tmp_path,
+        cleanup_targets=[
+            {
+                "target_id": "cleanup-thread-archive-report",
+                "path": "specs/001-auth/threads/archive-001.md",
+                "kind": "thread_archive",
+                "cleanup_action": "archive_thread_report",
+            },
+            {
+                "target_id": "cleanup-spec-dir",
+                "path": "specs/002-course",
+                "kind": "spec_dir",
+                "cleanup_action": "remove_spec_dir",
+            },
+        ],
+        cleanup_target_eligibility=[
+            {
+                "target_id": "cleanup-thread-archive-report",
+                "eligibility": "eligible",
+                "reason": "thread archive report may proceed to preview planning truth",
+            },
+            {
+                "target_id": "cleanup-spec-dir",
+                "eligibility": "eligible",
+                "reason": "explicit cleanup target may proceed to future planning truth",
+            },
+        ],
+        cleanup_preview_plan=[
+            {
+                "target_id": "cleanup-thread-archive-report",
+                "planned_action": "archive_thread_report",
+                "reason": "preview canonical archive-only cleanup action",
+            },
+            {
+                "target_id": "cleanup-spec-dir",
+                "planned_action": "remove_spec_dir",
+                "reason": "preview canonical spec cleanup action",
+            },
+        ],
+        cleanup_mutation_proposal=[
+            {
+                "target_id": "cleanup-thread-archive-report",
+                "proposed_action": "archive_thread_report",
+                "reason": "proposal mirrors previewed archive-only cleanup action",
+            },
+            {
+                "target_id": "cleanup-spec-dir",
+                "proposed_action": "remove_spec_dir",
+                "reason": "proposal mirrors previewed spec cleanup action",
+            },
+        ],
+        cleanup_mutation_proposal_approval=[
+            {
+                "target_id": "cleanup-thread-archive-report",
+                "approved_action": "archive_thread_report",
+                "reason": "explicit approval matches the proposed archive-only cleanup action",
+            },
+            {
+                "target_id": "cleanup-spec-dir",
+                "approved_action": "remove_spec_dir",
+                "reason": "explicit approval matches the proposed spec cleanup action",
+            },
+        ],
+        cleanup_mutation_execution_gating=[
+            {
+                "target_id": "cleanup-thread-archive-report",
+                "gated_action": "archive_thread_report",
+                "reason": "execution gating matches the approved archive-only cleanup action",
+            },
+            {
+                "target_id": "cleanup-spec-dir",
+                "gated_action": "remove_spec_dir",
+                "reason": "execution gating matches the approved spec cleanup action",
+            },
+        ],
+    )
+
+    svc = ProgramService(tmp_path)
+    result = svc.execute_frontend_final_proof_archive_project_cleanup(
+        _manifest(),
+        confirmed=True,
+    )
+
+    assert result.passed is False
+    assert result.confirmed is True
+    assert result.project_cleanup_state == "partial"
+    assert result.project_cleanup_result == "partial"
+    assert result.project_cleanup_summaries == [
+        "executed 1 of 2 cleanup mutation(s) from canonical cleanup_mutation_execution_gating"
+    ]
+    assert result.written_paths == ["specs/002-course"]
+    assert result.remaining_blockers == ["cleanup-thread-archive-report"]
+    assert result.source_linkage["project_cleanup_state"] == "partial"
+    assert result.source_linkage["project_cleanup_result"] == "partial"
+    assert any(
+        "cleanup target cleanup-thread-archive-report is missing at specs/001-auth/threads/archive-001.md"
+        in item
+        for item in result.warnings
+    )
+    assert not spec_dir.exists()
+
+
+def test_execute_frontend_final_proof_archive_project_cleanup_does_not_write_artifact_by_default(
+    tmp_path: Path,
+) -> None:
+    for p in ("specs/001-auth", "specs/002-course", "specs/003-enroll"):
+        (tmp_path / p).mkdir(parents=True)
+    _write_frontend_final_proof_archive_artifact(
+        tmp_path,
+        archive_result="deferred",
+        archive_state="deferred",
+        remaining_blockers=["spec 001-auth remediation still required"],
+    )
+
+    svc = ProgramService(tmp_path)
+    result = svc.execute_frontend_final_proof_archive_project_cleanup(
+        _manifest(),
+        confirmed=True,
+    )
+
+    assert result.project_cleanup_state == "blocked"
+    assert result.project_cleanup_result == "blocked"
+    assert result.project_cleanup_summaries == [
+        "no cleanup mutations listed in canonical cleanup_mutation_execution_gating"
+    ]
+    assert result.written_paths == []
+    assert result.remaining_blockers == []
+    assert result.warnings == []
+    assert not (
+        tmp_path
+        / ".ai-sdlc"
+        / "memory"
+        / "frontend-final-proof-archive-project-cleanup"
+        / "latest.yaml"
+    ).exists()
+
+
+def test_write_frontend_final_proof_archive_project_cleanup_artifact_emits_canonical_yaml(
+    tmp_path: Path,
+) -> None:
+    for p in ("specs/001-auth", "specs/002-course", "specs/003-enroll"):
+        (tmp_path / p).mkdir(parents=True)
+    _write_frontend_final_proof_archive_artifact(
+        tmp_path,
+        archive_result="deferred",
+        archive_state="deferred",
+        remaining_blockers=["spec 001-auth remediation still required"],
+    )
+
+    svc = ProgramService(tmp_path)
+    request = svc.build_frontend_final_proof_archive_project_cleanup_request(_manifest())
+    result = svc.execute_frontend_final_proof_archive_project_cleanup(
+        _manifest(),
+        request=request,
+        confirmed=True,
+    )
+
+    artifact_path = svc.write_frontend_final_proof_archive_project_cleanup_artifact(
+        _manifest(),
+        request=request,
+        result=result,
+    )
+
+    assert artifact_path == (
+        tmp_path
+        / ".ai-sdlc"
+        / "memory"
+        / "frontend-final-proof-archive-project-cleanup"
+        / "latest.yaml"
+    )
+    payload = yaml.safe_load(artifact_path.read_text(encoding="utf-8"))
+    assert payload["project_cleanup_result"] == "blocked"
+    assert payload["project_cleanup_state"] == "blocked"
+    assert payload["project_cleanup_summaries"] == [
+        "no cleanup mutations listed in canonical cleanup_mutation_execution_gating"
+    ]
+    assert payload["thread_archive_state"] == "deferred"
+    assert payload["cleanup_targets_state"] == "missing"
+    assert payload["cleanup_targets"] == []
+    assert payload["cleanup_target_eligibility_state"] == "missing"
+    assert payload["cleanup_target_eligibility"] == []
+    assert payload["cleanup_preview_plan_state"] == "missing"
+    assert payload["cleanup_preview_plan"] == []
+    assert payload["cleanup_mutation_proposal_state"] == "missing"
+    assert payload["cleanup_mutation_proposal"] == []
+    assert payload["cleanup_mutation_proposal_approval_state"] == "missing"
+    assert payload["cleanup_mutation_proposal_approval"] == []
+    assert payload["cleanup_mutation_execution_gating_state"] == "missing"
+    assert payload["cleanup_mutation_execution_gating"] == []
+    assert payload["confirmed"] is True
+    assert payload["written_paths"] == []
+    assert payload["remaining_blockers"] == []
+    assert (
+        payload["source_linkage"]["final_proof_archive_project_cleanup_artifact_path"]
+        == ".ai-sdlc/memory/frontend-final-proof-archive-project-cleanup/latest.yaml"
+    )
+    assert payload["source_linkage"]["project_cleanup_state"] == "blocked"
+    assert payload["source_linkage"]["project_cleanup_result"] == "blocked"
+
+
+def test_execute_frontend_final_proof_archive_does_not_write_artifact_by_default(
+    tmp_path: Path,
+) -> None:
+    for p in ("specs/001-auth", "specs/002-course", "specs/003-enroll"):
+        (tmp_path / p).mkdir(parents=True)
+    _write_frontend_final_proof_closure_artifact(
+        tmp_path,
+        closure_result="deferred",
+        closure_state="deferred",
+        remaining_blockers=["spec 001-auth remediation still required"],
+    )
+
+    svc = ProgramService(tmp_path)
+    result = svc.execute_frontend_final_proof_archive(_manifest(), confirmed=True)
+
+    assert result.archive_state == "deferred"
+    assert not (
+        tmp_path
+        / ".ai-sdlc"
+        / "memory"
+        / "frontend-final-proof-archive"
+        / "latest.yaml"
+    ).exists()
+
+
+def test_write_frontend_final_proof_archive_artifact_emits_canonical_yaml(
+    tmp_path: Path,
+) -> None:
+    for p in ("specs/001-auth", "specs/002-course", "specs/003-enroll"):
+        (tmp_path / p).mkdir(parents=True)
+    _write_frontend_final_proof_closure_artifact(
+        tmp_path,
+        closure_result="deferred",
+        closure_state="deferred",
+        remaining_blockers=["spec 001-auth remediation still required"],
+    )
+
+    svc = ProgramService(tmp_path)
+    request = svc.build_frontend_final_proof_archive_request(_manifest())
+    result = svc.execute_frontend_final_proof_archive(
+        _manifest(),
+        request=request,
+        confirmed=True,
+    )
+
+    artifact_path = svc.write_frontend_final_proof_archive_artifact(
+        _manifest(),
+        request=request,
+        result=result,
+    )
+
+    assert artifact_path == (
+        tmp_path
+        / ".ai-sdlc"
+        / "memory"
+        / "frontend-final-proof-archive"
+        / "latest.yaml"
+    )
+    payload = yaml.safe_load(artifact_path.read_text(encoding="utf-8"))
+    assert payload["manifest_path"] == "program-manifest.yaml"
+    assert (
+        payload["artifact_source_path"]
+        == ".ai-sdlc/memory/frontend-final-proof-closure/latest.yaml"
+    )
+    assert payload["artifact_generated_at"] == "2026-04-04T04:00:00Z"
+    assert payload["closure_state"] == "deferred"
+    assert payload["archive_state"] == "deferred"
+    assert payload["archive_result"] == "deferred"
+    assert payload["confirmed"] is True
+    assert payload["archive_summaries"] == [
+        "no final proof archive actions executed in final proof archive baseline"
+    ]
+    assert payload["written_paths"] == []
+    assert payload["remaining_blockers"] == ["spec 001-auth remediation still required"]
+    assert payload["steps"][0]["spec_id"] == "001-auth"
+    assert payload["steps"][0]["archive_state"] == "not_started"
+    assert (
+        payload["source_linkage"]["final_proof_closure_artifact_path"]
+        == ".ai-sdlc/memory/frontend-final-proof-closure/latest.yaml"
+    )
+    assert (
+        payload["source_linkage"]["final_proof_archive_artifact_path"]
+        == ".ai-sdlc/memory/frontend-final-proof-archive/latest.yaml"
+    )
+
+
 def test_build_status_surfaces_ready_frontend_readiness_per_spec(tmp_path: Path) -> None:
     for p in ("specs/001-auth", "specs/002-course", "specs/003-enroll"):
         (tmp_path / p).mkdir(parents=True)
@@ -2682,5 +4028,196 @@ def _write_frontend_final_proof_publication_artifact(
             sort_keys=False,
             allow_unicode=True,
         ),
+        encoding="utf-8",
+    )
+
+
+def _write_frontend_final_proof_closure_artifact(
+    root: Path,
+    *,
+    closure_result: str,
+    closure_state: str,
+    remaining_blockers: list[str],
+) -> None:
+    artifact_path = (
+        root / ".ai-sdlc" / "memory" / "frontend-final-proof-closure" / "latest.yaml"
+    )
+    artifact_path.parent.mkdir(parents=True, exist_ok=True)
+    artifact_path.write_text(
+        yaml.safe_dump(
+            {
+                "generated_at": "2026-04-04T04:00:00Z",
+                "manifest_path": "program-manifest.yaml",
+                "artifact_source_path": ".ai-sdlc/memory/frontend-final-proof-publication/latest.yaml",
+                "artifact_generated_at": "2026-04-04T03:00:00Z",
+                "required": True,
+                "confirmation_required": True,
+                "confirmed": True,
+                "publication_state": "deferred",
+                "closure_state": closure_state,
+                "closure_result": closure_result,
+                "closure_summaries": [
+                    "no final proof closure actions executed in final proof closure baseline"
+                ],
+                "written_paths": [],
+                "remaining_blockers": list(remaining_blockers),
+                "warnings": [
+                    "final proof closure baseline does not persist closure artifacts yet"
+                ],
+                "steps": [
+                    {
+                        "spec_id": "001-auth",
+                        "path": "specs/001-auth",
+                        "closure_state": "not_started",
+                        "pending_inputs": ["frontend_contract_observations"],
+                        "suggested_next_actions": [
+                            "materialize final proof archive review context",
+                            "re-run ai-sdlc verify constraints",
+                        ],
+                        "source_linkage": {
+                            "closure_state": closure_state,
+                            "final_proof_publication_artifact_path": ".ai-sdlc/memory/frontend-final-proof-publication/latest.yaml",
+                        },
+                    }
+                ],
+                "source_linkage": {
+                    "publication_state": "deferred",
+                    "closure_state": closure_state,
+                    "closure_result": closure_result,
+                    "final_proof_publication_artifact_path": ".ai-sdlc/memory/frontend-final-proof-publication/latest.yaml",
+                    "final_proof_closure_artifact_path": ".ai-sdlc/memory/frontend-final-proof-closure/latest.yaml",
+                },
+            },
+            sort_keys=False,
+            allow_unicode=True,
+        ),
+        encoding="utf-8",
+    )
+
+
+def _write_frontend_final_proof_archive_artifact(
+    root: Path,
+    *,
+    archive_result: str,
+    archive_state: str,
+    remaining_blockers: list[str],
+) -> None:
+    artifact_path = (
+        root / ".ai-sdlc" / "memory" / "frontend-final-proof-archive" / "latest.yaml"
+    )
+    artifact_path.parent.mkdir(parents=True, exist_ok=True)
+    artifact_path.write_text(
+        yaml.safe_dump(
+            {
+                "generated_at": "2026-04-04T05:00:00Z",
+                "manifest_path": "program-manifest.yaml",
+                "artifact_source_path": ".ai-sdlc/memory/frontend-final-proof-closure/latest.yaml",
+                "artifact_generated_at": "2026-04-04T04:00:00Z",
+                "required": True,
+                "confirmation_required": True,
+                "confirmed": True,
+                "closure_state": "deferred",
+                "archive_state": archive_state,
+                "archive_result": archive_result,
+                "archive_summaries": [
+                    "no final proof archive actions executed in final proof archive baseline"
+                ],
+                "written_paths": [],
+                "remaining_blockers": list(remaining_blockers),
+                "warnings": [
+                    "final proof archive baseline defers thread archive and cleanup actions"
+                ],
+                "steps": [
+                    {
+                        "spec_id": "001-auth",
+                        "path": "specs/001-auth",
+                        "archive_state": "not_started",
+                        "pending_inputs": ["frontend_contract_observations"],
+                        "suggested_next_actions": [
+                            "materialize bounded thread archive context",
+                            "re-run ai-sdlc verify constraints",
+                        ],
+                        "source_linkage": {
+                            "archive_state": archive_state,
+                            "final_proof_closure_artifact_path": ".ai-sdlc/memory/frontend-final-proof-closure/latest.yaml",
+                            "final_proof_archive_artifact_path": ".ai-sdlc/memory/frontend-final-proof-archive/latest.yaml",
+                        },
+                    }
+                ],
+                "source_linkage": {
+                    "closure_state": "deferred",
+                    "archive_state": archive_state,
+                    "archive_result": archive_result,
+                    "final_proof_closure_artifact_path": ".ai-sdlc/memory/frontend-final-proof-closure/latest.yaml",
+                    "final_proof_archive_artifact_path": ".ai-sdlc/memory/frontend-final-proof-archive/latest.yaml",
+                },
+            },
+            sort_keys=False,
+            allow_unicode=True,
+        ),
+        encoding="utf-8",
+    )
+
+
+def _write_frontend_final_proof_archive_project_cleanup_seed_artifact(
+    root: Path,
+    *,
+    cleanup_targets: object,
+    cleanup_target_eligibility: object | None = None,
+    cleanup_preview_plan: object | None = None,
+    cleanup_mutation_proposal: object | None = None,
+    cleanup_mutation_proposal_approval: object | None = None,
+    cleanup_mutation_execution_gating: object | None = None,
+) -> None:
+    artifact_path = (
+        root / ".ai-sdlc" / "memory" / "frontend-final-proof-archive-project-cleanup" / "latest.yaml"
+    )
+    artifact_path.parent.mkdir(parents=True, exist_ok=True)
+    payload = {
+        "generated_at": "2026-04-04T07:00:00Z",
+        "manifest_path": "program-manifest.yaml",
+        "artifact_source_path": ".ai-sdlc/memory/frontend-final-proof-archive/latest.yaml",
+        "artifact_generated_at": "2026-04-04T05:00:00Z",
+        "required": True,
+        "confirmation_required": True,
+        "confirmed": True,
+        "thread_archive_state": "deferred",
+        "thread_archive_result": "deferred",
+        "project_cleanup_state": "deferred",
+        "project_cleanup_result": "deferred",
+        "cleanup_targets_state": "seeded",
+        "cleanup_targets": cleanup_targets,
+        "project_cleanup_summaries": [
+            "seeded cleanup target truth for consumption tests"
+        ],
+        "written_paths": [],
+        "remaining_blockers": ["spec 001-auth remediation still required"],
+        "warnings": [],
+        "steps": [],
+        "source_linkage": {
+            "thread_archive_state": "deferred",
+            "thread_archive_result": "deferred",
+            "project_cleanup_state": "deferred",
+            "project_cleanup_result": "deferred",
+            "final_proof_archive_artifact_path": ".ai-sdlc/memory/frontend-final-proof-archive/latest.yaml",
+            "final_proof_archive_project_cleanup_artifact_path": ".ai-sdlc/memory/frontend-final-proof-archive-project-cleanup/latest.yaml",
+        },
+    }
+    if cleanup_target_eligibility is not None:
+        payload["cleanup_target_eligibility"] = cleanup_target_eligibility
+    if cleanup_preview_plan is not None:
+        payload["cleanup_preview_plan"] = cleanup_preview_plan
+    if cleanup_mutation_proposal is not None:
+        payload["cleanup_mutation_proposal"] = cleanup_mutation_proposal
+    if cleanup_mutation_proposal_approval is not None:
+        payload["cleanup_mutation_proposal_approval"] = (
+            cleanup_mutation_proposal_approval
+        )
+    if cleanup_mutation_execution_gating is not None:
+        payload["cleanup_mutation_execution_gating"] = (
+            cleanup_mutation_execution_gating
+        )
+    artifact_path.write_text(
+        yaml.safe_dump(payload, sort_keys=False, allow_unicode=True),
         encoding="utf-8",
     )
