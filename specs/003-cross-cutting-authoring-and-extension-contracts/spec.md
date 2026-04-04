@@ -2,7 +2,7 @@
 
 **功能编号**：`003-cross-cutting-authoring-and-extension-contracts`  
 **创建日期**：2026-03-28  
-**状态**：草案  
+**状态**：已实现（cross-cutting authoring and extension closure）
 **输入**：原始 PRD Section 4.2, 8.4.1, 8.10, 8.12, 12, 13, 14；缺口收敛总表 RG-016 ~ RG-019（仅承接原 PRD 旧债）
 
 > 口径：本 spec 只吸收**原 PRD 已存在、但不适合继续塞进 `001` / `002`** 的跨域需求，不承接仓库在原 PRD 之后新增出的 operator / telemetry / program 能力。

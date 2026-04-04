@@ -2,7 +2,7 @@
 
 **功能编号**：`004-operator-surfaces-and-post-prd-extensions`  
 **创建日期**：2026-03-28  
-**状态**：草案  
+**状态**：已实现（operator surfaces and post-PRD extension closure）
 **输入**：当前仓库已实现能力（Program / Telemetry / Stage / Doctor / Scan / IDE Adapter / Offline Packaging）；缺口收敛总表 RG-020 ~ RG-023（仅承接原 PRD 外新增能力）
 
 > 口径：本 spec 只承接**原 PRD 之外、但仓库已实现并形成事实标准**的后续新增能力，不用于回填原 PRD 旧债。
