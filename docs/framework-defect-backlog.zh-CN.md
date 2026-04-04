@@ -93,11 +93,12 @@
 - 迁移补齐的字段若原始材料未显式给出，会以“基于历史记录推断”的方式写入，但会保留 `legacy_ref`。
 - 新增条目应直接写入本文件；若需要回溯历史来源，再反向链接到 legacy registry。
 
-## 下一波待修优先级（2026-03-31）
+## 下一波待修优先级（2026-04-05）
 
 - 当前待修：
   - 无
 - 本轮已收口：
+  - `框架线` `FD-2026-04-05-001`
   - `框架线` `FD-2026-04-04-001`
   - `009` 线 `FD-2026-04-02-001`
   - `010` 线 `FD-2026-04-02-002`、`FD-2026-04-02-003`、`FD-2026-04-02-004`、`FD-2026-04-03-005`
@@ -111,6 +112,40 @@
 - 挂靠原则：
   - `003` 线：已全部收口
   - `004` 线：已全部收口
+
+## FD-2026-04-05-001 | RefineGate 对验收场景的识别仅接受窄格式，导致常见 Markdown 场景标题被误判缺失
+
+- 日期 (UTC): 2026-04-05
+- 来源: user_review, self_review
+- 状态: closed
+- 缺陷类型: refine_gate_scenario_contract_drift
+- owner: codex
+- wi_id: 001-ai-sdlc-framework
+- related_doc: src/ai_sdlc/gates/pipeline_gates.py, tests/unit/test_gates.py, src/ai_sdlc/templates/spec.md.j2, src/ai_sdlc/rules/quality-gate.md, docs/framework-defect-backlog.zh-CN.md
+- detection_surface: user_review, self_review
+- trace_anchor: manual_review_only
+- observed_scope: manual_review
+- subject_ref: 无（当前无稳定 provenance inspection subject）
+- chain_status: unknown（当前以 gate 实现、模板、文档与手工复盘为准）
+- highest_confidence_source: 无（当前无 provenance inspection 输出）
+- key_gaps: unsupported: `RefineGate` 当前只接受行首纯文本 `场景|scenario` 前缀，未兼容常见 Markdown 标题/列表/加粗写法；split_truth: gate、模板、规则文档都要求“每个用户故事必须有验收场景”，但没有对可接受语法收敛到同一合同；unobserved: 单测只覆盖窄格式，通过性主要依赖当前正则而不是语义合同
+- evidence_refs: file:src/ai_sdlc/gates/pipeline_gates.py; file:tests/unit/test_gates.py; file:src/ai_sdlc/templates/spec.md.j2; file:src/ai_sdlc/rules/quality-gate.md; manual_review_only
+- 现象: 用户故事中已存在语义上明确的验收场景，但只要采用 `**场景 1**`、`#### 场景 1`、`- 场景 1` 等常见 Markdown 写法，`RefineGate` 仍会把该故事判定为缺少 acceptance scenario，并返回 `acceptance_scenarios_present=False`。只有 `场景 1:` / `scenario 1:` 这类窄格式可以稳定通过。
+- 触发场景: 在 refine/spec 文档中按常见 Markdown 习惯书写验收场景标题，随后执行 `RefineGate` 或依赖同一检查逻辑的质量门禁。
+- 影响范围: 所有依赖 RefineGate 的 refine/spec 校验路径、用户对“场景已写但 gate 仍失败”的理解成本、模板/提示词/人工编辑的一致性，以及框架对语义完整性的判断可信度。若不修复，用户会持续把排版差异误判为自己未写场景，或反复为了过 gate 而改写文档形状。
+- 根因分类: D, G（G: acceptance-scenario syntax contract drift across gate / template / docs / tests）
+- 未来杜绝方案摘要: “每个用户故事必须有验收场景”应是语义合同，不应被实现成只接受单一纯文本前缀的脆弱排版规则。框架需要先定义可接受的场景标题合同，再同步收敛 gate、模板、文档和测试，避免继续出现“文档语义正确但 gate 误判失败”的系统性缺陷。
+- 建议改动层级: rule / policy, workflow, tool, eval
+- prompt / context: 当用户或代理编写 spec/refine 文档时，框架应把“验收场景”视为结构语义，而不是要求操作者猜测唯一合法排版。若当前仍存在格式约束，必须明确告诉用户 accepted forms，而不是在 gate 失败后让用户自行试错。
+- rule / policy: 在质量门禁与模板文档中明确写出验收场景的 canonical 推荐写法，并声明支持的 Markdown 变体边界。推荐把 `场景 1:` / `Scenario 1:` 作为首选示例，但允许常见等价形式如加粗标题、ATX heading、列表项标题。
+- middleware: 为 RefineGate 增加轻量的场景标题归一化/识别 helper，在判断前剥离常见 Markdown 包装（如 `**...**`、`#### `、`- `），将识别从“裸正则命中”提升为“归一化后判断是否为场景标题”。
+- workflow: refine/spec 生成、人工编辑、门禁校验三条路径必须共享同一场景语法合同。后续若调整 gate 合同，应同步更新模板示例、用户文档与回归测试，不得只改 gate 实现。
+- tool: src/ai_sdlc/gates/pipeline_gates.py, tests/unit/test_gates.py, src/ai_sdlc/templates/spec.md.j2, src/ai_sdlc/rules/quality-gate.md
+- eval: refine-gate-scenario-false-negative 次数、因场景格式误判导致的 retry 次数、模板示例与 gate 合同不一致的回归次数、场景识别矩阵测试覆盖率
+- 风险等级: 中
+- 收口说明（2026-04-05）: `RefineGate` 已改为“逐行归一化 Markdown 包装后再判断场景标题”，当前主线工作树已兼容 `场景 1:`、`Scenario 1:`、`**场景 1**`、`#### 场景 1`、`- 场景 1` 与 `- **场景 1**`；`tests/unit/test_gates.py` 已补格式矩阵与“正文仅提到场景但不是标题”反例，`src/ai_sdlc/templates/spec.md.j2` 与 `src/ai_sdlc/rules/quality-gate.md` 也已同步补上 accepted forms 示例。定向回归 `uv run pytest tests/unit/test_gates.py tests/integration/test_cli_stage.py tests/integration/test_cli_run.py tests/integration/test_cli_status.py tests/integration/test_cli_recover.py` 已通过（`116 passed`），本条 defect 不再停留在 backlog 讨论层，已完成框架真值、模板示例与测试矩阵的同步收口。
+- 可验证成功标准: 1) `场景 1:`、`Scenario 1:`、`**场景 1**`、`#### 场景 1`、`- 场景 1` 在用户故事块内都能被稳定识别为验收场景。 2) 明确非法的非场景标题不会被误判通过。 3) 模板与质量门禁文档明确列出推荐写法和支持边界。 4) 对应单元测试在识别逻辑再次收窄或漂移时会直接失败。
+- 是否需要回归测试补充: 是：补 acceptance-scenario heading 的格式矩阵测试，并增加 gate、模板示例、规则文档三者一致性的回归覆盖。
 
 ## FD-2026-04-04-001 | execution-log 模板、脚手架与 close-check 契约漂移，导致新旧 workitem 的收口证据格式系统性失配
 

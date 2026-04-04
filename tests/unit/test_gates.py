@@ -148,11 +148,26 @@ class TestInitGate:
 
 
 class TestRefineGate:
-    def test_pass(self, tmp_path: Path) -> None:
+    @pytest.mark.parametrize(
+        "scenario_heading",
+        [
+            "scenario",
+            "Scenario 1:",
+            "场景 1:",
+            "**场景 1**",
+            "#### 场景 1",
+            "- 场景 1",
+            "- **场景 1**",
+        ],
+    )
+    def test_pass_with_supported_scenario_heading(
+        self, tmp_path: Path, scenario_heading: str
+    ) -> None:
         spec_dir = tmp_path / "specs" / "001"
         spec_dir.mkdir(parents=True)
         (spec_dir / "spec.md").write_text(
-            "### 用户故事 1\nscenario\n\n- **FR-001**: requirement\n"
+            f"### 用户故事 1\n{scenario_heading}\n\n- **FR-001**: requirement\n",
+            encoding="utf-8",
         )
         result = RefineGate().check({"spec_dir": str(spec_dir)})
         assert result.verdict == GateVerdict.PASS
@@ -175,6 +190,17 @@ class TestRefineGate:
         spec_dir.mkdir()
         (spec_dir / "spec.md").write_text(
             "### 用户故事 1\n没有场景\n\n- **FR-001**: requirement\n",
+            encoding="utf-8",
+        )
+        result = RefineGate().check({"spec_dir": str(spec_dir)})
+        assert result.verdict == GateVerdict.RETRY
+        assert any(c.name == "acceptance_scenarios_present" and not c.passed for c in result.checks)
+
+    def test_fail_when_scenario_is_only_mentioned_in_body(self, tmp_path: Path) -> None:
+        spec_dir = tmp_path / "specs"
+        spec_dir.mkdir()
+        (spec_dir / "spec.md").write_text(
+            "### 用户故事 1\n这里提到场景覆盖，但不是验收场景标题。\n\n- **FR-001**: requirement\n",
             encoding="utf-8",
         )
         result = RefineGate().check({"spec_dir": str(spec_dir)})

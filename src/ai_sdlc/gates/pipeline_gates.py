@@ -928,5 +928,28 @@ def _all_user_stories_have_scenarios(content: str) -> bool:
     story_blocks = [block for block in blocks[1:] if block.strip()]
     if not story_blocks:
         return False
-    scenario_pattern = re.compile(r"(^|\n)\s*(场景|scenario)\b", re.IGNORECASE)
-    return all(bool(scenario_pattern.search(block)) for block in story_blocks)
+    return all(
+        any(_is_acceptance_scenario_heading(line) for line in block.splitlines())
+        for block in story_blocks
+    )
+
+
+def _is_acceptance_scenario_heading(line: str) -> bool:
+    """Return True when a line is a supported acceptance scenario heading."""
+    normalized = _normalize_markdown_heading(line)
+    return bool(re.match(r"^(场景|scenario)\b", normalized, re.IGNORECASE))
+
+
+def _normalize_markdown_heading(line: str) -> str:
+    """Strip common Markdown wrappers before heading classification."""
+    normalized = line.strip()
+    while normalized:
+        previous = normalized
+        normalized = re.sub(r"^#{1,6}\s+", "", normalized).strip()
+        normalized = re.sub(r"^[-*+]\s+", "", normalized).strip()
+        normalized = re.sub(r"^\d+[.)]\s+", "", normalized).strip()
+        normalized = re.sub(r"^\*\*(.+)\*\*$", r"\1", normalized).strip()
+        normalized = re.sub(r"^__(.+)__$", r"\1", normalized).strip()
+        if normalized == previous:
+            break
+    return normalized
