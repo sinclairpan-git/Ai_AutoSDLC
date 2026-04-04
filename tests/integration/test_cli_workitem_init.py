@@ -141,6 +141,42 @@ class TestCliWorkitemInit:
         assert second.exit_code == 1
         assert "already exist" in second.output.lower()
 
+    def test_workitem_init_skips_existing_sequences_when_project_state_lags(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        root = tmp_path / "repo"
+        root.mkdir()
+        init_project(root)
+        existing = root / "specs" / "046-existing-formal-baseline"
+        existing.mkdir(parents=True)
+        (existing / "spec.md").write_text("# existing\n", encoding="utf-8")
+        state_path = root / ".ai-sdlc" / "project" / "config" / "project-state.yaml"
+        state_path.write_text(
+            "status: initialized\n"
+            "project_name: demo\n"
+            "next_work_item_seq: 20\n"
+            "version: '1.0'\n",
+            encoding="utf-8",
+        )
+        monkeypatch.chdir(root)
+
+        result = runner.invoke(
+            app,
+            [
+                "workitem",
+                "init",
+                "--title",
+                "Frontend Program Final Proof Archive Orchestration Baseline",
+            ],
+        )
+
+        assert result.exit_code == 0
+        assert (
+            "specs/047-frontend-program-final-proof-archive-orchestration-baseline"
+            in result.output
+        )
+        assert load_project_state(root).next_work_item_seq == 48
+
     def test_workitem_init_requires_title(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:

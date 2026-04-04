@@ -143,3 +143,21 @@ def test_scaffold_rejects_duplicate_canonical_doc_set(tmp_path: Path) -> None:
             title="Duplicate Canonical Docs",
             wi_id="004-duplicate-canonical-docs",
         )
+
+
+def test_scaffold_uses_next_free_sequence_when_project_state_lags(tmp_path: Path) -> None:
+    root = tmp_path / "repo"
+    root.mkdir()
+    _setup_project(root, next_work_item_seq=20)
+    existing = root / "specs" / "046-existing-formal-baseline"
+    existing.mkdir(parents=True)
+    (existing / "spec.md").write_text("# existing\n", encoding="utf-8")
+
+    result = WorkitemScaffolder(template_dir=TEMPLATE_DIR).scaffold(
+        root=root,
+        title="Frontend Program Final Proof Archive Orchestration Baseline",
+    )
+
+    assert result.work_item_id == "047-frontend-program-final-proof-archive-orchestration-baseline"
+    state = load_project_state(root)
+    assert state.next_work_item_seq == 48

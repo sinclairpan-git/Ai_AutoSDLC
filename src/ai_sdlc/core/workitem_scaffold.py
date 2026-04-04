@@ -55,6 +55,7 @@ class WorkitemScaffolder:
 
         state = load_project_state(root)
         work_item_id = self._resolve_work_item_id(
+            root=root,
             title=title_clean,
             wi_id=wi_id,
             next_work_item_seq=state.next_work_item_seq,
@@ -135,6 +136,7 @@ class WorkitemScaffolder:
     def _resolve_work_item_id(
         self,
         *,
+        root: Path,
         title: str,
         wi_id: str | None,
         next_work_item_seq: int,
@@ -145,12 +147,25 @@ class WorkitemScaffolder:
             slug = slugify(title)
             if not slug:
                 raise WorkitemScaffoldError("title does not produce a valid slug for work item id")
-            candidate = f"{next_work_item_seq:03d}-{slug}"
+            candidate = f"{self._next_available_sequence(root, next_work_item_seq):03d}-{slug}"
         if not _WI_ID_RE.fullmatch(candidate):
             raise WorkitemScaffoldError(
                 "work item id must use the canonical `NNN-short-name` form"
             )
         return candidate
+
+    def _next_available_sequence(self, root: Path, current: int) -> int:
+        specs_dir = root / "specs"
+        max_existing = current - 1
+        if specs_dir.is_dir():
+            for child in specs_dir.iterdir():
+                if not child.is_dir():
+                    continue
+                match = _WI_ID_RE.fullmatch(child.name)
+                if match is None:
+                    continue
+                max_existing = max(max_existing, int(match.group("seq")))
+        return max(current, max_existing + 1)
 
     def _next_sequence_after(self, work_item_id: str, current: int) -> int:
         match = _WI_ID_RE.fullmatch(work_item_id)
