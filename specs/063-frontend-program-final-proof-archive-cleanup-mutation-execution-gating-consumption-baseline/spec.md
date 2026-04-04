@@ -2,7 +2,7 @@
 
 **功能编号**：`063-frontend-program-final-proof-archive-cleanup-mutation-execution-gating-consumption-baseline`
 **创建日期**：2026-04-04
-**状态**：已规划（execution gating consumption baseline）
+**状态**：已实现（execution gating consumption baseline）
 **输入**：在 `050` 已建立 final proof archive project cleanup baseline、`060` 已冻结 `cleanup_mutation_proposal_approval`、`061` 已完成 approval truth consumption、`062` 已冻结 `cleanup_mutation_execution_gating` canonical truth 后，补齐 `ProgramService`、artifact payload 与 CLI 对 execution gating truth 的最小消费链路，确保 request/result/report 只消费 formalized execution gating truth，并继续保持 `deferred` honesty boundary。
 
 **范围**：
