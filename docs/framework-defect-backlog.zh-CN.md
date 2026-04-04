@@ -98,6 +98,7 @@
 - 当前待修：
   - 无
 - 本轮已收口：
+  - `框架线` `FD-2026-04-05-002`
   - `框架线` `FD-2026-04-05-001`
   - `框架线` `FD-2026-04-04-001`
   - `009` 线 `FD-2026-04-02-001`
@@ -112,6 +113,40 @@
 - 挂靠原则：
   - `003` 线：已全部收口
   - `004` 线：已全部收口
+
+## FD-2026-04-05-002 | adapter activation 真值台账与重复指引段落发生漂移，导致 backlog 假绿与用户口径不一致
+
+- 日期 (UTC): 2026-04-05
+- 来源: user_review, self_review
+- 状态: closed
+- 缺陷类型: adapter_activation_truth_drift
+- owner: codex
+- wi_id: 001-ai-sdlc-framework
+- related_doc: docs/framework-defect-backlog.zh-CN.md, docs/USER_GUIDE.zh-CN.md, src/ai_sdlc/cli/commands.py, src/ai_sdlc/cli/adapter_cmd.py, src/ai_sdlc/integrations/ide_adapter.py
+- detection_surface: user_review, self_review
+- trace_anchor: rev:9b9a8a3
+- observed_scope: repo
+- subject_ref: 无（当前无稳定 provenance inspection subject）
+- chain_status: unknown（当前以 repo 内文档、CLI 文案与手工复核为准）
+- highest_confidence_source: rev:9b9a8a3
+- key_gaps: split_truth: backlog 顶部“当前待修 / 本轮已收口”摘要与具体 defect 条目状态未共享单一真值，曾出现 `FD-2026-04-02-003` 条目仍为 `open`、但总表按已收口汇总的假绿；unsupported: `docs/USER_GUIDE.zh-CN.md` 内重复的 `adapter activate` 教程段落没有与 CLI/help 和 adapter 模板共用同一 canonical wording；ambiguous: 在文件型 adapter 仍属 `soft_prompt_only` 的前提下，重复段落漏写“只是人工确认”“不是治理激活证明”，容易把 acknowledgement / dry-run 误读成治理已生效。
+- evidence_refs: rev:9b9a8a3; file:docs/framework-defect-backlog.zh-CN.md; file:docs/USER_GUIDE.zh-CN.md; file:src/ai_sdlc/cli/commands.py; file:src/ai_sdlc/cli/adapter_cmd.py; file:src/ai_sdlc/integrations/ide_adapter.py
+- 现象: 在执行“全部待办已完成落地、且无偏移”审计时发现，backlog 总表写着“当前待修：无”并把 `FD-2026-04-02-003` 列入“本轮已收口”，但该条目正文仍停留在 `open`；与此同时，`docs/USER_GUIDE.zh-CN.md` 后半段重复的 `adapter activate` 指引只保留了 `Adapter acknowledged` 示例，没有同步写出“这只是 CLI 人工确认”“当前文件型 adapter 仍属 `soft_prompt_only`”“不证明治理激活”这组三层口径。
+- 触发场景: adapter activation contract / governance wording 完成修复后，只更新了部分 canonical surface 和单条 defect 状态，没有同步扫清 backlog 总表摘要与重复教程段落；随后在用户要求做全量真值审计时被暴露。
+- 影响范围: backlog 作为单一真值台账的可信度、用户对“当前是否仍有 open defect”的判断、以及对 `adapter activate` / `run --dry-run` 是否等于治理激活的理解。若不修复，会持续制造“账面已全绿、正文仍 open”与“不同章节口径不一致”的假收口。
+- 根因分类: B, G, H（G: adapter-activation truth contract drift across backlog summary / defect entry / duplicated user-guide surfaces）
+- 未来杜绝方案摘要: adapter activation 的治理真值必须收敛为单一 canonical wording；backlog 顶部摘要不得继续手工维护成与条目状态矛盾的二次真值；凡涉及 adapter activation contract、governance wording 或 defect 状态变更的提交，都应在收口前执行全文 truth sweep 与 diff 复核，必要时引入 bounded consistency audit。
+- 建议改动层级: rule / policy, middleware, workflow, tool, eval
+- prompt / context: 当对外声称“全部待办已落地、无偏移”时，对账对象必须同时覆盖 backlog summary、具体 defect 状态、CLI/help、adapter 模板和 `USER_GUIDE` 的重复段落；不能只看最近修改过的单点 surface。
+- rule / policy: 把“backlog 总表与具体条目状态必须一致”“重复 adapter 激活指引必须复用同一治理口径”写成显式对账要求；任何“无待修 / 已收口”的表述都必须经过该对账。
+- middleware: 若继续保留 backlog 顶部摘要与重复教程段落，应提供 bounded 生成/校验 helper，使摘要由条目状态导出，或至少提供一致性检查脚本，避免再次出现手工双写漂移。
+- workflow: 任何涉及 adapter activation contract、governance wording 或 backlog 状态变更的提交，收口前固定执行 `rg` / `git diff` 真值 sweep；当用户要求“确认全部完成且无偏移”时，这类 sweep 应视为硬步骤，而不是可选补充。
+- tool: docs/framework-defect-backlog.zh-CN.md, docs/USER_GUIDE.zh-CN.md, src/ai_sdlc/cli/commands.py, src/ai_sdlc/cli/adapter_cmd.py, src/ai_sdlc/integrations/ide_adapter.py
+- eval: backlog-summary-entry-drift 次数、duplicate-user-guide-contract-drift 次数、adapter-activation-false-green review 命中次数、提交前全文 truth sweep 拦截率
+- 风险等级: 中
+- 收口说明（2026-04-05）: 已通过 `rev:9b9a8a3` 将 `FD-2026-04-02-003` 的条目状态与顶部总表重新对齐，并补齐 `docs/USER_GUIDE.zh-CN.md` 后半段重复 `adapter activate` 指引中的 canonical disclaimer，使其与 `src/ai_sdlc/cli/commands.py`、`src/ai_sdlc/cli/adapter_cmd.py`、`src/ai_sdlc/integrations/ide_adapter.py` 以及各 adapter 模板保持一致。同步复核后，当前主线不再把 acknowledgement / dry-run 误表述为治理激活，也不再存在“总表已收口、条目仍 open”的 backlog 假绿。
+- 可验证成功标准: 1) backlog 顶部摘要与具体 defect 状态保持一致，不再出现 `FD-2026-04-02-003` 这类“总表 closed、正文 open”的分叉。 2) `docs/USER_GUIDE.zh-CN.md` 两处 `adapter activate` 指引都明确写出 acknowledgement-only、`soft_prompt_only` 与“not governance proof”口径。 3) CLI/help、adapter 模板与 USER_GUIDE 不再把文件存在、`adapter activate` 或 `run --dry-run` 表述为治理已激活。 4) 后续真值审计若再出现类似分叉，能够在提交前被 sweep/diff 复核直接拦下。
+- 是否需要回归测试补充: 是：补一个 bounded docs/truth audit，至少检查 backlog 顶部摘要与条目状态一致，以及 `USER_GUIDE` 中重复的 `adapter activate` 指引都包含 canonical disclaimer。
 
 ## FD-2026-04-05-001 | RefineGate 对验收场景的识别仅接受窄格式，导致常见 Markdown 场景标题被误判缺失
 
