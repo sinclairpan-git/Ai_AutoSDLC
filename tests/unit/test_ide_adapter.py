@@ -8,11 +8,11 @@ import pytest
 
 from ai_sdlc.integrations.ide_adapter import (
     IDEKind,
+    acknowledge_adapter,
     apply_adapter,
     build_adapter_governance_surface,
     detect_ide,
     ensure_ide_adaptation,
-    acknowledge_adapter,
 )
 from ai_sdlc.models.project import ActivationState, AdapterSupportTier
 from ai_sdlc.routers.bootstrap import init_project
