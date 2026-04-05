@@ -267,7 +267,6 @@ def status_command(
         console.print(note)
 
     state = load_project_state(root)
-    cfg = load_project_config(root)
     adapter_governance = build_adapter_governance_surface(root)
     if state.status == ProjectStatus.UNINITIALIZED:
         console.print("[yellow]Project found but not initialized.[/yellow]")
