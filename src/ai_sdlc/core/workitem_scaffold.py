@@ -33,7 +33,26 @@ class WorkitemScaffolder:
     """Create parser-friendly formal work item docs under ``specs/<WI>/``."""
 
     def __init__(self, *, template_dir: Path | None = None) -> None:
-        self._template_dir = template_dir or Path(__file__).resolve().parents[3] / "templates"
+        self._template_dirs = self._resolve_template_dirs(template_dir)
+
+    def _resolve_template_dirs(self, template_dir: Path | None) -> tuple[Path, ...]:
+        candidates: list[Path] = []
+        if template_dir is not None:
+            candidates.append(template_dir.expanduser())
+
+        module_path = Path(__file__).resolve()
+        candidates.extend(
+            (
+                module_path.parents[3] / "templates",
+                module_path.parents[1] / "templates",
+            )
+        )
+
+        deduped: list[Path] = []
+        for candidate in candidates:
+            if candidate not in deduped:
+                deduped.append(candidate)
+        return tuple(deduped)
 
     def scaffold(
         self,
@@ -438,7 +457,12 @@ class WorkitemScaffolder:
         return rendered
 
     def _load_template(self, template_name: str) -> str:
-        path = self._template_dir / template_name
-        if not path.is_file():
-            raise WorkitemScaffoldError(f"template not found: {path}")
-        return path.read_text(encoding="utf-8")
+        searched: list[str] = []
+        for template_dir in self._template_dirs:
+            path = template_dir / template_name
+            searched.append(str(path))
+            if path.is_file():
+                return path.read_text(encoding="utf-8")
+        raise WorkitemScaffoldError(
+            f"template not found: {template_name}; searched: {', '.join(searched)}"
+        )

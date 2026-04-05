@@ -24,6 +24,12 @@ build-backend = "hatchling.build"
 [tool.hatch.build.targets.wheel]
 packages = ["src/ai_sdlc"]
 
+[tool.hatch.build.targets.wheel.force-include]
+"templates/spec-template.md" = "ai_sdlc/templates/spec-template.md"
+"templates/plan-template.md" = "ai_sdlc/templates/plan-template.md"
+"templates/tasks-template.md" = "ai_sdlc/templates/tasks-template.md"
+"templates/execution-log-template.md" = "ai_sdlc/templates/execution-log-template.md"
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["src"]

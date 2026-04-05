@@ -6,6 +6,7 @@ from pathlib import Path
 
 import pytest
 
+import ai_sdlc.core.workitem_scaffold as workitem_scaffold_module
 from ai_sdlc.core.config import load_project_state, save_project_state
 from ai_sdlc.core.plan_check import parse_markdown_frontmatter
 from ai_sdlc.core.workitem_scaffold import WorkitemScaffolder, WorkitemScaffoldError
@@ -25,6 +26,17 @@ def _setup_project(root: Path, *, next_work_item_seq: int = 1) -> None:
             next_work_item_seq=next_work_item_seq,
         ),
     )
+
+
+def _copy_scaffold_templates(dest: Path) -> None:
+    dest.mkdir(parents=True, exist_ok=True)
+    for name in (
+        "spec-template.md",
+        "plan-template.md",
+        "tasks-template.md",
+        "execution-log-template.md",
+    ):
+        (dest / name).write_text((TEMPLATE_DIR / name).read_text(encoding="utf-8"), encoding="utf-8")
 
 
 def test_scaffold_generates_parser_friendly_formal_docs_with_refs(
@@ -171,3 +183,27 @@ def test_scaffold_uses_next_free_sequence_when_project_state_lags(tmp_path: Path
     assert result.work_item_id == "047-frontend-program-final-proof-archive-orchestration-baseline"
     state = load_project_state(root)
     assert state.next_work_item_seq == 48
+
+
+def test_scaffold_falls_back_to_packaged_templates_when_repo_templates_missing(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    root = tmp_path / "repo"
+    root.mkdir()
+    _setup_project(root, next_work_item_seq=8)
+
+    package_root = tmp_path / "venv" / "lib" / "python3.11" / "site-packages" / "ai_sdlc"
+    _copy_scaffold_templates(package_root / "templates")
+    fake_module_path = package_root / "core" / "workitem_scaffold.py"
+    fake_module_path.parent.mkdir(parents=True, exist_ok=True)
+    fake_module_path.touch()
+    monkeypatch.setattr(workitem_scaffold_module, "__file__", str(fake_module_path))
+
+    result = WorkitemScaffolder().scaffold(
+        root=root,
+        title="Packaged Template Fallback",
+    )
+
+    assert result.work_item_id == "008-packaged-template-fallback"
+    assert (result.spec_dir / "spec.md").is_file()

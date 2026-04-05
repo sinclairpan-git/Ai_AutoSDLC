@@ -2,10 +2,15 @@
 
 from __future__ import annotations
 
+import os
+import shutil
+import subprocess
+import sys
 from pathlib import Path
 from unittest.mock import patch
 
 import pytest
+import typer
 from typer.testing import CliRunner
 
 from ai_sdlc.cli.main import app
@@ -13,6 +18,7 @@ from ai_sdlc.core.config import load_project_state
 from ai_sdlc.core.plan_check import parse_markdown_frontmatter
 from ai_sdlc.routers.bootstrap import init_project
 
+REPO_ROOT = Path(__file__).resolve().parents[2]
 runner = CliRunner()
 
 
@@ -20,6 +26,16 @@ runner = CliRunner()
 def _no_ide_adapter_hook() -> None:
     with patch("ai_sdlc.cli.main.run_ide_adapter_if_initialized"):
         yield
+
+
+def _venv_executable(venv_dir: Path, name: str) -> Path:
+    scripts_dir = "Scripts" if os.name == "nt" else "bin"
+    suffix = ".exe" if os.name == "nt" else ""
+    return venv_dir / scripts_dir / f"{name}{suffix}"
+
+
+def _installed_dep_site_packages() -> Path:
+    return Path(typer.__file__).resolve().parents[1]
 
 
 class TestCliWorkitemInit:
@@ -194,3 +210,94 @@ class TestCliWorkitemInit:
 
         result = runner.invoke(app, ["workitem", "init"])
         assert result.exit_code == 2
+
+    def test_workitem_init_succeeds_from_installed_wheel_runtime(
+        self,
+        tmp_path: Path,
+    ) -> None:
+        uv = shutil.which("uv")
+        if uv is None:
+            pytest.skip("uv is required for installed-wheel smoke coverage")
+
+        dist_dir = tmp_path / "dist"
+        venv_dir = tmp_path / "venv"
+        repo = tmp_path / "repo"
+
+        build = subprocess.run(
+            [uv, "build", "--wheel", "--out-dir", str(dist_dir)],
+            cwd=REPO_ROOT,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        assert build.returncode == 0, build.stderr
+
+        wheels = sorted(dist_dir.glob("ai_sdlc-*-py3-none-any.whl"))
+        assert wheels, "expected uv build to emit an ai_sdlc wheel"
+        wheel = wheels[-1]
+
+        create_venv = subprocess.run(
+            [sys.executable, "-m", "venv", str(venv_dir)],
+            cwd=tmp_path,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        assert create_venv.returncode == 0, create_venv.stderr
+
+        venv_python = _venv_executable(venv_dir, "python")
+        venv_cli = _venv_executable(venv_dir, "ai-sdlc")
+
+        install = subprocess.run(
+            [str(venv_python), "-m", "pip", "install", "--no-deps", str(wheel)],
+            cwd=tmp_path,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        assert install.returncode == 0, install.stderr
+        assert venv_cli.is_file()
+
+        env = dict(os.environ)
+        dep_site = _installed_dep_site_packages()
+        prev = env.get("PYTHONPATH", "")
+        env["PYTHONPATH"] = str(dep_site) if not prev else f"{dep_site}{os.pathsep}{prev}"
+
+        package_root = subprocess.run(
+            [str(venv_python), "-c", "import ai_sdlc; print(ai_sdlc.__file__)"],
+            cwd=tmp_path,
+            capture_output=True,
+            text=True,
+            env=env,
+            check=False,
+        )
+        assert package_root.returncode == 0, package_root.stderr
+        assert str(venv_dir) in package_root.stdout.strip()
+
+        repo.mkdir()
+
+        init_result = subprocess.run(
+            [str(venv_cli), "init", "."],
+            cwd=repo,
+            capture_output=True,
+            text=True,
+            env=env,
+            check=False,
+        )
+        assert init_result.returncode == 0, init_result.stderr
+
+        workitem_result = subprocess.run(
+            [str(venv_cli), "workitem", "init", "--title", "Installed Wheel Smoke"],
+            cwd=repo,
+            capture_output=True,
+            text=True,
+            env=env,
+            check=False,
+        )
+        assert workitem_result.returncode == 0, workitem_result.stderr
+        assert "specs/001-installed-wheel-smoke" in workitem_result.stdout
+        wi_dir = repo / "specs" / "001-installed-wheel-smoke"
+        assert (wi_dir / "spec.md").is_file()
+        assert (wi_dir / "plan.md").is_file()
+        assert (wi_dir / "tasks.md").is_file()
+        assert (wi_dir / "task-execution-log.md").is_file()

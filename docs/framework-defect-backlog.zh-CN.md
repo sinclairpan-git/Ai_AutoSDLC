@@ -96,8 +96,9 @@
 ## 下一波待修优先级（2026-04-05）
 
 - 当前待修：
-  - 无
+  - `无`
 - 本轮已收口：
+  - `框架线` `FD-2026-04-05-003`
   - `框架线` `FD-2026-04-05-002`
   - `框架线` `FD-2026-04-05-001`
   - `框架线` `FD-2026-04-04-001`
@@ -113,6 +114,40 @@
 - 挂靠原则：
   - `003` 线：已全部收口
   - `004` 线：已全部收口
+
+## FD-2026-04-05-003 | workitem init 安装态生产回归未被真实 wheel 冒烟回归覆盖
+
+- 日期 (UTC): 2026-04-05
+- 来源: user_review, self_review
+- 状态: closed
+- 缺陷类型: installed_wheel_cli_coverage_gap
+- owner: codex
+- wi_id: 001-ai-sdlc-framework
+- related_doc: docs/framework-defect-backlog.zh-CN.md, src/ai_sdlc/core/workitem_scaffold.py, pyproject.toml, tests/unit/test_workitem_scaffold.py, tests/unit/test_packaging_config.py, tests/integration/test_cli_workitem_init.py
+- detection_surface: user_review, self_review
+- trace_anchor: installed_wheel_smoke_regression
+- observed_scope: isolated_python311_installed_wheel_runtime
+- subject_ref: 无（当前无稳定 provenance inspection subject）
+- chain_status: closed_loop_local_runtime_verified（当前已由真实 installed-wheel 自动化回归、wheel 打包校验与隔离环境手工 smoke 形成关闭证据）
+- highest_confidence_source: installed_wheel_smoke_regression
+- key_gaps: unobserved: 当前回归没有在隔离 `python3.11` 环境中安装新构建 wheel 并通过真实 CLI 入口执行 `workitem init`；unsupported: 现有测试只覆盖 source-tree `CliRunner`、`__file__` monkeypatch 的伪安装态 fallback 和 wheel 内容断言，没有覆盖真实 installed-wheel runtime；ambiguous: 缺陷收口标准允许“单测 + 打包内容检查”替代“真实安装态 smoke 成功”，导致生产路径仍可能复发；environment_drift: 本机默认 `python3` 仍为 `3.9.6`，而项目要求 `>=3.11`，若不显式锁定解释器，连复现实验本身都会偏离目标运行时。
+- evidence_refs: file:src/ai_sdlc/core/workitem_scaffold.py; file:pyproject.toml; file:tests/unit/test_workitem_scaffold.py; file:tests/unit/test_packaging_config.py; test:tests/integration/test_cli_workitem_init.py::test_workitem_init_succeeds_from_installed_wheel_runtime; command:uv run pytest tests/unit/test_workitem_scaffold.py tests/unit/test_packaging_config.py tests/integration/test_cli_workitem_init.py -q; command:uv run ruff check tests/integration/test_cli_workitem_init.py tests/unit/test_workitem_scaffold.py tests/unit/test_packaging_config.py src/ai_sdlc/core/workitem_scaffold.py
+- 现象: 前一轮已针对 `workitem init` 缺少 `templates/spec-template.md` 等模板的安装态问题补了代码、打包配置和回归测试，且 source-tree 测试与 wheel 内容检查均为绿色；但生产环境再次出现同类问题，说明现有验证仍未真正覆盖用户执行 `workitem init` 的安装态链路，形成“测试已绿、生产仍可复发”的假收口。
+- 触发场景: 用户在真实安装环境而非源码树内执行 `workitem init`；或在与开发机不同的解释器 / 依赖 / 入口路径组合下运行已安装 wheel。
+- 影响范围: 所有通过已安装 `ai-sdlc` CLI 使用 `workitem init` 的用户、release/packaging 质量门禁、以及框架对“安装态已修复”的可信度。若不补足，后续任何依赖包内资源、entrypoint、解释器版本或安装布局的命令都可能重复出现“源码态通过、生产态失败”的回归。
+- 根因分类: B, G（G: installed-wheel runtime contract was not covered by a real isolated smoke path, so closure was based on proxy evidence instead of production-equivalent execution）
+- 未来杜绝方案摘要: 凡是安装态 / 打包态 defect，收口标准必须升级为“真实隔离环境 + 指定 Python 版本 + 安装 wheel + 真实 CLI 冒烟”通过，不能再只靠源码态测试、monkeypatch 伪安装态和 wheel 内容断言。release 或 defect close 前必须保留一条可重复执行的 installed-wheel smoke，且该 smoke 要能在缺模板、路径解析错误、entrypoint 漂移时直接失败。
+- 建议改动层级: rule / policy, workflow, tool, eval
+- prompt / context: 当缺陷发生在“已安装包 / 生产运行环境”时，验证语境必须和生产形态对齐；不能把 source-tree 下的 `CliRunner`、局部 monkeypatch 或 wheel 清单检查视为充分替代证据。
+- rule / policy: 新增显式规则：所有安装态 defect 的关闭必须附带真实 installed-wheel smoke 证据，并固定锁定目标 Python 主版本；若只有源码态证据，状态最多为 `in_progress`，不得宣称“已彻底修复”。
+- middleware: 提供统一的安装态 smoke helper 或脚本，负责创建隔离 `venv`、安装最新 wheel、执行 `ai-sdlc workitem init`、校验生成文件与模板解析链路，避免每次手工拼装不一致的验证步骤。
+- workflow: 把 installed-wheel smoke 纳入 `release-check` / defect close checklist；当问题来自生产复发时，backlog 条目至少应保持 `in_progress`，直到真实安装态复现和回归都完成，不能因为单测已绿提前收口。
+- tool: src/ai_sdlc/core/workitem_scaffold.py, pyproject.toml, tests/unit/test_workitem_scaffold.py, tests/unit/test_packaging_config.py, tests/integration/test_cli_workitem_init.py
+- eval: installed-wheel-smoke 缺失次数、source-tree-green-but-installed-fail 复发次数、未锁定 Python 主版本的验证次数、因 proxy evidence 提前 close 的 defect 数量
+- 风险等级: 高
+- 收口说明（2026-04-05）: 已新增 `tests/integration/test_cli_workitem_init.py::test_workitem_init_succeeds_from_installed_wheel_runtime`，该回归会在隔离 `python3.11` venv 中 `uv build` 当前 wheel、`pip install --no-deps` 安装后，通过真实 `ai-sdlc` 入口执行 `init` 与 `workitem init`，并确认 `ai_sdlc.__file__` 来自临时 `site-packages` 而非源码树。与此同时，已完成本地手工 installed-wheel smoke：在隔离 `python3.11` 环境中安装新构建 wheel 后，真实执行 `ai-sdlc init .` 与 `ai-sdlc workitem init --title "Installed Wheel Smoke"`，成功生成 `spec.md`、`plan.md`、`tasks.md` 与 `task-execution-log.md`。本条关闭依据为“真实安装态自动化回归 + 隔离环境手工 smoke + wheel 打包内容校验”三项同时成立，不再以源码态代理证据单独收口。
+- 可验证成功标准: 1) 在隔离 `python3.11` 环境中安装当前构建 wheel 后，真实执行 `ai-sdlc workitem init --title ...` 可以成功生成 `spec.md`、`plan.md`、`tasks.md` 与 `task-execution-log.md`。 2) 同一路径在模板缺失、entrypoint 路径错误或包内容缺失时会稳定失败，从而证明 smoke 具备拦截能力。 3) CI / 本地 release-check 至少有一条自动化回归覆盖该 installed-wheel 路径，而不只是源码态 `CliRunner`。 4) 缺陷关闭前必须具备真实 installed-wheel smoke 的稳定通过证据，不能仅凭源码态单测、monkeypatch 伪安装态或 wheel 内容断言收口。
+- 是否需要回归测试补充: 是：新增真实 installed-wheel smoke regression，使用隔离 `python3.11` 解释器安装当前 wheel 并通过 CLI 入口执行 `workitem init`；同时把 Python 版本锁定与失败模式断言纳入验证。
 
 ## FD-2026-04-05-002 | adapter activation 真值台账与重复指引段落发生漂移，导致 backlog 假绿与用户口径不一致
 
