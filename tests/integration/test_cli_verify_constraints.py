@@ -33,6 +33,11 @@ from ai_sdlc.models.state import Checkpoint, FeatureInfo
 from ai_sdlc.routers.bootstrap import init_project
 
 runner = CliRunner()
+SAMPLE_FIXTURE_ROOT = (
+    Path(__file__).resolve().parents[1]
+    / "fixtures"
+    / "frontend-contract-sample-src"
+)
 
 
 @pytest.fixture(autouse=True)
@@ -228,6 +233,27 @@ def _write_012_frontend_contract_observations(
         generated_at="2026-04-02T14:30:00Z",
     )
     write_frontend_contract_observation_artifact(spec_dir, artifact)
+
+
+def _scan_fixture_into_012_frontend_contract_observations(
+    root: Path,
+    fixture_name: str,
+    *,
+    generated_at: str = "2026-04-06T12:50:00Z",
+) -> None:
+    spec_dir = root / "specs" / "012-frontend-contract-verify-integration"
+    result = runner.invoke(
+        app,
+        [
+            "scan",
+            str(SAMPLE_FIXTURE_ROOT / fixture_name),
+            "--frontend-contract-spec-dir",
+            str(spec_dir),
+            "--frontend-contract-generated-at",
+            generated_at,
+        ],
+    )
+    assert result.exit_code == 0, result.output
 
 
 def _write_018_checkpoint(root: Path) -> None:
@@ -770,6 +796,7 @@ class TestCliVerifyConstraints:
         _minimal_constitution(tmp_path)
         _write_012_checkpoint(tmp_path)
         _write_012_frontend_contract_page_artifacts(tmp_path)
+        assert SAMPLE_FIXTURE_ROOT.is_dir()
         monkeypatch.chdir(tmp_path)
 
         result = runner.invoke(app, ["verify", "constraints", "--json"])
@@ -805,6 +832,54 @@ class TestCliVerifyConstraints:
         ]
         assert payload["frontend_contract_verification"]["gate_verdict"] == "PASS"
         assert payload["frontend_contract_verification"]["coverage_gaps"] == []
+
+    def test_json_output_exposes_012_frontend_contract_summary_when_sample_fixture_matches(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        init_project(tmp_path)
+        _minimal_constitution(tmp_path)
+        _write_012_checkpoint(tmp_path)
+        _write_012_frontend_contract_page_artifacts(tmp_path)
+        _write_012_frontend_contract_page_artifacts(
+            tmp_path,
+            page_id="account-edit",
+            recipe_id="form-edit",
+        )
+        _scan_fixture_into_012_frontend_contract_observations(tmp_path, "match")
+        monkeypatch.chdir(tmp_path)
+
+        result = runner.invoke(app, ["verify", "constraints", "--json"])
+
+        assert result.exit_code == 0
+        payload = json.loads(result.output)
+        assert payload["frontend_contract_verification"]["gate_verdict"] == "PASS"
+        assert payload["frontend_contract_verification"]["coverage_gaps"] == []
+        assert payload["frontend_contract_verification"]["blockers"] == []
+
+    def test_json_output_exposes_012_frontend_contract_summary_when_sample_fixture_drifts(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        init_project(tmp_path)
+        _minimal_constitution(tmp_path)
+        _write_012_checkpoint(tmp_path)
+        _write_012_frontend_contract_page_artifacts(tmp_path)
+        _scan_fixture_into_012_frontend_contract_observations(tmp_path, "drift")
+        monkeypatch.chdir(tmp_path)
+
+        result = runner.invoke(app, ["verify", "constraints", "--json"])
+
+        assert result.exit_code == 1
+        payload = json.loads(result.output)
+        assert payload["frontend_contract_verification"]["gate_verdict"] == "RETRY"
+        assert payload["frontend_contract_verification"]["coverage_gaps"] == []
+        assert any(
+            "frontend contract drift detected" in blocker
+            for blocker in payload["frontend_contract_verification"]["blockers"]
+        )
+        assert any(
+            "recipe_mismatch" in blocker
+            for blocker in payload["frontend_contract_verification"]["blockers"]
+        )
 
     def test_terminal_output_exposes_012_frontend_contract_summary(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch

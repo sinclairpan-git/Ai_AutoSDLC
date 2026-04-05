@@ -284,12 +284,13 @@ specs:
                 ["program", "integrate", "--execute", "--yes", "--allow-dirty"],
             )
 
+        normalized_output = "".join(result.output.split())
         assert result.exit_code == 1
         assert "Frontend Remediation Handoff" in result.output
         assert "materialize frontend contract observations" in result.output
         assert (
-            "uv run ai-sdlc scan . --frontend-contract-spec-dir specs/001-auth"
-            in result.output
+            "uvrunai-sdlcscan<frontend-source-root>--frontend-contract-spec-dirspecs/001-auth"
+            in normalized_output
         )
         assert "re-run ai-sdlc verify constraints" in result.output
 
@@ -402,7 +403,7 @@ specs:
         assert "Frontend Remediation Handoff" in report
         assert "materialize frontend contract observations" in report
         assert (
-            "uv run ai-sdlc scan . --frontend-contract-spec-dir specs/001-auth"
+            "uv run ai-sdlc scan <frontend-source-root> --frontend-contract-spec-dir specs/001-auth"
             in report
         )
         assert "re-run ai-sdlc verify constraints" in report
@@ -436,9 +437,13 @@ specs:
         with patch("ai_sdlc.cli.program_cmd.find_project_root", return_value=root):
             result = runner.invoke(app, ["program", "remediate", "--dry-run"])
 
+        normalized_output = "".join(result.output.split())
         assert result.exit_code == 0
         assert "Program Frontend Remediation Dry-Run" in result.output
-        assert "uv run ai-sdlc scan . --frontend-contract-spec-dir specs/001-auth" in result.output
+        assert (
+            "uvrunai-sdlcscan<frontend-source-root>--frontend-contract-spec-dirspecs/001-auth"
+            in normalized_output
+        )
         assert "uv run ai-sdlc rules materialize-frontend-mvp" in result.output
         assert "uv run ai-sdlc verify constraints" in result.output
 
@@ -458,11 +463,17 @@ specs:
                 ["program", "remediate", "--execute", "--yes"],
             )
 
-        assert result.exit_code == 0
-        assert "Frontend remediation execute completed" in result.output
+        normalized_output = "".join(result.output.split())
+        assert result.exit_code == 1
+        assert "Frontend remediation execute incomplete" in result.output
+        assert (
+            "uvrunai-sdlcscan<frontend-source-root>--frontend-contract-spec-dirspecs/001-auth"
+            in normalized_output
+        )
+        assert "explicit <frontend-source-root> required" in result.output
         assert "uv run ai-sdlc rules materialize-frontend-mvp" in result.output
-        assert "uv run ai-sdlc verify constraints" in result.output
-        assert observation_artifact_path(root / "specs" / "001-auth").is_file()
+        assert "uv run ai-sdlc verify constraints ->" not in result.output
+        assert not observation_artifact_path(root / "specs" / "001-auth").is_file()
         assert (root / "governance" / "frontend" / "gates" / "gate.manifest.yaml").is_file()
 
     def test_program_remediate_execute_writes_canonical_writeback_artifact(
@@ -484,15 +495,20 @@ specs:
         writeback_path = (
             root / ".ai-sdlc" / "memory" / "frontend-remediation" / "latest.yaml"
         )
-        assert result.exit_code == 0
+        assert result.exit_code == 1
         assert "Frontend remediation writeback saved" in result.output
         assert ".ai-sdlc/memory/frontend-remediation/latest.yaml" in result.output
         assert writeback_path.is_file()
         payload = yaml.safe_load(writeback_path.read_text(encoding="utf-8"))
-        assert payload["passed"] is True
-        assert payload["remaining_blockers"] == []
+        assert payload["passed"] is False
         assert any(
-            item["command"] == "uv run ai-sdlc verify constraints"
+            "explicit <frontend-source-root> required" in blocker
+            for blocker in payload["remaining_blockers"]
+        )
+        assert any(
+            item["command"]
+            == "uv run ai-sdlc scan <frontend-source-root> --frontend-contract-spec-dir specs/001-auth"
+            and item["status"] == "failed"
             for item in payload["command_results"]
         )
 
@@ -2379,7 +2395,7 @@ def _write_frontend_remediation_writeback_artifact(
                             "re-run ai-sdlc verify constraints",
                         ],
                         "action_commands": [
-                            "uv run ai-sdlc scan . --frontend-contract-spec-dir specs/001-auth"
+                            "uv run ai-sdlc scan <frontend-source-root> --frontend-contract-spec-dir specs/001-auth"
                         ],
                         "source_linkage": {
                             "runtime_attachment_status": "missing_artifact",
@@ -2388,7 +2404,7 @@ def _write_frontend_remediation_writeback_artifact(
                     }
                 ],
                 "action_commands": [
-                    "uv run ai-sdlc scan . --frontend-contract-spec-dir specs/001-auth"
+                    "uv run ai-sdlc scan <frontend-source-root> --frontend-contract-spec-dir specs/001-auth"
                 ],
                 "follow_up_commands": ["uv run ai-sdlc verify constraints"],
                 "command_results": [

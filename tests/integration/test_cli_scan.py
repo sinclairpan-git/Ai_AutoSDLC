@@ -14,6 +14,11 @@ from ai_sdlc.core.frontend_contract_observation_provider import (
 from ai_sdlc.routers.bootstrap import init_project
 
 runner = CliRunner()
+SAMPLE_FIXTURE_ROOT = (
+    Path(__file__).resolve().parents[1]
+    / "fixtures"
+    / "frontend-contract-sample-src"
+)
 
 
 def test_scan_reports_results_for_uninitialized_path(tmp_path: Path) -> None:
@@ -123,6 +128,84 @@ def test_scan_frontend_contract_export_reports_invalid_annotation_block(
 
     assert result.exit_code == 1
     assert "Frontend contract scan failed" in result.output
+
+
+def test_scan_frontend_contract_export_rejects_missing_source_root(
+    tmp_path: Path,
+) -> None:
+    missing_root = SAMPLE_FIXTURE_ROOT / "missing"
+
+    result = runner.invoke(
+        app,
+        [
+            "scan",
+            str(missing_root),
+            "--frontend-contract-spec-dir",
+            str(tmp_path / "specs" / "065"),
+            "--frontend-contract-generated-at",
+            "2026-04-06T12:30:00Z",
+        ],
+    )
+
+    assert result.exit_code == 2
+    assert "".join(result.output.split()) == (
+        f"Error:{missing_root}isnotadirectory"
+    )
+
+
+def test_scan_frontend_contract_export_materializes_sample_fixture_artifact(
+    tmp_path: Path,
+) -> None:
+    spec_dir = tmp_path / "specs" / "065-frontend-contract-sample-source-selfcheck-baseline"
+
+    result = runner.invoke(
+        app,
+        [
+            "scan",
+            str(SAMPLE_FIXTURE_ROOT / "match"),
+            "--frontend-contract-spec-dir",
+            str(spec_dir),
+            "--frontend-contract-generated-at",
+            "2026-04-06T12:40:00Z",
+        ],
+    )
+
+    assert result.exit_code == 0
+    assert "Frontend contract observations exported" in result.output
+    assert "2 observations" in result.output
+    artifact = load_frontend_contract_observation_artifact(
+        spec_dir / "frontend-contract-observations.json"
+    )
+    assert [item.page_id for item in artifact.observations] == [
+        "account-edit",
+        "user-create",
+    ]
+
+
+def test_scan_frontend_contract_export_materializes_empty_sample_fixture_artifact(
+    tmp_path: Path,
+) -> None:
+    spec_dir = tmp_path / "specs" / "065-frontend-contract-sample-source-selfcheck-baseline"
+
+    result = runner.invoke(
+        app,
+        [
+            "scan",
+            str(SAMPLE_FIXTURE_ROOT / "empty"),
+            "--frontend-contract-spec-dir",
+            str(spec_dir),
+            "--frontend-contract-generated-at",
+            "2026-04-06T12:45:00Z",
+        ],
+    )
+
+    assert result.exit_code == 0
+    assert "Frontend contract observations exported" in result.output
+    assert "0 observations" in result.output
+    artifact = load_frontend_contract_observation_artifact(
+        spec_dir / "frontend-contract-observations.json"
+    )
+    assert artifact.observations == ()
 
 
 def test_scan_frontend_contract_export_is_analysis_only_on_initialized_project(

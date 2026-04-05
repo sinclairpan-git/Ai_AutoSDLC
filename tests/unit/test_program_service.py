@@ -185,7 +185,7 @@ def test_build_integration_dry_run_surfaces_frontend_remediation_input_when_not_
     assert "frontend_contract_observations" in remediation.fix_inputs
     assert "materialize frontend contract observations" in remediation.suggested_actions
     assert (
-        "uv run ai-sdlc scan . --frontend-contract-spec-dir specs/001-auth"
+        "uv run ai-sdlc scan <frontend-source-root> --frontend-contract-spec-dir specs/001-auth"
         in remediation.recommended_commands
     )
     assert remediation.recommended_commands[-1] == "uv run ai-sdlc verify constraints"
@@ -261,7 +261,7 @@ def test_build_frontend_remediation_runbook_collects_action_commands_and_follow_
         "003-enroll",
     ]
     assert (
-        "uv run ai-sdlc scan . --frontend-contract-spec-dir specs/001-auth"
+        "uv run ai-sdlc scan <frontend-source-root> --frontend-contract-spec-dir specs/001-auth"
         in runbook.action_commands
     )
     assert "uv run ai-sdlc rules materialize-frontend-mvp" in runbook.action_commands
@@ -285,25 +285,32 @@ def test_execute_frontend_remediation_runbook_materializes_bounded_commands_and_
         generated_at="2026-04-03T17:30:00Z",
     )
 
-    assert result.passed is True
-    assert (
-        observation_artifact_path(tmp_path / "specs" / "001-auth").is_file()
-    )
+    assert result.passed is False
+    assert not observation_artifact_path(tmp_path / "specs" / "001-auth").is_file()
     assert (tmp_path / "governance" / "frontend" / "gates" / "gate.manifest.yaml").is_file()
     assert (
         tmp_path / "governance" / "frontend" / "generation" / "generation.manifest.yaml"
     ).is_file()
     assert any(
+        item.command
+        == "uv run ai-sdlc scan <frontend-source-root> --frontend-contract-spec-dir specs/001-auth"
+        and item.status == "failed"
+        and "explicit <frontend-source-root> required" in item.summary
+        for item in result.command_results
+    )
+    assert any(
         item.command == "uv run ai-sdlc rules materialize-frontend-mvp"
         and item.status == "executed"
         for item in result.command_results
     )
-    assert any(
-        item.command == "uv run ai-sdlc verify constraints"
-        and item.status == "passed"
+    assert all(
+        item.command != "uv run ai-sdlc verify constraints"
         for item in result.command_results
     )
-    assert result.blockers == []
+    assert any(
+        "explicit <frontend-source-root> required" in blocker
+        for blocker in result.blockers
+    )
 
 
 def test_write_frontend_remediation_writeback_artifact_emits_canonical_yaml(
@@ -336,14 +343,19 @@ def test_write_frontend_remediation_writeback_artifact_emits_canonical_yaml(
     )
     payload = yaml.safe_load(writeback_path.read_text(encoding="utf-8"))
     assert payload["generated_at"] == "2026-04-03T16:00:00Z"
-    assert payload["passed"] is True
+    assert payload["passed"] is False
     assert payload["manifest_path"] == "program-manifest.yaml"
-    assert payload["remaining_blockers"] == []
+    assert any(
+        "explicit <frontend-source-root> required" in blocker
+        for blocker in payload["remaining_blockers"]
+    )
     assert payload["follow_up_commands"] == ["uv run ai-sdlc verify constraints"]
     assert payload["written_paths"]
     assert payload["steps"][0]["spec_id"] == "001-auth"
     assert any(
-        item["command"] == "uv run ai-sdlc verify constraints"
+        item["command"]
+        == "uv run ai-sdlc scan <frontend-source-root> --frontend-contract-spec-dir specs/001-auth"
+        and item["status"] == "failed"
         for item in payload["command_results"]
     )
 
@@ -3418,7 +3430,7 @@ def _write_frontend_remediation_writeback_artifact(
                             "re-run ai-sdlc verify constraints",
                         ],
                         "action_commands": [
-                            "uv run ai-sdlc scan . --frontend-contract-spec-dir specs/001-auth"
+                            "uv run ai-sdlc scan <frontend-source-root> --frontend-contract-spec-dir specs/001-auth"
                         ],
                         "source_linkage": {
                             "runtime_attachment_status": "missing_artifact",
@@ -3443,7 +3455,7 @@ def _write_frontend_remediation_writeback_artifact(
                     },
                 ],
                 "action_commands": [
-                    "uv run ai-sdlc scan . --frontend-contract-spec-dir specs/001-auth"
+                    "uv run ai-sdlc scan <frontend-source-root> --frontend-contract-spec-dir specs/001-auth"
                 ],
                 "follow_up_commands": ["uv run ai-sdlc verify constraints"],
                 "command_results": [

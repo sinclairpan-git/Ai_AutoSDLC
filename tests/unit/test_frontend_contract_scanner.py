@@ -2,9 +2,14 @@
 
 from __future__ import annotations
 
+import hashlib
+import json
+from pathlib import Path
+
 import pytest
 
 from ai_sdlc.core.frontend_contract_observation_provider import (
+    FRONTEND_CONTRACT_OBSERVATION_SCHEMA_VERSION,
     load_frontend_contract_observation_artifact,
 )
 from ai_sdlc.scanners.frontend_contract_scanner import (
@@ -14,6 +19,12 @@ from ai_sdlc.scanners.frontend_contract_scanner import (
     build_frontend_contract_scanner_artifact,
     scan_frontend_contract_observations,
     write_frontend_contract_scanner_artifact,
+)
+
+SAMPLE_FIXTURE_ROOT = (
+    Path(__file__).resolve().parents[1]
+    / "fixtures"
+    / "frontend-contract-sample-src"
 )
 
 
@@ -185,3 +196,75 @@ def test_scan_frontend_contract_observations_ignores_unmarked_files(
     assert result.observations == ()
     assert result.matched_files == ()
     assert FRONTEND_CONTRACT_OBSERVATION_MARKER == "ai-sdlc:frontend-contract-observation"
+
+
+def test_repository_sample_match_fixture_scans_expected_observations() -> None:
+    source_root = SAMPLE_FIXTURE_ROOT / "match"
+
+    assert source_root.is_dir()
+
+    result = scan_frontend_contract_observations(source_root)
+
+    assert result.matched_files == ("AccountEdit.tsx", "UserCreate.vue")
+    assert [item.page_id for item in result.observations] == [
+        "account-edit",
+        "user-create",
+    ]
+    assert result.observations[0].new_legacy_usages == ["window.legacyModal.open"]
+    assert result.observations[1].i18n_keys == [
+        "user.create.title",
+        "user.create.submit",
+    ]
+    assert result.observations[1].validation_fields == ["username", "email"]
+
+
+def test_repository_sample_drift_fixture_scans_expected_mismatch_observation() -> None:
+    source_root = SAMPLE_FIXTURE_ROOT / "drift"
+
+    assert source_root.is_dir()
+
+    result = scan_frontend_contract_observations(source_root)
+
+    assert result.matched_files == ("UserCreate.vue",)
+    assert [item.page_id for item in result.observations] == ["user-create"]
+    assert result.observations[0].recipe_id == "form-edit"
+    assert result.observations[0].i18n_keys == ["user.create.submit"]
+    assert result.observations[0].validation_fields == ["username"]
+
+
+def test_write_frontend_contract_scanner_artifact_from_empty_fixture_keeps_stable_envelope(
+    tmp_path,
+) -> None:
+    source_root = SAMPLE_FIXTURE_ROOT / "empty"
+    spec_dir = tmp_path / "specs" / "065-frontend-contract-sample-source-selfcheck-baseline"
+
+    assert source_root.is_dir()
+
+    artifact_path = write_frontend_contract_scanner_artifact(
+        source_root,
+        spec_dir,
+        generated_at="2026-04-06T12:00:00Z",
+    )
+    loaded = load_frontend_contract_observation_artifact(artifact_path)
+
+    expected_json = {
+        "schema_version": FRONTEND_CONTRACT_OBSERVATION_SCHEMA_VERSION,
+        "provenance": {
+            "provider_kind": FRONTEND_CONTRACT_SCANNER_PROVIDER_KIND,
+            "provider_name": FRONTEND_CONTRACT_SCANNER_PROVIDER_NAME,
+            "provider_version": None,
+            "source_ref": str(source_root),
+        },
+        "freshness": {
+            "generated_at": "2026-04-06T12:00:00Z",
+            "source_digest": f"sha256:{hashlib.sha256().hexdigest()}",
+            "source_revision": None,
+        },
+        "observations": [],
+    }
+
+    assert loaded.observations == ()
+    assert loaded.to_json_dict() == expected_json
+    assert artifact_path.read_text(encoding="utf-8") == (
+        json.dumps(expected_json, ensure_ascii=False, indent=2) + "\n"
+    )

@@ -30,9 +30,6 @@ from ai_sdlc.models.frontend_generation_constraints import (
     build_mvp_frontend_generation_constraints,
 )
 from ai_sdlc.models.program import ProgramManifest, ProgramSpecRef
-from ai_sdlc.scanners.frontend_contract_scanner import (
-    write_frontend_contract_scanner_artifact,
-)
 from ai_sdlc.telemetry.clock import utc_now_z
 
 PROGRAM_FRONTEND_READINESS_READY = "ready"
@@ -43,7 +40,11 @@ PROGRAM_FRONTEND_RUNTIME_ATTACHMENT_SOURCE_NAME = (
 )
 PROGRAM_FRONTEND_RECHECK_COMMAND = "uv run ai-sdlc verify constraints"
 PROGRAM_FRONTEND_SCAN_COMMAND_PREFIX = (
-    "uv run ai-sdlc scan . --frontend-contract-spec-dir "
+    "uv run ai-sdlc scan <frontend-source-root> --frontend-contract-spec-dir "
+)
+PROGRAM_FRONTEND_SCAN_COMMAND_BLOCKER = (
+    "explicit <frontend-source-root> required; "
+    "program remediation execute does not infer a default source root"
 )
 PROGRAM_FRONTEND_GOVERNANCE_MATERIALIZE_COMMAND = (
     "uv run ai-sdlc rules materialize-frontend-mvp"
@@ -4759,7 +4760,7 @@ class ProgramService:
         recommended_commands: list[str] = []
         if "frontend_contract_observations" in fix_inputs:
             recommended_commands.append(
-                f"uv run ai-sdlc scan . --frontend-contract-spec-dir {spec_path}"
+                f"{PROGRAM_FRONTEND_SCAN_COMMAND_PREFIX}{spec_path}"
             )
         if (
             "frontend_gate_policy_artifacts" in fix_inputs
@@ -4793,26 +4794,11 @@ class ProgramService:
             )
 
         if command.startswith(PROGRAM_FRONTEND_SCAN_COMMAND_PREFIX):
-            spec_path = command.removeprefix(PROGRAM_FRONTEND_SCAN_COMMAND_PREFIX).strip()
-            try:
-                spec_dir = self._resolve_spec_dir(spec_path)
-                artifact_path = write_frontend_contract_scanner_artifact(
-                    self.root,
-                    spec_dir,
-                    generated_at=generated_at,
-                )
-            except Exception as exc:
-                return ProgramFrontendRemediationCommandResult(
-                    command=command,
-                    status="failed",
-                    blockers=[f"{command}: {exc}"],
-                    summary=str(exc),
-                )
             return ProgramFrontendRemediationCommandResult(
                 command=command,
-                status="executed",
-                written_paths=[str(artifact_path.relative_to(self.root))],
-                summary="frontend contract observations materialized",
+                status="failed",
+                blockers=[f"{command}: {PROGRAM_FRONTEND_SCAN_COMMAND_BLOCKER}"],
+                summary=PROGRAM_FRONTEND_SCAN_COMMAND_BLOCKER,
             )
 
         if command == PROGRAM_FRONTEND_GOVERNANCE_MATERIALIZE_COMMAND:
