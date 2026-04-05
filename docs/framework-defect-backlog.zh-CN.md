@@ -98,6 +98,7 @@
 - 当前待修：
   - `无`
 - 本轮已收口：
+  - `框架线` `FD-2026-04-05-004`
   - `框架线` `FD-2026-04-05-003`
   - `框架线` `FD-2026-04-05-002`
   - `框架线` `FD-2026-04-05-001`
@@ -114,6 +115,40 @@
 - 挂靠原则：
   - `003` 线：已全部收口
   - `004` 线：已全部收口
+
+## FD-2026-04-05-004 | 跨项目上下文串入时错误将 superpowers 相似目录当成正式落点
+
+- 日期 (UTC): 2026-04-05
+- 来源: user_review, self_review
+- 状态: closed
+- 缺陷类型: cross_project_context_fallback_target_inference
+- owner: codex
+- wi_id: 001-ai-sdlc-framework
+- related_doc: docs/framework-defect-backlog.zh-CN.md, src/ai_sdlc/rules/pipeline.md
+- detection_surface: user_review, self_review
+- trace_anchor: manual_review_only
+- observed_scope: manual_review
+- subject_ref: 无（当前无稳定 provenance inspection subject）
+- chain_status: unknown（当前以人工复盘与仓库规则修正为准）
+- highest_confidence_source: manual_review_only
+- key_gaps: cross_project_context: 当前对话短时混入了不属于本仓库的设计讨论，但执行侧没有在“仓库内找不到对应 canonical artifact / 对象定义”时立即硬停；fallback_target_inference: 在缺少明确 `specs/<WI>/` 归属时，试图根据现有 `docs/superpowers/*` 相似目录推断写入目标；unobserved_write_guard: 虽然本次在真正落盘前被用户指出并中止，`git status --short` 也保持为空，但框架规则此前没有把“归属未证实 -> 禁止写入”写成足够硬的显式前置。
+- evidence_refs: manual_review_only; command:git status --short; file:src/ai_sdlc/rules/pipeline.md; file:docs/framework-defect-backlog.zh-CN.md
+- 现象: 在当前仓库中找不到用户刚讨论对象的 canonical 文稿、work item 或规则映射时，执行侧没有先将其判定为“项目归属未证实”，而是试图沿用仓库内现有的 `docs/superpowers/*` 相似目录作为文档落点。虽然本次没有实际写入文件，但“想往 superpowers 写”的意图本身已构成真实违约。
+- 触发场景: 用户在当前仓库会话中连续讨论了其他项目的设计内容，同时要求“不要再请求路径，直接完成文档”；仓库内又存在 `docs/superpowers/*` 这类辅助设计目录，导致执行侧为了继续推进而做出错误的 fallback target 推断。
+- 影响范围: 当前项目边界纯度、canonical formal docs 的可信度、以及 `docs/superpowers/*` 作为辅助输入空间的稳定语义。若该问题不被正式记账并收紧规则，后续可能把跨项目需求、宿主对话草稿或外部设计对象误写入本仓库，形成真实污染。
+- 根因分类: A, E, G（G: cross-project context entered the session and the executor tried to infer a fallback write target from a semantically similar local directory）
+- 未来杜绝方案摘要: 当对话内容无法被当前仓库的 canonical artifact、active work item、规则对象或用户明确指定路径稳定映射时，默认动作必须收缩为“停写 + 边界澄清 + 只读核对工作区”，不得再从 `docs/superpowers/*`、历史设计稿目录或其他语义相似路径反推正式落点。`docs/superpowers/*` 仅可作为 `related_doc / related_plan / auxiliary reference`，永不作为归属不明内容的 fallback write target。
+- 建议改动层级: prompt / context, rule / policy, workflow, eval
+- prompt / context: 当当前会话中的对象、章节名或设计语义无法在本仓库内映射到稳定 canonical artifact 时，必须先把它视为“项目归属未证实”的外部上下文，而不是默认它属于当前项目。
+- rule / policy: 在 `src/ai_sdlc/rules/pipeline.md` 明确写死：归属未证实时默认停写；`docs/superpowers/*` 只允许作为辅助引用，不得当正式落点或 fallback write target。
+- middleware: 当前仓库暂无自动化 repo-scope write guard；后续若引入宿主侧 preflight / bounded write guard，应把“归属未证实时禁止写入”作为硬失败条件，而不是提示性建议。
+- workflow: 处理顺序固定为 `识别上下文疑似跨项目 -> 停止任何写入意图 -> git status --short 确认未落盘 -> 明示边界不一致 -> 仅在用户将内容重新绑定到当前仓库 canonical 路径后再恢复执行`；禁止跳过上述步骤直接补写设计文档。
+- tool: docs/framework-defect-backlog.zh-CN.md, src/ai_sdlc/rules/pipeline.md
+- eval: cross-project-context-catch 次数、unbound-context-write-attempt 次数、`docs/superpowers/*` 被误当正式落点的 review 命中次数、归属未证实场景下的 stop-before-write 命中率
+- 风险等级: 高
+- 收口说明（2026-04-05）: 本次事件未产生落盘文件，已通过 `git status --short` 复核为干净工作区。随后已将“归属未证实时必须停写、不得把 `docs/superpowers/*` 当 fallback write target”的约束补入 `src/ai_sdlc/rules/pipeline.md`，并将该违约正式登记进 backlog，作为后续规则与宿主 write guard 演化输入。
+- 可验证成功标准: 1) 当当前对话内容无法映射到本仓库 canonical artifact 时，不发生任何文件写入。 2) `docs/superpowers/*` 在规则层只被允许作为 `related_doc / related_plan / auxiliary reference`，不再能被解释为正式落点。 3) 再次出现跨项目上下文时，默认动作是停写、核对工作区并显式披露边界不一致，而不是继续补出目标路径。 4) review / 复盘能够直接引用本条 backlog 与规则文本，而不需要依赖会话记忆解释。
+- 是否需要回归测试补充: 否：当前缺口首先是规则 / 工作流层缺少硬约束，已先通过 backlog 与 pipeline rule 收口；若后续引入 repo-scope write guard，再补对应自动化验证。
 
 ## FD-2026-04-05-003 | workitem init 安装态生产回归未被真实 wheel 冒烟回归覆盖
 
