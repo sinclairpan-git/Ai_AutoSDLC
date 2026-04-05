@@ -86,9 +86,10 @@
 - #52 | Tier 48 | `061` | branch `codex/frontend-program-final-proof-archive-cleanup-mutation-proposal-approval-consumption-baseline` | 直接依赖：`050`、`054`、`056`、`058`、`059`、`060` | 状态：已实现（mutation proposal approval consumption baseline）
 - #53 | Tier 49 | `062` | branch `codex/frontend-program-final-proof-archive-cleanup-mutation-execution-gating-baseline` | 直接依赖：`050`、`054`、`056`、`058`、`060`、`061` | 状态：已冻结（formal baseline）
 - #54 | Tier 50 | `063` | branch `codex/frontend-program-final-proof-archive-cleanup-mutation-execution-gating-consumption-baseline` | 直接依赖：`050`、`060`、`061`、`062` | 状态：已实现（execution gating consumption baseline）
-- #55 | Tier 51 | `064` | branch `codex/frontend-program-final-proof-archive-cleanup-mutation-execution-baseline` | 直接依赖：`050`、`062`、`063` | 状态：已冻结（formal baseline）
+- #55 | Tier 51 | `064` | branch `codex/frontend-program-final-proof-archive-cleanup-mutation-execution-baseline` | 直接依赖：`050`、`062`、`063` | 状态：已实现（cleanup mutation execution baseline，commit `36b99e2`）
 
 ## 备注
 
-- `053`、`055`、`057`、`059`、`061`、`063` 属于已实现的 consumption/gating 项，后续如需补强，应仍以当前 DAG 位次为准，不要越过其 docs-only 前置项。
-- `058`、`060`、`062`、`064` 目前仍是 mutation proposal / approval / gating / execution 主线上的关键冻结点，适合作为后续逐项开分支的优先补齐目标。
+- `053`、`055`、`057`、`059`、`061`、`063`、`064` 已经在当前仓库具备实现闭环；后续如需补强，应仍以当前 DAG 位次为准，不要越过其 docs-only 前置项。
+- `058`、`060`、`062` 仍是 mutation proposal / approval / gating 主线上的 canonical 冻结点；后续若继续开分支，应以它们作为 truth predecessor，而不是把 `064` 误判为待实现项。
+- 当前 `program status` 对全部 frontend spec 统一暴露的 `missing_artifact [frontend_contract_observations]` 属于 active spec 输入缺口，不对应本仓库内可直接扫描补齐的实现分支；当前仓库不存在真实前端源码标注源，后续需要在实际前端项目中生成并回填 canonical observation artifact。
