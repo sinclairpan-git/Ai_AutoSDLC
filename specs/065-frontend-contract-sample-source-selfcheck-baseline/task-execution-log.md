@@ -178,3 +178,82 @@
 - **提交哈希**：`ce17e04`
 - 当前批次 branch disposition 状态：`archived`
 - 当前批次 worktree disposition 状态：`retained（065 archived truth carrier；未请求 mainline merge）`
+
+### Batch 2026-04-06-004 | mainline merge and program truth sync
+
+#### 1. 准备
+
+- **任务来源**：`close-out integration follow-up`
+- **目标**：将 `065` 的实现快进并入 `main`，同步根级 `program-manifest.yaml` / `frontend-program-branch-rollout-plan.md`，并把 latest batch 的 branch lifecycle truth 从 `archived` 更新为 `merged`。
+- **预读范围**：`program-manifest.yaml`、`frontend-program-branch-rollout-plan.md`、`spec.md`、`plan.md`、`tasks.md`、`task-execution-log.md`、`development-summary.md`
+- **激活的规则**：workitem close-check git closure；program truth sync honesty；mainline merge 后 fresh verification。
+- **验证画像**：`code-change`
+- **改动范围**：`program-manifest.yaml`、`frontend-program-branch-rollout-plan.md`、`specs/065-frontend-contract-sample-source-selfcheck-baseline/task-execution-log.md`、`specs/065-frontend-contract-sample-source-selfcheck-baseline/development-summary.md`
+
+#### 2. 统一验证命令
+
+- **V1（065 定向回归）**
+  - 命令：`uv run pytest tests/unit/test_frontend_contract_scanner.py tests/integration/test_cli_scan.py tests/integration/test_cli_verify_constraints.py tests/unit/test_program_service.py tests/integration/test_cli_program.py -q`
+- **V2（静态检查）**
+  - 命令：`uv run ruff check src tests`
+- **V3（治理只读校验）**
+  - 命令：`uv run ai-sdlc verify constraints`
+- **V4（workitem close gate）**
+  - 命令：`uv run ai-sdlc workitem close-check --wi specs/065-frontend-contract-sample-source-selfcheck-baseline`
+- **V5（program manifest 校验）**
+  - 命令：`uv run ai-sdlc program validate`
+- **V6（program status）**
+  - 命令：`uv run ai-sdlc program status`
+- **V7（program plan）**
+  - 命令：`uv run ai-sdlc program plan`
+- **V8（program integrate dry-run）**
+  - 命令：`uv run ai-sdlc program integrate --dry-run`
+- **V9（diff hygiene）**
+  - 命令：`git diff --check`
+
+#### 3. 任务记录
+
+##### Task integrate | 快进并入 main 并同步 program-level truth
+
+- **改动范围**：`program-manifest.yaml`、`frontend-program-branch-rollout-plan.md`、`specs/065-frontend-contract-sample-source-selfcheck-baseline/task-execution-log.md`、`specs/065-frontend-contract-sample-source-selfcheck-baseline/development-summary.md`
+- **改动内容**：
+  - 将 `codex/065-frontend-contract-sample-source-selfcheck-baseline` 快进并入 `main`，把 sample fixture、scanner/program wording 与 close-out docs 一并带回主线。
+  - 把 `065` 补入根级 `program-manifest.yaml`，依赖口径显式登记为 `012`、`013`、`014`，避免把 child baseline 变成人工特例。
+  - 更新 `frontend-program-branch-rollout-plan.md` 的更新日期、排序总表与备注，明确 `065` 已实现但不改变 production truth model，也不消除 `frontend_contract_observations` 的真实外部输入缺口。
+  - 更新 `development-summary.md` 与 latest execution batch，使当前主线 truth 明确为 `merged`，worktree 仅作保留副本，不再宣称 archived non-mainline 状态。
+- **新增/调整的测试**：无新增测试；本批复用 `065` 既有定向回归与 program dry-run 做 mainline re-validation。
+- **执行的命令**：见 V1 ~ V9。
+- **测试结果**：
+  - `git merge --ff-only codex/065-frontend-contract-sample-source-selfcheck-baseline` 成功，`main` 快进至 `4d7d65d`。
+  - `uv run pytest tests/unit/test_frontend_contract_scanner.py tests/integration/test_cli_scan.py tests/integration/test_cli_verify_constraints.py tests/unit/test_program_service.py tests/integration/test_cli_program.py -q` 通过：`210 passed in 5.00s`。
+  - `uv run ruff check src tests` 通过：`All checks passed!`
+  - `uv run ai-sdlc verify constraints` 通过：`verify constraints: no BLOCKERs.`
+  - `uv run ai-sdlc program validate` 通过：`program validate: PASS`
+  - `uv run ai-sdlc program status` 显示 `065` 已进入 `close`，且全部 frontend spec 仍统一提示 `missing_artifact [frontend_contract_observations]`。
+  - `uv run ai-sdlc program plan` 正常生成 DAG，`065` 位于 Tier `5`，与 `018` 同层。
+  - `uv run ai-sdlc program integrate --dry-run` 退出码 `0`，主线闭环 dry-run 正常。
+  - `git diff --check` 无输出，diff hygiene 通过。
+- **是否符合任务目标**：符合。当前批次把 `065` 从 isolated close-ready truth 推进为已并入主线且已纳入根级 program truth 的实现项。
+
+#### 4. 代码审查（摘要）
+
+- 本批仅同步主线 truth，不再改写 `065` 的产品实现；重点复核的是：manifest 依赖是否与 `spec.md` 输入口径一致，rollout note 是否保持 honesty，以及 merged disposition 是否与 branch inventory 匹配。
+- 审查结论：`065` 继续保持 `source_root -> artifact -> verify` 单一真值链；program-level sync 只登记其主线实现事实，不把 sample fixture 泄漏为 runtime fallback 或默认 remediation。
+
+#### 5. 任务/计划同步状态
+
+- `tasks.md` 同步状态：`已对账`
+- `plan.md` 同步状态：`已对账`
+- `spec.md` 同步状态：`已对账`
+- 关联 branch/worktree disposition 计划：`merged`
+
+#### 6. 批次结论
+
+- 本批把 `065` 的主线状态从“已归档的 isolated truth carrier”提升为“已并入 main 且已进入根级 program truth 的实现项”；同时保留 worktree 副本，供后续用户决定是否清理。
+
+#### 7. 归档后动作
+
+- **已完成 git 提交**：是（`main` 已快进至 `4d7d65d`；本批同步归档见当前提交）
+- **提交哈希**：`4d7d65d（mainline fast-forward base；当前批次 program truth sync 随当前提交落盘）`
+- 当前批次 branch disposition 状态：`merged`
+- 当前批次 worktree disposition 状态：`retained（已并回 main；隔离 worktree 保留待用户决定是否清理）`

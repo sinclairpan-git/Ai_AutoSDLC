@@ -386,3 +386,11 @@ specs:
       - "063-frontend-program-final-proof-archive-cleanup-mutation-execution-gating-consumption-baseline"
     branch_slug: "frontend-program-final-proof-archive-cleanup-mutation-execution-baseline"
     owner: "team-frontend-governance"
+  - id: "065-frontend-contract-sample-source-selfcheck-baseline"
+    path: "specs/065-frontend-contract-sample-source-selfcheck-baseline"
+    depends_on:
+      - "012-frontend-contract-verify-integration"
+      - "013-frontend-contract-observation-provider-baseline"
+      - "014-frontend-contract-runtime-attachment-baseline"
+    branch_slug: "frontend-contract-sample-source-selfcheck-baseline"
+    owner: "team-frontend-governance"

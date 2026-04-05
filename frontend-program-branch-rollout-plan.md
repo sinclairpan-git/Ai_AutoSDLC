@@ -1,6 +1,6 @@
 # Frontend Program 未实现项排序与分支落地计划
 
-**更新日期**：2026-04-05
+**更新日期**：2026-04-06
 **适用范围**：所有 `specs/0xx-frontend-*` work item
 **机器真值**：根级 `program-manifest.yaml`；本文件用于说明排序口径、并行窗口与建议分支命名。
 
@@ -21,6 +21,7 @@
 ## 主线分段
 
 - 合同与观测基础：`009` -> `018`
+- 合同自检输入补强：`065`（依赖 `012`、`013`、`014`，不改写 production truth model）
 - program orchestration / execute / remediation 主链：`019` -> `046`
 - final proof archive 与 cleanup 主链：`047` -> `064`
 
@@ -87,9 +88,11 @@
 - #53 | Tier 49 | `062` | branch `codex/frontend-program-final-proof-archive-cleanup-mutation-execution-gating-baseline` | 直接依赖：`050`、`054`、`056`、`058`、`060`、`061` | 状态：已冻结（formal baseline）
 - #54 | Tier 50 | `063` | branch `codex/frontend-program-final-proof-archive-cleanup-mutation-execution-gating-consumption-baseline` | 直接依赖：`050`、`060`、`061`、`062` | 状态：已实现（execution gating consumption baseline）
 - #55 | Tier 51 | `064` | branch `codex/frontend-program-final-proof-archive-cleanup-mutation-execution-baseline` | 直接依赖：`050`、`062`、`063` | 状态：已实现（cleanup mutation execution baseline，commit `36b99e2`）
+- #56 | Tier 05 | `065` | branch `codex/frontend-contract-sample-source-selfcheck-baseline` | 直接依赖：`012`、`013`、`014` | 状态：已实现（sample source self-check baseline，commit `4d7d65d`）
 
 ## 备注
 
-- `053`、`055`、`057`、`059`、`061`、`063`、`064` 已经在当前仓库具备实现闭环；后续如需补强，应仍以当前 DAG 位次为准，不要越过其 docs-only 前置项。
+- `053`、`055`、`057`、`059`、`061`、`063`、`064`、`065` 已经在当前仓库具备实现闭环；后续如需补强，应仍以当前 DAG 位次为准，不要越过其 docs-only 前置项。
 - `058`、`060`、`062` 仍是 mutation proposal / approval / gating 主线上的 canonical 冻结点；后续若继续开分支，应以它们作为 truth predecessor，而不是把 `064` 误判为待实现项。
+- `065` 是 `014` 下游的 self-check child baseline；它让框架仓库可用 sample source tree 做显式自检，但不消除真实 active spec 对 `frontend_contract_observations` 的外部输入要求。
 - 当前 `program status` 对全部 frontend spec 统一暴露的 `missing_artifact [frontend_contract_observations]` 属于 active spec 输入缺口，不对应本仓库内可直接扫描补齐的实现分支；当前仓库不存在真实前端源码标注源，后续需要在实际前端项目中生成并回填 canonical observation artifact。

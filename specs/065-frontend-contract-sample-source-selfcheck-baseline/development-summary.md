@@ -12,5 +12,5 @@
 
 ## 备注
 
-- `065` 当前在独立 worktree 分支上以 archived truth carrier 形式保留，尚未宣称已并回 `main`。
-- 若后续要把 `065` 纳入根级 `program-manifest.yaml`，应在单独的 program truth sync 批次中完成，不在本批偷带。
+- `065` 已并入 `main`，根级 `program-manifest.yaml` 与 `frontend-program-branch-rollout-plan.md` 已在独立 program truth sync 批次中补入。
+- `065` 的 sample source self-check 能力只服务框架仓库自检，不改变 `verify/program` 对 canonical observation artifact 的 production truth model。
