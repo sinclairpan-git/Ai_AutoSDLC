@@ -2,7 +2,7 @@
 
 **功能编号**：`065-frontend-contract-sample-source-selfcheck-baseline`  
 **创建日期**：2026-04-06  
-**状态**：Batch 2-5 已实现并验证，待本批归档提交
+**状态**：Batch 2-5 已实现并验证，close-out evidence 已补齐
 
 ## 1. 归档规则
 
@@ -24,8 +24,8 @@
 
 - `065` 的 formal docs freeze 已先在主工作区完成并单独提交，提交哈希：`c26c5a0`。
 - 当前实现位于隔离 worktree 分支 `codex/065-frontend-contract-sample-source-selfcheck-baseline`。
-- `Batch 2` 到 `Batch 5` 的 sample fixture、scan/verify matrix、program honesty 与 fresh verification 已完成；当前只剩本批归档提交尚未落盘。
-- 当前 work item 仍未进入 `close-out`；后续是否继续扩展到新的 work item，需在本批提交后再单独决策。
+- `Batch 2` 到 `Batch 5` 的 sample fixture、scan/verify matrix、program honesty 与 fresh verification 已完成。
+- 当前正在追加 latest close-out evidence batch，用于补齐 `workitem close-check` 所需的 execution-log 字段、verification profile 与 branch/worktree disposition truth。
 
 ## 3. 批次记录
 
@@ -114,5 +114,67 @@
 
 #### 6. 归档后动作
 
-- **已完成 git 提交**：否
-- **下一步动作**：将本批 `program_service`、program tests 与 execution log 一并提交
+- **已完成 git 提交**：是
+- **提交哈希**：`ce17e04`
+- **下一步动作**：追加 latest close-out evidence batch，并以 docs-only 归档补齐 `workitem close-check`
+
+### Batch 2026-04-06-003 | close-out evidence and archived branch disposition
+
+#### 1. 准备
+
+- **任务来源**：`T52 close-out evidence normalization`
+- **目标**：在不改写 `065` 实现边界的前提下，为 latest batch 补齐当前框架要求的 close-out evidence 字段、verification profile、review 摘要与 branch/worktree disposition truth。
+- **预读范围**：`spec.md`、`plan.md`、`tasks.md`、`task-execution-log.md`、`development-summary.md`、`src/ai_sdlc/core/close_check.py`
+- **激活的规则**：close-check execution log fields；verification profile truthfulness；git close-out markers truthfulness。
+- **验证画像**：`docs-only`
+- **改动范围**：`specs/065-frontend-contract-sample-source-selfcheck-baseline/task-execution-log.md`、`specs/065-frontend-contract-sample-source-selfcheck-baseline/development-summary.md`
+
+#### 2. 统一验证命令
+
+- **V1（治理只读校验）**
+  - 命令：`uv run ai-sdlc verify constraints`
+- **V2（diff hygiene）**
+  - 命令：`git diff --check`
+- **V3（workitem close-check）**
+  - 命令：`uv run ai-sdlc workitem close-check --wi specs/065-frontend-contract-sample-source-selfcheck-baseline`
+
+#### 3. 任务记录
+
+##### Task close-out | 追加 canonical close evidence 并补 development summary
+
+- **改动范围**：`specs/065-frontend-contract-sample-source-selfcheck-baseline/task-execution-log.md`、`specs/065-frontend-contract-sample-source-selfcheck-baseline/development-summary.md`
+- **改动内容**：
+  - 追加 latest `### Batch ...` close-out evidence 结构，补齐 `统一验证命令`、`代码审查`、`任务/计划同步状态`、`验证画像` 与 git close-out markers。
+  - 修正 `Batch 2026-04-06-002` 的历史提交状态，使 execution log 与已存在提交事实一致。
+  - 新增 `development-summary.md`，把 `065` 提升为 work item close-ready 的正式收口输入，但不在本批引入新的 runtime / test 实现。
+- **新增/调整的测试**：无。本批只补 close-out docs 与 canonical summary。
+- **执行的命令**：见 V1 ~ V3。
+- **测试结果**：
+  - `uv run ai-sdlc verify constraints` 通过，输出：`verify constraints: no BLOCKERs.`
+  - `git diff --check` 无输出，diff hygiene 通过。
+  - `workitem close-check` 作为 post-commit close gate，在本批提交后复跑。
+- **是否符合任务目标**：符合。当前 docs-only close-out evidence 已补齐；最终完成态以 post-commit `workitem close-check` 为准。
+
+#### 4. 代码审查（摘要）
+
+- 已基于 `main...HEAD` 审阅 `065` 的实现 diff，重点覆盖 `program_service.py`、scanner/unit/integration tests 与 sample fixture。
+- 审查结论：当前实现保持了 `source_root -> artifact -> verify` 单一真值链；`program` remediation wording 已不再暗示 `scan .`，且 `program remediate --execute` 不再隐式 materialize frontend observations。
+- 当前批次仅补 close-out docs，不引入新的产品行为；最终结论以本批 fresh verification 与 close-check 复核为准。
+
+#### 5. 任务/计划同步状态
+
+- `tasks.md` 同步状态：`已对账`
+- `plan.md` 同步状态：`已对账`
+- `spec.md` 同步状态：`已对账`
+- 关联 branch/worktree disposition 计划：`archived`
+
+#### 6. 批次结论
+
+- 本批目标是把 `065` 的 close-out evidence 调整为当前框架认可的最新 canonical 形状，并把该分支显式登记为 `archived` truth carrier，而不是伪装成已合并回 `main`。
+
+#### 7. 归档后动作
+
+- **已完成 git 提交**：是
+- **提交哈希**：`ce17e04`
+- 当前批次 branch disposition 状态：`archived`
+- 当前批次 worktree disposition 状态：`retained（065 archived truth carrier；未请求 mainline merge）`
