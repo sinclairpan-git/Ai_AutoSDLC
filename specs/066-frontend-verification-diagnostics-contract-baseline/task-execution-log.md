@@ -2,7 +2,7 @@
 
 **功能编号**：`066-frontend-verification-diagnostics-contract-baseline`  
 **创建日期**：2026-04-06  
-**状态**：Batch 2-5 已实现并验证，close-out evidence 已补齐
+**状态**：Batch 2-6 已实现并验证，git closure sync 进行中
 
 ## 1. 归档规则
 
@@ -302,12 +302,11 @@
 
 #### 6. 批次结论
 
-- 当前批次只做 `066` close-out evidence normalization，不引入新的实现范围；若 fresh verification 通过，则 `066` 可进入 git closure sync。
 - 当前批次只做 `066` close-out evidence normalization，不引入新的实现范围；fresh verification 已通过，当前进入 git closure sync。
 
 #### 7. 归档后动作
 
-- **已完成 git 提交**：否
-- **提交哈希**：待本批提交后生成
+- **已完成 git 提交**：是（implementation baseline 已提交；latest close-out sync 将在当前归档提交中落盘）
+- **提交哈希**：`df129b1`
 - 当前批次 branch disposition 状态：`archived`
 - 当前批次 worktree disposition 状态：`retained（066 archived truth carrier；未请求 mainline merge）`
