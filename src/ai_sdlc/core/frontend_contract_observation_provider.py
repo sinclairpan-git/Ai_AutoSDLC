@@ -10,6 +10,9 @@ from ai_sdlc.core.frontend_contract_drift import PageImplementationObservation
 
 FRONTEND_CONTRACT_OBSERVATION_ARTIFACT_NAME = "frontend-contract-observations.json"
 FRONTEND_CONTRACT_OBSERVATION_SCHEMA_VERSION = "frontend-contract-observations/v1"
+FRONTEND_CONTRACT_OBSERVATION_ARTIFACT_STATUS_ATTACHED = "attached"
+FRONTEND_CONTRACT_OBSERVATION_ARTIFACT_STATUS_MISSING_ARTIFACT = "missing_artifact"
+FRONTEND_CONTRACT_OBSERVATION_ARTIFACT_STATUS_INVALID_ARTIFACT = "invalid_artifact"
 
 
 @dataclass(frozen=True, slots=True)
@@ -261,6 +264,9 @@ def _optional_text(value: object, field_name: str) -> str | None:
 
 __all__ = [
     "FRONTEND_CONTRACT_OBSERVATION_ARTIFACT_NAME",
+    "FRONTEND_CONTRACT_OBSERVATION_ARTIFACT_STATUS_ATTACHED",
+    "FRONTEND_CONTRACT_OBSERVATION_ARTIFACT_STATUS_INVALID_ARTIFACT",
+    "FRONTEND_CONTRACT_OBSERVATION_ARTIFACT_STATUS_MISSING_ARTIFACT",
     "FRONTEND_CONTRACT_OBSERVATION_SCHEMA_VERSION",
     "FrontendContractObservationArtifact",
     "ObservationFreshnessMarker",

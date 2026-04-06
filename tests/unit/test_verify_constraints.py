@@ -4,17 +4,21 @@ from __future__ import annotations
 
 import json
 import subprocess
+from dataclasses import replace
 from pathlib import Path
 
+import ai_sdlc.core.verify_constraints as verify_constraints_module
 from ai_sdlc.context.state import save_checkpoint
 from ai_sdlc.core.frontend_contract_drift import PageImplementationObservation
 from ai_sdlc.core.frontend_contract_observation_provider import (
+    FRONTEND_CONTRACT_OBSERVATION_ARTIFACT_STATUS_MISSING_ARTIFACT,
     build_frontend_contract_observation_artifact,
     write_frontend_contract_observation_artifact,
 )
 from ai_sdlc.core.frontend_contract_verification import (
     FRONTEND_CONTRACT_CHECK_OBJECTS,
     FRONTEND_CONTRACT_SOURCE_NAME,
+    build_frontend_contract_verification_report,
 )
 from ai_sdlc.core.frontend_gate_verification import (
     FRONTEND_GATE_CHECK_OBJECTS,
@@ -349,24 +353,25 @@ def _write_minimal_frontend_contract_page_artifacts(
 def _write_012_frontend_contract_observations(
     root: Path,
     *,
-    page_id: str = "user-create",
-    recipe_id: str = "form-create",
+    observations: list[PageImplementationObservation] | None = None,
 ) -> None:
     spec_dir = (
         root
         / "specs"
         / "012-frontend-contract-verify-integration"
     )
-    artifact = build_frontend_contract_observation_artifact(
-        observations=[
+    if observations is None:
+        observations = [
             PageImplementationObservation(
-                page_id=page_id,
-                recipe_id=recipe_id,
+                page_id="user-create",
+                recipe_id="form-create",
                 i18n_keys=[],
                 validation_fields=[],
                 new_legacy_usages=[],
             )
-        ],
+        ]
+    artifact = build_frontend_contract_observation_artifact(
+        observations=observations,
         provider_kind="manual",
         provider_name="test-fixture",
         generated_at="2026-04-02T14:30:00Z",
@@ -377,24 +382,25 @@ def _write_012_frontend_contract_observations(
 def _write_018_frontend_contract_observations(
     root: Path,
     *,
-    page_id: str = "user-create",
-    recipe_id: str = "form-create",
+    observations: list[PageImplementationObservation] | None = None,
 ) -> None:
     spec_dir = (
         root
         / "specs"
         / "018-frontend-gate-compatibility-baseline"
     )
-    artifact = build_frontend_contract_observation_artifact(
-        observations=[
+    if observations is None:
+        observations = [
             PageImplementationObservation(
-                page_id=page_id,
-                recipe_id=recipe_id,
+                page_id="user-create",
+                recipe_id="form-create",
                 i18n_keys=[],
                 validation_fields=[],
                 new_legacy_usages=[],
             )
-        ],
+        ]
+    artifact = build_frontend_contract_observation_artifact(
+        observations=observations,
         provider_kind="manual",
         provider_name="test-fixture",
         generated_at="2026-04-03T14:30:00Z",
@@ -1210,6 +1216,23 @@ def test_012_frontend_contract_verification_passes_with_structured_observations(
     assert context["frontend_contract_verification"]["coverage_gaps"] == []
 
 
+def test_012_frontend_contract_verification_distinguishes_valid_empty_artifact(
+    tmp_path: Path,
+) -> None:
+    _write_012_checkpoint(tmp_path)
+    _write_minimal_frontend_contract_page_artifacts(tmp_path)
+    _write_012_frontend_contract_observations(tmp_path, observations=[])
+
+    report = build_constraint_report(tmp_path)
+    context = build_verification_gate_context(tmp_path)
+
+    assert report.coverage_gaps == ()
+    assert any("declared empty" in blocker for blocker in report.blockers)
+    assert context["frontend_contract_verification"]["coverage_gaps"] == []
+    assert context["frontend_contract_verification"]["observation_artifact_status"] == "attached"
+    assert context["frontend_contract_verification"]["observation_count"] == 0
+
+
 def test_012_frontend_contract_verification_rejects_noncanonical_observation_artifact(
     tmp_path: Path,
 ) -> None:
@@ -1255,6 +1278,40 @@ def test_012_frontend_contract_verification_rejects_noncanonical_observation_art
     ]
 
 
+def test_012_frontend_contract_verification_uses_projection_to_restore_missing_gap(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    _write_012_checkpoint(tmp_path)
+    _write_minimal_frontend_contract_page_artifacts(tmp_path)
+
+    upstream_report = build_frontend_contract_verification_report(
+        tmp_path / "contracts" / "frontend",
+        [],
+        observation_artifact_status=(
+            FRONTEND_CONTRACT_OBSERVATION_ARTIFACT_STATUS_MISSING_ARTIFACT
+        ),
+    )
+    stale_gap_report = replace(upstream_report, coverage_gaps=())
+    monkeypatch.setattr(
+        verify_constraints_module,
+        "_frontend_contract_attachment_report",
+        lambda root, checkpoint: stale_gap_report,
+    )
+
+    report = build_constraint_report(tmp_path)
+    context = build_verification_gate_context(tmp_path)
+
+    assert report.coverage_gaps == ("frontend_contract_observations",)
+    assert context["frontend_contract_verification"]["coverage_gaps"] == [
+        "frontend_contract_observations"
+    ]
+    assert (
+        context["frontend_contract_verification"]["diagnostic"]["diagnostic_status"]
+        == "missing_artifact"
+    )
+
+
 def test_018_frontend_gate_verification_surfaces_missing_gate_policy_gap(
     tmp_path: Path,
 ) -> None:
@@ -1296,6 +1353,34 @@ def test_018_frontend_gate_verification_passes_with_artifacts_and_observations(
     )
     assert context["frontend_gate_verification"]["gate_verdict"] == "PASS"
     assert context["frontend_gate_verification"]["coverage_gaps"] == []
+
+
+def test_018_frontend_gate_verification_distinguishes_valid_empty_artifact(
+    tmp_path: Path,
+) -> None:
+    _write_018_checkpoint(tmp_path)
+    _write_minimal_frontend_contract_page_artifacts(tmp_path)
+    _write_018_gate_artifacts(tmp_path)
+    _write_018_frontend_contract_observations(tmp_path, observations=[])
+
+    report = build_constraint_report(tmp_path)
+    context = build_verification_gate_context(tmp_path)
+
+    assert report.coverage_gaps == ()
+    assert any("declared empty" in blocker for blocker in report.blockers)
+    assert context["frontend_gate_verification"]["coverage_gaps"] == []
+    assert (
+        context["frontend_gate_verification"]["upstream_contract_verification"][
+            "observation_artifact_status"
+        ]
+        == "attached"
+    )
+    assert (
+        context["frontend_gate_verification"]["upstream_contract_verification"][
+            "observation_count"
+        ]
+        == 0
+    )
 
 
 def test_018_frontend_gate_verification_rejects_noncanonical_observation_artifact(

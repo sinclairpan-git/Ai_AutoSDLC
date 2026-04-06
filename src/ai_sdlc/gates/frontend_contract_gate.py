@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
@@ -10,8 +11,27 @@ from ai_sdlc.core.frontend_contract_drift import (
     PageImplementationObservation,
     detect_frontend_contract_drift,
 )
+from ai_sdlc.core.frontend_contract_observation_provider import (
+    FRONTEND_CONTRACT_OBSERVATION_ARTIFACT_STATUS_ATTACHED,
+    FRONTEND_CONTRACT_OBSERVATION_ARTIFACT_STATUS_INVALID_ARTIFACT,
+    FRONTEND_CONTRACT_OBSERVATION_ARTIFACT_STATUS_MISSING_ARTIFACT,
+)
 from ai_sdlc.generators.frontend_contract_artifacts import frontend_contracts_root
 from ai_sdlc.models.gate import GateCheck, GateResult, GateVerdict
+
+FRONTEND_CONTRACT_DIAGNOSTIC_STATUS_MISSING_ARTIFACT = "missing_artifact"
+FRONTEND_CONTRACT_DIAGNOSTIC_STATUS_INVALID_ARTIFACT = "invalid_artifact"
+FRONTEND_CONTRACT_DIAGNOSTIC_STATUS_VALID_EMPTY = "valid_empty"
+FRONTEND_CONTRACT_DIAGNOSTIC_STATUS_DRIFT = "drift"
+FRONTEND_CONTRACT_DIAGNOSTIC_STATUS_CLEAN = "clean"
+
+
+@dataclass(frozen=True, slots=True)
+class _DiagnosticSummary:
+    status: str
+    observation_count: int
+    parse_error_summary: str | None
+    drift_summary: str | None
 
 
 class FrontendContractGate:
@@ -20,8 +40,21 @@ class FrontendContractGate:
     def check(self, context: dict[str, Any]) -> GateResult:
         contracts_root = _resolve_contracts_root(context)
         observations = _coerce_observations(context.get("observations", ()))
+        observation_artifact_status = _coerce_observation_artifact_status(
+            context.get("observation_artifact_status")
+        )
+        diagnostic = _coerce_diagnostic(context.get("diagnostic"))
 
         artifacts_present, artifact_message = _check_contract_artifacts(contracts_root)
+        if diagnostic is None:
+            observations_declared, observation_message = _check_observations_declared(
+                observation_artifact_status,
+                observations,
+            )
+        else:
+            observations_declared, observation_message = (
+                _check_observations_declared_from_diagnostic(diagnostic)
+            )
         checks = [
             GateCheck(
                 name="contract_artifacts_present",
@@ -30,29 +63,45 @@ class FrontendContractGate:
             ),
             GateCheck(
                 name="implementation_observations_declared",
-                passed=bool(observations),
-                message="" if observations else "no implementation observations declared",
+                passed=observations_declared,
+                message=observation_message,
             ),
         ]
 
-        if artifacts_present and observations:
-            drifts = detect_frontend_contract_drift(contracts_root, observations)
-            checks.append(
-                GateCheck(
-                    name="contract_drift_free",
-                    passed=len(drifts) == 0,
-                    message="" if not drifts else _summarize_drifts(drifts),
+        if diagnostic is None:
+            if artifacts_present and observations_declared and observations:
+                drifts = detect_frontend_contract_drift(contracts_root, observations)
+                checks.append(
+                    GateCheck(
+                        name="contract_drift_free",
+                        passed=len(drifts) == 0,
+                        message="" if not drifts else _summarize_drifts(drifts),
+                    )
                 )
-            )
+            else:
+                checks.append(
+                    GateCheck(
+                        name="contract_drift_free",
+                        passed=False,
+                        message=_missing_prerequisite_message(
+                            artifacts_present=artifacts_present,
+                            artifact_message=artifact_message,
+                            observation_message=observation_message,
+                        ),
+                    )
+                )
         else:
+            drift_free, drift_message = _check_contract_drift_from_diagnostic(
+                diagnostic=diagnostic,
+                artifacts_present=artifacts_present,
+                artifact_message=artifact_message,
+                observation_message=observation_message,
+            )
             checks.append(
                 GateCheck(
                     name="contract_drift_free",
-                    passed=False,
-                    message=_missing_prerequisite_message(
-                        artifacts_present=artifacts_present,
-                        observations_declared=bool(observations),
-                    ),
+                    passed=drift_free,
+                    message=drift_message,
                 )
             )
 
@@ -84,6 +133,12 @@ def _coerce_observations(value: object) -> list[PageImplementationObservation]:
     return observations
 
 
+def _coerce_observation_artifact_status(value: object) -> str:
+    if not isinstance(value, str) or not value.strip():
+        return FRONTEND_CONTRACT_OBSERVATION_ARTIFACT_STATUS_ATTACHED
+    return value.strip()
+
+
 def _check_contract_artifacts(contracts_root: Path) -> tuple[bool, str]:
     pages_root = contracts_root / "pages"
     if not pages_root.is_dir():
@@ -105,16 +160,104 @@ def _check_contract_artifacts(contracts_root: Path) -> tuple[bool, str]:
     return True, ""
 
 
+def _check_observations_declared(
+    observation_artifact_status: str,
+    observations: list[PageImplementationObservation],
+) -> tuple[bool, str]:
+    if observation_artifact_status == FRONTEND_CONTRACT_OBSERVATION_ARTIFACT_STATUS_ATTACHED:
+        if observations:
+            return True, ""
+        return False, "observation artifact attached but declared no implementation observations"
+    if (
+        observation_artifact_status
+        == FRONTEND_CONTRACT_OBSERVATION_ARTIFACT_STATUS_MISSING_ARTIFACT
+    ):
+        return False, "missing canonical observation artifact"
+    if (
+        observation_artifact_status
+        == FRONTEND_CONTRACT_OBSERVATION_ARTIFACT_STATUS_INVALID_ARTIFACT
+    ):
+        return False, "invalid structured observation artifact"
+    return False, f"unsupported observation artifact status: {observation_artifact_status}"
+
+
+def _check_observations_declared_from_diagnostic(
+    diagnostic: _DiagnosticSummary,
+) -> tuple[bool, str]:
+    if diagnostic.status == FRONTEND_CONTRACT_DIAGNOSTIC_STATUS_MISSING_ARTIFACT:
+        return False, "missing canonical observation artifact"
+    if diagnostic.status == FRONTEND_CONTRACT_DIAGNOSTIC_STATUS_INVALID_ARTIFACT:
+        return (
+            False,
+            diagnostic.parse_error_summary or "invalid structured observation artifact",
+        )
+    if diagnostic.status == FRONTEND_CONTRACT_DIAGNOSTIC_STATUS_VALID_EMPTY:
+        return False, "observation artifact attached but declared no implementation observations"
+    if diagnostic.status in (
+        FRONTEND_CONTRACT_DIAGNOSTIC_STATUS_DRIFT,
+        FRONTEND_CONTRACT_DIAGNOSTIC_STATUS_CLEAN,
+    ):
+        return True, ""
+    return False, f"unsupported diagnostic status: {diagnostic.status}"
+
+
+def _check_contract_drift_from_diagnostic(
+    *,
+    diagnostic: _DiagnosticSummary,
+    artifacts_present: bool,
+    artifact_message: str,
+    observation_message: str,
+) -> tuple[bool, str]:
+    if not artifacts_present or observation_message:
+        return (
+            False,
+            _missing_prerequisite_message(
+                artifacts_present=artifacts_present,
+                artifact_message=artifact_message,
+                observation_message=observation_message,
+            ),
+        )
+    if diagnostic.status == FRONTEND_CONTRACT_DIAGNOSTIC_STATUS_DRIFT:
+        return False, diagnostic.drift_summary or "frontend contract drift detected"
+    if diagnostic.status == FRONTEND_CONTRACT_DIAGNOSTIC_STATUS_CLEAN:
+        return True, ""
+    return False, f"unsupported diagnostic status: {diagnostic.status}"
+
+
+def _coerce_diagnostic(value: object) -> _DiagnosticSummary | None:
+    if not isinstance(value, dict):
+        return None
+    status = str(value.get("diagnostic_status") or "").strip()
+    evidence = value.get("evidence")
+    if not status or not isinstance(evidence, dict):
+        return None
+    observation_count = evidence.get("observation_count")
+    if not isinstance(observation_count, int):
+        observation_count = 0
+    parse_error_summary = evidence.get("parse_error_summary")
+    drift_summary = evidence.get("drift_summary")
+    return _DiagnosticSummary(
+        status=status,
+        observation_count=observation_count,
+        parse_error_summary=(
+            str(parse_error_summary).strip() if parse_error_summary is not None else None
+        ),
+        drift_summary=str(drift_summary).strip() if drift_summary is not None else None,
+    )
+
+
 def _missing_prerequisite_message(
     *,
     artifacts_present: bool,
-    observations_declared: bool,
+    artifact_message: str,
+    observation_message: str,
 ) -> str:
-    if not artifacts_present and not observations_declared:
-        return "frontend contract artifacts missing; no implementation observations declared"
+    messages: list[str] = []
     if not artifacts_present:
-        return "frontend contract artifacts missing"
-    return "no implementation observations declared"
+        messages.append(artifact_message or "frontend contract artifacts missing")
+    if observation_message:
+        messages.append(observation_message)
+    return "; ".join(messages) if messages else "frontend contract prerequisites unavailable"
 
 
 def _summarize_drifts(drifts: list[FrontendContractDriftRecord]) -> str:

@@ -3,6 +3,11 @@
 from __future__ import annotations
 
 from ai_sdlc.core.frontend_contract_drift import PageImplementationObservation
+from ai_sdlc.core.frontend_contract_observation_provider import (
+    FRONTEND_CONTRACT_OBSERVATION_ARTIFACT_STATUS_ATTACHED,
+    FRONTEND_CONTRACT_OBSERVATION_ARTIFACT_STATUS_INVALID_ARTIFACT,
+    FRONTEND_CONTRACT_OBSERVATION_ARTIFACT_STATUS_MISSING_ARTIFACT,
+)
 from ai_sdlc.core.frontend_contract_verification import (
     FRONTEND_CONTRACT_CHECK_OBJECTS,
     FRONTEND_CONTRACT_SOURCE_NAME,
@@ -120,6 +125,57 @@ def _matching_observations() -> list[PageImplementationObservation]:
     ]
 
 
+def _drifted_observations() -> list[PageImplementationObservation]:
+    return [
+        PageImplementationObservation(
+            page_id="user-create",
+            recipe_id="form-edit",
+            i18n_keys=["submit"],
+            validation_fields=["username"],
+        )
+    ]
+
+
+def _assert_diagnostic_contract(
+    report,
+    *,
+    expected_status: str,
+    expected_readiness_effect: str,
+    expected_report_family_member: str,
+    expected_severity: str,
+    expected_blocker_class: str,
+    expected_coverage_effect: str,
+    expected_observation_count: int,
+    expected_parse_error_summary: str | None,
+    expected_drift_summary_substring: str | None,
+) -> None:
+    diagnostic = report.diagnostic
+
+    assert diagnostic.source_family == "frontend_contract"
+    assert diagnostic.source_key == "frontend_contract_observations"
+    assert diagnostic.diagnostic_status == expected_status
+    assert diagnostic.evidence.artifact_ref == report.observation_artifact_ref
+    assert diagnostic.evidence.observation_count == expected_observation_count
+    assert diagnostic.evidence.parse_error_summary == expected_parse_error_summary
+    if expected_drift_summary_substring is None:
+        assert diagnostic.evidence.drift_summary is None
+    else:
+        assert diagnostic.evidence.drift_summary is not None
+        assert expected_drift_summary_substring in diagnostic.evidence.drift_summary
+    assert diagnostic.evidence.source_linkage == {
+        "contracts_root": report.contracts_root,
+        "observation_artifact_status": report.observation_artifact_status,
+    }
+    assert diagnostic.policy_projection.readiness_effect == expected_readiness_effect
+    assert (
+        diagnostic.policy_projection.report_family_member
+        == expected_report_family_member
+    )
+    assert diagnostic.policy_projection.severity == expected_severity
+    assert diagnostic.policy_projection.blocker_class == expected_blocker_class
+    assert diagnostic.policy_projection.coverage_effect == expected_coverage_effect
+
+
 def test_build_frontend_contract_verification_report_returns_pass_context(tmp_path) -> None:
     materialize_frontend_contract_artifacts(tmp_path, _build_contract_set())
 
@@ -148,6 +204,10 @@ def test_build_frontend_contract_verification_report_returns_pass_context(tmp_pa
     assert context["constraint_blockers"] == ()
     assert context["coverage_gaps"] == ()
     assert context["frontend_contract_verification"]["gate_verdict"] == "PASS"
+    assert (
+        context["frontend_contract_verification"]["diagnostic"]["diagnostic_status"]
+        == "clean"
+    )
 
 
 def test_build_frontend_contract_verification_report_maps_missing_artifacts_to_gap(
@@ -173,13 +233,98 @@ def test_build_frontend_contract_verification_report_maps_missing_observations_t
     report = build_frontend_contract_verification_report(
         tmp_path / "contracts" / "frontend",
         [],
+        observation_artifact_status=(
+            FRONTEND_CONTRACT_OBSERVATION_ARTIFACT_STATUS_MISSING_ARTIFACT
+        ),
     )
 
     assert report.coverage_gaps == ("frontend_contract_observations",)
     assert len(report.blockers) == 1
     assert "observations unavailable" in report.blockers[0]
-    assert "no implementation observations declared" in report.blockers[0]
+    assert "missing canonical observation artifact" in report.blockers[0]
+    assert report.observation_artifact_status == "missing_artifact"
+    assert report.observation_count == 0
     assert report.gate_result.verdict.value == "RETRY"
+    _assert_diagnostic_contract(
+        report,
+        expected_status="missing_artifact",
+        expected_readiness_effect="retry",
+        expected_report_family_member="frontend_contract_observations",
+        expected_severity="blocker",
+        expected_blocker_class="coverage_gap",
+        expected_coverage_effect="gap",
+        expected_observation_count=0,
+        expected_parse_error_summary=None,
+        expected_drift_summary_substring=None,
+    )
+
+
+def test_build_frontend_contract_verification_report_short_circuits_invalid_before_valid_empty(
+    tmp_path,
+) -> None:
+    materialize_frontend_contract_artifacts(tmp_path, _build_contract_set())
+    artifact_path = tmp_path / "specs" / "012-sample" / "frontend-contract-observations.json"
+
+    report = build_frontend_contract_verification_report(
+        tmp_path / "contracts" / "frontend",
+        [],
+        observation_artifact_status=(
+            FRONTEND_CONTRACT_OBSERVATION_ARTIFACT_STATUS_INVALID_ARTIFACT
+        ),
+        observation_artifact_path=artifact_path,
+        observation_artifact_error="invalid JSON (Expecting value)",
+    )
+
+    assert report.coverage_gaps == ("frontend_contract_observations",)
+    assert len(report.blockers) == 1
+    assert "invalid structured observation input" in report.blockers[0]
+    assert "invalid JSON" in report.blockers[0]
+    assert report.observation_artifact_status == "invalid_artifact"
+    assert report.observation_count == 0
+    _assert_diagnostic_contract(
+        report,
+        expected_status="invalid_artifact",
+        expected_readiness_effect="retry",
+        expected_report_family_member="frontend_contract_observations",
+        expected_severity="blocker",
+        expected_blocker_class="invalid_input",
+        expected_coverage_effect="gap",
+        expected_observation_count=0,
+        expected_parse_error_summary="invalid JSON (Expecting value)",
+        expected_drift_summary_substring=None,
+    )
+
+
+def test_build_frontend_contract_verification_report_distinguishes_valid_empty_artifact(
+    tmp_path,
+) -> None:
+    materialize_frontend_contract_artifacts(tmp_path, _build_contract_set())
+
+    report = build_frontend_contract_verification_report(
+        tmp_path / "contracts" / "frontend",
+        [],
+        observation_artifact_status=FRONTEND_CONTRACT_OBSERVATION_ARTIFACT_STATUS_ATTACHED,
+    )
+
+    assert report.coverage_gaps == ()
+    assert len(report.blockers) == 1
+    assert "declared empty" in report.blockers[0]
+    assert "no implementation observations" in report.blockers[0]
+    assert report.observation_artifact_status == "attached"
+    assert report.observation_count == 0
+    assert report.gate_result.verdict.value == "RETRY"
+    _assert_diagnostic_contract(
+        report,
+        expected_status="valid_empty",
+        expected_readiness_effect="retry",
+        expected_report_family_member="frontend_contract_observations",
+        expected_severity="blocker",
+        expected_blocker_class="declared_empty",
+        expected_coverage_effect="none",
+        expected_observation_count=0,
+        expected_parse_error_summary=None,
+        expected_drift_summary_substring=None,
+    )
 
 
 def test_build_frontend_contract_verification_report_maps_drift_to_blocker(tmp_path) -> None:
@@ -187,14 +332,7 @@ def test_build_frontend_contract_verification_report_maps_drift_to_blocker(tmp_p
 
     report = build_frontend_contract_verification_report(
         tmp_path / "contracts" / "frontend",
-        [
-            PageImplementationObservation(
-                page_id="user-create",
-                recipe_id="form-edit",
-                i18n_keys=["submit"],
-                validation_fields=["username"],
-            )
-        ],
+        _drifted_observations(),
     )
 
     assert report.coverage_gaps == ()
@@ -203,3 +341,39 @@ def test_build_frontend_contract_verification_report_maps_drift_to_blocker(tmp_p
     assert "recipe_mismatch" in report.blockers[0]
     assert "user-create" in report.blockers[0]
     assert report.gate_result.verdict.value == "RETRY"
+    _assert_diagnostic_contract(
+        report,
+        expected_status="drift",
+        expected_readiness_effect="retry",
+        expected_report_family_member="frontend_contract_drift",
+        expected_severity="blocker",
+        expected_blocker_class="drift",
+        expected_coverage_effect="none",
+        expected_observation_count=1,
+        expected_parse_error_summary=None,
+        expected_drift_summary_substring="recipe_mismatch",
+    )
+
+
+def test_build_frontend_contract_verification_report_resolves_clean_diagnostic(
+    tmp_path,
+) -> None:
+    materialize_frontend_contract_artifacts(tmp_path, _build_contract_set())
+
+    report = build_frontend_contract_verification_report(
+        tmp_path / "contracts" / "frontend",
+        _matching_observations(),
+    )
+
+    _assert_diagnostic_contract(
+        report,
+        expected_status="clean",
+        expected_readiness_effect="ready",
+        expected_report_family_member="frontend_contract_verification",
+        expected_severity="none",
+        expected_blocker_class="none",
+        expected_coverage_effect="none",
+        expected_observation_count=1,
+        expected_parse_error_summary=None,
+        expected_drift_summary_substring=None,
+    )
