@@ -737,3 +737,39 @@
 - **已完成 git 提交**：否
 - 当前 batch 结论：gate unit 层的 071 issue-review truth-surface 已补齐回归断言。
 - **下一步动作**：继续补 `ai-sdlc gate verify / gate verification` 的 CLI integration coverage，把同一 token 钉到终端输出层。
+
+### Batch 2026-04-07-019 | gate cli issue-review truth-surface coverage
+
+#### 1. 背景
+
+- `VerifyGate / VerificationGate` 的 unit 层已经确认会保留 `frontend_visual_a11y_issue_review`，但 `ai-sdlc gate verify / gate verification` 还没有 integration coverage 去保证终端输出层不会把这条 truth surface 丢掉。
+- 这一批目标是新增最小 018/071 fixture 链，把同一 token 钉到 gate CLI 两个入口；若 RED 只来自渲染截断，则只修测试环境，不动生产逻辑。
+
+#### 2. 修改文件
+
+- `tests/integration/test_cli_index_gate.py`
+- `specs/071-frontend-p1-visual-a11y-foundation-baseline/task-execution-log.md`
+
+#### 3. 执行命令
+
+- `uv run pytest tests/integration/test_cli_index_gate.py -k 'visual_a11y_issue_review' -q`
+- `uv run pytest tests/integration/test_cli_index_gate.py -q`
+- `git diff --check -- tests/integration/test_cli_index_gate.py specs/071-frontend-p1-visual-a11y-foundation-baseline/task-execution-log.md`
+
+#### 4. 验证结果
+
+- 先跑 RED：`uv run pytest tests/integration/test_cli_index_gate.py -k 'visual_a11y_issue_review' -q` 失败，结果为 `2 failed, 2 deselected in 0.32s`；失败点不是生产逻辑，而是 Rich 表格宽度截断了长 message，导致完整 token 未出现在默认终端渲染输出中。
+- 收紧测试并固定 `sub_apps.console` 宽度后重跑：`uv run pytest tests/integration/test_cli_index_gate.py -k 'visual_a11y_issue_review' -q` 通过，结果为 `2 passed, 2 deselected in 0.27s`。
+- `uv run pytest tests/integration/test_cli_index_gate.py -q` 通过，结果为 `4 passed in 0.38s`。
+- `git diff --check -- tests/integration/test_cli_index_gate.py specs/071-frontend-p1-visual-a11y-foundation-baseline/task-execution-log.md` 通过，无 whitespace / conflict 问题。
+
+#### 5. 对账结论
+
+- `ai-sdlc gate verify` 与 `ai-sdlc gate verification` 两个入口在 071 issue evidence 场景下都能从 frontend gate summary 自然输出 `frontend_visual_a11y_issue_review`。
+- 这一批没有新增生产代码改动；真实收口点是 CLI integration coverage 需要在测试中固定终端宽度，避免 Rich 截断造成假阴性。
+
+#### 6. 归档后动作
+
+- **已完成 git 提交**：否
+- 当前 batch 结论：gate CLI 层的 071 issue-review truth-surface 已补齐 integration coverage。
+- **下一步动作**：继续扫描 071 剩余 gate / verify 相邻 surfaces；若不再存在真实缺口，则转向 execution log honesty 收尾并保持工作树干净。
