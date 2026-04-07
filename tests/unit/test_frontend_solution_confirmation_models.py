@@ -67,6 +67,10 @@ def test_build_mvp_solution_snapshot_creates_versioned_requested_effective_chain
     assert fallback.provider_mode == "cross_stack_fallback"
     assert fallback.fallback_reason_code == "enterprise-provider-unavailable"
     assert fallback.snapshot_id == "solution-snapshot-002"
+    assert fallback.provider_theme_adapter_config == {
+        "adapter_id": "public-primevue-theme-bridge",
+        "preset": "macos-glass",
+    }
 
 
 def test_build_mvp_solution_snapshot_assigns_new_snapshot_id_for_derived_versions() -> None:
@@ -128,4 +132,8 @@ def test_build_mvp_solution_snapshot_preserves_previous_state_when_versioning() 
     assert derived.style_fidelity_status == "partial"
     assert derived.style_degradation_reason_codes == ["provider-theme-token-gap"]
     assert derived.resolved_style_tokens == original.resolved_style_tokens
+    assert original.provider_theme_adapter_config == {
+        "adapter_id": "public-primevue-theme-bridge",
+        "preset": "modern-saas",
+    }
     assert derived.provider_theme_adapter_config == original.provider_theme_adapter_config

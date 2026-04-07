@@ -195,6 +195,23 @@ def build_builtin_install_strategies() -> list[InstallStrategy]:
     ]
 
 
+def _default_provider_theme_adapter_config(
+    effective_provider_id: str,
+    effective_style_pack_id: str,
+    *,
+    previous_config: dict[str, object] | None = None,
+    preserve_existing_adapter: bool = False,
+) -> dict[str, str]:
+    adapter_id = f"{effective_provider_id}-theme-bridge"
+    if preserve_existing_adapter and previous_config is not None:
+        adapter_id = str(previous_config.get("adapter_id", adapter_id))
+
+    return {
+        "adapter_id": adapter_id,
+        "preset": effective_style_pack_id,
+    }
+
+
 def build_mvp_solution_snapshot(
     previous_snapshot: FrontendSolutionSnapshot | None = None,
     **overrides: object,
@@ -261,10 +278,10 @@ def build_mvp_solution_snapshot(
             "fallback_reason_code": None,
             "fallback_reason_text": None,
             "resolved_style_tokens": style_tokens_by_id[effective_style_pack_id],
-            "provider_theme_adapter_config": {
-                "adapter_id": "enterprise-vue2-theme-bridge",
-                "preset": effective_style_pack_id,
-            },
+            "provider_theme_adapter_config": _default_provider_theme_adapter_config(
+                "enterprise-vue2",
+                effective_style_pack_id,
+            ),
             "style_fidelity_status": "full",
             "style_degradation_reason_codes": [],
         }
@@ -283,13 +300,32 @@ def build_mvp_solution_snapshot(
     base_payload.update(overrides)
 
     effective_style_pack_id = str(base_payload["effective_style_pack_id"])
+    effective_provider_id = str(base_payload["effective_provider_id"])
     if "resolved_style_tokens" not in overrides:
         base_payload["resolved_style_tokens"] = style_tokens_by_id[effective_style_pack_id]
     if "provider_theme_adapter_config" not in overrides:
-        base_payload["provider_theme_adapter_config"] = {
-            "adapter_id": "enterprise-vue2-theme-bridge",
-            "preset": effective_style_pack_id,
-        }
+        previous_adapter_config = None
+        preserve_existing_adapter = False
+        if previous_snapshot is not None:
+            previous_adapter_config = previous_snapshot.model_dump(mode="json").get(
+                "provider_theme_adapter_config"
+            )
+            preserve_existing_adapter = (
+                effective_provider_id == previous_snapshot.effective_provider_id
+            )
+
+        base_payload["provider_theme_adapter_config"] = (
+            _default_provider_theme_adapter_config(
+                effective_provider_id,
+                effective_style_pack_id,
+                previous_config=(
+                    previous_adapter_config
+                    if isinstance(previous_adapter_config, dict)
+                    else None
+                ),
+                preserve_existing_adapter=preserve_existing_adapter,
+            )
+        )
 
     return FrontendSolutionSnapshot(**base_payload)
 
