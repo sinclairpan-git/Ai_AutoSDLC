@@ -2298,6 +2298,65 @@ specs:
         assert "Frontend Persisted Write Proof Artifact" in report
         assert ".ai-sdlc/memory/frontend-persisted-write-proof/latest.yaml" in report
 
+    def test_program_persisted_write_proof_execute_preserves_stable_empty_visual_a11y_pending_input(
+        self, initialized_project_dir: Path
+    ) -> None:
+        root = initialized_project_dir
+        _write_manifest(root)
+        _write_frontend_writeback_persistence_artifact(
+            root,
+            persistence_result="deferred",
+            persistence_state="deferred",
+            remaining_blockers=["spec 001-auth remediation still required"],
+            steps=[
+                {
+                    "spec_id": "001-auth",
+                    "path": "specs/001-auth",
+                    "persistence_state": "deferred",
+                    "pending_inputs": ["frontend_visual_a11y_evidence_stable_empty"],
+                    "suggested_next_actions": [
+                        "review stable empty frontend visual / a11y evidence",
+                        "re-run ai-sdlc verify constraints",
+                    ],
+                    "source_linkage": {
+                        "persistence_state": "deferred",
+                        "final_governance_artifact_path": ".ai-sdlc/memory/frontend-final-governance/latest.yaml",
+                    },
+                }
+            ],
+        )
+        report_rel = ".ai-sdlc/memory/frontend-persisted-write-proof-stable-empty.md"
+
+        with patch("ai_sdlc.cli.program_cmd.find_project_root", return_value=root):
+            result = runner.invoke(
+                app,
+                [
+                    "program",
+                    "persisted-write-proof",
+                    "--execute",
+                    "--yes",
+                    "--report",
+                    report_rel,
+                ],
+            )
+
+        artifact_path = (
+            root
+            / ".ai-sdlc"
+            / "memory"
+            / "frontend-persisted-write-proof"
+            / "latest.yaml"
+        )
+        assert result.exit_code == 1
+        payload = yaml.safe_load(artifact_path.read_text(encoding="utf-8"))
+        assert payload["steps"][0]["pending_inputs"] == [
+            "frontend_visual_a11y_evidence_stable_empty"
+        ]
+        assert payload["steps"][0]["suggested_next_actions"] == [
+            "review stable empty frontend visual / a11y evidence",
+            "re-run ai-sdlc verify constraints",
+        ]
+
     def test_program_final_proof_publication_execute_preserves_stable_empty_visual_a11y_pending_input(
         self, initialized_project_dir: Path
     ) -> None:
@@ -3765,11 +3824,28 @@ def _write_frontend_writeback_persistence_artifact(
     persistence_result: str,
     persistence_state: str,
     remaining_blockers: list[str],
+    steps: list[dict[str, object]] | None = None,
 ) -> None:
     artifact_path = (
         root / ".ai-sdlc" / "memory" / "frontend-writeback-persistence" / "latest.yaml"
     )
     artifact_path.parent.mkdir(parents=True, exist_ok=True)
+    default_steps = [
+        {
+            "spec_id": "001-auth",
+            "path": "specs/001-auth",
+            "persistence_state": persistence_state,
+            "pending_inputs": ["frontend_contract_observations"],
+            "suggested_next_actions": [
+                "materialize persisted write proof review context",
+                "re-run ai-sdlc verify constraints",
+            ],
+            "source_linkage": {
+                "persistence_state": persistence_state,
+                "final_governance_artifact_path": ".ai-sdlc/memory/frontend-final-governance/latest.yaml",
+            },
+        }
+    ]
     artifact_path.write_text(
         yaml.safe_dump(
             {
@@ -3792,22 +3868,7 @@ def _write_frontend_writeback_persistence_artifact(
                 "warnings": [
                     "writeback persistence baseline does not produce persisted write proof yet"
                 ],
-                "steps": [
-                    {
-                        "spec_id": "001-auth",
-                        "path": "specs/001-auth",
-                        "persistence_state": persistence_state,
-                        "pending_inputs": ["frontend_contract_observations"],
-                        "suggested_next_actions": [
-                            "materialize persisted write proof review context",
-                            "re-run ai-sdlc verify constraints",
-                        ],
-                        "source_linkage": {
-                            "persistence_state": persistence_state,
-                            "final_governance_artifact_path": ".ai-sdlc/memory/frontend-final-governance/latest.yaml",
-                        },
-                    }
-                ],
+                "steps": list(steps or default_steps),
                 "source_linkage": {
                     "final_governance_state": "deferred",
                     "persistence_state": persistence_state,

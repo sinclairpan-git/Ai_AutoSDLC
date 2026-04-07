@@ -251,3 +251,45 @@
 - **已完成 git 提交**：否
 - 当前 batch 结论：`071` 的 stable-empty visual/a11y evidence truth-surface propagation 已在 program tail stages 完成成链覆盖，并通过最新整文件回归验证。
 - **下一步动作**：继续扫描 `071` 相邻 surface；若仍无新的生产缺口，则维持按批次更新 execution log 的节奏。
+
+### Batch 2026-04-07-006 | persisted write proof propagation coverage
+
+#### 1. 批次范围
+
+- **任务编号**：post-freeze truth-surface gap fill
+- **目标**：补齐 `frontend_writeback_persistence -> frontend_persisted_write_proof` 这一段遗漏的 stable-empty visual/a11y evidence 传播覆盖，确保 `071` truth-surface 链路在进入 final proof publication 之前没有中间断点。
+- **执行分支**：`codex/071-frontend-p1-visual-a11y-foundation-implementation`
+
+#### 2. Touched Files
+
+- `tests/unit/test_program_service.py`
+- `tests/integration/test_cli_program.py`
+- `specs/071-frontend-p1-visual-a11y-foundation-baseline/task-execution-log.md`
+
+#### 3. 执行命令
+
+- `uv run pytest tests/unit/test_program_service.py -k 'build_frontend_persisted_write_proof_request_preserves_stable_empty_visual_a11y_pending_input or write_frontend_persisted_write_proof_artifact_preserves_stable_empty_visual_a11y_pending_input' -q`
+- `uv run pytest tests/integration/test_cli_program.py -k 'program_persisted_write_proof_execute_preserves_stable_empty_visual_a11y_pending_input' -q`
+- `uv run pytest tests/unit/test_program_service.py -q`
+- `uv run pytest tests/integration/test_cli_program.py -q`
+- `git diff --check -- specs/071-frontend-p1-visual-a11y-foundation-baseline/task-execution-log.md`
+
+#### 4. 验证结果
+
+- 初始 RED 明确失败在 tests helper fixture surface：两个 `test_program_service` 新增用例与一个 `test_cli_program` 新增用例都因 `_write_frontend_writeback_persistence_artifact(..., steps=...)` 尚未支持 `steps` 参数而失败，说明缺口在测试支撑面而非 `ProgramService` 主逻辑。
+- `uv run pytest tests/unit/test_program_service.py -k 'build_frontend_persisted_write_proof_request_preserves_stable_empty_visual_a11y_pending_input or write_frontend_persisted_write_proof_artifact_preserves_stable_empty_visual_a11y_pending_input' -q` 通过，结果为 `2 passed, 116 deselected in 0.36s`。
+- `uv run pytest tests/integration/test_cli_program.py -k 'program_persisted_write_proof_execute_preserves_stable_empty_visual_a11y_pending_input' -q` 通过，结果为 `1 passed, 91 deselected in 0.36s`。
+- `uv run pytest tests/unit/test_program_service.py -q` 通过，结果为 `118 passed in 1.07s`。
+- `uv run pytest tests/integration/test_cli_program.py -q` 通过，结果为 `92 passed in 2.01s`。
+
+#### 5. 对账结论
+
+- 本批新增了 persisted write proof request、persisted write proof artifact、以及 `program persisted-write-proof --execute` 三处 stable-empty visual/a11y propagation coverage，把之前从 `writeback-persistence` 直接跳到 `final-proof-publication` 的测试断层补齐。
+- 为了让 RED 指向真实的传播行为，本批仅把 unit/integration 测试 helper `_write_frontend_writeback_persistence_artifact()` 升级为支持可选 `steps` 透传；未改动 `ProgramService` 生产逻辑，因此没有扩张 `071` 的实现边界。
+- 经过这次补齐后，`071` 的 stable-empty visual/a11y truth-surface propagation 现在覆盖 `writeback-persistence -> persisted-write-proof -> final-proof-publication` 的完整连续链路，而不是依赖下游阶段间接证明。
+
+#### 6. 归档后动作
+
+- **已完成 git 提交**：否
+- 当前 batch 结论：persisted write proof 这段遗漏节点已补齐，并通过 fresh unit/integration 整文件回归验证。
+- **下一步动作**：继续扫描 `071` 相邻 surface，优先寻找新的生产缺口；若仍只剩 truth-surface 或文档同步差异，则继续按批次补齐并提交。

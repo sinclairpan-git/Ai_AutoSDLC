@@ -2311,6 +2311,98 @@ def test_write_frontend_persisted_write_proof_artifact_emits_canonical_yaml(
     )
 
 
+def test_build_frontend_persisted_write_proof_request_preserves_stable_empty_visual_a11y_pending_input(
+    tmp_path: Path,
+) -> None:
+    for p in ("specs/001-auth", "specs/002-course", "specs/003-enroll"):
+        (tmp_path / p).mkdir(parents=True)
+    _write_frontend_writeback_persistence_artifact(
+        tmp_path,
+        persistence_result="deferred",
+        persistence_state="deferred",
+        remaining_blockers=["spec 001-auth remediation still required"],
+        steps=[
+            {
+                "spec_id": "001-auth",
+                "path": "specs/001-auth",
+                "persistence_state": "deferred",
+                "pending_inputs": ["frontend_visual_a11y_evidence_stable_empty"],
+                "suggested_next_actions": [
+                    "review stable empty frontend visual / a11y evidence",
+                    "re-run ai-sdlc verify constraints",
+                ],
+                "source_linkage": {
+                    "persistence_state": "deferred",
+                    "final_governance_artifact_path": ".ai-sdlc/memory/frontend-final-governance/latest.yaml",
+                },
+            }
+        ],
+    )
+
+    svc = ProgramService(tmp_path)
+    request = svc.build_frontend_persisted_write_proof_request(_manifest())
+
+    assert request.steps[0].pending_inputs == [
+        "frontend_visual_a11y_evidence_stable_empty"
+    ]
+    assert request.steps[0].suggested_next_actions == [
+        "review stable empty frontend visual / a11y evidence",
+        "re-run ai-sdlc verify constraints",
+    ]
+
+
+def test_write_frontend_persisted_write_proof_artifact_preserves_stable_empty_visual_a11y_pending_input(
+    tmp_path: Path,
+) -> None:
+    for p in ("specs/001-auth", "specs/002-course", "specs/003-enroll"):
+        (tmp_path / p).mkdir(parents=True)
+    _write_frontend_writeback_persistence_artifact(
+        tmp_path,
+        persistence_result="deferred",
+        persistence_state="deferred",
+        remaining_blockers=["spec 001-auth remediation still required"],
+        steps=[
+            {
+                "spec_id": "001-auth",
+                "path": "specs/001-auth",
+                "persistence_state": "deferred",
+                "pending_inputs": ["frontend_visual_a11y_evidence_stable_empty"],
+                "suggested_next_actions": [
+                    "review stable empty frontend visual / a11y evidence",
+                    "re-run ai-sdlc verify constraints",
+                ],
+                "source_linkage": {
+                    "persistence_state": "deferred",
+                    "final_governance_artifact_path": ".ai-sdlc/memory/frontend-final-governance/latest.yaml",
+                },
+            }
+        ],
+    )
+
+    svc = ProgramService(tmp_path)
+    request = svc.build_frontend_persisted_write_proof_request(_manifest())
+    result = svc.execute_frontend_persisted_write_proof(
+        _manifest(),
+        request=request,
+        confirmed=True,
+    )
+
+    artifact_path = svc.write_frontend_persisted_write_proof_artifact(
+        _manifest(),
+        request=request,
+        result=result,
+    )
+
+    payload = yaml.safe_load(artifact_path.read_text(encoding="utf-8"))
+    assert payload["steps"][0]["pending_inputs"] == [
+        "frontend_visual_a11y_evidence_stable_empty"
+    ]
+    assert payload["steps"][0]["suggested_next_actions"] == [
+        "review stable empty frontend visual / a11y evidence",
+        "re-run ai-sdlc verify constraints",
+    ]
+
+
 def test_build_frontend_final_proof_publication_request_preserves_stable_empty_visual_a11y_pending_input(
     tmp_path: Path,
 ) -> None:
@@ -5160,11 +5252,28 @@ def _write_frontend_writeback_persistence_artifact(
     persistence_result: str,
     persistence_state: str,
     remaining_blockers: list[str],
+    steps: list[dict[str, object]] | None = None,
 ) -> None:
     artifact_path = (
         root / ".ai-sdlc" / "memory" / "frontend-writeback-persistence" / "latest.yaml"
     )
     artifact_path.parent.mkdir(parents=True, exist_ok=True)
+    default_steps = [
+        {
+            "spec_id": "001-auth",
+            "path": "specs/001-auth",
+            "persistence_state": persistence_state,
+            "pending_inputs": ["frontend_contract_observations"],
+            "suggested_next_actions": [
+                "materialize persisted write proof review context",
+                "re-run ai-sdlc verify constraints",
+            ],
+            "source_linkage": {
+                "persistence_state": persistence_state,
+                "final_governance_artifact_path": ".ai-sdlc/memory/frontend-final-governance/latest.yaml",
+            },
+        }
+    ]
     artifact_path.write_text(
         yaml.safe_dump(
             {
@@ -5187,22 +5296,7 @@ def _write_frontend_writeback_persistence_artifact(
                 "warnings": [
                     "writeback persistence baseline does not produce persisted write proof yet"
                 ],
-                "steps": [
-                    {
-                        "spec_id": "001-auth",
-                        "path": "specs/001-auth",
-                        "persistence_state": persistence_state,
-                        "pending_inputs": ["frontend_contract_observations"],
-                        "suggested_next_actions": [
-                            "materialize persisted write proof review context",
-                            "re-run ai-sdlc verify constraints",
-                        ],
-                        "source_linkage": {
-                            "persistence_state": persistence_state,
-                            "final_governance_artifact_path": ".ai-sdlc/memory/frontend-final-governance/latest.yaml",
-                        },
-                    }
-                ],
+                "steps": list(steps or default_steps),
                 "source_linkage": {
                     "final_governance_state": "deferred",
                     "persistence_state": persistence_state,
