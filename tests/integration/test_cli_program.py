@@ -391,6 +391,41 @@ specs:
         assert "materialize frontend visual / a11y policy artifacts" in result.output
         assert "uv run ai-sdlc rules materialize-frontend-mvp" in result.output
 
+    def test_program_integrate_execute_surfaces_stable_empty_visual_a11y_review_hint(
+        self, initialized_project_dir: Path
+    ) -> None:
+        root = initialized_project_dir
+        _write_manifest(root)
+        _write_minimal_frontend_contract_page_artifacts(root)
+        _write_p1_frontend_gate_artifacts(root)
+        for spec in ("001-auth", "002-course", "003-enroll"):
+            (root / "specs" / spec / "development-summary.md").write_text(
+                "done\n", encoding="utf-8"
+            )
+            spec_dir = root / "specs" / spec
+            _write_frontend_contract_observations(spec_dir)
+            artifact = build_frontend_visual_a11y_evidence_artifact(
+                evaluations=[],
+                provider_kind="manual",
+                provider_name="test-fixture",
+                generated_at="2026-04-07T17:00:00Z",
+            )
+            write_frontend_visual_a11y_evidence_artifact(spec_dir, artifact)
+
+        with patch("ai_sdlc.cli.program_cmd.find_project_root", return_value=root):
+            result = runner.invoke(
+                app,
+                ["program", "integrate", "--execute", "--yes", "--allow-dirty"],
+            )
+
+        assert result.exit_code == 1
+        assert "Frontend Remediation Handoff" in result.output
+        assert "frontend_visual_a11y_evidence_stable_empty" in result.output
+        assert "review stable empty frontend visual / a11y evidence" in result.output
+        assert "materialize frontend visual / a11y evidence input" not in result.output
+        assert "uv run ai-sdlc rules materialize-frontend-mvp" not in result.output
+        assert "uv run ai-sdlc verify constraints" in result.output
+
     def test_program_integrate_execute_surfaces_frontend_recheck_handoff(
         self, initialized_project_dir: Path
     ) -> None:
