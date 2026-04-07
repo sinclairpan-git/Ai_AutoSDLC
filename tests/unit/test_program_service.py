@@ -12,6 +12,11 @@ from ai_sdlc.core.frontend_contract_observation_provider import (
     observation_artifact_path,
     write_frontend_contract_observation_artifact,
 )
+from ai_sdlc.core.frontend_visual_a11y_evidence_provider import (
+    FrontendVisualA11yEvidenceEvaluation,
+    build_frontend_visual_a11y_evidence_artifact,
+    write_frontend_visual_a11y_evidence_artifact,
+)
 from ai_sdlc.core.program_service import (
     ProgramFrontendRemediationCommandResult,
     ProgramFrontendRemediationExecutionResult,
@@ -23,7 +28,10 @@ from ai_sdlc.generators.frontend_gate_policy_artifacts import (
 from ai_sdlc.generators.frontend_generation_constraint_artifacts import (
     materialize_frontend_generation_constraint_artifacts,
 )
-from ai_sdlc.models.frontend_gate_policy import build_mvp_frontend_gate_policy
+from ai_sdlc.models.frontend_gate_policy import (
+    build_mvp_frontend_gate_policy,
+    build_p1_frontend_gate_policy_visual_a11y_foundation,
+)
 from ai_sdlc.models.frontend_generation_constraints import (
     build_mvp_frontend_generation_constraints,
 )
@@ -3249,6 +3257,65 @@ def test_build_status_surfaces_frontend_readiness_gap_when_attachment_missing(
     assert readiness.source_linkage["frontend_gate_verdict"] == "UNRESOLVED"
 
 
+def test_build_status_surfaces_frontend_readiness_gap_when_071_visual_a11y_evidence_missing(
+    tmp_path: Path,
+) -> None:
+    for p in ("specs/001-auth", "specs/002-course", "specs/003-enroll"):
+        (tmp_path / p).mkdir(parents=True)
+    _write_minimal_frontend_contract_page_artifacts(tmp_path)
+    materialize_frontend_gate_policy_artifacts(
+        tmp_path,
+        build_p1_frontend_gate_policy_visual_a11y_foundation(),
+    )
+    materialize_frontend_generation_constraint_artifacts(
+        tmp_path,
+        build_mvp_frontend_generation_constraints(),
+    )
+    _write_frontend_contract_observations(tmp_path / "specs" / "001-auth")
+
+    svc = ProgramService(tmp_path)
+    rows = svc.build_status(_manifest())
+    by = {r.spec_id: r for r in rows}
+
+    readiness = by["001-auth"].frontend_readiness
+    assert readiness is not None
+    assert readiness.state == "retry"
+    assert "frontend_visual_a11y_evidence_input" in readiness.coverage_gaps
+    assert any("missing explicit evidence input" in blocker for blocker in readiness.blockers)
+    assert readiness.source_linkage["frontend_gate_verdict"] == "RETRY"
+
+
+def test_build_integration_dry_run_surfaces_visual_a11y_evidence_remediation_input_when_missing(
+    tmp_path: Path,
+) -> None:
+    for p in ("specs/001-auth", "specs/002-course", "specs/003-enroll"):
+        (tmp_path / p).mkdir(parents=True)
+    _write_minimal_frontend_contract_page_artifacts(tmp_path)
+    materialize_frontend_gate_policy_artifacts(
+        tmp_path,
+        build_p1_frontend_gate_policy_visual_a11y_foundation(),
+    )
+    materialize_frontend_generation_constraint_artifacts(
+        tmp_path,
+        build_mvp_frontend_generation_constraints(),
+    )
+    for spec in ("001-auth", "002-course", "003-enroll"):
+        _write_frontend_contract_observations(tmp_path / "specs" / spec)
+
+    svc = ProgramService(tmp_path)
+    plan = svc.build_integration_dry_run(_manifest())
+
+    step = next(item for item in plan.steps if item.spec_id == "001-auth")
+    remediation = step.frontend_remediation_input
+    assert remediation is not None
+    assert "frontend_visual_a11y_evidence_input" in remediation.fix_inputs
+    assert (
+        "materialize frontend visual / a11y evidence input"
+        in remediation.suggested_actions
+    )
+    assert remediation.recommended_commands == ["uv run ai-sdlc verify constraints"]
+
+
 def test_execution_gates_require_all_specs_closed(tmp_path: Path) -> None:
     for p in ("specs/001-auth", "specs/002-course", "specs/003-enroll"):
         (tmp_path / p).mkdir(parents=True)
@@ -3368,6 +3435,19 @@ def _write_frontend_contract_observations(
         source_revision="rev-program-service",
     )
     write_frontend_contract_observation_artifact(spec_dir, artifact)
+
+
+def _write_frontend_visual_a11y_evidence(
+    spec_dir: Path,
+    evaluations: list[FrontendVisualA11yEvidenceEvaluation],
+) -> None:
+    artifact = build_frontend_visual_a11y_evidence_artifact(
+        evaluations=evaluations,
+        provider_kind="manual",
+        provider_name="test-fixture",
+        generated_at="2026-04-07T15:00:00Z",
+    )
+    write_frontend_visual_a11y_evidence_artifact(spec_dir, artifact)
 
 
 def _write_frontend_contract_source_annotation(

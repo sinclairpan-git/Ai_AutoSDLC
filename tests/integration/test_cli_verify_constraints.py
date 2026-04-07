@@ -19,6 +19,11 @@ from ai_sdlc.core.frontend_contract_observation_provider import (
     write_frontend_contract_observation_artifact,
 )
 from ai_sdlc.core.frontend_contract_verification import FRONTEND_CONTRACT_SOURCE_NAME
+from ai_sdlc.core.frontend_visual_a11y_evidence_provider import (
+    FrontendVisualA11yEvidenceEvaluation,
+    build_frontend_visual_a11y_evidence_artifact,
+    write_frontend_visual_a11y_evidence_artifact,
+)
 from ai_sdlc.generators.frontend_gate_policy_artifacts import (
     materialize_frontend_gate_policy_artifacts,
 )
@@ -298,6 +303,20 @@ def _write_018_frontend_contract_observations(
         generated_at="2026-04-03T14:30:00Z",
     )
     write_frontend_contract_observation_artifact(spec_dir, artifact)
+
+
+def _write_018_frontend_visual_a11y_evidence(
+    root: Path,
+    evaluations: list[FrontendVisualA11yEvidenceEvaluation],
+) -> None:
+    spec_dir = root / "specs" / "018-frontend-gate-compatibility-baseline"
+    artifact = build_frontend_visual_a11y_evidence_artifact(
+        evaluations=evaluations,
+        provider_kind="manual",
+        provider_name="test-fixture",
+        generated_at="2026-04-07T14:30:00Z",
+    )
+    write_frontend_visual_a11y_evidence_artifact(spec_dir, artifact)
 
 
 def _write_018_gate_artifacts(root: Path) -> None:
@@ -971,6 +990,23 @@ class TestCliVerifyConstraints:
         assert "frontend gate verification: RETRY" in result.output
         assert "frontend_visual_a11y_policy_artifacts" in result.output
 
+    def test_terminal_output_exposes_018_frontend_gate_retry_summary_when_071_visual_a11y_evidence_missing(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        init_project(tmp_path)
+        _minimal_constitution(tmp_path)
+        _write_018_checkpoint(tmp_path)
+        _write_012_frontend_contract_page_artifacts(tmp_path)
+        _write_071_gate_artifacts(tmp_path)
+        _write_018_frontend_contract_observations(tmp_path)
+        monkeypatch.chdir(tmp_path)
+
+        result = runner.invoke(app, ["verify", "constraints"])
+
+        assert result.exit_code == 1
+        assert "frontend gate verification: RETRY" in result.output
+        assert "frontend_visual_a11y_evidence_input" in result.output
+
     def test_terminal_output_exposes_018_frontend_gate_summary_with_071_visual_a11y_artifacts(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
@@ -980,6 +1016,17 @@ class TestCliVerifyConstraints:
         _write_012_frontend_contract_page_artifacts(tmp_path)
         _write_071_gate_artifacts(tmp_path)
         _write_018_frontend_contract_observations(tmp_path)
+        _write_018_frontend_visual_a11y_evidence(
+            tmp_path,
+            [
+                FrontendVisualA11yEvidenceEvaluation(
+                    evaluation_id="eval-pass",
+                    target_id="user-create",
+                    surface_id="refreshing",
+                    outcome="pass",
+                )
+            ],
+        )
         monkeypatch.chdir(tmp_path)
 
         result = runner.invoke(app, ["verify", "constraints"])

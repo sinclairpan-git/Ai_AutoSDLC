@@ -20,6 +20,11 @@ from ai_sdlc.core.frontend_gate_verification import (
     FRONTEND_GATE_CHECK_OBJECTS,
     FRONTEND_GATE_SOURCE_NAME,
 )
+from ai_sdlc.core.frontend_visual_a11y_evidence_provider import (
+    FrontendVisualA11yEvidenceEvaluation,
+    build_frontend_visual_a11y_evidence_artifact,
+    write_frontend_visual_a11y_evidence_artifact,
+)
 from ai_sdlc.core.verify_constraints import (
     build_constraint_report,
     build_verification_gate_context,
@@ -395,6 +400,24 @@ def _write_018_frontend_contract_observations(
         generated_at="2026-04-03T14:30:00Z",
     )
     write_frontend_contract_observation_artifact(spec_dir, artifact)
+
+
+def _write_018_frontend_visual_a11y_evidence(
+    root: Path,
+    evaluations: list[FrontendVisualA11yEvidenceEvaluation],
+) -> None:
+    spec_dir = (
+        root
+        / "specs"
+        / "018-frontend-gate-compatibility-baseline"
+    )
+    artifact = build_frontend_visual_a11y_evidence_artifact(
+        evaluations=evaluations,
+        provider_kind="manual",
+        provider_name="test-fixture",
+        generated_at="2026-04-07T14:00:00Z",
+    )
+    write_frontend_visual_a11y_evidence_artifact(spec_dir, artifact)
 
 
 def _write_018_gate_artifacts(root: Path) -> None:
@@ -1341,13 +1364,108 @@ def test_018_frontend_gate_verification_surfaces_missing_071_visual_a11y_gap(
     ]
 
 
-def test_018_frontend_gate_verification_passes_with_071_visual_a11y_artifacts(
+def test_018_frontend_gate_verification_surfaces_missing_071_visual_a11y_evidence_input(
     tmp_path: Path,
 ) -> None:
     _write_018_checkpoint(tmp_path)
     _write_minimal_frontend_contract_page_artifacts(tmp_path)
     _write_071_gate_artifacts(tmp_path)
     _write_018_frontend_contract_observations(tmp_path)
+
+    report = build_constraint_report(tmp_path)
+    context = build_verification_gate_context(tmp_path)
+
+    assert "frontend_visual_a11y_evidence_input" in report.coverage_gaps
+    assert any("missing explicit evidence input" in blocker for blocker in report.blockers)
+    assert context["frontend_gate_verification"]["gate_verdict"] == "RETRY"
+    assert "frontend_visual_a11y_policy_artifacts" in report.check_objects
+
+
+def test_018_frontend_gate_verification_surfaces_stable_empty_071_visual_a11y_evidence(
+    tmp_path: Path,
+) -> None:
+    _write_018_checkpoint(tmp_path)
+    _write_minimal_frontend_contract_page_artifacts(tmp_path)
+    _write_071_gate_artifacts(tmp_path)
+    _write_018_frontend_contract_observations(tmp_path)
+    _write_018_frontend_visual_a11y_evidence(tmp_path, [])
+
+    report = build_constraint_report(tmp_path)
+    context = build_verification_gate_context(tmp_path)
+
+    assert "frontend_visual_a11y_evidence_stable_empty" in report.coverage_gaps
+    assert any("stable empty evidence" in blocker for blocker in report.blockers)
+    assert context["frontend_gate_verification"]["gate_verdict"] == "RETRY"
+
+
+def test_018_frontend_gate_verification_surfaces_invalid_071_visual_a11y_evidence_input(
+    tmp_path: Path,
+) -> None:
+    _write_018_checkpoint(tmp_path)
+    _write_minimal_frontend_contract_page_artifacts(tmp_path)
+    _write_071_gate_artifacts(tmp_path)
+    _write_018_frontend_contract_observations(tmp_path)
+    path = (
+        tmp_path
+        / "specs"
+        / "018-frontend-gate-compatibility-baseline"
+        / "frontend-visual-a11y-evidence.json"
+    )
+    path.write_text(
+        json.dumps(
+            {
+                "schema_version": "frontend-visual-a11y-evidence/v1",
+                "provenance": {
+                    "provider_kind": "manual",
+                    "provider_name": "fixture",
+                },
+                "freshness": {"generated_at": "2026-04-07T14:00:00Z"},
+                "evaluations": [
+                    {
+                        "evaluation_id": "eval-issue",
+                        "target_id": "user-create",
+                        "surface_id": "refreshing",
+                        "outcome": "issue",
+                        "report_type": "unsupported-report",
+                    }
+                ],
+            },
+            ensure_ascii=False,
+            indent=2,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    report = build_constraint_report(tmp_path)
+    context = build_verification_gate_context(tmp_path)
+
+    assert "frontend_visual_a11y_evidence_input" in report.coverage_gaps
+    assert any(
+        "invalid structured visual / a11y evidence input" in blocker
+        for blocker in report.blockers
+    )
+    assert context["frontend_gate_verification"]["gate_verdict"] == "RETRY"
+
+
+def test_018_frontend_gate_verification_passes_with_071_visual_a11y_evidence(
+    tmp_path: Path,
+) -> None:
+    _write_018_checkpoint(tmp_path)
+    _write_minimal_frontend_contract_page_artifacts(tmp_path)
+    _write_071_gate_artifacts(tmp_path)
+    _write_018_frontend_contract_observations(tmp_path)
+    _write_018_frontend_visual_a11y_evidence(
+        tmp_path,
+        [
+            FrontendVisualA11yEvidenceEvaluation(
+                evaluation_id="eval-pass",
+                target_id="user-create",
+                surface_id="refreshing",
+                outcome="pass",
+            )
+        ],
+    )
 
     report = build_constraint_report(tmp_path)
     context = build_verification_gate_context(tmp_path)
