@@ -215,3 +215,28 @@ class TestCliIndexAndGate:
         assert "frontend_gate_status_clear" in result.output
         assert "frontend_visual_a11y_issue_review" in result.output
         assert "frontend_visual_a11y_evidence_stable_empty" not in result.output
+
+    @pytest.mark.parametrize("stage", ["verify", "verification"])
+    def test_gate_cli_surfaces_071_visual_a11y_stable_empty_from_frontend_gate_summary(
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        stage: str,
+    ) -> None:
+        init_project(tmp_path)
+        _minimal_constitution(tmp_path)
+        _write_018_checkpoint(tmp_path)
+        _write_minimal_frontend_contract_page_artifacts(tmp_path)
+        _write_071_gate_artifacts(tmp_path)
+        _write_018_frontend_contract_observations(tmp_path)
+        _write_018_frontend_visual_a11y_evidence(tmp_path, [])
+        monkeypatch.setattr(sub_apps, "console", Console(width=240, force_terminal=False))
+        monkeypatch.chdir(tmp_path)
+
+        result = runner.invoke(app, ["gate", stage])
+
+        assert result.exit_code == 1
+        assert f"Gate {stage}: RETRY" in result.output
+        assert "frontend_gate_status_clear" in result.output
+        assert "frontend_visual_a11y_evidence_stable_empty" in result.output
+        assert "frontend_visual_a11y_issue_review" not in result.output

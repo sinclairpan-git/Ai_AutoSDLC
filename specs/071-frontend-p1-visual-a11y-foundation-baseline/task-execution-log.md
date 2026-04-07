@@ -773,3 +773,41 @@
 - **已完成 git 提交**：否
 - 当前 batch 结论：gate CLI 层的 071 issue-review truth-surface 已补齐 integration coverage。
 - **下一步动作**：继续扫描 071 剩余 gate / verify 相邻 surfaces；若不再存在真实缺口，则转向 execution log honesty 收尾并保持工作树干净。
+
+### Batch 2026-04-07-020 | gate stable-empty truth-surface symmetry coverage
+
+#### 1. 背景
+
+- gate 层已经对 `frontend_visual_a11y_issue_review` 补齐了 unit + CLI integration coverage，但对应的 stable-empty token `frontend_visual_a11y_evidence_stable_empty` 还没有在同一层做对称断言。
+- 这一批目标是把 `VerifyGate / VerificationGate / gate verify / gate verification` 四个入口都补成对称 coverage，避免未来 truth token 只在 actual-issue 侧被保护。
+
+#### 2. 修改文件
+
+- `tests/unit/test_gates.py`
+- `tests/integration/test_cli_index_gate.py`
+- `specs/071-frontend-p1-visual-a11y-foundation-baseline/task-execution-log.md`
+
+#### 3. 执行命令
+
+- `uv run pytest tests/unit/test_gates.py -k 'stable_empty' -q`
+- `uv run pytest tests/integration/test_cli_index_gate.py -k 'stable_empty' -q`
+- `uv run pytest tests/unit/test_gates.py tests/integration/test_cli_index_gate.py -q`
+- `git diff --check -- tests/unit/test_gates.py tests/integration/test_cli_index_gate.py specs/071-frontend-p1-visual-a11y-foundation-baseline/task-execution-log.md`
+
+#### 4. 验证结果
+
+- `uv run pytest tests/unit/test_gates.py -k 'stable_empty' -q` 通过，结果为 `2 passed, 69 deselected in 0.19s`。
+- `uv run pytest tests/integration/test_cli_index_gate.py -k 'stable_empty' -q` 通过，结果为 `2 passed, 4 deselected in 0.28s`。
+- `uv run pytest tests/unit/test_gates.py tests/integration/test_cli_index_gate.py -q` 通过，结果为 `77 passed in 0.61s`。
+- `git diff --check -- tests/unit/test_gates.py tests/integration/test_cli_index_gate.py specs/071-frontend-p1-visual-a11y-foundation-baseline/task-execution-log.md` 通过，无 whitespace / conflict 问题。
+
+#### 5. 对账结论
+
+- `frontend_visual_a11y_evidence_stable_empty` 在 gate unit 与 gate CLI 两层都会被自然 surfaced，且不会误混成 `frontend_visual_a11y_issue_review`。
+- 这一批继续保持 tests-only；收口的是对称 coverage，而不是新增生产逻辑。
+
+#### 6. 归档后动作
+
+- **已完成 git 提交**：否
+- 当前 batch 结论：gate 层的 stable-empty / actual-issue token 对称 coverage 已补齐。
+- **下一步动作**：继续扫描 071 剩余 truth-surface 或 honesty 差异；若没有新的行为缺口，则转入 execution log honesty 收尾。
