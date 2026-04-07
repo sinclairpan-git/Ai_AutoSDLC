@@ -2956,6 +2956,46 @@ def test_build_frontend_final_proof_archive_thread_archive_request_uses_archive_
     )
 
 
+def test_build_frontend_final_proof_archive_thread_archive_request_preserves_stable_empty_visual_a11y_pending_input(
+    tmp_path: Path,
+) -> None:
+    for p in ("specs/001-auth", "specs/002-course", "specs/003-enroll"):
+        (tmp_path / p).mkdir(parents=True)
+    _write_frontend_final_proof_archive_artifact(
+        tmp_path,
+        archive_result="deferred",
+        archive_state="deferred",
+        remaining_blockers=["spec 001-auth remediation still required"],
+        steps=[
+            {
+                "spec_id": "001-auth",
+                "path": "specs/001-auth",
+                "archive_state": "deferred",
+                "pending_inputs": ["frontend_visual_a11y_evidence_stable_empty"],
+                "suggested_next_actions": [
+                    "review stable empty frontend visual / a11y evidence",
+                    "re-run ai-sdlc verify constraints",
+                ],
+                "source_linkage": {
+                    "archive_state": "deferred",
+                    "final_proof_closure_artifact_path": ".ai-sdlc/memory/frontend-final-proof-closure/latest.yaml",
+                },
+            }
+        ],
+    )
+
+    svc = ProgramService(tmp_path)
+    request = svc.build_frontend_final_proof_archive_thread_archive_request(_manifest())
+
+    assert request.steps[0].pending_inputs == [
+        "frontend_visual_a11y_evidence_stable_empty"
+    ]
+    assert request.steps[0].suggested_next_actions == [
+        "review stable empty frontend visual / a11y evidence",
+        "re-run ai-sdlc verify constraints",
+    ]
+
+
 def test_execute_frontend_final_proof_archive_thread_archive_returns_deferred_result_when_confirmed(
     tmp_path: Path,
 ) -> None:
@@ -5285,11 +5325,29 @@ def _write_frontend_final_proof_archive_artifact(
     archive_result: str,
     archive_state: str,
     remaining_blockers: list[str],
+    steps: list[dict[str, object]] | None = None,
 ) -> None:
     artifact_path = (
         root / ".ai-sdlc" / "memory" / "frontend-final-proof-archive" / "latest.yaml"
     )
     artifact_path.parent.mkdir(parents=True, exist_ok=True)
+    default_steps = [
+        {
+            "spec_id": "001-auth",
+            "path": "specs/001-auth",
+            "archive_state": "not_started",
+            "pending_inputs": ["frontend_contract_observations"],
+            "suggested_next_actions": [
+                "materialize bounded thread archive context",
+                "re-run ai-sdlc verify constraints",
+            ],
+            "source_linkage": {
+                "archive_state": archive_state,
+                "final_proof_closure_artifact_path": ".ai-sdlc/memory/frontend-final-proof-closure/latest.yaml",
+                "final_proof_archive_artifact_path": ".ai-sdlc/memory/frontend-final-proof-archive/latest.yaml",
+            },
+        }
+    ]
     artifact_path.write_text(
         yaml.safe_dump(
             {
@@ -5311,23 +5369,7 @@ def _write_frontend_final_proof_archive_artifact(
                 "warnings": [
                     "final proof archive baseline defers thread archive and cleanup actions"
                 ],
-                "steps": [
-                    {
-                        "spec_id": "001-auth",
-                        "path": "specs/001-auth",
-                        "archive_state": "not_started",
-                        "pending_inputs": ["frontend_contract_observations"],
-                        "suggested_next_actions": [
-                            "materialize bounded thread archive context",
-                            "re-run ai-sdlc verify constraints",
-                        ],
-                        "source_linkage": {
-                            "archive_state": archive_state,
-                            "final_proof_closure_artifact_path": ".ai-sdlc/memory/frontend-final-proof-closure/latest.yaml",
-                            "final_proof_archive_artifact_path": ".ai-sdlc/memory/frontend-final-proof-archive/latest.yaml",
-                        },
-                    }
-                ],
+                "steps": list(steps or default_steps),
                 "source_linkage": {
                     "closure_state": "deferred",
                     "archive_state": archive_state,
