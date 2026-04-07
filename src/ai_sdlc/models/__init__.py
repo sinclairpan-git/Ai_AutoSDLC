@@ -52,9 +52,11 @@ from ai_sdlc.models.frontend_ui_kernel import (
     FrontendUiKernelSet,
     KernelInteractionBaseline,
     KernelStateBaseline,
+    KernelStateSemantic,
     PageRecipeStandard,
     UiProtocolComponent,
     build_mvp_frontend_ui_kernel,
+    build_p1_frontend_ui_kernel_semantic_expansion,
 )
 from ai_sdlc.models.gate import (
     GateCheck,
@@ -190,6 +192,7 @@ __all__ = [
     "KnowledgeRefreshLog",
     "KernelInteractionBaseline",
     "KernelStateBaseline",
+    "KernelStateSemantic",
     "LegacyAdapterPolicy",
     "MaintenanceBrief",
     "MaintenancePlan",
@@ -242,6 +245,7 @@ __all__ = [
     "WorkerAssignment",
     "WorkingSet",
     "build_mvp_frontend_ui_kernel",
+    "build_p1_frontend_ui_kernel_semantic_expansion",
     "build_mvp_enterprise_vue2_provider_profile",
     "build_mvp_frontend_generation_constraints",
     "build_mvp_frontend_gate_policy",
