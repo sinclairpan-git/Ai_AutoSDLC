@@ -734,7 +734,7 @@
 
 #### 6. 归档后动作
 
-- **已完成 git 提交**：否
+- **已完成 git 提交**：是
 - 当前 batch 结论：gate unit 层的 071 issue-review truth-surface 已补齐回归断言。
 - **下一步动作**：继续补 `ai-sdlc gate verify / gate verification` 的 CLI integration coverage，把同一 token 钉到终端输出层。
 
@@ -770,7 +770,7 @@
 
 #### 6. 归档后动作
 
-- **已完成 git 提交**：否
+- **已完成 git 提交**：是
 - 当前 batch 结论：gate CLI 层的 071 issue-review truth-surface 已补齐 integration coverage。
 - **下一步动作**：继续扫描 071 剩余 gate / verify 相邻 surfaces；若不再存在真实缺口，则转向 execution log honesty 收尾并保持工作树干净。
 
@@ -808,6 +808,41 @@
 
 #### 6. 归档后动作
 
-- **已完成 git 提交**：否
+- **已完成 git 提交**：是
 - 当前 batch 结论：gate 层的 stable-empty / actual-issue token 对称 coverage 已补齐。
 - **下一步动作**：继续扫描 071 剩余 truth-surface 或 honesty 差异；若没有新的行为缺口，则转入 execution log honesty 收尾。
+
+### Batch 2026-04-07-021 | execution log honesty alignment for recent gate batches
+
+#### 1. 背景
+
+- 最近连续完成并提交了 gate unit / gate CLI / gate stable-empty 三个批次，对应 commit 分别是 `9d28f89`、`38780af`、`2ee282d`。
+- 但 execution log 中 Batch 018 / 019 / 020 的 `**已完成 git 提交**` 仍停留在 `否`，形成文档状态与真实 git 历史不一致的 honesty 差异。
+
+#### 2. 修改文件
+
+- `specs/071-frontend-p1-visual-a11y-foundation-baseline/task-execution-log.md`
+
+#### 3. 执行命令
+
+- `rg -n "\*\*已完成 git 提交\*\*：否" specs/071-frontend-p1-visual-a11y-foundation-baseline/task-execution-log.md`
+- `git log --oneline -n 6`
+- `git diff --check -- specs/071-frontend-p1-visual-a11y-foundation-baseline/task-execution-log.md`
+
+#### 4. 验证结果
+
+- `rg -n "\*\*已完成 git 提交\*\*：否" specs/071-frontend-p1-visual-a11y-foundation-baseline/task-execution-log.md` 在变更前命中 Batch 018 / 019 / 020 的状态位，以及更早历史叙述中对旧问题的说明文本。
+- `git log --oneline -n 6` 显示最近提交依次为 `2ee282d test: cover gate stable empty truth surface`、`38780af test: cover gate cli issue review truth surface`、`9d28f89 test: cover gate issue review truth surface`，与三批 execution 记录对应。
+- 再次执行 `rg -n "\*\*已完成 git 提交\*\*：否" specs/071-frontend-p1-visual-a11y-foundation-baseline/task-execution-log.md` 后，仅剩当前 Batch 021 自身的状态位，以及更早历史叙述中的过去时文本。
+- `git diff --check -- specs/071-frontend-p1-visual-a11y-foundation-baseline/task-execution-log.md` 通过，无 whitespace / conflict 问题。
+
+#### 5. 对账结论
+
+- Batch 018 / 019 / 020 的 git 提交状态现在应全部回写为 `是`；历史叙述中的 `否` 保留为过去时说明，不属于当前状态字段。
+- 这一批不涉及功能改动，只修 execution log honesty。
+
+#### 6. 归档后动作
+
+- **已完成 git 提交**：否
+- 当前 batch 结论：recent gate batches 的 execution log honesty 已对齐到真实提交历史。
+- **下一步动作**：继续扫描是否还存在新的 071 相邻缺口；若没有，则保持工作树干净等待下一轮任务。
