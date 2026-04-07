@@ -785,6 +785,48 @@ def test_build_frontend_provider_patch_handoff_packages_runtime_artifact(
     )
 
 
+def test_build_frontend_provider_patch_handoff_preserves_stable_empty_visual_a11y_pending_input(
+    tmp_path: Path,
+) -> None:
+    for p in ("specs/001-auth", "specs/002-course", "specs/003-enroll"):
+        (tmp_path / p).mkdir(parents=True)
+    _write_frontend_provider_runtime_artifact(
+        tmp_path,
+        invocation_result="deferred",
+        provider_execution_state="deferred",
+        remaining_blockers=["spec 001-auth remediation still required"],
+        steps=[
+            {
+                "spec_id": "001-auth",
+                "path": "specs/001-auth",
+                "pending_inputs": ["frontend_visual_a11y_evidence_stable_empty"],
+                "suggested_next_actions": [
+                    "review stable empty frontend visual / a11y evidence",
+                    "re-run ai-sdlc verify constraints",
+                ],
+                "source_linkage": {
+                    "writeback_artifact_path": ".ai-sdlc/memory/frontend-remediation/latest.yaml",
+                    "provider_runtime_state": "deferred",
+                },
+            }
+        ],
+    )
+
+    svc = ProgramService(tmp_path)
+    handoff = svc.build_frontend_provider_patch_handoff(_manifest())
+
+    assert handoff.required is True
+    assert [step.spec_id for step in handoff.steps] == ["001-auth"]
+    assert handoff.steps[0].pending_inputs == [
+        "frontend_visual_a11y_evidence_stable_empty"
+    ]
+    assert handoff.steps[0].suggested_next_actions == [
+        "review stable empty frontend visual / a11y evidence",
+        "re-run ai-sdlc verify constraints",
+    ]
+    assert handoff.steps[0].patch_availability_state == "deferred"
+
+
 def test_build_frontend_provider_patch_handoff_warns_when_runtime_artifact_missing(
     tmp_path: Path,
 ) -> None:
@@ -830,6 +872,49 @@ def test_build_frontend_provider_patch_apply_request_requires_explicit_confirmat
     assert (
         request.steps[0].source_linkage["patch_apply_state"] == "not_started"
     )
+
+
+def test_build_frontend_provider_patch_apply_request_preserves_stable_empty_visual_a11y_pending_input(
+    tmp_path: Path,
+) -> None:
+    for p in ("specs/001-auth", "specs/002-course", "specs/003-enroll"):
+        (tmp_path / p).mkdir(parents=True)
+    _write_frontend_provider_runtime_artifact(
+        tmp_path,
+        invocation_result="deferred",
+        provider_execution_state="deferred",
+        remaining_blockers=["spec 001-auth remediation still required"],
+        steps=[
+            {
+                "spec_id": "001-auth",
+                "path": "specs/001-auth",
+                "pending_inputs": ["frontend_visual_a11y_evidence_stable_empty"],
+                "suggested_next_actions": [
+                    "review stable empty frontend visual / a11y evidence",
+                    "re-run ai-sdlc verify constraints",
+                ],
+                "source_linkage": {
+                    "writeback_artifact_path": ".ai-sdlc/memory/frontend-remediation/latest.yaml",
+                    "provider_runtime_state": "deferred",
+                },
+            }
+        ],
+    )
+
+    svc = ProgramService(tmp_path)
+    request = svc.build_frontend_provider_patch_apply_request(_manifest())
+
+    assert request.required is True
+    assert request.confirmation_required is True
+    assert [step.spec_id for step in request.steps] == ["001-auth"]
+    assert request.steps[0].pending_inputs == [
+        "frontend_visual_a11y_evidence_stable_empty"
+    ]
+    assert request.steps[0].suggested_next_actions == [
+        "review stable empty frontend visual / a11y evidence",
+        "re-run ai-sdlc verify constraints",
+    ]
+    assert request.steps[0].patch_availability_state == "deferred"
 
 
 def test_execute_frontend_provider_patch_apply_returns_deferred_result_when_confirmed(
@@ -3804,7 +3889,23 @@ def _write_frontend_provider_runtime_artifact(
     invocation_result: str,
     provider_execution_state: str,
     remaining_blockers: list[str],
+    steps: list[dict[str, object]] | None = None,
 ) -> None:
+    default_steps: list[dict[str, object]] = [
+        {
+            "spec_id": "001-auth",
+            "path": "specs/001-auth",
+            "pending_inputs": ["frontend_contract_observations"],
+            "suggested_next_actions": [
+                "materialize frontend contract observations",
+                "re-run ai-sdlc verify constraints",
+            ],
+            "source_linkage": {
+                "writeback_artifact_path": ".ai-sdlc/memory/frontend-remediation/latest.yaml",
+                "provider_runtime_state": provider_execution_state,
+            },
+        }
+    ]
     artifact_path = (
         root / ".ai-sdlc" / "memory" / "frontend-provider-runtime" / "latest.yaml"
     )
@@ -3828,21 +3929,7 @@ def _write_frontend_provider_runtime_artifact(
                 "warnings": [
                     "guarded provider runtime baseline does not invoke provider yet"
                 ],
-                "steps": [
-                    {
-                        "spec_id": "001-auth",
-                        "path": "specs/001-auth",
-                        "pending_inputs": ["frontend_contract_observations"],
-                        "suggested_next_actions": [
-                            "materialize frontend contract observations",
-                            "re-run ai-sdlc verify constraints",
-                        ],
-                        "source_linkage": {
-                            "writeback_artifact_path": ".ai-sdlc/memory/frontend-remediation/latest.yaml",
-                            "provider_runtime_state": provider_execution_state,
-                        },
-                    }
-                ],
+                "steps": list(steps or default_steps),
                 "source_linkage": {
                     "writeback_artifact_path": ".ai-sdlc/memory/frontend-remediation/latest.yaml",
                     "provider_runtime_state": provider_execution_state,
