@@ -18,6 +18,7 @@ from ai_sdlc.models.frontend_contracts import (
 )
 from ai_sdlc.models.frontend_gate_policy import (
     CompatibilityExecutionPolicy,
+    FrontendA11yFoundationCoverageEntry,
     FrontendCompatibilityFeedbackBoundary,
     FrontendCoverageGap,
     FrontendCoverageReport,
@@ -31,8 +32,12 @@ from ai_sdlc.models.frontend_gate_policy import (
     FrontendLegacyExpansionReport,
     FrontendViolation,
     FrontendViolationReport,
+    FrontendVisualA11yEvidenceBoundary,
+    FrontendVisualA11yFeedbackBoundary,
+    FrontendVisualFoundationCoverageEntry,
     build_mvp_frontend_gate_policy,
     build_p1_frontend_gate_policy_diagnostics_drift_expansion,
+    build_p1_frontend_gate_policy_visual_a11y_foundation,
 )
 from ai_sdlc.models.frontend_generation_constraints import (
     FrontendGenerationConstraintSet,
@@ -153,6 +158,7 @@ __all__ = [
     "ContractLegacyContext",
     "ContractRuleBundle",
     "CompatibilityExecutionPolicy",
+    "FrontendA11yFoundationCoverageEntry",
     "FrontendCompatibilityFeedbackBoundary",
     "DependencyInfo",
     "DiscoveredTestFile",
@@ -179,6 +185,9 @@ __all__ = [
     "FrontendUiKernelSet",
     "FrontendViolation",
     "FrontendViolationReport",
+    "FrontendVisualA11yEvidenceBoundary",
+    "FrontendVisualA11yFeedbackBoundary",
+    "FrontendVisualFoundationCoverageEntry",
     "FreezeSnapshot",
     "GateCheck",
     "GateResult",
@@ -259,4 +268,5 @@ __all__ = [
     "build_mvp_frontend_generation_constraints",
     "build_mvp_frontend_gate_policy",
     "build_p1_frontend_gate_policy_diagnostics_drift_expansion",
+    "build_p1_frontend_gate_policy_visual_a11y_foundation",
 ]

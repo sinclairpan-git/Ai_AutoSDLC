@@ -32,7 +32,10 @@ from ai_sdlc.generators.frontend_gate_policy_artifacts import (
 from ai_sdlc.generators.frontend_generation_constraint_artifacts import (
     materialize_frontend_generation_constraint_artifacts,
 )
-from ai_sdlc.models.frontend_gate_policy import build_mvp_frontend_gate_policy
+from ai_sdlc.models.frontend_gate_policy import (
+    build_mvp_frontend_gate_policy,
+    build_p1_frontend_gate_policy_visual_a11y_foundation,
+)
 from ai_sdlc.models.frontend_generation_constraints import (
     build_mvp_frontend_generation_constraints,
 )
@@ -398,6 +401,17 @@ def _write_018_gate_artifacts(root: Path) -> None:
     materialize_frontend_gate_policy_artifacts(
         root,
         build_mvp_frontend_gate_policy(),
+    )
+    materialize_frontend_generation_constraint_artifacts(
+        root,
+        build_mvp_frontend_generation_constraints(),
+    )
+
+
+def _write_071_gate_artifacts(root: Path) -> None:
+    materialize_frontend_gate_policy_artifacts(
+        root,
+        build_p1_frontend_gate_policy_visual_a11y_foundation(),
     )
     materialize_frontend_generation_constraint_artifacts(
         root,
@@ -1301,6 +1315,47 @@ def test_018_frontend_gate_verification_rejects_noncanonical_observation_artifac
     assert context["frontend_gate_verification"]["coverage_gaps"] == [
         "frontend_contract_observations"
     ]
+
+
+def test_018_frontend_gate_verification_surfaces_missing_071_visual_a11y_gap(
+    tmp_path: Path,
+) -> None:
+    _write_018_checkpoint(tmp_path)
+    _write_minimal_frontend_contract_page_artifacts(tmp_path)
+    _write_071_gate_artifacts(tmp_path)
+    _write_018_frontend_contract_observations(tmp_path)
+    (
+        tmp_path
+        / "governance"
+        / "frontend"
+        / "gates"
+        / "visual-foundation-coverage-matrix.yaml"
+    ).unlink()
+
+    report = build_constraint_report(tmp_path)
+    context = build_verification_gate_context(tmp_path)
+
+    assert "frontend_visual_a11y_policy_artifacts" in report.coverage_gaps
+    assert context["frontend_gate_verification"]["coverage_gaps"] == [
+        "frontend_visual_a11y_policy_artifacts"
+    ]
+
+
+def test_018_frontend_gate_verification_passes_with_071_visual_a11y_artifacts(
+    tmp_path: Path,
+) -> None:
+    _write_018_checkpoint(tmp_path)
+    _write_minimal_frontend_contract_page_artifacts(tmp_path)
+    _write_071_gate_artifacts(tmp_path)
+    _write_018_frontend_contract_observations(tmp_path)
+
+    report = build_constraint_report(tmp_path)
+    context = build_verification_gate_context(tmp_path)
+
+    assert report.coverage_gaps == ()
+    assert report.blockers == ()
+    assert context["frontend_gate_verification"]["gate_verdict"] == "PASS"
+    assert "frontend_visual_a11y_policy_artifacts" in report.check_objects
 
 
 def test_build_verification_governance_bundle_emits_gate_capable_payload(

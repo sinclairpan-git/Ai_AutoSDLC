@@ -5,6 +5,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 
+import yaml
+
 from ai_sdlc.core.frontend_contract_drift import PageImplementationObservation
 from ai_sdlc.core.frontend_contract_verification import (
     FrontendContractVerificationReport,
@@ -18,6 +20,7 @@ from ai_sdlc.generators.frontend_generation_constraint_artifacts import (
 from ai_sdlc.models.gate import GateCheck, GateResult, GateVerdict
 
 FRONTEND_GATE_SOURCE_NAME = "frontend gate verification"
+FRONTEND_GATE_VISUAL_A11Y_CHECK_OBJECT = "frontend_visual_a11y_policy_artifacts"
 FRONTEND_GATE_CHECK_OBJECTS = (
     "frontend_gate_policy_artifacts",
     "frontend_generation_governance_artifacts",
@@ -83,6 +86,19 @@ def build_frontend_gate_verification_report(
             "report-types.yaml",
         ),
     )
+    visual_a11y_required = _requires_visual_a11y_policy_artifacts(gate_root)
+    visual_a11y_present = True
+    visual_a11y_message = ""
+    if visual_a11y_required:
+        visual_a11y_present, visual_a11y_message = _required_artifacts_present(
+            gate_root,
+            (
+                "visual-foundation-coverage-matrix.yaml",
+                "a11y-foundation-coverage-matrix.yaml",
+                "visual-a11y-evidence-boundary.yaml",
+                "visual-a11y-feedback-boundary.yaml",
+            ),
+        )
     generation_present, generation_message = _required_artifacts_present(
         generation_root,
         (
@@ -117,6 +133,14 @@ def build_frontend_gate_verification_report(
             else _contract_prerequisite_message(contract_report),
         ),
     ]
+    if visual_a11y_required:
+        checks.append(
+            GateCheck(
+                name="visual_a11y_policy_artifacts_present",
+                passed=visual_a11y_present,
+                message=visual_a11y_message,
+            )
+        )
     gate_result = GateResult(
         stage="frontend_gate",
         verdict=GateVerdict.PASS if all(check.passed for check in checks) else GateVerdict.RETRY,
@@ -132,6 +156,13 @@ def build_frontend_gate_verification_report(
             f"{gate_message}"
         )
         coverage_gaps.append("frontend_gate_policy_artifacts")
+
+    if visual_a11y_required and not visual_a11y_present:
+        blockers.append(
+            "BLOCKER: frontend visual / a11y policy artifacts unavailable: "
+            f"{visual_a11y_message}"
+        )
+        coverage_gaps.append(FRONTEND_GATE_VISUAL_A11Y_CHECK_OBJECT)
 
     if not generation_present:
         blockers.append(
@@ -152,7 +183,10 @@ def build_frontend_gate_verification_report(
         gate_policy_root=str(gate_root),
         generation_root=str(generation_root),
         source_name=FRONTEND_GATE_SOURCE_NAME,
-        check_objects=FRONTEND_GATE_CHECK_OBJECTS,
+        check_objects=(
+            *FRONTEND_GATE_CHECK_OBJECTS,
+            *((FRONTEND_GATE_VISUAL_A11Y_CHECK_OBJECT,) if visual_a11y_required else ()),
+        ),
         blockers=tuple(_unique_strings(blockers)),
         coverage_gaps=tuple(_unique_strings(coverage_gaps)),
         advisory_checks=(),
@@ -192,6 +226,19 @@ def _required_artifacts_present(
     return True, ""
 
 
+def _requires_visual_a11y_policy_artifacts(gate_root: Path) -> bool:
+    manifest_path = gate_root / "gate.manifest.yaml"
+    if not manifest_path.is_file():
+        return False
+
+    raw = yaml.safe_load(manifest_path.read_text(encoding="utf-8"))
+    if not isinstance(raw, dict):
+        return False
+
+    work_item_id = str(raw.get("work_item_id", "")).strip()
+    return work_item_id == "071" or work_item_id.startswith("071-")
+
+
 def _contract_prerequisite_message(
     report: FrontendContractVerificationReport,
 ) -> str:
@@ -214,6 +261,7 @@ def _unique_strings(values: list[str] | tuple[str, ...]) -> list[str]:
 __all__ = [
     "FRONTEND_GATE_CHECK_OBJECTS",
     "FRONTEND_GATE_SOURCE_NAME",
+    "FRONTEND_GATE_VISUAL_A11Y_CHECK_OBJECT",
     "FrontendGateVerificationReport",
     "build_frontend_gate_verification_context",
     "build_frontend_gate_verification_report",

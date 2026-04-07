@@ -13,6 +13,7 @@ from ai_sdlc.generators.frontend_gate_policy_artifacts import (
 from ai_sdlc.models.frontend_gate_policy import (
     build_mvp_frontend_gate_policy,
     build_p1_frontend_gate_policy_diagnostics_drift_expansion,
+    build_p1_frontend_gate_policy_visual_a11y_foundation,
 )
 
 
@@ -139,3 +140,59 @@ def test_frontend_gate_policy_root_is_stable(tmp_path) -> None:
     assert frontend_gate_policy_root(tmp_path) == (
         tmp_path / "governance" / "frontend" / "gates"
     )
+
+
+def test_materialize_p1_frontend_gate_policy_artifacts_writes_visual_a11y_extension_files(
+    tmp_path,
+) -> None:
+    policy = build_p1_frontend_gate_policy_visual_a11y_foundation()
+
+    paths = materialize_frontend_gate_policy_artifacts(tmp_path, policy)
+    rel_paths = {path.relative_to(tmp_path).as_posix() for path in paths}
+
+    assert rel_paths == {
+        "governance/frontend/gates/a11y-foundation-coverage-matrix.yaml",
+        "governance/frontend/gates/compatibility-feedback-boundary.yaml",
+        "governance/frontend/gates/compatibility-policies.yaml",
+        "governance/frontend/gates/diagnostics-coverage-matrix.yaml",
+        "governance/frontend/gates/drift-classification.yaml",
+        "governance/frontend/gates/gate-matrix.yaml",
+        "governance/frontend/gates/gate.manifest.yaml",
+        "governance/frontend/gates/report-types.yaml",
+        "governance/frontend/gates/visual-a11y-evidence-boundary.yaml",
+        "governance/frontend/gates/visual-a11y-feedback-boundary.yaml",
+        "governance/frontend/gates/visual-foundation-coverage-matrix.yaml",
+    }
+
+
+def test_p1_gate_policy_artifacts_preserve_visual_a11y_payloads(tmp_path) -> None:
+    policy = build_p1_frontend_gate_policy_visual_a11y_foundation()
+
+    materialize_frontend_gate_policy_artifacts(tmp_path, policy)
+
+    root = frontend_gate_policy_root(tmp_path)
+    visual_matrix = _read_yaml(root / "visual-foundation-coverage-matrix.yaml")
+    a11y_matrix = _read_yaml(root / "a11y-foundation-coverage-matrix.yaml")
+    evidence_boundary = _read_yaml(root / "visual-a11y-evidence-boundary.yaml")
+    feedback_boundary = _read_yaml(root / "visual-a11y-feedback-boundary.yaml")
+
+    assert [item["coverage_id"] for item in visual_matrix["items"]] == [
+        "state-visual-presence",
+        "required-area-visual-presence",
+        "controlled-container-visual-continuity",
+    ]
+    assert [item["coverage_id"] for item in a11y_matrix["items"]] == [
+        "error-status-perceivability",
+        "accessible-naming-semantics",
+        "keyboard-reachability",
+        "focus-continuity",
+    ]
+    assert evidence_boundary["items"][0]["allowed_evidence_sources"] == [
+        "explicit-input-artifact"
+    ]
+    assert feedback_boundary["items"][0]["report_types"] == [
+        "violation-report",
+        "coverage-report",
+        "drift-report",
+        "legacy-expansion-report",
+    ]
