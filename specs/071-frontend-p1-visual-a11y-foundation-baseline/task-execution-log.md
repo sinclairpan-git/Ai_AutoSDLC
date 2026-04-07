@@ -428,3 +428,43 @@
 - **已完成 git 提交**：是
 - 当前 batch 结论：execution log commit-state honesty 已对齐到当前实际提交状态。
 - **下一步动作**：若继续推进，只保留对新发现缺口的最小批次修补；若没有新缺口，则保持工作树干净并在后续批次继续同样流程。
+
+### Batch 2026-04-07-011 | actual issue remediation honesty propagation
+
+#### 1. 背景
+
+- 继续扫描 `071` 的 visual/a11y remediation honesty surface 时，发现 `frontend_gate_verification` 已能区分 `input gap / stable empty / actual issue`，但 `program_service` 在 actual issue 场景下仍只回退成通用 `retry` + `resolve frontend blockers`，没有把 visual/a11y issue review handoff 显式传到 program/CLI surface。
+
+#### 2. 修改文件
+
+- `src/ai_sdlc/core/program_service.py`
+- `tests/unit/test_program_service.py`
+- `tests/integration/test_cli_program.py`
+- `specs/071-frontend-p1-visual-a11y-foundation-baseline/task-execution-log.md`
+
+#### 3. 执行命令
+
+- `uv run pytest tests/unit/test_program_service.py -k 'visual_a11y_issue_review_input' -q`
+- `uv run pytest tests/integration/test_cli_program.py -k 'visual_a11y_issue_review_hint' -q`
+- `uv run pytest tests/unit/test_program_service.py -q`
+- `uv run pytest tests/integration/test_cli_program.py -q`
+- `git diff --check -- src/ai_sdlc/core/program_service.py tests/unit/test_program_service.py tests/integration/test_cli_program.py specs/071-frontend-p1-visual-a11y-foundation-baseline/task-execution-log.md`
+
+#### 4. 验证结果
+
+- 初始 RED 失败表明 actual issue 目前只会落成 `fix_inputs=['retry']`，CLI 输出也只显示 `resolve frontend blockers`；失败点准确落在缺失的 actual-issue remediation honesty surface。
+- `uv run pytest tests/unit/test_program_service.py -k 'visual_a11y_issue_review_input' -q` 通过，结果为 `1 passed, 118 deselected in 0.20s`。
+- `uv run pytest tests/integration/test_cli_program.py -k 'visual_a11y_issue_review_hint' -q` 通过，结果为 `1 passed, 92 deselected in 0.25s`。
+- `uv run pytest tests/unit/test_program_service.py -q` 通过，结果为 `119 passed in 0.84s`。
+- `uv run pytest tests/integration/test_cli_program.py -q` 通过，结果为 `93 passed in 1.88s`。
+
+#### 5. 对账结论
+
+- 本批为 actual issue 场景新增了显式 `frontend_visual_a11y_issue_review` remediation token，并把建议动作收敛为 `review frontend visual / a11y issue findings`，不再退化成 generic blocker fallback。
+- 这样 `program_service` 与 CLI report/output 现在都能诚实区分 `input gap / stable empty / actual issue` 三类 visual/a11y 语义，和 `071` formal baseline 对齐，同时没有扩张到 remediation runbook 自动化或 provider/runtime 实现。
+
+#### 6. 归档后动作
+
+- **已完成 git 提交**：否
+- 当前 batch 结论：actual issue remediation honesty surface 已闭合，并通过 unit + CLI integration 回归。
+- **下一步动作**：提交本批后继续扫描 visual/a11y 相邻的 program writeback / persisted artifact / messaging surface，优先找仍使用 generic blocker fallback 的生产缺口。

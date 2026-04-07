@@ -45,6 +45,9 @@ PROGRAM_FRONTEND_RUNTIME_ATTACHMENT_SOURCE_NAME = (
     "frontend contract runtime attachment"
 )
 PROGRAM_FRONTEND_RECHECK_COMMAND = "uv run ai-sdlc verify constraints"
+PROGRAM_FRONTEND_VISUAL_A11Y_ISSUE_REVIEW_INPUT = (
+    "frontend_visual_a11y_issue_review"
+)
 PROGRAM_FRONTEND_SCAN_COMMAND_PREFIX = (
     "uv run ai-sdlc scan <frontend-source-root> --frontend-contract-spec-dir "
 )
@@ -4774,6 +4777,10 @@ class ProgramService:
             return None
 
         fix_inputs = _unique_strings(readiness.coverage_gaps)
+        if _has_frontend_visual_a11y_issue_blocker(readiness.blockers):
+            fix_inputs = _unique_strings(
+                [*fix_inputs, PROGRAM_FRONTEND_VISUAL_A11Y_ISSUE_REVIEW_INPUT]
+            )
         if not fix_inputs:
             fix_inputs = [readiness.state]
 
@@ -4788,6 +4795,8 @@ class ProgramService:
             suggested_actions.append("materialize frontend visual / a11y evidence input")
         if "frontend_visual_a11y_evidence_stable_empty" in fix_inputs:
             suggested_actions.append("review stable empty frontend visual / a11y evidence")
+        if PROGRAM_FRONTEND_VISUAL_A11Y_ISSUE_REVIEW_INPUT in fix_inputs:
+            suggested_actions.append("review frontend visual / a11y issue findings")
         if "frontend_gate_policy_artifacts" in fix_inputs:
             suggested_actions.append("materialize frontend gate policy artifacts")
         if "frontend_generation_governance_artifacts" in fix_inputs:
@@ -6786,6 +6795,12 @@ def _normalize_string_mapping(value: object) -> dict[str, str]:
         if key_text and item_text:
             result[key_text] = item_text
     return result
+
+
+def _has_frontend_visual_a11y_issue_blocker(
+    blockers: list[str] | tuple[str, ...],
+) -> bool:
+    return any("visual / a11y issues detected" in str(blocker) for blocker in blockers)
 
 
 def _relative_to_root_or_str(root: Path, path: Path) -> str:

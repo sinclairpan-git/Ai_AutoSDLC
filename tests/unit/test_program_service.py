@@ -4579,6 +4579,55 @@ def test_build_integration_dry_run_surfaces_stable_empty_visual_a11y_evidence_re
     assert remediation.recommended_commands == ["uv run ai-sdlc verify constraints"]
 
 
+def test_build_integration_dry_run_surfaces_visual_a11y_issue_review_input(
+    tmp_path: Path,
+) -> None:
+    for p in ("specs/001-auth", "specs/002-course", "specs/003-enroll"):
+        (tmp_path / p).mkdir(parents=True)
+    _write_minimal_frontend_contract_page_artifacts(tmp_path)
+    materialize_frontend_gate_policy_artifacts(
+        tmp_path,
+        build_p1_frontend_gate_policy_visual_a11y_foundation(),
+    )
+    materialize_frontend_generation_constraint_artifacts(
+        tmp_path,
+        build_mvp_frontend_generation_constraints(),
+    )
+    for spec in ("001-auth", "002-course", "003-enroll"):
+        spec_dir = tmp_path / "specs" / spec
+        _write_frontend_contract_observations(spec_dir)
+        _write_frontend_visual_a11y_evidence(
+            spec_dir,
+            [
+                FrontendVisualA11yEvidenceEvaluation(
+                    evaluation_id=f"{spec}-visual-a11y-issue",
+                    target_id="user-create",
+                    surface_id="success-feedback",
+                    outcome="issue",
+                    report_type="violation-report",
+                    severity="medium",
+                    location_anchor="feedback.banner",
+                    quality_hint="review success feedback visibility and semantics",
+                    changed_scope_explanation="071 issue fixture",
+                )
+            ],
+        )
+
+    svc = ProgramService(tmp_path)
+    plan = svc.build_integration_dry_run(_manifest())
+
+    step = next(item for item in plan.steps if item.spec_id == "001-auth")
+    remediation = step.frontend_remediation_input
+    assert remediation is not None
+    assert "frontend_visual_a11y_issue_review" in remediation.fix_inputs
+    assert (
+        "review frontend visual / a11y issue findings"
+        in remediation.suggested_actions
+    )
+    assert "frontend_visual_a11y_evidence_stable_empty" not in remediation.fix_inputs
+    assert remediation.recommended_commands == ["uv run ai-sdlc verify constraints"]
+
+
 def test_build_integration_dry_run_surfaces_visual_a11y_policy_artifact_remediation_input_when_missing(
     tmp_path: Path,
 ) -> None:
