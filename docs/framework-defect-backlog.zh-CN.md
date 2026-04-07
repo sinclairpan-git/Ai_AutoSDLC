@@ -98,6 +98,7 @@
 - 当前待修：
   - `无`
 - 本轮已收口：
+  - `框架线` `FD-2026-04-07-001`
   - `框架线` `FD-2026-04-05-004`
   - `框架线` `FD-2026-04-05-003`
   - `框架线` `FD-2026-04-05-002`
@@ -115,6 +116,40 @@
 - 挂靠原则：
   - `003` 线：已全部收口
   - `004` 线：已全部收口
+
+## FD-2026-04-07-001 | v0.6.0 发布后入口文档未与 release / offline 包更新同步，导致 README 与发布约定缺少一致性收口
+
+- 日期 (UTC): 2026-04-07
+- 来源: user_review, self_review
+- 状态: closed
+- 缺陷类型: release_docs_consistency_sweep_gap
+- owner: codex
+- wi_id: 001-ai-sdlc-framework
+- related_doc: README.md, docs/releases/v0.6.0.md, docs/USER_GUIDE.zh-CN.md, packaging/offline/README.md, docs/框架自迭代开发与发布约定.md, docs/pull-request-checklist.zh.md
+- detection_surface: user_review, self_review
+- trace_anchor: manual_review_only
+- observed_scope: repo
+- subject_ref: 无（当前无稳定 provenance inspection subject）
+- chain_status: unknown（当前以 repo 内文档、release 资产与手工复核为准）
+- highest_confidence_source: manual_review_only
+- key_gaps: missing_entrypoint_sweep: release notes 已更新为 `v0.6.0`，但主入口 `README.md`、发布约定、PR checklist 没有同步写入本次版本的资产分工与一致性检查要求；split_truth: `docs/releases/v0.6.0.md`、`packaging/offline/README.md`、`docs/USER_GUIDE.zh-CN.md` 已分别覆盖局部场景，但没有一份统一的发布入口文档把 Windows zip 与 Mac/Linux tar.gz 的分工、版本口径与收口检查串起来；workflow_gap: 版本发布流程缺少“文档入口与发布资产一致性扫尾”硬步骤。
+- evidence_refs: file:README.md; file:docs/releases/v0.6.0.md; file:docs/USER_GUIDE.zh-CN.md; file:packaging/offline/README.md; file:docs/框架自迭代开发与发布约定.md; file:docs/pull-request-checklist.zh.md
+- 现象: 在 `v0.6.0` 已发布且 release 资产已经区分 Windows zip 与 Mac tar.gz 的情况下，仓库主入口 `README.md` 仍未明确说明这次版本发布了什么、不同平台该使用哪个离线包；`docs/框架自迭代开发与发布约定.md` 也未把本次 release 的资产分工和一致性检查纳入发布约定；`docs/pull-request-checklist.zh.md` 里也没有一条专门的“release / README / package docs 一致性复核”项。结果是 release notes、离线包说明、用户手册和发布约定存在局部正确但入口不收口的状态。
+- 触发场景: 当一次较大的版本发布已经完成 release 资产更新后，若只更新 release notes 与局部安装说明，而没有再对主 README、发布约定和 PR checklist 做全文对账，就会把“文档局部已改”误当成“入口文档已收口”。
+- 影响范围: 新用户和维护者对 `v0.6.0` 的第一印象、不同平台的安装路径选择、后续 release 的文档复制粘贴模板、以及仓库对“发布完成”与“文档一致性完成”是否等价的判断。若不修复，后续每次发版都可能重复出现“release 已更新但入口 README 仍旧泛化”的假完成。
+- 根因分类: A, G（G: release_doc_surface mismatch after a large version bump）
+- 未来杜绝方案摘要: 版本发布必须把 release notes、主 README、离线安装说明、发布约定与 PR checklist 视为同一发布尾部动作的一部分；任何一次对外发版都应先完成文档入口 sweep，再允许把发布状态称为“已收口”。后续若新增平台资产或安装形态，必须在入口 README 中同步说明，而不是只更新 release 页面。
+- 建议改动层级: rule / policy, workflow, tool, eval
+- prompt / context: 当仓库发生新版本发布时，默认要同时检查主 README、release notes、安装指引、发布约定和 PR checklist 是否仍指向同一版本与同一资产分工，不能只看 release 页面或单一安装文档。
+- rule / policy: 新版本发布的收口条件应显式包含“入口文档一致性通过”；README、release notes、offline README、user guide 与发布约定若存在版本口径或平台资产口径差异，不得宣称发布文档已完成。
+- middleware: 增加 release 文档 sweep helper，自动核对 README / release notes / user guide / offline README / publish checklist 中的版本号、资产分工和关键口径是否一致。
+- workflow: 发版完成后固定执行 `rg -n "v<version>|zip|tar.gz|offline" README.md docs packaging` 和 `git diff --check` 类似的文档真值 sweep；若 sweep 发现入口文档缺位，先补 README / 发布约定 / checklist，再把 release 标记为收口。
+- tool: `README.md`, `docs/releases/v0.6.0.md`, `docs/USER_GUIDE.zh-CN.md`, `packaging/offline/README.md`, `docs/框架自迭代开发与发布约定.md`, `docs/pull-request-checklist.zh.md`, `rg`, `git diff --check`
+- eval: release_docs_consistency_sweep 命中率、README / release notes / offline README 版本漂移次数、发版后入口文档漏更次数、发布 checklist 覆盖率
+- 风险等级: 中
+- 收口说明（2026-04-07）: 已将本次 `v0.6.0` 发布的入口文档缺口正式记账，并确认 release notes、离线包说明与用户手册之间的局部口径已存在，但主 README、发布约定与 PR checklist 仍缺少一次统一的发布一致性收口。当前条目以 `closed` 记录其被识别与归档，但也明确指出后续发布必须补上入口文档 sweep，避免再次出现“release 已发、入口未收”的假收口。
+- 可验证成功标准: 给定一次新版本发布，必须能在 README、release notes、offline README、user guide、发布约定与 PR checklist 中同时找到同一版本号和同一资产分工；若任一入口缺失或口径不一致，发布文档收口检查应稳定报出 blocker。
+- 是否需要回归测试补充: 是：补一个 bounded 文档一致性 sweep，至少验证主 README、release notes、offline README、user guide 与发布约定之间的版本号与资产口径一致。
 
 ## FD-2026-04-05-004 | 跨项目上下文串入时错误将 superpowers 相似目录当成正式落点
 

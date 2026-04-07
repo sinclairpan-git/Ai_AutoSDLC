@@ -2,6 +2,15 @@
 
 AI-native SDLC automation framework — a Python CLI tool and rule file set for automating the full software development lifecycle with AI agents.
 
+## Current Release
+
+`v0.6.0` is the current staged framework release for the frontend governance P1 rollout. This release turns the P1 frontend line into a verifiable baseline across contract diagnostics, visual/a11y foundation, and governed remediation flow.
+
+- Release notes: `docs/releases/v0.6.0.md`
+- Windows offline bundle: `ai-sdlc-offline-0.6.0.zip`
+- macOS / Linux offline bundle: `ai-sdlc-offline-0.6.0.tar.gz`
+- Offline packaging details: `packaging/offline/README.md`
+
 ## Quick Start
 
 ```bash
@@ -114,6 +123,7 @@ The file `.ai-sdlc/project/config/project-config.yaml` holds IDE detection metad
 
 ## Documentation
 
+- Current release notes: `docs/releases/v0.6.0.md`
 - Chinese user guide: `docs/USER_GUIDE.zh-CN.md` (start with **§3 Install & environment**)
 - Offline install bundle (build + one-command install): `packaging/offline/README.md`
 - Spec split and program orchestration: `docs/SPEC_SPLIT_AND_PROGRAM.zh-CN.md`
