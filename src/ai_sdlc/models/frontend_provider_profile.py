@@ -1,6 +1,8 @@
-"""enterprise-vue2 Provider profile data models."""
+"""Frontend Provider profile data models."""
 
 from __future__ import annotations
+
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
@@ -39,6 +41,15 @@ class ProviderWhitelistEntry(FrontendProviderProfileModel):
     api_curation: list[str] = Field(default_factory=list)
     capability_curation: list[str] = Field(default_factory=list)
     dependency_curation: list[str] = Field(default_factory=list)
+
+
+class ProviderStyleSupportEntry(FrontendProviderProfileModel):
+    """Canonical style support truth for one style pack within a Provider."""
+
+    style_pack_id: str
+    fidelity_status: Literal["full", "partial", "degraded", "unsupported"]
+    degradation_reason_codes: list[str] = Field(default_factory=list)
+    notes: list[str] = Field(default_factory=list)
 
 
 class ProviderRiskIsolationPolicy(FrontendProviderProfileModel):
@@ -96,6 +107,12 @@ class EnterpriseVue2ProviderProfile(FrontendProviderProfileModel):
     work_item_id: str
     provider_id: str
     kernel_artifact_ref: str = "kernel/frontend"
+    access_mode: Literal["public", "private"] = "private"
+    install_strategy_ids: list[str] = Field(default_factory=list)
+    availability_prerequisites: list[str] = Field(default_factory=list)
+    style_support_matrix: list[ProviderStyleSupportEntry] = Field(default_factory=list)
+    default_style_pack_id: str = "enterprise-default"
+    cross_stack_fallback_targets: list[str] = Field(default_factory=list)
     mappings: list[ProviderMapping] = Field(default_factory=list)
     whitelist: list[ProviderWhitelistEntry] = Field(default_factory=list)
     risk_isolation: ProviderRiskIsolationPolicy = Field(
@@ -118,6 +135,15 @@ class EnterpriseVue2ProviderProfile(FrontendProviderProfileModel):
         if duplicate_whitelist_ids:
             joined = ", ".join(duplicate_whitelist_ids)
             raise ValueError(f"duplicate whitelist component_id values: {joined}")
+
+        duplicate_style_pack_ids = _find_duplicates(
+            [entry.style_pack_id for entry in self.style_support_matrix]
+        )
+        if duplicate_style_pack_ids:
+            joined = ", ".join(duplicate_style_pack_ids)
+            raise ValueError(
+                f"duplicate style_support_matrix style_pack_id values: {joined}"
+            )
         return self
 
 
@@ -144,6 +170,38 @@ def build_mvp_enterprise_vue2_provider_profile() -> EnterpriseVue2ProviderProfil
     return EnterpriseVue2ProviderProfile(
         work_item_id="016",
         provider_id="enterprise-vue2",
+        install_strategy_ids=["enterprise-vue2-private-registry"],
+        availability_prerequisites=[
+            "company-registry-network",
+            "company-registry-token",
+        ],
+        style_support_matrix=[
+            ProviderStyleSupportEntry(
+                style_pack_id="enterprise-default",
+                fidelity_status="full",
+            ),
+            ProviderStyleSupportEntry(
+                style_pack_id="data-console",
+                fidelity_status="full",
+            ),
+            ProviderStyleSupportEntry(
+                style_pack_id="high-clarity",
+                fidelity_status="full",
+            ),
+            ProviderStyleSupportEntry(
+                style_pack_id="modern-saas",
+                fidelity_status="partial",
+                notes=["requires-token-bridge-for-brand-leaning-accent-surfaces"],
+            ),
+            ProviderStyleSupportEntry(
+                style_pack_id="macos-glass",
+                fidelity_status="degraded",
+                degradation_reason_codes=[
+                    "glass-surface-depth-not-compatible-with-enterprise-vue2-default-theme"
+                ],
+            ),
+        ],
+        cross_stack_fallback_targets=["vue3/public-primevue"],
         mappings=[
             ProviderMapping(
                 component_id=component_id,
@@ -178,6 +236,7 @@ __all__ = [
     "LegacyAdapterPolicy",
     "ProviderMapping",
     "ProviderRiskIsolationPolicy",
+    "ProviderStyleSupportEntry",
     "ProviderWhitelistEntry",
     "build_mvp_enterprise_vue2_provider_profile",
 ]

@@ -93,12 +93,13 @@
 - 迁移补齐的字段若原始材料未显式给出，会以“基于历史记录推断”的方式写入，但会保留 `legacy_ref`。
 - 新增条目应直接写入本文件；若需要回溯历史来源，再反向链接到 legacy registry。
 
-## 下一波待修优先级（2026-04-05）
+## 下一波待修优先级（2026-04-07）
 
 - 当前待修：
-  - `无`
+  - `高优先 / 回归` `FD-2026-04-07-002`：formal artifact canonical 落点与“识别违约后立即记账”仍未形成稳定硬门，且属 `FD-2026-03-31-003`、`FD-2026-03-30-002` 同族复发。
+  - `高优先 / 回归` `FD-2026-04-07-003`：`plan.md -> 直接推进实现` 仍会绕过 `tasks.md + 显式 execute 授权`，且属 `FD-2026-03-30-001` 同族复发。
+  - `中优先` `FD-2026-04-07-001`：release 文档入口一致性 sweep helper / checklist 尚未真正落地，当前只完成记账，未完成防复发收口。
 - 本轮已收口：
-  - `框架线` `FD-2026-04-07-001`
   - `框架线` `FD-2026-04-05-004`
   - `框架线` `FD-2026-04-05-003`
   - `框架线` `FD-2026-04-05-002`
@@ -114,6 +115,7 @@
   - `003` 线 `FD-2026-03-27-011`、`FD-2026-03-27-012`
   - `004` 线 `FD-2026-03-27-013`
 - 挂靠原则：
+  - `2026-04-07` 当天新增 `FD-2026-04-07-001/002/003` 目前都只完成“识别与记账/局部纠偏”，尚未完成规则、guard、workflow 或验证面的正式防复发落地，不得继续按 `closed` 汇总。
   - `003` 线：已全部收口
   - `004` 线：已全部收口
 
@@ -121,7 +123,7 @@
 
 - 日期 (UTC): 2026-04-07
 - 来源: user_review, self_review
-- 状态: closed
+- 状态: planned
 - 缺陷类型: release_docs_consistency_sweep_gap
 - owner: codex
 - wi_id: 001-ai-sdlc-framework
@@ -147,9 +149,79 @@
 - tool: `README.md`, `docs/releases/v0.6.0.md`, `docs/USER_GUIDE.zh-CN.md`, `packaging/offline/README.md`, `docs/框架自迭代开发与发布约定.md`, `docs/pull-request-checklist.zh.md`, `rg`, `git diff --check`
 - eval: release_docs_consistency_sweep 命中率、README / release notes / offline README 版本漂移次数、发版后入口文档漏更次数、发布 checklist 覆盖率
 - 风险等级: 中
-- 收口说明（2026-04-07）: 已将本次 `v0.6.0` 发布的入口文档缺口正式记账，并确认 release notes、离线包说明与用户手册之间的局部口径已存在，但主 README、发布约定与 PR checklist 仍缺少一次统一的发布一致性收口。当前条目以 `closed` 记录其被识别与归档，但也明确指出后续发布必须补上入口文档 sweep，避免再次出现“release 已发、入口未收”的假收口。
+- 处置进展（2026-04-07）: 本次已将 `v0.6.0` 发布的入口文档缺口正式记账，并确认 release notes、离线包说明与用户手册之间的局部口径已存在，但主 README、发布约定与 PR checklist 仍缺少一次统一的发布一致性收口。当前只完成问题识别与 backlog 挂账，尚未落地 release sweep helper / checklist，因此本条不能按 `closed` 处理，维持 `planned` 直到防复发机制真正落地。
 - 可验证成功标准: 给定一次新版本发布，必须能在 README、release notes、offline README、user guide、发布约定与 PR checklist 中同时找到同一版本号和同一资产分工；若任一入口缺失或口径不一致，发布文档收口检查应稳定报出 blocker。
 - 是否需要回归测试补充: 是：补一个 bounded 文档一致性 sweep，至少验证主 README、release notes、offline README、user guide 与发布约定之间的版本号与资产口径一致。
+
+## FD-2026-04-07-002 | formal spec 被误写入 `docs/superpowers/specs`，且识别违约后未同轮补录 backlog
+
+- 日期 (UTC): 2026-04-07
+- 来源: user_review, self_review
+- 状态: planned
+- 缺陷类型: formal_artifact_misplacement_and_late_breach_logging
+- owner: codex
+- wi_id: 001-ai-sdlc-framework
+- legacy_ref: FD-2026-03-31-003, FD-2026-03-30-002
+- related_doc: cursor/rules/ai-sdlc.md, src/ai_sdlc/stages/refine.yaml, docs/USER_GUIDE.zh-CN.md, docs/framework-defect-backlog.zh-CN.md, specs/073-frontend-p2-provider-style-solution-baseline/spec.md
+- detection_surface: user_review, self_review
+- trace_anchor: manual_review_only
+- observed_scope: repo, session
+- subject_ref: 无（当前无稳定 provenance inspection subject）
+- chain_status: unknown（当前以仓库规则、文件落点与人工复盘为准）
+- highest_confidence_source: manual_review_only
+- key_gaps: formal_artifact_misclassification: 明明是在产出框架 formal spec，却把产物误判成了“设计参考文档”，沿用了 `docs/superpowers/specs` 这一辅助目录；rule_priority_drift: 仓库已经通过 `cursor/rules/ai-sdlc.md`、`src/ai_sdlc/stages/refine.yaml` 与 `docs/USER_GUIDE.zh-CN.md` 明确 formal 产物应落在 `specs/<WI>/spec.md`，执行侧却让旧习惯压过了 canonical 规则；atomic_breach_logging_gap: 在口头确认“这是违约”之后，没有把“立即登记 framework-defect-backlog”当成同轮原子动作，直到用户再次追问才补录；regression: 本条同时复发了 `FD-2026-03-31-003` 的 canonical formal 落点问题与 `FD-2026-03-30-002` 的违约即时记账问题，说明既有规则文本尚未转成稳定的 artifact / response preflight 硬门。
+- evidence_refs: manual_review_only; file:cursor/rules/ai-sdlc.md; file:src/ai_sdlc/stages/refine.yaml; file:docs/USER_GUIDE.zh-CN.md; file:docs/framework-defect-backlog.zh-CN.md; file:specs/073-frontend-p2-provider-style-solution-baseline/spec.md
+- 现象: 在本轮围绕 P2 provider/style 方案输出正式 spec 时，执行侧先把文稿写进了 `docs/superpowers/specs/2026-04-07-ai-autosdlc-p2-provider-style-solution-design.md`，而不是按框架约束落到 `specs/073-frontend-p2-provider-style-solution-baseline/spec.md`。在用户指出该落点违背框架约束后，执行侧虽然承认了违约并完成了文档迁移，但仍未立即按仓库规则将违约登记到 `docs/framework-defect-backlog.zh-CN.md`，而是再次停留在解释层，直到用户继续追问“先记录违约”才补录。
+- 触发场景: 用户在当前仓库内完成一轮正式设计收口后，要求把结果转成正式 spec。执行侧错误地把本次产物归类为“design reference”，沿用 `docs/superpowers/specs` 的旧路径习惯落盘；随后在违约已被识别的情况下，又没有把 backlog 记录视为必须立即完成的法定动作。
+- 影响范围: formal artifact 真值位置、`specs/<WI>/spec.md` 这一 canonical contract 的可信度、`docs/superpowers/*` 与正式工作项目录的职责边界、以及“识别违约后是否会立刻回挂 backlog”的流程可信度。若不正式记账，后续仍可能重复出现“formal spec 误写到辅助目录”与“违约只口头承认、不即时补录”的双重回归。
+- 根因分类: A, E, H, G（G: formal spec and auxiliary design note were misclassified as interchangeable artifact classes）
+- 未来杜绝方案摘要: formal artifact 的写入目标必须先由 work item contract 反推，再允许落盘；`docs/superpowers/*` 只能作为设计输入或辅助参考，不能再作为 formal spec 的候选落点。与此同时，一旦识别出流程违约，登记 `docs/framework-defect-backlog.zh-CN.md` 必须与“承认违约”同轮完成，不能再等待用户二次提醒。
+- 建议改动层级: prompt / context, rule / policy, workflow, tool, eval
+- prompt / context: 当用户明确要求“正式 spec / 计划 / 任务”时，默认先查 canonical work item 目录与仓库规则，不得先按语义相似路径猜测落点；当代理自己已说出“这是违约”时，下一动作默认应切到 backlog 记录，而不是继续解释。
+- rule / policy: 继续收紧规则表达：formal spec 只能落在 `specs/<WI>/spec.md`；`docs/superpowers/*` 仅允许作为 `related_doc / auxiliary reference`。同时把“识别违约 -> 立即登记 backlog”维持为强顺序约束，不允许被解释、迁移或补正动作打断。
+- middleware: 后续若引入 artifact preflight / write guard，应在落盘前校验“目标路径是否为该 artifact 类型的 canonical 目录”；若目标为 `docs/superpowers/*` 且 artifact 类型属于 formal spec/plan/tasks，应直接阻断。另可增加 breach-detected-but-not-logged 检查，发现已明确识别违约却未新增 backlog 条目时给出 blocker。
+- workflow: 顺序固定为 `确认 artifact 类型 -> 解析 canonical work item 路径 -> 落盘 -> 若发现违约则立即登记 backlog -> 只读校验 -> 再继续补正/解释/实施计划`；不得出现“先写辅助目录、后迁移”或“先口头承认违约、后等提醒再补录”的次序。
+- tool: `docs/framework-defect-backlog.zh-CN.md`, `cursor/rules/ai-sdlc.md`, `src/ai_sdlc/stages/refine.yaml`, `docs/USER_GUIDE.zh-CN.md`, `specs/<WI>/spec.md`, 后续 artifact preflight / write guard
+- eval: formal_artifact_misplaced_to_superpowers 次数、识别违约到 backlog 落盘的延迟时间、需要用户二次提醒才补录的次数、formal artifact canonical-path 命中率
+- 风险等级: 高
+- 处置进展（2026-04-07）: 本次误写入 `docs/superpowers/specs` 的 formal spec 已迁移到 `specs/073-frontend-p2-provider-style-solution-baseline/spec.md`，辅助目录中的误放文件已移除；同时，“识别违约后未同轮补录 backlog”的二次违约也已正式记账。但当前仍未落地 artifact-target guard 与 breach-detected-but-not-logged blocker，这类问题又已是同族回归，因此本条只能维持 `planned`，不能按 `closed` 汇总。
+- 可验证成功标准: 1) 当产物类型为 formal spec 时，只允许写入 `specs/<WI>/spec.md`，不能再写入 `docs/superpowers/specs/*`。 2) 若执行侧已明确识别出违约，同轮必须新增 backlog 条目并完成只读校验，然后才能继续讨论补正动作。 3) review / 复盘能够直接通过本条与相关规则文件解释“为什么这次既是落点违约，也是补录时序违约”，而不依赖会话记忆。 4) 再次出现 formal artifact 写入辅助目录的尝试时，artifact preflight / review 能稳定阻断或报高优先级告警。
+- 是否需要回归测试补充: 是：补一类 artifact-target 正反夹具，验证 formal spec 不会再被写入 `docs/superpowers/specs/*`；同时补一类流程级夹具，验证“已识别违约但未新增 backlog 条目”会被视为未完成流程并阻断后续继续表述为“已处理”。
+
+## FD-2026-04-07-003 | plan freeze 后误将“下一步”推进成实现，绕过 `tasks.md` 与显式 execute 授权
+
+- 日期 (UTC): 2026-04-07
+- 来源: user_review, self_review
+- 状态: planned
+- 缺陷类型: premature_execute_handoff_without_tasks_truth
+- owner: codex
+- wi_id: 073-frontend-p2-provider-style-solution-baseline
+- legacy_ref: FD-2026-03-30-001
+- related_doc: docs/框架自迭代开发与发布约定.md, docs/USER_GUIDE.zh-CN.md, specs/073-frontend-p2-provider-style-solution-baseline/spec.md, specs/073-frontend-p2-provider-style-solution-baseline/plan.md, docs/framework-defect-backlog.zh-CN.md
+- detection_surface: user_review, self_review
+- trace_anchor: manual_review_only
+- observed_scope: repo, session
+- subject_ref: 无（当前无稳定 provenance inspection subject）
+- chain_status: unknown（当前以仓库规则、文件存在性与人工复盘为准）
+- highest_confidence_source: manual_review_only
+- key_gaps: execute_gate_drift: 在 spec/plan 已冻结后，执行侧把 implementation plan 的存在误当成了 execute 授权；tasks_truth_missing: `specs/073-frontend-p2-provider-style-solution-baseline/tasks.md` 尚不存在，仍提前使用了“下一步直接进入实现/Phase 1 开做”的表述；host_workflow_override: 把宿主 skill 的 handoff 心智错当成仓库阶段真值，压过了“用户仍在 review 流程约束时必须停在 docs-only”的框架规则；regression: 本条属于 `FD-2026-03-30-001` 同族问题复发，说明“superpowers plan 不是 execute 授权、`tasks.md` 才是法定执行入口”虽然已写入规则，但尚未固化为稳定的 response guard / execute preflight。
+- evidence_refs: manual_review_only; file:docs/框架自迭代开发与发布约定.md; file:docs/USER_GUIDE.zh-CN.md; file:specs/073-frontend-p2-provider-style-solution-baseline/spec.md; file:specs/073-frontend-p2-provider-style-solution-baseline/plan.md
+- 现象: 在 `spec.md` 与 `plan.md` 已形成 canonical formal docs 后，执行侧直接给出了“下一步可以直接进入实现”“从 Phase 1 开始做”的表述，没有先核对 `specs/073-frontend-p2-provider-style-solution-baseline/tasks.md` 是否存在，也没有把“用户当前仍在 review/追问流程约束”识别为 docs-only 状态。用户随后指出这仍然是在走 `superpowers` 的 handoff 心智，而不是遵守框架约束。
+- 触发场景: 用户完成第二次设计评审并给出 `Accept / Frozen` 后，执行侧产出了 implementation plan，随即自然把“下一步”推进成编码实现，忽略了框架仓库要求在 execute 前必须具备 `spec.md`、`plan.md`、`tasks.md`，且需要用户明确要求进入实现这一阶段门槛。
+- 影响范围: framework 阶段真值可信度、`tasks.md` 作为法定执行入口的约束强度、用户对“plan freeze 是否等于 execute 授权”的理解，以及后续任务分解/执行日志/close-check 的可追溯性。若不正式记账，后续仍可能重复出现“formal docs 一冻结就口头推进编码”的假启动。
+- 根因分类: A, C, F, H
+- 未来杜绝方案摘要: 在框架仓库内，`implementation plan` 只表示进入任务分解准备，不表示可以直接编码；任何“下一步开始实现”的表述前，必须先核对 `tasks.md` 存在、阶段状态已从 review 进入 execute、且用户已明确要求进入实现。若用户仍在 review 流程约束，默认动作必须保持 docs-only。
+- 建议改动层级: prompt / context, rule / policy, workflow, tool, eval
+- prompt / context: 当用户刚完成 spec/plan review 或仍在追问流程约束时，默认答复只能说明“当前停在 formal docs / docs-only 阶段”，不得把“implementation plan 已写好”外推成“可以直接开做”。若 `tasks.md` 不存在，应明确指出正确下一步是任务分解，而不是编码。
+- rule / policy: 将“spec/plan freeze != execute authorization”写成硬规则；只有在 `specs/<WI>/tasks.md` 已存在且用户明确要求进入实现时，才允许出现“从 Phase 1 开始实现/直接开做”的表述。
+- middleware: 为后续 artifact/response preflight 增加 execute wording guard。当检测到当前 WI 缺少 `tasks.md`，或会话仍处于 review/规则澄清语境时，阻断“进入实现”“从 Task 1 开始”等措辞。
+- workflow: 框架仓库中新增 capability 的顺序固定为 `spec.md -> plan.md -> tasks.md -> review/对账 -> 用户明确要求进入实现 -> code/execute`。不得从 `plan.md` 直接跳到编码建议，也不得把宿主 skills 的 handoff 视为仓库 execute gate。
+- tool: `docs/框架自迭代开发与发布约定.md`, `docs/USER_GUIDE.zh-CN.md`, `specs/<WI>/tasks.md`, 后续 response guard / tasks existence preflight
+- eval: 无 `tasks.md` 时出现“直接进入实现”表述的次数、review 语境下被错误推进 execute 的次数、plan freeze 后仍需用户纠正阶段状态的次数
+- 风险等级: 高
+- 处置进展（2026-04-07）: 本次已在用户指出后立刻停止“进入实现”的口径，并回到框架正式阶段真值：`073` 当前只有 `spec.md` 与 `plan.md`，没有 `tasks.md`，因此状态应视为 docs-only / review-to-decompose，而不是 execute。当前只是完成会话级纠偏，尚未落地 execute wording guard、`tasks.md` existence preflight 与 review 语境 blocker；且该问题已属同族回归，因此本条维持 `planned`，直到防复发机制真正落地。
+- 可验证成功标准: 1) 当 `specs/<WI>/tasks.md` 不存在时，执行侧不得再输出“下一步直接进入实现”“从 Phase 1 开始实现”等表述。 2) 当用户仍在 review spec/plan 或追问框架流程约束时，默认答复必须明确当前仍处于 docs-only / review 状态。 3) 只有在 `tasks.md` 已存在且用户明确要求进入实现后，execute 相关表述才允许出现。
+- 是否需要回归测试补充: 是：补一类阶段词义 guard，验证“有 spec/plan 但无 tasks.md”时会阻断 execute handoff；再补一类会话语境 guard，验证用户仍在 review/规则对账时，不会被自然推进到编码建议。
 
 ## FD-2026-04-05-004 | 跨项目上下文串入时错误将 superpowers 相似目录当成正式落点
 

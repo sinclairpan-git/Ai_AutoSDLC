@@ -35,6 +35,7 @@ def test_materialize_frontend_provider_profile_artifacts_writes_expected_file_se
         "providers/frontend/enterprise-vue2/mappings.yaml",
         "providers/frontend/enterprise-vue2/provider.manifest.yaml",
         "providers/frontend/enterprise-vue2/risk-isolation.yaml",
+        "providers/frontend/enterprise-vue2/style-support.yaml",
         "providers/frontend/enterprise-vue2/whitelist.yaml",
     }
 
@@ -50,11 +51,15 @@ def test_provider_profile_artifacts_preserve_mapping_and_policy_semantics(tmp_pa
     whitelist = _read_yaml(profile_root / "whitelist.yaml")
     risk_isolation = _read_yaml(profile_root / "risk-isolation.yaml")
     legacy_adapter = _read_yaml(profile_root / "legacy-adapter.yaml")
+    style_support = _read_yaml(profile_root / "style-support.yaml")
 
     assert manifest == {
         "work_item_id": "016",
         "provider_id": "enterprise-vue2",
         "kernel_artifact_ref": "kernel/frontend",
+        "access_mode": "private",
+        "install_strategy_ids": ["enterprise-vue2-private-registry"],
+        "default_style_pack_id": "enterprise-default",
         "mapped_components": [
             "UiButton",
             "UiInput",
@@ -81,6 +86,7 @@ def test_provider_profile_artifacts_preserve_mapping_and_policy_semantics(tmp_pa
             "UiSpinner",
             "UiPageHeader",
         ],
+        "cross_stack_fallback_targets": ["vue3/public-primevue"],
     }
     assert mappings["items"][0]["component_id"] == "UiButton"
     assert mappings["items"][0]["implementation_ref"] == "SfButton"
@@ -90,6 +96,18 @@ def test_provider_profile_artifacts_preserve_mapping_and_policy_semantics(tmp_pa
     assert "full-vue-use-company-library" in risk_isolation["disallowed_capabilities"]
     assert legacy_adapter["default_entry_allowed"] is False
     assert legacy_adapter["expansion_forbidden"] is True
+    assert {
+        item["style_pack_id"]: item["fidelity_status"] for item in style_support["items"]
+    } == {
+        "enterprise-default": "full",
+        "data-console": "full",
+        "high-clarity": "full",
+        "modern-saas": "partial",
+        "macos-glass": "degraded",
+    }
+    assert next(
+        item for item in style_support["items"] if item["style_pack_id"] == "modern-saas"
+    )["notes"] == ["requires-token-bridge-for-brand-leaning-accent-surfaces"]
 
 
 def test_frontend_provider_profile_root_is_stable(tmp_path) -> None:

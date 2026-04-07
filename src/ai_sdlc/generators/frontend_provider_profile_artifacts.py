@@ -30,12 +30,16 @@ def materialize_frontend_provider_profile_artifacts(
                 "work_item_id": profile.work_item_id,
                 "provider_id": profile.provider_id,
                 "kernel_artifact_ref": profile.kernel_artifact_ref,
+                "access_mode": profile.access_mode,
+                "install_strategy_ids": profile.install_strategy_ids,
+                "default_style_pack_id": profile.default_style_pack_id,
                 "mapped_components": [
                     mapping.component_id for mapping in profile.mappings
                 ],
                 "whitelist_components": [
                     entry.component_id for entry in profile.whitelist
                 ],
+                "cross_stack_fallback_targets": profile.cross_stack_fallback_targets,
             },
         ),
         _write_yaml(
@@ -63,6 +67,15 @@ def materialize_frontend_provider_profile_artifacts(
         _write_yaml(
             base_dir / "legacy-adapter.yaml",
             profile.legacy_adapter.model_dump(mode="json", exclude_none=True),
+        ),
+        _write_yaml(
+            base_dir / "style-support.yaml",
+            {
+                "items": [
+                    entry.model_dump(mode="json", exclude_none=True)
+                    for entry in profile.style_support_matrix
+                ]
+            },
         ),
     ]
 

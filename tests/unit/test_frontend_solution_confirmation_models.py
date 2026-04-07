@@ -1,0 +1,69 @@
+"""Unit tests for frontend solution confirmation models."""
+
+from __future__ import annotations
+
+from ai_sdlc.models.frontend_solution_confirmation import (
+    build_builtin_install_strategies,
+    build_builtin_style_pack_manifests,
+    build_mvp_solution_snapshot,
+)
+
+
+def test_build_builtin_style_pack_manifests_covers_five_canonical_styles() -> None:
+    manifests = build_builtin_style_pack_manifests()
+
+    assert [manifest.style_pack_id for manifest in manifests] == [
+        "enterprise-default",
+        "data-console",
+        "high-clarity",
+        "modern-saas",
+        "macos-glass",
+    ]
+    modern_saas = next(
+        manifest for manifest in manifests if manifest.style_pack_id == "modern-saas"
+    )
+    assert modern_saas.design_tokens["surface_mode"] == "soft-gradient"
+    assert modern_saas.recommended_for == ["marketing-sites", "self-serve-saas"]
+
+
+def test_build_builtin_install_strategies_preserves_private_and_public_distribution_modes() -> None:
+    strategies = build_builtin_install_strategies()
+
+    assert [strategy.strategy_id for strategy in strategies] == [
+        "enterprise-vue2-private-registry",
+        "public-primevue-default",
+    ]
+    assert strategies[0].access_mode == "private"
+    assert strategies[0].private_package_required is True
+    assert strategies[1].access_mode == "public"
+    assert strategies[1].packages == ["primevue", "@primeuix/themes"]
+
+
+def test_build_mvp_solution_snapshot_creates_versioned_requested_effective_chain() -> None:
+    original = build_mvp_solution_snapshot()
+    fallback = build_mvp_solution_snapshot(
+        previous_snapshot=original,
+        snapshot_id="solution-snapshot-002",
+        decision_status="fallback_confirmed",
+        requested_frontend_stack="vue2",
+        requested_provider_id="enterprise-vue2",
+        requested_style_pack_id="macos-glass",
+        effective_frontend_stack="vue3",
+        effective_provider_id="public-primevue",
+        effective_style_pack_id="macos-glass",
+        provider_mode="cross_stack_fallback",
+        fallback_reason_code="enterprise-provider-unavailable",
+        style_fidelity_status="full",
+        preflight_reason_codes=["private-registry-unavailable"],
+    )
+
+    assert original.version == 1
+    assert original.changed_from_snapshot_id is None
+    assert original.decision_status == "recommended"
+    assert original.availability_summary.overall_status == "ready"
+    assert fallback.version == 2
+    assert fallback.changed_from_snapshot_id == original.snapshot_id
+    assert fallback.requested_provider_id == "enterprise-vue2"
+    assert fallback.effective_provider_id == "public-primevue"
+    assert fallback.provider_mode == "cross_stack_fallback"
+    assert fallback.fallback_reason_code == "enterprise-provider-unavailable"
