@@ -15,6 +15,14 @@ def _find_duplicates(values: list[str]) -> list[str]:
     return duplicates
 
 
+def _find_unknown_references(values: list[str], known_values: set[str]) -> list[str]:
+    unknown: list[str] = []
+    for value in values:
+        if value not in known_values and value not in unknown:
+            unknown.append(value)
+    return unknown
+
+
 class FrontendUiKernelModel(BaseModel):
     """Base model for frontend UI Kernel artifacts."""
 
@@ -38,15 +46,30 @@ class PageRecipeStandard(FrontendUiKernelModel):
     required_areas: list[str] = Field(default_factory=list)
     optional_areas: list[str] = Field(default_factory=list)
     required_protocols: list[str] = Field(default_factory=list)
+    consumed_protocols: list[str] = Field(default_factory=list)
+    minimum_state_expectations: list[str] = Field(default_factory=list)
     forbidden_patterns: list[str] = Field(default_factory=list)
     interaction_rules: list[str] = Field(default_factory=list)
 
     @model_validator(mode="after")
-    def _reject_overlapping_areas(self) -> PageRecipeStandard:
+    def _validate_recipe_structure(self) -> PageRecipeStandard:
         overlap = [area for area in self.required_areas if area in self.optional_areas]
         if overlap:
             joined = ", ".join(overlap)
             raise ValueError(f"required_areas and optional_areas overlap: {joined}")
+
+        if self.consumed_protocols:
+            missing_required_protocols = [
+                protocol
+                for protocol in self.required_protocols
+                if protocol not in self.consumed_protocols
+            ]
+            if missing_required_protocols:
+                joined = ", ".join(missing_required_protocols)
+                raise ValueError(
+                    "required_protocols must be included in consumed_protocols: "
+                    f"{joined}"
+                )
         return self
 
 
@@ -120,6 +143,53 @@ class FrontendUiKernelSet(FrontendUiKernelModel):
         if duplicate_recipe_ids:
             joined = ", ".join(duplicate_recipe_ids)
             raise ValueError(f"duplicate recipe_id values: {joined}")
+
+        component_ids = {
+            component.component_id for component in self.semantic_components
+        }
+        unknown_required_protocols = _find_unknown_references(
+            [
+                protocol
+                for recipe in self.page_recipes
+                for protocol in recipe.required_protocols
+            ],
+            component_ids,
+        )
+        if unknown_required_protocols:
+            joined = ", ".join(unknown_required_protocols)
+            raise ValueError(
+                f"page_recipes reference unknown required_protocols: {joined}"
+            )
+
+        unknown_consumed_protocols = _find_unknown_references(
+            [
+                protocol
+                for recipe in self.page_recipes
+                for protocol in recipe.consumed_protocols
+            ],
+            component_ids,
+        )
+        if unknown_consumed_protocols:
+            joined = ", ".join(unknown_consumed_protocols)
+            raise ValueError(
+                f"page_recipes reference unknown consumed_protocols: {joined}"
+            )
+
+        state_ids = set(self.state_baseline.required_states)
+        unknown_minimum_state_expectations = _find_unknown_references(
+            [
+                state_id
+                for recipe in self.page_recipes
+                for state_id in recipe.minimum_state_expectations
+            ],
+            state_ids,
+        )
+        if unknown_minimum_state_expectations:
+            joined = ", ".join(unknown_minimum_state_expectations)
+            raise ValueError(
+                "page_recipes reference unknown minimum_state_expectations: "
+                f"{joined}"
+            )
         return self
 
 
@@ -216,7 +286,6 @@ def build_mvp_frontend_ui_kernel() -> FrontendUiKernelSet:
                     "Pagination Area",
                 ],
                 required_protocols=["UiPageHeader", "UiTable"],
-                optional_areas=["Bulk Action Area", "Row Detail Area"],
                 forbidden_patterns=[
                     "mix primary actions into filter area",
                     "replace list content with arbitrary raw structure",
@@ -235,7 +304,11 @@ def build_mvp_frontend_ui_kernel() -> FrontendUiKernelSet:
                     "State Area",
                 ],
                 required_protocols=["UiForm", "UiFormItem"],
-                optional_areas=["Help Area", "Grouped Section Area", "Submission Feedback Area"],
+                optional_areas=[
+                    "Help Area",
+                    "Grouped Section Area",
+                    "Submission Feedback Area",
+                ],
                 forbidden_patterns=[
                     "replace structured validation with prose-only guidance",
                     "compose pseudo forms without UiForm or UiFormItem",
@@ -402,6 +475,167 @@ def build_p1_frontend_ui_kernel_semantic_expansion() -> FrontendUiKernelSet:
         ),
     )
 
+def build_p1_frontend_ui_kernel_page_recipe_expansion() -> FrontendUiKernelSet:
+    """Build the P1 page recipe expansion baseline defined by work item 068."""
+
+    kernel = build_p1_frontend_ui_kernel_semantic_expansion()
+
+    return FrontendUiKernelSet(
+        work_item_id="068",
+        format_version=kernel.format_version,
+        semantic_components=[
+            component.model_copy(deep=True) for component in kernel.semantic_components
+        ],
+        page_recipes=[
+            *[recipe.model_copy(deep=True) for recipe in kernel.page_recipes],
+            PageRecipeStandard(
+                recipe_id="DashboardPage",
+                required_areas=[
+                    "PageHeader",
+                    "Summary Area",
+                    "Main Insight Area",
+                    "State Area",
+                ],
+                optional_areas=[
+                    "Filter Scope Area",
+                    "Toolbar / Quick Action Area",
+                    "Secondary Section Area",
+                ],
+                required_protocols=[
+                    "UiPageHeader",
+                    "UiSection",
+                    "UiCard",
+                    "UiResult",
+                ],
+                consumed_protocols=[
+                    "UiPageHeader",
+                    "UiSection",
+                    "UiCard",
+                    "UiResult",
+                    "UiToolbar",
+                ],
+                minimum_state_expectations=["refreshing", "partial-error"],
+                forbidden_patterns=[
+                    "replace standard area structure with a freeform card wall",
+                    "disguise a full form page or single list page as a dashboard",
+                ],
+                interaction_rules=[
+                    "overview sections and cards remain structurally partitioned",
+                    "dashboard refresh and partial failures stay explicit without replacing global loading or error",
+                ],
+            ),
+            PageRecipeStandard(
+                recipe_id="DialogFormPage",
+                required_areas=[
+                    "Overlay Shell Area",
+                    "Title / Context Area",
+                    "Form Area",
+                    "Action Area",
+                    "State / Validation Area",
+                ],
+                optional_areas=["Help / Description Area", "Secondary Section Area"],
+                required_protocols=["UiForm", "UiFormItem", "UiResult"],
+                consumed_protocols=[
+                    "UiDialog",
+                    "UiDrawer",
+                    "UiForm",
+                    "UiFormItem",
+                    "UiResult",
+                ],
+                minimum_state_expectations=[
+                    "submitting",
+                    "partial-error",
+                    "success-feedback",
+                ],
+                forbidden_patterns=[
+                    "degrade into a provider modal API alias",
+                    "use pagination or a freeform list area as the primary skeleton",
+                    "mix multi-step flow semantics into a single-step dialog form",
+                ],
+                interaction_rules=[
+                    "overlay shell semantics must be satisfied by UiDialog or UiDrawer without exposing provider APIs",
+                    "submission, validation, and bounded success feedback remain explicit",
+                ],
+            ),
+            PageRecipeStandard(
+                recipe_id="SearchListPage",
+                required_areas=[
+                    "PageHeader",
+                    "Search Area",
+                    "Result Summary Area",
+                    "Content Area",
+                    "State Area",
+                    "Pagination Area",
+                ],
+                optional_areas=["Filter Area", "Toolbar / Primary Action Area"],
+                required_protocols=[
+                    "UiPageHeader",
+                    "UiSearchBar",
+                    "UiTable",
+                    "UiResult",
+                    "UiPagination",
+                ],
+                consumed_protocols=[
+                    "UiPageHeader",
+                    "UiSearchBar",
+                    "UiFilterBar",
+                    "UiTable",
+                    "UiResult",
+                    "UiToolbar",
+                    "UiPagination",
+                ],
+                minimum_state_expectations=[
+                    "refreshing",
+                    "no-results",
+                    "partial-error",
+                ],
+                forbidden_patterns=[
+                    "treat a list page without query context as a SearchListPage",
+                    "skip result summary and assemble results as a freeform content zone",
+                    "bypass pagination and state areas with arbitrary layout",
+                ],
+                interaction_rules=[
+                    "query context, result summary, and content remain explicitly separated",
+                    "filter and toolbar semantics stay subordinate to search result structure",
+                ],
+            ),
+            PageRecipeStandard(
+                recipe_id="WizardPage",
+                required_areas=[
+                    "PageHeader / Step Context Area",
+                    "Step Progress Area",
+                    "Step Content Area",
+                    "Action Area",
+                    "State / Feedback Area",
+                ],
+                optional_areas=["Review / Summary Area", "Help / Aside Area"],
+                required_protocols=["UiForm", "UiFormItem", "UiResult"],
+                consumed_protocols=[
+                    "UiPageHeader",
+                    "UiForm",
+                    "UiFormItem",
+                    "UiResult",
+                ],
+                minimum_state_expectations=[
+                    "submitting",
+                    "partial-error",
+                    "success-feedback",
+                ],
+                forbidden_patterns=[
+                    "use freeform tabs to impersonate step semantics",
+                    "expose multiple parallel primary actions within one step",
+                    "split step content into unordered freeform page fragments",
+                ],
+                interaction_rules=[
+                    "step progression remains ordered even without introducing a dedicated stepper protocol",
+                    "submission, partial failure, and bounded success feedback remain explicit across step transitions",
+                ],
+            ),
+        ],
+        state_baseline=kernel.state_baseline.model_copy(deep=True),
+        interaction_baseline=kernel.interaction_baseline.model_copy(deep=True),
+    )
+
 
 __all__ = [
     "FrontendUiKernelSet",
@@ -411,5 +645,6 @@ __all__ = [
     "PageRecipeStandard",
     "UiProtocolComponent",
     "build_mvp_frontend_ui_kernel",
+    "build_p1_frontend_ui_kernel_page_recipe_expansion",
     "build_p1_frontend_ui_kernel_semantic_expansion",
 ]
