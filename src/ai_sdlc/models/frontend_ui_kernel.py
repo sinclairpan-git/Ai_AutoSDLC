@@ -456,7 +456,10 @@ def build_p1_frontend_ui_kernel_semantic_expansion() -> FrontendUiKernelSet:
                 KernelStateSemantic(
                     state_id="success-feedback",
                     semantic_meaning="limited success acknowledgement after an action completes",
-                    boundary="does not replace long-lived page state or structured result rendering",
+                    boundary=(
+                        "does not replace long-lived page state or structured result "
+                        "rendering"
+                    ),
                 ),
             ],
         ),
