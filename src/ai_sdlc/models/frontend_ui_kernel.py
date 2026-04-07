@@ -50,11 +50,42 @@ class PageRecipeStandard(FrontendUiKernelModel):
         return self
 
 
+class KernelStateSemantic(FrontendUiKernelModel):
+    """Structured semantic meaning for one page-level state."""
+
+    state_id: str
+    semantic_meaning: str
+    boundary: str
+
+
 class KernelStateBaseline(FrontendUiKernelModel):
     """Page-level state baseline required by the Kernel."""
 
     required_states: list[str] = Field(default_factory=list)
     state_priority_scope: str = "page_or_recipe"
+    state_semantics: list[KernelStateSemantic] | None = None
+
+    @model_validator(mode="after")
+    def _enforce_state_semantics_reference_declared_states(self) -> KernelStateBaseline:
+        if self.state_semantics is None:
+            return self
+
+        duplicate_state_ids = _find_duplicates(
+            [semantic.state_id for semantic in self.state_semantics]
+        )
+        if duplicate_state_ids:
+            joined = ", ".join(duplicate_state_ids)
+            raise ValueError(f"duplicate state_semantics state_id values: {joined}")
+
+        unknown_state_ids = [
+            semantic.state_id
+            for semantic in self.state_semantics
+            if semantic.state_id not in self.required_states
+        ]
+        if unknown_state_ids:
+            joined = ", ".join(unknown_state_ids)
+            raise ValueError(f"state_semantics reference unknown required_states: {joined}")
+        return self
 
 
 class KernelInteractionBaseline(FrontendUiKernelModel):
@@ -256,11 +287,129 @@ def build_mvp_frontend_ui_kernel() -> FrontendUiKernelSet:
     )
 
 
+def build_p1_frontend_ui_kernel_semantic_expansion() -> FrontendUiKernelSet:
+    """Build the P1 Kernel semantic expansion baseline defined by work item 067."""
+
+    kernel = build_mvp_frontend_ui_kernel()
+
+    return FrontendUiKernelSet(
+        work_item_id="067",
+        format_version=kernel.format_version,
+        semantic_components=[
+            *[component.model_copy(deep=True) for component in kernel.semantic_components],
+            UiProtocolComponent(
+                component_id="UiTabs",
+                semantic_role="segmented_navigation_container",
+                supported_states=["disabled"],
+                supported_events=["change"],
+                disallowed_capabilities=["provider specific tab api passthrough"],
+            ),
+            UiProtocolComponent(
+                component_id="UiSearchBar",
+                semantic_role="search_input_and_trigger",
+                supported_states=["disabled"],
+                supported_events=["change", "submit", "clear"],
+                disallowed_capabilities=["implicit page recipe replacement"],
+            ),
+            UiProtocolComponent(
+                component_id="UiFilterBar",
+                semantic_role="filter_condition_collection",
+                supported_states=["disabled"],
+                supported_events=["change", "apply", "clear"],
+                disallowed_capabilities=["provider specific filter panel dominance"],
+            ),
+            UiProtocolComponent(
+                component_id="UiResult",
+                semantic_role="structured_result_feedback",
+                supported_states=["success-feedback", "partial-error", "error"],
+                disallowed_capabilities=["generic toast message substitution"],
+            ),
+            UiProtocolComponent(
+                component_id="UiSection",
+                semantic_role="page_section_partition",
+                disallowed_capabilities=["page recipe body replacement"],
+            ),
+            UiProtocolComponent(
+                component_id="UiToolbar",
+                semantic_role="in_page_action_cluster",
+                supported_states=["disabled"],
+                disallowed_capabilities=["layout api passthrough"],
+            ),
+            UiProtocolComponent(
+                component_id="UiPagination",
+                semantic_role="result_set_navigation",
+                supported_states=["disabled"],
+                supported_events=["paginate"],
+                disallowed_capabilities=["provider data table pagination api binding"],
+            ),
+            UiProtocolComponent(
+                component_id="UiCard",
+                semantic_role="structured_info_block",
+                disallowed_capabilities=["pure visual box contract"],
+            ),
+        ],
+        page_recipes=[recipe.model_copy(deep=True) for recipe in kernel.page_recipes],
+        state_baseline=KernelStateBaseline(
+            required_states=[
+                *kernel.state_baseline.required_states,
+                "refreshing",
+                "submitting",
+                "no-results",
+                "partial-error",
+                "success-feedback",
+            ],
+            state_priority_scope=kernel.state_baseline.state_priority_scope,
+            state_semantics=[
+                KernelStateSemantic(
+                    state_id="refreshing",
+                    semantic_meaning="refreshing existing page content",
+                    boundary="supplements loading when prior content already exists",
+                ),
+                KernelStateSemantic(
+                    state_id="submitting",
+                    semantic_meaning="form or local page action submission is in progress",
+                    boundary="does not replace disabled; it describes submission progress",
+                ),
+                KernelStateSemantic(
+                    state_id="no-results",
+                    semantic_meaning="search or filter results are empty",
+                    boundary="distinct from empty without active query or filter context",
+                ),
+                KernelStateSemantic(
+                    state_id="partial-error",
+                    semantic_meaning="only part of the page or region failed",
+                    boundary="does not collapse into global error while other content remains available",
+                ),
+                KernelStateSemantic(
+                    state_id="success-feedback",
+                    semantic_meaning="limited success acknowledgement after an action completes",
+                    boundary="does not replace long-lived page state or structured result rendering",
+                ),
+            ],
+        ),
+        interaction_baseline=KernelInteractionBaseline(
+            rules=[
+                *kernel.interaction_baseline.rules,
+                "search and filter flows must distinguish empty from no-results",
+                "partial failures remain explicit without collapsing the whole page",
+                "success feedback stays bounded and does not replace structured result rendering",
+            ],
+            minimum_a11y_rules=[
+                *kernel.interaction_baseline.minimum_a11y_rules,
+                "refreshing and submitting progress must stay perceivable when prior content remains visible",
+                "partial error and success feedback must not rely on a single visual cue",
+            ],
+        ),
+    )
+
+
 __all__ = [
     "FrontendUiKernelSet",
     "KernelInteractionBaseline",
     "KernelStateBaseline",
+    "KernelStateSemantic",
     "PageRecipeStandard",
     "UiProtocolComponent",
     "build_mvp_frontend_ui_kernel",
+    "build_p1_frontend_ui_kernel_semantic_expansion",
 ]

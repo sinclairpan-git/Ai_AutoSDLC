@@ -10,7 +10,10 @@ from ai_sdlc.generators.frontend_ui_kernel_artifacts import (
     frontend_ui_kernel_root,
     materialize_frontend_ui_kernel_artifacts,
 )
-from ai_sdlc.models.frontend_ui_kernel import build_mvp_frontend_ui_kernel
+from ai_sdlc.models.frontend_ui_kernel import (
+    build_mvp_frontend_ui_kernel,
+    build_p1_frontend_ui_kernel_semantic_expansion,
+)
 
 
 def _read_yaml(path: Path) -> dict[str, object]:
@@ -94,6 +97,74 @@ def test_kernel_artifact_payloads_preserve_component_recipe_and_baseline_semanti
     assert "dangerous actions require explicit confirmation" in interaction["rules"]
     assert "form error feedback must be perceivable" in interaction[
         "minimum_a11y_rules"
+    ]
+
+
+def test_p1_kernel_artifact_payloads_preserve_semantic_expansion_truth(tmp_path) -> None:
+    kernel = build_p1_frontend_ui_kernel_semantic_expansion()
+
+    materialize_frontend_ui_kernel_artifacts(tmp_path, kernel)
+
+    kernel_root = frontend_ui_kernel_root(tmp_path)
+    manifest = _read_yaml(kernel_root / "kernel.manifest.yaml")
+    semantic_components = _read_yaml(kernel_root / "semantic-components.yaml")
+    state = _read_yaml(kernel_root / "state-baseline.yaml")
+
+    assert manifest["work_item_id"] == "067"
+    assert manifest["semantic_components"][-8:] == [
+        "UiTabs",
+        "UiSearchBar",
+        "UiFilterBar",
+        "UiResult",
+        "UiSection",
+        "UiToolbar",
+        "UiPagination",
+        "UiCard",
+    ]
+    assert state["required_states"][-5:] == [
+        "refreshing",
+        "submitting",
+        "no-results",
+        "partial-error",
+        "success-feedback",
+    ]
+    assert state["state_semantics"] == [
+        {
+            "state_id": "refreshing",
+            "semantic_meaning": "refreshing existing page content",
+            "boundary": "supplements loading when prior content already exists",
+        },
+        {
+            "state_id": "submitting",
+            "semantic_meaning": "form or local page action submission is in progress",
+            "boundary": "does not replace disabled; it describes submission progress",
+        },
+        {
+            "state_id": "no-results",
+            "semantic_meaning": "search or filter results are empty",
+            "boundary": "distinct from empty without active query or filter context",
+        },
+        {
+            "state_id": "partial-error",
+            "semantic_meaning": "only part of the page or region failed",
+            "boundary": "does not collapse into global error while other content remains available",
+        },
+        {
+            "state_id": "success-feedback",
+            "semantic_meaning": "limited success acknowledgement after an action completes",
+            "boundary": "does not replace long-lived page state or structured result rendering",
+        },
+    ]
+    component_by_id = {
+        item["component_id"]: item for item in semantic_components["items"]
+    }
+    assert component_by_id["UiTabs"]["semantic_role"] == "segmented_navigation_container"
+    assert "provider specific tab api passthrough" in component_by_id["UiTabs"][
+        "disallowed_capabilities"
+    ]
+    assert component_by_id["UiResult"]["semantic_role"] == "structured_result_feedback"
+    assert "generic toast message substitution" in component_by_id["UiResult"][
+        "disallowed_capabilities"
     ]
 
 
