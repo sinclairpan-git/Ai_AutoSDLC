@@ -516,6 +516,52 @@ def test_build_frontend_provider_handoff_packages_pending_inputs_from_writeback_
     )
 
 
+def test_build_frontend_provider_handoff_preserves_stable_empty_visual_a11y_pending_input(
+    tmp_path: Path,
+) -> None:
+    for p in ("specs/001-auth", "specs/002-course", "specs/003-enroll"):
+        (tmp_path / p).mkdir(parents=True)
+    _write_frontend_remediation_writeback_artifact(
+        tmp_path,
+        passed=False,
+        remaining_blockers=["spec 001-auth remediation still required"],
+        steps=[
+            {
+                "spec_id": "001-auth",
+                "path": "specs/001-auth",
+                "state": "required",
+                "fix_inputs": ["frontend_visual_a11y_evidence_stable_empty"],
+                "suggested_actions": [
+                    "review stable empty frontend visual / a11y evidence",
+                    "re-run ai-sdlc verify constraints",
+                ],
+                "action_commands": [],
+                "source_linkage": {
+                    "runtime_attachment_status": "stable_empty_artifact",
+                    "frontend_gate_verdict": "RETRY",
+                },
+            }
+        ],
+    )
+
+    svc = ProgramService(tmp_path)
+    handoff = svc.build_frontend_provider_handoff(_manifest())
+
+    assert handoff.required is True
+    assert [step.spec_id for step in handoff.steps] == ["001-auth"]
+    assert handoff.steps[0].pending_inputs == [
+        "frontend_visual_a11y_evidence_stable_empty"
+    ]
+    assert handoff.steps[0].suggested_next_actions == [
+        "review stable empty frontend visual / a11y evidence",
+        "re-run ai-sdlc verify constraints",
+    ]
+    assert (
+        handoff.steps[0].source_linkage["runtime_attachment_status"]
+        == "stable_empty_artifact"
+    )
+
+
 def test_build_frontend_provider_handoff_is_not_required_when_writeback_is_clean(
     tmp_path: Path,
 ) -> None:
@@ -558,6 +604,52 @@ def test_build_frontend_provider_runtime_request_requires_explicit_confirmation(
     assert request.remaining_blockers == ["spec 001-auth remediation still required"]
     assert [step.spec_id for step in request.steps] == ["001-auth", "002-course"]
     assert request.steps[0].pending_inputs == ["frontend_contract_observations"]
+    assert (
+        request.steps[0].source_linkage["provider_runtime_state"] == "not_started"
+    )
+
+
+def test_build_frontend_provider_runtime_request_preserves_stable_empty_visual_a11y_pending_input(
+    tmp_path: Path,
+) -> None:
+    for p in ("specs/001-auth", "specs/002-course", "specs/003-enroll"):
+        (tmp_path / p).mkdir(parents=True)
+    _write_frontend_remediation_writeback_artifact(
+        tmp_path,
+        passed=False,
+        remaining_blockers=["spec 001-auth remediation still required"],
+        steps=[
+            {
+                "spec_id": "001-auth",
+                "path": "specs/001-auth",
+                "state": "required",
+                "fix_inputs": ["frontend_visual_a11y_evidence_stable_empty"],
+                "suggested_actions": [
+                    "review stable empty frontend visual / a11y evidence",
+                    "re-run ai-sdlc verify constraints",
+                ],
+                "action_commands": [],
+                "source_linkage": {
+                    "runtime_attachment_status": "stable_empty_artifact",
+                    "frontend_gate_verdict": "RETRY",
+                },
+            }
+        ],
+    )
+
+    svc = ProgramService(tmp_path)
+    request = svc.build_frontend_provider_runtime_request(_manifest())
+
+    assert request.required is True
+    assert request.confirmation_required is True
+    assert [step.spec_id for step in request.steps] == ["001-auth"]
+    assert request.steps[0].pending_inputs == [
+        "frontend_visual_a11y_evidence_stable_empty"
+    ]
+    assert request.steps[0].suggested_next_actions == [
+        "review stable empty frontend visual / a11y evidence",
+        "re-run ai-sdlc verify constraints",
+    ]
     assert (
         request.steps[0].source_linkage["provider_runtime_state"] == "not_started"
     )
@@ -3635,7 +3727,39 @@ def _write_frontend_remediation_writeback_artifact(
     *,
     passed: bool,
     remaining_blockers: list[str],
+    steps: list[dict[str, object]] | None = None,
 ) -> None:
+    default_steps: list[dict[str, object]] = [
+        {
+            "spec_id": "001-auth",
+            "path": "specs/001-auth",
+            "state": "required",
+            "fix_inputs": ["frontend_contract_observations"],
+            "suggested_actions": [
+                "materialize frontend contract observations",
+                "re-run ai-sdlc verify constraints",
+            ],
+            "action_commands": [
+                "uv run ai-sdlc scan <frontend-source-root> --frontend-contract-spec-dir specs/001-auth"
+            ],
+            "source_linkage": {
+                "runtime_attachment_status": "missing_artifact",
+                "frontend_gate_verdict": "UNRESOLVED",
+            },
+        },
+        {
+            "spec_id": "002-course",
+            "path": "specs/002-course",
+            "state": "required",
+            "fix_inputs": ["frontend_gate_policy_artifacts"],
+            "suggested_actions": ["materialize frontend gate policy artifacts"],
+            "action_commands": ["uv run ai-sdlc rules materialize-frontend-mvp"],
+            "source_linkage": {
+                "runtime_attachment_status": "attached",
+                "frontend_gate_verdict": "RETRY",
+            },
+        },
+    ]
     artifact_path = (
         root / ".ai-sdlc" / "memory" / "frontend-remediation" / "latest.yaml"
     )
@@ -3650,41 +3774,7 @@ def _write_frontend_remediation_writeback_artifact(
                     "runbook_source": "program frontend remediation runbook",
                     "execution_source": "program frontend remediation execution",
                 },
-                "steps": [
-                    {
-                        "spec_id": "001-auth",
-                        "path": "specs/001-auth",
-                        "state": "required",
-                        "fix_inputs": ["frontend_contract_observations"],
-                        "suggested_actions": [
-                            "materialize frontend contract observations",
-                            "re-run ai-sdlc verify constraints",
-                        ],
-                        "action_commands": [
-                            "uv run ai-sdlc scan <frontend-source-root> --frontend-contract-spec-dir specs/001-auth"
-                        ],
-                        "source_linkage": {
-                            "runtime_attachment_status": "missing_artifact",
-                            "frontend_gate_verdict": "UNRESOLVED",
-                        },
-                    },
-                    {
-                        "spec_id": "002-course",
-                        "path": "specs/002-course",
-                        "state": "required",
-                        "fix_inputs": ["frontend_gate_policy_artifacts"],
-                        "suggested_actions": [
-                            "materialize frontend gate policy artifacts"
-                        ],
-                        "action_commands": [
-                            "uv run ai-sdlc rules materialize-frontend-mvp"
-                        ],
-                        "source_linkage": {
-                            "runtime_attachment_status": "attached",
-                            "frontend_gate_verdict": "RETRY",
-                        },
-                    },
-                ],
+                "steps": list(steps or default_steps),
                 "action_commands": [
                     "uv run ai-sdlc scan <frontend-source-root> --frontend-contract-spec-dir specs/001-auth"
                 ],
