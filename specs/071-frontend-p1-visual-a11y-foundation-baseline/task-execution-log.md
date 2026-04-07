@@ -23,7 +23,7 @@
 ## 2. 当前执行边界
 
 - `071` 是 `066` 下游的 P1 visual / a11y foundation child work item，不是 diagnostics、recheck/remediation 或 provider/runtime 工单。
-- `071` 的 docs-only formal freeze 已完成；在门禁通过且用户明确要求连续推进后，本分支已完成 visual/a11y foundation materialization、explicit evidence gating 与 verify CLI JSON exposure 三个实现切片。
+- `071` 的 docs-only formal freeze 已完成；在门禁通过且用户明确要求连续推进后，本分支已完成 visual/a11y foundation materialization、explicit evidence gating、verify CLI JSON exposure、visual/a11y policy remediation hints、governance materialization default upgrade 与 policy-gap remediation command routing 六个实现切片。
 - 当前实现仍严格停留在 gate policy、frontend gate verification、verify/program surface 与对应 tests；不扩张完整 visual regression 平台、完整 a11y 平台、interaction quality 平台、provider/runtime 或 root truth sync。
 - 当前实现不修改 root `program-manifest.yaml`、`frontend-program-branch-rollout-plan.md`，也不生成 `development-summary.md`。
 - 当前状态代表 `071` 的 accepted child baseline 与其最小实现切片均已落地；这仍不代表 root program sync、close-ready、完整质量平台或 provider/runtime 已开始。
@@ -114,3 +114,53 @@
 - **已完成 git 提交**：否
 - 当前 batch 结论：`071` 已不再是“仅 docs-only freeze”的状态，而是“accepted child baseline + implementation slices completed”。
 - **下一步动作**：继续在当前 worktree 内顺着 `071`/相邻 gate surface 查找下一处最小缺口，完成后直接提交进入下一批。
+
+### Batch 2026-04-07-003 | program remediation and rules materialization alignment
+
+#### 1. 批次范围
+
+- **任务编号**：post-freeze remediation / rules alignment
+- **目标**：把 `071` visual / a11y foundation 的 policy-gap honesty 与命令执行面闭环到 `program_service`、`program integrate --execute` 和 `rules materialize-frontend-mvp`，确保 remediation hints、recommended commands 与实际 materialization 产物一致。
+- **执行分支**：`codex/071-frontend-p1-visual-a11y-foundation-implementation`
+
+#### 2. Touched Files
+
+- `src/ai_sdlc/core/program_service.py`
+- `src/ai_sdlc/cli/sub_apps.py`
+- `tests/unit/test_program_service.py`
+- `tests/integration/test_cli_program.py`
+- `tests/integration/test_cli_rules.py`
+- `specs/071-frontend-p1-visual-a11y-foundation-baseline/task-execution-log.md`
+
+#### 3. 执行命令
+
+- `git log --oneline -n 8`
+- `uv run pytest tests/unit/test_program_service.py -k 'visual_a11y_policy_artifact_remediation_input_when_missing' -q`
+- `uv run pytest tests/integration/test_cli_program.py -k 'visual_a11y_policy_artifact_remediation_hint' -q`
+- `uv run pytest tests/integration/test_cli_rules.py tests/unit/test_program_service.py -k 'materialize_frontend_mvp or frontend_readiness or execution_gates or visual_a11y_policy_artifact_remediation_input_when_missing or execute_frontend_remediation_runbook_materializes_bounded_commands_and_verifies' -q`
+- `uv run pytest tests/unit/test_frontend_gate_verification.py tests/unit/test_verify_constraints.py tests/integration/test_cli_verify_constraints.py -k frontend_gate -q`
+- `git diff --check -- specs/071-frontend-p1-visual-a11y-foundation-baseline/task-execution-log.md`
+
+#### 4. 验证结果
+
+- `git log --oneline -n 8` 显示本批连续实现提交链已包含：
+  - `844a7e2 feat: surface visual a11y policy remediation hints`
+  - `f27543d feat: materialize 071 frontend gate artifacts by default`
+  - `18fb378 feat: recommend governance materialization for 071 policy gaps`
+- `uv run pytest tests/unit/test_program_service.py -k 'visual_a11y_policy_artifact_remediation_input_when_missing' -q` 通过，结果为 `1 passed, 90 deselected in 0.20s`。
+- `uv run pytest tests/integration/test_cli_program.py -k 'visual_a11y_policy_artifact_remediation_hint' -q` 通过，结果为 `1 passed, 74 deselected in 0.24s`。
+- `uv run pytest tests/integration/test_cli_rules.py tests/unit/test_program_service.py -k 'materialize_frontend_mvp or frontend_readiness or execution_gates or visual_a11y_policy_artifact_remediation_input_when_missing or execute_frontend_remediation_runbook_materializes_bounded_commands_and_verifies' -q` 通过，结果为 `10 passed, 82 deselected in 0.34s`。
+- `uv run pytest tests/unit/test_frontend_gate_verification.py tests/unit/test_verify_constraints.py tests/integration/test_cli_verify_constraints.py -k frontend_gate -q` 通过，结果为 `25 passed, 64 deselected in 0.76s`。
+
+#### 5. 对账结论
+
+- `844a7e2` 已将 `frontend_visual_a11y_policy_artifacts` 缺口映射为 `program_service` 与 `program integrate --execute` 的显式 remediation handoff，避免该 gap 退化成泛化的 `resolve frontend blockers`。
+- `f27543d` 已在不改兼容命令名的前提下，将 `rules materialize-frontend-mvp` 与 `program_service` 的已知 remediation 执行路径升级为 materialize `071` P1 visual / a11y gate artifacts，从而真实产出 `visual-a11y-evidence-boundary.yaml`。
+- `18fb378` 已把 `frontend_visual_a11y_policy_artifacts` 与 governance materialization command 重新接通，使 remediation command list 与实际可修复命令保持一致，而不再只建议重复 verify。
+- 本批仍然严格停留在 `program_service` / CLI `rules` / CLI `program` 与对应测试面；没有进入 provider/runtime、root truth sync、完整 visual regression 平台、完整 a11y 平台或新的 root program rollout 变更。
+
+#### 6. 归档后动作
+
+- **已完成 git 提交**：否
+- 当前 batch 结论：`071` 的 visual / a11y policy gap 现在已在提示面、命令建议面与命令执行面形成闭环，且 `materialize-frontend-mvp` 的兼容入口已对齐到 `071` P1 gate artifacts。
+- **下一步动作**：继续在当前 worktree 内扫描 `071` 相关残余缺口；如无新的生产代码 gap，则保持执行日志与后续实现批次同步更新。
