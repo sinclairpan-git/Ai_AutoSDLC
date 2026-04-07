@@ -259,17 +259,20 @@ def test_build_p1_frontend_ui_kernel_semantic_expansion_preserves_component_and_
     assert "generic toast message substitution" in component_by_id[
         "UiResult"
     ].disallowed_capabilities
-    assert state_semantics["no-results"].semantic_meaning == "search or filter results are empty"
-    assert (
-        state_semantics["no-results"].boundary
-        == "distinct from empty without active query or filter context"
+    assert state_semantics["refreshing"] == KernelStateSemantic(
+        state_id="refreshing",
+        semantic_meaning="refreshing existing page content",
+        boundary="supplements loading when prior content already exists",
     )
-    assert state_semantics["partial-error"].semantic_meaning == (
-        "only part of the page or region failed"
+    assert state_semantics["no-results"] == KernelStateSemantic(
+        state_id="no-results",
+        semantic_meaning="search or filter results are empty",
+        boundary="distinct from empty without active query or filter context",
     )
-    assert (
-        state_semantics["partial-error"].boundary
-        == "does not collapse into global error while other content remains available"
+    assert state_semantics["partial-error"] == KernelStateSemantic(
+        state_id="partial-error",
+        semantic_meaning="only part of the page or region failed",
+        boundary="does not collapse into global error while other content remains available",
     )
 
 
@@ -324,8 +327,39 @@ def test_page_recipe_standard_rejects_required_protocols_missing_from_consumed_p
     ):
         PageRecipeStandard(
             recipe_id="BrokenPage",
-            required_protocols=["UiSearchBar"],
-            consumed_protocols=["UiResult"],
+            required_protocols=["UiForm"],
+            consumed_protocols=["UiDialog"],
+        )
+
+
+def test_kernel_state_baseline_rejects_duplicate_or_unknown_state_semantics() -> None:
+    with pytest.raises(ValueError, match="duplicate state_semantics state_id values"):
+        KernelStateBaseline(
+            required_states=["loading", "refreshing"],
+            state_semantics=[
+                KernelStateSemantic(
+                    state_id="refreshing",
+                    semantic_meaning="refreshing existing page content",
+                    boundary="supplements loading when prior content already exists",
+                ),
+                KernelStateSemantic(
+                    state_id="refreshing",
+                    semantic_meaning="refreshing existing page content",
+                    boundary="supplements loading when prior content already exists",
+                ),
+            ],
+        )
+
+    with pytest.raises(ValueError, match="state_semantics reference unknown required_states"):
+        KernelStateBaseline(
+            required_states=["loading"],
+            state_semantics=[
+                KernelStateSemantic(
+                    state_id="refreshing",
+                    semantic_meaning="refreshing existing page content",
+                    boundary="supplements loading when prior content already exists",
+                ),
+            ],
         )
 
 
@@ -390,10 +424,10 @@ def test_frontend_ui_kernel_set_rejects_unknown_recipe_protocol_or_state_referen
             ],
             page_recipes=[
                 PageRecipeStandard(
-                    recipe_id="SearchListPage",
+                    recipe_id="BrokenPage",
                     required_protocols=["UiSearchBar"],
                     consumed_protocols=["UiSearchBar", "UiToolbar"],
-                )
+                ),
             ],
             state_baseline=KernelStateBaseline(required_states=["loading"]),
             interaction_baseline=KernelInteractionBaseline(rules=["actions are explicit"]),
@@ -410,11 +444,11 @@ def test_frontend_ui_kernel_set_rejects_unknown_recipe_protocol_or_state_referen
             ],
             page_recipes=[
                 PageRecipeStandard(
-                    recipe_id="SearchListPage",
+                    recipe_id="BrokenPage",
                     required_protocols=["UiSearchBar"],
                     consumed_protocols=["UiSearchBar"],
                     minimum_state_expectations=["refreshing"],
-                )
+                ),
             ],
             state_baseline=KernelStateBaseline(required_states=["loading"]),
             interaction_baseline=KernelInteractionBaseline(rules=["actions are explicit"]),
