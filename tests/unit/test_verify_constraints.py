@@ -1398,6 +1398,39 @@ def test_018_frontend_gate_verification_surfaces_stable_empty_071_visual_a11y_ev
     assert context["frontend_gate_verification"]["gate_verdict"] == "RETRY"
 
 
+def test_018_frontend_gate_verification_surfaces_071_visual_a11y_issue_review(
+    tmp_path: Path,
+) -> None:
+    _write_018_checkpoint(tmp_path)
+    _write_minimal_frontend_contract_page_artifacts(tmp_path)
+    _write_071_gate_artifacts(tmp_path)
+    _write_018_frontend_contract_observations(tmp_path)
+    _write_018_frontend_visual_a11y_evidence(
+        tmp_path,
+        [
+            FrontendVisualA11yEvidenceEvaluation(
+                evaluation_id="eval-issue",
+                target_id="user-create",
+                surface_id="refreshing",
+                outcome="issue",
+                report_type="violation-report",
+                severity="medium",
+                location_anchor="form.header",
+            )
+        ],
+    )
+
+    report = build_constraint_report(tmp_path)
+    context = build_verification_gate_context(tmp_path)
+
+    assert "frontend_visual_a11y_issue_review" in report.coverage_gaps
+    assert any("visual / a11y issues detected" in blocker for blocker in report.blockers)
+    assert context["frontend_gate_verification"]["gate_verdict"] == "RETRY"
+    assert context["frontend_gate_verification"]["coverage_gaps"] == [
+        "frontend_visual_a11y_issue_review"
+    ]
+
+
 def test_018_frontend_gate_verification_surfaces_invalid_071_visual_a11y_evidence_input(
     tmp_path: Path,
 ) -> None:

@@ -253,7 +253,7 @@ def test_frontend_gate_verification_report_flags_stable_empty_visual_a11y_eviden
     assert any("stable empty evidence" in blocker for blocker in report.blockers)
 
 
-def test_frontend_gate_verification_report_flags_visual_a11y_issue_evidence(
+def test_frontend_gate_verification_report_flags_visual_a11y_issue_review_gap(
     tmp_path: Path,
 ) -> None:
     _write_minimal_frontend_contract_page_artifacts(tmp_path)
@@ -286,7 +286,7 @@ def test_frontend_gate_verification_report_flags_visual_a11y_issue_evidence(
     )
 
     assert report.gate_result.verdict.value == "RETRY"
-    assert report.coverage_gaps == ()
+    assert report.coverage_gaps == ("frontend_visual_a11y_issue_review",)
     assert any("visual / a11y issues detected" in blocker for blocker in report.blockers)
 
 

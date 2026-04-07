@@ -660,6 +660,45 @@
 
 #### 6. 归档后动作
 
-- **已完成 git 提交**：否
+- **已完成 git 提交**：是
 - 当前 batch 结论：final-proof 尾部 actual-issue truth propagation 已补齐，并通过 targeted + full unit/integration 回归。
 - **下一步动作**：继续扫描 071 相邻剩余 truth-surface 或 honesty/messaging 缺口；若没有新的生产缺口，则转向更高一层的治理/报告 surface 收尾。
+
+### Batch 2026-04-07-017 | verify surfaces visual-a11y issue-review propagation
+
+#### 1. 背景
+
+- `program_service` 与 `program` CLI 主链已经把 `frontend_visual_a11y_issue_review` 从 provider 一路透传到 final-proof tail，但 `frontend_gate_verification / verify_constraints / verify CLI` 仍只对 stable-empty evidence 有显式 coverage gap surface。
+- 这一批目标是把 “issue evidence detected” 明确 surfaced 为 `frontend_visual_a11y_issue_review`，让 verification / report / CLI 三层与上游 remediation input 保持一致。
+
+#### 2. 修改文件
+
+- `tests/unit/test_frontend_gate_verification.py`
+- `tests/unit/test_verify_constraints.py`
+- `tests/integration/test_cli_verify_constraints.py`
+- `src/ai_sdlc/core/frontend_gate_verification.py`
+- `specs/071-frontend-p1-visual-a11y-foundation-baseline/task-execution-log.md`
+
+#### 3. 执行命令
+
+- `uv run pytest tests/unit/test_frontend_gate_verification.py tests/unit/test_verify_constraints.py tests/integration/test_cli_verify_constraints.py -k 'issue_review or issues_detected' -q`
+- `uv run pytest tests/unit/test_frontend_gate_verification.py tests/unit/test_verify_constraints.py tests/integration/test_cli_verify_constraints.py -q`
+- `git diff --check -- tests/unit/test_frontend_gate_verification.py tests/unit/test_verify_constraints.py tests/integration/test_cli_verify_constraints.py src/ai_sdlc/core/frontend_gate_verification.py specs/071-frontend-p1-visual-a11y-foundation-baseline/task-execution-log.md`
+
+#### 4. 验证结果
+
+- 先跑 RED：`uv run pytest tests/unit/test_frontend_gate_verification.py tests/unit/test_verify_constraints.py tests/integration/test_cli_verify_constraints.py -k 'issue_review or issues_detected' -q` 失败，结果为 `4 failed, 88 deselected in 0.50s`；失败点集中在 `frontend_gate_verification` 未将 visual/a11y issue evidence 显式 surfaced 为 `frontend_visual_a11y_issue_review`。
+- 最小实现后重跑：`uv run pytest tests/unit/test_frontend_gate_verification.py tests/unit/test_verify_constraints.py tests/integration/test_cli_verify_constraints.py -k 'issue_review or issues_detected' -q` 通过，结果为 `4 passed, 88 deselected in 0.34s`。
+- `uv run pytest tests/unit/test_frontend_gate_verification.py tests/unit/test_verify_constraints.py tests/integration/test_cli_verify_constraints.py -q` 通过，结果为 `92 passed in 4.15s`。
+- `git diff --check -- tests/unit/test_frontend_gate_verification.py tests/unit/test_verify_constraints.py tests/integration/test_cli_verify_constraints.py src/ai_sdlc/core/frontend_gate_verification.py specs/071-frontend-p1-visual-a11y-foundation-baseline/task-execution-log.md` 通过，无 whitespace / conflict 问题。
+
+#### 5. 对账结论
+
+- `frontend_gate_verification` 现在会在 visual/a11y evidence 存在 issue 时显式输出 `frontend_visual_a11y_issue_review` coverage gap；`verify_constraints` 报告与 verify CLI terminal/json 输出都已同步 surfaced 这一 truth token。
+- 这让 verification/report 层与上游 program remediation input 对齐，不再依赖仅凭 blocker 文案去推断要执行 issue review。
+
+#### 6. 归档后动作
+
+- **已完成 git 提交**：否
+- 当前 batch 结论：verify surfaces 的 visual-a11y issue-review propagation 已补齐，并通过 RED -> GREEN -> full verification 回归。
+- **下一步动作**：继续扫描 071 剩余 messaging / honesty 收尾项；若没有新的生产缺口，则把 execution log 与 truth-surface 对账收束到最后一批。

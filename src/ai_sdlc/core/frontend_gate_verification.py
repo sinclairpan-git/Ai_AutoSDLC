@@ -352,6 +352,7 @@ def _evaluate_visual_a11y_evidence_artifact(
 
     if issue_count:
         summary["status"] = "issue"
+        summary["coverage_gaps"] = ["frontend_visual_a11y_issue_review"]
         if prerequisites_clear:
             return False, "visual / a11y issues detected", summary
         return True, "", summary
