@@ -22,6 +22,8 @@ chmod +x packaging/offline/build_offline_bundle.sh
 
 > 平台合同：新 bundle 会写出 `bundle-manifest.json`，安装脚本会校验目标机 OS/CPU 是否匹配；请尽量在和目标机相同的 OS/CPU 环境打包。
 
+如果只需要 macOS / Linux release 资产，可以在构建时设置 `OFFLINE_BUNDLE_ZIP=0`，这样脚本只会产出 `.tar.gz`。
+
 ## 二、离线安装（目标机器）
 
 ### Linux/macOS

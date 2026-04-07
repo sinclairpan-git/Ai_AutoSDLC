@@ -8,6 +8,7 @@
 #   ./packaging/offline/build_offline_bundle.sh
 # Env:
 #   PYTHON=/path/to/python3.11   interpreter used for pip download (default: try python3.11, then python3)
+#   OFFLINE_BUNDLE_ZIP=0         skip creating the .zip archive (default: create both .tar.gz and .zip)
 
 set -euo pipefail
 
@@ -20,6 +21,7 @@ OUT="${ROOT}/dist-offline/ai-sdlc-offline-${VERSION}"
 ARCHIVE="${ROOT}/dist-offline/ai-sdlc-offline-${VERSION}.tar.gz"
 ZIP_ARCHIVE="${ROOT}/dist-offline/ai-sdlc-offline-${VERSION}.zip"
 MANIFEST="${OUT}/bundle-manifest.json"
+BUILD_ZIP="${OFFLINE_BUNDLE_ZIP:-1}"
 
 _pick_py() {
   local c
@@ -106,8 +108,9 @@ PY
 mkdir -p "${ROOT}/dist-offline"
 rm -f "${ARCHIVE}"
 tar -czf "${ARCHIVE}" -C "${ROOT}/dist-offline" "$(basename "${OUT}")"
-rm -f "${ZIP_ARCHIVE}"
-"${PY}" - <<PY
+if [[ "${BUILD_ZIP}" != "0" ]]; then
+  rm -f "${ZIP_ARCHIVE}"
+  "${PY}" - <<PY
 from pathlib import Path
 import zipfile
 
@@ -119,13 +122,18 @@ with zipfile.ZipFile(dst, "w", zipfile.ZIP_DEFLATED) as zf:
         if path.is_file():
             zf.write(path, path.relative_to(root))
 PY
+fi
 
 echo ""
 echo "Done."
 echo "  Archive: ${ARCHIVE}"
-echo "  Archive: ${ZIP_ARCHIVE}"
+if [[ "${BUILD_ZIP}" != "0" ]]; then
+  echo "  Archive: ${ZIP_ARCHIVE}"
+fi
 echo "  Folder:  ${OUT}"
 echo ""
 echo "Ship either archive (or the folder) to offline machines."
 echo "  Linux/macOS: tar xzf ai-sdlc-offline-${VERSION}.tar.gz && cd ai-sdlc-offline-${VERSION} && ./install_offline.sh"
-echo "  Windows:     unzip ai-sdlc-offline-${VERSION}.zip && cd ai-sdlc-offline-${VERSION} && install_offline.bat"
+if [[ "${BUILD_ZIP}" != "0" ]]; then
+  echo "  Windows:     unzip ai-sdlc-offline-${VERSION}.zip && cd ai-sdlc-offline-${VERSION} && install_offline.bat"
+fi

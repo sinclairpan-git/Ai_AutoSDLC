@@ -175,6 +175,32 @@ def test_build_offline_bundle_emits_platform_manifest_and_archives(tmp_path: Pat
         assert "ai-sdlc-offline-0.2.0/bundle-manifest.json" in archive.namelist()
 
 
+def test_build_offline_bundle_can_skip_zip_for_release_assets(tmp_path: Path) -> None:
+    repo = _prepare_fake_bundle_repo(tmp_path)
+    wrapper_dir = tmp_path / "wrappers"
+    wrapper_dir.mkdir()
+    fake_python = _make_fake_python(wrapper_dir)
+    _make_fake_uv(wrapper_dir)
+
+    env = _script_env(wrapper_dir, fake_python)
+    env["OFFLINE_BUNDLE_ZIP"] = "0"
+
+    result = subprocess.run(
+        ["bash", str(repo / "packaging" / "offline" / "build_offline_bundle.sh")],
+        cwd=repo,
+        capture_output=True,
+        text=True,
+        env=env,
+        check=False,
+    )
+
+    assert result.returncode == 0, result.stderr
+    tar_path = repo / "dist-offline" / "ai-sdlc-offline-0.2.0.tar.gz"
+    zip_path = repo / "dist-offline" / "ai-sdlc-offline-0.2.0.zip"
+    assert tar_path.is_file()
+    assert not zip_path.exists()
+
+
 def test_install_offline_rejects_platform_manifest_mismatch(tmp_path: Path) -> None:
     bundle_dir = tmp_path / "bundle"
     wheels_dir = bundle_dir / "wheels"
