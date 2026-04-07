@@ -328,6 +328,75 @@ def test_execute_frontend_remediation_runbook_materializes_bounded_commands_and_
     )
 
 
+def test_execute_frontend_remediation_runbook_passes_when_only_visual_a11y_policy_artifact_gap_remains(
+    tmp_path: Path,
+) -> None:
+    for p in ("specs/001-auth", "specs/002-course", "specs/003-enroll"):
+        (tmp_path / p).mkdir(parents=True)
+    _write_minimal_constitution(tmp_path)
+    _write_minimal_frontend_contract_page_artifacts(tmp_path)
+    materialize_frontend_gate_policy_artifacts(
+        tmp_path,
+        build_p1_frontend_gate_policy_visual_a11y_foundation(),
+    )
+    (
+        tmp_path
+        / "governance"
+        / "frontend"
+        / "gates"
+        / "visual-a11y-evidence-boundary.yaml"
+    ).unlink()
+    materialize_frontend_generation_constraint_artifacts(
+        tmp_path,
+        build_mvp_frontend_generation_constraints(),
+    )
+    for spec in ("001-auth", "002-course", "003-enroll"):
+        spec_dir = tmp_path / "specs" / spec
+        _write_frontend_contract_observations(spec_dir)
+        _write_frontend_visual_a11y_evidence(
+            spec_dir,
+            [
+                FrontendVisualA11yEvidenceEvaluation(
+                    evaluation_id=f"{spec}-visual-a11y-pass",
+                    target_id="user-create",
+                    surface_id="page:user-create",
+                    outcome="pass",
+                    report_type="coverage-report",
+                    severity="info",
+                    location_anchor="specs",
+                    quality_hint="fixture evidence",
+                    changed_scope_explanation="071 pass fixture",
+                )
+            ],
+        )
+
+    svc = ProgramService(tmp_path)
+    result = svc.execute_frontend_remediation_runbook(
+        _manifest(),
+        generated_at="2026-04-07T16:00:00Z",
+    )
+
+    assert result.passed is True
+    assert (
+        tmp_path
+        / "governance"
+        / "frontend"
+        / "gates"
+        / "visual-a11y-evidence-boundary.yaml"
+    ).is_file()
+    assert any(
+        item.command == "uv run ai-sdlc rules materialize-frontend-mvp"
+        and item.status == "executed"
+        for item in result.command_results
+    )
+    assert any(
+        item.command == "uv run ai-sdlc verify constraints"
+        and item.status == "passed"
+        for item in result.command_results
+    )
+    assert result.blockers == []
+
+
 def test_write_frontend_remediation_writeback_artifact_emits_canonical_yaml(
     tmp_path: Path,
 ) -> None:

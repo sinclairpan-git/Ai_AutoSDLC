@@ -15,6 +15,11 @@ from ai_sdlc.core.frontend_contract_observation_provider import (
     observation_artifact_path,
     write_frontend_contract_observation_artifact,
 )
+from ai_sdlc.core.frontend_visual_a11y_evidence_provider import (
+    FrontendVisualA11yEvidenceEvaluation,
+    build_frontend_visual_a11y_evidence_artifact,
+    write_frontend_visual_a11y_evidence_artifact,
+)
 from ai_sdlc.generators.frontend_gate_policy_artifacts import (
     materialize_frontend_gate_policy_artifacts,
 )
@@ -96,6 +101,28 @@ def _write_frontend_contract_observations(
         source_revision="rev-cli-program",
     )
     write_frontend_contract_observation_artifact(spec_dir, artifact)
+
+
+def _write_frontend_visual_a11y_evidence(spec_dir: Path) -> None:
+    artifact = build_frontend_visual_a11y_evidence_artifact(
+        evaluations=[
+            FrontendVisualA11yEvidenceEvaluation(
+                evaluation_id=f"{spec_dir.name}-visual-a11y-pass",
+                target_id="user-create",
+                surface_id="page:user-create",
+                outcome="pass",
+                report_type="coverage-report",
+                severity="info",
+                location_anchor="specs",
+                quality_hint="fixture evidence",
+                changed_scope_explanation="071 pass fixture",
+            )
+        ],
+        provider_kind="manual",
+        provider_name="test-fixture",
+        generated_at="2026-04-07T15:30:00Z",
+    )
+    write_frontend_visual_a11y_evidence_artifact(spec_dir, artifact)
 
 
 def _write_frontend_gate_artifacts(root: Path) -> None:
@@ -521,6 +548,43 @@ specs:
         assert "uv run ai-sdlc verify constraints ->" not in result.output
         assert not observation_artifact_path(root / "specs" / "001-auth").is_file()
         assert (root / "governance" / "frontend" / "gates" / "gate.manifest.yaml").is_file()
+
+    def test_program_remediate_execute_passes_when_only_visual_a11y_policy_artifact_gap_remains(
+        self, initialized_project_dir: Path
+    ) -> None:
+        root = initialized_project_dir
+        _write_manifest(root)
+        _write_minimal_frontend_contract_page_artifacts(root)
+        _write_p1_frontend_gate_artifacts(root)
+        (
+            root
+            / "governance"
+            / "frontend"
+            / "gates"
+            / "visual-a11y-evidence-boundary.yaml"
+        ).unlink()
+        for spec in ("001-auth", "002-course", "003-enroll"):
+            spec_dir = root / "specs" / spec
+            _write_frontend_contract_observations(spec_dir)
+            _write_frontend_visual_a11y_evidence(spec_dir)
+
+        with patch("ai_sdlc.cli.program_cmd.find_project_root", return_value=root):
+            result = runner.invoke(
+                app,
+                ["program", "remediate", "--execute", "--yes"],
+            )
+
+        assert result.exit_code == 0
+        assert "Frontend remediation execute completed" in result.output
+        assert "uv run ai-sdlc rules materialize-frontend-mvp -> executed" in result.output
+        assert "uv run ai-sdlc verify constraints -> passed" in result.output
+        assert (
+            root
+            / "governance"
+            / "frontend"
+            / "gates"
+            / "visual-a11y-evidence-boundary.yaml"
+        ).is_file()
 
     def test_program_remediate_execute_writes_canonical_writeback_artifact(
         self, initialized_project_dir: Path
