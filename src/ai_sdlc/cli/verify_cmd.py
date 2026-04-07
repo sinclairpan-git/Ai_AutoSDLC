@@ -168,6 +168,7 @@ def verify_constraints(
                         "release_gate": report.release_gate,
                     },
                     "frontend_contract_verification": frontend_contract_summary,
+                    "frontend_gate_verification": frontend_gate_summary,
                     "governance": governance,
                     "telemetry": {
                         "goal_session_id": goal_session_id,
