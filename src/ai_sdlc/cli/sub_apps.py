@@ -287,7 +287,7 @@ def rules_active(
 
 @rules_app.command(name="materialize-frontend-mvp")
 def rules_materialize_frontend_mvp() -> None:
-    """Materialize canonical frontend governance MVP artifacts."""
+    """Materialize canonical frontend governance artifacts."""
     root = find_project_root()
     if root is None:
         console.print("[red]Not inside an AI-SDLC project.[/red]")
@@ -305,7 +305,7 @@ def rules_materialize_frontend_mvp() -> None:
     ]
 
     console.print(
-        "[green]Frontend governance MVP artifacts materialized[/green] "
+        "[green]Frontend governance artifacts materialized[/green] "
         f"({len(paths)} files)"
     )
     for path in paths:

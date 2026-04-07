@@ -30,7 +30,7 @@ def test_rules_materialize_frontend_mvp_writes_canonical_governance_artifacts(
     result = runner.invoke(app, ["rules", "materialize-frontend-mvp"])
 
     assert result.exit_code == 0
-    assert "Frontend governance MVP artifacts materialized" in result.output
+    assert "Frontend governance artifacts materialized" in result.output
     assert "governance/frontend/gates/gate.manifest.yaml" in result.output
     assert "governance/frontend/generation/generation.manifest.yaml" in result.output
     assert (tmp_path / "governance" / "frontend" / "gates" / "gate.manifest.yaml").is_file()
