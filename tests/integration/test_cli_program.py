@@ -2092,6 +2092,65 @@ specs:
         assert "Frontend Writeback Persistence Artifact" in report
         assert ".ai-sdlc/memory/frontend-writeback-persistence/latest.yaml" in report
 
+    def test_program_writeback_persistence_execute_preserves_stable_empty_visual_a11y_pending_input(
+        self, initialized_project_dir: Path
+    ) -> None:
+        root = initialized_project_dir
+        _write_manifest(root)
+        _write_frontend_final_governance_artifact(
+            root,
+            final_governance_result="deferred",
+            final_governance_state="deferred",
+            remaining_blockers=["spec 001-auth remediation still required"],
+            steps=[
+                {
+                    "spec_id": "001-auth",
+                    "path": "specs/001-auth",
+                    "final_governance_state": "deferred",
+                    "pending_inputs": ["frontend_visual_a11y_evidence_stable_empty"],
+                    "suggested_next_actions": [
+                        "review stable empty frontend visual / a11y evidence",
+                        "re-run ai-sdlc verify constraints",
+                    ],
+                    "source_linkage": {
+                        "final_governance_state": "deferred",
+                        "broader_governance_artifact_path": ".ai-sdlc/memory/frontend-broader-governance/latest.yaml",
+                    },
+                }
+            ],
+        )
+        report_rel = ".ai-sdlc/memory/frontend-writeback-persistence-stable-empty.md"
+
+        with patch("ai_sdlc.cli.program_cmd.find_project_root", return_value=root):
+            result = runner.invoke(
+                app,
+                [
+                    "program",
+                    "writeback-persistence",
+                    "--execute",
+                    "--yes",
+                    "--report",
+                    report_rel,
+                ],
+            )
+
+        artifact_path = (
+            root
+            / ".ai-sdlc"
+            / "memory"
+            / "frontend-writeback-persistence"
+            / "latest.yaml"
+        )
+        assert result.exit_code == 1
+        payload = yaml.safe_load(artifact_path.read_text(encoding="utf-8"))
+        assert payload["steps"][0]["pending_inputs"] == [
+            "frontend_visual_a11y_evidence_stable_empty"
+        ]
+        assert payload["steps"][0]["suggested_next_actions"] == [
+            "review stable empty frontend visual / a11y evidence",
+            "re-run ai-sdlc verify constraints",
+        ]
+
     def test_program_persisted_write_proof_execute_requires_explicit_confirmation(
         self, initialized_project_dir: Path
     ) -> None:
