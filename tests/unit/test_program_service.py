@@ -297,6 +297,13 @@ def test_execute_frontend_remediation_runbook_materializes_bounded_commands_and_
     assert not observation_artifact_path(tmp_path / "specs" / "001-auth").is_file()
     assert (tmp_path / "governance" / "frontend" / "gates" / "gate.manifest.yaml").is_file()
     assert (
+        tmp_path
+        / "governance"
+        / "frontend"
+        / "gates"
+        / "visual-a11y-evidence-boundary.yaml"
+    ).is_file()
+    assert (
         tmp_path / "governance" / "frontend" / "generation" / "generation.manifest.yaml"
     ).is_file()
     assert any(

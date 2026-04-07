@@ -38,6 +38,13 @@ def test_rules_materialize_frontend_mvp_writes_canonical_governance_artifacts(
         tmp_path
         / "governance"
         / "frontend"
+        / "gates"
+        / "visual-a11y-evidence-boundary.yaml"
+    ).is_file()
+    assert (
+        tmp_path
+        / "governance"
+        / "frontend"
         / "generation"
         / "generation.manifest.yaml"
     ).is_file()
