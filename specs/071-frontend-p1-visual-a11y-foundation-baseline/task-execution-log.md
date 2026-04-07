@@ -328,3 +328,37 @@
 - **已完成 git 提交**：否
 - 当前 batch 结论：late-stage report propagation 已补齐，并通过 targeted + full CLI integration 回归验证。
 - **下一步动作**：继续扫描剩余 CLI/unit/report surface，优先寻找尚未显式钉死的 stable-empty propagation 或 messaging honesty 缺口；完成一批立即提交再进入下一批。
+
+### Batch 2026-04-07-008 | integrate report propagation coverage
+
+#### 1. 背景
+
+- 在上一批补齐晚期链路后，继续扫描 stable-empty visual/a11y truth surface，发现最上游 `program integrate --execute` 的 stable-empty remediation 用例仍只校验终端输出，没有显式钉死 `--report` 文件内容。
+
+#### 2. 修改文件
+
+- `tests/integration/test_cli_program.py`
+- `specs/071-frontend-p1-visual-a11y-foundation-baseline/task-execution-log.md`
+
+#### 3. 执行命令
+
+- `uv run pytest tests/integration/test_cli_program.py -k 'program_integrate_execute_surfaces_stable_empty_visual_a11y_review_hint' -q`
+- `uv run pytest tests/integration/test_cli_program.py -q`
+- `git diff --check -- specs/071-frontend-p1-visual-a11y-foundation-baseline/task-execution-log.md tests/integration/test_cli_program.py`
+
+#### 4. 验证结果
+
+- `uv run pytest tests/integration/test_cli_program.py -k 'program_integrate_execute_surfaces_stable_empty_visual_a11y_review_hint' -q` 通过，结果为 `1 passed, 91 deselected in 0.38s`。
+- `uv run pytest tests/integration/test_cli_program.py -q` 通过，结果为 `92 passed in 1.99s`。
+
+#### 5. 对账结论
+
+- 本批给 `test_program_integrate_execute_surfaces_stable_empty_visual_a11y_review_hint` 增加了 `--report` 输出路径，并显式断言 report 中包含 stable-empty pending input、review hint 与 `uv run ai-sdlc verify constraints` 后续动作。
+- 这样一来，`071` 的 stable-empty CLI coverage 不再只从中后段开始，而是从 `program integrate --execute` 的最上游 remediation handoff surface 就同时证明 terminal output 与 persisted report 两个可见面。
+- 本批没有改动生产代码，仍然只是在 integration truth surface 上补强证据链。
+
+#### 6. 归档后动作
+
+- **已完成 git 提交**：否
+- 当前 batch 结论：integrate report propagation 已补齐，并通过 targeted + full CLI integration 回归验证。
+- **下一步动作**：继续扫描是否还存在 stable-empty visual/a11y 在 CLI 或 unit 层的单点可见面缺口；若只剩文档或 message honesty 差异，则按最小批次继续提交。

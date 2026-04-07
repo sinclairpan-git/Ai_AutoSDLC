@@ -411,11 +411,20 @@ specs:
                 generated_at="2026-04-07T17:00:00Z",
             )
             write_frontend_visual_a11y_evidence_artifact(spec_dir, artifact)
+        report_rel = ".ai-sdlc/memory/program-integrate-stable-empty.md"
 
         with patch("ai_sdlc.cli.program_cmd.find_project_root", return_value=root):
             result = runner.invoke(
                 app,
-                ["program", "integrate", "--execute", "--yes", "--allow-dirty"],
+                [
+                    "program",
+                    "integrate",
+                    "--execute",
+                    "--yes",
+                    "--allow-dirty",
+                    "--report",
+                    report_rel,
+                ],
             )
 
         assert result.exit_code == 1
@@ -425,6 +434,10 @@ specs:
         assert "materialize frontend visual / a11y evidence input" not in result.output
         assert "uv run ai-sdlc rules materialize-frontend-mvp" not in result.output
         assert "uv run ai-sdlc verify constraints" in result.output
+        report = (root / report_rel).read_text(encoding="utf-8")
+        assert "frontend_visual_a11y_evidence_stable_empty" in report
+        assert "review stable empty frontend visual / a11y evidence" in report
+        assert "uv run ai-sdlc verify constraints" in report
 
     def test_program_integrate_execute_surfaces_frontend_recheck_handoff(
         self, initialized_project_dir: Path
