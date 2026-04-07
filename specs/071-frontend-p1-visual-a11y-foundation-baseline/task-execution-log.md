@@ -293,3 +293,38 @@
 - **已完成 git 提交**：否
 - 当前 batch 结论：persisted write proof 这段遗漏节点已补齐，并通过 fresh unit/integration 整文件回归验证。
 - **下一步动作**：继续扫描 `071` 相邻 surface，优先寻找新的生产缺口；若仍只剩 truth-surface 或文档同步差异，则继续按批次补齐并提交。
+
+### Batch 2026-04-07-007 | late-stage report propagation coverage
+
+#### 1. 背景
+
+- 继续沿 `071 frontend visual/a11y stable-empty truth surface` 扫描 CLI integration coverage，目标是把晚期执行链路对 `--report` 文件的可见性断言补齐，并修正上一轮误打到前半段节点的重复断言。
+
+#### 2. 修改文件
+
+- `tests/integration/test_cli_program.py`
+- `specs/071-frontend-p1-visual-a11y-foundation-baseline/task-execution-log.md`
+
+#### 3. 执行命令
+
+- `uv run pytest tests/integration/test_cli_program.py -k 'final_governance_execute_preserves_stable_empty_visual_a11y_pending_input or writeback_persistence_execute_preserves_stable_empty_visual_a11y_pending_input or persisted_write_proof_execute_preserves_stable_empty_visual_a11y_pending_input or final_proof_publication_execute_preserves_stable_empty_visual_a11y_pending_input or final_proof_closure_execute_preserves_stable_empty_visual_a11y_pending_input or final_proof_archive_execute_preserves_stable_empty_visual_a11y_pending_input' -q`
+- `uv run pytest tests/integration/test_cli_program.py -q`
+- `git diff --check -- specs/071-frontend-p1-visual-a11y-foundation-baseline/task-execution-log.md tests/integration/test_cli_program.py`
+
+#### 4. 验证结果
+
+- 初始 RED 明确表明这些阶段的 CLI `result.output` 并不会回显 `frontend_visual_a11y_evidence_stable_empty` token；失败点落在错误的断言选择而不是生产逻辑，说明应当只校验 artifact 与 `--report` 文件内容。
+- `uv run pytest tests/integration/test_cli_program.py -k 'final_governance_execute_preserves_stable_empty_visual_a11y_pending_input or writeback_persistence_execute_preserves_stable_empty_visual_a11y_pending_input or persisted_write_proof_execute_preserves_stable_empty_visual_a11y_pending_input or final_proof_publication_execute_preserves_stable_empty_visual_a11y_pending_input or final_proof_closure_execute_preserves_stable_empty_visual_a11y_pending_input or final_proof_archive_execute_preserves_stable_empty_visual_a11y_pending_input' -q` 通过，结果为 `6 passed, 86 deselected in 0.54s`。
+- `uv run pytest tests/integration/test_cli_program.py -q` 通过，结果为 `92 passed in 2.20s`。
+
+#### 5. 对账结论
+
+- 本批移除了误加到 provider-runtime、provider-patch-apply、cross-spec-writeback、guarded-registry、broader-governance 与 final-governance 上的 `result.output` 重复断言，恢复为以 report 文件为准的稳定校验面。
+- 同时补齐了 `final-governance -> writeback-persistence -> persisted-write-proof -> final-proof-publication -> final-proof-closure -> final-proof-archive` 这条晚期链路对 `--report` 内容的显式覆盖，使 stable-empty visual/a11y pending input 和 remediation hint 在 CLI report surface 上被连续证明。
+- 本批只改 integration truth-surface tests 与执行日志，没有扩张 `071` 生产实现边界。
+
+#### 6. 归档后动作
+
+- **已完成 git 提交**：否
+- 当前 batch 结论：late-stage report propagation 已补齐，并通过 targeted + full CLI integration 回归验证。
+- **下一步动作**：继续扫描剩余 CLI/unit/report surface，优先寻找尚未显式钉死的 stable-empty propagation 或 messaging honesty 缺口；完成一批立即提交再进入下一批。

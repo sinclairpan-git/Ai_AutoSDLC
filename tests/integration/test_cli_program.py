@@ -1950,6 +1950,9 @@ specs:
             "review stable empty frontend visual / a11y evidence",
             "re-run ai-sdlc verify constraints",
         ]
+        report = (root / report_rel).read_text(encoding="utf-8")
+        assert "frontend_visual_a11y_evidence_stable_empty" in report
+        assert "review stable empty frontend visual / a11y evidence" in report
 
     def test_program_writeback_persistence_execute_requires_explicit_confirmation(
         self, initialized_project_dir: Path
@@ -2150,6 +2153,9 @@ specs:
             "review stable empty frontend visual / a11y evidence",
             "re-run ai-sdlc verify constraints",
         ]
+        report = (root / report_rel).read_text(encoding="utf-8")
+        assert "frontend_visual_a11y_evidence_stable_empty" in report
+        assert "review stable empty frontend visual / a11y evidence" in report
 
     def test_program_persisted_write_proof_execute_requires_explicit_confirmation(
         self, initialized_project_dir: Path
@@ -2356,6 +2362,9 @@ specs:
             "review stable empty frontend visual / a11y evidence",
             "re-run ai-sdlc verify constraints",
         ]
+        report = (root / report_rel).read_text(encoding="utf-8")
+        assert "frontend_visual_a11y_evidence_stable_empty" in report
+        assert "review stable empty frontend visual / a11y evidence" in report
 
     def test_program_final_proof_publication_execute_preserves_stable_empty_visual_a11y_pending_input(
         self, initialized_project_dir: Path
@@ -2415,6 +2424,9 @@ specs:
             "review stable empty frontend visual / a11y evidence",
             "re-run ai-sdlc verify constraints",
         ]
+        report = (root / report_rel).read_text(encoding="utf-8")
+        assert "frontend_visual_a11y_evidence_stable_empty" in report
+        assert "review stable empty frontend visual / a11y evidence" in report
 
     def test_program_final_proof_publication_execute_requires_explicit_confirmation(
         self, initialized_project_dir: Path
@@ -2623,6 +2635,9 @@ specs:
             "review stable empty frontend visual / a11y evidence",
             "re-run ai-sdlc verify constraints",
         ]
+        report = (root / report_rel).read_text(encoding="utf-8")
+        assert "frontend_visual_a11y_evidence_stable_empty" in report
+        assert "review stable empty frontend visual / a11y evidence" in report
 
     def test_program_final_proof_closure_execute_requires_explicit_confirmation(
         self, initialized_project_dir: Path
@@ -2782,6 +2797,9 @@ specs:
             "review stable empty frontend visual / a11y evidence",
             "re-run ai-sdlc verify constraints",
         ]
+        report = (root / report_rel).read_text(encoding="utf-8")
+        assert "frontend_visual_a11y_evidence_stable_empty" in report
+        assert "review stable empty frontend visual / a11y evidence" in report
 
     def test_program_final_proof_archive_execute_requires_explicit_confirmation(
         self, initialized_project_dir: Path
