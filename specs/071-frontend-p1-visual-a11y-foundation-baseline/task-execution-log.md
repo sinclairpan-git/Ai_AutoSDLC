@@ -702,3 +702,38 @@
 - **已完成 git 提交**：是
 - 当前 batch 结论：verify surfaces 的 visual-a11y issue-review propagation 已补齐，并通过 RED -> GREEN -> full verification 回归。
 - **下一步动作**：继续扫描 071 剩余 messaging / honesty 收尾项；若没有新的生产缺口，则把 execution log 与 truth-surface 对账收束到最后一批。
+
+### Batch 2026-04-07-018 | gate unit issue-review truth-surface coverage
+
+#### 1. 背景
+
+- `verify constraints` 与 verify CLI 已经显式 surfaced `frontend_visual_a11y_issue_review`，但 gate 层 unit coverage 还没有直接钉住 `VerifyGate / VerificationGate` 的 status message 是否保留这一 token。
+- 这一批目标是只补 gate 层回归覆盖，不改生产逻辑；如果测试直接变绿，就把本批定性为 tests-only truth-surface 收口。
+
+#### 2. 修改文件
+
+- `tests/unit/test_gates.py`
+- `specs/071-frontend-p1-visual-a11y-foundation-baseline/task-execution-log.md`
+
+#### 3. 执行命令
+
+- `uv run pytest tests/unit/test_gates.py -k 'frontend_gate_summary_surfaces_071_visual_a11y_issue_review' -q`
+- `uv run pytest tests/unit/test_gates.py -q`
+- `git diff --check -- tests/unit/test_gates.py specs/071-frontend-p1-visual-a11y-foundation-baseline/task-execution-log.md`
+
+#### 4. 验证结果
+
+- `uv run pytest tests/unit/test_gates.py -k 'frontend_gate_summary_surfaces_071_visual_a11y_issue_review' -q` 通过，结果为 `2 passed, 67 deselected in 0.22s`。
+- `uv run pytest tests/unit/test_gates.py -q` 通过，结果为 `69 passed in 0.28s`。
+- `git diff --check -- tests/unit/test_gates.py specs/071-frontend-p1-visual-a11y-foundation-baseline/task-execution-log.md` 通过，无 whitespace / conflict 问题。
+
+#### 5. 对账结论
+
+- `VerifyGate / VerificationGate` 在 `frontend_gate_status_clear` message 上天然会保留 `frontend_visual_a11y_issue_review`，没有退化回 generic blocker，也不会误回落到 `frontend_visual_a11y_evidence_stable_empty`。
+- 当前缺口是 coverage density，而不是新的生产断层；因此本批保持 tests-only 最小提交。
+
+#### 6. 归档后动作
+
+- **已完成 git 提交**：否
+- 当前 batch 结论：gate unit 层的 071 issue-review truth-surface 已补齐回归断言。
+- **下一步动作**：继续补 `ai-sdlc gate verify / gate verification` 的 CLI integration coverage，把同一 token 钉到终端输出层。
