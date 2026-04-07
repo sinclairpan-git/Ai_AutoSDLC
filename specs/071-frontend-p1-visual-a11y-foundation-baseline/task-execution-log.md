@@ -2,7 +2,7 @@
 
 **功能编号**：`071-frontend-p1-visual-a11y-foundation-baseline`  
 **创建日期**：2026-04-06  
-**状态**：docs-only formal freeze 已完成并 accepted（accepted child baseline）
+**状态**：accepted child baseline；formal freeze 已完成；visual/a11y foundation implementation slices 已完成
 
 ## 1. 归档规则
 
@@ -23,10 +23,10 @@
 ## 2. 当前执行边界
 
 - `071` 是 `066` 下游的 P1 visual / a11y foundation child work item，不是 diagnostics、recheck/remediation 或 provider/runtime 工单。
-- 当前批次只允许 docs-only formal freeze；不进入 `src/` / `tests/`，不扩张完整 visual regression 平台、完整 a11y 平台、interaction quality 平台或 provider/runtime。
-- 当前批次不修改 root `program-manifest.yaml`、`frontend-program-branch-rollout-plan.md`，也不生成 `development-summary.md`。
-- 当前批次唯一状态推进是：创建 `spec.md / plan.md / tasks.md / task-execution-log.md`，并把 `project-state.yaml` 的 `next_work_item_seq` 推进到下一个可用编号。
-- 当前状态只代表 `071` 的 docs-only formal freeze 已完成并 accepted；不代表 root program sync、close-ready、完整质量平台或实现已开始。
+- `071` 的 docs-only formal freeze 已完成；在门禁通过且用户明确要求连续推进后，本分支已完成 visual/a11y foundation materialization、explicit evidence gating 与 verify CLI JSON exposure 三个实现切片。
+- 当前实现仍严格停留在 gate policy、frontend gate verification、verify/program surface 与对应 tests；不扩张完整 visual regression 平台、完整 a11y 平台、interaction quality 平台、provider/runtime 或 root truth sync。
+- 当前实现不修改 root `program-manifest.yaml`、`frontend-program-branch-rollout-plan.md`，也不生成 `development-summary.md`。
+- 当前状态代表 `071` 的 accepted child baseline 与其最小实现切片均已落地；这仍不代表 root program sync、close-ready、完整质量平台或 provider/runtime 已开始。
 
 ## 3. 批次记录
 
@@ -69,3 +69,48 @@
 - 当前 batch 结论仅限于 `071` 的 P1 visual / a11y foundation baseline 已完成 docs-only formal freeze，并可视为 accepted child baseline；它冻结了 P1 的 visual foundation、a11y foundation、evidence boundary、feedback honesty 与 sibling/provider handoff 边界。
 - 当前 batch 完成不代表 root program sync、close-ready、完整质量平台或实现已开始。
 - **下一步动作**：在用户明确要求下提交当前 freeze，或继续按 `066` 的 DAG 推进后续 root sync 决策。
+
+### Batch 2026-04-07-002 | implementation state reconciliation
+
+#### 1. 批次范围
+
+- **任务编号**：post-freeze implementation reconciliation
+- **目标**：将 `071` formal baseline 之后已经落地的三个实现提交与 fresh verification 结果追加归档，确保当前 child work item 的状态诚实表达为“formal baseline + implementation slices completed”，而不是继续停留在 docs-only freeze。
+- **执行分支**：`codex/071-frontend-p1-visual-a11y-foundation-implementation`
+
+#### 2. Touched Files
+
+- `specs/071-frontend-p1-visual-a11y-foundation-baseline/task-execution-log.md`
+
+#### 3. 执行命令
+
+- `git log --oneline -5`
+- `uv run pytest tests/unit/test_frontend_gate_policy_models.py tests/unit/test_frontend_gate_policy_artifacts.py tests/unit/test_frontend_gate_verification.py -q`
+- `uv run pytest tests/unit/test_verify_constraints.py -k frontend_gate -q`
+- `uv run pytest tests/integration/test_cli_verify_constraints.py -k frontend_gate -q`
+- `uv run pytest tests/unit/test_program_service.py -k 'frontend_readiness or execution_gates' -q`
+- `git diff --check -- specs/071-frontend-p1-visual-a11y-foundation-baseline/task-execution-log.md`
+
+#### 4. 验证结果
+
+- `git log --oneline -5` 显示 `071` 的实现提交链已包含：
+  - `0f1f79d feat: materialize 071 visual a11y gate foundation`
+  - `7a60c66 feat: add frontend visual a11y evidence gating`
+  - `e2c255d feat: expose frontend gate verification in verify json`
+- `uv run pytest tests/unit/test_frontend_gate_policy_models.py tests/unit/test_frontend_gate_policy_artifacts.py tests/unit/test_frontend_gate_verification.py -q` 通过，结果为 `23 passed in 0.33s`。
+- `uv run pytest tests/unit/test_verify_constraints.py -k frontend_gate -q` 通过，结果为 `8 passed, 35 deselected in 0.33s`。
+- `uv run pytest tests/integration/test_cli_verify_constraints.py -k frontend_gate -q` 通过，结果为 `8 passed, 29 deselected in 0.59s`。
+- `uv run pytest tests/unit/test_program_service.py -k 'frontend_readiness or execution_gates' -q` 通过，结果为 `7 passed, 83 deselected in 0.25s`。
+
+#### 5. 对账结论
+
+- `0f1f79d` 已把 `071` formal baseline 冻结的 visual/a11y foundation truth 落到 `frontend_gate_policy` model / artifact，并接入 `frontend_gate_verification`、`verify_constraints` 与对应 unit/integration tests。
+- `7a60c66` 已新增显式 `frontend_visual_a11y_evidence_provider`，并把 evidence honesty 接到 `frontend_gate_verification`、`verify_constraints`、`program_service` 与对应 tests，保持 `input gap / stable empty / actual issue` 的区分。
+- `e2c255d` 已把 `frontend_gate_verification` 纳入 `verify constraints --json` payload，使 `071` gate summary 在 terminal 与 machine-readable surface 上保持一致。
+- 本批只做 execution log 诚实化，不修改 `spec.md / plan.md / tasks.md` 的 formal baseline truth；`071` 仍没有扩张到 provider/runtime、root sync、完整 visual regression 平台或完整 a11y 平台。
+
+#### 6. 归档后动作
+
+- **已完成 git 提交**：否
+- 当前 batch 结论：`071` 已不再是“仅 docs-only freeze”的状态，而是“accepted child baseline + implementation slices completed”。
+- **下一步动作**：继续在当前 worktree 内顺着 `071`/相邻 gate surface 查找下一处最小缺口，完成后直接提交进入下一批。
