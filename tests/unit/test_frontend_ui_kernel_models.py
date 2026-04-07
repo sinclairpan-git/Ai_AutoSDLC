@@ -424,7 +424,7 @@ def test_frontend_ui_kernel_set_rejects_unknown_recipe_protocol_or_state_referen
             ],
             page_recipes=[
                 PageRecipeStandard(
-                    recipe_id="BrokenPage",
+                    recipe_id="SearchListPage",
                     required_protocols=["UiSearchBar"],
                     consumed_protocols=["UiSearchBar", "UiToolbar"],
                 ),
@@ -444,7 +444,7 @@ def test_frontend_ui_kernel_set_rejects_unknown_recipe_protocol_or_state_referen
             ],
             page_recipes=[
                 PageRecipeStandard(
-                    recipe_id="BrokenPage",
+                    recipe_id="SearchListPage",
                     required_protocols=["UiSearchBar"],
                     consumed_protocols=["UiSearchBar"],
                     minimum_state_expectations=["refreshing"],

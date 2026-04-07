@@ -22,8 +22,7 @@ def materialize_frontend_gate_policy_artifacts(
     """Write the minimal frontend gate policy artifact set to disk."""
 
     base_dir = frontend_gate_policy_root(root)
-
-    return [
+    paths = [
         _write_yaml(
             base_dir / "gate.manifest.yaml",
             {
@@ -54,6 +53,47 @@ def materialize_frontend_gate_policy_artifacts(
             {"items": policy.report_types},
         ),
     ]
+
+    if policy.diagnostics_coverage_matrix:
+        paths.append(
+            _write_yaml(
+                base_dir / "diagnostics-coverage-matrix.yaml",
+                {
+                    "items": [
+                        item.model_dump(mode="json", exclude_none=True)
+                        for item in policy.diagnostics_coverage_matrix
+                    ]
+                },
+            )
+        )
+
+    if policy.drift_classification:
+        paths.append(
+            _write_yaml(
+                base_dir / "drift-classification.yaml",
+                {
+                    "items": [
+                        item.model_dump(mode="json", exclude_none=True)
+                        for item in policy.drift_classification
+                    ]
+                },
+            )
+        )
+
+    if policy.compatibility_feedback_boundary:
+        paths.append(
+            _write_yaml(
+                base_dir / "compatibility-feedback-boundary.yaml",
+                {
+                    "items": [
+                        item.model_dump(mode="json", exclude_none=True)
+                        for item in policy.compatibility_feedback_boundary
+                    ]
+                },
+            )
+        )
+
+    return paths
 
 
 def _write_yaml(path: Path, payload: dict[str, object]) -> Path:

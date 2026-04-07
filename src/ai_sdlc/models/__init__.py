@@ -18,8 +18,11 @@ from ai_sdlc.models.frontend_contracts import (
 )
 from ai_sdlc.models.frontend_gate_policy import (
     CompatibilityExecutionPolicy,
+    FrontendCompatibilityFeedbackBoundary,
     FrontendCoverageGap,
     FrontendCoverageReport,
+    FrontendDiagnosticsCoverageEntry,
+    FrontendDriftClassification,
     FrontendDriftFinding,
     FrontendDriftReport,
     FrontendGatePolicySet,
@@ -29,6 +32,7 @@ from ai_sdlc.models.frontend_gate_policy import (
     FrontendViolation,
     FrontendViolationReport,
     build_mvp_frontend_gate_policy,
+    build_p1_frontend_gate_policy_diagnostics_drift_expansion,
 )
 from ai_sdlc.models.frontend_generation_constraints import (
     FrontendGenerationConstraintSet,
@@ -149,6 +153,7 @@ __all__ = [
     "ContractLegacyContext",
     "ContractRuleBundle",
     "CompatibilityExecutionPolicy",
+    "FrontendCompatibilityFeedbackBoundary",
     "DependencyInfo",
     "DiscoveredTestFile",
     "EnterpriseVue2ProviderProfile",
@@ -162,7 +167,9 @@ __all__ = [
     "FrontendContractSet",
     "FrontendCoverageGap",
     "FrontendCoverageReport",
+    "FrontendDiagnosticsCoverageEntry",
     "FrontendDriftFinding",
+    "FrontendDriftClassification",
     "FrontendDriftReport",
     "FrontendGatePolicySet",
     "FrontendGateRule",
@@ -251,4 +258,5 @@ __all__ = [
     "build_mvp_enterprise_vue2_provider_profile",
     "build_mvp_frontend_generation_constraints",
     "build_mvp_frontend_gate_policy",
+    "build_p1_frontend_gate_policy_diagnostics_drift_expansion",
 ]

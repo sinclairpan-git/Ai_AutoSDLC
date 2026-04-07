@@ -6,8 +6,11 @@ import pytest
 
 from ai_sdlc.models.frontend_gate_policy import (
     CompatibilityExecutionPolicy,
+    FrontendCompatibilityFeedbackBoundary,
     FrontendCoverageGap,
     FrontendCoverageReport,
+    FrontendDiagnosticsCoverageEntry,
+    FrontendDriftClassification,
     FrontendDriftFinding,
     FrontendDriftReport,
     FrontendGatePolicySet,
@@ -17,6 +20,7 @@ from ai_sdlc.models.frontend_gate_policy import (
     FrontendViolation,
     FrontendViolationReport,
     build_mvp_frontend_gate_policy,
+    build_p1_frontend_gate_policy_diagnostics_drift_expansion,
 )
 from ai_sdlc.models.frontend_generation_constraints import (
     build_mvp_frontend_generation_constraints,
@@ -74,6 +78,79 @@ def test_build_mvp_frontend_gate_policy_aligns_hard_rule_and_changed_scope_seman
     assert compatibility_mode.record_existing_debt is True
     assert compatibility_mode.advisory_only_for_existing_debt is True
     assert compatibility_mode.require_legacy_expansion_report is True
+
+
+def test_build_p1_frontend_gate_policy_diagnostics_drift_expansion_preserves_shared_gate_truth() -> None:
+    policy = build_p1_frontend_gate_policy_diagnostics_drift_expansion()
+
+    assert policy.work_item_id == "069"
+    assert policy.execution_priority == build_mvp_frontend_gate_policy().execution_priority
+    assert [rule.rule_id for rule in policy.gate_matrix] == [
+        "i18n-contract-completeness",
+        "validation-contract-coverage",
+        "recipe-declaration-compliance",
+        "whitelist-entry-compliance",
+        "token-rule-compliance",
+        "vue2-hard-rule-compliance",
+    ]
+    assert [entry.mode for entry in policy.compatibility_feedback_boundary] == [
+        "strict",
+        "incremental",
+        "compatibility",
+    ]
+    assert [entry.coverage_id for entry in policy.diagnostics_coverage_matrix] == [
+        "semantic-component-coverage",
+        "page-recipe-coverage",
+        "state-coverage",
+        "whitelist-coverage",
+        "token-rule-coverage",
+    ]
+    assert [entry.classification_id for entry in policy.drift_classification] == [
+        "input-gap",
+        "stable-empty-observation",
+        "recipe-structure-drift",
+        "state-expectation-drift",
+        "whitelist-leakage",
+        "token-leakage",
+    ]
+
+    semantic_component_coverage = next(
+        entry
+        for entry in policy.diagnostics_coverage_matrix
+        if entry.coverage_id == "semantic-component-coverage"
+    )
+    compatibility_feedback = next(
+        entry
+        for entry in policy.compatibility_feedback_boundary
+        if entry.mode == "compatibility"
+    )
+    whitelist_leakage = next(
+        entry
+        for entry in policy.drift_classification
+        if entry.classification_id == "whitelist-leakage"
+    )
+
+    assert semantic_component_coverage.coverage_type == "semantic-component"
+    assert semantic_component_coverage.governed_targets == [
+        "UiTabs",
+        "UiSearchBar",
+        "UiFilterBar",
+        "UiResult",
+        "UiSection",
+        "UiToolbar",
+        "UiPagination",
+        "UiCard",
+    ]
+    assert semantic_component_coverage.source_truth_refs == ["067", "018"]
+    assert compatibility_feedback.allowed_feedback_surfaces == [
+        "report-severity",
+        "changed-scope-explanation",
+        "remediation-hint",
+        "legacy-expansion-context",
+    ]
+    assert "second-gate-system" in compatibility_feedback.forbidden_truth_mutations
+    assert whitelist_leakage.report_type == "violation-report"
+    assert whitelist_leakage.source_truth_refs == ["017", "067", "068", "018"]
 
 
 def test_frontend_gate_reports_are_machine_consumable() -> None:
@@ -169,6 +246,71 @@ def test_frontend_gate_policy_set_rejects_duplicate_rule_ids_and_policy_modes() 
                 ),
             ],
             report_types=["violation-report"],
+        )
+
+
+def test_frontend_gate_policy_set_rejects_unknown_diagnostics_targets_report_types_and_modes() -> None:
+    base_policy = build_mvp_frontend_gate_policy()
+
+    with pytest.raises(
+        ValueError,
+        match="diagnostics_coverage_matrix references unknown governed_targets",
+    ):
+        FrontendGatePolicySet(
+            work_item_id="069",
+            execution_priority=base_policy.execution_priority,
+            gate_matrix=base_policy.gate_matrix,
+            compatibility_policies=base_policy.compatibility_policies,
+            report_types=base_policy.report_types,
+            diagnostics_coverage_matrix=[
+                FrontendDiagnosticsCoverageEntry(
+                    coverage_id="semantic-component-coverage",
+                    coverage_type="semantic-component",
+                    governed_targets=["UiGhost"],
+                    source_truth_refs=["067", "018"],
+                    diagnostic_focus="should fail",
+                )
+            ],
+        )
+
+    with pytest.raises(
+        ValueError,
+        match="drift_classification references unknown report_types",
+    ):
+        FrontendGatePolicySet(
+            work_item_id="069",
+            execution_priority=base_policy.execution_priority,
+            gate_matrix=base_policy.gate_matrix,
+            compatibility_policies=base_policy.compatibility_policies,
+            report_types=base_policy.report_types,
+            drift_classification=[
+                FrontendDriftClassification(
+                    classification_id="input-gap",
+                    trigger_condition="missing artifact",
+                    report_type="ghost-report",
+                    severity_floor="medium",
+                    source_truth_refs=["065", "018"],
+                )
+            ],
+        )
+
+    with pytest.raises(
+        ValueError,
+        match="compatibility_feedback_boundary references unknown modes",
+    ):
+        FrontendGatePolicySet(
+            work_item_id="069",
+            execution_priority=base_policy.execution_priority,
+            gate_matrix=base_policy.gate_matrix,
+            compatibility_policies=base_policy.compatibility_policies,
+            report_types=base_policy.report_types,
+            compatibility_feedback_boundary=[
+                FrontendCompatibilityFeedbackBoundary(
+                    mode="shadow",
+                    allowed_feedback_surfaces=["report-severity"],
+                    forbidden_truth_mutations=["kernel-truth"],
+                )
+            ],
         )
 
     with pytest.raises(ValueError, match="duplicate compatibility modes"):

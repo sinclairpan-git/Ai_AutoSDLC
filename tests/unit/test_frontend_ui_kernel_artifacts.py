@@ -168,6 +168,7 @@ def test_p1_kernel_artifact_payloads_preserve_semantic_expansion_truth(tmp_path)
         "disallowed_capabilities"
     ]
 
+
 def test_p1_page_recipe_expansion_artifacts_preserve_recipe_truth(tmp_path) -> None:
     kernel = build_p1_frontend_ui_kernel_page_recipe_expansion()
 
