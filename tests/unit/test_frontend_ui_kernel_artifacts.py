@@ -12,6 +12,7 @@ from ai_sdlc.generators.frontend_ui_kernel_artifacts import (
 )
 from ai_sdlc.models.frontend_ui_kernel import (
     build_mvp_frontend_ui_kernel,
+    build_p1_frontend_ui_kernel_page_recipe_expansion,
     build_p1_frontend_ui_kernel_semantic_expansion,
 )
 
@@ -166,6 +167,75 @@ def test_p1_kernel_artifact_payloads_preserve_semantic_expansion_truth(tmp_path)
     assert "generic toast message substitution" in component_by_id["UiResult"][
         "disallowed_capabilities"
     ]
+
+def test_p1_page_recipe_expansion_artifacts_preserve_recipe_truth(tmp_path) -> None:
+    kernel = build_p1_frontend_ui_kernel_page_recipe_expansion()
+
+    paths = materialize_frontend_ui_kernel_artifacts(tmp_path, kernel)
+    rel_paths = {path.relative_to(tmp_path).as_posix() for path in paths}
+
+    assert rel_paths == {
+        "kernel/frontend/interaction-baseline.yaml",
+        "kernel/frontend/kernel.manifest.yaml",
+        "kernel/frontend/page-recipes/DashboardPage.yaml",
+        "kernel/frontend/page-recipes/DetailPage.yaml",
+        "kernel/frontend/page-recipes/DialogFormPage.yaml",
+        "kernel/frontend/page-recipes/FormPage.yaml",
+        "kernel/frontend/page-recipes/ListPage.yaml",
+        "kernel/frontend/page-recipes/SearchListPage.yaml",
+        "kernel/frontend/page-recipes/WizardPage.yaml",
+        "kernel/frontend/semantic-components.yaml",
+        "kernel/frontend/state-baseline.yaml",
+    }
+
+    kernel_root = frontend_ui_kernel_root(tmp_path)
+    manifest = _read_yaml(kernel_root / "kernel.manifest.yaml")
+    search_list_page = _read_yaml(kernel_root / "page-recipes" / "SearchListPage.yaml")
+    dialog_form_page = _read_yaml(kernel_root / "page-recipes" / "DialogFormPage.yaml")
+    wizard_page = _read_yaml(kernel_root / "page-recipes" / "WizardPage.yaml")
+
+    assert manifest["work_item_id"] == "068"
+    assert manifest["page_recipes"][-4:] == [
+        "DashboardPage",
+        "DialogFormPage",
+        "SearchListPage",
+        "WizardPage",
+    ]
+    assert search_list_page["consumed_protocols"] == [
+        "UiPageHeader",
+        "UiSearchBar",
+        "UiFilterBar",
+        "UiTable",
+        "UiResult",
+        "UiToolbar",
+        "UiPagination",
+    ]
+    assert search_list_page["minimum_state_expectations"] == [
+        "refreshing",
+        "no-results",
+        "partial-error",
+    ]
+    assert dialog_form_page["consumed_protocols"] == [
+        "UiDialog",
+        "UiDrawer",
+        "UiForm",
+        "UiFormItem",
+        "UiResult",
+    ]
+    assert dialog_form_page["minimum_state_expectations"] == [
+        "submitting",
+        "partial-error",
+        "success-feedback",
+    ]
+    assert wizard_page["minimum_state_expectations"] == [
+        "submitting",
+        "partial-error",
+        "success-feedback",
+    ]
+    assert (
+        "step progression remains ordered even without introducing a dedicated stepper protocol"
+        in wizard_page["interaction_rules"]
+    )
 
 
 def test_frontend_ui_kernel_root_is_stable(tmp_path) -> None:
