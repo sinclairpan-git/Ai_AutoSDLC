@@ -202,3 +202,52 @@
 - **已完成 git 提交**：否
 - 当前 batch 结论：`071` 相关的 governance materialization command 已在命令名兼容、产物范围、提示文案三者之间保持一致。
 - **下一步动作**：如继续推进，将优先寻找新的生产代码缺口；若仅剩 formal 归档差异，则继续按批次同步 execution log。
+
+### Batch 2026-04-07-005 | visual a11y truth-surface propagation log sync
+
+#### 1. 批次范围
+
+- **任务编号**：post-freeze truth-surface propagation archival sync
+- **目标**：把最近一串 `program_service` / `program` truth-surface tests-only 提交链与 fresh full-file verification 结果追加归档，确保 `071` 的 stable-empty visual/a11y evidence 传播范围被诚实记录到 final proof archive tail，而不是只停留在局部提交历史里。
+- **执行分支**：`codex/071-frontend-p1-visual-a11y-foundation-implementation`
+
+#### 2. Touched Files
+
+- `specs/071-frontend-p1-visual-a11y-foundation-baseline/task-execution-log.md`
+
+#### 3. 执行命令
+
+- `git log --oneline -n 12`
+- `uv run pytest tests/unit/test_program_service.py -q`
+- `uv run pytest tests/integration/test_cli_program.py -q`
+- `git diff --check -- specs/071-frontend-p1-visual-a11y-foundation-baseline/task-execution-log.md`
+
+#### 4. 验证结果
+
+- `git log --oneline -n 12` 显示最近连续 truth-surface propagation 提交链已包含：
+  - `cafbf08 test: cover visual a11y project cleanup propagation`
+  - `27202fa test: cover visual a11y thread archive propagation`
+  - `2c848fe test: cover visual a11y final proof archive propagation`
+  - `f9882d8 test: cover visual a11y final proof closure propagation`
+  - `2c20f82 test: cover visual a11y final proof publication propagation`
+  - `1af7bfe test: cover visual a11y writeback persistence propagation`
+  - `80a5a48 test: cover visual a11y final governance propagation`
+  - `cad6d2c test: cover visual a11y broader governance propagation`
+  - `1fb7ca1 test: cover visual a11y guarded registry propagation`
+  - `472ede9 test: cover visual a11y cross spec propagation`
+  - `1f3abdb test: cover visual a11y provider patch propagation`
+  - `982e8c2 test: cover visual a11y provider handoff propagation`
+- `uv run pytest tests/unit/test_program_service.py -q` 通过，结果为 `116 passed in 0.88s`。
+- `uv run pytest tests/integration/test_cli_program.py -q` 通过，结果为 `91 passed in 1.97s`。
+
+#### 5. 对账结论
+
+- 最近这组 tests-only 提交把 `frontend_visual_a11y_evidence_stable_empty` 从 provider handoff / provider patch 一直沿着 `cross-spec-writeback -> guarded-registry -> broader-governance -> final-governance -> writeback-persistence -> final-proof-publication -> final-proof-closure -> final-proof-archive -> thread-archive -> project-cleanup` 链路持续钉死在 unit 与 CLI integration 两层。
+- 这批工作没有引入新的 production behavior；它的职责是把 `071` 已落地的 honesty/truth surfaces 在后续 program tail stages 上补齐回归保护，避免 stable-empty evidence 在下游 request、artifact、report 或 execute surface 上被静默丢失。
+- 本批之后，当前 worktree 中与 `071` 直接相邻的 visual/a11y stable-empty propagation tail 已完成到 `final-proof-archive-project-cleanup`；若后续继续推进，应优先寻找新的生产代码缺口，否则继续保持 execution log 与提交链同步。
+
+#### 6. 归档后动作
+
+- **已完成 git 提交**：否
+- 当前 batch 结论：`071` 的 stable-empty visual/a11y evidence truth-surface propagation 已在 program tail stages 完成成链覆盖，并通过最新整文件回归验证。
+- **下一步动作**：继续扫描 `071` 相邻 surface；若仍无新的生产缺口，则维持按批次更新 execution log 的节奏。
