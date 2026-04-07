@@ -621,6 +621,45 @@
 
 #### 6. 归档后动作
 
-- **已完成 git 提交**：否
+- **已完成 git 提交**：是
 - 当前 batch 结论：final-proof 主链 actual-issue truth propagation 已补齐，并通过 targeted + full unit/integration 回归。
 - **下一步动作**：继续把 actual-issue token 补到 `final-proof-archive-thread-archive / final-proof-archive-project-cleanup` 尾部 surfaces。
+
+### Batch 2026-04-07-016 | final-proof tail actual-issue propagation
+
+#### 1. 背景
+
+- `final-proof publication / closure / archive` 主链已经完成 actual-issue truth propagation，剩余尾部缺口只在 `final-proof-archive-thread-archive / final-proof-archive-project-cleanup`。
+- 这一段是 final-proof archive 之后的最后两层 surface；目标仍然是保证 `frontend_visual_a11y_issue_review` 与对应建议动作不会在尾部收束阶段退化回 generic remediation。
+
+#### 2. 修改文件
+
+- `tests/unit/test_program_service.py`
+- `tests/integration/test_cli_program.py`
+- `specs/071-frontend-p1-visual-a11y-foundation-baseline/task-execution-log.md`
+
+#### 3. 执行命令
+
+- `uv run pytest tests/unit/test_program_service.py -k 'visual_a11y_issue_review and (thread_archive or project_cleanup)' -q`
+- `uv run pytest tests/integration/test_cli_program.py -k 'visual_a11y_issue_review and (thread_archive or project_cleanup)' -q`
+- `uv run pytest tests/unit/test_program_service.py -q`
+- `uv run pytest tests/integration/test_cli_program.py -q`
+- `git diff --check -- tests/unit/test_program_service.py tests/integration/test_cli_program.py specs/071-frontend-p1-visual-a11y-foundation-baseline/task-execution-log.md`
+
+#### 4. 验证结果
+
+- `uv run pytest tests/unit/test_program_service.py -k 'visual_a11y_issue_review and (thread_archive or project_cleanup)' -q` 通过，结果为 `3 passed, 141 deselected in 0.38s`。
+- `uv run pytest tests/integration/test_cli_program.py -k 'visual_a11y_issue_review and (thread_archive or project_cleanup)' -q` 通过，结果为 `2 passed, 106 deselected in 0.45s`。
+- `uv run pytest tests/unit/test_program_service.py -q` 通过，结果为 `144 passed in 0.96s`。
+- `uv run pytest tests/integration/test_cli_program.py -q` 通过，结果为 `108 passed in 2.15s`。
+
+#### 5. 对账结论
+
+- `final-proof-archive-thread-archive / final-proof-archive-project-cleanup` 尾部 surface 都能自然保留 `frontend_visual_a11y_issue_review` 与对应建议动作，未发现新的生产断层。
+- 到这里为止，071 这条 visual/a11y truth propagation 主链已经从 remediation provider 一路闭合到 final-proof archive 尾部 cleanup surfaces。
+
+#### 6. 归档后动作
+
+- **已完成 git 提交**：否
+- 当前 batch 结论：final-proof 尾部 actual-issue truth propagation 已补齐，并通过 targeted + full unit/integration 回归。
+- **下一步动作**：继续扫描 071 相邻剩余 truth-surface 或 honesty/messaging 缺口；若没有新的生产缺口，则转向更高一层的治理/报告 surface 收尾。

@@ -3913,6 +3913,56 @@ specs:
         assert "review stable empty frontend visual / a11y evidence" in report
         assert "re-run ai-sdlc verify constraints" in report
 
+    def test_program_final_proof_archive_thread_archive_execute_preserves_visual_a11y_issue_review_input(
+        self, initialized_project_dir: Path
+    ) -> None:
+        root = initialized_project_dir
+        _write_manifest(root)
+        _write_frontend_final_proof_archive_artifact(
+            root,
+            archive_result="deferred",
+            archive_state="deferred",
+            remaining_blockers=["spec 001-auth remediation still required"],
+            steps=[
+                {
+                    "spec_id": "001-auth",
+                    "path": "specs/001-auth",
+                    "archive_state": "deferred",
+                    "pending_inputs": ["frontend_visual_a11y_issue_review"],
+                    "suggested_next_actions": [
+                        "review frontend visual / a11y issue findings",
+                        "re-run ai-sdlc verify constraints",
+                    ],
+                    "source_linkage": {
+                        "archive_state": "deferred",
+                        "final_proof_closure_artifact_path": ".ai-sdlc/memory/frontend-final-proof-closure/latest.yaml",
+                    },
+                }
+            ],
+        )
+        report_rel = (
+            ".ai-sdlc/memory/frontend-final-proof-archive-thread-archive-visual-a11y-issue.md"
+        )
+
+        with patch("ai_sdlc.cli.program_cmd.find_project_root", return_value=root):
+            result = runner.invoke(
+                app,
+                [
+                    "program",
+                    "final-proof-archive-thread-archive",
+                    "--execute",
+                    "--yes",
+                    "--report",
+                    report_rel,
+                ],
+            )
+
+        assert result.exit_code == 1
+        report = (root / report_rel).read_text(encoding="utf-8")
+        assert "frontend_visual_a11y_issue_review" in report
+        assert "review frontend visual / a11y issue findings" in report
+        assert "re-run ai-sdlc verify constraints" in report
+
     def test_program_final_proof_archive_project_cleanup_execute_requires_explicit_confirmation(
         self, initialized_project_dir: Path
     ) -> None:
@@ -4236,6 +4286,71 @@ specs:
         report = (root / report_rel).read_text(encoding="utf-8")
         assert "frontend_visual_a11y_evidence_stable_empty" in report
         assert "review stable empty frontend visual / a11y evidence" in report
+        assert "re-run ai-sdlc verify constraints" in report
+
+    def test_program_final_proof_archive_project_cleanup_execute_preserves_visual_a11y_issue_review_input(
+        self, initialized_project_dir: Path
+    ) -> None:
+        root = initialized_project_dir
+        _write_manifest(root)
+        _write_frontend_final_proof_archive_artifact(
+            root,
+            archive_result="deferred",
+            archive_state="deferred",
+            remaining_blockers=["spec 001-auth remediation still required"],
+            steps=[
+                {
+                    "spec_id": "001-auth",
+                    "path": "specs/001-auth",
+                    "archive_state": "deferred",
+                    "pending_inputs": ["frontend_visual_a11y_issue_review"],
+                    "suggested_next_actions": [
+                        "review frontend visual / a11y issue findings",
+                        "re-run ai-sdlc verify constraints",
+                    ],
+                    "source_linkage": {
+                        "archive_state": "deferred",
+                        "final_proof_closure_artifact_path": ".ai-sdlc/memory/frontend-final-proof-closure/latest.yaml",
+                    },
+                }
+            ],
+        )
+        report_rel = (
+            ".ai-sdlc/memory/frontend-final-proof-archive-project-cleanup-visual-a11y-issue.md"
+        )
+
+        with patch("ai_sdlc.cli.program_cmd.find_project_root", return_value=root):
+            result = runner.invoke(
+                app,
+                [
+                    "program",
+                    "final-proof-archive-project-cleanup",
+                    "--execute",
+                    "--yes",
+                    "--report",
+                    report_rel,
+                ],
+            )
+
+        artifact_path = (
+            root
+            / ".ai-sdlc"
+            / "memory"
+            / "frontend-final-proof-archive-project-cleanup"
+            / "latest.yaml"
+        )
+        assert result.exit_code == 1
+        payload = yaml.safe_load(artifact_path.read_text(encoding="utf-8"))
+        assert payload["steps"][0]["pending_inputs"] == [
+            "frontend_visual_a11y_issue_review"
+        ]
+        assert payload["steps"][0]["suggested_next_actions"] == [
+            "review frontend visual / a11y issue findings",
+            "re-run ai-sdlc verify constraints",
+        ]
+        report = (root / report_rel).read_text(encoding="utf-8")
+        assert "frontend_visual_a11y_issue_review" in report
+        assert "review frontend visual / a11y issue findings" in report
         assert "re-run ai-sdlc verify constraints" in report
 
 
