@@ -507,3 +507,42 @@
 - **已完成 git 提交**：是
 - 当前 batch 结论：provider 前半段 actual-issue truth propagation 已补齐，并通过 targeted + full unit/integration 回归。
 - **下一步动作**：若 provider 前半段保持自然透传，则继续沿 cross-spec-writeback 之后的 artifact 链把 actual-issue token 覆盖补齐到 final-proof。
+
+### Batch 2026-04-07-013 | cross-spec to broader-governance actual-issue propagation
+
+#### 1. 背景
+
+- provider 前半段已经证明 `frontend_visual_a11y_issue_review` 可以自然透传，下一段需要继续把同一 token 沿 `cross-spec-writeback -> guarded-registry -> broader-governance` 链钉死。
+- 这一段同样是 artifact 驱动的 guarded orchestration surface，目标仍然是保证 actual issue 不会在中途被压回 generic remediation。
+
+#### 2. 修改文件
+
+- `tests/unit/test_program_service.py`
+- `tests/integration/test_cli_program.py`
+- `specs/071-frontend-p1-visual-a11y-foundation-baseline/task-execution-log.md`
+
+#### 3. 执行命令
+
+- `uv run pytest tests/unit/test_program_service.py -k 'visual_a11y_issue_review and (cross_spec or guarded_registry or broader_governance)' -q`
+- `uv run pytest tests/integration/test_cli_program.py -k 'visual_a11y_issue_review and (cross_spec or guarded_registry or broader_governance)' -q`
+- `uv run pytest tests/unit/test_program_service.py -q`
+- `uv run pytest tests/integration/test_cli_program.py -q`
+- `git diff --check -- tests/unit/test_program_service.py tests/integration/test_cli_program.py specs/071-frontend-p1-visual-a11y-foundation-baseline/task-execution-log.md`
+
+#### 4. 验证结果
+
+- `uv run pytest tests/unit/test_program_service.py -k 'visual_a11y_issue_review and (cross_spec or guarded_registry or broader_governance)' -q` 通过，结果为 `6 passed, 123 deselected in 0.39s`。
+- `uv run pytest tests/integration/test_cli_program.py -k 'visual_a11y_issue_review and (cross_spec or guarded_registry or broader_governance)' -q` 通过，结果为 `3 passed, 97 deselected in 0.48s`。
+- `uv run pytest tests/unit/test_program_service.py -q` 通过，结果为 `129 passed in 0.90s`。
+- `uv run pytest tests/integration/test_cli_program.py -q` 通过，结果为 `100 passed in 2.04s`。
+
+#### 5. 对账结论
+
+- `cross-spec-writeback / guarded-registry / broader-governance` 三层都能自然保留 `frontend_visual_a11y_issue_review` 与对应建议动作，未发现新的生产断层。
+- 这说明前半段 guarded orchestration 链的 actual-issue truth surface 已经连续闭合，当前缺口继续后移到 final-governance 之后的 persistence / final-proof surfaces。
+
+#### 6. 归档后动作
+
+- **已完成 git 提交**：是
+- 当前 batch 结论：cross-spec 到 broader-governance 的 actual-issue truth propagation 已补齐，并通过 targeted + full unit/integration 回归。
+- **下一步动作**：若这一段继续保持透传，则把 actual-issue token 继续补到 final-governance / writeback-persistence / final-proof 系列 surface。
