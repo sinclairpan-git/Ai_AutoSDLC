@@ -1855,6 +1855,98 @@ def test_execute_frontend_final_governance_does_not_write_artifact_by_default(
     ).exists()
 
 
+def test_build_frontend_final_governance_request_preserves_stable_empty_visual_a11y_pending_input(
+    tmp_path: Path,
+) -> None:
+    for p in ("specs/001-auth", "specs/002-course", "specs/003-enroll"):
+        (tmp_path / p).mkdir(parents=True)
+    _write_frontend_broader_governance_artifact(
+        tmp_path,
+        governance_result="deferred",
+        governance_state="deferred",
+        remaining_blockers=["spec 001-auth remediation still required"],
+        steps=[
+            {
+                "spec_id": "001-auth",
+                "path": "specs/001-auth",
+                "governance_state": "deferred",
+                "pending_inputs": ["frontend_visual_a11y_evidence_stable_empty"],
+                "suggested_next_actions": [
+                    "review stable empty frontend visual / a11y evidence",
+                    "re-run ai-sdlc verify constraints",
+                ],
+                "source_linkage": {
+                    "governance_state": "deferred",
+                    "guarded_registry_artifact_path": ".ai-sdlc/memory/frontend-guarded-registry/latest.yaml",
+                },
+            }
+        ],
+    )
+
+    svc = ProgramService(tmp_path)
+    request = svc.build_frontend_final_governance_request(_manifest())
+
+    assert request.steps[0].pending_inputs == [
+        "frontend_visual_a11y_evidence_stable_empty"
+    ]
+    assert request.steps[0].suggested_next_actions == [
+        "review stable empty frontend visual / a11y evidence",
+        "re-run ai-sdlc verify constraints",
+    ]
+
+
+def test_write_frontend_final_governance_artifact_preserves_stable_empty_visual_a11y_pending_input(
+    tmp_path: Path,
+) -> None:
+    for p in ("specs/001-auth", "specs/002-course", "specs/003-enroll"):
+        (tmp_path / p).mkdir(parents=True)
+    _write_frontend_broader_governance_artifact(
+        tmp_path,
+        governance_result="deferred",
+        governance_state="deferred",
+        remaining_blockers=["spec 001-auth remediation still required"],
+        steps=[
+            {
+                "spec_id": "001-auth",
+                "path": "specs/001-auth",
+                "governance_state": "deferred",
+                "pending_inputs": ["frontend_visual_a11y_evidence_stable_empty"],
+                "suggested_next_actions": [
+                    "review stable empty frontend visual / a11y evidence",
+                    "re-run ai-sdlc verify constraints",
+                ],
+                "source_linkage": {
+                    "governance_state": "deferred",
+                    "guarded_registry_artifact_path": ".ai-sdlc/memory/frontend-guarded-registry/latest.yaml",
+                },
+            }
+        ],
+    )
+
+    svc = ProgramService(tmp_path)
+    request = svc.build_frontend_final_governance_request(_manifest())
+    result = svc.execute_frontend_final_governance(
+        _manifest(),
+        request=request,
+        confirmed=True,
+    )
+
+    artifact_path = svc.write_frontend_final_governance_artifact(
+        _manifest(),
+        request=request,
+        result=result,
+    )
+
+    payload = yaml.safe_load(artifact_path.read_text(encoding="utf-8"))
+    assert payload["steps"][0]["pending_inputs"] == [
+        "frontend_visual_a11y_evidence_stable_empty"
+    ]
+    assert payload["steps"][0]["suggested_next_actions"] == [
+        "review stable empty frontend visual / a11y evidence",
+        "re-run ai-sdlc verify constraints",
+    ]
+
+
 def test_build_frontend_writeback_persistence_request_requires_explicit_confirmation(
     tmp_path: Path,
 ) -> None:
@@ -4432,11 +4524,28 @@ def _write_frontend_broader_governance_artifact(
     governance_result: str,
     governance_state: str,
     remaining_blockers: list[str],
+    steps: list[dict[str, object]] | None = None,
 ) -> None:
     artifact_path = (
         root / ".ai-sdlc" / "memory" / "frontend-broader-governance" / "latest.yaml"
     )
     artifact_path.parent.mkdir(parents=True, exist_ok=True)
+    default_steps = [
+        {
+            "spec_id": "001-auth",
+            "path": "specs/001-auth",
+            "governance_state": governance_state,
+            "pending_inputs": ["frontend_contract_observations"],
+            "suggested_next_actions": [
+                "materialize broader governance review context",
+                "re-run ai-sdlc verify constraints",
+            ],
+            "source_linkage": {
+                "governance_state": governance_state,
+                "guarded_registry_artifact_path": ".ai-sdlc/memory/frontend-guarded-registry/latest.yaml",
+            },
+        }
+    ]
     artifact_path.write_text(
         yaml.safe_dump(
             {
@@ -4459,22 +4568,7 @@ def _write_frontend_broader_governance_artifact(
                 "warnings": [
                     "broader governance baseline does not execute final governance actions yet"
                 ],
-                "steps": [
-                    {
-                        "spec_id": "001-auth",
-                        "path": "specs/001-auth",
-                        "governance_state": governance_state,
-                        "pending_inputs": ["frontend_contract_observations"],
-                        "suggested_next_actions": [
-                            "materialize broader governance review context",
-                            "re-run ai-sdlc verify constraints",
-                        ],
-                        "source_linkage": {
-                            "governance_state": governance_state,
-                            "guarded_registry_artifact_path": ".ai-sdlc/memory/frontend-guarded-registry/latest.yaml",
-                        },
-                    }
-                ],
+                "steps": list(steps or default_steps),
                 "source_linkage": {
                     "registry_state": "deferred",
                     "governance_state": governance_state,
@@ -4496,11 +4590,28 @@ def _write_frontend_final_governance_artifact(
     final_governance_result: str,
     final_governance_state: str,
     remaining_blockers: list[str],
+    steps: list[dict[str, object]] | None = None,
 ) -> None:
     artifact_path = (
         root / ".ai-sdlc" / "memory" / "frontend-final-governance" / "latest.yaml"
     )
     artifact_path.parent.mkdir(parents=True, exist_ok=True)
+    default_steps = [
+        {
+            "spec_id": "001-auth",
+            "path": "specs/001-auth",
+            "final_governance_state": final_governance_state,
+            "pending_inputs": ["frontend_contract_observations"],
+            "suggested_next_actions": [
+                "materialize writeback persistence review context",
+                "re-run ai-sdlc verify constraints",
+            ],
+            "source_linkage": {
+                "final_governance_state": final_governance_state,
+                "broader_governance_artifact_path": ".ai-sdlc/memory/frontend-broader-governance/latest.yaml",
+            },
+        }
+    ]
     artifact_path.write_text(
         yaml.safe_dump(
             {
@@ -4523,22 +4634,7 @@ def _write_frontend_final_governance_artifact(
                 "warnings": [
                     "final governance baseline does not execute code rewrite persistence yet"
                 ],
-                "steps": [
-                    {
-                        "spec_id": "001-auth",
-                        "path": "specs/001-auth",
-                        "final_governance_state": final_governance_state,
-                        "pending_inputs": ["frontend_contract_observations"],
-                        "suggested_next_actions": [
-                            "materialize writeback persistence review context",
-                            "re-run ai-sdlc verify constraints",
-                        ],
-                        "source_linkage": {
-                            "final_governance_state": final_governance_state,
-                            "broader_governance_artifact_path": ".ai-sdlc/memory/frontend-broader-governance/latest.yaml",
-                        },
-                    }
-                ],
+                "steps": list(steps or default_steps),
                 "source_linkage": {
                     "governance_state": "deferred",
                     "final_governance_state": final_governance_state,
