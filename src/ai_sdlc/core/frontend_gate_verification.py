@@ -8,6 +8,9 @@ from pathlib import Path
 import yaml
 
 from ai_sdlc.core.frontend_contract_drift import PageImplementationObservation
+from ai_sdlc.core.frontend_contract_observation_provider import (
+    FRONTEND_CONTRACT_OBSERVATION_ARTIFACT_STATUS_ATTACHED,
+)
 from ai_sdlc.core.frontend_contract_verification import (
     FrontendContractVerificationReport,
     build_frontend_contract_verification_report,
@@ -76,6 +79,11 @@ def build_frontend_gate_verification_report(
     root: Path,
     observations: list[PageImplementationObservation],
     *,
+    observation_artifact_status: str = (
+        FRONTEND_CONTRACT_OBSERVATION_ARTIFACT_STATUS_ATTACHED
+    ),
+    observation_artifact_path: Path | None = None,
+    observation_artifact_error: str | None = None,
     visual_a11y_evidence_artifact: FrontendVisualA11yEvidenceArtifact | None = None,
 ) -> FrontendGateVerificationReport:
     """Translate artifact presence and contract prerequisite into gate summary fields."""
@@ -85,6 +93,9 @@ def build_frontend_gate_verification_report(
     contract_report = build_frontend_contract_verification_report(
         frontend_contracts_root(root),
         observations,
+        observation_artifact_status=observation_artifact_status,
+        observation_artifact_path=observation_artifact_path,
+        observation_artifact_error=observation_artifact_error,
     )
 
     gate_present, gate_message = _required_artifacts_present(
@@ -211,7 +222,7 @@ def build_frontend_gate_verification_report(
             "frontend contract verification not clear: "
             f"{_contract_prerequisite_message(contract_report)}"
         )
-        coverage_gaps.extend(contract_report.coverage_gaps)
+        coverage_gaps.extend(_contract_coverage_gaps(contract_report))
 
     if visual_a11y_required and not visual_a11y_evidence_clear:
         blockers.append(
@@ -253,6 +264,11 @@ def build_frontend_gate_verification_context(
     root: Path,
     observations: list[PageImplementationObservation],
     *,
+    observation_artifact_status: str = (
+        FRONTEND_CONTRACT_OBSERVATION_ARTIFACT_STATUS_ATTACHED
+    ),
+    observation_artifact_path: Path | None = None,
+    observation_artifact_error: str | None = None,
     visual_a11y_evidence_artifact: FrontendVisualA11yEvidenceArtifact | None = None,
 ) -> dict[str, object]:
     """Build a verification-compatible context fragment for frontend gate summary."""
@@ -260,6 +276,9 @@ def build_frontend_gate_verification_context(
     report = build_frontend_gate_verification_report(
         root,
         observations,
+        observation_artifact_status=observation_artifact_status,
+        observation_artifact_path=observation_artifact_path,
+        observation_artifact_error=observation_artifact_error,
         visual_a11y_evidence_artifact=visual_a11y_evidence_artifact,
     )
     return {
@@ -307,6 +326,17 @@ def _contract_prerequisite_message(
     if report.coverage_gaps:
         return "coverage gaps: " + ", ".join(report.coverage_gaps)
     return "frontend contract verification not clear"
+
+
+def _contract_coverage_gaps(
+    report: FrontendContractVerificationReport,
+) -> tuple[str, ...]:
+    projection = report.diagnostic.policy_projection
+    report_family_member = projection.report_family_member
+    gaps = [gap for gap in report.coverage_gaps if gap != report_family_member]
+    if projection.coverage_effect == "gap":
+        gaps.append(report_family_member)
+    return tuple(_unique_strings(gaps))
 
 
 def _evaluate_visual_a11y_evidence_artifact(
