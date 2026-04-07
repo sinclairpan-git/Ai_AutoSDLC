@@ -362,6 +362,7 @@ specs:
         assert "Frontend Remediation Handoff" in result.output
         assert "frontend_visual_a11y_policy_artifacts" in result.output
         assert "materialize frontend visual / a11y policy artifacts" in result.output
+        assert "uv run ai-sdlc rules materialize-frontend-mvp" in result.output
 
     def test_program_integrate_execute_surfaces_frontend_recheck_handoff(
         self, initialized_project_dir: Path

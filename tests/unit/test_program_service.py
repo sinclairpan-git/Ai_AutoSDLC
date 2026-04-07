@@ -3358,7 +3358,10 @@ def test_build_integration_dry_run_surfaces_visual_a11y_policy_artifact_remediat
         "materialize frontend visual / a11y policy artifacts"
         in remediation.suggested_actions
     )
-    assert remediation.recommended_commands == ["uv run ai-sdlc verify constraints"]
+    assert remediation.recommended_commands == [
+        "uv run ai-sdlc rules materialize-frontend-mvp",
+        "uv run ai-sdlc verify constraints",
+    ]
 
 
 def test_execution_gates_require_all_specs_closed(tmp_path: Path) -> None:

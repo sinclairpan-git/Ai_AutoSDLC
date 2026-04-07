@@ -4802,7 +4802,8 @@ class ProgramService:
                 f"{PROGRAM_FRONTEND_SCAN_COMMAND_PREFIX}{spec_path}"
             )
         if (
-            "frontend_gate_policy_artifacts" in fix_inputs
+            "frontend_visual_a11y_policy_artifacts" in fix_inputs
+            or "frontend_gate_policy_artifacts" in fix_inputs
             or "frontend_generation_governance_artifacts" in fix_inputs
         ):
             recommended_commands.append("uv run ai-sdlc rules materialize-frontend-mvp")
