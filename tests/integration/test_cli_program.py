@@ -22,6 +22,9 @@ from ai_sdlc.generators.frontend_generation_constraint_artifacts import (
     materialize_frontend_generation_constraint_artifacts,
 )
 from ai_sdlc.models.frontend_gate_policy import build_mvp_frontend_gate_policy
+from ai_sdlc.models.frontend_gate_policy import (
+    build_p1_frontend_gate_policy_visual_a11y_foundation,
+)
 from ai_sdlc.models.frontend_generation_constraints import (
     build_mvp_frontend_generation_constraints,
 )
@@ -99,6 +102,17 @@ def _write_frontend_gate_artifacts(root: Path) -> None:
     materialize_frontend_gate_policy_artifacts(
         root,
         build_mvp_frontend_gate_policy(),
+    )
+    materialize_frontend_generation_constraint_artifacts(
+        root,
+        build_mvp_frontend_generation_constraints(),
+    )
+
+
+def _write_p1_frontend_gate_artifacts(root: Path) -> None:
+    materialize_frontend_gate_policy_artifacts(
+        root,
+        build_p1_frontend_gate_policy_visual_a11y_foundation(),
     )
     materialize_frontend_generation_constraint_artifacts(
         root,
@@ -317,6 +331,37 @@ specs:
         assert "Frontend Execute Preflight" in result.output
         assert "ready" in result.output
         assert "Execution gates passed" in result.output
+
+    def test_program_integrate_execute_surfaces_visual_a11y_policy_artifact_remediation_hint(
+        self, initialized_project_dir: Path
+    ) -> None:
+        root = initialized_project_dir
+        _write_manifest(root)
+        _write_minimal_frontend_contract_page_artifacts(root)
+        _write_p1_frontend_gate_artifacts(root)
+        (
+            root
+            / "governance"
+            / "frontend"
+            / "gates"
+            / "visual-a11y-evidence-boundary.yaml"
+        ).unlink()
+        for spec in ("001-auth", "002-course", "003-enroll"):
+            (root / "specs" / spec / "development-summary.md").write_text(
+                "done\n", encoding="utf-8"
+            )
+            _write_frontend_contract_observations(root / "specs" / spec)
+
+        with patch("ai_sdlc.cli.program_cmd.find_project_root", return_value=root):
+            result = runner.invoke(
+                app,
+                ["program", "integrate", "--execute", "--yes", "--allow-dirty"],
+            )
+
+        assert result.exit_code == 1
+        assert "Frontend Remediation Handoff" in result.output
+        assert "frontend_visual_a11y_policy_artifacts" in result.output
+        assert "materialize frontend visual / a11y policy artifacts" in result.output
 
     def test_program_integrate_execute_surfaces_frontend_recheck_handoff(
         self, initialized_project_dir: Path

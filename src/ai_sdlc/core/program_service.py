@@ -4778,6 +4778,10 @@ class ProgramService:
         suggested_actions: list[str] = []
         if "frontend_contract_observations" in fix_inputs:
             suggested_actions.append("materialize frontend contract observations")
+        if "frontend_visual_a11y_policy_artifacts" in fix_inputs:
+            suggested_actions.append(
+                "materialize frontend visual / a11y policy artifacts"
+            )
         if "frontend_visual_a11y_evidence_input" in fix_inputs:
             suggested_actions.append("materialize frontend visual / a11y evidence input")
         if "frontend_visual_a11y_evidence_stable_empty" in fix_inputs:

@@ -3316,6 +3316,44 @@ def test_build_integration_dry_run_surfaces_visual_a11y_evidence_remediation_inp
     assert remediation.recommended_commands == ["uv run ai-sdlc verify constraints"]
 
 
+def test_build_integration_dry_run_surfaces_visual_a11y_policy_artifact_remediation_input_when_missing(
+    tmp_path: Path,
+) -> None:
+    for p in ("specs/001-auth", "specs/002-course", "specs/003-enroll"):
+        (tmp_path / p).mkdir(parents=True)
+    _write_minimal_frontend_contract_page_artifacts(tmp_path)
+    materialize_frontend_gate_policy_artifacts(
+        tmp_path,
+        build_p1_frontend_gate_policy_visual_a11y_foundation(),
+    )
+    (
+        tmp_path
+        / "governance"
+        / "frontend"
+        / "gates"
+        / "visual-a11y-evidence-boundary.yaml"
+    ).unlink()
+    materialize_frontend_generation_constraint_artifacts(
+        tmp_path,
+        build_mvp_frontend_generation_constraints(),
+    )
+    for spec in ("001-auth", "002-course", "003-enroll"):
+        _write_frontend_contract_observations(tmp_path / "specs" / spec)
+
+    svc = ProgramService(tmp_path)
+    plan = svc.build_integration_dry_run(_manifest())
+
+    step = next(item for item in plan.steps if item.spec_id == "001-auth")
+    remediation = step.frontend_remediation_input
+    assert remediation is not None
+    assert "frontend_visual_a11y_policy_artifacts" in remediation.fix_inputs
+    assert (
+        "materialize frontend visual / a11y policy artifacts"
+        in remediation.suggested_actions
+    )
+    assert remediation.recommended_commands == ["uv run ai-sdlc verify constraints"]
+
+
 def test_execution_gates_require_all_specs_closed(tmp_path: Path) -> None:
     for p in ("specs/001-auth", "specs/002-course", "specs/003-enroll"):
         (tmp_path / p).mkdir(parents=True)
