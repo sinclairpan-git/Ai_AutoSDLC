@@ -1215,7 +1215,7 @@
 
 - 日期 (UTC): 2026-03-28
 - 来源: user_report, self_review
-- 状态: fixed
+- 状态: closed
 - owner: codex
 - wi_id: 001-ai-sdlc-framework
 - 现象: `checkpoint.yml` 已推进到较新阶段甚至 `close`，但 `resume-pack.yaml` 仍停留在更早的 `execute`/旧 batch；此后再次执行 `ai-sdlc recover` 时，CLI 会继续读取旧 `resume-pack` 并向用户报告过期断点，形成“每次中断都回到同一旧位置”的假象。
@@ -1224,6 +1224,7 @@
 - 根因分类: A, B, D, H
 - 未来杜绝方案摘要: 断点恢复必须收敛为单一真值来源：`checkpoint.yml` 为唯一恢复真值，`resume-pack.yaml` 仅是由 checkpoint 派生出的上下文快照，且必须在 checkpoint 变更时同步刷新。`recover/status` 需要显式校验两者的一致性，发现 stale pack 时要阻断或自动重建，而不是继续静默复用旧快照。
 - 收口说明（2026-03-28）: `load_resume_pack()` 已改为统一执行 strict checkpoint 校验，并以 `checkpoint_last_updated` + `checkpoint_fingerprint` 判定 root/work-item `resume-pack` 是否 stale；当 pack 缺失、损坏或 stale 且 checkpoint 有效时，自动重建并原子写回派生快照；当 checkpoint 无效或不兼容时，直接失败，不再回退信任旧 pack。`ai-sdlc recover` 与 `ai-sdlc status` 现已统一走该入口，并输出 `stale` / `rebuilding from checkpoint` / `rebuilt successfully` 等可观测提示。
+- 审计复核（2026-04-07）: 已复核当前主线实现与定向回归：`tests/unit/test_context_state.py`、`tests/integration/test_cli_recover.py`、`tests/integration/test_cli_status.py` 均通过，且 `src/ai_sdlc/context/state.py` 仍保留 checkpoint 指纹/更新时间校验与 stale pack 自动重建逻辑。因此该条目从历史 `fixed` 状态正式收口为 `closed`。
 - 建议改动层级: prompt / context, rule / policy, middleware, workflow, tool, eval
 - prompt / context: 所有面向用户的恢复说明必须明确“checkpoint 是恢复真值，resume-pack 是派生快照”；不得把旧快照继续表述成当前断点。
 - rule / policy: 规定 checkpoint 为唯一断点真值；resume-pack 不得独立领先或落后于 checkpoint 而仍被视为有效恢复依据。
