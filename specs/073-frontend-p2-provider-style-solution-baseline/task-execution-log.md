@@ -127,3 +127,43 @@
 - `073` 当前已补齐 solution confirmation 的结构化 model 与 artifact materialization 基线。
 - 本批新增/修改文件在定向 tests、owned-file lint、`diff --check` 与 `verify constraints` 上均已通过。
 - 剩余仓库级阻塞仅为未触碰历史 `ruff` 红灯，不属于本批代码回归。
+
+### Batch 2026-04-08-002 | reconcile missed local-only Batch 4/5 branch provenance
+
+#### 2.1 对账背景
+
+- **任务来源**：遗漏本地分支 `codex/073-provider-style-batch4` 的对账与收口。
+- **对账对象**：已提交历史 `12996fb`、`d9536a2`，以及旧工作树中未提交的 generator / test 草稿。
+- **目标**：确认哪些内容值得补回主线，哪些内容只是早期状态，避免把过时实现重新带入 `main`。
+
+#### 2.2 对账结论
+
+- `12996fb` / `d9536a2` 携带的 Batch 4 / 5 model 工作已经被后续主线实现覆盖，直接合并会回退 `frontend_solution_confirmation`、artifact generator 与对应测试的后续修复。
+- 旧工作树里的未提交改动同样停留在早期 artifact 形态，不适合作为可合入代码来源。
+- 唯一需要补回主线的有效差异是 formal docs：
+  - `tasks.md` 中 `T43` / `T53` 的验证口径应与当时真实执行结果一致，收紧到 batch-owned `ruff` 文件集合。
+  - 执行日志需要明确记录这次遗漏分支对账，说明旧分支为何不能直接 push/merge。
+
+#### 2.3 分支处置
+
+- 旧脏工作树已保留到 `codex/073-provider-style-batch4-wip-archive`，用于保全原始现场。
+- 新的 `codex/073-provider-style-batch4` 从当前 `main` 重建，只承载这次 formal-doc reconciliation，不再复用旧代码树。
+
+#### 2.4 本次文档修正
+
+- 将 `tasks.md` 的 `T43` 验证命令改为 `src/ai_sdlc/models/frontend_provider_profile.py`、`src/ai_sdlc/models/__init__.py` 与 `tests/unit/test_frontend_provider_profile_models.py` 的 owned-file `ruff`。
+- 将 `tasks.md` 的 `T53` 验证命令改为 `src/ai_sdlc/models/frontend_solution_confirmation.py`、`src/ai_sdlc/models/__init__.py` 与 `tests/unit/test_frontend_solution_confirmation_models.py` 的 owned-file `ruff`。
+- 追加本节对账记录，保持 `073` formal docs 与真实执行历史一致。
+
+#### 2.5 验证
+
+- `uv run python -c "from pathlib import Path; from ai_sdlc.generators.doc_gen import TasksParser; plan = TasksParser().parse(Path('specs/073-frontend-p2-provider-style-solution-baseline/tasks.md')); print({'total_tasks': plan.total_tasks, 'total_batches': plan.total_batches})"`
+- `uv run pytest tests/unit/test_frontend_provider_profile_models.py tests/unit/test_frontend_solution_confirmation_models.py -q`
+- `uv run ruff check src tests`
+- `git diff --check -- specs/073-frontend-p2-provider-style-solution-baseline`
+- `uv run ai-sdlc verify constraints`
+
+#### 2.6 结论
+
+- `codex/073-provider-style-batch4` 现在已经被整理成可安全 push / PR / merge 的分支。
+- 本次合入目标是补齐遗漏的 formal docs provenance，而不是回滚代码实现。
