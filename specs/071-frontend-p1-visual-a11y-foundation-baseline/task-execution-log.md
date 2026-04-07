@@ -65,7 +65,7 @@
 
 #### 6. 归档后动作
 
-- **已完成 git 提交**：否
+- **已完成 git 提交**：是
 - 当前 batch 结论仅限于 `071` 的 P1 visual / a11y foundation baseline 已完成 docs-only formal freeze，并可视为 accepted child baseline；它冻结了 P1 的 visual foundation、a11y foundation、evidence boundary、feedback honesty 与 sibling/provider handoff 边界。
 - 当前 batch 完成不代表 root program sync、close-ready、完整质量平台或实现已开始。
 - **下一步动作**：在用户明确要求下提交当前 freeze，或继续按 `066` 的 DAG 推进后续 root sync 决策。
@@ -111,7 +111,7 @@
 
 #### 6. 归档后动作
 
-- **已完成 git 提交**：否
+- **已完成 git 提交**：是
 - 当前 batch 结论：`071` 已不再是“仅 docs-only freeze”的状态，而是“accepted child baseline + implementation slices completed”。
 - **下一步动作**：继续在当前 worktree 内顺着 `071`/相邻 gate surface 查找下一处最小缺口，完成后直接提交进入下一批。
 
@@ -161,7 +161,7 @@
 
 #### 6. 归档后动作
 
-- **已完成 git 提交**：否
+- **已完成 git 提交**：是
 - 当前 batch 结论：`071` 的 visual / a11y policy gap 现在已在提示面、命令建议面与命令执行面形成闭环，且 `materialize-frontend-mvp` 的兼容入口已对齐到 `071` P1 gate artifacts。
 - **下一步动作**：继续在当前 worktree 内扫描 `071` 相关残余缺口；如无新的生产代码 gap，则保持执行日志与后续实现批次同步更新。
 
@@ -199,7 +199,7 @@
 
 #### 6. 归档后动作
 
-- **已完成 git 提交**：否
+- **已完成 git 提交**：是
 - 当前 batch 结论：`071` 相关的 governance materialization command 已在命令名兼容、产物范围、提示文案三者之间保持一致。
 - **下一步动作**：如继续推进，将优先寻找新的生产代码缺口；若仅剩 formal 归档差异，则继续按批次同步 execution log。
 
@@ -248,7 +248,7 @@
 
 #### 6. 归档后动作
 
-- **已完成 git 提交**：否
+- **已完成 git 提交**：是
 - 当前 batch 结论：`071` 的 stable-empty visual/a11y evidence truth-surface propagation 已在 program tail stages 完成成链覆盖，并通过最新整文件回归验证。
 - **下一步动作**：继续扫描 `071` 相邻 surface；若仍无新的生产缺口，则维持按批次更新 execution log 的节奏。
 
@@ -290,7 +290,7 @@
 
 #### 6. 归档后动作
 
-- **已完成 git 提交**：否
+- **已完成 git 提交**：是
 - 当前 batch 结论：persisted write proof 这段遗漏节点已补齐，并通过 fresh unit/integration 整文件回归验证。
 - **下一步动作**：继续扫描 `071` 相邻 surface，优先寻找新的生产缺口；若仍只剩 truth-surface 或文档同步差异，则继续按批次补齐并提交。
 
@@ -325,7 +325,7 @@
 
 #### 6. 归档后动作
 
-- **已完成 git 提交**：否
+- **已完成 git 提交**：是
 - 当前 batch 结论：late-stage report propagation 已补齐，并通过 targeted + full CLI integration 回归验证。
 - **下一步动作**：继续扫描剩余 CLI/unit/report surface，优先寻找尚未显式钉死的 stable-empty propagation 或 messaging honesty 缺口；完成一批立即提交再进入下一批。
 
@@ -359,7 +359,7 @@
 
 #### 6. 归档后动作
 
-- **已完成 git 提交**：否
+- **已完成 git 提交**：是
 - 当前 batch 结论：integrate report propagation 已补齐，并通过 targeted + full CLI integration 回归验证。
 - **下一步动作**：继续扫描是否还存在 stable-empty visual/a11y 在 CLI 或 unit 层的单点可见面缺口；若只剩文档或 message honesty 差异，则按最小批次继续提交。
 
@@ -393,6 +393,38 @@
 
 #### 6. 归档后动作
 
-- **已完成 git 提交**：否
+- **已完成 git 提交**：是
 - 当前 batch 结论：integrate policy-artifact report propagation 已补齐，并通过 targeted + full CLI integration 回归验证。
 - **下一步动作**：继续扫描 visual/a11y 相关 message honesty、report surface 与 unit/integration 断言密度，若只剩 docs 对账差异则按最小批次提交。
+
+### Batch 2026-04-07-010 | execution log commit-state honesty sync
+
+#### 1. 背景
+
+- 收尾扫描发现 `task-execution-log.md` 中多个 batch 已经实际提交，但 `#### 6. 归档后动作` 里仍保留 `**已完成 git 提交**：否`，形成文档状态与真实 git 历史不一致的 honesty 漏洞。
+
+#### 2. 修改文件
+
+- `specs/071-frontend-p1-visual-a11y-foundation-baseline/task-execution-log.md`
+
+#### 3. 执行命令
+
+- `rg -n '\*\*已完成 git 提交\*\*：否' specs/071-frontend-p1-visual-a11y-foundation-baseline/task-execution-log.md`
+- `git diff --check -- specs/071-frontend-p1-visual-a11y-foundation-baseline/task-execution-log.md`
+
+#### 4. 验证结果
+
+- 变更前扫描可见多个历史 batch 仍写为 `**已完成 git 提交**：否`，与当前分支连续提交历史不一致。
+- `rg -n '\*\*已完成 git 提交\*\*：否' specs/071-frontend-p1-visual-a11y-foundation-baseline/task-execution-log.md` 现在返回空结果，说明当前 execution log 中这类已知不诚实状态已清除。
+- `git diff --check -- specs/071-frontend-p1-visual-a11y-foundation-baseline/task-execution-log.md` 通过，无 whitespace / patch hygiene 问题。
+
+#### 5. 对账结论
+
+- 本批将当前 execution log 中已确认落地的 batch 提交状态统一回写为 `是`，使文档 truth 与实际 git 历史重新一致。
+- 这是纯 docs honesty 对账，不涉及 `071` 的生产代码、测试语义或 rollout 边界变化。
+
+#### 6. 归档后动作
+
+- **已完成 git 提交**：是
+- 当前 batch 结论：execution log commit-state honesty 已对齐到当前实际提交状态。
+- **下一步动作**：若继续推进，只保留对新发现缺口的最小批次修补；若没有新缺口，则保持工作树干净并在后续批次继续同样流程。
