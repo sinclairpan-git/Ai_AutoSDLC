@@ -378,11 +378,20 @@ specs:
                 "done\n", encoding="utf-8"
             )
             _write_frontend_contract_observations(root / "specs" / spec)
+        report_rel = ".ai-sdlc/memory/program-integrate-visual-a11y-policy-artifacts.md"
 
         with patch("ai_sdlc.cli.program_cmd.find_project_root", return_value=root):
             result = runner.invoke(
                 app,
-                ["program", "integrate", "--execute", "--yes", "--allow-dirty"],
+                [
+                    "program",
+                    "integrate",
+                    "--execute",
+                    "--yes",
+                    "--allow-dirty",
+                    "--report",
+                    report_rel,
+                ],
             )
 
         assert result.exit_code == 1
@@ -390,6 +399,10 @@ specs:
         assert "frontend_visual_a11y_policy_artifacts" in result.output
         assert "materialize frontend visual / a11y policy artifacts" in result.output
         assert "uv run ai-sdlc rules materialize-frontend-mvp" in result.output
+        report = (root / report_rel).read_text(encoding="utf-8")
+        assert "frontend_visual_a11y_policy_artifacts" in report
+        assert "materialize frontend visual / a11y policy artifacts" in report
+        assert "uv run ai-sdlc rules materialize-frontend-mvp" in report
 
     def test_program_integrate_execute_surfaces_stable_empty_visual_a11y_review_hint(
         self, initialized_project_dir: Path

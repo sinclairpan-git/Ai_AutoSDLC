@@ -362,3 +362,37 @@
 - **已完成 git 提交**：否
 - 当前 batch 结论：integrate report propagation 已补齐，并通过 targeted + full CLI integration 回归验证。
 - **下一步动作**：继续扫描是否还存在 stable-empty visual/a11y 在 CLI 或 unit 层的单点可见面缺口；若只剩文档或 message honesty 差异，则按最小批次继续提交。
+
+### Batch 2026-04-07-009 | integrate policy-artifact report propagation
+
+#### 1. 背景
+
+- 在最上游 stable-empty report surface 补齐后，继续检查相邻 remediation token，发现 `program integrate --execute` 对 `frontend_visual_a11y_policy_artifacts` 仍只有 terminal output 断言，缺少 report 文件覆盖。
+
+#### 2. 修改文件
+
+- `tests/integration/test_cli_program.py`
+- `specs/071-frontend-p1-visual-a11y-foundation-baseline/task-execution-log.md`
+
+#### 3. 执行命令
+
+- `uv run pytest tests/integration/test_cli_program.py -k 'program_integrate_execute_surfaces_visual_a11y_policy_artifact_remediation_hint' -q`
+- `uv run pytest tests/integration/test_cli_program.py -q`
+- `git diff --check -- specs/071-frontend-p1-visual-a11y-foundation-baseline/task-execution-log.md tests/integration/test_cli_program.py`
+
+#### 4. 验证结果
+
+- `uv run pytest tests/integration/test_cli_program.py -k 'program_integrate_execute_surfaces_visual_a11y_policy_artifact_remediation_hint' -q` 通过，结果为 `1 passed, 91 deselected in 0.38s`。
+- `uv run pytest tests/integration/test_cli_program.py -q` 通过，结果为 `92 passed in 2.05s`。
+
+#### 5. 对账结论
+
+- 本批给 `test_program_integrate_execute_surfaces_visual_a11y_policy_artifact_remediation_hint` 增加了 `--report` 输出，并显式断言 report 中包含 `frontend_visual_a11y_policy_artifacts`、`materialize frontend visual / a11y policy artifacts` 与 `uv run ai-sdlc rules materialize-frontend-mvp`。
+- 至此，`integrate --execute` 在 visual/a11y 两类 remediation surface 上都同时证明了 terminal output 与 persisted report，而不是只覆盖一侧可见面。
+- 本批仍然只补 integration truth surface 与执行日志，没有改动 `071` 生产逻辑。
+
+#### 6. 归档后动作
+
+- **已完成 git 提交**：否
+- 当前 batch 结论：integrate policy-artifact report propagation 已补齐，并通过 targeted + full CLI integration 回归验证。
+- **下一步动作**：继续扫描 visual/a11y 相关 message honesty、report surface 与 unit/integration 断言密度，若只剩 docs 对账差异则按最小批次提交。
