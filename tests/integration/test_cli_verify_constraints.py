@@ -221,21 +221,25 @@ def _write_012_frontend_contract_page_artifacts(
 
 
 def _write_012_frontend_contract_observations(
-    root: Path, *, page_id: str = "user-create", recipe_id: str = "form-create"
+    root: Path,
+    *,
+    observations: list[PageImplementationObservation] | None = None,
 ) -> None:
     spec_dir = (
         root / "specs" / "012-frontend-contract-verify-integration"
     )
-    artifact = build_frontend_contract_observation_artifact(
-        observations=[
+    if observations is None:
+        observations = [
             PageImplementationObservation(
-                page_id=page_id,
-                recipe_id=recipe_id,
+                page_id="user-create",
+                recipe_id="form-create",
                 i18n_keys=[],
                 validation_fields=[],
                 new_legacy_usages=[],
             )
-        ],
+        ]
+    artifact = build_frontend_contract_observation_artifact(
+        observations=observations,
         provider_kind="manual",
         provider_name="test-fixture",
         generated_at="2026-04-02T14:30:00Z",
@@ -283,21 +287,25 @@ def _write_018_checkpoint(root: Path) -> None:
 
 
 def _write_018_frontend_contract_observations(
-    root: Path, *, page_id: str = "user-create", recipe_id: str = "form-create"
+    root: Path,
+    *,
+    observations: list[PageImplementationObservation] | None = None,
 ) -> None:
     spec_dir = (
         root / "specs" / "018-frontend-gate-compatibility-baseline"
     )
-    artifact = build_frontend_contract_observation_artifact(
-        observations=[
+    if observations is None:
+        observations = [
             PageImplementationObservation(
-                page_id=page_id,
-                recipe_id=recipe_id,
+                page_id="user-create",
+                recipe_id="form-create",
                 i18n_keys=[],
                 validation_fields=[],
                 new_legacy_usages=[],
             )
-        ],
+        ]
+    artifact = build_frontend_contract_observation_artifact(
+        observations=observations,
         provider_kind="manual",
         provider_name="test-fixture",
         generated_at="2026-04-03T14:30:00Z",
@@ -865,6 +873,50 @@ class TestCliVerifyConstraints:
         ]
         assert payload["frontend_contract_verification"]["gate_verdict"] == "PASS"
         assert payload["frontend_contract_verification"]["coverage_gaps"] == []
+
+    def test_json_output_exposes_012_frontend_contract_summary_when_artifact_is_valid_empty(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        init_project(tmp_path)
+        _minimal_constitution(tmp_path)
+        _write_012_checkpoint(tmp_path)
+        _write_012_frontend_contract_page_artifacts(tmp_path)
+        _write_012_frontend_contract_observations(tmp_path, observations=[])
+        monkeypatch.chdir(tmp_path)
+
+        result = runner.invoke(app, ["verify", "constraints", "--json"])
+
+        assert result.exit_code == 1
+        payload = json.loads(result.output)
+        assert payload["frontend_contract_verification"]["gate_verdict"] == "RETRY"
+        assert payload["frontend_contract_verification"]["coverage_gaps"] == []
+        assert (
+            payload["frontend_contract_verification"]["observation_artifact_status"]
+            == "attached"
+        )
+        assert payload["frontend_contract_verification"]["observation_count"] == 0
+        assert any(
+            "declared empty" in blocker
+            for blocker in payload["frontend_contract_verification"]["blockers"]
+        )
+
+    def test_terminal_output_exposes_012_frontend_contract_diagnostic_summary_when_artifact_is_valid_empty(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        init_project(tmp_path)
+        _minimal_constitution(tmp_path)
+        _write_012_checkpoint(tmp_path)
+        _write_012_frontend_contract_page_artifacts(tmp_path)
+        _write_012_frontend_contract_observations(tmp_path, observations=[])
+        monkeypatch.chdir(tmp_path)
+
+        result = runner.invoke(app, ["verify", "constraints"])
+
+        assert result.exit_code == 1
+        assert "frontend contract verification: RETRY" in result.output
+        assert "diagnostic: valid_empty" in result.output
+        assert "coverage=none" in result.output
+        assert "coverage gaps:" not in result.output
 
     def test_json_output_exposes_012_frontend_contract_summary_when_sample_fixture_matches(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch

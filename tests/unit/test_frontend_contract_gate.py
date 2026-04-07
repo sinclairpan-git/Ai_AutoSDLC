@@ -3,6 +3,13 @@
 from __future__ import annotations
 
 from ai_sdlc.core.frontend_contract_drift import PageImplementationObservation
+from ai_sdlc.core.frontend_contract_observation_provider import (
+    FRONTEND_CONTRACT_OBSERVATION_ARTIFACT_STATUS_ATTACHED,
+    FRONTEND_CONTRACT_OBSERVATION_ARTIFACT_STATUS_MISSING_ARTIFACT,
+)
+from ai_sdlc.core.frontend_contract_verification import (
+    build_frontend_contract_verification_report,
+)
 from ai_sdlc.gates.frontend_contract_gate import FrontendContractGate
 from ai_sdlc.generators.frontend_contract_artifacts import (
     materialize_frontend_contract_artifacts,
@@ -191,6 +198,9 @@ def test_frontend_contract_gate_retries_when_observations_are_missing(tmp_path) 
         {
             "contracts_root": tmp_path / "contracts" / "frontend",
             "observations": [],
+            "observation_artifact_status": (
+                FRONTEND_CONTRACT_OBSERVATION_ARTIFACT_STATUS_ATTACHED
+            ),
         }
     )
 
@@ -202,4 +212,69 @@ def test_frontend_contract_gate_retries_when_observations_are_missing(tmp_path) 
 
     assert result.verdict == GateVerdict.RETRY
     assert observation_check.passed is False
-    assert "no implementation observations" in observation_check.message
+    assert "declared no implementation observations" in observation_check.message
+
+
+def test_frontend_contract_gate_distinguishes_missing_observation_artifact(
+    tmp_path,
+) -> None:
+    materialize_frontend_contract_artifacts(tmp_path, _build_contract_set())
+
+    result = FrontendContractGate().check(
+        {
+            "contracts_root": tmp_path / "contracts" / "frontend",
+            "observations": [],
+            "observation_artifact_status": (
+                FRONTEND_CONTRACT_OBSERVATION_ARTIFACT_STATUS_MISSING_ARTIFACT
+            ),
+        }
+    )
+
+    observation_check = next(
+        check
+        for check in result.checks
+        if check.name == "implementation_observations_declared"
+    )
+
+    assert result.verdict == GateVerdict.RETRY
+    assert observation_check.passed is False
+    assert "missing canonical observation artifact" in observation_check.message
+
+
+def test_frontend_contract_gate_prefers_diagnostic_truth_over_raw_observation_list(
+    tmp_path,
+) -> None:
+    materialize_frontend_contract_artifacts(tmp_path, _build_contract_set())
+    diagnostic_report = build_frontend_contract_verification_report(
+        tmp_path / "contracts" / "frontend",
+        [],
+        observation_artifact_status=FRONTEND_CONTRACT_OBSERVATION_ARTIFACT_STATUS_ATTACHED,
+    )
+
+    result = FrontendContractGate().check(
+        {
+            "contracts_root": tmp_path / "contracts" / "frontend",
+            "observations": [
+                PageImplementationObservation(
+                    page_id="user-create",
+                    recipe_id="form-create",
+                    i18n_keys=["submit"],
+                    validation_fields=["username"],
+                )
+            ],
+            "diagnostic": diagnostic_report.to_json_dict()["diagnostic"],
+        }
+    )
+
+    observation_check = next(
+        check
+        for check in result.checks
+        if check.name == "implementation_observations_declared"
+    )
+    drift_check = next(check for check in result.checks if check.name == "contract_drift_free")
+
+    assert result.verdict == GateVerdict.RETRY
+    assert observation_check.passed is False
+    assert "declared no implementation observations" in observation_check.message
+    assert drift_check.passed is False
+    assert "declared no implementation observations" in drift_check.message

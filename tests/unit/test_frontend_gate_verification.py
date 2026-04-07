@@ -2,9 +2,18 @@
 
 from __future__ import annotations
 
+from dataclasses import replace
 from pathlib import Path
 
+import ai_sdlc.core.frontend_gate_verification as frontend_gate_verification_module
 from ai_sdlc.core.frontend_contract_drift import PageImplementationObservation
+from ai_sdlc.core.frontend_contract_observation_provider import (
+    FRONTEND_CONTRACT_OBSERVATION_ARTIFACT_STATUS_ATTACHED,
+    FRONTEND_CONTRACT_OBSERVATION_ARTIFACT_STATUS_MISSING_ARTIFACT,
+)
+from ai_sdlc.core.frontend_contract_verification import (
+    build_frontend_contract_verification_report,
+)
 from ai_sdlc.core.frontend_gate_verification import (
     FRONTEND_GATE_CHECK_OBJECTS,
     FRONTEND_GATE_SOURCE_NAME,
@@ -128,11 +137,86 @@ def test_frontend_gate_verification_report_flags_unclear_contract_prerequisite(
         build_mvp_frontend_generation_constraints(),
     )
 
-    report = build_frontend_gate_verification_report(tmp_path, [])
+    report = build_frontend_gate_verification_report(
+        tmp_path,
+        [],
+        observation_artifact_status=(
+            FRONTEND_CONTRACT_OBSERVATION_ARTIFACT_STATUS_MISSING_ARTIFACT
+        ),
+    )
 
     assert report.gate_result.verdict.value == "RETRY"
     assert "frontend_contract_observations" in report.coverage_gaps
     assert any("contract verification not clear" in blocker for blocker in report.blockers)
+
+
+def test_frontend_gate_verification_report_distinguishes_valid_empty_contract_artifact(
+    tmp_path: Path,
+) -> None:
+    _write_minimal_frontend_contract_page_artifacts(tmp_path)
+    materialize_frontend_gate_policy_artifacts(
+        tmp_path,
+        build_mvp_frontend_gate_policy(),
+    )
+    materialize_frontend_generation_constraint_artifacts(
+        tmp_path,
+        build_mvp_frontend_generation_constraints(),
+    )
+
+    report = build_frontend_gate_verification_report(
+        tmp_path,
+        [],
+        observation_artifact_status=FRONTEND_CONTRACT_OBSERVATION_ARTIFACT_STATUS_ATTACHED,
+    )
+
+    assert report.gate_result.verdict.value == "RETRY"
+    assert report.coverage_gaps == ()
+    assert any("declared empty" in blocker for blocker in report.blockers)
+    assert report.upstream_contract_verification["observation_artifact_status"] == "attached"
+    assert report.upstream_contract_verification["observation_count"] == 0
+
+
+def test_frontend_gate_verification_report_uses_projection_to_keep_valid_empty_out_of_gaps(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    _write_minimal_frontend_contract_page_artifacts(tmp_path)
+    materialize_frontend_gate_policy_artifacts(
+        tmp_path,
+        build_mvp_frontend_gate_policy(),
+    )
+    materialize_frontend_generation_constraint_artifacts(
+        tmp_path,
+        build_mvp_frontend_generation_constraints(),
+    )
+
+    upstream_report = build_frontend_contract_verification_report(
+        tmp_path / "contracts" / "frontend",
+        [],
+        observation_artifact_status=FRONTEND_CONTRACT_OBSERVATION_ARTIFACT_STATUS_ATTACHED,
+    )
+    stale_gap_report = replace(
+        upstream_report,
+        coverage_gaps=("frontend_contract_observations",),
+    )
+    monkeypatch.setattr(
+        frontend_gate_verification_module,
+        "build_frontend_contract_verification_report",
+        lambda *args, **kwargs: stale_gap_report,
+    )
+
+    report = build_frontend_gate_verification_report(
+        tmp_path,
+        [_matching_observation()],
+    )
+
+    assert report.gate_result.verdict.value == "RETRY"
+    assert report.coverage_gaps == ()
+    assert any("declared empty" in blocker for blocker in report.blockers)
+    assert (
+        report.upstream_contract_verification["diagnostic"]["diagnostic_status"]
+        == "valid_empty"
+    )
 
 
 def test_frontend_gate_verification_context_passes_when_prerequisites_are_ready(

@@ -219,6 +219,9 @@ def _render_frontend_summary(label: str, summary: object) -> None:
     coverage_gaps = _string_list(summary.get("coverage_gaps", ()))
     blockers = _string_list(summary.get("blockers", ()))
     details: list[str] = []
+    diagnostic_summary = _frontend_diagnostic_summary(summary)
+    if diagnostic_summary:
+        details.append(diagnostic_summary)
     if coverage_gaps:
         details.append("coverage gaps: " + ", ".join(coverage_gaps[:3]))
     elif verdict != "PASS" and blockers:
@@ -237,3 +240,47 @@ def _string_list(value: object) -> list[str]:
         if text:
             items.append(text)
     return items
+
+
+def _frontend_diagnostic_summary(summary: dict[str, object]) -> str:
+    diagnostic = _frontend_diagnostic_payload(summary)
+    if not diagnostic:
+        return ""
+
+    status = str(diagnostic.get("diagnostic_status", "")).strip()
+    if not status:
+        return ""
+
+    projection = diagnostic.get("policy_projection", {})
+    if not isinstance(projection, dict):
+        projection = {}
+
+    projection_fields: list[str] = []
+    coverage_effect = str(projection.get("coverage_effect", "")).strip()
+    if coverage_effect:
+        projection_fields.append(f"coverage={coverage_effect}")
+    report_family_member = str(projection.get("report_family_member", "")).strip()
+    if report_family_member:
+        projection_fields.append(f"report={report_family_member}")
+    blocker_class = str(projection.get("blocker_class", "")).strip()
+    if blocker_class:
+        projection_fields.append(f"blocker={blocker_class}")
+
+    if not projection_fields:
+        return f"diagnostic: {status}"
+    return f"diagnostic: {status}; projection: {', '.join(projection_fields)}"
+
+
+def _frontend_diagnostic_payload(summary: dict[str, object]) -> dict[str, object]:
+    diagnostic = summary.get("diagnostic")
+    if isinstance(diagnostic, dict):
+        return diagnostic
+
+    upstream = summary.get("upstream_contract_verification")
+    if not isinstance(upstream, dict):
+        return {}
+
+    diagnostic = upstream.get("diagnostic")
+    if isinstance(diagnostic, dict):
+        return diagnostic
+    return {}
