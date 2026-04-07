@@ -699,6 +699,6 @@
 
 #### 6. 归档后动作
 
-- **已完成 git 提交**：否
+- **已完成 git 提交**：是
 - 当前 batch 结论：verify surfaces 的 visual-a11y issue-review propagation 已补齐，并通过 RED -> GREEN -> full verification 回归。
 - **下一步动作**：继续扫描 071 剩余 messaging / honesty 收尾项；若没有新的生产缺口，则把 execution log 与 truth-surface 对账收束到最后一批。
