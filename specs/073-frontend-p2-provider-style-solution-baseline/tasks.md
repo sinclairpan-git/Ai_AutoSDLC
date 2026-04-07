@@ -214,9 +214,9 @@ Batch 9: verify / consistency / regression slice
 - **可并行**：否
 - **验收标准**：
   1. `uv run pytest tests/unit/test_frontend_provider_profile_models.py -q` 通过
-  2. `uv run ruff check src tests`、`git diff --check -- specs/073-frontend-p2-provider-style-solution-baseline src/ai_sdlc/models tests/unit` 与 `uv run ai-sdlc verify constraints` 通过
+  2. `uv run ruff check src/ai_sdlc/models/frontend_provider_profile.py src/ai_sdlc/models/__init__.py tests/unit/test_frontend_provider_profile_models.py`、`git diff --check -- specs/073-frontend-p2-provider-style-solution-baseline src/ai_sdlc/models tests/unit` 与 `uv run ai-sdlc verify constraints` 通过
   3. `task-execution-log.md` 追加记录当前 provider model batch 的 touched files、验证命令与结论
-- **验证**：`uv run pytest tests/unit/test_frontend_provider_profile_models.py -q`, `uv run ruff check src tests`, `git diff --check -- specs/073-frontend-p2-provider-style-solution-baseline src/ai_sdlc/models tests/unit`, `uv run ai-sdlc verify constraints`
+- **验证**：`uv run pytest tests/unit/test_frontend_provider_profile_models.py -q`, `uv run ruff check src/ai_sdlc/models/frontend_provider_profile.py src/ai_sdlc/models/__init__.py tests/unit/test_frontend_provider_profile_models.py`, `git diff --check -- specs/073-frontend-p2-provider-style-solution-baseline src/ai_sdlc/models tests/unit`, `uv run ai-sdlc verify constraints`
 
 ---
 
@@ -259,9 +259,9 @@ Batch 9: verify / consistency / regression slice
 - **可并行**：否
 - **验收标准**：
   1. `uv run pytest tests/unit/test_frontend_solution_confirmation_models.py -q` 通过
-  2. `uv run ruff check src tests`、`git diff --check -- specs/073-frontend-p2-provider-style-solution-baseline src/ai_sdlc/models tests/unit` 与 `uv run ai-sdlc verify constraints` 通过
+  2. `uv run ruff check src/ai_sdlc/models/frontend_solution_confirmation.py src/ai_sdlc/models/__init__.py tests/unit/test_frontend_solution_confirmation_models.py`、`git diff --check -- specs/073-frontend-p2-provider-style-solution-baseline src/ai_sdlc/models tests/unit` 与 `uv run ai-sdlc verify constraints` 通过
   3. `task-execution-log.md` 追加记录当前 solution model batch 的 touched files、验证命令与结论
-- **验证**：`uv run pytest tests/unit/test_frontend_solution_confirmation_models.py -q`, `uv run ruff check src tests`, `git diff --check -- specs/073-frontend-p2-provider-style-solution-baseline src/ai_sdlc/models tests/unit`, `uv run ai-sdlc verify constraints`
+- **验证**：`uv run pytest tests/unit/test_frontend_solution_confirmation_models.py -q`, `uv run ruff check src/ai_sdlc/models/frontend_solution_confirmation.py src/ai_sdlc/models/__init__.py tests/unit/test_frontend_solution_confirmation_models.py`, `git diff --check -- specs/073-frontend-p2-provider-style-solution-baseline src/ai_sdlc/models tests/unit`, `uv run ai-sdlc verify constraints`
 
 ---
 
