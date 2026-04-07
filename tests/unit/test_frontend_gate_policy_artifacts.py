@@ -10,7 +10,10 @@ from ai_sdlc.generators.frontend_gate_policy_artifacts import (
     frontend_gate_policy_root,
     materialize_frontend_gate_policy_artifacts,
 )
-from ai_sdlc.models.frontend_gate_policy import build_mvp_frontend_gate_policy
+from ai_sdlc.models.frontend_gate_policy import (
+    build_mvp_frontend_gate_policy,
+    build_p1_frontend_gate_policy_diagnostics_drift_expansion,
+)
 
 
 def _read_yaml(path: Path) -> dict[str, object]:
@@ -76,6 +79,60 @@ def test_gate_policy_artifacts_preserve_policy_payloads(tmp_path) -> None:
         "drift-report",
         "legacy-expansion-report",
     ]
+
+
+def test_materialize_p1_frontend_gate_policy_artifacts_writes_diagnostics_extension_files(
+    tmp_path,
+) -> None:
+    policy = build_p1_frontend_gate_policy_diagnostics_drift_expansion()
+
+    paths = materialize_frontend_gate_policy_artifacts(tmp_path, policy)
+    rel_paths = {path.relative_to(tmp_path).as_posix() for path in paths}
+
+    assert rel_paths == {
+        "governance/frontend/gates/compatibility-feedback-boundary.yaml",
+        "governance/frontend/gates/compatibility-policies.yaml",
+        "governance/frontend/gates/diagnostics-coverage-matrix.yaml",
+        "governance/frontend/gates/drift-classification.yaml",
+        "governance/frontend/gates/gate-matrix.yaml",
+        "governance/frontend/gates/gate.manifest.yaml",
+        "governance/frontend/gates/report-types.yaml",
+    }
+
+
+def test_p1_gate_policy_artifacts_preserve_diagnostics_payloads(tmp_path) -> None:
+    policy = build_p1_frontend_gate_policy_diagnostics_drift_expansion()
+
+    materialize_frontend_gate_policy_artifacts(tmp_path, policy)
+
+    root = frontend_gate_policy_root(tmp_path)
+    diagnostics_matrix = _read_yaml(root / "diagnostics-coverage-matrix.yaml")
+    drift_classification = _read_yaml(root / "drift-classification.yaml")
+    compatibility_boundary = _read_yaml(root / "compatibility-feedback-boundary.yaml")
+
+    assert [item["coverage_id"] for item in diagnostics_matrix["items"]] == [
+        "semantic-component-coverage",
+        "page-recipe-coverage",
+        "state-coverage",
+        "whitelist-coverage",
+        "token-rule-coverage",
+    ]
+    assert [item["classification_id"] for item in drift_classification["items"]] == [
+        "input-gap",
+        "stable-empty-observation",
+        "recipe-structure-drift",
+        "state-expectation-drift",
+        "whitelist-leakage",
+        "token-leakage",
+    ]
+    assert [item["mode"] for item in compatibility_boundary["items"]] == [
+        "strict",
+        "incremental",
+        "compatibility",
+    ]
+    assert compatibility_boundary["items"][2]["forbidden_truth_mutations"][-1] == (
+        "second-gate-system"
+    )
 
 
 def test_frontend_gate_policy_root_is_stable(tmp_path) -> None:
