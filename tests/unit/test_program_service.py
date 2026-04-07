@@ -2391,6 +2391,94 @@ def test_write_frontend_final_governance_artifact_preserves_stable_empty_visual_
     ]
 
 
+def test_build_frontend_final_governance_request_preserves_visual_a11y_issue_review_input(
+    tmp_path: Path,
+) -> None:
+    for p in ("specs/001-auth", "specs/002-course", "specs/003-enroll"):
+        (tmp_path / p).mkdir(parents=True)
+    _write_frontend_broader_governance_artifact(
+        tmp_path,
+        governance_result="deferred",
+        governance_state="deferred",
+        remaining_blockers=["spec 001-auth remediation still required"],
+        steps=[
+            {
+                "spec_id": "001-auth",
+                "path": "specs/001-auth",
+                "governance_state": "deferred",
+                "pending_inputs": ["frontend_visual_a11y_issue_review"],
+                "suggested_next_actions": [
+                    "review frontend visual / a11y issue findings",
+                    "re-run ai-sdlc verify constraints",
+                ],
+                "source_linkage": {
+                    "governance_state": "deferred",
+                    "guarded_registry_artifact_path": ".ai-sdlc/memory/frontend-guarded-registry/latest.yaml",
+                },
+            }
+        ],
+    )
+
+    svc = ProgramService(tmp_path)
+    request = svc.build_frontend_final_governance_request(_manifest())
+
+    assert request.steps[0].pending_inputs == ["frontend_visual_a11y_issue_review"]
+    assert request.steps[0].suggested_next_actions == [
+        "review frontend visual / a11y issue findings",
+        "re-run ai-sdlc verify constraints",
+    ]
+
+
+def test_write_frontend_final_governance_artifact_preserves_visual_a11y_issue_review_input(
+    tmp_path: Path,
+) -> None:
+    for p in ("specs/001-auth", "specs/002-course", "specs/003-enroll"):
+        (tmp_path / p).mkdir(parents=True)
+    _write_frontend_broader_governance_artifact(
+        tmp_path,
+        governance_result="deferred",
+        governance_state="deferred",
+        remaining_blockers=["spec 001-auth remediation still required"],
+        steps=[
+            {
+                "spec_id": "001-auth",
+                "path": "specs/001-auth",
+                "governance_state": "deferred",
+                "pending_inputs": ["frontend_visual_a11y_issue_review"],
+                "suggested_next_actions": [
+                    "review frontend visual / a11y issue findings",
+                    "re-run ai-sdlc verify constraints",
+                ],
+                "source_linkage": {
+                    "governance_state": "deferred",
+                    "guarded_registry_artifact_path": ".ai-sdlc/memory/frontend-guarded-registry/latest.yaml",
+                },
+            }
+        ],
+    )
+
+    svc = ProgramService(tmp_path)
+    request = svc.build_frontend_final_governance_request(_manifest())
+    result = svc.execute_frontend_final_governance(
+        _manifest(),
+        request=request,
+        confirmed=True,
+    )
+
+    artifact_path = svc.write_frontend_final_governance_artifact(
+        _manifest(),
+        request=request,
+        result=result,
+    )
+
+    payload = yaml.safe_load(artifact_path.read_text(encoding="utf-8"))
+    assert payload["steps"][0]["pending_inputs"] == ["frontend_visual_a11y_issue_review"]
+    assert payload["steps"][0]["suggested_next_actions"] == [
+        "review frontend visual / a11y issue findings",
+        "re-run ai-sdlc verify constraints",
+    ]
+
+
 def test_build_frontend_writeback_persistence_request_requires_explicit_confirmation(
     tmp_path: Path,
 ) -> None:
@@ -2590,6 +2678,94 @@ def test_write_frontend_writeback_persistence_artifact_preserves_stable_empty_vi
     ]
     assert payload["steps"][0]["suggested_next_actions"] == [
         "review stable empty frontend visual / a11y evidence",
+        "re-run ai-sdlc verify constraints",
+    ]
+
+
+def test_build_frontend_writeback_persistence_request_preserves_visual_a11y_issue_review_input(
+    tmp_path: Path,
+) -> None:
+    for p in ("specs/001-auth", "specs/002-course", "specs/003-enroll"):
+        (tmp_path / p).mkdir(parents=True)
+    _write_frontend_final_governance_artifact(
+        tmp_path,
+        final_governance_result="deferred",
+        final_governance_state="deferred",
+        remaining_blockers=["spec 001-auth remediation still required"],
+        steps=[
+            {
+                "spec_id": "001-auth",
+                "path": "specs/001-auth",
+                "final_governance_state": "deferred",
+                "pending_inputs": ["frontend_visual_a11y_issue_review"],
+                "suggested_next_actions": [
+                    "review frontend visual / a11y issue findings",
+                    "re-run ai-sdlc verify constraints",
+                ],
+                "source_linkage": {
+                    "final_governance_state": "deferred",
+                    "broader_governance_artifact_path": ".ai-sdlc/memory/frontend-broader-governance/latest.yaml",
+                },
+            }
+        ],
+    )
+
+    svc = ProgramService(tmp_path)
+    request = svc.build_frontend_writeback_persistence_request(_manifest())
+
+    assert request.steps[0].pending_inputs == ["frontend_visual_a11y_issue_review"]
+    assert request.steps[0].suggested_next_actions == [
+        "review frontend visual / a11y issue findings",
+        "re-run ai-sdlc verify constraints",
+    ]
+
+
+def test_write_frontend_writeback_persistence_artifact_preserves_visual_a11y_issue_review_input(
+    tmp_path: Path,
+) -> None:
+    for p in ("specs/001-auth", "specs/002-course", "specs/003-enroll"):
+        (tmp_path / p).mkdir(parents=True)
+    _write_frontend_final_governance_artifact(
+        tmp_path,
+        final_governance_result="deferred",
+        final_governance_state="deferred",
+        remaining_blockers=["spec 001-auth remediation still required"],
+        steps=[
+            {
+                "spec_id": "001-auth",
+                "path": "specs/001-auth",
+                "final_governance_state": "deferred",
+                "pending_inputs": ["frontend_visual_a11y_issue_review"],
+                "suggested_next_actions": [
+                    "review frontend visual / a11y issue findings",
+                    "re-run ai-sdlc verify constraints",
+                ],
+                "source_linkage": {
+                    "final_governance_state": "deferred",
+                    "broader_governance_artifact_path": ".ai-sdlc/memory/frontend-broader-governance/latest.yaml",
+                },
+            }
+        ],
+    )
+
+    svc = ProgramService(tmp_path)
+    request = svc.build_frontend_writeback_persistence_request(_manifest())
+    result = svc.execute_frontend_writeback_persistence(
+        _manifest(),
+        request=request,
+        confirmed=True,
+    )
+
+    artifact_path = svc.write_frontend_writeback_persistence_artifact(
+        _manifest(),
+        request=request,
+        result=result,
+    )
+
+    payload = yaml.safe_load(artifact_path.read_text(encoding="utf-8"))
+    assert payload["steps"][0]["pending_inputs"] == ["frontend_visual_a11y_issue_review"]
+    assert payload["steps"][0]["suggested_next_actions"] == [
+        "review frontend visual / a11y issue findings",
         "re-run ai-sdlc verify constraints",
     ]
 
@@ -2843,6 +3019,94 @@ def test_write_frontend_persisted_write_proof_artifact_preserves_stable_empty_vi
     ]
     assert payload["steps"][0]["suggested_next_actions"] == [
         "review stable empty frontend visual / a11y evidence",
+        "re-run ai-sdlc verify constraints",
+    ]
+
+
+def test_build_frontend_persisted_write_proof_request_preserves_visual_a11y_issue_review_input(
+    tmp_path: Path,
+) -> None:
+    for p in ("specs/001-auth", "specs/002-course", "specs/003-enroll"):
+        (tmp_path / p).mkdir(parents=True)
+    _write_frontend_writeback_persistence_artifact(
+        tmp_path,
+        persistence_result="deferred",
+        persistence_state="deferred",
+        remaining_blockers=["spec 001-auth remediation still required"],
+        steps=[
+            {
+                "spec_id": "001-auth",
+                "path": "specs/001-auth",
+                "persistence_state": "deferred",
+                "pending_inputs": ["frontend_visual_a11y_issue_review"],
+                "suggested_next_actions": [
+                    "review frontend visual / a11y issue findings",
+                    "re-run ai-sdlc verify constraints",
+                ],
+                "source_linkage": {
+                    "persistence_state": "deferred",
+                    "final_governance_artifact_path": ".ai-sdlc/memory/frontend-final-governance/latest.yaml",
+                },
+            }
+        ],
+    )
+
+    svc = ProgramService(tmp_path)
+    request = svc.build_frontend_persisted_write_proof_request(_manifest())
+
+    assert request.steps[0].pending_inputs == ["frontend_visual_a11y_issue_review"]
+    assert request.steps[0].suggested_next_actions == [
+        "review frontend visual / a11y issue findings",
+        "re-run ai-sdlc verify constraints",
+    ]
+
+
+def test_write_frontend_persisted_write_proof_artifact_preserves_visual_a11y_issue_review_input(
+    tmp_path: Path,
+) -> None:
+    for p in ("specs/001-auth", "specs/002-course", "specs/003-enroll"):
+        (tmp_path / p).mkdir(parents=True)
+    _write_frontend_writeback_persistence_artifact(
+        tmp_path,
+        persistence_result="deferred",
+        persistence_state="deferred",
+        remaining_blockers=["spec 001-auth remediation still required"],
+        steps=[
+            {
+                "spec_id": "001-auth",
+                "path": "specs/001-auth",
+                "persistence_state": "deferred",
+                "pending_inputs": ["frontend_visual_a11y_issue_review"],
+                "suggested_next_actions": [
+                    "review frontend visual / a11y issue findings",
+                    "re-run ai-sdlc verify constraints",
+                ],
+                "source_linkage": {
+                    "persistence_state": "deferred",
+                    "final_governance_artifact_path": ".ai-sdlc/memory/frontend-final-governance/latest.yaml",
+                },
+            }
+        ],
+    )
+
+    svc = ProgramService(tmp_path)
+    request = svc.build_frontend_persisted_write_proof_request(_manifest())
+    result = svc.execute_frontend_persisted_write_proof(
+        _manifest(),
+        request=request,
+        confirmed=True,
+    )
+
+    artifact_path = svc.write_frontend_persisted_write_proof_artifact(
+        _manifest(),
+        request=request,
+        result=result,
+    )
+
+    payload = yaml.safe_load(artifact_path.read_text(encoding="utf-8"))
+    assert payload["steps"][0]["pending_inputs"] == ["frontend_visual_a11y_issue_review"]
+    assert payload["steps"][0]["suggested_next_actions"] == [
+        "review frontend visual / a11y issue findings",
         "re-run ai-sdlc verify constraints",
     ]
 

@@ -546,3 +546,42 @@
 - **已完成 git 提交**：是
 - 当前 batch 结论：cross-spec 到 broader-governance 的 actual-issue truth propagation 已补齐，并通过 targeted + full unit/integration 回归。
 - **下一步动作**：若这一段继续保持透传，则把 actual-issue token 继续补到 final-governance / writeback-persistence / final-proof 系列 surface。
+
+### Batch 2026-04-07-014 | final-governance to persisted-write-proof actual-issue propagation
+
+#### 1. 背景
+
+- 前半段 guarded orchestration 链已经证明 `frontend_visual_a11y_issue_review` 能自然透传，下一段需要把同一 token 继续钉到 `final-governance -> writeback-persistence -> persisted-write-proof`。
+- 这一段是进入 final-proof 之前最后一层 persistence artifact 链，如果这里没有显式覆盖，后续 report surface 仍可能在演进时退化回 generic remediation。
+
+#### 2. 修改文件
+
+- `tests/unit/test_program_service.py`
+- `tests/integration/test_cli_program.py`
+- `specs/071-frontend-p1-visual-a11y-foundation-baseline/task-execution-log.md`
+
+#### 3. 执行命令
+
+- `uv run pytest tests/unit/test_program_service.py -k 'visual_a11y_issue_review and (final_governance or writeback_persistence or persisted_write_proof)' -q`
+- `uv run pytest tests/integration/test_cli_program.py -k 'visual_a11y_issue_review and (final_governance or writeback_persistence or persisted_write_proof)' -q`
+- `uv run pytest tests/unit/test_program_service.py -q`
+- `uv run pytest tests/integration/test_cli_program.py -q`
+- `git diff --check -- tests/unit/test_program_service.py tests/integration/test_cli_program.py specs/071-frontend-p1-visual-a11y-foundation-baseline/task-execution-log.md`
+
+#### 4. 验证结果
+
+- `uv run pytest tests/unit/test_program_service.py -k 'visual_a11y_issue_review and (final_governance or writeback_persistence or persisted_write_proof)' -q` 通过，结果为 `6 passed, 129 deselected in 0.38s`。
+- `uv run pytest tests/integration/test_cli_program.py -k 'visual_a11y_issue_review and (final_governance or writeback_persistence or persisted_write_proof)' -q` 通过，结果为 `3 passed, 100 deselected in 0.45s`。
+- `uv run pytest tests/unit/test_program_service.py -q` 通过，结果为 `135 passed in 0.89s`。
+- `uv run pytest tests/integration/test_cli_program.py -q` 通过，结果为 `103 passed in 2.01s`。
+
+#### 5. 对账结论
+
+- `final-governance / writeback-persistence / persisted-write-proof` 三段都能自然保留 `frontend_visual_a11y_issue_review` 与对应建议动作，没有在 persistence artifact 链中退化回 generic remediation。
+- 到这里为止，actual-issue truth surface 已经连续推进到 final-proof 入口；剩余缺口后移到 `final-proof publication / closure / archive` 及其尾部 cleanup surfaces。
+
+#### 6. 归档后动作
+
+- **已完成 git 提交**：否
+- 当前 batch 结论：final-governance 到 persisted-write-proof 的 actual-issue truth propagation 已补齐，并通过 targeted + full unit/integration 回归。
+- **下一步动作**：若 persistence 链继续保持透传，则把 actual-issue token 收束到 final-proof publication / closure / archive 后半段。
