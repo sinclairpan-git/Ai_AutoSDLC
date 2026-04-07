@@ -7,6 +7,7 @@ import pytest
 from ai_sdlc.models.frontend_gate_policy import (
     CompatibilityExecutionPolicy,
     FrontendCompatibilityFeedbackBoundary,
+    FrontendA11yFoundationCoverageEntry,
     FrontendCoverageGap,
     FrontendCoverageReport,
     FrontendDiagnosticsCoverageEntry,
@@ -19,8 +20,12 @@ from ai_sdlc.models.frontend_gate_policy import (
     FrontendLegacyExpansionReport,
     FrontendViolation,
     FrontendViolationReport,
+    FrontendVisualA11yEvidenceBoundary,
+    FrontendVisualA11yFeedbackBoundary,
+    FrontendVisualFoundationCoverageEntry,
     build_mvp_frontend_gate_policy,
     build_p1_frontend_gate_policy_diagnostics_drift_expansion,
+    build_p1_frontend_gate_policy_visual_a11y_foundation,
 )
 from ai_sdlc.models.frontend_generation_constraints import (
     build_mvp_frontend_generation_constraints,
@@ -153,6 +158,90 @@ def test_build_p1_frontend_gate_policy_diagnostics_drift_expansion_preserves_sha
     assert whitelist_leakage.source_truth_refs == ["017", "067", "068", "018"]
 
 
+def test_build_p1_frontend_gate_policy_visual_a11y_foundation_preserves_069_truth() -> None:
+    policy = build_p1_frontend_gate_policy_visual_a11y_foundation()
+
+    assert policy.work_item_id == "071"
+    assert [entry.coverage_id for entry in policy.diagnostics_coverage_matrix] == [
+        "semantic-component-coverage",
+        "page-recipe-coverage",
+        "state-coverage",
+        "whitelist-coverage",
+        "token-rule-coverage",
+    ]
+    assert [entry.classification_id for entry in policy.drift_classification] == [
+        "input-gap",
+        "stable-empty-observation",
+        "recipe-structure-drift",
+        "state-expectation-drift",
+        "whitelist-leakage",
+        "token-leakage",
+    ]
+    assert [entry.coverage_id for entry in policy.visual_foundation_coverage_matrix] == [
+        "state-visual-presence",
+        "required-area-visual-presence",
+        "controlled-container-visual-continuity",
+    ]
+    assert [entry.coverage_id for entry in policy.a11y_foundation_coverage_matrix] == [
+        "error-status-perceivability",
+        "accessible-naming-semantics",
+        "keyboard-reachability",
+        "focus-continuity",
+    ]
+    assert [entry.boundary_id for entry in policy.visual_a11y_evidence_boundary] == [
+        "explicit-evidence-only",
+    ]
+    assert [entry.boundary_id for entry in policy.visual_a11y_feedback_boundary] == [
+        "shared-report-family-reuse",
+    ]
+
+    state_visual_presence = next(
+        entry
+        for entry in policy.visual_foundation_coverage_matrix
+        if entry.coverage_id == "state-visual-presence"
+    )
+    accessible_naming = next(
+        entry
+        for entry in policy.a11y_foundation_coverage_matrix
+        if entry.coverage_id == "accessible-naming-semantics"
+    )
+    evidence_boundary = policy.visual_a11y_evidence_boundary[0]
+    feedback_boundary = policy.visual_a11y_feedback_boundary[0]
+
+    assert state_visual_presence.quality_surface == "state-visual-presence"
+    assert state_visual_presence.governed_targets == [
+        "refreshing",
+        "submitting",
+        "no-results",
+        "partial-error",
+        "success-feedback",
+    ]
+    assert accessible_naming.governed_targets == [
+        "UiInput",
+        "UiFormItem",
+        "UiTabs",
+        "UiSearchBar",
+        "UiFilterBar",
+        "UiToolbar",
+        "UiPagination",
+        "UiResult",
+    ]
+    assert evidence_boundary.allowed_evidence_sources == ["explicit-input-artifact"]
+    assert "workspace-root-discovery" in evidence_boundary.forbidden_implicit_sources
+    assert feedback_boundary.allowed_feedback_surfaces == [
+        "report-severity",
+        "location-anchor",
+        "quality-hint",
+        "changed-scope-explanation",
+    ]
+    assert feedback_boundary.report_types == [
+        "violation-report",
+        "coverage-report",
+        "drift-report",
+        "legacy-expansion-report",
+    ]
+
+
 def test_frontend_gate_reports_are_machine_consumable() -> None:
     violation = FrontendViolation(
         rule_id="token-rule-compliance",
@@ -269,6 +358,48 @@ def test_frontend_gate_policy_set_rejects_unknown_diagnostics_targets_report_typ
                     governed_targets=["UiGhost"],
                     source_truth_refs=["067", "018"],
                     diagnostic_focus="should fail",
+                )
+            ],
+        )
+
+    with pytest.raises(
+        ValueError,
+        match="visual_foundation_coverage_matrix references unknown governed_targets",
+    ):
+        FrontendGatePolicySet(
+            work_item_id="071",
+            execution_priority=base_policy.execution_priority,
+            gate_matrix=base_policy.gate_matrix,
+            compatibility_policies=base_policy.compatibility_policies,
+            report_types=base_policy.report_types,
+            visual_foundation_coverage_matrix=[
+                FrontendVisualFoundationCoverageEntry(
+                    coverage_id="state-visual-presence",
+                    quality_surface="state-visual-presence",
+                    governed_targets=["UnknownVisualTarget"],
+                    source_truth_refs=["067", "068", "069", "018"],
+                    expectation="state should remain visible",
+                )
+            ],
+        )
+
+    with pytest.raises(
+        ValueError,
+        match="visual_a11y_feedback_boundary references unknown report_types",
+    ):
+        FrontendGatePolicySet(
+            work_item_id="071",
+            execution_priority=base_policy.execution_priority,
+            gate_matrix=base_policy.gate_matrix,
+            compatibility_policies=base_policy.compatibility_policies,
+            report_types=base_policy.report_types,
+            visual_a11y_feedback_boundary=[
+                FrontendVisualA11yFeedbackBoundary(
+                    boundary_id="shared-report-family-reuse",
+                    allowed_feedback_surfaces=["report-severity"],
+                    report_types=["visual-report"],
+                    forbidden_expansions=["second-visual-gate-system"],
+                    source_truth_refs=["018", "069", "070"],
                 )
             ],
         )

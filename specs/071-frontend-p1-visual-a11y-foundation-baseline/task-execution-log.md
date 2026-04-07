@@ -2,7 +2,7 @@
 
 **功能编号**：`071-frontend-p1-visual-a11y-foundation-baseline`  
 **创建日期**：2026-04-06  
-**状态**：docs-only formal freeze 已完成并 accepted（accepted child baseline）
+**状态**：accepted child baseline；formal freeze 已完成；visual/a11y foundation implementation slices 已完成
 
 ## 1. 归档规则
 
@@ -23,10 +23,10 @@
 ## 2. 当前执行边界
 
 - `071` 是 `066` 下游的 P1 visual / a11y foundation child work item，不是 diagnostics、recheck/remediation 或 provider/runtime 工单。
-- 当前批次只允许 docs-only formal freeze；不进入 `src/` / `tests/`，不扩张完整 visual regression 平台、完整 a11y 平台、interaction quality 平台或 provider/runtime。
-- 当前批次不修改 root `program-manifest.yaml`、`frontend-program-branch-rollout-plan.md`，也不生成 `development-summary.md`。
-- 当前批次唯一状态推进是：创建 `spec.md / plan.md / tasks.md / task-execution-log.md`，并把 `project-state.yaml` 的 `next_work_item_seq` 推进到下一个可用编号。
-- 当前状态只代表 `071` 的 docs-only formal freeze 已完成并 accepted；不代表 root program sync、close-ready、完整质量平台或实现已开始。
+- `071` 的 docs-only formal freeze 已完成；在门禁通过且用户明确要求连续推进后，本分支已完成 visual/a11y foundation materialization、explicit evidence gating、verify CLI JSON exposure、visual/a11y policy remediation hints、governance materialization default upgrade、policy-gap remediation command routing 与 governance materialization messaging honesty 七个实现切片。
+- 当前实现仍严格停留在 gate policy、frontend gate verification、verify/program surface 与对应 tests；不扩张完整 visual regression 平台、完整 a11y 平台、interaction quality 平台、provider/runtime 或 root truth sync。
+- 当前实现不修改 root `program-manifest.yaml`、`frontend-program-branch-rollout-plan.md`，也不生成 `development-summary.md`。
+- 当前状态代表 `071` 的 accepted child baseline 与其最小实现切片均已落地；这仍不代表 root program sync、close-ready、完整质量平台或 provider/runtime 已开始。
 
 ## 3. 批次记录
 
@@ -65,7 +65,784 @@
 
 #### 6. 归档后动作
 
-- **已完成 git 提交**：否
+- **已完成 git 提交**：是
 - 当前 batch 结论仅限于 `071` 的 P1 visual / a11y foundation baseline 已完成 docs-only formal freeze，并可视为 accepted child baseline；它冻结了 P1 的 visual foundation、a11y foundation、evidence boundary、feedback honesty 与 sibling/provider handoff 边界。
 - 当前 batch 完成不代表 root program sync、close-ready、完整质量平台或实现已开始。
 - **下一步动作**：在用户明确要求下提交当前 freeze，或继续按 `066` 的 DAG 推进后续 root sync 决策。
+
+### Batch 2026-04-07-002 | implementation state reconciliation
+
+#### 1. 批次范围
+
+- **任务编号**：post-freeze implementation reconciliation
+- **目标**：将 `071` formal baseline 之后已经落地的三个实现提交与 fresh verification 结果追加归档，确保当前 child work item 的状态诚实表达为“formal baseline + implementation slices completed”，而不是继续停留在 docs-only freeze。
+- **执行分支**：`codex/071-frontend-p1-visual-a11y-foundation-implementation`
+
+#### 2. Touched Files
+
+- `specs/071-frontend-p1-visual-a11y-foundation-baseline/task-execution-log.md`
+
+#### 3. 执行命令
+
+- `git log --oneline -5`
+- `uv run pytest tests/unit/test_frontend_gate_policy_models.py tests/unit/test_frontend_gate_policy_artifacts.py tests/unit/test_frontend_gate_verification.py -q`
+- `uv run pytest tests/unit/test_verify_constraints.py -k frontend_gate -q`
+- `uv run pytest tests/integration/test_cli_verify_constraints.py -k frontend_gate -q`
+- `uv run pytest tests/unit/test_program_service.py -k 'frontend_readiness or execution_gates' -q`
+- `git diff --check -- specs/071-frontend-p1-visual-a11y-foundation-baseline/task-execution-log.md`
+
+#### 4. 验证结果
+
+- `git log --oneline -5` 显示 `071` 的实现提交链已包含：
+  - `0f1f79d feat: materialize 071 visual a11y gate foundation`
+  - `7a60c66 feat: add frontend visual a11y evidence gating`
+  - `e2c255d feat: expose frontend gate verification in verify json`
+- `uv run pytest tests/unit/test_frontend_gate_policy_models.py tests/unit/test_frontend_gate_policy_artifacts.py tests/unit/test_frontend_gate_verification.py -q` 通过，结果为 `23 passed in 0.33s`。
+- `uv run pytest tests/unit/test_verify_constraints.py -k frontend_gate -q` 通过，结果为 `8 passed, 35 deselected in 0.33s`。
+- `uv run pytest tests/integration/test_cli_verify_constraints.py -k frontend_gate -q` 通过，结果为 `8 passed, 29 deselected in 0.59s`。
+- `uv run pytest tests/unit/test_program_service.py -k 'frontend_readiness or execution_gates' -q` 通过，结果为 `7 passed, 83 deselected in 0.25s`。
+
+#### 5. 对账结论
+
+- `0f1f79d` 已把 `071` formal baseline 冻结的 visual/a11y foundation truth 落到 `frontend_gate_policy` model / artifact，并接入 `frontend_gate_verification`、`verify_constraints` 与对应 unit/integration tests。
+- `7a60c66` 已新增显式 `frontend_visual_a11y_evidence_provider`，并把 evidence honesty 接到 `frontend_gate_verification`、`verify_constraints`、`program_service` 与对应 tests，保持 `input gap / stable empty / actual issue` 的区分。
+- `e2c255d` 已把 `frontend_gate_verification` 纳入 `verify constraints --json` payload，使 `071` gate summary 在 terminal 与 machine-readable surface 上保持一致。
+- 本批只做 execution log 诚实化，不修改 `spec.md / plan.md / tasks.md` 的 formal baseline truth；`071` 仍没有扩张到 provider/runtime、root sync、完整 visual regression 平台或完整 a11y 平台。
+
+#### 6. 归档后动作
+
+- **已完成 git 提交**：是
+- 当前 batch 结论：`071` 已不再是“仅 docs-only freeze”的状态，而是“accepted child baseline + implementation slices completed”。
+- **下一步动作**：继续在当前 worktree 内顺着 `071`/相邻 gate surface 查找下一处最小缺口，完成后直接提交进入下一批。
+
+### Batch 2026-04-07-003 | program remediation and rules materialization alignment
+
+#### 1. 批次范围
+
+- **任务编号**：post-freeze remediation / rules alignment
+- **目标**：把 `071` visual / a11y foundation 的 policy-gap honesty 与命令执行面闭环到 `program_service`、`program integrate --execute` 和 `rules materialize-frontend-mvp`，确保 remediation hints、recommended commands 与实际 materialization 产物一致。
+- **执行分支**：`codex/071-frontend-p1-visual-a11y-foundation-implementation`
+
+#### 2. Touched Files
+
+- `src/ai_sdlc/core/program_service.py`
+- `src/ai_sdlc/cli/sub_apps.py`
+- `tests/unit/test_program_service.py`
+- `tests/integration/test_cli_program.py`
+- `tests/integration/test_cli_rules.py`
+- `specs/071-frontend-p1-visual-a11y-foundation-baseline/task-execution-log.md`
+
+#### 3. 执行命令
+
+- `git log --oneline -n 8`
+- `uv run pytest tests/unit/test_program_service.py -k 'visual_a11y_policy_artifact_remediation_input_when_missing' -q`
+- `uv run pytest tests/integration/test_cli_program.py -k 'visual_a11y_policy_artifact_remediation_hint' -q`
+- `uv run pytest tests/integration/test_cli_rules.py tests/unit/test_program_service.py -k 'materialize_frontend_mvp or frontend_readiness or execution_gates or visual_a11y_policy_artifact_remediation_input_when_missing or execute_frontend_remediation_runbook_materializes_bounded_commands_and_verifies' -q`
+- `uv run pytest tests/unit/test_frontend_gate_verification.py tests/unit/test_verify_constraints.py tests/integration/test_cli_verify_constraints.py -k frontend_gate -q`
+- `git diff --check -- specs/071-frontend-p1-visual-a11y-foundation-baseline/task-execution-log.md`
+
+#### 4. 验证结果
+
+- `git log --oneline -n 8` 显示本批连续实现提交链已包含：
+  - `844a7e2 feat: surface visual a11y policy remediation hints`
+  - `f27543d feat: materialize 071 frontend gate artifacts by default`
+  - `18fb378 feat: recommend governance materialization for 071 policy gaps`
+- `uv run pytest tests/unit/test_program_service.py -k 'visual_a11y_policy_artifact_remediation_input_when_missing' -q` 通过，结果为 `1 passed, 90 deselected in 0.20s`。
+- `uv run pytest tests/integration/test_cli_program.py -k 'visual_a11y_policy_artifact_remediation_hint' -q` 通过，结果为 `1 passed, 74 deselected in 0.24s`。
+- `uv run pytest tests/integration/test_cli_rules.py tests/unit/test_program_service.py -k 'materialize_frontend_mvp or frontend_readiness or execution_gates or visual_a11y_policy_artifact_remediation_input_when_missing or execute_frontend_remediation_runbook_materializes_bounded_commands_and_verifies' -q` 通过，结果为 `10 passed, 82 deselected in 0.34s`。
+- `uv run pytest tests/unit/test_frontend_gate_verification.py tests/unit/test_verify_constraints.py tests/integration/test_cli_verify_constraints.py -k frontend_gate -q` 通过，结果为 `25 passed, 64 deselected in 0.76s`。
+
+#### 5. 对账结论
+
+- `844a7e2` 已将 `frontend_visual_a11y_policy_artifacts` 缺口映射为 `program_service` 与 `program integrate --execute` 的显式 remediation handoff，避免该 gap 退化成泛化的 `resolve frontend blockers`。
+- `f27543d` 已在不改兼容命令名的前提下，将 `rules materialize-frontend-mvp` 与 `program_service` 的已知 remediation 执行路径升级为 materialize `071` P1 visual / a11y gate artifacts，从而真实产出 `visual-a11y-evidence-boundary.yaml`。
+- `18fb378` 已把 `frontend_visual_a11y_policy_artifacts` 与 governance materialization command 重新接通，使 remediation command list 与实际可修复命令保持一致，而不再只建议重复 verify。
+- 本批仍然严格停留在 `program_service` / CLI `rules` / CLI `program` 与对应测试面；没有进入 provider/runtime、root truth sync、完整 visual regression 平台、完整 a11y 平台或新的 root program rollout 变更。
+
+#### 6. 归档后动作
+
+- **已完成 git 提交**：是
+- 当前 batch 结论：`071` 的 visual / a11y policy gap 现在已在提示面、命令建议面与命令执行面形成闭环，且 `materialize-frontend-mvp` 的兼容入口已对齐到 `071` P1 gate artifacts。
+- **下一步动作**：继续在当前 worktree 内扫描 `071` 相关残余缺口；如无新的生产代码 gap，则保持执行日志与后续实现批次同步更新。
+
+### Batch 2026-04-07-004 | governance materialization messaging honesty
+
+#### 1. 批次范围
+
+- **任务编号**：post-freeze messaging honesty alignment
+- **目标**：在保持 `rules materialize-frontend-mvp` 兼容命令名不变的前提下，修正其 help/stdout 文案中的 `MVP artifacts` 表述，使之与已升级到 `071` P1 gate artifacts 的实际产物范围一致。
+- **执行分支**：`codex/071-frontend-p1-visual-a11y-foundation-implementation`
+
+#### 2. Touched Files
+
+- `src/ai_sdlc/cli/sub_apps.py`
+- `tests/integration/test_cli_rules.py`
+- `specs/071-frontend-p1-visual-a11y-foundation-baseline/task-execution-log.md`
+
+#### 3. 执行命令
+
+- `git log --oneline -n 5`
+- `uv run pytest tests/integration/test_cli_rules.py -q`
+- `uv run pytest tests/unit/test_program_service.py -k 'execute_frontend_remediation_runbook_materializes_bounded_commands_and_verifies' -q`
+- `git diff --check -- specs/071-frontend-p1-visual-a11y-foundation-baseline/task-execution-log.md`
+
+#### 4. 验证结果
+
+- `git log --oneline -n 5` 显示本批修正提交已包含 `440ca79 fix: align frontend governance materialization messaging`。
+- `uv run pytest tests/integration/test_cli_rules.py -q` 通过，结果为 `1 passed in 0.23s`。
+- `uv run pytest tests/unit/test_program_service.py -k 'execute_frontend_remediation_runbook_materializes_bounded_commands_and_verifies' -q` 通过，结果为 `1 passed, 90 deselected in 0.18s`。
+
+#### 5. 对账结论
+
+- `440ca79` 保留了 `rules materialize-frontend-mvp` 这个兼容 command surface，但将 help text 与成功输出调整为中性 `frontend governance artifacts` 表述，避免在实际已 materialize `071` P1 gate artifacts 的情况下继续误报为 `MVP artifacts`。
+- 本批仍然只涉及 CLI honesty 与对应集成测试，不改变 gate policy truth、recommended commands、provider/runtime、root sync 或任何更高层 rollout 规划。
+
+#### 6. 归档后动作
+
+- **已完成 git 提交**：是
+- 当前 batch 结论：`071` 相关的 governance materialization command 已在命令名兼容、产物范围、提示文案三者之间保持一致。
+- **下一步动作**：如继续推进，将优先寻找新的生产代码缺口；若仅剩 formal 归档差异，则继续按批次同步 execution log。
+
+### Batch 2026-04-07-005 | visual a11y truth-surface propagation log sync
+
+#### 1. 批次范围
+
+- **任务编号**：post-freeze truth-surface propagation archival sync
+- **目标**：把最近一串 `program_service` / `program` truth-surface tests-only 提交链与 fresh full-file verification 结果追加归档，确保 `071` 的 stable-empty visual/a11y evidence 传播范围被诚实记录到 final proof archive tail，而不是只停留在局部提交历史里。
+- **执行分支**：`codex/071-frontend-p1-visual-a11y-foundation-implementation`
+
+#### 2. Touched Files
+
+- `specs/071-frontend-p1-visual-a11y-foundation-baseline/task-execution-log.md`
+
+#### 3. 执行命令
+
+- `git log --oneline -n 12`
+- `uv run pytest tests/unit/test_program_service.py -q`
+- `uv run pytest tests/integration/test_cli_program.py -q`
+- `git diff --check -- specs/071-frontend-p1-visual-a11y-foundation-baseline/task-execution-log.md`
+
+#### 4. 验证结果
+
+- `git log --oneline -n 12` 显示最近连续 truth-surface propagation 提交链已包含：
+  - `cafbf08 test: cover visual a11y project cleanup propagation`
+  - `27202fa test: cover visual a11y thread archive propagation`
+  - `2c848fe test: cover visual a11y final proof archive propagation`
+  - `f9882d8 test: cover visual a11y final proof closure propagation`
+  - `2c20f82 test: cover visual a11y final proof publication propagation`
+  - `1af7bfe test: cover visual a11y writeback persistence propagation`
+  - `80a5a48 test: cover visual a11y final governance propagation`
+  - `cad6d2c test: cover visual a11y broader governance propagation`
+  - `1fb7ca1 test: cover visual a11y guarded registry propagation`
+  - `472ede9 test: cover visual a11y cross spec propagation`
+  - `1f3abdb test: cover visual a11y provider patch propagation`
+  - `982e8c2 test: cover visual a11y provider handoff propagation`
+- `uv run pytest tests/unit/test_program_service.py -q` 通过，结果为 `116 passed in 0.88s`。
+- `uv run pytest tests/integration/test_cli_program.py -q` 通过，结果为 `91 passed in 1.97s`。
+
+#### 5. 对账结论
+
+- 最近这组 tests-only 提交把 `frontend_visual_a11y_evidence_stable_empty` 从 provider handoff / provider patch 一直沿着 `cross-spec-writeback -> guarded-registry -> broader-governance -> final-governance -> writeback-persistence -> final-proof-publication -> final-proof-closure -> final-proof-archive -> thread-archive -> project-cleanup` 链路持续钉死在 unit 与 CLI integration 两层。
+- 这批工作没有引入新的 production behavior；它的职责是把 `071` 已落地的 honesty/truth surfaces 在后续 program tail stages 上补齐回归保护，避免 stable-empty evidence 在下游 request、artifact、report 或 execute surface 上被静默丢失。
+- 本批之后，当前 worktree 中与 `071` 直接相邻的 visual/a11y stable-empty propagation tail 已完成到 `final-proof-archive-project-cleanup`；若后续继续推进，应优先寻找新的生产代码缺口，否则继续保持 execution log 与提交链同步。
+
+#### 6. 归档后动作
+
+- **已完成 git 提交**：是
+- 当前 batch 结论：`071` 的 stable-empty visual/a11y evidence truth-surface propagation 已在 program tail stages 完成成链覆盖，并通过最新整文件回归验证。
+- **下一步动作**：继续扫描 `071` 相邻 surface；若仍无新的生产缺口，则维持按批次更新 execution log 的节奏。
+
+### Batch 2026-04-07-006 | persisted write proof propagation coverage
+
+#### 1. 批次范围
+
+- **任务编号**：post-freeze truth-surface gap fill
+- **目标**：补齐 `frontend_writeback_persistence -> frontend_persisted_write_proof` 这一段遗漏的 stable-empty visual/a11y evidence 传播覆盖，确保 `071` truth-surface 链路在进入 final proof publication 之前没有中间断点。
+- **执行分支**：`codex/071-frontend-p1-visual-a11y-foundation-implementation`
+
+#### 2. Touched Files
+
+- `tests/unit/test_program_service.py`
+- `tests/integration/test_cli_program.py`
+- `specs/071-frontend-p1-visual-a11y-foundation-baseline/task-execution-log.md`
+
+#### 3. 执行命令
+
+- `uv run pytest tests/unit/test_program_service.py -k 'build_frontend_persisted_write_proof_request_preserves_stable_empty_visual_a11y_pending_input or write_frontend_persisted_write_proof_artifact_preserves_stable_empty_visual_a11y_pending_input' -q`
+- `uv run pytest tests/integration/test_cli_program.py -k 'program_persisted_write_proof_execute_preserves_stable_empty_visual_a11y_pending_input' -q`
+- `uv run pytest tests/unit/test_program_service.py -q`
+- `uv run pytest tests/integration/test_cli_program.py -q`
+- `git diff --check -- specs/071-frontend-p1-visual-a11y-foundation-baseline/task-execution-log.md`
+
+#### 4. 验证结果
+
+- 初始 RED 明确失败在 tests helper fixture surface：两个 `test_program_service` 新增用例与一个 `test_cli_program` 新增用例都因 `_write_frontend_writeback_persistence_artifact(..., steps=...)` 尚未支持 `steps` 参数而失败，说明缺口在测试支撑面而非 `ProgramService` 主逻辑。
+- `uv run pytest tests/unit/test_program_service.py -k 'build_frontend_persisted_write_proof_request_preserves_stable_empty_visual_a11y_pending_input or write_frontend_persisted_write_proof_artifact_preserves_stable_empty_visual_a11y_pending_input' -q` 通过，结果为 `2 passed, 116 deselected in 0.36s`。
+- `uv run pytest tests/integration/test_cli_program.py -k 'program_persisted_write_proof_execute_preserves_stable_empty_visual_a11y_pending_input' -q` 通过，结果为 `1 passed, 91 deselected in 0.36s`。
+- `uv run pytest tests/unit/test_program_service.py -q` 通过，结果为 `118 passed in 1.07s`。
+- `uv run pytest tests/integration/test_cli_program.py -q` 通过，结果为 `92 passed in 2.01s`。
+
+#### 5. 对账结论
+
+- 本批新增了 persisted write proof request、persisted write proof artifact、以及 `program persisted-write-proof --execute` 三处 stable-empty visual/a11y propagation coverage，把之前从 `writeback-persistence` 直接跳到 `final-proof-publication` 的测试断层补齐。
+- 为了让 RED 指向真实的传播行为，本批仅把 unit/integration 测试 helper `_write_frontend_writeback_persistence_artifact()` 升级为支持可选 `steps` 透传；未改动 `ProgramService` 生产逻辑，因此没有扩张 `071` 的实现边界。
+- 经过这次补齐后，`071` 的 stable-empty visual/a11y truth-surface propagation 现在覆盖 `writeback-persistence -> persisted-write-proof -> final-proof-publication` 的完整连续链路，而不是依赖下游阶段间接证明。
+
+#### 6. 归档后动作
+
+- **已完成 git 提交**：是
+- 当前 batch 结论：persisted write proof 这段遗漏节点已补齐，并通过 fresh unit/integration 整文件回归验证。
+- **下一步动作**：继续扫描 `071` 相邻 surface，优先寻找新的生产缺口；若仍只剩 truth-surface 或文档同步差异，则继续按批次补齐并提交。
+
+### Batch 2026-04-07-007 | late-stage report propagation coverage
+
+#### 1. 背景
+
+- 继续沿 `071 frontend visual/a11y stable-empty truth surface` 扫描 CLI integration coverage，目标是把晚期执行链路对 `--report` 文件的可见性断言补齐，并修正上一轮误打到前半段节点的重复断言。
+
+#### 2. 修改文件
+
+- `tests/integration/test_cli_program.py`
+- `specs/071-frontend-p1-visual-a11y-foundation-baseline/task-execution-log.md`
+
+#### 3. 执行命令
+
+- `uv run pytest tests/integration/test_cli_program.py -k 'final_governance_execute_preserves_stable_empty_visual_a11y_pending_input or writeback_persistence_execute_preserves_stable_empty_visual_a11y_pending_input or persisted_write_proof_execute_preserves_stable_empty_visual_a11y_pending_input or final_proof_publication_execute_preserves_stable_empty_visual_a11y_pending_input or final_proof_closure_execute_preserves_stable_empty_visual_a11y_pending_input or final_proof_archive_execute_preserves_stable_empty_visual_a11y_pending_input' -q`
+- `uv run pytest tests/integration/test_cli_program.py -q`
+- `git diff --check -- specs/071-frontend-p1-visual-a11y-foundation-baseline/task-execution-log.md tests/integration/test_cli_program.py`
+
+#### 4. 验证结果
+
+- 初始 RED 明确表明这些阶段的 CLI `result.output` 并不会回显 `frontend_visual_a11y_evidence_stable_empty` token；失败点落在错误的断言选择而不是生产逻辑，说明应当只校验 artifact 与 `--report` 文件内容。
+- `uv run pytest tests/integration/test_cli_program.py -k 'final_governance_execute_preserves_stable_empty_visual_a11y_pending_input or writeback_persistence_execute_preserves_stable_empty_visual_a11y_pending_input or persisted_write_proof_execute_preserves_stable_empty_visual_a11y_pending_input or final_proof_publication_execute_preserves_stable_empty_visual_a11y_pending_input or final_proof_closure_execute_preserves_stable_empty_visual_a11y_pending_input or final_proof_archive_execute_preserves_stable_empty_visual_a11y_pending_input' -q` 通过，结果为 `6 passed, 86 deselected in 0.54s`。
+- `uv run pytest tests/integration/test_cli_program.py -q` 通过，结果为 `92 passed in 2.20s`。
+
+#### 5. 对账结论
+
+- 本批移除了误加到 provider-runtime、provider-patch-apply、cross-spec-writeback、guarded-registry、broader-governance 与 final-governance 上的 `result.output` 重复断言，恢复为以 report 文件为准的稳定校验面。
+- 同时补齐了 `final-governance -> writeback-persistence -> persisted-write-proof -> final-proof-publication -> final-proof-closure -> final-proof-archive` 这条晚期链路对 `--report` 内容的显式覆盖，使 stable-empty visual/a11y pending input 和 remediation hint 在 CLI report surface 上被连续证明。
+- 本批只改 integration truth-surface tests 与执行日志，没有扩张 `071` 生产实现边界。
+
+#### 6. 归档后动作
+
+- **已完成 git 提交**：是
+- 当前 batch 结论：late-stage report propagation 已补齐，并通过 targeted + full CLI integration 回归验证。
+- **下一步动作**：继续扫描剩余 CLI/unit/report surface，优先寻找尚未显式钉死的 stable-empty propagation 或 messaging honesty 缺口；完成一批立即提交再进入下一批。
+
+### Batch 2026-04-07-008 | integrate report propagation coverage
+
+#### 1. 背景
+
+- 在上一批补齐晚期链路后，继续扫描 stable-empty visual/a11y truth surface，发现最上游 `program integrate --execute` 的 stable-empty remediation 用例仍只校验终端输出，没有显式钉死 `--report` 文件内容。
+
+#### 2. 修改文件
+
+- `tests/integration/test_cli_program.py`
+- `specs/071-frontend-p1-visual-a11y-foundation-baseline/task-execution-log.md`
+
+#### 3. 执行命令
+
+- `uv run pytest tests/integration/test_cli_program.py -k 'program_integrate_execute_surfaces_stable_empty_visual_a11y_review_hint' -q`
+- `uv run pytest tests/integration/test_cli_program.py -q`
+- `git diff --check -- specs/071-frontend-p1-visual-a11y-foundation-baseline/task-execution-log.md tests/integration/test_cli_program.py`
+
+#### 4. 验证结果
+
+- `uv run pytest tests/integration/test_cli_program.py -k 'program_integrate_execute_surfaces_stable_empty_visual_a11y_review_hint' -q` 通过，结果为 `1 passed, 91 deselected in 0.38s`。
+- `uv run pytest tests/integration/test_cli_program.py -q` 通过，结果为 `92 passed in 1.99s`。
+
+#### 5. 对账结论
+
+- 本批给 `test_program_integrate_execute_surfaces_stable_empty_visual_a11y_review_hint` 增加了 `--report` 输出路径，并显式断言 report 中包含 stable-empty pending input、review hint 与 `uv run ai-sdlc verify constraints` 后续动作。
+- 这样一来，`071` 的 stable-empty CLI coverage 不再只从中后段开始，而是从 `program integrate --execute` 的最上游 remediation handoff surface 就同时证明 terminal output 与 persisted report 两个可见面。
+- 本批没有改动生产代码，仍然只是在 integration truth surface 上补强证据链。
+
+#### 6. 归档后动作
+
+- **已完成 git 提交**：是
+- 当前 batch 结论：integrate report propagation 已补齐，并通过 targeted + full CLI integration 回归验证。
+- **下一步动作**：继续扫描是否还存在 stable-empty visual/a11y 在 CLI 或 unit 层的单点可见面缺口；若只剩文档或 message honesty 差异，则按最小批次继续提交。
+
+### Batch 2026-04-07-009 | integrate policy-artifact report propagation
+
+#### 1. 背景
+
+- 在最上游 stable-empty report surface 补齐后，继续检查相邻 remediation token，发现 `program integrate --execute` 对 `frontend_visual_a11y_policy_artifacts` 仍只有 terminal output 断言，缺少 report 文件覆盖。
+
+#### 2. 修改文件
+
+- `tests/integration/test_cli_program.py`
+- `specs/071-frontend-p1-visual-a11y-foundation-baseline/task-execution-log.md`
+
+#### 3. 执行命令
+
+- `uv run pytest tests/integration/test_cli_program.py -k 'program_integrate_execute_surfaces_visual_a11y_policy_artifact_remediation_hint' -q`
+- `uv run pytest tests/integration/test_cli_program.py -q`
+- `git diff --check -- specs/071-frontend-p1-visual-a11y-foundation-baseline/task-execution-log.md tests/integration/test_cli_program.py`
+
+#### 4. 验证结果
+
+- `uv run pytest tests/integration/test_cli_program.py -k 'program_integrate_execute_surfaces_visual_a11y_policy_artifact_remediation_hint' -q` 通过，结果为 `1 passed, 91 deselected in 0.38s`。
+- `uv run pytest tests/integration/test_cli_program.py -q` 通过，结果为 `92 passed in 2.05s`。
+
+#### 5. 对账结论
+
+- 本批给 `test_program_integrate_execute_surfaces_visual_a11y_policy_artifact_remediation_hint` 增加了 `--report` 输出，并显式断言 report 中包含 `frontend_visual_a11y_policy_artifacts`、`materialize frontend visual / a11y policy artifacts` 与 `uv run ai-sdlc rules materialize-frontend-mvp`。
+- 至此，`integrate --execute` 在 visual/a11y 两类 remediation surface 上都同时证明了 terminal output 与 persisted report，而不是只覆盖一侧可见面。
+- 本批仍然只补 integration truth surface 与执行日志，没有改动 `071` 生产逻辑。
+
+#### 6. 归档后动作
+
+- **已完成 git 提交**：是
+- 当前 batch 结论：integrate policy-artifact report propagation 已补齐，并通过 targeted + full CLI integration 回归验证。
+- **下一步动作**：继续扫描 visual/a11y 相关 message honesty、report surface 与 unit/integration 断言密度，若只剩 docs 对账差异则按最小批次提交。
+
+### Batch 2026-04-07-010 | execution log commit-state honesty sync
+
+#### 1. 背景
+
+- 收尾扫描发现 `task-execution-log.md` 中多个 batch 已经实际提交，但 `#### 6. 归档后动作` 里仍保留 `**已完成 git 提交**：否`，形成文档状态与真实 git 历史不一致的 honesty 漏洞。
+
+#### 2. 修改文件
+
+- `specs/071-frontend-p1-visual-a11y-foundation-baseline/task-execution-log.md`
+
+#### 3. 执行命令
+
+- `rg -n '\*\*已完成 git 提交\*\*：否' specs/071-frontend-p1-visual-a11y-foundation-baseline/task-execution-log.md`
+- `git diff --check -- specs/071-frontend-p1-visual-a11y-foundation-baseline/task-execution-log.md`
+
+#### 4. 验证结果
+
+- 变更前扫描可见多个历史 batch 仍写为 `**已完成 git 提交**：否`，与当前分支连续提交历史不一致。
+- `rg -n '\*\*已完成 git 提交\*\*：否' specs/071-frontend-p1-visual-a11y-foundation-baseline/task-execution-log.md` 现在返回空结果，说明当前 execution log 中这类已知不诚实状态已清除。
+- `git diff --check -- specs/071-frontend-p1-visual-a11y-foundation-baseline/task-execution-log.md` 通过，无 whitespace / patch hygiene 问题。
+
+#### 5. 对账结论
+
+- 本批将当前 execution log 中已确认落地的 batch 提交状态统一回写为 `是`，使文档 truth 与实际 git 历史重新一致。
+- 这是纯 docs honesty 对账，不涉及 `071` 的生产代码、测试语义或 rollout 边界变化。
+
+#### 6. 归档后动作
+
+- **已完成 git 提交**：是
+- 当前 batch 结论：execution log commit-state honesty 已对齐到当前实际提交状态。
+- **下一步动作**：若继续推进，只保留对新发现缺口的最小批次修补；若没有新缺口，则保持工作树干净并在后续批次继续同样流程。
+
+### Batch 2026-04-07-011 | actual issue remediation honesty propagation
+
+#### 1. 背景
+
+- 继续扫描 `071` 的 visual/a11y remediation honesty surface 时，发现 `frontend_gate_verification` 已能区分 `input gap / stable empty / actual issue`，但 `program_service` 在 actual issue 场景下仍只回退成通用 `retry` + `resolve frontend blockers`，没有把 visual/a11y issue review handoff 显式传到 program/CLI surface。
+
+#### 2. 修改文件
+
+- `src/ai_sdlc/core/program_service.py`
+- `tests/unit/test_program_service.py`
+- `tests/integration/test_cli_program.py`
+- `specs/071-frontend-p1-visual-a11y-foundation-baseline/task-execution-log.md`
+
+#### 3. 执行命令
+
+- `uv run pytest tests/unit/test_program_service.py -k 'visual_a11y_issue_review_input' -q`
+- `uv run pytest tests/integration/test_cli_program.py -k 'visual_a11y_issue_review_hint' -q`
+- `uv run pytest tests/unit/test_program_service.py -q`
+- `uv run pytest tests/integration/test_cli_program.py -q`
+- `git diff --check -- src/ai_sdlc/core/program_service.py tests/unit/test_program_service.py tests/integration/test_cli_program.py specs/071-frontend-p1-visual-a11y-foundation-baseline/task-execution-log.md`
+
+#### 4. 验证结果
+
+- 初始 RED 失败表明 actual issue 目前只会落成 `fix_inputs=['retry']`，CLI 输出也只显示 `resolve frontend blockers`；失败点准确落在缺失的 actual-issue remediation honesty surface。
+- `uv run pytest tests/unit/test_program_service.py -k 'visual_a11y_issue_review_input' -q` 通过，结果为 `1 passed, 118 deselected in 0.20s`。
+- `uv run pytest tests/integration/test_cli_program.py -k 'visual_a11y_issue_review_hint' -q` 通过，结果为 `1 passed, 92 deselected in 0.25s`。
+- `uv run pytest tests/unit/test_program_service.py -q` 通过，结果为 `119 passed in 0.84s`。
+- `uv run pytest tests/integration/test_cli_program.py -q` 通过，结果为 `93 passed in 1.88s`。
+
+#### 5. 对账结论
+
+- 本批为 actual issue 场景新增了显式 `frontend_visual_a11y_issue_review` remediation token，并把建议动作收敛为 `review frontend visual / a11y issue findings`，不再退化成 generic blocker fallback。
+- 这样 `program_service` 与 CLI report/output 现在都能诚实区分 `input gap / stable empty / actual issue` 三类 visual/a11y 语义，和 `071` formal baseline 对齐，同时没有扩张到 remediation runbook 自动化或 provider/runtime 实现。
+
+#### 6. 归档后动作
+
+- **已完成 git 提交**：是
+- 当前 batch 结论：actual issue remediation honesty surface 已闭合，并通过 unit + CLI integration 回归。
+- **下一步动作**：提交本批后继续扫描 visual/a11y 相邻的 program writeback / persisted artifact / messaging surface，优先找仍使用 generic blocker fallback 的生产缺口。
+
+### Batch 2026-04-07-012 | provider chain actual-issue truth propagation
+
+#### 1. 背景
+
+- `frontend_visual_a11y_issue_review` 已经从 remediation surface 正确产出，但 provider handoff / runtime / patch handoff / patch apply 这一段此前只对 stable-empty truth 做了显式覆盖。
+- 由于这几层都是 writeback artifact 的条件化转抄 surface，这里需要把 actual-issue token 也钉死，避免后续有人在 generic passthrough 处再次压扁语义。
+
+#### 2. 修改文件
+
+- `tests/unit/test_program_service.py`
+- `tests/integration/test_cli_program.py`
+- `specs/071-frontend-p1-visual-a11y-foundation-baseline/task-execution-log.md`
+
+#### 3. 执行命令
+
+- `uv run pytest tests/unit/test_program_service.py -k 'provider_.*visual_a11y_issue_review|visual_a11y_issue_review.*provider' -q`
+- `uv run pytest tests/integration/test_cli_program.py -k 'provider_.*visual_a11y_issue_review|visual_a11y_issue_review.*provider' -q`
+- `uv run pytest tests/unit/test_program_service.py -q`
+- `uv run pytest tests/integration/test_cli_program.py -q`
+- `git diff --check -- tests/unit/test_program_service.py tests/integration/test_cli_program.py specs/071-frontend-p1-visual-a11y-foundation-baseline/task-execution-log.md`
+
+#### 4. 验证结果
+
+- `uv run pytest tests/unit/test_program_service.py -k 'provider and visual_a11y_issue_review' -q` 通过，结果为 `4 passed, 119 deselected in 0.18s`。
+- `uv run pytest tests/integration/test_cli_program.py -k 'provider and visual_a11y_issue_review' -q` 通过，结果为 `4 passed, 93 deselected in 0.42s`。
+- `uv run pytest tests/unit/test_program_service.py -q` 通过，结果为 `123 passed in 0.85s`。
+- `uv run pytest tests/integration/test_cli_program.py -q` 通过，结果为 `97 passed in 1.94s`。
+
+#### 5. 对账结论
+
+- provider handoff / provider runtime / provider patch handoff / provider patch apply 这一段已经天然保留 `frontend_visual_a11y_issue_review` 与对应建议动作，不需要额外生产代码改动。
+- execute 类 CLI terminal output 目前不承担 step 级 pending input truth surface；这一层的真实承载面是 persisted artifact 与 report，因此本批覆盖对齐到已有 CLI 设计边界，而没有虚构新的输出契约。
+
+#### 6. 归档后动作
+
+- **已完成 git 提交**：是
+- 当前 batch 结论：provider 前半段 actual-issue truth propagation 已补齐，并通过 targeted + full unit/integration 回归。
+- **下一步动作**：若 provider 前半段保持自然透传，则继续沿 cross-spec-writeback 之后的 artifact 链把 actual-issue token 覆盖补齐到 final-proof。
+
+### Batch 2026-04-07-013 | cross-spec to broader-governance actual-issue propagation
+
+#### 1. 背景
+
+- provider 前半段已经证明 `frontend_visual_a11y_issue_review` 可以自然透传，下一段需要继续把同一 token 沿 `cross-spec-writeback -> guarded-registry -> broader-governance` 链钉死。
+- 这一段同样是 artifact 驱动的 guarded orchestration surface，目标仍然是保证 actual issue 不会在中途被压回 generic remediation。
+
+#### 2. 修改文件
+
+- `tests/unit/test_program_service.py`
+- `tests/integration/test_cli_program.py`
+- `specs/071-frontend-p1-visual-a11y-foundation-baseline/task-execution-log.md`
+
+#### 3. 执行命令
+
+- `uv run pytest tests/unit/test_program_service.py -k 'visual_a11y_issue_review and (cross_spec or guarded_registry or broader_governance)' -q`
+- `uv run pytest tests/integration/test_cli_program.py -k 'visual_a11y_issue_review and (cross_spec or guarded_registry or broader_governance)' -q`
+- `uv run pytest tests/unit/test_program_service.py -q`
+- `uv run pytest tests/integration/test_cli_program.py -q`
+- `git diff --check -- tests/unit/test_program_service.py tests/integration/test_cli_program.py specs/071-frontend-p1-visual-a11y-foundation-baseline/task-execution-log.md`
+
+#### 4. 验证结果
+
+- `uv run pytest tests/unit/test_program_service.py -k 'visual_a11y_issue_review and (cross_spec or guarded_registry or broader_governance)' -q` 通过，结果为 `6 passed, 123 deselected in 0.39s`。
+- `uv run pytest tests/integration/test_cli_program.py -k 'visual_a11y_issue_review and (cross_spec or guarded_registry or broader_governance)' -q` 通过，结果为 `3 passed, 97 deselected in 0.48s`。
+- `uv run pytest tests/unit/test_program_service.py -q` 通过，结果为 `129 passed in 0.90s`。
+- `uv run pytest tests/integration/test_cli_program.py -q` 通过，结果为 `100 passed in 2.04s`。
+
+#### 5. 对账结论
+
+- `cross-spec-writeback / guarded-registry / broader-governance` 三层都能自然保留 `frontend_visual_a11y_issue_review` 与对应建议动作，未发现新的生产断层。
+- 这说明前半段 guarded orchestration 链的 actual-issue truth surface 已经连续闭合，当前缺口继续后移到 final-governance 之后的 persistence / final-proof surfaces。
+
+#### 6. 归档后动作
+
+- **已完成 git 提交**：是
+- 当前 batch 结论：cross-spec 到 broader-governance 的 actual-issue truth propagation 已补齐，并通过 targeted + full unit/integration 回归。
+- **下一步动作**：若这一段继续保持透传，则把 actual-issue token 继续补到 final-governance / writeback-persistence / final-proof 系列 surface。
+
+### Batch 2026-04-07-014 | final-governance to persisted-write-proof actual-issue propagation
+
+#### 1. 背景
+
+- 前半段 guarded orchestration 链已经证明 `frontend_visual_a11y_issue_review` 能自然透传，下一段需要把同一 token 继续钉到 `final-governance -> writeback-persistence -> persisted-write-proof`。
+- 这一段是进入 final-proof 之前最后一层 persistence artifact 链，如果这里没有显式覆盖，后续 report surface 仍可能在演进时退化回 generic remediation。
+
+#### 2. 修改文件
+
+- `tests/unit/test_program_service.py`
+- `tests/integration/test_cli_program.py`
+- `specs/071-frontend-p1-visual-a11y-foundation-baseline/task-execution-log.md`
+
+#### 3. 执行命令
+
+- `uv run pytest tests/unit/test_program_service.py -k 'visual_a11y_issue_review and (final_governance or writeback_persistence or persisted_write_proof)' -q`
+- `uv run pytest tests/integration/test_cli_program.py -k 'visual_a11y_issue_review and (final_governance or writeback_persistence or persisted_write_proof)' -q`
+- `uv run pytest tests/unit/test_program_service.py -q`
+- `uv run pytest tests/integration/test_cli_program.py -q`
+- `git diff --check -- tests/unit/test_program_service.py tests/integration/test_cli_program.py specs/071-frontend-p1-visual-a11y-foundation-baseline/task-execution-log.md`
+
+#### 4. 验证结果
+
+- `uv run pytest tests/unit/test_program_service.py -k 'visual_a11y_issue_review and (final_governance or writeback_persistence or persisted_write_proof)' -q` 通过，结果为 `6 passed, 129 deselected in 0.38s`。
+- `uv run pytest tests/integration/test_cli_program.py -k 'visual_a11y_issue_review and (final_governance or writeback_persistence or persisted_write_proof)' -q` 通过，结果为 `3 passed, 100 deselected in 0.45s`。
+- `uv run pytest tests/unit/test_program_service.py -q` 通过，结果为 `135 passed in 0.89s`。
+- `uv run pytest tests/integration/test_cli_program.py -q` 通过，结果为 `103 passed in 2.01s`。
+
+#### 5. 对账结论
+
+- `final-governance / writeback-persistence / persisted-write-proof` 三段都能自然保留 `frontend_visual_a11y_issue_review` 与对应建议动作，没有在 persistence artifact 链中退化回 generic remediation。
+- 到这里为止，actual-issue truth surface 已经连续推进到 final-proof 入口；剩余缺口后移到 `final-proof publication / closure / archive` 及其尾部 cleanup surfaces。
+
+#### 6. 归档后动作
+
+- **已完成 git 提交**：是
+- 当前 batch 结论：final-governance 到 persisted-write-proof 的 actual-issue truth propagation 已补齐，并通过 targeted + full unit/integration 回归。
+- **下一步动作**：若 persistence 链继续保持透传，则把 actual-issue token 收束到 final-proof publication / closure / archive 后半段。
+
+### Batch 2026-04-07-015 | final-proof mainline actual-issue propagation
+
+#### 1. 背景
+
+- actual-issue truth surface 已经推进到 final-proof 入口，下一段需要把同一 remediation token 继续钉到 `final-proof publication -> closure -> archive` 主链。
+- 这三层仍然是 artifact 驱动的串联 surface；目标是防止 final-proof 主链把具体 visual/a11y issue 重新压回 generic blocker 描述。
+
+#### 2. 修改文件
+
+- `tests/unit/test_program_service.py`
+- `tests/integration/test_cli_program.py`
+- `specs/071-frontend-p1-visual-a11y-foundation-baseline/task-execution-log.md`
+
+#### 3. 执行命令
+
+- `uv run pytest tests/unit/test_program_service.py -k 'visual_a11y_issue_review and (final_proof_publication or final_proof_closure or final_proof_archive)' -q`
+- `uv run pytest tests/integration/test_cli_program.py -k 'visual_a11y_issue_review and (final_proof_publication or final_proof_closure or final_proof_archive)' -q`
+- `uv run pytest tests/unit/test_program_service.py -q`
+- `uv run pytest tests/integration/test_cli_program.py -q`
+- `git diff --check -- tests/unit/test_program_service.py tests/integration/test_cli_program.py specs/071-frontend-p1-visual-a11y-foundation-baseline/task-execution-log.md`
+
+#### 4. 验证结果
+
+- `uv run pytest tests/unit/test_program_service.py -k 'visual_a11y_issue_review and (final_proof_publication or final_proof_closure or final_proof_archive)' -q` 通过，结果为 `6 passed, 135 deselected in 0.40s`。
+- `uv run pytest tests/integration/test_cli_program.py -k 'visual_a11y_issue_review and (final_proof_publication or final_proof_closure or final_proof_archive)' -q` 通过，结果为 `3 passed, 103 deselected in 0.48s`。
+- `uv run pytest tests/unit/test_program_service.py -q` 通过，结果为 `141 passed in 0.94s`。
+- `uv run pytest tests/integration/test_cli_program.py -q` 通过，结果为 `106 passed in 2.10s`。
+
+#### 5. 对账结论
+
+- `final-proof publication / closure / archive` 主链三层都能自然保留 `frontend_visual_a11y_issue_review` 与对应建议动作，未发现新的生产断层。
+- 到这里为止，actual-issue truth surface 已经推进到 final-proof archive 之后的尾部 `thread-archive / project-cleanup` surfaces。
+
+#### 6. 归档后动作
+
+- **已完成 git 提交**：是
+- 当前 batch 结论：final-proof 主链 actual-issue truth propagation 已补齐，并通过 targeted + full unit/integration 回归。
+- **下一步动作**：继续把 actual-issue token 补到 `final-proof-archive-thread-archive / final-proof-archive-project-cleanup` 尾部 surfaces。
+
+### Batch 2026-04-07-016 | final-proof tail actual-issue propagation
+
+#### 1. 背景
+
+- `final-proof publication / closure / archive` 主链已经完成 actual-issue truth propagation，剩余尾部缺口只在 `final-proof-archive-thread-archive / final-proof-archive-project-cleanup`。
+- 这一段是 final-proof archive 之后的最后两层 surface；目标仍然是保证 `frontend_visual_a11y_issue_review` 与对应建议动作不会在尾部收束阶段退化回 generic remediation。
+
+#### 2. 修改文件
+
+- `tests/unit/test_program_service.py`
+- `tests/integration/test_cli_program.py`
+- `specs/071-frontend-p1-visual-a11y-foundation-baseline/task-execution-log.md`
+
+#### 3. 执行命令
+
+- `uv run pytest tests/unit/test_program_service.py -k 'visual_a11y_issue_review and (thread_archive or project_cleanup)' -q`
+- `uv run pytest tests/integration/test_cli_program.py -k 'visual_a11y_issue_review and (thread_archive or project_cleanup)' -q`
+- `uv run pytest tests/unit/test_program_service.py -q`
+- `uv run pytest tests/integration/test_cli_program.py -q`
+- `git diff --check -- tests/unit/test_program_service.py tests/integration/test_cli_program.py specs/071-frontend-p1-visual-a11y-foundation-baseline/task-execution-log.md`
+
+#### 4. 验证结果
+
+- `uv run pytest tests/unit/test_program_service.py -k 'visual_a11y_issue_review and (thread_archive or project_cleanup)' -q` 通过，结果为 `3 passed, 141 deselected in 0.38s`。
+- `uv run pytest tests/integration/test_cli_program.py -k 'visual_a11y_issue_review and (thread_archive or project_cleanup)' -q` 通过，结果为 `2 passed, 106 deselected in 0.45s`。
+- `uv run pytest tests/unit/test_program_service.py -q` 通过，结果为 `144 passed in 0.96s`。
+- `uv run pytest tests/integration/test_cli_program.py -q` 通过，结果为 `108 passed in 2.15s`。
+
+#### 5. 对账结论
+
+- `final-proof-archive-thread-archive / final-proof-archive-project-cleanup` 尾部 surface 都能自然保留 `frontend_visual_a11y_issue_review` 与对应建议动作，未发现新的生产断层。
+- 到这里为止，071 这条 visual/a11y truth propagation 主链已经从 remediation provider 一路闭合到 final-proof archive 尾部 cleanup surfaces。
+
+#### 6. 归档后动作
+
+- **已完成 git 提交**：是
+- 当前 batch 结论：final-proof 尾部 actual-issue truth propagation 已补齐，并通过 targeted + full unit/integration 回归。
+- **下一步动作**：继续扫描 071 相邻剩余 truth-surface 或 honesty/messaging 缺口；若没有新的生产缺口，则转向更高一层的治理/报告 surface 收尾。
+
+### Batch 2026-04-07-017 | verify surfaces visual-a11y issue-review propagation
+
+#### 1. 背景
+
+- `program_service` 与 `program` CLI 主链已经把 `frontend_visual_a11y_issue_review` 从 provider 一路透传到 final-proof tail，但 `frontend_gate_verification / verify_constraints / verify CLI` 仍只对 stable-empty evidence 有显式 coverage gap surface。
+- 这一批目标是把 “issue evidence detected” 明确 surfaced 为 `frontend_visual_a11y_issue_review`，让 verification / report / CLI 三层与上游 remediation input 保持一致。
+
+#### 2. 修改文件
+
+- `tests/unit/test_frontend_gate_verification.py`
+- `tests/unit/test_verify_constraints.py`
+- `tests/integration/test_cli_verify_constraints.py`
+- `src/ai_sdlc/core/frontend_gate_verification.py`
+- `specs/071-frontend-p1-visual-a11y-foundation-baseline/task-execution-log.md`
+
+#### 3. 执行命令
+
+- `uv run pytest tests/unit/test_frontend_gate_verification.py tests/unit/test_verify_constraints.py tests/integration/test_cli_verify_constraints.py -k 'issue_review or issues_detected' -q`
+- `uv run pytest tests/unit/test_frontend_gate_verification.py tests/unit/test_verify_constraints.py tests/integration/test_cli_verify_constraints.py -q`
+- `git diff --check -- tests/unit/test_frontend_gate_verification.py tests/unit/test_verify_constraints.py tests/integration/test_cli_verify_constraints.py src/ai_sdlc/core/frontend_gate_verification.py specs/071-frontend-p1-visual-a11y-foundation-baseline/task-execution-log.md`
+
+#### 4. 验证结果
+
+- 先跑 RED：`uv run pytest tests/unit/test_frontend_gate_verification.py tests/unit/test_verify_constraints.py tests/integration/test_cli_verify_constraints.py -k 'issue_review or issues_detected' -q` 失败，结果为 `4 failed, 88 deselected in 0.50s`；失败点集中在 `frontend_gate_verification` 未将 visual/a11y issue evidence 显式 surfaced 为 `frontend_visual_a11y_issue_review`。
+- 最小实现后重跑：`uv run pytest tests/unit/test_frontend_gate_verification.py tests/unit/test_verify_constraints.py tests/integration/test_cli_verify_constraints.py -k 'issue_review or issues_detected' -q` 通过，结果为 `4 passed, 88 deselected in 0.34s`。
+- `uv run pytest tests/unit/test_frontend_gate_verification.py tests/unit/test_verify_constraints.py tests/integration/test_cli_verify_constraints.py -q` 通过，结果为 `92 passed in 4.15s`。
+- `git diff --check -- tests/unit/test_frontend_gate_verification.py tests/unit/test_verify_constraints.py tests/integration/test_cli_verify_constraints.py src/ai_sdlc/core/frontend_gate_verification.py specs/071-frontend-p1-visual-a11y-foundation-baseline/task-execution-log.md` 通过，无 whitespace / conflict 问题。
+
+#### 5. 对账结论
+
+- `frontend_gate_verification` 现在会在 visual/a11y evidence 存在 issue 时显式输出 `frontend_visual_a11y_issue_review` coverage gap；`verify_constraints` 报告与 verify CLI terminal/json 输出都已同步 surfaced 这一 truth token。
+- 这让 verification/report 层与上游 program remediation input 对齐，不再依赖仅凭 blocker 文案去推断要执行 issue review。
+
+#### 6. 归档后动作
+
+- **已完成 git 提交**：是
+- 当前 batch 结论：verify surfaces 的 visual-a11y issue-review propagation 已补齐，并通过 RED -> GREEN -> full verification 回归。
+- **下一步动作**：继续扫描 071 剩余 messaging / honesty 收尾项；若没有新的生产缺口，则把 execution log 与 truth-surface 对账收束到最后一批。
+
+### Batch 2026-04-07-018 | gate unit issue-review truth-surface coverage
+
+#### 1. 背景
+
+- `verify constraints` 与 verify CLI 已经显式 surfaced `frontend_visual_a11y_issue_review`，但 gate 层 unit coverage 还没有直接钉住 `VerifyGate / VerificationGate` 的 status message 是否保留这一 token。
+- 这一批目标是只补 gate 层回归覆盖，不改生产逻辑；如果测试直接变绿，就把本批定性为 tests-only truth-surface 收口。
+
+#### 2. 修改文件
+
+- `tests/unit/test_gates.py`
+- `specs/071-frontend-p1-visual-a11y-foundation-baseline/task-execution-log.md`
+
+#### 3. 执行命令
+
+- `uv run pytest tests/unit/test_gates.py -k 'frontend_gate_summary_surfaces_071_visual_a11y_issue_review' -q`
+- `uv run pytest tests/unit/test_gates.py -q`
+- `git diff --check -- tests/unit/test_gates.py specs/071-frontend-p1-visual-a11y-foundation-baseline/task-execution-log.md`
+
+#### 4. 验证结果
+
+- `uv run pytest tests/unit/test_gates.py -k 'frontend_gate_summary_surfaces_071_visual_a11y_issue_review' -q` 通过，结果为 `2 passed, 67 deselected in 0.22s`。
+- `uv run pytest tests/unit/test_gates.py -q` 通过，结果为 `69 passed in 0.28s`。
+- `git diff --check -- tests/unit/test_gates.py specs/071-frontend-p1-visual-a11y-foundation-baseline/task-execution-log.md` 通过，无 whitespace / conflict 问题。
+
+#### 5. 对账结论
+
+- `VerifyGate / VerificationGate` 在 `frontend_gate_status_clear` message 上天然会保留 `frontend_visual_a11y_issue_review`，没有退化回 generic blocker，也不会误回落到 `frontend_visual_a11y_evidence_stable_empty`。
+- 当前缺口是 coverage density，而不是新的生产断层；因此本批保持 tests-only 最小提交。
+
+#### 6. 归档后动作
+
+- **已完成 git 提交**：是
+- 当前 batch 结论：gate unit 层的 071 issue-review truth-surface 已补齐回归断言。
+- **下一步动作**：继续补 `ai-sdlc gate verify / gate verification` 的 CLI integration coverage，把同一 token 钉到终端输出层。
+
+### Batch 2026-04-07-019 | gate cli issue-review truth-surface coverage
+
+#### 1. 背景
+
+- `VerifyGate / VerificationGate` 的 unit 层已经确认会保留 `frontend_visual_a11y_issue_review`，但 `ai-sdlc gate verify / gate verification` 还没有 integration coverage 去保证终端输出层不会把这条 truth surface 丢掉。
+- 这一批目标是新增最小 018/071 fixture 链，把同一 token 钉到 gate CLI 两个入口；若 RED 只来自渲染截断，则只修测试环境，不动生产逻辑。
+
+#### 2. 修改文件
+
+- `tests/integration/test_cli_index_gate.py`
+- `specs/071-frontend-p1-visual-a11y-foundation-baseline/task-execution-log.md`
+
+#### 3. 执行命令
+
+- `uv run pytest tests/integration/test_cli_index_gate.py -k 'visual_a11y_issue_review' -q`
+- `uv run pytest tests/integration/test_cli_index_gate.py -q`
+- `git diff --check -- tests/integration/test_cli_index_gate.py specs/071-frontend-p1-visual-a11y-foundation-baseline/task-execution-log.md`
+
+#### 4. 验证结果
+
+- 先跑 RED：`uv run pytest tests/integration/test_cli_index_gate.py -k 'visual_a11y_issue_review' -q` 失败，结果为 `2 failed, 2 deselected in 0.32s`；失败点不是生产逻辑，而是 Rich 表格宽度截断了长 message，导致完整 token 未出现在默认终端渲染输出中。
+- 收紧测试并固定 `sub_apps.console` 宽度后重跑：`uv run pytest tests/integration/test_cli_index_gate.py -k 'visual_a11y_issue_review' -q` 通过，结果为 `2 passed, 2 deselected in 0.27s`。
+- `uv run pytest tests/integration/test_cli_index_gate.py -q` 通过，结果为 `4 passed in 0.38s`。
+- `git diff --check -- tests/integration/test_cli_index_gate.py specs/071-frontend-p1-visual-a11y-foundation-baseline/task-execution-log.md` 通过，无 whitespace / conflict 问题。
+
+#### 5. 对账结论
+
+- `ai-sdlc gate verify` 与 `ai-sdlc gate verification` 两个入口在 071 issue evidence 场景下都能从 frontend gate summary 自然输出 `frontend_visual_a11y_issue_review`。
+- 这一批没有新增生产代码改动；真实收口点是 CLI integration coverage 需要在测试中固定终端宽度，避免 Rich 截断造成假阴性。
+
+#### 6. 归档后动作
+
+- **已完成 git 提交**：是
+- 当前 batch 结论：gate CLI 层的 071 issue-review truth-surface 已补齐 integration coverage。
+- **下一步动作**：继续扫描 071 剩余 gate / verify 相邻 surfaces；若不再存在真实缺口，则转向 execution log honesty 收尾并保持工作树干净。
+
+### Batch 2026-04-07-020 | gate stable-empty truth-surface symmetry coverage
+
+#### 1. 背景
+
+- gate 层已经对 `frontend_visual_a11y_issue_review` 补齐了 unit + CLI integration coverage，但对应的 stable-empty token `frontend_visual_a11y_evidence_stable_empty` 还没有在同一层做对称断言。
+- 这一批目标是把 `VerifyGate / VerificationGate / gate verify / gate verification` 四个入口都补成对称 coverage，避免未来 truth token 只在 actual-issue 侧被保护。
+
+#### 2. 修改文件
+
+- `tests/unit/test_gates.py`
+- `tests/integration/test_cli_index_gate.py`
+- `specs/071-frontend-p1-visual-a11y-foundation-baseline/task-execution-log.md`
+
+#### 3. 执行命令
+
+- `uv run pytest tests/unit/test_gates.py -k 'stable_empty' -q`
+- `uv run pytest tests/integration/test_cli_index_gate.py -k 'stable_empty' -q`
+- `uv run pytest tests/unit/test_gates.py tests/integration/test_cli_index_gate.py -q`
+- `git diff --check -- tests/unit/test_gates.py tests/integration/test_cli_index_gate.py specs/071-frontend-p1-visual-a11y-foundation-baseline/task-execution-log.md`
+
+#### 4. 验证结果
+
+- `uv run pytest tests/unit/test_gates.py -k 'stable_empty' -q` 通过，结果为 `2 passed, 69 deselected in 0.19s`。
+- `uv run pytest tests/integration/test_cli_index_gate.py -k 'stable_empty' -q` 通过，结果为 `2 passed, 4 deselected in 0.28s`。
+- `uv run pytest tests/unit/test_gates.py tests/integration/test_cli_index_gate.py -q` 通过，结果为 `77 passed in 0.61s`。
+- `git diff --check -- tests/unit/test_gates.py tests/integration/test_cli_index_gate.py specs/071-frontend-p1-visual-a11y-foundation-baseline/task-execution-log.md` 通过，无 whitespace / conflict 问题。
+
+#### 5. 对账结论
+
+- `frontend_visual_a11y_evidence_stable_empty` 在 gate unit 与 gate CLI 两层都会被自然 surfaced，且不会误混成 `frontend_visual_a11y_issue_review`。
+- 这一批继续保持 tests-only；收口的是对称 coverage，而不是新增生产逻辑。
+
+#### 6. 归档后动作
+
+- **已完成 git 提交**：是
+- 当前 batch 结论：gate 层的 stable-empty / actual-issue token 对称 coverage 已补齐。
+- **下一步动作**：继续扫描 071 剩余 truth-surface 或 honesty 差异；若没有新的行为缺口，则转入 execution log honesty 收尾。
+
+### Batch 2026-04-07-021 | execution log honesty alignment for recent gate batches
+
+#### 1. 背景
+
+- 最近连续完成并提交了 gate unit / gate CLI / gate stable-empty 三个批次，对应 commit 分别是 `9d28f89`、`38780af`、`2ee282d`。
+- 但 execution log 中 Batch 018 / 019 / 020 的 `**已完成 git 提交**` 仍停留在 `否`，形成文档状态与真实 git 历史不一致的 honesty 差异。
+
+#### 2. 修改文件
+
+- `specs/071-frontend-p1-visual-a11y-foundation-baseline/task-execution-log.md`
+
+#### 3. 执行命令
+
+- `rg -n "\*\*已完成 git 提交\*\*：否" specs/071-frontend-p1-visual-a11y-foundation-baseline/task-execution-log.md`
+- `git log --oneline -n 6`
+- `git diff --check -- specs/071-frontend-p1-visual-a11y-foundation-baseline/task-execution-log.md`
+
+#### 4. 验证结果
+
+- `rg -n "\*\*已完成 git 提交\*\*：否" specs/071-frontend-p1-visual-a11y-foundation-baseline/task-execution-log.md` 在变更前命中 Batch 018 / 019 / 020 的状态位，以及更早历史叙述中对旧问题的说明文本。
+- `git log --oneline -n 6` 显示最近提交依次为 `2ee282d test: cover gate stable empty truth surface`、`38780af test: cover gate cli issue review truth surface`、`9d28f89 test: cover gate issue review truth surface`，与三批 execution 记录对应。
+- 再次执行 `rg -n "\*\*已完成 git 提交\*\*：否" specs/071-frontend-p1-visual-a11y-foundation-baseline/task-execution-log.md` 后，仅剩当前 Batch 021 自身的状态位，以及更早历史叙述中的过去时文本。
+- `git diff --check -- specs/071-frontend-p1-visual-a11y-foundation-baseline/task-execution-log.md` 通过，无 whitespace / conflict 问题。
+
+#### 5. 对账结论
+
+- Batch 018 / 019 / 020 的 git 提交状态现在应全部回写为 `是`；历史叙述中的 `否` 保留为过去时说明，不属于当前状态字段。
+- 这一批不涉及功能改动，只修 execution log honesty。
+
+#### 6. 归档后动作
+
+- **已完成 git 提交**：否
+- 当前 batch 结论：recent gate batches 的 execution log honesty 已对齐到真实提交历史。
+- **下一步动作**：继续扫描是否还存在新的 071 相邻缺口；若没有，则保持工作树干净等待下一轮任务。

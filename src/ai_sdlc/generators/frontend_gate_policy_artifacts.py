@@ -93,6 +93,58 @@ def materialize_frontend_gate_policy_artifacts(
             )
         )
 
+    if policy.visual_foundation_coverage_matrix:
+        paths.append(
+            _write_yaml(
+                base_dir / "visual-foundation-coverage-matrix.yaml",
+                {
+                    "items": [
+                        item.model_dump(mode="json", exclude_none=True)
+                        for item in policy.visual_foundation_coverage_matrix
+                    ]
+                },
+            )
+        )
+
+    if policy.a11y_foundation_coverage_matrix:
+        paths.append(
+            _write_yaml(
+                base_dir / "a11y-foundation-coverage-matrix.yaml",
+                {
+                    "items": [
+                        item.model_dump(mode="json", exclude_none=True)
+                        for item in policy.a11y_foundation_coverage_matrix
+                    ]
+                },
+            )
+        )
+
+    if policy.visual_a11y_evidence_boundary:
+        paths.append(
+            _write_yaml(
+                base_dir / "visual-a11y-evidence-boundary.yaml",
+                {
+                    "items": [
+                        item.model_dump(mode="json", exclude_none=True)
+                        for item in policy.visual_a11y_evidence_boundary
+                    ]
+                },
+            )
+        )
+
+    if policy.visual_a11y_feedback_boundary:
+        paths.append(
+            _write_yaml(
+                base_dir / "visual-a11y-feedback-boundary.yaml",
+                {
+                    "items": [
+                        item.model_dump(mode="json", exclude_none=True)
+                        for item in policy.visual_a11y_feedback_boundary
+                    ]
+                },
+            )
+        )
+
     return paths
 
 

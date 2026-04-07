@@ -5,10 +5,15 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 
+import yaml
+
 from ai_sdlc.core.frontend_contract_drift import PageImplementationObservation
 from ai_sdlc.core.frontend_contract_verification import (
     FrontendContractVerificationReport,
     build_frontend_contract_verification_report,
+)
+from ai_sdlc.core.frontend_visual_a11y_evidence_provider import (
+    FrontendVisualA11yEvidenceArtifact,
 )
 from ai_sdlc.generators.frontend_contract_artifacts import frontend_contracts_root
 from ai_sdlc.generators.frontend_gate_policy_artifacts import frontend_gate_policy_root
@@ -18,6 +23,8 @@ from ai_sdlc.generators.frontend_generation_constraint_artifacts import (
 from ai_sdlc.models.gate import GateCheck, GateResult, GateVerdict
 
 FRONTEND_GATE_SOURCE_NAME = "frontend gate verification"
+FRONTEND_GATE_VISUAL_A11Y_CHECK_OBJECT = "frontend_visual_a11y_policy_artifacts"
+FRONTEND_GATE_VISUAL_A11Y_EVIDENCE_OBJECT = "frontend_visual_a11y_evidence"
 FRONTEND_GATE_CHECK_OBJECTS = (
     "frontend_gate_policy_artifacts",
     "frontend_generation_governance_artifacts",
@@ -38,9 +45,10 @@ class FrontendGateVerificationReport:
     advisory_checks: tuple[str, ...]
     gate_result: GateResult
     upstream_contract_verification: dict[str, object]
+    visual_a11y_evidence_summary: dict[str, object] | None = None
 
     def to_json_dict(self) -> dict[str, object]:
-        return {
+        payload = {
             "gate_policy_root": self.gate_policy_root,
             "generation_root": self.generation_root,
             "source_name": self.source_name,
@@ -59,11 +67,16 @@ class FrontendGateVerificationReport:
             ],
             "upstream_contract_verification": self.upstream_contract_verification,
         }
+        if self.visual_a11y_evidence_summary is not None:
+            payload["visual_a11y_evidence_summary"] = self.visual_a11y_evidence_summary
+        return payload
 
 
 def build_frontend_gate_verification_report(
     root: Path,
     observations: list[PageImplementationObservation],
+    *,
+    visual_a11y_evidence_artifact: FrontendVisualA11yEvidenceArtifact | None = None,
 ) -> FrontendGateVerificationReport:
     """Translate artifact presence and contract prerequisite into gate summary fields."""
 
@@ -83,6 +96,19 @@ def build_frontend_gate_verification_report(
             "report-types.yaml",
         ),
     )
+    visual_a11y_required = _requires_visual_a11y_policy_artifacts(gate_root)
+    visual_a11y_present = True
+    visual_a11y_message = ""
+    if visual_a11y_required:
+        visual_a11y_present, visual_a11y_message = _required_artifacts_present(
+            gate_root,
+            (
+                "visual-foundation-coverage-matrix.yaml",
+                "a11y-foundation-coverage-matrix.yaml",
+                "visual-a11y-evidence-boundary.yaml",
+                "visual-a11y-feedback-boundary.yaml",
+            ),
+        )
     generation_present, generation_message = _required_artifacts_present(
         generation_root,
         (
@@ -97,6 +123,21 @@ def build_frontend_gate_verification_report(
         and not contract_report.blockers
         and not contract_report.coverage_gaps
     )
+    visual_a11y_evidence_clear = True
+    visual_a11y_evidence_message = ""
+    visual_a11y_evidence_summary: dict[str, object] | None = None
+    if visual_a11y_required:
+        (
+            visual_a11y_evidence_clear,
+            visual_a11y_evidence_message,
+            visual_a11y_evidence_summary,
+        ) = _evaluate_visual_a11y_evidence_artifact(
+            visual_a11y_evidence_artifact,
+            prerequisites_clear=gate_present
+            and visual_a11y_present
+            and generation_present
+            and contract_clear,
+        )
 
     checks = [
         GateCheck(
@@ -109,6 +150,23 @@ def build_frontend_gate_verification_report(
             passed=generation_present,
             message=generation_message,
         ),
+    ]
+    if visual_a11y_required:
+        checks.append(
+            GateCheck(
+                name="visual_a11y_policy_artifacts_present",
+                passed=visual_a11y_present,
+                message=visual_a11y_message,
+            )
+        )
+        checks.append(
+            GateCheck(
+                name="visual_a11y_evidence_clear",
+                passed=visual_a11y_evidence_clear,
+                message=visual_a11y_evidence_message,
+            )
+        )
+    checks.append(
         GateCheck(
             name="frontend_contract_prerequisite_clear",
             passed=contract_clear,
@@ -116,7 +174,7 @@ def build_frontend_gate_verification_report(
             if contract_clear
             else _contract_prerequisite_message(contract_report),
         ),
-    ]
+    )
     gate_result = GateResult(
         stage="frontend_gate",
         verdict=GateVerdict.PASS if all(check.passed for check in checks) else GateVerdict.RETRY,
@@ -133,6 +191,13 @@ def build_frontend_gate_verification_report(
         )
         coverage_gaps.append("frontend_gate_policy_artifacts")
 
+    if visual_a11y_required and not visual_a11y_present:
+        blockers.append(
+            "BLOCKER: frontend visual / a11y policy artifacts unavailable: "
+            f"{visual_a11y_message}"
+        )
+        coverage_gaps.append(FRONTEND_GATE_VISUAL_A11Y_CHECK_OBJECT)
+
     if not generation_present:
         blockers.append(
             "BLOCKER: frontend generation governance artifacts unavailable: "
@@ -148,26 +213,55 @@ def build_frontend_gate_verification_report(
         )
         coverage_gaps.extend(contract_report.coverage_gaps)
 
+    if visual_a11y_required and not visual_a11y_evidence_clear:
+        blockers.append(
+            "BLOCKER: frontend visual / a11y evidence unavailable: "
+            f"{visual_a11y_evidence_message}"
+        )
+        if visual_a11y_evidence_summary is not None:
+            coverage_gaps.extend(
+                _coverage_gaps_from_visual_a11y_evidence_summary(
+                    visual_a11y_evidence_summary
+                )
+            )
+
     return FrontendGateVerificationReport(
         gate_policy_root=str(gate_root),
         generation_root=str(generation_root),
         source_name=FRONTEND_GATE_SOURCE_NAME,
-        check_objects=FRONTEND_GATE_CHECK_OBJECTS,
+        check_objects=(
+            *FRONTEND_GATE_CHECK_OBJECTS,
+            *(
+                (
+                    FRONTEND_GATE_VISUAL_A11Y_CHECK_OBJECT,
+                    FRONTEND_GATE_VISUAL_A11Y_EVIDENCE_OBJECT,
+                )
+                if visual_a11y_required
+                else ()
+            ),
+        ),
         blockers=tuple(_unique_strings(blockers)),
         coverage_gaps=tuple(_unique_strings(coverage_gaps)),
         advisory_checks=(),
         gate_result=gate_result,
         upstream_contract_verification=contract_report.to_json_dict(),
+        visual_a11y_evidence_summary=visual_a11y_evidence_summary,
     )
 
 
 def build_frontend_gate_verification_context(
     root: Path,
     observations: list[PageImplementationObservation],
+    *,
+    visual_a11y_evidence_artifact: FrontendVisualA11yEvidenceArtifact | None = None,
 ) -> dict[str, object]:
     """Build a verification-compatible context fragment for frontend gate summary."""
 
-    report = build_frontend_gate_verification_report(root, observations)
+    report = build_frontend_gate_verification_report(
+        root,
+        observations,
+        visual_a11y_evidence_artifact=visual_a11y_evidence_artifact,
+    )
     return {
         "verification_sources": (report.source_name,),
         "verification_check_objects": report.check_objects,
@@ -192,6 +286,19 @@ def _required_artifacts_present(
     return True, ""
 
 
+def _requires_visual_a11y_policy_artifacts(gate_root: Path) -> bool:
+    manifest_path = gate_root / "gate.manifest.yaml"
+    if not manifest_path.is_file():
+        return False
+
+    raw = yaml.safe_load(manifest_path.read_text(encoding="utf-8"))
+    if not isinstance(raw, dict):
+        return False
+
+    work_item_id = str(raw.get("work_item_id", "")).strip()
+    return work_item_id == "071" or work_item_id.startswith("071-")
+
+
 def _contract_prerequisite_message(
     report: FrontendContractVerificationReport,
 ) -> str:
@@ -200,6 +307,72 @@ def _contract_prerequisite_message(
     if report.coverage_gaps:
         return "coverage gaps: " + ", ".join(report.coverage_gaps)
     return "frontend contract verification not clear"
+
+
+def _evaluate_visual_a11y_evidence_artifact(
+    artifact: FrontendVisualA11yEvidenceArtifact | None,
+    *,
+    prerequisites_clear: bool,
+) -> tuple[bool, str, dict[str, object] | None]:
+    if artifact is None:
+        summary = {
+            "status": "missing_input",
+            "coverage_gaps": ["frontend_visual_a11y_evidence_input"],
+            "evaluation_count": 0,
+            "issue_count": 0,
+            "pass_count": 0,
+        }
+        if prerequisites_clear:
+            return False, "missing explicit evidence input", summary
+        return True, "", summary
+
+    issue_count = sum(
+        1 for evaluation in artifact.evaluations if evaluation.outcome == "issue"
+    )
+    pass_count = sum(
+        1 for evaluation in artifact.evaluations if evaluation.outcome == "pass"
+    )
+    summary = {
+        "status": "clear",
+        "coverage_gaps": [],
+        "evaluation_count": len(artifact.evaluations),
+        "issue_count": issue_count,
+        "pass_count": pass_count,
+        "provider_kind": artifact.provenance.provider_kind,
+        "provider_name": artifact.provenance.provider_name,
+        "generated_at": artifact.freshness.generated_at,
+    }
+
+    if not artifact.evaluations:
+        summary["status"] = "stable_empty"
+        summary["coverage_gaps"] = ["frontend_visual_a11y_evidence_stable_empty"]
+        if prerequisites_clear:
+            return False, "stable empty evidence", summary
+        return True, "", summary
+
+    if issue_count:
+        summary["status"] = "issue"
+        summary["coverage_gaps"] = ["frontend_visual_a11y_issue_review"]
+        if prerequisites_clear:
+            return False, "visual / a11y issues detected", summary
+        return True, "", summary
+
+    summary["status"] = "pass"
+    return True, "", summary
+
+
+def _coverage_gaps_from_visual_a11y_evidence_summary(
+    summary: dict[str, object],
+) -> tuple[str, ...]:
+    raw = summary.get("coverage_gaps")
+    if not isinstance(raw, list):
+        return ()
+    gaps: list[str] = []
+    for item in raw:
+        text = str(item).strip()
+        if text and text not in gaps:
+            gaps.append(text)
+    return tuple(gaps)
 
 
 def _unique_strings(values: list[str] | tuple[str, ...]) -> list[str]:
@@ -214,6 +387,8 @@ def _unique_strings(values: list[str] | tuple[str, ...]) -> list[str]:
 __all__ = [
     "FRONTEND_GATE_CHECK_OBJECTS",
     "FRONTEND_GATE_SOURCE_NAME",
+    "FRONTEND_GATE_VISUAL_A11Y_CHECK_OBJECT",
+    "FRONTEND_GATE_VISUAL_A11Y_EVIDENCE_OBJECT",
     "FrontendGateVerificationReport",
     "build_frontend_gate_verification_context",
     "build_frontend_gate_verification_report",

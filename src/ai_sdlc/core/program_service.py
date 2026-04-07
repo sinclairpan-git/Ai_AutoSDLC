@@ -18,6 +18,10 @@ from ai_sdlc.core.frontend_gate_verification import (
     FRONTEND_GATE_SOURCE_NAME,
     build_frontend_gate_verification_report,
 )
+from ai_sdlc.core.frontend_visual_a11y_evidence_provider import (
+    load_frontend_visual_a11y_evidence_artifact,
+    visual_a11y_evidence_artifact_path,
+)
 from ai_sdlc.core.verify_constraints import build_constraint_report
 from ai_sdlc.generators.frontend_gate_policy_artifacts import (
     materialize_frontend_gate_policy_artifacts,
@@ -25,7 +29,9 @@ from ai_sdlc.generators.frontend_gate_policy_artifacts import (
 from ai_sdlc.generators.frontend_generation_constraint_artifacts import (
     materialize_frontend_generation_constraint_artifacts,
 )
-from ai_sdlc.models.frontend_gate_policy import build_mvp_frontend_gate_policy
+from ai_sdlc.models.frontend_gate_policy import (
+    build_p1_frontend_gate_policy_visual_a11y_foundation,
+)
 from ai_sdlc.models.frontend_generation_constraints import (
     build_mvp_frontend_generation_constraints,
 )
@@ -39,6 +45,9 @@ PROGRAM_FRONTEND_RUNTIME_ATTACHMENT_SOURCE_NAME = (
     "frontend contract runtime attachment"
 )
 PROGRAM_FRONTEND_RECHECK_COMMAND = "uv run ai-sdlc verify constraints"
+PROGRAM_FRONTEND_VISUAL_A11Y_ISSUE_REVIEW_INPUT = (
+    "frontend_visual_a11y_issue_review"
+)
 PROGRAM_FRONTEND_SCAN_COMMAND_PREFIX = (
     "uv run ai-sdlc scan <frontend-source-root> --frontend-contract-spec-dir "
 )
@@ -4677,15 +4686,40 @@ class ProgramService:
         gate_verdict = PROGRAM_FRONTEND_GATE_VERDICT_UNRESOLVED
 
         if attachment.status == FRONTEND_CONTRACT_RUNTIME_ATTACHMENT_STATUS_ATTACHED:
+            visual_a11y_evidence = None
+            evidence_path = visual_a11y_evidence_artifact_path(spec_dir)
+            evidence_load_error: str | None = None
+            if evidence_path.is_file():
+                try:
+                    visual_a11y_evidence = load_frontend_visual_a11y_evidence_artifact(
+                        evidence_path
+                    )
+                except ValueError as exc:
+                    evidence_load_error = str(exc)
             gate_report = build_frontend_gate_verification_report(
                 self.root,
                 list(attachment.observations),
+                visual_a11y_evidence_artifact=visual_a11y_evidence,
             )
             gate_verdict = gate_report.gate_result.verdict.value
             coverage_gaps = _unique_strings(
                 [*coverage_gaps, *gate_report.coverage_gaps]
             )
             blockers = _unique_strings([*blockers, *gate_report.blockers])
+            if evidence_load_error is not None:
+                coverage_gaps = _unique_strings(
+                    [*coverage_gaps, "frontend_visual_a11y_evidence_input"]
+                )
+                blockers = _unique_strings(
+                    [
+                        *blockers,
+                        "BLOCKER: frontend visual / a11y evidence unavailable: "
+                        "invalid structured visual / a11y evidence input "
+                        f"{evidence_path.as_posix()}: {evidence_load_error}",
+                    ]
+                )
+                if gate_verdict == "PASS":
+                    gate_verdict = "RETRY"
 
         return ProgramFrontendReadiness(
             state=self._frontend_readiness_state(
@@ -4743,12 +4777,26 @@ class ProgramService:
             return None
 
         fix_inputs = _unique_strings(readiness.coverage_gaps)
+        if _has_frontend_visual_a11y_issue_blocker(readiness.blockers):
+            fix_inputs = _unique_strings(
+                [*fix_inputs, PROGRAM_FRONTEND_VISUAL_A11Y_ISSUE_REVIEW_INPUT]
+            )
         if not fix_inputs:
             fix_inputs = [readiness.state]
 
         suggested_actions: list[str] = []
         if "frontend_contract_observations" in fix_inputs:
             suggested_actions.append("materialize frontend contract observations")
+        if "frontend_visual_a11y_policy_artifacts" in fix_inputs:
+            suggested_actions.append(
+                "materialize frontend visual / a11y policy artifacts"
+            )
+        if "frontend_visual_a11y_evidence_input" in fix_inputs:
+            suggested_actions.append("materialize frontend visual / a11y evidence input")
+        if "frontend_visual_a11y_evidence_stable_empty" in fix_inputs:
+            suggested_actions.append("review stable empty frontend visual / a11y evidence")
+        if PROGRAM_FRONTEND_VISUAL_A11Y_ISSUE_REVIEW_INPUT in fix_inputs:
+            suggested_actions.append("review frontend visual / a11y issue findings")
         if "frontend_gate_policy_artifacts" in fix_inputs:
             suggested_actions.append("materialize frontend gate policy artifacts")
         if "frontend_generation_governance_artifacts" in fix_inputs:
@@ -4763,7 +4811,8 @@ class ProgramService:
                 f"{PROGRAM_FRONTEND_SCAN_COMMAND_PREFIX}{spec_path}"
             )
         if (
-            "frontend_gate_policy_artifacts" in fix_inputs
+            "frontend_visual_a11y_policy_artifacts" in fix_inputs
+            or "frontend_gate_policy_artifacts" in fix_inputs
             or "frontend_generation_governance_artifacts" in fix_inputs
         ):
             recommended_commands.append("uv run ai-sdlc rules materialize-frontend-mvp")
@@ -4806,7 +4855,7 @@ class ProgramService:
                 paths = [
                     *materialize_frontend_gate_policy_artifacts(
                         self.root,
-                        build_mvp_frontend_gate_policy(),
+                        build_p1_frontend_gate_policy_visual_a11y_foundation(),
                     ),
                     *materialize_frontend_generation_constraint_artifacts(
                         self.root,
@@ -6746,6 +6795,12 @@ def _normalize_string_mapping(value: object) -> dict[str, str]:
         if key_text and item_text:
             result[key_text] = item_text
     return result
+
+
+def _has_frontend_visual_a11y_issue_blocker(
+    blockers: list[str] | tuple[str, ...],
+) -> bool:
+    return any("visual / a11y issues detected" in str(blocker) for blocker in blockers)
 
 
 def _relative_to_root_or_str(root: Path, path: Path) -> str:

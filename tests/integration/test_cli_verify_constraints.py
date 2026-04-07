@@ -19,13 +19,21 @@ from ai_sdlc.core.frontend_contract_observation_provider import (
     write_frontend_contract_observation_artifact,
 )
 from ai_sdlc.core.frontend_contract_verification import FRONTEND_CONTRACT_SOURCE_NAME
+from ai_sdlc.core.frontend_visual_a11y_evidence_provider import (
+    FrontendVisualA11yEvidenceEvaluation,
+    build_frontend_visual_a11y_evidence_artifact,
+    write_frontend_visual_a11y_evidence_artifact,
+)
 from ai_sdlc.generators.frontend_gate_policy_artifacts import (
     materialize_frontend_gate_policy_artifacts,
 )
 from ai_sdlc.generators.frontend_generation_constraint_artifacts import (
     materialize_frontend_generation_constraint_artifacts,
 )
-from ai_sdlc.models.frontend_gate_policy import build_mvp_frontend_gate_policy
+from ai_sdlc.models.frontend_gate_policy import (
+    build_mvp_frontend_gate_policy,
+    build_p1_frontend_gate_policy_visual_a11y_foundation,
+)
 from ai_sdlc.models.frontend_generation_constraints import (
     build_mvp_frontend_generation_constraints,
 )
@@ -297,10 +305,35 @@ def _write_018_frontend_contract_observations(
     write_frontend_contract_observation_artifact(spec_dir, artifact)
 
 
+def _write_018_frontend_visual_a11y_evidence(
+    root: Path,
+    evaluations: list[FrontendVisualA11yEvidenceEvaluation],
+) -> None:
+    spec_dir = root / "specs" / "018-frontend-gate-compatibility-baseline"
+    artifact = build_frontend_visual_a11y_evidence_artifact(
+        evaluations=evaluations,
+        provider_kind="manual",
+        provider_name="test-fixture",
+        generated_at="2026-04-07T14:30:00Z",
+    )
+    write_frontend_visual_a11y_evidence_artifact(spec_dir, artifact)
+
+
 def _write_018_gate_artifacts(root: Path) -> None:
     materialize_frontend_gate_policy_artifacts(
         root,
         build_mvp_frontend_gate_policy(),
+    )
+    materialize_frontend_generation_constraint_artifacts(
+        root,
+        build_mvp_frontend_generation_constraints(),
+    )
+
+
+def _write_071_gate_artifacts(root: Path) -> None:
+    materialize_frontend_gate_policy_artifacts(
+        root,
+        build_p1_frontend_gate_policy_visual_a11y_foundation(),
     )
     materialize_frontend_generation_constraint_artifacts(
         root,
@@ -932,6 +965,220 @@ class TestCliVerifyConstraints:
         assert "frontend gate verification: RETRY" in result.output
         assert "coverage gaps:" in result.output
         assert "frontend_gate_policy_artifacts" in result.output
+
+    def test_terminal_output_exposes_018_frontend_gate_retry_summary_when_071_visual_a11y_artifacts_missing(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        init_project(tmp_path)
+        _minimal_constitution(tmp_path)
+        _write_018_checkpoint(tmp_path)
+        _write_012_frontend_contract_page_artifacts(tmp_path)
+        _write_071_gate_artifacts(tmp_path)
+        _write_018_frontend_contract_observations(tmp_path)
+        (
+            tmp_path
+            / "governance"
+            / "frontend"
+            / "gates"
+            / "visual-a11y-evidence-boundary.yaml"
+        ).unlink()
+        monkeypatch.chdir(tmp_path)
+
+        result = runner.invoke(app, ["verify", "constraints"])
+
+        assert result.exit_code == 1
+        assert "frontend gate verification: RETRY" in result.output
+        assert "frontend_visual_a11y_policy_artifacts" in result.output
+
+    def test_terminal_output_exposes_018_frontend_gate_retry_summary_when_071_visual_a11y_evidence_missing(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        init_project(tmp_path)
+        _minimal_constitution(tmp_path)
+        _write_018_checkpoint(tmp_path)
+        _write_012_frontend_contract_page_artifacts(tmp_path)
+        _write_071_gate_artifacts(tmp_path)
+        _write_018_frontend_contract_observations(tmp_path)
+        monkeypatch.chdir(tmp_path)
+
+        result = runner.invoke(app, ["verify", "constraints"])
+
+        assert result.exit_code == 1
+        assert "frontend gate verification: RETRY" in result.output
+        assert "frontend_visual_a11y_evidence_input" in result.output
+
+    def test_terminal_output_exposes_018_frontend_gate_summary_with_071_visual_a11y_artifacts(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        init_project(tmp_path)
+        _minimal_constitution(tmp_path)
+        _write_018_checkpoint(tmp_path)
+        _write_012_frontend_contract_page_artifacts(tmp_path)
+        _write_071_gate_artifacts(tmp_path)
+        _write_018_frontend_contract_observations(tmp_path)
+        _write_018_frontend_visual_a11y_evidence(
+            tmp_path,
+            [
+                FrontendVisualA11yEvidenceEvaluation(
+                    evaluation_id="eval-pass",
+                    target_id="user-create",
+                    surface_id="refreshing",
+                    outcome="pass",
+                )
+            ],
+        )
+        monkeypatch.chdir(tmp_path)
+
+        result = runner.invoke(app, ["verify", "constraints"])
+
+        assert result.exit_code == 0
+        assert "frontend gate verification: PASS" in result.output
+
+    def test_terminal_output_exposes_018_frontend_gate_retry_summary_when_071_visual_a11y_issues_detected(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        init_project(tmp_path)
+        _minimal_constitution(tmp_path)
+        _write_018_checkpoint(tmp_path)
+        _write_012_frontend_contract_page_artifacts(tmp_path)
+        _write_071_gate_artifacts(tmp_path)
+        _write_018_frontend_contract_observations(tmp_path)
+        _write_018_frontend_visual_a11y_evidence(
+            tmp_path,
+            [
+                FrontendVisualA11yEvidenceEvaluation(
+                    evaluation_id="eval-issue",
+                    target_id="user-create",
+                    surface_id="refreshing",
+                    outcome="issue",
+                    report_type="violation-report",
+                    severity="medium",
+                    location_anchor="form.header",
+                )
+            ],
+        )
+        monkeypatch.chdir(tmp_path)
+
+        result = runner.invoke(app, ["verify", "constraints"])
+
+        assert result.exit_code == 1
+        assert "frontend gate verification: RETRY" in result.output
+        assert "frontend_visual_a11y_issue_review" in result.output
+
+    def test_json_output_exposes_018_frontend_gate_retry_summary_when_071_visual_a11y_artifacts_missing(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        init_project(tmp_path)
+        _minimal_constitution(tmp_path)
+        _write_018_checkpoint(tmp_path)
+        _write_012_frontend_contract_page_artifacts(tmp_path)
+        _write_071_gate_artifacts(tmp_path)
+        _write_018_frontend_contract_observations(tmp_path)
+        (
+            tmp_path
+            / "governance"
+            / "frontend"
+            / "gates"
+            / "visual-a11y-evidence-boundary.yaml"
+        ).unlink()
+        monkeypatch.chdir(tmp_path)
+
+        result = runner.invoke(app, ["verify", "constraints", "--json"])
+
+        assert result.exit_code == 1
+        payload = json.loads(result.output)
+        assert payload["frontend_gate_verification"]["gate_verdict"] == "RETRY"
+        assert payload["frontend_gate_verification"]["coverage_gaps"] == [
+            "frontend_visual_a11y_policy_artifacts"
+        ]
+
+    def test_json_output_exposes_018_frontend_gate_retry_summary_when_071_visual_a11y_evidence_missing(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        init_project(tmp_path)
+        _minimal_constitution(tmp_path)
+        _write_018_checkpoint(tmp_path)
+        _write_012_frontend_contract_page_artifacts(tmp_path)
+        _write_071_gate_artifacts(tmp_path)
+        _write_018_frontend_contract_observations(tmp_path)
+        monkeypatch.chdir(tmp_path)
+
+        result = runner.invoke(app, ["verify", "constraints", "--json"])
+
+        assert result.exit_code == 1
+        payload = json.loads(result.output)
+        assert payload["frontend_gate_verification"]["gate_verdict"] == "RETRY"
+        assert payload["frontend_gate_verification"]["coverage_gaps"] == [
+            "frontend_visual_a11y_evidence_input"
+        ]
+
+    def test_json_output_exposes_018_frontend_gate_summary_with_071_visual_a11y_artifacts(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        init_project(tmp_path)
+        _minimal_constitution(tmp_path)
+        _write_018_checkpoint(tmp_path)
+        _write_012_frontend_contract_page_artifacts(tmp_path)
+        _write_071_gate_artifacts(tmp_path)
+        _write_018_frontend_contract_observations(tmp_path)
+        _write_018_frontend_visual_a11y_evidence(
+            tmp_path,
+            [
+                FrontendVisualA11yEvidenceEvaluation(
+                    evaluation_id="eval-pass",
+                    target_id="user-create",
+                    surface_id="refreshing",
+                    outcome="pass",
+                )
+            ],
+        )
+        monkeypatch.chdir(tmp_path)
+
+        result = runner.invoke(app, ["verify", "constraints", "--json"])
+
+        assert result.exit_code == 0
+        payload = json.loads(result.output)
+        assert payload["frontend_gate_verification"]["gate_verdict"] == "PASS"
+        assert payload["frontend_gate_verification"]["coverage_gaps"] == []
+        assert payload["frontend_gate_verification"]["blockers"] == []
+
+    def test_json_output_exposes_018_frontend_gate_retry_summary_when_071_visual_a11y_issues_detected(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        init_project(tmp_path)
+        _minimal_constitution(tmp_path)
+        _write_018_checkpoint(tmp_path)
+        _write_012_frontend_contract_page_artifacts(tmp_path)
+        _write_071_gate_artifacts(tmp_path)
+        _write_018_frontend_contract_observations(tmp_path)
+        _write_018_frontend_visual_a11y_evidence(
+            tmp_path,
+            [
+                FrontendVisualA11yEvidenceEvaluation(
+                    evaluation_id="eval-issue",
+                    target_id="user-create",
+                    surface_id="refreshing",
+                    outcome="issue",
+                    report_type="violation-report",
+                    severity="medium",
+                    location_anchor="form.header",
+                )
+            ],
+        )
+        monkeypatch.chdir(tmp_path)
+
+        result = runner.invoke(app, ["verify", "constraints", "--json"])
+
+        assert result.exit_code == 1
+        payload = json.loads(result.output)
+        assert payload["frontend_gate_verification"]["gate_verdict"] == "RETRY"
+        assert payload["frontend_gate_verification"]["coverage_gaps"] == [
+            "frontend_visual_a11y_issue_review"
+        ]
+        assert any(
+            "visual / a11y issues detected" in blocker
+            for blocker in payload["frontend_gate_verification"]["blockers"]
+        )
 
     def test_exit_0_when_003_feature_contract_surfaces_complete(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch

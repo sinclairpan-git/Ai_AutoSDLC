@@ -13,13 +13,34 @@ from ai_sdlc.models.frontend_ui_kernel import (
     build_p1_frontend_ui_kernel_semantic_expansion,
 )
 
-ALLOWED_GATE_POLICY_TRUTH_REFS = {"017", "018", "065", "067", "068"}
+ALLOWED_GATE_POLICY_TRUTH_REFS = {
+    "015",
+    "017",
+    "018",
+    "065",
+    "067",
+    "068",
+    "069",
+    "070",
+    "071",
+}
 ALLOWED_DIAGNOSTICS_COVERAGE_TYPES = {
     "semantic-component",
     "page-recipe",
     "state",
     "whitelist",
     "token-rule",
+}
+ALLOWED_VISUAL_FOUNDATION_SURFACES = {
+    "state-visual-presence",
+    "required-area-visual-presence",
+    "controlled-container-visual-continuity",
+}
+ALLOWED_A11Y_FOUNDATION_SURFACES = {
+    "error-status-perceivability",
+    "accessible-naming-semantics",
+    "keyboard-reachability",
+    "focus-continuity",
 }
 
 
@@ -116,6 +137,88 @@ class FrontendCompatibilityFeedbackBoundary(FrontendGateModel):
             raise ValueError(
                 f"duplicate compatibility forbidden_truth_mutations: {joined}"
             )
+        return self
+
+
+class FrontendVisualFoundationCoverageEntry(FrontendGateModel):
+    """P1 visual foundation coverage entry."""
+
+    coverage_id: str
+    quality_surface: str
+    governed_targets: list[str] = Field(default_factory=list)
+    source_truth_refs: list[str] = Field(default_factory=list)
+    expectation: str
+    boundary: str = ""
+
+
+class FrontendA11yFoundationCoverageEntry(FrontendGateModel):
+    """P1 accessibility foundation coverage entry."""
+
+    coverage_id: str
+    quality_surface: str
+    governed_targets: list[str] = Field(default_factory=list)
+    source_truth_refs: list[str] = Field(default_factory=list)
+    expectation: str
+    boundary: str = ""
+
+
+class FrontendVisualA11yEvidenceBoundary(FrontendGateModel):
+    """Boundary describing allowed evidence sources for visual/a11y feedback."""
+
+    boundary_id: str
+    allowed_evidence_sources: list[str] = Field(default_factory=list)
+    forbidden_implicit_sources: list[str] = Field(default_factory=list)
+    source_truth_refs: list[str] = Field(default_factory=list)
+    description: str = ""
+
+    @model_validator(mode="after")
+    def _enforce_unique_evidence_lists(self) -> FrontendVisualA11yEvidenceBoundary:
+        duplicate_sources = _find_duplicates(self.allowed_evidence_sources)
+        if duplicate_sources:
+            joined = ", ".join(duplicate_sources)
+            raise ValueError(
+                f"duplicate visual_a11y allowed_evidence_sources: {joined}"
+            )
+
+        duplicate_implicit_sources = _find_duplicates(
+            self.forbidden_implicit_sources
+        )
+        if duplicate_implicit_sources:
+            joined = ", ".join(duplicate_implicit_sources)
+            raise ValueError(
+                f"duplicate visual_a11y forbidden_implicit_sources: {joined}"
+            )
+        return self
+
+
+class FrontendVisualA11yFeedbackBoundary(FrontendGateModel):
+    """Boundary describing report-family reuse for visual/a11y feedback."""
+
+    boundary_id: str
+    allowed_feedback_surfaces: list[str] = Field(default_factory=list)
+    report_types: list[str] = Field(default_factory=list)
+    forbidden_expansions: list[str] = Field(default_factory=list)
+    source_truth_refs: list[str] = Field(default_factory=list)
+    description: str = ""
+
+    @model_validator(mode="after")
+    def _enforce_unique_feedback_lists(self) -> FrontendVisualA11yFeedbackBoundary:
+        duplicate_surfaces = _find_duplicates(self.allowed_feedback_surfaces)
+        if duplicate_surfaces:
+            joined = ", ".join(duplicate_surfaces)
+            raise ValueError(
+                f"duplicate visual_a11y allowed_feedback_surfaces: {joined}"
+            )
+
+        duplicate_report_types = _find_duplicates(self.report_types)
+        if duplicate_report_types:
+            joined = ", ".join(duplicate_report_types)
+            raise ValueError(f"duplicate visual_a11y report_types: {joined}")
+
+        duplicate_expansions = _find_duplicates(self.forbidden_expansions)
+        if duplicate_expansions:
+            joined = ", ".join(duplicate_expansions)
+            raise ValueError(f"duplicate visual_a11y forbidden_expansions: {joined}")
         return self
 
 
@@ -224,6 +327,18 @@ class FrontendGatePolicySet(FrontendGateModel):
     compatibility_feedback_boundary: list[FrontendCompatibilityFeedbackBoundary] = (
         Field(default_factory=list)
     )
+    visual_foundation_coverage_matrix: list[FrontendVisualFoundationCoverageEntry] = (
+        Field(default_factory=list)
+    )
+    a11y_foundation_coverage_matrix: list[FrontendA11yFoundationCoverageEntry] = (
+        Field(default_factory=list)
+    )
+    visual_a11y_evidence_boundary: list[FrontendVisualA11yEvidenceBoundary] = Field(
+        default_factory=list
+    )
+    visual_a11y_feedback_boundary: list[FrontendVisualA11yFeedbackBoundary] = Field(
+        default_factory=list
+    )
 
     @model_validator(mode="after")
     def _enforce_unique_rule_ids_and_modes(self) -> FrontendGatePolicySet:
@@ -260,6 +375,34 @@ class FrontendGatePolicySet(FrontendGateModel):
             joined = ", ".join(duplicate_boundary_modes)
             raise ValueError(f"duplicate compatibility feedback boundary modes: {joined}")
 
+        duplicate_visual_coverage_ids = _find_duplicates(
+            [entry.coverage_id for entry in self.visual_foundation_coverage_matrix]
+        )
+        if duplicate_visual_coverage_ids:
+            joined = ", ".join(duplicate_visual_coverage_ids)
+            raise ValueError(f"duplicate visual foundation coverage ids: {joined}")
+
+        duplicate_a11y_coverage_ids = _find_duplicates(
+            [entry.coverage_id for entry in self.a11y_foundation_coverage_matrix]
+        )
+        if duplicate_a11y_coverage_ids:
+            joined = ", ".join(duplicate_a11y_coverage_ids)
+            raise ValueError(f"duplicate a11y foundation coverage ids: {joined}")
+
+        duplicate_evidence_boundary_ids = _find_duplicates(
+            [entry.boundary_id for entry in self.visual_a11y_evidence_boundary]
+        )
+        if duplicate_evidence_boundary_ids:
+            joined = ", ".join(duplicate_evidence_boundary_ids)
+            raise ValueError(f"duplicate visual a11y evidence boundary ids: {joined}")
+
+        duplicate_feedback_boundary_ids = _find_duplicates(
+            [entry.boundary_id for entry in self.visual_a11y_feedback_boundary]
+        )
+        if duplicate_feedback_boundary_ids:
+            joined = ", ".join(duplicate_feedback_boundary_ids)
+            raise ValueError(f"duplicate visual a11y feedback boundary ids: {joined}")
+
         unknown_coverage_types = _find_unknown_references(
             [entry.coverage_type for entry in self.diagnostics_coverage_matrix],
             ALLOWED_DIAGNOSTICS_COVERAGE_TYPES,
@@ -267,6 +410,22 @@ class FrontendGatePolicySet(FrontendGateModel):
         if unknown_coverage_types:
             joined = ", ".join(unknown_coverage_types)
             raise ValueError(f"unknown diagnostics coverage types: {joined}")
+
+        unknown_visual_surfaces = _find_unknown_references(
+            [entry.quality_surface for entry in self.visual_foundation_coverage_matrix],
+            ALLOWED_VISUAL_FOUNDATION_SURFACES,
+        )
+        if unknown_visual_surfaces:
+            joined = ", ".join(unknown_visual_surfaces)
+            raise ValueError(f"unknown visual foundation quality surfaces: {joined}")
+
+        unknown_a11y_surfaces = _find_unknown_references(
+            [entry.quality_surface for entry in self.a11y_foundation_coverage_matrix],
+            ALLOWED_A11Y_FOUNDATION_SURFACES,
+        )
+        if unknown_a11y_surfaces:
+            joined = ", ".join(unknown_a11y_surfaces)
+            raise ValueError(f"unknown a11y foundation quality surfaces: {joined}")
 
         if self.diagnostics_coverage_matrix:
             kernel = build_p1_frontend_ui_kernel_page_recipe_expansion()
@@ -292,6 +451,38 @@ class FrontendGatePolicySet(FrontendGateModel):
                     "diagnostics_coverage_matrix references unknown governed_targets: "
                     f"{joined}"
                 )
+
+        known_visual_a11y_targets = _known_p1_visual_a11y_targets()
+
+        unknown_visual_governed_targets = _find_unknown_references(
+            [
+                target
+                for entry in self.visual_foundation_coverage_matrix
+                for target in entry.governed_targets
+            ],
+            known_visual_a11y_targets,
+        )
+        if unknown_visual_governed_targets:
+            joined = ", ".join(unknown_visual_governed_targets)
+            raise ValueError(
+                "visual_foundation_coverage_matrix references unknown "
+                f"governed_targets: {joined}"
+            )
+
+        unknown_a11y_governed_targets = _find_unknown_references(
+            [
+                target
+                for entry in self.a11y_foundation_coverage_matrix
+                for target in entry.governed_targets
+            ],
+            known_visual_a11y_targets,
+        )
+        if unknown_a11y_governed_targets:
+            joined = ", ".join(unknown_a11y_governed_targets)
+            raise ValueError(
+                "a11y_foundation_coverage_matrix references unknown "
+                f"governed_targets: {joined}"
+            )
 
         unknown_diagnostics_truth_refs = _find_unknown_references(
             [
@@ -322,6 +513,66 @@ class FrontendGatePolicySet(FrontendGateModel):
                 f"drift_classification references unknown source_truth_refs: {joined}"
             )
 
+        unknown_visual_truth_refs = _find_unknown_references(
+            [
+                truth_ref
+                for entry in self.visual_foundation_coverage_matrix
+                for truth_ref in entry.source_truth_refs
+            ],
+            ALLOWED_GATE_POLICY_TRUTH_REFS,
+        )
+        if unknown_visual_truth_refs:
+            joined = ", ".join(unknown_visual_truth_refs)
+            raise ValueError(
+                "visual_foundation_coverage_matrix references unknown "
+                f"source_truth_refs: {joined}"
+            )
+
+        unknown_a11y_truth_refs = _find_unknown_references(
+            [
+                truth_ref
+                for entry in self.a11y_foundation_coverage_matrix
+                for truth_ref in entry.source_truth_refs
+            ],
+            ALLOWED_GATE_POLICY_TRUTH_REFS,
+        )
+        if unknown_a11y_truth_refs:
+            joined = ", ".join(unknown_a11y_truth_refs)
+            raise ValueError(
+                "a11y_foundation_coverage_matrix references unknown "
+                f"source_truth_refs: {joined}"
+            )
+
+        unknown_visual_evidence_truth_refs = _find_unknown_references(
+            [
+                truth_ref
+                for entry in self.visual_a11y_evidence_boundary
+                for truth_ref in entry.source_truth_refs
+            ],
+            ALLOWED_GATE_POLICY_TRUTH_REFS,
+        )
+        if unknown_visual_evidence_truth_refs:
+            joined = ", ".join(unknown_visual_evidence_truth_refs)
+            raise ValueError(
+                "visual_a11y_evidence_boundary references unknown "
+                f"source_truth_refs: {joined}"
+            )
+
+        unknown_visual_feedback_truth_refs = _find_unknown_references(
+            [
+                truth_ref
+                for entry in self.visual_a11y_feedback_boundary
+                for truth_ref in entry.source_truth_refs
+            ],
+            ALLOWED_GATE_POLICY_TRUTH_REFS,
+        )
+        if unknown_visual_feedback_truth_refs:
+            joined = ", ".join(unknown_visual_feedback_truth_refs)
+            raise ValueError(
+                "visual_a11y_feedback_boundary references unknown "
+                f"source_truth_refs: {joined}"
+            )
+
         unknown_report_types = _find_unknown_references(
             [entry.report_type for entry in self.drift_classification],
             set(self.report_types),
@@ -342,7 +593,37 @@ class FrontendGatePolicySet(FrontendGateModel):
                 f"compatibility_feedback_boundary references unknown modes: {joined}"
             )
 
+        unknown_visual_feedback_report_types = _find_unknown_references(
+            [
+                report_type
+                for entry in self.visual_a11y_feedback_boundary
+                for report_type in entry.report_types
+            ],
+            set(self.report_types),
+        )
+        if unknown_visual_feedback_report_types:
+            joined = ", ".join(unknown_visual_feedback_report_types)
+            raise ValueError(
+                "visual_a11y_feedback_boundary references unknown report_types: "
+                f"{joined}"
+            )
+
         return self
+
+
+def _known_p1_visual_a11y_targets() -> set[str]:
+    kernel = build_p1_frontend_ui_kernel_page_recipe_expansion()
+    known_targets = {
+        component.component_id for component in kernel.semantic_components
+    }
+    known_targets.update(recipe.recipe_id for recipe in kernel.page_recipes)
+    known_targets.update(kernel.state_baseline.required_states)
+    known_targets.update(
+        area
+        for recipe in kernel.page_recipes
+        for area in [*recipe.required_areas, *recipe.optional_areas]
+    )
+    return known_targets
 
 
 def build_mvp_frontend_gate_policy() -> FrontendGatePolicySet:
@@ -650,9 +931,165 @@ def build_p1_frontend_gate_policy_diagnostics_drift_expansion() -> FrontendGateP
     )
 
 
+def build_p1_frontend_gate_policy_visual_a11y_foundation() -> FrontendGatePolicySet:
+    """Build the P1 visual/a11y foundation truth on top of the 069 gate policy."""
+
+    base_policy = build_p1_frontend_gate_policy_diagnostics_drift_expansion()
+
+    return FrontendGatePolicySet(
+        work_item_id="071",
+        execution_priority=base_policy.execution_priority,
+        gate_matrix=base_policy.gate_matrix,
+        compatibility_policies=base_policy.compatibility_policies,
+        report_types=base_policy.report_types,
+        diagnostics_coverage_matrix=base_policy.diagnostics_coverage_matrix,
+        drift_classification=base_policy.drift_classification,
+        compatibility_feedback_boundary=base_policy.compatibility_feedback_boundary,
+        visual_foundation_coverage_matrix=[
+            FrontendVisualFoundationCoverageEntry(
+                coverage_id="state-visual-presence",
+                quality_surface="state-visual-presence",
+                governed_targets=[
+                    "refreshing",
+                    "submitting",
+                    "no-results",
+                    "partial-error",
+                    "success-feedback",
+                ],
+                source_truth_refs=["015", "067", "069", "071"],
+                expectation="P1 extended states stay visually perceivable without erasing prior content context",
+                boundary="covers only bounded state presence and does not introduce visual regression tooling",
+            ),
+            FrontendVisualFoundationCoverageEntry(
+                coverage_id="required-area-visual-presence",
+                quality_surface="required-area-visual-presence",
+                governed_targets=[
+                    "Main Insight Area",
+                    "State / Validation Area",
+                    "Result Summary Area",
+                    "Step Progress Area",
+                ],
+                source_truth_refs=["068", "069", "071"],
+                expectation="required P1 recipe areas remain explicitly present and visually distinguishable",
+                boundary="reuses recipe area truth without redefining layout systems",
+            ),
+            FrontendVisualFoundationCoverageEntry(
+                coverage_id="controlled-container-visual-continuity",
+                quality_surface="controlled-container-visual-continuity",
+                governed_targets=[
+                    "UiDialog",
+                    "UiDrawer",
+                    "UiSection",
+                    "UiCard",
+                    "UiResult",
+                ],
+                source_truth_refs=["067", "068", "069", "071"],
+                expectation="controlled containers preserve continuity cues across transitions and partial failures",
+                boundary="stays within shared Ui* container semantics and does not add runtime probes",
+            ),
+        ],
+        a11y_foundation_coverage_matrix=[
+            FrontendA11yFoundationCoverageEntry(
+                coverage_id="error-status-perceivability",
+                quality_surface="error-status-perceivability",
+                governed_targets=[
+                    "error",
+                    "partial-error",
+                    "success-feedback",
+                    "no-results",
+                ],
+                source_truth_refs=["015", "067", "069", "071"],
+                expectation="critical feedback and result states remain perceivable without relying on one visual cue",
+                boundary="extends minimum perceivability truth without adding browser automation",
+            ),
+            FrontendA11yFoundationCoverageEntry(
+                coverage_id="accessible-naming-semantics",
+                quality_surface="accessible-naming-semantics",
+                governed_targets=[
+                    "UiInput",
+                    "UiFormItem",
+                    "UiTabs",
+                    "UiSearchBar",
+                    "UiFilterBar",
+                    "UiToolbar",
+                    "UiPagination",
+                    "UiResult",
+                ],
+                source_truth_refs=["015", "067", "069", "071"],
+                expectation="interactive and result-bearing protocols keep explicit naming and semantic affordances",
+                boundary="reuses shared component semantics without creating a separate accessibility contract family",
+            ),
+            FrontendA11yFoundationCoverageEntry(
+                coverage_id="keyboard-reachability",
+                quality_surface="keyboard-reachability",
+                governed_targets=[
+                    "UiButton",
+                    "UiInput",
+                    "UiSelect",
+                    "UiTabs",
+                    "UiSearchBar",
+                    "UiFilterBar",
+                    "UiPagination",
+                    "UiDialog",
+                    "UiDrawer",
+                ],
+                source_truth_refs=["015", "067", "071"],
+                expectation="key interactive surfaces remain reachable in standard keyboard flows",
+                boundary="captures minimum reachability expectations without adding runtime tab-order assertions",
+            ),
+            FrontendA11yFoundationCoverageEntry(
+                coverage_id="focus-continuity",
+                quality_surface="focus-continuity",
+                governed_targets=[
+                    "DialogFormPage",
+                    "WizardPage",
+                    "UiDialog",
+                    "UiDrawer",
+                    "UiTabs",
+                ],
+                source_truth_refs=["067", "068", "071"],
+                expectation="focus handling remains continuous across overlays, step transitions, and segmented navigation",
+                boundary="records continuity expectations only and does not define provider focus traps",
+            ),
+        ],
+        visual_a11y_evidence_boundary=[
+            FrontendVisualA11yEvidenceBoundary(
+                boundary_id="explicit-evidence-only",
+                allowed_evidence_sources=["explicit-input-artifact"],
+                forbidden_implicit_sources=[
+                    "workspace-root-discovery",
+                    "ambient-screenshot-scan",
+                    "runtime-dom-assumption",
+                ],
+                source_truth_refs=["069", "071"],
+                description="visual and a11y feedback can only consume explicit artifacts handed into verification",
+            )
+        ],
+        visual_a11y_feedback_boundary=[
+            FrontendVisualA11yFeedbackBoundary(
+                boundary_id="shared-report-family-reuse",
+                allowed_feedback_surfaces=[
+                    "report-severity",
+                    "location-anchor",
+                    "quality-hint",
+                    "changed-scope-explanation",
+                ],
+                report_types=base_policy.report_types,
+                forbidden_expansions=[
+                    "second-visual-gate-system",
+                    "runtime-browser-verifier",
+                ],
+                source_truth_refs=["018", "069", "070", "071"],
+                description="visual and a11y findings reuse the shared report family instead of inventing a parallel gate output",
+            )
+        ],
+    )
+
+
 __all__ = [
     "CompatibilityExecutionPolicy",
     "FrontendCompatibilityFeedbackBoundary",
+    "FrontendA11yFoundationCoverageEntry",
     "FrontendCoverageGap",
     "FrontendCoverageReport",
     "FrontendDiagnosticsCoverageEntry",
@@ -665,6 +1102,10 @@ __all__ = [
     "FrontendLegacyExpansionReport",
     "FrontendViolation",
     "FrontendViolationReport",
+    "FrontendVisualA11yEvidenceBoundary",
+    "FrontendVisualA11yFeedbackBoundary",
+    "FrontendVisualFoundationCoverageEntry",
     "build_mvp_frontend_gate_policy",
     "build_p1_frontend_gate_policy_diagnostics_drift_expansion",
+    "build_p1_frontend_gate_policy_visual_a11y_foundation",
 ]

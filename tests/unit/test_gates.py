@@ -342,6 +342,68 @@ class TestVerifyGate:
         result = VerifyGate().check({"critical_issues": 0, "high_issues": 5})
         assert result.verdict == GateVerdict.RETRY
 
+    def test_retries_when_frontend_gate_summary_surfaces_071_visual_a11y_issue_review(
+        self,
+    ) -> None:
+        result = VerifyGate().check(
+            {
+                "verification_check_objects": (
+                    "required_governance_files",
+                    *FRONTEND_GATE_CHECK_OBJECTS,
+                ),
+                "verification_sources": (
+                    "verify constraints",
+                    FRONTEND_GATE_SOURCE_NAME,
+                ),
+                "constraint_blockers": (
+                    "BLOCKER: visual / a11y issues detected; review and disposition required",
+                ),
+                "coverage_gaps": ("frontend_visual_a11y_issue_review",),
+                "frontend_gate_verification": _frontend_gate_summary_payload(
+                    gate_verdict="RETRY",
+                    blockers=(
+                        "BLOCKER: visual / a11y issues detected; review and disposition required",
+                    ),
+                    coverage_gaps=("frontend_visual_a11y_issue_review",),
+                ),
+            }
+        )
+
+        assert result.verdict == GateVerdict.RETRY
+        status_check = next(c for c in result.checks if c.name == "frontend_gate_status_clear")
+        assert "frontend_visual_a11y_issue_review" in status_check.message
+        assert "frontend_visual_a11y_evidence_stable_empty" not in status_check.message
+
+    def test_retries_when_frontend_gate_summary_surfaces_071_visual_a11y_stable_empty(
+        self,
+    ) -> None:
+        result = VerifyGate().check(
+            {
+                "verification_check_objects": (
+                    "required_governance_files",
+                    *FRONTEND_GATE_CHECK_OBJECTS,
+                ),
+                "verification_sources": (
+                    "verify constraints",
+                    FRONTEND_GATE_SOURCE_NAME,
+                ),
+                "constraint_blockers": (
+                    "BLOCKER: stable empty evidence requires explicit review",
+                ),
+                "coverage_gaps": ("frontend_visual_a11y_evidence_stable_empty",),
+                "frontend_gate_verification": _frontend_gate_summary_payload(
+                    gate_verdict="RETRY",
+                    blockers=("BLOCKER: stable empty evidence requires explicit review",),
+                    coverage_gaps=("frontend_visual_a11y_evidence_stable_empty",),
+                ),
+            }
+        )
+
+        assert result.verdict == GateVerdict.RETRY
+        status_check = next(c for c in result.checks if c.name == "frontend_gate_status_clear")
+        assert "frontend_visual_a11y_evidence_stable_empty" in status_check.message
+        assert "frontend_visual_a11y_issue_review" not in status_check.message
+
 
 class TestVerificationGate:
     def test_blocks_when_constraint_blockers_exist(self) -> None:
@@ -458,6 +520,68 @@ class TestVerificationGate:
             c.name == "frontend_gate_status_clear" and not c.passed
             for c in result.checks
         )
+
+    def test_retries_when_frontend_gate_summary_surfaces_071_visual_a11y_issue_review(
+        self,
+    ) -> None:
+        result = VerificationGate().check(
+            {
+                "verification_check_objects": (
+                    "required_governance_files",
+                    *FRONTEND_GATE_CHECK_OBJECTS,
+                ),
+                "verification_sources": (
+                    "verify constraints",
+                    FRONTEND_GATE_SOURCE_NAME,
+                ),
+                "constraint_blockers": (
+                    "BLOCKER: visual / a11y issues detected; review and disposition required",
+                ),
+                "coverage_gaps": ("frontend_visual_a11y_issue_review",),
+                "frontend_gate_verification": _frontend_gate_summary_payload(
+                    gate_verdict="RETRY",
+                    blockers=(
+                        "BLOCKER: visual / a11y issues detected; review and disposition required",
+                    ),
+                    coverage_gaps=("frontend_visual_a11y_issue_review",),
+                ),
+            }
+        )
+
+        assert result.verdict == GateVerdict.RETRY
+        status_check = next(c for c in result.checks if c.name == "frontend_gate_status_clear")
+        assert "frontend_visual_a11y_issue_review" in status_check.message
+        assert "frontend_visual_a11y_evidence_stable_empty" not in status_check.message
+
+    def test_retries_when_frontend_gate_summary_surfaces_071_visual_a11y_stable_empty(
+        self,
+    ) -> None:
+        result = VerificationGate().check(
+            {
+                "verification_check_objects": (
+                    "required_governance_files",
+                    *FRONTEND_GATE_CHECK_OBJECTS,
+                ),
+                "verification_sources": (
+                    "verify constraints",
+                    FRONTEND_GATE_SOURCE_NAME,
+                ),
+                "constraint_blockers": (
+                    "BLOCKER: stable empty evidence requires explicit review",
+                ),
+                "coverage_gaps": ("frontend_visual_a11y_evidence_stable_empty",),
+                "frontend_gate_verification": _frontend_gate_summary_payload(
+                    gate_verdict="RETRY",
+                    blockers=("BLOCKER: stable empty evidence requires explicit review",),
+                    coverage_gaps=("frontend_visual_a11y_evidence_stable_empty",),
+                ),
+            }
+        )
+
+        assert result.verdict == GateVerdict.RETRY
+        status_check = next(c for c in result.checks if c.name == "frontend_gate_status_clear")
+        assert "frontend_visual_a11y_evidence_stable_empty" in status_check.message
+        assert "frontend_visual_a11y_issue_review" not in status_check.message
 
 
 class TestReviewGate:

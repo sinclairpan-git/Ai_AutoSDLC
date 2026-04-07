@@ -30,7 +30,9 @@ from ai_sdlc.generators.frontend_gate_policy_artifacts import (
 from ai_sdlc.generators.frontend_generation_constraint_artifacts import (
     materialize_frontend_generation_constraint_artifacts,
 )
-from ai_sdlc.models.frontend_gate_policy import build_mvp_frontend_gate_policy
+from ai_sdlc.models.frontend_gate_policy import (
+    build_p1_frontend_gate_policy_visual_a11y_foundation,
+)
 from ai_sdlc.models.frontend_generation_constraints import (
     build_mvp_frontend_generation_constraints,
 )
@@ -285,7 +287,7 @@ def rules_active(
 
 @rules_app.command(name="materialize-frontend-mvp")
 def rules_materialize_frontend_mvp() -> None:
-    """Materialize canonical frontend governance MVP artifacts."""
+    """Materialize canonical frontend governance artifacts."""
     root = find_project_root()
     if root is None:
         console.print("[red]Not inside an AI-SDLC project.[/red]")
@@ -294,7 +296,7 @@ def rules_materialize_frontend_mvp() -> None:
     paths = [
         *materialize_frontend_gate_policy_artifacts(
             root,
-            build_mvp_frontend_gate_policy(),
+            build_p1_frontend_gate_policy_visual_a11y_foundation(),
         ),
         *materialize_frontend_generation_constraint_artifacts(
             root,
@@ -303,7 +305,7 @@ def rules_materialize_frontend_mvp() -> None:
     ]
 
     console.print(
-        "[green]Frontend governance MVP artifacts materialized[/green] "
+        "[green]Frontend governance artifacts materialized[/green] "
         f"({len(paths)} files)"
     )
     for path in paths:

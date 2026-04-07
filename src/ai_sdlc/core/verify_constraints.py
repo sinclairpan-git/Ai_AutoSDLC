@@ -19,6 +19,11 @@ from ai_sdlc.core.frontend_gate_verification import (
     FrontendGateVerificationReport,
     build_frontend_gate_verification_report,
 )
+from ai_sdlc.core.frontend_visual_a11y_evidence_provider import (
+    FRONTEND_VISUAL_A11Y_EVIDENCE_ARTIFACT_NAME,
+    FrontendVisualA11yEvidenceArtifact,
+    load_frontend_visual_a11y_evidence_artifact,
+)
 from ai_sdlc.core.provenance_gate import load_phase1_provenance_gate_payload
 from ai_sdlc.core.release_gate import ReleaseGateParseError, load_release_gate_report
 from ai_sdlc.core.workitem_traceability import evaluate_work_item_branch_lifecycle
@@ -55,6 +60,7 @@ FRAMEWORK_DEFECT_BACKLOG_REL = Path("docs") / "framework-defect-backlog.zh-CN.md
 VERIFICATION_RULE_REL = Path("src") / "ai_sdlc" / "rules" / "verification.md"
 PR_CHECKLIST_REL = Path("docs") / "pull-request-checklist.zh.md"
 FRONTEND_CONTRACT_OBSERVATION_INPUT_FILE = "frontend-contract-observations.json"
+FRONTEND_VISUAL_A11Y_EVIDENCE_INPUT_FILE = FRONTEND_VISUAL_A11Y_EVIDENCE_ARTIFACT_NAME
 DOC_FIRST_SURFACES: dict[Path, tuple[str, ...]] = {
     PIPELINE_RULE_REL: (
         "先文档 / 先需求 / 先 spec-plan-tasks",
@@ -577,22 +583,45 @@ def _frontend_gate_attachment_report(
         return None
 
     observations_path = _frontend_contract_observation_path(root, checkpoint)
+    visual_a11y_evidence_path = _frontend_visual_a11y_evidence_path(root, checkpoint)
     observations: list = []
+    visual_a11y_evidence_artifact: FrontendVisualA11yEvidenceArtifact | None = None
     load_error: str | None = None
+    visual_a11y_evidence_load_error: str | None = None
     if observations_path is not None and observations_path.is_file():
         try:
             observations = _load_frontend_contract_observations(observations_path)
         except ValueError as exc:
             load_error = str(exc)
+    if visual_a11y_evidence_path is not None and visual_a11y_evidence_path.is_file():
+        try:
+            visual_a11y_evidence_artifact = load_frontend_visual_a11y_evidence_artifact(
+                visual_a11y_evidence_path
+            )
+        except ValueError as exc:
+            visual_a11y_evidence_load_error = str(exc)
 
-    report = build_frontend_gate_verification_report(root, observations)
-    if load_error is None or observations_path is None:
-        return report
-    return _invalid_frontend_gate_observation_report(
-        report,
-        observations_path=observations_path,
-        error_message=load_error,
+    report = build_frontend_gate_verification_report(
+        root,
+        observations,
+        visual_a11y_evidence_artifact=visual_a11y_evidence_artifact,
     )
+    if load_error is not None and observations_path is not None:
+        report = _invalid_frontend_gate_observation_report(
+            report,
+            observations_path=observations_path,
+            error_message=load_error,
+        )
+    if (
+        visual_a11y_evidence_load_error is not None
+        and visual_a11y_evidence_path is not None
+    ):
+        report = _invalid_frontend_gate_visual_a11y_evidence_report(
+            report,
+            evidence_path=visual_a11y_evidence_path,
+            error_message=visual_a11y_evidence_load_error,
+        )
+    return report
 
 
 def _frontend_contract_observation_path(
@@ -605,6 +634,18 @@ def _frontend_contract_observation_path(
     if not spec_dir_raw:
         return None
     return root / spec_dir_raw / FRONTEND_CONTRACT_OBSERVATION_INPUT_FILE
+
+
+def _frontend_visual_a11y_evidence_path(
+    root: Path,
+    checkpoint: Checkpoint | None,
+) -> Path | None:
+    if checkpoint is None or checkpoint.feature is None:
+        return None
+    spec_dir_raw = (checkpoint.feature.spec_dir or "").strip()
+    if not spec_dir_raw:
+        return None
+    return root / spec_dir_raw / FRONTEND_VISUAL_A11Y_EVIDENCE_INPUT_FILE
 
 
 def _load_frontend_contract_observations(
@@ -705,6 +746,57 @@ def _invalid_frontend_gate_observation_report(
         advisory_checks=report.advisory_checks,
         gate_result=report.gate_result,
         upstream_contract_verification=upstream_contract,
+        visual_a11y_evidence_summary=report.visual_a11y_evidence_summary,
+    )
+
+
+def _invalid_frontend_gate_visual_a11y_evidence_report(
+    report: FrontendGateVerificationReport,
+    *,
+    evidence_path: Path,
+    error_message: str,
+) -> FrontendGateVerificationReport:
+    """Preserve gate attachment while surfacing malformed visual/a11y evidence honestly."""
+    evidence_blocker = (
+        "BLOCKER: frontend visual / a11y evidence unavailable: "
+        "invalid structured visual / a11y evidence input "
+        f"{evidence_path.as_posix()}: {error_message}"
+    )
+    blockers: list[str] = []
+    replaced = False
+    for blocker in report.blockers:
+        if blocker.startswith("BLOCKER: frontend visual / a11y evidence unavailable:"):
+            blockers.append(evidence_blocker)
+            replaced = True
+        else:
+            blockers.append(blocker)
+    if not replaced:
+        blockers.append(evidence_blocker)
+
+    summary = dict(report.visual_a11y_evidence_summary or {})
+    summary.update(
+        {
+            "status": "invalid_input",
+            "coverage_gaps": ["frontend_visual_a11y_evidence_input"],
+            "error": error_message,
+            "source_path": evidence_path.as_posix(),
+        }
+    )
+
+    return FrontendGateVerificationReport(
+        gate_policy_root=report.gate_policy_root,
+        generation_root=report.generation_root,
+        source_name=report.source_name,
+        check_objects=report.check_objects,
+        blockers=tuple(blockers),
+        coverage_gaps=_merge_unique_strings(
+            report.coverage_gaps,
+            ("frontend_visual_a11y_evidence_input",),
+        ),
+        advisory_checks=report.advisory_checks,
+        gate_result=report.gate_result,
+        upstream_contract_verification=report.upstream_contract_verification,
+        visual_a11y_evidence_summary=summary,
     )
 
 
