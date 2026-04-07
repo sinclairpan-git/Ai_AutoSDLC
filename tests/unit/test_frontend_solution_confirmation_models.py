@@ -77,3 +77,55 @@ def test_build_mvp_solution_snapshot_assigns_new_snapshot_id_for_derived_version
     assert derived.version == original.version + 1
     assert derived.snapshot_id == "solution-snapshot-002"
     assert derived.changed_from_snapshot_id == original.snapshot_id
+
+
+def test_build_mvp_solution_snapshot_preserves_previous_state_when_versioning() -> None:
+    original = build_mvp_solution_snapshot(
+        project_id="customer-portal",
+        confirmed_by_mode="manual-confirmation",
+        decision_status="user_confirmed",
+        requested_frontend_stack="vue3",
+        requested_provider_id="public-primevue",
+        requested_style_pack_id="modern-saas",
+        effective_frontend_stack="vue3",
+        effective_provider_id="public-primevue",
+        effective_style_pack_id="modern-saas",
+        provider_mode="cross_stack_fallback",
+        fallback_reason_code="enterprise-provider-unavailable",
+        fallback_reason_text="Private registry unavailable during setup.",
+        preflight_status="warning",
+        preflight_reason_codes=["private-registry-unavailable"],
+        user_overrode_recommendation=True,
+        user_override_fields=["frontend_stack", "provider_id", "style_pack_id"],
+        style_fidelity_status="partial",
+        style_degradation_reason_codes=["provider-theme-token-gap"],
+    )
+
+    derived = build_mvp_solution_snapshot(previous_snapshot=original)
+
+    assert derived.snapshot_id == "solution-snapshot-002"
+    assert derived.version == 2
+    assert derived.changed_from_snapshot_id == original.snapshot_id
+    assert derived.project_id == "customer-portal"
+    assert derived.confirmed_by_mode == "manual-confirmation"
+    assert derived.decision_status == "user_confirmed"
+    assert derived.requested_frontend_stack == "vue3"
+    assert derived.requested_provider_id == "public-primevue"
+    assert derived.effective_frontend_stack == "vue3"
+    assert derived.effective_provider_id == "public-primevue"
+    assert derived.effective_style_pack_id == "modern-saas"
+    assert derived.provider_mode == "cross_stack_fallback"
+    assert derived.fallback_reason_code == "enterprise-provider-unavailable"
+    assert derived.fallback_reason_text == "Private registry unavailable during setup."
+    assert derived.preflight_status == "warning"
+    assert derived.preflight_reason_codes == ["private-registry-unavailable"]
+    assert derived.user_overrode_recommendation is True
+    assert derived.user_override_fields == [
+        "frontend_stack",
+        "provider_id",
+        "style_pack_id",
+    ]
+    assert derived.style_fidelity_status == "partial"
+    assert derived.style_degradation_reason_codes == ["provider-theme-token-gap"]
+    assert derived.resolved_style_tokens == original.resolved_style_tokens
+    assert derived.provider_theme_adapter_config == original.provider_theme_adapter_config

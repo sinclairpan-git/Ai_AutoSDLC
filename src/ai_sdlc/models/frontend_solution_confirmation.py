@@ -205,74 +205,92 @@ def build_mvp_solution_snapshot(
         manifest.style_pack_id: manifest.design_tokens
         for manifest in build_builtin_style_pack_manifests()
     }
-    effective_style_pack_id = str(
-        overrides.get("effective_style_pack_id", "enterprise-default")
-    )
     snapshot_id = (
         "solution-snapshot-001"
         if previous_snapshot is None
         else _next_snapshot_id(previous_snapshot.snapshot_id)
     )
-    base_payload: dict[str, object] = {
-        "snapshot_id": snapshot_id,
-        "project_id": "073-demo",
-        "version": 1 if previous_snapshot is None else previous_snapshot.version + 1,
-        "created_at": "2026-04-08T00:00:00Z",
-        "confirmed_at": "2026-04-08T00:05:00Z",
-        "confirmed_by_mode": "guided",
-        "decision_status": "recommended",
-        "recommended_project_shape": "frontend-heavy",
-        "recommended_frontend_stack": "vue2",
-        "recommended_provider_id": "enterprise-vue2",
-        "recommended_backend_stack": "fastapi",
-        "recommended_api_collab_mode": "typed-bff",
-        "recommended_style_pack_id": "enterprise-default",
-        "recommendation_source": "simple-mode",
-        "recommendation_reason_codes": ["enterprise-provider-preferred"],
-        "recommendation_reason_text": "Enterprise baseline is available and preferred.",
-        "requested_project_shape": "frontend-heavy",
-        "requested_frontend_stack": "vue2",
-        "requested_provider_id": "enterprise-vue2",
-        "requested_backend_stack": "fastapi",
-        "requested_api_collab_mode": "typed-bff",
-        "requested_style_pack_id": effective_style_pack_id,
-        "effective_project_shape": "frontend-heavy",
-        "effective_frontend_stack": "vue2",
-        "effective_provider_id": "enterprise-vue2",
-        "effective_backend_stack": "fastapi",
-        "effective_api_collab_mode": "typed-bff",
-        "effective_style_pack_id": effective_style_pack_id,
-        "enterprise_provider_eligible": True,
-        "availability_checks": [
-            "company-registry-network",
-            "company-registry-token",
-        ],
-        "availability_summary": AvailabilitySummary(
-            overall_status="ready",
-            passed_check_ids=["company-registry-network", "company-registry-token"],
-            failed_check_ids=[],
-            blocking_reason_codes=[],
-        ),
-        "availability_reason_text": "Enterprise provider prerequisites satisfied.",
-        "preflight_status": "ready",
-        "preflight_reason_codes": [],
-        "user_overrode_recommendation": False,
-        "user_override_fields": [],
-        "provider_mode": "normal",
-        "fallback_reason_code": None,
-        "fallback_reason_text": None,
-        "resolved_style_tokens": style_tokens_by_id[effective_style_pack_id],
-        "provider_theme_adapter_config": {
+    if previous_snapshot is None:
+        effective_style_pack_id = str(
+            overrides.get("effective_style_pack_id", "enterprise-default")
+        )
+        base_payload: dict[str, object] = {
+            "project_id": "073-demo",
+            "created_at": "2026-04-08T00:00:00Z",
+            "confirmed_at": "2026-04-08T00:05:00Z",
+            "confirmed_by_mode": "guided",
+            "decision_status": "recommended",
+            "recommended_project_shape": "frontend-heavy",
+            "recommended_frontend_stack": "vue2",
+            "recommended_provider_id": "enterprise-vue2",
+            "recommended_backend_stack": "fastapi",
+            "recommended_api_collab_mode": "typed-bff",
+            "recommended_style_pack_id": "enterprise-default",
+            "recommendation_source": "simple-mode",
+            "recommendation_reason_codes": ["enterprise-provider-preferred"],
+            "recommendation_reason_text": "Enterprise baseline is available and preferred.",
+            "requested_project_shape": "frontend-heavy",
+            "requested_frontend_stack": "vue2",
+            "requested_provider_id": "enterprise-vue2",
+            "requested_backend_stack": "fastapi",
+            "requested_api_collab_mode": "typed-bff",
+            "requested_style_pack_id": effective_style_pack_id,
+            "effective_project_shape": "frontend-heavy",
+            "effective_frontend_stack": "vue2",
+            "effective_provider_id": "enterprise-vue2",
+            "effective_backend_stack": "fastapi",
+            "effective_api_collab_mode": "typed-bff",
+            "effective_style_pack_id": effective_style_pack_id,
+            "enterprise_provider_eligible": True,
+            "availability_checks": [
+                "company-registry-network",
+                "company-registry-token",
+            ],
+            "availability_summary": AvailabilitySummary(
+                overall_status="ready",
+                passed_check_ids=["company-registry-network", "company-registry-token"],
+                failed_check_ids=[],
+                blocking_reason_codes=[],
+            ),
+            "availability_reason_text": "Enterprise provider prerequisites satisfied.",
+            "preflight_status": "ready",
+            "preflight_reason_codes": [],
+            "user_overrode_recommendation": False,
+            "user_override_fields": [],
+            "provider_mode": "normal",
+            "fallback_reason_code": None,
+            "fallback_reason_text": None,
+            "resolved_style_tokens": style_tokens_by_id[effective_style_pack_id],
+            "provider_theme_adapter_config": {
+                "adapter_id": "enterprise-vue2-theme-bridge",
+                "preset": effective_style_pack_id,
+            },
+            "style_fidelity_status": "full",
+            "style_degradation_reason_codes": [],
+        }
+    else:
+        base_payload = previous_snapshot.model_dump(mode="json")
+
+    base_payload.update(
+        {
+            "snapshot_id": snapshot_id,
+            "version": 1 if previous_snapshot is None else previous_snapshot.version + 1,
+            "changed_from_snapshot_id": (
+                None if previous_snapshot is None else previous_snapshot.snapshot_id
+            ),
+        }
+    )
+    base_payload.update(overrides)
+
+    effective_style_pack_id = str(base_payload["effective_style_pack_id"])
+    if "resolved_style_tokens" not in overrides:
+        base_payload["resolved_style_tokens"] = style_tokens_by_id[effective_style_pack_id]
+    if "provider_theme_adapter_config" not in overrides:
+        base_payload["provider_theme_adapter_config"] = {
             "adapter_id": "enterprise-vue2-theme-bridge",
             "preset": effective_style_pack_id,
-        },
-        "style_fidelity_status": "full",
-        "style_degradation_reason_codes": [],
-        "changed_from_snapshot_id": (
-            None if previous_snapshot is None else previous_snapshot.snapshot_id
-        ),
-    }
-    base_payload.update(overrides)
+        }
+
     return FrontendSolutionSnapshot(**base_payload)
 
 
