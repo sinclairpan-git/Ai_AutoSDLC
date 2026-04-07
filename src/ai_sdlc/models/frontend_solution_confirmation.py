@@ -212,6 +212,21 @@ def _default_provider_theme_adapter_config(
     }
 
 
+def _default_resolved_style_tokens(
+    effective_style_pack_id: str,
+    style_tokens_by_id: dict[str, dict[str, str]],
+    *,
+    previous_tokens: dict[str, object] | None = None,
+) -> dict[str, str]:
+    if effective_style_pack_id in style_tokens_by_id:
+        return style_tokens_by_id[effective_style_pack_id]
+
+    if previous_tokens is None:
+        return {}
+
+    return {str(key): str(value) for key, value in previous_tokens.items()}
+
+
 def build_mvp_solution_snapshot(
     previous_snapshot: FrontendSolutionSnapshot | None = None,
     **overrides: object,
@@ -277,7 +292,10 @@ def build_mvp_solution_snapshot(
             "provider_mode": "normal",
             "fallback_reason_code": None,
             "fallback_reason_text": None,
-            "resolved_style_tokens": style_tokens_by_id[effective_style_pack_id],
+            "resolved_style_tokens": _default_resolved_style_tokens(
+                effective_style_pack_id,
+                style_tokens_by_id,
+            ),
             "provider_theme_adapter_config": _default_provider_theme_adapter_config(
                 "enterprise-vue2",
                 effective_style_pack_id,
@@ -302,7 +320,24 @@ def build_mvp_solution_snapshot(
     effective_style_pack_id = str(base_payload["effective_style_pack_id"])
     effective_provider_id = str(base_payload["effective_provider_id"])
     if "resolved_style_tokens" not in overrides:
-        base_payload["resolved_style_tokens"] = style_tokens_by_id[effective_style_pack_id]
+        previous_resolved_style_tokens = None
+        if (
+            previous_snapshot is not None
+            and effective_style_pack_id == previous_snapshot.effective_style_pack_id
+        ):
+            previous_resolved_style_tokens = previous_snapshot.model_dump(mode="json").get(
+                "resolved_style_tokens"
+            )
+
+        base_payload["resolved_style_tokens"] = _default_resolved_style_tokens(
+            effective_style_pack_id,
+            style_tokens_by_id,
+            previous_tokens=(
+                previous_resolved_style_tokens
+                if isinstance(previous_resolved_style_tokens, dict)
+                else None
+            ),
+        )
     if "provider_theme_adapter_config" not in overrides:
         previous_adapter_config = None
         preserve_existing_adapter = False

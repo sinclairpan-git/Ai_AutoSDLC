@@ -137,3 +137,24 @@ def test_build_mvp_solution_snapshot_preserves_previous_state_when_versioning() 
         "preset": "modern-saas",
     }
     assert derived.provider_theme_adapter_config == original.provider_theme_adapter_config
+
+
+def test_build_mvp_solution_snapshot_preserves_unknown_style_tokens_without_keyerror() -> None:
+    original = build_mvp_solution_snapshot(
+        requested_style_pack_id="brand-x",
+        effective_style_pack_id="brand-x",
+        resolved_style_tokens={
+            "surface_mode": "brand-x-surface",
+            "accent_mode": "brand-x-accent",
+        },
+    )
+
+    derived = build_mvp_solution_snapshot(previous_snapshot=original)
+
+    assert original.effective_style_pack_id == "brand-x"
+    assert original.resolved_style_tokens == {
+        "surface_mode": "brand-x-surface",
+        "accent_mode": "brand-x-accent",
+    }
+    assert derived.effective_style_pack_id == "brand-x"
+    assert derived.resolved_style_tokens == original.resolved_style_tokens
