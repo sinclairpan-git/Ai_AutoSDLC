@@ -9,6 +9,7 @@ from ai_sdlc.models.frontend_provider_profile import (
     LegacyAdapterPolicy,
     ProviderMapping,
     ProviderRiskIsolationPolicy,
+    ProviderStyleSupportEntry,
     ProviderWhitelistEntry,
     build_mvp_enterprise_vue2_provider_profile,
 )
@@ -58,6 +59,32 @@ def test_build_mvp_enterprise_vue2_provider_profile_enforces_isolation_and_legac
     assert profile.legacy_adapter.requires_declared_migration_intent is True
 
 
+def test_build_mvp_enterprise_vue2_provider_profile_exposes_style_support_and_install_truth() -> None:
+    profile = build_mvp_enterprise_vue2_provider_profile()
+
+    assert profile.access_mode == "private"
+    assert profile.install_strategy_ids == ["enterprise-vue2-private-registry"]
+    assert profile.default_style_pack_id == "enterprise-default"
+    assert profile.cross_stack_fallback_targets == ["vue3/public-primevue"]
+    assert {
+        entry.style_pack_id: entry.fidelity_status
+        for entry in profile.style_support_matrix
+    } == {
+        "enterprise-default": "full",
+        "data-console": "full",
+        "high-clarity": "full",
+        "modern-saas": "partial",
+        "macos-glass": "degraded",
+    }
+    assert next(
+        entry
+        for entry in profile.style_support_matrix
+        if entry.style_pack_id == "macos-glass"
+    ).degradation_reason_codes == [
+        "glass-surface-depth-not-compatible-with-enterprise-vue2-default-theme"
+    ]
+
+
 def test_enterprise_vue2_provider_profile_rejects_duplicate_mapping_or_whitelist_ids() -> None:
     with pytest.raises(ValueError, match="duplicate mapping component_id values"):
         EnterpriseVue2ProviderProfile(
@@ -102,4 +129,35 @@ def test_enterprise_vue2_provider_profile_rejects_duplicate_mapping_or_whitelist
             ],
             risk_isolation=ProviderRiskIsolationPolicy(),
             legacy_adapter=LegacyAdapterPolicy(),
+        )
+
+
+def test_enterprise_vue2_provider_profile_rejects_duplicate_style_support_ids() -> None:
+    with pytest.raises(ValueError, match="duplicate style_support_matrix style_pack_id values"):
+        EnterpriseVue2ProviderProfile(
+            work_item_id="016",
+            provider_id="enterprise-vue2",
+            mappings=[
+                ProviderMapping(component_id="UiButton", implementation_ref="SfButton"),
+            ],
+            whitelist=[
+                ProviderWhitelistEntry(
+                    component_id="UiButton",
+                    api_curation=["curated-props"],
+                    capability_curation=["no-dangerous-rendering"],
+                    dependency_curation=["no-global-install"],
+                )
+            ],
+            risk_isolation=ProviderRiskIsolationPolicy(),
+            legacy_adapter=LegacyAdapterPolicy(),
+            style_support_matrix=[
+                ProviderStyleSupportEntry(
+                    style_pack_id="enterprise-default",
+                    fidelity_status="full",
+                ),
+                ProviderStyleSupportEntry(
+                    style_pack_id="enterprise-default",
+                    fidelity_status="partial",
+                ),
+            ],
         )

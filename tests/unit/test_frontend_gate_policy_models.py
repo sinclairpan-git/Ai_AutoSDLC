@@ -7,7 +7,6 @@ import pytest
 from ai_sdlc.models.frontend_gate_policy import (
     CompatibilityExecutionPolicy,
     FrontendCompatibilityFeedbackBoundary,
-    FrontendA11yFoundationCoverageEntry,
     FrontendCoverageGap,
     FrontendCoverageReport,
     FrontendDiagnosticsCoverageEntry,
@@ -20,7 +19,6 @@ from ai_sdlc.models.frontend_gate_policy import (
     FrontendLegacyExpansionReport,
     FrontendViolation,
     FrontendViolationReport,
-    FrontendVisualA11yEvidenceBoundary,
     FrontendVisualA11yFeedbackBoundary,
     FrontendVisualFoundationCoverageEntry,
     build_mvp_frontend_gate_policy,
