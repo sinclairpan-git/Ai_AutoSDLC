@@ -32,6 +32,7 @@ def materialize_frontend_provider_profile_artifacts(
                 "kernel_artifact_ref": profile.kernel_artifact_ref,
                 "access_mode": profile.access_mode,
                 "install_strategy_ids": profile.install_strategy_ids,
+                "availability_prerequisites": profile.availability_prerequisites,
                 "default_style_pack_id": profile.default_style_pack_id,
                 "mapped_components": [
                     mapping.component_id for mapping in profile.mappings

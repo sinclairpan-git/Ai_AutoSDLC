@@ -59,6 +59,10 @@ def test_provider_profile_artifacts_preserve_mapping_and_policy_semantics(tmp_pa
         "kernel_artifact_ref": "kernel/frontend",
         "access_mode": "private",
         "install_strategy_ids": ["enterprise-vue2-private-registry"],
+        "availability_prerequisites": [
+            "company-registry-network",
+            "company-registry-token",
+        ],
         "default_style_pack_id": "enterprise-default",
         "mapped_components": [
             "UiButton",

@@ -2,9 +2,12 @@
 
 from __future__ import annotations
 
+import re
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
+
+_SNAPSHOT_ID_PATTERN = re.compile(r"^(?P<prefix>.*?)(?P<number>\d+)$")
 
 
 class FrontendSolutionConfirmationModel(BaseModel):
@@ -205,8 +208,13 @@ def build_mvp_solution_snapshot(
     effective_style_pack_id = str(
         overrides.get("effective_style_pack_id", "enterprise-default")
     )
+    snapshot_id = (
+        "solution-snapshot-001"
+        if previous_snapshot is None
+        else _next_snapshot_id(previous_snapshot.snapshot_id)
+    )
     base_payload: dict[str, object] = {
-        "snapshot_id": "solution-snapshot-001",
+        "snapshot_id": snapshot_id,
         "project_id": "073-demo",
         "version": 1 if previous_snapshot is None else previous_snapshot.version + 1,
         "created_at": "2026-04-08T00:00:00Z",
@@ -266,6 +274,16 @@ def build_mvp_solution_snapshot(
     }
     base_payload.update(overrides)
     return FrontendSolutionSnapshot(**base_payload)
+
+
+def _next_snapshot_id(snapshot_id: str) -> str:
+    match = _SNAPSHOT_ID_PATTERN.match(snapshot_id)
+    if match is None:
+        return f"{snapshot_id}-next"
+
+    prefix = match.group("prefix")
+    current_number = match.group("number")
+    return f"{prefix}{int(current_number) + 1:0{len(current_number)}d}"
 
 
 __all__ = [

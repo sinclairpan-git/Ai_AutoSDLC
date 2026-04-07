@@ -43,7 +43,6 @@ def test_build_mvp_solution_snapshot_creates_versioned_requested_effective_chain
     original = build_mvp_solution_snapshot()
     fallback = build_mvp_solution_snapshot(
         previous_snapshot=original,
-        snapshot_id="solution-snapshot-002",
         decision_status="fallback_confirmed",
         requested_frontend_stack="vue2",
         requested_provider_id="enterprise-vue2",
@@ -67,3 +66,14 @@ def test_build_mvp_solution_snapshot_creates_versioned_requested_effective_chain
     assert fallback.effective_provider_id == "public-primevue"
     assert fallback.provider_mode == "cross_stack_fallback"
     assert fallback.fallback_reason_code == "enterprise-provider-unavailable"
+    assert fallback.snapshot_id == "solution-snapshot-002"
+
+
+def test_build_mvp_solution_snapshot_assigns_new_snapshot_id_for_derived_versions() -> None:
+    original = build_mvp_solution_snapshot()
+    derived = build_mvp_solution_snapshot(previous_snapshot=original)
+
+    assert original.snapshot_id == "solution-snapshot-001"
+    assert derived.version == original.version + 1
+    assert derived.snapshot_id == "solution-snapshot-002"
+    assert derived.changed_from_snapshot_id == original.snapshot_id
