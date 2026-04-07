@@ -582,6 +582,45 @@
 
 #### 6. 归档后动作
 
-- **已完成 git 提交**：否
+- **已完成 git 提交**：是
 - 当前 batch 结论：final-governance 到 persisted-write-proof 的 actual-issue truth propagation 已补齐，并通过 targeted + full unit/integration 回归。
 - **下一步动作**：若 persistence 链继续保持透传，则把 actual-issue token 收束到 final-proof publication / closure / archive 后半段。
+
+### Batch 2026-04-07-015 | final-proof mainline actual-issue propagation
+
+#### 1. 背景
+
+- actual-issue truth surface 已经推进到 final-proof 入口，下一段需要把同一 remediation token 继续钉到 `final-proof publication -> closure -> archive` 主链。
+- 这三层仍然是 artifact 驱动的串联 surface；目标是防止 final-proof 主链把具体 visual/a11y issue 重新压回 generic blocker 描述。
+
+#### 2. 修改文件
+
+- `tests/unit/test_program_service.py`
+- `tests/integration/test_cli_program.py`
+- `specs/071-frontend-p1-visual-a11y-foundation-baseline/task-execution-log.md`
+
+#### 3. 执行命令
+
+- `uv run pytest tests/unit/test_program_service.py -k 'visual_a11y_issue_review and (final_proof_publication or final_proof_closure or final_proof_archive)' -q`
+- `uv run pytest tests/integration/test_cli_program.py -k 'visual_a11y_issue_review and (final_proof_publication or final_proof_closure or final_proof_archive)' -q`
+- `uv run pytest tests/unit/test_program_service.py -q`
+- `uv run pytest tests/integration/test_cli_program.py -q`
+- `git diff --check -- tests/unit/test_program_service.py tests/integration/test_cli_program.py specs/071-frontend-p1-visual-a11y-foundation-baseline/task-execution-log.md`
+
+#### 4. 验证结果
+
+- `uv run pytest tests/unit/test_program_service.py -k 'visual_a11y_issue_review and (final_proof_publication or final_proof_closure or final_proof_archive)' -q` 通过，结果为 `6 passed, 135 deselected in 0.40s`。
+- `uv run pytest tests/integration/test_cli_program.py -k 'visual_a11y_issue_review and (final_proof_publication or final_proof_closure or final_proof_archive)' -q` 通过，结果为 `3 passed, 103 deselected in 0.48s`。
+- `uv run pytest tests/unit/test_program_service.py -q` 通过，结果为 `141 passed in 0.94s`。
+- `uv run pytest tests/integration/test_cli_program.py -q` 通过，结果为 `106 passed in 2.10s`。
+
+#### 5. 对账结论
+
+- `final-proof publication / closure / archive` 主链三层都能自然保留 `frontend_visual_a11y_issue_review` 与对应建议动作，未发现新的生产断层。
+- 到这里为止，actual-issue truth surface 已经推进到 final-proof archive 之后的尾部 `thread-archive / project-cleanup` surfaces。
+
+#### 6. 归档后动作
+
+- **已完成 git 提交**：否
+- 当前 batch 结论：final-proof 主链 actual-issue truth propagation 已补齐，并通过 targeted + full unit/integration 回归。
+- **下一步动作**：继续把 actual-issue token 补到 `final-proof-archive-thread-archive / final-proof-archive-project-cleanup` 尾部 surfaces。
