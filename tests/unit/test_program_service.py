@@ -562,6 +562,49 @@ def test_build_frontend_provider_handoff_preserves_stable_empty_visual_a11y_pend
     )
 
 
+def test_build_frontend_provider_handoff_preserves_visual_a11y_issue_review_input(
+    tmp_path: Path,
+) -> None:
+    for p in ("specs/001-auth", "specs/002-course", "specs/003-enroll"):
+        (tmp_path / p).mkdir(parents=True)
+    _write_frontend_remediation_writeback_artifact(
+        tmp_path,
+        passed=False,
+        remaining_blockers=["spec 001-auth remediation still required"],
+        steps=[
+            {
+                "spec_id": "001-auth",
+                "path": "specs/001-auth",
+                "state": "required",
+                "fix_inputs": ["frontend_visual_a11y_issue_review"],
+                "suggested_actions": [
+                    "review frontend visual / a11y issue findings",
+                    "re-run ai-sdlc verify constraints",
+                ],
+                "action_commands": [],
+                "source_linkage": {
+                    "runtime_attachment_status": "artifact_attached",
+                    "frontend_gate_verdict": "RETRY",
+                },
+            }
+        ],
+    )
+
+    svc = ProgramService(tmp_path)
+    handoff = svc.build_frontend_provider_handoff(_manifest())
+
+    assert handoff.required is True
+    assert [step.spec_id for step in handoff.steps] == ["001-auth"]
+    assert handoff.steps[0].pending_inputs == ["frontend_visual_a11y_issue_review"]
+    assert handoff.steps[0].suggested_next_actions == [
+        "review frontend visual / a11y issue findings",
+        "re-run ai-sdlc verify constraints",
+    ]
+    assert handoff.steps[0].source_linkage["runtime_attachment_status"] == (
+        "artifact_attached"
+    )
+
+
 def test_build_frontend_provider_handoff_is_not_required_when_writeback_is_clean(
     tmp_path: Path,
 ) -> None:
@@ -648,6 +691,50 @@ def test_build_frontend_provider_runtime_request_preserves_stable_empty_visual_a
     ]
     assert request.steps[0].suggested_next_actions == [
         "review stable empty frontend visual / a11y evidence",
+        "re-run ai-sdlc verify constraints",
+    ]
+    assert (
+        request.steps[0].source_linkage["provider_runtime_state"] == "not_started"
+    )
+
+
+def test_build_frontend_provider_runtime_request_preserves_visual_a11y_issue_review_input(
+    tmp_path: Path,
+) -> None:
+    for p in ("specs/001-auth", "specs/002-course", "specs/003-enroll"):
+        (tmp_path / p).mkdir(parents=True)
+    _write_frontend_remediation_writeback_artifact(
+        tmp_path,
+        passed=False,
+        remaining_blockers=["spec 001-auth remediation still required"],
+        steps=[
+            {
+                "spec_id": "001-auth",
+                "path": "specs/001-auth",
+                "state": "required",
+                "fix_inputs": ["frontend_visual_a11y_issue_review"],
+                "suggested_actions": [
+                    "review frontend visual / a11y issue findings",
+                    "re-run ai-sdlc verify constraints",
+                ],
+                "action_commands": [],
+                "source_linkage": {
+                    "runtime_attachment_status": "artifact_attached",
+                    "frontend_gate_verdict": "RETRY",
+                },
+            }
+        ],
+    )
+
+    svc = ProgramService(tmp_path)
+    request = svc.build_frontend_provider_runtime_request(_manifest())
+
+    assert request.required is True
+    assert request.confirmation_required is True
+    assert [step.spec_id for step in request.steps] == ["001-auth"]
+    assert request.steps[0].pending_inputs == ["frontend_visual_a11y_issue_review"]
+    assert request.steps[0].suggested_next_actions == [
+        "review frontend visual / a11y issue findings",
         "re-run ai-sdlc verify constraints",
     ]
     assert (
@@ -827,6 +914,46 @@ def test_build_frontend_provider_patch_handoff_preserves_stable_empty_visual_a11
     assert handoff.steps[0].patch_availability_state == "deferred"
 
 
+def test_build_frontend_provider_patch_handoff_preserves_visual_a11y_issue_review_input(
+    tmp_path: Path,
+) -> None:
+    for p in ("specs/001-auth", "specs/002-course", "specs/003-enroll"):
+        (tmp_path / p).mkdir(parents=True)
+    _write_frontend_provider_runtime_artifact(
+        tmp_path,
+        invocation_result="deferred",
+        provider_execution_state="deferred",
+        remaining_blockers=["spec 001-auth remediation still required"],
+        steps=[
+            {
+                "spec_id": "001-auth",
+                "path": "specs/001-auth",
+                "pending_inputs": ["frontend_visual_a11y_issue_review"],
+                "suggested_next_actions": [
+                    "review frontend visual / a11y issue findings",
+                    "re-run ai-sdlc verify constraints",
+                ],
+                "source_linkage": {
+                    "writeback_artifact_path": ".ai-sdlc/memory/frontend-remediation/latest.yaml",
+                    "provider_runtime_state": "deferred",
+                },
+            }
+        ],
+    )
+
+    svc = ProgramService(tmp_path)
+    handoff = svc.build_frontend_provider_patch_handoff(_manifest())
+
+    assert handoff.required is True
+    assert [step.spec_id for step in handoff.steps] == ["001-auth"]
+    assert handoff.steps[0].pending_inputs == ["frontend_visual_a11y_issue_review"]
+    assert handoff.steps[0].suggested_next_actions == [
+        "review frontend visual / a11y issue findings",
+        "re-run ai-sdlc verify constraints",
+    ]
+    assert handoff.steps[0].patch_availability_state == "deferred"
+
+
 def test_build_frontend_provider_patch_handoff_warns_when_runtime_artifact_missing(
     tmp_path: Path,
 ) -> None:
@@ -912,6 +1039,47 @@ def test_build_frontend_provider_patch_apply_request_preserves_stable_empty_visu
     ]
     assert request.steps[0].suggested_next_actions == [
         "review stable empty frontend visual / a11y evidence",
+        "re-run ai-sdlc verify constraints",
+    ]
+    assert request.steps[0].patch_availability_state == "deferred"
+
+
+def test_build_frontend_provider_patch_apply_request_preserves_visual_a11y_issue_review_input(
+    tmp_path: Path,
+) -> None:
+    for p in ("specs/001-auth", "specs/002-course", "specs/003-enroll"):
+        (tmp_path / p).mkdir(parents=True)
+    _write_frontend_provider_runtime_artifact(
+        tmp_path,
+        invocation_result="deferred",
+        provider_execution_state="deferred",
+        remaining_blockers=["spec 001-auth remediation still required"],
+        steps=[
+            {
+                "spec_id": "001-auth",
+                "path": "specs/001-auth",
+                "pending_inputs": ["frontend_visual_a11y_issue_review"],
+                "suggested_next_actions": [
+                    "review frontend visual / a11y issue findings",
+                    "re-run ai-sdlc verify constraints",
+                ],
+                "source_linkage": {
+                    "writeback_artifact_path": ".ai-sdlc/memory/frontend-remediation/latest.yaml",
+                    "provider_runtime_state": "deferred",
+                },
+            }
+        ],
+    )
+
+    svc = ProgramService(tmp_path)
+    request = svc.build_frontend_provider_patch_apply_request(_manifest())
+
+    assert request.required is True
+    assert request.confirmation_required is True
+    assert [step.spec_id for step in request.steps] == ["001-auth"]
+    assert request.steps[0].pending_inputs == ["frontend_visual_a11y_issue_review"]
+    assert request.steps[0].suggested_next_actions == [
+        "review frontend visual / a11y issue findings",
         "re-run ai-sdlc verify constraints",
     ]
     assert request.steps[0].patch_availability_state == "deferred"

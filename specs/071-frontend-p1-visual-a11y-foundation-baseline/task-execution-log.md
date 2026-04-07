@@ -465,6 +465,45 @@
 
 #### 6. 归档后动作
 
-- **已完成 git 提交**：否
+- **已完成 git 提交**：是
 - 当前 batch 结论：actual issue remediation honesty surface 已闭合，并通过 unit + CLI integration 回归。
 - **下一步动作**：提交本批后继续扫描 visual/a11y 相邻的 program writeback / persisted artifact / messaging surface，优先找仍使用 generic blocker fallback 的生产缺口。
+
+### Batch 2026-04-07-012 | provider chain actual-issue truth propagation
+
+#### 1. 背景
+
+- `frontend_visual_a11y_issue_review` 已经从 remediation surface 正确产出，但 provider handoff / runtime / patch handoff / patch apply 这一段此前只对 stable-empty truth 做了显式覆盖。
+- 由于这几层都是 writeback artifact 的条件化转抄 surface，这里需要把 actual-issue token 也钉死，避免后续有人在 generic passthrough 处再次压扁语义。
+
+#### 2. 修改文件
+
+- `tests/unit/test_program_service.py`
+- `tests/integration/test_cli_program.py`
+- `specs/071-frontend-p1-visual-a11y-foundation-baseline/task-execution-log.md`
+
+#### 3. 执行命令
+
+- `uv run pytest tests/unit/test_program_service.py -k 'provider_.*visual_a11y_issue_review|visual_a11y_issue_review.*provider' -q`
+- `uv run pytest tests/integration/test_cli_program.py -k 'provider_.*visual_a11y_issue_review|visual_a11y_issue_review.*provider' -q`
+- `uv run pytest tests/unit/test_program_service.py -q`
+- `uv run pytest tests/integration/test_cli_program.py -q`
+- `git diff --check -- tests/unit/test_program_service.py tests/integration/test_cli_program.py specs/071-frontend-p1-visual-a11y-foundation-baseline/task-execution-log.md`
+
+#### 4. 验证结果
+
+- `uv run pytest tests/unit/test_program_service.py -k 'provider and visual_a11y_issue_review' -q` 通过，结果为 `4 passed, 119 deselected in 0.18s`。
+- `uv run pytest tests/integration/test_cli_program.py -k 'provider and visual_a11y_issue_review' -q` 通过，结果为 `4 passed, 93 deselected in 0.42s`。
+- `uv run pytest tests/unit/test_program_service.py -q` 通过，结果为 `123 passed in 0.85s`。
+- `uv run pytest tests/integration/test_cli_program.py -q` 通过，结果为 `97 passed in 1.94s`。
+
+#### 5. 对账结论
+
+- provider handoff / provider runtime / provider patch handoff / provider patch apply 这一段已经天然保留 `frontend_visual_a11y_issue_review` 与对应建议动作，不需要额外生产代码改动。
+- execute 类 CLI terminal output 目前不承担 step 级 pending input truth surface；这一层的真实承载面是 persisted artifact 与 report，因此本批覆盖对齐到已有 CLI 设计边界，而没有虚构新的输出契约。
+
+#### 6. 归档后动作
+
+- **已完成 git 提交**：是
+- 当前 batch 结论：provider 前半段 actual-issue truth propagation 已补齐，并通过 targeted + full unit/integration 回归。
+- **下一步动作**：若 provider 前半段保持自然透传，则继续沿 cross-spec-writeback 之后的 artifact 链把 actual-issue token 覆盖补齐到 final-proof。

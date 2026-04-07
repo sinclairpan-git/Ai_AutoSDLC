@@ -814,6 +814,49 @@ specs:
         assert "frontend_visual_a11y_evidence_stable_empty" in report
         assert "review stable empty frontend visual / a11y evidence" in report
 
+    def test_program_provider_handoff_surfaces_visual_a11y_issue_review_input(
+        self, initialized_project_dir: Path
+    ) -> None:
+        root = initialized_project_dir
+        _write_manifest(root)
+        _write_frontend_remediation_writeback_artifact(
+            root,
+            passed=False,
+            remaining_blockers=["spec 001-auth remediation still required"],
+            steps=[
+                {
+                    "spec_id": "001-auth",
+                    "path": "specs/001-auth",
+                    "state": "required",
+                    "fix_inputs": ["frontend_visual_a11y_issue_review"],
+                    "suggested_actions": [
+                        "review frontend visual / a11y issue findings",
+                        "re-run ai-sdlc verify constraints",
+                    ],
+                    "action_commands": [],
+                    "source_linkage": {
+                        "runtime_attachment_status": "artifact_attached",
+                        "frontend_gate_verdict": "RETRY",
+                    },
+                }
+            ],
+        )
+        report_rel = ".ai-sdlc/memory/frontend-provider-handoff.md"
+
+        with patch("ai_sdlc.cli.program_cmd.find_project_root", return_value=root):
+            result = runner.invoke(
+                app,
+                ["program", "provider-handoff", "--report", report_rel],
+            )
+
+        assert result.exit_code == 0
+        assert "frontend_visual_a11y_issue_review" in result.output
+        assert "review frontend visual / a11y issue findings" in result.output
+        assert "frontend_visual_a11y_evidence_stable_empty" not in result.output
+        report = (root / report_rel).read_text(encoding="utf-8")
+        assert "frontend_visual_a11y_issue_review" in report
+        assert "review frontend visual / a11y issue findings" in report
+
     def test_program_provider_runtime_execute_requires_explicit_confirmation(
         self, initialized_project_dir: Path
     ) -> None:
@@ -922,6 +965,65 @@ specs:
         report = (root / report_rel).read_text(encoding="utf-8")
         assert "frontend_visual_a11y_evidence_stable_empty" in report
         assert "review stable empty frontend visual / a11y evidence" in report
+
+    def test_program_provider_runtime_execute_preserves_visual_a11y_issue_review_input(
+        self, initialized_project_dir: Path
+    ) -> None:
+        root = initialized_project_dir
+        _write_manifest(root)
+        _write_frontend_remediation_writeback_artifact(
+            root,
+            passed=False,
+            remaining_blockers=["spec 001-auth remediation still required"],
+            steps=[
+                {
+                    "spec_id": "001-auth",
+                    "path": "specs/001-auth",
+                    "state": "required",
+                    "fix_inputs": ["frontend_visual_a11y_issue_review"],
+                    "suggested_actions": [
+                        "review frontend visual / a11y issue findings",
+                        "re-run ai-sdlc verify constraints",
+                    ],
+                    "action_commands": [],
+                    "source_linkage": {
+                        "runtime_attachment_status": "artifact_attached",
+                        "frontend_gate_verdict": "RETRY",
+                    },
+                }
+            ],
+        )
+        report_rel = ".ai-sdlc/memory/frontend-provider-runtime.md"
+
+        with patch("ai_sdlc.cli.program_cmd.find_project_root", return_value=root):
+            result = runner.invoke(
+                app,
+                [
+                    "program",
+                    "provider-runtime",
+                    "--execute",
+                    "--yes",
+                    "--report",
+                    report_rel,
+                ],
+            )
+
+        artifact_path = (
+            root / ".ai-sdlc" / "memory" / "frontend-provider-runtime" / "latest.yaml"
+        )
+        assert result.exit_code == 1
+        payload = yaml.safe_load(artifact_path.read_text(encoding="utf-8"))
+        assert payload["steps"][0]["pending_inputs"] == [
+            "frontend_visual_a11y_issue_review"
+        ]
+        assert payload["steps"][0]["suggested_next_actions"] == [
+            "review frontend visual / a11y issue findings",
+            "re-run ai-sdlc verify constraints",
+        ]
+        report = (root / report_rel).read_text(encoding="utf-8")
+        assert "frontend_visual_a11y_issue_review" in report
+        assert "review frontend visual / a11y issue findings" in report
+        assert "frontend_visual_a11y_evidence_stable_empty" not in report
 
     def test_program_provider_runtime_dry_run_does_not_write_artifact(
         self, initialized_project_dir: Path
@@ -1052,6 +1154,47 @@ specs:
         assert "frontend_visual_a11y_evidence_stable_empty" in report
         assert "review stable empty frontend visual / a11y evidence" in report
 
+    def test_program_provider_patch_handoff_surfaces_visual_a11y_issue_review_input(
+        self, initialized_project_dir: Path
+    ) -> None:
+        root = initialized_project_dir
+        _write_manifest(root)
+        _write_frontend_provider_runtime_artifact(
+            root,
+            invocation_result="deferred",
+            provider_execution_state="deferred",
+            remaining_blockers=["spec 001-auth remediation still required"],
+            steps=[
+                {
+                    "spec_id": "001-auth",
+                    "path": "specs/001-auth",
+                    "pending_inputs": ["frontend_visual_a11y_issue_review"],
+                    "suggested_next_actions": [
+                        "review frontend visual / a11y issue findings",
+                        "re-run ai-sdlc verify constraints",
+                    ],
+                    "source_linkage": {
+                        "writeback_artifact_path": ".ai-sdlc/memory/frontend-remediation/latest.yaml",
+                        "provider_runtime_state": "deferred",
+                    },
+                }
+            ],
+        )
+        report_rel = ".ai-sdlc/memory/frontend-provider-patch-handoff.md"
+
+        with patch("ai_sdlc.cli.program_cmd.find_project_root", return_value=root):
+            result = runner.invoke(
+                app,
+                ["program", "provider-patch-handoff", "--report", report_rel],
+            )
+
+        assert result.exit_code == 0
+        assert "frontend_visual_a11y_issue_review" in result.output
+        assert "review frontend visual / a11y issue findings" in result.output
+        report = (root / report_rel).read_text(encoding="utf-8")
+        assert "frontend_visual_a11y_issue_review" in report
+        assert "review frontend visual / a11y issue findings" in report
+
     def test_program_provider_patch_handoff_fails_when_runtime_artifact_missing(
         self, initialized_project_dir: Path
     ) -> None:
@@ -1177,6 +1320,68 @@ specs:
         report = (root / report_rel).read_text(encoding="utf-8")
         assert "frontend_visual_a11y_evidence_stable_empty" in report
         assert "review stable empty frontend visual / a11y evidence" in report
+
+    def test_program_provider_patch_apply_execute_preserves_visual_a11y_issue_review_input(
+        self, initialized_project_dir: Path
+    ) -> None:
+        root = initialized_project_dir
+        _write_manifest(root)
+        _write_frontend_provider_runtime_artifact(
+            root,
+            invocation_result="deferred",
+            provider_execution_state="deferred",
+            remaining_blockers=["spec 001-auth remediation still required"],
+            steps=[
+                {
+                    "spec_id": "001-auth",
+                    "path": "specs/001-auth",
+                    "pending_inputs": ["frontend_visual_a11y_issue_review"],
+                    "suggested_next_actions": [
+                        "review frontend visual / a11y issue findings",
+                        "re-run ai-sdlc verify constraints",
+                    ],
+                    "source_linkage": {
+                        "writeback_artifact_path": ".ai-sdlc/memory/frontend-remediation/latest.yaml",
+                        "provider_runtime_state": "deferred",
+                    },
+                }
+            ],
+        )
+        report_rel = ".ai-sdlc/memory/frontend-provider-patch-apply.md"
+
+        with patch("ai_sdlc.cli.program_cmd.find_project_root", return_value=root):
+            result = runner.invoke(
+                app,
+                [
+                    "program",
+                    "provider-patch-apply",
+                    "--execute",
+                    "--yes",
+                    "--report",
+                    report_rel,
+                ],
+            )
+
+        artifact_path = (
+            root
+            / ".ai-sdlc"
+            / "memory"
+            / "frontend-provider-patch-apply"
+            / "latest.yaml"
+        )
+        assert result.exit_code == 1
+        payload = yaml.safe_load(artifact_path.read_text(encoding="utf-8"))
+        assert payload["steps"][0]["pending_inputs"] == [
+            "frontend_visual_a11y_issue_review"
+        ]
+        assert payload["steps"][0]["suggested_next_actions"] == [
+            "review frontend visual / a11y issue findings",
+            "re-run ai-sdlc verify constraints",
+        ]
+        report = (root / report_rel).read_text(encoding="utf-8")
+        assert "frontend_visual_a11y_issue_review" in report
+        assert "review frontend visual / a11y issue findings" in report
+        assert "frontend_visual_a11y_evidence_stable_empty" not in report
 
     def test_program_provider_patch_apply_dry_run_does_not_write_artifact(
         self, initialized_project_dir: Path
