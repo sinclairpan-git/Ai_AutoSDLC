@@ -190,3 +190,44 @@
 - **已完成 git 提交**：否
 - 当前 batch 结论：`067` 的 spec / plan / tasks / execution log 四层真值与元数据现在全部一致。
 - **下一步动作**：可按当前 worktree 变更直接提交 `067`。
+
+### Batch 2026-04-08-005 | close-ready development summary handoff
+
+#### 1. 批次范围
+
+- **任务来源**：`067` formal baseline 与唯一 implementation slice 已完成后的 close artifact 收口。
+- **目标**：补齐 `development-summary.md`，把 `067` 从 `decompose_or_execute` 提升为 program-level `close` 输入，同时不回写 `068`、root rollout 或任何 `src/` / `tests/` 实现面。
+- **执行分支**：`main`
+
+#### 2. Touched Files
+
+- `specs/067-frontend-p1-ui-kernel-semantic-expansion-baseline/development-summary.md`
+- `specs/067-frontend-p1-ui-kernel-semantic-expansion-baseline/task-execution-log.md`
+
+#### 3. 执行命令
+
+- `uv run pytest tests/unit/test_frontend_ui_kernel_models.py tests/unit/test_frontend_ui_kernel_artifacts.py -q`
+- `uv run ai-sdlc verify constraints`
+- `uv run ai-sdlc program status`
+- `uv run ai-sdlc program integrate --dry-run`
+- `git diff --check -- specs/067-frontend-p1-ui-kernel-semantic-expansion-baseline src/ai_sdlc/models tests/unit`
+
+#### 4. 验证结果
+
+- `uv run pytest tests/unit/test_frontend_ui_kernel_models.py tests/unit/test_frontend_ui_kernel_artifacts.py -q` -> `18 passed in 0.22s`
+- `uv run ai-sdlc verify constraints` -> `verify constraints: no BLOCKERs.`
+- `uv run ai-sdlc program status` -> `067-frontend-p1-ui-kernel-semantic-expansion-baseline` 已显示为 `close`，同时 `068` 的 `Blocked By` 已变为 `-`。
+- `uv run ai-sdlc program integrate --dry-run` -> `067` 继续保留在 root dry-run 排程中；warnings 只剩 `069-071` 的既有阻塞链，没有为 `067` 产生新的阻塞告警。
+- `git diff --check -- specs/067-frontend-p1-ui-kernel-semantic-expansion-baseline src/ai_sdlc/models tests/unit` -> 通过。
+
+#### 5. 对账结论
+
+- `067` 的 formal baseline、唯一 implementation slice 与 close artifact 现在已经在同一 work item 下完成闭环。
+- 本批只补 `development-summary.md` 与 execution log，不回写 `068`、root rollout 或任何 `src/` / `tests/` 实现面。
+- root machine truth 现在把 `067` 视为 `close`，并且 `068` 已从 `067` 的 close artifact 阻塞中释放出来。
+
+#### 6. 归档后动作
+
+- **已完成 git 提交**：否
+- 当前 batch 结论：待执行。
+- **下一步动作**：若 close artifact 验证通过，再决定是否追加 root rollout close sync carrier。
