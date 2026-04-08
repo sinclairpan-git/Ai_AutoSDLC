@@ -2,7 +2,7 @@
 
 **功能编号**：`067-frontend-p1-ui-kernel-semantic-expansion-baseline`  
 **创建日期**：2026-04-06  
-**状态**：accepted child baseline；formal freeze 已完成；Batch 5 kernel model semantic expansion slice 已验证
+**状态**：accepted child baseline；formal freeze 已完成；Batch 5 kernel model semantic expansion slice 已验证；close-ready development summary handoff 已补齐
 
 ## 1. 归档规则
 
@@ -24,9 +24,9 @@
 
 - `067` 是 `066` 下游的 P1 UI Kernel semantic expansion child work item，不是 recipe / diagnostics / provider 工单。
 - `067` formal baseline 已完成；当前允许的唯一实现批次是 Batch 5 kernel model semantic expansion slice，仅可写 `src/ai_sdlc/models/frontend_ui_kernel.py`、`src/ai_sdlc/models/__init__.py`、`tests/unit/test_frontend_ui_kernel_models.py`、`tests/unit/test_frontend_ui_kernel_artifacts.py`、以及本工单的 `plan.md / tasks.md / task-execution-log.md`。
-- 当前批次不修改 root `program-manifest.yaml`、`frontend-program-branch-rollout-plan.md`，也不生成 `development-summary.md`。
+- 当前 work item 已补齐 `development-summary.md` 作为 program-level close 输入；当前 review-sync batch 不修改 root `program-manifest.yaml`、`frontend-program-branch-rollout-plan.md`，也不新增任何 `src/` / `tests/` 写面。
 - 当前批次不 formalize 下游 `068/069`，也不修改 `src/ai_sdlc/generators/frontend_ui_kernel_artifacts.py`、provider/runtime 或 root program truth。
-- 当前状态为 `accepted child baseline`，其含义是：`067` 的 docs-only formal freeze 已完成，且首批 kernel model semantic expansion slice 已按护栏完成验证；这仍不代表 `068/069`、provider/runtime、root program sync 或 close-ready 已开始。
+- 当前状态为 `accepted child baseline + verified first implementation slice + close-ready development summary handoff`；其含义是：`067` 的 docs-only formal freeze 已完成，首批 kernel model semantic expansion slice 已按护栏完成验证，并且当前 work item 已进入 program-level `close` 输入；这仍不代表 `068/069`、provider/runtime 或新的 root program sync 主线已开始。
 
 ## 3. 批次记录
 
@@ -229,5 +229,44 @@
 #### 6. 归档后动作
 
 - **已完成 git 提交**：否
-- 当前 batch 结论：待执行。
-- **下一步动作**：若 close artifact 验证通过，再决定是否追加 root rollout close sync carrier。
+- 当前 batch 结论：`067` 的 close-ready development summary handoff 已完成并生效；当前 work item 已具备 program-level `close` 输入。
+- **下一步动作**：如需对外评审或回写 review note，应使用包含 Batch 005 的 latest truth，而不是停留在 Batch 1-4 口径。
+
+### Batch 2026-04-08-006 | latest review verdict sync
+
+#### 1. 批次范围
+
+- **任务来源**：二次评审结论同步修正。
+- **目标**：将 `067` 的 latest review verdict 与 Batch 005 / `development-summary.md` / current `program status` 对齐，消除 `spec.md / plan.md / tasks.md / task-execution-log.md` 之间“是否允许 `development-summary.md`、是否已进入 close-ready handoff”的口径冲突。
+- **执行分支**：`codex/076-frontend-p1-root-close-sync-baseline`
+
+#### 2. Touched Files
+
+- `specs/067-frontend-p1-ui-kernel-semantic-expansion-baseline/spec.md`
+- `specs/067-frontend-p1-ui-kernel-semantic-expansion-baseline/plan.md`
+- `specs/067-frontend-p1-ui-kernel-semantic-expansion-baseline/tasks.md`
+- `specs/067-frontend-p1-ui-kernel-semantic-expansion-baseline/task-execution-log.md`
+
+#### 3. 执行命令
+
+- `uv run ai-sdlc verify constraints`
+- `uv run ai-sdlc program status`
+- `git diff --check -- specs/067-frontend-p1-ui-kernel-semantic-expansion-baseline`
+
+#### 4. 验证结果
+
+- `uv run ai-sdlc verify constraints` 通过，输出：`verify constraints: no BLOCKERs.`
+- `uv run ai-sdlc program status` 继续显示 `067-frontend-p1-ui-kernel-semantic-expansion-baseline` 的 `Stage=close`，与 `development-summary.md` 的 `program-close-ready` 口径一致。
+- `git diff --check -- specs/067-frontend-p1-ui-kernel-semantic-expansion-baseline` 无输出，diff hygiene 通过。
+
+#### 5. 对账结论
+
+- `spec.md / plan.md / tasks.md` 不再继续否认 `development-summary.md` 或 close-ready handoff 的存在，现已与 Batch 005 和 current `program status` 对齐。
+- `067` 的 latest review verdict 现应按“`accepted child baseline + verified first implementation slice + close-ready development summary handoff`”理解，而不是停留在只覆盖 Batch 1-4 的旧口径。
+- 本批不改变 `067` 的技术 scope，不改 `src/`、`tests/`、`068/069`、provider/runtime 或 root rollout 主线。
+
+#### 6. 归档后动作
+
+- **已完成 git 提交**：否
+- 当前 batch 结论：`067` 的 latest review verdict 已与当前仓库真值重新统一。
+- **下一步动作**：如需输出 review note，应使用包含 close-ready handoff 的修正版 verdict。

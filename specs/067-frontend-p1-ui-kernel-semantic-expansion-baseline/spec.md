@@ -2,7 +2,7 @@
 
 **功能编号**：`067-frontend-p1-ui-kernel-semantic-expansion-baseline`
 **创建日期**：2026-04-06
-**状态**：accepted child baseline；formal baseline 已冻结；唯一首批 implementation slice（Batch 5）已验证
+**状态**：accepted child baseline；formal baseline 已冻结；唯一首批 implementation slice（Batch 5）已验证；close-ready development summary handoff 已补齐
 **输入**：[`../009-frontend-governance-ui-kernel/spec.md`](../009-frontend-governance-ui-kernel/spec.md)、[`../015-frontend-ui-kernel-standard-baseline/spec.md`](../015-frontend-ui-kernel-standard-baseline/spec.md)、[`../017-frontend-generation-governance-baseline/spec.md`](../017-frontend-generation-governance-baseline/spec.md)、[`../018-frontend-gate-compatibility-baseline/spec.md`](../018-frontend-gate-compatibility-baseline/spec.md)、[`../065-frontend-contract-sample-source-selfcheck-baseline/spec.md`](../065-frontend-contract-sample-source-selfcheck-baseline/spec.md)、[`../066-frontend-p1-experience-stability-planning-baseline/spec.md`](../066-frontend-p1-experience-stability-planning-baseline/spec.md)、[`../../docs/superpowers/specs/2026-04-02-ai-autosdlc-frontend-governance-ui-kernel-design.md`](../../docs/superpowers/specs/2026-04-02-ai-autosdlc-frontend-governance-ui-kernel-design.md)
 
 > 口径：本 work item 是 `066-frontend-p1-experience-stability-planning-baseline` 冻结后的首条下游 child work item，先把 P1 的 UI Kernel 语义扩展正式冻结成单一 formal truth；在 formal baseline 完成后，再允许唯一的首批 implementation slice，把同一份 truth 落到 Kernel model 与定向 unit tests。它只处理“新增哪些 `Ui*` 语义组件协议、扩展哪些页面状态语义、这些语义如何继续保持 Provider 无关性与与 recipe/diagnostics 的边界”这条 Kernel 主线；它不是 page recipe 扩展工单，不是 diagnostics / drift 工单，也不是 provider/runtime 实现工单。
@@ -24,7 +24,7 @@
 - `069` 在没有 expanded state semantics 的情况下先扩 drift / diagnostics，导致 gate 反馈只能围绕临时命名或 provider 细节
 - provider 或企业项目历史页面模式反向主导 P1 组件集，使 `UiTabs / UiSearchBar / UiFilterBar / UiToolbar / UiPagination / UiSection / UiCard / UiResult` 退化成底层 API 别名
 
-因此，`067` 的职责是先冻结 P1 UI Kernel semantic expansion truth；在 formal baseline 完成后，当前工单只允许唯一的首批 kernel model semantic expansion slice，把该 truth 落到模型与定向单测，而不是继续扩大到 recipe、diagnostics、provider/runtime 或 root sync。
+因此，`067` 的职责是先冻结 P1 UI Kernel semantic expansion truth；在 formal baseline 完成后，当前工单先允许唯一的首批 kernel model semantic expansion slice，把该 truth 落到模型与定向单测；在该 slice 完成后，只允许补齐 `development-summary.md` 与 append-only execution log，作为 program-level close input，而不是继续扩大到 recipe、diagnostics、provider/runtime 或 root sync。
 
 ## 范围
 
@@ -36,6 +36,7 @@
   - 为后续 `068` recipe 扩展、`069` diagnostics / drift 扩展提供 canonical baseline
   - 在 formal baseline 完成后，仅允许唯一的首批 implementation slice 将 expanded kernel truth 落到 `src/ai_sdlc/models/frontend_ui_kernel.py` 与 `src/ai_sdlc/models/__init__.py`
   - 用 `tests/unit/test_frontend_ui_kernel_models.py` 与 `tests/unit/test_frontend_ui_kernel_artifacts.py` 验证模型层 truth 与 artifact payload 承接保持一致
+  - 在 Batch 5 fresh verification 完成后，仅允许通过 `development-summary.md` 与 `task-execution-log.md` 补齐 close-ready development summary handoff
 - **不覆盖**：
   - 定义 `DashboardPage / DialogFormPage / SearchListPage / WizardPage` 的 page recipe 标准本体
   - 扩张 whitelist、token rules、drift diagnostics、同一套 gate matrix 的兼容执行口径相关规则/反馈面或 remediation feedback
@@ -56,7 +57,7 @@
 - 新增页面状态语义必须与 `015` 的 `loading / empty / error / disabled / no-permission` 共存，而不是重写 MVP baseline
 - `067` formal baseline 已完成；当前唯一允许的实现批次是 Batch 5 kernel model semantic expansion slice，写面仅限 `src/ai_sdlc/models/frontend_ui_kernel.py`、`src/ai_sdlc/models/__init__.py`、`tests/unit/test_frontend_ui_kernel_models.py`、`tests/unit/test_frontend_ui_kernel_artifacts.py`
 - 当前 implementation slice 不改 `src/ai_sdlc/generators/frontend_ui_kernel_artifacts.py`，不改 root `program-manifest.yaml` 或 `frontend-program-branch-rollout-plan.md`，也不 formalize 下游 `068/069`
-- `067` 的当前状态必须被表达为 `accepted child baseline + verified first implementation slice`，但这不代表 recipe、diagnostics、provider/runtime、root sync 或 close-ready 已开始
+- `067` 的当前状态必须被表达为 `accepted child baseline + verified first implementation slice + close-ready development summary handoff`；这代表当前 work item 已进入 program-level `close` 输入，但不代表 recipe、diagnostics、provider/runtime 或新的 root sync 主线已开始
 
 ## 用户故事与验收
 
@@ -135,7 +136,7 @@
 | FR-067-016 | `067` 必须明确 `069` 负责 whitelist / token / drift diagnostics / coverage expansion，不得在当前工单抢跑 |
 | FR-067-017 | `067` 必须在 formal baseline 完成后允许唯一的 Batch 5 implementation slice，且写面仅限 `src/ai_sdlc/models/frontend_ui_kernel.py`、`src/ai_sdlc/models/__init__.py`、`tests/unit/test_frontend_ui_kernel_models.py`、`tests/unit/test_frontend_ui_kernel_artifacts.py` |
 | FR-067-018 | `067` 的当前 implementation slice 必须把 expanded semantic component / state truth 落到 Kernel model，并通过定向 RED/GREEN unit tests 证明该 truth 继续被 artifact payload 消费 |
-| FR-067-019 | `067` 必须明确当前状态是 `accepted child baseline + verified first implementation slice`，不生成 `development-summary.md`，也不宣称 `068/069`、provider/runtime、root sync 或 close-ready 已开始 |
+| FR-067-019 | `067` 必须明确当前状态是 `accepted child baseline + verified first implementation slice + close-ready development summary handoff`；允许生成 `development-summary.md` 作为 program-level `close` 输入，但不得据此宣称 `068/069`、provider/runtime 或新的 root sync 主线已开始 |
 
 ### Implementation Slice Contract
 
@@ -183,5 +184,5 @@
 - **SC-067-002**：`068` 可以直接根据 `067` 读取 expanded kernel truth，而不会再通过 recipe 反向定义组件语义
 - **SC-067-003**：`069` 可以直接根据 `067` 读取 expanded state semantics，而不会将状态命名退回 provider 私有口径
 - **SC-067-004**：reviewer 能从 `067` 直接读出 `067 != 068 != 069 != provider/runtime` 的边界
-- **SC-067-005**：`067` 当前状态被清楚表达为 `accepted child baseline + verified first implementation slice`，不会被误读成 `068/069`、provider/runtime、root program sync 或 close-ready 已开始
+- **SC-067-005**：`067` 当前状态被清楚表达为 `accepted child baseline + verified first implementation slice + close-ready development summary handoff`，不会被误读成 `068/069`、provider/runtime 或新的 root program sync 主线已开始
 - **SC-067-006**：reviewer 能从 `067` 直接读出当前 implementation slice 的唯一允许写面、验证方式与继续排除的 non-goals，而不需要回头依赖 `plan.md / tasks.md / task-execution-log.md` 反向推断顶层真值
