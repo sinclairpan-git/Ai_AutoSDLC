@@ -5849,6 +5849,123 @@ def test_execution_gates_pass_when_closed_and_frontend_ready(tmp_path: Path) -> 
     assert not any("frontend execute gate not clear" in item for item in gates.failed)
 
 
+def test_build_frontend_solution_confirmation_recommends_enterprise_defaults_in_simple_mode(
+    tmp_path: Path,
+) -> None:
+    for p in ("specs/001-auth", "specs/002-course", "specs/003-enroll"):
+        (tmp_path / p).mkdir(parents=True)
+
+    svc = ProgramService(tmp_path)
+    snapshot = svc.build_frontend_solution_confirmation(_manifest())
+
+    assert snapshot.decision_status == "recommended"
+    assert snapshot.preflight_status == "ready"
+    assert snapshot.recommended_frontend_stack == "vue2"
+    assert snapshot.recommended_provider_id == "enterprise-vue2"
+    assert snapshot.recommended_style_pack_id == "enterprise-default"
+    assert snapshot.requested_frontend_stack == "vue2"
+    assert snapshot.requested_provider_id == "enterprise-vue2"
+    assert snapshot.requested_style_pack_id == "enterprise-default"
+    assert snapshot.effective_frontend_stack == "vue2"
+    assert snapshot.effective_provider_id == "enterprise-vue2"
+    assert snapshot.effective_style_pack_id == "enterprise-default"
+    assert snapshot.recommended_backend_stack == "fastapi"
+    assert snapshot.recommended_api_collab_mode == "typed-bff"
+    assert snapshot.style_fidelity_status == "full"
+    assert snapshot.provider_mode == "normal"
+
+
+def test_build_frontend_solution_confirmation_recommends_public_fallback_in_simple_mode_when_enterprise_not_eligible(
+    tmp_path: Path,
+) -> None:
+    for p in ("specs/001-auth", "specs/002-course", "specs/003-enroll"):
+        (tmp_path / p).mkdir(parents=True)
+
+    svc = ProgramService(tmp_path)
+    snapshot = svc.build_frontend_solution_confirmation(
+        _manifest(),
+        enterprise_provider_eligible=False,
+        failed_preflight_check_ids=["company-registry-token"],
+    )
+
+    assert snapshot.decision_status == "recommended"
+    assert snapshot.preflight_status == "ready"
+    assert snapshot.recommended_frontend_stack == "vue3"
+    assert snapshot.recommended_provider_id == "public-primevue"
+    assert snapshot.recommended_style_pack_id == "modern-saas"
+    assert snapshot.requested_frontend_stack == "vue3"
+    assert snapshot.requested_provider_id == "public-primevue"
+    assert snapshot.requested_style_pack_id == "modern-saas"
+    assert snapshot.effective_frontend_stack == "vue3"
+    assert snapshot.effective_provider_id == "public-primevue"
+    assert snapshot.effective_style_pack_id == "modern-saas"
+    assert snapshot.availability_summary.failed_check_ids == [
+        "company-registry-token"
+    ]
+    assert snapshot.style_fidelity_status == "full"
+    assert snapshot.provider_mode == "normal"
+
+
+def test_build_frontend_solution_confirmation_requires_explicit_cross_stack_fallback_for_enterprise_request(
+    tmp_path: Path,
+) -> None:
+    for p in ("specs/001-auth", "specs/002-course", "specs/003-enroll"):
+        (tmp_path / p).mkdir(parents=True)
+
+    svc = ProgramService(tmp_path)
+    snapshot = svc.build_frontend_solution_confirmation(
+        _manifest(),
+        requested_frontend_stack="vue2",
+        requested_provider_id="enterprise-vue2",
+        requested_style_pack_id="enterprise-default",
+        enterprise_provider_eligible=False,
+        failed_preflight_check_ids=["company-registry-token"],
+    )
+
+    assert snapshot.decision_status == "fallback_required"
+    assert snapshot.preflight_status == "warning"
+    assert snapshot.requested_frontend_stack == "vue2"
+    assert snapshot.requested_provider_id == "enterprise-vue2"
+    assert snapshot.requested_style_pack_id == "enterprise-default"
+    assert snapshot.effective_frontend_stack == "vue3"
+    assert snapshot.effective_provider_id == "public-primevue"
+    assert snapshot.effective_style_pack_id == "modern-saas"
+    assert snapshot.provider_mode == "cross_stack_fallback"
+    assert snapshot.fallback_reason_code == "enterprise_provider_unavailable"
+    assert snapshot.availability_summary.failed_check_ids == [
+        "company-registry-token"
+    ]
+
+
+def test_build_frontend_solution_confirmation_blocks_when_enterprise_unavailable_and_no_fallback_candidate(
+    tmp_path: Path,
+) -> None:
+    for p in ("specs/001-auth", "specs/002-course", "specs/003-enroll"):
+        (tmp_path / p).mkdir(parents=True)
+
+    svc = ProgramService(tmp_path)
+    snapshot = svc.build_frontend_solution_confirmation(
+        _manifest(),
+        requested_frontend_stack="vue2",
+        requested_provider_id="enterprise-vue2",
+        requested_style_pack_id="enterprise-default",
+        enterprise_provider_eligible=False,
+        failed_preflight_check_ids=["company-registry-token"],
+        fallback_candidate_available=False,
+    )
+
+    assert snapshot.decision_status == "blocked"
+    assert snapshot.preflight_status == "blocked"
+    assert snapshot.requested_frontend_stack == "vue2"
+    assert snapshot.requested_provider_id == "enterprise-vue2"
+    assert snapshot.requested_style_pack_id == "enterprise-default"
+    assert snapshot.effective_frontend_stack == "vue2"
+    assert snapshot.effective_provider_id == "enterprise-vue2"
+    assert snapshot.effective_style_pack_id == "enterprise-default"
+    assert snapshot.provider_mode == "normal"
+    assert snapshot.fallback_reason_code == "enterprise_provider_unavailable"
+
+
 def _write_minimal_frontend_contract_page_artifacts(
     root: Path,
     *,

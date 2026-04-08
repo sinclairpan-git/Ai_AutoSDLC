@@ -35,6 +35,11 @@ from ai_sdlc.models.frontend_gate_policy import (
 from ai_sdlc.models.frontend_generation_constraints import (
     build_mvp_frontend_generation_constraints,
 )
+from ai_sdlc.models.frontend_solution_confirmation import (
+    AvailabilitySummary,
+    FrontendSolutionSnapshot,
+    build_mvp_solution_snapshot,
+)
 from ai_sdlc.models.program import ProgramManifest, ProgramSpecRef
 from ai_sdlc.telemetry.clock import utc_now_z
 
@@ -971,6 +976,200 @@ class ProgramService:
             statuses[spec.id].blocked_by = blocked
 
         return [statuses[s.id] for s in manifest.specs if s.id in statuses]
+
+    def build_frontend_solution_confirmation(
+        self,
+        manifest: ProgramManifest,
+        *,
+        mode: str = "simple",
+        requested_frontend_stack: str | None = None,
+        requested_provider_id: str | None = None,
+        requested_style_pack_id: str | None = None,
+        enterprise_provider_eligible: bool = True,
+        failed_preflight_check_ids: list[str] | None = None,
+        fallback_candidate_available: bool = True,
+    ) -> FrontendSolutionSnapshot:
+        """Build the minimal frontend solution confirmation truth for Batch 7."""
+
+        del manifest  # Batch 7 orchestration is manifest-shaped but not manifest-derived yet.
+
+        if mode != "simple":
+            raise ValueError("only simple mode is supported in Batch 7 baseline")
+
+        availability_checks = [
+            "company-registry-network",
+            "company-registry-token",
+        ]
+        failed_check_ids = list(failed_preflight_check_ids or [])
+        passed_check_ids = [
+            check_id
+            for check_id in availability_checks
+            if check_id not in failed_check_ids
+        ]
+        recommendation = self._default_frontend_solution_recommendation(
+            enterprise_provider_eligible=enterprise_provider_eligible
+        )
+        requested_solution = {
+            "frontend_stack": requested_frontend_stack
+            or recommendation["frontend_stack"],
+            "provider_id": requested_provider_id or recommendation["provider_id"],
+            "style_pack_id": requested_style_pack_id
+            or recommendation["style_pack_id"],
+        }
+        explicit_enterprise_request = (
+            requested_solution["frontend_stack"] == "vue2"
+            and requested_solution["provider_id"] == "enterprise-vue2"
+            and not enterprise_provider_eligible
+        )
+
+        effective_solution = dict(requested_solution)
+        decision_status = "recommended"
+        preflight_status = "ready"
+        provider_mode = "normal"
+        fallback_reason_code: str | None = None
+        fallback_reason_text: str | None = None
+        preflight_reason_codes: list[str] = []
+
+        if explicit_enterprise_request:
+            fallback_reason_code = "enterprise_provider_unavailable"
+            fallback_reason_text = (
+                "Enterprise provider prerequisites are not satisfied; explicit fallback confirmation is required."
+            )
+            if fallback_candidate_available:
+                effective_solution = {
+                    "frontend_stack": "vue3",
+                    "provider_id": "public-primevue",
+                    "style_pack_id": "modern-saas",
+                }
+                decision_status = "fallback_required"
+                preflight_status = "warning"
+                provider_mode = "cross_stack_fallback"
+                preflight_reason_codes = [fallback_reason_code]
+            else:
+                decision_status = "blocked"
+                preflight_status = "blocked"
+                preflight_reason_codes = [fallback_reason_code]
+
+        user_override_fields: list[str] = []
+        if requested_solution["frontend_stack"] != recommendation["frontend_stack"]:
+            user_override_fields.append("frontend_stack")
+        if requested_solution["provider_id"] != recommendation["provider_id"]:
+            user_override_fields.append("provider_id")
+        if requested_solution["style_pack_id"] != recommendation["style_pack_id"]:
+            user_override_fields.append("style_pack_id")
+
+        style_fidelity_status, style_degradation_reason_codes = (
+            self._resolve_style_fidelity(
+                effective_provider_id=effective_solution["provider_id"],
+                effective_style_pack_id=effective_solution["style_pack_id"],
+            )
+        )
+
+        if enterprise_provider_eligible:
+            availability_summary = AvailabilitySummary(
+                overall_status="ready",
+                passed_check_ids=passed_check_ids,
+                failed_check_ids=[],
+                blocking_reason_codes=[],
+            )
+            availability_reason_text = "Enterprise provider prerequisites satisfied."
+            recommendation_reason_codes = ["enterprise-provider-preferred"]
+            recommendation_reason_text = (
+                "Enterprise baseline is available and preferred."
+            )
+        else:
+            blocking_reason_codes = (
+                ["enterprise_provider_unavailable"] if failed_check_ids else []
+            )
+            availability_summary = AvailabilitySummary(
+                overall_status=(
+                    "blocked" if explicit_enterprise_request and not fallback_candidate_available else "attention"
+                ),
+                passed_check_ids=passed_check_ids,
+                failed_check_ids=failed_check_ids,
+                blocking_reason_codes=blocking_reason_codes,
+            )
+            availability_reason_text = (
+                "Enterprise provider prerequisites are not satisfied."
+            )
+            recommendation_reason_codes = ["public-provider-defaulted"]
+            recommendation_reason_text = (
+                "Enterprise provider is unavailable, so the public provider becomes the default recommendation."
+            )
+
+        return build_mvp_solution_snapshot(
+            project_id=self.root.name,
+            confirmed_by_mode=mode,
+            decision_status=decision_status,
+            recommendation_source=f"{mode}-mode",
+            recommendation_reason_codes=recommendation_reason_codes,
+            recommendation_reason_text=recommendation_reason_text,
+            recommended_frontend_stack=recommendation["frontend_stack"],
+            recommended_provider_id=recommendation["provider_id"],
+            recommended_style_pack_id=recommendation["style_pack_id"],
+            requested_frontend_stack=requested_solution["frontend_stack"],
+            requested_provider_id=requested_solution["provider_id"],
+            requested_style_pack_id=requested_solution["style_pack_id"],
+            effective_frontend_stack=effective_solution["frontend_stack"],
+            effective_provider_id=effective_solution["provider_id"],
+            effective_style_pack_id=effective_solution["style_pack_id"],
+            enterprise_provider_eligible=enterprise_provider_eligible,
+            availability_checks=availability_checks,
+            availability_summary=availability_summary,
+            availability_reason_text=availability_reason_text,
+            preflight_status=preflight_status,
+            preflight_reason_codes=preflight_reason_codes,
+            user_overrode_recommendation=bool(user_override_fields),
+            user_override_fields=user_override_fields,
+            provider_mode=provider_mode,
+            fallback_reason_code=fallback_reason_code,
+            fallback_reason_text=fallback_reason_text,
+            style_fidelity_status=style_fidelity_status,
+            style_degradation_reason_codes=style_degradation_reason_codes,
+        )
+
+    def _default_frontend_solution_recommendation(
+        self,
+        *,
+        enterprise_provider_eligible: bool,
+    ) -> dict[str, str]:
+        if enterprise_provider_eligible:
+            return {
+                "frontend_stack": "vue2",
+                "provider_id": "enterprise-vue2",
+                "style_pack_id": "enterprise-default",
+            }
+
+        return {
+            "frontend_stack": "vue3",
+            "provider_id": "public-primevue",
+            "style_pack_id": "modern-saas",
+        }
+
+    def _resolve_style_fidelity(
+        self,
+        *,
+        effective_provider_id: str,
+        effective_style_pack_id: str,
+    ) -> tuple[str, list[str]]:
+        if effective_provider_id == "public-primevue":
+            return "full", []
+
+        enterprise_style_support = {
+            "enterprise-default": ("full", []),
+            "data-console": ("full", []),
+            "high-clarity": ("full", []),
+            "modern-saas": ("partial", []),
+            "macos-glass": (
+                "degraded",
+                ["glass-surface-depth-not-compatible-with-enterprise-vue2-default-theme"],
+            ),
+        }
+        fidelity_status, degradation_reason_codes = enterprise_style_support.get(
+            effective_style_pack_id,
+            ("unsupported", ["style-pack-not-supported-by-provider"]),
+        )
+        return fidelity_status, list(degradation_reason_codes)
 
     def build_integration_dry_run(self, manifest: ProgramManifest) -> ProgramIntegrationPlan:
         """Build a dry-run integration plan (no git mutations)."""

@@ -167,3 +167,81 @@
 
 - `codex/073-provider-style-batch4` 现在已经被整理成可安全 push / PR / merge 的分支。
 - 本次合入目标是补齐遗漏的 formal docs provenance，而不是回滚代码实现。
+
+### Batch 2026-04-08-003 | recommendation / preflight / fallback orchestration baseline
+
+#### 3.1 范围
+
+- **任务来源**：`073` Batch 7（T71 / T72 / T73）
+- **目标**：在 `ProgramService` 中补齐最小 recommendation / preflight / fallback orchestration，并用定向单测固定简单模式、显式 enterprise 请求与 `blocked` 路径。
+- **本批 touched files**：
+  - `tests/unit/test_program_service.py`
+  - `src/ai_sdlc/core/program_service.py`
+  - `specs/073-frontend-p2-provider-style-solution-baseline/task-execution-log.md`
+
+#### 3.2 T71 | 先写 failing tests 固定 orchestration 语义
+
+- **改动内容**：
+  - 在 `tests/unit/test_program_service.py` 新增 4 个定向用例，覆盖：
+    - 简单模式默认推荐 enterprise baseline
+    - enterprise 不可用时简单模式自动推荐 `vue3 + public-primevue + modern-saas`
+    - 显式 enterprise 请求失败时输出 `fallback_required`
+    - enterprise 不可用且无 fallback candidate 时输出 `blocked`
+  - 同时固定简单模式默认不落到 `degraded` style fidelity。
+- **RED 结果**：
+  - `uv run pytest tests/unit/test_program_service.py -q -k "build_frontend_solution_confirmation"`
+  - 结果：`4 failed`
+  - 失败原因：`ProgramService` 尚未提供 `build_frontend_solution_confirmation()`，符合预期红测语义。
+- **是否符合任务目标**：符合。
+
+#### 3.3 T72 | 实现最小 recommendation / preflight / fallback orchestration
+
+- **改动内容**：
+  - 在 `src/ai_sdlc/core/program_service.py` 引入 `FrontendSolutionSnapshot` / `AvailabilitySummary` / `build_mvp_solution_snapshot`。
+  - 新增 `ProgramService.build_frontend_solution_confirmation()`，输出结构化 solution confirmation truth，而不是自由文本。
+  - 简单模式下按 enterprise eligibility 决定默认推荐：
+    - 可用时推荐 `vue2 + enterprise-vue2 + enterprise-default`
+    - 不可用时推荐 `vue3 + public-primevue + modern-saas`
+  - 对显式 enterprise 请求实现最小 preflight 分流：
+    - 有退路时输出 `fallback_required`，且候选 `effective_*` 明确指向 `vue3 + public-primevue + modern-saas`
+    - 无退路时输出 `blocked`
+  - 仅产出 preflight / requested / effective / audit truth，不执行真实安装。
+  - 追加最小 style fidelity 解析，确保简单模式默认推荐不落到 `degraded`。
+- **GREEN 结果**：
+  - `uv run pytest tests/unit/test_program_service.py -q -k "build_frontend_solution_confirmation"`
+  - 结果：`4 passed`
+- **是否符合任务目标**：符合。
+
+#### 3.4 T73 | Fresh verify 并追加 orchestration batch 归档
+
+- **验证命令**：
+  - `uv run pytest tests/unit/test_program_service.py -q`
+  - `uv run ruff check src tests`
+  - `git diff --check -- specs/073-frontend-p2-provider-style-solution-baseline src/ai_sdlc/core tests/unit`
+  - `uv run ai-sdlc verify constraints`
+- **验证结果**：
+  - `uv run pytest tests/unit/test_program_service.py -q` -> `148 passed in 0.96s`
+  - `uv run ruff check src tests` -> `All checks passed!`
+  - `git diff --check -- specs/073-frontend-p2-provider-style-solution-baseline src/ai_sdlc/core tests/unit` -> 通过
+  - `uv run ai-sdlc verify constraints` -> `verify constraints: no BLOCKERs.`
+- **是否符合任务目标**：符合。
+
+#### 3.5 代码审查（Mandatory）
+
+- **规格对齐**：当前实现严格停留在 Batch 7 边界，只补 ProgramService orchestration，不提前扩到 CLI `solution-confirm`。
+- **代码质量**：复用已有 `FrontendSolutionSnapshot` 真值模型，避免在 service 层重复定义第二套结构。
+- **测试质量**：先红后绿，且已补完整文件级 pytest / `ruff` / `diff --check` / constraints verify。
+- **结论**：`无 Critical 阻塞项`
+
+#### 3.6 任务/计划同步状态（Mandatory）
+
+- `tasks.md` 同步状态：`无需变更（Batch 7 formal tasks 与实际执行一致）`
+- `plan.md` 同步状态：`已同步（Batch 7 现在进入已实现状态）`
+- `spec.md` 同步状态：`无需变更`
+- 说明：下一步可以进入 Batch 8 的 CLI `solution-confirm` slice。
+
+#### 3.7 批次结论
+
+- `073` 的 recommendation / preflight / fallback orchestration baseline 已落到 `ProgramService`。
+- 简单模式推荐、显式 cross-stack fallback requirement 与 `blocked` 路径都已有结构化单测保护。
+- 当前工作树在 Batch 7 范围内已经达到可继续推进到 CLI slice 的状态。
