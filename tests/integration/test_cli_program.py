@@ -1084,6 +1084,128 @@ specs:
         assert "Frontend Provider Runtime Artifact" in report
         assert ".ai-sdlc/memory/frontend-provider-runtime/latest.yaml" in report
 
+    def test_program_solution_confirm_simple_mode_preview_shows_single_recommendation(
+        self, initialized_project_dir: Path
+    ) -> None:
+        root = initialized_project_dir
+        _write_manifest(root)
+
+        with patch("ai_sdlc.cli.program_cmd.find_project_root", return_value=root):
+            result = runner.invoke(app, ["program", "solution-confirm"])
+
+        assert result.exit_code == 0
+        assert "Program Frontend Solution Confirm Simple" in result.output
+        assert "Recommended Solution" in result.output
+        assert "recommended_frontend_stack: vue2" in result.output
+        assert "recommended_provider_id: enterprise-vue2" in result.output
+        assert "fallback_required: false" in result.output
+        assert not (
+            root
+            / ".ai-sdlc"
+            / "memory"
+            / "frontend-solution-confirmation"
+            / "latest.yaml"
+        ).exists()
+
+    def test_program_solution_confirm_advanced_mode_surfaces_wizard_and_preflight(
+        self, initialized_project_dir: Path
+    ) -> None:
+        root = initialized_project_dir
+        _write_manifest(root)
+
+        with patch("ai_sdlc.cli.program_cmd.find_project_root", return_value=root):
+            result = runner.invoke(
+                app,
+                [
+                    "program",
+                    "solution-confirm",
+                    "--mode",
+                    "advanced",
+                    "--frontend-stack",
+                    "vue2",
+                    "--provider-id",
+                    "enterprise-vue2",
+                    "--style-pack-id",
+                    "enterprise-default",
+                    "--enterprise-provider-ineligible",
+                ],
+            )
+
+        assert result.exit_code == 0
+        assert "Program Frontend Solution Confirm Advanced" in result.output
+        assert "Step 1/7" in result.output
+        assert "Step 7/7" in result.output
+        assert "Final Preflight" in result.output
+        assert "requested_frontend_stack: vue2" in result.output
+        assert "effective_frontend_stack: vue3" in result.output
+        assert "preflight_status: warning" in result.output
+        assert (
+            "will_change_on_confirm: frontend_stack, provider_id, style_pack_id"
+            in result.output
+        )
+        assert "fallback_required: true" in result.output
+
+    def test_program_solution_confirm_execute_requires_explicit_confirmation(
+        self, initialized_project_dir: Path
+    ) -> None:
+        root = initialized_project_dir
+        _write_manifest(root)
+
+        with patch("ai_sdlc.cli.program_cmd.find_project_root", return_value=root):
+            result = runner.invoke(app, ["program", "solution-confirm", "--execute"])
+
+        assert result.exit_code == 2
+        assert "--yes" in result.output
+
+    def test_program_solution_confirm_execute_writes_snapshot_without_preview_only_fields(
+        self, initialized_project_dir: Path
+    ) -> None:
+        root = initialized_project_dir
+        _write_manifest(root)
+        report_rel = ".ai-sdlc/memory/frontend-solution-confirmation.md"
+
+        with patch("ai_sdlc.cli.program_cmd.find_project_root", return_value=root):
+            result = runner.invoke(
+                app,
+                [
+                    "program",
+                    "solution-confirm",
+                    "--mode",
+                    "advanced",
+                    "--frontend-stack",
+                    "vue2",
+                    "--provider-id",
+                    "enterprise-vue2",
+                    "--style-pack-id",
+                    "enterprise-default",
+                    "--enterprise-provider-ineligible",
+                    "--execute",
+                    "--yes",
+                    "--report",
+                    report_rel,
+                ],
+            )
+
+        artifact_path = (
+            root
+            / ".ai-sdlc"
+            / "memory"
+            / "frontend-solution-confirmation"
+            / "latest.yaml"
+        )
+        assert result.exit_code == 0
+        assert artifact_path.is_file()
+        payload = yaml.safe_load(artifact_path.read_text(encoding="utf-8"))
+        assert payload["confirmed_by_mode"] == "advanced"
+        assert payload["decision_status"] == "fallback_required"
+        assert payload["requested_frontend_stack"] == "vue2"
+        assert payload["effective_frontend_stack"] == "vue3"
+        assert payload["preflight_status"] == "warning"
+        assert "will_change_on_confirm" not in payload
+        report = (root / report_rel).read_text(encoding="utf-8")
+        assert "Frontend Solution Confirmation Artifact" in report
+        assert ".ai-sdlc/memory/frontend-solution-confirmation/latest.yaml" in report
+
     def test_program_provider_patch_handoff_surfaces_runtime_artifact(
         self, initialized_project_dir: Path
     ) -> None:

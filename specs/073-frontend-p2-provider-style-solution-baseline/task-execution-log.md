@@ -245,3 +245,76 @@
 - `073` 的 recommendation / preflight / fallback orchestration baseline 已落到 `ProgramService`。
 - 简单模式推荐、显式 cross-stack fallback requirement 与 `blocked` 路径都已有结构化单测保护。
 - 当前工作树在 Batch 7 范围内已经达到可继续推进到 CLI slice 的状态。
+
+### Batch 2026-04-08-004 | CLI solution-confirm baseline
+
+#### 4.1 范围
+
+- **任务来源**：`073` Batch 8（T81 / T82 / T83）
+- **目标**：补齐最小 CLI `program solution-confirm` 入口，把 recommendation / advanced wizard / final confirmation gate 变成结构化输出与可落盘 snapshot。
+- **本批 touched files**：
+  - `tests/integration/test_cli_program.py`
+  - `src/ai_sdlc/cli/program_cmd.py`
+  - `docs/USER_GUIDE.zh-CN.md`
+  - `specs/073-frontend-p2-provider-style-solution-baseline/task-execution-log.md`
+
+#### 4.2 T81 | 先写 failing tests 固定 CLI 简单模式 / 高级模式 / 最终确认页语义
+
+- **改动内容**：
+  - 在 `tests/integration/test_cli_program.py` 新增 4 个定向集成测试，覆盖：
+    - 简单模式默认只显示单套主推荐
+    - 高级模式显示 7 步结构化向导与最终预检区
+    - `--execute` 缺少 `--yes` 时必须拒绝执行
+    - 最终确认落盘后 snapshot artifact 不得携带 `will_change_on_confirm`
+- **RED 结果**：
+  - `uv run pytest tests/integration/test_cli_program.py -q -k "solution_confirm"`
+  - 结果：`4 failed`
+  - 失败原因：CLI 尚未提供 `program solution-confirm` 命令，符合预期红测语义。
+- **是否符合任务目标**：符合。
+
+#### 4.3 T82 | 实现最小 CLI solution-confirm 入口
+
+- **改动内容**：
+  - 在 `src/ai_sdlc/cli/program_cmd.py` 新增 `program solution-confirm` 命令。
+  - 支持 `simple / advanced` 两种模式、`--dry-run / --execute`、`--yes`、`--report`，以及最小 enterprise eligibility / failed preflight / fallback candidate 参数面。
+  - 复用 `ProgramService.build_frontend_solution_confirmation()` 输出结构化 snapshot，而不是回退到自由文本。
+  - 简单模式输出单套推荐；高级模式输出 7 步 wizard 与 final preflight。
+  - 最终确认落盘时通过 artifact generator 写 `.ai-sdlc/memory/frontend-solution-confirmation/`，并确保 `will_change_on_confirm` 只停留在确认前展示层，不进入 snapshot 真值。
+  - 在 `docs/USER_GUIDE.zh-CN.md` 追加 `program solution-confirm` 的最小使用面与边界说明。
+- **GREEN 结果**：
+  - `uv run pytest tests/integration/test_cli_program.py -q -k "solution_confirm"`
+  - 结果：`4 passed`
+- **是否符合任务目标**：符合。
+
+#### 4.4 T83 | Fresh verify 并追加 CLI batch 归档
+
+- **验证命令**：
+  - `uv run pytest tests/integration/test_cli_program.py -q`
+  - `uv run ruff check src tests`
+  - `git diff --check -- specs/073-frontend-p2-provider-style-solution-baseline src/ai_sdlc/cli docs/USER_GUIDE.zh-CN.md tests/integration`
+  - `uv run ai-sdlc verify constraints`
+- **验证结果**：
+  - `uv run pytest tests/integration/test_cli_program.py -q` -> `112 passed in 2.11s`
+  - `uv run ruff check src tests` -> `All checks passed!`
+  - `git diff --check -- specs/073-frontend-p2-provider-style-solution-baseline src/ai_sdlc/cli docs/USER_GUIDE.zh-CN.md tests/integration` -> 通过
+  - `uv run ai-sdlc verify constraints` -> `verify constraints: no BLOCKERs.`
+- **是否符合任务目标**：符合。
+
+#### 4.5 代码审查（Mandatory）
+
+- **规格对齐**：当前实现严格停留在 Batch 8 边界，只增加 CLI `solution-confirm` slice 与对应文档，不提前进入 Batch 9 verify/consistency slice。
+- **代码质量**：CLI 层复用已有 `ProgramService` / artifact generator / snapshot model，避免在入口层拼装第二套真值结构。
+- **测试质量**：先红后绿，已固定简单模式、高级模式、确认 gate 与 artifact truth 边界。
+- **结论**：`无 Critical 阻塞项`
+
+#### 4.6 任务/计划同步状态（Mandatory）
+
+- `tasks.md` 同步状态：`无需变更（Batch 8 formal tasks 与当前实现一致）`
+- `plan.md` 同步状态：`已同步（Batch 8 已实现并完成 fresh verify）`
+- `spec.md` 同步状态：`无需变更`
+- 说明：下一步可继续推进 Batch 9 的 verify / consistency / regression slice。
+
+#### 4.7 批次结论
+
+- `073` 的 CLI `program solution-confirm` baseline 已落地，简单模式、高级模式、确认 gate 与 snapshot artifact 边界均已被集成测试覆盖。
+- 用户手册已补最小使用面，当前 Batch 8 在集成测试、`ruff`、`diff --check` 与 constraints verify 上均已 fresh 通过。

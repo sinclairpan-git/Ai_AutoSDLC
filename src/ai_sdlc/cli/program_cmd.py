@@ -13,6 +13,15 @@ from ai_sdlc.core.program_service import (
     ProgramFrontendRemediationInput,
     ProgramService,
 )
+from ai_sdlc.generators.frontend_solution_confirmation_artifacts import (
+    frontend_solution_confirmation_memory_root,
+    materialize_frontend_solution_confirmation_artifacts,
+)
+from ai_sdlc.models.frontend_solution_confirmation import (
+    FrontendSolutionSnapshot,
+    build_builtin_install_strategies,
+    build_builtin_style_pack_manifests,
+)
 from ai_sdlc.utils.helpers import find_project_root
 
 program_app = typer.Typer(help="Program-level planning across multiple specs")
@@ -814,6 +823,168 @@ def program_provider_runtime(
 
     console.print("\n[bold red]Frontend provider runtime incomplete[/bold red]")
     raise typer.Exit(code=1)
+
+
+@program_app.command("solution-confirm")
+def program_solution_confirm(
+    manifest: str = typer.Option(
+        "program-manifest.yaml",
+        "--manifest",
+        help="Path to program manifest relative to project root.",
+    ),
+    mode: str = typer.Option(
+        "simple",
+        "--mode",
+        help="Confirmation flow mode: simple or advanced.",
+    ),
+    frontend_stack: str = typer.Option(
+        "",
+        "--frontend-stack",
+        help="Optional requested frontend stack override.",
+    ),
+    provider_id: str = typer.Option(
+        "",
+        "--provider-id",
+        help="Optional requested provider override.",
+    ),
+    style_pack_id: str = typer.Option(
+        "",
+        "--style-pack-id",
+        help="Optional requested style pack override.",
+    ),
+    enterprise_provider_eligible: bool = typer.Option(
+        True,
+        "--enterprise-provider-eligible/--enterprise-provider-ineligible",
+        help="Whether enterprise provider prerequisites are currently satisfied.",
+    ),
+    failed_preflight_check_ids: list[str] = typer.Option(
+        None,
+        "--failed-preflight-check-id",
+        help="Optional failed availability/preflight check IDs.",
+    ),
+    fallback_candidate_available: bool = typer.Option(
+        True,
+        "--fallback-candidate-available/--no-fallback-candidate",
+        help="Whether a public fallback candidate is available when enterprise is blocked.",
+    ),
+    dry_run: bool = typer.Option(
+        True,
+        "--dry-run/--execute",
+        help="Preview or explicitly materialize the structured solution confirmation snapshot.",
+    ),
+    report: str = typer.Option(
+        "",
+        "--report",
+        help="Optional report output path relative to project root.",
+    ),
+    yes: bool = typer.Option(
+        False,
+        "--yes",
+        help="Confirm solution confirmation execute mode.",
+    ),
+) -> None:
+    """Preview or execute the structured frontend solution confirmation baseline."""
+    root = _resolve_root()
+    svc = ProgramService(root, root / manifest)
+
+    try:
+        mf = svc.load_manifest()
+    except Exception as exc:
+        console.print(f"[red]Failed to load manifest: {exc}[/red]")
+        raise typer.Exit(code=2) from None
+
+    result = svc.validate_manifest(mf)
+    if not result.valid:
+        console.print(
+            "[bold red]Manifest invalid; cannot build frontend solution confirmation.[/bold red]"
+        )
+        for e in result.errors:
+            console.print(f"  - {e}")
+        raise typer.Exit(code=1)
+
+    normalized_mode = mode.strip().lower()
+    if normalized_mode not in {"simple", "advanced"}:
+        console.print("[bold red]`--mode` must be `simple` or `advanced`.[/bold red]")
+        raise typer.Exit(code=2)
+
+    snapshot = svc.build_frontend_solution_confirmation(
+        mf,
+        mode="simple",
+        requested_frontend_stack=frontend_stack or None,
+        requested_provider_id=provider_id or None,
+        requested_style_pack_id=style_pack_id or None,
+        enterprise_provider_eligible=enterprise_provider_eligible,
+        failed_preflight_check_ids=list(failed_preflight_check_ids or []),
+        fallback_candidate_available=fallback_candidate_available,
+    )
+    snapshot = _coerce_frontend_solution_confirmation_mode(
+        snapshot,
+        mode=normalized_mode,
+    )
+
+    mode_title = (
+        "Program Frontend Solution Confirm Simple"
+        if normalized_mode == "simple"
+        else "Program Frontend Solution Confirm Advanced"
+    )
+    console.print(f"[bold]{mode_title}[/bold]")
+
+    if normalized_mode == "advanced":
+        _render_frontend_solution_confirmation_wizard(snapshot)
+    else:
+        _render_frontend_solution_confirmation_recommendation(snapshot)
+    _render_frontend_solution_confirmation_final(snapshot)
+
+    artifact_paths: list[Path] = []
+    latest_snapshot_path: Path | None = None
+    if not dry_run:
+        if not yes:
+            console.print(
+                "[bold yellow]`--execute` requires explicit confirmation via `--yes`.[/bold yellow]"
+            )
+            raise typer.Exit(code=2)
+        artifact_paths = materialize_frontend_solution_confirmation_artifacts(
+            root,
+            style_packs=build_builtin_style_pack_manifests(),
+            install_strategies=build_builtin_install_strategies(),
+            snapshot=snapshot,
+        )
+        latest_snapshot_path = (
+            frontend_solution_confirmation_memory_root(root) / "latest.yaml"
+        )
+        console.print("\n[bold cyan]Frontend Solution Confirmation Artifact[/bold cyan]")
+        console.print(
+            f"  - saved: {latest_snapshot_path.relative_to(root)}",
+            markup=False,
+        )
+
+    if report:
+        report_path = root / report
+        report_path.parent.mkdir(parents=True, exist_ok=True)
+        lines = _frontend_solution_confirmation_report_lines(
+            manifest=manifest,
+            mode_title=mode_title,
+            snapshot=snapshot,
+            mode=normalized_mode,
+            latest_snapshot_path=latest_snapshot_path,
+            artifact_paths=artifact_paths,
+        )
+        report_path.write_text("\n".join(lines), encoding="utf-8")
+        console.print(f"\n[green]Report written:[/green] {report_path}")
+
+    if dry_run:
+        raise typer.Exit(code=0)
+
+    if snapshot.preflight_status == "blocked":
+        console.print(
+            "\n[bold red]Frontend solution confirmation blocked[/bold red]"
+        )
+        raise typer.Exit(code=1)
+
+    console.print(
+        "\n[bold green]Frontend solution confirmation materialized[/bold green]"
+    )
+    raise typer.Exit(code=0)
 
 
 @program_app.command("provider-patch-handoff")
@@ -3789,6 +3960,237 @@ def _render_frontend_remediation_execution_result(results: list[object]) -> None
         summary = str(getattr(item, "summary", "")).strip()
         if summary:
             console.print(f"    summary: {summary}", markup=False)
+
+
+def _coerce_frontend_solution_confirmation_mode(
+    snapshot: FrontendSolutionSnapshot,
+    *,
+    mode: str,
+) -> FrontendSolutionSnapshot:
+    if snapshot.confirmed_by_mode == mode:
+        return snapshot
+
+    payload = snapshot.model_dump(mode="json")
+    payload["confirmed_by_mode"] = mode
+    payload["recommendation_source"] = f"{mode}-mode"
+    return FrontendSolutionSnapshot(**payload)
+
+
+def _frontend_solution_confirmation_change_fields(
+    snapshot: FrontendSolutionSnapshot,
+) -> list[str]:
+    fields = [
+        "project_shape",
+        "frontend_stack",
+        "provider_id",
+        "backend_stack",
+        "api_collab_mode",
+        "style_pack_id",
+    ]
+    changed_fields: list[str] = []
+    for field_name in fields:
+        requested_value = getattr(snapshot, f"requested_{field_name}")
+        effective_value = getattr(snapshot, f"effective_{field_name}")
+        if requested_value != effective_value:
+            changed_fields.append(field_name)
+    return changed_fields
+
+
+def _frontend_solution_confirmation_fallback_required(
+    snapshot: FrontendSolutionSnapshot,
+) -> bool:
+    return snapshot.decision_status in {"fallback_required", "fallback_confirmed"}
+
+
+def _render_frontend_solution_confirmation_recommendation(
+    snapshot: FrontendSolutionSnapshot,
+) -> None:
+    console.print("\n[bold cyan]Recommended Solution[/bold cyan]")
+    console.print(
+        f"  - recommended_frontend_stack: {snapshot.recommended_frontend_stack}",
+        markup=False,
+    )
+    console.print(
+        f"  - recommended_provider_id: {snapshot.recommended_provider_id}",
+        markup=False,
+    )
+    console.print(
+        f"  - recommended_style_pack_id: {snapshot.recommended_style_pack_id}",
+        markup=False,
+    )
+    console.print(
+        f"  - recommendation_reason_text: {snapshot.recommendation_reason_text}",
+        markup=False,
+    )
+
+
+def _render_frontend_solution_confirmation_wizard(
+    snapshot: FrontendSolutionSnapshot,
+) -> None:
+    changed_fields = _frontend_solution_confirmation_change_fields(snapshot)
+    step_lines = [
+        "Step 1/7: Recommendation",
+        "Step 2/7: Requested frontend stack",
+        "Step 3/7: Requested provider",
+        "Step 4/7: Requested style pack",
+        "Step 5/7: Availability summary",
+        "Step 6/7: Effective solution diff",
+        "Step 7/7: Final confirmation",
+    ]
+    console.print("\n[bold cyan]Structured Wizard[/bold cyan]")
+    for line in step_lines:
+        console.print(f"  - {line}", markup=False)
+    console.print(
+        f"  - requested_frontend_stack: {snapshot.requested_frontend_stack}",
+        markup=False,
+    )
+    console.print(
+        f"  - requested_provider_id: {snapshot.requested_provider_id}",
+        markup=False,
+    )
+    console.print(
+        f"  - requested_style_pack_id: {snapshot.requested_style_pack_id}",
+        markup=False,
+    )
+    console.print(
+        "  - availability_summary: "
+        + snapshot.availability_summary.overall_status,
+        markup=False,
+    )
+    console.print(
+        "  - effective_diff: "
+        + (", ".join(changed_fields) if changed_fields else "none"),
+        markup=False,
+    )
+
+
+def _render_frontend_solution_confirmation_final(
+    snapshot: FrontendSolutionSnapshot,
+) -> None:
+    changed_fields = _frontend_solution_confirmation_change_fields(snapshot)
+    console.print("\n[bold cyan]Final Preflight[/bold cyan]")
+    console.print(
+        f"  - requested_frontend_stack: {snapshot.requested_frontend_stack}",
+        markup=False,
+    )
+    console.print(
+        f"  - requested_provider_id: {snapshot.requested_provider_id}",
+        markup=False,
+    )
+    console.print(
+        f"  - requested_style_pack_id: {snapshot.requested_style_pack_id}",
+        markup=False,
+    )
+    console.print(
+        f"  - effective_frontend_stack: {snapshot.effective_frontend_stack}",
+        markup=False,
+    )
+    console.print(
+        f"  - effective_provider_id: {snapshot.effective_provider_id}",
+        markup=False,
+    )
+    console.print(
+        f"  - effective_style_pack_id: {snapshot.effective_style_pack_id}",
+        markup=False,
+    )
+    console.print(
+        f"  - preflight_status: {snapshot.preflight_status}",
+        markup=False,
+    )
+    console.print(
+        "  - will_change_on_confirm: "
+        + (", ".join(changed_fields) if changed_fields else "none"),
+        markup=False,
+    )
+    console.print(
+        "  - fallback_required: "
+        + str(_frontend_solution_confirmation_fallback_required(snapshot)).lower(),
+        markup=False,
+    )
+
+
+def _frontend_solution_confirmation_report_lines(
+    *,
+    manifest: str,
+    mode_title: str,
+    snapshot: FrontendSolutionSnapshot,
+    mode: str,
+    latest_snapshot_path: Path | None,
+    artifact_paths: list[Path],
+) -> list[str]:
+    changed_fields = _frontend_solution_confirmation_change_fields(snapshot)
+    lines: list[str] = [
+        f"# {mode_title}",
+        "",
+        f"- Manifest: `{manifest}`",
+        f"- Mode: `{mode}`",
+        "",
+    ]
+    if mode == "advanced":
+        lines.extend(
+            [
+                "## Structured Wizard",
+                "",
+                "- Step 1/7: Recommendation",
+                "- Step 2/7: Requested frontend stack",
+                "- Step 3/7: Requested provider",
+                "- Step 4/7: Requested style pack",
+                "- Step 5/7: Availability summary",
+                "- Step 6/7: Effective solution diff",
+                "- Step 7/7: Final confirmation",
+                "",
+            ]
+        )
+    else:
+        lines.extend(
+            [
+                "## Recommended Solution",
+                "",
+                f"- recommended_frontend_stack: `{snapshot.recommended_frontend_stack}`",
+                f"- recommended_provider_id: `{snapshot.recommended_provider_id}`",
+                f"- recommended_style_pack_id: `{snapshot.recommended_style_pack_id}`",
+                "",
+            ]
+        )
+    lines.extend(
+        [
+            "## Final Preflight",
+            "",
+            f"- requested_frontend_stack: `{snapshot.requested_frontend_stack}`",
+            f"- requested_provider_id: `{snapshot.requested_provider_id}`",
+            f"- requested_style_pack_id: `{snapshot.requested_style_pack_id}`",
+            f"- effective_frontend_stack: `{snapshot.effective_frontend_stack}`",
+            f"- effective_provider_id: `{snapshot.effective_provider_id}`",
+            f"- effective_style_pack_id: `{snapshot.effective_style_pack_id}`",
+            f"- preflight_status: `{snapshot.preflight_status}`",
+            "- will_change_on_confirm: `"
+            + (", ".join(changed_fields) if changed_fields else "none")
+            + "`",
+            "- fallback_required: `"
+            + str(_frontend_solution_confirmation_fallback_required(snapshot)).lower()
+            + "`",
+            "",
+        ]
+    )
+    if latest_snapshot_path is not None:
+        lines.extend(
+            [
+                "## Frontend Solution Confirmation Artifact",
+                "",
+                f"- `{latest_snapshot_path}`",
+                "",
+            ]
+        )
+    if artifact_paths:
+        lines.extend(
+            [
+                "## Materialized Files",
+                "",
+            ]
+        )
+        lines.extend([f"- `{path}`" for path in artifact_paths])
+        lines.append("")
+    return lines
 
 
 def _render_frontend_provider_runtime_result(result: object) -> None:

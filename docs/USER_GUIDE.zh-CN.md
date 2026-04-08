@@ -924,6 +924,8 @@ Phase 1 的边界要记住：
 | stage run --dry-run | `python -m ai_sdlc stage run <stage> --dry-run` | 阶段预演 | **可能写 adapter**：命令本身只展示清单，不执行阶段步骤；但仍可能先触发 adapter apply |
 | stage run | `python -m ai_sdlc stage run <stage>` | 阶段调度入口 | **可能写 adapter**：命令本身输出清单与引导，不自动替你执行步骤；但仍可能先触发 adapter apply |
 | program validate / status / plan | `python -m ai_sdlc program ...` | Program 级校验与规划 | **可能写 adapter**：program service 自身以读和规划为主，但 CLI 入口仍可能先触发 adapter apply |
+| program solution-confirm --dry-run | `python -m ai_sdlc program solution-confirm --dry-run` | 技术方案确认预演 | **可能写 adapter**：命令主体会展示 recommendation / wizard / final preflight；若带 `--report` 会额外写 report 文件 |
+| program solution-confirm --execute --yes | `python -m ai_sdlc program solution-confirm --execute --yes` | 技术方案确认落盘 | **可能写 adapter**；确认后会写 `.ai-sdlc/memory/frontend-solution-confirmation/` snapshot artifacts，并可选写 report 文件 |
 | program integrate --dry-run | `python -m ai_sdlc program integrate --dry-run` | guarded integration runbook 预览 | **可能写 adapter**；若带 `--report`，还会写 report 文件 |
 | program integrate --execute --yes | `python -m ai_sdlc program integrate --execute --yes` | guarded execute gate | **可能写 adapter**；当前会做 gate 校验与可选 report 写入，不会直接替你修改各 spec 内容 |
 | manual telemetry | `python -m ai_sdlc telemetry open-session`、`record-*`、`close-session` | operator evidence write | **会写 telemetry**：落到 `.ai-sdlc/local/telemetry/` 与派生 indexes；CLI 入口本身也可能先触发 adapter apply |
@@ -938,6 +940,26 @@ Phase 1 的边界要记住：
 
 - 命令主体是否会写业务状态、telemetry 或离线产物
 - 该命令是否处在会触发 IDE adapter 幂等 apply 的 CLI 入口上
+
+### 7) `program solution-confirm` 的最小使用面
+
+`program solution-confirm` 是 `073` 引入的结构化技术方案确认入口，用来把“推荐方案 / requested truth / effective truth / preflight 结果”从自由文本说明提升为可审计 snapshot。
+
+- 简单模式预览：
+  - `python -m ai_sdlc program solution-confirm --dry-run`
+  - 默认输出单套主推荐，不落盘 artifact。
+- 高级模式预览：
+  - `python -m ai_sdlc program solution-confirm --mode advanced --dry-run`
+  - 输出 7 步向导式摘要，并在最终确认区显式展示 `requested_*`、`effective_*`、`preflight_status`、`will_change_on_confirm`、`fallback_required`。
+- 最终确认并落盘：
+  - `python -m ai_sdlc program solution-confirm --mode advanced --execute --yes`
+  - 会把确认后的 snapshot 落到 `.ai-sdlc/memory/frontend-solution-confirmation/`。
+
+这里有三个边界需要明确：
+
+- `will_change_on_confirm` 只属于确认前的派生展示字段，不会写入最终 snapshot artifact。
+- 如果请求的 enterprise 方案不可用，但存在允许的退路，CLI 会保留 `requested_*`，并把 fallback 结果写到 `effective_*`。
+- 如果预检结果是 `blocked`，命令会停止在确认 gate，不应把它理解为“已自动完成技术选型”。
 
 ## 框架仓库里的 verify / close 收口
 
