@@ -398,3 +398,43 @@
 - `073` 的 verify / consistency / regression baseline 已落到 `verify_constraints`，Provider / Style / Snapshot / CLI JSON 四条真值链现在能被统一对账。
 - `verify_constraints` 仍保持“只查自相矛盾、不重造规则”的边界，避免成为第二套 provider/style 推荐真值。
 - 当前工作树在 Batch 9 范围内已经具备可提交 / 可继续收尾的状态。
+
+### Batch 2026-04-08-006 | close-ready development summary handoff
+
+#### 6.1 范围
+
+- **任务来源**：`073` Batch 9 已闭合后的 close artifact 收口。
+- **目标**：补齐 `development-summary.md`，把 `073` 从 `decompose_or_execute` 提升到 program-level `close` 输入，同时保留既有实现/验证证据仍以本日志前述 batch 为准。
+- **本批 touched files**：
+  - `specs/073-frontend-p2-provider-style-solution-baseline/development-summary.md`
+  - `specs/073-frontend-p2-provider-style-solution-baseline/task-execution-log.md`
+
+#### 6.2 改动内容
+
+- 新增标准化 `development-summary.md`，采用仓库既有 `program-close-ready` 模板，不重写 073 的实现细节，只引用现有 `spec.md / plan.md / tasks.md / task-execution-log.md` 作为 canonical evidence。
+- 保持 close artifact 边界最小化，不回写 `spec.md / plan.md / tasks.md`，也不改 `src/` / `tests/`。
+
+#### 6.3 验证命令
+
+- `uv run ai-sdlc verify constraints`
+- `uv run ai-sdlc program status`
+- `uv run ai-sdlc program integrate --dry-run`
+- `git diff --check -- specs/073-frontend-p2-provider-style-solution-baseline`
+
+#### 6.4 验证结果
+
+- `uv run ai-sdlc verify constraints` -> `verify constraints: no BLOCKERs.`
+- `uv run ai-sdlc program status` -> `073-frontend-p2-provider-style-solution-baseline` 已显示为 `close`，`Blocked By = -`，说明 `development-summary.md` 已被 root machine truth 接受为 close-ready artifact。
+- `uv run ai-sdlc program integrate --dry-run` -> `073` 继续保留在 Tier 6 dry-run 排程中，archive check 显式包含 `development-summary present or updated`；warnings 仍只剩 `068-071` 的既有阻塞链，没有为 `073` 产生新的阻塞告警。
+- `git diff --check -- specs/073-frontend-p2-provider-style-solution-baseline` -> 通过。
+
+#### 6.5 对账结论
+
+- `073` 的 close artifact 已补齐，但没有重写前述 Batch 1 ~ 5 的实现 provenance。
+- root machine truth 现在把 `073` 视为 `close`，与 `development-summary.md` 的 `program-close-ready` 状态保持一致。
+- 本批只做收口，不扩大到新的 child work item，也不伪造 clean-tree / full close-check 结论。
+
+#### 6.6 批次结论
+
+- `073` 现在已经具备 program-level close 输入所需的最小文档面。
+- 后续若继续推进，应转入下一个真实 work item，而不是再回到 `073` 内追加实现批次。
