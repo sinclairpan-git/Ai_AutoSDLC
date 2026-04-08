@@ -318,3 +318,83 @@
 
 - `073` 的 CLI `program solution-confirm` baseline 已落地，简单模式、高级模式、确认 gate 与 snapshot artifact 边界均已被集成测试覆盖。
 - 用户手册已补最小使用面，当前 Batch 8 在集成测试、`ruff`、`diff --check` 与 constraints verify 上均已 fresh 通过。
+
+### Batch 2026-04-08-005 | verify / consistency / regression baseline
+
+#### 5.1 范围
+
+- **任务来源**：`073` Batch 9（T91 / T92 / T93）
+- **目标**：把 Provider / Style Pack / solution snapshot 的最小 consistency check 接到 `verify_constraints`，同时固定 CLI `verify constraints --json` 的 073 输出面，避免“artifact 已存在但 verify 不知道”的断层。
+- **本批 touched files**：
+  - `tests/unit/test_verify_constraints.py`
+  - `tests/integration/test_cli_verify_constraints.py`
+  - `src/ai_sdlc/core/verify_constraints.py`
+  - `specs/073-frontend-p2-provider-style-solution-baseline/task-execution-log.md`
+
+#### 5.2 T91 | 先写 failing tests 固定 verify / consistency / regression 语义
+
+- **改动内容**：
+  - 在 `tests/unit/test_verify_constraints.py` 新增 073 定向单测，固定以下 inconsistency 必须被 verify 捕获：
+    - snapshot artifact 不得持久化 `will_change_on_confirm`
+    - `react` 不得进入当前推荐 / requested / effective truth
+    - `fallback_required` 时 `requested_* / effective_* / provider_mode / fallback_reason_*` 必须自洽
+    - Style Pack artifact 缺失与 simple mode 默认 `degraded` 必须进入 blocker / coverage gap
+  - 在 `tests/integration/test_cli_verify_constraints.py` 新增 `verify constraints --json` 集成测试，固定 `verification_gate` 与 073 attachment JSON surface。
+- **RED 结果**：
+  - 首次定向运行新增 unit / integration 用例时均按预期失败。
+  - 失败原因：`verify_constraints` 尚未挂接任何 `073` solution confirmation attachment，也不会把 073 consistency gap 暴露到 JSON 输出。
+- **是否符合任务目标**：符合。
+
+#### 5.3 T92 | 实现最小 verify / consistency / regression attachment
+
+- **改动内容**：
+  - 在 `src/ai_sdlc/core/verify_constraints.py` 新增 073 scoped attachment，只在 active work item 为 `073` 时检查：
+    - `.ai-sdlc/memory/frontend-solution-confirmation/latest.yaml`
+    - `.ai-sdlc/memory/frontend-solution-confirmation/versions/<snapshot_id>.yaml`
+    - Provider profile / style-support / style-pack / install-strategy artifact 真值链
+  - 仅校验“是否自相矛盾”，不在 verify 层重造推荐规则，不引入第二套 provider/style 真值。
+  - 统一把 073 的 inconsistency 收敛为 `frontend_solution_confirmation_consistency` coverage gap，并暴露到 `build_constraint_report()` / `build_verification_gate_context()` / CLI JSON 输出。
+  - 顺手修复既有 012 regression：
+    - 恢复 frontend contract observation attachment 的 `missing_artifact / invalid_artifact` 状态透传
+    - 修正 stale report 构造与 diagnostic -> coverage gap projection，避免 073 attachment 合入时破坏 012 verify surface
+- **GREEN 结果**：
+  - `uv run pytest tests/unit/test_verify_constraints.py -q -k 073_frontend_solution_confirmation_verification_surfaces_consistency_gap` -> `1 passed`
+  - `uv run pytest tests/integration/test_cli_verify_constraints.py -q -k 073_frontend_solution_consistency_gap` -> `1 passed`
+  - 012 回归恢复校验：
+    - `uv run pytest tests/unit/test_verify_constraints.py -q -k '012_frontend_contract_verification_surfaces_missing_observations_gap or 012_frontend_contract_verification_rejects_noncanonical_observation_artifact or 012_frontend_contract_verification_uses_projection_to_restore_missing_gap'` -> `3 passed`
+    - `uv run pytest tests/integration/test_cli_verify_constraints.py -q -k 'json_output_exposes_012_frontend_contract_summary_when_observations_missing'` -> `1 passed`
+- **是否符合任务目标**：符合。
+
+#### 5.4 T93 | Fresh verify 并追加 verify batch 归档
+
+- **验证命令**：
+  - `uv run pytest tests/unit/test_verify_constraints.py tests/integration/test_cli_verify_constraints.py -q`
+  - `uv run ai-sdlc verify constraints`
+  - `uv run ruff check src tests`
+  - `git diff --check -- specs/073-frontend-p2-provider-style-solution-baseline src/ai_sdlc/core tests`
+- **验证结果**：
+  - `uv run pytest tests/unit/test_verify_constraints.py tests/integration/test_cli_verify_constraints.py -q` -> `90 passed in 4.40s`
+  - `uv run ai-sdlc verify constraints` -> `verify constraints: no BLOCKERs.`
+  - `uv run ruff check src tests` -> `All checks passed!`
+  - `git diff --check -- specs/073-frontend-p2-provider-style-solution-baseline src/ai_sdlc/core tests` -> 通过
+- **是否符合任务目标**：符合。
+
+#### 5.5 代码审查（Mandatory）
+
+- **规格对齐**：当前实现严格停留在 Batch 9 边界，只补 `verify_constraints` scoped attachment 与对应测试，不扩展到新 CLI / ProgramService 行为。
+- **代码质量**：073 verify 只消费既有 provider/style/snapshot artifact 真值，检查的是 cross-artifact consistency，而不是在 verify 层重建推荐系统。
+- **回归控制**：实现过程中发现并修复 012 frontend contract verification 的历史 attachment/projection 漂移，最终 `verify_constraints` 全量 unit + integration 通过。
+- **结论**：`无 Critical 阻塞项`
+
+#### 5.6 任务/计划同步状态（Mandatory）
+
+- `tasks.md` 同步状态：`无需变更（Batch 9 formal tasks 与当前实现一致）`
+- `plan.md` 同步状态：`已同步（Verify / consistency / regression slice 已实现并完成 fresh verify）`
+- `spec.md` 同步状态：`无需变更`
+- 说明：`073` 当前 9 个 batch 已全部闭合，后续若继续推进，应进入新的 child work item 或独立增量任务，而不是继续扩大本批边界。
+
+#### 5.7 批次结论
+
+- `073` 的 verify / consistency / regression baseline 已落到 `verify_constraints`，Provider / Style / Snapshot / CLI JSON 四条真值链现在能被统一对账。
+- `verify_constraints` 仍保持“只查自相矛盾、不重造规则”的边界，避免成为第二套 provider/style 推荐真值。
+- 当前工作树在 Batch 9 范围内已经具备可提交 / 可继续收尾的状态。

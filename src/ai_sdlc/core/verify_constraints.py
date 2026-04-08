@@ -6,9 +6,14 @@ import re
 from dataclasses import dataclass
 from pathlib import Path
 
+import yaml
+
 from ai_sdlc.branch.git_client import GitError
 from ai_sdlc.context.state import load_checkpoint
 from ai_sdlc.core.frontend_contract_observation_provider import (
+    FRONTEND_CONTRACT_OBSERVATION_ARTIFACT_STATUS_ATTACHED,
+    FRONTEND_CONTRACT_OBSERVATION_ARTIFACT_STATUS_INVALID_ARTIFACT,
+    FRONTEND_CONTRACT_OBSERVATION_ARTIFACT_STATUS_MISSING_ARTIFACT,
     load_frontend_contract_observation_artifact,
 )
 from ai_sdlc.core.frontend_contract_verification import (
@@ -127,6 +132,19 @@ VERIFICATION_GATE_OBJECTS = (
     "checkpoint_spec_dir",
     "tasks_acceptance",
     "skip_registry_mapping",
+)
+FRONTEND_SOLUTION_CONFIRMATION_SOURCE_NAME = (
+    "frontend solution confirmation verification"
+)
+FRONTEND_SOLUTION_CONFIRMATION_COVERAGE_GAP = (
+    "frontend_solution_confirmation_consistency"
+)
+FRONTEND_SOLUTION_CONFIRMATION_CHECK_OBJECTS = (
+    "frontend_provider_profile_artifacts",
+    "frontend_solution_style_pack_artifacts",
+    "frontend_solution_install_strategy_artifacts",
+    "frontend_solution_snapshot_artifacts",
+    FRONTEND_SOLUTION_CONFIRMATION_COVERAGE_GAP,
 )
 
 
@@ -252,31 +270,86 @@ class ConstraintReport:
     evidence_kinds: tuple[str, ...] = ("event", "structured_report")
 
 
+@dataclass(frozen=True, slots=True)
+class FrontendSolutionConfirmationVerificationReport:
+    """Scoped verification summary for work item 073 solution consistency."""
+
+    root: str
+    source_name: str = FRONTEND_SOLUTION_CONFIRMATION_SOURCE_NAME
+    check_objects: tuple[str, ...] = FRONTEND_SOLUTION_CONFIRMATION_CHECK_OBJECTS
+    blockers: tuple[str, ...] = ()
+    coverage_gaps: tuple[str, ...] = ()
+    gate_result: str = "PASS"
+    snapshot_id: str | None = None
+    effective_provider_id: str | None = None
+
+    def to_json_dict(self) -> dict[str, object]:
+        return {
+            "source_name": self.source_name,
+            "gate_verdict": self.gate_result,
+            "check_objects": list(self.check_objects),
+            "blockers": list(self.blockers),
+            "coverage_gaps": list(self.coverage_gaps),
+            "snapshot_id": self.snapshot_id,
+            "effective_provider_id": self.effective_provider_id,
+        }
+
+
 def build_constraint_report(root: Path) -> ConstraintReport:
     """Build a structured report for verify constraints."""
     checkpoint = load_checkpoint(root)
     frontend_contract_report = _frontend_contract_attachment_report(root, checkpoint)
     frontend_gate_report = _frontend_gate_attachment_report(root, checkpoint)
+    frontend_solution_confirmation_report = (
+        _frontend_solution_confirmation_attachment_report(root, checkpoint)
+    )
     return ConstraintReport(
         root=str(root),
         gate_name="Verification Gate",
         source_name="verify constraints",
         check_objects=_merge_unique_strings(
             _merge_unique_strings(
-                VERIFICATION_GATE_OBJECTS,
-                frontend_contract_report.check_objects if frontend_contract_report else (),
+                _merge_unique_strings(
+                    VERIFICATION_GATE_OBJECTS,
+                    frontend_contract_report.check_objects
+                    if frontend_contract_report
+                    else (),
+                ),
+                frontend_gate_report.check_objects if frontend_gate_report else (),
             ),
-            frontend_gate_report.check_objects if frontend_gate_report else (),
+            (
+                frontend_solution_confirmation_report.check_objects
+                if frontend_solution_confirmation_report
+                else ()
+            ),
         ),
         blockers=_merge_unique_strings(
-            tuple(collect_constraint_blockers(root)),
-            frontend_gate_report.blockers if frontend_gate_report else (),
+            _merge_unique_strings(
+                tuple(collect_constraint_blockers(root)),
+                frontend_gate_report.blockers if frontend_gate_report else (),
+            ),
+            (
+                frontend_solution_confirmation_report.blockers
+                if frontend_solution_confirmation_report
+                else ()
+            ),
         ),
         coverage_gaps=_merge_unique_strings(
             _feature_contract_coverage_gaps(root, checkpoint),
             _merge_unique_strings(
-                frontend_contract_report.coverage_gaps if frontend_contract_report else (),
-                frontend_gate_report.coverage_gaps if frontend_gate_report else (),
+                _merge_unique_strings(
+                    _frontend_contract_projected_coverage_gaps(
+                        frontend_contract_report
+                    )
+                    if frontend_contract_report
+                    else (),
+                    frontend_gate_report.coverage_gaps if frontend_gate_report else (),
+                ),
+                (
+                    frontend_solution_confirmation_report.coverage_gaps
+                    if frontend_solution_confirmation_report
+                    else ()
+                ),
             ),
         ),
         release_gate=_release_gate_surface(root, checkpoint),
@@ -289,6 +362,9 @@ def build_verification_gate_context(root: Path) -> dict[str, object]:
     checkpoint = load_checkpoint(root)
     frontend_contract_report = _frontend_contract_attachment_report(root, checkpoint)
     frontend_gate_report = _frontend_gate_attachment_report(root, checkpoint)
+    frontend_solution_confirmation_report = (
+        _frontend_solution_confirmation_attachment_report(root, checkpoint)
+    )
     governance = build_verification_governance_bundle(
         report,
         decision_subject=f"verify:{root}",
@@ -298,12 +374,19 @@ def build_verification_gate_context(root: Path) -> dict[str, object]:
     context: dict[str, object] = {
         "verification_sources": _merge_unique_strings(
             _merge_unique_strings(
-                (report.source_name,),
-                (frontend_contract_report.source_name,)
-                if frontend_contract_report
-                else (),
+                _merge_unique_strings(
+                    (report.source_name,),
+                    (frontend_contract_report.source_name,)
+                    if frontend_contract_report
+                    else (),
+                ),
+                (frontend_gate_report.source_name,) if frontend_gate_report else (),
             ),
-            (frontend_gate_report.source_name,) if frontend_gate_report else (),
+            (
+                (frontend_solution_confirmation_report.source_name,)
+                if frontend_solution_confirmation_report
+                else ()
+            ),
         ),
         "verification_check_objects": report.check_objects,
         "constraint_blockers": report.blockers if decision_result == "block" else (),
@@ -313,11 +396,15 @@ def build_verification_gate_context(root: Path) -> dict[str, object]:
         "provenance_phase1": load_phase1_provenance_gate_payload(root),
     }
     if frontend_contract_report is not None:
-        context["frontend_contract_verification"] = (
-            frontend_contract_report.to_json_dict()
+        context["frontend_contract_verification"] = _frontend_contract_report_payload(
+            frontend_contract_report
         )
     if frontend_gate_report is not None:
         context["frontend_gate_verification"] = frontend_gate_report.to_json_dict()
+    if frontend_solution_confirmation_report is not None:
+        context["frontend_solution_confirmation_verification"] = (
+            frontend_solution_confirmation_report.to_json_dict()
+        )
     return context
 
 
@@ -553,16 +640,28 @@ def _frontend_contract_attachment_report(
 
     observations_path = _frontend_contract_observation_path(root, checkpoint)
     observations: list = []
+    observation_artifact_status = (
+        FRONTEND_CONTRACT_OBSERVATION_ARTIFACT_STATUS_MISSING_ARTIFACT
+    )
     load_error: str | None = None
     if observations_path is not None and observations_path.is_file():
+        observation_artifact_status = (
+            FRONTEND_CONTRACT_OBSERVATION_ARTIFACT_STATUS_ATTACHED
+        )
         try:
             observations = _load_frontend_contract_observations(observations_path)
         except ValueError as exc:
             load_error = str(exc)
+            observation_artifact_status = (
+                FRONTEND_CONTRACT_OBSERVATION_ARTIFACT_STATUS_INVALID_ARTIFACT
+            )
 
     report = build_frontend_contract_verification_report(
         frontend_contracts_root(root),
         observations,
+        observation_artifact_status=observation_artifact_status,
+        observation_artifact_path=observations_path,
+        observation_artifact_error=load_error,
     )
     if load_error is None or observations_path is None:
         return report
@@ -624,6 +723,102 @@ def _frontend_gate_attachment_report(
     return report
 
 
+def _frontend_solution_confirmation_attachment_report(
+    root: Path,
+    checkpoint: Checkpoint | None,
+) -> FrontendSolutionConfirmationVerificationReport | None:
+    """Resolve the scoped frontend solution confirmation attachment for active 073 only."""
+    work_item_id = _effective_feature_contract_wi_id(checkpoint)
+    if not _is_073_work_item(work_item_id):
+        return None
+
+    blockers: list[str] = []
+    snapshot_payload: dict[str, object] | None = None
+    snapshot_id: str | None = None
+    effective_provider_id: str | None = None
+
+    latest_snapshot_path = (
+        root
+        / ".ai-sdlc"
+        / "memory"
+        / "frontend-solution-confirmation"
+        / "latest.yaml"
+    )
+    if not latest_snapshot_path.is_file():
+        blockers.append(
+            "BLOCKER: frontend solution snapshot artifact missing: "
+            f"{latest_snapshot_path.as_posix()}"
+        )
+    else:
+        try:
+            snapshot_payload = _load_yaml_mapping(latest_snapshot_path)
+        except ValueError as exc:
+            blockers.append(
+                "BLOCKER: invalid frontend solution snapshot artifact "
+                f"{latest_snapshot_path.as_posix()}: {exc}"
+            )
+
+    if snapshot_payload is not None:
+        snapshot_id = _optional_str(snapshot_payload.get("snapshot_id"))
+        effective_provider_id = _optional_str(snapshot_payload.get("effective_provider_id"))
+        blockers.extend(
+            _frontend_solution_snapshot_blockers(
+                snapshot_payload,
+                snapshot_path=latest_snapshot_path,
+            )
+        )
+
+        if snapshot_id is None:
+            blockers.append(
+                "BLOCKER: frontend solution latest snapshot missing snapshot_id"
+            )
+        else:
+            version_snapshot_path = (
+                root
+                / ".ai-sdlc"
+                / "memory"
+                / "frontend-solution-confirmation"
+                / "versions"
+                / f"{snapshot_id}.yaml"
+            )
+            if not version_snapshot_path.is_file():
+                blockers.append(
+                    "BLOCKER: frontend solution versioned snapshot artifact missing: "
+                    f"{version_snapshot_path.as_posix()}"
+                )
+            else:
+                try:
+                    version_snapshot_payload = _load_yaml_mapping(version_snapshot_path)
+                except ValueError as exc:
+                    blockers.append(
+                        "BLOCKER: invalid frontend solution versioned snapshot artifact "
+                        f"{version_snapshot_path.as_posix()}: {exc}"
+                    )
+                else:
+                    blockers.extend(
+                        _frontend_solution_snapshot_blockers(
+                            version_snapshot_payload,
+                            snapshot_path=version_snapshot_path,
+                        )
+                    )
+
+        blockers.extend(_frontend_solution_provider_consistency_blockers(root, snapshot_payload))
+
+    blockers_tuple = tuple(blockers)
+    return FrontendSolutionConfirmationVerificationReport(
+        root=str(root),
+        blockers=blockers_tuple,
+        coverage_gaps=(
+            (FRONTEND_SOLUTION_CONFIRMATION_COVERAGE_GAP,)
+            if blockers_tuple
+            else ()
+        ),
+        gate_result="RETRY" if blockers_tuple else "PASS",
+        snapshot_id=snapshot_id,
+        effective_provider_id=effective_provider_id,
+    )
+
+
 def _frontend_contract_observation_path(
     root: Path,
     checkpoint: Checkpoint | None,
@@ -663,6 +858,15 @@ def _invalid_frontend_contract_observation_report(
     error_message: str,
 ) -> FrontendContractVerificationReport:
     """Preserve scoped attachment while surfacing malformed observation input honestly."""
+    invalid_report = build_frontend_contract_verification_report(
+        Path(report.contracts_root),
+        [],
+        observation_artifact_status=(
+            FRONTEND_CONTRACT_OBSERVATION_ARTIFACT_STATUS_INVALID_ARTIFACT
+        ),
+        observation_artifact_path=observations_path,
+        observation_artifact_error=error_message,
+    )
     observation_blocker = (
         "BLOCKER: frontend contract observations unavailable: "
         "invalid structured observation input "
@@ -682,13 +886,17 @@ def _invalid_frontend_contract_observation_report(
         contracts_root=report.contracts_root,
         source_name=report.source_name,
         check_objects=report.check_objects,
+        observation_artifact_ref=invalid_report.observation_artifact_ref,
+        observation_artifact_status=invalid_report.observation_artifact_status,
+        observation_count=invalid_report.observation_count,
+        diagnostic=invalid_report.diagnostic,
         blockers=tuple(blockers),
         coverage_gaps=_merge_unique_strings(
-            report.coverage_gaps,
-            ("frontend_contract_observations",),
+            _frontend_contract_projected_coverage_gaps(report),
+            invalid_report.coverage_gaps,
         ),
         advisory_checks=report.advisory_checks,
-        gate_result=report.gate_result,
+        gate_result=invalid_report.gate_result,
     )
 
 
@@ -850,6 +1058,11 @@ def _is_018_work_item(work_item_id: str) -> bool:
     return normalized == "018" or normalized.startswith("018-") or normalized.startswith("018/")
 
 
+def _is_073_work_item(work_item_id: str) -> bool:
+    normalized = work_item_id.strip()
+    return normalized == "073" or normalized.startswith("073-") or normalized.startswith("073/")
+
+
 def _effective_feature_contract_wi_id(checkpoint: Checkpoint | None) -> str:
     """Resolve the active work-item id for feature-contract coverage."""
     if checkpoint is None:
@@ -868,6 +1081,25 @@ def _merge_unique_strings(
     return tuple(merged)
 
 
+def _frontend_contract_projected_coverage_gaps(
+    report: FrontendContractVerificationReport,
+) -> tuple[str, ...]:
+    projection = report.diagnostic.policy_projection
+    report_family_member = projection.report_family_member
+    gaps = [gap for gap in report.coverage_gaps if gap != report_family_member]
+    if projection.coverage_effect == "gap":
+        gaps.append(report_family_member)
+    return _merge_unique_strings(tuple(gaps), ())
+
+
+def _frontend_contract_report_payload(
+    report: FrontendContractVerificationReport,
+) -> dict[str, object]:
+    payload = report.to_json_dict()
+    payload["coverage_gaps"] = list(_frontend_contract_projected_coverage_gaps(report))
+    return payload
+
+
 def _string_tuple(value: object) -> tuple[str, ...]:
     if not isinstance(value, (list, tuple)):
         return ()
@@ -877,6 +1109,251 @@ def _string_tuple(value: object) -> tuple[str, ...]:
         if text:
             items.append(text)
     return tuple(items)
+
+
+def _optional_str(value: object) -> str | None:
+    text = str(value).strip() if value is not None else ""
+    return text or None
+
+
+def _load_yaml_mapping(path: Path) -> dict[str, object]:
+    payload = yaml.safe_load(path.read_text(encoding="utf-8"))
+    if not isinstance(payload, dict):
+        raise ValueError("expected top-level YAML mapping")
+    return payload
+
+
+def _frontend_solution_snapshot_blockers(
+    snapshot_payload: dict[str, object],
+    *,
+    snapshot_path: Path,
+) -> list[str]:
+    blockers: list[str] = []
+    if "will_change_on_confirm" in snapshot_payload:
+        blockers.append(
+            "BLOCKER: frontend solution snapshot artifact contains preview-only field "
+            f"will_change_on_confirm: {snapshot_path.as_posix()}"
+        )
+
+    recommended_tuple = _frontend_solution_tuple(snapshot_payload, prefix="recommended")
+    requested_tuple = _frontend_solution_tuple(snapshot_payload, prefix="requested")
+    effective_tuple = _frontend_solution_tuple(snapshot_payload, prefix="effective")
+    frontend_stacks = (
+        recommended_tuple[0],
+        requested_tuple[0],
+        effective_tuple[0],
+    )
+    if any(stack == "react" for stack in frontend_stacks):
+        blockers.append(
+            "BLOCKER: frontend solution confirmation leaked unsupported frontend stack "
+            "`react` into current recommendation / snapshot truth"
+        )
+
+    decision_status = _optional_str(snapshot_payload.get("decision_status")) or ""
+    provider_mode = _optional_str(snapshot_payload.get("provider_mode")) or ""
+    fallback_reason_code = _optional_str(snapshot_payload.get("fallback_reason_code"))
+    fallback_reason_text = _optional_str(snapshot_payload.get("fallback_reason_text"))
+    user_overrode_recommendation = bool(
+        snapshot_payload.get("user_overrode_recommendation", False)
+    )
+
+    if decision_status == "fallback_required":
+        if requested_tuple == effective_tuple:
+            blockers.append(
+                "BLOCKER: frontend solution confirmation decision_status=fallback_required "
+                "but requested_* and effective_* are identical"
+            )
+        if provider_mode != "cross_stack_fallback":
+            blockers.append(
+                "BLOCKER: frontend solution confirmation decision_status=fallback_required "
+                "requires provider_mode=cross_stack_fallback"
+            )
+        if not fallback_reason_code or not fallback_reason_text:
+            blockers.append(
+                "BLOCKER: frontend solution confirmation decision_status=fallback_required "
+                "requires fallback_reason_code and fallback_reason_text"
+            )
+    elif decision_status in {"recommended", "user_confirmed"} and requested_tuple != effective_tuple:
+        blockers.append(
+            "BLOCKER: frontend solution confirmation "
+            f"decision_status={decision_status} requires requested_* == effective_*"
+        )
+
+    if requested_tuple != recommended_tuple and not user_overrode_recommendation:
+        blockers.append(
+            "BLOCKER: frontend solution confirmation requested_* diverges from "
+            "recommended_* but user_overrode_recommendation is false"
+        )
+
+    return blockers
+
+
+def _frontend_solution_provider_consistency_blockers(
+    root: Path,
+    snapshot_payload: dict[str, object],
+) -> list[str]:
+    blockers: list[str] = []
+    provider_id = _optional_str(snapshot_payload.get("effective_provider_id"))
+    if provider_id is None:
+        blockers.append(
+            "BLOCKER: frontend solution confirmation missing effective_provider_id"
+        )
+        return blockers
+
+    provider_root = root / "providers" / "frontend" / provider_id
+    provider_manifest_path = provider_root / "provider.manifest.yaml"
+    style_support_path = provider_root / "style-support.yaml"
+    style_pack_root = root / "governance" / "frontend" / "solution" / "style-packs"
+    install_strategy_root = (
+        root / "governance" / "frontend" / "solution" / "install-strategies"
+    )
+
+    provider_manifest: dict[str, object] | None = None
+    style_support_payload: dict[str, object] | None = None
+
+    if not provider_manifest_path.is_file():
+        blockers.append(
+            "BLOCKER: frontend provider profile artifact missing: "
+            f"{provider_manifest_path.as_posix()}"
+        )
+    else:
+        try:
+            provider_manifest = _load_yaml_mapping(provider_manifest_path)
+        except ValueError as exc:
+            blockers.append(
+                "BLOCKER: invalid frontend provider profile artifact "
+                f"{provider_manifest_path.as_posix()}: {exc}"
+            )
+
+    if not style_support_path.is_file():
+        blockers.append(
+            "BLOCKER: frontend provider style-support artifact missing: "
+            f"{style_support_path.as_posix()}"
+        )
+    else:
+        try:
+            style_support_payload = _load_yaml_mapping(style_support_path)
+        except ValueError as exc:
+            blockers.append(
+                "BLOCKER: invalid frontend provider style-support artifact "
+                f"{style_support_path.as_posix()}: {exc}"
+            )
+
+    referenced_style_pack_ids = {
+        style_pack_id
+        for style_pack_id in (
+            _optional_str(snapshot_payload.get("recommended_style_pack_id")),
+            _optional_str(snapshot_payload.get("requested_style_pack_id")),
+            _optional_str(snapshot_payload.get("effective_style_pack_id")),
+        )
+        if style_pack_id
+    }
+
+    if provider_manifest is not None:
+        default_style_pack_id = _optional_str(provider_manifest.get("default_style_pack_id"))
+        if default_style_pack_id is not None:
+            referenced_style_pack_ids.add(default_style_pack_id)
+        for strategy_id in _string_tuple(provider_manifest.get("install_strategy_ids", ())):
+            strategy_path = install_strategy_root / f"{strategy_id}.yaml"
+            if not strategy_path.is_file():
+                blockers.append(
+                    "BLOCKER: frontend solution consistency missing install-strategy artifact "
+                    f"{strategy_id}: {strategy_path.as_posix()}"
+                )
+
+    style_support_by_id: dict[str, dict[str, object]] = {}
+    if style_support_payload is not None:
+        items = style_support_payload.get("items", ())
+        if not isinstance(items, list):
+            blockers.append(
+                "BLOCKER: invalid frontend provider style-support artifact "
+                f"{style_support_path.as_posix()}: items must be a list"
+            )
+        else:
+            for item in items:
+                if not isinstance(item, dict):
+                    continue
+                style_pack_id = _optional_str(item.get("style_pack_id"))
+                if style_pack_id is None:
+                    continue
+                style_support_by_id[style_pack_id] = item
+                referenced_style_pack_ids.add(style_pack_id)
+
+    for style_pack_id in sorted(referenced_style_pack_ids):
+        style_pack_path = style_pack_root / f"{style_pack_id}.yaml"
+        if not style_pack_path.is_file():
+            blockers.append(
+                "BLOCKER: frontend solution consistency missing style-pack artifact "
+                f"{style_pack_id}: {style_pack_path.as_posix()}"
+            )
+
+    recommendation_source = _optional_str(snapshot_payload.get("recommendation_source")) or ""
+    recommended_style_pack_id = _optional_str(snapshot_payload.get("recommended_style_pack_id"))
+    recommended_style_support = (
+        style_support_by_id.get(recommended_style_pack_id)
+        if recommended_style_pack_id is not None
+        else None
+    )
+    if (
+        recommendation_source == "simple-mode"
+        and recommended_style_support is not None
+        and _optional_str(recommended_style_support.get("fidelity_status")) == "degraded"
+    ):
+        blockers.append(
+            "BLOCKER: frontend solution consistency simple-mode recommendation cannot "
+            f"default to degraded style pack {recommended_style_pack_id}"
+        )
+
+    effective_style_pack_id = _optional_str(snapshot_payload.get("effective_style_pack_id"))
+    effective_style_support = (
+        style_support_by_id.get(effective_style_pack_id)
+        if effective_style_pack_id is not None
+        else None
+    )
+    if effective_style_pack_id is not None and effective_style_support is None:
+        blockers.append(
+            "BLOCKER: frontend solution consistency provider style-support truth missing "
+            f"effective style pack {effective_style_pack_id}"
+        )
+        return blockers
+
+    if effective_style_support is None:
+        return blockers
+
+    expected_fidelity = _optional_str(effective_style_support.get("fidelity_status")) or ""
+    actual_fidelity = _optional_str(snapshot_payload.get("style_fidelity_status")) or ""
+    if expected_fidelity and actual_fidelity and expected_fidelity != actual_fidelity:
+        blockers.append(
+            "BLOCKER: frontend solution consistency provider style-support truth marks "
+            f"{effective_style_pack_id} as {expected_fidelity}, but snapshot recorded "
+            f"style_fidelity_status={actual_fidelity}"
+        )
+
+    expected_degradation_reason_codes = _string_tuple(
+        effective_style_support.get("degradation_reason_codes", ())
+    )
+    actual_degradation_reason_codes = _string_tuple(
+        snapshot_payload.get("style_degradation_reason_codes", ())
+    )
+    if expected_degradation_reason_codes != actual_degradation_reason_codes:
+        blockers.append(
+            "BLOCKER: frontend solution consistency degraded style-pack reason codes "
+            f"for {effective_style_pack_id} do not match provider style-support truth"
+        )
+
+    return blockers
+
+
+def _frontend_solution_tuple(
+    payload: dict[str, object],
+    *,
+    prefix: str,
+) -> tuple[str, str, str]:
+    return (
+        _optional_str(payload.get(f"{prefix}_frontend_stack")) or "",
+        _optional_str(payload.get(f"{prefix}_provider_id")) or "",
+        _optional_str(payload.get(f"{prefix}_style_pack_id")) or "",
+    )
 
 
 def _release_gate_surface(
