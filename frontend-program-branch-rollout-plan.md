@@ -1,6 +1,6 @@
 # Frontend Program 未实现项排序与分支落地计划
 
-**更新日期**：2026-04-06
+**更新日期**：2026-04-08
 **适用范围**：所有 `specs/0xx-frontend-*` work item
 **机器真值**：根级 `program-manifest.yaml`；本文件用于说明排序口径、并行窗口与建议分支命名。
 
@@ -23,6 +23,7 @@
 - 合同与观测基础：`009` -> `018`
 - 合同自检输入补强：`065`（依赖 `012`、`013`、`014`，不改写 production truth model）
 - P1 planning / experience stability 支线：`066` -> `067` -> `068` -> `069` -> (`070` || `071`)（已纳入 program DAG，但当前仍是 planning-only / 未 close）
+- P2 provider/style solution 支线：`073`（依赖 `009`、`016`、`017`、`018`，已纳入 program DAG；root close 仍待 `development-summary.md`）
 - program orchestration / execute / remediation 主链：`019` -> `046`
 - final proof archive 与 cleanup 主链：`047` -> `064`
 
@@ -97,6 +98,7 @@
 - #60 | Tier 09 | `069` | branch `codex/frontend-p1-governance-diagnostics-drift-baseline` | 直接依赖：`068` | 状态：已纳入 program（docs-only child baseline，未 close）
 - #61 | Tier 10 | `070` | branch `codex/frontend-p1-recheck-remediation-feedback-baseline` | 直接依赖：`069` | 状态：已纳入 program（docs-only child baseline，未 close）
 - #62 | Tier 10 | `071` | branch `codex/frontend-p1-visual-a11y-foundation-baseline` | 直接依赖：`069` | 状态：已纳入 program（docs-only child baseline，未 close）
+- #63 | Tier 06 | `073` | branch `codex/frontend-p2-provider-style-solution-baseline` | 直接依赖：`009`、`016`、`017`、`018` | 状态：已纳入 program（实现与验证已完成，root close 仍待 `development-summary.md`）
 
 ## 备注
 
@@ -105,5 +107,7 @@
 - `065` 是 `014` 下游的 self-check child baseline；它让框架仓库可用 sample source tree 做显式自检，但不消除真实 active spec 对 `frontend_contract_observations` 的外部输入要求。
 - `066` ~ `071` 已纳入根级 manifest，作用是保留 P1 planning branch 的 canonical DAG 与 rollout 位次；由于这些 spec 尚无 `development-summary.md`，`program status` / `program integrate --execute` 仍会把它们诚实视为未 close，这不是实现回退，而是 planning-only honesty。
 - `070` 与 `071` 是 `069` 下游的 sibling child；root DAG 故意保留 `069 -> (070 || 071)`，不要把 `071` 误写成依赖 `070`。
+- `073` 已在当前仓库完成 provider/style solution baseline 的实现批次与 fresh verification；本轮 root sync 只把它纳入根级 machine truth。由于尚未生成 `development-summary.md`，`program` surface 仍会诚实视为未 close，这不代表实现回退。
 - `072` 是本轮 root sync carrier spec，用于冻结并执行 `066-071` 的 root truth sync；它不属于当前 root DAG 中待执行 / 待 close 的 frontend program item，因此不写入本表。
+- `074` 是本轮 root sync carrier spec，用于冻结并执行 `073` 的 root truth sync；它不属于当前 root DAG 中待执行 / 待 close 的 frontend program item，因此不写入本表。
 - 当前 `program status` 对全部 frontend spec 统一暴露的 `missing_artifact [frontend_contract_observations]` 属于 active spec 输入缺口，不对应本仓库内可直接扫描补齐的实现分支；当前仓库不存在真实前端源码标注源，后续需要在实际前端项目中生成并回填 canonical observation artifact。
