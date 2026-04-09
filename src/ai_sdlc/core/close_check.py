@@ -27,6 +27,9 @@ from ai_sdlc.core.reviewer_gate import (
     evaluate_reviewer_gate,
 )
 from ai_sdlc.core.verify_constraints import collect_frontend_evidence_class_blockers
+from ai_sdlc.core.verify_constraints import (
+    _is_frontend_evidence_class_subject as _is_frontend_evidence_class_spec_subject,
+)
 from ai_sdlc.core.workitem_traceability import (
     analyze_completion_truth,
     evaluate_work_item_branch_lifecycle,
@@ -60,7 +63,6 @@ DOCS_WHITELIST_RELS = (
     Path("USER_GUIDE.zh-CN.md"),
 )
 RELEASE_GATE_EVIDENCE_FILE = "release-gate-evidence.md"
-_WORKITEM_SEQUENCE_RE = re.compile(r"^(?P<seq>\d+)-")
 
 
 def _registered_command_strings() -> tuple[str, ...]:
@@ -71,8 +73,7 @@ def _registered_command_strings() -> tuple[str, ...]:
 
 
 def _is_frontend_evidence_class_subject(wi_dir_name: str) -> bool:
-    match = _WORKITEM_SEQUENCE_RE.match(wi_dir_name.strip())
-    return match is not None and int(match.group("seq")) >= 82
+    return _is_frontend_evidence_class_spec_subject(wi_dir_name)
 
 
 def _format_frontend_evidence_class_late_resurfacing_detail(

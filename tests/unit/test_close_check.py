@@ -1070,3 +1070,28 @@ def test_close_check_blocks_when_frontend_manifest_cannot_be_loaded(
     assert "manifest_unreadable" in frontend_check["detail"]
     assert any("frontend_evidence_class_mirror_drift" in blocker for blocker in r.blockers)
     assert any("manifest_unreadable" in blocker for blocker in r.blockers)
+
+
+def test_close_check_ignores_frontend_evidence_gate_for_non_frontend_wi(
+    tmp_path: Path,
+) -> None:
+    root = tmp_path / "repo16"
+    root.mkdir()
+    wi_rel = "specs/100-backend-manifest-parse"
+    _setup_repo(
+        root,
+        tasks_body="- [x] done\n### Task 1.1\n- **验收标准（AC）**：ok",
+        plan_status="completed",
+        wi_rel=wi_rel,
+    )
+    (root / "program-manifest.yaml").write_text(
+        "schema_version: \"1\"\nspecs: [\n",
+        encoding="utf-8",
+    )
+    _commit_all(root, "docs: add malformed manifest for non-frontend wi")
+
+    r = run_close_check(cwd=root, wi=Path(wi_rel))
+
+    assert r.ok is True
+    assert all(check["name"] != "frontend_evidence_class" for check in r.checks)
+    assert not any("frontend_evidence_class" in blocker for blocker in r.blockers)
