@@ -1991,6 +1991,56 @@ def test_073_frontend_solution_confirmation_verification_rejects_invalid_overrid
     )
 
 
+def test_073_frontend_solution_confirmation_verification_surfaces_invalid_latest_yaml_as_blocker(
+    tmp_path: Path,
+) -> None:
+    _write_073_checkpoint(tmp_path)
+    _write_073_solution_confirmation_artifacts(tmp_path)
+
+    latest_snapshot_path = (
+        tmp_path
+        / ".ai-sdlc"
+        / "memory"
+        / "frontend-solution-confirmation"
+        / "latest.yaml"
+    )
+    latest_snapshot_path.write_text("snapshot_id: [broken\n", encoding="utf-8")
+
+    report = build_constraint_report(tmp_path)
+
+    assert report.coverage_gaps == ("frontend_solution_confirmation_consistency",)
+    assert any(
+        "invalid frontend solution snapshot artifact" in blocker
+        and "latest.yaml" in blocker
+        for blocker in report.blockers
+    )
+
+
+def test_073_frontend_solution_confirmation_verification_surfaces_invalid_style_support_yaml_as_blocker(
+    tmp_path: Path,
+) -> None:
+    _write_073_checkpoint(tmp_path)
+    _write_073_solution_confirmation_artifacts(tmp_path)
+
+    style_support_path = (
+        tmp_path
+        / "providers"
+        / "frontend"
+        / "enterprise-vue2"
+        / "style-support.yaml"
+    )
+    style_support_path.write_text("items: [broken\n", encoding="utf-8")
+
+    report = build_constraint_report(tmp_path)
+
+    assert report.coverage_gaps == ("frontend_solution_confirmation_consistency",)
+    assert any(
+        "invalid frontend provider style-support artifact" in blocker
+        and "style-support.yaml" in blocker
+        for blocker in report.blockers
+    )
+
+
 def test_build_verification_governance_bundle_emits_gate_capable_payload(
     tmp_path: Path,
 ) -> None:

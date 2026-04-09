@@ -1340,7 +1340,10 @@ def _parse_bool_literal(value: object) -> bool | None:
 
 
 def _load_yaml_mapping(path: Path) -> dict[str, object]:
-    payload = yaml.safe_load(path.read_text(encoding="utf-8"))
+    try:
+        payload = yaml.safe_load(path.read_text(encoding="utf-8"))
+    except yaml.YAMLError as exc:
+        raise ValueError(f"invalid YAML syntax: {exc}") from exc
     if not isinstance(payload, dict):
         raise ValueError("expected top-level YAML mapping")
     return payload
