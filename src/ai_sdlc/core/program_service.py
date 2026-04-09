@@ -1028,6 +1028,9 @@ class ProgramService:
         spec: ProgramSpecRef,
         spec_dir: Path,
     ) -> list[str]:
+        if not _is_frontend_evidence_class_subject(spec_dir.name):
+            return []
+
         canonical_value = _load_frontend_evidence_class_from_spec(spec_dir / "spec.md")
         if canonical_value is None:
             return []

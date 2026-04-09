@@ -1057,6 +1057,49 @@ specs:
     assert "human_remediation_hint" not in json.dumps(summary)
 
 
+def test_status_json_frontend_evidence_class_requires_exact_spec_path_match(
+    tmp_path: Path,
+) -> None:
+    init_project(tmp_path)
+    spec_dir = tmp_path / "archive" / "082-frontend-example"
+    spec_dir.mkdir(parents=True, exist_ok=True)
+    (spec_dir / "spec.md").write_text(
+        "# Spec\n\n---\nfrontend_evidence_class: \"framework_capability\"\n---\n",
+        encoding="utf-8",
+    )
+    (tmp_path / "program-manifest.yaml").write_text(
+        """
+schema_version: "1"
+specs:
+  - id: "082-frontend-example"
+    path: "archive/082-frontend-example"
+    depends_on: []
+""".strip()
+        + "\n",
+        encoding="utf-8",
+    )
+    save_checkpoint(
+        tmp_path,
+        Checkpoint(
+            current_stage="verify",
+            feature=FeatureInfo(
+                id="082-frontend-example",
+                spec_dir="specs/082-frontend-example",
+                design_branch="design/082-frontend-example",
+                feature_branch="feature/082-frontend-example",
+                current_branch="main",
+            ),
+        ),
+    )
+
+    with patch("ai_sdlc.cli.commands.find_project_root", return_value=tmp_path):
+        result = runner.invoke(app, ["status", "--json"])
+
+    assert result.exit_code == 0
+    payload = json.loads(result.output)
+    assert "frontend_evidence_class" not in payload["branch_lifecycle"]
+
+
 def test_status_json_latest_summary_falls_back_to_canonical_snapshots_without_indexes(
     tmp_path: Path,
 ) -> None:

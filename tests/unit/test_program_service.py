@@ -222,6 +222,32 @@ def test_validate_manifest_frontend_evidence_class_mirror_valid(tmp_path: Path) 
     assert res.errors == []
 
 
+def test_validate_manifest_ignores_frontend_evidence_class_drift_for_non_frontend_spec(
+    tmp_path: Path,
+) -> None:
+    _write_frontend_evidence_class_spec(
+        tmp_path,
+        spec_rel="specs/050-non-frontend",
+        frontend_evidence_class="framework_capability",
+    )
+    svc = ProgramService(tmp_path)
+
+    res = svc.validate_manifest(
+        ProgramManifest(
+            specs=[
+                ProgramSpecRef(
+                    id="050-non-frontend",
+                    path="specs/050-non-frontend",
+                    depends_on=[],
+                )
+            ]
+        )
+    )
+
+    assert res.valid is True
+    assert res.errors == []
+
+
 def test_validate_manifest_rejects_spec_path_outside_project_root(
     tmp_path: Path,
 ) -> None:

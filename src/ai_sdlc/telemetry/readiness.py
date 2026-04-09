@@ -143,12 +143,20 @@ def _build_frontend_evidence_class_surface(repo_root: Path) -> dict[str, Any] | 
     except Exception:
         return None
 
+    try:
+        checkpoint_spec_dir = svc._resolve_spec_dir(spec_dir_raw)
+    except ValueError:
+        return None
+
     target_spec = next(
         (
             spec
             for spec in manifest.specs
-            if spec.path.strip() == spec_dir_raw
-            or Path(spec.path).name == Path(spec_dir_raw).name
+            if _frontend_evidence_class_spec_matches_checkpoint(
+                svc=svc,
+                spec_path=spec.path,
+                checkpoint_spec_dir=checkpoint_spec_dir,
+            )
         ),
         None,
     )
@@ -170,6 +178,18 @@ def _build_frontend_evidence_class_surface(repo_root: Path) -> dict[str, Any] | 
         "detection_surface": summary.detection_surface,
         "summary_token": summary.summary_token,
     }
+
+
+def _frontend_evidence_class_spec_matches_checkpoint(
+    *,
+    svc: ProgramService,
+    spec_path: str,
+    checkpoint_spec_dir: Path,
+) -> bool:
+    try:
+        return svc._resolve_spec_dir(spec_path) == checkpoint_spec_dir
+    except ValueError:
+        return False
 
 
 def build_doctor_readiness_items(repo_root: Path | None) -> list[dict[str, str]]:
