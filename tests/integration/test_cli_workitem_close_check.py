@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import subprocess
+import textwrap
 from pathlib import Path
 from unittest.mock import patch
 
@@ -10,7 +11,10 @@ import pytest
 from typer.testing import CliRunner
 
 from ai_sdlc.cli.main import app
+from ai_sdlc.context.state import save_checkpoint
+from ai_sdlc.core.close_check import run_close_check
 from ai_sdlc.core.p1_artifacts import save_reviewer_decision
+from ai_sdlc.models.state import Checkpoint, FeatureInfo
 from ai_sdlc.models.work import (
     PrdReviewerCheckpoint,
     PrdReviewerDecision,
@@ -127,6 +131,47 @@ def _write_release_gate_evidence(wi_dir: Path, *, overall_verdict: str = "PASS")
         "}\n"
         "```\n",
         encoding="utf-8",
+    )
+
+
+def _write_frontend_evidence_class_spec(
+    root: Path,
+    *,
+    spec_rel: str,
+    frontend_evidence_class: str,
+) -> None:
+    spec_dir = root / spec_rel
+    spec_dir.mkdir(parents=True, exist_ok=True)
+    (spec_dir / "spec.md").write_text(
+        "# Spec\n\n"
+        "---\n"
+        f'frontend_evidence_class: "{frontend_evidence_class}"\n'
+        "---\n",
+        encoding="utf-8",
+    )
+
+
+def _write_manifest_yaml(root: Path, text: str) -> None:
+    (root / "program-manifest.yaml").write_text(
+        textwrap.dedent(text).strip() + "\n",
+        encoding="utf-8",
+    )
+
+
+def _write_checkpoint(root: Path, *, wi_rel: str) -> None:
+    wi_name = Path(wi_rel).name
+    save_checkpoint(
+        root,
+        Checkpoint(
+            current_stage="verify",
+            feature=FeatureInfo(
+                id=wi_name.split("-", 1)[0],
+                spec_dir=wi_rel,
+                design_branch=f"design/{wi_name}",
+                feature_branch=f"feature/{wi_name}",
+                current_branch="main",
+            ),
+        ),
     )
 
 
@@ -288,7 +333,7 @@ class TestCliWorkitemCloseCheck:
         monkeypatch.chdir(root)
 
         result = runner.invoke(app, ["workitem", "close-check", "--wi", "specs/001-wi"])
-        assert result.exit_code == 1
+        assert result.exit_code == 1, result.output
         assert "BLOCKER" in result.output
 
     def test_exit_0_when_all_green(
@@ -342,7 +387,7 @@ class TestCliWorkitemCloseCheck:
 
         result = runner.invoke(app, ["workitem", "close-check", "--wi", "specs/001-wi"])
 
-        assert result.exit_code == 1
+        assert result.exit_code == 1, result.output
         assert "source closure" in result.output.lower()
         assert "published" in result.output.lower()
 
@@ -360,7 +405,7 @@ class TestCliWorkitemCloseCheck:
         monkeypatch.chdir(root)
 
         result = runner.invoke(app, ["workitem", "close-check", "--wi", "specs/001-wi"])
-        assert result.exit_code == 1
+        assert result.exit_code == 1, result.output
         assert "git" in result.output.lower()
 
     def test_exit_1_when_worktree_dirty_after_git_closeout(
@@ -938,6 +983,81 @@ class TestCliWorkitemCloseCheck:
         assert result.exit_code == 1
         assert "branch_lifecycle" in result.output
         assert "codex/001-branch-check-demo" in result.output
+
+    def test_exit_1_when_close_check_late_resurfaces_frontend_evidence_class_mirror_drift(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        root = tmp_path / "r10a"
+        root.mkdir()
+        wi_rel = "specs/082-frontend-example"
+        _setup_repo(
+            root,
+            tasks_body="- [x] done\n### Task 1.1\n- **验收标准（AC）**：ok",
+            plan_status="completed",
+            wi_rel=wi_rel,
+        )
+        _write_frontend_evidence_class_spec(
+            root,
+            spec_rel=wi_rel,
+            frontend_evidence_class="framework_capability",
+        )
+        _write_checkpoint(root, wi_rel=wi_rel)
+        _write_manifest_yaml(
+            root,
+            """
+            schema_version: "1"
+            specs:
+              - id: "082-frontend-example"
+                path: "specs/082-frontend-example"
+                depends_on: []
+            """,
+        )
+        _commit_all(root, "docs: add frontend evidence class mirror drift fixture")
+        monkeypatch.chdir(root)
+
+        core_result = run_close_check(cwd=root, wi=Path(wi_rel))
+        assert core_result.ok is False, core_result.to_json_dict()
+        assert any(
+            "frontend_evidence_class_mirror_drift" in blocker
+            for blocker in core_result.blockers
+        ), core_result.to_json_dict()
+
+        result = runner.invoke(app, ["workitem", "close-check", "--wi", wi_rel])
+
+        assert result.exit_code == 1, result.output
+        assert "frontend_evidence_class" in result.output
+        assert "frontend_evidence_class_mirror_drift" in result.output
+        assert "program validate" in result.output
+        assert "mirror_missing" in result.output
+        assert "source_of_truth_path=" not in result.output
+        assert "human_remediation_hint=" not in result.output
+
+    def test_close_check_json_late_resurfaces_frontend_evidence_class_authoring_malformed(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        root = tmp_path / "r10b"
+        root.mkdir()
+        wi_rel = "specs/082-frontend-authoring"
+        _setup_repo(
+            root,
+            tasks_body="- [x] done\n### Task 1.1\n- **验收标准（AC）**：ok",
+            plan_status="completed",
+            wi_rel=wi_rel,
+        )
+        wi_dir = root / wi_rel
+        wi_dir.joinpath("spec.md").write_text("# Spec\n\nMissing footer metadata.\n", encoding="utf-8")
+        _write_checkpoint(root, wi_rel=wi_rel)
+        _commit_all(root, "docs: add frontend evidence class authoring malformed fixture")
+        monkeypatch.chdir(root)
+
+        result = runner.invoke(app, ["workitem", "close-check", "--wi", wi_rel, "--json"])
+
+        assert result.exit_code == 1, result.output
+        assert "frontend_evidence_class_authoring_malformed" in result.output
+        assert "verify constraints" in result.output
+        assert "missing_footer_key" in result.output
+        assert "source_of_truth_path=" not in result.output
+        assert "human_remediation_hint=" not in result.output
 
     def test_branch_check_reports_unresolved_associated_worktree_in_json(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
