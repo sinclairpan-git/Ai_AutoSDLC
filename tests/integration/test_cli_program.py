@@ -405,6 +405,31 @@ specs:
         assert "source_of_truth_path=" not in result.output
         assert "human_remediation_hint=" not in result.output
 
+    def test_program_status_best_effort_handles_spec_path_outside_project_root(
+        self, initialized_project_dir: Path
+    ) -> None:
+        root = initialized_project_dir
+        legacy_dir = root.parent / "legacy-spec"
+        legacy_dir.mkdir(exist_ok=True)
+        (root / "program-manifest.yaml").write_text(
+            f"""
+schema_version: "1"
+specs:
+  - id: "082-frontend-example"
+    path: "../{legacy_dir.name}"
+    depends_on: []
+""".strip()
+            + "\n",
+            encoding="utf-8",
+        )
+
+        with patch("ai_sdlc.cli.program_cmd.find_project_root", return_value=root):
+            result = runner.invoke(app, ["program", "status"])
+
+        assert result.exit_code == 1, result.output
+        assert "Manifest invalid; status shown with best-effort parsing." in result.output
+        assert "outside project root" in result.output
+
     def test_program_integrate_dry_run_with_report(
         self, initialized_project_dir: Path
     ) -> None:

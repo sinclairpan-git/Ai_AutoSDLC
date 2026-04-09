@@ -225,6 +225,10 @@ def program_status(
         console.print(
             "\n[bold red]Manifest invalid; status shown with best-effort parsing.[/bold red]"
         )
+        for error in result.errors:
+            if "problem_family=frontend_evidence_class_" in error:
+                continue
+            console.print(f"  - {error}")
         raise typer.Exit(code=1)
 
     raise typer.Exit(code=0)

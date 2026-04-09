@@ -1059,6 +1059,40 @@ class TestCliWorkitemCloseCheck:
         assert "source_of_truth_path=" not in result.output
         assert "human_remediation_hint=" not in result.output
 
+    def test_close_check_scopes_frontend_evidence_authoring_to_target_wi(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        root = tmp_path / "r10c"
+        root.mkdir()
+        target_wi_rel = "specs/082-frontend-target"
+        checkpoint_wi_rel = "specs/083-frontend-checkpoint"
+        _setup_repo(
+            root,
+            tasks_body="- [x] done\n### Task 1.1\n- **验收标准（AC）**：ok",
+            plan_status="completed",
+            wi_rel=target_wi_rel,
+        )
+        _write_frontend_evidence_class_spec(
+            root,
+            spec_rel=checkpoint_wi_rel,
+            frontend_evidence_class="framework_capability",
+        )
+        target_wi_dir = root / target_wi_rel
+        target_wi_dir.joinpath("spec.md").write_text(
+            "# Spec\n\nMissing footer metadata.\n",
+            encoding="utf-8",
+        )
+        _write_checkpoint(root, wi_rel=checkpoint_wi_rel)
+        _commit_all(root, "docs: add mismatched frontend evidence class close-check fixture")
+        monkeypatch.chdir(root)
+
+        result = runner.invoke(app, ["workitem", "close-check", "--wi", target_wi_rel])
+
+        assert result.exit_code == 1, result.output
+        assert "frontend_evidence_class_authoring_malformed" in result.output
+        assert "verify constraints" in result.output
+        assert "missing_footer_key" in result.output
+
     def test_branch_check_reports_unresolved_associated_worktree_in_json(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:

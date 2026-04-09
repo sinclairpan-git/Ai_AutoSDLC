@@ -220,6 +220,29 @@ def test_validate_manifest_frontend_evidence_class_mirror_valid(tmp_path: Path) 
     assert res.errors == []
 
 
+def test_validate_manifest_rejects_spec_path_outside_project_root(
+    tmp_path: Path,
+) -> None:
+    legacy_dir = tmp_path.parent / "legacy-spec"
+    legacy_dir.mkdir(exist_ok=True)
+    svc = ProgramService(tmp_path)
+
+    res = svc.validate_manifest(
+        ProgramManifest(
+            specs=[
+                ProgramSpecRef(
+                    id="082-frontend-example",
+                    path=f"../{legacy_dir.name}",
+                    depends_on=[],
+                )
+            ]
+        )
+    )
+
+    assert res.valid is False
+    assert any("path outside project root" in err for err in res.errors)
+
+
 def test_sync_frontend_evidence_class_manifest_execute_targeted(tmp_path: Path) -> None:
     _write_frontend_evidence_class_spec(
         tmp_path,

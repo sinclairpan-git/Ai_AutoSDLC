@@ -25,7 +25,7 @@ from ai_sdlc.core.reviewer_gate import (
     ReviewerGateOutcomeKind,
     evaluate_reviewer_gate,
 )
-from ai_sdlc.core.verify_constraints import build_constraint_report
+from ai_sdlc.core.verify_constraints import collect_frontend_evidence_class_blockers
 from ai_sdlc.core.workitem_traceability import (
     analyze_completion_truth,
     evaluate_work_item_branch_lifecycle,
@@ -91,11 +91,9 @@ def _build_frontend_evidence_class_close_check_summary(
     if not _is_frontend_evidence_class_subject(wi_dir.name):
         return None
 
-    spec_path = (wi_dir / "spec.md").as_posix()
-    constraint_report = build_constraint_report(root)
-    for blocker in constraint_report.blockers:
+    for blocker in collect_frontend_evidence_class_blockers(wi_dir):
         parsed = _parse_frontend_evidence_class_status_blocker(blocker)
-        if parsed is None or parsed["spec_path"] != spec_path:
+        if parsed is None:
             continue
         return ProgramFrontendEvidenceClassStatus(
             has_blocker=True,

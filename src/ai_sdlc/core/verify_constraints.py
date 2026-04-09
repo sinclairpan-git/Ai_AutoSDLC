@@ -686,6 +686,11 @@ def _frontend_evidence_class_blockers(spec_dir: Path) -> list[str]:
     return []
 
 
+def collect_frontend_evidence_class_blockers(spec_dir: Path) -> list[str]:
+    """Return WI-scoped frontend evidence authoring blockers for a specific spec dir."""
+    return _frontend_evidence_class_blockers(spec_dir)
+
+
 def _is_frontend_evidence_class_subject(spec_dir_name: str) -> bool:
     match = re.fullmatch(r"(?P<seq>\d{3})-(?P<slug>[a-z0-9-]+)", spec_dir_name.strip())
     if match is None:

@@ -910,7 +910,11 @@ class ProgramService:
             else:
                 seen_paths.add(spec.path)
 
-            abs_spec = self.root / spec.path
+            try:
+                abs_spec = self._resolve_spec_dir(spec.path)
+            except ValueError:
+                errors.append(f"spec {spec.id}: path outside project root: {spec.path}")
+                continue
             if not abs_spec.exists():
                 warnings.append(f"spec {spec.id}: path not found: {spec.path}")
             elif not abs_spec.is_dir():
@@ -1266,7 +1270,10 @@ class ProgramService:
     ) -> dict[str, ProgramFrontendEvidenceClassStatus]:
         spec_path_to_id: dict[str, str] = {}
         for spec in manifest.specs:
-            spec_dir = self._resolve_spec_dir(spec.path)
+            try:
+                spec_dir = self._resolve_spec_dir(spec.path)
+            except ValueError:
+                continue
             spec_path_to_id[(spec_dir / "spec.md").as_posix()] = spec.id
 
         statuses: dict[str, ProgramFrontendEvidenceClassStatus] = {}
