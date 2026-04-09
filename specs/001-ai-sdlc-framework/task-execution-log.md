@@ -91,7 +91,7 @@
 
 - **改动范围**：`specs/001-ai-sdlc-framework/portability-audit-T10.md`
 - **改动内容**：
-  - 将 `docs/USER_GUIDE.zh-CN.md` 相关项状态从“已部分完成”收敛为“已关闭”（以仓库事实为准）。
+  - 将 `USER_GUIDE.zh-CN.md` 相关项状态从“已部分完成”收敛为“已关闭”（以仓库事实为准）。
   - 将“Task 6.1 验证条款”收敛为“完成（文档/规则范围）”，明确根目录 PRD 改版为延期项。
   - 追加 2026-03-25 收口记录（本批次归档 + 独立提交）。
 - **新增/调整的测试**：无（文档变更，验证使用全量回归 + ruff）。
@@ -618,7 +618,7 @@
 ##### Task 6.17 | close-check 文档范围 + `--all-docs`（FR-096 / SC-021）
 
 - **改动范围**：`src/ai_sdlc/core/close_check.py`、`src/ai_sdlc/cli/workitem_cmd.py`、close-check 相关单测与集成测。
-- **改动内容**：默认扫描 `specs/<WI>/*.md` 与 `docs/pull-request-checklist.zh.md`、`docs/USER_GUIDE.zh-CN.md`；`--all-docs` 恢复全 `docs/**/*.md` 扫描。
+- **改动内容**：默认扫描 `specs/<WI>/*.md` 与 `docs/pull-request-checklist.zh.md`、`USER_GUIDE.zh-CN.md`；`--all-docs` 恢复全 `docs/**/*.md` 扫描。
 - **新增/调整的测试**：默认忽略深层 `docs/nested` 违规；`--all-docs` 捕获；`--help` 展示开关。
 - **执行的命令**：见统一验证命令。
 - **测试结果**：见统一验证命令。
@@ -758,9 +758,9 @@
 
 #### 2.1 批次范围
 
-- **覆盖内容**：`pyproject.toml` / `uv.lock` 版本 **0.2.3 → 0.2.4**；`src/ai_sdlc/__init__.py` 中 `__version__` 改为 **安装态** `importlib.metadata.version("ai-sdlc")`，无分发元数据时回退 **0.2.4**；`docs/USER_GUIDE.zh-CN.md` 中 GitHub 标签与离线包示例路径与 **0.2.4** 一致；按 `packaging/offline/README.md` 执行离线包构建。
+- **覆盖内容**：`pyproject.toml` / `uv.lock` 版本 **0.2.3 → 0.2.4**；`src/ai_sdlc/__init__.py` 中 `__version__` 改为 **安装态** `importlib.metadata.version("ai-sdlc")`，无分发元数据时回退 **0.2.4**；`USER_GUIDE.zh-CN.md` 中 GitHub 标签与离线包示例路径与 **0.2.4** 一致；按 `packaging/offline/README.md` 执行离线包构建。
 - **覆盖阶段**：发布卫生检查（与 Batch 014 同一套：测试 + Lint + Build + 可选离线包）。
-- **预读范围**：`packaging/offline/build_offline_bundle.sh`、`docs/USER_GUIDE.zh-CN.md` §3 / §12。
+- **预读范围**：`packaging/offline/build_offline_bundle.sh`、`USER_GUIDE.zh-CN.md` §3 / §12。
 
 #### 2.2 统一验证命令
 
@@ -787,7 +787,7 @@
 
 ##### 版本与文档 | 0.2.4
 
-- **改动范围**：`pyproject.toml`、`uv.lock`、`src/ai_sdlc/__init__.py`、`docs/USER_GUIDE.zh-CN.md`（安装示例中的标签与离线目录名）。
+- **改动范围**：`pyproject.toml`、`uv.lock`、`src/ai_sdlc/__init__.py`、`USER_GUIDE.zh-CN.md`（安装示例中的标签与离线目录名）。
 - **是否符合任务目标**：符合（单一发布版本号；安装文档与 wheel/离线包名一致；`__version__` 与已安装包版本一致）。
 
 #### 2.4 代码审查（摘要）
@@ -874,11 +874,11 @@
 
 - `tasks.md` 同步状态：`已同步`（Task 6.15 收口说明已落盘；无未勾选 checklist 项）。
 - `related_plan`（如存在）同步状态：`已对账`（当前工作项未声明 `related_plan`，close-check 按约定跳过）。
-- 说明：本批提交仅纳入“框架收口”直接相关文件；现有 `docs/USER_GUIDE.zh-CN.md` 与新增框架补充文档草稿不并入本批，避免误提交未收口的用户态文档改动。
+- 说明：本批提交仅纳入“框架收口”直接相关文件；现有 `USER_GUIDE.zh-CN.md` 与新增框架补充文档草稿不并入本批，避免误提交未收口的用户态文档改动。
 
 #### 2.6 自动决策记录（如有）
 
-- AD-001：将 `docs/USER_GUIDE.zh-CN.md` 与未跟踪的框架补充文档排除出本批提交 → 来源：当前工作树已有独立文档改动，且本批 close-check / execution-log 目标不依赖其入库 → 理由：避免把未完成或未核对链接关系的用户文档改动混入本次框架收口提交。
+- AD-001：将 `USER_GUIDE.zh-CN.md` 与未跟踪的框架补充文档排除出本批提交 → 来源：当前工作树已有独立文档改动，且本批 close-check / execution-log 目标不依赖其入库 → 理由：避免把未完成或未核对链接关系的用户文档改动混入本次框架收口提交。
 
 #### 2.7 批次结论
 
@@ -894,9 +894,9 @@
 
 #### 2.1 批次范围
 
-- **覆盖内容**：将框架自迭代开发指南纳入仓库文档；在 [`docs/USER_GUIDE.zh-CN.md`](../../docs/USER_GUIDE.zh-CN.md) 增加入口；新增 [`docs/框架自迭代开发与发布约定.md`](../../docs/框架自迭代开发与发布约定.md)。
+- **覆盖内容**：将框架自迭代开发指南纳入仓库文档；在 [`USER_GUIDE.zh-CN.md`](../../USER_GUIDE.zh-CN.md) 增加入口；新增 [`docs/框架自迭代开发与发布约定.md`](../../docs/框架自迭代开发与发布约定.md)。
 - **覆盖阶段**：CLOSE（文档补充与用户入口收敛）。
-- **预读范围**：`src/ai_sdlc/rules/batch-protocol.md`、`templates/execution-log-template.md`、`docs/USER_GUIDE.zh-CN.md`、`docs/framework-defect-backlog.zh-CN.md`。
+- **预读范围**：`src/ai_sdlc/rules/batch-protocol.md`、`templates/execution-log-template.md`、`USER_GUIDE.zh-CN.md`、`docs/framework-defect-backlog.zh-CN.md`。
 - **激活的规则**：完成前验证、代码自审、文档变更最小验证集。
 
 #### 2.2 统一验证命令
@@ -915,7 +915,7 @@
 
 ##### 文档入口 | 用户手册补充
 
-- **改动范围**：`docs/USER_GUIDE.zh-CN.md`
+- **改动范围**：`USER_GUIDE.zh-CN.md`
 - **改动内容**：在 telemetry 运维边界章节后新增“框架自身开发补充”入口，明确框架仓库内自迭代开发应跳转到独立指南；链接收敛为仓库实际文件名。
 - **新增/调整的测试**：无（文档变更）。
 - **执行的命令**：`uv run ai-sdlc verify constraints`、`uv run ai-sdlc workitem close-check --wi specs/001-ai-sdlc-framework --all-docs`

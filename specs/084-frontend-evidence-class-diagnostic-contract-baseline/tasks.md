@@ -31,7 +31,7 @@ Batch 3: verification, project-state update, archive
 
 - [x] 回读 `083`
 - [x] 回读 `docs/framework-defect-backlog.zh-CN.md`
-- [x] 回读 `docs/USER_GUIDE.zh-CN.md`
+- [x] 回读 `USER_GUIDE.zh-CN.md`
 - [x] 确认 future problem families、severity boundary 与 bounded status exposure 的最小要求
 
 **完成标准**

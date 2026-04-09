@@ -21,7 +21,7 @@
 - `specs/086-frontend-evidence-class-program-validate-mirror-contract-baseline/spec.md`
 - `specs/087-frontend-evidence-class-manifest-mirror-writeback-contract-baseline/spec.md`
 - `specs/088-frontend-evidence-class-bounded-status-surface-baseline/spec.md`
-- `docs/USER_GUIDE.zh-CN.md`
+- `USER_GUIDE.zh-CN.md`
 - `src/ai_sdlc/cli/workitem_cmd.py`
 - `src/ai_sdlc/core/close_check.py`
 

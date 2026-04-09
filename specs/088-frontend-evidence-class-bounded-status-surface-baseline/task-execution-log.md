@@ -20,7 +20,7 @@
 - `specs/085-frontend-evidence-class-verify-first-runtime-cut-baseline/spec.md`
 - `specs/086-frontend-evidence-class-program-validate-mirror-contract-baseline/spec.md`
 - `specs/087-frontend-evidence-class-manifest-mirror-writeback-contract-baseline/spec.md`
-- `docs/USER_GUIDE.zh-CN.md`
+- `USER_GUIDE.zh-CN.md`
 - `src/ai_sdlc/cli/program_cmd.py`
 - `src/ai_sdlc/cli/commands.py`
 - `src/ai_sdlc/telemetry/readiness.py`

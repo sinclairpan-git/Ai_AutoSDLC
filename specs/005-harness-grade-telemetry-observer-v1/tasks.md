@@ -191,7 +191,7 @@ Batch 6: bounded surfaces + compatibility smoke
 - **任务编号**：T62
 - **优先级**：P1
 - **依赖**：T61
-- **文件**：tests/unit/test_telemetry_contracts.py, tests/unit/test_telemetry_store.py, tests/unit/test_telemetry_observer.py, tests/unit/test_verify_constraints.py, tests/unit/test_close_check.py, docs/USER_GUIDE.zh-CN.md
+- **文件**：tests/unit/test_telemetry_contracts.py, tests/unit/test_telemetry_store.py, tests/unit/test_telemetry_observer.py, tests/unit/test_verify_constraints.py, tests/unit/test_close_check.py, USER_GUIDE.zh-CN.md
 - **可并行**：否
 - **验收标准**：
   1. `source closure`、`gate consumption`、`mode/profile drift`、`collector boundary` 四类关键能力都有 paired positive / negative smoke。

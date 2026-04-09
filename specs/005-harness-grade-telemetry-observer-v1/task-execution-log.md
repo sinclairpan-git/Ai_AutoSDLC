@@ -16,7 +16,7 @@
 
 - **任务来源**：[`tasks.md`](tasks.md) Task `1.1` ~ Task `5.2`
 - **目标**：把已在 `main` 上存在的 `005` Batch `1~5` 实现链正式补录为 execution evidence，为后续 Batch `6` 收口提供 planned-batch coverage 真值。
-- **预读范围**：[`spec.md`](spec.md)、[`plan.md`](plan.md)、[`tasks.md`](tasks.md)、[`../../docs/USER_GUIDE.zh-CN.md`](../../docs/USER_GUIDE.zh-CN.md)、`src/ai_sdlc/telemetry/*`、`src/ai_sdlc/core/verify_constraints.py`、`src/ai_sdlc/core/close_check.py`
+- **预读范围**：[`spec.md`](spec.md)、[`plan.md`](plan.md)、[`tasks.md`](tasks.md)、[`../../USER_GUIDE.zh-CN.md`](../../USER_GUIDE.zh-CN.md)、`src/ai_sdlc/telemetry/*`、`src/ai_sdlc/core/verify_constraints.py`、`src/ai_sdlc/core/close_check.py`
 - **激活的规则**：fresh verification；close-check completion truth；task/execution-log 单一真值。
 - **验证画像**：`docs-only`
 
@@ -139,7 +139,7 @@
 
 - **任务来源**：[`tasks.md`](tasks.md) Task `6.1`
 - **目标**：把 bounded `status --json` / `doctor` / manual telemetry surface 的主线实现与 smoke 证据正式挂回 `005` Batch `6`。
-- **预读范围**：[`spec.md`](spec.md)、[`plan.md`](plan.md)、[`tasks.md`](tasks.md)、[`../../docs/USER_GUIDE.zh-CN.md`](../../docs/USER_GUIDE.zh-CN.md)、[`../../src/ai_sdlc/telemetry/readiness.py`](../../src/ai_sdlc/telemetry/readiness.py)、[`../../src/ai_sdlc/cli/telemetry_cmd.py`](../../src/ai_sdlc/cli/telemetry_cmd.py)、[`../../src/ai_sdlc/cli/doctor_cmd.py`](../../src/ai_sdlc/cli/doctor_cmd.py)
+- **预读范围**：[`spec.md`](spec.md)、[`plan.md`](plan.md)、[`tasks.md`](tasks.md)、[`../../USER_GUIDE.zh-CN.md`](../../USER_GUIDE.zh-CN.md)、[`../../src/ai_sdlc/telemetry/readiness.py`](../../src/ai_sdlc/telemetry/readiness.py)、[`../../src/ai_sdlc/cli/telemetry_cmd.py`](../../src/ai_sdlc/cli/telemetry_cmd.py)、[`../../src/ai_sdlc/cli/doctor_cmd.py`](../../src/ai_sdlc/cli/doctor_cmd.py)
 - **激活的规则**：fresh verification；bounded/read-only operator surface；task/execution-log 单一真值。
 - **验证画像**：`code-change`
 
@@ -208,7 +208,7 @@
 
 - **任务来源**：[`tasks.md`](tasks.md) Task `6.2`
 - **目标**：以 fresh paired smoke + repo regression 复核 `005` 最终收口状态，并把 `verify / close` operator 口径同步回用户手册与 execution evidence。
-- **预读范围**：[`spec.md`](spec.md)、[`plan.md`](plan.md)、[`tasks.md`](tasks.md)、[`task-execution-log.md`](task-execution-log.md)、[`../../docs/USER_GUIDE.zh-CN.md`](../../docs/USER_GUIDE.zh-CN.md)、[`../../src/ai_sdlc/core/verify_constraints.py`](../../src/ai_sdlc/core/verify_constraints.py)、[`../../src/ai_sdlc/core/close_check.py`](../../src/ai_sdlc/core/close_check.py)
+- **预读范围**：[`spec.md`](spec.md)、[`plan.md`](plan.md)、[`tasks.md`](tasks.md)、[`task-execution-log.md`](task-execution-log.md)、[`../../USER_GUIDE.zh-CN.md`](../../USER_GUIDE.zh-CN.md)、[`../../src/ai_sdlc/core/verify_constraints.py`](../../src/ai_sdlc/core/verify_constraints.py)、[`../../src/ai_sdlc/core/close_check.py`](../../src/ai_sdlc/core/close_check.py)
 - **激活的规则**：fresh verification；close-check completion truth；paired positive / negative smoke；docs-only closeout discipline。
 - **验证画像**：`docs-only`
 
@@ -231,7 +231,7 @@
 
 ##### Task 6.2 | paired positive / negative smoke 与仓库级回归收口
 
-- **改动范围**：`../../docs/USER_GUIDE.zh-CN.md`、`tasks.md`、`task-execution-log.md`
+- **改动范围**：`../../USER_GUIDE.zh-CN.md`、`tasks.md`、`task-execution-log.md`
 - **改动内容**：
   - 在用户手册中补齐 `verify constraints` 与 `workitem close-check` 的 operator/close 口径，明确 `verify` 为仓库级只读治理校验，`close-check` 为 work item 收口真值核验，并写明 telemetry / CLI smoke 后需复核 `git status --short`。
   - 将 `005` Batch `1~6` 的 execution evidence 正式补回 work item 目录，使 planned-batch coverage 不再缺席。

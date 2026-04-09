@@ -82,7 +82,7 @@
 ### Phase 0：contract reconciliation
 
 - 回读 `082` ~ `086`
-- 回读 `docs/USER_GUIDE.zh-CN.md` 中 read-only / bounded surface 边界
+- 回读 `USER_GUIDE.zh-CN.md` 中 read-only / bounded surface 边界
 - 回读 `program` / `workitem close-check` 的 CLI 与 service 落点
 
 ### Phase 1：writeback contract baseline freeze

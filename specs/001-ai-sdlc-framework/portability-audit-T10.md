@@ -8,7 +8,7 @@
 | 路径 | 问题摘要 | 优先级 | 建议修订 | 状态 |
 |------|----------|--------|----------|------|
 | `cursor/rules/ai-sdlc.md`（仓库根示例） | 与包内 `adapters/cursor` 同源；description 曾暗示绑定 Cursor | P1 | 已与 `src/ai_sdlc/adapters/cursor/rules/ai-sdlc.md` 对齐为「可选适配」 | 已同步源模板 |
-| `docs/USER_GUIDE.zh-CN.md` §2 | 需强调 CLI/rules 为真值 | P1 | 已增「规范入口（与 IDE 无关）」段，指向 `agent-skip-registry` 与 `pipeline` 条款 17 | 已关闭 |
+| `USER_GUIDE.zh-CN.md` §2 | 需强调 CLI/rules 为真值 | P1 | 已增「规范入口（与 IDE 无关）」段，指向 `agent-skip-registry` 与 `pipeline` 条款 17 | 已关闭 |
 | `cursor/commands/dev.autopilot.md` | description 写「Cursor 适配器」 | P2 | 已改为「可选：Cursor 命令示例」并指向 autopilot/CLI 真值 | 已关闭 |
 | `tests/integration/test_cli_init.py` | 断言输出含 `cursor`（安装规则提示） | — | 保留：测试安装行为，非用户唯一路径 | 关闭 |
 | `src/ai_sdlc/integrations/ide_adapter.py` | 检测 `.cursor` 等 | — | 保留：可选适配逻辑；文档侧标明非必需 | 关闭 |

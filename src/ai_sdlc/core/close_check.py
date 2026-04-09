@@ -56,7 +56,7 @@ VERIFICATION_PROFILE_REQUIRED_COMMANDS: dict[str, tuple[str, ...]] = {
 # FR-096: default docs scan = WI `*.md` + these repo-relative paths (when present).
 DOCS_WHITELIST_RELS = (
     Path("docs/pull-request-checklist.zh.md"),
-    Path("docs/USER_GUIDE.zh-CN.md"),
+    Path("USER_GUIDE.zh-CN.md"),
 )
 RELEASE_GATE_EVIDENCE_FILE = "release-gate-evidence.md"
 _WORKITEM_SEQUENCE_RE = re.compile(r"^(?P<seq>\d+)-")

@@ -52,7 +52,7 @@
 - `tests/unit/test_verify_constraints.py`: provenance candidates do not alter current verify-default blocker outcomes.
 - `tests/unit/test_close_check.py`: provenance candidates do not alter current close-check-default blocker outcomes.
 - `tests/unit/test_gates.py`: governance-ready payload compatibility stays aligned with existing gate-capable fields.
-- `docs/USER_GUIDE.zh-CN.md`: document the read-only provenance CLI surface and Phase 1 limits.
+- `USER_GUIDE.zh-CN.md`: document the read-only provenance CLI surface and Phase 1 limits.
 
 ## Execution Order And Parallelism
 
@@ -343,7 +343,7 @@ git commit -m "feat: add non-blocking provenance governance hooks"
 - Modify: `tests/unit/test_telemetry_provenance_store.py`
 - Modify: `tests/unit/test_telemetry_provenance_inspection.py`
 - Modify: `tests/integration/test_cli_provenance.py`
-- Modify: `docs/USER_GUIDE.zh-CN.md`
+- Modify: `USER_GUIDE.zh-CN.md`
 
 - [ ] **Step 1: Add explicit positive/negative matrix coverage**
 
@@ -384,6 +384,6 @@ Expected:
 - [ ] **Step 5: Commit**
 
 ```bash
-git add tests/unit/test_telemetry_provenance_ingress.py tests/unit/test_telemetry_provenance_store.py tests/unit/test_telemetry_provenance_inspection.py tests/integration/test_cli_provenance.py docs/USER_GUIDE.zh-CN.md
+git add tests/unit/test_telemetry_provenance_ingress.py tests/unit/test_telemetry_provenance_store.py tests/unit/test_telemetry_provenance_inspection.py tests/integration/test_cli_provenance.py USER_GUIDE.zh-CN.md
 git commit -m "docs: finalize provenance phase 1 rollout"
 ```

@@ -255,7 +255,7 @@
 - **本批 touched files**：
   - `tests/integration/test_cli_program.py`
   - `src/ai_sdlc/cli/program_cmd.py`
-  - `docs/USER_GUIDE.zh-CN.md`
+  - `USER_GUIDE.zh-CN.md`
   - `specs/073-frontend-p2-provider-style-solution-baseline/task-execution-log.md`
 
 #### 4.2 T81 | 先写 failing tests 固定 CLI 简单模式 / 高级模式 / 最终确认页语义
@@ -280,7 +280,7 @@
   - 复用 `ProgramService.build_frontend_solution_confirmation()` 输出结构化 snapshot，而不是回退到自由文本。
   - 简单模式输出单套推荐；高级模式输出 7 步 wizard 与 final preflight。
   - 最终确认落盘时通过 artifact generator 写 `.ai-sdlc/memory/frontend-solution-confirmation/`，并确保 `will_change_on_confirm` 只停留在确认前展示层，不进入 snapshot 真值。
-  - 在 `docs/USER_GUIDE.zh-CN.md` 追加 `program solution-confirm` 的最小使用面与边界说明。
+  - 在 `USER_GUIDE.zh-CN.md` 追加 `program solution-confirm` 的最小使用面与边界说明。
 - **GREEN 结果**：
   - `uv run pytest tests/integration/test_cli_program.py -q -k "solution_confirm"`
   - 结果：`4 passed`
@@ -291,12 +291,12 @@
 - **验证命令**：
   - `uv run pytest tests/integration/test_cli_program.py -q`
   - `uv run ruff check src tests`
-  - `git diff --check -- specs/073-frontend-p2-provider-style-solution-baseline src/ai_sdlc/cli docs/USER_GUIDE.zh-CN.md tests/integration`
+  - `git diff --check -- specs/073-frontend-p2-provider-style-solution-baseline src/ai_sdlc/cli USER_GUIDE.zh-CN.md tests/integration`
   - `uv run ai-sdlc verify constraints`
 - **验证结果**：
   - `uv run pytest tests/integration/test_cli_program.py -q` -> `112 passed in 2.11s`
   - `uv run ruff check src tests` -> `All checks passed!`
-  - `git diff --check -- specs/073-frontend-p2-provider-style-solution-baseline src/ai_sdlc/cli docs/USER_GUIDE.zh-CN.md tests/integration` -> 通过
+  - `git diff --check -- specs/073-frontend-p2-provider-style-solution-baseline src/ai_sdlc/cli USER_GUIDE.zh-CN.md tests/integration` -> 通过
   - `uv run ai-sdlc verify constraints` -> `verify constraints: no BLOCKERs.`
 - **是否符合任务目标**：符合。
 

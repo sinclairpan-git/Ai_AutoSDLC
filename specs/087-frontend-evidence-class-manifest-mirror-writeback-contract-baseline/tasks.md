@@ -32,7 +32,7 @@ Batch 3: verification, project-state update, archive
 ### Task 1.1 对齐 authoring / validator / mirror / read-only surface 边界
 
 - [x] 回读 `082`、`083`、`084`、`085`、`086`
-- [x] 回读 `docs/USER_GUIDE.zh-CN.md` 中 `program validate`、`status --json`、`workitem close-check` 的边界
+- [x] 回读 `USER_GUIDE.zh-CN.md` 中 `program validate`、`status --json`、`workitem close-check` 的边界
 - [x] 回读 `src/ai_sdlc/cli/program_cmd.py`、`src/ai_sdlc/cli/workitem_cmd.py`、`src/ai_sdlc/core/program_service.py`
 
 **完成标准**

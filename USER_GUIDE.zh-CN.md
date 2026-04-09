@@ -1,5 +1,35 @@
 # AI-SDLC 小白实操手册
 
+## 目录
+
+- 使用前先记住
+- 第一章：空项目完整演练
+  - 第 1 步：先用 IDE 打开你准备放项目的目录一次
+  - 第 2 步：在终端里创建一个空项目文件夹
+  - 第 3 步：检查 Python 版本
+  - 第 4 步：在这个空项目里创建虚拟环境并安装 AI-SDLC
+  - 第 5 步：验证 AI-SDLC 安装成功
+  - 第 6 步：初始化这个空项目
+  - 第 7 步：先确认 adapter 已被宿主认可
+  - 第 8 步：现在不要聊天，先在终端里做一次预演启动
+  - 第 9 步：到这里，才切换到 IDE 聊天输入框
+- 第二章：已有项目完整演练
+  - 第 1 步：先用你的 IDE 打开这个已有项目一次
+  - 第 2 步：在终端里进入这个已有项目根目录
+  - 第 3 步：检查 Python 版本
+  - 第 4 步：在这个已有项目里安装 AI-SDLC
+  - 第 5 步：验证安装成功
+  - 第 6 步：初始化这个已有项目
+  - 第 7 步：看一下当前状态
+  - 第 8 步：先确认 adapter 已被宿主认可
+  - 第 9 步：先在终端做一次预演启动
+  - 第 10 步：到这里，才切换到 IDE 聊天输入框
+- Telemetry 运维边界（status/doctor）
+- 交付完成（DoD）与计划 / 任务状态
+- 框架自身开发补充
+
+## 使用前先记住
+
 这份文档只有两章。
 第一章用一个空项目，从 0 开始，完整跑到“可以开始在 IDE 聊天窗里说需求”。
 第二章用一个已有项目，从安装一直跑到“可以开始在 IDE 聊天窗里说增量需求”。
@@ -12,7 +42,7 @@
 如果你问“最合适在哪里执行命令”，我的答案是：
 
 - 最合适：先用 Cursor / Codex / Claude Code 打开项目文件夹一次，然后在这个 IDE 自带的 Terminal 里执行本文命令。
-- 也可以：Windows 用 PowerShell，macOS 用 Terminal。
+- 也可以：Windows 用 PowerShell，macOS / Linux 用 Terminal。
 - 但是不管你用哪种终端，**都不要把 `python -m ai_sdlc init .` 这种命令粘贴到 IDE 聊天输入框里。**
 
 如果你问“PowerShell 怎么识别 IDE”，答案是：
@@ -54,10 +84,12 @@
 
 - Windows：PowerShell，或 IDE 自带 Terminal
 - macOS：Terminal / iTerm，或 IDE 自带 Terminal
+- Linux：Terminal，或 IDE 自带 Terminal
 
 **Windows 直接复制：**
 
 ```powershell
+# D:\work 是示例父目录，ui-test-platform 是示例项目名；可按需替换
 cd D:\work
 mkdir ui-test-platform
 cd ui-test-platform
@@ -66,6 +98,16 @@ cd ui-test-platform
 **macOS 直接复制：**
 
 ```bash
+# ~/work 是示例父目录，ui-test-platform 是示例项目名；可按需替换
+cd ~/work
+mkdir ui-test-platform
+cd ui-test-platform
+```
+
+**Linux 直接复制：**
+
+```bash
+# ~/work 是示例父目录，ui-test-platform 是示例项目名；可按需替换
 cd ~/work
 mkdir ui-test-platform
 cd ui-test-platform
@@ -73,7 +115,7 @@ cd ui-test-platform
 
 **执行成功以后，你应该看到：**
 
-- 终端当前目录已经进入 `ui-test-platform`
+- 终端当前目录已经进入你刚创建的项目目录；如果你直接照抄示例，这里就是 `ui-test-platform`
 - 这个目录现在还是空的，里面还没有业务代码
 
 ### 第 3 步：检查 Python 版本
@@ -94,15 +136,63 @@ py -3.11 --version
 python3 --version
 ```
 
+**Linux 直接复制：**
+
+```bash
+python3 --version
+```
+
 **执行成功以后，你应该看到：**
 
 - Windows 至少显示 `Python 3.11.x`
 - macOS 至少显示 `Python 3.11.x`
+- Linux 至少显示 `Python 3.11.x`
 
 **如果报错：**
 
-- Windows 如果提示找不到 `py` 或没有 3.11，请先安装 Python 3.11+
-- macOS 如果版本低于 3.11，请先安装 Python 3.11+
+- Windows 如果提示找不到 `py` 或没有 3.11，直接复制：
+
+```powershell
+winget install -e --id Python.Python.3.11 --accept-package-agreements --accept-source-agreements
+winget install -e --id Python.Launcher --accept-package-agreements --accept-source-agreements
+py -3.11 --version
+```
+
+- macOS 如果版本低于 3.11，直接复制：
+
+如果你的 Mac 还没装 Homebrew，先复制：
+
+```bash
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+```
+
+然后继续复制：
+
+```bash
+if [ -x /opt/homebrew/bin/brew ]; then
+  eval "$(/opt/homebrew/bin/brew shellenv)"
+elif [ -x /usr/local/bin/brew ]; then
+  eval "$(/usr/local/bin/brew shellenv)"
+fi
+brew install python@3.11
+export PATH="$(brew --prefix python@3.11)/libexec/bin:$PATH"
+python3 --version
+```
+
+- Linux 如果版本低于 3.11，直接复制：
+
+下面这组命令按 Ubuntu / Debian 写法准备；如果你用的是其他发行版，思路不变，但安装系统依赖的命令要换成你自己的包管理器。
+
+```bash
+sudo apt-get update
+sudo apt-get install -y build-essential procps curl file git
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
+brew install python@3.11
+export PATH="$(brew --prefix python@3.11)/libexec/bin:$PATH"
+python3 --version
+```
+
 - Python 没装好之前，不要继续往下执行
 
 ### 第 4 步：在这个空项目里创建虚拟环境并安装 AI-SDLC
@@ -122,6 +212,15 @@ pip install "https://github.com/sinclairpan-git/Ai_AutoSDLC/archive/refs/tags/v0
 ```
 
 **macOS 直接复制：**
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install -U pip
+pip install "https://github.com/sinclairpan-git/Ai_AutoSDLC/archive/refs/tags/v0.6.0.tar.gz"
+```
+
+**Linux 直接复制：**
 
 ```bash
 python3 -m venv .venv
@@ -183,7 +282,7 @@ pip install --upgrade --force-reinstall "https://github.com/sinclairpan-git/Ai_A
 
 - 终端
 
-**Windows / macOS 都直接复制：**
+**Windows / macOS / Linux 都直接复制：**
 
 ```bash
 python -m ai_sdlc --help
@@ -214,6 +313,13 @@ source .venv/bin/activate
 python -m ai_sdlc --help
 ```
 
+Linux：
+
+```bash
+source .venv/bin/activate
+python -m ai_sdlc --help
+```
+
 - 如果重新激活后还是不行，回到上一步重新安装，不要继续往下走
 
 ### 第 6 步：初始化这个空项目
@@ -223,7 +329,7 @@ python -m ai_sdlc --help
 - 终端
 - 不在 IDE 聊天输入框执行
 
-**Windows / macOS 都直接复制：**
+**Windows / macOS / Linux 都直接复制：**
 
 ```bash
 python -m ai_sdlc init .
@@ -289,7 +395,7 @@ Pipeline Stage init
 - 终端
 - 不在 IDE 聊天输入框执行
 
-**Windows / macOS 都直接复制：**
+**Windows / macOS / Linux 都直接复制：**
 
 ```bash
 python -m ai_sdlc adapter activate
@@ -335,7 +441,7 @@ python -m ai_sdlc adapter activate --agent-target codex
 - 终端
 - 不在 IDE 聊天输入框执行
 
-**Windows / macOS 都直接复制：**
+**Windows / macOS / Linux 都直接复制：**
 
 ```bash
 python -m ai_sdlc run --dry-run
@@ -485,18 +591,27 @@ python -m ai_sdlc run --dry-run
 **Windows 直接复制：**
 
 ```powershell
+# D:\work\my-existing-project 是示例路径；请替换成你自己已有项目的真实路径
 cd D:\work\my-existing-project
 ```
 
 **macOS 直接复制：**
 
 ```bash
+# ~/work/my-existing-project 是示例路径；请替换成你自己已有项目的真实路径
+cd ~/work/my-existing-project
+```
+
+**Linux 直接复制：**
+
+```bash
+# ~/work/my-existing-project 是示例路径；请替换成你自己已有项目的真实路径
 cd ~/work/my-existing-project
 ```
 
 **执行成功以后，你应该看到：**
 
-- 当前终端已经位于已有项目的根目录
+- 当前终端已经位于你的已有项目根目录
 
 ### 第 3 步：检查 Python 版本
 
@@ -516,13 +631,61 @@ py -3.11 --version
 python3 --version
 ```
 
+**Linux 直接复制：**
+
+```bash
+python3 --version
+```
+
 **执行成功以后，你应该看到：**
 
-- Python 版本至少是 `3.11.x`
+- Windows / macOS / Linux 至少显示 `Python 3.11.x`
 
 **如果报错：**
 
-- 先安装 Python 3.11+
+- Windows 如果提示找不到 `py` 或没有 3.11，直接复制：
+
+```powershell
+winget install -e --id Python.Python.3.11 --accept-package-agreements --accept-source-agreements
+winget install -e --id Python.Launcher --accept-package-agreements --accept-source-agreements
+py -3.11 --version
+```
+
+- macOS 如果版本低于 3.11，直接复制：
+
+如果你的 Mac 还没装 Homebrew，先复制：
+
+```bash
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+```
+
+然后继续复制：
+
+```bash
+if [ -x /opt/homebrew/bin/brew ]; then
+  eval "$(/opt/homebrew/bin/brew shellenv)"
+elif [ -x /usr/local/bin/brew ]; then
+  eval "$(/usr/local/bin/brew shellenv)"
+fi
+brew install python@3.11
+export PATH="$(brew --prefix python@3.11)/libexec/bin:$PATH"
+python3 --version
+```
+
+- Linux 如果版本低于 3.11，直接复制：
+
+下面这组命令按 Ubuntu / Debian 写法准备；如果你用的是其他发行版，思路不变，但安装系统依赖的命令要换成你自己的包管理器。
+
+```bash
+sudo apt-get update
+sudo apt-get install -y build-essential procps curl file git
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
+brew install python@3.11
+export PATH="$(brew --prefix python@3.11)/libexec/bin:$PATH"
+python3 --version
+```
+
 - Python 没准备好之前，不要继续
 
 ### 第 4 步：在这个已有项目里安装 AI-SDLC
@@ -542,6 +705,15 @@ pip install "https://github.com/sinclairpan-git/Ai_AutoSDLC/archive/refs/tags/v0
 ```
 
 **macOS 直接复制：**
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install -U pip
+pip install "https://github.com/sinclairpan-git/Ai_AutoSDLC/archive/refs/tags/v0.6.0.tar.gz"
+```
+
+**Linux 直接复制：**
 
 ```bash
 python3 -m venv .venv
@@ -592,7 +764,7 @@ pip install --upgrade --force-reinstall "https://github.com/sinclairpan-git/Ai_A
 
 - 终端
 
-**Windows / macOS 都直接复制：**
+**Windows / macOS / Linux 都直接复制：**
 
 ```bash
 python -m ai_sdlc --help
@@ -623,6 +795,13 @@ source .venv/bin/activate
 python -m ai_sdlc --help
 ```
 
+Linux：
+
+```bash
+source .venv/bin/activate
+python -m ai_sdlc --help
+```
+
 ### 第 6 步：初始化这个已有项目
 
 **这一步在哪执行：**
@@ -630,7 +809,7 @@ python -m ai_sdlc --help
 - 终端
 - 不在 IDE 聊天输入框执行
 
-**Windows / macOS 都直接复制：**
+**Windows / macOS / Linux 都直接复制：**
 
 ```bash
 python -m ai_sdlc init .
@@ -672,7 +851,7 @@ python -m ai_sdlc init . --agent-target codex
 
 - 终端
 
-**Windows / macOS 都直接复制：**
+**Windows / macOS / Linux 都直接复制：**
 
 ```bash
 python -m ai_sdlc status
@@ -700,7 +879,7 @@ Pipeline Stage init
 - 终端
 - 不在 IDE 聊天输入框执行
 
-**Windows / macOS 都直接复制：**
+**Windows / macOS / Linux 都直接复制：**
 
 ```bash
 python -m ai_sdlc adapter activate
@@ -738,7 +917,7 @@ python -m ai_sdlc adapter activate --agent-target codex
 - 终端
 - 不在 IDE 聊天输入框执行
 
-**Windows / macOS 都直接复制：**
+**Windows / macOS / Linux 都直接复制：**
 
 ```bash
 python -m ai_sdlc run --dry-run
@@ -961,7 +1140,13 @@ Phase 1 的边界要记住：
 - 如果请求的 enterprise 方案不可用，但存在允许的退路，CLI 会保留 `requested_*`，并把 fallback 结果写到 `effective_*`。
 - 如果预检结果是 `blocked`，命令会停止在确认 gate，不应把它理解为“已自动完成技术选型”。
 
-## 框架仓库里的 verify / close 收口
+## 交付完成（DoD）与计划 / 任务状态
+
+如果你是在 **AI-SDLC 仓库里开发 AI-SDLC 自身**，这一节主要看 `verify constraints`、`workitem close-check`、`branch-check` 和 `truth-check` 这几类收口命令怎么配合使用。
+
+<a id="user-guide-dod-plan-sync"></a>
+
+### 框架仓库里的 verify / close 收口
 
 如果你是在 **AI-SDLC 仓库里开发 AI-SDLC 自身**，`verify` 和 `close` 最容易被混淆的地方是：
 
@@ -986,7 +1171,7 @@ Phase 1 的边界要记住：
   - 它回答“指定的 branch/commit 上，这个 WI 只是 formal freeze、已经在分支实现，还是已进 `main`”，并显式披露当前 HEAD 是否与目标 revision 一致。
   - 当你在 `main` 上审查另一个分支或历史提交时，优先先跑 `truth-check`，不要把当前 checkout 的 execution evidence 直接外推到目标 revision。
 - `uv run ai-sdlc workitem close-check --wi specs/<WI>/ --all-docs`
-  - 默认只扫 `specs/<WI>/*.md`，以及 `docs/pull-request-checklist.zh.md`、`docs/USER_GUIDE.zh-CN.md`。
+  - 默认只扫 `specs/<WI>/*.md`，以及 `docs/pull-request-checklist.zh.md`、`USER_GUIDE.zh-CN.md`。
   - 只有当你需要做全仓 `docs/**/*.md` wording drift 复核时，才加 `--all-docs`。
 
 框架仓库里做 telemetry smoke 或仓库级回归时，最常用的一组 fresh verification 是：

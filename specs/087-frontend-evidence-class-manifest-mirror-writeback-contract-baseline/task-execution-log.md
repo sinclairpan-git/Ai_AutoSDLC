@@ -20,7 +20,7 @@
 - `specs/084-frontend-evidence-class-diagnostic-contract-baseline/spec.md`
 - `specs/085-frontend-evidence-class-verify-first-runtime-cut-baseline/spec.md`
 - `specs/086-frontend-evidence-class-program-validate-mirror-contract-baseline/spec.md`
-- `docs/USER_GUIDE.zh-CN.md`
+- `USER_GUIDE.zh-CN.md`
 - `docs/SPEC_SPLIT_AND_PROGRAM.zh-CN.md`
 - `src/ai_sdlc/cli/program_cmd.py`
 - `src/ai_sdlc/cli/workitem_cmd.py`
@@ -54,7 +54,7 @@
 
 - **任务来源**：`close-out gate remediation`
 - **目标**：为 `087` 的 latest batch 补齐当前 `workitem close-check` 要求的 canonical close-out markers，并保持 manifest mirror writeback contract 的 docs-only truth 不变。
-- **预读范围**：`spec.md`、`plan.md`、`tasks.md`、`task-execution-log.md`、`docs/USER_GUIDE.zh-CN.md`、`src/ai_sdlc/cli/program_cmd.py`
+- **预读范围**：`spec.md`、`plan.md`、`tasks.md`、`task-execution-log.md`、`USER_GUIDE.zh-CN.md`、`src/ai_sdlc/cli/program_cmd.py`
 - **激活的规则**：close-check execution log fields；verification profile truthfulness；fresh verification before commit
 - **验证画像**：`docs-only`
 - **改动范围**：`specs/087-frontend-evidence-class-manifest-mirror-writeback-contract-baseline/task-execution-log.md`

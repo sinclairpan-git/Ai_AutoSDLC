@@ -3,7 +3,7 @@
 **功能编号**：`009-frontend-governance-ui-kernel`  
 **创建日期**：2026-04-02  
 **状态**：已冻结（formal baseline）  
-**输入**：[`../../docs/superpowers/specs/2026-04-02-ai-autosdlc-frontend-governance-ui-kernel-design.md`](../../docs/superpowers/specs/2026-04-02-ai-autosdlc-frontend-governance-ui-kernel-design.md)、[`../../src/ai_sdlc/rules/pipeline.md`](../../src/ai_sdlc/rules/pipeline.md)、[`../../docs/USER_GUIDE.zh-CN.md`](../../docs/USER_GUIDE.zh-CN.md)
+**输入**：[`../../docs/superpowers/specs/2026-04-02-ai-autosdlc-frontend-governance-ui-kernel-design.md`](../../docs/superpowers/specs/2026-04-02-ai-autosdlc-frontend-governance-ui-kernel-design.md)、[`../../src/ai_sdlc/rules/pipeline.md`](../../src/ai_sdlc/rules/pipeline.md)、[`../../USER_GUIDE.zh-CN.md`](../../USER_GUIDE.zh-CN.md)
 
 > 口径：本 work item 不是直接实现完整前端运行时，也不是把冻结设计再复制成第二套正文，而是把“前端治理与 UI Kernel”转成 framework 内可继续分解与执行的 canonical formal baseline。
 

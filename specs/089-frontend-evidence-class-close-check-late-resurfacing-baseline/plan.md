@@ -31,7 +31,7 @@
 ### Phase 1：close-stage surface reconciliation
 
 - 回读 `083` ~ `088` 已冻结 contract
-- 回读 `docs/USER_GUIDE.zh-CN.md` 中 `workitem close-check` 的 read-only / close-stage 语义
+- 回读 `USER_GUIDE.zh-CN.md` 中 `workitem close-check` 的 read-only / close-stage 语义
 - 回读 `src/ai_sdlc/cli/workitem_cmd.py` 与 `src/ai_sdlc/core/close_check.py`，确认当前 table / json 面向的是 compact blocker truth
 
 ### Phase 2：late resurfacing baseline freeze

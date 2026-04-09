@@ -16,7 +16,7 @@
 ### 1.2 预读与 research inputs
 
 - `specs/082-frontend-evidence-class-authoring-surface-baseline/spec.md`
-- `docs/USER_GUIDE.zh-CN.md`
+- `USER_GUIDE.zh-CN.md`
 - `docs/SPEC_SPLIT_AND_PROGRAM.zh-CN.md`
 - `docs/framework-defect-backlog.zh-CN.md`
 - `rg -n "authoring error|program validate|verify constraints|workitem close-check|status --json|validate" docs specs src tests -g '*.md' -g '*.py'`

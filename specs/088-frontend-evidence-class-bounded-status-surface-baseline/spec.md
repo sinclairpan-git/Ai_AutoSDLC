@@ -3,7 +3,7 @@
 **功能编号**：`088-frontend-evidence-class-bounded-status-surface-baseline`  
 **创建日期**：2026-04-09  
 **状态**：已冻结（formal baseline）  
-**输入**：[`../083-frontend-evidence-class-validator-surface-baseline/spec.md`](../083-frontend-evidence-class-validator-surface-baseline/spec.md)、[`../084-frontend-evidence-class-diagnostic-contract-baseline/spec.md`](../084-frontend-evidence-class-diagnostic-contract-baseline/spec.md)、[`../085-frontend-evidence-class-verify-first-runtime-cut-baseline/spec.md`](../085-frontend-evidence-class-verify-first-runtime-cut-baseline/spec.md)、[`../086-frontend-evidence-class-program-validate-mirror-contract-baseline/spec.md`](../086-frontend-evidence-class-program-validate-mirror-contract-baseline/spec.md)、[`../087-frontend-evidence-class-manifest-mirror-writeback-contract-baseline/spec.md`](../087-frontend-evidence-class-manifest-mirror-writeback-contract-baseline/spec.md)、[`../../docs/USER_GUIDE.zh-CN.md`](../../docs/USER_GUIDE.zh-CN.md)、[`../../src/ai_sdlc/cli/program_cmd.py`](../../src/ai_sdlc/cli/program_cmd.py)、[`../../src/ai_sdlc/cli/commands.py`](../../src/ai_sdlc/cli/commands.py)、[`../../src/ai_sdlc/telemetry/readiness.py`](../../src/ai_sdlc/telemetry/readiness.py)
+**输入**：[`../083-frontend-evidence-class-validator-surface-baseline/spec.md`](../083-frontend-evidence-class-validator-surface-baseline/spec.md)、[`../084-frontend-evidence-class-diagnostic-contract-baseline/spec.md`](../084-frontend-evidence-class-diagnostic-contract-baseline/spec.md)、[`../085-frontend-evidence-class-verify-first-runtime-cut-baseline/spec.md`](../085-frontend-evidence-class-verify-first-runtime-cut-baseline/spec.md)、[`../086-frontend-evidence-class-program-validate-mirror-contract-baseline/spec.md`](../086-frontend-evidence-class-program-validate-mirror-contract-baseline/spec.md)、[`../087-frontend-evidence-class-manifest-mirror-writeback-contract-baseline/spec.md`](../087-frontend-evidence-class-manifest-mirror-writeback-contract-baseline/spec.md)、[`../../USER_GUIDE.zh-CN.md`](../../USER_GUIDE.zh-CN.md)、[`../../src/ai_sdlc/cli/program_cmd.py`](../../src/ai_sdlc/cli/program_cmd.py)、[`../../src/ai_sdlc/cli/commands.py`](../../src/ai_sdlc/cli/commands.py)、[`../../src/ai_sdlc/telemetry/readiness.py`](../../src/ai_sdlc/telemetry/readiness.py)
 
 > 口径：`088` 把 `frontend_evidence_class` 的 future bounded status surfacing 冻结成一条 prospective-only baseline。它回答 `program status` 与 `status --json` 最多允许露出什么级别的 summary、两者各自承载到什么粒度、以及哪些 diagnostics 永远不得在 status surface 直接展开；它不实现 runtime，不新增状态字段，不改写 `verify constraints` / `program validate` / `close-check` 的 owning semantics，也不 retroactively 改写 `068` ~ `071`。
 
@@ -186,7 +186,7 @@ related_doc:
   - "specs/085-frontend-evidence-class-verify-first-runtime-cut-baseline/spec.md"
   - "specs/086-frontend-evidence-class-program-validate-mirror-contract-baseline/spec.md"
   - "specs/087-frontend-evidence-class-manifest-mirror-writeback-contract-baseline/spec.md"
-  - "docs/USER_GUIDE.zh-CN.md"
+  - "USER_GUIDE.zh-CN.md"
   - "src/ai_sdlc/cli/program_cmd.py"
   - "src/ai_sdlc/cli/commands.py"
   - "src/ai_sdlc/telemetry/readiness.py"

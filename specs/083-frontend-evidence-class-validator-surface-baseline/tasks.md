@@ -30,7 +30,7 @@ Batch 3: verification, project-state update, archive
 ### Task 1.1 对齐命令面职责
 
 - [x] 回读 `082`
-- [x] 回读 `docs/USER_GUIDE.zh-CN.md`
+- [x] 回读 `USER_GUIDE.zh-CN.md`
 - [x] 回读 `docs/SPEC_SPLIT_AND_PROGRAM.zh-CN.md`
 - [x] 确认 future primary detection / mirror consistency / bounded visibility / close-stage recheck 的命令归属
 

@@ -3,7 +3,7 @@
 **功能编号**：`083-frontend-evidence-class-validator-surface-baseline`  
 **创建日期**：2026-04-08  
 **状态**：已冻结（formal baseline）  
-**输入**：[`../082-frontend-evidence-class-authoring-surface-baseline/spec.md`](../082-frontend-evidence-class-authoring-surface-baseline/spec.md)、[`../../docs/USER_GUIDE.zh-CN.md`](../../docs/USER_GUIDE.zh-CN.md)、[`../../docs/SPEC_SPLIT_AND_PROGRAM.zh-CN.md`](../../docs/SPEC_SPLIT_AND_PROGRAM.zh-CN.md)
+**输入**：[`../082-frontend-evidence-class-authoring-surface-baseline/spec.md`](../082-frontend-evidence-class-authoring-surface-baseline/spec.md)、[`../../USER_GUIDE.zh-CN.md`](../../USER_GUIDE.zh-CN.md)、[`../../docs/SPEC_SPLIT_AND_PROGRAM.zh-CN.md`](../../docs/SPEC_SPLIT_AND_PROGRAM.zh-CN.md)
 
 > 口径：`083` 在 `082` 的 authoring surface 之上，继续冻结 future runtime 应该先在哪个命令面发现并报告 `frontend_evidence_class` authoring error。它只定义 detection/reporting surface contract，不修改任何现有 CLI、parser、validator 或既有 item 状态。
 
@@ -166,7 +166,7 @@ future 如果多个命令都报告同一问题，应遵守以下 precedence：
 ---
 related_doc:
   - "specs/082-frontend-evidence-class-authoring-surface-baseline/spec.md"
-  - "docs/USER_GUIDE.zh-CN.md"
+  - "USER_GUIDE.zh-CN.md"
   - "docs/SPEC_SPLIT_AND_PROGRAM.zh-CN.md"
 frontend_evidence_class: "framework_capability"
 ---

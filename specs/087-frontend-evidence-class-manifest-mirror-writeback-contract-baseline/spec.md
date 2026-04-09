@@ -3,7 +3,7 @@
 **功能编号**：`087-frontend-evidence-class-manifest-mirror-writeback-contract-baseline`  
 **创建日期**：2026-04-09  
 **状态**：已冻结（formal baseline）  
-**输入**：[`../082-frontend-evidence-class-authoring-surface-baseline/spec.md`](../082-frontend-evidence-class-authoring-surface-baseline/spec.md)、[`../083-frontend-evidence-class-validator-surface-baseline/spec.md`](../083-frontend-evidence-class-validator-surface-baseline/spec.md)、[`../084-frontend-evidence-class-diagnostic-contract-baseline/spec.md`](../084-frontend-evidence-class-diagnostic-contract-baseline/spec.md)、[`../085-frontend-evidence-class-verify-first-runtime-cut-baseline/spec.md`](../085-frontend-evidence-class-verify-first-runtime-cut-baseline/spec.md)、[`../086-frontend-evidence-class-program-validate-mirror-contract-baseline/spec.md`](../086-frontend-evidence-class-program-validate-mirror-contract-baseline/spec.md)、[`../../docs/USER_GUIDE.zh-CN.md`](../../docs/USER_GUIDE.zh-CN.md)、[`../../docs/SPEC_SPLIT_AND_PROGRAM.zh-CN.md`](../../docs/SPEC_SPLIT_AND_PROGRAM.zh-CN.md)
+**输入**：[`../082-frontend-evidence-class-authoring-surface-baseline/spec.md`](../082-frontend-evidence-class-authoring-surface-baseline/spec.md)、[`../083-frontend-evidence-class-validator-surface-baseline/spec.md`](../083-frontend-evidence-class-validator-surface-baseline/spec.md)、[`../084-frontend-evidence-class-diagnostic-contract-baseline/spec.md`](../084-frontend-evidence-class-diagnostic-contract-baseline/spec.md)、[`../085-frontend-evidence-class-verify-first-runtime-cut-baseline/spec.md`](../085-frontend-evidence-class-verify-first-runtime-cut-baseline/spec.md)、[`../086-frontend-evidence-class-program-validate-mirror-contract-baseline/spec.md`](../086-frontend-evidence-class-program-validate-mirror-contract-baseline/spec.md)、[`../../USER_GUIDE.zh-CN.md`](../../USER_GUIDE.zh-CN.md)、[`../../docs/SPEC_SPLIT_AND_PROGRAM.zh-CN.md`](../../docs/SPEC_SPLIT_AND_PROGRAM.zh-CN.md)
 
 > 口径：`087` 把 `frontend_evidence_class` 的 future manifest mirror generation/writeback contract 冻结成一条 prospective-only baseline。它回答谁可以写 mirror、在什么前置条件下写、允许改 manifest 的哪一小块，以及哪些 surfaces 永远不得 opportunistic write；它不实现 runtime，不冻结具体 CLI 子命令名，不定义 status summary 或 close-stage resurfacing，也不 retroactively 改写 `068` ~ `071`。
 
@@ -201,7 +201,7 @@ related_doc:
   - "specs/084-frontend-evidence-class-diagnostic-contract-baseline/spec.md"
   - "specs/085-frontend-evidence-class-verify-first-runtime-cut-baseline/spec.md"
   - "specs/086-frontend-evidence-class-program-validate-mirror-contract-baseline/spec.md"
-  - "docs/USER_GUIDE.zh-CN.md"
+  - "USER_GUIDE.zh-CN.md"
   - "docs/SPEC_SPLIT_AND_PROGRAM.zh-CN.md"
 frontend_evidence_class: "framework_capability"
 ---

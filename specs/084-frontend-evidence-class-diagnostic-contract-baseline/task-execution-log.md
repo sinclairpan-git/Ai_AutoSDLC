@@ -17,7 +17,7 @@
 
 - `specs/083-frontend-evidence-class-validator-surface-baseline/spec.md`
 - `docs/framework-defect-backlog.zh-CN.md`
-- `docs/USER_GUIDE.zh-CN.md`
+- `USER_GUIDE.zh-CN.md`
 - `rg -n "authoring error|diagnostic|BLOCKER|warning|error code|status --json|verify constraints" docs specs src tests -g '*.md' -g '*.py'`
 
 ### 1.3 改动内容

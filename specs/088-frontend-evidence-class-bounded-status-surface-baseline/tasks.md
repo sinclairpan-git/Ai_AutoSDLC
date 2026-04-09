@@ -32,7 +32,7 @@ Batch 3: verification, project-state update, archive
 ### Task 1.1 对齐 validator / diagnostics / writeback / status 边界
 
 - [x] 回读 `083`、`084`、`085`、`086`、`087`
-- [x] 回读 `docs/USER_GUIDE.zh-CN.md` 中 `status --json` 与 `program status` 的边界
+- [x] 回读 `USER_GUIDE.zh-CN.md` 中 `status --json` 与 `program status` 的边界
 - [x] 回读 `src/ai_sdlc/cli/program_cmd.py`、`src/ai_sdlc/cli/commands.py`、`src/ai_sdlc/telemetry/readiness.py`
 
 **完成标准**

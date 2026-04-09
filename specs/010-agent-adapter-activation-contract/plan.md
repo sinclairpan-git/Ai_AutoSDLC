@@ -1,7 +1,7 @@
 ---
 related_doc:
   - "docs/framework-defect-backlog.zh-CN.md"
-  - "docs/USER_GUIDE.zh-CN.md"
+  - "USER_GUIDE.zh-CN.md"
 ---
 # 实施计划：Agent Adapter Activation Contract
 

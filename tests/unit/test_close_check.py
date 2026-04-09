@@ -860,8 +860,7 @@ def test_close_check_whitelist_user_guide_scanned(tmp_path: Path) -> None:
         tasks_body="- [x] done\n### Task 1.1\n- **验收标准（AC）**：ok",
         plan_status="completed",
     )
-    ug = root / "docs" / "USER_GUIDE.zh-CN.md"
-    ug.parent.mkdir(parents=True)
+    ug = root / "USER_GUIDE.zh-CN.md"
     ug.write_text(
         "在未实现前可忽略：`ai-sdlc workitem plan-check`。\n",
         encoding="utf-8",

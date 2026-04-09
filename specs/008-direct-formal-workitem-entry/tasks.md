@@ -36,7 +36,7 @@ Batch 4: docs alignment + focused regression + close-out
 - **任务编号**：T12
 - **优先级**：P0
 - **依赖**：T11
-- **文件**：src/ai_sdlc/rules/pipeline.md, docs/框架自迭代开发与发布约定.md, docs/USER_GUIDE.zh-CN.md
+- **文件**：src/ai_sdlc/rules/pipeline.md, docs/框架自迭代开发与发布约定.md, USER_GUIDE.zh-CN.md
 - **可并行**：否
 - **验收标准**：
   1. 新 framework capability 的 canonical spec/plan/tasks 默认位于 `specs/<WI>/`。
@@ -113,7 +113,7 @@ Batch 4: docs alignment + focused regression + close-out
 - **任务编号**：T41
 - **优先级**：P1
 - **依赖**：T32
-- **文件**：docs/USER_GUIDE.zh-CN.md, docs/框架自迭代开发与发布约定.md, src/ai_sdlc/rules/pipeline.md
+- **文件**：USER_GUIDE.zh-CN.md, docs/框架自迭代开发与发布约定.md, src/ai_sdlc/rules/pipeline.md
 - **可并行**：否
 - **验收标准**：
   1. 用户文档把 direct-formal init 作为新 framework capability 的默认入口。
@@ -126,7 +126,7 @@ Batch 4: docs alignment + focused regression + close-out
 - **任务编号**：T42
 - **优先级**：P1
 - **依赖**：T41
-- **文件**：tests/unit/test_workitem_scaffold.py, tests/integration/test_cli_workitem_init.py, tests/unit/test_command_names.py, docs/USER_GUIDE.zh-CN.md
+- **文件**：tests/unit/test_workitem_scaffold.py, tests/integration/test_cli_workitem_init.py, tests/unit/test_command_names.py, USER_GUIDE.zh-CN.md
 - **可并行**：否
 - **验收标准**：
   1. direct-formal scaffold focused suite 全部通过。

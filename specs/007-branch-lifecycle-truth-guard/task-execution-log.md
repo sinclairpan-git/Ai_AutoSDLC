@@ -93,7 +93,7 @@
 
 - **任务来源**：[`tasks.md`](tasks.md) `T41`、`T42`
 - **目标**：把 branch lifecycle unresolved truth 接入 `verify constraints`、`status --json` 和 `doctor`，同时保持 bounded read-only。
-- **预读范围**：[`../../src/ai_sdlc/core/verify_constraints.py`](../../src/ai_sdlc/core/verify_constraints.py)、[`../../src/ai_sdlc/telemetry/readiness.py`](../../src/ai_sdlc/telemetry/readiness.py)、[`../../docs/USER_GUIDE.zh-CN.md`](../../docs/USER_GUIDE.zh-CN.md)
+- **预读范围**：[`../../src/ai_sdlc/core/verify_constraints.py`](../../src/ai_sdlc/core/verify_constraints.py)、[`../../src/ai_sdlc/telemetry/readiness.py`](../../src/ai_sdlc/telemetry/readiness.py)、[`../../USER_GUIDE.zh-CN.md`](../../USER_GUIDE.zh-CN.md)
 - **激活的规则**：bounded read surfaces；history-unrelated branches 不默认 blocker；governance 只读。
 
 #### 2.2 统一验证命令
@@ -159,7 +159,7 @@
 
 - **任务来源**：[`tasks.md`](tasks.md) `T51`、`T52`
 - **目标**：同步用户文档/自迭代约定，清理 host tool 临时产物，并用 focused suite + full regression + smoke 冻结新的 branch close-out guardrails。
-- **预读范围**：[`../../docs/USER_GUIDE.zh-CN.md`](../../docs/USER_GUIDE.zh-CN.md)、[`../../docs/框架自迭代开发与发布约定.md`](../../docs/框架自迭代开发与发布约定.md)、[`../../templates/execution-log-template.md`](../../templates/execution-log-template.md)、[`../../src/ai_sdlc/templates/execution-log.md.j2`](../../src/ai_sdlc/templates/execution-log.md.j2)
+- **预读范围**：[`../../USER_GUIDE.zh-CN.md`](../../USER_GUIDE.zh-CN.md)、[`../../docs/框架自迭代开发与发布约定.md`](../../docs/框架自迭代开发与发布约定.md)、[`../../templates/execution-log-template.md`](../../templates/execution-log-template.md)、[`../../src/ai_sdlc/templates/execution-log.md.j2`](../../src/ai_sdlc/templates/execution-log.md.j2)
 - **激活的规则**：user-facing command truth；formal execution evidence；fresh verification before completion。
 - **验证画像**：`code-change`
 
@@ -189,7 +189,7 @@
 
 ##### T51 | rules/templates/user docs close-out
 
-- **改动范围**：[`../../docs/USER_GUIDE.zh-CN.md`](../../docs/USER_GUIDE.zh-CN.md)、[`../../docs/框架自迭代开发与发布约定.md`](../../docs/框架自迭代开发与发布约定.md)、[`../../.gitignore`](../../.gitignore)
+- **改动范围**：[`../../USER_GUIDE.zh-CN.md`](../../USER_GUIDE.zh-CN.md)、[`../../docs/框架自迭代开发与发布约定.md`](../../docs/框架自迭代开发与发布约定.md)、[`../../.gitignore`](../../.gitignore)
 - **改动内容**：补齐 `workitem branch-check`、`close-check` 的 branch disposition truth 口径，并把 `.superpowers/` 判定为本地 skill 临时缓存后忽略。
 - **新增/调整的测试**：无新增产品行为测试；以 smoke 和仓库全量回归为准。
 - **测试结果**：通过。

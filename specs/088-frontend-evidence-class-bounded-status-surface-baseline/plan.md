@@ -61,7 +61,7 @@
 ### Phase 0：surface reconciliation
 
 - 回读 `083` ~ `087`
-- 回读 `docs/USER_GUIDE.zh-CN.md` 中 `status --json` / `program status` 的只读边界
+- 回读 `USER_GUIDE.zh-CN.md` 中 `status --json` / `program status` 的只读边界
 - 回读 `src/ai_sdlc/cli/program_cmd.py`、`src/ai_sdlc/cli/commands.py` 与 `telemetry/readiness.py`
 
 ### Phase 1：status contract baseline freeze

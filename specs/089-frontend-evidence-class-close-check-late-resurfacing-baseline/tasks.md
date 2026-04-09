@@ -32,7 +32,7 @@ Batch 3: verification, project-state update, archive
 ### Task 1.1 对齐 owning surfaces / writeback / status / close-stage 边界
 
 - [x] 回读 `083`、`084`、`085`、`086`、`087`、`088`
-- [x] 回读 `docs/USER_GUIDE.zh-CN.md` 中 `workitem close-check` 的边界
+- [x] 回读 `USER_GUIDE.zh-CN.md` 中 `workitem close-check` 的边界
 - [x] 回读 `src/ai_sdlc/cli/workitem_cmd.py`、`src/ai_sdlc/core/close_check.py`
 
 **完成标准**

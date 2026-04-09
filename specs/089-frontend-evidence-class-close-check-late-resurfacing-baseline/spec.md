@@ -3,7 +3,7 @@
 **功能编号**：`089-frontend-evidence-class-close-check-late-resurfacing-baseline`  
 **创建日期**：2026-04-09  
 **状态**：已冻结（formal baseline）  
-**输入**：[`../083-frontend-evidence-class-validator-surface-baseline/spec.md`](../083-frontend-evidence-class-validator-surface-baseline/spec.md)、[`../084-frontend-evidence-class-diagnostic-contract-baseline/spec.md`](../084-frontend-evidence-class-diagnostic-contract-baseline/spec.md)、[`../085-frontend-evidence-class-verify-first-runtime-cut-baseline/spec.md`](../085-frontend-evidence-class-verify-first-runtime-cut-baseline/spec.md)、[`../086-frontend-evidence-class-program-validate-mirror-contract-baseline/spec.md`](../086-frontend-evidence-class-program-validate-mirror-contract-baseline/spec.md)、[`../087-frontend-evidence-class-manifest-mirror-writeback-contract-baseline/spec.md`](../087-frontend-evidence-class-manifest-mirror-writeback-contract-baseline/spec.md)、[`../088-frontend-evidence-class-bounded-status-surface-baseline/spec.md`](../088-frontend-evidence-class-bounded-status-surface-baseline/spec.md)、[`../../docs/USER_GUIDE.zh-CN.md`](../../docs/USER_GUIDE.zh-CN.md)、[`../../src/ai_sdlc/cli/workitem_cmd.py`](../../src/ai_sdlc/cli/workitem_cmd.py)、[`../../src/ai_sdlc/core/close_check.py`](../../src/ai_sdlc/core/close_check.py)
+**输入**：[`../083-frontend-evidence-class-validator-surface-baseline/spec.md`](../083-frontend-evidence-class-validator-surface-baseline/spec.md)、[`../084-frontend-evidence-class-diagnostic-contract-baseline/spec.md`](../084-frontend-evidence-class-diagnostic-contract-baseline/spec.md)、[`../085-frontend-evidence-class-verify-first-runtime-cut-baseline/spec.md`](../085-frontend-evidence-class-verify-first-runtime-cut-baseline/spec.md)、[`../086-frontend-evidence-class-program-validate-mirror-contract-baseline/spec.md`](../086-frontend-evidence-class-program-validate-mirror-contract-baseline/spec.md)、[`../087-frontend-evidence-class-manifest-mirror-writeback-contract-baseline/spec.md`](../087-frontend-evidence-class-manifest-mirror-writeback-contract-baseline/spec.md)、[`../088-frontend-evidence-class-bounded-status-surface-baseline/spec.md`](../088-frontend-evidence-class-bounded-status-surface-baseline/spec.md)、[`../../USER_GUIDE.zh-CN.md`](../../USER_GUIDE.zh-CN.md)、[`../../src/ai_sdlc/cli/workitem_cmd.py`](../../src/ai_sdlc/cli/workitem_cmd.py)、[`../../src/ai_sdlc/core/close_check.py`](../../src/ai_sdlc/core/close_check.py)
 
 > 口径：`089` 把 `frontend_evidence_class` 的 future `workitem close-check` surfacing 冻结成一条 prospective-only baseline。它回答 close-stage recheck 最多允许如何晚期重述 authoring malformed / mirror drift blocker、close-check 在 table / json 两种 read surface 上的 bounded 粒度，以及它明确不能承担哪些 first-detection、mirror writeback 或 full diagnostics 责任；它不实现 runtime，不新增 check，不改写 `verify constraints` / `program validate` / `program status` / `status --json` 的 owning semantics，也不 retroactively 改写 `068` ~ `071`。
 
@@ -182,7 +182,7 @@ related_doc:
   - "specs/086-frontend-evidence-class-program-validate-mirror-contract-baseline/spec.md"
   - "specs/087-frontend-evidence-class-manifest-mirror-writeback-contract-baseline/spec.md"
   - "specs/088-frontend-evidence-class-bounded-status-surface-baseline/spec.md"
-  - "docs/USER_GUIDE.zh-CN.md"
+  - "USER_GUIDE.zh-CN.md"
   - "src/ai_sdlc/cli/workitem_cmd.py"
   - "src/ai_sdlc/core/close_check.py"
 frontend_evidence_class: "framework_capability"

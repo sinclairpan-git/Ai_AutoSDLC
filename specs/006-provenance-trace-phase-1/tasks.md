@@ -187,7 +187,7 @@ Batch 6: docs close-out + targeted matrix + final verification
 - **任务编号**：T61
 - **优先级**：P1
 - **依赖**：T52
-- **文件**：docs/USER_GUIDE.zh-CN.md, tests/integration/test_cli_provenance.py
+- **文件**：USER_GUIDE.zh-CN.md, tests/integration/test_cli_provenance.py
 - **可并行**：否
 - **验收标准**：
   1. 用户文档明确 `summary / explain / gaps` 是日常 read-only surface。
@@ -200,7 +200,7 @@ Batch 6: docs close-out + targeted matrix + final verification
 - **任务编号**：T62
 - **优先级**：P1
 - **依赖**：T61
-- **文件**：tests/unit/test_telemetry_provenance_contracts.py, tests/unit/test_telemetry_provenance_store.py, tests/unit/test_telemetry_provenance_ingress.py, tests/unit/test_telemetry_provenance_inspection.py, tests/unit/test_telemetry_provenance_observer.py, tests/unit/test_telemetry_provenance_governance.py, tests/integration/test_cli_provenance.py, tests/unit/test_verify_constraints.py, tests/unit/test_close_check.py, tests/unit/test_gates.py, tests/unit/test_command_names.py, docs/USER_GUIDE.zh-CN.md
+- **文件**：tests/unit/test_telemetry_provenance_contracts.py, tests/unit/test_telemetry_provenance_store.py, tests/unit/test_telemetry_provenance_ingress.py, tests/unit/test_telemetry_provenance_inspection.py, tests/unit/test_telemetry_provenance_observer.py, tests/unit/test_telemetry_provenance_governance.py, tests/integration/test_cli_provenance.py, tests/unit/test_verify_constraints.py, tests/unit/test_close_check.py, tests/unit/test_gates.py, tests/unit/test_command_names.py, USER_GUIDE.zh-CN.md
 - **可并行**：否
 - **验收标准**：
   1. targeted provenance suite 全部通过。

@@ -189,7 +189,7 @@ def workitem_close_check(
         help=(
             "Scan all docs/**/*.md for CLI wording drift (legacy full scan). "
             "Default: only specs/<WI>/*.md plus docs/pull-request-checklist.zh.md "
-            "and docs/USER_GUIDE.zh-CN.md (FR-096)."
+            "and USER_GUIDE.zh-CN.md (FR-096)."
         ),
     ),
     as_json: bool = typer.Option(

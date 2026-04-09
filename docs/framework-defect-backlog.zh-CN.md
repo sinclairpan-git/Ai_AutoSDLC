@@ -127,15 +127,15 @@
 - 缺陷类型: release_docs_consistency_sweep_gap
 - owner: codex
 - wi_id: 001-ai-sdlc-framework
-- related_doc: README.md, docs/releases/v0.6.0.md, docs/USER_GUIDE.zh-CN.md, packaging/offline/README.md, docs/框架自迭代开发与发布约定.md, docs/pull-request-checklist.zh.md
+- related_doc: README.md, docs/releases/v0.6.0.md, USER_GUIDE.zh-CN.md, packaging/offline/README.md, docs/框架自迭代开发与发布约定.md, docs/pull-request-checklist.zh.md
 - detection_surface: user_review, self_review
 - trace_anchor: manual_review_only
 - observed_scope: repo
 - subject_ref: 无（当前无稳定 provenance inspection subject）
 - chain_status: unknown（当前以 repo 内文档、release 资产与手工复核为准）
 - highest_confidence_source: manual_review_only
-- key_gaps: missing_entrypoint_sweep: release notes 已更新为 `v0.6.0`，但主入口 `README.md`、发布约定、PR checklist 没有同步写入本次版本的资产分工与一致性检查要求；split_truth: `docs/releases/v0.6.0.md`、`packaging/offline/README.md`、`docs/USER_GUIDE.zh-CN.md` 已分别覆盖局部场景，但没有一份统一的发布入口文档把 Windows zip 与 Mac/Linux tar.gz 的分工、版本口径与收口检查串起来；workflow_gap: 版本发布流程缺少“文档入口与发布资产一致性扫尾”硬步骤。
-- evidence_refs: file:README.md; file:docs/releases/v0.6.0.md; file:docs/USER_GUIDE.zh-CN.md; file:packaging/offline/README.md; file:docs/框架自迭代开发与发布约定.md; file:docs/pull-request-checklist.zh.md
+- key_gaps: missing_entrypoint_sweep: release notes 已更新为 `v0.6.0`，但主入口 `README.md`、发布约定、PR checklist 没有同步写入本次版本的资产分工与一致性检查要求；split_truth: `docs/releases/v0.6.0.md`、`packaging/offline/README.md`、`USER_GUIDE.zh-CN.md` 已分别覆盖局部场景，但没有一份统一的发布入口文档把 Windows zip 与 Mac/Linux tar.gz 的分工、版本口径与收口检查串起来；workflow_gap: 版本发布流程缺少“文档入口与发布资产一致性扫尾”硬步骤。
+- evidence_refs: file:README.md; file:docs/releases/v0.6.0.md; file:USER_GUIDE.zh-CN.md; file:packaging/offline/README.md; file:docs/框架自迭代开发与发布约定.md; file:docs/pull-request-checklist.zh.md
 - 现象: 在 `v0.6.0` 已发布且 release 资产已经区分 Windows zip 与 Mac tar.gz 的情况下，仓库主入口 `README.md` 仍未明确说明这次版本发布了什么、不同平台该使用哪个离线包；`docs/框架自迭代开发与发布约定.md` 也未把本次 release 的资产分工和一致性检查纳入发布约定；`docs/pull-request-checklist.zh.md` 里也没有一条专门的“release / README / package docs 一致性复核”项。结果是 release notes、离线包说明、用户手册和发布约定存在局部正确但入口不收口的状态。
 - 触发场景: 当一次较大的版本发布已经完成 release 资产更新后，若只更新 release notes 与局部安装说明，而没有再对主 README、发布约定和 PR checklist 做全文对账，就会把“文档局部已改”误当成“入口文档已收口”。
 - 影响范围: 新用户和维护者对 `v0.6.0` 的第一印象、不同平台的安装路径选择、后续 release 的文档复制粘贴模板、以及仓库对“发布完成”与“文档一致性完成”是否等价的判断。若不修复，后续每次发版都可能重复出现“release 已更新但入口 README 仍旧泛化”的假完成。
@@ -146,7 +146,7 @@
 - rule / policy: 新版本发布的收口条件应显式包含“入口文档一致性通过”；README、release notes、offline README、user guide 与发布约定若存在版本口径或平台资产口径差异，不得宣称发布文档已完成。
 - middleware: 增加 release 文档 sweep helper，自动核对 README / release notes / user guide / offline README / publish checklist 中的版本号、资产分工和关键口径是否一致。
 - workflow: 发版完成后固定执行 `rg -n "v<version>|zip|tar.gz|offline" README.md docs packaging` 和 `git diff --check` 类似的文档真值 sweep；若 sweep 发现入口文档缺位，先补 README / 发布约定 / checklist，再把 release 标记为收口。
-- tool: `README.md`, `docs/releases/v0.6.0.md`, `docs/USER_GUIDE.zh-CN.md`, `packaging/offline/README.md`, `docs/框架自迭代开发与发布约定.md`, `docs/pull-request-checklist.zh.md`, `rg`, `git diff --check`
+- tool: `README.md`, `docs/releases/v0.6.0.md`, `USER_GUIDE.zh-CN.md`, `packaging/offline/README.md`, `docs/框架自迭代开发与发布约定.md`, `docs/pull-request-checklist.zh.md`, `rg`, `git diff --check`
 - eval: release_docs_consistency_sweep 命中率、README / release notes / offline README 版本漂移次数、发版后入口文档漏更次数、发布 checklist 覆盖率
 - 风险等级: 中
 - 处置进展（2026-04-07）: 本次已将 `v0.6.0` 发布的入口文档缺口正式记账，并确认 release notes、离线包说明与用户手册之间的局部口径已存在，但主 README、发布约定与 PR checklist 仍缺少一次统一的发布一致性收口。当前只完成问题识别与 backlog 挂账，尚未落地 release sweep helper / checklist，因此本条不能按 `closed` 处理，维持 `planned` 直到防复发机制真正落地。
@@ -162,15 +162,15 @@
 - owner: codex
 - wi_id: 001-ai-sdlc-framework
 - legacy_ref: FD-2026-03-31-003, FD-2026-03-30-002
-- related_doc: cursor/rules/ai-sdlc.md, src/ai_sdlc/stages/refine.yaml, docs/USER_GUIDE.zh-CN.md, docs/framework-defect-backlog.zh-CN.md, specs/073-frontend-p2-provider-style-solution-baseline/spec.md
+- related_doc: cursor/rules/ai-sdlc.md, src/ai_sdlc/stages/refine.yaml, USER_GUIDE.zh-CN.md, docs/framework-defect-backlog.zh-CN.md, specs/073-frontend-p2-provider-style-solution-baseline/spec.md
 - detection_surface: user_review, self_review
 - trace_anchor: manual_review_only
 - observed_scope: repo, session
 - subject_ref: 无（当前无稳定 provenance inspection subject）
 - chain_status: unknown（当前以仓库规则、文件落点与人工复盘为准）
 - highest_confidence_source: manual_review_only
-- key_gaps: formal_artifact_misclassification: 明明是在产出框架 formal spec，却把产物误判成了“设计参考文档”，沿用了 `docs/superpowers/specs` 这一辅助目录；rule_priority_drift: 仓库已经通过 `cursor/rules/ai-sdlc.md`、`src/ai_sdlc/stages/refine.yaml` 与 `docs/USER_GUIDE.zh-CN.md` 明确 formal 产物应落在 `specs/<WI>/spec.md`，执行侧却让旧习惯压过了 canonical 规则；atomic_breach_logging_gap: 在口头确认“这是违约”之后，没有把“立即登记 framework-defect-backlog”当成同轮原子动作，直到用户再次追问才补录；regression: 本条同时复发了 `FD-2026-03-31-003` 的 canonical formal 落点问题与 `FD-2026-03-30-002` 的违约即时记账问题，说明既有规则文本尚未转成稳定的 artifact / response preflight 硬门。
-- evidence_refs: manual_review_only; file:cursor/rules/ai-sdlc.md; file:src/ai_sdlc/stages/refine.yaml; file:docs/USER_GUIDE.zh-CN.md; file:docs/framework-defect-backlog.zh-CN.md; file:specs/073-frontend-p2-provider-style-solution-baseline/spec.md
+- key_gaps: formal_artifact_misclassification: 明明是在产出框架 formal spec，却把产物误判成了“设计参考文档”，沿用了 `docs/superpowers/specs` 这一辅助目录；rule_priority_drift: 仓库已经通过 `cursor/rules/ai-sdlc.md`、`src/ai_sdlc/stages/refine.yaml` 与 `USER_GUIDE.zh-CN.md` 明确 formal 产物应落在 `specs/<WI>/spec.md`，执行侧却让旧习惯压过了 canonical 规则；atomic_breach_logging_gap: 在口头确认“这是违约”之后，没有把“立即登记 framework-defect-backlog”当成同轮原子动作，直到用户再次追问才补录；regression: 本条同时复发了 `FD-2026-03-31-003` 的 canonical formal 落点问题与 `FD-2026-03-30-002` 的违约即时记账问题，说明既有规则文本尚未转成稳定的 artifact / response preflight 硬门。
+- evidence_refs: manual_review_only; file:cursor/rules/ai-sdlc.md; file:src/ai_sdlc/stages/refine.yaml; file:USER_GUIDE.zh-CN.md; file:docs/framework-defect-backlog.zh-CN.md; file:specs/073-frontend-p2-provider-style-solution-baseline/spec.md
 - 现象: 在本轮围绕 P2 provider/style 方案输出正式 spec 时，执行侧先把文稿写进了 `docs/superpowers/specs/2026-04-07-ai-autosdlc-p2-provider-style-solution-design.md`，而不是按框架约束落到 `specs/073-frontend-p2-provider-style-solution-baseline/spec.md`。在用户指出该落点违背框架约束后，执行侧虽然承认了违约并完成了文档迁移，但仍未立即按仓库规则将违约登记到 `docs/framework-defect-backlog.zh-CN.md`，而是再次停留在解释层，直到用户继续追问“先记录违约”才补录。
 - 触发场景: 用户在当前仓库内完成一轮正式设计收口后，要求把结果转成正式 spec。执行侧错误地把本次产物归类为“design reference”，沿用 `docs/superpowers/specs` 的旧路径习惯落盘；随后在违约已被识别的情况下，又没有把 backlog 记录视为必须立即完成的法定动作。
 - 影响范围: formal artifact 真值位置、`specs/<WI>/spec.md` 这一 canonical contract 的可信度、`docs/superpowers/*` 与正式工作项目录的职责边界、以及“识别违约后是否会立刻回挂 backlog”的流程可信度。若不正式记账，后续仍可能重复出现“formal spec 误写到辅助目录”与“违约只口头承认、不即时补录”的双重回归。
@@ -181,7 +181,7 @@
 - rule / policy: 继续收紧规则表达：formal spec 只能落在 `specs/<WI>/spec.md`；`docs/superpowers/*` 仅允许作为 `related_doc / auxiliary reference`。同时把“识别违约 -> 立即登记 backlog”维持为强顺序约束，不允许被解释、迁移或补正动作打断。
 - middleware: 后续若引入 artifact preflight / write guard，应在落盘前校验“目标路径是否为该 artifact 类型的 canonical 目录”；若目标为 `docs/superpowers/*` 且 artifact 类型属于 formal spec/plan/tasks，应直接阻断。另可增加 breach-detected-but-not-logged 检查，发现已明确识别违约却未新增 backlog 条目时给出 blocker。
 - workflow: 顺序固定为 `确认 artifact 类型 -> 解析 canonical work item 路径 -> 落盘 -> 若发现违约则立即登记 backlog -> 只读校验 -> 再继续补正/解释/实施计划`；不得出现“先写辅助目录、后迁移”或“先口头承认违约、后等提醒再补录”的次序。
-- tool: `docs/framework-defect-backlog.zh-CN.md`, `cursor/rules/ai-sdlc.md`, `src/ai_sdlc/stages/refine.yaml`, `docs/USER_GUIDE.zh-CN.md`, `specs/<WI>/spec.md`, 后续 artifact preflight / write guard
+- tool: `docs/framework-defect-backlog.zh-CN.md`, `cursor/rules/ai-sdlc.md`, `src/ai_sdlc/stages/refine.yaml`, `USER_GUIDE.zh-CN.md`, `specs/<WI>/spec.md`, 后续 artifact preflight / write guard
 - eval: formal_artifact_misplaced_to_superpowers 次数、识别违约到 backlog 落盘的延迟时间、需要用户二次提醒才补录的次数、formal artifact canonical-path 命中率
 - 风险等级: 高
 - 处置进展（2026-04-07）: 本次误写入 `docs/superpowers/specs` 的 formal spec 已迁移到 `specs/073-frontend-p2-provider-style-solution-baseline/spec.md`，辅助目录中的误放文件已移除；同时，“识别违约后未同轮补录 backlog”的二次违约也已正式记账。但当前仍未落地 artifact-target guard 与 breach-detected-but-not-logged blocker，这类问题又已是同族回归，因此本条只能维持 `planned`，不能按 `closed` 汇总。
@@ -197,7 +197,7 @@
 - owner: codex
 - wi_id: 073-frontend-p2-provider-style-solution-baseline
 - legacy_ref: FD-2026-03-30-001
-- related_doc: docs/框架自迭代开发与发布约定.md, docs/USER_GUIDE.zh-CN.md, specs/073-frontend-p2-provider-style-solution-baseline/spec.md, specs/073-frontend-p2-provider-style-solution-baseline/plan.md, docs/framework-defect-backlog.zh-CN.md
+- related_doc: docs/框架自迭代开发与发布约定.md, USER_GUIDE.zh-CN.md, specs/073-frontend-p2-provider-style-solution-baseline/spec.md, specs/073-frontend-p2-provider-style-solution-baseline/plan.md, docs/framework-defect-backlog.zh-CN.md
 - detection_surface: user_review, self_review
 - trace_anchor: manual_review_only
 - observed_scope: repo, session
@@ -205,7 +205,7 @@
 - chain_status: unknown（当前以仓库规则、文件存在性与人工复盘为准）
 - highest_confidence_source: manual_review_only
 - key_gaps: execute_gate_drift: 在 spec/plan 已冻结后，执行侧把 implementation plan 的存在误当成了 execute 授权；tasks_truth_missing: `specs/073-frontend-p2-provider-style-solution-baseline/tasks.md` 尚不存在，仍提前使用了“下一步直接进入实现/Phase 1 开做”的表述；host_workflow_override: 把宿主 skill 的 handoff 心智错当成仓库阶段真值，压过了“用户仍在 review 流程约束时必须停在 docs-only”的框架规则；regression: 本条属于 `FD-2026-03-30-001` 同族问题复发，说明“superpowers plan 不是 execute 授权、`tasks.md` 才是法定执行入口”虽然已写入规则，但尚未固化为稳定的 response guard / execute preflight。
-- evidence_refs: manual_review_only; file:docs/框架自迭代开发与发布约定.md; file:docs/USER_GUIDE.zh-CN.md; file:specs/073-frontend-p2-provider-style-solution-baseline/spec.md; file:specs/073-frontend-p2-provider-style-solution-baseline/plan.md
+- evidence_refs: manual_review_only; file:docs/框架自迭代开发与发布约定.md; file:USER_GUIDE.zh-CN.md; file:specs/073-frontend-p2-provider-style-solution-baseline/spec.md; file:specs/073-frontend-p2-provider-style-solution-baseline/plan.md
 - 现象: 在 `spec.md` 与 `plan.md` 已形成 canonical formal docs 后，执行侧直接给出了“下一步可以直接进入实现”“从 Phase 1 开始做”的表述，没有先核对 `specs/073-frontend-p2-provider-style-solution-baseline/tasks.md` 是否存在，也没有把“用户当前仍在 review/追问流程约束”识别为 docs-only 状态。用户随后指出这仍然是在走 `superpowers` 的 handoff 心智，而不是遵守框架约束。
 - 触发场景: 用户完成第二次设计评审并给出 `Accept / Frozen` 后，执行侧产出了 implementation plan，随即自然把“下一步”推进成编码实现，忽略了框架仓库要求在 execute 前必须具备 `spec.md`、`plan.md`、`tasks.md`，且需要用户明确要求进入实现这一阶段门槛。
 - 影响范围: framework 阶段真值可信度、`tasks.md` 作为法定执行入口的约束强度、用户对“plan freeze 是否等于 execute 授权”的理解，以及后续任务分解/执行日志/close-check 的可追溯性。若不正式记账，后续仍可能重复出现“formal docs 一冻结就口头推进编码”的假启动。
@@ -216,7 +216,7 @@
 - rule / policy: 将“spec/plan freeze != execute authorization”写成硬规则；只有在 `specs/<WI>/tasks.md` 已存在且用户明确要求进入实现时，才允许出现“从 Phase 1 开始实现/直接开做”的表述。
 - middleware: 为后续 artifact/response preflight 增加 execute wording guard。当检测到当前 WI 缺少 `tasks.md`，或会话仍处于 review/规则澄清语境时，阻断“进入实现”“从 Task 1 开始”等措辞。
 - workflow: 框架仓库中新增 capability 的顺序固定为 `spec.md -> plan.md -> tasks.md -> review/对账 -> 用户明确要求进入实现 -> code/execute`。不得从 `plan.md` 直接跳到编码建议，也不得把宿主 skills 的 handoff 视为仓库 execute gate。
-- tool: `docs/框架自迭代开发与发布约定.md`, `docs/USER_GUIDE.zh-CN.md`, `specs/<WI>/tasks.md`, 后续 response guard / tasks existence preflight
+- tool: `docs/框架自迭代开发与发布约定.md`, `USER_GUIDE.zh-CN.md`, `specs/<WI>/tasks.md`, 后续 response guard / tasks existence preflight
 - eval: 无 `tasks.md` 时出现“直接进入实现”表述的次数、review 语境下被错误推进 execute 的次数、plan freeze 后仍需用户纠正阶段状态的次数
 - 风险等级: 高
 - 处置进展（2026-04-07）: 本次已在用户指出后立刻停止“进入实现”的口径，并回到框架正式阶段真值：`073` 当前只有 `spec.md` 与 `plan.md`，没有 `tasks.md`，因此状态应视为 docs-only / review-to-decompose，而不是 execute。当前只是完成会话级纠偏，尚未落地 execute wording guard、`tasks.md` existence preflight 与 review 语境 blocker；且该问题已属同族回归，因此本条维持 `planned`，直到防复发机制真正落地。
@@ -299,16 +299,16 @@
 - 缺陷类型: adapter_activation_truth_drift
 - owner: codex
 - wi_id: 001-ai-sdlc-framework
-- related_doc: docs/framework-defect-backlog.zh-CN.md, docs/USER_GUIDE.zh-CN.md, src/ai_sdlc/cli/commands.py, src/ai_sdlc/cli/adapter_cmd.py, src/ai_sdlc/integrations/ide_adapter.py
+- related_doc: docs/framework-defect-backlog.zh-CN.md, USER_GUIDE.zh-CN.md, src/ai_sdlc/cli/commands.py, src/ai_sdlc/cli/adapter_cmd.py, src/ai_sdlc/integrations/ide_adapter.py
 - detection_surface: user_review, self_review
 - trace_anchor: rev:9b9a8a3
 - observed_scope: repo
 - subject_ref: 无（当前无稳定 provenance inspection subject）
 - chain_status: unknown（当前以 repo 内文档、CLI 文案与手工复核为准）
 - highest_confidence_source: rev:9b9a8a3
-- key_gaps: split_truth: backlog 顶部“当前待修 / 本轮已收口”摘要与具体 defect 条目状态未共享单一真值，曾出现 `FD-2026-04-02-003` 条目仍为 `open`、但总表按已收口汇总的假绿；unsupported: `docs/USER_GUIDE.zh-CN.md` 内重复的 `adapter activate` 教程段落没有与 CLI/help 和 adapter 模板共用同一 canonical wording；ambiguous: 在文件型 adapter 仍属 `soft_prompt_only` 的前提下，重复段落漏写“只是人工确认”“不是治理激活证明”，容易把 acknowledgement / dry-run 误读成治理已生效。
-- evidence_refs: rev:9b9a8a3; file:docs/framework-defect-backlog.zh-CN.md; file:docs/USER_GUIDE.zh-CN.md; file:src/ai_sdlc/cli/commands.py; file:src/ai_sdlc/cli/adapter_cmd.py; file:src/ai_sdlc/integrations/ide_adapter.py
-- 现象: 在执行“全部待办已完成落地、且无偏移”审计时发现，backlog 总表写着“当前待修：无”并把 `FD-2026-04-02-003` 列入“本轮已收口”，但该条目正文仍停留在 `open`；与此同时，`docs/USER_GUIDE.zh-CN.md` 后半段重复的 `adapter activate` 指引只保留了 `Adapter acknowledged` 示例，没有同步写出“这只是 CLI 人工确认”“当前文件型 adapter 仍属 `soft_prompt_only`”“不证明治理激活”这组三层口径。
+- key_gaps: split_truth: backlog 顶部“当前待修 / 本轮已收口”摘要与具体 defect 条目状态未共享单一真值，曾出现 `FD-2026-04-02-003` 条目仍为 `open`、但总表按已收口汇总的假绿；unsupported: `USER_GUIDE.zh-CN.md` 内重复的 `adapter activate` 教程段落没有与 CLI/help 和 adapter 模板共用同一 canonical wording；ambiguous: 在文件型 adapter 仍属 `soft_prompt_only` 的前提下，重复段落漏写“只是人工确认”“不是治理激活证明”，容易把 acknowledgement / dry-run 误读成治理已生效。
+- evidence_refs: rev:9b9a8a3; file:docs/framework-defect-backlog.zh-CN.md; file:USER_GUIDE.zh-CN.md; file:src/ai_sdlc/cli/commands.py; file:src/ai_sdlc/cli/adapter_cmd.py; file:src/ai_sdlc/integrations/ide_adapter.py
+- 现象: 在执行“全部待办已完成落地、且无偏移”审计时发现，backlog 总表写着“当前待修：无”并把 `FD-2026-04-02-003` 列入“本轮已收口”，但该条目正文仍停留在 `open`；与此同时，`USER_GUIDE.zh-CN.md` 后半段重复的 `adapter activate` 指引只保留了 `Adapter acknowledged` 示例，没有同步写出“这只是 CLI 人工确认”“当前文件型 adapter 仍属 `soft_prompt_only`”“不证明治理激活”这组三层口径。
 - 触发场景: adapter activation contract / governance wording 完成修复后，只更新了部分 canonical surface 和单条 defect 状态，没有同步扫清 backlog 总表摘要与重复教程段落；随后在用户要求做全量真值审计时被暴露。
 - 影响范围: backlog 作为单一真值台账的可信度、用户对“当前是否仍有 open defect”的判断、以及对 `adapter activate` / `run --dry-run` 是否等于治理激活的理解。若不修复，会持续制造“账面已全绿、正文仍 open”与“不同章节口径不一致”的假收口。
 - 根因分类: B, G, H（G: adapter-activation truth contract drift across backlog summary / defect entry / duplicated user-guide surfaces）
@@ -318,11 +318,11 @@
 - rule / policy: 把“backlog 总表与具体条目状态必须一致”“重复 adapter 激活指引必须复用同一治理口径”写成显式对账要求；任何“无待修 / 已收口”的表述都必须经过该对账。
 - middleware: 若继续保留 backlog 顶部摘要与重复教程段落，应提供 bounded 生成/校验 helper，使摘要由条目状态导出，或至少提供一致性检查脚本，避免再次出现手工双写漂移。
 - workflow: 任何涉及 adapter activation contract、governance wording 或 backlog 状态变更的提交，收口前固定执行 `rg` / `git diff` 真值 sweep；当用户要求“确认全部完成且无偏移”时，这类 sweep 应视为硬步骤，而不是可选补充。
-- tool: docs/framework-defect-backlog.zh-CN.md, docs/USER_GUIDE.zh-CN.md, src/ai_sdlc/cli/commands.py, src/ai_sdlc/cli/adapter_cmd.py, src/ai_sdlc/integrations/ide_adapter.py
+- tool: docs/framework-defect-backlog.zh-CN.md, USER_GUIDE.zh-CN.md, src/ai_sdlc/cli/commands.py, src/ai_sdlc/cli/adapter_cmd.py, src/ai_sdlc/integrations/ide_adapter.py
 - eval: backlog-summary-entry-drift 次数、duplicate-user-guide-contract-drift 次数、adapter-activation-false-green review 命中次数、提交前全文 truth sweep 拦截率
 - 风险等级: 中
-- 收口说明（2026-04-05）: 已通过 `rev:9b9a8a3` 将 `FD-2026-04-02-003` 的条目状态与顶部总表重新对齐，并补齐 `docs/USER_GUIDE.zh-CN.md` 后半段重复 `adapter activate` 指引中的 canonical disclaimer，使其与 `src/ai_sdlc/cli/commands.py`、`src/ai_sdlc/cli/adapter_cmd.py`、`src/ai_sdlc/integrations/ide_adapter.py` 以及各 adapter 模板保持一致。同步复核后，当前主线不再把 acknowledgement / dry-run 误表述为治理激活，也不再存在“总表已收口、条目仍 open”的 backlog 假绿。
-- 可验证成功标准: 1) backlog 顶部摘要与具体 defect 状态保持一致，不再出现 `FD-2026-04-02-003` 这类“总表 closed、正文 open”的分叉。 2) `docs/USER_GUIDE.zh-CN.md` 两处 `adapter activate` 指引都明确写出 acknowledgement-only、`soft_prompt_only` 与“not governance proof”口径。 3) CLI/help、adapter 模板与 USER_GUIDE 不再把文件存在、`adapter activate` 或 `run --dry-run` 表述为治理已激活。 4) 后续真值审计若再出现类似分叉，能够在提交前被 sweep/diff 复核直接拦下。
+- 收口说明（2026-04-05）: 已通过 `rev:9b9a8a3` 将 `FD-2026-04-02-003` 的条目状态与顶部总表重新对齐，并补齐 `USER_GUIDE.zh-CN.md` 后半段重复 `adapter activate` 指引中的 canonical disclaimer，使其与 `src/ai_sdlc/cli/commands.py`、`src/ai_sdlc/cli/adapter_cmd.py`、`src/ai_sdlc/integrations/ide_adapter.py` 以及各 adapter 模板保持一致。同步复核后，当前主线不再把 acknowledgement / dry-run 误表述为治理激活，也不再存在“总表已收口、条目仍 open”的 backlog 假绿。
+- 可验证成功标准: 1) backlog 顶部摘要与具体 defect 状态保持一致，不再出现 `FD-2026-04-02-003` 这类“总表 closed、正文 open”的分叉。 2) `USER_GUIDE.zh-CN.md` 两处 `adapter activate` 指引都明确写出 acknowledgement-only、`soft_prompt_only` 与“not governance proof”口径。 3) CLI/help、adapter 模板与 USER_GUIDE 不再把文件存在、`adapter activate` 或 `run --dry-run` 表述为治理已激活。 4) 后续真值审计若再出现类似分叉，能够在提交前被 sweep/diff 复核直接拦下。
 - 是否需要回归测试补充: 是：补一个 bounded docs/truth audit，至少检查 backlog 顶部摘要与条目状态一致，以及 `USER_GUIDE` 中重复的 `adapter activate` 指引都包含 canonical disclaimer。
 
 ## FD-2026-04-05-001 | RefineGate 对验收场景的识别仅接受窄格式，导致常见 Markdown 场景标题被误判缺失
@@ -400,7 +400,7 @@
 - 状态: closed
 - owner: codex
 - wi_id: 009-frontend-governance-ui-kernel
-- related_doc: src/ai_sdlc/core/workitem_scaffold.py, src/ai_sdlc/routers/bootstrap.py, docs/USER_GUIDE.zh-CN.md, src/ai_sdlc/rules/pipeline.md, docs/framework-defect-backlog.zh-CN.md, specs/009-frontend-governance-ui-kernel/spec.md, specs/009-frontend-governance-ui-kernel/plan.md, specs/009-frontend-governance-ui-kernel/tasks.md
+- related_doc: src/ai_sdlc/core/workitem_scaffold.py, src/ai_sdlc/routers/bootstrap.py, USER_GUIDE.zh-CN.md, src/ai_sdlc/rules/pipeline.md, docs/framework-defect-backlog.zh-CN.md, specs/009-frontend-governance-ui-kernel/spec.md, specs/009-frontend-governance-ui-kernel/plan.md, specs/009-frontend-governance-ui-kernel/tasks.md
 - detection_surface: self_review, user_review
 - trace_anchor: rev:697ae34
 - observed_scope: repo
@@ -419,7 +419,7 @@
 - rule / policy: 在 `pipeline.md`、用户指南与自迭代约定中补充 direct-formal 入口的前置条件：`workitem init` 只适用于已完成 `ai-sdlc init` 的项目；对“已有 `.ai-sdlc` 痕迹但缺 `project-state.yaml`”的场景，应视为 formal bootstrap 缺口，而不是要求操作者自行推断。若后续定义 `existing_project_partially_initialized` 一类状态，也应在规则中明确其与 direct-formal 的衔接关系。
 - middleware: bootstrap/router 层应能识别“历史 `.ai-sdlc` 痕迹 + 缺 formal state”这一 reconcile 场景，并向上层命令返回结构化状态，而不是仅在 `workitem_scaffold` 里做文件存在判断。`workitem init` 失败时应输出明确下一步，例如“Project found but formal bootstrap incomplete. Run `ai-sdlc init .` first.”，必要时可附带 bounded reconcile hint。
 - workflow: direct-formal canonical 路径应收敛为 `确认 formal bootstrap -> workitem init -> freeze spec/plan/tasks`。对于框架自身这类自迭代仓库，若发现历史 `.ai-sdlc` 痕迹但 formal bootstrap 缺失，应先进入“补 formal init / reconcile”而不是让操作者在 `workitem init` 失败后自行摸索。`stage run init` / `stage show init` 的说明也应明确它们不是 formal 初始化落盘入口。
-- tool: src/ai_sdlc/core/workitem_scaffold.py, src/ai_sdlc/routers/bootstrap.py, src/ai_sdlc/cli/workitem_cmd.py, src/ai_sdlc/cli/commands.py, docs/USER_GUIDE.zh-CN.md, docs/框架自迭代开发与发布约定.md
+- tool: src/ai_sdlc/core/workitem_scaffold.py, src/ai_sdlc/routers/bootstrap.py, src/ai_sdlc/cli/workitem_cmd.py, src/ai_sdlc/cli/commands.py, USER_GUIDE.zh-CN.md, docs/框架自迭代开发与发布约定.md
 - eval: direct-formal-init-precondition-fail 次数、自迭代仓库 “existing project but missing formal bootstrap” 场景的首次成功率、`workitem init` 失败后仍需人工判读下一步的次数、是否出现把 `stage run init` 误当成 formal 初始化入口的复现事件
 - 风险等级: 中
 - 可验证成功标准: 给定“仓库存在历史 `.ai-sdlc` 痕迹但缺 `.ai-sdlc/project/config/project-state.yaml`”的夹具时，`ai-sdlc workitem init` 不再只抛出底层缺文件错误，而会明确给出“先执行 `ai-sdlc init .`”的 formal guidance，或直接输出结构化 reconcile 状态；用户文档在 `workitem init` 条目中也明确写出该前置条件。给定已 formal init 的项目时，`workitem init` 仍按当前 direct-formal 入口正常生成 `specs/<WI>/spec.md + plan.md + tasks.md`。
@@ -432,7 +432,7 @@
 - 状态: closed
 - owner: codex
 - wi_id: 009-frontend-governance-ui-kernel
-- related_doc: src/ai_sdlc/integrations/ide_adapter.py, src/ai_sdlc/adapters/vscode/AI-SDLC.md, src/ai_sdlc/adapters/codex/AI-SDLC.md, docs/USER_GUIDE.zh-CN.md, tests/unit/test_ide_adapter.py, tests/integration/test_cli_ide_adapter.py, tests/integration/test_cli_run.py, docs/framework-defect-backlog.zh-CN.md
+- related_doc: src/ai_sdlc/integrations/ide_adapter.py, src/ai_sdlc/adapters/vscode/AI-SDLC.md, src/ai_sdlc/adapters/codex/AI-SDLC.md, USER_GUIDE.zh-CN.md, tests/unit/test_ide_adapter.py, tests/integration/test_cli_ide_adapter.py, tests/integration/test_cli_run.py, docs/framework-defect-backlog.zh-CN.md
 - detection_surface: user_review, self_review
 - trace_anchor: rev:783f688
 - observed_scope: repo
@@ -451,7 +451,7 @@
 - rule / policy: 在用户文档和适配规则中明确：adapter 选择目标是**实际消费约束的 AI 代理入口**，不是单纯的编辑器外壳。对存在多个候选宿主的场景，默认应进入“自动识别 + 用户确认”的选择流程，而不是静默按固定优先级落盘。列表只保留 `Claude Code / Codex / Cursor / VS Code / 其他-通用` 五项，不再把“VS Code + 某插件”拆成组合选项；若无交互能力，则要求通过 `--ide` 或等价参数显式指定，或退回 deterministic fallback 并清楚提示。
 - middleware: `ide_adapter` 需要从单一 `detect_ide() -> IDEKind` 模型演进为“候选方案收集 + 默认候选排序 + 用户确认 / 手动指定”的流程。建议新增交互式 adapter selector：启动时列表显示 `Claude Code`、`Codex`、`Cursor`、`VS Code`、`其他-通用`，自动检测命中的方案仅做默认聚焦，不自动确认；用户可通过上下方向键与回车选择，也可通过 `--ide claude-code|codex|cursor|vscode|generic` 直接指定。选择器的文案应聚焦“请选择当前实际用于聊天开发的 AI 代理入口”，而不是“请选择 IDE”。非 TTY / CI 场景下不得阻塞等待交互，应按显式参数优先、其后采用 deterministic fallback，并打印清晰提示。
 - workflow: `ai-sdlc init .` 应收敛为 `探测候选 AI 代理入口 -> 默认聚焦推荐项 -> 用户确认/手动指定 -> 安装对应 adapter -> 后续 dry-run / run 使用同一已确认结果`。若后续检测到宿主变化，也应允许显式重新选择，而不是继续沿用历史错误判定。`run --dry-run` 等非只读入口应尊重已确认的 adapter 选择结果，而不是重新静默改判。
-- tool: src/ai_sdlc/integrations/ide_adapter.py, src/ai_sdlc/cli/commands.py, src/ai_sdlc/cli/cli_hooks.py, src/ai_sdlc/adapters/vscode/AI-SDLC.md, src/ai_sdlc/adapters/codex/AI-SDLC.md, docs/USER_GUIDE.zh-CN.md, tests/unit/test_ide_adapter.py, tests/integration/test_cli_ide_adapter.py, tests/integration/test_cli_run.py
+- tool: src/ai_sdlc/integrations/ide_adapter.py, src/ai_sdlc/cli/commands.py, src/ai_sdlc/cli/cli_hooks.py, src/ai_sdlc/adapters/vscode/AI-SDLC.md, src/ai_sdlc/adapters/codex/AI-SDLC.md, USER_GUIDE.zh-CN.md, tests/unit/test_ide_adapter.py, tests/integration/test_cli_ide_adapter.py, tests/integration/test_cli_run.py
 - eval: mixed-host-adapter-mismatch 次数、VS Code + Codex 场景首次适配成功率、`.codex/AI-SDLC.md` 缺失但 `.vscode/AI-SDLC.md` 已生成的误装率、用户手动重新适配次数、非交互环境下 adapter 选择失败次数
 - 风险等级: 高
 - 可验证成功标准: 给定 `.vscode + .codex` 并存或 `TERM_PROGRAM=vscode + OPENAI_CODEX=1` 的夹具时，`ai-sdlc init .` 不再静默只安装 VS Code adapter，而会默认聚焦 `Codex` 并要求用户确认，或允许通过 `--ide codex` 明确指定；确认后 `.codex/AI-SDLC.md` 必须存在，且后续 `run --dry-run` 不会把适配重新改回 VS Code。给定非交互环境时，CLI 不会卡在选择器上，而会要求显式 `--ide` 或采用可解释的 fallback。现有单一 IDE 场景（Cursor、VS Code、Codex、Claude Code、generic）仍保持幂等与不覆盖用户改动。
@@ -464,7 +464,7 @@
 - 状态: closed
 - owner: codex
 - wi_id: 009-frontend-governance-ui-kernel
-- related_doc: src/ai_sdlc/adapters/codex/AI-SDLC.md, docs/USER_GUIDE.zh-CN.md, src/ai_sdlc/integrations/ide_adapter.py, docs/framework-defect-backlog.zh-CN.md
+- related_doc: src/ai_sdlc/adapters/codex/AI-SDLC.md, USER_GUIDE.zh-CN.md, src/ai_sdlc/integrations/ide_adapter.py, docs/framework-defect-backlog.zh-CN.md
 - detection_surface: production_report, user_review
 - trace_anchor: manual_review_only
 - observed_scope: manual_review
@@ -483,10 +483,10 @@
 - rule / policy: 在用户文档、适配规则和产品说明里明确：当前 Codex/Claude 类 adapter 若仅通过本地 Markdown 提示文件接入，则默认只代表“提示面已安装”，不等于“框架约束已被代理硬采纳”。除非后续补上 activation contract，否则不得把这类 adapter 描述为已经可靠接管对话执行。
 - middleware: 为 adapter 引入 activation state 模型，例如 `installed / acknowledged / activated`，并让后续 `run --dry-run`、`status` 或显式握手命令能够更新该状态。若目标代理产品无法反馈已采纳约束，则框架应显式停留在 `installed` 或 `acknowledged`，而不是虚构 `activated`。
 - workflow: 用户在聊天中输入需求后，框架应有一条可验证的“激活确认”路径，而不是只要求读文件和跑 dry-run。若没有激活确认能力，工作流必须退回到“软提示 + 人工确认”模式，并在文案上明确当前仍存在代理不遵守框架约束的风险。
-- tool: src/ai_sdlc/adapters/codex/AI-SDLC.md, src/ai_sdlc/integrations/ide_adapter.py, docs/USER_GUIDE.zh-CN.md, future activation handshake / status surface
+- tool: src/ai_sdlc/adapters/codex/AI-SDLC.md, src/ai_sdlc/integrations/ide_adapter.py, USER_GUIDE.zh-CN.md, future activation handshake / status surface
 - eval: adapter-installed-but-not-activated 次数、Codex 读取 adapter 后仍偏离框架链路的事件数、用户误以为“dry-run 成功=治理已接管”的次数、是否存在可验证 activation signal
 - 风险等级: 高
-- 收口说明（2026-04-05）: 当前主线已补齐 `adapter_activation_state`、`governance_activation_state` 与 `governance_activation_mode` 三层状态面，`adapter activate` 只会把文件型 adapter 推进到 `acknowledged`，`adapter status`、`init` next-step 提示、Codex/Cursor/Claude Code/VS Code adapter 模板与 `docs/USER_GUIDE.zh-CN.md` 也已统一明确：当前 Markdown / 文件型 adapter 仍是 `soft_prompt_only`，`run --dry-run` 与 operator acknowledgement 都不是治理激活证明。也就是说，本条 defect 所要求的“停止把 adapter 文件存在或 dry-run 成功表述为治理已生效”已完成收口；虽然宿主侧仍无可验证 handshake，但产品口径和状态真值已不再误报为已激活。
+- 收口说明（2026-04-05）: 当前主线已补齐 `adapter_activation_state`、`governance_activation_state` 与 `governance_activation_mode` 三层状态面，`adapter activate` 只会把文件型 adapter 推进到 `acknowledged`，`adapter status`、`init` next-step 提示、Codex/Cursor/Claude Code/VS Code adapter 模板与 `USER_GUIDE.zh-CN.md` 也已统一明确：当前 Markdown / 文件型 adapter 仍是 `soft_prompt_only`，`run --dry-run` 与 operator acknowledgement 都不是治理激活证明。也就是说，本条 defect 所要求的“停止把 adapter 文件存在或 dry-run 成功表述为治理已生效”已完成收口；虽然宿主侧仍无可验证 handshake，但产品口径和状态真值已不再误报为已激活。
 - 可验证成功标准: 给定 Codex 插件场景时，框架能够明确区分“文件已安装”“插件已读取”“治理已激活”三层状态；若插件无法提供 activation signal，产品文档与 CLI 状态不会再把 `.codex/AI-SDLC.md` 存在或 `run --dry-run` 执行成功表述为“约束已生效”。若后续提供 handshake，则在用户输入需求后可通过稳定信号证明 Codex 已进入框架治理路径。
 - 是否需要回归测试补充: 是：补 activation-state contract 的单元/集成测试，以及“adapter 文件存在 + dry-run 成功但未获得 activation signal”时不得误报已激活的回归测试。
 
@@ -497,7 +497,7 @@
 - 状态: closed
 - owner: codex
 - wi_id: 010-agent-adapter-activation-contract
-- related_doc: src/ai_sdlc/core/config.py, src/ai_sdlc/integrations/ide_adapter.py, tests/unit/test_project_config.py, tests/integration/test_cli_status.py, tests/integration/test_cli_doctor.py, docs/USER_GUIDE.zh-CN.md, docs/framework-defect-backlog.zh-CN.md
+- related_doc: src/ai_sdlc/core/config.py, src/ai_sdlc/integrations/ide_adapter.py, tests/unit/test_project_config.py, tests/integration/test_cli_status.py, tests/integration/test_cli_doctor.py, USER_GUIDE.zh-CN.md, docs/framework-defect-backlog.zh-CN.md
 - detection_surface: user_review, self_review
 - trace_anchor: rev:5dc28b8
 - observed_scope: repo
@@ -530,7 +530,7 @@
 - 状态: closed
 - owner: codex
 - wi_id: 010-agent-adapter-activation-contract
-- related_doc: specs/010-agent-adapter-activation-contract/spec.md, specs/010-agent-adapter-activation-contract/plan.md, specs/010-agent-adapter-activation-contract/tasks.md, src/ai_sdlc/cli/commands.py, src/ai_sdlc/cli/adapter_cmd.py, tests/integration/test_cli_adapter.py, tests/integration/test_cli_init.py, tests/unit/test_ide_adapter.py, docs/USER_GUIDE.zh-CN.md, docs/framework-defect-backlog.zh-CN.md
+- related_doc: specs/010-agent-adapter-activation-contract/spec.md, specs/010-agent-adapter-activation-contract/plan.md, specs/010-agent-adapter-activation-contract/tasks.md, src/ai_sdlc/cli/commands.py, src/ai_sdlc/cli/adapter_cmd.py, tests/integration/test_cli_adapter.py, tests/integration/test_cli_init.py, tests/unit/test_ide_adapter.py, USER_GUIDE.zh-CN.md, docs/framework-defect-backlog.zh-CN.md
 - detection_surface: user_review, self_review
 - trace_anchor: rev:5dc28b8
 - observed_scope: repo
@@ -538,7 +538,7 @@
 - chain_status: unknown（当前以 formal docs、CLI 实现、测试与用户文档复盘为准）
 - highest_confidence_source: 无（当前无 provenance inspection 输出）
 - key_gaps: unsupported: `init` 当前没有实现 formal spec 要求的交互式五项 selector；unsupported: 现有测试只锁住 `--agent-target` 显式路径，没有锁住 “TTY 下 selector 默认聚焦 + 上下键确认” 主路径；ambiguous: 用户文档把 `adapter select --agent-target ...` 教成主要纠偏方式；incomplete: `010` formal docs 已冻结，但缺少 `task-execution-log.md`，close-check 仍无法证明实现与工单收口一致
-- evidence_refs: file:specs/010-agent-adapter-activation-contract/spec.md; file:src/ai_sdlc/cli/commands.py; file:src/ai_sdlc/cli/adapter_cmd.py; file:tests/integration/test_cli_adapter.py; file:tests/integration/test_cli_init.py; file:docs/USER_GUIDE.zh-CN.md; command:uv run ai-sdlc workitem close-check --wi specs/010-agent-adapter-activation-contract
+- evidence_refs: file:specs/010-agent-adapter-activation-contract/spec.md; file:src/ai_sdlc/cli/commands.py; file:src/ai_sdlc/cli/adapter_cmd.py; file:tests/integration/test_cli_adapter.py; file:tests/integration/test_cli_init.py; file:USER_GUIDE.zh-CN.md; command:uv run ai-sdlc workitem close-check --wi specs/010-agent-adapter-activation-contract
 - 现象: `010` formal truth 明确要求 `ai-sdlc init` 提供交互式 AI 代理入口选择器，自动探测只负责默认聚焦，用户通过上下方向键和回车确认；当前实现没有 selector，主要依赖 `--agent-target` 与 `adapter select --agent-target ...` 完成选择，产品形态与需求不一致。当前代码把显式参数 fallback/override 做成了主 UX，导致用户必须记住命令值，而不是通过直观选项完成确认。
 - 触发场景: operator 在交互式终端首次执行 `ai-sdlc init .`，期望看到固定五项列表并确认真实聊天 AI 入口；实际 CLI 直接走自动探测或要求手工输入参数，没有进入选择器。后续用户文档和测试也都围绕显式参数路径展开，进一步固化了偏差。
 - 影响范围: adapter activation contract 的主 UX、mixed-host 场景下的目标确认可信度、用户对框架“认的是谁”的理解、USER_GUIDE 教程路径、以及 `010` 工单的 formal truth 与实现一致性。若不修复，用户会持续把命令参数当作“唯一修正方法”，而不是得到预期的交互式产品形态。
@@ -549,7 +549,7 @@
 - rule / policy: 若 formal spec 写明 `init` 提供交互式选择器，且自动探测仅用于默认聚焦，则任何只提供显式参数的实现都不得视为已满足 FR；`adapter select` 也不能反向替代 `init` 主入口的交互体验。
 - middleware: 抽出统一的 agent-target selector helper，承载 fixed options、default focus、TTY/非 TTY 分流、用户确认结果与 fallback 原因；让 `init` 和后续显式改选路径复用同一 selector truth。
 - workflow: `010` 必须回到正式 execute 路径，按 `T21 / T22 / T32` 补 selector、CLI surface 和回归矩阵，并补 `task-execution-log.md`，不得继续以散落代码替代 work item 收口。
-- tool: src/ai_sdlc/cli/commands.py, src/ai_sdlc/cli/adapter_cmd.py, src/ai_sdlc/integrations/ide_adapter.py, tests/integration/test_cli_init.py, tests/integration/test_cli_adapter.py, tests/unit/test_ide_adapter.py, docs/USER_GUIDE.zh-CN.md
+- tool: src/ai_sdlc/cli/commands.py, src/ai_sdlc/cli/adapter_cmd.py, src/ai_sdlc/integrations/ide_adapter.py, tests/integration/test_cli_init.py, tests/integration/test_cli_adapter.py, tests/unit/test_ide_adapter.py, USER_GUIDE.zh-CN.md
 - eval: TTY selector 回归通过率、mixed-host 默认聚焦命中率、non-interactive fallback 成功率、用户通过 `adapter select --agent-target ...` 手工纠偏次数、`010` formal docs 与实现一致性检查命中率
 - 风险等级: 高
 - 收口说明（2026-04-03）: `init` 与 `adapter select` 现在共享交互式五项 selector；TTY 下默认进入选项确认，`--agent-target` 退回 non-interactive fallback/override。mixed-host env precedence、selector 回归、CLI 文档与 `010` formal docs 已同步补齐，`010` 不再停留在 `formal_freeze_only`。
@@ -648,7 +648,7 @@
 - rule / policy: 在 `pipeline.md` 与自迭代约定中，把“新 framework capability 的 canonical 设计/计划入口直接位于 `specs/<WI>/`”写成显式规则；`docs/superpowers/*` 若存在，仅能作为 design input / auxiliary reference。
 - middleware: 提供 direct-formal 的 work item scaffold/init 能力，使用现有 spec/plan/tasks 模板一次性创建 parser-friendly formal docs，并允许可选挂接 `related_doc` / `related_plan` 引用，而不是强制复制内容。
 - workflow: 顺序应收紧为 `allocate WI -> init formal spec/plan/tasks -> review / freeze -> execute`；若有 superpowers 草稿，只能选择“引用”而不是“再抄一套”。
-- tool: `src/ai_sdlc/cli/workitem_cmd.py`、新增 work item scaffold helper、`templates/spec-template.md`、`templates/plan-template.md`、`templates/tasks-template.md`、`docs/USER_GUIDE.zh-CN.md`
+- tool: `src/ai_sdlc/cli/workitem_cmd.py`、新增 work item scaffold helper、`templates/spec-template.md`、`templates/plan-template.md`、`templates/tasks-template.md`、`USER_GUIDE.zh-CN.md`
 - eval: 新 framework capability 中“先写 `docs/superpowers/*` 再补 formal work item”的事件数、formal work item 从首次设计到落盘的延迟时间、需要重复搬运 spec/plan 内容的次数
 - 风险等级: 高
 - 收口说明（2026-03-31）: `src/ai_sdlc/core/workitem_scaffold.py`、`ai-sdlc workitem init`、`pipeline.md`、自迭代约定与用户文档已经把新 framework capability 的 canonical 入口统一到 `specs/<WI>/spec.md + plan.md + tasks.md`；当前 `008` 也已直接以 formal work item 启动并合流主线，不再依赖“先写 `docs/superpowers/*` 再 formalize”的双轨路径。
@@ -662,7 +662,7 @@
 - 状态: closed
 - owner: codex
 - wi_id: 006-provenance-trace-phase-1
-- related_doc: src/ai_sdlc/branch/git_client.py, src/ai_sdlc/core/workitem_truth.py, src/ai_sdlc/cli/workitem_cmd.py, tests/integration/test_cli_workitem_truth_check.py, tests/unit/test_command_names.py, docs/USER_GUIDE.zh-CN.md, docs/框架自迭代开发与发布约定.md
+- related_doc: src/ai_sdlc/branch/git_client.py, src/ai_sdlc/core/workitem_truth.py, src/ai_sdlc/cli/workitem_cmd.py, tests/integration/test_cli_workitem_truth_check.py, tests/unit/test_command_names.py, USER_GUIDE.zh-CN.md, docs/框架自迭代开发与发布约定.md
 - detection_surface: user_review, self_review
 - trace_anchor: rev:67dda48
 - observed_scope: revision

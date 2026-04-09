@@ -416,7 +416,7 @@ git commit -m "feat: consume harness governance at closure gates"
 **Files:**
 - Modify: `src/ai_sdlc/cli/telemetry_cmd.py`
 - Modify: `src/ai_sdlc/cli/main.py`
-- Modify: `docs/USER_GUIDE.zh-CN.md`
+- Modify: `USER_GUIDE.zh-CN.md`
 - Modify: `docs/superpowers/specs/2026-03-30-harness-grade-telemetry-observer-architecture-design.md`
 - Test: `tests/integration/test_cli_telemetry.py`
 - Test: `tests/integration/test_cli_trace.py`
@@ -464,7 +464,7 @@ Expected:
 - [ ] **Step 6: Commit**
 
 ```bash
-git add src/ai_sdlc/cli/telemetry_cmd.py src/ai_sdlc/cli/main.py docs/USER_GUIDE.zh-CN.md docs/superpowers/specs/2026-03-30-harness-grade-telemetry-observer-architecture-design.md tests/integration/test_cli_telemetry.py tests/integration/test_cli_trace.py tests/unit/test_telemetry_contracts.py tests/unit/test_telemetry_store.py tests/unit/test_telemetry_observer.py
+git add src/ai_sdlc/cli/telemetry_cmd.py src/ai_sdlc/cli/main.py USER_GUIDE.zh-CN.md docs/superpowers/specs/2026-03-30-harness-grade-telemetry-observer-architecture-design.md tests/integration/test_cli_telemetry.py tests/integration/test_cli_trace.py tests/unit/test_telemetry_contracts.py tests/unit/test_telemetry_store.py tests/unit/test_telemetry_observer.py
 git commit -m "docs: close out harness telemetry observer v1 baseline"
 ```
 
