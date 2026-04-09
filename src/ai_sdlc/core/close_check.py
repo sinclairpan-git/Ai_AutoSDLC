@@ -11,6 +11,7 @@ from typing import Any
 from ai_sdlc.branch.git_client import GitClient, GitError
 from ai_sdlc.core.plan_check import resolve_plan_path_from_wi, run_plan_check
 from ai_sdlc.core.program_service import (
+    FRONTEND_EVIDENCE_CLASS_MIRROR_PROBLEM_FAMILY,
     ProgramFrontendEvidenceClassStatus,
     ProgramService,
     _parse_frontend_evidence_class_status_blocker,
@@ -110,7 +111,12 @@ def _build_frontend_evidence_class_close_check_summary(
     try:
         manifest = svc.load_manifest()
     except Exception:
-        return None
+        return ProgramFrontendEvidenceClassStatus(
+            has_blocker=True,
+            problem_family=FRONTEND_EVIDENCE_CLASS_MIRROR_PROBLEM_FAMILY,
+            detection_surface="program load",
+            summary_token="manifest_unreadable",
+        )
 
     resolved_wi_dir = wi_dir.resolve()
     matched_spec_id = next(

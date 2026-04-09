@@ -1279,13 +1279,32 @@ class ProgramService:
             spec_path_to_id[(spec_dir / "spec.md").as_posix()] = spec.id
 
         statuses: dict[str, ProgramFrontendEvidenceClassStatus] = {}
+        for spec in manifest.specs:
+            try:
+                spec_dir = self._resolve_spec_dir(spec.path)
+            except ValueError:
+                continue
+            for blocker in self._frontend_evidence_class_authoring_blockers(spec_dir):
+                parsed = _parse_frontend_evidence_class_status_blocker(blocker)
+                if parsed is None:
+                    continue
+                spec_id = spec_path_to_id.get(parsed["spec_path"])
+                if not spec_id or spec_id in statuses:
+                    continue
+                statuses[spec_id] = ProgramFrontendEvidenceClassStatus(
+                    has_blocker=True,
+                    problem_family=parsed["problem_family"],
+                    detection_surface=parsed["detection_surface"],
+                    summary_token=parsed["summary_token"],
+                )
+
         constraint_report = build_constraint_report(self.root)
         for blocker in constraint_report.blockers:
             parsed = _parse_frontend_evidence_class_status_blocker(blocker)
             if parsed is None:
                 continue
             spec_id = spec_path_to_id.get(parsed["spec_path"])
-            if not spec_id:
+            if not spec_id or spec_id in statuses:
                 continue
             statuses[spec_id] = ProgramFrontendEvidenceClassStatus(
                 has_blocker=True,

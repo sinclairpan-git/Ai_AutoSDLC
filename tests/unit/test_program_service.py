@@ -555,6 +555,57 @@ def test_build_status_surfaces_frontend_evidence_class_bounded_summary(
     assert summary.summary_token == "mirror_missing"
 
 
+def test_build_status_scans_each_manifest_spec_for_frontend_evidence_authoring_blockers(
+    tmp_path: Path,
+) -> None:
+    _write_frontend_evidence_class_spec(
+        tmp_path,
+        spec_rel="specs/082-frontend-valid",
+        frontend_evidence_class="framework_capability",
+    )
+    invalid_spec_dir = tmp_path / "specs" / "083-frontend-invalid"
+    invalid_spec_dir.mkdir(parents=True, exist_ok=True)
+    (invalid_spec_dir / "spec.md").write_text(
+        "# Spec\n\n"
+        'frontend_evidence_class: "framework_capability"\n\n'
+        "---\n"
+        'frontend_evidence_class: "consumer_adoption"\n'
+        "---\n",
+        encoding="utf-8",
+    )
+    svc = ProgramService(tmp_path)
+    manifest = ProgramManifest(
+        specs=[
+            ProgramSpecRef(
+                id="082-frontend-valid",
+                path="specs/082-frontend-valid",
+                depends_on=[],
+                frontend_evidence_class="framework_capability",
+            ),
+            ProgramSpecRef(
+                id="083-frontend-invalid",
+                path="specs/083-frontend-invalid",
+                depends_on=[],
+                frontend_evidence_class="consumer_adoption",
+            ),
+        ]
+    )
+
+    rows = svc.build_status(manifest)
+    by_id = {row.spec_id: row for row in rows}
+
+    assert by_id["082-frontend-valid"].frontend_evidence_class_status is None
+    invalid_summary = by_id["083-frontend-invalid"].frontend_evidence_class_status
+    assert invalid_summary is not None
+    assert invalid_summary.has_blocker is True
+    assert (
+        invalid_summary.problem_family
+        == "frontend_evidence_class_authoring_malformed"
+    )
+    assert invalid_summary.detection_surface == "verify constraints"
+    assert invalid_summary.summary_token == "body_footer_conflict"
+
+
 def test_build_status_treats_spec_path_outside_project_root_as_missing(
     tmp_path: Path,
 ) -> None:
