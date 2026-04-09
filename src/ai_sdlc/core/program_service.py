@@ -1197,13 +1197,20 @@ class ProgramService:
         )
 
         for spec in manifest.specs:
-            spec_dir = self.root / spec.path
-            exists = spec_dir.is_dir()
+            spec_dir: Path | None = None
+            exists = False
             stage_hint = "missing"
             completed = 0
             total = 0
 
-            if exists:
+            try:
+                spec_dir = self._resolve_spec_dir(spec.path)
+            except ValueError:
+                spec_dir = None
+            else:
+                exists = spec_dir.is_dir()
+
+            if exists and spec_dir is not None:
                 spec_md = spec_dir / "spec.md"
                 plan_md = spec_dir / "plan.md"
                 tasks_md = spec_dir / "tasks.md"
@@ -1223,7 +1230,11 @@ class ProgramService:
                 if tasks_md.exists():
                     completed, total = _task_counts(tasks_md)
 
-            frontend_readiness = self._build_frontend_readiness(spec_dir)
+            frontend_readiness = (
+                self._build_frontend_readiness(spec_dir)
+                if spec_dir is not None
+                else None
+            )
             statuses[spec.id] = ProgramSpecStatus(
                 spec_id=spec.id,
                 path=spec.path,

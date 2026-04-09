@@ -529,6 +529,32 @@ def test_build_status_surfaces_frontend_evidence_class_bounded_summary(
     assert summary.summary_token == "mirror_missing"
 
 
+def test_build_status_treats_spec_path_outside_project_root_as_missing(
+    tmp_path: Path,
+) -> None:
+    legacy_dir = tmp_path.parent / "legacy-spec"
+    legacy_dir.mkdir(exist_ok=True)
+    svc = ProgramService(tmp_path)
+    manifest = ProgramManifest(
+        specs=[
+            ProgramSpecRef(
+                id="082-frontend-example",
+                path=f"../{legacy_dir.name}",
+                depends_on=[],
+            )
+        ]
+    )
+
+    rows = svc.build_status(
+        manifest,
+        validation_result=svc.validate_manifest(manifest),
+    )
+
+    assert len(rows) == 1
+    assert rows[0].exists is False
+    assert rows[0].stage_hint == "missing"
+
+
 def test_build_integration_dry_run(tmp_path: Path) -> None:
     for p in ("specs/001-auth", "specs/002-course", "specs/003-enroll"):
         (tmp_path / p).mkdir(parents=True)

@@ -1327,6 +1327,18 @@ def _coerce_bool(value: object, *, default: bool = False) -> bool:
     return default
 
 
+def _parse_bool_literal(value: object) -> bool | None:
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, str):
+        normalized = value.strip().lower()
+        if normalized == "true":
+            return True
+        if normalized == "false":
+            return False
+    return None
+
+
 def _load_yaml_mapping(path: Path) -> dict[str, object]:
     payload = yaml.safe_load(path.read_text(encoding="utf-8"))
     if not isinstance(payload, dict):
@@ -1364,9 +1376,15 @@ def _frontend_solution_snapshot_blockers(
     provider_mode = _optional_str(snapshot_payload.get("provider_mode")) or ""
     fallback_reason_code = _optional_str(snapshot_payload.get("fallback_reason_code"))
     fallback_reason_text = _optional_str(snapshot_payload.get("fallback_reason_text"))
-    user_overrode_recommendation = _coerce_bool(
+    user_overrode_recommendation = _parse_bool_literal(
         snapshot_payload.get("user_overrode_recommendation", False)
     )
+    if user_overrode_recommendation is None:
+        blockers.append(
+            "BLOCKER: frontend solution confirmation "
+            "user_overrode_recommendation must be a boolean literal"
+        )
+        user_overrode_recommendation = False
 
     if decision_status == "fallback_required":
         if requested_tuple == effective_tuple:

@@ -1958,6 +1958,39 @@ def test_073_frontend_solution_confirmation_verification_rejects_string_false_ov
     )
 
 
+def test_073_frontend_solution_confirmation_verification_rejects_invalid_override_flag_literal(
+    tmp_path: Path,
+) -> None:
+    _write_073_checkpoint(tmp_path)
+    _write_073_solution_confirmation_artifacts(
+        tmp_path,
+        snapshot_overrides={
+            "decision_status": "recommended",
+            "user_overrode_recommendation": False,
+        },
+    )
+
+    memory_root = tmp_path / ".ai-sdlc" / "memory" / "frontend-solution-confirmation"
+    for path in (
+        memory_root / "latest.yaml",
+        memory_root / "versions" / "solution-snapshot-001.yaml",
+    ):
+        payload = yaml.safe_load(path.read_text(encoding="utf-8"))
+        assert isinstance(payload, dict)
+        payload["user_overrode_recommendation"] = "not-a-bool"
+        path.write_text(
+            yaml.safe_dump(payload, allow_unicode=True, sort_keys=False),
+            encoding="utf-8",
+        )
+
+    report = build_constraint_report(tmp_path)
+
+    assert any(
+        "user_overrode_recommendation must be a boolean literal" in blocker
+        for blocker in report.blockers
+    )
+
+
 def test_build_verification_governance_bundle_emits_gate_capable_payload(
     tmp_path: Path,
 ) -> None:
