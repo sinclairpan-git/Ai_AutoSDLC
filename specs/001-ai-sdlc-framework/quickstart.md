@@ -168,5 +168,50 @@ git branch -D design/001-ai-sdlc-framework
 | `ai-sdlc: command not found` | 确认已运行 `uv sync` 且在 venv 中 |
 | `ModuleNotFoundError: ai_sdlc` | 确认使用 `uv run` 前缀或激活了 venv |
 | `git not found` | 安装 Git：`brew install git` (macOS) |
-| `Python < 3.11` | 安装 Python 3.11+：`uv python install 3.11` |
+| `Python < 3.11` | 直接按下方“Python < 3.11 时直接复制”执行 |
 | YAML 解析错误 | 检查文件编码（必须 UTF-8）和缩进（空格，非 Tab） |
+
+### Python < 3.11 时直接复制
+
+**Windows（PowerShell）**
+
+```powershell
+winget install -e --id Python.Python.3.11 --accept-package-agreements --accept-source-agreements
+winget install -e --id Python.Launcher --accept-package-agreements --accept-source-agreements
+py -3.11 --version
+```
+
+**macOS（Terminal）**
+
+如果你的 Mac 还没装 Homebrew，先执行：
+
+```bash
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+```
+
+然后执行：
+
+```bash
+if [ -x /opt/homebrew/bin/brew ]; then
+  eval "$(/opt/homebrew/bin/brew shellenv)"
+elif [ -x /usr/local/bin/brew ]; then
+  eval "$(/usr/local/bin/brew shellenv)"
+fi
+brew install python@3.11
+export PATH="$(brew --prefix python@3.11)/libexec/bin:$PATH"
+python3 --version
+```
+
+**Linux（Ubuntu / Debian）**
+
+```bash
+sudo apt-get update
+sudo apt-get install -y build-essential procps curl file git
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
+brew install python@3.11
+export PATH="$(brew --prefix python@3.11)/libexec/bin:$PATH"
+python3 --version
+```
+
+如果你用的是其他 Linux 发行版，把系统依赖安装命令替换成你自己的包管理器；装好以后，再回到第 1 节继续执行 `uv sync`。
