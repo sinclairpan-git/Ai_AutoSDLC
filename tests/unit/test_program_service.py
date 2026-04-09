@@ -6440,6 +6440,29 @@ def test_build_frontend_solution_confirmation_blocks_when_enterprise_unavailable
     assert snapshot.fallback_reason_code == "enterprise_provider_unavailable"
 
 
+def test_build_frontend_solution_confirmation_requires_fallback_when_enterprise_provider_is_requested_without_explicit_stack(
+    tmp_path: Path,
+) -> None:
+    for p in ("specs/001-auth", "specs/002-course", "specs/003-enroll"):
+        (tmp_path / p).mkdir(parents=True)
+
+    svc = ProgramService(tmp_path)
+    snapshot = svc.build_frontend_solution_confirmation(
+        _manifest(),
+        requested_provider_id="enterprise-vue2",
+        enterprise_provider_eligible=False,
+        failed_preflight_check_ids=["company-registry-token"],
+    )
+
+    assert snapshot.decision_status == "fallback_required"
+    assert snapshot.preflight_status == "warning"
+    assert snapshot.requested_provider_id == "enterprise-vue2"
+    assert snapshot.effective_provider_id == "public-primevue"
+    assert snapshot.effective_frontend_stack == "vue3"
+    assert snapshot.fallback_reason_code == "enterprise_provider_unavailable"
+    assert snapshot.provider_mode == "cross_stack_fallback"
+
+
 def _write_minimal_frontend_contract_page_artifacts(
     root: Path,
     *,

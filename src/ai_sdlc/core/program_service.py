@@ -1352,8 +1352,7 @@ class ProgramService:
             or recommendation["style_pack_id"],
         }
         explicit_enterprise_request = (
-            requested_solution["frontend_stack"] == "vue2"
-            and requested_solution["provider_id"] == "enterprise-vue2"
+            requested_solution["provider_id"] == "enterprise-vue2"
             and not enterprise_provider_eligible
         )
         enterprise_unavailable_without_fallback = (

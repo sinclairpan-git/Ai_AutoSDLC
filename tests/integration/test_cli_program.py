@@ -1393,6 +1393,36 @@ specs:
         assert "Frontend Solution Confirmation Artifact" in report
         assert ".ai-sdlc/memory/frontend-solution-confirmation/latest.yaml" in report
 
+    def test_program_solution_confirm_execute_does_not_persist_blocked_snapshot(
+        self, initialized_project_dir: Path
+    ) -> None:
+        root = initialized_project_dir
+        _write_manifest(root)
+
+        with patch("ai_sdlc.cli.program_cmd.find_project_root", return_value=root):
+            result = runner.invoke(
+                app,
+                [
+                    "program",
+                    "solution-confirm",
+                    "--enterprise-provider-ineligible",
+                    "--no-fallback-candidate",
+                    "--execute",
+                    "--yes",
+                ],
+            )
+
+        artifact_path = (
+            root
+            / ".ai-sdlc"
+            / "memory"
+            / "frontend-solution-confirmation"
+            / "latest.yaml"
+        )
+        assert result.exit_code == 1
+        assert "Frontend solution confirmation blocked" in result.output
+        assert not artifact_path.exists()
+
     def test_program_provider_patch_handoff_surfaces_runtime_artifact(
         self, initialized_project_dir: Path
     ) -> None:

@@ -1044,20 +1044,21 @@ def program_solution_confirm(
                 "[bold yellow]`--execute` requires explicit confirmation via `--yes`.[/bold yellow]"
             )
             raise typer.Exit(code=2)
-        artifact_paths = materialize_frontend_solution_confirmation_artifacts(
-            root,
-            style_packs=build_builtin_style_pack_manifests(),
-            install_strategies=build_builtin_install_strategies(),
-            snapshot=snapshot,
-        )
-        latest_snapshot_path = (
-            frontend_solution_confirmation_memory_root(root) / "latest.yaml"
-        )
-        console.print("\n[bold cyan]Frontend Solution Confirmation Artifact[/bold cyan]")
-        console.print(
-            f"  - saved: {latest_snapshot_path.relative_to(root)}",
-            markup=False,
-        )
+        if snapshot.preflight_status != "blocked":
+            artifact_paths = materialize_frontend_solution_confirmation_artifacts(
+                root,
+                style_packs=build_builtin_style_pack_manifests(),
+                install_strategies=build_builtin_install_strategies(),
+                snapshot=snapshot,
+            )
+            latest_snapshot_path = (
+                frontend_solution_confirmation_memory_root(root) / "latest.yaml"
+            )
+            console.print("\n[bold cyan]Frontend Solution Confirmation Artifact[/bold cyan]")
+            console.print(
+                f"  - saved: {latest_snapshot_path.relative_to(root)}",
+                markup=False,
+            )
 
     if report:
         report_path = root / report
