@@ -667,6 +667,31 @@ def _write_003_checkpoint(root: Path, *, feature_id: str = "003") -> None:
     )
 
 
+def _write_frontend_evidence_class_checkpoint(
+    root: Path,
+    *,
+    wi_name: str,
+    spec_content: str,
+) -> None:
+    _minimal_constitution(root)
+    spec = root / "specs" / wi_name
+    spec.mkdir(parents=True, exist_ok=True)
+    (spec / "spec.md").write_text(spec_content, encoding="utf-8")
+    save_checkpoint(
+        root,
+        Checkpoint(
+            current_stage="verify",
+            feature=FeatureInfo(
+                id=wi_name.split("-", 1)[0],
+                spec_dir=f"specs/{wi_name}",
+                design_branch="d",
+                feature_branch="f",
+                current_branch="main",
+            ),
+        ),
+    )
+
+
 class TestCliVerifyConstraints:
     def test_exit_1_missing_constitution(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
@@ -722,6 +747,23 @@ class TestCliVerifyConstraints:
         result = runner.invoke(app, ["verify", "constraints"])
         assert result.exit_code == 0
         assert "no blocker" in result.output.lower()
+
+    def test_exit_1_frontend_evidence_class_missing_footer_key(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        init_project(tmp_path)
+        _write_frontend_evidence_class_checkpoint(
+            tmp_path,
+            wi_name="082-frontend-example",
+            spec_content="# Spec\n\nNo footer here.\n",
+        )
+        monkeypatch.chdir(tmp_path)
+
+        result = runner.invoke(app, ["verify", "constraints"])
+
+        assert result.exit_code == 1
+        assert "problem_family=frontend_evidence_class_authoring_malformed" in result.output
+        assert "error_kind=missing_footer_key" in result.output
 
     def test_exit_1_tasks_missing_acceptance(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
