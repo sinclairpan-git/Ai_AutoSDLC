@@ -606,6 +606,52 @@ def test_build_status_scans_each_manifest_spec_for_frontend_evidence_authoring_b
     assert invalid_summary.summary_token == "body_footer_conflict"
 
 
+def test_build_status_surfaces_shared_spec_path_blockers_for_all_manifest_rows(
+    tmp_path: Path,
+) -> None:
+    invalid_spec_dir = tmp_path / "specs" / "082-frontend-shared"
+    invalid_spec_dir.mkdir(parents=True, exist_ok=True)
+    (invalid_spec_dir / "spec.md").write_text(
+        "# Spec\n\n"
+        'frontend_evidence_class: "framework_capability"\n\n'
+        "---\n"
+        'frontend_evidence_class: "consumer_adoption"\n'
+        "---\n",
+        encoding="utf-8",
+    )
+    svc = ProgramService(tmp_path)
+    manifest = ProgramManifest(
+        specs=[
+            ProgramSpecRef(
+                id="082-frontend-shared-a",
+                path="specs/082-frontend-shared",
+                depends_on=[],
+                frontend_evidence_class="framework_capability",
+            ),
+            ProgramSpecRef(
+                id="082-frontend-shared-b",
+                path="specs/082-frontend-shared",
+                depends_on=[],
+                frontend_evidence_class="framework_capability",
+            ),
+        ]
+    )
+
+    rows = svc.build_status(manifest)
+    by_id = {row.spec_id: row for row in rows}
+
+    for spec_id in ("082-frontend-shared-a", "082-frontend-shared-b"):
+        summary = by_id[spec_id].frontend_evidence_class_status
+        assert summary is not None
+        assert summary.has_blocker is True
+        assert (
+            summary.problem_family
+            == "frontend_evidence_class_authoring_malformed"
+        )
+        assert summary.detection_surface == "verify constraints"
+        assert summary.summary_token == "body_footer_conflict"
+
+
 def test_build_status_treats_spec_path_outside_project_root_as_missing(
     tmp_path: Path,
 ) -> None:

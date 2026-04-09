@@ -1271,15 +1271,34 @@ class ProgramService:
         *,
         validation_result: ProgramValidationResult | None = None,
     ) -> dict[str, ProgramFrontendEvidenceClassStatus]:
-        spec_path_to_id: dict[str, str] = {}
+        spec_path_to_ids: dict[str, list[str]] = {}
         for spec in manifest.specs:
             try:
                 spec_dir = self._resolve_spec_dir(spec.path)
             except ValueError:
                 continue
-            spec_path_to_id[(spec_dir / "spec.md").as_posix()] = spec.id
+            spec_md_path = (spec_dir / "spec.md").as_posix()
+            spec_path_to_ids.setdefault(spec_md_path, []).append(spec.id)
 
         statuses: dict[str, ProgramFrontendEvidenceClassStatus] = {}
+
+        def record_status(
+            spec_path: str,
+            *,
+            problem_family: str,
+            detection_surface: str,
+            summary_token: str,
+        ) -> None:
+            for spec_id in spec_path_to_ids.get(spec_path, []):
+                if spec_id in statuses:
+                    continue
+                statuses[spec_id] = ProgramFrontendEvidenceClassStatus(
+                    has_blocker=True,
+                    problem_family=problem_family,
+                    detection_surface=detection_surface,
+                    summary_token=summary_token,
+                )
+
         for spec in manifest.specs:
             try:
                 spec_dir = self._resolve_spec_dir(spec.path)
@@ -1289,11 +1308,8 @@ class ProgramService:
                 parsed = _parse_frontend_evidence_class_status_blocker(blocker)
                 if parsed is None:
                     continue
-                spec_id = spec_path_to_id.get(parsed["spec_path"])
-                if not spec_id or spec_id in statuses:
-                    continue
-                statuses[spec_id] = ProgramFrontendEvidenceClassStatus(
-                    has_blocker=True,
+                record_status(
+                    parsed["spec_path"],
                     problem_family=parsed["problem_family"],
                     detection_surface=parsed["detection_surface"],
                     summary_token=parsed["summary_token"],
@@ -1304,11 +1320,8 @@ class ProgramService:
             parsed = _parse_frontend_evidence_class_status_blocker(blocker)
             if parsed is None:
                 continue
-            spec_id = spec_path_to_id.get(parsed["spec_path"])
-            if not spec_id or spec_id in statuses:
-                continue
-            statuses[spec_id] = ProgramFrontendEvidenceClassStatus(
-                has_blocker=True,
+            record_status(
+                parsed["spec_path"],
                 problem_family=parsed["problem_family"],
                 detection_surface=parsed["detection_surface"],
                 summary_token=parsed["summary_token"],
@@ -1323,11 +1336,8 @@ class ProgramService:
             parsed = _parse_frontend_evidence_class_status_blocker(error)
             if parsed is None:
                 continue
-            spec_id = spec_path_to_id.get(parsed["spec_path"])
-            if not spec_id or spec_id in statuses:
-                continue
-            statuses[spec_id] = ProgramFrontendEvidenceClassStatus(
-                has_blocker=True,
+            record_status(
+                parsed["spec_path"],
                 problem_family=parsed["problem_family"],
                 detection_surface=parsed["detection_surface"],
                 summary_token=parsed["summary_token"],
