@@ -155,7 +155,7 @@ _FRONTEND_EVIDENCE_CLASS_BODY_DECL_RE = re.compile(
     r'(?m)^[ \t]*frontend_evidence_class\s*:\s*(["\']?)(?P<value>[A-Za-z_-]*)\1\s*$'
 )
 _FRONTEND_EVIDENCE_CLASS_DUPLICATE_RE = re.compile(
-    r"(?m)^frontend_evidence_class\s*:"
+    r"(?m)^[ \t]*frontend_evidence_class\s*:"
 )
 FRONTEND_SOLUTION_CONFIRMATION_CHECK_OBJECTS = (
     "frontend_provider_profile_artifacts",

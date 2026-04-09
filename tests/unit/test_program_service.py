@@ -6,6 +6,7 @@ from pathlib import Path
 
 import yaml
 
+from ai_sdlc.context.state import save_checkpoint
 from ai_sdlc.core.frontend_contract_drift import PageImplementationObservation
 from ai_sdlc.core.frontend_contract_observation_provider import (
     build_frontend_contract_observation_artifact,
@@ -36,6 +37,7 @@ from ai_sdlc.models.frontend_generation_constraints import (
     build_mvp_frontend_generation_constraints,
 )
 from ai_sdlc.models.program import ProgramManifest, ProgramSpecRef
+from ai_sdlc.models.state import Checkpoint, FeatureInfo
 
 
 def _manifest() -> ProgramManifest:
@@ -369,7 +371,7 @@ def test_sync_frontend_evidence_class_manifest_uses_only_terminal_footer(
         "Example body block:\n\n"
         "```md\n"
         "---\n"
-        'frontend_evidence_class: "framework_capability"\n'
+        'example_frontend_evidence_class: "framework_capability"\n'
         "---\n"
         "```\n\n"
         "Terminal footer is canonical.\n\n"
@@ -402,6 +404,64 @@ specs:
     payload = yaml.safe_load((tmp_path / "program-manifest.yaml").read_text(encoding="utf-8"))
     specs = {item["id"]: item for item in payload["specs"]}
     assert specs["082-frontend-example"]["frontend_evidence_class"] == "consumer_adoption"
+
+
+def test_sync_frontend_evidence_class_manifest_blocks_bulk_invalid_non_checkpoint_spec(
+    tmp_path: Path,
+) -> None:
+    _write_frontend_evidence_class_spec(
+        tmp_path,
+        spec_rel="specs/082-frontend-checkpoint",
+        frontend_evidence_class="framework_capability",
+    )
+    spec_dir = tmp_path / "specs" / "083-frontend-invalid"
+    spec_dir.mkdir(parents=True, exist_ok=True)
+    (spec_dir / "spec.md").write_text(
+        "# Spec\n\n"
+        "---\n"
+        'frontend_evidence_class: "framework_capability"\n'
+        'frontend_evidence_class: "consumer_adoption"\n'
+        "---\n",
+        encoding="utf-8",
+    )
+    save_checkpoint(
+        tmp_path,
+        Checkpoint(
+            current_stage="verify",
+            feature=FeatureInfo(
+                id="082",
+                spec_dir="specs/082-frontend-checkpoint",
+                design_branch="d",
+                feature_branch="f",
+                current_branch="main",
+            ),
+        ),
+    )
+    _write_manifest_yaml(
+        tmp_path,
+        """
+schema_version: "1"
+specs:
+  - id: "082-frontend-checkpoint"
+    path: "specs/082-frontend-checkpoint"
+    depends_on: []
+  - id: "083-frontend-invalid"
+    path: "specs/083-frontend-invalid"
+    depends_on: []
+""",
+    )
+    svc = ProgramService(tmp_path)
+
+    result = svc.execute_frontend_evidence_class_sync(
+        svc.load_manifest(),
+        confirmed=True,
+    )
+
+    assert result.passed is False
+    assert result.sync_result == "blocked"
+    assert result.updated_specs == []
+    assert any("083-frontend-invalid/spec.md" in blocker for blocker in result.remaining_blockers)
+    assert any("error_kind=duplicate_key" in blocker for blocker in result.remaining_blockers)
 
 
 def test_topo_tiers(tmp_path: Path) -> None:

@@ -791,6 +791,22 @@ def test_frontend_evidence_class_duplicate_key_blocks(tmp_path: Path) -> None:
     assert any("error_kind=duplicate_key" in item for item in blockers)
 
 
+def test_frontend_evidence_class_duplicate_key_blocks_when_indented(tmp_path: Path) -> None:
+    _write_frontend_evidence_class_checkpoint(
+        tmp_path,
+        wi_name="082-frontend-example",
+        spec_content=(
+            "# Spec\n\n---\n"
+            "  frontend_evidence_class: framework_capability\n"
+            "  frontend_evidence_class: consumer_adoption\n"
+            "---\n"
+        ),
+    )
+
+    blockers = collect_constraint_blockers(tmp_path)
+    assert any("error_kind=duplicate_key" in item for item in blockers)
+
+
 def test_frontend_evidence_class_body_footer_conflict_blocks(tmp_path: Path) -> None:
     _write_frontend_evidence_class_checkpoint(
         tmp_path,

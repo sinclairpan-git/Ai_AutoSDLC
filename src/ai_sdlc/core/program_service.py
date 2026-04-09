@@ -26,6 +26,7 @@ from ai_sdlc.core.frontend_visual_a11y_evidence_provider import (
 )
 from ai_sdlc.core.verify_constraints import (
     build_constraint_report,
+    collect_frontend_evidence_class_blockers,
     split_terminal_markdown_footer,
 )
 from ai_sdlc.generators.frontend_gate_policy_artifacts import (
@@ -962,7 +963,6 @@ class ProgramService:
         if isinstance(candidate_specs, ProgramFrontendEvidenceClassSyncResult):
             return candidate_specs
 
-        report = build_constraint_report(self.root)
         updates: dict[str, str] = {}
         blockers: list[str] = []
 
@@ -971,10 +971,7 @@ class ProgramService:
             if not _is_frontend_evidence_class_subject(spec_dir.name):
                 continue
 
-            authoring_blockers = self._frontend_evidence_class_authoring_blockers(
-                spec_dir,
-                report_blockers=report.blockers,
-            )
+            authoring_blockers = self._frontend_evidence_class_authoring_blockers(spec_dir)
             if authoring_blockers:
                 blockers.extend(authoring_blockers)
                 continue
@@ -1103,18 +1100,8 @@ class ProgramService:
     def _frontend_evidence_class_authoring_blockers(
         self,
         spec_dir: Path,
-        *,
-        report_blockers: tuple[str, ...],
     ) -> list[str]:
-        spec_token = f"spec_path={(spec_dir / 'spec.md').as_posix()}"
-        problem_token = (
-            f"problem_family={FRONTEND_EVIDENCE_CLASS_AUTHORING_PROBLEM_FAMILY}"
-        )
-        return [
-            blocker
-            for blocker in report_blockers
-            if problem_token in blocker and spec_token in blocker
-        ]
+        return collect_frontend_evidence_class_blockers(spec_dir)
 
     def _write_frontend_evidence_class_manifest_updates(
         self,
