@@ -58,6 +58,23 @@ def _manifest() -> ProgramManifest:
     )
 
 
+def _write_frontend_evidence_class_spec(
+    root: Path,
+    *,
+    spec_rel: str,
+    frontend_evidence_class: str,
+) -> None:
+    spec_dir = root / spec_rel
+    spec_dir.mkdir(parents=True, exist_ok=True)
+    (spec_dir / "spec.md").write_text(
+        "# Spec\n\n"
+        "---\n"
+        f'frontend_evidence_class: "{frontend_evidence_class}"\n'
+        "---\n",
+        encoding="utf-8",
+    )
+
+
 def test_validate_manifest_ok(tmp_path: Path) -> None:
     for p in ("specs/001-auth", "specs/002-course", "specs/003-enroll"):
         (tmp_path / p).mkdir(parents=True)
@@ -81,6 +98,119 @@ def test_validate_manifest_cycle(tmp_path: Path) -> None:
     res = svc.validate_manifest(mf)
     assert res.valid is False
     assert any("cycle" in e for e in res.errors)
+
+
+def test_validate_manifest_frontend_evidence_class_mirror_missing(tmp_path: Path) -> None:
+    _write_frontend_evidence_class_spec(
+        tmp_path,
+        spec_rel="specs/082-frontend-example",
+        frontend_evidence_class="framework_capability",
+    )
+    svc = ProgramService(tmp_path)
+
+    res = svc.validate_manifest(
+        ProgramManifest(
+            specs=[
+                ProgramSpecRef(
+                    id="082-frontend-example",
+                    path="specs/082-frontend-example",
+                    depends_on=[],
+                )
+            ]
+        )
+    )
+
+    assert res.valid is False
+    assert any(
+        "problem_family=frontend_evidence_class_mirror_drift" in err
+        and "error_kind=mirror_missing" in err
+        for err in res.errors
+    )
+
+
+def test_validate_manifest_frontend_evidence_class_mirror_invalid_value(
+    tmp_path: Path,
+) -> None:
+    _write_frontend_evidence_class_spec(
+        tmp_path,
+        spec_rel="specs/082-frontend-example",
+        frontend_evidence_class="framework_capability",
+    )
+    svc = ProgramService(tmp_path)
+
+    res = svc.validate_manifest(
+        ProgramManifest(
+            specs=[
+                ProgramSpecRef(
+                    id="082-frontend-example",
+                    path="specs/082-frontend-example",
+                    depends_on=[],
+                    frontend_evidence_class="framework",
+                )
+            ]
+        )
+    )
+
+    assert res.valid is False
+    assert any(
+        "problem_family=frontend_evidence_class_mirror_drift" in err
+        and "error_kind=mirror_invalid_value" in err
+        for err in res.errors
+    )
+
+
+def test_validate_manifest_frontend_evidence_class_mirror_stale(tmp_path: Path) -> None:
+    _write_frontend_evidence_class_spec(
+        tmp_path,
+        spec_rel="specs/082-frontend-example",
+        frontend_evidence_class="framework_capability",
+    )
+    svc = ProgramService(tmp_path)
+
+    res = svc.validate_manifest(
+        ProgramManifest(
+            specs=[
+                ProgramSpecRef(
+                    id="082-frontend-example",
+                    path="specs/082-frontend-example",
+                    depends_on=[],
+                    frontend_evidence_class="consumer_adoption",
+                )
+            ]
+        )
+    )
+
+    assert res.valid is False
+    assert any(
+        "problem_family=frontend_evidence_class_mirror_drift" in err
+        and "error_kind=mirror_stale" in err
+        for err in res.errors
+    )
+
+
+def test_validate_manifest_frontend_evidence_class_mirror_valid(tmp_path: Path) -> None:
+    _write_frontend_evidence_class_spec(
+        tmp_path,
+        spec_rel="specs/082-frontend-example",
+        frontend_evidence_class="framework_capability",
+    )
+    svc = ProgramService(tmp_path)
+
+    res = svc.validate_manifest(
+        ProgramManifest(
+            specs=[
+                ProgramSpecRef(
+                    id="082-frontend-example",
+                    path="specs/082-frontend-example",
+                    depends_on=[],
+                    frontend_evidence_class="framework_capability",
+                )
+            ]
+        )
+    )
+
+    assert res.valid is True
+    assert res.errors == []
 
 
 def test_topo_tiers(tmp_path: Path) -> None:

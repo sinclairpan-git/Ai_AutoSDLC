@@ -43,6 +43,19 @@ from ai_sdlc.models.frontend_solution_confirmation import (
 from ai_sdlc.models.program import ProgramManifest, ProgramSpecRef
 from ai_sdlc.telemetry.clock import utc_now_z
 
+FRONTEND_EVIDENCE_CLASS_ALLOWED_VALUES = (
+    "framework_capability",
+    "consumer_adoption",
+)
+FRONTEND_EVIDENCE_CLASS_KEY = "frontend_evidence_class"
+FRONTEND_EVIDENCE_CLASS_MIRROR_PROBLEM_FAMILY = (
+    "frontend_evidence_class_mirror_drift"
+)
+FRONTEND_EVIDENCE_CLASS_MIRROR_CONTRACT_REF = (
+    "specs/086-frontend-evidence-class-program-validate-mirror-contract-baseline/spec.md"
+)
+_MARKDOWN_FOOTER_RE = __import__("re").compile(r"(?ms)^---\n(?P<footer>.*?)\n---\s*$")
+
 PROGRAM_FRONTEND_READINESS_READY = "ready"
 PROGRAM_FRONTEND_READINESS_RETRY = "retry"
 PROGRAM_FRONTEND_GATE_VERDICT_UNRESOLVED = "UNRESOLVED"
@@ -876,6 +889,10 @@ class ProgramService:
                 warnings.append(f"spec {spec.id}: path not found: {spec.path}")
             elif not abs_spec.is_dir():
                 errors.append(f"spec {spec.id}: path is not a directory: {spec.path}")
+            else:
+                errors.extend(
+                    self._frontend_evidence_class_manifest_drift_errors(spec, abs_spec)
+                )
 
         for spec in manifest.specs:
             if spec.id in spec.depends_on:
@@ -900,6 +917,54 @@ class ProgramService:
         return ProgramValidationResult(
             valid=not errors, errors=errors, warnings=warnings
         )
+
+    def _frontend_evidence_class_manifest_drift_errors(
+        self,
+        spec: ProgramSpecRef,
+        spec_dir: Path,
+    ) -> list[str]:
+        canonical_value = _load_frontend_evidence_class_from_spec(spec_dir / "spec.md")
+        if canonical_value is None:
+            return []
+
+        mirror_value = spec.frontend_evidence_class.strip()
+        if not mirror_value:
+            return [
+                _frontend_evidence_class_mirror_error(
+                    spec_path=spec_dir / "spec.md",
+                    manifest_path=self.manifest_path,
+                    error_kind="mirror_missing",
+                    human_remediation_hint=(
+                        "set specs[].frontend_evidence_class in program-manifest.yaml"
+                    ),
+                )
+            ]
+
+        if mirror_value not in FRONTEND_EVIDENCE_CLASS_ALLOWED_VALUES:
+            return [
+                _frontend_evidence_class_mirror_error(
+                    spec_path=spec_dir / "spec.md",
+                    manifest_path=self.manifest_path,
+                    error_kind="mirror_invalid_value",
+                    human_remediation_hint=(
+                        "use framework_capability or consumer_adoption in specs[].frontend_evidence_class"
+                    ),
+                )
+            ]
+
+        if mirror_value != canonical_value:
+            return [
+                _frontend_evidence_class_mirror_error(
+                    spec_path=spec_dir / "spec.md",
+                    manifest_path=self.manifest_path,
+                    error_kind="mirror_stale",
+                    human_remediation_hint=(
+                        "refresh specs[].frontend_evidence_class so it matches the spec footer"
+                    ),
+                )
+            ]
+
+        return []
 
     def topo_tiers(self, manifest: ProgramManifest) -> list[list[str]]:
         graph = self._build_graph(manifest)
@@ -6944,6 +7009,48 @@ class ProgramService:
             if cycle:
                 return cycle
         return []
+
+
+def _load_frontend_evidence_class_from_spec(spec_path: Path) -> str | None:
+    if not spec_path.is_file():
+        return None
+
+    text = spec_path.read_text(encoding="utf-8").rstrip()
+    match = _MARKDOWN_FOOTER_RE.search(text)
+    if match is None:
+        return None
+
+    try:
+        payload = yaml.safe_load(match.group("footer")) or {}
+    except yaml.YAMLError:
+        return None
+    if not isinstance(payload, dict):
+        return None
+
+    value = payload.get(FRONTEND_EVIDENCE_CLASS_KEY)
+    normalized_value = str(value).strip() if value is not None else ""
+    if normalized_value not in FRONTEND_EVIDENCE_CLASS_ALLOWED_VALUES:
+        return None
+    return normalized_value
+
+
+def _frontend_evidence_class_mirror_error(
+    *,
+    spec_path: Path,
+    manifest_path: Path,
+    error_kind: str,
+    human_remediation_hint: str,
+) -> str:
+    return (
+        "BLOCKER: "
+        f"problem_family={FRONTEND_EVIDENCE_CLASS_MIRROR_PROBLEM_FAMILY} "
+        "detection_surface=program validate "
+        f"spec_path={spec_path.as_posix()} "
+        f"error_kind={error_kind} "
+        f"source_of_truth_path={spec_path.as_posix()}#footer,{manifest_path.as_posix()} "
+        f"expected_contract_ref={FRONTEND_EVIDENCE_CLASS_MIRROR_CONTRACT_REF} "
+        f"human_remediation_hint={human_remediation_hint}"
+    )
 
 
 def _task_counts(tasks_md: Path) -> tuple[int, int]:

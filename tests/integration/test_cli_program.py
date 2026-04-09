@@ -60,6 +60,23 @@ specs:
     )
 
 
+def _write_frontend_evidence_class_spec(
+    root: Path,
+    *,
+    spec_rel: str,
+    frontend_evidence_class: str,
+) -> None:
+    spec_dir = root / spec_rel
+    spec_dir.mkdir(parents=True, exist_ok=True)
+    (spec_dir / "spec.md").write_text(
+        "# Spec\n\n"
+        "---\n"
+        f'frontend_evidence_class: "{frontend_evidence_class}"\n'
+        "---\n",
+        encoding="utf-8",
+    )
+
+
 def _write_minimal_frontend_contract_page_artifacts(
     root: Path,
     *,
@@ -202,6 +219,34 @@ specs:
             result = runner.invoke(app, ["program", "validate"])
         assert result.exit_code == 1
         assert "cycle" in result.output.lower()
+
+    def test_program_validate_fail_frontend_evidence_class_mirror_missing(
+        self, initialized_project_dir: Path
+    ) -> None:
+        root = initialized_project_dir
+        _write_frontend_evidence_class_spec(
+            root,
+            spec_rel="specs/082-frontend-example",
+            frontend_evidence_class="framework_capability",
+        )
+        (root / "program-manifest.yaml").write_text(
+            """
+schema_version: "1"
+specs:
+  - id: "082-frontend-example"
+    path: "specs/082-frontend-example"
+    depends_on: []
+""".strip()
+            + "\n",
+            encoding="utf-8",
+        )
+
+        with patch("ai_sdlc.cli.program_cmd.find_project_root", return_value=root):
+            result = runner.invoke(app, ["program", "validate"])
+
+        assert result.exit_code == 1
+        assert "frontend_evidence_class_mirror_drift" in result.output
+        assert "mirror_missing" in result.output
 
     def test_program_status_and_plan(self, initialized_project_dir: Path) -> None:
         root = initialized_project_dir

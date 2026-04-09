@@ -13,6 +13,7 @@ class ProgramSpecRef(BaseModel):
     depends_on: list[str] = Field(default_factory=list)
     branch_slug: str = ""
     owner: str = ""
+    frontend_evidence_class: str = ""
 
 
 class ProgramManifest(BaseModel):
