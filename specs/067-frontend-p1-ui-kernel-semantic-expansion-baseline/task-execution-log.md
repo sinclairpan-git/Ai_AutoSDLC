@@ -259,6 +259,18 @@
 - `uv run ai-sdlc program status` 继续显示 `067-frontend-p1-ui-kernel-semantic-expansion-baseline` 的 `Stage=close`，与 `development-summary.md` 的 `program-close-ready` 口径一致。
 - `git diff --check -- specs/067-frontend-p1-ui-kernel-semantic-expansion-baseline` 无输出，diff hygiene 通过。
 
+#### 5. 对账结论
+
+- `spec.md / plan.md / tasks.md` 不再继续否认 `development-summary.md` 或 close-ready handoff 的存在，现已与 Batch 005 和 current `program status` 对齐。
+- `067` 的 latest review verdict 现应按“`accepted child baseline + verified first implementation slice + close-ready development summary handoff`”理解，而不是停留在只覆盖 Batch 1-4 的旧口径。
+- 本批不改变 `067` 的技术 scope，不改 `src/`、`tests/`、`068/069`、provider/runtime 或 root rollout 主线。
+
+#### 6. 归档后动作
+
+- **已完成 git 提交**：否
+- 当前 batch 结论：`067` 的 latest review verdict 已与当前仓库真值重新统一。
+- **下一步动作**：如需输出 review note，应使用包含 close-ready handoff 的修正版 verdict。
+
 ### Batch 2026-04-09-007 | close-out evidence normalization
 
 #### 1. 准备
@@ -287,7 +299,7 @@
 
 - **改动范围**：`specs/067-frontend-p1-ui-kernel-semantic-expansion-baseline/task-execution-log.md`
 - **改动内容**：
-  - 追加 latest `### Batch ...` close-out evidence 结构，补齐 `统一验证命令`、`代码审查`、`任务/计划同步状态`、`验证画像` 与 git close-out markers。
+  - 追加真正位于文件末尾的 latest `### Batch ...` close-out evidence 结构，补齐 `统一验证命令`、`代码审查`、`任务/计划同步状态`、`验证画像` 与 git close-out markers。
   - 保持 `067` 的 formal baseline、唯一 implementation slice 与 `development-summary.md` handoff truth 不变；本批只做 execution evidence normalization，不回写 `spec.md`、`plan.md`、`tasks.md`、`development-summary.md` 或任何 `src/` / `tests/` 实现面。
   - 不改写 `067` 的 `Stage=close` 语义，也不触碰 `068/069`、provider/runtime 或 root rollout 主线。
 - **新增/调整的测试**：无新增测试；本批仅补 close-out docs，复用治理只读校验、program status 对账、diff hygiene 与 post-commit close-check 复核。
@@ -322,15 +334,3 @@
 - **提交哈希**：`70afa4d`
 - 当前批次 branch disposition 状态：`retained`
 - 当前批次 worktree disposition 状态：`retained（close-out sync clean worktree；原 associated implementation branch 历史不在本批变更范围）`
-
-#### 5. 对账结论
-
-- `spec.md / plan.md / tasks.md` 不再继续否认 `development-summary.md` 或 close-ready handoff 的存在，现已与 Batch 005 和 current `program status` 对齐。
-- `067` 的 latest review verdict 现应按“`accepted child baseline + verified first implementation slice + close-ready development summary handoff`”理解，而不是停留在只覆盖 Batch 1-4 的旧口径。
-- 本批不改变 `067` 的技术 scope，不改 `src/`、`tests/`、`068/069`、provider/runtime 或 root rollout 主线。
-
-#### 6. 归档后动作
-
-- **已完成 git 提交**：否
-- 当前 batch 结论：`067` 的 latest review verdict 已与当前仓库真值重新统一。
-- **下一步动作**：如需输出 review note，应使用包含 close-ready handoff 的修正版 verdict。
