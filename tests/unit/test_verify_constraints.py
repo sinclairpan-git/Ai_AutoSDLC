@@ -372,6 +372,33 @@ def _write_073_checkpoint(root: Path) -> None:
     save_checkpoint(root, cp)
 
 
+def _write_frontend_evidence_class_checkpoint(
+    root: Path,
+    *,
+    wi_name: str,
+    spec_content: str,
+) -> None:
+    mem = root / ".ai-sdlc" / "memory"
+    mem.mkdir(parents=True, exist_ok=True)
+    (mem / "constitution.md").write_text("# C\n", encoding="utf-8")
+
+    spec = root / "specs" / wi_name
+    spec.mkdir(parents=True, exist_ok=True)
+    (spec / "spec.md").write_text(spec_content, encoding="utf-8")
+
+    cp = Checkpoint(
+        current_stage="verify",
+        feature=FeatureInfo(
+            id=wi_name.split("-", 1)[0],
+            spec_dir=f"specs/{wi_name}",
+            design_branch="d",
+            feature_branch="f",
+            current_branch="main",
+        ),
+    )
+    save_checkpoint(root, cp)
+
+
 def _write_073_solution_confirmation_artifacts(
     root: Path,
     *,
@@ -707,6 +734,106 @@ def test_pass_constitution_and_spec_dir(tmp_path: Path) -> None:
         ),
     )
     save_checkpoint(tmp_path, cp)
+
+    assert collect_constraint_blockers(tmp_path) == []
+
+
+def test_frontend_evidence_class_missing_footer_key_blocks(tmp_path: Path) -> None:
+    _write_frontend_evidence_class_checkpoint(
+        tmp_path,
+        wi_name="082-frontend-example",
+        spec_content="# Spec\n\nNo footer here.\n",
+    )
+
+    blockers = collect_constraint_blockers(tmp_path)
+    assert any(
+        "problem_family=frontend_evidence_class_authoring_malformed" in item
+        and "error_kind=missing_footer_key" in item
+        for item in blockers
+    )
+
+
+def test_frontend_evidence_class_empty_value_blocks(tmp_path: Path) -> None:
+    _write_frontend_evidence_class_checkpoint(
+        tmp_path,
+        wi_name="082-frontend-example",
+        spec_content="# Spec\n\n---\nfrontend_evidence_class: \"\"\n---\n",
+    )
+
+    blockers = collect_constraint_blockers(tmp_path)
+    assert any("error_kind=empty_value" in item for item in blockers)
+
+
+def test_frontend_evidence_class_invalid_value_blocks(tmp_path: Path) -> None:
+    _write_frontend_evidence_class_checkpoint(
+        tmp_path,
+        wi_name="082-frontend-example",
+        spec_content="# Spec\n\n---\nfrontend_evidence_class: framework\n---\n",
+    )
+
+    blockers = collect_constraint_blockers(tmp_path)
+    assert any("error_kind=invalid_value" in item for item in blockers)
+
+
+def test_frontend_evidence_class_duplicate_key_blocks(tmp_path: Path) -> None:
+    _write_frontend_evidence_class_checkpoint(
+        tmp_path,
+        wi_name="082-frontend-example",
+        spec_content=(
+            "# Spec\n\n---\n"
+            "frontend_evidence_class: framework_capability\n"
+            "frontend_evidence_class: consumer_adoption\n"
+            "---\n"
+        ),
+    )
+
+    blockers = collect_constraint_blockers(tmp_path)
+    assert any("error_kind=duplicate_key" in item for item in blockers)
+
+
+def test_frontend_evidence_class_body_footer_conflict_blocks(tmp_path: Path) -> None:
+    _write_frontend_evidence_class_checkpoint(
+        tmp_path,
+        wi_name="082-frontend-example",
+        spec_content=(
+            "# Spec\n\n"
+            "```yaml\n"
+            "frontend_evidence_class: consumer_adoption\n"
+            "```\n\n"
+            "---\n"
+            "frontend_evidence_class: framework_capability\n"
+            "---\n"
+        ),
+    )
+
+    blockers = collect_constraint_blockers(tmp_path)
+    assert any("error_kind=body_footer_conflict" in item for item in blockers)
+
+
+def test_frontend_evidence_class_valid_footer_passes(tmp_path: Path) -> None:
+    _write_frontend_evidence_class_checkpoint(
+        tmp_path,
+        wi_name="082-frontend-example",
+        spec_content=(
+            "# Spec\n\n"
+            "```yaml\n"
+            "frontend_evidence_class: framework_capability\n"
+            "```\n\n"
+            "---\n"
+            "frontend_evidence_class: framework_capability\n"
+            "---\n"
+        ),
+    )
+
+    assert collect_constraint_blockers(tmp_path) == []
+
+
+def test_frontend_evidence_class_not_retroactive_before_082(tmp_path: Path) -> None:
+    _write_frontend_evidence_class_checkpoint(
+        tmp_path,
+        wi_name="071-frontend-legacy-example",
+        spec_content="# Spec\n\nNo footer here.\n",
+    )
 
     assert collect_constraint_blockers(tmp_path) == []
 

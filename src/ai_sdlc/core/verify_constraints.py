@@ -139,6 +139,25 @@ FRONTEND_SOLUTION_CONFIRMATION_SOURCE_NAME = (
 FRONTEND_SOLUTION_CONFIRMATION_COVERAGE_GAP = (
     "frontend_solution_confirmation_consistency"
 )
+FRONTEND_EVIDENCE_CLASS_ALLOWED_VALUES = (
+    "framework_capability",
+    "consumer_adoption",
+)
+FRONTEND_EVIDENCE_CLASS_CONTRACT_REF = (
+    "specs/085-frontend-evidence-class-verify-first-runtime-cut-baseline/spec.md"
+)
+FRONTEND_EVIDENCE_CLASS_MIN_SEQUENCE = 82
+FRONTEND_EVIDENCE_CLASS_KEY = "frontend_evidence_class"
+FRONTEND_EVIDENCE_CLASS_PROBLEM_FAMILY = (
+    "frontend_evidence_class_authoring_malformed"
+)
+_FRONTEND_EVIDENCE_CLASS_BODY_DECL_RE = re.compile(
+    r'(?m)^[ \t]*frontend_evidence_class\s*:\s*(["\']?)(?P<value>[A-Za-z_-]*)\1\s*$'
+)
+_FRONTEND_EVIDENCE_CLASS_DUPLICATE_RE = re.compile(
+    r"(?m)^frontend_evidence_class\s*:"
+)
+_MARKDOWN_FOOTER_RE = re.compile(r"(?ms)^---\n(?P<footer>.*?)\n---\s*$")
 FRONTEND_SOLUTION_CONFIRMATION_CHECK_OBJECTS = (
     "frontend_provider_profile_artifacts",
     "frontend_solution_style_pack_artifacts",
@@ -566,6 +585,7 @@ def collect_constraint_blockers(root: Path) -> list[str]:
                 "keep doc-first work in design/decompose and out of code/tests"
             )
 
+    blockers.extend(_frontend_evidence_class_blockers(spec_path))
     blockers.extend(_skip_registry_mapping_blockers(root, spec_path, cp))
     blockers.extend(_branch_lifecycle_blockers(root, spec_path))
     blockers.extend(_feature_contract_blockers(root, cp))
@@ -574,6 +594,131 @@ def collect_constraint_blockers(root: Path) -> list[str]:
         blockers.extend(frontend_contract_report.blockers)
     blockers.extend(_release_gate_blockers(root, cp))
     return blockers
+
+
+def _frontend_evidence_class_blockers(spec_dir: Path) -> list[str]:
+    spec_path = spec_dir / "spec.md"
+    if not spec_path.is_file() or not _is_frontend_evidence_class_subject(spec_dir.name):
+        return []
+
+    body, footer = _split_markdown_footer(spec_path.read_text(encoding="utf-8"))
+    if footer is None:
+        return [
+            _frontend_evidence_class_authoring_blocker(
+                spec_path=spec_path,
+                error_kind="missing_footer_key",
+                human_remediation_hint=(
+                    "add footer metadata with frontend_evidence_class to spec.md"
+                ),
+            )
+        ]
+
+    duplicate_count = len(_FRONTEND_EVIDENCE_CLASS_DUPLICATE_RE.findall(footer))
+    if duplicate_count > 1:
+        return [
+            _frontend_evidence_class_authoring_blocker(
+                spec_path=spec_path,
+                error_kind="duplicate_key",
+                human_remediation_hint=(
+                    "keep exactly one frontend_evidence_class entry in the spec footer"
+                ),
+            )
+        ]
+
+    try:
+        payload = yaml.safe_load(footer) or {}
+    except yaml.YAMLError:
+        payload = {}
+    if not isinstance(payload, dict):
+        payload = {}
+
+    if FRONTEND_EVIDENCE_CLASS_KEY not in payload:
+        return [
+            _frontend_evidence_class_authoring_blocker(
+                spec_path=spec_path,
+                error_kind="missing_footer_key",
+                human_remediation_hint=(
+                    "declare frontend_evidence_class in the spec footer metadata"
+                ),
+            )
+        ]
+
+    value = payload.get(FRONTEND_EVIDENCE_CLASS_KEY)
+    normalized_value = str(value).strip() if value is not None else ""
+    if not normalized_value:
+        return [
+            _frontend_evidence_class_authoring_blocker(
+                spec_path=spec_path,
+                error_kind="empty_value",
+                human_remediation_hint=(
+                    "set frontend_evidence_class to framework_capability or consumer_adoption"
+                ),
+            )
+        ]
+
+    if normalized_value not in FRONTEND_EVIDENCE_CLASS_ALLOWED_VALUES:
+        return [
+            _frontend_evidence_class_authoring_blocker(
+                spec_path=spec_path,
+                error_kind="invalid_value",
+                human_remediation_hint=(
+                    "use frontend_evidence_class values framework_capability or consumer_adoption"
+                ),
+            )
+        ]
+
+    body_values = [
+        match.group("value").strip()
+        for match in _FRONTEND_EVIDENCE_CLASS_BODY_DECL_RE.finditer(body)
+        if match.group("value").strip()
+    ]
+    if any(candidate != normalized_value for candidate in body_values):
+        return [
+            _frontend_evidence_class_authoring_blocker(
+                spec_path=spec_path,
+                error_kind="body_footer_conflict",
+                human_remediation_hint=(
+                    "align any body declaration with the canonical footer value"
+                ),
+            )
+        ]
+
+    return []
+
+
+def _is_frontend_evidence_class_subject(spec_dir_name: str) -> bool:
+    match = re.fullmatch(r"(?P<seq>\d{3})-(?P<slug>[a-z0-9-]+)", spec_dir_name.strip())
+    if match is None:
+        return False
+    if int(match.group("seq")) < FRONTEND_EVIDENCE_CLASS_MIN_SEQUENCE:
+        return False
+    return "frontend" in match.group("slug").split("-")
+
+
+def _split_markdown_footer(text: str) -> tuple[str, str | None]:
+    stripped = text.rstrip()
+    match = _MARKDOWN_FOOTER_RE.search(stripped)
+    if match is None:
+        return stripped, None
+    return stripped[: match.start()].rstrip(), match.group("footer")
+
+
+def _frontend_evidence_class_authoring_blocker(
+    *,
+    spec_path: Path,
+    error_kind: str,
+    human_remediation_hint: str,
+) -> str:
+    return (
+        "BLOCKER: "
+        f"problem_family={FRONTEND_EVIDENCE_CLASS_PROBLEM_FAMILY} "
+        "detection_surface=verify constraints "
+        f"spec_path={spec_path.as_posix()} "
+        f"error_kind={error_kind} "
+        f"source_of_truth_path={spec_path.as_posix()}#footer "
+        f"expected_contract_ref={FRONTEND_EVIDENCE_CLASS_CONTRACT_REF} "
+        f"human_remediation_hint={human_remediation_hint}"
+    )
 
 
 def _branch_lifecycle_blockers(root: Path, spec_path: Path) -> list[str]:
