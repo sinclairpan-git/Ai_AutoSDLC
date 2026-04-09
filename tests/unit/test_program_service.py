@@ -75,6 +75,13 @@ def _write_frontend_evidence_class_spec(
     )
 
 
+def _write_manifest_yaml(root: Path, text: str) -> None:
+    (root / "program-manifest.yaml").write_text(
+        text.strip() + "\n",
+        encoding="utf-8",
+    )
+
+
 def test_validate_manifest_ok(tmp_path: Path) -> None:
     for p in ("specs/001-auth", "specs/002-course", "specs/003-enroll"):
         (tmp_path / p).mkdir(parents=True)
@@ -211,6 +218,122 @@ def test_validate_manifest_frontend_evidence_class_mirror_valid(tmp_path: Path) 
 
     assert res.valid is True
     assert res.errors == []
+
+
+def test_sync_frontend_evidence_class_manifest_execute_targeted(tmp_path: Path) -> None:
+    _write_frontend_evidence_class_spec(
+        tmp_path,
+        spec_rel="specs/082-frontend-example",
+        frontend_evidence_class="framework_capability",
+    )
+    _write_manifest_yaml(
+        tmp_path,
+        """
+schema_version: "1"
+specs:
+  - id: "082-frontend-example"
+    path: "specs/082-frontend-example"
+    depends_on: []
+    owner: "team-a"
+  - id: "050-non-frontend"
+    path: "specs/050-non-frontend"
+    depends_on: []
+    owner: "team-b"
+""",
+    )
+    (tmp_path / "specs" / "050-non-frontend").mkdir(parents=True, exist_ok=True)
+    svc = ProgramService(tmp_path)
+
+    result = svc.execute_frontend_evidence_class_sync(
+        svc.load_manifest(),
+        spec_id="082-frontend-example",
+        confirmed=True,
+    )
+
+    assert result.passed is True
+    assert result.sync_result == "updated"
+    assert result.updated_specs == ["082-frontend-example"]
+
+    payload = yaml.safe_load((tmp_path / "program-manifest.yaml").read_text(encoding="utf-8"))
+    specs = {item["id"]: item for item in payload["specs"]}
+    assert specs["082-frontend-example"]["frontend_evidence_class"] == "framework_capability"
+    assert specs["082-frontend-example"]["owner"] == "team-a"
+    assert "frontend_evidence_class" not in specs["050-non-frontend"]
+    assert specs["050-non-frontend"]["owner"] == "team-b"
+
+
+def test_sync_frontend_evidence_class_manifest_execute_bulk(tmp_path: Path) -> None:
+    _write_frontend_evidence_class_spec(
+        tmp_path,
+        spec_rel="specs/082-frontend-example",
+        frontend_evidence_class="framework_capability",
+    )
+    _write_frontend_evidence_class_spec(
+        tmp_path,
+        spec_rel="specs/083-frontend-adoption",
+        frontend_evidence_class="consumer_adoption",
+    )
+    _write_manifest_yaml(
+        tmp_path,
+        """
+schema_version: "1"
+specs:
+  - id: "082-frontend-example"
+    path: "specs/082-frontend-example"
+    depends_on: []
+  - id: "083-frontend-adoption"
+    path: "specs/083-frontend-adoption"
+    depends_on: []
+    frontend_evidence_class: "framework_capability"
+""",
+    )
+    svc = ProgramService(tmp_path)
+
+    result = svc.execute_frontend_evidence_class_sync(
+        svc.load_manifest(),
+        confirmed=True,
+    )
+
+    assert result.passed is True
+    assert result.sync_result == "updated"
+    assert result.updated_specs == [
+        "082-frontend-example",
+        "083-frontend-adoption",
+    ]
+
+    payload = yaml.safe_load((tmp_path / "program-manifest.yaml").read_text(encoding="utf-8"))
+    specs = {item["id"]: item for item in payload["specs"]}
+    assert specs["082-frontend-example"]["frontend_evidence_class"] == "framework_capability"
+    assert specs["083-frontend-adoption"]["frontend_evidence_class"] == "consumer_adoption"
+
+
+def test_sync_frontend_evidence_class_manifest_blocks_when_footer_missing(
+    tmp_path: Path,
+) -> None:
+    spec_dir = tmp_path / "specs" / "082-frontend-example"
+    spec_dir.mkdir(parents=True, exist_ok=True)
+    (spec_dir / "spec.md").write_text("# Spec\n", encoding="utf-8")
+    _write_manifest_yaml(
+        tmp_path,
+        """
+schema_version: "1"
+specs:
+  - id: "082-frontend-example"
+    path: "specs/082-frontend-example"
+    depends_on: []
+""",
+    )
+    svc = ProgramService(tmp_path)
+
+    result = svc.execute_frontend_evidence_class_sync(
+        svc.load_manifest(),
+        confirmed=True,
+    )
+
+    assert result.passed is False
+    assert result.sync_result == "blocked"
+    assert result.updated_specs == []
+    assert any("082-frontend-example" in blocker for blocker in result.remaining_blockers)
 
 
 def test_topo_tiers(tmp_path: Path) -> None:

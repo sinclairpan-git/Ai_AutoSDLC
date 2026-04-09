@@ -9,6 +9,7 @@ from rich.console import Console
 from rich.table import Table
 
 from ai_sdlc.core.program_service import (
+    FRONTEND_EVIDENCE_CLASS_MIRROR_PROBLEM_FAMILY,
     ProgramFrontendReadiness,
     ProgramFrontendRemediationInput,
     ProgramService,
@@ -73,6 +74,98 @@ def program_validate(
 
     console.print("[bold red]program validate: FAIL[/bold red]")
     raise typer.Exit(code=1)
+
+
+@program_app.command("frontend-evidence-class-sync")
+def program_frontend_evidence_class_sync(
+    manifest: str = typer.Option(
+        "program-manifest.yaml",
+        "--manifest",
+        help="Path to program manifest relative to project root.",
+    ),
+    spec_id: str = typer.Option(
+        "",
+        "--spec-id",
+        help="Optional single spec id to sync instead of bounded bulk sync.",
+    ),
+    dry_run: bool = typer.Option(
+        True,
+        "--dry-run/--execute",
+        help="Preview frontend evidence class mirror sync or explicitly update the manifest mirror.",
+    ),
+    yes: bool = typer.Option(
+        False,
+        "--yes",
+        help="Confirm frontend evidence class manifest sync in execute mode.",
+    ),
+) -> None:
+    """Preview or execute frontend evidence class manifest mirror sync."""
+    root = _resolve_root()
+    svc = ProgramService(root, root / manifest)
+
+    try:
+        mf = svc.load_manifest()
+    except Exception as exc:
+        console.print(f"[red]Failed to load manifest: {exc}[/red]")
+        raise typer.Exit(code=2) from None
+
+    result = svc.validate_manifest(mf)
+    blocking_errors = [
+        error
+        for error in result.errors
+        if f"problem_family={FRONTEND_EVIDENCE_CLASS_MIRROR_PROBLEM_FAMILY}" not in error
+    ]
+    if blocking_errors:
+        console.print(
+            "[bold red]Manifest invalid; cannot sync frontend evidence class mirror.[/bold red]"
+        )
+        for error in blocking_errors:
+            console.print(f"  - {error}")
+        raise typer.Exit(code=1)
+
+    sync_result = svc.execute_frontend_evidence_class_sync(
+        mf,
+        spec_id=spec_id.strip() or None,
+        confirmed=not dry_run and yes,
+    )
+
+    mode_title = (
+        "Program Frontend Evidence Class Sync Dry-Run"
+        if dry_run
+        else "Program Frontend Evidence Class Sync Execute"
+    )
+    console.print(f"[bold cyan]{mode_title}[/bold cyan]")
+    console.print(
+        f"  - scope: {spec_id.strip() or 'all eligible manifest specs'}",
+        markup=False,
+    )
+    console.print(f"  - sync result: {sync_result.sync_result}", markup=False)
+    console.print(
+        f"  - confirmation required: {str(sync_result.sync_result == 'confirmation_required').lower()}",
+        markup=False,
+    )
+    for updated_spec in sync_result.updated_specs:
+        console.print(f"  - updated spec: {updated_spec}", markup=False)
+    for written_path in sync_result.written_paths:
+        console.print(f"  - written path: {written_path}", markup=False)
+    for blocker in sync_result.remaining_blockers:
+        console.print(f"  - blocker: {blocker}", markup=False)
+
+    if sync_result.warnings:
+        console.print("\n[bold yellow]Warnings[/bold yellow]")
+        for warning in sync_result.warnings:
+            console.print(f"  - {warning}")
+
+    if dry_run:
+        raise typer.Exit(code=0 if not sync_result.remaining_blockers else 1)
+
+    if not yes:
+        console.print(
+            "[bold yellow]`--execute` requires explicit confirmation via `--yes`.[/bold yellow]"
+        )
+        raise typer.Exit(code=2)
+
+    raise typer.Exit(code=0 if sync_result.passed else 1)
 
 
 @program_app.command("status")

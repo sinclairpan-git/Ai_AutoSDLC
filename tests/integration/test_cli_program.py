@@ -77,6 +77,13 @@ def _write_frontend_evidence_class_spec(
     )
 
 
+def _write_manifest_yaml(root: Path, text: str) -> None:
+    (root / "program-manifest.yaml").write_text(
+        text.strip() + "\n",
+        encoding="utf-8",
+    )
+
+
 def _write_minimal_frontend_contract_page_artifacts(
     root: Path,
     *,
@@ -247,6 +254,88 @@ specs:
         assert result.exit_code == 1
         assert "frontend_evidence_class_mirror_drift" in result.output
         assert "mirror_missing" in result.output
+
+    def test_program_frontend_evidence_class_sync_execute_updates_manifest(
+        self, initialized_project_dir: Path
+    ) -> None:
+        root = initialized_project_dir
+        _write_frontend_evidence_class_spec(
+            root,
+            spec_rel="specs/082-frontend-example",
+            frontend_evidence_class="framework_capability",
+        )
+        _write_manifest_yaml(
+            root,
+            """
+schema_version: "1"
+specs:
+  - id: "082-frontend-example"
+    path: "specs/082-frontend-example"
+    depends_on: []
+""",
+        )
+
+        with patch("ai_sdlc.cli.program_cmd.find_project_root", return_value=root):
+            result = runner.invoke(
+                app,
+                ["program", "frontend-evidence-class-sync", "--execute", "--yes"],
+            )
+
+        assert result.exit_code == 0
+        assert "updated" in result.output
+        payload = yaml.safe_load((root / "program-manifest.yaml").read_text(encoding="utf-8"))
+        assert payload["specs"][0]["frontend_evidence_class"] == "framework_capability"
+
+        with patch("ai_sdlc.cli.program_cmd.find_project_root", return_value=root):
+            validate = runner.invoke(app, ["program", "validate"])
+        assert validate.exit_code == 0
+
+    def test_program_frontend_evidence_class_sync_targeted_updates_only_selected_spec(
+        self, initialized_project_dir: Path
+    ) -> None:
+        root = initialized_project_dir
+        _write_frontend_evidence_class_spec(
+            root,
+            spec_rel="specs/082-frontend-example",
+            frontend_evidence_class="framework_capability",
+        )
+        _write_frontend_evidence_class_spec(
+            root,
+            spec_rel="specs/083-frontend-adoption",
+            frontend_evidence_class="consumer_adoption",
+        )
+        _write_manifest_yaml(
+            root,
+            """
+schema_version: "1"
+specs:
+  - id: "082-frontend-example"
+    path: "specs/082-frontend-example"
+    depends_on: []
+  - id: "083-frontend-adoption"
+    path: "specs/083-frontend-adoption"
+    depends_on: []
+""",
+        )
+
+        with patch("ai_sdlc.cli.program_cmd.find_project_root", return_value=root):
+            result = runner.invoke(
+                app,
+                [
+                    "program",
+                    "frontend-evidence-class-sync",
+                    "--spec-id",
+                    "082-frontend-example",
+                    "--execute",
+                    "--yes",
+                ],
+            )
+
+        assert result.exit_code == 0
+        payload = yaml.safe_load((root / "program-manifest.yaml").read_text(encoding="utf-8"))
+        specs = {item["id"]: item for item in payload["specs"]}
+        assert specs["082-frontend-example"]["frontend_evidence_class"] == "framework_capability"
+        assert "frontend_evidence_class" not in specs["083-frontend-adoption"]
 
     def test_program_status_and_plan(self, initialized_project_dir: Path) -> None:
         root = initialized_project_dir

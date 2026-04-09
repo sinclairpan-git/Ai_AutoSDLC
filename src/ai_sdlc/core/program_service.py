@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import re
 import shutil
+import tempfile
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -47,14 +49,18 @@ FRONTEND_EVIDENCE_CLASS_ALLOWED_VALUES = (
     "framework_capability",
     "consumer_adoption",
 )
+FRONTEND_EVIDENCE_CLASS_MIN_SEQUENCE = 82
 FRONTEND_EVIDENCE_CLASS_KEY = "frontend_evidence_class"
 FRONTEND_EVIDENCE_CLASS_MIRROR_PROBLEM_FAMILY = (
     "frontend_evidence_class_mirror_drift"
 )
+FRONTEND_EVIDENCE_CLASS_AUTHORING_PROBLEM_FAMILY = (
+    "frontend_evidence_class_authoring_malformed"
+)
 FRONTEND_EVIDENCE_CLASS_MIRROR_CONTRACT_REF = (
     "specs/086-frontend-evidence-class-program-validate-mirror-contract-baseline/spec.md"
 )
-_MARKDOWN_FOOTER_RE = __import__("re").compile(r"(?ms)^---\n(?P<footer>.*?)\n---\s*$")
+_MARKDOWN_FOOTER_RE = re.compile(r"(?ms)^---\n(?P<footer>.*?)\n---\s*$")
 
 PROGRAM_FRONTEND_READINESS_READY = "ready"
 PROGRAM_FRONTEND_READINESS_RETRY = "retry"
@@ -849,6 +855,17 @@ class ProgramExecuteGates:
     warnings: list[str] = field(default_factory=list)
 
 
+@dataclass
+class ProgramFrontendEvidenceClassSyncResult:
+    passed: bool
+    confirmed: bool
+    sync_result: str
+    updated_specs: list[str] = field(default_factory=list)
+    written_paths: list[str] = field(default_factory=list)
+    remaining_blockers: list[str] = field(default_factory=list)
+    warnings: list[str] = field(default_factory=list)
+
+
 class ProgramService:
     """Program-level helper service used by CLI `program` commands."""
 
@@ -918,6 +935,83 @@ class ProgramService:
             valid=not errors, errors=errors, warnings=warnings
         )
 
+    def execute_frontend_evidence_class_sync(
+        self,
+        manifest: ProgramManifest,
+        *,
+        spec_id: str | None = None,
+        confirmed: bool = False,
+    ) -> ProgramFrontendEvidenceClassSyncResult:
+        candidate_specs = self._frontend_evidence_class_sync_candidates(
+            manifest, spec_id=spec_id
+        )
+        if isinstance(candidate_specs, ProgramFrontendEvidenceClassSyncResult):
+            return candidate_specs
+
+        report = build_constraint_report(self.root)
+        updates: dict[str, str] = {}
+        blockers: list[str] = []
+
+        for spec in candidate_specs:
+            spec_dir = self._resolve_spec_dir(spec.path)
+            if not _is_frontend_evidence_class_subject(spec_dir.name):
+                continue
+
+            authoring_blockers = self._frontend_evidence_class_authoring_blockers(
+                spec_dir,
+                report_blockers=report.blockers,
+            )
+            if authoring_blockers:
+                blockers.extend(authoring_blockers)
+                continue
+
+            canonical_value = _load_frontend_evidence_class_from_spec(spec_dir / "spec.md")
+            if canonical_value is None:
+                blockers.append(
+                    "BLOCKER: unable to resolve canonical frontend_evidence_class "
+                    f"for spec {spec.id}"
+                )
+                continue
+
+            if spec.frontend_evidence_class.strip() != canonical_value:
+                updates[spec.id] = canonical_value
+
+        if blockers:
+            return ProgramFrontendEvidenceClassSyncResult(
+                passed=False,
+                confirmed=confirmed,
+                sync_result="blocked",
+                updated_specs=[],
+                written_paths=[],
+                remaining_blockers=_unique_strings(blockers),
+            )
+
+        if not updates:
+            return ProgramFrontendEvidenceClassSyncResult(
+                passed=True,
+                confirmed=confirmed,
+                sync_result="noop",
+            )
+
+        updated_spec_ids = list(updates.keys())
+        if not confirmed:
+            return ProgramFrontendEvidenceClassSyncResult(
+                passed=False,
+                confirmed=False,
+                sync_result="confirmation_required",
+                updated_specs=updated_spec_ids,
+                warnings=["frontend evidence class sync requires explicit confirmation"],
+            )
+
+        self._write_frontend_evidence_class_manifest_updates(updates)
+        return ProgramFrontendEvidenceClassSyncResult(
+            passed=True,
+            confirmed=True,
+            sync_result="updated",
+            updated_specs=updated_spec_ids,
+            written_paths=[_relative_to_root_or_str(self.root, self.manifest_path)],
+        )
+
     def _frontend_evidence_class_manifest_drift_errors(
         self,
         spec: ProgramSpecRef,
@@ -965,6 +1059,105 @@ class ProgramService:
             ]
 
         return []
+
+    def _frontend_evidence_class_sync_candidates(
+        self,
+        manifest: ProgramManifest,
+        *,
+        spec_id: str | None,
+    ) -> list[ProgramSpecRef] | ProgramFrontendEvidenceClassSyncResult:
+        if not spec_id:
+            return list(manifest.specs)
+
+        matches = [spec for spec in manifest.specs if spec.id == spec_id]
+        if not matches:
+            return ProgramFrontendEvidenceClassSyncResult(
+                passed=False,
+                confirmed=False,
+                sync_result="blocked",
+                remaining_blockers=[f"target spec not found in manifest: {spec_id}"],
+            )
+        if len(matches) > 1:
+            return ProgramFrontendEvidenceClassSyncResult(
+                passed=False,
+                confirmed=False,
+                sync_result="blocked",
+                remaining_blockers=[f"target spec is ambiguous in manifest: {spec_id}"],
+            )
+        return matches
+
+    def _frontend_evidence_class_authoring_blockers(
+        self,
+        spec_dir: Path,
+        *,
+        report_blockers: tuple[str, ...],
+    ) -> list[str]:
+        spec_token = f"spec_path={(spec_dir / 'spec.md').as_posix()}"
+        problem_token = (
+            f"problem_family={FRONTEND_EVIDENCE_CLASS_AUTHORING_PROBLEM_FAMILY}"
+        )
+        return [
+            blocker
+            for blocker in report_blockers
+            if problem_token in blocker and spec_token in blocker
+        ]
+
+    def _write_frontend_evidence_class_manifest_updates(
+        self,
+        updates: dict[str, str],
+    ) -> None:
+        payload = self._load_manifest_yaml_payload()
+        specs = payload.get("specs", [])
+        if not isinstance(specs, list):
+            raise ValueError("program-manifest.yaml specs must be a list")
+
+        updated_ids: set[str] = set()
+        for item in specs:
+            if not isinstance(item, dict):
+                continue
+            item_id = str(item.get("id", "")).strip()
+            if item_id in updates:
+                item[FRONTEND_EVIDENCE_CLASS_KEY] = updates[item_id]
+                updated_ids.add(item_id)
+
+        missing_ids = sorted(set(updates) - updated_ids)
+        if missing_ids:
+            raise ValueError(
+                "frontend evidence class sync could not resolve manifest entries for: "
+                + ", ".join(missing_ids)
+            )
+
+        serialized = yaml.safe_dump(payload, sort_keys=False, allow_unicode=True)
+        self._atomic_write_text(self.manifest_path, serialized)
+
+    def _load_manifest_yaml_payload(self) -> dict[str, object]:
+        try:
+            payload = yaml.safe_load(self.manifest_path.read_text(encoding="utf-8")) or {}
+        except yaml.YAMLError as exc:
+            raise ValueError(f"invalid YAML in {self.manifest_path}: {exc}") from exc
+        if not isinstance(payload, dict):
+            raise ValueError(f"invalid YAML root in {self.manifest_path}: expected mapping")
+        return payload
+
+    def _atomic_write_text(self, path: Path, text: str) -> None:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        if path.exists() and path.read_text(encoding="utf-8") == text:
+            return
+
+        handle = tempfile.NamedTemporaryFile(
+            mode="w",
+            suffix=".tmp",
+            dir=path.parent,
+            delete=False,
+            encoding="utf-8",
+        )
+        try:
+            handle.write(text)
+            handle.close()
+            Path(handle.name).replace(path)
+        except Exception:
+            Path(handle.name).unlink(missing_ok=True)
+            raise
 
     def topo_tiers(self, manifest: ProgramManifest) -> list[list[str]]:
         graph = self._build_graph(manifest)
@@ -7032,6 +7225,15 @@ def _load_frontend_evidence_class_from_spec(spec_path: Path) -> str | None:
     if normalized_value not in FRONTEND_EVIDENCE_CLASS_ALLOWED_VALUES:
         return None
     return normalized_value
+
+
+def _is_frontend_evidence_class_subject(spec_dir_name: str) -> bool:
+    match = re.fullmatch(r"(?P<seq>\d{3})-(?P<slug>[a-z0-9-]+)", spec_dir_name.strip())
+    if match is None:
+        return False
+    if int(match.group("seq")) < FRONTEND_EVIDENCE_CLASS_MIN_SEQUENCE:
+        return False
+    return "frontend" in match.group("slug").split("-")
 
 
 def _frontend_evidence_class_mirror_error(
