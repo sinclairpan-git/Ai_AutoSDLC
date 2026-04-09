@@ -26,10 +26,10 @@ from ai_sdlc.core.reviewer_gate import (
     ReviewerGateOutcomeKind,
     evaluate_reviewer_gate,
 )
-from ai_sdlc.core.verify_constraints import collect_frontend_evidence_class_blockers
 from ai_sdlc.core.verify_constraints import (
     _is_frontend_evidence_class_subject as _is_frontend_evidence_class_spec_subject,
 )
+from ai_sdlc.core.verify_constraints import collect_frontend_evidence_class_blockers
 from ai_sdlc.core.workitem_traceability import (
     analyze_completion_truth,
     evaluate_work_item_branch_lifecycle,
