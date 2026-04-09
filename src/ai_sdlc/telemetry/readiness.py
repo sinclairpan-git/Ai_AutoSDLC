@@ -138,13 +138,25 @@ def _build_frontend_evidence_class_surface(repo_root: Path) -> dict[str, Any] | 
 
     manifest_path = repo_root / "program-manifest.yaml"
     if not manifest_path.is_file():
-        return None
+        return {
+            "active_work_item": checkpoint.feature.id,
+            "has_blocker": True,
+            "problem_family": FRONTEND_EVIDENCE_CLASS_MIRROR_PROBLEM_FAMILY,
+            "detection_surface": "program load",
+            "summary_token": "manifest_missing",
+        }
 
     svc = ProgramService(repo_root, manifest_path)
     try:
         manifest = svc.load_manifest()
     except Exception:
-        return None
+        return {
+            "active_work_item": checkpoint.feature.id,
+            "has_blocker": True,
+            "problem_family": FRONTEND_EVIDENCE_CLASS_MIRROR_PROBLEM_FAMILY,
+            "detection_surface": "program load",
+            "summary_token": "manifest_unreadable",
+        }
 
     try:
         checkpoint_spec_dir = svc._resolve_spec_dir(spec_dir_raw)

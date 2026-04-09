@@ -1207,3 +1207,43 @@ def test_close_check_blocks_when_frontend_manifest_path_match_is_ambiguous(
     assert "manifest_ambiguous_path_match" in frontend_check["detail"]
     assert any("frontend_evidence_class_mirror_drift" in blocker for blocker in r.blockers)
     assert any("manifest_ambiguous_path_match" in blocker for blocker in r.blockers)
+
+
+def test_close_check_emits_frontend_evidence_check_when_frontend_manifest_is_clean(
+    tmp_path: Path,
+) -> None:
+    root = tmp_path / "repo19"
+    root.mkdir()
+    wi_rel = "specs/082-frontend-clean"
+    _setup_repo(
+        root,
+        tasks_body="- [x] done\n### Task 1.1\n- **验收标准（AC）**：ok",
+        plan_status="completed",
+        wi_rel=wi_rel,
+    )
+    wi = root / wi_rel
+    wi.joinpath("spec.md").write_text(
+        "# Spec\n\n---\nfrontend_evidence_class: \"framework_capability\"\n---\n",
+        encoding="utf-8",
+    )
+    (root / "program-manifest.yaml").write_text(
+        "schema_version: \"1\"\n"
+        "specs:\n"
+        "  - id: 082-frontend-clean\n"
+        "    path: specs/082-frontend-clean\n"
+        "    frontend_evidence_class: framework_capability\n",
+        encoding="utf-8",
+    )
+    _commit_all(root, "docs: add clean frontend manifest fixture")
+
+    r = run_close_check(cwd=root, wi=Path(wi_rel))
+
+    frontend_check = next(
+        check for check in r.checks if check["name"] == "frontend_evidence_class"
+    )
+    assert frontend_check == {
+        "name": "frontend_evidence_class",
+        "ok": True,
+        "detail": "no unresolved frontend_evidence_class blocker",
+    }
+    assert not any("frontend_evidence_class" in blocker for blocker in r.blockers)

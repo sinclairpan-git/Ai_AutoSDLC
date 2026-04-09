@@ -1100,6 +1100,43 @@ specs:
     assert "frontend_evidence_class" not in payload["branch_lifecycle"]
 
 
+def test_status_json_frontend_evidence_class_surfaces_missing_manifest(
+    tmp_path: Path,
+) -> None:
+    init_project(tmp_path)
+    _write_frontend_evidence_class_spec(
+        tmp_path,
+        spec_rel="specs/082-frontend-example",
+        frontend_evidence_class="framework_capability",
+    )
+    save_checkpoint(
+        tmp_path,
+        Checkpoint(
+            current_stage="verify",
+            feature=FeatureInfo(
+                id="082-frontend-example",
+                spec_dir="specs/082-frontend-example",
+                design_branch="design/082-frontend-example",
+                feature_branch="feature/082-frontend-example",
+                current_branch="main",
+            ),
+        ),
+    )
+
+    with patch("ai_sdlc.cli.commands.find_project_root", return_value=tmp_path):
+        result = runner.invoke(app, ["status", "--json"])
+
+    assert result.exit_code == 0
+    payload = json.loads(result.output)
+    assert payload["branch_lifecycle"]["frontend_evidence_class"] == {
+        "active_work_item": "082-frontend-example",
+        "has_blocker": True,
+        "problem_family": "frontend_evidence_class_mirror_drift",
+        "detection_surface": "program load",
+        "summary_token": "manifest_missing",
+    }
+
+
 def test_status_json_frontend_evidence_class_surfaces_ambiguous_manifest_match(
     tmp_path: Path,
 ) -> None:

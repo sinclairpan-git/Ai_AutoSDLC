@@ -150,10 +150,13 @@ def _build_frontend_evidence_class_close_check_summary(
     matched_spec_id = matched_spec_ids[0]
 
     validation_result = svc.validate_manifest(manifest)
-    return svc.build_frontend_evidence_class_statuses(
+    summary = svc.build_frontend_evidence_class_statuses(
         manifest,
         validation_result=validation_result,
     ).get(matched_spec_id)
+    if summary is not None:
+        return summary
+    return ProgramFrontendEvidenceClassStatus(has_blocker=False)
 
 
 @dataclass
