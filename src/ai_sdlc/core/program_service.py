@@ -1433,13 +1433,22 @@ class ProgramService:
         )
 
         if enterprise_provider_eligible:
+            enterprise_preflight_warning = bool(failed_check_ids)
+            if enterprise_preflight_warning:
+                preflight_status = "warning"
+                if not preflight_reason_codes:
+                    preflight_reason_codes = ["enterprise_provider_preflight_warning"]
             availability_summary = AvailabilitySummary(
-                overall_status="ready",
+                overall_status="attention" if enterprise_preflight_warning else "ready",
                 passed_check_ids=passed_check_ids,
-                failed_check_ids=[],
+                failed_check_ids=failed_check_ids,
                 blocking_reason_codes=[],
             )
-            availability_reason_text = "Enterprise provider prerequisites satisfied."
+            availability_reason_text = (
+                "Enterprise provider was marked eligible, but preflight failures were reported."
+                if enterprise_preflight_warning
+                else "Enterprise provider prerequisites satisfied."
+            )
             recommendation_reason_codes = ["enterprise-provider-preferred"]
             recommendation_reason_text = (
                 "Enterprise baseline is available and preferred."

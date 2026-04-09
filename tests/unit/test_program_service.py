@@ -6423,6 +6423,32 @@ def test_build_frontend_solution_confirmation_recommends_public_fallback_in_simp
     assert snapshot.provider_mode == "normal"
 
 
+def test_build_frontend_solution_confirmation_preserves_failed_preflight_checks_when_enterprise_marked_eligible(
+    tmp_path: Path,
+) -> None:
+    for p in ("specs/001-auth", "specs/002-course", "specs/003-enroll"):
+        (tmp_path / p).mkdir(parents=True)
+
+    svc = ProgramService(tmp_path)
+    snapshot = svc.build_frontend_solution_confirmation(
+        _manifest(),
+        enterprise_provider_eligible=True,
+        failed_preflight_check_ids=["company-registry-token"],
+    )
+
+    assert snapshot.decision_status == "recommended"
+    assert snapshot.preflight_status == "warning"
+    assert snapshot.preflight_reason_codes == ["enterprise_provider_preflight_warning"]
+    assert snapshot.recommended_provider_id == "enterprise-vue2"
+    assert snapshot.effective_provider_id == "enterprise-vue2"
+    assert snapshot.availability_summary.overall_status == "attention"
+    assert snapshot.availability_summary.passed_check_ids == ["company-registry-network"]
+    assert snapshot.availability_summary.failed_check_ids == [
+        "company-registry-token"
+    ]
+    assert snapshot.availability_summary.blocking_reason_codes == []
+
+
 def test_build_frontend_solution_confirmation_blocks_when_defaulted_public_fallback_is_unavailable(
     tmp_path: Path,
 ) -> None:

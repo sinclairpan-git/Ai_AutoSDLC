@@ -1095,3 +1095,44 @@ def test_close_check_ignores_frontend_evidence_gate_for_non_frontend_wi(
     assert r.ok is True
     assert all(check["name"] != "frontend_evidence_class" for check in r.checks)
     assert not any("frontend_evidence_class" in blocker for blocker in r.blockers)
+
+
+def test_close_check_blocks_when_frontend_wi_is_missing_from_manifest_mapping(
+    tmp_path: Path,
+) -> None:
+    root = tmp_path / "repo17"
+    root.mkdir()
+    wi_rel = "specs/082-frontend-unmapped"
+    _setup_repo(
+        root,
+        tasks_body="- [x] done\n### Task 1.1\n- **验收标准（AC）**：ok",
+        plan_status="completed",
+        wi_rel=wi_rel,
+    )
+    wi = root / wi_rel
+    wi.joinpath("spec.md").write_text(
+        "# Spec\n\n---\nfrontend_evidence_class: \"framework_capability\"\n---\n",
+        encoding="utf-8",
+    )
+    other_spec = root / "specs" / "083-frontend-mapped"
+    other_spec.mkdir(parents=True, exist_ok=True)
+    other_spec.joinpath("spec.md").write_text("# Other\n", encoding="utf-8")
+    (root / "program-manifest.yaml").write_text(
+        "schema_version: \"1\"\n"
+        "specs:\n"
+        "  - id: 083-frontend-mapped\n"
+        "    path: specs/083-frontend-mapped\n",
+        encoding="utf-8",
+    )
+    _commit_all(root, "docs: add unmapped frontend manifest fixture")
+
+    r = run_close_check(cwd=root, wi=Path(wi_rel))
+
+    assert r.ok is False
+    frontend_check = next(
+        check for check in r.checks if check["name"] == "frontend_evidence_class"
+    )
+    assert frontend_check["ok"] is False
+    assert "manifest_unmapped" in frontend_check["detail"]
+    assert any("frontend_evidence_class_mirror_drift" in blocker for blocker in r.blockers)
+    assert any("manifest_unmapped" in blocker for blocker in r.blockers)

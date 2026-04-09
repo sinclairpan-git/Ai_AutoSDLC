@@ -129,7 +129,12 @@ def _build_frontend_evidence_class_close_check_summary(
         None,
     )
     if not matched_spec_id:
-        return None
+        return ProgramFrontendEvidenceClassStatus(
+            has_blocker=True,
+            problem_family=FRONTEND_EVIDENCE_CLASS_MIRROR_PROBLEM_FAMILY,
+            detection_surface="program load",
+            summary_token="manifest_unmapped",
+        )
 
     validation_result = svc.validate_manifest(manifest)
     return svc.build_frontend_evidence_class_statuses(
