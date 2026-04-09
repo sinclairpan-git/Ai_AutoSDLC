@@ -13,6 +13,7 @@ from ai_sdlc.context.state import load_checkpoint
 from ai_sdlc.core.program_service import (
     FRONTEND_EVIDENCE_CLASS_MIRROR_PROBLEM_FAMILY,
     ProgramService,
+    _is_frontend_evidence_class_subject,
 )
 from ai_sdlc.core.workitem_traceability import evaluate_work_item_branch_lifecycle
 from ai_sdlc.integrations.ide_adapter import build_adapter_governance_surface
@@ -134,6 +135,9 @@ def _build_frontend_evidence_class_surface(repo_root: Path) -> dict[str, Any] | 
 
     spec_dir_raw = (checkpoint.feature.spec_dir or "").strip()
     if not spec_dir_raw or spec_dir_raw == "specs/unknown":
+        return None
+    checkpoint_spec_name = Path(spec_dir_raw).name
+    if not _is_frontend_evidence_class_subject(checkpoint_spec_name):
         return None
 
     manifest_path = repo_root / "program-manifest.yaml"

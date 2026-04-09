@@ -1137,6 +1137,35 @@ def test_status_json_frontend_evidence_class_surfaces_missing_manifest(
     }
 
 
+def test_status_json_ignores_frontend_evidence_class_for_non_subject_checkpoint(
+    tmp_path: Path,
+) -> None:
+    init_project(tmp_path)
+    spec_dir = tmp_path / "specs" / "081-backend-example"
+    spec_dir.mkdir(parents=True, exist_ok=True)
+    (spec_dir / "spec.md").write_text("# Spec\n", encoding="utf-8")
+    save_checkpoint(
+        tmp_path,
+        Checkpoint(
+            current_stage="verify",
+            feature=FeatureInfo(
+                id="081-backend-example",
+                spec_dir="specs/081-backend-example",
+                design_branch="design/081-backend-example",
+                feature_branch="feature/081-backend-example",
+                current_branch="main",
+            ),
+        ),
+    )
+
+    with patch("ai_sdlc.cli.commands.find_project_root", return_value=tmp_path):
+        result = runner.invoke(app, ["status", "--json"])
+
+    assert result.exit_code == 0
+    payload = json.loads(result.output)
+    assert "frontend_evidence_class" not in payload["branch_lifecycle"]
+
+
 def test_status_json_frontend_evidence_class_surfaces_ambiguous_manifest_match(
     tmp_path: Path,
 ) -> None:
