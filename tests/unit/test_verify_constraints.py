@@ -828,6 +828,47 @@ def test_frontend_evidence_class_valid_footer_passes(tmp_path: Path) -> None:
     assert collect_constraint_blockers(tmp_path) == []
 
 
+def test_frontend_evidence_class_ignores_non_terminal_body_examples(tmp_path: Path) -> None:
+    _write_frontend_evidence_class_checkpoint(
+        tmp_path,
+        wi_name="082-frontend-example",
+        spec_content=(
+            "# Spec\n\n"
+            "Example body block:\n\n"
+            "```md\n"
+            "---\n"
+            "frontend_evidence_class: framework_capability\n"
+            "---\n"
+            "```\n\n"
+            "Trailing body prose means this file still has no terminal footer.\n"
+        ),
+    )
+
+    blockers = collect_constraint_blockers(tmp_path)
+    assert any("error_kind=missing_footer_key" in item for item in blockers)
+
+
+def test_frontend_evidence_class_body_example_at_eof_is_not_footer(
+    tmp_path: Path,
+) -> None:
+    _write_frontend_evidence_class_checkpoint(
+        tmp_path,
+        wi_name="082-frontend-example",
+        spec_content=(
+            "# Spec\n\n"
+            "Body example only:\n\n"
+            "```md\n"
+            "---\n"
+            "frontend_evidence_class: framework_capability\n"
+            "---\n"
+            "```\n"
+        ),
+    )
+
+    blockers = collect_constraint_blockers(tmp_path)
+    assert any("error_kind=missing_footer_key" in item for item in blockers)
+
+
 def test_frontend_evidence_class_not_retroactive_before_082(tmp_path: Path) -> None:
     _write_frontend_evidence_class_checkpoint(
         tmp_path,

@@ -24,7 +24,10 @@ from ai_sdlc.core.frontend_visual_a11y_evidence_provider import (
     load_frontend_visual_a11y_evidence_artifact,
     visual_a11y_evidence_artifact_path,
 )
-from ai_sdlc.core.verify_constraints import build_constraint_report
+from ai_sdlc.core.verify_constraints import (
+    build_constraint_report,
+    split_terminal_markdown_footer,
+)
 from ai_sdlc.generators.frontend_gate_policy_artifacts import (
     materialize_frontend_gate_policy_artifacts,
 )
@@ -60,8 +63,6 @@ FRONTEND_EVIDENCE_CLASS_AUTHORING_PROBLEM_FAMILY = (
 FRONTEND_EVIDENCE_CLASS_MIRROR_CONTRACT_REF = (
     "specs/086-frontend-evidence-class-program-validate-mirror-contract-baseline/spec.md"
 )
-_MARKDOWN_FOOTER_RE = re.compile(r"(?ms)^---\n(?P<footer>.*?)\n---\s*$")
-
 PROGRAM_FRONTEND_READINESS_READY = "ready"
 PROGRAM_FRONTEND_READINESS_RETRY = "retry"
 PROGRAM_FRONTEND_GATE_VERDICT_UNRESOLVED = "UNRESOLVED"
@@ -7286,13 +7287,12 @@ def _load_frontend_evidence_class_from_spec(spec_path: Path) -> str | None:
     if not spec_path.is_file():
         return None
 
-    text = spec_path.read_text(encoding="utf-8").rstrip()
-    match = _MARKDOWN_FOOTER_RE.search(text)
-    if match is None:
+    _, footer = split_terminal_markdown_footer(spec_path.read_text(encoding="utf-8"))
+    if footer is None:
         return None
 
     try:
-        payload = yaml.safe_load(match.group("footer")) or {}
+        payload = yaml.safe_load(footer) or {}
     except yaml.YAMLError:
         return None
     if not isinstance(payload, dict):

@@ -359,6 +359,51 @@ specs:
     assert any("082-frontend-example" in blocker for blocker in result.remaining_blockers)
 
 
+def test_sync_frontend_evidence_class_manifest_uses_only_terminal_footer(
+    tmp_path: Path,
+) -> None:
+    spec_dir = tmp_path / "specs" / "082-frontend-example"
+    spec_dir.mkdir(parents=True, exist_ok=True)
+    (spec_dir / "spec.md").write_text(
+        "# Spec\n\n"
+        "Example body block:\n\n"
+        "```md\n"
+        "---\n"
+        'frontend_evidence_class: "framework_capability"\n'
+        "---\n"
+        "```\n\n"
+        "Terminal footer is canonical.\n\n"
+        "---\n"
+        'frontend_evidence_class: "consumer_adoption"\n'
+        "---\n",
+        encoding="utf-8",
+    )
+    _write_manifest_yaml(
+        tmp_path,
+        """
+schema_version: "1"
+specs:
+  - id: "082-frontend-example"
+    path: "specs/082-frontend-example"
+    depends_on: []
+""",
+    )
+    svc = ProgramService(tmp_path)
+
+    result = svc.execute_frontend_evidence_class_sync(
+        svc.load_manifest(),
+        confirmed=True,
+    )
+
+    assert result.passed is True
+    assert result.sync_result == "updated"
+    assert result.updated_specs == ["082-frontend-example"]
+
+    payload = yaml.safe_load((tmp_path / "program-manifest.yaml").read_text(encoding="utf-8"))
+    specs = {item["id"]: item for item in payload["specs"]}
+    assert specs["082-frontend-example"]["frontend_evidence_class"] == "consumer_adoption"
+
+
 def test_topo_tiers(tmp_path: Path) -> None:
     for p in ("specs/001-auth", "specs/002-course", "specs/003-enroll"):
         (tmp_path / p).mkdir(parents=True)

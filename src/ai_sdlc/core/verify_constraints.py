@@ -157,7 +157,6 @@ _FRONTEND_EVIDENCE_CLASS_BODY_DECL_RE = re.compile(
 _FRONTEND_EVIDENCE_CLASS_DUPLICATE_RE = re.compile(
     r"(?m)^frontend_evidence_class\s*:"
 )
-_MARKDOWN_FOOTER_RE = re.compile(r"(?ms)^---\n(?P<footer>.*?)\n---\s*$")
 FRONTEND_SOLUTION_CONFIRMATION_CHECK_OBJECTS = (
     "frontend_provider_profile_artifacts",
     "frontend_solution_style_pack_artifacts",
@@ -701,11 +700,61 @@ def _is_frontend_evidence_class_subject(spec_dir_name: str) -> bool:
 
 
 def _split_markdown_footer(text: str) -> tuple[str, str | None]:
+    return split_terminal_markdown_footer(text)
+
+
+def split_terminal_markdown_footer(text: str) -> tuple[str, str | None]:
     stripped = text.rstrip()
-    match = _MARKDOWN_FOOTER_RE.search(stripped)
-    if match is None:
+    lines = stripped.splitlines()
+    delimiter_indexes = _markdown_footer_delimiter_indexes(lines)
+    if len(delimiter_indexes) < 2 or delimiter_indexes[-1] != len(lines) - 1:
         return stripped, None
-    return stripped[: match.start()].rstrip(), match.group("footer")
+
+    opening_index = delimiter_indexes[-2]
+    body = "\n".join(lines[:opening_index]).rstrip()
+    footer = "\n".join(lines[opening_index + 1 : -1])
+    return body, footer
+
+
+def _markdown_footer_delimiter_indexes(lines: list[str]) -> list[int]:
+    indexes: list[int] = []
+    active_fence: tuple[str, int] | None = None
+
+    for index, line in enumerate(lines):
+        fence = _markdown_fence_marker(line)
+        if active_fence is None:
+            if fence is not None:
+                active_fence = fence
+                continue
+            if line == "---":
+                indexes.append(index)
+            continue
+
+        if _markdown_fence_closes(line, active_fence):
+            active_fence = None
+
+    return indexes
+
+
+def _markdown_fence_marker(line: str) -> tuple[str, int] | None:
+    stripped = line.lstrip(" \t")
+    if not stripped:
+        return None
+    if stripped.startswith("```"):
+        return ("`", len(stripped) - len(stripped.lstrip("`")))
+    if stripped.startswith("~~~"):
+        return ("~", len(stripped) - len(stripped.lstrip("~")))
+    return None
+
+
+def _markdown_fence_closes(line: str, active_fence: tuple[str, int]) -> bool:
+    fence_char, fence_len = active_fence
+    stripped = line.lstrip(" \t").rstrip()
+    if not stripped or stripped[0] != fence_char:
+        return False
+
+    run_len = len(stripped) - len(stripped.lstrip(fence_char))
+    return run_len >= fence_len and not stripped[run_len:].strip()
 
 
 def _frontend_evidence_class_authoring_blocker(
