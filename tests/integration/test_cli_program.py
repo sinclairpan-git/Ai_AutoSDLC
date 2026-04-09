@@ -1380,15 +1380,41 @@ specs:
             / "frontend-solution-confirmation"
             / "latest.yaml"
         )
+        provider_manifest_path = (
+            root
+            / "providers"
+            / "frontend"
+            / "public-primevue"
+            / "provider.manifest.yaml"
+        )
+        style_support_path = (
+            root
+            / "providers"
+            / "frontend"
+            / "public-primevue"
+            / "style-support.yaml"
+        )
         assert result.exit_code == 0
         assert artifact_path.is_file()
+        assert provider_manifest_path.is_file()
+        assert style_support_path.is_file()
         payload = yaml.safe_load(artifact_path.read_text(encoding="utf-8"))
+        provider_manifest = yaml.safe_load(provider_manifest_path.read_text(encoding="utf-8"))
+        style_support = yaml.safe_load(style_support_path.read_text(encoding="utf-8"))
         assert payload["confirmed_by_mode"] == "advanced"
         assert payload["decision_status"] == "fallback_required"
         assert payload["requested_frontend_stack"] == "vue2"
         assert payload["effective_frontend_stack"] == "vue3"
+        assert payload["effective_provider_id"] == "public-primevue"
         assert payload["preflight_status"] == "warning"
         assert "will_change_on_confirm" not in payload
+        assert provider_manifest["provider_id"] == "public-primevue"
+        assert provider_manifest["install_strategy_ids"] == ["public-primevue-default"]
+        assert any(
+            item["style_pack_id"] == "modern-saas"
+            and item["fidelity_status"] == "full"
+            for item in style_support["items"]
+        )
         report = (root / report_rel).read_text(encoding="utf-8")
         assert "Frontend Solution Confirmation Artifact" in report
         assert ".ai-sdlc/memory/frontend-solution-confirmation/latest.yaml" in report

@@ -15,6 +15,9 @@ from ai_sdlc.core.program_service import (
     ProgramFrontendRemediationInput,
     ProgramService,
 )
+from ai_sdlc.generators.frontend_provider_profile_artifacts import (
+    materialize_builtin_frontend_provider_profile_artifacts,
+)
 from ai_sdlc.generators.frontend_solution_confirmation_artifacts import (
     frontend_solution_confirmation_memory_root,
     materialize_frontend_solution_confirmation_artifacts,
@@ -1050,6 +1053,12 @@ def program_solution_confirm(
                 style_packs=build_builtin_style_pack_manifests(),
                 install_strategies=build_builtin_install_strategies(),
                 snapshot=snapshot,
+            )
+            artifact_paths.extend(
+                materialize_builtin_frontend_provider_profile_artifacts(
+                    root,
+                    provider_id=snapshot.effective_provider_id,
+                )
             )
             latest_snapshot_path = (
                 frontend_solution_confirmation_memory_root(root) / "latest.yaml"

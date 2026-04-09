@@ -10,7 +10,10 @@ from typing import Any
 
 from ai_sdlc.branch.git_client import GitError
 from ai_sdlc.context.state import load_checkpoint
-from ai_sdlc.core.program_service import ProgramService
+from ai_sdlc.core.program_service import (
+    FRONTEND_EVIDENCE_CLASS_MIRROR_PROBLEM_FAMILY,
+    ProgramService,
+)
 from ai_sdlc.core.workitem_traceability import evaluate_work_item_branch_lifecycle
 from ai_sdlc.integrations.ide_adapter import build_adapter_governance_surface
 from ai_sdlc.telemetry.contracts import ScopeLevel
@@ -148,20 +151,27 @@ def _build_frontend_evidence_class_surface(repo_root: Path) -> dict[str, Any] | 
     except ValueError:
         return None
 
-    target_spec = next(
-        (
-            spec
-            for spec in manifest.specs
-            if _frontend_evidence_class_spec_matches_checkpoint(
-                svc=svc,
-                spec_path=spec.path,
-                checkpoint_spec_dir=checkpoint_spec_dir,
-            )
-        ),
-        None,
-    )
-    if target_spec is None:
+    matched_specs = [
+        spec
+        for spec in manifest.specs
+        if _frontend_evidence_class_spec_matches_checkpoint(
+            svc=svc,
+            spec_path=spec.path,
+            checkpoint_spec_dir=checkpoint_spec_dir,
+        )
+    ]
+    if not matched_specs:
         return None
+    if len(matched_specs) > 1:
+        return {
+            "active_work_item": checkpoint.feature.id,
+            "has_blocker": True,
+            "problem_family": FRONTEND_EVIDENCE_CLASS_MIRROR_PROBLEM_FAMILY,
+            "detection_surface": "program load",
+            "summary_token": "manifest_ambiguous_path_match",
+        }
+
+    target_spec = matched_specs[0]
 
     summaries = svc.build_frontend_evidence_class_statuses(manifest)
     summary = summaries.get(target_spec.id)
