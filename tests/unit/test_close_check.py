@@ -1072,6 +1072,37 @@ def test_close_check_blocks_when_frontend_manifest_cannot_be_loaded(
     assert any("manifest_unreadable" in blocker for blocker in r.blockers)
 
 
+def test_close_check_blocks_when_frontend_manifest_is_missing(
+    tmp_path: Path,
+) -> None:
+    root = tmp_path / "repo16a"
+    root.mkdir()
+    wi_rel = "specs/082-frontend-manifest-missing"
+    _setup_repo(
+        root,
+        tasks_body="- [x] done\n### Task 1.1\n- **验收标准（AC）**：ok",
+        plan_status="completed",
+        wi_rel=wi_rel,
+    )
+    wi = root / wi_rel
+    wi.joinpath("spec.md").write_text(
+        "# Spec\n\n---\nfrontend_evidence_class: \"framework_capability\"\n---\n",
+        encoding="utf-8",
+    )
+    _commit_all(root, "docs: add missing frontend manifest fixture")
+
+    r = run_close_check(cwd=root, wi=Path(wi_rel))
+
+    assert r.ok is False
+    frontend_check = next(
+        check for check in r.checks if check["name"] == "frontend_evidence_class"
+    )
+    assert frontend_check["ok"] is False
+    assert "manifest_missing" in frontend_check["detail"]
+    assert any("frontend_evidence_class_mirror_drift" in blocker for blocker in r.blockers)
+    assert any("manifest_missing" in blocker for blocker in r.blockers)
+
+
 def test_close_check_ignores_frontend_evidence_gate_for_non_frontend_wi(
     tmp_path: Path,
 ) -> None:
@@ -1136,3 +1167,43 @@ def test_close_check_blocks_when_frontend_wi_is_missing_from_manifest_mapping(
     assert "manifest_unmapped" in frontend_check["detail"]
     assert any("frontend_evidence_class_mirror_drift" in blocker for blocker in r.blockers)
     assert any("manifest_unmapped" in blocker for blocker in r.blockers)
+
+
+def test_close_check_blocks_when_frontend_manifest_path_match_is_ambiguous(
+    tmp_path: Path,
+) -> None:
+    root = tmp_path / "repo18"
+    root.mkdir()
+    wi_rel = "specs/082-frontend-ambiguous"
+    _setup_repo(
+        root,
+        tasks_body="- [x] done\n### Task 1.1\n- **验收标准（AC）**：ok",
+        plan_status="completed",
+        wi_rel=wi_rel,
+    )
+    wi = root / wi_rel
+    wi.joinpath("spec.md").write_text(
+        "# Spec\n\n---\nfrontend_evidence_class: \"framework_capability\"\n---\n",
+        encoding="utf-8",
+    )
+    (root / "program-manifest.yaml").write_text(
+        "schema_version: \"1\"\n"
+        "specs:\n"
+        "  - id: 082-frontend-ambiguous-a\n"
+        "    path: specs/082-frontend-ambiguous\n"
+        "  - id: 082-frontend-ambiguous-b\n"
+        "    path: specs/082-frontend-ambiguous\n",
+        encoding="utf-8",
+    )
+    _commit_all(root, "docs: add ambiguous frontend manifest mapping fixture")
+
+    r = run_close_check(cwd=root, wi=Path(wi_rel))
+
+    assert r.ok is False
+    frontend_check = next(
+        check for check in r.checks if check["name"] == "frontend_evidence_class"
+    )
+    assert frontend_check["ok"] is False
+    assert "manifest_ambiguous_path_match" in frontend_check["detail"]
+    assert any("frontend_evidence_class_mirror_drift" in blocker for blocker in r.blockers)
+    assert any("manifest_ambiguous_path_match" in blocker for blocker in r.blockers)

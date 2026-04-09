@@ -106,7 +106,12 @@ def _build_frontend_evidence_class_close_check_summary(
 
     manifest_path = root / "program-manifest.yaml"
     if not manifest_path.is_file():
-        return None
+        return ProgramFrontendEvidenceClassStatus(
+            has_blocker=True,
+            problem_family=FRONTEND_EVIDENCE_CLASS_MIRROR_PROBLEM_FAMILY,
+            detection_surface="program load",
+            summary_token="manifest_missing",
+        )
 
     svc = ProgramService(root, manifest_path)
     try:
@@ -120,21 +125,29 @@ def _build_frontend_evidence_class_close_check_summary(
         )
 
     resolved_wi_dir = wi_dir.resolve()
-    matched_spec_id = next(
-        (
-            spec.id
-            for spec in manifest.specs
-            if (root / spec.path).resolve() == resolved_wi_dir
-        ),
-        None,
-    )
-    if not matched_spec_id:
+    matched_spec_ids: list[str] = []
+    for spec in manifest.specs:
+        try:
+            spec_dir = svc._resolve_spec_dir(spec.path)
+        except ValueError:
+            continue
+        if spec_dir == resolved_wi_dir:
+            matched_spec_ids.append(spec.id)
+    if not matched_spec_ids:
         return ProgramFrontendEvidenceClassStatus(
             has_blocker=True,
             problem_family=FRONTEND_EVIDENCE_CLASS_MIRROR_PROBLEM_FAMILY,
             detection_surface="program load",
             summary_token="manifest_unmapped",
         )
+    if len(matched_spec_ids) > 1:
+        return ProgramFrontendEvidenceClassStatus(
+            has_blocker=True,
+            problem_family=FRONTEND_EVIDENCE_CLASS_MIRROR_PROBLEM_FAMILY,
+            detection_surface="program load",
+            summary_token="manifest_ambiguous_path_match",
+        )
+    matched_spec_id = matched_spec_ids[0]
 
     validation_result = svc.validate_manifest(manifest)
     return svc.build_frontend_evidence_class_statuses(
