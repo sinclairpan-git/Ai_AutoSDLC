@@ -1540,6 +1540,9 @@ class ProgramService:
         if effective_provider_id == "public-primevue":
             return "full", []
 
+        if effective_provider_id != "enterprise-vue2":
+            return "unsupported", ["provider-not-supported-for-style-fidelity"]
+
         enterprise_style_support = {
             "enterprise-default": ("full", []),
             "data-console": ("full", []),
