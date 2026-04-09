@@ -6320,6 +6320,40 @@ def test_build_frontend_solution_confirmation_recommends_public_fallback_in_simp
     assert snapshot.provider_mode == "normal"
 
 
+def test_build_frontend_solution_confirmation_blocks_when_defaulted_public_fallback_is_unavailable(
+    tmp_path: Path,
+) -> None:
+    for p in ("specs/001-auth", "specs/002-course", "specs/003-enroll"):
+        (tmp_path / p).mkdir(parents=True)
+
+    svc = ProgramService(tmp_path)
+    snapshot = svc.build_frontend_solution_confirmation(
+        _manifest(),
+        enterprise_provider_eligible=False,
+        failed_preflight_check_ids=["company-registry-token"],
+        fallback_candidate_available=False,
+    )
+
+    assert snapshot.decision_status == "blocked"
+    assert snapshot.preflight_status == "blocked"
+    assert snapshot.recommended_frontend_stack == "vue3"
+    assert snapshot.recommended_provider_id == "public-primevue"
+    assert snapshot.recommended_style_pack_id == "modern-saas"
+    assert snapshot.requested_frontend_stack == "vue3"
+    assert snapshot.requested_provider_id == "public-primevue"
+    assert snapshot.requested_style_pack_id == "modern-saas"
+    assert snapshot.effective_frontend_stack == "vue3"
+    assert snapshot.effective_provider_id == "public-primevue"
+    assert snapshot.effective_style_pack_id == "modern-saas"
+    assert snapshot.provider_mode == "normal"
+    assert snapshot.fallback_reason_code == "enterprise_provider_unavailable"
+    assert snapshot.preflight_reason_codes == ["enterprise_provider_unavailable"]
+    assert snapshot.availability_summary.overall_status == "blocked"
+    assert snapshot.availability_summary.failed_check_ids == [
+        "company-registry-token"
+    ]
+
+
 def test_build_frontend_solution_confirmation_requires_explicit_cross_stack_fallback_for_enterprise_request(
     tmp_path: Path,
 ) -> None:

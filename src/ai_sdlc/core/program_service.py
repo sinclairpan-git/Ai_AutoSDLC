@@ -1345,6 +1345,9 @@ class ProgramService:
             and requested_solution["provider_id"] == "enterprise-vue2"
             and not enterprise_provider_eligible
         )
+        enterprise_unavailable_without_fallback = (
+            not enterprise_provider_eligible and not fallback_candidate_available
+        )
 
         effective_solution = dict(requested_solution)
         decision_status = "recommended"
@@ -1373,6 +1376,14 @@ class ProgramService:
                 decision_status = "blocked"
                 preflight_status = "blocked"
                 preflight_reason_codes = [fallback_reason_code]
+        elif enterprise_unavailable_without_fallback:
+            fallback_reason_code = "enterprise_provider_unavailable"
+            fallback_reason_text = (
+                "Enterprise provider prerequisites are not satisfied and no public fallback candidate is available."
+            )
+            decision_status = "blocked"
+            preflight_status = "blocked"
+            preflight_reason_codes = [fallback_reason_code]
 
         user_override_fields: list[str] = []
         if requested_solution["frontend_stack"] != recommendation["frontend_stack"]:
@@ -1407,19 +1418,28 @@ class ProgramService:
             )
             availability_summary = AvailabilitySummary(
                 overall_status=(
-                    "blocked" if explicit_enterprise_request and not fallback_candidate_available else "attention"
+                    "blocked" if enterprise_unavailable_without_fallback else "attention"
                 ),
                 passed_check_ids=passed_check_ids,
                 failed_check_ids=failed_check_ids,
                 blocking_reason_codes=blocking_reason_codes,
             )
-            availability_reason_text = (
-                "Enterprise provider prerequisites are not satisfied."
-            )
-            recommendation_reason_codes = ["public-provider-defaulted"]
-            recommendation_reason_text = (
-                "Enterprise provider is unavailable, so the public provider becomes the default recommendation."
-            )
+            if enterprise_unavailable_without_fallback:
+                availability_reason_text = (
+                    "Enterprise provider prerequisites are not satisfied and no public fallback candidate is available."
+                )
+                recommendation_reason_codes = ["enterprise-provider-unavailable"]
+                recommendation_reason_text = (
+                    "Enterprise provider is unavailable and no public fallback candidate is available."
+                )
+            else:
+                availability_reason_text = (
+                    "Enterprise provider prerequisites are not satisfied."
+                )
+                recommendation_reason_codes = ["public-provider-defaulted"]
+                recommendation_reason_text = (
+                    "Enterprise provider is unavailable, so the public provider becomes the default recommendation."
+                )
 
         return build_mvp_solution_snapshot(
             project_id=self.root.name,

@@ -1908,6 +1908,56 @@ def test_073_frontend_solution_confirmation_verification_surfaces_consistency_ga
     assert any("degraded" in blocker for blocker in report.blockers)
 
 
+def test_073_frontend_solution_confirmation_verification_rejects_string_false_override_flag(
+    tmp_path: Path,
+) -> None:
+    _write_073_checkpoint(tmp_path)
+    _write_073_solution_confirmation_artifacts(
+        tmp_path,
+        snapshot_overrides={
+            "decision_status": "user_confirmed",
+            "recommended_frontend_stack": "vue2",
+            "recommended_provider_id": "enterprise-vue2",
+            "recommended_style_pack_id": "enterprise-default",
+            "requested_frontend_stack": "vue3",
+            "requested_provider_id": "public-primevue",
+            "requested_style_pack_id": "modern-saas",
+            "effective_frontend_stack": "vue3",
+            "effective_provider_id": "public-primevue",
+            "effective_style_pack_id": "modern-saas",
+            "user_overrode_recommendation": False,
+            "user_override_fields": [
+                "frontend_stack",
+                "provider_id",
+                "style_pack_id",
+            ],
+        },
+    )
+
+    memory_root = tmp_path / ".ai-sdlc" / "memory" / "frontend-solution-confirmation"
+    for path in (
+        memory_root / "latest.yaml",
+        memory_root / "versions" / "solution-snapshot-001.yaml",
+    ):
+        payload = yaml.safe_load(path.read_text(encoding="utf-8"))
+        assert isinstance(payload, dict)
+        payload["user_overrode_recommendation"] = "false"
+        path.write_text(
+            yaml.safe_dump(payload, allow_unicode=True, sort_keys=False),
+            encoding="utf-8",
+        )
+
+    report = build_constraint_report(tmp_path)
+    context = build_verification_gate_context(tmp_path)
+
+    assert report.coverage_gaps == ("frontend_solution_confirmation_consistency",)
+    assert context["frontend_solution_confirmation_verification"]["gate_verdict"] == "RETRY"
+    assert any(
+        "user_overrode_recommendation is false" in blocker
+        for blocker in report.blockers
+    )
+
+
 def test_build_verification_governance_bundle_emits_gate_capable_payload(
     tmp_path: Path,
 ) -> None:

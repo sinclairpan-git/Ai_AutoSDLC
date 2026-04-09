@@ -1315,6 +1315,18 @@ def _optional_str(value: object) -> str | None:
     return text or None
 
 
+def _coerce_bool(value: object, *, default: bool = False) -> bool:
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, str):
+        normalized = value.strip().lower()
+        if normalized == "true":
+            return True
+        if normalized == "false":
+            return False
+    return default
+
+
 def _load_yaml_mapping(path: Path) -> dict[str, object]:
     payload = yaml.safe_load(path.read_text(encoding="utf-8"))
     if not isinstance(payload, dict):
@@ -1352,7 +1364,7 @@ def _frontend_solution_snapshot_blockers(
     provider_mode = _optional_str(snapshot_payload.get("provider_mode")) or ""
     fallback_reason_code = _optional_str(snapshot_payload.get("fallback_reason_code"))
     fallback_reason_text = _optional_str(snapshot_payload.get("fallback_reason_text"))
-    user_overrode_recommendation = bool(
+    user_overrode_recommendation = _coerce_bool(
         snapshot_payload.get("user_overrode_recommendation", False)
     )
 
