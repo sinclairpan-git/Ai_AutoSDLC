@@ -368,6 +368,39 @@ def test_build_status_counts_and_blockers(tmp_path: Path) -> None:
     assert by["003-enroll"].blocked_by == ["001-auth"]
 
 
+def test_build_status_surfaces_frontend_evidence_class_bounded_summary(
+    tmp_path: Path,
+) -> None:
+    _write_frontend_evidence_class_spec(
+        tmp_path,
+        spec_rel="specs/082-frontend-example",
+        frontend_evidence_class="framework_capability",
+    )
+    svc = ProgramService(tmp_path)
+    manifest = ProgramManifest(
+        specs=[
+            ProgramSpecRef(
+                id="082-frontend-example",
+                path="specs/082-frontend-example",
+                depends_on=[],
+            )
+        ]
+    )
+
+    rows = svc.build_status(
+        manifest,
+        validation_result=svc.validate_manifest(manifest),
+    )
+
+    assert len(rows) == 1
+    summary = rows[0].frontend_evidence_class_status
+    assert summary is not None
+    assert summary.has_blocker is True
+    assert summary.problem_family == "frontend_evidence_class_mirror_drift"
+    assert summary.detection_surface == "program validate"
+    assert summary.summary_token == "mirror_missing"
+
+
 def test_build_integration_dry_run(tmp_path: Path) -> None:
     for p in ("specs/001-auth", "specs/002-course", "specs/003-enroll"):
         (tmp_path / p).mkdir(parents=True)

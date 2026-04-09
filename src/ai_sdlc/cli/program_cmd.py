@@ -10,6 +10,7 @@ from rich.table import Table
 
 from ai_sdlc.core.program_service import (
     FRONTEND_EVIDENCE_CLASS_MIRROR_PROBLEM_FAMILY,
+    ProgramFrontendEvidenceClassStatus,
     ProgramFrontendReadiness,
     ProgramFrontendRemediationInput,
     ProgramService,
@@ -187,7 +188,7 @@ def program_status(
         raise typer.Exit(code=2) from None
 
     result = svc.validate_manifest(mf)
-    rows = svc.build_status(mf)
+    rows = svc.build_status(mf, validation_result=result)
 
     table = Table(title="Program Status")
     table.add_column("Spec")
@@ -211,7 +212,10 @@ def program_status(
             stage,
             tasks,
             blocked,
-            _format_frontend_readiness(row.frontend_readiness),
+            _format_program_status_frontend_cell(
+                row.frontend_readiness,
+                row.frontend_evidence_class_status,
+            ),
         )
 
     console.print(table)
@@ -3914,13 +3918,40 @@ def _format_frontend_readiness(readiness: ProgramFrontendReadiness | None) -> st
     return f"{readiness.state}{suffix}"
 
 
+def _format_frontend_evidence_class_status(
+    status: ProgramFrontendEvidenceClassStatus | None,
+) -> str:
+    if status is None or not status.has_blocker:
+        return ""
+
+    summary = status.problem_family
+    if status.summary_token:
+        summary = f"{summary}:{status.summary_token}"
+    return f"fec={summary}"
+
+
+def _format_program_status_frontend_cell(
+    readiness: ProgramFrontendReadiness | None,
+    frontend_evidence_class_status: ProgramFrontendEvidenceClassStatus | None,
+) -> str:
+    base = _format_frontend_readiness(readiness)
+    summary = _format_frontend_evidence_class_status(frontend_evidence_class_status)
+    if not summary:
+        return base
+    if base == "-":
+        return summary
+    return f"{base} | {summary}"
+
+
 def _render_frontend_status_lines(rows: list[object]) -> None:
     console.print("\n[bold cyan]Frontend Readiness[/bold cyan]")
     for row in rows:
         spec_id = str(getattr(row, "spec_id", "")).strip() or "unknown-spec"
         readiness = getattr(row, "frontend_readiness", None)
+        evidence_class_status = getattr(row, "frontend_evidence_class_status", None)
         console.print(
-            f"  - {spec_id}: {_format_frontend_readiness(readiness)}",
+            f"  - {spec_id}: "
+            f"{_format_program_status_frontend_cell(readiness, evidence_class_status)}",
             markup=False,
         )
 

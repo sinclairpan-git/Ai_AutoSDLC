@@ -10,6 +10,7 @@ from typing import Any
 
 from ai_sdlc.branch.git_client import GitError
 from ai_sdlc.context.state import load_checkpoint
+from ai_sdlc.core.program_service import ProgramService
 from ai_sdlc.core.workitem_traceability import evaluate_work_item_branch_lifecycle
 from ai_sdlc.integrations.ide_adapter import build_adapter_governance_surface
 from ai_sdlc.telemetry.contracts import ScopeLevel
@@ -32,6 +33,12 @@ def build_status_json_surface(repo_root: Path) -> dict[str, Any]:
     manifest_state = _load_manifest_state(repo_root)
     store = TelemetryStore(repo_root)
     branch_lifecycle = _build_branch_lifecycle_surface(repo_root)
+    frontend_evidence_class = _build_frontend_evidence_class_surface(repo_root)
+    if frontend_evidence_class is not None:
+        branch_lifecycle = {
+            **branch_lifecycle,
+            "frontend_evidence_class": frontend_evidence_class,
+        }
     adapter_governance = build_adapter_governance_surface(repo_root)
     derived_indexes: dict[str, dict[str, Any]] | None = None
 
@@ -114,6 +121,54 @@ def build_status_json_surface(repo_root: Path) -> dict[str, Any]:
         },
         "branch_lifecycle": branch_lifecycle,
         "adapter_governance": adapter_governance,
+    }
+
+
+def _build_frontend_evidence_class_surface(repo_root: Path) -> dict[str, Any] | None:
+    checkpoint = load_checkpoint(repo_root)
+    if checkpoint is None or checkpoint.feature is None:
+        return None
+
+    spec_dir_raw = (checkpoint.feature.spec_dir or "").strip()
+    if not spec_dir_raw or spec_dir_raw == "specs/unknown":
+        return None
+
+    manifest_path = repo_root / "program-manifest.yaml"
+    if not manifest_path.is_file():
+        return None
+
+    svc = ProgramService(repo_root, manifest_path)
+    try:
+        manifest = svc.load_manifest()
+    except Exception:
+        return None
+
+    target_spec = next(
+        (
+            spec
+            for spec in manifest.specs
+            if spec.path.strip() == spec_dir_raw
+            or Path(spec.path).name == Path(spec_dir_raw).name
+        ),
+        None,
+    )
+    if target_spec is None:
+        return None
+
+    summaries = svc.build_frontend_evidence_class_statuses(manifest)
+    summary = summaries.get(target_spec.id)
+    if summary is None:
+        return {
+            "active_work_item": target_spec.id,
+            "has_blocker": False,
+        }
+
+    return {
+        "active_work_item": target_spec.id,
+        "has_blocker": summary.has_blocker,
+        "problem_family": summary.problem_family,
+        "detection_surface": summary.detection_surface,
+        "summary_token": summary.summary_token,
     }
 
 

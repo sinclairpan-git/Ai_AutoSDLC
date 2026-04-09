@@ -180,6 +180,14 @@ class ProgramFrontendReadiness:
 
 
 @dataclass
+class ProgramFrontendEvidenceClassStatus:
+    has_blocker: bool
+    problem_family: str = ""
+    detection_surface: str = ""
+    summary_token: str = ""
+
+
+@dataclass
 class ProgramSpecStatus:
     spec_id: str
     path: str
@@ -189,6 +197,7 @@ class ProgramSpecStatus:
     total_tasks: int
     blocked_by: list[str] = field(default_factory=list)
     frontend_readiness: ProgramFrontendReadiness | None = None
+    frontend_evidence_class_status: ProgramFrontendEvidenceClassStatus | None = None
 
 
 @dataclass
@@ -1181,8 +1190,19 @@ class ProgramService:
                         indeg[n] -= 1
         return tiers
 
-    def build_status(self, manifest: ProgramManifest) -> list[ProgramSpecStatus]:
+    def build_status(
+        self,
+        manifest: ProgramManifest,
+        *,
+        validation_result: ProgramValidationResult | None = None,
+    ) -> list[ProgramSpecStatus]:
         statuses: dict[str, ProgramSpecStatus] = {}
+        frontend_evidence_class_statuses = (
+            self.build_frontend_evidence_class_statuses(
+                manifest,
+                validation_result=validation_result,
+            )
+        )
 
         for spec in manifest.specs:
             spec_dir = self.root / spec.path
@@ -1220,6 +1240,9 @@ class ProgramService:
                 completed_tasks=completed,
                 total_tasks=total,
                 frontend_readiness=frontend_readiness,
+                frontend_evidence_class_status=frontend_evidence_class_statuses.get(
+                    spec.id
+                ),
             )
 
         for spec in manifest.specs:
@@ -1234,6 +1257,54 @@ class ProgramService:
             statuses[spec.id].blocked_by = blocked
 
         return [statuses[s.id] for s in manifest.specs if s.id in statuses]
+
+    def build_frontend_evidence_class_statuses(
+        self,
+        manifest: ProgramManifest,
+        *,
+        validation_result: ProgramValidationResult | None = None,
+    ) -> dict[str, ProgramFrontendEvidenceClassStatus]:
+        spec_path_to_id: dict[str, str] = {}
+        for spec in manifest.specs:
+            spec_dir = self._resolve_spec_dir(spec.path)
+            spec_path_to_id[(spec_dir / "spec.md").as_posix()] = spec.id
+
+        statuses: dict[str, ProgramFrontendEvidenceClassStatus] = {}
+        constraint_report = build_constraint_report(self.root)
+        for blocker in constraint_report.blockers:
+            parsed = _parse_frontend_evidence_class_status_blocker(blocker)
+            if parsed is None:
+                continue
+            spec_id = spec_path_to_id.get(parsed["spec_path"])
+            if not spec_id:
+                continue
+            statuses[spec_id] = ProgramFrontendEvidenceClassStatus(
+                has_blocker=True,
+                problem_family=parsed["problem_family"],
+                detection_surface=parsed["detection_surface"],
+                summary_token=parsed["summary_token"],
+            )
+
+        manifest_errors = (
+            validation_result.errors
+            if validation_result is not None
+            else self.validate_manifest(manifest).errors
+        )
+        for error in manifest_errors:
+            parsed = _parse_frontend_evidence_class_status_blocker(error)
+            if parsed is None:
+                continue
+            spec_id = spec_path_to_id.get(parsed["spec_path"])
+            if not spec_id or spec_id in statuses:
+                continue
+            statuses[spec_id] = ProgramFrontendEvidenceClassStatus(
+                has_blocker=True,
+                problem_family=parsed["problem_family"],
+                detection_surface=parsed["detection_surface"],
+                summary_token=parsed["summary_token"],
+            )
+
+        return statuses
 
     def build_frontend_solution_confirmation(
         self,
@@ -7253,6 +7324,35 @@ def _frontend_evidence_class_mirror_error(
         f"expected_contract_ref={FRONTEND_EVIDENCE_CLASS_MIRROR_CONTRACT_REF} "
         f"human_remediation_hint={human_remediation_hint}"
     )
+
+
+def _parse_frontend_evidence_class_status_blocker(
+    message: str,
+) -> dict[str, str] | None:
+    if "problem_family=frontend_evidence_class_" not in message:
+        return None
+
+    problem_match = re.search(r"problem_family=(?P<value>[^\s]+)", message)
+    detection_match = re.search(
+        r"detection_surface=(?P<value>.*?) spec_path=",
+        message,
+    )
+    spec_match = re.search(r"spec_path=(?P<value>[^\s]+)", message)
+    error_kind_match = re.search(r"error_kind=(?P<value>[^\s]+)", message)
+    if (
+        problem_match is None
+        or detection_match is None
+        or spec_match is None
+        or error_kind_match is None
+    ):
+        return None
+
+    return {
+        "problem_family": problem_match.group("value").strip(),
+        "detection_surface": detection_match.group("value").strip(),
+        "spec_path": spec_match.group("value").strip(),
+        "summary_token": error_kind_match.group("value").strip(),
+    }
 
 
 def _task_counts(tasks_md: Path) -> tuple[int, int]:

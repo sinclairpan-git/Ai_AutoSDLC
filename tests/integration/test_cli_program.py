@@ -377,6 +377,34 @@ specs:
         assert "ready" in result.output
         assert "missing_artifact" in result.output
 
+    def test_program_status_exposes_bounded_frontend_evidence_class_summary(
+        self, initialized_project_dir: Path
+    ) -> None:
+        root = initialized_project_dir
+        _write_frontend_evidence_class_spec(
+            root,
+            spec_rel="specs/082-frontend-example",
+            frontend_evidence_class="framework_capability",
+        )
+        _write_manifest_yaml(
+            root,
+            """
+schema_version: "1"
+specs:
+  - id: "082-frontend-example"
+    path: "specs/082-frontend-example"
+    depends_on: []
+""",
+        )
+
+        with patch("ai_sdlc.cli.program_cmd.find_project_root", return_value=root):
+            result = runner.invoke(app, ["program", "status"])
+
+        assert result.exit_code == 1
+        assert "frontend_evidence_class_mirror_drift:mirror_missing" in result.output
+        assert "source_of_truth_path=" not in result.output
+        assert "human_remediation_hint=" not in result.output
+
     def test_program_integrate_dry_run_with_report(
         self, initialized_project_dir: Path
     ) -> None:
