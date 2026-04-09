@@ -41,6 +41,11 @@
 - `uv run ruff check src/ai_sdlc/core/close_check.py tests/integration/test_cli_workitem_close_check.py`：通过，`All checks passed!`
 - `uv run ai-sdlc verify constraints`：通过，输出 `verify constraints: no BLOCKERs.`
 - `git diff --check`：通过，无输出
+- 提交前 fresh 重跑：
+  - `uv run pytest tests/integration/test_cli_workitem_close_check.py -q`：通过，`30 passed in 12.28s`
+  - `uv run ruff check src/ai_sdlc/core/close_check.py tests/integration/test_cli_workitem_close_check.py`：通过，`All checks passed!`
+  - `uv run ai-sdlc verify constraints`：通过，输出 `verify constraints: no BLOCKERs.`
+  - `git diff --check`：通过，无输出
 
 ### 1.5 对账结论
 
@@ -50,7 +55,7 @@
 
 ### 1.6 归档后动作
 
-- **已完成 git 提交**：否
-- **提交哈希**：N/A
-- 当前 batch 结论：`091` 的首批 close-check runtime cut 已完成实现与 fresh verification，但尚未提交。
-- **下一步动作**：将 `091` 相关文档、实现与测试一并提交。
+- **已完成 git 提交**：是
+- **提交哈希**：`56dc3de`
+- 当前 batch 结论：`091` 的首批 close-check runtime cut 已完成实现、fresh verification 与独立提交。
+- **下一步动作**：如继续推进 runtime，优先回到 `086/087` 对应的 mirror carrier / `program validate` 路径，补齐 close-check 上游 canonical drift surface。
