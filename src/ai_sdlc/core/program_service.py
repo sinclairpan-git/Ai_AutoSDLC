@@ -44,6 +44,7 @@ from ai_sdlc.models.frontend_generation_constraints import (
 from ai_sdlc.models.frontend_solution_confirmation import (
     AvailabilitySummary,
     FrontendSolutionSnapshot,
+    build_builtin_style_pack_manifests,
     build_mvp_solution_snapshot,
 )
 from ai_sdlc.models.program import ProgramManifest, ProgramSpecRef
@@ -1538,6 +1539,11 @@ class ProgramService:
         effective_style_pack_id: str,
     ) -> tuple[str, list[str]]:
         if effective_provider_id == "public-primevue":
+            builtin_style_pack_ids = {
+                manifest.style_pack_id for manifest in build_builtin_style_pack_manifests()
+            }
+            if effective_style_pack_id not in builtin_style_pack_ids:
+                return "unsupported", ["style-pack-not-supported-by-provider"]
             return "full", []
 
         if effective_provider_id != "enterprise-vue2":

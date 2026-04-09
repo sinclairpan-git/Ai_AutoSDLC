@@ -17,6 +17,7 @@ from ai_sdlc.core.program_service import (
 )
 from ai_sdlc.generators.frontend_provider_profile_artifacts import (
     materialize_builtin_frontend_provider_profile_artifacts,
+    supports_builtin_frontend_provider_profile_artifacts,
 )
 from ai_sdlc.generators.frontend_solution_confirmation_artifacts import (
     frontend_solution_confirmation_memory_root,
@@ -1048,6 +1049,26 @@ def program_solution_confirm(
             )
             raise typer.Exit(code=2)
         if snapshot.preflight_status != "blocked":
+            if not supports_builtin_frontend_provider_profile_artifacts(
+                snapshot.effective_provider_id
+            ):
+                console.print(
+                    "\n[bold red]Unsupported frontend provider profile artifacts[/bold red]"
+                )
+                console.print(
+                    "  - "
+                    f"provider_id: {snapshot.effective_provider_id}",
+                    markup=False,
+                )
+                console.print(
+                    "  - supported built-in providers: enterprise-vue2, public-primevue",
+                    markup=False,
+                )
+                console.print(
+                    "  - use `--dry-run` or choose a built-in provider before executing",
+                    markup=False,
+                )
+                raise typer.Exit(code=1)
             artifact_paths = materialize_frontend_solution_confirmation_artifacts(
                 root,
                 style_packs=build_builtin_style_pack_manifests(),

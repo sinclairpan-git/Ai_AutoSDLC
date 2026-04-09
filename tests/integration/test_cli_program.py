@@ -1449,6 +1449,41 @@ specs:
         assert "Frontend solution confirmation blocked" in result.output
         assert not artifact_path.exists()
 
+    def test_program_solution_confirm_execute_blocks_unknown_provider_artifact_materialization(
+        self, initialized_project_dir: Path
+    ) -> None:
+        root = initialized_project_dir
+        _write_manifest(root)
+
+        with patch("ai_sdlc.cli.program_cmd.find_project_root", return_value=root):
+            result = runner.invoke(
+                app,
+                [
+                    "program",
+                    "solution-confirm",
+                    "--provider-id",
+                    "foo-provider",
+                    "--style-pack-id",
+                    "modern-saas",
+                    "--execute",
+                    "--yes",
+                ],
+            )
+
+        artifact_path = (
+            root
+            / ".ai-sdlc"
+            / "memory"
+            / "frontend-solution-confirmation"
+            / "latest.yaml"
+        )
+        provider_root = root / "providers" / "frontend" / "foo-provider"
+        assert result.exit_code == 1
+        assert "Unsupported frontend provider profile artifacts" in result.output
+        assert "Traceback" not in result.output
+        assert not artifact_path.exists()
+        assert not provider_root.exists()
+
     def test_program_provider_patch_handoff_surfaces_runtime_artifact(
         self, initialized_project_dir: Path
     ) -> None:

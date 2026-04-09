@@ -6587,6 +6587,27 @@ def test_build_frontend_solution_confirmation_marks_unknown_provider_style_fidel
     ]
 
 
+def test_build_frontend_solution_confirmation_marks_unknown_public_style_pack_unsupported(
+    tmp_path: Path,
+) -> None:
+    for p in ("specs/001-auth", "specs/002-course", "specs/003-enroll"):
+        (tmp_path / p).mkdir(parents=True)
+
+    svc = ProgramService(tmp_path)
+    snapshot = svc.build_frontend_solution_confirmation(
+        _manifest(),
+        requested_provider_id="public-primevue",
+        requested_style_pack_id="custom-pack",
+    )
+
+    assert snapshot.effective_provider_id == "public-primevue"
+    assert snapshot.effective_style_pack_id == "custom-pack"
+    assert snapshot.style_fidelity_status == "unsupported"
+    assert snapshot.style_degradation_reason_codes == [
+        "style-pack-not-supported-by-provider"
+    ]
+
+
 def _write_minimal_frontend_contract_page_artifacts(
     root: Path,
     *,

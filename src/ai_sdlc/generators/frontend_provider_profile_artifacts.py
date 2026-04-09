@@ -14,6 +14,10 @@ from ai_sdlc.models.frontend_solution_confirmation import (
     build_builtin_style_pack_manifests,
 )
 
+BUILTIN_FRONTEND_PROVIDER_PROFILE_IDS = frozenset(
+    {"enterprise-vue2", "public-primevue"}
+)
+
 
 def frontend_provider_profile_root(root: Path, provider_id: str) -> Path:
     """Return the canonical root for instantiated Provider profile artifacts."""
@@ -135,6 +139,12 @@ def materialize_builtin_frontend_provider_profile_artifacts(
     raise ValueError(f"unsupported built-in provider profile: {provider_id}")
 
 
+def supports_builtin_frontend_provider_profile_artifacts(provider_id: str) -> bool:
+    """Return whether the provider has a built-in profile artifact materializer."""
+
+    return provider_id in BUILTIN_FRONTEND_PROVIDER_PROFILE_IDS
+
+
 def _write_yaml(path: Path, payload: dict[str, object]) -> Path:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(
@@ -149,7 +159,9 @@ def _write_yaml(path: Path, payload: dict[str, object]) -> Path:
 
 
 __all__ = [
+    "BUILTIN_FRONTEND_PROVIDER_PROFILE_IDS",
     "frontend_provider_profile_root",
     "materialize_builtin_frontend_provider_profile_artifacts",
     "materialize_frontend_provider_profile_artifacts",
+    "supports_builtin_frontend_provider_profile_artifacts",
 ]
