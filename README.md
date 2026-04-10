@@ -124,6 +124,6 @@ The file `.ai-sdlc/project/config/project-config.yaml` holds IDE detection metad
 ## Documentation
 
 - Current release notes: `docs/releases/v0.6.0.md`
-- Chinese user guide: `docs/USER_GUIDE.zh-CN.md` (start with **§3 Install & environment**)
+- Chinese user guide: `USER_GUIDE.zh-CN.md` (start with the **目录**, then jump to Chapter 1 or Chapter 2)
 - Offline install bundle (build + one-command install): `packaging/offline/README.md`
 - Spec split and program orchestration: `docs/SPEC_SPLIT_AND_PROGRAM.zh-CN.md`

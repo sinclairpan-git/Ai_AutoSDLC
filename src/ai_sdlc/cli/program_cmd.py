@@ -9,9 +9,24 @@ from rich.console import Console
 from rich.table import Table
 
 from ai_sdlc.core.program_service import (
+    FRONTEND_EVIDENCE_CLASS_MIRROR_PROBLEM_FAMILY,
+    ProgramFrontendEvidenceClassStatus,
     ProgramFrontendReadiness,
     ProgramFrontendRemediationInput,
     ProgramService,
+)
+from ai_sdlc.generators.frontend_provider_profile_artifacts import (
+    materialize_builtin_frontend_provider_profile_artifacts,
+    supports_builtin_frontend_provider_profile_artifacts,
+)
+from ai_sdlc.generators.frontend_solution_confirmation_artifacts import (
+    frontend_solution_confirmation_memory_root,
+    materialize_frontend_solution_confirmation_artifacts,
+)
+from ai_sdlc.models.frontend_solution_confirmation import (
+    FrontendSolutionSnapshot,
+    build_builtin_install_strategies,
+    build_builtin_style_pack_manifests,
 )
 from ai_sdlc.utils.helpers import find_project_root
 
@@ -66,6 +81,98 @@ def program_validate(
     raise typer.Exit(code=1)
 
 
+@program_app.command("frontend-evidence-class-sync")
+def program_frontend_evidence_class_sync(
+    manifest: str = typer.Option(
+        "program-manifest.yaml",
+        "--manifest",
+        help="Path to program manifest relative to project root.",
+    ),
+    spec_id: str = typer.Option(
+        "",
+        "--spec-id",
+        help="Optional single spec id to sync instead of bounded bulk sync.",
+    ),
+    dry_run: bool = typer.Option(
+        True,
+        "--dry-run/--execute",
+        help="Preview frontend evidence class mirror sync or explicitly update the manifest mirror.",
+    ),
+    yes: bool = typer.Option(
+        False,
+        "--yes",
+        help="Confirm frontend evidence class manifest sync in execute mode.",
+    ),
+) -> None:
+    """Preview or execute frontend evidence class manifest mirror sync."""
+    root = _resolve_root()
+    svc = ProgramService(root, root / manifest)
+
+    try:
+        mf = svc.load_manifest()
+    except Exception as exc:
+        console.print(f"[red]Failed to load manifest: {exc}[/red]")
+        raise typer.Exit(code=2) from None
+
+    result = svc.validate_manifest(mf)
+    blocking_errors = [
+        error
+        for error in result.errors
+        if f"problem_family={FRONTEND_EVIDENCE_CLASS_MIRROR_PROBLEM_FAMILY}" not in error
+    ]
+    if blocking_errors:
+        console.print(
+            "[bold red]Manifest invalid; cannot sync frontend evidence class mirror.[/bold red]"
+        )
+        for error in blocking_errors:
+            console.print(f"  - {error}")
+        raise typer.Exit(code=1)
+
+    sync_result = svc.execute_frontend_evidence_class_sync(
+        mf,
+        spec_id=spec_id.strip() or None,
+        confirmed=not dry_run and yes,
+    )
+
+    mode_title = (
+        "Program Frontend Evidence Class Sync Dry-Run"
+        if dry_run
+        else "Program Frontend Evidence Class Sync Execute"
+    )
+    console.print(f"[bold cyan]{mode_title}[/bold cyan]")
+    console.print(
+        f"  - scope: {spec_id.strip() or 'all eligible manifest specs'}",
+        markup=False,
+    )
+    console.print(f"  - sync result: {sync_result.sync_result}", markup=False)
+    console.print(
+        f"  - confirmation required: {str(sync_result.sync_result == 'confirmation_required').lower()}",
+        markup=False,
+    )
+    for updated_spec in sync_result.updated_specs:
+        console.print(f"  - updated spec: {updated_spec}", markup=False)
+    for written_path in sync_result.written_paths:
+        console.print(f"  - written path: {written_path}", markup=False)
+    for blocker in sync_result.remaining_blockers:
+        console.print(f"  - blocker: {blocker}", markup=False)
+
+    if sync_result.warnings:
+        console.print("\n[bold yellow]Warnings[/bold yellow]")
+        for warning in sync_result.warnings:
+            console.print(f"  - {warning}")
+
+    if dry_run:
+        raise typer.Exit(code=0 if not sync_result.remaining_blockers else 1)
+
+    if not yes:
+        console.print(
+            "[bold yellow]`--execute` requires explicit confirmation via `--yes`.[/bold yellow]"
+        )
+        raise typer.Exit(code=2)
+
+    raise typer.Exit(code=0 if sync_result.passed else 1)
+
+
 @program_app.command("status")
 def program_status(
     manifest: str = typer.Option(
@@ -85,7 +192,7 @@ def program_status(
         raise typer.Exit(code=2) from None
 
     result = svc.validate_manifest(mf)
-    rows = svc.build_status(mf)
+    rows = svc.build_status(mf, validation_result=result)
 
     table = Table(title="Program Status")
     table.add_column("Spec")
@@ -109,7 +216,10 @@ def program_status(
             stage,
             tasks,
             blocked,
-            _format_frontend_readiness(row.frontend_readiness),
+            _format_program_status_frontend_cell(
+                row.frontend_readiness,
+                row.frontend_evidence_class_status,
+            ),
         )
 
     console.print(table)
@@ -119,6 +229,10 @@ def program_status(
         console.print(
             "\n[bold red]Manifest invalid; status shown with best-effort parsing.[/bold red]"
         )
+        for error in result.errors:
+            if "problem_family=frontend_evidence_class_" in error:
+                continue
+            console.print(f"  - {error}")
         raise typer.Exit(code=1)
 
     raise typer.Exit(code=0)
@@ -814,6 +928,195 @@ def program_provider_runtime(
 
     console.print("\n[bold red]Frontend provider runtime incomplete[/bold red]")
     raise typer.Exit(code=1)
+
+
+@program_app.command("solution-confirm")
+def program_solution_confirm(
+    manifest: str = typer.Option(
+        "program-manifest.yaml",
+        "--manifest",
+        help="Path to program manifest relative to project root.",
+    ),
+    mode: str = typer.Option(
+        "simple",
+        "--mode",
+        help="Confirmation flow mode: simple or advanced.",
+    ),
+    frontend_stack: str = typer.Option(
+        "",
+        "--frontend-stack",
+        help="Optional requested frontend stack override.",
+    ),
+    provider_id: str = typer.Option(
+        "",
+        "--provider-id",
+        help="Optional requested provider override.",
+    ),
+    style_pack_id: str = typer.Option(
+        "",
+        "--style-pack-id",
+        help="Optional requested style pack override.",
+    ),
+    enterprise_provider_eligible: bool = typer.Option(
+        True,
+        "--enterprise-provider-eligible/--enterprise-provider-ineligible",
+        help="Whether enterprise provider prerequisites are currently satisfied.",
+    ),
+    failed_preflight_check_ids: list[str] = typer.Option(
+        None,
+        "--failed-preflight-check-id",
+        help="Optional failed availability/preflight check IDs.",
+    ),
+    fallback_candidate_available: bool = typer.Option(
+        True,
+        "--fallback-candidate-available/--no-fallback-candidate",
+        help="Whether a public fallback candidate is available when enterprise is blocked.",
+    ),
+    dry_run: bool = typer.Option(
+        True,
+        "--dry-run/--execute",
+        help="Preview or explicitly materialize the structured solution confirmation snapshot.",
+    ),
+    report: str = typer.Option(
+        "",
+        "--report",
+        help="Optional report output path relative to project root.",
+    ),
+    yes: bool = typer.Option(
+        False,
+        "--yes",
+        help="Confirm solution confirmation execute mode.",
+    ),
+) -> None:
+    """Preview or execute the structured frontend solution confirmation baseline."""
+    root = _resolve_root()
+    svc = ProgramService(root, root / manifest)
+
+    try:
+        mf = svc.load_manifest()
+    except Exception as exc:
+        console.print(f"[red]Failed to load manifest: {exc}[/red]")
+        raise typer.Exit(code=2) from None
+
+    result = svc.validate_manifest(mf)
+    if not result.valid:
+        console.print(
+            "[bold red]Manifest invalid; cannot build frontend solution confirmation.[/bold red]"
+        )
+        for e in result.errors:
+            console.print(f"  - {e}")
+        raise typer.Exit(code=1)
+
+    normalized_mode = mode.strip().lower()
+    if normalized_mode not in {"simple", "advanced"}:
+        console.print("[bold red]`--mode` must be `simple` or `advanced`.[/bold red]")
+        raise typer.Exit(code=2)
+
+    snapshot = svc.build_frontend_solution_confirmation(
+        mf,
+        mode="simple",
+        requested_frontend_stack=frontend_stack or None,
+        requested_provider_id=provider_id or None,
+        requested_style_pack_id=style_pack_id or None,
+        enterprise_provider_eligible=enterprise_provider_eligible,
+        failed_preflight_check_ids=list(failed_preflight_check_ids or []),
+        fallback_candidate_available=fallback_candidate_available,
+    )
+    snapshot = _coerce_frontend_solution_confirmation_mode(
+        snapshot,
+        mode=normalized_mode,
+    )
+
+    mode_title = (
+        "Program Frontend Solution Confirm Simple"
+        if normalized_mode == "simple"
+        else "Program Frontend Solution Confirm Advanced"
+    )
+    console.print(f"[bold]{mode_title}[/bold]")
+
+    if normalized_mode == "advanced":
+        _render_frontend_solution_confirmation_wizard(snapshot)
+    else:
+        _render_frontend_solution_confirmation_recommendation(snapshot)
+    _render_frontend_solution_confirmation_final(snapshot)
+
+    artifact_paths: list[Path] = []
+    latest_snapshot_path: Path | None = None
+    if not dry_run:
+        if not yes:
+            console.print(
+                "[bold yellow]`--execute` requires explicit confirmation via `--yes`.[/bold yellow]"
+            )
+            raise typer.Exit(code=2)
+        if snapshot.preflight_status != "blocked":
+            if not supports_builtin_frontend_provider_profile_artifacts(
+                snapshot.effective_provider_id
+            ):
+                console.print(
+                    "\n[bold red]Unsupported frontend provider profile artifacts[/bold red]"
+                )
+                console.print(
+                    "  - "
+                    f"provider_id: {snapshot.effective_provider_id}",
+                    markup=False,
+                )
+                console.print(
+                    "  - supported built-in providers: enterprise-vue2, public-primevue",
+                    markup=False,
+                )
+                console.print(
+                    "  - use `--dry-run` or choose a built-in provider before executing",
+                    markup=False,
+                )
+                raise typer.Exit(code=1)
+            artifact_paths = materialize_frontend_solution_confirmation_artifacts(
+                root,
+                style_packs=build_builtin_style_pack_manifests(),
+                install_strategies=build_builtin_install_strategies(),
+                snapshot=snapshot,
+            )
+            artifact_paths.extend(
+                materialize_builtin_frontend_provider_profile_artifacts(
+                    root,
+                    provider_id=snapshot.effective_provider_id,
+                )
+            )
+            latest_snapshot_path = (
+                frontend_solution_confirmation_memory_root(root) / "latest.yaml"
+            )
+            console.print("\n[bold cyan]Frontend Solution Confirmation Artifact[/bold cyan]")
+            console.print(
+                f"  - saved: {latest_snapshot_path.relative_to(root)}",
+                markup=False,
+            )
+
+    if report:
+        report_path = root / report
+        report_path.parent.mkdir(parents=True, exist_ok=True)
+        lines = _frontend_solution_confirmation_report_lines(
+            manifest=manifest,
+            mode_title=mode_title,
+            snapshot=snapshot,
+            mode=normalized_mode,
+            latest_snapshot_path=latest_snapshot_path,
+            artifact_paths=artifact_paths,
+        )
+        report_path.write_text("\n".join(lines), encoding="utf-8")
+        console.print(f"\n[green]Report written:[/green] {report_path}")
+
+    if dry_run:
+        raise typer.Exit(code=0)
+
+    if snapshot.preflight_status == "blocked":
+        console.print(
+            "\n[bold red]Frontend solution confirmation blocked[/bold red]"
+        )
+        raise typer.Exit(code=1)
+
+    console.print(
+        "\n[bold green]Frontend solution confirmation materialized[/bold green]"
+    )
+    raise typer.Exit(code=0)
 
 
 @program_app.command("provider-patch-handoff")
@@ -3650,13 +3953,40 @@ def _format_frontend_readiness(readiness: ProgramFrontendReadiness | None) -> st
     return f"{readiness.state}{suffix}"
 
 
+def _format_frontend_evidence_class_status(
+    status: ProgramFrontendEvidenceClassStatus | None,
+) -> str:
+    if status is None or not status.has_blocker:
+        return ""
+
+    summary = status.problem_family
+    if status.summary_token:
+        summary = f"{summary}:{status.summary_token}"
+    return f"fec={summary}"
+
+
+def _format_program_status_frontend_cell(
+    readiness: ProgramFrontendReadiness | None,
+    frontend_evidence_class_status: ProgramFrontendEvidenceClassStatus | None,
+) -> str:
+    base = _format_frontend_readiness(readiness)
+    summary = _format_frontend_evidence_class_status(frontend_evidence_class_status)
+    if not summary:
+        return base
+    if base == "-":
+        return summary
+    return f"{base} | {summary}"
+
+
 def _render_frontend_status_lines(rows: list[object]) -> None:
     console.print("\n[bold cyan]Frontend Readiness[/bold cyan]")
     for row in rows:
         spec_id = str(getattr(row, "spec_id", "")).strip() or "unknown-spec"
         readiness = getattr(row, "frontend_readiness", None)
+        evidence_class_status = getattr(row, "frontend_evidence_class_status", None)
         console.print(
-            f"  - {spec_id}: {_format_frontend_readiness(readiness)}",
+            f"  - {spec_id}: "
+            f"{_format_program_status_frontend_cell(readiness, evidence_class_status)}",
             markup=False,
         )
 
@@ -3789,6 +4119,237 @@ def _render_frontend_remediation_execution_result(results: list[object]) -> None
         summary = str(getattr(item, "summary", "")).strip()
         if summary:
             console.print(f"    summary: {summary}", markup=False)
+
+
+def _coerce_frontend_solution_confirmation_mode(
+    snapshot: FrontendSolutionSnapshot,
+    *,
+    mode: str,
+) -> FrontendSolutionSnapshot:
+    if snapshot.confirmed_by_mode == mode:
+        return snapshot
+
+    payload = snapshot.model_dump(mode="json")
+    payload["confirmed_by_mode"] = mode
+    payload["recommendation_source"] = f"{mode}-mode"
+    return FrontendSolutionSnapshot(**payload)
+
+
+def _frontend_solution_confirmation_change_fields(
+    snapshot: FrontendSolutionSnapshot,
+) -> list[str]:
+    fields = [
+        "project_shape",
+        "frontend_stack",
+        "provider_id",
+        "backend_stack",
+        "api_collab_mode",
+        "style_pack_id",
+    ]
+    changed_fields: list[str] = []
+    for field_name in fields:
+        requested_value = getattr(snapshot, f"requested_{field_name}")
+        effective_value = getattr(snapshot, f"effective_{field_name}")
+        if requested_value != effective_value:
+            changed_fields.append(field_name)
+    return changed_fields
+
+
+def _frontend_solution_confirmation_fallback_required(
+    snapshot: FrontendSolutionSnapshot,
+) -> bool:
+    return snapshot.decision_status in {"fallback_required", "fallback_confirmed"}
+
+
+def _render_frontend_solution_confirmation_recommendation(
+    snapshot: FrontendSolutionSnapshot,
+) -> None:
+    console.print("\n[bold cyan]Recommended Solution[/bold cyan]")
+    console.print(
+        f"  - recommended_frontend_stack: {snapshot.recommended_frontend_stack}",
+        markup=False,
+    )
+    console.print(
+        f"  - recommended_provider_id: {snapshot.recommended_provider_id}",
+        markup=False,
+    )
+    console.print(
+        f"  - recommended_style_pack_id: {snapshot.recommended_style_pack_id}",
+        markup=False,
+    )
+    console.print(
+        f"  - recommendation_reason_text: {snapshot.recommendation_reason_text}",
+        markup=False,
+    )
+
+
+def _render_frontend_solution_confirmation_wizard(
+    snapshot: FrontendSolutionSnapshot,
+) -> None:
+    changed_fields = _frontend_solution_confirmation_change_fields(snapshot)
+    step_lines = [
+        "Step 1/7: Recommendation",
+        "Step 2/7: Requested frontend stack",
+        "Step 3/7: Requested provider",
+        "Step 4/7: Requested style pack",
+        "Step 5/7: Availability summary",
+        "Step 6/7: Effective solution diff",
+        "Step 7/7: Final confirmation",
+    ]
+    console.print("\n[bold cyan]Structured Wizard[/bold cyan]")
+    for line in step_lines:
+        console.print(f"  - {line}", markup=False)
+    console.print(
+        f"  - requested_frontend_stack: {snapshot.requested_frontend_stack}",
+        markup=False,
+    )
+    console.print(
+        f"  - requested_provider_id: {snapshot.requested_provider_id}",
+        markup=False,
+    )
+    console.print(
+        f"  - requested_style_pack_id: {snapshot.requested_style_pack_id}",
+        markup=False,
+    )
+    console.print(
+        "  - availability_summary: "
+        + snapshot.availability_summary.overall_status,
+        markup=False,
+    )
+    console.print(
+        "  - effective_diff: "
+        + (", ".join(changed_fields) if changed_fields else "none"),
+        markup=False,
+    )
+
+
+def _render_frontend_solution_confirmation_final(
+    snapshot: FrontendSolutionSnapshot,
+) -> None:
+    changed_fields = _frontend_solution_confirmation_change_fields(snapshot)
+    console.print("\n[bold cyan]Final Preflight[/bold cyan]")
+    console.print(
+        f"  - requested_frontend_stack: {snapshot.requested_frontend_stack}",
+        markup=False,
+    )
+    console.print(
+        f"  - requested_provider_id: {snapshot.requested_provider_id}",
+        markup=False,
+    )
+    console.print(
+        f"  - requested_style_pack_id: {snapshot.requested_style_pack_id}",
+        markup=False,
+    )
+    console.print(
+        f"  - effective_frontend_stack: {snapshot.effective_frontend_stack}",
+        markup=False,
+    )
+    console.print(
+        f"  - effective_provider_id: {snapshot.effective_provider_id}",
+        markup=False,
+    )
+    console.print(
+        f"  - effective_style_pack_id: {snapshot.effective_style_pack_id}",
+        markup=False,
+    )
+    console.print(
+        f"  - preflight_status: {snapshot.preflight_status}",
+        markup=False,
+    )
+    console.print(
+        "  - will_change_on_confirm: "
+        + (", ".join(changed_fields) if changed_fields else "none"),
+        markup=False,
+    )
+    console.print(
+        "  - fallback_required: "
+        + str(_frontend_solution_confirmation_fallback_required(snapshot)).lower(),
+        markup=False,
+    )
+
+
+def _frontend_solution_confirmation_report_lines(
+    *,
+    manifest: str,
+    mode_title: str,
+    snapshot: FrontendSolutionSnapshot,
+    mode: str,
+    latest_snapshot_path: Path | None,
+    artifact_paths: list[Path],
+) -> list[str]:
+    changed_fields = _frontend_solution_confirmation_change_fields(snapshot)
+    lines: list[str] = [
+        f"# {mode_title}",
+        "",
+        f"- Manifest: `{manifest}`",
+        f"- Mode: `{mode}`",
+        "",
+    ]
+    if mode == "advanced":
+        lines.extend(
+            [
+                "## Structured Wizard",
+                "",
+                "- Step 1/7: Recommendation",
+                "- Step 2/7: Requested frontend stack",
+                "- Step 3/7: Requested provider",
+                "- Step 4/7: Requested style pack",
+                "- Step 5/7: Availability summary",
+                "- Step 6/7: Effective solution diff",
+                "- Step 7/7: Final confirmation",
+                "",
+            ]
+        )
+    else:
+        lines.extend(
+            [
+                "## Recommended Solution",
+                "",
+                f"- recommended_frontend_stack: `{snapshot.recommended_frontend_stack}`",
+                f"- recommended_provider_id: `{snapshot.recommended_provider_id}`",
+                f"- recommended_style_pack_id: `{snapshot.recommended_style_pack_id}`",
+                "",
+            ]
+        )
+    lines.extend(
+        [
+            "## Final Preflight",
+            "",
+            f"- requested_frontend_stack: `{snapshot.requested_frontend_stack}`",
+            f"- requested_provider_id: `{snapshot.requested_provider_id}`",
+            f"- requested_style_pack_id: `{snapshot.requested_style_pack_id}`",
+            f"- effective_frontend_stack: `{snapshot.effective_frontend_stack}`",
+            f"- effective_provider_id: `{snapshot.effective_provider_id}`",
+            f"- effective_style_pack_id: `{snapshot.effective_style_pack_id}`",
+            f"- preflight_status: `{snapshot.preflight_status}`",
+            "- will_change_on_confirm: `"
+            + (", ".join(changed_fields) if changed_fields else "none")
+            + "`",
+            "- fallback_required: `"
+            + str(_frontend_solution_confirmation_fallback_required(snapshot)).lower()
+            + "`",
+            "",
+        ]
+    )
+    if latest_snapshot_path is not None:
+        lines.extend(
+            [
+                "## Frontend Solution Confirmation Artifact",
+                "",
+                f"- `{latest_snapshot_path}`",
+                "",
+            ]
+        )
+    if artifact_paths:
+        lines.extend(
+            [
+                "## Materialized Files",
+                "",
+            ]
+        )
+        lines.extend([f"- `{path}`" for path in artifact_paths])
+        lines.append("")
+    return lines
 
 
 def _render_frontend_provider_runtime_result(result: object) -> None:

@@ -2,7 +2,7 @@
 
 **功能编号**：`067-frontend-p1-ui-kernel-semantic-expansion-baseline`  
 **创建日期**：2026-04-06  
-**状态**：accepted child baseline；formal freeze 已完成；Batch 5 kernel model semantic expansion slice 已验证
+**状态**：accepted child baseline；formal freeze 已完成；Batch 5 kernel model semantic expansion slice 已验证；close-ready development summary handoff 已补齐
 
 ## 1. 归档规则
 
@@ -24,9 +24,9 @@
 
 - `067` 是 `066` 下游的 P1 UI Kernel semantic expansion child work item，不是 recipe / diagnostics / provider 工单。
 - `067` formal baseline 已完成；当前允许的唯一实现批次是 Batch 5 kernel model semantic expansion slice，仅可写 `src/ai_sdlc/models/frontend_ui_kernel.py`、`src/ai_sdlc/models/__init__.py`、`tests/unit/test_frontend_ui_kernel_models.py`、`tests/unit/test_frontend_ui_kernel_artifacts.py`、以及本工单的 `plan.md / tasks.md / task-execution-log.md`。
-- 当前批次不修改 root `program-manifest.yaml`、`frontend-program-branch-rollout-plan.md`，也不生成 `development-summary.md`。
+- 当前 work item 已补齐 `development-summary.md` 作为 program-level close 输入；当前 review-sync batch 不修改 root `program-manifest.yaml`、`frontend-program-branch-rollout-plan.md`，也不新增任何 `src/` / `tests/` 写面。
 - 当前批次不 formalize 下游 `068/069`，也不修改 `src/ai_sdlc/generators/frontend_ui_kernel_artifacts.py`、provider/runtime 或 root program truth。
-- 当前状态为 `accepted child baseline`，其含义是：`067` 的 docs-only formal freeze 已完成，且首批 kernel model semantic expansion slice 已按护栏完成验证；这仍不代表 `068/069`、provider/runtime、root program sync 或 close-ready 已开始。
+- 当前状态为 `accepted child baseline + verified first implementation slice + close-ready development summary handoff`；其含义是：`067` 的 docs-only formal freeze 已完成，首批 kernel model semantic expansion slice 已按护栏完成验证，并且当前 work item 已进入 program-level `close` 输入；这仍不代表 `068/069`、provider/runtime 或新的 root program sync 主线已开始。
 
 ## 3. 批次记录
 
@@ -190,3 +190,147 @@
 - **已完成 git 提交**：否
 - 当前 batch 结论：`067` 的 spec / plan / tasks / execution log 四层真值与元数据现在全部一致。
 - **下一步动作**：可按当前 worktree 变更直接提交 `067`。
+
+### Batch 2026-04-08-005 | close-ready development summary handoff
+
+#### 1. 批次范围
+
+- **任务来源**：`067` formal baseline 与唯一 implementation slice 已完成后的 close artifact 收口。
+- **目标**：补齐 `development-summary.md`，把 `067` 从 `decompose_or_execute` 提升为 program-level `close` 输入，同时不回写 `068`、root rollout 或任何 `src/` / `tests/` 实现面。
+- **执行分支**：`main`
+
+#### 2. Touched Files
+
+- `specs/067-frontend-p1-ui-kernel-semantic-expansion-baseline/development-summary.md`
+- `specs/067-frontend-p1-ui-kernel-semantic-expansion-baseline/task-execution-log.md`
+
+#### 3. 执行命令
+
+- `uv run pytest tests/unit/test_frontend_ui_kernel_models.py tests/unit/test_frontend_ui_kernel_artifacts.py -q`
+- `uv run ai-sdlc verify constraints`
+- `uv run ai-sdlc program status`
+- `uv run ai-sdlc program integrate --dry-run`
+- `git diff --check -- specs/067-frontend-p1-ui-kernel-semantic-expansion-baseline src/ai_sdlc/models tests/unit`
+
+#### 4. 验证结果
+
+- `uv run pytest tests/unit/test_frontend_ui_kernel_models.py tests/unit/test_frontend_ui_kernel_artifacts.py -q` -> `18 passed in 0.22s`
+- `uv run ai-sdlc verify constraints` -> `verify constraints: no BLOCKERs.`
+- `uv run ai-sdlc program status` -> `067-frontend-p1-ui-kernel-semantic-expansion-baseline` 已显示为 `close`，同时 `068` 的 `Blocked By` 已变为 `-`。
+- `uv run ai-sdlc program integrate --dry-run` -> `067` 继续保留在 root dry-run 排程中；warnings 只剩 `069-071` 的既有阻塞链，没有为 `067` 产生新的阻塞告警。
+- `git diff --check -- specs/067-frontend-p1-ui-kernel-semantic-expansion-baseline src/ai_sdlc/models tests/unit` -> 通过。
+
+#### 5. 对账结论
+
+- `067` 的 formal baseline、唯一 implementation slice 与 close artifact 现在已经在同一 work item 下完成闭环。
+- 本批只补 `development-summary.md` 与 execution log，不回写 `068`、root rollout 或任何 `src/` / `tests/` 实现面。
+- root machine truth 现在把 `067` 视为 `close`，并且 `068` 已从 `067` 的 close artifact 阻塞中释放出来。
+
+#### 6. 归档后动作
+
+- **已完成 git 提交**：否
+- 当前 batch 结论：`067` 的 close-ready development summary handoff 已完成并生效；当前 work item 已具备 program-level `close` 输入。
+- **下一步动作**：如需对外评审或回写 review note，应使用包含 Batch 005 的 latest truth，而不是停留在 Batch 1-4 口径。
+
+### Batch 2026-04-08-006 | latest review verdict sync
+
+#### 1. 批次范围
+
+- **任务来源**：二次评审结论同步修正。
+- **目标**：将 `067` 的 latest review verdict 与 Batch 005 / `development-summary.md` / current `program status` 对齐，消除 `spec.md / plan.md / tasks.md / task-execution-log.md` 之间“是否允许 `development-summary.md`、是否已进入 close-ready handoff”的口径冲突。
+- **执行分支**：`codex/076-frontend-p1-root-close-sync-baseline`
+
+#### 2. Touched Files
+
+- `specs/067-frontend-p1-ui-kernel-semantic-expansion-baseline/spec.md`
+- `specs/067-frontend-p1-ui-kernel-semantic-expansion-baseline/plan.md`
+- `specs/067-frontend-p1-ui-kernel-semantic-expansion-baseline/tasks.md`
+- `specs/067-frontend-p1-ui-kernel-semantic-expansion-baseline/task-execution-log.md`
+
+#### 3. 执行命令
+
+- `uv run ai-sdlc verify constraints`
+- `uv run ai-sdlc program status`
+- `git diff --check -- specs/067-frontend-p1-ui-kernel-semantic-expansion-baseline`
+
+#### 4. 验证结果
+
+- `uv run ai-sdlc verify constraints` 通过，输出：`verify constraints: no BLOCKERs.`
+- `uv run ai-sdlc program status` 继续显示 `067-frontend-p1-ui-kernel-semantic-expansion-baseline` 的 `Stage=close`，与 `development-summary.md` 的 `program-close-ready` 口径一致。
+- `git diff --check -- specs/067-frontend-p1-ui-kernel-semantic-expansion-baseline` 无输出，diff hygiene 通过。
+
+#### 5. 对账结论
+
+- `spec.md / plan.md / tasks.md` 不再继续否认 `development-summary.md` 或 close-ready handoff 的存在，现已与 Batch 005 和 current `program status` 对齐。
+- `067` 的 latest review verdict 现应按“`accepted child baseline + verified first implementation slice + close-ready development summary handoff`”理解，而不是停留在只覆盖 Batch 1-4 的旧口径。
+- 本批不改变 `067` 的技术 scope，不改 `src/`、`tests/`、`068/069`、provider/runtime 或 root rollout 主线。
+
+#### 6. 归档后动作
+
+- **已完成 git 提交**：否
+- 当前 batch 结论：`067` 的 latest review verdict 已与当前仓库真值重新统一。
+- **下一步动作**：如需输出 review note，应使用包含 close-ready handoff 的修正版 verdict。
+
+### Batch 2026-04-09-007 | close-out evidence normalization
+
+#### 1. 准备
+
+- **任务来源**：`close-out gate remediation`
+- **目标**：为 `067` 的 latest batch 补齐当前 `workitem close-check` 要求的 canonical close-out markers，并保持 `accepted child baseline + verified first implementation slice + close-ready development summary handoff` 的既有 truth 不变。
+- **预读范围**：`spec.md`、`plan.md`、`tasks.md`、`task-execution-log.md`、`development-summary.md`
+- **激活的规则**：close-check execution log fields；verification profile truthfulness；fresh verification before commit
+- **验证画像**：`docs-only`
+- **改动范围**：`specs/067-frontend-p1-ui-kernel-semantic-expansion-baseline/task-execution-log.md`
+
+#### 2. 统一验证命令
+
+- **V1（治理只读校验）**
+  - 命令：`uv run ai-sdlc verify constraints`
+- **V2（program status 对账）**
+  - 命令：`uv run ai-sdlc program status`
+- **V3（diff hygiene）**
+  - 命令：`git diff --check -- specs/067-frontend-p1-ui-kernel-semantic-expansion-baseline/task-execution-log.md`
+- **V4（workitem close-check）**
+  - 命令：`uv run ai-sdlc workitem close-check --wi specs/067-frontend-p1-ui-kernel-semantic-expansion-baseline`
+
+#### 3. 任务记录
+
+##### Task close-out-remediation | 规范 067 latest batch 结构
+
+- **改动范围**：`specs/067-frontend-p1-ui-kernel-semantic-expansion-baseline/task-execution-log.md`
+- **改动内容**：
+  - 追加真正位于文件末尾的 latest `### Batch ...` close-out evidence 结构，补齐 `统一验证命令`、`代码审查`、`任务/计划同步状态`、`验证画像` 与 git close-out markers。
+  - 保持 `067` 的 formal baseline、唯一 implementation slice 与 `development-summary.md` handoff truth 不变；本批只做 execution evidence normalization，不回写 `spec.md`、`plan.md`、`tasks.md`、`development-summary.md` 或任何 `src/` / `tests/` 实现面。
+  - 不改写 `067` 的 `Stage=close` 语义，也不触碰 `068/069`、provider/runtime 或 root rollout 主线。
+- **新增/调整的测试**：无新增测试；本批仅补 close-out docs，复用治理只读校验、program status 对账、diff hygiene 与 post-commit close-check 复核。
+- **执行的命令**：见 V1 ~ V4。
+- **测试结果**：
+  - `uv run ai-sdlc verify constraints`：将在本批提交前 fresh 复跑。
+  - `uv run ai-sdlc program status`：将在本批提交前 fresh 复跑，用于确认 `067` 仍保持 `Stage=close`。
+  - `git diff --check -- specs/067-frontend-p1-ui-kernel-semantic-expansion-baseline/task-execution-log.md`：将在本批提交前 fresh 复跑。
+  - `uv run ai-sdlc workitem close-check --wi specs/067-frontend-p1-ui-kernel-semantic-expansion-baseline`：将在本批提交后复跑，用于确认 latest close-out evidence 已满足 gate。
+- **是否符合任务目标**：符合。latest batch 现已具备 close-check 所需的 mandatory markers，最终完成态以 post-commit close-check 为准。
+
+#### 4. 代码审查（摘要）
+
+- 本批审查重点是 `067` 的 latest close-out batch 是否准确表达既有 truth，而不是重审 kernel model semantic expansion 的实现内容本身。
+- 审查结论：`067` 继续保持“accepted child baseline + verified first implementation slice + close-ready development summary handoff”的边界；本批没有引入新的实现面，只把 latest execution evidence 调整为框架认可的 canonical 结构。
+
+#### 5. 任务/计划同步状态
+
+- `tasks.md` 同步状态：`已对账`
+- `plan.md` 同步状态：`已对账`
+- `spec.md` 同步状态：`已对账`
+- `development-summary.md` 同步状态：`已对账`
+- 关联 branch/worktree disposition 计划：`retained（close-out sync only；不改变 067 原实现批次的历史分支归档事实）`
+
+#### 6. 批次结论
+
+- 当前批次只做 `067` latest close-out evidence normalization，不改写 formal baseline、implementation slice 或 close-ready handoff truth；fresh verification 与 post-commit close-check 通过后即可作为 formal close-out latest batch。
+
+#### 7. 归档后动作
+
+- **已完成 git 提交**：是（latest review verdict sync 已完成并作为当前 close-out evidence 的上游正式提交）
+- **提交哈希**：`70afa4d`
+- 当前批次 branch disposition 状态：`retained`
+- 当前批次 worktree disposition 状态：`retained（close-out sync clean worktree；原 associated implementation branch 历史不在本批变更范围）`

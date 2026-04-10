@@ -68,7 +68,7 @@ Batch 6: backlog remediation for latest/readiness freshness
   2. `scan` / `status --json` 明确只读或 analysis 边界。
 - **验证**：`uv run pytest tests/integration/test_cli_stage.py tests/integration/test_cli_status.py -v`
 
-> **Task 2.2 完成（2026-03-30）**：[`../../src/ai_sdlc/cli/main.py`](../../src/ai_sdlc/cli/main.py) 已把 `scan` 归入不触发 IDE adapter 的 analysis surface；[`../../src/ai_sdlc/cli/commands.py`](../../src/ai_sdlc/cli/commands.py) 已移除 `scan` 内部的 adapter apply；[`../../tests/integration/test_cli_scan.py`](../../tests/integration/test_cli_scan.py) 已补“initialized project 下 scan 不得触发 adapter 写路径”的回归；[`../../docs/USER_GUIDE.zh-CN.md`](../../docs/USER_GUIDE.zh-CN.md) 已明确 `scan` 的 operator/analysis 边界。
+> **Task 2.2 完成（2026-03-30）**：[`../../src/ai_sdlc/cli/main.py`](../../src/ai_sdlc/cli/main.py) 已把 `scan` 归入不触发 IDE adapter 的 analysis surface；[`../../src/ai_sdlc/cli/commands.py`](../../src/ai_sdlc/cli/commands.py) 已移除 `scan` 内部的 adapter apply；[`../../tests/integration/test_cli_scan.py`](../../tests/integration/test_cli_scan.py) 已补“initialized project 下 scan 不得触发 adapter 写路径”的回归；[`../../USER_GUIDE.zh-CN.md`](../../USER_GUIDE.zh-CN.md) 已明确 `scan` 的 operator/analysis 边界。
 
 ### Task 2.3 — 补齐 manual telemetry canonical writer commands
 
@@ -81,7 +81,7 @@ Batch 6: backlog remediation for latest/readiness freshness
   3. 文档示例与 CLI 对外合同一致，不再只暴露 event/evidence 两类。
 - **验证**：`uv run pytest tests/integration/test_cli_telemetry.py -v`
 
-> **Task 2.3 完成（2026-03-30）**：[`../../src/ai_sdlc/cli/telemetry_cmd.py`](../../src/ai_sdlc/cli/telemetry_cmd.py) 已补 `record-evaluation` 与 `record-violation`，统一复用 `Evaluation` / `Violation` contract、`RuntimeTelemetry.validate_manual_scope()` 与 `TelemetryWriter`；[`../../tests/integration/test_cli_telemetry.py`](../../tests/integration/test_cli_telemetry.py) 已补 run/step scope 正向回归；[`../../docs/USER_GUIDE.zh-CN.md`](../../docs/USER_GUIDE.zh-CN.md) 已补四类 manual telemetry 命令示例。
+> **Task 2.3 完成（2026-03-30）**：[`../../src/ai_sdlc/cli/telemetry_cmd.py`](../../src/ai_sdlc/cli/telemetry_cmd.py) 已补 `record-evaluation` 与 `record-violation`，统一复用 `Evaluation` / `Violation` contract、`RuntimeTelemetry.validate_manual_scope()` 与 `TelemetryWriter`；[`../../tests/integration/test_cli_telemetry.py`](../../tests/integration/test_cli_telemetry.py) 已补 run/step scope 正向回归；[`../../USER_GUIDE.zh-CN.md`](../../USER_GUIDE.zh-CN.md) 已补四类 manual telemetry 命令示例。
 
 ---
 
@@ -148,14 +148,14 @@ Batch 6: backlog remediation for latest/readiness freshness
 
 - **优先级**：P1
 - **依赖**：Task 2.2, Task 2.3, Task 4.1
-- **输入**：[`../../docs/USER_GUIDE.zh-CN.md`](../../docs/USER_GUIDE.zh-CN.md)、[`../../src/ai_sdlc/cli/main.py`](../../src/ai_sdlc/cli/main.py)、[`../../src/ai_sdlc/cli/commands.py`](../../src/ai_sdlc/cli/commands.py)、[`../../src/ai_sdlc/cli/stage_cmd.py`](../../src/ai_sdlc/cli/stage_cmd.py)、[`../../src/ai_sdlc/cli/program_cmd.py`](../../src/ai_sdlc/cli/program_cmd.py)、[`../../src/ai_sdlc/cli/telemetry_cmd.py`](../../src/ai_sdlc/cli/telemetry_cmd.py)
+- **输入**：[`../../USER_GUIDE.zh-CN.md`](../../USER_GUIDE.zh-CN.md)、[`../../src/ai_sdlc/cli/main.py`](../../src/ai_sdlc/cli/main.py)、[`../../src/ai_sdlc/cli/commands.py`](../../src/ai_sdlc/cli/commands.py)、[`../../src/ai_sdlc/cli/stage_cmd.py`](../../src/ai_sdlc/cli/stage_cmd.py)、[`../../src/ai_sdlc/cli/program_cmd.py`](../../src/ai_sdlc/cli/program_cmd.py)、[`../../src/ai_sdlc/cli/telemetry_cmd.py`](../../src/ai_sdlc/cli/telemetry_cmd.py)
 - **验收标准**：
   1. `004` 范围内的 operator / offline surfaces 被明确分成只读、analysis、会写本地状态三类。
   2. IDE adapter hook 造成的“命令主体只读但入口仍可能写 adapter”边界被明确写出。
   3. 文档口径与现有 CLI 行为、现有 integration tests 一致。
 - **验证**：`uv run pytest tests/integration/test_cli_stage.py tests/integration/test_cli_program.py tests/integration/test_cli_scan.py tests/integration/test_cli_telemetry.py -q` + 文档复核
 
-> **Task 5.2 完成（2026-03-30）**：[`../../docs/USER_GUIDE.zh-CN.md`](../../docs/USER_GUIDE.zh-CN.md) 已新增 operator surface 读写矩阵，覆盖 `status --json`、`doctor`、`scan`、`stage`、`program`、manual telemetry 与 offline build/install；矩阵已把 IDE adapter hook 导致的副作用层与命令主体行为分开表达，并与现有 CLI 实现及 integration evidence 对齐。
+> **Task 5.2 完成（2026-03-30）**：[`../../USER_GUIDE.zh-CN.md`](../../USER_GUIDE.zh-CN.md) 已新增 operator surface 读写矩阵，覆盖 `status --json`、`doctor`、`scan`、`stage`、`program`、manual telemetry 与 offline build/install；矩阵已把 IDE adapter hook 导致的副作用层与命令主体行为分开表达，并与现有 CLI 实现及 integration evidence 对齐。
 
 ---
 

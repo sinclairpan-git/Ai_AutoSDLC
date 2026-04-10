@@ -11,5 +11,7 @@ __pycache__/
 .worktrees/
 *.egg-info/
 dist-offline/
+.deliverables/
+output/
 .DS_Store
 **/.DS_Store

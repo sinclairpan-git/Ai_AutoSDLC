@@ -8,6 +8,7 @@ import yaml
 
 from ai_sdlc.generators.frontend_provider_profile_artifacts import (
     frontend_provider_profile_root,
+    materialize_builtin_frontend_provider_profile_artifacts,
     materialize_frontend_provider_profile_artifacts,
 )
 from ai_sdlc.models.frontend_provider_profile import (
@@ -118,3 +119,44 @@ def test_frontend_provider_profile_root_is_stable(tmp_path) -> None:
     assert frontend_provider_profile_root(tmp_path, "enterprise-vue2") == (
         tmp_path / "providers" / "frontend" / "enterprise-vue2"
     )
+
+
+def test_materialize_builtin_frontend_provider_profile_artifacts_writes_public_provider_minimum(
+    tmp_path,
+) -> None:
+    paths = materialize_builtin_frontend_provider_profile_artifacts(
+        tmp_path,
+        provider_id="public-primevue",
+    )
+
+    rel_paths = {path.relative_to(tmp_path).as_posix() for path in paths}
+    assert rel_paths == {
+        "providers/frontend/public-primevue/provider.manifest.yaml",
+        "providers/frontend/public-primevue/style-support.yaml",
+    }
+
+    profile_root = frontend_provider_profile_root(tmp_path, "public-primevue")
+    manifest = _read_yaml(profile_root / "provider.manifest.yaml")
+    style_support = _read_yaml(profile_root / "style-support.yaml")
+
+    assert manifest == {
+        "work_item_id": "073",
+        "provider_id": "public-primevue",
+        "kernel_artifact_ref": "kernel/frontend",
+        "access_mode": "public",
+        "install_strategy_ids": ["public-primevue-default"],
+        "availability_prerequisites": [],
+        "default_style_pack_id": "modern-saas",
+        "mapped_components": [],
+        "whitelist_components": [],
+        "cross_stack_fallback_targets": [],
+    }
+    assert {
+        item["style_pack_id"]: item["fidelity_status"] for item in style_support["items"]
+    } == {
+        "enterprise-default": "full",
+        "data-console": "full",
+        "high-clarity": "full",
+        "modern-saas": "full",
+        "macos-glass": "full",
+    }

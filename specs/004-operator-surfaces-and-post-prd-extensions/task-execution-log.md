@@ -121,7 +121,7 @@
 
 ##### Task 2.3 | manual telemetry canonical writer commands
 
-- **改动范围**：[`../../src/ai_sdlc/cli/telemetry_cmd.py`](../../src/ai_sdlc/cli/telemetry_cmd.py)、[`../../tests/integration/test_cli_telemetry.py`](../../tests/integration/test_cli_telemetry.py)、[`../../docs/USER_GUIDE.zh-CN.md`](../../docs/USER_GUIDE.zh-CN.md)、[`plan.md`](plan.md)、[`tasks.md`](tasks.md)
+- **改动范围**：[`../../src/ai_sdlc/cli/telemetry_cmd.py`](../../src/ai_sdlc/cli/telemetry_cmd.py)、[`../../tests/integration/test_cli_telemetry.py`](../../tests/integration/test_cli_telemetry.py)、[`../../USER_GUIDE.zh-CN.md`](../../USER_GUIDE.zh-CN.md)、[`plan.md`](plan.md)、[`tasks.md`](tasks.md)
 - **改动内容**：
   - 在 `telemetry` CLI 中新增 `record-evaluation` 与 `record-violation`，直接复用现有 `Evaluation` / `Violation` contract、`RuntimeTelemetry.validate_manual_scope()` 与 `TelemetryWriter.write_evaluation()` / `write_violation()`。
   - 保持 `manual telemetry` 的写入路径与已有 `record-event` / `record-evidence` 一致，不引入旁路 store、手写 snapshot 或独立 index 更新逻辑。
@@ -195,7 +195,7 @@
 
 ##### Task 2.2 | `scan` / `status --json` / `stage` 边界收口中的 scan formalization
 
-- **改动范围**：[`../../src/ai_sdlc/cli/main.py`](../../src/ai_sdlc/cli/main.py)、[`../../src/ai_sdlc/cli/commands.py`](../../src/ai_sdlc/cli/commands.py)、[`../../tests/integration/test_cli_scan.py`](../../tests/integration/test_cli_scan.py)、[`../../docs/USER_GUIDE.zh-CN.md`](../../docs/USER_GUIDE.zh-CN.md)、[`tasks.md`](tasks.md)
+- **改动范围**：[`../../src/ai_sdlc/cli/main.py`](../../src/ai_sdlc/cli/main.py)、[`../../src/ai_sdlc/cli/commands.py`](../../src/ai_sdlc/cli/commands.py)、[`../../tests/integration/test_cli_scan.py`](../../tests/integration/test_cli_scan.py)、[`../../USER_GUIDE.zh-CN.md`](../../USER_GUIDE.zh-CN.md)、[`tasks.md`](tasks.md)
 - **改动内容**：
   - 在 CLI 全局 hook 中把 `scan` 归入不触发 IDE adapter 的 surface，避免进入隐式写路径。
   - 删除 `scan_command()` 内部的 `ensure_ide_adaptation(root)` 调用，保持 deep scan 只做读取与终端输出。
@@ -312,7 +312,7 @@
 
 - **任务来源**：[`tasks.md`](tasks.md) Task `5.2`；[`spec.md`](spec.md) `FR-004-015`
 - **目标**：把 `004` 范围内 operator / offline surfaces 的只读、analysis、写路径边界写成用户可查的矩阵，并显式说明 IDE adapter hook 的副作用层。
-- **预读范围**：[`../../docs/USER_GUIDE.zh-CN.md`](../../docs/USER_GUIDE.zh-CN.md)、[`../../src/ai_sdlc/cli/main.py`](../../src/ai_sdlc/cli/main.py)、[`../../src/ai_sdlc/cli/commands.py`](../../src/ai_sdlc/cli/commands.py)、[`../../src/ai_sdlc/cli/stage_cmd.py`](../../src/ai_sdlc/cli/stage_cmd.py)、[`../../src/ai_sdlc/cli/program_cmd.py`](../../src/ai_sdlc/cli/program_cmd.py)、[`../../src/ai_sdlc/cli/telemetry_cmd.py`](../../src/ai_sdlc/cli/telemetry_cmd.py)
+- **预读范围**：[`../../USER_GUIDE.zh-CN.md`](../../USER_GUIDE.zh-CN.md)、[`../../src/ai_sdlc/cli/main.py`](../../src/ai_sdlc/cli/main.py)、[`../../src/ai_sdlc/cli/commands.py`](../../src/ai_sdlc/cli/commands.py)、[`../../src/ai_sdlc/cli/stage_cmd.py`](../../src/ai_sdlc/cli/stage_cmd.py)、[`../../src/ai_sdlc/cli/program_cmd.py`](../../src/ai_sdlc/cli/program_cmd.py)、[`../../src/ai_sdlc/cli/telemetry_cmd.py`](../../src/ai_sdlc/cli/telemetry_cmd.py)
 - **激活的规则**：现状优先；文档必须表达真实 CLI 行为而不是理想行为；adapter hook 影响单独披露
 - **验证画像**：`docs-only`
 
@@ -329,7 +329,7 @@
 
 ##### Task 5.2 | operator mutation/read-only matrix 文档收口
 
-- **改动范围**：`../../docs/USER_GUIDE.zh-CN.md`、`tasks.md`
+- **改动范围**：`../../USER_GUIDE.zh-CN.md`、`tasks.md`
 - **改动内容**：
   - 新增 `Operator surface 读写矩阵`，覆盖 `status --json`、`doctor`、`scan`、`stage show/status/run`、`program validate/status/plan/integrate`、manual telemetry、offline build/install。
   - 把“命令主体行为”和“CLI 全局 IDE adapter hook 可能带来的幂等写入”拆开表述，避免把 `stage` / `program` 这类命令误记成绝对只读。

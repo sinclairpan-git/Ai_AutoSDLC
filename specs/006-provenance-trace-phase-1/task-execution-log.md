@@ -17,7 +17,7 @@
 
 - **任务来源**：[`tasks.md`](tasks.md) `T11` ~ `T62`
 - **目标**：把 provenance Phase 1 的 contracts、store/resolver、ingress/adapters、inspection CLI、non-blocking governance、docs 与最终回归证据正式补录为 execution truth，并将当前关联 branch/worktree disposition 固定为 `archived / retained（对照保留）`。
-- **预读范围**：[`spec.md`](spec.md)、[`plan.md`](plan.md)、[`tasks.md`](tasks.md)、[`../../docs/superpowers/plans/2026-03-31-provenance-trace-phase-1.md`](../../docs/superpowers/plans/2026-03-31-provenance-trace-phase-1.md)、[`../../docs/USER_GUIDE.zh-CN.md`](../../docs/USER_GUIDE.zh-CN.md)、[`../../src/ai_sdlc/core/close_check.py`](../../src/ai_sdlc/core/close_check.py)、[`../../src/ai_sdlc/core/workitem_traceability.py`](../../src/ai_sdlc/core/workitem_traceability.py)
+- **预读范围**：[`spec.md`](spec.md)、[`plan.md`](plan.md)、[`tasks.md`](tasks.md)、[`../../docs/superpowers/plans/2026-03-31-provenance-trace-phase-1.md`](../../docs/superpowers/plans/2026-03-31-provenance-trace-phase-1.md)、[`../../USER_GUIDE.zh-CN.md`](../../USER_GUIDE.zh-CN.md)、[`../../src/ai_sdlc/core/close_check.py`](../../src/ai_sdlc/core/close_check.py)、[`../../src/ai_sdlc/core/workitem_traceability.py`](../../src/ai_sdlc/core/workitem_traceability.py)
 - **激活的规则**：fresh verification before completion；formal execution truth；branch/worktree explicit disposition；read-only first；gate-capable but non-blocking。
 - **验证画像**：`code-change`
 
@@ -100,7 +100,7 @@
 
 ##### T61 / T62 | docs close-out + targeted provenance suite + final verification
 
-- **改动范围**：[`../../docs/USER_GUIDE.zh-CN.md`](../../docs/USER_GUIDE.zh-CN.md)、[`../../tests/integration/test_cli_provenance.py`](../../tests/integration/test_cli_provenance.py)、[`task-execution-log.md`](task-execution-log.md)
+- **改动范围**：[`../../USER_GUIDE.zh-CN.md`](../../USER_GUIDE.zh-CN.md)、[`../../tests/integration/test_cli_provenance.py`](../../tests/integration/test_cli_provenance.py)、[`task-execution-log.md`](task-execution-log.md)
 - **改动内容**：
   - 用户文档明确 `summary / explain / gaps` 是 Phase 1 的日常 read-only surface，`manual injection` 保持测试/诊断/回放定位。
   - provenance CLI discoverability、integration smoke 与用户文档命令口径统一。

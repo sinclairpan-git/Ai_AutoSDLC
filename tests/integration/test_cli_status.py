@@ -175,6 +175,23 @@ def _write_branch_lifecycle_fixture(
     _commit_all(root, "docs: seed branch lifecycle status fixture")
 
 
+def _write_frontend_evidence_class_spec(
+    root: Path,
+    *,
+    spec_rel: str,
+    frontend_evidence_class: str,
+) -> None:
+    spec_dir = root / spec_rel
+    spec_dir.mkdir(parents=True, exist_ok=True)
+    (spec_dir / "spec.md").write_text(
+        "# Spec\n\n"
+        "---\n"
+        f'frontend_evidence_class: "{frontend_evidence_class}"\n'
+        "---\n",
+        encoding="utf-8",
+    )
+
+
 class TestCliStatus:
     @pytest.fixture(autouse=True)
     def _no_ide_adapter_hook(self) -> None:
@@ -972,21 +989,232 @@ def test_status_json_fallback_latest_scope_ids_follow_fresh_writes_without_index
     assert payload["current"]["runs"]["latest_workflow_run_id"] == run_a
     assert payload["current"]["steps"]["latest_step_id"] == step_a
 
-    def test_status_json_includes_bounded_branch_lifecycle_summary(
-        self, tmp_path: Path
-    ) -> None:
-        _write_branch_lifecycle_fixture(tmp_path)
-        _create_branch_ahead_of_main(tmp_path, "codex/001-status-drift")
+def test_status_json_includes_bounded_branch_lifecycle_summary(
+    tmp_path: Path,
+) -> None:
+    _write_branch_lifecycle_fixture(tmp_path)
+    _create_branch_ahead_of_main(tmp_path, "codex/001-status-drift")
 
-        with patch("ai_sdlc.cli.commands.find_project_root", return_value=tmp_path):
-            result = runner.invoke(app, ["status", "--json"])
+    with patch("ai_sdlc.cli.commands.find_project_root", return_value=tmp_path):
+        result = runner.invoke(app, ["status", "--json"])
 
-        assert result.exit_code == 0
-        payload = json.loads(result.output)
-        assert payload["branch_lifecycle"]["state"] == "ready"
-        assert payload["branch_lifecycle"]["blocking_count"] == 1
-        assert payload["branch_lifecycle"]["active_work_item"] == "001-wi"
-        assert payload["branch_lifecycle"]["sample_entries"][0]["name"] == "codex/001-status-drift"
+    assert result.exit_code == 0
+    payload = json.loads(result.output)
+    assert payload["branch_lifecycle"]["state"] == "ready"
+    assert payload["branch_lifecycle"]["blocking_count"] == 1
+    assert payload["branch_lifecycle"]["active_work_item"] == "001-wi"
+    assert payload["branch_lifecycle"]["sample_entries"][0]["name"] == "codex/001-status-drift"
+
+
+def test_status_json_includes_bounded_frontend_evidence_class_summary(
+    tmp_path: Path,
+) -> None:
+    init_project(tmp_path)
+    _write_frontend_evidence_class_spec(
+        tmp_path,
+        spec_rel="specs/082-frontend-example",
+        frontend_evidence_class="framework_capability",
+    )
+    (tmp_path / "program-manifest.yaml").write_text(
+        """
+schema_version: "1"
+specs:
+  - id: "082-frontend-example"
+    path: "specs/082-frontend-example"
+    depends_on: []
+""".strip()
+        + "\n",
+        encoding="utf-8",
+    )
+    save_checkpoint(
+        tmp_path,
+        Checkpoint(
+            current_stage="verify",
+            feature=FeatureInfo(
+                id="082-frontend-example",
+                spec_dir="specs/082-frontend-example",
+                design_branch="design/082-frontend-example",
+                feature_branch="feature/082-frontend-example",
+                current_branch="main",
+            ),
+        ),
+    )
+
+    with patch("ai_sdlc.cli.commands.find_project_root", return_value=tmp_path):
+        result = runner.invoke(app, ["status", "--json"])
+
+    assert result.exit_code == 0
+    payload = json.loads(result.output)
+    summary = payload["branch_lifecycle"]["frontend_evidence_class"]
+    assert summary == {
+        "active_work_item": "082-frontend-example",
+        "has_blocker": True,
+        "problem_family": "frontend_evidence_class_mirror_drift",
+        "detection_surface": "program validate",
+        "summary_token": "mirror_missing",
+    }
+    assert "source_of_truth_path" not in json.dumps(summary)
+    assert "human_remediation_hint" not in json.dumps(summary)
+
+
+def test_status_json_frontend_evidence_class_requires_exact_spec_path_match(
+    tmp_path: Path,
+) -> None:
+    init_project(tmp_path)
+    spec_dir = tmp_path / "archive" / "082-frontend-example"
+    spec_dir.mkdir(parents=True, exist_ok=True)
+    (spec_dir / "spec.md").write_text(
+        "# Spec\n\n---\nfrontend_evidence_class: \"framework_capability\"\n---\n",
+        encoding="utf-8",
+    )
+    (tmp_path / "program-manifest.yaml").write_text(
+        """
+schema_version: "1"
+specs:
+  - id: "082-frontend-example"
+    path: "archive/082-frontend-example"
+    depends_on: []
+""".strip()
+        + "\n",
+        encoding="utf-8",
+    )
+    save_checkpoint(
+        tmp_path,
+        Checkpoint(
+            current_stage="verify",
+            feature=FeatureInfo(
+                id="082-frontend-example",
+                spec_dir="specs/082-frontend-example",
+                design_branch="design/082-frontend-example",
+                feature_branch="feature/082-frontend-example",
+                current_branch="main",
+            ),
+        ),
+    )
+
+    with patch("ai_sdlc.cli.commands.find_project_root", return_value=tmp_path):
+        result = runner.invoke(app, ["status", "--json"])
+
+    assert result.exit_code == 0
+    payload = json.loads(result.output)
+    assert "frontend_evidence_class" not in payload["branch_lifecycle"]
+
+
+def test_status_json_frontend_evidence_class_surfaces_missing_manifest(
+    tmp_path: Path,
+) -> None:
+    init_project(tmp_path)
+    _write_frontend_evidence_class_spec(
+        tmp_path,
+        spec_rel="specs/082-frontend-example",
+        frontend_evidence_class="framework_capability",
+    )
+    save_checkpoint(
+        tmp_path,
+        Checkpoint(
+            current_stage="verify",
+            feature=FeatureInfo(
+                id="082-frontend-example",
+                spec_dir="specs/082-frontend-example",
+                design_branch="design/082-frontend-example",
+                feature_branch="feature/082-frontend-example",
+                current_branch="main",
+            ),
+        ),
+    )
+
+    with patch("ai_sdlc.cli.commands.find_project_root", return_value=tmp_path):
+        result = runner.invoke(app, ["status", "--json"])
+
+    assert result.exit_code == 0
+    payload = json.loads(result.output)
+    assert payload["branch_lifecycle"]["frontend_evidence_class"] == {
+        "active_work_item": "082-frontend-example",
+        "has_blocker": True,
+        "problem_family": "frontend_evidence_class_mirror_drift",
+        "detection_surface": "program load",
+        "summary_token": "manifest_missing",
+    }
+
+
+def test_status_json_ignores_frontend_evidence_class_for_non_subject_checkpoint(
+    tmp_path: Path,
+) -> None:
+    init_project(tmp_path)
+    spec_dir = tmp_path / "specs" / "081-backend-example"
+    spec_dir.mkdir(parents=True, exist_ok=True)
+    (spec_dir / "spec.md").write_text("# Spec\n", encoding="utf-8")
+    save_checkpoint(
+        tmp_path,
+        Checkpoint(
+            current_stage="verify",
+            feature=FeatureInfo(
+                id="081-backend-example",
+                spec_dir="specs/081-backend-example",
+                design_branch="design/081-backend-example",
+                feature_branch="feature/081-backend-example",
+                current_branch="main",
+            ),
+        ),
+    )
+
+    with patch("ai_sdlc.cli.commands.find_project_root", return_value=tmp_path):
+        result = runner.invoke(app, ["status", "--json"])
+
+    assert result.exit_code == 0
+    payload = json.loads(result.output)
+    assert "frontend_evidence_class" not in payload["branch_lifecycle"]
+
+
+def test_status_json_frontend_evidence_class_surfaces_ambiguous_manifest_match(
+    tmp_path: Path,
+) -> None:
+    init_project(tmp_path)
+    _write_frontend_evidence_class_spec(
+        tmp_path,
+        spec_rel="specs/082-frontend-example",
+        frontend_evidence_class="framework_capability",
+    )
+    (tmp_path / "program-manifest.yaml").write_text(
+        """
+schema_version: "1"
+specs:
+  - id: "082-frontend-example-a"
+    path: "specs/082-frontend-example"
+    depends_on: []
+  - id: "082-frontend-example-b"
+    path: "specs/082-frontend-example"
+    depends_on: []
+""".strip()
+        + "\n",
+        encoding="utf-8",
+    )
+    save_checkpoint(
+        tmp_path,
+        Checkpoint(
+            current_stage="verify",
+            feature=FeatureInfo(
+                id="082-frontend-example",
+                spec_dir="specs/082-frontend-example",
+                design_branch="design/082-frontend-example",
+                feature_branch="feature/082-frontend-example",
+                current_branch="main",
+            ),
+        ),
+    )
+
+    with patch("ai_sdlc.cli.commands.find_project_root", return_value=tmp_path):
+        result = runner.invoke(app, ["status", "--json"])
+
+    assert result.exit_code == 0
+    payload = json.loads(result.output)
+    assert payload["branch_lifecycle"]["frontend_evidence_class"] == {
+        "active_work_item": "082-frontend-example",
+        "has_blocker": True,
+        "problem_family": "frontend_evidence_class_mirror_drift",
+        "detection_surface": "program load",
+        "summary_token": "manifest_ambiguous_path_match",
+    }
 
 
 def test_status_json_latest_summary_falls_back_to_canonical_snapshots_without_indexes(

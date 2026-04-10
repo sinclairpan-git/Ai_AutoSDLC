@@ -6,6 +6,7 @@ from pathlib import Path
 
 import yaml
 
+from ai_sdlc.context.state import save_checkpoint
 from ai_sdlc.core.frontend_contract_drift import PageImplementationObservation
 from ai_sdlc.core.frontend_contract_observation_provider import (
     build_frontend_contract_observation_artifact,
@@ -36,6 +37,7 @@ from ai_sdlc.models.frontend_generation_constraints import (
     build_mvp_frontend_generation_constraints,
 )
 from ai_sdlc.models.program import ProgramManifest, ProgramSpecRef
+from ai_sdlc.models.state import Checkpoint, FeatureInfo
 
 
 def _manifest() -> ProgramManifest:
@@ -55,6 +57,30 @@ def _manifest() -> ProgramManifest:
                 depends_on=["001-auth", "002-course"],
             ),
         ],
+    )
+
+
+def _write_frontend_evidence_class_spec(
+    root: Path,
+    *,
+    spec_rel: str,
+    frontend_evidence_class: str,
+) -> None:
+    spec_dir = root / spec_rel
+    spec_dir.mkdir(parents=True, exist_ok=True)
+    (spec_dir / "spec.md").write_text(
+        "# Spec\n\n"
+        "---\n"
+        f'frontend_evidence_class: "{frontend_evidence_class}"\n'
+        "---\n",
+        encoding="utf-8",
+    )
+
+
+def _write_manifest_yaml(root: Path, text: str) -> None:
+    (root / "program-manifest.yaml").write_text(
+        text.strip() + "\n",
+        encoding="utf-8",
     )
 
 
@@ -81,6 +107,387 @@ def test_validate_manifest_cycle(tmp_path: Path) -> None:
     res = svc.validate_manifest(mf)
     assert res.valid is False
     assert any("cycle" in e for e in res.errors)
+
+
+def test_validate_manifest_frontend_evidence_class_mirror_missing(tmp_path: Path) -> None:
+    _write_frontend_evidence_class_spec(
+        tmp_path,
+        spec_rel="specs/082-frontend-example",
+        frontend_evidence_class="framework_capability",
+    )
+    svc = ProgramService(tmp_path)
+
+    res = svc.validate_manifest(
+        ProgramManifest(
+            specs=[
+                ProgramSpecRef(
+                    id="082-frontend-example",
+                    path="specs/082-frontend-example",
+                    depends_on=[],
+                )
+            ]
+        )
+    )
+
+    assert res.valid is False
+    assert any(
+        "problem_family=frontend_evidence_class_mirror_drift" in err
+        and "error_kind=mirror_missing" in err
+        for err in res.errors
+    )
+
+
+def test_validate_manifest_frontend_evidence_class_mirror_invalid_value(
+    tmp_path: Path,
+) -> None:
+    _write_frontend_evidence_class_spec(
+        tmp_path,
+        spec_rel="specs/082-frontend-example",
+        frontend_evidence_class="framework_capability",
+    )
+    svc = ProgramService(tmp_path)
+
+    res = svc.validate_manifest(
+        ProgramManifest(
+            specs=[
+                ProgramSpecRef(
+                    id="082-frontend-example",
+                    path="specs/082-frontend-example",
+                    depends_on=[],
+                    frontend_evidence_class="framework",
+                )
+            ]
+        )
+    )
+
+    assert res.valid is False
+    assert any(
+        "problem_family=frontend_evidence_class_mirror_drift" in err
+        and "error_kind=mirror_invalid_value" in err
+        for err in res.errors
+    )
+
+
+def test_validate_manifest_frontend_evidence_class_mirror_stale(tmp_path: Path) -> None:
+    _write_frontend_evidence_class_spec(
+        tmp_path,
+        spec_rel="specs/082-frontend-example",
+        frontend_evidence_class="framework_capability",
+    )
+    svc = ProgramService(tmp_path)
+
+    res = svc.validate_manifest(
+        ProgramManifest(
+            specs=[
+                ProgramSpecRef(
+                    id="082-frontend-example",
+                    path="specs/082-frontend-example",
+                    depends_on=[],
+                    frontend_evidence_class="consumer_adoption",
+                )
+            ]
+        )
+    )
+
+    assert res.valid is False
+    assert any(
+        "problem_family=frontend_evidence_class_mirror_drift" in err
+        and "error_kind=mirror_stale" in err
+        for err in res.errors
+    )
+
+
+def test_validate_manifest_frontend_evidence_class_mirror_valid(tmp_path: Path) -> None:
+    _write_frontend_evidence_class_spec(
+        tmp_path,
+        spec_rel="specs/082-frontend-example",
+        frontend_evidence_class="framework_capability",
+    )
+    svc = ProgramService(tmp_path)
+
+    res = svc.validate_manifest(
+        ProgramManifest(
+            specs=[
+                ProgramSpecRef(
+                    id="082-frontend-example",
+                    path="specs/082-frontend-example",
+                    depends_on=[],
+                    frontend_evidence_class="framework_capability",
+                )
+            ]
+        )
+    )
+
+    assert res.valid is True
+    assert res.errors == []
+
+
+def test_validate_manifest_ignores_frontend_evidence_class_drift_for_non_frontend_spec(
+    tmp_path: Path,
+) -> None:
+    _write_frontend_evidence_class_spec(
+        tmp_path,
+        spec_rel="specs/050-non-frontend",
+        frontend_evidence_class="framework_capability",
+    )
+    svc = ProgramService(tmp_path)
+
+    res = svc.validate_manifest(
+        ProgramManifest(
+            specs=[
+                ProgramSpecRef(
+                    id="050-non-frontend",
+                    path="specs/050-non-frontend",
+                    depends_on=[],
+                )
+            ]
+        )
+    )
+
+    assert res.valid is True
+    assert res.errors == []
+
+
+def test_validate_manifest_rejects_spec_path_outside_project_root(
+    tmp_path: Path,
+) -> None:
+    legacy_dir = tmp_path.parent / "legacy-spec"
+    legacy_dir.mkdir(exist_ok=True)
+    svc = ProgramService(tmp_path)
+
+    res = svc.validate_manifest(
+        ProgramManifest(
+            specs=[
+                ProgramSpecRef(
+                    id="082-frontend-example",
+                    path=f"../{legacy_dir.name}",
+                    depends_on=[],
+                )
+            ]
+        )
+    )
+
+    assert res.valid is False
+    assert any("path outside project root" in err for err in res.errors)
+
+
+def test_sync_frontend_evidence_class_manifest_execute_targeted(tmp_path: Path) -> None:
+    _write_frontend_evidence_class_spec(
+        tmp_path,
+        spec_rel="specs/082-frontend-example",
+        frontend_evidence_class="framework_capability",
+    )
+    _write_manifest_yaml(
+        tmp_path,
+        """
+schema_version: "1"
+specs:
+  - id: "082-frontend-example"
+    path: "specs/082-frontend-example"
+    depends_on: []
+    owner: "team-a"
+  - id: "050-non-frontend"
+    path: "specs/050-non-frontend"
+    depends_on: []
+    owner: "team-b"
+""",
+    )
+    (tmp_path / "specs" / "050-non-frontend").mkdir(parents=True, exist_ok=True)
+    svc = ProgramService(tmp_path)
+
+    result = svc.execute_frontend_evidence_class_sync(
+        svc.load_manifest(),
+        spec_id="082-frontend-example",
+        confirmed=True,
+    )
+
+    assert result.passed is True
+    assert result.sync_result == "updated"
+    assert result.updated_specs == ["082-frontend-example"]
+
+    payload = yaml.safe_load((tmp_path / "program-manifest.yaml").read_text(encoding="utf-8"))
+    specs = {item["id"]: item for item in payload["specs"]}
+    assert specs["082-frontend-example"]["frontend_evidence_class"] == "framework_capability"
+    assert specs["082-frontend-example"]["owner"] == "team-a"
+    assert "frontend_evidence_class" not in specs["050-non-frontend"]
+    assert specs["050-non-frontend"]["owner"] == "team-b"
+
+
+def test_sync_frontend_evidence_class_manifest_execute_bulk(tmp_path: Path) -> None:
+    _write_frontend_evidence_class_spec(
+        tmp_path,
+        spec_rel="specs/082-frontend-example",
+        frontend_evidence_class="framework_capability",
+    )
+    _write_frontend_evidence_class_spec(
+        tmp_path,
+        spec_rel="specs/083-frontend-adoption",
+        frontend_evidence_class="consumer_adoption",
+    )
+    _write_manifest_yaml(
+        tmp_path,
+        """
+schema_version: "1"
+specs:
+  - id: "082-frontend-example"
+    path: "specs/082-frontend-example"
+    depends_on: []
+  - id: "083-frontend-adoption"
+    path: "specs/083-frontend-adoption"
+    depends_on: []
+    frontend_evidence_class: "framework_capability"
+""",
+    )
+    svc = ProgramService(tmp_path)
+
+    result = svc.execute_frontend_evidence_class_sync(
+        svc.load_manifest(),
+        confirmed=True,
+    )
+
+    assert result.passed is True
+    assert result.sync_result == "updated"
+    assert result.updated_specs == [
+        "082-frontend-example",
+        "083-frontend-adoption",
+    ]
+
+    payload = yaml.safe_load((tmp_path / "program-manifest.yaml").read_text(encoding="utf-8"))
+    specs = {item["id"]: item for item in payload["specs"]}
+    assert specs["082-frontend-example"]["frontend_evidence_class"] == "framework_capability"
+    assert specs["083-frontend-adoption"]["frontend_evidence_class"] == "consumer_adoption"
+
+
+def test_sync_frontend_evidence_class_manifest_blocks_when_footer_missing(
+    tmp_path: Path,
+) -> None:
+    spec_dir = tmp_path / "specs" / "082-frontend-example"
+    spec_dir.mkdir(parents=True, exist_ok=True)
+    (spec_dir / "spec.md").write_text("# Spec\n", encoding="utf-8")
+    _write_manifest_yaml(
+        tmp_path,
+        """
+schema_version: "1"
+specs:
+  - id: "082-frontend-example"
+    path: "specs/082-frontend-example"
+    depends_on: []
+""",
+    )
+    svc = ProgramService(tmp_path)
+
+    result = svc.execute_frontend_evidence_class_sync(
+        svc.load_manifest(),
+        confirmed=True,
+    )
+
+    assert result.passed is False
+    assert result.sync_result == "blocked"
+    assert result.updated_specs == []
+    assert any("082-frontend-example" in blocker for blocker in result.remaining_blockers)
+
+
+def test_sync_frontend_evidence_class_manifest_uses_only_terminal_footer(
+    tmp_path: Path,
+) -> None:
+    spec_dir = tmp_path / "specs" / "082-frontend-example"
+    spec_dir.mkdir(parents=True, exist_ok=True)
+    (spec_dir / "spec.md").write_text(
+        "# Spec\n\n"
+        "Example body block:\n\n"
+        "```md\n"
+        "---\n"
+        'example_frontend_evidence_class: "framework_capability"\n'
+        "---\n"
+        "```\n\n"
+        "Terminal footer is canonical.\n\n"
+        "---\n"
+        'frontend_evidence_class: "consumer_adoption"\n'
+        "---\n",
+        encoding="utf-8",
+    )
+    _write_manifest_yaml(
+        tmp_path,
+        """
+schema_version: "1"
+specs:
+  - id: "082-frontend-example"
+    path: "specs/082-frontend-example"
+    depends_on: []
+""",
+    )
+    svc = ProgramService(tmp_path)
+
+    result = svc.execute_frontend_evidence_class_sync(
+        svc.load_manifest(),
+        confirmed=True,
+    )
+
+    assert result.passed is True
+    assert result.sync_result == "updated"
+    assert result.updated_specs == ["082-frontend-example"]
+
+    payload = yaml.safe_load((tmp_path / "program-manifest.yaml").read_text(encoding="utf-8"))
+    specs = {item["id"]: item for item in payload["specs"]}
+    assert specs["082-frontend-example"]["frontend_evidence_class"] == "consumer_adoption"
+
+
+def test_sync_frontend_evidence_class_manifest_blocks_bulk_invalid_non_checkpoint_spec(
+    tmp_path: Path,
+) -> None:
+    _write_frontend_evidence_class_spec(
+        tmp_path,
+        spec_rel="specs/082-frontend-checkpoint",
+        frontend_evidence_class="framework_capability",
+    )
+    spec_dir = tmp_path / "specs" / "083-frontend-invalid"
+    spec_dir.mkdir(parents=True, exist_ok=True)
+    (spec_dir / "spec.md").write_text(
+        "# Spec\n\n"
+        "---\n"
+        'frontend_evidence_class: "framework_capability"\n'
+        'frontend_evidence_class: "consumer_adoption"\n'
+        "---\n",
+        encoding="utf-8",
+    )
+    save_checkpoint(
+        tmp_path,
+        Checkpoint(
+            current_stage="verify",
+            feature=FeatureInfo(
+                id="082",
+                spec_dir="specs/082-frontend-checkpoint",
+                design_branch="d",
+                feature_branch="f",
+                current_branch="main",
+            ),
+        ),
+    )
+    _write_manifest_yaml(
+        tmp_path,
+        """
+schema_version: "1"
+specs:
+  - id: "082-frontend-checkpoint"
+    path: "specs/082-frontend-checkpoint"
+    depends_on: []
+  - id: "083-frontend-invalid"
+    path: "specs/083-frontend-invalid"
+    depends_on: []
+""",
+    )
+    svc = ProgramService(tmp_path)
+
+    result = svc.execute_frontend_evidence_class_sync(
+        svc.load_manifest(),
+        confirmed=True,
+    )
+
+    assert result.passed is False
+    assert result.sync_result == "blocked"
+    assert result.updated_specs == []
+    assert any("083-frontend-invalid/spec.md" in blocker for blocker in result.remaining_blockers)
+    assert any("error_kind=duplicate_key" in blocker for blocker in result.remaining_blockers)
 
 
 def test_topo_tiers(tmp_path: Path) -> None:
@@ -113,6 +520,162 @@ def test_build_status_counts_and_blockers(tmp_path: Path) -> None:
     assert by["001-auth"].total_tasks == 2
     assert by["002-course"].stage_hint == "close"
     assert by["003-enroll"].blocked_by == ["001-auth"]
+
+
+def test_build_status_surfaces_frontend_evidence_class_bounded_summary(
+    tmp_path: Path,
+) -> None:
+    _write_frontend_evidence_class_spec(
+        tmp_path,
+        spec_rel="specs/082-frontend-example",
+        frontend_evidence_class="framework_capability",
+    )
+    svc = ProgramService(tmp_path)
+    manifest = ProgramManifest(
+        specs=[
+            ProgramSpecRef(
+                id="082-frontend-example",
+                path="specs/082-frontend-example",
+                depends_on=[],
+            )
+        ]
+    )
+
+    rows = svc.build_status(
+        manifest,
+        validation_result=svc.validate_manifest(manifest),
+    )
+
+    assert len(rows) == 1
+    summary = rows[0].frontend_evidence_class_status
+    assert summary is not None
+    assert summary.has_blocker is True
+    assert summary.problem_family == "frontend_evidence_class_mirror_drift"
+    assert summary.detection_surface == "program validate"
+    assert summary.summary_token == "mirror_missing"
+
+
+def test_build_status_scans_each_manifest_spec_for_frontend_evidence_authoring_blockers(
+    tmp_path: Path,
+) -> None:
+    _write_frontend_evidence_class_spec(
+        tmp_path,
+        spec_rel="specs/082-frontend-valid",
+        frontend_evidence_class="framework_capability",
+    )
+    invalid_spec_dir = tmp_path / "specs" / "083-frontend-invalid"
+    invalid_spec_dir.mkdir(parents=True, exist_ok=True)
+    (invalid_spec_dir / "spec.md").write_text(
+        "# Spec\n\n"
+        'frontend_evidence_class: "framework_capability"\n\n'
+        "---\n"
+        'frontend_evidence_class: "consumer_adoption"\n'
+        "---\n",
+        encoding="utf-8",
+    )
+    svc = ProgramService(tmp_path)
+    manifest = ProgramManifest(
+        specs=[
+            ProgramSpecRef(
+                id="082-frontend-valid",
+                path="specs/082-frontend-valid",
+                depends_on=[],
+                frontend_evidence_class="framework_capability",
+            ),
+            ProgramSpecRef(
+                id="083-frontend-invalid",
+                path="specs/083-frontend-invalid",
+                depends_on=[],
+                frontend_evidence_class="consumer_adoption",
+            ),
+        ]
+    )
+
+    rows = svc.build_status(manifest)
+    by_id = {row.spec_id: row for row in rows}
+
+    assert by_id["082-frontend-valid"].frontend_evidence_class_status is None
+    invalid_summary = by_id["083-frontend-invalid"].frontend_evidence_class_status
+    assert invalid_summary is not None
+    assert invalid_summary.has_blocker is True
+    assert (
+        invalid_summary.problem_family
+        == "frontend_evidence_class_authoring_malformed"
+    )
+    assert invalid_summary.detection_surface == "verify constraints"
+    assert invalid_summary.summary_token == "body_footer_conflict"
+
+
+def test_build_status_surfaces_shared_spec_path_blockers_for_all_manifest_rows(
+    tmp_path: Path,
+) -> None:
+    invalid_spec_dir = tmp_path / "specs" / "082-frontend-shared"
+    invalid_spec_dir.mkdir(parents=True, exist_ok=True)
+    (invalid_spec_dir / "spec.md").write_text(
+        "# Spec\n\n"
+        'frontend_evidence_class: "framework_capability"\n\n'
+        "---\n"
+        'frontend_evidence_class: "consumer_adoption"\n'
+        "---\n",
+        encoding="utf-8",
+    )
+    svc = ProgramService(tmp_path)
+    manifest = ProgramManifest(
+        specs=[
+            ProgramSpecRef(
+                id="082-frontend-shared-a",
+                path="specs/082-frontend-shared",
+                depends_on=[],
+                frontend_evidence_class="framework_capability",
+            ),
+            ProgramSpecRef(
+                id="082-frontend-shared-b",
+                path="specs/082-frontend-shared",
+                depends_on=[],
+                frontend_evidence_class="framework_capability",
+            ),
+        ]
+    )
+
+    rows = svc.build_status(manifest)
+    by_id = {row.spec_id: row for row in rows}
+
+    for spec_id in ("082-frontend-shared-a", "082-frontend-shared-b"):
+        summary = by_id[spec_id].frontend_evidence_class_status
+        assert summary is not None
+        assert summary.has_blocker is True
+        assert (
+            summary.problem_family
+            == "frontend_evidence_class_authoring_malformed"
+        )
+        assert summary.detection_surface == "verify constraints"
+        assert summary.summary_token == "body_footer_conflict"
+
+
+def test_build_status_treats_spec_path_outside_project_root_as_missing(
+    tmp_path: Path,
+) -> None:
+    legacy_dir = tmp_path.parent / "legacy-spec"
+    legacy_dir.mkdir(exist_ok=True)
+    svc = ProgramService(tmp_path)
+    manifest = ProgramManifest(
+        specs=[
+            ProgramSpecRef(
+                id="082-frontend-example",
+                path=f"../{legacy_dir.name}",
+                depends_on=[],
+            )
+        ]
+    )
+
+    rows = svc.build_status(
+        manifest,
+        validation_result=svc.validate_manifest(manifest),
+    )
+
+    assert len(rows) == 1
+    assert rows[0].exists is False
+    assert rows[0].stage_hint == "missing"
 
 
 def test_build_integration_dry_run(tmp_path: Path) -> None:
@@ -5847,6 +6410,248 @@ def test_execution_gates_pass_when_closed_and_frontend_ready(tmp_path: Path) -> 
 
     assert gates.passed is True
     assert not any("frontend execute gate not clear" in item for item in gates.failed)
+
+
+def test_build_frontend_solution_confirmation_recommends_enterprise_defaults_in_simple_mode(
+    tmp_path: Path,
+) -> None:
+    for p in ("specs/001-auth", "specs/002-course", "specs/003-enroll"):
+        (tmp_path / p).mkdir(parents=True)
+
+    svc = ProgramService(tmp_path)
+    snapshot = svc.build_frontend_solution_confirmation(_manifest())
+
+    assert snapshot.decision_status == "recommended"
+    assert snapshot.preflight_status == "ready"
+    assert snapshot.recommended_frontend_stack == "vue2"
+    assert snapshot.recommended_provider_id == "enterprise-vue2"
+    assert snapshot.recommended_style_pack_id == "enterprise-default"
+    assert snapshot.requested_frontend_stack == "vue2"
+    assert snapshot.requested_provider_id == "enterprise-vue2"
+    assert snapshot.requested_style_pack_id == "enterprise-default"
+    assert snapshot.effective_frontend_stack == "vue2"
+    assert snapshot.effective_provider_id == "enterprise-vue2"
+    assert snapshot.effective_style_pack_id == "enterprise-default"
+    assert snapshot.recommended_backend_stack == "fastapi"
+    assert snapshot.recommended_api_collab_mode == "typed-bff"
+    assert snapshot.style_fidelity_status == "full"
+    assert snapshot.provider_mode == "normal"
+
+
+def test_build_frontend_solution_confirmation_recommends_public_fallback_in_simple_mode_when_enterprise_not_eligible(
+    tmp_path: Path,
+) -> None:
+    for p in ("specs/001-auth", "specs/002-course", "specs/003-enroll"):
+        (tmp_path / p).mkdir(parents=True)
+
+    svc = ProgramService(tmp_path)
+    snapshot = svc.build_frontend_solution_confirmation(
+        _manifest(),
+        enterprise_provider_eligible=False,
+        failed_preflight_check_ids=["company-registry-token"],
+    )
+
+    assert snapshot.decision_status == "recommended"
+    assert snapshot.preflight_status == "ready"
+    assert snapshot.recommended_frontend_stack == "vue3"
+    assert snapshot.recommended_provider_id == "public-primevue"
+    assert snapshot.recommended_style_pack_id == "modern-saas"
+    assert snapshot.requested_frontend_stack == "vue3"
+    assert snapshot.requested_provider_id == "public-primevue"
+    assert snapshot.requested_style_pack_id == "modern-saas"
+    assert snapshot.effective_frontend_stack == "vue3"
+    assert snapshot.effective_provider_id == "public-primevue"
+    assert snapshot.effective_style_pack_id == "modern-saas"
+    assert snapshot.availability_summary.failed_check_ids == [
+        "company-registry-token"
+    ]
+    assert snapshot.style_fidelity_status == "full"
+    assert snapshot.provider_mode == "normal"
+
+
+def test_build_frontend_solution_confirmation_preserves_failed_preflight_checks_when_enterprise_marked_eligible(
+    tmp_path: Path,
+) -> None:
+    for p in ("specs/001-auth", "specs/002-course", "specs/003-enroll"):
+        (tmp_path / p).mkdir(parents=True)
+
+    svc = ProgramService(tmp_path)
+    snapshot = svc.build_frontend_solution_confirmation(
+        _manifest(),
+        enterprise_provider_eligible=True,
+        failed_preflight_check_ids=["company-registry-token"],
+    )
+
+    assert snapshot.decision_status == "recommended"
+    assert snapshot.preflight_status == "warning"
+    assert snapshot.preflight_reason_codes == ["enterprise_provider_preflight_warning"]
+    assert snapshot.recommended_provider_id == "enterprise-vue2"
+    assert snapshot.effective_provider_id == "enterprise-vue2"
+    assert snapshot.availability_summary.overall_status == "attention"
+    assert snapshot.availability_summary.passed_check_ids == ["company-registry-network"]
+    assert snapshot.availability_summary.failed_check_ids == [
+        "company-registry-token"
+    ]
+    assert snapshot.availability_summary.blocking_reason_codes == []
+
+
+def test_build_frontend_solution_confirmation_blocks_when_defaulted_public_fallback_is_unavailable(
+    tmp_path: Path,
+) -> None:
+    for p in ("specs/001-auth", "specs/002-course", "specs/003-enroll"):
+        (tmp_path / p).mkdir(parents=True)
+
+    svc = ProgramService(tmp_path)
+    snapshot = svc.build_frontend_solution_confirmation(
+        _manifest(),
+        enterprise_provider_eligible=False,
+        failed_preflight_check_ids=["company-registry-token"],
+        fallback_candidate_available=False,
+    )
+
+    assert snapshot.decision_status == "blocked"
+    assert snapshot.preflight_status == "blocked"
+    assert snapshot.recommended_frontend_stack == "vue3"
+    assert snapshot.recommended_provider_id == "public-primevue"
+    assert snapshot.recommended_style_pack_id == "modern-saas"
+    assert snapshot.requested_frontend_stack == "vue3"
+    assert snapshot.requested_provider_id == "public-primevue"
+    assert snapshot.requested_style_pack_id == "modern-saas"
+    assert snapshot.effective_frontend_stack == "vue3"
+    assert snapshot.effective_provider_id == "public-primevue"
+    assert snapshot.effective_style_pack_id == "modern-saas"
+    assert snapshot.provider_mode == "normal"
+    assert snapshot.fallback_reason_code == "enterprise_provider_unavailable"
+    assert snapshot.preflight_reason_codes == ["enterprise_provider_unavailable"]
+    assert snapshot.availability_summary.overall_status == "blocked"
+    assert snapshot.availability_summary.failed_check_ids == [
+        "company-registry-token"
+    ]
+
+
+def test_build_frontend_solution_confirmation_requires_explicit_cross_stack_fallback_for_enterprise_request(
+    tmp_path: Path,
+) -> None:
+    for p in ("specs/001-auth", "specs/002-course", "specs/003-enroll"):
+        (tmp_path / p).mkdir(parents=True)
+
+    svc = ProgramService(tmp_path)
+    snapshot = svc.build_frontend_solution_confirmation(
+        _manifest(),
+        requested_frontend_stack="vue2",
+        requested_provider_id="enterprise-vue2",
+        requested_style_pack_id="enterprise-default",
+        enterprise_provider_eligible=False,
+        failed_preflight_check_ids=["company-registry-token"],
+    )
+
+    assert snapshot.decision_status == "fallback_required"
+    assert snapshot.preflight_status == "warning"
+    assert snapshot.requested_frontend_stack == "vue2"
+    assert snapshot.requested_provider_id == "enterprise-vue2"
+    assert snapshot.requested_style_pack_id == "enterprise-default"
+    assert snapshot.effective_frontend_stack == "vue3"
+    assert snapshot.effective_provider_id == "public-primevue"
+    assert snapshot.effective_style_pack_id == "modern-saas"
+    assert snapshot.provider_mode == "cross_stack_fallback"
+    assert snapshot.fallback_reason_code == "enterprise_provider_unavailable"
+    assert snapshot.availability_summary.failed_check_ids == [
+        "company-registry-token"
+    ]
+
+
+def test_build_frontend_solution_confirmation_blocks_when_enterprise_unavailable_and_no_fallback_candidate(
+    tmp_path: Path,
+) -> None:
+    for p in ("specs/001-auth", "specs/002-course", "specs/003-enroll"):
+        (tmp_path / p).mkdir(parents=True)
+
+    svc = ProgramService(tmp_path)
+    snapshot = svc.build_frontend_solution_confirmation(
+        _manifest(),
+        requested_frontend_stack="vue2",
+        requested_provider_id="enterprise-vue2",
+        requested_style_pack_id="enterprise-default",
+        enterprise_provider_eligible=False,
+        failed_preflight_check_ids=["company-registry-token"],
+        fallback_candidate_available=False,
+    )
+
+    assert snapshot.decision_status == "blocked"
+    assert snapshot.preflight_status == "blocked"
+    assert snapshot.requested_frontend_stack == "vue2"
+    assert snapshot.requested_provider_id == "enterprise-vue2"
+    assert snapshot.requested_style_pack_id == "enterprise-default"
+    assert snapshot.effective_frontend_stack == "vue2"
+    assert snapshot.effective_provider_id == "enterprise-vue2"
+    assert snapshot.effective_style_pack_id == "enterprise-default"
+    assert snapshot.provider_mode == "normal"
+    assert snapshot.fallback_reason_code == "enterprise_provider_unavailable"
+
+
+def test_build_frontend_solution_confirmation_requires_fallback_when_enterprise_provider_is_requested_without_explicit_stack(
+    tmp_path: Path,
+) -> None:
+    for p in ("specs/001-auth", "specs/002-course", "specs/003-enroll"):
+        (tmp_path / p).mkdir(parents=True)
+
+    svc = ProgramService(tmp_path)
+    snapshot = svc.build_frontend_solution_confirmation(
+        _manifest(),
+        requested_provider_id="enterprise-vue2",
+        enterprise_provider_eligible=False,
+        failed_preflight_check_ids=["company-registry-token"],
+    )
+
+    assert snapshot.decision_status == "fallback_required"
+    assert snapshot.preflight_status == "warning"
+    assert snapshot.requested_provider_id == "enterprise-vue2"
+    assert snapshot.effective_provider_id == "public-primevue"
+    assert snapshot.effective_frontend_stack == "vue3"
+    assert snapshot.fallback_reason_code == "enterprise_provider_unavailable"
+    assert snapshot.provider_mode == "cross_stack_fallback"
+
+
+def test_build_frontend_solution_confirmation_marks_unknown_provider_style_fidelity_unsupported(
+    tmp_path: Path,
+) -> None:
+    for p in ("specs/001-auth", "specs/002-course", "specs/003-enroll"):
+        (tmp_path / p).mkdir(parents=True)
+
+    svc = ProgramService(tmp_path)
+    snapshot = svc.build_frontend_solution_confirmation(
+        _manifest(),
+        requested_provider_id="foo-provider",
+        requested_style_pack_id="enterprise-default",
+    )
+
+    assert snapshot.effective_provider_id == "foo-provider"
+    assert snapshot.effective_style_pack_id == "enterprise-default"
+    assert snapshot.style_fidelity_status == "unsupported"
+    assert snapshot.style_degradation_reason_codes == [
+        "provider-not-supported-for-style-fidelity"
+    ]
+
+
+def test_build_frontend_solution_confirmation_marks_unknown_public_style_pack_unsupported(
+    tmp_path: Path,
+) -> None:
+    for p in ("specs/001-auth", "specs/002-course", "specs/003-enroll"):
+        (tmp_path / p).mkdir(parents=True)
+
+    svc = ProgramService(tmp_path)
+    snapshot = svc.build_frontend_solution_confirmation(
+        _manifest(),
+        requested_provider_id="public-primevue",
+        requested_style_pack_id="custom-pack",
+    )
+
+    assert snapshot.effective_provider_id == "public-primevue"
+    assert snapshot.effective_style_pack_id == "custom-pack"
+    assert snapshot.style_fidelity_status == "unsupported"
+    assert snapshot.style_degradation_reason_codes == [
+        "style-pack-not-supported-by-provider"
+    ]
 
 
 def _write_minimal_frontend_contract_page_artifacts(

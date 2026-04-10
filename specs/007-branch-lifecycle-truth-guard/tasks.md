@@ -148,7 +148,7 @@ Batch 5: rules/templates/docs close-out + regression
 - **任务编号**：T51
 - **优先级**：P1
 - **依赖**：T42
-- **文件**：src/ai_sdlc/rules/git-branch.md, src/ai_sdlc/rules/pipeline.md, docs/框架自迭代开发与发布约定.md, docs/USER_GUIDE.zh-CN.md, templates/execution-log-template.md, src/ai_sdlc/templates/execution-log.md.j2
+- **文件**：src/ai_sdlc/rules/git-branch.md, src/ai_sdlc/rules/pipeline.md, docs/框架自迭代开发与发布约定.md, USER_GUIDE.zh-CN.md, templates/execution-log-template.md, src/ai_sdlc/templates/execution-log.md.j2
 - **可并行**：否
 - **验收标准**：
   1. `git-branch.md` 不再只描述“如何开 design/feature 分支”，而是包含 lifecycle kind 与 disposition 语义。
@@ -161,7 +161,7 @@ Batch 5: rules/templates/docs close-out + regression
 - **任务编号**：T52
 - **优先级**：P1
 - **依赖**：T51
-- **文件**：tests/unit/test_git_client.py, tests/unit/test_branch_inventory.py, tests/unit/test_verify_constraints.py, tests/unit/test_close_check.py, tests/integration/test_cli_verify_constraints.py, tests/integration/test_cli_workitem_close_check.py, tests/integration/test_cli_status.py, tests/integration/test_cli_doctor.py, docs/USER_GUIDE.zh-CN.md
+- **文件**：tests/unit/test_git_client.py, tests/unit/test_branch_inventory.py, tests/unit/test_verify_constraints.py, tests/unit/test_close_check.py, tests/integration/test_cli_verify_constraints.py, tests/integration/test_cli_workitem_close_check.py, tests/integration/test_cli_status.py, tests/integration/test_cli_doctor.py, USER_GUIDE.zh-CN.md
 - **可并行**：否
 - **验收标准**：
   1. branch lifecycle focused suite 全部通过。

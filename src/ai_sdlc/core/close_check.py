@@ -10,6 +10,12 @@ from typing import Any
 
 from ai_sdlc.branch.git_client import GitClient, GitError
 from ai_sdlc.core.plan_check import resolve_plan_path_from_wi, run_plan_check
+from ai_sdlc.core.program_service import (
+    FRONTEND_EVIDENCE_CLASS_MIRROR_PROBLEM_FAMILY,
+    ProgramFrontendEvidenceClassStatus,
+    ProgramService,
+    _parse_frontend_evidence_class_status_blocker,
+)
 from ai_sdlc.core.provenance_gate import load_phase1_provenance_gate_payload
 from ai_sdlc.core.release_gate import (
     ReleaseGateParseError,
@@ -20,6 +26,10 @@ from ai_sdlc.core.reviewer_gate import (
     ReviewerGateOutcomeKind,
     evaluate_reviewer_gate,
 )
+from ai_sdlc.core.verify_constraints import (
+    _is_frontend_evidence_class_subject as _is_frontend_evidence_class_spec_subject,
+)
+from ai_sdlc.core.verify_constraints import collect_frontend_evidence_class_blockers
 from ai_sdlc.core.workitem_traceability import (
     analyze_completion_truth,
     evaluate_work_item_branch_lifecycle,
@@ -50,7 +60,7 @@ VERIFICATION_PROFILE_REQUIRED_COMMANDS: dict[str, tuple[str, ...]] = {
 # FR-096: default docs scan = WI `*.md` + these repo-relative paths (when present).
 DOCS_WHITELIST_RELS = (
     Path("docs/pull-request-checklist.zh.md"),
-    Path("docs/USER_GUIDE.zh-CN.md"),
+    Path("USER_GUIDE.zh-CN.md"),
 )
 RELEASE_GATE_EVIDENCE_FILE = "release-gate-evidence.md"
 
@@ -60,6 +70,93 @@ def _registered_command_strings() -> tuple[str, ...]:
     from ai_sdlc.cli.command_names import collect_flat_command_strings
 
     return collect_flat_command_strings()
+
+
+def _is_frontend_evidence_class_subject(wi_dir_name: str) -> bool:
+    return _is_frontend_evidence_class_spec_subject(wi_dir_name)
+
+
+def _format_frontend_evidence_class_late_resurfacing_detail(
+    status: ProgramFrontendEvidenceClassStatus,
+) -> str:
+    token = status.summary_token.strip()
+    detail = f"{status.problem_family} via {status.detection_surface}".strip()
+    if token:
+        return f"{detail} ({token})"
+    return detail
+
+
+def _build_frontend_evidence_class_close_check_summary(
+    root: Path,
+    wi_dir: Path,
+) -> ProgramFrontendEvidenceClassStatus | None:
+    if not _is_frontend_evidence_class_subject(wi_dir.name):
+        return None
+
+    for blocker in collect_frontend_evidence_class_blockers(wi_dir):
+        parsed = _parse_frontend_evidence_class_status_blocker(blocker)
+        if parsed is None:
+            continue
+        return ProgramFrontendEvidenceClassStatus(
+            has_blocker=True,
+            problem_family=parsed["problem_family"],
+            detection_surface=parsed["detection_surface"],
+            summary_token=parsed["summary_token"],
+        )
+
+    manifest_path = root / "program-manifest.yaml"
+    if not manifest_path.is_file():
+        return ProgramFrontendEvidenceClassStatus(
+            has_blocker=True,
+            problem_family=FRONTEND_EVIDENCE_CLASS_MIRROR_PROBLEM_FAMILY,
+            detection_surface="program load",
+            summary_token="manifest_missing",
+        )
+
+    svc = ProgramService(root, manifest_path)
+    try:
+        manifest = svc.load_manifest()
+    except Exception:
+        return ProgramFrontendEvidenceClassStatus(
+            has_blocker=True,
+            problem_family=FRONTEND_EVIDENCE_CLASS_MIRROR_PROBLEM_FAMILY,
+            detection_surface="program load",
+            summary_token="manifest_unreadable",
+        )
+
+    resolved_wi_dir = wi_dir.resolve()
+    matched_spec_ids: list[str] = []
+    for spec in manifest.specs:
+        try:
+            spec_dir = svc._resolve_spec_dir(spec.path)
+        except ValueError:
+            continue
+        if spec_dir == resolved_wi_dir:
+            matched_spec_ids.append(spec.id)
+    if not matched_spec_ids:
+        return ProgramFrontendEvidenceClassStatus(
+            has_blocker=True,
+            problem_family=FRONTEND_EVIDENCE_CLASS_MIRROR_PROBLEM_FAMILY,
+            detection_surface="program load",
+            summary_token="manifest_unmapped",
+        )
+    if len(matched_spec_ids) > 1:
+        return ProgramFrontendEvidenceClassStatus(
+            has_blocker=True,
+            problem_family=FRONTEND_EVIDENCE_CLASS_MIRROR_PROBLEM_FAMILY,
+            detection_surface="program load",
+            summary_token="manifest_ambiguous_path_match",
+        )
+    matched_spec_id = matched_spec_ids[0]
+
+    validation_result = svc.validate_manifest(manifest)
+    summary = svc.build_frontend_evidence_class_statuses(
+        manifest,
+        validation_result=validation_result,
+    ).get(matched_spec_id)
+    if summary is not None:
+        return summary
+    return ProgramFrontendEvidenceClassStatus(has_blocker=False)
 
 
 @dataclass
@@ -476,6 +573,32 @@ def run_close_check(*, cwd: Path | None, wi: Path, all_docs: bool = False) -> Cl
             }
         )
         blockers.extend(branch_lifecycle.blockers)
+
+        frontend_evidence_class_status = _build_frontend_evidence_class_close_check_summary(
+            root,
+            wi_dir,
+        )
+        if frontend_evidence_class_status is not None:
+            frontend_evidence_class_ok = not frontend_evidence_class_status.has_blocker
+            frontend_evidence_class_detail = (
+                "no unresolved frontend_evidence_class blocker"
+                if frontend_evidence_class_ok
+                else _format_frontend_evidence_class_late_resurfacing_detail(
+                    frontend_evidence_class_status
+                )
+            )
+            checks.append(
+                {
+                    "name": "frontend_evidence_class",
+                    "ok": frontend_evidence_class_ok,
+                    "detail": frontend_evidence_class_detail,
+                }
+            )
+            if not frontend_evidence_class_ok:
+                blockers.append(
+                    "BLOCKER: close-stage unresolved "
+                    f"{frontend_evidence_class_detail}"
+                )
 
     if _requires_release_gate(wi_dir):
         release_gate_path = wi_dir / RELEASE_GATE_EVIDENCE_FILE

@@ -95,7 +95,7 @@
 
 ##### T12 | 冻结 direct-formal canonical path 语义
 
-- **改动范围**：[`../../src/ai_sdlc/rules/pipeline.md`](../../src/ai_sdlc/rules/pipeline.md)、[`../../docs/框架自迭代开发与发布约定.md`](../../docs/框架自迭代开发与发布约定.md)、[`../../docs/USER_GUIDE.zh-CN.md`](../../docs/USER_GUIDE.zh-CN.md)
+- **改动范围**：[`../../src/ai_sdlc/rules/pipeline.md`](../../src/ai_sdlc/rules/pipeline.md)、[`../../docs/框架自迭代开发与发布约定.md`](../../docs/框架自迭代开发与发布约定.md)、[`../../USER_GUIDE.zh-CN.md`](../../USER_GUIDE.zh-CN.md)
 - **改动内容**：把新 framework capability 的 canonical 入口收紧为 direct-formal `specs/<WI>/`，并明确 `docs/superpowers/*` 仅为 reference。
 - **新增/调整的测试**：通过 focused suite、全量回归与治理校验覆盖规则/CLI/文档对齐。
 - **测试结果**：通过。
@@ -119,7 +119,7 @@
 
 ##### T41 / T42 | 文档对齐与 focused regression
 
-- **改动范围**：[`../../docs/USER_GUIDE.zh-CN.md`](../../docs/USER_GUIDE.zh-CN.md)、[`../../docs/框架自迭代开发与发布约定.md`](../../docs/框架自迭代开发与发布约定.md)、[`../../src/ai_sdlc/rules/pipeline.md`](../../src/ai_sdlc/rules/pipeline.md)
+- **改动范围**：[`../../USER_GUIDE.zh-CN.md`](../../USER_GUIDE.zh-CN.md)、[`../../docs/框架自迭代开发与发布约定.md`](../../docs/框架自迭代开发与发布约定.md)、[`../../src/ai_sdlc/rules/pipeline.md`](../../src/ai_sdlc/rules/pipeline.md)
 - **改动内容**：把用户文档、规则和自迭代约定统一到 direct-formal 入口；不再要求“先写 superpowers 再 formalize”。
 - **新增/调整的测试**：通过 focused suite、全量回归、`ruff` 与 `verify constraints` 覆盖。
 - **测试结果**：通过。

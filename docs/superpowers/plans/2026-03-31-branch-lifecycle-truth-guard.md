@@ -36,7 +36,7 @@
 - `docs/框架自迭代开发与发布约定.md`: document “分支已实现 ≠ 主线已兑现” and the required close-out sequence.
 - `templates/execution-log-template.md`: add branch close-out markers for latest-batch disposition truth.
 - `src/ai_sdlc/templates/execution-log.md.j2`: keep generator output aligned with the new markers.
-- `docs/USER_GUIDE.zh-CN.md`: document `branch-check` and bounded branch inventory reading.
+- `USER_GUIDE.zh-CN.md`: document `branch-check` and bounded branch inventory reading.
 - `tests/unit/test_git_client.py`: branch/worktree read helper coverage.
 - `tests/unit/test_branch_inventory.py`: lifecycle kind classification, divergence, and disposition logic.
 - `tests/unit/test_verify_constraints.py`: branch lifecycle governance surface.
@@ -232,7 +232,7 @@ git commit -m "feat: surface branch lifecycle readiness"
 - Modify: `src/ai_sdlc/rules/git-branch.md`
 - Modify: `src/ai_sdlc/rules/pipeline.md`
 - Modify: `docs/框架自迭代开发与发布约定.md`
-- Modify: `docs/USER_GUIDE.zh-CN.md`
+- Modify: `USER_GUIDE.zh-CN.md`
 
 - [ ] **Step 1: Write the failing doc/rule assertions**
 
@@ -273,7 +273,7 @@ Expected:
 - [ ] **Step 5: Commit**
 
 ```bash
-git add src/ai_sdlc/rules/git-branch.md src/ai_sdlc/rules/pipeline.md docs/框架自迭代开发与发布约定.md docs/USER_GUIDE.zh-CN.md
+git add src/ai_sdlc/rules/git-branch.md src/ai_sdlc/rules/pipeline.md docs/框架自迭代开发与发布约定.md USER_GUIDE.zh-CN.md
 git commit -m "docs: define branch lifecycle closeout policy"
 ```
 

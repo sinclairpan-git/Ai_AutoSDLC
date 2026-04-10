@@ -4,7 +4,7 @@
 
 #### 1. 预读与范围确认
 
-- **预读范围**：[`spec.md`](spec.md)、[`plan.md`](plan.md)、[`tasks.md`](tasks.md)、[`../../docs/framework-defect-backlog.zh-CN.md`](../../docs/framework-defect-backlog.zh-CN.md)、[`../../docs/USER_GUIDE.zh-CN.md`](../../docs/USER_GUIDE.zh-CN.md)
+- **预读范围**：[`spec.md`](spec.md)、[`plan.md`](plan.md)、[`tasks.md`](tasks.md)、[`../../docs/framework-defect-backlog.zh-CN.md`](../../docs/framework-defect-backlog.zh-CN.md)、[`../../USER_GUIDE.zh-CN.md`](../../USER_GUIDE.zh-CN.md)
 - **目标任务**：`T41`、`T42`、`T51`、`T52`、`T53`、`T61`、`T62`
 - **执行范围**：仅处理 adapter activation contract、selector UX、activation truth surface、`project-config.yaml` durability 与对应文档/台账收口
 
@@ -51,7 +51,7 @@
 
 ##### Task 6.1 | USER_GUIDE / backlog / formal docs 同步
 
-- **改动范围**：[`../../docs/USER_GUIDE.zh-CN.md`](../../docs/USER_GUIDE.zh-CN.md)、[`../../docs/framework-defect-backlog.zh-CN.md`](../../docs/framework-defect-backlog.zh-CN.md)、[`spec.md`](spec.md)、[`plan.md`](plan.md)、[`tasks.md`](tasks.md)
+- **改动范围**：[`../../USER_GUIDE.zh-CN.md`](../../USER_GUIDE.zh-CN.md)、[`../../docs/framework-defect-backlog.zh-CN.md`](../../docs/framework-defect-backlog.zh-CN.md)、[`spec.md`](spec.md)、[`plan.md`](plan.md)、[`tasks.md`](tasks.md)
 - **结果摘要**：
   - USER_GUIDE 改回“交互 selector 为主路径，`--agent-target` 为 fallback/override”。
   - backlog 已同步关闭 `FD-2026-04-02-002/003/004` 与 `FD-2026-04-03-005`。
@@ -94,7 +94,7 @@
 
 #### 2.8 归档后动作
 
-- **改动范围**：[`../../docs/USER_GUIDE.zh-CN.md`](../../docs/USER_GUIDE.zh-CN.md)、[`../../docs/framework-defect-backlog.zh-CN.md`](../../docs/framework-defect-backlog.zh-CN.md)、[`spec.md`](spec.md)、[`plan.md`](plan.md)、[`tasks.md`](tasks.md)、[`task-execution-log.md`](task-execution-log.md)、[`../../src/ai_sdlc/cli/adapter_cmd.py`](../../src/ai_sdlc/cli/adapter_cmd.py)、[`../../src/ai_sdlc/cli/commands.py`](../../src/ai_sdlc/cli/commands.py)、[`../../src/ai_sdlc/core/config.py`](../../src/ai_sdlc/core/config.py)、[`../../src/ai_sdlc/integrations/agent_target.py`](../../src/ai_sdlc/integrations/agent_target.py)、[`../../src/ai_sdlc/integrations/ide_adapter.py`](../../src/ai_sdlc/integrations/ide_adapter.py)、[`../../src/ai_sdlc/models/project.py`](../../src/ai_sdlc/models/project.py)、[`../../tests/integration/test_cli_adapter.py`](../../tests/integration/test_cli_adapter.py)、[`../../tests/integration/test_cli_status.py`](../../tests/integration/test_cli_status.py)、[`../../tests/unit/test_agent_target.py`](../../tests/unit/test_agent_target.py)、[`../../tests/unit/test_ide_adapter.py`](../../tests/unit/test_ide_adapter.py)、[`../../tests/unit/test_project_config.py`](../../tests/unit/test_project_config.py)
+- **改动范围**：[`../../USER_GUIDE.zh-CN.md`](../../USER_GUIDE.zh-CN.md)、[`../../docs/framework-defect-backlog.zh-CN.md`](../../docs/framework-defect-backlog.zh-CN.md)、[`spec.md`](spec.md)、[`plan.md`](plan.md)、[`tasks.md`](tasks.md)、[`task-execution-log.md`](task-execution-log.md)、[`../../src/ai_sdlc/cli/adapter_cmd.py`](../../src/ai_sdlc/cli/adapter_cmd.py)、[`../../src/ai_sdlc/cli/commands.py`](../../src/ai_sdlc/cli/commands.py)、[`../../src/ai_sdlc/core/config.py`](../../src/ai_sdlc/core/config.py)、[`../../src/ai_sdlc/integrations/agent_target.py`](../../src/ai_sdlc/integrations/agent_target.py)、[`../../src/ai_sdlc/integrations/ide_adapter.py`](../../src/ai_sdlc/integrations/ide_adapter.py)、[`../../src/ai_sdlc/models/project.py`](../../src/ai_sdlc/models/project.py)、[`../../tests/integration/test_cli_adapter.py`](../../tests/integration/test_cli_adapter.py)、[`../../tests/integration/test_cli_status.py`](../../tests/integration/test_cli_status.py)、[`../../tests/unit/test_agent_target.py`](../../tests/unit/test_agent_target.py)、[`../../tests/unit/test_ide_adapter.py`](../../tests/unit/test_ide_adapter.py)、[`../../tests/unit/test_project_config.py`](../../tests/unit/test_project_config.py)
 - **已完成 git 提交**：是
 - **提交哈希**：`953c28f`
 - 当前批次 branch disposition 状态：`待合回 main`

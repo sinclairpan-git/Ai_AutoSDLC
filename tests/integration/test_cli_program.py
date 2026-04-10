@@ -60,6 +60,30 @@ specs:
     )
 
 
+def _write_frontend_evidence_class_spec(
+    root: Path,
+    *,
+    spec_rel: str,
+    frontend_evidence_class: str,
+) -> None:
+    spec_dir = root / spec_rel
+    spec_dir.mkdir(parents=True, exist_ok=True)
+    (spec_dir / "spec.md").write_text(
+        "# Spec\n\n"
+        "---\n"
+        f'frontend_evidence_class: "{frontend_evidence_class}"\n'
+        "---\n",
+        encoding="utf-8",
+    )
+
+
+def _write_manifest_yaml(root: Path, text: str) -> None:
+    (root / "program-manifest.yaml").write_text(
+        text.strip() + "\n",
+        encoding="utf-8",
+    )
+
+
 def _write_minimal_frontend_contract_page_artifacts(
     root: Path,
     *,
@@ -203,6 +227,116 @@ specs:
         assert result.exit_code == 1
         assert "cycle" in result.output.lower()
 
+    def test_program_validate_fail_frontend_evidence_class_mirror_missing(
+        self, initialized_project_dir: Path
+    ) -> None:
+        root = initialized_project_dir
+        _write_frontend_evidence_class_spec(
+            root,
+            spec_rel="specs/082-frontend-example",
+            frontend_evidence_class="framework_capability",
+        )
+        (root / "program-manifest.yaml").write_text(
+            """
+schema_version: "1"
+specs:
+  - id: "082-frontend-example"
+    path: "specs/082-frontend-example"
+    depends_on: []
+""".strip()
+            + "\n",
+            encoding="utf-8",
+        )
+
+        with patch("ai_sdlc.cli.program_cmd.find_project_root", return_value=root):
+            result = runner.invoke(app, ["program", "validate"])
+
+        assert result.exit_code == 1
+        assert "frontend_evidence_class_mirror_drift" in result.output
+        assert "mirror_missing" in result.output
+
+    def test_program_frontend_evidence_class_sync_execute_updates_manifest(
+        self, initialized_project_dir: Path
+    ) -> None:
+        root = initialized_project_dir
+        _write_frontend_evidence_class_spec(
+            root,
+            spec_rel="specs/082-frontend-example",
+            frontend_evidence_class="framework_capability",
+        )
+        _write_manifest_yaml(
+            root,
+            """
+schema_version: "1"
+specs:
+  - id: "082-frontend-example"
+    path: "specs/082-frontend-example"
+    depends_on: []
+""",
+        )
+
+        with patch("ai_sdlc.cli.program_cmd.find_project_root", return_value=root):
+            result = runner.invoke(
+                app,
+                ["program", "frontend-evidence-class-sync", "--execute", "--yes"],
+            )
+
+        assert result.exit_code == 0
+        assert "updated" in result.output
+        payload = yaml.safe_load((root / "program-manifest.yaml").read_text(encoding="utf-8"))
+        assert payload["specs"][0]["frontend_evidence_class"] == "framework_capability"
+
+        with patch("ai_sdlc.cli.program_cmd.find_project_root", return_value=root):
+            validate = runner.invoke(app, ["program", "validate"])
+        assert validate.exit_code == 0
+
+    def test_program_frontend_evidence_class_sync_targeted_updates_only_selected_spec(
+        self, initialized_project_dir: Path
+    ) -> None:
+        root = initialized_project_dir
+        _write_frontend_evidence_class_spec(
+            root,
+            spec_rel="specs/082-frontend-example",
+            frontend_evidence_class="framework_capability",
+        )
+        _write_frontend_evidence_class_spec(
+            root,
+            spec_rel="specs/083-frontend-adoption",
+            frontend_evidence_class="consumer_adoption",
+        )
+        _write_manifest_yaml(
+            root,
+            """
+schema_version: "1"
+specs:
+  - id: "082-frontend-example"
+    path: "specs/082-frontend-example"
+    depends_on: []
+  - id: "083-frontend-adoption"
+    path: "specs/083-frontend-adoption"
+    depends_on: []
+""",
+        )
+
+        with patch("ai_sdlc.cli.program_cmd.find_project_root", return_value=root):
+            result = runner.invoke(
+                app,
+                [
+                    "program",
+                    "frontend-evidence-class-sync",
+                    "--spec-id",
+                    "082-frontend-example",
+                    "--execute",
+                    "--yes",
+                ],
+            )
+
+        assert result.exit_code == 0
+        payload = yaml.safe_load((root / "program-manifest.yaml").read_text(encoding="utf-8"))
+        specs = {item["id"]: item for item in payload["specs"]}
+        assert specs["082-frontend-example"]["frontend_evidence_class"] == "framework_capability"
+        assert "frontend_evidence_class" not in specs["083-frontend-adoption"]
+
     def test_program_status_and_plan(self, initialized_project_dir: Path) -> None:
         root = initialized_project_dir
         _write_manifest(root)
@@ -242,6 +376,59 @@ specs:
         assert "Frontend" in result.output
         assert "ready" in result.output
         assert "missing_artifact" in result.output
+
+    def test_program_status_exposes_bounded_frontend_evidence_class_summary(
+        self, initialized_project_dir: Path
+    ) -> None:
+        root = initialized_project_dir
+        _write_frontend_evidence_class_spec(
+            root,
+            spec_rel="specs/082-frontend-example",
+            frontend_evidence_class="framework_capability",
+        )
+        _write_manifest_yaml(
+            root,
+            """
+schema_version: "1"
+specs:
+  - id: "082-frontend-example"
+    path: "specs/082-frontend-example"
+    depends_on: []
+""",
+        )
+
+        with patch("ai_sdlc.cli.program_cmd.find_project_root", return_value=root):
+            result = runner.invoke(app, ["program", "status"])
+
+        assert result.exit_code == 1
+        assert "frontend_evidence_class_mirror_drift:mirror_missing" in result.output
+        assert "source_of_truth_path=" not in result.output
+        assert "human_remediation_hint=" not in result.output
+
+    def test_program_status_best_effort_handles_spec_path_outside_project_root(
+        self, initialized_project_dir: Path
+    ) -> None:
+        root = initialized_project_dir
+        legacy_dir = root.parent / "legacy-spec"
+        legacy_dir.mkdir(exist_ok=True)
+        (root / "program-manifest.yaml").write_text(
+            f"""
+schema_version: "1"
+specs:
+  - id: "082-frontend-example"
+    path: "../{legacy_dir.name}"
+    depends_on: []
+""".strip()
+            + "\n",
+            encoding="utf-8",
+        )
+
+        with patch("ai_sdlc.cli.program_cmd.find_project_root", return_value=root):
+            result = runner.invoke(app, ["program", "status"])
+
+        assert result.exit_code == 1, result.output
+        assert "Manifest invalid; status shown with best-effort parsing." in result.output
+        assert "outside project root" in result.output
 
     def test_program_integrate_dry_run_with_report(
         self, initialized_project_dir: Path
@@ -1083,6 +1270,219 @@ specs:
         report = (root / report_rel).read_text(encoding="utf-8")
         assert "Frontend Provider Runtime Artifact" in report
         assert ".ai-sdlc/memory/frontend-provider-runtime/latest.yaml" in report
+
+    def test_program_solution_confirm_simple_mode_preview_shows_single_recommendation(
+        self, initialized_project_dir: Path
+    ) -> None:
+        root = initialized_project_dir
+        _write_manifest(root)
+
+        with patch("ai_sdlc.cli.program_cmd.find_project_root", return_value=root):
+            result = runner.invoke(app, ["program", "solution-confirm"])
+
+        assert result.exit_code == 0
+        assert "Program Frontend Solution Confirm Simple" in result.output
+        assert "Recommended Solution" in result.output
+        assert "recommended_frontend_stack: vue2" in result.output
+        assert "recommended_provider_id: enterprise-vue2" in result.output
+        assert "fallback_required: false" in result.output
+        assert not (
+            root
+            / ".ai-sdlc"
+            / "memory"
+            / "frontend-solution-confirmation"
+            / "latest.yaml"
+        ).exists()
+
+    def test_program_solution_confirm_advanced_mode_surfaces_wizard_and_preflight(
+        self, initialized_project_dir: Path
+    ) -> None:
+        root = initialized_project_dir
+        _write_manifest(root)
+
+        with patch("ai_sdlc.cli.program_cmd.find_project_root", return_value=root):
+            result = runner.invoke(
+                app,
+                [
+                    "program",
+                    "solution-confirm",
+                    "--mode",
+                    "advanced",
+                    "--frontend-stack",
+                    "vue2",
+                    "--provider-id",
+                    "enterprise-vue2",
+                    "--style-pack-id",
+                    "enterprise-default",
+                    "--enterprise-provider-ineligible",
+                ],
+            )
+
+        assert result.exit_code == 0
+        assert "Program Frontend Solution Confirm Advanced" in result.output
+        assert "Step 1/7" in result.output
+        assert "Step 7/7" in result.output
+        assert "Final Preflight" in result.output
+        assert "requested_frontend_stack: vue2" in result.output
+        assert "effective_frontend_stack: vue3" in result.output
+        assert "preflight_status: warning" in result.output
+        assert (
+            "will_change_on_confirm: frontend_stack, provider_id, style_pack_id"
+            in result.output
+        )
+        assert "fallback_required: true" in result.output
+
+    def test_program_solution_confirm_execute_requires_explicit_confirmation(
+        self, initialized_project_dir: Path
+    ) -> None:
+        root = initialized_project_dir
+        _write_manifest(root)
+
+        with patch("ai_sdlc.cli.program_cmd.find_project_root", return_value=root):
+            result = runner.invoke(app, ["program", "solution-confirm", "--execute"])
+
+        assert result.exit_code == 2
+        assert "--yes" in result.output
+
+    def test_program_solution_confirm_execute_writes_snapshot_without_preview_only_fields(
+        self, initialized_project_dir: Path
+    ) -> None:
+        root = initialized_project_dir
+        _write_manifest(root)
+        report_rel = ".ai-sdlc/memory/frontend-solution-confirmation.md"
+
+        with patch("ai_sdlc.cli.program_cmd.find_project_root", return_value=root):
+            result = runner.invoke(
+                app,
+                [
+                    "program",
+                    "solution-confirm",
+                    "--mode",
+                    "advanced",
+                    "--frontend-stack",
+                    "vue2",
+                    "--provider-id",
+                    "enterprise-vue2",
+                    "--style-pack-id",
+                    "enterprise-default",
+                    "--enterprise-provider-ineligible",
+                    "--execute",
+                    "--yes",
+                    "--report",
+                    report_rel,
+                ],
+            )
+
+        artifact_path = (
+            root
+            / ".ai-sdlc"
+            / "memory"
+            / "frontend-solution-confirmation"
+            / "latest.yaml"
+        )
+        provider_manifest_path = (
+            root
+            / "providers"
+            / "frontend"
+            / "public-primevue"
+            / "provider.manifest.yaml"
+        )
+        style_support_path = (
+            root
+            / "providers"
+            / "frontend"
+            / "public-primevue"
+            / "style-support.yaml"
+        )
+        assert result.exit_code == 0
+        assert artifact_path.is_file()
+        assert provider_manifest_path.is_file()
+        assert style_support_path.is_file()
+        payload = yaml.safe_load(artifact_path.read_text(encoding="utf-8"))
+        provider_manifest = yaml.safe_load(provider_manifest_path.read_text(encoding="utf-8"))
+        style_support = yaml.safe_load(style_support_path.read_text(encoding="utf-8"))
+        assert payload["confirmed_by_mode"] == "advanced"
+        assert payload["decision_status"] == "fallback_required"
+        assert payload["requested_frontend_stack"] == "vue2"
+        assert payload["effective_frontend_stack"] == "vue3"
+        assert payload["effective_provider_id"] == "public-primevue"
+        assert payload["preflight_status"] == "warning"
+        assert "will_change_on_confirm" not in payload
+        assert provider_manifest["provider_id"] == "public-primevue"
+        assert provider_manifest["install_strategy_ids"] == ["public-primevue-default"]
+        assert any(
+            item["style_pack_id"] == "modern-saas"
+            and item["fidelity_status"] == "full"
+            for item in style_support["items"]
+        )
+        report = (root / report_rel).read_text(encoding="utf-8")
+        assert "Frontend Solution Confirmation Artifact" in report
+        assert ".ai-sdlc/memory/frontend-solution-confirmation/latest.yaml" in report
+
+    def test_program_solution_confirm_execute_does_not_persist_blocked_snapshot(
+        self, initialized_project_dir: Path
+    ) -> None:
+        root = initialized_project_dir
+        _write_manifest(root)
+
+        with patch("ai_sdlc.cli.program_cmd.find_project_root", return_value=root):
+            result = runner.invoke(
+                app,
+                [
+                    "program",
+                    "solution-confirm",
+                    "--enterprise-provider-ineligible",
+                    "--no-fallback-candidate",
+                    "--execute",
+                    "--yes",
+                ],
+            )
+
+        artifact_path = (
+            root
+            / ".ai-sdlc"
+            / "memory"
+            / "frontend-solution-confirmation"
+            / "latest.yaml"
+        )
+        assert result.exit_code == 1
+        assert "Frontend solution confirmation blocked" in result.output
+        assert not artifact_path.exists()
+
+    def test_program_solution_confirm_execute_blocks_unknown_provider_artifact_materialization(
+        self, initialized_project_dir: Path
+    ) -> None:
+        root = initialized_project_dir
+        _write_manifest(root)
+
+        with patch("ai_sdlc.cli.program_cmd.find_project_root", return_value=root):
+            result = runner.invoke(
+                app,
+                [
+                    "program",
+                    "solution-confirm",
+                    "--provider-id",
+                    "foo-provider",
+                    "--style-pack-id",
+                    "modern-saas",
+                    "--execute",
+                    "--yes",
+                ],
+            )
+
+        artifact_path = (
+            root
+            / ".ai-sdlc"
+            / "memory"
+            / "frontend-solution-confirmation"
+            / "latest.yaml"
+        )
+        provider_root = root / "providers" / "frontend" / "foo-provider"
+        assert result.exit_code == 1
+        assert "Unsupported frontend provider profile artifacts" in result.output
+        assert "Traceback" not in result.output
+        assert not artifact_path.exists()
+        assert not provider_root.exists()
 
     def test_program_provider_patch_handoff_surfaces_runtime_artifact(
         self, initialized_project_dir: Path

@@ -1,6 +1,6 @@
 # Frontend Program 未实现项排序与分支落地计划
 
-**更新日期**：2026-04-06
+**更新日期**：2026-04-08
 **适用范围**：所有 `specs/0xx-frontend-*` work item
 **机器真值**：根级 `program-manifest.yaml`；本文件用于说明排序口径、并行窗口与建议分支命名。
 
@@ -22,7 +22,8 @@
 
 - 合同与观测基础：`009` -> `018`
 - 合同自检输入补强：`065`（依赖 `012`、`013`、`014`，不改写 production truth model）
-- P1 planning / experience stability 支线：`066` -> `067` -> `068` -> `069` -> (`070` || `071`)（已纳入 program DAG，但当前仍是 planning-only / 未 close）
+- P1 planning / experience stability 支线：`066`、`067` 当前 `program status` 均为 `close`；`068` ~ `071` 的 docs-only carrier closeout 已分别归档，但 root `program status` 仍未进入 `close`，并继续保持 `068` -> `069` -> (`070` || `071`) 的 DAG 位次；其共同 frontend truth gap 仍由 `missing_artifact [frontend_contract_observations]` 暴露，但按 `079` 的 framework-only policy split，应读作 consumer implementation evidence 仍外部缺失，而不是框架侧 capability 尚未存在
+- P2 provider/style solution 支线：`073`（依赖 `009`、`016`、`017`、`018`，已纳入 program DAG；`development-summary.md` 已补齐，当前 `program status` 为 `close`）
 - program orchestration / execute / remediation 主链：`019` -> `046`
 - final proof archive 与 cleanup 主链：`047` -> `064`
 
@@ -91,19 +92,28 @@
 - #54 | Tier 50 | `063` | branch `codex/frontend-program-final-proof-archive-cleanup-mutation-execution-gating-consumption-baseline` | 直接依赖：`050`、`060`、`061`、`062` | 状态：已实现（execution gating consumption baseline）
 - #55 | Tier 51 | `064` | branch `codex/frontend-program-final-proof-archive-cleanup-mutation-execution-baseline` | 直接依赖：`050`、`062`、`063` | 状态：已实现（cleanup mutation execution baseline，commit `36b99e2`）
 - #56 | Tier 05 | `065` | branch `codex/frontend-contract-sample-source-selfcheck-baseline` | 直接依赖：`012`、`013`、`014` | 状态：已实现（sample source self-check baseline，commit `4d7d65d`）
-- #57 | Tier 06 | `066` | branch `codex/frontend-p1-experience-stability-planning-baseline` | 直接依赖：`018`、`065` | 状态：已纳入 program（docs-only planning baseline，未 close）
-- #58 | Tier 07 | `067` | branch `codex/frontend-p1-ui-kernel-semantic-expansion-baseline` | 直接依赖：`066` | 状态：已纳入 program（docs-only child baseline，未 close）
-- #59 | Tier 08 | `068` | branch `codex/frontend-p1-page-recipe-expansion-baseline` | 直接依赖：`067` | 状态：已纳入 program（docs-only child baseline，未 close）
-- #60 | Tier 09 | `069` | branch `codex/frontend-p1-governance-diagnostics-drift-baseline` | 直接依赖：`068` | 状态：已纳入 program（docs-only child baseline，未 close）
-- #61 | Tier 10 | `070` | branch `codex/frontend-p1-recheck-remediation-feedback-baseline` | 直接依赖：`069` | 状态：已纳入 program（docs-only child baseline，未 close）
-- #62 | Tier 10 | `071` | branch `codex/frontend-p1-visual-a11y-foundation-baseline` | 直接依赖：`069` | 状态：已纳入 program（docs-only child baseline，未 close）
+- #57 | Tier 06 | `066` | branch `codex/frontend-p1-experience-stability-planning-baseline` | 直接依赖：`018`、`065` | 状态：已纳入 program（planning baseline 与 `development-summary.md` 已补齐，当前 `program status` 为 `close`）
+- #58 | Tier 07 | `067` | branch `codex/frontend-p1-ui-kernel-semantic-expansion-baseline` | 直接依赖：`066` | 状态：已纳入 program（formal baseline、implementation slice 与 `development-summary.md` 已补齐，当前 `program status` 为 `close`）
+- #59 | Tier 08 | `068` | branch `codex/frontend-p1-page-recipe-expansion-baseline` | 直接依赖：`067` | 状态：已纳入 program（docs-only child baseline 的 carrier closeout 已归档；当前 root `program status` 仍非 `close`，Frontend 列仍为 `missing_artifact [frontend_contract_observations]`；按 framework-only policy split，应读作 consumer implementation evidence 仍外部缺失，而非框架侧 capability 缺失）
+- #60 | Tier 09 | `069` | branch `codex/frontend-p1-governance-diagnostics-drift-baseline` | 直接依赖：`068` | 状态：已纳入 program（docs-only child baseline 的 carrier closeout 已归档；当前 root 仍受 `068` 前置位次约束，Frontend 列仍为 `missing_artifact [frontend_contract_observations]`；该 blocker 仍是 consumer implementation evidence 缺口）
+- #61 | Tier 10 | `070` | branch `codex/frontend-p1-recheck-remediation-feedback-baseline` | 直接依赖：`069` | 状态：已纳入 program（docs-only child baseline 的 carrier closeout 已归档；当前 root 仍受 `069` 前置位次约束，Frontend 列仍为 `missing_artifact [frontend_contract_observations]`；该 blocker 仍是 consumer implementation evidence 缺口）
+- #62 | Tier 10 | `071` | branch `codex/frontend-p1-visual-a11y-foundation-baseline` | 直接依赖：`069` | 状态：已纳入 program（docs-only child baseline 的 carrier closeout 已归档；当前 root 仍受 `069` 前置位次约束，Frontend 列仍为 `missing_artifact [frontend_contract_observations]`；该 blocker 仍是 consumer implementation evidence 缺口）
+- #63 | Tier 06 | `073` | branch `codex/frontend-p2-provider-style-solution-baseline` | 直接依赖：`009`、`016`、`017`、`018` | 状态：已纳入 program（实现、验证与 `development-summary.md` 已补齐，当前 `program status` 为 `close`）
 
 ## 备注
 
 - `053`、`055`、`057`、`059`、`061`、`063`、`064`、`065` 已经在当前仓库具备实现闭环；后续如需补强，应仍以当前 DAG 位次为准，不要越过其 docs-only 前置项。
 - `058`、`060`、`062` 仍是 mutation proposal / approval / gating 主线上的 canonical 冻结点；后续若继续开分支，应以它们作为 truth predecessor，而不是把 `064` 误判为待实现项。
 - `065` 是 `014` 下游的 self-check child baseline；它让框架仓库可用 sample source tree 做显式自检，但不消除真实 active spec 对 `frontend_contract_observations` 的外部输入要求。
-- `066` ~ `071` 已纳入根级 manifest，作用是保留 P1 planning branch 的 canonical DAG 与 rollout 位次；由于这些 spec 尚无 `development-summary.md`，`program status` / `program integrate --execute` 仍会把它们诚实视为未 close，这不是实现回退，而是 planning-only honesty。
+- `066` ~ `071` 已纳入根级 manifest，作用是保留 P1 planning branch 的 canonical DAG 与 rollout 位次；其中 `066`、`067` 当前已具备 `development-summary.md` 并被 root machine truth 视为 `close`，`068` ~ `071` 虽已各自完成 carrier closeout 归档，但 root `program status` 仍保持非 `close` 口径。
+- `067` 已在当前仓库完成 kernel semantic expansion formal baseline、model/artifact implementation slice 与 `development-summary.md` 补齐；当前 root machine truth 已把它视为 `close`，并释放了 `068` 的前置阻塞。
 - `070` 与 `071` 是 `069` 下游的 sibling child；root DAG 故意保留 `069 -> (070 || 071)`，不要把 `071` 误写成依赖 `070`。
+- `073` 已在当前仓库完成 provider/style solution baseline 的实现批次、fresh verification 与 `development-summary.md` 补齐；当前 root machine truth 已把它视为 `close`。这表示 close input 已具备，不等于已经执行最终 merge / archive。
 - `072` 是本轮 root sync carrier spec，用于冻结并执行 `066-071` 的 root truth sync；它不属于当前 root DAG 中待执行 / 待 close 的 frontend program item，因此不写入本表。
-- 当前 `program status` 对全部 frontend spec 统一暴露的 `missing_artifact [frontend_contract_observations]` 属于 active spec 输入缺口，不对应本仓库内可直接扫描补齐的实现分支；当前仓库不存在真实前端源码标注源，后续需要在实际前端项目中生成并回填 canonical observation artifact。
+- `074` 是本轮 root sync carrier spec，用于冻结并执行 `073` 的 root truth sync；它不属于当前 root DAG 中待执行 / 待 close 的 frontend program item，因此不写入本表。
+- `075` 是本轮 root close sync carrier spec，用于把 `073` 的 root rollout wording 从“已纳入 program”进一步同步到当前 `close` 口径；它同样不属于当前 root DAG 中待执行 / 待 close 的 frontend program item，因此不写入本表。
+- `076` 是本轮 P1 root honesty sync carrier spec，用于把 `067` 的 `close` 口径，以及 `068` ~ `071` 的 archived carrier closeout / root non-close 区分，同步到根级 rollout wording；它同样不属于当前 root DAG 中待执行 / 待 close 的 frontend program item，因此不写入本表。
+- `077` 冻结了真实 consumer implementation evidence 的回填 playbook；若未来存在真实前端项目，应按该 playbook 生成并回填 canonical observation artifact。
+- `078` 冻结了 sample self-check fallback 的边界：sample source tree 只能证明 framework pipeline 可运行，不能冒充真实 consumer implementation evidence。
+- `079` 冻结了 framework-only repository 的 closure policy split：framework capability evidence 与 consumer implementation evidence 是两层不同真值；因此当前 `068` ~ `071` 的 root non-close，应读作 consumer evidence 尚未接入，而不是框架能力仍未建立。
+- 当前 `program status` 对全部 frontend spec 统一暴露的 `missing_artifact [frontend_contract_observations]` 属于 active spec 输入缺口；在本仓库语境下，它对应的是外部 consumer implementation evidence 尚未接入，不对应仓库内还缺一条可直接扫描补齐的业务前端实现分支。

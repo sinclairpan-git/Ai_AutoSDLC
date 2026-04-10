@@ -229,7 +229,7 @@ tests/
 
 - `src/ai_sdlc/cli/program_cmd.py`
 - `tests/integration/test_cli_program.py`
-- 可选 `docs/USER_GUIDE.zh-CN.md`
+- 可选 `USER_GUIDE.zh-CN.md`
 
 **实现重点**：
 

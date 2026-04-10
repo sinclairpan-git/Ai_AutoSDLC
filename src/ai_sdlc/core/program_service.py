@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import re
 import shutil
+import tempfile
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -22,7 +24,11 @@ from ai_sdlc.core.frontend_visual_a11y_evidence_provider import (
     load_frontend_visual_a11y_evidence_artifact,
     visual_a11y_evidence_artifact_path,
 )
-from ai_sdlc.core.verify_constraints import build_constraint_report
+from ai_sdlc.core.verify_constraints import (
+    build_constraint_report,
+    collect_frontend_evidence_class_blockers,
+    split_terminal_markdown_footer,
+)
 from ai_sdlc.generators.frontend_gate_policy_artifacts import (
     materialize_frontend_gate_policy_artifacts,
 )
@@ -35,9 +41,30 @@ from ai_sdlc.models.frontend_gate_policy import (
 from ai_sdlc.models.frontend_generation_constraints import (
     build_mvp_frontend_generation_constraints,
 )
+from ai_sdlc.models.frontend_solution_confirmation import (
+    AvailabilitySummary,
+    FrontendSolutionSnapshot,
+    build_builtin_style_pack_manifests,
+    build_mvp_solution_snapshot,
+)
 from ai_sdlc.models.program import ProgramManifest, ProgramSpecRef
 from ai_sdlc.telemetry.clock import utc_now_z
 
+FRONTEND_EVIDENCE_CLASS_ALLOWED_VALUES = (
+    "framework_capability",
+    "consumer_adoption",
+)
+FRONTEND_EVIDENCE_CLASS_MIN_SEQUENCE = 82
+FRONTEND_EVIDENCE_CLASS_KEY = "frontend_evidence_class"
+FRONTEND_EVIDENCE_CLASS_MIRROR_PROBLEM_FAMILY = (
+    "frontend_evidence_class_mirror_drift"
+)
+FRONTEND_EVIDENCE_CLASS_AUTHORING_PROBLEM_FAMILY = (
+    "frontend_evidence_class_authoring_malformed"
+)
+FRONTEND_EVIDENCE_CLASS_MIRROR_CONTRACT_REF = (
+    "specs/086-frontend-evidence-class-program-validate-mirror-contract-baseline/spec.md"
+)
 PROGRAM_FRONTEND_READINESS_READY = "ready"
 PROGRAM_FRONTEND_READINESS_RETRY = "retry"
 PROGRAM_FRONTEND_GATE_VERDICT_UNRESOLVED = "UNRESOLVED"
@@ -156,6 +183,14 @@ class ProgramFrontendReadiness:
 
 
 @dataclass
+class ProgramFrontendEvidenceClassStatus:
+    has_blocker: bool
+    problem_family: str = ""
+    detection_surface: str = ""
+    summary_token: str = ""
+
+
+@dataclass
 class ProgramSpecStatus:
     spec_id: str
     path: str
@@ -165,6 +200,7 @@ class ProgramSpecStatus:
     total_tasks: int
     blocked_by: list[str] = field(default_factory=list)
     frontend_readiness: ProgramFrontendReadiness | None = None
+    frontend_evidence_class_status: ProgramFrontendEvidenceClassStatus | None = None
 
 
 @dataclass
@@ -831,6 +867,17 @@ class ProgramExecuteGates:
     warnings: list[str] = field(default_factory=list)
 
 
+@dataclass
+class ProgramFrontendEvidenceClassSyncResult:
+    passed: bool
+    confirmed: bool
+    sync_result: str
+    updated_specs: list[str] = field(default_factory=list)
+    written_paths: list[str] = field(default_factory=list)
+    remaining_blockers: list[str] = field(default_factory=list)
+    warnings: list[str] = field(default_factory=list)
+
+
 class ProgramService:
     """Program-level helper service used by CLI `program` commands."""
 
@@ -866,11 +913,19 @@ class ProgramService:
             else:
                 seen_paths.add(spec.path)
 
-            abs_spec = self.root / spec.path
+            try:
+                abs_spec = self._resolve_spec_dir(spec.path)
+            except ValueError:
+                errors.append(f"spec {spec.id}: path outside project root: {spec.path}")
+                continue
             if not abs_spec.exists():
                 warnings.append(f"spec {spec.id}: path not found: {spec.path}")
             elif not abs_spec.is_dir():
                 errors.append(f"spec {spec.id}: path is not a directory: {spec.path}")
+            else:
+                errors.extend(
+                    self._frontend_evidence_class_manifest_drift_errors(spec, abs_spec)
+                )
 
         for spec in manifest.specs:
             if spec.id in spec.depends_on:
@@ -896,6 +951,219 @@ class ProgramService:
             valid=not errors, errors=errors, warnings=warnings
         )
 
+    def execute_frontend_evidence_class_sync(
+        self,
+        manifest: ProgramManifest,
+        *,
+        spec_id: str | None = None,
+        confirmed: bool = False,
+    ) -> ProgramFrontendEvidenceClassSyncResult:
+        candidate_specs = self._frontend_evidence_class_sync_candidates(
+            manifest, spec_id=spec_id
+        )
+        if isinstance(candidate_specs, ProgramFrontendEvidenceClassSyncResult):
+            return candidate_specs
+
+        updates: dict[str, str] = {}
+        blockers: list[str] = []
+
+        for spec in candidate_specs:
+            spec_dir = self._resolve_spec_dir(spec.path)
+            if not _is_frontend_evidence_class_subject(spec_dir.name):
+                continue
+
+            authoring_blockers = self._frontend_evidence_class_authoring_blockers(spec_dir)
+            if authoring_blockers:
+                blockers.extend(authoring_blockers)
+                continue
+
+            canonical_value = _load_frontend_evidence_class_from_spec(spec_dir / "spec.md")
+            if canonical_value is None:
+                blockers.append(
+                    "BLOCKER: unable to resolve canonical frontend_evidence_class "
+                    f"for spec {spec.id}"
+                )
+                continue
+
+            if spec.frontend_evidence_class.strip() != canonical_value:
+                updates[spec.id] = canonical_value
+
+        if blockers:
+            return ProgramFrontendEvidenceClassSyncResult(
+                passed=False,
+                confirmed=confirmed,
+                sync_result="blocked",
+                updated_specs=[],
+                written_paths=[],
+                remaining_blockers=_unique_strings(blockers),
+            )
+
+        if not updates:
+            return ProgramFrontendEvidenceClassSyncResult(
+                passed=True,
+                confirmed=confirmed,
+                sync_result="noop",
+            )
+
+        updated_spec_ids = list(updates.keys())
+        if not confirmed:
+            return ProgramFrontendEvidenceClassSyncResult(
+                passed=False,
+                confirmed=False,
+                sync_result="confirmation_required",
+                updated_specs=updated_spec_ids,
+                warnings=["frontend evidence class sync requires explicit confirmation"],
+            )
+
+        self._write_frontend_evidence_class_manifest_updates(updates)
+        return ProgramFrontendEvidenceClassSyncResult(
+            passed=True,
+            confirmed=True,
+            sync_result="updated",
+            updated_specs=updated_spec_ids,
+            written_paths=[_relative_to_root_or_str(self.root, self.manifest_path)],
+        )
+
+    def _frontend_evidence_class_manifest_drift_errors(
+        self,
+        spec: ProgramSpecRef,
+        spec_dir: Path,
+    ) -> list[str]:
+        if not _is_frontend_evidence_class_subject(spec_dir.name):
+            return []
+
+        canonical_value = _load_frontend_evidence_class_from_spec(spec_dir / "spec.md")
+        if canonical_value is None:
+            return []
+
+        mirror_value = spec.frontend_evidence_class.strip()
+        if not mirror_value:
+            return [
+                _frontend_evidence_class_mirror_error(
+                    spec_path=spec_dir / "spec.md",
+                    manifest_path=self.manifest_path,
+                    error_kind="mirror_missing",
+                    human_remediation_hint=(
+                        "set specs[].frontend_evidence_class in program-manifest.yaml"
+                    ),
+                )
+            ]
+
+        if mirror_value not in FRONTEND_EVIDENCE_CLASS_ALLOWED_VALUES:
+            return [
+                _frontend_evidence_class_mirror_error(
+                    spec_path=spec_dir / "spec.md",
+                    manifest_path=self.manifest_path,
+                    error_kind="mirror_invalid_value",
+                    human_remediation_hint=(
+                        "use framework_capability or consumer_adoption in specs[].frontend_evidence_class"
+                    ),
+                )
+            ]
+
+        if mirror_value != canonical_value:
+            return [
+                _frontend_evidence_class_mirror_error(
+                    spec_path=spec_dir / "spec.md",
+                    manifest_path=self.manifest_path,
+                    error_kind="mirror_stale",
+                    human_remediation_hint=(
+                        "refresh specs[].frontend_evidence_class so it matches the spec footer"
+                    ),
+                )
+            ]
+
+        return []
+
+    def _frontend_evidence_class_sync_candidates(
+        self,
+        manifest: ProgramManifest,
+        *,
+        spec_id: str | None,
+    ) -> list[ProgramSpecRef] | ProgramFrontendEvidenceClassSyncResult:
+        if not spec_id:
+            return list(manifest.specs)
+
+        matches = [spec for spec in manifest.specs if spec.id == spec_id]
+        if not matches:
+            return ProgramFrontendEvidenceClassSyncResult(
+                passed=False,
+                confirmed=False,
+                sync_result="blocked",
+                remaining_blockers=[f"target spec not found in manifest: {spec_id}"],
+            )
+        if len(matches) > 1:
+            return ProgramFrontendEvidenceClassSyncResult(
+                passed=False,
+                confirmed=False,
+                sync_result="blocked",
+                remaining_blockers=[f"target spec is ambiguous in manifest: {spec_id}"],
+            )
+        return matches
+
+    def _frontend_evidence_class_authoring_blockers(
+        self,
+        spec_dir: Path,
+    ) -> list[str]:
+        return collect_frontend_evidence_class_blockers(spec_dir)
+
+    def _write_frontend_evidence_class_manifest_updates(
+        self,
+        updates: dict[str, str],
+    ) -> None:
+        payload = self._load_manifest_yaml_payload()
+        specs = payload.get("specs", [])
+        if not isinstance(specs, list):
+            raise ValueError("program-manifest.yaml specs must be a list")
+
+        updated_ids: set[str] = set()
+        for item in specs:
+            if not isinstance(item, dict):
+                continue
+            item_id = str(item.get("id", "")).strip()
+            if item_id in updates:
+                item[FRONTEND_EVIDENCE_CLASS_KEY] = updates[item_id]
+                updated_ids.add(item_id)
+
+        missing_ids = sorted(set(updates) - updated_ids)
+        if missing_ids:
+            raise ValueError(
+                "frontend evidence class sync could not resolve manifest entries for: "
+                + ", ".join(missing_ids)
+            )
+
+        serialized = yaml.safe_dump(payload, sort_keys=False, allow_unicode=True)
+        self._atomic_write_text(self.manifest_path, serialized)
+
+    def _load_manifest_yaml_payload(self) -> dict[str, object]:
+        try:
+            payload = yaml.safe_load(self.manifest_path.read_text(encoding="utf-8")) or {}
+        except yaml.YAMLError as exc:
+            raise ValueError(f"invalid YAML in {self.manifest_path}: {exc}") from exc
+        if not isinstance(payload, dict):
+            raise ValueError(f"invalid YAML root in {self.manifest_path}: expected mapping")
+        return payload
+
+    def _atomic_write_text(self, path: Path, text: str) -> None:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        if path.exists() and path.read_text(encoding="utf-8") == text:
+            return
+
+        handle = tempfile.NamedTemporaryFile(
+            mode="w",
+            suffix=".tmp",
+            dir=path.parent,
+            delete=False,
+            encoding="utf-8",
+        )
+        try:
+            handle.write(text)
+            handle.close()
+            Path(handle.name).replace(path)
+        except Exception:
+            Path(handle.name).unlink(missing_ok=True)
+            raise
+
     def topo_tiers(self, manifest: ProgramManifest) -> list[list[str]]:
         graph = self._build_graph(manifest)
         indeg: dict[str, int] = {k: 0 for k in graph}
@@ -918,17 +1186,35 @@ class ProgramService:
                         indeg[n] -= 1
         return tiers
 
-    def build_status(self, manifest: ProgramManifest) -> list[ProgramSpecStatus]:
+    def build_status(
+        self,
+        manifest: ProgramManifest,
+        *,
+        validation_result: ProgramValidationResult | None = None,
+    ) -> list[ProgramSpecStatus]:
         statuses: dict[str, ProgramSpecStatus] = {}
+        frontend_evidence_class_statuses = (
+            self.build_frontend_evidence_class_statuses(
+                manifest,
+                validation_result=validation_result,
+            )
+        )
 
         for spec in manifest.specs:
-            spec_dir = self.root / spec.path
-            exists = spec_dir.is_dir()
+            spec_dir: Path | None = None
+            exists = False
             stage_hint = "missing"
             completed = 0
             total = 0
 
-            if exists:
+            try:
+                spec_dir = self._resolve_spec_dir(spec.path)
+            except ValueError:
+                spec_dir = None
+            else:
+                exists = spec_dir.is_dir()
+
+            if exists and spec_dir is not None:
                 spec_md = spec_dir / "spec.md"
                 plan_md = spec_dir / "plan.md"
                 tasks_md = spec_dir / "tasks.md"
@@ -948,7 +1234,11 @@ class ProgramService:
                 if tasks_md.exists():
                     completed, total = _task_counts(tasks_md)
 
-            frontend_readiness = self._build_frontend_readiness(spec_dir)
+            frontend_readiness = (
+                self._build_frontend_readiness(spec_dir)
+                if spec_dir is not None
+                else None
+            )
             statuses[spec.id] = ProgramSpecStatus(
                 spec_id=spec.id,
                 path=spec.path,
@@ -957,6 +1247,9 @@ class ProgramService:
                 completed_tasks=completed,
                 total_tasks=total,
                 frontend_readiness=frontend_readiness,
+                frontend_evidence_class_status=frontend_evidence_class_statuses.get(
+                    spec.id
+                ),
             )
 
         for spec in manifest.specs:
@@ -971,6 +1264,316 @@ class ProgramService:
             statuses[spec.id].blocked_by = blocked
 
         return [statuses[s.id] for s in manifest.specs if s.id in statuses]
+
+    def build_frontend_evidence_class_statuses(
+        self,
+        manifest: ProgramManifest,
+        *,
+        validation_result: ProgramValidationResult | None = None,
+    ) -> dict[str, ProgramFrontendEvidenceClassStatus]:
+        spec_path_to_ids: dict[str, list[str]] = {}
+        for spec in manifest.specs:
+            try:
+                spec_dir = self._resolve_spec_dir(spec.path)
+            except ValueError:
+                continue
+            spec_md_path = (spec_dir / "spec.md").as_posix()
+            spec_path_to_ids.setdefault(spec_md_path, []).append(spec.id)
+
+        statuses: dict[str, ProgramFrontendEvidenceClassStatus] = {}
+
+        def record_status(
+            spec_path: str,
+            *,
+            problem_family: str,
+            detection_surface: str,
+            summary_token: str,
+        ) -> None:
+            for spec_id in spec_path_to_ids.get(spec_path, []):
+                if spec_id in statuses:
+                    continue
+                statuses[spec_id] = ProgramFrontendEvidenceClassStatus(
+                    has_blocker=True,
+                    problem_family=problem_family,
+                    detection_surface=detection_surface,
+                    summary_token=summary_token,
+                )
+
+        for spec in manifest.specs:
+            try:
+                spec_dir = self._resolve_spec_dir(spec.path)
+            except ValueError:
+                continue
+            for blocker in self._frontend_evidence_class_authoring_blockers(spec_dir):
+                parsed = _parse_frontend_evidence_class_status_blocker(blocker)
+                if parsed is None:
+                    continue
+                record_status(
+                    parsed["spec_path"],
+                    problem_family=parsed["problem_family"],
+                    detection_surface=parsed["detection_surface"],
+                    summary_token=parsed["summary_token"],
+                )
+
+        constraint_report = build_constraint_report(self.root)
+        for blocker in constraint_report.blockers:
+            parsed = _parse_frontend_evidence_class_status_blocker(blocker)
+            if parsed is None:
+                continue
+            record_status(
+                parsed["spec_path"],
+                problem_family=parsed["problem_family"],
+                detection_surface=parsed["detection_surface"],
+                summary_token=parsed["summary_token"],
+            )
+
+        manifest_errors = (
+            validation_result.errors
+            if validation_result is not None
+            else self.validate_manifest(manifest).errors
+        )
+        for error in manifest_errors:
+            parsed = _parse_frontend_evidence_class_status_blocker(error)
+            if parsed is None:
+                continue
+            record_status(
+                parsed["spec_path"],
+                problem_family=parsed["problem_family"],
+                detection_surface=parsed["detection_surface"],
+                summary_token=parsed["summary_token"],
+            )
+
+        return statuses
+
+    def build_frontend_solution_confirmation(
+        self,
+        manifest: ProgramManifest,
+        *,
+        mode: str = "simple",
+        requested_frontend_stack: str | None = None,
+        requested_provider_id: str | None = None,
+        requested_style_pack_id: str | None = None,
+        enterprise_provider_eligible: bool = True,
+        failed_preflight_check_ids: list[str] | None = None,
+        fallback_candidate_available: bool = True,
+    ) -> FrontendSolutionSnapshot:
+        """Build the minimal frontend solution confirmation truth for Batch 7."""
+
+        del manifest  # Batch 7 orchestration is manifest-shaped but not manifest-derived yet.
+
+        if mode != "simple":
+            raise ValueError("only simple mode is supported in Batch 7 baseline")
+
+        availability_checks = [
+            "company-registry-network",
+            "company-registry-token",
+        ]
+        failed_check_ids = list(failed_preflight_check_ids or [])
+        passed_check_ids = [
+            check_id
+            for check_id in availability_checks
+            if check_id not in failed_check_ids
+        ]
+        recommendation = self._default_frontend_solution_recommendation(
+            enterprise_provider_eligible=enterprise_provider_eligible
+        )
+        requested_solution = {
+            "frontend_stack": requested_frontend_stack
+            or recommendation["frontend_stack"],
+            "provider_id": requested_provider_id or recommendation["provider_id"],
+            "style_pack_id": requested_style_pack_id
+            or recommendation["style_pack_id"],
+        }
+        explicit_enterprise_request = (
+            requested_solution["provider_id"] == "enterprise-vue2"
+            and not enterprise_provider_eligible
+        )
+        enterprise_unavailable_without_fallback = (
+            not enterprise_provider_eligible and not fallback_candidate_available
+        )
+
+        effective_solution = dict(requested_solution)
+        decision_status = "recommended"
+        preflight_status = "ready"
+        provider_mode = "normal"
+        fallback_reason_code: str | None = None
+        fallback_reason_text: str | None = None
+        preflight_reason_codes: list[str] = []
+
+        if explicit_enterprise_request:
+            fallback_reason_code = "enterprise_provider_unavailable"
+            fallback_reason_text = (
+                "Enterprise provider prerequisites are not satisfied; explicit fallback confirmation is required."
+            )
+            if fallback_candidate_available:
+                effective_solution = {
+                    "frontend_stack": "vue3",
+                    "provider_id": "public-primevue",
+                    "style_pack_id": "modern-saas",
+                }
+                decision_status = "fallback_required"
+                preflight_status = "warning"
+                provider_mode = "cross_stack_fallback"
+                preflight_reason_codes = [fallback_reason_code]
+            else:
+                decision_status = "blocked"
+                preflight_status = "blocked"
+                preflight_reason_codes = [fallback_reason_code]
+        elif enterprise_unavailable_without_fallback:
+            fallback_reason_code = "enterprise_provider_unavailable"
+            fallback_reason_text = (
+                "Enterprise provider prerequisites are not satisfied and no public fallback candidate is available."
+            )
+            decision_status = "blocked"
+            preflight_status = "blocked"
+            preflight_reason_codes = [fallback_reason_code]
+
+        user_override_fields: list[str] = []
+        if requested_solution["frontend_stack"] != recommendation["frontend_stack"]:
+            user_override_fields.append("frontend_stack")
+        if requested_solution["provider_id"] != recommendation["provider_id"]:
+            user_override_fields.append("provider_id")
+        if requested_solution["style_pack_id"] != recommendation["style_pack_id"]:
+            user_override_fields.append("style_pack_id")
+
+        style_fidelity_status, style_degradation_reason_codes = (
+            self._resolve_style_fidelity(
+                effective_provider_id=effective_solution["provider_id"],
+                effective_style_pack_id=effective_solution["style_pack_id"],
+            )
+        )
+
+        if enterprise_provider_eligible:
+            enterprise_preflight_warning = bool(failed_check_ids)
+            if enterprise_preflight_warning:
+                preflight_status = "warning"
+                if not preflight_reason_codes:
+                    preflight_reason_codes = ["enterprise_provider_preflight_warning"]
+            availability_summary = AvailabilitySummary(
+                overall_status="attention" if enterprise_preflight_warning else "ready",
+                passed_check_ids=passed_check_ids,
+                failed_check_ids=failed_check_ids,
+                blocking_reason_codes=[],
+            )
+            availability_reason_text = (
+                "Enterprise provider was marked eligible, but preflight failures were reported."
+                if enterprise_preflight_warning
+                else "Enterprise provider prerequisites satisfied."
+            )
+            recommendation_reason_codes = ["enterprise-provider-preferred"]
+            recommendation_reason_text = (
+                "Enterprise baseline is available and preferred."
+            )
+        else:
+            blocking_reason_codes = (
+                ["enterprise_provider_unavailable"] if failed_check_ids else []
+            )
+            availability_summary = AvailabilitySummary(
+                overall_status=(
+                    "blocked" if enterprise_unavailable_without_fallback else "attention"
+                ),
+                passed_check_ids=passed_check_ids,
+                failed_check_ids=failed_check_ids,
+                blocking_reason_codes=blocking_reason_codes,
+            )
+            if enterprise_unavailable_without_fallback:
+                availability_reason_text = (
+                    "Enterprise provider prerequisites are not satisfied and no public fallback candidate is available."
+                )
+                recommendation_reason_codes = ["enterprise-provider-unavailable"]
+                recommendation_reason_text = (
+                    "Enterprise provider is unavailable and no public fallback candidate is available."
+                )
+            else:
+                availability_reason_text = (
+                    "Enterprise provider prerequisites are not satisfied."
+                )
+                recommendation_reason_codes = ["public-provider-defaulted"]
+                recommendation_reason_text = (
+                    "Enterprise provider is unavailable, so the public provider becomes the default recommendation."
+                )
+
+        return build_mvp_solution_snapshot(
+            project_id=self.root.name,
+            confirmed_by_mode=mode,
+            decision_status=decision_status,
+            recommendation_source=f"{mode}-mode",
+            recommendation_reason_codes=recommendation_reason_codes,
+            recommendation_reason_text=recommendation_reason_text,
+            recommended_frontend_stack=recommendation["frontend_stack"],
+            recommended_provider_id=recommendation["provider_id"],
+            recommended_style_pack_id=recommendation["style_pack_id"],
+            requested_frontend_stack=requested_solution["frontend_stack"],
+            requested_provider_id=requested_solution["provider_id"],
+            requested_style_pack_id=requested_solution["style_pack_id"],
+            effective_frontend_stack=effective_solution["frontend_stack"],
+            effective_provider_id=effective_solution["provider_id"],
+            effective_style_pack_id=effective_solution["style_pack_id"],
+            enterprise_provider_eligible=enterprise_provider_eligible,
+            availability_checks=availability_checks,
+            availability_summary=availability_summary,
+            availability_reason_text=availability_reason_text,
+            preflight_status=preflight_status,
+            preflight_reason_codes=preflight_reason_codes,
+            user_overrode_recommendation=bool(user_override_fields),
+            user_override_fields=user_override_fields,
+            provider_mode=provider_mode,
+            fallback_reason_code=fallback_reason_code,
+            fallback_reason_text=fallback_reason_text,
+            style_fidelity_status=style_fidelity_status,
+            style_degradation_reason_codes=style_degradation_reason_codes,
+        )
+
+    def _default_frontend_solution_recommendation(
+        self,
+        *,
+        enterprise_provider_eligible: bool,
+    ) -> dict[str, str]:
+        if enterprise_provider_eligible:
+            return {
+                "frontend_stack": "vue2",
+                "provider_id": "enterprise-vue2",
+                "style_pack_id": "enterprise-default",
+            }
+
+        return {
+            "frontend_stack": "vue3",
+            "provider_id": "public-primevue",
+            "style_pack_id": "modern-saas",
+        }
+
+    def _resolve_style_fidelity(
+        self,
+        *,
+        effective_provider_id: str,
+        effective_style_pack_id: str,
+    ) -> tuple[str, list[str]]:
+        if effective_provider_id == "public-primevue":
+            builtin_style_pack_ids = {
+                manifest.style_pack_id for manifest in build_builtin_style_pack_manifests()
+            }
+            if effective_style_pack_id not in builtin_style_pack_ids:
+                return "unsupported", ["style-pack-not-supported-by-provider"]
+            return "full", []
+
+        if effective_provider_id != "enterprise-vue2":
+            return "unsupported", ["provider-not-supported-for-style-fidelity"]
+
+        enterprise_style_support = {
+            "enterprise-default": ("full", []),
+            "data-console": ("full", []),
+            "high-clarity": ("full", []),
+            "modern-saas": ("partial", []),
+            "macos-glass": (
+                "degraded",
+                ["glass-surface-depth-not-compatible-with-enterprise-vue2-default-theme"],
+            ),
+        }
+        fidelity_status, degradation_reason_codes = enterprise_style_support.get(
+            effective_style_pack_id,
+            ("unsupported", ["style-pack-not-supported-by-provider"]),
+        )
+        return fidelity_status, list(degradation_reason_codes)
 
     def build_integration_dry_run(self, manifest: ProgramManifest) -> ProgramIntegrationPlan:
         """Build a dry-run integration plan (no git mutations)."""
@@ -6745,6 +7348,85 @@ class ProgramService:
             if cycle:
                 return cycle
         return []
+
+
+def _load_frontend_evidence_class_from_spec(spec_path: Path) -> str | None:
+    if not spec_path.is_file():
+        return None
+
+    _, footer = split_terminal_markdown_footer(spec_path.read_text(encoding="utf-8"))
+    if footer is None:
+        return None
+
+    try:
+        payload = yaml.safe_load(footer) or {}
+    except yaml.YAMLError:
+        return None
+    if not isinstance(payload, dict):
+        return None
+
+    value = payload.get(FRONTEND_EVIDENCE_CLASS_KEY)
+    normalized_value = str(value).strip() if value is not None else ""
+    if normalized_value not in FRONTEND_EVIDENCE_CLASS_ALLOWED_VALUES:
+        return None
+    return normalized_value
+
+
+def _is_frontend_evidence_class_subject(spec_dir_name: str) -> bool:
+    match = re.fullmatch(r"(?P<seq>\d{3})-(?P<slug>[a-z0-9-]+)", spec_dir_name.strip())
+    if match is None:
+        return False
+    if int(match.group("seq")) < FRONTEND_EVIDENCE_CLASS_MIN_SEQUENCE:
+        return False
+    return "frontend" in match.group("slug").split("-")
+
+
+def _frontend_evidence_class_mirror_error(
+    *,
+    spec_path: Path,
+    manifest_path: Path,
+    error_kind: str,
+    human_remediation_hint: str,
+) -> str:
+    return (
+        "BLOCKER: "
+        f"problem_family={FRONTEND_EVIDENCE_CLASS_MIRROR_PROBLEM_FAMILY} "
+        "detection_surface=program validate "
+        f"spec_path={spec_path.as_posix()} "
+        f"error_kind={error_kind} "
+        f"source_of_truth_path={spec_path.as_posix()}#footer,{manifest_path.as_posix()} "
+        f"expected_contract_ref={FRONTEND_EVIDENCE_CLASS_MIRROR_CONTRACT_REF} "
+        f"human_remediation_hint={human_remediation_hint}"
+    )
+
+
+def _parse_frontend_evidence_class_status_blocker(
+    message: str,
+) -> dict[str, str] | None:
+    if "problem_family=frontend_evidence_class_" not in message:
+        return None
+
+    problem_match = re.search(r"problem_family=(?P<value>[^\s]+)", message)
+    detection_match = re.search(
+        r"detection_surface=(?P<value>.*?) spec_path=",
+        message,
+    )
+    spec_match = re.search(r"spec_path=(?P<value>[^\s]+)", message)
+    error_kind_match = re.search(r"error_kind=(?P<value>[^\s]+)", message)
+    if (
+        problem_match is None
+        or detection_match is None
+        or spec_match is None
+        or error_kind_match is None
+    ):
+        return None
+
+    return {
+        "problem_family": problem_match.group("value").strip(),
+        "detection_surface": detection_match.group("value").strip(),
+        "spec_path": spec_match.group("value").strip(),
+        "summary_token": error_kind_match.group("value").strip(),
+    }
 
 
 def _task_counts(tasks_md: Path) -> tuple[int, int]:

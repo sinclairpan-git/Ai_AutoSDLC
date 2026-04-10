@@ -431,3 +431,12 @@ specs:
       - "069-frontend-p1-governance-diagnostics-drift-baseline"
     branch_slug: "frontend-p1-visual-a11y-foundation-baseline"
     owner: "team-frontend-governance"
+  - id: "073-frontend-p2-provider-style-solution-baseline"
+    path: "specs/073-frontend-p2-provider-style-solution-baseline"
+    depends_on:
+      - "009-frontend-governance-ui-kernel"
+      - "016-frontend-enterprise-vue2-provider-baseline"
+      - "017-frontend-generation-governance-baseline"
+      - "018-frontend-gate-compatibility-baseline"
+    branch_slug: "frontend-p2-provider-style-solution-baseline"
+    owner: "team-frontend-governance"

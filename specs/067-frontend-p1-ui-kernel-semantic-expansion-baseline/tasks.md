@@ -34,7 +34,7 @@ Batch 5: kernel model semantic expansion slice
 - `067` 不得扩张 whitelist、token rules、drift diagnostics、同一套 gate matrix 的兼容执行口径相关规则/反馈面或 remediation feedback；这些保留给下游 `069` 或更后续 child。
 - `067` 不得定义 `Ui* -> provider/runtime` 的具体映射、Vue 组件实现、白名单承接或企业样式包装。
 - `067` 不得修改 root `program-manifest.yaml` 或 `frontend-program-branch-rollout-plan.md`。
-- `067` 不得生成 `development-summary.md`，也不得宣称 close-ready、已实现或已进入 program close。
+- `067` 的 Batch 5 实现切片不得顺手生成 `development-summary.md`；close-ready handoff 只允许后续单独写入 `development-summary.md` 与 `task-execution-log.md`，且不得借此宣称 `068/069`、provider/runtime 或新的 root sync 主线已开始。
 - `067` 不得改写 `009/015/017/018/066` 的 formal truth，也不得用 provider/history page skeleton 反向主导 P1 Kernel 组件集。
 - `Batch 5` 只允许写入 `src/ai_sdlc/models/frontend_ui_kernel.py`、`src/ai_sdlc/models/__init__.py`、`tests/unit/test_frontend_ui_kernel_models.py`、`tests/unit/test_frontend_ui_kernel_artifacts.py`、`specs/067-frontend-p1-ui-kernel-semantic-expansion-baseline/task-execution-log.md`，以及为本批边界服务的 `plan.md / tasks.md`。
 - 当前首批实现只放行 P1 kernel semantic component / state expansion 的模型与 artifact truth，不放行 page recipe 扩展、diagnostics / drift、provider/runtime 或 root sync。
@@ -126,7 +126,7 @@ Batch 5: kernel model semantic expansion slice
 - **验收标准**：
   1. `plan.md` 给出 future Kernel 模型/工件的优先文件面
   2. 文档明确这些文件面当前仅为后续实现触点，不构成当前批次改动授权
-  3. 文档明确 `067` 当前不生成 `development-summary.md`，也不宣称 close-ready 或已实现
+  3. 文档明确 `067` 的 Batch 5 阶段不生成 `development-summary.md`，且后续 close-ready handoff 只允许单独写入 `development-summary.md` 与 `task-execution-log.md`
 - **验证**：docs consistency review
 
 ---

@@ -303,7 +303,7 @@
 > 来源：2026-03-26 复盘——`verify constraints` 对 **全局** `agent-skip-registry` 做 FR/Task 映射、`close-check` **全量**扫描 `docs/`、以及「归档占位哈希 + 二次提交回填」等实现，易引发 **误报 BLOCKER**、**全局效率下降**、**规则越堆越重**。本组需求约束：**先契约、后实现**；作用域与真值来源须写进 spec/tasks 再改代码。
 
 - **FR-095（P1）**：`verify constraints` 对 `agent-skip-registry.zh.md` 的 FR/Task 映射检查须 **按工作项作用域过滤**：登记表须具备 **`wi_id`（或等价列名）**；仅当 **`wi_id` 与当前 checkpoint 绑定的工作项一致**（或与 `feature.spec_dir` 推导的工作项 id 一致，策略由实现 PR 与本文锁死）时，才对该行执行「登记内容须在当项 `spec.md`/`tasks.md` 可找到」的 BLOCKER；**无 `wi_id` 的历史行不参与该项 BLOCKER**（避免全表历史拖累当前 WI）。须向后兼容现有表结构与既有测试夹具（迁移策略见 tasks）。
-- **FR-096（P1）**：`workitem close-check` 的 **docs 一致性**子检查默认仅扫描 **与当前 WI 强相关** 的路径：`specs/<WI>/` 下 Markdown，外加 **白名单**（至少含 `docs/pull-request-checklist.zh.md`、`docs/USER_GUIDE.zh-CN.md`，可扩展列表由实现 PR 与本文锁死）；**全仓库 `docs/**` 扫描**仅当 CLI 显式传入 `--all-docs`（或等价开关）时启用。须 pytest 覆盖「默认不扫无关子目录」「`--all-docs` 扩大范围」两类行为。
+- **FR-096（P1）**：`workitem close-check` 的 **docs 一致性**子检查默认仅扫描 **与当前 WI 强相关** 的路径：`specs/<WI>/` 下 Markdown，外加 **白名单**（至少含 `docs/pull-request-checklist.zh.md`、`USER_GUIDE.zh-CN.md`，可扩展列表由实现 PR 与本文锁死）；**全仓库 `docs/**` 扫描**仅当 CLI 显式传入 `--all-docs`（或等价开关）时启用。须 pytest 覆盖「默认不扫无关子目录」「`--all-docs` 扩大范围」两类行为。
 - **FR-097（P1）**：**归档提交策略降噪**：`templates/execution-log-template.md` 与 `batch-protocol.md` 叙述应对齐——**默认单次 commit** 同时包含实现与 execution-log 批次段落；**「提交哈希」** 仅在 commit **成功之后** 填写 **一次**（若需知 SHA 后再写正文，可用 **`git commit --amend`** 将更新后的归档并入 **同一条语义提交**，避免「仅改归档」的二次 commit）。详见模板 **2.8** 与 `batch-protocol` Step 4–5。
 - **FR-098（P1）**：`close-check`（及将来同类检查）中「已注册 CLI 命令」列表 **不得长期硬编码**；须从 **Typer 应用对象**（或经批准的单一注册表模块）**枚举子命令全名**（如 `ai-sdlc workitem plan-check`），与 `ai-sdlc --help` / 实际注册保持一致；须 pytest 防止漏注册或重命名后检查失效。
 

@@ -31,7 +31,7 @@ related_doc:
 - 冻结 `067` 与 `068` recipe 扩展、`069` diagnostics / drift 扩展之间的 handoff 边界
 - 为后续 Kernel 模型 / 生成工件 / 测试切片提供单一 formal baseline
 
-当前 formal baseline 已完成。经用户明确要求继续推进 `067` 后，当前允许进入首批实现切片：仅在 Kernel 模型层落下 P1 semantic component / state expansion truth，并用 model/artifact unit tests 证明生成工件继续忠实承接该 truth。当前仍不进入 page recipe 扩展、diagnostics / drift、provider/runtime、root `program-manifest.yaml` / `frontend-program-branch-rollout-plan.md`，也不生成 `development-summary.md`。
+当前 formal baseline 已完成。经用户明确要求继续推进 `067` 后，当前先进入首批实现切片：仅在 Kernel 模型层落下 P1 semantic component / state expansion truth，并用 model/artifact unit tests 证明生成工件继续忠实承接该 truth。该 slice 完成后，当前仓库状态又补齐了一个受限的 close-ready handoff：只允许写入 `development-summary.md` 与 `task-execution-log.md`，把 `067` 提升为 program-level `close` 输入。当前仍不进入 page recipe 扩展、diagnostics / drift、provider/runtime、root `program-manifest.yaml` / `frontend-program-branch-rollout-plan.md` 主线。
 
 ## 技术背景
 
@@ -42,7 +42,7 @@ related_doc:
 - 当前 child baseline：`specs/067-frontend-p1-ui-kernel-semantic-expansion-baseline/`
 - 当前项目编号真值：`.ai-sdlc/project/config/project-state.yaml`
 
-**测试**：formal baseline 阶段使用 `uv run ai-sdlc verify constraints`、`git diff --check`；当前首批实现切片追加 `uv run pytest tests/unit/test_frontend_ui_kernel_models.py tests/unit/test_frontend_ui_kernel_artifacts.py -q` 与 `uv run ruff check src tests`
+**测试**：formal baseline 阶段使用 `uv run ai-sdlc verify constraints`、`git diff --check`；首批实现切片追加 `uv run pytest tests/unit/test_frontend_ui_kernel_models.py tests/unit/test_frontend_ui_kernel_artifacts.py -q` 与 `uv run ruff check src tests`；close-ready handoff 追加 `uv run ai-sdlc program status`
 **目标平台**：Ai_AutoSDLC 框架仓库的 formal planning 层与 frontend kernel model 层
 **主要约束**：
 
@@ -50,6 +50,7 @@ related_doc:
 - `068` 只能在 `067` expanded kernel truth 冻结后继续 formalize
 - `069` 必须继续消费 `067 + 068 + 017 + 018 + 065` 的组合 truth
 - 当前首批实现切片只放行 `src/ai_sdlc/models/frontend_ui_kernel.py`、`src/ai_sdlc/models/__init__.py`、`tests/unit/test_frontend_ui_kernel_models.py`、`tests/unit/test_frontend_ui_kernel_artifacts.py`
+- close-ready handoff 只放行 `specs/067-frontend-p1-ui-kernel-semantic-expansion-baseline/development-summary.md` 与 `specs/067-frontend-p1-ui-kernel-semantic-expansion-baseline/task-execution-log.md`
 - 当前切片不得新增 page recipe 标准本体、diagnostics / drift 规则、provider/runtime 映射或 root sync
 
 ## 宪章检查
@@ -71,7 +72,8 @@ specs/067-frontend-p1-ui-kernel-semantic-expansion-baseline/
 ├── spec.md
 ├── plan.md
 ├── tasks.md
-└── task-execution-log.md
+├── task-execution-log.md
+└── development-summary.md
 ```
 
 ### 当前已冻结的上游 truths
@@ -103,7 +105,7 @@ tests/unit/test_frontend_ui_kernel_artifacts.py
 - `068` 才承接 `DashboardPage / DialogFormPage / SearchListPage / WizardPage`
 - `069` 才承接 whitelist / token / drift / diagnostics / coverage expansion
 - `067` formal baseline 已完成；当前首批实现只允许把已冻结 truth 落到 kernel model / unit tests
-- `067` 不得生成 `development-summary.md`，也不得宣称 close-ready
+- `067` 的 Batch 5 实现切片不得顺手生成 `development-summary.md`；close-ready handoff 只能在 Batch 5 fresh verification 完成后单独补齐，且不得借此宣称 `068/069`、provider/runtime 或新的 root sync 主线已开始
 - 当前批次不得假定 provider/runtime API shape；真实字段与映射以后续实现与 provider child 为准
 
 未锁定上述决策前，不得进入当前实现切片、recipe formalize 或 root truth sync。

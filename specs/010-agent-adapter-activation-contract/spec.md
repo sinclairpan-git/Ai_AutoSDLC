@@ -3,7 +3,7 @@
 **功能编号**：`010-agent-adapter-activation-contract`  
 **创建日期**：2026-04-02  
 **状态**：已实现（branch remediation）
-**输入**：[`../../docs/framework-defect-backlog.zh-CN.md`](../../docs/framework-defect-backlog.zh-CN.md)、[`../../docs/USER_GUIDE.zh-CN.md`](../../docs/USER_GUIDE.zh-CN.md)、[`../../src/ai_sdlc/integrations/ide_adapter.py`](../../src/ai_sdlc/integrations/ide_adapter.py)、[`../../src/ai_sdlc/cli/commands.py`](../../src/ai_sdlc/cli/commands.py)
+**输入**：[`../../docs/framework-defect-backlog.zh-CN.md`](../../docs/framework-defect-backlog.zh-CN.md)、[`../../USER_GUIDE.zh-CN.md`](../../USER_GUIDE.zh-CN.md)、[`../../src/ai_sdlc/integrations/ide_adapter.py`](../../src/ai_sdlc/integrations/ide_adapter.py)、[`../../src/ai_sdlc/cli/commands.py`](../../src/ai_sdlc/cli/commands.py)
 
 > 口径：本 work item 不是修一个“识别顺序小 bug”，而是把框架入口适配从“文件注入型软提示”升级为“AI 代理入口选择 + activation handshake + activation state + activation gate”的正式合同。若该合同缺位，`init / dry-run` 成功也不能代表框架已真正接管开发链路。
 

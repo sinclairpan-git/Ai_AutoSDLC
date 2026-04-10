@@ -1,7 +1,7 @@
 ---
 related_doc:
   - "docs/framework-defect-backlog.zh-CN.md"
-  - "docs/USER_GUIDE.zh-CN.md"
+  - "USER_GUIDE.zh-CN.md"
 ---
 # 任务分解：Agent Adapter Activation Contract
 
@@ -232,7 +232,7 @@ Batch 6: docs, backlog, and execution close-out
 - **任务编号**：T61
 - **优先级**：P1
 - **依赖**：T53
-- **文件**：`docs/USER_GUIDE.zh-CN.md`, `docs/framework-defect-backlog.zh-CN.md`, `specs/010-agent-adapter-activation-contract/spec.md`, `specs/010-agent-adapter-activation-contract/plan.md`, `specs/010-agent-adapter-activation-contract/tasks.md`
+- **文件**：`USER_GUIDE.zh-CN.md`, `docs/framework-defect-backlog.zh-CN.md`, `specs/010-agent-adapter-activation-contract/spec.md`, `specs/010-agent-adapter-activation-contract/plan.md`, `specs/010-agent-adapter-activation-contract/tasks.md`
 - **可并行**：否
 - **验收标准**：
   1. USER_GUIDE 把交互式 selector 写回主路径，`--agent-target` 退回 fallback/override

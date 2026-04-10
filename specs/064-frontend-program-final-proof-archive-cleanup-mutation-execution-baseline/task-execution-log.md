@@ -23,7 +23,7 @@
 
 - **任务来源**：`tasks.md` Task `5.1`
 - **目标**：把 `064` 最新收口批次补齐为 `workitem close-check` 可识别的正式归档格式，只做文档归档规范化，不扩展 `064` 已冻结的实现边界。
-- **预读范围**：`task-execution-log.md`、`tasks.md`、`plan.md`、`docs/USER_GUIDE.zh-CN.md`、`src/ai_sdlc/core/close_check.py`
+- **预读范围**：`task-execution-log.md`、`tasks.md`、`plan.md`、`USER_GUIDE.zh-CN.md`、`src/ai_sdlc/core/close_check.py`
 - **激活的规则**：close-check execution log fields；verification profile truthfulness；git close-out markers truthfulness。
 - **验证画像**：`docs-only`
 - **改动范围**：`specs/064-frontend-program-final-proof-archive-cleanup-mutation-execution-baseline/task-execution-log.md`

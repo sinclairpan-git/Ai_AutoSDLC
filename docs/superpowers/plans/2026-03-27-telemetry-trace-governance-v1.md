@@ -343,7 +343,7 @@ git commit -m "feat: add telemetry governance publishing"
 - Modify: `src/ai_sdlc/cli/commands.py`
 - Modify: `src/ai_sdlc/cli/doctor_cmd.py`
 - Modify: `README.md`
-- Modify: `docs/USER_GUIDE.zh-CN.md`
+- Modify: `USER_GUIDE.zh-CN.md`
 - Test: `tests/integration/test_cli_status.py`
 - Test: `tests/integration/test_cli_doctor.py`
 
@@ -384,7 +384,7 @@ Expected: PASS
 - [ ] **Step 6: Commit**
 
 ```bash
-git add src/ai_sdlc/telemetry/readiness.py src/ai_sdlc/cli/commands.py src/ai_sdlc/cli/doctor_cmd.py README.md docs/USER_GUIDE.zh-CN.md tests/integration/test_cli_status.py tests/integration/test_cli_doctor.py
+git add src/ai_sdlc/telemetry/readiness.py src/ai_sdlc/cli/commands.py src/ai_sdlc/cli/doctor_cmd.py README.md USER_GUIDE.zh-CN.md tests/integration/test_cli_status.py tests/integration/test_cli_doctor.py
 git commit -m "feat: expose telemetry readiness surfaces"
 ```
 

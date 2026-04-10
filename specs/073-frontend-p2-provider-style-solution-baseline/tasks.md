@@ -41,7 +41,7 @@ Batch 9: verify / consistency / regression slice
 - `Batch 5` 只允许写入 `src/ai_sdlc/models/frontend_solution_confirmation.py`、`src/ai_sdlc/models/__init__.py`、`tests/unit/test_frontend_solution_confirmation_models.py`、`specs/073-frontend-p2-provider-style-solution-baseline/task-execution-log.md`，以及为本批边界服务的 `plan.md / tasks.md`。
 - `Batch 6` 只允许写入 `src/ai_sdlc/generators/frontend_provider_profile_artifacts.py`、`src/ai_sdlc/generators/frontend_solution_confirmation_artifacts.py`、`src/ai_sdlc/generators/__init__.py`、`tests/unit/test_frontend_provider_profile_artifacts.py`、`tests/unit/test_frontend_solution_confirmation_artifacts.py`、`specs/073-frontend-p2-provider-style-solution-baseline/task-execution-log.md`，以及为本批边界服务的 `plan.md / tasks.md`。
 - `Batch 7` 只允许写入 `src/ai_sdlc/core/program_service.py`、`tests/unit/test_program_service.py`、`specs/073-frontend-p2-provider-style-solution-baseline/task-execution-log.md`，以及为本批边界服务的 `plan.md / tasks.md`。
-- `Batch 8` 只允许写入 `src/ai_sdlc/cli/program_cmd.py`、`tests/integration/test_cli_program.py`、`docs/USER_GUIDE.zh-CN.md`、`specs/073-frontend-p2-provider-style-solution-baseline/task-execution-log.md`，以及为本批边界服务的 `plan.md / tasks.md`。
+- `Batch 8` 只允许写入 `src/ai_sdlc/cli/program_cmd.py`、`tests/integration/test_cli_program.py`、`USER_GUIDE.zh-CN.md`、`specs/073-frontend-p2-provider-style-solution-baseline/task-execution-log.md`，以及为本批边界服务的 `plan.md / tasks.md`。
 - `Batch 9` 只允许写入 `src/ai_sdlc/core/verify_constraints.py`、`tests/unit/test_verify_constraints.py`、`tests/integration/test_cli_verify_constraints.py`、`specs/073-frontend-p2-provider-style-solution-baseline/task-execution-log.md`，以及为本批边界服务的 `plan.md / tasks.md`。
 - `073` 只冻结并分解“技术方案确认 / Provider 选择 / Style Pack”formal baseline，不默认决定任何 business project runtime side effect。
 - 只有在用户明确要求进入实现，且 `spec.md / plan.md / tasks.md` 三件套已通过门禁后，才允许进入 `src/` / `tests/` 级实现。
@@ -371,7 +371,7 @@ Batch 9: verify / consistency / regression slice
 - **任务编号**：T82
 - **优先级**：P0
 - **依赖**：T81
-- **文件**：`src/ai_sdlc/cli/program_cmd.py`, `docs/USER_GUIDE.zh-CN.md`
+- **文件**：`src/ai_sdlc/cli/program_cmd.py`, `USER_GUIDE.zh-CN.md`
 - **可并行**：否
 - **验收标准**：
   1. CLI 提供结构化技术方案确认入口，不回退到自由文本手打方案
@@ -389,9 +389,9 @@ Batch 9: verify / consistency / regression slice
 - **可并行**：否
 - **验收标准**：
   1. `uv run pytest tests/integration/test_cli_program.py -q` 通过
-  2. `uv run ruff check src tests`、`git diff --check -- specs/073-frontend-p2-provider-style-solution-baseline src/ai_sdlc/cli docs/USER_GUIDE.zh-CN.md tests/integration` 与 `uv run ai-sdlc verify constraints` 通过
+  2. `uv run ruff check src tests`、`git diff --check -- specs/073-frontend-p2-provider-style-solution-baseline src/ai_sdlc/cli USER_GUIDE.zh-CN.md tests/integration` 与 `uv run ai-sdlc verify constraints` 通过
   3. `task-execution-log.md` 追加记录当前 CLI batch 的 touched files、验证命令与结论
-- **验证**：`uv run pytest tests/integration/test_cli_program.py -q`, `uv run ruff check src tests`, `git diff --check -- specs/073-frontend-p2-provider-style-solution-baseline src/ai_sdlc/cli docs/USER_GUIDE.zh-CN.md tests/integration`, `uv run ai-sdlc verify constraints`
+- **验证**：`uv run pytest tests/integration/test_cli_program.py -q`, `uv run ruff check src tests`, `git diff --check -- specs/073-frontend-p2-provider-style-solution-baseline src/ai_sdlc/cli USER_GUIDE.zh-CN.md tests/integration`, `uv run ai-sdlc verify constraints`
 
 ---
 
