@@ -559,3 +559,13 @@ specs:
     branch_slug: "frontend-mainline-browser-gate-probe-runtime-baseline"
     owner: "team-frontend-governance"
     frontend_evidence_class: "framework_capability"
+  - id: "104-frontend-mainline-browser-gate-recheck-remediation-binding-baseline"
+    path: "specs/104-frontend-mainline-browser-gate-recheck-remediation-binding-baseline"
+    depends_on:
+      - "020-frontend-program-execute-runtime-baseline"
+      - "101-frontend-mainline-managed-delivery-apply-runtime-baseline"
+      - "102-frontend-mainline-browser-quality-gate-baseline"
+      - "103-frontend-mainline-browser-gate-probe-runtime-baseline"
+    branch_slug: "frontend-mainline-browser-gate-recheck-remediation-binding-baseline"
+    owner: "team-frontend-governance"
+    frontend_evidence_class: "framework_capability"
