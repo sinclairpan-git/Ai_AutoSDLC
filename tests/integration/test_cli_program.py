@@ -435,7 +435,8 @@ class TestCliProgram:
         assert probe_result.exit_code == 0
         assert "Program Browser Gate Probe Execute" in probe_result.output
         assert "overall gate status: incomplete" in probe_result.output
-        assert "current slice materializes gate-run runtime truth" in probe_result.output
+        assert "execute gate state: recheck_required" in probe_result.output
+        assert "next command: uv run ai-sdlc program browser-gate-probe --execute" in probe_result.output
         latest_artifact = (
             root / ".ai-sdlc" / "memory" / "frontend-browser-gate" / "latest.yaml"
         )
@@ -475,6 +476,99 @@ class TestCliProgram:
             / "frontend-browser-gate"
             / "gate-run-preview"
         ).exists()
+
+    def test_program_remediate_dry_run_surfaces_browser_gate_follow_up_command(
+        self, initialized_project_dir: Path
+    ) -> None:
+        root = initialized_project_dir
+        _write_manifest(root)
+        save_project_config(root, ProjectConfig(adapter_ingress_state="verified_loaded"))
+        _write_frontend_solution_confirmation_artifacts(root)
+        issue_artifact = build_frontend_visual_a11y_evidence_artifact(
+            evaluations=[
+                FrontendVisualA11yEvidenceEvaluation(
+                    evaluation_id="001-auth-visual-a11y-issue",
+                    target_id="user-create",
+                    surface_id="success-feedback",
+                    outcome="issue",
+                    report_type="violation-report",
+                    severity="medium",
+                    location_anchor="feedback.banner",
+                    quality_hint="review success feedback visibility and semantics",
+                    changed_scope_explanation="071 issue fixture",
+                )
+            ],
+            provider_kind="manual",
+            provider_name="test-fixture",
+            generated_at="2026-04-07T15:30:00Z",
+        )
+        write_frontend_visual_a11y_evidence_artifact(
+            root / "specs" / "001-auth",
+            issue_artifact,
+        )
+        request_rel = _write_artifact_generate_apply_request(root)
+
+        with patch("ai_sdlc.cli.program_cmd.find_project_root", return_value=root):
+            apply_result = runner.invoke(
+                app,
+                [
+                    "program",
+                    "managed-delivery-apply",
+                    "--request",
+                    request_rel,
+                    "--execute",
+                    "--yes",
+                ],
+            )
+            probe_result = runner.invoke(app, ["program", "browser-gate-probe", "--execute"])
+            payload = yaml.safe_load(
+                (
+                    root
+                    / ".ai-sdlc"
+                    / "memory"
+                    / "frontend-browser-gate"
+                    / "latest.yaml"
+                ).read_text(encoding="utf-8")
+            )
+            payload["overall_gate_status"] = "blocked"
+            payload["bundle_input"]["overall_gate_status"] = "blocked"
+            for receipt in payload["bundle_input"]["check_receipts"]:
+                if receipt["check_name"] in {
+                    "playwright_smoke",
+                    "interaction_anti_pattern_checks",
+                }:
+                    receipt["classification_candidate"] = "pass"
+                    receipt["recheck_required"] = False
+                    receipt["blocking_reason_codes"] = []
+                    receipt["remediation_hints"] = []
+                    receipt["runtime_status"] = "completed"
+                else:
+                    receipt["classification_candidate"] = "actual_quality_blocker"
+                    receipt["blocking_reason_codes"] = [
+                        "visual_a11y_quality_blocker"
+                    ]
+                    receipt["remediation_hints"] = [
+                        "review frontend visual / a11y issue findings"
+                    ]
+            payload["bundle_input"]["blocking_reason_codes"] = [
+                "visual_a11y_quality_blocker"
+            ]
+            (
+                root
+                / ".ai-sdlc"
+                / "memory"
+                / "frontend-browser-gate"
+                / "latest.yaml"
+            ).write_text(
+                yaml.safe_dump(payload, sort_keys=False, allow_unicode=True),
+                encoding="utf-8",
+            )
+            remediate_result = runner.invoke(app, ["program", "remediate", "--dry-run"])
+
+        assert apply_result.exit_code == 0
+        assert probe_result.exit_code == 0
+        assert remediate_result.exit_code == 0
+        assert "uv run ai-sdlc program browser-gate-probe --execute" in remediate_result.output
 
     def test_program_validate_pass(self, initialized_project_dir: Path) -> None:
         _write_manifest(initialized_project_dir)

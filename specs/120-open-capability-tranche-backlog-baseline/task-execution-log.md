@@ -170,3 +170,26 @@
 #### 2.16 批次结论
 
 - `120/T13` 现在已经有正式 implementation carrier，browser gate probe runtime 不再悬空。
+
+### Batch 2026-04-14-003 | Derive T14 implementation carrier
+
+#### 2.17 批次范围
+
+- 覆盖范围：`tasks.md`
+- 覆盖目标：
+  - 将 `T14` 的建议派生工单从抽象 implementation carrier 更新为正式 `126`
+
+#### 2.18 任务记录
+
+##### T120-DOC-9 | 回填 `T14` 派生结果
+
+- 改动范围：`tasks.md`
+- 改动内容：
+  - 将 `Task 1.4 Browser Binding, Recheck, Remediation And Footer Closure` 的建议派生工单更新为 `126-frontend-mainline-browser-gate-recheck-remediation-runtime-closure-baseline`
+  - 明确 `T14` 在 `126` focused verification 通过前继续保持 `capability_open`
+- 新增/调整的测试：无
+- 是否符合任务目标：是
+
+#### 2.19 批次结论
+
+- `120/T14` 现在已经有正式 implementation carrier，browser gate recheck/remediation closure 不再停留在占位描述。

@@ -903,3 +903,13 @@ specs:
     branch_slug: "frontend-mainline-browser-gate-probe-runtime-implementation-baseline"
     owner: "team-frontend-governance"
     frontend_evidence_class: "framework_capability"
+  - id: "126-frontend-mainline-browser-gate-recheck-remediation-runtime-closure-baseline"
+    path: "specs/126-frontend-mainline-browser-gate-recheck-remediation-runtime-closure-baseline"
+    depends_on:
+      - "104-frontend-mainline-browser-gate-recheck-remediation-binding-baseline"
+      - "105-frontend-mainline-browser-gate-recheck-remediation-runtime-implementation-baseline"
+      - "106-frontend-mainline-browser-gate-evidence-class-footer-normalization-baseline"
+      - "125-frontend-mainline-browser-gate-probe-runtime-implementation-baseline"
+    branch_slug: "frontend-mainline-browser-gate-recheck-remediation-runtime-closure-baseline"
+    owner: "team-frontend-governance"
+    frontend_evidence_class: "framework_capability"

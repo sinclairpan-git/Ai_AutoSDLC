@@ -460,6 +460,372 @@ def test_execute_frontend_browser_gate_probe_materializes_gate_run_bundle(
     assert payload["bundle_input"]["overall_gate_status"] == "incomplete"
 
 
+def test_build_integration_dry_run_uses_browser_gate_recheck_command_when_gate_artifact_exists(
+    initialized_project_dir: Path,
+) -> None:
+    root = initialized_project_dir
+    save_project_config(root, ProjectConfig(adapter_ingress_state="verified_loaded"))
+    _write_frontend_solution_confirmation_artifacts(root)
+    request_path = _write_artifact_generate_apply_request(root)
+    svc = ProgramService(root)
+    apply_request = svc.build_frontend_managed_delivery_apply_request(request_path)
+    apply_result = svc.execute_frontend_managed_delivery_apply(
+        request_path,
+        request=apply_request,
+        confirmed=True,
+    )
+    svc.write_frontend_managed_delivery_apply_artifact(
+        request_path,
+        request=apply_request,
+        result=apply_result,
+        generated_at="2026-04-14T04:00:00Z",
+    )
+    probe_request = svc.build_frontend_browser_gate_probe_request()
+    svc.execute_frontend_browser_gate_probe(
+        request=probe_request,
+        generated_at="2026-04-14T04:05:00Z",
+    )
+
+    plan = svc.build_integration_dry_run(_manifest())
+
+    step = next(item for item in plan.steps if item.spec_id == "001-auth")
+    handoff = step.frontend_recheck_handoff
+    assert handoff is not None
+    assert handoff.required is True
+    assert handoff.recommended_commands == [
+        "uv run ai-sdlc program browser-gate-probe --execute"
+    ]
+    assert "browser gate" in handoff.reason.lower()
+
+
+def test_build_status_fails_closed_when_browser_gate_artifact_scope_drift_detected(
+    initialized_project_dir: Path,
+) -> None:
+    root = initialized_project_dir
+    save_project_config(root, ProjectConfig(adapter_ingress_state="verified_loaded"))
+    _write_frontend_solution_confirmation_artifacts(root)
+    request_path = _write_artifact_generate_apply_request(root)
+    svc = ProgramService(root)
+    apply_request = svc.build_frontend_managed_delivery_apply_request(request_path)
+    apply_result = svc.execute_frontend_managed_delivery_apply(
+        request_path,
+        request=apply_request,
+        confirmed=True,
+    )
+    svc.write_frontend_managed_delivery_apply_artifact(
+        request_path,
+        request=apply_request,
+        result=apply_result,
+        generated_at="2026-04-14T04:00:00Z",
+    )
+    probe_request = svc.build_frontend_browser_gate_probe_request()
+    probe_result = svc.execute_frontend_browser_gate_probe(
+        request=probe_request,
+        generated_at="2026-04-14T04:05:00Z",
+    )
+    artifact_path = root / probe_result.artifact_path
+    payload = yaml.safe_load(artifact_path.read_text(encoding="utf-8"))
+    payload["bundle_input"]["spec_dir"] = "specs/002-course"
+    artifact_path.write_text(
+        yaml.safe_dump(payload, sort_keys=False, allow_unicode=True),
+        encoding="utf-8",
+    )
+
+    rows = svc.build_status(_manifest())
+    by = {r.spec_id: r for r in rows}
+
+    readiness = by["001-auth"].frontend_readiness
+    assert readiness is not None
+    assert readiness.execute_gate_state == "blocked"
+    assert readiness.decision_reason == "scope_or_linkage_invalid"
+
+
+def test_build_status_fails_closed_when_browser_gate_latest_artifact_is_invalid_yaml(
+    initialized_project_dir: Path,
+) -> None:
+    root = initialized_project_dir
+    save_project_config(root, ProjectConfig(adapter_ingress_state="verified_loaded"))
+    _write_frontend_solution_confirmation_artifacts(root)
+    request_path = _write_artifact_generate_apply_request(root)
+    svc = ProgramService(root)
+    apply_request = svc.build_frontend_managed_delivery_apply_request(request_path)
+    apply_result = svc.execute_frontend_managed_delivery_apply(
+        request_path,
+        request=apply_request,
+        confirmed=True,
+    )
+    svc.write_frontend_managed_delivery_apply_artifact(
+        request_path,
+        request=apply_request,
+        result=apply_result,
+        generated_at="2026-04-14T04:00:00Z",
+    )
+    latest_path = (
+        root / ".ai-sdlc" / "memory" / "frontend-browser-gate" / "latest.yaml"
+    )
+    latest_path.parent.mkdir(parents=True, exist_ok=True)
+    latest_path.write_text("not: [valid\n", encoding="utf-8")
+
+    rows = svc.build_status(_manifest())
+    by = {r.spec_id: r for r in rows}
+
+    readiness = by["001-auth"].frontend_readiness
+    assert readiness is not None
+    assert readiness.execute_gate_state == "blocked"
+    assert readiness.decision_reason == "scope_or_linkage_invalid"
+    assert any("frontend_browser_gate_artifact_invalid" in blocker for blocker in readiness.blockers)
+
+
+def test_build_status_fails_closed_when_current_apply_truth_drift_detected(
+    initialized_project_dir: Path,
+) -> None:
+    root = initialized_project_dir
+    save_project_config(root, ProjectConfig(adapter_ingress_state="verified_loaded"))
+    _write_frontend_solution_confirmation_artifacts(root)
+    request_path = _write_artifact_generate_apply_request(root)
+    svc = ProgramService(root)
+    apply_request = svc.build_frontend_managed_delivery_apply_request(request_path)
+    apply_result = svc.execute_frontend_managed_delivery_apply(
+        request_path,
+        request=apply_request,
+        confirmed=True,
+    )
+    apply_artifact_path = svc.write_frontend_managed_delivery_apply_artifact(
+        request_path,
+        request=apply_request,
+        result=apply_result,
+        generated_at="2026-04-14T04:00:00Z",
+    )
+    probe_request = svc.build_frontend_browser_gate_probe_request()
+    svc.execute_frontend_browser_gate_probe(
+        request=probe_request,
+        generated_at="2026-04-14T04:05:00Z",
+    )
+
+    apply_payload = yaml.safe_load(apply_artifact_path.read_text(encoding="utf-8"))
+    apply_payload["apply_result_id"] = "apply-result-drifted"
+    apply_artifact_path.write_text(
+        yaml.safe_dump(apply_payload, sort_keys=False, allow_unicode=True),
+        encoding="utf-8",
+    )
+
+    rows = svc.build_status(_manifest())
+    by = {r.spec_id: r for r in rows}
+
+    readiness = by["001-auth"].frontend_readiness
+    assert readiness is not None
+    assert readiness.execute_gate_state == "blocked"
+    assert readiness.decision_reason == "scope_or_linkage_invalid"
+    assert any("current_truth_drift" in blocker for blocker in readiness.blockers)
+
+
+def test_build_integration_dry_run_surfaces_browser_gate_remediation_follow_up_command(
+    initialized_project_dir: Path,
+) -> None:
+    root = initialized_project_dir
+    save_project_config(root, ProjectConfig(adapter_ingress_state="verified_loaded"))
+    _write_frontend_solution_confirmation_artifacts(root)
+    _write_frontend_visual_a11y_evidence(
+        root / "specs" / "001-auth",
+        [
+            FrontendVisualA11yEvidenceEvaluation(
+                evaluation_id="001-auth-visual-a11y-issue",
+                target_id="user-create",
+                surface_id="success-feedback",
+                outcome="issue",
+                report_type="violation-report",
+                severity="medium",
+                location_anchor="feedback.banner",
+                quality_hint="review success feedback visibility and semantics",
+                changed_scope_explanation="071 issue fixture",
+            )
+        ],
+    )
+    request_path = _write_artifact_generate_apply_request(root)
+    svc = ProgramService(root)
+    apply_request = svc.build_frontend_managed_delivery_apply_request(request_path)
+    apply_result = svc.execute_frontend_managed_delivery_apply(
+        request_path,
+        request=apply_request,
+        confirmed=True,
+    )
+    svc.write_frontend_managed_delivery_apply_artifact(
+        request_path,
+        request=apply_request,
+        result=apply_result,
+        generated_at="2026-04-14T04:00:00Z",
+    )
+    probe_request = svc.build_frontend_browser_gate_probe_request()
+    probe_result = svc.execute_frontend_browser_gate_probe(
+        request=probe_request,
+        generated_at="2026-04-14T04:05:00Z",
+    )
+    artifact_path = root / probe_result.artifact_path
+    payload = yaml.safe_load(artifact_path.read_text(encoding="utf-8"))
+    payload["overall_gate_status"] = "blocked"
+    payload["bundle_input"]["overall_gate_status"] = "blocked"
+    for receipt in payload["bundle_input"]["check_receipts"]:
+        if receipt["check_name"] in {"playwright_smoke", "interaction_anti_pattern_checks"}:
+            receipt["classification_candidate"] = "pass"
+            receipt["recheck_required"] = False
+            receipt["blocking_reason_codes"] = []
+            receipt["remediation_hints"] = []
+            receipt["runtime_status"] = "completed"
+        else:
+            receipt["classification_candidate"] = "actual_quality_blocker"
+            receipt["blocking_reason_codes"] = ["visual_a11y_quality_blocker"]
+            receipt["remediation_hints"] = [
+                "review frontend visual / a11y issue findings"
+            ]
+    payload["bundle_input"]["blocking_reason_codes"] = ["visual_a11y_quality_blocker"]
+    artifact_path.write_text(
+        yaml.safe_dump(payload, sort_keys=False, allow_unicode=True),
+        encoding="utf-8",
+    )
+
+    plan = svc.build_integration_dry_run(_manifest())
+
+    step = next(item for item in plan.steps if item.spec_id == "001-auth")
+    remediation = step.frontend_remediation_input
+    assert remediation is not None
+    assert "frontend_visual_a11y_issue_review" in remediation.fix_inputs
+    assert "uv run ai-sdlc program browser-gate-probe --execute" in remediation.recommended_commands
+    assert remediation.recommended_commands[-1] == "uv run ai-sdlc verify constraints"
+
+
+def test_build_integration_dry_run_skips_browser_gate_recheck_handoff_when_artifact_is_ready(
+    initialized_project_dir: Path,
+) -> None:
+    root = initialized_project_dir
+    save_project_config(root, ProjectConfig(adapter_ingress_state="verified_loaded"))
+    _write_frontend_solution_confirmation_artifacts(root)
+    _write_frontend_visual_a11y_evidence(
+        root / "specs" / "001-auth",
+        [
+            FrontendVisualA11yEvidenceEvaluation(
+                evaluation_id="001-auth-visual-a11y-pass",
+                target_id="user-create",
+                surface_id="page:user-create",
+                outcome="pass",
+                report_type="coverage-report",
+                severity="info",
+                location_anchor="specs",
+                quality_hint="fixture evidence",
+                changed_scope_explanation="071 pass fixture",
+            )
+        ],
+    )
+    request_path = _write_artifact_generate_apply_request(root)
+    svc = ProgramService(root)
+    apply_request = svc.build_frontend_managed_delivery_apply_request(request_path)
+    apply_result = svc.execute_frontend_managed_delivery_apply(
+        request_path,
+        request=apply_request,
+        confirmed=True,
+    )
+    svc.write_frontend_managed_delivery_apply_artifact(
+        request_path,
+        request=apply_request,
+        result=apply_result,
+        generated_at="2026-04-14T04:00:00Z",
+    )
+    probe_request = svc.build_frontend_browser_gate_probe_request()
+    probe_result = svc.execute_frontend_browser_gate_probe(
+        request=probe_request,
+        generated_at="2026-04-14T04:05:00Z",
+    )
+    artifact_path = root / probe_result.artifact_path
+    payload = yaml.safe_load(artifact_path.read_text(encoding="utf-8"))
+    payload["overall_gate_status"] = "passed"
+    payload["bundle_input"]["overall_gate_status"] = "passed"
+    for receipt in payload["bundle_input"]["check_receipts"]:
+        receipt["classification_candidate"] = "pass"
+        receipt["recheck_required"] = False
+        receipt["blocking_reason_codes"] = []
+        receipt["remediation_hints"] = []
+        receipt["runtime_status"] = "completed"
+    payload["bundle_input"]["blocking_reason_codes"] = []
+    artifact_path.write_text(
+        yaml.safe_dump(payload, sort_keys=False, allow_unicode=True),
+        encoding="utf-8",
+    )
+
+    plan = svc.build_integration_dry_run(_manifest())
+
+    step = next(item for item in plan.steps if item.spec_id == "001-auth")
+    assert step.frontend_recheck_handoff is None
+
+
+def test_execute_frontend_remediation_runbook_stays_incomplete_when_browser_gate_recheck_remains(
+    initialized_project_dir: Path,
+) -> None:
+    root = initialized_project_dir
+    save_project_config(root, ProjectConfig(adapter_ingress_state="verified_loaded"))
+    _write_frontend_solution_confirmation_artifacts(root)
+    _write_frontend_visual_a11y_evidence(
+        root / "specs" / "001-auth",
+        [
+            FrontendVisualA11yEvidenceEvaluation(
+                evaluation_id="001-auth-visual-a11y-issue",
+                target_id="user-create",
+                surface_id="success-feedback",
+                outcome="issue",
+                report_type="violation-report",
+                severity="medium",
+                location_anchor="feedback.banner",
+                quality_hint="review success feedback visibility and semantics",
+                changed_scope_explanation="071 issue fixture",
+            )
+        ],
+    )
+    request_path = _write_artifact_generate_apply_request(root)
+    svc = ProgramService(root)
+    apply_request = svc.build_frontend_managed_delivery_apply_request(request_path)
+    apply_result = svc.execute_frontend_managed_delivery_apply(
+        request_path,
+        request=apply_request,
+        confirmed=True,
+    )
+    svc.write_frontend_managed_delivery_apply_artifact(
+        request_path,
+        request=apply_request,
+        result=apply_result,
+        generated_at="2026-04-14T04:00:00Z",
+    )
+    probe_request = svc.build_frontend_browser_gate_probe_request()
+    probe_result = svc.execute_frontend_browser_gate_probe(
+        request=probe_request,
+        generated_at="2026-04-14T04:05:00Z",
+    )
+    artifact_path = root / probe_result.artifact_path
+    payload = yaml.safe_load(artifact_path.read_text(encoding="utf-8"))
+    payload["overall_gate_status"] = "blocked"
+    payload["bundle_input"]["overall_gate_status"] = "blocked"
+    for receipt in payload["bundle_input"]["check_receipts"]:
+        if receipt["check_name"] in {"playwright_smoke", "interaction_anti_pattern_checks"}:
+            receipt["classification_candidate"] = "pass"
+            receipt["recheck_required"] = False
+            receipt["blocking_reason_codes"] = []
+            receipt["remediation_hints"] = []
+            receipt["runtime_status"] = "completed"
+        else:
+            receipt["classification_candidate"] = "actual_quality_blocker"
+            receipt["blocking_reason_codes"] = ["visual_a11y_quality_blocker"]
+            receipt["remediation_hints"] = [
+                "review frontend visual / a11y issue findings"
+            ]
+    payload["bundle_input"]["blocking_reason_codes"] = ["visual_a11y_quality_blocker"]
+    artifact_path.write_text(
+        yaml.safe_dump(payload, sort_keys=False, allow_unicode=True),
+        encoding="utf-8",
+    )
+
+    result = svc.execute_frontend_remediation_runbook(_manifest())
+
+    assert result.passed is False
+    assert result.blockers
+
+
 def test_validate_manifest_cycle(tmp_path: Path) -> None:
     (tmp_path / "specs" / "a").mkdir(parents=True)
     (tmp_path / "specs" / "b").mkdir(parents=True)

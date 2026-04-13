@@ -22,6 +22,7 @@ from ai_sdlc.core.frontend_gate_verification import (
     FRONTEND_GATE_SOURCE_NAME,
     FRONTEND_GATE_VISUAL_A11Y_CHECK_OBJECT,
     FRONTEND_GATE_VISUAL_A11Y_EVIDENCE_OBJECT,
+    build_frontend_browser_gate_execute_decision,
     build_frontend_gate_execute_decision,
     build_frontend_gate_verification_context,
     build_frontend_gate_verification_report,
@@ -43,6 +44,11 @@ from ai_sdlc.models.frontend_gate_policy import (
 )
 from ai_sdlc.models.frontend_generation_constraints import (
     build_mvp_frontend_generation_constraints,
+)
+from ai_sdlc.models.frontend_browser_gate import (
+    BrowserProbeExecutionReceipt,
+    BrowserQualityBundleMaterializationInput,
+    BrowserQualityGateExecutionContext,
 )
 
 
@@ -398,6 +404,156 @@ def test_frontend_gate_execute_decision_allows_framework_capability_when_attachm
         decision.source_linkage_refs["frontend_attachment_requirement"]
         == "waived_for_framework_capability"
     )
+
+
+def test_frontend_browser_gate_execute_decision_maps_incomplete_bundle_to_recheck_required() -> None:
+    context = BrowserQualityGateExecutionContext(
+        gate_run_id="gate-run-001",
+        apply_result_id="apply-result-001",
+        solution_snapshot_id="snapshot-001",
+        spec_dir="specs/001-auth",
+        attachment_scope_ref="scope://001-auth",
+        managed_frontend_target="managed/frontend",
+        readiness_subject_id="001-auth",
+        effective_provider="public-primevue",
+        effective_style_pack="modern-saas",
+        style_fidelity_status="full",
+        required_probe_set=["playwright_smoke"],
+        browser_entry_ref="managed/frontend",
+    )
+    bundle = BrowserQualityBundleMaterializationInput(
+        bundle_id="bundle-001",
+        gate_run_id="gate-run-001",
+        apply_result_id="apply-result-001",
+        solution_snapshot_id="snapshot-001",
+        spec_dir="specs/001-auth",
+        attachment_scope_ref="scope://001-auth",
+        managed_frontend_target="managed/frontend",
+        source_artifact_ref=".ai-sdlc/memory/frontend-managed-delivery/latest.yaml",
+        readiness_subject_id="001-auth",
+        check_receipts=[
+            BrowserProbeExecutionReceipt(
+                check_name="playwright_smoke",
+                started_at="2026-04-14T04:05:00Z",
+                finished_at="2026-04-14T04:05:00Z",
+                runtime_status="incomplete",
+                classification_candidate="evidence_missing",
+                recheck_required=True,
+                remediation_hints=["materialize shared Playwright runtime evidence"],
+                blocking_reason_codes=["playwright_probe_evidence_missing"],
+            )
+        ],
+        smoke_verdict="evidence_missing",
+        visual_verdict="pass",
+        a11y_verdict="pass",
+        interaction_anti_pattern_verdict="pass",
+        overall_gate_status="incomplete",
+        blocking_reason_codes=["playwright_probe_evidence_missing"],
+        generated_at="2026-04-14T04:05:00Z",
+    )
+
+    decision = build_frontend_browser_gate_execute_decision(
+        execution_context=context,
+        bundle=bundle,
+        artifact_path=".ai-sdlc/memory/frontend-browser-gate/latest.yaml",
+    )
+
+    assert decision.execute_gate_state == FRONTEND_GATE_EXECUTE_STATE_RECHECK_REQUIRED
+    assert decision.decision_reason == "evidence_missing"
+    assert decision.recheck_required is True
+    assert "playwright_probe_evidence_missing" in decision.recheck_reason_codes
+    assert (
+        decision.source_linkage_refs["frontend_browser_gate_gate_run_id"] == "gate-run-001"
+    )
+
+
+def test_frontend_browser_gate_execute_decision_fails_closed_on_scope_mismatch() -> None:
+    context = BrowserQualityGateExecutionContext(
+        gate_run_id="gate-run-001",
+        apply_result_id="apply-result-001",
+        solution_snapshot_id="snapshot-001",
+        spec_dir="specs/001-auth",
+        attachment_scope_ref="scope://001-auth",
+        managed_frontend_target="managed/frontend",
+        readiness_subject_id="001-auth",
+        effective_provider="public-primevue",
+        effective_style_pack="modern-saas",
+        style_fidelity_status="full",
+        required_probe_set=["playwright_smoke"],
+        browser_entry_ref="managed/frontend",
+    )
+    bundle = BrowserQualityBundleMaterializationInput(
+        bundle_id="bundle-001",
+        gate_run_id="gate-run-001",
+        apply_result_id="apply-result-001",
+        solution_snapshot_id="snapshot-001",
+        spec_dir="specs/002-course",
+        attachment_scope_ref="scope://001-auth",
+        managed_frontend_target="managed/frontend",
+        source_artifact_ref=".ai-sdlc/memory/frontend-managed-delivery/latest.yaml",
+        readiness_subject_id="001-auth",
+        check_receipts=[],
+        smoke_verdict="pass",
+        visual_verdict="pass",
+        a11y_verdict="pass",
+        interaction_anti_pattern_verdict="pass",
+        overall_gate_status="passed",
+        generated_at="2026-04-14T04:05:00Z",
+    )
+
+    decision = build_frontend_browser_gate_execute_decision(
+        execution_context=context,
+        bundle=bundle,
+        artifact_path=".ai-sdlc/memory/frontend-browser-gate/latest.yaml",
+    )
+
+    assert decision.execute_gate_state == FRONTEND_GATE_EXECUTE_STATE_BLOCKED
+    assert decision.decision_reason == "scope_or_linkage_invalid"
+
+
+def test_frontend_browser_gate_execute_decision_blocks_when_required_probe_receipts_missing() -> None:
+    context = BrowserQualityGateExecutionContext(
+        gate_run_id="gate-run-001",
+        apply_result_id="apply-result-001",
+        solution_snapshot_id="snapshot-001",
+        spec_dir="specs/001-auth",
+        attachment_scope_ref="scope://001-auth",
+        managed_frontend_target="managed/frontend",
+        readiness_subject_id="001-auth",
+        effective_provider="public-primevue",
+        effective_style_pack="modern-saas",
+        style_fidelity_status="full",
+        required_probe_set=["playwright_smoke", "visual_expectation"],
+        browser_entry_ref="managed/frontend",
+    )
+    bundle = BrowserQualityBundleMaterializationInput(
+        bundle_id="bundle-001",
+        gate_run_id="gate-run-001",
+        apply_result_id="apply-result-001",
+        solution_snapshot_id="snapshot-001",
+        spec_dir="specs/001-auth",
+        attachment_scope_ref="scope://001-auth",
+        managed_frontend_target="managed/frontend",
+        source_artifact_ref=".ai-sdlc/memory/frontend-managed-delivery/latest.yaml",
+        readiness_subject_id="001-auth",
+        check_receipts=[],
+        smoke_verdict="pass",
+        visual_verdict="pass",
+        a11y_verdict="pass",
+        interaction_anti_pattern_verdict="pass",
+        overall_gate_status="passed",
+        generated_at="2026-04-14T04:05:00Z",
+    )
+
+    decision = build_frontend_browser_gate_execute_decision(
+        execution_context=context,
+        bundle=bundle,
+        artifact_path=".ai-sdlc/memory/frontend-browser-gate/latest.yaml",
+        apply_artifact_path=".ai-sdlc/memory/frontend-managed-delivery/latest.yaml",
+    )
+
+    assert decision.execute_gate_state == FRONTEND_GATE_EXECUTE_STATE_BLOCKED
+    assert decision.decision_reason == "result_inconsistency"
 
 
 def test_frontend_gate_verification_report_flags_missing_visual_a11y_extension_artifacts(

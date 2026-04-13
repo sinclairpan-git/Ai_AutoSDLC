@@ -820,10 +820,6 @@ def program_browser_gate_probe(
             f"  - browser entry ref: {request.execution_context.browser_entry_ref}",
             markup=False,
         )
-        console.print(
-            "  - current slice materializes gate-run runtime truth; execute readiness stays downstream",
-            markup=False,
-        )
     if request.overall_gate_status_preview:
         console.print(
             f"  - overall gate status preview: {request.overall_gate_status_preview}",
@@ -842,6 +838,21 @@ def program_browser_gate_probe(
     console.print(f"  - gate run id: {result.gate_run_id}", markup=False)
     console.print(f"  - artifact path: {result.artifact_path}", markup=False)
     console.print(f"  - artifact root: {result.artifact_root}", markup=False)
+    if result.execute_gate_state:
+        console.print(
+            f"  - execute gate state: {result.execute_gate_state}",
+            markup=False,
+        )
+    if result.decision_reason:
+        console.print(
+            f"  - decision reason: {result.decision_reason}",
+            markup=False,
+        )
+    if result.recommended_next_command:
+        console.print(
+            f"  - next command: {result.recommended_next_command}",
+            markup=False,
+        )
     for blocker in result.remaining_blockers:
         console.print(f"  - blocker: {blocker}", markup=False)
     if result.warnings:

@@ -28,6 +28,8 @@ from ai_sdlc.core.frontend_gate_verification import (
     FRONTEND_GATE_EXECUTE_STATE_READY,
     FRONTEND_GATE_EXECUTE_STATE_RECHECK_REQUIRED,
     FRONTEND_GATE_SOURCE_NAME,
+    FrontendGateExecuteDecision,
+    build_frontend_browser_gate_execute_decision,
     build_frontend_gate_execute_decision,
     build_frontend_gate_verification_report,
 )
@@ -51,6 +53,9 @@ from ai_sdlc.generators.frontend_generation_constraint_artifacts import (
     materialize_frontend_generation_constraint_artifacts,
 )
 from ai_sdlc.models.frontend_browser_gate import (
+    BrowserGateProbeRuntimeSession,
+    BrowserProbeArtifactRecord,
+    BrowserQualityBundleMaterializationInput,
     BrowserQualityGateExecutionContext,
 )
 from ai_sdlc.models.frontend_gate_policy import (
@@ -95,6 +100,9 @@ PROGRAM_FRONTEND_RUNTIME_ATTACHMENT_SOURCE_NAME = (
     "frontend contract runtime attachment"
 )
 PROGRAM_FRONTEND_RECHECK_COMMAND = "uv run ai-sdlc verify constraints"
+PROGRAM_FRONTEND_BROWSER_GATE_RECHECK_COMMAND = (
+    "uv run ai-sdlc program browser-gate-probe --execute"
+)
 PROGRAM_FRONTEND_VISUAL_A11Y_ISSUE_REVIEW_INPUT = (
     "frontend_visual_a11y_issue_review"
 )
@@ -353,6 +361,9 @@ class ProgramFrontendBrowserGateProbeResult:
     gate_run_id: str
     artifact_path: str
     artifact_root: str
+    execute_gate_state: str = ""
+    decision_reason: str = ""
+    recommended_next_command: str = ""
     required_probe_set: list[str] = field(default_factory=list)
     remaining_blockers: list[str] = field(default_factory=list)
     warnings: list[str] = field(default_factory=list)
@@ -1818,6 +1829,18 @@ class ProgramService:
             yaml.safe_dump(payload, sort_keys=False, allow_unicode=True),
             encoding="utf-8",
         )
+        execute_decision = build_frontend_browser_gate_execute_decision(
+            execution_context=context,
+            bundle=bundle,
+            artifact_path=relative_artifact_path,
+            probe_runtime_state=session.status,
+            apply_artifact_path=apply_artifact_rel,
+        )
+        recommended_next_command = ""
+        if execute_decision.execute_gate_state == FRONTEND_GATE_EXECUTE_STATE_RECHECK_REQUIRED:
+            recommended_next_command = PROGRAM_FRONTEND_BROWSER_GATE_RECHECK_COMMAND
+        elif execute_decision.execute_gate_state != FRONTEND_GATE_EXECUTE_STATE_READY:
+            recommended_next_command = "uv run ai-sdlc program remediate --dry-run"
         return ProgramFrontendBrowserGateProbeResult(
             passed=True,
             probe_runtime_state=session.status,
@@ -1825,6 +1848,9 @@ class ProgramService:
             gate_run_id=gate_run_id,
             artifact_path=relative_artifact_path,
             artifact_root=session.artifact_root_ref,
+            execute_gate_state=execute_decision.execute_gate_state,
+            decision_reason=execute_decision.decision_reason,
+            recommended_next_command=recommended_next_command,
             required_probe_set=list(context.required_probe_set),
             warnings=list(effective_request.warnings),
         )
@@ -2088,6 +2114,202 @@ class ProgramService:
         except ValueError:
             return None
 
+    def _build_frontend_browser_gate_execute_decision(
+        self,
+        spec_dir: Path,
+    ) -> tuple[FrontendGateExecuteDecision | None, str]:
+        artifact_path = self.root / PROGRAM_FRONTEND_BROWSER_GATE_ARTIFACT_REL_PATH
+        if not artifact_path.is_file():
+            return None, ""
+
+        try:
+            payload = yaml.safe_load(artifact_path.read_text(encoding="utf-8")) or {}
+        except yaml.YAMLError as exc:
+            return (
+                _invalid_browser_gate_artifact_decision(
+                    f"frontend_browser_gate_artifact_invalid:{exc}"
+                ),
+                "",
+            )
+
+        try:
+            execution_context = BrowserQualityGateExecutionContext.model_validate(
+                payload.get("execution_context", {})
+            )
+        except Exception as exc:
+            return (
+                _invalid_browser_gate_artifact_decision(
+                    f"frontend_browser_gate_execution_context_invalid:{exc}"
+                ),
+                "",
+            )
+
+        expected_spec_dir = _relative_to_root_or_str(self.root, spec_dir)
+        if execution_context.spec_dir != expected_spec_dir:
+            return None, ""
+
+        current_apply_artifact_path = (
+            self.root / PROGRAM_FRONTEND_MANAGED_DELIVERY_APPLY_ARTIFACT_REL_PATH
+        )
+        if not current_apply_artifact_path.is_file():
+            return (
+                _invalid_browser_gate_artifact_decision(
+                    "frontend_browser_gate_apply_artifact_missing"
+                ),
+                str(payload.get("overall_gate_status", "")).strip(),
+            )
+        try:
+            current_apply_payload = yaml.safe_load(
+                current_apply_artifact_path.read_text(encoding="utf-8")
+            ) or {}
+        except yaml.YAMLError as exc:
+            return (
+                _invalid_browser_gate_artifact_decision(
+                    f"frontend_browser_gate_apply_artifact_invalid:{exc}"
+                ),
+                str(payload.get("overall_gate_status", "")).strip(),
+            )
+        current_snapshot, snapshot_blocker = self._load_latest_frontend_solution_snapshot()
+        if current_snapshot is None:
+            return (
+                _invalid_browser_gate_artifact_decision(
+                    snapshot_blocker or "frontend_browser_gate_solution_snapshot_missing"
+                ),
+                str(payload.get("overall_gate_status", "")).strip(),
+            )
+        try:
+            expected_context = build_browser_quality_gate_execution_context(
+                apply_payload=current_apply_payload,
+                solution_snapshot=current_snapshot,
+                gate_run_id=execution_context.gate_run_id,
+            )
+        except ValueError as exc:
+            return (
+                _invalid_browser_gate_artifact_decision(
+                    f"frontend_browser_gate_current_context_invalid:{exc}"
+                ),
+                str(payload.get("overall_gate_status", "")).strip(),
+            )
+        if any(
+            (
+                expected_context.apply_result_id != execution_context.apply_result_id,
+                expected_context.solution_snapshot_id
+                != execution_context.solution_snapshot_id,
+                expected_context.spec_dir != execution_context.spec_dir,
+                expected_context.attachment_scope_ref
+                != execution_context.attachment_scope_ref,
+                expected_context.managed_frontend_target
+                != execution_context.managed_frontend_target,
+                expected_context.readiness_subject_id
+                != execution_context.readiness_subject_id,
+                expected_context.effective_provider
+                != execution_context.effective_provider,
+                expected_context.effective_style_pack
+                != execution_context.effective_style_pack,
+                expected_context.style_fidelity_status
+                != execution_context.style_fidelity_status,
+                expected_context.browser_entry_ref != execution_context.browser_entry_ref,
+                tuple(expected_context.required_probe_set)
+                != tuple(execution_context.required_probe_set),
+            )
+        ):
+            return (
+                _invalid_browser_gate_artifact_decision(
+                    "frontend_browser_gate_current_truth_drift"
+                ),
+                str(payload.get("overall_gate_status", "")).strip(),
+            )
+
+        try:
+            runtime_session = BrowserGateProbeRuntimeSession.model_validate(
+                payload.get("runtime_session", {})
+            )
+        except Exception as exc:
+            return (
+                _invalid_browser_gate_artifact_decision(
+                    f"frontend_browser_gate_runtime_session_invalid:{exc}"
+                ),
+                str(payload.get("overall_gate_status", "")).strip(),
+            )
+
+        try:
+            artifact_records = [
+                BrowserProbeArtifactRecord.model_validate(item)
+                for item in payload.get("artifact_records", []) or []
+            ]
+        except Exception as exc:
+            return (
+                _invalid_browser_gate_artifact_decision(
+                    f"frontend_browser_gate_artifact_records_invalid:{exc}"
+                ),
+                str(payload.get("overall_gate_status", "")).strip(),
+            )
+
+        try:
+            bundle = BrowserQualityBundleMaterializationInput.model_validate(
+                payload.get("bundle_input", {})
+            )
+        except Exception:
+            return (
+                build_frontend_browser_gate_execute_decision(
+                    execution_context=execution_context,
+                    bundle=BrowserQualityBundleMaterializationInput(
+                        bundle_id="invalid-browser-gate-bundle",
+                        gate_run_id=str(payload.get("gate_run_id", "")).strip(),
+                        apply_result_id=execution_context.apply_result_id,
+                        solution_snapshot_id=execution_context.solution_snapshot_id,
+                        spec_dir=execution_context.spec_dir,
+                        attachment_scope_ref=execution_context.attachment_scope_ref,
+                        managed_frontend_target=execution_context.managed_frontend_target,
+                        source_artifact_ref="",
+                        readiness_subject_id=execution_context.readiness_subject_id,
+                        check_receipts=[],
+                        smoke_verdict="pass",
+                        visual_verdict="pass",
+                        a11y_verdict="pass",
+                        interaction_anti_pattern_verdict="pass",
+                        overall_gate_status="passed",
+                        generated_at=str(payload.get("generated_at", "")).strip()
+                        or utc_now_z(),
+                    ),
+                    artifact_path=PROGRAM_FRONTEND_BROWSER_GATE_ARTIFACT_REL_PATH,
+                    probe_runtime_state=str(payload.get("probe_runtime_state", "")).strip(),
+                    apply_artifact_path=str(payload.get("apply_artifact_path", "")).strip(),
+                ),
+                str(payload.get("overall_gate_status", "")).strip(),
+            )
+
+        expected_artifact_root = (
+            f".ai-sdlc/artifacts/frontend-browser-gate/{bundle.gate_run_id}"
+        )
+        if (
+            runtime_session.gate_run_id != execution_context.gate_run_id
+            or runtime_session.gate_run_id != bundle.gate_run_id
+            or runtime_session.artifact_root_ref != expected_artifact_root
+            or any(
+                record.gate_run_id != bundle.gate_run_id
+                or not record.artifact_ref.startswith(f"{expected_artifact_root}/")
+                for record in artifact_records
+            )
+        ):
+            return (
+                _invalid_browser_gate_artifact_decision(
+                    "frontend_browser_gate_artifact_namespace_invalid"
+                ),
+                bundle.overall_gate_status,
+            )
+
+        return (
+            build_frontend_browser_gate_execute_decision(
+                execution_context=execution_context,
+                bundle=bundle,
+                artifact_path=PROGRAM_FRONTEND_BROWSER_GATE_ARTIFACT_REL_PATH,
+                probe_runtime_state=str(payload.get("probe_runtime_state", "")).strip(),
+                apply_artifact_path=PROGRAM_FRONTEND_MANAGED_DELIVERY_APPLY_ARTIFACT_REL_PATH,
+            ),
+            bundle.overall_gate_status,
+        )
+
     def build_integration_dry_run(self, manifest: ProgramManifest) -> ProgramIntegrationPlan:
         """Build a dry-run integration plan (no git mutations)."""
         tiers = self.topo_tiers(manifest)
@@ -2162,10 +2384,18 @@ class ProgramService:
             step_action_commands = [
                 command
                 for command in remediation.recommended_commands
-                if command != PROGRAM_FRONTEND_RECHECK_COMMAND
+                if command
+                not in (
+                    PROGRAM_FRONTEND_RECHECK_COMMAND,
+                    PROGRAM_FRONTEND_BROWSER_GATE_RECHECK_COMMAND,
+                )
             ]
-            if PROGRAM_FRONTEND_RECHECK_COMMAND in remediation.recommended_commands:
-                follow_up_commands.append(PROGRAM_FRONTEND_RECHECK_COMMAND)
+            for follow_up_command in (
+                PROGRAM_FRONTEND_BROWSER_GATE_RECHECK_COMMAND,
+                PROGRAM_FRONTEND_RECHECK_COMMAND,
+            ):
+                if follow_up_command in remediation.recommended_commands:
+                    follow_up_commands.append(follow_up_command)
 
             steps.append(
                 ProgramFrontendRemediationRunbookStep(
@@ -2227,6 +2457,16 @@ class ProgramService:
                     for step in remaining.steps
                 ]
             )
+        remaining_plan = self.build_integration_dry_run(manifest)
+        blockers.extend(
+            [
+                f"spec {step.spec_id} browser gate recheck still required"
+                for step in remaining_plan.steps
+                if step.frontend_recheck_handoff is not None
+                and PROGRAM_FRONTEND_BROWSER_GATE_RECHECK_COMMAND
+                in step.frontend_recheck_handoff.recommended_commands
+            ]
+        )
 
         return ProgramFrontendRemediationExecutionResult(
             passed=not blockers,
@@ -5852,10 +6092,28 @@ class ProgramService:
             gate_report=gate_report,
             frontend_evidence_class=frontend_evidence_class,
         )
+        browser_gate_decision, browser_gate_status = (
+            self._build_frontend_browser_gate_execute_decision(spec_dir)
+        )
+        frontend_gate_source = FRONTEND_GATE_SOURCE_NAME
+        if browser_gate_decision is not None:
+            execute_decision = browser_gate_decision
+            frontend_gate_source = "frontend_browser_gate_artifact"
+            gate_verdict = browser_gate_status or gate_verdict
+            if execute_decision.execute_gate_state == FRONTEND_GATE_EXECUTE_STATE_READY:
+                coverage_gaps = []
+                blockers = []
+            elif execute_decision.execute_gate_state == FRONTEND_GATE_EXECUTE_STATE_RECHECK_REQUIRED:
+                coverage_gaps = list(execute_decision.recheck_reason_codes)
+                blockers = list(execute_decision.blockers)
+            else:
+                coverage_gaps = list(execute_decision.remediation_reason_codes)
+                blockers = list(execute_decision.blockers)
         if (
             execute_decision.execute_gate_state == FRONTEND_GATE_EXECUTE_STATE_READY
             and execute_decision.decision_reason == "advisory_only"
             and attachment.status != FRONTEND_CONTRACT_RUNTIME_ATTACHMENT_STATUS_ATTACHED
+            and browser_gate_decision is None
         ):
             coverage_gaps = [
                 gap for gap in coverage_gaps if gap != "frontend_contract_observations"
@@ -5865,14 +6123,21 @@ class ProgramService:
                 for blocker in blockers
                 if "missing canonical observation artifact" not in blocker
             ]
-        return ProgramFrontendReadiness(
-            state=self._frontend_readiness_state(
+        readiness_state = (
+            PROGRAM_FRONTEND_READINESS_READY
+            if execute_decision.execute_gate_state == FRONTEND_GATE_EXECUTE_STATE_READY
+            else PROGRAM_FRONTEND_READINESS_RETRY
+            if browser_gate_decision is not None
+            else self._frontend_readiness_state(
                 attachment_status=attachment.status,
                 gate_verdict=gate_verdict,
                 execute_gate_state=execute_decision.execute_gate_state,
                 coverage_gaps=coverage_gaps,
                 blockers=blockers,
-            ),
+            )
+        )
+        return ProgramFrontendReadiness(
+            state=readiness_state,
             attachment_status=attachment.status,
             gate_verdict=gate_verdict,
             execute_gate_state=execute_decision.execute_gate_state,
@@ -5886,7 +6151,7 @@ class ProgramService:
             source_linkage={
                 "runtime_attachment_source": PROGRAM_FRONTEND_RUNTIME_ATTACHMENT_SOURCE_NAME,
                 "runtime_attachment_status": attachment.status,
-                "frontend_gate_source": FRONTEND_GATE_SOURCE_NAME,
+                "frontend_gate_source": frontend_gate_source,
                 "frontend_gate_verdict": gate_verdict,
                 "frontend_execute_gate_state": execute_decision.execute_gate_state,
                 "frontend_execute_decision_reason": execute_decision.decision_reason,
@@ -5919,16 +6184,27 @@ class ProgramService:
             return None
 
         effective_state = readiness.execute_gate_state or readiness.state
+        if (
+            _readiness_uses_browser_gate_artifact(readiness)
+            and effective_state == FRONTEND_GATE_EXECUTE_STATE_READY
+        ):
+            return None
         if effective_state not in (
             FRONTEND_GATE_EXECUTE_STATE_READY,
             FRONTEND_GATE_EXECUTE_STATE_RECHECK_REQUIRED,
         ):
             return None
 
+        recommended_command = (
+            PROGRAM_FRONTEND_BROWSER_GATE_RECHECK_COMMAND
+            if _readiness_uses_browser_gate_artifact(readiness)
+            else PROGRAM_FRONTEND_RECHECK_COMMAND
+        )
+
         return ProgramFrontendRecheckHandoff(
             required=True,
             reason=_frontend_recheck_reason(readiness),
-            recommended_commands=[PROGRAM_FRONTEND_RECHECK_COMMAND],
+            recommended_commands=[recommended_command],
             source_linkage=dict(readiness.source_linkage),
         )
 
@@ -5976,6 +6252,15 @@ class ProgramService:
             suggested_actions.append("review stable empty frontend visual / a11y evidence")
         if PROGRAM_FRONTEND_VISUAL_A11Y_ISSUE_REVIEW_INPUT in fix_inputs:
             suggested_actions.append("review frontend visual / a11y issue findings")
+        if "playwright_probe_evidence_missing" in fix_inputs:
+            suggested_actions.append("materialize shared Playwright runtime evidence")
+        if "interaction_probe_evidence_missing" in fix_inputs:
+            suggested_actions.append("materialize interaction anti-pattern probe evidence")
+        if (
+            "visual_expectation_evidence_missing" in fix_inputs
+            or "basic_a11y_evidence_missing" in fix_inputs
+        ):
+            suggested_actions.append("materialize browser gate visual / a11y probe evidence")
         if "frontend_gate_policy_artifacts" in fix_inputs:
             suggested_actions.append("materialize frontend gate policy artifacts")
         if "frontend_generation_governance_artifacts" in fix_inputs:
@@ -5995,6 +6280,8 @@ class ProgramService:
             or "frontend_generation_governance_artifacts" in fix_inputs
         ):
             recommended_commands.append("uv run ai-sdlc rules materialize-frontend-mvp")
+        if _readiness_uses_browser_gate_artifact(readiness):
+            recommended_commands.append(PROGRAM_FRONTEND_BROWSER_GATE_RECHECK_COMMAND)
         recommended_commands.append(PROGRAM_FRONTEND_RECHECK_COMMAND)
 
         return ProgramFrontendRemediationInput(
@@ -6053,6 +6340,34 @@ class ProgramService:
                 status="executed",
                 written_paths=[str(path.relative_to(self.root)) for path in paths],
                 summary=f"materialized {len(paths)} frontend governance artifacts",
+            )
+
+        if command == PROGRAM_FRONTEND_BROWSER_GATE_RECHECK_COMMAND:
+            request = self.build_frontend_browser_gate_probe_request()
+            if request.execution_context is None:
+                return ProgramFrontendRemediationCommandResult(
+                    command=command,
+                    status="failed",
+                    blockers=list(request.remaining_blockers),
+                    summary=(
+                        request.remaining_blockers[0]
+                        if request.remaining_blockers
+                        else "browser gate probe request not executable"
+                    ),
+                )
+            result = self.execute_frontend_browser_gate_probe(request=request)
+            return ProgramFrontendRemediationCommandResult(
+                command=command,
+                status="executed",
+                written_paths=(
+                    [result.artifact_path]
+                    if result.artifact_path
+                    else []
+                ),
+                summary=(
+                    "browser gate probe materialized "
+                    f"overall_gate_status={result.overall_gate_status}"
+                ),
             )
 
         if command == PROGRAM_FRONTEND_RECHECK_COMMAND:
@@ -8058,7 +8373,15 @@ def _normalize_string_mapping(value: object) -> dict[str, str]:
 def _has_frontend_visual_a11y_issue_blocker(
     blockers: list[str] | tuple[str, ...],
 ) -> bool:
-    return any("visual / a11y issues detected" in str(blocker) for blocker in blockers)
+    return any(
+        marker in str(blocker)
+        for blocker in blockers
+        for marker in (
+            "visual / a11y issues detected",
+            "review frontend visual / a11y issue findings",
+            "visual_a11y_quality_blocker",
+        )
+    )
 
 
 def _relative_to_root_or_str(root: Path, path: Path) -> str:
@@ -8109,6 +8432,19 @@ def _frontend_recheck_reason(readiness: ProgramFrontendReadiness) -> str:
     if effective_state == FRONTEND_GATE_EXECUTE_STATE_READY:
         return "re-run frontend verification after execute before close"
 
+    if _readiness_uses_browser_gate_artifact(readiness):
+        gate_run_id = readiness.source_linkage.get(
+            "frontend_browser_gate_gate_run_id", ""
+        ).strip()
+        gate_run_suffix = f" for {gate_run_id}" if gate_run_id else ""
+        recheck_codes = set(readiness.recheck_reason_codes)
+        if recheck_codes:
+            return (
+                "materialize missing browser gate probe evidence and "
+                f"re-run browser gate probe{gate_run_suffix}"
+            )
+        return f"re-run browser gate probe{gate_run_suffix}"
+
     recheck_codes = set(readiness.recheck_reason_codes)
     if "frontend_visual_a11y_evidence_input" in recheck_codes:
         return (
@@ -8121,3 +8457,27 @@ def _frontend_recheck_reason(readiness: ProgramFrontendReadiness) -> str:
     if readiness.decision_reason == "transient_run_failure":
         return "re-run browser gate verification after transient runtime failure"
     return "re-run browser gate verification before execute"
+
+
+def _readiness_uses_browser_gate_artifact(
+    readiness: ProgramFrontendReadiness,
+) -> bool:
+    return bool(readiness.source_linkage.get("frontend_browser_gate_artifact_path", "").strip())
+
+
+def _invalid_browser_gate_artifact_decision(
+    reason_code: str,
+) -> FrontendGateExecuteDecision:
+    return FrontendGateExecuteDecision(
+        execute_gate_state="blocked",
+        decision_reason="scope_or_linkage_invalid",
+        blockers=(f"browser gate artifact invalid: {reason_code}",),
+        remediation_hints=(f"browser gate artifact invalid: {reason_code}",),
+        remediation_reason_codes=(reason_code,),
+        source_linkage_refs={
+            "frontend_execute_gate_source": "frontend_browser_gate_artifact",
+            "frontend_browser_gate_artifact_path": (
+                PROGRAM_FRONTEND_BROWSER_GATE_ARTIFACT_REL_PATH
+            ),
+        },
+    )

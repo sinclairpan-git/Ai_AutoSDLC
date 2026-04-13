@@ -143,6 +143,7 @@ related_doc:
 - **交付流**：`S7`
 - **来源范围**：`104`、`105`、`106`
 - **当前状态**：`capability_open`
+- **派生状态**：已派生 `126-frontend-mainline-browser-gate-recheck-remediation-runtime-closure-baseline`；在 `126` focused verification 通过前仍保持 `capability_open`
 - **缺失 carrier**：
   - browser gate replay / recheck runtime closure
   - remediation input / runbook continuation
@@ -154,7 +155,7 @@ related_doc:
   2. browser gate 的 replay/recheck 路径不再停留在 baseline wording
   3. `105` 的“首批切片”被推进到整链可用，而不是局部映射
 - **验证**：`uv run pytest tests/unit/test_frontend_gate_verification.py tests/unit/test_program_service.py tests/integration/test_cli_program.py -q`
-- **建议派生工单**：implementation carrier
+- **建议派生工单**：`126-frontend-mainline-browser-gate-recheck-remediation-runtime-closure-baseline`
 
 ---
 
