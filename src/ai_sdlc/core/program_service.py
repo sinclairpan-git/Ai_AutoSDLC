@@ -11,6 +11,10 @@ from pathlib import Path
 import yaml
 
 from ai_sdlc.branch.git_client import GitClient, GitError
+from ai_sdlc.core.frontend_browser_gate_runtime import (
+    build_browser_quality_gate_execution_context,
+    materialize_browser_gate_probe_runtime,
+)
 from ai_sdlc.core.config import YamlStore, load_project_config
 from ai_sdlc.core.managed_delivery_apply import (
     ALLOWED_ACTION_TYPES,
@@ -28,6 +32,7 @@ from ai_sdlc.core.frontend_gate_verification import (
     build_frontend_gate_verification_report,
 )
 from ai_sdlc.core.frontend_visual_a11y_evidence_provider import (
+    FrontendVisualA11yEvidenceArtifact,
     load_frontend_visual_a11y_evidence_artifact,
     visual_a11y_evidence_artifact_path,
 )
@@ -39,8 +44,14 @@ from ai_sdlc.core.verify_constraints import (
 from ai_sdlc.generators.frontend_gate_policy_artifacts import (
     materialize_frontend_gate_policy_artifacts,
 )
+from ai_sdlc.generators.frontend_solution_confirmation_artifacts import (
+    frontend_solution_confirmation_memory_root,
+)
 from ai_sdlc.generators.frontend_generation_constraint_artifacts import (
     materialize_frontend_generation_constraint_artifacts,
+)
+from ai_sdlc.models.frontend_browser_gate import (
+    BrowserQualityGateExecutionContext,
 )
 from ai_sdlc.models.frontend_gate_policy import (
     build_p1_frontend_gate_policy_visual_a11y_foundation,
@@ -99,6 +110,12 @@ PROGRAM_FRONTEND_GOVERNANCE_MATERIALIZE_COMMAND = (
 )
 PROGRAM_FRONTEND_REMEDIATION_WRITEBACK_REL_PATH = (
     ".ai-sdlc/memory/frontend-remediation/latest.yaml"
+)
+PROGRAM_FRONTEND_MANAGED_DELIVERY_APPLY_ARTIFACT_REL_PATH = (
+    ".ai-sdlc/memory/frontend-managed-delivery/latest.yaml"
+)
+PROGRAM_FRONTEND_BROWSER_GATE_ARTIFACT_REL_PATH = (
+    ".ai-sdlc/memory/frontend-browser-gate/latest.yaml"
 )
 PROGRAM_FRONTEND_PROVIDER_RUNTIME_ARTIFACT_REL_PATH = (
     ".ai-sdlc/memory/frontend-provider-runtime/latest.yaml"
@@ -308,6 +325,35 @@ class ProgramFrontendManagedDeliveryApplyResult:
     failed_action_ids: list[str] = field(default_factory=list)
     blocked_action_ids: list[str] = field(default_factory=list)
     skipped_action_ids: list[str] = field(default_factory=list)
+    remaining_blockers: list[str] = field(default_factory=list)
+    warnings: list[str] = field(default_factory=list)
+
+
+@dataclass
+class ProgramFrontendBrowserGateProbeRequest:
+    required: bool
+    confirmation_required: bool
+    probe_state: str
+    apply_artifact_path: str
+    apply_result_id: str = ""
+    gate_run_id: str = ""
+    spec_dir: str = ""
+    required_probe_set: list[str] = field(default_factory=list)
+    overall_gate_status_preview: str = ""
+    remaining_blockers: list[str] = field(default_factory=list)
+    warnings: list[str] = field(default_factory=list)
+    execution_context: BrowserQualityGateExecutionContext | None = None
+
+
+@dataclass
+class ProgramFrontendBrowserGateProbeResult:
+    passed: bool
+    probe_runtime_state: str
+    overall_gate_status: str
+    gate_run_id: str
+    artifact_path: str
+    artifact_root: str
+    required_probe_set: list[str] = field(default_factory=list)
     remaining_blockers: list[str] = field(default_factory=list)
     warnings: list[str] = field(default_factory=list)
 
@@ -1527,6 +1573,262 @@ class ProgramService:
             warnings=list(apply_result.remediation_hints),
         )
 
+    def write_frontend_managed_delivery_apply_artifact(
+        self,
+        request_path: str | Path,
+        *,
+        request: ProgramFrontendManagedDeliveryApplyRequest | None = None,
+        result: ProgramFrontendManagedDeliveryApplyResult | None = None,
+        output_path: Path | None = None,
+        generated_at: str | None = None,
+    ) -> Path:
+        """Persist the canonical managed delivery apply artifact."""
+
+        effective_generated_at = generated_at or utc_now_z()
+        effective_request = request or self.build_frontend_managed_delivery_apply_request(
+            request_path
+        )
+        effective_result = result or self.execute_frontend_managed_delivery_apply(
+            request_path,
+            request=effective_request,
+            confirmed=True,
+        )
+        artifact_path = output_path or (
+            self.root / PROGRAM_FRONTEND_MANAGED_DELIVERY_APPLY_ARTIFACT_REL_PATH
+        )
+        if not artifact_path.is_absolute():
+            artifact_path = self.root / artifact_path
+        artifact_path.parent.mkdir(parents=True, exist_ok=True)
+        relative_artifact_path = _relative_to_root_or_str(self.root, artifact_path)
+        payload = {
+            "generated_at": effective_generated_at,
+            "manifest_path": _relative_to_root_or_str(self.root, self.manifest_path),
+            "request_source_path": effective_request.request_source_path,
+            "apply_state": effective_request.apply_state,
+            "action_plan_id": effective_request.action_plan_id,
+            "plan_fingerprint": effective_request.plan_fingerprint,
+            "result_status": effective_result.result_status,
+            "apply_result_id": f"apply-result-{effective_request.action_plan_id}",
+            "headline": effective_result.headline,
+            "delivery_complete": effective_result.delivery_complete,
+            "browser_gate_required": effective_result.browser_gate_required,
+            "browser_gate_state": effective_result.browser_gate_state,
+            "next_required_gate": effective_result.next_required_gate,
+            "selected_action_ids": list(effective_request.selected_action_ids),
+            "executed_action_ids": list(effective_result.executed_action_ids),
+            "failed_action_ids": list(effective_result.failed_action_ids),
+            "blocked_action_ids": list(effective_result.blocked_action_ids),
+            "skipped_action_ids": list(effective_result.skipped_action_ids),
+            "remaining_blockers": list(effective_result.remaining_blockers),
+            "warnings": _unique_strings([*effective_request.warnings, *effective_result.warnings]),
+            "execution_view": (
+                effective_request.execution_view.model_dump(mode="json")
+                if effective_request.execution_view is not None
+                else {}
+            ),
+            "decision_receipt": (
+                effective_request.decision_receipt.model_dump(mode="json")
+                if effective_request.decision_receipt is not None
+                else {}
+            ),
+            "source_linkage": {
+                "managed_delivery_apply_artifact_path": relative_artifact_path,
+                "managed_delivery_apply_result_status": effective_result.result_status,
+                "request_source_path": effective_request.request_source_path,
+            },
+        }
+        artifact_path.write_text(
+            yaml.safe_dump(payload, sort_keys=False, allow_unicode=True),
+            encoding="utf-8",
+        )
+        return artifact_path
+
+    def build_frontend_browser_gate_probe_request(
+        self,
+        *,
+        apply_artifact_path: Path | None = None,
+    ) -> ProgramFrontendBrowserGateProbeRequest:
+        """Build the browser gate probe request from managed delivery apply truth."""
+
+        effective_apply_artifact_path = apply_artifact_path or (
+            self.root / PROGRAM_FRONTEND_MANAGED_DELIVERY_APPLY_ARTIFACT_REL_PATH
+        )
+        if not effective_apply_artifact_path.is_absolute():
+            effective_apply_artifact_path = self.root / effective_apply_artifact_path
+        relative_apply_artifact_path = _relative_to_root_or_str(
+            self.root, effective_apply_artifact_path
+        )
+        warnings: list[str] = []
+        if not effective_apply_artifact_path.is_file():
+            return ProgramFrontendBrowserGateProbeRequest(
+                required=False,
+                confirmation_required=False,
+                probe_state="missing_apply_artifact",
+                apply_artifact_path=relative_apply_artifact_path,
+                remaining_blockers=["managed_delivery_apply_artifact_missing"],
+            )
+
+        try:
+            apply_payload = yaml.safe_load(
+                effective_apply_artifact_path.read_text(encoding="utf-8")
+            ) or {}
+        except yaml.YAMLError as exc:
+            return ProgramFrontendBrowserGateProbeRequest(
+                required=False,
+                confirmation_required=False,
+                probe_state="invalid_apply_artifact",
+                apply_artifact_path=relative_apply_artifact_path,
+                remaining_blockers=[f"managed_delivery_apply_artifact_invalid:{exc}"],
+            )
+
+        solution_snapshot, snapshot_blocker = self._load_latest_frontend_solution_snapshot()
+        if solution_snapshot is None:
+            return ProgramFrontendBrowserGateProbeRequest(
+                required=False,
+                confirmation_required=False,
+                probe_state="missing_solution_snapshot",
+                apply_artifact_path=relative_apply_artifact_path,
+                remaining_blockers=[snapshot_blocker or "solution_snapshot_missing"],
+            )
+
+        try:
+            context = build_browser_quality_gate_execution_context(
+                apply_payload=apply_payload,
+                solution_snapshot=solution_snapshot,
+                gate_run_id="gate-run-preview",
+            )
+        except ValueError as exc:
+            return ProgramFrontendBrowserGateProbeRequest(
+                required=True,
+                confirmation_required=False,
+                probe_state="blocked_before_start",
+                apply_artifact_path=relative_apply_artifact_path,
+                apply_result_id=str(apply_payload.get("apply_result_id", "")).strip(),
+                remaining_blockers=[str(exc)],
+            )
+
+        visual_a11y_evidence = self._load_spec_visual_a11y_evidence(Path(context.spec_dir))
+        _session, _artifact_records, receipts, bundle = materialize_browser_gate_probe_runtime(
+            root=self.root,
+            context=context,
+            apply_artifact_path=relative_apply_artifact_path,
+            visual_a11y_evidence_artifact=visual_a11y_evidence,
+            generated_at="preview",
+            write_artifacts=False,
+        )
+        return ProgramFrontendBrowserGateProbeRequest(
+            required=True,
+            confirmation_required=False,
+            probe_state="ready_to_execute",
+            apply_artifact_path=relative_apply_artifact_path,
+            apply_result_id=context.apply_result_id,
+            gate_run_id=context.gate_run_id,
+            spec_dir=context.spec_dir,
+            required_probe_set=list(context.required_probe_set),
+            overall_gate_status_preview=bundle.overall_gate_status,
+            warnings=warnings,
+            execution_context=context,
+        )
+
+    def execute_frontend_browser_gate_probe(
+        self,
+        *,
+        request: ProgramFrontendBrowserGateProbeRequest | None = None,
+        apply_artifact_path: Path | None = None,
+        generated_at: str | None = None,
+        output_path: Path | None = None,
+    ) -> ProgramFrontendBrowserGateProbeResult:
+        """Materialize one browser gate probe runtime artifact payload."""
+
+        effective_generated_at = generated_at or utc_now_z()
+        effective_request = request or self.build_frontend_browser_gate_probe_request(
+            apply_artifact_path=apply_artifact_path
+        )
+        if effective_request.execution_context is None:
+            return ProgramFrontendBrowserGateProbeResult(
+                passed=False,
+                probe_runtime_state=effective_request.probe_state,
+                overall_gate_status="incomplete",
+                gate_run_id=effective_request.gate_run_id,
+                artifact_path="",
+                artifact_root="",
+                required_probe_set=list(effective_request.required_probe_set),
+                remaining_blockers=list(effective_request.remaining_blockers),
+                warnings=list(effective_request.warnings),
+            )
+
+        apply_artifact_rel = effective_request.apply_artifact_path
+        apply_payload = yaml.safe_load(
+            (self.root / apply_artifact_rel).read_text(encoding="utf-8")
+        ) or {}
+        solution_snapshot, snapshot_blocker = self._load_latest_frontend_solution_snapshot()
+        if solution_snapshot is None:
+            return ProgramFrontendBrowserGateProbeResult(
+                passed=False,
+                probe_runtime_state="missing_solution_snapshot",
+                overall_gate_status="incomplete",
+                gate_run_id="",
+                artifact_path="",
+                artifact_root="",
+                required_probe_set=list(effective_request.required_probe_set),
+                remaining_blockers=[snapshot_blocker or "solution_snapshot_missing"],
+            )
+        gate_run_id = _slugify_token(f"gate-run-{effective_generated_at}") or "gate-run"
+        context = build_browser_quality_gate_execution_context(
+            apply_payload=apply_payload,
+            solution_snapshot=solution_snapshot,
+            gate_run_id=gate_run_id,
+        )
+        visual_a11y_evidence = self._load_spec_visual_a11y_evidence(Path(context.spec_dir))
+        session, artifact_records, receipts, bundle = materialize_browser_gate_probe_runtime(
+            root=self.root,
+            context=context,
+            apply_artifact_path=apply_artifact_rel,
+            visual_a11y_evidence_artifact=visual_a11y_evidence,
+            generated_at=effective_generated_at,
+        )
+        artifact_path = output_path or (
+            self.root / PROGRAM_FRONTEND_BROWSER_GATE_ARTIFACT_REL_PATH
+        )
+        if not artifact_path.is_absolute():
+            artifact_path = self.root / artifact_path
+        artifact_path.parent.mkdir(parents=True, exist_ok=True)
+        relative_artifact_path = _relative_to_root_or_str(self.root, artifact_path)
+        payload = {
+            "generated_at": effective_generated_at,
+            "manifest_path": _relative_to_root_or_str(self.root, self.manifest_path),
+            "apply_artifact_path": apply_artifact_rel,
+            "probe_runtime_state": session.status,
+            "gate_run_id": gate_run_id,
+            "artifact_root": session.artifact_root_ref,
+            "required_probe_set": list(context.required_probe_set),
+            "execution_context": context.model_dump(mode="json"),
+            "runtime_session": session.model_dump(mode="json"),
+            "artifact_records": [record.model_dump(mode="json") for record in artifact_records],
+            "check_receipts": [receipt.model_dump(mode="json") for receipt in receipts],
+            "bundle_input": bundle.model_dump(mode="json"),
+            "overall_gate_status": bundle.overall_gate_status,
+            "warnings": list(effective_request.warnings),
+            "source_linkage": {
+                **context.source_linkage_refs,
+                "frontend_browser_gate_artifact_path": relative_artifact_path,
+            },
+        }
+        artifact_path.write_text(
+            yaml.safe_dump(payload, sort_keys=False, allow_unicode=True),
+            encoding="utf-8",
+        )
+        return ProgramFrontendBrowserGateProbeResult(
+            passed=True,
+            probe_runtime_state=session.status,
+            overall_gate_status=bundle.overall_gate_status,
+            gate_run_id=gate_run_id,
+            artifact_path=relative_artifact_path,
+            artifact_root=session.artifact_root_ref,
+            required_probe_set=list(context.required_probe_set),
+            warnings=list(effective_request.warnings),
+        )
+
     def build_frontend_solution_confirmation(
         self,
         manifest: ProgramManifest,
@@ -1756,6 +2058,35 @@ class ProgramService:
             ("unsupported", ["style-pack-not-supported-by-provider"]),
         )
         return fidelity_status, list(degradation_reason_codes)
+
+    def _load_latest_frontend_solution_snapshot(
+        self,
+    ) -> tuple[FrontendSolutionSnapshot | None, str | None]:
+        snapshot_path = (
+            frontend_solution_confirmation_memory_root(self.root) / "latest.yaml"
+        )
+        if not snapshot_path.is_file():
+            return None, "frontend_solution_snapshot_missing"
+        try:
+            payload = yaml.safe_load(snapshot_path.read_text(encoding="utf-8")) or {}
+        except yaml.YAMLError as exc:
+            return None, f"frontend_solution_snapshot_invalid:{exc}"
+        try:
+            return FrontendSolutionSnapshot.model_validate(payload), None
+        except Exception as exc:  # pragma: no cover - pydantic validation path
+            return None, f"frontend_solution_snapshot_invalid:{exc}"
+
+    def _load_spec_visual_a11y_evidence(
+        self,
+        spec_dir: Path,
+    ) -> FrontendVisualA11yEvidenceArtifact | None:
+        evidence_path = visual_a11y_evidence_artifact_path(self.root / spec_dir)
+        if not evidence_path.is_file():
+            return None
+        try:
+            return load_frontend_visual_a11y_evidence_artifact(evidence_path)
+        except ValueError:
+            return None
 
     def build_integration_dry_run(self, manifest: ProgramManifest) -> ProgramIntegrationPlan:
         """Build a dry-run integration plan (no git mutations)."""
@@ -7735,6 +8066,11 @@ def _relative_to_root_or_str(root: Path, path: Path) -> str:
         return str(path.resolve().relative_to(root.resolve()))
     except ValueError:
         return str(path)
+
+
+def _slugify_token(value: str) -> str:
+    token = re.sub(r"[^a-zA-Z0-9]+", "-", value.strip().lower()).strip("-")
+    return token
 
 
 def _managed_delivery_apply_headline(result_status: str) -> str:

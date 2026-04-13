@@ -895,3 +895,11 @@ specs:
     branch_slug: "frontend-mainline-delivery-materialization-runtime-baseline"
     owner: "team-frontend-governance"
     frontend_evidence_class: "framework_capability"
+  - id: "125-frontend-mainline-browser-gate-probe-runtime-implementation-baseline"
+    path: "specs/125-frontend-mainline-browser-gate-probe-runtime-implementation-baseline"
+    depends_on:
+      - "103-frontend-mainline-browser-gate-probe-runtime-baseline"
+      - "124-frontend-mainline-delivery-materialization-runtime-baseline"
+    branch_slug: "frontend-mainline-browser-gate-probe-runtime-implementation-baseline"
+    owner: "team-frontend-governance"
+    frontend_evidence_class: "framework_capability"

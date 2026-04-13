@@ -24,6 +24,9 @@ from ai_sdlc.core.frontend_visual_a11y_evidence_provider import (
 from ai_sdlc.generators.frontend_gate_policy_artifacts import (
     materialize_frontend_gate_policy_artifacts,
 )
+from ai_sdlc.generators.frontend_solution_confirmation_artifacts import (
+    materialize_frontend_solution_confirmation_artifacts,
+)
 from ai_sdlc.generators.frontend_generation_constraint_artifacts import (
     materialize_frontend_generation_constraint_artifacts,
 )
@@ -33,6 +36,11 @@ from ai_sdlc.models.frontend_gate_policy import (
 )
 from ai_sdlc.models.frontend_generation_constraints import (
     build_mvp_frontend_generation_constraints,
+)
+from ai_sdlc.models.frontend_solution_confirmation import (
+    build_builtin_install_strategies,
+    build_builtin_style_pack_manifests,
+    build_mvp_solution_snapshot,
 )
 from ai_sdlc.models.project import ProjectConfig
 
@@ -76,6 +84,27 @@ def _write_frontend_evidence_class_spec(
         f'frontend_evidence_class: "{frontend_evidence_class}"\n'
         "---\n",
         encoding="utf-8",
+    )
+
+
+def _write_frontend_solution_confirmation_artifacts(root: Path) -> None:
+    materialize_frontend_solution_confirmation_artifacts(
+        root,
+        style_packs=build_builtin_style_pack_manifests(),
+        install_strategies=build_builtin_install_strategies(),
+        snapshot=build_mvp_solution_snapshot(
+            project_id="001-auth",
+            effective_provider_id="public-primevue",
+            effective_style_pack_id="modern-saas",
+            requested_provider_id="public-primevue",
+            requested_style_pack_id="modern-saas",
+            recommended_provider_id="public-primevue",
+            recommended_style_pack_id="modern-saas",
+            recommended_frontend_stack="vue3",
+            requested_frontend_stack="vue3",
+            effective_frontend_stack="vue3",
+            style_fidelity_status="full",
+        ),
     )
 
 
@@ -374,9 +403,78 @@ class TestCliProgram:
         assert result.exit_code == 0
         assert "selected action types: artifact_generate" in result.output
         assert "managed target path: managed/frontend" in result.output
+        assert "apply artifact: .ai-sdlc/memory/frontend-managed-delivery/latest.yaml" in result.output
         assert (
             root / "managed" / "frontend" / "src" / "App.vue"
         ).read_text(encoding="utf-8") == "<template>cli generated</template>\n"
+
+    def test_program_browser_gate_probe_execute_materializes_gate_run_artifact(
+        self, initialized_project_dir: Path
+    ) -> None:
+        root = initialized_project_dir
+        save_project_config(root, ProjectConfig(adapter_ingress_state="verified_loaded"))
+        _write_frontend_solution_confirmation_artifacts(root)
+        _write_frontend_visual_a11y_evidence(root / "specs" / "001-auth")
+        request_rel = _write_artifact_generate_apply_request(root)
+
+        with patch("ai_sdlc.cli.program_cmd.find_project_root", return_value=root):
+            apply_result = runner.invoke(
+                app,
+                [
+                    "program",
+                    "managed-delivery-apply",
+                    "--request",
+                    request_rel,
+                    "--execute",
+                    "--yes",
+                ],
+            )
+            probe_result = runner.invoke(app, ["program", "browser-gate-probe", "--execute"])
+
+        assert apply_result.exit_code == 0
+        assert probe_result.exit_code == 0
+        assert "Program Browser Gate Probe Execute" in probe_result.output
+        assert "overall gate status: incomplete" in probe_result.output
+        assert "current slice materializes gate-run runtime truth" in probe_result.output
+        latest_artifact = (
+            root / ".ai-sdlc" / "memory" / "frontend-browser-gate" / "latest.yaml"
+        )
+        payload = yaml.safe_load(latest_artifact.read_text(encoding="utf-8"))
+        gate_run_id = payload["gate_run_id"]
+        assert payload["bundle_input"]["gate_run_id"] == gate_run_id
+        assert all(gate_run_id in record["artifact_ref"] for record in payload["artifact_records"])
+
+    def test_program_browser_gate_probe_dry_run_does_not_materialize_preview_artifacts(
+        self, initialized_project_dir: Path
+    ) -> None:
+        root = initialized_project_dir
+        save_project_config(root, ProjectConfig(adapter_ingress_state="verified_loaded"))
+        _write_frontend_solution_confirmation_artifacts(root)
+        _write_frontend_visual_a11y_evidence(root / "specs" / "001-auth")
+        request_rel = _write_artifact_generate_apply_request(root)
+
+        with patch("ai_sdlc.cli.program_cmd.find_project_root", return_value=root):
+            runner.invoke(
+                app,
+                [
+                    "program",
+                    "managed-delivery-apply",
+                    "--request",
+                    request_rel,
+                    "--execute",
+                    "--yes",
+                ],
+            )
+            probe_result = runner.invoke(app, ["program", "browser-gate-probe", "--dry-run"])
+
+        assert probe_result.exit_code == 0
+        assert not (
+            root
+            / ".ai-sdlc"
+            / "artifacts"
+            / "frontend-browser-gate"
+            / "gate-run-preview"
+        ).exists()
 
     def test_program_validate_pass(self, initialized_project_dir: Path) -> None:
         _write_manifest(initialized_project_dir)

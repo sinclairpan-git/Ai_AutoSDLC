@@ -723,6 +723,11 @@ def program_managed_delivery_apply(
         request=request_payload,
         confirmed=True,
     )
+    artifact_path = svc.write_frontend_managed_delivery_apply_artifact(
+        request,
+        request=request_payload,
+        result=result,
+    )
     console.print("\n[bold cyan]Managed Delivery Apply Result[/bold cyan]")
     console.print(f"  - status: {result.result_status}", markup=False)
     console.print(f"  - headline: {result.headline}", markup=False)
@@ -764,7 +769,85 @@ def program_managed_delivery_apply(
         console.print("\n[bold yellow]Warnings[/bold yellow]")
         for warning in result.warnings:
             console.print(f"  - {warning}")
+    console.print(
+        f"  - apply artifact: {artifact_path.relative_to(root)}",
+        markup=False,
+    )
 
+    raise typer.Exit(code=0 if result.passed else 1)
+
+
+@program_app.command("browser-gate-probe")
+def program_browser_gate_probe(
+    dry_run: bool = typer.Option(
+        True,
+        "--dry-run/--execute",
+        help="Preview browser gate probe runtime or materialize the gate-run artifact bundle.",
+    ),
+) -> None:
+    """Preview or execute the browser gate probe runtime baseline."""
+    root = _resolve_root()
+    svc = ProgramService(root)
+    request = svc.build_frontend_browser_gate_probe_request()
+
+    table = Table(
+        title=(
+            "Program Browser Gate Probe Dry-Run"
+            if dry_run
+            else "Program Browser Gate Probe Execute"
+        )
+    )
+    table.add_column("Apply Artifact")
+    table.add_column("Gate Run")
+    table.add_column("Spec")
+    table.add_column("Probe Set")
+    table.add_row(
+        request.apply_artifact_path or "-",
+        request.gate_run_id or "-",
+        request.spec_dir or "-",
+        ", ".join(request.required_probe_set) or "-",
+    )
+    console.print(table)
+    console.print("\n[bold cyan]Browser Gate Probe Guard[/bold cyan]")
+    console.print(f"  - probe state: {request.probe_state}", markup=False)
+    console.print(f"  - apply artifact: {request.apply_artifact_path}", markup=False)
+    if request.execution_context is not None:
+        console.print(
+            f"  - managed frontend target: {request.execution_context.managed_frontend_target}",
+            markup=False,
+        )
+        console.print(
+            f"  - browser entry ref: {request.execution_context.browser_entry_ref}",
+            markup=False,
+        )
+        console.print(
+            "  - current slice materializes gate-run runtime truth; execute readiness stays downstream",
+            markup=False,
+        )
+    if request.overall_gate_status_preview:
+        console.print(
+            f"  - overall gate status preview: {request.overall_gate_status_preview}",
+            markup=False,
+        )
+    for blocker in request.remaining_blockers:
+        console.print(f"  - blocker: {blocker}", markup=False)
+
+    if dry_run:
+        raise typer.Exit(code=0 if not request.remaining_blockers else 1)
+
+    result = svc.execute_frontend_browser_gate_probe(request=request)
+    console.print("\n[bold cyan]Browser Gate Probe Result[/bold cyan]")
+    console.print(f"  - runtime state: {result.probe_runtime_state}", markup=False)
+    console.print(f"  - overall gate status: {result.overall_gate_status}", markup=False)
+    console.print(f"  - gate run id: {result.gate_run_id}", markup=False)
+    console.print(f"  - artifact path: {result.artifact_path}", markup=False)
+    console.print(f"  - artifact root: {result.artifact_root}", markup=False)
+    for blocker in result.remaining_blockers:
+        console.print(f"  - blocker: {blocker}", markup=False)
+    if result.warnings:
+        console.print("\n[bold yellow]Warnings[/bold yellow]")
+        for warning in result.warnings:
+            console.print(f"  - {warning}")
     raise typer.Exit(code=0 if result.passed else 1)
 
 

@@ -147,3 +147,26 @@
 #### 2.13 批次结论
 
 - `120/T12` 现在已经有正式 implementation carrier，后续 materialization runtime 不再依赖口头继续。
+
+### Batch 2026-04-14-002 | Derive T13 implementation carrier
+
+#### 2.14 批次范围
+
+- 覆盖范围：`tasks.md`
+- 覆盖目标：
+  - 将 `T13` 的建议派生工单从抽象占位更新为正式 `125`
+
+#### 2.15 任务记录
+
+##### T120-DOC-8 | 回填 `T13` 派生结果
+
+- 改动范围：`tasks.md`
+- 改动内容：
+  - 将 `Task 1.3 Browser Probe Runtime` 的建议派生工单更新为 `125-frontend-mainline-browser-gate-probe-runtime-implementation-baseline`
+  - 明确 `T13` 在 `125` focused verification 与下游 `T14` 收口前继续保持 `capability_open`
+- 新增/调整的测试：无
+- 是否符合任务目标：是
+
+#### 2.16 批次结论
+
+- `120/T13` 现在已经有正式 implementation carrier，browser gate probe runtime 不再悬空。

@@ -123,6 +123,7 @@ related_doc:
 - **交付流**：`S7`
 - **来源范围**：`102`、`103`
 - **当前状态**：`capability_open`
+- **派生状态**：已派生 `125-frontend-mainline-browser-gate-probe-runtime-implementation-baseline`；在 `125` focused verification 通过且下游 `T14` 收口前仍保持 `capability_open`
 - **缺失 carrier**：
   - shared Playwright probe runtime session
   - gate-run scoped artifact namespace
@@ -134,7 +135,7 @@ related_doc:
   2. evidence missing / transient failure / real blocker 被结构化区分
   3. browser bundle 只消费当前 gate run artifacts
 - **验证**：`uv run pytest tests/unit/test_frontend_gate_verification.py tests/integration/test_cli_program.py -q`
-- **建议派生工单**：implementation carrier
+- **建议派生工单**：`125-frontend-mainline-browser-gate-probe-runtime-implementation-baseline`
 
 ### Task 1.4 Browser Binding, Recheck, Remediation And Footer Closure
 

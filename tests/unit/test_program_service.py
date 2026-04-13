@@ -27,6 +27,9 @@ from ai_sdlc.core.program_service import (
 from ai_sdlc.generators.frontend_gate_policy_artifacts import (
     materialize_frontend_gate_policy_artifacts,
 )
+from ai_sdlc.generators.frontend_solution_confirmation_artifacts import (
+    materialize_frontend_solution_confirmation_artifacts,
+)
 from ai_sdlc.generators.frontend_generation_constraint_artifacts import (
     materialize_frontend_generation_constraint_artifacts,
 )
@@ -37,6 +40,11 @@ from ai_sdlc.models.frontend_gate_policy import (
 from ai_sdlc.models.project import ProjectConfig
 from ai_sdlc.models.frontend_generation_constraints import (
     build_mvp_frontend_generation_constraints,
+)
+from ai_sdlc.models.frontend_solution_confirmation import (
+    build_builtin_install_strategies,
+    build_builtin_style_pack_manifests,
+    build_mvp_solution_snapshot,
 )
 from ai_sdlc.models.program import ProgramManifest, ProgramSpecRef
 from ai_sdlc.models.state import Checkpoint, FeatureInfo
@@ -133,6 +141,27 @@ def _write_managed_delivery_apply_request(root: Path, *, fingerprint: str = "fp-
     request_path.parent.mkdir(parents=True, exist_ok=True)
     request_path.write_text(yaml.safe_dump(payload, sort_keys=False), encoding="utf-8")
     return request_path
+
+
+def _write_frontend_solution_confirmation_artifacts(root: Path) -> None:
+    materialize_frontend_solution_confirmation_artifacts(
+        root,
+        style_packs=build_builtin_style_pack_manifests(),
+        install_strategies=build_builtin_install_strategies(),
+        snapshot=build_mvp_solution_snapshot(
+            project_id="001-auth",
+            effective_provider_id="public-primevue",
+            effective_style_pack_id="modern-saas",
+            requested_provider_id="public-primevue",
+            requested_style_pack_id="modern-saas",
+            recommended_provider_id="public-primevue",
+            recommended_style_pack_id="modern-saas",
+            recommended_frontend_stack="vue3",
+            requested_frontend_stack="vue3",
+            effective_frontend_stack="vue3",
+            style_fidelity_status="full",
+        ),
+    )
 
 
 def _write_blocked_managed_delivery_apply_request(root: Path) -> Path:
@@ -317,6 +346,118 @@ def test_build_frontend_managed_delivery_apply_request_surfaces_executor_preflig
 
     assert request.apply_state == "blocked_before_start"
     assert "artifact_generate_outside_managed_target" in request.remaining_blockers
+
+
+def test_write_frontend_managed_delivery_apply_artifact_persists_browser_gate_handoff_input(
+    initialized_project_dir: Path,
+) -> None:
+    save_project_config(
+        initialized_project_dir,
+        ProjectConfig(adapter_ingress_state="verified_loaded"),
+    )
+    request_path = _write_artifact_generate_apply_request(initialized_project_dir)
+    svc = ProgramService(initialized_project_dir)
+    request = svc.build_frontend_managed_delivery_apply_request(request_path)
+    result = svc.execute_frontend_managed_delivery_apply(
+        request_path,
+        request=request,
+        confirmed=True,
+    )
+
+    artifact_path = svc.write_frontend_managed_delivery_apply_artifact(
+        request_path,
+        request=request,
+        result=result,
+        generated_at="2026-04-14T04:00:00Z",
+    )
+    payload = yaml.safe_load(artifact_path.read_text(encoding="utf-8"))
+
+    assert payload["result_status"] == "apply_succeeded_pending_browser_gate"
+    assert payload["browser_gate_required"] is True
+    assert payload["execution_view"]["spec_dir"] == "specs/001-auth"
+    assert (
+        payload["source_linkage"]["managed_delivery_apply_artifact_path"]
+        == ".ai-sdlc/memory/frontend-managed-delivery/latest.yaml"
+    )
+
+
+def test_build_frontend_browser_gate_probe_request_requires_apply_artifact(
+    initialized_project_dir: Path,
+) -> None:
+    svc = ProgramService(initialized_project_dir)
+
+    request = svc.build_frontend_browser_gate_probe_request()
+
+    assert request.probe_state == "missing_apply_artifact"
+    assert "managed_delivery_apply_artifact_missing" in request.remaining_blockers
+
+
+def test_execute_frontend_browser_gate_probe_materializes_gate_run_bundle(
+    initialized_project_dir: Path,
+) -> None:
+    save_project_config(
+        initialized_project_dir,
+        ProjectConfig(adapter_ingress_state="verified_loaded"),
+    )
+    _write_frontend_solution_confirmation_artifacts(initialized_project_dir)
+    _write_frontend_visual_a11y_evidence(
+        initialized_project_dir / "specs" / "001-auth",
+        [
+            FrontendVisualA11yEvidenceEvaluation(
+                evaluation_id="001-auth-visual-pass",
+                target_id="user-create",
+                surface_id="page:user-create",
+                outcome="pass",
+                report_type="coverage-report",
+                severity="info",
+            )
+        ],
+    )
+    request_path = _write_artifact_generate_apply_request(initialized_project_dir)
+    svc = ProgramService(initialized_project_dir)
+    apply_request = svc.build_frontend_managed_delivery_apply_request(request_path)
+    apply_result = svc.execute_frontend_managed_delivery_apply(
+        request_path,
+        request=apply_request,
+        confirmed=True,
+    )
+    svc.write_frontend_managed_delivery_apply_artifact(
+        request_path,
+        request=apply_request,
+        result=apply_result,
+        generated_at="2026-04-14T04:00:00Z",
+    )
+
+    probe_request = svc.build_frontend_browser_gate_probe_request()
+    preview_root = (
+        initialized_project_dir
+        / ".ai-sdlc"
+        / "artifacts"
+        / "frontend-browser-gate"
+        / "gate-run-preview"
+    )
+    probe_result = svc.execute_frontend_browser_gate_probe(
+        request=probe_request,
+        generated_at="2026-04-14T04:05:00Z",
+    )
+
+    assert probe_request.probe_state == "ready_to_execute"
+    assert probe_request.overall_gate_status_preview == "incomplete"
+    assert not preview_root.exists()
+    assert probe_result.passed is True
+    assert probe_result.overall_gate_status == "incomplete"
+    artifact_path = initialized_project_dir / probe_result.artifact_path
+    payload = yaml.safe_load(artifact_path.read_text(encoding="utf-8"))
+    gate_run_id = payload["gate_run_id"]
+    assert gate_run_id.startswith("gate-run-")
+    assert payload["runtime_session"]["artifact_root_ref"].endswith(gate_run_id)
+    assert all(
+        gate_run_id in record["artifact_ref"] for record in payload["artifact_records"]
+    )
+    assert (
+        payload["bundle_input"]["gate_run_id"] == gate_run_id
+    )
+    assert payload["bundle_input"]["overall_gate_status"] == "incomplete"
 
 
 def test_validate_manifest_cycle(tmp_path: Path) -> None:
