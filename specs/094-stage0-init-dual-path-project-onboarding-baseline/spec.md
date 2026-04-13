@@ -241,6 +241,7 @@ related_doc:
   - "specs/093-stage0-installed-runtime-update-advisor-baseline/spec.md"
   - "src/ai_sdlc/routers/bootstrap.py"
   - "src/ai_sdlc/routers/existing_project_init.py"
+frontend_evidence_class: "framework_capability"
 init_dual_path_scope: "stage0_onboarding_only"
 init_dual_path_status: "formal_baseline"
 ---

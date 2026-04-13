@@ -168,3 +168,9 @@
 - **SC-071-004**：operator 能从 `071` 直接读出 `input gap != stable empty evidence != actual visual/a11y issue`
 - **SC-071-005**：sibling recheck/remediation feedback 主线与 `071` 的 handoff 边界清晰，不会把 remediation runbook 或完整作者体验闭环混入当前工单
 - **SC-071-006**：`071` 当前状态被清楚表达为 docs-only formal baseline，不会被误读成已实现、已 close-ready 或已进入 root program sync
+
+---
+related_doc:
+  - "specs/108-frontend-legacy-framework-evidence-class-backfill-baseline/spec.md"
+frontend_evidence_class: "framework_capability"
+---

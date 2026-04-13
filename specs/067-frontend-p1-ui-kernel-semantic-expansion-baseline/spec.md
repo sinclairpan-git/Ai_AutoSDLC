@@ -186,3 +186,9 @@
 - **SC-067-004**：reviewer 能从 `067` 直接读出 `067 != 068 != 069 != provider/runtime` 的边界
 - **SC-067-005**：`067` 当前状态被清楚表达为 `accepted child baseline + verified first implementation slice + close-ready development summary handoff`，不会被误读成 `068/069`、provider/runtime 或新的 root program sync 主线已开始
 - **SC-067-006**：reviewer 能从 `067` 直接读出当前 implementation slice 的唯一允许写面、验证方式与继续排除的 non-goals，而不需要回头依赖 `plan.md / tasks.md / task-execution-log.md` 反向推断顶层真值
+
+---
+related_doc:
+  - "specs/108-frontend-legacy-framework-evidence-class-backfill-baseline/spec.md"
+frontend_evidence_class: "framework_capability"
+---

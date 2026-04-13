@@ -174,3 +174,9 @@
 - **SC-069-004**：operator 能从 `069` 直接读出 `input gap != stable empty observation != drift`
 - **SC-069-005**：reviewer 能从 `069` 直接读出当前 implementation slice 的唯一允许写面、验证方式与继续排除的 non-goals，而不需要回头依赖 `plan.md / tasks.md / task-execution-log.md` 反向推断顶层真值
 - **SC-069-006**：`069` 当前状态被清楚表达为 `accepted child baseline + first implementation slice in progress`，不会被误读成 `070`、`071`、provider/runtime、root sync 或 close-ready 已开始
+
+---
+related_doc:
+  - "specs/108-frontend-legacy-framework-evidence-class-backfill-baseline/spec.md"
+frontend_evidence_class: "framework_capability"
+---

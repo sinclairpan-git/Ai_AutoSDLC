@@ -375,6 +375,7 @@ related_doc:
   - "specs/073-frontend-p2-provider-style-solution-baseline/spec.md"
   - "src/ai_sdlc/cli/main.py"
   - "src/ai_sdlc/__init__.py"
+frontend_evidence_class: "framework_capability"
 update_advisor_scope: "installed_runtime_only"
 update_advisor_status: "formal_baseline"
 ---

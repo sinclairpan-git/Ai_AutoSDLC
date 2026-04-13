@@ -148,3 +148,9 @@
 - **SC-065-003**：`verify constraints` 与 `program` surface 的 production semantics 不因 sample fixture 的存在而改变；缺 artifact 时仍稳定暴露 `frontend_contract_observations`
 - **SC-065-004**：runtime remediation wording 不再暗示 `scan .`，而是稳定要求显式 `<frontend-source-root>`
 - **SC-065-005**：后续实现团队能够从 `065` 直接读出 fixture 路径、推荐文件面、测试矩阵与“不允许 implicit materialization”的 guardrail
+
+---
+related_doc:
+  - "specs/108-frontend-legacy-framework-evidence-class-backfill-baseline/spec.md"
+frontend_evidence_class: "framework_capability"
+---

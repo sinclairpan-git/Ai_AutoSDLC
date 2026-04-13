@@ -851,3 +851,9 @@ P2 第一阶段达到以下标准视为方案落地成功：
 5. Provider 风格支持矩阵
 6. `solution_snapshot` 持久化与审计
 7. 风格生成产物与 Provider Theme Adapter 落地
+
+---
+related_doc:
+  - "specs/108-frontend-legacy-framework-evidence-class-backfill-baseline/spec.md"
+frontend_evidence_class: "framework_capability"
+---

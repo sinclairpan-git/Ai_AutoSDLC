@@ -157,3 +157,9 @@
 - **SC-066-003**：后续 child work item 可直接根据 `066` 的 DAG 与 branch rollout 规则继续 formalize，而不会出现 kernel / recipe / diagnostics 排序漂移
 - **SC-066-004**：`066` 当前状态被清楚表达为 docs-only planning baseline，不会被误读成已实现或已 close-ready 的 program item
 - **SC-066-005**：`066` 对 root truth sync 的时机表述保持诚实，不提前修改 `program-manifest.yaml` 或 `frontend-program-branch-rollout-plan.md`
+
+---
+related_doc:
+  - "specs/108-frontend-legacy-framework-evidence-class-backfill-baseline/spec.md"
+frontend_evidence_class: "framework_capability"
+---

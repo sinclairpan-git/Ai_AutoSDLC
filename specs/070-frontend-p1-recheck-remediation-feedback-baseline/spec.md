@@ -142,3 +142,9 @@
 - **SC-070-003**：作者能从 `070` 直接读出 fix inputs、suggested actions、recommended commands 与 `<frontend-source-root>` honesty 的边界
 - **SC-070-004**：`070` 不会回写或冲掉 `069` 的 diagnostics truth，也不会抢跑 `071` visual / a11y foundation
 - **SC-070-005**：`070` 当前状态被清楚表达为 docs-only child baseline，不会被误读成已实现、已 close-ready 或已 root sync 的 program item
+
+---
+related_doc:
+  - "specs/108-frontend-legacy-framework-evidence-class-backfill-baseline/spec.md"
+frontend_evidence_class: "framework_capability"
+---

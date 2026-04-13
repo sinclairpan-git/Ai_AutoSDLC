@@ -185,3 +185,9 @@
 - **SC-068-004**：reviewer 能从 `068` 直接读出 `068 != 067 != 069 != provider/runtime` 的边界
 - **SC-068-005**：`068` 当前状态被清楚表达为 `accepted child baseline + verified first implementation slice`，不会被误读成 `069`、provider/runtime、root program sync 或 close-ready 已开始
 - **SC-068-006**：reviewer 能从 `068` 直接读出当前 implementation slice 的唯一允许写面、验证方式与继续排除的 non-goals，而不需要回头依赖 `plan.md / tasks.md / task-execution-log.md` 反向推断顶层真值
+
+---
+related_doc:
+  - "specs/108-frontend-legacy-framework-evidence-class-backfill-baseline/spec.md"
+frontend_evidence_class: "framework_capability"
+---
