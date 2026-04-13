@@ -438,3 +438,62 @@
 
 - `073` 现在已经具备 program-level close 输入所需的最小文档面。
 - 后续若继续推进，应转入下一个真实 work item，而不是再回到 `073` 内追加实现批次。
+
+### Batch 2026-04-13-007 | latest batch close-check backfill
+
+#### 7.1 范围
+
+- **任务来源**：latest-batch close-out backfill（无新增实现任务编号）
+- **目标**：补齐 `073` latest batch 缺失的 `验证画像` 与 `git close-out markers`，让现有 close-ready 文档能按当前 close-check 口径诚实收口
+- **本批 touched files**：
+  - `specs/073-frontend-p2-provider-style-solution-baseline/task-execution-log.md`
+- **执行分支**：`codex/112-frontend-072-081-close-check-backfill-baseline`
+- **验证画像**：`docs-only`
+- **改动范围**：`specs/073-frontend-p2-provider-style-solution-baseline/task-execution-log.md`
+
+#### 7.2 统一验证命令
+
+- **验证命令**：
+  - `UV_CACHE_DIR=/tmp/uv-cache uv run ai-sdlc verify constraints`
+  - `UV_CACHE_DIR=/tmp/uv-cache uv run ai-sdlc workitem close-check --wi specs/073-frontend-p2-provider-style-solution-baseline`
+  - `git diff --check -- specs/073-frontend-p2-provider-style-solution-baseline/task-execution-log.md`
+- **验证结果**：
+  - `UV_CACHE_DIR=/tmp/uv-cache uv run ai-sdlc verify constraints` -> `verify constraints: no BLOCKERs.`
+  - `UV_CACHE_DIR=/tmp/uv-cache uv run ai-sdlc workitem close-check --wi specs/073-frontend-p2-provider-style-solution-baseline` -> latest batch 的 verification profile 与 git markers 已补齐；fresh rerun 只剩 `git working tree has uncommitted changes`，待 `112` close-out commit 落盘后消除
+  - `git diff --check -- specs/073-frontend-p2-provider-style-solution-baseline/task-execution-log.md` -> 通过
+
+#### 7.3 任务记录
+
+- 本批只追加 `073/task-execution-log.md` 的 latest-batch close-check backfill 段落
+- 不改 `073/spec.md / plan.md / tasks.md / development-summary.md`
+- 不改 `src/`、`tests/`、`verify constraints` 逻辑或 root machine truth
+
+#### 7.4 代码审查（Mandatory）
+
+- **规格对齐**：当前修复严格停留在 latest batch close-out schema，不重写 Batch 1 ~ 6 的实现 provenance。
+- **风险判断**：docs-only 回填不改变 `073` 已具备的 close-ready 语义，只让 execution log 与现行 close-check 模板对齐。
+- **结论**：`无 Critical 阻塞项`
+
+#### 7.5 任务/计划同步状态（Mandatory）
+
+- `tasks.md` 同步状态：`无需变更（073 的 formal task 边界与既有实现保持一致）`
+- `plan.md` 同步状态：`无需变更（当前仅补 latest-batch close-out schema）`
+- `spec.md` 同步状态：`无需变更`
+- 说明：`073` 仍是已完成 close-ready 文档基线；本批不扩大到新的 child work item。`
+
+#### 7.6 自动决策记录（如有）
+
+- 保留 `073` 现有 Batch 1 ~ 6 的叙述不动，只追加 Batch 7 做 close-check schema 回填；这样可以修补 latest-batch 门禁而不改写既有 close-ready 证据链。
+
+#### 7.7 批次结论
+
+- `073` 的 latest batch 现已补齐 verification profile 与 git close-out markers，并与现行 close-check 口径对齐。
+- 本批不宣称新的 provider/style/verify 实现，只修 close-out honesty 缺口。
+
+#### 7.8 归档后动作
+
+- **已完成 git 提交**：是
+- **提交哈希**：由 `112` close-out commit 统一承载；以当前分支 `HEAD` 为准
+- 当前批次 branch disposition 状态：retained
+- 当前批次 worktree disposition 状态：retained
+- 是否继续下一批：是；可由 `112` carrier 继续统一收口其余目标

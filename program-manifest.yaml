@@ -688,3 +688,10 @@ specs:
     branch_slug: "frontend-p1-child-close-check-backfill-baseline"
     owner: "team-frontend-governance"
     frontend_evidence_class: "framework_capability"
+  - id: "112-frontend-072-081-close-check-backfill-baseline"
+    path: "specs/112-frontend-072-081-close-check-backfill-baseline"
+    depends_on:
+      - "111-frontend-p1-child-close-check-backfill-baseline"
+    branch_slug: "frontend-072-081-close-check-backfill-baseline"
+    owner: "team-frontend-governance"
+    frontend_evidence_class: "framework_capability"

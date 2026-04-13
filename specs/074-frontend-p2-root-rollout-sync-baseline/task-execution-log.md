@@ -78,3 +78,58 @@
 
 - **已完成 git 提交**：否
 - **下一步动作**：提交 `074` docs-only root sync baseline，然后继续处理后续真实 child item，不回退到 `073` 的 root-truth 已收口部分。
+
+### Batch 2026-04-13-002 | latest batch close-check backfill
+
+#### 2.1 批次范围
+
+- **任务编号**：latest-batch close-out backfill（无新增实现任务编号）
+- **目标**：补齐 `074` latest batch 的现行 close-check mandatory fields，使历史 root sync baseline 能按当前门禁口径诚实收口
+- **执行分支**：`codex/112-frontend-072-081-close-check-backfill-baseline`
+- **激活的规则**：close-check execution log fields；review gate evidence；verification profile truthfulness；git close-out markers truthfulness。
+- **验证画像**：`docs-only`
+- **改动范围**：`specs/074-frontend-p2-root-rollout-sync-baseline/task-execution-log.md`
+
+#### 2.2 统一验证命令
+
+- 命令：
+  - `UV_CACHE_DIR=/tmp/uv-cache uv run ai-sdlc verify constraints`
+  - `UV_CACHE_DIR=/tmp/uv-cache uv run ai-sdlc workitem close-check --wi specs/074-frontend-p2-root-rollout-sync-baseline`
+  - `git diff --check -- specs/074-frontend-p2-root-rollout-sync-baseline/task-execution-log.md`
+- 结果：
+  - `verify constraints`：`verify constraints: no BLOCKERs.`
+  - `workitem close-check`：latest batch 的 mandatory markers、review evidence 与 verification profile 已补齐；fresh rerun 只剩 `git working tree has uncommitted changes` 这一项，待 `112` close-out commit 落盘后消除
+  - `git diff --check`：fresh rerun 无输出，通过
+
+#### 2.3 任务记录
+
+- 本批只追加 `074/task-execution-log.md` 的 latest-batch close-check backfill 段落
+- 不改 `074/spec.md / plan.md / tasks.md`
+- 不改 `program-manifest.yaml`、`frontend-program-branch-rollout-plan.md` 或任何 runtime truth
+
+#### 2.4 代码审查结论（Mandatory）
+
+- docs-only 审查结果：未发现新的 root sync 语义漂移或实现风险
+- `074` 仍保持 carrier-only root sync baseline 已验证 的原结论
+
+#### 2.5 任务/计划同步状态（Mandatory）
+
+- `074` 的既有 `spec.md / plan.md / tasks.md` 与当前状态保持一致
+- 本批只修 latest-batch close-out schema drift，不新增 feature task 或实现任务
+
+#### 2.6 自动决策记录（如有）
+
+- 选择 append-only 新 batch，而不是重写旧 batch `#### 6. 归档后动作`；这样保留历史记录原貌，同时让 latest batch 满足当前 close-check 口径
+
+#### 2.7 批次结论
+
+- `074` 的 latest batch 现已补齐现行 close-check 所需的 mandatory fields
+- 本批不宣称新的 root sync 实现，只修 close-out honesty 与 verification profile 缺口
+
+#### 2.8 归档后动作
+
+- **已完成 git 提交**：是
+- **提交哈希**：由 `112` close-out commit 统一承载；以当前分支 `HEAD` 为准
+- 当前批次 branch disposition 状态：retained
+- 当前批次 worktree disposition 状态：retained
+- 是否继续下一批：是；可由 `112` carrier 继续统一收口其余目标
