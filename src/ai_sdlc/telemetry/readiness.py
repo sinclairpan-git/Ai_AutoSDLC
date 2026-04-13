@@ -10,6 +10,7 @@ from typing import Any
 
 from ai_sdlc.branch.git_client import GitError
 from ai_sdlc.context.state import load_checkpoint
+from ai_sdlc.core.execute_authorization import evaluate_execute_authorization
 from ai_sdlc.core.program_service import (
     FRONTEND_EVIDENCE_CLASS_MIRROR_PROBLEM_FAMILY,
     ProgramService,
@@ -37,6 +38,7 @@ def build_status_json_surface(repo_root: Path) -> dict[str, Any]:
     manifest_state = _load_manifest_state(repo_root)
     store = TelemetryStore(repo_root)
     branch_lifecycle = _build_branch_lifecycle_surface(repo_root)
+    execute_authorization = _build_execute_authorization_surface(repo_root)
     frontend_evidence_class = _build_frontend_evidence_class_surface(repo_root)
     if frontend_evidence_class is not None:
         branch_lifecycle = {
@@ -61,6 +63,7 @@ def build_status_json_surface(repo_root: Path) -> dict[str, Any]:
                 "latest": None,
             },
             "branch_lifecycle": branch_lifecycle,
+            "execute_authorization": execute_authorization,
             "adapter_governance": adapter_governance,
         }
     if manifest_state["state"] != "loaded":
@@ -72,6 +75,7 @@ def build_status_json_surface(repo_root: Path) -> dict[str, Any]:
                 "error": manifest_state.get("error"),
             },
             "branch_lifecycle": branch_lifecycle,
+            "execute_authorization": execute_authorization,
             "adapter_governance": adapter_governance,
         }
 
@@ -124,6 +128,7 @@ def build_status_json_surface(repo_root: Path) -> dict[str, Any]:
             ),
         },
         "branch_lifecycle": branch_lifecycle,
+        "execute_authorization": execute_authorization,
         "adapter_governance": adapter_governance,
     }
 
@@ -204,6 +209,14 @@ def _build_frontend_evidence_class_surface(repo_root: Path) -> dict[str, Any] | 
         "detection_surface": summary.detection_surface,
         "summary_token": summary.summary_token,
     }
+
+
+def _build_execute_authorization_surface(repo_root: Path) -> dict[str, Any]:
+    checkpoint = load_checkpoint(repo_root)
+    return evaluate_execute_authorization(
+        root=repo_root,
+        checkpoint=checkpoint,
+    ).to_json_dict()
 
 
 def _frontend_evidence_class_spec_matches_checkpoint(

@@ -382,7 +382,12 @@ class TestCliStatus:
 
         assert result.exit_code == 0
         payload = json.loads(result.output)
-        assert set(payload) == {"telemetry", "branch_lifecycle", "adapter_governance"}
+        assert set(payload) == {
+            "telemetry",
+            "branch_lifecycle",
+            "execute_authorization",
+            "adapter_governance",
+        }
         telemetry = payload["telemetry"]
         assert telemetry["state"] == "ready"
         assert telemetry["current"] == {
@@ -1004,6 +1009,114 @@ def test_status_json_includes_bounded_branch_lifecycle_summary(
     assert payload["branch_lifecycle"]["blocking_count"] == 1
     assert payload["branch_lifecycle"]["active_work_item"] == "001-wi"
     assert payload["branch_lifecycle"]["sample_entries"][0]["name"] == "codex/001-status-drift"
+
+
+def test_status_json_includes_execute_authorization_blocker_when_tasks_missing(
+    tmp_path: Path,
+) -> None:
+    _init_git_repo(tmp_path)
+    init_project(tmp_path)
+    spec_dir = tmp_path / "specs" / "116-execute-auth"
+    spec_dir.mkdir(parents=True, exist_ok=True)
+    (spec_dir / "spec.md").write_text("# Spec\n", encoding="utf-8")
+    (spec_dir / "plan.md").write_text("# Plan\n", encoding="utf-8")
+    save_checkpoint(
+        tmp_path,
+        Checkpoint(
+            current_stage="verify",
+            feature=FeatureInfo(
+                id="116-execute-auth",
+                spec_dir="specs/116-execute-auth",
+                design_branch="design/116-execute-auth",
+                feature_branch="feature/116-execute-auth",
+                current_branch="main",
+            ),
+        ),
+    )
+
+    with patch("ai_sdlc.cli.commands.find_project_root", return_value=tmp_path):
+        result = runner.invoke(app, ["status", "--json"])
+
+    assert result.exit_code == 0
+    payload = json.loads(result.output)
+    summary = payload["execute_authorization"]
+    assert summary["state"] == "blocked"
+    assert summary["active_work_item"] == "116-execute-auth"
+    assert summary["reason_codes"] == ["tasks_truth_missing"]
+    assert summary["tasks_present"] is False
+
+
+def test_status_json_includes_execute_authorization_blocker_before_execute_stage(
+    tmp_path: Path,
+) -> None:
+    _init_git_repo(tmp_path)
+    init_project(tmp_path)
+    spec_dir = tmp_path / "specs" / "116-execute-auth"
+    spec_dir.mkdir(parents=True, exist_ok=True)
+    (spec_dir / "spec.md").write_text("# Spec\n", encoding="utf-8")
+    (spec_dir / "plan.md").write_text("# Plan\n", encoding="utf-8")
+    (spec_dir / "tasks.md").write_text("# Tasks\n", encoding="utf-8")
+    subprocess.run(["git", "add", "."], cwd=tmp_path, check=True, capture_output=True)
+    subprocess.run(["git", "commit", "-m", "seed execute auth fixture"], cwd=tmp_path, check=True, capture_output=True)
+    save_checkpoint(
+        tmp_path,
+        Checkpoint(
+            current_stage="verify",
+            feature=FeatureInfo(
+                id="116-execute-auth",
+                spec_dir="specs/116-execute-auth",
+                design_branch="design/116-execute-auth",
+                feature_branch="feature/116-execute-auth",
+                current_branch="main",
+            ),
+        ),
+    )
+
+    with patch("ai_sdlc.cli.commands.find_project_root", return_value=tmp_path):
+        result = runner.invoke(app, ["status", "--json"])
+
+    assert result.exit_code == 0
+    payload = json.loads(result.output)
+    summary = payload["execute_authorization"]
+    assert summary["state"] == "blocked"
+    assert summary["reason_codes"] == ["explicit_execute_authorization_missing"]
+    assert summary["tasks_present"] is True
+    assert summary["current_stage"] == "verify"
+
+
+def test_status_text_surfaces_execute_authorization_detail(
+    tmp_path: Path,
+) -> None:
+    _init_git_repo(tmp_path)
+    init_project(tmp_path)
+    spec_dir = tmp_path / "specs" / "116-execute-auth"
+    spec_dir.mkdir(parents=True, exist_ok=True)
+    (spec_dir / "spec.md").write_text("# Spec\n", encoding="utf-8")
+    (spec_dir / "plan.md").write_text("# Plan\n", encoding="utf-8")
+    (spec_dir / "tasks.md").write_text("# Tasks\n", encoding="utf-8")
+    subprocess.run(["git", "add", "."], cwd=tmp_path, check=True, capture_output=True)
+    subprocess.run(["git", "commit", "-m", "seed execute auth text fixture"], cwd=tmp_path, check=True, capture_output=True)
+    save_checkpoint(
+        tmp_path,
+        Checkpoint(
+            current_stage="verify",
+            feature=FeatureInfo(
+                id="116-execute-auth",
+                spec_dir="specs/116-execute-auth",
+                design_branch="design/116-execute-auth",
+                feature_branch="feature/116-execute-auth",
+                current_branch="main",
+            ),
+        ),
+    )
+
+    with patch("ai_sdlc.cli.commands.find_project_root", return_value=tmp_path):
+        result = runner.invoke(app, ["status"])
+
+    assert result.exit_code == 0
+    assert "Execute Authorization" in result.output
+    assert "blocked" in result.output
+    assert "current_stage=verify" in result.output
 
 
 def test_status_json_includes_bounded_frontend_evidence_class_summary(

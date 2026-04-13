@@ -23,6 +23,7 @@ from ai_sdlc.context.state import (
     load_working_set,
 )
 from ai_sdlc.core.config import load_project_config, load_project_state
+from ai_sdlc.core.execute_authorization import evaluate_execute_authorization
 from ai_sdlc.core.frontend_contract_observation_provider import (
     load_frontend_contract_observation_artifact,
 )
@@ -411,6 +412,15 @@ def status_command(
                         "Parallel Merge Order",
                         ", ".join(coordination.merge_order),
                     )
+
+    execute_authorization = evaluate_execute_authorization(root=root, checkpoint=cp)
+    table.add_row("Execute Authorization", execute_authorization.state)
+    table.add_row("Execute Authorization Detail", execute_authorization.detail or "-")
+    if execute_authorization.reason_codes:
+        table.add_row(
+            "Execute Auth Reasons",
+            ", ".join(execute_authorization.reason_codes),
+        )
 
     console.print(table)
     if hint is not None:
