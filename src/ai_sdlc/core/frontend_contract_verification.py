@@ -24,6 +24,9 @@ FRONTEND_CONTRACT_DIAGNOSTIC_SOURCE_FAMILY = "frontend_contract"
 FRONTEND_CONTRACT_DIAGNOSTIC_SOURCE_KEY = "frontend_contract_observations"
 FRONTEND_CONTRACT_DIAGNOSTIC_STATUS_MISSING_ARTIFACT = "missing_artifact"
 FRONTEND_CONTRACT_DIAGNOSTIC_STATUS_INVALID_ARTIFACT = "invalid_artifact"
+FRONTEND_CONTRACT_DIAGNOSTIC_STATUS_SOURCE_PROFILE_MISMATCH = (
+    "source_profile_mismatch"
+)
 FRONTEND_CONTRACT_DIAGNOSTIC_STATUS_VALID_EMPTY = "valid_empty"
 FRONTEND_CONTRACT_DIAGNOSTIC_STATUS_DRIFT = "drift"
 FRONTEND_CONTRACT_DIAGNOSTIC_STATUS_CLEAN = "clean"
@@ -138,6 +141,8 @@ def build_frontend_contract_verification_report(
     ),
     observation_artifact_path: Path | None = None,
     observation_artifact_error: str | None = None,
+    observation_source_profile: str = "",
+    observation_source_issue: str | None = None,
 ) -> FrontendContractVerificationReport:
     """Translate frontend contract gate output into verify-friendly report fields."""
 
@@ -193,6 +198,12 @@ def build_frontend_contract_verification_report(
             f"{invalid_message}"
         )
         coverage_gaps.append("frontend_contract_observations")
+    elif observation_source_issue is not None:
+        blockers.append(
+            "BLOCKER: frontend contract observations unavailable: "
+            f"{observation_source_issue}"
+        )
+        coverage_gaps.append("frontend_contract_observations")
     elif not observations_check.passed:
         blockers.append(
             "BLOCKER: frontend contract observations declared empty: "
@@ -216,6 +227,8 @@ def build_frontend_contract_verification_report(
         artifacts_check_passed=artifacts_check.passed,
         observations_check_message=observations_check.message,
         drift_check=drift_check,
+        observation_source_profile=observation_source_profile,
+        observation_source_issue=observation_source_issue,
     )
 
     return FrontendContractVerificationReport(
@@ -242,6 +255,8 @@ def build_frontend_contract_verification_context(
     ),
     observation_artifact_path: Path | None = None,
     observation_artifact_error: str | None = None,
+    observation_source_profile: str = "",
+    observation_source_issue: str | None = None,
 ) -> dict[str, object]:
     """Build a verification-compatible context fragment from contract observations."""
 
@@ -251,6 +266,8 @@ def build_frontend_contract_verification_context(
         observation_artifact_status=observation_artifact_status,
         observation_artifact_path=observation_artifact_path,
         observation_artifact_error=observation_artifact_error,
+        observation_source_profile=observation_source_profile,
+        observation_source_issue=observation_source_issue,
     )
     return {
         "verification_sources": (report.source_name,),
@@ -290,12 +307,15 @@ def _build_verification_diagnostic(
     artifacts_check_passed: bool,
     observations_check_message: str,
     drift_check,
+    observation_source_profile: str,
+    observation_source_issue: str | None,
 ) -> VerificationDiagnosticRecord:
     status = _resolve_diagnostic_status(
         observation_artifact_status=observation_artifact_status,
         observation_count=len(observations),
         artifacts_check_passed=artifacts_check_passed,
         drift_check_passed=drift_check.passed,
+        observation_source_issue=observation_source_issue,
     )
     parse_error_summary = None
     if status == FRONTEND_CONTRACT_DIAGNOSTIC_STATUS_INVALID_ARTIFACT:
@@ -317,6 +337,7 @@ def _build_verification_diagnostic(
             source_linkage={
                 "contracts_root": str(contracts_root),
                 "observation_artifact_status": observation_artifact_status,
+                "observation_source_profile": observation_source_profile or "unknown",
             },
         ),
         policy_projection=_policy_projection_for_status(status),
@@ -329,6 +350,7 @@ def _resolve_diagnostic_status(
     observation_count: int,
     artifacts_check_passed: bool,
     drift_check_passed: bool,
+    observation_source_issue: str | None,
 ) -> str:
     if (
         observation_artifact_status
@@ -345,6 +367,8 @@ def _resolve_diagnostic_status(
         != FRONTEND_CONTRACT_OBSERVATION_ARTIFACT_STATUS_ATTACHED
     ):
         return FRONTEND_CONTRACT_DIAGNOSTIC_STATUS_INVALID_ARTIFACT
+    if observation_source_issue is not None:
+        return FRONTEND_CONTRACT_DIAGNOSTIC_STATUS_SOURCE_PROFILE_MISMATCH
     if observation_count == 0:
         return FRONTEND_CONTRACT_DIAGNOSTIC_STATUS_VALID_EMPTY
     if artifacts_check_passed and not drift_check_passed:
@@ -369,6 +393,14 @@ def _policy_projection_for_status(
             report_family_member="frontend_contract_observations",
             severity="blocker",
             blocker_class="invalid_input",
+            coverage_effect="gap",
+        )
+    if status == FRONTEND_CONTRACT_DIAGNOSTIC_STATUS_SOURCE_PROFILE_MISMATCH:
+        return VerificationDiagnosticPolicyProjection(
+            readiness_effect="retry",
+            report_family_member="frontend_contract_observations",
+            severity="blocker",
+            blocker_class="source_profile_mismatch",
             coverage_effect="gap",
         )
     if status == FRONTEND_CONTRACT_DIAGNOSTIC_STATUS_VALID_EMPTY:

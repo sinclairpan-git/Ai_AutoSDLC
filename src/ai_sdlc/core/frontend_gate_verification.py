@@ -117,6 +117,8 @@ def build_frontend_gate_verification_report(
     ),
     observation_artifact_path: Path | None = None,
     observation_artifact_error: str | None = None,
+    observation_source_profile: str = "",
+    observation_source_issue: str | None = None,
     visual_a11y_evidence_artifact: FrontendVisualA11yEvidenceArtifact | None = None,
 ) -> FrontendGateVerificationReport:
     """Translate artifact presence and contract prerequisite into gate summary fields."""
@@ -129,6 +131,8 @@ def build_frontend_gate_verification_report(
         observation_artifact_status=observation_artifact_status,
         observation_artifact_path=observation_artifact_path,
         observation_artifact_error=observation_artifact_error,
+        observation_source_profile=observation_source_profile,
+        observation_source_issue=observation_source_issue,
     )
 
     gate_present, gate_message = _required_artifacts_present(

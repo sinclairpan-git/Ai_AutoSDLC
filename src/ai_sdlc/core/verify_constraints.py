@@ -18,6 +18,10 @@ from ai_sdlc.core.frontend_contract_observation_provider import (
     FRONTEND_CONTRACT_OBSERVATION_ARTIFACT_STATUS_MISSING_ARTIFACT,
     load_frontend_contract_observation_artifact,
 )
+from ai_sdlc.core.frontend_contract_observation_runtime_policy import (
+    FRONTEND_CONTRACT_OBSERVATION_SOURCE_PROFILE_OPAQUE,
+    assess_frontend_contract_observation_source,
+)
 from ai_sdlc.core.frontend_contract_verification import (
     FrontendContractVerificationReport,
     build_frontend_contract_verification_report,
@@ -905,12 +909,21 @@ def _frontend_contract_attachment_report(
         FRONTEND_CONTRACT_OBSERVATION_ARTIFACT_STATUS_MISSING_ARTIFACT
     )
     load_error: str | None = None
+    observation_source_profile = FRONTEND_CONTRACT_OBSERVATION_SOURCE_PROFILE_OPAQUE
+    observation_source_issue: str | None = None
     if observations_path is not None and observations_path.is_file():
         observation_artifact_status = (
             FRONTEND_CONTRACT_OBSERVATION_ARTIFACT_STATUS_ATTACHED
         )
         try:
-            observations = _load_frontend_contract_observations(observations_path)
+            artifact = load_frontend_contract_observation_artifact(observations_path)
+            observations = list(artifact.observations)
+            source_assessment = assess_frontend_contract_observation_source(
+                artifact,
+                work_item_id=work_item_id,
+            )
+            observation_source_profile = source_assessment.source_profile
+            observation_source_issue = source_assessment.issue_message
         except ValueError as exc:
             load_error = str(exc)
             observation_artifact_status = (
@@ -923,6 +936,8 @@ def _frontend_contract_attachment_report(
         observation_artifact_status=observation_artifact_status,
         observation_artifact_path=observations_path,
         observation_artifact_error=load_error,
+        observation_source_profile=observation_source_profile,
+        observation_source_issue=observation_source_issue,
     )
     if load_error is None or observations_path is None:
         return report

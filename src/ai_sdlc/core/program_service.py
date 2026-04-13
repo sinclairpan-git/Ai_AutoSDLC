@@ -6063,6 +6063,8 @@ class ProgramService:
             gate_report = build_frontend_gate_verification_report(
                 self.root,
                 list(attachment.observations),
+                observation_source_profile=attachment.observation_source_profile,
+                observation_source_issue=attachment.observation_source_issue,
                 visual_a11y_evidence_artifact=visual_a11y_evidence,
             )
             gate_verdict = gate_report.gate_result.verdict.value
@@ -6151,6 +6153,12 @@ class ProgramService:
             source_linkage={
                 "runtime_attachment_source": PROGRAM_FRONTEND_RUNTIME_ATTACHMENT_SOURCE_NAME,
                 "runtime_attachment_status": attachment.status,
+                "frontend_contract_observation_source_profile": (
+                    attachment.observation_source_profile
+                ),
+                "frontend_contract_observation_source_requirement": (
+                    attachment.observation_source_requirement
+                ),
                 "frontend_gate_source": frontend_gate_source,
                 "frontend_gate_verdict": gate_verdict,
                 "frontend_execute_gate_state": execute_decision.execute_gate_state,

@@ -94,6 +94,7 @@ def test_scan_frontend_contract_export_materializes_canonical_artifact(
 
     assert result.exit_code == 0
     assert "Frontend contract observations exported" in result.output
+    assert "source profile: consumer_evidence" in result.output
     artifact = load_frontend_contract_observation_artifact(
         spec_dir / "frontend-contract-observations.json"
     )
@@ -172,6 +173,7 @@ def test_scan_frontend_contract_export_materializes_sample_fixture_artifact(
 
     assert result.exit_code == 0
     assert "Frontend contract observations exported" in result.output
+    assert "source profile: sample_selfcheck" in result.output
     assert "2 observations" in result.output
     artifact = load_frontend_contract_observation_artifact(
         spec_dir / "frontend-contract-observations.json"

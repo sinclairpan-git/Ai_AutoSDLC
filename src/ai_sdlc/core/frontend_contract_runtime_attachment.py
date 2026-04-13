@@ -12,6 +12,11 @@ from ai_sdlc.core.frontend_contract_observation_provider import (
     load_frontend_contract_observation_artifact,
     observation_artifact_path,
 )
+from ai_sdlc.core.frontend_contract_observation_runtime_policy import (
+    FRONTEND_CONTRACT_OBSERVATION_SOURCE_PROFILE_OPAQUE,
+    FRONTEND_CONTRACT_OBSERVATION_SOURCE_REQUIREMENT_ALLOWED,
+    assess_frontend_contract_observation_source,
+)
 from ai_sdlc.models.state import Checkpoint
 
 FRONTEND_CONTRACT_RUNTIME_ATTACHMENT_SCOPE_CHECKPOINT = "checkpoint"
@@ -62,6 +67,11 @@ class FrontendContractRuntimeAttachment:
     advisories: tuple[str, ...] = ()
     coverage_gaps: tuple[str, ...] = ()
     freshness_status: str = FRONTEND_CONTRACT_RUNTIME_ATTACHMENT_FRESHNESS_UNKNOWN
+    observation_source_profile: str = FRONTEND_CONTRACT_OBSERVATION_SOURCE_PROFILE_OPAQUE
+    observation_source_requirement: str = (
+        FRONTEND_CONTRACT_OBSERVATION_SOURCE_REQUIREMENT_ALLOWED
+    )
+    observation_source_issue: str | None = None
     allow_artifact_write: bool = False
     write_policy: str = FRONTEND_CONTRACT_RUNTIME_ATTACHMENT_WRITE_POLICY_EXPLICIT_OPT_IN
 
@@ -82,6 +92,9 @@ class FrontendContractRuntimeAttachment:
             "advisories": list(self.advisories),
             "coverage_gaps": list(self.coverage_gaps),
             "freshness_status": self.freshness_status,
+            "observation_source_profile": self.observation_source_profile,
+            "observation_source_requirement": self.observation_source_requirement,
+            "observation_source_issue": self.observation_source_issue,
             "allow_artifact_write": self.allow_artifact_write,
             "write_policy": self.write_policy,
             "observation_count": len(self.observations),
@@ -178,6 +191,10 @@ def build_frontend_contract_runtime_attachment(
         )
 
     freshness_status = _freshness_status(artifact)
+    source_assessment = assess_frontend_contract_observation_source(
+        artifact,
+        work_item_id=scope.work_item_id,
+    )
     advisories: tuple[str, ...] = ()
     coverage_gaps: tuple[str, ...] = ()
     if (
@@ -199,6 +216,9 @@ def build_frontend_contract_runtime_attachment(
         advisories=advisories,
         coverage_gaps=coverage_gaps,
         freshness_status=freshness_status,
+        observation_source_profile=source_assessment.source_profile,
+        observation_source_requirement=source_assessment.requirement_state,
+        observation_source_issue=source_assessment.issue_message,
         allow_artifact_write=allow_artifact_write,
     )
 

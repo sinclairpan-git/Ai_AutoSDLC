@@ -148,6 +148,7 @@ def _assert_diagnostic_contract(
     expected_observation_count: int,
     expected_parse_error_summary: str | None,
     expected_drift_summary_substring: str | None,
+    expected_source_profile: str = "unknown",
 ) -> None:
     diagnostic = report.diagnostic
 
@@ -165,6 +166,7 @@ def _assert_diagnostic_contract(
     assert diagnostic.evidence.source_linkage == {
         "contracts_root": report.contracts_root,
         "observation_artifact_status": report.observation_artifact_status,
+        "observation_source_profile": expected_source_profile,
     }
     assert diagnostic.policy_projection.readiness_effect == expected_readiness_effect
     assert (
@@ -292,6 +294,45 @@ def test_build_frontend_contract_verification_report_short_circuits_invalid_befo
         expected_observation_count=0,
         expected_parse_error_summary="invalid JSON (Expecting value)",
         expected_drift_summary_substring=None,
+    )
+
+
+def test_build_frontend_contract_verification_report_treats_sample_selfcheck_profile_as_gap(
+    tmp_path,
+) -> None:
+    materialize_frontend_contract_artifacts(tmp_path, _build_contract_set())
+    artifact_path = tmp_path / "specs" / "001-auth" / "frontend-contract-observations.json"
+
+    report = build_frontend_contract_verification_report(
+        tmp_path / "contracts" / "frontend",
+        _matching_observations(),
+        observation_artifact_status=FRONTEND_CONTRACT_OBSERVATION_ARTIFACT_STATUS_ATTACHED,
+        observation_artifact_path=artifact_path,
+        observation_source_profile="sample_selfcheck",
+        observation_source_issue=(
+            "sample self-check observation artifact cannot satisfy this spec; "
+            "materialize consumer evidence from a real frontend source root"
+        ),
+    )
+
+    assert report.coverage_gaps == ("frontend_contract_observations",)
+    assert len(report.blockers) == 1
+    assert "sample self-check observation artifact cannot satisfy this spec" in report.blockers[0]
+    _assert_diagnostic_contract(
+        report,
+        expected_status="source_profile_mismatch",
+        expected_readiness_effect="retry",
+        expected_report_family_member="frontend_contract_observations",
+        expected_severity="blocker",
+        expected_blocker_class="source_profile_mismatch",
+        expected_coverage_effect="gap",
+        expected_observation_count=1,
+        expected_parse_error_summary=None,
+        expected_drift_summary_substring=None,
+        expected_source_profile="sample_selfcheck",
+    )
+    assert report.diagnostic.evidence.source_linkage["observation_source_profile"] == (
+        "sample_selfcheck"
     )
 
 

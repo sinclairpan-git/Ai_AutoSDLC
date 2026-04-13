@@ -167,6 +167,7 @@ related_doc:
 - **交付流**：`S2`
 - **来源范围**：`012`、`013`、`065`、`077`、`078`
 - **当前状态**：`partial`
+- **派生状态**：已派生 `127-frontend-contract-observation-producer-runtime-closure-baseline`；在 `127` focused verification 通过且下游 `T22` 收口前仍保持 `partial`
 - **缺失 carrier**：
   - canonical observation scanner / producer
   - non-sample consumer evidence producer
@@ -178,7 +179,7 @@ related_doc:
   2. `065/077/078` 的 sample fallback 边界在 runtime 中成立
   3. observation producer 能产出 verify / gate 可消费的 canonical artifact
 - **验证**：`uv run pytest tests/unit/test_frontend_contract* tests/integration/test_cli_scan.py -q`
-- **建议派生工单**：implementation carrier
+- **建议派生工单**：`127-frontend-contract-observation-producer-runtime-closure-baseline`
 
 ### Task 2.2 Runtime Attachment And Verify/Gate Closure
 

@@ -88,6 +88,99 @@ def test_build_runtime_attachment_prefers_explicit_spec_dir_and_loads_artifact(
     assert attachment.blockers == ()
 
 
+def test_build_runtime_attachment_classifies_sample_selfcheck_source_profile(
+    tmp_path: Path,
+) -> None:
+    spec_dir = tmp_path / "specs" / "001-auth"
+    artifact = build_frontend_contract_observation_artifact(
+        observations=[
+            PageImplementationObservation(
+                page_id="user-create",
+                recipe_id="form-create",
+            )
+        ],
+        provider_kind="scanner",
+        provider_name="frontend_contract_scanner",
+        generated_at="2026-04-14T07:00:00Z",
+        source_ref="tests/fixtures/frontend-contract-sample-src/match",
+        source_digest="sha256:sample-selfcheck",
+    )
+    write_frontend_contract_observation_artifact(spec_dir, artifact)
+
+    attachment = build_frontend_contract_runtime_attachment(
+        tmp_path,
+        explicit_spec_dir=spec_dir,
+    )
+
+    assert attachment.status == FRONTEND_CONTRACT_RUNTIME_ATTACHMENT_STATUS_ATTACHED
+    assert attachment.observation_source_profile == "sample_selfcheck"
+    assert attachment.observation_source_requirement == "sample_selfcheck_only"
+    assert attachment.observation_source_issue is not None
+    assert "sample self-check observation artifact cannot satisfy this spec" in (
+        attachment.observation_source_issue
+    )
+
+
+def test_build_runtime_attachment_allows_sample_selfcheck_for_012_scope(
+    tmp_path: Path,
+) -> None:
+    spec_dir = tmp_path / "specs" / "012-frontend-contract-verify-integration"
+    artifact = build_frontend_contract_observation_artifact(
+        observations=[
+            PageImplementationObservation(
+                page_id="user-create",
+                recipe_id="form-create",
+            )
+        ],
+        provider_kind="scanner",
+        provider_name="frontend_contract_scanner",
+        generated_at="2026-04-14T07:05:00Z",
+        source_ref="tests/fixtures/frontend-contract-sample-src/match",
+        source_digest="sha256:sample-selfcheck-012",
+    )
+    write_frontend_contract_observation_artifact(spec_dir, artifact)
+
+    attachment = build_frontend_contract_runtime_attachment(
+        tmp_path,
+        explicit_spec_dir=spec_dir,
+    )
+
+    assert attachment.status == FRONTEND_CONTRACT_RUNTIME_ATTACHMENT_STATUS_ATTACHED
+    assert attachment.observation_source_profile == "sample_selfcheck"
+    assert attachment.observation_source_requirement == "allowed"
+    assert attachment.observation_source_issue is None
+
+
+def test_build_runtime_attachment_flags_manual_sample_source_ref_as_sample_selfcheck(
+    tmp_path: Path,
+) -> None:
+    spec_dir = tmp_path / "specs" / "001-auth"
+    artifact = build_frontend_contract_observation_artifact(
+        observations=[
+            PageImplementationObservation(
+                page_id="user-create",
+                recipe_id="form-create",
+            )
+        ],
+        provider_kind="manual",
+        provider_name="fixture-export",
+        generated_at="2026-04-14T07:10:00Z",
+        source_ref="tests/fixtures/frontend-contract-sample-src/match",
+        source_digest="sha256:manual-sample-selfcheck",
+    )
+    write_frontend_contract_observation_artifact(spec_dir, artifact)
+
+    attachment = build_frontend_contract_runtime_attachment(
+        tmp_path,
+        explicit_spec_dir=spec_dir,
+    )
+
+    assert attachment.status == FRONTEND_CONTRACT_RUNTIME_ATTACHMENT_STATUS_ATTACHED
+    assert attachment.observation_source_profile == "sample_selfcheck"
+    assert attachment.observation_source_requirement == "sample_selfcheck_only"
+    assert attachment.observation_source_issue is not None
+
+
 def test_build_runtime_attachment_requires_scope(tmp_path: Path) -> None:
     attachment = build_frontend_contract_runtime_attachment(tmp_path)
 

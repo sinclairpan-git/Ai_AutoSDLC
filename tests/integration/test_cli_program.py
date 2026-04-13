@@ -45,6 +45,7 @@ from ai_sdlc.models.frontend_solution_confirmation import (
 from ai_sdlc.models.project import ProjectConfig
 
 runner = CliRunner()
+SAMPLE_FIXTURE_SOURCE_REF = "tests/fixtures/frontend-contract-sample-src/match"
 
 
 def _write_manifest(root: Path) -> None:
@@ -247,6 +248,9 @@ def _write_frontend_contract_observations(
     *,
     page_id: str = "user-create",
     recipe_id: str = "form-create",
+    provider_kind: str = "manual",
+    provider_name: str = "test-fixture",
+    source_ref: str | None = None,
 ) -> None:
     artifact = build_frontend_contract_observation_artifact(
         observations=[
@@ -258,9 +262,10 @@ def _write_frontend_contract_observations(
                 new_legacy_usages=[],
             )
         ],
-        provider_kind="manual",
-        provider_name="test-fixture",
+        provider_kind=provider_kind,
+        provider_name=provider_name,
         generated_at="2026-04-03T15:30:00Z",
+        source_ref=source_ref,
         source_digest="sha256:cli-program",
         source_revision="rev-cli-program",
     )
@@ -1302,6 +1307,34 @@ specs:
         )
         assert "uv run ai-sdlc rules materialize-frontend-mvp" in result.output
         assert "uv run ai-sdlc verify constraints" in result.output
+
+    def test_program_remediate_dry_run_rejects_sample_selfcheck_artifact_as_consumer_evidence(
+        self, initialized_project_dir: Path
+    ) -> None:
+        root = initialized_project_dir
+        _write_manifest(root)
+        _write_minimal_frontend_contract_page_artifacts(root)
+        _write_frontend_gate_artifacts(root)
+        _write_frontend_contract_observations(
+            root / "specs" / "001-auth",
+            provider_kind="scanner",
+            provider_name="frontend_contract_scanner",
+            source_ref=SAMPLE_FIXTURE_SOURCE_REF,
+        )
+        for spec in ("002-course", "003-enroll"):
+            _write_frontend_contract_observations(root / "specs" / spec)
+
+        with patch("ai_sdlc.cli.program_cmd.find_project_root", return_value=root):
+            result = runner.invoke(app, ["program", "remediate", "--dry-run"])
+
+        normalized_output = "".join(result.output.split())
+        assert result.exit_code == 0
+        assert "No frontend remediation steps generated." not in result.output
+        assert (
+            "uvrunai-sdlcscan<frontend-source-root>--frontend-contract-spec-dirspecs/001-auth"
+            in normalized_output
+        )
+        assert "uv run ai-sdlc rules materialize-frontend-mvp" not in result.output
 
     def test_program_remediate_execute_runs_bounded_frontend_commands(
         self, initialized_project_dir: Path

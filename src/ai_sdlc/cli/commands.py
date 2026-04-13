@@ -29,6 +29,9 @@ from ai_sdlc.core.execute_authorization import evaluate_execute_authorization
 from ai_sdlc.core.frontend_contract_observation_provider import (
     load_frontend_contract_observation_artifact,
 )
+from ai_sdlc.core.frontend_contract_observation_runtime_policy import (
+    classify_frontend_contract_observation_source,
+)
 from ai_sdlc.core.p1_artifacts import (
     load_execution_path,
     load_latest_reviewer_decision,
@@ -657,6 +660,10 @@ def scan_command(
         console.print(
             "[green]Frontend contract observations exported:[/green] "
             f"{len(artifact.observations)} observations -> {artifact_path}"
+        )
+        console.print(
+            "[dim]source profile: "
+            f"{classify_frontend_contract_observation_source(artifact)}[/dim]"
         )
         raise typer.Exit(code=0)
 

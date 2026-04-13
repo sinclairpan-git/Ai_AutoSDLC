@@ -49,6 +49,8 @@ from ai_sdlc.models.frontend_solution_confirmation import (
 from ai_sdlc.models.program import ProgramManifest, ProgramSpecRef
 from ai_sdlc.models.state import Checkpoint, FeatureInfo
 
+SAMPLE_FIXTURE_SOURCE_REF = "tests/fixtures/frontend-contract-sample-src/match"
+
 
 def _manifest() -> ProgramManifest:
     return ProgramManifest(
@@ -6956,6 +6958,48 @@ def test_build_status_waives_observation_gap_for_framework_capability(
     )
 
 
+def test_build_status_blocks_sample_selfcheck_observation_artifact_for_general_spec(
+    tmp_path: Path,
+) -> None:
+    for p in ("specs/001-auth", "specs/002-course", "specs/003-enroll"):
+        (tmp_path / p).mkdir(parents=True)
+    _write_minimal_frontend_contract_page_artifacts(tmp_path)
+    materialize_frontend_gate_policy_artifacts(
+        tmp_path,
+        build_mvp_frontend_gate_policy(),
+    )
+    materialize_frontend_generation_constraint_artifacts(
+        tmp_path,
+        build_mvp_frontend_generation_constraints(),
+    )
+    _write_frontend_contract_observations(
+        tmp_path / "specs" / "001-auth",
+        provider_kind="scanner",
+        provider_name="frontend_contract_scanner",
+        source_ref=SAMPLE_FIXTURE_SOURCE_REF,
+    )
+
+    svc = ProgramService(tmp_path)
+    rows = svc.build_status(_manifest())
+    by = {r.spec_id: r for r in rows}
+
+    readiness = by["001-auth"].frontend_readiness
+    assert readiness is not None
+    assert readiness.state == "retry"
+    assert readiness.execute_gate_state == "blocked"
+    assert readiness.decision_reason == "result_inconsistency"
+    assert "frontend_contract_observations" in readiness.coverage_gaps
+    assert any(
+        "sample self-check observation artifact cannot satisfy this spec"
+        in blocker
+        for blocker in readiness.blockers
+    )
+    assert (
+        readiness.source_linkage["frontend_contract_observation_source_profile"]
+        == "sample_selfcheck"
+    )
+
+
 def test_build_status_keeps_observation_gap_for_consumer_adoption(
     tmp_path: Path,
 ) -> None:
@@ -7607,6 +7651,9 @@ def _write_frontend_contract_observations(
     *,
     page_id: str = "user-create",
     recipe_id: str = "form-create",
+    provider_kind: str = "manual",
+    provider_name: str = "test-fixture",
+    source_ref: str | None = None,
 ) -> None:
     artifact = build_frontend_contract_observation_artifact(
         observations=[
@@ -7618,9 +7665,10 @@ def _write_frontend_contract_observations(
                 new_legacy_usages=[],
             )
         ],
-        provider_kind="manual",
-        provider_name="test-fixture",
+        provider_kind=provider_kind,
+        provider_name=provider_name,
         generated_at="2026-04-03T15:00:00Z",
+        source_ref=source_ref,
         source_digest="sha256:program-service",
         source_revision="rev-program-service",
     )
