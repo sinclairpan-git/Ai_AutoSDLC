@@ -261,8 +261,9 @@ def status_command(
         )
         raise typer.Exit(code=1)
 
+    status_surface = build_status_json_surface(root)
     if as_json:
-        typer.echo(json.dumps(build_status_json_surface(root), indent=2))
+        typer.echo(json.dumps(status_surface, indent=2))
         raise typer.Exit(code=0)
 
     note = format_adapter_notice(ensure_ide_adaptation(root))
@@ -439,6 +440,22 @@ def status_command(
             "Execute Auth Reasons",
             ", ".join(execute_authorization.reason_codes),
         )
+    capability_closure = status_surface.get("capability_closure")
+    if capability_closure is not None:
+        table.add_row("Capability Closure", str(capability_closure["state"]))
+        table.add_row(
+            "Capability Closure Detail",
+            str(capability_closure["detail"]),
+        )
+        sample_clusters = capability_closure.get("open_clusters", [])[:3]
+        if sample_clusters:
+            summary = ", ".join(
+                f"{cluster['cluster_id']} ({cluster['closure_state']})"
+                for cluster in sample_clusters
+            )
+            if capability_closure["open_cluster_count"] > len(sample_clusters):
+                summary += ", ..."
+            table.add_row("Capability Closure Focus", summary)
 
     console.print(table)
     if hint is not None:

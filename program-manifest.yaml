@@ -1,5 +1,50 @@
 schema_version: "1"
 prd_path: "AI-SDLC 全自动化框架 产品需求文档（PRD）.md"
+capability_closure_audit:
+  reviewed_at: "2026-04-13"
+  open_clusters:
+    - cluster_id: "project-meta-foundations"
+      title: "项目元能力基线"
+      closure_state: "formal_only"
+      summary: "005-008 仍是 formal baseline；仓库尚未提供对应 runtime / guard / surface 的实现闭环。"
+      source_refs:
+        - "005-008"
+    - cluster_id: "frontend-contract-foundation"
+      title: "Frontend 合同与观测基础链"
+      closure_state: "partial"
+      summary: "065 与少量相邻切片已落地，但 009/011-018 的合同、scanner、attachment、gate 主链仍未端到端闭环。"
+      source_refs:
+        - "009-018"
+        - "065"
+        - "077-078"
+    - cluster_id: "frontend-program-automation-chain"
+      title: "Frontend Program 自动化主链"
+      closure_state: "capability_open"
+      summary: "019-064 存在局部 consumption 实现，但 execute/remediation/writeback/archive/cleanup 仍不能按能力闭环认定为已交付。"
+      source_refs:
+        - "019-064"
+    - cluster_id: "frontend-p1-experience-stability"
+      title: "Frontend P1 体验稳定性"
+      closure_state: "capability_open"
+      summary: "067-069 首批 implementation slice 已落地，但 070-071 仍 docs-only；066/072/076 的 close wording 不得等同 capability closure。"
+      source_refs:
+        - "066-072"
+        - "076"
+    - cluster_id: "frontend-evidence-class-lifecycle"
+      title: "Frontend Evidence Class 生命周期"
+      closure_state: "partial"
+      summary: "107-113 已补部分 runtime/backfill，但 083-090 仍 prospective/formal-only，091 仍首批 implementation slice 进行中。"
+      source_refs:
+        - "079-092"
+        - "107-113"
+    - cluster_id: "frontend-mainline-delivery"
+      title: "Frontend Mainline Delivery"
+      closure_state: "capability_open"
+      summary: "073 solution freeze、096 host readiness 与 105 首批 binding runtime 已落地，但 095 承诺的 delivery/apply/browser gate 仍未端到端闭环。"
+      source_refs:
+        - "073-075"
+        - "093-106"
+        - "114-115"
 specs:
   - id: "009-frontend-governance-ui-kernel"
     path: "specs/009-frontend-governance-ui-kernel"

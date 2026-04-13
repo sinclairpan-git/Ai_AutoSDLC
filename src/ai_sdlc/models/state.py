@@ -3,8 +3,9 @@
 from __future__ import annotations
 
 from enum import Enum
+from typing import Any
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 # ---------------------------------------------------------------------------
 # Checkpoint models (from checkpoint)
@@ -72,6 +73,27 @@ class Checkpoint(BaseModel):
     linked_wi_id: str | None = None
     linked_plan_uri: str | None = None
     last_synced_at: str | None = None
+
+    @model_validator(mode="before")
+    @classmethod
+    def _migrate_legacy_pipeline_block(cls, data: Any) -> Any:
+        if not isinstance(data, dict):
+            return data
+
+        pipeline = data.get("pipeline")
+        if not isinstance(pipeline, dict):
+            return data
+
+        migrated = dict(data)
+        if not str(migrated.get("pipeline_started_at", "")).strip():
+            started_at = pipeline.get("started_at")
+            if isinstance(started_at, str) and started_at.strip():
+                migrated["pipeline_started_at"] = started_at
+        if not str(migrated.get("pipeline_last_updated", "")).strip():
+            last_updated = pipeline.get("last_updated")
+            if isinstance(last_updated, str) and last_updated.strip():
+                migrated["pipeline_last_updated"] = last_updated
+        return migrated
 
 
 # ---------------------------------------------------------------------------

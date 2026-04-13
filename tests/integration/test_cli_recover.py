@@ -271,6 +271,53 @@ class TestCliRecover:
         assert result.exit_code == 1
         assert "checkpoint" in result.output.lower()
 
+    def test_recover_rebuilds_legacy_resume_pack_from_legacy_checkpoint(
+        self, tmp_path: Path
+    ) -> None:
+        init_project(tmp_path)
+        spec_dir = tmp_path / "specs" / "WI-2026-LEGACY"
+        spec_dir.mkdir(parents=True)
+        (spec_dir / "spec.md").write_text("# Spec\n", encoding="utf-8")
+        (spec_dir / "plan.md").write_text("# Plan\n", encoding="utf-8")
+        (spec_dir / "tasks.md").write_text("# Tasks\n", encoding="utf-8")
+        checkpoint_path = tmp_path / ".ai-sdlc" / "state" / "checkpoint.yml"
+        checkpoint_path.parent.mkdir(parents=True, exist_ok=True)
+        checkpoint_path.write_text(
+            """
+pipeline:
+  started_at: '2026-01-01T00:00:00+00:00'
+  last_updated: '2026-01-01T00:05:00+00:00'
+current_stage: execute
+feature:
+  id: 'WI-2026-LEGACY'
+  spec_dir: specs/WI-2026-LEGACY
+  design_branch: feature/WI-2026-LEGACY-docs
+  feature_branch: feature/WI-2026-LEGACY-dev
+  current_branch: feature/WI-2026-LEGACY-dev
+""".strip(),
+            encoding="utf-8",
+        )
+        (tmp_path / ".ai-sdlc" / "state" / "resume-pack.yaml").write_text(
+            """
+current_stage: execute
+current_batch: 0
+last_committed_task: ''
+working_set_snapshot: {}
+timestamp: '2026-01-01T00:06:00+00:00'
+checkpoint_path: .ai-sdlc/state/checkpoint.yml
+""".strip(),
+            encoding="utf-8",
+        )
+
+        with patch("ai_sdlc.cli.commands.find_project_root", return_value=tmp_path):
+            result = runner.invoke(app, ["recover"])
+
+        assert result.exit_code == 0
+        assert "rebuilding from checkpoint" in result.output.lower()
+        assert "rebuilt successfully" in result.output.lower()
+        assert "Resume Stage" in result.output
+        assert "WI-2026-LEGACY" in result.output
+
     def test_recover_displays_branch_binding_and_governance(
         self, tmp_path: Path
     ) -> None:

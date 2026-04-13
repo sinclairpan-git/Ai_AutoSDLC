@@ -42,6 +42,32 @@ execution_mode: auto
     assert loaded.last_synced_at is None
 
 
+def test_strict_load_accepts_legacy_pipeline_block(tmp_path: Path) -> None:
+    cp_path = tmp_path / CHECKPOINT_PATH
+    cp_path.parent.mkdir(parents=True)
+    cp_path.write_text(
+        """
+pipeline:
+  started_at: '2026-01-01T00:00:00+00:00'
+  last_updated: '2026-01-01T00:05:00+00:00'
+current_stage: init
+feature:
+  id: '001'
+  spec_dir: specs/001
+  design_branch: design/001
+  feature_branch: feature/001
+  current_branch: main
+""".strip(),
+        encoding="utf-8",
+    )
+
+    loaded = load_checkpoint(tmp_path, strict=True)
+
+    assert loaded is not None
+    assert loaded.pipeline_started_at == "2026-01-01T00:00:00+00:00"
+    assert loaded.pipeline_last_updated == "2026-01-01T00:05:00+00:00"
+
+
 def test_save_link_fields_roundtrip(tmp_path: Path) -> None:
     cp = Checkpoint(
         current_stage="design",

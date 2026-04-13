@@ -1,13 +1,15 @@
-# Frontend Program 未实现项排序与分支落地计划
+# Frontend Program 排序与能力闭环真值
 
-**更新日期**：2026-04-08
+**更新日期**：2026-04-13
 **适用范围**：所有 `specs/0xx-frontend-*` work item
-**机器真值**：根级 `program-manifest.yaml`；本文件用于说明排序口径、并行窗口与建议分支命名。
+**机器真值**：根级 `program-manifest.yaml`；本文件用于说明排序口径、frontend 范围内的 capability closure 汇总与建议分支命名。
 
 ## 口径
 
 - `program-manifest.yaml` 是后续 `program validate/status/plan/integrate` 与逐项开分支落地的唯一机器真值。
-- 本文件把 manifest 的 DAG 拓扑序、人读状态口径与建议 branch slug 汇总成一张表，方便逐项执行。
+- 本文件把 manifest 的 DAG 拓扑序、frontend 范围内的 capability closure 汇总与建议 branch slug 汇总成一张表，方便逐项执行。
+- `spec.md` 顶部状态、`development-summary.md`、carrier close wording 只代表 work item local truth；不得推导为 capability closure。
+- capability closure 一律以 `program-manifest.yaml > capability_closure_audit` 为准；当本文件与 manifest wording 冲突时，以 manifest 为准。
 - Tier 编号与 `uv run ai-sdlc program plan` 保持一致，采用 `0` 起始。
 - 排序优先遵循依赖闭包；同层若无依赖关系，则按 spec 编号升序处理。
 
@@ -17,6 +19,18 @@
 - 只有在“有限并行窗口”中列出的 tier 内项目，才建议并行开分支；其余按主线串行推进。
 - 每次分支落地前，先以根级 manifest 重新跑 `uv run ai-sdlc program plan`，确认依赖未漂移。
 - docs-only baseline 也保留独立分支位次，避免把冻结基线与后续消费实现混在同一次 close-out。
+
+## Frontend 能力闭环状态
+
+> 说明：下表只汇总 frontend 范围内仍处于 open 的 capability clusters。`project-meta-foundations` 这类非 frontend cluster 只保留在根级 manifest audit 中，不在本文件展开。
+
+| Capability Cluster | 状态 | 来源范围 | 当前口径 |
+|---|---|---|---|
+| `frontend-contract-foundation` | `partial` | `009-018`, `065`, `077-078` | 已有 sample self-check 与少量相邻实现，但合同、scanner、attachment、gate 主链仍未端到端闭环 |
+| `frontend-program-automation-chain` | `capability_open` | `019-064` | 局部 consumption/execute carrier 已存在，但 program execute/remediation/writeback/archive/cleanup 仍不能宣称已交付 |
+| `frontend-p1-experience-stability` | `capability_open` | `066-072`, `076` | `067-069` 首批 implementation slice 已落地；`070-071` 仍 docs-only，close wording 不得等同 capability closure |
+| `frontend-evidence-class-lifecycle` | `partial` | `079-092`, `107-113` | 已有 backfill/runtime cut，但 validator/mirror/status/close-check 链仍未整体闭环 |
+| `frontend-mainline-delivery` | `capability_open` | `073-075`, `093-106`, `114-115` | `073`、`096`、`105` 已有局部落地，但 `095` 承诺的 delivery/apply/browser gate 仍未端到端闭环 |
 
 ## 主线分段
 
@@ -34,7 +48,7 @@
 - Tier 4: `014`, `017` 可并行，前提是该 tier 之前的依赖层已完成。
 - Tier 10: `070`, `071` 可并行，前提是 `069` 已 formalize 且该 tier 之前的依赖层已完成。
 
-## 排序总表
+## 排序总表（以下“状态”仅表示 work item local truth，不表示 capability closure）
 
 - #01 | Tier 00 | `009` | branch `codex/frontend-governance-ui-kernel` | 直接依赖：无 | 状态：已冻结（formal baseline）
 - #02 | Tier 01 | `011` | branch `codex/frontend-contract-authoring-baseline` | 直接依赖：`009` | 状态：已冻结（formal baseline）

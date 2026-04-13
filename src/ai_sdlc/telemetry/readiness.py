@@ -40,6 +40,7 @@ def build_status_json_surface(repo_root: Path) -> dict[str, Any]:
     manifest_state = _load_manifest_state(repo_root)
     store = TelemetryStore(repo_root)
     branch_lifecycle = _build_branch_lifecycle_surface(repo_root)
+    capability_closure = _build_capability_closure_surface(repo_root)
     formal_artifact_target = _build_formal_artifact_target_surface(repo_root)
     backlog_breach_guard = _build_backlog_breach_guard_surface(repo_root)
     execute_authorization = _build_execute_authorization_surface(repo_root)
@@ -60,7 +61,7 @@ def build_status_json_surface(repo_root: Path) -> dict[str, Any]:
 
     timeline_payload = _read_json_file(telemetry_indexes_root(repo_root) / "timeline-cursor.json")
     if manifest_state["state"] == "not_initialized":
-        return {
+        payload = {
             "telemetry": {
                 "state": "not_initialized",
                 "current": None,
@@ -72,8 +73,11 @@ def build_status_json_surface(repo_root: Path) -> dict[str, Any]:
             "execute_authorization": execute_authorization,
             "adapter_governance": adapter_governance,
         }
+        if capability_closure is not None:
+            payload["capability_closure"] = capability_closure
+        return payload
     if manifest_state["state"] != "loaded":
-        return {
+        payload = {
             "telemetry": {
                 "state": "invalid_manifest",
                 "current": None,
@@ -86,6 +90,9 @@ def build_status_json_surface(repo_root: Path) -> dict[str, Any]:
             "execute_authorization": execute_authorization,
             "adapter_governance": adapter_governance,
         }
+        if capability_closure is not None:
+            payload["capability_closure"] = capability_closure
+        return payload
 
     manifest = manifest_state["manifest"]
     derived_timeline_payload: dict[str, Any] | None = None
@@ -100,7 +107,7 @@ def build_status_json_surface(repo_root: Path) -> dict[str, Any]:
         latest_id = _timeline_latest_id(derived_timeline_payload, field_name)
         return latest_id if latest_id in values else None
 
-    return {
+    payload = {
         "telemetry": {
             "state": "ready",
             "current": {
@@ -140,6 +147,59 @@ def build_status_json_surface(repo_root: Path) -> dict[str, Any]:
         "backlog_breach_guard": backlog_breach_guard,
         "execute_authorization": execute_authorization,
         "adapter_governance": adapter_governance,
+    }
+    if capability_closure is not None:
+        payload["capability_closure"] = capability_closure
+    return payload
+
+
+def _build_capability_closure_surface(repo_root: Path) -> dict[str, Any] | None:
+    manifest_path = repo_root / "program-manifest.yaml"
+    if not manifest_path.is_file():
+        return None
+
+    svc = ProgramService(repo_root, manifest_path)
+    try:
+        manifest = svc.load_manifest()
+    except Exception:
+        return None
+
+    audit = manifest.capability_closure_audit
+    if audit is None or not audit.open_clusters:
+        return None
+
+    counts = {
+        "formal_only": 0,
+        "partial": 0,
+        "capability_open": 0,
+    }
+    open_clusters: list[dict[str, Any]] = []
+    for cluster in audit.open_clusters:
+        counts[cluster.closure_state] += 1
+        open_clusters.append(
+            {
+                "cluster_id": cluster.cluster_id,
+                "title": cluster.title,
+                "closure_state": cluster.closure_state,
+                "source_refs": list(cluster.source_refs),
+            }
+        )
+
+    open_cluster_count = len(open_clusters)
+    return {
+        "state": "open",
+        "reviewed_at": audit.reviewed_at,
+        "open_cluster_count": open_cluster_count,
+        "formal_only_count": counts["formal_only"],
+        "partial_count": counts["partial"],
+        "capability_open_count": counts["capability_open"],
+        "detail": (
+            f"{open_cluster_count} open clusters; "
+            f"formal_only={counts['formal_only']}, "
+            f"partial={counts['partial']}, "
+            f"capability_open={counts['capability_open']}"
+        ),
+        "open_clusters": open_clusters,
     }
 
 

@@ -731,6 +731,55 @@ def test_status_json_real_cli_path_does_not_mutate_project_config(
     assert after == before
 
 
+def test_status_rebuilds_legacy_resume_pack_from_legacy_checkpoint(
+    tmp_path: Path,
+) -> None:
+    init_project(tmp_path)
+    spec_dir = tmp_path / "specs" / "WI-2026-LEGACY"
+    spec_dir.mkdir(parents=True)
+    (spec_dir / "spec.md").write_text("# Spec\n", encoding="utf-8")
+    (spec_dir / "plan.md").write_text("# Plan\n", encoding="utf-8")
+    (spec_dir / "tasks.md").write_text("# Tasks\n", encoding="utf-8")
+
+    checkpoint_path = tmp_path / ".ai-sdlc" / "state" / "checkpoint.yml"
+    checkpoint_path.parent.mkdir(parents=True, exist_ok=True)
+    checkpoint_path.write_text(
+        """
+pipeline:
+  started_at: '2026-01-01T00:00:00+00:00'
+  last_updated: '2026-01-01T00:05:00+00:00'
+current_stage: execute
+feature:
+  id: 'WI-2026-LEGACY'
+  spec_dir: specs/WI-2026-LEGACY
+  design_branch: feature/WI-2026-LEGACY-docs
+  feature_branch: feature/WI-2026-LEGACY-dev
+  current_branch: feature/WI-2026-LEGACY-dev
+""".strip(),
+        encoding="utf-8",
+    )
+    (tmp_path / ".ai-sdlc" / "state" / "resume-pack.yaml").write_text(
+        """
+current_stage: execute
+current_batch: 0
+last_committed_task: ''
+working_set_snapshot: {}
+timestamp: '2026-01-01T00:06:00+00:00'
+checkpoint_path: .ai-sdlc/state/checkpoint.yml
+""".strip(),
+        encoding="utf-8",
+    )
+
+    with patch("ai_sdlc.cli.commands.find_project_root", return_value=tmp_path):
+        result = runner.invoke(app, ["status"])
+
+    assert result.exit_code == 0
+    assert "rebuilding from checkpoint" in result.output.lower()
+    assert "rebuilt successfully" in result.output.lower()
+    assert "Pipeline Stage" in result.output
+    assert "WI-2026-LEGACY" in result.output
+
+
 def test_status_json_latest_scope_ids_do_not_depend_on_manifest_key_order(
     tmp_path: Path,
 ) -> None:
@@ -1240,6 +1289,99 @@ specs:
     }
     assert "source_of_truth_path" not in json.dumps(summary)
     assert "human_remediation_hint" not in json.dumps(summary)
+
+
+def test_status_json_includes_capability_closure_summary(
+    tmp_path: Path,
+) -> None:
+    init_project(tmp_path)
+    (tmp_path / "program-manifest.yaml").write_text(
+        """
+schema_version: "1"
+capability_closure_audit:
+  reviewed_at: "2026-04-13"
+  open_clusters:
+    - cluster_id: "project-meta-foundations"
+      title: "Project Meta Foundations"
+      closure_state: "formal_only"
+      summary: "Only formal baselines exist; no implementation carrier has landed."
+      source_refs:
+        - "005-008"
+    - cluster_id: "frontend-mainline-delivery"
+      title: "Frontend Mainline Delivery"
+      closure_state: "capability_open"
+      summary: "Solution freeze and some runtime slices exist, but delivery/apply/browser gate are not end-to-end closed."
+      source_refs:
+        - "073-075"
+        - "093-106"
+        - "114-115"
+specs: []
+""".strip()
+        + "\n",
+        encoding="utf-8",
+    )
+
+    with patch("ai_sdlc.cli.commands.find_project_root", return_value=tmp_path):
+        result = runner.invoke(app, ["status", "--json"])
+
+    assert result.exit_code == 0
+    payload = json.loads(result.output)
+    assert payload["capability_closure"] == {
+        "state": "open",
+        "reviewed_at": "2026-04-13",
+        "open_cluster_count": 2,
+        "formal_only_count": 1,
+        "partial_count": 0,
+        "capability_open_count": 1,
+        "detail": "2 open clusters; formal_only=1, partial=0, capability_open=1",
+        "open_clusters": [
+            {
+                "cluster_id": "project-meta-foundations",
+                "title": "Project Meta Foundations",
+                "closure_state": "formal_only",
+                "source_refs": ["005-008"],
+            },
+            {
+                "cluster_id": "frontend-mainline-delivery",
+                "title": "Frontend Mainline Delivery",
+                "closure_state": "capability_open",
+                "source_refs": ["073-075", "093-106", "114-115"],
+            },
+        ],
+    }
+
+
+def test_status_text_surfaces_capability_closure_summary(
+    tmp_path: Path,
+) -> None:
+    init_project(tmp_path)
+    (tmp_path / "program-manifest.yaml").write_text(
+        """
+schema_version: "1"
+capability_closure_audit:
+  reviewed_at: "2026-04-13"
+  open_clusters:
+    - cluster_id: "project-meta-foundations"
+      title: "Project Meta Foundations"
+      closure_state: "formal_only"
+      summary: "Only formal baselines exist; no implementation carrier has landed."
+      source_refs:
+        - "005-008"
+specs: []
+""".strip()
+        + "\n",
+        encoding="utf-8",
+    )
+
+    with patch("ai_sdlc.cli.commands.find_project_root", return_value=tmp_path):
+        result = runner.invoke(app, ["status"])
+
+    assert result.exit_code == 0
+    assert "Capability Closure" in result.output
+    assert "1 open clusters" in result.output
+    assert "formal_only=1" in result.output
+    assert "capability_open=0" in result.output
+    assert "project-meta-foundations (formal_only)" in result.output
 
 
 def test_status_json_frontend_evidence_class_requires_exact_spec_path_match(
