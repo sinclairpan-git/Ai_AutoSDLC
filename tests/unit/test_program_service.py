@@ -7,6 +7,7 @@ from pathlib import Path
 import yaml
 
 from ai_sdlc.context.state import save_checkpoint
+from ai_sdlc.core.config import save_project_config
 from ai_sdlc.core.frontend_contract_drift import PageImplementationObservation
 from ai_sdlc.core.frontend_contract_observation_provider import (
     build_frontend_contract_observation_artifact,
@@ -33,6 +34,7 @@ from ai_sdlc.models.frontend_gate_policy import (
     build_mvp_frontend_gate_policy,
     build_p1_frontend_gate_policy_visual_a11y_foundation,
 )
+from ai_sdlc.models.project import ProjectConfig
 from ai_sdlc.models.frontend_generation_constraints import (
     build_mvp_frontend_generation_constraints,
 )
@@ -84,6 +86,102 @@ def _write_manifest_yaml(root: Path, text: str) -> None:
     )
 
 
+def _write_managed_delivery_apply_request(root: Path, *, fingerprint: str = "fp-001") -> Path:
+    payload = {
+        "execution_view": {
+            "action_plan_id": "plan-001",
+            "confirmation_surface_id": "surface-001",
+            "plan_fingerprint": fingerprint,
+            "protocol_version": "1",
+            "managed_target_ref": "managed://frontend/app",
+            "attachment_scope_ref": "scope://001-auth",
+            "readiness_subject_id": "001-auth",
+            "spec_dir": "specs/001-auth",
+            "action_items": [
+                {
+                    "action_id": "a1",
+                    "effect_kind": "mutate",
+                    "action_type": "runtime_remediation",
+                    "required": True,
+                    "selected": True,
+                    "default_selected": True,
+                    "depends_on_action_ids": [],
+                    "rollback_ref": "rollback:a1",
+                    "retry_ref": "retry:a1",
+                    "cleanup_ref": "cleanup:a1",
+                    "risk_flags": [],
+                    "source_linkage_refs": {"spec": "specs/001-auth"},
+                }
+            ],
+            "will_not_touch": ["legacy-root"],
+        },
+        "decision_receipt": {
+            "decision_receipt_id": "receipt-001",
+            "action_plan_id": "plan-001",
+            "confirmation_surface_id": "surface-001",
+            "decision": "continue",
+            "selected_action_ids": ["a1"],
+            "deselected_optional_action_ids": [],
+            "risk_acknowledgement_ids": [],
+            "second_confirmation_acknowledged": True,
+            "confirmed_plan_fingerprint": fingerprint,
+            "created_at": "2026-04-13T13:30:00Z",
+        },
+    }
+    request_path = root / ".ai-sdlc" / "memory" / "frontend-managed-delivery" / "apply-request.yaml"
+    request_path.parent.mkdir(parents=True, exist_ok=True)
+    request_path.write_text(yaml.safe_dump(payload, sort_keys=False), encoding="utf-8")
+    return request_path
+
+
+def _write_blocked_managed_delivery_apply_request(root: Path) -> Path:
+    payload = {
+        "execution_view": {
+            "action_plan_id": "plan-001",
+            "confirmation_surface_id": "surface-001",
+            "plan_fingerprint": "fp-001",
+            "protocol_version": "1",
+            "managed_target_ref": "managed://frontend/app",
+            "attachment_scope_ref": "scope://001-auth",
+            "readiness_subject_id": "001-auth",
+            "spec_dir": "specs/001-auth",
+            "action_items": [
+                {
+                    "action_id": "a1",
+                    "effect_kind": "mutate",
+                    "action_type": "dependency_install",
+                    "required": True,
+                    "selected": True,
+                    "default_selected": True,
+                    "depends_on_action_ids": [],
+                    "rollback_ref": "rollback:a1",
+                    "retry_ref": "retry:a1",
+                    "cleanup_ref": "cleanup:a1",
+                    "risk_flags": [],
+                    "source_linkage_refs": {"spec": "specs/001-auth"},
+                }
+            ],
+            "will_not_touch": ["legacy-root"],
+        },
+        "decision_receipt": {
+            "decision_receipt_id": "receipt-001",
+            "action_plan_id": "plan-001",
+            "confirmation_surface_id": "surface-001",
+            "decision": "continue",
+            "selected_action_ids": ["a1"],
+            "deselected_optional_action_ids": [],
+            "risk_acknowledgement_ids": [],
+            "second_confirmation_acknowledged": True,
+            "confirmed_plan_fingerprint": "fp-001",
+            "created_at": "2026-04-13T13:30:00Z",
+        },
+    }
+    request_path = root / ".ai-sdlc" / "memory" / "frontend-managed-delivery" / "apply-request-blocked.yaml"
+    request_path.parent.mkdir(parents=True, exist_ok=True)
+    request_path.write_text(yaml.safe_dump(payload, sort_keys=False), encoding="utf-8")
+    return request_path
+
+
 def test_validate_manifest_ok(tmp_path: Path) -> None:
     for p in ("specs/001-auth", "specs/002-course", "specs/003-enroll"):
         (tmp_path / p).mkdir(parents=True)
@@ -92,6 +190,62 @@ def test_validate_manifest_ok(tmp_path: Path) -> None:
     res = svc.validate_manifest(_manifest())
     assert res.valid is True
     assert res.errors == []
+
+
+def test_build_frontend_managed_delivery_apply_request_blocks_on_host_ingress(
+    initialized_project_dir: Path,
+) -> None:
+    save_project_config(
+        initialized_project_dir,
+        ProjectConfig(adapter_ingress_state="materialized"),
+    )
+    request_path = _write_managed_delivery_apply_request(initialized_project_dir)
+    svc = ProgramService(initialized_project_dir)
+
+    request = svc.build_frontend_managed_delivery_apply_request(request_path)
+
+    assert request.required is True
+    assert request.apply_state == "blocked_before_start"
+    assert "host_ingress_below_mutate_threshold" in request.remaining_blockers
+
+
+def test_execute_frontend_managed_delivery_apply_returns_pending_browser_gate_success(
+    initialized_project_dir: Path,
+) -> None:
+    save_project_config(
+        initialized_project_dir,
+        ProjectConfig(adapter_ingress_state="verified_loaded"),
+    )
+    request_path = _write_managed_delivery_apply_request(initialized_project_dir)
+    svc = ProgramService(initialized_project_dir)
+    request = svc.build_frontend_managed_delivery_apply_request(request_path)
+
+    result = svc.execute_frontend_managed_delivery_apply(
+        request_path,
+        request=request,
+        confirmed=True,
+    )
+
+    assert result.passed is True
+    assert result.result_status == "apply_succeeded_pending_browser_gate"
+    assert "delivery is not complete" in result.headline.lower()
+    assert "browser gate has not run" in result.headline.lower()
+
+
+def test_build_frontend_managed_delivery_apply_request_surfaces_executor_preflight_blockers(
+    initialized_project_dir: Path,
+) -> None:
+    save_project_config(
+        initialized_project_dir,
+        ProjectConfig(adapter_ingress_state="verified_loaded"),
+    )
+    request_path = _write_blocked_managed_delivery_apply_request(initialized_project_dir)
+    svc = ProgramService(initialized_project_dir)
+
+    request = svc.build_frontend_managed_delivery_apply_request(request_path)
+
+    assert request.apply_state == "blocked_before_start"
+    assert "required_unsupported" in request.remaining_blockers
 
 
 def test_validate_manifest_cycle(tmp_path: Path) -> None:

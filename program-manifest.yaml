@@ -880,3 +880,10 @@ specs:
     branch_slug: "stage0-093-095-plan-backfill-baseline"
     owner: "team-frontend-governance"
     frontend_evidence_class: "framework_capability"
+  - id: "123-frontend-mainline-managed-delivery-apply-runtime-implementation-baseline"
+    path: "specs/123-frontend-mainline-managed-delivery-apply-runtime-implementation-baseline"
+    depends_on:
+      - "101-frontend-mainline-managed-delivery-apply-runtime-baseline"
+    branch_slug: "frontend-mainline-managed-delivery-apply-runtime-implementation-baseline"
+    owner: "team-frontend-governance"
+    frontend_evidence_class: "framework_capability"

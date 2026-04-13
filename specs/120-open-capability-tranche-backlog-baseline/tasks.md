@@ -81,6 +81,7 @@ related_doc:
 - **交付流**：`S6`
 - **来源范围**：`095`、`100`、`101`
 - **当前状态**：`capability_open`
+- **派生状态**：已派生 `123-frontend-mainline-managed-delivery-apply-runtime-implementation-baseline`；在 `123` focused verification 通过且下游 `T12/T13` 收口前仍保持 `capability_open`
 - **缺失 carrier**：
   - confirmed `frontend_action_plan` 的 execution session
   - `delivery_action_ledger` 的实际创建/更新 runtime
@@ -94,7 +95,7 @@ related_doc:
   3. partial progress / failed / blocked / cancelled 能被诚实记录
   4. `installed / acknowledged / verified` 三态不会被混成同一 delivery 前置状态
 - **验证**：`uv run pytest tests/unit/test_*delivery* tests/integration/test_cli_program.py -q`
-- **建议派生工单**：implementation carrier
+- **建议派生工单**：`123-frontend-mainline-managed-delivery-apply-runtime-implementation-baseline`
 
 ### Task 1.2 Frontend Provider Adapter/Package And File Writer Actions
 

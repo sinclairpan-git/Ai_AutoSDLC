@@ -102,3 +102,25 @@
 
 - `120` 现在已经与 `121/122` 的 root truth 保持一致，不再把 verified host ingress 视为未入 truth 的临时 blocker。
 - 后续 implementation 应直接从 `tasks.md` 的 `Batch 0` 开始派生，而不是继续停留在口径同步阶段。
+
+### Batch 2026-04-13-003 | Derive T11 implementation carrier
+
+#### 2.8 批次范围
+
+- 覆盖范围：`tasks.md`
+- 覆盖目标：
+  - 将 `T11` 的建议派生工单从泛化的 implementation carrier 更新为正式 `123`
+
+#### 2.9 任务记录
+
+##### T120-DOC-6 | 回填 `T11` 派生结果
+
+- 改动范围：`tasks.md`
+- 改动内容：
+  - 将 `Task 1.1 Managed Delivery Apply Executor` 的建议派生工单更新为 `123-frontend-mainline-managed-delivery-apply-runtime-implementation-baseline`
+- 新增/调整的测试：无
+- 是否符合任务目标：是
+
+#### 2.10 批次结论
+
+- `120/T11` 现在已经有明确的 implementation carrier，不再停留在抽象派生占位。

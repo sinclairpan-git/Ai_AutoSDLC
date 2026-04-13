@@ -11,7 +11,11 @@ from pathlib import Path
 import yaml
 
 from ai_sdlc.branch.git_client import GitClient, GitError
-from ai_sdlc.core.config import YamlStore
+from ai_sdlc.core.config import YamlStore, load_project_config
+from ai_sdlc.core.managed_delivery_apply import (
+    ALLOWED_ACTION_TYPES,
+    run_managed_delivery_apply,
+)
 from ai_sdlc.core.frontend_contract_runtime_attachment import (
     FRONTEND_CONTRACT_RUNTIME_ATTACHMENT_STATUS_ATTACHED,
     build_frontend_contract_runtime_attachment,
@@ -43,6 +47,11 @@ from ai_sdlc.models.frontend_gate_policy import (
 )
 from ai_sdlc.models.frontend_generation_constraints import (
     build_mvp_frontend_generation_constraints,
+)
+from ai_sdlc.models.frontend_managed_delivery import (
+    ConfirmedActionPlanExecutionView,
+    DeliveryApplyDecisionReceipt,
+    ManagedDeliveryExecutorContext,
 )
 from ai_sdlc.models.frontend_solution_confirmation import (
     AvailabilitySummary,
@@ -265,6 +274,42 @@ class ProgramFrontendRemediationExecutionResult:
         default_factory=list
     )
     blockers: list[str] = field(default_factory=list)
+
+
+@dataclass
+class ProgramFrontendManagedDeliveryApplyRequest:
+    required: bool
+    confirmation_required: bool
+    apply_state: str
+    request_source_path: str
+    action_plan_id: str
+    plan_fingerprint: str
+    selected_action_ids: list[str] = field(default_factory=list)
+    executable_action_ids: list[str] = field(default_factory=list)
+    unsupported_action_ids: list[str] = field(default_factory=list)
+    remaining_blockers: list[str] = field(default_factory=list)
+    warnings: list[str] = field(default_factory=list)
+    execution_view: ConfirmedActionPlanExecutionView | None = None
+    decision_receipt: DeliveryApplyDecisionReceipt | None = None
+
+
+@dataclass
+class ProgramFrontendManagedDeliveryApplyResult:
+    passed: bool
+    confirmed: bool
+    result_status: str
+    request_source_path: str
+    headline: str
+    delivery_complete: bool = False
+    browser_gate_required: bool = True
+    browser_gate_state: str = "pending"
+    next_required_gate: str = "browser_gate"
+    executed_action_ids: list[str] = field(default_factory=list)
+    failed_action_ids: list[str] = field(default_factory=list)
+    blocked_action_ids: list[str] = field(default_factory=list)
+    skipped_action_ids: list[str] = field(default_factory=list)
+    remaining_blockers: list[str] = field(default_factory=list)
+    warnings: list[str] = field(default_factory=list)
 
 
 @dataclass
@@ -897,6 +942,20 @@ class ProgramService:
     def load_manifest(self) -> ProgramManifest:
         return YamlStore.load(self.manifest_path, ProgramManifest)
 
+    def _resolve_project_relative_path(self, path: str | Path) -> Path:
+        candidate = Path(path)
+        if not candidate.is_absolute():
+            candidate = self.root / candidate
+        candidate = candidate.resolve()
+        candidate.relative_to(self.root)
+        return candidate
+
+    def _safe_relative_path(self, path: Path) -> str:
+        try:
+            return str(path.relative_to(self.root))
+        except ValueError:
+            return path.as_posix()
+
     def validate_manifest(self, manifest: ProgramManifest) -> ProgramValidationResult:
         errors: list[str] = []
         warnings: list[str] = []
@@ -1353,6 +1412,112 @@ class ProgramService:
             )
 
         return statuses
+
+    def build_frontend_managed_delivery_apply_request(
+        self,
+        request_path: str | Path,
+    ) -> ProgramFrontendManagedDeliveryApplyRequest:
+        """Load and gate a managed delivery apply request payload."""
+
+        payload_path = self._resolve_project_relative_path(request_path)
+        payload = yaml.safe_load(payload_path.read_text(encoding="utf-8")) or {}
+        execution_view = ConfirmedActionPlanExecutionView.model_validate(
+            payload.get("execution_view", {})
+        )
+        decision_receipt = DeliveryApplyDecisionReceipt.model_validate(
+            payload.get("decision_receipt", {})
+        )
+        selected_mutate_actions = [
+            action
+            for action in execution_view.action_items
+            if action.effect_kind == "mutate"
+            and action.action_id in decision_receipt.selected_action_ids
+        ]
+        executable_action_ids = [
+            action.action_id
+            for action in selected_mutate_actions
+            if action.action_type in ALLOWED_ACTION_TYPES
+        ]
+        unsupported_action_ids = [
+            action.action_id
+            for action in selected_mutate_actions
+            if action.action_type not in ALLOWED_ACTION_TYPES
+        ]
+        blockers: list[str] = []
+        preflight_result = run_managed_delivery_apply(
+            execution_view,
+            decision_receipt,
+            ManagedDeliveryExecutorContext(host_ingress_allowed=True),
+        )
+        if preflight_result.result_status == "blocked_before_start":
+            blockers.extend(preflight_result.blockers)
+        if load_project_config(self.root).adapter_ingress_state.strip() != "verified_loaded":
+            blockers.append("host_ingress_below_mutate_threshold")
+        return ProgramFrontendManagedDeliveryApplyRequest(
+            required=True,
+            confirmation_required=True,
+            apply_state="blocked_before_start" if blockers else "ready_to_execute",
+            request_source_path=self._safe_relative_path(payload_path),
+            action_plan_id=execution_view.action_plan_id,
+            plan_fingerprint=execution_view.plan_fingerprint,
+            selected_action_ids=list(decision_receipt.selected_action_ids),
+            executable_action_ids=executable_action_ids,
+            unsupported_action_ids=unsupported_action_ids,
+            remaining_blockers=blockers,
+            execution_view=execution_view,
+            decision_receipt=decision_receipt,
+        )
+
+    def execute_frontend_managed_delivery_apply(
+        self,
+        request_path: str | Path,
+        *,
+        request: ProgramFrontendManagedDeliveryApplyRequest | None = None,
+        confirmed: bool = False,
+    ) -> ProgramFrontendManagedDeliveryApplyResult:
+        """Execute a managed delivery apply request."""
+
+        effective_request = request or self.build_frontend_managed_delivery_apply_request(
+            request_path
+        )
+        if effective_request.execution_view is None or effective_request.decision_receipt is None:
+            raise ValueError("managed delivery apply request missing execution payload")
+        if effective_request.remaining_blockers:
+            return ProgramFrontendManagedDeliveryApplyResult(
+                passed=False,
+                confirmed=confirmed,
+                result_status="blocked_before_start",
+                request_source_path=effective_request.request_source_path,
+                headline="Managed delivery apply blocked before start.",
+                delivery_complete=False,
+                browser_gate_required=True,
+                browser_gate_state="not_run",
+                next_required_gate="browser_gate",
+                remaining_blockers=list(effective_request.remaining_blockers),
+            )
+
+        apply_result = run_managed_delivery_apply(
+            effective_request.execution_view,
+            effective_request.decision_receipt,
+            ManagedDeliveryExecutorContext(host_ingress_allowed=True),
+        )
+        return ProgramFrontendManagedDeliveryApplyResult(
+            passed=apply_result.result_status == "apply_succeeded_pending_browser_gate",
+            confirmed=confirmed,
+            result_status=apply_result.result_status,
+            request_source_path=effective_request.request_source_path,
+            headline=_managed_delivery_apply_headline(apply_result.result_status),
+            delivery_complete=False,
+            browser_gate_required=apply_result.browser_gate_required,
+            browser_gate_state="pending" if apply_result.browser_gate_required else "not_required",
+            next_required_gate="browser_gate" if apply_result.browser_gate_required else "",
+            executed_action_ids=list(apply_result.executed_action_ids),
+            failed_action_ids=list(apply_result.failed_action_ids),
+            blocked_action_ids=list(apply_result.blocked_action_ids),
+            skipped_action_ids=list(apply_result.skipped_action_ids),
+            remaining_blockers=list(apply_result.blockers),
+            warnings=list(apply_result.remediation_hints),
+        )
 
     def build_frontend_solution_confirmation(
         self,
@@ -7562,6 +7727,22 @@ def _relative_to_root_or_str(root: Path, path: Path) -> str:
         return str(path.resolve().relative_to(root.resolve()))
     except ValueError:
         return str(path)
+
+
+def _managed_delivery_apply_headline(result_status: str) -> str:
+    if result_status == "apply_succeeded_pending_browser_gate":
+        return (
+            "Apply actions completed. Delivery is not complete. "
+            "Browser gate has not run."
+        )
+    if result_status == "blocked_before_start":
+        return "Managed delivery apply blocked before start."
+    if result_status == "manual_recovery_required":
+        return (
+            "Managed delivery apply requires manual recovery. "
+            "No automatic rollback/retry/cleanup was run."
+        )
+    return f"Managed delivery apply finished with status: {result_status}"
 
 
 def _summarize_frontend_execute_gate(

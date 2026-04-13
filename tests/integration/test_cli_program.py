@@ -9,6 +9,7 @@ import yaml
 from typer.testing import CliRunner
 
 from ai_sdlc.cli.main import app
+from ai_sdlc.core.config import save_project_config
 from ai_sdlc.core.frontend_contract_drift import PageImplementationObservation
 from ai_sdlc.core.frontend_contract_observation_provider import (
     build_frontend_contract_observation_artifact,
@@ -33,6 +34,7 @@ from ai_sdlc.models.frontend_gate_policy import (
 from ai_sdlc.models.frontend_generation_constraints import (
     build_mvp_frontend_generation_constraints,
 )
+from ai_sdlc.models.project import ProjectConfig
 
 runner = CliRunner()
 
@@ -82,6 +84,55 @@ def _write_manifest_yaml(root: Path, text: str) -> None:
         text.strip() + "\n",
         encoding="utf-8",
     )
+
+
+def _write_managed_delivery_apply_request(root: Path, *, fingerprint: str = "fp-001") -> str:
+    payload = {
+        "execution_view": {
+            "action_plan_id": "plan-001",
+            "confirmation_surface_id": "surface-001",
+            "plan_fingerprint": fingerprint,
+            "protocol_version": "1",
+            "managed_target_ref": "managed://frontend/app",
+            "attachment_scope_ref": "scope://001-auth",
+            "readiness_subject_id": "001-auth",
+            "spec_dir": "specs/001-auth",
+            "action_items": [
+                {
+                    "action_id": "a1",
+                    "effect_kind": "mutate",
+                    "action_type": "runtime_remediation",
+                    "required": True,
+                    "selected": True,
+                    "default_selected": True,
+                    "depends_on_action_ids": [],
+                    "rollback_ref": "rollback:a1",
+                    "retry_ref": "retry:a1",
+                    "cleanup_ref": "cleanup:a1",
+                    "risk_flags": [],
+                    "source_linkage_refs": {"spec": "specs/001-auth"},
+                }
+            ],
+            "will_not_touch": ["legacy-root"],
+        },
+        "decision_receipt": {
+            "decision_receipt_id": "receipt-001",
+            "action_plan_id": "plan-001",
+            "confirmation_surface_id": "surface-001",
+            "decision": "continue",
+            "selected_action_ids": ["a1"],
+            "deselected_optional_action_ids": [],
+            "risk_acknowledgement_ids": [],
+            "second_confirmation_acknowledged": True,
+            "confirmed_plan_fingerprint": fingerprint,
+            "created_at": "2026-04-13T13:30:00Z",
+        },
+    }
+    rel = ".ai-sdlc/memory/frontend-managed-delivery/apply-request.yaml"
+    request_path = root / rel
+    request_path.parent.mkdir(parents=True, exist_ok=True)
+    request_path.write_text(yaml.safe_dump(payload, sort_keys=False), encoding="utf-8")
+    return rel
 
 
 def _write_minimal_frontend_contract_page_artifacts(
@@ -195,6 +246,50 @@ def _write_frontend_contract_source_annotation(
 
 
 class TestCliProgram:
+    def test_program_managed_delivery_apply_dry_run_blocks_on_host_ingress(
+        self, initialized_project_dir: Path
+    ) -> None:
+        root = initialized_project_dir
+        save_project_config(root, ProjectConfig(adapter_ingress_state="materialized"))
+        request_rel = _write_managed_delivery_apply_request(root)
+
+        with patch("ai_sdlc.cli.program_cmd.find_project_root", return_value=root):
+            result = runner.invoke(
+                app,
+                ["program", "managed-delivery-apply", "--request", request_rel, "--dry-run"],
+            )
+
+        assert result.exit_code == 1
+        assert "Program Managed Delivery Apply Dry-Run" in result.output
+        assert "host_ingress_below_mutate_threshold" in result.output
+
+    def test_program_managed_delivery_apply_execute_surfaces_honest_headline(
+        self, initialized_project_dir: Path
+    ) -> None:
+        root = initialized_project_dir
+        save_project_config(root, ProjectConfig(adapter_ingress_state="verified_loaded"))
+        request_rel = _write_managed_delivery_apply_request(root)
+
+        with patch("ai_sdlc.cli.program_cmd.find_project_root", return_value=root):
+            result = runner.invoke(
+                app,
+                [
+                    "program",
+                    "managed-delivery-apply",
+                    "--request",
+                    request_rel,
+                    "--execute",
+                    "--yes",
+                ],
+            )
+
+        assert result.exit_code == 0
+        assert "Program Managed Delivery Apply Execute" in result.output
+        assert "delivery is not complete" in result.output.lower()
+        assert "browser gate has not run" in result.output.lower()
+        assert "delivery complete: false" in result.output.lower()
+        assert "next required gate: browser_gate" in result.output.lower()
+
     def test_program_validate_pass(self, initialized_project_dir: Path) -> None:
         _write_manifest(initialized_project_dir)
         with patch(

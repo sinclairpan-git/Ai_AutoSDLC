@@ -618,6 +618,123 @@ def program_remediate(
     raise typer.Exit(code=1)
 
 
+@program_app.command("managed-delivery-apply")
+def program_managed_delivery_apply(
+    request: str = typer.Option(
+        ...,
+        "--request",
+        help="Path to the managed delivery apply request YAML relative to project root.",
+    ),
+    dry_run: bool = typer.Option(
+        True,
+        "--dry-run/--execute",
+        help="Preview managed delivery apply or explicitly execute the narrow apply runtime.",
+    ),
+    yes: bool = typer.Option(
+        False,
+        "--yes",
+        help="Confirm managed delivery apply execute mode.",
+    ),
+) -> None:
+    """Preview or execute the narrow managed delivery apply runtime."""
+    root = _resolve_root()
+    svc = ProgramService(root)
+
+    request_payload = svc.build_frontend_managed_delivery_apply_request(request)
+    mode_title = (
+        "Program Managed Delivery Apply Dry-Run"
+        if dry_run
+        else "Program Managed Delivery Apply Execute"
+    )
+
+    table = Table(title=mode_title)
+    table.add_column("Action Plan")
+    table.add_column("Selected")
+    table.add_column("Executable")
+    table.add_column("Unsupported")
+    table.add_row(
+        request_payload.action_plan_id,
+        ", ".join(request_payload.selected_action_ids) or "-",
+        ", ".join(request_payload.executable_action_ids) or "-",
+        ", ".join(request_payload.unsupported_action_ids) or "-",
+    )
+    console.print(table)
+
+    console.print("\n[bold cyan]Managed Delivery Apply Guard[/bold cyan]")
+    console.print(
+        f"  - request source: {request_payload.request_source_path}",
+        markup=False,
+    )
+    console.print(
+        f"  - apply state: {request_payload.apply_state}",
+        markup=False,
+    )
+    console.print(
+        f"  - confirmation required: {str(request_payload.confirmation_required).lower()}",
+        markup=False,
+    )
+    for blocker in request_payload.remaining_blockers:
+        console.print(f"  - blocker: {blocker}", markup=False)
+
+    if dry_run:
+        raise typer.Exit(code=0 if not request_payload.remaining_blockers else 1)
+
+    if not yes:
+        console.print(
+            "[bold yellow]`--execute` requires explicit confirmation via `--yes`.[/bold yellow]"
+        )
+        raise typer.Exit(code=2)
+
+    result = svc.execute_frontend_managed_delivery_apply(
+        request,
+        request=request_payload,
+        confirmed=True,
+    )
+    console.print("\n[bold cyan]Managed Delivery Apply Result[/bold cyan]")
+    console.print(f"  - status: {result.result_status}", markup=False)
+    console.print(f"  - headline: {result.headline}", markup=False)
+    console.print(
+        f"  - delivery complete: {str(result.delivery_complete).lower()}",
+        markup=False,
+    )
+    console.print(
+        f"  - browser gate required: {str(result.browser_gate_required).lower()}",
+        markup=False,
+    )
+    console.print(
+        f"  - browser gate state: {result.browser_gate_state}",
+        markup=False,
+    )
+    if result.next_required_gate:
+        console.print(
+            f"  - next required gate: {result.next_required_gate}",
+            markup=False,
+        )
+    for blocker in result.remaining_blockers:
+        console.print(f"  - blocker: {blocker}", markup=False)
+    if result.executed_action_ids:
+        console.print(
+            f"  - executed actions: {', '.join(result.executed_action_ids)}",
+            markup=False,
+        )
+    if result.failed_action_ids:
+        console.print(
+            f"  - failed actions: {', '.join(result.failed_action_ids)}",
+            markup=False,
+        )
+    if result.blocked_action_ids:
+        console.print(
+            f"  - blocked actions: {', '.join(result.blocked_action_ids)}",
+            markup=False,
+        )
+    if result.warnings:
+        console.print("\n[bold yellow]Warnings[/bold yellow]")
+        for warning in result.warnings:
+            console.print(f"  - {warning}")
+
+    raise typer.Exit(code=0 if result.passed else 1)
+
+
 @program_app.command("provider-handoff")
 def program_provider_handoff(
     manifest: str = typer.Option(
