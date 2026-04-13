@@ -839,6 +839,46 @@ def test_build_frontend_remediation_runbook_collects_action_commands_and_follow_
     assert runbook.follow_up_commands == ["uv run ai-sdlc verify constraints"]
 
 
+def test_build_frontend_remediation_runbook_keeps_visual_a11y_policy_artifact_gaps_in_remediation(
+    tmp_path: Path,
+) -> None:
+    for p in ("specs/001-auth", "specs/002-course", "specs/003-enroll"):
+        (tmp_path / p).mkdir(parents=True)
+    _write_minimal_frontend_contract_page_artifacts(tmp_path)
+    materialize_frontend_gate_policy_artifacts(
+        tmp_path,
+        build_p1_frontend_gate_policy_visual_a11y_foundation(),
+    )
+    (
+        tmp_path
+        / "governance"
+        / "frontend"
+        / "gates"
+        / "visual-a11y-evidence-boundary.yaml"
+    ).unlink()
+    materialize_frontend_generation_constraint_artifacts(
+        tmp_path,
+        build_mvp_frontend_generation_constraints(),
+    )
+    for spec in ("001-auth", "002-course", "003-enroll"):
+        _write_frontend_contract_observations(tmp_path / "specs" / spec)
+
+    svc = ProgramService(tmp_path)
+    runbook = svc.build_frontend_remediation_runbook(_manifest())
+
+    assert [step.spec_id for step in runbook.steps] == [
+        "001-auth",
+        "002-course",
+        "003-enroll",
+    ]
+    assert all(
+        "frontend_visual_a11y_policy_artifacts" in step.fix_inputs
+        for step in runbook.steps
+    )
+    assert runbook.action_commands == ["uv run ai-sdlc rules materialize-frontend-mvp"]
+    assert runbook.follow_up_commands == ["uv run ai-sdlc verify constraints"]
+
+
 def test_execute_frontend_remediation_runbook_materializes_bounded_commands_and_verifies(
     tmp_path: Path,
 ) -> None:
