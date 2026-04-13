@@ -1185,6 +1185,46 @@ def test_framework_backlog_well_formed_passes(tmp_path: Path) -> None:
     assert collect_constraint_blockers(tmp_path) == []
 
 
+def test_verify_constraints_blocks_misplaced_formal_artifact_under_superpowers(
+    tmp_path: Path,
+) -> None:
+    mem = tmp_path / ".ai-sdlc" / "memory"
+    mem.mkdir(parents=True)
+    (mem / "constitution.md").write_text("# C\n", encoding="utf-8")
+    misplaced = tmp_path / "docs" / "superpowers" / "specs" / "2026-04-07-misplaced.md"
+    misplaced.parent.mkdir(parents=True, exist_ok=True)
+    misplaced.write_text(
+        "# 功能规格：Misplaced\n\n"
+        "**功能编号**：`073-demo`\n"
+        "**创建日期**：2026-04-07\n"
+        "**状态**：草稿\n",
+        encoding="utf-8",
+    )
+
+    blockers = collect_constraint_blockers(tmp_path)
+
+    assert any("misplaced formal artifact" in x for x in blockers)
+
+
+def test_verify_constraints_blocks_missing_backlog_for_referenced_defect(
+    tmp_path: Path,
+) -> None:
+    mem = tmp_path / ".ai-sdlc" / "memory"
+    mem.mkdir(parents=True)
+    (mem / "constitution.md").write_text("# C\n", encoding="utf-8")
+    spec_dir = tmp_path / "specs" / "117-formal-artifact-target-guard-baseline"
+    spec_dir.mkdir(parents=True, exist_ok=True)
+    (spec_dir / "spec.md").write_text(
+        "# 功能规格：Demo\n\n"
+        "承接 `FD-2026-04-07-002`。\n",
+        encoding="utf-8",
+    )
+
+    blockers = collect_constraint_blockers(tmp_path)
+
+    assert any("breach_detected_but_not_logged" in x for x in blockers)
+
+
 def test_verification_profile_docs_block_when_rules_surface_missing_profile(
     tmp_path: Path,
 ) -> None:

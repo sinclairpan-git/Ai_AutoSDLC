@@ -22,6 +22,8 @@ from ai_sdlc.context.state import (
     load_runtime_state,
     load_working_set,
 )
+from ai_sdlc.core.artifact_target_guard import evaluate_formal_artifact_target_guard
+from ai_sdlc.core.backlog_breach_guard import evaluate_backlog_breach_guard
 from ai_sdlc.core.config import load_project_config, load_project_state
 from ai_sdlc.core.execute_authorization import evaluate_execute_authorization
 from ai_sdlc.core.frontend_contract_observation_provider import (
@@ -414,6 +416,22 @@ def status_command(
                     )
 
     execute_authorization = evaluate_execute_authorization(root=root, checkpoint=cp)
+    formal_artifact_target = evaluate_formal_artifact_target_guard(root)
+    backlog_breach_guard = evaluate_backlog_breach_guard(root)
+    table.add_row("Formal Artifact Target", formal_artifact_target.state)
+    table.add_row("Formal Artifact Detail", formal_artifact_target.detail or "-")
+    if formal_artifact_target.reason_codes:
+        table.add_row(
+            "Formal Artifact Reasons",
+            ", ".join(formal_artifact_target.reason_codes),
+        )
+    table.add_row("Backlog Breach Guard", backlog_breach_guard.state)
+    table.add_row("Backlog Breach Detail", backlog_breach_guard.detail or "-")
+    if backlog_breach_guard.reason_codes:
+        table.add_row(
+            "Backlog Breach Reasons",
+            ", ".join(backlog_breach_guard.reason_codes),
+        )
     table.add_row("Execute Authorization", execute_authorization.state)
     table.add_row("Execute Authorization Detail", execute_authorization.detail or "-")
     if execute_authorization.reason_codes:

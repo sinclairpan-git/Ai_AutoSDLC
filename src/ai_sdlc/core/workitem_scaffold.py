@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from datetime import date
 from pathlib import Path
 
+from ai_sdlc.core.artifact_target_guard import validate_formal_artifact_target
 from ai_sdlc.core.config import load_project_state, save_project_state
 from ai_sdlc.utils.helpers import AI_SDLC_DIR, PROJECT_STATE_PATH, slugify
 
@@ -134,6 +135,15 @@ class WorkitemScaffolder:
         )
 
         for path, content in rendered:
+            artifact_kind = _formal_artifact_kind_for_path(path)
+            if artifact_kind is not None:
+                validation = validate_formal_artifact_target(
+                    path=path,
+                    artifact_kind=artifact_kind,
+                    root=root,
+                )
+                if not validation.allowed:
+                    raise WorkitemScaffoldError(validation.detail)
             path.write_text(content, encoding="utf-8")
 
         next_seq = self._next_sequence_after(work_item_id, state.next_work_item_seq)
@@ -466,3 +476,9 @@ class WorkitemScaffolder:
         raise WorkitemScaffoldError(
             f"template not found: {template_name}; searched: {', '.join(searched)}"
         )
+
+
+def _formal_artifact_kind_for_path(path: Path) -> str | None:
+    if path.name in {"spec.md", "plan.md", "tasks.md"}:
+        return path.stem
+    return None

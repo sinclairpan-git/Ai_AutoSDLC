@@ -10,6 +10,8 @@ from typing import Any
 
 from ai_sdlc.branch.git_client import GitError
 from ai_sdlc.context.state import load_checkpoint
+from ai_sdlc.core.artifact_target_guard import evaluate_formal_artifact_target_guard
+from ai_sdlc.core.backlog_breach_guard import evaluate_backlog_breach_guard
 from ai_sdlc.core.execute_authorization import evaluate_execute_authorization
 from ai_sdlc.core.program_service import (
     FRONTEND_EVIDENCE_CLASS_MIRROR_PROBLEM_FAMILY,
@@ -38,6 +40,8 @@ def build_status_json_surface(repo_root: Path) -> dict[str, Any]:
     manifest_state = _load_manifest_state(repo_root)
     store = TelemetryStore(repo_root)
     branch_lifecycle = _build_branch_lifecycle_surface(repo_root)
+    formal_artifact_target = _build_formal_artifact_target_surface(repo_root)
+    backlog_breach_guard = _build_backlog_breach_guard_surface(repo_root)
     execute_authorization = _build_execute_authorization_surface(repo_root)
     frontend_evidence_class = _build_frontend_evidence_class_surface(repo_root)
     if frontend_evidence_class is not None:
@@ -63,6 +67,8 @@ def build_status_json_surface(repo_root: Path) -> dict[str, Any]:
                 "latest": None,
             },
             "branch_lifecycle": branch_lifecycle,
+            "formal_artifact_target": formal_artifact_target,
+            "backlog_breach_guard": backlog_breach_guard,
             "execute_authorization": execute_authorization,
             "adapter_governance": adapter_governance,
         }
@@ -75,6 +81,8 @@ def build_status_json_surface(repo_root: Path) -> dict[str, Any]:
                 "error": manifest_state.get("error"),
             },
             "branch_lifecycle": branch_lifecycle,
+            "formal_artifact_target": formal_artifact_target,
+            "backlog_breach_guard": backlog_breach_guard,
             "execute_authorization": execute_authorization,
             "adapter_governance": adapter_governance,
         }
@@ -128,6 +136,8 @@ def build_status_json_surface(repo_root: Path) -> dict[str, Any]:
             ),
         },
         "branch_lifecycle": branch_lifecycle,
+        "formal_artifact_target": formal_artifact_target,
+        "backlog_breach_guard": backlog_breach_guard,
         "execute_authorization": execute_authorization,
         "adapter_governance": adapter_governance,
     }
@@ -216,6 +226,25 @@ def _build_execute_authorization_surface(repo_root: Path) -> dict[str, Any]:
     return evaluate_execute_authorization(
         root=repo_root,
         checkpoint=checkpoint,
+    ).to_json_dict()
+
+
+def _build_formal_artifact_target_surface(repo_root: Path) -> dict[str, Any]:
+    return evaluate_formal_artifact_target_guard(repo_root).to_json_dict()
+
+
+def _build_backlog_breach_guard_surface(repo_root: Path) -> dict[str, Any]:
+    checkpoint = load_checkpoint(repo_root)
+    spec_dir: Path | None = None
+    if checkpoint is not None and checkpoint.feature is not None:
+        spec_dir_raw = (checkpoint.feature.spec_dir or "").strip()
+        if spec_dir_raw and spec_dir_raw != "specs/unknown":
+            candidate = repo_root / spec_dir_raw
+            if candidate.is_dir():
+                spec_dir = candidate
+    return evaluate_backlog_breach_guard(
+        repo_root,
+        spec_dir=spec_dir,
     ).to_json_dict()
 
 

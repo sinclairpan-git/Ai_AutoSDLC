@@ -192,6 +192,41 @@ def _write_frontend_evidence_class_spec(
     )
 
 
+def _write_formal_artifact_target_fixture(root: Path) -> None:
+    misplaced = root / "docs" / "superpowers" / "specs" / "2026-04-07-misplaced.md"
+    misplaced.parent.mkdir(parents=True, exist_ok=True)
+    misplaced.write_text(
+        "# 功能规格：Misplaced\n\n"
+        "**功能编号**：`073-demo`\n"
+        "**创建日期**：2026-04-07\n"
+        "**状态**：草稿\n",
+        encoding="utf-8",
+    )
+
+
+def _write_backlog_breach_fixture(root: Path) -> None:
+    spec_dir = root / "specs" / "117-formal-artifact-target-guard-baseline"
+    spec_dir.mkdir(parents=True, exist_ok=True)
+    (spec_dir / "spec.md").write_text(
+        "# 功能规格：Demo\n\n"
+        "承接 `FD-2026-04-07-002`。\n",
+        encoding="utf-8",
+    )
+    save_checkpoint(
+        root,
+        Checkpoint(
+            current_stage="verify",
+            feature=FeatureInfo(
+                id="117",
+                spec_dir="specs/117-formal-artifact-target-guard-baseline",
+                design_branch="design/117",
+                feature_branch="feature/117",
+                current_branch="main",
+            ),
+        ),
+    )
+
+
 class TestCliStatus:
     @pytest.fixture(autouse=True)
     def _no_ide_adapter_hook(self) -> None:
@@ -385,6 +420,8 @@ class TestCliStatus:
         assert set(payload) == {
             "telemetry",
             "branch_lifecycle",
+            "formal_artifact_target",
+            "backlog_breach_guard",
             "execute_authorization",
             "adapter_governance",
         }
@@ -1117,6 +1154,40 @@ def test_status_text_surfaces_execute_authorization_detail(
     assert "Execute Authorization" in result.output
     assert "blocked" in result.output
     assert "current_stage=verify" in result.output
+
+
+def test_status_json_includes_formal_artifact_target_guard_summary(
+    tmp_path: Path,
+) -> None:
+    init_project(tmp_path)
+    _write_formal_artifact_target_fixture(tmp_path)
+
+    with patch("ai_sdlc.cli.commands.find_project_root", return_value=tmp_path):
+        result = runner.invoke(app, ["status", "--json"])
+
+    assert result.exit_code == 0
+    payload = json.loads(result.output)
+    summary = payload["formal_artifact_target"]
+    assert summary["state"] == "blocked"
+    assert summary["reason_codes"] == ["misplaced_formal_artifact_detected"]
+    assert summary["violation_count"] == 1
+
+
+def test_status_json_includes_backlog_breach_guard_summary(
+    tmp_path: Path,
+) -> None:
+    init_project(tmp_path)
+    _write_backlog_breach_fixture(tmp_path)
+
+    with patch("ai_sdlc.cli.commands.find_project_root", return_value=tmp_path):
+        result = runner.invoke(app, ["status", "--json"])
+
+    assert result.exit_code == 0
+    payload = json.loads(result.output)
+    summary = payload["backlog_breach_guard"]
+    assert summary["state"] == "blocked"
+    assert summary["reason_codes"] == ["breach_detected_but_not_logged"]
+    assert summary["missing_ids"] == ["FD-2026-04-07-002"]
 
 
 def test_status_json_includes_bounded_frontend_evidence_class_summary(

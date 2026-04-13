@@ -10,6 +10,8 @@ import yaml
 
 from ai_sdlc.branch.git_client import GitError
 from ai_sdlc.context.state import load_checkpoint
+from ai_sdlc.core.artifact_target_guard import detect_misplaced_formal_artifacts
+from ai_sdlc.core.backlog_breach_guard import collect_missing_backlog_entry_references
 from ai_sdlc.core.frontend_contract_observation_provider import (
     FRONTEND_CONTRACT_OBSERVATION_ARTIFACT_STATUS_ATTACHED,
     FRONTEND_CONTRACT_OBSERVATION_ARTIFACT_STATUS_INVALID_ARTIFACT,
@@ -547,6 +549,8 @@ def collect_constraint_blockers(root: Path) -> list[str]:
         )
 
     blockers.extend(_framework_defect_backlog_blockers(root))
+    blockers.extend(_formal_artifact_target_blockers(root))
+    blockers.extend(_backlog_breach_reference_blockers(root))
     blockers.extend(_doc_first_surface_blockers(root))
     blockers.extend(_verification_profile_blockers(root))
 
@@ -1703,6 +1707,29 @@ def _framework_defect_backlog_blockers(root: Path) -> list[str]:
                 "BLOCKER: framework-defect-backlog entry "
                 f"{title!r} missing required fields: {', '.join(missing)}"
             )
+    return blockers
+
+
+def _formal_artifact_target_blockers(root: Path) -> list[str]:
+    """Report misplaced formal artifacts found under docs/superpowers/*."""
+    blockers: list[str] = []
+    for violation in detect_misplaced_formal_artifacts(root):
+        blockers.append(
+            "BLOCKER: misplaced formal artifact detected under docs/superpowers/*: "
+            f"{violation.path} ({violation.artifact_kind})"
+        )
+    return blockers
+
+
+def _backlog_breach_reference_blockers(root: Path) -> list[str]:
+    """Block when specs reference FD ids that have no backlog entry."""
+    blockers: list[str] = []
+    for violation in collect_missing_backlog_entry_references(root):
+        blockers.append(
+            "BLOCKER: breach_detected_but_not_logged: "
+            f"{violation.path} references missing backlog ids: "
+            f"{', '.join(violation.missing_ids)}"
+        )
     return blockers
 
 
