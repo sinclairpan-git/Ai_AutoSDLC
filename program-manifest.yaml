@@ -569,3 +569,10 @@ specs:
     branch_slug: "frontend-mainline-browser-gate-recheck-remediation-binding-baseline"
     owner: "team-frontend-governance"
     frontend_evidence_class: "framework_capability"
+  - id: "105-frontend-mainline-browser-gate-recheck-remediation-runtime-implementation-baseline"
+    path: "specs/105-frontend-mainline-browser-gate-recheck-remediation-runtime-implementation-baseline"
+    depends_on:
+      - "104-frontend-mainline-browser-gate-recheck-remediation-binding-baseline"
+    branch_slug: "frontend-mainline-browser-gate-recheck-remediation-runtime-implementation-baseline"
+    owner: "team-frontend-governance"
+    frontend_evidence_class: "framework_capability"
