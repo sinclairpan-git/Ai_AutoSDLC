@@ -6195,6 +6195,59 @@ def test_build_status_surfaces_frontend_readiness_gap_when_attachment_missing(
     assert readiness.source_linkage["frontend_gate_verdict"] == "UNRESOLVED"
 
 
+def test_build_status_waives_observation_gap_for_framework_capability(
+    tmp_path: Path,
+) -> None:
+    for p in ("specs/001-auth", "specs/002-course", "specs/003-enroll"):
+        (tmp_path / p).mkdir(parents=True)
+    _write_frontend_evidence_class_spec(
+        tmp_path,
+        spec_rel="specs/001-auth",
+        frontend_evidence_class="framework_capability",
+    )
+
+    svc = ProgramService(tmp_path)
+    rows = svc.build_status(_manifest())
+    by = {r.spec_id: r for r in rows}
+
+    readiness = by["001-auth"].frontend_readiness
+    assert readiness is not None
+    assert readiness.state == "ready"
+    assert readiness.execute_gate_state == "ready"
+    assert readiness.decision_reason == "advisory_only"
+    assert readiness.coverage_gaps == []
+    assert readiness.blockers == []
+    assert readiness.source_linkage["runtime_attachment_status"] == "missing_artifact"
+    assert (
+        readiness.source_linkage["frontend_attachment_requirement"]
+        == "waived_for_framework_capability"
+    )
+
+
+def test_build_status_keeps_observation_gap_for_consumer_adoption(
+    tmp_path: Path,
+) -> None:
+    for p in ("specs/001-auth", "specs/002-course", "specs/003-enroll"):
+        (tmp_path / p).mkdir(parents=True)
+    _write_frontend_evidence_class_spec(
+        tmp_path,
+        spec_rel="specs/001-auth",
+        frontend_evidence_class="consumer_adoption",
+    )
+
+    svc = ProgramService(tmp_path)
+    rows = svc.build_status(_manifest())
+    by = {r.spec_id: r for r in rows}
+
+    readiness = by["001-auth"].frontend_readiness
+    assert readiness is not None
+    assert readiness.state == "missing_artifact"
+    assert readiness.execute_gate_state == "blocked"
+    assert readiness.decision_reason == "scope_or_linkage_invalid"
+    assert "frontend_contract_observations" in readiness.coverage_gaps
+    assert "missing canonical observation artifact" in readiness.blockers[0]
+
+
 def test_build_status_surfaces_frontend_readiness_gap_when_071_visual_a11y_evidence_missing(
     tmp_path: Path,
 ) -> None:
@@ -6527,6 +6580,28 @@ def test_execution_gates_pass_when_closed_and_frontend_ready(tmp_path: Path) -> 
         tmp_path,
         build_mvp_frontend_generation_constraints(),
     )
+
+    svc = ProgramService(tmp_path)
+    gates = svc.evaluate_execute_gates(_manifest(), allow_dirty=True)
+
+    assert gates.passed is True
+    assert not any("frontend execute gate not clear" in item for item in gates.failed)
+
+
+def test_execution_gates_pass_for_closed_framework_capability_without_observations(
+    tmp_path: Path,
+) -> None:
+    for p in ("specs/001-auth", "specs/002-course", "specs/003-enroll"):
+        (tmp_path / p).mkdir(parents=True)
+        _write_frontend_evidence_class_spec(
+            tmp_path,
+            spec_rel=f"specs/{p.split('/')[-1]}",
+            frontend_evidence_class="framework_capability",
+        )
+    for spec in ("001-auth", "002-course", "003-enroll"):
+        (tmp_path / "specs" / spec / "development-summary.md").write_text(
+            "ok\n", encoding="utf-8"
+        )
 
     svc = ProgramService(tmp_path)
     gates = svc.evaluate_execute_gates(_manifest(), allow_dirty=True)

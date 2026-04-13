@@ -5293,6 +5293,9 @@ class ProgramService:
         )
 
     def _build_frontend_readiness(self, spec_dir: Path) -> ProgramFrontendReadiness:
+        frontend_evidence_class = _load_frontend_evidence_class_from_spec(
+            spec_dir / "spec.md"
+        ) or ""
         attachment = build_frontend_contract_runtime_attachment(
             self.root,
             explicit_spec_dir=spec_dir,
@@ -5343,11 +5346,26 @@ class ProgramService:
             attachment_blockers=blockers,
             attachment_coverage_gaps=coverage_gaps,
             gate_report=gate_report,
+            frontend_evidence_class=frontend_evidence_class,
         )
+        if (
+            execute_decision.execute_gate_state == FRONTEND_GATE_EXECUTE_STATE_READY
+            and execute_decision.decision_reason == "advisory_only"
+            and attachment.status != FRONTEND_CONTRACT_RUNTIME_ATTACHMENT_STATUS_ATTACHED
+        ):
+            coverage_gaps = [
+                gap for gap in coverage_gaps if gap != "frontend_contract_observations"
+            ]
+            blockers = [
+                blocker
+                for blocker in blockers
+                if "missing canonical observation artifact" not in blocker
+            ]
         return ProgramFrontendReadiness(
             state=self._frontend_readiness_state(
                 attachment_status=attachment.status,
                 gate_verdict=gate_verdict,
+                execute_gate_state=execute_decision.execute_gate_state,
                 coverage_gaps=coverage_gaps,
                 blockers=blockers,
             ),
@@ -5377,9 +5395,12 @@ class ProgramService:
         *,
         attachment_status: str,
         gate_verdict: str,
+        execute_gate_state: str,
         coverage_gaps: list[str],
         blockers: list[str],
     ) -> str:
+        if execute_gate_state == FRONTEND_GATE_EXECUTE_STATE_READY:
+            return PROGRAM_FRONTEND_READINESS_READY
         if attachment_status != FRONTEND_CONTRACT_RUNTIME_ATTACHMENT_STATUS_ATTACHED:
             return attachment_status
         if gate_verdict == "PASS" and not coverage_gaps and not blockers:

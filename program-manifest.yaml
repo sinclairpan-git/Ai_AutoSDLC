@@ -588,3 +588,10 @@ specs:
     branch_slug: "frontend-mainline-browser-gate-evidence-class-footer-normalization-baseline"
     owner: "team-frontend-governance"
     frontend_evidence_class: "framework_capability"
+  - id: "107-frontend-evidence-class-readiness-gate-runtime-baseline"
+    path: "specs/107-frontend-evidence-class-readiness-gate-runtime-baseline"
+    depends_on:
+      - "106-frontend-mainline-browser-gate-evidence-class-footer-normalization-baseline"
+    branch_slug: "frontend-evidence-class-readiness-gate-runtime-baseline"
+    owner: "team-frontend-governance"
+    frontend_evidence_class: "framework_capability"

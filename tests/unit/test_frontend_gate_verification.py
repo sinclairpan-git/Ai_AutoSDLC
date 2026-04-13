@@ -378,6 +378,28 @@ def test_frontend_gate_execute_decision_fails_closed_when_attachment_missing() -
     assert "frontend_contract_observations" in decision.remediation_reason_codes
 
 
+def test_frontend_gate_execute_decision_allows_framework_capability_when_attachment_missing() -> None:
+    decision = build_frontend_gate_execute_decision(
+        attachment_status="missing_artifact",
+        attachment_blockers=(
+            "frontend contract runtime attachment unavailable: missing canonical observation artifact",
+        ),
+        attachment_coverage_gaps=("frontend_contract_observations",),
+        gate_report=None,
+        frontend_evidence_class="framework_capability",
+    )
+
+    assert decision.execute_gate_state == "ready"
+    assert decision.decision_reason == "advisory_only"
+    assert decision.recheck_required is False
+    assert decision.blockers == ()
+    assert decision.remediation_reason_codes == ()
+    assert (
+        decision.source_linkage_refs["frontend_attachment_requirement"]
+        == "waived_for_framework_capability"
+    )
+
+
 def test_frontend_gate_verification_report_flags_missing_visual_a11y_extension_artifacts(
     tmp_path: Path,
 ) -> None:

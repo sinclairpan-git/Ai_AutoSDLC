@@ -3945,11 +3945,16 @@ def _format_frontend_readiness(readiness: ProgramFrontendReadiness | None) -> st
         return "-"
 
     state = readiness.state
+    effective_state = readiness.execute_gate_state or readiness.state
     if readiness.execute_gate_state and readiness.execute_gate_state != readiness.state:
         state = f"{readiness.state} / {readiness.execute_gate_state}"
+    elif (
+        effective_state == "ready"
+        and readiness.decision_reason == "advisory_only"
+    ):
+        state = f"{readiness.state} / {readiness.decision_reason}"
 
     details: list[str] = []
-    effective_state = readiness.execute_gate_state or readiness.state
     if effective_state != "ready" and readiness.decision_reason:
         details.append(readiness.decision_reason)
     if readiness.coverage_gaps:

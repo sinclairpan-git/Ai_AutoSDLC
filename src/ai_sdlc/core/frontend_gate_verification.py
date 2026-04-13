@@ -43,6 +43,9 @@ FRONTEND_GATE_DECISION_REASON_SCOPE_OR_LINKAGE_INVALID = "scope_or_linkage_inval
 FRONTEND_GATE_DECISION_REASON_EVIDENCE_MISSING = "evidence_missing"
 FRONTEND_GATE_DECISION_REASON_ACTUAL_QUALITY_BLOCKER = "actual_quality_blocker"
 FRONTEND_GATE_DECISION_REASON_RESULT_INCONSISTENCY = "result_inconsistency"
+FRONTEND_EVIDENCE_CLASS_FRAMEWORK_CAPABILITY = "framework_capability"
+FRONTEND_OBSERVATION_ATTACHMENT_COVERAGE_GAP = "frontend_contract_observations"
+FRONTEND_ATTACHMENT_REQUIREMENT_WAIVED = "waived_for_framework_capability"
 
 
 @dataclass(frozen=True, slots=True)
@@ -290,14 +293,33 @@ def build_frontend_gate_execute_decision(
     gate_report: FrontendGateVerificationReport | None,
     attachment_blockers: tuple[str, ...] | list[str] = (),
     attachment_coverage_gaps: tuple[str, ...] | list[str] = (),
+    frontend_evidence_class: str = "",
 ) -> FrontendGateExecuteDecision:
     """Project frontend gate verification into an execute-time decision."""
 
     blockers = tuple(_unique_strings([*attachment_blockers]))
     coverage_gaps = tuple(_unique_strings([*attachment_coverage_gaps]))
     source_linkage_refs = {"runtime_attachment_status": attachment_status}
+    if frontend_evidence_class:
+        source_linkage_refs["frontend_evidence_class"] = frontend_evidence_class
 
     if attachment_status != "attached":
+        if _framework_capability_observation_gap_can_be_waived(
+            attachment_status=attachment_status,
+            blockers=blockers,
+            coverage_gaps=coverage_gaps,
+            frontend_evidence_class=frontend_evidence_class,
+        ):
+            return FrontendGateExecuteDecision(
+                execute_gate_state=FRONTEND_GATE_EXECUTE_STATE_READY,
+                decision_reason=FRONTEND_GATE_DECISION_REASON_ADVISORY_ONLY,
+                source_linkage_refs={
+                    **source_linkage_refs,
+                    "frontend_attachment_requirement": (
+                        FRONTEND_ATTACHMENT_REQUIREMENT_WAIVED
+                    ),
+                },
+            )
         return FrontendGateExecuteDecision(
             execute_gate_state=FRONTEND_GATE_EXECUTE_STATE_BLOCKED,
             decision_reason=FRONTEND_GATE_DECISION_REASON_SCOPE_OR_LINKAGE_INVALID,
@@ -400,6 +422,22 @@ def build_frontend_gate_execute_decision(
         remediation_reason_codes=coverage_gaps,
         source_linkage_refs=source_linkage_refs,
     )
+
+
+def _framework_capability_observation_gap_can_be_waived(
+    *,
+    attachment_status: str,
+    blockers: tuple[str, ...],
+    coverage_gaps: tuple[str, ...],
+    frontend_evidence_class: str,
+) -> bool:
+    if frontend_evidence_class != FRONTEND_EVIDENCE_CLASS_FRAMEWORK_CAPABILITY:
+        return False
+    if attachment_status != "missing_artifact":
+        return False
+    if set(coverage_gaps) != {FRONTEND_OBSERVATION_ATTACHMENT_COVERAGE_GAP}:
+        return False
+    return all("missing canonical observation artifact" in blocker for blocker in blockers)
 
 
 def build_frontend_gate_verification_context(

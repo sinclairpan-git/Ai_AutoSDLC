@@ -378,6 +378,25 @@ specs:
         assert "missing_artifact" in result.output
         assert "scope_or_linkage_invalid" in result.output
 
+    def test_program_status_waives_observation_gap_for_framework_capability(
+        self, initialized_project_dir: Path
+    ) -> None:
+        root = initialized_project_dir
+        _write_manifest(root)
+        _write_frontend_evidence_class_spec(
+            root,
+            spec_rel="specs/001-auth",
+            frontend_evidence_class="framework_capability",
+        )
+
+        with patch("ai_sdlc.cli.program_cmd.find_project_root", return_value=root):
+            result = runner.invoke(app, ["program", "status"])
+
+        assert result.exit_code == 0
+        assert "001-auth" in result.output
+        assert "advisory_only" in result.output
+        assert "001-auth: ready / advisory_only" in result.output
+
     def test_program_status_exposes_frontend_execute_gate_recheck_required(
         self, initialized_project_dir: Path
     ) -> None:
