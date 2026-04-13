@@ -1119,6 +1119,7 @@ def test_status_json_includes_execute_authorization_blocker_before_execute_stage
     assert summary["reason_codes"] == ["explicit_execute_authorization_missing"]
     assert summary["tasks_present"] is True
     assert summary["current_stage"] == "verify"
+    assert "review-to-decompose" in summary["detail"]
 
 
 def test_status_text_surfaces_execute_authorization_detail(

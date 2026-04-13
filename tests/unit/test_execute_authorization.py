@@ -97,6 +97,7 @@ def test_evaluate_execute_authorization_blocks_when_stage_has_not_entered_execut
     assert result.tasks_present is True
     assert result.current_stage == "verify"
     assert "current_stage=verify" in result.detail
+    assert "review-to-decompose" in result.detail
 
 
 def test_evaluate_execute_authorization_is_ready_after_checkpoint_enters_execute(
@@ -135,3 +136,38 @@ def test_evaluate_execute_authorization_is_ready_after_checkpoint_enters_execute
     assert result.reason_codes == []
     assert result.current_stage == "execute"
     assert result.truth_classification == "formal_freeze_only"
+
+
+def test_evaluate_execute_authorization_surfaces_docs_only_review_truth_when_tasks_missing(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    root = tmp_path / "repo"
+    root.mkdir()
+    (root / "specs" / "073-wi").mkdir(parents=True)
+
+    monkeypatch.setattr(
+        execute_authorization_module,
+        "run_truth_check",
+        lambda **_: WorkitemTruthResult(
+            ok=False,
+            requested_revision="HEAD",
+            wi_path="specs/073-wi",
+            formal_docs={
+                "spec": True,
+                "plan": True,
+                "tasks": False,
+                "execution_log": False,
+            },
+            error="formal work item docs not found at revision HEAD: specs/073-wi",
+        ),
+    )
+
+    result = execute_authorization_module.evaluate_execute_authorization(
+        root=root,
+        checkpoint=_checkpoint(spec_dir="specs/073-wi"),
+    )
+
+    assert result.state == "blocked"
+    assert result.reason_codes == ["tasks_truth_missing"]
+    assert "docs-only / review-to-decompose" in result.detail

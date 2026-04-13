@@ -103,7 +103,7 @@ def evaluate_execute_authorization(
             result.state = "blocked"
             result.reason_codes = ["tasks_truth_missing"]
             result.detail = _detail_with_stage(
-                "active work item is missing tasks.md; remain in docs-only / review",
+                "active work item is missing tasks.md; remain in docs-only / review-to-decompose",
                 current_stage,
             )
             return result
@@ -122,7 +122,7 @@ def evaluate_execute_authorization(
         result.state = "blocked"
         result.reason_codes = ["tasks_truth_missing"]
         result.detail = _detail_with_stage(
-            "active work item is missing tasks.md; remain in docs-only / review",
+            "active work item is missing tasks.md; remain in docs-only / review-to-decompose",
             current_stage,
         )
         return result
@@ -131,7 +131,7 @@ def evaluate_execute_authorization(
         result.state = "blocked"
         result.reason_codes = ["explicit_execute_authorization_missing"]
         result.detail = _detail_with_stage(
-            "active work item has tasks.md, but repo truth has not entered execute",
+            "active work item has tasks.md, but repo truth has not entered execute; remain in review-to-decompose",
             current_stage,
         )
         return result

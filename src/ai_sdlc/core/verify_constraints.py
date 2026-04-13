@@ -66,6 +66,11 @@ SKIP_REGISTRY_REL = Path("src") / "ai_sdlc" / "rules" / "agent-skip-registry.zh.
 FRAMEWORK_DEFECT_BACKLOG_REL = Path("docs") / "framework-defect-backlog.zh-CN.md"
 VERIFICATION_RULE_REL = Path("src") / "ai_sdlc" / "rules" / "verification.md"
 PR_CHECKLIST_REL = Path("docs") / "pull-request-checklist.zh.md"
+RELEASE_NOTES_V060_REL = Path("docs") / "releases" / "v0.6.0.md"
+RELEASE_POLICY_REL = Path("docs") / "框架自迭代开发与发布约定.md"
+README_REL = Path("README.md")
+USER_GUIDE_REL = Path("USER_GUIDE.zh-CN.md")
+OFFLINE_README_REL = Path("packaging") / "offline" / "README.md"
 FRONTEND_CONTRACT_OBSERVATION_INPUT_FILE = "frontend-contract-observations.json"
 FRONTEND_VISUAL_A11Y_EVIDENCE_INPUT_FILE = FRONTEND_VISUAL_A11Y_EVIDENCE_ARTIFACT_NAME
 DOC_FIRST_SURFACES: dict[Path, tuple[str, ...]] = {
@@ -105,6 +110,58 @@ VERIFICATION_PROFILE_SURFACES: dict[Path, tuple[str, ...]] = {
         "uv run ai-sdlc verify constraints",
         "uv run pytest",
         "uv run ruff check",
+    ),
+}
+RELEASE_DOCS_CONSISTENCY_SURFACES: dict[Path, tuple[str, ...]] = {
+    README_REL: (
+        "v0.6.0",
+        "docs/releases/v0.6.0.md",
+        "ai-sdlc-offline-0.6.0.zip",
+        "ai-sdlc-offline-0.6.0.tar.gz",
+    ),
+    RELEASE_NOTES_V060_REL: (
+        "v0.6.0",
+        "Windows",
+        ".zip",
+        "macOS / Linux",
+        ".tar.gz",
+    ),
+    USER_GUIDE_REL: (
+        "v0.6.0",
+        "Windows",
+        "macOS",
+        "Linux",
+        ".zip",
+        ".tar.gz",
+    ),
+    OFFLINE_README_REL: (
+        "v0.6.0",
+        "Windows",
+        ".zip",
+        "Linux/macOS",
+        ".tar.gz",
+    ),
+    RELEASE_POLICY_REL: (
+        "README.md",
+        "docs/releases/v0.6.0.md",
+        "USER_GUIDE.zh-CN.md",
+        "packaging/offline/README.md",
+        "docs/pull-request-checklist.zh.md",
+        "Windows",
+        ".zip",
+        "macOS / Linux",
+        ".tar.gz",
+    ),
+    PR_CHECKLIST_REL: (
+        "README.md",
+        "docs/releases/v0.6.0.md",
+        "USER_GUIDE.zh-CN.md",
+        "packaging/offline/README.md",
+        "v0.6.0",
+        "Windows",
+        ".zip",
+        "macOS / Linux",
+        ".tar.gz",
     ),
 }
 FEATURE_CONTRACT_SURFACE_OBJECT = "feature_contract_surfaces"
@@ -551,6 +608,7 @@ def collect_constraint_blockers(root: Path) -> list[str]:
     blockers.extend(_framework_defect_backlog_blockers(root))
     blockers.extend(_formal_artifact_target_blockers(root))
     blockers.extend(_backlog_breach_reference_blockers(root))
+    blockers.extend(_release_docs_consistency_blockers(root))
     blockers.extend(_doc_first_surface_blockers(root))
     blockers.extend(_verification_profile_blockers(root))
 
@@ -1730,6 +1788,37 @@ def _backlog_breach_reference_blockers(root: Path) -> list[str]:
             f"{violation.path} references missing backlog ids: "
             f"{', '.join(violation.missing_ids)}"
         )
+    return blockers
+
+
+def _release_docs_consistency_blockers(root: Path) -> list[str]:
+    """Validate the fixed release entry docs for v0.6.0 consistency."""
+    activation_surfaces = (
+        README_REL,
+        RELEASE_NOTES_V060_REL,
+        USER_GUIDE_REL,
+        OFFLINE_README_REL,
+        RELEASE_POLICY_REL,
+    )
+    if not any((root / rel).is_file() for rel in activation_surfaces):
+        return []
+
+    blockers: list[str] = []
+    for rel, required_tokens in RELEASE_DOCS_CONSISTENCY_SURFACES.items():
+        path = root / rel
+        if not path.is_file():
+            blockers.append(
+                "BLOCKER: release docs consistency missing required entry doc: "
+                f"{rel.as_posix()}"
+            )
+            continue
+        text = path.read_text(encoding="utf-8")
+        missing = [token for token in required_tokens if token not in text]
+        if missing:
+            blockers.append(
+                "BLOCKER: release docs consistency drift: "
+                f"{rel.as_posix()} missing required markers: {', '.join(missing)}"
+            )
     return blockers
 
 

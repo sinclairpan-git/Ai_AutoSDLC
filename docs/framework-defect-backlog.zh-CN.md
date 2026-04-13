@@ -96,10 +96,10 @@
 ## 下一波待修优先级（2026-04-07）
 
 - 当前待修：
-  - `高优先 / 回归` `FD-2026-04-07-002`：formal artifact canonical 落点与“识别违约后立即记账”仍未形成稳定硬门，且属 `FD-2026-03-31-003`、`FD-2026-03-30-002` 同族复发。
   - `高优先 / 回归` `FD-2026-04-07-003`：`plan.md -> 直接推进实现` 仍会绕过 `tasks.md + 显式 execute 授权`，且属 `FD-2026-03-30-001` 同族复发。
   - `中优先` `FD-2026-04-07-001`：release 文档入口一致性 sweep helper / checklist 尚未真正落地，当前只完成记账，未完成防复发收口。
 - 本轮已收口：
+  - `框架线` `FD-2026-04-07-002`
   - `框架线` `FD-2026-04-05-004`
   - `框架线` `FD-2026-04-05-003`
   - `框架线` `FD-2026-04-05-002`
@@ -115,7 +115,7 @@
   - `003` 线 `FD-2026-03-27-011`、`FD-2026-03-27-012`
   - `004` 线 `FD-2026-03-27-013`
 - 挂靠原则：
-  - `2026-04-07` 当天新增 `FD-2026-04-07-001/002/003` 目前都只完成“识别与记账/局部纠偏”，尚未完成规则、guard、workflow 或验证面的正式防复发落地，不得继续按 `closed` 汇总。
+  - `2026-04-07` 当天新增 `FD-2026-04-07-001/003` 目前仍只完成“识别与记账/局部纠偏”，尚未完成规则、guard、workflow 或验证面的正式防复发落地，不得继续按 `closed` 汇总。
   - `003` 线：已全部收口
   - `004` 线：已全部收口
 
@@ -157,7 +157,7 @@
 
 - 日期 (UTC): 2026-04-07
 - 来源: user_review, self_review
-- 状态: planned
+- 状态: closed
 - 缺陷类型: formal_artifact_misplacement_and_late_breach_logging
 - owner: codex
 - wi_id: 001-ai-sdlc-framework
@@ -184,7 +184,7 @@
 - tool: `docs/framework-defect-backlog.zh-CN.md`, `cursor/rules/ai-sdlc.md`, `src/ai_sdlc/stages/refine.yaml`, `USER_GUIDE.zh-CN.md`, `specs/<WI>/spec.md`, 后续 artifact preflight / write guard
 - eval: formal_artifact_misplaced_to_superpowers 次数、识别违约到 backlog 落盘的延迟时间、需要用户二次提醒才补录的次数、formal artifact canonical-path 命中率
 - 风险等级: 高
-- 处置进展（2026-04-07）: 本次误写入 `docs/superpowers/specs` 的 formal spec 已迁移到 `specs/073-frontend-p2-provider-style-solution-baseline/spec.md`，辅助目录中的误放文件已移除；同时，“识别违约后未同轮补录 backlog”的二次违约也已正式记账。但当前仍未落地 artifact-target guard 与 breach-detected-but-not-logged blocker，这类问题又已是同族回归，因此本条只能维持 `planned`，不能按 `closed` 汇总。
+- 收口说明（2026-04-13）: `117` 已落地 `src/ai_sdlc/core/artifact_target_guard.py` 与 `src/ai_sdlc/core/backlog_breach_guard.py`，并将其接入 `workitem_scaffold`、`verify_constraints`、`status` / `status --json`。formal `spec.md / plan.md / tasks.md` 已具备 canonical target guard，而引用 `FD-*` 却未在 backlog 登记的场景也会被稳定阻断；相关 focused tests、ruff 与 `verify constraints` 均已通过，因此本条正式回填为 `closed`。
 - 可验证成功标准: 1) 当产物类型为 formal spec 时，只允许写入 `specs/<WI>/spec.md`，不能再写入 `docs/superpowers/specs/*`。 2) 若执行侧已明确识别出违约，同轮必须新增 backlog 条目并完成只读校验，然后才能继续讨论补正动作。 3) review / 复盘能够直接通过本条与相关规则文件解释“为什么这次既是落点违约，也是补录时序违约”，而不依赖会话记忆。 4) 再次出现 formal artifact 写入辅助目录的尝试时，artifact preflight / review 能稳定阻断或报高优先级告警。
 - 是否需要回归测试补充: 是：补一类 artifact-target 正反夹具，验证 formal spec 不会再被写入 `docs/superpowers/specs/*`；同时补一类流程级夹具，验证“已识别违约但未新增 backlog 条目”会被视为未完成流程并阻断后续继续表述为“已处理”。
 
