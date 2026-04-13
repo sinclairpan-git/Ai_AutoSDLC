@@ -811,3 +811,11 @@ specs:
     branch_slug: "frontend-082-092-manifest-mirror-baseline"
     owner: "team-frontend-governance"
     frontend_evidence_class: "framework_capability"
+  - id: "114-stage0-093-095-formal-docs-backfill-baseline"
+    path: "specs/114-stage0-093-095-formal-docs-backfill-baseline"
+    depends_on:
+      - "095-frontend-mainline-product-delivery-baseline"
+      - "113-frontend-082-092-manifest-mirror-baseline"
+    branch_slug: "stage0-093-095-formal-docs-backfill-baseline"
+    owner: "team-frontend-governance"
+    frontend_evidence_class: "framework_capability"
