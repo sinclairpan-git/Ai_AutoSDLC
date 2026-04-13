@@ -333,3 +333,17 @@ v1 的 executable scope 规则固定如下：
    - 负责 Playwright smoke、visual/a11y/interaction evidence bundle
    - 负责把 browser verdict 与 `ManagedDeliveryApplyResult` 绑定
    - 负责向 `020` 提供最终可执行的 frontend readiness handoff
+
+---
+related_doc:
+  - "specs/014-frontend-contract-runtime-attachment-baseline/spec.md"
+  - "specs/020-frontend-program-execute-runtime-baseline/spec.md"
+  - "specs/073-frontend-p2-provider-style-solution-baseline/spec.md"
+  - "specs/094-stage0-init-dual-path-project-onboarding-baseline/spec.md"
+  - "specs/095-frontend-mainline-product-delivery-baseline/spec.md"
+  - "specs/096-frontend-mainline-host-runtime-manager-baseline/spec.md"
+  - "specs/098-frontend-mainline-posture-detector-baseline/spec.md"
+  - "specs/099-frontend-mainline-delivery-registry-resolver-baseline/spec.md"
+  - "specs/100-frontend-mainline-action-plan-binding-baseline/spec.md"
+frontend_evidence_class: "framework_capability"
+---

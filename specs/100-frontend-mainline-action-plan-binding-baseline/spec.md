@@ -445,3 +445,15 @@ blocked 时必须：
 2. **Browser Quality Gate Baseline**
    - 负责 Playwright smoke、visual/a11y/interaction evidence bundle
    - 负责把 browser verdict 接到 `020` readiness
+
+---
+related_doc:
+  - "specs/014-frontend-contract-runtime-attachment-baseline/spec.md"
+  - "specs/073-frontend-p2-provider-style-solution-baseline/spec.md"
+  - "specs/094-stage0-init-dual-path-project-onboarding-baseline/spec.md"
+  - "specs/095-frontend-mainline-product-delivery-baseline/spec.md"
+  - "specs/096-frontend-mainline-host-runtime-manager-baseline/spec.md"
+  - "specs/098-frontend-mainline-posture-detector-baseline/spec.md"
+  - "specs/099-frontend-mainline-delivery-registry-resolver-baseline/spec.md"
+frontend_evidence_class: "framework_capability"
+---

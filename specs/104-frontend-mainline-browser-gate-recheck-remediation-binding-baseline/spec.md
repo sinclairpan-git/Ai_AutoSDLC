@@ -294,3 +294,12 @@
    - 负责在 `core` 中 materialize handoff decision、recheck binding 与 remediation binding
 2. **Program Execute Browser Gate Wiring**
    - 负责把 `104` 的 decision surface 接到 `020` 已有 execute preflight / recheck handoff
+
+---
+related_doc:
+  - "specs/020-frontend-program-execute-runtime-baseline/spec.md"
+  - "specs/101-frontend-mainline-managed-delivery-apply-runtime-baseline/spec.md"
+  - "specs/102-frontend-mainline-browser-quality-gate-baseline/spec.md"
+  - "specs/103-frontend-mainline-browser-gate-probe-runtime-baseline/spec.md"
+frontend_evidence_class: "framework_capability"
+---

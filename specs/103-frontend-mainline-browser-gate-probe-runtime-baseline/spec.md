@@ -310,3 +310,13 @@ probe runtime 的单向顺序固定如下：
 
 1. **Browser Gate Recheck And Remediation Binding**
    - 负责把 `102/103` 的 incomplete、blocked 与 advisory 结果绑定到 `020` recheck/remediation vocabulary
+
+---
+related_doc:
+  - "specs/071-frontend-p1-visual-a11y-foundation-baseline/spec.md"
+  - "specs/073-frontend-p2-provider-style-solution-baseline/spec.md"
+  - "specs/095-frontend-mainline-product-delivery-baseline/spec.md"
+  - "specs/101-frontend-mainline-managed-delivery-apply-runtime-baseline/spec.md"
+  - "specs/102-frontend-mainline-browser-quality-gate-baseline/spec.md"
+frontend_evidence_class: "framework_capability"
+---

@@ -332,3 +332,15 @@ browser quality gate 的单向顺序固定如下：
    - 负责 Playwright probe orchestration、trace/screenshot materialization 与 per-check result 写出
 2. **Browser Gate Recheck And Remediation Binding**
    - 负责把 `102` 的 `incomplete / blocked / advisory` 结果绑定到 `020` recheck/remediation replay
+
+---
+related_doc:
+  - "specs/014-frontend-contract-runtime-attachment-baseline/spec.md"
+  - "specs/020-frontend-program-execute-runtime-baseline/spec.md"
+  - "specs/071-frontend-p1-visual-a11y-foundation-baseline/spec.md"
+  - "specs/073-frontend-p2-provider-style-solution-baseline/spec.md"
+  - "specs/095-frontend-mainline-product-delivery-baseline/spec.md"
+  - "specs/100-frontend-mainline-action-plan-binding-baseline/spec.md"
+  - "specs/101-frontend-mainline-managed-delivery-apply-runtime-baseline/spec.md"
+frontend_evidence_class: "framework_capability"
+---
