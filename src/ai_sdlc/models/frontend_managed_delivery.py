@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from typing import Literal
+from pathlib import Path
+from typing import Any, Callable, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -10,7 +11,31 @@ from pydantic import BaseModel, ConfigDict, Field
 class FrontendManagedDeliveryModel(BaseModel):
     """Base model for managed delivery runtime truth."""
 
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(extra="forbid", arbitrary_types_allowed=True)
+
+
+class DependencyInstallExecutionPayload(FrontendManagedDeliveryModel):
+    """Structured install payload for one dependency install action."""
+
+    install_strategy_id: str
+    package_manager: Literal["npm", "pnpm", "yarn"]
+    working_directory: str = "."
+    packages: list[str] = Field(default_factory=list)
+
+
+class GeneratedArtifactFile(FrontendManagedDeliveryModel):
+    """A single generated artifact file rooted at the managed target."""
+
+    path: str
+    content: str
+    encoding: str = "utf-8"
+
+
+class ArtifactGenerateExecutionPayload(FrontendManagedDeliveryModel):
+    """Structured artifact generation payload for one action."""
+
+    directories: list[str] = Field(default_factory=list)
+    files: list[GeneratedArtifactFile] = Field(default_factory=list)
 
 
 class FrontendActionPlanAction(FrontendManagedDeliveryModel):
@@ -28,6 +53,7 @@ class FrontendActionPlanAction(FrontendManagedDeliveryModel):
     cleanup_ref: str = ""
     risk_flags: list[str] = Field(default_factory=list)
     source_linkage_refs: dict[str, str] = Field(default_factory=dict)
+    executor_payload: dict[str, Any] = Field(default_factory=dict)
 
 
 class ConfirmedActionPlanExecutionView(FrontendManagedDeliveryModel):
@@ -38,6 +64,7 @@ class ConfirmedActionPlanExecutionView(FrontendManagedDeliveryModel):
     plan_fingerprint: str
     protocol_version: str
     managed_target_ref: str
+    managed_target_path: str = ""
     attachment_scope_ref: str
     readiness_subject_id: str
     spec_dir: str
@@ -117,4 +144,12 @@ class ManagedDeliveryExecutorContext(FrontendManagedDeliveryModel):
     """Execution context and test hooks for the managed delivery executor."""
 
     host_ingress_allowed: bool = True
+    execute_actions: bool = False
+    repo_root: Path | None = None
     before_state_failures: dict[str, str] = Field(default_factory=dict)
+    dependency_installer: Callable[
+        [DependencyInstallExecutionPayload, Path], dict[str, str]
+    ] | None = None
+    artifact_writer: Callable[
+        [ArtifactGenerateExecutionPayload, Path], dict[str, str]
+    ] | None = None

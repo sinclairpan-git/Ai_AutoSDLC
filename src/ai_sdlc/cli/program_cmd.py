@@ -673,6 +673,39 @@ def program_managed_delivery_apply(
         f"  - confirmation required: {str(request_payload.confirmation_required).lower()}",
         markup=False,
     )
+    if request_payload.execution_view is not None:
+        action_types = []
+        action_by_id = {
+            action.action_id: action for action in request_payload.execution_view.action_items
+        }
+        for action_id in request_payload.selected_action_ids:
+            action = action_by_id.get(action_id)
+            if action is not None:
+                action_types.append(action.action_type)
+        if action_types:
+            console.print(
+                f"  - selected action types: {', '.join(action_types)}",
+                markup=False,
+            )
+        if request_payload.execution_view.managed_target_path:
+            console.print(
+                f"  - managed target path: {request_payload.execution_view.managed_target_path}",
+                markup=False,
+            )
+        if request_payload.execution_view.will_not_touch:
+            console.print(
+                "  - will not touch: "
+                + ", ".join(request_payload.execution_view.will_not_touch),
+                markup=False,
+            )
+    console.print(
+        "  - scope: only selected managed-target actions from the confirmed plan can materialize here",
+        markup=False,
+    )
+    console.print(
+        "  - delivery remains incomplete until browser gate and downstream closure finish",
+        markup=False,
+    )
     for blocker in request_payload.remaining_blockers:
         console.print(f"  - blocker: {blocker}", markup=False)
 

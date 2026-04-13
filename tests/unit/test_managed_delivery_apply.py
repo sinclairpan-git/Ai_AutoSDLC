@@ -2,10 +2,11 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
 from ai_sdlc.core.managed_delivery_apply import run_managed_delivery_apply
 from ai_sdlc.models.frontend_managed_delivery import (
     ConfirmedActionPlanExecutionView,
-    DeliveryActionLedgerEntry,
     DeliveryApplyDecisionReceipt,
     FrontendActionPlanAction,
     ManagedDeliveryExecutorContext,
@@ -19,6 +20,7 @@ def _build_action(
     required: bool = True,
     selected: bool = True,
     depends_on_action_ids: list[str] | None = None,
+    executor_payload: dict[str, object] | None = None,
 ) -> FrontendActionPlanAction:
     return FrontendActionPlanAction(
         action_id=action_id,
@@ -33,16 +35,21 @@ def _build_action(
         cleanup_ref=f"cleanup:{action_id}",
         risk_flags=[],
         source_linkage_refs={"spec": "specs/001-auth"},
+        executor_payload=executor_payload or {},
     )
 
 
-def _build_view(*actions: FrontendActionPlanAction) -> ConfirmedActionPlanExecutionView:
+def _build_view(
+    *actions: FrontendActionPlanAction,
+    managed_target_path: str = "managed/frontend",
+) -> ConfirmedActionPlanExecutionView:
     return ConfirmedActionPlanExecutionView(
         action_plan_id="plan-001",
         confirmation_surface_id="surface-001",
         plan_fingerprint="fp-001",
         protocol_version="1",
         managed_target_ref="managed://frontend/app",
+        managed_target_path=managed_target_path,
         attachment_scope_ref="scope://001-auth",
         readiness_subject_id="001-auth",
         spec_dir="specs/001-auth",
@@ -114,7 +121,7 @@ def test_run_managed_delivery_apply_blocks_when_risk_acknowledgement_missing() -
 
 
 def test_run_managed_delivery_apply_blocks_when_required_unsupported_selected() -> None:
-    view = _build_view(_build_action(action_id="a1", action_type="dependency_install"))
+    view = _build_view(_build_action(action_id="a1", action_type="workspace_integration"))
     receipt = _build_receipt(selected_action_ids=["a1"])
 
     result = run_managed_delivery_apply(view, receipt, ManagedDeliveryExecutorContext())
@@ -141,7 +148,7 @@ def test_run_managed_delivery_apply_blocks_when_dependency_is_unsupported() -> N
     view = _build_view(
         _build_action(
             action_id="a1",
-            action_type="dependency_install",
+            action_type="workspace_integration",
             required=False,
         ),
         _build_action(
@@ -162,6 +169,148 @@ def test_run_managed_delivery_apply_blocks_when_dependency_is_unsupported() -> N
         "selected_optional_unsupported",
         "dependency_blocked_by_unsupported",
     ]
+
+
+def test_run_managed_delivery_apply_executes_dependency_install_with_plan_payload(
+    tmp_path: Path,
+) -> None:
+    recorded: list[tuple[str, str, list[str]]] = []
+    action = _build_action(
+        action_id="a1",
+        action_type="dependency_install",
+        executor_payload={
+            "install_strategy_id": "public-primevue-default",
+            "package_manager": "pnpm",
+            "working_directory": ".",
+            "packages": ["primevue", "@primeuix/themes"],
+        },
+    )
+    view = _build_view(action)
+    receipt = _build_receipt(selected_action_ids=["a1"])
+
+    def _installer(payload, working_directory: Path) -> dict[str, str]:
+        recorded.append((payload.package_manager, str(working_directory), payload.packages))
+        return {
+            "command": "pnpm add primevue @primeuix/themes",
+            "working_directory": str(working_directory),
+        }
+
+    result = run_managed_delivery_apply(
+        view,
+        receipt,
+        ManagedDeliveryExecutorContext(
+            host_ingress_allowed=True,
+            execute_actions=True,
+            repo_root=tmp_path,
+            dependency_installer=_installer,
+        ),
+    )
+
+    assert result.result_status == "apply_succeeded_pending_browser_gate"
+    assert result.executed_action_ids == ["a1"]
+    assert recorded == [("pnpm", str((tmp_path / "managed/frontend").resolve()), ["primevue", "@primeuix/themes"])]
+    assert result.ledger_entries[0].after_state["command"] == "pnpm add primevue @primeuix/themes"
+
+
+def test_run_managed_delivery_apply_blocks_dependency_install_when_manifest_is_no_touch(
+    tmp_path: Path,
+) -> None:
+    action = _build_action(
+        action_id="a1",
+        action_type="dependency_install",
+        executor_payload={
+            "install_strategy_id": "public-primevue-default",
+            "package_manager": "pnpm",
+            "working_directory": ".",
+            "packages": ["primevue"],
+        },
+    )
+    view = _build_view(action).model_copy(
+        update={"will_not_touch": ["managed/frontend/package.json"]}
+    )
+    receipt = _build_receipt(selected_action_ids=["a1"])
+
+    result = run_managed_delivery_apply(
+        view,
+        receipt,
+        ManagedDeliveryExecutorContext(
+            host_ingress_allowed=True,
+            execute_actions=False,
+            repo_root=tmp_path,
+        ),
+    )
+
+    assert result.result_status == "blocked_before_start"
+    assert result.blockers == ["dependency_install_hits_will_not_touch"]
+    assert result.blocked_action_ids == ["a1"]
+
+
+def test_run_managed_delivery_apply_generates_artifacts_inside_managed_target(
+    tmp_path: Path,
+) -> None:
+    action = _build_action(
+        action_id="a1",
+        action_type="artifact_generate",
+        executor_payload={
+            "directories": ["src"],
+            "files": [
+                {
+                    "path": "src/App.vue",
+                    "content": "<template>Hello</template>\n",
+                }
+            ],
+        },
+    )
+    view = _build_view(action)
+    receipt = _build_receipt(selected_action_ids=["a1"])
+
+    result = run_managed_delivery_apply(
+        view,
+        receipt,
+        ManagedDeliveryExecutorContext(
+            host_ingress_allowed=True,
+            execute_actions=True,
+            repo_root=tmp_path,
+        ),
+    )
+
+    assert result.result_status == "apply_succeeded_pending_browser_gate"
+    assert (tmp_path / "managed" / "frontend" / "src" / "App.vue").read_text(
+        encoding="utf-8"
+    ) == "<template>Hello</template>\n"
+
+
+def test_run_managed_delivery_apply_blocks_artifact_generate_outside_managed_target(
+    tmp_path: Path,
+) -> None:
+    action = _build_action(
+        action_id="a1",
+        action_type="artifact_generate",
+        executor_payload={
+            "files": [
+                {
+                    "path": "../legacy-root/App.vue",
+                    "content": "<template>Blocked</template>\n",
+                }
+            ]
+        },
+    )
+    view = _build_view(action)
+    receipt = _build_receipt(selected_action_ids=["a1"])
+
+    result = run_managed_delivery_apply(
+        view,
+        receipt,
+        ManagedDeliveryExecutorContext(
+            host_ingress_allowed=True,
+            execute_actions=False,
+            repo_root=tmp_path,
+        ),
+    )
+
+    assert result.result_status == "blocked_before_start"
+    assert result.blocked_action_ids == ["a1"]
+    assert result.blockers == ["artifact_generate_outside_managed_target"]
 
 
 def test_run_managed_delivery_apply_does_not_execute_when_before_state_capture_fails() -> None:

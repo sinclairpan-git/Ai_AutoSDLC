@@ -1447,7 +1447,11 @@ class ProgramService:
         preflight_result = run_managed_delivery_apply(
             execution_view,
             decision_receipt,
-            ManagedDeliveryExecutorContext(host_ingress_allowed=True),
+            ManagedDeliveryExecutorContext(
+                host_ingress_allowed=True,
+                execute_actions=False,
+                repo_root=self.root,
+            ),
         )
         if preflight_result.result_status == "blocked_before_start":
             blockers.extend(preflight_result.blockers)
@@ -1499,7 +1503,11 @@ class ProgramService:
         apply_result = run_managed_delivery_apply(
             effective_request.execution_view,
             effective_request.decision_receipt,
-            ManagedDeliveryExecutorContext(host_ingress_allowed=True),
+            ManagedDeliveryExecutorContext(
+                host_ingress_allowed=True,
+                execute_actions=True,
+                repo_root=self.root,
+            ),
         )
         return ProgramFrontendManagedDeliveryApplyResult(
             passed=apply_result.result_status == "apply_succeeded_pending_browser_gate",

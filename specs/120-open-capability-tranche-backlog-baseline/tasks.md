@@ -103,6 +103,7 @@ related_doc:
 - **交付流**：`S6`
 - **来源范围**：`095`、`099`、`100`、`101`
 - **当前状态**：`capability_open`
+- **派生状态**：已派生 `124-frontend-mainline-delivery-materialization-runtime-baseline`；在 `124` focused verification 通过且下游 `T13/T14` 收口前仍保持 `capability_open`
 - **缺失 carrier**：
   - `dependency_install` action executor
   - controlled subtree / scaffold file writer
@@ -114,7 +115,7 @@ related_doc:
   2. sidecar / managed target 写入与 `will_not_touch` 边界一致
   3. `100/101` 明确排除的 runtime executor / package installer / file writer 缺口被真正补齐
 - **验证**：`uv run pytest tests/unit/test_*frontend* tests/integration/test_cli_program.py -q`
-- **建议派生工单**：implementation carrier
+- **建议派生工单**：`124-frontend-mainline-delivery-materialization-runtime-baseline`
 
 ### Task 1.3 Browser Probe Runtime
 

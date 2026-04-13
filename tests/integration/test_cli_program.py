@@ -94,6 +94,7 @@ def _write_managed_delivery_apply_request(root: Path, *, fingerprint: str = "fp-
             "plan_fingerprint": fingerprint,
             "protocol_version": "1",
             "managed_target_ref": "managed://frontend/app",
+            "managed_target_path": "managed/frontend",
             "attachment_scope_ref": "scope://001-auth",
             "readiness_subject_id": "001-auth",
             "spec_dir": "specs/001-auth",
@@ -129,6 +130,65 @@ def _write_managed_delivery_apply_request(root: Path, *, fingerprint: str = "fp-
         },
     }
     rel = ".ai-sdlc/memory/frontend-managed-delivery/apply-request.yaml"
+    request_path = root / rel
+    request_path.parent.mkdir(parents=True, exist_ok=True)
+    request_path.write_text(yaml.safe_dump(payload, sort_keys=False), encoding="utf-8")
+    return rel
+
+
+def _write_artifact_generate_apply_request(root: Path) -> str:
+    payload = {
+        "execution_view": {
+            "action_plan_id": "plan-001",
+            "confirmation_surface_id": "surface-001",
+            "plan_fingerprint": "fp-001",
+            "protocol_version": "1",
+            "managed_target_ref": "managed://frontend/app",
+            "managed_target_path": "managed/frontend",
+            "attachment_scope_ref": "scope://001-auth",
+            "readiness_subject_id": "001-auth",
+            "spec_dir": "specs/001-auth",
+            "action_items": [
+                {
+                    "action_id": "a1",
+                    "effect_kind": "mutate",
+                    "action_type": "artifact_generate",
+                    "required": True,
+                    "selected": True,
+                    "default_selected": True,
+                    "depends_on_action_ids": [],
+                    "rollback_ref": "rollback:a1",
+                    "retry_ref": "retry:a1",
+                    "cleanup_ref": "cleanup:a1",
+                    "risk_flags": [],
+                    "source_linkage_refs": {"spec": "specs/001-auth"},
+                    "executor_payload": {
+                        "directories": ["src"],
+                        "files": [
+                            {
+                                "path": "src/App.vue",
+                                "content": "<template>cli generated</template>\n",
+                            }
+                        ],
+                    },
+                }
+            ],
+            "will_not_touch": ["legacy-root"],
+        },
+        "decision_receipt": {
+            "decision_receipt_id": "receipt-001",
+            "action_plan_id": "plan-001",
+            "confirmation_surface_id": "surface-001",
+            "decision": "continue",
+            "selected_action_ids": ["a1"],
+            "deselected_optional_action_ids": [],
+            "risk_acknowledgement_ids": [],
+            "second_confirmation_acknowledged": True,
+            "confirmed_plan_fingerprint": "fp-001",
+            "created_at": "2026-04-13T13:30:00Z",
+        },
+    }
+    rel = ".ai-sdlc/memory/frontend-managed-delivery/apply-request-artifact.yaml"
     request_path = root / rel
     request_path.parent.mkdir(parents=True, exist_ok=True)
     request_path.write_text(yaml.safe_dump(payload, sort_keys=False), encoding="utf-8")
@@ -289,6 +349,34 @@ class TestCliProgram:
         assert "browser gate has not run" in result.output.lower()
         assert "delivery complete: false" in result.output.lower()
         assert "next required gate: browser_gate" in result.output.lower()
+        assert "selected managed-target actions from the confirmed plan" in result.output.lower()
+
+    def test_program_managed_delivery_apply_execute_writes_managed_artifacts(
+        self, initialized_project_dir: Path
+    ) -> None:
+        root = initialized_project_dir
+        save_project_config(root, ProjectConfig(adapter_ingress_state="verified_loaded"))
+        request_rel = _write_artifact_generate_apply_request(root)
+
+        with patch("ai_sdlc.cli.program_cmd.find_project_root", return_value=root):
+            result = runner.invoke(
+                app,
+                [
+                    "program",
+                    "managed-delivery-apply",
+                    "--request",
+                    request_rel,
+                    "--execute",
+                    "--yes",
+                ],
+            )
+
+        assert result.exit_code == 0
+        assert "selected action types: artifact_generate" in result.output
+        assert "managed target path: managed/frontend" in result.output
+        assert (
+            root / "managed" / "frontend" / "src" / "App.vue"
+        ).read_text(encoding="utf-8") == "<template>cli generated</template>\n"
 
     def test_program_validate_pass(self, initialized_project_dir: Path) -> None:
         _write_manifest(initialized_project_dir)

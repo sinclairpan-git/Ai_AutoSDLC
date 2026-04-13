@@ -94,6 +94,7 @@ def _write_managed_delivery_apply_request(root: Path, *, fingerprint: str = "fp-
             "plan_fingerprint": fingerprint,
             "protocol_version": "1",
             "managed_target_ref": "managed://frontend/app",
+            "managed_target_path": "managed/frontend",
             "attachment_scope_ref": "scope://001-auth",
             "readiness_subject_id": "001-auth",
             "spec_dir": "specs/001-auth",
@@ -142,6 +143,7 @@ def _write_blocked_managed_delivery_apply_request(root: Path) -> Path:
             "plan_fingerprint": "fp-001",
             "protocol_version": "1",
             "managed_target_ref": "managed://frontend/app",
+            "managed_target_path": "managed/frontend",
             "attachment_scope_ref": "scope://001-auth",
             "readiness_subject_id": "001-auth",
             "spec_dir": "specs/001-auth",
@@ -149,7 +151,7 @@ def _write_blocked_managed_delivery_apply_request(root: Path) -> Path:
                 {
                     "action_id": "a1",
                     "effect_kind": "mutate",
-                    "action_type": "dependency_install",
+                    "action_type": "artifact_generate",
                     "required": True,
                     "selected": True,
                     "default_selected": True,
@@ -159,6 +161,14 @@ def _write_blocked_managed_delivery_apply_request(root: Path) -> Path:
                     "cleanup_ref": "cleanup:a1",
                     "risk_flags": [],
                     "source_linkage_refs": {"spec": "specs/001-auth"},
+                    "executor_payload": {
+                        "files": [
+                            {
+                                "path": "../legacy-root/Blocked.vue",
+                                "content": "<template>blocked</template>\n",
+                            }
+                        ]
+                    },
                 }
             ],
             "will_not_touch": ["legacy-root"],
@@ -177,6 +187,64 @@ def _write_blocked_managed_delivery_apply_request(root: Path) -> Path:
         },
     }
     request_path = root / ".ai-sdlc" / "memory" / "frontend-managed-delivery" / "apply-request-blocked.yaml"
+    request_path.parent.mkdir(parents=True, exist_ok=True)
+    request_path.write_text(yaml.safe_dump(payload, sort_keys=False), encoding="utf-8")
+    return request_path
+
+
+def _write_artifact_generate_apply_request(root: Path) -> Path:
+    payload = {
+        "execution_view": {
+            "action_plan_id": "plan-001",
+            "confirmation_surface_id": "surface-001",
+            "plan_fingerprint": "fp-001",
+            "protocol_version": "1",
+            "managed_target_ref": "managed://frontend/app",
+            "managed_target_path": "managed/frontend",
+            "attachment_scope_ref": "scope://001-auth",
+            "readiness_subject_id": "001-auth",
+            "spec_dir": "specs/001-auth",
+            "action_items": [
+                {
+                    "action_id": "a1",
+                    "effect_kind": "mutate",
+                    "action_type": "artifact_generate",
+                    "required": True,
+                    "selected": True,
+                    "default_selected": True,
+                    "depends_on_action_ids": [],
+                    "rollback_ref": "rollback:a1",
+                    "retry_ref": "retry:a1",
+                    "cleanup_ref": "cleanup:a1",
+                    "risk_flags": [],
+                    "source_linkage_refs": {"spec": "specs/001-auth"},
+                    "executor_payload": {
+                        "directories": ["src"],
+                        "files": [
+                            {
+                                "path": "src/App.vue",
+                                "content": "<template>generated</template>\n",
+                            }
+                        ],
+                    },
+                }
+            ],
+            "will_not_touch": ["legacy-root"],
+        },
+        "decision_receipt": {
+            "decision_receipt_id": "receipt-001",
+            "action_plan_id": "plan-001",
+            "confirmation_surface_id": "surface-001",
+            "decision": "continue",
+            "selected_action_ids": ["a1"],
+            "deselected_optional_action_ids": [],
+            "risk_acknowledgement_ids": [],
+            "second_confirmation_acknowledged": True,
+            "confirmed_plan_fingerprint": "fp-001",
+            "created_at": "2026-04-13T13:30:00Z",
+        },
+    }
+    request_path = root / ".ai-sdlc" / "memory" / "frontend-managed-delivery" / "apply-request-artifact.yaml"
     request_path.parent.mkdir(parents=True, exist_ok=True)
     request_path.write_text(yaml.safe_dump(payload, sort_keys=False), encoding="utf-8")
     return request_path
@@ -216,7 +284,7 @@ def test_execute_frontend_managed_delivery_apply_returns_pending_browser_gate_su
         initialized_project_dir,
         ProjectConfig(adapter_ingress_state="verified_loaded"),
     )
-    request_path = _write_managed_delivery_apply_request(initialized_project_dir)
+    request_path = _write_artifact_generate_apply_request(initialized_project_dir)
     svc = ProgramService(initialized_project_dir)
     request = svc.build_frontend_managed_delivery_apply_request(request_path)
 
@@ -230,6 +298,9 @@ def test_execute_frontend_managed_delivery_apply_returns_pending_browser_gate_su
     assert result.result_status == "apply_succeeded_pending_browser_gate"
     assert "delivery is not complete" in result.headline.lower()
     assert "browser gate has not run" in result.headline.lower()
+    assert (
+        initialized_project_dir / "managed" / "frontend" / "src" / "App.vue"
+    ).read_text(encoding="utf-8") == "<template>generated</template>\n"
 
 
 def test_build_frontend_managed_delivery_apply_request_surfaces_executor_preflight_blockers(
@@ -245,7 +316,7 @@ def test_build_frontend_managed_delivery_apply_request_surfaces_executor_preflig
     request = svc.build_frontend_managed_delivery_apply_request(request_path)
 
     assert request.apply_state == "blocked_before_start"
-    assert "required_unsupported" in request.remaining_blockers
+    assert "artifact_generate_outside_managed_target" in request.remaining_blockers
 
 
 def test_validate_manifest_cycle(tmp_path: Path) -> None:

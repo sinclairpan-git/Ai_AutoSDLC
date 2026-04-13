@@ -124,3 +124,26 @@
 #### 2.10 批次结论
 
 - `120/T11` 现在已经有明确的 implementation carrier，不再停留在抽象派生占位。
+
+### Batch 2026-04-14-001 | Derive T12 implementation carrier
+
+#### 2.11 批次范围
+
+- 覆盖范围：`tasks.md`
+- 覆盖目标：
+  - 将 `T12` 的建议派生工单从抽象占位更新为正式 `124`
+
+#### 2.12 任务记录
+
+##### T120-DOC-7 | 回填 `T12` 派生结果
+
+- 改动范围：`tasks.md`
+- 改动内容：
+  - 将 `Task 1.2 Frontend Provider Adapter/Package And File Writer Actions` 的建议派生工单更新为 `124-frontend-mainline-delivery-materialization-runtime-baseline`
+  - 明确 `T12` 在 `124` focused verification 与后续 `T13/T14` 收口前继续保持 `capability_open`
+- 新增/调整的测试：无
+- 是否符合任务目标：是
+
+#### 2.13 批次结论
+
+- `120/T12` 现在已经有正式 implementation carrier，后续 materialization runtime 不再依赖口头继续。
