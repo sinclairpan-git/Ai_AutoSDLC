@@ -2,7 +2,7 @@
 
 **功能编号**：`066-frontend-verification-diagnostics-contract-baseline`  
 **创建日期**：2026-04-06  
-**状态**：Batch 2-6 已实现并验证，git closure sync 进行中
+**状态**：已完成（implementation baseline 与 git closure sync 已收口）
 
 ## 1. 归档规则
 

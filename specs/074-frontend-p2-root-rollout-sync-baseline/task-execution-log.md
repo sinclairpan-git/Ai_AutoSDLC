@@ -2,7 +2,7 @@
 
 **功能编号**：`074-frontend-p2-root-rollout-sync-baseline`  
 **创建日期**：2026-04-08  
-**状态**：docs-only root truth sync 进行中
+**状态**：已完成（docs-only root truth sync）
 
 ## 1. 归档规则
 
