@@ -819,3 +819,11 @@ specs:
     branch_slug: "stage0-093-095-formal-docs-backfill-baseline"
     owner: "team-frontend-governance"
     frontend_evidence_class: "framework_capability"
+  - id: "115-stage0-093-095-plan-backfill-baseline"
+    path: "specs/115-stage0-093-095-plan-backfill-baseline"
+    depends_on:
+      - "095-frontend-mainline-product-delivery-baseline"
+      - "114-stage0-093-095-formal-docs-backfill-baseline"
+    branch_slug: "stage0-093-095-plan-backfill-baseline"
+    owner: "team-frontend-governance"
+    frontend_evidence_class: "framework_capability"
