@@ -95,7 +95,7 @@
 当仓库不存在足以证明“已有工程”的代码或构建痕迹时，`init` 必须进入 greenfield bootstrap path。该路径的核心目标是：
 
 - 以最低命令数建立 `.ai-sdlc` 基线与 governance skeleton
-- 提供可继续执行显式后续步骤的正式起点；其中受控开发入口的直接前置动作是 `adapter activate`
+- 提供可继续执行显式后续步骤的正式起点；其中受控开发入口的直接前置动作是完成 `010` 定义的最低 adapter gate。当前 reality 下，`adapter activate` 只记录 operator acknowledgement，不证明 host verified activation
 - 明确告诉系统和用户：此时多数项目事实仍未被发现，只是完成了框架接入底座
 
 ## 用户故事与验收
@@ -160,7 +160,7 @@
 | FR-094-012 | 对 `greenfield`，`init` 必须建立最小 `.ai-sdlc` bootstrap skeleton，使 operator 无需预先手写 formal docs 即可进入后续标准路径 |
 | FR-094-013 | greenfield bootstrap 允许写入默认 governance/profile 文件，但必须明确这些内容是 bootstrap declaration，而不是 observed project fact |
 | FR-094-014 | greenfield bootstrap 不得伪造 knowledge baseline、repo evidence 或“已扫描完成”的状态 |
-| FR-094-015 | greenfield bootstrap 后，最直接的受控开发前置动作必须是按 `010` 完成 adapter activation；init 不得把 bootstrap 成功表述为 activation 已满足 |
+| FR-094-015 | greenfield bootstrap 后，最直接的受控开发前置动作必须是按 `010` 完成最低 adapter gate；当前 `adapter activate` 只能表示 acknowledged，不得被 init 或后续主线误表述为 host verified activation |
 | FR-094-016 | greenfield bootstrap 后的其他后续动作必须通过显式命令继续推进；其中 `run --dry-run` 或等价受控执行入口只能在 `010` 认可的 activation 条件满足后出现，`workitem init` 也不得被 init 静默替代 |
 
 ### Canonical Artifact And Memory Hierarchy

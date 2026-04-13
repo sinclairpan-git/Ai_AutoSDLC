@@ -59,6 +59,17 @@
 - 若无法证明 activation，则框架只能宣称“已安装/已确认”，不能宣称“已接管”
 - 对 file-based agent 的当前最高能力应以 `acknowledged` 或等价软激活为上限；只有未来具备可验证回执时，才允许升级到更高 support tier
 
+## 当前已知后续缺口（不由 `010` 本次收口）
+
+`010` 解决的是 **installed != activated** 的 formal contract，防止把“写入 adapter 文件”误报成“治理已接管”。但以下能力并未在 `010` 本次收口：
+
+- host / plugin **官方默认读取入口** 的正式支持矩阵
+- `official_default / documented_custom / unverified_custom / unsupported` 这类 ingestion surface support tier
+- 依赖 nonce/probe/evidence 的 **host-verifiable activation**
+- `generic` 这类缺少官方自动加载或验证协议目标的诚实降级语义；当前 `TRAE` 也应归入这一类，直到厂商公开文档明确默认入口与验证机制
+
+因此，`adapter activate` 在当前 reality 下只代表 operator acknowledgement；它不能单独证明宿主已读取官方入口，也不能单独作为后续 mutating delivery 的“真实适配成功”证据。
+
 ## 用户故事与验收
 
 ### US-010-1 — Operator 需要在混合宿主场景中选对 AI 代理入口

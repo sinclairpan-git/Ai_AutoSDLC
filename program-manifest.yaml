@@ -3,6 +3,14 @@ prd_path: "AI-SDLC 全自动化框架 产品需求文档（PRD）.md"
 capability_closure_audit:
   reviewed_at: "2026-04-13"
   open_clusters:
+    - cluster_id: "agent-adapter-verified-host-ingress"
+      title: "Agent Adapter 真实接入与宿主验证"
+      closure_state: "partial"
+      summary: "010/094 已冻结 target selection 与 acknowledged gate，121 已将该缺口升级为 root truth；但当前 adapter 仍未对齐厂商公开文档支持的默认读取入口，且缺少 machine-verifiable host ingress runtime。TRAE 因厂商公开支持不明确，当前只能归入 generic。"
+      source_refs:
+        - "010"
+        - "094"
+        - "120-122"
     - cluster_id: "project-meta-foundations"
       title: "项目元能力基线"
       closure_state: "formal_only"
