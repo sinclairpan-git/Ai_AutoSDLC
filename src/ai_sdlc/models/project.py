@@ -31,6 +31,24 @@ class AdapterSupportTier(str, Enum):
     HARD_ACTIVATED = "hard_activated"
 
 
+class AdapterIngressState(str, Enum):
+    """Observed repo-local host ingress truth for the selected adapter."""
+
+    MATERIALIZED = "materialized"
+    VERIFIED_LOADED = "verified_loaded"
+    DEGRADED = "degraded"
+    UNSUPPORTED = "unsupported"
+
+
+class AdapterVerificationResult(str, Enum):
+    """Verification result for the selected adapter target."""
+
+    VERIFIED = "verified"
+    UNVERIFIED = "unverified"
+    DEGRADED = "degraded"
+    UNSUPPORTED = "unsupported"
+
+
 class ProjectState(BaseModel):
     """Represents the project initialization state stored in project-state.yaml."""
 
@@ -74,5 +92,11 @@ class ProjectConfig(BaseModel):
     adapter_activation_source: str = ""
     adapter_activation_evidence: str = ""
     adapter_activated_at: str = ""
+    adapter_ingress_state: str = ""
+    adapter_verification_result: str = ""
+    adapter_canonical_path: str = ""
+    adapter_degrade_reason: str = ""
+    adapter_verification_evidence: str = ""
+    adapter_verified_at: str = ""
     telemetry_profile: TelemetryProfile = TelemetryProfile.SELF_HOSTING
     telemetry_mode: TelemetryMode = TelemetryMode.LITE

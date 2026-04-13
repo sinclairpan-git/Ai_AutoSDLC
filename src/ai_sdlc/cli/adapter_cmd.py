@@ -28,8 +28,8 @@ console = Console()
 
 adapter_app = typer.Typer(
     help=(
-        "Select adapters, record operator acknowledgement, and inspect raw "
-        "activation state plus derived governance mode."
+        "Select adapters, inspect ingress truth plus verification result, "
+        "and keep operator acknowledgement for compatibility/debug flows."
     )
 )
 
@@ -75,7 +75,10 @@ def adapter_select(
     if note:
         console.print(note)
     cfg = load_project_config(root)
-    console.print(f"[green]Adapter target selected:[/green] {cfg.agent_target}")
+    console.print(
+        "[green]Adapter target selected:[/green] "
+        f"{cfg.agent_target} ({cfg.adapter_ingress_state or 'unknown'})"
+    )
 
 
 @adapter_app.command(name="activate")
@@ -86,7 +89,7 @@ def adapter_activate(
         help="Optionally override the current adapter target while acknowledging it.",
     ),
 ) -> None:
-    """Record operator acknowledgement. This does not prove governance activation."""
+    """Record operator acknowledgement for compatibility/debug use only; this does not change ingress verification."""
     root = _require_project_root()
     result = acknowledge_adapter(root, agent_target=agent_target)
     note = format_adapter_notice(result)
@@ -94,8 +97,9 @@ def adapter_activate(
         console.print(note)
     cfg = _adapter_status_payload(root)
     console.print(
-        "[green]Adapter acknowledged:[/green] "
-        f"{cfg['agent_target']} ({cfg['adapter_activation_state']})"
+        "[green]Adapter acknowledgement recorded:[/green] "
+        f"{cfg['agent_target']} ({cfg['adapter_activation_state']}); "
+        "this does not change ingress verification."
     )
 
 
@@ -103,7 +107,7 @@ def adapter_activate(
 def adapter_status(
     as_json: bool = typer.Option(False, "--json", help="Machine-readable adapter state."),
 ) -> None:
-    """Show raw activation state and derived governance mode."""
+    """Show ingress state, verification result, and derived governance mode."""
     root = _require_project_root()
     payload = _adapter_status_payload(root)
     if as_json:

@@ -39,24 +39,25 @@ class TestCliAdapter:
 
         assert result.exit_code == 0
         assert "Select, acknowledge, and inspect IDE adapters" not in result.output
-        assert "raw activation state" in result.output
-        assert "derived governance mode" in result.output
-        assert "operator acknowledgement" in result.output
+        assert "ingress truth" in result.output
+        assert "verification result" in result.output
+        assert "compatibility/debug" in result.output
 
-    def test_adapter_activate_help_describes_operator_acknowledgement(self) -> None:
+    def test_adapter_activate_help_describes_compatibility_acknowledgement(self) -> None:
         result = runner.invoke(app, ["adapter", "activate", "--help"])
 
         assert result.exit_code == 0
         assert "acknowledged by the user" not in result.output
-        assert "operator acknowledgement" in result.output
-        assert "does not prove governance activation" in result.output
+        assert "compatibility/debug" in result.output
+        assert "does" in result.output
+        assert "ingress verification" in result.output
 
-    def test_adapter_status_help_describes_raw_and_derived_state(self) -> None:
+    def test_adapter_status_help_describes_ingress_and_verification_state(self) -> None:
         result = runner.invoke(app, ["adapter", "status", "--help"])
 
         assert result.exit_code == 0
-        assert "activation state" in result.output
-        assert "derived governance mode" in result.output
+        assert "ingress state" in result.output
+        assert "verification result" in result.output
 
     def test_init_interactive_selector_persists_user_choice(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
@@ -72,7 +73,7 @@ class TestCliAdapter:
         assert result.exit_code == 0
         cfg = load_project_config(tmp_path)
         assert cfg.agent_target == IDEKind.CLAUDE_CODE.value
-        assert (tmp_path / ".claude" / "AI-SDLC.md").is_file()
+        assert (tmp_path / ".claude" / "CLAUDE.md").is_file()
 
     def test_init_with_explicit_agent_target_persists_target(self, tmp_path: Path) -> None:
         result = runner.invoke(
@@ -82,8 +83,9 @@ class TestCliAdapter:
         assert result.exit_code == 0
         cfg = load_project_config(tmp_path)
         assert cfg.agent_target == "codex"
-        assert cfg.adapter_activation_state == ActivationState.INSTALLED.value
-        assert (tmp_path / ".codex" / "AI-SDLC.md").is_file()
+        assert cfg.adapter_ingress_state == "materialized"
+        assert cfg.adapter_verification_result == "unverified"
+        assert (tmp_path / "AGENTS.md").is_file()
 
     def test_adapter_activate_marks_project_acknowledged(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
@@ -110,6 +112,8 @@ class TestCliAdapter:
         assert cfg.adapter_activation_source == "operator_cli"
         assert cfg.adapter_activation_evidence == "ai-sdlc adapter activate"
         assert cfg.adapter_activated_at != ""
+        assert cfg.adapter_ingress_state == "materialized"
+        assert cfg.adapter_verification_result == "unverified"
 
     def test_adapter_select_without_flag_uses_interactive_selector(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
@@ -127,9 +131,9 @@ class TestCliAdapter:
         assert result.exit_code == 0
         cfg = load_project_config(tmp_path)
         assert cfg.agent_target == IDEKind.CODEX.value
-        assert (tmp_path / ".codex" / "AI-SDLC.md").is_file()
+        assert (tmp_path / "AGENTS.md").is_file()
 
-    def test_adapter_status_json_exposes_target_and_activation(
+    def test_adapter_status_json_exposes_target_and_ingress_truth(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         assert (
@@ -142,16 +146,37 @@ class TestCliAdapter:
         assert result.exit_code == 0
         payload = json.loads(result.output)
         assert payload["agent_target"] == "codex"
-        assert payload["adapter_activation_state"] == ActivationState.INSTALLED.value
-        assert payload["adapter_support_tier"] == AdapterSupportTier.SOFT_INSTALLED.value
-        assert payload["adapter_activation_source"] == ""
-        assert payload["adapter_activation_evidence"] == ""
-        assert payload["governance_activation_state"] == "installed_only"
+        assert payload["adapter_ingress_state"] == "materialized"
+        assert payload["adapter_verification_result"] == "unverified"
+        assert payload["adapter_canonical_path"] == "AGENTS.md"
+        assert payload["adapter_degrade_reason"] == ""
+        assert payload["governance_activation_state"] == "materialized_unverified"
         assert payload["governance_activation_verifiable"] is False
-        assert payload["governance_activation_mode"] == "soft_prompt_only"
-        assert "not acknowledged" in payload["governance_activation_detail"]
+        assert payload["governance_activation_mode"] == "materialized_only"
+        assert "machine-verifiable evidence" in payload["governance_activation_detail"]
 
-    def test_adapter_status_json_reports_acknowledged_but_not_verifiable_governance(
+    def test_adapter_status_json_reports_verified_loaded_when_host_matches_target(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setenv("OPENAI_CODEX", "1")
+        assert (
+            runner.invoke(app, ["init", str(tmp_path), "--agent-target", "codex"]).exit_code
+            == 0
+        )
+        monkeypatch.chdir(tmp_path)
+
+        result = runner.invoke(app, ["adapter", "status", "--json"])
+
+        assert result.exit_code == 0
+        payload = json.loads(result.output)
+        assert payload["adapter_ingress_state"] == "verified_loaded"
+        assert payload["adapter_verification_result"] == "verified"
+        assert payload["adapter_verification_evidence"] == "env:OPENAI_CODEX"
+        assert payload["governance_activation_state"] == "verified_loaded"
+        assert payload["governance_activation_verifiable"] is True
+        assert payload["governance_activation_mode"] == "verified_loaded"
+
+    def test_adapter_status_json_keeps_acknowledgement_out_of_ingress_truth(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         assert (
@@ -173,7 +198,9 @@ class TestCliAdapter:
             payload["adapter_support_tier"]
             == AdapterSupportTier.ACKNOWLEDGED_ACTIVATION.value
         )
-        assert payload["governance_activation_state"] == "acknowledged_only"
+        assert payload["adapter_ingress_state"] == "materialized"
+        assert payload["adapter_verification_result"] == "unverified"
+        assert payload["governance_activation_state"] == "materialized_unverified"
         assert payload["governance_activation_verifiable"] is False
-        assert payload["governance_activation_mode"] == "soft_prompt_only"
-        assert "not verifiable" in payload["governance_activation_detail"]
+        assert payload["governance_activation_mode"] == "materialized_only"
+        assert "operator acknowledgement" in payload["governance_activation_detail"]

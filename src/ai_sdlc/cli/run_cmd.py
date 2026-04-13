@@ -9,32 +9,37 @@ from rich.console import Console
 from rich.panel import Panel
 
 from ai_sdlc.cli.commands import _print_reconcile_guidance
-from ai_sdlc.core.config import load_project_config
 from ai_sdlc.core.frontend_contract_runtime_attachment import (
     build_frontend_contract_runtime_attachment,
     is_frontend_contract_runtime_attachment_work_item,
 )
 from ai_sdlc.core.reconcile import detect_reconcile_hint
 from ai_sdlc.core.runner import PipelineHaltError, SDLCRunner
-from ai_sdlc.integrations.ide_adapter import IDEKind
-from ai_sdlc.models.project import ActivationState
+from ai_sdlc.integrations.ide_adapter import build_adapter_governance_surface
 from ai_sdlc.models.state import Checkpoint
 from ai_sdlc.utils.helpers import find_project_root
 
 console = Console()
 
 
-def _adapter_activation_block_message(root: object) -> str | None:
-    """Return a user-facing blocker when the selected adapter is only installed."""
-    cfg = load_project_config(root)
-    if not cfg.agent_target or cfg.agent_target == IDEKind.GENERIC.value:
+def _adapter_gate_message(root: object, *, dry_run: bool) -> str | None:
+    """Return a warning/blocker based on persisted ingress truth."""
+    payload = build_adapter_governance_surface(root)
+    if payload["adapter_ingress_state"] == "verified_loaded":
         return None
-    if cfg.adapter_activation_state not in ("", ActivationState.INSTALLED.value):
-        return None
+    if dry_run:
+        return (
+            f"Adapter target '{payload['agent_target']}' is not yet verified_loaded.\n"
+            f"Current ingress state: {payload['adapter_ingress_state']} "
+            f"({payload['adapter_verification_result']}).\n"
+            "Dry-run may continue, but this is not verified host ingress.\n"
+            "Inspect `ai-sdlc adapter status` before mutating runs."
+        )
     return (
-        f"Adapter target '{cfg.agent_target}' is installed but not yet acknowledged.\n"
-        f"Run `ai-sdlc adapter activate --agent-target {cfg.agent_target}` "
-        "before continuing with `ai-sdlc run`."
+        f"Adapter target '{payload['agent_target']}' has not reached verified_loaded.\n"
+        f"Current ingress state: {payload['adapter_ingress_state']} "
+        f"({payload['adapter_verification_result']}).\n"
+        "Inspect `ai-sdlc adapter status` and continue only after host ingress is verified."
     )
 
 
@@ -76,11 +81,19 @@ def run_command(
         )
         raise typer.Exit(code=1)
 
-    block_message = _adapter_activation_block_message(root)
-    if block_message is not None:
+    gate_message = _adapter_gate_message(root, dry_run=dry_run)
+    if gate_message is not None and dry_run:
         console.print(
             Panel(
-                block_message,
+                gate_message,
+                title="ai-sdlc run",
+                border_style="yellow",
+            )
+        )
+    elif gate_message is not None:
+        console.print(
+            Panel(
+                gate_message,
                 title="ai-sdlc run",
                 border_style="yellow",
             )

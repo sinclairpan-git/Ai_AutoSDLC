@@ -1,20 +1,33 @@
-"""Auto-detect IDE and install namespaced adapter files (idempotent, non-destructive)."""
+"""Auto-detect IDE and materialize canonical adapter ingress files."""
 
 from __future__ import annotations
 
 import logging
+import os
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
 from ai_sdlc.core.config import load_project_config, save_project_config
 from ai_sdlc.integrations.agent_target import IDEKind, detect_agent_target
-from ai_sdlc.models.project import ActivationState, AdapterSupportTier
+from ai_sdlc.models.project import (
+    ActivationState,
+    AdapterIngressState,
+    AdapterSupportTier,
+    AdapterVerificationResult,
+)
 from ai_sdlc.utils.helpers import AI_SDLC_DIR, PROJECT_CONFIG_PATH, now_iso
 
 logger = logging.getLogger(__name__)
 
 ADAPTER_VERSION = "1"
+
+_VERIFICATION_ENV_KEYS: dict[IDEKind, tuple[str, ...]] = {
+    IDEKind.CURSOR: ("CURSOR_TRACE_ID", "CURSOR_AGENT"),
+    IDEKind.VSCODE: ("VSCODE_IPC_HOOK_CLI",),
+    IDEKind.CODEX: ("OPENAI_CODEX", "CODEX_CLI_READY"),
+    IDEKind.CLAUDE_CODE: ("CLAUDE_CODE_ENTRYPOINT", "CLAUDECODE"),
+}
 
 
 @dataclass
@@ -34,16 +47,20 @@ def _bundle_root() -> Path:
 
 
 def _install_pairs(ide: IDEKind) -> list[tuple[str, str]]:
-    """Map bundle-relative path -> project-relative path."""
+    """Map bundle-relative path -> project-relative canonical path."""
     if ide == IDEKind.CURSOR:
-        return [("cursor/rules/ai-sdlc.md", ".cursor/rules/ai-sdlc.md")]
+        return [("cursor/rules/ai-sdlc.md", ".cursor/rules/ai-sdlc.mdc")]
     if ide == IDEKind.VSCODE:
-        return [("vscode/AI-SDLC.md", ".vscode/AI-SDLC.md")]
+        return [("vscode/AI-SDLC.md", ".github/copilot-instructions.md")]
     if ide == IDEKind.CODEX:
-        return [("codex/AI-SDLC.md", ".codex/AI-SDLC.md")]
+        return [("codex/AI-SDLC.md", "AGENTS.md")]
     if ide == IDEKind.CLAUDE_CODE:
-        return [("claude_code/AI-SDLC.md", ".claude/AI-SDLC.md")]
+        return [("claude_code/AI-SDLC.md", ".claude/CLAUDE.md")]
     return [("generic/ide-hint.md", f"{AI_SDLC_DIR}/memory/ide-adapter-hint.md")]
+
+
+def _canonical_path(ide: IDEKind) -> str:
+    return _install_pairs(ide)[0][1]
 
 
 def detect_ide(root: Path) -> IDEKind:
@@ -167,6 +184,153 @@ def _activation_metadata(
     }
 
 
+def _preserved_verified_ingress(
+    cfg: Any,
+    target: IDEKind,
+    evidence: str,
+) -> dict[str, str] | None:
+    if cfg.agent_target != target.value:
+        return None
+    if cfg.adapter_ingress_state != AdapterIngressState.VERIFIED_LOADED.value:
+        return None
+    if cfg.adapter_verification_result != AdapterVerificationResult.VERIFIED.value:
+        return None
+    if cfg.adapter_verification_evidence != evidence:
+        return None
+    return {
+        "adapter_ingress_state": cfg.adapter_ingress_state,
+        "adapter_verification_result": cfg.adapter_verification_result,
+        "adapter_canonical_path": _canonical_path(target),
+        "adapter_degrade_reason": "",
+        "adapter_verification_evidence": cfg.adapter_verification_evidence,
+        "adapter_verified_at": cfg.adapter_verified_at,
+    }
+
+
+def _ingress_metadata(
+    root: Path,
+    cfg: Any,
+    *,
+    target: IDEKind,
+    environ: dict[str, str] | None = None,
+) -> dict[str, str]:
+    canonical_path = _canonical_path(target)
+    if target == IDEKind.GENERIC:
+        return {
+            "adapter_ingress_state": AdapterIngressState.DEGRADED.value,
+            "adapter_verification_result": AdapterVerificationResult.DEGRADED.value,
+            "adapter_canonical_path": canonical_path,
+            "adapter_degrade_reason": "generic_target_has_no_verify_protocol",
+            "adapter_verification_evidence": "",
+            "adapter_verified_at": "",
+        }
+
+    if not (root / canonical_path).is_file():
+        return {
+            "adapter_ingress_state": AdapterIngressState.UNSUPPORTED.value,
+            "adapter_verification_result": AdapterVerificationResult.UNSUPPORTED.value,
+            "adapter_canonical_path": canonical_path,
+            "adapter_degrade_reason": "canonical_path_not_materialized",
+            "adapter_verification_evidence": "",
+            "adapter_verified_at": "",
+        }
+
+    env = environ or dict(os.environ)
+    for key in _VERIFICATION_ENV_KEYS.get(target, ()):
+        if env.get(key):
+            evidence = f"env:{key}"
+            preserved = _preserved_verified_ingress(cfg, target, evidence)
+            if preserved is not None:
+                return preserved
+            return {
+                "adapter_ingress_state": AdapterIngressState.VERIFIED_LOADED.value,
+                "adapter_verification_result": AdapterVerificationResult.VERIFIED.value,
+                "adapter_canonical_path": canonical_path,
+                "adapter_degrade_reason": "",
+                "adapter_verification_evidence": evidence,
+                "adapter_verified_at": now_iso(),
+            }
+
+    return {
+        "adapter_ingress_state": AdapterIngressState.MATERIALIZED.value,
+        "adapter_verification_result": AdapterVerificationResult.UNVERIFIED.value,
+        "adapter_canonical_path": canonical_path,
+        "adapter_degrade_reason": "",
+        "adapter_verification_evidence": "",
+        "adapter_verified_at": "",
+    }
+
+
+def _ingress_fields_from_config(cfg: Any, target: IDEKind) -> dict[str, str]:
+    if cfg.adapter_ingress_state:
+        return {
+            "adapter_ingress_state": cfg.adapter_ingress_state,
+            "adapter_verification_result": cfg.adapter_verification_result,
+            "adapter_canonical_path": cfg.adapter_canonical_path or _canonical_path(target),
+            "adapter_degrade_reason": cfg.adapter_degrade_reason,
+            "adapter_verification_evidence": cfg.adapter_verification_evidence,
+            "adapter_verified_at": cfg.adapter_verified_at,
+        }
+    if target == IDEKind.GENERIC:
+        return {
+            "adapter_ingress_state": AdapterIngressState.DEGRADED.value,
+            "adapter_verification_result": AdapterVerificationResult.DEGRADED.value,
+            "adapter_canonical_path": _canonical_path(target),
+            "adapter_degrade_reason": "generic_target_has_no_verify_protocol",
+            "adapter_verification_evidence": "",
+            "adapter_verified_at": "",
+        }
+    return {
+        "adapter_ingress_state": AdapterIngressState.MATERIALIZED.value,
+        "adapter_verification_result": AdapterVerificationResult.UNVERIFIED.value,
+        "adapter_canonical_path": _canonical_path(target),
+        "adapter_degrade_reason": "",
+        "adapter_verification_evidence": "",
+        "adapter_verified_at": "",
+    }
+
+
+def _governance_detail(
+    *,
+    ingress_state: str,
+    canonical_path: str,
+    verification_evidence: str,
+    degrade_reason: str,
+    activation_state: str,
+) -> str:
+    if ingress_state == AdapterIngressState.VERIFIED_LOADED.value:
+        if verification_evidence:
+            return (
+                "Verified host ingress recorded from machine-verifiable evidence: "
+                f"{verification_evidence}."
+            )
+        return "Verified host ingress recorded from machine-verifiable evidence."
+
+    if ingress_state == AdapterIngressState.MATERIALIZED.value:
+        detail = (
+            "Adapter instructions are materialized at the canonical path "
+            f"'{canonical_path}', but machine-verifiable evidence is not yet recorded."
+        )
+        if activation_state == ActivationState.ACKNOWLEDGED.value:
+            detail += (
+                " operator acknowledgement is stored separately and does not change "
+                "ingress verification."
+            )
+        return detail
+
+    if ingress_state == AdapterIngressState.DEGRADED.value:
+        reason = degrade_reason or "adapter_target_is_running_degraded"
+        detail = f"Adapter target is running in degraded mode: {reason}."
+        if activation_state == ActivationState.ACKNOWLEDGED.value:
+            detail += (
+                " operator acknowledgement is stored separately and does not change "
+                "ingress verification."
+            )
+        return detail
+
+    return "Adapter target is unsupported until canonical materialization succeeds."
+
+
 def build_adapter_governance_surface(
     root: Path,
     *,
@@ -179,39 +343,36 @@ def build_adapter_governance_surface(
         fallback = _coerce_ide_kind(detected_ide) or detect_ide(root)
         resolved_detected_ide = fallback.value
     agent_target = cfg.agent_target or resolved_detected_ide
+    target = _coerce_ide_kind(agent_target) or IDEKind.GENERIC
     activation_state = cfg.adapter_activation_state or ActivationState.INSTALLED.value
     support_tier = cfg.adapter_support_tier or _default_support_tier(activation_state)
-    verifiable = activation_state == ActivationState.ACTIVATED.value or support_tier in {
-        AdapterSupportTier.VERIFIED_ACTIVATION.value,
-        AdapterSupportTier.HARD_ACTIVATED.value,
-    }
-    if verifiable:
-        governance_state = "activated"
-        governance_mode = (
-            "hard_activated"
-            if support_tier == AdapterSupportTier.HARD_ACTIVATED.value
-            else "verified_activation"
-        )
-        detail = "Governance activation is verifiable from persisted adapter evidence."
-        if cfg.adapter_activation_evidence:
-            detail = (
-                "Governance activation is verifiable from persisted adapter evidence: "
-                f"{cfg.adapter_activation_evidence}."
-            )
-    elif activation_state == ActivationState.ACKNOWLEDGED.value:
-        governance_state = "acknowledged_only"
-        governance_mode = "soft_prompt_only"
-        detail = (
-            "Adapter acknowledgment was recorded, but governance activation is not "
-            "verifiable; adapter remains soft prompt only."
-        )
+    ingress = _ingress_fields_from_config(cfg, target)
+    ingress_state = ingress["adapter_ingress_state"]
+
+    if ingress_state == AdapterIngressState.VERIFIED_LOADED.value:
+        governance_state = AdapterIngressState.VERIFIED_LOADED.value
+        governance_mode = AdapterIngressState.VERIFIED_LOADED.value
+        verifiable = True
+    elif ingress_state == AdapterIngressState.MATERIALIZED.value:
+        governance_state = "materialized_unverified"
+        governance_mode = "materialized_only"
+        verifiable = False
+    elif ingress_state == AdapterIngressState.DEGRADED.value:
+        governance_state = AdapterIngressState.DEGRADED.value
+        governance_mode = AdapterIngressState.DEGRADED.value
+        verifiable = False
     else:
-        governance_state = "installed_only"
-        governance_mode = "soft_prompt_only"
-        detail = (
-            "Adapter is installed but not acknowledged, and governance activation is "
-            "not verifiable; adapter remains soft prompt only."
-        )
+        governance_state = AdapterIngressState.UNSUPPORTED.value
+        governance_mode = AdapterIngressState.UNSUPPORTED.value
+        verifiable = False
+
+    detail = _governance_detail(
+        ingress_state=ingress_state,
+        canonical_path=ingress["adapter_canonical_path"],
+        verification_evidence=ingress["adapter_verification_evidence"],
+        degrade_reason=ingress["adapter_degrade_reason"],
+        activation_state=activation_state,
+    )
 
     return {
         "detected_ide": resolved_detected_ide,
@@ -222,6 +383,7 @@ def build_adapter_governance_surface(
         "adapter_activation_source": cfg.adapter_activation_source,
         "adapter_activation_evidence": cfg.adapter_activation_evidence,
         "adapter_activated_at": cfg.adapter_activated_at,
+        **ingress,
         "governance_activation_state": governance_state,
         "governance_activation_verifiable": verifiable,
         "governance_activation_mode": governance_mode,
@@ -254,6 +416,7 @@ def _persist_config(
             agent_target,
         )
     )
+    updates.update(_ingress_metadata(root, cfg, target=agent_target))
     config_path = root / PROJECT_CONFIG_PATH
     state_changed = (
         not config_path.is_file()
@@ -309,7 +472,7 @@ def acknowledge_adapter(
     *,
     agent_target: IDEKind | str | None = None,
 ) -> ApplyResult:
-    """Persist an explicit user acknowledgement for the selected adapter."""
+    """Persist an explicit operator acknowledgement for compatibility/debug flows."""
     result = ensure_ide_adaptation(root, agent_target=agent_target)
     cfg = load_project_config(root)
     cfg = cfg.model_copy(

@@ -37,6 +37,10 @@ def _clear_ide_env(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 class TestDetectIde:
+    def test_trae_is_not_supported_as_a_distinct_target(self) -> None:
+        with pytest.raises(ValueError):
+            IDEKind("trae")
+
     def test_cursor_dir(self, tmp_path: Path) -> None:
         (tmp_path / ".cursor").mkdir()
         assert detect_ide(tmp_path) == IDEKind.CURSOR
@@ -107,7 +111,7 @@ class TestApplyAdapter:
     def test_writes_cursor_rule(self, tmp_path: Path) -> None:
         (tmp_path / AI_SDLC_DIR).mkdir(parents=True)
         r = apply_adapter(tmp_path, IDEKind.CURSOR)
-        p = tmp_path / ".cursor" / "rules" / "ai-sdlc.md"
+        p = tmp_path / ".cursor" / "rules" / "ai-sdlc.mdc"
         assert p.is_file()
         assert "AI-Native SDLC" in p.read_text(encoding="utf-8")
         assert any(str(p) == w or p.name in w for w in r.written)
@@ -118,37 +122,36 @@ class TestApplyAdapter:
         r2 = apply_adapter(tmp_path, IDEKind.VSCODE)
         assert not r2.written
         assert r2.skipped_existing
-        assert (tmp_path / ".vscode" / "AI-SDLC.md").is_file()
+        assert (tmp_path / ".github" / "copilot-instructions.md").is_file()
 
     def test_skips_user_modified(self, tmp_path: Path) -> None:
         (tmp_path / AI_SDLC_DIR).mkdir(parents=True)
         apply_adapter(tmp_path, IDEKind.CODEX)
-        f = tmp_path / ".codex" / "AI-SDLC.md"
+        f = tmp_path / "AGENTS.md"
         f.write_text("user content", encoding="utf-8")
         r = apply_adapter(tmp_path, IDEKind.CODEX)
         assert f.read_text(encoding="utf-8") == "user content"
         assert str(f) in r.skipped_user_modified
 
-    def test_all_ide_templates_include_activation_then_safe_start(
+    def test_all_ide_templates_point_to_status_then_safe_start(
         self, tmp_path: Path
     ) -> None:
         (tmp_path / AI_SDLC_DIR).mkdir(parents=True)
         targets = [
-            (IDEKind.CURSOR, tmp_path / ".cursor" / "rules" / "ai-sdlc.md"),
-            (IDEKind.VSCODE, tmp_path / ".vscode" / "AI-SDLC.md"),
-            (IDEKind.CODEX, tmp_path / ".codex" / "AI-SDLC.md"),
-            (IDEKind.CLAUDE_CODE, tmp_path / ".claude" / "AI-SDLC.md"),
+            (IDEKind.CURSOR, tmp_path / ".cursor" / "rules" / "ai-sdlc.mdc"),
+            (IDEKind.VSCODE, tmp_path / ".github" / "copilot-instructions.md"),
+            (IDEKind.CODEX, tmp_path / "AGENTS.md"),
+            (IDEKind.CLAUDE_CODE, tmp_path / ".claude" / "CLAUDE.md"),
         ]
         for ide, path in targets:
             apply_adapter(tmp_path, ide)
             text = path.read_text(encoding="utf-8")
-            if ide != IDEKind.GENERIC:
-                assert "ai-sdlc adapter activate" in text
-                assert "acknowledged" in text
+            assert "ai-sdlc adapter status" in text
+            assert "machine-verifiable" in text
             assert "ai-sdlc run --dry-run" in text
             assert "python -m ai_sdlc run --dry-run" in text
-            assert "soft_prompt_only" in text
-            assert "不证明治理激活" in text
+            assert "verified_loaded" in text
+            assert "adapter activate" not in text
 
 
 class TestEnsureIdeAdaptation:
@@ -165,8 +168,9 @@ class TestEnsureIdeAdaptation:
         cfg = load_project_config(tmp_path)
         assert cfg.detected_ide == IDEKind.GENERIC.value
         assert cfg.agent_target == IDEKind.GENERIC.value
-        assert cfg.adapter_activation_state == ActivationState.INSTALLED.value
-        assert cfg.adapter_support_tier == AdapterSupportTier.SOFT_INSTALLED.value
+        assert cfg.adapter_ingress_state == "degraded"
+        assert cfg.adapter_verification_result == "degraded"
+        assert cfg.adapter_degrade_reason == "generic_target_has_no_verify_protocol"
 
     def test_explicit_agent_target_persists_installed_state(self, tmp_path: Path) -> None:
         init_project(tmp_path)
@@ -176,8 +180,9 @@ class TestEnsureIdeAdaptation:
         cfg = load_project_config(tmp_path)
         assert cfg.agent_target == IDEKind.CODEX.value
         assert cfg.adapter_applied == IDEKind.CODEX.value
-        assert cfg.adapter_activation_state == ActivationState.INSTALLED.value
-        assert cfg.adapter_support_tier == AdapterSupportTier.SOFT_INSTALLED.value
+        assert cfg.adapter_ingress_state == "materialized"
+        assert cfg.adapter_verification_result == "unverified"
+        assert cfg.adapter_canonical_path == "AGENTS.md"
 
     def test_repeated_adaptation_does_not_refresh_timestamp_without_state_change(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
@@ -215,8 +220,22 @@ class TestEnsureIdeAdaptation:
             cfg.adapter_support_tier
             == AdapterSupportTier.ACKNOWLEDGED_ACTIVATION.value
         )
+        assert cfg.adapter_ingress_state == "materialized"
 
-    def test_build_adapter_governance_surface_reports_soft_prompt_only(
+    def test_explicit_target_can_auto_verify_when_running_inside_matching_host(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setenv("OPENAI_CODEX", "1")
+        init_project(tmp_path, agent_target=IDEKind.CODEX.value)
+        from ai_sdlc.core.config import load_project_config
+
+        cfg = load_project_config(tmp_path)
+        assert cfg.agent_target == IDEKind.CODEX.value
+        assert cfg.adapter_ingress_state == "verified_loaded"
+        assert cfg.adapter_verification_result == "verified"
+        assert cfg.adapter_verification_evidence == "env:OPENAI_CODEX"
+
+    def test_build_adapter_governance_surface_reports_materialized_truth(
         self, tmp_path: Path
     ) -> None:
         (tmp_path / ".codex").mkdir()
@@ -225,6 +244,8 @@ class TestEnsureIdeAdaptation:
         payload = build_adapter_governance_surface(tmp_path, detected_ide=IDEKind.CODEX)
 
         assert payload["agent_target"] == IDEKind.CODEX.value
-        assert payload["governance_activation_state"] == "installed_only"
+        assert payload["adapter_ingress_state"] == "materialized"
+        assert payload["adapter_verification_result"] == "unverified"
+        assert payload["governance_activation_state"] == "materialized_unverified"
         assert payload["governance_activation_verifiable"] is False
-        assert payload["governance_activation_mode"] == "soft_prompt_only"
+        assert payload["governance_activation_mode"] == "materialized_only"

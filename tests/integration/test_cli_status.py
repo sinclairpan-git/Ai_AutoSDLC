@@ -255,8 +255,9 @@ class TestCliStatus:
         assert "codex" in result.output
         assert "acknowledged" in result.output
         assert "Governance Activation" in result.output
-        assert "soft prompt only" in result.output
-        assert "not verifiable" in result.output
+        assert "materialized only" in result.output
+        assert "machine-verifiable evidence is not yet" in result.output
+        assert "recorded" in result.output
 
     def test_status_not_initialized(self) -> None:
         with patch("ai_sdlc.cli.commands.find_project_root", return_value=None):
@@ -323,7 +324,9 @@ class TestCliStatus:
         assert payload["telemetry"]["latest"] is None
         assert payload["adapter_governance"]["agent_target"] == "codex"
         assert payload["adapter_governance"]["adapter_activation_state"] == "installed"
-        assert payload["adapter_governance"]["governance_activation_state"] == "installed_only"
+        assert payload["adapter_governance"]["adapter_ingress_state"] == "materialized"
+        assert payload["adapter_governance"]["adapter_verification_result"] == "unverified"
+        assert payload["adapter_governance"]["governance_activation_state"] == "materialized_unverified"
         assert payload["adapter_governance"]["governance_activation_verifiable"] is False
         assert telemetry_root.exists() is False
 
@@ -448,7 +451,8 @@ class TestCliStatus:
         }
         assert payload["branch_lifecycle"]["state"] == "unavailable"
         assert payload["adapter_governance"]["agent_target"] == "codex"
-        assert payload["adapter_governance"]["governance_activation_mode"] == "soft_prompt_only"
+        assert payload["adapter_governance"]["adapter_ingress_state"] == "materialized"
+        assert payload["adapter_governance"]["governance_activation_mode"] == "materialized_only"
         assert payload["adapter_governance"]["governance_activation_verifiable"] is False
 
     def test_status_shows_p1_artifact_surfaces(self, tmp_path: Path) -> None:

@@ -137,35 +137,59 @@ class TestRunCommand:
         assert "dry-run" in result.output
         assert "mode" in result.output
 
-    def test_run_triggers_ide_adapter_after_codex_marker(
+    def test_run_dry_run_materializes_canonical_adapter_after_codex_marker(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         monkeypatch.chdir(tmp_path)
         assert runner.invoke(app, ["init", "."]).exit_code == 0
         (tmp_path / ".codex").mkdir()
         result = runner.invoke(app, ["run", "--dry-run"])
-        assert result.exit_code == 1
-        assert "adapter activate" in result.output
-        doc = tmp_path / ".codex" / "AI-SDLC.md"
+        assert result.exit_code == 0
+        assert "not yet verified_loaded" in result.output
+        doc = tmp_path / "AGENTS.md"
         assert doc.is_file()
 
-    def test_run_dry_run_continues_after_adapter_activation(
+    def test_run_dry_run_continues_without_manual_adapter_activation(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         monkeypatch.chdir(tmp_path)
         assert runner.invoke(app, ["init", ".", "--agent-target", "codex"]).exit_code == 0
-        assert runner.invoke(app, ["adapter", "activate", "--agent-target", "codex"]).exit_code == 0
 
         result = runner.invoke(app, ["run", "--dry-run"])
 
         assert result.exit_code == 0
         assert "Pipeline completed." in result.output
         cfg = load_project_config(tmp_path)
-        assert cfg.adapter_activation_state == ActivationState.ACKNOWLEDGED.value
-        assert (
-            cfg.adapter_support_tier
-            == AdapterSupportTier.ACKNOWLEDGED_ACTIVATION.value
-        )
+        assert cfg.adapter_ingress_state == "materialized"
+        assert cfg.adapter_verification_result == "unverified"
+
+    def test_run_non_dry_run_blocks_when_adapter_is_not_verified_loaded(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.chdir(tmp_path)
+        assert runner.invoke(app, ["init", ".", "--agent-target", "codex"]).exit_code == 0
+
+        result = runner.invoke(app, ["run"])
+
+        assert result.exit_code == 1
+        assert "verified_loaded" in result.output
+        assert "ai-sdlc adapter status" in result.output
+
+    def test_run_non_dry_run_continues_when_adapter_is_verified_loaded(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setenv("OPENAI_CODEX", "1")
+        monkeypatch.chdir(tmp_path)
+        assert runner.invoke(app, ["init", ".", "--agent-target", "codex"]).exit_code == 0
+        self._force_passing_gates(monkeypatch)
+
+        result = runner.invoke(app, ["run"])
+
+        assert result.exit_code == 0
+        assert "Pipeline completed. Stage: close" in result.output
+        cfg = load_project_config(tmp_path)
+        assert cfg.adapter_ingress_state == "verified_loaded"
+        assert cfg.adapter_verification_result == "verified"
 
     def test_run_dry_run_lazy_inits_telemetry_without_governance_artifacts(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
@@ -185,8 +209,9 @@ class TestRunCommand:
     def test_run_non_dry_run_does_not_halt_init_when_git_repo_is_missing(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
+        monkeypatch.setenv("OPENAI_CODEX", "1")
         monkeypatch.chdir(tmp_path)
-        assert runner.invoke(app, ["init", "."]).exit_code == 0
+        assert runner.invoke(app, ["init", ".", "--agent-target", "codex"]).exit_code == 0
 
         original_run_gate = SDLCRunner._run_gate
 
@@ -209,8 +234,9 @@ class TestRunCommand:
     def test_run_non_dry_run_executes_batches_updates_checkpoint_and_summary(
         self, git_repo: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
+        monkeypatch.setenv("OPENAI_CODEX", "1")
         monkeypatch.chdir(git_repo)
-        assert runner.invoke(app, ["init", "."]).exit_code == 0
+        assert runner.invoke(app, ["init", ".", "--agent-target", "codex"]).exit_code == 0
         self._write_pipeline_config(git_repo)
 
         spec_dir = git_repo / "specs" / "WI-2026-RUN"
@@ -267,15 +293,16 @@ class TestRunCommand:
     def test_run_binds_telemetry_profile_and_mode_from_project_config(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
+        monkeypatch.setenv("OPENAI_CODEX", "1")
         monkeypatch.chdir(tmp_path)
-        assert runner.invoke(app, ["init", "."]).exit_code == 0
-        save_project_config(
-            tmp_path,
-            ProjectConfig(
-                telemetry_profile=TelemetryProfile.EXTERNAL_PROJECT,
-                telemetry_mode=TelemetryMode.STRICT,
-            ),
+        assert runner.invoke(app, ["init", ".", "--agent-target", "codex"]).exit_code == 0
+        cfg = load_project_config(tmp_path).model_copy(
+            update={
+                "telemetry_profile": TelemetryProfile.EXTERNAL_PROJECT,
+                "telemetry_mode": TelemetryMode.STRICT,
+            }
         )
+        save_project_config(tmp_path, cfg)
 
         original_run_gate = SDLCRunner._run_gate
 

@@ -88,7 +88,9 @@ from ai_sdlc.models.gate import (
 from ai_sdlc.models.program import ProgramManifest, ProgramSpecRef
 from ai_sdlc.models.project import (
     ActivationState,
+    AdapterIngressState,
     AdapterSupportTier,
+    AdapterVerificationResult,
     ProjectConfig,
     ProjectState,
     ProjectStatus,
@@ -158,7 +160,9 @@ __all__ = [
     "ApiEndpoint",
     "AvailabilitySummary",
     "ActivationState",
+    "AdapterIngressState",
     "AdapterSupportTier",
+    "AdapterVerificationResult",
     "ChangeRequest",
     "Checkpoint",
     "ClarificationState",

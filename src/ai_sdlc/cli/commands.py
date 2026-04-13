@@ -81,13 +81,12 @@ console = Console()
 def _startup_next_step_hint() -> str:
     return (
         "\n\n[bold]Next step:[/bold]\n"
-        "  Record operator acknowledgement: [cyan]ai-sdlc adapter activate[/cyan]\n"
-        "  Inspect adapter + governance status: [cyan]ai-sdlc adapter status[/cyan]\n"
+        "  Inspect adapter ingress status: [cyan]ai-sdlc adapter status[/cyan]\n"
         "  Start framework with safe startup rehearsal only: "
         "[cyan]ai-sdlc run --dry-run[/cyan]\n"
         "  Or stage-by-stage: [cyan]ai-sdlc stage run init --dry-run[/cyan]\n"
-        "  Current file-based adapters remain soft prompt only; "
-        "operator acknowledgement and dry-run are not governance proof.\n"
+        "  Current startup rehearsal is not verified host-ingress proof; "
+        "check adapter status before mutating runs.\n"
         "  If `ai-sdlc` is not on PATH, use the venv's Python:\n"
         "  [cyan]python -m ai_sdlc adapter status[/cyan]\n"
         "  [cyan]python -m ai_sdlc run --dry-run[/cyan]"
@@ -287,16 +286,20 @@ def status_command(
     table.add_row("Next WI Seq", str(state.next_work_item_seq))
     table.add_row("Agent Target", str(adapter_governance["agent_target"] or "-"))
     table.add_row(
-        "Adapter State",
+        "Ingress State",
+        str(adapter_governance["adapter_ingress_state"] or "-"),
+    )
+    table.add_row(
+        "Verification Result",
+        str(adapter_governance["adapter_verification_result"] or "-"),
+    )
+    table.add_row(
+        "Canonical Path",
+        str(adapter_governance["adapter_canonical_path"] or "-"),
+    )
+    table.add_row(
+        "Activation State",
         str(adapter_governance["adapter_activation_state"] or "-"),
-    )
-    table.add_row(
-        "Support Tier",
-        str(adapter_governance["adapter_support_tier"] or "-"),
-    )
-    table.add_row(
-        "Activation Source",
-        str(adapter_governance["adapter_activation_source"] or "-"),
     )
     table.add_row(
         "Governance Activation",
