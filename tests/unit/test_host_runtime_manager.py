@@ -135,3 +135,60 @@ def test_build_host_runtime_plan_ready_when_all_requirements_present() -> None:
     assert plan.readiness.node_runtime_status == "ready"
     assert plan.readiness.package_manager_status == "ready"
     assert plan.readiness.playwright_browsers_status == "ready"
+
+
+def test_build_host_runtime_plan_blocks_when_offline_bundle_missing() -> None:
+    plan = build_host_runtime_plan(
+        HostRuntimeProbe(
+            platform_os="linux",
+            platform_arch="x86_64",
+            python_version="3.11.9",
+            surface_kind="installed_cli",
+            surface_binding_state="bound",
+            installed_runtime_status="missing",
+            offline_bundle_available=False,
+        )
+    )
+
+    assert plan.status == "blocked"
+    assert plan.reason_codes == ["offline_bundle_missing"]
+    assert plan.bootstrap_acquisition is not None
+    assert plan.bootstrap_acquisition.handoff_kind == "offline_bundle_required"
+
+
+def test_build_host_runtime_plan_blocks_when_install_target_not_writable() -> None:
+    plan = build_host_runtime_plan(
+        HostRuntimeProbe(
+            platform_os="darwin",
+            platform_arch="arm64",
+            python_version="3.11.9",
+            surface_kind="installed_cli",
+            surface_binding_state="bound",
+            installed_runtime_status="ready",
+            node_runtime_available=False,
+            install_target_writable=False,
+        )
+    )
+
+    assert plan.status == "blocked"
+    assert plan.reason_codes == ["permission_denied"]
+    assert plan.remediation_fragment is None
+
+
+def test_build_host_runtime_plan_blocks_when_disk_space_insufficient() -> None:
+    plan = build_host_runtime_plan(
+        HostRuntimeProbe(
+            platform_os="windows",
+            platform_arch="amd64",
+            python_version="3.11.9",
+            surface_kind="installed_cli",
+            surface_binding_state="bound",
+            installed_runtime_status="ready",
+            package_manager_available=False,
+            disk_space_sufficient=False,
+        )
+    )
+
+    assert plan.status == "blocked"
+    assert plan.reason_codes == ["disk_space_insufficient"]
+    assert plan.remediation_fragment is None

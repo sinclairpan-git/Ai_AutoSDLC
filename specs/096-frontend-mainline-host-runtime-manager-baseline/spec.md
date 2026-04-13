@@ -2,7 +2,7 @@
 
 **功能编号**：`096-frontend-mainline-host-runtime-manager-baseline`  
 **创建日期**：2026-04-12  
-**状态**：formal baseline 已冻结；已完成两轮对抗收敛  
+**状态**：已完成
 **输入**：[`../093-stage0-installed-runtime-update-advisor-baseline/spec.md`](../093-stage0-installed-runtime-update-advisor-baseline/spec.md)、[`../094-stage0-init-dual-path-project-onboarding-baseline/spec.md`](../094-stage0-init-dual-path-project-onboarding-baseline/spec.md)、[`../095-frontend-mainline-product-delivery-baseline/spec.md`](../095-frontend-mainline-product-delivery-baseline/spec.md)、[`../../src/ai_sdlc/cli/main.py`](../../src/ai_sdlc/cli/main.py)、[`../../packaging/offline/install_offline.sh`](../../packaging/offline/install_offline.sh)、[`../../packaging/offline/install_offline.ps1`](../../packaging/offline/install_offline.ps1)、[`../../USER_GUIDE.zh-CN.md`](../../USER_GUIDE.zh-CN.md)
 
 > 口径：`096` 冻结的不是“框架帮用户装一切”的黑盒安装器，而是 `095` 七层主线中的第 1 层 `Host Readiness` 正式合同。它把最小可执行宿主、`bootstrap acquisition channel`、`in-mainline remediation`、隔离安装目标、平台 profile、以及确认页前置边界收紧成单一 truth；但它不重写 `093` 的 installed runtime truth，不重写 `094` 的 onboarding truth，也不提前吞并 `095` 里的 Managed Action Engine、Frontend Posture 或 Browser Quality Gate。

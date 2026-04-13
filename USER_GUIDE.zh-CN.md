@@ -1075,6 +1075,7 @@ Phase 1 的边界要记住：
 - telemetry 缺失时会返回 `not_initialized`，并且不会创建 `.ai-sdlc/local/telemetry/`。
 - `python -m ai_sdlc doctor` 的 telemetry readiness 仅做只读诊断：root 可写性、manifest 状态、registry 可解析性、writer path 有效性、resolver 健康、`status --json` surface 可用性，以及 branch lifecycle readiness。
 - `doctor` 不会深度扫描 trace，不会隐式 rebuild indexes，也不会隐式初始化 telemetry 根目录。
+- `python -m ai_sdlc host-runtime plan --json` 只输出当前宿主的只读 `host_runtime_plan`：会暴露 `bootstrap acquisition` / `mainline remediation fragment` / `will_not_touch` 等 machine truth，但不会下载、安装、升级或回滚任何宿主依赖。
 
 ### 5) `scan` 的边界
 
@@ -1092,6 +1093,7 @@ Phase 1 的边界要记住：
 | Surface | 典型命令 | 主定位 | 仓库/本地状态影响 |
 |---|---|---|---|
 | bounded telemetry status | `python -m ai_sdlc status --json` | 只读 telemetry + branch lifecycle 摘要 | **只读**：不初始化 telemetry root，不 rebuild indexes，不触发 adapter |
+| host runtime plan | `python -m ai_sdlc host-runtime plan --json` | 当前宿主 readiness / bootstrap / remediation 只读规划 | **只读**：不触发 adapter，不下载/安装/升级任何 Python、Node、package manager 或 Playwright 浏览器；只输出 bounded `host_runtime_plan` |
 | adapter status | `python -m ai_sdlc adapter status` | 查看当前选中的 adapter target 与 activation state | **只读**：读取 project config；不触发 adapter apply |
 | adapter select | `python -m ai_sdlc adapter select` | 手工改正当前真正聊天的 AI 入口 | **会写 adapter config**：TTY 下进入与 `init` 相同的五项 selector；非交互时可配合 `--agent-target` 显式指定，并把 activation state 重置为 `installed` |
 | adapter activate | `python -m ai_sdlc adapter activate` | 把当前 adapter 明确记为“已人工确认” | **会写 adapter config**：必要时补装 adapter 文件，并把 activation state 推进到 `acknowledged`；对当前 Markdown / 文件型 adapter，这仍只是 `soft_prompt_only`，不是可验证治理激活 |

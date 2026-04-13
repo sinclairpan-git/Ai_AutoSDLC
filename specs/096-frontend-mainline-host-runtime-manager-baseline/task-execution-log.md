@@ -125,3 +125,64 @@ git diff --check
 - `096` 的 Batch 1、2 已完成，Batch 3 还剩 `permission / disk` 类 blocker reason code；
 - 当前仍未完成的是剩余 Batch 3 与 Batch 4：CLI 输出入口、CLI 集成测试、`USER_GUIDE.zh-CN.md` 说明和本轮最终收尾验证；
 - 本批仍保持只读语义，没有引入下载、安装、升级或回滚动作。
+
+## Batch 2026-04-13-004 | Batch 3 blocker completion and Batch 4 CLI/docs
+
+### 1. 范围
+
+- 补齐 `offline bundle / permission / disk` 类 blocker reason code；
+- 为 `096` 增加只读 `host-runtime plan` CLI 入口与 JSON/退出码集成测试；
+- 更新 `USER_GUIDE.zh-CN.md` 与 `096/tasks.md`、补齐本轮验证归档。
+
+### 2. 事实记录
+
+- Batch 2026-04-13-003 已落地 core truth，但 `permission / disk` 类 blocker 仍未进入 machine reason code；
+- 仓库此前不存在 `src/ai_sdlc/cli/host_runtime_cmd.py`，`ai-sdlc` 主 CLI 也没有 `host-runtime` 子命令；
+- `096` 明确要求这条入口保持只读，不得触发 adapter apply，也不得隐式修改宿主环境。
+
+### 3. 本批输出
+
+- 扩展 `HostRuntimeProbe`，补入 `offline_bundle_available`、`bundle_platform_matches`、`install_target_writable`、`disk_space_sufficient`；
+- 在 `src/ai_sdlc/core/host_runtime_manager.py` 中补齐：
+  - `offline_bundle_missing`
+  - `bundle_platform_mismatch`
+  - `permission_denied`
+  - `disk_space_insufficient`
+  这些 blocker reason code 与对应 handoff / blocked 语义；
+- 新增 `src/ai_sdlc/cli/host_runtime_cmd.py`，提供 `python -m ai_sdlc host-runtime plan` 与 `--json`；
+- 在 `src/ai_sdlc/cli/main.py` 中挂载 `host-runtime` 子命令，并将其加入 read-only exemption，避免触发 IDE adapter apply；
+- 新增 `tests/integration/test_cli_host_runtime.py`，固定 JSON 输出与退出语义；
+- 更新 `USER_GUIDE.zh-CN.md` 的 operator surface 读写矩阵，明确 `host-runtime plan` 只读且不会静默修改宿主。
+
+### 4. 验证命令
+
+```bash
+uv run pytest tests/unit/test_host_runtime_manager.py tests/integration/test_cli_host_runtime.py -q
+uv run ruff check src/ai_sdlc/models/host_runtime_plan.py src/ai_sdlc/core/host_runtime_manager.py src/ai_sdlc/cli/host_runtime_cmd.py src/ai_sdlc/cli/main.py tests/unit/test_host_runtime_manager.py tests/integration/test_cli_host_runtime.py
+uv run ai-sdlc verify constraints
+uv run ai-sdlc host-runtime plan --json
+git diff --check
+```
+
+### 5. 验证结果
+
+- 红灯阶段：
+  - `HostRuntimeProbe.__init__()` 尚不接受 `offline_bundle_available / install_target_writable / disk_space_sufficient`
+  - `ai_sdlc.cli.host_runtime_cmd` 尚不存在
+  - `offline_bundle_missing` 初版被错误归到 `bootstrap_required`
+- 绿灯复跑：
+- `uv run pytest tests/unit/test_host_runtime_manager.py tests/integration/test_cli_host_runtime.py -q`：通过（`10 passed`）
+- `uv run ruff check src/ai_sdlc/models/host_runtime_plan.py src/ai_sdlc/core/host_runtime_manager.py src/ai_sdlc/cli/host_runtime_cmd.py src/ai_sdlc/cli/main.py tests/unit/test_host_runtime_manager.py tests/integration/test_cli_host_runtime.py`：通过
+- `uv run ai-sdlc verify constraints`：通过，输出 `verify constraints: no BLOCKERs.`
+- `uv run ai-sdlc host-runtime plan --json`：在当前源码仓运行时返回 `bootstrap_required` / `surface_binding_unbound`，并输出只读 `host_runtime_plan` JSON；符合 `source runtime` fail-closed 预期。
+- `git diff --check`：通过
+
+### 6. 当前结论
+
+- `096` 的 Batch 1-4 与收尾验证项均已完成；
+- 当前 `host_runtime_plan` 已具备：
+  - fail-closed core contract
+  - bootstrap / remediation 分面
+  - `offline bundle / permission / disk` blocker reason code
+  - 只读 CLI 输出入口与 JSON/退出语义
+- 本轮仍保持“只读规划，不执行 mutate”边界，后续真正的下载/安装/确认仍应由 `095` 下游承接。

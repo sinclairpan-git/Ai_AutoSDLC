@@ -2,7 +2,10 @@
 
 from __future__ import annotations
 
+import platform
+import shutil
 from dataclasses import dataclass
+from pathlib import Path
 
 from ai_sdlc.models.host_runtime_plan import (
     BootstrapAcquisitionFacet,
@@ -37,6 +40,10 @@ class HostRuntimeProbe:
     node_runtime_available: bool | None = None
     package_manager_available: bool | None = None
     playwright_browsers_available: bool | None = None
+    offline_bundle_available: bool | None = None
+    bundle_platform_matches: bool | None = None
+    install_target_writable: bool | None = None
+    disk_space_sufficient: bool | None = None
 
 
 def build_host_runtime_plan(probe: HostRuntimeProbe) -> HostRuntimePlan:
@@ -54,6 +61,7 @@ def build_host_runtime_plan(probe: HostRuntimeProbe) -> HostRuntimePlan:
 
     python_status, python_reason = _python_status(probe.python_version)
     installed_runtime_status, installed_reason = _installed_runtime_readiness(probe)
+    bootstrap_channel_reason = _bootstrap_channel_reason(probe)
 
     default_unknown = "unknown_evidence"
     node_status = default_unknown
@@ -63,6 +71,11 @@ def build_host_runtime_plan(probe: HostRuntimeProbe) -> HostRuntimePlan:
     bootstrap_reason = (
         _unsupported_platform_reason(platform_os, platform_arch)
         or python_reason
+        or (
+            bootstrap_channel_reason
+            if installed_reason == "installed_cli_runtime_missing"
+            else installed_reason
+        )
         or installed_reason
     )
 
@@ -70,6 +83,9 @@ def build_host_runtime_plan(probe: HostRuntimeProbe) -> HostRuntimePlan:
         node_status = _mainline_status(probe.node_runtime_available)
         package_manager_status = _mainline_status(probe.package_manager_available)
         playwright_status = _mainline_status(probe.playwright_browsers_available)
+        runtime_blocker_reason = _runtime_blocker_reason(probe)
+    else:
+        runtime_blocker_reason = None
 
     readiness = HostRuntimeReadiness(
         python_runtime_status=python_status,
@@ -102,6 +118,8 @@ def build_host_runtime_plan(probe: HostRuntimeProbe) -> HostRuntimePlan:
             "unsupported_platform",
             "installed_cli_runtime_unknown",
             "unknown_surface_binding",
+            "offline_bundle_missing",
+            "bundle_platform_mismatch",
         } else "bootstrap_required"
         minimal_executable_host = False
         installed_runtime_ready = False
@@ -113,13 +131,25 @@ def build_host_runtime_plan(probe: HostRuntimeProbe) -> HostRuntimePlan:
         )
         minimal_executable_host = True
         installed_runtime_ready = True
-        reason_codes = remediation_reason_codes
-        missing_runtime_entries = _mainline_missing_entries(remediation_reason_codes)
-        if remediation_reason_codes:
-            remediation_fragment = _build_remediation_fragment(remediation_reason_codes)
-            status = "remediation_required"
+        if runtime_blocker_reason is not None:
+            reason_codes = [runtime_blocker_reason]
+            missing_runtime_entries = _mainline_missing_entries(remediation_reason_codes)
+            remediation_fragment = None
+            status = "blocked"
         else:
-            status = "ready"
+            reason_codes = remediation_reason_codes
+            missing_runtime_entries = _mainline_missing_entries(remediation_reason_codes)
+            if remediation_reason_codes:
+                remediation_fragment = _build_remediation_fragment(remediation_reason_codes)
+                status = "remediation_required"
+            else:
+                status = "ready"
+        if runtime_blocker_reason is None and remediation_reason_codes:
+            remediation_fragment = _build_remediation_fragment(remediation_reason_codes)
+        if runtime_blocker_reason is not None:
+            requires_network = False
+        else:
+            requires_network = bool(reason_codes) and remediation_fragment is not None
 
     return HostRuntimePlan(
         plan_id=f"host-runtime-{platform_os}-{platform_arch}-{probe.surface_kind}",
@@ -133,7 +163,11 @@ def build_host_runtime_plan(probe: HostRuntimeProbe) -> HostRuntimePlan:
         missing_runtime_entries=missing_runtime_entries,
         installer_profile_ids=[profile.profile_id for profile in profiles],
         install_target_root=_MANAGED_RUNTIME_ROOT,
-        requires_network=bool(reason_codes) and remediation_fragment is not None,
+        requires_network=(
+            bool(reason_codes) and remediation_fragment is not None
+            if bootstrap_reason is not None
+            else requires_network
+        ),
         requires_credentials=False,
         status=status,
         reason_codes=reason_codes,
@@ -141,6 +175,52 @@ def build_host_runtime_plan(probe: HostRuntimeProbe) -> HostRuntimePlan:
         readiness=readiness,
         bootstrap_acquisition=bootstrap_acquisition,
         remediation_fragment=remediation_fragment,
+    )
+
+
+def evaluate_current_host_runtime(project_root: Path | None) -> HostRuntimePlan:
+    """Probe the current host and build a read-only host runtime plan."""
+
+    return build_host_runtime_plan(probe_current_host_runtime(project_root))
+
+
+def probe_current_host_runtime(project_root: Path | None) -> HostRuntimeProbe:
+    """Collect bounded host runtime inputs from the current environment."""
+
+    root = project_root.resolve() if project_root is not None else None
+    module_path = Path(__file__).resolve()
+    current_os = platform.system().lower()
+    surface_kind = "installed_cli"
+    surface_binding_state = "bound"
+    installed_runtime_status = "ready"
+    if root is not None and _is_relative_to(module_path, root):
+        surface_kind = "source"
+        surface_binding_state = "unbound"
+        installed_runtime_status = "missing"
+
+    install_target_writable = None
+    disk_space_sufficient = None
+    if root is not None:
+        managed_root = root / _MANAGED_RUNTIME_ROOT
+        install_target_writable = _path_is_writable(managed_root.parent)
+        disk_space_sufficient = _has_sufficient_disk_space(managed_root.parent)
+
+    return HostRuntimeProbe(
+        platform_os=current_os,
+        platform_arch=platform.machine(),
+        python_version=platform.python_version(),
+        surface_kind=surface_kind,
+        surface_binding_state=surface_binding_state,
+        installed_runtime_status=installed_runtime_status,
+        node_runtime_available=shutil.which("node") is not None,
+        package_manager_available=any(
+            shutil.which(name) is not None for name in ("pnpm", "npm", "yarn")
+        ),
+        playwright_browsers_available=None,
+        offline_bundle_available=_offline_bundle_available(root),
+        bundle_platform_matches=None,
+        install_target_writable=install_target_writable,
+        disk_space_sufficient=disk_space_sufficient,
     )
 
 
@@ -230,6 +310,16 @@ def _unsupported_platform_reason(platform_os: str, platform_arch: str) -> str | 
     return None
 
 
+def _bootstrap_channel_reason(probe: HostRuntimeProbe) -> str | None:
+    if probe.installed_runtime_status != "missing":
+        return None
+    if probe.bundle_platform_matches is False:
+        return "bundle_platform_mismatch"
+    if probe.offline_bundle_available is False:
+        return "offline_bundle_missing"
+    return None
+
+
 def _bootstrap_missing_entries(
     reason_code: str,
     *,
@@ -267,6 +357,14 @@ def _build_bootstrap_acquisition(
         handoff_kind = "unsupported_platform"
         required_targets = ["platform_profile"]
         manual_steps = ["switch to a supported OS/arch pair before retrying host readiness"]
+    elif reason_code == "bundle_platform_mismatch":
+        handoff_kind = "offline_bundle_required"
+        required_targets = ["matching_offline_bundle"]
+        manual_steps = ["provide an offline bundle whose manifest matches the current OS/arch"]
+    elif reason_code == "offline_bundle_missing":
+        handoff_kind = "offline_bundle_required"
+        required_targets = ["offline_bundle"]
+        manual_steps = ["obtain the matching offline bundle or install an official runtime first"]
     elif reason_code in {"python_runtime_missing", "python_runtime_version_unsupported"}:
         handoff_kind = "manual_python_install_required"
         required_targets = ["python_runtime"]
@@ -308,6 +406,14 @@ def _mainline_reason_codes(
     return reason_codes
 
 
+def _runtime_blocker_reason(probe: HostRuntimeProbe) -> str | None:
+    if probe.install_target_writable is False:
+        return "permission_denied"
+    if probe.disk_space_sufficient is False:
+        return "disk_space_insufficient"
+    return None
+
+
 def _mainline_missing_entries(reason_codes: list[str]) -> list[str]:
     mapping = {
         "node_runtime_missing": "node_runtime",
@@ -343,3 +449,40 @@ def _build_remediation_fragment(reason_codes: list[str]) -> RemediationFragmentF
         manual_recovery_required=[],
         reason_codes=list(reason_codes),
     )
+
+
+def _offline_bundle_available(project_root: Path | None) -> bool | None:
+    if project_root is None:
+        return None
+    offline_dir = project_root / "packaging" / "offline"
+    return any(
+        (offline_dir / name).exists()
+        for name in ("install_offline.sh", "install_offline.ps1", "install_offline.bat")
+    )
+
+
+def _path_is_writable(path: Path) -> bool:
+    try:
+        path.mkdir(parents=True, exist_ok=True)
+        probe = path / ".write-probe"
+        probe.write_text("ok", encoding="utf-8")
+        probe.unlink()
+        return True
+    except OSError:
+        return False
+
+
+def _has_sufficient_disk_space(path: Path) -> bool:
+    try:
+        usage = shutil.disk_usage(path)
+    except OSError:
+        return False
+    return usage.free >= 256 * 1024 * 1024
+
+
+def _is_relative_to(path: Path, other: Path) -> bool:
+    try:
+        path.relative_to(other)
+        return True
+    except ValueError:
+        return False

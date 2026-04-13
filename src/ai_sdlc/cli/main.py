@@ -14,6 +14,7 @@ from ai_sdlc.cli.commands import (
     status_command,
 )
 from ai_sdlc.cli.doctor_cmd import doctor_command
+from ai_sdlc.cli.host_runtime_cmd import host_runtime_app
 from ai_sdlc.cli.program_cmd import program_app
 from ai_sdlc.cli.provenance_cmd import provenance_app
 from ai_sdlc.cli.run_cmd import run_command
@@ -43,6 +44,7 @@ def _global_before_command(ctx: typer.Context) -> None:
         "adapter",
         "init",
         "doctor",
+        "host-runtime",
         "status",
         "scan",
         "verify",
@@ -66,6 +68,7 @@ app.add_typer(rules_app, name="rules")
 app.add_typer(studio_app, name="studio")
 app.add_typer(stage_app, name="stage")
 app.add_typer(program_app, name="program")
+app.add_typer(host_runtime_app, name="host-runtime")
 app.add_typer(workitem_app, name="workitem")
 app.add_typer(verify_app, name="verify")
 app.add_typer(telemetry_app, name="telemetry")

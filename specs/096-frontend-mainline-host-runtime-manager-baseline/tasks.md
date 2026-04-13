@@ -25,20 +25,20 @@
 ## Batch 3：离线 profile 与主线缺口诊断
 
 - [x] 建立离线 bundle profile 映射。
-- [ ] 识别 bundle / platform / arch / permission / disk 等阻断因素并落 reason code。
+- [x] 识别 bundle / platform / arch / permission / disk 等阻断因素并落 reason code。
 - [x] 在最小宿主成立时诊断 Node / package manager / Playwright browser 缺口。
 - [x] 将上述缺口表达为 `mainline_remediable`，不执行修复。
 
 ## Batch 4：CLI 与文档
 
-- [ ] 在 CLI 中增加只读 `host_runtime_plan` 输出入口。
-- [ ] 增加 CLI 集成测试，固定 JSON 输出与退出语义。
-- [ ] 更新 `USER_GUIDE.zh-CN.md`，说明显式确认前不会发生修改。
-- [ ] 回写执行记录与验证结果。
+- [x] 在 CLI 中增加只读 `host_runtime_plan` 输出入口。
+- [x] 增加 CLI 集成测试，固定 JSON 输出与退出语义。
+- [x] 更新 `USER_GUIDE.zh-CN.md`，说明显式确认前不会发生修改。
+- [x] 回写执行记录与验证结果。
 
 ## 收尾验证
 
-- [ ] 运行针对性 `pytest`。
-- [ ] 运行针对性 `ruff check`。
-- [ ] 运行 `uv run ai-sdlc verify constraints`。
-- [ ] 运行 `git diff --check`。
+- [x] 运行针对性 `pytest`。
+- [x] 运行针对性 `ruff check`。
+- [x] 运行 `uv run ai-sdlc verify constraints`。
+- [x] 运行 `git diff --check`。
