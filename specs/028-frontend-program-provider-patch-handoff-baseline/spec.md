@@ -107,3 +107,9 @@
 - **SC-028-003**：reviewer 能从 `028` 直接读出 handoff 不会默认开启 patch apply、code rewrite 或 registry  
 - **SC-028-004**：后续实现团队能够从 `028` 直接读出 `core / cli / tests` 的推荐文件面与最小测试矩阵  
 - **SC-028-005**：`028` formal baseline 不会回写或冲掉 `027` 已冻结的 runtime artifact truth
+
+---
+related_doc:
+  - "specs/110-frontend-foundation-mainline-evidence-class-backfill-baseline/spec.md"
+frontend_evidence_class: "framework_capability"
+---

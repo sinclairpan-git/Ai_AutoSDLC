@@ -107,3 +107,9 @@
 - **SC-043-003**：reviewer 能从 `043` 直接读出 orchestration 不会默认开启 publication artifact persistence  
 - **SC-043-004**：后续实现团队能够从 `043` 直接读出 `core / cli / tests` 的推荐文件面与最小测试矩阵  
 - **SC-043-005**：`043` formal baseline 不会回写或冲掉 `042` 已冻结的 persisted write proof artifact truth
+
+---
+related_doc:
+  - "specs/110-frontend-foundation-mainline-evidence-class-backfill-baseline/spec.md"
+frontend_evidence_class: "framework_capability"
+---

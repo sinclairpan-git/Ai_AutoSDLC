@@ -128,3 +128,9 @@
 - **SC-016-003**：reviewer 能从 `016` 直接读出 `Provider != UI Kernel != 公司组件库` 与 `禁止全量 Vue.use` 的边界
 - **SC-016-004**：后续实现团队能够从 `016` 直接读出 `models / runtime profile / tests` 的推荐文件面与最小测试矩阵
 - **SC-016-005**：`016` formal baseline 不会回写或冲掉 `009` 母规格与 `015` UI Kernel baseline 的既有真值
+
+---
+related_doc:
+  - "specs/110-frontend-foundation-mainline-evidence-class-backfill-baseline/spec.md"
+frontend_evidence_class: "framework_capability"
+---

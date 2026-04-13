@@ -107,3 +107,9 @@
 - **SC-032-003**：reviewer 能从 `032` 直接读出 cross-spec writeback artifact 不会默认开启 registry 或 broader code rewrite orchestration  
 - **SC-032-004**：后续实现团队能够从 `032` 直接读出 `core / cli / tests` 的推荐文件面与最小测试矩阵  
 - **SC-032-005**：`032` formal baseline 不会回写或冲掉 `031` 已冻结的 guarded cross-spec writeback truth
+
+---
+related_doc:
+  - "specs/110-frontend-foundation-mainline-evidence-class-backfill-baseline/spec.md"
+frontend_evidence_class: "framework_capability"
+---

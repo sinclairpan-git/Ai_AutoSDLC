@@ -109,3 +109,9 @@
 - **SC-022-003**：reviewer 能从 `022` 直接读出 materialization runtime 不会默认开启 auto-fix、writeback 或 provider runtime  
 - **SC-022-004**：后续实现团队能够从 `022` 直接读出 `cli / core / tests` 的推荐文件面与最小测试矩阵  
 - **SC-022-005**：`022` formal baseline 不会回写或冲掉 `017`、`018`、`021` 已冻结的既有 truth
+
+---
+related_doc:
+  - "specs/110-frontend-foundation-mainline-evidence-class-backfill-baseline/spec.md"
+frontend_evidence_class: "framework_capability"
+---

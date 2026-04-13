@@ -82,3 +82,9 @@
 - **SC-017-003**：reviewer 能从 `017` 直接读出 `Contract -> Kernel -> Whitelist -> Hard Rules -> Token Rules -> Exceptions` 的顺序
 - **SC-017-004**：后续实现团队能够从 `017` 直接读出 `models / artifacts / tests` 的推荐文件面与最小测试矩阵
 - **SC-017-005**：`017` formal baseline 不会回写或冲掉 `011` / `015` / `016` 的既有真值
+
+---
+related_doc:
+  - "specs/110-frontend-foundation-mainline-evidence-class-backfill-baseline/spec.md"
+frontend_evidence_class: "framework_capability"
+---

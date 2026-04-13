@@ -108,3 +108,9 @@
 - **SC-049-003**：reviewer 能从 `049` 直接读出 thread archive 不会默认开启 project cleanup 或其他额外 side effect  
 - **SC-049-004**：后续实现团队能够从 `049` 直接读出 `core / cli / tests` 的推荐文件面与最小测试矩阵  
 - **SC-049-005**：`049` formal baseline 不会回写或冲掉 `048` 已冻结的 final proof archive artifact truth
+
+---
+related_doc:
+  - "specs/110-frontend-foundation-mainline-evidence-class-backfill-baseline/spec.md"
+frontend_evidence_class: "framework_capability"
+---

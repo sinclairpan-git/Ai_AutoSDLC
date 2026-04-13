@@ -107,3 +107,9 @@
 - **SC-029-003**：reviewer 能从 `029` 直接读出 apply 不会默认开启 cross-spec writeback、registry 或更宽的 code rewrite orchestration  
 - **SC-029-004**：后续实现团队能够从 `029` 直接读出 `core / cli / tests` 的推荐文件面与最小测试矩阵  
 - **SC-029-005**：`029` formal baseline 不会回写或冲掉 `028` 已冻结的 patch handoff truth
+
+---
+related_doc:
+  - "specs/110-frontend-foundation-mainline-evidence-class-backfill-baseline/spec.md"
+frontend_evidence_class: "framework_capability"
+---

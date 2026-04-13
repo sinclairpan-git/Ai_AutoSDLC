@@ -107,3 +107,9 @@
 - **SC-027-003**：reviewer 能从 `027` 直接读出 runtime artifact 不会默认开启 patch handoff、patch apply、code rewrite 或 registry  
 - **SC-027-004**：后续实现团队能够从 `027` 直接读出 `core / cli / tests` 的推荐文件面与最小测试矩阵  
 - **SC-027-005**：`027` formal baseline 不会回写或冲掉 `026` 已冻结的 guarded runtime truth
+
+---
+related_doc:
+  - "specs/110-frontend-foundation-mainline-evidence-class-backfill-baseline/spec.md"
+frontend_evidence_class: "framework_capability"
+---

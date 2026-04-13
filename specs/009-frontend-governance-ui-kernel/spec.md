@@ -151,3 +151,9 @@
 - **SC-009-006**：五条主 workstream 都能被独立引用，并能清楚回答“边界是什么、输入真值是什么、后续应由哪个下游工单承接”
 - **SC-009-007**：MVP / P1 / P2 的边界保持单一，MVP 不再被表述成“首版即终局能力”
 - **SC-009-008**：后续任何实现任务都必须显式回挂到 `009` 的下游 work item，而不是绕过 formalize 直接扩张 `009`
+
+---
+related_doc:
+  - "specs/110-frontend-foundation-mainline-evidence-class-backfill-baseline/spec.md"
+frontend_evidence_class: "framework_capability"
+---

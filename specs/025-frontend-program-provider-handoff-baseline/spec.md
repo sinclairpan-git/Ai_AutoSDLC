@@ -107,3 +107,9 @@
 - **SC-025-003**：reviewer 能从 `025` 直接读出 handoff 不会默认开启 provider runtime、registry 或页面代码改写  
 - **SC-025-004**：后续实现团队能够从 `025` 直接读出 `core / cli / tests` 的推荐文件面与最小测试矩阵  
 - **SC-025-005**：`025` formal baseline 不会回写或冲掉 `024` 已冻结的 writeback truth
+
+---
+related_doc:
+  - "specs/110-frontend-foundation-mainline-evidence-class-backfill-baseline/spec.md"
+frontend_evidence_class: "framework_capability"
+---

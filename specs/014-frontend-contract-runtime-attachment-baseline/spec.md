@@ -136,3 +136,9 @@
 - **SC-014-003**：reviewer 能从 `014` 直接读出 active `spec_dir` scope、artifact locality 与 failure honesty 的正式口径
 - **SC-014-004**：后续实现团队能够从 `014` 直接读出 `core / cli / runner / tests` 的推荐文件面与最小测试矩阵
 - **SC-014-005**：`014` formal baseline 不会回写或冲掉 `013` 已冻结的 provider/export truth 与 `012` 已冻结的 verify integration truth
+
+---
+related_doc:
+  - "specs/110-frontend-foundation-mainline-evidence-class-backfill-baseline/spec.md"
+frontend_evidence_class: "framework_capability"
+---

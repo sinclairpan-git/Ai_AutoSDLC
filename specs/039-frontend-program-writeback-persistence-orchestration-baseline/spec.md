@@ -107,3 +107,9 @@
 - **SC-039-003**：reviewer 能从 `039` 直接读出 orchestration 不会默认开启 persisted write proof / artifact  
 - **SC-039-004**：后续实现团队能够从 `039` 直接读出 `core / cli / tests` 的推荐文件面与最小测试矩阵  
 - **SC-039-005**：`039` formal baseline 不会回写或冲掉 `038` 已冻结的 final governance artifact truth
+
+---
+related_doc:
+  - "specs/110-frontend-foundation-mainline-evidence-class-backfill-baseline/spec.md"
+frontend_evidence_class: "framework_capability"
+---

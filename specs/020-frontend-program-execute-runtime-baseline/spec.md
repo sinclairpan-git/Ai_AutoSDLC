@@ -111,3 +111,9 @@
 - **SC-020-003**：reviewer 能从 `020` 直接读出 execute runtime 不会默认开启 auto-fix、writeback 或 scanner/provider 写入  
 - **SC-020-004**：后续实现团队能够从 `020` 直接读出 `core / cli / tests` 的推荐文件面与最小测试矩阵  
 - **SC-020-005**：`020` formal baseline 不会回写或冲掉 `014`、`018`、`019` 已冻结的既有 truth
+
+---
+related_doc:
+  - "specs/110-frontend-foundation-mainline-evidence-class-backfill-baseline/spec.md"
+frontend_evidence_class: "framework_capability"
+---

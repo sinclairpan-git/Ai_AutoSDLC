@@ -107,3 +107,9 @@
 - **SC-040-003**：reviewer 能从 `040` 直接读出 artifact 不会默认开启 persisted write proof / artifact  
 - **SC-040-004**：后续实现团队能够从 `040` 直接读出 `core / cli / tests` 的推荐文件面与最小测试矩阵  
 - **SC-040-005**：`040` formal baseline 不会回写或冲掉 `039` 已冻结的 writeback persistence truth
+
+---
+related_doc:
+  - "specs/110-frontend-foundation-mainline-evidence-class-backfill-baseline/spec.md"
+frontend_evidence_class: "framework_capability"
+---

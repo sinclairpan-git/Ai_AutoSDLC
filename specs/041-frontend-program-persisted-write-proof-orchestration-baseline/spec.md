@@ -107,3 +107,9 @@
 - **SC-041-003**：reviewer 能从 `041` 直接读出 orchestration 不会默认开启 proof artifact persistence  
 - **SC-041-004**：后续实现团队能够从 `041` 直接读出 `core / cli / tests` 的推荐文件面与最小测试矩阵  
 - **SC-041-005**：`041` formal baseline 不会回写或冲掉 `040` 已冻结的 writeback persistence artifact truth
+
+---
+related_doc:
+  - "specs/110-frontend-foundation-mainline-evidence-class-backfill-baseline/spec.md"
+frontend_evidence_class: "framework_capability"
+---

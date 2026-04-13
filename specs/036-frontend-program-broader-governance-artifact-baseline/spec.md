@@ -107,3 +107,9 @@
 - **SC-036-003**：reviewer 能从 `036` 直接读出 broader governance artifact 不会默认开启 final code rewrite / governance execution  
 - **SC-036-004**：后续实现团队能够从 `036` 直接读出 `core / cli / tests` 的推荐文件面与最小测试矩阵  
 - **SC-036-005**：`036` formal baseline 不会回写或冲掉 `035` 已冻结的 broader governance truth
+
+---
+related_doc:
+  - "specs/110-frontend-foundation-mainline-evidence-class-backfill-baseline/spec.md"
+frontend_evidence_class: "framework_capability"
+---

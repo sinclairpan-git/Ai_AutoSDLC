@@ -107,3 +107,9 @@
 - **SC-042-003**：reviewer 能从 `042` 直接读出 artifact 不会默认开启 final proof publication / closure  
 - **SC-042-004**：后续实现团队能够从 `042` 直接读出 `core / cli / tests` 的推荐文件面与最小测试矩阵  
 - **SC-042-005**：`042` formal baseline 不会回写或冲掉 `041` 已冻结的 persisted write proof truth
+
+---
+related_doc:
+  - "specs/110-frontend-foundation-mainline-evidence-class-backfill-baseline/spec.md"
+frontend_evidence_class: "framework_capability"
+---

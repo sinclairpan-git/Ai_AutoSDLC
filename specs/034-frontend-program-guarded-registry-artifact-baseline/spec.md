@@ -107,3 +107,9 @@
 - **SC-034-003**：reviewer 能从 `034` 直接读出 guarded registry artifact 不会默认开启 broader code rewrite orchestration  
 - **SC-034-004**：后续实现团队能够从 `034` 直接读出 `core / cli / tests` 的推荐文件面与最小测试矩阵  
 - **SC-034-005**：`034` formal baseline 不会回写或冲掉 `033` 已冻结的 guarded registry truth
+
+---
+related_doc:
+  - "specs/110-frontend-foundation-mainline-evidence-class-backfill-baseline/spec.md"
+frontend_evidence_class: "framework_capability"
+---

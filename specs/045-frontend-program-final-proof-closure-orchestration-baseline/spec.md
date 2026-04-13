@@ -107,3 +107,9 @@
 - **SC-045-003**：reviewer 能从 `045` 直接读出 orchestration 不会默认开启 closure artifact persistence  
 - **SC-045-004**：后续实现团队能够从 `045` 直接读出 `core / cli / tests` 的推荐文件面与最小测试矩阵  
 - **SC-045-005**：`045` formal baseline 不会回写或冲掉 `044` 已冻结的 final proof publication artifact truth
+
+---
+related_doc:
+  - "specs/110-frontend-foundation-mainline-evidence-class-backfill-baseline/spec.md"
+frontend_evidence_class: "framework_capability"
+---

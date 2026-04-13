@@ -130,3 +130,9 @@
 - **SC-015-003**：reviewer 能从 `015` 直接读出 `recipe standard body != recipe declaration` 与 `Kernel != Provider != 公司组件库`
 - **SC-015-004**：后续实现团队能够从 `015` 直接读出 `models / provider / gates / tests` 的推荐文件面与最小测试矩阵
 - **SC-015-005**：`015` formal baseline 不会回写或冲掉 `009` 母规格与 `011` Contract baseline 的既有真值
+
+---
+related_doc:
+  - "specs/110-frontend-foundation-mainline-evidence-class-backfill-baseline/spec.md"
+frontend_evidence_class: "framework_capability"
+---

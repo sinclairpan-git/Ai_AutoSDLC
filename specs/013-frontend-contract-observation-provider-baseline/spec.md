@@ -129,3 +129,9 @@
 - **SC-013-003**：reviewer 能从 `013` 直接读出 scanner 只是 candidate provider，不是 provider contract 全部
 - **SC-013-004**：后续实现团队能够从 `013` 直接读出 `core / scanners / cli / tests` 的推荐文件面与最小测试矩阵
 - **SC-013-005**：`013` formal baseline 不会回写或冲掉 `011` / `012` 已冻结的 contract artifact truth 与 verify integration truth
+
+---
+related_doc:
+  - "specs/110-frontend-foundation-mainline-evidence-class-backfill-baseline/spec.md"
+frontend_evidence_class: "framework_capability"
+---

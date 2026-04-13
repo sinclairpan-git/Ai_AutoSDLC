@@ -139,3 +139,9 @@
 - **SC-012-003**：`verify constraints`、`VerificationGate / VerifyGate` 与 CLI surface 的关系在 formal docs 中保持单一真值
 - **SC-012-004**：reviewer 能从 `012` 直接读出 scanner / fix-loop / auto-fix 不属于当前 work item，而是下游扩展
 - **SC-012-005**：后续实现团队能够从 `012` 直接读出 `core / gates / cli / tests` 的最小文件面与验证矩阵
+
+---
+related_doc:
+  - "specs/110-frontend-foundation-mainline-evidence-class-backfill-baseline/spec.md"
+frontend_evidence_class: "framework_capability"
+---

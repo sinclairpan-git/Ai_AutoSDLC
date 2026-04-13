@@ -132,3 +132,9 @@
 - **SC-011-005**：`refine / design / decompose / verify / execute / close` 与 Contract 的关系在 formal docs 中可被直接引用
 - **SC-011-006**：后续实现团队能够从 `011` 直接读出模型、实例化、drift 检查和测试面的最小边界，而不需要重新发明对象模型
 - **SC-011-007**：后续实现团队能够从 `011` 直接读出最小 contract-aware gate surface 的输入、输出与禁止事项，而不把它误扩成 registry 接线、auto-fix 或源码扫描器
+
+---
+related_doc:
+  - "specs/110-frontend-foundation-mainline-evidence-class-backfill-baseline/spec.md"
+frontend_evidence_class: "framework_capability"
+---
