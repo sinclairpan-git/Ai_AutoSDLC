@@ -376,6 +376,86 @@ specs:
         assert "Frontend" in result.output
         assert "ready" in result.output
         assert "missing_artifact" in result.output
+        assert "scope_or_linkage_invalid" in result.output
+
+    def test_program_status_exposes_frontend_execute_gate_recheck_required(
+        self, initialized_project_dir: Path
+    ) -> None:
+        root = initialized_project_dir
+        _write_manifest(root)
+        _write_minimal_frontend_contract_page_artifacts(root)
+        _write_p1_frontend_gate_artifacts(root)
+        _write_frontend_contract_observations(root / "specs" / "001-auth")
+
+        with patch("ai_sdlc.cli.program_cmd.find_project_root", return_value=root):
+            result = runner.invoke(app, ["program", "status"])
+
+        assert result.exit_code == 0
+        assert "retry / recheck_required" in result.output
+        assert "evidence_missing" in result.output
+        assert "frontend_visual_a11y_evidence_input" in result.output
+
+    def test_program_status_exposes_frontend_execute_gate_blocked_for_policy_artifact_gap(
+        self, initialized_project_dir: Path
+    ) -> None:
+        root = initialized_project_dir
+        _write_manifest(root)
+        _write_minimal_frontend_contract_page_artifacts(root)
+        _write_p1_frontend_gate_artifacts(root)
+        (
+            root
+            / "governance"
+            / "frontend"
+            / "gates"
+            / "visual-a11y-evidence-boundary.yaml"
+        ).unlink()
+        _write_frontend_contract_observations(root / "specs" / "001-auth")
+
+        with patch("ai_sdlc.cli.program_cmd.find_project_root", return_value=root):
+            result = runner.invoke(app, ["program", "status"])
+
+        assert result.exit_code == 0
+        assert "retry / blocked" in result.output
+        assert "result_inconsistency" in result.output
+        assert "frontend_visual_a11y_policy_artifacts" in result.output
+        assert "recheck_required" not in result.output
+
+    def test_program_status_exposes_frontend_execute_gate_needs_remediation(
+        self, initialized_project_dir: Path
+    ) -> None:
+        root = initialized_project_dir
+        _write_manifest(root)
+        _write_minimal_frontend_contract_page_artifacts(root)
+        _write_p1_frontend_gate_artifacts(root)
+        spec_dir = root / "specs" / "001-auth"
+        _write_frontend_contract_observations(spec_dir)
+        artifact = build_frontend_visual_a11y_evidence_artifact(
+            evaluations=[
+                FrontendVisualA11yEvidenceEvaluation(
+                    evaluation_id="001-auth-visual-a11y-issue",
+                    target_id="user-create",
+                    surface_id="success-feedback",
+                    outcome="issue",
+                    report_type="violation-report",
+                    severity="medium",
+                    location_anchor="feedback.banner",
+                    quality_hint="review success feedback visibility and semantics",
+                    changed_scope_explanation="071 issue fixture",
+                )
+            ],
+            provider_kind="manual",
+            provider_name="test-fixture",
+            generated_at="2026-04-07T17:15:00Z",
+        )
+        write_frontend_visual_a11y_evidence_artifact(spec_dir, artifact)
+
+        with patch("ai_sdlc.cli.program_cmd.find_project_root", return_value=root):
+            result = runner.invoke(app, ["program", "status"])
+
+        assert result.exit_code == 0
+        assert "retry / needs_remediation" in result.output
+        assert "actual_quality_blocker" in result.output
+        assert "frontend_visual_a11y_issue_review" in result.output
 
     def test_program_status_exposes_bounded_frontend_evidence_class_summary(
         self, initialized_project_dir: Path
@@ -583,10 +663,12 @@ specs:
 
         assert result.exit_code == 1
         assert "Frontend Remediation Handoff" in result.output
+        assert "Frontend Recheck Handoff" not in result.output
         assert "frontend_visual_a11y_policy_artifacts" in result.output
         assert "materialize frontend visual / a11y policy artifacts" in result.output
         assert "uv run ai-sdlc rules materialize-frontend-mvp" in result.output
         report = (root / report_rel).read_text(encoding="utf-8")
+        assert "Frontend Recheck Handoff" not in report
         assert "frontend_visual_a11y_policy_artifacts" in report
         assert "materialize frontend visual / a11y policy artifacts" in report
         assert "uv run ai-sdlc rules materialize-frontend-mvp" in report
@@ -628,14 +710,13 @@ specs:
             )
 
         assert result.exit_code == 1
-        assert "Frontend Remediation Handoff" in result.output
-        assert "frontend_visual_a11y_evidence_stable_empty" in result.output
+        assert "Frontend Recheck Handoff" in result.output
         assert "review stable empty frontend visual / a11y evidence" in result.output
         assert "materialize frontend visual / a11y evidence input" not in result.output
         assert "uv run ai-sdlc rules materialize-frontend-mvp" not in result.output
         assert "uv run ai-sdlc verify constraints" in result.output
         report = (root / report_rel).read_text(encoding="utf-8")
-        assert "frontend_visual_a11y_evidence_stable_empty" in report
+        assert "Frontend Recheck Handoff" in report
         assert "review stable empty frontend visual / a11y evidence" in report
         assert "uv run ai-sdlc verify constraints" in report
 

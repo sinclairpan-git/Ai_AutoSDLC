@@ -16,14 +16,14 @@ from ai_sdlc.core.frontend_contract_verification import (
 )
 from ai_sdlc.core.frontend_gate_verification import (
     FRONTEND_GATE_CHECK_OBJECTS,
-    FRONTEND_GATE_SOURCE_NAME,
-    FRONTEND_GATE_VISUAL_A11Y_CHECK_OBJECT,
-    FRONTEND_GATE_VISUAL_A11Y_EVIDENCE_OBJECT,
     FRONTEND_GATE_EXECUTE_STATE_BLOCKED,
     FRONTEND_GATE_EXECUTE_STATE_NEEDS_REMEDIATION,
     FRONTEND_GATE_EXECUTE_STATE_RECHECK_REQUIRED,
-    build_frontend_gate_verification_context,
+    FRONTEND_GATE_SOURCE_NAME,
+    FRONTEND_GATE_VISUAL_A11Y_CHECK_OBJECT,
+    FRONTEND_GATE_VISUAL_A11Y_EVIDENCE_OBJECT,
     build_frontend_gate_execute_decision,
+    build_frontend_gate_verification_context,
     build_frontend_gate_verification_report,
 )
 from ai_sdlc.core.frontend_visual_a11y_evidence_provider import (
@@ -279,6 +279,41 @@ def test_frontend_gate_execute_decision_maps_missing_visual_a11y_evidence_to_rec
     assert decision.decision_reason == "evidence_missing"
     assert decision.recheck_required is True
     assert "frontend_visual_a11y_evidence_input" in decision.recheck_reason_codes
+
+
+def test_frontend_gate_execute_decision_blocks_missing_visual_a11y_policy_artifacts(
+    tmp_path: Path,
+) -> None:
+    _write_minimal_frontend_contract_page_artifacts(tmp_path)
+    materialize_frontend_gate_policy_artifacts(
+        tmp_path,
+        build_p1_frontend_gate_policy_visual_a11y_foundation(),
+    )
+    (
+        tmp_path
+        / "governance"
+        / "frontend"
+        / "gates"
+        / "visual-a11y-evidence-boundary.yaml"
+    ).unlink()
+    materialize_frontend_generation_constraint_artifacts(
+        tmp_path,
+        build_mvp_frontend_generation_constraints(),
+    )
+
+    report = build_frontend_gate_verification_report(
+        tmp_path,
+        [_matching_observation()],
+    )
+    decision = build_frontend_gate_execute_decision(
+        attachment_status="attached",
+        gate_report=report,
+    )
+
+    assert decision.execute_gate_state == FRONTEND_GATE_EXECUTE_STATE_BLOCKED
+    assert decision.decision_reason == "result_inconsistency"
+    assert decision.recheck_required is False
+    assert "frontend_visual_a11y_policy_artifacts" in decision.remediation_reason_codes
 
 
 def test_frontend_gate_execute_decision_maps_visual_a11y_issue_to_needs_remediation(

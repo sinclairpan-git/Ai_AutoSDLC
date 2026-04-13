@@ -6185,6 +6185,42 @@ def test_build_status_surfaces_frontend_readiness_gap_when_071_visual_a11y_evide
     assert readiness.source_linkage["frontend_gate_verdict"] == "RETRY"
 
 
+def test_build_status_surfaces_frontend_blocked_when_visual_a11y_policy_artifacts_missing(
+    tmp_path: Path,
+) -> None:
+    for p in ("specs/001-auth", "specs/002-course", "specs/003-enroll"):
+        (tmp_path / p).mkdir(parents=True)
+    _write_minimal_frontend_contract_page_artifacts(tmp_path)
+    materialize_frontend_gate_policy_artifacts(
+        tmp_path,
+        build_p1_frontend_gate_policy_visual_a11y_foundation(),
+    )
+    (
+        tmp_path
+        / "governance"
+        / "frontend"
+        / "gates"
+        / "visual-a11y-evidence-boundary.yaml"
+    ).unlink()
+    materialize_frontend_generation_constraint_artifacts(
+        tmp_path,
+        build_mvp_frontend_generation_constraints(),
+    )
+    _write_frontend_contract_observations(tmp_path / "specs" / "001-auth")
+
+    svc = ProgramService(tmp_path)
+    rows = svc.build_status(_manifest())
+    by = {r.spec_id: r for r in rows}
+
+    readiness = by["001-auth"].frontend_readiness
+    assert readiness is not None
+    assert readiness.state == "retry"
+    assert readiness.execute_gate_state == "blocked"
+    assert readiness.decision_reason == "result_inconsistency"
+    assert "frontend_visual_a11y_policy_artifacts" in readiness.coverage_gaps
+    assert any("policy artifacts unavailable" in blocker for blocker in readiness.blockers)
+
+
 def test_build_status_surfaces_frontend_needs_remediation_when_visual_a11y_issue_detected(
     tmp_path: Path,
 ) -> None:
@@ -6230,7 +6266,7 @@ def test_build_status_surfaces_frontend_needs_remediation_when_visual_a11y_issue
     assert "frontend_visual_a11y_issue_review" in readiness.coverage_gaps
 
 
-def test_build_integration_dry_run_surfaces_visual_a11y_evidence_remediation_input_when_missing(
+def test_build_integration_dry_run_surfaces_visual_a11y_evidence_recheck_handoff_when_missing(
     tmp_path: Path,
 ) -> None:
     for p in ("specs/001-auth", "specs/002-course", "specs/003-enroll"):
@@ -6251,17 +6287,15 @@ def test_build_integration_dry_run_surfaces_visual_a11y_evidence_remediation_inp
     plan = svc.build_integration_dry_run(_manifest())
 
     step = next(item for item in plan.steps if item.spec_id == "001-auth")
-    remediation = step.frontend_remediation_input
-    assert remediation is not None
-    assert "frontend_visual_a11y_evidence_input" in remediation.fix_inputs
-    assert (
-        "materialize frontend visual / a11y evidence input"
-        in remediation.suggested_actions
-    )
-    assert remediation.recommended_commands == ["uv run ai-sdlc verify constraints"]
+    handoff = step.frontend_recheck_handoff
+    assert handoff is not None
+    assert handoff.required is True
+    assert "materialize frontend visual / a11y evidence input" in handoff.reason
+    assert handoff.recommended_commands == ["uv run ai-sdlc verify constraints"]
+    assert step.frontend_remediation_input is None
 
 
-def test_build_integration_dry_run_surfaces_stable_empty_visual_a11y_evidence_review_input(
+def test_build_integration_dry_run_surfaces_stable_empty_visual_a11y_evidence_recheck_handoff(
     tmp_path: Path,
 ) -> None:
     for p in ("specs/001-auth", "specs/002-course", "specs/003-enroll"):
@@ -6284,15 +6318,13 @@ def test_build_integration_dry_run_surfaces_stable_empty_visual_a11y_evidence_re
     plan = svc.build_integration_dry_run(_manifest())
 
     step = next(item for item in plan.steps if item.spec_id == "001-auth")
-    remediation = step.frontend_remediation_input
-    assert remediation is not None
-    assert "frontend_visual_a11y_evidence_stable_empty" in remediation.fix_inputs
-    assert (
-        "review stable empty frontend visual / a11y evidence"
-        in remediation.suggested_actions
-    )
-    assert "materialize frontend visual / a11y evidence input" not in remediation.suggested_actions
-    assert remediation.recommended_commands == ["uv run ai-sdlc verify constraints"]
+    handoff = step.frontend_recheck_handoff
+    assert handoff is not None
+    assert handoff.required is True
+    assert "review stable empty frontend visual / a11y evidence" in handoff.reason
+    assert "materialize frontend visual / a11y evidence input" not in handoff.reason
+    assert handoff.recommended_commands == ["uv run ai-sdlc verify constraints"]
+    assert step.frontend_remediation_input is None
 
 
 def test_build_integration_dry_run_surfaces_visual_a11y_issue_review_input(

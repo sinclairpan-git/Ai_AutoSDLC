@@ -18,6 +18,7 @@ from ai_sdlc.core.frontend_contract_runtime_attachment import (
 )
 from ai_sdlc.core.frontend_gate_verification import (
     FRONTEND_GATE_EXECUTE_STATE_READY,
+    FRONTEND_GATE_EXECUTE_STATE_RECHECK_REQUIRED,
     FRONTEND_GATE_SOURCE_NAME,
     build_frontend_gate_execute_decision,
     build_frontend_gate_verification_report,
@@ -5389,16 +5390,19 @@ class ProgramService:
         self,
         readiness: ProgramFrontendReadiness | None,
     ) -> ProgramFrontendRecheckHandoff | None:
-        if (
-            readiness is None
-            or (readiness.execute_gate_state or readiness.state)
-            != FRONTEND_GATE_EXECUTE_STATE_READY
+        if readiness is None:
+            return None
+
+        effective_state = readiness.execute_gate_state or readiness.state
+        if effective_state not in (
+            FRONTEND_GATE_EXECUTE_STATE_READY,
+            FRONTEND_GATE_EXECUTE_STATE_RECHECK_REQUIRED,
         ):
             return None
 
         return ProgramFrontendRecheckHandoff(
             required=True,
-            reason="re-run frontend verification after execute before close",
+            reason=_frontend_recheck_reason(readiness),
             recommended_commands=[PROGRAM_FRONTEND_RECHECK_COMMAND],
             source_linkage=dict(readiness.source_linkage),
         )
@@ -5408,10 +5412,13 @@ class ProgramService:
         readiness: ProgramFrontendReadiness | None,
         spec_path: str,
     ) -> ProgramFrontendRemediationInput | None:
-        if (
-            readiness is None
-            or (readiness.execute_gate_state or readiness.state)
-            == FRONTEND_GATE_EXECUTE_STATE_READY
+        if readiness is None:
+            return None
+
+        effective_state = readiness.execute_gate_state or readiness.state
+        if effective_state in (
+            FRONTEND_GATE_EXECUTE_STATE_READY,
+            FRONTEND_GATE_EXECUTE_STATE_RECHECK_REQUIRED,
         ):
             return None
 
@@ -7549,3 +7556,22 @@ def _summarize_frontend_execute_gate(
     elif readiness.blockers:
         details.append("remediation_hint=" + readiness.blockers[0])
     return "; ".join(details)
+
+
+def _frontend_recheck_reason(readiness: ProgramFrontendReadiness) -> str:
+    effective_state = readiness.execute_gate_state or readiness.state
+    if effective_state == FRONTEND_GATE_EXECUTE_STATE_READY:
+        return "re-run frontend verification after execute before close"
+
+    recheck_codes = set(readiness.recheck_reason_codes)
+    if "frontend_visual_a11y_evidence_input" in recheck_codes:
+        return (
+            "materialize frontend visual / a11y evidence input and re-run browser gate verification"
+        )
+    if "frontend_visual_a11y_evidence_stable_empty" in recheck_codes:
+        return (
+            "review stable empty frontend visual / a11y evidence and re-run browser gate verification"
+        )
+    if readiness.decision_reason == "transient_run_failure":
+        return "re-run browser gate verification after transient runtime failure"
+    return "re-run browser gate verification before execute"

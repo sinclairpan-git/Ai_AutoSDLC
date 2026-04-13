@@ -426,6 +426,7 @@ def program_integrate(
         console.print("\n[bold red]Execution gates failed[/bold red]")
         for item in gates.failed:
             console.print(f"  - {item}")
+        _render_frontend_recheck_handoff(plan.steps)
         _render_frontend_remediation_handoff(plan.steps)
         raise typer.Exit(code=1)
 
@@ -3943,14 +3944,21 @@ def _format_frontend_readiness(readiness: ProgramFrontendReadiness | None) -> st
     if readiness is None:
         return "-"
 
+    state = readiness.state
+    if readiness.execute_gate_state and readiness.execute_gate_state != readiness.state:
+        state = f"{readiness.state} / {readiness.execute_gate_state}"
+
     details: list[str] = []
+    effective_state = readiness.execute_gate_state or readiness.state
+    if effective_state != "ready" and readiness.decision_reason:
+        details.append(readiness.decision_reason)
     if readiness.coverage_gaps:
         details.append(", ".join(readiness.coverage_gaps[:2]))
-    elif readiness.state != "ready" and readiness.blockers:
+    elif effective_state != "ready" and readiness.blockers:
         details.append(readiness.blockers[0])
 
     suffix = f" [{'; '.join(details)}]" if details else ""
-    return f"{readiness.state}{suffix}"
+    return f"{state}{suffix}"
 
 
 def _format_frontend_evidence_class_status(

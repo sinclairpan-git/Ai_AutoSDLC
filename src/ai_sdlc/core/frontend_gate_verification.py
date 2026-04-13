@@ -359,13 +359,34 @@ def build_frontend_gate_execute_decision(
             source_linkage_refs=source_linkage_refs,
         )
 
-    if blockers or coverage_gaps or visual_a11y_status in {"missing_input", "stable_empty"}:
+    recheck_reason_codes = {
+        "frontend_visual_a11y_evidence_input",
+        "frontend_visual_a11y_evidence_stable_empty",
+    }
+    has_non_recheck_gap = any(code not in recheck_reason_codes for code in coverage_gaps)
+    if (
+        not has_non_recheck_gap
+        and (
+            visual_a11y_status in {"missing_input", "stable_empty"}
+            or any(code in recheck_reason_codes for code in coverage_gaps)
+        )
+    ):
         return FrontendGateExecuteDecision(
             execute_gate_state=FRONTEND_GATE_EXECUTE_STATE_RECHECK_REQUIRED,
             decision_reason=FRONTEND_GATE_DECISION_REASON_EVIDENCE_MISSING,
             blockers=blockers,
             recheck_required=True,
             recheck_reason_codes=coverage_gaps,
+            remediation_hints=blockers,
+            remediation_reason_codes=coverage_gaps,
+            source_linkage_refs=source_linkage_refs,
+        )
+
+    if blockers or coverage_gaps:
+        return FrontendGateExecuteDecision(
+            execute_gate_state=FRONTEND_GATE_EXECUTE_STATE_BLOCKED,
+            decision_reason=FRONTEND_GATE_DECISION_REASON_RESULT_INCONSISTENCY,
+            blockers=blockers,
             remediation_hints=blockers,
             remediation_reason_codes=coverage_gaps,
             source_linkage_refs=source_linkage_refs,
