@@ -2,7 +2,7 @@
 
 **功能编号**：`117-formal-artifact-target-guard-baseline`
 **创建日期**：2026-04-13
-**状态**：草稿
+**状态**：已完成
 **输入**：Remediate `FD-2026-04-07-002` by freezing a canonical guard that prevents formal `spec.md / plan.md / tasks.md` from being written into `docs/superpowers/*` and requires same-turn backlog logging once a breach is identified. 参考：`docs/framework-defect-backlog.zh-CN.md`、`cursor/rules/ai-sdlc.md`、`src/ai_sdlc/stages/refine.yaml`、`USER_GUIDE.zh-CN.md`
 
 > 口径：`117` 不是新的 direct-formal scaffold 能力，也不是重写 `073` 的 formal docs。它承接的是 `FD-2026-04-07-002` 暴露出的两类高优先回归：formal artifact 落点误写，以及识别违约后没有在同轮立即补录 backlog。

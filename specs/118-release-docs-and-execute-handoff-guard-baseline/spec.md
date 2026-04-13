@@ -2,7 +2,7 @@
 
 **功能编号**：`118-release-docs-and-execute-handoff-guard-baseline`
 **创建日期**：2026-04-13
-**状态**：草稿
+**状态**：已完成
 **输入**：Close `FD-2026-04-07-001` and `FD-2026-04-07-003` in one bounded guard slice, and backfill `FD-2026-04-07-002` as closed now that formal artifact target guard and breach logging guard have landed. 参考：`docs/framework-defect-backlog.zh-CN.md`、`docs/框架自迭代开发与发布约定.md`、`USER_GUIDE.zh-CN.md`、`README.md`、`packaging/offline/README.md`、`docs/releases/v0.6.0.md`、`docs/pull-request-checklist.zh.md`
 
 > 口径：`118` 不是新的安装器 work item，也不是新的会话语义理解器。它只补两类 bounded hard guard：其一是 `plan/spec freeze != 可直接进入实现` 的 repo-truth guard；其二是 `v0.6.0` release 入口文档一致性 sweep。与此同时，它负责把已由 `117` 落地的 `FD-2026-04-07-002` 正式回填为已收口。

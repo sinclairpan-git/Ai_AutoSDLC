@@ -2,7 +2,7 @@
 
 **功能编号**：`117-formal-artifact-target-guard-baseline`
 **创建日期**：2026-04-13
-**状态**：进行中
+**状态**：已完成
 
 ## 1. 归档规则
 
@@ -139,8 +139,8 @@
 
 #### 2.8 归档后动作
 
-- 已完成 git 提交：否
-- 提交哈希：待本批最终提交后生成
-- 当前批次 branch disposition 状态：待最终收口
-- 当前批次 worktree disposition 状态：待最终收口
-- 是否继续下一批：否；当前 `117` 任务已完成，待提交收口
+- 已完成 git 提交：是
+- 提交哈希：`733436b`
+- 当前批次 branch disposition 状态：retained
+- 当前批次 worktree disposition 状态：retained
+- 是否继续下一批：否；本轮实现与验证已完成

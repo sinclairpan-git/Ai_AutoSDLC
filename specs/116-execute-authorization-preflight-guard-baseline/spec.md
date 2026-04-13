@@ -2,7 +2,7 @@
 
 **功能编号**：`116-execute-authorization-preflight-guard-baseline`
 **创建日期**：2026-04-13
-**状态**：草稿
+**状态**：已完成
 **输入**：Remediate `FD-2026-04-07-003` by freezing and implementing a canonical execute-authorization preflight that prevents treating plan freeze as execute authorization before `tasks.md` exists and repo truth has entered execute. 参考：`docs/framework-defect-backlog.zh-CN.md`、`docs/框架自迭代开发与发布约定.md`、`USER_GUIDE.zh-CN.md`、`src/ai_sdlc/rules/pipeline.md`、`src/ai_sdlc/core/workitem_truth.py`
 
 > 口径：`116` 不是新的 direct-formal scaffold 能力，也不是只补一层文案提醒。它要把 `FD-2026-04-07-003` 中暴露出的阶段漂移正式落成可复用、可测试的 preflight truth，使仓库能够稳定区分“formal docs 已冻结”和“已经获得 execute 授权”。

@@ -10,24 +10,24 @@
 
 ## Batch 1：契约与证据模型
 
-- [ ] 定义 `host_runtime_plan` 顶层结构与 JSON 序列化约定。
-- [ ] 定义 `readiness` / `bootstrap_acquisition` / `remediation_fragment` 的数据模型。
-- [ ] 固定 `reason_codes`、`will_download`、`will_install`、`will_modify`、`will_not_touch` 字段。
-- [ ] 为未知平台、未知 runtime、未绑定 surface 建立 fail-closed 单元测试。
+- [x] 定义 `host_runtime_plan` 顶层结构与 JSON 序列化约定。
+- [x] 定义 `readiness` / `bootstrap_acquisition` / `remediation_fragment` 的数据模型。
+- [x] 固定 `reason_codes`、`will_download`、`will_install`、`will_modify`、`will_not_touch` 字段。
+- [x] 为未知平台、未知 runtime、未绑定 surface 建立 fail-closed 单元测试。
 
 ## Batch 2：最小宿主判定
 
-- [ ] 实现 OS / arch / Python 版本判定。
-- [ ] 实现 AI-SDLC runtime 可验证性判定。
-- [ ] 实现 surface binding 判定，覆盖 `source`、`uv`、`python -m`、IDE 等非绑定入口。
-- [ ] 在最小宿主不成立时输出 acquisition handoff，而不是 remediation。
+- [x] 实现 OS / arch / Python 版本判定。
+- [x] 实现 AI-SDLC runtime 可验证性判定。
+- [x] 实现 surface binding 判定，覆盖 `source`、`uv`、`python -m`、IDE 等非绑定入口。
+- [x] 在最小宿主不成立时输出 acquisition handoff，而不是 remediation。
 
 ## Batch 3：离线 profile 与主线缺口诊断
 
-- [ ] 建立离线 bundle profile 映射。
+- [x] 建立离线 bundle profile 映射。
 - [ ] 识别 bundle / platform / arch / permission / disk 等阻断因素并落 reason code。
-- [ ] 在最小宿主成立时诊断 Node / package manager / Playwright browser 缺口。
-- [ ] 将上述缺口表达为 `mainline_remediable`，不执行修复。
+- [x] 在最小宿主成立时诊断 Node / package manager / Playwright browser 缺口。
+- [x] 将上述缺口表达为 `mainline_remediable`，不执行修复。
 
 ## Batch 4：CLI 与文档
 

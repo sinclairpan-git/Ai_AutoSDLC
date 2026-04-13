@@ -96,9 +96,10 @@
 ## 下一波待修优先级（2026-04-07）
 
 - 当前待修：
-  - `高优先 / 回归` `FD-2026-04-07-003`：`plan.md -> 直接推进实现` 仍会绕过 `tasks.md + 显式 execute 授权`，且属 `FD-2026-03-30-001` 同族复发。
-  - `中优先` `FD-2026-04-07-001`：release 文档入口一致性 sweep helper / checklist 尚未真正落地，当前只完成记账，未完成防复发收口。
+  - 无（截至 `2026-04-13`，`2026-04-07` 这一批框架线缺陷已完成回填与 guard 落地；后续待修以新发现 backlog 为准）
 - 本轮已收口：
+  - `框架线` `FD-2026-04-07-001`
+  - `框架线` `FD-2026-04-07-003`
   - `框架线` `FD-2026-04-07-002`
   - `框架线` `FD-2026-04-05-004`
   - `框架线` `FD-2026-04-05-003`
@@ -115,7 +116,7 @@
   - `003` 线 `FD-2026-03-27-011`、`FD-2026-03-27-012`
   - `004` 线 `FD-2026-03-27-013`
 - 挂靠原则：
-  - `2026-04-07` 当天新增 `FD-2026-04-07-001/003` 目前仍只完成“识别与记账/局部纠偏”，尚未完成规则、guard、workflow 或验证面的正式防复发落地，不得继续按 `closed` 汇总。
+  - `2026-04-07` 当天新增 `FD-2026-04-07-001/002/003` 已在 `116`、`117`、`118` 中完成 guard / sweep / backlog 回填；后续若再复发，应按新条目继续登记，不回退已收口状态。
   - `003` 线：已全部收口
   - `004` 线：已全部收口
 
@@ -123,7 +124,7 @@
 
 - 日期 (UTC): 2026-04-07
 - 来源: user_review, self_review
-- 状态: planned
+- 状态: closed
 - 缺陷类型: release_docs_consistency_sweep_gap
 - owner: codex
 - wi_id: 001-ai-sdlc-framework
@@ -149,7 +150,7 @@
 - tool: `README.md`, `docs/releases/v0.6.0.md`, `USER_GUIDE.zh-CN.md`, `packaging/offline/README.md`, `docs/框架自迭代开发与发布约定.md`, `docs/pull-request-checklist.zh.md`, `rg`, `git diff --check`
 - eval: release_docs_consistency_sweep 命中率、README / release notes / offline README 版本漂移次数、发版后入口文档漏更次数、发布 checklist 覆盖率
 - 风险等级: 中
-- 处置进展（2026-04-07）: 本次已将 `v0.6.0` 发布的入口文档缺口正式记账，并确认 release notes、离线包说明与用户手册之间的局部口径已存在，但主 README、发布约定与 PR checklist 仍缺少一次统一的发布一致性收口。当前只完成问题识别与 backlog 挂账，尚未落地 release sweep helper / checklist，因此本条不能按 `closed` 处理，维持 `planned` 直到防复发机制真正落地。
+- 收口说明（2026-04-13）: `118` 已在 `src/ai_sdlc/core/verify_constraints.py` 落地固定的 `v0.6.0` release entry docs consistency sweep，并同步补齐 `docs/releases/v0.6.0.md`、`packaging/offline/README.md`、`docs/框架自迭代开发与发布约定.md` 与 `docs/pull-request-checklist.zh.md` 的入口口径。当前 `verify constraints`、focused tests 与 release 文档入口已对齐，因此本条正式回填为 `closed`。
 - 可验证成功标准: 给定一次新版本发布，必须能在 README、release notes、offline README、user guide、发布约定与 PR checklist 中同时找到同一版本号和同一资产分工；若任一入口缺失或口径不一致，发布文档收口检查应稳定报出 blocker。
 - 是否需要回归测试补充: 是：补一个 bounded 文档一致性 sweep，至少验证主 README、release notes、offline README、user guide 与发布约定之间的版本号与资产口径一致。
 
@@ -192,7 +193,7 @@
 
 - 日期 (UTC): 2026-04-07
 - 来源: user_review, self_review
-- 状态: planned
+- 状态: closed
 - 缺陷类型: premature_execute_handoff_without_tasks_truth
 - owner: codex
 - wi_id: 073-frontend-p2-provider-style-solution-baseline
@@ -219,7 +220,7 @@
 - tool: `docs/框架自迭代开发与发布约定.md`, `USER_GUIDE.zh-CN.md`, `specs/<WI>/tasks.md`, 后续 response guard / tasks existence preflight
 - eval: 无 `tasks.md` 时出现“直接进入实现”表述的次数、review 语境下被错误推进 execute 的次数、plan freeze 后仍需用户纠正阶段状态的次数
 - 风险等级: 高
-- 处置进展（2026-04-07）: 本次已在用户指出后立刻停止“进入实现”的口径，并回到框架正式阶段真值：`073` 当前只有 `spec.md` 与 `plan.md`，没有 `tasks.md`，因此状态应视为 docs-only / review-to-decompose，而不是 execute。当前只是完成会话级纠偏，尚未落地 execute wording guard、`tasks.md` existence preflight 与 review 语境 blocker；且该问题已属同族回归，因此本条维持 `planned`，直到防复发机制真正落地。
+- 收口说明（2026-04-13）: `116` 已落地 execute authorization preflight，`118` 又将 blocked detail 收紧为 `docs-only / review-to-decompose` 与 `remain in review-to-decompose`，并通过 `status` / `status --json` / `verify constraints` 与 focused tests 持续暴露 `tasks.md` 缺失、阶段未进入 execute 的 blocker。`plan freeze != execute authorization` 已从会话纠偏升级为仓库内稳定 guard，因此本条正式回填为 `closed`。
 - 可验证成功标准: 1) 当 `specs/<WI>/tasks.md` 不存在时，执行侧不得再输出“下一步直接进入实现”“从 Phase 1 开始实现”等表述。 2) 当用户仍在 review spec/plan 或追问框架流程约束时，默认答复必须明确当前仍处于 docs-only / review 状态。 3) 只有在 `tasks.md` 已存在且用户明确要求进入实现后，execute 相关表述才允许出现。
 - 是否需要回归测试补充: 是：补一类阶段词义 guard，验证“有 spec/plan 但无 tasks.md”时会阻断 execute handoff；再补一类会话语境 guard，验证用户仍在 review/规则对账时，不会被自然推进到编码建议。
 

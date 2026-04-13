@@ -105,7 +105,7 @@
 #### 2.8 归档后动作
 
 - 已完成 git 提交：是
-- 提交哈希：见 `git rev-parse --short HEAD`
-- 当前批次 branch disposition 状态：待最终收口
-- 当前批次 worktree disposition 状态：待最终收口
+- 提交哈希：`5d72c6c`
+- 当前批次 branch disposition 状态：retained
+- 当前批次 worktree disposition 状态：retained
 - 是否继续下一批：否；本 work item 已完成

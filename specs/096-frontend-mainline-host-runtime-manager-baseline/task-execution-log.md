@@ -77,3 +77,51 @@ git diff --check -- specs/096-frontend-mainline-host-runtime-manager-baseline/sp
 
 - reviewer 指出的 `.bat` profile 合同缺口已收口到同一命名体系；
 - `096` 目前不存在“模型层漏掉 `.bat` / FR 层承认 `.bat`”这类自相矛盾。
+
+## Batch 2026-04-13-003 | Batch 1-2 and Batch 3 core baseline
+
+### 1. 范围
+
+- 落地 `host_runtime_plan` 的核心 machine contract 与 JSON 序列化真值；
+- 实现最小宿主判定、bootstrap acquisition handoff 与 mainline remediation fragment 的主体；
+- 用 TDD 固定 unknown platform / unknown runtime / unbound surface / remediation / ready 五类核心分支。
+
+### 2. 事实记录
+
+- 仓库中此前不存在 `src/ai_sdlc/core/host_runtime_manager.py` 与 `host_runtime_plan` 对应模型；
+- `096` 的真实缺口集中在 Batch 1-3：contract、判定器、offline profile 映射与 mainline gap 诊断都还没有代码落点；
+- CLI 入口与用户文档仍未开始，因此本批只推进 core truth，不引入 mutate surface。
+
+### 3. 本批输出
+
+- 新增 `src/ai_sdlc/models/host_runtime_plan.py`，定义 `HostRuntimePlan`、`HostRuntimeReadiness`、`BootstrapAcquisitionFacet`、`RemediationFragmentFacet` 与 `InstallerProfileRef`；
+- 新增 `src/ai_sdlc/core/host_runtime_manager.py`，实现：
+  - OS / arch 归一化与支持矩阵；
+  - Python 3.11 门槛、installed runtime readiness、surface binding fail-closed 判定；
+  - `offline_bundle_posix_shell`、`offline_bundle_windows_powershell`、`offline_bundle_windows_bat_launcher` profile 映射；
+  - Node / package manager / Playwright browsers 缺口到 `mainline_remediable` fragment 的映射；
+- 当前仍未覆盖 `permission / disk` 等 host blocker reason code；
+- 新增 `tests/unit/test_host_runtime_manager.py`，先红后绿固定 Batch 1-3 contract。
+
+### 4. 验证命令
+
+```bash
+uv run pytest tests/unit/test_host_runtime_manager.py -q
+uv run ruff check src/ai_sdlc/models/host_runtime_plan.py src/ai_sdlc/core/host_runtime_manager.py tests/unit/test_host_runtime_manager.py
+uv run ai-sdlc verify constraints
+git diff --check
+```
+
+### 5. 验证结果
+
+- 首次红灯：`ModuleNotFoundError: No module named 'ai_sdlc.core.host_runtime_manager'`，确认测试确实命中新缺口；
+- 绿灯复跑：`uv run pytest tests/unit/test_host_runtime_manager.py -q` 通过（`5 passed`）。
+- `uv run ruff check src/ai_sdlc/models/host_runtime_plan.py src/ai_sdlc/core/host_runtime_manager.py tests/unit/test_host_runtime_manager.py`：通过（`All checks passed!`）。
+- `uv run ai-sdlc verify constraints`：通过，输出 `verify constraints: no BLOCKERs.`。
+- `git diff --check`：通过。
+
+### 6. 当前结论
+
+- `096` 的 Batch 1、2 已完成，Batch 3 还剩 `permission / disk` 类 blocker reason code；
+- 当前仍未完成的是剩余 Batch 3 与 Batch 4：CLI 输出入口、CLI 集成测试、`USER_GUIDE.zh-CN.md` 说明和本轮最终收尾验证；
+- 本批仍保持只读语义，没有引入下载、安装、升级或回滚动作。

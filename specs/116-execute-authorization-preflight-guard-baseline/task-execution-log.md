@@ -2,7 +2,7 @@
 
 **功能编号**：`116-execute-authorization-preflight-guard-baseline`
 **创建日期**：2026-04-13
-**状态**：进行中
+**状态**：已完成
 
 ## 1. 归档规则
 
@@ -141,7 +141,7 @@
 #### 2.8 归档后动作
 
 - **已完成 git 提交**：是（本批 close-out commit 将承载 latest batch truth）
-- **提交哈希**：以当前分支 `HEAD` 为准
+- **提交哈希**：`4fd9e24`
 - 当前批次 branch disposition 状态：retained
 - 当前批次 worktree disposition 状态：retained
 - 是否继续下一批：否，本轮实现与验证已完成
