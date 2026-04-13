@@ -123,3 +123,60 @@
 - **已完成 git 提交**：否
 - 当前 batch 结论：`068` 的 formal baseline 与首批 page recipe model expansion slice 已对齐并完成验证，但尚未提交。
 - **下一步动作**：在 `068` worktree 上决定是否提交当前 slice；若不继续扩写 `068`，则后续可转入 `069` 的 diagnostics / drift formalize。
+
+### Batch 2026-04-13-003 | latest batch close-check backfill
+
+#### 2.1 批次范围
+
+- **任务编号**：latest-batch close-out backfill（无新增实现任务编号）
+- **目标**：补齐 `068` latest batch 的现行 close-check mandatory fields，使历史 P1 child baseline 能按当前门禁口径诚实收口
+- **执行分支**：`codex/111-frontend-p1-child-close-check-backfill-baseline`
+- **激活的规则**：close-check execution log fields；review gate evidence；verification profile truthfulness；git close-out markers truthfulness。
+- **验证画像**：`docs-only`
+- **改动范围**：`specs/068-frontend-p1-page-recipe-expansion-baseline/task-execution-log.md`
+
+#### 2.2 统一验证命令
+
+- 命令：
+  - `UV_CACHE_DIR=/tmp/uv-cache uv run ai-sdlc verify constraints`
+  - `UV_CACHE_DIR=/tmp/uv-cache uv run ai-sdlc workitem close-check --wi specs/068-frontend-p1-page-recipe-expansion-baseline`
+  - `git diff --check -- specs/068-frontend-p1-page-recipe-expansion-baseline/task-execution-log.md`
+  - `rg -n "\*\*已完成 git 提交\*\*：否" specs/068-frontend-p1-page-recipe-expansion-baseline/task-execution-log.md`
+- 结果：
+  - `verify constraints`：`verify constraints: no BLOCKERs.`
+  - `workitem close-check`：latest batch 的 mandatory markers 与 verification profile 已补齐；fresh rerun 只剩 `git working tree has uncommitted changes` 这一项，待 `111` close-out commit 落盘后消除
+  - `git diff --check`：fresh rerun 无输出，通过
+  - `rg`：历史 batch 里的旧状态字段仍保留为过去时记录；latest batch 当前状态以本批段落为准
+
+#### 2.3 任务记录
+
+- 本批只追加 `068/task-execution-log.md` 的 latest-batch close-check backfill 段落
+- 不改 `068/spec.md / plan.md / tasks.md`
+- 不改 `src/ai_sdlc/models/frontend_ui_kernel.py`、`tests/unit/*` 或任何 runtime truth
+
+#### 2.4 代码审查结论（Mandatory）
+
+- docs-only 审查结果：未发现新的实现风险或语义漂移
+- `068` 仍保持 accepted child baseline + Batch 5 implementation slice 已验证 的原结论
+
+#### 2.5 任务/计划同步状态（Mandatory）
+
+- `068` 的既有 `spec.md / plan.md / tasks.md` 与当前状态保持一致
+- 本批只修 latest-batch close-out schema drift，不新增 feature task 或实现任务
+
+#### 2.6 自动决策记录（如有）
+
+- 选择 append-only 新 batch，而不是重写旧 batch `#### 6. 归档后动作`；这样保留历史记录原貌，同时让 latest batch 满足当前 close-check 口径
+
+#### 2.7 批次结论
+
+- `068` 的 latest batch 现已补齐现行 close-check 所需的 mandatory fields
+- 本批不宣称新的 page recipe 实现，只修 close-out honesty 与 verification profile 缺口
+
+#### 2.8 归档后动作
+
+- **已完成 git 提交**：是
+- **提交哈希**：由 `111` close-out commit 统一承载；以当前分支 `HEAD` 为准
+- 当前批次 branch disposition 状态：retained
+- 当前批次 worktree disposition 状态：retained
+- 是否继续下一批：是；可由 `111` carrier 继续统一收口其余目标

@@ -125,3 +125,60 @@
 - **已完成 git 提交**：否
 - 当前 batch 结论：`069` 的 diagnostics truth materialization slice 已完成，RED/GREEN 与 fresh verification 均已收口。
 - **下一步动作**：提交本批实现，然后按规划约束进入下游下一批 work item。
+
+### Batch 2026-04-13-003 | latest batch close-check backfill
+
+#### 2.1 批次范围
+
+- **任务编号**：latest-batch close-out backfill（无新增实现任务编号）
+- **目标**：补齐 `069` latest batch 的现行 close-check mandatory fields，使历史 P1 child baseline 能按当前门禁口径诚实收口
+- **执行分支**：`codex/111-frontend-p1-child-close-check-backfill-baseline`
+- **激活的规则**：close-check execution log fields；review gate evidence；verification profile truthfulness；git close-out markers truthfulness。
+- **验证画像**：`docs-only`
+- **改动范围**：`specs/069-frontend-p1-governance-diagnostics-drift-baseline/task-execution-log.md`
+
+#### 2.2 统一验证命令
+
+- 命令：
+  - `UV_CACHE_DIR=/tmp/uv-cache uv run ai-sdlc verify constraints`
+  - `UV_CACHE_DIR=/tmp/uv-cache uv run ai-sdlc workitem close-check --wi specs/069-frontend-p1-governance-diagnostics-drift-baseline`
+  - `git diff --check -- specs/069-frontend-p1-governance-diagnostics-drift-baseline/task-execution-log.md`
+  - `rg -n "\*\*已完成 git 提交\*\*：否" specs/069-frontend-p1-governance-diagnostics-drift-baseline/task-execution-log.md`
+- 结果：
+  - `verify constraints`：`verify constraints: no BLOCKERs.`
+  - `workitem close-check`：latest batch 的 mandatory markers 与 verification profile 已补齐；fresh rerun 只剩 `git working tree has uncommitted changes` 这一项，待 `111` close-out commit 落盘后消除
+  - `git diff --check`：fresh rerun 无输出，通过
+  - `rg`：历史 batch 中旧的提交状态字段保留为过去时记录；latest batch 当前状态以本批段落为准
+
+#### 2.3 任务记录
+
+- 本批只追加 `069/task-execution-log.md` 的 latest-batch close-check backfill 段落
+- 不改 `069/spec.md / plan.md / tasks.md`
+- 不改 `frontend_gate_policy` model、artifact generator、tests 或任何 runtime truth
+
+#### 2.4 代码审查结论（Mandatory）
+
+- docs-only 审查结果：未发现新的实现风险或语义漂移
+- `069` 仍保持 accepted child baseline + Batch 5 diagnostics truth materialization slice 已完成 的原结论
+
+#### 2.5 任务/计划同步状态（Mandatory）
+
+- `069` 的既有 `spec.md / plan.md / tasks.md` 与当前状态保持一致
+- 本批只修 latest-batch close-out schema drift，不新增 diagnostics / gate / verify 实现任务
+
+#### 2.6 自动决策记录（如有）
+
+- 选择 append-only 新 batch，而不是改写旧 batch 结果；这样保留 `069` 的实现历史，同时满足当前 close-check schema
+
+#### 2.7 批次结论
+
+- `069` 的 latest batch 现已补齐现行 close-check 所需的 mandatory fields
+- 本批不宣称新的 diagnostics/runtime 行为，只修 close-out honesty 与 verification profile 缺口
+
+#### 2.8 归档后动作
+
+- **已完成 git 提交**：是
+- **提交哈希**：由 `111` close-out commit 统一承载；以当前分支 `HEAD` 为准
+- 当前批次 branch disposition 状态：retained
+- 当前批次 worktree disposition 状态：retained
+- 是否继续下一批：是；可由 `111` carrier 继续统一收口其余目标

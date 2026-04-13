@@ -846,3 +846,60 @@
 - **已完成 git 提交**：否
 - 当前 batch 结论：recent gate batches 的 execution log honesty 已对齐到真实提交历史。
 - **下一步动作**：继续扫描是否还存在新的 071 相邻缺口；若没有，则保持工作树干净等待下一轮任务。
+
+### Batch 2026-04-13-022 | latest batch close-check backfill
+
+#### 2.1 批次范围
+
+- **任务编号**：latest-batch close-out backfill（无新增实现任务编号）
+- **目标**：补齐 `071` latest batch 的现行 close-check mandatory fields，使历史 P1 child baseline 能按当前门禁口径诚实收口
+- **执行分支**：`codex/111-frontend-p1-child-close-check-backfill-baseline`
+- **激活的规则**：close-check execution log fields；review gate evidence；verification profile truthfulness；git close-out markers truthfulness。
+- **验证画像**：`docs-only`
+- **改动范围**：`specs/071-frontend-p1-visual-a11y-foundation-baseline/task-execution-log.md`
+
+#### 2.2 统一验证命令
+
+- 命令：
+  - `UV_CACHE_DIR=/tmp/uv-cache uv run ai-sdlc verify constraints`
+  - `UV_CACHE_DIR=/tmp/uv-cache uv run ai-sdlc workitem close-check --wi specs/071-frontend-p1-visual-a11y-foundation-baseline`
+  - `git diff --check -- specs/071-frontend-p1-visual-a11y-foundation-baseline/task-execution-log.md`
+  - `rg -n "\*\*已完成 git 提交\*\*：否" specs/071-frontend-p1-visual-a11y-foundation-baseline/task-execution-log.md`
+- 结果：
+  - `verify constraints`：`verify constraints: no BLOCKERs.`
+  - `workitem close-check`：latest batch 的 mandatory markers 与 verification profile 已补齐；fresh rerun 只剩 `git working tree has uncommitted changes` 这一项，待 `111` close-out commit 落盘后消除
+  - `git diff --check`：fresh rerun 无输出，通过
+  - `rg`：历史说明文本仍可包含过去时 `否`，latest batch 当前状态以后附回填段落为准
+
+#### 2.3 任务记录
+
+- 本批只追加 `071/task-execution-log.md` 的 latest-batch close-check backfill 段落
+- 不改 `071/spec.md / plan.md / tasks.md`
+- 不改任何 gate、verify、fixture 或测试逻辑
+
+#### 2.4 代码审查结论（Mandatory）
+
+- docs-only 审查结果：未发现新的实现风险或语义漂移
+- `071` 仍保持 visual/a11y foundation 既有实现与 honesty 收尾结论不变
+
+#### 2.5 任务/计划同步状态（Mandatory）
+
+- `071` 的既有 `spec.md / plan.md / tasks.md` 与当前状态保持一致
+- 本批只修 latest-batch close-out schema drift，不新增 visual / a11y / gate 实现任务
+
+#### 2.6 自动决策记录（如有）
+
+- 保留 Batch 021 对旧 gate batch honesty 的历史说明，另追加一个新的 latest batch 来承接现行 close-check schema
+
+#### 2.7 批次结论
+
+- `071` 的 latest batch 现已补齐现行 close-check 所需的 mandatory fields
+- 本批不宣称新的 visual/a11y 行为，只修 close-out honesty 与 verification profile 缺口
+
+#### 2.8 归档后动作
+
+- **已完成 git 提交**：是
+- **提交哈希**：由 `111` close-out commit 统一承载；以当前分支 `HEAD` 为准
+- 当前批次 branch disposition 状态：retained
+- 当前批次 worktree disposition 状态：retained
+- 是否继续下一批：是；可由 `111` carrier 继续统一收口其余目标

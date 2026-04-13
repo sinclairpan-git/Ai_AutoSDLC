@@ -681,3 +681,10 @@ specs:
     branch_slug: "frontend-foundation-mainline-evidence-class-backfill-baseline"
     owner: "team-frontend-governance"
     frontend_evidence_class: "framework_capability"
+  - id: "111-frontend-p1-child-close-check-backfill-baseline"
+    path: "specs/111-frontend-p1-child-close-check-backfill-baseline"
+    depends_on:
+      - "110-frontend-foundation-mainline-evidence-class-backfill-baseline"
+    branch_slug: "frontend-p1-child-close-check-backfill-baseline"
+    owner: "team-frontend-governance"
+    frontend_evidence_class: "framework_capability"
