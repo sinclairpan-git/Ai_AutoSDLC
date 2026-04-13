@@ -85,3 +85,9 @@
 - **SC-058-002**：文档明确将 `cleanup_mutation_proposal` 冻结为单一 truth source，并禁止从 sibling truths 或隐式信号推断 proposal。
 - **SC-058-003**：文档明确 proposal truth 与 approval/execution 的边界，且固定下一子项顺序为 `failing tests -> proposal consumption -> approval/gating -> execution`。
 - **SC-058-004**：`uv run ai-sdlc verify constraints` 与 `git diff --check -- specs/058-frontend-program-final-proof-archive-cleanup-mutation-proposal-baseline .ai-sdlc/project/config/project-state.yaml` 全部通过。
+
+---
+related_doc:
+  - "specs/109-frontend-cleanup-archive-evidence-class-backfill-baseline/spec.md"
+frontend_evidence_class: "framework_capability"
+---

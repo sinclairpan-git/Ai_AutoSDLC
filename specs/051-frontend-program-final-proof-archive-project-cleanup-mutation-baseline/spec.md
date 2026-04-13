@@ -123,3 +123,9 @@
 - **SC-051-003**：formal docs 明确说明当前没有任何 `src/` / `tests/` 实现修改被放行  
 - **SC-051-004**：`task-execution-log.md` 追加记录证据审阅命令、结论与只读验证结果  
 - **SC-051-005**：future child work item 可以从 `051` 直接接力，先 formalize cleanup target truth，再进入 failing tests 和实现
+
+---
+related_doc:
+  - "specs/109-frontend-cleanup-archive-evidence-class-backfill-baseline/spec.md"
+frontend_evidence_class: "framework_capability"
+---

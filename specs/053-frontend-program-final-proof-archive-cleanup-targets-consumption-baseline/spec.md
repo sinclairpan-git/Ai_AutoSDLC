@@ -79,3 +79,9 @@
 - **SC-002**：`ProgramService` 产出的 request/result/artifact payload 可观测到 `cleanup_targets_state` 与显式 target 列表，且不会从隐式信号推断 target。
 - **SC-003**：CLI 集成测试验证 dry-run / execute 输出包含 cleanup target truth state 和 target 数量。
 - **SC-004**：`uv run pytest tests/unit/test_program_service.py tests/integration/test_cli_program.py -q`、`uv run ruff check src tests`、`uv run ai-sdlc verify constraints` 全部通过。
+
+---
+related_doc:
+  - "specs/109-frontend-cleanup-archive-evidence-class-backfill-baseline/spec.md"
+frontend_evidence_class: "framework_capability"
+---

@@ -140,3 +140,9 @@ cleanup_targets:
 - **SC-052-003**：formal docs 明确禁止 inferred cleanup target  
 - **SC-052-004**：formal docs 明确区分 `missing` 与 `empty` target truth 语义  
 - **SC-052-005**：`task-execution-log.md` 追加记录脚手架、文档冻结与只读验证结果
+
+---
+related_doc:
+  - "specs/109-frontend-cleanup-archive-evidence-class-backfill-baseline/spec.md"
+frontend_evidence_class: "framework_capability"
+---

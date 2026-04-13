@@ -110,3 +110,9 @@
 - **SC-050-003**：reviewer 能从 `050` 直接读出 project cleanup 不会默认开启任意 workspace mutation 或其他未定义 side effect  
 - **SC-050-004**：后续实现团队能够从 `050` 直接读出 `core / cli / tests` 的推荐文件面与最小测试矩阵  
 - **SC-050-005**：`050` formal baseline 不会回写或冲掉 `049` 已冻结的 thread archive execute truth
+
+---
+related_doc:
+  - "specs/109-frontend-cleanup-archive-evidence-class-backfill-baseline/spec.md"
+frontend_evidence_class: "framework_capability"
+---

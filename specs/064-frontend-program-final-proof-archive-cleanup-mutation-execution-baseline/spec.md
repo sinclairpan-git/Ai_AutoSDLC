@@ -143,3 +143,9 @@
 - **SC-064-004**：新增 integration tests 能验证 CLI dry-run / execute / report 对真实 execution outcome、aggregate result 与 written paths 的呈现。
 - **SC-064-005**：实现后 `ProgramService` / CLI 不再把真实 mutation 结果显示为 `deferred`，并能在 artifact 中保留诚实 execution evidence。
 - **SC-064-006**：`uv run pytest tests/unit/test_program_service.py tests/integration/test_cli_program.py`、`uv run ruff check src/ai_sdlc/core/program_service.py src/ai_sdlc/cli/program_cmd.py tests/unit/test_program_service.py tests/integration/test_cli_program.py`、`uv run ai-sdlc verify constraints` 与 `git diff --check -- specs/064-frontend-program-final-proof-archive-cleanup-mutation-execution-baseline src/ai_sdlc/core src/ai_sdlc/cli tests/unit tests/integration` 全部通过。
+
+---
+related_doc:
+  - "specs/109-frontend-cleanup-archive-evidence-class-backfill-baseline/spec.md"
+frontend_evidence_class: "framework_capability"
+---

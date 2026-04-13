@@ -180,3 +180,9 @@ cleanup_preview_plan:
 - **SC-056-003**：formal docs 明确禁止 inferred preview plan，并继续保持 `050/051` 的 no-mutation 边界。
 - **SC-056-004**：formal docs 明确 future child work item 的顺序为 `failing tests -> service/CLI preview consumption -> mutation proposal / execution`。
 - **SC-056-005**：`task-execution-log.md` 追加记录脚手架、边界冻结与 focused verification 结果。
+
+---
+related_doc:
+  - "specs/109-frontend-cleanup-archive-evidence-class-backfill-baseline/spec.md"
+frontend_evidence_class: "framework_capability"
+---

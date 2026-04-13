@@ -84,3 +84,9 @@
 - **SC-059-002**：`ProgramService` 产出的 request/result/artifact payload 可观测到 `cleanup_mutation_proposal_state` 与显式 proposal 列表，且不会从隐式信号推断 proposal truth。
 - **SC-059-003**：CLI 集成测试验证 dry-run / execute 输出与 report 包含 proposal truth state 和 proposal 数量。
 - **SC-059-004**：`uv run pytest tests/unit/test_program_service.py -q`、`uv run pytest tests/integration/test_cli_program.py -q`、`uv run ruff check src tests`、`uv run ai-sdlc verify constraints` 全部通过。
+
+---
+related_doc:
+  - "specs/109-frontend-cleanup-archive-evidence-class-backfill-baseline/spec.md"
+frontend_evidence_class: "framework_capability"
+---

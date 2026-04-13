@@ -84,3 +84,9 @@
 - **SC-057-002**：`ProgramService` 产出的 request/result/artifact payload 可观测到 `cleanup_preview_plan_state` 与显式 preview item 列表，且不会从隐式信号推断 preview truth。
 - **SC-057-003**：CLI 集成测试验证 dry-run / execute 输出与 report 包含 preview plan truth state 和 preview item 数量。
 - **SC-057-004**：`uv run pytest tests/unit/test_program_service.py tests/integration/test_cli_program.py -q`、`uv run ruff check src tests`、`uv run ai-sdlc verify constraints` 全部通过。
+
+---
+related_doc:
+  - "specs/109-frontend-cleanup-archive-evidence-class-backfill-baseline/spec.md"
+frontend_evidence_class: "framework_capability"
+---

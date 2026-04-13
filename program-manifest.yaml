@@ -267,12 +267,14 @@ specs:
       - "049-frontend-program-final-proof-archive-thread-archive-baseline"
     branch_slug: "frontend-program-final-proof-archive-project-cleanup-baseline"
     owner: "team-frontend-governance"
+    frontend_evidence_class: "framework_capability"
   - id: "051-frontend-program-final-proof-archive-project-cleanup-mutation-baseline"
     path: "specs/051-frontend-program-final-proof-archive-project-cleanup-mutation-baseline"
     depends_on:
       - "050-frontend-program-final-proof-archive-project-cleanup-baseline"
     branch_slug: "frontend-program-final-proof-archive-project-cleanup-mutation-baseline"
     owner: "team-frontend-governance"
+    frontend_evidence_class: "framework_capability"
   - id: "052-frontend-program-final-proof-archive-explicit-cleanup-targets-baseline"
     path: "specs/052-frontend-program-final-proof-archive-explicit-cleanup-targets-baseline"
     depends_on:
@@ -280,6 +282,7 @@ specs:
       - "051-frontend-program-final-proof-archive-project-cleanup-mutation-baseline"
     branch_slug: "frontend-program-final-proof-archive-explicit-cleanup-targets-baseline"
     owner: "team-frontend-governance"
+    frontend_evidence_class: "framework_capability"
   - id: "053-frontend-program-final-proof-archive-cleanup-targets-consumption-baseline"
     path: "specs/053-frontend-program-final-proof-archive-cleanup-targets-consumption-baseline"
     depends_on:
@@ -287,6 +290,7 @@ specs:
       - "052-frontend-program-final-proof-archive-explicit-cleanup-targets-baseline"
     branch_slug: "frontend-program-final-proof-archive-cleanup-targets-consumption-baseline"
     owner: "team-frontend-governance"
+    frontend_evidence_class: "framework_capability"
   - id: "054-frontend-program-final-proof-archive-cleanup-mutation-eligibility-baseline"
     path: "specs/054-frontend-program-final-proof-archive-cleanup-mutation-eligibility-baseline"
     depends_on:
@@ -295,6 +299,7 @@ specs:
       - "053-frontend-program-final-proof-archive-cleanup-targets-consumption-baseline"
     branch_slug: "frontend-program-final-proof-archive-cleanup-mutation-eligibility-baseline"
     owner: "team-frontend-governance"
+    frontend_evidence_class: "framework_capability"
   - id: "055-frontend-program-final-proof-archive-cleanup-eligibility-consumption-baseline"
     path: "specs/055-frontend-program-final-proof-archive-cleanup-eligibility-consumption-baseline"
     depends_on:
@@ -303,6 +308,7 @@ specs:
       - "054-frontend-program-final-proof-archive-cleanup-mutation-eligibility-baseline"
     branch_slug: "frontend-program-final-proof-archive-cleanup-eligibility-consumption-baseline"
     owner: "team-frontend-governance"
+    frontend_evidence_class: "framework_capability"
   - id: "056-frontend-program-final-proof-archive-project-cleanup-preview-plan-baseline"
     path: "specs/056-frontend-program-final-proof-archive-project-cleanup-preview-plan-baseline"
     depends_on:
@@ -311,6 +317,7 @@ specs:
       - "055-frontend-program-final-proof-archive-cleanup-eligibility-consumption-baseline"
     branch_slug: "frontend-program-final-proof-archive-project-cleanup-preview-plan-baseline"
     owner: "team-frontend-governance"
+    frontend_evidence_class: "framework_capability"
   - id: "057-frontend-program-final-proof-archive-cleanup-preview-plan-consumption-baseline"
     path: "specs/057-frontend-program-final-proof-archive-cleanup-preview-plan-consumption-baseline"
     depends_on:
@@ -319,6 +326,7 @@ specs:
       - "056-frontend-program-final-proof-archive-project-cleanup-preview-plan-baseline"
     branch_slug: "frontend-program-final-proof-archive-cleanup-preview-plan-consumption-baseline"
     owner: "team-frontend-governance"
+    frontend_evidence_class: "framework_capability"
   - id: "058-frontend-program-final-proof-archive-cleanup-mutation-proposal-baseline"
     path: "specs/058-frontend-program-final-proof-archive-cleanup-mutation-proposal-baseline"
     depends_on:
@@ -329,6 +337,7 @@ specs:
       - "057-frontend-program-final-proof-archive-cleanup-preview-plan-consumption-baseline"
     branch_slug: "frontend-program-final-proof-archive-cleanup-mutation-proposal-baseline"
     owner: "team-frontend-governance"
+    frontend_evidence_class: "framework_capability"
   - id: "059-frontend-program-final-proof-archive-cleanup-mutation-proposal-consumption-baseline"
     path: "specs/059-frontend-program-final-proof-archive-cleanup-mutation-proposal-consumption-baseline"
     depends_on:
@@ -337,6 +346,7 @@ specs:
       - "058-frontend-program-final-proof-archive-cleanup-mutation-proposal-baseline"
     branch_slug: "frontend-program-final-proof-archive-cleanup-mutation-proposal-consumption-baseline"
     owner: "team-frontend-governance"
+    frontend_evidence_class: "framework_capability"
   - id: "060-frontend-program-final-proof-archive-cleanup-mutation-proposal-approval-baseline"
     path: "specs/060-frontend-program-final-proof-archive-cleanup-mutation-proposal-approval-baseline"
     depends_on:
@@ -347,6 +357,7 @@ specs:
       - "059-frontend-program-final-proof-archive-cleanup-mutation-proposal-consumption-baseline"
     branch_slug: "frontend-program-final-proof-archive-cleanup-mutation-proposal-approval-baseline"
     owner: "team-frontend-governance"
+    frontend_evidence_class: "framework_capability"
   - id: "061-frontend-program-final-proof-archive-cleanup-mutation-proposal-approval-consumption-baseline"
     path: "specs/061-frontend-program-final-proof-archive-cleanup-mutation-proposal-approval-consumption-baseline"
     depends_on:
@@ -358,6 +369,7 @@ specs:
       - "060-frontend-program-final-proof-archive-cleanup-mutation-proposal-approval-baseline"
     branch_slug: "frontend-program-final-proof-archive-cleanup-mutation-proposal-approval-consumption-baseline"
     owner: "team-frontend-governance"
+    frontend_evidence_class: "framework_capability"
   - id: "062-frontend-program-final-proof-archive-cleanup-mutation-execution-gating-baseline"
     path: "specs/062-frontend-program-final-proof-archive-cleanup-mutation-execution-gating-baseline"
     depends_on:
@@ -369,6 +381,7 @@ specs:
       - "061-frontend-program-final-proof-archive-cleanup-mutation-proposal-approval-consumption-baseline"
     branch_slug: "frontend-program-final-proof-archive-cleanup-mutation-execution-gating-baseline"
     owner: "team-frontend-governance"
+    frontend_evidence_class: "framework_capability"
   - id: "063-frontend-program-final-proof-archive-cleanup-mutation-execution-gating-consumption-baseline"
     path: "specs/063-frontend-program-final-proof-archive-cleanup-mutation-execution-gating-consumption-baseline"
     depends_on:
@@ -378,6 +391,7 @@ specs:
       - "062-frontend-program-final-proof-archive-cleanup-mutation-execution-gating-baseline"
     branch_slug: "frontend-program-final-proof-archive-cleanup-mutation-execution-gating-consumption-baseline"
     owner: "team-frontend-governance"
+    frontend_evidence_class: "framework_capability"
   - id: "064-frontend-program-final-proof-archive-cleanup-mutation-execution-baseline"
     path: "specs/064-frontend-program-final-proof-archive-cleanup-mutation-execution-baseline"
     depends_on:
@@ -386,6 +400,7 @@ specs:
       - "063-frontend-program-final-proof-archive-cleanup-mutation-execution-gating-consumption-baseline"
     branch_slug: "frontend-program-final-proof-archive-cleanup-mutation-execution-baseline"
     owner: "team-frontend-governance"
+    frontend_evidence_class: "framework_capability"
   - id: "065-frontend-contract-sample-source-selfcheck-baseline"
     path: "specs/065-frontend-contract-sample-source-selfcheck-baseline"
     depends_on:
@@ -610,5 +625,12 @@ specs:
     depends_on:
       - "107-frontend-evidence-class-readiness-gate-runtime-baseline"
     branch_slug: "frontend-legacy-framework-evidence-class-backfill-baseline"
+    owner: "team-frontend-governance"
+    frontend_evidence_class: "framework_capability"
+  - id: "109-frontend-cleanup-archive-evidence-class-backfill-baseline"
+    path: "specs/109-frontend-cleanup-archive-evidence-class-backfill-baseline"
+    depends_on:
+      - "108-frontend-legacy-framework-evidence-class-backfill-baseline"
+    branch_slug: "frontend-cleanup-archive-evidence-class-backfill-baseline"
     owner: "team-frontend-governance"
     frontend_evidence_class: "framework_capability"

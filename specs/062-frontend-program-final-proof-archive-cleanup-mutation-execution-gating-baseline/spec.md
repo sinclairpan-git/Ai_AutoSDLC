@@ -194,3 +194,9 @@ cleanup_mutation_execution_gating:
 - **SC-062-003**：formal docs 明确禁止 inferred execution gating，并继续保持 `050` 的 `deferred` honesty boundary。
 - **SC-062-004**：formal docs 明确 future child work item 的顺序为 `failing tests -> service/CLI execution gating consumption -> separate execution child work item`。
 - **SC-062-005**：`task-execution-log.md` 追加记录脚手架、边界冻结与 focused verification 结果。
+
+---
+related_doc:
+  - "specs/109-frontend-cleanup-archive-evidence-class-backfill-baseline/spec.md"
+frontend_evidence_class: "framework_capability"
+---

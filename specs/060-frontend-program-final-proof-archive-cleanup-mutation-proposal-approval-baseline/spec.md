@@ -189,3 +189,9 @@ cleanup_mutation_proposal_approval:
 - **SC-060-003**：formal docs 明确禁止 inferred approval，并继续保持 `050` 的 `deferred` honesty boundary。
 - **SC-060-004**：formal docs 明确 future child work item 的顺序为 `failing tests -> service/CLI approval consumption -> separate execution child work item`。
 - **SC-060-005**：`task-execution-log.md` 追加记录脚手架、边界冻结与 focused verification 结果。
+
+---
+related_doc:
+  - "specs/109-frontend-cleanup-archive-evidence-class-backfill-baseline/spec.md"
+frontend_evidence_class: "framework_capability"
+---
