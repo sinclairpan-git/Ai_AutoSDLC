@@ -17,7 +17,9 @@ from ai_sdlc.core.frontend_contract_runtime_attachment import (
     build_frontend_contract_runtime_attachment,
 )
 from ai_sdlc.core.frontend_gate_verification import (
+    FRONTEND_GATE_EXECUTE_STATE_READY,
     FRONTEND_GATE_SOURCE_NAME,
+    build_frontend_gate_execute_decision,
     build_frontend_gate_verification_report,
 )
 from ai_sdlc.core.frontend_visual_a11y_evidence_provider import (
@@ -177,6 +179,12 @@ class ProgramFrontendReadiness:
     state: str
     attachment_status: str
     gate_verdict: str
+    execute_gate_state: str = ""
+    decision_reason: str = ""
+    recheck_required: bool = False
+    recheck_reason_codes: list[str] = field(default_factory=list)
+    remediation_reason_codes: list[str] = field(default_factory=list)
+    remediation_hints: list[str] = field(default_factory=list)
     coverage_gaps: list[str] = field(default_factory=list)
     blockers: list[str] = field(default_factory=list)
     source_linkage: dict[str, str] = field(default_factory=dict)
@@ -5257,7 +5265,11 @@ class ProgramService:
                 )
             if (
                 row.frontend_readiness is not None
-                and row.frontend_readiness.state != PROGRAM_FRONTEND_READINESS_READY
+                and (
+                    row.frontend_readiness.execute_gate_state
+                    or row.frontend_readiness.state
+                )
+                != FRONTEND_GATE_EXECUTE_STATE_READY
             ):
                 failed.append(
                     f"spec {row.spec_id} frontend execute gate not clear "
@@ -5287,6 +5299,7 @@ class ProgramService:
         coverage_gaps = _unique_strings(attachment.coverage_gaps)
         blockers = _unique_strings(attachment.blockers)
         gate_verdict = PROGRAM_FRONTEND_GATE_VERDICT_UNRESOLVED
+        gate_report = None
 
         if attachment.status == FRONTEND_CONTRACT_RUNTIME_ATTACHMENT_STATUS_ATTACHED:
             visual_a11y_evidence = None
@@ -5324,6 +5337,12 @@ class ProgramService:
                 if gate_verdict == "PASS":
                     gate_verdict = "RETRY"
 
+        execute_decision = build_frontend_gate_execute_decision(
+            attachment_status=attachment.status,
+            attachment_blockers=blockers,
+            attachment_coverage_gaps=coverage_gaps,
+            gate_report=gate_report,
+        )
         return ProgramFrontendReadiness(
             state=self._frontend_readiness_state(
                 attachment_status=attachment.status,
@@ -5333,6 +5352,12 @@ class ProgramService:
             ),
             attachment_status=attachment.status,
             gate_verdict=gate_verdict,
+            execute_gate_state=execute_decision.execute_gate_state,
+            decision_reason=execute_decision.decision_reason,
+            recheck_required=execute_decision.recheck_required,
+            recheck_reason_codes=list(execute_decision.recheck_reason_codes),
+            remediation_reason_codes=list(execute_decision.remediation_reason_codes),
+            remediation_hints=list(execute_decision.remediation_hints),
             coverage_gaps=coverage_gaps,
             blockers=blockers,
             source_linkage={
@@ -5340,6 +5365,9 @@ class ProgramService:
                 "runtime_attachment_status": attachment.status,
                 "frontend_gate_source": FRONTEND_GATE_SOURCE_NAME,
                 "frontend_gate_verdict": gate_verdict,
+                "frontend_execute_gate_state": execute_decision.execute_gate_state,
+                "frontend_execute_decision_reason": execute_decision.decision_reason,
+                **execute_decision.source_linkage_refs,
             },
         )
 
@@ -5361,7 +5389,11 @@ class ProgramService:
         self,
         readiness: ProgramFrontendReadiness | None,
     ) -> ProgramFrontendRecheckHandoff | None:
-        if readiness is None or readiness.state != PROGRAM_FRONTEND_READINESS_READY:
+        if (
+            readiness is None
+            or (readiness.execute_gate_state or readiness.state)
+            != FRONTEND_GATE_EXECUTE_STATE_READY
+        ):
             return None
 
         return ProgramFrontendRecheckHandoff(
@@ -5376,16 +5408,28 @@ class ProgramService:
         readiness: ProgramFrontendReadiness | None,
         spec_path: str,
     ) -> ProgramFrontendRemediationInput | None:
-        if readiness is None or readiness.state == PROGRAM_FRONTEND_READINESS_READY:
+        if (
+            readiness is None
+            or (readiness.execute_gate_state or readiness.state)
+            == FRONTEND_GATE_EXECUTE_STATE_READY
+        ):
             return None
 
-        fix_inputs = _unique_strings(readiness.coverage_gaps)
-        if _has_frontend_visual_a11y_issue_blocker(readiness.blockers):
+        fix_inputs = _unique_strings(
+            [
+                *readiness.coverage_gaps,
+                *readiness.recheck_reason_codes,
+                *readiness.remediation_reason_codes,
+            ]
+        )
+        if _has_frontend_visual_a11y_issue_blocker(
+            [*readiness.blockers, *readiness.remediation_hints]
+        ):
             fix_inputs = _unique_strings(
                 [*fix_inputs, PROGRAM_FRONTEND_VISUAL_A11Y_ISSUE_REVIEW_INPUT]
             )
         if not fix_inputs:
-            fix_inputs = [readiness.state]
+            fix_inputs = [readiness.execute_gate_state or readiness.state]
 
         suggested_actions: list[str] = []
         if "frontend_contract_observations" in fix_inputs:
@@ -7496,6 +7540,10 @@ def _summarize_frontend_execute_gate(
     readiness: ProgramFrontendReadiness,
 ) -> str:
     details = [f"state={readiness.state}"]
+    if readiness.execute_gate_state and readiness.execute_gate_state != readiness.state:
+        details.append(f"execute_gate_state={readiness.execute_gate_state}")
+    if readiness.decision_reason:
+        details.append(f"reason={readiness.decision_reason}")
     if readiness.coverage_gaps:
         details.append("coverage_gaps=" + ",".join(readiness.coverage_gaps[:2]))
     elif readiness.blockers:

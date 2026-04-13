@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 
 import yaml
@@ -33,6 +33,16 @@ FRONTEND_GATE_CHECK_OBJECTS = (
     "frontend_generation_governance_artifacts",
     "frontend_contract_verification",
 )
+FRONTEND_GATE_EXECUTE_STATE_READY = "ready"
+FRONTEND_GATE_EXECUTE_STATE_BLOCKED = "blocked"
+FRONTEND_GATE_EXECUTE_STATE_RECHECK_REQUIRED = "recheck_required"
+FRONTEND_GATE_EXECUTE_STATE_NEEDS_REMEDIATION = "needs_remediation"
+FRONTEND_GATE_DECISION_REASON_ALL_CHECKS_PASSED = "all_checks_passed"
+FRONTEND_GATE_DECISION_REASON_ADVISORY_ONLY = "advisory_only"
+FRONTEND_GATE_DECISION_REASON_SCOPE_OR_LINKAGE_INVALID = "scope_or_linkage_invalid"
+FRONTEND_GATE_DECISION_REASON_EVIDENCE_MISSING = "evidence_missing"
+FRONTEND_GATE_DECISION_REASON_ACTUAL_QUALITY_BLOCKER = "actual_quality_blocker"
+FRONTEND_GATE_DECISION_REASON_RESULT_INCONSISTENCY = "result_inconsistency"
 
 
 @dataclass(frozen=True, slots=True)
@@ -73,6 +83,20 @@ class FrontendGateVerificationReport:
         if self.visual_a11y_evidence_summary is not None:
             payload["visual_a11y_evidence_summary"] = self.visual_a11y_evidence_summary
         return payload
+
+
+@dataclass(frozen=True, slots=True)
+class FrontendGateExecuteDecision:
+    """Decision projection for runtime/frontend execute gating."""
+
+    execute_gate_state: str
+    decision_reason: str
+    blockers: tuple[str, ...] = ()
+    recheck_required: bool = False
+    recheck_reason_codes: tuple[str, ...] = ()
+    remediation_hints: tuple[str, ...] = ()
+    remediation_reason_codes: tuple[str, ...] = ()
+    source_linkage_refs: dict[str, str] = field(default_factory=dict)
 
 
 def build_frontend_gate_verification_report(
@@ -260,6 +284,103 @@ def build_frontend_gate_verification_report(
     )
 
 
+def build_frontend_gate_execute_decision(
+    *,
+    attachment_status: str,
+    gate_report: FrontendGateVerificationReport | None,
+    attachment_blockers: tuple[str, ...] | list[str] = (),
+    attachment_coverage_gaps: tuple[str, ...] | list[str] = (),
+) -> FrontendGateExecuteDecision:
+    """Project frontend gate verification into an execute-time decision."""
+
+    blockers = tuple(_unique_strings([*attachment_blockers]))
+    coverage_gaps = tuple(_unique_strings([*attachment_coverage_gaps]))
+    source_linkage_refs = {"runtime_attachment_status": attachment_status}
+
+    if attachment_status != "attached":
+        return FrontendGateExecuteDecision(
+            execute_gate_state=FRONTEND_GATE_EXECUTE_STATE_BLOCKED,
+            decision_reason=FRONTEND_GATE_DECISION_REASON_SCOPE_OR_LINKAGE_INVALID,
+            blockers=blockers,
+            remediation_hints=blockers,
+            remediation_reason_codes=coverage_gaps,
+            source_linkage_refs=source_linkage_refs,
+        )
+
+    if gate_report is None:
+        return FrontendGateExecuteDecision(
+            execute_gate_state=FRONTEND_GATE_EXECUTE_STATE_BLOCKED,
+            decision_reason=FRONTEND_GATE_DECISION_REASON_RESULT_INCONSISTENCY,
+            blockers=blockers,
+            remediation_hints=blockers,
+            remediation_reason_codes=coverage_gaps,
+            source_linkage_refs=source_linkage_refs,
+        )
+
+    source_linkage_refs = {
+        **source_linkage_refs,
+        "frontend_gate_verdict": gate_report.gate_result.verdict.value,
+    }
+    blockers = tuple(_unique_strings([*blockers, *gate_report.blockers]))
+    coverage_gaps = tuple(_unique_strings([*coverage_gaps, *gate_report.coverage_gaps]))
+    visual_a11y_status = _visual_a11y_summary_status(gate_report)
+
+    if gate_report.gate_result.verdict == GateVerdict.PASS:
+        if blockers or coverage_gaps:
+            return FrontendGateExecuteDecision(
+                execute_gate_state=FRONTEND_GATE_EXECUTE_STATE_BLOCKED,
+                decision_reason=FRONTEND_GATE_DECISION_REASON_RESULT_INCONSISTENCY,
+                blockers=blockers,
+                remediation_hints=blockers,
+                remediation_reason_codes=coverage_gaps,
+                source_linkage_refs=source_linkage_refs,
+            )
+        decision_reason = (
+            FRONTEND_GATE_DECISION_REASON_ADVISORY_ONLY
+            if gate_report.advisory_checks
+            else FRONTEND_GATE_DECISION_REASON_ALL_CHECKS_PASSED
+        )
+        return FrontendGateExecuteDecision(
+            execute_gate_state=FRONTEND_GATE_EXECUTE_STATE_READY,
+            decision_reason=decision_reason,
+            source_linkage_refs=source_linkage_refs,
+        )
+
+    if _has_visual_a11y_issue(gate_report):
+        remediation_reason_codes = coverage_gaps or (
+            "frontend_visual_a11y_issue_review",
+        )
+        return FrontendGateExecuteDecision(
+            execute_gate_state=FRONTEND_GATE_EXECUTE_STATE_NEEDS_REMEDIATION,
+            decision_reason=FRONTEND_GATE_DECISION_REASON_ACTUAL_QUALITY_BLOCKER,
+            blockers=blockers,
+            remediation_hints=blockers,
+            remediation_reason_codes=remediation_reason_codes,
+            source_linkage_refs=source_linkage_refs,
+        )
+
+    if blockers or coverage_gaps or visual_a11y_status in {"missing_input", "stable_empty"}:
+        return FrontendGateExecuteDecision(
+            execute_gate_state=FRONTEND_GATE_EXECUTE_STATE_RECHECK_REQUIRED,
+            decision_reason=FRONTEND_GATE_DECISION_REASON_EVIDENCE_MISSING,
+            blockers=blockers,
+            recheck_required=True,
+            recheck_reason_codes=coverage_gaps,
+            remediation_hints=blockers,
+            remediation_reason_codes=coverage_gaps,
+            source_linkage_refs=source_linkage_refs,
+        )
+
+    return FrontendGateExecuteDecision(
+        execute_gate_state=FRONTEND_GATE_EXECUTE_STATE_BLOCKED,
+        decision_reason=FRONTEND_GATE_DECISION_REASON_RESULT_INCONSISTENCY,
+        blockers=blockers,
+        remediation_hints=blockers,
+        remediation_reason_codes=coverage_gaps,
+        source_linkage_refs=source_linkage_refs,
+    )
+
+
 def build_frontend_gate_verification_context(
     root: Path,
     observations: list[PageImplementationObservation],
@@ -405,6 +526,23 @@ def _coverage_gaps_from_visual_a11y_evidence_summary(
     return tuple(gaps)
 
 
+def _visual_a11y_summary_status(
+    report: FrontendGateVerificationReport,
+) -> str:
+    summary = report.visual_a11y_evidence_summary
+    if not isinstance(summary, dict):
+        return ""
+    return str(summary.get("status", "")).strip()
+
+
+def _has_visual_a11y_issue(
+    report: FrontendGateVerificationReport,
+) -> bool:
+    if "frontend_visual_a11y_issue_review" in report.coverage_gaps:
+        return True
+    return _visual_a11y_summary_status(report) == "issue"
+
+
 def _unique_strings(values: list[str] | tuple[str, ...]) -> list[str]:
     unique: list[str] = []
     for value in values:
@@ -416,10 +554,22 @@ def _unique_strings(values: list[str] | tuple[str, ...]) -> list[str]:
 
 __all__ = [
     "FRONTEND_GATE_CHECK_OBJECTS",
+    "FRONTEND_GATE_DECISION_REASON_ACTUAL_QUALITY_BLOCKER",
+    "FRONTEND_GATE_DECISION_REASON_ADVISORY_ONLY",
+    "FRONTEND_GATE_DECISION_REASON_ALL_CHECKS_PASSED",
+    "FRONTEND_GATE_DECISION_REASON_EVIDENCE_MISSING",
+    "FRONTEND_GATE_DECISION_REASON_RESULT_INCONSISTENCY",
+    "FRONTEND_GATE_DECISION_REASON_SCOPE_OR_LINKAGE_INVALID",
+    "FRONTEND_GATE_EXECUTE_STATE_BLOCKED",
+    "FRONTEND_GATE_EXECUTE_STATE_NEEDS_REMEDIATION",
+    "FRONTEND_GATE_EXECUTE_STATE_READY",
+    "FRONTEND_GATE_EXECUTE_STATE_RECHECK_REQUIRED",
     "FRONTEND_GATE_SOURCE_NAME",
     "FRONTEND_GATE_VISUAL_A11Y_CHECK_OBJECT",
     "FRONTEND_GATE_VISUAL_A11Y_EVIDENCE_OBJECT",
+    "FrontendGateExecuteDecision",
     "FrontendGateVerificationReport",
+    "build_frontend_gate_execute_decision",
     "build_frontend_gate_verification_context",
     "build_frontend_gate_verification_report",
 ]

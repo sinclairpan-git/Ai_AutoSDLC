@@ -19,7 +19,11 @@ from ai_sdlc.core.frontend_gate_verification import (
     FRONTEND_GATE_SOURCE_NAME,
     FRONTEND_GATE_VISUAL_A11Y_CHECK_OBJECT,
     FRONTEND_GATE_VISUAL_A11Y_EVIDENCE_OBJECT,
+    FRONTEND_GATE_EXECUTE_STATE_BLOCKED,
+    FRONTEND_GATE_EXECUTE_STATE_NEEDS_REMEDIATION,
+    FRONTEND_GATE_EXECUTE_STATE_RECHECK_REQUIRED,
     build_frontend_gate_verification_context,
+    build_frontend_gate_execute_decision,
     build_frontend_gate_verification_report,
 )
 from ai_sdlc.core.frontend_visual_a11y_evidence_provider import (
@@ -247,6 +251,96 @@ def test_frontend_gate_verification_context_passes_when_prerequisites_are_ready(
     assert context["verification_sources"] == (FRONTEND_GATE_SOURCE_NAME,)
     assert context["verification_check_objects"] == FRONTEND_GATE_CHECK_OBJECTS
     assert context["frontend_gate_verification"]["gate_verdict"] == "PASS"
+
+
+def test_frontend_gate_execute_decision_maps_missing_visual_a11y_evidence_to_recheck_required(
+    tmp_path: Path,
+) -> None:
+    _write_minimal_frontend_contract_page_artifacts(tmp_path)
+    materialize_frontend_gate_policy_artifacts(
+        tmp_path,
+        build_p1_frontend_gate_policy_visual_a11y_foundation(),
+    )
+    materialize_frontend_generation_constraint_artifacts(
+        tmp_path,
+        build_mvp_frontend_generation_constraints(),
+    )
+
+    report = build_frontend_gate_verification_report(
+        tmp_path,
+        [_matching_observation()],
+    )
+    decision = build_frontend_gate_execute_decision(
+        attachment_status="attached",
+        gate_report=report,
+    )
+
+    assert decision.execute_gate_state == FRONTEND_GATE_EXECUTE_STATE_RECHECK_REQUIRED
+    assert decision.decision_reason == "evidence_missing"
+    assert decision.recheck_required is True
+    assert "frontend_visual_a11y_evidence_input" in decision.recheck_reason_codes
+
+
+def test_frontend_gate_execute_decision_maps_visual_a11y_issue_to_needs_remediation(
+    tmp_path: Path,
+) -> None:
+    _write_minimal_frontend_contract_page_artifacts(tmp_path)
+    materialize_frontend_gate_policy_artifacts(
+        tmp_path,
+        build_p1_frontend_gate_policy_visual_a11y_foundation(),
+    )
+    materialize_frontend_generation_constraint_artifacts(
+        tmp_path,
+        build_mvp_frontend_generation_constraints(),
+    )
+
+    report = build_frontend_gate_verification_report(
+        tmp_path,
+        [_matching_observation()],
+        visual_a11y_evidence_artifact=_visual_a11y_evidence_artifact(
+            [
+                FrontendVisualA11yEvidenceEvaluation(
+                    evaluation_id="visual-issue",
+                    target_id="orders.form",
+                    surface_id="success-feedback",
+                    outcome="issue",
+                    report_type="violation-report",
+                    severity="medium",
+                    location_anchor="feedback.banner",
+                    quality_hint="review success feedback visibility and semantics",
+                    changed_scope_explanation="issue fixture",
+                )
+            ]
+        ),
+    )
+    decision = build_frontend_gate_execute_decision(
+        attachment_status="attached",
+        gate_report=report,
+    )
+
+    assert (
+        decision.execute_gate_state
+        == FRONTEND_GATE_EXECUTE_STATE_NEEDS_REMEDIATION
+    )
+    assert decision.decision_reason == "actual_quality_blocker"
+    assert decision.recheck_required is False
+    assert "frontend_visual_a11y_issue_review" in decision.remediation_reason_codes
+
+
+def test_frontend_gate_execute_decision_fails_closed_when_attachment_missing() -> None:
+    decision = build_frontend_gate_execute_decision(
+        attachment_status="missing_artifact",
+        attachment_blockers=(
+            "frontend contract runtime attachment unavailable: missing canonical observation artifact",
+        ),
+        attachment_coverage_gaps=("frontend_contract_observations",),
+        gate_report=None,
+    )
+
+    assert decision.execute_gate_state == FRONTEND_GATE_EXECUTE_STATE_BLOCKED
+    assert decision.decision_reason == "scope_or_linkage_invalid"
+    assert decision.recheck_required is False
+    assert "frontend_contract_observations" in decision.remediation_reason_codes
 
 
 def test_frontend_gate_verification_report_flags_missing_visual_a11y_extension_artifacts(

@@ -6126,6 +6126,8 @@ def test_build_status_surfaces_ready_frontend_readiness_per_spec(tmp_path: Path)
     readiness = by["001-auth"].frontend_readiness
     assert readiness is not None
     assert readiness.state == "ready"
+    assert readiness.execute_gate_state == "ready"
+    assert readiness.decision_reason == "all_checks_passed"
     assert readiness.coverage_gaps == []
     assert readiness.blockers == []
     assert readiness.source_linkage["runtime_attachment_status"] == "attached"
@@ -6145,6 +6147,8 @@ def test_build_status_surfaces_frontend_readiness_gap_when_attachment_missing(
     readiness = by["001-auth"].frontend_readiness
     assert readiness is not None
     assert readiness.state == "missing_artifact"
+    assert readiness.execute_gate_state == "blocked"
+    assert readiness.decision_reason == "scope_or_linkage_invalid"
     assert "frontend_contract_observations" in readiness.coverage_gaps
     assert "missing canonical observation artifact" in readiness.blockers[0]
     assert readiness.source_linkage["runtime_attachment_status"] == "missing_artifact"
@@ -6174,9 +6178,56 @@ def test_build_status_surfaces_frontend_readiness_gap_when_071_visual_a11y_evide
     readiness = by["001-auth"].frontend_readiness
     assert readiness is not None
     assert readiness.state == "retry"
+    assert readiness.execute_gate_state == "recheck_required"
+    assert readiness.decision_reason == "evidence_missing"
     assert "frontend_visual_a11y_evidence_input" in readiness.coverage_gaps
     assert any("missing explicit evidence input" in blocker for blocker in readiness.blockers)
     assert readiness.source_linkage["frontend_gate_verdict"] == "RETRY"
+
+
+def test_build_status_surfaces_frontend_needs_remediation_when_visual_a11y_issue_detected(
+    tmp_path: Path,
+) -> None:
+    for p in ("specs/001-auth", "specs/002-course", "specs/003-enroll"):
+        (tmp_path / p).mkdir(parents=True)
+    _write_minimal_frontend_contract_page_artifacts(tmp_path)
+    materialize_frontend_gate_policy_artifacts(
+        tmp_path,
+        build_p1_frontend_gate_policy_visual_a11y_foundation(),
+    )
+    materialize_frontend_generation_constraint_artifacts(
+        tmp_path,
+        build_mvp_frontend_generation_constraints(),
+    )
+    spec_dir = tmp_path / "specs" / "001-auth"
+    _write_frontend_contract_observations(spec_dir)
+    _write_frontend_visual_a11y_evidence(
+        spec_dir,
+        [
+            FrontendVisualA11yEvidenceEvaluation(
+                evaluation_id="001-auth-visual-a11y-issue",
+                target_id="user-create",
+                surface_id="success-feedback",
+                outcome="issue",
+                report_type="violation-report",
+                severity="medium",
+                location_anchor="feedback.banner",
+                quality_hint="review success feedback visibility and semantics",
+                changed_scope_explanation="071 issue fixture",
+            )
+        ],
+    )
+
+    svc = ProgramService(tmp_path)
+    rows = svc.build_status(_manifest())
+    by = {r.spec_id: r for r in rows}
+
+    readiness = by["001-auth"].frontend_readiness
+    assert readiness is not None
+    assert readiness.state == "retry"
+    assert readiness.execute_gate_state == "needs_remediation"
+    assert readiness.decision_reason == "actual_quality_blocker"
+    assert "frontend_visual_a11y_issue_review" in readiness.coverage_gaps
 
 
 def test_build_integration_dry_run_surfaces_visual_a11y_evidence_remediation_input_when_missing(
