@@ -187,7 +187,7 @@ related_doc:
 - **交付流**：`S2`
 - **来源范围**：`014`、`015`、`016`、`017`、`018`
 - **当前状态**：`partial`
-- **派生状态**：已派生 `128-frontend-runtime-attachment-verify-gate-readiness-closure-baseline`；在 `128` focused verification 通过且下游 `T23/T25/T33` 收口前仍保持 `partial`
+- **派生状态**：已派生 `128-frontend-runtime-attachment-verify-gate-readiness-closure-baseline`；在 `128` focused verification 通过且下游 `T23/T31/T33` 收口前仍保持 `partial`
 - **缺失 carrier**：
   - active `spec_dir` scoped runtime attachment
   - verify/gate/readiness aggregation 的真实接线
@@ -227,7 +227,7 @@ related_doc:
 - **交付流**：`S8`
 - **来源范围**：`087`、`089`、`090`、`091`、`092`、`109-113`
 - **当前状态**：`partial`
-- **派生状态**：已派生 `130-frontend-evidence-class-writeback-close-check-runtime-closure-baseline`；在 `130` focused verification 通过且下游 `T25` 收口前仍保持 `partial`
+- **派生状态**：已派生 `130-frontend-evidence-class-writeback-close-check-runtime-closure-baseline`；在 `130` focused verification 通过且下游 `T31` 收口前仍保持 `partial`
 - **缺失 carrier**：
   - explicit program-level mirror write surface
   - close-check late resurfacing 的全量 closure
@@ -250,7 +250,8 @@ related_doc:
 - **任务编号**：T31
 - **交付流**：`S3`
 - **来源范围**：`019-024`
-- **当前状态**：`capability_open`
+- **当前状态**：`partial`
+- **派生状态**：已派生 `131-frontend-program-execute-remediation-materialization-runtime-closure-baseline`；在 `131` focused verification 通过且下游 `T32/T41` 收口前仍保持 `partial`
 - **缺失 carrier**：
   - program execute frontend gate 的 end-to-end runtime
   - bounded remediation execute / writeback 的真实执行链
@@ -262,7 +263,7 @@ related_doc:
   2. execute / remediation / writeback 不再只是 formal handoff
   3. `020/022` 留给下游的 runtime 缺口被真正补齐
 - **验证**：`uv run pytest tests/unit/test_program_service.py tests/integration/test_cli_program.py -q`
-- **建议派生工单**：implementation carrier
+- **建议派生工单**：`131-frontend-program-execute-remediation-materialization-runtime-closure-baseline`
 
 ### Task 3.2 Provider Invocation, Patch Apply And Cross-Spec Writeback Chain
 

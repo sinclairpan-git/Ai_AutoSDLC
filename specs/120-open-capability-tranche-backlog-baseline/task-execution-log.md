@@ -232,7 +232,7 @@
 - 改动范围：`tasks.md`
 - 改动内容：
   - 将 `Task 2.2 Runtime Attachment And Verify/Gate Closure` 的建议派生工单更新为 `128-frontend-runtime-attachment-verify-gate-readiness-closure-baseline`
-  - 明确 `T22` 在 `128` focused verification 通过且下游 `T23/T25/T33` 收口前继续保持 `partial`
+  - 明确 `T22` 在 `128` focused verification 通过且下游 `T23/T31/T33` 收口前继续保持 `partial`
 - 新增/调整的测试：无
 - 是否符合任务目标：是
 
@@ -278,10 +278,35 @@
 - 改动范围：`tasks.md`
 - 改动内容：
   - 将 `Task 2.4 Evidence-Class Mirror Writeback And Close-Check Completion` 的建议派生工单更新为 `130-frontend-evidence-class-writeback-close-check-runtime-closure-baseline`
-  - 明确 `T24` 在 `130` focused verification 通过且下游 `T25` 收口前继续保持 `partial`
+  - 明确 `T24` 在 `130` focused verification 通过且下游 `T31` 收口前继续保持 `partial`
 - 新增/调整的测试：无
 - 是否符合任务目标：是
 
 #### 2.31 批次结论
 
 - `120/T24` 现在已经有正式 implementation carrier，evidence-class 的 writeback/close-check/backfill closure 不再停留在抽象占位。
+
+### Batch 2026-04-14-008 | Derive T31 implementation carrier
+
+#### 2.32 批次范围
+
+- 覆盖范围：`tasks.md`
+- 覆盖目标：
+  - 将 `T31` 的建议派生工单从抽象 implementation carrier 更新为正式 `131`
+  - 修正 `120` 中遗留的 `T25 -> T31` 编号漂移
+
+#### 2.33 任务记录
+
+##### T120-DOC-14 | 回填 `T31` 派生结果
+
+- 改动范围：`tasks.md`
+- 改动内容：
+  - 将 `Task 3.1 Execute, Remediation And Materialization Runtime` 的建议派生工单更新为 `131-frontend-program-execute-remediation-materialization-runtime-closure-baseline`
+  - 明确 `T31` 在 `131` focused verification 通过且下游 `T32/T41` 收口前继续保持 `partial`
+  - 将 `T22/T24` 的历史下游依赖文案从不存在的 `T25` 修正为 `T31`
+- 新增/调整的测试：无
+- 是否符合任务目标：是
+
+#### 2.34 批次结论
+
+- `120/T31` 现在已经有正式 implementation carrier，program execute/remediation/materialization 主线不再停留在抽象占位。
