@@ -2,6 +2,10 @@
 
 from __future__ import annotations
 
+import inspect
+import json
+import subprocess
+from collections.abc import Callable, Iterable
 from pathlib import Path
 
 import yaml
@@ -10,7 +14,10 @@ from ai_sdlc.core.frontend_visual_a11y_evidence_provider import (
     FrontendVisualA11yEvidenceArtifact,
 )
 from ai_sdlc.models.frontend_browser_gate import (
+    BrowserGateInteractionProbeCapture,
+    BrowserGateProbeRunnerResult,
     BrowserGateProbeRuntimeSession,
+    BrowserGateSharedRuntimeCapture,
     BrowserProbeArtifactRecord,
     BrowserProbeExecutionReceipt,
     BrowserQualityBundleMaterializationInput,
@@ -24,6 +31,16 @@ BROWSER_GATE_REQUIRED_PROBE_SET = (
     "basic_a11y",
     "interaction_anti_pattern_checks",
 )
+_PLAYWRIGHT_TRACE_REL_PATH = "shared-runtime/playwright-trace.zip"
+_PLAYWRIGHT_SCREENSHOT_REL_PATH = "shared-runtime/navigation-screenshot.png"
+_INTERACTION_SNAPSHOT_REL_PATH = "interaction/interaction-snapshot.json"
+_DEFAULT_BROWSER_GATE_PROBE_TIMEOUT_SECONDS = 30
+
+
+BrowserGateProbeRunner = Callable[
+    ...,
+    BrowserGateProbeRunnerResult,
+]
 
 
 def build_browser_quality_gate_execution_context(
@@ -61,7 +78,7 @@ def build_browser_quality_gate_execution_context(
     ):
         raise ValueError("browser_gate_scope_linkage_incomplete")
 
-    browser_entry_ref = managed_frontend_target
+    browser_entry_ref = _derive_browser_entry_ref(managed_frontend_target)
     return BrowserQualityGateExecutionContext(
         gate_run_id=gate_run_id,
         apply_result_id=apply_result_id,
@@ -82,6 +99,83 @@ def build_browser_quality_gate_execution_context(
     )
 
 
+def run_default_browser_gate_probe(
+    *,
+    root: Path,
+    artifact_root: Path,
+    execution_context: BrowserQualityGateExecutionContext,
+    generated_at: str,
+) -> BrowserGateProbeRunnerResult:
+    """Run the default Playwright-backed browser gate probe."""
+
+    artifact_root_rel = str(artifact_root.relative_to(root))
+    script_path = root / "scripts" / "frontend_browser_gate_probe_runner.mjs"
+    if not script_path.is_file():
+        return _transient_probe_runner_result(
+            gate_run_id=execution_context.gate_run_id,
+            artifact_root_rel=artifact_root_rel,
+            diagnostic_code="playwright_runner_script_missing",
+            warning="Playwright probe runner is not available in this installation.",
+        )
+
+    payload = {
+        "artifact_root": str(artifact_root),
+        "artifact_root_ref": artifact_root_rel,
+        "browser_entry_ref": execution_context.browser_entry_ref,
+        "gate_run_id": execution_context.gate_run_id,
+        "generated_at": generated_at,
+        "managed_frontend_target": execution_context.managed_frontend_target,
+    }
+    try:
+        completed = subprocess.run(
+            ["node", str(script_path)],
+            cwd=root,
+            input=json.dumps(payload),
+            text=True,
+            capture_output=True,
+            check=False,
+            timeout=_DEFAULT_BROWSER_GATE_PROBE_TIMEOUT_SECONDS,
+        )
+    except FileNotFoundError:
+        return _transient_probe_runner_result(
+            gate_run_id=execution_context.gate_run_id,
+            artifact_root_rel=artifact_root_rel,
+            diagnostic_code="playwright_runtime_unavailable",
+            warning=(
+                "Playwright runtime is not available on this host. Install Playwright and its browsers for this frontend host, then re-run `uv run ai-sdlc program browser-gate-probe --execute`."
+            ),
+        )
+    except subprocess.TimeoutExpired:
+        return _transient_probe_runner_result(
+            gate_run_id=execution_context.gate_run_id,
+            artifact_root_rel=artifact_root_rel,
+            diagnostic_code="browser_probe_timeout",
+            warning=(
+                "Browser gate probe timed out before completion. Confirm the frontend host is ready, then re-run `uv run ai-sdlc program browser-gate-probe --execute`."
+            ),
+        )
+    stdout = completed.stdout.strip()
+    if not stdout:
+        warning = completed.stderr.strip() or "Playwright runtime is not available on this host."
+        return _transient_probe_runner_result(
+            gate_run_id=execution_context.gate_run_id,
+            artifact_root_rel=artifact_root_rel,
+            diagnostic_code="playwright_runtime_unavailable",
+            warning=warning,
+        )
+    try:
+        raw_payload = json.loads(stdout)
+        return BrowserGateProbeRunnerResult.model_validate(raw_payload)
+    except Exception as exc:
+        warning = completed.stderr.strip() or f"browser gate runner output invalid: {exc}"
+        return _transient_probe_runner_result(
+            gate_run_id=execution_context.gate_run_id,
+            artifact_root_rel=artifact_root_rel,
+            diagnostic_code="playwright_runner_output_invalid",
+            warning=warning,
+        )
+
+
 def materialize_browser_gate_probe_runtime(
     *,
     root: Path,
@@ -90,6 +184,8 @@ def materialize_browser_gate_probe_runtime(
     visual_a11y_evidence_artifact: FrontendVisualA11yEvidenceArtifact | None,
     generated_at: str,
     write_artifacts: bool = True,
+    probe_runner: BrowserGateProbeRunner | None = None,
+    execute_probe: bool = False,
 ) -> tuple[
     BrowserGateProbeRuntimeSession,
     list[BrowserProbeArtifactRecord],
@@ -107,23 +203,38 @@ def materialize_browser_gate_probe_runtime(
 
     artifact_records: list[BrowserProbeArtifactRecord] = []
     receipts: list[BrowserProbeExecutionReceipt] = []
+    runner_warnings: list[str] = []
 
-    smoke_records = _materialize_missing_probe_artifacts(
-        root=root,
-        artifact_root=artifact_root,
-        gate_run_id=context.gate_run_id,
-        check_name="playwright_smoke",
-        artifact_specs=(
-            ("playwright_trace", "shared-runtime/playwright-trace.yaml"),
-            ("navigation_screenshot", "shared-runtime/navigation-screenshot.yaml"),
-        ),
-        generated_at=generated_at,
-        reason="playwright_probe_not_materialized_in_runtime_baseline",
-        write_artifacts=write_artifacts,
-    )
-    artifact_records.extend(smoke_records)
-    receipts.append(
-        BrowserProbeExecutionReceipt(
+    if execute_probe:
+        (
+            smoke_records,
+            smoke_receipt,
+            interaction_records,
+            interaction_receipt,
+            runner_warnings,
+        ) = _materialize_real_probe_receipts(
+            root=root,
+            artifact_root=artifact_root,
+            artifact_root_rel=artifact_root_rel,
+            context=context,
+            generated_at=generated_at,
+            probe_runner=probe_runner or run_default_browser_gate_probe,
+        )
+    else:
+        smoke_records = _materialize_missing_probe_artifacts(
+            root=root,
+            artifact_root=artifact_root,
+            gate_run_id=context.gate_run_id,
+            check_name="playwright_smoke",
+            artifact_specs=(
+                ("playwright_trace", _PLAYWRIGHT_TRACE_REL_PATH),
+                ("navigation_screenshot", _PLAYWRIGHT_SCREENSHOT_REL_PATH),
+            ),
+            generated_at=generated_at,
+            reason="playwright_probe_not_materialized_in_runtime_baseline",
+            write_artifacts=write_artifacts,
+        )
+        smoke_receipt = BrowserProbeExecutionReceipt(
             check_name="playwright_smoke",
             started_at=generated_at,
             finished_at=generated_at,
@@ -135,7 +246,31 @@ def materialize_browser_gate_probe_runtime(
             blocking_reason_codes=["playwright_probe_evidence_missing"],
             requirement_linkage=["browser_quality_gate:playwright_smoke"],
         )
-    )
+        interaction_records = _materialize_missing_probe_artifacts(
+            root=root,
+            artifact_root=artifact_root,
+            gate_run_id=context.gate_run_id,
+            check_name="interaction_anti_pattern_checks",
+            artifact_specs=(("interaction_snapshot", _INTERACTION_SNAPSHOT_REL_PATH),),
+            generated_at=generated_at,
+            reason="interaction_probe_not_materialized_in_runtime_baseline",
+            write_artifacts=write_artifacts,
+        )
+        interaction_receipt = BrowserProbeExecutionReceipt(
+            check_name="interaction_anti_pattern_checks",
+            started_at=generated_at,
+            finished_at=generated_at,
+            runtime_status="incomplete",
+            artifact_ids=[record.artifact_id for record in interaction_records],
+            classification_candidate="evidence_missing",
+            recheck_required=True,
+            remediation_hints=["materialize interaction anti-pattern probe evidence"],
+            blocking_reason_codes=["interaction_probe_evidence_missing"],
+            requirement_linkage=["browser_quality_gate:interaction_anti_pattern_checks"],
+        )
+
+    artifact_records.extend(smoke_records)
+    receipts.append(smoke_receipt)
 
     visual_records, visual_receipt, a11y_receipt = _materialize_visual_and_a11y_receipts(
         root=root,
@@ -148,36 +283,15 @@ def materialize_browser_gate_probe_runtime(
     artifact_records.extend(visual_records)
     receipts.extend([visual_receipt, a11y_receipt])
 
-    interaction_records = _materialize_missing_probe_artifacts(
-        root=root,
-        artifact_root=artifact_root,
-        gate_run_id=context.gate_run_id,
-        check_name="interaction_anti_pattern_checks",
-        artifact_specs=(
-            ("interaction_snapshot", "interaction/anti-pattern-snapshot.yaml"),
-        ),
-        generated_at=generated_at,
-        reason="interaction_probe_not_materialized_in_runtime_baseline",
-        write_artifacts=write_artifacts,
-    )
     artifact_records.extend(interaction_records)
-    receipts.append(
-        BrowserProbeExecutionReceipt(
-            check_name="interaction_anti_pattern_checks",
-            started_at=generated_at,
-            finished_at=generated_at,
-            runtime_status="incomplete",
-            artifact_ids=[record.artifact_id for record in interaction_records],
-            classification_candidate="evidence_missing",
-            recheck_required=True,
-            remediation_hints=["materialize interaction anti-pattern probe evidence"],
-            blocking_reason_codes=["interaction_probe_evidence_missing"],
-            requirement_linkage=["browser_quality_gate:interaction_anti_pattern_checks"],
-        )
-    )
+    receipts.append(interaction_receipt)
 
     overall_gate_status = _overall_gate_status(receipts)
-    session_status = "completed" if overall_gate_status in {"passed", "passed_with_advisories"} else "incomplete"
+    session_status = _session_status(
+        overall_gate_status,
+        smoke_receipt=smoke_receipt,
+        interaction_receipt=interaction_receipt,
+    )
     session = BrowserGateProbeRuntimeSession(
         probe_runtime_session_id=f"{context.gate_run_id}-session",
         gate_run_id=context.gate_run_id,
@@ -193,6 +307,7 @@ def materialize_browser_gate_probe_runtime(
         started_at=generated_at,
         updated_at=generated_at,
         finished_at=generated_at,
+        warnings=list(runner_warnings),
         source_linkage_refs={
             **context.source_linkage_refs,
             "apply_artifact_path": apply_artifact_path,
@@ -213,11 +328,13 @@ def materialize_browser_gate_probe_runtime(
             record.artifact_ref
             for record in artifact_records
             if record.artifact_type == "playwright_trace"
+            and record.capture_status == "captured"
         ],
         screenshot_refs=[
             record.artifact_ref
             for record in artifact_records
             if record.artifact_type.endswith("screenshot")
+            and record.capture_status == "captured"
         ],
         check_receipts=receipts,
         smoke_verdict=_receipt_verdict(receipts, "playwright_smoke"),
@@ -251,6 +368,247 @@ def materialize_browser_gate_probe_runtime(
         },
     )
     return session, artifact_records, receipts, bundle
+
+
+def _materialize_real_probe_receipts(
+    *,
+    root: Path,
+    artifact_root: Path,
+    artifact_root_rel: str,
+    context: BrowserQualityGateExecutionContext,
+    generated_at: str,
+    probe_runner: BrowserGateProbeRunner,
+) -> tuple[
+    list[BrowserProbeArtifactRecord],
+    BrowserProbeExecutionReceipt,
+    list[BrowserProbeArtifactRecord],
+    BrowserProbeExecutionReceipt,
+    list[str],
+]:
+    runner_result = _invoke_probe_runner(
+        probe_runner,
+        root=root,
+        artifact_root=artifact_root,
+        execution_context=context,
+        generated_at=generated_at,
+    )
+    smoke_records, smoke_receipt = _materialize_real_smoke_receipt(
+        root=root,
+        artifact_root=artifact_root,
+        artifact_root_rel=artifact_root_rel,
+        gate_run_id=context.gate_run_id,
+        generated_at=generated_at,
+        runner_result=runner_result,
+    )
+    interaction_records, interaction_receipt = _materialize_real_interaction_receipt(
+        root=root,
+        artifact_root=artifact_root,
+        artifact_root_rel=artifact_root_rel,
+        gate_run_id=context.gate_run_id,
+        generated_at=generated_at,
+        runner_result=runner_result,
+    )
+    warnings = _unique_strings(
+        runner_result.warnings
+        or _diagnostic_warning_messages(runner_result.diagnostic_codes)
+    )
+    return smoke_records, smoke_receipt, interaction_records, interaction_receipt, warnings
+
+
+def _materialize_real_smoke_receipt(
+    *,
+    root: Path,
+    artifact_root: Path,
+    artifact_root_rel: str,
+    gate_run_id: str,
+    generated_at: str,
+    runner_result: BrowserGateProbeRunnerResult,
+) -> tuple[list[BrowserProbeArtifactRecord], BrowserProbeExecutionReceipt]:
+    capture = runner_result.shared_capture
+    diagnostic_codes = _unique_strings(
+        [*runner_result.diagnostic_codes, *capture.diagnostic_codes]
+    )
+    refs = [
+        (
+            "playwright_trace",
+            capture.trace_artifact_ref or f"{artifact_root_rel}/{_PLAYWRIGHT_TRACE_REL_PATH}",
+        ),
+        (
+            "navigation_screenshot",
+            capture.navigation_screenshot_ref
+            or f"{artifact_root_rel}/{_PLAYWRIGHT_SCREENSHOT_REL_PATH}",
+        ),
+    ]
+    records: list[BrowserProbeArtifactRecord] = []
+    missing_artifact = False
+    for index, (artifact_type, artifact_ref) in enumerate(refs, start=1):
+        resolved_status = capture.capture_status
+        if resolved_status == "captured" and not _runner_artifact_exists(
+            root=root,
+            artifact_root=artifact_root,
+            artifact_ref=artifact_ref,
+        ):
+            resolved_status = "missing"
+            missing_artifact = True
+        elif resolved_status == "missing":
+            missing_artifact = True
+        records.append(
+            BrowserProbeArtifactRecord(
+                artifact_id=f"{gate_run_id}-playwright_smoke-{index}",
+                gate_run_id=gate_run_id,
+                check_name="playwright_smoke",
+                artifact_type=artifact_type,
+                artifact_ref=artifact_ref,
+                anchor_refs=list(capture.anchor_refs),
+                capture_status=resolved_status,
+                captured_at=generated_at,
+                source_linkage_refs={"artifact_reason": ",".join(diagnostic_codes)},
+            )
+        )
+
+    if runner_result.runtime_status == "failed_transient" or capture.capture_status == "capture_failed":
+        return records, BrowserProbeExecutionReceipt(
+            check_name="playwright_smoke",
+            started_at=generated_at,
+            finished_at=generated_at,
+            runtime_status="failed_transient",
+            artifact_ids=[record.artifact_id for record in records],
+            anchor_refs=list(capture.anchor_refs),
+            requirement_linkage=["browser_quality_gate:playwright_smoke"],
+            classification_candidate="transient_run_failure",
+            recheck_required=True,
+            remediation_hints=["re-run the browser gate probe after restoring the Playwright runtime"],
+            blocking_reason_codes=diagnostic_codes or ["playwright_probe_transient_failure"],
+        )
+
+    if missing_artifact:
+        return records, BrowserProbeExecutionReceipt(
+            check_name="playwright_smoke",
+            started_at=generated_at,
+            finished_at=generated_at,
+            runtime_status="incomplete",
+            artifact_ids=[record.artifact_id for record in records],
+            anchor_refs=list(capture.anchor_refs),
+            requirement_linkage=["browser_quality_gate:playwright_smoke"],
+            classification_candidate="evidence_missing",
+            recheck_required=True,
+            remediation_hints=["materialize shared Playwright runtime evidence"],
+            blocking_reason_codes=diagnostic_codes or ["playwright_probe_evidence_missing"],
+        )
+
+    return records, BrowserProbeExecutionReceipt(
+        check_name="playwright_smoke",
+        started_at=generated_at,
+        finished_at=generated_at,
+        runtime_status="completed",
+        artifact_ids=[record.artifact_id for record in records],
+        anchor_refs=list(capture.anchor_refs),
+        requirement_linkage=["browser_quality_gate:playwright_smoke"],
+        classification_candidate="pass",
+    )
+
+
+def _materialize_real_interaction_receipt(
+    *,
+    root: Path,
+    artifact_root: Path,
+    artifact_root_rel: str,
+    gate_run_id: str,
+    generated_at: str,
+    runner_result: BrowserGateProbeRunnerResult,
+) -> tuple[list[BrowserProbeArtifactRecord], BrowserProbeExecutionReceipt]:
+    capture = runner_result.interaction_capture
+    diagnostic_codes = _unique_strings(
+        [*runner_result.diagnostic_codes, *capture.blocking_reason_codes]
+    )
+    artifact_refs = list(capture.artifact_refs) or [
+        f"{artifact_root_rel}/{_INTERACTION_SNAPSHOT_REL_PATH}"
+    ]
+    records: list[BrowserProbeArtifactRecord] = []
+    missing_artifact = False
+    for index, artifact_ref in enumerate(artifact_refs, start=1):
+        resolved_status = capture.capture_status
+        if resolved_status == "captured" and not _runner_artifact_exists(
+            root=root,
+            artifact_root=artifact_root,
+            artifact_ref=artifact_ref,
+        ):
+            resolved_status = "missing"
+            missing_artifact = True
+        elif resolved_status == "missing":
+            missing_artifact = True
+        records.append(
+            BrowserProbeArtifactRecord(
+                artifact_id=f"{gate_run_id}-interaction-{index}",
+                gate_run_id=gate_run_id,
+                check_name="interaction_anti_pattern_checks",
+                artifact_type="interaction_snapshot",
+                artifact_ref=artifact_ref,
+                anchor_refs=list(capture.anchor_refs),
+                capture_status=resolved_status,
+                captured_at=generated_at,
+                source_linkage_refs={"interaction_probe_id": capture.interaction_probe_id},
+            )
+        )
+
+    if (
+        runner_result.runtime_status == "failed_transient"
+        or capture.capture_status == "capture_failed"
+        or capture.classification_candidate == "transient_run_failure"
+    ):
+        return records, BrowserProbeExecutionReceipt(
+            check_name="interaction_anti_pattern_checks",
+            started_at=generated_at,
+            finished_at=generated_at,
+            runtime_status="failed_transient",
+            artifact_ids=[record.artifact_id for record in records],
+            anchor_refs=list(capture.anchor_refs),
+            requirement_linkage=["browser_quality_gate:interaction_anti_pattern_checks"],
+            classification_candidate="transient_run_failure",
+            recheck_required=True,
+            remediation_hints=["re-run the browser gate probe after restoring the interaction runtime"],
+            blocking_reason_codes=diagnostic_codes or ["interaction_probe_transient_failure"],
+        )
+
+    if missing_artifact or capture.classification_candidate == "evidence_missing":
+        return records, BrowserProbeExecutionReceipt(
+            check_name="interaction_anti_pattern_checks",
+            started_at=generated_at,
+            finished_at=generated_at,
+            runtime_status="incomplete",
+            artifact_ids=[record.artifact_id for record in records],
+            anchor_refs=list(capture.anchor_refs),
+            requirement_linkage=["browser_quality_gate:interaction_anti_pattern_checks"],
+            classification_candidate="evidence_missing",
+            recheck_required=True,
+            remediation_hints=["materialize interaction anti-pattern probe evidence"],
+            blocking_reason_codes=diagnostic_codes or ["interaction_probe_evidence_missing"],
+        )
+
+    if capture.classification_candidate == "actual_quality_blocker":
+        return records, BrowserProbeExecutionReceipt(
+            check_name="interaction_anti_pattern_checks",
+            started_at=generated_at,
+            finished_at=generated_at,
+            runtime_status="completed",
+            artifact_ids=[record.artifact_id for record in records],
+            anchor_refs=list(capture.anchor_refs),
+            requirement_linkage=["browser_quality_gate:interaction_anti_pattern_checks"],
+            classification_candidate="actual_quality_blocker",
+            remediation_hints=["review interaction anti-pattern issue findings"],
+            blocking_reason_codes=diagnostic_codes or ["interaction_probe_quality_blocker"],
+        )
+
+    return records, BrowserProbeExecutionReceipt(
+        check_name="interaction_anti_pattern_checks",
+        started_at=generated_at,
+        finished_at=generated_at,
+        runtime_status="completed",
+        artifact_ids=[record.artifact_id for record in records],
+        anchor_refs=list(capture.anchor_refs),
+        requirement_linkage=["browser_quality_gate:interaction_anti_pattern_checks"],
+        classification_candidate="pass",
+    )
 
 
 def _materialize_missing_probe_artifacts(
@@ -438,6 +796,149 @@ def _materialize_visual_and_a11y_receipts(
     )
 
 
+def _runner_artifact_exists(*, root: Path, artifact_root: Path, artifact_ref: str) -> bool:
+    if not artifact_ref.strip():
+        return False
+    artifact_path = (root / artifact_ref).resolve()
+    try:
+        artifact_path.relative_to(artifact_root.resolve())
+    except ValueError:
+        return False
+    return artifact_path.is_file()
+
+
+def _derive_browser_entry_ref(managed_frontend_target: str) -> str:
+    target = managed_frontend_target.strip()
+    if not target:
+        return ""
+    if "://" in target:
+        return target
+    candidate = Path(target)
+    if candidate.suffix:
+        return candidate.as_posix()
+    return (candidate / "index.html").as_posix()
+
+
+def _invoke_probe_runner(
+    probe_runner: BrowserGateProbeRunner,
+    *,
+    root: Path,
+    artifact_root: Path,
+    execution_context: BrowserQualityGateExecutionContext,
+    generated_at: str,
+) -> BrowserGateProbeRunnerResult:
+    signature_target = probe_runner
+    side_effect = getattr(probe_runner, "side_effect", None)
+    if callable(side_effect):
+        signature_target = side_effect
+
+    try:
+        signature = inspect.signature(signature_target)
+    except (TypeError, ValueError):
+        signature = None
+
+    if signature is None:
+        return probe_runner(
+            root=root,
+            artifact_root=artifact_root,
+            execution_context=execution_context,
+            generated_at=generated_at,
+        )
+
+    parameters = signature.parameters
+    supports_var_keyword = any(
+        parameter.kind is inspect.Parameter.VAR_KEYWORD
+        for parameter in parameters.values()
+    )
+    kwargs: dict[str, object] = {
+        "artifact_root": artifact_root,
+        "execution_context": execution_context,
+        "generated_at": generated_at,
+    }
+    if supports_var_keyword or "root" in parameters:
+        kwargs["root"] = root
+    return probe_runner(**kwargs)
+
+
+def _transient_probe_runner_result(
+    *,
+    gate_run_id: str,
+    artifact_root_rel: str,
+    diagnostic_code: str,
+    warning: str,
+) -> BrowserGateProbeRunnerResult:
+    return BrowserGateProbeRunnerResult(
+        runtime_status="failed_transient",
+        shared_capture=BrowserGateSharedRuntimeCapture(
+            gate_run_id=gate_run_id,
+            trace_artifact_ref=f"{artifact_root_rel}/{_PLAYWRIGHT_TRACE_REL_PATH}",
+            navigation_screenshot_ref=f"{artifact_root_rel}/{_PLAYWRIGHT_SCREENSHOT_REL_PATH}",
+            capture_status="capture_failed",
+            final_url="",
+            diagnostic_codes=[diagnostic_code],
+        ),
+        interaction_capture=BrowserGateInteractionProbeCapture(
+            gate_run_id=gate_run_id,
+            interaction_probe_id="primary-action",
+            artifact_refs=[f"{artifact_root_rel}/{_INTERACTION_SNAPSHOT_REL_PATH}"],
+            capture_status="capture_failed",
+            classification_candidate="transient_run_failure",
+            blocking_reason_codes=[diagnostic_code],
+        ),
+        diagnostic_codes=[diagnostic_code],
+        warnings=[warning],
+    )
+
+
+def _diagnostic_warning_messages(codes: Iterable[str]) -> list[str]:
+    messages: list[str] = []
+    for code in codes:
+        if code == "playwright_runtime_unavailable":
+            messages.append(
+                "Playwright runtime is not available on this host. Install Playwright and its browsers for this frontend host, then re-run `uv run ai-sdlc program browser-gate-probe --execute`."
+            )
+        elif code == "browser_launch_failed":
+            messages.append(
+                "Browser launch failed before the probe could complete. Restore the frontend browser runtime, then re-run `uv run ai-sdlc program browser-gate-probe --execute`."
+            )
+        elif code == "navigation_failed":
+            messages.append(
+                "Browser navigation failed before the probe could complete. Confirm the browser entry exists and is loadable, then re-run `uv run ai-sdlc program browser-gate-probe --execute`."
+            )
+        elif code == "browser_entry_unavailable":
+            messages.append(
+                "The managed frontend target did not resolve to a loadable browser entry. Materialize a browser entry such as `index.html`, or point the apply artifact at a navigable URL, then re-run `uv run ai-sdlc program browser-gate-probe --execute`."
+            )
+        elif code == "browser_probe_timeout":
+            messages.append(
+                "Browser gate probe timed out before completion. Confirm the frontend host is ready, then re-run `uv run ai-sdlc program browser-gate-probe --execute`."
+            )
+        elif code == "playwright_runner_script_missing":
+            messages.append(
+                "Playwright probe runner is missing from this installation. Restore the AI-SDLC runner assets, then re-run `uv run ai-sdlc program browser-gate-probe --execute`."
+            )
+        elif code == "playwright_probe_evidence_missing":
+            messages.append("Shared Playwright artifacts were not fully captured.")
+        elif code == "interaction_probe_evidence_missing":
+            messages.append("Interaction probe artifacts were not fully captured.")
+    return _unique_strings(messages)
+
+
+def _session_status(
+    overall_gate_status: str,
+    *,
+    smoke_receipt: BrowserProbeExecutionReceipt,
+    interaction_receipt: BrowserProbeExecutionReceipt,
+) -> str:
+    if smoke_receipt.classification_candidate == "transient_run_failure" or (
+        interaction_receipt.classification_candidate == "transient_run_failure"
+    ):
+        return "failed"
+    if overall_gate_status in {"passed", "passed_with_advisories"}:
+        return "completed"
+    return "incomplete"
+
+
 def _overall_gate_status(receipts: list[BrowserProbeExecutionReceipt]) -> str:
     verdicts = {receipt.classification_candidate for receipt in receipts}
     if {"evidence_missing", "transient_run_failure"} & verdicts:
@@ -456,7 +957,7 @@ def _receipt_verdict(receipts: list[BrowserProbeExecutionReceipt], check_name: s
     raise ValueError(f"missing receipt for check {check_name}")
 
 
-def _unique_strings(values) -> list[str]:
+def _unique_strings(values: Iterable[object]) -> list[str]:
     seen: set[str] = set()
     ordered: list[str] = []
     for value in values:

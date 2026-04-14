@@ -11,6 +11,11 @@ from typer.testing import CliRunner
 
 from ai_sdlc.cli.main import app
 from ai_sdlc.core.config import save_project_config
+from ai_sdlc.core.frontend_browser_gate_runtime import (
+    BrowserGateInteractionProbeCapture,
+    BrowserGateProbeRunnerResult,
+    BrowserGateSharedRuntimeCapture,
+)
 from ai_sdlc.core.frontend_contract_drift import PageImplementationObservation
 from ai_sdlc.core.frontend_contract_observation_provider import (
     build_frontend_contract_observation_artifact,
@@ -552,6 +557,63 @@ class TestCliProgram:
             / "frontend-browser-gate"
             / "gate-run-preview"
         ).exists()
+
+    def test_program_browser_gate_probe_execute_surfaces_plain_language_runner_failure(
+        self, initialized_project_dir: Path
+    ) -> None:
+        root = initialized_project_dir
+        save_project_config(root, ProjectConfig(adapter_ingress_state="verified_loaded"))
+        _write_frontend_solution_confirmation_artifacts(root)
+        _write_frontend_visual_a11y_evidence(root / "specs" / "001-auth")
+        request_rel = _write_artifact_generate_apply_request(root)
+
+        def _runner(*, artifact_root: Path, execution_context, generated_at: str):
+            return BrowserGateProbeRunnerResult(
+                runtime_status="failed_transient",
+                shared_capture=BrowserGateSharedRuntimeCapture(
+                    gate_run_id=execution_context.gate_run_id,
+                    trace_artifact_ref="",
+                    navigation_screenshot_ref="",
+                    capture_status="capture_failed",
+                    final_url="",
+                    anchor_refs=[],
+                    diagnostic_codes=["playwright_runtime_unavailable"],
+                ),
+                interaction_capture=BrowserGateInteractionProbeCapture(
+                    gate_run_id=execution_context.gate_run_id,
+                    interaction_probe_id="primary-action",
+                    artifact_refs=[],
+                    capture_status="capture_failed",
+                    classification_candidate="transient_run_failure",
+                    blocking_reason_codes=["playwright_runtime_unavailable"],
+                    anchor_refs=[],
+                ),
+                diagnostic_codes=["playwright_runtime_unavailable"],
+                warnings=["Playwright runtime is not available on this host."],
+            )
+
+        with patch("ai_sdlc.cli.program_cmd.find_project_root", return_value=root), patch(
+            "ai_sdlc.core.frontend_browser_gate_runtime.run_default_browser_gate_probe",
+            side_effect=_runner,
+        ):
+            apply_result = runner.invoke(
+                app,
+                [
+                    "program",
+                    "managed-delivery-apply",
+                    "--request",
+                    request_rel,
+                    "--execute",
+                    "--yes",
+                ],
+            )
+            probe_result = runner.invoke(app, ["program", "browser-gate-probe", "--execute"])
+
+        assert apply_result.exit_code == 0
+        assert probe_result.exit_code == 0
+        assert "execute gate state: recheck_required" in probe_result.output
+        assert "Playwright runtime is not available on this host." in probe_result.output
+        assert "next command: uv run ai-sdlc program browser-gate-probe --execute" in probe_result.output
 
     def test_program_remediate_dry_run_surfaces_browser_gate_follow_up_command(
         self, initialized_project_dir: Path

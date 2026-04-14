@@ -15,6 +15,7 @@ import yaml
 from ai_sdlc.branch.git_client import GitClient, GitError
 from ai_sdlc.core.config import YamlStore, load_project_config
 from ai_sdlc.core.frontend_browser_gate_runtime import (
+    BrowserGateProbeRunner,
     build_browser_quality_gate_execution_context,
     materialize_browser_gate_probe_runtime,
 )
@@ -1031,9 +1032,15 @@ class ProgramFrontendEvidenceClassSyncResult:
 class ProgramService:
     """Program-level helper service used by CLI `program` commands."""
 
-    def __init__(self, root: Path, manifest_path: Path | None = None) -> None:
+    def __init__(
+        self,
+        root: Path,
+        manifest_path: Path | None = None,
+        browser_gate_probe_runner: BrowserGateProbeRunner | None = None,
+    ) -> None:
         self.root = root.resolve()
         self.manifest_path = manifest_path or (self.root / "program-manifest.yaml")
+        self.browser_gate_probe_runner = browser_gate_probe_runner
 
     def load_manifest(self) -> ProgramManifest:
         return YamlStore.load(self.manifest_path, ProgramManifest)
@@ -2346,6 +2353,7 @@ class ProgramService:
             visual_a11y_evidence_artifact=visual_a11y_evidence,
             generated_at="preview",
             write_artifacts=False,
+            execute_probe=False,
         )
         return ProgramFrontendBrowserGateProbeRequest(
             required=True,
@@ -2417,7 +2425,10 @@ class ProgramService:
             apply_artifact_path=apply_artifact_rel,
             visual_a11y_evidence_artifact=visual_a11y_evidence,
             generated_at=effective_generated_at,
+            probe_runner=self.browser_gate_probe_runner,
+            execute_probe=True,
         )
+        result_warnings = _unique_strings([*effective_request.warnings, *session.warnings])
         artifact_path = output_path or (
             self.root / PROGRAM_FRONTEND_BROWSER_GATE_ARTIFACT_REL_PATH
         )
@@ -2439,7 +2450,7 @@ class ProgramService:
             "check_receipts": [receipt.model_dump(mode="json") for receipt in receipts],
             "bundle_input": bundle.model_dump(mode="json"),
             "overall_gate_status": bundle.overall_gate_status,
-            "warnings": list(effective_request.warnings),
+            "warnings": result_warnings,
             "source_linkage": {
                 **context.source_linkage_refs,
                 "frontend_browser_gate_artifact_path": relative_artifact_path,
@@ -2472,7 +2483,7 @@ class ProgramService:
             decision_reason=execute_decision.decision_reason,
             recommended_next_command=recommended_next_command,
             required_probe_set=list(context.required_probe_set),
-            warnings=list(effective_request.warnings),
+            warnings=result_warnings,
         )
 
     def build_frontend_solution_confirmation(

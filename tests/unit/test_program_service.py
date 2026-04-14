@@ -10,6 +10,11 @@ import yaml
 
 from ai_sdlc.context.state import save_checkpoint
 from ai_sdlc.core.config import save_project_config
+from ai_sdlc.core.frontend_browser_gate_runtime import (
+    BrowserGateInteractionProbeCapture,
+    BrowserGateProbeRunnerResult,
+    BrowserGateSharedRuntimeCapture,
+)
 from ai_sdlc.core.frontend_contract_drift import PageImplementationObservation
 from ai_sdlc.core.frontend_contract_observation_provider import (
     build_frontend_contract_observation_artifact,
@@ -1342,6 +1347,88 @@ def test_execute_frontend_remediation_runbook_stays_incomplete_when_browser_gate
 
     assert result.passed is False
     assert result.blockers
+
+
+def test_execute_frontend_browser_gate_probe_treats_runner_success_with_missing_artifact_as_recheck_required(
+    initialized_project_dir: Path,
+) -> None:
+    root = initialized_project_dir
+    save_project_config(root, ProjectConfig(adapter_ingress_state="verified_loaded"))
+    _write_frontend_solution_confirmation_artifacts(root)
+    _write_frontend_visual_a11y_evidence(
+        root / "specs" / "001-auth",
+        [
+            FrontendVisualA11yEvidenceEvaluation(
+                evaluation_id="001-auth-visual-a11y-pass",
+                target_id="page:user-create",
+                surface_id="page:user-create",
+                outcome="pass",
+                report_type="coverage-report",
+                severity="info",
+                location_anchor="specs",
+                quality_hint="fixture evidence",
+                changed_scope_explanation="143 pass fixture",
+            )
+        ],
+    )
+    request_path = _write_artifact_generate_apply_request(root)
+
+    def _runner(*, artifact_root: Path, execution_context, generated_at: str):
+        screenshot_path = artifact_root / "shared-runtime" / "navigation-screenshot.png"
+        interaction_path = artifact_root / "interaction" / "interaction-snapshot.json"
+        screenshot_path.parent.mkdir(parents=True, exist_ok=True)
+        interaction_path.parent.mkdir(parents=True, exist_ok=True)
+        screenshot_path.write_bytes(b"png")
+        interaction_path.write_text('{"interaction":"ok"}\n', encoding="utf-8")
+        return BrowserGateProbeRunnerResult(
+            runtime_status="completed",
+            shared_capture=BrowserGateSharedRuntimeCapture(
+                gate_run_id=execution_context.gate_run_id,
+                trace_artifact_ref=str(
+                    (artifact_root / "shared-runtime" / "playwright-trace.zip").relative_to(
+                        root
+                    )
+                ),
+                navigation_screenshot_ref=str(screenshot_path.relative_to(root)),
+                capture_status="captured",
+                final_url="http://localhost:4173/",
+                anchor_refs=["page:landing"],
+                diagnostic_codes=[],
+            ),
+            interaction_capture=BrowserGateInteractionProbeCapture(
+                gate_run_id=execution_context.gate_run_id,
+                interaction_probe_id="primary-action",
+                artifact_refs=[str(interaction_path.relative_to(root))],
+                capture_status="captured",
+                classification_candidate="pass",
+                blocking_reason_codes=[],
+                anchor_refs=["interaction:primary-action"],
+            ),
+            diagnostic_codes=[],
+            warnings=[],
+        )
+
+    svc = ProgramService(root, browser_gate_probe_runner=_runner)
+    apply_request = svc.build_frontend_managed_delivery_apply_request(request_path)
+    apply_result = svc.execute_frontend_managed_delivery_apply(
+        request_path,
+        request=apply_request,
+        confirmed=True,
+    )
+    svc.write_frontend_managed_delivery_apply_artifact(
+        request_path,
+        request=apply_request,
+        result=apply_result,
+        generated_at="2026-04-14T15:00:00Z",
+    )
+    probe_request = svc.build_frontend_browser_gate_probe_request()
+    probe_result = svc.execute_frontend_browser_gate_probe(
+        request=probe_request,
+        generated_at="2026-04-14T15:05:00Z",
+    )
+
+    assert probe_result.execute_gate_state == "recheck_required"
+    assert probe_result.decision_reason == "evidence_missing"
 
 
 def test_validate_manifest_cycle(tmp_path: Path) -> None:

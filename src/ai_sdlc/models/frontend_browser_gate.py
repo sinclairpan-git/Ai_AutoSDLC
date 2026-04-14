@@ -56,7 +56,47 @@ class BrowserGateProbeRuntimeSession(FrontendBrowserGateModel):
     started_at: str
     updated_at: str
     finished_at: str = ""
+    warnings: list[str] = Field(default_factory=list)
     source_linkage_refs: dict[str, str] = Field(default_factory=dict)
+
+
+class BrowserGateSharedRuntimeCapture(FrontendBrowserGateModel):
+    """Shared browser bootstrap capture returned by the real probe runner."""
+
+    gate_run_id: str
+    trace_artifact_ref: str
+    navigation_screenshot_ref: str
+    capture_status: Literal["captured", "missing", "capture_failed"]
+    final_url: str
+    anchor_refs: list[str] = Field(default_factory=list)
+    diagnostic_codes: list[str] = Field(default_factory=list)
+
+
+class BrowserGateInteractionProbeCapture(FrontendBrowserGateModel):
+    """Bounded interaction probe capture returned by the real probe runner."""
+
+    gate_run_id: str
+    interaction_probe_id: str
+    artifact_refs: list[str] = Field(default_factory=list)
+    capture_status: Literal["captured", "missing", "capture_failed"]
+    classification_candidate: Literal[
+        "pass",
+        "evidence_missing",
+        "transient_run_failure",
+        "actual_quality_blocker",
+    ]
+    blocking_reason_codes: list[str] = Field(default_factory=list)
+    anchor_refs: list[str] = Field(default_factory=list)
+
+
+class BrowserGateProbeRunnerResult(FrontendBrowserGateModel):
+    """Structured stdout contract between the probe runner and Python runtime."""
+
+    runtime_status: Literal["completed", "incomplete", "failed_transient"]
+    shared_capture: BrowserGateSharedRuntimeCapture
+    interaction_capture: BrowserGateInteractionProbeCapture
+    diagnostic_codes: list[str] = Field(default_factory=list)
+    warnings: list[str] = Field(default_factory=list)
 
 
 class BrowserProbeArtifactRecord(FrontendBrowserGateModel):
@@ -132,4 +172,3 @@ class BrowserQualityBundleMaterializationInput(FrontendBrowserGateModel):
     advisory_reason_codes: list[str] = Field(default_factory=list)
     generated_at: str
     source_linkage_refs: dict[str, str] = Field(default_factory=dict)
-
