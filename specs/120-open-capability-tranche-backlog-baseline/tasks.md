@@ -410,16 +410,16 @@ related_doc:
 - **任务编号**：T44
 - **交付流**：`S1`
 - **来源范围**：`007-008`
-- **当前状态**：`formal_only`
+- **当前状态**：`partial`
+- **派生状态**：已派生 `139-branch-lifecycle-direct-formal-runtime-closure-baseline`；`139` 的 bounded focused verification 已通过，installed-wheel smoke 因网络限制待补跑；当前保持 `partial` 仅表示 tranche/root closure 保守态
 - **缺失 carrier**：
-  - branch lifecycle bounded runtime
-  - direct-formal scaffold / CLI / tests closure
-  - branch guard 与 direct-formal entry 的 end-to-end repo truth
+  - 无；branch lifecycle bounded runtime、direct-formal scaffold / CLI / tests closure 与 branch guard / direct-formal entry 的 end-to-end repo truth 已由 `139` 正式收束为现有 runtime closure
 - **建议文件面**：`src/ai_sdlc/core/*branch*`、`src/ai_sdlc/cli/*workitem*`、`src/ai_sdlc/cli/*formal*`、对应 tests
 - **依赖**：无；可与 T43 并行，但不建议先于 `S6/S7`
 - **验收标准**：
   1. `007-008` 不再只是 baseline，而形成真实 repo mutation/entry runtime
   2. branch lifecycle 与 direct-formal entry 不再只靠约定或局部 guard
   3. formal entry 与 branch truth 能为后续 work item 主链提供稳定边界
-- **验证**：`uv run pytest tests/unit/test_branch* tests/integration/test_cli_*workitem* tests/integration/test_cli_init.py -q`
-- **建议派生工单**：implementation carrier
+- **验证**：`uv run pytest tests/unit/test_branch_inventory.py tests/unit/test_workitem_scaffold.py tests/unit/test_command_names.py tests/unit/test_verify_constraints.py tests/integration/test_cli_workitem_init.py tests/integration/test_cli_workitem_close_check.py tests/integration/test_cli_workitem_truth_check.py tests/integration/test_cli_workitem_plan_check.py tests/integration/test_cli_workitem_link.py tests/integration/test_cli_verify_constraints.py tests/integration/test_cli_status.py tests/integration/test_cli_doctor.py tests/integration/test_cli_init.py -q -k 'not installed_wheel_runtime'`
+- **环境备注**：`tests/integration/test_cli_workitem_init.py::TestCliWorkitemInit::test_workitem_init_succeeds_from_installed_wheel_runtime` 依赖外网拉取 `hatchling`，当前环境受限，待网络条件满足后补跑
+- **建议派生工单**：`139-branch-lifecycle-direct-formal-runtime-closure-baseline`

@@ -601,3 +601,52 @@
 #### 2.70 批次结论
 
 - `120/T43` 现在已经从 formal carrier 推进到真实 runtime closure；下一批可转向 `T44` branch lifecycle / direct formal entry。
+
+### Batch 2026-04-14-021 | Derive T44 implementation carrier
+
+#### 2.71 批次范围
+
+- 覆盖范围：`tasks.md`
+- 覆盖目标：
+  - 将 `T44` 的建议派生工单从抽象 implementation carrier 更新为正式 `139`
+  - 固定 `T44` 的边界只覆盖 `007-008` branch lifecycle / direct-formal runtime closure
+
+#### 2.72 任务记录
+
+##### T120-DOC-27 | 回填 `T44` 派生结果
+
+- 改动范围：`tasks.md`
+- 改动内容：
+  - 将 `Task 4.4 Branch Lifecycle And Direct Formal Entry Closure` 的建议派生工单更新为 `139-branch-lifecycle-direct-formal-runtime-closure-baseline`
+  - 明确 `T44` 的 runtime closure 只覆盖 `007-008` branch lifecycle / direct-formal 主线，而不扩张到其他 tranche
+- 新增/调整的测试：无
+- 是否符合任务目标：是
+
+#### 2.73 批次结论
+
+- `120/T44` 现在已经有正式 implementation carrier；branch lifecycle / direct-formal runtime 不再停留在抽象占位。
+
+### Batch 2026-04-14-022 | Close T44 runtime closure
+
+#### 2.74 批次范围
+
+- 覆盖范围：`tasks.md`
+- 覆盖目标：
+  - 将 `T44` 从 `formal_only` 推进到 `partial`
+  - 回填 `139` 已完成 focused verification，并固定当前 closure 边界
+
+#### 2.75 任务记录
+
+##### T120-DOC-28 | 回填 `T44` 实现结果
+
+- 改动范围：`tasks.md`
+- 改动内容：
+  - 将 `Task 4.4 Branch Lifecycle And Direct Formal Entry Closure` 的当前状态从 `formal_only` 更新为 `partial`
+  - 明确 `139` 的 bounded focused verification 已通过，且当前仅有 network-limited installed-wheel smoke 待网络条件满足后补跑
+  - 明确 `T44` 当前保持 `partial` 仅表示 tranche/root closure 保守态，不表示 `139` 仍缺实现 carrier
+- 新增/调整的测试：无
+- 是否符合任务目标：是
+
+#### 2.76 批次结论
+
+- `120/T44` 现在已经从 formal carrier 推进到真实 runtime closure；下一批可转向后续 tranche。
