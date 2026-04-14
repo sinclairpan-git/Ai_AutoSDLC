@@ -227,6 +227,7 @@ related_doc:
 - **交付流**：`S8`
 - **来源范围**：`087`、`089`、`090`、`091`、`092`、`109-113`
 - **当前状态**：`partial`
+- **派生状态**：已派生 `130-frontend-evidence-class-writeback-close-check-runtime-closure-baseline`；在 `130` focused verification 通过且下游 `T25` 收口前仍保持 `partial`
 - **缺失 carrier**：
   - explicit program-level mirror write surface
   - close-check late resurfacing 的全量 closure
@@ -238,7 +239,7 @@ related_doc:
   2. `091` 从“首批 implementation slice 进行中”推进到完整 close-check closure
   3. evidence-class lifecycle 从 authoring/validate/status/close-check 到 writeback 形成单链
 - **验证**：`uv run pytest tests/integration/test_cli_workitem_close_check.py tests/integration/test_cli_program.py -q`
-- **建议派生工单**：implementation carrier
+- **建议派生工单**：`130-frontend-evidence-class-writeback-close-check-runtime-closure-baseline`
 
 ---
 

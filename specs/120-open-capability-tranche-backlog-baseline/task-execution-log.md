@@ -262,3 +262,26 @@
 #### 2.28 批次结论
 
 - `120/T23` 现在已经有正式 implementation carrier，evidence-class 的 verify/validate/status closure 不再停留在抽象占位。
+
+### Batch 2026-04-14-007 | Derive T24 implementation carrier
+
+#### 2.29 批次范围
+
+- 覆盖范围：`tasks.md`
+- 覆盖目标：
+  - 将 `T24` 的建议派生工单从抽象 implementation carrier 更新为正式 `130`
+
+#### 2.30 任务记录
+
+##### T120-DOC-13 | 回填 `T24` 派生结果
+
+- 改动范围：`tasks.md`
+- 改动内容：
+  - 将 `Task 2.4 Evidence-Class Mirror Writeback And Close-Check Completion` 的建议派生工单更新为 `130-frontend-evidence-class-writeback-close-check-runtime-closure-baseline`
+  - 明确 `T24` 在 `130` focused verification 通过且下游 `T25` 收口前继续保持 `partial`
+- 新增/调整的测试：无
+- 是否符合任务目标：是
+
+#### 2.31 批次结论
+
+- `120/T24` 现在已经有正式 implementation carrier，evidence-class 的 writeback/close-check/backfill closure 不再停留在抽象占位。
