@@ -311,6 +311,7 @@ related_doc:
 - **交付流**：`S4`
 - **来源范围**：`041-049`
 - **当前状态**：`capability_open`
+- **派生状态**：已派生 `134-frontend-program-final-proof-publication-archive-runtime-closure-baseline`；在 `134` focused verification 通过且下游 `T35` 收口前仍保持 `capability_open`
 - **缺失 carrier**：
   - final proof publication runtime
   - closure -> archive orchestration runtime
@@ -322,7 +323,7 @@ related_doc:
   2. `047` 留给下游的 archive artifact persistence 形成真实 runtime
   3. thread archive truth 为 cleanup 提供稳定输入
 - **验证**：`uv run pytest tests/unit/test_program_service.py tests/integration/test_cli_program.py -q`
-- **建议派生工单**：implementation carrier
+- **建议派生工单**：`134-frontend-program-final-proof-publication-archive-runtime-closure-baseline`
 
 ### Task 3.5 Bounded Cleanup Actualization
 

@@ -384,3 +384,28 @@
 #### 2.43 批次结论
 
 - `120/T33` 现在已经从抽象 carrier 推进到真实 runtime closure；`T34` 成为下一批明确下游。
+
+### Batch 2026-04-14-012 | Derive T34 implementation carrier
+
+#### 2.44 批次范围
+
+- 覆盖范围：`tasks.md`
+- 覆盖目标：
+  - 将 `T34` 的建议派生工单从抽象 implementation carrier 更新为正式 `134`
+  - 固定 `T34` 与 `T35` 的边界，避免 proof/publication/archive 与 cleanup 主线混线
+
+#### 2.45 任务记录
+
+##### T120-DOC-18 | 回填 `T34` 派生结果
+
+- 改动范围：`tasks.md`
+- 改动内容：
+  - 将 `Task 3.4 Final Proof Publication And Archive Runtime` 的建议派生工单更新为 `134-frontend-program-final-proof-publication-archive-runtime-closure-baseline`
+  - 明确 `T34` 在 `134` focused verification 通过且下游 `T35` 收口前继续保持 `capability_open`
+  - 固定 `T34` 的下游边界只前推到 `T35`
+- 新增/调整的测试：无
+- 是否符合任务目标：是
+
+#### 2.46 批次结论
+
+- `120/T34` 现在已经有正式 implementation carrier；final proof publication / archive 主线的真实实现缺口已被固定到 `134`。
