@@ -251,7 +251,7 @@ related_doc:
 - **交付流**：`S3`
 - **来源范围**：`019-024`
 - **当前状态**：`partial`
-- **派生状态**：已派生 `131-frontend-program-execute-remediation-materialization-runtime-closure-baseline`；在 `131` focused verification 通过且下游 `T32/T41` 收口前仍保持 `partial`
+- **派生状态**：已派生 `131-frontend-program-execute-remediation-materialization-runtime-closure-baseline`；在 `131` focused verification 通过且下游 `T41` 收口前仍保持 `partial`
 - **缺失 carrier**：
   - program execute frontend gate 的 end-to-end runtime
   - bounded remediation execute / writeback 的真实执行链
@@ -270,7 +270,8 @@ related_doc:
 - **任务编号**：T32
 - **交付流**：`S3`
 - **来源范围**：`025-031`
-- **当前状态**：`capability_open`
+- **当前状态**：`partial`
+- **派生状态**：已派生 `132-frontend-program-provider-patch-writeback-runtime-closure-baseline`；在 `132` focused verification 通过且下游 `T33` 收口前仍保持 `partial`
 - **缺失 carrier**：
   - provider invocation protocol/runtime
   - patch handoff 到 patch apply 的真实 apply engine
@@ -282,7 +283,7 @@ related_doc:
   2. `028-031` 不再停留在 handoff/apply/writeback baseline
   3. cross-spec writeback 不再只是 artifact 契约
 - **验证**：`uv run pytest tests/unit/test_program_service.py tests/integration/test_cli_program.py -q`
-- **建议派生工单**：implementation carrier
+- **建议派生工单**：`132-frontend-program-provider-patch-writeback-runtime-closure-baseline`
 
 ### Task 3.3 Registry, Governance And Persistence Chain
 

@@ -131,9 +131,13 @@ PROGRAM_FRONTEND_PROVIDER_RUNTIME_ARTIFACT_REL_PATH = (
 PROGRAM_FRONTEND_PROVIDER_PATCH_APPLY_ARTIFACT_REL_PATH = (
     ".ai-sdlc/memory/frontend-provider-patch-apply/latest.yaml"
 )
+PROGRAM_FRONTEND_PROVIDER_PATCH_APPLY_STEP_DIR = (
+    ".ai-sdlc/memory/frontend-provider-patch-apply/steps"
+)
 PROGRAM_FRONTEND_CROSS_SPEC_WRITEBACK_ARTIFACT_REL_PATH = (
     ".ai-sdlc/memory/frontend-cross-spec-writeback/latest.yaml"
 )
+PROGRAM_FRONTEND_CROSS_SPEC_WRITEBACK_FILENAME = "frontend-provider-writeback.md"
 PROGRAM_FRONTEND_GUARDED_REGISTRY_ARTIFACT_REL_PATH = (
     ".ai-sdlc/memory/frontend-guarded-registry/latest.yaml"
 )
@@ -2642,7 +2646,7 @@ class ProgramService:
         request: ProgramFrontendProviderRuntimeRequest | None = None,
         confirmed: bool = False,
     ) -> ProgramFrontendProviderRuntimeResult:
-        """Execute the guarded provider runtime without invoking provider/code rewrite."""
+        """Execute the guarded provider runtime with bounded patch-plan generation."""
         effective_request = request or self.build_frontend_provider_runtime_request(
             manifest
         )
@@ -2691,21 +2695,51 @@ class ProgramService:
                     "invocation_result": "blocked",
                 },
             )
+        patch_summaries: list[str] = []
+        remaining_blockers: list[str] = []
+        warnings = list(effective_request.warnings)
+
+        for step in effective_request.steps:
+            if not step.spec_id:
+                remaining_blockers.append(
+                    "provider runtime step missing spec_id; patch plan not generated"
+                )
+                continue
+            pending_inputs = _unique_strings(list(step.pending_inputs))
+            patch_summaries.append(
+                "generated provider patch plan for "
+                f"{step.spec_id} (pending_inputs={','.join(pending_inputs) or 'none'})"
+            )
+
+        if patch_summaries and not remaining_blockers:
+            provider_execution_state = "completed"
+            invocation_result = "patches_generated"
+            passed = True
+        elif patch_summaries:
+            provider_execution_state = "partial"
+            invocation_result = "patches_generated"
+            passed = False
+        else:
+            provider_execution_state = "failed"
+            invocation_result = "failed"
+            passed = False
+            if not remaining_blockers:
+                remaining_blockers.append(
+                    "provider runtime generated no patch plans from provider handoff payload"
+                )
+
         return ProgramFrontendProviderRuntimeResult(
-            passed=False,
+            passed=passed,
             confirmed=True,
-            provider_execution_state="deferred",
-            invocation_result="deferred",
-            patch_summaries=[PROGRAM_FRONTEND_PROVIDER_RUNTIME_DEFERRED_SUMMARY],
-            remaining_blockers=list(effective_request.remaining_blockers),
-            warnings=[
-                *effective_request.warnings,
-                "guarded provider runtime baseline does not invoke provider yet",
-            ],
+            provider_execution_state=provider_execution_state,
+            invocation_result=invocation_result,
+            patch_summaries=patch_summaries,
+            remaining_blockers=remaining_blockers,
+            warnings=warnings,
             source_linkage={
                 **dict(effective_request.source_linkage),
-                "provider_runtime_state": "deferred",
-                "invocation_result": "deferred",
+                "provider_runtime_state": provider_execution_state,
+                "invocation_result": invocation_result,
             },
         )
 
@@ -2893,7 +2927,7 @@ class ProgramService:
         request: ProgramFrontendProviderPatchApplyRequest | None = None,
         confirmed: bool = False,
     ) -> ProgramFrontendProviderPatchApplyResult:
-        """Execute the guarded patch apply baseline without writing files yet."""
+        """Execute the guarded patch apply and write bounded step files."""
         effective_request = request or self.build_frontend_provider_patch_apply_request(
             manifest
         )
@@ -2942,22 +2976,90 @@ class ProgramService:
                     "apply_result": "blocked",
                 },
             )
+        written_paths: list[str] = []
+        remaining_blockers: list[str] = []
+        warnings = list(effective_request.warnings)
+        executable_steps = 0
+        steps_root = (
+            self.root / PROGRAM_FRONTEND_PROVIDER_PATCH_APPLY_STEP_DIR
+        ).resolve()
+
+        for step in effective_request.steps:
+            if not step.spec_id:
+                remaining_blockers.append(
+                    "provider patch apply step missing spec_id; apply skipped"
+                )
+                continue
+            if Path(step.spec_id).name != step.spec_id or step.spec_id in {".", ".."}:
+                remaining_blockers.append(
+                    "provider patch apply step "
+                    f"{step.spec_id} is not a simple spec identifier; apply skipped"
+                )
+                continue
+            if step.patch_availability_state not in {"patches_generated", "completed"}:
+                remaining_blockers.append(
+                    "provider patch apply step "
+                    f"{step.spec_id} not ready (patch_availability_state={step.patch_availability_state or 'unknown'})"
+                )
+                continue
+            target_path = (steps_root / f"{step.spec_id}.md").resolve()
+            try:
+                target_path.relative_to(steps_root)
+            except ValueError:
+                remaining_blockers.append(
+                    "provider patch apply step "
+                    f"{step.spec_id} resolves outside bounded step directory; apply skipped"
+                )
+                continue
+            executable_steps += 1
+            target_path.parent.mkdir(parents=True, exist_ok=True)
+            target_path.write_text(
+                self._render_frontend_provider_patch_apply_step_content(
+                    request=effective_request,
+                    step=step,
+                ),
+                encoding="utf-8",
+            )
+            written_paths.append(_relative_to_root_or_str(self.root, target_path))
+
+        if executable_steps == 0:
+            patch_apply_state = "blocked"
+            apply_result = "blocked"
+            apply_summaries = [
+                "no executable provider patch files available from readonly patch handoff"
+            ]
+        elif not remaining_blockers and len(written_paths) == executable_steps:
+            patch_apply_state = "completed"
+            apply_result = "applied"
+            apply_summaries = [
+                f"applied {len(written_paths)} provider patch file(s) from readonly patch handoff"
+            ]
+        elif written_paths:
+            patch_apply_state = "partial"
+            apply_result = "partial"
+            apply_summaries = [
+                f"applied {len(written_paths)} of {executable_steps} provider patch file(s) from readonly patch handoff"
+            ]
+        else:
+            patch_apply_state = "failed"
+            apply_result = "failed"
+            apply_summaries = [
+                f"applied 0 of {executable_steps} provider patch file(s) from readonly patch handoff"
+            ]
+
         return ProgramFrontendProviderPatchApplyResult(
-            passed=False,
+            passed=apply_result == "applied",
             confirmed=True,
-            patch_apply_state="deferred",
-            apply_result="deferred",
-            apply_summaries=[PROGRAM_FRONTEND_PATCH_APPLY_DEFERRED_SUMMARY],
-            written_paths=[],
-            remaining_blockers=list(effective_request.remaining_blockers),
-            warnings=[
-                *effective_request.warnings,
-                "guarded patch apply baseline does not apply patches yet",
-            ],
+            patch_apply_state=patch_apply_state,
+            apply_result=apply_result,
+            apply_summaries=apply_summaries,
+            written_paths=_unique_strings(written_paths),
+            remaining_blockers=_unique_strings(remaining_blockers),
+            warnings=warnings,
             source_linkage={
                 **dict(effective_request.source_linkage),
-                "patch_apply_state": "deferred",
-                "apply_result": "deferred",
+                "patch_apply_state": patch_apply_state,
+                "apply_result": apply_result,
             },
         )
 
@@ -3103,7 +3205,7 @@ class ProgramService:
         request: ProgramFrontendCrossSpecWritebackRequest | None = None,
         confirmed: bool = False,
     ) -> ProgramFrontendCrossSpecWritebackResult:
-        """Execute the guarded cross-spec writeback baseline without writing files yet."""
+        """Execute the guarded cross-spec writeback and write bounded receipts."""
         effective_request = request or self.build_frontend_cross_spec_writeback_request(
             manifest
         )
@@ -3155,24 +3257,121 @@ class ProgramService:
                     "orchestration_result": "blocked",
                 },
             )
+        if effective_request.apply_result not in {"applied", "completed"}:
+            return ProgramFrontendCrossSpecWritebackResult(
+                passed=False,
+                confirmed=True,
+                writeback_state="blocked",
+                orchestration_result="blocked",
+                written_paths=[],
+                remaining_blockers=_unique_strings(
+                    [
+                        *effective_request.remaining_blockers,
+                        "cross-spec writeback requires applied patch artifact "
+                        f"(apply_result={effective_request.apply_result or 'unknown'})",
+                    ]
+                ),
+                warnings=list(effective_request.warnings),
+                source_linkage={
+                    **dict(effective_request.source_linkage),
+                    "cross_spec_writeback_state": "blocked",
+                    "orchestration_result": "blocked",
+                },
+            )
+        written_paths: list[str] = []
+        remaining_blockers: list[str] = list(effective_request.remaining_blockers)
+        warnings = list(effective_request.warnings)
+        executable_steps = 0
+        spec_by_id = {spec.id: spec for spec in manifest.specs}
+
+        for step in effective_request.steps:
+            if not step.spec_id:
+                remaining_blockers.append(
+                    "cross-spec writeback step missing spec_id; writeback skipped"
+                )
+                continue
+            manifest_spec = spec_by_id.get(step.spec_id)
+            if manifest_spec is None:
+                remaining_blockers.append(
+                    f"cross-spec writeback step {step.spec_id} missing manifest spec"
+                )
+                continue
+            path_text = str(step.path).strip()
+            if not path_text:
+                remaining_blockers.append(
+                    f"cross-spec writeback step {step.spec_id} missing spec path"
+                )
+                continue
+            expected_spec_dir = self._resolve_project_relative_path(manifest_spec.path)
+            spec_dir = (self.root / path_text).resolve()
+            try:
+                spec_dir.relative_to(self.root)
+            except ValueError:
+                remaining_blockers.append(
+                    "cross-spec writeback step "
+                    f"{step.spec_id} resolves outside workspace root: {path_text}"
+                )
+                continue
+            if spec_dir != expected_spec_dir:
+                remaining_blockers.append(
+                    "cross-spec writeback step "
+                    f"{step.spec_id} path does not match manifest spec path: {path_text}"
+                )
+                continue
+            if not spec_dir.is_dir():
+                remaining_blockers.append(
+                    f"cross-spec writeback step {step.spec_id} missing spec directory: {path_text}"
+                )
+                continue
+            executable_steps += 1
+            target_path = spec_dir / PROGRAM_FRONTEND_CROSS_SPEC_WRITEBACK_FILENAME
+            target_path.write_text(
+                self._render_frontend_cross_spec_writeback_content(
+                    request=effective_request,
+                    step=step,
+                ),
+                encoding="utf-8",
+            )
+            written_paths.append(_relative_to_root_or_str(self.root, target_path))
+
+        if executable_steps == 0:
+            writeback_state = "blocked"
+            orchestration_result = "blocked"
+            orchestration_summaries = [
+                "no executable cross-spec writeback targets available from canonical patch apply artifact"
+            ]
+        elif not remaining_blockers and len(written_paths) == executable_steps:
+            writeback_state = "completed"
+            orchestration_result = "completed"
+            orchestration_summaries = [
+                f"wrote {len(written_paths)} cross-spec writeback file(s) from canonical patch apply artifact"
+            ]
+        elif written_paths:
+            writeback_state = "partial"
+            orchestration_result = "partial"
+            orchestration_summaries = [
+                f"wrote {len(written_paths)} of {executable_steps} cross-spec writeback file(s) from canonical patch apply artifact"
+            ]
+        else:
+            writeback_state = "failed"
+            orchestration_result = "failed"
+            orchestration_summaries = [
+                f"wrote 0 of {executable_steps} cross-spec writeback file(s) from canonical patch apply artifact"
+            ]
+
         return ProgramFrontendCrossSpecWritebackResult(
-            passed=False,
+            passed=orchestration_result == "completed",
             confirmed=True,
-            writeback_state="deferred",
-            orchestration_result="deferred",
-            orchestration_summaries=[
-                PROGRAM_FRONTEND_CROSS_SPEC_WRITEBACK_DEFERRED_SUMMARY
-            ],
-            written_paths=[],
-            remaining_blockers=list(effective_request.remaining_blockers),
-            warnings=[
-                *effective_request.warnings,
-                "guarded cross-spec writeback baseline does not execute writes yet",
-            ],
+            writeback_state=writeback_state,
+            orchestration_result=orchestration_result,
+            orchestration_summaries=orchestration_summaries,
+            written_paths=_unique_strings(written_paths),
+            remaining_blockers=_unique_strings(remaining_blockers),
+            warnings=warnings,
             source_linkage={
                 **dict(effective_request.source_linkage),
-                "cross_spec_writeback_state": "deferred",
-                "orchestration_result": "deferred",
+                "cross_spec_writeback_state": writeback_state,
+                "orchestration_result": orchestration_result,
             },
         )
 
@@ -3218,6 +3417,111 @@ class ProgramService:
             encoding="utf-8",
         )
         return artifact_path
+
+    def _render_frontend_provider_patch_apply_step_content(
+        self,
+        *,
+        request: ProgramFrontendProviderPatchApplyRequest,
+        step: ProgramFrontendProviderPatchApplyRequestStep,
+    ) -> str:
+        lines = [
+            f"# Frontend Provider Patch Apply Step: {step.spec_id}",
+            "",
+            f"- Manifest: `{_relative_to_root_or_str(self.root, self.manifest_path)}`",
+            f"- Source handoff: `{request.handoff_source_path}`",
+            f"- Patch availability: `{step.patch_availability_state}`",
+            f"- Source generated_at: `{request.handoff_generated_at or 'unknown'}`",
+            "",
+            "## Pending Inputs",
+            "",
+        ]
+        pending_inputs = list(step.pending_inputs) or ["none"]
+        lines.extend([f"- `{item}`" for item in pending_inputs])
+        lines.extend(
+            [
+                "",
+                "## Suggested Next Actions",
+                "",
+            ]
+        )
+        suggested_actions = list(step.suggested_next_actions) or ["none"]
+        lines.extend([f"- {item}" for item in suggested_actions])
+        lines.extend(
+            [
+                "",
+                "## Source Linkage",
+                "",
+            ]
+        )
+        source_items = dict(step.source_linkage)
+        source_items.update(
+            {
+                "patch_apply_state": "completed",
+                "apply_result": "applied",
+            }
+        )
+        lines.extend(
+            [f"- `{key}`: `{value}`" for key, value in sorted(source_items.items())]
+        )
+        lines.append("")
+        return "\n".join(lines)
+
+    def _render_frontend_cross_spec_writeback_content(
+        self,
+        *,
+        request: ProgramFrontendCrossSpecWritebackRequest,
+        step: ProgramFrontendCrossSpecWritebackRequestStep,
+    ) -> str:
+        lines = [
+            f"# Frontend Cross-Spec Writeback: {step.spec_id}",
+            "",
+            f"- Manifest: `{_relative_to_root_or_str(self.root, self.manifest_path)}`",
+            f"- Source artifact: `{request.artifact_source_path}`",
+            f"- Apply result: `{request.apply_result}`",
+            f"- Artifact generated_at: `{request.artifact_generated_at or 'unknown'}`",
+            "",
+            "## Pending Inputs",
+            "",
+        ]
+        pending_inputs = list(step.pending_inputs) or ["none"]
+        lines.extend([f"- `{item}`" for item in pending_inputs])
+        lines.extend(
+            [
+                "",
+                "## Suggested Next Actions",
+                "",
+            ]
+        )
+        suggested_actions = list(step.suggested_next_actions) or ["none"]
+        lines.extend([f"- {item}" for item in suggested_actions])
+        if request.written_paths:
+            lines.extend(
+                [
+                    "",
+                    "## Source Apply Paths",
+                    "",
+                ]
+            )
+            lines.extend([f"- `{item}`" for item in request.written_paths])
+        lines.extend(
+            [
+                "",
+                "## Source Linkage",
+                "",
+            ]
+        )
+        source_items = dict(step.source_linkage)
+        source_items.update(
+            {
+                "cross_spec_writeback_state": "completed",
+                "orchestration_result": "completed",
+            }
+        )
+        lines.extend(
+            [f"- `{key}`: `{value}`" for key, value in sorted(source_items.items())]
+        )
+        lines.append("")
+        return "\n".join(lines)
 
     def build_frontend_guarded_registry_request(
         self,

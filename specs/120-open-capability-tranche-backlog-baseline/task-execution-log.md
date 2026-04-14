@@ -310,3 +310,28 @@
 #### 2.34 批次结论
 
 - `120/T31` 现在已经有正式 implementation carrier，program execute/remediation/materialization 主线不再停留在抽象占位。
+
+### Batch 2026-04-14-009 | Derive T32 implementation carrier
+
+#### 2.35 批次范围
+
+- 覆盖范围：`tasks.md`
+- 覆盖目标：
+  - 将 `T32` 的建议派生工单从抽象 implementation carrier 更新为正式 `132`
+  - 同步 `T31` 的剩余下游依赖为 `T41`
+
+#### 2.36 任务记录
+
+##### T120-DOC-15 | 回填 `T32` 派生结果
+
+- 改动范围：`tasks.md`
+- 改动内容：
+  - 将 `Task 3.2 Provider Invocation, Patch Apply And Cross-Spec Writeback Chain` 的建议派生工单更新为 `132-frontend-program-provider-patch-writeback-runtime-closure-baseline`
+  - 明确 `T32` 在 `132` focused verification 通过且下游 `T33` 收口前继续保持 `partial`
+  - 将 `T31` 的剩余下游依赖从 `T32/T41` 收敛为 `T41`
+- 新增/调整的测试：无
+- 是否符合任务目标：是
+
+#### 2.37 批次结论
+
+- `120/T32` 现在已经有正式 implementation carrier，provider invocation / patch apply / cross-spec writeback 主线不再停留在 deferred 占位。
