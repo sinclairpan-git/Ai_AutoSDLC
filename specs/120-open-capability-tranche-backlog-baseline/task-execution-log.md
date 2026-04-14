@@ -505,3 +505,51 @@
 #### 2.58 批次结论
 
 - `120/T41` 现在已经从 formal carrier 推进到真实 runtime closure；下一批明确下游仍是 `T42` visual / a11y foundation。
+
+### Batch 2026-04-14-017 | Derive T42 implementation carrier
+
+#### 2.59 批次范围
+
+- 覆盖范围：`tasks.md`
+- 覆盖目标：
+  - 将 `T42` 的建议派生工单从抽象 implementation carrier 更新为正式 `137`
+  - 固定 `T42` 的边界只覆盖 `071` visual / a11y runtime foundation
+
+#### 2.60 任务记录
+
+##### T120-DOC-23 | 回填 `T42` 派生结果
+
+- 改动范围：`tasks.md`
+- 改动内容：
+  - 将 `Task 4.2 P1 Visual/A11y Runtime Foundation` 的建议派生工单更新为 `137-frontend-p1-visual-a11y-runtime-foundation-closure-baseline`
+  - 明确 `T42` 的 runtime closure 只覆盖 `071` visual / a11y foundation，而不扩张为完整质量平台
+- 新增/调整的测试：无
+- 是否符合任务目标：是
+
+#### 2.61 批次结论
+
+- `120/T42` 现在已经有正式 implementation carrier；`071` 的 runtime foundation 不再停留在抽象占位。
+
+### Batch 2026-04-14-018 | Close T42 runtime closure
+
+#### 2.62 批次范围
+
+- 覆盖范围：`tasks.md`
+- 覆盖目标：
+  - 将 `T42` 从 `capability_open` 推进到 `partial`
+  - 回填 `137` 已完成 focused verification，并固定当前 closure 边界
+
+#### 2.63 任务记录
+
+##### T120-DOC-24 | 回填 `T42` 实现结果
+
+- 改动范围：`tasks.md`
+- 改动内容：
+  - 将 `Task 4.2 P1 Visual/A11y Runtime Foundation` 的当前状态从 `capability_open` 更新为 `partial`
+  - 明确 `137` focused verification 已通过，且 `T42` 当前保持 `partial`
+- 新增/调整的测试：无
+- 是否符合任务目标：是
+
+#### 2.64 批次结论
+
+- `120/T42` 现在已经从 formal carrier 推进到真实 runtime closure；下一批可转向 `T43/T44` 这类 platform meta capability。

@@ -374,11 +374,10 @@ related_doc:
 - **任务编号**：T42
 - **交付流**：`S5`
 - **来源范围**：`071`
-- **当前状态**：`capability_open`
+- **当前状态**：`partial`
+- **派生状态**：已派生 `137-frontend-p1-visual-a11y-runtime-foundation-closure-baseline`；`137` focused verification 已通过，当前保持 `partial`
 - **缺失 carrier**：
-  - visual / a11y evidence fixtures
-  - gate-compatible visual/a11y checks
-  - P1 visual/a11y feedback runtime surface
+  - 无；`071` 的 visual / a11y evidence fixtures、gate-compatible visual/a11y checks 与 P1 visual/a11y feedback runtime surface 已由 `137` 正式收束为现有 runtime closure
 - **建议文件面**：`src/ai_sdlc/core/frontend_gate_verification.py`、`tests/unit/test_frontend_gate_verification.py`、`tests/integration/test_cli_program.py`
 - **依赖**：T13、T14、T41
 - **验收标准**：
@@ -386,7 +385,7 @@ related_doc:
   2. evidence gap /真实质量问题边界在 runtime 中成立
   3. visual/a11y feedback 继续服从既有 gate/report family
 - **验证**：`uv run pytest tests/unit/test_frontend_gate_verification.py tests/integration/test_cli_program.py -q`
-- **建议派生工单**：implementation carrier
+- **建议派生工单**：`137-frontend-p1-visual-a11y-runtime-foundation-closure-baseline`
 
 ### Task 4.3 Harness Telemetry And Provenance Runtime Closure
 
