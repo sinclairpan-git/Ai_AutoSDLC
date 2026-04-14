@@ -973,3 +973,28 @@
 #### 2.115 批次结论
 
 - `120/T34` 已形成 final proof publication / archive 的 partial runtime closure 首段；cleanup mutation execution 继续由 `T35` 承接。
+
+### Batch 2026-04-14-036 | Refresh T35 runtime closure
+
+#### 2.116 批次范围
+
+- 覆盖范围：`tasks.md`
+- 覆盖目标：
+  - 将 `T35` 的现有 runtime truth 与 `135` focused verification 对齐
+  - 明确 `T35` 当前保持 `partial`
+
+#### 2.117 任务记录
+
+##### T120-DOC-42 | 回填 `T35` 实现结果
+
+- 改动范围：`tasks.md`
+- 改动内容：
+  - 明确 `135` focused verification 已通过，且 `T35` 当前保持 `partial`
+  - 将 `T35` 的缺失 carrier 收紧为已由 `135` 收束的 cleanup mutation execution partial runtime closure（本任务范围内）
+  - 证据：沿用 `135` focused verification（无新增测试）
+- 新增/调整的测试：无
+- 是否符合任务目标：是
+
+#### 2.118 批次结论
+
+- `120/T35` 已形成 cleanup mutation execution 的 partial runtime closure；当前保持 `partial`，本任务范围内无下游承接。

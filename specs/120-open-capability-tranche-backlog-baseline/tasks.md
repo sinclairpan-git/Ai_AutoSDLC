@@ -309,9 +309,8 @@ related_doc:
 - **当前状态**：`partial`
 - **派生状态**：已派生 `135-frontend-program-final-proof-archive-project-cleanup-runtime-closure-baseline`；`135` focused verification 已通过，当前保持 `partial`
 - **缺失 carrier**：
-  - safe cleanup action set
-  - deferred cleanup 到真实 bounded cleanup 的过渡
-  - mutation proposal / approval / gating / execution 的 end-to-end closure
+  - 缺失 carrier（本任务范围内）：无
+  - 收束说明：cleanup mutation execution 已由 `135` 收束为 partial runtime closure
 - **建议文件面**：`src/ai_sdlc/core/program_*cleanup*`、`src/ai_sdlc/cli/program_cmd.py`、对应 tests
 - **依赖**：T34
 - **验收标准**：
