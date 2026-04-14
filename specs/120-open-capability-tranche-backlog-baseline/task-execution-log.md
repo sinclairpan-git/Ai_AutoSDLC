@@ -948,3 +948,28 @@
 #### 2.112 批次结论
 
 - `120/T33` 已形成 registry / governance / persistence 的 partial runtime closure；final proof / archive 继续由 `T34` 承接。
+
+### Batch 2026-04-14-035 | Refresh T34 runtime closure
+
+#### 2.113 批次范围
+
+- 覆盖范围：`tasks.md`
+- 覆盖目标：
+  - 将 `T34` 的现有 runtime truth 与 `134` focused verification 对齐
+  - 明确 `T34` 在下游 `T35` 收口前继续保持 `partial`
+
+#### 2.114 任务记录
+
+##### T120-DOC-41 | 回填 `T34` 实现结果
+
+- 改动范围：`tasks.md`
+- 改动内容：
+  - 明确 `134` focused verification 已通过，且 `T34` 在下游 `T35` 收口前继续保持 `partial`
+  - 将 `T34` 的缺失 carrier 收紧为已由 `134` 收束的 final proof publication / archive partial runtime closure（本任务范围内），并把 cleanup mutation execution 下游边界保留给 `T35`
+  - 证据：沿用 `134` focused verification（无新增测试）
+- 新增/调整的测试：无
+- 是否符合任务目标：是
+
+#### 2.115 批次结论
+
+- `120/T34` 已形成 final proof publication / archive 的 partial runtime closure 首段；cleanup mutation execution 继续由 `T35` 承接。

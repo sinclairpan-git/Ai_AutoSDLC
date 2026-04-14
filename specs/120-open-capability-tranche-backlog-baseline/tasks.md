@@ -290,9 +290,8 @@ related_doc:
 - **当前状态**：`partial`
 - **派生状态**：已派生 `134-frontend-program-final-proof-publication-archive-runtime-closure-baseline`；`134` focused verification 已通过，且在下游 `T35` 收口前继续保持 `partial`
 - **缺失 carrier**：
-  - final proof publication runtime
-  - closure -> archive orchestration runtime
-  - archive artifact / thread archive 的 end-to-end closure
+  - 缺失 carrier（本任务范围内）：无；final proof publication / archive 已由 `134` 收束
+  - 下游承接：cleanup mutation execution 由 `T35` 收口
 - **建议文件面**：`src/ai_sdlc/core/program_*final_proof*`、`src/ai_sdlc/cli/program_cmd.py`、对应 tests
 - **依赖**：T33
 - **验收标准**：
