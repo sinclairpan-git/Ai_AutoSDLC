@@ -1109,13 +1109,15 @@ specs:
             )
 
         assert result.exit_code == 1
-        assert "Frontend Recheck Handoff" in result.output
+        assert "Frontend Remediation Handoff" in result.output
+        assert "Frontend Recheck Handoff" not in result.output
         assert "review stable empty frontend visual / a11y evidence" in result.output
         assert "materialize frontend visual / a11y evidence input" not in result.output
         assert "uv run ai-sdlc rules materialize-frontend-mvp" not in result.output
         assert "uv run ai-sdlc verify constraints" in result.output
         report = (root / report_rel).read_text(encoding="utf-8")
-        assert "Frontend Recheck Handoff" in report
+        assert "Frontend Remediation Handoff" in report
+        assert "Frontend Recheck Handoff" not in report
         assert "review stable empty frontend visual / a11y evidence" in report
         assert "uv run ai-sdlc verify constraints" in report
 

@@ -7654,10 +7654,7 @@ class ProgramService:
             and effective_state == FRONTEND_GATE_EXECUTE_STATE_READY
         ):
             return None
-        if effective_state not in (
-            FRONTEND_GATE_EXECUTE_STATE_READY,
-            FRONTEND_GATE_EXECUTE_STATE_RECHECK_REQUIRED,
-        ):
+        if effective_state != FRONTEND_GATE_EXECUTE_STATE_READY:
             return None
 
         recommended_command = (
@@ -7682,10 +7679,7 @@ class ProgramService:
             return None
 
         effective_state = readiness.execute_gate_state or readiness.state
-        if effective_state in (
-            FRONTEND_GATE_EXECUTE_STATE_READY,
-            FRONTEND_GATE_EXECUTE_STATE_RECHECK_REQUIRED,
-        ):
+        if effective_state == FRONTEND_GATE_EXECUTE_STATE_READY:
             return None
 
         fix_inputs = _unique_strings(

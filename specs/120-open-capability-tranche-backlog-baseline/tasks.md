@@ -354,7 +354,8 @@ related_doc:
 - **任务编号**：T41
 - **交付流**：`S5`
 - **来源范围**：`066-070`
-- **当前状态**：`capability_open`
+- **当前状态**：`partial`
+- **派生状态**：已派生 `136-frontend-p1-recheck-remediation-feedback-runtime-closure-baseline`；`136` focused verification 已通过，当前保持 `partial`
 - **缺失 carrier**：
   - `070` docs-only feedback contract 的 runtime consumer
   - P1 readiness -> remediation/recheck handoff surfaces
@@ -366,7 +367,7 @@ related_doc:
   2. P1 diagnostics / drift 能进入 bounded remediation feedback runtime
   3. program surface 能诚实区分 remediation input 与 recheck handoff
 - **验证**：`uv run pytest tests/unit/test_program_service.py tests/integration/test_cli_program.py -q`
-- **建议派生工单**：implementation carrier
+- **建议派生工单**：`136-frontend-p1-recheck-remediation-feedback-runtime-closure-baseline`
 
 ### Task 4.2 P1 Visual/A11y Runtime Foundation
 

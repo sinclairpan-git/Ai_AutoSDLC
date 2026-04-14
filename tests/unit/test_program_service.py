@@ -492,13 +492,20 @@ def test_build_integration_dry_run_uses_browser_gate_recheck_command_when_gate_a
     plan = svc.build_integration_dry_run(_manifest())
 
     step = next(item for item in plan.steps if item.spec_id == "001-auth")
-    handoff = step.frontend_recheck_handoff
-    assert handoff is not None
-    assert handoff.required is True
-    assert handoff.recommended_commands == [
-        "uv run ai-sdlc program browser-gate-probe --execute"
+    assert step.frontend_recheck_handoff is None
+    remediation = step.frontend_remediation_input
+    assert remediation is not None
+    assert remediation.state == "required"
+    assert "visual_expectation_evidence_missing" in remediation.fix_inputs
+    assert "basic_a11y_evidence_missing" in remediation.fix_inputs
+    assert (
+        "materialize browser gate visual / a11y probe evidence"
+        in remediation.suggested_actions
+    )
+    assert remediation.recommended_commands == [
+        "uv run ai-sdlc program browser-gate-probe --execute",
+        "uv run ai-sdlc verify constraints",
     ]
-    assert "browser gate" in handoff.reason.lower()
 
 
 def test_build_status_fails_closed_when_browser_gate_artifact_scope_drift_detected(
@@ -8598,12 +8605,15 @@ def test_build_integration_dry_run_surfaces_visual_a11y_evidence_recheck_handoff
     plan = svc.build_integration_dry_run(_manifest())
 
     step = next(item for item in plan.steps if item.spec_id == "001-auth")
-    handoff = step.frontend_recheck_handoff
-    assert handoff is not None
-    assert handoff.required is True
-    assert "materialize frontend visual / a11y evidence input" in handoff.reason
-    assert handoff.recommended_commands == ["uv run ai-sdlc verify constraints"]
-    assert step.frontend_remediation_input is None
+    assert step.frontend_recheck_handoff is None
+    remediation = step.frontend_remediation_input
+    assert remediation is not None
+    assert "frontend_visual_a11y_evidence_input" in remediation.fix_inputs
+    assert (
+        "materialize frontend visual / a11y evidence input"
+        in remediation.suggested_actions
+    )
+    assert remediation.recommended_commands == ["uv run ai-sdlc verify constraints"]
 
 
 def test_build_integration_dry_run_surfaces_stable_empty_visual_a11y_evidence_recheck_handoff(
@@ -8629,13 +8639,19 @@ def test_build_integration_dry_run_surfaces_stable_empty_visual_a11y_evidence_re
     plan = svc.build_integration_dry_run(_manifest())
 
     step = next(item for item in plan.steps if item.spec_id == "001-auth")
-    handoff = step.frontend_recheck_handoff
-    assert handoff is not None
-    assert handoff.required is True
-    assert "review stable empty frontend visual / a11y evidence" in handoff.reason
-    assert "materialize frontend visual / a11y evidence input" not in handoff.reason
-    assert handoff.recommended_commands == ["uv run ai-sdlc verify constraints"]
-    assert step.frontend_remediation_input is None
+    assert step.frontend_recheck_handoff is None
+    remediation = step.frontend_remediation_input
+    assert remediation is not None
+    assert "frontend_visual_a11y_evidence_stable_empty" in remediation.fix_inputs
+    assert (
+        "review stable empty frontend visual / a11y evidence"
+        in remediation.suggested_actions
+    )
+    assert (
+        "materialize frontend visual / a11y evidence input"
+        not in remediation.suggested_actions
+    )
+    assert remediation.recommended_commands == ["uv run ai-sdlc verify constraints"]
 
 
 def test_build_integration_dry_run_surfaces_visual_a11y_issue_review_input(

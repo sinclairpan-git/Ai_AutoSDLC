@@ -457,3 +457,51 @@
 #### 2.52 批次结论
 
 - `120/T35` 现在已经有正式 implementation carrier；cleanup 主线不再停留在抽象占位。
+
+### Batch 2026-04-14-015 | Derive T41 implementation carrier
+
+#### 2.53 批次范围
+
+- 覆盖范围：`tasks.md`
+- 覆盖目标：
+  - 将 `T41` 的建议派生工单从抽象 implementation carrier 更新为正式 `136`
+  - 固定 `T41` 的边界只覆盖 `066-070` remediation / recheck feedback 主线
+
+#### 2.54 任务记录
+
+##### T120-DOC-21 | 回填 `T41` 派生结果
+
+- 改动范围：`tasks.md`
+- 改动内容：
+  - 将 `Task 4.1 P1 Recheck And Remediation Feedback Runtime` 的建议派生工单更新为 `136-frontend-p1-recheck-remediation-feedback-runtime-closure-baseline`
+  - 明确 `T41` 的 runtime closure 只覆盖 `066-070`，并将下游边界继续固定到 `T42`
+- 新增/调整的测试：无
+- 是否符合任务目标：是
+
+#### 2.55 批次结论
+
+- `120/T41` 现在已经有正式 implementation carrier；P1 remediation / recheck feedback 主线不再停留在抽象占位。
+
+### Batch 2026-04-14-016 | Close T41 runtime closure
+
+#### 2.56 批次范围
+
+- 覆盖范围：`tasks.md`
+- 覆盖目标：
+  - 将 `T41` 从 `capability_open` 推进到 `partial`
+  - 回填 `136` 已完成 focused verification，且下游仍由 `T42` 承接
+
+#### 2.57 任务记录
+
+##### T120-DOC-22 | 回填 `T41` 实现结果
+
+- 改动范围：`tasks.md`
+- 改动内容：
+  - 将 `Task 4.1 P1 Recheck And Remediation Feedback Runtime` 的当前状态从 `capability_open` 更新为 `partial`
+  - 明确 `136` focused verification 已通过，且 `T41` 当前保持 `partial`
+- 新增/调整的测试：无
+- 是否符合任务目标：是
+
+#### 2.58 批次结论
+
+- `120/T41` 现在已经从 formal carrier 推进到真实 runtime closure；下一批明确下游仍是 `T42` visual / a11y foundation。
