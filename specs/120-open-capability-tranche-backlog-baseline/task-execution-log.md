@@ -216,3 +216,26 @@
 #### 2.22 批次结论
 
 - `120/T21` 现在已经有正式 implementation carrier，observation producer runtime split 不再停留在占位描述。
+
+### Batch 2026-04-14-005 | Derive T22 implementation carrier
+
+#### 2.23 批次范围
+
+- 覆盖范围：`tasks.md`
+- 覆盖目标：
+  - 将 `T22` 的建议派生工单从抽象 implementation carrier 更新为正式 `128`
+
+#### 2.24 任务记录
+
+##### T120-DOC-11 | 回填 `T22` 派生结果
+
+- 改动范围：`tasks.md`
+- 改动内容：
+  - 将 `Task 2.2 Runtime Attachment And Verify/Gate Closure` 的建议派生工单更新为 `128-frontend-runtime-attachment-verify-gate-readiness-closure-baseline`
+  - 明确 `T22` 在 `128` focused verification 通过且下游 `T23/T25/T33` 收口前继续保持 `partial`
+- 新增/调整的测试：无
+- 是否符合任务目标：是
+
+#### 2.25 批次结论
+
+- `120/T22` 现在已经有正式 implementation carrier，runtime attachment -> verify/gate/readiness 的闭环不再停留在抽象占位。

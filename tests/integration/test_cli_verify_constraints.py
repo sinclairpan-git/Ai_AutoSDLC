@@ -1013,6 +1013,11 @@ class TestCliVerifyConstraints:
             "verify constraints",
             FRONTEND_CONTRACT_SOURCE_NAME,
         ]
+        assert payload["frontend_contract_runtime_attachment"]["status"] == "attached"
+        assert (
+            payload["frontend_contract_runtime_attachment"]["provenance"]["source_ref"]
+            is None
+        )
         assert payload["frontend_contract_verification"]["gate_verdict"] == "PASS"
         assert payload["frontend_contract_verification"]["coverage_gaps"] == []
 
@@ -1138,6 +1143,36 @@ class TestCliVerifyConstraints:
 
         assert result.exit_code == 0
         assert "frontend gate verification: PASS" in result.output
+
+    def test_json_output_exposes_012_runtime_attachment_summary_when_scope_unresolved(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        init_project(tmp_path)
+        _minimal_constitution(tmp_path)
+        save_checkpoint(
+            tmp_path,
+            Checkpoint(
+                current_stage="verify",
+                feature=FeatureInfo(
+                    id="012",
+                    spec_dir="specs/unknown",
+                    design_branch="d",
+                    feature_branch="f",
+                    current_branch="main",
+                ),
+            ),
+        )
+        _write_012_frontend_contract_page_artifacts(tmp_path)
+        monkeypatch.chdir(tmp_path)
+
+        result = runner.invoke(app, ["verify", "constraints", "--json"])
+
+        assert result.exit_code == 1
+        payload = json.loads(result.output)
+        assert payload["frontend_contract_runtime_attachment"]["status"] == "missing_scope"
+        assert payload["frontend_contract_runtime_attachment"]["coverage_gaps"] == [
+            "frontend_contract_runtime_scope"
+        ]
 
     def test_terminal_output_exposes_018_frontend_gate_retry_summary_when_policy_missing(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch

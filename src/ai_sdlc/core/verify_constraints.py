@@ -12,15 +12,18 @@ from ai_sdlc.branch.git_client import GitError
 from ai_sdlc.context.state import load_checkpoint
 from ai_sdlc.core.artifact_target_guard import detect_misplaced_formal_artifacts
 from ai_sdlc.core.backlog_breach_guard import collect_missing_backlog_entry_references
+from ai_sdlc.core.frontend_contract_runtime_attachment import (
+    FRONTEND_CONTRACT_RUNTIME_ATTACHMENT_STATUS_ATTACHED,
+    FRONTEND_CONTRACT_RUNTIME_ATTACHMENT_STATUS_INVALID_ARTIFACT,
+    FRONTEND_CONTRACT_RUNTIME_ATTACHMENT_STATUS_MISSING_ARTIFACT,
+    FrontendContractRuntimeAttachment,
+    build_frontend_contract_runtime_attachment,
+    is_frontend_contract_runtime_attachment_work_item,
+)
 from ai_sdlc.core.frontend_contract_observation_provider import (
     FRONTEND_CONTRACT_OBSERVATION_ARTIFACT_STATUS_ATTACHED,
     FRONTEND_CONTRACT_OBSERVATION_ARTIFACT_STATUS_INVALID_ARTIFACT,
     FRONTEND_CONTRACT_OBSERVATION_ARTIFACT_STATUS_MISSING_ARTIFACT,
-    load_frontend_contract_observation_artifact,
-)
-from ai_sdlc.core.frontend_contract_observation_runtime_policy import (
-    FRONTEND_CONTRACT_OBSERVATION_SOURCE_PROFILE_OPAQUE,
-    assess_frontend_contract_observation_source,
 )
 from ai_sdlc.core.frontend_contract_verification import (
     FrontendContractVerificationReport,
@@ -379,6 +382,7 @@ class FrontendSolutionConfirmationVerificationReport:
 def build_constraint_report(root: Path) -> ConstraintReport:
     """Build a structured report for verify constraints."""
     checkpoint = load_checkpoint(root)
+    frontend_runtime_attachment = _frontend_contract_runtime_attachment(root, checkpoint)
     frontend_contract_report = _frontend_contract_attachment_report(root, checkpoint)
     frontend_gate_report = _frontend_gate_attachment_report(root, checkpoint)
     frontend_solution_confirmation_report = (
@@ -406,7 +410,12 @@ def build_constraint_report(root: Path) -> ConstraintReport:
         ),
         blockers=_merge_unique_strings(
             _merge_unique_strings(
-                tuple(collect_constraint_blockers(root)),
+                _merge_unique_strings(
+                    tuple(collect_constraint_blockers(root)),
+                    _frontend_contract_runtime_attachment_gate_blockers(
+                        frontend_runtime_attachment
+                    ),
+                ),
                 frontend_gate_report.blockers if frontend_gate_report else (),
             ),
             (
@@ -419,17 +428,22 @@ def build_constraint_report(root: Path) -> ConstraintReport:
             _feature_contract_coverage_gaps(root, checkpoint),
             _merge_unique_strings(
                 _merge_unique_strings(
+                    _frontend_contract_runtime_attachment_gate_coverage_gaps(
+                        frontend_runtime_attachment
+                    ),
                     _frontend_contract_projected_coverage_gaps(
                         frontend_contract_report
                     )
                     if frontend_contract_report
                     else (),
-                    frontend_gate_report.coverage_gaps if frontend_gate_report else (),
                 ),
-                (
-                    frontend_solution_confirmation_report.coverage_gaps
-                    if frontend_solution_confirmation_report
-                    else ()
+                _merge_unique_strings(
+                    frontend_gate_report.coverage_gaps if frontend_gate_report else (),
+                    (
+                        frontend_solution_confirmation_report.coverage_gaps
+                        if frontend_solution_confirmation_report
+                        else ()
+                    ),
                 ),
             ),
         ),
@@ -441,6 +455,7 @@ def build_verification_gate_context(root: Path) -> dict[str, object]:
     """Build the explicit Verification Gate context consumed by runner and gate CLI."""
     report = build_constraint_report(root)
     checkpoint = load_checkpoint(root)
+    frontend_runtime_attachment = _frontend_contract_runtime_attachment(root, checkpoint)
     frontend_contract_report = _frontend_contract_attachment_report(root, checkpoint)
     frontend_gate_report = _frontend_gate_attachment_report(root, checkpoint)
     frontend_solution_confirmation_report = (
@@ -479,6 +494,10 @@ def build_verification_gate_context(root: Path) -> dict[str, object]:
     if frontend_contract_report is not None:
         context["frontend_contract_verification"] = _frontend_contract_report_payload(
             frontend_contract_report
+        )
+    if frontend_runtime_attachment is not None:
+        context["frontend_contract_runtime_attachment"] = (
+            _frontend_contract_runtime_attachment_payload(frontend_runtime_attachment)
         )
     if frontend_gate_report is not None:
         context["frontend_gate_verification"] = frontend_gate_report.to_json_dict()
@@ -897,77 +916,47 @@ def _feature_contract_coverage_gaps(
 def _frontend_contract_attachment_report(
     root: Path,
     checkpoint: Checkpoint | None,
+    attachment: FrontendContractRuntimeAttachment | None = None,
 ) -> FrontendContractVerificationReport | None:
     """Resolve the scoped frontend-contract verify attachment for active 012 only."""
-    work_item_id = _effective_feature_contract_wi_id(checkpoint)
+    work_item_id = _frontend_runtime_attachment_work_item_id(checkpoint)
     if not _is_012_work_item(work_item_id):
         return None
 
-    observations_path = _frontend_contract_observation_path(root, checkpoint)
-    observations: list = []
-    observation_artifact_status = (
-        FRONTEND_CONTRACT_OBSERVATION_ARTIFACT_STATUS_MISSING_ARTIFACT
+    effective_attachment = attachment or _frontend_contract_runtime_attachment(
+        root,
+        checkpoint,
     )
-    load_error: str | None = None
-    observation_source_profile = FRONTEND_CONTRACT_OBSERVATION_SOURCE_PROFILE_OPAQUE
-    observation_source_issue: str | None = None
-    if observations_path is not None and observations_path.is_file():
-        observation_artifact_status = (
-            FRONTEND_CONTRACT_OBSERVATION_ARTIFACT_STATUS_ATTACHED
-        )
-        try:
-            artifact = load_frontend_contract_observation_artifact(observations_path)
-            observations = list(artifact.observations)
-            source_assessment = assess_frontend_contract_observation_source(
-                artifact,
-                work_item_id=work_item_id,
-            )
-            observation_source_profile = source_assessment.source_profile
-            observation_source_issue = source_assessment.issue_message
-        except ValueError as exc:
-            load_error = str(exc)
-            observation_artifact_status = (
-                FRONTEND_CONTRACT_OBSERVATION_ARTIFACT_STATUS_INVALID_ARTIFACT
-            )
-
-    report = build_frontend_contract_verification_report(
+    verification_input = _frontend_contract_verification_input(effective_attachment)
+    return build_frontend_contract_verification_report(
         frontend_contracts_root(root),
-        observations,
-        observation_artifact_status=observation_artifact_status,
-        observation_artifact_path=observations_path,
-        observation_artifact_error=load_error,
-        observation_source_profile=observation_source_profile,
-        observation_source_issue=observation_source_issue,
-    )
-    if load_error is None or observations_path is None:
-        return report
-    return _invalid_frontend_contract_observation_report(
-        report,
-        observations_path=observations_path,
-        error_message=load_error,
+        verification_input["observations"],
+        observation_artifact_status=verification_input["observation_artifact_status"],
+        observation_artifact_path=verification_input["observation_artifact_path"],
+        observation_artifact_error=verification_input["observation_artifact_error"],
+        observation_source_profile=verification_input["observation_source_profile"],
+        observation_source_issue=verification_input["observation_source_issue"],
     )
 
 
 def _frontend_gate_attachment_report(
     root: Path,
     checkpoint: Checkpoint | None,
+    attachment: FrontendContractRuntimeAttachment | None = None,
 ) -> FrontendGateVerificationReport | None:
     """Resolve the scoped frontend gate verify attachment for active 018 only."""
-    work_item_id = _effective_feature_contract_wi_id(checkpoint)
+    work_item_id = _frontend_runtime_attachment_work_item_id(checkpoint)
     if not _is_018_work_item(work_item_id):
         return None
 
-    observations_path = _frontend_contract_observation_path(root, checkpoint)
+    effective_attachment = attachment or _frontend_contract_runtime_attachment(
+        root,
+        checkpoint,
+    )
+    verification_input = _frontend_contract_verification_input(effective_attachment)
     visual_a11y_evidence_path = _frontend_visual_a11y_evidence_path(root, checkpoint)
-    observations: list = []
     visual_a11y_evidence_artifact: FrontendVisualA11yEvidenceArtifact | None = None
-    load_error: str | None = None
     visual_a11y_evidence_load_error: str | None = None
-    if observations_path is not None and observations_path.is_file():
-        try:
-            observations = _load_frontend_contract_observations(observations_path)
-        except ValueError as exc:
-            load_error = str(exc)
     if visual_a11y_evidence_path is not None and visual_a11y_evidence_path.is_file():
         try:
             visual_a11y_evidence_artifact = load_frontend_visual_a11y_evidence_artifact(
@@ -978,15 +967,14 @@ def _frontend_gate_attachment_report(
 
     report = build_frontend_gate_verification_report(
         root,
-        observations,
+        verification_input["observations"],
+        observation_artifact_status=verification_input["observation_artifact_status"],
+        observation_artifact_path=verification_input["observation_artifact_path"],
+        observation_artifact_error=verification_input["observation_artifact_error"],
+        observation_source_profile=verification_input["observation_source_profile"],
+        observation_source_issue=verification_input["observation_source_issue"],
         visual_a11y_evidence_artifact=visual_a11y_evidence_artifact,
     )
-    if load_error is not None and observations_path is not None:
-        report = _invalid_frontend_gate_observation_report(
-            report,
-            observations_path=observations_path,
-            error_message=load_error,
-        )
     if (
         visual_a11y_evidence_load_error is not None
         and visual_a11y_evidence_path is not None
@@ -1093,6 +1081,123 @@ def _frontend_solution_confirmation_attachment_report(
         snapshot_id=snapshot_id,
         effective_provider_id=effective_provider_id,
     )
+
+
+def _frontend_contract_runtime_attachment(
+    root: Path,
+    checkpoint: Checkpoint | None,
+) -> FrontendContractRuntimeAttachment | None:
+    work_item_id = _frontend_runtime_attachment_work_item_id(checkpoint)
+    if not (
+        _is_012_work_item(work_item_id)
+        or _is_018_work_item(work_item_id)
+        or is_frontend_contract_runtime_attachment_work_item(checkpoint)
+    ):
+        return None
+    return build_frontend_contract_runtime_attachment(
+        root,
+        checkpoint=checkpoint,
+    )
+
+
+def _frontend_contract_verification_input(
+    attachment: FrontendContractRuntimeAttachment | None,
+) -> dict[str, object]:
+    if attachment is None:
+        return {
+            "observations": [],
+            "observation_artifact_status": (
+                FRONTEND_CONTRACT_OBSERVATION_ARTIFACT_STATUS_MISSING_ARTIFACT
+            ),
+            "observation_artifact_path": None,
+            "observation_artifact_error": None,
+            "observation_source_profile": "",
+            "observation_source_issue": None,
+        }
+
+    observation_artifact_status = (
+        FRONTEND_CONTRACT_OBSERVATION_ARTIFACT_STATUS_MISSING_ARTIFACT
+    )
+    observation_artifact_error: str | None = None
+
+    if attachment.status == FRONTEND_CONTRACT_RUNTIME_ATTACHMENT_STATUS_ATTACHED:
+        observation_artifact_status = FRONTEND_CONTRACT_OBSERVATION_ARTIFACT_STATUS_ATTACHED
+    elif attachment.status == FRONTEND_CONTRACT_RUNTIME_ATTACHMENT_STATUS_INVALID_ARTIFACT:
+        observation_artifact_status = (
+            FRONTEND_CONTRACT_OBSERVATION_ARTIFACT_STATUS_INVALID_ARTIFACT
+        )
+        observation_artifact_error = _frontend_contract_runtime_attachment_error_detail(
+            attachment
+        )
+    elif attachment.status == FRONTEND_CONTRACT_RUNTIME_ATTACHMENT_STATUS_MISSING_ARTIFACT:
+        observation_artifact_status = (
+            FRONTEND_CONTRACT_OBSERVATION_ARTIFACT_STATUS_MISSING_ARTIFACT
+        )
+
+    return {
+        "observations": list(attachment.observations),
+        "observation_artifact_status": observation_artifact_status,
+        "observation_artifact_path": attachment.artifact_path,
+        "observation_artifact_error": observation_artifact_error,
+        "observation_source_profile": attachment.observation_source_profile,
+        "observation_source_issue": attachment.observation_source_issue,
+    }
+
+
+def _frontend_runtime_attachment_work_item_id(checkpoint: Checkpoint | None) -> str:
+    if checkpoint is None or checkpoint.feature is None:
+        return ""
+    linked_wi_id = (checkpoint.linked_wi_id or "").strip()
+    if linked_wi_id:
+        return linked_wi_id
+    feature_id = (checkpoint.feature.id or "").strip()
+    if feature_id and feature_id != "unknown":
+        return feature_id
+    return _effective_feature_contract_wi_id(checkpoint)
+
+
+def _frontend_contract_runtime_attachment_payload(
+    attachment: FrontendContractRuntimeAttachment,
+) -> dict[str, object]:
+    payload = attachment.to_json_dict()
+    provenance = payload.get("provenance")
+    if isinstance(provenance, dict) and "source_ref" in provenance:
+        provenance = dict(provenance)
+        provenance["source_ref"] = None
+        payload["provenance"] = provenance
+    return payload
+
+
+def _frontend_contract_runtime_attachment_gate_blockers(
+    attachment: FrontendContractRuntimeAttachment | None,
+) -> tuple[str, ...]:
+    if attachment is None:
+        return ()
+    if "frontend_contract_runtime_scope" in attachment.coverage_gaps:
+        return attachment.blockers
+    return ()
+
+
+def _frontend_contract_runtime_attachment_gate_coverage_gaps(
+    attachment: FrontendContractRuntimeAttachment | None,
+) -> tuple[str, ...]:
+    if attachment is None:
+        return ()
+    if "frontend_contract_runtime_scope" in attachment.coverage_gaps:
+        return attachment.coverage_gaps
+    return ()
+
+
+def _frontend_contract_runtime_attachment_error_detail(
+    attachment: FrontendContractRuntimeAttachment,
+) -> str | None:
+    if attachment.status != FRONTEND_CONTRACT_RUNTIME_ATTACHMENT_STATUS_INVALID_ARTIFACT:
+        return None
+    for blocker in attachment.blockers:
+        text = str(blocker).strip()
+        if "invalid structured observation input" in text:
+            return text.rsplit(": ", 1)[-1]
+    return None
 
 
 def _frontend_contract_observation_path(

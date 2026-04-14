@@ -1595,6 +1595,7 @@ def test_012_frontend_contract_verification_surfaces_missing_observations_gap(
     assert context["frontend_contract_verification"]["coverage_gaps"] == [
         "frontend_contract_observations"
     ]
+    assert context["frontend_contract_runtime_attachment"]["status"] == "missing_artifact"
 
 
 def test_012_frontend_contract_verification_passes_with_structured_observations(
@@ -1613,6 +1614,11 @@ def test_012_frontend_contract_verification_passes_with_structured_observations(
     assert context["verification_sources"] == (
         "verify constraints",
         FRONTEND_CONTRACT_SOURCE_NAME,
+    )
+    assert context["frontend_contract_runtime_attachment"]["status"] == "attached"
+    assert (
+        context["frontend_contract_runtime_attachment"]["provenance"]["source_ref"]
+        is None
     )
     assert context["frontend_contract_verification"]["gate_verdict"] == "PASS"
     assert context["frontend_contract_verification"]["coverage_gaps"] == []
@@ -1714,6 +1720,37 @@ def test_012_frontend_contract_verification_uses_projection_to_restore_missing_g
     )
 
 
+def test_012_frontend_contract_runtime_attachment_surfaces_missing_scope_gap(
+    tmp_path: Path,
+) -> None:
+    save_checkpoint(
+        tmp_path,
+        Checkpoint(
+            current_stage="verify",
+            feature=FeatureInfo(
+                id="012",
+                spec_dir="specs/unknown",
+                design_branch="d",
+                feature_branch="f",
+                current_branch="main",
+            ),
+        ),
+    )
+    _write_minimal_frontend_contract_page_artifacts(tmp_path)
+
+    report = build_constraint_report(tmp_path)
+    context = build_verification_gate_context(tmp_path)
+
+    assert "frontend_contract_runtime_scope" in report.coverage_gaps
+    assert context["frontend_contract_runtime_attachment"]["status"] == "missing_scope"
+    assert context["frontend_contract_runtime_attachment"]["coverage_gaps"] == [
+        "frontend_contract_runtime_scope"
+    ]
+    assert "active spec_dir is unresolved" in context["frontend_contract_runtime_attachment"][
+        "blockers"
+    ][0]
+
+
 def test_018_frontend_gate_verification_surfaces_missing_gate_policy_gap(
     tmp_path: Path,
 ) -> None:
@@ -1753,6 +1790,7 @@ def test_018_frontend_gate_verification_passes_with_artifacts_and_observations(
         "verify constraints",
         FRONTEND_GATE_SOURCE_NAME,
     )
+    assert context["frontend_contract_runtime_attachment"]["status"] == "attached"
     assert context["frontend_gate_verification"]["gate_verdict"] == "PASS"
     assert context["frontend_gate_verification"]["coverage_gaps"] == []
 
@@ -1994,6 +2032,35 @@ def test_018_frontend_gate_verification_passes_with_071_visual_a11y_evidence(
     assert report.blockers == ()
     assert context["frontend_gate_verification"]["gate_verdict"] == "PASS"
     assert "frontend_visual_a11y_policy_artifacts" in report.check_objects
+
+
+def test_018_frontend_gate_runtime_attachment_surfaces_missing_scope_gap(
+    tmp_path: Path,
+) -> None:
+    save_checkpoint(
+        tmp_path,
+        Checkpoint(
+            current_stage="verify",
+            feature=FeatureInfo(
+                id="018",
+                spec_dir="specs/unknown",
+                design_branch="d",
+                feature_branch="f",
+                current_branch="main",
+            ),
+        ),
+    )
+    _write_minimal_frontend_contract_page_artifacts(tmp_path)
+    _write_018_gate_artifacts(tmp_path)
+
+    report = build_constraint_report(tmp_path)
+    context = build_verification_gate_context(tmp_path)
+
+    assert "frontend_contract_runtime_scope" in report.coverage_gaps
+    assert context["frontend_contract_runtime_attachment"]["status"] == "missing_scope"
+    assert context["frontend_contract_runtime_attachment"]["coverage_gaps"] == [
+        "frontend_contract_runtime_scope"
+    ]
 
 
 def test_073_frontend_solution_confirmation_verification_surfaces_consistency_gap(

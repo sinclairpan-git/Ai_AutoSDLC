@@ -187,6 +187,7 @@ related_doc:
 - **交付流**：`S2`
 - **来源范围**：`014`、`015`、`016`、`017`、`018`
 - **当前状态**：`partial`
+- **派生状态**：已派生 `128-frontend-runtime-attachment-verify-gate-readiness-closure-baseline`；在 `128` focused verification 通过且下游 `T23/T25/T33` 收口前仍保持 `partial`
 - **缺失 carrier**：
   - active `spec_dir` scoped runtime attachment
   - verify/gate/readiness aggregation 的真实接线
@@ -197,8 +198,8 @@ related_doc:
   1. `014` 留给下游的 runtime attachment 正式落地
   2. verify / gate / compatibility 不再只停留在 baseline contract
   3. contract artifacts 与 program/frontend readiness 能进入统一 runtime truth
-- **验证**：`uv run pytest tests/unit/test_verify_constraints.py tests/integration/test_cli_verify.py tests/integration/test_cli_program.py -q`
-- **建议派生工单**：implementation carrier
+- **验证**：`uv run pytest tests/unit/test_verify_constraints.py tests/integration/test_cli_verify_constraints.py tests/integration/test_cli_program.py -q`
+- **建议派生工单**：`128-frontend-runtime-attachment-verify-gate-readiness-closure-baseline`
 
 ### Task 2.3 Evidence-Class Validator And Status Runtime Completion
 

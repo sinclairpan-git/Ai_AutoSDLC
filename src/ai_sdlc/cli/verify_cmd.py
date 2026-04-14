@@ -79,6 +79,9 @@ def verify_constraints(
         verification_context.get("verification_sources", (report.source_name,))
     )
     frontend_contract_summary = verification_context.get("frontend_contract_verification")
+    frontend_runtime_attachment = verification_context.get(
+        "frontend_contract_runtime_attachment"
+    )
     frontend_gate_summary = verification_context.get("frontend_gate_verification")
     blockers = list(report.blockers)
     governance = build_verification_governance_bundle(
@@ -168,6 +171,7 @@ def verify_constraints(
                         "release_gate": report.release_gate,
                     },
                     "frontend_contract_verification": frontend_contract_summary,
+                    "frontend_contract_runtime_attachment": frontend_runtime_attachment,
                     "frontend_gate_verification": frontend_gate_summary,
                     "governance": governance,
                     "telemetry": {
