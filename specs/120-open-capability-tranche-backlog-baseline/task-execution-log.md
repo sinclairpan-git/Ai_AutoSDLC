@@ -1073,3 +1073,28 @@
 #### 2.127 批次结论
 
 - `120/T43` 已形成 telemetry/provenance 的 partial runtime closure 首段；当前保持 `partial`，原因是 `S1` tranche/root 尚未收口。
+
+### Batch 2026-04-14-040 | Refresh T44 runtime closure
+
+#### 2.128 批次范围
+
+- 覆盖范围：`tasks.md`
+- 覆盖目标：
+  - 将 `T44` 的现有 runtime truth 与 `139` focused verification 对齐
+  - 明确 `T44` 当前保持 `partial`（tranche/root closure 保守态）
+
+#### 2.129 任务记录
+
+##### T120-DOC-46 | 回填 `T44` 实现结果
+
+- 改动范围：`tasks.md`
+- 改动内容：
+  - 明确 `139` focused verification 已通过，且 `T44` 当前保持 `partial`（tranche/root closure 保守态）
+  - 将 `T44` 的缺失 carrier 收紧为已由 `139` 收束的 branch lifecycle / direct-formal partial runtime closure（本任务范围内）
+  - 证据：沿用 `139` focused verification（无新增测试）
+- 新增/调整的测试：无
+- 是否符合任务目标：是
+
+#### 2.130 批次结论
+
+- `120/T44` 已形成（本任务范围内）branch lifecycle / direct-formal 的 partial runtime closure 首段；当前保持 `partial`，原因是 tranche/root closure 仍为保守态。

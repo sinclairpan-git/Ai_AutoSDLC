@@ -391,7 +391,9 @@ related_doc:
 - **当前状态**：`partial`
 - **派生状态**：已派生 `139-branch-lifecycle-direct-formal-runtime-closure-baseline`；`139` 的 focused verification 已通过，当前保持 `partial` 仅表示 tranche/root closure 保守态
 - **缺失 carrier**：
-  - 无；branch lifecycle bounded runtime、direct-formal scaffold / CLI / tests closure 与 branch guard / direct-formal entry 的 end-to-end repo truth 已由 `139` 正式收束为现有 runtime closure
+  - 缺失 carrier（本任务范围内）：无
+  - 收束说明（本任务范围内）：branch lifecycle / direct-formal runtime 已由 `139` 收束为 partial runtime closure
+  - partial 保留原因：tranche/root closure 保守态（不构成本任务范围缺失）
 - **建议文件面**：`src/ai_sdlc/core/*branch*`、`src/ai_sdlc/cli/*workitem*`、`src/ai_sdlc/cli/*formal*`、对应 tests
 - **依赖**：无；可与 T43 并行，但不建议先于 `S6/S7`
 - **验收标准**：
