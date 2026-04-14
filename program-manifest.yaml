@@ -1372,61 +1372,47 @@ specs:
   roles: []
   capability_refs: []
 truth_snapshot:
-  generated_at: '2026-04-14T14:05:33Z'
+  generated_at: '2026-04-14T14:34:12Z'
   generated_by: ai-sdlc program truth sync
   generator_version: program_truth_snapshot_v1
-  repo_revision: '2493083'
+  repo_revision: fd6f968
   authoring_hash: 607c7264e1618940342e42c3a883361af2465a64ea1a922ad0652e964150acad
   source_hashes:
-    truth_check:specs/095-frontend-mainline-product-delivery-baseline: f5c167f6d569e119c84433363964c03c320400e26918fea17fd1f3a28601914a
-    truth_check:specs/096-frontend-mainline-host-runtime-manager-baseline: af9f17c7c99838a9a8255ad67da5f7007abfe214e122063b084b57eda7754606
-    truth_check:specs/098-frontend-mainline-posture-detector-baseline: 28c806c07a5c7c59639cb8c5858137a760cd5c7c49b351ba8718ee06cff654d8
-    truth_check:specs/099-frontend-mainline-delivery-registry-resolver-baseline: a1621576991b37c506134f83735f02cac3cbaf84c1ffa79a02fa099e804cc06b
-    truth_check:specs/100-frontend-mainline-action-plan-binding-baseline: 36f125d3261838883132e384a8991f22d154d597f28b6d151ca945d7fe0fe794
-    truth_check:specs/101-frontend-mainline-managed-delivery-apply-runtime-baseline: 55f0bec2508057f7859e116bb5d1ad9f807be1fa1fef4f05eb840a04880a8f0a
-    truth_check:specs/102-frontend-mainline-browser-quality-gate-baseline: 7d6e0f442296f3bf2976bf7634aa0c304a59d6f71a149068df5318cd0c374cdc
-    truth_check:specs/103-frontend-mainline-browser-gate-probe-runtime-baseline: ccae3dff83e0582fa1db7e7562dfabb550f10056f2c6dd7b71c8f2351981c0b1
-    truth_check:specs/104-frontend-mainline-browser-gate-recheck-remediation-binding-baseline: d043b7458f2772293196efeb38b04074cbc8d54eec68d831ffc4161404c7d603
-    truth_check:specs/105-frontend-mainline-browser-gate-recheck-remediation-runtime-implementation-baseline: 29b896bcb3d77765d499c8af89a9a6d83e2db479105179ec07e58ea3e5d69c0f
-    truth_check:specs/123-frontend-mainline-managed-delivery-apply-runtime-implementation-baseline: d3ff4eb72776a5908dacf95c9505d1f462412123e6c8f9ee151ed1ff665b3131
-    truth_check:specs/124-frontend-mainline-delivery-materialization-runtime-baseline: 3c4953f8daad5ef80040b0bb6a923e7f5bb2436d4d70b59c83e80eaf4d31f461
-    truth_check:specs/125-frontend-mainline-browser-gate-probe-runtime-implementation-baseline: ca0253f7286b24a71494aa517fa47f5c2d1f3325395836f6f3ece863add44c42
-    truth_check:specs/126-frontend-mainline-browser-gate-recheck-remediation-runtime-closure-baseline: 6696bc6298f022478949f88c168187bd438c58be4b11ffb9e5e615026ca7c324
-    close_check:specs/095-frontend-mainline-product-delivery-baseline: 85701b9bb14bd5f3e918c4048a54c650a27dff9bff507d966f9b11ed801e0055
-    close_check:specs/096-frontend-mainline-host-runtime-manager-baseline: e7199e6d3c809c11ab1ac60329dbc4b2eb52e3d350e28c3113aa380bc0f08a39
-    close_check:specs/098-frontend-mainline-posture-detector-baseline: aef2acdccd5ddc48cf5a850183f86ad0d0af3b50ab6a83b3703296c1d45b3121
-    close_check:specs/099-frontend-mainline-delivery-registry-resolver-baseline: 632209602f1155c8a7df827034bcc03aa116d89ebb3c138e0e2d430a1dca667a
-    close_check:specs/100-frontend-mainline-action-plan-binding-baseline: 699b8f07362ecf6327b5c6d5baabea0638143b27bce126ef062f0ce7946acc41
-    close_check:specs/101-frontend-mainline-managed-delivery-apply-runtime-baseline: 8f31b02797add636a00dc62b506e4e746367bc08c342c0e962b5a5581ea102be
-    close_check:specs/102-frontend-mainline-browser-quality-gate-baseline: 67e23779db86160e05fbbcd37f907e8b258ff66522fc6fc9096734723c5ffe71
-    close_check:specs/103-frontend-mainline-browser-gate-probe-runtime-baseline: f05bd99c1e5d4e752f8e9d3fcd2125110c1a8f7c74b259bf6915b592d3ff1ce2
-    close_check:specs/104-frontend-mainline-browser-gate-recheck-remediation-binding-baseline: cc0ca894bcd9c44ff80af0349658b54eaa848a1a6c21b2f854c46cb1d7d74849
-    close_check:specs/105-frontend-mainline-browser-gate-recheck-remediation-runtime-implementation-baseline: 1f5fd5bb5fc5db511deb840a83678ba60459ce729377cc417b5404208a701be8
-    close_check:specs/123-frontend-mainline-managed-delivery-apply-runtime-implementation-baseline: 90727d274a6300dfd62541d3e58ee7b97d35c0d88e3436d805344be5868929aa
-    close_check:specs/124-frontend-mainline-delivery-materialization-runtime-baseline: a32d4a807e6945070d0c4193dd7ff6b00dbfaac693ac1cc7b15335a2c689afde
-    close_check:specs/125-frontend-mainline-browser-gate-probe-runtime-implementation-baseline: 7c5ad790bacc8d85585d09f2aa7fd05f7dba069b79d4f62232c225c2cad79ced
-    close_check:specs/126-frontend-mainline-browser-gate-recheck-remediation-runtime-closure-baseline: b6b321db4a033334a62b4ce9cd4fc6f520ef0e06f6c235388df4d9e507b0cb69
+    truth_check:specs/095-frontend-mainline-product-delivery-baseline: 634be3eb94d4201071082f212911aed0d59978556b691ffe094ddb2d960e2273
+    truth_check:specs/096-frontend-mainline-host-runtime-manager-baseline: 4f80aa194e1ced075b5a916caa5ee64d5c1ce8a168ffe9c35d7a539f6fdc8df9
+    truth_check:specs/098-frontend-mainline-posture-detector-baseline: 04edc29137ff36cf22c40e0cdec2415ad85e49e823234b99fcb5a5a743497d60
+    truth_check:specs/099-frontend-mainline-delivery-registry-resolver-baseline: 4880a740ed284b9abdbbef455a98c6b669f89c50c201bd7dbfb808fa66d9b36f
+    truth_check:specs/100-frontend-mainline-action-plan-binding-baseline: e6b9889992c1f86b4c2ecffe0f9dfeaaf8b81870d7583f5d0a0989381561d7ba
+    truth_check:specs/101-frontend-mainline-managed-delivery-apply-runtime-baseline: ecc8da97e29914e16c4fe9c00ab78f15a41191a70775e35ee4fda39f6772a8de
+    truth_check:specs/102-frontend-mainline-browser-quality-gate-baseline: f12c85d5eeb708a703d9aa9be04e29bfe782277e1ec5913efee5d5f109936ab8
+    truth_check:specs/103-frontend-mainline-browser-gate-probe-runtime-baseline: 7175f7e134300c1b12aac27cfa5ac8dce7c9dd9cbfa5a36bb8c6a4b890ff1284
+    truth_check:specs/104-frontend-mainline-browser-gate-recheck-remediation-binding-baseline: 5207023fca7af7a4147b333131aa9945ef8ee6768ce07b1484ebfa652b9bc955
+    truth_check:specs/105-frontend-mainline-browser-gate-recheck-remediation-runtime-implementation-baseline: 13b93282a476ce220d9eaa6ec9856955381040983274d321463b33d59792be5f
+    truth_check:specs/123-frontend-mainline-managed-delivery-apply-runtime-implementation-baseline: 73f73605aeeb6e54f19957939bf316ee1d33981aa11db5c3f5edf82f2937e29f
+    truth_check:specs/124-frontend-mainline-delivery-materialization-runtime-baseline: 57e34509f2d01849f823fc34d16d7abdf9d58b482e12cf9b66591ebd8aaecb57
+    truth_check:specs/125-frontend-mainline-browser-gate-probe-runtime-implementation-baseline: 61ee77eb304e645d41fe0247bc33d1aac595f2045a2ddbbb572552ad214d98d2
+    truth_check:specs/126-frontend-mainline-browser-gate-recheck-remediation-runtime-closure-baseline: 1246c8476353b1e87725dfb7c0498c6f3b52d5bca7b80a8bf3d2d8d2e666411e
+    close_check:specs/095-frontend-mainline-product-delivery-baseline: e33cf450dc4ec955dfd1ca110355f1a193b5c1b9c93bfde2bbd5486c9282f34e
+    close_check:specs/096-frontend-mainline-host-runtime-manager-baseline: 8d66f2ea896afed44dbdbe3eea2ba1688ecc48a411936d7be267f3c0133da51a
+    close_check:specs/098-frontend-mainline-posture-detector-baseline: fc69e91f9b95f338463a5bdfba008c1489e2776bbbd8e91b44f478acdacf9d2c
+    close_check:specs/099-frontend-mainline-delivery-registry-resolver-baseline: 65316a48f911f3831d42f7fef5a5ca3d02fc6f28732e6e269bd28140a94bdac2
+    close_check:specs/100-frontend-mainline-action-plan-binding-baseline: 6b171da08bb79c5bdd7dff368d1a7c30b63a0320d69ccb9590566e9a619700aa
+    close_check:specs/101-frontend-mainline-managed-delivery-apply-runtime-baseline: 62bd04e1c188332a7f7e7a695f8bfa63cb5780f17a77234da232227597a19cd3
+    close_check:specs/102-frontend-mainline-browser-quality-gate-baseline: 47472068b784b59f690c1f1f3d8420dea37038ed768b7e6eb37a3e3d52736df3
+    close_check:specs/103-frontend-mainline-browser-gate-probe-runtime-baseline: 7672a082ff3b09c1954620b50e549077330eda31c98bebfced87f5781b449284
+    close_check:specs/104-frontend-mainline-browser-gate-recheck-remediation-binding-baseline: c84be24550f88523cec1cf650ed8c2c9cbc1a81bcdc6ee7d7e774be66f380357
+    close_check:specs/105-frontend-mainline-browser-gate-recheck-remediation-runtime-implementation-baseline: dc35e0d3c1b6d6e6020598d2a9528cd9a758835cadf78e79e8a35aeacf380d92
+    close_check:specs/123-frontend-mainline-managed-delivery-apply-runtime-implementation-baseline: ed569986245f0b1aae5751c9cb02cb35fea17d675a313dc7934ecb6593f4a44e
+    close_check:specs/124-frontend-mainline-delivery-materialization-runtime-baseline: d3bf8571b54990206a46b9b01ef0b9fad846c57bdd4e5a28289d4c111f3fa676
+    close_check:specs/125-frontend-mainline-browser-gate-probe-runtime-implementation-baseline: 44e20478b6dc2e8a4d9ccf08877a6c2f3f0c019036153d6bce1c7058e480a09c
+    close_check:specs/126-frontend-mainline-browser-gate-recheck-remediation-runtime-closure-baseline: a7dcb824b70f446c8da361abcece826f313b0040a0b283c8e64afe7288bc13bf
     verify:uv run ai-sdlc verify constraints: 67c162e8ce6369708f41fd003c4d3b2703509ebeb85aefbbc2a2d67663c45333
-  snapshot_hash: a317094a0bbb6c123b98fb8c5a852af927a83f2d77cad543a2af62cf7e7c3336
+  snapshot_hash: 76e9eaeeafb541407ee72722f69c2f7f41154e708b4a364369de5bd403a600b6
   computed_capabilities:
   - capability_id: frontend-mainline-delivery
     closure_state: capability_open
     audit_state: blocked
     blocking_refs:
     - capability_closure_audit:capability_open
-    - close_check:specs/095-frontend-mainline-product-delivery-baseline
-    - close_check:specs/096-frontend-mainline-host-runtime-manager-baseline
-    - close_check:specs/098-frontend-mainline-posture-detector-baseline
-    - close_check:specs/099-frontend-mainline-delivery-registry-resolver-baseline
-    - close_check:specs/100-frontend-mainline-action-plan-binding-baseline
-    - close_check:specs/101-frontend-mainline-managed-delivery-apply-runtime-baseline
-    - close_check:specs/102-frontend-mainline-browser-quality-gate-baseline
-    - close_check:specs/103-frontend-mainline-browser-gate-probe-runtime-baseline
-    - close_check:specs/104-frontend-mainline-browser-gate-recheck-remediation-binding-baseline
-    - close_check:specs/105-frontend-mainline-browser-gate-recheck-remediation-runtime-implementation-baseline
-    - close_check:specs/123-frontend-mainline-managed-delivery-apply-runtime-implementation-baseline
-    - close_check:specs/124-frontend-mainline-delivery-materialization-runtime-baseline
-    - close_check:specs/125-frontend-mainline-browser-gate-probe-runtime-implementation-baseline
-    - close_check:specs/126-frontend-mainline-browser-gate-recheck-remediation-runtime-closure-baseline
     stale_reason: ''
   state: blocked
