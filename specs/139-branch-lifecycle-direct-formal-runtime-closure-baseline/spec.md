@@ -2,7 +2,7 @@
 
 **功能编号**：`139-branch-lifecycle-direct-formal-runtime-closure-baseline`
 **创建日期**：2026-04-14
-**状态**：formal baseline 已冻结；runtime closure 已完成；bounded focused verification 已通过；installed-wheel smoke 受网络限制待补跑
+**状态**：formal baseline 已冻结；runtime closure 已完成并通过 focused verification
 **输入**：[`../007-branch-lifecycle-truth-guard/spec.md`](../007-branch-lifecycle-truth-guard/spec.md)、[`../007-branch-lifecycle-truth-guard/task-execution-log.md`](../007-branch-lifecycle-truth-guard/task-execution-log.md)、[`../008-direct-formal-workitem-entry/spec.md`](../008-direct-formal-workitem-entry/spec.md)、[`../008-direct-formal-workitem-entry/task-execution-log.md`](../008-direct-formal-workitem-entry/task-execution-log.md)、[`../../src/ai_sdlc/core/branch_inventory.py`](../../src/ai_sdlc/core/branch_inventory.py)、[`../../src/ai_sdlc/core/workitem_traceability.py`](../../src/ai_sdlc/core/workitem_traceability.py)、[`../../src/ai_sdlc/core/workitem_scaffold.py`](../../src/ai_sdlc/core/workitem_scaffold.py)、[`../../src/ai_sdlc/core/verify_constraints.py`](../../src/ai_sdlc/core/verify_constraints.py)、[`../../src/ai_sdlc/telemetry/readiness.py`](../../src/ai_sdlc/telemetry/readiness.py)、[`../../src/ai_sdlc/cli/workitem_cmd.py`](../../src/ai_sdlc/cli/workitem_cmd.py)、[`../../tests/unit/test_branch_inventory.py`](../../tests/unit/test_branch_inventory.py)、[`../../tests/unit/test_workitem_scaffold.py`](../../tests/unit/test_workitem_scaffold.py)、[`../../tests/integration/test_cli_workitem_init.py`](../../tests/integration/test_cli_workitem_init.py)
 
 > 口径：`139` 是 `120/T44` 的 implementation carrier。它不重写 `007/008` 的 formal truth，而是把当前仓库里已经落地的 branch lifecycle truth 与 direct-formal entry runtime 正式收束为 backlog 可消费的单一 closure carrier。

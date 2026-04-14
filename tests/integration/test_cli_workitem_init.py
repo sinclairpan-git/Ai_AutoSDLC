@@ -38,6 +38,31 @@ def _installed_dep_site_packages() -> Path:
     return Path(typer.__file__).resolve().parents[1]
 
 
+def _dependency_overlay_site_packages(tmp_path: Path) -> Path:
+    source = _installed_dep_site_packages()
+    overlay = tmp_path / "dep-site"
+    overlay.mkdir()
+
+    for item in source.iterdir():
+        if item.name == "ai_sdlc":
+            continue
+        if item.name.startswith("ai_sdlc-") and item.name.endswith(".dist-info"):
+            continue
+        if item.name.startswith("ai_sdlc") and item.suffix == ".pth":
+            continue
+
+        target = overlay / item.name
+        try:
+            target.symlink_to(item, target_is_directory=item.is_dir())
+        except OSError:
+            if item.is_dir():
+                shutil.copytree(item, target)
+            else:
+                shutil.copy2(item, target)
+
+    return overlay
+
+
 class TestCliWorkitemInit:
     def test_workitem_init_guides_formal_bootstrap_when_state_missing(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
@@ -259,7 +284,7 @@ class TestCliWorkitemInit:
         assert venv_cli.is_file()
 
         env = dict(os.environ)
-        dep_site = _installed_dep_site_packages()
+        dep_site = _dependency_overlay_site_packages(tmp_path)
         prev = env.get("PYTHONPATH", "")
         env["PYTHONPATH"] = str(dep_site) if not prev else f"{dep_site}{os.pathsep}{prev}"
 

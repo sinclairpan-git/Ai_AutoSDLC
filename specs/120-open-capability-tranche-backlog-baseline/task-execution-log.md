@@ -642,7 +642,7 @@
 - 改动范围：`tasks.md`
 - 改动内容：
   - 将 `Task 4.4 Branch Lifecycle And Direct Formal Entry Closure` 的当前状态从 `formal_only` 更新为 `partial`
-  - 明确 `139` 的 bounded focused verification 已通过，且当前仅有 network-limited installed-wheel smoke 待网络条件满足后补跑
+  - 明确 `139` 的 focused verification 已通过，且 installed-wheel smoke 现已可在当前环境内直接完成
   - 明确 `T44` 当前保持 `partial` 仅表示 tranche/root closure 保守态，不表示 `139` 仍缺实现 carrier
 - 新增/调整的测试：无
 - 是否符合任务目标：是

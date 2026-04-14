@@ -18,13 +18,11 @@ dependencies = [
 ai-sdlc = "ai_sdlc.cli.main:app"
 
 [build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
+requires = []
+build-backend = "packaging_backend"
+backend-path = ["."]
 
-[tool.hatch.build.targets.wheel]
-packages = ["src/ai_sdlc"]
-
-[tool.hatch.build.targets.wheel.force-include]
+[tool.ai_sdlc.packaging.force-include]
 "templates/spec-template.md" = "ai_sdlc/templates/spec-template.md"
 "templates/plan-template.md" = "ai_sdlc/templates/plan-template.md"
 "templates/tasks-template.md" = "ai_sdlc/templates/tasks-template.md"
