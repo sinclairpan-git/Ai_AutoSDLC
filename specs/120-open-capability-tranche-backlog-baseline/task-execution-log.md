@@ -650,3 +650,30 @@
 #### 2.76 批次结论
 
 - `120/T44` 现在已经从 formal carrier 推进到真实 runtime closure；下一批可转向后续 tranche。
+
+### Batch 2026-04-14-023 | Close T00 runtime closure
+
+#### 2.77 批次范围
+
+- 覆盖范围：`tasks.md`
+- 覆盖目标：
+  - 将 `T00` 与 `122` 的现有 runtime truth 正式对齐
+  - 明确 `T00` 已不再阻塞 Batch 1 派生，但当前 host/mutating gate 仍由 adapter ingress truth 控制
+
+#### 2.78 任务记录
+
+##### T120-DOC-29 | 回填 `T00` 实现结果
+
+- 改动范围：`tasks.md`
+- 改动内容：
+  - 为 `Task 0.0 Real Adapter Installation And Verification Blocker` 回填 `122-agent-adapter-verified-host-ingress-runtime-baseline`
+  - 明确 `122` focused verification 已通过，`T00` 不再阻塞 Batch 1 派生，但实际 mutating delivery 仍继续受当前 adapter ingress truth gate 控制
+  - 将 `T00` 的缺失 carrier 改为“无”，并把旧 blocker wording 收紧为已由 `122` 收束的历史背景；`partial` 仅作为 `S9` root closure 保守态
+- 新增/调整的测试：无
+- 是否符合任务目标：是
+
+#### 2.79 批次结论
+
+- `120/T00` 现在已经和 `122` 的 adapter verified host ingress runtime truth 对齐。
+- Batch 1 不再被 `T00` 的 implementation carrier 缺失阻塞；下一批可直接继续 `T11/T12` 等 user-visible mainline closure。
+- 实际 mutating delivery 仍继续以当前 adapter ingress truth 为 gate，不因为本次 backlog sync 被放宽。

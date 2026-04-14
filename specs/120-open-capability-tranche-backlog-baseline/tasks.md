@@ -50,15 +50,13 @@ related_doc:
 - **交付流**：`S9`
 - **来源范围**：`010`、`094`、`121`、`src/ai_sdlc/integrations/ide_adapter.py`、`src/ai_sdlc/cli/adapter_cmd.py`、`src/ai_sdlc/cli/run_cmd.py`
 - **当前状态**：`partial`
-- **阻塞原因**：
-  - Claude/Codex/VS Code 当前写入的不是官方默认读取入口
-  - `adapter activate` 只是 operator acknowledgement，不是 host/plugin 已读取的机器证据
-  - `generic` 尚缺统一的官方自动加载入口和验证协议；像 `TRAE` 这类当前未获厂商公开文档明确支持的目标，也只能先归入 `generic`，不能宣称“真实适配成功”
+- **派生状态**：已派生 `122-agent-adapter-verified-host-ingress-runtime-baseline`；`122` focused verification 已通过，`T00` 已不再阻塞 Batch 1 派生；实际 mutating delivery 仍继续受当前 adapter ingress truth gate 控制；当前保持 `partial` 仅表示 `S9` root closure 保守态
+- **历史阻塞背景（已由 `122` 收束）**：
+  - Claude/Codex/VS Code 先前写入的不是官方默认读取入口；`122` 已切换到 canonical path
+  - `adapter activate` 先前只是 operator acknowledgement；`122` 已将治理真值迁到 machine-verifiable ingress truth
+  - `generic` 仍无统一 verify protocol；像 `TRAE` 这类当前未获厂商公开文档明确支持的目标，继续按 `generic / degraded / unsupported` 诚实处理
 - **缺失 carrier**：
-  - per-agent official/default ingestion surface registry
-  - host/plugin auto-detection precedence 与 support tier
-  - nonce/probe/evidence 驱动的自动 verify runtime
-  - `status / doctor / run / init` 对 `installed / acknowledged / verified / degraded / unsupported` 的单一 gate truth
+  - 无；per-agent official/default ingestion surface registry、host/plugin auto-detection precedence 与 support tier、nonce/probe/evidence 驱动的 verify runtime，以及 `status / doctor / run / init` 的单一 gate truth 已由 `122` 正式收束为现有 runtime closure
 - **建议文件面**：`src/ai_sdlc/integrations/ide_adapter.py`、`src/ai_sdlc/integrations/agent_target.py`、`src/ai_sdlc/cli/adapter_cmd.py`、`src/ai_sdlc/cli/run_cmd.py`、`src/ai_sdlc/adapters/*`、对应 unit/integration tests
 - **前置要求**：
   1. `121` 已将该缺口回写进 root `capability_closure_audit`
