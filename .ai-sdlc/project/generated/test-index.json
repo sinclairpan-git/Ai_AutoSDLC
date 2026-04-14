@@ -1,6 +1,6 @@
 {
   "total_test_files": 840,
-  "total_test_functions": 1605,
+  "total_test_functions": 1607,
   "test_files": [
     {
       "path": "docs/superpowers/specs/2026-03-27-telemetry-trace-governance-design.md",
@@ -5748,7 +5748,7 @@
     {
       "path": "tests/unit/test_ide_adapter.py",
       "framework": "pytest",
-      "test_count": 25,
+      "test_count": 26,
       "test_names": [
         "test_trae_is_not_supported_as_a_distinct_target",
         "test_cursor_dir",
@@ -5767,6 +5767,7 @@
         "test_writes_cursor_rule",
         "test_idempotent_second_run",
         "test_skips_user_modified",
+        "test_migrates_legacy_vscode_adapter",
         "test_all_ide_templates_point_to_status_then_safe_start",
         "test_skips_without_ai_sdlc",
         "test_init_applies_generic_when_no_ide_dirs",
@@ -6292,9 +6293,10 @@
     {
       "path": "tests/unit/test_runner_confirm.py",
       "framework": "pytest",
-      "test_count": 16,
+      "test_count": 17,
       "test_names": [
         "test_close_context_includes_incident_postmortem_and_refresh_entry",
+        "test_close_context_attests_with_close_check_when_execute_progress_missing",
         "test_verify_context_includes_frontend_contract_runtime_attachment_for_active_014",
         "test_verify_context_skips_frontend_contract_runtime_attachment_for_non_014",
         "test_confirm_callback_pauses_pipeline",

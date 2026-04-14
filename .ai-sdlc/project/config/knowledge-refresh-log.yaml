@@ -27,3 +27,25 @@ entries:
   updated_docs:
   - .ai-sdlc/project/memory/engineering-corpus.md
   notes: ''
+- work_item_id: WI-MANUAL
+  refresh_level: 2
+  triggered_at: '2026-04-14T10:44:46+00:00'
+  completed_at: '2026-04-14T10:44:50+00:00'
+  changed_files:
+  - USER_GUIDE.zh-CN.md
+  - docs/framework-defect-backlog.zh-CN.md
+  - src/ai_sdlc/cli/sub_apps.py
+  - src/ai_sdlc/core/runner.py
+  - src/ai_sdlc/integrations/ide_adapter.py
+  - tests/unit/test_ide_adapter.py
+  - tests/unit/test_runner_confirm.py
+  updated_indexes:
+  - .ai-sdlc/state/repo-facts.json
+  - .ai-sdlc/project/generated/key-files.json
+  - .ai-sdlc/project/generated/api-index.json
+  - .ai-sdlc/project/generated/dependency-index.json
+  - .ai-sdlc/project/generated/test-index.json
+  - .ai-sdlc/project/generated/risk-index.json
+  updated_docs:
+  - .ai-sdlc/project/memory/engineering-corpus.md
+  notes: ''

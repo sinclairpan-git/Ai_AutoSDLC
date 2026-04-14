@@ -1390,3 +1390,53 @@
 - 处置进展（2026-03-28）: `001` Batch 16 Task 6.42 已完成收口：[`GitClient`](../src/ai_sdlc/branch/git_client.py) 新增仓库级 Git 写锁，统一把 `git add`、`git commit`、`git merge`、`git checkout`、`git branch` 写操作、`git worktree remove/add`、`git push` 等归入互斥临界区；`add_and_commit()` 固化为 `git add -> git status/diff -> git commit` 顺序，`push()` 明确为后置单独步骤。遇到 `.git/index.lock` 时，helper 会先区分 active vs stale：若存在活跃 Git 进程则直接阻断，若无活跃进程也只允许显式 `remove_stale_index_lock()` 路径，不再默认删锁。定向回归 **58 passed**，`uv run ruff check`、`uv run ai-sdlc verify constraints` 与 `uv run ai-sdlc workitem close-check --wi specs/001-ai-sdlc-framework --all-docs` 已通过，因此本条 defect 关单。
 - 可验证成功标准: 给定“同一仓库内连续发起两个 Git 写命令”的场景时，代理必须串行化或直接拒绝并行执行，不再出现 `.git/index.lock` 争抢；给定“锁文件已存在”的场景时，只有在确认没有活跃 Git 进程后才允许清理陈旧锁文件。
 - 是否需要回归测试补充: 是：补一条针对 Git 写命令分类/串行化的 guardrail 检查，并增加“遇到 `.git/index.lock` 时先做进程与锁状态判断”的流程约束测试。
+
+## FD-2026-04-14-001 | Close Gate 仅依赖 execute_progress，导致升级后无法可信收尾
+
+- 日期 (UTC): 2026-04-14
+- 来源: user_report, self_review
+- 状态: closed
+- owner: codex
+- wi_id: 001-ai-sdlc-framework
+- 现象: `ai-sdlc run` 在 `close` 阶段反复报 “Not all tasks are completed / Final tests did not pass”，但 `workitem close-check` 已全部 PASS；问题出现在 `execute_progress` 为空或为旧版本遗留时，Close Gate 无法读取手工验证证据。
+- 触发场景: 旧版本升级后未使用 `Executor` 跑完整 batch，或历史项目只有 `task-execution-log.md` / `verify` 证据而 `checkpoint.yml.execute_progress` 为空。
+- 影响范围: close 阶段可信收尾、升级后项目的收口路径、用户对“验证已完成但仍被门禁阻断”的信任、非智能模型的执行体验。
+- 根因分类: A, B, H
+- 未来杜绝方案摘要: Close Gate 在 `execute_progress` 缺失或不完整时必须允许使用 `workitem close-check` 作为可信补证入口；其结果应映射到 DoneGate 的 `all_tasks_complete/tests_passed` 以维持可验证收尾，且不篡改 `execute_progress` 本身。
+- 建议改动层级: rule / policy, middleware, workflow, tool, eval
+- prompt / context: 明确“close 可信收尾”可由 `close-check` 证据补齐，但必须满足 `task-execution-log` 的验证画像与 git closure 规则。
+- rule / policy: DoneGate 允许 `close-check` 作为 execute_progress 缺失时的可信补证来源；不得仅凭手工口头声明放行。
+- middleware: `runner._enrich_close_context()` / `cli.sub_apps` 在 close/done 阶段引入 close-check fallback，基于 `tasks_completion` / `verification_profile` 结果补齐 gate context。
+- workflow: 升级后项目若 `execute_progress` 缺失，应先运行 `workitem close-check`（在最终 commit 后）再进入 close gate。
+- tool: `src/ai_sdlc/core/runner.py`, `src/ai_sdlc/cli/sub_apps.py`, `src/ai_sdlc/core/close_check.py`
+- eval: close gate 被 “execute_progress 缺失”阻断的次数、`close-check` 补证通过率、升级后项目收口耗时
+- 风险等级: 中
+- 处置进展（2026-04-14）: `runner` 与 `cli` 已在 close/done 阶段缺失 `execute_progress` 时回落 `close-check`，并将 `tasks_completion` / `verification_profile` 映射到 DoneGate；新增 `test_close_context_attests_with_close_check_when_execute_progress_missing` 覆盖该路径。全量 **`uv run pytest -q`**、`uv run ruff check .` 与 `uv run ai-sdlc verify constraints` 已通过，仓库级 `uv run ai-sdlc workitem close-check --wi specs/001-ai-sdlc-framework` 已通过，因此本条 defect 关单。
+- 下一步任务归属（2026-04-14）: 已在 `001` Task 6.46 收口，无新增 action item。
+- 可验证成功标准: 给定 execute_progress 为空但 close-check PASS 的项目，`ai-sdlc run` 的 close gate 不再失败；若 close-check FAIL，仍保持阻断。
+- 是否需要回归测试补充: 是：补 close gate fallback 的单测，覆盖 execute_progress 缺失但 close-check PASS 的场景。
+
+## FD-2026-04-14-002 | Adapter canonical path 迁移未兼容旧路径，升级后误判未适配
+
+- 日期 (UTC): 2026-04-14
+- 来源: user_report, self_review
+- 状态: closed
+- owner: codex
+- wi_id: 001-ai-sdlc-framework
+- 现象: 升级到 `122` 后，旧项目仍保留 `.vscode/AI-SDLC.md` / `.claude/AI-SDLC.md` / `.codex/AI-SDLC.md` 等历史文件，但新的 canonical path 是 `.github/copilot-instructions.md` / `.claude/CLAUDE.md` / `AGENTS.md`；`adapter status` 可能显示 `unsupported` 或仅 `materialized`，用户误以为适配失败。
+- 触发场景: 历史项目升级后未主动重新执行 `adapter select`；旧路径文件仍在，但新路径缺失。
+- 影响范围: 升级兼容体验、IDE 适配可信度、非智能模型对“为什么突然不生效”的理解。
+- 根因分类: A, B, D
+- 未来杜绝方案摘要: 自动识别 legacy adapter 文件，并在不覆盖用户改动的前提下，把内容迁移到新 canonical path；同时在状态面提示已检测到 legacy 文件，避免误判为 unsupported。
+- 建议改动层级: prompt / context, rule / policy, middleware, workflow, tool, eval
+- prompt / context: 明确升级后 canonical path 已迁移；旧路径只作为 legacy 迁移输入，不再是运行时入口。
+- rule / policy: 旧路径仅作为迁移源，状态面不得把 legacy 文件当成 canonical materialized。
+- middleware: `ide_adapter.apply_adapter()` 增加 legacy source -> canonical 的一次性迁移逻辑。
+- workflow: 升级后建议重新执行 `adapter select` 或 `status` 触发幂等迁移。
+- tool: `src/ai_sdlc/integrations/ide_adapter.py`, `tests/unit/test_ide_adapter.py`
+- eval: 升级后 adapter 误判为 unsupported 的次数、legacy 迁移触发率
+- 风险等级: 中
+- 处置进展（2026-04-14）: `ide_adapter` 已加入 legacy path 检测与迁移回填逻辑，canonical 缺失时会用旧路径内容补齐，且不会覆盖已有 canonical 文件；`ingress` 在仅 legacy 存在时给出明确 degrade 说明。新增 `test_migrates_legacy_vscode_adapter` 回归，用户指南补充升级兼容提示。全量 **`uv run pytest -q`**、`uv run ruff check .` 与 `uv run ai-sdlc verify constraints` 已通过，仓库级 `uv run ai-sdlc workitem close-check --wi specs/001-ai-sdlc-framework` 已通过，因此本条 defect 关单。
+- 下一步任务归属（2026-04-14）: 已在 `001` Task 6.47 收口，无新增 action item。
+- 可验证成功标准: 给定只有旧路径文件的项目，运行 `ai-sdlc status`/`init` 后 canonical path 会被补齐，且不会覆盖用户自定义内容。
+- 是否需要回归测试补充: 是：补 legacy file 迁移的单测。

@@ -94,6 +94,11 @@
       "lines": 583
     },
     {
+      "path": "src/ai_sdlc/integrations/ide_adapter.py",
+      "language": "python",
+      "lines": 576
+    },
+    {
       "path": "src/ai_sdlc/telemetry/store.py",
       "language": "python",
       "lines": 558
@@ -107,11 +112,6 @@
       "path": "src/ai_sdlc/telemetry/evaluators.py",
       "language": "python",
       "lines": 538
-    },
-    {
-      "path": "src/ai_sdlc/integrations/ide_adapter.py",
-      "language": "python",
-      "lines": 525
     },
     {
       "path": "src/ai_sdlc/telemetry/contracts.py",

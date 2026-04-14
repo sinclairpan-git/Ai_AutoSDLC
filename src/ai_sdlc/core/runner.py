@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any
 
 from ai_sdlc.context.state import load_checkpoint, save_checkpoint
+from ai_sdlc.core.close_check import run_close_check
 from ai_sdlc.core.config import load_project_config
 from ai_sdlc.core.dispatcher import StageDispatcher
 from ai_sdlc.core.executor import Executor
@@ -407,6 +408,25 @@ class SDLCRunner:
                 and not prog.halted
             )
             ctx["tests_passed"] = prog.last_commit_hash != "" and not prog.halted
+        if spec_dir is not None and (not ctx["all_tasks_complete"] or not ctx["tests_passed"]):
+            close_check = run_close_check(cwd=self.root, wi=spec_dir, all_docs=False)
+            ctx["close_check_ok"] = close_check.ok
+            if close_check.ok:
+                def _flag_ok(name: str) -> bool:
+                    return any(
+                        check.get("name") == name and check.get("ok")
+                        for check in close_check.checks
+                    )
+
+                ctx["all_tasks_complete"] = ctx["all_tasks_complete"] or _flag_ok(
+                    "tasks_completion"
+                )
+                ctx["tests_passed"] = ctx["tests_passed"] or _flag_ok(
+                    "verification_profile"
+                )
+                ctx["close_check_attested"] = True
+            else:
+                ctx["close_check_blockers"] = list(close_check.blockers)
         work_item_id = ""
         if cp and cp.linked_wi_id:
             work_item_id = cp.linked_wi_id

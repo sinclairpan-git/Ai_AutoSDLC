@@ -8,6 +8,7 @@ from rich.panel import Panel
 from rich.table import Table
 
 from ai_sdlc.context.state import load_checkpoint
+from ai_sdlc.core.close_check import run_close_check
 from ai_sdlc.core.verify_constraints import build_verification_gate_context
 from ai_sdlc.gates.pipeline_gates import (
     CloseGate,
@@ -132,6 +133,26 @@ def _build_context(stage: str, root_str: str) -> dict[str, object]:
         if "spec_dir" in ctx:
             spec_dir = Path(ctx["spec_dir"])
             ctx["summary_path"] = str(spec_dir / "development-summary.md")
+        if "spec_dir" in ctx and (not ctx["all_tasks_complete"] or not ctx["tests_passed"]):
+            spec_dir = Path(ctx["spec_dir"])
+            close_check = run_close_check(cwd=root, wi=spec_dir, all_docs=False)
+            ctx["close_check_ok"] = close_check.ok
+            if close_check.ok:
+                def _flag_ok(name: str) -> bool:
+                    return any(
+                        check.get("name") == name and check.get("ok")
+                        for check in close_check.checks
+                    )
+
+                ctx["all_tasks_complete"] = ctx["all_tasks_complete"] or _flag_ok(
+                    "tasks_completion"
+                )
+                ctx["tests_passed"] = ctx["tests_passed"] or _flag_ok(
+                    "verification_profile"
+                )
+                ctx["close_check_attested"] = True
+            else:
+                ctx["close_check_blockers"] = list(close_check.blockers)
 
     return ctx
 

@@ -9,6 +9,7 @@ from unittest.mock import MagicMock
 import pytest
 
 from ai_sdlc.context.state import load_checkpoint, save_checkpoint
+from ai_sdlc.core.close_check import CloseCheckResult
 from ai_sdlc.core.config import save_project_config
 from ai_sdlc.core.frontend_contract_drift import PageImplementationObservation
 from ai_sdlc.core.frontend_contract_observation_provider import (
@@ -127,6 +128,51 @@ class TestConfirmMode:
         assert ctx["postmortem_path"] == ".ai-sdlc/work-items/WI-INC-001/postmortem.md"
         assert ctx["knowledge_refresh_level"] == 2
         assert ctx["knowledge_refresh_completed"] is True
+
+    def test_close_context_attests_with_close_check_when_execute_progress_missing(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        _bootstrap_project(tmp_path)
+        spec_dir = tmp_path / "specs" / "WI-001"
+        spec_dir.mkdir(parents=True, exist_ok=True)
+        (spec_dir / "development-summary.md").write_text("# Summary\n", encoding="utf-8")
+        save_checkpoint(
+            tmp_path,
+            Checkpoint(
+                current_stage="close",
+                feature=FeatureInfo(
+                    id="WI-001",
+                    spec_dir="specs/WI-001",
+                    design_branch="design/WI-001",
+                    feature_branch="feature/WI-001",
+                    current_branch="feature/WI-001",
+                ),
+            ),
+        )
+
+        def _fake_close_check(*, cwd: Path | None, wi: Path, all_docs: bool = False) -> CloseCheckResult:
+            return CloseCheckResult(
+                ok=True,
+                blockers=[],
+                checks=[
+                    {"name": "tasks_completion", "ok": True, "detail": "ok"},
+                    {"name": "verification_profile", "ok": True, "detail": "ok"},
+                ],
+                wi_dir=spec_dir,
+                error=None,
+            )
+
+        monkeypatch.setattr("ai_sdlc.core.runner.run_close_check", _fake_close_check)
+
+        runner = SDLCRunner(tmp_path)
+        cp = load_checkpoint(tmp_path)
+        assert cp is not None
+
+        ctx = runner._build_context("close", cp)
+
+        assert ctx["all_tasks_complete"] is True
+        assert ctx["tests_passed"] is True
+        assert ctx["close_check_attested"] is True
 
     def test_verify_context_includes_frontend_contract_runtime_attachment_for_active_014(
         self, tmp_path: Path

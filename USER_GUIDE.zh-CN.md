@@ -1,5 +1,18 @@
 # AI-SDLC 小白实操手册
 
+## 升级兼容提示（2026-04）
+
+- adapter 的 canonical path 已切换到厂商默认入口：
+  - Codex -> `AGENTS.md`
+  - Cursor -> `.cursor/rules/ai-sdlc.mdc`
+  - VS Code -> `.github/copilot-instructions.md`
+  - Claude Code -> `.claude/CLAUDE.md`
+- 旧路径（`.vscode/AI-SDLC.md` / `.claude/AI-SDLC.md` / `.codex/AI-SDLC.md` / `.cursor/rules/ai-sdlc.md`）只作为迁移输入；新版会把内容迁到 canonical path，但不会覆盖你在新路径上的自定义修改。
+- `adapter activate` 现在只保留为兼容/调试入口，不代表 “verified_loaded”；是否已验证以 `adapter status` 的 ingress truth 为准。
+- 示例输出（`Adapter acknowledged` / `Pipeline completed`）不代表 verified_loaded；以 `adapter status` 的 ingress truth 为准。
+- `close-check` 只在 `execute_progress` 缺失时作为可信补证，仍要求 tasks.md / execution-log / fresh verification，不能替代正常 execute 收口。
+- 如果 status 仍显示 `materialized only` 或 `unsupported`，请在 IDE 自带终端重新运行 `python -m ai_sdlc adapter select`，或按提示设置宿主环境变量后再跑 `status`。
+
 ## 目录
 
 - 使用前先记住
@@ -469,6 +482,8 @@ python -m ai_sdlc run --dry-run
 Pipeline completed. Stage: verify
 ```
 
+**注意：**这只是示例输出，不代表治理已激活；以 `python -m ai_sdlc adapter status` 的 ingress truth 为准。
+
 **如果报错说需要 `recover --reconcile`：**
 
 直接复制下面四条：
@@ -479,6 +494,8 @@ python -m ai_sdlc status
 python -m ai_sdlc adapter activate
 python -m ai_sdlc run --dry-run
 ```
+
+如果照做仍失败，不要继续往下走，先回到第 5～7 步检查安装与路径。
 
 **如果它提示你先执行 `adapter activate`：**
 
@@ -942,6 +959,8 @@ python -m ai_sdlc run --dry-run
 Pipeline completed. Stage: verify
 ```
 
+**注意：**这只是示例输出，不代表治理已激活；以 `python -m ai_sdlc adapter status` 的 ingress truth 为准。
+
 **如果报错说需要 `recover --reconcile`：**
 
 直接复制：
@@ -952,6 +971,8 @@ python -m ai_sdlc status
 python -m ai_sdlc adapter activate
 python -m ai_sdlc run --dry-run
 ```
+
+如果照做仍失败，不要继续第 10 步，先回到第 5～7 步检查安装与路径。
 
 **如果它提示你先执行 `adapter activate`：**
 

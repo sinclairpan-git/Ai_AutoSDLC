@@ -1703,3 +1703,83 @@
 - **已完成 git 提交**：是
 - **提交哈希**：本批唯一一次语义提交为 `feat: serialize repo git writes`；完整 SHA 以当前 `HEAD`（`git rev-parse HEAD`）为准。
 - **是否继续下一批**：Batch 16 已完成，可转下一个未收口 work item
+
+### Batch 2026-04-14-001 | 001 Close可信收尾与 legacy adapter 兼容
+
+#### 2.1 准备
+
+- **任务来源**：[`tasks.md`](tasks.md) Task `6.46` / `6.47`、[`../../docs/framework-defect-backlog.zh-CN.md`](../../docs/framework-defect-backlog.zh-CN.md) `FD-2026-04-14-001` / `FD-2026-04-14-002`、用户升级兼容反馈。
+- **目标**：补齐 close gate 在 `execute_progress` 缺失时的可信补证路径；兼容 legacy adapter 路径并减少升级误判。
+- **预读范围**：[`../../src/ai_sdlc/core/runner.py`](../../src/ai_sdlc/core/runner.py)、[`../../src/ai_sdlc/cli/sub_apps.py`](../../src/ai_sdlc/cli/sub_apps.py)、[`../../src/ai_sdlc/integrations/ide_adapter.py`](../../src/ai_sdlc/integrations/ide_adapter.py)、[`../../tests/unit/test_runner_confirm.py`](../../tests/unit/test_runner_confirm.py)、[`../../tests/unit/test_ide_adapter.py`](../../tests/unit/test_ide_adapter.py)、[`../../docs/framework-defect-backlog.zh-CN.md`](../../docs/framework-defect-backlog.zh-CN.md)、[`../../USER_GUIDE.zh-CN.md`](../../USER_GUIDE.zh-CN.md)。
+- **激活的规则**：verification-before-completion；归档先于继续。
+
+#### 2.2 统一验证命令
+
+- **验证画像**：`code-change`
+- **R1 / V1**
+  - 命令：`uv run pytest -q`
+  - 结果：**1670 passed**。
+- **Lint**
+  - 命令：`uv run ruff check .`
+  - 结果：**All checks passed!**
+- **治理只读校验**
+  - 命令：`uv run ai-sdlc verify constraints`
+  - 结果：**无 BLOCKER**。
+- **收口核验**
+  - 命令：`uv run ai-sdlc workitem close-check --wi specs/001-ai-sdlc-framework`
+  - 结果：**全部 PASS**。
+- **入口预演**
+  - 命令：`uv run ai-sdlc run --dry-run`
+  - 结果：**Pipeline completed（Stage: close）；提示 adapter 为 materialized/unverified**。
+
+#### 2.3 任务记录
+
+##### Task 6.46 | Close Gate 可信收尾补证
+
+- **改动范围**：[`../../src/ai_sdlc/core/runner.py`](../../src/ai_sdlc/core/runner.py)、[`../../src/ai_sdlc/cli/sub_apps.py`](../../src/ai_sdlc/cli/sub_apps.py)、[`../../tests/unit/test_runner_confirm.py`](../../tests/unit/test_runner_confirm.py)
+- **改动内容**：
+  - Close / Done Gate 在 `execute_progress` 缺失或不完整时回落 `close-check`，并把 `tasks_completion` / `verification_profile` 映射到 gate context，保留 `close_check_attested` 审计标记。
+  - 不再依赖手工口头声明；当 `close-check` 失败时仍保持阻断。
+- **新增/调整的测试**：新增 `test_close_context_attests_with_close_check_when_execute_progress_missing` 覆盖 execute_progress 缺失但 close-check PASS 的路径。
+- **执行的命令**：见 R1 / V1 / Lint / 治理只读校验 / 收口核验。
+- **测试结果**：通过。
+- **是否符合任务目标**：符合。升级后 close gate 可使用可验证补证路径完成可信收尾。
+
+##### Task 6.47 | Legacy adapter path 迁移兼容
+
+- **改动范围**：[`../../src/ai_sdlc/integrations/ide_adapter.py`](../../src/ai_sdlc/integrations/ide_adapter.py)、[`../../tests/unit/test_ide_adapter.py`](../../tests/unit/test_ide_adapter.py)、[`../../USER_GUIDE.zh-CN.md`](../../USER_GUIDE.zh-CN.md)
+- **改动内容**：
+  - 自动检测 legacy adapter 路径，canonical 缺失时以 legacy 内容补齐；不覆盖已存在 canonical 文件。
+  - `ingress` 在仅 legacy 存在时给出明确 degrade 说明，避免误判为未适配。
+  - 用户指南补充升级兼容提示与新 canonical path 列表。
+- **新增/调整的测试**：新增 `test_migrates_legacy_vscode_adapter` 覆盖 legacy 路径回填。
+- **执行的命令**：见 R1 / V1 / Lint / 治理只读校验 / 收口核验。
+- **测试结果**：通过。
+- **是否符合任务目标**：符合。升级路径能平滑迁移 legacy adapter 文件。
+
+#### 2.4 代码审查（摘要）
+
+- **规格对齐**：close gate 可信补证落地为 machine-verifiable 路径，避免“执行证据缺失但被阻断”的不一致体验。
+- **代码质量**：fallback 仅在 execute_progress 缺失时触发，且不回写旧 checkpoint，避免引入隐式副作用。
+- **测试质量**：补齐 close gate fallback 与 legacy 迁移单测，覆盖升级场景。
+- **结论**：允许关闭 `FD-2026-04-14-001` 与 `FD-2026-04-14-002`。
+
+#### 2.5 任务/计划同步状态
+
+- `tasks.md` 同步状态：`已同步`（Task `6.46` / `6.47` 已补充完成态）。
+- `framework-defect-backlog.zh-CN.md` 同步状态：`已同步`（`FD-2026-04-14-001` / `FD-2026-04-14-002` 已关闭）。
+- `related_plan`（如存在）同步状态：`已对账`。
+
+#### 2.6 自动决策记录（如有）
+
+- AD-001：Close Gate 在 execute_progress 缺失时优先使用 `close-check` 结果映射 DoneGate，而不是强制重建 execute_progress → 理由：保留历史项目的验证证据来源，同时避免伪造执行进度。
+
+#### 2.7 批次结论
+
+- Task **6.46**、**6.47** 已完成，升级后的 close 可信收尾与 legacy adapter 兼容已收口。
+
+#### 2.8 归档后动作
+
+- **已完成 git 提交**：是
+- **提交哈希**：本批唯一一次语义提交为 `fix: close gate fallback + legacy adapter migration`；完整 SHA 以当前 `HEAD`（`git rev-parse HEAD`）为准。
+- **是否继续下一批**：等待新的 tranche / backlog 输入

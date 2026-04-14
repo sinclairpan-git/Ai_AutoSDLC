@@ -28,6 +28,12 @@ _VERIFICATION_ENV_KEYS: dict[IDEKind, tuple[str, ...]] = {
     IDEKind.CODEX: ("OPENAI_CODEX", "CODEX_CLI_READY"),
     IDEKind.CLAUDE_CODE: ("CLAUDE_CODE_ENTRYPOINT", "CLAUDECODE"),
 }
+_LEGACY_ADAPTER_PATHS: dict[IDEKind, tuple[str, ...]] = {
+    IDEKind.CURSOR: (".cursor/rules/ai-sdlc.md",),
+    IDEKind.VSCODE: (".vscode/AI-SDLC.md",),
+    IDEKind.CODEX: (".codex/AI-SDLC.md",),
+    IDEKind.CLAUDE_CODE: (".claude/AI-SDLC.md",),
+}
 
 
 @dataclass
@@ -38,6 +44,7 @@ class ApplyResult:
     written: list[str] = field(default_factory=list)
     skipped_existing: list[str] = field(default_factory=list)
     skipped_user_modified: list[str] = field(default_factory=list)
+    legacy_migrated: list[str] = field(default_factory=list)
     skipped_no_project: bool = False
     message: str = ""
 
@@ -63,15 +70,38 @@ def _canonical_path(ide: IDEKind) -> str:
     return _install_pairs(ide)[0][1]
 
 
+def _legacy_paths(ide: IDEKind) -> tuple[str, ...]:
+    return _LEGACY_ADAPTER_PATHS.get(ide, ())
+
+
+def _detect_legacy_adapter(root: Path, ide: IDEKind) -> str | None:
+    for rel in _legacy_paths(ide):
+        if (root / rel).is_file():
+            return rel
+    return None
+
+
 def detect_ide(root: Path) -> IDEKind:
     """Detect IDE from project markers first, then environment hints."""
     return detect_agent_target(root)
 
 
-def _sync_file(bundle: Path, dest: Path, result: ApplyResult) -> None:
+def _sync_file(
+    bundle: Path,
+    dest: Path,
+    result: ApplyResult,
+    *,
+    legacy_sources: tuple[Path, ...] = (),
+) -> None:
     expected = bundle.read_text(encoding="utf-8")
     dest.parent.mkdir(parents=True, exist_ok=True)
     if not dest.exists():
+        legacy_source = next((path for path in legacy_sources if path.is_file()), None)
+        if legacy_source is not None:
+            dest.write_text(legacy_source.read_text(encoding="utf-8"), encoding="utf-8")
+            result.written.append(str(dest))
+            result.legacy_migrated.append(str(legacy_source))
+            return
         dest.write_text(expected, encoding="utf-8")
         result.written.append(str(dest))
         return
@@ -92,7 +122,8 @@ def apply_adapter(root: Path, ide: IDEKind) -> ApplyResult:
             logger.warning("Missing adapter template: %s", src)
             continue
         dst = root / rel_dest
-        _sync_file(src, dst, result)
+        legacy_sources = tuple(root / rel for rel in _legacy_paths(ide))
+        _sync_file(src, dst, result, legacy_sources=legacy_sources)
     return result
 
 
@@ -226,6 +257,16 @@ def _ingress_metadata(
         }
 
     if not (root / canonical_path).is_file():
+        legacy_rel = _detect_legacy_adapter(root, target)
+        if legacy_rel is not None:
+            return {
+                "adapter_ingress_state": AdapterIngressState.UNSUPPORTED.value,
+                "adapter_verification_result": AdapterVerificationResult.UNSUPPORTED.value,
+                "adapter_canonical_path": canonical_path,
+                "adapter_degrade_reason": f"legacy_adapter_path_detected:{legacy_rel}",
+                "adapter_verification_evidence": "",
+                "adapter_verified_at": "",
+            }
         return {
             "adapter_ingress_state": AdapterIngressState.UNSUPPORTED.value,
             "adapter_verification_result": AdapterVerificationResult.UNSUPPORTED.value,
@@ -331,6 +372,17 @@ def _governance_detail(
             )
         return detail
 
+    if ingress_state == AdapterIngressState.UNSUPPORTED.value and degrade_reason.startswith(
+        "legacy_adapter_path_detected:"
+    ):
+        legacy_path = degrade_reason.split(":", 1)[1]
+        return (
+            "Legacy adapter file detected at "
+            f"'{legacy_path}'. Rerun `ai-sdlc adapter select` to materialize "
+            f"the canonical path '{canonical_path}'. Until then governance "
+            "remains unsupported and runs stay advisory-only."
+        )
+
     return "Adapter target is unsupported until canonical materialization succeeds."
 
 
@@ -341,9 +393,10 @@ def _verification_env_hint(target: IDEKind) -> str:
     joined = ", ".join(keys)
     example = keys[0]
     return (
-        "To verify host ingress, rerun the command from the IDE host environment "
+        "To verify host ingress, rerun the command from the IDE built-in terminal "
         f"and reselect the adapter: `ai-sdlc adapter select --agent-target {target.value}`. "
-        f"If you must run from a generic shell, set {joined} (e.g., {example}=1) and rerun."
+        f"If you must run from a generic shell, set {joined} (e.g., {example}=1) and rerun; "
+        "otherwise ingress remains unverified."
     )
 
 

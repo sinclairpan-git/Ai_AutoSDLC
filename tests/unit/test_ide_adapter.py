@@ -133,6 +133,19 @@ class TestApplyAdapter:
         assert f.read_text(encoding="utf-8") == "user content"
         assert str(f) in r.skipped_user_modified
 
+    def test_migrates_legacy_vscode_adapter(self, tmp_path: Path) -> None:
+        (tmp_path / AI_SDLC_DIR).mkdir(parents=True)
+        legacy = tmp_path / ".vscode" / "AI-SDLC.md"
+        legacy.parent.mkdir(parents=True, exist_ok=True)
+        legacy.write_text("legacy content", encoding="utf-8")
+
+        result = apply_adapter(tmp_path, IDEKind.VSCODE)
+
+        canonical = tmp_path / ".github" / "copilot-instructions.md"
+        assert canonical.is_file()
+        assert canonical.read_text(encoding="utf-8") == "legacy content"
+        assert str(legacy) in result.legacy_migrated
+
     def test_all_ide_templates_point_to_status_then_safe_start(
         self, tmp_path: Path
     ) -> None:
