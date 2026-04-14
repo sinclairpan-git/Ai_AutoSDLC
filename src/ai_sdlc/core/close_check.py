@@ -63,6 +63,10 @@ DOCS_WHITELIST_RELS = (
     Path("USER_GUIDE.zh-CN.md"),
 )
 RELEASE_GATE_EVIDENCE_FILE = "release-gate-evidence.md"
+GIT_CLOSURE_ALLOWED_DIRTY_RELS = (
+    ".ai-sdlc/state/checkpoint.yml",
+    ".ai-sdlc/state/checkpoint.yml.bak",
+)
 
 
 def _registered_command_strings() -> tuple[str, ...]:
@@ -326,11 +330,31 @@ def _git_closure_violation(root: Path, log_text: str) -> str | None:
     if normalized_hash in {"", "N/A"}:
         return "latest batch is missing a committed git hash"
     try:
-        if GitClient(root).has_uncommitted_changes():
+        if _has_uncommitted_changes_excluding_allowed(root):
             return "git working tree has uncommitted changes; close-out is not fully committed"
     except GitError as exc:
         return f"unable to inspect git closure state: {exc}"
     return None
+
+
+def _has_uncommitted_changes_excluding_allowed(root: Path) -> bool:
+    client = GitClient(root)
+    status = client._run("status", "--porcelain", "--untracked-files=all")
+    lines = [line for line in status.splitlines() if line.strip()]
+    if not lines:
+        return False
+    allowed = {path.replace("\\", "/") for path in GIT_CLOSURE_ALLOWED_DIRTY_RELS}
+    for line in lines:
+        parts = line.split(maxsplit=1)
+        if len(parts) == 1:
+            return True
+        path = parts[1]
+        if " -> " in path:
+            path = path.split(" -> ", 1)[1]
+        normalized = path.strip().replace("\\", "/")
+        if normalized not in allowed:
+            return True
+    return False
 
 
 def _requires_release_gate(wi_dir: Path) -> bool:

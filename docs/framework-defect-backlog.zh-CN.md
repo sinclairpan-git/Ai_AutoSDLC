@@ -1440,3 +1440,28 @@
 - 下一步任务归属（2026-04-14）: 已在 `001` Task 6.47 收口，无新增 action item。
 - 可验证成功标准: 给定只有旧路径文件的项目，运行 `ai-sdlc status`/`init` 后 canonical path 会被补齐，且不会覆盖用户自定义内容。
 - 是否需要回归测试补充: 是：补 legacy file 迁移的单测。
+
+## FD-2026-04-14-003 | Close-check 因 pipeline state dirty 误判未收口
+
+- 日期 (UTC): 2026-04-14
+- 来源: user_report, self_review
+- 状态: closed
+- owner: codex
+- wi_id: 001-ai-sdlc-framework
+- 现象: `ai-sdlc run` 在 close 阶段反复失败，报 “Not all tasks are completed / Final tests did not pass”；根因是 run 会更新 `.ai-sdlc/state/checkpoint.yml(.bak)`，导致 close-check 的 `git_closure` 认为工作树 dirty，从而无法作为 close gate 可信补证。
+- 触发场景: 在 verified_loaded 环境直接运行 `ai-sdlc run`，pipeline 写入 checkpoint / bak 文件。
+- 影响范围: close gate 可信收尾、升级后收口体验、用户在 IDE 终端执行 run 的成功率。
+- 根因分类: A, H
+- 未来杜绝方案摘要: close-check 的 git_closure 需要忽略 pipeline state 文件，避免框架自写文件触发“未提交”误判。
+- 建议改动层级: rule / policy, middleware, tool, eval
+- prompt / context: git_closure 只针对交付产物变更，不包含 `.ai-sdlc/state/checkpoint.yml(.bak)`。
+- rule / policy: pipeline state 文件不应阻断 close-check git_closure。
+- middleware: `close_check._git_closure_violation()` 读取 git status 时过滤允许路径。
+- workflow: 运行 `ai-sdlc run` 触发 checkpoint 写入后仍可完成 close；必要时先 `workitem close-check` 验证收口。
+- tool: `src/ai_sdlc/core/close_check.py`, `tests/unit/test_close_check.py`
+- eval: close-check 因 pipeline state dirty 误报的次数、run close 成功率。
+- 风险等级: 中
+- 处置进展（2026-04-14）: git_closure 允许 `.ai-sdlc/state/checkpoint.yml(.bak)` 作为白名单；新增 `test_close_check_ignores_checkpoint_state_dirty_files` 回归，`uv run pytest tests/unit/test_close_check.py -q` 通过，`uv run ai-sdlc run` 已能完成 close 阶段。
+- 下一步任务归属（2026-04-14）: 已在 `001` Task 6.48 收口，无新增 action item。
+- 可验证成功标准: 仅 checkpoint state 文件 dirty 时 close-check 仍 PASS；若存在其他未提交变更仍保持 BLOCKER。
+- 是否需要回归测试补充: 是：补 checkpoint state dirty 的 close-check 单测。

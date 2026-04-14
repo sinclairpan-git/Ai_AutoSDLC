@@ -1783,3 +1783,71 @@
 - **已完成 git 提交**：是
 - **提交哈希**：本批唯一一次语义提交为 `fix: close gate fallback + legacy adapter migration`；完整 SHA 以当前 `HEAD`（`git rev-parse HEAD`）为准。
 - **是否继续下一批**：等待新的 tranche / backlog 输入
+
+### Batch 2026-04-14-002 | 001 Close-check git_closure 白名单补齐
+
+#### 2.1 准备
+
+- **任务来源**：[`tasks.md`](tasks.md) Task `6.48`、[`../../docs/framework-defect-backlog.zh-CN.md`](../../docs/framework-defect-backlog.zh-CN.md) `FD-2026-04-14-003`、run close 阶段阻断反馈。
+- **目标**：close-check 允许 pipeline state 文件 dirty，不再因 run 自写 checkpoint 误判未收口。
+- **预读范围**：[`../../src/ai_sdlc/core/close_check.py`](../../src/ai_sdlc/core/close_check.py)、[`../../tests/unit/test_close_check.py`](../../tests/unit/test_close_check.py)、[`../../docs/framework-defect-backlog.zh-CN.md`](../../docs/framework-defect-backlog.zh-CN.md)。
+- **激活的规则**：test-driven-development；verification-before-completion；归档先于继续。
+
+#### 2.2 统一验证命令
+
+- **验证画像**：`code-change`
+- **R1 / V1**
+  - 命令：`uv run pytest -q`
+  - 结果：**1671 passed**。
+- **Lint**
+  - 命令：`uv run ruff check .`
+  - 结果：**All checks passed!**
+- **治理只读校验**
+  - 命令：`uv run ai-sdlc verify constraints`
+  - 结果：**无 BLOCKER**。
+- **收口核验**
+  - 命令：`uv run ai-sdlc workitem close-check --wi specs/001-ai-sdlc-framework`
+  - 结果：**全部 PASS**。
+- **全流程执行**
+  - 命令：`OPENAI_CODEX=1 uv run ai-sdlc run`
+  - 结果：**Pipeline completed（Stage: close）**。
+
+#### 2.3 任务记录
+
+##### Task 6.48 | Close-check 允许 pipeline state dirty 白名单
+
+- **改动范围**：[`../../src/ai_sdlc/core/close_check.py`](../../src/ai_sdlc/core/close_check.py)、[`../../tests/unit/test_close_check.py`](../../tests/unit/test_close_check.py)
+- **改动内容**：
+  - `git_closure` 读取 git status 时过滤 `.ai-sdlc/state/checkpoint.yml(.bak)`，避免 run 写入导致误报。
+  - 解析 `git status --porcelain` 输出时不再依赖固定字符位，兼容被 `strip()` 处理的状态行。
+- **新增/调整的测试**：新增 `test_close_check_ignores_checkpoint_state_dirty_files` 覆盖 pipeline state dirty 白名单。
+- **执行的命令**：见 R1 / V1 / Lint / 治理只读校验 / 收口核验 / 全流程执行。
+- **测试结果**：通过。
+- **是否符合任务目标**：符合。close-check 不再因 checkpoint dirty 阻断 run close。
+
+#### 2.4 代码审查（摘要）
+
+- **规格对齐**：git_closure 仍保证业务变更需提交，但允许框架自写 state 作为白名单例外。
+- **代码质量**：白名单判断集中在 close-check 内部，不扩散到其他 gate。
+- **测试质量**：新增单测覆盖 checkpoint dirty 场景，防回归。
+- **结论**：允许关闭 `FD-2026-04-14-003`。
+
+#### 2.5 任务/计划同步状态
+
+- `tasks.md` 同步状态：`已同步`（Task `6.48` 已补充完成态）。
+- `framework-defect-backlog.zh-CN.md` 同步状态：`已同步`（`FD-2026-04-14-003` 已关闭）。
+- `related_plan`（如存在）同步状态：`已对账`。
+
+#### 2.6 自动决策记录（如有）
+
+- AD-001：git_closure 仅忽略 pipeline state 白名单，不扩展到其他 `.ai-sdlc/` 目录 → 理由：避免误放行业务改动。
+
+#### 2.7 批次结论
+
+- Task **6.48** 已完成，close-check 与 run close 阶段可稳定收口。
+
+#### 2.8 归档后动作
+
+- **已完成 git 提交**：是
+- **提交哈希**：本批唯一一次语义提交为 `fix: ignore checkpoint state in close-check`；完整 SHA 以当前 `HEAD`（`git rev-parse HEAD`）为准。
+- **是否继续下一批**：等待新的 tranche / backlog 输入

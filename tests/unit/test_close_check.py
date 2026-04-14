@@ -421,6 +421,25 @@ def test_close_check_blocker_when_worktree_dirty_after_git_closeout(tmp_path: Pa
     assert any("working tree" in b for b in r.blockers)
 
 
+def test_close_check_ignores_checkpoint_state_dirty_files(tmp_path: Path) -> None:
+    root = tmp_path / "repo3c2"
+    root.mkdir()
+    _setup_repo(
+        root,
+        tasks_body="- [x] done\n### Task 1.1\n- **验收标准（AC）**：ok",
+        plan_status="completed",
+    )
+    state_dir = root / ".ai-sdlc" / "state"
+    state_dir.mkdir(parents=True)
+    (state_dir / "checkpoint.yml").write_text(
+        "pipeline_started_at: '2026-04-14'\n", encoding="utf-8"
+    )
+    (state_dir / "checkpoint.yml.bak").write_text("backup\n", encoding="utf-8")
+
+    r = run_close_check(cwd=root, wi=Path("specs/001-wi"))
+    assert r.ok is True
+
+
 def test_close_check_blocker_when_latest_batch_missing_verification_profile(
     tmp_path: Path,
 ) -> None:
