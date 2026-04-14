@@ -335,3 +335,28 @@
 #### 2.37 批次结论
 
 - `120/T32` 现在已经有正式 implementation carrier，provider invocation / patch apply / cross-spec writeback 主线不再停留在 deferred 占位。
+
+### Batch 2026-04-14-010 | Derive T33 implementation carrier
+
+#### 2.38 批次范围
+
+- 覆盖范围：`tasks.md`
+- 覆盖目标：
+  - 将 `T33` 的建议派生工单从抽象 implementation carrier 更新为正式 `133`
+  - 固定 `T33` 与 `T34` 的边界，避免 registry/governance/persistence 与 final proof/archive 主线混线
+
+#### 2.39 任务记录
+
+##### T120-DOC-16 | 回填 `T33` 派生结果
+
+- 改动范围：`tasks.md`
+- 改动内容：
+  - 将 `Task 3.3 Registry, Governance And Persistence Chain` 的建议派生工单更新为 `133-frontend-program-registry-governance-persistence-runtime-closure-baseline`
+  - 明确 `T33` 在 `133` focused verification 通过且下游 `T34` 收口前继续保持 `capability_open`
+  - 固定 `T33` 的下游边界只前推到 `T34`
+- 新增/调整的测试：无
+- 是否符合任务目标：是
+
+#### 2.40 批次结论
+
+- `120/T33` 现在已经有正式 implementation carrier；registry/governance/persistence 主线的真实实现缺口已被固定到 `133`。

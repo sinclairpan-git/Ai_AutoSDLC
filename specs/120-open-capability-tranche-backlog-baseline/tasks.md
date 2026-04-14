@@ -291,10 +291,11 @@ related_doc:
 - **交付流**：`S3`
 - **来源范围**：`032-040`
 - **当前状态**：`capability_open`
+- **派生状态**：已派生 `133-frontend-program-registry-governance-persistence-runtime-closure-baseline`；在 `133` focused verification 通过且下游 `T34` 收口前仍保持 `capability_open`
 - **缺失 carrier**：
   - guarded registry runtime
   - broader/final governance orchestration runtime
-  - writeback persistence / persisted write proof runtime
+  - writeback persistence runtime
 - **建议文件面**：`src/ai_sdlc/core/program_*registry*`、`src/ai_sdlc/core/program_*governance*`、`src/ai_sdlc/core/program_*persistence*`、对应 tests
 - **依赖**：T32
 - **验收标准**：
@@ -302,7 +303,7 @@ related_doc:
   2. `032-040` 的执行链能形成稳定 persisted truth
   3. 为 final proof / archive 主线提供真实上游输入
 - **验证**：`uv run pytest tests/unit/test_program_service.py tests/integration/test_cli_program.py -q`
-- **建议派生工单**：implementation carrier
+- **建议派生工单**：`133-frontend-program-registry-governance-persistence-runtime-closure-baseline`
 
 ### Task 3.4 Final Proof Publication And Archive Runtime
 
