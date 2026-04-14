@@ -1023,3 +1023,28 @@
 #### 2.121 批次结论
 
 - `120/T41` 已形成 remediation/recheck feedback 的 partial runtime closure 首段；visual / a11y runtime foundation 继续由 `T42` 承接。
+
+### Batch 2026-04-14-038 | Refresh T42 runtime closure
+
+#### 2.122 批次范围
+
+- 覆盖范围：`tasks.md`
+- 覆盖目标：
+  - 将 `T42` 的现有 runtime truth 与 `137` focused verification 对齐
+  - 明确 `T42` 当前保持 `partial`
+
+#### 2.123 任务记录
+
+##### T120-DOC-44 | 回填 `T42` 实现结果
+
+- 改动范围：`tasks.md`
+- 改动内容：
+  - 明确 `137` focused verification 已通过，且 `T42` 当前保持 `partial`
+  - 将 `T42` 的缺失 carrier 收紧为已由 `137` 收束的 visual/a11y runtime foundation partial runtime closure（本任务范围内）
+  - 证据：沿用 `137` focused verification（无新增测试）
+- 新增/调整的测试：无
+- 是否符合任务目标：是
+
+#### 2.124 批次结论
+
+- `120/T42` 已形成 visual/a11y runtime foundation 的 partial runtime closure 首段；当前保持 `partial`。

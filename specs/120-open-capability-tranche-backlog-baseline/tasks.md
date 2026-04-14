@@ -352,7 +352,9 @@ related_doc:
 - **当前状态**：`partial`
 - **派生状态**：已派生 `137-frontend-p1-visual-a11y-runtime-foundation-closure-baseline`；`137` focused verification 已通过，当前保持 `partial`
 - **缺失 carrier**：
-  - 无；`071` 的 visual / a11y evidence fixtures、gate-compatible visual/a11y checks 与 P1 visual/a11y feedback runtime surface 已由 `137` 正式收束为现有 runtime closure
+  - 缺失 carrier（本任务范围内）：无
+  - 收束说明（本任务范围内）：`071` 的 visual / a11y evidence fixtures、gate-compatible visual/a11y checks 与 P1 visual/a11y feedback runtime surface 已由 `137` 收束为 partial runtime closure
+  - 下游承接：无；当前保持 `partial` 由于 `S5` 总体仍未收口
 - **建议文件面**：`src/ai_sdlc/core/frontend_gate_verification.py`、`tests/unit/test_frontend_gate_verification.py`、`tests/integration/test_cli_program.py`
 - **依赖**：T13、T14、T41
 - **验收标准**：
