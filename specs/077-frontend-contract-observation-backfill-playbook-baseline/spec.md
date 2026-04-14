@@ -52,6 +52,7 @@
 - 真实 backfill 必须来自外部 frontend 实现仓库；`tests/fixtures/frontend-contract-sample-src/` 只用于框架自检，不可作为 active spec 的真实输入
 - attached artifact 若 `observations` 为空，gate 仍失败；artifact 存在不等于 contract truth 已满足
 - 当前 CLI export 产物天然携带 `source_digest`，因此 freshness 可验证；CLI 还未暴露显式 `source_revision` 注入参数
+- 本 spec 的 `frontend_evidence_class` 仅用于框架侧 capability 分类与 `program status` 口径对齐；`missing_artifact [frontend_contract_observations]` 对 consumer adoption 仍然是 blocker，`ready/advisory_only` 不代表已解除
 
 ## 用户故事与验收
 
@@ -116,4 +117,5 @@ related_doc:
   - "src/ai_sdlc/core/frontend_contract_runtime_attachment.py"
   - "src/ai_sdlc/gates/frontend_contract_gate.py"
   - "src/ai_sdlc/cli/commands.py"
+frontend_evidence_class: "framework_capability"
 ---

@@ -48,6 +48,7 @@
 - `match` sample 能证明 canonical export 主线可运行
 - `empty` sample 能证明 valid-but-empty artifact 语义仍保持失败
 - `missing-root` 能证明 scanner/export 不会偷偷 fallback
+- 本 spec 的 `frontend_evidence_class` 仅用于框架侧 capability 分类与 `program status` 口径对齐；`missing_artifact [frontend_contract_observations]` 对 consumer adoption 仍然是 blocker，`ready/advisory_only` 不代表已解除
 
 ## 用户故事与验收
 
@@ -100,3 +101,6 @@
 - **SC-078-002**：maintainer 能在无真实前端输入时，先使用 sample fixture 验证 scanner/export 主线仍可运行
 - **SC-078-003**：`078` 不会伪造 `068` ~ `071` 已解除 root blocker 的结论
 - **SC-078-004**：本轮 diff 仅新增 `078` formal docs 并把 `project-state.yaml` 推进到 `78`
+---
+frontend_evidence_class: "framework_capability"
+---
