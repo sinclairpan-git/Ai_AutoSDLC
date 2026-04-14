@@ -433,3 +433,27 @@
 #### 2.49 批次结论
 
 - `120/T34` 现在已经从 formal carrier 推进到真实 runtime closure；下一批明确下游仍是 `T35` cleanup。
+
+### Batch 2026-04-14-014 | Derive T35 implementation carrier
+
+#### 2.50 批次范围
+
+- 覆盖范围：`tasks.md`
+- 覆盖目标：
+  - 将 `T35` 的建议派生工单从抽象 implementation carrier 更新为正式 `135`
+  - 固定 `T35` 的边界只覆盖 `050-064` cleanup 主线
+
+#### 2.51 任务记录
+
+##### T120-DOC-20 | 回填 `T35` 派生结果
+
+- 改动范围：`tasks.md`
+- 改动内容：
+  - 将 `Task 3.5 Bounded Cleanup Actualization` 的建议派生工单更新为 `135-frontend-program-final-proof-archive-project-cleanup-runtime-closure-baseline`
+  - 明确 `T35` 当前状态推进为 `partial`，并由 `135` 承接且完成 focused verification
+- 新增/调整的测试：无
+- 是否符合任务目标：是
+
+#### 2.52 批次结论
+
+- `120/T35` 现在已经有正式 implementation carrier；cleanup 主线不再停留在抽象占位。

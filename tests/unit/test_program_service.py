@@ -7877,6 +7877,158 @@ def test_execute_frontend_final_proof_archive_project_cleanup_returns_partial_re
     assert not spec_dir.exists()
 
 
+def test_execute_frontend_final_proof_archive_project_cleanup_blocks_invalid_execution_gating_alignment(
+    tmp_path: Path,
+) -> None:
+    for p in ("specs/001-auth", "specs/002-course", "specs/003-enroll"):
+        (tmp_path / p).mkdir(parents=True)
+    archive_report = tmp_path / "specs" / "001-auth" / "threads" / "archive-001.md"
+    archive_report.parent.mkdir(parents=True, exist_ok=True)
+    archive_report.write_text("# archived thread\n", encoding="utf-8")
+    _write_frontend_final_proof_archive_artifact(
+        tmp_path,
+        archive_result="deferred",
+        archive_state="deferred",
+        remaining_blockers=["spec 001-auth remediation still required"],
+    )
+    _write_frontend_final_proof_archive_project_cleanup_seed_artifact(
+        tmp_path,
+        cleanup_targets=[
+            {
+                "target_id": "cleanup-thread-archive-report",
+                "path": "specs/001-auth/threads/archive-001.md",
+                "kind": "thread_archive",
+                "cleanup_action": "archive_thread_report",
+            }
+        ],
+        cleanup_target_eligibility=[
+            {
+                "target_id": "cleanup-thread-archive-report",
+                "eligibility": "blocked",
+                "reason": "thread archive artifact remains deferred",
+            }
+        ],
+        cleanup_preview_plan=[],
+        cleanup_mutation_proposal=[
+            {
+                "target_id": "cleanup-thread-archive-report",
+                "proposed_action": "archive_thread_report",
+                "reason": "proposal mirrors the canonical cleanup action",
+            }
+        ],
+        cleanup_mutation_proposal_approval=[
+            {
+                "target_id": "cleanup-thread-archive-report",
+                "approved_action": "archive_thread_report",
+                "reason": "approval mirrors the canonical cleanup action",
+            }
+        ],
+        cleanup_mutation_execution_gating=[
+            {
+                "target_id": "cleanup-thread-archive-report",
+                "gated_action": "archive_thread_report",
+                "reason": "execution gating matches the canonical cleanup action",
+            }
+        ],
+    )
+
+    svc = ProgramService(tmp_path)
+    result = svc.execute_frontend_final_proof_archive_project_cleanup(
+        _manifest(),
+        confirmed=True,
+    )
+
+    assert result.passed is False
+    assert result.confirmed is True
+    assert result.project_cleanup_state == "blocked"
+    assert result.project_cleanup_result == "blocked"
+    assert result.written_paths == []
+    assert archive_report.exists()
+    assert any(
+        "cleanup_mutation_execution_gating target_id=cleanup-thread-archive-report is not eligible"
+        in item
+        for item in result.warnings
+    )
+    assert any(
+        "cleanup_mutation_execution_gating target_id=cleanup-thread-archive-report does not appear in cleanup_preview_plan"
+        in item
+        for item in result.warnings
+    )
+
+
+def test_execute_frontend_final_proof_archive_project_cleanup_blocks_manual_skip_request_with_invalid_cleanup_truth(
+    tmp_path: Path,
+) -> None:
+    for p in ("specs/001-auth", "specs/002-course", "specs/003-enroll"):
+        (tmp_path / p).mkdir(parents=True)
+    archive_report = tmp_path / "specs" / "001-auth" / "threads" / "archive-001.md"
+    archive_report.parent.mkdir(parents=True, exist_ok=True)
+    archive_report.write_text("# archived thread\n", encoding="utf-8")
+    _write_frontend_final_proof_archive_artifact(
+        tmp_path,
+        archive_result="deferred",
+        archive_state="deferred",
+        remaining_blockers=["spec 001-auth remediation still required"],
+    )
+    _write_frontend_final_proof_archive_project_cleanup_seed_artifact(
+        tmp_path,
+        cleanup_targets=[
+            {
+                "target_id": "cleanup-thread-archive-report",
+                "path": "specs/001-auth/threads/archive-001.md",
+                "kind": "thread_archive",
+                "cleanup_action": "archive_thread_report",
+            }
+        ],
+        cleanup_target_eligibility=[
+            {
+                "target_id": "cleanup-thread-archive-report",
+                "eligibility": "blocked",
+                "reason": "thread archive artifact remains deferred",
+            }
+        ],
+        cleanup_preview_plan=[],
+        cleanup_mutation_proposal=[
+            {
+                "target_id": "cleanup-thread-archive-report",
+                "proposed_action": "archive_thread_report",
+                "reason": "proposal mirrors the canonical cleanup action",
+            }
+        ],
+        cleanup_mutation_proposal_approval=[
+            {
+                "target_id": "cleanup-thread-archive-report",
+                "approved_action": "archive_thread_report",
+                "reason": "approval mirrors the canonical cleanup action",
+            }
+        ],
+        cleanup_mutation_execution_gating=[
+            {
+                "target_id": "cleanup-thread-archive-report",
+                "gated_action": "archive_thread_report",
+                "reason": "execution gating matches the canonical cleanup action",
+            }
+        ],
+    )
+
+    svc = ProgramService(tmp_path)
+    request = replace(
+        svc.build_frontend_final_proof_archive_project_cleanup_request(_manifest()),
+        required=False,
+    )
+    result = svc.execute_frontend_final_proof_archive_project_cleanup(
+        _manifest(),
+        request=request,
+        confirmed=True,
+    )
+
+    assert result.passed is False
+    assert result.project_cleanup_state == "blocked"
+    assert result.project_cleanup_result == "blocked"
+    assert result.written_paths == []
+    assert archive_report.exists()
+
+
 def test_execute_frontend_final_proof_archive_project_cleanup_does_not_write_artifact_by_default(
     tmp_path: Path,
 ) -> None:

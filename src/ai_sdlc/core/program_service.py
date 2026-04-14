@@ -6937,65 +6937,6 @@ class ProgramService:
                     "project_cleanup_result": "blocked",
                 },
             )
-        if not effective_request.required:
-            return ProgramFrontendFinalProofArchiveProjectCleanupResult(
-                passed=True,
-                confirmed=confirmed,
-                project_cleanup_state="not_started",
-                project_cleanup_result="skipped",
-                cleanup_targets_state=effective_request.cleanup_targets_state,
-                cleanup_target_eligibility_state=(
-                    effective_request.cleanup_target_eligibility_state
-                ),
-                cleanup_preview_plan_state=effective_request.cleanup_preview_plan_state,
-                cleanup_mutation_proposal_state=(
-                    effective_request.cleanup_mutation_proposal_state
-                ),
-                cleanup_mutation_proposal_approval_state=(
-                    effective_request.cleanup_mutation_proposal_approval_state
-                ),
-                cleanup_mutation_execution_gating_state=(
-                    effective_request.cleanup_mutation_execution_gating_state
-                ),
-                cleanup_targets=list(effective_request.cleanup_targets),
-                cleanup_target_eligibility=list(
-                    effective_request.cleanup_target_eligibility
-                ),
-                cleanup_preview_plan=list(effective_request.cleanup_preview_plan),
-                cleanup_mutation_proposal=list(
-                    effective_request.cleanup_mutation_proposal
-                ),
-                cleanup_mutation_proposal_approval=list(
-                    effective_request.cleanup_mutation_proposal_approval
-                ),
-                cleanup_mutation_execution_gating=list(
-                    effective_request.cleanup_mutation_execution_gating
-                ),
-                written_paths=list(effective_request.written_paths),
-                remaining_blockers=[],
-                warnings=list(effective_request.warnings),
-                source_linkage={
-                    **dict(effective_request.source_linkage),
-                    "cleanup_targets_state": effective_request.cleanup_targets_state,
-                    "cleanup_target_eligibility_state": (
-                        effective_request.cleanup_target_eligibility_state
-                    ),
-                    "cleanup_preview_plan_state": (
-                        effective_request.cleanup_preview_plan_state
-                    ),
-                    "cleanup_mutation_proposal_state": (
-                        effective_request.cleanup_mutation_proposal_state
-                    ),
-                    "cleanup_mutation_proposal_approval_state": (
-                        effective_request.cleanup_mutation_proposal_approval_state
-                    ),
-                    "cleanup_mutation_execution_gating_state": (
-                        effective_request.cleanup_mutation_execution_gating_state
-                    ),
-                    "project_cleanup_state": "not_started",
-                    "project_cleanup_result": "skipped",
-                },
-            )
         if not confirmed:
             return ProgramFrontendFinalProofArchiveProjectCleanupResult(
                 passed=False,
@@ -7056,6 +6997,135 @@ class ProgramService:
                     ),
                     "project_cleanup_state": "confirmation_required",
                     "project_cleanup_result": "blocked",
+                },
+            )
+        invalid_cleanup_truth_warnings = [
+            warning
+            for warning in effective_request.warnings
+            if warning.startswith(
+                "invalid final proof archive project cleanup artifact: "
+            )
+        ]
+        if invalid_cleanup_truth_warnings:
+            blocker = "invalid canonical cleanup truth prevents cleanup mutation execution"
+            return ProgramFrontendFinalProofArchiveProjectCleanupResult(
+                passed=False,
+                confirmed=True,
+                project_cleanup_state="blocked",
+                project_cleanup_result="blocked",
+                cleanup_targets_state=effective_request.cleanup_targets_state,
+                cleanup_target_eligibility_state=(
+                    effective_request.cleanup_target_eligibility_state
+                ),
+                cleanup_preview_plan_state=effective_request.cleanup_preview_plan_state,
+                cleanup_mutation_proposal_state=(
+                    effective_request.cleanup_mutation_proposal_state
+                ),
+                cleanup_mutation_proposal_approval_state=(
+                    effective_request.cleanup_mutation_proposal_approval_state
+                ),
+                cleanup_mutation_execution_gating_state=(
+                    effective_request.cleanup_mutation_execution_gating_state
+                ),
+                project_cleanup_summaries=[blocker],
+                cleanup_targets=list(effective_request.cleanup_targets),
+                cleanup_target_eligibility=list(
+                    effective_request.cleanup_target_eligibility
+                ),
+                cleanup_preview_plan=list(effective_request.cleanup_preview_plan),
+                cleanup_mutation_proposal=list(
+                    effective_request.cleanup_mutation_proposal
+                ),
+                cleanup_mutation_proposal_approval=list(
+                    effective_request.cleanup_mutation_proposal_approval
+                ),
+                cleanup_mutation_execution_gating=list(
+                    effective_request.cleanup_mutation_execution_gating
+                ),
+                written_paths=[],
+                remaining_blockers=_unique_strings(
+                    [*effective_request.remaining_blockers, blocker]
+                ),
+                warnings=list(effective_request.warnings),
+                source_linkage={
+                    **dict(effective_request.source_linkage),
+                    "cleanup_targets_state": effective_request.cleanup_targets_state,
+                    "cleanup_target_eligibility_state": (
+                        effective_request.cleanup_target_eligibility_state
+                    ),
+                    "cleanup_preview_plan_state": (
+                        effective_request.cleanup_preview_plan_state
+                    ),
+                    "cleanup_mutation_proposal_state": (
+                        effective_request.cleanup_mutation_proposal_state
+                    ),
+                    "cleanup_mutation_proposal_approval_state": (
+                        effective_request.cleanup_mutation_proposal_approval_state
+                    ),
+                    "cleanup_mutation_execution_gating_state": (
+                        effective_request.cleanup_mutation_execution_gating_state
+                    ),
+                    "project_cleanup_state": "blocked",
+                    "project_cleanup_result": "blocked",
+                },
+            )
+        if not effective_request.required:
+            return ProgramFrontendFinalProofArchiveProjectCleanupResult(
+                passed=True,
+                confirmed=confirmed,
+                project_cleanup_state="not_started",
+                project_cleanup_result="skipped",
+                cleanup_targets_state=effective_request.cleanup_targets_state,
+                cleanup_target_eligibility_state=(
+                    effective_request.cleanup_target_eligibility_state
+                ),
+                cleanup_preview_plan_state=effective_request.cleanup_preview_plan_state,
+                cleanup_mutation_proposal_state=(
+                    effective_request.cleanup_mutation_proposal_state
+                ),
+                cleanup_mutation_proposal_approval_state=(
+                    effective_request.cleanup_mutation_proposal_approval_state
+                ),
+                cleanup_mutation_execution_gating_state=(
+                    effective_request.cleanup_mutation_execution_gating_state
+                ),
+                cleanup_targets=list(effective_request.cleanup_targets),
+                cleanup_target_eligibility=list(
+                    effective_request.cleanup_target_eligibility
+                ),
+                cleanup_preview_plan=list(effective_request.cleanup_preview_plan),
+                cleanup_mutation_proposal=list(
+                    effective_request.cleanup_mutation_proposal
+                ),
+                cleanup_mutation_proposal_approval=list(
+                    effective_request.cleanup_mutation_proposal_approval
+                ),
+                cleanup_mutation_execution_gating=list(
+                    effective_request.cleanup_mutation_execution_gating
+                ),
+                written_paths=list(effective_request.written_paths),
+                remaining_blockers=[],
+                warnings=list(effective_request.warnings),
+                source_linkage={
+                    **dict(effective_request.source_linkage),
+                    "cleanup_targets_state": effective_request.cleanup_targets_state,
+                    "cleanup_target_eligibility_state": (
+                        effective_request.cleanup_target_eligibility_state
+                    ),
+                    "cleanup_preview_plan_state": (
+                        effective_request.cleanup_preview_plan_state
+                    ),
+                    "cleanup_mutation_proposal_state": (
+                        effective_request.cleanup_mutation_proposal_state
+                    ),
+                    "cleanup_mutation_proposal_approval_state": (
+                        effective_request.cleanup_mutation_proposal_approval_state
+                    ),
+                    "cleanup_mutation_execution_gating_state": (
+                        effective_request.cleanup_mutation_execution_gating_state
+                    ),
+                    "project_cleanup_state": "not_started",
+                    "project_cleanup_result": "skipped",
                 },
             )
         (

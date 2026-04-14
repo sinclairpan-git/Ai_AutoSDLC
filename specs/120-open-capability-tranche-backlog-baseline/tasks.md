@@ -330,7 +330,8 @@ related_doc:
 - **任务编号**：T35
 - **交付流**：`S4`
 - **来源范围**：`050-064`
-- **当前状态**：`capability_open`
+- **当前状态**：`partial`
+- **派生状态**：已派生 `135-frontend-program-final-proof-archive-project-cleanup-runtime-closure-baseline`；`135` focused verification 已通过，当前保持 `partial`
 - **缺失 carrier**：
   - safe cleanup action set
   - deferred cleanup 到真实 bounded cleanup 的过渡
@@ -342,7 +343,7 @@ related_doc:
   2. `053/055/057/059/061/063` 的 consumption baseline 被父能力真正吸收
   3. `064` 的 cleanup mutation execution 成为尾链 closure，而不是孤立切片
 - **验证**：`uv run pytest tests/unit/test_program_cleanup* tests/integration/test_cli_program.py -q`
-- **建议派生工单**：implementation carrier
+- **建议派生工单**：`135-frontend-program-final-proof-archive-project-cleanup-runtime-closure-baseline`
 
 ---
 

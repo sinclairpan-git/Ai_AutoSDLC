@@ -5194,6 +5194,79 @@ specs:
         assert not archive_report.exists()
         assert not spec_dir.exists()
 
+    def test_program_final_proof_archive_project_cleanup_execute_blocks_invalid_gating_alignment(
+        self, initialized_project_dir: Path
+    ) -> None:
+        root = initialized_project_dir
+        _write_manifest(root)
+        archive_report = root / "specs" / "001-auth" / "threads" / "archive-001.md"
+        archive_report.parent.mkdir(parents=True, exist_ok=True)
+        archive_report.write_text("# archived thread\n", encoding="utf-8")
+        _write_frontend_final_proof_archive_artifact(
+            root,
+            archive_result="deferred",
+            archive_state="deferred",
+            remaining_blockers=["spec 001-auth remediation still required"],
+        )
+        _write_frontend_final_proof_archive_project_cleanup_seed_artifact(
+            root,
+            cleanup_targets=[
+                {
+                    "target_id": "cleanup-thread-archive-report",
+                    "path": "specs/001-auth/threads/archive-001.md",
+                    "kind": "thread_archive",
+                    "cleanup_action": "archive_thread_report",
+                }
+            ],
+            cleanup_target_eligibility=[
+                {
+                    "target_id": "cleanup-thread-archive-report",
+                    "eligibility": "blocked",
+                    "reason": "thread archive artifact remains deferred",
+                }
+            ],
+            cleanup_preview_plan=[],
+            cleanup_mutation_proposal=[
+                {
+                    "target_id": "cleanup-thread-archive-report",
+                    "proposed_action": "archive_thread_report",
+                    "reason": "proposal mirrors the canonical cleanup action",
+                }
+            ],
+            cleanup_mutation_proposal_approval=[
+                {
+                    "target_id": "cleanup-thread-archive-report",
+                    "approved_action": "archive_thread_report",
+                    "reason": "approval matches the canonical cleanup action",
+                }
+            ],
+            cleanup_mutation_execution_gating=[
+                {
+                    "target_id": "cleanup-thread-archive-report",
+                    "gated_action": "archive_thread_report",
+                    "reason": "execution gating matches the canonical cleanup action",
+                }
+            ],
+        )
+
+        with patch("ai_sdlc.cli.program_cmd.find_project_root", return_value=root):
+            result = runner.invoke(
+                app,
+                [
+                    "program",
+                    "final-proof-archive-project-cleanup",
+                    "--execute",
+                    "--yes",
+                ],
+            )
+
+        assert result.exit_code == 1
+        assert "project cleanup result: blocked" in result.output
+        assert "project cleanup state: blocked" in result.output
+        assert "is not eligible" in result.output
+        assert "does not appear in cleanup_preview_plan" in result.output
+        assert archive_report.exists()
+
     def test_program_final_proof_archive_project_cleanup_execute_preserves_stable_empty_visual_a11y_pending_input(
         self, initialized_project_dir: Path
     ) -> None:
