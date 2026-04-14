@@ -15,7 +15,10 @@ from ai_sdlc.core.frontend_contract_runtime_attachment import (
 )
 from ai_sdlc.core.reconcile import detect_reconcile_hint
 from ai_sdlc.core.runner import PipelineHaltError, SDLCRunner
-from ai_sdlc.integrations.ide_adapter import build_adapter_governance_surface
+from ai_sdlc.integrations.ide_adapter import (
+    build_adapter_governance_surface,
+    verification_env_hint,
+)
 from ai_sdlc.models.state import Checkpoint
 from ai_sdlc.utils.helpers import find_project_root
 
@@ -27,20 +30,27 @@ def _adapter_gate_message(root: object, *, dry_run: bool) -> str | None:
     payload = build_adapter_governance_surface(root)
     if payload["adapter_ingress_state"] == "verified_loaded":
         return None
+    hint = verification_env_hint(payload.get("agent_target"))
     if dry_run:
-        return (
+        message = (
             f"Adapter target '{payload['agent_target']}' is not yet verified_loaded.\n"
             f"Current ingress state: {payload['adapter_ingress_state']} "
             f"({payload['adapter_verification_result']}).\n"
             "Dry-run may continue, but this is not verified host ingress.\n"
             "Inspect `ai-sdlc adapter status` before mutating runs."
         )
-    return (
+        if hint:
+            message += f"\n{hint}"
+        return message
+    message = (
         f"Adapter target '{payload['agent_target']}' has not reached verified_loaded.\n"
         f"Current ingress state: {payload['adapter_ingress_state']} "
         f"({payload['adapter_verification_result']}).\n"
         "Inspect `ai-sdlc adapter status` and continue only after host ingress is verified."
     )
+    if hint:
+        message += f"\n{hint}"
+    return message
 
 
 def _confirm_callback(stage: str, _result: Any) -> bool:

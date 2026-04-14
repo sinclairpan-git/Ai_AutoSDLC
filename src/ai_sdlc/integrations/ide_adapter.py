@@ -297,6 +297,7 @@ def _governance_detail(
     verification_evidence: str,
     degrade_reason: str,
     activation_state: str,
+    verification_hint: str = "",
 ) -> str:
     if ingress_state == AdapterIngressState.VERIFIED_LOADED.value:
         if verification_evidence:
@@ -316,6 +317,8 @@ def _governance_detail(
                 " operator acknowledgement is stored separately and does not change "
                 "ingress verification."
             )
+        if verification_hint:
+            detail += f" {verification_hint}"
         return detail
 
     if ingress_state == AdapterIngressState.DEGRADED.value:
@@ -329,6 +332,23 @@ def _governance_detail(
         return detail
 
     return "Adapter target is unsupported until canonical materialization succeeds."
+
+
+def _verification_env_hint(target: IDEKind) -> str:
+    keys = _VERIFICATION_ENV_KEYS.get(target, ())
+    if not keys:
+        return ""
+    joined = ", ".join(keys)
+    example = keys[0]
+    return (
+        f"Set one of {joined} (e.g., {example}=1) and rerun "
+        f"`ai-sdlc adapter select --agent-target {target.value}`."
+    )
+
+
+def verification_env_hint(target: IDEKind | str | None) -> str:
+    kind = _coerce_ide_kind(target) or IDEKind.GENERIC
+    return _verification_env_hint(kind)
 
 
 def build_adapter_governance_surface(
@@ -372,6 +392,7 @@ def build_adapter_governance_surface(
         verification_evidence=ingress["adapter_verification_evidence"],
         degrade_reason=ingress["adapter_degrade_reason"],
         activation_state=activation_state,
+        verification_hint=_verification_env_hint(target),
     )
 
     return {
