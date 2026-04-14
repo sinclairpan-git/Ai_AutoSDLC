@@ -440,6 +440,95 @@ def test_close_check_ignores_checkpoint_state_dirty_files(tmp_path: Path) -> Non
     assert r.ok is True
 
 
+def test_close_check_ignores_truth_snapshot_only_program_manifest_drift(
+    tmp_path: Path,
+) -> None:
+    root = tmp_path / "repo3c3"
+    root.mkdir()
+    _setup_repo(
+        root,
+        tasks_body="- [x] done\n### Task 1.1\n- **验收标准（AC）**：ok",
+        plan_status="completed",
+    )
+    manifest_path = root / "program-manifest.yaml"
+    manifest_path.write_text(
+        'schema_version: "2"\n'
+        'prd_path: "PRD.md"\n'
+        "program:\n"
+        '  goal: "demo"\n'
+        "specs: []\n",
+        encoding="utf-8",
+    )
+    _commit_all(root, "docs: add baseline manifest")
+
+    manifest_path.write_text(
+        'schema_version: "2"\n'
+        'prd_path: "PRD.md"\n'
+        "program:\n"
+        '  goal: "demo"\n'
+        "specs: []\n"
+        "truth_snapshot:\n"
+        '  generated_at: "2026-04-14T14:34:12Z"\n'
+        '  generated_by: "ai-sdlc program truth sync"\n'
+        '  generator_version: "program_truth_snapshot_v1"\n'
+        '  repo_revision: "abc1234"\n'
+        '  authoring_hash: "hash"\n'
+        "  source_hashes: {}\n"
+        '  snapshot_hash: "snapshot"\n'
+        "  computed_capabilities: []\n"
+        '  state: "blocked"\n',
+        encoding="utf-8",
+    )
+
+    r = run_close_check(cwd=root, wi=Path("specs/001-wi"))
+    assert r.ok is True
+
+
+def test_close_check_blocks_when_program_manifest_drift_exceeds_truth_snapshot(
+    tmp_path: Path,
+) -> None:
+    root = tmp_path / "repo3c4"
+    root.mkdir()
+    _setup_repo(
+        root,
+        tasks_body="- [x] done\n### Task 1.1\n- **验收标准（AC）**：ok",
+        plan_status="completed",
+    )
+    manifest_path = root / "program-manifest.yaml"
+    manifest_path.write_text(
+        'schema_version: "2"\n'
+        'prd_path: "PRD.md"\n'
+        "program:\n"
+        '  goal: "demo"\n'
+        "specs: []\n",
+        encoding="utf-8",
+    )
+    _commit_all(root, "docs: add baseline manifest")
+
+    manifest_path.write_text(
+        'schema_version: "2"\n'
+        'prd_path: "PRD.md"\n'
+        "program:\n"
+        '  goal: "changed goal"\n'
+        "specs: []\n"
+        "truth_snapshot:\n"
+        '  generated_at: "2026-04-14T14:34:12Z"\n'
+        '  generated_by: "ai-sdlc program truth sync"\n'
+        '  generator_version: "program_truth_snapshot_v1"\n'
+        '  repo_revision: "abc1234"\n'
+        '  authoring_hash: "hash"\n'
+        "  source_hashes: {}\n"
+        '  snapshot_hash: "snapshot"\n'
+        "  computed_capabilities: []\n"
+        '  state: "blocked"\n',
+        encoding="utf-8",
+    )
+
+    r = run_close_check(cwd=root, wi=Path("specs/001-wi"))
+    assert r.ok is False
+    assert any("working tree" in b for b in r.blockers)
+
+
 def test_close_check_blocker_when_latest_batch_missing_verification_profile(
     tmp_path: Path,
 ) -> None:

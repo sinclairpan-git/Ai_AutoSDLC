@@ -724,6 +724,46 @@ def test_build_truth_ledger_surface_marks_stale_when_authoring_hash_changes(
     assert surface["state"] == "stale"
 
 
+def test_build_truth_ledger_surface_stays_fresh_for_truth_snapshot_only_drift(
+    tmp_path: Path,
+) -> None:
+    _init_truth_git_repo(tmp_path)
+    (tmp_path / ".ai-sdlc" / "project" / "config").mkdir(parents=True)
+    (tmp_path / ".ai-sdlc" / "project" / "config" / "project-state.yaml").write_text(
+        "status: initialized\nproject_name: demo\nnext_work_item_seq: 1\nversion: '1.0'\n",
+        encoding="utf-8",
+    )
+    (tmp_path / "PRD.md").write_text("# prd\n", encoding="utf-8")
+    spec_dir = tmp_path / "specs" / "082-frontend-example"
+    spec_dir.mkdir(parents=True)
+    (spec_dir / "spec.md").write_text(
+        "# Spec\n\n---\nfrontend_evidence_class: \"framework_capability\"\n---\n",
+        encoding="utf-8",
+    )
+    (spec_dir / "plan.md").write_text("# Plan\n", encoding="utf-8")
+    (spec_dir / "tasks.md").write_text("- [x] done\n", encoding="utf-8")
+    (spec_dir / "task-execution-log.md").write_text(
+        "# Log\n\n统一验证命令\n代码审查\n任务/计划同步状态\n",
+        encoding="utf-8",
+    )
+    (tmp_path / "src").mkdir(parents=True)
+    (tmp_path / "src" / "app.py").write_text("print('demo')\n", encoding="utf-8")
+    _write_truth_ledger_manifest(tmp_path)
+    _commit_truth_repo(tmp_path, "seed truth ledger sync fixture")
+
+    svc = ProgramService(tmp_path)
+    manifest = svc.load_manifest()
+    snapshot = svc.build_truth_snapshot(manifest)
+    svc.write_truth_snapshot(snapshot)
+
+    updated_manifest = svc.load_manifest()
+    surface = svc.build_truth_ledger_surface(updated_manifest)
+
+    assert surface is not None
+    assert surface["snapshot_state"] == "fresh"
+    assert surface["state"] == snapshot.state
+
+
 def test_build_truth_snapshot_blocks_release_scope_when_closure_audit_missing(
     tmp_path: Path,
 ) -> None:

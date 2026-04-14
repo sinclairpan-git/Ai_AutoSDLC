@@ -8,6 +8,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
+import yaml
+
 from ai_sdlc.branch.git_client import GitClient, GitError
 from ai_sdlc.core.plan_check import resolve_plan_path_from_wi, run_plan_check
 from ai_sdlc.core.program_service import (
@@ -337,6 +339,39 @@ def _git_closure_violation(root: Path, log_text: str) -> str | None:
     return None
 
 
+def _manifest_payload_without_truth_snapshot(text: str) -> dict[str, Any] | None:
+    payload = yaml.safe_load(text)
+    if not isinstance(payload, dict):
+        return None
+    normalized = dict(payload)
+    normalized.pop("truth_snapshot", None)
+    return normalized
+
+
+def _is_truth_snapshot_only_manifest_drift(root: Path) -> bool:
+    manifest_rel = "program-manifest.yaml"
+    manifest_path = root / manifest_rel
+    if not manifest_path.is_file():
+        return False
+    try:
+        current_payload = _manifest_payload_without_truth_snapshot(
+            manifest_path.read_text(encoding="utf-8")
+        )
+    except OSError:
+        return False
+    if current_payload is None:
+        return False
+    try:
+        git = GitClient(root)
+        head_text = git._run("show", f"HEAD:{manifest_rel}")
+    except GitError:
+        return False
+    head_payload = _manifest_payload_without_truth_snapshot(head_text)
+    if head_payload is None:
+        return False
+    return current_payload == head_payload
+
+
 def _has_uncommitted_changes_excluding_allowed(root: Path) -> bool:
     client = GitClient(root)
     status = client._run("status", "--porcelain", "--untracked-files=all")
@@ -352,6 +387,8 @@ def _has_uncommitted_changes_excluding_allowed(root: Path) -> bool:
         if " -> " in path:
             path = path.split(" -> ", 1)[1]
         normalized = path.strip().replace("\\", "/")
+        if normalized == "program-manifest.yaml" and _is_truth_snapshot_only_manifest_drift(root):
+            continue
         if normalized not in allowed:
             return True
     return False
