@@ -207,6 +207,7 @@ related_doc:
 - **交付流**：`S8`
 - **来源范围**：`083`、`084`、`085`、`086`、`088`、`107`、`108`
 - **当前状态**：`partial`
+- **派生状态**：已派生 `129-frontend-evidence-class-verify-validate-status-runtime-closure-baseline`；在 `129` focused verification 通过且下游 `T24` 收口前仍保持 `partial`
 - **缺失 carrier**：
   - `verify constraints` first runtime cut 的完整落地
   - `program validate` mirror consistency runtime
@@ -218,7 +219,7 @@ related_doc:
   2. evidence-class 问题在 verify / validate / status 间维持单一 truth-order
   3. `107/108` 的 backfill 与 runtime surfaces 不再只是局部补丁
 - **验证**：`uv run pytest tests/unit/test_verify_constraints.py tests/integration/test_cli_program.py tests/integration/test_cli_status.py -q`
-- **建议派生工单**：implementation carrier
+- **建议派生工单**：`129-frontend-evidence-class-verify-validate-status-runtime-closure-baseline`
 
 ### Task 2.4 Evidence-Class Mirror Writeback And Close-Check Completion
 
