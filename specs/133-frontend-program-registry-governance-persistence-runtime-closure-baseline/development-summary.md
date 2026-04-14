@@ -9,6 +9,7 @@
 - 本 work item 的 canonical truth、实施计划、任务拆解与执行归档已分别落在 `spec.md`、`plan.md`、`tasks.md`、`task-execution-log.md`。
 - 闭环口径：`120/T33` 现在已从抽象 implementation carrier 推进为真实 runtime closure；registry/governance/persistence 主线不再停留在 deferred 占位，且 empty artifact / manual request / blocker-carrying upstream 全部按 fail-closed 收口；`133` 已明确边界只覆盖 `032-040`，并通过 bounded step-file/materialized artifact truth 为 `T34/T35` 提供稳定上游输入
 - 本总结用于把该 work item 提升为 program-level `close` 输入，确保后续集成/收口基于同一口径。
+- 本任务范围说明：本总结仅覆盖该 work item 的收口口径；若仍标记 `partial`，具体保留原因以 `task-execution-log.md` 最新批次结论为准。
 
 ## 备注
 

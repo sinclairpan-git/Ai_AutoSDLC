@@ -9,6 +9,7 @@
 - 本 work item 的 canonical truth、实施计划、任务拆解与执行归档已分别落在 `spec.md`、`plan.md`、`tasks.md`、`task-execution-log.md`。
 - 闭环口径：`130` 确认 `T24` 当前缺口主要是 formal carrier 缺失，而非新的 writeback/close-check runtime 语义未实现；evidence-class lifecycle 已从 authoring/validate/status/close-check 接到 explicit writeback 与历史 backfill closeout
 - 本总结用于把该 work item 提升为 program-level `close` 输入，确保后续集成/收口基于同一口径。
+- 本任务范围说明：本总结仅覆盖该 work item 的收口口径；若仍标记 `partial`，具体保留原因以 `task-execution-log.md` 最新批次结论为准。
 
 ## 备注
 

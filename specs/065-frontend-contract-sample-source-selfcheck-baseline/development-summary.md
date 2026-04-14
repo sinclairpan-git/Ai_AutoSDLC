@@ -9,6 +9,7 @@
 - 本 work item 的 canonical truth、实施计划、任务拆解与执行归档已分别落在 `spec.md`、`plan.md`、`tasks.md`、`task-execution-log.md`。
 - 本次实现把仓库内 sample frontend source tree 冻结为显式 self-check 输入源，保留 `source_root -> canonical artifact -> verify` 的单一真值链，同时收紧 `program` remediation wording 为显式 `<frontend-source-root>`。
 - 具体 touched files、fresh verification 与 close-out 结论以 `task-execution-log.md` 最新批次为准；本总结只负责把 `065` 提升为后续 program-level close 输入。
+- 本任务范围说明：本总结仅覆盖该 work item 的收口口径；若仍标记 `partial`，具体保留原因以 `task-execution-log.md` 最新批次结论为准。
 
 ## 备注
 

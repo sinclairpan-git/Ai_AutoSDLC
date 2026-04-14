@@ -9,6 +9,7 @@
 - 本 work item 的 canonical truth、实施计划、任务拆解与执行归档已分别落在 `spec.md`、`plan.md`、`tasks.md`、`task-execution-log.md`。
 - 闭环口径：`118` 已完成 execute handoff guard、release docs consistency sweep 与 `FD-2026-04-07-002` backlog backfill。；当前批次已完成 git 提交与收口校验。
 - 本总结用于把该 work item 提升为 program-level `close` 输入，确保后续集成/收口基于同一口径。
+- 本任务范围说明：本总结仅覆盖该 work item 的收口口径；若仍标记 `partial`，具体保留原因以 `task-execution-log.md` 最新批次结论为准。
 
 ## 备注
 
