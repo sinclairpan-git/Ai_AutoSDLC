@@ -372,7 +372,8 @@ related_doc:
 - **当前状态**：`partial`
 - **派生状态**：已派生 `138-harness-telemetry-provenance-runtime-closure-baseline`；`138` focused verification 已通过，当前保持 `partial`
 - **缺失 carrier**：
-  - 无；harness-grade telemetry / observer runtime 与 provenance trace runtime / read surfaces 已由 `138` 正式收束为现有 runtime closure
+  - 缺失 carrier（本任务范围内）：无；telemetry/provenance 已由 `138` 收束为 partial runtime closure
+  - partial 保留原因：`S1` tranche/root 未收口（不构成本任务范围缺失）
 - **建议文件面**：`src/ai_sdlc/telemetry/*`、`src/ai_sdlc/core/*provenance*`、`src/ai_sdlc/cli/provenance*`、对应 tests
 - **依赖**：无；可与其他 batch 并行，但不建议先于 `S6/S7`
 - **验收标准**：
