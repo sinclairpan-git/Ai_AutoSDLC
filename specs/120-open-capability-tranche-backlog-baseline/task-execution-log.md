@@ -553,3 +553,51 @@
 #### 2.64 批次结论
 
 - `120/T42` 现在已经从 formal carrier 推进到真实 runtime closure；下一批可转向 `T43/T44` 这类 platform meta capability。
+
+### Batch 2026-04-14-019 | Derive T43 implementation carrier
+
+#### 2.65 批次范围
+
+- 覆盖范围：`tasks.md`
+- 覆盖目标：
+  - 将 `T43` 的建议派生工单从抽象 implementation carrier 更新为正式 `138`
+  - 固定 `T43` 的边界只覆盖 `005-006` telemetry / provenance runtime closure
+
+#### 2.66 任务记录
+
+##### T120-DOC-25 | 回填 `T43` 派生结果
+
+- 改动范围：`tasks.md`
+- 改动内容：
+  - 将 `Task 4.3 Harness Telemetry And Provenance Runtime Closure` 的建议派生工单更新为 `138-harness-telemetry-provenance-runtime-closure-baseline`
+  - 明确 `T43` 的 runtime closure 只覆盖 `005-006` telemetry / provenance 主线，而不扩张到 `007-008/T44`
+- 新增/调整的测试：无
+- 是否符合任务目标：是
+
+#### 2.67 批次结论
+
+- `120/T43` 现在已经有正式 implementation carrier；telemetry / provenance runtime 不再停留在抽象占位。
+
+### Batch 2026-04-14-020 | Close T43 runtime closure
+
+#### 2.68 批次范围
+
+- 覆盖范围：`tasks.md`
+- 覆盖目标：
+  - 将 `T43` 从 `formal_only` 推进到 `partial`
+  - 回填 `138` 已完成 focused verification，并固定当前 closure 边界
+
+#### 2.69 任务记录
+
+##### T120-DOC-26 | 回填 `T43` 实现结果
+
+- 改动范围：`tasks.md`
+- 改动内容：
+  - 将 `Task 4.3 Harness Telemetry And Provenance Runtime Closure` 的当前状态从 `formal_only` 更新为 `partial`
+  - 明确 `138` focused verification 已通过，且 `T43` 当前保持 `partial`
+- 新增/调整的测试：无
+- 是否符合任务目标：是
+
+#### 2.70 批次结论
+
+- `120/T43` 现在已经从 formal carrier 推进到真实 runtime closure；下一批可转向 `T44` branch lifecycle / direct formal entry。

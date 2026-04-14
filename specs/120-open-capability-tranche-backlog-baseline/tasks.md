@@ -392,10 +392,10 @@ related_doc:
 - **任务编号**：T43
 - **交付流**：`S1`
 - **来源范围**：`005-006`
-- **当前状态**：`formal_only`
+- **当前状态**：`partial`
+- **派生状态**：已派生 `138-harness-telemetry-provenance-runtime-closure-baseline`；`138` focused verification 已通过，当前保持 `partial`
 - **缺失 carrier**：
-  - harness-grade telemetry / observer runtime
-  - provenance trace runtime and read surfaces
+  - 无；harness-grade telemetry / observer runtime 与 provenance trace runtime / read surfaces 已由 `138` 正式收束为现有 runtime closure
 - **建议文件面**：`src/ai_sdlc/telemetry/*`、`src/ai_sdlc/core/*provenance*`、`src/ai_sdlc/cli/provenance*`、对应 tests
 - **依赖**：无；可与其他 batch 并行，但不建议先于 `S6/S7`
 - **验收标准**：
@@ -403,7 +403,7 @@ related_doc:
   2. platform meta capability 的观测与追踪链进入可交付状态
   3. provenance read surfaces 不再只靠局部 artifact contract
 - **验证**：`uv run pytest tests/unit/test_telemetry* tests/unit/test_provenance* tests/integration/test_cli_provenance.py -q`
-- **建议派生工单**：implementation carrier
+- **建议派生工单**：`138-harness-telemetry-provenance-runtime-closure-baseline`
 
 ### Task 4.4 Branch Lifecycle And Direct Formal Entry Closure
 
