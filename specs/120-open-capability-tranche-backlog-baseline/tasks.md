@@ -290,8 +290,8 @@ related_doc:
 - **任务编号**：T33
 - **交付流**：`S3`
 - **来源范围**：`032-040`
-- **当前状态**：`capability_open`
-- **派生状态**：已派生 `133-frontend-program-registry-governance-persistence-runtime-closure-baseline`；在 `133` focused verification 通过且下游 `T34` 收口前仍保持 `capability_open`
+- **当前状态**：`partial`
+- **派生状态**：已派生 `133-frontend-program-registry-governance-persistence-runtime-closure-baseline`；在 `133` focused verification 通过且下游 `T34` 收口前仍保持 `partial`
 - **缺失 carrier**：
   - guarded registry runtime
   - broader/final governance orchestration runtime

@@ -141,14 +141,26 @@ PROGRAM_FRONTEND_CROSS_SPEC_WRITEBACK_FILENAME = "frontend-provider-writeback.md
 PROGRAM_FRONTEND_GUARDED_REGISTRY_ARTIFACT_REL_PATH = (
     ".ai-sdlc/memory/frontend-guarded-registry/latest.yaml"
 )
+PROGRAM_FRONTEND_GUARDED_REGISTRY_STEP_DIR = (
+    ".ai-sdlc/memory/frontend-guarded-registry/steps"
+)
 PROGRAM_FRONTEND_BROADER_GOVERNANCE_ARTIFACT_REL_PATH = (
     ".ai-sdlc/memory/frontend-broader-governance/latest.yaml"
+)
+PROGRAM_FRONTEND_BROADER_GOVERNANCE_STEP_DIR = (
+    ".ai-sdlc/memory/frontend-broader-governance/steps"
 )
 PROGRAM_FRONTEND_FINAL_GOVERNANCE_ARTIFACT_REL_PATH = (
     ".ai-sdlc/memory/frontend-final-governance/latest.yaml"
 )
+PROGRAM_FRONTEND_FINAL_GOVERNANCE_STEP_DIR = (
+    ".ai-sdlc/memory/frontend-final-governance/steps"
+)
 PROGRAM_FRONTEND_WRITEBACK_PERSISTENCE_ARTIFACT_REL_PATH = (
     ".ai-sdlc/memory/frontend-writeback-persistence/latest.yaml"
+)
+PROGRAM_FRONTEND_WRITEBACK_PERSISTENCE_STEP_DIR = (
+    ".ai-sdlc/memory/frontend-writeback-persistence/steps"
 )
 PROGRAM_FRONTEND_PERSISTED_WRITE_PROOF_ARTIFACT_REL_PATH = (
     ".ai-sdlc/memory/frontend-persisted-write-proof/latest.yaml"
@@ -1016,6 +1028,61 @@ class ProgramService:
             return str(path.relative_to(self.root))
         except ValueError:
             return path.as_posix()
+
+    def _resolve_frontend_stage_spec_dir(
+        self,
+        manifest: ProgramManifest,
+        *,
+        stage_name: str,
+        spec_id: str,
+        path_text: str,
+    ) -> tuple[Path | None, str | None]:
+        manifest_spec = next((spec for spec in manifest.specs if spec.id == spec_id), None)
+        if manifest_spec is None:
+            return None, f"{stage_name} step {spec_id} missing manifest spec"
+        if not path_text.strip():
+            return None, f"{stage_name} step {spec_id} missing spec path"
+        try:
+            spec_dir = self._resolve_project_relative_path(path_text)
+        except ValueError:
+            return (
+                None,
+                f"{stage_name} step {spec_id} resolves outside workspace root: {path_text}",
+            )
+        expected_spec_dir = self._resolve_project_relative_path(manifest_spec.path)
+        if spec_dir != expected_spec_dir:
+            return (
+                None,
+                f"{stage_name} step {spec_id} path does not match manifest spec path: {path_text}",
+            )
+        if not spec_dir.is_dir():
+            return None, f"{stage_name} step {spec_id} missing spec directory: {path_text}"
+        return spec_dir, None
+
+    def _resolve_frontend_stage_step_target(
+        self,
+        *,
+        stage_name: str,
+        steps_dir: str,
+        spec_id: str,
+    ) -> tuple[Path | None, str | None]:
+        if not spec_id:
+            return None, f"{stage_name} step missing spec_id; write skipped"
+        if Path(spec_id).name != spec_id or spec_id in {".", ".."}:
+            return (
+                None,
+                f"{stage_name} step {spec_id} is not a simple spec identifier; write skipped",
+            )
+        steps_root = (self.root / steps_dir).resolve()
+        target_path = (steps_root / f"{spec_id}.md").resolve()
+        try:
+            target_path.relative_to(steps_root)
+        except ValueError:
+            return (
+                None,
+                f"{stage_name} step {spec_id} resolves outside bounded step directory; write skipped",
+            )
+        return target_path, None
 
     def validate_manifest(self, manifest: ProgramManifest) -> ProgramValidationResult:
         errors: list[str] = []
@@ -3523,6 +3590,72 @@ class ProgramService:
         lines.append("")
         return "\n".join(lines)
 
+    def _render_frontend_bounded_stage_step_content(
+        self,
+        *,
+        title: str,
+        source_label: str,
+        source_path: str,
+        upstream_label: str,
+        upstream_value: str,
+        artifact_generated_at: str,
+        stage_state_key: str,
+        result_key: str,
+        source_written_paths: list[str],
+        step: object,
+    ) -> str:
+        step_spec_id = getattr(step, "spec_id", "")
+        pending_inputs = list(getattr(step, "pending_inputs", [])) or ["none"]
+        suggested_actions = list(getattr(step, "suggested_next_actions", [])) or ["none"]
+        source_linkage = dict(getattr(step, "source_linkage", {}))
+        lines = [
+            f"# {title}: {step_spec_id}",
+            "",
+            f"- Manifest: `{_relative_to_root_or_str(self.root, self.manifest_path)}`",
+            f"- {source_label}: `{source_path}`",
+            f"- {upstream_label}: `{upstream_value}`",
+            f"- Artifact generated_at: `{artifact_generated_at or 'unknown'}`",
+            "",
+            "## Pending Inputs",
+            "",
+        ]
+        lines.extend([f"- `{item}`" for item in pending_inputs])
+        lines.extend(
+            [
+                "",
+                "## Suggested Next Actions",
+                "",
+            ]
+        )
+        lines.extend([f"- {item}" for item in suggested_actions])
+        if source_written_paths:
+            lines.extend(
+                [
+                    "",
+                    "## Source Written Paths",
+                    "",
+                ]
+            )
+            lines.extend([f"- `{item}`" for item in source_written_paths])
+        lines.extend(
+            [
+                "",
+                "## Source Linkage",
+                "",
+            ]
+        )
+        source_linkage.update(
+            {
+                stage_state_key: "completed",
+                result_key: "completed",
+            }
+        )
+        lines.extend(
+            [f"- `{key}`: `{value}`" for key, value in sorted(source_linkage.items())]
+        )
+        lines.append("")
+        return "\n".join(lines)
+
     def build_frontend_guarded_registry_request(
         self,
         manifest: ProgramManifest,
@@ -3628,7 +3761,7 @@ class ProgramService:
         request: ProgramFrontendGuardedRegistryRequest | None = None,
         confirmed: bool = False,
     ) -> ProgramFrontendGuardedRegistryResult:
-        """Execute the guarded registry baseline without updating registries yet."""
+        """Execute the guarded registry baseline with bounded step-file materialization."""
         effective_request = request or self.build_frontend_guarded_registry_request(
             manifest
         )
@@ -3640,6 +3773,65 @@ class ProgramService:
                 registry_result="blocked",
                 written_paths=list(effective_request.written_paths),
                 remaining_blockers=list(effective_request.remaining_blockers),
+                warnings=list(effective_request.warnings),
+                source_linkage={
+                    **dict(effective_request.source_linkage),
+                    "registry_state": "blocked",
+                    "registry_result": "blocked",
+                },
+            )
+        if not confirmed:
+            return ProgramFrontendGuardedRegistryResult(
+                passed=False,
+                confirmed=False,
+                registry_state="confirmation_required",
+                registry_result="blocked",
+                written_paths=list(effective_request.written_paths),
+                remaining_blockers=list(effective_request.remaining_blockers),
+                warnings=[
+                    *effective_request.warnings,
+                    "guarded registry orchestration requires explicit confirmation",
+                ],
+                source_linkage={
+                    **dict(effective_request.source_linkage),
+                    "registry_state": "confirmation_required",
+                    "registry_result": "blocked",
+                },
+            )
+        if effective_request.writeback_state != "completed":
+            blocker = (
+                "guarded registry requires completed cross-spec writeback artifact "
+                f"(writeback_state={effective_request.writeback_state or 'unknown'})"
+            )
+            return ProgramFrontendGuardedRegistryResult(
+                passed=False,
+                confirmed=True,
+                registry_state="blocked",
+                registry_result="blocked",
+                registry_summaries=[blocker],
+                written_paths=[],
+                remaining_blockers=_unique_strings(
+                    [*effective_request.remaining_blockers, blocker]
+                ),
+                warnings=list(effective_request.warnings),
+                source_linkage={
+                    **dict(effective_request.source_linkage),
+                    "registry_state": "blocked",
+                    "registry_result": "blocked",
+                },
+            )
+        if effective_request.remaining_blockers:
+            blocker = "guarded registry requires blocker-free cross-spec writeback artifact"
+            return ProgramFrontendGuardedRegistryResult(
+                passed=False,
+                confirmed=True,
+                registry_state="blocked",
+                registry_result="blocked",
+                registry_summaries=[blocker],
+                written_paths=[],
+                remaining_blockers=_unique_strings(
+                    [*effective_request.remaining_blockers, blocker]
+                ),
                 warnings=list(effective_request.warnings),
                 source_linkage={
                     **dict(effective_request.source_linkage),
@@ -3662,40 +3854,84 @@ class ProgramService:
                     "registry_result": "skipped",
                 },
             )
-        if not confirmed:
-            return ProgramFrontendGuardedRegistryResult(
-                passed=False,
-                confirmed=False,
-                registry_state="confirmation_required",
-                registry_result="blocked",
-                written_paths=list(effective_request.written_paths),
-                remaining_blockers=list(effective_request.remaining_blockers),
-                warnings=[
-                    *effective_request.warnings,
-                    "guarded registry orchestration requires explicit confirmation",
-                ],
-                source_linkage={
-                    **dict(effective_request.source_linkage),
-                    "registry_state": "confirmation_required",
-                    "registry_result": "blocked",
-                },
+        written_paths: list[str] = []
+        remaining_blockers: list[str] = list(effective_request.remaining_blockers)
+        warnings = list(effective_request.warnings)
+        executable_steps = 0
+        for step in effective_request.steps:
+            target_path, target_blocker = self._resolve_frontend_stage_step_target(
+                stage_name="guarded registry",
+                steps_dir=PROGRAM_FRONTEND_GUARDED_REGISTRY_STEP_DIR,
+                spec_id=step.spec_id,
             )
+            if target_blocker:
+                remaining_blockers.append(target_blocker)
+                continue
+            _, spec_blocker = self._resolve_frontend_stage_spec_dir(
+                manifest,
+                stage_name="guarded registry",
+                spec_id=step.spec_id,
+                path_text=str(step.path).strip(),
+            )
+            if spec_blocker:
+                remaining_blockers.append(spec_blocker)
+                continue
+            assert target_path is not None
+            executable_steps += 1
+            target_path.parent.mkdir(parents=True, exist_ok=True)
+            target_path.write_text(
+                self._render_frontend_bounded_stage_step_content(
+                    title="Frontend Guarded Registry Step",
+                    source_label="Source artifact",
+                    source_path=effective_request.artifact_source_path,
+                    upstream_label="Writeback state",
+                    upstream_value=effective_request.writeback_state,
+                    artifact_generated_at=effective_request.artifact_generated_at,
+                    stage_state_key="registry_state",
+                    result_key="registry_result",
+                    source_written_paths=list(effective_request.written_paths),
+                    step=step,
+                ),
+                encoding="utf-8",
+            )
+            written_paths.append(_relative_to_root_or_str(self.root, target_path))
+        if executable_steps == 0:
+            registry_state = "blocked"
+            registry_result = "blocked"
+            registry_summaries = [
+                "no executable guarded registry targets available from canonical cross-spec writeback artifact"
+            ]
+        elif not remaining_blockers and len(written_paths) == executable_steps:
+            registry_state = "completed"
+            registry_result = "completed"
+            registry_summaries = [
+                f"materialized {len(written_paths)} guarded registry step file(s) from canonical cross-spec writeback artifact"
+            ]
+        elif written_paths:
+            registry_state = "partial"
+            registry_result = "partial"
+            registry_summaries = [
+                f"materialized {len(written_paths)} of {executable_steps} guarded registry step file(s) from canonical cross-spec writeback artifact"
+            ]
+        else:
+            registry_state = "failed"
+            registry_result = "failed"
+            registry_summaries = [
+                f"materialized 0 of {executable_steps} guarded registry step file(s) from canonical cross-spec writeback artifact"
+            ]
         return ProgramFrontendGuardedRegistryResult(
-            passed=False,
+            passed=registry_result == "completed",
             confirmed=True,
-            registry_state="deferred",
-            registry_result="deferred",
-            registry_summaries=[PROGRAM_FRONTEND_GUARDED_REGISTRY_DEFERRED_SUMMARY],
-            written_paths=[],
-            remaining_blockers=list(effective_request.remaining_blockers),
-            warnings=[
-                *effective_request.warnings,
-                "guarded registry baseline does not update registries yet",
-            ],
+            registry_state=registry_state,
+            registry_result=registry_result,
+            registry_summaries=registry_summaries,
+            written_paths=_unique_strings(written_paths),
+            remaining_blockers=_unique_strings(remaining_blockers),
+            warnings=warnings,
             source_linkage={
                 **dict(effective_request.source_linkage),
-                "registry_state": "deferred",
-                "registry_result": "deferred",
+                "registry_state": registry_state,
+                "registry_result": registry_result,
             },
         )
 
@@ -3847,7 +4083,7 @@ class ProgramService:
         request: ProgramFrontendBroaderGovernanceRequest | None = None,
         confirmed: bool = False,
     ) -> ProgramFrontendBroaderGovernanceResult:
-        """Execute the broader governance baseline without final execution yet."""
+        """Execute the broader governance baseline with bounded step-file materialization."""
         effective_request = request or self.build_frontend_broader_governance_request(
             manifest
         )
@@ -3859,6 +4095,65 @@ class ProgramService:
                 governance_result="blocked",
                 written_paths=list(effective_request.written_paths),
                 remaining_blockers=list(effective_request.remaining_blockers),
+                warnings=list(effective_request.warnings),
+                source_linkage={
+                    **dict(effective_request.source_linkage),
+                    "governance_state": "blocked",
+                    "governance_result": "blocked",
+                },
+            )
+        if not confirmed:
+            return ProgramFrontendBroaderGovernanceResult(
+                passed=False,
+                confirmed=False,
+                governance_state="confirmation_required",
+                governance_result="blocked",
+                written_paths=list(effective_request.written_paths),
+                remaining_blockers=list(effective_request.remaining_blockers),
+                warnings=[
+                    *effective_request.warnings,
+                    "broader governance orchestration requires explicit confirmation",
+                ],
+                source_linkage={
+                    **dict(effective_request.source_linkage),
+                    "governance_state": "confirmation_required",
+                    "governance_result": "blocked",
+                },
+            )
+        if effective_request.registry_state != "completed":
+            blocker = (
+                "broader governance requires completed guarded registry artifact "
+                f"(registry_state={effective_request.registry_state or 'unknown'})"
+            )
+            return ProgramFrontendBroaderGovernanceResult(
+                passed=False,
+                confirmed=True,
+                governance_state="blocked",
+                governance_result="blocked",
+                governance_summaries=[blocker],
+                written_paths=[],
+                remaining_blockers=_unique_strings(
+                    [*effective_request.remaining_blockers, blocker]
+                ),
+                warnings=list(effective_request.warnings),
+                source_linkage={
+                    **dict(effective_request.source_linkage),
+                    "governance_state": "blocked",
+                    "governance_result": "blocked",
+                },
+            )
+        if effective_request.remaining_blockers:
+            blocker = "broader governance requires blocker-free guarded registry artifact"
+            return ProgramFrontendBroaderGovernanceResult(
+                passed=False,
+                confirmed=True,
+                governance_state="blocked",
+                governance_result="blocked",
+                governance_summaries=[blocker],
+                written_paths=[],
+                remaining_blockers=_unique_strings(
+                    [*effective_request.remaining_blockers, blocker]
+                ),
                 warnings=list(effective_request.warnings),
                 source_linkage={
                     **dict(effective_request.source_linkage),
@@ -3881,40 +4176,84 @@ class ProgramService:
                     "governance_result": "skipped",
                 },
             )
-        if not confirmed:
-            return ProgramFrontendBroaderGovernanceResult(
-                passed=False,
-                confirmed=False,
-                governance_state="confirmation_required",
-                governance_result="blocked",
-                written_paths=list(effective_request.written_paths),
-                remaining_blockers=list(effective_request.remaining_blockers),
-                warnings=[
-                    *effective_request.warnings,
-                    "broader governance orchestration requires explicit confirmation",
-                ],
-                source_linkage={
-                    **dict(effective_request.source_linkage),
-                    "governance_state": "confirmation_required",
-                    "governance_result": "blocked",
-                },
+        written_paths: list[str] = []
+        remaining_blockers: list[str] = list(effective_request.remaining_blockers)
+        warnings = list(effective_request.warnings)
+        executable_steps = 0
+        for step in effective_request.steps:
+            target_path, target_blocker = self._resolve_frontend_stage_step_target(
+                stage_name="broader governance",
+                steps_dir=PROGRAM_FRONTEND_BROADER_GOVERNANCE_STEP_DIR,
+                spec_id=step.spec_id,
             )
+            if target_blocker:
+                remaining_blockers.append(target_blocker)
+                continue
+            _, spec_blocker = self._resolve_frontend_stage_spec_dir(
+                manifest,
+                stage_name="broader governance",
+                spec_id=step.spec_id,
+                path_text=str(step.path).strip(),
+            )
+            if spec_blocker:
+                remaining_blockers.append(spec_blocker)
+                continue
+            assert target_path is not None
+            executable_steps += 1
+            target_path.parent.mkdir(parents=True, exist_ok=True)
+            target_path.write_text(
+                self._render_frontend_bounded_stage_step_content(
+                    title="Frontend Broader Governance Step",
+                    source_label="Source artifact",
+                    source_path=effective_request.artifact_source_path,
+                    upstream_label="Registry state",
+                    upstream_value=effective_request.registry_state,
+                    artifact_generated_at=effective_request.artifact_generated_at,
+                    stage_state_key="governance_state",
+                    result_key="governance_result",
+                    source_written_paths=list(effective_request.written_paths),
+                    step=step,
+                ),
+                encoding="utf-8",
+            )
+            written_paths.append(_relative_to_root_or_str(self.root, target_path))
+        if executable_steps == 0:
+            governance_state = "blocked"
+            governance_result = "blocked"
+            governance_summaries = [
+                "no executable broader governance targets available from canonical guarded registry artifact"
+            ]
+        elif not remaining_blockers and len(written_paths) == executable_steps:
+            governance_state = "completed"
+            governance_result = "completed"
+            governance_summaries = [
+                f"materialized {len(written_paths)} broader governance step file(s) from canonical guarded registry artifact"
+            ]
+        elif written_paths:
+            governance_state = "partial"
+            governance_result = "partial"
+            governance_summaries = [
+                f"materialized {len(written_paths)} of {executable_steps} broader governance step file(s) from canonical guarded registry artifact"
+            ]
+        else:
+            governance_state = "failed"
+            governance_result = "failed"
+            governance_summaries = [
+                f"materialized 0 of {executable_steps} broader governance step file(s) from canonical guarded registry artifact"
+            ]
         return ProgramFrontendBroaderGovernanceResult(
-            passed=False,
+            passed=governance_result == "completed",
             confirmed=True,
-            governance_state="deferred",
-            governance_result="deferred",
-            governance_summaries=[PROGRAM_FRONTEND_BROADER_GOVERNANCE_DEFERRED_SUMMARY],
-            written_paths=[],
-            remaining_blockers=list(effective_request.remaining_blockers),
-            warnings=[
-                *effective_request.warnings,
-                "broader governance baseline does not execute final governance actions yet",
-            ],
+            governance_state=governance_state,
+            governance_result=governance_result,
+            governance_summaries=governance_summaries,
+            written_paths=_unique_strings(written_paths),
+            remaining_blockers=_unique_strings(remaining_blockers),
+            warnings=warnings,
             source_linkage={
                 **dict(effective_request.source_linkage),
-                "governance_state": "deferred",
-                "governance_result": "deferred",
+                "governance_state": governance_state,
+                "governance_result": governance_result,
             },
         )
 
@@ -4072,7 +4411,7 @@ class ProgramService:
         request: ProgramFrontendFinalGovernanceRequest | None = None,
         confirmed: bool = False,
     ) -> ProgramFrontendFinalGovernanceResult:
-        """Execute the final governance baseline without persistence yet."""
+        """Execute the final governance baseline with bounded step-file materialization."""
         effective_request = request or self.build_frontend_final_governance_request(
             manifest
         )
@@ -4084,6 +4423,65 @@ class ProgramService:
                 final_governance_result="blocked",
                 written_paths=list(effective_request.written_paths),
                 remaining_blockers=list(effective_request.remaining_blockers),
+                warnings=list(effective_request.warnings),
+                source_linkage={
+                    **dict(effective_request.source_linkage),
+                    "final_governance_state": "blocked",
+                    "final_governance_result": "blocked",
+                },
+            )
+        if not confirmed:
+            return ProgramFrontendFinalGovernanceResult(
+                passed=False,
+                confirmed=False,
+                final_governance_state="confirmation_required",
+                final_governance_result="blocked",
+                written_paths=list(effective_request.written_paths),
+                remaining_blockers=list(effective_request.remaining_blockers),
+                warnings=[
+                    *effective_request.warnings,
+                    "final governance orchestration requires explicit confirmation",
+                ],
+                source_linkage={
+                    **dict(effective_request.source_linkage),
+                    "final_governance_state": "confirmation_required",
+                    "final_governance_result": "blocked",
+                },
+            )
+        if effective_request.governance_state != "completed":
+            blocker = (
+                "final governance requires completed broader governance artifact "
+                f"(governance_state={effective_request.governance_state or 'unknown'})"
+            )
+            return ProgramFrontendFinalGovernanceResult(
+                passed=False,
+                confirmed=True,
+                final_governance_state="blocked",
+                final_governance_result="blocked",
+                final_governance_summaries=[blocker],
+                written_paths=[],
+                remaining_blockers=_unique_strings(
+                    [*effective_request.remaining_blockers, blocker]
+                ),
+                warnings=list(effective_request.warnings),
+                source_linkage={
+                    **dict(effective_request.source_linkage),
+                    "final_governance_state": "blocked",
+                    "final_governance_result": "blocked",
+                },
+            )
+        if effective_request.remaining_blockers:
+            blocker = "final governance requires blocker-free broader governance artifact"
+            return ProgramFrontendFinalGovernanceResult(
+                passed=False,
+                confirmed=True,
+                final_governance_state="blocked",
+                final_governance_result="blocked",
+                final_governance_summaries=[blocker],
+                written_paths=[],
+                remaining_blockers=_unique_strings(
+                    [*effective_request.remaining_blockers, blocker]
+                ),
                 warnings=list(effective_request.warnings),
                 source_linkage={
                     **dict(effective_request.source_linkage),
@@ -4106,42 +4504,84 @@ class ProgramService:
                     "final_governance_result": "skipped",
                 },
             )
-        if not confirmed:
-            return ProgramFrontendFinalGovernanceResult(
-                passed=False,
-                confirmed=False,
-                final_governance_state="confirmation_required",
-                final_governance_result="blocked",
-                written_paths=list(effective_request.written_paths),
-                remaining_blockers=list(effective_request.remaining_blockers),
-                warnings=[
-                    *effective_request.warnings,
-                    "final governance orchestration requires explicit confirmation",
-                ],
-                source_linkage={
-                    **dict(effective_request.source_linkage),
-                    "final_governance_state": "confirmation_required",
-                    "final_governance_result": "blocked",
-                },
+        written_paths: list[str] = []
+        remaining_blockers: list[str] = list(effective_request.remaining_blockers)
+        warnings = list(effective_request.warnings)
+        executable_steps = 0
+        for step in effective_request.steps:
+            target_path, target_blocker = self._resolve_frontend_stage_step_target(
+                stage_name="final governance",
+                steps_dir=PROGRAM_FRONTEND_FINAL_GOVERNANCE_STEP_DIR,
+                spec_id=step.spec_id,
             )
+            if target_blocker:
+                remaining_blockers.append(target_blocker)
+                continue
+            _, spec_blocker = self._resolve_frontend_stage_spec_dir(
+                manifest,
+                stage_name="final governance",
+                spec_id=step.spec_id,
+                path_text=str(step.path).strip(),
+            )
+            if spec_blocker:
+                remaining_blockers.append(spec_blocker)
+                continue
+            assert target_path is not None
+            executable_steps += 1
+            target_path.parent.mkdir(parents=True, exist_ok=True)
+            target_path.write_text(
+                self._render_frontend_bounded_stage_step_content(
+                    title="Frontend Final Governance Step",
+                    source_label="Source artifact",
+                    source_path=effective_request.artifact_source_path,
+                    upstream_label="Governance state",
+                    upstream_value=effective_request.governance_state,
+                    artifact_generated_at=effective_request.artifact_generated_at,
+                    stage_state_key="final_governance_state",
+                    result_key="final_governance_result",
+                    source_written_paths=list(effective_request.written_paths),
+                    step=step,
+                ),
+                encoding="utf-8",
+            )
+            written_paths.append(_relative_to_root_or_str(self.root, target_path))
+        if executable_steps == 0:
+            final_governance_state = "blocked"
+            final_governance_result = "blocked"
+            final_governance_summaries = [
+                "no executable final governance targets available from canonical broader governance artifact"
+            ]
+        elif not remaining_blockers and len(written_paths) == executable_steps:
+            final_governance_state = "completed"
+            final_governance_result = "completed"
+            final_governance_summaries = [
+                f"materialized {len(written_paths)} final governance step file(s) from canonical broader governance artifact"
+            ]
+        elif written_paths:
+            final_governance_state = "partial"
+            final_governance_result = "partial"
+            final_governance_summaries = [
+                f"materialized {len(written_paths)} of {executable_steps} final governance step file(s) from canonical broader governance artifact"
+            ]
+        else:
+            final_governance_state = "failed"
+            final_governance_result = "failed"
+            final_governance_summaries = [
+                f"materialized 0 of {executable_steps} final governance step file(s) from canonical broader governance artifact"
+            ]
         return ProgramFrontendFinalGovernanceResult(
-            passed=False,
+            passed=final_governance_result == "completed",
             confirmed=True,
-            final_governance_state="deferred",
-            final_governance_result="deferred",
-            final_governance_summaries=[
-                PROGRAM_FRONTEND_FINAL_GOVERNANCE_DEFERRED_SUMMARY
-            ],
-            written_paths=[],
-            remaining_blockers=list(effective_request.remaining_blockers),
-            warnings=[
-                *effective_request.warnings,
-                "final governance baseline does not execute code rewrite persistence yet",
-            ],
+            final_governance_state=final_governance_state,
+            final_governance_result=final_governance_result,
+            final_governance_summaries=final_governance_summaries,
+            written_paths=_unique_strings(written_paths),
+            remaining_blockers=_unique_strings(remaining_blockers),
+            warnings=warnings,
             source_linkage={
                 **dict(effective_request.source_linkage),
-                "final_governance_state": "deferred",
-                "final_governance_result": "deferred",
+                "final_governance_state": final_governance_state,
+                "final_governance_result": final_governance_result,
             },
         )
 
@@ -4301,7 +4741,7 @@ class ProgramService:
         request: ProgramFrontendWritebackPersistenceRequest | None = None,
         confirmed: bool = False,
     ) -> ProgramFrontendWritebackPersistenceResult:
-        """Execute the writeback persistence baseline without proof yet."""
+        """Execute the writeback persistence baseline with bounded step-file materialization."""
         effective_request = request or self.build_frontend_writeback_persistence_request(
             manifest
         )
@@ -4313,6 +4753,65 @@ class ProgramService:
                 persistence_result="blocked",
                 written_paths=list(effective_request.written_paths),
                 remaining_blockers=list(effective_request.remaining_blockers),
+                warnings=list(effective_request.warnings),
+                source_linkage={
+                    **dict(effective_request.source_linkage),
+                    "persistence_state": "blocked",
+                    "persistence_result": "blocked",
+                },
+            )
+        if not confirmed:
+            return ProgramFrontendWritebackPersistenceResult(
+                passed=False,
+                confirmed=False,
+                persistence_state="confirmation_required",
+                persistence_result="blocked",
+                written_paths=list(effective_request.written_paths),
+                remaining_blockers=list(effective_request.remaining_blockers),
+                warnings=[
+                    *effective_request.warnings,
+                    "writeback persistence orchestration requires explicit confirmation",
+                ],
+                source_linkage={
+                    **dict(effective_request.source_linkage),
+                    "persistence_state": "confirmation_required",
+                    "persistence_result": "blocked",
+                },
+            )
+        if effective_request.final_governance_state != "completed":
+            blocker = (
+                "writeback persistence requires completed final governance artifact "
+                f"(final_governance_state={effective_request.final_governance_state or 'unknown'})"
+            )
+            return ProgramFrontendWritebackPersistenceResult(
+                passed=False,
+                confirmed=True,
+                persistence_state="blocked",
+                persistence_result="blocked",
+                persistence_summaries=[blocker],
+                written_paths=[],
+                remaining_blockers=_unique_strings(
+                    [*effective_request.remaining_blockers, blocker]
+                ),
+                warnings=list(effective_request.warnings),
+                source_linkage={
+                    **dict(effective_request.source_linkage),
+                    "persistence_state": "blocked",
+                    "persistence_result": "blocked",
+                },
+            )
+        if effective_request.remaining_blockers:
+            blocker = "writeback persistence requires blocker-free final governance artifact"
+            return ProgramFrontendWritebackPersistenceResult(
+                passed=False,
+                confirmed=True,
+                persistence_state="blocked",
+                persistence_result="blocked",
+                persistence_summaries=[blocker],
+                written_paths=[],
+                remaining_blockers=_unique_strings(
+                    [*effective_request.remaining_blockers, blocker]
+                ),
                 warnings=list(effective_request.warnings),
                 source_linkage={
                     **dict(effective_request.source_linkage),
@@ -4335,42 +4834,84 @@ class ProgramService:
                     "persistence_result": "skipped",
                 },
             )
-        if not confirmed:
-            return ProgramFrontendWritebackPersistenceResult(
-                passed=False,
-                confirmed=False,
-                persistence_state="confirmation_required",
-                persistence_result="blocked",
-                written_paths=list(effective_request.written_paths),
-                remaining_blockers=list(effective_request.remaining_blockers),
-                warnings=[
-                    *effective_request.warnings,
-                    "writeback persistence orchestration requires explicit confirmation",
-                ],
-                source_linkage={
-                    **dict(effective_request.source_linkage),
-                    "persistence_state": "confirmation_required",
-                    "persistence_result": "blocked",
-                },
+        written_paths: list[str] = []
+        remaining_blockers: list[str] = list(effective_request.remaining_blockers)
+        warnings = list(effective_request.warnings)
+        executable_steps = 0
+        for step in effective_request.steps:
+            target_path, target_blocker = self._resolve_frontend_stage_step_target(
+                stage_name="writeback persistence",
+                steps_dir=PROGRAM_FRONTEND_WRITEBACK_PERSISTENCE_STEP_DIR,
+                spec_id=step.spec_id,
             )
+            if target_blocker:
+                remaining_blockers.append(target_blocker)
+                continue
+            _, spec_blocker = self._resolve_frontend_stage_spec_dir(
+                manifest,
+                stage_name="writeback persistence",
+                spec_id=step.spec_id,
+                path_text=str(step.path).strip(),
+            )
+            if spec_blocker:
+                remaining_blockers.append(spec_blocker)
+                continue
+            assert target_path is not None
+            executable_steps += 1
+            target_path.parent.mkdir(parents=True, exist_ok=True)
+            target_path.write_text(
+                self._render_frontend_bounded_stage_step_content(
+                    title="Frontend Writeback Persistence Step",
+                    source_label="Source artifact",
+                    source_path=effective_request.artifact_source_path,
+                    upstream_label="Final governance state",
+                    upstream_value=effective_request.final_governance_state,
+                    artifact_generated_at=effective_request.artifact_generated_at,
+                    stage_state_key="persistence_state",
+                    result_key="persistence_result",
+                    source_written_paths=list(effective_request.written_paths),
+                    step=step,
+                ),
+                encoding="utf-8",
+            )
+            written_paths.append(_relative_to_root_or_str(self.root, target_path))
+        if executable_steps == 0:
+            persistence_state = "blocked"
+            persistence_result = "blocked"
+            persistence_summaries = [
+                "no executable writeback persistence targets available from canonical final governance artifact"
+            ]
+        elif not remaining_blockers and len(written_paths) == executable_steps:
+            persistence_state = "completed"
+            persistence_result = "completed"
+            persistence_summaries = [
+                f"materialized {len(written_paths)} writeback persistence step file(s) from canonical final governance artifact"
+            ]
+        elif written_paths:
+            persistence_state = "partial"
+            persistence_result = "partial"
+            persistence_summaries = [
+                f"materialized {len(written_paths)} of {executable_steps} writeback persistence step file(s) from canonical final governance artifact"
+            ]
+        else:
+            persistence_state = "failed"
+            persistence_result = "failed"
+            persistence_summaries = [
+                f"materialized 0 of {executable_steps} writeback persistence step file(s) from canonical final governance artifact"
+            ]
         return ProgramFrontendWritebackPersistenceResult(
-            passed=False,
+            passed=persistence_result == "completed",
             confirmed=True,
-            persistence_state="deferred",
-            persistence_result="deferred",
-            persistence_summaries=[
-                PROGRAM_FRONTEND_WRITEBACK_PERSISTENCE_DEFERRED_SUMMARY
-            ],
-            written_paths=[],
-            remaining_blockers=list(effective_request.remaining_blockers),
-            warnings=[
-                *effective_request.warnings,
-                "writeback persistence baseline does not produce persisted write proof yet",
-            ],
+            persistence_state=persistence_state,
+            persistence_result=persistence_result,
+            persistence_summaries=persistence_summaries,
+            written_paths=_unique_strings(written_paths),
+            remaining_blockers=_unique_strings(remaining_blockers),
+            warnings=warnings,
             source_linkage={
                 **dict(effective_request.source_linkage),
-                "persistence_state": "deferred",
-                "persistence_result": "deferred",
+                "persistence_state": persistence_state,
+                "persistence_result": persistence_result,
             },
         )
 

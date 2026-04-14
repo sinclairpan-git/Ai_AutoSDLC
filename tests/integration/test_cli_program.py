@@ -2654,16 +2654,16 @@ specs:
         assert "Program Frontend Guarded Registry Dry-Run" in result.output
         assert ".ai-sdlc/memory/frontend-cross-spec-writeback/latest.yaml" in result.output
 
-    def test_program_guarded_registry_execute_surfaces_deferred_result(
+    def test_program_guarded_registry_execute_surfaces_completed_result(
         self, initialized_project_dir: Path
     ) -> None:
         root = initialized_project_dir
         _write_manifest(root)
         _write_frontend_cross_spec_writeback_artifact(
             root,
-            orchestration_result="deferred",
-            writeback_state="deferred",
-            remaining_blockers=["spec 001-auth remediation still required"],
+            orchestration_result="completed",
+            writeback_state="completed",
+            remaining_blockers=[],
         )
         report_rel = ".ai-sdlc/memory/frontend-guarded-registry.md"
 
@@ -2680,14 +2680,13 @@ specs:
                 ],
             )
 
-        assert result.exit_code == 1
+        assert result.exit_code == 0
         assert "Program Frontend Guarded Registry Execute" in result.output
-        assert "deferred" in result.output
-        assert "no registry updates executed in guarded registry baseline" in result.output
+        assert "completed" in result.output
         report = (root / report_rel).read_text(encoding="utf-8")
         assert "Frontend Guarded Registry Result" in report
-        assert "deferred" in report
-        assert "no registry updates executed in guarded registry baseline" in report
+        assert "completed" in report
+        assert "materialized 1 guarded registry step file(s) from canonical cross-spec writeback artifact" in report
 
     def test_program_guarded_registry_execute_preserves_stable_empty_visual_a11y_pending_input(
         self, initialized_project_dir: Path
@@ -2876,9 +2875,13 @@ specs:
         assert artifact_path.is_file()
         assert ".ai-sdlc/memory/frontend-guarded-registry/latest.yaml" in result.output
         payload = yaml.safe_load(artifact_path.read_text(encoding="utf-8"))
-        assert payload["registry_result"] == "deferred"
-        assert payload["registry_state"] == "deferred"
+        assert payload["registry_result"] == "blocked"
+        assert payload["registry_state"] == "blocked"
         assert payload["confirmed"] is True
+        assert payload["remaining_blockers"] == [
+            "spec 001-auth remediation still required",
+            "guarded registry requires completed cross-spec writeback artifact (writeback_state=deferred)",
+        ]
         report = (root / report_rel).read_text(encoding="utf-8")
         assert "Frontend Guarded Registry Artifact" in report
         assert ".ai-sdlc/memory/frontend-guarded-registry/latest.yaml" in report
@@ -2920,16 +2923,16 @@ specs:
         assert "Program Frontend Broader Governance Dry-Run" in result.output
         assert ".ai-sdlc/memory/frontend-guarded-registry/latest.yaml" in result.output
 
-    def test_program_broader_governance_execute_surfaces_deferred_result(
+    def test_program_broader_governance_execute_surfaces_completed_result(
         self, initialized_project_dir: Path
     ) -> None:
         root = initialized_project_dir
         _write_manifest(root)
         _write_frontend_guarded_registry_artifact(
             root,
-            registry_result="deferred",
-            registry_state="deferred",
-            remaining_blockers=["spec 001-auth remediation still required"],
+            registry_result="completed",
+            registry_state="completed",
+            remaining_blockers=[],
         )
         report_rel = ".ai-sdlc/memory/frontend-broader-governance.md"
 
@@ -2946,14 +2949,13 @@ specs:
                 ],
             )
 
-        assert result.exit_code == 1
+        assert result.exit_code == 0
         assert "Program Frontend Broader Governance Execute" in result.output
-        assert "deferred" in result.output
-        assert "no broader governance actions executed in broader governance baseline" in result.output
+        assert "completed" in result.output
         report = (root / report_rel).read_text(encoding="utf-8")
         assert "Frontend Broader Governance Result" in report
-        assert "deferred" in report
-        assert "no broader governance actions executed in broader governance baseline" in report
+        assert "completed" in report
+        assert "materialized 1 broader governance step file(s) from canonical guarded registry artifact" in report
 
     def test_program_broader_governance_execute_preserves_stable_empty_visual_a11y_pending_input(
         self, initialized_project_dir: Path
@@ -3142,9 +3144,13 @@ specs:
         assert artifact_path.is_file()
         assert ".ai-sdlc/memory/frontend-broader-governance/latest.yaml" in result.output
         payload = yaml.safe_load(artifact_path.read_text(encoding="utf-8"))
-        assert payload["governance_result"] == "deferred"
-        assert payload["governance_state"] == "deferred"
+        assert payload["governance_result"] == "blocked"
+        assert payload["governance_state"] == "blocked"
         assert payload["confirmed"] is True
+        assert payload["remaining_blockers"] == [
+            "spec 001-auth remediation still required",
+            "broader governance requires completed guarded registry artifact (registry_state=deferred)",
+        ]
         report = (root / report_rel).read_text(encoding="utf-8")
         assert "Frontend Broader Governance Artifact" in report
         assert ".ai-sdlc/memory/frontend-broader-governance/latest.yaml" in report
@@ -3186,16 +3192,16 @@ specs:
         assert "Program Frontend Final Governance Dry-Run" in result.output
         assert ".ai-sdlc/memory/frontend-broader-governance/latest.yaml" in result.output
 
-    def test_program_final_governance_execute_surfaces_deferred_result(
+    def test_program_final_governance_execute_surfaces_completed_result(
         self, initialized_project_dir: Path
     ) -> None:
         root = initialized_project_dir
         _write_manifest(root)
         _write_frontend_broader_governance_artifact(
             root,
-            governance_result="deferred",
-            governance_state="deferred",
-            remaining_blockers=["spec 001-auth remediation still required"],
+            governance_result="completed",
+            governance_state="completed",
+            remaining_blockers=[],
         )
         report_rel = ".ai-sdlc/memory/frontend-final-governance.md"
 
@@ -3212,14 +3218,13 @@ specs:
                 ],
             )
 
-        assert result.exit_code == 1
+        assert result.exit_code == 0
         assert "Program Frontend Final Governance Execute" in result.output
-        assert "deferred" in result.output
-        assert "no final governance actions executed in final governance baseline" in result.output
+        assert "completed" in result.output
         report = (root / report_rel).read_text(encoding="utf-8")
         assert "Frontend Final Governance Result" in report
-        assert "deferred" in report
-        assert "no final governance actions executed in final governance baseline" in report
+        assert "completed" in report
+        assert "materialized 1 final governance step file(s) from canonical broader governance artifact" in report
 
     def test_program_final_governance_dry_run_does_not_write_artifact(
         self, initialized_project_dir: Path
@@ -3283,9 +3288,13 @@ specs:
         assert artifact_path.is_file()
         assert ".ai-sdlc/memory/frontend-final-governance/latest.yaml" in result.output
         payload = yaml.safe_load(artifact_path.read_text(encoding="utf-8"))
-        assert payload["final_governance_result"] == "deferred"
-        assert payload["final_governance_state"] == "deferred"
+        assert payload["final_governance_result"] == "blocked"
+        assert payload["final_governance_state"] == "blocked"
         assert payload["confirmed"] is True
+        assert payload["remaining_blockers"] == [
+            "spec 001-auth remediation still required",
+            "final governance requires completed broader governance artifact (governance_state=deferred)",
+        ]
         report = (root / report_rel).read_text(encoding="utf-8")
         assert "Frontend Final Governance Artifact" in report
         assert ".ai-sdlc/memory/frontend-final-governance/latest.yaml" in report
@@ -3451,16 +3460,16 @@ specs:
         assert "Program Frontend Writeback Persistence Dry-Run" in result.output
         assert ".ai-sdlc/memory/frontend-final-governance/latest.yaml" in result.output
 
-    def test_program_writeback_persistence_execute_surfaces_deferred_result(
+    def test_program_writeback_persistence_execute_surfaces_completed_result(
         self, initialized_project_dir: Path
     ) -> None:
         root = initialized_project_dir
         _write_manifest(root)
         _write_frontend_final_governance_artifact(
             root,
-            final_governance_result="deferred",
-            final_governance_state="deferred",
-            remaining_blockers=["spec 001-auth remediation still required"],
+            final_governance_result="completed",
+            final_governance_state="completed",
+            remaining_blockers=[],
         )
         report_rel = ".ai-sdlc/memory/frontend-writeback-persistence.md"
 
@@ -3477,14 +3486,13 @@ specs:
                 ],
             )
 
-        assert result.exit_code == 1
+        assert result.exit_code == 0
         assert "Program Frontend Writeback Persistence Execute" in result.output
-        assert "deferred" in result.output
-        assert "no writeback persistence actions executed in writeback persistence baseline" in result.output
+        assert "completed" in result.output
         report = (root / report_rel).read_text(encoding="utf-8")
         assert "Frontend Writeback Persistence Result" in report
-        assert "deferred" in report
-        assert "no writeback persistence actions executed in writeback persistence baseline" in report
+        assert "completed" in report
+        assert "materialized 1 writeback persistence step file(s) from canonical final governance artifact" in report
 
     def test_program_writeback_persistence_dry_run_does_not_write_artifact(
         self, initialized_project_dir: Path
@@ -3548,9 +3556,13 @@ specs:
         assert artifact_path.is_file()
         assert ".ai-sdlc/memory/frontend-writeback-persistence/latest.yaml" in result.output
         payload = yaml.safe_load(artifact_path.read_text(encoding="utf-8"))
-        assert payload["persistence_result"] == "deferred"
-        assert payload["persistence_state"] == "deferred"
+        assert payload["persistence_result"] == "blocked"
+        assert payload["persistence_state"] == "blocked"
         assert payload["confirmed"] is True
+        assert payload["remaining_blockers"] == [
+            "spec 001-auth remediation still required",
+            "writeback persistence requires completed final governance artifact (final_governance_state=deferred)",
+        ]
         report = (root / report_rel).read_text(encoding="utf-8")
         assert "Frontend Writeback Persistence Artifact" in report
         assert ".ai-sdlc/memory/frontend-writeback-persistence/latest.yaml" in report
@@ -5534,6 +5546,7 @@ def _write_frontend_cross_spec_writeback_artifact(
         root / ".ai-sdlc" / "memory" / "frontend-cross-spec-writeback" / "latest.yaml"
     )
     artifact_path.parent.mkdir(parents=True, exist_ok=True)
+    effective_steps = default_steps if steps is None else steps
     artifact_path.write_text(
         yaml.safe_dump(
             {
@@ -5552,7 +5565,7 @@ def _write_frontend_cross_spec_writeback_artifact(
                 "written_paths": written_paths,
                 "remaining_blockers": list(remaining_blockers),
                 "warnings": warnings,
-                "steps": list(steps or default_steps),
+                "steps": list(effective_steps),
                 "source_linkage": {
                     "cross_spec_writeback_state": writeback_state,
                     "orchestration_result": orchestration_result,
@@ -5595,6 +5608,7 @@ def _write_frontend_guarded_registry_artifact(
         root / ".ai-sdlc" / "memory" / "frontend-guarded-registry" / "latest.yaml"
     )
     artifact_path.parent.mkdir(parents=True, exist_ok=True)
+    effective_steps = default_steps if steps is None else steps
     artifact_path.write_text(
         yaml.safe_dump(
             {
@@ -5617,7 +5631,7 @@ def _write_frontend_guarded_registry_artifact(
                 "warnings": [
                     "guarded registry baseline does not update registries yet"
                 ],
-                "steps": list(steps or default_steps),
+                "steps": list(effective_steps),
                 "source_linkage": {
                     "registry_state": registry_state,
                     "registry_result": registry_result,
@@ -5660,6 +5674,7 @@ def _write_frontend_broader_governance_artifact(
             },
         }
     ]
+    effective_steps = default_steps if steps is None else steps
     artifact_path.write_text(
         yaml.safe_dump(
             {
@@ -5682,7 +5697,7 @@ def _write_frontend_broader_governance_artifact(
                 "warnings": [
                     "broader governance baseline does not execute final governance actions yet"
                 ],
-                "steps": list(steps or default_steps),
+                "steps": list(effective_steps),
                 "source_linkage": {
                     "registry_state": "deferred",
                     "governance_state": governance_state,
@@ -5726,6 +5741,7 @@ def _write_frontend_final_governance_artifact(
             },
         }
     ]
+    effective_steps = default_steps if steps is None else steps
     artifact_path.write_text(
         yaml.safe_dump(
             {
@@ -5748,7 +5764,7 @@ def _write_frontend_final_governance_artifact(
                 "warnings": [
                     "final governance baseline does not execute code rewrite persistence yet"
                 ],
-                "steps": list(steps or default_steps),
+                "steps": list(effective_steps),
                 "source_linkage": {
                     "governance_state": "deferred",
                     "final_governance_state": final_governance_state,
@@ -5792,6 +5808,7 @@ def _write_frontend_writeback_persistence_artifact(
             },
         }
     ]
+    effective_steps = default_steps if steps is None else steps
     artifact_path.write_text(
         yaml.safe_dump(
             {
@@ -5814,7 +5831,7 @@ def _write_frontend_writeback_persistence_artifact(
                 "warnings": [
                     "writeback persistence baseline does not produce persisted write proof yet"
                 ],
-                "steps": list(steps or default_steps),
+                "steps": list(effective_steps),
                 "source_linkage": {
                     "final_governance_state": "deferred",
                     "persistence_state": persistence_state,

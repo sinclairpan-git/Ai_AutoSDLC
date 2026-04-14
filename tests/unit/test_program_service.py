@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from dataclasses import replace
 from pathlib import Path
 
 import yaml
@@ -3108,7 +3109,7 @@ def test_build_frontend_guarded_registry_request_preserves_visual_a11y_issue_rev
     assert request.steps[0].registry_state == "not_started"
 
 
-def test_execute_frontend_guarded_registry_returns_deferred_result_when_confirmed(
+def test_execute_frontend_guarded_registry_blocks_until_writeback_is_completed(
     tmp_path: Path,
 ) -> None:
     for p in ("specs/001-auth", "specs/002-course", "specs/003-enroll"):
@@ -3125,14 +3126,133 @@ def test_execute_frontend_guarded_registry_returns_deferred_result_when_confirme
 
     assert result.passed is False
     assert result.confirmed is True
-    assert result.registry_state == "deferred"
-    assert result.registry_result == "deferred"
+    assert result.registry_state == "blocked"
+    assert result.registry_result == "blocked"
     assert result.registry_summaries == [
-        "no registry updates executed in guarded registry baseline"
+        "guarded registry requires completed cross-spec writeback artifact (writeback_state=deferred)"
     ]
     assert result.written_paths == []
-    assert result.remaining_blockers == ["spec 001-auth remediation still required"]
-    assert result.source_linkage["registry_state"] == "deferred"
+    assert result.remaining_blockers == [
+        "spec 001-auth remediation still required",
+        "guarded registry requires completed cross-spec writeback artifact (writeback_state=deferred)",
+    ]
+    assert result.source_linkage["registry_state"] == "blocked"
+
+
+def test_execute_frontend_guarded_registry_writes_step_files_when_confirmed(
+    tmp_path: Path,
+) -> None:
+    for p in ("specs/001-auth", "specs/002-course", "specs/003-enroll"):
+        (tmp_path / p).mkdir(parents=True)
+    _write_frontend_cross_spec_writeback_artifact(
+        tmp_path,
+        orchestration_result="completed",
+        writeback_state="completed",
+        remaining_blockers=[],
+    )
+
+    svc = ProgramService(tmp_path)
+    result = svc.execute_frontend_guarded_registry(_manifest(), confirmed=True)
+
+    assert result.passed is True
+    assert result.confirmed is True
+    assert result.registry_state == "completed"
+    assert result.registry_result == "completed"
+    assert result.registry_summaries == [
+        "materialized 1 guarded registry step file(s) from canonical cross-spec writeback artifact"
+    ]
+    assert result.written_paths == [
+        ".ai-sdlc/memory/frontend-guarded-registry/steps/001-auth.md"
+    ]
+    assert (
+        tmp_path
+        / ".ai-sdlc"
+        / "memory"
+        / "frontend-guarded-registry"
+        / "steps"
+        / "001-auth.md"
+    ).is_file()
+    assert result.remaining_blockers == []
+    assert result.source_linkage["registry_state"] == "completed"
+
+
+def test_execute_frontend_guarded_registry_blocks_completed_artifact_with_blockers(
+    tmp_path: Path,
+) -> None:
+    for p in ("specs/001-auth", "specs/002-course", "specs/003-enroll"):
+        (tmp_path / p).mkdir(parents=True)
+    _write_frontend_cross_spec_writeback_artifact(
+        tmp_path,
+        orchestration_result="completed",
+        writeback_state="completed",
+        remaining_blockers=["spec 001-auth receipt still requires review"],
+    )
+
+    svc = ProgramService(tmp_path)
+    result = svc.execute_frontend_guarded_registry(_manifest(), confirmed=True)
+
+    assert result.passed is False
+    assert result.registry_state == "blocked"
+    assert result.registry_result == "blocked"
+    assert result.written_paths == []
+    assert result.remaining_blockers == [
+        "spec 001-auth receipt still requires review",
+        "guarded registry requires blocker-free cross-spec writeback artifact",
+    ]
+
+
+def test_execute_frontend_guarded_registry_blocks_manual_skip_request_with_blockers(
+    tmp_path: Path,
+) -> None:
+    for p in ("specs/001-auth", "specs/002-course", "specs/003-enroll"):
+        (tmp_path / p).mkdir(parents=True)
+    _write_frontend_cross_spec_writeback_artifact(
+        tmp_path,
+        orchestration_result="completed",
+        writeback_state="completed",
+        remaining_blockers=["spec 001-auth receipt still requires review"],
+    )
+
+    svc = ProgramService(tmp_path)
+    request = replace(
+        svc.build_frontend_guarded_registry_request(_manifest()),
+        required=False,
+    )
+    result = svc.execute_frontend_guarded_registry(
+        _manifest(),
+        request=request,
+        confirmed=True,
+    )
+
+    assert result.passed is False
+    assert result.registry_state == "blocked"
+    assert result.registry_result == "blocked"
+    assert result.written_paths == []
+    assert result.remaining_blockers == [
+        "spec 001-auth receipt still requires review",
+        "guarded registry requires blocker-free cross-spec writeback artifact",
+    ]
+
+
+def test_execute_frontend_guarded_registry_blocks_empty_non_completed_artifact(
+    tmp_path: Path,
+) -> None:
+    for p in ("specs/001-auth", "specs/002-course", "specs/003-enroll"):
+        (tmp_path / p).mkdir(parents=True)
+    _write_frontend_cross_spec_writeback_artifact(
+        tmp_path,
+        orchestration_result="deferred",
+        writeback_state="deferred",
+        remaining_blockers=[],
+        steps=[],
+    )
+
+    svc = ProgramService(tmp_path)
+    result = svc.execute_frontend_guarded_registry(_manifest(), confirmed=True)
+
+    assert result.registry_state == "blocked"
+    assert result.registry_result == "blocked"
+    assert result.written_paths == []
 
 
 def test_write_frontend_guarded_registry_artifact_emits_canonical_yaml(
@@ -3142,9 +3262,9 @@ def test_write_frontend_guarded_registry_artifact_emits_canonical_yaml(
         (tmp_path / p).mkdir(parents=True)
     _write_frontend_cross_spec_writeback_artifact(
         tmp_path,
-        orchestration_result="deferred",
-        writeback_state="deferred",
-        remaining_blockers=["spec 001-auth remediation still required"],
+        orchestration_result="completed",
+        writeback_state="completed",
+        remaining_blockers=[],
     )
 
     svc = ProgramService(tmp_path)
@@ -3174,14 +3294,16 @@ def test_write_frontend_guarded_registry_artifact_emits_canonical_yaml(
         payload["artifact_source_path"]
         == ".ai-sdlc/memory/frontend-cross-spec-writeback/latest.yaml"
     )
-    assert payload["registry_state"] == "deferred"
-    assert payload["registry_result"] == "deferred"
+    assert payload["registry_state"] == "completed"
+    assert payload["registry_result"] == "completed"
     assert payload["confirmed"] is True
     assert payload["registry_summaries"] == [
-        "no registry updates executed in guarded registry baseline"
+        "materialized 1 guarded registry step file(s) from canonical cross-spec writeback artifact"
     ]
-    assert payload["written_paths"] == []
-    assert payload["remaining_blockers"] == ["spec 001-auth remediation still required"]
+    assert payload["written_paths"] == [
+        ".ai-sdlc/memory/frontend-guarded-registry/steps/001-auth.md"
+    ]
+    assert payload["remaining_blockers"] == []
     assert payload["steps"][0]["spec_id"] == "001-auth"
     assert (
         payload["source_linkage"]["guarded_registry_artifact_path"]
@@ -3298,15 +3420,15 @@ def test_execute_frontend_guarded_registry_does_not_write_artifact_by_default(
         (tmp_path / p).mkdir(parents=True)
     _write_frontend_cross_spec_writeback_artifact(
         tmp_path,
-        orchestration_result="deferred",
-        writeback_state="deferred",
-        remaining_blockers=["spec 001-auth remediation still required"],
+        orchestration_result="completed",
+        writeback_state="completed",
+        remaining_blockers=[],
     )
 
     svc = ProgramService(tmp_path)
     result = svc.execute_frontend_guarded_registry(_manifest(), confirmed=True)
 
-    assert result.registry_state == "deferred"
+    assert result.registry_state == "completed"
     assert not (
         tmp_path
         / ".ai-sdlc"
@@ -3432,7 +3554,7 @@ def test_build_frontend_broader_governance_request_preserves_visual_a11y_issue_r
     assert request.steps[0].governance_state == "not_started"
 
 
-def test_execute_frontend_broader_governance_returns_deferred_result_when_confirmed(
+def test_execute_frontend_broader_governance_blocks_until_registry_is_completed(
     tmp_path: Path,
 ) -> None:
     for p in ("specs/001-auth", "specs/002-course", "specs/003-enroll"):
@@ -3449,14 +3571,133 @@ def test_execute_frontend_broader_governance_returns_deferred_result_when_confir
 
     assert result.passed is False
     assert result.confirmed is True
-    assert result.governance_state == "deferred"
-    assert result.governance_result == "deferred"
+    assert result.governance_state == "blocked"
+    assert result.governance_result == "blocked"
     assert result.governance_summaries == [
-        "no broader governance actions executed in broader governance baseline"
+        "broader governance requires completed guarded registry artifact (registry_state=deferred)"
     ]
     assert result.written_paths == []
-    assert result.remaining_blockers == ["spec 001-auth remediation still required"]
-    assert result.source_linkage["governance_state"] == "deferred"
+    assert result.remaining_blockers == [
+        "spec 001-auth remediation still required",
+        "broader governance requires completed guarded registry artifact (registry_state=deferred)",
+    ]
+    assert result.source_linkage["governance_state"] == "blocked"
+
+
+def test_execute_frontend_broader_governance_writes_step_files_when_confirmed(
+    tmp_path: Path,
+) -> None:
+    for p in ("specs/001-auth", "specs/002-course", "specs/003-enroll"):
+        (tmp_path / p).mkdir(parents=True)
+    _write_frontend_guarded_registry_artifact(
+        tmp_path,
+        registry_result="completed",
+        registry_state="completed",
+        remaining_blockers=[],
+    )
+
+    svc = ProgramService(tmp_path)
+    result = svc.execute_frontend_broader_governance(_manifest(), confirmed=True)
+
+    assert result.passed is True
+    assert result.confirmed is True
+    assert result.governance_state == "completed"
+    assert result.governance_result == "completed"
+    assert result.governance_summaries == [
+        "materialized 1 broader governance step file(s) from canonical guarded registry artifact"
+    ]
+    assert result.written_paths == [
+        ".ai-sdlc/memory/frontend-broader-governance/steps/001-auth.md"
+    ]
+    assert (
+        tmp_path
+        / ".ai-sdlc"
+        / "memory"
+        / "frontend-broader-governance"
+        / "steps"
+        / "001-auth.md"
+    ).is_file()
+    assert result.remaining_blockers == []
+    assert result.source_linkage["governance_state"] == "completed"
+
+
+def test_execute_frontend_broader_governance_blocks_completed_artifact_with_blockers(
+    tmp_path: Path,
+) -> None:
+    for p in ("specs/001-auth", "specs/002-course", "specs/003-enroll"):
+        (tmp_path / p).mkdir(parents=True)
+    _write_frontend_guarded_registry_artifact(
+        tmp_path,
+        registry_result="completed",
+        registry_state="completed",
+        remaining_blockers=["spec 001-auth registry update still requires review"],
+    )
+
+    svc = ProgramService(tmp_path)
+    result = svc.execute_frontend_broader_governance(_manifest(), confirmed=True)
+
+    assert result.passed is False
+    assert result.governance_state == "blocked"
+    assert result.governance_result == "blocked"
+    assert result.written_paths == []
+    assert result.remaining_blockers == [
+        "spec 001-auth registry update still requires review",
+        "broader governance requires blocker-free guarded registry artifact",
+    ]
+
+
+def test_execute_frontend_broader_governance_blocks_manual_skip_request_with_blockers(
+    tmp_path: Path,
+) -> None:
+    for p in ("specs/001-auth", "specs/002-course", "specs/003-enroll"):
+        (tmp_path / p).mkdir(parents=True)
+    _write_frontend_guarded_registry_artifact(
+        tmp_path,
+        registry_result="completed",
+        registry_state="completed",
+        remaining_blockers=["spec 001-auth registry update still requires review"],
+    )
+
+    svc = ProgramService(tmp_path)
+    request = replace(
+        svc.build_frontend_broader_governance_request(_manifest()),
+        required=False,
+    )
+    result = svc.execute_frontend_broader_governance(
+        _manifest(),
+        request=request,
+        confirmed=True,
+    )
+
+    assert result.passed is False
+    assert result.governance_state == "blocked"
+    assert result.governance_result == "blocked"
+    assert result.written_paths == []
+    assert result.remaining_blockers == [
+        "spec 001-auth registry update still requires review",
+        "broader governance requires blocker-free guarded registry artifact",
+    ]
+
+
+def test_execute_frontend_broader_governance_blocks_empty_non_completed_artifact(
+    tmp_path: Path,
+) -> None:
+    for p in ("specs/001-auth", "specs/002-course", "specs/003-enroll"):
+        (tmp_path / p).mkdir(parents=True)
+    _write_frontend_guarded_registry_artifact(
+        tmp_path,
+        registry_result="deferred",
+        registry_state="deferred",
+        remaining_blockers=[],
+        steps=[],
+    )
+
+    svc = ProgramService(tmp_path)
+    result = svc.execute_frontend_broader_governance(_manifest(), confirmed=True)
+
+    assert result.governance_state == "blocked"
+    assert result.governance_result == "blocked"
+    assert result.written_paths == []
 
 
 def test_write_frontend_broader_governance_artifact_emits_canonical_yaml(
@@ -3466,9 +3707,9 @@ def test_write_frontend_broader_governance_artifact_emits_canonical_yaml(
         (tmp_path / p).mkdir(parents=True)
     _write_frontend_guarded_registry_artifact(
         tmp_path,
-        registry_result="deferred",
-        registry_state="deferred",
-        remaining_blockers=["spec 001-auth remediation still required"],
+        registry_result="completed",
+        registry_state="completed",
+        remaining_blockers=[],
     )
 
     svc = ProgramService(tmp_path)
@@ -3498,14 +3739,16 @@ def test_write_frontend_broader_governance_artifact_emits_canonical_yaml(
         payload["artifact_source_path"]
         == ".ai-sdlc/memory/frontend-guarded-registry/latest.yaml"
     )
-    assert payload["governance_state"] == "deferred"
-    assert payload["governance_result"] == "deferred"
+    assert payload["governance_state"] == "completed"
+    assert payload["governance_result"] == "completed"
     assert payload["confirmed"] is True
     assert payload["governance_summaries"] == [
-        "no broader governance actions executed in broader governance baseline"
+        "materialized 1 broader governance step file(s) from canonical guarded registry artifact"
     ]
-    assert payload["written_paths"] == []
-    assert payload["remaining_blockers"] == ["spec 001-auth remediation still required"]
+    assert payload["written_paths"] == [
+        ".ai-sdlc/memory/frontend-broader-governance/steps/001-auth.md"
+    ]
+    assert payload["remaining_blockers"] == []
     assert payload["steps"][0]["spec_id"] == "001-auth"
     assert (
         payload["source_linkage"]["broader_governance_artifact_path"]
@@ -3622,15 +3865,15 @@ def test_execute_frontend_broader_governance_does_not_write_artifact_by_default(
         (tmp_path / p).mkdir(parents=True)
     _write_frontend_guarded_registry_artifact(
         tmp_path,
-        registry_result="deferred",
-        registry_state="deferred",
-        remaining_blockers=["spec 001-auth remediation still required"],
+        registry_result="completed",
+        registry_state="completed",
+        remaining_blockers=[],
     )
 
     svc = ProgramService(tmp_path)
     result = svc.execute_frontend_broader_governance(_manifest(), confirmed=True)
 
-    assert result.governance_state == "deferred"
+    assert result.governance_state == "completed"
     assert not (
         tmp_path
         / ".ai-sdlc"
@@ -3670,7 +3913,7 @@ def test_build_frontend_final_governance_request_requires_explicit_confirmation(
     assert request.steps[0].source_linkage["final_governance_state"] == "not_started"
 
 
-def test_execute_frontend_final_governance_returns_deferred_result_when_confirmed(
+def test_execute_frontend_final_governance_blocks_until_broader_governance_is_completed(
     tmp_path: Path,
 ) -> None:
     for p in ("specs/001-auth", "specs/002-course", "specs/003-enroll"):
@@ -3687,14 +3930,133 @@ def test_execute_frontend_final_governance_returns_deferred_result_when_confirme
 
     assert result.passed is False
     assert result.confirmed is True
-    assert result.final_governance_state == "deferred"
-    assert result.final_governance_result == "deferred"
+    assert result.final_governance_state == "blocked"
+    assert result.final_governance_result == "blocked"
     assert result.final_governance_summaries == [
-        "no final governance actions executed in final governance baseline"
+        "final governance requires completed broader governance artifact (governance_state=deferred)"
     ]
     assert result.written_paths == []
-    assert result.remaining_blockers == ["spec 001-auth remediation still required"]
-    assert result.source_linkage["final_governance_state"] == "deferred"
+    assert result.remaining_blockers == [
+        "spec 001-auth remediation still required",
+        "final governance requires completed broader governance artifact (governance_state=deferred)",
+    ]
+    assert result.source_linkage["final_governance_state"] == "blocked"
+
+
+def test_execute_frontend_final_governance_writes_step_files_when_confirmed(
+    tmp_path: Path,
+) -> None:
+    for p in ("specs/001-auth", "specs/002-course", "specs/003-enroll"):
+        (tmp_path / p).mkdir(parents=True)
+    _write_frontend_broader_governance_artifact(
+        tmp_path,
+        governance_result="completed",
+        governance_state="completed",
+        remaining_blockers=[],
+    )
+
+    svc = ProgramService(tmp_path)
+    result = svc.execute_frontend_final_governance(_manifest(), confirmed=True)
+
+    assert result.passed is True
+    assert result.confirmed is True
+    assert result.final_governance_state == "completed"
+    assert result.final_governance_result == "completed"
+    assert result.final_governance_summaries == [
+        "materialized 1 final governance step file(s) from canonical broader governance artifact"
+    ]
+    assert result.written_paths == [
+        ".ai-sdlc/memory/frontend-final-governance/steps/001-auth.md"
+    ]
+    assert (
+        tmp_path
+        / ".ai-sdlc"
+        / "memory"
+        / "frontend-final-governance"
+        / "steps"
+        / "001-auth.md"
+    ).is_file()
+    assert result.remaining_blockers == []
+    assert result.source_linkage["final_governance_state"] == "completed"
+
+
+def test_execute_frontend_final_governance_blocks_completed_artifact_with_blockers(
+    tmp_path: Path,
+) -> None:
+    for p in ("specs/001-auth", "specs/002-course", "specs/003-enroll"):
+        (tmp_path / p).mkdir(parents=True)
+    _write_frontend_broader_governance_artifact(
+        tmp_path,
+        governance_result="completed",
+        governance_state="completed",
+        remaining_blockers=["spec 001-auth broader governance still requires review"],
+    )
+
+    svc = ProgramService(tmp_path)
+    result = svc.execute_frontend_final_governance(_manifest(), confirmed=True)
+
+    assert result.passed is False
+    assert result.final_governance_state == "blocked"
+    assert result.final_governance_result == "blocked"
+    assert result.written_paths == []
+    assert result.remaining_blockers == [
+        "spec 001-auth broader governance still requires review",
+        "final governance requires blocker-free broader governance artifact",
+    ]
+
+
+def test_execute_frontend_final_governance_blocks_manual_skip_request_with_blockers(
+    tmp_path: Path,
+) -> None:
+    for p in ("specs/001-auth", "specs/002-course", "specs/003-enroll"):
+        (tmp_path / p).mkdir(parents=True)
+    _write_frontend_broader_governance_artifact(
+        tmp_path,
+        governance_result="completed",
+        governance_state="completed",
+        remaining_blockers=["spec 001-auth broader governance still requires review"],
+    )
+
+    svc = ProgramService(tmp_path)
+    request = replace(
+        svc.build_frontend_final_governance_request(_manifest()),
+        required=False,
+    )
+    result = svc.execute_frontend_final_governance(
+        _manifest(),
+        request=request,
+        confirmed=True,
+    )
+
+    assert result.passed is False
+    assert result.final_governance_state == "blocked"
+    assert result.final_governance_result == "blocked"
+    assert result.written_paths == []
+    assert result.remaining_blockers == [
+        "spec 001-auth broader governance still requires review",
+        "final governance requires blocker-free broader governance artifact",
+    ]
+
+
+def test_execute_frontend_final_governance_blocks_empty_non_completed_artifact(
+    tmp_path: Path,
+) -> None:
+    for p in ("specs/001-auth", "specs/002-course", "specs/003-enroll"):
+        (tmp_path / p).mkdir(parents=True)
+    _write_frontend_broader_governance_artifact(
+        tmp_path,
+        governance_result="deferred",
+        governance_state="deferred",
+        remaining_blockers=[],
+        steps=[],
+    )
+
+    svc = ProgramService(tmp_path)
+    result = svc.execute_frontend_final_governance(_manifest(), confirmed=True)
+
+    assert result.final_governance_state == "blocked"
+    assert result.final_governance_result == "blocked"
+    assert result.written_paths == []
 
 
 def test_write_frontend_final_governance_artifact_emits_canonical_yaml(
@@ -3704,9 +4066,9 @@ def test_write_frontend_final_governance_artifact_emits_canonical_yaml(
         (tmp_path / p).mkdir(parents=True)
     _write_frontend_broader_governance_artifact(
         tmp_path,
-        governance_result="deferred",
-        governance_state="deferred",
-        remaining_blockers=["spec 001-auth remediation still required"],
+        governance_result="completed",
+        governance_state="completed",
+        remaining_blockers=[],
     )
 
     svc = ProgramService(tmp_path)
@@ -3736,14 +4098,16 @@ def test_write_frontend_final_governance_artifact_emits_canonical_yaml(
         payload["artifact_source_path"]
         == ".ai-sdlc/memory/frontend-broader-governance/latest.yaml"
     )
-    assert payload["final_governance_state"] == "deferred"
-    assert payload["final_governance_result"] == "deferred"
+    assert payload["final_governance_state"] == "completed"
+    assert payload["final_governance_result"] == "completed"
     assert payload["confirmed"] is True
     assert payload["final_governance_summaries"] == [
-        "no final governance actions executed in final governance baseline"
+        "materialized 1 final governance step file(s) from canonical broader governance artifact"
     ]
-    assert payload["written_paths"] == []
-    assert payload["remaining_blockers"] == ["spec 001-auth remediation still required"]
+    assert payload["written_paths"] == [
+        ".ai-sdlc/memory/frontend-final-governance/steps/001-auth.md"
+    ]
+    assert payload["remaining_blockers"] == []
     assert payload["steps"][0]["spec_id"] == "001-auth"
     assert (
         payload["source_linkage"]["final_governance_artifact_path"]
@@ -3758,15 +4122,15 @@ def test_execute_frontend_final_governance_does_not_write_artifact_by_default(
         (tmp_path / p).mkdir(parents=True)
     _write_frontend_broader_governance_artifact(
         tmp_path,
-        governance_result="deferred",
-        governance_state="deferred",
-        remaining_blockers=["spec 001-auth remediation still required"],
+        governance_result="completed",
+        governance_state="completed",
+        remaining_blockers=[],
     )
 
     svc = ProgramService(tmp_path)
     result = svc.execute_frontend_final_governance(_manifest(), confirmed=True)
 
-    assert result.final_governance_state == "deferred"
+    assert result.final_governance_state == "completed"
     assert not (
         tmp_path
         / ".ai-sdlc"
@@ -3986,7 +4350,7 @@ def test_build_frontend_writeback_persistence_request_requires_explicit_confirma
     assert request.steps[0].source_linkage["persistence_state"] == "not_started"
 
 
-def test_execute_frontend_writeback_persistence_returns_deferred_result_when_confirmed(
+def test_execute_frontend_writeback_persistence_blocks_until_final_governance_is_completed(
     tmp_path: Path,
 ) -> None:
     for p in ("specs/001-auth", "specs/002-course", "specs/003-enroll"):
@@ -4003,14 +4367,133 @@ def test_execute_frontend_writeback_persistence_returns_deferred_result_when_con
 
     assert result.passed is False
     assert result.confirmed is True
-    assert result.persistence_state == "deferred"
-    assert result.persistence_result == "deferred"
+    assert result.persistence_state == "blocked"
+    assert result.persistence_result == "blocked"
     assert result.persistence_summaries == [
-        "no writeback persistence actions executed in writeback persistence baseline"
+        "writeback persistence requires completed final governance artifact (final_governance_state=deferred)"
     ]
     assert result.written_paths == []
-    assert result.remaining_blockers == ["spec 001-auth remediation still required"]
-    assert result.source_linkage["persistence_state"] == "deferred"
+    assert result.remaining_blockers == [
+        "spec 001-auth remediation still required",
+        "writeback persistence requires completed final governance artifact (final_governance_state=deferred)",
+    ]
+    assert result.source_linkage["persistence_state"] == "blocked"
+
+
+def test_execute_frontend_writeback_persistence_writes_step_files_when_confirmed(
+    tmp_path: Path,
+) -> None:
+    for p in ("specs/001-auth", "specs/002-course", "specs/003-enroll"):
+        (tmp_path / p).mkdir(parents=True)
+    _write_frontend_final_governance_artifact(
+        tmp_path,
+        final_governance_result="completed",
+        final_governance_state="completed",
+        remaining_blockers=[],
+    )
+
+    svc = ProgramService(tmp_path)
+    result = svc.execute_frontend_writeback_persistence(_manifest(), confirmed=True)
+
+    assert result.passed is True
+    assert result.confirmed is True
+    assert result.persistence_state == "completed"
+    assert result.persistence_result == "completed"
+    assert result.persistence_summaries == [
+        "materialized 1 writeback persistence step file(s) from canonical final governance artifact"
+    ]
+    assert result.written_paths == [
+        ".ai-sdlc/memory/frontend-writeback-persistence/steps/001-auth.md"
+    ]
+    assert (
+        tmp_path
+        / ".ai-sdlc"
+        / "memory"
+        / "frontend-writeback-persistence"
+        / "steps"
+        / "001-auth.md"
+    ).is_file()
+    assert result.remaining_blockers == []
+    assert result.source_linkage["persistence_state"] == "completed"
+
+
+def test_execute_frontend_writeback_persistence_blocks_completed_artifact_with_blockers(
+    tmp_path: Path,
+) -> None:
+    for p in ("specs/001-auth", "specs/002-course", "specs/003-enroll"):
+        (tmp_path / p).mkdir(parents=True)
+    _write_frontend_final_governance_artifact(
+        tmp_path,
+        final_governance_result="completed",
+        final_governance_state="completed",
+        remaining_blockers=["spec 001-auth final governance still requires review"],
+    )
+
+    svc = ProgramService(tmp_path)
+    result = svc.execute_frontend_writeback_persistence(_manifest(), confirmed=True)
+
+    assert result.passed is False
+    assert result.persistence_state == "blocked"
+    assert result.persistence_result == "blocked"
+    assert result.written_paths == []
+    assert result.remaining_blockers == [
+        "spec 001-auth final governance still requires review",
+        "writeback persistence requires blocker-free final governance artifact",
+    ]
+
+
+def test_execute_frontend_writeback_persistence_blocks_manual_skip_request_with_blockers(
+    tmp_path: Path,
+) -> None:
+    for p in ("specs/001-auth", "specs/002-course", "specs/003-enroll"):
+        (tmp_path / p).mkdir(parents=True)
+    _write_frontend_final_governance_artifact(
+        tmp_path,
+        final_governance_result="completed",
+        final_governance_state="completed",
+        remaining_blockers=["spec 001-auth final governance still requires review"],
+    )
+
+    svc = ProgramService(tmp_path)
+    request = replace(
+        svc.build_frontend_writeback_persistence_request(_manifest()),
+        required=False,
+    )
+    result = svc.execute_frontend_writeback_persistence(
+        _manifest(),
+        request=request,
+        confirmed=True,
+    )
+
+    assert result.passed is False
+    assert result.persistence_state == "blocked"
+    assert result.persistence_result == "blocked"
+    assert result.written_paths == []
+    assert result.remaining_blockers == [
+        "spec 001-auth final governance still requires review",
+        "writeback persistence requires blocker-free final governance artifact",
+    ]
+
+
+def test_execute_frontend_writeback_persistence_blocks_empty_non_completed_artifact(
+    tmp_path: Path,
+) -> None:
+    for p in ("specs/001-auth", "specs/002-course", "specs/003-enroll"):
+        (tmp_path / p).mkdir(parents=True)
+    _write_frontend_final_governance_artifact(
+        tmp_path,
+        final_governance_result="deferred",
+        final_governance_state="deferred",
+        remaining_blockers=[],
+        steps=[],
+    )
+
+    svc = ProgramService(tmp_path)
+    result = svc.execute_frontend_writeback_persistence(_manifest(), confirmed=True)
+
+    assert result.persistence_state == "blocked"
+    assert result.persistence_result == "blocked"
+    assert result.written_paths == []
 
 
 def test_write_frontend_writeback_persistence_artifact_emits_canonical_yaml(
@@ -4020,9 +4503,9 @@ def test_write_frontend_writeback_persistence_artifact_emits_canonical_yaml(
         (tmp_path / p).mkdir(parents=True)
     _write_frontend_final_governance_artifact(
         tmp_path,
-        final_governance_result="deferred",
-        final_governance_state="deferred",
-        remaining_blockers=["spec 001-auth remediation still required"],
+        final_governance_result="completed",
+        final_governance_state="completed",
+        remaining_blockers=[],
     )
 
     svc = ProgramService(tmp_path)
@@ -4052,14 +4535,16 @@ def test_write_frontend_writeback_persistence_artifact_emits_canonical_yaml(
         payload["artifact_source_path"]
         == ".ai-sdlc/memory/frontend-final-governance/latest.yaml"
     )
-    assert payload["persistence_state"] == "deferred"
-    assert payload["persistence_result"] == "deferred"
+    assert payload["persistence_state"] == "completed"
+    assert payload["persistence_result"] == "completed"
     assert payload["confirmed"] is True
     assert payload["persistence_summaries"] == [
-        "no writeback persistence actions executed in writeback persistence baseline"
+        "materialized 1 writeback persistence step file(s) from canonical final governance artifact"
     ]
-    assert payload["written_paths"] == []
-    assert payload["remaining_blockers"] == ["spec 001-auth remediation still required"]
+    assert payload["written_paths"] == [
+        ".ai-sdlc/memory/frontend-writeback-persistence/steps/001-auth.md"
+    ]
+    assert payload["remaining_blockers"] == []
     assert payload["steps"][0]["spec_id"] == "001-auth"
     assert (
         payload["source_linkage"]["writeback_persistence_artifact_path"]
@@ -4254,15 +4739,15 @@ def test_execute_frontend_writeback_persistence_does_not_write_artifact_by_defau
         (tmp_path / p).mkdir(parents=True)
     _write_frontend_final_governance_artifact(
         tmp_path,
-        final_governance_result="deferred",
-        final_governance_state="deferred",
-        remaining_blockers=["spec 001-auth remediation still required"],
+        final_governance_result="completed",
+        final_governance_state="completed",
+        remaining_blockers=[],
     )
 
     svc = ProgramService(tmp_path)
     result = svc.execute_frontend_writeback_persistence(_manifest(), confirmed=True)
 
-    assert result.persistence_state == "deferred"
+    assert result.persistence_state == "completed"
     assert not (
         tmp_path
         / ".ai-sdlc"
@@ -8131,6 +8616,7 @@ def _write_frontend_cross_spec_writeback_artifact(
         root / ".ai-sdlc" / "memory" / "frontend-cross-spec-writeback" / "latest.yaml"
     )
     artifact_path.parent.mkdir(parents=True, exist_ok=True)
+    effective_steps = default_steps if steps is None else steps
     artifact_path.write_text(
         yaml.safe_dump(
             {
@@ -8149,7 +8635,7 @@ def _write_frontend_cross_spec_writeback_artifact(
                 "written_paths": written_paths,
                 "remaining_blockers": list(remaining_blockers),
                 "warnings": warnings,
-                "steps": list(steps or default_steps),
+                "steps": list(effective_steps),
                 "source_linkage": {
                     "cross_spec_writeback_state": writeback_state,
                     "orchestration_result": orchestration_result,
@@ -8192,6 +8678,7 @@ def _write_frontend_guarded_registry_artifact(
         root / ".ai-sdlc" / "memory" / "frontend-guarded-registry" / "latest.yaml"
     )
     artifact_path.parent.mkdir(parents=True, exist_ok=True)
+    effective_steps = default_steps if steps is None else steps
     artifact_path.write_text(
         yaml.safe_dump(
             {
@@ -8214,7 +8701,7 @@ def _write_frontend_guarded_registry_artifact(
                 "warnings": [
                     "guarded registry baseline does not update registries yet"
                 ],
-                "steps": list(steps or default_steps),
+                "steps": list(effective_steps),
                 "source_linkage": {
                     "registry_state": registry_state,
                     "registry_result": registry_result,
@@ -8257,6 +8744,7 @@ def _write_frontend_broader_governance_artifact(
             },
         }
     ]
+    effective_steps = default_steps if steps is None else steps
     artifact_path.write_text(
         yaml.safe_dump(
             {
@@ -8279,7 +8767,7 @@ def _write_frontend_broader_governance_artifact(
                 "warnings": [
                     "broader governance baseline does not execute final governance actions yet"
                 ],
-                "steps": list(steps or default_steps),
+                "steps": list(effective_steps),
                 "source_linkage": {
                     "registry_state": "deferred",
                     "governance_state": governance_state,
@@ -8323,6 +8811,7 @@ def _write_frontend_final_governance_artifact(
             },
         }
     ]
+    effective_steps = default_steps if steps is None else steps
     artifact_path.write_text(
         yaml.safe_dump(
             {
@@ -8345,7 +8834,7 @@ def _write_frontend_final_governance_artifact(
                 "warnings": [
                     "final governance baseline does not execute code rewrite persistence yet"
                 ],
-                "steps": list(steps or default_steps),
+                "steps": list(effective_steps),
                 "source_linkage": {
                     "governance_state": "deferred",
                     "final_governance_state": final_governance_state,
@@ -8389,6 +8878,7 @@ def _write_frontend_writeback_persistence_artifact(
             },
         }
     ]
+    effective_steps = default_steps if steps is None else steps
     artifact_path.write_text(
         yaml.safe_dump(
             {
@@ -8411,7 +8901,7 @@ def _write_frontend_writeback_persistence_artifact(
                 "warnings": [
                     "writeback persistence baseline does not produce persisted write proof yet"
                 ],
-                "steps": list(steps or default_steps),
+                "steps": list(effective_steps),
                 "source_linkage": {
                     "final_governance_state": "deferred",
                     "persistence_state": persistence_state,

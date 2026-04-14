@@ -360,3 +360,27 @@
 #### 2.40 批次结论
 
 - `120/T33` 现在已经有正式 implementation carrier；registry/governance/persistence 主线的真实实现缺口已被固定到 `133`。
+
+### Batch 2026-04-14-011 | Close T33 runtime closure
+
+#### 2.41 批次范围
+
+- 覆盖范围：`tasks.md`
+- 覆盖目标：
+  - 将 `T33` 从 `capability_open` 推进到 `partial`
+  - 回填 `133` 已完成 focused verification 且下游仍由 `T34` 承接
+
+#### 2.42 任务记录
+
+##### T120-DOC-17 | 回填 `T33` 实现结果
+
+- 改动范围：`tasks.md`
+- 改动内容：
+  - 将 `Task 3.3 Registry, Governance And Persistence Chain` 的当前状态从 `capability_open` 更新为 `partial`
+  - 明确 `T33` 在 `133` focused verification 通过且下游 `T34` 收口前继续保持 `partial`
+- 新增/调整的测试：无
+- 是否符合任务目标：是
+
+#### 2.43 批次结论
+
+- `120/T33` 现在已经从抽象 carrier 推进到真实 runtime closure；`T34` 成为下一批明确下游。
