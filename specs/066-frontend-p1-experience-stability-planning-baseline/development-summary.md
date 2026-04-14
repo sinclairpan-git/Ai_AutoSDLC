@@ -1,7 +1,7 @@
 # 开发总结：066-frontend-p1-experience-stability-planning-baseline
 
-**功能编号**：`066-frontend-p1-experience-stability-planning-baseline`  
-**收口日期**：2026-04-06  
+**功能编号**：`066-frontend-p1-experience-stability-planning-baseline`
+**收口日期**：2026-04-06
 **收口状态**：`program-close-ready`
 
 ## 交付摘要

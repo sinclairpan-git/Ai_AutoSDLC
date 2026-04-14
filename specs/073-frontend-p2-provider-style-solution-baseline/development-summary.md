@@ -1,7 +1,7 @@
 # 开发总结：073-frontend-p2-provider-style-solution-baseline
 
-**功能编号**：`073-frontend-p2-provider-style-solution-baseline`  
-**收口日期**：2026-04-08  
+**功能编号**：`073-frontend-p2-provider-style-solution-baseline`
+**收口日期**：2026-04-08
 **收口状态**：`program-close-ready`
 
 ## 交付摘要

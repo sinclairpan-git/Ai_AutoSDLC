@@ -1,7 +1,7 @@
 # 开发总结：019-frontend-program-orchestration-baseline
 
-**功能编号**：`019-frontend-program-orchestration-baseline`  
-**收口日期**：2026-04-05  
+**功能编号**：`019-frontend-program-orchestration-baseline`
+**收口日期**：2026-04-05
 **收口状态**：`program-close-ready`
 
 ## 交付摘要

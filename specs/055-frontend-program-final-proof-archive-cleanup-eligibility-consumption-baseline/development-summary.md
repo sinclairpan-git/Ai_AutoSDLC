@@ -1,7 +1,7 @@
 # 开发总结：055-frontend-program-final-proof-archive-cleanup-eligibility-consumption-baseline
 
-**功能编号**：`055-frontend-program-final-proof-archive-cleanup-eligibility-consumption-baseline`  
-**收口日期**：2026-04-05  
+**功能编号**：`055-frontend-program-final-proof-archive-cleanup-eligibility-consumption-baseline`
+**收口日期**：2026-04-05
 **收口状态**：`program-close-ready`
 
 ## 交付摘要

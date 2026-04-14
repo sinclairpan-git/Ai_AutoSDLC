@@ -1,0 +1,15 @@
+# 开发总结：125-frontend-mainline-browser-gate-probe-runtime-implementation-baseline
+
+**功能编号**：`125-frontend-mainline-browser-gate-probe-runtime-implementation-baseline`
+**收口日期**：2026-04-14
+**收口状态**：`program-close-ready`
+
+## 交付摘要
+
+- 本 work item 的 canonical truth、实施计划、任务拆解与执行归档已分别落在 `spec.md`、`plan.md`、`tasks.md`、`task-execution-log.md`。
+- 闭环口径：`125` 已把 browser gate probe runtime 的第一条 canonical artifact 链落到代码；当前切片仍未提供下游 execute-state binding 与完整 Playwright binary capture，继续留给 `T14` / 后续 tranche
+- 本总结用于把该 work item 提升为 program-level `close` 输入，确保后续集成/收口基于同一口径。
+
+## 备注
+
+- 若后续需要执行严格 `workitem close-check`，应在最终 git close-out 时于干净工作区重跑；本文件不伪造 clean-tree 结论。

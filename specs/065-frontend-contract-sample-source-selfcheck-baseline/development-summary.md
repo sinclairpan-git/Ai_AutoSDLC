@@ -1,7 +1,7 @@
 # 开发总结：065-frontend-contract-sample-source-selfcheck-baseline
 
-**功能编号**：`065-frontend-contract-sample-source-selfcheck-baseline`  
-**收口日期**：2026-04-06  
+**功能编号**：`065-frontend-contract-sample-source-selfcheck-baseline`
+**收口日期**：2026-04-06
 **收口状态**：`program-close-ready`
 
 ## 交付摘要

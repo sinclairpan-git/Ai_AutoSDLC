@@ -1,7 +1,7 @@
 # 开发总结：028-frontend-program-provider-patch-handoff-baseline
 
-**功能编号**：`028-frontend-program-provider-patch-handoff-baseline`  
-**收口日期**：2026-04-05  
+**功能编号**：`028-frontend-program-provider-patch-handoff-baseline`
+**收口日期**：2026-04-05
 **收口状态**：`program-close-ready`
 
 ## 交付摘要

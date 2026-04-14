@@ -1,7 +1,7 @@
 # 开发总结：067-frontend-p1-ui-kernel-semantic-expansion-baseline
 
-**功能编号**：`067-frontend-p1-ui-kernel-semantic-expansion-baseline`  
-**收口日期**：2026-04-08  
+**功能编号**：`067-frontend-p1-ui-kernel-semantic-expansion-baseline`
+**收口日期**：2026-04-08
 **收口状态**：`program-close-ready`
 
 ## 交付摘要

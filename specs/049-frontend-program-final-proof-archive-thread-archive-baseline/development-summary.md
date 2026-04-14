@@ -1,7 +1,7 @@
 # 开发总结：049-frontend-program-final-proof-archive-thread-archive-baseline
 
-**功能编号**：`049-frontend-program-final-proof-archive-thread-archive-baseline`  
-**收口日期**：2026-04-05  
+**功能编号**：`049-frontend-program-final-proof-archive-thread-archive-baseline`
+**收口日期**：2026-04-05
 **收口状态**：`program-close-ready`
 
 ## 交付摘要

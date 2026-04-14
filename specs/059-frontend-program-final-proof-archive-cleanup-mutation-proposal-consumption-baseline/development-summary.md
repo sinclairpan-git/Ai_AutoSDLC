@@ -1,7 +1,7 @@
 # 开发总结：059-frontend-program-final-proof-archive-cleanup-mutation-proposal-consumption-baseline
 
-**功能编号**：`059-frontend-program-final-proof-archive-cleanup-mutation-proposal-consumption-baseline`  
-**收口日期**：2026-04-05  
+**功能编号**：`059-frontend-program-final-proof-archive-cleanup-mutation-proposal-consumption-baseline`
+**收口日期**：2026-04-05
 **收口状态**：`program-close-ready`
 
 ## 交付摘要
