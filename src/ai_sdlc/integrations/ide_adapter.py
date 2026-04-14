@@ -341,8 +341,9 @@ def _verification_env_hint(target: IDEKind) -> str:
     joined = ", ".join(keys)
     example = keys[0]
     return (
-        f"Set one of {joined} (e.g., {example}=1) and rerun "
-        f"`ai-sdlc adapter select --agent-target {target.value}`."
+        "To verify host ingress, rerun the command from the IDE host environment "
+        f"and reselect the adapter: `ai-sdlc adapter select --agent-target {target.value}`. "
+        f"If you must run from a generic shell, set {joined} (e.g., {example}=1) and rerun."
     )
 
 
