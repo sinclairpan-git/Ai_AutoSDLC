@@ -332,9 +332,9 @@ related_doc:
 - **当前状态**：`partial`
 - **派生状态**：已派生 `136-frontend-p1-recheck-remediation-feedback-runtime-closure-baseline`；`136` focused verification 已通过，当前保持 `partial`
 - **缺失 carrier**：
-  - `070` docs-only feedback contract 的 runtime consumer
-  - P1 readiness -> remediation/recheck handoff surfaces
-  - author-facing bounded runbook materialization
+  - 缺失 carrier（本任务范围内）：无
+  - 收束说明：remediation/recheck feedback 已由 `136` 收束为 partial runtime closure
+  - 下游承接：visual / a11y runtime foundation 由 `T42` 收口
 - **建议文件面**：`src/ai_sdlc/core/program_service.py`、`src/ai_sdlc/cli/program_cmd.py`、`src/ai_sdlc/core/frontend_gate_verification.py`、对应 tests
 - **依赖**：T22、T31
 - **验收标准**：

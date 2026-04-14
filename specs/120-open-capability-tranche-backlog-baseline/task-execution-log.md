@@ -998,3 +998,28 @@
 #### 2.118 批次结论
 
 - `120/T35` 已形成 cleanup mutation execution 的 partial runtime closure；当前保持 `partial`，本任务范围内无下游承接。
+
+### Batch 2026-04-14-037 | Refresh T41 runtime closure
+
+#### 2.119 批次范围
+
+- 覆盖范围：`tasks.md`
+- 覆盖目标：
+  - 将 `T41` 的现有 runtime truth 与 `136` focused verification 对齐
+  - 明确 `T41` 在下游 `T42` 收口前继续保持 `partial`
+
+#### 2.120 任务记录
+
+##### T120-DOC-43 | 回填 `T41` 实现结果
+
+- 改动范围：`tasks.md`
+- 改动内容：
+  - 明确 `136` focused verification 已通过，且 `T41` 在下游 `T42` 收口前继续保持 `partial`
+  - 将 `T41` 的缺失 carrier 收紧为已由 `136` 收束的 remediation/recheck feedback partial runtime closure（本任务范围内），并把 visual / a11y runtime foundation 下游边界保留给 `T42`
+  - 证据：沿用 `136` focused verification（无新增测试）
+- 新增/调整的测试：无
+- 是否符合任务目标：是
+
+#### 2.121 批次结论
+
+- `120/T41` 已形成 remediation/recheck feedback 的 partial runtime closure 首段；visual / a11y runtime foundation 继续由 `T42` 承接。
