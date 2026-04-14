@@ -777,3 +777,99 @@
 #### 2.91 批次结论
 
 - `120/T14` 现在已经从抽象 carrier 推进到真实 runtime closure；Batch 1 的 user-visible mainline closure 已整体进入 `partial`。
+
+### Batch 2026-04-14-028 | Close T21 runtime closure
+
+#### 2.92 批次范围
+
+- 覆盖范围：`tasks.md`
+- 覆盖目标：
+  - 将 `T21` 的现有 runtime truth 与 `127` 正式对齐
+  - 明确 `T21` 在下游 `T22` 收口前继续保持 `partial`
+
+#### 2.93 任务记录
+
+##### T120-DOC-34 | 回填 `T21` 实现结果
+
+- 改动范围：`tasks.md`
+- 改动内容：
+  - 明确 `127` focused verification 已通过，且 `T21` 在下游 `T22` 收口前继续保持 `partial`
+  - 将 `T21` 的缺失 carrier 收紧为已由 `127` 收束的 observation producer runtime closure，并把 attachment / verify-gate 聚合边界保留给 `T22`
+- 新增/调整的测试：无
+- 是否符合任务目标：是
+
+#### 2.94 批次结论
+
+- `120/T21` 现在已经从抽象 carrier 推进到真实 runtime closure；`T22` 继续承接 attachment / verify-gate-readiness 主线。
+
+### Batch 2026-04-14-029 | Close T22 runtime closure
+
+#### 2.95 批次范围
+
+- 覆盖范围：`tasks.md`
+- 覆盖目标：
+  - 将 `T22` 的现有 runtime truth 与 `128` 正式对齐
+  - 明确 `T22` 在下游 `T23/T31/T33` 收口前继续保持 `partial`
+
+#### 2.96 任务记录
+
+##### T120-DOC-35 | 回填 `T22` 实现结果
+
+- 改动范围：`tasks.md`
+- 改动内容：
+  - 明确 `128` focused verification 已通过，且 `T22` 在下游 `T23/T31/T33` 收口前继续保持 `partial`
+  - 将 `T22` 的缺失 carrier 收紧为已由 `128` 收束的 runtime attachment / verify-gate-readiness closure，并把 evidence-class、report/compatibility 后继面与 program automation 边界保留给下游
+- 新增/调整的测试：无
+- 是否符合任务目标：是
+
+#### 2.97 批次结论
+
+- `120/T22` 现在已经从抽象 carrier 推进到真实 runtime closure；`T23/T31/T33` 继续承接下游主线。
+
+### Batch 2026-04-14-030 | Close T23 runtime closure
+
+#### 2.98 批次范围
+
+- 覆盖范围：`tasks.md`
+- 覆盖目标：
+  - 将 `T23` 的现有 runtime truth 与 `129` 正式对齐
+  - 明确 `T23` 在下游 `T24` 收口前继续保持 `partial`
+
+#### 2.99 任务记录
+
+##### T120-DOC-36 | 回填 `T23` 实现结果
+
+- 改动范围：`tasks.md`
+- 改动内容：
+  - 明确 `129` focused verification 已通过，且 `T23` 在下游 `T24` 收口前继续保持 `partial`
+  - 将 `T23` 的缺失 carrier 收紧为已由 `129` 收束的 evidence-class verify/validate/status closure，并把 explicit writeback / close-check 后继闭环保留给 `T24`
+- 新增/调整的测试：无
+- 是否符合任务目标：是
+
+#### 2.100 批次结论
+
+- `120/T23` 现在已经从抽象 carrier 推进到真实 runtime closure；`T24` 继续承接 writeback / close-check 后继闭环。
+
+### Batch 2026-04-14-031 | Close T24 runtime closure
+
+#### 2.101 批次范围
+
+- 覆盖范围：`tasks.md`
+- 覆盖目标：
+  - 将 `T24` 的现有 runtime truth 与 `130` 正式对齐
+  - 明确 `T24` 在下游 `T31` 收口前继续保持 `partial`
+
+#### 2.102 任务记录
+
+##### T120-DOC-37 | 回填 `T24` 实现结果
+
+- 改动范围：`tasks.md`
+- 改动内容：
+  - 明确 `130` focused verification 已通过，且 `T24` 在下游 `T31` 收口前继续保持 `partial`
+  - 将 `T24` 的缺失 carrier 收紧为已由 `130` 收束的 writeback / close-check / backfill closure，并把 program automation mainline 保留给 `T31`
+- 新增/调整的测试：无
+- 是否符合任务目标：是
+
+#### 2.103 批次结论
+
+- `120/T24` 现在已经从抽象 carrier 推进到真实 runtime closure；Batch 2 的 contract foundation / evidence inputs 已整体进入 `partial`。

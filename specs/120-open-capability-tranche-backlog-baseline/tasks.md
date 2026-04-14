@@ -157,11 +157,9 @@ related_doc:
 - **交付流**：`S2`
 - **来源范围**：`012`、`013`、`065`、`077`、`078`
 - **当前状态**：`partial`
-- **派生状态**：已派生 `127-frontend-contract-observation-producer-runtime-closure-baseline`；在 `127` focused verification 通过且下游 `T22` 收口前仍保持 `partial`
+- **派生状态**：已派生 `127-frontend-contract-observation-producer-runtime-closure-baseline`；`127` focused verification 已通过，且在下游 `T22` 收口前继续保持 `partial`
 - **缺失 carrier**：
-  - canonical observation scanner / producer
-  - non-sample consumer evidence producer
-  - sample self-check 与真实 consumer evidence 的 runtime split
+  - 无；canonical observation scanner / producer、non-sample consumer evidence producer，以及 sample self-check / consumer evidence 的 runtime split 已由 `127` 正式收束为现有 runtime closure；更宽 attachment / verify-gate-readiness 聚合继续由 `T22` 承接
 - **建议文件面**：`src/ai_sdlc/core/frontend_contract_*`、`src/ai_sdlc/cli/*scan*`、对应 tests 与 sample fixtures
 - **依赖**：无
 - **验收标准**：
@@ -177,11 +175,9 @@ related_doc:
 - **交付流**：`S2`
 - **来源范围**：`014`、`015`、`016`、`017`、`018`
 - **当前状态**：`partial`
-- **派生状态**：已派生 `128-frontend-runtime-attachment-verify-gate-readiness-closure-baseline`；在 `128` focused verification 通过且下游 `T23/T31/T33` 收口前仍保持 `partial`
+- **派生状态**：已派生 `128-frontend-runtime-attachment-verify-gate-readiness-closure-baseline`；`128` focused verification 已通过，且在下游 `T23/T31/T33` 收口前继续保持 `partial`
 - **缺失 carrier**：
-  - active `spec_dir` scoped runtime attachment
-  - verify/gate/readiness aggregation 的真实接线
-  - recheck / report / compatibility surfaces 的 runtime closure
+  - 无；active `spec_dir` scoped runtime attachment 与 verify/gate/readiness aggregation 的首批真实接线已由 `128` 正式收束；更宽 evidence-class、report/compatibility 后继面与 program automation 继续由 `T23/T31/T33` 承接
 - **建议文件面**：`src/ai_sdlc/core/verify_constraints.py`、`src/ai_sdlc/core/frontend_*gate*`、`src/ai_sdlc/core/program_service.py`、对应 tests
 - **依赖**：T21
 - **验收标准**：
@@ -197,11 +193,9 @@ related_doc:
 - **交付流**：`S8`
 - **来源范围**：`083`、`084`、`085`、`086`、`088`、`107`、`108`
 - **当前状态**：`partial`
-- **派生状态**：已派生 `129-frontend-evidence-class-verify-validate-status-runtime-closure-baseline`；在 `129` focused verification 通过且下游 `T24` 收口前仍保持 `partial`
+- **派生状态**：已派生 `129-frontend-evidence-class-verify-validate-status-runtime-closure-baseline`；`129` focused verification 已通过，且在下游 `T24` 收口前继续保持 `partial`
 - **缺失 carrier**：
-  - `verify constraints` first runtime cut 的完整落地
-  - `program validate` mirror consistency runtime
-  - bounded status surface 与 legacy/backfill 的统一呈现
+  - 无；`verify constraints` first runtime cut、`program validate` mirror consistency，以及 bounded status surface / legacy-backfill 的统一呈现已由 `129` 正式收束为现有 runtime closure；explicit writeback / close-check 后继闭环继续由 `T24` 承接
 - **建议文件面**：`src/ai_sdlc/core/verify_constraints.py`、`src/ai_sdlc/core/program_validation*`、`src/ai_sdlc/telemetry/readiness.py`、对应 tests
 - **依赖**：T22
 - **验收标准**：
@@ -217,11 +211,9 @@ related_doc:
 - **交付流**：`S8`
 - **来源范围**：`087`、`089`、`090`、`091`、`092`、`109-113`
 - **当前状态**：`partial`
-- **派生状态**：已派生 `130-frontend-evidence-class-writeback-close-check-runtime-closure-baseline`；在 `130` focused verification 通过且下游 `T31` 收口前仍保持 `partial`
+- **派生状态**：已派生 `130-frontend-evidence-class-writeback-close-check-runtime-closure-baseline`；`130` focused verification 已通过，且在下游 `T31` 收口前继续保持 `partial`
 - **缺失 carrier**：
-  - explicit program-level mirror write surface
-  - close-check late resurfacing 的全量 closure
-  - runtime rollout sequencing 与 backfill closeout 的最终闭环
+  - 无；explicit program-level mirror write surface、close-check late resurfacing，以及 runtime rollout sequencing / backfill closeout 的首批闭环已由 `130` 正式收束为现有 runtime closure；program automation mainline 继续由 `T31` 承接
 - **建议文件面**：`src/ai_sdlc/core/close_check.py`、`src/ai_sdlc/cli/workitem_cmd.py`、`src/ai_sdlc/core/program_*`、对应 tests
 - **依赖**：T23
 - **验收标准**：
