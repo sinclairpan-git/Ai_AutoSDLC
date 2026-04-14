@@ -117,12 +117,84 @@ capability_closure_audit:
     - 093-106
     - 114-115
 specs:
+- id: 001-ai-sdlc-framework
+  path: specs/001-ai-sdlc-framework
+  depends_on: []
+  branch_slug: ai-sdlc-framework
+  owner: team-frontend-governance
+  frontend_evidence_class: ''
+  roles: []
+  capability_refs: []
+- id: 002-p1-capabilities
+  path: specs/002-p1-capabilities
+  depends_on: []
+  branch_slug: p1-capabilities
+  owner: team-frontend-governance
+  frontend_evidence_class: ''
+  roles: []
+  capability_refs: []
+- id: 003-cross-cutting-authoring-and-extension-contracts
+  path: specs/003-cross-cutting-authoring-and-extension-contracts
+  depends_on: []
+  branch_slug: cross-cutting-authoring-and-extension-contracts
+  owner: team-frontend-governance
+  frontend_evidence_class: ''
+  roles: []
+  capability_refs: []
+- id: 004-operator-surfaces-and-post-prd-extensions
+  path: specs/004-operator-surfaces-and-post-prd-extensions
+  depends_on: []
+  branch_slug: operator-surfaces-and-post-prd-extensions
+  owner: team-frontend-governance
+  frontend_evidence_class: ''
+  roles: []
+  capability_refs: []
+- id: 005-harness-grade-telemetry-observer-v1
+  path: specs/005-harness-grade-telemetry-observer-v1
+  depends_on: []
+  branch_slug: harness-grade-telemetry-observer-v1
+  owner: team-frontend-governance
+  frontend_evidence_class: ''
+  roles: []
+  capability_refs: []
+- id: 006-provenance-trace-phase-1
+  path: specs/006-provenance-trace-phase-1
+  depends_on: []
+  branch_slug: provenance-trace-phase-1
+  owner: team-frontend-governance
+  frontend_evidence_class: ''
+  roles: []
+  capability_refs: []
+- id: 007-branch-lifecycle-truth-guard
+  path: specs/007-branch-lifecycle-truth-guard
+  depends_on: []
+  branch_slug: branch-lifecycle-truth-guard
+  owner: team-frontend-governance
+  frontend_evidence_class: ''
+  roles: []
+  capability_refs: []
+- id: 008-direct-formal-workitem-entry
+  path: specs/008-direct-formal-workitem-entry
+  depends_on: []
+  branch_slug: direct-formal-workitem-entry
+  owner: team-frontend-governance
+  frontend_evidence_class: ''
+  roles: []
+  capability_refs: []
 - id: 009-frontend-governance-ui-kernel
   path: specs/009-frontend-governance-ui-kernel
   depends_on: []
   branch_slug: frontend-governance-ui-kernel
   owner: team-frontend-governance
   frontend_evidence_class: framework_capability
+- id: 010-agent-adapter-activation-contract
+  path: specs/010-agent-adapter-activation-contract
+  depends_on: []
+  branch_slug: agent-adapter-activation-contract
+  owner: team-frontend-governance
+  frontend_evidence_class: ''
+  roles: []
+  capability_refs: []
 - id: 011-frontend-contract-authoring-baseline
   path: specs/011-frontend-contract-authoring-baseline
   depends_on:
@@ -574,6 +646,14 @@ specs:
   branch_slug: frontend-p1-experience-stability-planning-baseline
   owner: team-frontend-governance
   frontend_evidence_class: framework_capability
+- id: 066-frontend-verification-diagnostics-contract-baseline
+  path: specs/066-frontend-verification-diagnostics-contract-baseline
+  depends_on: []
+  branch_slug: frontend-verification-diagnostics-contract-baseline
+  owner: team-frontend-governance
+  frontend_evidence_class: ''
+  roles: []
+  capability_refs: []
 - id: 067-frontend-p1-ui-kernel-semantic-expansion-baseline
   path: specs/067-frontend-p1-ui-kernel-semantic-expansion-baseline
   depends_on:
@@ -609,6 +689,14 @@ specs:
   branch_slug: frontend-p1-visual-a11y-foundation-baseline
   owner: team-frontend-governance
   frontend_evidence_class: framework_capability
+- id: 072-frontend-p1-root-rollout-sync-baseline
+  path: specs/072-frontend-p1-root-rollout-sync-baseline
+  depends_on: []
+  branch_slug: frontend-p1-root-rollout-sync-baseline
+  owner: team-frontend-governance
+  frontend_evidence_class: ''
+  roles: []
+  capability_refs: []
 - id: 077-frontend-contract-observation-backfill-playbook-baseline
   path: specs/077-frontend-contract-observation-backfill-playbook-baseline
   depends_on:
@@ -635,6 +723,54 @@ specs:
   branch_slug: frontend-p2-provider-style-solution-baseline
   owner: team-frontend-governance
   frontend_evidence_class: framework_capability
+- id: 074-frontend-p2-root-rollout-sync-baseline
+  path: specs/074-frontend-p2-root-rollout-sync-baseline
+  depends_on: []
+  branch_slug: frontend-p2-root-rollout-sync-baseline
+  owner: team-frontend-governance
+  frontend_evidence_class: ''
+  roles: []
+  capability_refs: []
+- id: 075-frontend-p2-root-close-sync-baseline
+  path: specs/075-frontend-p2-root-close-sync-baseline
+  depends_on: []
+  branch_slug: frontend-p2-root-close-sync-baseline
+  owner: team-frontend-governance
+  frontend_evidence_class: ''
+  roles: []
+  capability_refs: []
+- id: 076-frontend-p1-root-close-sync-baseline
+  path: specs/076-frontend-p1-root-close-sync-baseline
+  depends_on: []
+  branch_slug: frontend-p1-root-close-sync-baseline
+  owner: team-frontend-governance
+  frontend_evidence_class: ''
+  roles: []
+  capability_refs: []
+- id: 079-frontend-framework-only-closure-policy-baseline
+  path: specs/079-frontend-framework-only-closure-policy-baseline
+  depends_on: []
+  branch_slug: frontend-framework-only-closure-policy-baseline
+  owner: team-frontend-governance
+  frontend_evidence_class: ''
+  roles: []
+  capability_refs: []
+- id: 080-frontend-framework-only-root-policy-sync-baseline
+  path: specs/080-frontend-framework-only-root-policy-sync-baseline
+  depends_on: []
+  branch_slug: frontend-framework-only-root-policy-sync-baseline
+  owner: team-frontend-governance
+  frontend_evidence_class: ''
+  roles: []
+  capability_refs: []
+- id: 081-frontend-framework-only-prospective-closure-contract-baseline
+  path: specs/081-frontend-framework-only-prospective-closure-contract-baseline
+  depends_on: []
+  branch_slug: frontend-framework-only-prospective-closure-contract-baseline
+  owner: team-frontend-governance
+  frontend_evidence_class: ''
+  roles: []
+  capability_refs: []
 - id: 082-frontend-evidence-class-authoring-surface-baseline
   path: specs/082-frontend-evidence-class-authoring-surface-baseline
   depends_on: []
@@ -999,6 +1135,62 @@ specs:
   branch_slug: stage0-093-095-plan-backfill-baseline
   owner: team-frontend-governance
   frontend_evidence_class: framework_capability
+- id: 116-execute-authorization-preflight-guard-baseline
+  path: specs/116-execute-authorization-preflight-guard-baseline
+  depends_on: []
+  branch_slug: execute-authorization-preflight-guard-baseline
+  owner: team-frontend-governance
+  frontend_evidence_class: ''
+  roles: []
+  capability_refs: []
+- id: 117-formal-artifact-target-guard-baseline
+  path: specs/117-formal-artifact-target-guard-baseline
+  depends_on: []
+  branch_slug: formal-artifact-target-guard-baseline
+  owner: team-frontend-governance
+  frontend_evidence_class: ''
+  roles: []
+  capability_refs: []
+- id: 118-release-docs-and-execute-handoff-guard-baseline
+  path: specs/118-release-docs-and-execute-handoff-guard-baseline
+  depends_on: []
+  branch_slug: release-docs-and-execute-handoff-guard-baseline
+  owner: team-frontend-governance
+  frontend_evidence_class: ''
+  roles: []
+  capability_refs: []
+- id: 119-capability-closure-truth-baseline
+  path: specs/119-capability-closure-truth-baseline
+  depends_on: []
+  branch_slug: capability-closure-truth-baseline
+  owner: team-frontend-governance
+  frontend_evidence_class: ''
+  roles: []
+  capability_refs: []
+- id: 120-open-capability-tranche-backlog-baseline
+  path: specs/120-open-capability-tranche-backlog-baseline
+  depends_on: []
+  branch_slug: open-capability-tranche-backlog-baseline
+  owner: team-frontend-governance
+  frontend_evidence_class: ''
+  roles: []
+  capability_refs: []
+- id: 121-agent-adapter-verified-host-ingress-truth-baseline
+  path: specs/121-agent-adapter-verified-host-ingress-truth-baseline
+  depends_on: []
+  branch_slug: agent-adapter-verified-host-ingress-truth-baseline
+  owner: team-frontend-governance
+  frontend_evidence_class: ''
+  roles: []
+  capability_refs: []
+- id: 122-agent-adapter-verified-host-ingress-runtime-baseline
+  path: specs/122-agent-adapter-verified-host-ingress-runtime-baseline
+  depends_on: []
+  branch_slug: agent-adapter-verified-host-ingress-runtime-baseline
+  owner: team-frontend-governance
+  frontend_evidence_class: ''
+  roles: []
+  capability_refs: []
 - id: 123-frontend-mainline-managed-delivery-apply-runtime-implementation-baseline
   path: specs/123-frontend-mainline-managed-delivery-apply-runtime-implementation-baseline
   depends_on:
@@ -1059,27 +1251,147 @@ specs:
   branch_slug: frontend-contract-observation-producer-runtime-closure-baseline
   owner: team-frontend-governance
   frontend_evidence_class: framework_capability
+- id: 128-frontend-runtime-attachment-verify-gate-readiness-closure-baseline
+  path: specs/128-frontend-runtime-attachment-verify-gate-readiness-closure-baseline
+  depends_on: []
+  branch_slug: frontend-runtime-attachment-verify-gate-readiness-closure-baseline
+  owner: team-frontend-governance
+  frontend_evidence_class: framework_capability
+  roles: []
+  capability_refs: []
+- id: 129-frontend-evidence-class-verify-validate-status-runtime-closure-baseline
+  path: specs/129-frontend-evidence-class-verify-validate-status-runtime-closure-baseline
+  depends_on: []
+  branch_slug: frontend-evidence-class-verify-validate-status-runtime-closure-baseline
+  owner: team-frontend-governance
+  frontend_evidence_class: framework_capability
+  roles: []
+  capability_refs: []
+- id: 130-frontend-evidence-class-writeback-close-check-runtime-closure-baseline
+  path: specs/130-frontend-evidence-class-writeback-close-check-runtime-closure-baseline
+  depends_on: []
+  branch_slug: frontend-evidence-class-writeback-close-check-runtime-closure-baseline
+  owner: team-frontend-governance
+  frontend_evidence_class: framework_capability
+  roles: []
+  capability_refs: []
+- id: 131-frontend-program-execute-remediation-materialization-runtime-closure-baseline
+  path: specs/131-frontend-program-execute-remediation-materialization-runtime-closure-baseline
+  depends_on: []
+  branch_slug: frontend-program-execute-remediation-materialization-runtime-closure-baseline
+  owner: team-frontend-governance
+  frontend_evidence_class: framework_capability
+  roles: []
+  capability_refs: []
+- id: 132-frontend-program-provider-patch-writeback-runtime-closure-baseline
+  path: specs/132-frontend-program-provider-patch-writeback-runtime-closure-baseline
+  depends_on: []
+  branch_slug: frontend-program-provider-patch-writeback-runtime-closure-baseline
+  owner: team-frontend-governance
+  frontend_evidence_class: framework_capability
+  roles: []
+  capability_refs: []
+- id: 133-frontend-program-registry-governance-persistence-runtime-closure-baseline
+  path: specs/133-frontend-program-registry-governance-persistence-runtime-closure-baseline
+  depends_on: []
+  branch_slug: frontend-program-registry-governance-persistence-runtime-closure-baseline
+  owner: team-frontend-governance
+  frontend_evidence_class: framework_capability
+  roles: []
+  capability_refs: []
+- id: 134-frontend-program-final-proof-publication-archive-runtime-closure-baseline
+  path: specs/134-frontend-program-final-proof-publication-archive-runtime-closure-baseline
+  depends_on: []
+  branch_slug: frontend-program-final-proof-publication-archive-runtime-closure-baseline
+  owner: team-frontend-governance
+  frontend_evidence_class: framework_capability
+  roles: []
+  capability_refs: []
+- id: 135-frontend-program-final-proof-archive-project-cleanup-runtime-closure-baseline
+  path: specs/135-frontend-program-final-proof-archive-project-cleanup-runtime-closure-baseline
+  depends_on: []
+  branch_slug: frontend-program-final-proof-archive-project-cleanup-runtime-closure-baseline
+  owner: team-frontend-governance
+  frontend_evidence_class: framework_capability
+  roles: []
+  capability_refs: []
+- id: 136-frontend-p1-recheck-remediation-feedback-runtime-closure-baseline
+  path: specs/136-frontend-p1-recheck-remediation-feedback-runtime-closure-baseline
+  depends_on: []
+  branch_slug: frontend-p1-recheck-remediation-feedback-runtime-closure-baseline
+  owner: team-frontend-governance
+  frontend_evidence_class: framework_capability
+  roles: []
+  capability_refs: []
+- id: 137-frontend-p1-visual-a11y-runtime-foundation-closure-baseline
+  path: specs/137-frontend-p1-visual-a11y-runtime-foundation-closure-baseline
+  depends_on: []
+  branch_slug: frontend-p1-visual-a11y-runtime-foundation-closure-baseline
+  owner: team-frontend-governance
+  frontend_evidence_class: framework_capability
+  roles: []
+  capability_refs: []
+- id: 138-harness-telemetry-provenance-runtime-closure-baseline
+  path: specs/138-harness-telemetry-provenance-runtime-closure-baseline
+  depends_on: []
+  branch_slug: harness-telemetry-provenance-runtime-closure-baseline
+  owner: team-frontend-governance
+  frontend_evidence_class: framework_capability
+  roles: []
+  capability_refs: []
+- id: 139-branch-lifecycle-direct-formal-runtime-closure-baseline
+  path: specs/139-branch-lifecycle-direct-formal-runtime-closure-baseline
+  depends_on: []
+  branch_slug: branch-lifecycle-direct-formal-runtime-closure-baseline
+  owner: team-frontend-governance
+  frontend_evidence_class: framework_capability
+  roles: []
+  capability_refs: []
+- id: 140-program-truth-ledger-release-audit-baseline
+  path: specs/140-program-truth-ledger-release-audit-baseline
+  depends_on: []
+  branch_slug: program-truth-ledger-release-audit-baseline
+  owner: team-frontend-governance
+  frontend_evidence_class: framework_capability
+  roles: []
+  capability_refs: []
+- id: 141-program-manifest-root-census-backfill-baseline
+  path: specs/141-program-manifest-root-census-backfill-baseline
+  depends_on: []
+  branch_slug: program-manifest-root-census-backfill-baseline
+  owner: team-frontend-governance
+  frontend_evidence_class: framework_capability
+  roles: []
+  capability_refs: []
+- id: 142-frontend-mainline-delivery-close-check-closure-baseline
+  path: specs/142-frontend-mainline-delivery-close-check-closure-baseline
+  depends_on: []
+  branch_slug: frontend-mainline-delivery-close-check-closure-baseline
+  owner: team-frontend-governance
+  frontend_evidence_class: framework_capability
+  roles: []
+  capability_refs: []
 truth_snapshot:
-  generated_at: '2026-04-14T13:10:34Z'
+  generated_at: '2026-04-14T14:05:33Z'
   generated_by: ai-sdlc program truth sync
   generator_version: program_truth_snapshot_v1
-  repo_revision: b06108f
-  authoring_hash: e8225ae6a3539de567bcdf765a9a5cac171cae266c8a7e40d13463a8dbf3f698
+  repo_revision: '2493083'
+  authoring_hash: 607c7264e1618940342e42c3a883361af2465a64ea1a922ad0652e964150acad
   source_hashes:
-    truth_check:specs/095-frontend-mainline-product-delivery-baseline: b742ffdddca24a54ceb45791f910540e110b021317bda56d0989e061106f9922
-    truth_check:specs/096-frontend-mainline-host-runtime-manager-baseline: 74015308ac28f6ee6a221953933f6eb3bbd68bf8bb04af4b66aa83d13b5fde68
-    truth_check:specs/098-frontend-mainline-posture-detector-baseline: a2b606bcdfb508cf79b5523fbe2b4694681586fb955baf8b61a4a4ec699ab0ed
-    truth_check:specs/099-frontend-mainline-delivery-registry-resolver-baseline: e67f4bcf6dd90e4fc9628a2a48f3d74b6c80d5df95e2377573cabc2842210ab0
-    truth_check:specs/100-frontend-mainline-action-plan-binding-baseline: b638217fd9a0e3e0f91b70da0ed0ad423ae9faede5c1f66b8ab73ce0c22607b0
-    truth_check:specs/101-frontend-mainline-managed-delivery-apply-runtime-baseline: e6fb7fdf1dcf3d79ece71d8a8953366f22d8090f8f12a35ed1a06045e85e3025
-    truth_check:specs/102-frontend-mainline-browser-quality-gate-baseline: 50e0c2252c704783b41c46f6b759f2669c489917423722537cb7e304603f402c
-    truth_check:specs/103-frontend-mainline-browser-gate-probe-runtime-baseline: f9c583f61f60d0720e3e1e52ca54893dd9d84febcdeeee15c57c9f8a2198b1ed
-    truth_check:specs/104-frontend-mainline-browser-gate-recheck-remediation-binding-baseline: 17cae6e557592b356bb6bb6c48268496902d7f4f91f56a3bda85d53e11129cd7
-    truth_check:specs/105-frontend-mainline-browser-gate-recheck-remediation-runtime-implementation-baseline: a2ff5c2baf7ab7b19b1d97c43f3a4dbd8beeb922973c11a8ba65fd3f7799bd44
-    truth_check:specs/123-frontend-mainline-managed-delivery-apply-runtime-implementation-baseline: 56ad5a8b61a704dc05e7d26b1fa90083c0dbac9ee16d57c40c2f4bda4a440886
-    truth_check:specs/124-frontend-mainline-delivery-materialization-runtime-baseline: b523e85926ab4f299763b6328449971e2702d99440192a14fdf4be5161a568f9
-    truth_check:specs/125-frontend-mainline-browser-gate-probe-runtime-implementation-baseline: 08094bc3ccfffd28b34b7ffb69f59b6ab3aa38d2c15b9feeac8dd4a90edcc0b4
-    truth_check:specs/126-frontend-mainline-browser-gate-recheck-remediation-runtime-closure-baseline: da60288d9c28b44313e0bc4a227c1d92302e07d6f6423ce3fee85bcf412216eb
+    truth_check:specs/095-frontend-mainline-product-delivery-baseline: f5c167f6d569e119c84433363964c03c320400e26918fea17fd1f3a28601914a
+    truth_check:specs/096-frontend-mainline-host-runtime-manager-baseline: af9f17c7c99838a9a8255ad67da5f7007abfe214e122063b084b57eda7754606
+    truth_check:specs/098-frontend-mainline-posture-detector-baseline: 28c806c07a5c7c59639cb8c5858137a760cd5c7c49b351ba8718ee06cff654d8
+    truth_check:specs/099-frontend-mainline-delivery-registry-resolver-baseline: a1621576991b37c506134f83735f02cac3cbaf84c1ffa79a02fa099e804cc06b
+    truth_check:specs/100-frontend-mainline-action-plan-binding-baseline: 36f125d3261838883132e384a8991f22d154d597f28b6d151ca945d7fe0fe794
+    truth_check:specs/101-frontend-mainline-managed-delivery-apply-runtime-baseline: 55f0bec2508057f7859e116bb5d1ad9f807be1fa1fef4f05eb840a04880a8f0a
+    truth_check:specs/102-frontend-mainline-browser-quality-gate-baseline: 7d6e0f442296f3bf2976bf7634aa0c304a59d6f71a149068df5318cd0c374cdc
+    truth_check:specs/103-frontend-mainline-browser-gate-probe-runtime-baseline: ccae3dff83e0582fa1db7e7562dfabb550f10056f2c6dd7b71c8f2351981c0b1
+    truth_check:specs/104-frontend-mainline-browser-gate-recheck-remediation-binding-baseline: d043b7458f2772293196efeb38b04074cbc8d54eec68d831ffc4161404c7d603
+    truth_check:specs/105-frontend-mainline-browser-gate-recheck-remediation-runtime-implementation-baseline: 29b896bcb3d77765d499c8af89a9a6d83e2db479105179ec07e58ea3e5d69c0f
+    truth_check:specs/123-frontend-mainline-managed-delivery-apply-runtime-implementation-baseline: d3ff4eb72776a5908dacf95c9505d1f462412123e6c8f9ee151ed1ff665b3131
+    truth_check:specs/124-frontend-mainline-delivery-materialization-runtime-baseline: 3c4953f8daad5ef80040b0bb6a923e7f5bb2436d4d70b59c83e80eaf4d31f461
+    truth_check:specs/125-frontend-mainline-browser-gate-probe-runtime-implementation-baseline: ca0253f7286b24a71494aa517fa47f5c2d1f3325395836f6f3ece863add44c42
+    truth_check:specs/126-frontend-mainline-browser-gate-recheck-remediation-runtime-closure-baseline: 6696bc6298f022478949f88c168187bd438c58be4b11ffb9e5e615026ca7c324
     close_check:specs/095-frontend-mainline-product-delivery-baseline: 85701b9bb14bd5f3e918c4048a54c650a27dff9bff507d966f9b11ed801e0055
     close_check:specs/096-frontend-mainline-host-runtime-manager-baseline: e7199e6d3c809c11ab1ac60329dbc4b2eb52e3d350e28c3113aa380bc0f08a39
     close_check:specs/098-frontend-mainline-posture-detector-baseline: aef2acdccd5ddc48cf5a850183f86ad0d0af3b50ab6a83b3703296c1d45b3121
@@ -1095,7 +1407,7 @@ truth_snapshot:
     close_check:specs/125-frontend-mainline-browser-gate-probe-runtime-implementation-baseline: 7c5ad790bacc8d85585d09f2aa7fd05f7dba069b79d4f62232c225c2cad79ced
     close_check:specs/126-frontend-mainline-browser-gate-recheck-remediation-runtime-closure-baseline: b6b321db4a033334a62b4ce9cd4fc6f520ef0e06f6c235388df4d9e507b0cb69
     verify:uv run ai-sdlc verify constraints: 67c162e8ce6369708f41fd003c4d3b2703509ebeb85aefbbc2a2d67663c45333
-  snapshot_hash: a706cb8678a5659b76f8a0c4eb99eb11c1bf417febfb589d793621af3b207490
+  snapshot_hash: a317094a0bbb6c123b98fb8c5a852af927a83f2d77cad543a2af62cf7e7c3336
   computed_capabilities:
   - capability_id: frontend-mainline-delivery
     closure_state: capability_open
@@ -1117,4 +1429,4 @@ truth_snapshot:
     - close_check:specs/125-frontend-mainline-browser-gate-probe-runtime-implementation-baseline
     - close_check:specs/126-frontend-mainline-browser-gate-recheck-remediation-runtime-closure-baseline
     stale_reason: ''
-  state: migration_pending
+  state: blocked

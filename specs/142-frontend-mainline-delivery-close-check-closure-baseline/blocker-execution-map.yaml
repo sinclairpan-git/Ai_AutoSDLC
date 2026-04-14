@@ -1,0 +1,211 @@
+capability_id: frontend-mainline-delivery
+source_of_truth:
+  audit_command: uv run ai-sdlc program truth audit
+  manifest_close_check_refs:
+    - specs/095-frontend-mainline-product-delivery-baseline
+    - specs/096-frontend-mainline-host-runtime-manager-baseline
+    - specs/098-frontend-mainline-posture-detector-baseline
+    - specs/099-frontend-mainline-delivery-registry-resolver-baseline
+    - specs/100-frontend-mainline-action-plan-binding-baseline
+    - specs/101-frontend-mainline-managed-delivery-apply-runtime-baseline
+    - specs/102-frontend-mainline-browser-quality-gate-baseline
+    - specs/103-frontend-mainline-browser-gate-probe-runtime-baseline
+    - specs/104-frontend-mainline-browser-gate-recheck-remediation-binding-baseline
+    - specs/105-frontend-mainline-browser-gate-recheck-remediation-runtime-implementation-baseline
+    - specs/123-frontend-mainline-managed-delivery-apply-runtime-implementation-baseline
+    - specs/124-frontend-mainline-delivery-materialization-runtime-baseline
+    - specs/125-frontend-mainline-browser-gate-probe-runtime-implementation-baseline
+    - specs/126-frontend-mainline-browser-gate-recheck-remediation-runtime-closure-baseline
+blockers:
+  - blocker_ref: capability_closure_audit:capability_open
+    carrier_spec: frontend-mainline-delivery
+    execution_batch: phase-5-closure-audit
+    verification_command_or_surface:
+      - uv run ai-sdlc program truth audit
+    expected_close_evidence:
+      - frontend-mainline-delivery audit_state=ready
+      - capability_closure_audit blocker removed from truth audit
+    prerequisites:
+      - close_check:specs/095-frontend-mainline-product-delivery-baseline
+      - close_check:specs/096-frontend-mainline-host-runtime-manager-baseline
+      - close_check:specs/098-frontend-mainline-posture-detector-baseline
+      - close_check:specs/099-frontend-mainline-delivery-registry-resolver-baseline
+      - close_check:specs/100-frontend-mainline-action-plan-binding-baseline
+      - close_check:specs/101-frontend-mainline-managed-delivery-apply-runtime-baseline
+      - close_check:specs/102-frontend-mainline-browser-quality-gate-baseline
+      - close_check:specs/103-frontend-mainline-browser-gate-probe-runtime-baseline
+      - close_check:specs/104-frontend-mainline-browser-gate-recheck-remediation-binding-baseline
+      - close_check:specs/105-frontend-mainline-browser-gate-recheck-remediation-runtime-implementation-baseline
+      - close_check:specs/123-frontend-mainline-managed-delivery-apply-runtime-implementation-baseline
+      - close_check:specs/124-frontend-mainline-delivery-materialization-runtime-baseline
+      - close_check:specs/125-frontend-mainline-browser-gate-probe-runtime-implementation-baseline
+      - close_check:specs/126-frontend-mainline-browser-gate-recheck-remediation-runtime-closure-baseline
+  - blocker_ref: close_check:specs/095-frontend-mainline-product-delivery-baseline
+    carrier_spec: 095-frontend-mainline-product-delivery-baseline
+    execution_batch: phase-2-product-host-registry-apply
+    verification_command_or_surface:
+      - uv run ai-sdlc workitem truth-check --wi specs/095-frontend-mainline-product-delivery-baseline
+      - uv run ai-sdlc workitem close-check --wi specs/095-frontend-mainline-product-delivery-baseline
+      - uv run ai-sdlc program truth audit
+    expected_close_evidence:
+      - workitem close-check passes for 095
+      - blocker removed from truth audit
+    prerequisites: []
+  - blocker_ref: close_check:specs/096-frontend-mainline-host-runtime-manager-baseline
+    carrier_spec: 096-frontend-mainline-host-runtime-manager-baseline
+    execution_batch: phase-2-product-host-registry-apply
+    verification_command_or_surface:
+      - uv run ai-sdlc workitem truth-check --wi specs/096-frontend-mainline-host-runtime-manager-baseline
+      - uv run ai-sdlc workitem close-check --wi specs/096-frontend-mainline-host-runtime-manager-baseline
+      - uv run ai-sdlc program truth audit
+    expected_close_evidence:
+      - workitem close-check passes for 096
+      - blocker removed from truth audit
+    prerequisites:
+      - close_check:specs/095-frontend-mainline-product-delivery-baseline
+  - blocker_ref: close_check:specs/098-frontend-mainline-posture-detector-baseline
+    carrier_spec: 098-frontend-mainline-posture-detector-baseline
+    execution_batch: phase-2-product-host-registry-apply
+    verification_command_or_surface:
+      - uv run ai-sdlc workitem truth-check --wi specs/098-frontend-mainline-posture-detector-baseline
+      - uv run ai-sdlc workitem close-check --wi specs/098-frontend-mainline-posture-detector-baseline
+      - uv run ai-sdlc program truth audit
+    expected_close_evidence:
+      - workitem close-check passes for 098
+      - blocker removed from truth audit
+    prerequisites:
+      - close_check:specs/096-frontend-mainline-host-runtime-manager-baseline
+  - blocker_ref: close_check:specs/099-frontend-mainline-delivery-registry-resolver-baseline
+    carrier_spec: 099-frontend-mainline-delivery-registry-resolver-baseline
+    execution_batch: phase-2-product-host-registry-apply
+    verification_command_or_surface:
+      - uv run ai-sdlc workitem truth-check --wi specs/099-frontend-mainline-delivery-registry-resolver-baseline
+      - uv run ai-sdlc workitem close-check --wi specs/099-frontend-mainline-delivery-registry-resolver-baseline
+      - uv run ai-sdlc program truth audit
+    expected_close_evidence:
+      - workitem close-check passes for 099
+      - blocker removed from truth audit
+    prerequisites:
+      - close_check:specs/098-frontend-mainline-posture-detector-baseline
+  - blocker_ref: close_check:specs/100-frontend-mainline-action-plan-binding-baseline
+    carrier_spec: 100-frontend-mainline-action-plan-binding-baseline
+    execution_batch: phase-2-product-host-registry-apply
+    verification_command_or_surface:
+      - uv run ai-sdlc workitem truth-check --wi specs/100-frontend-mainline-action-plan-binding-baseline
+      - uv run ai-sdlc workitem close-check --wi specs/100-frontend-mainline-action-plan-binding-baseline
+      - uv run ai-sdlc program truth audit
+    expected_close_evidence:
+      - workitem close-check passes for 100
+      - blocker removed from truth audit
+    prerequisites:
+      - close_check:specs/099-frontend-mainline-delivery-registry-resolver-baseline
+  - blocker_ref: close_check:specs/101-frontend-mainline-managed-delivery-apply-runtime-baseline
+    carrier_spec: 101-frontend-mainline-managed-delivery-apply-runtime-baseline
+    execution_batch: phase-2-product-host-registry-apply
+    verification_command_or_surface:
+      - uv run ai-sdlc workitem truth-check --wi specs/101-frontend-mainline-managed-delivery-apply-runtime-baseline
+      - uv run ai-sdlc workitem close-check --wi specs/101-frontend-mainline-managed-delivery-apply-runtime-baseline
+      - uv run ai-sdlc program truth audit
+    expected_close_evidence:
+      - workitem close-check passes for 101
+      - blocker removed from truth audit
+    prerequisites:
+      - close_check:specs/100-frontend-mainline-action-plan-binding-baseline
+  - blocker_ref: close_check:specs/123-frontend-mainline-managed-delivery-apply-runtime-implementation-baseline
+    carrier_spec: 123-frontend-mainline-managed-delivery-apply-runtime-implementation-baseline
+    execution_batch: phase-2-product-host-registry-apply
+    verification_command_or_surface:
+      - uv run ai-sdlc workitem truth-check --wi specs/123-frontend-mainline-managed-delivery-apply-runtime-implementation-baseline
+      - uv run ai-sdlc workitem close-check --wi specs/123-frontend-mainline-managed-delivery-apply-runtime-implementation-baseline
+      - uv run ai-sdlc program truth audit
+    expected_close_evidence:
+      - workitem close-check passes for 123
+      - blocker removed from truth audit
+    prerequisites:
+      - close_check:specs/101-frontend-mainline-managed-delivery-apply-runtime-baseline
+  - blocker_ref: close_check:specs/124-frontend-mainline-delivery-materialization-runtime-baseline
+    carrier_spec: 124-frontend-mainline-delivery-materialization-runtime-baseline
+    execution_batch: phase-2-product-host-registry-apply
+    verification_command_or_surface:
+      - uv run ai-sdlc workitem truth-check --wi specs/124-frontend-mainline-delivery-materialization-runtime-baseline
+      - uv run ai-sdlc workitem close-check --wi specs/124-frontend-mainline-delivery-materialization-runtime-baseline
+      - uv run ai-sdlc program truth audit
+    expected_close_evidence:
+      - workitem close-check passes for 124
+      - blocker removed from truth audit
+    prerequisites:
+      - close_check:specs/123-frontend-mainline-managed-delivery-apply-runtime-implementation-baseline
+  - blocker_ref: close_check:specs/102-frontend-mainline-browser-quality-gate-baseline
+    carrier_spec: 102-frontend-mainline-browser-quality-gate-baseline
+    execution_batch: phase-3-browser-gate-recheck
+    verification_command_or_surface:
+      - uv run ai-sdlc workitem truth-check --wi specs/102-frontend-mainline-browser-quality-gate-baseline
+      - uv run ai-sdlc workitem close-check --wi specs/102-frontend-mainline-browser-quality-gate-baseline
+      - uv run ai-sdlc program truth audit
+    expected_close_evidence:
+      - workitem close-check passes for 102
+      - blocker removed from truth audit
+    prerequisites:
+      - close_check:specs/101-frontend-mainline-managed-delivery-apply-runtime-baseline
+  - blocker_ref: close_check:specs/103-frontend-mainline-browser-gate-probe-runtime-baseline
+    carrier_spec: 103-frontend-mainline-browser-gate-probe-runtime-baseline
+    execution_batch: phase-3-browser-gate-recheck
+    verification_command_or_surface:
+      - uv run ai-sdlc workitem truth-check --wi specs/103-frontend-mainline-browser-gate-probe-runtime-baseline
+      - uv run ai-sdlc workitem close-check --wi specs/103-frontend-mainline-browser-gate-probe-runtime-baseline
+      - uv run ai-sdlc program truth audit
+    expected_close_evidence:
+      - workitem close-check passes for 103
+      - blocker removed from truth audit
+    prerequisites:
+      - close_check:specs/102-frontend-mainline-browser-quality-gate-baseline
+  - blocker_ref: close_check:specs/104-frontend-mainline-browser-gate-recheck-remediation-binding-baseline
+    carrier_spec: 104-frontend-mainline-browser-gate-recheck-remediation-binding-baseline
+    execution_batch: phase-3-browser-gate-recheck
+    verification_command_or_surface:
+      - uv run ai-sdlc workitem truth-check --wi specs/104-frontend-mainline-browser-gate-recheck-remediation-binding-baseline
+      - uv run ai-sdlc workitem close-check --wi specs/104-frontend-mainline-browser-gate-recheck-remediation-binding-baseline
+      - uv run ai-sdlc program truth audit
+    expected_close_evidence:
+      - workitem close-check passes for 104
+      - blocker removed from truth audit
+    prerequisites:
+      - close_check:specs/103-frontend-mainline-browser-gate-probe-runtime-baseline
+  - blocker_ref: close_check:specs/105-frontend-mainline-browser-gate-recheck-remediation-runtime-implementation-baseline
+    carrier_spec: 105-frontend-mainline-browser-gate-recheck-remediation-runtime-implementation-baseline
+    execution_batch: phase-3-browser-gate-recheck
+    verification_command_or_surface:
+      - uv run ai-sdlc workitem truth-check --wi specs/105-frontend-mainline-browser-gate-recheck-remediation-runtime-implementation-baseline
+      - uv run ai-sdlc workitem close-check --wi specs/105-frontend-mainline-browser-gate-recheck-remediation-runtime-implementation-baseline
+      - uv run ai-sdlc program truth audit
+    expected_close_evidence:
+      - workitem close-check passes for 105
+      - blocker removed from truth audit
+    prerequisites:
+      - close_check:specs/104-frontend-mainline-browser-gate-recheck-remediation-binding-baseline
+  - blocker_ref: close_check:specs/125-frontend-mainline-browser-gate-probe-runtime-implementation-baseline
+    carrier_spec: 125-frontend-mainline-browser-gate-probe-runtime-implementation-baseline
+    execution_batch: phase-3-browser-gate-recheck
+    verification_command_or_surface:
+      - uv run ai-sdlc workitem truth-check --wi specs/125-frontend-mainline-browser-gate-probe-runtime-implementation-baseline
+      - uv run ai-sdlc workitem close-check --wi specs/125-frontend-mainline-browser-gate-probe-runtime-implementation-baseline
+      - uv run ai-sdlc program truth audit
+    expected_close_evidence:
+      - workitem close-check passes for 125
+      - blocker removed from truth audit
+    prerequisites:
+      - close_check:specs/103-frontend-mainline-browser-gate-probe-runtime-baseline
+      - close_check:specs/124-frontend-mainline-delivery-materialization-runtime-baseline
+  - blocker_ref: close_check:specs/126-frontend-mainline-browser-gate-recheck-remediation-runtime-closure-baseline
+    carrier_spec: 126-frontend-mainline-browser-gate-recheck-remediation-runtime-closure-baseline
+    execution_batch: phase-3-browser-gate-recheck
+    verification_command_or_surface:
+      - uv run ai-sdlc workitem truth-check --wi specs/126-frontend-mainline-browser-gate-recheck-remediation-runtime-closure-baseline
+      - uv run ai-sdlc workitem close-check --wi specs/126-frontend-mainline-browser-gate-recheck-remediation-runtime-closure-baseline
+      - uv run ai-sdlc program truth audit
+    expected_close_evidence:
+      - workitem close-check passes for 126
+      - blocker removed from truth audit
+    prerequisites:
+      - close_check:specs/105-frontend-mainline-browser-gate-recheck-remediation-runtime-implementation-baseline
+      - close_check:specs/125-frontend-mainline-browser-gate-probe-runtime-implementation-baseline
