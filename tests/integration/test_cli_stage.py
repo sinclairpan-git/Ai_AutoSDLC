@@ -78,7 +78,7 @@ class TestStageCommand:
         assert runner.invoke(app, ["init", "."]).exit_code == 0
         (tmp_path / ".claude").mkdir()
         assert runner.invoke(app, ["stage", "show", "init"]).exit_code == 0
-        doc = tmp_path / ".claude" / "AI-SDLC.md"
+        doc = tmp_path / ".claude" / "CLAUDE.md"
         assert doc.is_file()
 
     def test_stage_run_guides_user_when_legacy_reconcile_is_needed(

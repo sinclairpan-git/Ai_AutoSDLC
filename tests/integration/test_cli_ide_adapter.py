@@ -37,7 +37,7 @@ class TestCliIdeAdapterHook:
         assert runner.invoke(app, ["init", "."]).exit_code == 0
         (tmp_path / ".vscode").mkdir()
         assert runner.invoke(app, ["status"]).exit_code == 0
-        vs = tmp_path / ".vscode" / "AI-SDLC.md"
+        vs = tmp_path / ".github" / "copilot-instructions.md"
         assert vs.is_file()
 
     def test_status_json_does_not_install_vscode_file(
@@ -50,5 +50,5 @@ class TestCliIdeAdapterHook:
         result = runner.invoke(app, ["status", "--json"])
 
         assert result.exit_code == 0
-        vs = tmp_path / ".vscode" / "AI-SDLC.md"
+        vs = tmp_path / ".github" / "copilot-instructions.md"
         assert vs.exists() is False

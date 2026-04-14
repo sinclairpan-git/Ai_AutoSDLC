@@ -1,0 +1,29 @@
+entries:
+- work_item_id: WI-MANUAL
+  refresh_level: 2
+  triggered_at: '2026-04-14T10:20:26+00:00'
+  completed_at: '2026-04-14T10:20:29+00:00'
+  changed_files:
+  - src/ai_sdlc/core/frontend_contract_observation_runtime_policy.py
+  - src/ai_sdlc/core/managed_delivery_apply.py
+  - src/ai_sdlc/core/program_service.py
+  - src/ai_sdlc/core/verify_constraints.py
+  - src/ai_sdlc/models/frontend_managed_delivery.py
+  - tests/integration/test_cli_ide_adapter.py
+  - tests/integration/test_cli_program.py
+  - tests/integration/test_cli_provenance.py
+  - tests/integration/test_cli_run.py
+  - tests/integration/test_cli_stage.py
+  - tests/integration/test_cli_verify_constraints.py
+  - tests/unit/test_frontend_gate_verification.py
+  - tests/unit/test_program_service.py
+  updated_indexes:
+  - .ai-sdlc/state/repo-facts.json
+  - .ai-sdlc/project/generated/key-files.json
+  - .ai-sdlc/project/generated/api-index.json
+  - .ai-sdlc/project/generated/dependency-index.json
+  - .ai-sdlc/project/generated/test-index.json
+  - .ai-sdlc/project/generated/risk-index.json
+  updated_docs:
+  - .ai-sdlc/project/memory/engineering-corpus.md
+  notes: ''

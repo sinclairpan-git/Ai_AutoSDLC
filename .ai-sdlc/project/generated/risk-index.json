@@ -1,5 +1,5 @@
 {
-  "total_risks": 45,
+  "total_risks": 55,
   "by_category": {
     "large_file": [
       {
@@ -17,8 +17,14 @@
       {
         "path": "src/ai_sdlc/cli/commands.py",
         "severity": "medium",
-        "description": "File has 605 lines (threshold: 500)",
-        "metric_value": 605.0
+        "description": "File has 766 lines (threshold: 500)",
+        "metric_value": 766.0
+      },
+      {
+        "path": "src/ai_sdlc/cli/program_cmd.py",
+        "severity": "high",
+        "description": "File has 5015 lines (threshold: 500)",
+        "metric_value": 5015.0
       },
       {
         "path": "src/ai_sdlc/context/state.py",
@@ -29,8 +35,8 @@
       {
         "path": "src/ai_sdlc/core/close_check.py",
         "severity": "medium",
-        "description": "File has 620 lines (threshold: 500)",
-        "metric_value": 620.0
+        "description": "File has 743 lines (threshold: 500)",
+        "metric_value": 743.0
       },
       {
         "path": "src/ai_sdlc/core/executor.py",
@@ -39,16 +45,52 @@
         "metric_value": 763.0
       },
       {
-        "path": "src/ai_sdlc/core/verify_constraints.py",
+        "path": "src/ai_sdlc/core/frontend_gate_verification.py",
         "severity": "medium",
-        "description": "File has 787 lines (threshold: 500)",
-        "metric_value": 787.0
+        "description": "File has 887 lines (threshold: 500)",
+        "metric_value": 887.0
+      },
+      {
+        "path": "src/ai_sdlc/core/managed_delivery_apply.py",
+        "severity": "medium",
+        "description": "File has 720 lines (threshold: 500)",
+        "metric_value": 720.0
+      },
+      {
+        "path": "src/ai_sdlc/core/program_service.py",
+        "severity": "high",
+        "description": "File has 9942 lines (threshold: 500)",
+        "metric_value": 9942.0
+      },
+      {
+        "path": "src/ai_sdlc/core/verify_constraints.py",
+        "severity": "high",
+        "description": "File has 2080 lines (threshold: 500)",
+        "metric_value": 2080.0
       },
       {
         "path": "src/ai_sdlc/gates/pipeline_gates.py",
         "severity": "medium",
-        "description": "File has 657 lines (threshold: 500)",
-        "metric_value": 657.0
+        "description": "File has 955 lines (threshold: 500)",
+        "metric_value": 955.0
+      },
+      {
+        "path": "src/ai_sdlc/integrations/ide_adapter.py",
+        "severity": "medium",
+        "description": "File has 525 lines (threshold: 500)",
+        "metric_value": 525.0
+      },
+      {
+        "path": "src/ai_sdlc/models/frontend_gate_policy.py",
+        "severity": "high",
+        "description": "File has 1111 lines (threshold: 500)",
+        "metric_value": 1111.0
+      },
+      {
+        "path": "src/ai_sdlc/models/frontend_ui_kernel.py",
+        "severity": "medium",
+        "description": "File has 653 lines (threshold: 500)",
+        "metric_value": 653.0
       },
       {
         "path": "src/ai_sdlc/telemetry/contracts.py",
@@ -65,8 +107,8 @@
       {
         "path": "src/ai_sdlc/telemetry/readiness.py",
         "severity": "medium",
-        "description": "File has 691 lines (threshold: 500)",
-        "metric_value": 691.0
+        "description": "File has 899 lines (threshold: 500)",
+        "metric_value": 899.0
       },
       {
         "path": "src/ai_sdlc/telemetry/runtime.py",
@@ -103,47 +145,53 @@
     ],
     "high_coupling": [
       {
-        "path": "ai_sdlc",
+        "path": "pathlib",
         "severity": "medium",
-        "description": "Imported by 85 other files (threshold: 24)",
-        "metric_value": 85.0
-      },
-      {
-        "path": "typing",
-        "severity": "medium",
-        "description": "Imported by 36 other files (threshold: 24)",
-        "metric_value": 36.0
-      },
-      {
-        "path": "dataclasses",
-        "severity": "medium",
-        "description": "Imported by 28 other files (threshold: 24)",
-        "metric_value": 28.0
+        "description": "Imported by 90 other files (threshold: 32)",
+        "metric_value": 90.0
       },
       {
         "path": "__future__",
         "severity": "medium",
-        "description": "Imported by 98 other files (threshold: 24)",
-        "metric_value": 98.0
+        "description": "Imported by 132 other files (threshold: 32)",
+        "metric_value": 132.0
       },
       {
-        "path": "pathlib",
+        "path": "ai_sdlc",
         "severity": "medium",
-        "description": "Imported by 65 other files (threshold: 24)",
-        "metric_value": 65.0
+        "description": "Imported by 109 other files (threshold: 32)",
+        "metric_value": 109.0
       },
       {
-        "path": "logging",
+        "path": "typing",
         "severity": "medium",
-        "description": "Imported by 31 other files (threshold: 24)",
-        "metric_value": 31.0
+        "description": "Imported by 50 other files (threshold: 32)",
+        "metric_value": 50.0
+      },
+      {
+        "path": "dataclasses",
+        "severity": "medium",
+        "description": "Imported by 41 other files (threshold: 32)",
+        "metric_value": 41.0
       }
     ],
     "no_tests": [
       {
-        "path": "src/ai_sdlc/cli",
+        "path": "src/ai_sdlc/stages",
         "severity": "medium",
-        "description": "Source directory 'src/ai_sdlc/cli' has no corresponding test directory",
+        "description": "Source directory 'src/ai_sdlc/stages' has no corresponding test directory",
+        "metric_value": 0.0
+      },
+      {
+        "path": "src/ai_sdlc/backends",
+        "severity": "medium",
+        "description": "Source directory 'src/ai_sdlc/backends' has no corresponding test directory",
+        "metric_value": 0.0
+      },
+      {
+        "path": "dist-offline/ai-sdlc-offline-0.5.1",
+        "severity": "medium",
+        "description": "Source directory 'dist-offline/ai-sdlc-offline-0.5.1' has no corresponding test directory",
         "metric_value": 0.0
       },
       {
@@ -153,21 +201,117 @@
         "metric_value": 0.0
       },
       {
-        "path": "packaging/offline",
+        "path": "src/ai_sdlc/gates",
         "severity": "medium",
-        "description": "Source directory 'packaging/offline' has no corresponding test directory",
+        "description": "Source directory 'src/ai_sdlc/gates' has no corresponding test directory",
         "metric_value": 0.0
       },
       {
-        "path": "src/ai_sdlc/telemetry",
+        "path": "src/ai_sdlc/models",
         "severity": "medium",
-        "description": "Source directory 'src/ai_sdlc/telemetry' has no corresponding test directory",
+        "description": "Source directory 'src/ai_sdlc/models' has no corresponding test directory",
+        "metric_value": 0.0
+      },
+      {
+        "path": "src/ai_sdlc/cli",
+        "severity": "medium",
+        "description": "Source directory 'src/ai_sdlc/cli' has no corresponding test directory",
+        "metric_value": 0.0
+      },
+      {
+        "path": ".superpowers/brainstorm/83637-1774953116",
+        "severity": "medium",
+        "description": "Source directory '.superpowers/brainstorm/83637-1774953116' has no corresponding test directory",
+        "metric_value": 0.0
+      },
+      {
+        "path": "dist-offline/ai-sdlc-offline-0.2.5",
+        "severity": "medium",
+        "description": "Source directory 'dist-offline/ai-sdlc-offline-0.2.5' has no corresponding test directory",
+        "metric_value": 0.0
+      },
+      {
+        "path": "src/ai_sdlc/generators",
+        "severity": "medium",
+        "description": "Source directory 'src/ai_sdlc/generators' has no corresponding test directory",
+        "metric_value": 0.0
+      },
+      {
+        "path": "src/ai_sdlc/studios",
+        "severity": "medium",
+        "description": "Source directory 'src/ai_sdlc/studios' has no corresponding test directory",
+        "metric_value": 0.0
+      },
+      {
+        "path": "src/ai_sdlc/context",
+        "severity": "medium",
+        "description": "Source directory 'src/ai_sdlc/context' has no corresponding test directory",
+        "metric_value": 0.0
+      },
+      {
+        "path": "src/ai_sdlc/parallel",
+        "severity": "medium",
+        "description": "Source directory 'src/ai_sdlc/parallel' has no corresponding test directory",
+        "metric_value": 0.0
+      },
+      {
+        "path": "src/ai_sdlc/core",
+        "severity": "medium",
+        "description": "Source directory 'src/ai_sdlc/core' has no corresponding test directory",
+        "metric_value": 0.0
+      },
+      {
+        "path": "src/ai_sdlc/utils",
+        "severity": "medium",
+        "description": "Source directory 'src/ai_sdlc/utils' has no corresponding test directory",
+        "metric_value": 0.0
+      },
+      {
+        "path": "src/ai_sdlc/adapters",
+        "severity": "medium",
+        "description": "Source directory 'src/ai_sdlc/adapters' has no corresponding test directory",
+        "metric_value": 0.0
+      },
+      {
+        "path": "dist-offline/ai-sdlc-offline-0.5.0",
+        "severity": "medium",
+        "description": "Source directory 'dist-offline/ai-sdlc-offline-0.5.0' has no corresponding test directory",
+        "metric_value": 0.0
+      },
+      {
+        "path": "src/ai_sdlc/rules",
+        "severity": "medium",
+        "description": "Source directory 'src/ai_sdlc/rules' has no corresponding test directory",
+        "metric_value": 0.0
+      },
+      {
+        "path": "dist-offline/ai-sdlc-offline-0.3.1",
+        "severity": "medium",
+        "description": "Source directory 'dist-offline/ai-sdlc-offline-0.3.1' has no corresponding test directory",
+        "metric_value": 0.0
+      },
+      {
+        "path": "src/ai_sdlc/scanners",
+        "severity": "medium",
+        "description": "Source directory 'src/ai_sdlc/scanners' has no corresponding test directory",
         "metric_value": 0.0
       },
       {
         "path": "src/ai_sdlc/routers",
         "severity": "medium",
         "description": "Source directory 'src/ai_sdlc/routers' has no corresponding test directory",
+        "metric_value": 0.0
+      },
+      {
+        "path": ".superpowers/brainstorm/31873-1775640624",
+        "severity": "medium",
+        "description": "Source directory '.superpowers/brainstorm/31873-1775640624' has no corresponding test directory",
+        "metric_value": 0.0
+      },
+      {
+        "path": "src/ai_sdlc/integrations",
+        "severity": "medium",
+        "description": "Source directory 'src/ai_sdlc/integrations' has no corresponding test directory",
         "metric_value": 0.0
       },
       {
@@ -183,99 +327,15 @@
         "metric_value": 0.0
       },
       {
-        "path": "src/ai_sdlc/adapters",
+        "path": "src/ai_sdlc/telemetry",
         "severity": "medium",
-        "description": "Source directory 'src/ai_sdlc/adapters' has no corresponding test directory",
+        "description": "Source directory 'src/ai_sdlc/telemetry' has no corresponding test directory",
         "metric_value": 0.0
       },
       {
-        "path": "src/ai_sdlc/utils",
+        "path": "packaging/offline",
         "severity": "medium",
-        "description": "Source directory 'src/ai_sdlc/utils' has no corresponding test directory",
-        "metric_value": 0.0
-      },
-      {
-        "path": "src/ai_sdlc/rules",
-        "severity": "medium",
-        "description": "Source directory 'src/ai_sdlc/rules' has no corresponding test directory",
-        "metric_value": 0.0
-      },
-      {
-        "path": "src/ai_sdlc/core",
-        "severity": "medium",
-        "description": "Source directory 'src/ai_sdlc/core' has no corresponding test directory",
-        "metric_value": 0.0
-      },
-      {
-        "path": "src/ai_sdlc/studios",
-        "severity": "medium",
-        "description": "Source directory 'src/ai_sdlc/studios' has no corresponding test directory",
-        "metric_value": 0.0
-      },
-      {
-        "path": "src/ai_sdlc/generators",
-        "severity": "medium",
-        "description": "Source directory 'src/ai_sdlc/generators' has no corresponding test directory",
-        "metric_value": 0.0
-      },
-      {
-        "path": "dist-offline/ai-sdlc-offline-0.2.5",
-        "severity": "medium",
-        "description": "Source directory 'dist-offline/ai-sdlc-offline-0.2.5' has no corresponding test directory",
-        "metric_value": 0.0
-      },
-      {
-        "path": "src/ai_sdlc/stages",
-        "severity": "medium",
-        "description": "Source directory 'src/ai_sdlc/stages' has no corresponding test directory",
-        "metric_value": 0.0
-      },
-      {
-        "path": "src/ai_sdlc/gates",
-        "severity": "medium",
-        "description": "Source directory 'src/ai_sdlc/gates' has no corresponding test directory",
-        "metric_value": 0.0
-      },
-      {
-        "path": "src/ai_sdlc/scanners",
-        "severity": "medium",
-        "description": "Source directory 'src/ai_sdlc/scanners' has no corresponding test directory",
-        "metric_value": 0.0
-      },
-      {
-        "path": "src/ai_sdlc/integrations",
-        "severity": "medium",
-        "description": "Source directory 'src/ai_sdlc/integrations' has no corresponding test directory",
-        "metric_value": 0.0
-      },
-      {
-        "path": "src/ai_sdlc/context",
-        "severity": "medium",
-        "description": "Source directory 'src/ai_sdlc/context' has no corresponding test directory",
-        "metric_value": 0.0
-      },
-      {
-        "path": ".superpowers/brainstorm/83637-1774953116",
-        "severity": "medium",
-        "description": "Source directory '.superpowers/brainstorm/83637-1774953116' has no corresponding test directory",
-        "metric_value": 0.0
-      },
-      {
-        "path": "src/ai_sdlc/models",
-        "severity": "medium",
-        "description": "Source directory 'src/ai_sdlc/models' has no corresponding test directory",
-        "metric_value": 0.0
-      },
-      {
-        "path": "src/ai_sdlc/parallel",
-        "severity": "medium",
-        "description": "Source directory 'src/ai_sdlc/parallel' has no corresponding test directory",
-        "metric_value": 0.0
-      },
-      {
-        "path": "src/ai_sdlc/backends",
-        "severity": "medium",
-        "description": "Source directory 'src/ai_sdlc/backends' has no corresponding test directory",
+        "description": "Source directory 'packaging/offline' has no corresponding test directory",
         "metric_value": 0.0
       }
     ]

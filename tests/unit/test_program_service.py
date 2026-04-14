@@ -28,17 +28,16 @@ from ai_sdlc.core.program_service import (
 from ai_sdlc.generators.frontend_gate_policy_artifacts import (
     materialize_frontend_gate_policy_artifacts,
 )
-from ai_sdlc.generators.frontend_solution_confirmation_artifacts import (
-    materialize_frontend_solution_confirmation_artifacts,
-)
 from ai_sdlc.generators.frontend_generation_constraint_artifacts import (
     materialize_frontend_generation_constraint_artifacts,
+)
+from ai_sdlc.generators.frontend_solution_confirmation_artifacts import (
+    materialize_frontend_solution_confirmation_artifacts,
 )
 from ai_sdlc.models.frontend_gate_policy import (
     build_mvp_frontend_gate_policy,
     build_p1_frontend_gate_policy_visual_a11y_foundation,
 )
-from ai_sdlc.models.project import ProjectConfig
 from ai_sdlc.models.frontend_generation_constraints import (
     build_mvp_frontend_generation_constraints,
 )
@@ -48,6 +47,7 @@ from ai_sdlc.models.frontend_solution_confirmation import (
     build_mvp_solution_snapshot,
 )
 from ai_sdlc.models.program import ProgramManifest, ProgramSpecRef
+from ai_sdlc.models.project import ProjectConfig
 from ai_sdlc.models.state import Checkpoint, FeatureInfo
 
 SAMPLE_FIXTURE_SOURCE_REF = "tests/fixtures/frontend-contract-sample-src/match"

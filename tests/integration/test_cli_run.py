@@ -18,7 +18,6 @@ from ai_sdlc.core.frontend_contract_observation_provider import (
 )
 from ai_sdlc.core.runner import SDLCRunner
 from ai_sdlc.models.gate import GateCheck, GateResult, GateVerdict
-from ai_sdlc.models.project import ActivationState, AdapterSupportTier, ProjectConfig
 from ai_sdlc.models.state import Checkpoint, FeatureInfo
 from ai_sdlc.telemetry.enums import TelemetryMode, TelemetryProfile
 from ai_sdlc.telemetry.paths import (

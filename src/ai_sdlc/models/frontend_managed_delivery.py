@@ -2,8 +2,9 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from pathlib import Path
-from typing import Any, Callable, Literal
+from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 

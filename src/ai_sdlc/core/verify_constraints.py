@@ -12,6 +12,12 @@ from ai_sdlc.branch.git_client import GitError
 from ai_sdlc.context.state import load_checkpoint
 from ai_sdlc.core.artifact_target_guard import detect_misplaced_formal_artifacts
 from ai_sdlc.core.backlog_breach_guard import collect_missing_backlog_entry_references
+from ai_sdlc.core.frontend_contract_observation_provider import (
+    FRONTEND_CONTRACT_OBSERVATION_ARTIFACT_STATUS_ATTACHED,
+    FRONTEND_CONTRACT_OBSERVATION_ARTIFACT_STATUS_INVALID_ARTIFACT,
+    FRONTEND_CONTRACT_OBSERVATION_ARTIFACT_STATUS_MISSING_ARTIFACT,
+    load_frontend_contract_observation_artifact,
+)
 from ai_sdlc.core.frontend_contract_runtime_attachment import (
     FRONTEND_CONTRACT_RUNTIME_ATTACHMENT_STATUS_ATTACHED,
     FRONTEND_CONTRACT_RUNTIME_ATTACHMENT_STATUS_INVALID_ARTIFACT,
@@ -19,11 +25,6 @@ from ai_sdlc.core.frontend_contract_runtime_attachment import (
     FrontendContractRuntimeAttachment,
     build_frontend_contract_runtime_attachment,
     is_frontend_contract_runtime_attachment_work_item,
-)
-from ai_sdlc.core.frontend_contract_observation_provider import (
-    FRONTEND_CONTRACT_OBSERVATION_ARTIFACT_STATUS_ATTACHED,
-    FRONTEND_CONTRACT_OBSERVATION_ARTIFACT_STATUS_INVALID_ARTIFACT,
-    FRONTEND_CONTRACT_OBSERVATION_ARTIFACT_STATUS_MISSING_ARTIFACT,
 )
 from ai_sdlc.core.frontend_contract_verification import (
     FrontendContractVerificationReport,

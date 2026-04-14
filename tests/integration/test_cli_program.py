@@ -24,11 +24,11 @@ from ai_sdlc.core.frontend_visual_a11y_evidence_provider import (
 from ai_sdlc.generators.frontend_gate_policy_artifacts import (
     materialize_frontend_gate_policy_artifacts,
 )
-from ai_sdlc.generators.frontend_solution_confirmation_artifacts import (
-    materialize_frontend_solution_confirmation_artifacts,
-)
 from ai_sdlc.generators.frontend_generation_constraint_artifacts import (
     materialize_frontend_generation_constraint_artifacts,
+)
+from ai_sdlc.generators.frontend_solution_confirmation_artifacts import (
+    materialize_frontend_solution_confirmation_artifacts,
 )
 from ai_sdlc.models.frontend_gate_policy import (
     build_mvp_frontend_gate_policy,

@@ -38,17 +38,17 @@ from ai_sdlc.generators.frontend_gate_policy_artifacts import (
 from ai_sdlc.generators.frontend_generation_constraint_artifacts import (
     materialize_frontend_generation_constraint_artifacts,
 )
+from ai_sdlc.models.frontend_browser_gate import (
+    BrowserProbeExecutionReceipt,
+    BrowserQualityBundleMaterializationInput,
+    BrowserQualityGateExecutionContext,
+)
 from ai_sdlc.models.frontend_gate_policy import (
     build_mvp_frontend_gate_policy,
     build_p1_frontend_gate_policy_visual_a11y_foundation,
 )
 from ai_sdlc.models.frontend_generation_constraints import (
     build_mvp_frontend_generation_constraints,
-)
-from ai_sdlc.models.frontend_browser_gate import (
-    BrowserProbeExecutionReceipt,
-    BrowserQualityBundleMaterializationInput,
-    BrowserQualityGateExecutionContext,
 )
 
 

@@ -42,9 +42,8 @@ def classify_frontend_contract_observation_source(
     source_ref = _normalize_source_ref(artifact.provenance.source_ref)
     if _looks_like_sample_fixture_source_ref(source_ref):
         return FRONTEND_CONTRACT_OBSERVATION_SOURCE_PROFILE_SAMPLE_SELFCHECK
-    if provider_kind == "scanner":
-        if source_ref:
-            return FRONTEND_CONTRACT_OBSERVATION_SOURCE_PROFILE_CONSUMER_EVIDENCE
+    if provider_kind == "scanner" and source_ref:
+        return FRONTEND_CONTRACT_OBSERVATION_SOURCE_PROFILE_CONSUMER_EVIDENCE
     return FRONTEND_CONTRACT_OBSERVATION_SOURCE_PROFILE_OPAQUE
 
 

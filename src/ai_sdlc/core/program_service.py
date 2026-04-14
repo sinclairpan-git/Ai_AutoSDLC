@@ -11,14 +11,10 @@ from pathlib import Path
 import yaml
 
 from ai_sdlc.branch.git_client import GitClient, GitError
+from ai_sdlc.core.config import YamlStore, load_project_config
 from ai_sdlc.core.frontend_browser_gate_runtime import (
     build_browser_quality_gate_execution_context,
     materialize_browser_gate_probe_runtime,
-)
-from ai_sdlc.core.config import YamlStore, load_project_config
-from ai_sdlc.core.managed_delivery_apply import (
-    ALLOWED_ACTION_TYPES,
-    run_managed_delivery_apply,
 )
 from ai_sdlc.core.frontend_contract_runtime_attachment import (
     FRONTEND_CONTRACT_RUNTIME_ATTACHMENT_STATUS_ATTACHED,
@@ -38,6 +34,10 @@ from ai_sdlc.core.frontend_visual_a11y_evidence_provider import (
     load_frontend_visual_a11y_evidence_artifact,
     visual_a11y_evidence_artifact_path,
 )
+from ai_sdlc.core.managed_delivery_apply import (
+    ALLOWED_ACTION_TYPES,
+    run_managed_delivery_apply,
+)
 from ai_sdlc.core.verify_constraints import (
     build_constraint_report,
     collect_frontend_evidence_class_blockers,
@@ -46,11 +46,11 @@ from ai_sdlc.core.verify_constraints import (
 from ai_sdlc.generators.frontend_gate_policy_artifacts import (
     materialize_frontend_gate_policy_artifacts,
 )
-from ai_sdlc.generators.frontend_solution_confirmation_artifacts import (
-    frontend_solution_confirmation_memory_root,
-)
 from ai_sdlc.generators.frontend_generation_constraint_artifacts import (
     materialize_frontend_generation_constraint_artifacts,
+)
+from ai_sdlc.generators.frontend_solution_confirmation_artifacts import (
+    frontend_solution_confirmation_memory_root,
 )
 from ai_sdlc.models.frontend_browser_gate import (
     BrowserGateProbeRuntimeSession,

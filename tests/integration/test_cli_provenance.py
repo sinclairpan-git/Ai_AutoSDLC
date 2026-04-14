@@ -187,4 +187,4 @@ def test_provenance_summary_does_not_trigger_ide_adapter_writes(
     )
 
     assert result.exit_code == 0
-    assert not (tmp_path / ".vscode" / "AI-SDLC.md").exists()
+    assert not (tmp_path / ".github" / "copilot-instructions.md").exists()

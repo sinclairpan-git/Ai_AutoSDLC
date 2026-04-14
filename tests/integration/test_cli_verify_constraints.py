@@ -1664,7 +1664,7 @@ class TestCliVerifyConstraints:
         before_config = (
             config_path.read_text(encoding="utf-8") if config_path.exists() else None
         )
-        before_adapter = (tmp_path / ".vscode" / "AI-SDLC.md").exists()
+        before_adapter = (tmp_path / ".github" / "copilot-instructions.md").exists()
         time.sleep(1.2)
         monkeypatch.chdir(tmp_path)
 
@@ -1673,7 +1673,7 @@ class TestCliVerifyConstraints:
         after_config = (
             config_path.read_text(encoding="utf-8") if config_path.exists() else None
         )
-        after_adapter = (tmp_path / ".vscode" / "AI-SDLC.md").exists()
+        after_adapter = (tmp_path / ".github" / "copilot-instructions.md").exists()
         assert result.exit_code == 0
         assert after_config == before_config
         assert after_adapter == before_adapter

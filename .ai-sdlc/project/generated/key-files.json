@@ -8,7 +8,7 @@
     {
       "path": "src/ai_sdlc/cli/main.py",
       "language": "python",
-      "lines": 66
+      "lines": 79
     }
   ],
   "config_files": [
@@ -19,9 +19,44 @@
   ],
   "largest_files": [
     {
+      "path": "src/ai_sdlc/core/program_service.py",
+      "language": "python",
+      "lines": 9942
+    },
+    {
+      "path": "src/ai_sdlc/cli/program_cmd.py",
+      "language": "python",
+      "lines": 5015
+    },
+    {
       "path": "src/ai_sdlc/core/verify_constraints.py",
       "language": "python",
-      "lines": 787
+      "lines": 2080
+    },
+    {
+      "path": "src/ai_sdlc/models/frontend_gate_policy.py",
+      "language": "python",
+      "lines": 1111
+    },
+    {
+      "path": "src/ai_sdlc/gates/pipeline_gates.py",
+      "language": "python",
+      "lines": 955
+    },
+    {
+      "path": "src/ai_sdlc/telemetry/readiness.py",
+      "language": "python",
+      "lines": 899
+    },
+    {
+      "path": "src/ai_sdlc/core/frontend_gate_verification.py",
+      "language": "python",
+      "lines": 887
+    },
+    {
+      "path": "src/ai_sdlc/cli/commands.py",
+      "language": "python",
+      "lines": 766
     },
     {
       "path": "src/ai_sdlc/core/executor.py",
@@ -29,29 +64,24 @@
       "lines": 763
     },
     {
+      "path": "src/ai_sdlc/core/close_check.py",
+      "language": "python",
+      "lines": 743
+    },
+    {
+      "path": "src/ai_sdlc/core/managed_delivery_apply.py",
+      "language": "python",
+      "lines": 720
+    },
+    {
       "path": "src/ai_sdlc/telemetry/runtime.py",
       "language": "python",
       "lines": 716
     },
     {
-      "path": "src/ai_sdlc/telemetry/readiness.py",
+      "path": "src/ai_sdlc/models/frontend_ui_kernel.py",
       "language": "python",
-      "lines": 691
-    },
-    {
-      "path": "src/ai_sdlc/gates/pipeline_gates.py",
-      "language": "python",
-      "lines": 657
-    },
-    {
-      "path": "src/ai_sdlc/core/close_check.py",
-      "language": "python",
-      "lines": 620
-    },
-    {
-      "path": "src/ai_sdlc/cli/commands.py",
-      "language": "python",
-      "lines": 605
+      "lines": 653
     },
     {
       "path": "src/ai_sdlc/context/state.py",
@@ -79,44 +109,14 @@
       "lines": 538
     },
     {
+      "path": "src/ai_sdlc/integrations/ide_adapter.py",
+      "language": "python",
+      "lines": 525
+    },
+    {
       "path": "src/ai_sdlc/telemetry/contracts.py",
       "language": "python",
       "lines": 523
-    },
-    {
-      "path": "src/ai_sdlc/models/work.py",
-      "language": "python",
-      "lines": 485
-    },
-    {
-      "path": "src/ai_sdlc/telemetry/generators.py",
-      "language": "python",
-      "lines": 466
-    },
-    {
-      "path": "src/ai_sdlc/core/runner.py",
-      "language": "python",
-      "lines": 432
-    },
-    {
-      "path": "src/ai_sdlc/cli/workitem_cmd.py",
-      "language": "python",
-      "lines": 430
-    },
-    {
-      "path": "src/ai_sdlc/telemetry/writer.py",
-      "language": "python",
-      "lines": 413
-    },
-    {
-      "path": "src/ai_sdlc/core/workitem_traceability.py",
-      "language": "python",
-      "lines": 410
-    },
-    {
-      "path": ".superpowers/brainstorm/83637-1774953116/architecture-static-review.html",
-      "language": "html",
-      "lines": 398
     }
   ]
 }
