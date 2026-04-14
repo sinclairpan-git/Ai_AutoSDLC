@@ -78,12 +78,10 @@ related_doc:
 - **任务编号**：T11
 - **交付流**：`S6`
 - **来源范围**：`095`、`100`、`101`
-- **当前状态**：`capability_open`
-- **派生状态**：已派生 `123-frontend-mainline-managed-delivery-apply-runtime-implementation-baseline`；在 `123` focused verification 通过且下游 `T12/T13` 收口前仍保持 `capability_open`
+- **当前状态**：`partial`
+- **派生状态**：已派生 `123-frontend-mainline-managed-delivery-apply-runtime-implementation-baseline`；`123` focused verification 已通过，且在下游 `T12/T13` 收口前继续保持 `partial`
 - **缺失 carrier**：
-  - confirmed `frontend_action_plan` 的 execution session
-  - `delivery_action_ledger` 的实际创建/更新 runtime
-  - action ordering / dependency / partial-progress 的执行真值
+  - 无；confirmed `frontend_action_plan` 的 execution session、`delivery_action_ledger` runtime，以及 action ordering / dependency / partial-progress 的首批执行真值已由 `123` 正式收束为现有 runtime closure；更宽 materialization/browser gate 边界继续由 `T12/T13` 承接
 - **建议文件面**：`src/ai_sdlc/core/managed_delivery_apply*.py`、`src/ai_sdlc/models/frontend_*`、`src/ai_sdlc/cli/program_cmd.py`、对应 unit/integration tests
 - **依赖**：`096`、`098`、`099`、`100`
 - **前置门禁**：`T00`；`010` 中 `agent_target + activation_state + support_tier + evidence` 达到允许进入 mutate delivery 的最低阈值
@@ -100,12 +98,10 @@ related_doc:
 - **任务编号**：T12
 - **交付流**：`S6`
 - **来源范围**：`095`、`099`、`100`、`101`
-- **当前状态**：`capability_open`
-- **派生状态**：已派生 `124-frontend-mainline-delivery-materialization-runtime-baseline`；在 `124` focused verification 通过且下游 `T13/T14` 收口前仍保持 `capability_open`
+- **当前状态**：`partial`
+- **派生状态**：已派生 `124-frontend-mainline-delivery-materialization-runtime-baseline`；`124` focused verification 已通过，且在下游 `T13/T14` 收口前继续保持 `partial`
 - **缺失 carrier**：
-  - `dependency_install` action executor
-  - controlled subtree / scaffold file writer
-  - package manager / component library / frontend provider adapter materialization runtime
+  - 无；`dependency_install` executor、controlled subtree / scaffold file writer，以及 package manager / component library / frontend provider adapter 的首批 materialization runtime 已由 `124` 正式收束；更宽 browser gate / root takeover 边界继续由 `T13/T14` 承接
 - **建议文件面**：`src/ai_sdlc/core/frontend_delivery_*`、`src/ai_sdlc/generators/*`、`src/ai_sdlc/cli/program_cmd.py`、对应 tests
 - **依赖**：T00、T11
 - **验收标准**：
@@ -120,12 +116,10 @@ related_doc:
 - **任务编号**：T13
 - **交付流**：`S7`
 - **来源范围**：`102`、`103`
-- **当前状态**：`capability_open`
-- **派生状态**：已派生 `125-frontend-mainline-browser-gate-probe-runtime-implementation-baseline`；在 `125` focused verification 通过且下游 `T14` 收口前仍保持 `capability_open`
+- **当前状态**：`partial`
+- **派生状态**：已派生 `125-frontend-mainline-browser-gate-probe-runtime-implementation-baseline`；`125` focused verification 已通过，且在下游 `T14` 收口前继续保持 `partial`
 - **缺失 carrier**：
-  - shared Playwright probe runtime session
-  - gate-run scoped artifact namespace
-  - trace / screenshot / anchor structured evidence materialization
+  - 无；shared probe runtime session、gate-run scoped artifact namespace，以及首批 structured evidence materialization 已由 `125` 正式收束；更完整的 replay / recheck / remediation closure 继续由 `T14` 承接
 - **建议文件面**：`src/ai_sdlc/core/frontend_browser_gate*`、`tests/unit/test_frontend_gate_verification.py`、`tests/integration/test_cli_program.py`
 - **依赖**：T11、T12
 - **验收标准**：
@@ -140,12 +134,10 @@ related_doc:
 - **任务编号**：T14
 - **交付流**：`S7`
 - **来源范围**：`104`、`105`、`106`
-- **当前状态**：`capability_open`
-- **派生状态**：已派生 `126-frontend-mainline-browser-gate-recheck-remediation-runtime-closure-baseline`；在 `126` focused verification 通过前仍保持 `capability_open`
+- **当前状态**：`partial`
+- **派生状态**：已派生 `126-frontend-mainline-browser-gate-recheck-remediation-runtime-closure-baseline`；`126` focused verification 已通过，当前保持 `partial`
 - **缺失 carrier**：
-  - browser gate replay / recheck runtime closure
-  - remediation input / runbook continuation
-  - footer normalization 与 gate verdict 的 end-to-end闭环
+  - 无；browser gate replay / recheck runtime、remediation input / runbook continuation，以及 footer normalization / gate verdict 的首批 end-to-end closure 已由 `126` 正式收束为现有 runtime closure
 - **建议文件面**：`src/ai_sdlc/core/frontend_gate_verification.py`、`src/ai_sdlc/core/program_service.py`、`src/ai_sdlc/cli/program_cmd.py`、对应 tests
 - **依赖**：T13
 - **验收标准**：

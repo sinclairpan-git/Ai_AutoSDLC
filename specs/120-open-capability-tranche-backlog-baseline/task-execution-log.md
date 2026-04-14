@@ -677,3 +677,103 @@
 - `120/T00` 现在已经和 `122` 的 adapter verified host ingress runtime truth 对齐。
 - Batch 1 不再被 `T00` 的 implementation carrier 缺失阻塞；下一批可直接继续 `T11/T12` 等 user-visible mainline closure。
 - 实际 mutating delivery 仍继续以当前 adapter ingress truth 为 gate，不因为本次 backlog sync 被放宽。
+
+### Batch 2026-04-14-024 | Close T11 runtime closure
+
+#### 2.80 批次范围
+
+- 覆盖范围：`tasks.md`
+- 覆盖目标：
+  - 将 `T11` 从 `capability_open` 推进到 `partial`
+  - 回填 `123` 已完成 focused verification，且下游仍由 `T12/T13` 承接
+
+#### 2.81 任务记录
+
+##### T120-DOC-30 | 回填 `T11` 实现结果
+
+- 改动范围：`tasks.md`
+- 改动内容：
+  - 将 `Task 1.1 Managed Delivery Apply Executor` 的当前状态从 `capability_open` 更新为 `partial`
+  - 明确 `123` focused verification 已通过，且 `T11` 在下游 `T12/T13` 收口前继续保持 `partial`
+  - 将 `T11` 的缺失 carrier 收紧为已由 `123` 收束的首批 apply runtime closure，并把更宽边界明确留给 `T12/T13`
+- 新增/调整的测试：无
+- 是否符合任务目标：是
+
+#### 2.82 批次结论
+
+- `120/T11` 现在已经从抽象 carrier 推进到真实 runtime closure；下游 `T12/T13` 继续承接剩余主线。
+
+### Batch 2026-04-14-025 | Close T12 runtime closure
+
+#### 2.83 批次范围
+
+- 覆盖范围：`tasks.md`
+- 覆盖目标：
+  - 将 `T12` 从 `capability_open` 推进到 `partial`
+  - 回填 `124` 已完成 focused verification，且下游仍由 `T13/T14` 承接
+
+#### 2.84 任务记录
+
+##### T120-DOC-31 | 回填 `T12` 实现结果
+
+- 改动范围：`tasks.md`
+- 改动内容：
+  - 将 `Task 1.2 Frontend Provider Adapter/Package And File Writer Actions` 的当前状态从 `capability_open` 更新为 `partial`
+  - 明确 `124` focused verification 已通过，且 `T12` 在下游 `T13/T14` 收口前继续保持 `partial`
+  - 将 `T12` 的缺失 carrier 收紧为已由 `124` 收束的首批 materialization runtime closure，并把 browser gate / root takeover 边界保留给下游
+- 新增/调整的测试：无
+- 是否符合任务目标：是
+
+#### 2.85 批次结论
+
+- `120/T12` 现在已经从抽象 carrier 推进到真实 runtime closure；下游 `T13/T14` 继续承接 browser gate 与更宽 closure。
+
+### Batch 2026-04-14-026 | Close T13 runtime closure
+
+#### 2.86 批次范围
+
+- 覆盖范围：`tasks.md`
+- 覆盖目标：
+  - 将 `T13` 从 `capability_open` 推进到 `partial`
+  - 回填 `125` 已完成 focused verification，且下游仍由 `T14` 承接
+
+#### 2.87 任务记录
+
+##### T120-DOC-32 | 回填 `T13` 实现结果
+
+- 改动范围：`tasks.md`
+- 改动内容：
+  - 将 `Task 1.3 Browser Probe Runtime` 的当前状态从 `capability_open` 更新为 `partial`
+  - 明确 `125` focused verification 已通过，且 `T13` 在下游 `T14` 收口前继续保持 `partial`
+  - 将 `T13` 的缺失 carrier 收紧为已由 `125` 收束的首批 probe runtime closure，并把 replay / recheck / remediation 边界保留给 `T14`
+- 新增/调整的测试：无
+- 是否符合任务目标：是
+
+#### 2.88 批次结论
+
+- `120/T13` 现在已经从抽象 carrier 推进到真实 runtime closure；`T14` 继续承接 replay / recheck / remediation 主线。
+
+### Batch 2026-04-14-027 | Close T14 runtime closure
+
+#### 2.89 批次范围
+
+- 覆盖范围：`tasks.md`
+- 覆盖目标：
+  - 将 `T14` 从 `capability_open` 推进到 `partial`
+  - 回填 `126` 已完成 focused verification，并固定当前 browser gate closure 边界
+
+#### 2.90 任务记录
+
+##### T120-DOC-33 | 回填 `T14` 实现结果
+
+- 改动范围：`tasks.md`
+- 改动内容：
+  - 将 `Task 1.4 Browser Binding, Recheck, Remediation And Footer Closure` 的当前状态从 `capability_open` 更新为 `partial`
+  - 明确 `126` focused verification 已通过，且 `T14` 当前保持 `partial`
+  - 将 `T14` 的缺失 carrier 收紧为已由 `126` 收束的现有 runtime closure
+- 新增/调整的测试：无
+- 是否符合任务目标：是
+
+#### 2.91 批次结论
+
+- `120/T14` 现在已经从抽象 carrier 推进到真实 runtime closure；Batch 1 的 user-visible mainline closure 已整体进入 `partial`。
