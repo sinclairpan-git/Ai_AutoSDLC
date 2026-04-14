@@ -269,11 +269,10 @@ related_doc:
 - **交付流**：`S3`
 - **来源范围**：`032-040`
 - **当前状态**：`partial`
-- **派生状态**：已派生 `133-frontend-program-registry-governance-persistence-runtime-closure-baseline`；在 `133` focused verification 通过且下游 `T34` 收口前仍保持 `partial`
+- **派生状态**：已派生 `133-frontend-program-registry-governance-persistence-runtime-closure-baseline`；`133` focused verification 已通过，且在下游 `T34` 收口前继续保持 `partial`
 - **缺失 carrier**：
-  - guarded registry runtime
-  - broader/final governance orchestration runtime
-  - writeback persistence runtime
+  - 无（就本任务范围）；registry / governance / persistence 已由 `133` 收束
+  - 下游承接：final proof publication / archive 由 `T34` 收口
 - **建议文件面**：`src/ai_sdlc/core/program_*registry*`、`src/ai_sdlc/core/program_*governance*`、`src/ai_sdlc/core/program_*persistence*`、对应 tests
 - **依赖**：T32
 - **验收标准**：
