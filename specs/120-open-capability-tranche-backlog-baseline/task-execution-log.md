@@ -873,3 +873,53 @@
 #### 2.103 批次结论
 
 - `120/T24` 现在已经从抽象 carrier 推进到真实 runtime closure；Batch 2 的 contract foundation / evidence inputs 已整体进入 `partial`。
+
+### Batch 2026-04-14-032 | Close T31 runtime closure
+
+#### 2.104 批次范围
+
+- 覆盖范围：`tasks.md`
+- 覆盖目标：
+  - 将 `T31` 的现有 runtime truth 与 `131` 正式对齐
+  - 明确 `T31` 在下游 `T41` 收口前继续保持 `partial`
+
+#### 2.105 任务记录
+
+##### T120-DOC-38 | 回填 `T31` 实现结果
+
+- 改动范围：`tasks.md`
+- 改动内容：
+  - 明确 `131` focused verification 已通过，且 `T31` 在下游 `T41` 收口前继续保持 `partial`
+  - 将 `T31` 的缺失 carrier 收紧为已由 `131` 收束的 execute / remediation / materialization runtime closure，并把 program automation 下游边界保留给 `T41`
+  - 证据：沿用 `131` focused verification（无新增测试）
+- 新增/调整的测试：无
+- 是否符合任务目标：是
+
+#### 2.106 批次结论
+
+- `120/T31` 已形成首批 runtime closure，当前保持 `partial`；program automation mainline 继续由 `T41` 承接。
+
+### Batch 2026-04-14-033 | Close T32 runtime closure
+
+#### 2.107 批次范围
+
+- 覆盖范围：`tasks.md`
+- 覆盖目标：
+  - 将 `T32` 的现有 runtime truth 与 `132` 正式对齐
+  - 明确 `T32` 在下游 `T33` 收口前继续保持 `partial`
+
+#### 2.108 任务记录
+
+##### T120-DOC-39 | 回填 `T32` 实现结果
+
+- 改动范围：`tasks.md`
+- 改动内容：
+  - 明确 `132` focused verification 已通过，且 `T32` 在下游 `T33` 收口前继续保持 `partial`
+  - 将 `T32` 的缺失 carrier 收紧为已由 `132` 收束的 provider invocation / patch apply / cross-spec writeback runtime closure，并把 registry / governance / persistence 下游边界保留给 `T33`
+  - 证据：沿用 `132` focused verification（无新增测试）
+- 新增/调整的测试：无
+- 是否符合任务目标：是
+
+#### 2.109 批次结论
+
+- `120/T32` 已形成首批 runtime closure，当前保持 `partial`；registry / governance / persistence 继续由 `T33` 承接。

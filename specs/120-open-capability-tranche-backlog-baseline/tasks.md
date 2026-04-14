@@ -233,11 +233,9 @@ related_doc:
 - **交付流**：`S3`
 - **来源范围**：`019-024`
 - **当前状态**：`partial`
-- **派生状态**：已派生 `131-frontend-program-execute-remediation-materialization-runtime-closure-baseline`；在 `131` focused verification 通过且下游 `T41` 收口前仍保持 `partial`
+- **派生状态**：已派生 `131-frontend-program-execute-remediation-materialization-runtime-closure-baseline`；`131` focused verification 已通过，且在下游 `T41` 收口前继续保持 `partial`
 - **缺失 carrier**：
-  - program execute frontend gate 的 end-to-end runtime
-  - bounded remediation execute / writeback 的真实执行链
-  - materialization command surface 的 runtime consumer
+  - 无（就本任务范围）；program automation 下游边界继续由 `T41` 承接
 - **建议文件面**：`src/ai_sdlc/core/program_service.py`、`src/ai_sdlc/cli/program_cmd.py`、`src/ai_sdlc/core/frontend_*`、对应 tests
 - **依赖**：T22、T24
 - **验收标准**：
@@ -253,11 +251,9 @@ related_doc:
 - **交付流**：`S3`
 - **来源范围**：`025-031`
 - **当前状态**：`partial`
-- **派生状态**：已派生 `132-frontend-program-provider-patch-writeback-runtime-closure-baseline`；在 `132` focused verification 通过且下游 `T33` 收口前仍保持 `partial`
+- **派生状态**：已派生 `132-frontend-program-provider-patch-writeback-runtime-closure-baseline`；`132` focused verification 已通过，且在下游 `T33` 收口前继续保持 `partial`
 - **缺失 carrier**：
-  - provider invocation protocol/runtime
-  - patch handoff 到 patch apply 的真实 apply engine
-  - cross-spec writeback orchestration 的 runtime closure
+  - 无（就本任务范围）；registry / governance / persistence 继续由 `T33` 承接
 - **建议文件面**：`src/ai_sdlc/core/program_*provider*`、`src/ai_sdlc/core/program_*patch*`、`src/ai_sdlc/cli/program_cmd.py`、对应 tests
 - **依赖**：T31
 - **验收标准**：
