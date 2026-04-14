@@ -409,3 +409,27 @@
 #### 2.46 批次结论
 
 - `120/T34` 现在已经有正式 implementation carrier；final proof publication / archive 主线的真实实现缺口已被固定到 `134`。
+
+### Batch 2026-04-14-013 | Close T34 runtime closure
+
+#### 2.47 批次范围
+
+- 覆盖范围：`tasks.md`
+- 覆盖目标：
+  - 将 `T34` 从 `capability_open` 推进到 `partial`
+  - 回填 `134` 已完成 focused verification，且下游仍由 `T35` 承接
+
+#### 2.48 任务记录
+
+##### T120-DOC-19 | 回填 `T34` 实现结果
+
+- 改动范围：`tasks.md`
+- 改动内容：
+  - 将 `Task 3.4 Final Proof Publication And Archive Runtime` 的当前状态从 `capability_open` 更新为 `partial`
+  - 明确 `134` focused verification 已通过，且 `T34` 在下游 `T35` 收口前继续保持 `partial`
+- 新增/调整的测试：无
+- 是否符合任务目标：是
+
+#### 2.49 批次结论
+
+- `120/T34` 现在已经从 formal carrier 推进到真实 runtime closure；下一批明确下游仍是 `T35` cleanup。

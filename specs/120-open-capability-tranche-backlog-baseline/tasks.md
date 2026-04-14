@@ -310,8 +310,8 @@ related_doc:
 - **任务编号**：T34
 - **交付流**：`S4`
 - **来源范围**：`041-049`
-- **当前状态**：`capability_open`
-- **派生状态**：已派生 `134-frontend-program-final-proof-publication-archive-runtime-closure-baseline`；在 `134` focused verification 通过且下游 `T35` 收口前仍保持 `capability_open`
+- **当前状态**：`partial`
+- **派生状态**：已派生 `134-frontend-program-final-proof-publication-archive-runtime-closure-baseline`；`134` focused verification 已通过，且在下游 `T35` 收口前继续保持 `partial`
 - **缺失 carrier**：
   - final proof publication runtime
   - closure -> archive orchestration runtime

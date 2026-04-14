@@ -165,14 +165,29 @@ PROGRAM_FRONTEND_WRITEBACK_PERSISTENCE_STEP_DIR = (
 PROGRAM_FRONTEND_PERSISTED_WRITE_PROOF_ARTIFACT_REL_PATH = (
     ".ai-sdlc/memory/frontend-persisted-write-proof/latest.yaml"
 )
+PROGRAM_FRONTEND_PERSISTED_WRITE_PROOF_STEP_DIR = (
+    ".ai-sdlc/memory/frontend-persisted-write-proof/steps"
+)
 PROGRAM_FRONTEND_FINAL_PROOF_PUBLICATION_ARTIFACT_REL_PATH = (
     ".ai-sdlc/memory/frontend-final-proof-publication/latest.yaml"
+)
+PROGRAM_FRONTEND_FINAL_PROOF_PUBLICATION_STEP_DIR = (
+    ".ai-sdlc/memory/frontend-final-proof-publication/steps"
 )
 PROGRAM_FRONTEND_FINAL_PROOF_CLOSURE_ARTIFACT_REL_PATH = (
     ".ai-sdlc/memory/frontend-final-proof-closure/latest.yaml"
 )
+PROGRAM_FRONTEND_FINAL_PROOF_CLOSURE_STEP_DIR = (
+    ".ai-sdlc/memory/frontend-final-proof-closure/steps"
+)
 PROGRAM_FRONTEND_FINAL_PROOF_ARCHIVE_ARTIFACT_REL_PATH = (
     ".ai-sdlc/memory/frontend-final-proof-archive/latest.yaml"
+)
+PROGRAM_FRONTEND_FINAL_PROOF_ARCHIVE_STEP_DIR = (
+    ".ai-sdlc/memory/frontend-final-proof-archive/steps"
+)
+PROGRAM_FRONTEND_FINAL_PROOF_ARCHIVE_THREAD_ARCHIVE_STEP_DIR = (
+    ".ai-sdlc/memory/frontend-final-proof-archive-thread-archive/steps"
 )
 PROGRAM_FRONTEND_FINAL_PROOF_ARCHIVE_PROJECT_CLEANUP_ARTIFACT_REL_PATH = (
     ".ai-sdlc/memory/frontend-final-proof-archive-project-cleanup/latest.yaml"
@@ -5069,7 +5084,7 @@ class ProgramService:
         request: ProgramFrontendPersistedWriteProofRequest | None = None,
         confirmed: bool = False,
     ) -> ProgramFrontendPersistedWriteProofResult:
-        """Execute the persisted write proof baseline without proof artifact persistence."""
+        """Execute the persisted write proof baseline with bounded step-file materialization."""
         effective_request = request or self.build_frontend_persisted_write_proof_request(
             manifest
         )
@@ -5081,6 +5096,65 @@ class ProgramService:
                 proof_result="blocked",
                 written_paths=list(effective_request.written_paths),
                 remaining_blockers=list(effective_request.remaining_blockers),
+                warnings=list(effective_request.warnings),
+                source_linkage={
+                    **dict(effective_request.source_linkage),
+                    "proof_state": "blocked",
+                    "proof_result": "blocked",
+                },
+            )
+        if not confirmed:
+            return ProgramFrontendPersistedWriteProofResult(
+                passed=False,
+                confirmed=False,
+                proof_state="confirmation_required",
+                proof_result="blocked",
+                written_paths=list(effective_request.written_paths),
+                remaining_blockers=list(effective_request.remaining_blockers),
+                warnings=[
+                    *effective_request.warnings,
+                    "persisted write proof orchestration requires explicit confirmation",
+                ],
+                source_linkage={
+                    **dict(effective_request.source_linkage),
+                    "proof_state": "confirmation_required",
+                    "proof_result": "blocked",
+                },
+            )
+        if effective_request.persistence_state != "completed":
+            blocker = (
+                "persisted write proof requires completed writeback persistence artifact "
+                f"(persistence_state={effective_request.persistence_state or 'unknown'})"
+            )
+            return ProgramFrontendPersistedWriteProofResult(
+                passed=False,
+                confirmed=True,
+                proof_state="blocked",
+                proof_result="blocked",
+                proof_summaries=[blocker],
+                written_paths=[],
+                remaining_blockers=_unique_strings(
+                    [*effective_request.remaining_blockers, blocker]
+                ),
+                warnings=list(effective_request.warnings),
+                source_linkage={
+                    **dict(effective_request.source_linkage),
+                    "proof_state": "blocked",
+                    "proof_result": "blocked",
+                },
+            )
+        if effective_request.remaining_blockers:
+            blocker = "persisted write proof requires blocker-free writeback persistence artifact"
+            return ProgramFrontendPersistedWriteProofResult(
+                passed=False,
+                confirmed=True,
+                proof_state="blocked",
+                proof_result="blocked",
+                proof_summaries=[blocker],
+                written_paths=[],
+                remaining_blockers=_unique_strings(
+                    [*effective_request.remaining_blockers, blocker]
+                ),
                 warnings=list(effective_request.warnings),
                 source_linkage={
                     **dict(effective_request.source_linkage),
@@ -5103,40 +5177,84 @@ class ProgramService:
                     "proof_result": "skipped",
                 },
             )
-        if not confirmed:
-            return ProgramFrontendPersistedWriteProofResult(
-                passed=False,
-                confirmed=False,
-                proof_state="confirmation_required",
-                proof_result="blocked",
-                written_paths=list(effective_request.written_paths),
-                remaining_blockers=list(effective_request.remaining_blockers),
-                warnings=[
-                    *effective_request.warnings,
-                    "persisted write proof orchestration requires explicit confirmation",
-                ],
-                source_linkage={
-                    **dict(effective_request.source_linkage),
-                    "proof_state": "confirmation_required",
-                    "proof_result": "blocked",
-                },
+        written_paths: list[str] = []
+        remaining_blockers: list[str] = list(effective_request.remaining_blockers)
+        warnings = list(effective_request.warnings)
+        executable_steps = 0
+        for step in effective_request.steps:
+            target_path, target_blocker = self._resolve_frontend_stage_step_target(
+                stage_name="persisted write proof",
+                steps_dir=PROGRAM_FRONTEND_PERSISTED_WRITE_PROOF_STEP_DIR,
+                spec_id=step.spec_id,
             )
+            if target_blocker:
+                remaining_blockers.append(target_blocker)
+                continue
+            _, spec_blocker = self._resolve_frontend_stage_spec_dir(
+                manifest,
+                stage_name="persisted write proof",
+                spec_id=step.spec_id,
+                path_text=str(step.path).strip(),
+            )
+            if spec_blocker:
+                remaining_blockers.append(spec_blocker)
+                continue
+            assert target_path is not None
+            executable_steps += 1
+            target_path.parent.mkdir(parents=True, exist_ok=True)
+            target_path.write_text(
+                self._render_frontend_bounded_stage_step_content(
+                    title="Frontend Persisted Write Proof Step",
+                    source_label="Source artifact",
+                    source_path=effective_request.artifact_source_path,
+                    upstream_label="Writeback persistence state",
+                    upstream_value=effective_request.persistence_state,
+                    artifact_generated_at=effective_request.artifact_generated_at,
+                    stage_state_key="proof_state",
+                    result_key="proof_result",
+                    source_written_paths=list(effective_request.written_paths),
+                    step=step,
+                ),
+                encoding="utf-8",
+            )
+            written_paths.append(_relative_to_root_or_str(self.root, target_path))
+        if executable_steps == 0:
+            proof_state = "blocked"
+            proof_result = "blocked"
+            proof_summaries = [
+                "no executable persisted write proof targets available from canonical writeback persistence artifact"
+            ]
+        elif not remaining_blockers and len(written_paths) == executable_steps:
+            proof_state = "completed"
+            proof_result = "completed"
+            proof_summaries = [
+                f"materialized {len(written_paths)} persisted write proof step file(s) from canonical writeback persistence artifact"
+            ]
+        elif written_paths:
+            proof_state = "partial"
+            proof_result = "partial"
+            proof_summaries = [
+                f"materialized {len(written_paths)} of {executable_steps} persisted write proof step file(s) from canonical writeback persistence artifact"
+            ]
+        else:
+            proof_state = "failed"
+            proof_result = "failed"
+            proof_summaries = [
+                f"materialized 0 of {executable_steps} persisted write proof step file(s) from canonical writeback persistence artifact"
+            ]
         return ProgramFrontendPersistedWriteProofResult(
-            passed=False,
+            passed=proof_result == "completed",
             confirmed=True,
-            proof_state="deferred",
-            proof_result="deferred",
-            proof_summaries=[PROGRAM_FRONTEND_PERSISTED_WRITE_PROOF_DEFERRED_SUMMARY],
-            written_paths=[],
-            remaining_blockers=list(effective_request.remaining_blockers),
-            warnings=[
-                *effective_request.warnings,
-                "persisted write proof baseline does not persist proof artifacts yet",
-            ],
+            proof_state=proof_state,
+            proof_result=proof_result,
+            proof_summaries=proof_summaries,
+            written_paths=_unique_strings(written_paths),
+            remaining_blockers=_unique_strings(remaining_blockers),
+            warnings=warnings,
             source_linkage={
                 **dict(effective_request.source_linkage),
-                "proof_state": "deferred",
-                "proof_result": "deferred",
+                "proof_state": proof_state,
+                "proof_result": proof_result,
             },
         )
 
@@ -5294,7 +5412,7 @@ class ProgramService:
         request: ProgramFrontendFinalProofPublicationRequest | None = None,
         confirmed: bool = False,
     ) -> ProgramFrontendFinalProofPublicationResult:
-        """Execute the final proof publication baseline without publication artifact persistence."""
+        """Execute the final proof publication baseline with bounded step-file materialization."""
         effective_request = request or self.build_frontend_final_proof_publication_request(
             manifest
         )
@@ -5306,6 +5424,65 @@ class ProgramService:
                 publication_result="blocked",
                 written_paths=list(effective_request.written_paths),
                 remaining_blockers=list(effective_request.remaining_blockers),
+                warnings=list(effective_request.warnings),
+                source_linkage={
+                    **dict(effective_request.source_linkage),
+                    "publication_state": "blocked",
+                    "publication_result": "blocked",
+                },
+            )
+        if not confirmed:
+            return ProgramFrontendFinalProofPublicationResult(
+                passed=False,
+                confirmed=False,
+                publication_state="confirmation_required",
+                publication_result="blocked",
+                written_paths=list(effective_request.written_paths),
+                remaining_blockers=list(effective_request.remaining_blockers),
+                warnings=[
+                    *effective_request.warnings,
+                    "final proof publication orchestration requires explicit confirmation",
+                ],
+                source_linkage={
+                    **dict(effective_request.source_linkage),
+                    "publication_state": "confirmation_required",
+                    "publication_result": "blocked",
+                },
+            )
+        if effective_request.proof_state != "completed":
+            blocker = (
+                "final proof publication requires completed persisted write proof artifact "
+                f"(proof_state={effective_request.proof_state or 'unknown'})"
+            )
+            return ProgramFrontendFinalProofPublicationResult(
+                passed=False,
+                confirmed=True,
+                publication_state="blocked",
+                publication_result="blocked",
+                publication_summaries=[blocker],
+                written_paths=[],
+                remaining_blockers=_unique_strings(
+                    [*effective_request.remaining_blockers, blocker]
+                ),
+                warnings=list(effective_request.warnings),
+                source_linkage={
+                    **dict(effective_request.source_linkage),
+                    "publication_state": "blocked",
+                    "publication_result": "blocked",
+                },
+            )
+        if effective_request.remaining_blockers:
+            blocker = "final proof publication requires blocker-free persisted write proof artifact"
+            return ProgramFrontendFinalProofPublicationResult(
+                passed=False,
+                confirmed=True,
+                publication_state="blocked",
+                publication_result="blocked",
+                publication_summaries=[blocker],
+                written_paths=[],
+                remaining_blockers=_unique_strings(
+                    [*effective_request.remaining_blockers, blocker]
+                ),
                 warnings=list(effective_request.warnings),
                 source_linkage={
                     **dict(effective_request.source_linkage),
@@ -5328,42 +5505,84 @@ class ProgramService:
                     "publication_result": "skipped",
                 },
             )
-        if not confirmed:
-            return ProgramFrontendFinalProofPublicationResult(
-                passed=False,
-                confirmed=False,
-                publication_state="confirmation_required",
-                publication_result="blocked",
-                written_paths=list(effective_request.written_paths),
-                remaining_blockers=list(effective_request.remaining_blockers),
-                warnings=[
-                    *effective_request.warnings,
-                    "final proof publication orchestration requires explicit confirmation",
-                ],
-                source_linkage={
-                    **dict(effective_request.source_linkage),
-                    "publication_state": "confirmation_required",
-                    "publication_result": "blocked",
-                },
+        written_paths: list[str] = []
+        remaining_blockers: list[str] = list(effective_request.remaining_blockers)
+        warnings = list(effective_request.warnings)
+        executable_steps = 0
+        for step in effective_request.steps:
+            target_path, target_blocker = self._resolve_frontend_stage_step_target(
+                stage_name="final proof publication",
+                steps_dir=PROGRAM_FRONTEND_FINAL_PROOF_PUBLICATION_STEP_DIR,
+                spec_id=step.spec_id,
             )
+            if target_blocker:
+                remaining_blockers.append(target_blocker)
+                continue
+            _, spec_blocker = self._resolve_frontend_stage_spec_dir(
+                manifest,
+                stage_name="final proof publication",
+                spec_id=step.spec_id,
+                path_text=str(step.path).strip(),
+            )
+            if spec_blocker:
+                remaining_blockers.append(spec_blocker)
+                continue
+            assert target_path is not None
+            executable_steps += 1
+            target_path.parent.mkdir(parents=True, exist_ok=True)
+            target_path.write_text(
+                self._render_frontend_bounded_stage_step_content(
+                    title="Frontend Final Proof Publication Step",
+                    source_label="Source artifact",
+                    source_path=effective_request.artifact_source_path,
+                    upstream_label="Persisted write proof state",
+                    upstream_value=effective_request.proof_state,
+                    artifact_generated_at=effective_request.artifact_generated_at,
+                    stage_state_key="publication_state",
+                    result_key="publication_result",
+                    source_written_paths=list(effective_request.written_paths),
+                    step=step,
+                ),
+                encoding="utf-8",
+            )
+            written_paths.append(_relative_to_root_or_str(self.root, target_path))
+        if executable_steps == 0:
+            publication_state = "blocked"
+            publication_result = "blocked"
+            publication_summaries = [
+                "no executable final proof publication targets available from canonical persisted write proof artifact"
+            ]
+        elif not remaining_blockers and len(written_paths) == executable_steps:
+            publication_state = "completed"
+            publication_result = "completed"
+            publication_summaries = [
+                f"materialized {len(written_paths)} final proof publication step file(s) from canonical persisted write proof artifact"
+            ]
+        elif written_paths:
+            publication_state = "partial"
+            publication_result = "partial"
+            publication_summaries = [
+                f"materialized {len(written_paths)} of {executable_steps} final proof publication step file(s) from canonical persisted write proof artifact"
+            ]
+        else:
+            publication_state = "failed"
+            publication_result = "failed"
+            publication_summaries = [
+                f"materialized 0 of {executable_steps} final proof publication step file(s) from canonical persisted write proof artifact"
+            ]
         return ProgramFrontendFinalProofPublicationResult(
-            passed=False,
+            passed=publication_result == "completed",
             confirmed=True,
-            publication_state="deferred",
-            publication_result="deferred",
-            publication_summaries=[
-                PROGRAM_FRONTEND_FINAL_PROOF_PUBLICATION_DEFERRED_SUMMARY
-            ],
-            written_paths=[],
-            remaining_blockers=list(effective_request.remaining_blockers),
-            warnings=[
-                *effective_request.warnings,
-                "final proof publication baseline does not persist publication artifacts yet",
-            ],
+            publication_state=publication_state,
+            publication_result=publication_result,
+            publication_summaries=publication_summaries,
+            written_paths=_unique_strings(written_paths),
+            remaining_blockers=_unique_strings(remaining_blockers),
+            warnings=warnings,
             source_linkage={
                 **dict(effective_request.source_linkage),
-                "publication_state": "deferred",
-                "publication_result": "deferred",
+                "publication_state": publication_state,
+                "publication_result": publication_result,
             },
         )
 
@@ -5523,7 +5742,7 @@ class ProgramService:
         request: ProgramFrontendFinalProofClosureRequest | None = None,
         confirmed: bool = False,
     ) -> ProgramFrontendFinalProofClosureResult:
-        """Execute the final proof closure baseline without closure artifact persistence."""
+        """Execute the final proof closure baseline with bounded step-file materialization."""
         effective_request = request or self.build_frontend_final_proof_closure_request(
             manifest
         )
@@ -5535,6 +5754,65 @@ class ProgramService:
                 closure_result="blocked",
                 written_paths=list(effective_request.written_paths),
                 remaining_blockers=list(effective_request.remaining_blockers),
+                warnings=list(effective_request.warnings),
+                source_linkage={
+                    **dict(effective_request.source_linkage),
+                    "closure_state": "blocked",
+                    "closure_result": "blocked",
+                },
+            )
+        if not confirmed:
+            return ProgramFrontendFinalProofClosureResult(
+                passed=False,
+                confirmed=False,
+                closure_state="confirmation_required",
+                closure_result="blocked",
+                written_paths=list(effective_request.written_paths),
+                remaining_blockers=list(effective_request.remaining_blockers),
+                warnings=[
+                    *effective_request.warnings,
+                    "final proof closure orchestration requires explicit confirmation",
+                ],
+                source_linkage={
+                    **dict(effective_request.source_linkage),
+                    "closure_state": "confirmation_required",
+                    "closure_result": "blocked",
+                },
+            )
+        if effective_request.publication_state != "completed":
+            blocker = (
+                "final proof closure requires completed final proof publication artifact "
+                f"(publication_state={effective_request.publication_state or 'unknown'})"
+            )
+            return ProgramFrontendFinalProofClosureResult(
+                passed=False,
+                confirmed=True,
+                closure_state="blocked",
+                closure_result="blocked",
+                closure_summaries=[blocker],
+                written_paths=[],
+                remaining_blockers=_unique_strings(
+                    [*effective_request.remaining_blockers, blocker]
+                ),
+                warnings=list(effective_request.warnings),
+                source_linkage={
+                    **dict(effective_request.source_linkage),
+                    "closure_state": "blocked",
+                    "closure_result": "blocked",
+                },
+            )
+        if effective_request.remaining_blockers:
+            blocker = "final proof closure requires blocker-free final proof publication artifact"
+            return ProgramFrontendFinalProofClosureResult(
+                passed=False,
+                confirmed=True,
+                closure_state="blocked",
+                closure_result="blocked",
+                closure_summaries=[blocker],
+                written_paths=[],
+                remaining_blockers=_unique_strings(
+                    [*effective_request.remaining_blockers, blocker]
+                ),
                 warnings=list(effective_request.warnings),
                 source_linkage={
                     **dict(effective_request.source_linkage),
@@ -5557,40 +5835,84 @@ class ProgramService:
                     "closure_result": "skipped",
                 },
             )
-        if not confirmed:
-            return ProgramFrontendFinalProofClosureResult(
-                passed=False,
-                confirmed=False,
-                closure_state="confirmation_required",
-                closure_result="blocked",
-                written_paths=list(effective_request.written_paths),
-                remaining_blockers=list(effective_request.remaining_blockers),
-                warnings=[
-                    *effective_request.warnings,
-                    "final proof closure orchestration requires explicit confirmation",
-                ],
-                source_linkage={
-                    **dict(effective_request.source_linkage),
-                    "closure_state": "confirmation_required",
-                    "closure_result": "blocked",
-                },
+        written_paths: list[str] = []
+        remaining_blockers: list[str] = list(effective_request.remaining_blockers)
+        warnings = list(effective_request.warnings)
+        executable_steps = 0
+        for step in effective_request.steps:
+            target_path, target_blocker = self._resolve_frontend_stage_step_target(
+                stage_name="final proof closure",
+                steps_dir=PROGRAM_FRONTEND_FINAL_PROOF_CLOSURE_STEP_DIR,
+                spec_id=step.spec_id,
             )
+            if target_blocker:
+                remaining_blockers.append(target_blocker)
+                continue
+            _, spec_blocker = self._resolve_frontend_stage_spec_dir(
+                manifest,
+                stage_name="final proof closure",
+                spec_id=step.spec_id,
+                path_text=str(step.path).strip(),
+            )
+            if spec_blocker:
+                remaining_blockers.append(spec_blocker)
+                continue
+            assert target_path is not None
+            executable_steps += 1
+            target_path.parent.mkdir(parents=True, exist_ok=True)
+            target_path.write_text(
+                self._render_frontend_bounded_stage_step_content(
+                    title="Frontend Final Proof Closure Step",
+                    source_label="Source artifact",
+                    source_path=effective_request.artifact_source_path,
+                    upstream_label="Final proof publication state",
+                    upstream_value=effective_request.publication_state,
+                    artifact_generated_at=effective_request.artifact_generated_at,
+                    stage_state_key="closure_state",
+                    result_key="closure_result",
+                    source_written_paths=list(effective_request.written_paths),
+                    step=step,
+                ),
+                encoding="utf-8",
+            )
+            written_paths.append(_relative_to_root_or_str(self.root, target_path))
+        if executable_steps == 0:
+            closure_state = "blocked"
+            closure_result = "blocked"
+            closure_summaries = [
+                "no executable final proof closure targets available from canonical final proof publication artifact"
+            ]
+        elif not remaining_blockers and len(written_paths) == executable_steps:
+            closure_state = "completed"
+            closure_result = "completed"
+            closure_summaries = [
+                f"materialized {len(written_paths)} final proof closure step file(s) from canonical final proof publication artifact"
+            ]
+        elif written_paths:
+            closure_state = "partial"
+            closure_result = "partial"
+            closure_summaries = [
+                f"materialized {len(written_paths)} of {executable_steps} final proof closure step file(s) from canonical final proof publication artifact"
+            ]
+        else:
+            closure_state = "failed"
+            closure_result = "failed"
+            closure_summaries = [
+                f"materialized 0 of {executable_steps} final proof closure step file(s) from canonical final proof publication artifact"
+            ]
         return ProgramFrontendFinalProofClosureResult(
-            passed=False,
+            passed=closure_result == "completed",
             confirmed=True,
-            closure_state="deferred",
-            closure_result="deferred",
-            closure_summaries=[PROGRAM_FRONTEND_FINAL_PROOF_CLOSURE_DEFERRED_SUMMARY],
-            written_paths=[],
-            remaining_blockers=list(effective_request.remaining_blockers),
-            warnings=[
-                *effective_request.warnings,
-                "final proof closure baseline does not persist closure artifacts yet",
-            ],
+            closure_state=closure_state,
+            closure_result=closure_result,
+            closure_summaries=closure_summaries,
+            written_paths=_unique_strings(written_paths),
+            remaining_blockers=_unique_strings(remaining_blockers),
+            warnings=warnings,
             source_linkage={
                 **dict(effective_request.source_linkage),
-                "closure_state": "deferred",
-                "closure_result": "deferred",
+                "closure_state": closure_state,
+                "closure_result": closure_result,
             },
         )
 
@@ -5748,7 +6070,7 @@ class ProgramService:
         request: ProgramFrontendFinalProofArchiveRequest | None = None,
         confirmed: bool = False,
     ) -> ProgramFrontendFinalProofArchiveResult:
-        """Execute the final proof archive baseline."""
+        """Execute the final proof archive baseline with bounded step-file materialization."""
         effective_request = request or self.build_frontend_final_proof_archive_request(
             manifest
         )
@@ -5760,6 +6082,65 @@ class ProgramService:
                 archive_result="blocked",
                 written_paths=list(effective_request.written_paths),
                 remaining_blockers=list(effective_request.remaining_blockers),
+                warnings=list(effective_request.warnings),
+                source_linkage={
+                    **dict(effective_request.source_linkage),
+                    "archive_state": "blocked",
+                    "archive_result": "blocked",
+                },
+            )
+        if not confirmed:
+            return ProgramFrontendFinalProofArchiveResult(
+                passed=False,
+                confirmed=False,
+                archive_state="confirmation_required",
+                archive_result="blocked",
+                written_paths=list(effective_request.written_paths),
+                remaining_blockers=list(effective_request.remaining_blockers),
+                warnings=[
+                    *effective_request.warnings,
+                    "final proof archive orchestration requires explicit confirmation",
+                ],
+                source_linkage={
+                    **dict(effective_request.source_linkage),
+                    "archive_state": "confirmation_required",
+                    "archive_result": "blocked",
+                },
+            )
+        if effective_request.closure_state != "completed":
+            blocker = (
+                "final proof archive requires completed final proof closure artifact "
+                f"(closure_state={effective_request.closure_state or 'unknown'})"
+            )
+            return ProgramFrontendFinalProofArchiveResult(
+                passed=False,
+                confirmed=True,
+                archive_state="blocked",
+                archive_result="blocked",
+                archive_summaries=[blocker],
+                written_paths=[],
+                remaining_blockers=_unique_strings(
+                    [*effective_request.remaining_blockers, blocker]
+                ),
+                warnings=list(effective_request.warnings),
+                source_linkage={
+                    **dict(effective_request.source_linkage),
+                    "archive_state": "blocked",
+                    "archive_result": "blocked",
+                },
+            )
+        if effective_request.remaining_blockers:
+            blocker = "final proof archive requires blocker-free final proof closure artifact"
+            return ProgramFrontendFinalProofArchiveResult(
+                passed=False,
+                confirmed=True,
+                archive_state="blocked",
+                archive_result="blocked",
+                archive_summaries=[blocker],
+                written_paths=[],
+                remaining_blockers=_unique_strings(
+                    [*effective_request.remaining_blockers, blocker]
+                ),
                 warnings=list(effective_request.warnings),
                 source_linkage={
                     **dict(effective_request.source_linkage),
@@ -5782,40 +6163,84 @@ class ProgramService:
                     "archive_result": "skipped",
                 },
             )
-        if not confirmed:
-            return ProgramFrontendFinalProofArchiveResult(
-                passed=False,
-                confirmed=False,
-                archive_state="confirmation_required",
-                archive_result="blocked",
-                written_paths=list(effective_request.written_paths),
-                remaining_blockers=list(effective_request.remaining_blockers),
-                warnings=[
-                    *effective_request.warnings,
-                    "final proof archive orchestration requires explicit confirmation",
-                ],
-                source_linkage={
-                    **dict(effective_request.source_linkage),
-                    "archive_state": "confirmation_required",
-                    "archive_result": "blocked",
-                },
+        written_paths: list[str] = []
+        remaining_blockers: list[str] = list(effective_request.remaining_blockers)
+        warnings = list(effective_request.warnings)
+        executable_steps = 0
+        for step in effective_request.steps:
+            target_path, target_blocker = self._resolve_frontend_stage_step_target(
+                stage_name="final proof archive",
+                steps_dir=PROGRAM_FRONTEND_FINAL_PROOF_ARCHIVE_STEP_DIR,
+                spec_id=step.spec_id,
             )
+            if target_blocker:
+                remaining_blockers.append(target_blocker)
+                continue
+            _, spec_blocker = self._resolve_frontend_stage_spec_dir(
+                manifest,
+                stage_name="final proof archive",
+                spec_id=step.spec_id,
+                path_text=str(step.path).strip(),
+            )
+            if spec_blocker:
+                remaining_blockers.append(spec_blocker)
+                continue
+            assert target_path is not None
+            executable_steps += 1
+            target_path.parent.mkdir(parents=True, exist_ok=True)
+            target_path.write_text(
+                self._render_frontend_bounded_stage_step_content(
+                    title="Frontend Final Proof Archive Step",
+                    source_label="Source artifact",
+                    source_path=effective_request.artifact_source_path,
+                    upstream_label="Final proof closure state",
+                    upstream_value=effective_request.closure_state,
+                    artifact_generated_at=effective_request.artifact_generated_at,
+                    stage_state_key="archive_state",
+                    result_key="archive_result",
+                    source_written_paths=list(effective_request.written_paths),
+                    step=step,
+                ),
+                encoding="utf-8",
+            )
+            written_paths.append(_relative_to_root_or_str(self.root, target_path))
+        if executable_steps == 0:
+            archive_state = "blocked"
+            archive_result = "blocked"
+            archive_summaries = [
+                "no executable final proof archive targets available from canonical final proof closure artifact"
+            ]
+        elif not remaining_blockers and len(written_paths) == executable_steps:
+            archive_state = "completed"
+            archive_result = "completed"
+            archive_summaries = [
+                f"materialized {len(written_paths)} final proof archive step file(s) from canonical final proof closure artifact"
+            ]
+        elif written_paths:
+            archive_state = "partial"
+            archive_result = "partial"
+            archive_summaries = [
+                f"materialized {len(written_paths)} of {executable_steps} final proof archive step file(s) from canonical final proof closure artifact"
+            ]
+        else:
+            archive_state = "failed"
+            archive_result = "failed"
+            archive_summaries = [
+                f"materialized 0 of {executable_steps} final proof archive step file(s) from canonical final proof closure artifact"
+            ]
         return ProgramFrontendFinalProofArchiveResult(
-            passed=False,
+            passed=archive_result == "completed",
             confirmed=True,
-            archive_state="deferred",
-            archive_result="deferred",
-            archive_summaries=[PROGRAM_FRONTEND_FINAL_PROOF_ARCHIVE_DEFERRED_SUMMARY],
-            written_paths=[],
-            remaining_blockers=list(effective_request.remaining_blockers),
-            warnings=[
-                *effective_request.warnings,
-                "final proof archive baseline defers thread archive and cleanup actions",
-            ],
+            archive_state=archive_state,
+            archive_result=archive_result,
+            archive_summaries=archive_summaries,
+            written_paths=_unique_strings(written_paths),
+            remaining_blockers=_unique_strings(remaining_blockers),
+            warnings=warnings,
             source_linkage={
                 **dict(effective_request.source_linkage),
-                "archive_state": "deferred",
-                "archive_result": "deferred",
+                "archive_state": archive_state,
+                "archive_result": archive_result,
             },
         )
 
@@ -5972,8 +6397,9 @@ class ProgramService:
         *,
         request: ProgramFrontendFinalProofArchiveThreadArchiveRequest | None = None,
         confirmed: bool = False,
+        materialize_steps: bool = True,
     ) -> ProgramFrontendFinalProofArchiveThreadArchiveResult:
-        """Execute the bounded thread archive baseline without project cleanup."""
+        """Execute or evaluate the bounded thread archive baseline."""
         effective_request = request or (
             self.build_frontend_final_proof_archive_thread_archive_request(manifest)
         )
@@ -5985,6 +6411,67 @@ class ProgramService:
                 thread_archive_result="blocked",
                 written_paths=list(effective_request.written_paths),
                 remaining_blockers=list(effective_request.remaining_blockers),
+                warnings=list(effective_request.warnings),
+                source_linkage={
+                    **dict(effective_request.source_linkage),
+                    "thread_archive_state": "blocked",
+                    "thread_archive_result": "blocked",
+                },
+            )
+        if not confirmed:
+            return ProgramFrontendFinalProofArchiveThreadArchiveResult(
+                passed=False,
+                confirmed=False,
+                thread_archive_state="confirmation_required",
+                thread_archive_result="blocked",
+                written_paths=list(effective_request.written_paths),
+                remaining_blockers=list(effective_request.remaining_blockers),
+                warnings=[
+                    *effective_request.warnings,
+                    "final proof archive thread archive requires explicit confirmation",
+                ],
+                source_linkage={
+                    **dict(effective_request.source_linkage),
+                    "thread_archive_state": "confirmation_required",
+                    "thread_archive_result": "blocked",
+                },
+            )
+        if effective_request.archive_state != "completed":
+            blocker = (
+                "final proof archive thread archive requires completed final proof archive artifact "
+                f"(archive_state={effective_request.archive_state or 'unknown'})"
+            )
+            return ProgramFrontendFinalProofArchiveThreadArchiveResult(
+                passed=False,
+                confirmed=True,
+                thread_archive_state="blocked",
+                thread_archive_result="blocked",
+                thread_archive_summaries=[blocker],
+                written_paths=[],
+                remaining_blockers=_unique_strings(
+                    [*effective_request.remaining_blockers, blocker]
+                ),
+                warnings=list(effective_request.warnings),
+                source_linkage={
+                    **dict(effective_request.source_linkage),
+                    "thread_archive_state": "blocked",
+                    "thread_archive_result": "blocked",
+                },
+            )
+        if effective_request.remaining_blockers:
+            blocker = (
+                "final proof archive thread archive requires blocker-free final proof archive artifact"
+            )
+            return ProgramFrontendFinalProofArchiveThreadArchiveResult(
+                passed=False,
+                confirmed=True,
+                thread_archive_state="blocked",
+                thread_archive_result="blocked",
+                thread_archive_summaries=[blocker],
+                written_paths=[],
+                remaining_blockers=_unique_strings(
+                    [*effective_request.remaining_blockers, blocker]
+                ),
                 warnings=list(effective_request.warnings),
                 source_linkage={
                     **dict(effective_request.source_linkage),
@@ -6007,45 +6494,99 @@ class ProgramService:
                     "thread_archive_result": "skipped",
                 },
             )
-        if not confirmed:
-            return ProgramFrontendFinalProofArchiveThreadArchiveResult(
-                passed=False,
-                confirmed=False,
-                thread_archive_state="confirmation_required",
-                thread_archive_result="blocked",
-                written_paths=list(effective_request.written_paths),
-                remaining_blockers=list(effective_request.remaining_blockers),
-                warnings=[
-                    *effective_request.warnings,
-                    "final proof archive thread archive requires explicit confirmation",
-                ],
-                source_linkage={
-                    **dict(effective_request.source_linkage),
-                    "thread_archive_state": "confirmation_required",
-                    "thread_archive_result": "blocked",
-                },
+        written_paths: list[str] = []
+        remaining_blockers: list[str] = list(effective_request.remaining_blockers)
+        warnings = list(effective_request.warnings)
+        executable_steps = 0
+        for step in effective_request.steps:
+            target_path, target_blocker = self._resolve_frontend_stage_step_target(
+                stage_name="final proof archive thread archive",
+                steps_dir=PROGRAM_FRONTEND_FINAL_PROOF_ARCHIVE_THREAD_ARCHIVE_STEP_DIR,
+                spec_id=step.spec_id,
             )
+            if target_blocker:
+                remaining_blockers.append(target_blocker)
+                continue
+            _, spec_blocker = self._resolve_frontend_stage_spec_dir(
+                manifest,
+                stage_name="final proof archive thread archive",
+                spec_id=step.spec_id,
+                path_text=str(step.path).strip(),
+            )
+            if spec_blocker:
+                remaining_blockers.append(spec_blocker)
+                continue
+            assert target_path is not None
+            executable_steps += 1
+            if materialize_steps:
+                target_path.parent.mkdir(parents=True, exist_ok=True)
+                target_path.write_text(
+                    self._render_frontend_bounded_stage_step_content(
+                        title="Frontend Final Proof Archive Thread Archive Step",
+                        source_label="Source artifact",
+                        source_path=effective_request.artifact_source_path,
+                        upstream_label="Final proof archive state",
+                        upstream_value=effective_request.archive_state,
+                        artifact_generated_at=effective_request.artifact_generated_at,
+                        stage_state_key="thread_archive_state",
+                        result_key="thread_archive_result",
+                        source_written_paths=list(effective_request.written_paths),
+                        step=step,
+                    ),
+                    encoding="utf-8",
+                )
+                written_paths.append(_relative_to_root_or_str(self.root, target_path))
+        if executable_steps == 0:
+            thread_archive_state = "blocked"
+            thread_archive_result = "blocked"
+            thread_archive_summaries = [
+                "no executable final proof archive thread archive targets available from canonical final proof archive artifact"
+            ]
+        elif not remaining_blockers and (
+            not materialize_steps or len(written_paths) == executable_steps
+        ):
+            thread_archive_state = "completed"
+            thread_archive_result = "completed"
+            if materialize_steps:
+                thread_archive_summaries = [
+                    f"materialized {len(written_paths)} final proof archive thread archive step file(s) from canonical final proof archive artifact"
+                ]
+            else:
+                thread_archive_summaries = [
+                    f"validated {executable_steps} final proof archive thread archive step target(s) from canonical final proof archive artifact"
+                ]
+        elif materialize_steps and written_paths:
+            thread_archive_state = "partial"
+            thread_archive_result = "partial"
+            thread_archive_summaries = [
+                f"materialized {len(written_paths)} of {executable_steps} final proof archive thread archive step file(s) from canonical final proof archive artifact"
+            ]
+        else:
+            if materialize_steps:
+                thread_archive_state = "failed"
+                thread_archive_result = "failed"
+                thread_archive_summaries = [
+                    f"materialized 0 of {executable_steps} final proof archive thread archive step file(s) from canonical final proof archive artifact"
+                ]
+            else:
+                thread_archive_state = "blocked"
+                thread_archive_result = "blocked"
+                thread_archive_summaries = [
+                    f"validated {executable_steps} final proof archive thread archive step target(s) but found blocker(s) in canonical final proof archive artifact"
+                ]
         return ProgramFrontendFinalProofArchiveThreadArchiveResult(
-            passed=False,
+            passed=thread_archive_result == "completed",
             confirmed=True,
-            thread_archive_state="deferred",
-            thread_archive_result="deferred",
-            thread_archive_summaries=[
-                PROGRAM_FRONTEND_FINAL_PROOF_ARCHIVE_THREAD_ARCHIVE_DEFERRED_SUMMARY
-            ],
-            written_paths=[],
-            remaining_blockers=list(effective_request.remaining_blockers),
-            warnings=[
-                *effective_request.warnings,
-                (
-                    "final proof archive thread archive baseline does not "
-                    "execute project cleanup actions yet"
-                ),
-            ],
+            thread_archive_state=thread_archive_state,
+            thread_archive_result=thread_archive_result,
+            thread_archive_summaries=thread_archive_summaries,
+            written_paths=_unique_strings(written_paths),
+            remaining_blockers=_unique_strings(remaining_blockers),
+            warnings=warnings,
             source_linkage={
                 **dict(effective_request.source_linkage),
-                "thread_archive_state": "deferred",
-                "thread_archive_result": "deferred",
+                "thread_archive_state": thread_archive_state,
+                "thread_archive_result": thread_archive_result,
             },
         )
 
@@ -6070,6 +6611,7 @@ class ProgramService:
             manifest,
             request=thread_archive_request,
             confirmed=True,
+            materialize_steps=False,
         )
         (
             cleanup_targets_state,

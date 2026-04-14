@@ -2,7 +2,7 @@
 
 **功能编号**：`134-frontend-program-final-proof-publication-archive-runtime-closure-baseline`
 **创建日期**：2026-04-14
-**状态**：formal baseline 已冻结；runtime closure 待 implementation batch
+**状态**：formal baseline 已冻结；runtime closure 已完成并通过 focused verification
 **输入**：[`../041-frontend-program-persisted-write-proof-orchestration-baseline/spec.md`](../041-frontend-program-persisted-write-proof-orchestration-baseline/spec.md)、[`../042-frontend-program-persisted-write-proof-artifact-baseline/spec.md`](../042-frontend-program-persisted-write-proof-artifact-baseline/spec.md)、[`../043-frontend-program-final-proof-publication-orchestration-baseline/spec.md`](../043-frontend-program-final-proof-publication-orchestration-baseline/spec.md)、[`../044-frontend-program-final-proof-publication-artifact-baseline/spec.md`](../044-frontend-program-final-proof-publication-artifact-baseline/spec.md)、[`../045-frontend-program-final-proof-closure-orchestration-baseline/spec.md`](../045-frontend-program-final-proof-closure-orchestration-baseline/spec.md)、[`../046-frontend-program-final-proof-closure-artifact-baseline/spec.md`](../046-frontend-program-final-proof-closure-artifact-baseline/spec.md)、[`../047-frontend-program-final-proof-archive-orchestration-baseline/spec.md`](../047-frontend-program-final-proof-archive-orchestration-baseline/spec.md)、[`../048-frontend-program-final-proof-archive-artifact-baseline/spec.md`](../048-frontend-program-final-proof-archive-artifact-baseline/spec.md)、[`../049-frontend-program-final-proof-archive-thread-archive-baseline/spec.md`](../049-frontend-program-final-proof-archive-thread-archive-baseline/spec.md)、[`../../src/ai_sdlc/core/program_service.py`](../../src/ai_sdlc/core/program_service.py)、[`../../src/ai_sdlc/cli/program_cmd.py`](../../src/ai_sdlc/cli/program_cmd.py)、[`../../tests/unit/test_program_service.py`](../../tests/unit/test_program_service.py)、[`../../tests/integration/test_cli_program.py`](../../tests/integration/test_cli_program.py)
 
 > 口径：`134` 是 `120/T34` 的 implementation carrier。它承接 `041-049` 已冻结的 persisted write proof、final proof publication、final proof closure、final proof archive 与 thread archive formal truth，目的不是发明新的 cleanup 语义，而是把当前仍停留在 `deferred` 的 final proof / archive 主线收束成下一批明确可执行的 runtime closure slice，并保持与 `T35` cleanup 主线分界清楚。
@@ -60,6 +60,13 @@
 - **SC-134-001**：reviewer 可以从 `134` 直接读出 `041-049` 的真实 gap 在 execute/orchestration runtime，而不是 formal contract
 - **SC-134-002**：`120/T34` 不再停留在抽象 implementation carrier 占位
 - **SC-134-003**：后续实现不会把 `T34` 与 `T35` cleanup 边界混淆
+
+## Runtime Closure Completion（2026-04-14）
+
+- `execute_frontend_persisted_write_proof()`、`execute_frontend_final_proof_publication()`、`execute_frontend_final_proof_closure()`、`execute_frontend_final_proof_archive()` 与 `execute_frontend_final_proof_archive_thread_archive()` 已按 `041-049` contract 收束为显式确认、upstream `completed`、blocker-free 三重 fail-closed gate。
+- 上述 execute surfaces 现在只在显式执行路径下 materialize bounded step files，分别落到 persisted write proof、final proof publication、final proof closure、final proof archive 与 thread archive 的 canonical `steps/` 目录。
+- `T34` 与 `T35` 的边界已固定：cleanup request / dry-run 只评估 thread archive truth，不再隐式 materialize thread archive step files；任何 thread archive side effect 仍要求显式走 `final-proof-archive-thread-archive --execute --yes`。
+- focused verification 已覆盖 blocker-carrying upstream artifact、`required=False` 手工绕过、显式 `steps=[]` 空 artifact 与 cleanup builder side-effect 回归面，确保 `041-049` 的 runtime truth 不再停留在 `deferred` 占位。
 
 ---
 related_doc:

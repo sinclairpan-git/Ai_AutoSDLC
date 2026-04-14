@@ -4787,7 +4787,7 @@ def test_build_frontend_persisted_write_proof_request_requires_explicit_confirma
     assert request.steps[0].source_linkage["proof_state"] == "not_started"
 
 
-def test_execute_frontend_persisted_write_proof_returns_deferred_result_when_confirmed(
+def test_execute_frontend_persisted_write_proof_blocks_until_writeback_persistence_is_completed(
     tmp_path: Path,
 ) -> None:
     for p in ("specs/001-auth", "specs/002-course", "specs/003-enroll"):
@@ -4804,14 +4804,140 @@ def test_execute_frontend_persisted_write_proof_returns_deferred_result_when_con
 
     assert result.passed is False
     assert result.confirmed is True
-    assert result.proof_state == "deferred"
-    assert result.proof_result == "deferred"
+    assert result.proof_state == "blocked"
+    assert result.proof_result == "blocked"
     assert result.proof_summaries == [
-        "no persisted write proof actions executed in persisted write proof baseline"
+        "persisted write proof requires completed writeback persistence artifact (persistence_state=deferred)"
     ]
     assert result.written_paths == []
-    assert result.remaining_blockers == ["spec 001-auth remediation still required"]
-    assert result.source_linkage["proof_state"] == "deferred"
+    assert result.remaining_blockers == [
+        "spec 001-auth remediation still required",
+        "persisted write proof requires completed writeback persistence artifact (persistence_state=deferred)",
+    ]
+    assert result.source_linkage["proof_state"] == "blocked"
+
+
+def test_execute_frontend_persisted_write_proof_blocks_completed_artifact_with_blockers(
+    tmp_path: Path,
+) -> None:
+    for p in ("specs/001-auth", "specs/002-course", "specs/003-enroll"):
+        (tmp_path / p).mkdir(parents=True)
+    _write_frontend_writeback_persistence_artifact(
+        tmp_path,
+        persistence_result="completed",
+        persistence_state="completed",
+        remaining_blockers=["spec 001-auth remediation still required"],
+    )
+
+    svc = ProgramService(tmp_path)
+    result = svc.execute_frontend_persisted_write_proof(_manifest(), confirmed=True)
+
+    assert result.passed is False
+    assert result.proof_state == "blocked"
+    assert result.proof_result == "blocked"
+    assert result.written_paths == []
+    assert result.remaining_blockers == [
+        "spec 001-auth remediation still required",
+        "persisted write proof requires blocker-free writeback persistence artifact",
+    ]
+
+
+def test_execute_frontend_persisted_write_proof_blocks_manual_skip_request_with_blockers(
+    tmp_path: Path,
+) -> None:
+    for p in ("specs/001-auth", "specs/002-course", "specs/003-enroll"):
+        (tmp_path / p).mkdir(parents=True)
+    _write_frontend_writeback_persistence_artifact(
+        tmp_path,
+        persistence_result="completed",
+        persistence_state="completed",
+        remaining_blockers=["spec 001-auth remediation still required"],
+    )
+
+    svc = ProgramService(tmp_path)
+    request = replace(
+        svc.build_frontend_persisted_write_proof_request(_manifest()),
+        required=False,
+    )
+    result = svc.execute_frontend_persisted_write_proof(
+        _manifest(),
+        request=request,
+        confirmed=True,
+    )
+
+    assert result.passed is False
+    assert result.proof_state == "blocked"
+    assert result.proof_result == "blocked"
+    assert result.written_paths == []
+    assert result.remaining_blockers == [
+        "spec 001-auth remediation still required",
+        "persisted write proof requires blocker-free writeback persistence artifact",
+    ]
+
+
+def test_execute_frontend_persisted_write_proof_blocks_empty_non_completed_artifact(
+    tmp_path: Path,
+) -> None:
+    for p in ("specs/001-auth", "specs/002-course", "specs/003-enroll"):
+        (tmp_path / p).mkdir(parents=True)
+    _write_frontend_writeback_persistence_artifact(
+        tmp_path,
+        persistence_result="deferred",
+        persistence_state="deferred",
+        remaining_blockers=[],
+        steps=[],
+    )
+
+    svc = ProgramService(tmp_path)
+    request = svc.build_frontend_persisted_write_proof_request(_manifest())
+    result = svc.execute_frontend_persisted_write_proof(
+        _manifest(),
+        request=request,
+        confirmed=True,
+    )
+
+    assert request.required is False
+    assert request.steps == []
+    assert result.proof_state == "blocked"
+    assert result.proof_result == "blocked"
+    assert result.written_paths == []
+
+
+def test_execute_frontend_persisted_write_proof_writes_step_files_when_confirmed(
+    tmp_path: Path,
+) -> None:
+    for p in ("specs/001-auth", "specs/002-course", "specs/003-enroll"):
+        (tmp_path / p).mkdir(parents=True)
+    _write_frontend_writeback_persistence_artifact(
+        tmp_path,
+        persistence_result="completed",
+        persistence_state="completed",
+        remaining_blockers=[],
+    )
+
+    svc = ProgramService(tmp_path)
+    result = svc.execute_frontend_persisted_write_proof(_manifest(), confirmed=True)
+
+    assert result.passed is True
+    assert result.confirmed is True
+    assert result.proof_state == "completed"
+    assert result.proof_result == "completed"
+    assert result.proof_summaries == [
+        "materialized 1 persisted write proof step file(s) from canonical writeback persistence artifact"
+    ]
+    assert result.written_paths == [
+        ".ai-sdlc/memory/frontend-persisted-write-proof/steps/001-auth.md"
+    ]
+    assert (
+        tmp_path
+        / ".ai-sdlc"
+        / "memory"
+        / "frontend-persisted-write-proof"
+        / "steps"
+        / "001-auth.md"
+    ).is_file()
+    assert result.remaining_blockers == []
+    assert result.source_linkage["proof_state"] == "completed"
 
 
 def test_execute_frontend_persisted_write_proof_does_not_write_artifact_by_default(
@@ -4821,15 +4947,15 @@ def test_execute_frontend_persisted_write_proof_does_not_write_artifact_by_defau
         (tmp_path / p).mkdir(parents=True)
     _write_frontend_writeback_persistence_artifact(
         tmp_path,
-        persistence_result="deferred",
-        persistence_state="deferred",
-        remaining_blockers=["spec 001-auth remediation still required"],
+        persistence_result="completed",
+        persistence_state="completed",
+        remaining_blockers=[],
     )
 
     svc = ProgramService(tmp_path)
     result = svc.execute_frontend_persisted_write_proof(_manifest(), confirmed=True)
 
-    assert result.proof_state == "deferred"
+    assert result.proof_state == "completed"
     assert not (
         tmp_path
         / ".ai-sdlc"
@@ -4846,9 +4972,9 @@ def test_write_frontend_persisted_write_proof_artifact_emits_canonical_yaml(
         (tmp_path / p).mkdir(parents=True)
     _write_frontend_writeback_persistence_artifact(
         tmp_path,
-        persistence_result="deferred",
-        persistence_state="deferred",
-        remaining_blockers=["spec 001-auth remediation still required"],
+        persistence_result="completed",
+        persistence_state="completed",
+        remaining_blockers=[],
     )
 
     svc = ProgramService(tmp_path)
@@ -4878,14 +5004,16 @@ def test_write_frontend_persisted_write_proof_artifact_emits_canonical_yaml(
         payload["artifact_source_path"]
         == ".ai-sdlc/memory/frontend-writeback-persistence/latest.yaml"
     )
-    assert payload["proof_state"] == "deferred"
-    assert payload["proof_result"] == "deferred"
+    assert payload["proof_state"] == "completed"
+    assert payload["proof_result"] == "completed"
     assert payload["confirmed"] is True
     assert payload["proof_summaries"] == [
-        "no persisted write proof actions executed in persisted write proof baseline"
+        "materialized 1 persisted write proof step file(s) from canonical writeback persistence artifact"
     ]
-    assert payload["written_paths"] == []
-    assert payload["remaining_blockers"] == ["spec 001-auth remediation still required"]
+    assert payload["written_paths"] == [
+        ".ai-sdlc/memory/frontend-persisted-write-proof/steps/001-auth.md"
+    ]
+    assert payload["remaining_blockers"] == []
     assert payload["steps"][0]["spec_id"] == "001-auth"
     assert (
         payload["source_linkage"]["persisted_write_proof_artifact_path"]
@@ -5283,7 +5411,7 @@ def test_build_frontend_final_proof_publication_request_requires_explicit_confir
     assert request.steps[0].source_linkage["publication_state"] == "not_started"
 
 
-def test_execute_frontend_final_proof_publication_returns_deferred_result_when_confirmed(
+def test_execute_frontend_final_proof_publication_blocks_until_persisted_write_proof_is_completed(
     tmp_path: Path,
 ) -> None:
     for p in ("specs/001-auth", "specs/002-course", "specs/003-enroll"):
@@ -5300,14 +5428,140 @@ def test_execute_frontend_final_proof_publication_returns_deferred_result_when_c
 
     assert result.passed is False
     assert result.confirmed is True
-    assert result.publication_state == "deferred"
-    assert result.publication_result == "deferred"
+    assert result.publication_state == "blocked"
+    assert result.publication_result == "blocked"
     assert result.publication_summaries == [
-        "no final proof publication actions executed in final proof publication baseline"
+        "final proof publication requires completed persisted write proof artifact (proof_state=deferred)"
     ]
     assert result.written_paths == []
-    assert result.remaining_blockers == ["spec 001-auth remediation still required"]
-    assert result.source_linkage["publication_state"] == "deferred"
+    assert result.remaining_blockers == [
+        "spec 001-auth remediation still required",
+        "final proof publication requires completed persisted write proof artifact (proof_state=deferred)",
+    ]
+    assert result.source_linkage["publication_state"] == "blocked"
+
+
+def test_execute_frontend_final_proof_publication_blocks_completed_artifact_with_blockers(
+    tmp_path: Path,
+) -> None:
+    for p in ("specs/001-auth", "specs/002-course", "specs/003-enroll"):
+        (tmp_path / p).mkdir(parents=True)
+    _write_frontend_persisted_write_proof_artifact(
+        tmp_path,
+        proof_result="completed",
+        proof_state="completed",
+        remaining_blockers=["spec 001-auth remediation still required"],
+    )
+
+    svc = ProgramService(tmp_path)
+    result = svc.execute_frontend_final_proof_publication(_manifest(), confirmed=True)
+
+    assert result.passed is False
+    assert result.publication_state == "blocked"
+    assert result.publication_result == "blocked"
+    assert result.written_paths == []
+    assert result.remaining_blockers == [
+        "spec 001-auth remediation still required",
+        "final proof publication requires blocker-free persisted write proof artifact",
+    ]
+
+
+def test_execute_frontend_final_proof_publication_blocks_manual_skip_request_with_blockers(
+    tmp_path: Path,
+) -> None:
+    for p in ("specs/001-auth", "specs/002-course", "specs/003-enroll"):
+        (tmp_path / p).mkdir(parents=True)
+    _write_frontend_persisted_write_proof_artifact(
+        tmp_path,
+        proof_result="completed",
+        proof_state="completed",
+        remaining_blockers=["spec 001-auth remediation still required"],
+    )
+
+    svc = ProgramService(tmp_path)
+    request = replace(
+        svc.build_frontend_final_proof_publication_request(_manifest()),
+        required=False,
+    )
+    result = svc.execute_frontend_final_proof_publication(
+        _manifest(),
+        request=request,
+        confirmed=True,
+    )
+
+    assert result.passed is False
+    assert result.publication_state == "blocked"
+    assert result.publication_result == "blocked"
+    assert result.written_paths == []
+    assert result.remaining_blockers == [
+        "spec 001-auth remediation still required",
+        "final proof publication requires blocker-free persisted write proof artifact",
+    ]
+
+
+def test_execute_frontend_final_proof_publication_blocks_empty_non_completed_artifact(
+    tmp_path: Path,
+) -> None:
+    for p in ("specs/001-auth", "specs/002-course", "specs/003-enroll"):
+        (tmp_path / p).mkdir(parents=True)
+    _write_frontend_persisted_write_proof_artifact(
+        tmp_path,
+        proof_result="deferred",
+        proof_state="deferred",
+        remaining_blockers=[],
+        steps=[],
+    )
+
+    svc = ProgramService(tmp_path)
+    request = svc.build_frontend_final_proof_publication_request(_manifest())
+    result = svc.execute_frontend_final_proof_publication(
+        _manifest(),
+        request=request,
+        confirmed=True,
+    )
+
+    assert request.required is False
+    assert request.steps == []
+    assert result.publication_state == "blocked"
+    assert result.publication_result == "blocked"
+    assert result.written_paths == []
+
+
+def test_execute_frontend_final_proof_publication_writes_step_files_when_confirmed(
+    tmp_path: Path,
+) -> None:
+    for p in ("specs/001-auth", "specs/002-course", "specs/003-enroll"):
+        (tmp_path / p).mkdir(parents=True)
+    _write_frontend_persisted_write_proof_artifact(
+        tmp_path,
+        proof_result="completed",
+        proof_state="completed",
+        remaining_blockers=[],
+    )
+
+    svc = ProgramService(tmp_path)
+    result = svc.execute_frontend_final_proof_publication(_manifest(), confirmed=True)
+
+    assert result.passed is True
+    assert result.confirmed is True
+    assert result.publication_state == "completed"
+    assert result.publication_result == "completed"
+    assert result.publication_summaries == [
+        "materialized 1 final proof publication step file(s) from canonical persisted write proof artifact"
+    ]
+    assert result.written_paths == [
+        ".ai-sdlc/memory/frontend-final-proof-publication/steps/001-auth.md"
+    ]
+    assert (
+        tmp_path
+        / ".ai-sdlc"
+        / "memory"
+        / "frontend-final-proof-publication"
+        / "steps"
+        / "001-auth.md"
+    ).is_file()
+    assert result.remaining_blockers == []
+    assert result.source_linkage["publication_state"] == "completed"
 
 
 def test_execute_frontend_final_proof_publication_does_not_write_artifact_by_default(
@@ -5317,15 +5571,15 @@ def test_execute_frontend_final_proof_publication_does_not_write_artifact_by_def
         (tmp_path / p).mkdir(parents=True)
     _write_frontend_persisted_write_proof_artifact(
         tmp_path,
-        proof_result="deferred",
-        proof_state="deferred",
-        remaining_blockers=["spec 001-auth remediation still required"],
+        proof_result="completed",
+        proof_state="completed",
+        remaining_blockers=[],
     )
 
     svc = ProgramService(tmp_path)
     result = svc.execute_frontend_final_proof_publication(_manifest(), confirmed=True)
 
-    assert result.publication_state == "deferred"
+    assert result.publication_state == "completed"
     assert not (
         tmp_path
         / ".ai-sdlc"
@@ -5342,9 +5596,9 @@ def test_write_frontend_final_proof_publication_artifact_emits_canonical_yaml(
         (tmp_path / p).mkdir(parents=True)
     _write_frontend_persisted_write_proof_artifact(
         tmp_path,
-        proof_result="deferred",
-        proof_state="deferred",
-        remaining_blockers=["spec 001-auth remediation still required"],
+        proof_result="completed",
+        proof_state="completed",
+        remaining_blockers=[],
     )
 
     svc = ProgramService(tmp_path)
@@ -5374,14 +5628,16 @@ def test_write_frontend_final_proof_publication_artifact_emits_canonical_yaml(
         payload["artifact_source_path"]
         == ".ai-sdlc/memory/frontend-persisted-write-proof/latest.yaml"
     )
-    assert payload["publication_state"] == "deferred"
-    assert payload["publication_result"] == "deferred"
+    assert payload["publication_state"] == "completed"
+    assert payload["publication_result"] == "completed"
     assert payload["confirmed"] is True
     assert payload["publication_summaries"] == [
-        "no final proof publication actions executed in final proof publication baseline"
+        "materialized 1 final proof publication step file(s) from canonical persisted write proof artifact"
     ]
-    assert payload["written_paths"] == []
-    assert payload["remaining_blockers"] == ["spec 001-auth remediation still required"]
+    assert payload["written_paths"] == [
+        ".ai-sdlc/memory/frontend-final-proof-publication/steps/001-auth.md"
+    ]
+    assert payload["remaining_blockers"] == []
     assert payload["steps"][0]["spec_id"] == "001-auth"
     assert (
         payload["source_linkage"]["final_proof_publication_artifact_path"]
@@ -5599,7 +5855,7 @@ def test_build_frontend_final_proof_closure_request_requires_explicit_confirmati
     assert request.steps[0].source_linkage["closure_state"] == "not_started"
 
 
-def test_execute_frontend_final_proof_closure_returns_deferred_result_when_confirmed(
+def test_execute_frontend_final_proof_closure_blocks_until_final_proof_publication_is_completed(
     tmp_path: Path,
 ) -> None:
     for p in ("specs/001-auth", "specs/002-course", "specs/003-enroll"):
@@ -5616,14 +5872,140 @@ def test_execute_frontend_final_proof_closure_returns_deferred_result_when_confi
 
     assert result.passed is False
     assert result.confirmed is True
-    assert result.closure_state == "deferred"
-    assert result.closure_result == "deferred"
+    assert result.closure_state == "blocked"
+    assert result.closure_result == "blocked"
     assert result.closure_summaries == [
-        "no final proof closure actions executed in final proof closure baseline"
+        "final proof closure requires completed final proof publication artifact (publication_state=deferred)"
     ]
     assert result.written_paths == []
-    assert result.remaining_blockers == ["spec 001-auth remediation still required"]
-    assert result.source_linkage["closure_state"] == "deferred"
+    assert result.remaining_blockers == [
+        "spec 001-auth remediation still required",
+        "final proof closure requires completed final proof publication artifact (publication_state=deferred)",
+    ]
+    assert result.source_linkage["closure_state"] == "blocked"
+
+
+def test_execute_frontend_final_proof_closure_blocks_completed_artifact_with_blockers(
+    tmp_path: Path,
+) -> None:
+    for p in ("specs/001-auth", "specs/002-course", "specs/003-enroll"):
+        (tmp_path / p).mkdir(parents=True)
+    _write_frontend_final_proof_publication_artifact(
+        tmp_path,
+        publication_result="completed",
+        publication_state="completed",
+        remaining_blockers=["spec 001-auth remediation still required"],
+    )
+
+    svc = ProgramService(tmp_path)
+    result = svc.execute_frontend_final_proof_closure(_manifest(), confirmed=True)
+
+    assert result.passed is False
+    assert result.closure_state == "blocked"
+    assert result.closure_result == "blocked"
+    assert result.written_paths == []
+    assert result.remaining_blockers == [
+        "spec 001-auth remediation still required",
+        "final proof closure requires blocker-free final proof publication artifact",
+    ]
+
+
+def test_execute_frontend_final_proof_closure_blocks_manual_skip_request_with_blockers(
+    tmp_path: Path,
+) -> None:
+    for p in ("specs/001-auth", "specs/002-course", "specs/003-enroll"):
+        (tmp_path / p).mkdir(parents=True)
+    _write_frontend_final_proof_publication_artifact(
+        tmp_path,
+        publication_result="completed",
+        publication_state="completed",
+        remaining_blockers=["spec 001-auth remediation still required"],
+    )
+
+    svc = ProgramService(tmp_path)
+    request = replace(
+        svc.build_frontend_final_proof_closure_request(_manifest()),
+        required=False,
+    )
+    result = svc.execute_frontend_final_proof_closure(
+        _manifest(),
+        request=request,
+        confirmed=True,
+    )
+
+    assert result.passed is False
+    assert result.closure_state == "blocked"
+    assert result.closure_result == "blocked"
+    assert result.written_paths == []
+    assert result.remaining_blockers == [
+        "spec 001-auth remediation still required",
+        "final proof closure requires blocker-free final proof publication artifact",
+    ]
+
+
+def test_execute_frontend_final_proof_closure_blocks_empty_non_completed_artifact(
+    tmp_path: Path,
+) -> None:
+    for p in ("specs/001-auth", "specs/002-course", "specs/003-enroll"):
+        (tmp_path / p).mkdir(parents=True)
+    _write_frontend_final_proof_publication_artifact(
+        tmp_path,
+        publication_result="deferred",
+        publication_state="deferred",
+        remaining_blockers=[],
+        steps=[],
+    )
+
+    svc = ProgramService(tmp_path)
+    request = svc.build_frontend_final_proof_closure_request(_manifest())
+    result = svc.execute_frontend_final_proof_closure(
+        _manifest(),
+        request=request,
+        confirmed=True,
+    )
+
+    assert request.required is False
+    assert request.steps == []
+    assert result.closure_state == "blocked"
+    assert result.closure_result == "blocked"
+    assert result.written_paths == []
+
+
+def test_execute_frontend_final_proof_closure_writes_step_files_when_confirmed(
+    tmp_path: Path,
+) -> None:
+    for p in ("specs/001-auth", "specs/002-course", "specs/003-enroll"):
+        (tmp_path / p).mkdir(parents=True)
+    _write_frontend_final_proof_publication_artifact(
+        tmp_path,
+        publication_result="completed",
+        publication_state="completed",
+        remaining_blockers=[],
+    )
+
+    svc = ProgramService(tmp_path)
+    result = svc.execute_frontend_final_proof_closure(_manifest(), confirmed=True)
+
+    assert result.passed is True
+    assert result.confirmed is True
+    assert result.closure_state == "completed"
+    assert result.closure_result == "completed"
+    assert result.closure_summaries == [
+        "materialized 1 final proof closure step file(s) from canonical final proof publication artifact"
+    ]
+    assert result.written_paths == [
+        ".ai-sdlc/memory/frontend-final-proof-closure/steps/001-auth.md"
+    ]
+    assert (
+        tmp_path
+        / ".ai-sdlc"
+        / "memory"
+        / "frontend-final-proof-closure"
+        / "steps"
+        / "001-auth.md"
+    ).is_file()
+    assert result.remaining_blockers == []
+    assert result.source_linkage["closure_state"] == "completed"
 
 
 def test_execute_frontend_final_proof_closure_does_not_write_artifact_by_default(
@@ -5633,15 +6015,15 @@ def test_execute_frontend_final_proof_closure_does_not_write_artifact_by_default
         (tmp_path / p).mkdir(parents=True)
     _write_frontend_final_proof_publication_artifact(
         tmp_path,
-        publication_result="deferred",
-        publication_state="deferred",
-        remaining_blockers=["spec 001-auth remediation still required"],
+        publication_result="completed",
+        publication_state="completed",
+        remaining_blockers=[],
     )
 
     svc = ProgramService(tmp_path)
     result = svc.execute_frontend_final_proof_closure(_manifest(), confirmed=True)
 
-    assert result.closure_state == "deferred"
+    assert result.closure_state == "completed"
     assert not (
         tmp_path
         / ".ai-sdlc"
@@ -5658,9 +6040,9 @@ def test_write_frontend_final_proof_closure_artifact_emits_canonical_yaml(
         (tmp_path / p).mkdir(parents=True)
     _write_frontend_final_proof_publication_artifact(
         tmp_path,
-        publication_result="deferred",
-        publication_state="deferred",
-        remaining_blockers=["spec 001-auth remediation still required"],
+        publication_result="completed",
+        publication_state="completed",
+        remaining_blockers=[],
     )
 
     svc = ProgramService(tmp_path)
@@ -5691,15 +6073,17 @@ def test_write_frontend_final_proof_closure_artifact_emits_canonical_yaml(
         == ".ai-sdlc/memory/frontend-final-proof-publication/latest.yaml"
     )
     assert payload["artifact_generated_at"] == "2026-04-04T03:00:00Z"
-    assert payload["publication_state"] == "deferred"
-    assert payload["closure_state"] == "deferred"
-    assert payload["closure_result"] == "deferred"
+    assert payload["publication_state"] == "completed"
+    assert payload["closure_state"] == "completed"
+    assert payload["closure_result"] == "completed"
     assert payload["confirmed"] is True
     assert payload["closure_summaries"] == [
-        "no final proof closure actions executed in final proof closure baseline"
+        "materialized 1 final proof closure step file(s) from canonical final proof publication artifact"
     ]
-    assert payload["written_paths"] == []
-    assert payload["remaining_blockers"] == ["spec 001-auth remediation still required"]
+    assert payload["written_paths"] == [
+        ".ai-sdlc/memory/frontend-final-proof-closure/steps/001-auth.md"
+    ]
+    assert payload["remaining_blockers"] == []
     assert payload["steps"][0]["spec_id"] == "001-auth"
     assert payload["steps"][0]["closure_state"] == "not_started"
     assert (
@@ -5922,7 +6306,7 @@ def test_build_frontend_final_proof_archive_request_requires_explicit_confirmati
     assert request.steps[0].source_linkage["archive_state"] == "not_started"
 
 
-def test_execute_frontend_final_proof_archive_returns_deferred_result_when_confirmed(
+def test_execute_frontend_final_proof_archive_blocks_until_final_proof_closure_is_completed(
     tmp_path: Path,
 ) -> None:
     for p in ("specs/001-auth", "specs/002-course", "specs/003-enroll"):
@@ -5939,14 +6323,140 @@ def test_execute_frontend_final_proof_archive_returns_deferred_result_when_confi
 
     assert result.passed is False
     assert result.confirmed is True
-    assert result.archive_state == "deferred"
-    assert result.archive_result == "deferred"
+    assert result.archive_state == "blocked"
+    assert result.archive_result == "blocked"
     assert result.archive_summaries == [
-        "no final proof archive actions executed in final proof archive baseline"
+        "final proof archive requires completed final proof closure artifact (closure_state=deferred)"
     ]
     assert result.written_paths == []
-    assert result.remaining_blockers == ["spec 001-auth remediation still required"]
-    assert result.source_linkage["archive_state"] == "deferred"
+    assert result.remaining_blockers == [
+        "spec 001-auth remediation still required",
+        "final proof archive requires completed final proof closure artifact (closure_state=deferred)",
+    ]
+    assert result.source_linkage["archive_state"] == "blocked"
+
+
+def test_execute_frontend_final_proof_archive_blocks_completed_artifact_with_blockers(
+    tmp_path: Path,
+) -> None:
+    for p in ("specs/001-auth", "specs/002-course", "specs/003-enroll"):
+        (tmp_path / p).mkdir(parents=True)
+    _write_frontend_final_proof_closure_artifact(
+        tmp_path,
+        closure_result="completed",
+        closure_state="completed",
+        remaining_blockers=["spec 001-auth remediation still required"],
+    )
+
+    svc = ProgramService(tmp_path)
+    result = svc.execute_frontend_final_proof_archive(_manifest(), confirmed=True)
+
+    assert result.passed is False
+    assert result.archive_state == "blocked"
+    assert result.archive_result == "blocked"
+    assert result.written_paths == []
+    assert result.remaining_blockers == [
+        "spec 001-auth remediation still required",
+        "final proof archive requires blocker-free final proof closure artifact",
+    ]
+
+
+def test_execute_frontend_final_proof_archive_blocks_manual_skip_request_with_blockers(
+    tmp_path: Path,
+) -> None:
+    for p in ("specs/001-auth", "specs/002-course", "specs/003-enroll"):
+        (tmp_path / p).mkdir(parents=True)
+    _write_frontend_final_proof_closure_artifact(
+        tmp_path,
+        closure_result="completed",
+        closure_state="completed",
+        remaining_blockers=["spec 001-auth remediation still required"],
+    )
+
+    svc = ProgramService(tmp_path)
+    request = replace(
+        svc.build_frontend_final_proof_archive_request(_manifest()),
+        required=False,
+    )
+    result = svc.execute_frontend_final_proof_archive(
+        _manifest(),
+        request=request,
+        confirmed=True,
+    )
+
+    assert result.passed is False
+    assert result.archive_state == "blocked"
+    assert result.archive_result == "blocked"
+    assert result.written_paths == []
+    assert result.remaining_blockers == [
+        "spec 001-auth remediation still required",
+        "final proof archive requires blocker-free final proof closure artifact",
+    ]
+
+
+def test_execute_frontend_final_proof_archive_blocks_empty_non_completed_artifact(
+    tmp_path: Path,
+) -> None:
+    for p in ("specs/001-auth", "specs/002-course", "specs/003-enroll"):
+        (tmp_path / p).mkdir(parents=True)
+    _write_frontend_final_proof_closure_artifact(
+        tmp_path,
+        closure_result="deferred",
+        closure_state="deferred",
+        remaining_blockers=[],
+        steps=[],
+    )
+
+    svc = ProgramService(tmp_path)
+    request = svc.build_frontend_final_proof_archive_request(_manifest())
+    result = svc.execute_frontend_final_proof_archive(
+        _manifest(),
+        request=request,
+        confirmed=True,
+    )
+
+    assert request.required is False
+    assert request.steps == []
+    assert result.archive_state == "blocked"
+    assert result.archive_result == "blocked"
+    assert result.written_paths == []
+
+
+def test_execute_frontend_final_proof_archive_writes_step_files_when_confirmed(
+    tmp_path: Path,
+) -> None:
+    for p in ("specs/001-auth", "specs/002-course", "specs/003-enroll"):
+        (tmp_path / p).mkdir(parents=True)
+    _write_frontend_final_proof_closure_artifact(
+        tmp_path,
+        closure_result="completed",
+        closure_state="completed",
+        remaining_blockers=[],
+    )
+
+    svc = ProgramService(tmp_path)
+    result = svc.execute_frontend_final_proof_archive(_manifest(), confirmed=True)
+
+    assert result.passed is True
+    assert result.confirmed is True
+    assert result.archive_state == "completed"
+    assert result.archive_result == "completed"
+    assert result.archive_summaries == [
+        "materialized 1 final proof archive step file(s) from canonical final proof closure artifact"
+    ]
+    assert result.written_paths == [
+        ".ai-sdlc/memory/frontend-final-proof-archive/steps/001-auth.md"
+    ]
+    assert (
+        tmp_path
+        / ".ai-sdlc"
+        / "memory"
+        / "frontend-final-proof-archive"
+        / "steps"
+        / "001-auth.md"
+    ).is_file()
+    assert result.remaining_blockers == []
+    assert result.source_linkage["archive_state"] == "completed"
 
 
 def test_build_frontend_final_proof_archive_thread_archive_request_uses_archive_artifact(
@@ -6060,7 +6570,7 @@ def test_build_frontend_final_proof_archive_thread_archive_request_preserves_vis
     ]
 
 
-def test_execute_frontend_final_proof_archive_thread_archive_returns_deferred_result_when_confirmed(
+def test_execute_frontend_final_proof_archive_thread_archive_blocks_until_final_proof_archive_is_completed(
     tmp_path: Path,
 ) -> None:
     for p in ("specs/001-auth", "specs/002-course", "specs/003-enroll"):
@@ -6080,19 +6590,148 @@ def test_execute_frontend_final_proof_archive_thread_archive_returns_deferred_re
 
     assert result.passed is False
     assert result.confirmed is True
-    assert result.thread_archive_state == "deferred"
-    assert result.thread_archive_result == "deferred"
+    assert result.thread_archive_state == "blocked"
+    assert result.thread_archive_result == "blocked"
     assert result.thread_archive_summaries == [
-        "no thread archive actions executed in final proof archive thread archive baseline"
+        "final proof archive thread archive requires completed final proof archive artifact (archive_state=deferred)"
     ]
     assert result.written_paths == []
-    assert result.remaining_blockers == ["spec 001-auth remediation still required"]
-    assert result.source_linkage["thread_archive_state"] == "deferred"
+    assert result.remaining_blockers == [
+        "spec 001-auth remediation still required",
+        "final proof archive thread archive requires completed final proof archive artifact (archive_state=deferred)",
+    ]
+    assert result.source_linkage["thread_archive_state"] == "blocked"
     assert "project_cleanup_state" not in result.source_linkage
-    assert any(
-        "does not execute project cleanup actions yet" in item
-        for item in result.warnings
+
+
+def test_execute_frontend_final_proof_archive_thread_archive_blocks_completed_artifact_with_blockers(
+    tmp_path: Path,
+) -> None:
+    for p in ("specs/001-auth", "specs/002-course", "specs/003-enroll"):
+        (tmp_path / p).mkdir(parents=True)
+    _write_frontend_final_proof_archive_artifact(
+        tmp_path,
+        archive_result="completed",
+        archive_state="completed",
+        remaining_blockers=["spec 001-auth remediation still required"],
     )
+
+    svc = ProgramService(tmp_path)
+    result = svc.execute_frontend_final_proof_archive_thread_archive(
+        _manifest(),
+        confirmed=True,
+    )
+
+    assert result.passed is False
+    assert result.thread_archive_state == "blocked"
+    assert result.thread_archive_result == "blocked"
+    assert result.written_paths == []
+    assert result.remaining_blockers == [
+        "spec 001-auth remediation still required",
+        "final proof archive thread archive requires blocker-free final proof archive artifact",
+    ]
+
+
+def test_execute_frontend_final_proof_archive_thread_archive_blocks_manual_skip_request_with_blockers(
+    tmp_path: Path,
+) -> None:
+    for p in ("specs/001-auth", "specs/002-course", "specs/003-enroll"):
+        (tmp_path / p).mkdir(parents=True)
+    _write_frontend_final_proof_archive_artifact(
+        tmp_path,
+        archive_result="completed",
+        archive_state="completed",
+        remaining_blockers=["spec 001-auth remediation still required"],
+    )
+
+    svc = ProgramService(tmp_path)
+    request = replace(
+        svc.build_frontend_final_proof_archive_thread_archive_request(_manifest()),
+        required=False,
+    )
+    result = svc.execute_frontend_final_proof_archive_thread_archive(
+        _manifest(),
+        request=request,
+        confirmed=True,
+    )
+
+    assert result.passed is False
+    assert result.thread_archive_state == "blocked"
+    assert result.thread_archive_result == "blocked"
+    assert result.written_paths == []
+    assert result.remaining_blockers == [
+        "spec 001-auth remediation still required",
+        "final proof archive thread archive requires blocker-free final proof archive artifact",
+    ]
+
+
+def test_execute_frontend_final_proof_archive_thread_archive_blocks_empty_non_completed_artifact(
+    tmp_path: Path,
+) -> None:
+    for p in ("specs/001-auth", "specs/002-course", "specs/003-enroll"):
+        (tmp_path / p).mkdir(parents=True)
+    _write_frontend_final_proof_archive_artifact(
+        tmp_path,
+        archive_result="deferred",
+        archive_state="deferred",
+        remaining_blockers=[],
+        steps=[],
+    )
+
+    svc = ProgramService(tmp_path)
+    request = svc.build_frontend_final_proof_archive_thread_archive_request(_manifest())
+    result = svc.execute_frontend_final_proof_archive_thread_archive(
+        _manifest(),
+        request=request,
+        confirmed=True,
+    )
+
+    assert request.required is False
+    assert request.steps == []
+    assert result.thread_archive_state == "blocked"
+    assert result.thread_archive_result == "blocked"
+    assert result.written_paths == []
+
+
+def test_execute_frontend_final_proof_archive_thread_archive_writes_step_files_when_confirmed(
+    tmp_path: Path,
+) -> None:
+    for p in ("specs/001-auth", "specs/002-course", "specs/003-enroll"):
+        (tmp_path / p).mkdir(parents=True)
+    _write_frontend_final_proof_archive_artifact(
+        tmp_path,
+        archive_result="completed",
+        archive_state="completed",
+        remaining_blockers=[],
+    )
+
+    svc = ProgramService(tmp_path)
+    result = svc.execute_frontend_final_proof_archive_thread_archive(
+        _manifest(),
+        confirmed=True,
+    )
+
+    assert result.passed is True
+    assert result.confirmed is True
+    assert result.thread_archive_state == "completed"
+    assert result.thread_archive_result == "completed"
+    assert result.thread_archive_summaries == [
+        "materialized 1 final proof archive thread archive step file(s) from canonical final proof archive artifact"
+    ]
+    assert result.written_paths == [
+        ".ai-sdlc/memory/frontend-final-proof-archive-thread-archive/steps/001-auth.md"
+    ]
+    assert (
+        tmp_path
+        / ".ai-sdlc"
+        / "memory"
+        / "frontend-final-proof-archive-thread-archive"
+        / "steps"
+        / "001-auth.md"
+    ).is_file()
+    assert result.remaining_blockers == []
+    assert result.source_linkage["thread_archive_state"] == "completed"
+    assert "project_cleanup_state" not in result.source_linkage
 
 
 def test_build_frontend_final_proof_archive_project_cleanup_request_uses_thread_archive_execute_truth(
@@ -6113,7 +6752,7 @@ def test_build_frontend_final_proof_archive_project_cleanup_request_uses_thread_
     assert request.required is True
     assert request.confirmation_required is True
     assert request.project_cleanup_state == "not_started"
-    assert request.thread_archive_state == "deferred"
+    assert request.thread_archive_state == "blocked"
     assert (
         request.artifact_source_path
         == ".ai-sdlc/memory/frontend-final-proof-archive/latest.yaml"
@@ -6134,9 +6773,7 @@ def test_build_frontend_final_proof_archive_project_cleanup_request_uses_thread_
     assert request.cleanup_mutation_execution_gating == []
     assert request.steps[0].spec_id == "001-auth"
     assert request.steps[0].project_cleanup_state == "not_started"
-    assert (
-        request.steps[0].source_linkage["thread_archive_result"] == "deferred"
-    )
+    assert request.steps[0].source_linkage["thread_archive_result"] == "blocked"
     assert (
         request.steps[0].source_linkage["final_proof_archive_artifact_path"]
         == ".ai-sdlc/memory/frontend-final-proof-archive/latest.yaml"
@@ -6151,6 +6788,33 @@ def test_build_frontend_final_proof_archive_project_cleanup_request_uses_thread_
     assert (
         request.source_linkage["cleanup_mutation_execution_gating_state"] == "missing"
     )
+
+
+def test_build_frontend_final_proof_archive_project_cleanup_request_does_not_materialize_thread_archive_steps(
+    tmp_path: Path,
+) -> None:
+    for p in ("specs/001-auth", "specs/002-course", "specs/003-enroll"):
+        (tmp_path / p).mkdir(parents=True)
+    _write_frontend_final_proof_archive_artifact(
+        tmp_path,
+        archive_result="completed",
+        archive_state="completed",
+        remaining_blockers=[],
+    )
+
+    svc = ProgramService(tmp_path)
+    request = svc.build_frontend_final_proof_archive_project_cleanup_request(_manifest())
+
+    assert request.thread_archive_state == "completed"
+    assert request.steps[0].source_linkage["thread_archive_result"] == "completed"
+    assert not (
+        tmp_path
+        / ".ai-sdlc"
+        / "memory"
+        / "frontend-final-proof-archive-thread-archive"
+        / "steps"
+        / "001-auth.md"
+    ).exists()
 
 
 def test_build_frontend_final_proof_archive_project_cleanup_request_preserves_stable_empty_visual_a11y_pending_input(
@@ -6273,7 +6937,6 @@ def test_build_frontend_final_proof_archive_project_cleanup_request_uses_explici
     assert request.cleanup_mutation_execution_gating == []
     assert request.warnings == [
         "final proof archive baseline defers thread archive and cleanup actions",
-        "final proof archive thread archive baseline does not execute project cleanup actions yet",
     ]
 
 
@@ -7079,7 +7742,7 @@ def test_execute_frontend_final_proof_archive_project_cleanup_executes_canonical
         "specs/002-course",
     ]
     assert result.remaining_blockers == []
-    assert result.source_linkage["thread_archive_state"] == "deferred"
+    assert result.source_linkage["thread_archive_state"] == "blocked"
     assert result.source_linkage["project_cleanup_state"] == "completed"
     assert result.source_linkage["project_cleanup_result"] == "completed"
     assert result.source_linkage["cleanup_targets_state"] == "listed"
@@ -7288,7 +7951,7 @@ def test_write_frontend_final_proof_archive_project_cleanup_artifact_emits_canon
     assert payload["project_cleanup_summaries"] == [
         "no cleanup mutations listed in canonical cleanup_mutation_execution_gating"
     ]
-    assert payload["thread_archive_state"] == "deferred"
+    assert payload["thread_archive_state"] == "blocked"
     assert payload["cleanup_targets_state"] == "missing"
     assert payload["cleanup_targets"] == []
     assert payload["cleanup_target_eligibility_state"] == "missing"
@@ -7425,15 +8088,15 @@ def test_execute_frontend_final_proof_archive_does_not_write_artifact_by_default
         (tmp_path / p).mkdir(parents=True)
     _write_frontend_final_proof_closure_artifact(
         tmp_path,
-        closure_result="deferred",
-        closure_state="deferred",
-        remaining_blockers=["spec 001-auth remediation still required"],
+        closure_result="completed",
+        closure_state="completed",
+        remaining_blockers=[],
     )
 
     svc = ProgramService(tmp_path)
     result = svc.execute_frontend_final_proof_archive(_manifest(), confirmed=True)
 
-    assert result.archive_state == "deferred"
+    assert result.archive_state == "completed"
     assert not (
         tmp_path
         / ".ai-sdlc"
@@ -7450,9 +8113,9 @@ def test_write_frontend_final_proof_archive_artifact_emits_canonical_yaml(
         (tmp_path / p).mkdir(parents=True)
     _write_frontend_final_proof_closure_artifact(
         tmp_path,
-        closure_result="deferred",
-        closure_state="deferred",
-        remaining_blockers=["spec 001-auth remediation still required"],
+        closure_result="completed",
+        closure_state="completed",
+        remaining_blockers=[],
     )
 
     svc = ProgramService(tmp_path)
@@ -7483,15 +8146,17 @@ def test_write_frontend_final_proof_archive_artifact_emits_canonical_yaml(
         == ".ai-sdlc/memory/frontend-final-proof-closure/latest.yaml"
     )
     assert payload["artifact_generated_at"] == "2026-04-04T04:00:00Z"
-    assert payload["closure_state"] == "deferred"
-    assert payload["archive_state"] == "deferred"
-    assert payload["archive_result"] == "deferred"
+    assert payload["closure_state"] == "completed"
+    assert payload["archive_state"] == "completed"
+    assert payload["archive_result"] == "completed"
     assert payload["confirmed"] is True
     assert payload["archive_summaries"] == [
-        "no final proof archive actions executed in final proof archive baseline"
+        "materialized 1 final proof archive step file(s) from canonical final proof closure artifact"
     ]
-    assert payload["written_paths"] == []
-    assert payload["remaining_blockers"] == ["spec 001-auth remediation still required"]
+    assert payload["written_paths"] == [
+        ".ai-sdlc/memory/frontend-final-proof-archive/steps/001-auth.md"
+    ]
+    assert payload["remaining_blockers"] == []
     assert payload["steps"][0]["spec_id"] == "001-auth"
     assert payload["steps"][0]["archive_state"] == "not_started"
     assert (
@@ -8945,6 +9610,7 @@ def _write_frontend_persisted_write_proof_artifact(
             },
         }
     ]
+    effective_steps = default_steps if steps is None else steps
     artifact_path.write_text(
         yaml.safe_dump(
             {
@@ -8967,7 +9633,7 @@ def _write_frontend_persisted_write_proof_artifact(
                 "warnings": [
                     "persisted write proof baseline does not persist proof artifacts yet"
                 ],
-                "steps": list(steps or default_steps),
+                "steps": list(effective_steps),
                 "source_linkage": {
                     "persistence_state": "deferred",
                     "proof_state": proof_state,
@@ -9011,6 +9677,7 @@ def _write_frontend_final_proof_publication_artifact(
             },
         }
     ]
+    effective_steps = default_steps if steps is None else steps
     artifact_path.write_text(
         yaml.safe_dump(
             {
@@ -9033,7 +9700,7 @@ def _write_frontend_final_proof_publication_artifact(
                 "warnings": [
                     "final proof publication baseline does not persist publication artifacts yet"
                 ],
-                "steps": list(steps or default_steps),
+                "steps": list(effective_steps),
                 "source_linkage": {
                     "proof_state": "deferred",
                     "publication_state": publication_state,
@@ -9077,6 +9744,7 @@ def _write_frontend_final_proof_closure_artifact(
             },
         }
     ]
+    effective_steps = default_steps if steps is None else steps
     artifact_path.write_text(
         yaml.safe_dump(
             {
@@ -9098,7 +9766,7 @@ def _write_frontend_final_proof_closure_artifact(
                 "warnings": [
                     "final proof closure baseline does not persist closure artifacts yet"
                 ],
-                "steps": list(steps or default_steps),
+                "steps": list(effective_steps),
                 "source_linkage": {
                     "publication_state": "deferred",
                     "closure_state": closure_state,
@@ -9143,6 +9811,7 @@ def _write_frontend_final_proof_archive_artifact(
             },
         }
     ]
+    effective_steps = default_steps if steps is None else steps
     artifact_path.write_text(
         yaml.safe_dump(
             {
@@ -9164,7 +9833,7 @@ def _write_frontend_final_proof_archive_artifact(
                 "warnings": [
                     "final proof archive baseline defers thread archive and cleanup actions"
                 ],
-                "steps": list(steps or default_steps),
+                "steps": list(effective_steps),
                 "source_linkage": {
                     "closure_state": "deferred",
                     "archive_state": archive_state,

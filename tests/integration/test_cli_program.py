@@ -3730,16 +3730,16 @@ specs:
         assert "Program Frontend Persisted Write Proof Dry-Run" in result.output
         assert ".ai-sdlc/memory/frontend-writeback-persistence/latest.yaml" in result.output
 
-    def test_program_persisted_write_proof_execute_surfaces_deferred_result(
+    def test_program_persisted_write_proof_execute_surfaces_completed_result(
         self, initialized_project_dir: Path
     ) -> None:
         root = initialized_project_dir
         _write_manifest(root)
         _write_frontend_writeback_persistence_artifact(
             root,
-            persistence_result="deferred",
-            persistence_state="deferred",
-            remaining_blockers=["spec 001-auth remediation still required"],
+            persistence_result="completed",
+            persistence_state="completed",
+            remaining_blockers=[],
         )
         report_rel = ".ai-sdlc/memory/frontend-persisted-write-proof.md"
 
@@ -3756,18 +3756,14 @@ specs:
                 ],
             )
 
-        assert result.exit_code == 1
+        assert result.exit_code == 0
         assert "Program Frontend Persisted Write Proof Execute" in result.output
-        assert "deferred" in result.output
-        assert (
-            "no persisted write proof actions executed in persisted write proof baseline"
-            in result.output
-        )
+        assert "completed" in result.output
         report = (root / report_rel).read_text(encoding="utf-8")
         assert "Frontend Persisted Write Proof Result" in report
-        assert "deferred" in report
+        assert "completed" in report
         assert (
-            "no persisted write proof actions executed in persisted write proof baseline"
+            "materialized 1 persisted write proof step file(s) from canonical writeback persistence artifact"
             in report
         )
 
@@ -3803,9 +3799,9 @@ specs:
         _write_manifest(root)
         _write_frontend_writeback_persistence_artifact(
             root,
-            persistence_result="deferred",
-            persistence_state="deferred",
-            remaining_blockers=["spec 001-auth remediation still required"],
+            persistence_result="completed",
+            persistence_state="completed",
+            remaining_blockers=[],
         )
         report_rel = ".ai-sdlc/memory/frontend-persisted-write-proof-artifact.md"
 
@@ -3829,13 +3825,16 @@ specs:
             / "frontend-persisted-write-proof"
             / "latest.yaml"
         )
-        assert result.exit_code == 1
+        assert result.exit_code == 0
         assert artifact_path.is_file()
         assert ".ai-sdlc/memory/frontend-persisted-write-proof/latest.yaml" in result.output
         payload = yaml.safe_load(artifact_path.read_text(encoding="utf-8"))
-        assert payload["proof_result"] == "deferred"
-        assert payload["proof_state"] == "deferred"
+        assert payload["proof_result"] == "completed"
+        assert payload["proof_state"] == "completed"
         assert payload["confirmed"] is True
+        assert payload["written_paths"] == [
+            ".ai-sdlc/memory/frontend-persisted-write-proof/steps/001-auth.md"
+        ]
         report = (root / report_rel).read_text(encoding="utf-8")
         assert "Frontend Persisted Write Proof Artifact" in report
         assert ".ai-sdlc/memory/frontend-persisted-write-proof/latest.yaml" in report
@@ -4127,16 +4126,16 @@ specs:
         assert "Program Frontend Final Proof Publication Dry-Run" in result.output
         assert ".ai-sdlc/memory/frontend-persisted-write-proof/latest.yaml" in result.output
 
-    def test_program_final_proof_publication_execute_surfaces_deferred_result(
+    def test_program_final_proof_publication_execute_surfaces_completed_result(
         self, initialized_project_dir: Path
     ) -> None:
         root = initialized_project_dir
         _write_manifest(root)
         _write_frontend_persisted_write_proof_artifact(
             root,
-            proof_result="deferred",
-            proof_state="deferred",
-            remaining_blockers=["spec 001-auth remediation still required"],
+            proof_result="completed",
+            proof_state="completed",
+            remaining_blockers=[],
         )
         report_rel = ".ai-sdlc/memory/frontend-final-proof-publication.md"
 
@@ -4153,18 +4152,18 @@ specs:
                 ],
             )
 
-        assert result.exit_code == 1
+        assert result.exit_code == 0
         assert "Program Frontend Final Proof Publication Execute" in result.output
-        assert "deferred" in result.output
+        assert "completed" in result.output
         assert (
-            "no final proof publication actions executed in final proof publication baseline"
+            "materialized 1 final proof publication step file(s) from canonical persisted write proof artifact"
             in result.output
         )
         report = (root / report_rel).read_text(encoding="utf-8")
         assert "Frontend Final Proof Publication Result" in report
-        assert "deferred" in report
+        assert "completed" in report
         assert (
-            "no final proof publication actions executed in final proof publication baseline"
+            "materialized 1 final proof publication step file(s) from canonical persisted write proof artifact"
             in report
         )
 
@@ -4200,9 +4199,9 @@ specs:
         _write_manifest(root)
         _write_frontend_persisted_write_proof_artifact(
             root,
-            proof_result="deferred",
-            proof_state="deferred",
-            remaining_blockers=["spec 001-auth remediation still required"],
+            proof_result="completed",
+            proof_state="completed",
+            remaining_blockers=[],
         )
         report_rel = ".ai-sdlc/memory/frontend-final-proof-publication-artifact.md"
 
@@ -4226,13 +4225,16 @@ specs:
             / "frontend-final-proof-publication"
             / "latest.yaml"
         )
-        assert result.exit_code == 1
+        assert result.exit_code == 0
         assert artifact_path.is_file()
         assert ".ai-sdlc/memory/frontend-final-proof-publication/latest.yaml" in result.output
         payload = yaml.safe_load(artifact_path.read_text(encoding="utf-8"))
-        assert payload["publication_result"] == "deferred"
-        assert payload["publication_state"] == "deferred"
+        assert payload["publication_result"] == "completed"
+        assert payload["publication_state"] == "completed"
         assert payload["confirmed"] is True
+        assert payload["written_paths"] == [
+            ".ai-sdlc/memory/frontend-final-proof-publication/steps/001-auth.md"
+        ]
         report = (root / report_rel).read_text(encoding="utf-8")
         assert "Frontend Final Proof Publication Artifact" in report
         assert ".ai-sdlc/memory/frontend-final-proof-publication/latest.yaml" in report
@@ -4412,9 +4414,9 @@ specs:
         _write_manifest(root)
         _write_frontend_final_proof_publication_artifact(
             root,
-            publication_result="deferred",
-            publication_state="deferred",
-            remaining_blockers=["spec 001-auth remediation still required"],
+            publication_result="completed",
+            publication_state="completed",
+            remaining_blockers=[],
         )
         report_rel = ".ai-sdlc/memory/frontend-final-proof-closure.md"
 
@@ -4438,25 +4440,28 @@ specs:
             / "frontend-final-proof-closure"
             / "latest.yaml"
         )
-        assert result.exit_code == 1
+        assert result.exit_code == 0
         assert "Program Frontend Final Proof Closure Execute" in result.output
-        assert "deferred" in result.output
+        assert "completed" in result.output
         assert (
-            "no final proof closure actions executed in final proof closure baseline"
+            "materialized 1 final proof closure step file(s) from canonical final proof publication artifact"
             in result.output
         )
         assert artifact_path.is_file()
         assert ".ai-sdlc/memory/frontend-final-proof-closure/latest.yaml" in result.output
         payload = yaml.safe_load(artifact_path.read_text(encoding="utf-8"))
-        assert payload["closure_result"] == "deferred"
-        assert payload["closure_state"] == "deferred"
+        assert payload["closure_result"] == "completed"
+        assert payload["closure_state"] == "completed"
         assert payload["confirmed"] is True
+        assert payload["written_paths"] == [
+            ".ai-sdlc/memory/frontend-final-proof-closure/steps/001-auth.md"
+        ]
         report = (root / report_rel).read_text(encoding="utf-8")
         assert "Frontend Final Proof Closure Result" in report
         assert "Frontend Final Proof Closure Artifact" in report
-        assert "deferred" in report
+        assert "completed" in report
         assert (
-            "no final proof closure actions executed in final proof closure baseline"
+            "materialized 1 final proof closure step file(s) from canonical final proof publication artifact"
             in report
         )
         assert ".ai-sdlc/memory/frontend-final-proof-closure/latest.yaml" in report
@@ -4636,9 +4641,9 @@ specs:
         _write_manifest(root)
         _write_frontend_final_proof_closure_artifact(
             root,
-            closure_result="deferred",
-            closure_state="deferred",
-            remaining_blockers=["spec 001-auth remediation still required"],
+            closure_result="completed",
+            closure_state="completed",
+            remaining_blockers=[],
         )
         report_rel = ".ai-sdlc/memory/frontend-final-proof-archive.md"
 
@@ -4662,26 +4667,29 @@ specs:
             / "frontend-final-proof-archive"
             / "latest.yaml"
         )
-        assert result.exit_code == 1
+        assert result.exit_code == 0
         assert "Program Frontend Final Proof Archive Execute" in result.output
-        assert "deferred" in result.output
+        assert "completed" in result.output
         assert (
-            "no final proof archive actions executed in final proof archive baseline"
+            "materialized 1 final proof archive step file(s) from canonical final proof closure artifact"
             in result.output
         )
         assert artifact_path.is_file()
         assert ".ai-sdlc/memory/frontend-final-proof-closure/latest.yaml" in result.output
         assert ".ai-sdlc/memory/frontend-final-proof-archive/latest.yaml" in result.output
         payload = yaml.safe_load(artifact_path.read_text(encoding="utf-8"))
-        assert payload["archive_result"] == "deferred"
-        assert payload["archive_state"] == "deferred"
+        assert payload["archive_result"] == "completed"
+        assert payload["archive_state"] == "completed"
         assert payload["confirmed"] is True
+        assert payload["written_paths"] == [
+            ".ai-sdlc/memory/frontend-final-proof-archive/steps/001-auth.md"
+        ]
         report = (root / report_rel).read_text(encoding="utf-8")
         assert "Frontend Final Proof Archive Result" in report
         assert "Frontend Final Proof Archive Artifact" in report
-        assert "deferred" in report
+        assert "completed" in report
         assert (
-            "no final proof archive actions executed in final proof archive baseline"
+            "materialized 1 final proof archive step file(s) from canonical final proof closure artifact"
             in report
         )
         assert ".ai-sdlc/memory/frontend-final-proof-closure/latest.yaml" in report
@@ -4738,16 +4746,16 @@ specs:
             / "latest.yaml"
         ).exists()
 
-    def test_program_final_proof_archive_thread_archive_execute_reports_deferred_result(
+    def test_program_final_proof_archive_thread_archive_execute_reports_completed_result(
         self, initialized_project_dir: Path
     ) -> None:
         root = initialized_project_dir
         _write_manifest(root)
         _write_frontend_final_proof_archive_artifact(
             root,
-            archive_result="deferred",
-            archive_state="deferred",
-            remaining_blockers=["spec 001-auth remediation still required"],
+            archive_result="completed",
+            archive_state="completed",
+            remaining_blockers=[],
         )
         report_rel = ".ai-sdlc/memory/frontend-final-proof-archive-thread-archive.md"
 
@@ -4764,27 +4772,31 @@ specs:
                 ],
             )
 
-        assert result.exit_code == 1
+        assert result.exit_code == 0
         assert "Program Frontend Final Proof Archive Thread Archive Execute" in result.output
         assert "Frontend Final Proof Archive Thread Archive Result" in result.output
-        assert "deferred" in result.output
+        assert "completed" in result.output
         assert (
-            "no thread archive actions executed in final proof archive thread archive baseline"
-            in result.output
-        )
-        assert (
-            "final proof archive thread archive baseline does not execute project cleanup actions yet"
+            "materialized 1 final proof archive thread archive step file(s) from canonical final proof archive artifact"
             in result.output
         )
         report = (root / report_rel).read_text(encoding="utf-8")
         assert "Frontend Final Proof Archive Thread Archive Result" in report
         assert "Frontend Final Proof Archive Artifact" in report
-        assert "deferred" in report
+        assert "completed" in report
         assert (
-            "no thread archive actions executed in final proof archive thread archive baseline"
+            "materialized 1 final proof archive thread archive step file(s) from canonical final proof archive artifact"
             in report
         )
         assert ".ai-sdlc/memory/frontend-final-proof-archive/latest.yaml" in report
+        assert (
+            root
+            / ".ai-sdlc"
+            / "memory"
+            / "frontend-final-proof-archive-thread-archive"
+            / "steps"
+            / "001-auth.md"
+        ).is_file()
         assert not (
             root
             / ".ai-sdlc"
@@ -4936,7 +4948,7 @@ specs:
         assert "Program Frontend Final Proof Archive Project Cleanup Dry-Run" in result.output
         assert ".ai-sdlc/memory/frontend-final-proof-archive/latest.yaml" in result.output
         assert "project cleanup state: not_started" in result.output
-        assert "thread archive state: deferred" in result.output
+        assert "thread archive state: blocked" in result.output
         assert "cleanup targets state: missing" in result.output
         assert "cleanup targets count: 0" in result.output
         assert "cleanup target eligibility state: missing" in result.output
@@ -4955,6 +4967,35 @@ specs:
             / "memory"
             / "frontend-final-proof-archive-project-cleanup"
             / "latest.yaml"
+        ).exists()
+
+    def test_program_final_proof_archive_project_cleanup_dry_run_does_not_materialize_thread_archive_steps(
+        self, initialized_project_dir: Path
+    ) -> None:
+        root = initialized_project_dir
+        _write_manifest(root)
+        _write_frontend_final_proof_archive_artifact(
+            root,
+            archive_result="completed",
+            archive_state="completed",
+            remaining_blockers=[],
+        )
+
+        with patch("ai_sdlc.cli.program_cmd.find_project_root", return_value=root):
+            result = runner.invoke(
+                app,
+                ["program", "final-proof-archive-project-cleanup"],
+            )
+
+        assert result.exit_code == 0
+        assert "thread archive state: completed" in result.output
+        assert not (
+            root
+            / ".ai-sdlc"
+            / "memory"
+            / "frontend-final-proof-archive-thread-archive"
+            / "steps"
+            / "001-auth.md"
         ).exists()
 
     def test_program_final_proof_archive_project_cleanup_execute_runs_canonical_gated_cleanup_mutations(
@@ -5875,6 +5916,7 @@ def _write_frontend_persisted_write_proof_artifact(
             },
         }
     ]
+    effective_steps = default_steps if steps is None else steps
     artifact_path.write_text(
         yaml.safe_dump(
             {
@@ -5897,7 +5939,7 @@ def _write_frontend_persisted_write_proof_artifact(
                 "warnings": [
                     "persisted write proof baseline does not persist proof artifacts yet"
                 ],
-                "steps": list(steps or default_steps),
+                "steps": list(effective_steps),
                 "source_linkage": {
                     "persistence_state": "deferred",
                     "proof_state": proof_state,
@@ -5941,6 +5983,7 @@ def _write_frontend_final_proof_publication_artifact(
             },
         }
     ]
+    effective_steps = default_steps if steps is None else steps
     artifact_path.write_text(
         yaml.safe_dump(
             {
@@ -5963,7 +6006,7 @@ def _write_frontend_final_proof_publication_artifact(
                 "warnings": [
                     "final proof publication baseline does not persist publication artifacts yet"
                 ],
-                "steps": list(steps or default_steps),
+                "steps": list(effective_steps),
                 "source_linkage": {
                     "proof_state": "deferred",
                     "publication_state": publication_state,
@@ -6007,6 +6050,7 @@ def _write_frontend_final_proof_closure_artifact(
             },
         }
     ]
+    effective_steps = default_steps if steps is None else steps
     artifact_path.write_text(
         yaml.safe_dump(
             {
@@ -6028,7 +6072,7 @@ def _write_frontend_final_proof_closure_artifact(
                 "warnings": [
                     "final proof closure baseline does not persist closure artifacts yet"
                 ],
-                "steps": list(steps or default_steps),
+                "steps": list(effective_steps),
                 "source_linkage": {
                     "publication_state": "deferred",
                     "closure_state": closure_state,
@@ -6072,6 +6116,7 @@ def _write_frontend_final_proof_archive_artifact(
             },
         }
     ]
+    effective_steps = default_steps if steps is None else steps
     artifact_path.write_text(
         yaml.safe_dump(
             {
@@ -6094,7 +6139,7 @@ def _write_frontend_final_proof_archive_artifact(
                 "warnings": [
                     "final proof archive baseline defers thread archive and cleanup actions"
                 ],
-                "steps": list(steps or default_steps),
+                "steps": list(effective_steps),
                 "source_linkage": {
                     "closure_state": "deferred",
                     "archive_state": archive_state,
