@@ -16,6 +16,7 @@ from ai_sdlc.core.frontend_contract_runtime_attachment import (
     build_frontend_contract_runtime_attachment,
     is_frontend_contract_runtime_attachment_work_item,
 )
+from ai_sdlc.core.program_service import ProgramService
 from ai_sdlc.core.state_machine import load_work_item, work_item_path
 from ai_sdlc.core.verify_constraints import build_verification_gate_context
 from ai_sdlc.gates.extra_gates import KnowledgeGate, ParallelGate, PostmortemGate
@@ -64,6 +65,56 @@ PIPELINE_STAGES = [
 ]
 
 MAX_RETRIES = 3
+
+
+def _program_truth_gate_surface(
+    root: Path,
+    *,
+    spec_dir: Path | None,
+) -> dict[str, object] | None:
+    manifest_path = root / "program-manifest.yaml"
+    if not manifest_path.is_file() or spec_dir is None:
+        return None
+
+    svc = ProgramService(root, manifest_path)
+    try:
+        manifest = svc.load_manifest()
+    except Exception as exc:
+        return {
+            "state": "invalid",
+            "detail": f"program truth ledger load failed: {exc}",
+        }
+
+    validation = svc.validate_manifest(manifest)
+    matched_capabilities = svc.release_target_capability_ids_for_spec(manifest, spec_dir)
+    if not matched_capabilities:
+        return None
+
+    surface = svc.build_truth_ledger_surface(manifest, validation_result=validation)
+    if surface is None:
+        return None
+
+    matched_items = [
+        item
+        for item in surface.get("release_capabilities", [])
+        if item.get("capability_id") in matched_capabilities
+    ]
+    if not matched_items:
+        return None
+
+    ready = surface.get("snapshot_state") == "fresh" and all(
+        item.get("audit_state") == "ready" for item in matched_items
+    )
+    detail = str(surface.get("detail", "")).strip()
+    if ready and surface.get("state") == "migration_pending":
+        detail = "release-scope truth is ready; global migration_pending remains outside current scope"
+
+    return {
+        "state": surface.get("state"),
+        "detail": detail,
+        "ready": ready,
+        "matched_capabilities": matched_capabilities,
+    }
 
 
 class PipelineHaltError(Exception):
@@ -427,6 +478,12 @@ class SDLCRunner:
                 ctx["close_check_attested"] = True
             else:
                 ctx["close_check_blockers"] = list(close_check.blockers)
+        truth_surface = _program_truth_gate_surface(self.root, spec_dir=spec_dir)
+        if truth_surface is not None:
+            ctx["program_truth_audit_required"] = True
+            ctx["program_truth_audit_ready"] = bool(truth_surface.get("ready"))
+            ctx["program_truth_audit_state"] = truth_surface.get("state")
+            ctx["program_truth_audit_detail"] = truth_surface.get("detail", "")
         work_item_id = ""
         if cp and cp.linked_wi_id:
             work_item_id = cp.linked_wi_id

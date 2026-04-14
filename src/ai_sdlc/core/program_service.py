@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import hashlib
+import json
 import re
 import shutil
 import tempfile
@@ -43,6 +45,7 @@ from ai_sdlc.core.verify_constraints import (
     collect_frontend_evidence_class_blockers,
     split_terminal_markdown_footer,
 )
+from ai_sdlc.core.workitem_truth import run_truth_check
 from ai_sdlc.generators.frontend_gate_policy_artifacts import (
     materialize_frontend_gate_policy_artifacts,
 )
@@ -75,7 +78,12 @@ from ai_sdlc.models.frontend_solution_confirmation import (
     build_builtin_style_pack_manifests,
     build_mvp_solution_snapshot,
 )
-from ai_sdlc.models.program import ProgramManifest, ProgramSpecRef
+from ai_sdlc.models.program import (
+    ProgramComputedCapabilityState,
+    ProgramManifest,
+    ProgramSpecRef,
+    ProgramTruthSnapshot,
+)
 from ai_sdlc.telemetry.clock import utc_now_z
 
 FRONTEND_EVIDENCE_CLASS_ALLOWED_VALUES = (
@@ -1151,6 +1159,110 @@ class ProgramService:
         if cycle:
             errors.append("dependency cycle detected: " + " -> ".join(cycle))
 
+        capability_by_id = {}
+        for capability in manifest.capabilities:
+            if not capability.id.strip():
+                errors.append("capability.id must not be empty")
+                continue
+            if capability.id in capability_by_id:
+                errors.append(f"duplicate capability id: {capability.id}")
+                continue
+            capability_by_id[capability.id] = capability
+
+        for release_target in manifest.release_targets:
+            if release_target not in capability_by_id:
+                errors.append(
+                    f"unknown release target '{release_target}' (not in capabilities)"
+                )
+
+        release_scope_spec_ids: set[str] = set()
+        for capability_id, capability in capability_by_id.items():
+            for spec_ref in capability.spec_refs:
+                if spec_ref not in by_id:
+                    errors.append(
+                        f"capability {capability_id}: unknown spec_ref '{spec_ref}'"
+                    )
+                else:
+                    if capability_id in manifest.release_targets:
+                        release_scope_spec_ids.add(spec_ref)
+            if capability.release_required:
+                evidence = capability.required_evidence
+                if not evidence.truth_check_refs:
+                    errors.append(
+                        f"release-required capability {capability_id}: "
+                        "truth_check_refs must not be empty"
+                    )
+                if not evidence.close_check_refs:
+                    errors.append(
+                        f"release-required capability {capability_id}: "
+                        "close_check_refs must not be empty"
+                    )
+                if not evidence.verify_refs:
+                    errors.append(
+                        f"release-required capability {capability_id}: "
+                        "verify_refs must not be empty"
+                    )
+
+        for spec_id in release_scope_spec_ids:
+            spec = by_id.get(spec_id)
+            if spec is None:
+                continue
+            if not spec.roles:
+                errors.append(
+                    f"release-scope spec {spec_id}: roles must not be empty"
+                )
+            if not spec.capability_refs:
+                errors.append(
+                    f"release-scope spec {spec_id}: capability_refs must not be empty"
+                )
+
+        for spec in manifest.specs:
+            for capability_ref in spec.capability_refs:
+                capability = capability_by_id.get(capability_ref)
+                if capability is None:
+                    errors.append(
+                        f"spec {spec.id}: unknown capability_ref '{capability_ref}'"
+                    )
+                    continue
+                if spec.id not in capability.spec_refs:
+                    errors.append(
+                        f"spec {spec.id}: capability_ref '{capability_ref}' missing "
+                        "back-reference in capability.spec_refs"
+                    )
+
+        for capability_id, capability in capability_by_id.items():
+            for spec_ref in capability.spec_refs:
+                spec = by_id.get(spec_ref)
+                if spec is None:
+                    continue
+                if spec.capability_refs and capability_id not in spec.capability_refs:
+                    errors.append(
+                        f"capability {capability_id}: spec_ref '{spec_ref}' missing "
+                        "back-reference in spec.capability_refs"
+                    )
+
+        if manifest.schema_version.strip() == "2":
+            manifest_spec_dirs = set()
+            for spec in manifest.specs:
+                try:
+                    manifest_spec_dirs.add(self._resolve_spec_dir(spec.path))
+                except ValueError:
+                    continue
+            specs_root = self.root / "specs"
+            if specs_root.is_dir():
+                for candidate in sorted(specs_root.iterdir()):
+                    if not candidate.is_dir():
+                        continue
+                    if not (candidate / "spec.md").is_file():
+                        continue
+                    resolved_candidate = candidate.resolve()
+                    if resolved_candidate in manifest_spec_dirs:
+                        continue
+                    warnings.append(
+                        "migration_pending: manifest entry missing for "
+                        f"{_relative_to_root_or_str(self.root, candidate)}"
+                    )
+
         if not manifest.prd_path.strip():
             warnings.append("prd_path is empty (recommended to set for traceability)")
         else:
@@ -1375,6 +1487,401 @@ class ProgramService:
             Path(handle.name).unlink(missing_ok=True)
             raise
 
+    def build_truth_snapshot(
+        self,
+        manifest: ProgramManifest,
+        *,
+        validation_result: ProgramValidationResult | None = None,
+    ) -> ProgramTruthSnapshot:
+        validation = (
+            validation_result
+            if validation_result is not None
+            else self.validate_manifest(manifest)
+        )
+        constraint_report = build_constraint_report(self.root)
+        release_targets = set(manifest.release_targets)
+        source_hashes: dict[str, str] = {}
+        computed_capabilities: list[ProgramComputedCapabilityState] = []
+
+        for capability in manifest.capabilities:
+            computed_capabilities.append(
+                self._build_truth_capability_state(
+                    manifest,
+                    capability_id=capability.id,
+                    validation_result=validation,
+                    constraint_report=constraint_report,
+                    release_targets=release_targets,
+                    source_hashes=source_hashes,
+                )
+            )
+
+        snapshot = ProgramTruthSnapshot(
+            generated_at=utc_now_z(),
+            generated_by="ai-sdlc program truth sync",
+            generator_version="program_truth_snapshot_v1",
+            repo_revision=self._current_repo_revision(),
+            authoring_hash=self._truth_authoring_hash(),
+            source_hashes=source_hashes,
+            computed_capabilities=computed_capabilities,
+            state=self._build_truth_snapshot_state(
+                validation_result=validation,
+                computed_capabilities=computed_capabilities,
+            ),
+        )
+        snapshot.snapshot_hash = self._hash_payload(
+            self._truth_snapshot_hash_payload(snapshot)
+        )
+        return snapshot
+
+    def write_truth_snapshot(self, snapshot: ProgramTruthSnapshot) -> None:
+        payload = self._load_manifest_yaml_payload()
+        payload["truth_snapshot"] = snapshot.model_dump(mode="json")
+        serialized = yaml.safe_dump(payload, sort_keys=False, allow_unicode=True)
+        self._atomic_write_text(self.manifest_path, serialized)
+
+    def build_truth_ledger_surface(
+        self,
+        manifest: ProgramManifest,
+        *,
+        validation_result: ProgramValidationResult | None = None,
+    ) -> dict[str, object] | None:
+        if (
+            manifest.schema_version.strip() != "2"
+            and manifest.truth_snapshot is None
+            and not manifest.capabilities
+            and not manifest.release_targets
+        ):
+            return None
+
+        validation = (
+            validation_result
+            if validation_result is not None
+            else self.validate_manifest(manifest)
+        )
+        current_snapshot = self.build_truth_snapshot(
+            manifest,
+            validation_result=validation,
+        )
+        persisted_snapshot = manifest.truth_snapshot
+        migration_pending_specs = self._migration_pending_specs(validation.warnings)
+
+        if persisted_snapshot is None:
+            snapshot_state = "missing"
+        elif not self._truth_snapshot_hash_matches(persisted_snapshot):
+            snapshot_state = "invalid"
+        elif self._truth_snapshot_stable_payload(
+            persisted_snapshot
+        ) != self._truth_snapshot_stable_payload(current_snapshot):
+            snapshot_state = "stale"
+        else:
+            snapshot_state = "fresh"
+
+        if snapshot_state == "missing":
+            state = "migration_pending"
+        elif snapshot_state in {"invalid", "stale"}:
+            state = snapshot_state
+        else:
+            state = current_snapshot.state or "ready"
+
+        release_capability_map = {
+            item.capability_id: item for item in current_snapshot.computed_capabilities
+        }
+        release_capabilities: list[dict[str, object]] = []
+        for capability_id in manifest.release_targets:
+            item = release_capability_map.get(capability_id)
+            if item is None:
+                continue
+            release_capabilities.append(
+                {
+                    "capability_id": item.capability_id,
+                    "closure_state": item.closure_state,
+                    "audit_state": item.audit_state,
+                    "blocking_refs": list(item.blocking_refs),
+                }
+            )
+
+        detail = self._build_truth_ledger_detail(
+            state=state,
+            snapshot_state=snapshot_state,
+            release_capabilities=release_capabilities,
+            migration_pending_count=len(migration_pending_specs),
+        )
+
+        return {
+            "state": state,
+            "snapshot_state": snapshot_state,
+            "detail": detail,
+            "snapshot_hash": current_snapshot.snapshot_hash,
+            "release_targets": list(manifest.release_targets),
+            "release_capabilities": release_capabilities,
+            "migration_pending_count": len(migration_pending_specs),
+            "migration_pending_specs": migration_pending_specs,
+            "migration_suggestions": [
+                f"add manifest entry for {item}" for item in migration_pending_specs[:5]
+            ],
+            "validation_errors": list(validation.errors),
+            "validation_warnings": list(validation.warnings),
+        }
+
+    def _build_truth_capability_state(
+        self,
+        manifest: ProgramManifest,
+        *,
+        capability_id: str,
+        validation_result: ProgramValidationResult,
+        constraint_report: object,
+        release_targets: set[str],
+        source_hashes: dict[str, str],
+    ) -> ProgramComputedCapabilityState:
+        capability = next(
+            (item for item in manifest.capabilities if item.id == capability_id),
+            None,
+        )
+        if capability is None:
+            return ProgramComputedCapabilityState(
+                capability_id=capability_id,
+                closure_state="capability_open",
+                audit_state="invalid",
+                blocking_refs=[f"missing_capability:{capability_id}"],
+            )
+
+        blockers: list[str] = []
+        closure_state = self._capability_closure_state(manifest, capability_id)
+        release_scope = capability.release_required or capability_id in release_targets
+
+        if release_scope and manifest.capability_closure_audit is None:
+            closure_state = "capability_open"
+            blockers.append("capability_closure_audit:missing")
+        if release_scope and closure_state != "closed":
+            blockers.append(f"capability_closure_audit:{closure_state}")
+
+        capability_validation_errors = [
+            error
+            for error in validation_result.errors
+            if capability_id in error
+            or any(spec_ref in error for spec_ref in capability.spec_refs)
+            or "unknown release target" in error
+        ]
+        canonical_conflict_errors = [
+            error
+            for error in capability_validation_errors
+            if f"problem_family={FRONTEND_EVIDENCE_CLASS_MIRROR_PROBLEM_FAMILY}" in error
+        ]
+        structural_validation_errors = [
+            error
+            for error in capability_validation_errors
+            if error not in canonical_conflict_errors
+        ]
+        capability_validation_warnings = [
+            warning
+            for warning in validation_result.warnings
+            if any(spec_ref in warning for spec_ref in capability.spec_refs)
+        ]
+
+        for ref in capability.required_evidence.truth_check_refs:
+            result = self._run_truth_check_ref(ref)
+            source_hashes[f"truth_check:{ref}"] = self._hash_payload(result)
+            if release_scope and (
+                not bool(result.get("ok"))
+                or result.get("classification") == "formal_freeze_only"
+            ):
+                blockers.append(f"truth_check:{ref}")
+
+        for ref in capability.required_evidence.close_check_refs:
+            result = self._run_close_check_ref(ref)
+            source_hashes[f"close_check:{ref}"] = self._hash_payload(result)
+            if release_scope and not bool(result.get("ok")):
+                blockers.append(f"close_check:{ref}")
+
+        for ref in capability.required_evidence.verify_refs:
+            result = self._run_verify_ref(ref, constraint_report=constraint_report)
+            source_hashes[f"verify:{ref}"] = self._hash_payload(result)
+            if release_scope and (
+                not bool(result.get("ok")) or bool(result.get("blockers"))
+            ):
+                blockers.append(f"verify:{ref}")
+
+        audit_state = "ready"
+        if canonical_conflict_errors:
+            audit_state = "blocked"
+            blockers.extend([f"canonical_conflict:{capability_id}"])
+            if structural_validation_errors:
+                blockers.extend([f"manifest_validation:{capability_id}"])
+        elif structural_validation_errors:
+            audit_state = "invalid"
+            blockers.extend([f"manifest_validation:{capability_id}"])
+        elif capability_validation_warnings:
+            audit_state = "migration_pending"
+        if blockers and audit_state not in {"invalid", "migration_pending"}:
+            audit_state = "blocked"
+
+        return ProgramComputedCapabilityState(
+            capability_id=capability_id,
+            closure_state=closure_state,
+            audit_state=audit_state,
+            blocking_refs=_unique_strings(blockers),
+            stale_reason="",
+        )
+
+    def _run_truth_check_ref(self, ref: str) -> dict[str, object]:
+        path = self._resolve_project_relative_path(ref)
+        result = run_truth_check(cwd=self.root, wi=path, rev="HEAD")
+        return result.to_json_dict()
+
+    def _run_close_check_ref(self, ref: str) -> dict[str, object]:
+        from ai_sdlc.core.close_check import run_close_check
+
+        path = self._resolve_project_relative_path(ref)
+        result = run_close_check(cwd=self.root, wi=path)
+        return result.to_json_dict()
+
+    def _run_verify_ref(
+        self,
+        ref: str,
+        *,
+        constraint_report: object,
+    ) -> dict[str, object]:
+        normalized = ref.strip()
+        if normalized == "uv run ai-sdlc verify constraints":
+            blockers = list(getattr(constraint_report, "blockers", []))
+            warnings = list(getattr(constraint_report, "warnings", []))
+            return {
+                "ok": not blockers,
+                "command": normalized,
+                "blockers": blockers,
+                "warnings": warnings,
+            }
+        return {
+            "ok": False,
+            "command": normalized,
+            "blockers": [f"unsupported verify ref: {normalized}"],
+            "warnings": [],
+        }
+
+    def _capability_closure_state(
+        self,
+        manifest: ProgramManifest,
+        capability_id: str,
+    ) -> str:
+        audit = manifest.capability_closure_audit
+        if audit is None:
+            return "closed"
+        for cluster in audit.open_clusters:
+            if cluster.cluster_id == capability_id:
+                return cluster.closure_state
+        return "closed"
+
+    def _build_truth_snapshot_state(
+        self,
+        *,
+        validation_result: ProgramValidationResult,
+        computed_capabilities: list[ProgramComputedCapabilityState],
+    ) -> str:
+        if validation_result.errors or any(
+            item.audit_state == "invalid" for item in computed_capabilities
+        ):
+            return "invalid"
+        if any(
+            item.audit_state == "migration_pending" for item in computed_capabilities
+        ) or any(
+            warning.startswith("migration_pending:")
+            for warning in validation_result.warnings
+        ):
+            return "migration_pending"
+        if any(item.audit_state == "blocked" for item in computed_capabilities):
+            return "blocked"
+        return "ready"
+
+    def _current_repo_revision(self) -> str:
+        try:
+            git = GitClient(self.root)
+            return git.resolve_revision("HEAD", short=True)
+        except GitError:
+            return ""
+
+    def _truth_authoring_hash(self) -> str:
+        payload = self._load_manifest_yaml_payload()
+        payload.pop("truth_snapshot", None)
+        return self._hash_payload(payload)
+
+    def _hash_payload(self, payload: object) -> str:
+        return hashlib.sha256(
+            json.dumps(payload, sort_keys=True, ensure_ascii=False).encode("utf-8")
+        ).hexdigest()
+
+    def _truth_snapshot_hash_payload(
+        self,
+        snapshot: ProgramTruthSnapshot,
+    ) -> dict[str, object]:
+        return {
+            "generated_at": snapshot.generated_at,
+            "generated_by": snapshot.generated_by,
+            "generator_version": snapshot.generator_version,
+            "repo_revision": snapshot.repo_revision,
+            "authoring_hash": snapshot.authoring_hash,
+            "source_hashes": dict(snapshot.source_hashes),
+            "computed_capabilities": [
+                item.model_dump(mode="json") for item in snapshot.computed_capabilities
+            ],
+            "state": snapshot.state,
+        }
+
+    def _truth_snapshot_hash_matches(self, snapshot: ProgramTruthSnapshot) -> bool:
+        return snapshot.snapshot_hash == self._hash_payload(
+            self._truth_snapshot_hash_payload(snapshot)
+        )
+
+    def _truth_snapshot_stable_payload(
+        self,
+        snapshot: ProgramTruthSnapshot,
+    ) -> dict[str, object]:
+        return {
+            "authoring_hash": snapshot.authoring_hash,
+            "source_hashes": dict(snapshot.source_hashes),
+            "computed_capabilities": [
+                item.model_dump(mode="json") for item in snapshot.computed_capabilities
+            ],
+            "state": snapshot.state,
+        }
+
+    def _build_truth_ledger_detail(
+        self,
+        *,
+        state: str,
+        snapshot_state: str,
+        release_capabilities: list[dict[str, object]],
+        migration_pending_count: int,
+    ) -> str:
+        if state == "ready":
+            return "truth snapshot is fresh and release targets are ready"
+        if snapshot_state == "missing":
+            return "truth snapshot has not been materialized"
+        if snapshot_state == "invalid":
+            return "persisted truth snapshot hash is invalid"
+        if snapshot_state == "stale":
+            return "persisted truth snapshot is stale relative to current authoring/evidence"
+        prefix = (
+            f"migration pending: {migration_pending_count}; "
+            if migration_pending_count > 0
+            else ""
+        )
+        if release_capabilities:
+            focus = ", ".join(
+                f"{item['capability_id']} ({item['audit_state']})"
+                for item in release_capabilities[:3]
+            )
+            return f"{prefix}release targets blocked: {focus}".strip()
+        return f"{prefix}truth ledger state: {state}".strip()
+
+    def _migration_pending_specs(self, warnings: list[str]) -> list[str]:
+        prefix = "migration_pending: manifest entry missing for "
+        pending_specs: list[str] = []
+        for warning in warnings:
+            if not warning.startswith(prefix):
+                continue
+            pending_specs.append(warning.removeprefix(prefix).strip())
+        return pending_specs
+
     def topo_tiers(self, manifest: ProgramManifest) -> list[list[str]]:
         graph = self._build_graph(manifest)
         indeg: dict[str, int] = {k: 0 for k in graph}
@@ -1475,6 +1982,33 @@ class ProgramService:
             statuses[spec.id].blocked_by = blocked
 
         return [statuses[s.id] for s in manifest.specs if s.id in statuses]
+
+    def release_target_capability_ids_for_spec(
+        self,
+        manifest: ProgramManifest,
+        spec_path: str | Path,
+    ) -> list[str]:
+        resolved_spec_dir = self._resolve_project_relative_path(spec_path)
+        matched_spec_ids: list[str] = []
+        for spec in manifest.specs:
+            try:
+                manifest_spec_dir = self._resolve_spec_dir(spec.path)
+            except ValueError:
+                continue
+            if manifest_spec_dir == resolved_spec_dir:
+                matched_spec_ids.append(spec.id)
+
+        if not matched_spec_ids:
+            return []
+
+        release_targets = set(manifest.release_targets)
+        matched_capabilities: list[str] = []
+        for capability in manifest.capabilities:
+            if capability.id not in release_targets:
+                continue
+            if any(spec_id in capability.spec_refs for spec_id in matched_spec_ids):
+                matched_capabilities.append(capability.id)
+        return _unique_strings(matched_capabilities)
 
     def build_frontend_evidence_class_statuses(
         self,

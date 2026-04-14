@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import subprocess
 from pathlib import Path
 from unittest.mock import patch
 
@@ -113,6 +114,76 @@ def _write_manifest_yaml(root: Path, text: str) -> None:
     (root / "program-manifest.yaml").write_text(
         text.strip() + "\n",
         encoding="utf-8",
+    )
+
+
+def _init_truth_git_repo(root: Path) -> None:
+    subprocess.run(["git", "init", "-b", "main"], cwd=root, check=True, capture_output=True)
+    subprocess.run(
+        ["git", "config", "user.email", "t@example.com"],
+        cwd=root,
+        check=True,
+        capture_output=True,
+    )
+    subprocess.run(
+        ["git", "config", "user.name", "Tester"],
+        cwd=root,
+        check=True,
+        capture_output=True,
+    )
+
+
+def _commit_truth_repo(root: Path, message: str) -> None:
+    subprocess.run(["git", "add", "."], cwd=root, check=True, capture_output=True)
+    subprocess.run(["git", "commit", "-m", message], cwd=root, check=True, capture_output=True)
+
+
+def _write_program_truth_fixture(root: Path) -> None:
+    spec_dir = root / "specs" / "001-auth"
+    spec_dir.mkdir(parents=True, exist_ok=True)
+    (spec_dir / "spec.md").write_text("# Spec\n", encoding="utf-8")
+    (spec_dir / "plan.md").write_text("# Plan\n", encoding="utf-8")
+    (spec_dir / "tasks.md").write_text("- [ ] pending\n", encoding="utf-8")
+    _write_manifest_yaml(
+        root,
+        """
+schema_version: "2"
+program:
+  goal: "Demo truth ledger"
+release_targets:
+  - "frontend-mainline-delivery"
+capabilities:
+  - id: "frontend-mainline-delivery"
+    title: "Frontend Mainline Delivery"
+    goal: "Demo release target"
+    release_required: true
+    spec_refs:
+      - "001-auth"
+    required_evidence:
+      truth_check_refs:
+        - "specs/001-auth"
+      close_check_refs:
+        - "specs/001-auth"
+      verify_refs:
+        - "uv run ai-sdlc verify constraints"
+capability_closure_audit:
+  reviewed_at: "2026-04-14T12:00:00Z"
+  open_clusters:
+    - cluster_id: "frontend-mainline-delivery"
+      title: "Frontend Mainline Delivery"
+      closure_state: "capability_open"
+      summary: "Delivery capability is still open."
+      source_refs:
+        - "001-auth"
+specs:
+  - id: "001-auth"
+    path: "specs/001-auth"
+    depends_on: []
+    roles:
+      - "runtime_carrier"
+    capability_refs:
+      - "frontend-mainline-delivery"
+""",
     )
 
 
@@ -739,6 +810,51 @@ specs:
         assert plan.exit_code == 0
         assert "Program Plan" in plan.output
         assert "003-enroll" in plan.output
+
+    def test_program_truth_sync_and_audit_surface_blocked_release_state(
+        self, initialized_project_dir: Path
+    ) -> None:
+        root = initialized_project_dir
+        _init_truth_git_repo(root)
+        _write_program_truth_fixture(root)
+        _commit_truth_repo(root, "docs: seed truth ledger fixture")
+
+        with patch("ai_sdlc.cli.program_cmd.find_project_root", return_value=root):
+            sync = runner.invoke(
+                app,
+                ["program", "truth", "sync", "--execute", "--yes"],
+            )
+            audit = runner.invoke(app, ["program", "truth", "audit"])
+            status = runner.invoke(app, ["program", "status"])
+
+        assert sync.exit_code == 0, sync.output
+        assert "Program Truth Sync Execute" in sync.output
+        payload = yaml.safe_load((root / "program-manifest.yaml").read_text(encoding="utf-8"))
+        snapshot = payload["truth_snapshot"]
+        assert snapshot["state"] == "blocked"
+        assert snapshot["computed_capabilities"] == [
+            {
+                "capability_id": "frontend-mainline-delivery",
+                "closure_state": "capability_open",
+                "audit_state": "blocked",
+                "blocking_refs": snapshot["computed_capabilities"][0]["blocking_refs"],
+                "stale_reason": "",
+            }
+        ]
+        assert any(
+            "capability_closure_audit:capability_open" in blocker
+            for blocker in snapshot["computed_capabilities"][0]["blocking_refs"]
+        )
+
+        assert audit.exit_code == 1, audit.output
+        assert "Program Truth Audit" in audit.output
+        assert "state: blocked" in audit.output.lower()
+        assert "snapshot state: fresh" in audit.output.lower()
+        assert "frontend-mainline-delivery" in audit.output
+
+        assert status.exit_code == 0, status.output
+        assert "Truth Ledger" in status.output
+        assert "blocked" in status.output.lower()
 
     def test_program_status_exposes_frontend_readiness(
         self, initialized_project_dir: Path

@@ -462,6 +462,25 @@ def status_command(
             if capability_closure["open_cluster_count"] > len(sample_clusters):
                 summary += ", ..."
             table.add_row("Capability Closure Focus", summary)
+    truth_ledger = status_surface.get("truth_ledger")
+    if truth_ledger is not None:
+        table.add_row("Truth Ledger", str(truth_ledger["state"]))
+        table.add_row("Truth Snapshot", str(truth_ledger["snapshot_state"]))
+        table.add_row("Truth Ledger Detail", str(truth_ledger["detail"]))
+        if truth_ledger.get("release_targets"):
+            table.add_row(
+                "Truth Release Targets",
+                ", ".join(str(item) for item in truth_ledger["release_targets"]),
+            )
+        sample_capabilities = truth_ledger.get("release_capabilities", [])[:3]
+        if sample_capabilities:
+            summary = ", ".join(
+                f"{item['capability_id']} ({item['audit_state']})"
+                for item in sample_capabilities
+            )
+            if len(truth_ledger["release_capabilities"]) > len(sample_capabilities):
+                summary += ", ..."
+            table.add_row("Truth Ledger Focus", summary)
 
     console.print(table)
     if hint is not None:

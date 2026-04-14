@@ -31,6 +31,8 @@ from ai_sdlc.models.frontend_solution_confirmation import (
 from ai_sdlc.utils.helpers import find_project_root
 
 program_app = typer.Typer(help="Program-level planning across multiple specs")
+truth_app = typer.Typer(help="Program truth-ledger operations")
+program_app.add_typer(truth_app, name="truth")
 console = Console()
 
 
@@ -193,6 +195,7 @@ def program_status(
 
     result = svc.validate_manifest(mf)
     rows = svc.build_status(mf, validation_result=result)
+    truth_surface = svc.build_truth_ledger_surface(mf, validation_result=result)
 
     table = Table(title="Program Status")
     table.add_column("Spec")
@@ -224,6 +227,8 @@ def program_status(
 
     console.print(table)
     _render_frontend_status_lines(rows)
+    if truth_surface is not None:
+        _render_truth_ledger_lines(truth_surface)
 
     if not result.valid:
         console.print(
@@ -236,6 +241,128 @@ def program_status(
         raise typer.Exit(code=1)
 
     raise typer.Exit(code=0)
+
+
+@truth_app.command("sync")
+def program_truth_sync(
+    manifest: str = typer.Option(
+        "program-manifest.yaml",
+        "--manifest",
+        help="Path to program manifest relative to project root.",
+    ),
+    dry_run: bool = typer.Option(
+        True,
+        "--dry-run/--execute",
+        help="Preview truth snapshot materialization or explicitly write truth_snapshot.",
+    ),
+    yes: bool = typer.Option(
+        False,
+        "--yes",
+        help="Confirm truth snapshot write in execute mode.",
+    ),
+) -> None:
+    """Preview or materialize the program truth snapshot."""
+    root = _resolve_root()
+    svc = ProgramService(root, root / manifest)
+
+    try:
+        mf = svc.load_manifest()
+    except Exception as exc:
+        console.print(f"[red]Failed to load manifest: {exc}[/red]")
+        raise typer.Exit(code=2) from None
+
+    validation = svc.validate_manifest(mf)
+    snapshot = svc.build_truth_snapshot(mf, validation_result=validation)
+    mode_title = "Program Truth Sync Dry-Run" if dry_run else "Program Truth Sync Execute"
+    console.print(f"[bold cyan]{mode_title}[/bold cyan]")
+    console.print(f"  - truth snapshot state: {snapshot.state}", markup=False)
+    console.print(f"  - snapshot hash: {snapshot.snapshot_hash}", markup=False)
+    console.print(
+        "  - release targets: "
+        + (", ".join(mf.release_targets) if mf.release_targets else "-"),
+        markup=False,
+    )
+    for item in snapshot.computed_capabilities:
+        console.print(
+            f"  - capability: {item.capability_id} | closure={item.closure_state} | audit={item.audit_state}",
+            markup=False,
+        )
+        for blocker in item.blocking_refs:
+            console.print(f"    blocker: {blocker}", markup=False)
+    _render_truth_validation_summary(validation.errors, validation.warnings)
+
+    if dry_run:
+        raise typer.Exit(code=0)
+
+    if not yes:
+        console.print(
+            "[bold yellow]`--execute` requires explicit confirmation via `--yes`.[/bold yellow]"
+        )
+        raise typer.Exit(code=2)
+
+    svc.write_truth_snapshot(snapshot)
+    console.print(
+        f"  - written path: {root.joinpath(manifest).relative_to(root)}",
+        markup=False,
+    )
+    raise typer.Exit(code=0)
+
+
+@truth_app.command("audit")
+def program_truth_audit(
+    manifest: str = typer.Option(
+        "program-manifest.yaml",
+        "--manifest",
+        help="Path to program manifest relative to project root.",
+    ),
+) -> None:
+    """Audit persisted truth snapshot freshness and release-target readiness."""
+    root = _resolve_root()
+    svc = ProgramService(root, root / manifest)
+
+    try:
+        mf = svc.load_manifest()
+    except Exception as exc:
+        console.print(f"[red]Failed to load manifest: {exc}[/red]")
+        raise typer.Exit(code=2) from None
+
+    validation = svc.validate_manifest(mf)
+    surface = svc.build_truth_ledger_surface(mf, validation_result=validation)
+    if surface is None:
+        console.print("[yellow]Truth ledger is not enabled in the manifest.[/yellow]")
+        raise typer.Exit(code=1)
+
+    console.print("[bold cyan]Program Truth Audit[/bold cyan]")
+    console.print(f"  - state: {surface['state']}", markup=False)
+    console.print(f"  - snapshot state: {surface['snapshot_state']}", markup=False)
+    console.print(f"  - detail: {surface['detail']}", markup=False)
+    console.print(
+        "  - release targets: "
+        + (", ".join(surface["release_targets"]) if surface["release_targets"] else "-"),
+        markup=False,
+    )
+    for item in surface["release_capabilities"]:
+        console.print(
+            f"  - capability: {item['capability_id']} | closure={item['closure_state']} | audit={item['audit_state']}",
+            markup=False,
+        )
+        for blocker in item["blocking_refs"]:
+            console.print(f"    blocker: {blocker}", markup=False)
+    if surface["migration_pending_count"]:
+        console.print(
+            f"  - migration pending: {surface['migration_pending_count']}",
+            markup=False,
+        )
+        for spec in surface["migration_pending_specs"][:5]:
+            console.print(f"    pending spec: {spec}", markup=False)
+        for suggestion in surface["migration_suggestions"]:
+            console.print(f"    suggestion: {suggestion}", markup=False)
+    _render_truth_validation_summary(
+        list(surface["validation_errors"]),
+        list(surface["validation_warnings"]),
+    )
+
+    raise typer.Exit(code=0 if surface["state"] == "ready" else 1)
 
 
 @program_app.command("plan")
@@ -4246,6 +4373,53 @@ def _render_frontend_status_lines(rows: list[object]) -> None:
             f"{_format_program_status_frontend_cell(readiness, evidence_class_status)}",
             markup=False,
         )
+
+
+def _render_truth_ledger_lines(surface: dict[str, object]) -> None:
+    console.print("\n[bold cyan]Truth Ledger[/bold cyan]")
+    console.print(f"  - state: {surface['state']}", markup=False)
+    console.print(f"  - snapshot state: {surface['snapshot_state']}", markup=False)
+    console.print(f"  - detail: {surface['detail']}", markup=False)
+    release_targets = surface.get("release_targets", [])
+    if release_targets:
+        console.print(
+            "  - release targets: " + ", ".join(str(item) for item in release_targets),
+            markup=False,
+        )
+    for item in surface.get("release_capabilities", []):
+        console.print(
+            f"  - capability: {item['capability_id']} | closure={item['closure_state']} | audit={item['audit_state']}",
+            markup=False,
+        )
+        for blocker in item.get("blocking_refs", []):
+            console.print(f"    blocker: {blocker}", markup=False)
+    migration_pending_count = int(surface.get("migration_pending_count", 0) or 0)
+    if migration_pending_count:
+        console.print(
+            f"  - migration pending: {migration_pending_count}",
+            markup=False,
+        )
+
+
+def _render_truth_validation_summary(
+    errors: list[str],
+    warnings: list[str],
+) -> None:
+    migration_prefix = "migration_pending:"
+    non_migration_warnings = [
+        warning for warning in warnings if not warning.startswith(migration_prefix)
+    ]
+    if non_migration_warnings:
+        console.print(
+            f"  - warnings: {len(non_migration_warnings)}",
+            markup=False,
+        )
+        for warning in non_migration_warnings[:5]:
+            console.print(f"    warning: {warning}", markup=False)
+    if errors:
+        console.print(f"  - validation errors: {len(errors)}", markup=False)
+        for error in errors[:5]:
+            console.print(f"    validation: {error}", markup=False)
 
 
 def _render_frontend_integrate_lines(steps: list[object]) -> None:

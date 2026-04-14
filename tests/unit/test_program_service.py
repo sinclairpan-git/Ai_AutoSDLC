@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import subprocess
 from dataclasses import replace
 from pathlib import Path
 
@@ -94,6 +95,68 @@ def _write_manifest_yaml(root: Path, text: str) -> None:
     (root / "program-manifest.yaml").write_text(
         text.strip() + "\n",
         encoding="utf-8",
+    )
+
+
+def _init_truth_git_repo(root: Path) -> None:
+    subprocess.run(["git", "init", "-b", "main"], cwd=root, check=True, capture_output=True)
+    subprocess.run(
+        ["git", "config", "user.email", "t@example.com"],
+        cwd=root,
+        check=True,
+        capture_output=True,
+    )
+    subprocess.run(
+        ["git", "config", "user.name", "Tester"],
+        cwd=root,
+        check=True,
+        capture_output=True,
+    )
+
+
+def _commit_truth_repo(root: Path, message: str) -> None:
+    subprocess.run(["git", "add", "."], cwd=root, check=True, capture_output=True)
+    subprocess.run(["git", "commit", "-m", message], cwd=root, check=True, capture_output=True)
+
+
+def _write_truth_ledger_manifest(
+    root: Path,
+    *,
+    frontend_evidence_class: str = "framework_capability",
+) -> None:
+    _write_manifest_yaml(
+        root,
+        f"""
+schema_version: "2"
+prd_path: "PRD.md"
+program:
+  goal: "Demo truth ledger"
+release_targets:
+  - "frontend-mainline-delivery"
+capabilities:
+  - id: "frontend-mainline-delivery"
+    title: "Frontend Mainline Delivery"
+    goal: "Demo release target"
+    release_required: true
+    spec_refs:
+      - "082-frontend-example"
+    required_evidence:
+      truth_check_refs:
+        - "specs/082-frontend-example"
+      close_check_refs:
+        - "specs/082-frontend-example"
+      verify_refs:
+        - "uv run ai-sdlc verify constraints"
+specs:
+  - id: "082-frontend-example"
+    path: "specs/082-frontend-example"
+    depends_on: []
+    frontend_evidence_class: "{frontend_evidence_class}"
+    roles:
+      - "runtime_carrier"
+    capability_refs:
+      - "frontend-mainline-delivery"
+""",
     )
 
 
@@ -290,6 +353,411 @@ def test_validate_manifest_ok(tmp_path: Path) -> None:
     res = svc.validate_manifest(_manifest())
     assert res.valid is True
     assert res.errors == []
+
+
+def test_program_manifest_v2_preserves_truth_ledger_fields() -> None:
+    manifest = ProgramManifest.model_validate(
+        {
+            "schema_version": "2",
+            "prd_path": "PRD.md",
+            "program": {"goal": "AI-SDLC automated framework"},
+            "release_targets": ["frontend-mainline-delivery"],
+            "capabilities": [
+                {
+                    "id": "frontend-mainline-delivery",
+                    "title": "Frontend Mainline Delivery",
+                    "goal": "ship the managed frontend mainline",
+                    "release_required": True,
+                    "spec_refs": ["001-auth"],
+                    "required_evidence": {
+                        "truth_check_refs": ["specs/001-auth"],
+                        "close_check_refs": ["specs/001-auth"],
+                        "verify_refs": ["uv run ai-sdlc verify constraints"],
+                    },
+                }
+            ],
+            "specs": [
+                {
+                    "id": "001-auth",
+                    "path": "specs/001-auth",
+                    "depends_on": [],
+                    "roles": ["runtime_carrier"],
+                    "capability_refs": ["frontend-mainline-delivery"],
+                }
+            ],
+            "truth_snapshot": {
+                "generated_at": "2026-04-14T12:00:00Z",
+                "generated_by": "ai-sdlc program truth sync",
+                "generator_version": "1",
+                "repo_revision": "abc123",
+                "authoring_hash": "authoring-hash",
+                "source_hashes": {"program-manifest.yaml": "src-hash"},
+                "snapshot_hash": "snapshot-hash",
+                "computed_capabilities": [
+                    {
+                        "capability_id": "frontend-mainline-delivery",
+                        "closure_state": "partial",
+                        "audit_state": "blocked",
+                        "blocking_refs": ["canonical_conflict"],
+                        "stale_reason": "",
+                    }
+                ],
+                "state": "blocked",
+            },
+        }
+    )
+
+    assert manifest.schema_version == "2"
+    assert manifest.program is not None
+    assert manifest.program.goal == "AI-SDLC automated framework"
+    assert manifest.release_targets == ["frontend-mainline-delivery"]
+    assert manifest.capabilities[0].id == "frontend-mainline-delivery"
+    assert manifest.capabilities[0].required_evidence.truth_check_refs == [
+        "specs/001-auth"
+    ]
+    assert manifest.specs[0].roles == ["runtime_carrier"]
+    assert manifest.specs[0].capability_refs == ["frontend-mainline-delivery"]
+    assert manifest.truth_snapshot is not None
+    assert manifest.truth_snapshot.authoring_hash == "authoring-hash"
+    assert manifest.truth_snapshot.computed_capabilities[0].audit_state == "blocked"
+
+
+def test_validate_manifest_rejects_unknown_release_target(tmp_path: Path) -> None:
+    (tmp_path / "specs" / "001-auth").mkdir(parents=True)
+    (tmp_path / "PRD.md").write_text("# prd\n", encoding="utf-8")
+    svc = ProgramService(tmp_path)
+    manifest = ProgramManifest.model_validate(
+        {
+            "schema_version": "2",
+            "prd_path": "PRD.md",
+            "program": {"goal": "AI-SDLC automated framework"},
+            "release_targets": ["missing-capability"],
+            "capabilities": [
+                {
+                    "id": "frontend-mainline-delivery",
+                    "title": "Frontend Mainline Delivery",
+                    "goal": "ship the managed frontend mainline",
+                    "release_required": True,
+                    "spec_refs": ["001-auth"],
+                    "required_evidence": {
+                        "truth_check_refs": ["specs/001-auth"],
+                        "close_check_refs": ["specs/001-auth"],
+                        "verify_refs": ["uv run ai-sdlc verify constraints"],
+                    },
+                }
+            ],
+            "specs": [
+                {
+                    "id": "001-auth",
+                    "path": "specs/001-auth",
+                    "depends_on": [],
+                    "roles": ["runtime_carrier"],
+                    "capability_refs": ["frontend-mainline-delivery"],
+                }
+            ],
+        }
+    )
+
+    res = svc.validate_manifest(manifest)
+
+    assert res.valid is False
+    assert any("unknown release target" in err for err in res.errors)
+
+
+def test_validate_manifest_rejects_release_scope_spec_without_roles_and_capability_refs(
+    tmp_path: Path,
+) -> None:
+    (tmp_path / "specs" / "001-auth").mkdir(parents=True)
+    (tmp_path / "PRD.md").write_text("# prd\n", encoding="utf-8")
+    svc = ProgramService(tmp_path)
+    manifest = ProgramManifest.model_validate(
+        {
+            "schema_version": "2",
+            "prd_path": "PRD.md",
+            "program": {"goal": "AI-SDLC automated framework"},
+            "release_targets": ["frontend-mainline-delivery"],
+            "capabilities": [
+                {
+                    "id": "frontend-mainline-delivery",
+                    "title": "Frontend Mainline Delivery",
+                    "goal": "ship the managed frontend mainline",
+                    "release_required": True,
+                    "spec_refs": ["001-auth"],
+                    "required_evidence": {
+                        "truth_check_refs": ["specs/001-auth"],
+                        "close_check_refs": ["specs/001-auth"],
+                        "verify_refs": ["uv run ai-sdlc verify constraints"],
+                    },
+                }
+            ],
+            "specs": [
+                {
+                    "id": "001-auth",
+                    "path": "specs/001-auth",
+                    "depends_on": [],
+                }
+            ],
+        }
+    )
+
+    res = svc.validate_manifest(manifest)
+
+    assert res.valid is False
+    assert any("release-scope spec 001-auth: roles must not be empty" in err for err in res.errors)
+    assert any(
+        "release-scope spec 001-auth: capability_refs must not be empty" in err
+        for err in res.errors
+    )
+
+
+def test_validate_manifest_warns_for_non_release_scope_spec_dir_missing_entry_in_v2(
+    tmp_path: Path,
+) -> None:
+    (tmp_path / "specs" / "001-auth").mkdir(parents=True)
+    (tmp_path / "specs" / "001-auth" / "spec.md").write_text(
+        "# auth\n", encoding="utf-8"
+    )
+    (tmp_path / "specs" / "999-legacy").mkdir(parents=True)
+    (tmp_path / "specs" / "999-legacy" / "spec.md").write_text(
+        "# legacy\n", encoding="utf-8"
+    )
+    (tmp_path / "PRD.md").write_text("# prd\n", encoding="utf-8")
+    svc = ProgramService(tmp_path)
+    manifest = ProgramManifest.model_validate(
+        {
+            "schema_version": "2",
+            "prd_path": "PRD.md",
+            "program": {"goal": "AI-SDLC automated framework"},
+            "release_targets": ["frontend-mainline-delivery"],
+            "capabilities": [
+                {
+                    "id": "frontend-mainline-delivery",
+                    "title": "Frontend Mainline Delivery",
+                    "goal": "ship the managed frontend mainline",
+                    "release_required": True,
+                    "spec_refs": ["001-auth"],
+                    "required_evidence": {
+                        "truth_check_refs": ["specs/001-auth"],
+                        "close_check_refs": ["specs/001-auth"],
+                        "verify_refs": ["uv run ai-sdlc verify constraints"],
+                    },
+                }
+            ],
+            "specs": [
+                {
+                    "id": "001-auth",
+                    "path": "specs/001-auth",
+                    "depends_on": [],
+                    "roles": ["runtime_carrier"],
+                    "capability_refs": ["frontend-mainline-delivery"],
+                }
+            ],
+        }
+    )
+
+    res = svc.validate_manifest(manifest)
+
+    assert res.valid is True
+    assert any(
+        "migration_pending: manifest entry missing for specs/999-legacy" in warning
+        for warning in res.warnings
+    )
+
+
+def test_build_truth_snapshot_maps_frontend_canonical_conflict_to_blocked(
+    tmp_path: Path,
+) -> None:
+    _init_truth_git_repo(tmp_path)
+    (tmp_path / ".ai-sdlc" / "project" / "config").mkdir(parents=True)
+    (tmp_path / ".ai-sdlc" / "project" / "config" / "project-state.yaml").write_text(
+        "status: initialized\nproject_name: demo\nnext_work_item_seq: 1\nversion: '1.0'\n",
+        encoding="utf-8",
+    )
+    (tmp_path / "PRD.md").write_text("# prd\n", encoding="utf-8")
+    spec_dir = tmp_path / "specs" / "082-frontend-example"
+    spec_dir.mkdir(parents=True)
+    (spec_dir / "spec.md").write_text(
+        "# Spec\n\n---\nfrontend_evidence_class: \"framework_capability\"\n---\n",
+        encoding="utf-8",
+    )
+    (spec_dir / "plan.md").write_text("# Plan\n", encoding="utf-8")
+    (spec_dir / "tasks.md").write_text("- [x] done\n", encoding="utf-8")
+    (spec_dir / "task-execution-log.md").write_text(
+        "# Log\n\n统一验证命令\n代码审查\n任务/计划同步状态\n",
+        encoding="utf-8",
+    )
+    (tmp_path / "src").mkdir(parents=True)
+    (tmp_path / "src" / "app.py").write_text("print('demo')\n", encoding="utf-8")
+    _write_truth_ledger_manifest(
+        tmp_path,
+        frontend_evidence_class="consumer_adoption",
+    )
+    _commit_truth_repo(tmp_path, "seed truth ledger conflict fixture")
+
+    svc = ProgramService(tmp_path)
+    manifest = svc.load_manifest()
+    validation = svc.validate_manifest(manifest)
+    snapshot = svc.build_truth_snapshot(manifest, validation_result=validation)
+
+    assert any(
+        "problem_family=frontend_evidence_class_mirror_drift" in error
+        for error in validation.errors
+    )
+    capability = snapshot.computed_capabilities[0]
+    assert capability.audit_state == "blocked"
+    assert any(
+        blocker == "canonical_conflict:frontend-mainline-delivery"
+        for blocker in capability.blocking_refs
+    )
+
+
+def test_build_truth_snapshot_keeps_canonical_conflict_blocked_when_structural_errors_exist(
+    tmp_path: Path,
+) -> None:
+    _init_truth_git_repo(tmp_path)
+    (tmp_path / ".ai-sdlc" / "project" / "config").mkdir(parents=True)
+    (tmp_path / ".ai-sdlc" / "project" / "config" / "project-state.yaml").write_text(
+        "status: initialized\nproject_name: demo\nnext_work_item_seq: 1\nversion: '1.0'\n",
+        encoding="utf-8",
+    )
+    (tmp_path / "PRD.md").write_text("# prd\n", encoding="utf-8")
+    spec_dir = tmp_path / "specs" / "082-frontend-example"
+    spec_dir.mkdir(parents=True)
+    (spec_dir / "spec.md").write_text(
+        "# Spec\n\n---\nfrontend_evidence_class: \"framework_capability\"\n---\n",
+        encoding="utf-8",
+    )
+    (spec_dir / "plan.md").write_text("# Plan\n", encoding="utf-8")
+    (spec_dir / "tasks.md").write_text("- [x] done\n", encoding="utf-8")
+    (spec_dir / "task-execution-log.md").write_text(
+        "# Log\n\n统一验证命令\n代码审查\n任务/计划同步状态\n",
+        encoding="utf-8",
+    )
+    (tmp_path / "src").mkdir(parents=True)
+    (tmp_path / "src" / "app.py").write_text("print('demo')\n", encoding="utf-8")
+    _write_manifest_yaml(
+        tmp_path,
+        """
+schema_version: "2"
+prd_path: "PRD.md"
+program:
+  goal: "Demo truth ledger"
+release_targets:
+  - "frontend-mainline-delivery"
+capabilities:
+  - id: "frontend-mainline-delivery"
+    title: "Frontend Mainline Delivery"
+    goal: "Demo release target"
+    release_required: true
+    spec_refs:
+      - "082-frontend-example"
+    required_evidence:
+      truth_check_refs:
+        - "specs/082-frontend-example"
+      close_check_refs:
+        - "specs/082-frontend-example"
+      verify_refs:
+        - "uv run ai-sdlc verify constraints"
+specs:
+  - id: "082-frontend-example"
+    path: "specs/082-frontend-example"
+    depends_on: []
+    frontend_evidence_class: "consumer_adoption"
+""",
+    )
+    _commit_truth_repo(tmp_path, "seed truth ledger conflict plus invalid fixture")
+
+    svc = ProgramService(tmp_path)
+    manifest = svc.load_manifest()
+    snapshot = svc.build_truth_snapshot(manifest)
+
+    capability = snapshot.computed_capabilities[0]
+    assert capability.audit_state == "blocked"
+    assert "canonical_conflict:frontend-mainline-delivery" in capability.blocking_refs
+    assert "manifest_validation:frontend-mainline-delivery" in capability.blocking_refs
+
+
+def test_build_truth_ledger_surface_marks_stale_when_authoring_hash_changes(
+    tmp_path: Path,
+) -> None:
+    _init_truth_git_repo(tmp_path)
+    (tmp_path / ".ai-sdlc" / "project" / "config").mkdir(parents=True)
+    (tmp_path / ".ai-sdlc" / "project" / "config" / "project-state.yaml").write_text(
+        "status: initialized\nproject_name: demo\nnext_work_item_seq: 1\nversion: '1.0'\n",
+        encoding="utf-8",
+    )
+    (tmp_path / "PRD.md").write_text("# prd\n", encoding="utf-8")
+    spec_dir = tmp_path / "specs" / "082-frontend-example"
+    spec_dir.mkdir(parents=True)
+    (spec_dir / "spec.md").write_text(
+        "# Spec\n\n---\nfrontend_evidence_class: \"framework_capability\"\n---\n",
+        encoding="utf-8",
+    )
+    (spec_dir / "plan.md").write_text("# Plan\n", encoding="utf-8")
+    (spec_dir / "tasks.md").write_text("- [x] done\n", encoding="utf-8")
+    (spec_dir / "task-execution-log.md").write_text(
+        "# Log\n\n统一验证命令\n代码审查\n任务/计划同步状态\n",
+        encoding="utf-8",
+    )
+    (tmp_path / "src").mkdir(parents=True)
+    (tmp_path / "src" / "app.py").write_text("print('demo')\n", encoding="utf-8")
+    _write_truth_ledger_manifest(tmp_path)
+    _commit_truth_repo(tmp_path, "seed truth ledger stale fixture")
+
+    svc = ProgramService(tmp_path)
+    manifest = svc.load_manifest()
+    snapshot = svc.build_truth_snapshot(manifest)
+    svc.write_truth_snapshot(snapshot)
+
+    payload = yaml.safe_load((tmp_path / "program-manifest.yaml").read_text(encoding="utf-8"))
+    payload["program"]["goal"] = "Updated goal after sync"
+    (tmp_path / "program-manifest.yaml").write_text(
+        yaml.safe_dump(payload, sort_keys=False, allow_unicode=True),
+        encoding="utf-8",
+    )
+
+    updated_manifest = svc.load_manifest()
+    surface = svc.build_truth_ledger_surface(updated_manifest)
+
+    assert surface is not None
+    assert surface["snapshot_state"] == "stale"
+    assert surface["state"] == "stale"
+
+
+def test_build_truth_snapshot_blocks_release_scope_when_closure_audit_missing(
+    tmp_path: Path,
+) -> None:
+    _init_truth_git_repo(tmp_path)
+    (tmp_path / ".ai-sdlc" / "project" / "config").mkdir(parents=True)
+    (tmp_path / ".ai-sdlc" / "project" / "config" / "project-state.yaml").write_text(
+        "status: initialized\nproject_name: demo\nnext_work_item_seq: 1\nversion: '1.0'\n",
+        encoding="utf-8",
+    )
+    (tmp_path / "PRD.md").write_text("# prd\n", encoding="utf-8")
+    spec_dir = tmp_path / "specs" / "082-frontend-example"
+    spec_dir.mkdir(parents=True)
+    (spec_dir / "spec.md").write_text(
+        "# Spec\n\n---\nfrontend_evidence_class: \"framework_capability\"\n---\n",
+        encoding="utf-8",
+    )
+    (spec_dir / "plan.md").write_text("# Plan\n", encoding="utf-8")
+    (spec_dir / "tasks.md").write_text("- [x] done\n", encoding="utf-8")
+    (spec_dir / "task-execution-log.md").write_text(
+        "# Log\n\n统一验证命令\n代码审查\n任务/计划同步状态\n",
+        encoding="utf-8",
+    )
+    (tmp_path / "src").mkdir(parents=True)
+    (tmp_path / "src" / "app.py").write_text("print('demo')\n", encoding="utf-8")
+    _write_truth_ledger_manifest(tmp_path)
+    _commit_truth_repo(tmp_path, "seed truth ledger missing closure audit fixture")
+
+    svc = ProgramService(tmp_path)
+    manifest = svc.load_manifest()
+    snapshot = svc.build_truth_snapshot(manifest)
+
+    capability = snapshot.computed_capabilities[0]
+    assert capability.audit_state == "blocked"
+    assert "capability_closure_audit:missing" in capability.blocking_refs
 
 
 def test_build_frontend_managed_delivery_apply_request_blocks_on_host_ingress(

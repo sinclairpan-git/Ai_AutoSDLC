@@ -41,6 +41,7 @@ def build_status_json_surface(repo_root: Path) -> dict[str, Any]:
     store = TelemetryStore(repo_root)
     branch_lifecycle = _build_branch_lifecycle_surface(repo_root)
     capability_closure = _build_capability_closure_surface(repo_root)
+    truth_ledger = _build_truth_ledger_surface(repo_root)
     formal_artifact_target = _build_formal_artifact_target_surface(repo_root)
     backlog_breach_guard = _build_backlog_breach_guard_surface(repo_root)
     execute_authorization = _build_execute_authorization_surface(repo_root)
@@ -75,6 +76,8 @@ def build_status_json_surface(repo_root: Path) -> dict[str, Any]:
         }
         if capability_closure is not None:
             payload["capability_closure"] = capability_closure
+        if truth_ledger is not None:
+            payload["truth_ledger"] = truth_ledger
         return payload
     if manifest_state["state"] != "loaded":
         payload = {
@@ -92,6 +95,8 @@ def build_status_json_surface(repo_root: Path) -> dict[str, Any]:
         }
         if capability_closure is not None:
             payload["capability_closure"] = capability_closure
+        if truth_ledger is not None:
+            payload["truth_ledger"] = truth_ledger
         return payload
 
     manifest = manifest_state["manifest"]
@@ -150,6 +155,8 @@ def build_status_json_surface(repo_root: Path) -> dict[str, Any]:
     }
     if capability_closure is not None:
         payload["capability_closure"] = capability_closure
+    if truth_ledger is not None:
+        payload["truth_ledger"] = truth_ledger
     return payload
 
 
@@ -201,6 +208,21 @@ def _build_capability_closure_surface(repo_root: Path) -> dict[str, Any] | None:
         ),
         "open_clusters": open_clusters,
     }
+
+
+def _build_truth_ledger_surface(repo_root: Path) -> dict[str, Any] | None:
+    manifest_path = repo_root / "program-manifest.yaml"
+    if not manifest_path.is_file():
+        return None
+
+    svc = ProgramService(repo_root, manifest_path)
+    try:
+        manifest = svc.load_manifest()
+    except Exception:
+        return None
+
+    validation = svc.validate_manifest(manifest)
+    return svc.build_truth_ledger_surface(manifest, validation_result=validation)
 
 
 def _build_frontend_evidence_class_surface(repo_root: Path) -> dict[str, Any] | None:

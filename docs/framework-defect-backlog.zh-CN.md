@@ -1465,3 +1465,29 @@
 - 下一步任务归属（2026-04-14）: 已在 `001` Task 6.48 收口，无新增 action item。
 - 可验证成功标准: 仅 checkpoint state 文件 dirty 时 close-check 仍 PASS；若存在其他未提交变更仍保持 BLOCKER。
 - 是否需要回归测试补充: 是：补 checkpoint state dirty 的 close-check 单测。
+
+## FD-2026-04-14-004 | plan 收敛后跳过 tasks 阶段直接表述可进入实现
+
+- 日期 (UTC): 2026-04-14
+- 来源: user_report, self_review
+- 状态: closed
+- owner: codex
+- wi_id: 140-program-truth-ledger-release-audit-baseline
+- related_doc: specs/140-program-truth-ledger-release-audit-baseline/spec.md, specs/140-program-truth-ledger-release-audit-baseline/plan.md, specs/140-program-truth-ledger-release-audit-baseline/tasks.md
+- 现象: 在 `140` 的 `spec.md` / `plan.md` 经两轮对抗评审收敛后，直接向用户表述“可以进入实现”，但当时 `tasks.md` 尚未创建，违反了框架要求的 `spec -> plan -> tasks -> execute` 顺序。
+- 触发场景: 设计评审收敛后，我把“通过评审”误当成“可以开始实现”的阶段信号，遗漏了必须先补 `tasks.md` 的 DECOMPOSE 步骤。
+- 影响范围: SDLC 阶段顺序可信度、后续 agent 跟随框架时的执行模板、用户对“是否还缺正式分解”的判断，以及非智能模型在升级后的可重复执行性。
+- 根因分类: A, D, H
+- 未来杜绝方案摘要: 当某 work item 已有 `spec.md` 与 `plan.md`、但缺 `tasks.md` 时，任何“下一步”或“可进入实现”的结论都必须先回到 DECOMPOSE；应把“是否存在 `tasks.md`”视为实现前的显式前置条件，并在答复前做最小文件级检查。
+- 建议改动层级: prompt / context, rule / policy, workflow, tool, eval
+- prompt / context: 对多轮 spec/plan 评审场景，明确“评审收敛 != 可直接实现”；若 `tasks.md` 缺失，下一步只能是补任务分解。
+- rule / policy: `plan` 之后必须进入 `tasks`；在 `tasks.md` 缺失时，不得向用户表述“进入实现”或“开始编码”。
+- middleware: 在 future pre-implementation guard 或阶段切换 helper 中加入 `tasks.md` 存在性检查；若缺失，则将当前 work item 强制标记为 DECOMPOSE incomplete。
+- workflow: 在每次 spec/plan 收敛后，先检查 `specs/<wi>/tasks.md` 是否存在；不存在则立即创建并把当前状态修正为 DECOMPOSE。
+- tool: `rg specs/<wi>/tasks.md`、`ai-sdlc stage show decompose`、future pre-implementation checklist
+- eval: “plan 后缺 tasks 仍宣称可实现”的发生次数、被用户指出的阶段顺序违约次数、spec/plan 收敛到 tasks 创建的平均延迟
+- 风险等级: 中
+- 处置进展（2026-04-14）: 已为 `140` 补建 [`tasks.md`](../specs/140-program-truth-ledger-release-audit-baseline/tasks.md)，并将结论口径修正为“先进入 tasks/decompose，再谈实现”。本条 defect 不再停留在口头承认，已完成留痕与补正。
+- 下一步任务归属（2026-04-14）: `140` Batch 2 起进入实现前分解后的正式执行阶段。
+- 可验证成功标准: 给定“某 work item 已有 `spec.md` / `plan.md` 但无 `tasks.md`”的场景时，代理必须先补 `tasks.md`，而不是宣称可进入实现；正常路径下，`140` 现在已具备 `spec.md`、`plan.md`、`tasks.md` 三件套。
+- 是否需要回归测试补充: 是：至少补一条流程约束或 checklist，防止在 spec/plan 收敛后再次跳过 `tasks`。

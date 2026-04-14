@@ -10,6 +10,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 import pytest
+import yaml
 from typer.testing import CliRunner
 
 from ai_sdlc.cli.main import app
@@ -224,6 +225,56 @@ def _write_backlog_breach_fixture(root: Path) -> None:
                 current_branch="main",
             ),
         ),
+    )
+
+
+def _write_truth_ledger_fixture(root: Path) -> None:
+    spec_dir = root / "specs" / "001-auth"
+    spec_dir.mkdir(parents=True, exist_ok=True)
+    (spec_dir / "spec.md").write_text("# Spec\n", encoding="utf-8")
+    (spec_dir / "plan.md").write_text("# Plan\n", encoding="utf-8")
+    (spec_dir / "tasks.md").write_text("- [ ] pending\n", encoding="utf-8")
+    (root / "program-manifest.yaml").write_text(
+        """
+schema_version: "2"
+program:
+  goal: "Demo truth ledger"
+release_targets:
+  - "frontend-mainline-delivery"
+capabilities:
+  - id: "frontend-mainline-delivery"
+    title: "Frontend Mainline Delivery"
+    goal: "Demo release target"
+    release_required: true
+    spec_refs:
+      - "001-auth"
+    required_evidence:
+      truth_check_refs:
+        - "specs/001-auth"
+      close_check_refs:
+        - "specs/001-auth"
+      verify_refs:
+        - "uv run ai-sdlc verify constraints"
+capability_closure_audit:
+  reviewed_at: "2026-04-14T12:00:00Z"
+  open_clusters:
+    - cluster_id: "frontend-mainline-delivery"
+      title: "Frontend Mainline Delivery"
+      closure_state: "capability_open"
+      summary: "Delivery capability is still open."
+      source_refs:
+        - "001-auth"
+specs:
+  - id: "001-auth"
+    path: "specs/001-auth"
+    depends_on: []
+    roles:
+      - "runtime_carrier"
+    capability_refs:
+      - "frontend-mainline-delivery"
+""".strip()
+        + "\n",
+        encoding="utf-8",
     )
 
 
@@ -1353,6 +1404,41 @@ specs: []
             },
         ],
     }
+
+
+def test_status_json_includes_truth_ledger_summary(tmp_path: Path) -> None:
+    _init_git_repo(tmp_path)
+    init_project(tmp_path)
+    _write_truth_ledger_fixture(tmp_path)
+    _commit_all(tmp_path, "docs: seed truth ledger fixture")
+
+    with patch("ai_sdlc.cli.program_cmd.find_project_root", return_value=tmp_path):
+        sync = runner.invoke(
+            app,
+            ["program", "truth", "sync", "--execute", "--yes"],
+        )
+
+    assert sync.exit_code == 0, sync.output
+    manifest = yaml.safe_load((tmp_path / "program-manifest.yaml").read_text(encoding="utf-8"))
+    assert manifest["truth_snapshot"]["state"] == "blocked"
+
+    with patch("ai_sdlc.cli.commands.find_project_root", return_value=tmp_path):
+        result = runner.invoke(app, ["status", "--json"])
+
+    assert result.exit_code == 0, result.output
+    payload = json.loads(result.output)
+    summary = payload["truth_ledger"]
+    assert summary["state"] == "blocked"
+    assert summary["snapshot_state"] == "fresh"
+    assert summary["release_targets"] == ["frontend-mainline-delivery"]
+    assert summary["release_capabilities"] == [
+        {
+            "capability_id": "frontend-mainline-delivery",
+            "closure_state": "capability_open",
+            "audit_state": "blocked",
+            "blocking_refs": summary["release_capabilities"][0]["blocking_refs"],
+        }
+    ]
 
 
 def test_status_text_surfaces_capability_closure_summary(

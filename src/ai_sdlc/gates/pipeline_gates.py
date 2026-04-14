@@ -873,6 +873,22 @@ class DoneGate:
             )
         )
 
+        truth_required = context.get("program_truth_audit_required", False)
+        if truth_required:
+            truth_ready = context.get("program_truth_audit_ready", False)
+            truth_detail = context.get("program_truth_audit_detail", "")
+            truth_state = str(context.get("program_truth_audit_state", "")).strip()
+            truth_message = str(truth_detail or "Program truth audit is not ready")
+            if truth_state:
+                truth_message = f"state={truth_state}; {truth_message}"
+            checks.append(
+                GateCheck(
+                    name="program_truth_audit_ready",
+                    passed=bool(truth_ready),
+                    message="" if truth_ready else truth_message,
+                )
+            )
+
         summary_path = context.get("summary_path")
         if isinstance(summary_path, str) and summary_path.strip():
             summary = Path(summary_path)

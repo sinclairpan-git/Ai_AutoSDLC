@@ -854,6 +854,29 @@ class TestCloseGate:
 
 
 class TestDoneGate:
+    def test_blocks_when_program_truth_audit_is_not_ready(self, tmp_path: Path) -> None:
+        summary = tmp_path / "development-summary.md"
+        summary.write_text("# Summary\n", encoding="utf-8")
+
+        result = DoneGate().check(
+            {
+                "root": str(tmp_path),
+                "all_tasks_complete": True,
+                "tests_passed": True,
+                "review_recorded": True,
+                "summary_path": str(summary),
+                "program_truth_audit_required": True,
+                "program_truth_audit_ready": False,
+                "program_truth_audit_detail": "migration pending: 3; release targets blocked",
+            }
+        )
+
+        assert result.verdict == GateVerdict.RETRY
+        assert any(
+            c.name == "program_truth_audit_ready" and not c.passed
+            for c in result.checks
+        )
+
     def test_blocks_when_knowledge_refresh_is_pending(self, tmp_path: Path) -> None:
         summary = tmp_path / "development-summary.md"
         summary.write_text("# Summary\n", encoding="utf-8")

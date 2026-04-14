@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
 import typer
 from rich.console import Console
 from rich.panel import Panel
@@ -9,6 +11,7 @@ from rich.table import Table
 
 from ai_sdlc.context.state import load_checkpoint
 from ai_sdlc.core.close_check import run_close_check
+from ai_sdlc.core.program_service import ProgramService
 from ai_sdlc.core.verify_constraints import build_verification_gate_context
 from ai_sdlc.gates.pipeline_gates import (
     CloseGate,
@@ -70,10 +73,58 @@ def _build_registry() -> GateRegistry:
     return reg
 
 
+def _program_truth_gate_surface(
+    root: Path,
+    *,
+    spec_dir: Path | None,
+) -> dict[str, object] | None:
+    manifest_path = root / "program-manifest.yaml"
+    if not manifest_path.is_file() or spec_dir is None:
+        return None
+
+    svc = ProgramService(root, manifest_path)
+    try:
+        manifest = svc.load_manifest()
+    except Exception as exc:
+        return {
+            "state": "invalid",
+            "detail": f"program truth ledger load failed: {exc}",
+        }
+
+    validation = svc.validate_manifest(manifest)
+    matched_capabilities = svc.release_target_capability_ids_for_spec(manifest, spec_dir)
+    if not matched_capabilities:
+        return None
+
+    surface = svc.build_truth_ledger_surface(manifest, validation_result=validation)
+    if surface is None:
+        return None
+
+    matched_items = [
+        item
+        for item in surface.get("release_capabilities", [])
+        if item.get("capability_id") in matched_capabilities
+    ]
+    if not matched_items:
+        return None
+
+    ready = surface.get("snapshot_state") == "fresh" and all(
+        item.get("audit_state") == "ready" for item in matched_items
+    )
+    detail = str(surface.get("detail", "")).strip()
+    if ready and surface.get("state") == "migration_pending":
+        detail = "release-scope truth is ready; global migration_pending remains outside current scope"
+
+    return {
+        "state": surface.get("state"),
+        "detail": detail,
+        "ready": ready,
+        "matched_capabilities": matched_capabilities,
+    }
+
+
 def _build_context(stage: str, root_str: str) -> dict[str, object]:
     """Build gate context from checkpoint and filesystem."""
-    from pathlib import Path
-
     root = Path(root_str)
     ctx: dict[str, object] = {"root": root_str}
 
@@ -153,6 +204,13 @@ def _build_context(stage: str, root_str: str) -> dict[str, object]:
                 ctx["close_check_attested"] = True
             else:
                 ctx["close_check_blockers"] = list(close_check.blockers)
+        spec_dir = Path(ctx["spec_dir"]) if "spec_dir" in ctx else None
+        truth_surface = _program_truth_gate_surface(root, spec_dir=spec_dir)
+        if truth_surface is not None:
+            ctx["program_truth_audit_required"] = True
+            ctx["program_truth_audit_ready"] = bool(truth_surface.get("ready"))
+            ctx["program_truth_audit_state"] = truth_surface.get("state")
+            ctx["program_truth_audit_detail"] = truth_surface.get("detail", "")
 
     return ctx
 

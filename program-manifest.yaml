@@ -1,942 +1,1120 @@
-schema_version: "1"
-prd_path: "AI-SDLC 全自动化框架 产品需求文档（PRD）.md"
+schema_version: '2'
+prd_path: AI-SDLC 全自动化框架 产品需求文档（PRD）.md
+program:
+  goal: 以根级真值账本持续反映 AI-SDLC 全量蓝图、release target 与 capability closure/audit 进展。
+release_targets:
+- frontend-mainline-delivery
+capabilities:
+- id: frontend-mainline-delivery
+  title: Frontend Mainline Delivery
+  goal: Frontend managed delivery/apply/browser gate 主链达到可审计的发布闭环。
+  release_required: true
+  spec_refs:
+  - 095-frontend-mainline-product-delivery-baseline
+  - 096-frontend-mainline-host-runtime-manager-baseline
+  - 098-frontend-mainline-posture-detector-baseline
+  - 099-frontend-mainline-delivery-registry-resolver-baseline
+  - 100-frontend-mainline-action-plan-binding-baseline
+  - 101-frontend-mainline-managed-delivery-apply-runtime-baseline
+  - 102-frontend-mainline-browser-quality-gate-baseline
+  - 103-frontend-mainline-browser-gate-probe-runtime-baseline
+  - 104-frontend-mainline-browser-gate-recheck-remediation-binding-baseline
+  - 105-frontend-mainline-browser-gate-recheck-remediation-runtime-implementation-baseline
+  - 123-frontend-mainline-managed-delivery-apply-runtime-implementation-baseline
+  - 124-frontend-mainline-delivery-materialization-runtime-baseline
+  - 125-frontend-mainline-browser-gate-probe-runtime-implementation-baseline
+  - 126-frontend-mainline-browser-gate-recheck-remediation-runtime-closure-baseline
+  required_evidence:
+    truth_check_refs:
+    - specs/095-frontend-mainline-product-delivery-baseline
+    - specs/096-frontend-mainline-host-runtime-manager-baseline
+    - specs/098-frontend-mainline-posture-detector-baseline
+    - specs/099-frontend-mainline-delivery-registry-resolver-baseline
+    - specs/100-frontend-mainline-action-plan-binding-baseline
+    - specs/101-frontend-mainline-managed-delivery-apply-runtime-baseline
+    - specs/102-frontend-mainline-browser-quality-gate-baseline
+    - specs/103-frontend-mainline-browser-gate-probe-runtime-baseline
+    - specs/104-frontend-mainline-browser-gate-recheck-remediation-binding-baseline
+    - specs/105-frontend-mainline-browser-gate-recheck-remediation-runtime-implementation-baseline
+    - specs/123-frontend-mainline-managed-delivery-apply-runtime-implementation-baseline
+    - specs/124-frontend-mainline-delivery-materialization-runtime-baseline
+    - specs/125-frontend-mainline-browser-gate-probe-runtime-implementation-baseline
+    - specs/126-frontend-mainline-browser-gate-recheck-remediation-runtime-closure-baseline
+    close_check_refs:
+    - specs/095-frontend-mainline-product-delivery-baseline
+    - specs/096-frontend-mainline-host-runtime-manager-baseline
+    - specs/098-frontend-mainline-posture-detector-baseline
+    - specs/099-frontend-mainline-delivery-registry-resolver-baseline
+    - specs/100-frontend-mainline-action-plan-binding-baseline
+    - specs/101-frontend-mainline-managed-delivery-apply-runtime-baseline
+    - specs/102-frontend-mainline-browser-quality-gate-baseline
+    - specs/103-frontend-mainline-browser-gate-probe-runtime-baseline
+    - specs/104-frontend-mainline-browser-gate-recheck-remediation-binding-baseline
+    - specs/105-frontend-mainline-browser-gate-recheck-remediation-runtime-implementation-baseline
+    - specs/123-frontend-mainline-managed-delivery-apply-runtime-implementation-baseline
+    - specs/124-frontend-mainline-delivery-materialization-runtime-baseline
+    - specs/125-frontend-mainline-browser-gate-probe-runtime-implementation-baseline
+    - specs/126-frontend-mainline-browser-gate-recheck-remediation-runtime-closure-baseline
+    verify_refs:
+    - uv run ai-sdlc verify constraints
 capability_closure_audit:
-  reviewed_at: "2026-04-13"
+  reviewed_at: '2026-04-13'
   open_clusters:
-    - cluster_id: "agent-adapter-verified-host-ingress"
-      title: "Agent Adapter 真实接入与宿主验证"
-      closure_state: "partial"
-      summary: "010/094 已冻结 target selection 与 acknowledged gate，121 已将该缺口升级为 root truth；但当前 adapter 仍未对齐厂商公开文档支持的默认读取入口，且缺少 machine-verifiable host ingress runtime。TRAE 因厂商公开支持不明确，当前只能归入 generic。"
-      source_refs:
-        - "010"
-        - "094"
-        - "120-122"
-    - cluster_id: "project-meta-foundations"
-      title: "项目元能力基线"
-      closure_state: "formal_only"
-      summary: "005-008 仍是 formal baseline；仓库尚未提供对应 runtime / guard / surface 的实现闭环。"
-      source_refs:
-        - "005-008"
-    - cluster_id: "frontend-contract-foundation"
-      title: "Frontend 合同与观测基础链"
-      closure_state: "partial"
-      summary: "065 与少量相邻切片已落地，但 009/011-018 的合同、scanner、attachment、gate 主链仍未端到端闭环。"
-      source_refs:
-        - "009-018"
-        - "065"
-        - "077-078"
-    - cluster_id: "frontend-program-automation-chain"
-      title: "Frontend Program 自动化主链"
-      closure_state: "capability_open"
-      summary: "019-064 存在局部 consumption 实现，但 execute/remediation/writeback/archive/cleanup 仍不能按能力闭环认定为已交付。"
-      source_refs:
-        - "019-064"
-    - cluster_id: "frontend-p1-experience-stability"
-      title: "Frontend P1 体验稳定性"
-      closure_state: "capability_open"
-      summary: "067-069 首批 implementation slice 已落地，但 070-071 仍 docs-only；066/072/076 的 close wording 不得等同 capability closure。"
-      source_refs:
-        - "066-072"
-        - "076"
-    - cluster_id: "frontend-evidence-class-lifecycle"
-      title: "Frontend Evidence Class 生命周期"
-      closure_state: "partial"
-      summary: "107-113 已补部分 runtime/backfill，但 083-090 仍 prospective/formal-only，091 仍首批 implementation slice 进行中。"
-      source_refs:
-        - "079-092"
-        - "107-113"
-    - cluster_id: "frontend-mainline-delivery"
-      title: "Frontend Mainline Delivery"
-      closure_state: "capability_open"
-      summary: "073 solution freeze、096 host readiness 与 105 首批 binding runtime 已落地，但 095 承诺的 delivery/apply/browser gate 仍未端到端闭环。"
-      source_refs:
-        - "073-075"
-        - "093-106"
-        - "114-115"
+  - cluster_id: agent-adapter-verified-host-ingress
+    title: Agent Adapter 真实接入与宿主验证
+    closure_state: partial
+    summary: 010/094 已冻结 target selection 与 acknowledged gate，121 已将该缺口升级为 root truth；但当前
+      adapter 仍未对齐厂商公开文档支持的默认读取入口，且缺少 machine-verifiable host ingress runtime。TRAE
+      因厂商公开支持不明确，当前只能归入 generic。
+    source_refs:
+    - '010'
+    - 094
+    - 120-122
+  - cluster_id: project-meta-foundations
+    title: 项目元能力基线
+    closure_state: formal_only
+    summary: 005-008 仍是 formal baseline；仓库尚未提供对应 runtime / guard / surface 的实现闭环。
+    source_refs:
+    - 005-008
+  - cluster_id: frontend-contract-foundation
+    title: Frontend 合同与观测基础链
+    closure_state: partial
+    summary: 065 与少量相邻切片已落地，但 009/011-018 的合同、scanner、attachment、gate 主链仍未端到端闭环。
+    source_refs:
+    - 009-018
+    - '065'
+    - 077-078
+  - cluster_id: frontend-program-automation-chain
+    title: Frontend Program 自动化主链
+    closure_state: capability_open
+    summary: 019-064 存在局部 consumption 实现，但 execute/remediation/writeback/archive/cleanup
+      仍不能按能力闭环认定为已交付。
+    source_refs:
+    - 019-064
+  - cluster_id: frontend-p1-experience-stability
+    title: Frontend P1 体验稳定性
+    closure_state: capability_open
+    summary: 067-069 首批 implementation slice 已落地，但 070-071 仍 docs-only；066/072/076
+      的 close wording 不得等同 capability closure。
+    source_refs:
+    - 066-072
+    - '076'
+  - cluster_id: frontend-evidence-class-lifecycle
+    title: Frontend Evidence Class 生命周期
+    closure_state: partial
+    summary: 107-113 已补部分 runtime/backfill，但 083-090 仍 prospective/formal-only，091
+      仍首批 implementation slice 进行中。
+    source_refs:
+    - 079-092
+    - 107-113
+  - cluster_id: frontend-mainline-delivery
+    title: Frontend Mainline Delivery
+    closure_state: capability_open
+    summary: 073 solution freeze、096 host readiness 与 105 首批 binding runtime 已落地，但
+      095 承诺的 delivery/apply/browser gate 仍未端到端闭环。
+    source_refs:
+    - 073-075
+    - 093-106
+    - 114-115
 specs:
-  - id: "009-frontend-governance-ui-kernel"
-    path: "specs/009-frontend-governance-ui-kernel"
-    depends_on: []
-    branch_slug: "frontend-governance-ui-kernel"
-    owner: "team-frontend-governance"
-    frontend_evidence_class: "framework_capability"
-  - id: "011-frontend-contract-authoring-baseline"
-    path: "specs/011-frontend-contract-authoring-baseline"
-    depends_on:
-      - "009-frontend-governance-ui-kernel"
-    branch_slug: "frontend-contract-authoring-baseline"
-    owner: "team-frontend-governance"
-    frontend_evidence_class: "framework_capability"
-  - id: "012-frontend-contract-verify-integration"
-    path: "specs/012-frontend-contract-verify-integration"
-    depends_on:
-      - "009-frontend-governance-ui-kernel"
-      - "011-frontend-contract-authoring-baseline"
-    branch_slug: "frontend-contract-verify-integration"
-    owner: "team-frontend-governance"
-    frontend_evidence_class: "framework_capability"
-  - id: "013-frontend-contract-observation-provider-baseline"
-    path: "specs/013-frontend-contract-observation-provider-baseline"
-    depends_on:
-      - "009-frontend-governance-ui-kernel"
-      - "011-frontend-contract-authoring-baseline"
-      - "012-frontend-contract-verify-integration"
-    branch_slug: "frontend-contract-observation-provider-baseline"
-    owner: "team-frontend-governance"
-    frontend_evidence_class: "framework_capability"
-  - id: "014-frontend-contract-runtime-attachment-baseline"
-    path: "specs/014-frontend-contract-runtime-attachment-baseline"
-    depends_on:
-      - "009-frontend-governance-ui-kernel"
-      - "011-frontend-contract-authoring-baseline"
-      - "012-frontend-contract-verify-integration"
-      - "013-frontend-contract-observation-provider-baseline"
-    branch_slug: "frontend-contract-runtime-attachment-baseline"
-    owner: "team-frontend-governance"
-    frontend_evidence_class: "framework_capability"
-  - id: "015-frontend-ui-kernel-standard-baseline"
-    path: "specs/015-frontend-ui-kernel-standard-baseline"
-    depends_on:
-      - "009-frontend-governance-ui-kernel"
-      - "011-frontend-contract-authoring-baseline"
-    branch_slug: "frontend-ui-kernel-standard-baseline"
-    owner: "team-frontend-governance"
-    frontend_evidence_class: "framework_capability"
-  - id: "016-frontend-enterprise-vue2-provider-baseline"
-    path: "specs/016-frontend-enterprise-vue2-provider-baseline"
-    depends_on:
-      - "009-frontend-governance-ui-kernel"
-      - "015-frontend-ui-kernel-standard-baseline"
-    branch_slug: "frontend-enterprise-vue2-provider-baseline"
-    owner: "team-frontend-governance"
-    frontend_evidence_class: "framework_capability"
-  - id: "017-frontend-generation-governance-baseline"
-    path: "specs/017-frontend-generation-governance-baseline"
-    depends_on:
-      - "009-frontend-governance-ui-kernel"
-      - "015-frontend-ui-kernel-standard-baseline"
-      - "016-frontend-enterprise-vue2-provider-baseline"
-    branch_slug: "frontend-generation-governance-baseline"
-    owner: "team-frontend-governance"
-    frontend_evidence_class: "framework_capability"
-  - id: "018-frontend-gate-compatibility-baseline"
-    path: "specs/018-frontend-gate-compatibility-baseline"
-    depends_on:
-      - "009-frontend-governance-ui-kernel"
-      - "017-frontend-generation-governance-baseline"
-    branch_slug: "frontend-gate-compatibility-baseline"
-    owner: "team-frontend-governance"
-    frontend_evidence_class: "framework_capability"
-  - id: "019-frontend-program-orchestration-baseline"
-    path: "specs/019-frontend-program-orchestration-baseline"
-    depends_on:
-      - "009-frontend-governance-ui-kernel"
-      - "014-frontend-contract-runtime-attachment-baseline"
-      - "018-frontend-gate-compatibility-baseline"
-    branch_slug: "frontend-program-orchestration-baseline"
-    owner: "team-frontend-governance"
-    frontend_evidence_class: "framework_capability"
-  - id: "020-frontend-program-execute-runtime-baseline"
-    path: "specs/020-frontend-program-execute-runtime-baseline"
-    depends_on:
-      - "009-frontend-governance-ui-kernel"
-      - "014-frontend-contract-runtime-attachment-baseline"
-      - "018-frontend-gate-compatibility-baseline"
-      - "019-frontend-program-orchestration-baseline"
-    branch_slug: "frontend-program-execute-runtime-baseline"
-    owner: "team-frontend-governance"
-    frontend_evidence_class: "framework_capability"
-  - id: "021-frontend-program-remediation-runtime-baseline"
-    path: "specs/021-frontend-program-remediation-runtime-baseline"
-    depends_on:
-      - "018-frontend-gate-compatibility-baseline"
-      - "019-frontend-program-orchestration-baseline"
-      - "020-frontend-program-execute-runtime-baseline"
-    branch_slug: "frontend-program-remediation-runtime-baseline"
-    owner: "team-frontend-governance"
-    frontend_evidence_class: "framework_capability"
-  - id: "022-frontend-governance-materialization-runtime-baseline"
-    path: "specs/022-frontend-governance-materialization-runtime-baseline"
-    depends_on:
-      - "017-frontend-generation-governance-baseline"
-      - "018-frontend-gate-compatibility-baseline"
-      - "021-frontend-program-remediation-runtime-baseline"
-    branch_slug: "frontend-governance-materialization-runtime-baseline"
-    owner: "team-frontend-governance"
-    frontend_evidence_class: "framework_capability"
-  - id: "023-frontend-program-bounded-remediation-execute-baseline"
-    path: "specs/023-frontend-program-bounded-remediation-execute-baseline"
-    depends_on:
-      - "021-frontend-program-remediation-runtime-baseline"
-      - "022-frontend-governance-materialization-runtime-baseline"
-    branch_slug: "frontend-program-bounded-remediation-execute-baseline"
-    owner: "team-frontend-governance"
-    frontend_evidence_class: "framework_capability"
-  - id: "024-frontend-program-bounded-remediation-writeback-baseline"
-    path: "specs/024-frontend-program-bounded-remediation-writeback-baseline"
-    depends_on:
-      - "023-frontend-program-bounded-remediation-execute-baseline"
-    branch_slug: "frontend-program-bounded-remediation-writeback-baseline"
-    owner: "team-frontend-governance"
-    frontend_evidence_class: "framework_capability"
-  - id: "025-frontend-program-provider-handoff-baseline"
-    path: "specs/025-frontend-program-provider-handoff-baseline"
-    depends_on:
-      - "024-frontend-program-bounded-remediation-writeback-baseline"
-    branch_slug: "frontend-program-provider-handoff-baseline"
-    owner: "team-frontend-governance"
-    frontend_evidence_class: "framework_capability"
-  - id: "026-frontend-program-guarded-provider-runtime-baseline"
-    path: "specs/026-frontend-program-guarded-provider-runtime-baseline"
-    depends_on:
-      - "025-frontend-program-provider-handoff-baseline"
-    branch_slug: "frontend-program-guarded-provider-runtime-baseline"
-    owner: "team-frontend-governance"
-    frontend_evidence_class: "framework_capability"
-  - id: "027-frontend-program-provider-runtime-artifact-baseline"
-    path: "specs/027-frontend-program-provider-runtime-artifact-baseline"
-    depends_on:
-      - "026-frontend-program-guarded-provider-runtime-baseline"
-    branch_slug: "frontend-program-provider-runtime-artifact-baseline"
-    owner: "team-frontend-governance"
-    frontend_evidence_class: "framework_capability"
-  - id: "028-frontend-program-provider-patch-handoff-baseline"
-    path: "specs/028-frontend-program-provider-patch-handoff-baseline"
-    depends_on:
-      - "027-frontend-program-provider-runtime-artifact-baseline"
-    branch_slug: "frontend-program-provider-patch-handoff-baseline"
-    owner: "team-frontend-governance"
-    frontend_evidence_class: "framework_capability"
-  - id: "029-frontend-program-guarded-patch-apply-baseline"
-    path: "specs/029-frontend-program-guarded-patch-apply-baseline"
-    depends_on:
-      - "028-frontend-program-provider-patch-handoff-baseline"
-    branch_slug: "frontend-program-guarded-patch-apply-baseline"
-    owner: "team-frontend-governance"
-    frontend_evidence_class: "framework_capability"
-  - id: "030-frontend-program-provider-patch-apply-artifact-baseline"
-    path: "specs/030-frontend-program-provider-patch-apply-artifact-baseline"
-    depends_on:
-      - "029-frontend-program-guarded-patch-apply-baseline"
-    branch_slug: "frontend-program-provider-patch-apply-artifact-baseline"
-    owner: "team-frontend-governance"
-    frontend_evidence_class: "framework_capability"
-  - id: "031-frontend-program-cross-spec-writeback-orchestration-baseline"
-    path: "specs/031-frontend-program-cross-spec-writeback-orchestration-baseline"
-    depends_on:
-      - "030-frontend-program-provider-patch-apply-artifact-baseline"
-    branch_slug: "frontend-program-cross-spec-writeback-orchestration-baseline"
-    owner: "team-frontend-governance"
-    frontend_evidence_class: "framework_capability"
-  - id: "032-frontend-program-cross-spec-writeback-artifact-baseline"
-    path: "specs/032-frontend-program-cross-spec-writeback-artifact-baseline"
-    depends_on:
-      - "031-frontend-program-cross-spec-writeback-orchestration-baseline"
-    branch_slug: "frontend-program-cross-spec-writeback-artifact-baseline"
-    owner: "team-frontend-governance"
-    frontend_evidence_class: "framework_capability"
-  - id: "033-frontend-program-guarded-registry-orchestration-baseline"
-    path: "specs/033-frontend-program-guarded-registry-orchestration-baseline"
-    depends_on:
-      - "032-frontend-program-cross-spec-writeback-artifact-baseline"
-    branch_slug: "frontend-program-guarded-registry-orchestration-baseline"
-    owner: "team-frontend-governance"
-    frontend_evidence_class: "framework_capability"
-  - id: "034-frontend-program-guarded-registry-artifact-baseline"
-    path: "specs/034-frontend-program-guarded-registry-artifact-baseline"
-    depends_on:
-      - "033-frontend-program-guarded-registry-orchestration-baseline"
-    branch_slug: "frontend-program-guarded-registry-artifact-baseline"
-    owner: "team-frontend-governance"
-    frontend_evidence_class: "framework_capability"
-  - id: "035-frontend-program-broader-governance-orchestration-baseline"
-    path: "specs/035-frontend-program-broader-governance-orchestration-baseline"
-    depends_on:
-      - "034-frontend-program-guarded-registry-artifact-baseline"
-    branch_slug: "frontend-program-broader-governance-orchestration-baseline"
-    owner: "team-frontend-governance"
-    frontend_evidence_class: "framework_capability"
-  - id: "036-frontend-program-broader-governance-artifact-baseline"
-    path: "specs/036-frontend-program-broader-governance-artifact-baseline"
-    depends_on:
-      - "035-frontend-program-broader-governance-orchestration-baseline"
-    branch_slug: "frontend-program-broader-governance-artifact-baseline"
-    owner: "team-frontend-governance"
-    frontend_evidence_class: "framework_capability"
-  - id: "037-frontend-program-final-governance-orchestration-baseline"
-    path: "specs/037-frontend-program-final-governance-orchestration-baseline"
-    depends_on:
-      - "036-frontend-program-broader-governance-artifact-baseline"
-    branch_slug: "frontend-program-final-governance-orchestration-baseline"
-    owner: "team-frontend-governance"
-    frontend_evidence_class: "framework_capability"
-  - id: "038-frontend-program-final-governance-artifact-baseline"
-    path: "specs/038-frontend-program-final-governance-artifact-baseline"
-    depends_on:
-      - "037-frontend-program-final-governance-orchestration-baseline"
-    branch_slug: "frontend-program-final-governance-artifact-baseline"
-    owner: "team-frontend-governance"
-    frontend_evidence_class: "framework_capability"
-  - id: "039-frontend-program-writeback-persistence-orchestration-baseline"
-    path: "specs/039-frontend-program-writeback-persistence-orchestration-baseline"
-    depends_on:
-      - "038-frontend-program-final-governance-artifact-baseline"
-    branch_slug: "frontend-program-writeback-persistence-orchestration-baseline"
-    owner: "team-frontend-governance"
-    frontend_evidence_class: "framework_capability"
-  - id: "040-frontend-program-writeback-persistence-artifact-baseline"
-    path: "specs/040-frontend-program-writeback-persistence-artifact-baseline"
-    depends_on:
-      - "039-frontend-program-writeback-persistence-orchestration-baseline"
-    branch_slug: "frontend-program-writeback-persistence-artifact-baseline"
-    owner: "team-frontend-governance"
-    frontend_evidence_class: "framework_capability"
-  - id: "041-frontend-program-persisted-write-proof-orchestration-baseline"
-    path: "specs/041-frontend-program-persisted-write-proof-orchestration-baseline"
-    depends_on:
-      - "040-frontend-program-writeback-persistence-artifact-baseline"
-    branch_slug: "frontend-program-persisted-write-proof-orchestration-baseline"
-    owner: "team-frontend-governance"
-    frontend_evidence_class: "framework_capability"
-  - id: "042-frontend-program-persisted-write-proof-artifact-baseline"
-    path: "specs/042-frontend-program-persisted-write-proof-artifact-baseline"
-    depends_on:
-      - "041-frontend-program-persisted-write-proof-orchestration-baseline"
-    branch_slug: "frontend-program-persisted-write-proof-artifact-baseline"
-    owner: "team-frontend-governance"
-    frontend_evidence_class: "framework_capability"
-  - id: "043-frontend-program-final-proof-publication-orchestration-baseline"
-    path: "specs/043-frontend-program-final-proof-publication-orchestration-baseline"
-    depends_on:
-      - "042-frontend-program-persisted-write-proof-artifact-baseline"
-    branch_slug: "frontend-program-final-proof-publication-orchestration-baseline"
-    owner: "team-frontend-governance"
-    frontend_evidence_class: "framework_capability"
-  - id: "044-frontend-program-final-proof-publication-artifact-baseline"
-    path: "specs/044-frontend-program-final-proof-publication-artifact-baseline"
-    depends_on:
-      - "043-frontend-program-final-proof-publication-orchestration-baseline"
-    branch_slug: "frontend-program-final-proof-publication-artifact-baseline"
-    owner: "team-frontend-governance"
-    frontend_evidence_class: "framework_capability"
-  - id: "045-frontend-program-final-proof-closure-orchestration-baseline"
-    path: "specs/045-frontend-program-final-proof-closure-orchestration-baseline"
-    depends_on:
-      - "044-frontend-program-final-proof-publication-artifact-baseline"
-    branch_slug: "frontend-program-final-proof-closure-orchestration-baseline"
-    owner: "team-frontend-governance"
-    frontend_evidence_class: "framework_capability"
-  - id: "046-frontend-program-final-proof-closure-artifact-baseline"
-    path: "specs/046-frontend-program-final-proof-closure-artifact-baseline"
-    depends_on:
-      - "045-frontend-program-final-proof-closure-orchestration-baseline"
-    branch_slug: "frontend-program-final-proof-closure-artifact-baseline"
-    owner: "team-frontend-governance"
-    frontend_evidence_class: "framework_capability"
-  - id: "047-frontend-program-final-proof-archive-orchestration-baseline"
-    path: "specs/047-frontend-program-final-proof-archive-orchestration-baseline"
-    depends_on:
-      - "046-frontend-program-final-proof-closure-artifact-baseline"
-    branch_slug: "frontend-program-final-proof-archive-orchestration-baseline"
-    owner: "team-frontend-governance"
-    frontend_evidence_class: "framework_capability"
-  - id: "048-frontend-program-final-proof-archive-artifact-baseline"
-    path: "specs/048-frontend-program-final-proof-archive-artifact-baseline"
-    depends_on:
-      - "047-frontend-program-final-proof-archive-orchestration-baseline"
-    branch_slug: "frontend-program-final-proof-archive-artifact-baseline"
-    owner: "team-frontend-governance"
-    frontend_evidence_class: "framework_capability"
-  - id: "049-frontend-program-final-proof-archive-thread-archive-baseline"
-    path: "specs/049-frontend-program-final-proof-archive-thread-archive-baseline"
-    depends_on:
-      - "048-frontend-program-final-proof-archive-artifact-baseline"
-    branch_slug: "frontend-program-final-proof-archive-thread-archive-baseline"
-    owner: "team-frontend-governance"
-    frontend_evidence_class: "framework_capability"
-  - id: "050-frontend-program-final-proof-archive-project-cleanup-baseline"
-    path: "specs/050-frontend-program-final-proof-archive-project-cleanup-baseline"
-    depends_on:
-      - "049-frontend-program-final-proof-archive-thread-archive-baseline"
-    branch_slug: "frontend-program-final-proof-archive-project-cleanup-baseline"
-    owner: "team-frontend-governance"
-    frontend_evidence_class: "framework_capability"
-  - id: "051-frontend-program-final-proof-archive-project-cleanup-mutation-baseline"
-    path: "specs/051-frontend-program-final-proof-archive-project-cleanup-mutation-baseline"
-    depends_on:
-      - "050-frontend-program-final-proof-archive-project-cleanup-baseline"
-    branch_slug: "frontend-program-final-proof-archive-project-cleanup-mutation-baseline"
-    owner: "team-frontend-governance"
-    frontend_evidence_class: "framework_capability"
-  - id: "052-frontend-program-final-proof-archive-explicit-cleanup-targets-baseline"
-    path: "specs/052-frontend-program-final-proof-archive-explicit-cleanup-targets-baseline"
-    depends_on:
-      - "050-frontend-program-final-proof-archive-project-cleanup-baseline"
-      - "051-frontend-program-final-proof-archive-project-cleanup-mutation-baseline"
-    branch_slug: "frontend-program-final-proof-archive-explicit-cleanup-targets-baseline"
-    owner: "team-frontend-governance"
-    frontend_evidence_class: "framework_capability"
-  - id: "053-frontend-program-final-proof-archive-cleanup-targets-consumption-baseline"
-    path: "specs/053-frontend-program-final-proof-archive-cleanup-targets-consumption-baseline"
-    depends_on:
-      - "050-frontend-program-final-proof-archive-project-cleanup-baseline"
-      - "052-frontend-program-final-proof-archive-explicit-cleanup-targets-baseline"
-    branch_slug: "frontend-program-final-proof-archive-cleanup-targets-consumption-baseline"
-    owner: "team-frontend-governance"
-    frontend_evidence_class: "framework_capability"
-  - id: "054-frontend-program-final-proof-archive-cleanup-mutation-eligibility-baseline"
-    path: "specs/054-frontend-program-final-proof-archive-cleanup-mutation-eligibility-baseline"
-    depends_on:
-      - "051-frontend-program-final-proof-archive-project-cleanup-mutation-baseline"
-      - "052-frontend-program-final-proof-archive-explicit-cleanup-targets-baseline"
-      - "053-frontend-program-final-proof-archive-cleanup-targets-consumption-baseline"
-    branch_slug: "frontend-program-final-proof-archive-cleanup-mutation-eligibility-baseline"
-    owner: "team-frontend-governance"
-    frontend_evidence_class: "framework_capability"
-  - id: "055-frontend-program-final-proof-archive-cleanup-eligibility-consumption-baseline"
-    path: "specs/055-frontend-program-final-proof-archive-cleanup-eligibility-consumption-baseline"
-    depends_on:
-      - "050-frontend-program-final-proof-archive-project-cleanup-baseline"
-      - "053-frontend-program-final-proof-archive-cleanup-targets-consumption-baseline"
-      - "054-frontend-program-final-proof-archive-cleanup-mutation-eligibility-baseline"
-    branch_slug: "frontend-program-final-proof-archive-cleanup-eligibility-consumption-baseline"
-    owner: "team-frontend-governance"
-    frontend_evidence_class: "framework_capability"
-  - id: "056-frontend-program-final-proof-archive-project-cleanup-preview-plan-baseline"
-    path: "specs/056-frontend-program-final-proof-archive-project-cleanup-preview-plan-baseline"
-    depends_on:
-      - "050-frontend-program-final-proof-archive-project-cleanup-baseline"
-      - "054-frontend-program-final-proof-archive-cleanup-mutation-eligibility-baseline"
-      - "055-frontend-program-final-proof-archive-cleanup-eligibility-consumption-baseline"
-    branch_slug: "frontend-program-final-proof-archive-project-cleanup-preview-plan-baseline"
-    owner: "team-frontend-governance"
-    frontend_evidence_class: "framework_capability"
-  - id: "057-frontend-program-final-proof-archive-cleanup-preview-plan-consumption-baseline"
-    path: "specs/057-frontend-program-final-proof-archive-cleanup-preview-plan-consumption-baseline"
-    depends_on:
-      - "050-frontend-program-final-proof-archive-project-cleanup-baseline"
-      - "055-frontend-program-final-proof-archive-cleanup-eligibility-consumption-baseline"
-      - "056-frontend-program-final-proof-archive-project-cleanup-preview-plan-baseline"
-    branch_slug: "frontend-program-final-proof-archive-cleanup-preview-plan-consumption-baseline"
-    owner: "team-frontend-governance"
-    frontend_evidence_class: "framework_capability"
-  - id: "058-frontend-program-final-proof-archive-cleanup-mutation-proposal-baseline"
-    path: "specs/058-frontend-program-final-proof-archive-cleanup-mutation-proposal-baseline"
-    depends_on:
-      - "050-frontend-program-final-proof-archive-project-cleanup-baseline"
-      - "052-frontend-program-final-proof-archive-explicit-cleanup-targets-baseline"
-      - "054-frontend-program-final-proof-archive-cleanup-mutation-eligibility-baseline"
-      - "056-frontend-program-final-proof-archive-project-cleanup-preview-plan-baseline"
-      - "057-frontend-program-final-proof-archive-cleanup-preview-plan-consumption-baseline"
-    branch_slug: "frontend-program-final-proof-archive-cleanup-mutation-proposal-baseline"
-    owner: "team-frontend-governance"
-    frontend_evidence_class: "framework_capability"
-  - id: "059-frontend-program-final-proof-archive-cleanup-mutation-proposal-consumption-baseline"
-    path: "specs/059-frontend-program-final-proof-archive-cleanup-mutation-proposal-consumption-baseline"
-    depends_on:
-      - "050-frontend-program-final-proof-archive-project-cleanup-baseline"
-      - "057-frontend-program-final-proof-archive-cleanup-preview-plan-consumption-baseline"
-      - "058-frontend-program-final-proof-archive-cleanup-mutation-proposal-baseline"
-    branch_slug: "frontend-program-final-proof-archive-cleanup-mutation-proposal-consumption-baseline"
-    owner: "team-frontend-governance"
-    frontend_evidence_class: "framework_capability"
-  - id: "060-frontend-program-final-proof-archive-cleanup-mutation-proposal-approval-baseline"
-    path: "specs/060-frontend-program-final-proof-archive-cleanup-mutation-proposal-approval-baseline"
-    depends_on:
-      - "050-frontend-program-final-proof-archive-project-cleanup-baseline"
-      - "054-frontend-program-final-proof-archive-cleanup-mutation-eligibility-baseline"
-      - "056-frontend-program-final-proof-archive-project-cleanup-preview-plan-baseline"
-      - "058-frontend-program-final-proof-archive-cleanup-mutation-proposal-baseline"
-      - "059-frontend-program-final-proof-archive-cleanup-mutation-proposal-consumption-baseline"
-    branch_slug: "frontend-program-final-proof-archive-cleanup-mutation-proposal-approval-baseline"
-    owner: "team-frontend-governance"
-    frontend_evidence_class: "framework_capability"
-  - id: "061-frontend-program-final-proof-archive-cleanup-mutation-proposal-approval-consumption-baseline"
-    path: "specs/061-frontend-program-final-proof-archive-cleanup-mutation-proposal-approval-consumption-baseline"
-    depends_on:
-      - "050-frontend-program-final-proof-archive-project-cleanup-baseline"
-      - "054-frontend-program-final-proof-archive-cleanup-mutation-eligibility-baseline"
-      - "056-frontend-program-final-proof-archive-project-cleanup-preview-plan-baseline"
-      - "058-frontend-program-final-proof-archive-cleanup-mutation-proposal-baseline"
-      - "059-frontend-program-final-proof-archive-cleanup-mutation-proposal-consumption-baseline"
-      - "060-frontend-program-final-proof-archive-cleanup-mutation-proposal-approval-baseline"
-    branch_slug: "frontend-program-final-proof-archive-cleanup-mutation-proposal-approval-consumption-baseline"
-    owner: "team-frontend-governance"
-    frontend_evidence_class: "framework_capability"
-  - id: "062-frontend-program-final-proof-archive-cleanup-mutation-execution-gating-baseline"
-    path: "specs/062-frontend-program-final-proof-archive-cleanup-mutation-execution-gating-baseline"
-    depends_on:
-      - "050-frontend-program-final-proof-archive-project-cleanup-baseline"
-      - "054-frontend-program-final-proof-archive-cleanup-mutation-eligibility-baseline"
-      - "056-frontend-program-final-proof-archive-project-cleanup-preview-plan-baseline"
-      - "058-frontend-program-final-proof-archive-cleanup-mutation-proposal-baseline"
-      - "060-frontend-program-final-proof-archive-cleanup-mutation-proposal-approval-baseline"
-      - "061-frontend-program-final-proof-archive-cleanup-mutation-proposal-approval-consumption-baseline"
-    branch_slug: "frontend-program-final-proof-archive-cleanup-mutation-execution-gating-baseline"
-    owner: "team-frontend-governance"
-    frontend_evidence_class: "framework_capability"
-  - id: "063-frontend-program-final-proof-archive-cleanup-mutation-execution-gating-consumption-baseline"
-    path: "specs/063-frontend-program-final-proof-archive-cleanup-mutation-execution-gating-consumption-baseline"
-    depends_on:
-      - "050-frontend-program-final-proof-archive-project-cleanup-baseline"
-      - "060-frontend-program-final-proof-archive-cleanup-mutation-proposal-approval-baseline"
-      - "061-frontend-program-final-proof-archive-cleanup-mutation-proposal-approval-consumption-baseline"
-      - "062-frontend-program-final-proof-archive-cleanup-mutation-execution-gating-baseline"
-    branch_slug: "frontend-program-final-proof-archive-cleanup-mutation-execution-gating-consumption-baseline"
-    owner: "team-frontend-governance"
-    frontend_evidence_class: "framework_capability"
-  - id: "064-frontend-program-final-proof-archive-cleanup-mutation-execution-baseline"
-    path: "specs/064-frontend-program-final-proof-archive-cleanup-mutation-execution-baseline"
-    depends_on:
-      - "050-frontend-program-final-proof-archive-project-cleanup-baseline"
-      - "062-frontend-program-final-proof-archive-cleanup-mutation-execution-gating-baseline"
-      - "063-frontend-program-final-proof-archive-cleanup-mutation-execution-gating-consumption-baseline"
-    branch_slug: "frontend-program-final-proof-archive-cleanup-mutation-execution-baseline"
-    owner: "team-frontend-governance"
-    frontend_evidence_class: "framework_capability"
-  - id: "065-frontend-contract-sample-source-selfcheck-baseline"
-    path: "specs/065-frontend-contract-sample-source-selfcheck-baseline"
-    depends_on:
-      - "012-frontend-contract-verify-integration"
-      - "013-frontend-contract-observation-provider-baseline"
-      - "014-frontend-contract-runtime-attachment-baseline"
-    branch_slug: "frontend-contract-sample-source-selfcheck-baseline"
-    owner: "team-frontend-governance"
-    frontend_evidence_class: "framework_capability"
-  - id: "066-frontend-p1-experience-stability-planning-baseline"
-    path: "specs/066-frontend-p1-experience-stability-planning-baseline"
-    depends_on:
-      - "018-frontend-gate-compatibility-baseline"
-      - "065-frontend-contract-sample-source-selfcheck-baseline"
-    branch_slug: "frontend-p1-experience-stability-planning-baseline"
-    owner: "team-frontend-governance"
-    frontend_evidence_class: "framework_capability"
-  - id: "067-frontend-p1-ui-kernel-semantic-expansion-baseline"
-    path: "specs/067-frontend-p1-ui-kernel-semantic-expansion-baseline"
-    depends_on:
-      - "066-frontend-p1-experience-stability-planning-baseline"
-    branch_slug: "frontend-p1-ui-kernel-semantic-expansion-baseline"
-    owner: "team-frontend-governance"
-    frontend_evidence_class: "framework_capability"
-  - id: "068-frontend-p1-page-recipe-expansion-baseline"
-    path: "specs/068-frontend-p1-page-recipe-expansion-baseline"
-    depends_on:
-      - "067-frontend-p1-ui-kernel-semantic-expansion-baseline"
-    branch_slug: "frontend-p1-page-recipe-expansion-baseline"
-    owner: "team-frontend-governance"
-    frontend_evidence_class: "framework_capability"
-  - id: "069-frontend-p1-governance-diagnostics-drift-baseline"
-    path: "specs/069-frontend-p1-governance-diagnostics-drift-baseline"
-    depends_on:
-      - "068-frontend-p1-page-recipe-expansion-baseline"
-    branch_slug: "frontend-p1-governance-diagnostics-drift-baseline"
-    owner: "team-frontend-governance"
-    frontend_evidence_class: "framework_capability"
-  - id: "070-frontend-p1-recheck-remediation-feedback-baseline"
-    path: "specs/070-frontend-p1-recheck-remediation-feedback-baseline"
-    depends_on:
-      - "069-frontend-p1-governance-diagnostics-drift-baseline"
-    branch_slug: "frontend-p1-recheck-remediation-feedback-baseline"
-    owner: "team-frontend-governance"
-    frontend_evidence_class: "framework_capability"
-  - id: "071-frontend-p1-visual-a11y-foundation-baseline"
-    path: "specs/071-frontend-p1-visual-a11y-foundation-baseline"
-    depends_on:
-      - "069-frontend-p1-governance-diagnostics-drift-baseline"
-    branch_slug: "frontend-p1-visual-a11y-foundation-baseline"
-    owner: "team-frontend-governance"
-    frontend_evidence_class: "framework_capability"
-  - id: "077-frontend-contract-observation-backfill-playbook-baseline"
-    path: "specs/077-frontend-contract-observation-backfill-playbook-baseline"
-    depends_on:
-      - "012-frontend-contract-verify-integration"
-      - "013-frontend-contract-observation-provider-baseline"
-    branch_slug: "frontend-contract-observation-backfill-playbook-baseline"
-    owner: "team-frontend-governance"
-    frontend_evidence_class: "framework_capability"
-  - id: "078-frontend-contract-sample-selfcheck-fallback-clarification-baseline"
-    path: "specs/078-frontend-contract-sample-selfcheck-fallback-clarification-baseline"
-    depends_on:
-      - "065-frontend-contract-sample-source-selfcheck-baseline"
-      - "077-frontend-contract-observation-backfill-playbook-baseline"
-    branch_slug: "frontend-contract-sample-selfcheck-fallback-clarification-baseline"
-    owner: "team-frontend-governance"
-    frontend_evidence_class: "framework_capability"
-  - id: "073-frontend-p2-provider-style-solution-baseline"
-    path: "specs/073-frontend-p2-provider-style-solution-baseline"
-    depends_on:
-      - "009-frontend-governance-ui-kernel"
-      - "016-frontend-enterprise-vue2-provider-baseline"
-      - "017-frontend-generation-governance-baseline"
-      - "018-frontend-gate-compatibility-baseline"
-    branch_slug: "frontend-p2-provider-style-solution-baseline"
-    owner: "team-frontend-governance"
-    frontend_evidence_class: "framework_capability"
-  - id: "082-frontend-evidence-class-authoring-surface-baseline"
-    path: "specs/082-frontend-evidence-class-authoring-surface-baseline"
-    depends_on: []
-    branch_slug: "frontend-evidence-class-authoring-surface-baseline"
-    owner: "team-frontend-governance"
-    frontend_evidence_class: "framework_capability"
-  - id: "083-frontend-evidence-class-validator-surface-baseline"
-    path: "specs/083-frontend-evidence-class-validator-surface-baseline"
-    depends_on:
-      - "082-frontend-evidence-class-authoring-surface-baseline"
-    branch_slug: "frontend-evidence-class-validator-surface-baseline"
-    owner: "team-frontend-governance"
-    frontend_evidence_class: "framework_capability"
-  - id: "084-frontend-evidence-class-diagnostic-contract-baseline"
-    path: "specs/084-frontend-evidence-class-diagnostic-contract-baseline"
-    depends_on:
-      - "083-frontend-evidence-class-validator-surface-baseline"
-    branch_slug: "frontend-evidence-class-diagnostic-contract-baseline"
-    owner: "team-frontend-governance"
-    frontend_evidence_class: "framework_capability"
-  - id: "085-frontend-evidence-class-verify-first-runtime-cut-baseline"
-    path: "specs/085-frontend-evidence-class-verify-first-runtime-cut-baseline"
-    depends_on:
-      - "082-frontend-evidence-class-authoring-surface-baseline"
-      - "083-frontend-evidence-class-validator-surface-baseline"
-      - "084-frontend-evidence-class-diagnostic-contract-baseline"
-    branch_slug: "frontend-evidence-class-verify-first-runtime-cut-baseline"
-    owner: "team-frontend-governance"
-    frontend_evidence_class: "framework_capability"
-  - id: "086-frontend-evidence-class-program-validate-mirror-contract-baseline"
-    path: "specs/086-frontend-evidence-class-program-validate-mirror-contract-baseline"
-    depends_on:
-      - "082-frontend-evidence-class-authoring-surface-baseline"
-      - "083-frontend-evidence-class-validator-surface-baseline"
-      - "084-frontend-evidence-class-diagnostic-contract-baseline"
-      - "085-frontend-evidence-class-verify-first-runtime-cut-baseline"
-    branch_slug: "frontend-evidence-class-program-validate-mirror-contract-baseline"
-    owner: "team-frontend-governance"
-    frontend_evidence_class: "framework_capability"
-  - id: "087-frontend-evidence-class-manifest-mirror-writeback-contract-baseline"
-    path: "specs/087-frontend-evidence-class-manifest-mirror-writeback-contract-baseline"
-    depends_on:
-      - "082-frontend-evidence-class-authoring-surface-baseline"
-      - "083-frontend-evidence-class-validator-surface-baseline"
-      - "084-frontend-evidence-class-diagnostic-contract-baseline"
-      - "085-frontend-evidence-class-verify-first-runtime-cut-baseline"
-      - "086-frontend-evidence-class-program-validate-mirror-contract-baseline"
-    branch_slug: "frontend-evidence-class-manifest-mirror-writeback-contract-baseline"
-    owner: "team-frontend-governance"
-    frontend_evidence_class: "framework_capability"
-  - id: "088-frontend-evidence-class-bounded-status-surface-baseline"
-    path: "specs/088-frontend-evidence-class-bounded-status-surface-baseline"
-    depends_on:
-      - "083-frontend-evidence-class-validator-surface-baseline"
-      - "084-frontend-evidence-class-diagnostic-contract-baseline"
-      - "085-frontend-evidence-class-verify-first-runtime-cut-baseline"
-      - "086-frontend-evidence-class-program-validate-mirror-contract-baseline"
-      - "087-frontend-evidence-class-manifest-mirror-writeback-contract-baseline"
-    branch_slug: "frontend-evidence-class-bounded-status-surface-baseline"
-    owner: "team-frontend-governance"
-    frontend_evidence_class: "framework_capability"
-  - id: "089-frontend-evidence-class-close-check-late-resurfacing-baseline"
-    path: "specs/089-frontend-evidence-class-close-check-late-resurfacing-baseline"
-    depends_on:
-      - "083-frontend-evidence-class-validator-surface-baseline"
-      - "084-frontend-evidence-class-diagnostic-contract-baseline"
-      - "085-frontend-evidence-class-verify-first-runtime-cut-baseline"
-      - "086-frontend-evidence-class-program-validate-mirror-contract-baseline"
-      - "087-frontend-evidence-class-manifest-mirror-writeback-contract-baseline"
-      - "088-frontend-evidence-class-bounded-status-surface-baseline"
-    branch_slug: "frontend-evidence-class-close-check-late-resurfacing-baseline"
-    owner: "team-frontend-governance"
-    frontend_evidence_class: "framework_capability"
-  - id: "090-frontend-evidence-class-runtime-rollout-sequencing-baseline"
-    path: "specs/090-frontend-evidence-class-runtime-rollout-sequencing-baseline"
-    depends_on:
-      - "082-frontend-evidence-class-authoring-surface-baseline"
-      - "083-frontend-evidence-class-validator-surface-baseline"
-      - "084-frontend-evidence-class-diagnostic-contract-baseline"
-      - "085-frontend-evidence-class-verify-first-runtime-cut-baseline"
-      - "086-frontend-evidence-class-program-validate-mirror-contract-baseline"
-      - "087-frontend-evidence-class-manifest-mirror-writeback-contract-baseline"
-      - "088-frontend-evidence-class-bounded-status-surface-baseline"
-      - "089-frontend-evidence-class-close-check-late-resurfacing-baseline"
-    branch_slug: "frontend-evidence-class-runtime-rollout-sequencing-baseline"
-    owner: "team-frontend-governance"
-    frontend_evidence_class: "framework_capability"
-  - id: "091-frontend-evidence-class-close-check-runtime-implementation-baseline"
-    path: "specs/091-frontend-evidence-class-close-check-runtime-implementation-baseline"
-    depends_on:
-      - "089-frontend-evidence-class-close-check-late-resurfacing-baseline"
-      - "090-frontend-evidence-class-runtime-rollout-sequencing-baseline"
-    branch_slug: "frontend-evidence-class-close-check-runtime-implementation-baseline"
-    owner: "team-frontend-governance"
-    frontend_evidence_class: "framework_capability"
-  - id: "092-frontend-evidence-class-runtime-reality-sync-baseline"
-    path: "specs/092-frontend-evidence-class-runtime-reality-sync-baseline"
-    depends_on:
-      - "085-frontend-evidence-class-verify-first-runtime-cut-baseline"
-      - "086-frontend-evidence-class-program-validate-mirror-contract-baseline"
-      - "087-frontend-evidence-class-manifest-mirror-writeback-contract-baseline"
-      - "088-frontend-evidence-class-bounded-status-surface-baseline"
-      - "089-frontend-evidence-class-close-check-late-resurfacing-baseline"
-      - "090-frontend-evidence-class-runtime-rollout-sequencing-baseline"
-      - "091-frontend-evidence-class-close-check-runtime-implementation-baseline"
-    branch_slug: "frontend-evidence-class-runtime-reality-sync-baseline"
-    owner: "team-frontend-governance"
-    frontend_evidence_class: "framework_capability"
-  - id: "093-stage0-installed-runtime-update-advisor-baseline"
-    path: "specs/093-stage0-installed-runtime-update-advisor-baseline"
-    depends_on: []
-    branch_slug: "stage0-installed-runtime-update-advisor-baseline"
-    owner: "team-frontend-governance"
-    frontend_evidence_class: "framework_capability"
-  - id: "094-stage0-init-dual-path-project-onboarding-baseline"
-    path: "specs/094-stage0-init-dual-path-project-onboarding-baseline"
-    depends_on:
-      - "093-stage0-installed-runtime-update-advisor-baseline"
-    branch_slug: "stage0-init-dual-path-project-onboarding-baseline"
-    owner: "team-frontend-governance"
-    frontend_evidence_class: "framework_capability"
-  - id: "095-frontend-mainline-product-delivery-baseline"
-    path: "specs/095-frontend-mainline-product-delivery-baseline"
-    depends_on:
-      - "014-frontend-contract-runtime-attachment-baseline"
-      - "073-frontend-p2-provider-style-solution-baseline"
-      - "094-stage0-init-dual-path-project-onboarding-baseline"
-    branch_slug: "frontend-mainline-product-delivery-baseline"
-    owner: "team-frontend-governance"
-    frontend_evidence_class: "framework_capability"
-  - id: "096-frontend-mainline-host-runtime-manager-baseline"
-    path: "specs/096-frontend-mainline-host-runtime-manager-baseline"
-    depends_on:
-      - "093-stage0-installed-runtime-update-advisor-baseline"
-      - "094-stage0-init-dual-path-project-onboarding-baseline"
-      - "095-frontend-mainline-product-delivery-baseline"
-    branch_slug: "frontend-mainline-host-runtime-manager-baseline"
-    owner: "team-frontend-governance"
-    frontend_evidence_class: "framework_capability"
-  - id: "097-frontend-mainline-posture-delivery-registry-baseline"
-    path: "specs/097-frontend-mainline-posture-delivery-registry-baseline"
-    depends_on:
-      - "014-frontend-contract-runtime-attachment-baseline"
-      - "016-frontend-enterprise-vue2-provider-baseline"
-      - "073-frontend-p2-provider-style-solution-baseline"
-      - "094-stage0-init-dual-path-project-onboarding-baseline"
-      - "095-frontend-mainline-product-delivery-baseline"
-      - "096-frontend-mainline-host-runtime-manager-baseline"
-    branch_slug: "frontend-mainline-posture-delivery-registry-baseline"
-    owner: "team-frontend-governance"
-    frontend_evidence_class: "framework_capability"
-  - id: "098-frontend-mainline-posture-detector-baseline"
-    path: "specs/098-frontend-mainline-posture-detector-baseline"
-    depends_on:
-      - "014-frontend-contract-runtime-attachment-baseline"
-      - "073-frontend-p2-provider-style-solution-baseline"
-      - "094-stage0-init-dual-path-project-onboarding-baseline"
-      - "095-frontend-mainline-product-delivery-baseline"
-      - "096-frontend-mainline-host-runtime-manager-baseline"
-      - "097-frontend-mainline-posture-delivery-registry-baseline"
-    branch_slug: "frontend-mainline-posture-detector-baseline"
-    owner: "team-frontend-governance"
-    frontend_evidence_class: "framework_capability"
-  - id: "099-frontend-mainline-delivery-registry-resolver-baseline"
-    path: "specs/099-frontend-mainline-delivery-registry-resolver-baseline"
-    depends_on:
-      - "014-frontend-contract-runtime-attachment-baseline"
-      - "016-frontend-enterprise-vue2-provider-baseline"
-      - "073-frontend-p2-provider-style-solution-baseline"
-      - "094-stage0-init-dual-path-project-onboarding-baseline"
-      - "095-frontend-mainline-product-delivery-baseline"
-      - "096-frontend-mainline-host-runtime-manager-baseline"
-      - "097-frontend-mainline-posture-delivery-registry-baseline"
-      - "098-frontend-mainline-posture-detector-baseline"
-    branch_slug: "frontend-mainline-delivery-registry-resolver-baseline"
-    owner: "team-frontend-governance"
-    frontend_evidence_class: "framework_capability"
-  - id: "100-frontend-mainline-action-plan-binding-baseline"
-    path: "specs/100-frontend-mainline-action-plan-binding-baseline"
-    depends_on:
-      - "014-frontend-contract-runtime-attachment-baseline"
-      - "073-frontend-p2-provider-style-solution-baseline"
-      - "094-stage0-init-dual-path-project-onboarding-baseline"
-      - "095-frontend-mainline-product-delivery-baseline"
-      - "096-frontend-mainline-host-runtime-manager-baseline"
-      - "098-frontend-mainline-posture-detector-baseline"
-      - "099-frontend-mainline-delivery-registry-resolver-baseline"
-    branch_slug: "frontend-mainline-action-plan-binding-baseline"
-    owner: "team-frontend-governance"
-    frontend_evidence_class: "framework_capability"
-  - id: "101-frontend-mainline-managed-delivery-apply-runtime-baseline"
-    path: "specs/101-frontend-mainline-managed-delivery-apply-runtime-baseline"
-    depends_on:
-      - "014-frontend-contract-runtime-attachment-baseline"
-      - "020-frontend-program-execute-runtime-baseline"
-      - "073-frontend-p2-provider-style-solution-baseline"
-      - "094-stage0-init-dual-path-project-onboarding-baseline"
-      - "095-frontend-mainline-product-delivery-baseline"
-      - "096-frontend-mainline-host-runtime-manager-baseline"
-      - "098-frontend-mainline-posture-detector-baseline"
-      - "099-frontend-mainline-delivery-registry-resolver-baseline"
-      - "100-frontend-mainline-action-plan-binding-baseline"
-    branch_slug: "frontend-mainline-managed-delivery-apply-runtime-baseline"
-    owner: "team-frontend-governance"
-    frontend_evidence_class: "framework_capability"
-  - id: "102-frontend-mainline-browser-quality-gate-baseline"
-    path: "specs/102-frontend-mainline-browser-quality-gate-baseline"
-    depends_on:
-      - "014-frontend-contract-runtime-attachment-baseline"
-      - "020-frontend-program-execute-runtime-baseline"
-      - "071-frontend-p1-visual-a11y-foundation-baseline"
-      - "073-frontend-p2-provider-style-solution-baseline"
-      - "095-frontend-mainline-product-delivery-baseline"
-      - "100-frontend-mainline-action-plan-binding-baseline"
-      - "101-frontend-mainline-managed-delivery-apply-runtime-baseline"
-    branch_slug: "frontend-mainline-browser-quality-gate-baseline"
-    owner: "team-frontend-governance"
-    frontend_evidence_class: "framework_capability"
-  - id: "103-frontend-mainline-browser-gate-probe-runtime-baseline"
-    path: "specs/103-frontend-mainline-browser-gate-probe-runtime-baseline"
-    depends_on:
-      - "071-frontend-p1-visual-a11y-foundation-baseline"
-      - "073-frontend-p2-provider-style-solution-baseline"
-      - "095-frontend-mainline-product-delivery-baseline"
-      - "101-frontend-mainline-managed-delivery-apply-runtime-baseline"
-      - "102-frontend-mainline-browser-quality-gate-baseline"
-    branch_slug: "frontend-mainline-browser-gate-probe-runtime-baseline"
-    owner: "team-frontend-governance"
-    frontend_evidence_class: "framework_capability"
-  - id: "104-frontend-mainline-browser-gate-recheck-remediation-binding-baseline"
-    path: "specs/104-frontend-mainline-browser-gate-recheck-remediation-binding-baseline"
-    depends_on:
-      - "020-frontend-program-execute-runtime-baseline"
-      - "101-frontend-mainline-managed-delivery-apply-runtime-baseline"
-      - "102-frontend-mainline-browser-quality-gate-baseline"
-      - "103-frontend-mainline-browser-gate-probe-runtime-baseline"
-    branch_slug: "frontend-mainline-browser-gate-recheck-remediation-binding-baseline"
-    owner: "team-frontend-governance"
-    frontend_evidence_class: "framework_capability"
-  - id: "105-frontend-mainline-browser-gate-recheck-remediation-runtime-implementation-baseline"
-    path: "specs/105-frontend-mainline-browser-gate-recheck-remediation-runtime-implementation-baseline"
-    depends_on:
-      - "104-frontend-mainline-browser-gate-recheck-remediation-binding-baseline"
-    branch_slug: "frontend-mainline-browser-gate-recheck-remediation-runtime-implementation-baseline"
-    owner: "team-frontend-governance"
-    frontend_evidence_class: "framework_capability"
-  - id: "106-frontend-mainline-browser-gate-evidence-class-footer-normalization-baseline"
-    path: "specs/106-frontend-mainline-browser-gate-evidence-class-footer-normalization-baseline"
-    depends_on:
-      - "100-frontend-mainline-action-plan-binding-baseline"
-      - "101-frontend-mainline-managed-delivery-apply-runtime-baseline"
-      - "102-frontend-mainline-browser-quality-gate-baseline"
-      - "103-frontend-mainline-browser-gate-probe-runtime-baseline"
-      - "104-frontend-mainline-browser-gate-recheck-remediation-binding-baseline"
-      - "105-frontend-mainline-browser-gate-recheck-remediation-runtime-implementation-baseline"
-    branch_slug: "frontend-mainline-browser-gate-evidence-class-footer-normalization-baseline"
-    owner: "team-frontend-governance"
-    frontend_evidence_class: "framework_capability"
-  - id: "107-frontend-evidence-class-readiness-gate-runtime-baseline"
-    path: "specs/107-frontend-evidence-class-readiness-gate-runtime-baseline"
-    depends_on:
-      - "106-frontend-mainline-browser-gate-evidence-class-footer-normalization-baseline"
-    branch_slug: "frontend-evidence-class-readiness-gate-runtime-baseline"
-    owner: "team-frontend-governance"
-    frontend_evidence_class: "framework_capability"
-  - id: "108-frontend-legacy-framework-evidence-class-backfill-baseline"
-    path: "specs/108-frontend-legacy-framework-evidence-class-backfill-baseline"
-    depends_on:
-      - "107-frontend-evidence-class-readiness-gate-runtime-baseline"
-    branch_slug: "frontend-legacy-framework-evidence-class-backfill-baseline"
-    owner: "team-frontend-governance"
-    frontend_evidence_class: "framework_capability"
-  - id: "109-frontend-cleanup-archive-evidence-class-backfill-baseline"
-    path: "specs/109-frontend-cleanup-archive-evidence-class-backfill-baseline"
-    depends_on:
-      - "108-frontend-legacy-framework-evidence-class-backfill-baseline"
-    branch_slug: "frontend-cleanup-archive-evidence-class-backfill-baseline"
-    owner: "team-frontend-governance"
-    frontend_evidence_class: "framework_capability"
-  - id: "110-frontend-foundation-mainline-evidence-class-backfill-baseline"
-    path: "specs/110-frontend-foundation-mainline-evidence-class-backfill-baseline"
-    depends_on:
-      - "109-frontend-cleanup-archive-evidence-class-backfill-baseline"
-    branch_slug: "frontend-foundation-mainline-evidence-class-backfill-baseline"
-    owner: "team-frontend-governance"
-    frontend_evidence_class: "framework_capability"
-  - id: "111-frontend-p1-child-close-check-backfill-baseline"
-    path: "specs/111-frontend-p1-child-close-check-backfill-baseline"
-    depends_on:
-      - "110-frontend-foundation-mainline-evidence-class-backfill-baseline"
-    branch_slug: "frontend-p1-child-close-check-backfill-baseline"
-    owner: "team-frontend-governance"
-    frontend_evidence_class: "framework_capability"
-  - id: "112-frontend-072-081-close-check-backfill-baseline"
-    path: "specs/112-frontend-072-081-close-check-backfill-baseline"
-    depends_on:
-      - "111-frontend-p1-child-close-check-backfill-baseline"
-    branch_slug: "frontend-072-081-close-check-backfill-baseline"
-    owner: "team-frontend-governance"
-    frontend_evidence_class: "framework_capability"
-  - id: "113-frontend-082-092-manifest-mirror-baseline"
-    path: "specs/113-frontend-082-092-manifest-mirror-baseline"
-    depends_on:
-      - "092-frontend-evidence-class-runtime-reality-sync-baseline"
-      - "112-frontend-072-081-close-check-backfill-baseline"
-    branch_slug: "frontend-082-092-manifest-mirror-baseline"
-    owner: "team-frontend-governance"
-    frontend_evidence_class: "framework_capability"
-  - id: "114-stage0-093-095-formal-docs-backfill-baseline"
-    path: "specs/114-stage0-093-095-formal-docs-backfill-baseline"
-    depends_on:
-      - "095-frontend-mainline-product-delivery-baseline"
-      - "113-frontend-082-092-manifest-mirror-baseline"
-    branch_slug: "stage0-093-095-formal-docs-backfill-baseline"
-    owner: "team-frontend-governance"
-    frontend_evidence_class: "framework_capability"
-  - id: "115-stage0-093-095-plan-backfill-baseline"
-    path: "specs/115-stage0-093-095-plan-backfill-baseline"
-    depends_on:
-      - "095-frontend-mainline-product-delivery-baseline"
-      - "114-stage0-093-095-formal-docs-backfill-baseline"
-    branch_slug: "stage0-093-095-plan-backfill-baseline"
-    owner: "team-frontend-governance"
-    frontend_evidence_class: "framework_capability"
-  - id: "123-frontend-mainline-managed-delivery-apply-runtime-implementation-baseline"
-    path: "specs/123-frontend-mainline-managed-delivery-apply-runtime-implementation-baseline"
-    depends_on:
-      - "101-frontend-mainline-managed-delivery-apply-runtime-baseline"
-    branch_slug: "frontend-mainline-managed-delivery-apply-runtime-implementation-baseline"
-    owner: "team-frontend-governance"
-    frontend_evidence_class: "framework_capability"
-  - id: "124-frontend-mainline-delivery-materialization-runtime-baseline"
-    path: "specs/124-frontend-mainline-delivery-materialization-runtime-baseline"
-    depends_on:
-      - "099-frontend-mainline-delivery-registry-resolver-baseline"
-      - "123-frontend-mainline-managed-delivery-apply-runtime-implementation-baseline"
-    branch_slug: "frontend-mainline-delivery-materialization-runtime-baseline"
-    owner: "team-frontend-governance"
-    frontend_evidence_class: "framework_capability"
-  - id: "125-frontend-mainline-browser-gate-probe-runtime-implementation-baseline"
-    path: "specs/125-frontend-mainline-browser-gate-probe-runtime-implementation-baseline"
-    depends_on:
-      - "103-frontend-mainline-browser-gate-probe-runtime-baseline"
-      - "124-frontend-mainline-delivery-materialization-runtime-baseline"
-    branch_slug: "frontend-mainline-browser-gate-probe-runtime-implementation-baseline"
-    owner: "team-frontend-governance"
-    frontend_evidence_class: "framework_capability"
-  - id: "126-frontend-mainline-browser-gate-recheck-remediation-runtime-closure-baseline"
-    path: "specs/126-frontend-mainline-browser-gate-recheck-remediation-runtime-closure-baseline"
-    depends_on:
-      - "104-frontend-mainline-browser-gate-recheck-remediation-binding-baseline"
-      - "105-frontend-mainline-browser-gate-recheck-remediation-runtime-implementation-baseline"
-      - "106-frontend-mainline-browser-gate-evidence-class-footer-normalization-baseline"
-      - "125-frontend-mainline-browser-gate-probe-runtime-implementation-baseline"
-    branch_slug: "frontend-mainline-browser-gate-recheck-remediation-runtime-closure-baseline"
-    owner: "team-frontend-governance"
-    frontend_evidence_class: "framework_capability"
-  - id: "127-frontend-contract-observation-producer-runtime-closure-baseline"
-    path: "specs/127-frontend-contract-observation-producer-runtime-closure-baseline"
-    depends_on:
-      - "012-frontend-contract-verify-integration"
-      - "013-frontend-contract-observation-provider-baseline"
-      - "065-frontend-contract-sample-source-selfcheck-baseline"
-      - "077-frontend-contract-observation-backfill-playbook-baseline"
-      - "078-frontend-contract-sample-selfcheck-fallback-clarification-baseline"
-    branch_slug: "frontend-contract-observation-producer-runtime-closure-baseline"
-    owner: "team-frontend-governance"
-    frontend_evidence_class: "framework_capability"
+- id: 009-frontend-governance-ui-kernel
+  path: specs/009-frontend-governance-ui-kernel
+  depends_on: []
+  branch_slug: frontend-governance-ui-kernel
+  owner: team-frontend-governance
+  frontend_evidence_class: framework_capability
+- id: 011-frontend-contract-authoring-baseline
+  path: specs/011-frontend-contract-authoring-baseline
+  depends_on:
+  - 009-frontend-governance-ui-kernel
+  branch_slug: frontend-contract-authoring-baseline
+  owner: team-frontend-governance
+  frontend_evidence_class: framework_capability
+- id: 012-frontend-contract-verify-integration
+  path: specs/012-frontend-contract-verify-integration
+  depends_on:
+  - 009-frontend-governance-ui-kernel
+  - 011-frontend-contract-authoring-baseline
+  branch_slug: frontend-contract-verify-integration
+  owner: team-frontend-governance
+  frontend_evidence_class: framework_capability
+- id: 013-frontend-contract-observation-provider-baseline
+  path: specs/013-frontend-contract-observation-provider-baseline
+  depends_on:
+  - 009-frontend-governance-ui-kernel
+  - 011-frontend-contract-authoring-baseline
+  - 012-frontend-contract-verify-integration
+  branch_slug: frontend-contract-observation-provider-baseline
+  owner: team-frontend-governance
+  frontend_evidence_class: framework_capability
+- id: 014-frontend-contract-runtime-attachment-baseline
+  path: specs/014-frontend-contract-runtime-attachment-baseline
+  depends_on:
+  - 009-frontend-governance-ui-kernel
+  - 011-frontend-contract-authoring-baseline
+  - 012-frontend-contract-verify-integration
+  - 013-frontend-contract-observation-provider-baseline
+  branch_slug: frontend-contract-runtime-attachment-baseline
+  owner: team-frontend-governance
+  frontend_evidence_class: framework_capability
+- id: 015-frontend-ui-kernel-standard-baseline
+  path: specs/015-frontend-ui-kernel-standard-baseline
+  depends_on:
+  - 009-frontend-governance-ui-kernel
+  - 011-frontend-contract-authoring-baseline
+  branch_slug: frontend-ui-kernel-standard-baseline
+  owner: team-frontend-governance
+  frontend_evidence_class: framework_capability
+- id: 016-frontend-enterprise-vue2-provider-baseline
+  path: specs/016-frontend-enterprise-vue2-provider-baseline
+  depends_on:
+  - 009-frontend-governance-ui-kernel
+  - 015-frontend-ui-kernel-standard-baseline
+  branch_slug: frontend-enterprise-vue2-provider-baseline
+  owner: team-frontend-governance
+  frontend_evidence_class: framework_capability
+- id: 017-frontend-generation-governance-baseline
+  path: specs/017-frontend-generation-governance-baseline
+  depends_on:
+  - 009-frontend-governance-ui-kernel
+  - 015-frontend-ui-kernel-standard-baseline
+  - 016-frontend-enterprise-vue2-provider-baseline
+  branch_slug: frontend-generation-governance-baseline
+  owner: team-frontend-governance
+  frontend_evidence_class: framework_capability
+- id: 018-frontend-gate-compatibility-baseline
+  path: specs/018-frontend-gate-compatibility-baseline
+  depends_on:
+  - 009-frontend-governance-ui-kernel
+  - 017-frontend-generation-governance-baseline
+  branch_slug: frontend-gate-compatibility-baseline
+  owner: team-frontend-governance
+  frontend_evidence_class: framework_capability
+- id: 019-frontend-program-orchestration-baseline
+  path: specs/019-frontend-program-orchestration-baseline
+  depends_on:
+  - 009-frontend-governance-ui-kernel
+  - 014-frontend-contract-runtime-attachment-baseline
+  - 018-frontend-gate-compatibility-baseline
+  branch_slug: frontend-program-orchestration-baseline
+  owner: team-frontend-governance
+  frontend_evidence_class: framework_capability
+- id: 020-frontend-program-execute-runtime-baseline
+  path: specs/020-frontend-program-execute-runtime-baseline
+  depends_on:
+  - 009-frontend-governance-ui-kernel
+  - 014-frontend-contract-runtime-attachment-baseline
+  - 018-frontend-gate-compatibility-baseline
+  - 019-frontend-program-orchestration-baseline
+  branch_slug: frontend-program-execute-runtime-baseline
+  owner: team-frontend-governance
+  frontend_evidence_class: framework_capability
+- id: 021-frontend-program-remediation-runtime-baseline
+  path: specs/021-frontend-program-remediation-runtime-baseline
+  depends_on:
+  - 018-frontend-gate-compatibility-baseline
+  - 019-frontend-program-orchestration-baseline
+  - 020-frontend-program-execute-runtime-baseline
+  branch_slug: frontend-program-remediation-runtime-baseline
+  owner: team-frontend-governance
+  frontend_evidence_class: framework_capability
+- id: 022-frontend-governance-materialization-runtime-baseline
+  path: specs/022-frontend-governance-materialization-runtime-baseline
+  depends_on:
+  - 017-frontend-generation-governance-baseline
+  - 018-frontend-gate-compatibility-baseline
+  - 021-frontend-program-remediation-runtime-baseline
+  branch_slug: frontend-governance-materialization-runtime-baseline
+  owner: team-frontend-governance
+  frontend_evidence_class: framework_capability
+- id: 023-frontend-program-bounded-remediation-execute-baseline
+  path: specs/023-frontend-program-bounded-remediation-execute-baseline
+  depends_on:
+  - 021-frontend-program-remediation-runtime-baseline
+  - 022-frontend-governance-materialization-runtime-baseline
+  branch_slug: frontend-program-bounded-remediation-execute-baseline
+  owner: team-frontend-governance
+  frontend_evidence_class: framework_capability
+- id: 024-frontend-program-bounded-remediation-writeback-baseline
+  path: specs/024-frontend-program-bounded-remediation-writeback-baseline
+  depends_on:
+  - 023-frontend-program-bounded-remediation-execute-baseline
+  branch_slug: frontend-program-bounded-remediation-writeback-baseline
+  owner: team-frontend-governance
+  frontend_evidence_class: framework_capability
+- id: 025-frontend-program-provider-handoff-baseline
+  path: specs/025-frontend-program-provider-handoff-baseline
+  depends_on:
+  - 024-frontend-program-bounded-remediation-writeback-baseline
+  branch_slug: frontend-program-provider-handoff-baseline
+  owner: team-frontend-governance
+  frontend_evidence_class: framework_capability
+- id: 026-frontend-program-guarded-provider-runtime-baseline
+  path: specs/026-frontend-program-guarded-provider-runtime-baseline
+  depends_on:
+  - 025-frontend-program-provider-handoff-baseline
+  branch_slug: frontend-program-guarded-provider-runtime-baseline
+  owner: team-frontend-governance
+  frontend_evidence_class: framework_capability
+- id: 027-frontend-program-provider-runtime-artifact-baseline
+  path: specs/027-frontend-program-provider-runtime-artifact-baseline
+  depends_on:
+  - 026-frontend-program-guarded-provider-runtime-baseline
+  branch_slug: frontend-program-provider-runtime-artifact-baseline
+  owner: team-frontend-governance
+  frontend_evidence_class: framework_capability
+- id: 028-frontend-program-provider-patch-handoff-baseline
+  path: specs/028-frontend-program-provider-patch-handoff-baseline
+  depends_on:
+  - 027-frontend-program-provider-runtime-artifact-baseline
+  branch_slug: frontend-program-provider-patch-handoff-baseline
+  owner: team-frontend-governance
+  frontend_evidence_class: framework_capability
+- id: 029-frontend-program-guarded-patch-apply-baseline
+  path: specs/029-frontend-program-guarded-patch-apply-baseline
+  depends_on:
+  - 028-frontend-program-provider-patch-handoff-baseline
+  branch_slug: frontend-program-guarded-patch-apply-baseline
+  owner: team-frontend-governance
+  frontend_evidence_class: framework_capability
+- id: 030-frontend-program-provider-patch-apply-artifact-baseline
+  path: specs/030-frontend-program-provider-patch-apply-artifact-baseline
+  depends_on:
+  - 029-frontend-program-guarded-patch-apply-baseline
+  branch_slug: frontend-program-provider-patch-apply-artifact-baseline
+  owner: team-frontend-governance
+  frontend_evidence_class: framework_capability
+- id: 031-frontend-program-cross-spec-writeback-orchestration-baseline
+  path: specs/031-frontend-program-cross-spec-writeback-orchestration-baseline
+  depends_on:
+  - 030-frontend-program-provider-patch-apply-artifact-baseline
+  branch_slug: frontend-program-cross-spec-writeback-orchestration-baseline
+  owner: team-frontend-governance
+  frontend_evidence_class: framework_capability
+- id: 032-frontend-program-cross-spec-writeback-artifact-baseline
+  path: specs/032-frontend-program-cross-spec-writeback-artifact-baseline
+  depends_on:
+  - 031-frontend-program-cross-spec-writeback-orchestration-baseline
+  branch_slug: frontend-program-cross-spec-writeback-artifact-baseline
+  owner: team-frontend-governance
+  frontend_evidence_class: framework_capability
+- id: 033-frontend-program-guarded-registry-orchestration-baseline
+  path: specs/033-frontend-program-guarded-registry-orchestration-baseline
+  depends_on:
+  - 032-frontend-program-cross-spec-writeback-artifact-baseline
+  branch_slug: frontend-program-guarded-registry-orchestration-baseline
+  owner: team-frontend-governance
+  frontend_evidence_class: framework_capability
+- id: 034-frontend-program-guarded-registry-artifact-baseline
+  path: specs/034-frontend-program-guarded-registry-artifact-baseline
+  depends_on:
+  - 033-frontend-program-guarded-registry-orchestration-baseline
+  branch_slug: frontend-program-guarded-registry-artifact-baseline
+  owner: team-frontend-governance
+  frontend_evidence_class: framework_capability
+- id: 035-frontend-program-broader-governance-orchestration-baseline
+  path: specs/035-frontend-program-broader-governance-orchestration-baseline
+  depends_on:
+  - 034-frontend-program-guarded-registry-artifact-baseline
+  branch_slug: frontend-program-broader-governance-orchestration-baseline
+  owner: team-frontend-governance
+  frontend_evidence_class: framework_capability
+- id: 036-frontend-program-broader-governance-artifact-baseline
+  path: specs/036-frontend-program-broader-governance-artifact-baseline
+  depends_on:
+  - 035-frontend-program-broader-governance-orchestration-baseline
+  branch_slug: frontend-program-broader-governance-artifact-baseline
+  owner: team-frontend-governance
+  frontend_evidence_class: framework_capability
+- id: 037-frontend-program-final-governance-orchestration-baseline
+  path: specs/037-frontend-program-final-governance-orchestration-baseline
+  depends_on:
+  - 036-frontend-program-broader-governance-artifact-baseline
+  branch_slug: frontend-program-final-governance-orchestration-baseline
+  owner: team-frontend-governance
+  frontend_evidence_class: framework_capability
+- id: 038-frontend-program-final-governance-artifact-baseline
+  path: specs/038-frontend-program-final-governance-artifact-baseline
+  depends_on:
+  - 037-frontend-program-final-governance-orchestration-baseline
+  branch_slug: frontend-program-final-governance-artifact-baseline
+  owner: team-frontend-governance
+  frontend_evidence_class: framework_capability
+- id: 039-frontend-program-writeback-persistence-orchestration-baseline
+  path: specs/039-frontend-program-writeback-persistence-orchestration-baseline
+  depends_on:
+  - 038-frontend-program-final-governance-artifact-baseline
+  branch_slug: frontend-program-writeback-persistence-orchestration-baseline
+  owner: team-frontend-governance
+  frontend_evidence_class: framework_capability
+- id: 040-frontend-program-writeback-persistence-artifact-baseline
+  path: specs/040-frontend-program-writeback-persistence-artifact-baseline
+  depends_on:
+  - 039-frontend-program-writeback-persistence-orchestration-baseline
+  branch_slug: frontend-program-writeback-persistence-artifact-baseline
+  owner: team-frontend-governance
+  frontend_evidence_class: framework_capability
+- id: 041-frontend-program-persisted-write-proof-orchestration-baseline
+  path: specs/041-frontend-program-persisted-write-proof-orchestration-baseline
+  depends_on:
+  - 040-frontend-program-writeback-persistence-artifact-baseline
+  branch_slug: frontend-program-persisted-write-proof-orchestration-baseline
+  owner: team-frontend-governance
+  frontend_evidence_class: framework_capability
+- id: 042-frontend-program-persisted-write-proof-artifact-baseline
+  path: specs/042-frontend-program-persisted-write-proof-artifact-baseline
+  depends_on:
+  - 041-frontend-program-persisted-write-proof-orchestration-baseline
+  branch_slug: frontend-program-persisted-write-proof-artifact-baseline
+  owner: team-frontend-governance
+  frontend_evidence_class: framework_capability
+- id: 043-frontend-program-final-proof-publication-orchestration-baseline
+  path: specs/043-frontend-program-final-proof-publication-orchestration-baseline
+  depends_on:
+  - 042-frontend-program-persisted-write-proof-artifact-baseline
+  branch_slug: frontend-program-final-proof-publication-orchestration-baseline
+  owner: team-frontend-governance
+  frontend_evidence_class: framework_capability
+- id: 044-frontend-program-final-proof-publication-artifact-baseline
+  path: specs/044-frontend-program-final-proof-publication-artifact-baseline
+  depends_on:
+  - 043-frontend-program-final-proof-publication-orchestration-baseline
+  branch_slug: frontend-program-final-proof-publication-artifact-baseline
+  owner: team-frontend-governance
+  frontend_evidence_class: framework_capability
+- id: 045-frontend-program-final-proof-closure-orchestration-baseline
+  path: specs/045-frontend-program-final-proof-closure-orchestration-baseline
+  depends_on:
+  - 044-frontend-program-final-proof-publication-artifact-baseline
+  branch_slug: frontend-program-final-proof-closure-orchestration-baseline
+  owner: team-frontend-governance
+  frontend_evidence_class: framework_capability
+- id: 046-frontend-program-final-proof-closure-artifact-baseline
+  path: specs/046-frontend-program-final-proof-closure-artifact-baseline
+  depends_on:
+  - 045-frontend-program-final-proof-closure-orchestration-baseline
+  branch_slug: frontend-program-final-proof-closure-artifact-baseline
+  owner: team-frontend-governance
+  frontend_evidence_class: framework_capability
+- id: 047-frontend-program-final-proof-archive-orchestration-baseline
+  path: specs/047-frontend-program-final-proof-archive-orchestration-baseline
+  depends_on:
+  - 046-frontend-program-final-proof-closure-artifact-baseline
+  branch_slug: frontend-program-final-proof-archive-orchestration-baseline
+  owner: team-frontend-governance
+  frontend_evidence_class: framework_capability
+- id: 048-frontend-program-final-proof-archive-artifact-baseline
+  path: specs/048-frontend-program-final-proof-archive-artifact-baseline
+  depends_on:
+  - 047-frontend-program-final-proof-archive-orchestration-baseline
+  branch_slug: frontend-program-final-proof-archive-artifact-baseline
+  owner: team-frontend-governance
+  frontend_evidence_class: framework_capability
+- id: 049-frontend-program-final-proof-archive-thread-archive-baseline
+  path: specs/049-frontend-program-final-proof-archive-thread-archive-baseline
+  depends_on:
+  - 048-frontend-program-final-proof-archive-artifact-baseline
+  branch_slug: frontend-program-final-proof-archive-thread-archive-baseline
+  owner: team-frontend-governance
+  frontend_evidence_class: framework_capability
+- id: 050-frontend-program-final-proof-archive-project-cleanup-baseline
+  path: specs/050-frontend-program-final-proof-archive-project-cleanup-baseline
+  depends_on:
+  - 049-frontend-program-final-proof-archive-thread-archive-baseline
+  branch_slug: frontend-program-final-proof-archive-project-cleanup-baseline
+  owner: team-frontend-governance
+  frontend_evidence_class: framework_capability
+- id: 051-frontend-program-final-proof-archive-project-cleanup-mutation-baseline
+  path: specs/051-frontend-program-final-proof-archive-project-cleanup-mutation-baseline
+  depends_on:
+  - 050-frontend-program-final-proof-archive-project-cleanup-baseline
+  branch_slug: frontend-program-final-proof-archive-project-cleanup-mutation-baseline
+  owner: team-frontend-governance
+  frontend_evidence_class: framework_capability
+- id: 052-frontend-program-final-proof-archive-explicit-cleanup-targets-baseline
+  path: specs/052-frontend-program-final-proof-archive-explicit-cleanup-targets-baseline
+  depends_on:
+  - 050-frontend-program-final-proof-archive-project-cleanup-baseline
+  - 051-frontend-program-final-proof-archive-project-cleanup-mutation-baseline
+  branch_slug: frontend-program-final-proof-archive-explicit-cleanup-targets-baseline
+  owner: team-frontend-governance
+  frontend_evidence_class: framework_capability
+- id: 053-frontend-program-final-proof-archive-cleanup-targets-consumption-baseline
+  path: specs/053-frontend-program-final-proof-archive-cleanup-targets-consumption-baseline
+  depends_on:
+  - 050-frontend-program-final-proof-archive-project-cleanup-baseline
+  - 052-frontend-program-final-proof-archive-explicit-cleanup-targets-baseline
+  branch_slug: frontend-program-final-proof-archive-cleanup-targets-consumption-baseline
+  owner: team-frontend-governance
+  frontend_evidence_class: framework_capability
+- id: 054-frontend-program-final-proof-archive-cleanup-mutation-eligibility-baseline
+  path: specs/054-frontend-program-final-proof-archive-cleanup-mutation-eligibility-baseline
+  depends_on:
+  - 051-frontend-program-final-proof-archive-project-cleanup-mutation-baseline
+  - 052-frontend-program-final-proof-archive-explicit-cleanup-targets-baseline
+  - 053-frontend-program-final-proof-archive-cleanup-targets-consumption-baseline
+  branch_slug: frontend-program-final-proof-archive-cleanup-mutation-eligibility-baseline
+  owner: team-frontend-governance
+  frontend_evidence_class: framework_capability
+- id: 055-frontend-program-final-proof-archive-cleanup-eligibility-consumption-baseline
+  path: specs/055-frontend-program-final-proof-archive-cleanup-eligibility-consumption-baseline
+  depends_on:
+  - 050-frontend-program-final-proof-archive-project-cleanup-baseline
+  - 053-frontend-program-final-proof-archive-cleanup-targets-consumption-baseline
+  - 054-frontend-program-final-proof-archive-cleanup-mutation-eligibility-baseline
+  branch_slug: frontend-program-final-proof-archive-cleanup-eligibility-consumption-baseline
+  owner: team-frontend-governance
+  frontend_evidence_class: framework_capability
+- id: 056-frontend-program-final-proof-archive-project-cleanup-preview-plan-baseline
+  path: specs/056-frontend-program-final-proof-archive-project-cleanup-preview-plan-baseline
+  depends_on:
+  - 050-frontend-program-final-proof-archive-project-cleanup-baseline
+  - 054-frontend-program-final-proof-archive-cleanup-mutation-eligibility-baseline
+  - 055-frontend-program-final-proof-archive-cleanup-eligibility-consumption-baseline
+  branch_slug: frontend-program-final-proof-archive-project-cleanup-preview-plan-baseline
+  owner: team-frontend-governance
+  frontend_evidence_class: framework_capability
+- id: 057-frontend-program-final-proof-archive-cleanup-preview-plan-consumption-baseline
+  path: specs/057-frontend-program-final-proof-archive-cleanup-preview-plan-consumption-baseline
+  depends_on:
+  - 050-frontend-program-final-proof-archive-project-cleanup-baseline
+  - 055-frontend-program-final-proof-archive-cleanup-eligibility-consumption-baseline
+  - 056-frontend-program-final-proof-archive-project-cleanup-preview-plan-baseline
+  branch_slug: frontend-program-final-proof-archive-cleanup-preview-plan-consumption-baseline
+  owner: team-frontend-governance
+  frontend_evidence_class: framework_capability
+- id: 058-frontend-program-final-proof-archive-cleanup-mutation-proposal-baseline
+  path: specs/058-frontend-program-final-proof-archive-cleanup-mutation-proposal-baseline
+  depends_on:
+  - 050-frontend-program-final-proof-archive-project-cleanup-baseline
+  - 052-frontend-program-final-proof-archive-explicit-cleanup-targets-baseline
+  - 054-frontend-program-final-proof-archive-cleanup-mutation-eligibility-baseline
+  - 056-frontend-program-final-proof-archive-project-cleanup-preview-plan-baseline
+  - 057-frontend-program-final-proof-archive-cleanup-preview-plan-consumption-baseline
+  branch_slug: frontend-program-final-proof-archive-cleanup-mutation-proposal-baseline
+  owner: team-frontend-governance
+  frontend_evidence_class: framework_capability
+- id: 059-frontend-program-final-proof-archive-cleanup-mutation-proposal-consumption-baseline
+  path: specs/059-frontend-program-final-proof-archive-cleanup-mutation-proposal-consumption-baseline
+  depends_on:
+  - 050-frontend-program-final-proof-archive-project-cleanup-baseline
+  - 057-frontend-program-final-proof-archive-cleanup-preview-plan-consumption-baseline
+  - 058-frontend-program-final-proof-archive-cleanup-mutation-proposal-baseline
+  branch_slug: frontend-program-final-proof-archive-cleanup-mutation-proposal-consumption-baseline
+  owner: team-frontend-governance
+  frontend_evidence_class: framework_capability
+- id: 060-frontend-program-final-proof-archive-cleanup-mutation-proposal-approval-baseline
+  path: specs/060-frontend-program-final-proof-archive-cleanup-mutation-proposal-approval-baseline
+  depends_on:
+  - 050-frontend-program-final-proof-archive-project-cleanup-baseline
+  - 054-frontend-program-final-proof-archive-cleanup-mutation-eligibility-baseline
+  - 056-frontend-program-final-proof-archive-project-cleanup-preview-plan-baseline
+  - 058-frontend-program-final-proof-archive-cleanup-mutation-proposal-baseline
+  - 059-frontend-program-final-proof-archive-cleanup-mutation-proposal-consumption-baseline
+  branch_slug: frontend-program-final-proof-archive-cleanup-mutation-proposal-approval-baseline
+  owner: team-frontend-governance
+  frontend_evidence_class: framework_capability
+- id: 061-frontend-program-final-proof-archive-cleanup-mutation-proposal-approval-consumption-baseline
+  path: specs/061-frontend-program-final-proof-archive-cleanup-mutation-proposal-approval-consumption-baseline
+  depends_on:
+  - 050-frontend-program-final-proof-archive-project-cleanup-baseline
+  - 054-frontend-program-final-proof-archive-cleanup-mutation-eligibility-baseline
+  - 056-frontend-program-final-proof-archive-project-cleanup-preview-plan-baseline
+  - 058-frontend-program-final-proof-archive-cleanup-mutation-proposal-baseline
+  - 059-frontend-program-final-proof-archive-cleanup-mutation-proposal-consumption-baseline
+  - 060-frontend-program-final-proof-archive-cleanup-mutation-proposal-approval-baseline
+  branch_slug: frontend-program-final-proof-archive-cleanup-mutation-proposal-approval-consumption-baseline
+  owner: team-frontend-governance
+  frontend_evidence_class: framework_capability
+- id: 062-frontend-program-final-proof-archive-cleanup-mutation-execution-gating-baseline
+  path: specs/062-frontend-program-final-proof-archive-cleanup-mutation-execution-gating-baseline
+  depends_on:
+  - 050-frontend-program-final-proof-archive-project-cleanup-baseline
+  - 054-frontend-program-final-proof-archive-cleanup-mutation-eligibility-baseline
+  - 056-frontend-program-final-proof-archive-project-cleanup-preview-plan-baseline
+  - 058-frontend-program-final-proof-archive-cleanup-mutation-proposal-baseline
+  - 060-frontend-program-final-proof-archive-cleanup-mutation-proposal-approval-baseline
+  - 061-frontend-program-final-proof-archive-cleanup-mutation-proposal-approval-consumption-baseline
+  branch_slug: frontend-program-final-proof-archive-cleanup-mutation-execution-gating-baseline
+  owner: team-frontend-governance
+  frontend_evidence_class: framework_capability
+- id: 063-frontend-program-final-proof-archive-cleanup-mutation-execution-gating-consumption-baseline
+  path: specs/063-frontend-program-final-proof-archive-cleanup-mutation-execution-gating-consumption-baseline
+  depends_on:
+  - 050-frontend-program-final-proof-archive-project-cleanup-baseline
+  - 060-frontend-program-final-proof-archive-cleanup-mutation-proposal-approval-baseline
+  - 061-frontend-program-final-proof-archive-cleanup-mutation-proposal-approval-consumption-baseline
+  - 062-frontend-program-final-proof-archive-cleanup-mutation-execution-gating-baseline
+  branch_slug: frontend-program-final-proof-archive-cleanup-mutation-execution-gating-consumption-baseline
+  owner: team-frontend-governance
+  frontend_evidence_class: framework_capability
+- id: 064-frontend-program-final-proof-archive-cleanup-mutation-execution-baseline
+  path: specs/064-frontend-program-final-proof-archive-cleanup-mutation-execution-baseline
+  depends_on:
+  - 050-frontend-program-final-proof-archive-project-cleanup-baseline
+  - 062-frontend-program-final-proof-archive-cleanup-mutation-execution-gating-baseline
+  - 063-frontend-program-final-proof-archive-cleanup-mutation-execution-gating-consumption-baseline
+  branch_slug: frontend-program-final-proof-archive-cleanup-mutation-execution-baseline
+  owner: team-frontend-governance
+  frontend_evidence_class: framework_capability
+- id: 065-frontend-contract-sample-source-selfcheck-baseline
+  path: specs/065-frontend-contract-sample-source-selfcheck-baseline
+  depends_on:
+  - 012-frontend-contract-verify-integration
+  - 013-frontend-contract-observation-provider-baseline
+  - 014-frontend-contract-runtime-attachment-baseline
+  branch_slug: frontend-contract-sample-source-selfcheck-baseline
+  owner: team-frontend-governance
+  frontend_evidence_class: framework_capability
+- id: 066-frontend-p1-experience-stability-planning-baseline
+  path: specs/066-frontend-p1-experience-stability-planning-baseline
+  depends_on:
+  - 018-frontend-gate-compatibility-baseline
+  - 065-frontend-contract-sample-source-selfcheck-baseline
+  branch_slug: frontend-p1-experience-stability-planning-baseline
+  owner: team-frontend-governance
+  frontend_evidence_class: framework_capability
+- id: 067-frontend-p1-ui-kernel-semantic-expansion-baseline
+  path: specs/067-frontend-p1-ui-kernel-semantic-expansion-baseline
+  depends_on:
+  - 066-frontend-p1-experience-stability-planning-baseline
+  branch_slug: frontend-p1-ui-kernel-semantic-expansion-baseline
+  owner: team-frontend-governance
+  frontend_evidence_class: framework_capability
+- id: 068-frontend-p1-page-recipe-expansion-baseline
+  path: specs/068-frontend-p1-page-recipe-expansion-baseline
+  depends_on:
+  - 067-frontend-p1-ui-kernel-semantic-expansion-baseline
+  branch_slug: frontend-p1-page-recipe-expansion-baseline
+  owner: team-frontend-governance
+  frontend_evidence_class: framework_capability
+- id: 069-frontend-p1-governance-diagnostics-drift-baseline
+  path: specs/069-frontend-p1-governance-diagnostics-drift-baseline
+  depends_on:
+  - 068-frontend-p1-page-recipe-expansion-baseline
+  branch_slug: frontend-p1-governance-diagnostics-drift-baseline
+  owner: team-frontend-governance
+  frontend_evidence_class: framework_capability
+- id: 070-frontend-p1-recheck-remediation-feedback-baseline
+  path: specs/070-frontend-p1-recheck-remediation-feedback-baseline
+  depends_on:
+  - 069-frontend-p1-governance-diagnostics-drift-baseline
+  branch_slug: frontend-p1-recheck-remediation-feedback-baseline
+  owner: team-frontend-governance
+  frontend_evidence_class: framework_capability
+- id: 071-frontend-p1-visual-a11y-foundation-baseline
+  path: specs/071-frontend-p1-visual-a11y-foundation-baseline
+  depends_on:
+  - 069-frontend-p1-governance-diagnostics-drift-baseline
+  branch_slug: frontend-p1-visual-a11y-foundation-baseline
+  owner: team-frontend-governance
+  frontend_evidence_class: framework_capability
+- id: 077-frontend-contract-observation-backfill-playbook-baseline
+  path: specs/077-frontend-contract-observation-backfill-playbook-baseline
+  depends_on:
+  - 012-frontend-contract-verify-integration
+  - 013-frontend-contract-observation-provider-baseline
+  branch_slug: frontend-contract-observation-backfill-playbook-baseline
+  owner: team-frontend-governance
+  frontend_evidence_class: framework_capability
+- id: 078-frontend-contract-sample-selfcheck-fallback-clarification-baseline
+  path: specs/078-frontend-contract-sample-selfcheck-fallback-clarification-baseline
+  depends_on:
+  - 065-frontend-contract-sample-source-selfcheck-baseline
+  - 077-frontend-contract-observation-backfill-playbook-baseline
+  branch_slug: frontend-contract-sample-selfcheck-fallback-clarification-baseline
+  owner: team-frontend-governance
+  frontend_evidence_class: framework_capability
+- id: 073-frontend-p2-provider-style-solution-baseline
+  path: specs/073-frontend-p2-provider-style-solution-baseline
+  depends_on:
+  - 009-frontend-governance-ui-kernel
+  - 016-frontend-enterprise-vue2-provider-baseline
+  - 017-frontend-generation-governance-baseline
+  - 018-frontend-gate-compatibility-baseline
+  branch_slug: frontend-p2-provider-style-solution-baseline
+  owner: team-frontend-governance
+  frontend_evidence_class: framework_capability
+- id: 082-frontend-evidence-class-authoring-surface-baseline
+  path: specs/082-frontend-evidence-class-authoring-surface-baseline
+  depends_on: []
+  branch_slug: frontend-evidence-class-authoring-surface-baseline
+  owner: team-frontend-governance
+  frontend_evidence_class: framework_capability
+- id: 083-frontend-evidence-class-validator-surface-baseline
+  path: specs/083-frontend-evidence-class-validator-surface-baseline
+  depends_on:
+  - 082-frontend-evidence-class-authoring-surface-baseline
+  branch_slug: frontend-evidence-class-validator-surface-baseline
+  owner: team-frontend-governance
+  frontend_evidence_class: framework_capability
+- id: 084-frontend-evidence-class-diagnostic-contract-baseline
+  path: specs/084-frontend-evidence-class-diagnostic-contract-baseline
+  depends_on:
+  - 083-frontend-evidence-class-validator-surface-baseline
+  branch_slug: frontend-evidence-class-diagnostic-contract-baseline
+  owner: team-frontend-governance
+  frontend_evidence_class: framework_capability
+- id: 085-frontend-evidence-class-verify-first-runtime-cut-baseline
+  path: specs/085-frontend-evidence-class-verify-first-runtime-cut-baseline
+  depends_on:
+  - 082-frontend-evidence-class-authoring-surface-baseline
+  - 083-frontend-evidence-class-validator-surface-baseline
+  - 084-frontend-evidence-class-diagnostic-contract-baseline
+  branch_slug: frontend-evidence-class-verify-first-runtime-cut-baseline
+  owner: team-frontend-governance
+  frontend_evidence_class: framework_capability
+- id: 086-frontend-evidence-class-program-validate-mirror-contract-baseline
+  path: specs/086-frontend-evidence-class-program-validate-mirror-contract-baseline
+  depends_on:
+  - 082-frontend-evidence-class-authoring-surface-baseline
+  - 083-frontend-evidence-class-validator-surface-baseline
+  - 084-frontend-evidence-class-diagnostic-contract-baseline
+  - 085-frontend-evidence-class-verify-first-runtime-cut-baseline
+  branch_slug: frontend-evidence-class-program-validate-mirror-contract-baseline
+  owner: team-frontend-governance
+  frontend_evidence_class: framework_capability
+- id: 087-frontend-evidence-class-manifest-mirror-writeback-contract-baseline
+  path: specs/087-frontend-evidence-class-manifest-mirror-writeback-contract-baseline
+  depends_on:
+  - 082-frontend-evidence-class-authoring-surface-baseline
+  - 083-frontend-evidence-class-validator-surface-baseline
+  - 084-frontend-evidence-class-diagnostic-contract-baseline
+  - 085-frontend-evidence-class-verify-first-runtime-cut-baseline
+  - 086-frontend-evidence-class-program-validate-mirror-contract-baseline
+  branch_slug: frontend-evidence-class-manifest-mirror-writeback-contract-baseline
+  owner: team-frontend-governance
+  frontend_evidence_class: framework_capability
+- id: 088-frontend-evidence-class-bounded-status-surface-baseline
+  path: specs/088-frontend-evidence-class-bounded-status-surface-baseline
+  depends_on:
+  - 083-frontend-evidence-class-validator-surface-baseline
+  - 084-frontend-evidence-class-diagnostic-contract-baseline
+  - 085-frontend-evidence-class-verify-first-runtime-cut-baseline
+  - 086-frontend-evidence-class-program-validate-mirror-contract-baseline
+  - 087-frontend-evidence-class-manifest-mirror-writeback-contract-baseline
+  branch_slug: frontend-evidence-class-bounded-status-surface-baseline
+  owner: team-frontend-governance
+  frontend_evidence_class: framework_capability
+- id: 089-frontend-evidence-class-close-check-late-resurfacing-baseline
+  path: specs/089-frontend-evidence-class-close-check-late-resurfacing-baseline
+  depends_on:
+  - 083-frontend-evidence-class-validator-surface-baseline
+  - 084-frontend-evidence-class-diagnostic-contract-baseline
+  - 085-frontend-evidence-class-verify-first-runtime-cut-baseline
+  - 086-frontend-evidence-class-program-validate-mirror-contract-baseline
+  - 087-frontend-evidence-class-manifest-mirror-writeback-contract-baseline
+  - 088-frontend-evidence-class-bounded-status-surface-baseline
+  branch_slug: frontend-evidence-class-close-check-late-resurfacing-baseline
+  owner: team-frontend-governance
+  frontend_evidence_class: framework_capability
+- id: 090-frontend-evidence-class-runtime-rollout-sequencing-baseline
+  path: specs/090-frontend-evidence-class-runtime-rollout-sequencing-baseline
+  depends_on:
+  - 082-frontend-evidence-class-authoring-surface-baseline
+  - 083-frontend-evidence-class-validator-surface-baseline
+  - 084-frontend-evidence-class-diagnostic-contract-baseline
+  - 085-frontend-evidence-class-verify-first-runtime-cut-baseline
+  - 086-frontend-evidence-class-program-validate-mirror-contract-baseline
+  - 087-frontend-evidence-class-manifest-mirror-writeback-contract-baseline
+  - 088-frontend-evidence-class-bounded-status-surface-baseline
+  - 089-frontend-evidence-class-close-check-late-resurfacing-baseline
+  branch_slug: frontend-evidence-class-runtime-rollout-sequencing-baseline
+  owner: team-frontend-governance
+  frontend_evidence_class: framework_capability
+- id: 091-frontend-evidence-class-close-check-runtime-implementation-baseline
+  path: specs/091-frontend-evidence-class-close-check-runtime-implementation-baseline
+  depends_on:
+  - 089-frontend-evidence-class-close-check-late-resurfacing-baseline
+  - 090-frontend-evidence-class-runtime-rollout-sequencing-baseline
+  branch_slug: frontend-evidence-class-close-check-runtime-implementation-baseline
+  owner: team-frontend-governance
+  frontend_evidence_class: framework_capability
+- id: 092-frontend-evidence-class-runtime-reality-sync-baseline
+  path: specs/092-frontend-evidence-class-runtime-reality-sync-baseline
+  depends_on:
+  - 085-frontend-evidence-class-verify-first-runtime-cut-baseline
+  - 086-frontend-evidence-class-program-validate-mirror-contract-baseline
+  - 087-frontend-evidence-class-manifest-mirror-writeback-contract-baseline
+  - 088-frontend-evidence-class-bounded-status-surface-baseline
+  - 089-frontend-evidence-class-close-check-late-resurfacing-baseline
+  - 090-frontend-evidence-class-runtime-rollout-sequencing-baseline
+  - 091-frontend-evidence-class-close-check-runtime-implementation-baseline
+  branch_slug: frontend-evidence-class-runtime-reality-sync-baseline
+  owner: team-frontend-governance
+  frontend_evidence_class: framework_capability
+- id: 093-stage0-installed-runtime-update-advisor-baseline
+  path: specs/093-stage0-installed-runtime-update-advisor-baseline
+  depends_on: []
+  branch_slug: stage0-installed-runtime-update-advisor-baseline
+  owner: team-frontend-governance
+  frontend_evidence_class: framework_capability
+- id: 094-stage0-init-dual-path-project-onboarding-baseline
+  path: specs/094-stage0-init-dual-path-project-onboarding-baseline
+  depends_on:
+  - 093-stage0-installed-runtime-update-advisor-baseline
+  branch_slug: stage0-init-dual-path-project-onboarding-baseline
+  owner: team-frontend-governance
+  frontend_evidence_class: framework_capability
+- id: 095-frontend-mainline-product-delivery-baseline
+  path: specs/095-frontend-mainline-product-delivery-baseline
+  depends_on:
+  - 014-frontend-contract-runtime-attachment-baseline
+  - 073-frontend-p2-provider-style-solution-baseline
+  - 094-stage0-init-dual-path-project-onboarding-baseline
+  branch_slug: frontend-mainline-product-delivery-baseline
+  owner: team-frontend-governance
+  frontend_evidence_class: framework_capability
+  roles:
+  - formal_contract
+  capability_refs:
+  - frontend-mainline-delivery
+- id: 096-frontend-mainline-host-runtime-manager-baseline
+  path: specs/096-frontend-mainline-host-runtime-manager-baseline
+  depends_on:
+  - 093-stage0-installed-runtime-update-advisor-baseline
+  - 094-stage0-init-dual-path-project-onboarding-baseline
+  - 095-frontend-mainline-product-delivery-baseline
+  branch_slug: frontend-mainline-host-runtime-manager-baseline
+  owner: team-frontend-governance
+  frontend_evidence_class: framework_capability
+  roles:
+  - runtime_carrier
+  capability_refs:
+  - frontend-mainline-delivery
+- id: 097-frontend-mainline-posture-delivery-registry-baseline
+  path: specs/097-frontend-mainline-posture-delivery-registry-baseline
+  depends_on:
+  - 014-frontend-contract-runtime-attachment-baseline
+  - 016-frontend-enterprise-vue2-provider-baseline
+  - 073-frontend-p2-provider-style-solution-baseline
+  - 094-stage0-init-dual-path-project-onboarding-baseline
+  - 095-frontend-mainline-product-delivery-baseline
+  - 096-frontend-mainline-host-runtime-manager-baseline
+  branch_slug: frontend-mainline-posture-delivery-registry-baseline
+  owner: team-frontend-governance
+  frontend_evidence_class: framework_capability
+- id: 098-frontend-mainline-posture-detector-baseline
+  path: specs/098-frontend-mainline-posture-detector-baseline
+  depends_on:
+  - 014-frontend-contract-runtime-attachment-baseline
+  - 073-frontend-p2-provider-style-solution-baseline
+  - 094-stage0-init-dual-path-project-onboarding-baseline
+  - 095-frontend-mainline-product-delivery-baseline
+  - 096-frontend-mainline-host-runtime-manager-baseline
+  - 097-frontend-mainline-posture-delivery-registry-baseline
+  branch_slug: frontend-mainline-posture-detector-baseline
+  owner: team-frontend-governance
+  frontend_evidence_class: framework_capability
+  roles:
+  - runtime_carrier
+  capability_refs:
+  - frontend-mainline-delivery
+- id: 099-frontend-mainline-delivery-registry-resolver-baseline
+  path: specs/099-frontend-mainline-delivery-registry-resolver-baseline
+  depends_on:
+  - 014-frontend-contract-runtime-attachment-baseline
+  - 016-frontend-enterprise-vue2-provider-baseline
+  - 073-frontend-p2-provider-style-solution-baseline
+  - 094-stage0-init-dual-path-project-onboarding-baseline
+  - 095-frontend-mainline-product-delivery-baseline
+  - 096-frontend-mainline-host-runtime-manager-baseline
+  - 097-frontend-mainline-posture-delivery-registry-baseline
+  - 098-frontend-mainline-posture-detector-baseline
+  branch_slug: frontend-mainline-delivery-registry-resolver-baseline
+  owner: team-frontend-governance
+  frontend_evidence_class: framework_capability
+  roles:
+  - runtime_carrier
+  capability_refs:
+  - frontend-mainline-delivery
+- id: 100-frontend-mainline-action-plan-binding-baseline
+  path: specs/100-frontend-mainline-action-plan-binding-baseline
+  depends_on:
+  - 014-frontend-contract-runtime-attachment-baseline
+  - 073-frontend-p2-provider-style-solution-baseline
+  - 094-stage0-init-dual-path-project-onboarding-baseline
+  - 095-frontend-mainline-product-delivery-baseline
+  - 096-frontend-mainline-host-runtime-manager-baseline
+  - 098-frontend-mainline-posture-detector-baseline
+  - 099-frontend-mainline-delivery-registry-resolver-baseline
+  branch_slug: frontend-mainline-action-plan-binding-baseline
+  owner: team-frontend-governance
+  frontend_evidence_class: framework_capability
+  roles:
+  - runtime_carrier
+  capability_refs:
+  - frontend-mainline-delivery
+- id: 101-frontend-mainline-managed-delivery-apply-runtime-baseline
+  path: specs/101-frontend-mainline-managed-delivery-apply-runtime-baseline
+  depends_on:
+  - 014-frontend-contract-runtime-attachment-baseline
+  - 020-frontend-program-execute-runtime-baseline
+  - 073-frontend-p2-provider-style-solution-baseline
+  - 094-stage0-init-dual-path-project-onboarding-baseline
+  - 095-frontend-mainline-product-delivery-baseline
+  - 096-frontend-mainline-host-runtime-manager-baseline
+  - 098-frontend-mainline-posture-detector-baseline
+  - 099-frontend-mainline-delivery-registry-resolver-baseline
+  - 100-frontend-mainline-action-plan-binding-baseline
+  branch_slug: frontend-mainline-managed-delivery-apply-runtime-baseline
+  owner: team-frontend-governance
+  frontend_evidence_class: framework_capability
+  roles:
+  - runtime_carrier
+  capability_refs:
+  - frontend-mainline-delivery
+- id: 102-frontend-mainline-browser-quality-gate-baseline
+  path: specs/102-frontend-mainline-browser-quality-gate-baseline
+  depends_on:
+  - 014-frontend-contract-runtime-attachment-baseline
+  - 020-frontend-program-execute-runtime-baseline
+  - 071-frontend-p1-visual-a11y-foundation-baseline
+  - 073-frontend-p2-provider-style-solution-baseline
+  - 095-frontend-mainline-product-delivery-baseline
+  - 100-frontend-mainline-action-plan-binding-baseline
+  - 101-frontend-mainline-managed-delivery-apply-runtime-baseline
+  branch_slug: frontend-mainline-browser-quality-gate-baseline
+  owner: team-frontend-governance
+  frontend_evidence_class: framework_capability
+  roles:
+  - formal_contract
+  capability_refs:
+  - frontend-mainline-delivery
+- id: 103-frontend-mainline-browser-gate-probe-runtime-baseline
+  path: specs/103-frontend-mainline-browser-gate-probe-runtime-baseline
+  depends_on:
+  - 071-frontend-p1-visual-a11y-foundation-baseline
+  - 073-frontend-p2-provider-style-solution-baseline
+  - 095-frontend-mainline-product-delivery-baseline
+  - 101-frontend-mainline-managed-delivery-apply-runtime-baseline
+  - 102-frontend-mainline-browser-quality-gate-baseline
+  branch_slug: frontend-mainline-browser-gate-probe-runtime-baseline
+  owner: team-frontend-governance
+  frontend_evidence_class: framework_capability
+  roles:
+  - runtime_carrier
+  capability_refs:
+  - frontend-mainline-delivery
+- id: 104-frontend-mainline-browser-gate-recheck-remediation-binding-baseline
+  path: specs/104-frontend-mainline-browser-gate-recheck-remediation-binding-baseline
+  depends_on:
+  - 020-frontend-program-execute-runtime-baseline
+  - 101-frontend-mainline-managed-delivery-apply-runtime-baseline
+  - 102-frontend-mainline-browser-quality-gate-baseline
+  - 103-frontend-mainline-browser-gate-probe-runtime-baseline
+  branch_slug: frontend-mainline-browser-gate-recheck-remediation-binding-baseline
+  owner: team-frontend-governance
+  frontend_evidence_class: framework_capability
+  roles:
+  - sync_carrier
+  capability_refs:
+  - frontend-mainline-delivery
+- id: 105-frontend-mainline-browser-gate-recheck-remediation-runtime-implementation-baseline
+  path: specs/105-frontend-mainline-browser-gate-recheck-remediation-runtime-implementation-baseline
+  depends_on:
+  - 104-frontend-mainline-browser-gate-recheck-remediation-binding-baseline
+  branch_slug: frontend-mainline-browser-gate-recheck-remediation-runtime-implementation-baseline
+  owner: team-frontend-governance
+  frontend_evidence_class: framework_capability
+  roles:
+  - runtime_carrier
+  capability_refs:
+  - frontend-mainline-delivery
+- id: 106-frontend-mainline-browser-gate-evidence-class-footer-normalization-baseline
+  path: specs/106-frontend-mainline-browser-gate-evidence-class-footer-normalization-baseline
+  depends_on:
+  - 100-frontend-mainline-action-plan-binding-baseline
+  - 101-frontend-mainline-managed-delivery-apply-runtime-baseline
+  - 102-frontend-mainline-browser-quality-gate-baseline
+  - 103-frontend-mainline-browser-gate-probe-runtime-baseline
+  - 104-frontend-mainline-browser-gate-recheck-remediation-binding-baseline
+  - 105-frontend-mainline-browser-gate-recheck-remediation-runtime-implementation-baseline
+  branch_slug: frontend-mainline-browser-gate-evidence-class-footer-normalization-baseline
+  owner: team-frontend-governance
+  frontend_evidence_class: framework_capability
+- id: 107-frontend-evidence-class-readiness-gate-runtime-baseline
+  path: specs/107-frontend-evidence-class-readiness-gate-runtime-baseline
+  depends_on:
+  - 106-frontend-mainline-browser-gate-evidence-class-footer-normalization-baseline
+  branch_slug: frontend-evidence-class-readiness-gate-runtime-baseline
+  owner: team-frontend-governance
+  frontend_evidence_class: framework_capability
+- id: 108-frontend-legacy-framework-evidence-class-backfill-baseline
+  path: specs/108-frontend-legacy-framework-evidence-class-backfill-baseline
+  depends_on:
+  - 107-frontend-evidence-class-readiness-gate-runtime-baseline
+  branch_slug: frontend-legacy-framework-evidence-class-backfill-baseline
+  owner: team-frontend-governance
+  frontend_evidence_class: framework_capability
+- id: 109-frontend-cleanup-archive-evidence-class-backfill-baseline
+  path: specs/109-frontend-cleanup-archive-evidence-class-backfill-baseline
+  depends_on:
+  - 108-frontend-legacy-framework-evidence-class-backfill-baseline
+  branch_slug: frontend-cleanup-archive-evidence-class-backfill-baseline
+  owner: team-frontend-governance
+  frontend_evidence_class: framework_capability
+- id: 110-frontend-foundation-mainline-evidence-class-backfill-baseline
+  path: specs/110-frontend-foundation-mainline-evidence-class-backfill-baseline
+  depends_on:
+  - 109-frontend-cleanup-archive-evidence-class-backfill-baseline
+  branch_slug: frontend-foundation-mainline-evidence-class-backfill-baseline
+  owner: team-frontend-governance
+  frontend_evidence_class: framework_capability
+- id: 111-frontend-p1-child-close-check-backfill-baseline
+  path: specs/111-frontend-p1-child-close-check-backfill-baseline
+  depends_on:
+  - 110-frontend-foundation-mainline-evidence-class-backfill-baseline
+  branch_slug: frontend-p1-child-close-check-backfill-baseline
+  owner: team-frontend-governance
+  frontend_evidence_class: framework_capability
+- id: 112-frontend-072-081-close-check-backfill-baseline
+  path: specs/112-frontend-072-081-close-check-backfill-baseline
+  depends_on:
+  - 111-frontend-p1-child-close-check-backfill-baseline
+  branch_slug: frontend-072-081-close-check-backfill-baseline
+  owner: team-frontend-governance
+  frontend_evidence_class: framework_capability
+- id: 113-frontend-082-092-manifest-mirror-baseline
+  path: specs/113-frontend-082-092-manifest-mirror-baseline
+  depends_on:
+  - 092-frontend-evidence-class-runtime-reality-sync-baseline
+  - 112-frontend-072-081-close-check-backfill-baseline
+  branch_slug: frontend-082-092-manifest-mirror-baseline
+  owner: team-frontend-governance
+  frontend_evidence_class: framework_capability
+- id: 114-stage0-093-095-formal-docs-backfill-baseline
+  path: specs/114-stage0-093-095-formal-docs-backfill-baseline
+  depends_on:
+  - 095-frontend-mainline-product-delivery-baseline
+  - 113-frontend-082-092-manifest-mirror-baseline
+  branch_slug: stage0-093-095-formal-docs-backfill-baseline
+  owner: team-frontend-governance
+  frontend_evidence_class: framework_capability
+- id: 115-stage0-093-095-plan-backfill-baseline
+  path: specs/115-stage0-093-095-plan-backfill-baseline
+  depends_on:
+  - 095-frontend-mainline-product-delivery-baseline
+  - 114-stage0-093-095-formal-docs-backfill-baseline
+  branch_slug: stage0-093-095-plan-backfill-baseline
+  owner: team-frontend-governance
+  frontend_evidence_class: framework_capability
+- id: 123-frontend-mainline-managed-delivery-apply-runtime-implementation-baseline
+  path: specs/123-frontend-mainline-managed-delivery-apply-runtime-implementation-baseline
+  depends_on:
+  - 101-frontend-mainline-managed-delivery-apply-runtime-baseline
+  branch_slug: frontend-mainline-managed-delivery-apply-runtime-implementation-baseline
+  owner: team-frontend-governance
+  frontend_evidence_class: framework_capability
+  roles:
+  - runtime_carrier
+  capability_refs:
+  - frontend-mainline-delivery
+- id: 124-frontend-mainline-delivery-materialization-runtime-baseline
+  path: specs/124-frontend-mainline-delivery-materialization-runtime-baseline
+  depends_on:
+  - 099-frontend-mainline-delivery-registry-resolver-baseline
+  - 123-frontend-mainline-managed-delivery-apply-runtime-implementation-baseline
+  branch_slug: frontend-mainline-delivery-materialization-runtime-baseline
+  owner: team-frontend-governance
+  frontend_evidence_class: framework_capability
+  roles:
+  - runtime_carrier
+  capability_refs:
+  - frontend-mainline-delivery
+- id: 125-frontend-mainline-browser-gate-probe-runtime-implementation-baseline
+  path: specs/125-frontend-mainline-browser-gate-probe-runtime-implementation-baseline
+  depends_on:
+  - 103-frontend-mainline-browser-gate-probe-runtime-baseline
+  - 124-frontend-mainline-delivery-materialization-runtime-baseline
+  branch_slug: frontend-mainline-browser-gate-probe-runtime-implementation-baseline
+  owner: team-frontend-governance
+  frontend_evidence_class: framework_capability
+  roles:
+  - runtime_carrier
+  capability_refs:
+  - frontend-mainline-delivery
+- id: 126-frontend-mainline-browser-gate-recheck-remediation-runtime-closure-baseline
+  path: specs/126-frontend-mainline-browser-gate-recheck-remediation-runtime-closure-baseline
+  depends_on:
+  - 104-frontend-mainline-browser-gate-recheck-remediation-binding-baseline
+  - 105-frontend-mainline-browser-gate-recheck-remediation-runtime-implementation-baseline
+  - 106-frontend-mainline-browser-gate-evidence-class-footer-normalization-baseline
+  - 125-frontend-mainline-browser-gate-probe-runtime-implementation-baseline
+  branch_slug: frontend-mainline-browser-gate-recheck-remediation-runtime-closure-baseline
+  owner: team-frontend-governance
+  frontend_evidence_class: framework_capability
+  roles:
+  - sync_carrier
+  capability_refs:
+  - frontend-mainline-delivery
+- id: 127-frontend-contract-observation-producer-runtime-closure-baseline
+  path: specs/127-frontend-contract-observation-producer-runtime-closure-baseline
+  depends_on:
+  - 012-frontend-contract-verify-integration
+  - 013-frontend-contract-observation-provider-baseline
+  - 065-frontend-contract-sample-source-selfcheck-baseline
+  - 077-frontend-contract-observation-backfill-playbook-baseline
+  - 078-frontend-contract-sample-selfcheck-fallback-clarification-baseline
+  branch_slug: frontend-contract-observation-producer-runtime-closure-baseline
+  owner: team-frontend-governance
+  frontend_evidence_class: framework_capability
+truth_snapshot:
+  generated_at: '2026-04-14T13:10:34Z'
+  generated_by: ai-sdlc program truth sync
+  generator_version: program_truth_snapshot_v1
+  repo_revision: b06108f
+  authoring_hash: e8225ae6a3539de567bcdf765a9a5cac171cae266c8a7e40d13463a8dbf3f698
+  source_hashes:
+    truth_check:specs/095-frontend-mainline-product-delivery-baseline: b742ffdddca24a54ceb45791f910540e110b021317bda56d0989e061106f9922
+    truth_check:specs/096-frontend-mainline-host-runtime-manager-baseline: 74015308ac28f6ee6a221953933f6eb3bbd68bf8bb04af4b66aa83d13b5fde68
+    truth_check:specs/098-frontend-mainline-posture-detector-baseline: a2b606bcdfb508cf79b5523fbe2b4694681586fb955baf8b61a4a4ec699ab0ed
+    truth_check:specs/099-frontend-mainline-delivery-registry-resolver-baseline: e67f4bcf6dd90e4fc9628a2a48f3d74b6c80d5df95e2377573cabc2842210ab0
+    truth_check:specs/100-frontend-mainline-action-plan-binding-baseline: b638217fd9a0e3e0f91b70da0ed0ad423ae9faede5c1f66b8ab73ce0c22607b0
+    truth_check:specs/101-frontend-mainline-managed-delivery-apply-runtime-baseline: e6fb7fdf1dcf3d79ece71d8a8953366f22d8090f8f12a35ed1a06045e85e3025
+    truth_check:specs/102-frontend-mainline-browser-quality-gate-baseline: 50e0c2252c704783b41c46f6b759f2669c489917423722537cb7e304603f402c
+    truth_check:specs/103-frontend-mainline-browser-gate-probe-runtime-baseline: f9c583f61f60d0720e3e1e52ca54893dd9d84febcdeeee15c57c9f8a2198b1ed
+    truth_check:specs/104-frontend-mainline-browser-gate-recheck-remediation-binding-baseline: 17cae6e557592b356bb6bb6c48268496902d7f4f91f56a3bda85d53e11129cd7
+    truth_check:specs/105-frontend-mainline-browser-gate-recheck-remediation-runtime-implementation-baseline: a2ff5c2baf7ab7b19b1d97c43f3a4dbd8beeb922973c11a8ba65fd3f7799bd44
+    truth_check:specs/123-frontend-mainline-managed-delivery-apply-runtime-implementation-baseline: 56ad5a8b61a704dc05e7d26b1fa90083c0dbac9ee16d57c40c2f4bda4a440886
+    truth_check:specs/124-frontend-mainline-delivery-materialization-runtime-baseline: b523e85926ab4f299763b6328449971e2702d99440192a14fdf4be5161a568f9
+    truth_check:specs/125-frontend-mainline-browser-gate-probe-runtime-implementation-baseline: 08094bc3ccfffd28b34b7ffb69f59b6ab3aa38d2c15b9feeac8dd4a90edcc0b4
+    truth_check:specs/126-frontend-mainline-browser-gate-recheck-remediation-runtime-closure-baseline: da60288d9c28b44313e0bc4a227c1d92302e07d6f6423ce3fee85bcf412216eb
+    close_check:specs/095-frontend-mainline-product-delivery-baseline: 85701b9bb14bd5f3e918c4048a54c650a27dff9bff507d966f9b11ed801e0055
+    close_check:specs/096-frontend-mainline-host-runtime-manager-baseline: e7199e6d3c809c11ab1ac60329dbc4b2eb52e3d350e28c3113aa380bc0f08a39
+    close_check:specs/098-frontend-mainline-posture-detector-baseline: aef2acdccd5ddc48cf5a850183f86ad0d0af3b50ab6a83b3703296c1d45b3121
+    close_check:specs/099-frontend-mainline-delivery-registry-resolver-baseline: 632209602f1155c8a7df827034bcc03aa116d89ebb3c138e0e2d430a1dca667a
+    close_check:specs/100-frontend-mainline-action-plan-binding-baseline: 699b8f07362ecf6327b5c6d5baabea0638143b27bce126ef062f0ce7946acc41
+    close_check:specs/101-frontend-mainline-managed-delivery-apply-runtime-baseline: 8f31b02797add636a00dc62b506e4e746367bc08c342c0e962b5a5581ea102be
+    close_check:specs/102-frontend-mainline-browser-quality-gate-baseline: 67e23779db86160e05fbbcd37f907e8b258ff66522fc6fc9096734723c5ffe71
+    close_check:specs/103-frontend-mainline-browser-gate-probe-runtime-baseline: f05bd99c1e5d4e752f8e9d3fcd2125110c1a8f7c74b259bf6915b592d3ff1ce2
+    close_check:specs/104-frontend-mainline-browser-gate-recheck-remediation-binding-baseline: cc0ca894bcd9c44ff80af0349658b54eaa848a1a6c21b2f854c46cb1d7d74849
+    close_check:specs/105-frontend-mainline-browser-gate-recheck-remediation-runtime-implementation-baseline: 1f5fd5bb5fc5db511deb840a83678ba60459ce729377cc417b5404208a701be8
+    close_check:specs/123-frontend-mainline-managed-delivery-apply-runtime-implementation-baseline: 90727d274a6300dfd62541d3e58ee7b97d35c0d88e3436d805344be5868929aa
+    close_check:specs/124-frontend-mainline-delivery-materialization-runtime-baseline: a32d4a807e6945070d0c4193dd7ff6b00dbfaac693ac1cc7b15335a2c689afde
+    close_check:specs/125-frontend-mainline-browser-gate-probe-runtime-implementation-baseline: 7c5ad790bacc8d85585d09f2aa7fd05f7dba069b79d4f62232c225c2cad79ced
+    close_check:specs/126-frontend-mainline-browser-gate-recheck-remediation-runtime-closure-baseline: b6b321db4a033334a62b4ce9cd4fc6f520ef0e06f6c235388df4d9e507b0cb69
+    verify:uv run ai-sdlc verify constraints: 67c162e8ce6369708f41fd003c4d3b2703509ebeb85aefbbc2a2d67663c45333
+  snapshot_hash: a706cb8678a5659b76f8a0c4eb99eb11c1bf417febfb589d793621af3b207490
+  computed_capabilities:
+  - capability_id: frontend-mainline-delivery
+    closure_state: capability_open
+    audit_state: blocked
+    blocking_refs:
+    - capability_closure_audit:capability_open
+    - close_check:specs/095-frontend-mainline-product-delivery-baseline
+    - close_check:specs/096-frontend-mainline-host-runtime-manager-baseline
+    - close_check:specs/098-frontend-mainline-posture-detector-baseline
+    - close_check:specs/099-frontend-mainline-delivery-registry-resolver-baseline
+    - close_check:specs/100-frontend-mainline-action-plan-binding-baseline
+    - close_check:specs/101-frontend-mainline-managed-delivery-apply-runtime-baseline
+    - close_check:specs/102-frontend-mainline-browser-quality-gate-baseline
+    - close_check:specs/103-frontend-mainline-browser-gate-probe-runtime-baseline
+    - close_check:specs/104-frontend-mainline-browser-gate-recheck-remediation-binding-baseline
+    - close_check:specs/105-frontend-mainline-browser-gate-recheck-remediation-runtime-implementation-baseline
+    - close_check:specs/123-frontend-mainline-managed-delivery-apply-runtime-implementation-baseline
+    - close_check:specs/124-frontend-mainline-delivery-materialization-runtime-baseline
+    - close_check:specs/125-frontend-mainline-browser-gate-probe-runtime-implementation-baseline
+    - close_check:specs/126-frontend-mainline-browser-gate-recheck-remediation-runtime-closure-baseline
+    stale_reason: ''
+  state: migration_pending
