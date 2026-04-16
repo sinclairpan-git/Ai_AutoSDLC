@@ -77,6 +77,14 @@ from ai_sdlc.models.frontend_solution_confirmation import (
     build_builtin_style_pack_manifests,
     build_mvp_solution_snapshot,
 )
+from ai_sdlc.models.frontend_theme_token_governance import (
+    CustomThemeTokenOverride,
+    FrontendThemeTokenGovernanceSet,
+    StyleEditorBoundaryContract,
+    ThemeGovernanceHandoffContract,
+    ThemeTokenMapping,
+    build_p2_frontend_theme_token_governance_baseline,
+)
 from ai_sdlc.models.frontend_ui_kernel import (
     FrontendUiKernelSet,
     KernelInteractionBaseline,
@@ -216,6 +224,7 @@ __all__ = [
     "FrontendVisualA11yFeedbackBoundary",
     "FrontendVisualFoundationCoverageEntry",
     "FrontendSolutionSnapshot",
+    "FrontendThemeTokenGovernanceSet",
     "FreezeSnapshot",
     "GateCheck",
     "GateResult",
@@ -282,8 +291,11 @@ __all__ = [
     "TaskStatus",
     "InstallStrategy",
     "StylePackManifest",
+    "StyleEditorBoundaryContract",
     "TokenRuleSet",
     "TokenRulesReference",
+    "ThemeGovernanceHandoffContract",
+    "ThemeTokenMapping",
     "RenderSlotDefinition",
     "UiSchemaDefinition",
     "WhitelistGenerationConstraint",
@@ -305,8 +317,10 @@ __all__ = [
     "build_mvp_enterprise_vue2_provider_profile",
     "build_p2_frontend_page_ui_schema_baseline",
     "build_mvp_solution_snapshot",
+    "build_p2_frontend_theme_token_governance_baseline",
     "build_mvp_frontend_generation_constraints",
     "build_mvp_frontend_gate_policy",
     "build_p1_frontend_gate_policy_diagnostics_drift_expansion",
     "build_p1_frontend_gate_policy_visual_a11y_foundation",
+    "CustomThemeTokenOverride",
 ]

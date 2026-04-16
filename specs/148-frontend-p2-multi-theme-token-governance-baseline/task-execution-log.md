@@ -143,3 +143,86 @@
 - 当前批次 branch disposition 状态：本批提交后闭环，可继续 Batch 5 runtime
 - 当前批次 worktree disposition 状态：本批提交后闭环，可继续 Batch 5 runtime
 - 是否继续下一批：是；默认继续 `148` 自身的 runtime slice，而不是跳出 Track B
+
+### Batch 2026-04-16-002 | T51-T53
+
+#### 2.9 批次范围
+
+- 覆盖任务：`T51`、`T52`、`T53`
+- 覆盖阶段：Batch 5 theme governance model baseline slice
+- 预读范围：`specs/148-frontend-p2-multi-theme-token-governance-baseline/spec.md`、`specs/148-frontend-p2-multi-theme-token-governance-baseline/plan.md`、`specs/148-frontend-p2-multi-theme-token-governance-baseline/tasks.md`、`src/ai_sdlc/models/frontend_page_ui_schema.py`、`src/ai_sdlc/models/frontend_solution_confirmation.py`
+- 激活的规则：TDD red-first、single-truth layering、model-only runtime slice、no duplicated style-pack inventory
+
+#### 2.10 统一验证命令
+
+- `R1`（红灯验证）
+  - 命令：`uv run pytest tests/unit/test_frontend_theme_token_governance_models.py -q`
+  - 结果：按预期失败；`ModuleNotFoundError: No module named 'ai_sdlc.models.frontend_theme_token_governance'`
+- `V1`（接入校验）
+  - 命令：`python -m ai_sdlc adapter status`
+  - 结果：通过；`governance_activation_state=verified_loaded`
+- `V2`（流程预演）
+  - 命令：`python -m ai_sdlc run --dry-run`
+  - 结果：通过；输出 `Pipeline completed. Stage: close`
+- `V3`（定向模型测试）
+  - 命令：`uv run pytest tests/unit/test_frontend_theme_token_governance_models.py -q`
+  - 结果：通过；`5 passed`
+- `V4`（lint）
+  - 命令：`uv run ruff check src/ai_sdlc/models/frontend_theme_token_governance.py src/ai_sdlc/models/__init__.py tests/unit/test_frontend_theme_token_governance_models.py`
+  - 结果：通过；`All checks passed!`
+- `V5`（diff hygiene）
+  - 命令：`git diff --check`
+  - 结果：通过；无输出
+
+#### 2.11 任务记录
+
+##### T51 | failing tests 固定 theme governance models 语义
+
+- 改动范围：`tests/unit/test_frontend_theme_token_governance_models.py`
+- 改动内容：
+  - 新增 `148` 的 model test 文件，固定顶层 governance set、token mapping、custom override envelope、style editor boundary contract 的最小结构
+  - 固定四类失败路径：duplicate mapping、unknown scope、illegal namespace、requested/effective mismatch
+  - 首次执行时获得预期红灯，证明 Batch 5 runtime models 之前尚未实现
+- 新增/调整的测试：
+  - `test_build_p2_frontend_theme_token_governance_baseline_inherits_upstream_truth_without_copying_inventory`
+  - `test_frontend_theme_token_governance_set_rejects_duplicate_mapping_ids`
+  - `test_theme_token_mapping_rejects_unknown_scope`
+  - `test_custom_theme_token_override_rejects_illegal_namespace`
+  - `test_custom_theme_token_override_requires_resolution_reason_when_requested_and_effective_mismatch`
+- 执行的命令：`R1`
+- 测试结果：通过；红灯命中预期缺失模块
+- 是否符合任务目标：是
+
+##### T52 | 实现 theme governance models 与 baseline builder
+
+- 改动范围：`src/ai_sdlc/models/frontend_theme_token_governance.py`、`src/ai_sdlc/models/__init__.py`
+- 改动内容：
+  - 新增 `FrontendThemeTokenGovernanceSet`、`ThemeTokenMapping`、`CustomThemeTokenOverride`、`StyleEditorBoundaryContract`、`ThemeGovernanceHandoffContract`
+  - 新增 `build_p2_frontend_theme_token_governance_baseline()`，显式继承：
+    - `017` 的 token floor forbidden naked values
+    - `073` 的 style pack ids，并以 `style-pack:<id>:<token>` 引用而非复制 token inventory
+    - `147` 的 page schema / anchor / render slot 引用
+  - 冻结 `override_precedence=global -> page -> section -> slot`
+  - 冻结 style editor v1 边界为 `read_only_diagnostics_structured_proposal` 与 canonical IA
+- 新增/调整的测试：复用 `T51` 新增测试
+- 执行的命令：`V3`
+- 测试结果：通过；Batch 5 models 全部转绿
+- 是否符合任务目标：是
+
+##### T53 | fresh verify 并归档 model batch
+
+- 改动范围：`specs/148-frontend-p2-multi-theme-token-governance-baseline/task-execution-log.md`
+- 改动内容：
+  - 追加当前 batch 的 red/green、实现边界、验证命令与结论
+  - 将本批口径固定为“runtime model baseline 已落地”，不冒充 artifact/validator/CLI 已完成
+- 新增/调整的测试：无
+- 执行的命令：`V1`、`V2`、`V3`、`V4`、`V5`
+- 测试结果：通过；pytest、ruff、diff hygiene 全部通过
+- 是否符合任务目标：是
+
+#### 2.12 代码审查结论（Mandatory）
+
+- 宪章/规格对齐：当前改动严格停留在 Batch 5 指定文件内，未提前进入 Batch 6 artifact/validator 或 Batch 7 CLI handoff
+- 代码质量：theme governance runtime truth 已从 docs-only baseline 进入 machine-checkable pydantic models；style pack token 仅以引用表达，未复制 `073` inventory
+- 测试质量：新增的 5 个单测覆盖 builder 正常路径与 4 条关键失败路径，满足 TDD red/green 要求
+- 结论：Batch 5 的 runtime model baseline 已具备继续向 artifact materialization 推进的基础
