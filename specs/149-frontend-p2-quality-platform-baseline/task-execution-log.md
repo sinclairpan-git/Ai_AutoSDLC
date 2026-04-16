@@ -52,12 +52,18 @@
 - `V5`（diff hygiene）
   - 命令：`git diff --check`
   - 结果：通过；无输出
-- `V6`（truth refresh）
+- `V6`（truth sync dry-run）
+  - 命令：`python -m ai_sdlc program truth sync --dry-run`
+  - 结果：执行成功；truth snapshot state=`blocked`，source inventory=`767/767 mapped`，阻塞根因为 release target `frontend-mainline-delivery` 仍存在历史 `close_check` blocker 链
+- `V7`（truth refresh execute）
   - 命令：`python -m ai_sdlc program truth sync --execute --yes`
-  - 结果：待最终 close-out 后执行
-- `V7`（最终 close-check）
+  - 结果：执行成功；在修复 `frontend_evidence_class_mirror_drift` 后刷新 truth snapshot，但全局状态仍为 `blocked`，原因同 `V6`
+- `V8`（truth audit）
+  - 命令：`python -m ai_sdlc program truth audit`
+  - 结果：执行完成；确认当前唯一全局 blocker 为 release target `frontend-mainline-delivery` 的历史 `close_check` 链（095/096/098/099/100/101/102/103/104/105/123/124/125/126/143/144）
+- `V9`（最终 close-check）
   - 命令：`python -m ai_sdlc workitem close-check --wi specs/149-frontend-p2-quality-platform-baseline`
-  - 结果：待最终 close-out 后执行
+  - 结果：待最终 close-out 提交后复跑；预期仅保留全局 `program_truth` blocker（若 release target 阻塞未清理）
 
 #### 2.3 任务记录
 
@@ -95,15 +101,15 @@
   - 记录本批 docs-only baseline、验证画像、close-check blocker 诊断与 truth handoff 语义
   - 准备在 final close-out 后执行 `program truth sync --execute --yes`，使 `149` 进入 global truth 作为 Track C canonical planning input
 - 新增/调整的测试：无（docs-only）
-- 执行的命令：`V3`、`V4`、`V5`
-- 测试结果：通过；docs-only baseline 已完成，final close-out 待提交与 truth refresh 完成
+- 执行的命令：`V3`、`V4`、`V5`、`V6`、`V7`、`V8`
+- 测试结果：通过；docs-only baseline 已完成且 truth handoff 已执行，当前剩余阻塞已收敛为全局 release target audit 链
 - 是否符合任务目标：是
 
 #### 2.4 代码审查结论（Mandatory）
 
 - 宪章/规格对齐：当前改动严格停留在 `specs/149/...`、`development-summary` 与 truth handoff 所需的 `program-manifest.yaml`；未越界进入 Track C runtime
 - 代码质量：不适用（docs-only formal baseline）
-- 测试质量：`adapter status`、`run --dry-run`、`verify constraints`、`close-check` 诊断与 `git diff --check` 均已纳入统一验证画像
+- 测试质量：`adapter status`、`run --dry-run`、`verify constraints`、`git diff --check`、`program truth sync --dry-run`、`program truth sync --execute --yes`、`program truth audit` 与 `close-check` 诊断均已纳入统一验证画像
 - 结论：`149` 已从模板升级为可被 AI-SDLC / global truth 直接消费的 Track C canonical baseline
 
 #### 2.5 任务/计划同步状态（Mandatory）
@@ -126,9 +132,9 @@
 #### 2.8 归档后动作
 
 - **验证画像**：`truth-only`
-- **改动范围**：`program-manifest.yaml`、`specs/149-frontend-p2-quality-platform-baseline/spec.md`、`specs/149-frontend-p2-quality-platform-baseline/plan.md`、`specs/149-frontend-p2-quality-platform-baseline/tasks.md`、`specs/149-frontend-p2-quality-platform-baseline/task-execution-log.md`、`specs/149-frontend-p2-quality-platform-baseline/development-summary.md`
-- **已完成 git 提交**：是
-- **提交哈希**：`HEAD`
+- **改动范围**：`program-manifest.yaml`、`specs/149-frontend-p2-quality-platform-baseline/spec.md`、`specs/149-frontend-p2-quality-platform-baseline/plan.md`、`specs/149-frontend-p2-quality-platform-baseline/tasks.md`、`specs/149-frontend-p2-quality-platform-baseline/task-execution-log.md`、`specs/149-frontend-p2-quality-platform-baseline/development-summary.md`、`.ai-sdlc/project/config/project-state.yaml`
+- **已完成 git 提交**：待本次补记与状态推进一并提交
+- **提交哈希**：待补记提交后回填
 - 当前批次 branch disposition 状态：本批提交后闭环，可继续 `149` runtime 或转入其下一条承接主线
 - 当前批次 worktree disposition 状态：本批提交后闭环，可继续 `149` runtime 或转入其下一条承接主线
 - 是否继续下一批：是；默认继续 `149` 自身 runtime slices，而不是重新做 capability census
