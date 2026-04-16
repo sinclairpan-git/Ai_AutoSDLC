@@ -16,30 +16,9 @@ source_of_truth:
     - specs/124-frontend-mainline-delivery-materialization-runtime-baseline
     - specs/125-frontend-mainline-browser-gate-probe-runtime-implementation-baseline
     - specs/126-frontend-mainline-browser-gate-recheck-remediation-runtime-closure-baseline
+    - specs/143-frontend-mainline-browser-gate-real-probe-runtime-baseline
+    - specs/144-frontend-mainline-host-remediation-and-workspace-integration-closure-baseline
 blockers:
-  - blocker_ref: capability_closure_audit:capability_open
-    carrier_spec: frontend-mainline-delivery
-    execution_batch: phase-5-closure-audit
-    verification_command_or_surface:
-      - uv run ai-sdlc program truth audit
-    expected_close_evidence:
-      - frontend-mainline-delivery audit_state=ready
-      - capability_closure_audit blocker removed from truth audit
-    prerequisites:
-      - close_check:specs/095-frontend-mainline-product-delivery-baseline
-      - close_check:specs/096-frontend-mainline-host-runtime-manager-baseline
-      - close_check:specs/098-frontend-mainline-posture-detector-baseline
-      - close_check:specs/099-frontend-mainline-delivery-registry-resolver-baseline
-      - close_check:specs/100-frontend-mainline-action-plan-binding-baseline
-      - close_check:specs/101-frontend-mainline-managed-delivery-apply-runtime-baseline
-      - close_check:specs/102-frontend-mainline-browser-quality-gate-baseline
-      - close_check:specs/103-frontend-mainline-browser-gate-probe-runtime-baseline
-      - close_check:specs/104-frontend-mainline-browser-gate-recheck-remediation-binding-baseline
-      - close_check:specs/105-frontend-mainline-browser-gate-recheck-remediation-runtime-implementation-baseline
-      - close_check:specs/123-frontend-mainline-managed-delivery-apply-runtime-implementation-baseline
-      - close_check:specs/124-frontend-mainline-delivery-materialization-runtime-baseline
-      - close_check:specs/125-frontend-mainline-browser-gate-probe-runtime-implementation-baseline
-      - close_check:specs/126-frontend-mainline-browser-gate-recheck-remediation-runtime-closure-baseline
   - blocker_ref: close_check:specs/095-frontend-mainline-product-delivery-baseline
     carrier_spec: 095-frontend-mainline-product-delivery-baseline
     execution_batch: phase-2-product-host-registry-apply
@@ -209,3 +188,28 @@ blockers:
     prerequisites:
       - close_check:specs/105-frontend-mainline-browser-gate-recheck-remediation-runtime-implementation-baseline
       - close_check:specs/125-frontend-mainline-browser-gate-probe-runtime-implementation-baseline
+  - blocker_ref: close_check:specs/143-frontend-mainline-browser-gate-real-probe-runtime-baseline
+    carrier_spec: 143-frontend-mainline-browser-gate-real-probe-runtime-baseline
+    execution_batch: phase-3-browser-gate-recheck
+    verification_command_or_surface:
+      - uv run ai-sdlc workitem truth-check --wi specs/143-frontend-mainline-browser-gate-real-probe-runtime-baseline
+      - uv run ai-sdlc workitem close-check --wi specs/143-frontend-mainline-browser-gate-real-probe-runtime-baseline
+      - uv run ai-sdlc program truth audit
+    expected_close_evidence:
+      - workitem close-check passes for 143
+      - blocker removed from truth audit
+    prerequisites:
+      - close_check:specs/126-frontend-mainline-browser-gate-recheck-remediation-runtime-closure-baseline
+  - blocker_ref: close_check:specs/144-frontend-mainline-host-remediation-and-workspace-integration-closure-baseline
+    carrier_spec: 144-frontend-mainline-host-remediation-and-workspace-integration-closure-baseline
+    execution_batch: phase-5-closure-audit
+    verification_command_or_surface:
+      - uv run ai-sdlc workitem truth-check --wi specs/144-frontend-mainline-host-remediation-and-workspace-integration-closure-baseline
+      - uv run ai-sdlc workitem close-check --wi specs/144-frontend-mainline-host-remediation-and-workspace-integration-closure-baseline
+      - uv run ai-sdlc program truth audit
+    expected_close_evidence:
+      - workitem close-check passes for 144
+      - blocker removed from truth audit
+    prerequisites:
+      - close_check:specs/124-frontend-mainline-delivery-materialization-runtime-baseline
+      - close_check:specs/143-frontend-mainline-browser-gate-real-probe-runtime-baseline

@@ -1,6 +1,6 @@
 # Frontend Program 排序与能力闭环真值
 
-**更新日期**：2026-04-13
+**更新日期**：2026-04-16
 **适用范围**：所有 `specs/0xx-frontend-*` work item
 **机器真值**：根级 `program-manifest.yaml`；本文件用于说明排序口径、frontend 范围内的 capability closure 汇总与建议分支命名。
 
@@ -26,11 +26,13 @@
 
 | Capability Cluster | 状态 | 来源范围 | 当前口径 |
 |---|---|---|---|
-| `frontend-contract-foundation` | `partial` | `009-018`, `065`, `077-078` | 已有 sample self-check 与少量相邻实现，但合同、scanner、attachment、gate 主链仍未端到端闭环 |
-| `frontend-program-automation-chain` | `capability_open` | `019-064` | 局部 consumption/execute carrier 已存在，但 program execute/remediation/writeback/archive/cleanup 仍不能宣称已交付 |
-| `frontend-p1-experience-stability` | `capability_open` | `066-072`, `076` | `067-069` 首批 implementation slice 已落地；`070-071` 仍 docs-only，close wording 不得等同 capability closure |
-| `frontend-evidence-class-lifecycle` | `partial` | `079-092`, `107-113` | 已有 backfill/runtime cut，但 validator/mirror/status/close-check 链仍未整体闭环 |
-| `frontend-mainline-delivery` | `capability_open` | `073-075`, `093-106`, `114-115` | `073`、`096`、`105` 已有局部落地，但 `095` 承诺的 delivery/apply/browser gate 仍未端到端闭环 |
+| `frontend-contract-foundation` | `partial` | `009-018`, `065`, `077-078` | canonical 合同、观测 provider、runtime attachment 与 gate 基线已具备 advisory-only 实现切片，但 cluster 级 closure 仍缺统一 carrier 与 ready 级收口 |
+| `frontend-program-automation-chain` | `capability_open` | `019-064` | 各 tranche 大量是 advisory-only/runtime slice，program execute/remediation/writeback/archive/cleanup 尚未被能力级收敛为 closed |
+| `frontend-p1-experience-stability` | `capability_open` | `066-072`, `076` | P1 planning 与部分 runtime closure 已落地，但 cluster 仍保留 consumer evidence / root sync 口径差异，不能等同 capability 已关闭 |
+| `frontend-evidence-class-lifecycle` | `partial` | `079-092`, `107-113` | evidence-class 主链已有 validator/mirror/runtime closure 切片，但 cluster 级 ready 口径与 root honesty sync 仍未统一收口 |
+
+- 已完成：`frontend-mainline-delivery` 已于 `2026-04-16` 在根级 truth ledger 收敛为 `closure=closed / audit=ready`，因此不再列入 open capability cluster。
+- 下一条建议主线：`frontend-contract-foundation`。它位于当前仍 open clusters 的最前置 DAG 区段，且其 closure 结果会直接影响后续 observation / attachment / gate contract 的统一口径。
 
 ## 主线分段
 

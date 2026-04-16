@@ -1,66 +1,63 @@
-# AI-SDLC Pipeline Checkpoint
-# 本文件由流水线自动维护，用于断点恢复
-# 请勿手动修改
-
-pipeline:
-  started_at: "2026-03-21T00:00:00"
-  last_updated: "2026-03-21T00:00:00"
-
-current_stage: "close"
-
+pipeline_started_at: '2026-03-21T00:00:00'
+pipeline_last_updated: '2026-04-14T11:36:25+00:00'
+current_stage: close
 feature:
-  id: "001-ai-sdlc-framework"
-  spec_dir: "specs/001-ai-sdlc-framework"
-  design_branch: "design/001-ai-sdlc-framework"
-  feature_branch: "feature/001-ai-sdlc-framework"
-  current_branch: "main"
-
+  id: 001-ai-sdlc-framework
+  spec_dir: specs/001-ai-sdlc-framework
+  design_branch: design/001-ai-sdlc-framework
+  feature_branch: feature/001-ai-sdlc-framework
+  current_branch: main
+  docs_baseline_ref: ''
+  docs_baseline_at: ''
 multi_agent:
   supported: true
   max_parallel: 3
-  tool_capability: "cursor-background-agents"
-
-prd_source: "AI-SDLC 全自动化框架 产品需求文档（PRD）.md"
-
+  tool_capability: cursor-background-agents
+prd_source: AI-SDLC 全自动化框架 产品需求文档（PRD）.md
 completed_stages:
-  - stage: init
-    completed_at: "2026-03-21T00:00:00"
-    artifacts:
-      - ".ai-sdlc/memory/constitution.md"
-      - ".ai-sdlc/profiles/tech-stack.yml"
-      - ".ai-sdlc/profiles/decisions.yml"
-      - ".ai-sdlc/config/pipeline.yml"
-  - stage: refine
-    completed_at: "2026-03-21T00:05:00"
-    artifacts:
-      - "specs/001-ai-sdlc-framework/spec.md"
-  - stage: design
-    completed_at: "2026-03-21T00:15:00"
-    artifacts:
-      - "specs/001-ai-sdlc-framework/plan.md"
-      - "specs/001-ai-sdlc-framework/research.md"
-      - "specs/001-ai-sdlc-framework/data-model.md"
-      - "specs/001-ai-sdlc-framework/quickstart.md"
-  - stage: decompose
-    completed_at: "2026-03-21T00:20:00"
-    artifacts:
-      - "specs/001-ai-sdlc-framework/tasks.md"
-  - stage: verify
-    completed_at: "2026-03-21T00:25:00"
-    artifacts:
-      - "specs/001-ai-sdlc-framework/tasks.md (FR refs fixed)"
-
-  - stage: execute
-    completed_at: "2026-03-21T01:00:00"
-    artifacts:
-      - "src/ai_sdlc/ (38 Python modules)"
-      - "tests/ (147 tests, 14 files)"
-      - "pyproject.toml"
-      - "README.md"
-  - stage: close
-    completed_at: "2026-03-21T01:05:00"
-    artifacts:
-      - "development-summary.md"
-
+- stage: init
+  completed_at: '2026-03-21T00:00:00'
+  artifacts:
+  - .ai-sdlc/memory/constitution.md
+  - .ai-sdlc/profiles/tech-stack.yml
+  - .ai-sdlc/profiles/decisions.yml
+  - .ai-sdlc/config/pipeline.yml
+- stage: refine
+  completed_at: '2026-03-21T00:05:00'
+  artifacts:
+  - specs/001-ai-sdlc-framework/spec.md
+- stage: design
+  completed_at: '2026-03-21T00:15:00'
+  artifacts:
+  - specs/001-ai-sdlc-framework/plan.md
+  - specs/001-ai-sdlc-framework/research.md
+  - specs/001-ai-sdlc-framework/data-model.md
+  - specs/001-ai-sdlc-framework/quickstart.md
+- stage: decompose
+  completed_at: '2026-03-21T00:20:00'
+  artifacts:
+  - specs/001-ai-sdlc-framework/tasks.md
+- stage: verify
+  completed_at: '2026-03-21T00:25:00'
+  artifacts:
+  - specs/001-ai-sdlc-framework/tasks.md (FR refs fixed)
+- stage: execute
+  completed_at: '2026-03-21T01:00:00'
+  artifacts:
+  - src/ai_sdlc/ (38 Python modules)
+  - tests/ (147 tests, 14 files)
+  - pyproject.toml
+  - README.md
+- stage: close
+  completed_at: '2026-03-21T01:05:00'
+  artifacts:
+  - development-summary.md
+- stage: close
+  completed_at: '2026-04-14T11:36:25+00:00'
+  artifacts: []
+execute_progress: null
 ai_decisions_count: 0
 execution_mode: auto
+linked_wi_id: null
+linked_plan_uri: null
+last_synced_at: null

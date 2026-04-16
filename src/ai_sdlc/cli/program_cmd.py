@@ -747,10 +747,10 @@ def program_remediate(
 
 @program_app.command("managed-delivery-apply")
 def program_managed_delivery_apply(
-    request: str = typer.Option(
-        ...,
+    request: str | None = typer.Option(
+        None,
         "--request",
-        help="Path to the managed delivery apply request YAML relative to project root.",
+        help="Optional path to a managed delivery apply request YAML relative to project root; when omitted, materialize from current truth.",
     ),
     dry_run: bool = typer.Option(
         True,
@@ -830,11 +830,19 @@ def program_managed_delivery_apply(
         markup=False,
     )
     console.print(
+        "  - package source boundary: only registry-declared package sets auto-install here",
+        markup=False,
+    )
+    console.print(
         "  - delivery remains incomplete until browser gate and downstream closure finish",
         markup=False,
     )
     for blocker in request_payload.remaining_blockers:
         console.print(f"  - blocker: {blocker}", markup=False)
+    for plain_text in request_payload.plain_language_blockers:
+        console.print(f"  - explain: {plain_text}", markup=False)
+    for next_step in request_payload.recommended_next_steps:
+        console.print(f"  - next step: {next_step}", markup=False)
 
     if dry_run:
         raise typer.Exit(code=0 if not request_payload.remaining_blockers else 1)

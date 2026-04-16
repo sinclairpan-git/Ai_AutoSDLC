@@ -24,6 +24,20 @@ class DependencyInstallExecutionPayload(FrontendManagedDeliveryModel):
     packages: list[str] = Field(default_factory=list)
 
 
+class RuntimeRemediationExecutionPayload(FrontendManagedDeliveryModel):
+    """Structured host runtime remediation payload."""
+
+    managed_runtime_root: str
+    required_runtime_entries: list[str] = Field(default_factory=list)
+    install_profile_id: str = ""
+    acquisition_mode: str
+    will_download: list[str] = Field(default_factory=list)
+    will_install: list[str] = Field(default_factory=list)
+    will_modify: list[str] = Field(default_factory=list)
+    manual_prerequisites: list[str] = Field(default_factory=list)
+    reentry_condition: str = ""
+
+
 class GeneratedArtifactFile(FrontendManagedDeliveryModel):
     """A single generated artifact file rooted at the managed target."""
 
@@ -37,6 +51,31 @@ class ArtifactGenerateExecutionPayload(FrontendManagedDeliveryModel):
 
     directories: list[str] = Field(default_factory=list)
     files: list[GeneratedArtifactFile] = Field(default_factory=list)
+
+
+class ManagedTargetPrepareExecutionPayload(FrontendManagedDeliveryModel):
+    """Structured managed target bootstrap payload."""
+
+    directories: list[str] = Field(default_factory=list)
+    files: list[GeneratedArtifactFile] = Field(default_factory=list)
+
+
+class WorkspaceIntegrationItem(FrontendManagedDeliveryModel):
+    """One bounded root-level workspace integration write."""
+
+    integration_id: str
+    target_class: Literal["workspace", "lockfile", "ci", "proxy", "route"]
+    target_path: str
+    mutation_kind: Literal["write_new", "overwrite_existing"]
+    content: str
+    requires_explicit_confirmation: bool = True
+    will_not_touch_refs: list[str] = Field(default_factory=list)
+
+
+class WorkspaceIntegrationExecutionPayload(FrontendManagedDeliveryModel):
+    """Structured payload for bounded workspace integration."""
+
+    items: list[WorkspaceIntegrationItem] = Field(default_factory=list)
 
 
 class FrontendActionPlanAction(FrontendManagedDeliveryModel):
@@ -151,6 +190,12 @@ class ManagedDeliveryExecutorContext(FrontendManagedDeliveryModel):
     dependency_installer: Callable[
         [DependencyInstallExecutionPayload, Path], dict[str, str]
     ] | None = None
+    runtime_remediator: Callable[
+        [RuntimeRemediationExecutionPayload, Path], dict[str, str]
+    ] | None = None
     artifact_writer: Callable[
         [ArtifactGenerateExecutionPayload, Path], dict[str, str]
+    ] | None = None
+    workspace_integrator: Callable[
+        [WorkspaceIntegrationExecutionPayload, Path], dict[str, str]
     ] | None = None

@@ -102,15 +102,15 @@ Batch 5: capability closure audit reconciliation
 
 ### Task 3.1 冻结子链执行顺序
 
-- [ ] 按 `095 -> 096 -> 098 -> 099 -> 100 -> 101 -> 123 -> 124` 固定 tasks
-- [ ] 为每个 carrier spec 绑定对应 close-check / truth-check / verify evidence
-- [ ] 明确哪些 child work 可以并行、哪些必须串行
+- [x] 按 `095 -> 096 -> 098 -> 099 -> 100 -> 101 -> 123 -> 124` 固定基础 host/apply 顺序，并将 `144` 标注为后续 closure bridge
+- [x] 为每个 carrier spec 绑定对应 close-check / truth-check / verify evidence
+- [x] 明确哪些 child work 可以并行、哪些必须串行
 
 ### Task 3.2 逐批实现并验证
 
-- [ ] 对每个 child work 执行实现
-- [ ] 每批结束后回跑对应 `workitem close-check`
-- [ ] 回跑 `program truth audit`，确认对应 blocker_ref 消失
+- [x] 对每个 child work 执行实现
+- [x] 每批结束后回跑对应 `workitem close-check`
+- [x] 回跑 `program truth audit`，确认对应 blocker_ref 消失
 
 ---
 
@@ -118,15 +118,15 @@ Batch 5: capability closure audit reconciliation
 
 ### Task 4.1 冻结子链执行顺序
 
-- [ ] 按 `102 -> 103 -> 104 -> 105 -> 125 -> 126` 固定 tasks
-- [ ] 在 map 中显式标注 `125` 依赖 `124`
-- [ ] 为每个 blocker 绑定 browser gate runtime close evidence
+- [x] 按 `102 -> 103 -> 104 -> 105 -> 125 -> 126 -> 143` 固定 browser gate / recheck / real-probe 顺序
+- [x] 在 map 中显式标注 `125` 依赖 `124`
+- [x] 为每个 blocker 绑定 browser gate runtime close evidence
 
 ### Task 4.2 逐批实现并验证
 
-- [ ] 对每个 child work 执行实现
-- [ ] 每批结束后回跑对应 `workitem close-check`
-- [ ] 回跑 `program truth audit`，确认对应 blocker_ref 消失
+- [x] 对每个 child work 执行实现
+- [x] 每批结束后回跑对应 `workitem close-check`
+- [x] 回跑 `program truth audit`，确认对应 blocker_ref 消失
 
 ---
 
@@ -134,15 +134,15 @@ Batch 5: capability closure audit reconciliation
 
 ### Task 5.1 复核 capability closure audit
 
-- [ ] 在所有 close_check blockers 消失后复核 `capability_closure_audit:capability_open`
-- [ ] 用 machine evidence 驱动 closure audit 收敛
-- [ ] 重新运行 `uv run ai-sdlc program truth audit`
+- [x] 在所有 close_check blockers 消失后复核 `capability_closure_audit`
+- [x] 用 machine evidence 驱动 closure audit 收敛
+- [x] 重新运行 `uv run ai-sdlc program truth audit`
 
 ### Task 5.2 最终 close 条件
 
-- [ ] 仅当 `frontend-mainline-delivery.audit_state=ready` 时关闭 `142`
-- [ ] 回填 `task-execution-log.md`
-- [ ] 生成 `development-summary.md`
+- [x] 仅当 `frontend-mainline-delivery.audit_state=ready` 时关闭 `142`
+- [x] 回填 `task-execution-log.md`
+- [x] 生成 `development-summary.md`
 
 **完成标准**
 

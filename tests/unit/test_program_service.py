@@ -8,6 +8,7 @@ from pathlib import Path
 
 import yaml
 
+import ai_sdlc.core.program_service as program_service_module
 from ai_sdlc.context.state import save_checkpoint
 from ai_sdlc.core.config import save_project_config
 from ai_sdlc.core.frontend_browser_gate_runtime import (
@@ -26,6 +27,7 @@ from ai_sdlc.core.frontend_visual_a11y_evidence_provider import (
     build_frontend_visual_a11y_evidence_artifact,
     write_frontend_visual_a11y_evidence_artifact,
 )
+from ai_sdlc.core.host_runtime_manager import HostRuntimeProbe, build_host_runtime_plan
 from ai_sdlc.core.program_service import (
     ProgramFrontendRemediationCommandResult,
     ProgramFrontendRemediationExecutionResult,
@@ -36,6 +38,9 @@ from ai_sdlc.generators.frontend_gate_policy_artifacts import (
 )
 from ai_sdlc.generators.frontend_generation_constraint_artifacts import (
     materialize_frontend_generation_constraint_artifacts,
+)
+from ai_sdlc.generators.frontend_provider_profile_artifacts import (
+    materialize_builtin_frontend_provider_profile_artifacts,
 )
 from ai_sdlc.generators.frontend_solution_confirmation_artifacts import (
     materialize_frontend_solution_confirmation_artifacts,
@@ -191,6 +196,17 @@ def _write_managed_delivery_apply_request(root: Path, *, fingerprint: str = "fp-
                     "cleanup_ref": "cleanup:a1",
                     "risk_flags": [],
                     "source_linkage_refs": {"spec": "specs/001-auth"},
+                    "executor_payload": {
+                        "managed_runtime_root": ".ai-sdlc/runtime",
+                        "required_runtime_entries": ["node_runtime"],
+                        "install_profile_id": "offline_bundle_darwin_shell",
+                        "acquisition_mode": "managed_runtime_install",
+                        "will_download": ["node_runtime"],
+                        "will_install": [],
+                        "will_modify": [".ai-sdlc/runtime"],
+                        "manual_prerequisites": [],
+                        "reentry_condition": "rerun managed delivery apply",
+                    },
                 }
             ],
             "will_not_touch": ["legacy-root"],
@@ -214,12 +230,17 @@ def _write_managed_delivery_apply_request(root: Path, *, fingerprint: str = "fp-
     return request_path
 
 
-def _write_frontend_solution_confirmation_artifacts(root: Path) -> None:
+def _write_frontend_solution_confirmation_artifacts(
+    root: Path,
+    *,
+    snapshot=None,
+) -> None:
     materialize_frontend_solution_confirmation_artifacts(
         root,
         style_packs=build_builtin_style_pack_manifests(),
         install_strategies=build_builtin_install_strategies(),
-        snapshot=build_mvp_solution_snapshot(
+        snapshot=snapshot
+        or build_mvp_solution_snapshot(
             project_id="001-auth",
             effective_provider_id="public-primevue",
             effective_style_pack_id="modern-saas",
@@ -232,6 +253,43 @@ def _write_frontend_solution_confirmation_artifacts(root: Path) -> None:
             effective_frontend_stack="vue3",
             style_fidelity_status="full",
         ),
+    )
+
+
+def _write_builtin_delivery_truth(root: Path, *, snapshot=None) -> None:
+    _write_frontend_solution_confirmation_artifacts(root, snapshot=snapshot)
+    materialize_builtin_frontend_provider_profile_artifacts(
+        root,
+        provider_id="enterprise-vue2",
+    )
+    materialize_builtin_frontend_provider_profile_artifacts(
+        root,
+        provider_id="public-primevue",
+    )
+
+
+def _build_host_runtime_plan_for_tests(
+    *,
+    node_runtime_available: bool | None,
+    package_manager_available: bool | None,
+    playwright_browsers_available: bool | None,
+) :
+    return build_host_runtime_plan(
+        HostRuntimeProbe(
+            platform_os="darwin",
+            platform_arch="arm64",
+            python_version="3.11.9",
+            surface_kind="installed_cli",
+            surface_binding_state="bound",
+            installed_runtime_status="ready",
+            node_runtime_available=node_runtime_available,
+            package_manager_available=package_manager_available,
+            playwright_browsers_available=playwright_browsers_available,
+            offline_bundle_available=True,
+            bundle_platform_matches=True,
+            install_target_writable=True,
+            disk_space_sufficient=True,
+        )
     )
 
 
@@ -822,6 +880,128 @@ def test_build_frontend_managed_delivery_apply_request_blocks_on_host_ingress(
     assert "host_ingress_below_mutate_threshold" in request.remaining_blockers
 
 
+def test_build_frontend_managed_delivery_apply_request_materializes_public_bundle_from_truth(
+    initialized_project_dir: Path,
+    monkeypatch,
+) -> None:
+    root = initialized_project_dir
+    save_project_config(root, ProjectConfig(adapter_ingress_state="verified_loaded"))
+    _write_builtin_delivery_truth(root)
+    monkeypatch.setattr(
+        program_service_module,
+        "evaluate_current_host_runtime",
+        lambda project_root: _build_host_runtime_plan_for_tests(
+            node_runtime_available=True,
+            package_manager_available=True,
+            playwright_browsers_available=True,
+        ),
+    )
+    svc = ProgramService(root)
+
+    request = svc.build_frontend_managed_delivery_apply_request()
+
+    assert request.request_source_path == ".ai-sdlc/memory/frontend-managed-delivery/latest.yaml"
+    assert request.apply_state == "ready_to_execute"
+    assert request.execution_view is not None
+    dependency_action = next(
+        action
+        for action in request.execution_view.action_items
+        if action.action_type == "dependency_install"
+    )
+    assert dependency_action.executor_payload["install_strategy_id"] == "public-primevue-default"
+    assert dependency_action.executor_payload["package_manager"] == "pnpm"
+    assert dependency_action.executor_payload["packages"] == [
+        "primevue",
+        "@primeuix/themes",
+    ]
+    workspace_action = next(
+        action
+        for action in request.execution_view.action_items
+        if action.action_type == "workspace_integration"
+    )
+    assert workspace_action.required is False
+    assert workspace_action.default_selected is False
+
+
+def test_build_frontend_managed_delivery_apply_request_uses_builtin_provider_truth_when_artifacts_missing(
+    initialized_project_dir: Path,
+    monkeypatch,
+) -> None:
+    root = initialized_project_dir
+    save_project_config(root, ProjectConfig(adapter_ingress_state="verified_loaded"))
+    _write_frontend_solution_confirmation_artifacts(root)
+    monkeypatch.setattr(
+        program_service_module,
+        "evaluate_current_host_runtime",
+        lambda project_root: _build_host_runtime_plan_for_tests(
+            node_runtime_available=True,
+            package_manager_available=True,
+            playwright_browsers_available=True,
+        ),
+    )
+    svc = ProgramService(root)
+
+    request = svc.build_frontend_managed_delivery_apply_request()
+
+    assert request.apply_state == "ready_to_execute"
+    assert request.execution_view is not None
+    dependency_action = next(
+        action
+        for action in request.execution_view.action_items
+        if action.action_type == "dependency_install"
+    )
+    assert dependency_action.executor_payload["packages"] == [
+        "primevue",
+        "@primeuix/themes",
+    ]
+
+
+def test_build_frontend_managed_delivery_apply_request_blocks_enterprise_private_registry_prereq_from_truth(
+    initialized_project_dir: Path,
+    monkeypatch,
+) -> None:
+    root = initialized_project_dir
+    save_project_config(root, ProjectConfig(adapter_ingress_state="verified_loaded"))
+    snapshot = build_mvp_solution_snapshot(
+        project_id="001-auth",
+        effective_provider_id="enterprise-vue2",
+        effective_style_pack_id="enterprise-default",
+        requested_provider_id="enterprise-vue2",
+        requested_style_pack_id="enterprise-default",
+        recommended_provider_id="enterprise-vue2",
+        recommended_style_pack_id="enterprise-default",
+        recommended_frontend_stack="vue2",
+        requested_frontend_stack="vue2",
+        effective_frontend_stack="vue2",
+        availability_summary={
+            "overall_status": "attention",
+            "passed_check_ids": ["company-registry-network"],
+            "failed_check_ids": ["company-registry-token"],
+            "blocking_reason_codes": [],
+        },
+        availability_reason_text="Registry token missing.",
+        preflight_status="warning",
+        preflight_reason_codes=["company-registry-token"],
+        style_fidelity_status="full",
+    )
+    _write_builtin_delivery_truth(root, snapshot=snapshot)
+    monkeypatch.setattr(
+        program_service_module,
+        "evaluate_current_host_runtime",
+        lambda project_root: _build_host_runtime_plan_for_tests(
+            node_runtime_available=True,
+            package_manager_available=True,
+            playwright_browsers_available=True,
+        ),
+    )
+    svc = ProgramService(root)
+
+    request = svc.build_frontend_managed_delivery_apply_request()
+
+    assert request.apply_state == "blocked_before_start"
+    assert "private_registry_prerequisite_missing:company-registry-token" in request.remaining_blockers
+
+
 def test_execute_frontend_managed_delivery_apply_returns_pending_browser_gate_success(
     initialized_project_dir: Path,
 ) -> None:
@@ -893,7 +1073,50 @@ def test_write_frontend_managed_delivery_apply_artifact_persists_browser_gate_ha
     assert payload["execution_view"]["spec_dir"] == "specs/001-auth"
     assert (
         payload["source_linkage"]["managed_delivery_apply_artifact_path"]
-        == ".ai-sdlc/memory/frontend-managed-delivery/latest.yaml"
+        == ".ai-sdlc/memory/frontend-managed-delivery-apply/latest.yaml"
+    )
+
+
+def test_write_frontend_managed_delivery_apply_artifact_keeps_materialized_request_schema_separate(
+    initialized_project_dir: Path,
+    monkeypatch,
+) -> None:
+    root = initialized_project_dir
+    save_project_config(root, ProjectConfig(adapter_ingress_state="verified_loaded"))
+    _write_builtin_delivery_truth(root)
+    monkeypatch.setattr(
+        program_service_module,
+        "evaluate_current_host_runtime",
+        lambda project_root: _build_host_runtime_plan_for_tests(
+            node_runtime_available=True,
+            package_manager_available=True,
+            playwright_browsers_available=True,
+        ),
+    )
+    svc = ProgramService(root)
+    request = svc.build_frontend_managed_delivery_apply_request()
+    result = svc.execute_frontend_managed_delivery_apply(
+        request=request,
+        confirmed=True,
+    )
+
+    artifact_path = svc.write_frontend_managed_delivery_apply_artifact(
+        request=request,
+        result=result,
+        generated_at="2026-04-14T04:00:00Z",
+    )
+
+    request_path = root / ".ai-sdlc" / "memory" / "frontend-managed-delivery" / "latest.yaml"
+    request_payload = yaml.safe_load(request_path.read_text(encoding="utf-8"))
+    apply_payload = yaml.safe_load(artifact_path.read_text(encoding="utf-8"))
+
+    assert artifact_path != request_path
+    assert "request_id" in request_payload
+    assert "result_status" not in request_payload
+    assert apply_payload["request_source_path"] == ".ai-sdlc/memory/frontend-managed-delivery/latest.yaml"
+    assert (
+        artifact_path
+        == root / ".ai-sdlc" / "memory" / "frontend-managed-delivery-apply" / "latest.yaml"
     )
 
 
@@ -906,6 +1129,35 @@ def test_build_frontend_browser_gate_probe_request_requires_apply_artifact(
 
     assert request.probe_state == "missing_apply_artifact"
     assert "managed_delivery_apply_artifact_missing" in request.remaining_blockers
+
+
+def test_build_frontend_browser_gate_probe_request_accepts_legacy_apply_artifact_path_for_upgrade_compat(
+    initialized_project_dir: Path,
+) -> None:
+    root = initialized_project_dir
+    save_project_config(root, ProjectConfig(adapter_ingress_state="verified_loaded"))
+    _write_frontend_solution_confirmation_artifacts(root)
+    request_path = _write_artifact_generate_apply_request(root)
+    svc = ProgramService(root)
+    apply_request = svc.build_frontend_managed_delivery_apply_request(request_path)
+    apply_result = svc.execute_frontend_managed_delivery_apply(
+        request_path,
+        request=apply_request,
+        confirmed=True,
+    )
+    legacy_apply_artifact_path = root / ".ai-sdlc" / "memory" / "frontend-managed-delivery" / "latest.yaml"
+    svc.write_frontend_managed_delivery_apply_artifact(
+        request_path,
+        request=apply_request,
+        result=apply_result,
+        output_path=legacy_apply_artifact_path,
+        generated_at="2026-04-14T04:00:00Z",
+    )
+
+    probe_request = svc.build_frontend_browser_gate_probe_request()
+
+    assert probe_request.probe_state == "ready_to_execute"
+    assert probe_request.apply_artifact_path == ".ai-sdlc/memory/frontend-managed-delivery/latest.yaml"
 
 
 def test_execute_frontend_browser_gate_probe_materializes_gate_run_bundle(

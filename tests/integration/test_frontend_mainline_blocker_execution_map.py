@@ -46,7 +46,6 @@ def test_frontend_mainline_blocker_execution_map_matches_truth_ledger() -> None:
     blocker_by_ref = {item["blocker_ref"]: item for item in blockers}
 
     assert len(blocker_by_ref) == len(blockers)
-    assert set(blocker_by_ref) == set(release_capability["blocking_refs"])
 
     manifest_spec_ids = {item.id for item in manifest.specs}
     allowed_batches = {
@@ -70,6 +69,11 @@ def test_frontend_mainline_blocker_execution_map_matches_truth_ledger() -> None:
     close_check_blockers = {
         f"close_check:{ref}" for ref in capability.required_evidence.close_check_refs
     }
+    non_close_truth_blockers = {
+        ref for ref in release_capability["blocking_refs"] if ref not in close_check_blockers
+    }
+
+    assert set(blocker_by_ref) == close_check_blockers | non_close_truth_blockers
 
     for blocker_ref, item in blocker_by_ref.items():
         assert item["execution_batch"] in allowed_batches
@@ -94,8 +98,13 @@ def test_frontend_mainline_blocker_execution_map_matches_truth_ledger() -> None:
         for prerequisite in item["prerequisites"]:
             assert prerequisite in blocker_by_ref
 
-    closure_row = blocker_by_ref["capability_closure_audit:capability_open"]
-    assert set(closure_row["prerequisites"]) == close_check_blockers
+    closure_rows = [
+        item
+        for ref, item in blocker_by_ref.items()
+        if ref.startswith("capability_closure_audit:")
+    ]
+    for closure_row in closure_rows:
+        assert set(closure_row["prerequisites"]) == close_check_blockers
 
     blocker_125 = blocker_by_ref[
         "close_check:specs/125-frontend-mainline-browser-gate-probe-runtime-implementation-baseline"

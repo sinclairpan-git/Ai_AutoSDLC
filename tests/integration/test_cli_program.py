@@ -9,6 +9,7 @@ from unittest.mock import patch
 import yaml
 from typer.testing import CliRunner
 
+import ai_sdlc.core.program_service as program_service_module
 from ai_sdlc.cli.main import app
 from ai_sdlc.core.config import save_project_config
 from ai_sdlc.core.frontend_browser_gate_runtime import (
@@ -27,11 +28,15 @@ from ai_sdlc.core.frontend_visual_a11y_evidence_provider import (
     build_frontend_visual_a11y_evidence_artifact,
     write_frontend_visual_a11y_evidence_artifact,
 )
+from ai_sdlc.core.host_runtime_manager import HostRuntimeProbe, build_host_runtime_plan
 from ai_sdlc.generators.frontend_gate_policy_artifacts import (
     materialize_frontend_gate_policy_artifacts,
 )
 from ai_sdlc.generators.frontend_generation_constraint_artifacts import (
     materialize_frontend_generation_constraint_artifacts,
+)
+from ai_sdlc.generators.frontend_provider_profile_artifacts import (
+    materialize_builtin_frontend_provider_profile_artifacts,
 )
 from ai_sdlc.generators.frontend_solution_confirmation_artifacts import (
     materialize_frontend_solution_confirmation_artifacts,
@@ -94,12 +99,13 @@ def _write_frontend_evidence_class_spec(
     )
 
 
-def _write_frontend_solution_confirmation_artifacts(root: Path) -> None:
+def _write_frontend_solution_confirmation_artifacts(root: Path, *, snapshot=None) -> None:
     materialize_frontend_solution_confirmation_artifacts(
         root,
         style_packs=build_builtin_style_pack_manifests(),
         install_strategies=build_builtin_install_strategies(),
-        snapshot=build_mvp_solution_snapshot(
+        snapshot=snapshot
+        or build_mvp_solution_snapshot(
             project_id="001-auth",
             effective_provider_id="public-primevue",
             effective_style_pack_id="modern-saas",
@@ -112,6 +118,43 @@ def _write_frontend_solution_confirmation_artifacts(root: Path) -> None:
             effective_frontend_stack="vue3",
             style_fidelity_status="full",
         ),
+    )
+
+
+def _write_builtin_delivery_truth(root: Path, *, snapshot=None) -> None:
+    _write_frontend_solution_confirmation_artifacts(root, snapshot=snapshot)
+    materialize_builtin_frontend_provider_profile_artifacts(
+        root,
+        provider_id="enterprise-vue2",
+    )
+    materialize_builtin_frontend_provider_profile_artifacts(
+        root,
+        provider_id="public-primevue",
+    )
+
+
+def _build_host_runtime_plan_for_tests(
+    *,
+    node_runtime_available: bool | None,
+    package_manager_available: bool | None,
+    playwright_browsers_available: bool | None,
+):
+    return build_host_runtime_plan(
+        HostRuntimeProbe(
+            platform_os="darwin",
+            platform_arch="arm64",
+            python_version="3.11.9",
+            surface_kind="installed_cli",
+            surface_binding_state="bound",
+            installed_runtime_status="ready",
+            node_runtime_available=node_runtime_available,
+            package_manager_available=package_manager_available,
+            playwright_browsers_available=playwright_browsers_available,
+            offline_bundle_available=True,
+            bundle_platform_matches=True,
+            install_target_writable=True,
+            disk_space_sufficient=True,
+        )
     )
 
 
@@ -218,6 +261,17 @@ def _write_managed_delivery_apply_request(root: Path, *, fingerprint: str = "fp-
                     "cleanup_ref": "cleanup:a1",
                     "risk_flags": [],
                     "source_linkage_refs": {"spec": "specs/001-auth"},
+                    "executor_payload": {
+                        "managed_runtime_root": ".ai-sdlc/runtime",
+                        "required_runtime_entries": ["node_runtime"],
+                        "install_profile_id": "offline_bundle_darwin_shell",
+                        "acquisition_mode": "managed_runtime_install",
+                        "will_download": ["node_runtime"],
+                        "will_install": [],
+                        "will_modify": [".ai-sdlc/runtime"],
+                        "manual_prerequisites": [],
+                        "reentry_condition": "rerun managed delivery apply",
+                    },
                 }
             ],
             "will_not_touch": ["legacy-root"],
@@ -484,10 +538,78 @@ class TestCliProgram:
         assert result.exit_code == 0
         assert "selected action types: artifact_generate" in result.output
         assert "managed target path: managed/frontend" in result.output
-        assert "apply artifact: .ai-sdlc/memory/frontend-managed-delivery/latest.yaml" in result.output
+        assert "apply artifact: .ai-sdlc/memory/frontend-managed-delivery-apply/latest.yaml" in result.output
         assert (
             root / "managed" / "frontend" / "src" / "App.vue"
         ).read_text(encoding="utf-8") == "<template>cli generated</template>\n"
+
+    def test_program_managed_delivery_apply_dry_run_materializes_request_from_truth_when_request_omitted(
+        self, initialized_project_dir: Path
+    ) -> None:
+        root = initialized_project_dir
+        save_project_config(root, ProjectConfig(adapter_ingress_state="verified_loaded"))
+        _write_builtin_delivery_truth(root)
+
+        with patch("ai_sdlc.cli.program_cmd.find_project_root", return_value=root), patch.object(
+            program_service_module,
+            "evaluate_current_host_runtime",
+            return_value=_build_host_runtime_plan_for_tests(
+                node_runtime_available=True,
+                package_manager_available=True,
+                playwright_browsers_available=True,
+            ),
+        ):
+            result = runner.invoke(app, ["program", "managed-delivery-apply", "--dry-run"])
+
+        assert result.exit_code == 0
+        assert "Program Managed Delivery Apply Dry-Run" in result.output
+        assert "request source: .ai-sdlc/memory/frontend-managed-delivery/latest.yaml" in result.output
+        assert "selected action types: managed_target_prepare, dependency_install" in result.output
+
+    def test_program_managed_delivery_apply_dry_run_surfaces_private_registry_blocker_from_truth_when_request_omitted(
+        self, initialized_project_dir: Path
+    ) -> None:
+        root = initialized_project_dir
+        save_project_config(root, ProjectConfig(adapter_ingress_state="verified_loaded"))
+        snapshot = build_mvp_solution_snapshot(
+            project_id="001-auth",
+            effective_provider_id="enterprise-vue2",
+            effective_style_pack_id="enterprise-default",
+            requested_provider_id="enterprise-vue2",
+            requested_style_pack_id="enterprise-default",
+            recommended_provider_id="enterprise-vue2",
+            recommended_style_pack_id="enterprise-default",
+            recommended_frontend_stack="vue2",
+            requested_frontend_stack="vue2",
+            effective_frontend_stack="vue2",
+            availability_summary={
+                "overall_status": "attention",
+                "passed_check_ids": ["company-registry-network"],
+                "failed_check_ids": ["company-registry-token"],
+                "blocking_reason_codes": [],
+            },
+            availability_reason_text="Registry token missing.",
+            preflight_status="warning",
+            preflight_reason_codes=["company-registry-token"],
+            style_fidelity_status="full",
+        )
+        _write_builtin_delivery_truth(root, snapshot=snapshot)
+
+        with patch("ai_sdlc.cli.program_cmd.find_project_root", return_value=root), patch.object(
+            program_service_module,
+            "evaluate_current_host_runtime",
+            return_value=_build_host_runtime_plan_for_tests(
+                node_runtime_available=True,
+                package_manager_available=True,
+                playwright_browsers_available=True,
+            ),
+        ):
+            result = runner.invoke(app, ["program", "managed-delivery-apply", "--dry-run"])
+
+        assert result.exit_code == 1
+        assert "private_registry_prerequisite_missing:company-registry-token" in result.output
+        assert "Enterprise package access is not ready" in result.output
+        assert "provide company-registry-token and rerun" in result.output
 
     def test_program_browser_gate_probe_execute_materializes_gate_run_artifact(
         self, initialized_project_dir: Path

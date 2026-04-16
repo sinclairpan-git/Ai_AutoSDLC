@@ -13,9 +13,14 @@ from ai_sdlc.models.frontend_managed_delivery import (
     DeliveryApplyDecisionReceipt,
     DependencyInstallExecutionPayload,
     FrontendActionPlanAction,
+    GeneratedArtifactFile,
     ManagedDeliveryApplyResult,
     ManagedDeliveryExecutionSession,
     ManagedDeliveryExecutorContext,
+    ManagedTargetPrepareExecutionPayload,
+    RuntimeRemediationExecutionPayload,
+    WorkspaceIntegrationExecutionPayload,
+    WorkspaceIntegrationItem,
 )
 
 ALLOWED_ACTION_TYPES = frozenset(
@@ -24,6 +29,7 @@ ALLOWED_ACTION_TYPES = frozenset(
         "managed_target_prepare",
         "dependency_install",
         "artifact_generate",
+        "workspace_integration",
     }
 )
 
@@ -442,9 +448,6 @@ def _prepare_action_execution(
     entries: list[DeliveryActionLedgerEntry] = []
     blockers: list[str] = []
     for action in actions:
-        if action.action_type not in {"dependency_install", "artifact_generate"}:
-            prepared[action.action_id] = {}
-            continue
         try:
             prepared[action.action_id] = _validate_executor_payload(action, view, context)
         except ValueError as exc:
@@ -508,6 +511,54 @@ def _validate_executor_payload(
             "payload": payload,
             "dependency_targets": dependency_targets,
         }
+    if action.action_type == "runtime_remediation":
+        payload = RuntimeRemediationExecutionPayload.model_validate(action.executor_payload)
+        if not payload.required_runtime_entries:
+            raise ValueError("runtime_remediation_required_runtime_entries_missing")
+        if payload.manual_prerequisites:
+            raise ValueError("runtime_remediation_manual_prerequisites_pending")
+        managed_runtime_root = _resolve_managed_child(
+            repo_root,
+            payload.managed_runtime_root,
+            blocker="runtime_remediation_outside_managed_runtime_root",
+        )
+        return {
+            "managed_runtime_root": managed_runtime_root,
+            "payload": payload,
+        }
+    if action.action_type == "managed_target_prepare":
+        payload = ManagedTargetPrepareExecutionPayload.model_validate(action.executor_payload)
+        if not payload.files and not payload.directories:
+            raise ValueError("managed_target_prepare_payload_empty")
+        file_paths = [
+            _resolve_managed_child(
+                managed_root,
+                generated_file.path,
+                blocker="managed_target_prepare_outside_managed_target",
+            )
+            for generated_file in payload.files
+        ]
+        dir_paths = [
+            _resolve_managed_child(
+                managed_root,
+                directory,
+                blocker="managed_target_prepare_outside_managed_target",
+            )
+            for directory in payload.directories
+        ]
+        for target in [managed_root, *file_paths, *dir_paths]:
+            _ensure_not_in_will_not_touch(
+                target,
+                repo_root,
+                view.will_not_touch,
+                blocker="managed_target_prepare_hits_will_not_touch",
+            )
+        return {
+            "managed_root": managed_root,
+            "payload": payload,
+            "file_paths": file_paths,
+            "dir_paths": dir_paths,
+        }
     if action.action_type == "artifact_generate":
         payload = ArtifactGenerateExecutionPayload.model_validate(action.executor_payload)
         if not payload.files and not payload.directories:
@@ -541,6 +592,31 @@ def _validate_executor_payload(
             "file_paths": file_paths,
             "dir_paths": dir_paths,
         }
+    if action.action_type == "workspace_integration":
+        payload = WorkspaceIntegrationExecutionPayload.model_validate(action.executor_payload)
+        if not payload.items:
+            raise ValueError("workspace_integration_payload_empty")
+        target_classes = {item.target_class for item in payload.items}
+        if len(target_classes) > 1:
+            raise ValueError("workspace_integration_mixed_target_classes")
+        resolved_targets: list[Path] = []
+        for item in payload.items:
+            target = _resolve_managed_child(
+                repo_root,
+                item.target_path,
+                blocker="workspace_integration_outside_repo_root",
+            )
+            _ensure_not_in_will_not_touch(
+                target,
+                repo_root,
+                [*view.will_not_touch, *item.will_not_touch_refs],
+                blocker="workspace_integration_hits_will_not_touch",
+            )
+            resolved_targets.append(target)
+        return {
+            "payload": payload,
+            "target_paths": resolved_targets,
+        }
     return {}
 
 
@@ -563,11 +639,38 @@ def _before_state_for_action(
                 "working_directory": str(prepared["working_directory"]),
             }
         )
+    if action.action_type == "runtime_remediation":
+        payload = prepared["payload"]
+        assert isinstance(payload, RuntimeRemediationExecutionPayload)
+        state.update(
+            {
+                "managed_runtime_root": str(prepared["managed_runtime_root"]),
+                "required_runtime_entries": ",".join(payload.required_runtime_entries),
+                "install_profile_id": payload.install_profile_id,
+            }
+        )
+    if action.action_type == "managed_target_prepare":
+        state.update(
+            {
+                "managed_target_path": view.managed_target_path,
+                "directory_count": str(len(prepared.get("dir_paths", ()))),
+                "file_count": str(len(prepared.get("file_paths", ()))),
+            }
+        )
     if action.action_type == "artifact_generate":
         state.update(
             {
                 "managed_target_path": view.managed_target_path,
                 "file_count": str(len(prepared.get("file_paths", ()))),
+            }
+        )
+    if action.action_type == "workspace_integration":
+        payload = prepared["payload"]
+        assert isinstance(payload, WorkspaceIntegrationExecutionPayload)
+        state.update(
+            {
+                "integration_count": str(len(payload.items)),
+                "target_class": payload.items[0].target_class if payload.items else "",
             }
         )
     return state
@@ -596,6 +699,46 @@ def _execute_action(
         after_state.setdefault("state", f"after:{action.action_id}")
         after_state.setdefault("managed_target_ref", view.managed_target_ref)
         return after_state
+    if action.action_type == "runtime_remediation":
+        payload = prepared["payload"]
+        managed_runtime_root = prepared["managed_runtime_root"]
+        assert isinstance(payload, RuntimeRemediationExecutionPayload)
+        assert isinstance(managed_runtime_root, Path)
+        if context.execute_actions:
+            remediator = context.runtime_remediator or _default_runtime_remediator
+            after_state = remediator(payload, managed_runtime_root)
+        else:
+            after_state = {
+                "mode": "preflight",
+                "required_runtime_entries": ",".join(payload.required_runtime_entries),
+                "install_profile_id": payload.install_profile_id,
+            }
+        after_state.setdefault("state", f"after:{action.action_id}")
+        after_state.setdefault("managed_target_ref", view.managed_target_ref)
+        after_state.setdefault("managed_runtime_root", str(managed_runtime_root))
+        return after_state
+    if action.action_type == "managed_target_prepare":
+        payload = prepared["payload"]
+        managed_root = prepared["managed_root"]
+        assert isinstance(payload, ManagedTargetPrepareExecutionPayload)
+        assert isinstance(managed_root, Path)
+        if context.execute_actions:
+            after_state = _default_managed_target_preparer(
+                payload,
+                managed_root,
+                prepared.get("dir_paths", []),
+                prepared.get("file_paths", []),
+            )
+        else:
+            after_state = {
+                "mode": "preflight",
+                "prepared_files": str(len(payload.files)),
+                "prepared_directories": str(len(payload.directories)),
+            }
+        after_state.setdefault("state", f"after:{action.action_id}")
+        after_state.setdefault("managed_target_ref", view.managed_target_ref)
+        after_state.setdefault("target_root", str(managed_root))
+        return after_state
     if action.action_type == "artifact_generate":
         payload = prepared["payload"]
         managed_root = prepared["managed_root"]
@@ -619,6 +762,20 @@ def _execute_action(
         after_state.setdefault("state", f"after:{action.action_id}")
         after_state.setdefault("managed_target_ref", view.managed_target_ref)
         return after_state
+    if action.action_type == "workspace_integration":
+        payload = prepared["payload"]
+        assert isinstance(payload, WorkspaceIntegrationExecutionPayload)
+        if context.execute_actions:
+            integrator = context.workspace_integrator or _default_workspace_integrator
+            after_state = integrator(payload, _repo_root(context))
+        else:
+            after_state = {
+                "mode": "preflight",
+                "applied_integrations": ",".join(item.integration_id for item in payload.items),
+            }
+        after_state.setdefault("state", f"after:{action.action_id}")
+        after_state.setdefault("managed_target_ref", view.managed_target_ref)
+        return after_state
     return {
         "state": f"after:{action.action_id}",
         "managed_target_ref": view.managed_target_ref,
@@ -627,7 +784,7 @@ def _execute_action(
 
 def _repo_root(context: ManagedDeliveryExecutorContext) -> Path:
     if context.repo_root is None:
-        raise ValueError("managed_delivery_repo_root_missing")
+        return Path.cwd().resolve()
     return context.repo_root.resolve()
 
 
@@ -709,6 +866,66 @@ def _default_artifact_writer(
         "output_root": str(managed_root),
         "generated_files": str(len(payload.files)),
         "generated_directories": str(len(dir_paths)),
+    }
+
+
+def _default_runtime_remediator(
+    payload: RuntimeRemediationExecutionPayload,
+    managed_runtime_root: Path,
+) -> dict[str, str]:
+    managed_runtime_root.mkdir(parents=True, exist_ok=True)
+    for runtime_entry in payload.required_runtime_entries:
+        (managed_runtime_root / runtime_entry).mkdir(parents=True, exist_ok=True)
+    return {
+        "managed_runtime_root": str(managed_runtime_root),
+        "required_runtime_entries": ",".join(payload.required_runtime_entries),
+        "install_profile_id": payload.install_profile_id,
+        "applied_entries": ",".join(payload.required_runtime_entries),
+    }
+
+
+def _default_managed_target_preparer(
+    payload: ManagedTargetPrepareExecutionPayload,
+    managed_root: Path,
+    dir_paths: list[Path],
+    file_paths: list[Path],
+) -> dict[str, str]:
+    managed_root.mkdir(parents=True, exist_ok=True)
+    for directory in dir_paths:
+        directory.mkdir(parents=True, exist_ok=True)
+    for generated_file, target in zip(payload.files, file_paths, strict=True):
+        assert isinstance(generated_file, GeneratedArtifactFile)
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text(generated_file.content, encoding=generated_file.encoding)
+    return {
+        "target_root": str(managed_root.resolve()),
+        "prepared_directories": str(len(dir_paths)),
+        "prepared_files": str(len(payload.files)),
+    }
+
+
+def _default_workspace_integrator(
+    payload: WorkspaceIntegrationExecutionPayload,
+    repo_root: Path,
+) -> dict[str, str]:
+    applied_ids: list[str] = []
+    for item in payload.items:
+        assert isinstance(item, WorkspaceIntegrationItem)
+        target = _resolve_managed_child(
+            repo_root,
+            item.target_path,
+            blocker="workspace_integration_outside_repo_root",
+        )
+        if item.mutation_kind == "write_new" and target.exists():
+            raise ValueError("workspace_integration_write_new_target_exists")
+        if item.mutation_kind == "overwrite_existing" and not target.exists():
+            raise ValueError("workspace_integration_overwrite_target_missing")
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text(item.content, encoding="utf-8")
+        applied_ids.append(item.integration_id)
+    return {
+        "applied_integrations": ",".join(applied_ids),
+        "written_paths": ",".join(item.target_path for item in payload.items),
     }
 
 

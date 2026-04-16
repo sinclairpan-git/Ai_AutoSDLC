@@ -47,8 +47,8 @@
   - 命令：`uv run pytest tests/unit/test_program_service.py tests/unit/test_frontend_browser_gate_runtime.py tests/unit/test_frontend_gate_verification.py tests/integration/test_cli_program.py -k "browser_gate_probe or frontend_browser_gate or materialize_browser_gate_probe_runtime" -q`
   - 结果：`11 passed, 384 deselected`
 - `V3`（框架验证）
-  - 命令：`uv run ai-sdlc program validate`；`uv run ai-sdlc verify constraints`
-  - 结果：`program validate: PASS`；`verify constraints: no BLOCKERs.`
+  - 命令：`uv run ruff check src/ai_sdlc/models/frontend_browser_gate.py src/ai_sdlc/core/frontend_browser_gate_runtime.py src/ai_sdlc/core/program_service.py scripts/frontend_browser_gate_probe_runner.mjs tests/unit/test_frontend_browser_gate_runtime.py tests/unit/test_program_service.py tests/unit/test_frontend_gate_verification.py tests/integration/test_cli_program.py`；`uv run ai-sdlc program validate`；`uv run ai-sdlc verify constraints`
+  - 结果：`ruff check: All checks passed!`；`program validate: PASS`；`verify constraints: no BLOCKERs.`
 - `V4`（formal truth）
   - 命令：`python -m ai_sdlc workitem truth-check --wi specs/143-frontend-mainline-browser-gate-real-probe-runtime-baseline`
   - 结果：通过；classification=`branch_only_implemented`（已进入当前分支 `HEAD`，尚未并入 `main`）
@@ -129,8 +129,10 @@
 
 #### 2.8 归档后动作
 
-- 已完成 git 提交：是
-- 提交哈希：`HEAD`（本批已合入当前分支头）
+- **验证画像**：`code-change`
+- **改动范围**：`src/ai_sdlc/models/frontend_browser_gate.py`、`src/ai_sdlc/core/frontend_browser_gate_runtime.py`、`src/ai_sdlc/core/program_service.py`、`scripts/frontend_browser_gate_probe_runner.mjs`、`tests/unit/test_frontend_browser_gate_runtime.py`、`tests/unit/test_program_service.py`、`tests/unit/test_frontend_gate_verification.py`、`tests/integration/test_cli_program.py`、`specs/143-frontend-mainline-browser-gate-real-probe-runtime-baseline/tasks.md`
+- **已完成 git 提交**：是
+- **提交哈希**：`HEAD`（本批已合入当前分支头）
 - 当前批次 branch disposition 状态：已闭环，待后续 tranche 决策
 - 当前批次 worktree disposition 状态：已闭环，待后续 tranche 决策
 - 是否继续下一批：可继续

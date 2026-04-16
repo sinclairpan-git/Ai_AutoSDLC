@@ -22,6 +22,29 @@ def _build_action(
     depends_on_action_ids: list[str] | None = None,
     executor_payload: dict[str, object] | None = None,
 ) -> FrontendActionPlanAction:
+    effective_payload = executor_payload or {}
+    if not effective_payload and action_type == "runtime_remediation":
+        effective_payload = {
+            "managed_runtime_root": ".ai-sdlc/runtime",
+            "required_runtime_entries": ["node_runtime"],
+            "install_profile_id": "offline_bundle_darwin_shell",
+            "acquisition_mode": "managed_runtime_install",
+            "will_download": ["node_runtime"],
+            "will_install": [],
+            "will_modify": [".ai-sdlc/runtime"],
+            "manual_prerequisites": [],
+            "reentry_condition": "rerun managed delivery apply",
+        }
+    if not effective_payload and action_type == "managed_target_prepare":
+        effective_payload = {
+            "directories": ["src"],
+            "files": [
+                {
+                    "path": "package.json",
+                    "content": '{\n  "name": "managed-frontend",\n  "private": true\n}\n',
+                }
+            ],
+        }
     return FrontendActionPlanAction(
         action_id=action_id,
         effect_kind="mutate",
@@ -35,7 +58,7 @@ def _build_action(
         cleanup_ref=f"cleanup:{action_id}",
         risk_flags=[],
         source_linkage_refs={"spec": "specs/001-auth"},
-        executor_payload=executor_payload or {},
+        executor_payload=effective_payload,
     )
 
 
@@ -121,7 +144,7 @@ def test_run_managed_delivery_apply_blocks_when_risk_acknowledgement_missing() -
 
 
 def test_run_managed_delivery_apply_blocks_when_required_unsupported_selected() -> None:
-    view = _build_view(_build_action(action_id="a1", action_type="workspace_integration"))
+    view = _build_view(_build_action(action_id="a1", action_type="custom_shell_execute"))
     receipt = _build_receipt(selected_action_ids=["a1"])
 
     result = run_managed_delivery_apply(view, receipt, ManagedDeliveryExecutorContext())
@@ -148,7 +171,7 @@ def test_run_managed_delivery_apply_blocks_when_dependency_is_unsupported() -> N
     view = _build_view(
         _build_action(
             action_id="a1",
-            action_type="workspace_integration",
+            action_type="custom_optional_action",
             required=False,
         ),
         _build_action(
@@ -405,6 +428,213 @@ def test_run_managed_delivery_apply_returns_pending_browser_gate_success() -> No
         "succeeded",
     ]
     assert all(entry.after_state for entry in result.ledger_entries)
+
+
+def test_run_managed_delivery_apply_materializes_runtime_remediation_truth(
+    tmp_path: Path,
+) -> None:
+    view = _build_view(
+        _build_action(
+            action_id="a1",
+            action_type="runtime_remediation",
+            executor_payload={
+                "managed_runtime_root": ".ai-sdlc/runtime",
+                "required_runtime_entries": ["node_runtime", "package_manager"],
+                "install_profile_id": "offline_bundle_darwin_shell",
+                "acquisition_mode": "managed_runtime_install",
+                "will_download": ["node_runtime"],
+                "will_install": ["package_manager"],
+                "will_modify": [".ai-sdlc/runtime"],
+                "manual_prerequisites": [],
+                "reentry_condition": "rerun managed delivery apply",
+            },
+        )
+    )
+    receipt = _build_receipt(selected_action_ids=["a1"])
+
+    result = run_managed_delivery_apply(
+        view,
+        receipt,
+        ManagedDeliveryExecutorContext(
+            host_ingress_allowed=True,
+            execute_actions=True,
+            repo_root=tmp_path,
+        ),
+    )
+
+    assert result.result_status == "apply_succeeded_pending_browser_gate"
+    entry = result.ledger_entries[0]
+    assert entry.after_state["managed_runtime_root"].endswith(".ai-sdlc/runtime")
+    assert entry.after_state["required_runtime_entries"] == "node_runtime,package_manager"
+
+
+def test_run_managed_delivery_apply_materializes_managed_target_prepare_truth(
+    tmp_path: Path,
+) -> None:
+    view = _build_view(
+        _build_action(
+            action_id="a1",
+            action_type="managed_target_prepare",
+            executor_payload={
+                "directories": ["src"],
+                "files": [
+                    {
+                        "path": "package.json",
+                        "content": '{\n  "name": "managed-frontend",\n  "private": true\n}\n',
+                    }
+                ],
+            },
+        )
+    )
+    receipt = _build_receipt(selected_action_ids=["a1"])
+
+    result = run_managed_delivery_apply(
+        view,
+        receipt,
+        ManagedDeliveryExecutorContext(
+            host_ingress_allowed=True,
+            execute_actions=True,
+            repo_root=tmp_path,
+        ),
+    )
+
+    assert result.result_status == "apply_succeeded_pending_browser_gate"
+    target_root = tmp_path / "managed" / "frontend"
+    assert (target_root / "src").is_dir()
+    assert (target_root / "package.json").is_file()
+    assert result.ledger_entries[0].after_state["target_root"] == str(target_root.resolve())
+
+
+def test_run_managed_delivery_apply_executes_workspace_integration_when_selected(
+    tmp_path: Path,
+) -> None:
+    view = _build_view(
+        _build_action(
+            action_id="a1",
+            action_type="workspace_integration",
+            required=False,
+            executor_payload={
+                "items": [
+                    {
+                        "integration_id": "workspace-package-json",
+                        "target_class": "workspace",
+                        "target_path": "package.json",
+                        "mutation_kind": "write_new",
+                        "content": '{\n  "name": "root-app"\n}\n',
+                        "requires_explicit_confirmation": True,
+                        "will_not_touch_refs": ["legacy-root"],
+                    }
+                ]
+            },
+        )
+    )
+    receipt = _build_receipt(selected_action_ids=["a1"])
+
+    result = run_managed_delivery_apply(
+        view,
+        receipt,
+        ManagedDeliveryExecutorContext(
+            host_ingress_allowed=True,
+            execute_actions=True,
+            repo_root=tmp_path,
+        ),
+    )
+
+    assert result.result_status == "apply_succeeded_pending_browser_gate"
+    assert (tmp_path / "package.json").read_text(encoding="utf-8") == '{\n  "name": "root-app"\n}\n'
+    assert result.ledger_entries[0].after_state["applied_integrations"] == "workspace-package-json"
+
+
+def test_run_managed_delivery_apply_blocks_workspace_integration_on_mixed_target_classes(
+    tmp_path: Path,
+) -> None:
+    view = _build_view(
+        _build_action(
+            action_id="a1",
+            action_type="workspace_integration",
+            required=False,
+            executor_payload={
+                "items": [
+                    {
+                        "integration_id": "workspace-package-json",
+                        "target_class": "workspace",
+                        "target_path": "package.json",
+                        "mutation_kind": "write_new",
+                        "content": "{}\n",
+                        "requires_explicit_confirmation": True,
+                        "will_not_touch_refs": [],
+                    },
+                    {
+                        "integration_id": "route-config",
+                        "target_class": "route",
+                        "target_path": "router/index.ts",
+                        "mutation_kind": "write_new",
+                        "content": "export {}\n",
+                        "requires_explicit_confirmation": True,
+                        "will_not_touch_refs": [],
+                    },
+                ]
+            },
+        )
+    )
+    receipt = _build_receipt(selected_action_ids=["a1"])
+
+    result = run_managed_delivery_apply(
+        view,
+        receipt,
+        ManagedDeliveryExecutorContext(
+            host_ingress_allowed=True,
+            execute_actions=False,
+            repo_root=tmp_path,
+        ),
+    )
+
+    assert result.result_status == "blocked_before_start"
+    assert result.blockers == ["workspace_integration_mixed_target_classes"]
+
+
+def test_run_managed_delivery_apply_blocks_workspace_integration_on_symlink_escape(
+    tmp_path: Path,
+) -> None:
+    outside_root = tmp_path.parent / "outside-workspace"
+    outside_root.mkdir(parents=True, exist_ok=True)
+    symlink_root = tmp_path / "links"
+    symlink_root.mkdir(parents=True, exist_ok=True)
+    (symlink_root / "escape").symlink_to(outside_root, target_is_directory=True)
+    view = _build_view(
+        _build_action(
+            action_id="a1",
+            action_type="workspace_integration",
+            required=False,
+            executor_payload={
+                "items": [
+                    {
+                        "integration_id": "escaped-write",
+                        "target_class": "workspace",
+                        "target_path": "links/escape/package.json",
+                        "mutation_kind": "write_new",
+                        "content": "{}\n",
+                        "requires_explicit_confirmation": True,
+                        "will_not_touch_refs": [],
+                    }
+                ]
+            },
+        )
+    )
+    receipt = _build_receipt(selected_action_ids=["a1"])
+
+    result = run_managed_delivery_apply(
+        view,
+        receipt,
+        ManagedDeliveryExecutorContext(
+            host_ingress_allowed=True,
+            execute_actions=False,
+            repo_root=tmp_path,
+        ),
+    )
+
+    assert result.result_status == "blocked_before_start"
+    assert result.blockers == ["workspace_integration_outside_repo_root"]
 
 
 def test_run_managed_delivery_apply_blocks_on_dependency_cycle() -> None:

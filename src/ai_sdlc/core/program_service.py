@@ -37,6 +37,7 @@ from ai_sdlc.core.frontend_visual_a11y_evidence_provider import (
     load_frontend_visual_a11y_evidence_artifact,
     visual_a11y_evidence_artifact_path,
 )
+from ai_sdlc.core.host_runtime_manager import evaluate_current_host_runtime
 from ai_sdlc.core.managed_delivery_apply import (
     ALLOWED_ACTION_TYPES,
     run_managed_delivery_apply,
@@ -73,9 +74,14 @@ from ai_sdlc.models.frontend_managed_delivery import (
     DeliveryApplyDecisionReceipt,
     ManagedDeliveryExecutorContext,
 )
+from ai_sdlc.models.frontend_provider_profile import (
+    build_mvp_enterprise_vue2_provider_profile,
+)
 from ai_sdlc.models.frontend_solution_confirmation import (
     AvailabilitySummary,
     FrontendSolutionSnapshot,
+    InstallStrategy,
+    build_builtin_install_strategies,
     build_builtin_style_pack_manifests,
     build_mvp_solution_snapshot,
 )
@@ -128,8 +134,11 @@ PROGRAM_FRONTEND_GOVERNANCE_MATERIALIZE_COMMAND = (
 PROGRAM_FRONTEND_REMEDIATION_WRITEBACK_REL_PATH = (
     ".ai-sdlc/memory/frontend-remediation/latest.yaml"
 )
-PROGRAM_FRONTEND_MANAGED_DELIVERY_APPLY_ARTIFACT_REL_PATH = (
+PROGRAM_FRONTEND_MANAGED_DELIVERY_REQUEST_ARTIFACT_REL_PATH = (
     ".ai-sdlc/memory/frontend-managed-delivery/latest.yaml"
+)
+PROGRAM_FRONTEND_MANAGED_DELIVERY_APPLY_ARTIFACT_REL_PATH = (
+    ".ai-sdlc/memory/frontend-managed-delivery-apply/latest.yaml"
 )
 PROGRAM_FRONTEND_BROWSER_GATE_ARTIFACT_REL_PATH = (
     ".ai-sdlc/memory/frontend-browser-gate/latest.yaml"
@@ -354,6 +363,8 @@ class ProgramFrontendManagedDeliveryApplyRequest:
     unsupported_action_ids: list[str] = field(default_factory=list)
     remaining_blockers: list[str] = field(default_factory=list)
     warnings: list[str] = field(default_factory=list)
+    plain_language_blockers: list[str] = field(default_factory=list)
+    recommended_next_steps: list[str] = field(default_factory=list)
     execution_view: ConfirmedActionPlanExecutionView | None = None
     decision_receipt: DeliveryApplyDecisionReceipt | None = None
 
@@ -2099,11 +2110,15 @@ class ProgramService:
 
     def build_frontend_managed_delivery_apply_request(
         self,
-        request_path: str | Path,
+        request_path: str | Path | None = None,
     ) -> ProgramFrontendManagedDeliveryApplyRequest:
         """Load and gate a managed delivery apply request payload."""
 
-        payload_path = self._resolve_project_relative_path(request_path)
+        payload_path = (
+            self._materialize_frontend_managed_delivery_apply_request()
+            if request_path is None
+            else self._resolve_project_relative_path(request_path)
+        )
         payload = yaml.safe_load(payload_path.read_text(encoding="utf-8")) or {}
         execution_view = ConfirmedActionPlanExecutionView.model_validate(
             payload.get("execution_view", {})
@@ -2111,6 +2126,8 @@ class ProgramService:
         decision_receipt = DeliveryApplyDecisionReceipt.model_validate(
             payload.get("decision_receipt", {})
         )
+        blockers = _normalize_string_list(payload.get("materialization_blockers", []))
+        warnings = _normalize_string_list(payload.get("warnings", []))
         selected_mutate_actions = [
             action
             for action in execution_view.action_items
@@ -2127,7 +2144,6 @@ class ProgramService:
             for action in selected_mutate_actions
             if action.action_type not in ALLOWED_ACTION_TYPES
         ]
-        blockers: list[str] = []
         preflight_result = run_managed_delivery_apply(
             execution_view,
             decision_receipt,
@@ -2141,24 +2157,476 @@ class ProgramService:
             blockers.extend(preflight_result.blockers)
         if load_project_config(self.root).adapter_ingress_state.strip() != "verified_loaded":
             blockers.append("host_ingress_below_mutate_threshold")
+        normalized_blockers = _unique_strings(blockers)
+        plain_language_blockers, recommended_next_steps = (
+            _build_managed_delivery_user_guidance(normalized_blockers)
+        )
         return ProgramFrontendManagedDeliveryApplyRequest(
             required=True,
             confirmation_required=True,
-            apply_state="blocked_before_start" if blockers else "ready_to_execute",
+            apply_state="blocked_before_start" if normalized_blockers else "ready_to_execute",
             request_source_path=self._safe_relative_path(payload_path),
             action_plan_id=execution_view.action_plan_id,
             plan_fingerprint=execution_view.plan_fingerprint,
             selected_action_ids=list(decision_receipt.selected_action_ids),
             executable_action_ids=executable_action_ids,
             unsupported_action_ids=unsupported_action_ids,
-            remaining_blockers=blockers,
+            remaining_blockers=normalized_blockers,
+            warnings=warnings,
+            plain_language_blockers=plain_language_blockers,
+            recommended_next_steps=recommended_next_steps,
             execution_view=execution_view,
             decision_receipt=decision_receipt,
         )
 
+    def _materialize_frontend_managed_delivery_apply_request(self) -> Path:
+        payload = self._build_frontend_managed_delivery_apply_request_payload()
+        payload_path = self.root / PROGRAM_FRONTEND_MANAGED_DELIVERY_REQUEST_ARTIFACT_REL_PATH
+        payload_path.parent.mkdir(parents=True, exist_ok=True)
+        payload_path.write_text(
+            yaml.safe_dump(payload, sort_keys=False, allow_unicode=True),
+            encoding="utf-8",
+        )
+        return payload_path
+
+    def _looks_like_frontend_managed_delivery_apply_payload(
+        self,
+        payload: object,
+    ) -> bool:
+        if not isinstance(payload, dict):
+            return False
+        return bool(
+            str(payload.get("apply_result_id", "")).strip()
+            and str(payload.get("result_status", "")).strip()
+        )
+
+    def _load_frontend_managed_delivery_apply_artifact(
+        self,
+        apply_artifact_path: str | Path | None = None,
+    ) -> tuple[Path | None, str, dict[str, object] | None, str | None]:
+        if apply_artifact_path is not None:
+            explicit_path = Path(apply_artifact_path)
+            if not explicit_path.is_absolute():
+                explicit_path = self.root / explicit_path
+            explicit_rel = _relative_to_root_or_str(self.root, explicit_path)
+            if not explicit_path.is_file():
+                return None, explicit_rel, None, "missing"
+            try:
+                payload = yaml.safe_load(explicit_path.read_text(encoding="utf-8")) or {}
+            except yaml.YAMLError as exc:
+                return explicit_path, explicit_rel, None, f"invalid:{exc}"
+            return explicit_path, explicit_rel, payload, None
+
+        canonical_apply_path = self.root / PROGRAM_FRONTEND_MANAGED_DELIVERY_APPLY_ARTIFACT_REL_PATH
+        canonical_apply_rel = _relative_to_root_or_str(self.root, canonical_apply_path)
+        if canonical_apply_path.is_file():
+            try:
+                payload = yaml.safe_load(canonical_apply_path.read_text(encoding="utf-8")) or {}
+            except yaml.YAMLError as exc:
+                return canonical_apply_path, canonical_apply_rel, None, f"invalid:{exc}"
+            return canonical_apply_path, canonical_apply_rel, payload, None
+
+        legacy_apply_path = self.root / PROGRAM_FRONTEND_MANAGED_DELIVERY_REQUEST_ARTIFACT_REL_PATH
+        legacy_apply_rel = _relative_to_root_or_str(self.root, legacy_apply_path)
+        if legacy_apply_path.is_file():
+            try:
+                payload = yaml.safe_load(legacy_apply_path.read_text(encoding="utf-8")) or {}
+            except yaml.YAMLError as exc:
+                return legacy_apply_path, legacy_apply_rel, None, f"invalid:{exc}"
+            if self._looks_like_frontend_managed_delivery_apply_payload(payload):
+                return legacy_apply_path, legacy_apply_rel, payload, None
+
+        return None, canonical_apply_rel, None, "missing"
+
+    def _build_frontend_managed_delivery_apply_request_payload(self) -> dict[str, object]:
+        solution_snapshot, snapshot_blocker = self._load_latest_frontend_solution_snapshot()
+        if solution_snapshot is None:
+            raise ValueError(snapshot_blocker or "frontend_solution_snapshot_missing")
+
+        host_plan = evaluate_current_host_runtime(self.root)
+        bundle = self._resolve_frontend_delivery_bundle(solution_snapshot)
+        blockers = list(bundle["blockers"])
+        warnings = list(bundle["warnings"])
+
+        if host_plan.status in {"bootstrap_required", "blocked", "partial"}:
+            blockers.extend(
+                f"host_runtime_{host_plan.status}:{reason}"
+                for reason in host_plan.reason_codes
+            )
+
+        action_items: list[dict[str, object]] = []
+        selected_action_ids: list[str] = []
+
+        runtime_action_id = ""
+        if host_plan.status == "remediation_required" and host_plan.remediation_fragment is not None:
+            runtime_action_id = "runtime-remediation"
+            action_items.append(
+                {
+                    "action_id": runtime_action_id,
+                    "effect_kind": "mutate",
+                    "action_type": "runtime_remediation",
+                    "required": True,
+                    "selected": True,
+                    "default_selected": True,
+                    "depends_on_action_ids": [],
+                    "rollback_ref": "rollback:runtime-remediation",
+                    "retry_ref": "retry:runtime-remediation",
+                    "cleanup_ref": "cleanup:runtime-remediation",
+                    "risk_flags": [],
+                    "source_linkage_refs": {
+                        "host_runtime_plan_id": host_plan.plan_id,
+                        "solution_snapshot_id": solution_snapshot.snapshot_id,
+                    },
+                    "executor_payload": self._runtime_remediation_payload_from_host_plan(host_plan),
+                }
+            )
+            selected_action_ids.append(runtime_action_id)
+
+        managed_target_prepare_id = "managed-target-prepare"
+        action_items.append(
+            {
+                "action_id": managed_target_prepare_id,
+                "effect_kind": "mutate",
+                "action_type": "managed_target_prepare",
+                "required": True,
+                "selected": True,
+                "default_selected": True,
+                "depends_on_action_ids": [runtime_action_id] if runtime_action_id else [],
+                "rollback_ref": "rollback:managed-target-prepare",
+                "retry_ref": "retry:managed-target-prepare",
+                "cleanup_ref": "cleanup:managed-target-prepare",
+                "risk_flags": [],
+                "source_linkage_refs": {
+                    "solution_snapshot_id": solution_snapshot.snapshot_id,
+                    "delivery_provider_id": bundle["provider_id"],
+                },
+                "executor_payload": self._managed_target_prepare_payload(bundle["package_manager"]),
+            }
+        )
+        selected_action_ids.append(managed_target_prepare_id)
+
+        dependency_install_id = "dependency-install"
+        dependency_dependencies = [managed_target_prepare_id]
+        if runtime_action_id:
+            dependency_dependencies.insert(0, runtime_action_id)
+        action_items.append(
+            {
+                "action_id": dependency_install_id,
+                "effect_kind": "mutate",
+                "action_type": "dependency_install",
+                "required": True,
+                "selected": True,
+                "default_selected": True,
+                "depends_on_action_ids": dependency_dependencies,
+                "rollback_ref": "rollback:dependency-install",
+                "retry_ref": "retry:dependency-install",
+                "cleanup_ref": "cleanup:dependency-install",
+                "risk_flags": [],
+                "source_linkage_refs": {
+                    "solution_snapshot_id": solution_snapshot.snapshot_id,
+                    "install_strategy_id": bundle["install_strategy_id"],
+                },
+                "executor_payload": {
+                    "install_strategy_id": bundle["install_strategy_id"],
+                    "package_manager": bundle["package_manager"],
+                    "working_directory": ".",
+                    "packages": [*bundle["component_library_packages"], *bundle["adapter_packages"]],
+                },
+            }
+        )
+        selected_action_ids.append(dependency_install_id)
+
+        workspace_integration_id = "workspace-integration"
+        action_items.append(
+            {
+                "action_id": workspace_integration_id,
+                "effect_kind": "mutate",
+                "action_type": "workspace_integration",
+                "required": False,
+                "selected": False,
+                "default_selected": False,
+                "depends_on_action_ids": [dependency_install_id],
+                "rollback_ref": "rollback:workspace-integration",
+                "retry_ref": "retry:workspace-integration",
+                "cleanup_ref": "cleanup:workspace-integration",
+                "risk_flags": ["risk:root-level-mutate"],
+                "source_linkage_refs": {
+                    "solution_snapshot_id": solution_snapshot.snapshot_id,
+                    "root_integration_mode": "default_off",
+                },
+                "executor_payload": {"items": []},
+            }
+        )
+
+        plan_seed = {
+            "solution_snapshot_id": solution_snapshot.snapshot_id,
+            "provider_id": bundle["provider_id"],
+            "install_strategy_id": bundle["install_strategy_id"],
+            "host_plan_id": host_plan.plan_id,
+            "selected_action_ids": selected_action_ids,
+            "blockers": blockers,
+        }
+        plan_fingerprint = hashlib.sha256(
+            json.dumps(plan_seed, sort_keys=True).encode("utf-8")
+        ).hexdigest()[:16]
+        spec_dir = f"specs/{solution_snapshot.project_id}"
+        normalized_blockers = _unique_strings(blockers)
+        plain_language_blockers, recommended_next_steps = _build_managed_delivery_user_guidance(
+            normalized_blockers
+        )
+        reentry_condition = (
+            recommended_next_steps[0]
+            if recommended_next_steps
+            else "review managed delivery request and continue when ready"
+        )
+        payload = {
+            "request_id": f"request-{solution_snapshot.snapshot_id}",
+            "generated_at": utc_now_z(),
+            "solution_snapshot_ref": (
+                _relative_to_root_or_str(
+                    self.root,
+                    frontend_solution_confirmation_memory_root(self.root) / "latest.yaml",
+                )
+                + f"#snapshot_id={solution_snapshot.snapshot_id}"
+            ),
+            "host_runtime_plan_ref": f"host_runtime_plan://{host_plan.plan_id}",
+            "delivery_bundle_entry_ref": (
+                "delivery_bundle_entry://"
+                f"{solution_snapshot.effective_frontend_stack}/"
+                f"{bundle['provider_id']}/"
+                f"{solution_snapshot.effective_style_pack_id}"
+            ),
+            "posture_assessment_ref": (
+                f"frontend_posture_assessment://{solution_snapshot.project_id}"
+            ),
+            "materialization_blockers": normalized_blockers,
+            "warnings": _unique_strings(warnings),
+            "plain_language_blockers": plain_language_blockers,
+            "recommended_next_steps": recommended_next_steps,
+            "reentry_condition": reentry_condition,
+            "execution_view": {
+                "action_plan_id": f"plan-{solution_snapshot.snapshot_id}",
+                "confirmation_surface_id": f"surface-{solution_snapshot.snapshot_id}",
+                "plan_fingerprint": plan_fingerprint,
+                "protocol_version": "1",
+                "managed_target_ref": f"managed://frontend/{solution_snapshot.project_id}",
+                "managed_target_path": "managed/frontend",
+                "attachment_scope_ref": f"scope://{solution_snapshot.project_id}",
+                "readiness_subject_id": solution_snapshot.project_id,
+                "spec_dir": spec_dir,
+                "action_items": action_items,
+                "will_not_touch": ["legacy-root"],
+            },
+            "decision_surface_seed": {
+                "surface_id": f"surface-{solution_snapshot.snapshot_id}",
+                "action_plan_id": f"plan-{solution_snapshot.snapshot_id}",
+                "selected_action_ids": selected_action_ids,
+                "deselected_optional_action_ids": [workspace_integration_id],
+                "required_action_ids": selected_action_ids,
+            },
+            "decision_receipt": {
+                "decision_receipt_id": f"receipt-{solution_snapshot.snapshot_id}",
+                "action_plan_id": f"plan-{solution_snapshot.snapshot_id}",
+                "confirmation_surface_id": f"surface-{solution_snapshot.snapshot_id}",
+                "decision": "continue",
+                "selected_action_ids": selected_action_ids,
+                "deselected_optional_action_ids": [workspace_integration_id],
+                "risk_acknowledgement_ids": [],
+                "second_confirmation_acknowledged": True,
+                "confirmed_plan_fingerprint": plan_fingerprint,
+                "created_at": utc_now_z(),
+            },
+        }
+        return payload
+
+    def _resolve_frontend_delivery_bundle(
+        self,
+        solution_snapshot: FrontendSolutionSnapshot,
+    ) -> dict[str, object]:
+        provider_id = solution_snapshot.effective_provider_id
+        blockers: list[str] = []
+        warnings: list[str] = []
+
+        provider_manifest = self._load_provider_manifest(provider_id)
+        if provider_manifest is None:
+            return {
+                "provider_id": provider_id,
+                "install_strategy_id": "",
+                "package_manager": "pnpm",
+                "component_library_packages": [],
+                "adapter_packages": [],
+                "blockers": [f"delivery_provider_manifest_missing:{provider_id}"],
+                "warnings": [],
+            }
+
+        style_support = self._load_provider_style_support(provider_id)
+        if style_support is None:
+            blockers.append(f"delivery_style_support_missing:{provider_id}")
+            style_support = {}
+
+        style_entry = next(
+            (
+                item
+                for item in _normalize_mapping_list(style_support.get("items", []))
+                if str(item.get("style_pack_id", "")).strip()
+                == solution_snapshot.effective_style_pack_id
+            ),
+            None,
+        )
+        if style_entry is None:
+            blockers.append(
+                f"delivery_style_support_entry_missing:{solution_snapshot.effective_style_pack_id}"
+            )
+        elif str(style_entry.get("fidelity_status", "")).strip() == "unsupported":
+            blockers.append(
+                f"delivery_style_support_unsupported:{solution_snapshot.effective_style_pack_id}"
+            )
+
+        strategy_ids = _normalize_string_list(provider_manifest.get("install_strategy_ids", []))
+        if not strategy_ids:
+            blockers.append(f"delivery_install_strategy_missing:{provider_id}")
+            return {
+                "provider_id": provider_id,
+                "install_strategy_id": "",
+                "package_manager": "pnpm",
+                "component_library_packages": [],
+                "adapter_packages": [],
+                "blockers": blockers,
+                "warnings": warnings,
+            }
+
+        strategy = self._load_install_strategy(strategy_ids[0])
+        if strategy is None:
+            blockers.append(f"delivery_install_strategy_missing:{strategy_ids[0]}")
+            return {
+                "provider_id": provider_id,
+                "install_strategy_id": "",
+                "package_manager": "pnpm",
+                "component_library_packages": [],
+                "adapter_packages": [],
+                "blockers": blockers,
+                "warnings": warnings,
+            }
+
+        manifest_provider_id = str(provider_manifest.get("provider_id", "")).strip()
+        manifest_access_mode = str(provider_manifest.get("access_mode", "")).strip()
+        if manifest_provider_id and manifest_provider_id != strategy.provider_id:
+            blockers.append(f"delivery_provider_mismatch:{provider_id}")
+        if manifest_access_mode and manifest_access_mode != strategy.access_mode:
+            blockers.append(f"delivery_access_mode_mismatch:{provider_id}")
+
+        passed_checks = set(solution_snapshot.availability_summary.passed_check_ids)
+        required_checks = [
+            *strategy.registry_requirements,
+            *strategy.credential_requirements,
+        ]
+        for requirement in required_checks:
+            if requirement in passed_checks:
+                continue
+            prefix = (
+                "private_registry_prerequisite_missing"
+                if strategy.access_mode == "private"
+                else "registry_prerequisite_missing"
+            )
+            blockers.append(f"{prefix}:{requirement}")
+
+        return {
+            "provider_id": provider_id,
+            "install_strategy_id": strategy.strategy_id,
+            "package_manager": strategy.package_manager,
+            "component_library_packages": list(strategy.packages),
+            "adapter_packages": [],
+            "blockers": blockers,
+            "warnings": warnings,
+        }
+
+    def _load_install_strategy(self, strategy_id: str) -> InstallStrategy | None:
+        strategy_path = (
+            self.root
+            / "governance"
+            / "frontend"
+            / "solution"
+            / "install-strategies"
+            / f"{strategy_id}.yaml"
+        )
+        if not strategy_path.is_file():
+            return next(
+                (
+                    strategy
+                    for strategy in build_builtin_install_strategies()
+                    if strategy.strategy_id == strategy_id
+                ),
+                None,
+            )
+        payload = yaml.safe_load(strategy_path.read_text(encoding="utf-8")) or {}
+        try:
+            return InstallStrategy.model_validate(payload)
+        except Exception:
+            return None
+
+    def _load_provider_manifest(self, provider_id: str) -> dict[str, object] | None:
+        manifest_path = (
+            self.root / "providers" / "frontend" / provider_id / "provider.manifest.yaml"
+        )
+        if manifest_path.is_file():
+            return yaml.safe_load(manifest_path.read_text(encoding="utf-8")) or {}
+        return _builtin_provider_manifest(provider_id)
+
+    def _load_provider_style_support(self, provider_id: str) -> dict[str, object] | None:
+        style_support_path = (
+            self.root / "providers" / "frontend" / provider_id / "style-support.yaml"
+        )
+        if style_support_path.is_file():
+            return yaml.safe_load(style_support_path.read_text(encoding="utf-8")) or {}
+        return _builtin_provider_style_support(provider_id)
+
+    def _runtime_remediation_payload_from_host_plan(
+        self,
+        host_plan,
+    ) -> dict[str, object]:
+        fragment = host_plan.remediation_fragment
+        if fragment is None:
+            return {}
+        install_profile_id = host_plan.installer_profile_ids[0] if host_plan.installer_profile_ids else ""
+        return {
+            "managed_runtime_root": fragment.managed_runtime_root,
+            "required_runtime_entries": list(host_plan.missing_runtime_entries),
+            "install_profile_id": install_profile_id,
+            "acquisition_mode": "managed_runtime_install",
+            "will_download": list(fragment.will_download),
+            "will_install": list(fragment.will_install),
+            "will_modify": list(fragment.will_modify),
+            "manual_prerequisites": [],
+            "reentry_condition": "rerun managed delivery apply after runtime remediation",
+        }
+
+    def _managed_target_prepare_payload(self, package_manager: str) -> dict[str, object]:
+        package_manager_line = {
+            "npm": "npm@10",
+            "yarn": "yarn@1",
+        }.get(package_manager, "pnpm@9")
+        return {
+            "directories": ["src"],
+            "files": [
+                {
+                    "path": "package.json",
+                    "content": json.dumps(
+                        {
+                            "name": f"{self.root.name}-managed-frontend",
+                            "private": True,
+                            "packageManager": package_manager_line,
+                        },
+                        ensure_ascii=True,
+                        indent=2,
+                    )
+                    + "\n",
+                }
+            ],
+        }
+
     def execute_frontend_managed_delivery_apply(
         self,
-        request_path: str | Path,
+        request_path: str | Path | None = None,
         *,
         request: ProgramFrontendManagedDeliveryApplyRequest | None = None,
         confirmed: bool = False,
@@ -2213,7 +2681,7 @@ class ProgramService:
 
     def write_frontend_managed_delivery_apply_artifact(
         self,
-        request_path: str | Path,
+        request_path: str | Path | None = None,
         *,
         request: ProgramFrontendManagedDeliveryApplyRequest | None = None,
         result: ProgramFrontendManagedDeliveryApplyResult | None = None,
@@ -2288,16 +2756,16 @@ class ProgramService:
     ) -> ProgramFrontendBrowserGateProbeRequest:
         """Build the browser gate probe request from managed delivery apply truth."""
 
-        effective_apply_artifact_path = apply_artifact_path or (
-            self.root / PROGRAM_FRONTEND_MANAGED_DELIVERY_APPLY_ARTIFACT_REL_PATH
-        )
-        if not effective_apply_artifact_path.is_absolute():
-            effective_apply_artifact_path = self.root / effective_apply_artifact_path
-        relative_apply_artifact_path = _relative_to_root_or_str(
-            self.root, effective_apply_artifact_path
+        (
+            _effective_apply_artifact_path,
+            relative_apply_artifact_path,
+            apply_payload,
+            apply_artifact_error,
+        ) = self._load_frontend_managed_delivery_apply_artifact(
+            apply_artifact_path
         )
         warnings: list[str] = []
-        if not effective_apply_artifact_path.is_file():
+        if apply_artifact_error == "missing":
             return ProgramFrontendBrowserGateProbeRequest(
                 required=False,
                 confirmation_required=False,
@@ -2305,19 +2773,17 @@ class ProgramService:
                 apply_artifact_path=relative_apply_artifact_path,
                 remaining_blockers=["managed_delivery_apply_artifact_missing"],
             )
-
-        try:
-            apply_payload = yaml.safe_load(
-                effective_apply_artifact_path.read_text(encoding="utf-8")
-            ) or {}
-        except yaml.YAMLError as exc:
+        if apply_artifact_error is not None:
             return ProgramFrontendBrowserGateProbeRequest(
                 required=False,
                 confirmation_required=False,
                 probe_state="invalid_apply_artifact",
                 apply_artifact_path=relative_apply_artifact_path,
-                remaining_blockers=[f"managed_delivery_apply_artifact_invalid:{exc}"],
+                remaining_blockers=[
+                    f"managed_delivery_apply_artifact_invalid:{apply_artifact_error.removeprefix('invalid:')}"
+                ],
             )
+        assert apply_payload is not None
 
         solution_snapshot, snapshot_blocker = self._load_latest_frontend_solution_snapshot()
         if solution_snapshot is None:
@@ -2779,27 +3245,28 @@ class ProgramService:
         if execution_context.spec_dir != expected_spec_dir:
             return None, ""
 
-        current_apply_artifact_path = (
-            self.root / PROGRAM_FRONTEND_MANAGED_DELIVERY_APPLY_ARTIFACT_REL_PATH
-        )
-        if not current_apply_artifact_path.is_file():
+        (
+            _current_apply_artifact_path,
+            current_apply_artifact_rel,
+            current_apply_payload,
+            current_apply_artifact_error,
+        ) = self._load_frontend_managed_delivery_apply_artifact()
+        if current_apply_artifact_error == "missing":
             return (
                 _invalid_browser_gate_artifact_decision(
                     "frontend_browser_gate_apply_artifact_missing"
                 ),
                 str(payload.get("overall_gate_status", "")).strip(),
             )
-        try:
-            current_apply_payload = yaml.safe_load(
-                current_apply_artifact_path.read_text(encoding="utf-8")
-            ) or {}
-        except yaml.YAMLError as exc:
+        if current_apply_artifact_error is not None:
             return (
                 _invalid_browser_gate_artifact_decision(
-                    f"frontend_browser_gate_apply_artifact_invalid:{exc}"
+                    "frontend_browser_gate_apply_artifact_invalid:"
+                    + current_apply_artifact_error.removeprefix("invalid:")
                 ),
                 str(payload.get("overall_gate_status", "")).strip(),
             )
+        assert current_apply_payload is not None
         current_snapshot, snapshot_blocker = self._load_latest_frontend_solution_snapshot()
         if current_snapshot is None:
             return (
@@ -2936,7 +3403,7 @@ class ProgramService:
                 bundle=bundle,
                 artifact_path=PROGRAM_FRONTEND_BROWSER_GATE_ARTIFACT_REL_PATH,
                 probe_runtime_state=str(payload.get("probe_runtime_state", "")).strip(),
-                apply_artifact_path=PROGRAM_FRONTEND_MANAGED_DELIVERY_APPLY_ARTIFACT_REL_PATH,
+                apply_artifact_path=current_apply_artifact_rel,
             ),
             bundle.overall_gate_status,
         )
@@ -10372,6 +10839,88 @@ def _normalize_string_mapping(value: object) -> dict[str, str]:
         if key_text and item_text:
             result[key_text] = item_text
     return result
+
+
+def _build_managed_delivery_user_guidance(
+    blockers: list[str],
+) -> tuple[list[str], list[str]]:
+    plain_language: list[str] = []
+    next_steps: list[str] = []
+
+    private_registry_missing = [
+        blocker.split(":", 1)[1]
+        for blocker in blockers
+        if blocker.startswith("private_registry_prerequisite_missing:")
+        and ":" in blocker
+    ]
+    if private_registry_missing:
+        plain_language.append("Enterprise package access is not ready.")
+        actionable_requirements = [
+            requirement
+            for requirement in private_registry_missing
+            if any(
+                marker in requirement
+                for marker in ("token", "credential", "auth", "key", "secret")
+            )
+        ]
+        if not actionable_requirements:
+            actionable_requirements = list(private_registry_missing)
+        next_steps.append(
+            "provide "
+            + ", ".join(actionable_requirements)
+            + " and rerun `ai-sdlc program managed-delivery-apply --dry-run`"
+        )
+
+    if "host_ingress_below_mutate_threshold" in blockers:
+        plain_language.append("Host ingress is not verified for managed delivery.")
+        next_steps.append(
+            "verify host ingress and rerun `ai-sdlc program managed-delivery-apply --dry-run`"
+        )
+
+    return _unique_strings(plain_language), _unique_strings(next_steps)
+
+
+def _builtin_provider_manifest(provider_id: str) -> dict[str, object] | None:
+    if provider_id == "enterprise-vue2":
+        profile = build_mvp_enterprise_vue2_provider_profile()
+        return {
+            "provider_id": profile.provider_id,
+            "access_mode": profile.access_mode,
+            "install_strategy_ids": list(profile.install_strategy_ids),
+            "availability_prerequisites": list(profile.availability_prerequisites),
+            "default_style_pack_id": profile.default_style_pack_id,
+        }
+    if provider_id == "public-primevue":
+        return {
+            "provider_id": "public-primevue",
+            "access_mode": "public",
+            "install_strategy_ids": ["public-primevue-default"],
+            "availability_prerequisites": [],
+            "default_style_pack_id": "modern-saas",
+        }
+    return None
+
+
+def _builtin_provider_style_support(provider_id: str) -> dict[str, object] | None:
+    if provider_id == "enterprise-vue2":
+        profile = build_mvp_enterprise_vue2_provider_profile()
+        return {
+            "items": [
+                entry.model_dump(mode="json", exclude_none=True)
+                for entry in profile.style_support_matrix
+            ]
+        }
+    if provider_id == "public-primevue":
+        return {
+            "items": [
+                {
+                    "style_pack_id": manifest.style_pack_id,
+                    "fidelity_status": "full",
+                }
+                for manifest in build_builtin_style_pack_manifests()
+            ]
+        }
+    return None
 
 
 def _has_frontend_visual_a11y_issue_blocker(
