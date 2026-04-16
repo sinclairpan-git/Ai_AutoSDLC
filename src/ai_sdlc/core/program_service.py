@@ -42,6 +42,9 @@ from ai_sdlc.core.frontend_page_ui_schema import (
 from ai_sdlc.core.frontend_provider_expansion import (
     validate_frontend_provider_expansion,
 )
+from ai_sdlc.core.frontend_provider_runtime_adapter import (
+    validate_frontend_provider_runtime_adapter,
+)
 from ai_sdlc.core.frontend_quality_platform import (
     validate_frontend_quality_platform,
 )
@@ -102,6 +105,9 @@ from ai_sdlc.models.frontend_provider_expansion import (
 from ai_sdlc.models.frontend_provider_profile import (
     ProviderStyleSupportEntry,
     build_mvp_enterprise_vue2_provider_profile,
+)
+from ai_sdlc.models.frontend_provider_runtime_adapter import (
+    build_p3_target_project_adapter_scaffold_baseline,
 )
 from ai_sdlc.models.frontend_quality_platform import (
     build_p2_frontend_quality_platform_baseline,
@@ -405,6 +411,35 @@ class ProgramFrontendProviderExpansionHandoff:
     react_stack_visibility: str
     react_binding_visibility: str
     provider_diagnostics: list[ProgramFrontendProviderExpansionDiagnostic] = field(
+        default_factory=list
+    )
+    blockers: list[str] = field(default_factory=list)
+    warnings: list[str] = field(default_factory=list)
+
+
+@dataclass
+class ProgramFrontendProviderRuntimeAdapterDiagnostic:
+    provider_id: str
+    target_frontend_stack: str
+    certification_gate: str
+    carrier_mode: str
+    runtime_delivery_state: str
+    evidence_return_state: str
+    scaffold_file_count: int = 0
+
+
+@dataclass
+class ProgramFrontendProviderRuntimeAdapterHandoff:
+    state: str
+    schema_version: str
+    effective_provider_id: str
+    requested_frontend_stack: str
+    effective_frontend_stack: str
+    artifact_root: str
+    carrier_mode: str
+    runtime_delivery_state: str
+    evidence_return_state: str
+    provider_diagnostics: list[ProgramFrontendProviderRuntimeAdapterDiagnostic] = field(
         default_factory=list
     )
     blockers: list[str] = field(default_factory=list)
@@ -4195,6 +4230,59 @@ class ProgramService:
             warnings=_unique_strings(warnings),
         )
 
+    def build_frontend_provider_runtime_adapter_handoff(
+        self,
+    ) -> ProgramFrontendProviderRuntimeAdapterHandoff:
+        """Build the provider runtime adapter handoff surface for the 153 baseline."""
+
+        runtime_adapter = build_p3_target_project_adapter_scaffold_baseline()
+        snapshot, snapshot_issue = self._load_latest_frontend_solution_snapshot()
+        blockers: list[str] = []
+        warnings: list[str] = []
+
+        if snapshot is None:
+            if snapshot_issue is not None:
+                blockers.append(snapshot_issue)
+            return ProgramFrontendProviderRuntimeAdapterHandoff(
+                state="blocked",
+                schema_version=runtime_adapter.handoff_contract.current_version,
+                effective_provider_id="",
+                requested_frontend_stack="",
+                effective_frontend_stack="",
+                artifact_root=runtime_adapter.handoff_contract.artifact_root,
+                carrier_mode="",
+                runtime_delivery_state="",
+                evidence_return_state="",
+                provider_diagnostics=self._build_frontend_provider_runtime_adapter_diagnostics(
+                    runtime_adapter
+                ),
+                blockers=_unique_strings(blockers),
+                warnings=[],
+            )
+
+        validation = validate_frontend_provider_runtime_adapter(
+            runtime_adapter,
+            solution_snapshot=snapshot,
+        )
+        blockers.extend(validation.blockers)
+        warnings.extend(validation.warnings)
+        return ProgramFrontendProviderRuntimeAdapterHandoff(
+            state="ready" if not blockers else "blocked",
+            schema_version=runtime_adapter.handoff_contract.current_version,
+            effective_provider_id=snapshot.effective_provider_id,
+            requested_frontend_stack=snapshot.requested_frontend_stack,
+            effective_frontend_stack=snapshot.effective_frontend_stack,
+            artifact_root=runtime_adapter.handoff_contract.artifact_root,
+            carrier_mode=validation.carrier_mode,
+            runtime_delivery_state=validation.runtime_delivery_state,
+            evidence_return_state=validation.evidence_return_state,
+            provider_diagnostics=self._build_frontend_provider_runtime_adapter_diagnostics(
+                runtime_adapter
+            ),
+            blockers=_unique_strings(blockers),
+            warnings=_unique_strings(warnings),
+        )
+
     def _build_frontend_provider_expansion_diagnostics(
         self,
         expansion,
@@ -4210,6 +4298,23 @@ class ProgramService:
                 ),
             )
             for provider in expansion.providers
+        ]
+
+    def _build_frontend_provider_runtime_adapter_diagnostics(
+        self,
+        runtime_adapter,
+    ) -> list[ProgramFrontendProviderRuntimeAdapterDiagnostic]:
+        return [
+            ProgramFrontendProviderRuntimeAdapterDiagnostic(
+                provider_id=target.provider_id,
+                target_frontend_stack=target.boundary_receipt.target_frontend_stack,
+                certification_gate=target.boundary_receipt.certification_gate,
+                carrier_mode=target.boundary_receipt.carrier_mode,
+                runtime_delivery_state=target.boundary_receipt.runtime_delivery_state,
+                evidence_return_state=target.boundary_receipt.evidence_return_state,
+                scaffold_file_count=len(target.scaffold_contract.files),
+            )
+            for target in runtime_adapter.adapter_targets
         ]
 
     def build_frontend_cross_provider_consistency_handoff(

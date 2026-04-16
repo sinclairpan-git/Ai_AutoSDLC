@@ -45,6 +45,9 @@ from ai_sdlc.generators.frontend_provider_expansion_artifacts import (
 from ai_sdlc.generators.frontend_provider_profile_artifacts import (
     materialize_builtin_frontend_provider_profile_artifacts,
 )
+from ai_sdlc.generators.frontend_provider_runtime_adapter_artifacts import (
+    materialize_frontend_provider_runtime_adapter_artifacts,
+)
 from ai_sdlc.generators.frontend_quality_platform_artifacts import (
     materialize_frontend_quality_platform_artifacts,
 )
@@ -60,6 +63,9 @@ from ai_sdlc.models.frontend_generation_constraints import (
 )
 from ai_sdlc.models.frontend_provider_expansion import (
     build_p3_frontend_provider_expansion_baseline,
+)
+from ai_sdlc.models.frontend_provider_runtime_adapter import (
+    build_p3_target_project_adapter_scaffold_baseline,
 )
 from ai_sdlc.models.frontend_quality_platform import (
     build_p2_frontend_quality_platform_baseline,
@@ -512,6 +518,62 @@ def test_build_frontend_provider_expansion_handoff_uses_latest_solution_snapshot
     assert handoff.provider_diagnostics[0].choice_surface_visibility == (
         "simple-default-eligible"
     )
+
+
+def test_build_frontend_provider_runtime_adapter_handoff_blocks_when_solution_snapshot_missing(
+    tmp_path: Path,
+) -> None:
+    svc = ProgramService(tmp_path)
+
+    handoff = svc.build_frontend_provider_runtime_adapter_handoff()
+
+    assert handoff.state == "blocked"
+    assert "frontend_solution_snapshot_missing" in handoff.blockers
+    assert handoff.effective_provider_id == ""
+    assert handoff.requested_frontend_stack == ""
+    assert handoff.effective_frontend_stack == ""
+
+
+def test_build_frontend_provider_runtime_adapter_handoff_surfaces_scaffold_and_delivery_state(
+    tmp_path: Path,
+) -> None:
+    _write_builtin_delivery_truth(
+        tmp_path,
+        snapshot=build_mvp_solution_snapshot(
+            project_id="153-demo",
+            requested_provider_id="public-primevue",
+            effective_provider_id="public-primevue",
+            recommended_provider_id="public-primevue",
+            requested_style_pack_id="modern-saas",
+            effective_style_pack_id="modern-saas",
+            recommended_style_pack_id="modern-saas",
+            requested_frontend_stack="vue3",
+            effective_frontend_stack="vue3",
+            recommended_frontend_stack="vue3",
+            style_fidelity_status="full",
+        ),
+    )
+    materialize_frontend_provider_runtime_adapter_artifacts(
+        tmp_path,
+        runtime_adapter=build_p3_target_project_adapter_scaffold_baseline(),
+    )
+    svc = ProgramService(tmp_path)
+
+    handoff = svc.build_frontend_provider_runtime_adapter_handoff()
+
+    assert handoff.state == "ready"
+    assert handoff.schema_version == "1.0"
+    assert handoff.effective_provider_id == "public-primevue"
+    assert handoff.requested_frontend_stack == "vue3"
+    assert handoff.effective_frontend_stack == "vue3"
+    assert handoff.carrier_mode == "target-project-adapter-layer"
+    assert handoff.runtime_delivery_state == "scaffolded"
+    assert handoff.evidence_return_state == "missing"
+    assert [entry.provider_id for entry in handoff.provider_diagnostics] == [
+        "public-primevue",
+        "react-nextjs-shadcn",
+    ]
+    assert handoff.provider_diagnostics[0].scaffold_file_count == 4
 
 
 def test_build_frontend_cross_provider_consistency_handoff_surfaces_pair_truth_and_release_blockers(

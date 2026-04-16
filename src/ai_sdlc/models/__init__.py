@@ -16,6 +16,19 @@ from ai_sdlc.models.frontend_contracts import (
     ValidationFieldRule,
     WhitelistReference,
 )
+from ai_sdlc.models.frontend_cross_provider_consistency import (
+    ConsistencyDiffRecord,
+    ConsistencyHandoffContract,
+    ConsistencyReadinessGate,
+    ConsistencyStateVector,
+    CoverageGapRecord,
+    FrontendCrossProviderConsistencySet,
+    ProviderPairCertificationBundle,
+    ProviderPairTruthSurfacingRecord,
+    ReadinessGateRule,
+    UxEquivalenceClause,
+    build_p2_frontend_cross_provider_consistency_baseline,
+)
 from ai_sdlc.models.frontend_gate_policy import (
     CompatibilityExecutionPolicy,
     FrontendA11yFoundationCoverageEntry,
@@ -59,28 +72,6 @@ from ai_sdlc.models.frontend_page_ui_schema import (
     UiSchemaDefinition,
     build_p2_frontend_page_ui_schema_baseline,
 )
-from ai_sdlc.models.frontend_provider_profile import (
-    EnterpriseVue2ProviderProfile,
-    LegacyAdapterPolicy,
-    ProviderMapping,
-    ProviderRiskIsolationPolicy,
-    ProviderStyleSupportEntry,
-    ProviderWhitelistEntry,
-    build_mvp_enterprise_vue2_provider_profile,
-)
-from ai_sdlc.models.frontend_cross_provider_consistency import (
-    ConsistencyDiffRecord,
-    ConsistencyHandoffContract,
-    ConsistencyReadinessGate,
-    ConsistencyStateVector,
-    CoverageGapRecord,
-    FrontendCrossProviderConsistencySet,
-    ProviderPairCertificationBundle,
-    ProviderPairTruthSurfacingRecord,
-    ReadinessGateRule,
-    UxEquivalenceClause,
-    build_p2_frontend_cross_provider_consistency_baseline,
-)
 from ai_sdlc.models.frontend_provider_expansion import (
     ChoiceSurfacePolicy,
     FrontendProviderExpansionSet,
@@ -91,6 +82,24 @@ from ai_sdlc.models.frontend_provider_expansion import (
     ProviderExpansionTruthSurfacingRecord,
     ReactExposureBoundary,
     build_p3_frontend_provider_expansion_baseline,
+)
+from ai_sdlc.models.frontend_provider_profile import (
+    EnterpriseVue2ProviderProfile,
+    LegacyAdapterPolicy,
+    ProviderMapping,
+    ProviderRiskIsolationPolicy,
+    ProviderStyleSupportEntry,
+    ProviderWhitelistEntry,
+    build_mvp_enterprise_vue2_provider_profile,
+)
+from ai_sdlc.models.frontend_provider_runtime_adapter import (
+    AdapterScaffoldContract,
+    AdapterScaffoldFile,
+    FrontendProviderRuntimeAdapterSet,
+    ProviderRuntimeAdapterHandoffContract,
+    ProviderRuntimeAdapterTarget,
+    RuntimeBoundaryReceipt,
+    build_p3_target_project_adapter_scaffold_baseline,
 )
 from ai_sdlc.models.frontend_quality_platform import (
     FrontendQualityPlatformSet,
@@ -309,6 +318,8 @@ __all__ = [
     "ProviderCertificationAggregate",
     "ProviderExpansionHandoffContract",
     "ProviderExpansionTruthSurfacingRecord",
+    "ProviderRuntimeAdapterHandoffContract",
+    "ProviderRuntimeAdapterTarget",
     "ProviderRiskIsolationPolicy",
     "ProviderStyleSupportEntry",
     "ProviderWhitelistEntry",
@@ -359,6 +370,7 @@ __all__ = [
     "build_mvp_enterprise_vue2_provider_profile",
     "build_p2_frontend_cross_provider_consistency_baseline",
     "build_p3_frontend_provider_expansion_baseline",
+    "build_p3_target_project_adapter_scaffold_baseline",
     "build_p2_frontend_quality_platform_baseline",
     "build_p2_frontend_page_ui_schema_baseline",
     "build_mvp_solution_snapshot",
@@ -373,12 +385,16 @@ __all__ = [
     "ConsistencyStateVector",
     "CoverageGapRecord",
     "CustomThemeTokenOverride",
+    "AdapterScaffoldContract",
+    "AdapterScaffoldFile",
     "FrontendCrossProviderConsistencySet",
+    "FrontendProviderRuntimeAdapterSet",
     "FrontendQualityPlatformSet",
     "InteractionQualityFlow",
     "ProviderPairCertificationBundle",
     "ProviderPairTruthSurfacingRecord",
     "QualityCoverageMatrixEntry",
+    "RuntimeBoundaryReceipt",
     "QualityEvidenceContract",
     "ReadinessGateRule",
     "QualityPlatformHandoffContract",

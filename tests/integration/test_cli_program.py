@@ -41,6 +41,9 @@ from ai_sdlc.generators.frontend_provider_expansion_artifacts import (
 from ai_sdlc.generators.frontend_provider_profile_artifacts import (
     materialize_builtin_frontend_provider_profile_artifacts,
 )
+from ai_sdlc.generators.frontend_provider_runtime_adapter_artifacts import (
+    materialize_frontend_provider_runtime_adapter_artifacts,
+)
 from ai_sdlc.generators.frontend_quality_platform_artifacts import (
     materialize_frontend_quality_platform_artifacts,
 )
@@ -56,6 +59,9 @@ from ai_sdlc.models.frontend_generation_constraints import (
 )
 from ai_sdlc.models.frontend_provider_expansion import (
     build_p3_frontend_provider_expansion_baseline,
+)
+from ai_sdlc.models.frontend_provider_runtime_adapter import (
+    build_p3_target_project_adapter_scaffold_baseline,
 )
 from ai_sdlc.models.frontend_quality_platform import (
     build_p2_frontend_quality_platform_baseline,
@@ -318,6 +324,61 @@ def test_program_provider_expansion_handoff_surfaces_provider_and_react_visibili
     assert "effective frontend stack: vue3" in result.output
     assert "react stack visibility: hidden" in result.output
     assert "react binding visibility: hidden" in result.output
+    assert "provider diagnostic: public-primevue" in result.output
+    assert "provider diagnostic: react-nextjs-shadcn" in result.output
+
+
+def test_program_provider_runtime_adapter_handoff_blocks_without_solution_snapshot(
+    initialized_project_dir: Path,
+) -> None:
+    root = initialized_project_dir
+
+    with patch("ai_sdlc.cli.program_cmd.find_project_root", return_value=root):
+        result = runner.invoke(app, ["program", "provider-runtime-adapter-handoff"])
+
+    assert result.exit_code == 1
+    assert "Frontend Provider Runtime Adapter Handoff" in result.output
+    assert "state: blocked" in result.output
+    assert "frontend_solution_snapshot_missing" in result.output
+
+
+def test_program_provider_runtime_adapter_handoff_surfaces_scaffold_and_delivery_state(
+    initialized_project_dir: Path,
+) -> None:
+    root = initialized_project_dir
+    _write_builtin_delivery_truth(
+        root,
+        snapshot=build_mvp_solution_snapshot(
+            project_id="153-demo",
+            requested_provider_id="public-primevue",
+            effective_provider_id="public-primevue",
+            recommended_provider_id="public-primevue",
+            requested_style_pack_id="modern-saas",
+            effective_style_pack_id="modern-saas",
+            recommended_style_pack_id="modern-saas",
+            requested_frontend_stack="vue3",
+            effective_frontend_stack="vue3",
+            recommended_frontend_stack="vue3",
+            style_fidelity_status="full",
+        ),
+    )
+    materialize_frontend_provider_runtime_adapter_artifacts(
+        root,
+        runtime_adapter=build_p3_target_project_adapter_scaffold_baseline(),
+    )
+
+    with patch("ai_sdlc.cli.program_cmd.find_project_root", return_value=root):
+        result = runner.invoke(app, ["program", "provider-runtime-adapter-handoff"])
+
+    assert result.exit_code == 0
+    assert "Frontend Provider Runtime Adapter Handoff" in result.output
+    assert "state: ready" in result.output
+    assert "provider: public-primevue" in result.output
+    assert "requested frontend stack: vue3" in result.output
+    assert "effective frontend stack: vue3" in result.output
+    assert "carrier mode: target-project-adapter-layer" in result.output
+    assert "runtime delivery state: scaffolded" in result.output
+    assert "evidence return state: missing" in result.output
     assert "provider diagnostic: public-primevue" in result.output
     assert "provider diagnostic: react-nextjs-shadcn" in result.output
 

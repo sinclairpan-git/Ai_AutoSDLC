@@ -52,6 +52,9 @@ from ai_sdlc.generators.frontend_provider_expansion_artifacts import (
 from ai_sdlc.generators.frontend_provider_profile_artifacts import (
     materialize_frontend_provider_profile_artifacts,
 )
+from ai_sdlc.generators.frontend_provider_runtime_adapter_artifacts import (
+    materialize_frontend_provider_runtime_adapter_artifacts,
+)
 from ai_sdlc.generators.frontend_quality_platform_artifacts import (
     materialize_frontend_quality_platform_artifacts,
 )
@@ -76,6 +79,9 @@ from ai_sdlc.models.frontend_provider_expansion import (
 )
 from ai_sdlc.models.frontend_provider_profile import (
     build_mvp_enterprise_vue2_provider_profile,
+)
+from ai_sdlc.models.frontend_provider_runtime_adapter import (
+    build_p3_target_project_adapter_scaffold_baseline,
 )
 from ai_sdlc.models.frontend_quality_platform import (
     build_p2_frontend_quality_platform_baseline,
@@ -482,6 +488,27 @@ def _write_150_checkpoint(root: Path) -> None:
     save_checkpoint(root, cp)
 
 
+def _write_153_checkpoint(root: Path) -> None:
+    mem = root / ".ai-sdlc" / "memory"
+    mem.mkdir(parents=True, exist_ok=True)
+    (mem / "constitution.md").write_text("# C\n", encoding="utf-8")
+
+    spec = root / "specs" / "153-frontend-p3-target-project-adapter-scaffold-baseline"
+    spec.mkdir(parents=True, exist_ok=True)
+
+    cp = Checkpoint(
+        current_stage="verify",
+        feature=FeatureInfo(
+            id="153",
+            spec_dir="specs/153-frontend-p3-target-project-adapter-scaffold-baseline",
+            design_branch="d",
+            feature_branch="f",
+            current_branch="main",
+        ),
+    )
+    save_checkpoint(root, cp)
+
+
 def _write_frontend_evidence_class_checkpoint(
     root: Path,
     *,
@@ -607,6 +634,37 @@ def _write_150_cross_provider_consistency_artifacts(root: Path) -> None:
     materialize_frontend_cross_provider_consistency_artifacts(
         root,
         consistency=build_p2_frontend_cross_provider_consistency_baseline(),
+    )
+
+
+def _write_153_provider_runtime_adapter_artifacts(
+    root: Path,
+    *,
+    snapshot_overrides: dict[str, object] | None = None,
+) -> None:
+    snapshot_payload: dict[str, object] = {
+        "project_id": "153-demo",
+        "requested_provider_id": "public-primevue",
+        "effective_provider_id": "public-primevue",
+        "recommended_provider_id": "public-primevue",
+        "requested_style_pack_id": "modern-saas",
+        "effective_style_pack_id": "modern-saas",
+        "recommended_style_pack_id": "modern-saas",
+        "requested_frontend_stack": "vue3",
+        "effective_frontend_stack": "vue3",
+        "recommended_frontend_stack": "vue3",
+        "style_fidelity_status": "full",
+    }
+    snapshot_payload.update(snapshot_overrides or {})
+    materialize_frontend_solution_confirmation_artifacts(
+        root,
+        style_packs=build_builtin_style_pack_manifests(),
+        install_strategies=build_builtin_install_strategies(),
+        snapshot=build_mvp_solution_snapshot(**snapshot_payload),
+    )
+    materialize_frontend_provider_runtime_adapter_artifacts(
+        root,
+        runtime_adapter=build_p3_target_project_adapter_scaffold_baseline(),
     )
 
 
@@ -2655,6 +2713,69 @@ def test_151_frontend_provider_expansion_verification_blocks_react_snapshot_whil
     assert report.coverage_gaps == ("frontend_provider_expansion_consistency",)
     assert context["frontend_provider_expansion_verification"]["gate_verdict"] == "RETRY"
     assert any("react stack remains hidden" in blocker for blocker in report.blockers)
+
+
+def test_153_frontend_provider_runtime_adapter_verification_surfaces_missing_scaffold_artifact(
+    tmp_path: Path,
+) -> None:
+    _write_153_checkpoint(tmp_path)
+    _write_153_provider_runtime_adapter_artifacts(tmp_path)
+
+    scaffold_path = (
+        tmp_path
+        / "governance"
+        / "frontend"
+        / "provider-runtime-adapter"
+        / "providers"
+        / "public-primevue"
+        / "adapter-scaffold.yaml"
+    )
+    scaffold_path.unlink()
+
+    report = build_constraint_report(tmp_path)
+    context = build_verification_gate_context(tmp_path)
+
+    assert report.coverage_gaps == ("frontend_provider_runtime_adapter_consistency",)
+    assert "frontend_provider_runtime_adapter_consistency" in report.check_objects
+    assert context["verification_sources"] == (
+        "verify constraints",
+        "frontend provider runtime adapter verification",
+    )
+    assert context["frontend_provider_runtime_adapter_verification"]["gate_verdict"] == (
+        "RETRY"
+    )
+    assert any(
+        "provider runtime adapter artifact missing" in blocker
+        for blocker in report.blockers
+    )
+
+
+def test_153_frontend_provider_runtime_adapter_verification_blocks_react_snapshot_before_scaffold_starts(
+    tmp_path: Path,
+) -> None:
+    _write_153_checkpoint(tmp_path)
+    _write_153_provider_runtime_adapter_artifacts(
+        tmp_path,
+        snapshot_overrides={
+            "requested_provider_id": "react-nextjs-shadcn",
+            "effective_provider_id": "react-nextjs-shadcn",
+            "recommended_provider_id": "react-nextjs-shadcn",
+            "requested_frontend_stack": "react",
+            "effective_frontend_stack": "react",
+            "recommended_frontend_stack": "react",
+        },
+    )
+
+    report = build_constraint_report(tmp_path)
+    context = build_verification_gate_context(tmp_path)
+
+    assert report.coverage_gaps == ("frontend_provider_runtime_adapter_consistency",)
+    assert context["frontend_provider_runtime_adapter_verification"]["gate_verdict"] == (
+        "RETRY"
+    )
+    assert any(
+        "runtime adapter scaffold not started" in blocker for blocker in report.blockers
+    )
 
 
 def test_150_frontend_cross_provider_consistency_verification_surfaces_missing_certification_artifact(

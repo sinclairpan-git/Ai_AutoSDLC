@@ -41,6 +41,9 @@ from ai_sdlc.core.frontend_gate_verification import (
 from ai_sdlc.core.frontend_provider_expansion import (
     validate_frontend_provider_expansion,
 )
+from ai_sdlc.core.frontend_provider_runtime_adapter import (
+    validate_frontend_provider_runtime_adapter,
+)
 from ai_sdlc.core.frontend_quality_platform import (
     validate_frontend_quality_platform,
 )
@@ -60,6 +63,9 @@ from ai_sdlc.gates.task_ac_checks import (
     first_task_missing_acceptance,
 )
 from ai_sdlc.generators.frontend_contract_artifacts import frontend_contracts_root
+from ai_sdlc.generators.frontend_provider_runtime_adapter_artifacts import (
+    frontend_provider_runtime_adapter_root,
+)
 from ai_sdlc.models.frontend_cross_provider_consistency import (
     ConsistencyDiffRecord,
     ConsistencyHandoffContract,
@@ -91,6 +97,14 @@ from ai_sdlc.models.frontend_provider_expansion import (
 from ai_sdlc.models.frontend_provider_profile import (
     ProviderStyleSupportEntry,
     build_mvp_enterprise_vue2_provider_profile,
+)
+from ai_sdlc.models.frontend_provider_runtime_adapter import (
+    AdapterScaffoldContract,
+    FrontendProviderRuntimeAdapterSet,
+    ProviderRuntimeAdapterHandoffContract,
+    ProviderRuntimeAdapterTarget,
+    RuntimeBoundaryReceipt,
+    build_p3_target_project_adapter_scaffold_baseline,
 )
 from ai_sdlc.models.frontend_quality_platform import (
     FrontendQualityPlatformSet,
@@ -294,6 +308,12 @@ FRONTEND_PROVIDER_EXPANSION_SOURCE_NAME = (
 FRONTEND_PROVIDER_EXPANSION_COVERAGE_GAP = (
     "frontend_provider_expansion_consistency"
 )
+FRONTEND_PROVIDER_RUNTIME_ADAPTER_SOURCE_NAME = (
+    "frontend provider runtime adapter verification"
+)
+FRONTEND_PROVIDER_RUNTIME_ADAPTER_COVERAGE_GAP = (
+    "frontend_provider_runtime_adapter_consistency"
+)
 FRONTEND_CROSS_PROVIDER_CONSISTENCY_SOURCE_NAME = (
     "frontend cross provider consistency verification"
 )
@@ -349,6 +369,14 @@ FRONTEND_PROVIDER_EXPANSION_CHECK_OBJECTS = (
     "frontend_provider_expansion_choice_surface_policy_artifacts",
     "frontend_provider_expansion_react_boundary_artifacts",
     FRONTEND_PROVIDER_EXPANSION_COVERAGE_GAP,
+)
+FRONTEND_PROVIDER_RUNTIME_ADAPTER_CHECK_OBJECTS = (
+    "frontend_provider_runtime_adapter_manifest_artifacts",
+    "frontend_provider_runtime_adapter_handoff_schema_artifacts",
+    "frontend_provider_runtime_adapter_targets_artifacts",
+    "frontend_provider_runtime_adapter_scaffold_artifacts",
+    "frontend_provider_runtime_adapter_boundary_receipt_artifacts",
+    FRONTEND_PROVIDER_RUNTIME_ADAPTER_COVERAGE_GAP,
 )
 FRONTEND_CROSS_PROVIDER_CONSISTENCY_CHECK_OBJECTS = (
     "frontend_cross_provider_consistency_manifest_artifacts",
@@ -597,6 +625,39 @@ class FrontendProviderExpansionVerificationReport:
 
 
 @dataclass(frozen=True, slots=True)
+class FrontendProviderRuntimeAdapterVerificationReport:
+    """Scoped verification summary for work item 153 runtime adapter scaffold."""
+
+    root: str
+    source_name: str = FRONTEND_PROVIDER_RUNTIME_ADAPTER_SOURCE_NAME
+    check_objects: tuple[str, ...] = FRONTEND_PROVIDER_RUNTIME_ADAPTER_CHECK_OBJECTS
+    blockers: tuple[str, ...] = ()
+    coverage_gaps: tuple[str, ...] = ()
+    gate_result: str = "PASS"
+    effective_provider_id: str | None = None
+    requested_frontend_stack: str | None = None
+    effective_frontend_stack: str | None = None
+    carrier_mode: str | None = None
+    runtime_delivery_state: str | None = None
+    evidence_return_state: str | None = None
+
+    def to_json_dict(self) -> dict[str, object]:
+        return {
+            "source_name": self.source_name,
+            "gate_verdict": self.gate_result,
+            "check_objects": list(self.check_objects),
+            "blockers": list(self.blockers),
+            "coverage_gaps": list(self.coverage_gaps),
+            "effective_provider_id": self.effective_provider_id,
+            "requested_frontend_stack": self.requested_frontend_stack,
+            "effective_frontend_stack": self.effective_frontend_stack,
+            "carrier_mode": self.carrier_mode,
+            "runtime_delivery_state": self.runtime_delivery_state,
+            "evidence_return_state": self.evidence_return_state,
+        }
+
+
+@dataclass(frozen=True, slots=True)
 class FrontendCrossProviderConsistencyVerificationReport:
     """Scoped verification summary for work item 150 cross-provider consistency."""
 
@@ -644,6 +705,9 @@ def build_constraint_report(root: Path) -> ConstraintReport:
     frontend_provider_expansion_report = (
         _frontend_provider_expansion_attachment_report(root, checkpoint)
     )
+    frontend_provider_runtime_adapter_report = (
+        _frontend_provider_runtime_adapter_attachment_report(root, checkpoint)
+    )
     frontend_cross_provider_consistency_report = (
         _frontend_cross_provider_consistency_attachment_report(root, checkpoint)
     )
@@ -683,6 +747,14 @@ def build_constraint_report(root: Path) -> ConstraintReport:
         (
             frontend_provider_expansion_report.check_objects
             if frontend_provider_expansion_report
+            else ()
+        ),
+    )
+    check_objects = _merge_unique_strings(
+        check_objects,
+        (
+            frontend_provider_runtime_adapter_report.check_objects
+            if frontend_provider_runtime_adapter_report
             else ()
         ),
     )
@@ -730,6 +802,14 @@ def build_constraint_report(root: Path) -> ConstraintReport:
         (
             frontend_provider_expansion_report.blockers
             if frontend_provider_expansion_report
+            else ()
+        ),
+    )
+    blockers = _merge_unique_strings(
+        blockers,
+        (
+            frontend_provider_runtime_adapter_report.blockers
+            if frontend_provider_runtime_adapter_report
             else ()
         ),
     )
@@ -788,6 +868,14 @@ def build_constraint_report(root: Path) -> ConstraintReport:
     coverage_gaps = _merge_unique_strings(
         coverage_gaps,
         (
+            frontend_provider_runtime_adapter_report.coverage_gaps
+            if frontend_provider_runtime_adapter_report
+            else ()
+        ),
+    )
+    coverage_gaps = _merge_unique_strings(
+        coverage_gaps,
+        (
             frontend_cross_provider_consistency_report.coverage_gaps
             if frontend_cross_provider_consistency_report
             else ()
@@ -823,6 +911,9 @@ def build_verification_gate_context(root: Path) -> dict[str, object]:
     )
     frontend_provider_expansion_report = (
         _frontend_provider_expansion_attachment_report(root, checkpoint)
+    )
+    frontend_provider_runtime_adapter_report = (
+        _frontend_provider_runtime_adapter_attachment_report(root, checkpoint)
     )
     frontend_cross_provider_consistency_report = (
         _frontend_cross_provider_consistency_attachment_report(root, checkpoint)
@@ -875,6 +966,14 @@ def build_verification_gate_context(root: Path) -> dict[str, object]:
     verification_sources = _merge_unique_strings(
         verification_sources,
         (
+            (frontend_provider_runtime_adapter_report.source_name,)
+            if frontend_provider_runtime_adapter_report
+            else ()
+        ),
+    )
+    verification_sources = _merge_unique_strings(
+        verification_sources,
+        (
             (frontend_cross_provider_consistency_report.source_name,)
             if frontend_cross_provider_consistency_report
             else ()
@@ -914,6 +1013,10 @@ def build_verification_gate_context(root: Path) -> dict[str, object]:
     if frontend_provider_expansion_report is not None:
         context["frontend_provider_expansion_verification"] = (
             frontend_provider_expansion_report.to_json_dict()
+        )
+    if frontend_provider_runtime_adapter_report is not None:
+        context["frontend_provider_runtime_adapter_verification"] = (
+            frontend_provider_runtime_adapter_report.to_json_dict()
         )
     if frontend_cross_provider_consistency_report is not None:
         context["frontend_cross_provider_consistency_verification"] = (
@@ -2305,6 +2408,253 @@ def _frontend_provider_expansion_attachment_report(
     )
 
 
+def _frontend_provider_runtime_adapter_attachment_report(
+    root: Path,
+    checkpoint: Checkpoint | None,
+) -> FrontendProviderRuntimeAdapterVerificationReport | None:
+    """Resolve the scoped frontend provider runtime adapter attachment for active 153 only."""
+
+    work_item_id = _effective_feature_contract_wi_id(checkpoint)
+    if not _is_153_work_item(work_item_id):
+        return None
+
+    blockers: list[str] = []
+    baseline = build_p3_target_project_adapter_scaffold_baseline()
+    artifact_root = frontend_provider_runtime_adapter_root(root)
+    manifest_path = artifact_root / "provider-runtime-adapter.manifest.yaml"
+    handoff_schema_path = artifact_root / "handoff.schema.yaml"
+    targets_path = artifact_root / "adapter-targets.yaml"
+
+    payloads: dict[str, dict[str, object]] = {}
+    for label, path in (
+        ("manifest", manifest_path),
+        ("handoff schema", handoff_schema_path),
+        ("targets", targets_path),
+    ):
+        if not path.is_file():
+            blockers.append(
+                "BLOCKER: frontend provider runtime adapter artifact missing: "
+                f"{path.as_posix()}"
+            )
+            continue
+        try:
+            payloads[label] = _load_yaml_mapping(path)
+        except ValueError as exc:
+            blockers.append(
+                "BLOCKER: invalid frontend provider runtime adapter artifact "
+                f"{path.as_posix()}: {exc}"
+            )
+
+    latest_snapshot_path = (
+        root
+        / ".ai-sdlc"
+        / "memory"
+        / "frontend-solution-confirmation"
+        / "latest.yaml"
+    )
+    snapshot: FrontendSolutionSnapshot | None = None
+    if not latest_snapshot_path.is_file():
+        blockers.append(
+            "BLOCKER: frontend solution snapshot artifact missing: "
+            f"{latest_snapshot_path.as_posix()}"
+        )
+    else:
+        try:
+            snapshot = FrontendSolutionSnapshot.model_validate(
+                _load_yaml_mapping(latest_snapshot_path)
+            )
+        except Exception as exc:
+            blockers.append(
+                "BLOCKER: invalid frontend solution snapshot artifact "
+                f"{latest_snapshot_path.as_posix()}: {exc}"
+            )
+
+    effective_provider_id = snapshot.effective_provider_id if snapshot else None
+    requested_frontend_stack = snapshot.requested_frontend_stack if snapshot else None
+    effective_frontend_stack = snapshot.effective_frontend_stack if snapshot else None
+
+    if blockers and (
+        "manifest" not in payloads
+        or "handoff schema" not in payloads
+        or "targets" not in payloads
+        or snapshot is None
+    ):
+        blockers_tuple = tuple(blockers)
+        return FrontendProviderRuntimeAdapterVerificationReport(
+            root=str(root),
+            blockers=blockers_tuple,
+            coverage_gaps=(
+                (FRONTEND_PROVIDER_RUNTIME_ADAPTER_COVERAGE_GAP,)
+                if blockers_tuple
+                else ()
+            ),
+            gate_result="RETRY" if blockers_tuple else "PASS",
+            effective_provider_id=effective_provider_id,
+            requested_frontend_stack=requested_frontend_stack,
+            effective_frontend_stack=effective_frontend_stack,
+        )
+
+    manifest_payload = payloads["manifest"]
+    handoff_schema_payload = payloads["handoff schema"]
+    targets_payload = payloads["targets"]
+
+    carrier_mode: str | None = None
+    runtime_delivery_state: str | None = None
+    evidence_return_state: str | None = None
+    try:
+        handoff_contract = ProviderRuntimeAdapterHandoffContract(
+            schema_family=str(
+                handoff_schema_payload.get(
+                    "schema_family",
+                    baseline.handoff_contract.schema_family,
+                )
+            ),
+            current_version=str(
+                handoff_schema_payload.get(
+                    "current_version",
+                    baseline.handoff_contract.current_version,
+                )
+            ),
+            compatible_versions=list(
+                _string_tuple(
+                    handoff_schema_payload.get(
+                        "compatible_versions",
+                        baseline.handoff_contract.compatible_versions,
+                    )
+                )
+            ),
+            artifact_root=str(
+                handoff_schema_payload.get(
+                    "artifact_root",
+                    baseline.handoff_contract.artifact_root,
+                )
+            ),
+            canonical_files=list(
+                _string_tuple(
+                    handoff_schema_payload.get(
+                        "canonical_files",
+                        baseline.handoff_contract.canonical_files,
+                    )
+                )
+            ),
+            program_service_fields=list(
+                _string_tuple(
+                    handoff_schema_payload.get(
+                        "program_service_fields",
+                        baseline.handoff_contract.program_service_fields,
+                    )
+                )
+            ),
+            cli_fields=list(
+                _string_tuple(
+                    handoff_schema_payload.get(
+                        "cli_fields",
+                        baseline.handoff_contract.cli_fields,
+                    )
+                )
+            ),
+            verify_fields=list(
+                _string_tuple(
+                    handoff_schema_payload.get(
+                        "verify_fields",
+                        baseline.handoff_contract.verify_fields,
+                    )
+                )
+            ),
+        )
+        target_items = targets_payload.get("items", [])
+        if not isinstance(target_items, list):
+            raise ValueError("adapter targets artifact `items` must be a list")
+        provider_ids = list(
+            _string_tuple(
+                manifest_payload.get(
+                    "provider_ids",
+                    [target.provider_id for target in baseline.adapter_targets],
+                )
+            )
+        )
+        targets: list[ProviderRuntimeAdapterTarget] = []
+        for provider_id in provider_ids:
+            provider_root = artifact_root / "providers" / provider_id
+            provider_payloads: dict[str, dict[str, object]] = {}
+            for label, path in (
+                ("scaffold", provider_root / "adapter-scaffold.yaml"),
+                ("boundary receipt", provider_root / "runtime-boundary-receipt.yaml"),
+            ):
+                if not path.is_file():
+                    blockers.append(
+                        "BLOCKER: frontend provider runtime adapter artifact missing: "
+                        f"{path.as_posix()}"
+                    )
+                    continue
+                try:
+                    provider_payloads[label] = _load_yaml_mapping(path)
+                except ValueError as exc:
+                    blockers.append(
+                        "BLOCKER: invalid frontend provider runtime adapter artifact "
+                        f"{path.as_posix()}: {exc}"
+                    )
+            if len(provider_payloads) != 2:
+                continue
+            targets.append(
+                ProviderRuntimeAdapterTarget(
+                    provider_id=provider_id,
+                    scaffold_contract=AdapterScaffoldContract.model_validate(
+                        provider_payloads["scaffold"]
+                    ),
+                    boundary_receipt=RuntimeBoundaryReceipt.model_validate(
+                        provider_payloads["boundary receipt"]
+                    ),
+                )
+            )
+
+        runtime_adapter = FrontendProviderRuntimeAdapterSet(
+            work_item_id=str(manifest_payload.get("work_item_id", baseline.work_item_id)),
+            source_work_item_ids=list(
+                _string_tuple(
+                    manifest_payload.get(
+                        "source_work_item_ids",
+                        baseline.source_work_item_ids,
+                    )
+                )
+            ),
+            adapter_targets=targets,
+            handoff_contract=handoff_contract,
+        )
+    except Exception as exc:
+        blockers.append(
+            "BLOCKER: invalid frontend provider runtime adapter artifact set: "
+            f"{exc}"
+        )
+    else:
+        validation = validate_frontend_provider_runtime_adapter(
+            runtime_adapter,
+            solution_snapshot=snapshot,
+        )
+        blockers.extend(f"BLOCKER: {blocker}" for blocker in validation.blockers)
+        carrier_mode = validation.carrier_mode
+        runtime_delivery_state = validation.runtime_delivery_state
+        evidence_return_state = validation.evidence_return_state
+
+    blockers_tuple = tuple(blockers)
+    return FrontendProviderRuntimeAdapterVerificationReport(
+        root=str(root),
+        blockers=blockers_tuple,
+        coverage_gaps=(
+            (FRONTEND_PROVIDER_RUNTIME_ADAPTER_COVERAGE_GAP,)
+            if blockers_tuple
+            else ()
+        ),
+        gate_result="RETRY" if blockers_tuple else "PASS",
+        effective_provider_id=effective_provider_id,
+        requested_frontend_stack=requested_frontend_stack,
+        effective_frontend_stack=effective_frontend_stack,
+        carrier_mode=carrier_mode,
+        runtime_delivery_state=runtime_delivery_state,
+        evidence_return_state=evidence_return_state,
+    )
+
+
 def _frontend_cross_provider_consistency_attachment_report(
     root: Path,
     checkpoint: Checkpoint | None,
@@ -3042,6 +3392,11 @@ def _is_150_work_item(work_item_id: str) -> bool:
 def _is_151_work_item(work_item_id: str) -> bool:
     normalized = work_item_id.strip()
     return normalized == "151" or normalized.startswith("151-") or normalized.startswith("151/")
+
+
+def _is_153_work_item(work_item_id: str) -> bool:
+    normalized = work_item_id.strip()
+    return normalized == "153" or normalized.startswith("153-") or normalized.startswith("153/")
 
 
 def _effective_feature_contract_wi_id(checkpoint: Checkpoint | None) -> str:

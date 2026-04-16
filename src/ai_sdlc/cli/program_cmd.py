@@ -422,6 +422,57 @@ def program_provider_expansion_handoff() -> None:
     raise typer.Exit(code=0 if handoff.state == "ready" else 1)
 
 
+@program_app.command("provider-runtime-adapter-handoff")
+def program_provider_runtime_adapter_handoff() -> None:
+    """Show the provider runtime adapter handoff surface for the 153 baseline."""
+
+    root = _resolve_root()
+    svc = ProgramService(root)
+    handoff = svc.build_frontend_provider_runtime_adapter_handoff()
+
+    console.print("[bold cyan]Frontend Provider Runtime Adapter Handoff[/bold cyan]")
+    console.print(f"  - state: {handoff.state}", markup=False)
+    console.print(f"  - schema version: {handoff.schema_version}", markup=False)
+    console.print(
+        f"  - provider: {handoff.effective_provider_id or '-'}",
+        markup=False,
+    )
+    console.print(
+        f"  - requested frontend stack: {handoff.requested_frontend_stack or '-'}",
+        markup=False,
+    )
+    console.print(
+        f"  - effective frontend stack: {handoff.effective_frontend_stack or '-'}",
+        markup=False,
+    )
+    console.print(f"  - artifact root: {handoff.artifact_root}", markup=False)
+    console.print(f"  - carrier mode: {handoff.carrier_mode or '-'}", markup=False)
+    console.print(
+        f"  - runtime delivery state: {handoff.runtime_delivery_state or '-'}",
+        markup=False,
+    )
+    console.print(
+        f"  - evidence return state: {handoff.evidence_return_state or '-'}",
+        markup=False,
+    )
+    for provider in handoff.provider_diagnostics:
+        console.print(
+            "  - provider diagnostic: "
+            f"{provider.provider_id} | stack: {provider.target_frontend_stack} | "
+            f"gate: {provider.certification_gate} | carrier: {provider.carrier_mode} | "
+            f"runtime: {provider.runtime_delivery_state} | "
+            f"evidence: {provider.evidence_return_state} | "
+            f"scaffold files: {provider.scaffold_file_count}",
+            markup=False,
+        )
+    for blocker in handoff.blockers:
+        console.print(f"  - blocker: {blocker}", markup=False)
+    for warning in handoff.warnings:
+        console.print(f"  - warning: {warning}", markup=False)
+
+    raise typer.Exit(code=0 if handoff.state == "ready" else 1)
+
+
 @program_app.command("cross-provider-consistency-handoff")
 def program_cross_provider_consistency_handoff() -> None:
     """Show the cross-provider consistency handoff surface for the 150 baseline."""
