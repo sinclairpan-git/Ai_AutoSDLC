@@ -82,14 +82,6 @@ capability_closure_audit:
     summary: 005-008 仍是 formal baseline；仓库尚未提供对应 runtime / guard / surface 的实现闭环。
     source_refs:
     - 005-008
-  - cluster_id: frontend-contract-foundation
-    title: Frontend 合同与观测基础链
-    closure_state: partial
-    summary: 065 与少量相邻切片已落地，但 009/011-018 的合同、scanner、attachment、gate 主链仍未端到端闭环。
-    source_refs:
-    - 009-018
-    - '065'
-    - 077-078
   - cluster_id: frontend-program-automation-chain
     title: Frontend Program 自动化主链
     closure_state: capability_open
@@ -1551,6 +1543,18 @@ specs:
   - 151-frontend-p3-modern-provider-expansion-baseline
   - 152-frontend-p3-modern-provider-runtime-adapter-expansion-baseline
   branch_slug: frontend-p3-target-project-adapter-scaffold-baseline
+  owner: team-frontend-governance
+  frontend_evidence_class: framework_capability
+  roles: []
+  capability_refs: []
+- id: 154-frontend-contract-foundation-closure-audit-reconciliation-baseline
+  path: specs/154-frontend-contract-foundation-closure-audit-reconciliation-baseline
+  depends_on:
+  - 119-capability-closure-truth-baseline
+  - 120-open-capability-tranche-backlog-baseline
+  - 127-frontend-contract-observation-producer-runtime-closure-baseline
+  - 128-frontend-runtime-attachment-verify-gate-readiness-closure-baseline
+  branch_slug: frontend-contract-foundation-closure-audit-reconciliation-baseline
   owner: team-frontend-governance
   frontend_evidence_class: framework_capability
   roles: []
