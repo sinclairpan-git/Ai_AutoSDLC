@@ -2,10 +2,12 @@
 
 **功能编号**：`151-frontend-p3-modern-provider-expansion-baseline`
 **创建日期**：2026-04-16
-**状态**：已冻结（formal baseline）
+**状态**：已落地（formal baseline + runtime slices 1-3）
 **输入**：承接 `145 Track E`，将 `modern provider expansion`、`public provider choice surface` 与 `React exposure boundary` 正式 materialize 为最后一条前端后续主线 child work item。参考：`docs/superpowers/specs/2026-04-02-ai-autosdlc-frontend-governance-ui-kernel-design.md`、`specs/145-frontend-p2-p3-deferred-capability-expansion-planning-baseline/spec.md`、`specs/073-frontend-p2-provider-style-solution-baseline/spec.md`、`specs/150-frontend-p2-cross-provider-consistency-baseline/spec.md`
 
 > 口径：`145` 已把剩余前端 later-phase capability 拉平成 `Track A -> Track B -> Track C -> Track D -> Track E` 的 canonical child DAG；`073` 已冻结 provider/style 第一阶段 truth，并明确 `react` 目前只作为内部可建模值存在、不进入 UI/推荐/计算；`150` 已冻结 cross-provider consistency 的认证门槛、public choice surface 受限开放规则与 Track E readiness gate。`151` 的职责不是跳过 Track D 直接扩 provider，也不是立即把 React 暴露到所有入口，而是把“哪些 modern provider 可被纳入候选 roster、何时允许进入 public choice surface、何时只允许受限暴露、React exposure 如何从 internal-only 进入受控公开边界”冻结成 Track E 的单一真值。
+>
+> 当前进度：formal baseline 已冻结；runtime slice 1 已 materialize `provider admission models + provider expansion artifacts`；runtime slice 2 已完成最小 `validator/policy + ProgramService / verify` 接线；runtime slice 3 已完成 `CLI handoff + global truth proof`。当前已完成 `151` 既定 decomposition 范围内的 consumer handoff。
 
 ## 问题定义
 
@@ -55,7 +57,7 @@
 - simple mode 仍保持 `073` 冻结的一套主推荐，不展示并列备选；advanced mode 才允许结构化暴露 gated provider options；`blocked` provider 不得进入任何 public choice surface；
 - Track E 必须定义 pair-level `150` certification truth 如何聚合为 provider-level admission truth，避免同一 provider 因多 pair / 多 journey / 多 roster scope 得出多个互相冲突的公开状态；
 - Track E 必须定义 machine-verifiable 的 roster/choice-surface artifact root、handoff schema 与 truth surfacing record，供 ProgramService、CLI、verify 与 global truth 直接消费；
-- `151` 当前只做 docs-only formal freeze，不进入 `src/` / `tests/`，不宣称 modern provider expansion runtime 已落地。
+- `151` 已完成 docs-only formal freeze，并已进入 runtime slices 1-3；当前已 materialize `provider admission models + roster/choice-surface artifacts`，并完成 `validator/policy + ProgramService/CLI/verify/global truth proof` 接线，仍不得宣称 modern provider expansion 全链路 runtime、真实 adapter 扩张或 React public rollout 已落地。
 
 ## 用户故事与验收
 
@@ -166,7 +168,7 @@ Track E 只冻结以下升级路径：
 1. `react stack visibility: hidden -> advanced-visible`：前提是至少存在一个 React provider binding 已进入 `roster_admission_state=admitted`，且对应 `certification_gate` 不为 `blocked`。
 2. `react provider binding visibility: hidden -> advanced-visible/public-visible`：前提是对应 provider binding 满足 Track D gate 与 Track E choice-surface policy。
 3. `react stack visibility/public-visible -> simple-default-eligible`：前提是 React stack 与其默认 provider binding 均满足 `certification_gate=ready`，且不会破坏 `073` 当前 requested/effective honesty。
-4. 在 Track E docs-only baseline 中，不允许宣称 `react` 已经完成以上任一升级。
+4. 在当前交付中，不允许宣称 `react` 已经完成以上任一升级；runtime slice 1 只 materialize current-state=`hidden` 的边界与产物契约。
 
 ## 冻结的 Track E handoff contract
 

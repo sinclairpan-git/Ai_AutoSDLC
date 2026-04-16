@@ -43,8 +43,14 @@ from ai_sdlc.generators.frontend_gate_policy_artifacts import (
 from ai_sdlc.generators.frontend_generation_constraint_artifacts import (
     materialize_frontend_generation_constraint_artifacts,
 )
+from ai_sdlc.generators.frontend_provider_expansion_artifacts import (
+    materialize_frontend_provider_expansion_artifacts,
+)
 from ai_sdlc.generators.frontend_provider_profile_artifacts import (
     materialize_frontend_provider_profile_artifacts,
+)
+from ai_sdlc.generators.frontend_quality_platform_artifacts import (
+    materialize_frontend_quality_platform_artifacts,
 )
 from ai_sdlc.generators.frontend_solution_confirmation_artifacts import (
     materialize_frontend_solution_confirmation_artifacts,
@@ -59,8 +65,14 @@ from ai_sdlc.models.frontend_gate_policy import (
 from ai_sdlc.models.frontend_generation_constraints import (
     build_mvp_frontend_generation_constraints,
 )
+from ai_sdlc.models.frontend_provider_expansion import (
+    build_p3_frontend_provider_expansion_baseline,
+)
 from ai_sdlc.models.frontend_provider_profile import (
     build_mvp_enterprise_vue2_provider_profile,
+)
+from ai_sdlc.models.frontend_quality_platform import (
+    build_p2_frontend_quality_platform_baseline,
 )
 from ai_sdlc.models.frontend_solution_confirmation import (
     build_builtin_install_strategies,
@@ -401,6 +413,48 @@ def _write_148_checkpoint(root: Path) -> None:
     save_checkpoint(root, cp)
 
 
+def _write_149_checkpoint(root: Path) -> None:
+    mem = root / ".ai-sdlc" / "memory"
+    mem.mkdir(parents=True, exist_ok=True)
+    (mem / "constitution.md").write_text("# C\n", encoding="utf-8")
+
+    spec = root / "specs" / "149-frontend-p2-quality-platform-baseline"
+    spec.mkdir(parents=True, exist_ok=True)
+
+    cp = Checkpoint(
+        current_stage="verify",
+        feature=FeatureInfo(
+            id="149",
+            spec_dir="specs/149-frontend-p2-quality-platform-baseline",
+            design_branch="d",
+            feature_branch="f",
+            current_branch="main",
+        ),
+    )
+    save_checkpoint(root, cp)
+
+
+def _write_151_checkpoint(root: Path) -> None:
+    mem = root / ".ai-sdlc" / "memory"
+    mem.mkdir(parents=True, exist_ok=True)
+    (mem / "constitution.md").write_text("# C\n", encoding="utf-8")
+
+    spec = root / "specs" / "151-frontend-p3-modern-provider-expansion-baseline"
+    spec.mkdir(parents=True, exist_ok=True)
+
+    cp = Checkpoint(
+        current_stage="verify",
+        feature=FeatureInfo(
+            id="151",
+            spec_dir="specs/151-frontend-p3-modern-provider-expansion-baseline",
+            design_branch="d",
+            feature_branch="f",
+            current_branch="main",
+        ),
+    )
+    save_checkpoint(root, cp)
+
+
 def _write_frontend_evidence_class_checkpoint(
     root: Path,
     *,
@@ -475,6 +529,49 @@ def _write_148_theme_token_governance_artifacts(
     materialize_frontend_theme_token_governance_artifacts(
         root,
         governance=build_p2_frontend_theme_token_governance_baseline(),
+    )
+
+
+def _write_149_quality_platform_artifacts(
+    root: Path,
+    *,
+    snapshot_overrides: dict[str, object] | None = None,
+) -> None:
+    _write_148_theme_token_governance_artifacts(root, snapshot_overrides=snapshot_overrides)
+    materialize_frontend_quality_platform_artifacts(
+        root,
+        platform=build_p2_frontend_quality_platform_baseline(),
+    )
+
+
+def _write_151_provider_expansion_artifacts(
+    root: Path,
+    *,
+    snapshot_overrides: dict[str, object] | None = None,
+) -> None:
+    snapshot_payload: dict[str, object] = {
+        "project_id": "151-demo",
+        "requested_provider_id": "public-primevue",
+        "effective_provider_id": "public-primevue",
+        "recommended_provider_id": "public-primevue",
+        "requested_style_pack_id": "modern-saas",
+        "effective_style_pack_id": "modern-saas",
+        "recommended_style_pack_id": "modern-saas",
+        "requested_frontend_stack": "vue3",
+        "effective_frontend_stack": "vue3",
+        "recommended_frontend_stack": "vue3",
+        "style_fidelity_status": "full",
+    }
+    snapshot_payload.update(snapshot_overrides or {})
+    materialize_frontend_solution_confirmation_artifacts(
+        root,
+        style_packs=build_builtin_style_pack_manifests(),
+        install_strategies=build_builtin_install_strategies(),
+        snapshot=build_mvp_solution_snapshot(**snapshot_payload),
+    )
+    materialize_frontend_provider_expansion_artifacts(
+        root,
+        expansion=build_p3_frontend_provider_expansion_baseline(),
     )
 
 
@@ -2408,6 +2505,121 @@ def test_148_frontend_theme_token_governance_verification_surfaces_illegal_overr
 
     assert report.coverage_gaps == ("frontend_theme_token_governance_consistency",)
     assert any("unsupported override namespace" in blocker for blocker in report.blockers)
+
+
+def test_149_frontend_quality_platform_verification_surfaces_missing_verdict_artifact(
+    tmp_path: Path,
+) -> None:
+    _write_149_checkpoint(tmp_path)
+    _write_149_quality_platform_artifacts(tmp_path)
+
+    verdict_path = (
+        tmp_path
+        / "governance"
+        / "frontend"
+        / "quality-platform"
+        / "verdicts"
+        / "dashboard-visual-pass.yaml"
+    )
+    verdict_path.unlink()
+
+    report = build_constraint_report(tmp_path)
+    context = build_verification_gate_context(tmp_path)
+
+    assert report.coverage_gaps == ("frontend_quality_platform_consistency",)
+    assert "frontend_quality_platform_consistency" in report.check_objects
+    assert context["verification_sources"] == (
+        "verify constraints",
+        "frontend quality platform verification",
+    )
+    assert context["frontend_quality_platform_verification"]["gate_verdict"] == "RETRY"
+    assert any(
+        "quality platform verdict artifact missing" in blocker
+        for blocker in report.blockers
+    )
+
+
+def test_149_frontend_quality_platform_verification_surfaces_unknown_style_pack(
+    tmp_path: Path,
+) -> None:
+    _write_149_checkpoint(tmp_path)
+    _write_149_quality_platform_artifacts(tmp_path)
+
+    matrix_path = (
+        tmp_path
+        / "governance"
+        / "frontend"
+        / "quality-platform"
+        / "coverage-matrix.yaml"
+    )
+    payload = yaml.safe_load(matrix_path.read_text(encoding="utf-8"))
+    assert isinstance(payload, dict)
+    payload["items"][0]["style_pack_id"] = "unknown-pack"
+    matrix_path.write_text(
+        yaml.safe_dump(payload, allow_unicode=True, sort_keys=False),
+        encoding="utf-8",
+    )
+
+    report = build_constraint_report(tmp_path)
+    context = build_verification_gate_context(tmp_path)
+
+    assert report.coverage_gaps == ("frontend_quality_platform_consistency",)
+    assert context["frontend_quality_platform_verification"]["gate_verdict"] == "RETRY"
+    assert any("unknown style pack" in blocker for blocker in report.blockers)
+
+
+def test_151_frontend_provider_expansion_verification_surfaces_missing_provider_admission_artifact(
+    tmp_path: Path,
+) -> None:
+    _write_151_checkpoint(tmp_path)
+    _write_151_provider_expansion_artifacts(tmp_path)
+
+    admission_path = (
+        tmp_path
+        / "governance"
+        / "frontend"
+        / "provider-expansion"
+        / "providers"
+        / "public-primevue"
+        / "admission.yaml"
+    )
+    admission_path.unlink()
+
+    report = build_constraint_report(tmp_path)
+    context = build_verification_gate_context(tmp_path)
+
+    assert report.coverage_gaps == ("frontend_provider_expansion_consistency",)
+    assert "frontend_provider_expansion_consistency" in report.check_objects
+    assert context["verification_sources"] == (
+        "verify constraints",
+        "frontend provider expansion verification",
+    )
+    assert context["frontend_provider_expansion_verification"]["gate_verdict"] == "RETRY"
+    assert any("provider expansion artifact missing" in blocker for blocker in report.blockers)
+
+
+def test_151_frontend_provider_expansion_verification_blocks_react_snapshot_while_boundary_hidden(
+    tmp_path: Path,
+) -> None:
+    _write_151_checkpoint(tmp_path)
+    _write_151_provider_expansion_artifacts(
+        tmp_path,
+        snapshot_overrides={
+            "requested_provider_id": "react-nextjs-shadcn",
+            "effective_provider_id": "react-nextjs-shadcn",
+            "recommended_provider_id": "react-nextjs-shadcn",
+            "requested_frontend_stack": "react",
+            "effective_frontend_stack": "react",
+            "recommended_frontend_stack": "react",
+        },
+    )
+
+    report = build_constraint_report(tmp_path)
+    context = build_verification_gate_context(tmp_path)
+
+    assert report.coverage_gaps == ("frontend_provider_expansion_consistency",)
+    assert context["frontend_provider_expansion_verification"]["gate_verdict"] == "RETRY"
+    assert any("react stack remains hidden" in blocker for blocker in report.blockers)
 
 
 def test_build_verification_governance_bundle_emits_gate_capable_payload(

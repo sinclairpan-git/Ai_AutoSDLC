@@ -35,8 +35,14 @@ from ai_sdlc.generators.frontend_gate_policy_artifacts import (
 from ai_sdlc.generators.frontend_generation_constraint_artifacts import (
     materialize_frontend_generation_constraint_artifacts,
 )
+from ai_sdlc.generators.frontend_provider_expansion_artifacts import (
+    materialize_frontend_provider_expansion_artifacts,
+)
 from ai_sdlc.generators.frontend_provider_profile_artifacts import (
     materialize_builtin_frontend_provider_profile_artifacts,
+)
+from ai_sdlc.generators.frontend_quality_platform_artifacts import (
+    materialize_frontend_quality_platform_artifacts,
 )
 from ai_sdlc.generators.frontend_solution_confirmation_artifacts import (
     materialize_frontend_solution_confirmation_artifacts,
@@ -47,6 +53,12 @@ from ai_sdlc.models.frontend_gate_policy import (
 )
 from ai_sdlc.models.frontend_generation_constraints import (
     build_mvp_frontend_generation_constraints,
+)
+from ai_sdlc.models.frontend_provider_expansion import (
+    build_p3_frontend_provider_expansion_baseline,
+)
+from ai_sdlc.models.frontend_quality_platform import (
+    build_p2_frontend_quality_platform_baseline,
 )
 from ai_sdlc.models.frontend_solution_confirmation import (
     build_builtin_install_strategies,
@@ -200,6 +212,114 @@ def test_program_theme_token_governance_handoff_surfaces_requested_effective_the
     assert "dashboard-workspace" in result.output
     assert "dashboard-page-header-accent-proposal" in result.output
     assert "requested: brand-accent" in result.output
+
+
+def test_program_quality_platform_handoff_blocks_without_solution_snapshot(
+    initialized_project_dir: Path,
+) -> None:
+    root = initialized_project_dir
+
+    with patch("ai_sdlc.cli.program_cmd.find_project_root", return_value=root):
+        result = runner.invoke(app, ["program", "quality-platform-handoff"])
+
+    assert result.exit_code == 1
+    assert "Frontend Quality Platform Handoff" in result.output
+    assert "state: blocked" in result.output
+    assert "frontend_solution_snapshot_missing" in result.output
+
+
+def test_program_quality_platform_handoff_surfaces_matrix_and_quality_diagnostics(
+    initialized_project_dir: Path,
+) -> None:
+    root = initialized_project_dir
+    _write_builtin_delivery_truth(
+        root,
+        snapshot=build_mvp_solution_snapshot(
+            project_id="149-demo",
+            requested_provider_id="public-primevue",
+            effective_provider_id="public-primevue",
+            recommended_provider_id="public-primevue",
+            requested_style_pack_id="modern-saas",
+            effective_style_pack_id="modern-saas",
+            recommended_style_pack_id="modern-saas",
+            requested_frontend_stack="vue3",
+            effective_frontend_stack="vue3",
+            recommended_frontend_stack="vue3",
+            style_fidelity_status="full",
+        ),
+    )
+    materialize_frontend_quality_platform_artifacts(
+        root,
+        platform=build_p2_frontend_quality_platform_baseline(),
+    )
+
+    with patch("ai_sdlc.cli.program_cmd.find_project_root", return_value=root):
+        result = runner.invoke(app, ["program", "quality-platform-handoff"])
+
+    assert result.exit_code == 0
+    assert "Frontend Quality Platform Handoff" in result.output
+    assert "state: ready" in result.output
+    assert "provider: public-primevue" in result.output
+    assert "requested style pack: modern-saas" in result.output
+    assert "effective style pack: modern-saas" in result.output
+    assert "matrix coverage: 3" in result.output
+    assert "page schema: dashboard-workspace" in result.output
+    assert "page schema: search-list-workspace" in result.output
+    assert "quality diagnostic: dashboard-modern-saas-desktop-chromium" in result.output
+
+
+def test_program_provider_expansion_handoff_blocks_without_solution_snapshot(
+    initialized_project_dir: Path,
+) -> None:
+    root = initialized_project_dir
+
+    with patch("ai_sdlc.cli.program_cmd.find_project_root", return_value=root):
+        result = runner.invoke(app, ["program", "provider-expansion-handoff"])
+
+    assert result.exit_code == 1
+    assert "Frontend Provider Expansion Handoff" in result.output
+    assert "state: blocked" in result.output
+    assert "frontend_solution_snapshot_missing" in result.output
+
+
+def test_program_provider_expansion_handoff_surfaces_provider_and_react_visibility_diagnostics(
+    initialized_project_dir: Path,
+) -> None:
+    root = initialized_project_dir
+    _write_builtin_delivery_truth(
+        root,
+        snapshot=build_mvp_solution_snapshot(
+            project_id="151-demo",
+            requested_provider_id="public-primevue",
+            effective_provider_id="public-primevue",
+            recommended_provider_id="public-primevue",
+            requested_style_pack_id="modern-saas",
+            effective_style_pack_id="modern-saas",
+            recommended_style_pack_id="modern-saas",
+            requested_frontend_stack="vue3",
+            effective_frontend_stack="vue3",
+            recommended_frontend_stack="vue3",
+            style_fidelity_status="full",
+        ),
+    )
+    materialize_frontend_provider_expansion_artifacts(
+        root,
+        expansion=build_p3_frontend_provider_expansion_baseline(),
+    )
+
+    with patch("ai_sdlc.cli.program_cmd.find_project_root", return_value=root):
+        result = runner.invoke(app, ["program", "provider-expansion-handoff"])
+
+    assert result.exit_code == 0
+    assert "Frontend Provider Expansion Handoff" in result.output
+    assert "state: ready" in result.output
+    assert "provider: public-primevue" in result.output
+    assert "requested frontend stack: vue3" in result.output
+    assert "effective frontend stack: vue3" in result.output
+    assert "react stack visibility: hidden" in result.output
+    assert "react binding visibility: hidden" in result.output
+    assert "provider diagnostic: public-primevue" in result.output
+    assert "provider diagnostic: react-nextjs-shadcn" in result.output
 
 
 def _write_builtin_delivery_truth(root: Path, *, snapshot=None) -> None:

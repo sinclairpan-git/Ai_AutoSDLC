@@ -18,13 +18,18 @@ related_doc:
 Batch 1: Track E positioning and upstream gate freeze
 Batch 2: provider admission / choice-surface / react boundary freeze
 Batch 3: development summary, docs-only validation, truth handoff readiness
+Batch 4: runtime slice 1 - provider admission models and artifacts
+Batch 5: runtime slice 2 - validator/policy and ProgramService/verify hookup
+Batch 6: runtime slice 3 - CLI handoff and global truth proof
 ```
 
 ---
 
 ## 执行护栏
 
-- `151` 当前只允许 docs-only formal baseline freeze，不得进入 `src/` / `tests/`。
+- `151` 的 docs-only baseline 已收口；当前只允许进入 runtime slice 1 所需的 `models / generators / focused unit tests`。
+- 当前允许继续沿既定顺序推进 runtime slice 2 的 `core validators / verify / ProgramService` 接线，但不得越级宣称 CLI 与 global truth handoff 已完成。
+- 当前 `151` 既定 decomposition 已完成到 slice 3；后续若继续推进，应回到真实 provider runtime / adapter expansion 的后续工单，而不是在 `151` 内继续发散。
 - `151` 不得重写 `073` provider/style truth、`150` consistency gate truth。
 - `151` 必须一次性冻结 provider admission、provider-level certification aggregation、choice-surface visibility、React stack/binding boundary、artifact/truth-surfacing contract，不得只补单条 provider 状态然后继续把其他 Track E 内容留在设计引用层。
 - `151` 不得伪造 modern provider roster、public choice surface、React exposure 已真实落地。
@@ -153,3 +158,127 @@ Batch 3: development summary, docs-only validation, truth handoff readiness
 - `151` 已通过 docs-only 门禁
 - downstream runtime 切片仍遵循一工单一分支
 - `151` 之后才允许进入真实 modern provider runtime / adapter 扩张
+
+## Batch 4：runtime slice 1 - provider admission models and artifacts
+
+### Task 4.1 落地 provider admission models 与 certification aggregation
+
+- **任务编号**：T41
+- **优先级**：P0
+- **依赖**：T33
+- **文件**：`src/ai_sdlc/models/frontend_provider_expansion.py`、`tests/unit/test_frontend_provider_expansion_models.py`
+- **可并行**：否
+- **验收标准**：
+  1. 新模型至少 materialize `certification_gate / roster_admission_state / choice_surface_visibility`
+  2. pair-level `150` certification 可聚合为单个 provider 的 `aggregate_gate`
+  3. React stack visibility / provider binding visibility 与 truth surfacing record 可被独立验证
+  4. `simple-default-eligible`、`blocked`、重复 provider 等关键非法状态会被单测拒绝
+- **验证**：`UV_CACHE_DIR=/tmp/uv-cache uv run pytest tests/unit/test_frontend_provider_expansion_models.py`
+
+### Task 4.2 落地 provider expansion artifact materialization
+
+- **任务编号**：T42
+- **优先级**：P0
+- **依赖**：T41
+- **文件**：`src/ai_sdlc/generators/frontend_provider_expansion_artifacts.py`、`tests/unit/test_frontend_provider_expansion_artifacts.py`
+- **可并行**：否
+- **验收标准**：
+  1. 生成器写出 canonical artifact root 下的 manifest、handoff schema、truth-surfacing、choice-surface-policy、react boundary 与 provider 子目录文件
+  2. 产物保留 gate、roster state、choice surface state 与 certification refs 语义
+  3. root helper 稳定，后续 ProgramService / verify 可直接复用
+- **验证**：`UV_CACHE_DIR=/tmp/uv-cache uv run pytest tests/unit/test_frontend_provider_expansion_artifacts.py`
+
+### Task 4.3 完成 runtime slice 1 的聚焦验证与任务记忆同步
+
+- **任务编号**：T43
+- **优先级**：P1
+- **依赖**：T42
+- **文件**：`specs/151-frontend-p3-modern-provider-expansion-baseline/task-execution-log.md`、`specs/151-frontend-p3-modern-provider-expansion-baseline/development-summary.md`
+- **可并行**：否
+- **验收标准**：
+  1. runtime slice 1 的代码/测试结果已写回任务记忆
+  2. `151` 的工单口径不再停留在 docs-only
+  3. 下一批待办明确收敛到 `validator/policy -> ProgramService/CLI/verify/global truth handoff`
+- **验证**：docs review、`git diff --check`
+
+## Batch 5：runtime slice 2 - validator/policy and ProgramService/verify hookup
+
+### Task 5.1 落地 provider expansion validation helper
+
+- **任务编号**：T51
+- **优先级**：P0
+- **依赖**：T43
+- **文件**：`src/ai_sdlc/core/frontend_provider_expansion.py`
+- **可并行**：否
+- **验收标准**：
+  1. 存在独立的 provider expansion validation helper，而不是把规则散落在 verify/program 里
+  2. 至少校验 effective provider roster admission、certification gate、choice surface visibility 与 React hidden boundary
+  3. 输出可被 verify/program 共同复用的结构化 blockers/warnings
+- **验证**：focused unit tests
+
+### Task 5.2 接入 verify constraints 与 ProgramService handoff
+
+- **任务编号**：T52
+- **优先级**：P0
+- **依赖**：T51
+- **文件**：`src/ai_sdlc/core/verify_constraints.py`、`src/ai_sdlc/core/program_service.py`、`tests/unit/test_verify_constraints.py`、`tests/unit/test_program_service.py`
+- **可并行**：否
+- **验收标准**：
+  1. `verify constraints` 在 active `151` 下输出 scoped `frontend_provider_expansion_verification`
+  2. `ProgramService` 提供 `build_frontend_provider_expansion_handoff()`
+  3. provider admission artifact 缺失与 react hidden snapshot 能在 verify 中出 blocker
+  4. latest solution snapshot 能驱动 ProgramService handoff diagnostics
+- **验证**：focused pytest、`UV_CACHE_DIR=/tmp/uv-cache uv run ai-sdlc verify constraints`
+
+### Task 5.3 完成 runtime slice 2 的任务记忆同步
+
+- **任务编号**：T53
+- **优先级**：P1
+- **依赖**：T52
+- **文件**：`specs/151-frontend-p3-modern-provider-expansion-baseline/spec.md`、`specs/151-frontend-p3-modern-provider-expansion-baseline/plan.md`、`specs/151-frontend-p3-modern-provider-expansion-baseline/tasks.md`、`specs/151-frontend-p3-modern-provider-expansion-baseline/task-execution-log.md`、`specs/151-frontend-p3-modern-provider-expansion-baseline/development-summary.md`
+- **可并行**：否
+- **验收标准**：
+  1. `151` 工单状态刷新为 runtime slices 1-2
+  2. 当前未完成项明确收敛到 `CLI / global truth handoff`
+  3. 任务记忆与当前代码状态一致
+- **验证**：docs review、`git diff --check`
+
+## Batch 6：runtime slice 3 - CLI handoff and global truth proof
+
+### Task 6.1 新增 provider expansion CLI handoff
+
+- **任务编号**：T61
+- **优先级**：P0
+- **依赖**：T53
+- **文件**：`src/ai_sdlc/cli/program_cmd.py`、`tests/integration/test_cli_program.py`
+- **可并行**：否
+- **验收标准**：
+  1. 存在 `program provider-expansion-handoff` 命令
+  2. 阻塞态与就绪态输出风格与现有 handoff 命令一致
+  3. 输出 provider diagnostics 与 React visibility
+- **验证**：focused CLI integration tests
+
+### Task 6.2 证明 provider expansion verify blocker 进入 global truth
+
+- **任务编号**：T62
+- **优先级**：P0
+- **依赖**：T61
+- **文件**：`tests/unit/test_program_service.py`
+- **可并行**：否
+- **验收标准**：
+  1. 存在 truth snapshot regression，证明 active `151` 的 verify blocker 会进入 release capability `blocking_refs`
+  2. regression 不依赖人工判断，而是直接通过 `build_truth_snapshot()` 验证
+- **验证**：focused program service unit test
+
+### Task 6.3 完成 runtime slice 3 的任务记忆同步
+
+- **任务编号**：T63
+- **优先级**：P1
+- **依赖**：T62
+- **文件**：`specs/151-frontend-p3-modern-provider-expansion-baseline/spec.md`、`specs/151-frontend-p3-modern-provider-expansion-baseline/plan.md`、`specs/151-frontend-p3-modern-provider-expansion-baseline/tasks.md`、`specs/151-frontend-p3-modern-provider-expansion-baseline/task-execution-log.md`、`specs/151-frontend-p3-modern-provider-expansion-baseline/development-summary.md`
+- **可并行**：否
+- **验收标准**：
+  1. `151` 工单状态刷新为 runtime slices 1-3
+  2. 明确 `151` 的既定 decomposition 已完成
+  3. 非目标边界仍保持诚实，不伪造真实 provider runtime / React public rollout 已完成
+- **验证**：docs review、`git diff --check`

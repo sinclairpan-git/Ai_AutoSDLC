@@ -2,10 +2,10 @@
 
 **功能编号**：`149-frontend-p2-quality-platform-baseline`
 **创建日期**：2026-04-16
-**状态**：已冻结（formal baseline）
+**状态**：已落地（runtime baseline）
 **输入**：承接 `145 Track C`，将完整 `visual regression / a11y platform / interaction quality / multi-browser multi-device matrix` 正式 materialize 为下一条前端主线 child work item。参考：`docs/superpowers/specs/2026-04-02-ai-autosdlc-frontend-governance-ui-kernel-design.md`、`specs/071-frontend-p1-visual-a11y-foundation-baseline/spec.md`、`specs/137-frontend-p1-visual-a11y-runtime-foundation-closure-baseline/spec.md`、`specs/095-frontend-mainline-product-delivery-baseline/spec.md`、`specs/143-frontend-mainline-browser-gate-real-probe-runtime-baseline/spec.md`、`specs/144-frontend-mainline-host-remediation-and-workspace-integration-closure-baseline/spec.md`、`specs/147-frontend-p2-page-ui-schema-baseline/spec.md`、`specs/148-frontend-p2-multi-theme-token-governance-baseline/spec.md`
 
-> 口径：`145` 已把剩余前端 later-phase capability 拉平成 `Track A -> Track B -> Track C -> Track D -> Track E` 的 canonical child DAG；`147` 已物化 page/ui schema runtime baseline，`148` 已物化 theme/token governance runtime baseline，`071/137` 已完成 P1 visual/a11y foundation，`095/143/144` 已完成 frontend-mainline-delivery 的主链 runtime。`149` 的职责不是重做 foundation，不是重做 browser gate/host remediation，也不是提前做 cross-provider certification 或 provider expansion，而是把“完整质量平台应消费哪些 schema/theme/runtime truth、需要补哪些 richer evidence/quality verdict、当前明确不开放哪些执行面”冻结成 Track C 的单一真值。
+> 口径：`145` 已把剩余前端 later-phase capability 拉平成 `Track A -> Track B -> Track C -> Track D -> Track E` 的 canonical child DAG；`147` 已物化 page/ui schema runtime baseline，`148` 已物化 theme/token governance runtime baseline，`071/137` 已完成 P1 visual/a11y foundation，`095/143/144` 已完成 frontend-mainline-delivery 的主链 runtime。`149` 的职责不是重做 foundation，不是重做 browser gate/host remediation，也不是提前做 cross-provider certification 或 provider expansion，而是把“完整质量平台应消费哪些 schema/theme/runtime truth、需要补哪些 richer evidence/quality verdict、当前明确不开放哪些执行面”冻结成 Track C 的单一真值，并已继续 materialize 为 `quality platform models + artifact/evidence materialization + validator/matrix + ProgramService/CLI/verify handoff` 的 runtime baseline。
 
 ## 问题定义
 
@@ -30,7 +30,7 @@
 - 让 `cross-provider consistency` 被迫自己重建 visual/a11y/interaction verdict，而不是消费统一 quality truth；
 - 在尚未冻结 schema/theme 依赖和 matrix 边界前，先开 provider expansion、React exposure 或开放式 style editor，导致质量平台失去统一输入面。
 
-因此，`149` 的职责是先 formalize Track C 的 canonical boundary、输入输出、执行切片与 downstream handoff，再决定后续 runtime 如何逐批落地。
+因此，`149` 的职责是先 formalize Track C 的 canonical boundary、输入输出、执行切片与 downstream handoff，再把 Track C runtime baseline 按既定顺序落到 machine-verifiable carrier。
 
 ## 范围
 
@@ -57,7 +57,7 @@
 - `147` 的 `page/ui schema` 与 `148` 的 `theme governance` 必须成为 quality platform 的共享输入锚点，禁止回退到 provider-specific DOM path 或自由主题输入；
 - Track C 的完整质量平台至少覆盖 visual regression、完整 a11y、interaction quality 与 multi-browser/multi-device matrix，但 v1 仍要求结构化、可验证、可审计，不允许“凭截图人工判断即可”；
 - Track C 必须定义 machine-verifiable 的 quality verdict / evidence / matrix contract，供 Track D `cross-provider consistency` 直接消费；
-- `149` 当前只做 docs-only formal freeze，不进入 `src/` / `tests/`，不宣称完整质量平台 runtime 已落地；
+- `149` 已完成 docs-only formal freeze，并已继续落地 Track C runtime baseline：`frontend_quality_platform` models、artifact generator、validator、`ProgramService`/CLI/verify handoff 与 truth gating proof；
 - `149` 完成后，下一条前端主线默认进入 Track D，而不是回头重新规划 Track C。
 
 ## 用户故事与验收

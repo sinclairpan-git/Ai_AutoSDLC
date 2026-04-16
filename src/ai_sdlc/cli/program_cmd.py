@@ -325,6 +325,103 @@ def program_theme_token_governance_handoff() -> None:
     raise typer.Exit(code=0 if handoff.state == "ready" else 1)
 
 
+@program_app.command("quality-platform-handoff")
+def program_quality_platform_handoff() -> None:
+    """Show the Track C quality platform handoff surface for the 149 baseline."""
+
+    root = _resolve_root()
+    svc = ProgramService(root)
+    handoff = svc.build_frontend_quality_platform_handoff()
+
+    console.print("[bold cyan]Frontend Quality Platform Handoff[/bold cyan]")
+    console.print(f"  - state: {handoff.state}", markup=False)
+    console.print(f"  - schema version: {handoff.schema_version}", markup=False)
+    console.print(
+        f"  - provider: {handoff.effective_provider_id or '-'}",
+        markup=False,
+    )
+    console.print(
+        f"  - requested style pack: {handoff.requested_style_pack_id or '-'}",
+        markup=False,
+    )
+    console.print(
+        f"  - effective style pack: {handoff.effective_style_pack_id or '-'}",
+        markup=False,
+    )
+    console.print(f"  - artifact root: {handoff.artifact_root}", markup=False)
+    console.print(f"  - matrix coverage: {handoff.matrix_coverage_count}", markup=False)
+    for evidence_contract_id in handoff.evidence_contract_ids:
+        console.print(f"  - evidence contract: {evidence_contract_id}", markup=False)
+    for page_schema_id in handoff.page_schema_ids:
+        console.print(f"  - page schema: {page_schema_id}", markup=False)
+    for diagnostic in handoff.quality_diagnostics:
+        console.print(
+            "  - quality diagnostic: "
+            f"{diagnostic.matrix_id} | page: {diagnostic.page_schema_id} | "
+            f"browser: {diagnostic.browser_id} | viewport: {diagnostic.viewport_id} | "
+            f"gate: {diagnostic.gate_state} | evidence: {diagnostic.evidence_state}",
+            markup=False,
+        )
+    for blocker in handoff.blockers:
+        console.print(f"  - blocker: {blocker}", markup=False)
+    for warning in handoff.warnings:
+        console.print(f"  - warning: {warning}", markup=False)
+
+    raise typer.Exit(code=0 if handoff.state == "ready" else 1)
+
+
+@program_app.command("provider-expansion-handoff")
+def program_provider_expansion_handoff() -> None:
+    """Show the provider expansion handoff surface for the 151 baseline."""
+
+    root = _resolve_root()
+    svc = ProgramService(root)
+    handoff = svc.build_frontend_provider_expansion_handoff()
+
+    console.print("[bold cyan]Frontend Provider Expansion Handoff[/bold cyan]")
+    console.print(f"  - state: {handoff.state}", markup=False)
+    console.print(f"  - schema version: {handoff.schema_version}", markup=False)
+    console.print(
+        f"  - provider: {handoff.effective_provider_id or '-'}",
+        markup=False,
+    )
+    console.print(
+        f"  - requested frontend stack: {handoff.requested_frontend_stack or '-'}",
+        markup=False,
+    )
+    console.print(
+        f"  - effective frontend stack: {handoff.effective_frontend_stack or '-'}",
+        markup=False,
+    )
+    console.print(
+        f"  - artifact root: {handoff.artifact_root}",
+        markup=False,
+    )
+    console.print(
+        f"  - react stack visibility: {handoff.react_stack_visibility}",
+        markup=False,
+    )
+    console.print(
+        f"  - react binding visibility: {handoff.react_binding_visibility}",
+        markup=False,
+    )
+    for provider in handoff.provider_diagnostics:
+        console.print(
+            "  - provider diagnostic: "
+            f"{provider.provider_id} | gate: {provider.certification_gate} | "
+            f"roster: {provider.roster_admission_state} | "
+            f"visibility: {provider.choice_surface_visibility} | "
+            f"pair refs: {provider.pair_certification_count}",
+            markup=False,
+        )
+    for blocker in handoff.blockers:
+        console.print(f"  - blocker: {blocker}", markup=False)
+    for warning in handoff.warnings:
+        console.print(f"  - warning: {warning}", markup=False)
+
+    raise typer.Exit(code=0 if handoff.state == "ready" else 1)
+
+
 @truth_app.command("sync")
 def program_truth_sync(
     manifest: str = typer.Option(

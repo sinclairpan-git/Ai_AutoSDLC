@@ -15,17 +15,17 @@ related_doc:
 
 ## 概述
 
-本计划是 docs-only formal baseline freeze，用于把 `145 Track C` 的 `quality platform` 主线 materialize 成 canonical child truth。当前交付物只包含 `spec.md / plan.md / tasks.md / task-execution-log.md / development-summary.md`，不进入 `src/` / `tests/`；目标是让后续执行者能够直接按既定顺序继续 formalize 和实现 Track C，而不是再次把 foundation/runtime/quality platform 混写成口头待办。
+本计划先完成 docs-only formal baseline freeze，把 `145 Track C` 的 `quality platform` 主线 materialize 成 canonical child truth；当前已继续进入 runtime baseline，并落地 `quality platform models + artifact/evidence materialization + validator/matrix + ProgramService/CLI/verify handoff`。现阶段交付物包括 formal docs、`frontend_quality_platform` models、artifact generator、validation helpers、`verify_constraints` 接线、`ProgramService` handoff 与 CLI handoff；当前不再需要继续做 Track C capability census。
 
 ## 技术背景
 
-**语言/版本**：Markdown formal docs；仓库运行时保持现状（Python + `ai_sdlc` CLI），本工单不改代码  
+**语言/版本**：Python 3.11 + Markdown；运行时实现继续使用 `ai_sdlc` 现有 Pydantic model / artifact generator 模式
 **主要依赖**：`workitem init` 生成的 canonical scaffold、顶层前端设计、`071/137/095/143/144/147/148` formal truth  
 **存储**：`specs/149-frontend-p2-quality-platform-baseline/`  
-**测试**：`uv run ai-sdlc verify constraints`、`python -m ai_sdlc workitem close-check --wi specs/149-frontend-p2-quality-platform-baseline`、`git diff --check`  
+**测试**：`UV_CACHE_DIR=/tmp/uv-cache uv run pytest tests/unit/test_frontend_quality_platform_models.py tests/unit/test_frontend_quality_platform_artifacts.py tests/unit/test_frontend_quality_platform.py tests/unit/test_program_service.py -k quality_platform tests/unit/test_verify_constraints.py -k frontend_quality_platform tests/integration/test_cli_program.py -k quality_platform tests/integration/test_cli_rules.py -k frontend_quality_platform`、`UV_CACHE_DIR=/tmp/uv-cache uv run ai-sdlc verify constraints`、`python -m ai_sdlc workitem close-check --wi specs/149-frontend-p2-quality-platform-baseline`、`git diff --check`
 **目标平台**：Ai_AutoSDLC 仓库的 formal truth / global truth / downstream workitem planning  
 **约束**：
-- 只允许 docs-only 变更，不进入 `src/` / `tests/`
+- 当前允许落地 Track C runtime baseline 所需的 `models / generators / validator / ProgramService / CLI / verify` 接线
 - 不重写 `071/137` visual/a11y foundation truth
 - 不重写 `095/143/144` delivery/browser/host runtime truth
 - 不在本工单里偷渡 Track D `cross-provider consistency`、Track E `provider expansion`、React exposure 或开放 style editor runtime
@@ -35,9 +35,9 @@ related_doc:
 | 宪章门禁 | 计划响应 |
 |----------|----------|
 | 单一 canonical truth | 所有 formal docs 只落在 `specs/149-frontend-p2-quality-platform-baseline/`，相关 design/spec 只作为 reference-only 输入 |
-| 先 formalize 再实现 | 当前工单只冻结 Track C 的 capability boundary、future runtime decomposition 与 downstream handoff，不直接进入 quality runtime |
+| 先 formalize 再实现 | formal baseline 已先冻结；当前实现只进入 Track C runtime baseline，不越过 Track D consistency 或 Track E provider expansion |
 | delivered / deferred honesty | `149` 显式隔离 `071/137` foundation、`095/143/144` runtime substrate 与 Track C 新增完整质量平台能力 |
-| 有界变更 | 当前批次不改 `src/` / `tests/`、不改既有 runtime contract，只补 Track C planning truth |
+| 有界变更 | 当前批次只新增 Track C runtime carrier 与 focused tests，不改 Track D/E contract |
 
 ## 项目结构
 
@@ -55,12 +55,19 @@ specs/149-frontend-p2-quality-platform-baseline/
 ### 源码结构
 
 ```text
-future runtime slices (not created in this batch)
-├── quality platform models / verdict envelopes
-├── quality evidence artifacts / matrix materialization
-├── quality validator / matrix guardrails
-├── ProgramService / CLI / verify surfaced diagnostics
-└── Track D consistency handoff consumers
+src/ai_sdlc/models/frontend_quality_platform.py
+src/ai_sdlc/generators/frontend_quality_platform_artifacts.py
+src/ai_sdlc/core/frontend_quality_platform.py
+src/ai_sdlc/core/verify_constraints.py
+src/ai_sdlc/core/program_service.py
+src/ai_sdlc/cli/program_cmd.py
+tests/unit/test_frontend_quality_platform_models.py
+tests/unit/test_frontend_quality_platform_artifacts.py
+tests/unit/test_frontend_quality_platform.py
+tests/unit/test_program_service.py
+tests/unit/test_verify_constraints.py
+tests/integration/test_cli_program.py
+tests/integration/test_cli_rules.py
 ```
 
 ## 阶段计划
@@ -123,11 +130,11 @@ future runtime slices (not created in this batch)
 
 | Slice | 目标 | 依赖 | 明确不做 |
 |-------|------|------|----------|
-| A | quality platform models / verdict envelopes | `071/137/147/148` | 不做 runtime execution |
-| B | quality evidence artifacts / matrix materialization | Slice A、`143/144` | 不做 Track D certification |
-| C | validator / matrix guardrails | Slice A/B、`095/143/144` | 不扩 provider roster |
-| D | ProgramService / CLI / verify surfaced diagnostics | Slice A/B/C | 不直接实现 provider expansion |
-| E | truth refresh + Track D handoff readiness | Slice D | 不把 Track D runtime 一起做掉 |
+| A | quality platform models / verdict envelopes | `071/137/147/148` | 不做 Track D certification |
+| B | quality evidence artifacts / matrix materialization | Slice A、`143/144` | 不扩 provider roster |
+| C | validator / matrix guardrails | Slice A/B、`095/143/144` | 不直接实现 provider expansion |
+| D | ProgramService / CLI / verify surfaced diagnostics | Slice A/B/C | 不把 Track D runtime 一起做掉 |
+| E | truth refresh + Track D handoff readiness | Slice D | 不伪造 Track D 已完成 |
 
 ## 关键路径验证策略
 

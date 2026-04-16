@@ -20,6 +20,14 @@ from ai_sdlc.generators.frontend_provider_profile_artifacts import (
     frontend_provider_profile_root,
     materialize_frontend_provider_profile_artifacts,
 )
+from ai_sdlc.generators.frontend_provider_expansion_artifacts import (
+    frontend_provider_expansion_root,
+    materialize_frontend_provider_expansion_artifacts,
+)
+from ai_sdlc.generators.frontend_quality_platform_artifacts import (
+    frontend_quality_platform_root,
+    materialize_frontend_quality_platform_artifacts,
+)
 from ai_sdlc.generators.frontend_solution_confirmation_artifacts import (
     frontend_solution_confirmation_memory_root,
     frontend_solution_confirmation_root,
@@ -43,7 +51,11 @@ __all__ = [
     "materialize_frontend_generation_constraint_artifacts",
     "frontend_page_ui_schema_root",
     "materialize_frontend_page_ui_schema_artifacts",
+    "frontend_provider_expansion_root",
+    "frontend_quality_platform_root",
     "frontend_provider_profile_root",
+    "materialize_frontend_provider_expansion_artifacts",
+    "materialize_frontend_quality_platform_artifacts",
     "materialize_frontend_provider_profile_artifacts",
     "frontend_solution_confirmation_memory_root",
     "frontend_solution_confirmation_root",

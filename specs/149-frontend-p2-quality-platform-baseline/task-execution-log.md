@@ -141,3 +141,126 @@
 - 当前批次 branch disposition 状态：本批提交后闭环，可继续 `149` runtime 或转入其下一条承接主线
 - 当前批次 worktree disposition 状态：本批提交后闭环，可继续 `149` runtime 或转入其下一条承接主线
 - 是否继续下一批：是；默认继续 `149` 自身 runtime slices，而不是重新做 capability census
+
+### Batch 2026-04-16-002 | T41-T62
+
+#### 3.1 批次范围
+
+- 覆盖任务：`T41`、`T42`、`T51`、`T61`、`T62`
+- 覆盖阶段：Track C runtime baseline materialization
+- 预读范围：`specs/149-frontend-p2-quality-platform-baseline/spec.md`、`specs/149-frontend-p2-quality-platform-baseline/plan.md`、`specs/149-frontend-p2-quality-platform-baseline/tasks.md`、`specs/147-frontend-p2-page-ui-schema-baseline/development-summary.md`、`specs/148-frontend-p2-multi-theme-token-governance-baseline/development-summary.md`、`specs/145-frontend-p2-p3-deferred-capability-expansion-planning-baseline/plan.md`
+- 激活的规则：formalize-first 已满足、schema/theme-first quality truth、machine-verifiable artifacts、evidence-before-claims
+
+#### 3.2 统一验证命令
+
+- `V11`（Track C focused pytest）
+  - 命令：`UV_CACHE_DIR=/tmp/uv-cache uv run pytest tests/unit/test_frontend_quality_platform_models.py tests/unit/test_frontend_quality_platform_artifacts.py tests/unit/test_frontend_quality_platform.py tests/unit/test_program_service.py -k quality_platform tests/unit/test_verify_constraints.py -k frontend_quality_platform tests/integration/test_cli_program.py -k quality_platform tests/integration/test_cli_rules.py -k frontend_quality_platform`
+  - 结果：通过；`15 passed`
+- `V12`（Track C focused lint）
+  - 命令：`UV_CACHE_DIR=/tmp/uv-cache uv run ruff check src/ai_sdlc/models/frontend_quality_platform.py src/ai_sdlc/core/frontend_quality_platform.py src/ai_sdlc/generators/frontend_quality_platform_artifacts.py src/ai_sdlc/core/program_service.py src/ai_sdlc/core/verify_constraints.py src/ai_sdlc/cli/program_cmd.py src/ai_sdlc/cli/sub_apps.py tests/unit/test_frontend_quality_platform_models.py tests/unit/test_frontend_quality_platform_artifacts.py tests/unit/test_frontend_quality_platform.py tests/unit/test_program_service.py tests/unit/test_verify_constraints.py tests/integration/test_cli_program.py tests/integration/test_cli_rules.py`
+  - 结果：通过；`All checks passed!`
+- `V13`（Track C scoped verify）
+  - 命令：`UV_CACHE_DIR=/tmp/uv-cache uv run ai-sdlc verify constraints`
+  - 结果：通过；输出 `verify constraints: no BLOCKERs.`
+
+#### 3.3 任务记录
+
+##### T41-T42 | quality models 与 artifact/evidence materialization
+
+- 改动范围：`src/ai_sdlc/models/frontend_quality_platform.py`、`src/ai_sdlc/generators/frontend_quality_platform_artifacts.py`、`src/ai_sdlc/models/__init__.py`、`src/ai_sdlc/generators/__init__.py`、`src/ai_sdlc/cli/sub_apps.py`、`tests/unit/test_frontend_quality_platform_models.py`、`tests/unit/test_frontend_quality_platform_artifacts.py`、`tests/integration/test_cli_rules.py`
+- 改动内容：
+  - 新增 Track C baseline models：matrix、evidence contract、interaction flow、verdict envelope、truth surfacing、handoff contract
+  - 新增 canonical artifact root `governance/frontend/quality-platform/`
+  - 新增 `rules materialize-frontend-quality-platform` CLI surface
+- 新增/调整的测试：quality platform models/artifacts/rules integration focused tests
+- 执行的命令：`V11`
+- 测试结果：通过
+- 是否符合任务目标：是
+
+##### T51-T62 | validator、ProgramService / CLI / verify handoff
+
+- 改动范围：`src/ai_sdlc/core/frontend_quality_platform.py`、`src/ai_sdlc/core/program_service.py`、`src/ai_sdlc/cli/program_cmd.py`、`src/ai_sdlc/core/verify_constraints.py`、`tests/unit/test_frontend_quality_platform.py`、`tests/unit/test_program_service.py`、`tests/unit/test_verify_constraints.py`、`tests/integration/test_cli_program.py`
+- 改动内容：
+  - 新增 quality platform validation helper
+  - 新增 `build_frontend_quality_platform_handoff()` 与 `program quality-platform-handoff`
+  - 将 active `149` 的 quality verification 接入 `verify constraints`
+  - 以 truth snapshot regression 证明 `frontend_quality_platform_consistency` 会进入 release blocking refs
+- 新增/调整的测试：quality platform validator / ProgramService / CLI / verify focused tests
+- 执行的命令：`V11`
+- 测试结果：通过
+- 是否符合任务目标：是
+
+#### 3.4 代码审查结论（Mandatory）
+
+- 宪章/规格对齐：当前改动只把 `149` 已冻结的 Track C decomposition materialize 为 runtime carrier，未越界实现 Track D consistency 或 Track E provider expansion
+- 代码质量：复用 `147/148/151` 已有 model / artifact / validator / handoff 模式，没有另造平行接线
+- 测试质量：models、artifacts、validator、ProgramService、CLI、verify 与 truth snapshot blocker 均有 focused coverage
+- 结论：`149` 已从 formal baseline 继续提升为可被 AI-SDLC / global truth 直接消费的 Track C runtime baseline
+
+#### 3.5 任务/计划同步状态（Mandatory）
+
+- `tasks.md` 同步状态：已追加 T41-T62 运行时切片与验收口径
+- `plan.md` 同步状态：已把 Track C 计划更新为 runtime baseline 口径
+- 关联 branch/worktree disposition 计划：当前 worktree 仍未最终 close-out 提交；完成整批验证后再执行 git close-out
+- 说明：当前工单已完成 Track C runtime baseline，不宣称 Track D/E 已完成
+
+#### 3.6 批次结论
+
+- `149` 的既定 runtime baseline 已落地；后续应转入 `150` 的 runtime consumption / consistency certification，而不是回头重新做 Track C capability census
+
+#### 3.7 归档后动作
+
+- **验证画像**：`code-change`
+- **改动范围**：`src/ai_sdlc/models/frontend_quality_platform.py`、`src/ai_sdlc/core/frontend_quality_platform.py`、`src/ai_sdlc/generators/frontend_quality_platform_artifacts.py`、`src/ai_sdlc/core/program_service.py`、`src/ai_sdlc/core/verify_constraints.py`、`src/ai_sdlc/cli/program_cmd.py`、`src/ai_sdlc/cli/sub_apps.py`、`src/ai_sdlc/models/__init__.py`、`src/ai_sdlc/generators/__init__.py`、`tests/unit/test_frontend_quality_platform_models.py`、`tests/unit/test_frontend_quality_platform_artifacts.py`、`tests/unit/test_frontend_quality_platform.py`、`tests/unit/test_program_service.py`、`tests/unit/test_verify_constraints.py`、`tests/integration/test_cli_program.py`、`tests/integration/test_cli_rules.py`、`specs/149-frontend-p2-quality-platform-baseline/spec.md`、`specs/149-frontend-p2-quality-platform-baseline/plan.md`、`specs/149-frontend-p2-quality-platform-baseline/tasks.md`、`specs/149-frontend-p2-quality-platform-baseline/task-execution-log.md`、`specs/149-frontend-p2-quality-platform-baseline/development-summary.md`
+- **已完成 git 提交**：否
+- **提交哈希**：`未提交`
+- 当前批次 branch disposition 状态：代码与文档已完成，待 git close-out
+- 当前批次 worktree disposition 状态：代码与文档已完成，待 truth sync + git close-out 后复跑 close-check
+- 是否继续下一批：是；在本轮 close-out 后默认转入 `150` runtime
+
+### Batch 2026-04-16-003 | close-out
+
+#### 4.1 批次范围
+
+- 覆盖任务：`149` final close-out
+- 覆盖阶段：full regression + truth refresh + close-check closure
+- 预读范围：`specs/149-frontend-p2-quality-platform-baseline/spec.md`、`specs/149-frontend-p2-quality-platform-baseline/plan.md`、`specs/149-frontend-p2-quality-platform-baseline/tasks.md`、`specs/149-frontend-p2-quality-platform-baseline/task-execution-log.md`
+- 激活的规则：entry-first、verification-before-closure、truth-sync-after-clean-tree、single-commit-close-out
+
+#### 4.2 统一验证命令
+
+- `V14`（full regression）
+  - 命令：`UV_CACHE_DIR=/tmp/uv-cache uv run pytest tests/unit/test_frontend_quality_platform_models.py tests/unit/test_frontend_quality_platform_artifacts.py tests/unit/test_frontend_quality_platform.py tests/unit/test_frontend_provider_expansion_models.py tests/unit/test_frontend_provider_expansion_artifacts.py tests/unit/test_program_service.py tests/unit/test_verify_constraints.py tests/integration/test_cli_program.py tests/integration/test_cli_rules.py`
+  - 结果：通过；`503 passed`
+- `V15`（lint）
+  - 命令：`UV_CACHE_DIR=/tmp/uv-cache uv run ruff check src/ai_sdlc/models/frontend_quality_platform.py src/ai_sdlc/core/frontend_quality_platform.py src/ai_sdlc/generators/frontend_quality_platform_artifacts.py src/ai_sdlc/models/frontend_provider_expansion.py src/ai_sdlc/core/frontend_provider_expansion.py src/ai_sdlc/generators/frontend_provider_expansion_artifacts.py src/ai_sdlc/core/program_service.py src/ai_sdlc/core/verify_constraints.py src/ai_sdlc/cli/program_cmd.py src/ai_sdlc/cli/sub_apps.py tests/unit/test_frontend_quality_platform_models.py tests/unit/test_frontend_quality_platform_artifacts.py tests/unit/test_frontend_quality_platform.py tests/unit/test_frontend_provider_expansion_models.py tests/unit/test_frontend_provider_expansion_artifacts.py tests/unit/test_program_service.py tests/unit/test_verify_constraints.py tests/integration/test_cli_program.py tests/integration/test_cli_rules.py`
+  - 结果：通过；`All checks passed!`
+- `V16`（constraints gate）
+  - 命令：`UV_CACHE_DIR=/tmp/uv-cache uv run ai-sdlc verify constraints`
+  - 结果：通过；输出 `verify constraints: no BLOCKERs.`
+- `V17`（diff hygiene）
+  - 命令：`git diff --check`
+  - 结果：通过；无输出
+- `V18`（post-commit truth refresh）
+  - 命令：`python -m ai_sdlc program truth sync --execute --yes`
+  - 结果：通过；`truth snapshot state=ready`，`frontend-mainline-delivery | closure=closed | audit=ready`
+- `V19`（post-commit truth audit）
+  - 命令：`python -m ai_sdlc program truth audit`
+  - 结果：待最终 amend 后在 clean tree 复跑并以最终结果为准
+- `V20`（final close-check）
+  - 命令：`python -m ai_sdlc workitem close-check --wi specs/149-frontend-p2-quality-platform-baseline`
+  - 结果：待最终 amend 后在 clean tree 复跑并以最终结果为准
+
+#### 4.3 批次结论
+
+- 本批先验证代码与文档的最终状态，再在 clean tree 上刷新 truth snapshot / close-check。
+- 当前观察到的 `frontend-mainline-delivery` 阻塞是 dirty tree 阶段的 fail-closed 现象；是否存在额外框架缺口，以 post-commit truth audit 为准。
+
+#### 4.4 归档后动作
+
+- **验证画像**：`code-change`
+- **已完成 git 提交**：是
+- **提交哈希**：`最新 HEAD（本批 close-out commit，允许后续 amend）`
+- 当前批次 branch disposition 状态：已完成 close-out commit，待 final truth audit / close-check 复跑
+- 当前批次 worktree disposition 状态：已完成 close-out commit，待 final truth audit / close-check 复跑
+- 是否继续下一批：是；完成本批后转入 `150` runtime

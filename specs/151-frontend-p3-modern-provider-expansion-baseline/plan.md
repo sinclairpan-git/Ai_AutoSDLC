@@ -11,17 +11,17 @@ related_doc:
 
 ## 概述
 
-本计划是 docs-only planning freeze，用于把顶层前端设计里的 Track E `modern provider expansion` 一次性 materialize 成 canonical child truth。当前交付物只包含 `spec.md / plan.md / tasks.md / task-execution-log.md / development-summary.md`，不进入 `src/` / `tests/`；目标是让后续执行者能够直接按照既定顺序继续实现 provider admission policy、choice-surface policy、React stack/binding visibility、provider certification aggregation 与 ProgramService/CLI/verify/global truth handoff，而不是再次回到顶层设计做 capability census。
+本计划先完成 docs-only planning freeze，把顶层前端设计里的 Track E `modern provider expansion` 一次性 materialize 成 canonical child truth；当前已继续进入 runtime slices 1-3，并落地 `provider admission models + provider expansion artifacts + validator/policy + ProgramService/verify/CLI + global truth proof`。现阶段交付物包括 formal docs、provider expansion models、artifact generator、validation helpers、`verify_constraints` 接线、`ProgramService` handoff、CLI handoff 与 truth snapshot regression；当前不再需要继续做 Track E capability census。
 
 ## 技术背景
 
-**语言/版本**：Markdown formal docs；仓库运行时保持现状（Python + `ai_sdlc` CLI），本工单不改代码  
+**语言/版本**：Python 3.11 + Markdown；运行时实现继续使用 `ai_sdlc` 现有 Pydantic model / artifact generator 模式
 **主要依赖**：`ai_sdlc workitem init` 生成的 canonical scaffold、顶层设计文档、`073/150` formal truth  
 **存储**：`specs/151-frontend-p3-modern-provider-expansion-baseline/`  
 **测试**：`UV_CACHE_DIR=/tmp/uv-cache uv run ai-sdlc verify constraints`、`python -m ai_sdlc workitem close-check --wi specs/151-frontend-p3-modern-provider-expansion-baseline`、`git diff --check`、`python -m ai_sdlc program truth sync --dry-run`、`python -m ai_sdlc program truth sync --execute --yes`、`python -m ai_sdlc program truth audit`  
 **目标平台**：Ai_AutoSDLC 仓库的 formal truth / global truth / downstream workitem planning  
 **约束**：
-- 只允许 docs-only 变更，不进入 `src/` / `tests/`
+- 当前只允许落地 Track E runtime slice 1 所需的 `models / generators / focused unit tests`
 - 不重写 `073` provider/style 第一阶段 truth 或 `150` consistency gate truth
 - 不把 Track E 与真实 provider runtime/adapter 落地混写
 - 必须固定 artifact root、truth surfacing record 与 close-out truth sync 门禁
@@ -31,9 +31,9 @@ related_doc:
 | 宪章门禁 | 计划响应 |
 |----------|----------|
 | 单一 canonical truth | 所有 formal docs 只落在 `specs/151-frontend-p3-modern-provider-expansion-baseline/`，外部 design docs 只作为 reference-only 输入 |
-| 先 formalize 再实现 | 当前工单只冻结 Track E 的 admission/choice-surface/react boundary 与 downstream handoff，不直接进入 runtime |
-| 诚实区分 delivered / deferred | `151` 明确隔离 `073/150` 已承接 truth 与 Track E 待实现能力 |
-| 有界变更 | 当前批次不改 `src/` / `tests/`、不改既有 runtime contract，只补 Track E planning truth |
+| 先 formalize 再实现 | formal baseline 已先冻结；当前实现只进入 runtime slice 1，不越过后续 validator / program surfacing slice |
+| 诚实区分 delivered / deferred | `151` 明确隔离已落地的 models/artifacts 与仍待实现的 validator / ProgramService / verify / truth sync 接入 |
+| 有界变更 | 当前批次只新增 provider expansion models / generators / focused tests，不改 adapter/runtime UI |
 
 ## 项目结构
 
@@ -51,11 +51,15 @@ specs/151-frontend-p3-modern-provider-expansion-baseline/
 ### 源码结构
 
 ```text
-future runtime slices (not created in this batch)
-├── provider admission models
-├── roster and choice-surface artifacts
-├── validators and policy rules
-└── ProgramService / CLI / verify / global truth handoff
+src/ai_sdlc/models/frontend_provider_expansion.py
+src/ai_sdlc/generators/frontend_provider_expansion_artifacts.py
+src/ai_sdlc/core/frontend_provider_expansion.py
+src/ai_sdlc/core/verify_constraints.py
+src/ai_sdlc/core/program_service.py
+tests/unit/test_frontend_provider_expansion_models.py
+tests/unit/test_frontend_provider_expansion_artifacts.py
+future runtime slices
+└── none within 151 planned decomposition
 ```
 
 ### 计划中的 canonical artifact roots
@@ -98,6 +102,27 @@ governance/frontend/provider-expansion/
 **验证方式**：`UV_CACHE_DIR=/tmp/uv-cache uv run ai-sdlc verify constraints`、`python -m ai_sdlc workitem close-check --wi specs/151-frontend-p3-modern-provider-expansion-baseline`、`git diff --check`、`python -m ai_sdlc program truth sync --dry-run`、`python -m ai_sdlc program truth sync --execute --yes`、`python -m ai_sdlc program truth audit`  
 **回退方式**：仅回退 `151` 文档与可选 truth snapshot 改动。  
 
+### Phase 3：runtime slice 1 - admission models 与 artifact materialization
+
+**目标**：把 `151` 冻结的 provider admission / certification aggregation / truth surfacing / React boundary contract materialize 成可测试的 Pydantic models 与 artifact generator。
+**产物**：`src/ai_sdlc/models/frontend_provider_expansion.py`、`src/ai_sdlc/generators/frontend_provider_expansion_artifacts.py`、对应 unit tests
+**验证方式**：`UV_CACHE_DIR=/tmp/uv-cache uv run pytest tests/unit/test_frontend_provider_expansion_models.py tests/unit/test_frontend_provider_expansion_artifacts.py`、`git diff --check`
+**回退方式**：仅回退 provider expansion runtime slice 1 的代码与测试，不影响已冻结 formal baseline。
+
+### Phase 4：runtime slice 2 - validator/policy 与 ProgramService/verify hookup
+
+**目标**：将 provider expansion truth 接入独立 validation helper、`verify_constraints` scoped verification、`ProgramService` handoff，使 `151` 的 consumer contract 不再只停留在 artifact 层。
+**产物**：`src/ai_sdlc/core/frontend_provider_expansion.py`、`src/ai_sdlc/core/verify_constraints.py`、`src/ai_sdlc/core/program_service.py`、对应 unit tests
+**验证方式**：`UV_CACHE_DIR=/tmp/uv-cache uv run pytest tests/unit/test_program_service.py::test_build_frontend_provider_expansion_handoff_blocks_when_solution_snapshot_missing tests/unit/test_program_service.py::test_build_frontend_provider_expansion_handoff_uses_latest_solution_snapshot_and_provider_diagnostics tests/unit/test_verify_constraints.py::test_151_frontend_provider_expansion_verification_surfaces_missing_provider_admission_artifact tests/unit/test_verify_constraints.py::test_151_frontend_provider_expansion_verification_blocks_react_snapshot_while_boundary_hidden`、`git diff --check`
+**回退方式**：仅回退 runtime slice 2 的校验与 handoff 接线，不影响已落地 models/artifacts。
+
+### Phase 5：runtime slice 3 - CLI handoff 与 global truth proof
+
+**目标**：把 provider expansion handoff 暴露到 CLI，并用 truth snapshot regression 证明 `151` verify blockers 会进入 global truth release gating。
+**产物**：`src/ai_sdlc/cli/program_cmd.py`、`tests/integration/test_cli_program.py`、`tests/unit/test_program_service.py`
+**验证方式**：`UV_CACHE_DIR=/tmp/uv-cache uv run pytest tests/integration/test_cli_program.py::test_program_provider_expansion_handoff_blocks_without_solution_snapshot tests/integration/test_cli_program.py::test_program_provider_expansion_handoff_surfaces_provider_and_react_visibility_diagnostics tests/unit/test_program_service.py::test_build_truth_snapshot_blocks_release_scope_on_151_provider_expansion_verify_gap`、`git diff --check`
+**回退方式**：仅回退 runtime slice 3 的 CLI/proof 接线，不影响已落地 runtime truth。
+
 ## 工作流计划
 
 ### 工作流 A：Track E positioning 与 boundary honesty
@@ -120,6 +145,27 @@ governance/frontend/provider-expansion/
 **影响范围**：`151/task-execution-log.md`、`151/development-summary.md`。  
 **验证方式**：`verify constraints`、`workitem close-check`、`git diff --check`、`program truth sync --dry-run`、`program truth sync --execute --yes`、`program truth audit`。  
 **回退方式**：回退 execution log / development summary，不影响 spec truth。  
+
+### 工作流 D：runtime slice 1 materialization
+
+**范围**：实现 provider certification aggregation、provider admission bundle、truth surfacing record、React exposure boundary 与 artifact generator。
+**影响范围**：`src/ai_sdlc/models/frontend_provider_expansion.py`、`src/ai_sdlc/generators/frontend_provider_expansion_artifacts.py`、对应 tests。
+**验证方式**：focused unit tests + `git diff --check`。
+**回退方式**：回退 runtime slice 1 代码，不影响 docs-only baseline。
+
+### 工作流 E：runtime slice 2 consumer hookup
+
+**范围**：实现 provider expansion validation helper，并接入 `verify_constraints` 与 `ProgramService` 的最小消费链路。
+**影响范围**：`src/ai_sdlc/core/frontend_provider_expansion.py`、`src/ai_sdlc/core/verify_constraints.py`、`src/ai_sdlc/core/program_service.py`、对应 tests。
+**验证方式**：focused unit tests + `git diff --check` + `UV_CACHE_DIR=/tmp/uv-cache uv run ai-sdlc verify constraints`。
+**回退方式**：回退 runtime slice 2 代码，不影响 slices 0-1 truth。
+
+### 工作流 F：runtime slice 3 CLI and truth proof
+
+**范围**：新增 `program provider-expansion-handoff` CLI surface，并用 truth snapshot regression 证明 verify blockers 会进入 release capability blocking refs。
+**影响范围**：`src/ai_sdlc/cli/program_cmd.py`、`tests/integration/test_cli_program.py`、`tests/unit/test_program_service.py`。
+**验证方式**：focused integration/unit tests + `git diff --check`。
+**回退方式**：回退 runtime slice 3 CLI/proof 代码，不影响 slices 0-2 truth。
 
 ## 关键路径验证策略
 

@@ -39,8 +39,14 @@ from ai_sdlc.generators.frontend_gate_policy_artifacts import (
 from ai_sdlc.generators.frontend_generation_constraint_artifacts import (
     materialize_frontend_generation_constraint_artifacts,
 )
+from ai_sdlc.generators.frontend_provider_expansion_artifacts import (
+    materialize_frontend_provider_expansion_artifacts,
+)
 from ai_sdlc.generators.frontend_provider_profile_artifacts import (
     materialize_builtin_frontend_provider_profile_artifacts,
+)
+from ai_sdlc.generators.frontend_quality_platform_artifacts import (
+    materialize_frontend_quality_platform_artifacts,
 )
 from ai_sdlc.generators.frontend_solution_confirmation_artifacts import (
     materialize_frontend_solution_confirmation_artifacts,
@@ -51,6 +57,12 @@ from ai_sdlc.models.frontend_gate_policy import (
 )
 from ai_sdlc.models.frontend_generation_constraints import (
     build_mvp_frontend_generation_constraints,
+)
+from ai_sdlc.models.frontend_provider_expansion import (
+    build_p3_frontend_provider_expansion_baseline,
+)
+from ai_sdlc.models.frontend_quality_platform import (
+    build_p2_frontend_quality_platform_baseline,
 )
 from ai_sdlc.models.frontend_solution_confirmation import (
     build_builtin_install_strategies,
@@ -268,6 +280,20 @@ def _write_builtin_delivery_truth(root: Path, *, snapshot=None) -> None:
     )
 
 
+def _write_151_truth_checkpoint(root: Path) -> None:
+    cp = Checkpoint(
+        current_stage="verify",
+        feature=FeatureInfo(
+            id="151",
+            spec_dir="specs/151-frontend-p3-modern-provider-expansion-baseline",
+            design_branch="d",
+            feature_branch="f",
+            current_branch="main",
+        ),
+    )
+    save_checkpoint(root, cp)
+
+
 def test_build_frontend_page_ui_schema_handoff_blocks_when_solution_snapshot_missing(
     tmp_path: Path,
 ) -> None:
@@ -369,6 +395,122 @@ def test_build_frontend_theme_token_governance_handoff_uses_latest_solution_snap
     assert handoff.override_diagnostics[0].requested_value == "brand-accent"
     assert handoff.override_diagnostics[0].effective_value == (
         "style-pack:enterprise-default:accent_mode"
+    )
+
+
+def test_build_frontend_quality_platform_handoff_blocks_when_solution_snapshot_missing(
+    tmp_path: Path,
+) -> None:
+    svc = ProgramService(tmp_path)
+
+    handoff = svc.build_frontend_quality_platform_handoff()
+
+    assert handoff.state == "blocked"
+    assert "frontend_solution_snapshot_missing" in handoff.blockers
+
+
+def test_build_frontend_quality_platform_handoff_uses_latest_solution_snapshot_and_surfaces_matrix_diagnostics(
+    tmp_path: Path,
+) -> None:
+    materialize_frontend_solution_confirmation_artifacts(
+        tmp_path,
+        style_packs=build_builtin_style_pack_manifests(),
+        install_strategies=build_builtin_install_strategies(),
+        snapshot=build_mvp_solution_snapshot(
+            project_id="149-demo",
+            requested_provider_id="public-primevue",
+            effective_provider_id="public-primevue",
+            recommended_provider_id="public-primevue",
+            requested_style_pack_id="modern-saas",
+            effective_style_pack_id="modern-saas",
+            recommended_style_pack_id="modern-saas",
+            requested_frontend_stack="vue3",
+            effective_frontend_stack="vue3",
+            recommended_frontend_stack="vue3",
+            style_fidelity_status="full",
+        ),
+    )
+    materialize_frontend_quality_platform_artifacts(
+        tmp_path,
+        platform=build_p2_frontend_quality_platform_baseline(),
+    )
+    svc = ProgramService(tmp_path)
+
+    handoff = svc.build_frontend_quality_platform_handoff()
+
+    assert handoff.state == "ready"
+    assert handoff.effective_provider_id == "public-primevue"
+    assert handoff.requested_style_pack_id == "modern-saas"
+    assert handoff.effective_style_pack_id == "modern-saas"
+    assert handoff.matrix_coverage_count == 3
+    assert handoff.evidence_contract_ids == [
+        "a11y-matrix-evidence",
+        "interaction-quality-evidence",
+        "visual-regression-evidence",
+    ]
+    assert handoff.page_schema_ids == ["dashboard-workspace", "search-list-workspace"]
+    assert {item.matrix_id for item in handoff.quality_diagnostics} == {
+        "dashboard-modern-saas-desktop-chromium",
+        "dashboard-modern-saas-mobile-webkit",
+        "search-enterprise-default-desktop-chromium",
+    }
+
+
+def test_build_frontend_provider_expansion_handoff_blocks_when_solution_snapshot_missing(
+    tmp_path: Path,
+) -> None:
+    svc = ProgramService(tmp_path)
+
+    handoff = svc.build_frontend_provider_expansion_handoff()
+
+    assert handoff.state == "blocked"
+    assert "frontend_solution_snapshot_missing" in handoff.blockers
+    assert handoff.effective_provider_id == ""
+    assert handoff.requested_frontend_stack == ""
+    assert handoff.effective_frontend_stack == ""
+
+
+def test_build_frontend_provider_expansion_handoff_uses_latest_solution_snapshot_and_provider_diagnostics(
+    tmp_path: Path,
+) -> None:
+    _write_builtin_delivery_truth(
+        tmp_path,
+        snapshot=build_mvp_solution_snapshot(
+            project_id="151-demo",
+            requested_provider_id="public-primevue",
+            effective_provider_id="public-primevue",
+            recommended_provider_id="public-primevue",
+            requested_style_pack_id="modern-saas",
+            effective_style_pack_id="modern-saas",
+            recommended_style_pack_id="modern-saas",
+            requested_frontend_stack="vue3",
+            effective_frontend_stack="vue3",
+            recommended_frontend_stack="vue3",
+            style_fidelity_status="full",
+        ),
+    )
+    materialize_frontend_provider_expansion_artifacts(
+        tmp_path,
+        expansion=build_p3_frontend_provider_expansion_baseline(),
+    )
+    svc = ProgramService(tmp_path)
+
+    handoff = svc.build_frontend_provider_expansion_handoff()
+
+    assert handoff.state == "ready"
+    assert handoff.schema_version == "1.0"
+    assert handoff.effective_provider_id == "public-primevue"
+    assert handoff.requested_frontend_stack == "vue3"
+    assert handoff.effective_frontend_stack == "vue3"
+    assert handoff.react_stack_visibility == "hidden"
+    assert handoff.react_binding_visibility == "hidden"
+    assert [entry.provider_id for entry in handoff.provider_diagnostics] == [
+        "public-primevue",
+        "react-nextjs-shadcn",
+    ]
+    assert handoff.provider_diagnostics[0].certification_gate == "ready"
+    assert handoff.provider_diagnostics[0].choice_surface_visibility == (
+        "simple-default-eligible"
     )
 
 
@@ -985,6 +1127,156 @@ def test_build_truth_snapshot_maps_frontend_canonical_conflict_to_blocked(
         blocker == "canonical_conflict:frontend-mainline-delivery"
         for blocker in capability.blocking_refs
     )
+
+
+def test_build_truth_snapshot_blocks_release_scope_on_151_provider_expansion_verify_gap(
+    tmp_path: Path,
+) -> None:
+    _init_truth_git_repo(tmp_path)
+    (tmp_path / ".ai-sdlc" / "project" / "config").mkdir(parents=True)
+    (tmp_path / ".ai-sdlc" / "project" / "config" / "project-state.yaml").write_text(
+        "status: initialized\nproject_name: demo\nnext_work_item_seq: 1\nversion: '1.0'\n",
+        encoding="utf-8",
+    )
+    (tmp_path / "PRD.md").write_text("# prd\n", encoding="utf-8")
+    spec_dir = tmp_path / "specs" / "151-frontend-p3-modern-provider-expansion-baseline"
+    spec_dir.mkdir(parents=True)
+    (spec_dir / "spec.md").write_text(
+        "# Spec\n\n---\nfrontend_evidence_class: \"framework_capability\"\n---\n",
+        encoding="utf-8",
+    )
+    (spec_dir / "plan.md").write_text("# Plan\n", encoding="utf-8")
+    (spec_dir / "tasks.md").write_text("- [x] done\n", encoding="utf-8")
+    (spec_dir / "task-execution-log.md").write_text(
+        "# Log\n\n统一验证命令\n代码审查\n任务/计划同步状态\n",
+        encoding="utf-8",
+    )
+    (spec_dir / "development-summary.md").write_text("# Summary\n", encoding="utf-8")
+    _write_manifest_yaml(
+        tmp_path,
+        """
+schema_version: "2"
+prd_path: "PRD.md"
+program:
+  goal: "Demo truth ledger"
+release_targets:
+  - "frontend-mainline-delivery"
+capabilities:
+  - id: "frontend-mainline-delivery"
+    title: "Frontend Mainline Delivery"
+    goal: "Demo release target"
+    release_required: true
+    spec_refs:
+      - "151-frontend-p3-modern-provider-expansion-baseline"
+    required_evidence:
+      truth_check_refs:
+        - "specs/151-frontend-p3-modern-provider-expansion-baseline"
+      close_check_refs:
+        - "specs/151-frontend-p3-modern-provider-expansion-baseline"
+      verify_refs:
+        - "uv run ai-sdlc verify constraints"
+specs:
+  - id: "151-frontend-p3-modern-provider-expansion-baseline"
+    path: "specs/151-frontend-p3-modern-provider-expansion-baseline"
+    depends_on: []
+    frontend_evidence_class: "framework_capability"
+    roles:
+      - "runtime_carrier"
+    capability_refs:
+      - "frontend-mainline-delivery"
+""",
+    )
+    _write_151_truth_checkpoint(tmp_path)
+    _commit_truth_repo(tmp_path, "seed 151 truth ledger fixture")
+
+    svc = ProgramService(tmp_path)
+    manifest = svc.load_manifest()
+    snapshot = svc.build_truth_snapshot(manifest)
+
+    capability = snapshot.computed_capabilities[0]
+    assert capability.audit_state == "blocked"
+    assert "verify:uv run ai-sdlc verify constraints" in capability.blocking_refs
+
+
+def test_build_truth_snapshot_blocks_release_scope_on_149_quality_platform_verify_gap(
+    tmp_path: Path,
+) -> None:
+    _init_truth_git_repo(tmp_path)
+    (tmp_path / ".ai-sdlc" / "project" / "config").mkdir(parents=True)
+    (tmp_path / ".ai-sdlc" / "project" / "config" / "project-state.yaml").write_text(
+        "status: initialized\nproject_name: demo\nnext_work_item_seq: 1\nversion: '1.0'\n",
+        encoding="utf-8",
+    )
+    (tmp_path / "PRD.md").write_text("# prd\n", encoding="utf-8")
+    spec_dir = tmp_path / "specs" / "149-frontend-p2-quality-platform-baseline"
+    spec_dir.mkdir(parents=True)
+    (spec_dir / "spec.md").write_text(
+        "# Spec\n\n---\nfrontend_evidence_class: \"framework_capability\"\n---\n",
+        encoding="utf-8",
+    )
+    (spec_dir / "plan.md").write_text("# Plan\n", encoding="utf-8")
+    (spec_dir / "tasks.md").write_text("- [x] done\n", encoding="utf-8")
+    (spec_dir / "task-execution-log.md").write_text(
+        "# Log\n\n统一验证命令\n代码审查\n任务/计划同步状态\n",
+        encoding="utf-8",
+    )
+    (spec_dir / "development-summary.md").write_text("# Summary\n", encoding="utf-8")
+    _write_manifest_yaml(
+        tmp_path,
+        """
+schema_version: "2"
+prd_path: "PRD.md"
+program:
+  goal: "Demo truth ledger"
+release_targets:
+  - "frontend-mainline-delivery"
+capabilities:
+  - id: "frontend-mainline-delivery"
+    title: "Frontend Mainline Delivery"
+    goal: "Demo release target"
+    release_required: true
+    spec_refs:
+      - "149-frontend-p2-quality-platform-baseline"
+    required_evidence:
+      truth_check_refs:
+        - "specs/149-frontend-p2-quality-platform-baseline"
+      close_check_refs:
+        - "specs/149-frontend-p2-quality-platform-baseline"
+      verify_refs:
+        - "uv run ai-sdlc verify constraints"
+specs:
+  - id: "149-frontend-p2-quality-platform-baseline"
+    path: "specs/149-frontend-p2-quality-platform-baseline"
+    depends_on: []
+    frontend_evidence_class: "framework_capability"
+    roles:
+      - "runtime_carrier"
+    capability_refs:
+      - "frontend-mainline-delivery"
+""",
+    )
+    save_checkpoint(
+        tmp_path,
+        Checkpoint(
+            current_stage="verify",
+            feature=FeatureInfo(
+                id="149",
+                spec_dir="specs/149-frontend-p2-quality-platform-baseline",
+                design_branch="d",
+                feature_branch="f",
+                current_branch="main",
+            ),
+        ),
+    )
+    _commit_truth_repo(tmp_path, "seed 149 truth ledger fixture")
+
+    svc = ProgramService(tmp_path)
+    manifest = svc.load_manifest()
+    snapshot = svc.build_truth_snapshot(manifest)
+
+    capability = snapshot.computed_capabilities[0]
+    assert capability.audit_state == "blocked"
+    assert "verify:uv run ai-sdlc verify constraints" in capability.blocking_refs
 
 
 def test_build_truth_snapshot_keeps_canonical_conflict_blocked_when_structural_errors_exist(

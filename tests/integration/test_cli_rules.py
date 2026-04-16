@@ -110,3 +110,33 @@ def test_rules_materialize_frontend_theme_token_governance_writes_canonical_them
         / "theme-token-governance"
         / "override-policy.json"
     ).is_file()
+
+
+def test_rules_materialize_frontend_quality_platform_writes_canonical_quality_artifacts(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    init_project(tmp_path)
+    monkeypatch.chdir(tmp_path)
+
+    result = runner.invoke(app, ["rules", "materialize-frontend-quality-platform"])
+
+    assert result.exit_code == 0
+    assert "Frontend quality platform artifacts materialized" in result.output
+    assert "governance/frontend/quality-platform/quality-platform.manifest.yaml" in result.output
+    assert "governance/frontend/quality-platform/coverage-matrix.yaml" in result.output
+    assert (
+        tmp_path
+        / "governance"
+        / "frontend"
+        / "quality-platform"
+        / "quality-platform.manifest.yaml"
+    ).is_file()
+    assert (
+        tmp_path
+        / "governance"
+        / "frontend"
+        / "quality-platform"
+        / "verdicts"
+        / "dashboard-visual-pass.yaml"
+    ).is_file()

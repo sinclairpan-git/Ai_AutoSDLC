@@ -36,6 +36,12 @@ from ai_sdlc.core.frontend_page_ui_schema import (
     FrontendPageUiSchemaHandoff,
     build_frontend_page_ui_schema_handoff,
 )
+from ai_sdlc.core.frontend_provider_expansion import (
+    validate_frontend_provider_expansion,
+)
+from ai_sdlc.core.frontend_quality_platform import (
+    validate_frontend_quality_platform,
+)
 from ai_sdlc.core.frontend_theme_token_governance import (
     validate_frontend_theme_token_governance,
 )
@@ -84,9 +90,15 @@ from ai_sdlc.models.frontend_managed_delivery import (
 from ai_sdlc.models.frontend_page_ui_schema import (
     build_p2_frontend_page_ui_schema_baseline,
 )
+from ai_sdlc.models.frontend_provider_expansion import (
+    build_p3_frontend_provider_expansion_baseline,
+)
 from ai_sdlc.models.frontend_provider_profile import (
     ProviderStyleSupportEntry,
     build_mvp_enterprise_vue2_provider_profile,
+)
+from ai_sdlc.models.frontend_quality_platform import (
+    build_p2_frontend_quality_platform_baseline,
 )
 from ai_sdlc.models.frontend_solution_confirmation import (
     AvailabilitySummary,
@@ -332,6 +344,61 @@ class ProgramFrontendThemeTokenGovernanceHandoff:
     token_mapping_count: int = 0
     page_schema_ids: list[str] = field(default_factory=list)
     override_diagnostics: list[ProgramFrontendThemeTokenOverrideDiagnostic] = field(
+        default_factory=list
+    )
+    blockers: list[str] = field(default_factory=list)
+    warnings: list[str] = field(default_factory=list)
+
+
+@dataclass
+class ProgramFrontendQualityPlatformDiagnostic:
+    matrix_id: str
+    page_schema_id: str
+    browser_id: str
+    viewport_id: str
+    style_pack_id: str
+    gate_state: str
+    evidence_state: str
+
+
+@dataclass
+class ProgramFrontendQualityPlatformHandoff:
+    state: str
+    schema_version: str
+    effective_provider_id: str
+    requested_style_pack_id: str
+    effective_style_pack_id: str
+    artifact_root: str
+    matrix_coverage_count: int = 0
+    evidence_contract_ids: list[str] = field(default_factory=list)
+    page_schema_ids: list[str] = field(default_factory=list)
+    quality_diagnostics: list[ProgramFrontendQualityPlatformDiagnostic] = field(
+        default_factory=list
+    )
+    blockers: list[str] = field(default_factory=list)
+    warnings: list[str] = field(default_factory=list)
+
+
+@dataclass
+class ProgramFrontendProviderExpansionDiagnostic:
+    provider_id: str
+    certification_gate: str
+    roster_admission_state: str
+    choice_surface_visibility: str
+    pair_certification_count: int = 0
+
+
+@dataclass
+class ProgramFrontendProviderExpansionHandoff:
+    state: str
+    schema_version: str
+    effective_provider_id: str
+    requested_frontend_stack: str
+    effective_frontend_stack: str
+    artifact_root: str
+    react_stack_visibility: str
+    react_binding_visibility: str
+    provider_diagnostics: list[ProgramFrontendProviderExpansionDiagnostic] = field(
         default_factory=list
     )
     blockers: list[str] = field(default_factory=list)
@@ -3943,6 +4010,157 @@ class ProgramService:
                 render_slot_id=override.render_slot_id or "",
             )
             for override in governance.custom_overrides
+        ]
+
+    def build_frontend_quality_platform_handoff(
+        self,
+    ) -> ProgramFrontendQualityPlatformHandoff:
+        """Build the Track C quality platform handoff surface for the 149 baseline."""
+
+        platform = build_p2_frontend_quality_platform_baseline()
+        snapshot, snapshot_issue = self._load_latest_frontend_solution_snapshot()
+        blockers: list[str] = []
+        warnings: list[str] = []
+
+        if snapshot is None:
+            if snapshot_issue is not None:
+                blockers.append(snapshot_issue)
+            return ProgramFrontendQualityPlatformHandoff(
+                state="blocked",
+                schema_version=platform.handoff_contract.current_version,
+                effective_provider_id="",
+                requested_style_pack_id="",
+                effective_style_pack_id="",
+                artifact_root=platform.handoff_contract.artifact_root,
+                matrix_coverage_count=len(platform.coverage_matrix),
+                evidence_contract_ids=sorted(
+                    contract.evidence_contract_id
+                    for contract in platform.evidence_contracts
+                ),
+                page_schema_ids=sorted(
+                    {entry.page_schema_id for entry in platform.coverage_matrix}
+                ),
+                quality_diagnostics=self._build_frontend_quality_platform_diagnostics(
+                    platform
+                ),
+                blockers=_unique_strings(blockers),
+                warnings=[],
+            )
+
+        validation = validate_frontend_quality_platform(
+            platform,
+            page_ui_schema=build_p2_frontend_page_ui_schema_baseline(),
+            theme_governance=build_p2_frontend_theme_token_governance_baseline(),
+            solution_snapshot=snapshot,
+        )
+        blockers.extend(validation.blockers)
+        warnings.extend(validation.warnings)
+        return ProgramFrontendQualityPlatformHandoff(
+            state="ready" if not blockers else "blocked",
+            schema_version=platform.handoff_contract.current_version,
+            effective_provider_id=snapshot.effective_provider_id,
+            requested_style_pack_id=snapshot.requested_style_pack_id,
+            effective_style_pack_id=snapshot.effective_style_pack_id,
+            artifact_root=platform.handoff_contract.artifact_root,
+            matrix_coverage_count=validation.matrix_coverage_count,
+            evidence_contract_ids=validation.evidence_contract_ids,
+            page_schema_ids=validation.page_schema_ids,
+            quality_diagnostics=self._build_frontend_quality_platform_diagnostics(
+                platform
+            ),
+            blockers=_unique_strings(blockers),
+            warnings=_unique_strings(warnings),
+        )
+
+    def _build_frontend_quality_platform_diagnostics(
+        self,
+        platform,
+    ) -> list[ProgramFrontendQualityPlatformDiagnostic]:
+        verdicts_by_matrix = {
+            verdict.matrix_id: verdict for verdict in platform.verdict_envelopes
+        }
+        diagnostics: list[ProgramFrontendQualityPlatformDiagnostic] = []
+        for entry in platform.coverage_matrix:
+            verdict = verdicts_by_matrix.get(entry.matrix_id)
+            diagnostics.append(
+                ProgramFrontendQualityPlatformDiagnostic(
+                    matrix_id=entry.matrix_id,
+                    page_schema_id=entry.page_schema_id,
+                    browser_id=entry.browser_id,
+                    viewport_id=entry.viewport_id,
+                    style_pack_id=entry.style_pack_id,
+                    gate_state=verdict.gate_state if verdict else "recheck",
+                    evidence_state=verdict.evidence_state if verdict else "missing",
+                )
+            )
+        return diagnostics
+
+    def build_frontend_provider_expansion_handoff(
+        self,
+    ) -> ProgramFrontendProviderExpansionHandoff:
+        """Build the provider expansion handoff surface for the 151 baseline."""
+
+        expansion = build_p3_frontend_provider_expansion_baseline()
+        snapshot, snapshot_issue = self._load_latest_frontend_solution_snapshot()
+        blockers: list[str] = []
+        warnings: list[str] = []
+
+        if snapshot is None:
+            if snapshot_issue is not None:
+                blockers.append(snapshot_issue)
+            return ProgramFrontendProviderExpansionHandoff(
+                state="blocked",
+                schema_version=expansion.handoff_contract.current_version,
+                effective_provider_id="",
+                requested_frontend_stack="",
+                effective_frontend_stack="",
+                artifact_root=expansion.handoff_contract.artifact_root,
+                react_stack_visibility=expansion.react_exposure_boundary.current_stack_visibility,
+                react_binding_visibility=expansion.react_exposure_boundary.current_binding_visibility,
+                provider_diagnostics=self._build_frontend_provider_expansion_diagnostics(
+                    expansion
+                ),
+                blockers=_unique_strings(blockers),
+                warnings=[],
+            )
+
+        validation = validate_frontend_provider_expansion(
+            expansion,
+            solution_snapshot=snapshot,
+        )
+        blockers.extend(validation.blockers)
+        warnings.extend(validation.warnings)
+        return ProgramFrontendProviderExpansionHandoff(
+            state="ready" if not blockers else "blocked",
+            schema_version=expansion.handoff_contract.current_version,
+            effective_provider_id=snapshot.effective_provider_id,
+            requested_frontend_stack=snapshot.requested_frontend_stack,
+            effective_frontend_stack=snapshot.effective_frontend_stack,
+            artifact_root=expansion.handoff_contract.artifact_root,
+            react_stack_visibility=expansion.react_exposure_boundary.current_stack_visibility,
+            react_binding_visibility=expansion.react_exposure_boundary.current_binding_visibility,
+            provider_diagnostics=self._build_frontend_provider_expansion_diagnostics(
+                expansion
+            ),
+            blockers=_unique_strings(blockers),
+            warnings=_unique_strings(warnings),
+        )
+
+    def _build_frontend_provider_expansion_diagnostics(
+        self,
+        expansion,
+    ) -> list[ProgramFrontendProviderExpansionDiagnostic]:
+        return [
+            ProgramFrontendProviderExpansionDiagnostic(
+                provider_id=provider.provider_id,
+                certification_gate=provider.certification_gate,
+                roster_admission_state=provider.roster_admission_state,
+                choice_surface_visibility=provider.choice_surface_visibility,
+                pair_certification_count=len(
+                    provider.certification_aggregate.pair_certifications
+                ),
+            )
+            for provider in expansion.providers
         ]
 
     def _build_theme_governance_provider_profile(

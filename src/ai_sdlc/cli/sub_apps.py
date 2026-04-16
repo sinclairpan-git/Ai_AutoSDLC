@@ -37,6 +37,9 @@ from ai_sdlc.generators.frontend_generation_constraint_artifacts import (
 from ai_sdlc.generators.frontend_page_ui_schema_artifacts import (
     materialize_frontend_page_ui_schema_artifacts,
 )
+from ai_sdlc.generators.frontend_quality_platform_artifacts import (
+    materialize_frontend_quality_platform_artifacts,
+)
 from ai_sdlc.generators.frontend_theme_token_governance_artifacts import (
     materialize_frontend_theme_token_governance_artifacts,
 )
@@ -48,6 +51,9 @@ from ai_sdlc.models.frontend_generation_constraints import (
 )
 from ai_sdlc.models.frontend_page_ui_schema import (
     build_p2_frontend_page_ui_schema_baseline,
+)
+from ai_sdlc.models.frontend_quality_platform import (
+    build_p2_frontend_quality_platform_baseline,
 )
 from ai_sdlc.models.frontend_theme_token_governance import (
     build_p2_frontend_theme_token_governance_baseline,
@@ -439,6 +445,27 @@ def rules_materialize_frontend_theme_token_governance() -> None:
 
     console.print(
         "[green]Frontend theme token governance artifacts materialized[/green] "
+        f"({len(paths)} files)"
+    )
+    for path in paths:
+        console.print(f"  - {path.relative_to(root)}")
+
+
+@rules_app.command(name="materialize-frontend-quality-platform")
+def rules_materialize_frontend_quality_platform() -> None:
+    """Materialize canonical frontend quality platform artifacts."""
+    root = find_project_root()
+    if root is None:
+        console.print("[red]Not inside an AI-SDLC project.[/red]")
+        raise typer.Exit(code=1)
+
+    paths = materialize_frontend_quality_platform_artifacts(
+        root,
+        platform=build_p2_frontend_quality_platform_baseline(),
+    )
+
+    console.print(
+        "[green]Frontend quality platform artifacts materialized[/green] "
         f"({len(paths)} files)"
     )
     for path in paths:

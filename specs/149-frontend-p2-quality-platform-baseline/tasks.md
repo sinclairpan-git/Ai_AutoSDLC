@@ -22,13 +22,16 @@ related_doc:
 Batch 1: Track C capability boundary and delivered/deferred honesty freeze
 Batch 2: future runtime decomposition and downstream handoff freeze
 Batch 3: development summary, docs-only validation, truth handoff readiness
+Batch 4: runtime slice 1 - quality models and artifact materialization
+Batch 5: runtime slice 2 - validator/matrix guardrails
+Batch 6: runtime slice 3 - ProgramService / CLI / verify handoff
 ```
 
 ---
 
 ## 执行护栏
 
-- `149` 当前只允许 docs-only formal baseline freeze，不得进入 `src/` / `tests/`。
+- `149` 已完成 docs-only formal baseline freeze；当前允许进入 `src/` / `tests/` 的 Track C runtime baseline 载体实现。
 - `149` 不得重做 `071/137` visual/a11y foundation，也不得把 `095/143/144` 已完成的 runtime 底座重新包装成当前缺口。
 - `149` 必须直接承认 `147`、`148` 已是 Track C 的共享 schema/theme truth，不得另起第二套输入面。
 - `149` 不得抢跑 `cross-provider consistency`、`provider expansion`、React exposure 或开放 style editor runtime。
@@ -139,3 +142,74 @@ Batch 3: development summary, docs-only validation, truth handoff readiness
 - `149` 已通过 docs-only 门禁
 - Track C runtime 仍需按照 `models -> artifact/evidence -> validator/matrix -> ProgramService/CLI/verify` 顺序推进
 - `149` 之后的下一条前端主线默认遵循 `Track D -> Track E`
+
+## Batch 4：runtime slice 1 - quality models and artifact materialization
+
+### Task 4.1 落地 quality platform models 与 verdict envelope
+
+- **任务编号**：T41
+- **优先级**：P0
+- **依赖**：T33
+- **文件**：`src/ai_sdlc/models/frontend_quality_platform.py`、`tests/unit/test_frontend_quality_platform_models.py`
+- **可并行**：否
+- **验收标准**：
+  1. 存在 `FrontendQualityPlatformSet`、`QualityCoverageMatrixEntry`、`QualityEvidenceContract`、`InteractionQualityFlow`、`QualityVerdictEnvelope`、`QualityTruthSurfacingRecord` 与 `QualityPlatformHandoffContract`
+  2. baseline 直接消费 `147` 的 page schema 与 `148` 的 theme truth，不另造平行输入面
+  3. duplicate matrix/evidence/verdict ids、非法 evidence refs、未知 evidence contract 等关键非法状态会被单测拒绝
+- **验证**：`UV_CACHE_DIR=/tmp/uv-cache uv run pytest tests/unit/test_frontend_quality_platform_models.py`
+
+### Task 4.2 落地 quality artifact / evidence materialization
+
+- **任务编号**：T42
+- **优先级**：P0
+- **依赖**：T41
+- **文件**：`src/ai_sdlc/generators/frontend_quality_platform_artifacts.py`、`tests/unit/test_frontend_quality_platform_artifacts.py`、`tests/integration/test_cli_rules.py`
+- **可并行**：否
+- **验收标准**：
+  1. 生成器写出 canonical artifact root 下的 manifest、handoff schema、coverage matrix、evidence platform、interaction quality、truth surfacing 与 verdict artifacts
+  2. CLI 存在 `python -m ai_sdlc rules materialize-frontend-quality-platform`
+  3. 输出 payload 保留 matrix / verdict / truth surfacing 语义
+- **验证**：`UV_CACHE_DIR=/tmp/uv-cache uv run pytest tests/unit/test_frontend_quality_platform_artifacts.py tests/integration/test_cli_rules.py -k frontend_quality_platform`
+
+## Batch 5：runtime slice 2 - validator/matrix guardrails
+
+### Task 5.1 落地 frontend quality platform validation helper
+
+- **任务编号**：T51
+- **优先级**：P0
+- **依赖**：T42
+- **文件**：`src/ai_sdlc/core/frontend_quality_platform.py`、`tests/unit/test_frontend_quality_platform.py`
+- **可并行**：否
+- **验收标准**：
+  1. 存在独立的 quality platform validation helper，而不是把规则散落在 verify/program 里
+  2. 至少校验 page schema、style pack、matrix/browser/viewport contract 与 snapshot style pack governance
+  3. advisory verdict 会被结构化 surfaced，而不是静默吞掉
+- **验证**：`UV_CACHE_DIR=/tmp/uv-cache uv run pytest tests/unit/test_frontend_quality_platform.py`
+
+## Batch 6：runtime slice 3 - ProgramService / CLI / verify handoff
+
+### Task 6.1 落地 ProgramService / CLI handoff
+
+- **任务编号**：T61
+- **优先级**：P0
+- **依赖**：T51
+- **文件**：`src/ai_sdlc/core/program_service.py`、`src/ai_sdlc/cli/program_cmd.py`、`tests/unit/test_program_service.py`、`tests/integration/test_cli_program.py`
+- **可并行**：否
+- **验收标准**：
+  1. 存在 `build_frontend_quality_platform_handoff()`
+  2. 存在 `python -m ai_sdlc program quality-platform-handoff`
+  3. handoff 输出 matrix coverage、page schema、evidence contract 与质量诊断
+- **验证**：`UV_CACHE_DIR=/tmp/uv-cache uv run pytest tests/unit/test_program_service.py -k quality_platform tests/integration/test_cli_program.py -k quality_platform`
+
+### Task 6.2 证明 quality platform verify blocker 进入 global truth
+
+- **任务编号**：T62
+- **优先级**：P1
+- **依赖**：T61
+- **文件**：`src/ai_sdlc/core/verify_constraints.py`、`tests/unit/test_verify_constraints.py`、`tests/unit/test_program_service.py`
+- **可并行**：否
+- **验收标准**：
+  1. `verify constraints` 在 active `149` 下输出 scoped `frontend_quality_platform_verification`
+  2. 缺失 verdict artifact、未知 style pack 等问题能在 verify 中出 blocker
+  3. quality platform verify coverage gap 会进入 truth snapshot 的 release blocking refs
+- **验证**：`UV_CACHE_DIR=/tmp/uv-cache uv run pytest tests/unit/test_verify_constraints.py -k frontend_quality_platform tests/unit/test_program_service.py -k quality_platform`

@@ -35,6 +35,12 @@ from ai_sdlc.core.frontend_gate_verification import (
     FrontendGateVerificationReport,
     build_frontend_gate_verification_report,
 )
+from ai_sdlc.core.frontend_provider_expansion import (
+    validate_frontend_provider_expansion,
+)
+from ai_sdlc.core.frontend_quality_platform import (
+    validate_frontend_quality_platform,
+)
 from ai_sdlc.core.frontend_theme_token_governance import (
     validate_frontend_theme_token_governance,
 )
@@ -57,9 +63,30 @@ from ai_sdlc.models.frontend_generation_constraints import (
 from ai_sdlc.models.frontend_page_ui_schema import (
     build_p2_frontend_page_ui_schema_baseline,
 )
+from ai_sdlc.models.frontend_provider_expansion import (
+    ChoiceSurfacePolicy,
+    FrontendProviderExpansionSet,
+    PairCertificationReference,
+    ProviderAdmissionBundle,
+    ProviderCertificationAggregate,
+    ProviderExpansionHandoffContract,
+    ProviderExpansionTruthSurfacingRecord,
+    ReactExposureBoundary,
+    build_p3_frontend_provider_expansion_baseline,
+)
 from ai_sdlc.models.frontend_provider_profile import (
     ProviderStyleSupportEntry,
     build_mvp_enterprise_vue2_provider_profile,
+)
+from ai_sdlc.models.frontend_quality_platform import (
+    FrontendQualityPlatformSet,
+    InteractionQualityFlow,
+    QualityCoverageMatrixEntry,
+    QualityEvidenceContract,
+    QualityPlatformHandoffContract,
+    QualityTruthSurfacingRecord,
+    QualityVerdictEnvelope,
+    build_p2_frontend_quality_platform_baseline,
 )
 from ai_sdlc.models.frontend_solution_confirmation import (
     FrontendSolutionSnapshot,
@@ -241,6 +268,18 @@ FRONTEND_THEME_TOKEN_GOVERNANCE_SOURCE_NAME = (
 FRONTEND_THEME_TOKEN_GOVERNANCE_COVERAGE_GAP = (
     "frontend_theme_token_governance_consistency"
 )
+FRONTEND_QUALITY_PLATFORM_SOURCE_NAME = (
+    "frontend quality platform verification"
+)
+FRONTEND_QUALITY_PLATFORM_COVERAGE_GAP = (
+    "frontend_quality_platform_consistency"
+)
+FRONTEND_PROVIDER_EXPANSION_SOURCE_NAME = (
+    "frontend provider expansion verification"
+)
+FRONTEND_PROVIDER_EXPANSION_COVERAGE_GAP = (
+    "frontend_provider_expansion_consistency"
+)
 FRONTEND_EVIDENCE_CLASS_ALLOWED_VALUES = (
     "framework_capability",
     "consumer_adoption",
@@ -272,6 +311,24 @@ FRONTEND_THEME_TOKEN_GOVERNANCE_CHECK_OBJECTS = (
     "frontend_theme_override_policy_artifacts",
     "frontend_theme_style_editor_boundary_artifacts",
     FRONTEND_THEME_TOKEN_GOVERNANCE_COVERAGE_GAP,
+)
+FRONTEND_QUALITY_PLATFORM_CHECK_OBJECTS = (
+    "frontend_quality_platform_manifest_artifacts",
+    "frontend_quality_platform_handoff_schema_artifacts",
+    "frontend_quality_platform_coverage_matrix_artifacts",
+    "frontend_quality_platform_evidence_platform_artifacts",
+    "frontend_quality_platform_interaction_flow_artifacts",
+    "frontend_quality_platform_truth_surfacing_artifacts",
+    "frontend_quality_platform_verdict_artifacts",
+    FRONTEND_QUALITY_PLATFORM_COVERAGE_GAP,
+)
+FRONTEND_PROVIDER_EXPANSION_CHECK_OBJECTS = (
+    "frontend_provider_expansion_manifest_artifacts",
+    "frontend_provider_expansion_handoff_schema_artifacts",
+    "frontend_provider_expansion_truth_surfacing_artifacts",
+    "frontend_provider_expansion_choice_surface_policy_artifacts",
+    "frontend_provider_expansion_react_boundary_artifacts",
+    FRONTEND_PROVIDER_EXPANSION_COVERAGE_GAP,
 )
 
 
@@ -449,6 +506,66 @@ class FrontendThemeTokenGovernanceVerificationReport:
         }
 
 
+@dataclass(frozen=True, slots=True)
+class FrontendQualityPlatformVerificationReport:
+    """Scoped verification summary for work item 149 quality-platform consistency."""
+
+    root: str
+    source_name: str = FRONTEND_QUALITY_PLATFORM_SOURCE_NAME
+    check_objects: tuple[str, ...] = FRONTEND_QUALITY_PLATFORM_CHECK_OBJECTS
+    blockers: tuple[str, ...] = ()
+    coverage_gaps: tuple[str, ...] = ()
+    gate_result: str = "PASS"
+    effective_provider_id: str | None = None
+    requested_style_pack_id: str | None = None
+    effective_style_pack_id: str | None = None
+    matrix_coverage_count: int = 0
+
+    def to_json_dict(self) -> dict[str, object]:
+        return {
+            "source_name": self.source_name,
+            "gate_verdict": self.gate_result,
+            "check_objects": list(self.check_objects),
+            "blockers": list(self.blockers),
+            "coverage_gaps": list(self.coverage_gaps),
+            "effective_provider_id": self.effective_provider_id,
+            "requested_style_pack_id": self.requested_style_pack_id,
+            "effective_style_pack_id": self.effective_style_pack_id,
+            "matrix_coverage_count": self.matrix_coverage_count,
+        }
+
+
+@dataclass(frozen=True, slots=True)
+class FrontendProviderExpansionVerificationReport:
+    """Scoped verification summary for work item 151 provider expansion consistency."""
+
+    root: str
+    source_name: str = FRONTEND_PROVIDER_EXPANSION_SOURCE_NAME
+    check_objects: tuple[str, ...] = FRONTEND_PROVIDER_EXPANSION_CHECK_OBJECTS
+    blockers: tuple[str, ...] = ()
+    coverage_gaps: tuple[str, ...] = ()
+    gate_result: str = "PASS"
+    effective_provider_id: str | None = None
+    requested_frontend_stack: str | None = None
+    effective_frontend_stack: str | None = None
+    react_stack_visibility: str | None = None
+    react_binding_visibility: str | None = None
+
+    def to_json_dict(self) -> dict[str, object]:
+        return {
+            "source_name": self.source_name,
+            "gate_verdict": self.gate_result,
+            "check_objects": list(self.check_objects),
+            "blockers": list(self.blockers),
+            "coverage_gaps": list(self.coverage_gaps),
+            "effective_provider_id": self.effective_provider_id,
+            "requested_frontend_stack": self.requested_frontend_stack,
+            "effective_frontend_stack": self.effective_frontend_stack,
+            "react_stack_visibility": self.react_stack_visibility,
+            "react_binding_visibility": self.react_binding_visibility,
+        }
+
+
 def build_constraint_report(root: Path) -> ConstraintReport:
     """Build a structured report for verify constraints."""
     checkpoint = load_checkpoint(root)
@@ -458,8 +575,15 @@ def build_constraint_report(root: Path) -> ConstraintReport:
     frontend_solution_confirmation_report = (
         _frontend_solution_confirmation_attachment_report(root, checkpoint)
     )
+    frontend_quality_platform_report = _frontend_quality_platform_attachment_report(
+        root,
+        checkpoint,
+    )
     frontend_theme_token_governance_report = (
         _frontend_theme_token_governance_attachment_report(root, checkpoint)
+    )
+    frontend_provider_expansion_report = (
+        _frontend_provider_expansion_attachment_report(root, checkpoint)
     )
     check_objects = _merge_unique_strings(
         _merge_unique_strings(
@@ -479,8 +603,24 @@ def build_constraint_report(root: Path) -> ConstraintReport:
             ),
         ),
         (
+            frontend_quality_platform_report.check_objects
+            if frontend_quality_platform_report
+            else ()
+        ),
+    )
+    check_objects = _merge_unique_strings(
+        check_objects,
+        (
             frontend_theme_token_governance_report.check_objects
             if frontend_theme_token_governance_report
+            else ()
+        ),
+    )
+    check_objects = _merge_unique_strings(
+        check_objects,
+        (
+            frontend_provider_expansion_report.check_objects
+            if frontend_provider_expansion_report
             else ()
         ),
     )
@@ -502,8 +642,24 @@ def build_constraint_report(root: Path) -> ConstraintReport:
             ),
         ),
         (
+            frontend_quality_platform_report.blockers
+            if frontend_quality_platform_report
+            else ()
+        ),
+    )
+    blockers = _merge_unique_strings(
+        blockers,
+        (
             frontend_theme_token_governance_report.blockers
             if frontend_theme_token_governance_report
+            else ()
+        ),
+    )
+    blockers = _merge_unique_strings(
+        blockers,
+        (
+            frontend_provider_expansion_report.blockers
+            if frontend_provider_expansion_report
             else ()
         ),
     )
@@ -529,10 +685,26 @@ def build_constraint_report(root: Path) -> ConstraintReport:
                 ),
             ),
             (
-                frontend_theme_token_governance_report.coverage_gaps
-                if frontend_theme_token_governance_report
+                frontend_quality_platform_report.coverage_gaps
+                if frontend_quality_platform_report
                 else ()
             ),
+        ),
+    )
+    coverage_gaps = _merge_unique_strings(
+        coverage_gaps,
+        (
+            frontend_theme_token_governance_report.coverage_gaps
+            if frontend_theme_token_governance_report
+            else ()
+        ),
+    )
+    coverage_gaps = _merge_unique_strings(
+        coverage_gaps,
+        (
+            frontend_provider_expansion_report.coverage_gaps
+            if frontend_provider_expansion_report
+            else ()
         ),
     )
     return ConstraintReport(
@@ -556,8 +728,15 @@ def build_verification_gate_context(root: Path) -> dict[str, object]:
     frontend_solution_confirmation_report = (
         _frontend_solution_confirmation_attachment_report(root, checkpoint)
     )
+    frontend_quality_platform_report = _frontend_quality_platform_attachment_report(
+        root,
+        checkpoint,
+    )
     frontend_theme_token_governance_report = (
         _frontend_theme_token_governance_attachment_report(root, checkpoint)
+    )
+    frontend_provider_expansion_report = (
+        _frontend_provider_expansion_attachment_report(root, checkpoint)
     )
     governance = build_verification_governance_bundle(
         report,
@@ -583,8 +762,24 @@ def build_verification_gate_context(root: Path) -> dict[str, object]:
             ),
         ),
         (
+            (frontend_quality_platform_report.source_name,)
+            if frontend_quality_platform_report
+            else ()
+        ),
+    )
+    verification_sources = _merge_unique_strings(
+        verification_sources,
+        (
             (frontend_theme_token_governance_report.source_name,)
             if frontend_theme_token_governance_report
+            else ()
+        ),
+    )
+    verification_sources = _merge_unique_strings(
+        verification_sources,
+        (
+            (frontend_provider_expansion_report.source_name,)
+            if frontend_provider_expansion_report
             else ()
         ),
     )
@@ -611,9 +806,17 @@ def build_verification_gate_context(root: Path) -> dict[str, object]:
         context["frontend_solution_confirmation_verification"] = (
             frontend_solution_confirmation_report.to_json_dict()
         )
+    if frontend_quality_platform_report is not None:
+        context["frontend_quality_platform_verification"] = (
+            frontend_quality_platform_report.to_json_dict()
+        )
     if frontend_theme_token_governance_report is not None:
         context["frontend_theme_token_governance_verification"] = (
             frontend_theme_token_governance_report.to_json_dict()
+        )
+    if frontend_provider_expansion_report is not None:
+        context["frontend_provider_expansion_verification"] = (
+            frontend_provider_expansion_report.to_json_dict()
         )
     return context
 
@@ -1193,6 +1396,251 @@ def _frontend_solution_confirmation_attachment_report(
     )
 
 
+def _frontend_quality_platform_attachment_report(
+    root: Path,
+    checkpoint: Checkpoint | None,
+) -> FrontendQualityPlatformVerificationReport | None:
+    """Resolve the scoped frontend quality platform attachment for active 149 only."""
+
+    work_item_id = _effective_feature_contract_wi_id(checkpoint)
+    if not _is_149_work_item(work_item_id):
+        return None
+
+    blockers: list[str] = []
+    baseline = build_p2_frontend_quality_platform_baseline()
+    artifact_root = root / "governance" / "frontend" / "quality-platform"
+    manifest_path = artifact_root / "quality-platform.manifest.yaml"
+    handoff_schema_path = artifact_root / "handoff.schema.yaml"
+    coverage_matrix_path = artifact_root / "coverage-matrix.yaml"
+    evidence_platform_path = artifact_root / "evidence-platform.yaml"
+    interaction_quality_path = artifact_root / "interaction-quality.yaml"
+    truth_surfacing_path = artifact_root / "truth-surfacing.yaml"
+
+    payloads: dict[str, dict[str, object]] = {}
+    for label, path in (
+        ("manifest", manifest_path),
+        ("handoff schema", handoff_schema_path),
+        ("coverage matrix", coverage_matrix_path),
+        ("evidence platform", evidence_platform_path),
+        ("interaction quality", interaction_quality_path),
+        ("truth surfacing", truth_surfacing_path),
+    ):
+        if not path.is_file():
+            blockers.append(
+                "BLOCKER: frontend quality platform artifact missing: "
+                f"{path.as_posix()}"
+            )
+            continue
+        try:
+            payloads[label] = _load_yaml_mapping(path)
+        except ValueError as exc:
+            blockers.append(
+                "BLOCKER: invalid frontend quality platform artifact "
+                f"{path.as_posix()}: {exc}"
+            )
+
+    latest_snapshot_path = (
+        root
+        / ".ai-sdlc"
+        / "memory"
+        / "frontend-solution-confirmation"
+        / "latest.yaml"
+    )
+    snapshot: FrontendSolutionSnapshot | None = None
+    if not latest_snapshot_path.is_file():
+        blockers.append(
+            "BLOCKER: frontend solution snapshot artifact missing: "
+            f"{latest_snapshot_path.as_posix()}"
+        )
+    else:
+        try:
+            snapshot = FrontendSolutionSnapshot.model_validate(
+                _load_yaml_mapping(latest_snapshot_path)
+            )
+        except Exception as exc:
+            blockers.append(
+                "BLOCKER: invalid frontend solution snapshot artifact "
+                f"{latest_snapshot_path.as_posix()}: {exc}"
+            )
+
+    manifest_payload = payloads.get("manifest")
+    handoff_schema_payload = payloads.get("handoff schema")
+    coverage_matrix_payload = payloads.get("coverage matrix")
+    evidence_platform_payload = payloads.get("evidence platform")
+    interaction_quality_payload = payloads.get("interaction quality")
+    truth_surfacing_payload = payloads.get("truth surfacing")
+
+    matrix_coverage_count = 0
+    effective_provider_id = snapshot.effective_provider_id if snapshot else None
+    requested_style_pack_id = snapshot.requested_style_pack_id if snapshot else None
+    effective_style_pack_id = snapshot.effective_style_pack_id if snapshot else None
+
+    if (
+        blockers
+        and (
+            manifest_payload is None
+            or handoff_schema_payload is None
+            or coverage_matrix_payload is None
+            or evidence_platform_payload is None
+            or interaction_quality_payload is None
+            or truth_surfacing_payload is None
+            or snapshot is None
+        )
+    ):
+        blockers_tuple = tuple(blockers)
+        return FrontendQualityPlatformVerificationReport(
+            root=str(root),
+            blockers=blockers_tuple,
+            coverage_gaps=((FRONTEND_QUALITY_PLATFORM_COVERAGE_GAP,) if blockers_tuple else ()),
+            gate_result="RETRY" if blockers_tuple else "PASS",
+            effective_provider_id=effective_provider_id,
+            requested_style_pack_id=requested_style_pack_id,
+            effective_style_pack_id=effective_style_pack_id,
+        )
+
+    assert manifest_payload is not None
+    assert handoff_schema_payload is not None
+    assert coverage_matrix_payload is not None
+    assert evidence_platform_payload is not None
+    assert interaction_quality_payload is not None
+    assert truth_surfacing_payload is not None
+    assert snapshot is not None
+
+    raw_matrix_items = coverage_matrix_payload.get("items", [])
+    raw_contract_items = evidence_platform_payload.get("contracts", [])
+    raw_flow_items = interaction_quality_payload.get("flows", [])
+    raw_truth_items = truth_surfacing_payload.get("items", [])
+    if not isinstance(raw_matrix_items, list):
+        blockers.append("BLOCKER: invalid quality platform coverage matrix artifact: items must be a list")
+    if not isinstance(raw_contract_items, list):
+        blockers.append("BLOCKER: invalid quality platform evidence platform artifact: contracts must be a list")
+    if not isinstance(raw_flow_items, list):
+        blockers.append("BLOCKER: invalid quality platform interaction artifact: flows must be a list")
+    if not isinstance(raw_truth_items, list):
+        blockers.append("BLOCKER: invalid quality platform truth surfacing artifact: items must be a list")
+
+    matrix_entries: list[QualityCoverageMatrixEntry] = []
+    evidence_contracts: list[QualityEvidenceContract] = []
+    interaction_flows: list[InteractionQualityFlow] = []
+    truth_records: list[QualityTruthSurfacingRecord] = []
+
+    if not blockers:
+        try:
+            matrix_entries = [
+                QualityCoverageMatrixEntry.model_validate(item)
+                for item in raw_matrix_items
+                if isinstance(item, dict)
+            ]
+            evidence_contracts = [
+                QualityEvidenceContract.model_validate(item)
+                for item in raw_contract_items
+                if isinstance(item, dict)
+            ]
+            interaction_flows = [
+                InteractionQualityFlow.model_validate(item)
+                for item in raw_flow_items
+                if isinstance(item, dict)
+            ]
+            truth_records = [
+                QualityTruthSurfacingRecord.model_validate(item)
+                for item in raw_truth_items
+                if isinstance(item, dict)
+            ]
+            handoff_contract = QualityPlatformHandoffContract(
+                schema_family=str(
+                    manifest_payload.get(
+                        "schema_family",
+                        baseline.handoff_contract.schema_family,
+                    )
+                ),
+                current_version=str(
+                    manifest_payload.get(
+                        "current_version",
+                        baseline.handoff_contract.current_version,
+                    )
+                ),
+                compatible_versions=[
+                    str(
+                        manifest_payload.get(
+                            "current_version",
+                            baseline.handoff_contract.current_version,
+                        )
+                    )
+                ],
+                artifact_root=str(
+                    manifest_payload.get(
+                        "artifact_root",
+                        baseline.handoff_contract.artifact_root,
+                    )
+                ),
+                canonical_files=list(baseline.handoff_contract.canonical_files),
+                program_service_fields=list(baseline.handoff_contract.program_service_fields),
+                cli_fields=list(baseline.handoff_contract.cli_fields),
+                verify_fields=list(baseline.handoff_contract.verify_fields),
+            )
+            verdict_root = artifact_root / "verdicts"
+            # Use baseline verdict ids because manifest only stores matrix ids.
+            raw_verdict_ids = [verdict.verdict_id for verdict in baseline.verdict_envelopes]
+            verdict_envelopes: list[QualityVerdictEnvelope] = []
+            for verdict_id in raw_verdict_ids:
+                verdict_path = verdict_root / f"{verdict_id}.yaml"
+                if not verdict_path.is_file():
+                    blockers.append(
+                        "BLOCKER: frontend quality platform verdict artifact missing: "
+                        f"{verdict_path.as_posix()}"
+                    )
+                    continue
+                verdict_envelopes.append(
+                    QualityVerdictEnvelope.model_validate(_load_yaml_mapping(verdict_path))
+                )
+
+            if not blockers:
+                platform = FrontendQualityPlatformSet(
+                    work_item_id=str(
+                        manifest_payload.get("work_item_id", baseline.work_item_id)
+                    ),
+                    source_work_item_ids=list(
+                        _string_tuple(
+                            manifest_payload.get(
+                                "source_work_item_ids",
+                                baseline.source_work_item_ids,
+                            )
+                        )
+                    ),
+                    coverage_matrix=matrix_entries,
+                    evidence_contracts=evidence_contracts,
+                    interaction_flows=interaction_flows,
+                    verdict_envelopes=verdict_envelopes,
+                    truth_surfacing_records=truth_records,
+                    handoff_contract=handoff_contract,
+                )
+                validation = validate_frontend_quality_platform(
+                    platform,
+                    page_ui_schema=build_p2_frontend_page_ui_schema_baseline(),
+                    theme_governance=build_p2_frontend_theme_token_governance_baseline(),
+                    solution_snapshot=snapshot,
+                )
+                blockers.extend(f"BLOCKER: {blocker}" for blocker in validation.blockers)
+                matrix_coverage_count = validation.matrix_coverage_count
+        except Exception as exc:
+            blockers.append(
+                "BLOCKER: invalid frontend quality platform artifact set: "
+                f"{exc}"
+            )
+
+    blockers_tuple = tuple(blockers)
+    return FrontendQualityPlatformVerificationReport(
+        root=str(root),
+        blockers=blockers_tuple,
+        coverage_gaps=((FRONTEND_QUALITY_PLATFORM_COVERAGE_GAP,) if blockers_tuple else ()),
+        gate_result="RETRY" if blockers_tuple else "PASS",
+        effective_provider_id=effective_provider_id,
+        requested_style_pack_id=requested_style_pack_id,
+        effective_style_pack_id=effective_style_pack_id,
+        matrix_coverage_count=matrix_coverage_count,
+    )
+
+
 def _frontend_theme_token_governance_attachment_report(
     root: Path,
     checkpoint: Checkpoint | None,
@@ -1446,6 +1894,313 @@ def _frontend_theme_token_governance_attachment_report(
         effective_provider_id=effective_provider_id,
         requested_style_pack_id=requested_style_pack_id,
         effective_style_pack_id=effective_style_pack_id,
+    )
+
+
+def _frontend_provider_expansion_attachment_report(
+    root: Path,
+    checkpoint: Checkpoint | None,
+) -> FrontendProviderExpansionVerificationReport | None:
+    """Resolve the scoped frontend provider expansion attachment for active 151 only."""
+
+    work_item_id = _effective_feature_contract_wi_id(checkpoint)
+    if not _is_151_work_item(work_item_id):
+        return None
+
+    blockers: list[str] = []
+    baseline = build_p3_frontend_provider_expansion_baseline()
+    artifact_root = root / "governance" / "frontend" / "provider-expansion"
+    manifest_path = artifact_root / "provider-expansion.manifest.yaml"
+    handoff_schema_path = artifact_root / "handoff.schema.yaml"
+    truth_surfacing_path = artifact_root / "truth-surfacing.yaml"
+    choice_surface_policy_path = artifact_root / "choice-surface-policy.yaml"
+    react_boundary_path = artifact_root / "react-exposure-boundary.yaml"
+
+    payloads: dict[str, dict[str, object]] = {}
+    for label, path in (
+        ("manifest", manifest_path),
+        ("handoff schema", handoff_schema_path),
+        ("truth surfacing", truth_surfacing_path),
+        ("choice surface policy", choice_surface_policy_path),
+        ("react boundary", react_boundary_path),
+    ):
+        if not path.is_file():
+            blockers.append(
+                "BLOCKER: frontend provider expansion artifact missing: "
+                f"{path.as_posix()}"
+            )
+            continue
+        try:
+            payloads[label] = _load_yaml_mapping(path)
+        except ValueError as exc:
+            blockers.append(
+                "BLOCKER: invalid frontend provider expansion artifact "
+                f"{path.as_posix()}: {exc}"
+            )
+
+    latest_snapshot_path = (
+        root
+        / ".ai-sdlc"
+        / "memory"
+        / "frontend-solution-confirmation"
+        / "latest.yaml"
+    )
+    snapshot: FrontendSolutionSnapshot | None = None
+    if not latest_snapshot_path.is_file():
+        blockers.append(
+            "BLOCKER: frontend solution snapshot artifact missing: "
+            f"{latest_snapshot_path.as_posix()}"
+        )
+    else:
+        try:
+            snapshot = FrontendSolutionSnapshot.model_validate(
+                _load_yaml_mapping(latest_snapshot_path)
+            )
+        except Exception as exc:
+            blockers.append(
+                "BLOCKER: invalid frontend solution snapshot artifact "
+                f"{latest_snapshot_path.as_posix()}: {exc}"
+            )
+
+    effective_provider_id = snapshot.effective_provider_id if snapshot else None
+    requested_frontend_stack = snapshot.requested_frontend_stack if snapshot else None
+    effective_frontend_stack = snapshot.effective_frontend_stack if snapshot else None
+
+    if blockers and (
+        "manifest" not in payloads
+        or "handoff schema" not in payloads
+        or "truth surfacing" not in payloads
+        or "choice surface policy" not in payloads
+        or "react boundary" not in payloads
+        or snapshot is None
+    ):
+        blockers_tuple = tuple(blockers)
+        return FrontendProviderExpansionVerificationReport(
+            root=str(root),
+            blockers=blockers_tuple,
+            coverage_gaps=(
+                (FRONTEND_PROVIDER_EXPANSION_COVERAGE_GAP,)
+                if blockers_tuple
+                else ()
+            ),
+            gate_result="RETRY" if blockers_tuple else "PASS",
+            effective_provider_id=effective_provider_id,
+            requested_frontend_stack=requested_frontend_stack,
+            effective_frontend_stack=effective_frontend_stack,
+        )
+
+    manifest_payload = payloads["manifest"]
+    handoff_schema_payload = payloads["handoff schema"]
+    truth_surfacing_payload = payloads["truth surfacing"]
+    choice_surface_policy_payload = payloads["choice surface policy"]
+    react_boundary_payload = payloads["react boundary"]
+
+    react_stack_visibility: str | None = None
+    react_binding_visibility: str | None = None
+
+    try:
+        handoff_contract = ProviderExpansionHandoffContract(
+            schema_family=str(
+                handoff_schema_payload.get(
+                    "schema_family",
+                    baseline.handoff_contract.schema_family,
+                )
+            ),
+            current_version=str(
+                handoff_schema_payload.get(
+                    "current_version",
+                    baseline.handoff_contract.current_version,
+                )
+            ),
+            compatible_versions=list(
+                _string_tuple(
+                    handoff_schema_payload.get(
+                        "compatible_versions",
+                        baseline.handoff_contract.compatible_versions,
+                    )
+                )
+            ),
+            artifact_root=str(
+                handoff_schema_payload.get(
+                    "artifact_root",
+                    baseline.handoff_contract.artifact_root,
+                )
+            ),
+            canonical_files=list(
+                _string_tuple(
+                    handoff_schema_payload.get(
+                        "canonical_files",
+                        baseline.handoff_contract.canonical_files,
+                    )
+                )
+            ),
+            program_service_fields=list(
+                _string_tuple(
+                    handoff_schema_payload.get(
+                        "program_service_fields",
+                        baseline.handoff_contract.program_service_fields,
+                    )
+                )
+            ),
+            cli_fields=list(
+                _string_tuple(
+                    handoff_schema_payload.get(
+                        "cli_fields",
+                        baseline.handoff_contract.cli_fields,
+                    )
+                )
+            ),
+            verify_fields=list(
+                _string_tuple(
+                    handoff_schema_payload.get(
+                        "verify_fields",
+                        baseline.handoff_contract.verify_fields,
+                    )
+                )
+            ),
+        )
+
+        choice_surface_policy = ChoiceSurfacePolicy.model_validate(
+            choice_surface_policy_payload
+        )
+        react_boundary = ReactExposureBoundary.model_validate(react_boundary_payload)
+        react_stack_visibility = react_boundary.current_stack_visibility
+        react_binding_visibility = react_boundary.current_binding_visibility
+
+        raw_truth_items = truth_surfacing_payload.get("items", [])
+        if not isinstance(raw_truth_items, list):
+            raise ValueError("truth surfacing artifact `items` must be a list")
+        truth_surfacing_records = [
+            ProviderExpansionTruthSurfacingRecord.model_validate(item)
+            for item in raw_truth_items
+            if isinstance(item, dict)
+        ]
+
+        provider_ids = list(
+            _string_tuple(
+                manifest_payload.get(
+                    "provider_ids",
+                    [provider.provider_id for provider in baseline.providers],
+                )
+            )
+        )
+        providers: list[ProviderAdmissionBundle] = []
+        for provider_id in provider_ids:
+            provider_root = artifact_root / "providers" / provider_id
+            provider_payloads: dict[str, dict[str, object]] = {}
+            for label, path in (
+                ("admission", provider_root / "admission.yaml"),
+                ("roster state", provider_root / "roster-state.yaml"),
+                ("certification ref", provider_root / "certification-ref.yaml"),
+                (
+                    "provider certification aggregate",
+                    provider_root / "provider-certification-aggregate.yaml",
+                ),
+            ):
+                if not path.is_file():
+                    blockers.append(
+                        "BLOCKER: frontend provider expansion artifact missing: "
+                        f"{path.as_posix()}"
+                    )
+                    continue
+                try:
+                    provider_payloads[label] = _load_yaml_mapping(path)
+                except ValueError as exc:
+                    blockers.append(
+                        "BLOCKER: invalid frontend provider expansion artifact "
+                        f"{path.as_posix()}: {exc}"
+                    )
+            if len(provider_payloads) != 4:
+                continue
+
+            raw_certification_items = provider_payloads["certification ref"].get(
+                "items",
+                [],
+            )
+            if not isinstance(raw_certification_items, list):
+                raise ValueError("certification ref artifact `items` must be a list")
+            pair_refs = [
+                PairCertificationReference.model_validate(item)
+                for item in raw_certification_items
+                if isinstance(item, dict)
+            ]
+            aggregate_payload = provider_payloads["provider certification aggregate"]
+            aggregate = ProviderCertificationAggregate(
+                provider_id=str(
+                    aggregate_payload.get("provider_id", provider_id)
+                ),
+                source_work_item_id=str(
+                    aggregate_payload.get("source_work_item_id", "150")
+                ),
+                pair_certifications=pair_refs,
+                aggregate_gate=_optional_str(aggregate_payload.get("aggregate_gate")),
+            )
+            admission_payload = provider_payloads["admission"]
+            providers.append(
+                ProviderAdmissionBundle(
+                    provider_id=str(admission_payload.get("provider_id", provider_id)),
+                    certification_aggregate=aggregate,
+                    roster_admission_state=str(
+                        admission_payload.get("roster_admission_state", "candidate")
+                    ),
+                    choice_surface_visibility=str(
+                        admission_payload.get("choice_surface_visibility", "hidden")
+                    ),
+                    caveat_codes=list(
+                        _string_tuple(admission_payload.get("caveat_codes", ()))
+                    ),
+                    artifact_root_ref=str(
+                        admission_payload.get(
+                            "artifact_root_ref",
+                            baseline.handoff_contract.artifact_root,
+                        )
+                    ),
+                )
+            )
+
+        expansion = FrontendProviderExpansionSet(
+            work_item_id=str(manifest_payload.get("work_item_id", baseline.work_item_id)),
+            source_work_item_ids=list(
+                _string_tuple(
+                    manifest_payload.get(
+                        "source_work_item_ids",
+                        baseline.source_work_item_ids,
+                    )
+                )
+            ),
+            choice_surface_policy=choice_surface_policy,
+            providers=providers,
+            react_exposure_boundary=react_boundary,
+            truth_surfacing_records=truth_surfacing_records,
+            handoff_contract=handoff_contract,
+        )
+    except Exception as exc:
+        blockers.append(
+            "BLOCKER: invalid frontend provider expansion artifact set: "
+            f"{exc}"
+        )
+    else:
+        validation = validate_frontend_provider_expansion(
+            expansion,
+            solution_snapshot=snapshot,
+        )
+        blockers.extend(f"BLOCKER: {blocker}" for blocker in validation.blockers)
+
+    blockers_tuple = tuple(blockers)
+    return FrontendProviderExpansionVerificationReport(
+        root=str(root),
+        blockers=blockers_tuple,
+        coverage_gaps=(
+            (FRONTEND_PROVIDER_EXPANSION_COVERAGE_GAP,)
+            if blockers_tuple
+            else ()
+        ),
+        gate_result="RETRY" if blockers_tuple else "PASS",
+        effective_provider_id=effective_provider_id,
+        requested_frontend_stack=requested_frontend_stack,
+        effective_frontend_stack=effective_frontend_stack,
+        react_stack_visibility=react_stack_visibility,
+        react_binding_visibility=react_binding_visibility,
     )
 
 
@@ -1813,6 +2568,16 @@ def _is_073_work_item(work_item_id: str) -> bool:
 def _is_148_work_item(work_item_id: str) -> bool:
     normalized = work_item_id.strip()
     return normalized == "148" or normalized.startswith("148-") or normalized.startswith("148/")
+
+
+def _is_149_work_item(work_item_id: str) -> bool:
+    normalized = work_item_id.strip()
+    return normalized == "149" or normalized.startswith("149-") or normalized.startswith("149/")
+
+
+def _is_151_work_item(work_item_id: str) -> bool:
+    normalized = work_item_id.strip()
+    return normalized == "151" or normalized.startswith("151-") or normalized.startswith("151/")
 
 
 def _effective_feature_contract_wi_id(checkpoint: Checkpoint | None) -> str:

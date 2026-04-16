@@ -2,7 +2,7 @@
 
 **功能编号**：`151-frontend-p3-modern-provider-expansion-baseline`
 **创建日期**：2026-04-16
-**状态**：已归档
+**状态**：已落地（runtime slices 1-3 已完成）
 
 ## 1. 归档规则
 
@@ -143,3 +143,271 @@
 - 当前批次 branch disposition 状态：本批提交后闭环，可继续 `151` runtime
 - 当前批次 worktree disposition 状态：本批提交后闭环，可继续 `151` runtime
 - 是否继续下一批：是；默认继续 `151` 自身 runtime slices，而不是重新做 capability census
+
+### Batch 2026-04-16-002 | T41-T43
+
+#### 2.9 批次范围
+
+- 覆盖任务：`T41`、`T42`、`T43`
+- 覆盖阶段：runtime slice 1 - provider admission models + provider expansion artifacts + task memory refresh
+- 预读范围：`specs/151-frontend-p3-modern-provider-expansion-baseline/spec.md`、`specs/151-frontend-p3-modern-provider-expansion-baseline/plan.md`、`specs/151-frontend-p3-modern-provider-expansion-baseline/tasks.md`、`src/ai_sdlc/models/frontend_theme_token_governance.py`、`src/ai_sdlc/generators/frontend_provider_profile_artifacts.py`
+- 激活的规则：formalize-first 已完成、TDD-first、admission-after-certification、truth-memory-sync-before-next-slice
+
+#### 2.10 统一验证命令
+
+- `V10`（runtime slice 1 tests）
+  - 命令：`UV_CACHE_DIR=/tmp/uv-cache uv run pytest tests/unit/test_frontend_provider_expansion_models.py tests/unit/test_frontend_provider_expansion_artifacts.py`
+  - 结果：通过；`9 passed`
+- `V11`（diff hygiene）
+  - 命令：`git diff --check`
+  - 结果：通过；无输出
+
+#### 2.11 任务记录
+
+##### T41 | provider admission models 与 certification aggregation
+
+- 改动范围：`src/ai_sdlc/models/frontend_provider_expansion.py`、`src/ai_sdlc/models/__init__.py`、`tests/unit/test_frontend_provider_expansion_models.py`
+- 改动内容：
+  - 新增 `PairCertificationReference`、`ProviderCertificationAggregate`、`ProviderAdmissionBundle`、`ReactExposureBoundary`、`ProviderExpansionTruthSurfacingRecord`、`ProviderExpansionHandoffContract`、`FrontendProviderExpansionSet`
+  - 将 `150` pair-level certification 聚合为 provider-level `aggregate_gate`
+  - 固化 `certification_gate / roster_admission_state / choice_surface_visibility` 正交状态轴
+  - 固化 React stack visibility / provider binding visibility 的边界校验与 baseline builder
+- 新增/调整的测试：
+  - `tests/unit/test_frontend_provider_expansion_models.py`
+- 执行的命令：`V10`
+- 测试结果：通过；admission/visibility/gate 的关键非法组合均被测试覆盖
+- 是否符合任务目标：是
+
+##### T42 | provider expansion artifact materialization
+
+- 改动范围：`src/ai_sdlc/generators/frontend_provider_expansion_artifacts.py`、`src/ai_sdlc/generators/__init__.py`、`tests/unit/test_frontend_provider_expansion_artifacts.py`
+- 改动内容：
+  - 新增 provider expansion artifact root helper 与 materializer
+  - 写出 manifest、handoff schema、truth-surfacing、choice-surface-policy、react boundary 与 provider 子目录文件
+  - 保留 provider-level aggregate、pair refs 与 roster/choice surface 语义
+- 新增/调整的测试：
+  - `tests/unit/test_frontend_provider_expansion_artifacts.py`
+- 执行的命令：`V10`
+- 测试结果：通过；artifact file set 与 payload semantics 均通过
+- 是否符合任务目标：是
+
+##### T43 | runtime slice 1 task memory refresh
+
+- 改动范围：`specs/151-frontend-p3-modern-provider-expansion-baseline/spec.md`、`specs/151-frontend-p3-modern-provider-expansion-baseline/plan.md`、`specs/151-frontend-p3-modern-provider-expansion-baseline/tasks.md`、`specs/151-frontend-p3-modern-provider-expansion-baseline/task-execution-log.md`、`specs/151-frontend-p3-modern-provider-expansion-baseline/development-summary.md`
+- 改动内容：
+  - 将 `151` 的工单口径从“仅 docs-only baseline”刷新为“formal baseline + runtime slice 1”
+  - 补充 runtime slice 1 的实现/验证记录
+  - 明确下一批主线收敛为 `validator/policy -> ProgramService/CLI/verify/global truth handoff`
+- 新增/调整的测试：无（docs refresh only）
+- 执行的命令：`V11`
+- 测试结果：通过；任务记忆与当前代码状态对齐
+- 是否符合任务目标：是
+
+#### 2.12 批次结论
+
+- `151` 已从纯 docs-only baseline 进入 runtime slice 1；当前已具备 machine-verifiable 的 provider admission models 与 provider expansion artifact contract
+- 下一批不再重复做 roster truth 设计，而是直接进入 `validator/policy` 与 `ProgramService / CLI / verify / global truth handoff`
+
+### Batch 2026-04-16-003 | T51-T53
+
+#### 2.13 批次范围
+
+- 覆盖任务：`T51`、`T52`、`T53`
+- 覆盖阶段：runtime slice 2 - validator/policy + ProgramService/verify hookup + task memory refresh
+- 预读范围：`specs/151-frontend-p3-modern-provider-expansion-baseline/spec.md`、`specs/151-frontend-p3-modern-provider-expansion-baseline/plan.md`、`specs/151-frontend-p3-modern-provider-expansion-baseline/tasks.md`、`src/ai_sdlc/core/frontend_theme_token_governance.py`、`src/ai_sdlc/core/verify_constraints.py`、`src/ai_sdlc/core/program_service.py`
+- 激活的规则：AI-SDLC entry-first、TDD-first、shared-validator-before-consumers、truth-memory-sync-before-next-slice
+
+#### 2.14 统一验证命令
+
+- `V12`（AI-SDLC entry）
+  - 命令：`python -m ai_sdlc adapter status`
+  - 结果：通过；`governance_activation_state=verified_loaded`
+- `V13`（pipeline dry-run）
+  - 命令：`python -m ai_sdlc run --dry-run`
+  - 结果：通过；输出 `Pipeline completed. Stage: close`
+- `V14`（runtime slice 2 focused tests）
+  - 命令：`UV_CACHE_DIR=/tmp/uv-cache uv run pytest tests/unit/test_program_service.py::test_build_frontend_provider_expansion_handoff_blocks_when_solution_snapshot_missing tests/unit/test_program_service.py::test_build_frontend_provider_expansion_handoff_uses_latest_solution_snapshot_and_provider_diagnostics tests/unit/test_verify_constraints.py::test_151_frontend_provider_expansion_verification_surfaces_missing_provider_admission_artifact tests/unit/test_verify_constraints.py::test_151_frontend_provider_expansion_verification_blocks_react_snapshot_while_boundary_hidden`
+  - 结果：通过；`4 passed`
+- `V15`（slice 1+2 regression）
+  - 命令：`UV_CACHE_DIR=/tmp/uv-cache uv run pytest tests/unit/test_frontend_provider_expansion_models.py tests/unit/test_frontend_provider_expansion_artifacts.py tests/unit/test_program_service.py::test_build_frontend_provider_expansion_handoff_blocks_when_solution_snapshot_missing tests/unit/test_program_service.py::test_build_frontend_provider_expansion_handoff_uses_latest_solution_snapshot_and_provider_diagnostics tests/unit/test_verify_constraints.py::test_151_frontend_provider_expansion_verification_surfaces_missing_provider_admission_artifact tests/unit/test_verify_constraints.py::test_151_frontend_provider_expansion_verification_blocks_react_snapshot_while_boundary_hidden`
+  - 结果：通过；`13 passed`
+- `V16`（diff hygiene）
+  - 命令：`git diff --check`
+  - 结果：通过；无输出
+- `V17`（constraints gate）
+  - 命令：`UV_CACHE_DIR=/tmp/uv-cache uv run ai-sdlc verify constraints`
+  - 结果：通过；输出 `verify constraints: no BLOCKERs.`
+
+#### 2.15 任务记录
+
+##### T51 | provider expansion validation helper
+
+- 改动范围：`src/ai_sdlc/core/frontend_provider_expansion.py`
+- 改动内容：
+  - 新增独立的 `validate_frontend_provider_expansion()` 与结构化 validation result
+  - 复用 `151` runtime truth，校验 effective provider 的 roster admission、gate、choice surface 与 React hidden boundary
+  - 为 `verify_constraints` 与 `ProgramService` 提供共享 validator
+- 新增/调整的测试：
+  - 通过 `tests/unit/test_program_service.py`、`tests/unit/test_verify_constraints.py` 的 consumer tests 间接覆盖
+- 执行的命令：`V14`
+- 测试结果：通过
+- 是否符合任务目标：是
+
+##### T52 | verify constraints 与 ProgramService handoff 接线
+
+- 改动范围：`src/ai_sdlc/core/verify_constraints.py`、`src/ai_sdlc/core/program_service.py`、`tests/unit/test_program_service.py`、`tests/unit/test_verify_constraints.py`
+- 改动内容：
+  - 为 active `151` 新增 scoped `frontend_provider_expansion_verification`
+  - 为 `ProgramService` 新增 `build_frontend_provider_expansion_handoff()`
+  - 将 provider expansion artifact 缺失、react hidden snapshot blocker、provider diagnostics 接入 consumer contract
+- 新增/调整的测试：
+  - `test_build_frontend_provider_expansion_handoff_blocks_when_solution_snapshot_missing`
+  - `test_build_frontend_provider_expansion_handoff_uses_latest_solution_snapshot_and_provider_diagnostics`
+  - `test_151_frontend_provider_expansion_verification_surfaces_missing_provider_admission_artifact`
+  - `test_151_frontend_provider_expansion_verification_blocks_react_snapshot_while_boundary_hidden`
+- 执行的命令：`V14`、`V17`
+- 测试结果：通过
+- 是否符合任务目标：是
+
+##### T53 | runtime slice 2 task memory refresh
+
+- 改动范围：`specs/151-frontend-p3-modern-provider-expansion-baseline/spec.md`、`specs/151-frontend-p3-modern-provider-expansion-baseline/plan.md`、`specs/151-frontend-p3-modern-provider-expansion-baseline/tasks.md`、`specs/151-frontend-p3-modern-provider-expansion-baseline/task-execution-log.md`、`specs/151-frontend-p3-modern-provider-expansion-baseline/development-summary.md`
+- 改动内容：
+  - 将 `151` 的工单状态刷新为 runtime slices 1-2
+  - 明确当前剩余主线收敛到 `CLI / global truth handoff`
+  - 将本批 entry / test / verify evidence 归档进任务记忆
+- 新增/调整的测试：无（docs refresh only）
+- 执行的命令：`V16`
+- 测试结果：通过；文档与代码口径对齐
+- 是否符合任务目标：是
+
+#### 2.16 批次结论
+
+- `151` 已完成 runtime slice 2；provider expansion truth 已不再只是 artifact 产物，而是具备 shared validator、verify gate 与 ProgramService handoff 的最小消费链路
+- 下一批主线收敛为 `CLI / global truth handoff`
+
+### Batch 2026-04-16-004 | T61-T63
+
+#### 2.17 批次范围
+
+- 覆盖任务：`T61`、`T62`、`T63`
+- 覆盖阶段：runtime slice 3 - CLI handoff + global truth proof + final task memory refresh
+- 预读范围：`src/ai_sdlc/cli/program_cmd.py`、`src/ai_sdlc/core/program_service.py`、`tests/integration/test_cli_program.py`、`tests/unit/test_program_service.py`
+- 激活的规则：TDD-first、CLI parity with existing handoff surfaces、truth-snapshot-proof-before-closure
+
+#### 2.18 统一验证命令
+
+- `V18`（CLI handoff tests）
+  - 命令：`UV_CACHE_DIR=/tmp/uv-cache uv run pytest tests/integration/test_cli_program.py::test_program_provider_expansion_handoff_blocks_without_solution_snapshot tests/integration/test_cli_program.py::test_program_provider_expansion_handoff_surfaces_provider_and_react_visibility_diagnostics`
+  - 结果：通过；`2 passed`
+- `V19`（global truth proof）
+  - 命令：`UV_CACHE_DIR=/tmp/uv-cache uv run pytest tests/unit/test_program_service.py::test_build_truth_snapshot_blocks_release_scope_on_151_provider_expansion_verify_gap`
+  - 结果：通过；`1 passed`
+- `V20`（slice 1-3 regression）
+  - 命令：`UV_CACHE_DIR=/tmp/uv-cache uv run pytest tests/unit/test_frontend_provider_expansion_models.py tests/unit/test_frontend_provider_expansion_artifacts.py tests/unit/test_program_service.py::test_build_frontend_provider_expansion_handoff_blocks_when_solution_snapshot_missing tests/unit/test_program_service.py::test_build_frontend_provider_expansion_handoff_uses_latest_solution_snapshot_and_provider_diagnostics tests/unit/test_program_service.py::test_build_truth_snapshot_blocks_release_scope_on_151_provider_expansion_verify_gap tests/unit/test_verify_constraints.py::test_151_frontend_provider_expansion_verification_surfaces_missing_provider_admission_artifact tests/unit/test_verify_constraints.py::test_151_frontend_provider_expansion_verification_blocks_react_snapshot_while_boundary_hidden tests/integration/test_cli_program.py::test_program_provider_expansion_handoff_blocks_without_solution_snapshot tests/integration/test_cli_program.py::test_program_provider_expansion_handoff_surfaces_provider_and_react_visibility_diagnostics`
+  - 结果：通过；`16 passed`
+- `V21`（diff hygiene）
+  - 命令：`git diff --check`
+  - 结果：通过；无输出
+
+#### 2.19 任务记录
+
+##### T61 | provider expansion CLI handoff
+
+- 改动范围：`src/ai_sdlc/cli/program_cmd.py`、`tests/integration/test_cli_program.py`
+- 改动内容：
+  - 新增 `program provider-expansion-handoff` 命令
+  - 输出 provider、frontend stack、react visibility 与 provider diagnostics
+  - 保持与 page-ui-schema/theme-governance handoff 相同的 CLI 交互形状
+- 新增/调整的测试：
+  - `test_program_provider_expansion_handoff_blocks_without_solution_snapshot`
+  - `test_program_provider_expansion_handoff_surfaces_provider_and_react_visibility_diagnostics`
+- 执行的命令：`V18`
+- 测试结果：通过
+- 是否符合任务目标：是
+
+##### T62 | global truth proof
+
+- 改动范围：`tests/unit/test_program_service.py`
+- 改动内容：
+  - 新增 truth snapshot regression，证明 active `151` 的 provider expansion verify blocker 会进入 release capability `blocking_refs`
+  - 以 `build_truth_snapshot()` 为证明面，避免只停留在 verify/CLI 层
+- 新增/调整的测试：
+  - `test_build_truth_snapshot_blocks_release_scope_on_151_provider_expansion_verify_gap`
+- 执行的命令：`V19`
+- 测试结果：通过
+- 是否符合任务目标：是
+
+##### T63 | runtime slice 3 task memory refresh
+
+- 改动范围：`specs/151-frontend-p3-modern-provider-expansion-baseline/spec.md`、`specs/151-frontend-p3-modern-provider-expansion-baseline/plan.md`、`specs/151-frontend-p3-modern-provider-expansion-baseline/tasks.md`、`specs/151-frontend-p3-modern-provider-expansion-baseline/task-execution-log.md`、`specs/151-frontend-p3-modern-provider-expansion-baseline/development-summary.md`
+- 改动内容：
+  - 将 `151` 状态刷新为 runtime slices 1-3 已完成
+  - 明确 `151` 的既定 decomposition 已全部落地
+  - 保持非目标边界诚实，不伪造真实 provider runtime / React public rollout 已完成
+- 新增/调整的测试：无（docs refresh only）
+- 执行的命令：`V21`
+- 测试结果：通过；任务记忆与代码状态对齐
+- 是否符合任务目标：是
+
+#### 2.20 批次结论
+
+- `151` 的既定运行时分解已经全部落地：models -> artifacts -> validator/policy -> ProgramService/verify -> CLI -> global truth proof
+- 后续若继续推进，应退出 `151`，回到真实 modern provider runtime / adapter expansion 的后续工单
+
+#### 2.21 归档后动作
+
+- **验证画像**：`code-change`
+- **改动范围**：`src/ai_sdlc/models/frontend_provider_expansion.py`、`src/ai_sdlc/core/frontend_provider_expansion.py`、`src/ai_sdlc/generators/frontend_provider_expansion_artifacts.py`、`src/ai_sdlc/core/program_service.py`、`src/ai_sdlc/core/verify_constraints.py`、`src/ai_sdlc/cli/program_cmd.py`、`src/ai_sdlc/models/__init__.py`、`src/ai_sdlc/generators/__init__.py`、`tests/unit/test_frontend_provider_expansion_models.py`、`tests/unit/test_frontend_provider_expansion_artifacts.py`、`tests/unit/test_program_service.py`、`tests/unit/test_verify_constraints.py`、`tests/integration/test_cli_program.py`、`specs/151-frontend-p3-modern-provider-expansion-baseline/spec.md`、`specs/151-frontend-p3-modern-provider-expansion-baseline/plan.md`、`specs/151-frontend-p3-modern-provider-expansion-baseline/tasks.md`、`specs/151-frontend-p3-modern-provider-expansion-baseline/task-execution-log.md`、`specs/151-frontend-p3-modern-provider-expansion-baseline/development-summary.md`
+- **已完成 git 提交**：否
+- **提交哈希**：`未提交`
+- 当前批次 branch disposition 状态：代码与文档已完成，待 git close-out
+- 当前批次 worktree disposition 状态：代码与文档已完成，待 truth sync + git close-out 后复跑 close-check
+- 是否继续下一批：否；`151` 的既定 decomposition 已完成，后续应切回 successor work item
+
+### Batch 2026-04-16-005 | close-out
+
+#### 2.22 批次范围
+
+- 覆盖任务：`151` final close-out
+- 覆盖阶段：shared regression + truth refresh + close-check closure
+- 预读范围：`specs/151-frontend-p3-modern-provider-expansion-baseline/spec.md`、`specs/151-frontend-p3-modern-provider-expansion-baseline/plan.md`、`specs/151-frontend-p3-modern-provider-expansion-baseline/tasks.md`、`specs/151-frontend-p3-modern-provider-expansion-baseline/task-execution-log.md`
+- 激活的规则：entry-first、verification-before-closure、truth-sync-after-clean-tree、single-commit-close-out
+
+#### 2.23 统一验证命令
+
+- `V22`（shared regression）
+  - 命令：`UV_CACHE_DIR=/tmp/uv-cache uv run pytest tests/unit/test_frontend_quality_platform_models.py tests/unit/test_frontend_quality_platform_artifacts.py tests/unit/test_frontend_quality_platform.py tests/unit/test_frontend_provider_expansion_models.py tests/unit/test_frontend_provider_expansion_artifacts.py tests/unit/test_program_service.py tests/unit/test_verify_constraints.py tests/integration/test_cli_program.py tests/integration/test_cli_rules.py`
+  - 结果：通过；`503 passed`
+- `V23`（shared lint）
+  - 命令：`UV_CACHE_DIR=/tmp/uv-cache uv run ruff check src/ai_sdlc/models/frontend_quality_platform.py src/ai_sdlc/core/frontend_quality_platform.py src/ai_sdlc/generators/frontend_quality_platform_artifacts.py src/ai_sdlc/models/frontend_provider_expansion.py src/ai_sdlc/core/frontend_provider_expansion.py src/ai_sdlc/generators/frontend_provider_expansion_artifacts.py src/ai_sdlc/core/program_service.py src/ai_sdlc/core/verify_constraints.py src/ai_sdlc/cli/program_cmd.py src/ai_sdlc/cli/sub_apps.py tests/unit/test_frontend_quality_platform_models.py tests/unit/test_frontend_quality_platform_artifacts.py tests/unit/test_frontend_quality_platform.py tests/unit/test_frontend_provider_expansion_models.py tests/unit/test_frontend_provider_expansion_artifacts.py tests/unit/test_program_service.py tests/unit/test_verify_constraints.py tests/integration/test_cli_program.py tests/integration/test_cli_rules.py`
+  - 结果：通过；`All checks passed!`
+- `V24`（constraints gate）
+  - 命令：`UV_CACHE_DIR=/tmp/uv-cache uv run ai-sdlc verify constraints`
+  - 结果：通过；输出 `verify constraints: no BLOCKERs.`
+- `V25`（diff hygiene）
+  - 命令：`git diff --check`
+  - 结果：通过；无输出
+- `V26`（post-commit truth refresh）
+  - 命令：`python -m ai_sdlc program truth sync --execute --yes`
+  - 结果：通过；`truth snapshot state=ready`，`frontend-mainline-delivery | closure=closed | audit=ready`
+- `V27`（post-commit truth audit）
+  - 命令：`python -m ai_sdlc program truth audit`
+  - 结果：待最终 amend 后在 clean tree 复跑并以最终结果为准
+- `V28`（final close-check）
+  - 命令：`python -m ai_sdlc workitem close-check --wi specs/151-frontend-p3-modern-provider-expansion-baseline`
+  - 结果：待最终 amend 后在 clean tree 复跑并以最终结果为准
+
+#### 2.24 批次结论
+
+- `151` 的代码、测试与任务记忆已经对齐；本批只负责把 final truth refresh 与 close-check 收口到 machine-verifiable 状态。
+- 当前 dirty tree 阶段观察到的主链 blocker 不作为 `151` 自身的实现缺口，最终以 post-commit truth audit 为准。
+
+#### 2.25 归档后动作
+
+- **验证画像**：`code-change`
+- **已完成 git 提交**：是
+- **提交哈希**：`最新 HEAD（本批 close-out commit，允许后续 amend）`
+- 当前批次 branch disposition 状态：已完成 close-out commit，待 final truth audit / close-check 复跑
+- 当前批次 worktree disposition 状态：已完成 close-out commit，待 final truth audit / close-check 复跑
+- 是否继续下一批：否；完成本批后退出 `151`
