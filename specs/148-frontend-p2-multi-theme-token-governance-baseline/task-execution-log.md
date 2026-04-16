@@ -335,7 +335,7 @@
   - 结果：首次执行命中预期 pre-commit blocker：latest batch missing verification profile、git working tree has uncommitted changes、`truth_snapshot_stale`
 - `V6`（truth refresh）
   - 命令：`python -m ai_sdlc program truth sync --execute --yes`
-  - 结果：执行完成并写回 `program-manifest.yaml`；`truth snapshot state=blocked`，原因是 `frontend-mainline-delivery` 仍被若干历史 mainline work item 的 close-check 阻断，但 `148` 当前 source inventory 已纳入新 snapshot
+  - 结果：最终复跑通过并写回 `program-manifest.yaml`；`truth snapshot state=ready`，`frontend-mainline-delivery | closure=closed | audit=ready`
 
 #### 2.19 任务记录
 
@@ -384,7 +384,7 @@
   - 记录首次 close-check 暴露的 pre-commit blocker，并在 truth sync 后转入最终 git close-out
 - 新增/调整的测试：无
 - 执行的命令：`V1`、`V2`、`V3`、`V4`、`V5`、`V6`
-- 测试结果：通过；定向 pytest、ruff、diff hygiene、verify constraints 与 truth sync 已完成，close-check 首轮 blocker 与 final git close-out 语义已被显式记录
+- 测试结果：通过；定向 pytest、ruff、diff hygiene、verify constraints 与 final truth sync 全部完成，close-check 首轮 blocker 与 final git close-out 语义已被显式记录
 - 是否符合任务目标：是
 
 #### 2.20 代码审查结论（Mandatory）
