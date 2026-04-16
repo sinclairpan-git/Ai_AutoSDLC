@@ -1460,12 +1460,36 @@ specs:
   frontend_evidence_class: framework_capability
   roles: []
   capability_refs: []
+- id: 146-program-truth-pipeline-injection-baseline
+  path: specs/146-program-truth-pipeline-injection-baseline
+  depends_on:
+  - 140-program-truth-ledger-release-audit-baseline
+  - 141-program-manifest-root-census-backfill-baseline
+  - 145-frontend-p2-p3-deferred-capability-expansion-planning-baseline
+  branch_slug: program-truth-pipeline-injection-baseline
+  owner: team-frontend-governance
+  frontend_evidence_class: framework_capability
+  roles: []
+  capability_refs: []
+- id: 147-frontend-p2-page-ui-schema-baseline
+  path: specs/147-frontend-p2-page-ui-schema-baseline
+  depends_on:
+  - 011-frontend-contract-authoring-baseline
+  - 015-frontend-ui-kernel-standard-baseline
+  - 068-frontend-p1-page-recipe-expansion-baseline
+  - 073-frontend-p2-provider-style-solution-baseline
+  - 145-frontend-p2-p3-deferred-capability-expansion-planning-baseline
+  branch_slug: frontend-p2-page-ui-schema-baseline
+  owner: team-frontend-governance
+  frontend_evidence_class: framework_capability
+  roles: []
+  capability_refs: []
 truth_snapshot:
-  generated_at: '2026-04-16T08:11:27Z'
+  generated_at: '2026-04-16T08:25:26Z'
   generated_by: ai-sdlc program truth sync
   generator_version: program_truth_snapshot_v1
-  repo_revision: 3cd2253
-  authoring_hash: eaccc8eac3b43478569504acbbcdaade3f108cc0a9dce8538babc81ec2977dc2
+  repo_revision: 9bf3721
+  authoring_hash: 2ee1c7518dca8f86ed18664d8de9045849553699307a4e0e740318e7533b6904
   source_hashes:
     truth_check:specs/095-frontend-mainline-product-delivery-baseline: 40b5e9332011b0d8941245c0e8e7c3b192e897b2bc4aa4876a3d37a94f9b80f0
     truth_check:specs/096-frontend-mainline-host-runtime-manager-baseline: e4586cf112089fff541fc809f9ba98ad4c4c3d5593de8febfc4e64cb1179ce02
@@ -1483,57 +1507,73 @@ truth_snapshot:
     truth_check:specs/126-frontend-mainline-browser-gate-recheck-remediation-runtime-closure-baseline: ba13cc26973f403a0030ba803fe07cfb2041ca291f021fd436f7968969c2297e
     truth_check:specs/143-frontend-mainline-browser-gate-real-probe-runtime-baseline: 814ccfb952dc066fcd569aa6b2e7dd08463fcac2f39c2086a021410bd9869dd3
     truth_check:specs/144-frontend-mainline-host-remediation-and-workspace-integration-closure-baseline: c320f9b5986df7b8866f164d99399fd95759a37dd51b3f2a22c68a310099d4b1
-    close_check:specs/095-frontend-mainline-product-delivery-baseline: 6953138b2d9d62e9f4d337bb97d069400c46449c785c77cdc0440eaafa6aabc6
-    close_check:specs/096-frontend-mainline-host-runtime-manager-baseline: 6953138b2d9d62e9f4d337bb97d069400c46449c785c77cdc0440eaafa6aabc6
-    close_check:specs/098-frontend-mainline-posture-detector-baseline: 6953138b2d9d62e9f4d337bb97d069400c46449c785c77cdc0440eaafa6aabc6
-    close_check:specs/099-frontend-mainline-delivery-registry-resolver-baseline: 6953138b2d9d62e9f4d337bb97d069400c46449c785c77cdc0440eaafa6aabc6
-    close_check:specs/100-frontend-mainline-action-plan-binding-baseline: 6953138b2d9d62e9f4d337bb97d069400c46449c785c77cdc0440eaafa6aabc6
-    close_check:specs/101-frontend-mainline-managed-delivery-apply-runtime-baseline: 6953138b2d9d62e9f4d337bb97d069400c46449c785c77cdc0440eaafa6aabc6
-    close_check:specs/102-frontend-mainline-browser-quality-gate-baseline: 6953138b2d9d62e9f4d337bb97d069400c46449c785c77cdc0440eaafa6aabc6
-    close_check:specs/103-frontend-mainline-browser-gate-probe-runtime-baseline: 6953138b2d9d62e9f4d337bb97d069400c46449c785c77cdc0440eaafa6aabc6
-    close_check:specs/104-frontend-mainline-browser-gate-recheck-remediation-binding-baseline: 6953138b2d9d62e9f4d337bb97d069400c46449c785c77cdc0440eaafa6aabc6
-    close_check:specs/105-frontend-mainline-browser-gate-recheck-remediation-runtime-implementation-baseline: 6953138b2d9d62e9f4d337bb97d069400c46449c785c77cdc0440eaafa6aabc6
-    close_check:specs/123-frontend-mainline-managed-delivery-apply-runtime-implementation-baseline: 6953138b2d9d62e9f4d337bb97d069400c46449c785c77cdc0440eaafa6aabc6
-    close_check:specs/124-frontend-mainline-delivery-materialization-runtime-baseline: 6953138b2d9d62e9f4d337bb97d069400c46449c785c77cdc0440eaafa6aabc6
-    close_check:specs/125-frontend-mainline-browser-gate-probe-runtime-implementation-baseline: 6953138b2d9d62e9f4d337bb97d069400c46449c785c77cdc0440eaafa6aabc6
-    close_check:specs/126-frontend-mainline-browser-gate-recheck-remediation-runtime-closure-baseline: 6953138b2d9d62e9f4d337bb97d069400c46449c785c77cdc0440eaafa6aabc6
-    close_check:specs/143-frontend-mainline-browser-gate-real-probe-runtime-baseline: 6953138b2d9d62e9f4d337bb97d069400c46449c785c77cdc0440eaafa6aabc6
-    close_check:specs/144-frontend-mainline-host-remediation-and-workspace-integration-closure-baseline: 6953138b2d9d62e9f4d337bb97d069400c46449c785c77cdc0440eaafa6aabc6
+    close_check:specs/095-frontend-mainline-product-delivery-baseline: a480d33dbf6d8470c447c41456282ac360186c60435613a9f55e46d06742e555
+    close_check:specs/096-frontend-mainline-host-runtime-manager-baseline: a480d33dbf6d8470c447c41456282ac360186c60435613a9f55e46d06742e555
+    close_check:specs/098-frontend-mainline-posture-detector-baseline: a480d33dbf6d8470c447c41456282ac360186c60435613a9f55e46d06742e555
+    close_check:specs/099-frontend-mainline-delivery-registry-resolver-baseline: a480d33dbf6d8470c447c41456282ac360186c60435613a9f55e46d06742e555
+    close_check:specs/100-frontend-mainline-action-plan-binding-baseline: a480d33dbf6d8470c447c41456282ac360186c60435613a9f55e46d06742e555
+    close_check:specs/101-frontend-mainline-managed-delivery-apply-runtime-baseline: a480d33dbf6d8470c447c41456282ac360186c60435613a9f55e46d06742e555
+    close_check:specs/102-frontend-mainline-browser-quality-gate-baseline: a480d33dbf6d8470c447c41456282ac360186c60435613a9f55e46d06742e555
+    close_check:specs/103-frontend-mainline-browser-gate-probe-runtime-baseline: a480d33dbf6d8470c447c41456282ac360186c60435613a9f55e46d06742e555
+    close_check:specs/104-frontend-mainline-browser-gate-recheck-remediation-binding-baseline: a480d33dbf6d8470c447c41456282ac360186c60435613a9f55e46d06742e555
+    close_check:specs/105-frontend-mainline-browser-gate-recheck-remediation-runtime-implementation-baseline: a480d33dbf6d8470c447c41456282ac360186c60435613a9f55e46d06742e555
+    close_check:specs/123-frontend-mainline-managed-delivery-apply-runtime-implementation-baseline: a480d33dbf6d8470c447c41456282ac360186c60435613a9f55e46d06742e555
+    close_check:specs/124-frontend-mainline-delivery-materialization-runtime-baseline: a480d33dbf6d8470c447c41456282ac360186c60435613a9f55e46d06742e555
+    close_check:specs/125-frontend-mainline-browser-gate-probe-runtime-implementation-baseline: a480d33dbf6d8470c447c41456282ac360186c60435613a9f55e46d06742e555
+    close_check:specs/126-frontend-mainline-browser-gate-recheck-remediation-runtime-closure-baseline: a480d33dbf6d8470c447c41456282ac360186c60435613a9f55e46d06742e555
+    close_check:specs/143-frontend-mainline-browser-gate-real-probe-runtime-baseline: a480d33dbf6d8470c447c41456282ac360186c60435613a9f55e46d06742e555
+    close_check:specs/144-frontend-mainline-host-remediation-and-workspace-integration-closure-baseline: a480d33dbf6d8470c447c41456282ac360186c60435613a9f55e46d06742e555
     verify:uv run ai-sdlc verify constraints: 67c162e8ce6369708f41fd003c4d3b2703509ebeb85aefbbc2a2d67663c45333
-  snapshot_hash: 91f1dc06e7185abf14001b2a502851a8ebd4650cc414b915464bfb009e28feaa
+  snapshot_hash: c19580af02baf3f5baedf7b6585849919491f0653a7b32ecdebf565bd397c4ba
   computed_capabilities:
   - capability_id: frontend-mainline-delivery
     closure_state: closed
-    audit_state: ready
-    blocking_refs: []
+    audit_state: blocked
+    blocking_refs:
+    - close_check:specs/095-frontend-mainline-product-delivery-baseline
+    - close_check:specs/096-frontend-mainline-host-runtime-manager-baseline
+    - close_check:specs/098-frontend-mainline-posture-detector-baseline
+    - close_check:specs/099-frontend-mainline-delivery-registry-resolver-baseline
+    - close_check:specs/100-frontend-mainline-action-plan-binding-baseline
+    - close_check:specs/101-frontend-mainline-managed-delivery-apply-runtime-baseline
+    - close_check:specs/102-frontend-mainline-browser-quality-gate-baseline
+    - close_check:specs/103-frontend-mainline-browser-gate-probe-runtime-baseline
+    - close_check:specs/104-frontend-mainline-browser-gate-recheck-remediation-binding-baseline
+    - close_check:specs/105-frontend-mainline-browser-gate-recheck-remediation-runtime-implementation-baseline
+    - close_check:specs/123-frontend-mainline-managed-delivery-apply-runtime-implementation-baseline
+    - close_check:specs/124-frontend-mainline-delivery-materialization-runtime-baseline
+    - close_check:specs/125-frontend-mainline-browser-gate-probe-runtime-implementation-baseline
+    - close_check:specs/126-frontend-mainline-browser-gate-recheck-remediation-runtime-closure-baseline
+    - close_check:specs/143-frontend-mainline-browser-gate-real-probe-runtime-baseline
+    - close_check:specs/144-frontend-mainline-host-remediation-and-workspace-integration-closure-baseline
     stale_reason: ''
   source_inventory:
     state: complete
-    total_sources: 747
-    mapped_sources: 747
+    total_sources: 757
+    mapped_sources: 757
     unmapped_sources: 0
     missing_sources: 0
-    phase_signal_count: 2328
-    deferred_signal_count: 4653
-    non_goal_signal_count: 256
+    phase_signal_count: 2399
+    deferred_signal_count: 4770
+    non_goal_signal_count: 258
     layer_totals:
       blueprint: 1
-      spec: 146
-      plan: 146
-      tasks: 146
-      execution: 146
-      close: 146
+      spec: 148
+      plan: 148
+      tasks: 148
+      execution: 148
+      close: 148
       requirements: 2
       defect: 2
       design: 8
       release: 4
     layer_materialized:
       blueprint: 1
-      spec: 146
-      plan: 146
-      tasks: 146
-      execution: 146
-      close: 146
+      spec: 148
+      plan: 148
+      tasks: 148
+      execution: 148
+      close: 148
       requirements: 2
       defect: 2
       design: 8
@@ -8118,6 +8158,96 @@ truth_snapshot:
       phase_signal_count: 7
       deferred_signal_count: 14
       non_goal_signal_count: 0
+    - path: specs/146-program-truth-pipeline-injection-baseline/spec.md
+      source_type: spec_doc
+      truth_layer: spec
+      mapped: true
+      exists: true
+      mapping_ref: 146-program-truth-pipeline-injection-baseline
+      phase_signal_count: 5
+      deferred_signal_count: 11
+      non_goal_signal_count: 1
+    - path: specs/146-program-truth-pipeline-injection-baseline/plan.md
+      source_type: plan_doc
+      truth_layer: plan
+      mapped: true
+      exists: true
+      mapping_ref: 146-program-truth-pipeline-injection-baseline
+      phase_signal_count: 6
+      deferred_signal_count: 7
+      non_goal_signal_count: 0
+    - path: specs/146-program-truth-pipeline-injection-baseline/tasks.md
+      source_type: tasks_doc
+      truth_layer: tasks
+      mapped: true
+      exists: true
+      mapping_ref: 146-program-truth-pipeline-injection-baseline
+      phase_signal_count: 5
+      deferred_signal_count: 7
+      non_goal_signal_count: 0
+    - path: specs/146-program-truth-pipeline-injection-baseline/task-execution-log.md
+      source_type: execution_log
+      truth_layer: execution
+      mapped: true
+      exists: true
+      mapping_ref: 146-program-truth-pipeline-injection-baseline
+      phase_signal_count: 0
+      deferred_signal_count: 3
+      non_goal_signal_count: 0
+    - path: specs/146-program-truth-pipeline-injection-baseline/development-summary.md
+      source_type: development_summary
+      truth_layer: close
+      mapped: true
+      exists: true
+      mapping_ref: 146-program-truth-pipeline-injection-baseline
+      phase_signal_count: 0
+      deferred_signal_count: 2
+      non_goal_signal_count: 0
+    - path: specs/147-frontend-p2-page-ui-schema-baseline/spec.md
+      source_type: spec_doc
+      truth_layer: spec
+      mapped: true
+      exists: true
+      mapping_ref: 147-frontend-p2-page-ui-schema-baseline
+      phase_signal_count: 12
+      deferred_signal_count: 31
+      non_goal_signal_count: 1
+    - path: specs/147-frontend-p2-page-ui-schema-baseline/plan.md
+      source_type: plan_doc
+      truth_layer: plan
+      mapped: true
+      exists: true
+      mapping_ref: 147-frontend-p2-page-ui-schema-baseline
+      phase_signal_count: 13
+      deferred_signal_count: 19
+      non_goal_signal_count: 0
+    - path: specs/147-frontend-p2-page-ui-schema-baseline/tasks.md
+      source_type: tasks_doc
+      truth_layer: tasks
+      mapped: true
+      exists: true
+      mapping_ref: 147-frontend-p2-page-ui-schema-baseline
+      phase_signal_count: 25
+      deferred_signal_count: 27
+      non_goal_signal_count: 0
+    - path: specs/147-frontend-p2-page-ui-schema-baseline/task-execution-log.md
+      source_type: execution_log
+      truth_layer: execution
+      mapped: true
+      exists: true
+      mapping_ref: 147-frontend-p2-page-ui-schema-baseline
+      phase_signal_count: 3
+      deferred_signal_count: 6
+      non_goal_signal_count: 0
+    - path: specs/147-frontend-p2-page-ui-schema-baseline/development-summary.md
+      source_type: development_summary
+      truth_layer: close
+      mapped: true
+      exists: true
+      mapping_ref: 147-frontend-p2-page-ui-schema-baseline
+      phase_signal_count: 2
+      deferred_signal_count: 4
+      non_goal_signal_count: 0
     - path: docs/SPEC_SPLIT_AND_PROGRAM.zh-CN.md
       source_type: requirement_doc
       truth_layer: requirements
@@ -8263,4 +8393,4 @@ truth_snapshot:
       deferred_signal_count: 6
       non_goal_signal_count: 1
     unmapped_paths: []
-  state: ready
+  state: blocked
