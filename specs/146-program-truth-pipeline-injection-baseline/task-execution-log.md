@@ -132,3 +132,56 @@
 - 当前批次 branch disposition 状态：已闭环，可继续后续实现切片
 - 当前批次 worktree disposition 状态：已闭环，可继续后续实现切片
 - 是否继续下一批：是；默认在 `147` formalize 完成后进入 `146` 的实现切片或按用户优先级调整
+
+### Batch 2026-04-16-002 | T41-T43
+
+#### 2.1 批次范围
+
+- 覆盖任务：`T41`、`T42`、`T43`
+- 覆盖阶段：Batch 4 pipeline truth injection implementation and focused regression
+- 预读范围：`AGENTS.md`、`specs/146/...`、`src/ai_sdlc/core/program_service.py`、`src/ai_sdlc/core/close_check.py`、`src/ai_sdlc/core/runner.py`、`src/ai_sdlc/core/verify_constraints.py`
+- 激活的规则：single-truth、read-only snapshot boundary、verification-profile honesty、verification-before-completion
+
+#### 2.2 统一验证命令
+
+- **验证画像**：`code-change`
+- 命令：`python -m ai_sdlc adapter status`
+- 命令：`python -m ai_sdlc run --dry-run`
+- 命令：`uv run ruff check src tests`
+- 命令：`uv run pytest tests/integration/test_cli_workitem_init.py tests/unit/test_close_check.py tests/integration/test_cli_program.py tests/unit/test_runner_confirm.py tests/unit/test_verify_constraints.py tests/unit/test_program_service.py tests/integration/test_cli_workitem_close_check.py tests/integration/test_cli_verify_constraints.py tests/unit/test_gates.py -q`
+- 命令：`UV_CACHE_DIR=/tmp/uv-cache uv run ai-sdlc verify constraints`
+- 命令：`python -m ai_sdlc program truth sync --dry-run`
+- 命令：`python -m ai_sdlc program truth sync --execute --yes`
+
+#### 2.3 任务记录
+
+- **改动范围**：`src/ai_sdlc/cli/workitem_cmd.py`、`src/ai_sdlc/core/program_service.py`、`src/ai_sdlc/core/close_check.py`、`src/ai_sdlc/core/runner.py`、`src/ai_sdlc/core/verify_constraints.py`、`src/ai_sdlc/rules/verification.md`、`docs/pull-request-checklist.zh.md`、`USER_GUIDE.zh-CN.md`、`tests/integration/test_cli_workitem_init.py`、`tests/unit/test_close_check.py`、`tests/integration/test_cli_program.py`、`tests/unit/test_runner_confirm.py`、`tests/unit/test_verify_constraints.py`
+- **改动内容**：
+  - 为 `workitem init` 增加 root manifest mapping handoff，并输出 exact next action
+  - 为 `close-check`、`program status`、`program truth audit`、`runner close` 注入 program truth freshness / mapping / capability diagnostics
+  - 增加 `truth-only` verification profile，并将规则、PR checklist、用户手册与约束检查面对齐
+- **新增/调整的测试**：新增 handoff、program truth diagnostics、truth-only profile 与 runner close context regression
+- **测试结果**：
+  - `ruff check src tests` 通过
+  - 674 个受影响回归用例通过
+  - `verify constraints` 返回 `no BLOCKERs`
+  - `program truth sync --execute --yes` 已刷新 root snapshot；当前 source inventory 仍为 `757/757 mapped`，但 release target `frontend-mainline-delivery` 仍处于 `blocked`
+
+#### 2.4 代码审查结论（Mandatory）
+
+- 本批实现只覆盖 truth injection pipeline，不扩展到前端业务 capability。
+- read-only surfaces 仍不写 snapshot；显式写入口仍保持为 `program truth sync --execute --yes`。
+- 新增测试覆盖 `manifest_unmapped`、`truth_snapshot_stale`、`capability_blocked` 三类关键诊断与 `truth-only` profile。
+
+#### 2.5 任务/计划同步状态（Mandatory）
+
+- `tasks.md` 已追加 Batch 4 的实现任务与验证口径。
+- 相关规则/手册已与当前实现对齐，不再停留在 formal baseline 口径。
+- 关联 branch/worktree disposition 计划：本批已与 `147` 共用 close-out commit，clean-tree truth rerun 后回到前端框架优化主线。
+
+#### 2.8 归档后动作
+
+- **已完成 git 提交**：是
+- **提交哈希**：`HEAD`（本批 close-out 以当前分支头为准）
+- 当前批次 branch disposition 状态：已闭环；clean-tree rerun 后继续下一条前端主线
+- 当前批次 worktree disposition 状态：已闭环；继续沿用当前 worktree 进入下一条子项

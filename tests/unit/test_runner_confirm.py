@@ -16,6 +16,7 @@ from ai_sdlc.core.frontend_contract_observation_provider import (
     build_frontend_contract_observation_artifact,
     write_frontend_contract_observation_artifact,
 )
+from ai_sdlc.core.program_service import ProgramService
 from ai_sdlc.core.runner import PipelineHaltError, SDLCRunner
 from ai_sdlc.core.state_machine import save_work_item
 from ai_sdlc.models.gate import GateCheck, GateResult, GateVerdict
@@ -173,6 +174,77 @@ class TestConfirmMode:
         assert ctx["all_tasks_complete"] is True
         assert ctx["tests_passed"] is True
         assert ctx["close_check_attested"] is True
+
+    def test_close_context_surfaces_stale_program_truth_for_mapped_spec(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        _bootstrap_project(tmp_path)
+        spec_dir = tmp_path / "specs" / "001-wi"
+        spec_dir.mkdir(parents=True, exist_ok=True)
+        (spec_dir / "spec.md").write_text("# Spec\n", encoding="utf-8")
+        (spec_dir / "plan.md").write_text("# Plan\n", encoding="utf-8")
+        (spec_dir / "tasks.md").write_text("- [x] done\n", encoding="utf-8")
+        (spec_dir / "task-execution-log.md").write_text(
+            "# Log\n\n统一验证命令\n代码审查\n任务/计划同步状态\n",
+            encoding="utf-8",
+        )
+        (spec_dir / "development-summary.md").write_text("# Summary\n", encoding="utf-8")
+        (tmp_path / "program-manifest.yaml").write_text(
+            'schema_version: "2"\n'
+            "program:\n"
+            '  goal: "Demo truth ledger"\n'
+            "specs:\n"
+            '  - id: "001-wi"\n'
+            '    path: "specs/001-wi"\n'
+            "    depends_on: []\n",
+            encoding="utf-8",
+        )
+        svc = ProgramService(tmp_path)
+        snapshot = svc.build_truth_snapshot(svc.load_manifest())
+        svc.write_truth_snapshot(snapshot)
+        manifest_text = (tmp_path / "program-manifest.yaml").read_text(encoding="utf-8")
+        (tmp_path / "program-manifest.yaml").write_text(
+            manifest_text.replace("Demo truth ledger", "Updated after truth sync"),
+            encoding="utf-8",
+        )
+        save_checkpoint(
+            tmp_path,
+            Checkpoint(
+                current_stage="close",
+                feature=FeatureInfo(
+                    id="001-wi",
+                    spec_dir="specs/001-wi",
+                    design_branch="design/001-wi",
+                    feature_branch="feature/001-wi",
+                    current_branch="feature/001-wi",
+                ),
+            ),
+        )
+
+        def _fake_close_check(*, cwd: Path | None, wi: Path, all_docs: bool = False) -> CloseCheckResult:
+            return CloseCheckResult(
+                ok=True,
+                blockers=[],
+                checks=[
+                    {"name": "tasks_completion", "ok": True, "detail": "ok"},
+                    {"name": "verification_profile", "ok": True, "detail": "ok"},
+                ],
+                wi_dir=spec_dir,
+                error=None,
+            )
+
+        monkeypatch.setattr("ai_sdlc.core.runner.run_close_check", _fake_close_check)
+
+        runner = SDLCRunner(tmp_path)
+        cp = load_checkpoint(tmp_path)
+        assert cp is not None
+
+        ctx = runner._build_context("close", cp)
+
+        assert ctx["program_truth_audit_required"] is True
+        assert ctx["program_truth_audit_ready"] is False
+        assert ctx["program_truth_audit_state"] == "stale"
+        assert "truth_snapshot_stale" in str(ctx["program_truth_audit_detail"])
 
     def test_verify_context_includes_frontend_contract_runtime_attachment_for_active_014(
         self, tmp_path: Path

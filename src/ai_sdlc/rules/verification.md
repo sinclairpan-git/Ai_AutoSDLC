@@ -52,10 +52,14 @@
   - 适用范围：仅改 `src/ai_sdlc/rules/**.md` 与相关文档，不含 `src/**/*.py`、`tests/**`。
   - 最小证据：`uv run ai-sdlc verify constraints`
   - 收口要求：latest batch 必须显式写 `验证画像：rules-only`；若实际混入代码/测试改动，不得继续沿用本画像。
+- `truth-only`
+  - 适用范围：仅改 `program-manifest.yaml`、`.ai-sdlc/**`、`specs/**.md`、`docs/**.md` 等全局真值与 formal carrier，不含 `src/**/*.py`、`tests/**`。
+  - 最小证据：`uv run ai-sdlc verify constraints`、`python -m ai_sdlc program truth sync --dry-run`
+  - 收口要求：latest batch 必须显式写 `验证画像：truth-only`；若混入代码/测试变更，不得继续沿用本画像；若最终要恢复 fresh snapshot，需显式执行 `python -m ai_sdlc program truth sync --execute --yes`。
 - `code-change`
   - 适用范围：任何涉及 `src/**/*.py`、`tests/**`、生成逻辑或运行时行为的变更。
   - 最小证据：`uv run pytest`、`uv run ruff check`、`uv run ai-sdlc verify constraints`
-  - 收口要求：latest batch 必须显式写 `验证画像：code-change`；不得用 `docs-only` / `rules-only` 伪装代码改动。
+  - 收口要求：latest batch 必须显式写 `验证画像：code-change`；不得用 `docs-only` / `rules-only` / `truth-only` 伪装代码改动。
 
 `close-check` 负责对 latest batch 的画像与 execution-log 中的 fresh evidence 做只读核验；`verify constraints` 负责确认本仓库规则文档和 PR checklist 对上述画像的定义保持一致。
 

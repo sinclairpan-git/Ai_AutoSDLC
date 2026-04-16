@@ -6,11 +6,14 @@
 
 ## 交付摘要
 
-- 本 work item 的交付物是 `Program Truth Pipeline Injection` 的 formal baseline，不是 runtime integration 完成态。
-- `146` 负责把“global truth 已完整但尚未深度注入 pipeline”的问题正式收束成独立 framework capability，并冻结 handoff、diagnostics、verification profile 的边界。
-- 本总结的意义是让后续执行者不再需要靠会话记忆解释为什么还要做 `146`，也不再把该问题误判成单个 workitem 的偶发遗漏。
-- `146` 关闭后代表：这个框架缺口已经被 canonical formalize，可继续进入后续实现切片；不代表 `workitem init / close-check / run-stage` 的实际代码集成已经全部完成。
+- `146` 已从 formal baseline 进入实现切片，并把 global truth 真正接入 `workitem init / close-check / program status / program truth audit / runner close context`。
+- `workitem init` 现在会在存在 `program-manifest.yaml` 时尝试 materialize `specs[]` entry，并明确提示 `python -m ai_sdlc program truth sync --execute --yes`。
+- `close-check` 现在会把 `manifest_unmapped`、`truth_snapshot_stale`、`capability_blocked` 区分为独立 blocker；`program status` / `program truth audit` 也会给出 next required truth action。
+- 仓库规则面已新增 `truth-only` verification profile，并与 `verify constraints`、PR checklist、用户手册保持一致。
+- root truth 已按新口径刷新：source inventory 维持 `757/757 mapped`，`146`/`147` 继续处于 `ready / advisory_only`，但整体 release target 仍因 frontend mainline 一组 workitem 的 `close_check` blocker 保持 `blocked`。
+- `146` 的收口代表：pipeline truth injection 缺口已经落地进入日常主链；它仍不代表任何前端业务 capability 已额外完成。
 
 ## 备注
 
-- 如需进入严格 `workitem close-check`，应在 git close-out 后于干净工作区复跑；本文件不伪造 clean-tree 结论。
+- 本次实现严格限制在 truth injection pipeline 与对应规则/测试面；未顺带扩展到前端业务 capability。
+- 根级 truth snapshot 仍保持显式写入边界；`status`、`close-check`、`run` 不会偷写 snapshot。

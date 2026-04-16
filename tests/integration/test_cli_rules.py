@@ -48,3 +48,33 @@ def test_rules_materialize_frontend_mvp_writes_canonical_governance_artifacts(
         / "generation"
         / "generation.manifest.yaml"
     ).is_file()
+
+
+def test_rules_materialize_frontend_page_ui_schema_writes_canonical_schema_artifacts(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    init_project(tmp_path)
+    monkeypatch.chdir(tmp_path)
+
+    result = runner.invoke(app, ["rules", "materialize-frontend-page-ui-schema"])
+
+    assert result.exit_code == 0
+    assert "Frontend page/UI schema artifacts materialized" in result.output
+    assert "kernel/frontend/page-ui-schema/schema.manifest.yaml" in result.output
+    assert "kernel/frontend/page-ui-schema/ui-schemas/wizard-workspace-default.yaml" in result.output
+    assert (
+        tmp_path
+        / "kernel"
+        / "frontend"
+        / "page-ui-schema"
+        / "schema.manifest.yaml"
+    ).is_file()
+    assert (
+        tmp_path
+        / "kernel"
+        / "frontend"
+        / "page-ui-schema"
+        / "page-schemas"
+        / "dashboard-workspace.yaml"
+    ).is_file()

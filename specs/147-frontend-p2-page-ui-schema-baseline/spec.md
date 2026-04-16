@@ -2,10 +2,10 @@
 
 **功能编号**：`147-frontend-p2-page-ui-schema-baseline`
 **创建日期**：2026-04-16
-**状态**：已冻结（formal baseline）
+**状态**：已冻结（implementation baseline）
 **输入**：承接 `145` 所冻结的 Track A，将更深的 `page schema / UI schema / schema versioning / render slot truth` 正式物化为下一条前端主线 child work item。参考：`docs/superpowers/specs/2026-04-02-ai-autosdlc-frontend-governance-ui-kernel-design.md`、`specs/068-frontend-p1-page-recipe-expansion-baseline/spec.md`、`specs/073-frontend-p2-provider-style-solution-baseline/spec.md`、`specs/145-frontend-p2-p3-deferred-capability-expansion-planning-baseline/spec.md`
 
-> 口径：`145` 已把剩余前端 deferred capability 全量拉平，并明确 Track A 的下一条 child 必须是 `frontend-p2-page-ui-schema-baseline`。`147` 的职责不是直接实现新的 provider 或 theme 系统，而是先把 “provider-neutral page schema / UI schema / schema versioning / render slot truth” 冻结成正式 child baseline，作为后续 `multi-theme/token governance`、`quality platform`、`cross-provider consistency` 的共同上游。
+> 口径：`145` 已把剩余前端 deferred capability 全量拉平，并明确 Track A 的下一条 child 必须是 `frontend-p2-page-ui-schema-baseline`。`147` 的职责不是直接实现新的 provider 或 theme 系统，而是把 “provider-neutral page schema / UI schema / schema versioning / render slot truth” 物化成 framework 内可验证的 runtime baseline，作为后续 `multi-theme/token governance`、`quality platform`、`cross-provider consistency` 的共同上游。
 
 ## 问题定义
 
@@ -37,19 +37,20 @@
   - 冻结 `schema versioning`、`render slot`、`section anchor`、`provider-neutral layout truth` 的最小 contract
   - 明确 `147` 与 `068/073` 的继承关系，不重写已冻结的 recipe 或 provider/style 第一阶段 truth
   - 明确 `147` 作为 `145 Track A` 的上游地位，为 `Track B/C/D/E` 提供共同 schema anchor
-  - 冻结下一轮实现切片的推荐顺序
+  - 物化 schema models、artifact materialization、validator/versioning 与 provider/kernel handoff surface
+  - 冻结并执行实现切片的推荐顺序
 - **不覆盖**：
   - 不在本工单中实现新的 provider、theme pack、visual regression 或 cross-provider certification
   - 不开放 React exposure boundary、公开 provider choice surface 或 style editor
-  - 不直接进入 `src/` / `tests/` 的 runtime 实现
   - 不把 `073` 已有的 provider/style solution baseline 回写成 page schema 的唯一来源
+  - 不把 Track B/C/D/E 伪装成已经完成
 
 ## 已锁定决策
 
 - `147` 是 `145` 明确指定的下一条优先 child，不再重新做 capability census；
 - `147` 的 schema truth 必须保持 provider-neutral，不能先绑死在单一 provider 实现上；
 - `page schema` 与 `ui schema` 需要显式分层：前者表达页面结构/意图，后者表达可渲染组件结构与 slot 约束；
-- `147` 只冻结 formal baseline，后续 implementation slice 再进入模型、序列化、校验与消费面；
+- `147` 在本工单内继续落实模型、序列化、校验与 provider/kernel consumption handoff，但不得越界进入 theme/quality/provider expansion；
 - `147` 完成后，后续 `multi-theme/token governance`、`quality platform`、`cross-provider consistency` 应以上游 schema truth 为 anchor，而不是各自另造结构定义。
 
 ## 用户故事与验收
@@ -124,10 +125,10 @@
 
 | ID | 需求 |
 |----|------|
-| FR-147-009 | `147` 当前只冻结 formal baseline，不直接进入 `src/` / `tests/` 的 runtime implementation |
-| FR-147-010 | `147` 必须给出后续 implementation slice 的推荐顺序，至少覆盖 schema model/serialization、validator/versioning、provider/kernel consumption |
-| FR-147-011 | `147` 必须允许自身作为 global truth 中明确可读的下一条前端主线 child |
-| FR-147-012 | `147` 的 close 语义必须诚实表达为“schema child baseline 已 formalize”，不得伪造 runtime 已完成 |
+| FR-147-009 | `147` 必须把 page schema / ui schema runtime baseline 落到 `src/` / `tests/`，至少覆盖 schema models、baseline builders 与 machine-verifiable artifact materialization |
+| FR-147-010 | `147` 必须实现 validator / versioning / anchor contract，能对 recipe、component、state、anchor、slot 引用给出结构化阻断信息 |
+| FR-147-011 | `147` 必须提供 provider/kernel consumption handoff surface，使后续 Track B/C/D 能消费同一套 schema anchor |
+| FR-147-012 | `147` 的 close 语义必须诚实表达为“page/ui schema runtime baseline 已落地”，但不得伪造 multi-theme、quality、cross-provider 或 provider expansion 已完成 |
 
 ## 关键实体
 
@@ -142,8 +143,8 @@
 - **SC-147-001**：`147` 独立成为 `145 Track A` 的 canonical child baseline，不再依赖会话记忆说明其存在
 - **SC-147-002**：`147` 明确区分 page schema、ui schema、render slot、section anchor 的结构边界
 - **SC-147-003**：`147` 明确指出与 `068/073` 的关系，不再混淆 recipe truth、provider/style truth 与 schema truth
-- **SC-147-004**：`147` 给出后续 implementation slice 顺序，并为 Track B/C/D 提供 schema anchor
-- **SC-147-005**：`147` 的收口语义诚实停留在 formal baseline，不伪造 runtime implementation complete
+- **SC-147-004**：`147` 落实 schema model、artifact、validator 与 provider/kernel handoff，并为 Track B/C/D 提供 schema anchor
+- **SC-147-005**：`147` 的收口语义诚实停留在 page/ui schema runtime baseline，不伪造 Track B/C/D/E 已完成
 
 ---
 related_doc:

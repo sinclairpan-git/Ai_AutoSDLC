@@ -11,6 +11,7 @@ from unittest.mock import patch
 
 import pytest
 import typer
+import yaml
 from typer.testing import CliRunner
 
 from ai_sdlc.cli.main import app
@@ -61,6 +62,13 @@ def _dependency_overlay_site_packages(tmp_path: Path) -> Path:
                 shutil.copy2(item, target)
 
     return overlay
+
+
+def _write_manifest_yaml(root: Path, text: str) -> None:
+    (root / "program-manifest.yaml").write_text(
+        text.strip() + "\n",
+        encoding="utf-8",
+    )
 
 
 class TestCliWorkitemInit:
@@ -188,6 +196,51 @@ class TestCliWorkitemInit:
         )
         assert second.exit_code == 1
         assert "already exist" in second.output.lower()
+
+    def test_workitem_init_materializes_program_manifest_entry_and_guides_truth_sync(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        root = tmp_path / "repo"
+        root.mkdir()
+        init_project(root)
+        _write_manifest_yaml(
+            root,
+            """
+schema_version: "2"
+program:
+  goal: "Demo truth ledger"
+specs: []
+""",
+        )
+        monkeypatch.chdir(root)
+
+        result = runner.invoke(
+            app,
+            [
+                "workitem",
+                "init",
+                "--title",
+                "Program Truth Handoff Example",
+                "--wi-id",
+                "148-program-truth-handoff-example",
+            ],
+        )
+
+        assert result.exit_code == 0
+        assert "program truth handoff" in result.output.lower()
+        assert "program-manifest.yaml" in result.output
+        assert "python -m ai_sdlc program truth sync --execute --yes" in result.output
+
+        manifest = yaml.safe_load(
+            (root / "program-manifest.yaml").read_text(encoding="utf-8")
+        )
+        assert manifest["specs"] == [
+            {
+                "id": "148-program-truth-handoff-example",
+                "path": "specs/148-program-truth-handoff-example",
+                "depends_on": [],
+            }
+        ]
 
     def test_workitem_init_skips_existing_sequences_when_project_state_lags(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch

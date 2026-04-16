@@ -91,6 +91,7 @@ def _write_verification_profile_docs(
     if include_rules_only:
         verification += "- `rules-only`：至少执行 `uv run ai-sdlc verify constraints`\n"
     verification += (
+        "- `truth-only`：执行 `uv run ai-sdlc verify constraints`、`python -m ai_sdlc program truth sync --dry-run`\n"
         "- `code-change`：执行 `uv run pytest`、`uv run ruff check`、`uv run ai-sdlc verify constraints`\n"
     )
     (rules_dir / "verification.md").write_text(verification, encoding="utf-8")
@@ -101,6 +102,7 @@ def _write_verification_profile_docs(
         "# 合并前自检清单\n\n"
         "- `docs-only`：`uv run ai-sdlc verify constraints`\n"
         "- `rules-only`：`uv run ai-sdlc verify constraints`\n"
+        "- `truth-only`：`uv run ai-sdlc verify constraints`、`python -m ai_sdlc program truth sync --dry-run`\n"
     )
     if include_checklist_code_change:
         checklist += "- `code-change`：`uv run pytest`、`uv run ruff check`、`uv run ai-sdlc verify constraints`\n"
@@ -1291,7 +1293,8 @@ def test_release_docs_consistency_passes_when_release_entry_docs_align(
     (tmp_path / "docs" / "pull-request-checklist.zh.md").write_text(
         "README.md\ndocs/releases/v0.6.0.md\nUSER_GUIDE.zh-CN.md\npackaging/offline/README.md\n"
         "v0.6.0\nWindows\n.zip\nmacOS / Linux\n.tar.gz\n"
-        "docs-only\nrules-only\ncode-change\nuv run ai-sdlc verify constraints\n"
+        "docs-only\nrules-only\ntruth-only\ncode-change\nuv run ai-sdlc verify constraints\n"
+        "python -m ai_sdlc program truth sync --dry-run\n"
         "uv run pytest\nuv run ruff check\n",
         encoding="utf-8",
     )
@@ -1323,6 +1326,25 @@ def test_verification_profile_docs_block_when_checklist_missing_code_change(
     blockers = collect_constraint_blockers(tmp_path)
     assert any("verification profile" in x for x in blockers)
     assert any("code-change" in x for x in blockers)
+
+
+def test_verification_profile_docs_block_when_truth_only_profile_missing(
+    tmp_path: Path,
+) -> None:
+    mem = tmp_path / ".ai-sdlc" / "memory"
+    mem.mkdir(parents=True)
+    (mem / "constitution.md").write_text("# C\n", encoding="utf-8")
+    _write_verification_profile_docs(tmp_path)
+
+    verification_path = tmp_path / "src" / "ai_sdlc" / "rules" / "verification.md"
+    verification_path.write_text(
+        verification_path.read_text(encoding="utf-8").replace("truth-only", "truth-profile"),
+        encoding="utf-8",
+    )
+
+    blockers = collect_constraint_blockers(tmp_path)
+    assert any("verification profile" in x for x in blockers)
+    assert any("truth-only" in x for x in blockers)
 
 
 def test_verification_profile_docs_pass_when_both_surfaces_complete(tmp_path: Path) -> None:

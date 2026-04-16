@@ -18,13 +18,14 @@ related_doc:
 Batch 1: truth injection problem statement and contract freeze
 Batch 2: diagnostic surfaces, verification profile, and implementation order freeze
 Batch 3: development summary, docs-only validation, and global truth handoff readiness
+Batch 4: pipeline truth injection implementation and focused regression
 ```
 
 ---
 
 ## 执行护栏
 
-- `146` 当前只允许 docs-only formal baseline freeze，不得进入 `src/` / `tests/` 实现。
+- Batch 1-3 只允许 docs-only formal baseline freeze；Batch 4 允许进入 `src/` / `tests/` 的受控实现切片，但范围仅限 truth injection pipeline。
 - `146` 不得新增第二份 program truth、第二个 manifest 或平行 dashboard。
 - `146` 不得把 stale truth 继续表述成“只是多跑一个命令即可”的经验问题；必须冻结为 pipeline injection 缺口。
 - `146` 必须明确 read-only surface 不得暗写 snapshot。
@@ -114,3 +115,44 @@ Batch 3: development summary, docs-only validation, and global truth handoff rea
   3. `program truth sync` 后 `146` 能进入 global truth mirror
   4. `git diff --check` 通过
 - **验证**：`uv run ai-sdlc verify constraints`、`python -m ai_sdlc workitem close-check --wi specs/146-program-truth-pipeline-injection-baseline`、`python -m ai_sdlc program truth sync --execute --yes`、`git diff --check`
+
+## Batch 4：pipeline truth injection implementation and focused regression
+
+### Task 4.1 落地 workitem init -> manifest mapping -> truth sync handoff
+
+- **任务编号**：T41
+- **优先级**：P0
+- **依赖**：T32
+- **文件**：`src/ai_sdlc/cli/workitem_cmd.py`, `src/ai_sdlc/core/program_service.py`, `tests/integration/test_cli_workitem_init.py`
+- **可并行**：否
+- **验收标准**：
+  1. `workitem init` 在存在 `program-manifest.yaml` 时可自动 materialize `specs[]` entry 或给出 exact next action
+  2. 输出明确提示 `python -m ai_sdlc program truth sync --execute --yes`
+  3. 新 workitem 不再静默留下 `manifest_unmapped`
+- **验证**：focused `pytest`（`test_cli_workitem_init.py`）
+
+### Task 4.2 落地 close-check / status / run-stage truth diagnostics
+
+- **任务编号**：T42
+- **优先级**：P0
+- **依赖**：T41
+- **文件**：`src/ai_sdlc/core/close_check.py`, `src/ai_sdlc/core/runner.py`, `src/ai_sdlc/core/program_service.py`, `src/ai_sdlc/cli/program_cmd.py`, `tests/unit/test_close_check.py`, `tests/unit/test_runner_confirm.py`, `tests/integration/test_cli_program.py`
+- **可并行**：否
+- **验收标准**：
+  1. `close-check` 区分 `manifest_unmapped`、`truth_snapshot_stale`、`capability_blocked`
+  2. `program status` / `program truth audit` 在 truth 不 ready 时输出 next required truth action
+  3. `runner close` context 能消费 mapped spec 的 stale truth
+- **验证**：focused `pytest`（close-check / runner / program CLI）
+
+### Task 4.3 落地 truth-only verification profile 与规则面收口
+
+- **任务编号**：T43
+- **优先级**：P1
+- **依赖**：T42
+- **文件**：`src/ai_sdlc/core/verify_constraints.py`, `src/ai_sdlc/rules/verification.md`, `docs/pull-request-checklist.zh.md`, `USER_GUIDE.zh-CN.md`, `tests/unit/test_verify_constraints.py`, `tests/integration/test_cli_verify_constraints.py`
+- **可并行**：否
+- **验收标准**：
+  1. 仓库规则面正式包含 `truth-only`
+  2. `close-check` 能诚实识别 truth-only 变更范围与 required commands
+  3. 文档、规则与约束检查面保持一致
+- **验证**：`uv run ai-sdlc verify constraints`、focused `pytest`

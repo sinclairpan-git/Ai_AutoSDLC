@@ -55,7 +55,7 @@
 - read-only surfaces 继续保持只读，但必须明确指出 stale / unmapped / next action；
 - stale truth 必须被视为 pipeline-level honesty 问题，而不是纯展示问题；
 - verification profile 必须允许 truth-only / manifest-only 变更被诚实验证，不能长期借用 `code-change` 画像；
-- `146` 当前只冻结 formal baseline，不直接在本批实现所有代码改造。
+- `146` 的实现边界只覆盖 truth injection pipeline；不得借机扩展到前端业务 capability 或平行真值系统。
 
 ## 用户故事与验收
 
@@ -132,7 +132,7 @@
 | FR-146-009 | 系统必须为 manifest-only / truth-only 改动定义诚实的 verification profile，避免长期借用 `code-change` |
 | FR-146-010 | `146` 必须明确区分“pipeline truth injection 缺口”与“业务 capability 真实未完成”，不得继续混淆这两类 blocker |
 | FR-146-011 | `146` 必须允许 `145/147` 一类 planning workitem 被 global truth 直接消费，而无需重新手工 census |
-| FR-146-012 | `146` 当前必须停留在 formal baseline；后续实现切片再进入 `src/` / `tests/` |
+| FR-146-012 | `146` 的实现必须只覆盖 truth injection pipeline 本身；不得顺带扩展到前端业务 capability 或平行真值系统 |
 
 ## 关键实体
 

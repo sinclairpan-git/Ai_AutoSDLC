@@ -14,6 +14,8 @@ from ai_sdlc.branch.git_client import GitClient, GitError
 from ai_sdlc.core.plan_check import resolve_plan_path_from_wi, run_plan_check
 from ai_sdlc.core.program_service import (
     FRONTEND_EVIDENCE_CLASS_MIRROR_PROBLEM_FAMILY,
+    PROGRAM_TRUTH_SYNC_DRY_RUN_COMMAND,
+    PROGRAM_TRUTH_SYNC_EXECUTE_COMMAND,
     ProgramFrontendEvidenceClassStatus,
     ProgramService,
     _parse_frontend_evidence_class_status_blocker,
@@ -50,9 +52,17 @@ COMMIT_HASH_RE = re.compile(r"(?m)^\s*-\s*\*\*提交哈希\*\*：(?P<value>.+?)\
 VERIFICATION_PROFILE_RE = re.compile(r"(?m)^\s*-\s*\*\*验证画像\*\*：(?P<value>.+?)\s*$")
 CHANGED_PATHS_RE = re.compile(r"(?m)^\s*-\s*\*\*改动范围\*\*：(?P<value>.+?)\s*$")
 PATH_TOKEN_RE = re.compile(r"`([^`]+)`|\[([^\]]+)\]\([^)]+\)")
-VERIFICATION_PROFILE_REQUIRED_COMMANDS: dict[str, tuple[str, ...]] = {
+VerificationCommandRequirement = str | tuple[str, ...]
+VERIFICATION_PROFILE_REQUIRED_COMMANDS: dict[str, tuple[VerificationCommandRequirement, ...]] = {
     "docs-only": ("uv run ai-sdlc verify constraints",),
     "rules-only": ("uv run ai-sdlc verify constraints",),
+    "truth-only": (
+        "uv run ai-sdlc verify constraints",
+        (
+            PROGRAM_TRUTH_SYNC_DRY_RUN_COMMAND,
+            "uv run ai-sdlc program truth sync --dry-run",
+        ),
+    ),
     "code-change": (
         "uv run pytest",
         "uv run ruff check",
@@ -163,6 +173,44 @@ def _build_frontend_evidence_class_close_check_summary(
     if summary is not None:
         return summary
     return ProgramFrontendEvidenceClassStatus(has_blocker=False)
+
+
+def _build_program_truth_close_check_summary(
+    root: Path,
+    wi_dir: Path,
+) -> dict[str, object] | None:
+    manifest_path = root / "program-manifest.yaml"
+    if not manifest_path.is_file():
+        return None
+
+    svc = ProgramService(root, manifest_path)
+    try:
+        manifest = svc.load_manifest()
+    except Exception as exc:
+        return {
+            "ok": False,
+            "summary_token": "manifest_unreadable",
+            "detail": f"manifest_unreadable: {exc}",
+            "next_required_actions": [
+                "fix program-manifest.yaml so it can be parsed",
+                PROGRAM_TRUTH_SYNC_EXECUTE_COMMAND,
+            ],
+        }
+
+    readiness = svc.build_spec_truth_readiness(
+        manifest,
+        spec_path=wi_dir,
+        validation_result=svc.validate_manifest(manifest),
+    )
+    if readiness is None:
+        return None
+
+    return {
+        "ok": readiness.ready,
+        "summary_token": readiness.summary_token,
+        "detail": readiness.detail,
+        "next_required_actions": list(readiness.next_required_actions),
+    }
 
 
 @dataclass
@@ -291,6 +339,32 @@ def _path_allowed_for_docs_profile(path: str) -> bool:
     return normalized.endswith(".md")
 
 
+def _path_allowed_for_truth_profile(path: str) -> bool:
+    normalized = path.strip().replace("\\", "/")
+    if normalized == "program-manifest.yaml":
+        return True
+    if normalized.startswith(".ai-sdlc/"):
+        return True
+    if normalized.startswith("specs/") and normalized.endswith(".md"):
+        return True
+    return normalized.startswith("docs/") and normalized.endswith(".md")
+
+
+def _command_requirement_present(
+    batch_text: str,
+    requirement: VerificationCommandRequirement,
+) -> bool:
+    if isinstance(requirement, tuple):
+        return any(command in batch_text for command in requirement)
+    return requirement in batch_text
+
+
+def _command_requirement_label(requirement: VerificationCommandRequirement) -> str:
+    if isinstance(requirement, tuple):
+        return " or ".join(requirement)
+    return requirement
+
+
 def _verification_profile_violation(log_text: str) -> str | None:
     batch_text = _latest_batch_text(log_text)
     profile = _normalize_marker_value(_last_log_marker(VERIFICATION_PROFILE_RE, batch_text))
@@ -301,9 +375,10 @@ def _verification_profile_violation(log_text: str) -> str | None:
         return f"latest batch has unsupported verification profile: {profile}"
 
     for command in required_commands:
-        if command not in batch_text:
+        if not _command_requirement_present(batch_text, command):
             return (
-                f"latest batch verification profile {profile} missing required command: {command}"
+                "latest batch verification profile "
+                f"{profile} missing required command: {_command_requirement_label(command)}"
             )
 
     if profile in {"docs-only", "rules-only"}:
@@ -315,6 +390,17 @@ def _verification_profile_violation(log_text: str) -> str | None:
         if disallowed:
             return (
                 f"latest batch verification profile {profile} includes non-doc changes: "
+                + ", ".join(disallowed[:5])
+            )
+    if profile == "truth-only":
+        raw_paths = _last_log_marker(CHANGED_PATHS_RE, batch_text)
+        paths = _changed_paths_from_marker(raw_paths or "")
+        if not paths:
+            return "latest batch verification profile truth-only missing changed-path scope"
+        disallowed = [path for path in paths if not _path_allowed_for_truth_profile(path)]
+        if disallowed:
+            return (
+                "latest batch verification profile truth-only includes non-truth changes: "
                 + ", ".join(disallowed[:5])
             )
 
@@ -444,7 +530,13 @@ def run_branch_check(*, cwd: Path | None, wi: Path) -> BranchCheckResult:
     )
 
 
-def run_close_check(*, cwd: Path | None, wi: Path, all_docs: bool = False) -> CloseCheckResult:
+def run_close_check(
+    *,
+    cwd: Path | None,
+    wi: Path,
+    all_docs: bool = False,
+    include_program_truth: bool = True,
+) -> CloseCheckResult:
     """Run read-only close checks for a `specs/<WI>/` directory.
 
     When ``all_docs`` is False (default), docs consistency only scans ``specs/<WI>/*.md``
@@ -634,6 +726,36 @@ def run_close_check(*, cwd: Path | None, wi: Path, all_docs: bool = False) -> Cl
             }
         )
         blockers.extend(branch_lifecycle.blockers)
+
+        program_truth_status = (
+            _build_program_truth_close_check_summary(root, wi_dir)
+            if include_program_truth
+            else None
+        )
+        if program_truth_status is not None:
+            program_truth_ok = bool(program_truth_status.get("ok"))
+            program_truth_detail = str(program_truth_status.get("detail", "")).strip()
+            checks.append(
+                {
+                    "name": "program_truth",
+                    "ok": program_truth_ok,
+                    "detail": program_truth_detail
+                    if program_truth_detail
+                    else "program truth is fresh and mapped",
+                }
+            )
+            if not program_truth_ok:
+                next_actions = [
+                    str(action)
+                    for action in program_truth_status.get("next_required_actions", [])
+                    if str(action).strip()
+                ]
+                blocker = "BLOCKER: program truth unresolved"
+                if program_truth_detail:
+                    blocker = f"{blocker}: {program_truth_detail}"
+                if next_actions:
+                    blocker += "; next action: " + " ; ".join(next_actions)
+                blockers.append(blocker)
 
         frontend_evidence_class_status = _build_frontend_evidence_class_close_check_summary(
             root,

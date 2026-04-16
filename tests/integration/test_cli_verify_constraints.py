@@ -118,6 +118,7 @@ def _write_verification_profile_docs(
     if include_rules_only:
         verification += "- `rules-only`：至少执行 `uv run ai-sdlc verify constraints`\n"
     verification += (
+        "- `truth-only`：执行 `uv run ai-sdlc verify constraints`、`python -m ai_sdlc program truth sync --dry-run`\n"
         "- `code-change`：执行 `uv run pytest`、`uv run ruff check`、`uv run ai-sdlc verify constraints`\n"
     )
     (rules_dir / "verification.md").write_text(verification, encoding="utf-8")
@@ -128,6 +129,7 @@ def _write_verification_profile_docs(
         "# 合并前自检清单\n\n"
         "- `docs-only`：`uv run ai-sdlc verify constraints`\n"
         "- `rules-only`：`uv run ai-sdlc verify constraints`\n"
+        "- `truth-only`：`uv run ai-sdlc verify constraints`、`python -m ai_sdlc program truth sync --dry-run`\n"
     )
     if include_checklist_code_change:
         checklist += "- `code-change`：`uv run pytest`、`uv run ruff check`、`uv run ai-sdlc verify constraints`\n"

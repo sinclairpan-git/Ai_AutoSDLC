@@ -18,6 +18,10 @@ from ai_sdlc.core.close_check import (
     run_close_check,
 )
 from ai_sdlc.core.plan_check import PlanCheckResult, format_json, run_plan_check
+from ai_sdlc.core.program_service import (
+    PROGRAM_TRUTH_SYNC_EXECUTE_COMMAND,
+    ProgramService,
+)
 from ai_sdlc.core.workitem_scaffold import WorkitemScaffolder, WorkitemScaffoldError
 from ai_sdlc.core.workitem_truth import (
     WorkitemTruthResult,
@@ -94,6 +98,35 @@ def workitem_init(
     )
     for path in result.created_paths:
         console.print(f"  - {path.relative_to(root)}")
+    manifest_sync = ProgramService(root).ensure_manifest_spec_entry(
+        spec_id=result.work_item_id,
+        spec_path=result.spec_dir,
+    )
+    if manifest_sync.status == "added":
+        console.print(
+            "[cyan]Program truth handoff: materialized manifest mapping in "
+            f"{', '.join(manifest_sync.written_paths)}[/cyan]"
+        )
+        console.print(
+            f"[cyan]Next required action: {PROGRAM_TRUTH_SYNC_EXECUTE_COMMAND}[/cyan]"
+        )
+    elif manifest_sync.status == "existing":
+        console.print(
+            "[cyan]Program truth handoff: manifest mapping already exists; "
+            f"next required action: {PROGRAM_TRUTH_SYNC_EXECUTE_COMMAND}[/cyan]"
+        )
+    elif manifest_sync.status == "blocked":
+        console.print(
+            "[yellow]Program truth handoff could not materialize automatically.[/yellow]"
+        )
+        for blocker in manifest_sync.blockers:
+            console.print(f"  - {blocker}")
+        for action in manifest_sync.next_required_actions:
+            console.print(f"  - next action: {action}")
+    elif manifest_sync.status == "not_applicable":
+        console.print(
+            "[dim]Program truth handoff skipped: program-manifest.yaml not found.[/dim]"
+        )
     if related_plan or related_doc:
         console.print(
             "[dim]External design inputs were recorded as references only; "

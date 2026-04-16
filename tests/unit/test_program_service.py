@@ -268,6 +268,53 @@ def _write_builtin_delivery_truth(root: Path, *, snapshot=None) -> None:
     )
 
 
+def test_build_frontend_page_ui_schema_handoff_blocks_when_solution_snapshot_missing(
+    tmp_path: Path,
+) -> None:
+    svc = ProgramService(tmp_path)
+
+    handoff = svc.build_frontend_page_ui_schema_handoff()
+
+    assert handoff.state == "blocked"
+    assert "frontend_solution_snapshot_missing" in handoff.blockers
+    assert handoff.effective_provider_id == ""
+    assert handoff.effective_style_pack_id == ""
+
+
+def test_build_frontend_page_ui_schema_handoff_uses_latest_solution_snapshot(
+    tmp_path: Path,
+) -> None:
+    _write_frontend_solution_confirmation_artifacts(
+        tmp_path,
+        snapshot=build_mvp_solution_snapshot(
+            project_id="147-demo",
+            requested_frontend_stack="vue3",
+            effective_frontend_stack="vue3",
+            recommended_frontend_stack="vue3",
+            requested_provider_id="public-primevue",
+            effective_provider_id="public-primevue",
+            recommended_provider_id="public-primevue",
+            requested_style_pack_id="modern-saas",
+            effective_style_pack_id="modern-saas",
+            recommended_style_pack_id="modern-saas",
+            style_fidelity_status="full",
+        ),
+    )
+    svc = ProgramService(tmp_path)
+
+    handoff = svc.build_frontend_page_ui_schema_handoff()
+
+    assert handoff.state == "ready"
+    assert handoff.schema_version == "1.0"
+    assert handoff.effective_provider_id == "public-primevue"
+    assert handoff.effective_style_pack_id == "modern-saas"
+    assert [entry.page_schema_id for entry in handoff.entries] == [
+        "dashboard-workspace",
+        "search-list-workspace",
+        "wizard-workspace",
+    ]
+
+
 def _build_host_runtime_plan_for_tests(
     *,
     node_runtime_available: bool | None,

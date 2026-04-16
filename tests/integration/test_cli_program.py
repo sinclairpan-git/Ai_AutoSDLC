@@ -121,6 +121,38 @@ def _write_frontend_solution_confirmation_artifacts(root: Path, *, snapshot=None
     )
 
 
+def test_program_page_ui_schema_handoff_blocks_without_solution_snapshot(
+    initialized_project_dir: Path,
+) -> None:
+    root = initialized_project_dir
+
+    with patch("ai_sdlc.cli.program_cmd.find_project_root", return_value=root):
+        result = runner.invoke(app, ["program", "page-ui-schema-handoff"])
+
+    assert result.exit_code == 1
+    assert "Frontend Page/UI Schema Handoff" in result.output
+    assert "state: blocked" in result.output
+    assert "frontend_solution_snapshot_missing" in result.output
+
+
+def test_program_page_ui_schema_handoff_surfaces_provider_style_and_schema_entries(
+    initialized_project_dir: Path,
+) -> None:
+    root = initialized_project_dir
+    _write_frontend_solution_confirmation_artifacts(root)
+
+    with patch("ai_sdlc.cli.program_cmd.find_project_root", return_value=root):
+        result = runner.invoke(app, ["program", "page-ui-schema-handoff"])
+
+    assert result.exit_code == 0
+    assert "Frontend Page/UI Schema Handoff" in result.output
+    assert "state: ready" in result.output
+    assert "provider: public-primevue" in result.output
+    assert "style pack: modern-saas" in result.output
+    assert "dashboard-workspace" in result.output
+    assert "search-list-workspace" in result.output
+
+
 def _write_builtin_delivery_truth(root: Path, *, snapshot=None) -> None:
     _write_frontend_solution_confirmation_artifacts(root, snapshot=snapshot)
     materialize_builtin_frontend_provider_profile_artifacts(
@@ -1072,6 +1104,38 @@ specs:
         assert "source inventory: incomplete" in audit.output.lower()
         assert "unmapped sources: 2" in audit.output.lower()
         assert "docs/superpowers/specs/2026-04-02-design.md" in audit.output
+
+    def test_program_status_exposes_next_required_truth_action_when_snapshot_is_stale(
+        self, initialized_project_dir: Path
+    ) -> None:
+        root = initialized_project_dir
+        _init_truth_git_repo(root)
+        _write_program_truth_fixture(root)
+        _commit_truth_repo(root, "docs: seed truth ledger fixture")
+
+        with patch("ai_sdlc.cli.program_cmd.find_project_root", return_value=root):
+            sync = runner.invoke(
+                app,
+                ["program", "truth", "sync", "--execute", "--yes"],
+            )
+
+        assert sync.exit_code == 0, sync.output
+
+        payload = yaml.safe_load((root / "program-manifest.yaml").read_text(encoding="utf-8"))
+        payload["program"]["goal"] = "Changed after truth sync"
+        (root / "program-manifest.yaml").write_text(
+            yaml.safe_dump(payload, sort_keys=False, allow_unicode=True),
+            encoding="utf-8",
+        )
+
+        with patch("ai_sdlc.cli.program_cmd.find_project_root", return_value=root):
+            status = runner.invoke(app, ["program", "status"])
+
+        assert status.exit_code == 0, status.output
+        assert "Truth Ledger" in status.output
+        assert "snapshot state: stale" in status.output.lower()
+        assert "next action" in status.output.lower()
+        assert "python -m ai_sdlc program truth sync --execute --yes" in status.output
 
     def test_program_status_exposes_frontend_readiness(
         self, initialized_project_dir: Path

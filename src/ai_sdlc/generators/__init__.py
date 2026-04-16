@@ -12,6 +12,10 @@ from ai_sdlc.generators.frontend_generation_constraint_artifacts import (
     frontend_generation_governance_root,
     materialize_frontend_generation_constraint_artifacts,
 )
+from ai_sdlc.generators.frontend_page_ui_schema_artifacts import (
+    frontend_page_ui_schema_root,
+    materialize_frontend_page_ui_schema_artifacts,
+)
 from ai_sdlc.generators.frontend_provider_profile_artifacts import (
     frontend_provider_profile_root,
     materialize_frontend_provider_profile_artifacts,
@@ -33,6 +37,8 @@ __all__ = [
     "materialize_frontend_contract_artifacts",
     "materialize_frontend_gate_policy_artifacts",
     "materialize_frontend_generation_constraint_artifacts",
+    "frontend_page_ui_schema_root",
+    "materialize_frontend_page_ui_schema_artifacts",
     "frontend_provider_profile_root",
     "materialize_frontend_provider_profile_artifacts",
     "frontend_solution_confirmation_memory_root",

@@ -9,6 +9,7 @@ import pytest
 
 from ai_sdlc.core.close_check import run_close_check
 from ai_sdlc.core.p1_artifacts import save_reviewer_decision
+from ai_sdlc.core.program_service import ProgramService
 from ai_sdlc.core.workitem_traceability import extract_execution_batches
 from ai_sdlc.models.work import (
     PrdReviewerCheckpoint,
@@ -20,6 +21,13 @@ from ai_sdlc.models.work import (
 def _commit_all(root: Path, message: str) -> None:
     subprocess.run(["git", "add", "."], cwd=root, check=True, capture_output=True)
     subprocess.run(["git", "commit", "-m", message], cwd=root, check=True, capture_output=True)
+
+
+def _write_manifest_yaml(root: Path, text: str) -> None:
+    (root / "program-manifest.yaml").write_text(
+        text.strip() + "\n",
+        encoding="utf-8",
+    )
 
 
 def _write_execution_log(
@@ -291,6 +299,180 @@ def test_close_check_pass_when_all_requirements_met(tmp_path: Path) -> None:
     assert r.blockers == []
 
 
+def test_close_check_blocks_when_program_truth_manifest_mapping_is_missing(
+    tmp_path: Path,
+) -> None:
+    root = tmp_path / "repo3-program-truth-unmapped"
+    root.mkdir()
+    wi_rel = "specs/001-wi"
+    _setup_repo(
+        root,
+        tasks_body="- [x] done\n### Task 1.1\n- **验收标准（AC）**：ok",
+        plan_status="completed",
+        wi_rel=wi_rel,
+    )
+    wi = root / wi_rel
+    wi.joinpath("spec.md").write_text("# Spec\n", encoding="utf-8")
+    wi.joinpath("plan.md").write_text("# Plan\n", encoding="utf-8")
+    other_spec = root / "specs" / "002-other"
+    other_spec.mkdir(parents=True, exist_ok=True)
+    other_spec.joinpath("spec.md").write_text("# Other\n", encoding="utf-8")
+    _write_manifest_yaml(
+        root,
+        """
+schema_version: "2"
+program:
+  goal: "Demo truth ledger"
+specs:
+  - id: "002-other"
+    path: "specs/002-other"
+    depends_on: []
+""",
+    )
+    svc = ProgramService(root)
+    snapshot = svc.build_truth_snapshot(svc.load_manifest())
+    svc.write_truth_snapshot(snapshot)
+    _commit_all(root, "docs: add truth snapshot for unrelated spec")
+
+    r = run_close_check(cwd=root, wi=Path(wi_rel))
+
+    assert r.ok is False
+    program_truth = next(check for check in r.checks if check["name"] == "program_truth")
+    assert program_truth["ok"] is False
+    assert "manifest_unmapped" in str(program_truth["detail"])
+    assert any("program truth" in blocker.lower() for blocker in r.blockers)
+    assert any("manifest_unmapped" in blocker for blocker in r.blockers)
+    assert any("program truth sync --execute --yes" in blocker for blocker in r.blockers)
+
+
+def test_close_check_blocks_when_program_truth_snapshot_is_stale(
+    tmp_path: Path,
+) -> None:
+    root = tmp_path / "repo3-program-truth-stale"
+    root.mkdir()
+    wi_rel = "specs/001-wi"
+    _setup_repo(
+        root,
+        tasks_body="- [x] done\n### Task 1.1\n- **验收标准（AC）**：ok",
+        plan_status="completed",
+        wi_rel=wi_rel,
+    )
+    wi = root / wi_rel
+    wi.joinpath("spec.md").write_text("# Spec\n", encoding="utf-8")
+    wi.joinpath("plan.md").write_text("# Plan\n", encoding="utf-8")
+    _write_manifest_yaml(
+        root,
+        """
+schema_version: "2"
+program:
+  goal: "Demo truth ledger"
+specs:
+  - id: "001-wi"
+    path: "specs/001-wi"
+    depends_on: []
+""",
+    )
+    svc = ProgramService(root)
+    snapshot = svc.build_truth_snapshot(svc.load_manifest())
+    svc.write_truth_snapshot(snapshot)
+    _commit_all(root, "docs: materialize truth snapshot")
+
+    _write_manifest_yaml(
+        root,
+        """
+schema_version: "2"
+program:
+  goal: "Updated goal after truth sync"
+specs:
+  - id: "001-wi"
+    path: "specs/001-wi"
+    depends_on: []
+truth_snapshot:
+"""
+        + (root / "program-manifest.yaml").read_text(encoding="utf-8").split("truth_snapshot:\n", 1)[1],
+    )
+    _commit_all(root, "docs: drift truth authoring after sync")
+
+    r = run_close_check(cwd=root, wi=Path(wi_rel))
+
+    assert r.ok is False
+    program_truth = next(check for check in r.checks if check["name"] == "program_truth")
+    assert program_truth["ok"] is False
+    assert "truth_snapshot_stale" in str(program_truth["detail"])
+    assert any("truth_snapshot_stale" in blocker for blocker in r.blockers)
+    assert any("program truth sync --execute --yes" in blocker for blocker in r.blockers)
+
+
+def test_close_check_distinguishes_program_truth_capability_blocker(
+    tmp_path: Path,
+) -> None:
+    root = tmp_path / "repo3-program-truth-capability"
+    root.mkdir()
+    wi_rel = "specs/001-wi"
+    _setup_repo(
+        root,
+        tasks_body="- [x] done\n### Task 1.1\n- **验收标准（AC）**：ok",
+        plan_status="completed",
+        wi_rel=wi_rel,
+    )
+    wi = root / wi_rel
+    wi.joinpath("spec.md").write_text("# Spec\n", encoding="utf-8")
+    wi.joinpath("plan.md").write_text("# Plan\n", encoding="utf-8")
+    _write_manifest_yaml(
+        root,
+        """
+schema_version: "2"
+program:
+  goal: "Demo truth ledger"
+release_targets:
+  - "frontend-mainline-delivery"
+capabilities:
+  - id: "frontend-mainline-delivery"
+    title: "Frontend Mainline Delivery"
+    goal: "Demo release target"
+    release_required: true
+    spec_refs:
+      - "001-wi"
+    required_evidence:
+      truth_check_refs:
+        - "specs/001-wi"
+      close_check_refs:
+        - "specs/001-wi"
+      verify_refs:
+        - "uv run ai-sdlc verify constraints"
+capability_closure_audit:
+  reviewed_at: "2026-04-16T10:00:00Z"
+  open_clusters:
+    - cluster_id: "frontend-mainline-delivery"
+      title: "Frontend Mainline Delivery"
+      closure_state: "capability_open"
+      summary: "Delivery capability is still open."
+      source_refs:
+        - "001-wi"
+specs:
+  - id: "001-wi"
+    path: "specs/001-wi"
+    depends_on: []
+    roles:
+      - "runtime_carrier"
+    capability_refs:
+      - "frontend-mainline-delivery"
+""",
+    )
+    svc = ProgramService(root)
+    snapshot = svc.build_truth_snapshot(svc.load_manifest())
+    svc.write_truth_snapshot(snapshot)
+
+    r = run_close_check(cwd=root, wi=Path(wi_rel))
+
+    assert r.ok is False
+    program_truth = next(check for check in r.checks if check["name"] == "program_truth")
+    assert program_truth["ok"] is False
+    assert "capability_blocked" in str(program_truth["detail"])
+    assert any("capability_blocked" in blocker for blocker in r.blockers)
+    assert any("program truth audit" in blocker for blocker in r.blockers)
+
+
 def test_close_check_blocks_when_associated_branch_is_ahead_and_undisposed(
     tmp_path: Path,
 ) -> None:
@@ -481,7 +663,9 @@ def test_close_check_ignores_truth_snapshot_only_program_manifest_drift(
     )
 
     r = run_close_check(cwd=root, wi=Path("specs/001-wi"))
-    assert r.ok is True
+    assert r.ok is False
+    assert all("working tree" not in blocker for blocker in r.blockers)
+    assert any("program truth" in blocker.lower() for blocker in r.blockers)
 
 
 def test_close_check_blocks_when_program_manifest_drift_exceeds_truth_snapshot(
@@ -813,6 +997,49 @@ def test_close_check_pass_for_docs_only_profile_with_minimal_evidence(
 
     r = run_close_check(cwd=root, wi=Path("specs/001-wi"))
     assert r.ok is True
+
+
+def test_close_check_pass_for_truth_only_profile_with_minimal_evidence(
+    tmp_path: Path,
+) -> None:
+    root = tmp_path / "repo3e-truth"
+    root.mkdir()
+    _setup_repo(
+        root,
+        tasks_body="- [x] done\n### Task 1.1\n- **验收标准（AC）**：ok",
+        plan_status="completed",
+        verification_profile="truth-only",
+        verification_commands=(
+            "uv run ai-sdlc verify constraints",
+            "python -m ai_sdlc program truth sync --dry-run",
+        ),
+        changed_paths=("program-manifest.yaml", "specs/001-wi/spec.md"),
+    )
+
+    r = run_close_check(cwd=root, wi=Path("specs/001-wi"))
+    assert r.ok is True
+
+
+def test_close_check_blocker_when_truth_only_profile_masks_code_changes(
+    tmp_path: Path,
+) -> None:
+    root = tmp_path / "repo3e-truth-bad"
+    root.mkdir()
+    _setup_repo(
+        root,
+        tasks_body="- [x] done\n### Task 1.1\n- **验收标准（AC）**：ok",
+        plan_status="completed",
+        verification_profile="truth-only",
+        verification_commands=(
+            "uv run ai-sdlc verify constraints",
+            "python -m ai_sdlc program truth sync --dry-run",
+        ),
+        changed_paths=("src/example.py", "program-manifest.yaml"),
+    )
+
+    r = run_close_check(cwd=root, wi=Path("specs/001-wi"))
+    assert r.ok is False
+    assert any("truth-only" in b for b in r.blockers)
 
 
 def test_close_check_blocker_when_docs_only_profile_missing_verify_constraints(
@@ -1231,9 +1458,10 @@ def test_close_check_ignores_frontend_evidence_gate_for_non_frontend_wi(
 
     r = run_close_check(cwd=root, wi=Path(wi_rel))
 
-    assert r.ok is True
+    assert r.ok is False
     assert all(check["name"] != "frontend_evidence_class" for check in r.checks)
     assert not any("frontend_evidence_class" in blocker for blocker in r.blockers)
+    assert any("program truth" in blocker.lower() for blocker in r.blockers)
 
 
 def test_close_check_blocks_when_frontend_wi_is_missing_from_manifest_mapping(

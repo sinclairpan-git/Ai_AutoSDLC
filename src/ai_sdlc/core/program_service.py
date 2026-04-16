@@ -32,6 +32,10 @@ from ai_sdlc.core.frontend_gate_verification import (
     build_frontend_gate_execute_decision,
     build_frontend_gate_verification_report,
 )
+from ai_sdlc.core.frontend_page_ui_schema import (
+    FrontendPageUiSchemaHandoff,
+    build_frontend_page_ui_schema_handoff,
+)
 from ai_sdlc.core.frontend_visual_a11y_evidence_provider import (
     FrontendVisualA11yEvidenceArtifact,
     load_frontend_visual_a11y_evidence_artifact,
@@ -74,6 +78,9 @@ from ai_sdlc.models.frontend_managed_delivery import (
     DeliveryApplyDecisionReceipt,
     ManagedDeliveryExecutorContext,
 )
+from ai_sdlc.models.frontend_page_ui_schema import (
+    build_p2_frontend_page_ui_schema_baseline,
+)
 from ai_sdlc.models.frontend_provider_profile import (
     build_mvp_enterprise_vue2_provider_profile,
 )
@@ -84,6 +91,9 @@ from ai_sdlc.models.frontend_solution_confirmation import (
     build_builtin_install_strategies,
     build_builtin_style_pack_manifests,
     build_mvp_solution_snapshot,
+)
+from ai_sdlc.models.frontend_ui_kernel import (
+    build_p1_frontend_ui_kernel_page_recipe_expansion,
 )
 from ai_sdlc.models.program import (
     ProgramComputedCapabilityState,
@@ -120,6 +130,9 @@ PROGRAM_FRONTEND_RECHECK_COMMAND = "uv run ai-sdlc verify constraints"
 PROGRAM_FRONTEND_BROWSER_GATE_RECHECK_COMMAND = (
     "uv run ai-sdlc program browser-gate-probe --execute"
 )
+PROGRAM_TRUTH_SYNC_DRY_RUN_COMMAND = "python -m ai_sdlc program truth sync --dry-run"
+PROGRAM_TRUTH_SYNC_EXECUTE_COMMAND = "python -m ai_sdlc program truth sync --execute --yes"
+PROGRAM_TRUTH_AUDIT_COMMAND = "python -m ai_sdlc program truth audit"
 PROGRAM_TRUTH_SOURCE_DISCOVERY_ROOT = Path("docs")
 PROGRAM_TRUTH_SOURCE_PHASE_RE = re.compile(
     r"(?:\bP1\b|\bP2\b|\bP3\b|\bPhase\s*[23]\b|第二期|第三期|二期|三期)",
@@ -1055,6 +1068,28 @@ class ProgramFrontendEvidenceClassSyncResult:
     warnings: list[str] = field(default_factory=list)
 
 
+@dataclass
+class ProgramManifestSpecEntrySyncResult:
+    status: str
+    spec_id: str
+    spec_path: str
+    written_paths: list[str] = field(default_factory=list)
+    blockers: list[str] = field(default_factory=list)
+    next_required_actions: list[str] = field(default_factory=list)
+
+
+@dataclass
+class ProgramSpecTruthReadinessResult:
+    required: bool
+    ready: bool
+    state: str
+    summary_token: str = ""
+    detail: str = ""
+    next_required_actions: list[str] = field(default_factory=list)
+    matched_spec_ids: list[str] = field(default_factory=list)
+    matched_capabilities: list[str] = field(default_factory=list)
+
+
 class ProgramService:
     """Program-level helper service used by CLI `program` commands."""
 
@@ -1070,6 +1105,280 @@ class ProgramService:
 
     def load_manifest(self) -> ProgramManifest:
         return YamlStore.load(self.manifest_path, ProgramManifest)
+
+    def ensure_manifest_spec_entry(
+        self,
+        *,
+        spec_id: str,
+        spec_path: str | Path,
+    ) -> ProgramManifestSpecEntrySyncResult:
+        normalized_id = spec_id.strip()
+        if not normalized_id:
+            return ProgramManifestSpecEntrySyncResult(
+                status="blocked",
+                spec_id="",
+                spec_path="",
+                blockers=["work item id must not be empty"],
+            )
+
+        try:
+            normalized_path = self._safe_relative_path(
+                self._resolve_project_relative_path(spec_path)
+            )
+        except ValueError:
+            return ProgramManifestSpecEntrySyncResult(
+                status="blocked",
+                spec_id=normalized_id,
+                spec_path=str(spec_path),
+                blockers=[f"spec path resolves outside project root: {spec_path}"],
+            )
+
+        if not self.manifest_path.is_file():
+            return ProgramManifestSpecEntrySyncResult(
+                status="not_applicable",
+                spec_id=normalized_id,
+                spec_path=normalized_path,
+            )
+
+        remediation_actions = [
+            (
+                "update program-manifest.yaml specs[] so "
+                f"{normalized_id} -> {normalized_path}"
+            ),
+            PROGRAM_TRUTH_SYNC_EXECUTE_COMMAND,
+        ]
+
+        try:
+            payload = self._load_manifest_yaml_payload()
+        except ValueError as exc:
+            return ProgramManifestSpecEntrySyncResult(
+                status="blocked",
+                spec_id=normalized_id,
+                spec_path=normalized_path,
+                blockers=[str(exc)],
+                next_required_actions=remediation_actions,
+            )
+
+        specs = payload.setdefault("specs", [])
+        if not isinstance(specs, list):
+            return ProgramManifestSpecEntrySyncResult(
+                status="blocked",
+                spec_id=normalized_id,
+                spec_path=normalized_path,
+                blockers=["program-manifest.yaml specs must be a list"],
+                next_required_actions=remediation_actions,
+            )
+
+        existing_by_id = None
+        existing_by_path = None
+        for item in specs:
+            if not isinstance(item, dict):
+                continue
+            item_id = str(item.get("id", "")).strip()
+            item_path = str(item.get("path", "")).strip()
+            if item_id == normalized_id and existing_by_id is None:
+                existing_by_id = item
+            if item_path == normalized_path and existing_by_path is None:
+                existing_by_path = item
+
+        if existing_by_id is not None or existing_by_path is not None:
+            if existing_by_id is existing_by_path:
+                return ProgramManifestSpecEntrySyncResult(
+                    status="existing",
+                    spec_id=normalized_id,
+                    spec_path=normalized_path,
+                    next_required_actions=[PROGRAM_TRUTH_SYNC_EXECUTE_COMMAND],
+                )
+
+            blockers: list[str] = []
+            if existing_by_id is not None:
+                blockers.append(
+                    "manifest id conflict: "
+                    f"{normalized_id} already maps to {existing_by_id.get('path', '')}"
+                )
+            if existing_by_path is not None:
+                blockers.append(
+                    "manifest path conflict: "
+                    f"{normalized_path} already maps to {existing_by_path.get('id', '')}"
+                )
+            return ProgramManifestSpecEntrySyncResult(
+                status="blocked",
+                spec_id=normalized_id,
+                spec_path=normalized_path,
+                blockers=blockers,
+                next_required_actions=remediation_actions,
+            )
+
+        specs.append(
+            {
+                "id": normalized_id,
+                "path": normalized_path,
+                "depends_on": [],
+            }
+        )
+        serialized = yaml.safe_dump(payload, sort_keys=False, allow_unicode=True)
+        self._atomic_write_text(self.manifest_path, serialized)
+        return ProgramManifestSpecEntrySyncResult(
+            status="added",
+            spec_id=normalized_id,
+            spec_path=normalized_path,
+            written_paths=[_relative_to_root_or_str(self.root, self.manifest_path)],
+            next_required_actions=[PROGRAM_TRUTH_SYNC_EXECUTE_COMMAND],
+        )
+
+    def build_spec_truth_readiness(
+        self,
+        manifest: ProgramManifest,
+        *,
+        spec_path: str | Path,
+        validation_result: ProgramValidationResult | None = None,
+    ) -> ProgramSpecTruthReadinessResult | None:
+        if not self._manifest_truth_enabled(manifest):
+            return None
+
+        resolved_spec_dir = self._resolve_project_relative_path(spec_path)
+        spec_rel = _relative_to_root_or_str(self.root, resolved_spec_dir)
+        matched_spec_ids: list[str] = []
+        for spec in manifest.specs:
+            try:
+                manifest_spec_dir = self._resolve_spec_dir(spec.path)
+            except ValueError:
+                continue
+            if manifest_spec_dir == resolved_spec_dir:
+                matched_spec_ids.append(spec.id)
+
+        if not matched_spec_ids:
+            return ProgramSpecTruthReadinessResult(
+                required=True,
+                ready=False,
+                state="manifest_unmapped",
+                summary_token="manifest_unmapped",
+                detail=(
+                    "manifest_unmapped: program truth handoff is missing for "
+                    f"{spec_rel}"
+                ),
+                next_required_actions=[
+                    f"update program-manifest.yaml specs[] so {spec_rel} is declared",
+                    PROGRAM_TRUTH_SYNC_EXECUTE_COMMAND,
+                ],
+            )
+
+        validation = (
+            validation_result
+            if validation_result is not None
+            else self.validate_manifest(manifest)
+        )
+        surface = self.build_truth_ledger_surface(
+            manifest,
+            validation_result=validation,
+        )
+        if surface is None:
+            return None
+
+        matched_capabilities = self.release_target_capability_ids_for_spec(
+            manifest,
+            resolved_spec_dir,
+        )
+        snapshot_state = str(surface.get("snapshot_state", "")).strip()
+        if snapshot_state != "fresh":
+            summary_token = f"truth_snapshot_{snapshot_state or 'missing'}"
+            return ProgramSpecTruthReadinessResult(
+                required=True,
+                ready=False,
+                state=snapshot_state or "missing",
+                summary_token=summary_token,
+                detail=f"{summary_token}: {surface.get('detail', '')}".strip(),
+                next_required_actions=[PROGRAM_TRUTH_SYNC_EXECUTE_COMMAND],
+                matched_spec_ids=matched_spec_ids,
+                matched_capabilities=matched_capabilities,
+            )
+
+        state = str(surface.get("state", "")).strip()
+        if state == "migration_pending":
+            return ProgramSpecTruthReadinessResult(
+                required=True,
+                ready=False,
+                state=state,
+                summary_token="truth_inventory_incomplete",
+                detail=(
+                    "truth_inventory_incomplete: "
+                    f"{surface.get('detail', '')}"
+                ).strip(),
+                next_required_actions=self._build_truth_ledger_next_actions(
+                    state=state,
+                    snapshot_state=snapshot_state,
+                    release_capabilities=list(surface.get("release_capabilities", [])),
+                    migration_pending_specs=list(surface.get("migration_pending_specs", [])),
+                    migration_pending_sources=list(
+                        surface.get("migration_pending_sources", [])
+                    ),
+                    validation_errors=list(surface.get("validation_errors", [])),
+                ),
+                matched_spec_ids=matched_spec_ids,
+                matched_capabilities=matched_capabilities,
+            )
+
+        matched_items = [
+            item
+            for item in surface.get("release_capabilities", [])
+            if item.get("capability_id") in matched_capabilities
+        ]
+        if matched_items and any(item.get("audit_state") != "ready" for item in matched_items):
+            blocked_capabilities = ", ".join(
+                f"{item.get('capability_id')} ({item.get('audit_state')})"
+                for item in matched_items
+            )
+            return ProgramSpecTruthReadinessResult(
+                required=True,
+                ready=False,
+                state="blocked",
+                summary_token="capability_blocked",
+                detail=f"capability_blocked: {blocked_capabilities}",
+                next_required_actions=[PROGRAM_TRUTH_AUDIT_COMMAND],
+                matched_spec_ids=matched_spec_ids,
+                matched_capabilities=matched_capabilities,
+            )
+
+        if state not in {"", "ready"}:
+            return ProgramSpecTruthReadinessResult(
+                required=True,
+                ready=False,
+                state=state,
+                summary_token=f"truth_state_{state}",
+                detail=f"truth_state_{state}: {surface.get('detail', '')}".strip(),
+                next_required_actions=self._build_truth_ledger_next_actions(
+                    state=state,
+                    snapshot_state=snapshot_state,
+                    release_capabilities=list(surface.get("release_capabilities", [])),
+                    migration_pending_specs=list(surface.get("migration_pending_specs", [])),
+                    migration_pending_sources=list(
+                        surface.get("migration_pending_sources", [])
+                    ),
+                    validation_errors=list(surface.get("validation_errors", [])),
+                ),
+                matched_spec_ids=matched_spec_ids,
+                matched_capabilities=matched_capabilities,
+            )
+
+        detail = "truth snapshot is fresh and spec is mapped"
+        if matched_capabilities:
+            detail = "truth snapshot is fresh and matched release capabilities are ready"
+        return ProgramSpecTruthReadinessResult(
+            required=True,
+            ready=True,
+            state="ready",
+            detail=detail,
+            matched_spec_ids=matched_spec_ids,
+            matched_capabilities=matched_capabilities,
+        )
+
+    def _manifest_truth_enabled(self, manifest: ProgramManifest) -> bool:
+        return not (
+            manifest.schema_version.strip() != "2"
+            and manifest.truth_snapshot is None
+            and not manifest.capabilities
+            and not manifest.release_targets
+        )
 
     def _resolve_project_relative_path(self, path: str | Path) -> Path:
         candidate = Path(path)
@@ -1767,12 +2076,7 @@ class ProgramService:
         *,
         validation_result: ProgramValidationResult | None = None,
     ) -> dict[str, object] | None:
-        if (
-            manifest.schema_version.strip() != "2"
-            and manifest.truth_snapshot is None
-            and not manifest.capabilities
-            and not manifest.release_targets
-        ):
+        if not self._manifest_truth_enabled(manifest):
             return None
 
         validation = (
@@ -1832,11 +2136,21 @@ class ProgramService:
             release_capabilities=release_capabilities,
             migration_pending_count=migration_pending_count,
         )
+        next_required_actions = self._build_truth_ledger_next_actions(
+            state=state,
+            snapshot_state=snapshot_state,
+            release_capabilities=release_capabilities,
+            migration_pending_specs=migration_pending_specs,
+            migration_pending_sources=migration_pending_sources,
+            validation_errors=list(validation.errors),
+        )
 
         return {
             "state": state,
             "snapshot_state": snapshot_state,
             "detail": detail,
+            "next_required_actions": next_required_actions,
+            "next_required_action": next_required_actions[0] if next_required_actions else "",
             "snapshot_hash": current_snapshot.snapshot_hash,
             "release_targets": list(manifest.release_targets),
             "release_capabilities": release_capabilities,
@@ -1974,7 +2288,7 @@ class ProgramService:
         from ai_sdlc.core.close_check import run_close_check
 
         path = self._resolve_project_relative_path(ref)
-        result = run_close_check(cwd=self.root, wi=path)
+        result = run_close_check(cwd=self.root, wi=path, include_program_truth=False)
         return result.to_json_dict()
 
     def _run_verify_ref(
@@ -2119,6 +2433,32 @@ class ProgramService:
             ),
             "state": snapshot.state,
         }
+
+    def _build_truth_ledger_next_actions(
+        self,
+        *,
+        state: str,
+        snapshot_state: str,
+        release_capabilities: list[dict[str, object]],
+        migration_pending_specs: list[str],
+        migration_pending_sources: list[str],
+        validation_errors: list[str],
+    ) -> list[str]:
+        actions: list[str] = []
+        if snapshot_state in {"missing", "invalid", "stale"}:
+            actions.append(PROGRAM_TRUTH_SYNC_EXECUTE_COMMAND)
+        elif validation_errors:
+            actions.append("python -m ai_sdlc program validate")
+        elif migration_pending_specs or migration_pending_sources or state == "migration_pending":
+            actions.append(
+                "update program-manifest.yaml / source_registry for the pending truth items"
+            )
+            actions.append(PROGRAM_TRUTH_SYNC_EXECUTE_COMMAND)
+        elif any(item.get("audit_state") != "ready" for item in release_capabilities) or (
+            state not in {"", "ready"}
+        ):
+            actions.append(PROGRAM_TRUTH_AUDIT_COMMAND)
+        return _unique_strings(actions)
 
     def _build_truth_ledger_detail(
         self,
@@ -3465,6 +3805,32 @@ class ProgramService:
             return FrontendSolutionSnapshot.model_validate(payload), None
         except Exception as exc:  # pragma: no cover - pydantic validation path
             return None, f"frontend_solution_snapshot_invalid:{exc}"
+
+    def build_frontend_page_ui_schema_handoff(
+        self,
+    ) -> FrontendPageUiSchemaHandoff:
+        """Build the provider/kernel handoff surface for the 147 page/UI schema baseline."""
+
+        schema_set = build_p2_frontend_page_ui_schema_baseline()
+        kernel = build_p1_frontend_ui_kernel_page_recipe_expansion()
+        snapshot, snapshot_issue = self._load_latest_frontend_solution_snapshot()
+        handoff = build_frontend_page_ui_schema_handoff(
+            schema_set,
+            kernel=kernel,
+            solution_snapshot=snapshot,
+        )
+        if snapshot_issue is None or snapshot_issue in handoff.blockers:
+            return handoff
+
+        return FrontendPageUiSchemaHandoff(
+            state="blocked",
+            schema_version=handoff.schema_version,
+            effective_provider_id=handoff.effective_provider_id,
+            effective_style_pack_id=handoff.effective_style_pack_id,
+            blockers=[snapshot_issue, *handoff.blockers],
+            warnings=list(handoff.warnings),
+            entries=list(handoff.entries),
+        )
 
     def _load_spec_visual_a11y_evidence(
         self,

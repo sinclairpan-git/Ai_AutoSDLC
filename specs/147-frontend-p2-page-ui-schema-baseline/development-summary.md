@@ -6,11 +6,12 @@
 
 ## 交付摘要
 
-- 本 work item 的交付物是 `145 Track A` 的正式 child baseline，不是 runtime schema system 完成态。
-- `147` 已把 page schema、ui schema、schema versioning、render slot、section anchor 的范围和与 `068/073` 的边界冻结成 canonical truth。
-- 本总结让后续 `multi-theme/token governance`、`quality platform`、`cross-provider consistency` 能明确以上游 schema anchor 为依赖，而不是再次回到顶层设计重做解释。
-- `147` 关闭后代表：下一条前端后续主线 child 已正式立项并完成 formalize；不代表 schema model、validator 或 provider consumption 已经落地。
+- 本 work item 已从 `145 Track A` 的 formal child baseline 继续推进为 runtime baseline：page schema、ui schema、schema versioning、render slot、section anchor 已落到 `src/` / `tests/` 的 machine-verifiable 实现。
+- `147` 当前新增了三类 runtime 载体：`frontend_page_ui_schema` models/builder、canonical artifact materialization、validator + provider/kernel handoff surface。
+- CLI 侧新增了 `python -m ai_sdlc rules materialize-frontend-page-ui-schema` 与 `python -m ai_sdlc program page-ui-schema-handoff`，让后续 Track B/C/D 可以在框架入口上直接消费 schema anchor。
+- `147` 的完成口径是“page/ui schema runtime baseline 已落地”；不代表 `multi-theme/token governance`、`quality platform`、`cross-provider consistency` 或 `modern provider expansion` 已完成。
 
 ## 备注
 
-- 如需进入严格 `workitem close-check`，应在 git close-out 后于干净工作区复跑；本文件不伪造 clean-tree 结论。
+- `program truth sync` 在本轮实现后已按新的 runtime 口径刷新，但 root release target 仍被既有 `frontend-mainline-delivery` close-check 链阻断；该阻断不由 `147` 新增。
+- 如需进入严格 `workitem close-check`，仍应在 git close-out 后于干净工作区复跑；本文件不伪造 clean-tree 结论。

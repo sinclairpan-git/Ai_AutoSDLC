@@ -82,38 +82,23 @@ def _program_truth_gate_surface(
     except Exception as exc:
         return {
             "state": "invalid",
-            "detail": f"program truth ledger load failed: {exc}",
+            "detail": f"manifest_unreadable: program truth ledger load failed: {exc}",
+            "ready": False,
         }
 
-    validation = svc.validate_manifest(manifest)
-    matched_capabilities = svc.release_target_capability_ids_for_spec(manifest, spec_dir)
-    if not matched_capabilities:
-        return None
-
-    surface = svc.build_truth_ledger_surface(manifest, validation_result=validation)
-    if surface is None:
-        return None
-
-    matched_items = [
-        item
-        for item in surface.get("release_capabilities", [])
-        if item.get("capability_id") in matched_capabilities
-    ]
-    if not matched_items:
-        return None
-
-    ready = surface.get("snapshot_state") == "fresh" and all(
-        item.get("audit_state") == "ready" for item in matched_items
+    readiness = svc.build_spec_truth_readiness(
+        manifest,
+        spec_path=spec_dir,
+        validation_result=svc.validate_manifest(manifest),
     )
-    detail = str(surface.get("detail", "")).strip()
-    if ready and surface.get("state") == "migration_pending":
-        detail = "release-scope truth is ready; global migration_pending remains outside current scope"
+    if readiness is None:
+        return None
 
     return {
-        "state": surface.get("state"),
-        "detail": detail,
-        "ready": ready,
-        "matched_capabilities": matched_capabilities,
+        "state": readiness.state,
+        "detail": readiness.detail,
+        "ready": readiness.ready,
+        "matched_capabilities": list(readiness.matched_capabilities),
     }
 
 

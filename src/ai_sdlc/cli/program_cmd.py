@@ -243,6 +243,39 @@ def program_status(
     raise typer.Exit(code=0)
 
 
+@program_app.command("page-ui-schema-handoff")
+def program_page_ui_schema_handoff() -> None:
+    """Show the provider/kernel handoff surface for the 147 page/UI schema baseline."""
+
+    root = _resolve_root()
+    svc = ProgramService(root)
+    handoff = svc.build_frontend_page_ui_schema_handoff()
+
+    console.print("[bold cyan]Frontend Page/UI Schema Handoff[/bold cyan]")
+    console.print(f"  - state: {handoff.state}", markup=False)
+    console.print(f"  - schema version: {handoff.schema_version}", markup=False)
+    console.print(
+        f"  - provider: {handoff.effective_provider_id or '-'}",
+        markup=False,
+    )
+    console.print(
+        f"  - style pack: {handoff.effective_style_pack_id or '-'}",
+        markup=False,
+    )
+    for entry in handoff.entries:
+        console.print(
+            "  - page schema: "
+            f"{entry.page_schema_id} | ui schema: {entry.ui_schema_id} | recipe: {entry.page_recipe_id}",
+            markup=False,
+        )
+    for blocker in handoff.blockers:
+        console.print(f"  - blocker: {blocker}", markup=False)
+    for warning in handoff.warnings:
+        console.print(f"  - warning: {warning}", markup=False)
+
+    raise typer.Exit(code=0 if handoff.state == "ready" else 1)
+
+
 @truth_app.command("sync")
 def program_truth_sync(
     manifest: str = typer.Option(
@@ -337,6 +370,8 @@ def program_truth_audit(
     console.print(f"  - state: {surface['state']}", markup=False)
     console.print(f"  - snapshot state: {surface['snapshot_state']}", markup=False)
     console.print(f"  - detail: {surface['detail']}", markup=False)
+    for action in surface.get("next_required_actions", []):
+        console.print(f"  - next action: {action}", markup=False)
     console.print(
         "  - release targets: "
         + (", ".join(surface["release_targets"]) if surface["release_targets"] else "-"),
@@ -4392,6 +4427,8 @@ def _render_truth_ledger_lines(surface: dict[str, object]) -> None:
     console.print(f"  - state: {surface['state']}", markup=False)
     console.print(f"  - snapshot state: {surface['snapshot_state']}", markup=False)
     console.print(f"  - detail: {surface['detail']}", markup=False)
+    for action in surface.get("next_required_actions", []):
+        console.print(f"  - next action: {action}", markup=False)
     release_targets = surface.get("release_targets", [])
     if release_targets:
         console.print(

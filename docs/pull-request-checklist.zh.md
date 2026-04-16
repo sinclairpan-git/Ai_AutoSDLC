@@ -17,7 +17,8 @@
 
 - [ ] `docs-only`：仅改 `docs/**`、`specs/**.md`、`task-execution-log.md`、`tasks.md` 等 Markdown/收口文档；至少执行 `uv run ai-sdlc verify constraints`。若触及 `related_plan` / 收口文档，需在**完成本轮 git 提交后**执行 `uv run ai-sdlc workitem close-check --wi specs/<WI>/`（或等价命令）并确认无 `BLOCKER`。
 - [ ] `rules-only`：仅改 `src/ai_sdlc/rules/**.md` 与相关文档；至少执行 `uv run ai-sdlc verify constraints`。若混入 `src/**/*.py` 或 `tests/**`，必须改按 `code-change` 执行。
-- [ ] `code-change`：涉及 `src/**/*.py`、`tests/**`、运行时行为或生成逻辑；执行 `uv run pytest`、`uv run ruff check src tests`、`uv run ai-sdlc verify constraints`。若存在 `related_plan` 或 close 阶段收口改动，补执行 `workitem plan-check` 与 `workitem close-check`（命令名以当前实现为准）并确认无 `BLOCKER`。
+- [ ] `truth-only`：仅改 `program-manifest.yaml`、`.ai-sdlc/**`、`specs/**.md`、`docs/**.md` 等全局真值与 formal carrier；执行 `uv run ai-sdlc verify constraints`、`python -m ai_sdlc program truth sync --dry-run`。若需要恢复 fresh snapshot，补执行 `python -m ai_sdlc program truth sync --execute --yes`；若混入 `src/**/*.py` 或 `tests/**`，必须改按 `code-change` 执行。
+- [ ] `code-change`：涉及 `src/**/*.py`、`tests/**`、运行时行为或生成逻辑；执行 `uv run pytest`、`uv run ruff check src tests`、`uv run ai-sdlc verify constraints`。若存在 `related_plan` 或 close 阶段收口改动，补执行 `workitem plan-check` 与 `workitem close-check`（命令名以当前实现为准）并确认无 `BLOCKER`；不得用 `docs-only` / `rules-only` / `truth-only` 伪装代码改动。
 - [ ] latest batch 已在 `task-execution-log.md` 记录 `验证画像`、对应 fresh verification 命令，以及 `已完成 git 提交 / 提交哈希`；若工作树仍 dirty，视为收口未完成。
 
 ## 参考

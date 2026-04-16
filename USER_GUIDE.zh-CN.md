@@ -1128,8 +1128,10 @@ Phase 1 的边界要记住：
 | program validate / status / plan | `python -m ai_sdlc program ...` | Program 级校验与规划 | **可能写 adapter**：program service 自身以读和规划为主，但 CLI 入口仍可能先触发 adapter apply |
 | program solution-confirm --dry-run | `python -m ai_sdlc program solution-confirm --dry-run` | 技术方案确认预演 | **可能写 adapter**：命令主体会展示 recommendation / wizard / final preflight；若带 `--report` 会额外写 report 文件 |
 | program solution-confirm --execute --yes | `python -m ai_sdlc program solution-confirm --execute --yes` | 技术方案确认落盘 | **可能写 adapter**；确认后会写 `.ai-sdlc/memory/frontend-solution-confirmation/` snapshot artifacts，并可选写 report 文件 |
+| program page-ui-schema-handoff | `python -m ai_sdlc program page-ui-schema-handoff` | 查看 `147` 的 provider/kernel handoff surface | **可能写 adapter**：命令主体只读；依赖既有 `.ai-sdlc/memory/frontend-solution-confirmation/latest.yaml`，若缺失会返回 blocker |
 | program integrate --dry-run | `python -m ai_sdlc program integrate --dry-run` | guarded integration runbook 预览 | **可能写 adapter**；若带 `--report`，还会写 report 文件 |
 | program integrate --execute --yes | `python -m ai_sdlc program integrate --execute --yes` | guarded execute gate | **可能写 adapter**；当前会做 gate 校验与可选 report 写入，不会直接替你修改各 spec 内容 |
+| rules materialize-frontend-page-ui-schema | `python -m ai_sdlc rules materialize-frontend-page-ui-schema` | materialize `147` 的 canonical page/ui schema artifacts | **可能写 adapter**：命令本身会把 artifact 写到 `kernel/frontend/page-ui-schema/`；CLI 入口仍可能先触发 adapter apply |
 | manual telemetry | `python -m ai_sdlc telemetry open-session`、`record-*`、`close-session` | operator evidence write | **会写 telemetry**：落到 `.ai-sdlc/local/telemetry/` 与派生 indexes；CLI 入口本身也可能先触发 adapter apply |
 | workitem init | `python -m ai_sdlc workitem init --title "新 capability 标题"` | direct-formal 初始化 formal work item | **会写 formal docs**：仅适用于已完成 `ai-sdlc init .` 的项目；直接创建 `specs/<WI>/spec.md`、`plan.md`、`tasks.md`；不会要求先写 `docs/superpowers/*` |
 | workitem truth-check | `python -m ai_sdlc workitem truth-check --wi specs/<WI>/ --rev <branch|commit>` | work item 指定 revision 的阶段真值核验 | **命令主体只读，但可能写 adapter**：绑定用户指定 branch/commit 后，回答该 WI 在目标 revision 上是 `formal_freeze_only`、`branch_only_implemented` 还是 `mainline_merged`，并显式披露 HEAD/revision mismatch |
@@ -1163,6 +1165,22 @@ Phase 1 的边界要记住：
 - 如果请求的 enterprise 方案不可用，但存在允许的退路，CLI 会保留 `requested_*`，并把 fallback 结果写到 `effective_*`。
 - 如果预检结果是 `blocked`，命令会停止在确认 gate，不应把它理解为“已自动完成技术选型”。
 
+### 7.1) `page-ui-schema` 的最小使用面
+
+`147` 引入的 page/UI schema runtime baseline 有两个最小入口：
+
+- materialize canonical artifacts：
+  - `python -m ai_sdlc rules materialize-frontend-page-ui-schema`
+  - 会把 schema manifest、versioning、page schemas、ui schemas 写到 `kernel/frontend/page-ui-schema/`。
+- 查看 provider/kernel handoff：
+  - `python -m ai_sdlc program page-ui-schema-handoff`
+  - 会读取当前 `.ai-sdlc/memory/frontend-solution-confirmation/latest.yaml`，把 `147` 的 schema truth 和当前 provider/style truth 拼成可读 handoff。
+
+这里也有两个边界需要明确：
+
+- `page-ui-schema-handoff` 是只读 surfaced diagnostics，不会替你自动 materialize solution snapshot，也不会推进 Track B/C/D。
+- 如果 solution snapshot 缺失或损坏，命令会诚实返回 `blocked`，而不是静默回退到内置默认值。
+
 ## 交付完成（DoD）与计划 / 任务状态
 
 如果你是在 **AI-SDLC 仓库里开发 AI-SDLC 自身**，这一节主要看 `verify constraints`、`workitem close-check`、`branch-check` 和 `truth-check` 这几类收口命令怎么配合使用。
@@ -1176,6 +1194,7 @@ Phase 1 的边界要记住：
 - `uv run ai-sdlc workitem init --title "<新的 framework capability 标题>"`
   - 这是**新 framework capability 的 direct-formal 入口**。
   - 它会直接在 `specs/<WI>/` 下创建 canonical `spec.md / plan.md / tasks.md`。
+  - 如果根目录已有 `program-manifest.yaml`，它还会尝试补入对应 `specs[]` entry，并明确提示下一条 global truth 动作。
   - 如果你手头已有 `docs/superpowers/*` 设计稿，它们最多只应作为 `related_doc / related_plan` 被引用，不应再复制成第二套 canonical 文档。
 - `uv run ai-sdlc verify constraints`
   - 这是**仓库级规则 / 治理只读校验**。
@@ -1184,7 +1203,14 @@ Phase 1 的边界要记住：
 - `uv run ai-sdlc workitem close-check --wi specs/<WI>/`
   - 这是**work item 级收口真值核验**。
   - 它看的不是“你是不是写了几段 execution log”，而是该 work item 的 tasks 完成度、planned batch coverage、FR / SC traceability、latest batch 的 fresh verification、`related_plan` 对账、branch disposition truth，以及最终 `git closure`。
+  - 当仓库已启用根级 global truth 时，它还会区分 `manifest_unmapped`、`truth_snapshot_stale`、`capability_blocked`，并给出下一条 required truth action。
   - 如果 latest batch 还没完成最终 `git commit`，或者仓库工作树仍 dirty，`close-check` 返回 `BLOCKER` 是符合预期的。
+- `python -m ai_sdlc program truth sync --dry-run`
+  - 这是**truth-only / manifest-only 变更的最小 fresh verification**。
+  - 它只做只读预演，不会偷写 snapshot；真正恢复 `fresh` 仍要显式执行 `python -m ai_sdlc program truth sync --execute --yes`。
+- `python -m ai_sdlc program truth audit`
+  - 这是**根级 truth freshness / capability blocker 诊断面**。
+  - 当 `program status` 或 `close-check` 指出 `capability_blocked` 时，优先先看这个面，而不是盲目重复 sync。
 - `uv run ai-sdlc workitem branch-check --wi specs/<WI>/`
   - 这是**work item 级 branch/worktree 只读盘点面**。
   - 它回答“这个 work item 当前还有哪些未处置 branch/worktree”，并显示它们相对 `main` 的 ahead/behind、worktree 绑定与 disposition。
@@ -1203,6 +1229,7 @@ Phase 1 的边界要记住：
 uv run pytest -q
 uv run ruff check src tests
 uv run ai-sdlc verify constraints
+python -m ai_sdlc program truth sync --dry-run
 uv run ai-sdlc workitem truth-check --wi specs/<WI> --rev <branch-or-commit>
 uv run ai-sdlc workitem branch-check --wi specs/<WI>
 git status --short
@@ -1219,6 +1246,7 @@ git status --short
 ```bash
 uv run ai-sdlc init .
 uv run ai-sdlc workitem init --title "<新的 framework capability 标题>"
+python -m ai_sdlc program truth sync --execute --yes
 uv run ai-sdlc verify constraints
 uv run ai-sdlc workitem branch-check --wi specs/<WI>
 ```
