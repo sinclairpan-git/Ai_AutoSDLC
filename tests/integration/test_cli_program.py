@@ -153,6 +153,55 @@ def test_program_page_ui_schema_handoff_surfaces_provider_style_and_schema_entri
     assert "search-list-workspace" in result.output
 
 
+def test_program_theme_token_governance_handoff_blocks_without_solution_snapshot(
+    initialized_project_dir: Path,
+) -> None:
+    root = initialized_project_dir
+
+    with patch("ai_sdlc.cli.program_cmd.find_project_root", return_value=root):
+        result = runner.invoke(app, ["program", "theme-token-governance-handoff"])
+
+    assert result.exit_code == 1
+    assert "Frontend Theme Token Governance Handoff" in result.output
+    assert "state: blocked" in result.output
+    assert "frontend_solution_snapshot_missing" in result.output
+
+
+def test_program_theme_token_governance_handoff_surfaces_requested_effective_theme_and_override_diagnostics(
+    initialized_project_dir: Path,
+) -> None:
+    root = initialized_project_dir
+    _write_builtin_delivery_truth(
+        root,
+        snapshot=build_mvp_solution_snapshot(
+            project_id="148-demo",
+            requested_provider_id="enterprise-vue2",
+            effective_provider_id="enterprise-vue2",
+            recommended_provider_id="enterprise-vue2",
+            requested_style_pack_id="enterprise-default",
+            effective_style_pack_id="enterprise-default",
+            recommended_style_pack_id="enterprise-default",
+            requested_frontend_stack="vue2",
+            effective_frontend_stack="vue2",
+            recommended_frontend_stack="vue2",
+            style_fidelity_status="full",
+        ),
+    )
+
+    with patch("ai_sdlc.cli.program_cmd.find_project_root", return_value=root):
+        result = runner.invoke(app, ["program", "theme-token-governance-handoff"])
+
+    assert result.exit_code == 0
+    assert "Frontend Theme Token Governance Handoff" in result.output
+    assert "state: ready" in result.output
+    assert "provider: enterprise-vue2" in result.output
+    assert "requested style pack: enterprise-default" in result.output
+    assert "effective style pack: enterprise-default" in result.output
+    assert "dashboard-workspace" in result.output
+    assert "dashboard-page-header-accent-proposal" in result.output
+    assert "requested: brand-accent" in result.output
+
+
 def _write_builtin_delivery_truth(root: Path, *, snapshot=None) -> None:
     _write_frontend_solution_confirmation_artifacts(root, snapshot=snapshot)
     materialize_builtin_frontend_provider_profile_artifacts(

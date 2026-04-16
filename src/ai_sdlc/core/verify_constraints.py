@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import re
 from dataclasses import dataclass
 from pathlib import Path
@@ -34,6 +35,9 @@ from ai_sdlc.core.frontend_gate_verification import (
     FrontendGateVerificationReport,
     build_frontend_gate_verification_report,
 )
+from ai_sdlc.core.frontend_theme_token_governance import (
+    validate_frontend_theme_token_governance,
+)
 from ai_sdlc.core.frontend_visual_a11y_evidence_provider import (
     FRONTEND_VISUAL_A11Y_EVIDENCE_ARTIFACT_NAME,
     FrontendVisualA11yEvidenceArtifact,
@@ -47,6 +51,27 @@ from ai_sdlc.gates.task_ac_checks import (
     first_task_missing_acceptance,
 )
 from ai_sdlc.generators.frontend_contract_artifacts import frontend_contracts_root
+from ai_sdlc.models.frontend_generation_constraints import (
+    build_mvp_frontend_generation_constraints,
+)
+from ai_sdlc.models.frontend_page_ui_schema import (
+    build_p2_frontend_page_ui_schema_baseline,
+)
+from ai_sdlc.models.frontend_provider_profile import (
+    ProviderStyleSupportEntry,
+    build_mvp_enterprise_vue2_provider_profile,
+)
+from ai_sdlc.models.frontend_solution_confirmation import (
+    FrontendSolutionSnapshot,
+)
+from ai_sdlc.models.frontend_theme_token_governance import (
+    CustomThemeTokenOverride,
+    FrontendThemeTokenGovernanceSet,
+    StyleEditorBoundaryContract,
+    ThemeGovernanceHandoffContract,
+    ThemeTokenMapping,
+    build_p2_frontend_theme_token_governance_baseline,
+)
 from ai_sdlc.models.state import Checkpoint
 from ai_sdlc.telemetry.clock import utc_now_z
 from ai_sdlc.telemetry.contracts import Evaluation, Violation
@@ -210,6 +235,12 @@ FRONTEND_SOLUTION_CONFIRMATION_SOURCE_NAME = (
 FRONTEND_SOLUTION_CONFIRMATION_COVERAGE_GAP = (
     "frontend_solution_confirmation_consistency"
 )
+FRONTEND_THEME_TOKEN_GOVERNANCE_SOURCE_NAME = (
+    "frontend theme token governance verification"
+)
+FRONTEND_THEME_TOKEN_GOVERNANCE_COVERAGE_GAP = (
+    "frontend_theme_token_governance_consistency"
+)
 FRONTEND_EVIDENCE_CLASS_ALLOWED_VALUES = (
     "framework_capability",
     "consumer_adoption",
@@ -234,6 +265,13 @@ FRONTEND_SOLUTION_CONFIRMATION_CHECK_OBJECTS = (
     "frontend_solution_install_strategy_artifacts",
     "frontend_solution_snapshot_artifacts",
     FRONTEND_SOLUTION_CONFIRMATION_COVERAGE_GAP,
+)
+FRONTEND_THEME_TOKEN_GOVERNANCE_CHECK_OBJECTS = (
+    "frontend_theme_governance_manifest_artifacts",
+    "frontend_theme_token_mapping_artifacts",
+    "frontend_theme_override_policy_artifacts",
+    "frontend_theme_style_editor_boundary_artifacts",
+    FRONTEND_THEME_TOKEN_GOVERNANCE_COVERAGE_GAP,
 )
 
 
@@ -384,6 +422,33 @@ class FrontendSolutionConfirmationVerificationReport:
         }
 
 
+@dataclass(frozen=True, slots=True)
+class FrontendThemeTokenGovernanceVerificationReport:
+    """Scoped verification summary for work item 148 theme governance consistency."""
+
+    root: str
+    source_name: str = FRONTEND_THEME_TOKEN_GOVERNANCE_SOURCE_NAME
+    check_objects: tuple[str, ...] = FRONTEND_THEME_TOKEN_GOVERNANCE_CHECK_OBJECTS
+    blockers: tuple[str, ...] = ()
+    coverage_gaps: tuple[str, ...] = ()
+    gate_result: str = "PASS"
+    effective_provider_id: str | None = None
+    requested_style_pack_id: str | None = None
+    effective_style_pack_id: str | None = None
+
+    def to_json_dict(self) -> dict[str, object]:
+        return {
+            "source_name": self.source_name,
+            "gate_verdict": self.gate_result,
+            "check_objects": list(self.check_objects),
+            "blockers": list(self.blockers),
+            "coverage_gaps": list(self.coverage_gaps),
+            "effective_provider_id": self.effective_provider_id,
+            "requested_style_pack_id": self.requested_style_pack_id,
+            "effective_style_pack_id": self.effective_style_pack_id,
+        }
+
+
 def build_constraint_report(root: Path) -> ConstraintReport:
     """Build a structured report for verify constraints."""
     checkpoint = load_checkpoint(root)
@@ -393,52 +458,64 @@ def build_constraint_report(root: Path) -> ConstraintReport:
     frontend_solution_confirmation_report = (
         _frontend_solution_confirmation_attachment_report(root, checkpoint)
     )
-    return ConstraintReport(
-        root=str(root),
-        gate_name="Verification Gate",
-        source_name="verify constraints",
-        check_objects=_merge_unique_strings(
+    frontend_theme_token_governance_report = (
+        _frontend_theme_token_governance_attachment_report(root, checkpoint)
+    )
+    check_objects = _merge_unique_strings(
+        _merge_unique_strings(
             _merge_unique_strings(
-                _merge_unique_strings(
-                    VERIFICATION_GATE_OBJECTS,
-                    frontend_contract_report.check_objects
-                    if frontend_contract_report
-                    else (),
-                ),
+                VERIFICATION_GATE_OBJECTS,
+                frontend_contract_report.check_objects
+                if frontend_contract_report
+                else (),
+            ),
+            _merge_unique_strings(
                 frontend_gate_report.check_objects if frontend_gate_report else (),
-            ),
-            (
-                frontend_solution_confirmation_report.check_objects
-                if frontend_solution_confirmation_report
-                else ()
-            ),
-        ),
-        blockers=_merge_unique_strings(
-            _merge_unique_strings(
-                _merge_unique_strings(
-                    tuple(collect_constraint_blockers(root)),
-                    _frontend_contract_runtime_attachment_gate_blockers(
-                        frontend_runtime_attachment
-                    ),
+                (
+                    frontend_solution_confirmation_report.check_objects
+                    if frontend_solution_confirmation_report
+                    else ()
                 ),
-                frontend_gate_report.blockers if frontend_gate_report else (),
-            ),
-            (
-                frontend_solution_confirmation_report.blockers
-                if frontend_solution_confirmation_report
-                else ()
             ),
         ),
-        coverage_gaps=_merge_unique_strings(
-            _feature_contract_coverage_gaps(root, checkpoint),
+        (
+            frontend_theme_token_governance_report.check_objects
+            if frontend_theme_token_governance_report
+            else ()
+        ),
+    )
+    blockers = _merge_unique_strings(
+        _merge_unique_strings(
+            _merge_unique_strings(
+                tuple(collect_constraint_blockers(root)),
+                _frontend_contract_runtime_attachment_gate_blockers(
+                    frontend_runtime_attachment
+                ),
+            ),
+            _merge_unique_strings(
+                frontend_gate_report.blockers if frontend_gate_report else (),
+                (
+                    frontend_solution_confirmation_report.blockers
+                    if frontend_solution_confirmation_report
+                    else ()
+                ),
+            ),
+        ),
+        (
+            frontend_theme_token_governance_report.blockers
+            if frontend_theme_token_governance_report
+            else ()
+        ),
+    )
+    coverage_gaps = _merge_unique_strings(
+        _feature_contract_coverage_gaps(root, checkpoint),
+        _merge_unique_strings(
             _merge_unique_strings(
                 _merge_unique_strings(
                     _frontend_contract_runtime_attachment_gate_coverage_gaps(
                         frontend_runtime_attachment
                     ),
-                    _frontend_contract_projected_coverage_gaps(
-                        frontend_contract_report
-                    )
+                    _frontend_contract_projected_coverage_gaps(frontend_contract_report)
                     if frontend_contract_report
                     else (),
                 ),
@@ -451,7 +528,20 @@ def build_constraint_report(root: Path) -> ConstraintReport:
                     ),
                 ),
             ),
+            (
+                frontend_theme_token_governance_report.coverage_gaps
+                if frontend_theme_token_governance_report
+                else ()
+            ),
         ),
+    )
+    return ConstraintReport(
+        root=str(root),
+        gate_name="Verification Gate",
+        source_name="verify constraints",
+        check_objects=check_objects,
+        blockers=blockers,
+        coverage_gaps=coverage_gaps,
         release_gate=_release_gate_surface(root, checkpoint),
     )
 
@@ -466,29 +556,40 @@ def build_verification_gate_context(root: Path) -> dict[str, object]:
     frontend_solution_confirmation_report = (
         _frontend_solution_confirmation_attachment_report(root, checkpoint)
     )
+    frontend_theme_token_governance_report = (
+        _frontend_theme_token_governance_attachment_report(root, checkpoint)
+    )
     governance = build_verification_governance_bundle(
         report,
         decision_subject=f"verify:{root}",
         evidence_refs=("verify-constraints:structured-report",),
     )
     decision_result = str(governance["gate_decision_payload"]["decision_result"])
-    context: dict[str, object] = {
-        "verification_sources": _merge_unique_strings(
+    verification_sources = _merge_unique_strings(
+        _merge_unique_strings(
             _merge_unique_strings(
-                _merge_unique_strings(
-                    (report.source_name,),
-                    (frontend_contract_report.source_name,)
-                    if frontend_contract_report
-                    else (),
-                ),
-                (frontend_gate_report.source_name,) if frontend_gate_report else (),
+                (report.source_name,),
+                (frontend_contract_report.source_name,)
+                if frontend_contract_report
+                else (),
             ),
-            (
-                (frontend_solution_confirmation_report.source_name,)
-                if frontend_solution_confirmation_report
-                else ()
+            _merge_unique_strings(
+                (frontend_gate_report.source_name,) if frontend_gate_report else (),
+                (
+                    (frontend_solution_confirmation_report.source_name,)
+                    if frontend_solution_confirmation_report
+                    else ()
+                ),
             ),
         ),
+        (
+            (frontend_theme_token_governance_report.source_name,)
+            if frontend_theme_token_governance_report
+            else ()
+        ),
+    )
+    context: dict[str, object] = {
+        "verification_sources": verification_sources,
         "verification_check_objects": report.check_objects,
         "constraint_blockers": report.blockers if decision_result == "block" else (),
         "coverage_gaps": report.coverage_gaps if decision_result == "block" else (),
@@ -509,6 +610,10 @@ def build_verification_gate_context(root: Path) -> dict[str, object]:
     if frontend_solution_confirmation_report is not None:
         context["frontend_solution_confirmation_verification"] = (
             frontend_solution_confirmation_report.to_json_dict()
+        )
+    if frontend_theme_token_governance_report is not None:
+        context["frontend_theme_token_governance_verification"] = (
+            frontend_theme_token_governance_report.to_json_dict()
         )
     return context
 
@@ -1088,6 +1193,262 @@ def _frontend_solution_confirmation_attachment_report(
     )
 
 
+def _frontend_theme_token_governance_attachment_report(
+    root: Path,
+    checkpoint: Checkpoint | None,
+) -> FrontendThemeTokenGovernanceVerificationReport | None:
+    """Resolve the scoped frontend theme token governance attachment for active 148 only."""
+
+    work_item_id = _effective_feature_contract_wi_id(checkpoint)
+    if not _is_148_work_item(work_item_id):
+        return None
+
+    blockers: list[str] = []
+    baseline = build_p2_frontend_theme_token_governance_baseline()
+    artifact_root = root / "governance" / "frontend" / "theme-token-governance"
+    manifest_path = artifact_root / "theme-governance-manifest.json"
+    token_mapping_path = artifact_root / "token-mapping.json"
+    override_policy_path = artifact_root / "override-policy.json"
+    boundary_path = artifact_root / "style-editor-boundary.json"
+
+    payloads: dict[str, dict[str, object]] = {}
+    for label, path in (
+        ("manifest", manifest_path),
+        ("token mapping", token_mapping_path),
+        ("override policy", override_policy_path),
+        ("style editor boundary", boundary_path),
+    ):
+        if not path.is_file():
+            blockers.append(
+                "BLOCKER: frontend theme token governance artifact missing: "
+                f"{path.as_posix()}"
+            )
+            continue
+        try:
+            payloads[label] = _load_json_mapping(path)
+        except ValueError as exc:
+            blockers.append(
+                "BLOCKER: invalid frontend theme token governance artifact "
+                f"{path.as_posix()}: {exc}"
+            )
+
+    latest_snapshot_path = (
+        root
+        / ".ai-sdlc"
+        / "memory"
+        / "frontend-solution-confirmation"
+        / "latest.yaml"
+    )
+    snapshot: FrontendSolutionSnapshot | None = None
+    if not latest_snapshot_path.is_file():
+        blockers.append(
+            "BLOCKER: frontend solution snapshot artifact missing: "
+            f"{latest_snapshot_path.as_posix()}"
+        )
+    else:
+        try:
+            snapshot = FrontendSolutionSnapshot.model_validate(
+                _load_yaml_mapping(latest_snapshot_path)
+            )
+        except Exception as exc:
+            blockers.append(
+                "BLOCKER: invalid frontend solution snapshot artifact "
+                f"{latest_snapshot_path.as_posix()}: {exc}"
+            )
+
+    effective_provider_id = snapshot.effective_provider_id if snapshot else None
+    requested_style_pack_id = snapshot.requested_style_pack_id if snapshot else None
+    effective_style_pack_id = snapshot.effective_style_pack_id if snapshot else None
+    provider_style_entries: list[ProviderStyleSupportEntry] = []
+    if effective_provider_id:
+        style_support_path = (
+            root / "providers" / "frontend" / effective_provider_id / "style-support.yaml"
+        )
+        if not style_support_path.is_file():
+            blockers.append(
+                "BLOCKER: frontend provider style-support artifact missing: "
+                f"{style_support_path.as_posix()}"
+            )
+        else:
+            try:
+                style_support_payload = _load_yaml_mapping(style_support_path)
+            except ValueError as exc:
+                blockers.append(
+                    "BLOCKER: invalid frontend provider style-support artifact "
+                    f"{style_support_path.as_posix()}: {exc}"
+                )
+            else:
+                raw_items = style_support_payload.get("items", [])
+                if not isinstance(raw_items, list):
+                    blockers.append(
+                        "BLOCKER: invalid frontend provider style-support artifact "
+                        f"{style_support_path.as_posix()}: items must be a list"
+                    )
+                else:
+                    for item in raw_items:
+                        if not isinstance(item, dict):
+                            continue
+                        try:
+                            provider_style_entries.append(
+                                ProviderStyleSupportEntry.model_validate(item)
+                            )
+                        except Exception as exc:
+                            blockers.append(
+                                "BLOCKER: invalid frontend provider style-support artifact "
+                                f"{style_support_path.as_posix()}: {exc}"
+                            )
+                            break
+
+    if blockers and (
+        "manifest" not in payloads
+        or "token mapping" not in payloads
+        or "override policy" not in payloads
+        or "style editor boundary" not in payloads
+        or snapshot is None
+        or not provider_style_entries
+    ):
+        blockers_tuple = tuple(blockers)
+        return FrontendThemeTokenGovernanceVerificationReport(
+            root=str(root),
+            blockers=blockers_tuple,
+            coverage_gaps=(
+                (FRONTEND_THEME_TOKEN_GOVERNANCE_COVERAGE_GAP,)
+                if blockers_tuple
+                else ()
+            ),
+            gate_result="RETRY" if blockers_tuple else "PASS",
+            effective_provider_id=effective_provider_id,
+            requested_style_pack_id=requested_style_pack_id,
+            effective_style_pack_id=effective_style_pack_id,
+        )
+
+    manifest_payload = payloads["manifest"]
+    token_mapping_payload = payloads["token mapping"]
+    override_policy_payload = payloads["override policy"]
+    boundary_payload = payloads["style editor boundary"]
+
+    try:
+        raw_mappings = token_mapping_payload.get("mappings", [])
+        if not isinstance(raw_mappings, list):
+            raise ValueError("token mapping artifact `mappings` must be a list")
+        token_mappings = [
+            ThemeTokenMapping.model_validate(item)
+            for item in raw_mappings
+            if isinstance(item, dict)
+        ]
+
+        raw_overrides = override_policy_payload.get("custom_overrides", [])
+        if not isinstance(raw_overrides, list):
+            raise ValueError("override policy artifact `custom_overrides` must be a list")
+        custom_overrides = [
+            CustomThemeTokenOverride.model_validate(item)
+            for item in raw_overrides
+            if isinstance(item, dict)
+        ]
+
+        style_editor_boundary = StyleEditorBoundaryContract.model_validate(boundary_payload)
+        handoff_contract = ThemeGovernanceHandoffContract(
+            schema_family=str(
+                manifest_payload.get(
+                    "schema_family",
+                    baseline.handoff_contract.schema_family,
+                )
+            ),
+            current_version=str(
+                manifest_payload.get(
+                    "current_version",
+                    baseline.handoff_contract.current_version,
+                )
+            ),
+            compatible_versions=[
+                str(
+                    manifest_payload.get(
+                        "current_version",
+                        baseline.handoff_contract.current_version,
+                    )
+                )
+            ],
+            artifact_root=str(
+                manifest_payload.get(
+                    "artifact_root",
+                    baseline.handoff_contract.artifact_root,
+                )
+            ),
+            canonical_files=list(baseline.handoff_contract.canonical_files),
+        )
+        governance = FrontendThemeTokenGovernanceSet(
+            work_item_id=str(manifest_payload.get("work_item_id", baseline.work_item_id)),
+            source_work_item_ids=list(
+                _string_tuple(
+                    manifest_payload.get(
+                        "source_work_item_ids",
+                        baseline.source_work_item_ids,
+                    )
+                )
+            ),
+            token_floor_disallowed_naked_values=list(
+                _string_tuple(
+                    manifest_payload.get(
+                        "token_floor_disallowed_naked_values",
+                        baseline.token_floor_disallowed_naked_values,
+                    )
+                )
+            ),
+            style_pack_ids=list(
+                _string_tuple(
+                    manifest_payload.get("style_pack_ids", baseline.style_pack_ids)
+                )
+            ),
+            override_precedence=list(
+                _string_tuple(
+                    override_policy_payload.get(
+                        "override_precedence",
+                        baseline.override_precedence,
+                    )
+                )
+            ),
+            token_mappings=token_mappings,
+            custom_overrides=custom_overrides,
+            style_editor_boundary=style_editor_boundary,
+            handoff_contract=handoff_contract,
+        )
+    except Exception as exc:
+        blockers.append(
+            "BLOCKER: invalid frontend theme token governance artifact set: "
+            f"{exc}"
+        )
+    else:
+        provider_profile = build_mvp_enterprise_vue2_provider_profile().model_copy(
+            update={
+                "provider_id": effective_provider_id or "",
+                "style_support_matrix": provider_style_entries,
+            }
+        )
+        validation = validate_frontend_theme_token_governance(
+            governance,
+            constraints=build_mvp_frontend_generation_constraints(),
+            page_ui_schema=build_p2_frontend_page_ui_schema_baseline(),
+            provider_profile=provider_profile,
+            solution_snapshot=snapshot,
+        )
+        blockers.extend(f"BLOCKER: {blocker}" for blocker in validation.blockers)
+
+    blockers_tuple = tuple(blockers)
+    return FrontendThemeTokenGovernanceVerificationReport(
+        root=str(root),
+        blockers=blockers_tuple,
+        coverage_gaps=(
+            (FRONTEND_THEME_TOKEN_GOVERNANCE_COVERAGE_GAP,)
+            if blockers_tuple
+            else ()
+        ),
+        gate_result="RETRY" if blockers_tuple else "PASS",
+        effective_provider_id=effective_provider_id,
+        requested_style_pack_id=requested_style_pack_id,
+        effective_style_pack_id=effective_style_pack_id,
+    )
+
+
 def _frontend_contract_runtime_attachment(
     root: Path,
     checkpoint: Checkpoint | None,
@@ -1449,6 +1810,11 @@ def _is_073_work_item(work_item_id: str) -> bool:
     return normalized == "073" or normalized.startswith("073-") or normalized.startswith("073/")
 
 
+def _is_148_work_item(work_item_id: str) -> bool:
+    normalized = work_item_id.strip()
+    return normalized == "148" or normalized.startswith("148-") or normalized.startswith("148/")
+
+
 def _effective_feature_contract_wi_id(checkpoint: Checkpoint | None) -> str:
     """Resolve the active work-item id for feature-contract coverage."""
     if checkpoint is None:
@@ -1533,6 +1899,16 @@ def _load_yaml_mapping(path: Path) -> dict[str, object]:
         raise ValueError(f"invalid YAML syntax: {exc}") from exc
     if not isinstance(payload, dict):
         raise ValueError("expected top-level YAML mapping")
+    return payload
+
+
+def _load_json_mapping(path: Path) -> dict[str, object]:
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as exc:
+        raise ValueError(f"invalid JSON syntax: {exc}") from exc
+    if not isinstance(payload, dict):
+        raise ValueError("expected top-level JSON mapping")
     return payload
 
 

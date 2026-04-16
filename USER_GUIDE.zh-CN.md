@@ -1129,9 +1129,11 @@ Phase 1 的边界要记住：
 | program solution-confirm --dry-run | `python -m ai_sdlc program solution-confirm --dry-run` | 技术方案确认预演 | **可能写 adapter**：命令主体会展示 recommendation / wizard / final preflight；若带 `--report` 会额外写 report 文件 |
 | program solution-confirm --execute --yes | `python -m ai_sdlc program solution-confirm --execute --yes` | 技术方案确认落盘 | **可能写 adapter**；确认后会写 `.ai-sdlc/memory/frontend-solution-confirmation/` snapshot artifacts，并可选写 report 文件 |
 | program page-ui-schema-handoff | `python -m ai_sdlc program page-ui-schema-handoff` | 查看 `147` 的 provider/kernel handoff surface | **可能写 adapter**：命令主体只读；依赖既有 `.ai-sdlc/memory/frontend-solution-confirmation/latest.yaml`，若缺失会返回 blocker |
+| program theme-token-governance-handoff | `python -m ai_sdlc program theme-token-governance-handoff` | 查看 `148` 的 theme governance handoff、requested/effective theme 与 override diagnostics | **可能写 adapter**：命令主体只读；依赖既有 solution snapshot 与 provider style-support truth，若缺失会返回 blocker |
 | program integrate --dry-run | `python -m ai_sdlc program integrate --dry-run` | guarded integration runbook 预览 | **可能写 adapter**；若带 `--report`，还会写 report 文件 |
 | program integrate --execute --yes | `python -m ai_sdlc program integrate --execute --yes` | guarded execute gate | **可能写 adapter**；当前会做 gate 校验与可选 report 写入，不会直接替你修改各 spec 内容 |
 | rules materialize-frontend-page-ui-schema | `python -m ai_sdlc rules materialize-frontend-page-ui-schema` | materialize `147` 的 canonical page/ui schema artifacts | **可能写 adapter**：命令本身会把 artifact 写到 `kernel/frontend/page-ui-schema/`；CLI 入口仍可能先触发 adapter apply |
+| rules materialize-frontend-theme-token-governance | `python -m ai_sdlc rules materialize-frontend-theme-token-governance` | materialize `148` 的 canonical theme governance artifacts | **可能写 adapter**：命令本身会把 artifact 写到 `governance/frontend/theme-token-governance/`；CLI 入口仍可能先触发 adapter apply |
 | manual telemetry | `python -m ai_sdlc telemetry open-session`、`record-*`、`close-session` | operator evidence write | **会写 telemetry**：落到 `.ai-sdlc/local/telemetry/` 与派生 indexes；CLI 入口本身也可能先触发 adapter apply |
 | workitem init | `python -m ai_sdlc workitem init --title "新 capability 标题"` | direct-formal 初始化 formal work item | **会写 formal docs**：仅适用于已完成 `ai-sdlc init .` 的项目；直接创建 `specs/<WI>/spec.md`、`plan.md`、`tasks.md`；不会要求先写 `docs/superpowers/*` |
 | workitem truth-check | `python -m ai_sdlc workitem truth-check --wi specs/<WI>/ --rev <branch|commit>` | work item 指定 revision 的阶段真值核验 | **命令主体只读，但可能写 adapter**：绑定用户指定 branch/commit 后，回答该 WI 在目标 revision 上是 `formal_freeze_only`、`branch_only_implemented` 还是 `mainline_merged`，并显式披露 HEAD/revision mismatch |
@@ -1180,6 +1182,23 @@ Phase 1 的边界要记住：
 
 - `page-ui-schema-handoff` 是只读 surfaced diagnostics，不会替你自动 materialize solution snapshot，也不会推进 Track B/C/D。
 - 如果 solution snapshot 缺失或损坏，命令会诚实返回 `blocked`，而不是静默回退到内置默认值。
+
+### 7.2) `theme-token-governance` 的最小使用面
+
+`148` 引入的 theme/token governance runtime baseline 也有两个最小入口：
+
+- materialize canonical artifacts：
+  - `python -m ai_sdlc rules materialize-frontend-theme-token-governance`
+  - 会把 theme governance manifest、token mapping、override policy、style editor boundary 写到 `governance/frontend/theme-token-governance/`。
+- 查看 theme governance handoff：
+  - `python -m ai_sdlc program theme-token-governance-handoff`
+  - 会读取当前 `.ai-sdlc/memory/frontend-solution-confirmation/latest.yaml` 与 provider style-support truth，把 `148` 的 requested/effective theme、page-schema coverage、override diagnostics 拼成可读 handoff。
+
+这里同样有三个边界需要明确：
+
+- `theme-token-governance-handoff` 是只读 surfaced diagnostics，不会自动替你执行 override，也不会直接推进 Track C/D 的 runtime 消费。
+- `148` 当前只把 theme/token governance 的 models、artifacts、validator、ProgramService/CLI/verify handoff 接进 AI-SDLC；quality platform、cross-provider consistency 与 provider expansion 仍是后续承接项。
+- 如果 solution snapshot、provider style-support 或 theme governance artifacts 缺失 / 损坏，命令与 `verify constraints` 都会诚实返回 `blocked` / `RETRY`，而不会静默回退为默认值。
 
 ## 交付完成（DoD）与计划 / 任务状态
 

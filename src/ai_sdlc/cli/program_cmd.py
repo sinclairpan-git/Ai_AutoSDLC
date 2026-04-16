@@ -276,6 +276,55 @@ def program_page_ui_schema_handoff() -> None:
     raise typer.Exit(code=0 if handoff.state == "ready" else 1)
 
 
+@program_app.command("theme-token-governance-handoff")
+def program_theme_token_governance_handoff() -> None:
+    """Show the provider/page-schema handoff surface for the 148 theme governance baseline."""
+
+    root = _resolve_root()
+    svc = ProgramService(root)
+    handoff = svc.build_frontend_theme_token_governance_handoff()
+
+    console.print("[bold cyan]Frontend Theme Token Governance Handoff[/bold cyan]")
+    console.print(f"  - state: {handoff.state}", markup=False)
+    console.print(f"  - schema version: {handoff.schema_version}", markup=False)
+    console.print(
+        f"  - provider: {handoff.effective_provider_id or '-'}",
+        markup=False,
+    )
+    console.print(
+        f"  - requested style pack: {handoff.requested_style_pack_id or '-'}",
+        markup=False,
+    )
+    console.print(
+        f"  - effective style pack: {handoff.effective_style_pack_id or '-'}",
+        markup=False,
+    )
+    console.print(
+        f"  - artifact root: {handoff.artifact_root}",
+        markup=False,
+    )
+    console.print(
+        f"  - token mappings: {handoff.token_mapping_count}",
+        markup=False,
+    )
+    for page_schema_id in handoff.page_schema_ids:
+        console.print(f"  - page schema: {page_schema_id}", markup=False)
+    for override in handoff.override_diagnostics:
+        console.print(
+            "  - override: "
+            f"{override.override_id} | scope: {override.scope} | "
+            f"requested: {override.requested_value} | "
+            f"effective: {override.effective_value}",
+            markup=False,
+        )
+    for blocker in handoff.blockers:
+        console.print(f"  - blocker: {blocker}", markup=False)
+    for warning in handoff.warnings:
+        console.print(f"  - warning: {warning}", markup=False)
+
+    raise typer.Exit(code=0 if handoff.state == "ready" else 1)
+
+
 @truth_app.command("sync")
 def program_truth_sync(
     manifest: str = typer.Option(

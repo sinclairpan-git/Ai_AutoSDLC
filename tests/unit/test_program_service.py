@@ -315,6 +315,63 @@ def test_build_frontend_page_ui_schema_handoff_uses_latest_solution_snapshot(
     ]
 
 
+def test_build_frontend_theme_token_governance_handoff_blocks_when_solution_snapshot_missing(
+    tmp_path: Path,
+) -> None:
+    svc = ProgramService(tmp_path)
+
+    handoff = svc.build_frontend_theme_token_governance_handoff()
+
+    assert handoff.state == "blocked"
+    assert "frontend_solution_snapshot_missing" in handoff.blockers
+    assert handoff.effective_provider_id == ""
+    assert handoff.requested_style_pack_id == ""
+    assert handoff.effective_style_pack_id == ""
+
+
+def test_build_frontend_theme_token_governance_handoff_uses_latest_solution_snapshot_and_page_schema_handoff(
+    tmp_path: Path,
+) -> None:
+    _write_builtin_delivery_truth(
+        tmp_path,
+        snapshot=build_mvp_solution_snapshot(
+            project_id="148-demo",
+            requested_provider_id="enterprise-vue2",
+            effective_provider_id="enterprise-vue2",
+            recommended_provider_id="enterprise-vue2",
+            requested_style_pack_id="enterprise-default",
+            effective_style_pack_id="enterprise-default",
+            recommended_style_pack_id="enterprise-default",
+            requested_frontend_stack="vue2",
+            effective_frontend_stack="vue2",
+            recommended_frontend_stack="vue2",
+            style_fidelity_status="full",
+        ),
+    )
+    svc = ProgramService(tmp_path)
+
+    handoff = svc.build_frontend_theme_token_governance_handoff()
+
+    assert handoff.state == "ready"
+    assert handoff.schema_version == "1.0"
+    assert handoff.effective_provider_id == "enterprise-vue2"
+    assert handoff.requested_style_pack_id == "enterprise-default"
+    assert handoff.effective_style_pack_id == "enterprise-default"
+    assert handoff.page_schema_ids == [
+        "dashboard-workspace",
+        "search-list-workspace",
+        "wizard-workspace",
+    ]
+    assert handoff.token_mapping_count > 0
+    assert handoff.override_diagnostics[0].override_id == (
+        "dashboard-page-header-accent-proposal"
+    )
+    assert handoff.override_diagnostics[0].requested_value == "brand-accent"
+    assert handoff.override_diagnostics[0].effective_value == (
+        "style-pack:enterprise-default:accent_mode"
+    )
+
+
 def _build_host_runtime_plan_for_tests(
     *,
     node_runtime_available: bool | None,

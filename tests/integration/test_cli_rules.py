@@ -78,3 +78,35 @@ def test_rules_materialize_frontend_page_ui_schema_writes_canonical_schema_artif
         / "page-schemas"
         / "dashboard-workspace.yaml"
     ).is_file()
+
+
+def test_rules_materialize_frontend_theme_token_governance_writes_canonical_theme_artifacts(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    init_project(tmp_path)
+    monkeypatch.chdir(tmp_path)
+
+    result = runner.invoke(app, ["rules", "materialize-frontend-theme-token-governance"])
+
+    assert result.exit_code == 0
+    assert "Frontend theme token governance artifacts materialized" in result.output
+    assert (
+        "governance/frontend/theme-token-governance/theme-governance-manifest.json"
+        in result.output
+    )
+    assert "governance/frontend/theme-token-governance/token-mapping.json" in result.output
+    assert (
+        tmp_path
+        / "governance"
+        / "frontend"
+        / "theme-token-governance"
+        / "theme-governance-manifest.json"
+    ).is_file()
+    assert (
+        tmp_path
+        / "governance"
+        / "frontend"
+        / "theme-token-governance"
+        / "override-policy.json"
+    ).is_file()

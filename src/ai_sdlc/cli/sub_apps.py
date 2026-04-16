@@ -37,6 +37,9 @@ from ai_sdlc.generators.frontend_generation_constraint_artifacts import (
 from ai_sdlc.generators.frontend_page_ui_schema_artifacts import (
     materialize_frontend_page_ui_schema_artifacts,
 )
+from ai_sdlc.generators.frontend_theme_token_governance_artifacts import (
+    materialize_frontend_theme_token_governance_artifacts,
+)
 from ai_sdlc.models.frontend_gate_policy import (
     build_p1_frontend_gate_policy_visual_a11y_foundation,
 )
@@ -45,6 +48,9 @@ from ai_sdlc.models.frontend_generation_constraints import (
 )
 from ai_sdlc.models.frontend_page_ui_schema import (
     build_p2_frontend_page_ui_schema_baseline,
+)
+from ai_sdlc.models.frontend_theme_token_governance import (
+    build_p2_frontend_theme_token_governance_baseline,
 )
 from ai_sdlc.models.gate import GateVerdict
 from ai_sdlc.rules import RulesLoader
@@ -412,6 +418,27 @@ def rules_materialize_frontend_page_ui_schema() -> None:
 
     console.print(
         "[green]Frontend page/UI schema artifacts materialized[/green] "
+        f"({len(paths)} files)"
+    )
+    for path in paths:
+        console.print(f"  - {path.relative_to(root)}")
+
+
+@rules_app.command(name="materialize-frontend-theme-token-governance")
+def rules_materialize_frontend_theme_token_governance() -> None:
+    """Materialize canonical frontend theme token governance artifacts."""
+    root = find_project_root()
+    if root is None:
+        console.print("[red]Not inside an AI-SDLC project.[/red]")
+        raise typer.Exit(code=1)
+
+    paths = materialize_frontend_theme_token_governance_artifacts(
+        root,
+        governance=build_p2_frontend_theme_token_governance_baseline(),
+    )
+
+    console.print(
+        "[green]Frontend theme token governance artifacts materialized[/green] "
         f"({len(paths)} files)"
     )
     for path in paths:

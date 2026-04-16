@@ -36,6 +36,9 @@ from ai_sdlc.core.frontend_page_ui_schema import (
     FrontendPageUiSchemaHandoff,
     build_frontend_page_ui_schema_handoff,
 )
+from ai_sdlc.core.frontend_theme_token_governance import (
+    validate_frontend_theme_token_governance,
+)
 from ai_sdlc.core.frontend_visual_a11y_evidence_provider import (
     FrontendVisualA11yEvidenceArtifact,
     load_frontend_visual_a11y_evidence_artifact,
@@ -82,6 +85,7 @@ from ai_sdlc.models.frontend_page_ui_schema import (
     build_p2_frontend_page_ui_schema_baseline,
 )
 from ai_sdlc.models.frontend_provider_profile import (
+    ProviderStyleSupportEntry,
     build_mvp_enterprise_vue2_provider_profile,
 )
 from ai_sdlc.models.frontend_solution_confirmation import (
@@ -91,6 +95,9 @@ from ai_sdlc.models.frontend_solution_confirmation import (
     build_builtin_install_strategies,
     build_builtin_style_pack_manifests,
     build_mvp_solution_snapshot,
+)
+from ai_sdlc.models.frontend_theme_token_governance import (
+    build_p2_frontend_theme_token_governance_baseline,
 )
 from ai_sdlc.models.frontend_ui_kernel import (
     build_p1_frontend_ui_kernel_page_recipe_expansion,
@@ -300,6 +307,35 @@ class ProgramFrontendReadiness:
     coverage_gaps: list[str] = field(default_factory=list)
     blockers: list[str] = field(default_factory=list)
     source_linkage: dict[str, str] = field(default_factory=dict)
+
+
+@dataclass
+class ProgramFrontendThemeTokenOverrideDiagnostic:
+    override_id: str
+    scope: str
+    requested_value: str
+    effective_value: str
+    fallback_reason_code: str = ""
+    page_schema_id: str = ""
+    schema_anchor_id: str = ""
+    render_slot_id: str = ""
+
+
+@dataclass
+class ProgramFrontendThemeTokenGovernanceHandoff:
+    state: str
+    schema_version: str
+    effective_provider_id: str
+    requested_style_pack_id: str
+    effective_style_pack_id: str
+    artifact_root: str
+    token_mapping_count: int = 0
+    page_schema_ids: list[str] = field(default_factory=list)
+    override_diagnostics: list[ProgramFrontendThemeTokenOverrideDiagnostic] = field(
+        default_factory=list
+    )
+    blockers: list[str] = field(default_factory=list)
+    warnings: list[str] = field(default_factory=list)
 
 
 @dataclass
@@ -3830,6 +3866,104 @@ class ProgramService:
             blockers=[snapshot_issue, *handoff.blockers],
             warnings=list(handoff.warnings),
             entries=list(handoff.entries),
+        )
+
+    def build_frontend_theme_token_governance_handoff(
+        self,
+    ) -> ProgramFrontendThemeTokenGovernanceHandoff:
+        """Build the provider/page-schema handoff surface for the 148 theme governance baseline."""
+
+        governance = build_p2_frontend_theme_token_governance_baseline()
+        page_ui_handoff = self.build_frontend_page_ui_schema_handoff()
+        snapshot, snapshot_issue = self._load_latest_frontend_solution_snapshot()
+        blockers = list(page_ui_handoff.blockers)
+        warnings = list(page_ui_handoff.warnings)
+
+        if snapshot is None:
+            if snapshot_issue is not None and snapshot_issue not in blockers:
+                blockers.insert(0, snapshot_issue)
+            return ProgramFrontendThemeTokenGovernanceHandoff(
+                state="blocked",
+                schema_version=governance.handoff_contract.current_version,
+                effective_provider_id="",
+                requested_style_pack_id="",
+                effective_style_pack_id="",
+                artifact_root=governance.handoff_contract.artifact_root,
+                token_mapping_count=len(governance.token_mappings),
+                page_schema_ids=[
+                    entry.page_schema_id for entry in page_ui_handoff.entries
+                ],
+                override_diagnostics=self._build_theme_override_diagnostics(governance),
+                blockers=_unique_strings(blockers),
+                warnings=_unique_strings(warnings),
+            )
+
+        provider_profile = self._build_theme_governance_provider_profile(
+            snapshot.effective_provider_id
+        )
+        validation = validate_frontend_theme_token_governance(
+            governance,
+            constraints=build_mvp_frontend_generation_constraints(),
+            page_ui_schema=build_p2_frontend_page_ui_schema_baseline(),
+            provider_profile=provider_profile,
+            solution_snapshot=snapshot,
+        )
+        blockers.extend(validation.blockers)
+        warnings.extend(validation.warnings)
+
+        return ProgramFrontendThemeTokenGovernanceHandoff(
+            state="ready" if not blockers else "blocked",
+            schema_version=governance.handoff_contract.current_version,
+            effective_provider_id=snapshot.effective_provider_id,
+            requested_style_pack_id=snapshot.requested_style_pack_id,
+            effective_style_pack_id=snapshot.effective_style_pack_id,
+            artifact_root=governance.handoff_contract.artifact_root,
+            token_mapping_count=len(governance.token_mappings),
+            page_schema_ids=[
+                entry.page_schema_id for entry in page_ui_handoff.entries
+            ],
+            override_diagnostics=self._build_theme_override_diagnostics(governance),
+            blockers=_unique_strings(blockers),
+            warnings=_unique_strings(warnings),
+        )
+
+    def _build_theme_override_diagnostics(
+        self,
+        governance,
+    ) -> list[ProgramFrontendThemeTokenOverrideDiagnostic]:
+        return [
+            ProgramFrontendThemeTokenOverrideDiagnostic(
+                override_id=override.override_id,
+                scope=override.scope,
+                requested_value=override.requested_value,
+                effective_value=override.effective_value,
+                fallback_reason_code=override.fallback_reason_code or "",
+                page_schema_id=override.page_schema_id or "",
+                schema_anchor_id=override.schema_anchor_id or "",
+                render_slot_id=override.render_slot_id or "",
+            )
+            for override in governance.custom_overrides
+        ]
+
+    def _build_theme_governance_provider_profile(
+        self,
+        provider_id: str,
+    ):
+        base_profile = build_mvp_enterprise_vue2_provider_profile()
+        style_support_payload = self._load_provider_style_support(provider_id) or {}
+        style_support_entries: list[ProviderStyleSupportEntry] = []
+        for item in _normalize_mapping_list(style_support_payload.get("items", [])):
+            try:
+                style_support_entries.append(ProviderStyleSupportEntry.model_validate(item))
+            except Exception:
+                continue
+        if not style_support_entries:
+            style_support_entries = list(base_profile.style_support_matrix)
+        return base_profile.model_copy(
+            update={
+                "provider_id": provider_id,
+                "style_support_matrix": style_support_entries,
+            }
         )
 
     def _load_spec_visual_a11y_evidence(

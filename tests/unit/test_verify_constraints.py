@@ -49,6 +49,9 @@ from ai_sdlc.generators.frontend_provider_profile_artifacts import (
 from ai_sdlc.generators.frontend_solution_confirmation_artifacts import (
     materialize_frontend_solution_confirmation_artifacts,
 )
+from ai_sdlc.generators.frontend_theme_token_governance_artifacts import (
+    materialize_frontend_theme_token_governance_artifacts,
+)
 from ai_sdlc.models.frontend_gate_policy import (
     build_mvp_frontend_gate_policy,
     build_p1_frontend_gate_policy_visual_a11y_foundation,
@@ -63,6 +66,9 @@ from ai_sdlc.models.frontend_solution_confirmation import (
     build_builtin_install_strategies,
     build_builtin_style_pack_manifests,
     build_mvp_solution_snapshot,
+)
+from ai_sdlc.models.frontend_theme_token_governance import (
+    build_p2_frontend_theme_token_governance_baseline,
 )
 from ai_sdlc.models.state import Checkpoint, FeatureInfo
 
@@ -374,6 +380,27 @@ def _write_073_checkpoint(root: Path) -> None:
     save_checkpoint(root, cp)
 
 
+def _write_148_checkpoint(root: Path) -> None:
+    mem = root / ".ai-sdlc" / "memory"
+    mem.mkdir(parents=True, exist_ok=True)
+    (mem / "constitution.md").write_text("# C\n", encoding="utf-8")
+
+    spec = root / "specs" / "148-frontend-p2-multi-theme-token-governance-baseline"
+    spec.mkdir(parents=True, exist_ok=True)
+
+    cp = Checkpoint(
+        current_stage="verify",
+        feature=FeatureInfo(
+            id="148",
+            spec_dir="specs/148-frontend-p2-multi-theme-token-governance-baseline",
+            design_branch="d",
+            feature_branch="f",
+            current_branch="main",
+        ),
+    )
+    save_checkpoint(root, cp)
+
+
 def _write_frontend_evidence_class_checkpoint(
     root: Path,
     *,
@@ -415,6 +442,39 @@ def _write_073_solution_confirmation_artifacts(
         style_packs=build_builtin_style_pack_manifests(),
         install_strategies=build_builtin_install_strategies(),
         snapshot=build_mvp_solution_snapshot(**(snapshot_overrides or {})),
+    )
+
+
+def _write_148_theme_token_governance_artifacts(
+    root: Path,
+    *,
+    snapshot_overrides: dict[str, object] | None = None,
+) -> None:
+    materialize_frontend_provider_profile_artifacts(
+        root,
+        build_mvp_enterprise_vue2_provider_profile(),
+    )
+    materialize_frontend_solution_confirmation_artifacts(
+        root,
+        style_packs=build_builtin_style_pack_manifests(),
+        install_strategies=build_builtin_install_strategies(),
+        snapshot=build_mvp_solution_snapshot(
+            requested_provider_id="enterprise-vue2",
+            effective_provider_id="enterprise-vue2",
+            recommended_provider_id="enterprise-vue2",
+            requested_style_pack_id="enterprise-default",
+            effective_style_pack_id="enterprise-default",
+            recommended_style_pack_id="enterprise-default",
+            requested_frontend_stack="vue2",
+            effective_frontend_stack="vue2",
+            recommended_frontend_stack="vue2",
+            style_fidelity_status="full",
+            **(snapshot_overrides or {}),
+        ),
+    )
+    materialize_frontend_theme_token_governance_artifacts(
+        root,
+        governance=build_p2_frontend_theme_token_governance_baseline(),
     )
 
 
@@ -2242,6 +2302,112 @@ def test_073_frontend_solution_confirmation_verification_surfaces_invalid_style_
         and "style-support.yaml" in blocker
         for blocker in report.blockers
     )
+
+
+def test_148_frontend_theme_token_governance_verification_surfaces_duplicate_mapping_ids(
+    tmp_path: Path,
+) -> None:
+    _write_148_checkpoint(tmp_path)
+    _write_148_theme_token_governance_artifacts(tmp_path)
+
+    token_mapping_path = (
+        tmp_path
+        / "governance"
+        / "frontend"
+        / "theme-token-governance"
+        / "token-mapping.json"
+    )
+    payload = json.loads(token_mapping_path.read_text(encoding="utf-8"))
+    payload["mappings"][1]["mapping_id"] = payload["mappings"][0]["mapping_id"]
+    token_mapping_path.write_text(
+        json.dumps(payload, ensure_ascii=False, indent=2) + "\n",
+        encoding="utf-8",
+    )
+
+    report = build_constraint_report(tmp_path)
+    context = build_verification_gate_context(tmp_path)
+
+    assert report.coverage_gaps == ("frontend_theme_token_governance_consistency",)
+    assert "frontend_theme_token_governance_consistency" in report.check_objects
+    assert context["verification_sources"] == (
+        "verify constraints",
+        "frontend theme token governance verification",
+    )
+    assert context["frontend_theme_token_governance_verification"]["gate_verdict"] == "RETRY"
+    assert any("duplicate mapping ids" in blocker for blocker in report.blockers)
+
+
+def test_148_frontend_theme_token_governance_verification_surfaces_unknown_anchor_and_token_floor_bypass(
+    tmp_path: Path,
+) -> None:
+    _write_148_checkpoint(tmp_path)
+    _write_148_theme_token_governance_artifacts(tmp_path)
+
+    token_mapping_path = (
+        tmp_path
+        / "governance"
+        / "frontend"
+        / "theme-token-governance"
+        / "token-mapping.json"
+    )
+    mapping_payload = json.loads(token_mapping_path.read_text(encoding="utf-8"))
+    mapping_payload["mappings"][0]["scope"] = "section"
+    mapping_payload["mappings"][0]["page_schema_id"] = "dashboard-workspace"
+    mapping_payload["mappings"][0]["schema_anchor_id"] = "unknown-anchor"
+    token_mapping_path.write_text(
+        json.dumps(mapping_payload, ensure_ascii=False, indent=2) + "\n",
+        encoding="utf-8",
+    )
+
+    override_policy_path = (
+        tmp_path
+        / "governance"
+        / "frontend"
+        / "theme-token-governance"
+        / "override-policy.json"
+    )
+    override_payload = json.loads(override_policy_path.read_text(encoding="utf-8"))
+    override_payload["custom_overrides"][0]["requested_value"] = "#ffffff"
+    override_payload["custom_overrides"][0]["effective_value"] = "#ffffff"
+    override_payload["custom_overrides"][0]["fallback_reason_code"] = None
+    override_policy_path.write_text(
+        json.dumps(override_payload, ensure_ascii=False, indent=2) + "\n",
+        encoding="utf-8",
+    )
+
+    report = build_constraint_report(tmp_path)
+    context = build_verification_gate_context(tmp_path)
+
+    assert report.coverage_gaps == ("frontend_theme_token_governance_consistency",)
+    assert context["frontend_theme_token_governance_verification"]["gate_verdict"] == "RETRY"
+    assert any("unknown schema anchor" in blocker for blocker in report.blockers)
+    assert any("token floor bypass" in blocker for blocker in report.blockers)
+
+
+def test_148_frontend_theme_token_governance_verification_surfaces_illegal_override_namespace(
+    tmp_path: Path,
+) -> None:
+    _write_148_checkpoint(tmp_path)
+    _write_148_theme_token_governance_artifacts(tmp_path)
+
+    override_policy_path = (
+        tmp_path
+        / "governance"
+        / "frontend"
+        / "theme-token-governance"
+        / "override-policy.json"
+    )
+    payload = json.loads(override_policy_path.read_text(encoding="utf-8"))
+    payload["custom_overrides"][0]["namespace"] = "provider-internal-token"
+    override_policy_path.write_text(
+        json.dumps(payload, ensure_ascii=False, indent=2) + "\n",
+        encoding="utf-8",
+    )
+
+    report = build_constraint_report(tmp_path)
+
+    assert report.coverage_gaps == ("frontend_theme_token_governance_consistency",)
+    assert any("unsupported override namespace" in blocker for blocker in report.blockers)
 
 
 def test_build_verification_governance_bundle_emits_gate_capable_payload(

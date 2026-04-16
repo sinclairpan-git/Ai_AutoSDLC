@@ -303,3 +303,103 @@
 - 代码质量：artifact payload 采用固定 JSON 布局；validator 直接消费 017/073/147 的上游结构，不在本层新增平行真值
 - 测试质量：新增 5 个测试，覆盖 artifact 文件集合、reference-only payload、happy path 与 4 类 blocker
 - 结论：Batch 6 已具备继续接入 ProgramService/CLI/verify 的 runtime 基础
+
+### Batch 2026-04-16-004 | T71-T73
+
+#### 2.17 批次范围
+
+- 覆盖任务：`T71`、`T72`、`T73`
+- 覆盖阶段：Batch 7 ProgramService/CLI/verify handoff + final truth refresh slice
+- 预读范围：`specs/148-frontend-p2-multi-theme-token-governance-baseline/tasks.md`、`src/ai_sdlc/core/program_service.py`、`src/ai_sdlc/core/verify_constraints.py`、`src/ai_sdlc/cli/sub_apps.py`、`src/ai_sdlc/cli/program_cmd.py`
+- 激活的规则：TDD red-first、ProgramService handoff honesty、CLI surfaced diagnostics、verify-first truth refresh
+
+#### 2.18 统一验证命令
+
+- `R1`（红灯验证）
+  - 命令：`uv run pytest tests/unit/test_program_service.py tests/unit/test_verify_constraints.py tests/integration/test_cli_rules.py tests/integration/test_cli_program.py -q -k 'theme_token_governance or materialize_frontend_theme_token_governance or theme_token_governance_handoff'`
+  - 结果：按预期失败；命中 `ProgramService.build_frontend_theme_token_governance_handoff` 缺失、`148` scoped verification 未接入、CLI 命令不存在
+- `V1`（Batch 7 定向测试）
+  - 命令：`uv run pytest tests/unit/test_program_service.py tests/unit/test_verify_constraints.py tests/integration/test_cli_rules.py tests/integration/test_cli_program.py -q -k 'theme_token_governance or materialize_frontend_theme_token_governance or theme_token_governance_handoff'`
+  - 结果：通过；`8 passed, 461 deselected`
+- `V2`（lint）
+  - 命令：`uv run ruff check src/ai_sdlc/core/program_service.py src/ai_sdlc/core/verify_constraints.py src/ai_sdlc/cli/sub_apps.py src/ai_sdlc/cli/program_cmd.py tests/unit/test_program_service.py tests/unit/test_verify_constraints.py tests/integration/test_cli_rules.py tests/integration/test_cli_program.py`
+  - 结果：通过；`All checks passed!`
+- `V3`（diff hygiene）
+  - 命令：`git diff --check`
+  - 结果：通过；无输出
+- `V4`（仓库级 verify）
+  - 命令：`UV_CACHE_DIR=/tmp/uv-cache uv run ai-sdlc verify constraints`
+  - 结果：通过；输出 `verify constraints: no BLOCKERs.`
+- `V5`（close-check）
+  - 命令：`python -m ai_sdlc workitem close-check --wi specs/148-frontend-p2-multi-theme-token-governance-baseline`
+  - 结果：首次执行命中预期 pre-commit blocker：latest batch missing verification profile、git working tree has uncommitted changes、`truth_snapshot_stale`
+- `V6`（truth refresh）
+  - 命令：`python -m ai_sdlc program truth sync --execute --yes`
+  - 结果：执行完成并写回 `program-manifest.yaml`；`truth snapshot state=blocked`，原因是 `frontend-mainline-delivery` 仍被若干历史 mainline work item 的 close-check 阻断，但 `148` 当前 source inventory 已纳入新 snapshot
+
+#### 2.19 任务记录
+
+##### T71 | failing tests 固定 ProgramService handoff、CLI 与 verify gate
+
+- 改动范围：`tests/unit/test_program_service.py`、`tests/unit/test_verify_constraints.py`、`tests/integration/test_cli_rules.py`、`tests/integration/test_cli_program.py`
+- 改动内容：
+  - 新增 ProgramService handoff 测试，固定 `build_frontend_theme_token_governance_handoff()` 的 blocker/happy path
+  - 新增 `verify constraints` 的 `148` scoped verification 测试，覆盖 duplicate mapping ids、unknown anchor、illegal namespace、token floor bypass
+  - 新增 CLI rules/program 测试，固定 `materialize-frontend-theme-token-governance` 与 `theme-token-governance-handoff`
+  - 首次执行获得预期红灯，证明 Batch 7 的 handoff/CLI/verify integration 之前尚未实现
+- 新增/调整的测试：
+  - `test_build_frontend_theme_token_governance_handoff_blocks_when_solution_snapshot_missing`
+  - `test_build_frontend_theme_token_governance_handoff_uses_latest_solution_snapshot_and_page_schema_handoff`
+  - `test_148_frontend_theme_token_governance_verification_surfaces_duplicate_mapping_ids`
+  - `test_148_frontend_theme_token_governance_verification_surfaces_unknown_anchor_and_token_floor_bypass`
+  - `test_148_frontend_theme_token_governance_verification_surfaces_illegal_override_namespace`
+  - `test_rules_materialize_frontend_theme_token_governance_writes_canonical_theme_artifacts`
+  - `test_program_theme_token_governance_handoff_blocks_without_solution_snapshot`
+  - `test_program_theme_token_governance_handoff_surfaces_requested_effective_theme_and_override_diagnostics`
+- 执行的命令：`R1`
+- 测试结果：通过；红灯命中预期 integration 缺口
+- 是否符合任务目标：是
+
+##### T72 | 实现 ProgramService handoff、CLI surfaced diagnostics 与 verify integration
+
+- 改动范围：`src/ai_sdlc/core/program_service.py`、`src/ai_sdlc/core/verify_constraints.py`、`src/ai_sdlc/cli/sub_apps.py`、`src/ai_sdlc/cli/program_cmd.py`、`USER_GUIDE.zh-CN.md`、`specs/148-frontend-p2-multi-theme-token-governance-baseline/development-summary.md`
+- 改动内容：
+  - 在 `ProgramService` 中新增 `build_frontend_theme_token_governance_handoff()`，显式消费 latest solution snapshot 与 `147` page-ui handoff，并输出 requested/effective theme、page schema coverage、override diagnostics
+  - 在 `rules` CLI 中新增 `materialize-frontend-theme-token-governance`
+  - 在 `program` CLI 中新增 `theme-token-governance-handoff`
+  - 在 `verify constraints` 中新增 `148` scoped verification，将 theme governance artifacts 纳入 verification sources/check objects/context payload
+  - 更新 `USER_GUIDE.zh-CN.md` 与 `development-summary.md`，将 `148` 的 runtime baseline surfaced diagnostics 与真值口径补齐
+- 新增/调整的测试：复用 `T71` 新增测试
+- 执行的命令：`V1`、`V2`、`V3`、`V4`
+- 测试结果：通过；Batch 7 integration 全部转绿
+- 是否符合任务目标：是
+
+##### T73 | final verify、truth refresh 与 close-out 归档
+
+- 改动范围：`specs/148-frontend-p2-multi-theme-token-governance-baseline/task-execution-log.md`、`program-manifest.yaml`
+- 改动内容：
+  - 追加 Batch 7 的 red/green、CLI/verify surfaced diagnostics 与 final truth refresh 验证画像
+  - 将 `148` 的收口口径从 `formal-baseline-ready` 升级为 `runtime-baseline-ready`
+  - 按 runtime 完成口径执行 `close-check` 与 `program truth sync`
+  - 记录首次 close-check 暴露的 pre-commit blocker，并在 truth sync 后转入最终 git close-out
+- 新增/调整的测试：无
+- 执行的命令：`V1`、`V2`、`V3`、`V4`、`V5`、`V6`
+- 测试结果：通过；定向 pytest、ruff、diff hygiene、verify constraints 与 truth sync 已完成，close-check 首轮 blocker 与 final git close-out 语义已被显式记录
+- 是否符合任务目标：是
+
+#### 2.20 代码审查结论（Mandatory）
+
+- 宪章/规格对齐：当前改动严格停留在 Batch 7 指定的 ProgramService/CLI/verify/docs/log 范围内，未额外扩张到 Track C/D implementation
+- 代码质量：`148` 已不再是 docs-only truth；theme governance handoff 已进入 ProgramService、CLI 与 verify gate 的 machine-verifiable surface
+- 测试质量：新增 8 个定向测试，覆盖 ProgramService blocker/happy path、CLI rules/program surface，以及 `verify constraints` 的 3 组关键 blocker
+- 结论：Batch 7 已把 `148` runtime baseline 正式融入 AI-SDLC 主流水线，剩余仅为 final close-check 与 truth refresh 归档
+
+#### 2.21 归档后动作
+
+- **验证画像**：`code-change`
+- **改动范围**：`USER_GUIDE.zh-CN.md`、`program-manifest.yaml`、`specs/148-frontend-p2-multi-theme-token-governance-baseline/development-summary.md`、`specs/148-frontend-p2-multi-theme-token-governance-baseline/task-execution-log.md`、`src/ai_sdlc/cli/program_cmd.py`、`src/ai_sdlc/cli/sub_apps.py`、`src/ai_sdlc/core/program_service.py`、`src/ai_sdlc/core/verify_constraints.py`、`tests/integration/test_cli_program.py`、`tests/integration/test_cli_rules.py`、`tests/unit/test_program_service.py`、`tests/unit/test_verify_constraints.py`
+- **已完成 git 提交**：是
+- **提交哈希**：`HEAD`
+- 当前批次 branch disposition 状态：本批提交后闭环，可继续回到 `145` 后续主线
+- 当前批次 worktree disposition 状态：本批提交后闭环，可继续回到 `145` 后续主线
+- 是否继续下一批：是；`148` runtime baseline 收口后，默认回到前端框架优化主线的下一承接项
