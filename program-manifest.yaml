@@ -1448,12 +1448,24 @@ specs:
   - runtime_carrier
   capability_refs:
   - frontend-mainline-delivery
+- id: 145-frontend-p2-p3-deferred-capability-expansion-planning-baseline
+  path: specs/145-frontend-p2-p3-deferred-capability-expansion-planning-baseline
+  depends_on:
+  - 073-frontend-p2-provider-style-solution-baseline
+  - 137-frontend-p1-visual-a11y-runtime-foundation-closure-baseline
+  - 143-frontend-mainline-browser-gate-real-probe-runtime-baseline
+  - 144-frontend-mainline-host-remediation-and-workspace-integration-closure-baseline
+  branch_slug: frontend-p2-p3-deferred-capability-expansion-planning-baseline
+  owner: team-frontend-governance
+  frontend_evidence_class: framework_capability
+  roles: []
+  capability_refs: []
 truth_snapshot:
-  generated_at: '2026-04-16T08:06:56Z'
+  generated_at: '2026-04-16T08:08:24Z'
   generated_by: ai-sdlc program truth sync
   generator_version: program_truth_snapshot_v1
-  repo_revision: 035ba8a
-  authoring_hash: 3cb98f597f596814d4c3e4b1f28cc42775f481646518176eda6dff14840be78b
+  repo_revision: 16c1320
+  authoring_hash: eaccc8eac3b43478569504acbbcdaade3f108cc0a9dce8538babc81ec2977dc2
   source_hashes:
     truth_check:specs/095-frontend-mainline-product-delivery-baseline: 40b5e9332011b0d8941245c0e8e7c3b192e897b2bc4aa4876a3d37a94f9b80f0
     truth_check:specs/096-frontend-mainline-host-runtime-manager-baseline: e4586cf112089fff541fc809f9ba98ad4c4c3d5593de8febfc4e64cb1179ce02
@@ -1488,7 +1500,7 @@ truth_snapshot:
     close_check:specs/143-frontend-mainline-browser-gate-real-probe-runtime-baseline: a480d33dbf6d8470c447c41456282ac360186c60435613a9f55e46d06742e555
     close_check:specs/144-frontend-mainline-host-remediation-and-workspace-integration-closure-baseline: a480d33dbf6d8470c447c41456282ac360186c60435613a9f55e46d06742e555
     verify:uv run ai-sdlc verify constraints: 67c162e8ce6369708f41fd003c4d3b2703509ebeb85aefbbc2a2d67663c45333
-  snapshot_hash: 99ac2cd1ed676c6ad9c4a1c9bc7e5907aa76f7c1237da18455bce71014825b4b
+  snapshot_hash: 14b9b635c7e349925968feff139612c31110430e820086aaf6a77740430df6f3
   computed_capabilities:
   - capability_id: frontend-mainline-delivery
     closure_state: closed
@@ -1513,31 +1525,31 @@ truth_snapshot:
     stale_reason: ''
   source_inventory:
     state: complete
-    total_sources: 742
-    mapped_sources: 742
+    total_sources: 747
+    mapped_sources: 747
     unmapped_sources: 0
     missing_sources: 0
-    phase_signal_count: 2176
-    deferred_signal_count: 4384
-    non_goal_signal_count: 254
+    phase_signal_count: 2328
+    deferred_signal_count: 4653
+    non_goal_signal_count: 256
     layer_totals:
       blueprint: 1
-      spec: 145
-      plan: 145
-      tasks: 145
-      execution: 145
-      close: 145
+      spec: 146
+      plan: 146
+      tasks: 146
+      execution: 146
+      close: 146
       requirements: 2
       defect: 2
       design: 8
       release: 4
     layer_materialized:
       blueprint: 1
-      spec: 145
-      plan: 145
-      tasks: 145
-      execution: 145
-      close: 145
+      spec: 146
+      plan: 146
+      tasks: 146
+      execution: 146
+      close: 146
       requirements: 2
       defect: 2
       design: 8
@@ -8077,6 +8089,51 @@ truth_snapshot:
       phase_signal_count: 0
       deferred_signal_count: 1
       non_goal_signal_count: 0
+    - path: specs/145-frontend-p2-p3-deferred-capability-expansion-planning-baseline/spec.md
+      source_type: spec_doc
+      truth_layer: spec
+      mapped: true
+      exists: true
+      mapping_ref: 145-frontend-p2-p3-deferred-capability-expansion-planning-baseline
+      phase_signal_count: 35
+      deferred_signal_count: 73
+      non_goal_signal_count: 2
+    - path: specs/145-frontend-p2-p3-deferred-capability-expansion-planning-baseline/plan.md
+      source_type: plan_doc
+      truth_layer: plan
+      mapped: true
+      exists: true
+      mapping_ref: 145-frontend-p2-p3-deferred-capability-expansion-planning-baseline
+      phase_signal_count: 29
+      deferred_signal_count: 45
+      non_goal_signal_count: 0
+    - path: specs/145-frontend-p2-p3-deferred-capability-expansion-planning-baseline/tasks.md
+      source_type: tasks_doc
+      truth_layer: tasks
+      mapped: true
+      exists: true
+      mapping_ref: 145-frontend-p2-p3-deferred-capability-expansion-planning-baseline
+      phase_signal_count: 46
+      deferred_signal_count: 77
+      non_goal_signal_count: 0
+    - path: specs/145-frontend-p2-p3-deferred-capability-expansion-planning-baseline/task-execution-log.md
+      source_type: execution_log
+      truth_layer: execution
+      mapped: true
+      exists: true
+      mapping_ref: 145-frontend-p2-p3-deferred-capability-expansion-planning-baseline
+      phase_signal_count: 35
+      deferred_signal_count: 60
+      non_goal_signal_count: 0
+    - path: specs/145-frontend-p2-p3-deferred-capability-expansion-planning-baseline/development-summary.md
+      source_type: development_summary
+      truth_layer: close
+      mapped: true
+      exists: true
+      mapping_ref: 145-frontend-p2-p3-deferred-capability-expansion-planning-baseline
+      phase_signal_count: 7
+      deferred_signal_count: 14
+      non_goal_signal_count: 0
     - path: docs/SPEC_SPLIT_AND_PROGRAM.zh-CN.md
       source_type: requirement_doc
       truth_layer: requirements
@@ -8222,4 +8279,4 @@ truth_snapshot:
       deferred_signal_count: 6
       non_goal_signal_count: 1
     unmapped_paths: []
-  state: migration_pending
+  state: blocked
