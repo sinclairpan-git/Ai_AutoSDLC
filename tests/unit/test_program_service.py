@@ -627,6 +627,215 @@ def test_validate_manifest_warns_for_non_release_scope_spec_dir_missing_entry_in
     )
 
 
+def test_validate_manifest_warns_for_unmapped_truth_sources_in_v2(
+    tmp_path: Path,
+) -> None:
+    (tmp_path / "specs" / "001-auth").mkdir(parents=True)
+    (tmp_path / "specs" / "001-auth" / "spec.md").write_text(
+        "# auth\n", encoding="utf-8"
+    )
+    (tmp_path / "PRD.md").write_text("# prd\n", encoding="utf-8")
+    (tmp_path / "docs" / "superpowers" / "specs").mkdir(parents=True)
+    (tmp_path / "docs" / "superpowers" / "specs" / "2026-04-02-design.md").write_text(
+        "# Design\n\nP2 modern provider\n",
+        encoding="utf-8",
+    )
+    (tmp_path / "docs" / "releases").mkdir(parents=True)
+    (tmp_path / "docs" / "releases" / "v0.9.0.md").write_text(
+        "# v0.9.0\n", encoding="utf-8"
+    )
+    (tmp_path / "docs" / "framework-defect-backlog.zh-CN.md").write_text(
+        "# backlog\n\n后续治理\n",
+        encoding="utf-8",
+    )
+    (tmp_path / "docs" / "requirements-gap-reconciliation.zh-CN.md").write_text(
+        "# requirements\n\n第二期能力\n",
+        encoding="utf-8",
+    )
+    svc = ProgramService(tmp_path)
+    manifest = ProgramManifest.model_validate(
+        {
+            "schema_version": "2",
+            "prd_path": "PRD.md",
+            "program": {"goal": "AI-SDLC automated framework"},
+            "release_targets": ["frontend-mainline-delivery"],
+            "capabilities": [
+                {
+                    "id": "frontend-mainline-delivery",
+                    "title": "Frontend Mainline Delivery",
+                    "goal": "ship the managed frontend mainline",
+                    "release_required": True,
+                    "spec_refs": ["001-auth"],
+                    "required_evidence": {
+                        "truth_check_refs": ["specs/001-auth"],
+                        "close_check_refs": ["specs/001-auth"],
+                        "verify_refs": ["uv run ai-sdlc verify constraints"],
+                    },
+                }
+            ],
+            "specs": [
+                {
+                    "id": "001-auth",
+                    "path": "specs/001-auth",
+                    "depends_on": [],
+                    "roles": ["runtime_carrier"],
+                    "capability_refs": ["frontend-mainline-delivery"],
+                }
+            ],
+        }
+    )
+
+    res = svc.validate_manifest(manifest)
+
+    assert res.valid is True
+    assert any(
+        "migration_pending: truth source unmapped for docs/superpowers/specs/2026-04-02-design.md"
+        in warning
+        for warning in res.warnings
+    )
+    assert any(
+        "migration_pending: truth source unmapped for docs/releases/v0.9.0.md"
+        in warning
+        for warning in res.warnings
+    )
+    assert any(
+        "migration_pending: truth source unmapped for docs/framework-defect-backlog.zh-CN.md"
+        in warning
+        for warning in res.warnings
+    )
+    assert any(
+        "migration_pending: truth source unmapped for docs/requirements-gap-reconciliation.zh-CN.md"
+        in warning
+        for warning in res.warnings
+    )
+
+
+def test_build_truth_snapshot_includes_source_inventory_and_layer_counts(
+    tmp_path: Path,
+) -> None:
+    _init_truth_git_repo(tmp_path)
+    (tmp_path / ".ai-sdlc" / "project" / "config").mkdir(parents=True)
+    (tmp_path / ".ai-sdlc" / "project" / "config" / "project-state.yaml").write_text(
+        "status: initialized\nproject_name: demo\nnext_work_item_seq: 1\nversion: '1.0'\n",
+        encoding="utf-8",
+    )
+    (tmp_path / "PRD.md").write_text("# prd\n", encoding="utf-8")
+    spec_dir = tmp_path / "specs" / "082-frontend-example"
+    spec_dir.mkdir(parents=True)
+    (spec_dir / "spec.md").write_text(
+        "# Spec\n\n---\nfrontend_evidence_class: \"framework_capability\"\n---\n",
+        encoding="utf-8",
+    )
+    (spec_dir / "plan.md").write_text("# Plan\n", encoding="utf-8")
+    (spec_dir / "tasks.md").write_text("- [ ] pending\n", encoding="utf-8")
+    (tmp_path / "docs" / "superpowers" / "specs").mkdir(parents=True)
+    (tmp_path / "docs" / "superpowers" / "specs" / "2026-04-02-design.md").write_text(
+        "# Design\n\nP2 modern provider\n",
+        encoding="utf-8",
+    )
+    (tmp_path / "docs" / "releases").mkdir(parents=True)
+    (tmp_path / "docs" / "releases" / "v0.9.0.md").write_text(
+        "# v0.9.0\n", encoding="utf-8"
+    )
+    (tmp_path / "docs" / "framework-defect-backlog.zh-CN.md").write_text(
+        "# backlog\n\n后续治理\n",
+        encoding="utf-8",
+    )
+    (tmp_path / "docs" / "requirements-gap-reconciliation.zh-CN.md").write_text(
+        "# requirements\n\n第二期能力\n",
+        encoding="utf-8",
+    )
+    (tmp_path / "src").mkdir(parents=True)
+    (tmp_path / "src" / "app.py").write_text("print('demo')\n", encoding="utf-8")
+    _write_manifest_yaml(
+        tmp_path,
+        """
+schema_version: "2"
+prd_path: "PRD.md"
+program:
+  goal: "Demo truth ledger"
+release_targets:
+  - "frontend-mainline-delivery"
+capabilities:
+  - id: "frontend-mainline-delivery"
+    title: "Frontend Mainline Delivery"
+    goal: "Demo release target"
+    release_required: true
+    spec_refs:
+      - "082-frontend-example"
+    required_evidence:
+      truth_check_refs:
+        - "specs/082-frontend-example"
+      close_check_refs:
+        - "specs/082-frontend-example"
+      verify_refs:
+        - "uv run ai-sdlc verify constraints"
+specs:
+  - id: "082-frontend-example"
+    path: "specs/082-frontend-example"
+    depends_on: []
+    frontend_evidence_class: "framework_capability"
+    roles:
+      - "runtime_carrier"
+    capability_refs:
+      - "frontend-mainline-delivery"
+source_registry:
+  - path: "docs/superpowers/specs/2026-04-02-design.md"
+    source_type: "design_doc"
+    truth_layer: "design"
+  - path: "docs/releases/v0.9.0.md"
+    source_type: "release_doc"
+    truth_layer: "release"
+  - path: "docs/framework-defect-backlog.zh-CN.md"
+    source_type: "defect_backlog"
+    truth_layer: "defect"
+  - path: "docs/requirements-gap-reconciliation.zh-CN.md"
+    source_type: "requirement_doc"
+    truth_layer: "requirements"
+""",
+    )
+    _commit_truth_repo(tmp_path, "seed truth ledger source inventory fixture")
+
+    svc = ProgramService(tmp_path)
+    manifest = svc.load_manifest()
+    validation = svc.validate_manifest(manifest)
+    snapshot = svc.build_truth_snapshot(manifest, validation_result=validation)
+
+    inventory = snapshot.source_inventory
+    assert inventory is not None
+    assert inventory.state == "complete"
+    assert inventory.total_sources == 10
+    assert inventory.mapped_sources == 10
+    assert inventory.unmapped_sources == 0
+    assert inventory.missing_sources == 2
+    assert inventory.layer_totals == {
+        "blueprint": 1,
+        "spec": 1,
+        "plan": 1,
+        "tasks": 1,
+        "execution": 1,
+        "close": 1,
+        "design": 1,
+        "release": 1,
+        "defect": 1,
+        "requirements": 1,
+    }
+    assert inventory.layer_materialized == {
+        "blueprint": 1,
+        "spec": 1,
+        "plan": 1,
+        "tasks": 1,
+        "execution": 0,
+        "close": 0,
+        "design": 1,
+        "release": 1,
+        "defect": 1,
+        "requirements": 1,
+    }
+    assert inventory.phase_signal_count >= 2
+    assert inventory.deferred_signal_count >= 2
+
+
 def test_build_truth_snapshot_maps_frontend_canonical_conflict_to_blocked(
     tmp_path: Path,
 ) -> None:

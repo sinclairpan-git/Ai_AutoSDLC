@@ -289,6 +289,7 @@ def program_truth_sync(
         )
         for blocker in item.blocking_refs:
             console.print(f"    blocker: {blocker}", markup=False)
+    _render_truth_source_inventory(snapshot.source_inventory)
     _render_truth_validation_summary(validation.errors, validation.warnings)
 
     if dry_run:
@@ -355,8 +356,11 @@ def program_truth_audit(
         )
         for spec in surface["migration_pending_specs"][:5]:
             console.print(f"    pending spec: {spec}", markup=False)
+        for source in surface.get("migration_pending_sources", [])[:5]:
+            console.print(f"    pending source: {source}", markup=False)
         for suggestion in surface["migration_suggestions"]:
             console.print(f"    suggestion: {suggestion}", markup=False)
+    _render_truth_source_inventory(surface.get("source_inventory"))
     _render_truth_validation_summary(
         list(surface["validation_errors"]),
         list(surface["validation_warnings"]),
@@ -4407,6 +4411,52 @@ def _render_truth_ledger_lines(surface: dict[str, object]) -> None:
             f"  - migration pending: {migration_pending_count}",
             markup=False,
         )
+    _render_truth_source_inventory(surface.get("source_inventory"))
+
+
+def _render_truth_source_inventory(source_inventory: object) -> None:
+    if hasattr(source_inventory, "model_dump"):
+        source_inventory = source_inventory.model_dump(mode="json")
+    if not isinstance(source_inventory, dict):
+        return
+
+    console.print(
+        "  - source inventory: "
+        f"{source_inventory.get('state', 'incomplete')}",
+        markup=False,
+    )
+    console.print(
+        "    totals: "
+        f"{source_inventory.get('mapped_sources', 0)}/"
+        f"{source_inventory.get('total_sources', 0)} mapped"
+        f", unmapped sources: {source_inventory.get('unmapped_sources', 0)}"
+        f", missing sources: {source_inventory.get('missing_sources', 0)}",
+        markup=False,
+    )
+    console.print(
+        "    signals: "
+        f"phase={source_inventory.get('phase_signal_count', 0)}, "
+        f"deferred={source_inventory.get('deferred_signal_count', 0)}, "
+        f"non_goal={source_inventory.get('non_goal_signal_count', 0)}",
+        markup=False,
+    )
+    layer_totals = source_inventory.get("layer_totals", {})
+    layer_materialized = source_inventory.get("layer_materialized", {})
+    if isinstance(layer_totals, dict) and layer_totals:
+        layer_parts = []
+        for layer, total in layer_totals.items():
+            materialized = 0
+            if isinstance(layer_materialized, dict):
+                materialized = int(layer_materialized.get(layer, 0) or 0)
+            layer_parts.append(f"{layer} {materialized}/{total}")
+        console.print(
+            "    layers: " + ", ".join(layer_parts),
+            markup=False,
+        )
+    unmapped_paths = source_inventory.get("unmapped_paths", [])
+    if isinstance(unmapped_paths, list):
+        for path in unmapped_paths[:5]:
+            console.print(f"    unmapped source: {path}", markup=False)
 
 
 def _render_truth_validation_summary(

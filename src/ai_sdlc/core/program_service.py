@@ -90,6 +90,8 @@ from ai_sdlc.models.program import (
     ProgramManifest,
     ProgramSpecRef,
     ProgramTruthSnapshot,
+    ProgramTruthSourceEntry,
+    ProgramTruthSourceInventory,
 )
 from ai_sdlc.telemetry.clock import utc_now_z
 
@@ -117,6 +119,19 @@ PROGRAM_FRONTEND_RUNTIME_ATTACHMENT_SOURCE_NAME = (
 PROGRAM_FRONTEND_RECHECK_COMMAND = "uv run ai-sdlc verify constraints"
 PROGRAM_FRONTEND_BROWSER_GATE_RECHECK_COMMAND = (
     "uv run ai-sdlc program browser-gate-probe --execute"
+)
+PROGRAM_TRUTH_SOURCE_DISCOVERY_ROOT = Path("docs")
+PROGRAM_TRUTH_SOURCE_PHASE_RE = re.compile(
+    r"(?:\bP1\b|\bP2\b|\bP3\b|\bPhase\s*[23]\b|第二期|第三期|二期|三期)",
+    re.IGNORECASE,
+)
+PROGRAM_TRUTH_SOURCE_DEFERRED_RE = re.compile(
+    r"(?:deferred|future work|后续|下一期|to be implemented|prospective|\bP1\b|\bP2\b|\bP3\b|\bPhase\s*[23]\b|第二期|第三期|二期|三期)",
+    re.IGNORECASE,
+)
+PROGRAM_TRUTH_SOURCE_NON_GOAL_RE = re.compile(
+    r"(?:不覆盖|非目标|not cover|out of scope)",
+    re.IGNORECASE,
 )
 PROGRAM_FRONTEND_VISUAL_A11Y_ISSUE_REVIEW_INPUT = (
     "frontend_visual_a11y_issue_review"
@@ -1259,6 +1274,17 @@ class ProgramService:
                         "back-reference in spec.capability_refs"
                     )
 
+        source_registry_paths: set[str] = set()
+        for source in manifest.source_registry:
+            source_path = source.path.strip()
+            if not source_path:
+                errors.append("source_registry.path must not be empty")
+                continue
+            if source_path in source_registry_paths:
+                errors.append(f"duplicate source_registry path: {source_path}")
+                continue
+            source_registry_paths.add(source_path)
+
         if manifest.schema_version.strip() == "2":
             manifest_spec_dirs = set()
             for spec in manifest.specs:
@@ -1280,6 +1306,18 @@ class ProgramService:
                         "migration_pending: manifest entry missing for "
                         f"{_relative_to_root_or_str(self.root, candidate)}"
                     )
+
+            for source_path in self._discovered_truth_source_paths():
+                if source_path in source_registry_paths:
+                    continue
+                warnings.append(
+                    f"migration_pending: truth source unmapped for {source_path}"
+                )
+
+        for source in manifest.source_registry:
+            source_path = self.root / source.path
+            if not source_path.exists():
+                warnings.append(f"source_registry path not found: {source.path}")
 
         if not manifest.prd_path.strip():
             warnings.append("prd_path is empty (recommended to set for traceability)")
@@ -1505,6 +1543,170 @@ class ProgramService:
             Path(handle.name).unlink(missing_ok=True)
             raise
 
+    def _discovered_truth_source_paths(self) -> list[str]:
+        return [item[0] for item in self._discovered_truth_sources()]
+
+    def _discovered_truth_sources(self) -> list[tuple[str, str, str]]:
+        docs_root = self.root / PROGRAM_TRUTH_SOURCE_DISCOVERY_ROOT
+        if not docs_root.is_dir():
+            return []
+
+        discovered: list[tuple[str, str, str]] = []
+        for candidate in sorted(docs_root.rglob("*.md")):
+            rel_path = _relative_to_root_or_str(self.root, candidate)
+            classified = self._classify_truth_source_path(rel_path)
+            if classified is None:
+                continue
+            discovered.append((rel_path, classified[0], classified[1]))
+        return discovered
+
+    def _classify_truth_source_path(self, rel_path: str) -> tuple[str, str] | None:
+        lower_rel = rel_path.lower()
+        path = Path(rel_path)
+        lower_name = path.name.lower()
+
+        if lower_rel.startswith("docs/superpowers/specs/"):
+            return ("design_doc", "design")
+        if lower_rel.startswith("docs/releases/"):
+            return ("release_doc", "release")
+        if lower_rel == "docs/framework-defect-backlog.zh-cn.md":
+            return ("defect_backlog", "defect")
+        if lower_rel.startswith("docs/defects/"):
+            return ("defect_report", "defect")
+        if "requirements" in lower_name or "spec_split_and_program" in lower_name:
+            return ("requirement_doc", "requirements")
+        if "cli-spec" in lower_name:
+            return ("design_doc", "design")
+        return None
+
+    def _source_text_signal_counts(self, path: Path) -> tuple[int, int, int]:
+        if not path.is_file():
+            return (0, 0, 0)
+        try:
+            text = path.read_text(encoding="utf-8")
+        except OSError:
+            return (0, 0, 0)
+        return (
+            len(PROGRAM_TRUTH_SOURCE_PHASE_RE.findall(text)),
+            len(PROGRAM_TRUTH_SOURCE_DEFERRED_RE.findall(text)),
+            len(PROGRAM_TRUTH_SOURCE_NON_GOAL_RE.findall(text)),
+        )
+
+    def _build_truth_source_inventory(
+        self,
+        manifest: ProgramManifest,
+    ) -> ProgramTruthSourceInventory:
+        entries: list[ProgramTruthSourceEntry] = []
+
+        if manifest.prd_path.strip():
+            prd_path = self.root / manifest.prd_path
+            phase_count, deferred_count, non_goal_count = self._source_text_signal_counts(
+                prd_path
+            )
+            entries.append(
+                ProgramTruthSourceEntry(
+                    path=manifest.prd_path,
+                    source_type="prd",
+                    truth_layer="blueprint",
+                    mapped=True,
+                    exists=prd_path.is_file(),
+                    mapping_ref="prd_path",
+                    phase_signal_count=phase_count,
+                    deferred_signal_count=deferred_count,
+                    non_goal_signal_count=non_goal_count,
+                )
+            )
+
+        spec_layer_defs = (
+            ("spec.md", "spec_doc", "spec"),
+            ("plan.md", "plan_doc", "plan"),
+            ("tasks.md", "tasks_doc", "tasks"),
+            ("task-execution-log.md", "execution_log", "execution"),
+            ("development-summary.md", "development_summary", "close"),
+        )
+        for spec in manifest.specs:
+            spec_dir = self.root / spec.path
+            for filename, source_type, truth_layer in spec_layer_defs:
+                source_path = spec_dir / filename
+                phase_count, deferred_count, non_goal_count = (
+                    self._source_text_signal_counts(source_path)
+                )
+                entries.append(
+                    ProgramTruthSourceEntry(
+                        path=_relative_to_root_or_str(self.root, source_path),
+                        source_type=source_type,
+                        truth_layer=truth_layer,
+                        mapped=True,
+                        exists=source_path.is_file(),
+                        mapping_ref=spec.id,
+                        phase_signal_count=phase_count,
+                        deferred_signal_count=deferred_count,
+                        non_goal_signal_count=non_goal_count,
+                    )
+                )
+
+        discovered_sources = {
+            rel_path: (source_type, truth_layer)
+            for rel_path, source_type, truth_layer in self._discovered_truth_sources()
+        }
+        registry_sources = {
+            item.path.strip(): item
+            for item in manifest.source_registry
+            if item.path.strip()
+        }
+        for rel_path in sorted(set(discovered_sources) | set(registry_sources)):
+            registry_entry = registry_sources.get(rel_path)
+            if registry_entry is not None:
+                source_type = registry_entry.source_type
+                truth_layer = registry_entry.truth_layer
+            else:
+                source_type, truth_layer = discovered_sources[rel_path]
+
+            source_path = self.root / rel_path
+            phase_count, deferred_count, non_goal_count = self._source_text_signal_counts(
+                source_path
+            )
+            entries.append(
+                ProgramTruthSourceEntry(
+                    path=rel_path,
+                    source_type=source_type,
+                    truth_layer=truth_layer,
+                    mapped=rel_path in registry_sources,
+                    exists=source_path.is_file(),
+                    mapping_ref=rel_path if rel_path in registry_sources else "",
+                    phase_signal_count=phase_count,
+                    deferred_signal_count=deferred_count,
+                    non_goal_signal_count=non_goal_count,
+                )
+            )
+
+        layer_totals: dict[str, int] = {}
+        layer_materialized: dict[str, int] = {}
+        for entry in entries:
+            layer_totals[entry.truth_layer] = layer_totals.get(entry.truth_layer, 0) + 1
+            if entry.exists:
+                layer_materialized[entry.truth_layer] = (
+                    layer_materialized.get(entry.truth_layer, 0) + 1
+                )
+            else:
+                layer_materialized.setdefault(entry.truth_layer, 0)
+
+        unmapped_paths = [entry.path for entry in entries if not entry.mapped]
+        return ProgramTruthSourceInventory(
+            state="complete" if not unmapped_paths else "incomplete",
+            total_sources=len(entries),
+            mapped_sources=sum(1 for entry in entries if entry.mapped),
+            unmapped_sources=len(unmapped_paths),
+            missing_sources=sum(1 for entry in entries if not entry.exists),
+            phase_signal_count=sum(entry.phase_signal_count for entry in entries),
+            deferred_signal_count=sum(entry.deferred_signal_count for entry in entries),
+            non_goal_signal_count=sum(entry.non_goal_signal_count for entry in entries),
+            layer_totals=layer_totals,
+            layer_materialized=layer_materialized,
+            entries=entries,
+            unmapped_paths=unmapped_paths,
+        )
+
     def build_truth_snapshot(
         self,
         manifest: ProgramManifest,
@@ -1520,6 +1722,7 @@ class ProgramService:
         release_targets = set(manifest.release_targets)
         source_hashes: dict[str, str] = {}
         computed_capabilities: list[ProgramComputedCapabilityState] = []
+        source_inventory = self._build_truth_source_inventory(manifest)
 
         for capability in manifest.capabilities:
             computed_capabilities.append(
@@ -1541,6 +1744,7 @@ class ProgramService:
             authoring_hash=self._truth_authoring_hash(),
             source_hashes=source_hashes,
             computed_capabilities=computed_capabilities,
+            source_inventory=source_inventory,
             state=self._build_truth_snapshot_state(
                 validation_result=validation,
                 computed_capabilities=computed_capabilities,
@@ -1582,6 +1786,10 @@ class ProgramService:
         )
         persisted_snapshot = manifest.truth_snapshot
         migration_pending_specs = self._migration_pending_specs(validation.warnings)
+        migration_pending_sources = self._migration_pending_sources(validation.warnings)
+        migration_pending_count = len(migration_pending_specs) + len(
+            migration_pending_sources
+        )
 
         if persisted_snapshot is None:
             snapshot_state = "missing"
@@ -1622,7 +1830,7 @@ class ProgramService:
             state=state,
             snapshot_state=snapshot_state,
             release_capabilities=release_capabilities,
-            migration_pending_count=len(migration_pending_specs),
+            migration_pending_count=migration_pending_count,
         )
 
         return {
@@ -1632,11 +1840,21 @@ class ProgramService:
             "snapshot_hash": current_snapshot.snapshot_hash,
             "release_targets": list(manifest.release_targets),
             "release_capabilities": release_capabilities,
-            "migration_pending_count": len(migration_pending_specs),
+            "migration_pending_count": migration_pending_count,
             "migration_pending_specs": migration_pending_specs,
+            "migration_pending_sources": migration_pending_sources,
             "migration_suggestions": [
                 f"add manifest entry for {item}" for item in migration_pending_specs[:5]
+            ]
+            + [
+                f"add source_registry entry for {item}"
+                for item in migration_pending_sources[:5]
             ],
+            "source_inventory": (
+                current_snapshot.source_inventory.model_dump(mode="json")
+                if current_snapshot.source_inventory is not None
+                else None
+            ),
             "validation_errors": list(validation.errors),
             "validation_warnings": list(validation.warnings),
         }
@@ -1871,6 +2089,11 @@ class ProgramService:
             "computed_capabilities": [
                 item.model_dump(mode="json") for item in snapshot.computed_capabilities
             ],
+            "source_inventory": (
+                snapshot.source_inventory.model_dump(mode="json")
+                if snapshot.source_inventory is not None
+                else None
+            ),
             "state": snapshot.state,
         }
 
@@ -1889,6 +2112,11 @@ class ProgramService:
             "computed_capabilities": [
                 item.model_dump(mode="json") for item in snapshot.computed_capabilities
             ],
+            "source_inventory": (
+                snapshot.source_inventory.model_dump(mode="json")
+                if snapshot.source_inventory is not None
+                else None
+            ),
             "state": snapshot.state,
         }
 
@@ -1929,6 +2157,15 @@ class ProgramService:
                 continue
             pending_specs.append(warning.removeprefix(prefix).strip())
         return pending_specs
+
+    def _migration_pending_sources(self, warnings: list[str]) -> list[str]:
+        prefix = "migration_pending: truth source unmapped for "
+        pending_sources: list[str] = []
+        for warning in warnings:
+            if not warning.startswith(prefix):
+                continue
+            pending_sources.append(warning.removeprefix(prefix).strip())
+        return pending_sources
 
     def topo_tiers(self, manifest: ProgramManifest) -> list[list[str]]:
         graph = self._build_graph(manifest)

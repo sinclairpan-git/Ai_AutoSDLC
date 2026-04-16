@@ -90,6 +90,80 @@ class ProgramComputedCapabilityState(BaseModel):
     stale_reason: str = ""
 
 
+class ProgramSourceRef(BaseModel):
+    """One non-spec source explicitly registered in the program ledger."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    path: str
+    source_type: Literal[
+        "design_doc",
+        "requirement_doc",
+        "release_doc",
+        "defect_backlog",
+        "defect_report",
+    ]
+    truth_layer: Literal["design", "requirements", "release", "defect"]
+
+
+class ProgramTruthSourceEntry(BaseModel):
+    """One source entry included in the machine-computed truth inventory."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    path: str
+    source_type: Literal[
+        "prd",
+        "spec_doc",
+        "plan_doc",
+        "tasks_doc",
+        "execution_log",
+        "development_summary",
+        "design_doc",
+        "requirement_doc",
+        "release_doc",
+        "defect_backlog",
+        "defect_report",
+    ]
+    truth_layer: Literal[
+        "blueprint",
+        "spec",
+        "plan",
+        "tasks",
+        "execution",
+        "close",
+        "design",
+        "requirements",
+        "release",
+        "defect",
+    ]
+    mapped: bool = False
+    exists: bool = True
+    mapping_ref: str = ""
+    phase_signal_count: int = 0
+    deferred_signal_count: int = 0
+    non_goal_signal_count: int = 0
+
+
+class ProgramTruthSourceInventory(BaseModel):
+    """Source-completeness view for the global truth snapshot."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    state: Literal["complete", "incomplete"] = "incomplete"
+    total_sources: int = 0
+    mapped_sources: int = 0
+    unmapped_sources: int = 0
+    missing_sources: int = 0
+    phase_signal_count: int = 0
+    deferred_signal_count: int = 0
+    non_goal_signal_count: int = 0
+    layer_totals: dict[str, int] = Field(default_factory=dict)
+    layer_materialized: dict[str, int] = Field(default_factory=dict)
+    entries: list[ProgramTruthSourceEntry] = Field(default_factory=list)
+    unmapped_paths: list[str] = Field(default_factory=list)
+
+
 class ProgramTruthSnapshot(BaseModel):
     """Minimal machine-computed program truth snapshot."""
 
@@ -105,6 +179,7 @@ class ProgramTruthSnapshot(BaseModel):
     computed_capabilities: list[ProgramComputedCapabilityState] = Field(
         default_factory=list
     )
+    source_inventory: ProgramTruthSourceInventory | None = None
     state: str = ""
 
 
@@ -119,5 +194,6 @@ class ProgramManifest(BaseModel):
     release_targets: list[str] = Field(default_factory=list)
     capabilities: list[ProgramCapabilityRef] = Field(default_factory=list)
     capability_closure_audit: ProgramCapabilityClosureAudit | None = None
+    source_registry: list[ProgramSourceRef] = Field(default_factory=list)
     truth_snapshot: ProgramTruthSnapshot | None = None
     specs: list[ProgramSpecRef] = Field(default_factory=list)

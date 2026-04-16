@@ -1040,6 +1040,39 @@ specs:
         assert "Truth Ledger" in status.output
         assert "blocked" in status.output.lower()
 
+    def test_program_truth_sync_and_audit_surface_exposes_source_inventory_migration(
+        self, initialized_project_dir: Path
+    ) -> None:
+        root = initialized_project_dir
+        _init_truth_git_repo(root)
+        _write_program_truth_fixture(root)
+        (root / "docs" / "superpowers" / "specs").mkdir(parents=True, exist_ok=True)
+        (root / "docs" / "superpowers" / "specs" / "2026-04-02-design.md").write_text(
+            "# Design\n\nP2 modern provider\n",
+            encoding="utf-8",
+        )
+        (root / "docs" / "framework-defect-backlog.zh-CN.md").write_text(
+            "# backlog\n\n后续治理\n",
+            encoding="utf-8",
+        )
+        _commit_truth_repo(root, "docs: seed truth ledger source inventory fixture")
+
+        with patch("ai_sdlc.cli.program_cmd.find_project_root", return_value=root):
+            sync = runner.invoke(
+                app,
+                ["program", "truth", "sync", "--execute", "--yes"],
+            )
+            audit = runner.invoke(app, ["program", "truth", "audit"])
+
+        assert sync.exit_code == 0, sync.output
+        assert "source inventory: incomplete" in sync.output.lower()
+        assert "unmapped sources: 2" in sync.output.lower()
+
+        assert audit.exit_code == 1, audit.output
+        assert "source inventory: incomplete" in audit.output.lower()
+        assert "unmapped sources: 2" in audit.output.lower()
+        assert "docs/superpowers/specs/2026-04-02-design.md" in audit.output
+
     def test_program_status_exposes_frontend_readiness(
         self, initialized_project_dir: Path
     ) -> None:
