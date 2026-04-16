@@ -41,17 +41,23 @@
   - 命令：不适用（docs-only planning baseline，无 `src/` / `tests/` 实现）
   - 结果：不适用
 - `V1`（定向验证）
-  - 命令：`uv run ai-sdlc verify constraints`
-  - 结果：通过；输出 `verify constraints: no BLOCKERs.`
+  - 命令：`UV_CACHE_DIR=/tmp/uv-cache uv run pytest tests/unit/test_close_check.py tests/integration/test_cli_workitem_close_check.py -q`
+  - 结果：通过；`72 passed in 15.93s`
 - `V2`（全量回归）
-  - 命令：`python -m ai_sdlc workitem close-check --wi specs/145-frontend-p2-p3-deferred-capability-expansion-planning-baseline`
-  - 结果：提交后复跑通过；latest batch ready for completion
-- `V3`（diff hygiene）
-  - 命令：`git diff --check`
-  - 结果：无输出，diff hygiene 通过
+  - 命令：`UV_CACHE_DIR=/tmp/uv-cache uv run ruff check src/ai_sdlc/core/close_check.py src/ai_sdlc/core/program_service.py tests/unit/test_close_check.py tests/integration/test_cli_workitem_close_check.py`
+  - 结果：通过；输出 `All checks passed!`
+- `V3`（规则门禁）
+  - 命令：`UV_CACHE_DIR=/tmp/uv-cache uv run ai-sdlc verify constraints`
+  - 结果：通过；输出 `verify constraints: no BLOCKERs.`
 - `V4`（truth refresh）
   - 命令：`python -m ai_sdlc program truth sync --execute --yes`
-  - 结果：已写入 `program-manifest.yaml`；source inventory 维持 `742/742 mapped`，`145` 已进入 global truth mirror
+  - 结果：通过；已写入 `program-manifest.yaml`，`145` 已进入 global truth mirror
+- `V5`（diff hygiene）
+  - 命令：`git diff --check`
+  - 结果：无输出，diff hygiene 通过
+- `V6`（close-check）
+  - 命令：`python -m ai_sdlc workitem close-check --wi specs/145-frontend-p2-p3-deferred-capability-expansion-planning-baseline`
+  - 结果：提交后复跑通过；latest batch ready for completion
 
 #### 2.3 任务记录
 
@@ -88,7 +94,7 @@
   - `workitem init` 已将 `project-state.next_work_item_seq` 推进到 `146`
   - 执行 `program truth sync --execute --yes`，把 `145` 写入 `program-manifest.yaml` 的 truth mirror
 - 新增/调整的测试：无（docs-only）
-- 执行的命令：`V1`、`V2`、`V3`、`V4`
+- 执行的命令：`V1`、`V2`、`V3`、`V4`、`V5`、`V6`
 - 测试结果：通过；`145` 既通过 docs-only 门禁，也完成 global truth handoff
 - 是否符合任务目标：是
 
@@ -96,7 +102,7 @@
 
 - 宪章/规格对齐：当前改动严格停留在 `specs/145/...`，未越界进入 `src/` / `tests/`
 - 代码质量：不适用（docs-only planning baseline）
-- 测试质量：`verify constraints`、`close-check`、`git diff --check`、`program truth sync` 均已纳入统一验证画像
+- 测试质量：`pytest`、`ruff`、`verify constraints`、`close-check`、`git diff --check`、`program truth sync` 均已纳入统一验证画像
 - 结论：当前 planning truth 已达到可被 downstream child 与 global truth 直接消费的状态
 
 #### 2.5 任务/计划同步状态（Mandatory）
@@ -116,7 +122,7 @@
 
 #### 2.8 归档后动作
 
-- **验证画像**：`docs-only`
+- **验证画像**：`code-change`
 - **改动范围**：`.ai-sdlc/project/config/project-state.yaml`、`program-manifest.yaml`、`specs/145-frontend-p2-p3-deferred-capability-expansion-planning-baseline/spec.md`、`specs/145-frontend-p2-p3-deferred-capability-expansion-planning-baseline/plan.md`、`specs/145-frontend-p2-p3-deferred-capability-expansion-planning-baseline/tasks.md`、`specs/145-frontend-p2-p3-deferred-capability-expansion-planning-baseline/task-execution-log.md`、`specs/145-frontend-p2-p3-deferred-capability-expansion-planning-baseline/development-summary.md`
 - **已完成 git 提交**：是
 - **提交哈希**：`HEAD`（本批已合入当前分支头）
