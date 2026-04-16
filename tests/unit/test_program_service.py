@@ -514,6 +514,41 @@ def test_build_frontend_provider_expansion_handoff_uses_latest_solution_snapshot
     )
 
 
+def test_build_frontend_cross_provider_consistency_handoff_surfaces_pair_truth_and_release_blockers(
+    tmp_path: Path,
+) -> None:
+    svc = ProgramService(tmp_path)
+
+    handoff = svc.build_frontend_cross_provider_consistency_handoff()
+
+    assert handoff.state == "blocked"
+    assert handoff.schema_version == "1.0"
+    assert handoff.artifact_root == "governance/frontend/cross-provider-consistency"
+    assert handoff.pair_count == 3
+    assert handoff.ready_pair_count == 1
+    assert handoff.conditional_pair_count == 1
+    assert handoff.blocked_pair_count == 1
+    assert handoff.page_schema_ids == [
+        "dashboard-workspace",
+        "search-list-workspace",
+        "wizard-workspace",
+    ]
+    assert [entry.pair_id for entry in handoff.pair_diagnostics] == [
+        "enterprise-vue2__public-primevue__search-list-workspace",
+        "enterprise-vue2__public-primevue__dashboard-workspace",
+        "enterprise-vue2__public-primevue__wizard-workspace",
+    ]
+    assert handoff.pair_diagnostics[0].certification_gate == "ready"
+    assert handoff.pair_diagnostics[1].comparability_state == "coverage-gap"
+    assert handoff.pair_diagnostics[2].blocking_state == "upstream-blocked"
+    assert any(
+        "certification gate remains blocked" in blocker for blocker in handoff.blockers
+    )
+    assert any(
+        "certification gate remains conditional" in warning for warning in handoff.warnings
+    )
+
+
 def _build_host_runtime_plan_for_tests(
     *,
     node_runtime_available: bool | None,

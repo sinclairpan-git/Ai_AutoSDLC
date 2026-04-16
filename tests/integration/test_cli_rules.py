@@ -140,3 +140,43 @@ def test_rules_materialize_frontend_quality_platform_writes_canonical_quality_ar
         / "verdicts"
         / "dashboard-visual-pass.yaml"
     ).is_file()
+
+
+def test_rules_materialize_frontend_cross_provider_consistency_writes_canonical_artifacts(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    init_project(tmp_path)
+    monkeypatch.chdir(tmp_path)
+
+    result = runner.invoke(
+        app,
+        ["rules", "materialize-frontend-cross-provider-consistency"],
+    )
+
+    assert result.exit_code == 0
+    assert "Frontend cross-provider consistency artifacts materialized" in result.output
+    assert (
+        "governance/frontend/cross-provider-consistency/consistency.manifest.yaml"
+        in result.output
+    )
+    assert (
+        "dashboard-workspace/certification.yaml"
+        in result.output
+    )
+    assert (
+        tmp_path
+        / "governance"
+        / "frontend"
+        / "cross-provider-consistency"
+        / "consistency.manifest.yaml"
+    ).is_file()
+    assert (
+        tmp_path
+        / "governance"
+        / "frontend"
+        / "cross-provider-consistency"
+        / "provider-pairs"
+        / "enterprise-vue2__public-primevue__wizard-workspace"
+        / "evidence-index.yaml"
+    ).is_file()

@@ -23,6 +23,9 @@ from ai_sdlc.core.frontend_contract_runtime_attachment import (
     FRONTEND_CONTRACT_RUNTIME_ATTACHMENT_STATUS_ATTACHED,
     build_frontend_contract_runtime_attachment,
 )
+from ai_sdlc.core.frontend_cross_provider_consistency import (
+    validate_frontend_cross_provider_consistency,
+)
 from ai_sdlc.core.frontend_gate_verification import (
     FRONTEND_GATE_EXECUTE_STATE_READY,
     FRONTEND_GATE_EXECUTE_STATE_RECHECK_REQUIRED,
@@ -75,6 +78,9 @@ from ai_sdlc.models.frontend_browser_gate import (
     BrowserProbeArtifactRecord,
     BrowserQualityBundleMaterializationInput,
     BrowserQualityGateExecutionContext,
+)
+from ai_sdlc.models.frontend_cross_provider_consistency import (
+    build_p2_frontend_cross_provider_consistency_baseline,
 )
 from ai_sdlc.models.frontend_gate_policy import (
     build_p1_frontend_gate_policy_visual_a11y_foundation,
@@ -399,6 +405,36 @@ class ProgramFrontendProviderExpansionHandoff:
     react_stack_visibility: str
     react_binding_visibility: str
     provider_diagnostics: list[ProgramFrontendProviderExpansionDiagnostic] = field(
+        default_factory=list
+    )
+    blockers: list[str] = field(default_factory=list)
+    warnings: list[str] = field(default_factory=list)
+
+
+@dataclass
+class ProgramFrontendCrossProviderConsistencyDiagnostic:
+    pair_id: str
+    baseline_provider_id: str
+    candidate_provider_id: str
+    page_schema_id: str
+    final_verdict: str
+    comparability_state: str
+    blocking_state: str
+    evidence_state: str
+    certification_gate: str
+
+
+@dataclass
+class ProgramFrontendCrossProviderConsistencyHandoff:
+    state: str
+    schema_version: str
+    artifact_root: str
+    pair_count: int = 0
+    ready_pair_count: int = 0
+    conditional_pair_count: int = 0
+    blocked_pair_count: int = 0
+    page_schema_ids: list[str] = field(default_factory=list)
+    pair_diagnostics: list[ProgramFrontendCrossProviderConsistencyDiagnostic] = field(
         default_factory=list
     )
     blockers: list[str] = field(default_factory=list)
@@ -4161,6 +4197,79 @@ class ProgramService:
                 ),
             )
             for provider in expansion.providers
+        ]
+
+    def build_frontend_cross_provider_consistency_handoff(
+        self,
+    ) -> ProgramFrontendCrossProviderConsistencyHandoff:
+        """Build the pair-level cross-provider consistency handoff surface for 150."""
+
+        consistency = build_p2_frontend_cross_provider_consistency_baseline()
+        validation = validate_frontend_cross_provider_consistency(
+            consistency,
+            page_ui_schema=build_p2_frontend_page_ui_schema_baseline(),
+            theme_governance=build_p2_frontend_theme_token_governance_baseline(),
+            quality_platform=build_p2_frontend_quality_platform_baseline(),
+        )
+        blockers = list(validation.blockers)
+        warnings = list(validation.warnings)
+        diagnostics = self._build_frontend_cross_provider_consistency_diagnostics(
+            consistency
+        )
+        ready_pair_count = 0
+        conditional_pair_count = 0
+        blocked_pair_count = 0
+
+        for diagnostic in diagnostics:
+            if diagnostic.certification_gate == "ready":
+                ready_pair_count += 1
+                continue
+            if diagnostic.certification_gate == "conditional":
+                conditional_pair_count += 1
+                warnings.append(
+                    "cross-provider certification gate remains conditional: "
+                    f"{diagnostic.pair_id}"
+                )
+                continue
+            blocked_pair_count += 1
+            blockers.append(
+                "cross-provider certification gate remains blocked: "
+                f"{diagnostic.pair_id}"
+            )
+
+        return ProgramFrontendCrossProviderConsistencyHandoff(
+            state="ready" if not blockers else "blocked",
+            schema_version=consistency.handoff_contract.current_version,
+            artifact_root=consistency.handoff_contract.artifact_root,
+            pair_count=len(consistency.certification_bundles),
+            ready_pair_count=ready_pair_count,
+            conditional_pair_count=conditional_pair_count,
+            blocked_pair_count=blocked_pair_count,
+            page_schema_ids=sorted(
+                {bundle.page_schema_id for bundle in consistency.certification_bundles}
+            ),
+            pair_diagnostics=diagnostics,
+            blockers=_unique_strings(blockers),
+            warnings=_unique_strings(warnings),
+        )
+
+    def _build_frontend_cross_provider_consistency_diagnostics(
+        self,
+        consistency,
+    ) -> list[ProgramFrontendCrossProviderConsistencyDiagnostic]:
+        return [
+            ProgramFrontendCrossProviderConsistencyDiagnostic(
+                pair_id=bundle.pair_id,
+                baseline_provider_id=bundle.baseline_provider_id,
+                candidate_provider_id=bundle.candidate_provider_id,
+                page_schema_id=bundle.page_schema_id,
+                final_verdict=bundle.state_vector.final_verdict,
+                comparability_state=bundle.state_vector.comparability_state,
+                blocking_state=bundle.state_vector.blocking_state,
+                evidence_state=bundle.state_vector.evidence_state,
+                certification_gate=bundle.certification_gate,
+            )
+            for bundle in consistency.certification_bundles
         ]
 
     def _build_theme_governance_provider_profile(

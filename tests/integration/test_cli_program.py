@@ -322,6 +322,32 @@ def test_program_provider_expansion_handoff_surfaces_provider_and_react_visibili
     assert "provider diagnostic: react-nextjs-shadcn" in result.output
 
 
+def test_program_cross_provider_consistency_handoff_surfaces_pair_truth(
+    initialized_project_dir: Path,
+) -> None:
+    root = initialized_project_dir
+
+    with patch("ai_sdlc.cli.program_cmd.find_project_root", return_value=root):
+        result = runner.invoke(app, ["program", "cross-provider-consistency-handoff"])
+
+    assert result.exit_code == 1
+    assert "Frontend Cross Provider Consistency Handoff" in result.output
+    assert "state: blocked" in result.output
+    assert "pair count: 3" in result.output
+    assert "ready pairs: 1" in result.output
+    assert "conditional pairs: 1" in result.output
+    assert "blocked pairs: 1" in result.output
+    assert (
+        "pair diagnostic: enterprise-vue2__public-primevue__dashboard-workspace"
+        in result.output
+    )
+    assert (
+        "pair diagnostic: enterprise-vue2__public-primevue__wizard-workspace"
+        in result.output
+    )
+    assert "certification gate remains blocked" in result.output
+
+
 def _write_builtin_delivery_truth(root: Path, *, snapshot=None) -> None:
     _write_frontend_solution_confirmation_artifacts(root, snapshot=snapshot)
     materialize_builtin_frontend_provider_profile_artifacts(

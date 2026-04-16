@@ -422,6 +422,46 @@ def program_provider_expansion_handoff() -> None:
     raise typer.Exit(code=0 if handoff.state == "ready" else 1)
 
 
+@program_app.command("cross-provider-consistency-handoff")
+def program_cross_provider_consistency_handoff() -> None:
+    """Show the cross-provider consistency handoff surface for the 150 baseline."""
+
+    root = _resolve_root()
+    svc = ProgramService(root)
+    handoff = svc.build_frontend_cross_provider_consistency_handoff()
+
+    console.print("[bold cyan]Frontend Cross Provider Consistency Handoff[/bold cyan]")
+    console.print(f"  - state: {handoff.state}", markup=False)
+    console.print(f"  - schema version: {handoff.schema_version}", markup=False)
+    console.print(f"  - artifact root: {handoff.artifact_root}", markup=False)
+    console.print(f"  - pair count: {handoff.pair_count}", markup=False)
+    console.print(f"  - ready pairs: {handoff.ready_pair_count}", markup=False)
+    console.print(
+        f"  - conditional pairs: {handoff.conditional_pair_count}",
+        markup=False,
+    )
+    console.print(f"  - blocked pairs: {handoff.blocked_pair_count}", markup=False)
+    for page_schema_id in handoff.page_schema_ids:
+        console.print(f"  - page schema: {page_schema_id}", markup=False)
+    for diagnostic in handoff.pair_diagnostics:
+        console.print(
+            "  - pair diagnostic: "
+            f"{diagnostic.pair_id} | page: {diagnostic.page_schema_id} | "
+            f"verdict: {diagnostic.final_verdict} | "
+            f"comparability: {diagnostic.comparability_state} | "
+            f"blocking: {diagnostic.blocking_state} | "
+            f"evidence: {diagnostic.evidence_state} | "
+            f"gate: {diagnostic.certification_gate}",
+            markup=False,
+        )
+    for blocker in handoff.blockers:
+        console.print(f"  - blocker: {blocker}", markup=False)
+    for warning in handoff.warnings:
+        console.print(f"  - warning: {warning}", markup=False)
+
+    raise typer.Exit(code=0 if handoff.state == "ready" else 1)
+
+
 @truth_app.command("sync")
 def program_truth_sync(
     manifest: str = typer.Option(

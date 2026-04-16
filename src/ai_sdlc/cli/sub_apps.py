@@ -28,6 +28,9 @@ from ai_sdlc.gates.pipeline_gates import (
 )
 from ai_sdlc.gates.registry import GateRegistry
 from ai_sdlc.gates.task_ac_checks import next_pending_task_ref
+from ai_sdlc.generators.frontend_cross_provider_consistency_artifacts import (
+    materialize_frontend_cross_provider_consistency_artifacts,
+)
 from ai_sdlc.generators.frontend_gate_policy_artifacts import (
     materialize_frontend_gate_policy_artifacts,
 )
@@ -42,6 +45,9 @@ from ai_sdlc.generators.frontend_quality_platform_artifacts import (
 )
 from ai_sdlc.generators.frontend_theme_token_governance_artifacts import (
     materialize_frontend_theme_token_governance_artifacts,
+)
+from ai_sdlc.models.frontend_cross_provider_consistency import (
+    build_p2_frontend_cross_provider_consistency_baseline,
 )
 from ai_sdlc.models.frontend_gate_policy import (
     build_p1_frontend_gate_policy_visual_a11y_foundation,
@@ -466,6 +472,27 @@ def rules_materialize_frontend_quality_platform() -> None:
 
     console.print(
         "[green]Frontend quality platform artifacts materialized[/green] "
+        f"({len(paths)} files)"
+    )
+    for path in paths:
+        console.print(f"  - {path.relative_to(root)}")
+
+
+@rules_app.command(name="materialize-frontend-cross-provider-consistency")
+def rules_materialize_frontend_cross_provider_consistency() -> None:
+    """Materialize canonical frontend cross-provider consistency artifacts."""
+    root = find_project_root()
+    if root is None:
+        console.print("[red]Not inside an AI-SDLC project.[/red]")
+        raise typer.Exit(code=1)
+
+    paths = materialize_frontend_cross_provider_consistency_artifacts(
+        root,
+        consistency=build_p2_frontend_cross_provider_consistency_baseline(),
+    )
+
+    console.print(
+        "[green]Frontend cross-provider consistency artifacts materialized[/green] "
         f"({len(paths)} files)"
     )
     for path in paths:

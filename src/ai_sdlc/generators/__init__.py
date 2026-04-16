@@ -4,6 +4,10 @@ from ai_sdlc.generators.frontend_contract_artifacts import (
     frontend_contracts_root,
     materialize_frontend_contract_artifacts,
 )
+from ai_sdlc.generators.frontend_cross_provider_consistency_artifacts import (
+    frontend_cross_provider_consistency_root,
+    materialize_frontend_cross_provider_consistency_artifacts,
+)
 from ai_sdlc.generators.frontend_gate_policy_artifacts import (
     frontend_gate_policy_root,
     materialize_frontend_gate_policy_artifacts,
@@ -44,9 +48,11 @@ from ai_sdlc.generators.frontend_ui_kernel_artifacts import (
 
 __all__ = [
     "frontend_contracts_root",
+    "frontend_cross_provider_consistency_root",
     "frontend_gate_policy_root",
     "frontend_generation_governance_root",
     "materialize_frontend_contract_artifacts",
+    "materialize_frontend_cross_provider_consistency_artifacts",
     "materialize_frontend_gate_policy_artifacts",
     "materialize_frontend_generation_constraint_artifacts",
     "frontend_page_ui_schema_root",

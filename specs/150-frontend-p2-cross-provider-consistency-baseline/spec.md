@@ -2,10 +2,10 @@
 
 **功能编号**：`150-frontend-p2-cross-provider-consistency-baseline`
 **创建日期**：2026-04-16
-**状态**：已冻结（formal baseline）
+**状态**：已落地（runtime slice 3）
 **输入**：承接 `145 Track D`，将 `cross-provider consistency`、`shared verdict`、`diff surface` 与 `consistency certification` 正式 materialize 为下一条前端主线 child work item。参考：`docs/superpowers/specs/2026-04-02-ai-autosdlc-frontend-governance-ui-kernel-design.md`、`specs/145-frontend-p2-p3-deferred-capability-expansion-planning-baseline/spec.md`、`specs/073-frontend-p2-provider-style-solution-baseline/spec.md`、`specs/147-frontend-p2-page-ui-schema-baseline/spec.md`、`specs/148-frontend-p2-multi-theme-token-governance-baseline/spec.md`、`specs/149-frontend-p2-quality-platform-baseline/spec.md`
 
-> 口径：`145` 已把剩余前端 later-phase capability 拉平成 `Track A -> Track B -> Track C -> Track D -> Track E` 的 canonical child DAG；`147` 已物化 page/ui schema runtime baseline，`148` 已物化 theme/token governance runtime baseline，`149` 已冻结 quality platform baseline，`073` 已完成 provider/style 第一阶段 truth。`150` 的职责不是扩 provider roster，不是开放 public provider choice surface，也不是提前进入 React exposure，而是把“现有 provider 集合如何在共享 schema/theme/quality truth 下进行一致性比较、如何输出 machine-verifiable diff/certification、以及如何为 Track E 提供准入门槛”冻结成 Track D 的单一真值。
+> 口径：`145` 已把剩余前端 later-phase capability 拉平成 `Track A -> Track B -> Track C -> Track D -> Track E` 的 canonical child DAG；`147` 已物化 page/ui schema runtime baseline，`148` 已物化 theme/token governance runtime baseline，`149` 已冻结 quality platform baseline，`073` 已完成 provider/style 第一阶段 truth。`150` 的职责不是扩 provider roster，不是开放 public provider choice surface，也不是提前进入 React exposure，而是把“现有 provider 集合如何在共享 schema/theme/quality truth 下进行一致性比较、如何输出 machine-verifiable diff/certification、以及如何为 Track E 提供准入门槛”冻结成 Track D 的单一真值。当前已进一步落地 runtime slices 1-3：独立的 pair-centric consistency models、canonical artifact materializer、shared validator，以及 ProgramService / CLI / rules / verify handoff 已进入 `src/` / `tests/`；但 global truth refresh proof、close-out 与 Track E consumption 仍未在本批次内宣称完成。
 
 ## 问题定义
 
@@ -56,7 +56,7 @@
 - Track D 必须使用分层的 `consistency state vector`，至少拆分 `final_verdict`、`comparability_state`、`blocking_state`、`evidence_state` 四个维度，避免把 drift、原因、可比性与复检状态折叠成单一 verdict；
 - Track D 必须把“用户体验上一致”冻结为显式 contract：至少覆盖关键任务结果、信息架构/结构锚点、关键交互反馈/状态时序，并允许 provider-native 的非关键视觉差异存在；
 - Track D 必须定义 machine-verifiable 的 diff/certification artifact root、handoff schema 与 truth surfacing record，供 ProgramService、CLI、verify、program truth 与 Track E 直接消费；
-- `150` 当前只做 docs-only formal freeze，不进入 `src/` / `tests/`，不宣称完整 consistency runtime 已落地；
+- `150` 已完成 docs-only formal freeze，并在当前批次推进到 runtime slice 3：已落地 pair-centric models、canonical artifact materializer、shared validator 与 ProgramService / CLI / verify handoff；本批仍不宣称 global truth refresh proof、close-out 或 Track E consumption 已落地；
 - `150` 完成后，下一条前端主线默认进入 Track E，而不是回头重做 Track D planning。
 
 ## 用户故事与验收

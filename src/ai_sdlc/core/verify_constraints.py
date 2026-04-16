@@ -31,6 +31,9 @@ from ai_sdlc.core.frontend_contract_verification import (
     FrontendContractVerificationReport,
     build_frontend_contract_verification_report,
 )
+from ai_sdlc.core.frontend_cross_provider_consistency import (
+    validate_frontend_cross_provider_consistency,
+)
 from ai_sdlc.core.frontend_gate_verification import (
     FrontendGateVerificationReport,
     build_frontend_gate_verification_report,
@@ -57,6 +60,17 @@ from ai_sdlc.gates.task_ac_checks import (
     first_task_missing_acceptance,
 )
 from ai_sdlc.generators.frontend_contract_artifacts import frontend_contracts_root
+from ai_sdlc.models.frontend_cross_provider_consistency import (
+    ConsistencyDiffRecord,
+    ConsistencyHandoffContract,
+    ConsistencyReadinessGate,
+    CoverageGapRecord,
+    FrontendCrossProviderConsistencySet,
+    ProviderPairCertificationBundle,
+    ProviderPairTruthSurfacingRecord,
+    ReadinessGateRule,
+    build_p2_frontend_cross_provider_consistency_baseline,
+)
 from ai_sdlc.models.frontend_generation_constraints import (
     build_mvp_frontend_generation_constraints,
 )
@@ -280,6 +294,12 @@ FRONTEND_PROVIDER_EXPANSION_SOURCE_NAME = (
 FRONTEND_PROVIDER_EXPANSION_COVERAGE_GAP = (
     "frontend_provider_expansion_consistency"
 )
+FRONTEND_CROSS_PROVIDER_CONSISTENCY_SOURCE_NAME = (
+    "frontend cross provider consistency verification"
+)
+FRONTEND_CROSS_PROVIDER_CONSISTENCY_COVERAGE_GAP = (
+    "frontend_cross_provider_consistency"
+)
 FRONTEND_EVIDENCE_CLASS_ALLOWED_VALUES = (
     "framework_capability",
     "consumer_adoption",
@@ -329,6 +349,16 @@ FRONTEND_PROVIDER_EXPANSION_CHECK_OBJECTS = (
     "frontend_provider_expansion_choice_surface_policy_artifacts",
     "frontend_provider_expansion_react_boundary_artifacts",
     FRONTEND_PROVIDER_EXPANSION_COVERAGE_GAP,
+)
+FRONTEND_CROSS_PROVIDER_CONSISTENCY_CHECK_OBJECTS = (
+    "frontend_cross_provider_consistency_manifest_artifacts",
+    "frontend_cross_provider_consistency_handoff_schema_artifacts",
+    "frontend_cross_provider_consistency_truth_surfacing_artifacts",
+    "frontend_cross_provider_consistency_readiness_gate_artifacts",
+    "frontend_cross_provider_consistency_pair_diff_summary_artifacts",
+    "frontend_cross_provider_consistency_pair_certification_artifacts",
+    "frontend_cross_provider_consistency_pair_evidence_index_artifacts",
+    FRONTEND_CROSS_PROVIDER_CONSISTENCY_COVERAGE_GAP,
 )
 
 
@@ -566,6 +596,35 @@ class FrontendProviderExpansionVerificationReport:
         }
 
 
+@dataclass(frozen=True, slots=True)
+class FrontendCrossProviderConsistencyVerificationReport:
+    """Scoped verification summary for work item 150 cross-provider consistency."""
+
+    root: str
+    source_name: str = FRONTEND_CROSS_PROVIDER_CONSISTENCY_SOURCE_NAME
+    check_objects: tuple[str, ...] = FRONTEND_CROSS_PROVIDER_CONSISTENCY_CHECK_OBJECTS
+    blockers: tuple[str, ...] = ()
+    coverage_gaps: tuple[str, ...] = ()
+    gate_result: str = "PASS"
+    pair_count: int = 0
+    ready_pair_count: int = 0
+    conditional_pair_count: int = 0
+    blocked_pair_count: int = 0
+
+    def to_json_dict(self) -> dict[str, object]:
+        return {
+            "source_name": self.source_name,
+            "gate_verdict": self.gate_result,
+            "check_objects": list(self.check_objects),
+            "blockers": list(self.blockers),
+            "coverage_gaps": list(self.coverage_gaps),
+            "pair_count": self.pair_count,
+            "ready_pair_count": self.ready_pair_count,
+            "conditional_pair_count": self.conditional_pair_count,
+            "blocked_pair_count": self.blocked_pair_count,
+        }
+
+
 def build_constraint_report(root: Path) -> ConstraintReport:
     """Build a structured report for verify constraints."""
     checkpoint = load_checkpoint(root)
@@ -584,6 +643,9 @@ def build_constraint_report(root: Path) -> ConstraintReport:
     )
     frontend_provider_expansion_report = (
         _frontend_provider_expansion_attachment_report(root, checkpoint)
+    )
+    frontend_cross_provider_consistency_report = (
+        _frontend_cross_provider_consistency_attachment_report(root, checkpoint)
     )
     check_objects = _merge_unique_strings(
         _merge_unique_strings(
@@ -624,6 +686,14 @@ def build_constraint_report(root: Path) -> ConstraintReport:
             else ()
         ),
     )
+    check_objects = _merge_unique_strings(
+        check_objects,
+        (
+            frontend_cross_provider_consistency_report.check_objects
+            if frontend_cross_provider_consistency_report
+            else ()
+        ),
+    )
     blockers = _merge_unique_strings(
         _merge_unique_strings(
             _merge_unique_strings(
@@ -660,6 +730,14 @@ def build_constraint_report(root: Path) -> ConstraintReport:
         (
             frontend_provider_expansion_report.blockers
             if frontend_provider_expansion_report
+            else ()
+        ),
+    )
+    blockers = _merge_unique_strings(
+        blockers,
+        (
+            frontend_cross_provider_consistency_report.blockers
+            if frontend_cross_provider_consistency_report
             else ()
         ),
     )
@@ -707,6 +785,14 @@ def build_constraint_report(root: Path) -> ConstraintReport:
             else ()
         ),
     )
+    coverage_gaps = _merge_unique_strings(
+        coverage_gaps,
+        (
+            frontend_cross_provider_consistency_report.coverage_gaps
+            if frontend_cross_provider_consistency_report
+            else ()
+        ),
+    )
     return ConstraintReport(
         root=str(root),
         gate_name="Verification Gate",
@@ -737,6 +823,9 @@ def build_verification_gate_context(root: Path) -> dict[str, object]:
     )
     frontend_provider_expansion_report = (
         _frontend_provider_expansion_attachment_report(root, checkpoint)
+    )
+    frontend_cross_provider_consistency_report = (
+        _frontend_cross_provider_consistency_attachment_report(root, checkpoint)
     )
     governance = build_verification_governance_bundle(
         report,
@@ -783,6 +872,14 @@ def build_verification_gate_context(root: Path) -> dict[str, object]:
             else ()
         ),
     )
+    verification_sources = _merge_unique_strings(
+        verification_sources,
+        (
+            (frontend_cross_provider_consistency_report.source_name,)
+            if frontend_cross_provider_consistency_report
+            else ()
+        ),
+    )
     context: dict[str, object] = {
         "verification_sources": verification_sources,
         "verification_check_objects": report.check_objects,
@@ -817,6 +914,10 @@ def build_verification_gate_context(root: Path) -> dict[str, object]:
     if frontend_provider_expansion_report is not None:
         context["frontend_provider_expansion_verification"] = (
             frontend_provider_expansion_report.to_json_dict()
+        )
+    if frontend_cross_provider_consistency_report is not None:
+        context["frontend_cross_provider_consistency_verification"] = (
+            frontend_cross_provider_consistency_report.to_json_dict()
         )
     return context
 
@@ -2204,6 +2305,364 @@ def _frontend_provider_expansion_attachment_report(
     )
 
 
+def _frontend_cross_provider_consistency_attachment_report(
+    root: Path,
+    checkpoint: Checkpoint | None,
+) -> FrontendCrossProviderConsistencyVerificationReport | None:
+    """Resolve the scoped frontend cross-provider consistency attachment for active 150 only."""
+
+    work_item_id = _effective_feature_contract_wi_id(checkpoint)
+    if not _is_150_work_item(work_item_id):
+        return None
+
+    blockers: list[str] = []
+    baseline = build_p2_frontend_cross_provider_consistency_baseline()
+    artifact_root = root / "governance" / "frontend" / "cross-provider-consistency"
+    manifest_path = artifact_root / "consistency.manifest.yaml"
+    handoff_schema_path = artifact_root / "handoff.schema.yaml"
+    truth_surfacing_path = artifact_root / "truth-surfacing.yaml"
+    readiness_gate_path = artifact_root / "readiness-gate.yaml"
+
+    payloads: dict[str, dict[str, object]] = {}
+    for label, path in (
+        ("manifest", manifest_path),
+        ("handoff schema", handoff_schema_path),
+        ("truth surfacing", truth_surfacing_path),
+        ("readiness gate", readiness_gate_path),
+    ):
+        if not path.is_file():
+            blockers.append(
+                "BLOCKER: frontend cross-provider consistency artifact missing: "
+                f"{path.as_posix()}"
+            )
+            continue
+        try:
+            payloads[label] = _load_yaml_mapping(path)
+        except ValueError as exc:
+            blockers.append(
+                "BLOCKER: invalid frontend cross-provider consistency artifact "
+                f"{path.as_posix()}: {exc}"
+            )
+
+    if blockers and len(payloads) != 4:
+        blockers_tuple = tuple(blockers)
+        return FrontendCrossProviderConsistencyVerificationReport(
+            root=str(root),
+            blockers=blockers_tuple,
+            coverage_gaps=(
+                (FRONTEND_CROSS_PROVIDER_CONSISTENCY_COVERAGE_GAP,)
+                if blockers_tuple
+                else ()
+            ),
+            gate_result="RETRY" if blockers_tuple else "PASS",
+            pair_count=len(baseline.certification_bundles),
+        )
+
+    manifest_payload = payloads["manifest"]
+    handoff_schema_payload = payloads["handoff schema"]
+    truth_surfacing_payload = payloads["truth surfacing"]
+    readiness_gate_payload = payloads["readiness gate"]
+
+    pair_count = 0
+    ready_pair_count = 0
+    conditional_pair_count = 0
+    blocked_pair_count = 0
+
+    try:
+        raw_truth_items = truth_surfacing_payload.get("items", [])
+        raw_rules = readiness_gate_payload.get("rules", [])
+        if not isinstance(raw_truth_items, list):
+            raise ValueError("truth surfacing artifact `items` must be a list")
+        if not isinstance(raw_rules, list):
+            raise ValueError("readiness gate artifact `rules` must be a list")
+
+        truth_surfacing_records = [
+            ProviderPairTruthSurfacingRecord.model_validate(item)
+            for item in raw_truth_items
+            if isinstance(item, dict)
+        ]
+        readiness_gate = ConsistencyReadinessGate(
+            gate_id=str(
+                readiness_gate_payload.get(
+                    "gate_id",
+                    baseline.readiness_gate.gate_id,
+                )
+            ),
+            required_coverage_scope=list(
+                _string_tuple(
+                    readiness_gate_payload.get(
+                        "required_coverage_scope",
+                        baseline.readiness_gate.required_coverage_scope,
+                    )
+                )
+            ),
+            optional_coverage_scope=list(
+                _string_tuple(
+                    readiness_gate_payload.get(
+                        "optional_coverage_scope",
+                        baseline.readiness_gate.optional_coverage_scope,
+                    )
+                )
+            ),
+            ux_equivalence_clause_ids=list(
+                _string_tuple(
+                    readiness_gate_payload.get(
+                        "ux_equivalence_clause_ids",
+                        baseline.readiness_gate.ux_equivalence_clause_ids,
+                    )
+                )
+            ),
+            rules=[
+                ReadinessGateRule.model_validate(item)
+                for item in raw_rules
+                if isinstance(item, dict)
+            ],
+        )
+        handoff_contract = ConsistencyHandoffContract(
+            schema_family=str(
+                handoff_schema_payload.get(
+                    "schema_family",
+                    baseline.handoff_contract.schema_family,
+                )
+            ),
+            current_version=str(
+                handoff_schema_payload.get(
+                    "current_version",
+                    baseline.handoff_contract.current_version,
+                )
+            ),
+            compatible_versions=list(
+                _string_tuple(
+                    handoff_schema_payload.get(
+                        "compatible_versions",
+                        baseline.handoff_contract.compatible_versions,
+                    )
+                )
+            ),
+            artifact_root=str(
+                handoff_schema_payload.get(
+                    "artifact_root",
+                    baseline.handoff_contract.artifact_root,
+                )
+            ),
+            canonical_files=list(
+                _string_tuple(
+                    handoff_schema_payload.get(
+                        "canonical_files",
+                        baseline.handoff_contract.canonical_files,
+                    )
+                )
+            ),
+            program_service_fields=list(
+                _string_tuple(
+                    handoff_schema_payload.get(
+                        "program_service_fields",
+                        baseline.handoff_contract.program_service_fields,
+                    )
+                )
+            ),
+            cli_fields=list(
+                _string_tuple(
+                    handoff_schema_payload.get(
+                        "cli_fields",
+                        baseline.handoff_contract.cli_fields,
+                    )
+                )
+            ),
+            verify_fields=list(
+                _string_tuple(
+                    handoff_schema_payload.get(
+                        "verify_fields",
+                        baseline.handoff_contract.verify_fields,
+                    )
+                )
+            ),
+        )
+
+        diff_records: list[ConsistencyDiffRecord] = []
+        coverage_gaps: list[CoverageGapRecord] = []
+        certification_bundles: list[ProviderPairCertificationBundle] = []
+        pair_ids = list(
+            _string_tuple(
+                manifest_payload.get(
+                    "pair_ids",
+                    [bundle.pair_id for bundle in baseline.certification_bundles],
+                )
+            )
+        )
+        pair_count = len(pair_ids)
+
+        for pair_id in pair_ids:
+            pair_root = artifact_root / "provider-pairs" / pair_id
+            pair_payloads: dict[str, dict[str, object]] = {}
+            for label, path in (
+                ("diff summary", pair_root / "diff-summary.yaml"),
+                ("certification", pair_root / "certification.yaml"),
+                ("evidence index", pair_root / "evidence-index.yaml"),
+            ):
+                if not path.is_file():
+                    blockers.append(
+                        "BLOCKER: frontend cross-provider consistency artifact missing: "
+                        f"{path.as_posix()}"
+                    )
+                    continue
+                try:
+                    pair_payloads[label] = _load_yaml_mapping(path)
+                except ValueError as exc:
+                    blockers.append(
+                        "BLOCKER: invalid frontend cross-provider consistency artifact "
+                        f"{path.as_posix()}: {exc}"
+                    )
+            if len(pair_payloads) != 3:
+                continue
+
+            diff_summary_payload = pair_payloads["diff summary"]
+            certification_payload = pair_payloads["certification"]
+            evidence_index_payload = pair_payloads["evidence index"]
+
+            raw_diffs = diff_summary_payload.get("diffs", [])
+            raw_gaps = diff_summary_payload.get("coverage_gaps", [])
+            raw_diff_refs = certification_payload.get("diff_refs", [])
+            raw_gap_refs = certification_payload.get("coverage_gap_refs", [])
+            raw_diff_evidence_refs = evidence_index_payload.get("diff_evidence_refs", [])
+            raw_upstream_truth_refs = evidence_index_payload.get("upstream_truth_refs", [])
+            if not isinstance(raw_diffs, list):
+                raise ValueError("diff summary artifact `diffs` must be a list")
+            if not isinstance(raw_gaps, list):
+                raise ValueError("diff summary artifact `coverage_gaps` must be a list")
+            if not isinstance(raw_diff_refs, list):
+                raise ValueError("certification artifact `diff_refs` must be a list")
+            if not isinstance(raw_gap_refs, list):
+                raise ValueError("certification artifact `coverage_gap_refs` must be a list")
+            if not isinstance(raw_diff_evidence_refs, list):
+                raise ValueError("evidence index artifact `diff_evidence_refs` must be a list")
+            if not isinstance(raw_upstream_truth_refs, list):
+                raise ValueError("evidence index artifact `upstream_truth_refs` must be a list")
+
+            diff_records.extend(
+                [
+                    ConsistencyDiffRecord.model_validate(item)
+                    for item in raw_diffs
+                    if isinstance(item, dict)
+                ]
+            )
+            coverage_gaps.extend(
+                [
+                    CoverageGapRecord.model_validate(item)
+                    for item in raw_gaps
+                    if isinstance(item, dict)
+                ]
+            )
+            bundle = ProviderPairCertificationBundle(
+                pair_id=str(certification_payload.get("pair_id", pair_id)),
+                baseline_provider_id=str(
+                    certification_payload.get("baseline_provider_id", "")
+                ),
+                candidate_provider_id=str(
+                    certification_payload.get("candidate_provider_id", "")
+                ),
+                page_schema_id=str(certification_payload.get("page_schema_id", "")),
+                compared_style_pack_id=str(
+                    certification_payload.get("compared_style_pack_id", "")
+                ),
+                required_journey_ids=list(
+                    _string_tuple(
+                        certification_payload.get("required_journey_ids", ())
+                    )
+                ),
+                state_vector={
+                    "final_verdict": str(
+                        certification_payload.get("final_verdict", "consistent")
+                    ),
+                    "comparability_state": str(
+                        certification_payload.get("comparability_state", "comparable")
+                    ),
+                    "blocking_state": str(
+                        certification_payload.get("blocking_state", "ready")
+                    ),
+                    "evidence_state": str(
+                        certification_payload.get("evidence_state", "fresh")
+                    ),
+                },
+                diff_record_ids=[
+                    str(ref).rsplit("#", 1)[-1]
+                    for ref in raw_diff_refs
+                    if str(ref)
+                ],
+                coverage_gap_ids=[
+                    str(ref).rsplit("#", 1)[-1]
+                    for ref in raw_gap_refs
+                    if str(ref)
+                ],
+                certification_gate=_optional_str(
+                    certification_payload.get("certification_gate")
+                ),
+            )
+            certification_bundles.append(bundle)
+            if bundle.certification_gate == "ready":
+                ready_pair_count += 1
+            elif bundle.certification_gate == "conditional":
+                conditional_pair_count += 1
+                blockers.append(
+                    "BLOCKER: cross-provider certification gate remains conditional: "
+                    f"{bundle.pair_id}"
+                )
+            else:
+                blocked_pair_count += 1
+                blockers.append(
+                    "BLOCKER: cross-provider certification gate remains blocked: "
+                    f"{bundle.pair_id}"
+                )
+
+        consistency = FrontendCrossProviderConsistencySet(
+            work_item_id=str(manifest_payload.get("work_item_id", baseline.work_item_id)),
+            source_work_item_ids=list(
+                _string_tuple(
+                    manifest_payload.get(
+                        "source_work_item_ids",
+                        baseline.source_work_item_ids,
+                    )
+                )
+            ),
+            ux_equivalence_clauses=list(baseline.ux_equivalence_clauses),
+            diff_records=diff_records,
+            coverage_gaps=coverage_gaps,
+            certification_bundles=certification_bundles,
+            truth_surfacing_records=truth_surfacing_records,
+            readiness_gate=readiness_gate,
+            handoff_contract=handoff_contract,
+        )
+    except Exception as exc:
+        blockers.append(
+            "BLOCKER: invalid frontend cross-provider consistency artifact set: "
+            f"{exc}"
+        )
+    else:
+        validation = validate_frontend_cross_provider_consistency(
+            consistency,
+            page_ui_schema=build_p2_frontend_page_ui_schema_baseline(),
+            theme_governance=build_p2_frontend_theme_token_governance_baseline(),
+            quality_platform=build_p2_frontend_quality_platform_baseline(),
+        )
+        blockers.extend(f"BLOCKER: {blocker}" for blocker in validation.blockers)
+
+    blockers_tuple = tuple(blockers)
+    return FrontendCrossProviderConsistencyVerificationReport(
+        root=str(root),
+        blockers=blockers_tuple,
+        coverage_gaps=(
+            (FRONTEND_CROSS_PROVIDER_CONSISTENCY_COVERAGE_GAP,)
+            if blockers_tuple
+            else ()
+        ),
+        gate_result="RETRY" if blockers_tuple else "PASS",
+        pair_count=pair_count,
+        ready_pair_count=ready_pair_count,
+        conditional_pair_count=conditional_pair_count,
+        blocked_pair_count=blocked_pair_count,
+    )
+
+
 def _frontend_contract_runtime_attachment(
     root: Path,
     checkpoint: Checkpoint | None,
@@ -2573,6 +3032,11 @@ def _is_148_work_item(work_item_id: str) -> bool:
 def _is_149_work_item(work_item_id: str) -> bool:
     normalized = work_item_id.strip()
     return normalized == "149" or normalized.startswith("149-") or normalized.startswith("149/")
+
+
+def _is_150_work_item(work_item_id: str) -> bool:
+    normalized = work_item_id.strip()
+    return normalized == "150" or normalized.startswith("150-") or normalized.startswith("150/")
 
 
 def _is_151_work_item(work_item_id: str) -> bool:

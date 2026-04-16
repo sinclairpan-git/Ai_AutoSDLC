@@ -20,13 +20,17 @@ related_doc:
 Batch 1: Track D positioning and upstream boundary freeze
 Batch 2: verdict / diff / certification handoff freeze
 Batch 3: development summary, docs-only validation, truth handoff readiness
+Batch 4: pair-centric runtime slice 1 (models + artifact materializer)
+Batch 5: pair-centric runtime slice 2 (validator + rules)
+Batch 6: pair-centric runtime slice 3 (ProgramService / CLI / rules / verify handoff)
 ```
 
 ---
 
 ## 执行护栏
 
-- `150` 当前只允许 docs-only formal baseline freeze，不得进入 `src/` / `tests/`。
+- `150` formal baseline 已完成；当前批次只允许进入 runtime slice 1：`models + artifact materializer skeleton`，不得提前进入 validator、ProgramService / CLI / verify。
+- 当前已完成 runtime slices 1-2；本批次只允许进入 runtime slice 3：`ProgramService / CLI / rules / verify handoff`，不得提前把 global truth refresh proof、close-out 或 Track E consumption 误报为已完成。
 - `150` 不得重写 `073` provider/style truth、`147` schema truth、`148` theme truth、`149` quality truth。
 - `150` 必须一次性冻结 multi-axis state vector、UX equivalence、structured diff、artifact/truth-surfacing contract、consistency certification 与 Track E readiness gate，不得只补一条 diff 语义然后继续把其他 Track D 内容留在设计引用层。
 - `150` 不得开放 provider roster expansion、public provider choice surface、React exposure 或开放式 style editor runtime。
@@ -154,3 +158,100 @@ Batch 3: development summary, docs-only validation, truth handoff readiness
 - `150` 已通过 docs-only 门禁
 - downstream child 编号以后续 scaffold 当时的 `project-state` 为准
 - `150` 之后的实现优先级默认遵循 `Track D runtime -> Track E`
+
+## Batch 4：pair-centric runtime slice 1
+
+### Task 4.1 实现独立的 150 consistency models
+
+- **任务编号**：T41
+- **优先级**：P0
+- **依赖**：T33
+- **文件**：`src/ai_sdlc/models/frontend_cross_provider_consistency.py`、`tests/unit/test_frontend_cross_provider_consistency_models.py`
+- **可并行**：否
+- **验收标准**：
+  1. `150` 具有独立的 pair-centric models，不复用 `149` quality verdict 或 `151` admission truth
+  2. 明确落地 `final_verdict / comparability_state / blocking_state / evidence_state`
+  3. readiness gate 能从四轴状态派生 `ready / conditional / blocked`
+- **验证**：focused pytest
+
+### Task 4.2 实现 canonical artifact materializer skeleton
+
+- **任务编号**：T42
+- **优先级**：P0
+- **依赖**：T41
+- **文件**：`src/ai_sdlc/generators/frontend_cross_provider_consistency_artifacts.py`、`tests/unit/test_frontend_cross_provider_consistency_artifacts.py`
+- **可并行**：否
+- **验收标准**：
+  1. canonical root 固定为 `governance/frontend/cross-provider-consistency/`
+  2. 至少落地 `consistency.manifest.yaml`、`handoff.schema.yaml`、`truth-surfacing.yaml`、`readiness-gate.yaml` 与 `provider-pairs/<pair_id>/...`
+  3. pair-level diff/certification/evidence-index 能保留四轴状态与 UX contract refs
+- **验证**：focused pytest
+
+### Task 4.3 同步 runtime slice 1 task memory
+
+- **任务编号**：T43
+- **优先级**：P1
+- **依赖**：T42
+- **文件**：`specs/150-frontend-p2-cross-provider-consistency-baseline/spec.md`、`specs/150-frontend-p2-cross-provider-consistency-baseline/plan.md`、`specs/150-frontend-p2-cross-provider-consistency-baseline/tasks.md`、`specs/150-frontend-p2-cross-provider-consistency-baseline/task-execution-log.md`、`specs/150-frontend-p2-cross-provider-consistency-baseline/development-summary.md`
+- **可并行**：否
+- **验收标准**：
+  1. `150` 的任务记忆从 docs-only baseline 刷新为 runtime slice 1
+  2. 文档诚实声明当前尚未落地 validator、ProgramService / CLI / verify
+  3. 后续主线明确收敛到 `validator/rules -> handoff surfaces`
+- **验证**：docs review、`git diff --check`
+
+## Batch 5：pair-centric runtime slice 2
+
+### Task 5.1 实现独立的 150 validator
+
+- **任务编号**：T51
+- **优先级**：P0
+- **依赖**：T43
+- **文件**：`src/ai_sdlc/core/frontend_cross_provider_consistency.py`、`tests/unit/test_frontend_cross_provider_consistency.py`
+- **可并行**：否
+- **验收标准**：
+  1. validator 校验对象必须是 pair bundle，而不是单 provider snapshot
+  2. validator 至少覆盖 page schema/style pack 对齐、coverage gap contract、truth surfacing layers 与 diff evidence refs
+  3. validator 不把 `coverage-gap / not-comparable / upstream-blocked` 折叠成单一 `ready/blocked`
+- **验证**：focused pytest
+
+### Task 5.2 同步 runtime slice 2 task memory
+
+- **任务编号**：T52
+- **优先级**：P1
+- **依赖**：T51
+- **文件**：`specs/150-frontend-p2-cross-provider-consistency-baseline/plan.md`、`specs/150-frontend-p2-cross-provider-consistency-baseline/tasks.md`、`specs/150-frontend-p2-cross-provider-consistency-baseline/task-execution-log.md`、`specs/150-frontend-p2-cross-provider-consistency-baseline/development-summary.md`
+- **可并行**：否
+- **验收标准**：
+  1. `150` 的任务记忆从 runtime slice 1 刷新为 runtime slices 1-2
+  2. 文档诚实声明当前尚未落地 ProgramService / CLI / verify
+  3. 后续主线明确收敛到 `ProgramService / CLI / verify handoff`
+- **验证**：docs review、`git diff --check`
+
+## Batch 6：pair-centric runtime slice 3
+
+### Task 6.1 实现 ProgramService / CLI / rules surfacing
+
+- **任务编号**：T61
+- **优先级**：P0
+- **依赖**：T52
+- **文件**：`src/ai_sdlc/core/program_service.py`、`src/ai_sdlc/cli/program_cmd.py`、`src/ai_sdlc/cli/sub_apps.py`、`tests/unit/test_program_service.py`、`tests/integration/test_cli_program.py`、`tests/integration/test_cli_rules.py`
+- **可并行**：否
+- **验收标准**：
+  1. `ProgramService` 能输出 `150` 的 pair-level handoff，而不是只暴露 isolated validator
+  2. CLI 能直接显示 `ready / conditional / blocked` pair truth
+  3. `rules materialize-frontend-cross-provider-consistency` 能写出 canonical artifacts
+- **验证**：focused pytest
+
+### Task 6.2 实现 verify attachment 与 runtime slice 3 task memory
+
+- **任务编号**：T62
+- **优先级**：P0
+- **依赖**：T61
+- **文件**：`src/ai_sdlc/core/verify_constraints.py`、`tests/unit/test_verify_constraints.py`、`specs/150-frontend-p2-cross-provider-consistency-baseline/spec.md`、`specs/150-frontend-p2-cross-provider-consistency-baseline/plan.md`、`specs/150-frontend-p2-cross-provider-consistency-baseline/tasks.md`、`specs/150-frontend-p2-cross-provider-consistency-baseline/task-execution-log.md`、`specs/150-frontend-p2-cross-provider-consistency-baseline/development-summary.md`
+- **可并行**：否
+- **验收标准**：
+  1. `verify constraints` 能把 `150` artifacts 与 pair gate readiness 纳入 verification context
+  2. `150` 的任务记忆从 runtime slices 1-2 刷新为 runtime slices 1-3
+  3. 文档诚实声明当前尚未落地 global truth refresh proof、close-out 或 Track E consumption
+- **验证**：focused pytest、focused ruff、`git diff --check`

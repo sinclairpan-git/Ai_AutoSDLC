@@ -13,17 +13,17 @@ related_doc:
 
 ## 概述
 
-本计划是 docs-only planning freeze，用于把顶层前端设计里的 Track D `cross-provider consistency` 一次性 materialize 成 canonical child truth。当前交付物只包含 `spec.md / plan.md / tasks.md / task-execution-log.md / development-summary.md`，不进入 `src/` / `tests/`；目标是让后续执行者能够直接按照既定顺序继续实现 multi-axis consistency state model、structured diff、consistency certification、truth surfacing 与 Track E readiness gate，而不是再次回到顶层设计做 capability census。
+本计划最初是 docs-only planning freeze，用于把顶层前端设计里的 Track D `cross-provider consistency` 一次性 materialize 成 canonical child truth。当前已进一步进入 runtime slices 1-3：除 `spec.md / plan.md / tasks.md / task-execution-log.md / development-summary.md` 外，已经落地 pair-centric consistency models、canonical artifact materializer skeleton、shared validator，以及 ProgramService / CLI / rules / verify handoff；本批仍不宣称 global truth refresh proof、close-out 或 Track E consumption 完成。
 
 ## 技术背景
 
-**语言/版本**：Markdown formal docs；仓库运行时保持现状（Python + `ai_sdlc` CLI），本工单不改代码  
-**主要依赖**：`ai_sdlc workitem init` 生成的 canonical scaffold、顶层设计文档、`073/147/148/149` formal truth  
+**语言/版本**：Python 3.11 + Markdown formal docs
+**主要依赖**：`ai_sdlc workitem init` 生成的 canonical scaffold、顶层设计文档、`073/147/148/149` formal truth、现有 `149/151` model/artifact patterns
 **存储**：`specs/150-frontend-p2-cross-provider-consistency-baseline/`  
-**测试**：`UV_CACHE_DIR=/tmp/uv-cache uv run ai-sdlc verify constraints`、`python -m ai_sdlc workitem close-check --wi specs/150-frontend-p2-cross-provider-consistency-baseline`、`git diff --check`、`python -m ai_sdlc program truth sync --dry-run`  
+**测试**：`UV_CACHE_DIR=/tmp/uv-cache uv run pytest tests/unit/test_frontend_cross_provider_consistency_models.py tests/unit/test_frontend_cross_provider_consistency_artifacts.py tests/unit/test_frontend_cross_provider_consistency.py tests/unit/test_program_service.py tests/integration/test_cli_program.py tests/unit/test_verify_constraints.py tests/integration/test_cli_rules.py -k 'cross_provider_consistency or frontend_cross_provider_consistency or materialize_frontend_cross_provider_consistency'`、`UV_CACHE_DIR=/tmp/uv-cache uv run ruff check src/ai_sdlc/models/frontend_cross_provider_consistency.py src/ai_sdlc/generators/frontend_cross_provider_consistency_artifacts.py src/ai_sdlc/core/frontend_cross_provider_consistency.py src/ai_sdlc/core/program_service.py src/ai_sdlc/core/verify_constraints.py src/ai_sdlc/cli/program_cmd.py src/ai_sdlc/cli/sub_apps.py tests/unit/test_frontend_cross_provider_consistency_models.py tests/unit/test_frontend_cross_provider_consistency_artifacts.py tests/unit/test_frontend_cross_provider_consistency.py tests/unit/test_program_service.py tests/integration/test_cli_program.py tests/unit/test_verify_constraints.py tests/integration/test_cli_rules.py`、`git diff --check`
 **目标平台**：Ai_AutoSDLC 仓库的 formal truth / global truth / downstream workitem planning  
 **约束**：
-- 只允许 docs-only 变更，不进入 `src/` / `tests/`
+- 当前批次只允许进入 runtime slice 3：`ProgramService / CLI / rules / verify handoff`，不得提前把 global truth refresh proof、close-out 或 Track E consumption 误报为已完成
 - 不重写 `073` provider/style truth、`147` schema truth、`148` theme truth、`149` quality truth
 - 不把 Track D 与 Track E 混写，不开放 provider roster expansion、public choice surface 或 React exposure
 - 不让 consistency 再造第二套 quality 标准或 provider 输入面
@@ -34,9 +34,9 @@ related_doc:
 | 宪章门禁 | 计划响应 |
 |----------|----------|
 | 单一 canonical truth | 所有 formal docs 只落在 `specs/150-frontend-p2-cross-provider-consistency-baseline/`，外部 design docs 只作为 reference-only 输入 |
-| 先 formalize 再实现 | 当前工单只冻结 Track D 的问题定义、verdict/diff/certification boundary 与 downstream handoff，不直接进入 runtime |
+| 先 formalize 再实现 | formal baseline 已完成；当前只按既定顺序进入 runtime slice 3，不跳过 contract 直接做 handoff |
 | 诚实区分 delivered / deferred | `150` 明确隔离 `073/147/148/149` 已承接 truth 与 Track D 待实现能力 |
-| 有界变更 | 当前批次不改 `src/` / `tests/`、不改既有 runtime contract，只补 Track D planning truth |
+| 有界变更 | 当前批次不改 Track E runtime，不重写 `149/151` 的既有 contract，只补 150 的 handoff surfacing |
 
 ## 项目结构
 
@@ -47,18 +47,32 @@ specs/150-frontend-p2-cross-provider-consistency-baseline/
 ├── spec.md
 ├── plan.md
 ├── tasks.md
-└── task-execution-log.md
+├── task-execution-log.md
 └── development-summary.md
 ```
 
 ### 源码结构
 
 ```text
-future runtime slices (not created in this batch)
-├── consistency models
-├── diff/certification artifacts
-├── validators and rules
-└── ProgramService / CLI / verify handoff
+src/ai_sdlc/
+├── models/frontend_cross_provider_consistency.py
+├── generators/frontend_cross_provider_consistency_artifacts.py
+├── core/frontend_cross_provider_consistency.py
+├── core/program_service.py
+├── core/verify_constraints.py
+├── cli/program_cmd.py
+└── cli/sub_apps.py
+
+tests/unit/
+├── test_frontend_cross_provider_consistency_models.py
+├── test_frontend_cross_provider_consistency_artifacts.py
+├── test_frontend_cross_provider_consistency.py
+├── test_program_service.py
+└── test_verify_constraints.py
+
+tests/integration/
+├── test_cli_program.py
+└── test_cli_rules.py
 ```
 
 ### 计划中的 canonical artifact roots
@@ -99,6 +113,27 @@ governance/frontend/cross-provider-consistency/
 **验证方式**：`UV_CACHE_DIR=/tmp/uv-cache uv run ai-sdlc verify constraints`、`python -m ai_sdlc workitem close-check --wi specs/150-frontend-p2-cross-provider-consistency-baseline`、`git diff --check`、`python -m ai_sdlc program truth sync --dry-run`、`python -m ai_sdlc program truth sync --execute --yes`、`python -m ai_sdlc program truth audit`  
 **回退方式**：仅回退 `150` 文档与可选 truth snapshot 改动。  
 
+### Phase 3：runtime slice 1 - pair-centric model and artifact baseline
+
+**目标**：把 `150` 的四轴状态、pair-level diff/certification artifact root 与 readiness gate 先落成独立 runtime contract，避免直接套用 `149/151` 的单轴 truth 形状。
+**产物**：`src/ai_sdlc/models/frontend_cross_provider_consistency.py`、`src/ai_sdlc/generators/frontend_cross_provider_consistency_artifacts.py`、对应 unit tests
+**验证方式**：focused pytest、focused ruff、`git diff --check`
+**回退方式**：仅回退 `150` runtime slice 1 新增文件与 task memory，不影响既有 `149/151` runtime。
+
+### Phase 4：runtime slice 2 - validator and pair-contract rules
+
+**目标**：在不提前接入 handoff consumer 的前提下，为 `150` 增加 shared validator，确保四轴状态、coverage gap、truth surfacing layer 与上游 truth ref 的组合能够被机器校验。
+**产物**：`src/ai_sdlc/core/frontend_cross_provider_consistency.py`、`tests/unit/test_frontend_cross_provider_consistency.py`
+**验证方式**：focused pytest、focused ruff、`git diff --check`
+**回退方式**：仅回退 validator 与对应 task memory，不影响 slice 1 的 models/artifacts。
+
+### Phase 5：runtime slice 3 - ProgramService / CLI / rules / verify handoff
+
+**目标**：让 `150` 的 pair-level truth 不再只停留在 isolated contract，而是能被 ProgramService、CLI、rules materializer 与 verify constraints 直接消费，并且明确暴露 `ready / conditional / blocked` pair gate 的真状态。
+**产物**：`src/ai_sdlc/core/program_service.py`、`src/ai_sdlc/core/verify_constraints.py`、`src/ai_sdlc/cli/program_cmd.py`、`src/ai_sdlc/cli/sub_apps.py`、对应 unit/integration tests
+**验证方式**：focused pytest、focused ruff、`git diff --check`
+**回退方式**：仅回退 slice 3 handoff surfacing，不影响已有 models/artifacts/validator。
+
 ## 工作流计划
 
 ### 工作流 A：Track D positioning 与 boundary honesty
@@ -122,6 +157,27 @@ governance/frontend/cross-provider-consistency/
 **验证方式**：`verify constraints`、`workitem close-check`、`git diff --check`、`program truth sync --dry-run`、`program truth sync --execute --yes`、`program truth audit`。  
 **回退方式**：回退 execution log / development summary，不影响 spec truth。  
 
+### 工作流 D：pair-centric runtime contract
+
+**范围**：实现独立的 `150` models、pair-level certification/diff artifacts 与 readiness gate materialization。
+**影响范围**：`src/ai_sdlc/models/frontend_cross_provider_consistency.py`、`src/ai_sdlc/generators/frontend_cross_provider_consistency_artifacts.py`、对应 unit tests、`150` task memory。
+**验证方式**：focused pytest、focused ruff、`git diff --check`。
+**回退方式**：回退 slice 1 新增 runtime contract，不影响 formal baseline 与后续 handoff 规划。
+
+### 工作流 E：validator and rules
+
+**范围**：实现独立的 `150` shared validator，校验 pair bundle 与 upstream truth / truth surfacing layer 的一致性。
+**影响范围**：`src/ai_sdlc/core/frontend_cross_provider_consistency.py`、`tests/unit/test_frontend_cross_provider_consistency.py`、`150` task memory。
+**验证方式**：focused pytest、focused ruff、`git diff --check`。
+**回退方式**：回退 validator/rules slice，不影响已有 models 与 artifacts。
+
+### 工作流 F：handoff surfacing and verification attachment
+
+**范围**：实现 `150` 的 ProgramService handoff、CLI surfacing、rules materializer 与 verify constraints 附着校验，并把 pair readiness 真实注入 verification context。
+**影响范围**：`src/ai_sdlc/core/program_service.py`、`src/ai_sdlc/core/verify_constraints.py`、`src/ai_sdlc/cli/program_cmd.py`、`src/ai_sdlc/cli/sub_apps.py`、对应 unit/integration tests、`150` task memory。
+**验证方式**：focused pytest、focused ruff、`git diff --check`。
+**回退方式**：回退 handoff/verify slice，不影响 slice 1-2 的独立 contract。
+
 ## 关键路径验证策略
 
 | 关键路径 | 主验证方式 | 次验证方式 |
@@ -144,5 +200,6 @@ governance/frontend/cross-provider-consistency/
 
 1. 先 formalize Track D positioning、multi-axis state vector、UX equivalence 与 artifact/truth-surface contract
 2. 再落地 Track D runtime models 与 diff/certification artifacts
-3. 然后接入 validator/rules、ProgramService/CLI/verify surfacing 与 program truth consumption
-4. 最后以 Track D certification truth 承接 `frontend-p3-modern-provider-expansion-baseline`
+3. 然后接入 validator/rules、ProgramService/CLI/verify surfacing
+4. 再补 global truth refresh proof、close-out 与 release truth 收口
+5. 最后以 Track D certification truth 承接 `frontend-p3-modern-provider-expansion-baseline`

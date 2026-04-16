@@ -37,6 +37,9 @@ from ai_sdlc.core.verify_constraints import (
     build_verification_governance_bundle,
     collect_constraint_blockers,
 )
+from ai_sdlc.generators.frontend_cross_provider_consistency_artifacts import (
+    materialize_frontend_cross_provider_consistency_artifacts,
+)
 from ai_sdlc.generators.frontend_gate_policy_artifacts import (
     materialize_frontend_gate_policy_artifacts,
 )
@@ -57,6 +60,9 @@ from ai_sdlc.generators.frontend_solution_confirmation_artifacts import (
 )
 from ai_sdlc.generators.frontend_theme_token_governance_artifacts import (
     materialize_frontend_theme_token_governance_artifacts,
+)
+from ai_sdlc.models.frontend_cross_provider_consistency import (
+    build_p2_frontend_cross_provider_consistency_baseline,
 )
 from ai_sdlc.models.frontend_gate_policy import (
     build_mvp_frontend_gate_policy,
@@ -455,6 +461,27 @@ def _write_151_checkpoint(root: Path) -> None:
     save_checkpoint(root, cp)
 
 
+def _write_150_checkpoint(root: Path) -> None:
+    mem = root / ".ai-sdlc" / "memory"
+    mem.mkdir(parents=True, exist_ok=True)
+    (mem / "constitution.md").write_text("# C\n", encoding="utf-8")
+
+    spec = root / "specs" / "150-frontend-p2-cross-provider-consistency-baseline"
+    spec.mkdir(parents=True, exist_ok=True)
+
+    cp = Checkpoint(
+        current_stage="verify",
+        feature=FeatureInfo(
+            id="150",
+            spec_dir="specs/150-frontend-p2-cross-provider-consistency-baseline",
+            design_branch="d",
+            feature_branch="f",
+            current_branch="main",
+        ),
+    )
+    save_checkpoint(root, cp)
+
+
 def _write_frontend_evidence_class_checkpoint(
     root: Path,
     *,
@@ -572,6 +599,14 @@ def _write_151_provider_expansion_artifacts(
     materialize_frontend_provider_expansion_artifacts(
         root,
         expansion=build_p3_frontend_provider_expansion_baseline(),
+    )
+
+
+def _write_150_cross_provider_consistency_artifacts(root: Path) -> None:
+    _write_149_quality_platform_artifacts(root)
+    materialize_frontend_cross_provider_consistency_artifacts(
+        root,
+        consistency=build_p2_frontend_cross_provider_consistency_baseline(),
     )
 
 
@@ -2620,6 +2655,63 @@ def test_151_frontend_provider_expansion_verification_blocks_react_snapshot_whil
     assert report.coverage_gaps == ("frontend_provider_expansion_consistency",)
     assert context["frontend_provider_expansion_verification"]["gate_verdict"] == "RETRY"
     assert any("react stack remains hidden" in blocker for blocker in report.blockers)
+
+
+def test_150_frontend_cross_provider_consistency_verification_surfaces_missing_certification_artifact(
+    tmp_path: Path,
+) -> None:
+    _write_150_checkpoint(tmp_path)
+    _write_150_cross_provider_consistency_artifacts(tmp_path)
+
+    certification_path = (
+        tmp_path
+        / "governance"
+        / "frontend"
+        / "cross-provider-consistency"
+        / "provider-pairs"
+        / "enterprise-vue2__public-primevue__wizard-workspace"
+        / "certification.yaml"
+    )
+    certification_path.unlink()
+
+    report = build_constraint_report(tmp_path)
+    context = build_verification_gate_context(tmp_path)
+
+    assert report.coverage_gaps == ("frontend_cross_provider_consistency",)
+    assert "frontend_cross_provider_consistency" in report.check_objects
+    assert context["verification_sources"] == (
+        "verify constraints",
+        "frontend cross provider consistency verification",
+    )
+    assert (
+        context["frontend_cross_provider_consistency_verification"]["gate_verdict"]
+        == "RETRY"
+    )
+    assert any(
+        "cross-provider consistency artifact missing" in blocker
+        for blocker in report.blockers
+    )
+
+
+def test_150_frontend_cross_provider_consistency_verification_blocks_release_truth_when_pair_gate_not_ready(
+    tmp_path: Path,
+) -> None:
+    _write_150_checkpoint(tmp_path)
+    _write_150_cross_provider_consistency_artifacts(tmp_path)
+
+    report = build_constraint_report(tmp_path)
+    context = build_verification_gate_context(tmp_path)
+
+    assert report.coverage_gaps == ("frontend_cross_provider_consistency",)
+    assert context["frontend_cross_provider_consistency_verification"]["gate_verdict"] == "RETRY"
+    assert context["frontend_cross_provider_consistency_verification"]["pair_count"] == 3
+    assert (
+        context["frontend_cross_provider_consistency_verification"]["blocked_pair_count"]
+        == 1
+    )
+    assert any(
+        "certification gate remains blocked" in blocker for blocker in report.blockers
+    )
 
 
 def test_build_verification_governance_bundle_emits_gate_capable_payload(
