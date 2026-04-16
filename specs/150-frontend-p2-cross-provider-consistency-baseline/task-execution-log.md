@@ -314,6 +314,15 @@
 - `V22`（verify constraints）
   - 命令：`uv run ai-sdlc verify constraints`
   - 结果：通过；在沙箱内以临时 `UV_CACHE_DIR` 执行，输出 `verify constraints: no BLOCKERs.`
+- `V23`（truth sync execute）
+  - 命令：`python -m ai_sdlc program truth sync --execute --yes`
+  - 结果：执行成功；truth snapshot state=`ready`，release target `frontend-mainline-delivery` audit=`ready`
+- `V24`（truth audit）
+  - 命令：`python -m ai_sdlc program truth audit`
+  - 结果：执行成功；`state=ready`、`snapshot state=fresh`
+- `V25`（final close-check）
+  - 命令：`python -m ai_sdlc workitem close-check --wi specs/150-frontend-p2-cross-provider-consistency-baseline`
+  - 结果：执行成功；`done_gate=PASS`
 
 #### 2.21 任务记录
 
@@ -342,14 +351,14 @@
   - 将 `150` 的任务记忆刷新为 runtime slices 1-3，并明确下一步是 truth refresh proof / close-out
 - 新增/调整的测试：
   - `tests/unit/test_verify_constraints.py`
-- 执行的命令：`V17`、`V18`、`V19`、`V20`、`V21`、`V22`
+- 执行的命令：`V17`、`V18`、`V19`、`V20`、`V21`、`V22`、`V23`、`V24`、`V25`
 - 测试结果：通过
 - 是否符合任务目标：是
 
 #### 2.22 批次结论
 
-- `150` 已完成 runtime slice 3；当前已具备可被 ProgramService、CLI、rules 与 verify 直接消费的 pair-centric truth surfacing
-- 下一批不再重做 handoff，而是进入 global truth refresh proof、close-out 与 release truth 收口；当前 close-check 已显示代码面 blocker 清空，只剩 git close-out 与 truth snapshot refresh
+- `150` 已完成 runtime slice 3，并补齐 truth refresh proof / close-out；当前已具备可被 ProgramService、CLI、rules 与 verify 直接消费的 pair-centric truth surfacing，且 close-check / truth audit 均已转绿
+- 下一步不再停留在 `150`，而是返回前端主线，继续 Track E / `145` 指定的后续子项
 
 #### 2.23 归档后动作
 
@@ -357,6 +366,6 @@
 - **改动范围**：`src/ai_sdlc/core/program_service.py`、`src/ai_sdlc/core/verify_constraints.py`、`src/ai_sdlc/cli/program_cmd.py`、`src/ai_sdlc/cli/sub_apps.py`、`tests/unit/test_program_service.py`、`tests/integration/test_cli_program.py`、`tests/unit/test_verify_constraints.py`、`tests/integration/test_cli_rules.py`、`specs/150-frontend-p2-cross-provider-consistency-baseline/spec.md`、`specs/150-frontend-p2-cross-provider-consistency-baseline/plan.md`、`specs/150-frontend-p2-cross-provider-consistency-baseline/tasks.md`、`specs/150-frontend-p2-cross-provider-consistency-baseline/task-execution-log.md`、`specs/150-frontend-p2-cross-provider-consistency-baseline/development-summary.md`
 - **已完成 git 提交**：是
 - **提交哈希**：`最新 HEAD（含 runtime slice 3 close-out）`
-- 当前批次 branch disposition 状态：本批提交后闭环，等待 truth refresh proof 与主链 release truth 收口
-- 当前批次 worktree disposition 状态：本批提交后闭环，等待 truth refresh proof 与主链 release truth 收口
-- 是否继续下一批：是；默认继续 `150` truth refresh proof / close-out
+- 当前批次 branch disposition 状态：本批 close-out 已完成，可返回前端主线继续下一条子项
+- 当前批次 worktree disposition 状态：本批 close-out 已完成，可返回前端主线继续下一条子项
+- 是否继续下一批：是；默认回到前端主线继续 `145` 的下一条承接子项

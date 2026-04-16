@@ -1536,10 +1536,10 @@ specs:
   roles: []
   capability_refs: []
 truth_snapshot:
-  generated_at: '2026-04-16T12:33:55Z'
+  generated_at: '2026-04-16T13:08:21Z'
   generated_by: ai-sdlc program truth sync
   generator_version: program_truth_snapshot_v1
-  repo_revision: b9f5843
+  repo_revision: 935c197
   authoring_hash: 9a901c3f1bd656ecf5cc812b78bc1df05108761dc6b7de6b8fede9506d3e037c
   source_hashes:
     truth_check:specs/095-frontend-mainline-product-delivery-baseline: 40b5e9332011b0d8941245c0e8e7c3b192e897b2bc4aa4876a3d37a94f9b80f0
@@ -1575,7 +1575,7 @@ truth_snapshot:
     close_check:specs/143-frontend-mainline-browser-gate-real-probe-runtime-baseline: 6953138b2d9d62e9f4d337bb97d069400c46449c785c77cdc0440eaafa6aabc6
     close_check:specs/144-frontend-mainline-host-remediation-and-workspace-integration-closure-baseline: 6953138b2d9d62e9f4d337bb97d069400c46449c785c77cdc0440eaafa6aabc6
     verify:uv run ai-sdlc verify constraints: 67c162e8ce6369708f41fd003c4d3b2703509ebeb85aefbbc2a2d67663c45333
-  snapshot_hash: 1746eb538ec3d7bb1390815166c1f97fc3626f9317872bb0c2e4cf1f4757b871
+  snapshot_hash: 80d835d085389b6d68e0efc7f778c9c86a44f211ebaba242067568278ee423ba
   computed_capabilities:
   - capability_id: frontend-mainline-delivery
     closure_state: closed
@@ -1588,8 +1588,8 @@ truth_snapshot:
     mapped_sources: 777
     unmapped_sources: 0
     missing_sources: 0
-    phase_signal_count: 2820
-    deferred_signal_count: 5348
+    phase_signal_count: 2874
+    deferred_signal_count: 5406
     non_goal_signal_count: 268
     layer_totals:
       blueprint: 1
@@ -8397,8 +8397,8 @@ truth_snapshot:
       mapped: true
       exists: true
       mapping_ref: 150-frontend-p2-cross-provider-consistency-baseline
-      phase_signal_count: 29
-      deferred_signal_count: 35
+      phase_signal_count: 45
+      deferred_signal_count: 53
       non_goal_signal_count: 0
     - path: specs/150-frontend-p2-cross-provider-consistency-baseline/task-execution-log.md
       source_type: execution_log
@@ -8406,8 +8406,8 @@ truth_snapshot:
       mapped: true
       exists: true
       mapping_ref: 150-frontend-p2-cross-provider-consistency-baseline
-      phase_signal_count: 22
-      deferred_signal_count: 30
+      phase_signal_count: 60
+      deferred_signal_count: 71
       non_goal_signal_count: 0
     - path: specs/150-frontend-p2-cross-provider-consistency-baseline/development-summary.md
       source_type: development_summary
@@ -8416,7 +8416,7 @@ truth_snapshot:
       exists: true
       mapping_ref: 150-frontend-p2-cross-provider-consistency-baseline
       phase_signal_count: 2
-      deferred_signal_count: 4
+      deferred_signal_count: 3
       non_goal_signal_count: 0
     - path: specs/151-frontend-p3-modern-provider-expansion-baseline/spec.md
       source_type: spec_doc
