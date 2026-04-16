@@ -1698,7 +1698,10 @@ class ProgramService:
 
         for ref in capability.required_evidence.truth_check_refs:
             result = self._run_truth_check_ref(ref)
-            source_hashes[f"truth_check:{ref}"] = self._hash_payload(result)
+            source_key = f"truth_check:{ref}"
+            source_hashes[source_key] = self._hash_payload(
+                self._truth_snapshot_source_hash_payload(source_key, result)
+            )
             if release_scope and (
                 not bool(result.get("ok"))
                 or result.get("classification") == "formal_freeze_only"
@@ -1707,7 +1710,10 @@ class ProgramService:
 
         for ref in capability.required_evidence.close_check_refs:
             result = self._run_close_check_ref(ref)
-            source_hashes[f"close_check:{ref}"] = self._hash_payload(result)
+            source_key = f"close_check:{ref}"
+            source_hashes[source_key] = self._hash_payload(
+                self._truth_snapshot_source_hash_payload(source_key, result)
+            )
             if release_scope and not bool(result.get("ok")):
                 blockers.append(f"close_check:{ref}")
 
@@ -1826,6 +1832,30 @@ class ProgramService:
         return hashlib.sha256(
             json.dumps(payload, sort_keys=True, ensure_ascii=False).encode("utf-8")
         ).hexdigest()
+
+    def _truth_snapshot_source_hash_payload(
+        self,
+        source_key: str,
+        payload: dict[str, object],
+    ) -> dict[str, object]:
+        if source_key.startswith("truth_check:"):
+            return {
+                "ok": bool(payload.get("ok")),
+                "classification": payload.get("classification"),
+                "detail": payload.get("detail"),
+                "wi_path": payload.get("wi_path"),
+                "formal_docs": payload.get("formal_docs"),
+                "execution_started": payload.get("execution_started"),
+                "error": payload.get("error"),
+            }
+        if source_key.startswith("close_check:"):
+            return {
+                "ok": bool(payload.get("ok")),
+                "blockers": payload.get("blockers"),
+                "checks": payload.get("checks"),
+                "error": payload.get("error"),
+            }
+        return payload
 
     def _truth_snapshot_hash_payload(
         self,

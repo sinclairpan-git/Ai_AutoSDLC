@@ -248,6 +248,26 @@ class TestEnsureIdeAdaptation:
         assert cfg.adapter_verification_result == "verified"
         assert cfg.adapter_verification_evidence == "env:OPENAI_CODEX"
 
+    def test_repeated_adaptation_preserves_recorded_verified_ingress_without_env(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setenv("OPENAI_CODEX", "1")
+        init_project(tmp_path, agent_target=IDEKind.CODEX.value)
+        from ai_sdlc.core.config import load_project_config
+
+        before = load_project_config(tmp_path)
+        assert before.adapter_ingress_state == "verified_loaded"
+        assert before.adapter_verification_result == "verified"
+        assert before.adapter_verification_evidence == "env:OPENAI_CODEX"
+
+        monkeypatch.delenv("OPENAI_CODEX", raising=False)
+        ensure_ide_adaptation(tmp_path, agent_target=IDEKind.CODEX)
+        after = load_project_config(tmp_path)
+
+        assert after.adapter_ingress_state == "verified_loaded"
+        assert after.adapter_verification_result == "verified"
+        assert after.adapter_verification_evidence == "env:OPENAI_CODEX"
+
     def test_build_adapter_governance_surface_reports_materialized_truth(
         self, tmp_path: Path
     ) -> None:

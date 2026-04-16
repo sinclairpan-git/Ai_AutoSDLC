@@ -238,6 +238,31 @@ def _preserved_verified_ingress(
     }
 
 
+def _recorded_verified_ingress(
+    cfg: Any,
+    target: IDEKind,
+) -> dict[str, str] | None:
+    canonical_path = _canonical_path(target)
+    if cfg.agent_target != target.value:
+        return None
+    if cfg.adapter_ingress_state != AdapterIngressState.VERIFIED_LOADED.value:
+        return None
+    if cfg.adapter_verification_result != AdapterVerificationResult.VERIFIED.value:
+        return None
+    if not cfg.adapter_verification_evidence:
+        return None
+    if cfg.adapter_canonical_path and cfg.adapter_canonical_path != canonical_path:
+        return None
+    return {
+        "adapter_ingress_state": cfg.adapter_ingress_state,
+        "adapter_verification_result": cfg.adapter_verification_result,
+        "adapter_canonical_path": canonical_path,
+        "adapter_degrade_reason": "",
+        "adapter_verification_evidence": cfg.adapter_verification_evidence,
+        "adapter_verified_at": cfg.adapter_verified_at,
+    }
+
+
 def _ingress_metadata(
     root: Path,
     cfg: Any,
@@ -291,6 +316,10 @@ def _ingress_metadata(
                 "adapter_verification_evidence": evidence,
                 "adapter_verified_at": now_iso(),
             }
+
+    preserved = _recorded_verified_ingress(cfg, target)
+    if preserved is not None:
+        return preserved
 
     return {
         "adapter_ingress_state": AdapterIngressState.MATERIALIZED.value,

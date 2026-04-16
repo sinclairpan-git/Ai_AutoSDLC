@@ -827,6 +827,105 @@ def test_build_truth_ledger_surface_stays_fresh_for_truth_snapshot_only_drift(
     assert surface["state"] == snapshot.state
 
 
+def test_build_truth_ledger_surface_ignores_truth_check_revision_metadata_drift(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    _init_truth_git_repo(tmp_path)
+    (tmp_path / ".ai-sdlc" / "project" / "config").mkdir(parents=True)
+    (tmp_path / ".ai-sdlc" / "project" / "config" / "project-state.yaml").write_text(
+        "status: initialized\nproject_name: demo\nnext_work_item_seq: 1\nversion: '1.0'\n",
+        encoding="utf-8",
+    )
+    (tmp_path / "PRD.md").write_text("# prd\n", encoding="utf-8")
+    spec_dir = tmp_path / "specs" / "082-frontend-example"
+    spec_dir.mkdir(parents=True)
+    (spec_dir / "spec.md").write_text(
+        "# Spec\n\n---\nfrontend_evidence_class: \"framework_capability\"\n---\n",
+        encoding="utf-8",
+    )
+    (spec_dir / "plan.md").write_text("# Plan\n", encoding="utf-8")
+    (spec_dir / "tasks.md").write_text("- [x] done\n", encoding="utf-8")
+    (spec_dir / "task-execution-log.md").write_text(
+        "# Log\n\n统一验证命令\n代码审查\n任务/计划同步状态\n",
+        encoding="utf-8",
+    )
+    (tmp_path / "src").mkdir(parents=True)
+    (tmp_path / "src" / "app.py").write_text("print('demo')\n", encoding="utf-8")
+    _write_truth_ledger_manifest(tmp_path)
+    _commit_truth_repo(tmp_path, "seed truth ledger revision metadata drift fixture")
+
+    base_truth_result = {
+        "ok": True,
+        "classification": "branch_only_implemented",
+        "detail": "requested revision contains execution evidence or implementation changes, but it is not yet contained in main",
+        "requested_revision": "HEAD",
+        "resolved_revision": "abc1234",
+        "head_revision": "abc1234",
+        "current_branch": "feature/truth-sync",
+        "head_matches_revision": True,
+        "contained_in_main": False,
+        "ahead_of_main": 1,
+        "behind_of_main": 0,
+        "wi_path": "specs/082-frontend-example",
+        "formal_docs": {
+            "spec_md": True,
+            "plan_md": True,
+            "tasks_md": True,
+            "task_execution_log_md": True,
+        },
+        "execution_started": True,
+        "changed_paths": [
+            "specs/082-frontend-example/task-execution-log.md",
+            "src/app.py",
+        ],
+        "code_paths": ["src/app.py"],
+        "test_paths": [],
+        "doc_paths": ["specs/082-frontend-example/task-execution-log.md"],
+        "other_paths": [],
+        "error": None,
+    }
+
+    svc = ProgramService(tmp_path)
+    monkeypatch.setattr(
+        svc,
+        "_run_truth_check_ref",
+        lambda ref: dict(base_truth_result),
+    )
+    manifest = svc.load_manifest()
+    snapshot = svc.build_truth_snapshot(manifest)
+    svc.write_truth_snapshot(snapshot)
+
+    drifted_truth_result = dict(base_truth_result)
+    drifted_truth_result.update(
+        {
+            "resolved_revision": "def5678",
+            "head_revision": "def5678",
+            "current_branch": "codex/truth-sync",
+            "head_matches_revision": False,
+            "ahead_of_main": 2,
+            "changed_paths": [
+                "program-manifest.yaml",
+                "specs/082-frontend-example/task-execution-log.md",
+                "src/app.py",
+            ],
+            "other_paths": ["program-manifest.yaml"],
+        }
+    )
+    monkeypatch.setattr(
+        svc,
+        "_run_truth_check_ref",
+        lambda ref: dict(drifted_truth_result),
+    )
+
+    updated_manifest = svc.load_manifest()
+    surface = svc.build_truth_ledger_surface(updated_manifest)
+
+    assert surface is not None
+    assert surface["snapshot_state"] == "fresh"
+    assert surface["state"] == snapshot.state
+
+
 def test_build_truth_snapshot_blocks_release_scope_when_closure_audit_missing(
     tmp_path: Path,
 ) -> None:
