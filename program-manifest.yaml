@@ -1511,6 +1511,19 @@ specs:
   frontend_evidence_class: framework_capability
   roles: []
   capability_refs: []
+- id: 150-frontend-p2-cross-provider-consistency-baseline
+  path: specs/150-frontend-p2-cross-provider-consistency-baseline
+  depends_on:
+  - 073-frontend-p2-provider-style-solution-baseline
+  - 145-frontend-p2-p3-deferred-capability-expansion-planning-baseline
+  - 147-frontend-p2-page-ui-schema-baseline
+  - 148-frontend-p2-multi-theme-token-governance-baseline
+  - 149-frontend-p2-quality-platform-baseline
+  branch_slug: frontend-p2-cross-provider-consistency-baseline
+  owner: team-frontend-governance
+  frontend_evidence_class: framework_capability
+  roles: []
+  capability_refs: []
 truth_snapshot:
   generated_at: '2026-04-16T11:08:25Z'
   generated_by: ai-sdlc program truth sync
