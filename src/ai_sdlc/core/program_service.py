@@ -1478,6 +1478,19 @@ class ProgramService:
                 matched_capabilities=matched_capabilities,
             )
 
+        if not matched_capabilities and state == "blocked":
+            return ProgramSpecTruthReadinessResult(
+                required=True,
+                ready=True,
+                state="ready",
+                detail=(
+                    "truth snapshot is fresh and spec is mapped; "
+                    "unrelated release targets remain blocked"
+                ),
+                matched_spec_ids=matched_spec_ids,
+                matched_capabilities=matched_capabilities,
+            )
+
         if state not in {"", "ready"}:
             return ProgramSpecTruthReadinessResult(
                 required=True,

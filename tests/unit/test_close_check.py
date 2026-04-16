@@ -473,6 +473,105 @@ specs:
     assert any("program truth audit" in blocker for blocker in r.blockers)
 
 
+def test_close_check_allows_non_release_workitem_when_unrelated_release_target_is_blocked(
+    tmp_path: Path,
+) -> None:
+    root = tmp_path / "repo3-program-truth-non-release"
+    root.mkdir()
+    wi_rel = "specs/002-truth-wi"
+    _setup_repo(
+        root,
+        tasks_body="- [x] done\n### Task 1.1\n- **验收标准（AC）**：ok",
+        plan_status="completed",
+        wi_rel=wi_rel,
+        changed_paths=("program-manifest.yaml", "specs/002-truth-wi/task-execution-log.md"),
+    )
+    release_spec = root / "specs/001-release"
+    release_spec.mkdir(parents=True)
+    release_spec.joinpath("spec.md").write_text("# Release Spec\n", encoding="utf-8")
+    release_spec.joinpath("plan.md").write_text("# Release Plan\n", encoding="utf-8")
+    release_spec.joinpath("tasks.md").write_text(
+        "---\n"
+        'related_plan: ".cursor/plans/p.md"\n'
+        "---\n\n"
+        "- [x] release done\n"
+        "### Task 1.1\n"
+        "- **验收标准（AC）**：ok\n",
+        encoding="utf-8",
+    )
+    _write_execution_log(
+        release_spec,
+        git_committed=False,
+        changed_paths=("program-manifest.yaml", "specs/001-release/task-execution-log.md"),
+    )
+    release_spec.joinpath("development-summary.md").write_text(
+        "# Release Summary\n",
+        encoding="utf-8",
+    )
+    truth_wi = root / wi_rel
+    truth_wi.joinpath("spec.md").write_text("# Truth Spec\n", encoding="utf-8")
+    truth_wi.joinpath("plan.md").write_text("# Truth Plan\n", encoding="utf-8")
+    _write_manifest_yaml(
+        root,
+        """
+schema_version: "2"
+program:
+  goal: "Demo truth ledger"
+release_targets:
+  - "frontend-mainline-delivery"
+capabilities:
+  - id: "frontend-mainline-delivery"
+    title: "Frontend Mainline Delivery"
+    goal: "Demo release target"
+    release_required: true
+    spec_refs:
+      - "001-release"
+    required_evidence:
+      truth_check_refs:
+        - "specs/001-release"
+      close_check_refs:
+        - "specs/001-release"
+      verify_refs:
+        - "uv run ai-sdlc verify constraints"
+capability_closure_audit:
+  reviewed_at: "2026-04-16T10:00:00Z"
+  open_clusters:
+    - cluster_id: "frontend-mainline-delivery"
+      title: "Frontend Mainline Delivery"
+      closure_state: "capability_open"
+      summary: "Delivery capability is still open."
+      source_refs:
+        - "001-release"
+specs:
+  - id: "001-release"
+    path: "specs/001-release"
+    depends_on: []
+    roles:
+      - "runtime_carrier"
+    capability_refs:
+      - "frontend-mainline-delivery"
+  - id: "002-truth-wi"
+    path: "specs/002-truth-wi"
+    depends_on: []
+""",
+    )
+    svc = ProgramService(root)
+    snapshot = svc.build_truth_snapshot(svc.load_manifest())
+    svc.write_truth_snapshot(snapshot)
+    _commit_all(root, "docs: materialize unrelated blocked release target")
+    snapshot = svc.build_truth_snapshot(svc.load_manifest())
+    svc.write_truth_snapshot(snapshot)
+    _commit_all(root, "docs: persist fresh truth snapshot")
+
+    r = run_close_check(cwd=root, wi=Path(wi_rel))
+
+    assert r.error is None
+    assert r.ok is True
+    program_truth = next(check for check in r.checks if check["name"] == "program_truth")
+    assert program_truth["ok"] is True
+    assert "fresh and spec is mapped" in str(program_truth["detail"])
+
+
 def test_close_check_blocks_when_associated_branch_is_ahead_and_undisposed(
     tmp_path: Path,
 ) -> None:
