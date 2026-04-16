@@ -226,3 +226,80 @@
 - 代码质量：theme governance runtime truth 已从 docs-only baseline 进入 machine-checkable pydantic models；style pack token 仅以引用表达，未复制 `073` inventory
 - 测试质量：新增的 5 个单测覆盖 builder 正常路径与 4 条关键失败路径，满足 TDD red/green 要求
 - 结论：Batch 5 的 runtime model baseline 已具备继续向 artifact materialization 推进的基础
+
+### Batch 2026-04-16-003 | T61-T63
+
+#### 2.13 批次范围
+
+- 覆盖任务：`T61`、`T62`、`T63`
+- 覆盖阶段：Batch 6 artifact materialization + validator/guardrails slice
+- 预读范围：`specs/148-frontend-p2-multi-theme-token-governance-baseline/tasks.md`、`src/ai_sdlc/generators/frontend_solution_confirmation_artifacts.py`、`src/ai_sdlc/core/frontend_page_ui_schema.py`
+- 激活的规则：TDD red-first、stable artifact root、machine-verifiable diagnostics、017/073/147 upstream validation
+
+#### 2.14 统一验证命令
+
+- `R1`（红灯验证）
+  - 命令：`uv run pytest tests/unit/test_frontend_theme_token_governance_artifacts.py tests/unit/test_frontend_theme_token_governance.py -q`
+  - 结果：按预期失败；`ModuleNotFoundError` 命中 `ai_sdlc.generators.frontend_theme_token_governance_artifacts` 与 `ai_sdlc.core.frontend_theme_token_governance`
+- `V1`（定向 artifact/validator 测试）
+  - 命令：`uv run pytest tests/unit/test_frontend_theme_token_governance_artifacts.py tests/unit/test_frontend_theme_token_governance.py -q`
+  - 结果：通过；`5 passed`
+- `V2`（lint）
+  - 命令：`uv run ruff check src/ai_sdlc/generators/frontend_theme_token_governance_artifacts.py src/ai_sdlc/generators/__init__.py src/ai_sdlc/core/frontend_theme_token_governance.py tests/unit/test_frontend_theme_token_governance_artifacts.py tests/unit/test_frontend_theme_token_governance.py`
+  - 结果：通过；`All checks passed!`
+- `V3`（diff hygiene）
+  - 命令：`git diff --check`
+  - 结果：通过；无输出
+
+#### 2.15 任务记录
+
+##### T61 | failing tests 固定 artifact root 与 validator contract
+
+- 改动范围：`tests/unit/test_frontend_theme_token_governance_artifacts.py`、`tests/unit/test_frontend_theme_token_governance.py`
+- 改动内容：
+  - 新增 artifact 测试，固定 `governance/frontend/theme-token-governance/` root 与四个 canonical files
+  - 新增 validator 测试，固定 builtin happy path 与 4 类 blocker：unknown schema anchor、unsupported provider/style pair、illegal override namespace、token floor bypass
+  - 首次执行获得预期红灯，证明 Batch 6 的生成器与校验器此前尚未实现
+- 新增/调整的测试：
+  - `test_materialize_frontend_theme_token_governance_artifacts_writes_expected_file_set`
+  - `test_theme_token_governance_artifacts_preserve_reference_only_payloads`
+  - `test_frontend_theme_token_governance_root_is_stable`
+  - `test_validate_frontend_theme_token_governance_passes_for_builtin_baseline`
+  - `test_validate_frontend_theme_token_governance_blocks_unknown_anchor_unsupported_pair_illegal_namespace_and_token_floor_bypass`
+- 执行的命令：`R1`
+- 测试结果：通过；红灯命中预期缺失模块
+- 是否符合任务目标：是
+
+##### T62 | 实现 artifact materialization 与 validator/guardrails
+
+- 改动范围：`src/ai_sdlc/generators/frontend_theme_token_governance_artifacts.py`、`src/ai_sdlc/generators/__init__.py`、`src/ai_sdlc/core/frontend_theme_token_governance.py`
+- 改动内容：
+  - 新增 theme governance artifact generator，稳定输出 manifest、token mapping、override policy、style editor boundary 四个 JSON 文件
+  - 新增 root helper，固定 artifact root 为 `governance/frontend/theme-token-governance`
+  - 新增 validator，显式消费：
+    - `017` token floor forbidden naked values
+    - `147` page schema / anchor / render slot truth
+    - `073` provider/style support truth（通过 solution snapshot + provider style support matrix）
+  - 诊断输出保持 machine-verifiable，返回 structured blockers / warnings / artifact_root / effective provider-style state
+- 新增/调整的测试：复用 `T61` 新增测试
+- 执行的命令：`V1`
+- 测试结果：通过；artifact/validator 全部转绿
+- 是否符合任务目标：是
+
+##### T63 | fresh verify 并归档 artifact/validator batch
+
+- 改动范围：`specs/148-frontend-p2-multi-theme-token-governance-baseline/task-execution-log.md`
+- 改动内容：
+  - 追加 Batch 6 的 red/green、artifact root、validator blocker 范围与验证画像
+  - 将本批语义固定为“artifact/validator runtime slice 已落地”，不冒充 ProgramService/CLI/verify integration 已完成
+- 新增/调整的测试：无
+- 执行的命令：`V1`、`V2`、`V3`
+- 测试结果：通过；pytest、ruff、diff hygiene 全部通过
+- 是否符合任务目标：是
+
+#### 2.16 代码审查结论（Mandatory）
+
+- 宪章/规格对齐：当前改动严格停留在 Batch 6 允许的 generator/core/test/log 范围内，未提前侵入 Batch 7 的 ProgramService/CLI
+- 代码质量：artifact payload 采用固定 JSON 布局；validator 直接消费 017/073/147 的上游结构，不在本层新增平行真值
+- 测试质量：新增 5 个测试，覆盖 artifact 文件集合、reference-only payload、happy path 与 4 类 blocker
+- 结论：Batch 6 已具备继续接入 ProgramService/CLI/verify 的 runtime 基础
