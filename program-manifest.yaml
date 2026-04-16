@@ -1525,10 +1525,10 @@ specs:
   roles: []
   capability_refs: []
 truth_snapshot:
-  generated_at: '2026-04-16T11:19:27Z'
+  generated_at: '2026-04-16T11:20:06Z'
   generated_by: ai-sdlc program truth sync
   generator_version: program_truth_snapshot_v1
-  repo_revision: 49a65a1
+  repo_revision: 4b10aa0
   authoring_hash: 9ff32a636fa3a53f4edded66d640a069ad5baaa5417f33e5f93a8e8371e1d366
   source_hashes:
     truth_check:specs/095-frontend-mainline-product-delivery-baseline: 40b5e9332011b0d8941245c0e8e7c3b192e897b2bc4aa4876a3d37a94f9b80f0
@@ -1564,7 +1564,7 @@ truth_snapshot:
     close_check:specs/143-frontend-mainline-browser-gate-real-probe-runtime-baseline: 6953138b2d9d62e9f4d337bb97d069400c46449c785c77cdc0440eaafa6aabc6
     close_check:specs/144-frontend-mainline-host-remediation-and-workspace-integration-closure-baseline: 6953138b2d9d62e9f4d337bb97d069400c46449c785c77cdc0440eaafa6aabc6
     verify:uv run ai-sdlc verify constraints: 67c162e8ce6369708f41fd003c4d3b2703509ebeb85aefbbc2a2d67663c45333
-  snapshot_hash: 33843dc123c929f4e46e6d966ba6e1eb62acd5f1ff72cef6f387edf71c9a9ee5
+  snapshot_hash: e706e0ee33f0249d37850a528eebce8d49dd34280f626cc85a83e2f81e3bc99b
   computed_capabilities:
   - capability_id: frontend-mainline-delivery
     closure_state: closed
