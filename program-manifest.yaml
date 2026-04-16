@@ -82,13 +82,6 @@ capability_closure_audit:
     summary: 005-008 仍是 formal baseline；仓库尚未提供对应 runtime / guard / surface 的实现闭环。
     source_refs:
     - 005-008
-  - cluster_id: frontend-program-automation-chain
-    title: Frontend Program 自动化主链
-    closure_state: capability_open
-    summary: 019-064 存在局部 consumption 实现，但 execute/remediation/writeback/archive/cleanup
-      仍不能按能力闭环认定为已交付。
-    source_refs:
-    - 019-064
   - cluster_id: frontend-p1-experience-stability
     title: Frontend P1 体验稳定性
     closure_state: capability_open
@@ -1559,12 +1552,20 @@ specs:
   frontend_evidence_class: framework_capability
   roles: []
   capability_refs: []
+- id: 155-frontend-program-automation-chain-closure-audit-reconciliation-baseline
+  path: specs/155-frontend-program-automation-chain-closure-audit-reconciliation-baseline
+  depends_on: []
+  branch_slug: frontend-program-automation-chain-closure-audit-reconciliation-baseline
+  owner: team-frontend-governance
+  frontend_evidence_class: framework_capability
+  roles: []
+  capability_refs: []
 truth_snapshot:
-  generated_at: '2026-04-16T14:18:40Z'
+  generated_at: '2026-04-16T16:10:01Z'
   generated_by: ai-sdlc program truth sync
   generator_version: program_truth_snapshot_v1
-  repo_revision: b7e3868
-  authoring_hash: a8c177e3dde26a226483489f3ac00273e32a84e4220272f469b05095c495bd58
+  repo_revision: a9f1995
+  authoring_hash: 72b1499e198fce01f7df827a59d0a53245e8bf1297efc7c4d0b2aac6f0f4f8d7
   source_hashes:
     truth_check:specs/095-frontend-mainline-product-delivery-baseline: 40b5e9332011b0d8941245c0e8e7c3b192e897b2bc4aa4876a3d37a94f9b80f0
     truth_check:specs/096-frontend-mainline-host-runtime-manager-baseline: e4586cf112089fff541fc809f9ba98ad4c4c3d5593de8febfc4e64cb1179ce02
@@ -1599,7 +1600,7 @@ truth_snapshot:
     close_check:specs/143-frontend-mainline-browser-gate-real-probe-runtime-baseline: 6953138b2d9d62e9f4d337bb97d069400c46449c785c77cdc0440eaafa6aabc6
     close_check:specs/144-frontend-mainline-host-remediation-and-workspace-integration-closure-baseline: 6953138b2d9d62e9f4d337bb97d069400c46449c785c77cdc0440eaafa6aabc6
     verify:uv run ai-sdlc verify constraints: 67c162e8ce6369708f41fd003c4d3b2703509ebeb85aefbbc2a2d67663c45333
-  snapshot_hash: 34b1495910caa0442ba11828294b23b975b5eb27acf27d870124c914a18a1c43
+  snapshot_hash: 8c6e937d2e0061cb1c2d21efc91762dedba6359fa6c0b7d572859d7d4eafea7c
   computed_capabilities:
   - capability_id: frontend-mainline-delivery
     closure_state: closed
@@ -1608,31 +1609,31 @@ truth_snapshot:
     stale_reason: ''
   source_inventory:
     state: complete
-    total_sources: 792
-    mapped_sources: 792
+    total_sources: 797
+    mapped_sources: 797
     unmapped_sources: 0
     missing_sources: 0
-    phase_signal_count: 2976
-    deferred_signal_count: 5544
-    non_goal_signal_count: 274
+    phase_signal_count: 2983
+    deferred_signal_count: 5553
+    non_goal_signal_count: 275
     layer_totals:
       blueprint: 1
-      spec: 155
-      plan: 155
-      tasks: 155
-      execution: 155
-      close: 155
+      spec: 156
+      plan: 156
+      tasks: 156
+      execution: 156
+      close: 156
       requirements: 2
       defect: 2
       design: 8
       release: 4
     layer_materialized:
       blueprint: 1
-      spec: 155
-      plan: 155
-      tasks: 155
-      execution: 155
-      close: 155
+      spec: 156
+      plan: 156
+      tasks: 156
+      execution: 156
+      close: 156
       requirements: 2
       defect: 2
       design: 8
@@ -8621,6 +8622,51 @@ truth_snapshot:
       mapping_ref: 154-frontend-contract-foundation-closure-audit-reconciliation-baseline
       phase_signal_count: 0
       deferred_signal_count: 1
+      non_goal_signal_count: 0
+    - path: specs/155-frontend-program-automation-chain-closure-audit-reconciliation-baseline/spec.md
+      source_type: spec_doc
+      truth_layer: spec
+      mapped: true
+      exists: true
+      mapping_ref: 155-frontend-program-automation-chain-closure-audit-reconciliation-baseline
+      phase_signal_count: 3
+      deferred_signal_count: 4
+      non_goal_signal_count: 1
+    - path: specs/155-frontend-program-automation-chain-closure-audit-reconciliation-baseline/plan.md
+      source_type: plan_doc
+      truth_layer: plan
+      mapped: true
+      exists: true
+      mapping_ref: 155-frontend-program-automation-chain-closure-audit-reconciliation-baseline
+      phase_signal_count: 1
+      deferred_signal_count: 1
+      non_goal_signal_count: 0
+    - path: specs/155-frontend-program-automation-chain-closure-audit-reconciliation-baseline/tasks.md
+      source_type: tasks_doc
+      truth_layer: tasks
+      mapped: true
+      exists: true
+      mapping_ref: 155-frontend-program-automation-chain-closure-audit-reconciliation-baseline
+      phase_signal_count: 0
+      deferred_signal_count: 0
+      non_goal_signal_count: 0
+    - path: specs/155-frontend-program-automation-chain-closure-audit-reconciliation-baseline/task-execution-log.md
+      source_type: execution_log
+      truth_layer: execution
+      mapped: true
+      exists: true
+      mapping_ref: 155-frontend-program-automation-chain-closure-audit-reconciliation-baseline
+      phase_signal_count: 2
+      deferred_signal_count: 2
+      non_goal_signal_count: 0
+    - path: specs/155-frontend-program-automation-chain-closure-audit-reconciliation-baseline/development-summary.md
+      source_type: development_summary
+      truth_layer: close
+      mapped: true
+      exists: true
+      mapping_ref: 155-frontend-program-automation-chain-closure-audit-reconciliation-baseline
+      phase_signal_count: 1
+      deferred_signal_count: 2
       non_goal_signal_count: 0
     - path: docs/SPEC_SPLIT_AND_PROGRAM.zh-CN.md
       source_type: requirement_doc
