@@ -61,16 +61,16 @@
 
 - `V1`（规则门禁）
   - 命令：`UV_CACHE_DIR=/tmp/uv-cache uv run ai-sdlc verify constraints`
-  - 结果：待 `154` final close-out 后补齐
+  - 结果：通过；输出 `verify constraints: no BLOCKERs.`
 - `V2`（self close-check）
   - 命令：`python -m ai_sdlc workitem close-check --wi specs/128-frontend-runtime-attachment-verify-gate-readiness-closure-baseline`
-  - 结果：待 `154` final close-out 后补齐
+  - 结果：通过；latest batch `ready for completion`
 - `V3`（truth freshness）
   - 命令：`python -m ai_sdlc program truth sync --dry-run`
-  - 结果：待 `154` final close-out 后补齐
+  - 结果：由 `154` final close-out 统一触发 latest truth refresh；最终 `program truth audit` 为 `ready / fresh`
 - `V4`（diff hygiene）
   - 命令：`git diff --check`
-  - 结果：待 `154` final close-out 后补齐
+  - 结果：通过；无输出
 
 ### 2.3 任务记录
 
@@ -82,14 +82,14 @@
   - 保持 `128` 既有 runtime 结论不变，只补齐 latest close-out 元数据
 - 新增/调整的测试：无
 - 执行的命令：`V1`、`V2`、`V3`、`V4`
-- 测试结果：待 `154` final close-out 后补齐
+- 测试结果：通过；`128` latest batch 已进入 current close-check grammar
 - 是否符合任务目标：是
 
 ### 2.4 代码审查结论（Mandatory）
 
 - 宪章/规格对齐：本批只做 close-out normalization，不重写 `128` runtime scope
 - 代码质量：不适用（execution log normalization）
-- 测试质量：待 `154` final close-out 后补齐 fresh evidence
+- 测试质量：`verify constraints`、`workitem close-check`、`git diff --check` 与 root truth fresh audit 已纳入当前 close-out 证据
 - 结论：`128` 已具备进入 current close-check grammar 的前置条件
 
 ### 2.5 任务/计划同步状态（Mandatory）

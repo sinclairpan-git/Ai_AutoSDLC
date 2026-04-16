@@ -24,16 +24,16 @@
 
 - `V1`（规则门禁）
   - 命令：`UV_CACHE_DIR=/tmp/uv-cache uv run ai-sdlc verify constraints`
-  - 结果：待 final close-out 后补齐
+  - 结果：通过；输出 `verify constraints: no BLOCKERs.`
 - `V2`（S2 close-check sweep）
   - 命令：`python -m ai_sdlc workitem close-check --wi specs/009-frontend-governance-ui-kernel`、`python -m ai_sdlc workitem close-check --wi specs/012-frontend-contract-verify-integration`、`python -m ai_sdlc workitem close-check --wi specs/065-frontend-contract-sample-source-selfcheck-baseline`、`python -m ai_sdlc workitem close-check --wi specs/127-frontend-contract-observation-producer-runtime-closure-baseline`、`python -m ai_sdlc workitem close-check --wi specs/128-frontend-runtime-attachment-verify-gate-readiness-closure-baseline`
-  - 结果：待 final close-out 后补齐
+  - 结果：通过；`009/012/065/127/128` latest clean-tree close-check 均为 `ready for completion`
 - `V3`（truth refresh）
   - 命令：`python -m ai_sdlc program truth sync --dry-run`、`python -m ai_sdlc program truth sync --execute --yes`
-  - 结果：待 final close-out 后补齐
+  - 结果：dry-run 在 authoring 变更后诚实提示需要 refresh；execute 完成后 `truth snapshot state=ready`
 - `V4`（truth audit / diff hygiene）
   - 命令：`python -m ai_sdlc program truth audit`、`git diff --check`
-  - 结果：待 final close-out 后补齐
+  - 结果：`program truth audit` 通过；`state=ready / snapshot state=fresh`；`git diff --check` 通过且无输出
 
 #### 2.3 任务记录
 
@@ -70,14 +70,14 @@
   - 记录本批 truth-only reconciliation 的 close-out 口径
 - 新增/调整的测试：无
 - 执行的命令：`V1`、`V2`、`V3`、`V4`
-- 测试结果：待 final close-out 后补齐
+- 测试结果：通过；root `frontend-contract-foundation` open cluster 已从 manifest 中移除
 - 是否符合任务目标：是
 
 #### 2.4 代码审查结论（Mandatory）
 
 - 宪章/规格对齐：`154` 严格停留在 truth-only reconciliation，不越界新增 runtime
 - 代码质量：不适用（truth-only closure carrier）
-- 测试质量：待 final close-out 后补齐 fresh `verify constraints`、close-check sweep、truth refresh 与 audit 结果
+- 测试质量：fresh `verify constraints`、`S2 close-check sweep`、`program truth sync`、`program truth audit` 与 `git diff --check` 均已纳入统一验证画像
 - 结论：`154` 已具备进入 final truth refresh 与 close-out 的前置条件
 
 #### 2.5 任务/计划同步状态（Mandatory）
