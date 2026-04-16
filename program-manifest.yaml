@@ -1536,11 +1536,11 @@ specs:
   roles: []
   capability_refs: []
 truth_snapshot:
-  generated_at: '2026-04-16T11:20:06Z'
+  generated_at: '2026-04-16T11:35:33Z'
   generated_by: ai-sdlc program truth sync
   generator_version: program_truth_snapshot_v1
-  repo_revision: 4b10aa0
-  authoring_hash: 9ff32a636fa3a53f4edded66d640a069ad5baaa5417f33e5f93a8e8371e1d366
+  repo_revision: 3c8953e
+  authoring_hash: 9a901c3f1bd656ecf5cc812b78bc1df05108761dc6b7de6b8fede9506d3e037c
   source_hashes:
     truth_check:specs/095-frontend-mainline-product-delivery-baseline: 40b5e9332011b0d8941245c0e8e7c3b192e897b2bc4aa4876a3d37a94f9b80f0
     truth_check:specs/096-frontend-mainline-host-runtime-manager-baseline: e4586cf112089fff541fc809f9ba98ad4c4c3d5593de8febfc4e64cb1179ce02
@@ -1575,7 +1575,7 @@ truth_snapshot:
     close_check:specs/143-frontend-mainline-browser-gate-real-probe-runtime-baseline: 6953138b2d9d62e9f4d337bb97d069400c46449c785c77cdc0440eaafa6aabc6
     close_check:specs/144-frontend-mainline-host-remediation-and-workspace-integration-closure-baseline: 6953138b2d9d62e9f4d337bb97d069400c46449c785c77cdc0440eaafa6aabc6
     verify:uv run ai-sdlc verify constraints: 67c162e8ce6369708f41fd003c4d3b2703509ebeb85aefbbc2a2d67663c45333
-  snapshot_hash: e706e0ee33f0249d37850a528eebce8d49dd34280f626cc85a83e2f81e3bc99b
+  snapshot_hash: 630e59a5e5ed21bbff2e5bf12a066e3e52a5cc2f24db7c8259520b789a624dd2
   computed_capabilities:
   - capability_id: frontend-mainline-delivery
     closure_state: closed
@@ -1584,31 +1584,31 @@ truth_snapshot:
     stale_reason: ''
   source_inventory:
     state: complete
-    total_sources: 772
-    mapped_sources: 772
+    total_sources: 777
+    mapped_sources: 777
     unmapped_sources: 0
     missing_sources: 0
-    phase_signal_count: 2683
-    deferred_signal_count: 5170
-    non_goal_signal_count: 264
+    phase_signal_count: 2755
+    deferred_signal_count: 5276
+    non_goal_signal_count: 266
     layer_totals:
       blueprint: 1
-      spec: 151
-      plan: 151
-      tasks: 151
-      execution: 151
-      close: 151
+      spec: 152
+      plan: 152
+      tasks: 152
+      execution: 152
+      close: 152
       requirements: 2
       defect: 2
       design: 8
       release: 4
     layer_materialized:
       blueprint: 1
-      spec: 151
-      plan: 151
-      tasks: 151
-      execution: 151
-      close: 151
+      spec: 152
+      plan: 152
+      tasks: 152
+      execution: 152
+      close: 152
       requirements: 2
       defect: 2
       design: 8
@@ -8415,6 +8415,51 @@ truth_snapshot:
       mapped: true
       exists: true
       mapping_ref: 150-frontend-p2-cross-provider-consistency-baseline
+      phase_signal_count: 2
+      deferred_signal_count: 4
+      non_goal_signal_count: 0
+    - path: specs/151-frontend-p3-modern-provider-expansion-baseline/spec.md
+      source_type: spec_doc
+      truth_layer: spec
+      mapped: true
+      exists: true
+      mapping_ref: 151-frontend-p3-modern-provider-expansion-baseline
+      phase_signal_count: 11
+      deferred_signal_count: 27
+      non_goal_signal_count: 2
+    - path: specs/151-frontend-p3-modern-provider-expansion-baseline/plan.md
+      source_type: plan_doc
+      truth_layer: plan
+      mapped: true
+      exists: true
+      mapping_ref: 151-frontend-p3-modern-provider-expansion-baseline
+      phase_signal_count: 13
+      deferred_signal_count: 16
+      non_goal_signal_count: 0
+    - path: specs/151-frontend-p3-modern-provider-expansion-baseline/tasks.md
+      source_type: tasks_doc
+      truth_layer: tasks
+      mapped: true
+      exists: true
+      mapping_ref: 151-frontend-p3-modern-provider-expansion-baseline
+      phase_signal_count: 26
+      deferred_signal_count: 32
+      non_goal_signal_count: 0
+    - path: specs/151-frontend-p3-modern-provider-expansion-baseline/task-execution-log.md
+      source_type: execution_log
+      truth_layer: execution
+      mapped: true
+      exists: true
+      mapping_ref: 151-frontend-p3-modern-provider-expansion-baseline
+      phase_signal_count: 20
+      deferred_signal_count: 27
+      non_goal_signal_count: 0
+    - path: specs/151-frontend-p3-modern-provider-expansion-baseline/development-summary.md
+      source_type: development_summary
+      truth_layer: close
+      mapped: true
+      exists: true
+      mapping_ref: 151-frontend-p3-modern-provider-expansion-baseline
       phase_signal_count: 2
       deferred_signal_count: 4
       non_goal_signal_count: 0

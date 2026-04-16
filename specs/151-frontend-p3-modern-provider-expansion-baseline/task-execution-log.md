@@ -57,13 +57,13 @@
   - 结果：执行成功；truth snapshot state=`blocked`，source inventory=`777/777 mapped`，当前阻塞为 persisted truth snapshot 尚未刷新，需在 close-out 后执行 `truth sync --execute`
 - `V7`（truth refresh execute）
   - 命令：`python -m ai_sdlc program truth sync --execute --yes`
-  - 结果：待最终 close-out 后执行
+  - 结果：执行成功；truth snapshot state=`ready`，release target `frontend-mainline-delivery` audit=`ready`，`151` 已被纳入最新全局真值快照
 - `V8`（truth audit）
   - 命令：`python -m ai_sdlc program truth audit`
-  - 结果：待最终 close-out 后执行
+  - 结果：执行成功；truth snapshot state=`fresh`，release targets=`ready`
 - `V9`（最终 close-check）
   - 命令：`python -m ai_sdlc workitem close-check --wi specs/151-frontend-p3-modern-provider-expansion-baseline`
-  - 结果：待最终 close-out 后执行
+  - 结果：待最终 close-out 提交后复跑；预期无 `151` 自身 blocker
 
 #### 2.3 任务记录
 
@@ -138,8 +138,8 @@
 
 - **验证画像**：`truth-only`
 - **改动范围**：`program-manifest.yaml`、`specs/151-frontend-p3-modern-provider-expansion-baseline/spec.md`、`specs/151-frontend-p3-modern-provider-expansion-baseline/plan.md`、`specs/151-frontend-p3-modern-provider-expansion-baseline/tasks.md`、`specs/151-frontend-p3-modern-provider-expansion-baseline/task-execution-log.md`、`specs/151-frontend-p3-modern-provider-expansion-baseline/development-summary.md`
-- **已完成 git 提交**：待本次补记与状态推进一并提交
-- **提交哈希**：待补记提交后回填
+- **已完成 git 提交**：是
+- **提交哈希**：`最新 HEAD（含 final truth refresh snapshot）`
 - 当前批次 branch disposition 状态：本批提交后闭环，可继续 `151` runtime
 - 当前批次 worktree disposition 状态：本批提交后闭环，可继续 `151` runtime
 - 是否继续下一批：是；默认继续 `151` 自身 runtime slices，而不是重新做 capability census
