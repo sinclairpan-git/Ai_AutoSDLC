@@ -1524,6 +1524,17 @@ specs:
   frontend_evidence_class: framework_capability
   roles: []
   capability_refs: []
+- id: 151-frontend-p3-modern-provider-expansion-baseline
+  path: specs/151-frontend-p3-modern-provider-expansion-baseline
+  depends_on:
+  - 073-frontend-p2-provider-style-solution-baseline
+  - 145-frontend-p2-p3-deferred-capability-expansion-planning-baseline
+  - 150-frontend-p2-cross-provider-consistency-baseline
+  branch_slug: frontend-p3-modern-provider-expansion-baseline
+  owner: team-frontend-governance
+  frontend_evidence_class: framework_capability
+  roles: []
+  capability_refs: []
 truth_snapshot:
   generated_at: '2026-04-16T11:20:06Z'
   generated_by: ai-sdlc program truth sync
