@@ -157,7 +157,7 @@
 
 - `tasks.md` 同步状态：已与真实执行状态对齐
 - `related_plan` 同步状态：已与“truth-only reconciliation”范围保持一致
-- 关联 branch/worktree disposition 计划：提交当前 truth-only reconciliation 后重跑 `158 close-check`
+- 关联 branch/worktree disposition 计划：已在 `codex/158-agent-adapter-ingress-audit` 上完成本批提交，并在 post-commit 状态重跑 `158 close-check`
 - 说明：本工单不宣称已证明 host 已消费 canonical path 内容，也不宣称 dry-run startup readiness 已闭环
 
 #### 2.6 自动决策记录（如有）
@@ -174,8 +174,8 @@
 
 - **验证画像**：`truth-only`
 - **改动范围**：`program-manifest.yaml`、`.ai-sdlc/project/config/project-state.yaml`、`specs/158-agent-adapter-verified-host-ingress-closure-audit-reconciliation-baseline/spec.md`、`specs/158-agent-adapter-verified-host-ingress-closure-audit-reconciliation-baseline/plan.md`、`specs/158-agent-adapter-verified-host-ingress-closure-audit-reconciliation-baseline/tasks.md`、`specs/158-agent-adapter-verified-host-ingress-closure-audit-reconciliation-baseline/task-execution-log.md`、`specs/158-agent-adapter-verified-host-ingress-closure-audit-reconciliation-baseline/development-summary.md`
-- **已完成 git 提交**：否（待本批 close-out）
-- **提交哈希**：待定
-- 当前批次 branch disposition 状态：待本批提交后更新
-- 当前批次 worktree disposition 状态：待本批提交后更新
+- **已完成 git 提交**：是
+- **提交哈希**：`2a5b03a`
+- 当前批次 branch disposition 状态：已切至 `codex/158-agent-adapter-ingress-audit` 并完成本批提交
+- 当前批次 worktree disposition 状态：post-commit truth refresh / close-check 复核中
 - 是否继续下一批：是；若后续需要真正关闭该 cluster，应新增针对 startup observability / readiness 的独立修复 carrier
