@@ -69,13 +69,17 @@ capability_closure_audit:
   - cluster_id: agent-adapter-verified-host-ingress
     title: Agent Adapter 真实接入与宿主验证
     closure_state: partial
-    summary: 010/094 已冻结 target selection 与 acknowledged gate，121 已将该缺口升级为 root truth；但当前
-      adapter 仍未对齐厂商公开文档支持的默认读取入口，且缺少 machine-verifiable host ingress runtime。TRAE
-      因厂商公开支持不明确，当前只能归入 generic。
+    summary: 010/094/121/122 已冻结 target selection、acknowledgement 边界与 verified ingress
+      truth；当前 `adapter status` 已以 `env:OPENAI_CODEX` 给出 Codex host ingress 的 machine-verifiable
+      `verified_loaded` 证据，但 canonical content 已被宿主实际消费仍缺独立证明，且仓库级 `run --dry-run`
+      在历史 `001` close checkpoint 上仍表现为长时间静默后完成。该 cluster 继续保留为 `partial`，缺口已收敛为 startup
+      observability / operator-facing readiness 语义，而不是“完全没有 verified host ingress
+      runtime”。
     source_refs:
     - '010'
     - 094
     - 120-122
+    - '158'
   - cluster_id: project-meta-foundations
     title: 项目元能力基线
     closure_state: formal_only
@@ -1579,12 +1583,25 @@ specs:
   frontend_evidence_class: framework_capability
   roles: []
   capability_refs: []
+- id: 158-agent-adapter-verified-host-ingress-closure-audit-reconciliation-baseline
+  path: specs/158-agent-adapter-verified-host-ingress-closure-audit-reconciliation-baseline
+  depends_on:
+  - 120-open-capability-tranche-backlog-baseline
+  - 010-agent-adapter-activation-contract
+  - 094-stage0-init-dual-path-project-onboarding-baseline
+  - 121-agent-adapter-verified-host-ingress-truth-baseline
+  - 122-agent-adapter-verified-host-ingress-runtime-baseline
+  branch_slug: agent-adapter-verified-host-ingress-closure-audit-reconciliation-baseline
+  owner: team-frontend-governance
+  frontend_evidence_class: framework_capability
+  roles: []
+  capability_refs: []
 truth_snapshot:
-  generated_at: '2026-04-17T03:11:27Z'
+  generated_at: '2026-04-17T15:36:05Z'
   generated_by: ai-sdlc program truth sync
   generator_version: program_truth_snapshot_v1
-  repo_revision: e7180bf
-  authoring_hash: 20dae2fcb62b2fc616766e9078afac53ebe59b4f7649f59142c56c5efc2c3a7c
+  repo_revision: 6fef3c7
+  authoring_hash: b452ef3ae7bde009284f2f2da872e246cc929750da141d03c9ec3354b02e75bc
   source_hashes:
     truth_check:specs/095-frontend-mainline-product-delivery-baseline: 40b5e9332011b0d8941245c0e8e7c3b192e897b2bc4aa4876a3d37a94f9b80f0
     truth_check:specs/096-frontend-mainline-host-runtime-manager-baseline: e4586cf112089fff541fc809f9ba98ad4c4c3d5593de8febfc4e64cb1179ce02
@@ -1602,57 +1619,73 @@ truth_snapshot:
     truth_check:specs/126-frontend-mainline-browser-gate-recheck-remediation-runtime-closure-baseline: ba13cc26973f403a0030ba803fe07cfb2041ca291f021fd436f7968969c2297e
     truth_check:specs/143-frontend-mainline-browser-gate-real-probe-runtime-baseline: 814ccfb952dc066fcd569aa6b2e7dd08463fcac2f39c2086a021410bd9869dd3
     truth_check:specs/144-frontend-mainline-host-remediation-and-workspace-integration-closure-baseline: c320f9b5986df7b8866f164d99399fd95759a37dd51b3f2a22c68a310099d4b1
-    close_check:specs/095-frontend-mainline-product-delivery-baseline: 6953138b2d9d62e9f4d337bb97d069400c46449c785c77cdc0440eaafa6aabc6
-    close_check:specs/096-frontend-mainline-host-runtime-manager-baseline: 6953138b2d9d62e9f4d337bb97d069400c46449c785c77cdc0440eaafa6aabc6
-    close_check:specs/098-frontend-mainline-posture-detector-baseline: 6953138b2d9d62e9f4d337bb97d069400c46449c785c77cdc0440eaafa6aabc6
-    close_check:specs/099-frontend-mainline-delivery-registry-resolver-baseline: 6953138b2d9d62e9f4d337bb97d069400c46449c785c77cdc0440eaafa6aabc6
-    close_check:specs/100-frontend-mainline-action-plan-binding-baseline: 6953138b2d9d62e9f4d337bb97d069400c46449c785c77cdc0440eaafa6aabc6
-    close_check:specs/101-frontend-mainline-managed-delivery-apply-runtime-baseline: 6953138b2d9d62e9f4d337bb97d069400c46449c785c77cdc0440eaafa6aabc6
-    close_check:specs/102-frontend-mainline-browser-quality-gate-baseline: 6953138b2d9d62e9f4d337bb97d069400c46449c785c77cdc0440eaafa6aabc6
-    close_check:specs/103-frontend-mainline-browser-gate-probe-runtime-baseline: 6953138b2d9d62e9f4d337bb97d069400c46449c785c77cdc0440eaafa6aabc6
-    close_check:specs/104-frontend-mainline-browser-gate-recheck-remediation-binding-baseline: 6953138b2d9d62e9f4d337bb97d069400c46449c785c77cdc0440eaafa6aabc6
-    close_check:specs/105-frontend-mainline-browser-gate-recheck-remediation-runtime-implementation-baseline: 6953138b2d9d62e9f4d337bb97d069400c46449c785c77cdc0440eaafa6aabc6
-    close_check:specs/123-frontend-mainline-managed-delivery-apply-runtime-implementation-baseline: 6953138b2d9d62e9f4d337bb97d069400c46449c785c77cdc0440eaafa6aabc6
-    close_check:specs/124-frontend-mainline-delivery-materialization-runtime-baseline: 6953138b2d9d62e9f4d337bb97d069400c46449c785c77cdc0440eaafa6aabc6
-    close_check:specs/125-frontend-mainline-browser-gate-probe-runtime-implementation-baseline: 6953138b2d9d62e9f4d337bb97d069400c46449c785c77cdc0440eaafa6aabc6
-    close_check:specs/126-frontend-mainline-browser-gate-recheck-remediation-runtime-closure-baseline: 6953138b2d9d62e9f4d337bb97d069400c46449c785c77cdc0440eaafa6aabc6
-    close_check:specs/143-frontend-mainline-browser-gate-real-probe-runtime-baseline: 6953138b2d9d62e9f4d337bb97d069400c46449c785c77cdc0440eaafa6aabc6
-    close_check:specs/144-frontend-mainline-host-remediation-and-workspace-integration-closure-baseline: 6953138b2d9d62e9f4d337bb97d069400c46449c785c77cdc0440eaafa6aabc6
+    close_check:specs/095-frontend-mainline-product-delivery-baseline: a480d33dbf6d8470c447c41456282ac360186c60435613a9f55e46d06742e555
+    close_check:specs/096-frontend-mainline-host-runtime-manager-baseline: a480d33dbf6d8470c447c41456282ac360186c60435613a9f55e46d06742e555
+    close_check:specs/098-frontend-mainline-posture-detector-baseline: a480d33dbf6d8470c447c41456282ac360186c60435613a9f55e46d06742e555
+    close_check:specs/099-frontend-mainline-delivery-registry-resolver-baseline: a480d33dbf6d8470c447c41456282ac360186c60435613a9f55e46d06742e555
+    close_check:specs/100-frontend-mainline-action-plan-binding-baseline: a480d33dbf6d8470c447c41456282ac360186c60435613a9f55e46d06742e555
+    close_check:specs/101-frontend-mainline-managed-delivery-apply-runtime-baseline: a480d33dbf6d8470c447c41456282ac360186c60435613a9f55e46d06742e555
+    close_check:specs/102-frontend-mainline-browser-quality-gate-baseline: a480d33dbf6d8470c447c41456282ac360186c60435613a9f55e46d06742e555
+    close_check:specs/103-frontend-mainline-browser-gate-probe-runtime-baseline: a480d33dbf6d8470c447c41456282ac360186c60435613a9f55e46d06742e555
+    close_check:specs/104-frontend-mainline-browser-gate-recheck-remediation-binding-baseline: a480d33dbf6d8470c447c41456282ac360186c60435613a9f55e46d06742e555
+    close_check:specs/105-frontend-mainline-browser-gate-recheck-remediation-runtime-implementation-baseline: a480d33dbf6d8470c447c41456282ac360186c60435613a9f55e46d06742e555
+    close_check:specs/123-frontend-mainline-managed-delivery-apply-runtime-implementation-baseline: a480d33dbf6d8470c447c41456282ac360186c60435613a9f55e46d06742e555
+    close_check:specs/124-frontend-mainline-delivery-materialization-runtime-baseline: a480d33dbf6d8470c447c41456282ac360186c60435613a9f55e46d06742e555
+    close_check:specs/125-frontend-mainline-browser-gate-probe-runtime-implementation-baseline: a480d33dbf6d8470c447c41456282ac360186c60435613a9f55e46d06742e555
+    close_check:specs/126-frontend-mainline-browser-gate-recheck-remediation-runtime-closure-baseline: a480d33dbf6d8470c447c41456282ac360186c60435613a9f55e46d06742e555
+    close_check:specs/143-frontend-mainline-browser-gate-real-probe-runtime-baseline: a480d33dbf6d8470c447c41456282ac360186c60435613a9f55e46d06742e555
+    close_check:specs/144-frontend-mainline-host-remediation-and-workspace-integration-closure-baseline: a480d33dbf6d8470c447c41456282ac360186c60435613a9f55e46d06742e555
     verify:uv run ai-sdlc verify constraints: 67c162e8ce6369708f41fd003c4d3b2703509ebeb85aefbbc2a2d67663c45333
-  snapshot_hash: ef7aab0cf3dab55a32a2009061014703e8a3a09e506f13edb4f7b831a7b3b1b0
+  snapshot_hash: 682b43198450cfc5f4f8ba30e0c5d2d20fae63042b4a59664124c05e00a29e46
   computed_capabilities:
   - capability_id: frontend-mainline-delivery
     closure_state: closed
-    audit_state: ready
-    blocking_refs: []
+    audit_state: blocked
+    blocking_refs:
+    - close_check:specs/095-frontend-mainline-product-delivery-baseline
+    - close_check:specs/096-frontend-mainline-host-runtime-manager-baseline
+    - close_check:specs/098-frontend-mainline-posture-detector-baseline
+    - close_check:specs/099-frontend-mainline-delivery-registry-resolver-baseline
+    - close_check:specs/100-frontend-mainline-action-plan-binding-baseline
+    - close_check:specs/101-frontend-mainline-managed-delivery-apply-runtime-baseline
+    - close_check:specs/102-frontend-mainline-browser-quality-gate-baseline
+    - close_check:specs/103-frontend-mainline-browser-gate-probe-runtime-baseline
+    - close_check:specs/104-frontend-mainline-browser-gate-recheck-remediation-binding-baseline
+    - close_check:specs/105-frontend-mainline-browser-gate-recheck-remediation-runtime-implementation-baseline
+    - close_check:specs/123-frontend-mainline-managed-delivery-apply-runtime-implementation-baseline
+    - close_check:specs/124-frontend-mainline-delivery-materialization-runtime-baseline
+    - close_check:specs/125-frontend-mainline-browser-gate-probe-runtime-implementation-baseline
+    - close_check:specs/126-frontend-mainline-browser-gate-recheck-remediation-runtime-closure-baseline
+    - close_check:specs/143-frontend-mainline-browser-gate-real-probe-runtime-baseline
+    - close_check:specs/144-frontend-mainline-host-remediation-and-workspace-integration-closure-baseline
     stale_reason: ''
   source_inventory:
     state: complete
-    total_sources: 807
-    mapped_sources: 807
+    total_sources: 812
+    mapped_sources: 812
     unmapped_sources: 0
     missing_sources: 0
-    phase_signal_count: 3123
-    deferred_signal_count: 5721
-    non_goal_signal_count: 277
+    phase_signal_count: 3129
+    deferred_signal_count: 5739
+    non_goal_signal_count: 278
     layer_totals:
       blueprint: 1
-      spec: 158
-      plan: 158
-      tasks: 158
-      execution: 158
-      close: 158
+      spec: 159
+      plan: 159
+      tasks: 159
+      execution: 159
+      close: 159
       requirements: 2
       defect: 2
       design: 8
       release: 4
     layer_materialized:
       blueprint: 1
-      spec: 158
-      plan: 158
-      tasks: 158
-      execution: 158
-      close: 158
+      spec: 159
+      plan: 159
+      tasks: 159
+      execution: 159
+      close: 159
       requirements: 2
       defect: 2
       design: 8
@@ -8777,6 +8810,51 @@ truth_snapshot:
       phase_signal_count: 0
       deferred_signal_count: 2
       non_goal_signal_count: 0
+    - path: specs/158-agent-adapter-verified-host-ingress-closure-audit-reconciliation-baseline/spec.md
+      source_type: spec_doc
+      truth_layer: spec
+      mapped: true
+      exists: true
+      mapping_ref: 158-agent-adapter-verified-host-ingress-closure-audit-reconciliation-baseline
+      phase_signal_count: 0
+      deferred_signal_count: 5
+      non_goal_signal_count: 1
+    - path: specs/158-agent-adapter-verified-host-ingress-closure-audit-reconciliation-baseline/plan.md
+      source_type: plan_doc
+      truth_layer: plan
+      mapped: true
+      exists: true
+      mapping_ref: 158-agent-adapter-verified-host-ingress-closure-audit-reconciliation-baseline
+      phase_signal_count: 3
+      deferred_signal_count: 6
+      non_goal_signal_count: 0
+    - path: specs/158-agent-adapter-verified-host-ingress-closure-audit-reconciliation-baseline/tasks.md
+      source_type: tasks_doc
+      truth_layer: tasks
+      mapped: true
+      exists: true
+      mapping_ref: 158-agent-adapter-verified-host-ingress-closure-audit-reconciliation-baseline
+      phase_signal_count: 3
+      deferred_signal_count: 5
+      non_goal_signal_count: 0
+    - path: specs/158-agent-adapter-verified-host-ingress-closure-audit-reconciliation-baseline/task-execution-log.md
+      source_type: execution_log
+      truth_layer: execution
+      mapped: true
+      exists: true
+      mapping_ref: 158-agent-adapter-verified-host-ingress-closure-audit-reconciliation-baseline
+      phase_signal_count: 0
+      deferred_signal_count: 1
+      non_goal_signal_count: 0
+    - path: specs/158-agent-adapter-verified-host-ingress-closure-audit-reconciliation-baseline/development-summary.md
+      source_type: development_summary
+      truth_layer: close
+      mapped: true
+      exists: true
+      mapping_ref: 158-agent-adapter-verified-host-ingress-closure-audit-reconciliation-baseline
+      phase_signal_count: 0
+      deferred_signal_count: 1
+      non_goal_signal_count: 0
     - path: docs/SPEC_SPLIT_AND_PROGRAM.zh-CN.md
       source_type: requirement_doc
       truth_layer: requirements
@@ -8922,4 +9000,4 @@ truth_snapshot:
       deferred_signal_count: 6
       non_goal_signal_count: 1
     unmapped_paths: []
-  state: ready
+  state: blocked
