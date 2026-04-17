@@ -344,6 +344,101 @@ class TestCliIndexAndGate:
         assert "158-agent-adapter-verified-host-ingress" in result.output
         assert "Gate close: PASS" in result.output
 
+    def test_gate_close_surfaces_program_truth_for_current_branch_work_item(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        init_project(tmp_path)
+        checkpoint_spec = tmp_path / "specs" / "001-ai-sdlc-framework"
+        checkpoint_spec.mkdir(parents=True, exist_ok=True)
+        target_spec = (
+            tmp_path
+            / "specs"
+            / "158-agent-adapter-verified-host-ingress-closure-audit-reconciliation-baseline"
+        )
+        target_spec.mkdir(parents=True, exist_ok=True)
+        (target_spec / "development-summary.md").write_text("# Summary\n", encoding="utf-8")
+        (tmp_path / "program-manifest.yaml").write_text("schema_version: '2'\n", encoding="utf-8")
+        save_checkpoint(
+            tmp_path,
+            Checkpoint(
+                current_stage="close",
+                feature=FeatureInfo(
+                    id="001",
+                    spec_dir="specs/001-ai-sdlc-framework",
+                    design_branch="design/001",
+                    feature_branch="feature/001",
+                    current_branch="main",
+                ),
+            ),
+        )
+
+        class _FakeGitClient:
+            def __init__(self, root: Path) -> None:
+                assert root == tmp_path
+
+            def current_branch(self) -> str:
+                return "codex/158-agent-adapter-ingress-audit"
+
+        seen: dict[str, Path] = {}
+
+        def _fake_run_close_check(*, cwd: Path, wi: Path, all_docs: bool) -> SimpleNamespace:
+            seen["cwd"] = cwd
+            seen["wi"] = wi
+            return SimpleNamespace(
+                ok=True,
+                blockers=[],
+                checks=[
+                    {"name": "tasks_completion", "ok": True, "detail": "ok"},
+                    {"name": "verification_profile", "ok": True, "detail": "ok"},
+                ],
+            )
+
+        class _FakeReadiness:
+            state = "ready"
+            detail = "truth snapshot is fresh and spec is mapped"
+            ready = True
+            matched_capabilities: list[str] = []
+
+        class _FakeProgramService:
+            def __init__(self, root: Path, manifest_path: Path) -> None:
+                assert root == tmp_path
+                assert manifest_path == tmp_path / "program-manifest.yaml"
+
+            def load_manifest(self) -> object:
+                return object()
+
+            def validate_manifest(self, manifest: object) -> object:
+                return object()
+
+            def release_target_capability_ids_for_spec(
+                self, manifest: object, spec_path: Path
+            ) -> list[str]:
+                return []
+
+            def build_spec_truth_readiness(
+                self,
+                manifest: object,
+                *,
+                spec_path: Path,
+                validation_result: object | None = None,
+            ) -> _FakeReadiness:
+                seen["truth_spec"] = spec_path
+                return _FakeReadiness()
+
+        monkeypatch.setattr(sub_apps, "GitClient", _FakeGitClient)
+        monkeypatch.setattr(sub_apps, "ProgramService", _FakeProgramService)
+        monkeypatch.setattr(sub_apps, "run_close_check", _fake_run_close_check)
+        monkeypatch.chdir(tmp_path)
+
+        result = runner.invoke(app, ["gate", "close"])
+
+        assert result.exit_code == 0
+        assert seen["cwd"] == tmp_path
+        assert seen["wi"] == target_spec
+        assert seen["truth_spec"] == target_spec
+        assert "program_truth_audit_ready" in result.output
+        assert "Gate close: PASS" in result.output
+
     @pytest.mark.parametrize("stage", ["verify", "verification"])
     def test_gate_cli_surfaces_071_visual_a11y_issue_review_from_frontend_gate_summary(
         self,
