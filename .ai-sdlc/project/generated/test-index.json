@@ -1,6 +1,6 @@
 {
-  "total_test_files": 840,
-  "total_test_functions": 1607,
+  "total_test_files": 955,
+  "total_test_functions": 1753,
   "test_files": [
     {
       "path": "docs/superpowers/specs/2026-03-27-telemetry-trace-governance-design.md",
@@ -4299,6 +4299,582 @@
       "test_names": []
     },
     {
+      "path": "specs/140-program-truth-ledger-release-audit-baseline/development-summary.md",
+      "framework": "",
+      "test_count": 0,
+      "test_names": []
+    },
+    {
+      "path": "specs/140-program-truth-ledger-release-audit-baseline/plan.md",
+      "framework": "",
+      "test_count": 0,
+      "test_names": []
+    },
+    {
+      "path": "specs/140-program-truth-ledger-release-audit-baseline/spec.md",
+      "framework": "",
+      "test_count": 0,
+      "test_names": []
+    },
+    {
+      "path": "specs/140-program-truth-ledger-release-audit-baseline/task-execution-log.md",
+      "framework": "",
+      "test_count": 0,
+      "test_names": []
+    },
+    {
+      "path": "specs/140-program-truth-ledger-release-audit-baseline/tasks.md",
+      "framework": "",
+      "test_count": 0,
+      "test_names": []
+    },
+    {
+      "path": "specs/141-program-manifest-root-census-backfill-baseline/development-summary.md",
+      "framework": "",
+      "test_count": 0,
+      "test_names": []
+    },
+    {
+      "path": "specs/141-program-manifest-root-census-backfill-baseline/plan.md",
+      "framework": "",
+      "test_count": 0,
+      "test_names": []
+    },
+    {
+      "path": "specs/141-program-manifest-root-census-backfill-baseline/spec.md",
+      "framework": "",
+      "test_count": 0,
+      "test_names": []
+    },
+    {
+      "path": "specs/141-program-manifest-root-census-backfill-baseline/task-execution-log.md",
+      "framework": "",
+      "test_count": 0,
+      "test_names": []
+    },
+    {
+      "path": "specs/141-program-manifest-root-census-backfill-baseline/tasks.md",
+      "framework": "",
+      "test_count": 0,
+      "test_names": []
+    },
+    {
+      "path": "specs/142-frontend-mainline-delivery-close-check-closure-baseline/blocker-execution-map.yaml",
+      "framework": "",
+      "test_count": 0,
+      "test_names": []
+    },
+    {
+      "path": "specs/142-frontend-mainline-delivery-close-check-closure-baseline/development-summary.md",
+      "framework": "",
+      "test_count": 0,
+      "test_names": []
+    },
+    {
+      "path": "specs/142-frontend-mainline-delivery-close-check-closure-baseline/plan.md",
+      "framework": "",
+      "test_count": 0,
+      "test_names": []
+    },
+    {
+      "path": "specs/142-frontend-mainline-delivery-close-check-closure-baseline/spec.md",
+      "framework": "",
+      "test_count": 0,
+      "test_names": []
+    },
+    {
+      "path": "specs/142-frontend-mainline-delivery-close-check-closure-baseline/task-execution-log.md",
+      "framework": "",
+      "test_count": 0,
+      "test_names": []
+    },
+    {
+      "path": "specs/142-frontend-mainline-delivery-close-check-closure-baseline/tasks.md",
+      "framework": "",
+      "test_count": 0,
+      "test_names": []
+    },
+    {
+      "path": "specs/143-frontend-mainline-browser-gate-real-probe-runtime-baseline/development-summary.md",
+      "framework": "",
+      "test_count": 0,
+      "test_names": []
+    },
+    {
+      "path": "specs/143-frontend-mainline-browser-gate-real-probe-runtime-baseline/plan.md",
+      "framework": "",
+      "test_count": 0,
+      "test_names": []
+    },
+    {
+      "path": "specs/143-frontend-mainline-browser-gate-real-probe-runtime-baseline/spec.md",
+      "framework": "",
+      "test_count": 0,
+      "test_names": []
+    },
+    {
+      "path": "specs/143-frontend-mainline-browser-gate-real-probe-runtime-baseline/task-execution-log.md",
+      "framework": "",
+      "test_count": 0,
+      "test_names": []
+    },
+    {
+      "path": "specs/143-frontend-mainline-browser-gate-real-probe-runtime-baseline/tasks.md",
+      "framework": "",
+      "test_count": 0,
+      "test_names": []
+    },
+    {
+      "path": "specs/144-frontend-mainline-host-remediation-and-workspace-integration-closure-baseline/development-summary.md",
+      "framework": "",
+      "test_count": 0,
+      "test_names": []
+    },
+    {
+      "path": "specs/144-frontend-mainline-host-remediation-and-workspace-integration-closure-baseline/plan.md",
+      "framework": "",
+      "test_count": 0,
+      "test_names": []
+    },
+    {
+      "path": "specs/144-frontend-mainline-host-remediation-and-workspace-integration-closure-baseline/spec.md",
+      "framework": "",
+      "test_count": 0,
+      "test_names": []
+    },
+    {
+      "path": "specs/144-frontend-mainline-host-remediation-and-workspace-integration-closure-baseline/task-execution-log.md",
+      "framework": "",
+      "test_count": 0,
+      "test_names": []
+    },
+    {
+      "path": "specs/144-frontend-mainline-host-remediation-and-workspace-integration-closure-baseline/tasks.md",
+      "framework": "",
+      "test_count": 0,
+      "test_names": []
+    },
+    {
+      "path": "specs/145-frontend-p2-p3-deferred-capability-expansion-planning-baseline/development-summary.md",
+      "framework": "",
+      "test_count": 0,
+      "test_names": []
+    },
+    {
+      "path": "specs/145-frontend-p2-p3-deferred-capability-expansion-planning-baseline/plan.md",
+      "framework": "",
+      "test_count": 0,
+      "test_names": []
+    },
+    {
+      "path": "specs/145-frontend-p2-p3-deferred-capability-expansion-planning-baseline/spec.md",
+      "framework": "",
+      "test_count": 0,
+      "test_names": []
+    },
+    {
+      "path": "specs/145-frontend-p2-p3-deferred-capability-expansion-planning-baseline/task-execution-log.md",
+      "framework": "",
+      "test_count": 0,
+      "test_names": []
+    },
+    {
+      "path": "specs/145-frontend-p2-p3-deferred-capability-expansion-planning-baseline/tasks.md",
+      "framework": "",
+      "test_count": 0,
+      "test_names": []
+    },
+    {
+      "path": "specs/146-program-truth-pipeline-injection-baseline/development-summary.md",
+      "framework": "",
+      "test_count": 0,
+      "test_names": []
+    },
+    {
+      "path": "specs/146-program-truth-pipeline-injection-baseline/plan.md",
+      "framework": "",
+      "test_count": 0,
+      "test_names": []
+    },
+    {
+      "path": "specs/146-program-truth-pipeline-injection-baseline/spec.md",
+      "framework": "",
+      "test_count": 0,
+      "test_names": []
+    },
+    {
+      "path": "specs/146-program-truth-pipeline-injection-baseline/task-execution-log.md",
+      "framework": "",
+      "test_count": 0,
+      "test_names": []
+    },
+    {
+      "path": "specs/146-program-truth-pipeline-injection-baseline/tasks.md",
+      "framework": "",
+      "test_count": 0,
+      "test_names": []
+    },
+    {
+      "path": "specs/147-frontend-p2-page-ui-schema-baseline/development-summary.md",
+      "framework": "",
+      "test_count": 0,
+      "test_names": []
+    },
+    {
+      "path": "specs/147-frontend-p2-page-ui-schema-baseline/plan.md",
+      "framework": "",
+      "test_count": 0,
+      "test_names": []
+    },
+    {
+      "path": "specs/147-frontend-p2-page-ui-schema-baseline/spec.md",
+      "framework": "",
+      "test_count": 0,
+      "test_names": []
+    },
+    {
+      "path": "specs/147-frontend-p2-page-ui-schema-baseline/task-execution-log.md",
+      "framework": "",
+      "test_count": 0,
+      "test_names": []
+    },
+    {
+      "path": "specs/147-frontend-p2-page-ui-schema-baseline/tasks.md",
+      "framework": "",
+      "test_count": 0,
+      "test_names": []
+    },
+    {
+      "path": "specs/148-frontend-p2-multi-theme-token-governance-baseline/development-summary.md",
+      "framework": "",
+      "test_count": 0,
+      "test_names": []
+    },
+    {
+      "path": "specs/148-frontend-p2-multi-theme-token-governance-baseline/plan.md",
+      "framework": "",
+      "test_count": 0,
+      "test_names": []
+    },
+    {
+      "path": "specs/148-frontend-p2-multi-theme-token-governance-baseline/spec.md",
+      "framework": "",
+      "test_count": 0,
+      "test_names": []
+    },
+    {
+      "path": "specs/148-frontend-p2-multi-theme-token-governance-baseline/task-execution-log.md",
+      "framework": "",
+      "test_count": 0,
+      "test_names": []
+    },
+    {
+      "path": "specs/148-frontend-p2-multi-theme-token-governance-baseline/tasks.md",
+      "framework": "",
+      "test_count": 0,
+      "test_names": []
+    },
+    {
+      "path": "specs/149-frontend-p2-quality-platform-baseline/development-summary.md",
+      "framework": "",
+      "test_count": 0,
+      "test_names": []
+    },
+    {
+      "path": "specs/149-frontend-p2-quality-platform-baseline/plan.md",
+      "framework": "",
+      "test_count": 0,
+      "test_names": []
+    },
+    {
+      "path": "specs/149-frontend-p2-quality-platform-baseline/spec.md",
+      "framework": "",
+      "test_count": 0,
+      "test_names": []
+    },
+    {
+      "path": "specs/149-frontend-p2-quality-platform-baseline/task-execution-log.md",
+      "framework": "",
+      "test_count": 0,
+      "test_names": []
+    },
+    {
+      "path": "specs/149-frontend-p2-quality-platform-baseline/tasks.md",
+      "framework": "",
+      "test_count": 0,
+      "test_names": []
+    },
+    {
+      "path": "specs/150-frontend-p2-cross-provider-consistency-baseline/development-summary.md",
+      "framework": "",
+      "test_count": 0,
+      "test_names": []
+    },
+    {
+      "path": "specs/150-frontend-p2-cross-provider-consistency-baseline/plan.md",
+      "framework": "",
+      "test_count": 0,
+      "test_names": []
+    },
+    {
+      "path": "specs/150-frontend-p2-cross-provider-consistency-baseline/spec.md",
+      "framework": "",
+      "test_count": 0,
+      "test_names": []
+    },
+    {
+      "path": "specs/150-frontend-p2-cross-provider-consistency-baseline/task-execution-log.md",
+      "framework": "",
+      "test_count": 0,
+      "test_names": []
+    },
+    {
+      "path": "specs/150-frontend-p2-cross-provider-consistency-baseline/tasks.md",
+      "framework": "",
+      "test_count": 0,
+      "test_names": []
+    },
+    {
+      "path": "specs/151-frontend-p3-modern-provider-expansion-baseline/development-summary.md",
+      "framework": "",
+      "test_count": 0,
+      "test_names": []
+    },
+    {
+      "path": "specs/151-frontend-p3-modern-provider-expansion-baseline/plan.md",
+      "framework": "",
+      "test_count": 0,
+      "test_names": []
+    },
+    {
+      "path": "specs/151-frontend-p3-modern-provider-expansion-baseline/spec.md",
+      "framework": "",
+      "test_count": 0,
+      "test_names": []
+    },
+    {
+      "path": "specs/151-frontend-p3-modern-provider-expansion-baseline/task-execution-log.md",
+      "framework": "",
+      "test_count": 0,
+      "test_names": []
+    },
+    {
+      "path": "specs/151-frontend-p3-modern-provider-expansion-baseline/tasks.md",
+      "framework": "",
+      "test_count": 0,
+      "test_names": []
+    },
+    {
+      "path": "specs/152-frontend-p3-modern-provider-runtime-adapter-expansion-baseline/development-summary.md",
+      "framework": "",
+      "test_count": 0,
+      "test_names": []
+    },
+    {
+      "path": "specs/152-frontend-p3-modern-provider-runtime-adapter-expansion-baseline/plan.md",
+      "framework": "",
+      "test_count": 0,
+      "test_names": []
+    },
+    {
+      "path": "specs/152-frontend-p3-modern-provider-runtime-adapter-expansion-baseline/spec.md",
+      "framework": "",
+      "test_count": 0,
+      "test_names": []
+    },
+    {
+      "path": "specs/152-frontend-p3-modern-provider-runtime-adapter-expansion-baseline/task-execution-log.md",
+      "framework": "",
+      "test_count": 0,
+      "test_names": []
+    },
+    {
+      "path": "specs/152-frontend-p3-modern-provider-runtime-adapter-expansion-baseline/tasks.md",
+      "framework": "",
+      "test_count": 0,
+      "test_names": []
+    },
+    {
+      "path": "specs/153-frontend-p3-target-project-adapter-scaffold-baseline/development-summary.md",
+      "framework": "",
+      "test_count": 0,
+      "test_names": []
+    },
+    {
+      "path": "specs/153-frontend-p3-target-project-adapter-scaffold-baseline/plan.md",
+      "framework": "",
+      "test_count": 0,
+      "test_names": []
+    },
+    {
+      "path": "specs/153-frontend-p3-target-project-adapter-scaffold-baseline/spec.md",
+      "framework": "",
+      "test_count": 0,
+      "test_names": []
+    },
+    {
+      "path": "specs/153-frontend-p3-target-project-adapter-scaffold-baseline/task-execution-log.md",
+      "framework": "",
+      "test_count": 0,
+      "test_names": []
+    },
+    {
+      "path": "specs/153-frontend-p3-target-project-adapter-scaffold-baseline/tasks.md",
+      "framework": "",
+      "test_count": 0,
+      "test_names": []
+    },
+    {
+      "path": "specs/154-frontend-contract-foundation-closure-audit-reconciliation-baseline/development-summary.md",
+      "framework": "",
+      "test_count": 0,
+      "test_names": []
+    },
+    {
+      "path": "specs/154-frontend-contract-foundation-closure-audit-reconciliation-baseline/plan.md",
+      "framework": "",
+      "test_count": 0,
+      "test_names": []
+    },
+    {
+      "path": "specs/154-frontend-contract-foundation-closure-audit-reconciliation-baseline/spec.md",
+      "framework": "",
+      "test_count": 0,
+      "test_names": []
+    },
+    {
+      "path": "specs/154-frontend-contract-foundation-closure-audit-reconciliation-baseline/task-execution-log.md",
+      "framework": "",
+      "test_count": 0,
+      "test_names": []
+    },
+    {
+      "path": "specs/154-frontend-contract-foundation-closure-audit-reconciliation-baseline/tasks.md",
+      "framework": "",
+      "test_count": 0,
+      "test_names": []
+    },
+    {
+      "path": "specs/155-frontend-program-automation-chain-closure-audit-reconciliation-baseline/development-summary.md",
+      "framework": "",
+      "test_count": 0,
+      "test_names": []
+    },
+    {
+      "path": "specs/155-frontend-program-automation-chain-closure-audit-reconciliation-baseline/plan.md",
+      "framework": "",
+      "test_count": 0,
+      "test_names": []
+    },
+    {
+      "path": "specs/155-frontend-program-automation-chain-closure-audit-reconciliation-baseline/spec.md",
+      "framework": "",
+      "test_count": 0,
+      "test_names": []
+    },
+    {
+      "path": "specs/155-frontend-program-automation-chain-closure-audit-reconciliation-baseline/task-execution-log.md",
+      "framework": "",
+      "test_count": 0,
+      "test_names": []
+    },
+    {
+      "path": "specs/155-frontend-program-automation-chain-closure-audit-reconciliation-baseline/tasks.md",
+      "framework": "",
+      "test_count": 0,
+      "test_names": []
+    },
+    {
+      "path": "specs/156-frontend-p1-experience-stability-closure-audit-reconciliation-baseline/development-summary.md",
+      "framework": "",
+      "test_count": 0,
+      "test_names": []
+    },
+    {
+      "path": "specs/156-frontend-p1-experience-stability-closure-audit-reconciliation-baseline/plan.md",
+      "framework": "",
+      "test_count": 0,
+      "test_names": []
+    },
+    {
+      "path": "specs/156-frontend-p1-experience-stability-closure-audit-reconciliation-baseline/spec.md",
+      "framework": "",
+      "test_count": 0,
+      "test_names": []
+    },
+    {
+      "path": "specs/156-frontend-p1-experience-stability-closure-audit-reconciliation-baseline/task-execution-log.md",
+      "framework": "",
+      "test_count": 0,
+      "test_names": []
+    },
+    {
+      "path": "specs/156-frontend-p1-experience-stability-closure-audit-reconciliation-baseline/tasks.md",
+      "framework": "",
+      "test_count": 0,
+      "test_names": []
+    },
+    {
+      "path": "specs/157-frontend-evidence-class-lifecycle-closure-audit-reconciliation-baseline/development-summary.md",
+      "framework": "",
+      "test_count": 0,
+      "test_names": []
+    },
+    {
+      "path": "specs/157-frontend-evidence-class-lifecycle-closure-audit-reconciliation-baseline/plan.md",
+      "framework": "",
+      "test_count": 0,
+      "test_names": []
+    },
+    {
+      "path": "specs/157-frontend-evidence-class-lifecycle-closure-audit-reconciliation-baseline/spec.md",
+      "framework": "",
+      "test_count": 0,
+      "test_names": []
+    },
+    {
+      "path": "specs/157-frontend-evidence-class-lifecycle-closure-audit-reconciliation-baseline/task-execution-log.md",
+      "framework": "",
+      "test_count": 0,
+      "test_names": []
+    },
+    {
+      "path": "specs/157-frontend-evidence-class-lifecycle-closure-audit-reconciliation-baseline/tasks.md",
+      "framework": "",
+      "test_count": 0,
+      "test_names": []
+    },
+    {
+      "path": "specs/158-agent-adapter-verified-host-ingress-closure-audit-reconciliation-baseline/development-summary.md",
+      "framework": "",
+      "test_count": 0,
+      "test_names": []
+    },
+    {
+      "path": "specs/158-agent-adapter-verified-host-ingress-closure-audit-reconciliation-baseline/plan.md",
+      "framework": "",
+      "test_count": 0,
+      "test_names": []
+    },
+    {
+      "path": "specs/158-agent-adapter-verified-host-ingress-closure-audit-reconciliation-baseline/spec.md",
+      "framework": "",
+      "test_count": 0,
+      "test_names": []
+    },
+    {
+      "path": "specs/158-agent-adapter-verified-host-ingress-closure-audit-reconciliation-baseline/task-execution-log.md",
+      "framework": "",
+      "test_count": 0,
+      "test_names": []
+    },
+    {
+      "path": "specs/158-agent-adapter-verified-host-ingress-closure-audit-reconciliation-baseline/tasks.md",
+      "framework": "",
+      "test_count": 0,
+      "test_names": []
+    },
+    {
       "path": "src/ai_sdlc/scanners/test_scanner.py",
       "framework": "pytest",
       "test_count": 0,
@@ -4527,13 +5103,27 @@
     {
       "path": "tests/integration/test_cli_program.py",
       "framework": "pytest",
-      "test_count": 132,
+      "test_count": 150,
       "test_names": [
+        "test_program_page_ui_schema_handoff_blocks_without_solution_snapshot",
+        "test_program_page_ui_schema_handoff_surfaces_provider_style_and_schema_entries",
+        "test_program_theme_token_governance_handoff_blocks_without_solution_snapshot",
+        "test_program_theme_token_governance_handoff_surfaces_requested_effective_theme_and_override_diagnostics",
+        "test_program_quality_platform_handoff_blocks_without_solution_snapshot",
+        "test_program_quality_platform_handoff_surfaces_matrix_and_quality_diagnostics",
+        "test_program_provider_expansion_handoff_blocks_without_solution_snapshot",
+        "test_program_provider_expansion_handoff_surfaces_provider_and_react_visibility_diagnostics",
+        "test_program_provider_runtime_adapter_handoff_blocks_without_solution_snapshot",
+        "test_program_provider_runtime_adapter_handoff_surfaces_scaffold_and_delivery_state",
+        "test_program_cross_provider_consistency_handoff_surfaces_pair_truth",
         "test_program_managed_delivery_apply_dry_run_blocks_on_host_ingress",
         "test_program_managed_delivery_apply_execute_surfaces_honest_headline",
         "test_program_managed_delivery_apply_execute_writes_managed_artifacts",
+        "test_program_managed_delivery_apply_dry_run_materializes_request_from_truth_when_request_omitted",
+        "test_program_managed_delivery_apply_dry_run_surfaces_private_registry_blocker_from_truth_when_request_omitted",
         "test_program_browser_gate_probe_execute_materializes_gate_run_artifact",
         "test_program_browser_gate_probe_dry_run_does_not_materialize_preview_artifacts",
+        "test_program_browser_gate_probe_execute_surfaces_plain_language_runner_failure",
         "test_program_remediate_dry_run_surfaces_browser_gate_follow_up_command",
         "test_program_validate_pass",
         "test_program_validate_fail_cycle",
@@ -4541,6 +5131,10 @@
         "test_program_frontend_evidence_class_sync_execute_updates_manifest",
         "test_program_frontend_evidence_class_sync_targeted_updates_only_selected_spec",
         "test_program_status_and_plan",
+        "test_program_truth_sync_and_audit_surface_blocked_release_state",
+        "test_program_truth_sync_and_audit_surface_exposes_source_inventory_migration",
+        "test_program_status_exposes_next_required_truth_action_when_snapshot_is_stale",
+        "test_program_status_exposes_terminal_truth_sync_guidance_when_snapshot_is_stale_but_current_recompute_is_ready",
         "test_program_status_exposes_frontend_readiness",
         "test_program_status_waives_observation_gap_for_framework_capability",
         "test_program_status_exposes_frontend_execute_gate_recheck_required",
@@ -4694,9 +5288,13 @@
     {
       "path": "tests/integration/test_cli_rules.py",
       "framework": "pytest",
-      "test_count": 1,
+      "test_count": 5,
       "test_names": [
-        "test_rules_materialize_frontend_mvp_writes_canonical_governance_artifacts"
+        "test_rules_materialize_frontend_mvp_writes_canonical_governance_artifacts",
+        "test_rules_materialize_frontend_page_ui_schema_writes_canonical_schema_artifacts",
+        "test_rules_materialize_frontend_theme_token_governance_writes_canonical_theme_artifacts",
+        "test_rules_materialize_frontend_quality_platform_writes_canonical_quality_artifacts",
+        "test_rules_materialize_frontend_cross_provider_consistency_writes_canonical_artifacts"
       ]
     },
     {
@@ -4752,7 +5350,7 @@
     {
       "path": "tests/integration/test_cli_status.py",
       "framework": "pytest",
-      "test_count": 35,
+      "test_count": 36,
       "test_names": [
         "test_status_initialized",
         "test_status_displays_adapter_target_and_activation_truth",
@@ -4781,6 +5379,7 @@
         "test_status_json_includes_backlog_breach_guard_summary",
         "test_status_json_includes_bounded_frontend_evidence_class_summary",
         "test_status_json_includes_capability_closure_summary",
+        "test_status_json_includes_truth_ledger_summary",
         "test_status_text_surfaces_capability_closure_summary",
         "test_status_json_frontend_evidence_class_requires_exact_spec_path_match",
         "test_status_json_frontend_evidence_class_surfaces_missing_manifest",
@@ -4919,12 +5518,13 @@
     {
       "path": "tests/integration/test_cli_workitem_init.py",
       "framework": "pytest",
-      "test_count": 7,
+      "test_count": 8,
       "test_names": [
         "test_workitem_init_guides_formal_bootstrap_when_state_missing",
         "test_workitem_init_generates_direct_formal_docs",
         "test_workitem_init_auto_generated_id_updates_project_state",
         "test_workitem_init_rejects_duplicate_initialization",
+        "test_workitem_init_materializes_program_manifest_entry_and_guides_truth_sync",
         "test_workitem_init_skips_existing_sequences_when_project_state_lags",
         "test_workitem_init_requires_title",
         "test_workitem_init_succeeds_from_installed_wheel_runtime"
@@ -4965,6 +5565,14 @@
       ]
     },
     {
+      "path": "tests/integration/test_frontend_mainline_blocker_execution_map.py",
+      "framework": "pytest",
+      "test_count": 1,
+      "test_names": [
+        "test_frontend_mainline_blocker_execution_map_matches_truth_ledger"
+      ]
+    },
+    {
       "path": "tests/integration/test_offline_bundle_scripts.py",
       "framework": "pytest",
       "test_count": 3,
@@ -4972,6 +5580,14 @@
         "test_build_offline_bundle_emits_platform_manifest_and_archives",
         "test_install_offline_rejects_platform_manifest_mismatch",
         "test_install_offline_accepts_matching_platform_manifest"
+      ]
+    },
+    {
+      "path": "tests/integration/test_repo_program_manifest.py",
+      "framework": "pytest",
+      "test_count": 1,
+      "test_names": [
+        "test_root_program_manifest_covers_all_spec_directories"
       ]
     },
     {
@@ -5150,17 +5766,24 @@
     {
       "path": "tests/unit/test_close_check.py",
       "framework": "pytest",
-      "test_count": 38,
+      "test_count": 47,
       "test_names": [
         "test_close_check_blocker_tasks_incomplete",
         "test_close_check_blocker_related_plan_drift",
         "test_close_check_pass_when_all_requirements_met",
+        "test_close_check_blocks_when_program_truth_manifest_mapping_is_missing",
+        "test_close_check_blocks_when_program_truth_snapshot_is_stale",
+        "test_close_check_distinguishes_program_truth_capability_blocker",
+        "test_close_check_allows_non_release_workitem_when_unrelated_release_target_is_blocked",
         "test_close_check_blocks_when_associated_branch_is_ahead_and_undisposed",
         "test_close_check_accepts_archived_associated_branch_without_escalating_to_blocker",
         "test_close_check_ignores_unrelated_historical_branch_inventory",
         "test_close_check_blocks_when_verification_governance_source_closure_is_incomplete",
         "test_close_check_blocker_when_git_closeout_not_committed",
         "test_close_check_blocker_when_worktree_dirty_after_git_closeout",
+        "test_close_check_ignores_checkpoint_state_dirty_files",
+        "test_close_check_ignores_truth_snapshot_only_program_manifest_drift",
+        "test_close_check_blocks_when_program_manifest_drift_exceeds_truth_snapshot",
         "test_close_check_blocker_when_latest_batch_missing_verification_profile",
         "test_extract_execution_batches_handles_realistic_header_formats",
         "test_close_check_passes_when_explicit_execution_batch_range_covers_planned_batches",
@@ -5170,6 +5793,8 @@
         "test_close_check_blocker_when_003_status_correction_is_explicit",
         "test_close_check_passes_when_generic_archive_headers_do_not_count_as_batches",
         "test_close_check_pass_for_docs_only_profile_with_minimal_evidence",
+        "test_close_check_pass_for_truth_only_profile_with_minimal_evidence",
+        "test_close_check_blocker_when_truth_only_profile_masks_code_changes",
         "test_close_check_blocker_when_docs_only_profile_missing_verify_constraints",
         "test_close_check_blocker_when_docs_only_profile_masks_code_changes",
         "test_close_check_blocker_docs_claim_not_implemented_for_registered_command",
@@ -5350,6 +5975,16 @@
       ]
     },
     {
+      "path": "tests/unit/test_frontend_browser_gate_runtime.py",
+      "framework": "pytest",
+      "test_count": 3,
+      "test_names": [
+        "test_build_browser_quality_gate_execution_context_derives_index_html_entry_ref",
+        "test_materialize_browser_gate_probe_runtime_executes_real_runner_and_captures_artifacts",
+        "test_materialize_browser_gate_probe_runtime_marks_missing_runner_artifact_as_evidence_missing"
+      ]
+    },
+    {
       "path": "tests/unit/test_frontend_contract_artifacts.py",
       "framework": "pytest",
       "test_count": 3,
@@ -5455,6 +6090,37 @@
       ]
     },
     {
+      "path": "tests/unit/test_frontend_cross_provider_consistency.py",
+      "framework": "pytest",
+      "test_count": 3,
+      "test_names": [
+        "test_validate_frontend_cross_provider_consistency_passes_for_builtin_baseline",
+        "test_validate_frontend_cross_provider_consistency_blocks_unknown_page_schema_and_style_pack",
+        "test_validate_frontend_cross_provider_consistency_blocks_inconsistent_gap_and_truth_surface_contract"
+      ]
+    },
+    {
+      "path": "tests/unit/test_frontend_cross_provider_consistency_artifacts.py",
+      "framework": "pytest",
+      "test_count": 3,
+      "test_names": [
+        "test_materialize_frontend_cross_provider_consistency_artifacts_writes_expected_file_set",
+        "test_frontend_cross_provider_consistency_artifacts_preserve_pair_and_gate_semantics",
+        "test_frontend_cross_provider_consistency_root_is_stable"
+      ]
+    },
+    {
+      "path": "tests/unit/test_frontend_cross_provider_consistency_models.py",
+      "framework": "pytest",
+      "test_count": 4,
+      "test_names": [
+        "test_build_p2_frontend_cross_provider_consistency_baseline_materializes_pair_centric_truth",
+        "test_provider_pair_certification_bundle_derives_gate_from_state_vector",
+        "test_consistency_diff_record_requires_artifact_evidence_refs",
+        "test_frontend_cross_provider_consistency_set_rejects_unknown_diff_refs"
+      ]
+    },
+    {
       "path": "tests/unit/test_frontend_gate_policy_artifacts.py",
       "framework": "pytest",
       "test_count": 7,
@@ -5530,6 +6196,61 @@
       ]
     },
     {
+      "path": "tests/unit/test_frontend_page_ui_schema.py",
+      "framework": "pytest",
+      "test_count": 3,
+      "test_names": [
+        "test_validate_frontend_page_ui_schema_set_passes_for_builtin_baseline",
+        "test_validate_frontend_page_ui_schema_set_blocks_unknown_recipe_component_and_state",
+        "test_build_frontend_page_ui_schema_handoff_packages_provider_style_and_schema_refs"
+      ]
+    },
+    {
+      "path": "tests/unit/test_frontend_page_ui_schema_artifacts.py",
+      "framework": "pytest",
+      "test_count": 3,
+      "test_names": [
+        "test_materialize_frontend_page_ui_schema_artifacts_writes_expected_file_set",
+        "test_frontend_page_ui_schema_artifacts_preserve_manifest_and_schema_payloads",
+        "test_frontend_page_ui_schema_root_is_stable"
+      ]
+    },
+    {
+      "path": "tests/unit/test_frontend_page_ui_schema_models.py",
+      "framework": "pytest",
+      "test_count": 5,
+      "test_names": [
+        "test_build_p2_frontend_page_ui_schema_baseline_contains_expected_schema_layers",
+        "test_page_schema_requires_primary_anchor_in_declared_section_anchors",
+        "test_page_schema_rejects_unknown_field_block_anchor",
+        "test_ui_schema_rejects_duplicate_render_slot_ids",
+        "test_schema_set_rejects_ui_schema_reference_for_unknown_page_schema"
+      ]
+    },
+    {
+      "path": "tests/unit/test_frontend_provider_expansion_artifacts.py",
+      "framework": "pytest",
+      "test_count": 3,
+      "test_names": [
+        "test_materialize_frontend_provider_expansion_artifacts_writes_expected_file_set",
+        "test_frontend_provider_expansion_artifacts_preserve_gate_and_truth_surface_semantics",
+        "test_frontend_provider_expansion_root_is_stable"
+      ]
+    },
+    {
+      "path": "tests/unit/test_frontend_provider_expansion_models.py",
+      "framework": "pytest",
+      "test_count": 6,
+      "test_names": [
+        "test_build_p3_frontend_provider_expansion_baseline_materializes_orthogonal_truth_axes",
+        "test_provider_certification_aggregate_derives_worst_case_gate_from_pair_refs",
+        "test_provider_admission_bundle_rejects_simple_default_without_ready_gate",
+        "test_provider_admission_bundle_rejects_blocked_provider_public_visibility",
+        "test_react_exposure_boundary_requires_binding_visibility_for_visible_stack",
+        "test_frontend_provider_expansion_set_rejects_duplicate_provider_entries"
+      ]
+    },
+    {
       "path": "tests/unit/test_frontend_provider_profile_artifacts.py",
       "framework": "pytest",
       "test_count": 4,
@@ -5554,6 +6275,58 @@
       ]
     },
     {
+      "path": "tests/unit/test_frontend_provider_runtime_adapter_artifacts.py",
+      "framework": "pytest",
+      "test_count": 3,
+      "test_names": [
+        "test_materialize_frontend_provider_runtime_adapter_artifacts_writes_expected_file_set",
+        "test_frontend_provider_runtime_adapter_artifacts_preserve_target_delivery_semantics",
+        "test_frontend_provider_runtime_adapter_root_is_stable"
+      ]
+    },
+    {
+      "path": "tests/unit/test_frontend_provider_runtime_adapter_models.py",
+      "framework": "pytest",
+      "test_count": 4,
+      "test_names": [
+        "test_build_p3_target_project_adapter_scaffold_baseline_materializes_default_carrier_targets",
+        "test_adapter_scaffold_contract_rejects_independent_package_before_multi_project_validation",
+        "test_runtime_boundary_receipt_rejects_verified_without_fresh_evidence",
+        "test_frontend_provider_runtime_adapter_set_rejects_duplicate_provider_targets"
+      ]
+    },
+    {
+      "path": "tests/unit/test_frontend_quality_platform.py",
+      "framework": "pytest",
+      "test_count": 3,
+      "test_names": [
+        "test_validate_frontend_quality_platform_passes_for_builtin_baseline",
+        "test_validate_frontend_quality_platform_blocks_unknown_page_schema_and_theme_pack",
+        "test_validate_frontend_quality_platform_blocks_snapshot_style_pack_outside_governance"
+      ]
+    },
+    {
+      "path": "tests/unit/test_frontend_quality_platform_artifacts.py",
+      "framework": "pytest",
+      "test_count": 3,
+      "test_names": [
+        "test_materialize_frontend_quality_platform_artifacts_writes_expected_file_set",
+        "test_frontend_quality_platform_artifacts_preserve_matrix_and_verdict_semantics",
+        "test_frontend_quality_platform_root_is_stable"
+      ]
+    },
+    {
+      "path": "tests/unit/test_frontend_quality_platform_models.py",
+      "framework": "pytest",
+      "test_count": 4,
+      "test_names": [
+        "test_build_p2_frontend_quality_platform_baseline_materializes_matrix_and_handoff_truth",
+        "test_quality_platform_set_rejects_duplicate_matrix_ids",
+        "test_quality_verdict_envelope_requires_artifact_evidence_refs",
+        "test_frontend_quality_platform_set_rejects_unknown_matrix_and_evidence_contract_refs"
+      ]
+    },
+    {
       "path": "tests/unit/test_frontend_solution_confirmation_artifacts.py",
       "framework": "pytest",
       "test_count": 3,
@@ -5574,6 +6347,37 @@
         "test_build_mvp_solution_snapshot_assigns_new_snapshot_id_for_derived_versions",
         "test_build_mvp_solution_snapshot_preserves_previous_state_when_versioning",
         "test_build_mvp_solution_snapshot_preserves_unknown_style_tokens_without_keyerror"
+      ]
+    },
+    {
+      "path": "tests/unit/test_frontend_theme_token_governance.py",
+      "framework": "pytest",
+      "test_count": 2,
+      "test_names": [
+        "test_validate_frontend_theme_token_governance_passes_for_builtin_baseline",
+        "test_validate_frontend_theme_token_governance_blocks_unknown_anchor_unsupported_pair_illegal_namespace_and_token_floor_bypass"
+      ]
+    },
+    {
+      "path": "tests/unit/test_frontend_theme_token_governance_artifacts.py",
+      "framework": "pytest",
+      "test_count": 3,
+      "test_names": [
+        "test_materialize_frontend_theme_token_governance_artifacts_writes_expected_file_set",
+        "test_theme_token_governance_artifacts_preserve_reference_only_payloads",
+        "test_frontend_theme_token_governance_root_is_stable"
+      ]
+    },
+    {
+      "path": "tests/unit/test_frontend_theme_token_governance_models.py",
+      "framework": "pytest",
+      "test_count": 5,
+      "test_names": [
+        "test_build_p2_frontend_theme_token_governance_baseline_inherits_upstream_truth_without_copying_inventory",
+        "test_frontend_theme_token_governance_set_rejects_duplicate_mapping_ids",
+        "test_theme_token_mapping_rejects_unknown_scope",
+        "test_custom_theme_token_override_rejects_illegal_namespace",
+        "test_custom_theme_token_override_requires_resolution_reason_when_requested_and_effective_mismatch"
       ]
     },
     {
@@ -5622,7 +6426,7 @@
     {
       "path": "tests/unit/test_gates.py",
       "framework": "pytest",
-      "test_count": 74,
+      "test_count": 75,
       "test_names": [
         "test_register_and_get",
         "test_get_missing",
@@ -5677,6 +6481,7 @@
         "test_pass",
         "test_fail_when_postmortem_is_incomplete",
         "test_fail_no_summary",
+        "test_blocks_when_program_truth_audit_is_not_ready",
         "test_blocks_when_knowledge_refresh_is_pending",
         "test_halts_if_not_initialized",
         "test_passes_if_initialized_no_changes",
@@ -5748,7 +6553,7 @@
     {
       "path": "tests/unit/test_ide_adapter.py",
       "framework": "pytest",
-      "test_count": 26,
+      "test_count": 27,
       "test_names": [
         "test_trae_is_not_supported_as_a_distinct_target",
         "test_cursor_dir",
@@ -5775,6 +6580,7 @@
         "test_repeated_adaptation_does_not_refresh_timestamp_without_state_change",
         "test_repeated_adaptation_preserves_acknowledged_support_tier",
         "test_explicit_target_can_auto_verify_when_running_inside_matching_host",
+        "test_repeated_adaptation_preserves_recorded_verified_ingress_without_env",
         "test_build_adapter_governance_surface_reports_materialized_truth"
       ]
     },
@@ -5807,7 +6613,7 @@
     {
       "path": "tests/unit/test_managed_delivery_apply.py",
       "framework": "pytest",
-      "test_count": 15,
+      "test_count": 20,
       "test_names": [
         "test_run_managed_delivery_apply_blocks_on_plan_fingerprint_mismatch",
         "test_run_managed_delivery_apply_blocks_on_receipt_plan_binding_mismatch",
@@ -5823,6 +6629,11 @@
         "test_run_managed_delivery_apply_preserves_partial_progress_on_manual_recovery",
         "test_run_managed_delivery_apply_tracks_deselected_optional_actions_as_skipped",
         "test_run_managed_delivery_apply_returns_pending_browser_gate_success",
+        "test_run_managed_delivery_apply_materializes_runtime_remediation_truth",
+        "test_run_managed_delivery_apply_materializes_managed_target_prepare_truth",
+        "test_run_managed_delivery_apply_executes_workspace_integration_when_selected",
+        "test_run_managed_delivery_apply_blocks_workspace_integration_on_mixed_target_classes",
+        "test_run_managed_delivery_apply_blocks_workspace_integration_on_symlink_escape",
         "test_run_managed_delivery_apply_blocks_on_dependency_cycle"
       ]
     },
@@ -6004,14 +6815,44 @@
     {
       "path": "tests/unit/test_program_service.py",
       "framework": "pytest",
-      "test_count": 230,
+      "test_count": 261,
       "test_names": [
+        "test_build_frontend_page_ui_schema_handoff_blocks_when_solution_snapshot_missing",
+        "test_build_frontend_page_ui_schema_handoff_uses_latest_solution_snapshot",
+        "test_build_frontend_theme_token_governance_handoff_blocks_when_solution_snapshot_missing",
+        "test_build_frontend_theme_token_governance_handoff_uses_latest_solution_snapshot_and_page_schema_handoff",
+        "test_build_frontend_quality_platform_handoff_blocks_when_solution_snapshot_missing",
+        "test_build_frontend_quality_platform_handoff_uses_latest_solution_snapshot_and_surfaces_matrix_diagnostics",
+        "test_build_frontend_provider_expansion_handoff_blocks_when_solution_snapshot_missing",
+        "test_build_frontend_provider_expansion_handoff_uses_latest_solution_snapshot_and_provider_diagnostics",
+        "test_build_frontend_provider_runtime_adapter_handoff_blocks_when_solution_snapshot_missing",
+        "test_build_frontend_provider_runtime_adapter_handoff_surfaces_scaffold_and_delivery_state",
+        "test_build_frontend_cross_provider_consistency_handoff_surfaces_pair_truth_and_release_blockers",
         "test_validate_manifest_ok",
+        "test_program_manifest_v2_preserves_truth_ledger_fields",
+        "test_validate_manifest_rejects_unknown_release_target",
+        "test_validate_manifest_rejects_release_scope_spec_without_roles_and_capability_refs",
+        "test_validate_manifest_warns_for_non_release_scope_spec_dir_missing_entry_in_v2",
+        "test_validate_manifest_warns_for_unmapped_truth_sources_in_v2",
+        "test_build_truth_snapshot_includes_source_inventory_and_layer_counts",
+        "test_build_truth_snapshot_maps_frontend_canonical_conflict_to_blocked",
+        "test_build_truth_snapshot_blocks_release_scope_on_151_provider_expansion_verify_gap",
+        "test_build_truth_snapshot_blocks_release_scope_on_149_quality_platform_verify_gap",
+        "test_build_truth_snapshot_keeps_canonical_conflict_blocked_when_structural_errors_exist",
+        "test_build_truth_ledger_surface_marks_stale_when_authoring_hash_changes",
+        "test_build_truth_ledger_surface_stays_fresh_for_truth_snapshot_only_drift",
+        "test_build_truth_ledger_surface_ignores_truth_check_revision_metadata_drift",
+        "test_build_truth_snapshot_blocks_release_scope_when_closure_audit_missing",
         "test_build_frontend_managed_delivery_apply_request_blocks_on_host_ingress",
+        "test_build_frontend_managed_delivery_apply_request_materializes_public_bundle_from_truth",
+        "test_build_frontend_managed_delivery_apply_request_uses_builtin_provider_truth_when_artifacts_missing",
+        "test_build_frontend_managed_delivery_apply_request_blocks_enterprise_private_registry_prereq_from_truth",
         "test_execute_frontend_managed_delivery_apply_returns_pending_browser_gate_success",
         "test_build_frontend_managed_delivery_apply_request_surfaces_executor_preflight_blockers",
         "test_write_frontend_managed_delivery_apply_artifact_persists_browser_gate_handoff_input",
+        "test_write_frontend_managed_delivery_apply_artifact_keeps_materialized_request_schema_separate",
         "test_build_frontend_browser_gate_probe_request_requires_apply_artifact",
+        "test_build_frontend_browser_gate_probe_request_accepts_legacy_apply_artifact_path_for_upgrade_compat",
         "test_execute_frontend_browser_gate_probe_materializes_gate_run_bundle",
         "test_build_integration_dry_run_uses_browser_gate_recheck_command_when_gate_artifact_exists",
         "test_build_status_fails_closed_when_browser_gate_artifact_scope_drift_detected",
@@ -6020,6 +6861,7 @@
         "test_build_integration_dry_run_surfaces_browser_gate_remediation_follow_up_command",
         "test_build_integration_dry_run_skips_browser_gate_recheck_handoff_when_artifact_is_ready",
         "test_execute_frontend_remediation_runbook_stays_incomplete_when_browser_gate_recheck_remains",
+        "test_execute_frontend_browser_gate_probe_treats_runner_success_with_missing_artifact_as_recheck_required",
         "test_validate_manifest_cycle",
         "test_validate_manifest_frontend_evidence_class_mirror_missing",
         "test_validate_manifest_frontend_evidence_class_mirror_invalid_value",
@@ -6293,10 +7135,11 @@
     {
       "path": "tests/unit/test_runner_confirm.py",
       "framework": "pytest",
-      "test_count": 17,
+      "test_count": 18,
       "test_names": [
         "test_close_context_includes_incident_postmortem_and_refresh_entry",
         "test_close_context_attests_with_close_check_when_execute_progress_missing",
+        "test_close_context_surfaces_stale_program_truth_for_mapped_spec",
         "test_verify_context_includes_frontend_contract_runtime_attachment_for_active_014",
         "test_verify_context_skips_frontend_contract_runtime_attachment_for_non_014",
         "test_confirm_callback_pauses_pipeline",
@@ -6635,7 +7478,7 @@
     {
       "path": "tests/unit/test_verify_constraints.py",
       "framework": "pytest",
-      "test_count": 68,
+      "test_count": 80,
       "test_names": [
         "test_blocker_missing_constitution",
         "test_blocker_spec_dir_missing",
@@ -6665,6 +7508,7 @@
         "test_release_docs_consistency_passes_when_release_entry_docs_align",
         "test_verification_profile_docs_block_when_rules_surface_missing_profile",
         "test_verification_profile_docs_block_when_checklist_missing_code_change",
+        "test_verification_profile_docs_block_when_truth_only_profile_missing",
         "test_verification_profile_docs_pass_when_both_surfaces_complete",
         "test_doc_first_rule_surfaces_block_when_pipeline_terms_missing",
         "test_doc_first_rule_surfaces_block_when_doc_first_task_targets_code",
@@ -6698,6 +7542,17 @@
         "test_073_frontend_solution_confirmation_verification_rejects_invalid_override_flag_literal",
         "test_073_frontend_solution_confirmation_verification_surfaces_invalid_latest_yaml_as_blocker",
         "test_073_frontend_solution_confirmation_verification_surfaces_invalid_style_support_yaml_as_blocker",
+        "test_148_frontend_theme_token_governance_verification_surfaces_duplicate_mapping_ids",
+        "test_148_frontend_theme_token_governance_verification_surfaces_unknown_anchor_and_token_floor_bypass",
+        "test_148_frontend_theme_token_governance_verification_surfaces_illegal_override_namespace",
+        "test_149_frontend_quality_platform_verification_surfaces_missing_verdict_artifact",
+        "test_149_frontend_quality_platform_verification_surfaces_unknown_style_pack",
+        "test_151_frontend_provider_expansion_verification_surfaces_missing_provider_admission_artifact",
+        "test_151_frontend_provider_expansion_verification_blocks_react_snapshot_while_boundary_hidden",
+        "test_153_frontend_provider_runtime_adapter_verification_surfaces_missing_scaffold_artifact",
+        "test_153_frontend_provider_runtime_adapter_verification_blocks_react_snapshot_before_scaffold_starts",
+        "test_150_frontend_cross_provider_consistency_verification_surfaces_missing_certification_artifact",
+        "test_150_frontend_cross_provider_consistency_verification_blocks_release_truth_when_pair_gate_not_ready",
         "test_build_verification_governance_bundle_emits_gate_capable_payload",
         "test_build_verification_gate_context_degrades_to_advisory_when_governance_is_incomplete",
         "test_build_verification_gate_context_keeps_phase1_provenance_advisory_only",

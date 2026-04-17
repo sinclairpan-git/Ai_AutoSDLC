@@ -49,3 +49,22 @@ entries:
   updated_docs:
   - .ai-sdlc/project/memory/engineering-corpus.md
   notes: ''
+- work_item_id: 158-agent-adapter-verified-host-ingress-closure-audit-reconciliation-baseline
+  refresh_level: 2
+  triggered_at: '2026-04-17T17:27:44+00:00'
+  completed_at: '2026-04-17T17:27:46+00:00'
+  changed_files:
+  - src/ai_sdlc/core/program_service.py
+  - tests/unit/test_program_service.py
+  - tests/integration/test_cli_program.py
+  - program-manifest.yaml
+  updated_indexes:
+  - .ai-sdlc/state/repo-facts.json
+  - .ai-sdlc/project/generated/key-files.json
+  - .ai-sdlc/project/generated/api-index.json
+  - .ai-sdlc/project/generated/dependency-index.json
+  - .ai-sdlc/project/generated/test-index.json
+  - .ai-sdlc/project/generated/risk-index.json
+  updated_docs:
+  - .ai-sdlc/project/memory/engineering-corpus.md
+  notes: ''

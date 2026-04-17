@@ -1,7 +1,7 @@
 initialized: true
 initialized_at: '2026-04-02T05:21:58+00:00'
-last_refreshed_at: '2026-04-14T10:44:50+00:00'
-refresh_count: 2
-corpus_version: 3
-index_version: 3
+last_refreshed_at: '2026-04-17T17:27:46+00:00'
+refresh_count: 3
+corpus_version: 4
+index_version: 4
 baseline_hash: ''

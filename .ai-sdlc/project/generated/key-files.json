@@ -21,17 +21,17 @@
     {
       "path": "src/ai_sdlc/core/program_service.py",
       "language": "python",
-      "lines": 9942
+      "lines": 12256
     },
     {
       "path": "src/ai_sdlc/cli/program_cmd.py",
       "language": "python",
-      "lines": 5015
+      "lines": 5521
     },
     {
       "path": "src/ai_sdlc/core/verify_constraints.py",
       "language": "python",
-      "lines": 2080
+      "lines": 4044
     },
     {
       "path": "src/ai_sdlc/models/frontend_gate_policy.py",
@@ -41,12 +41,27 @@
     {
       "path": "src/ai_sdlc/gates/pipeline_gates.py",
       "language": "python",
-      "lines": 955
+      "lines": 971
+    },
+    {
+      "path": "src/ai_sdlc/core/frontend_browser_gate_runtime.py",
+      "language": "python",
+      "lines": 969
+    },
+    {
+      "path": "src/ai_sdlc/core/managed_delivery_apply.py",
+      "language": "python",
+      "lines": 937
+    },
+    {
+      "path": "src/ai_sdlc/core/close_check.py",
+      "language": "python",
+      "lines": 926
     },
     {
       "path": "src/ai_sdlc/telemetry/readiness.py",
       "language": "python",
-      "lines": 899
+      "lines": 921
     },
     {
       "path": "src/ai_sdlc/core/frontend_gate_verification.py",
@@ -56,7 +71,7 @@
     {
       "path": "src/ai_sdlc/cli/commands.py",
       "language": "python",
-      "lines": 766
+      "lines": 785
     },
     {
       "path": "src/ai_sdlc/core/executor.py",
@@ -64,14 +79,9 @@
       "lines": 763
     },
     {
-      "path": "src/ai_sdlc/core/close_check.py",
+      "path": "src/ai_sdlc/models/frontend_cross_provider_consistency.py",
       "language": "python",
-      "lines": 743
-    },
-    {
-      "path": "src/ai_sdlc/core/managed_delivery_apply.py",
-      "language": "python",
-      "lines": 720
+      "lines": 749
     },
     {
       "path": "src/ai_sdlc/telemetry/runtime.py",
@@ -84,6 +94,11 @@
       "lines": 653
     },
     {
+      "path": "src/ai_sdlc/integrations/ide_adapter.py",
+      "language": "python",
+      "lines": 607
+    },
+    {
       "path": "src/ai_sdlc/context/state.py",
       "language": "python",
       "lines": 587
@@ -94,29 +109,14 @@
       "lines": 583
     },
     {
-      "path": "src/ai_sdlc/integrations/ide_adapter.py",
+      "path": "src/ai_sdlc/models/frontend_page_ui_schema.py",
       "language": "python",
-      "lines": 576
+      "lines": 564
     },
     {
       "path": "src/ai_sdlc/telemetry/store.py",
       "language": "python",
       "lines": 558
-    },
-    {
-      "path": "src/ai_sdlc/branch/git_client.py",
-      "language": "python",
-      "lines": 551
-    },
-    {
-      "path": "src/ai_sdlc/telemetry/evaluators.py",
-      "language": "python",
-      "lines": 538
-    },
-    {
-      "path": "src/ai_sdlc/telemetry/contracts.py",
-      "language": "python",
-      "lines": 523
     }
   ]
 }
