@@ -5,6 +5,7 @@ from __future__ import annotations
 import subprocess
 from dataclasses import replace
 from pathlib import Path
+from unittest.mock import patch
 
 import yaml
 
@@ -1467,26 +1468,67 @@ def test_build_truth_ledger_surface_marks_stale_when_authoring_hash_changes(
     (tmp_path / "src").mkdir(parents=True)
     (tmp_path / "src" / "app.py").write_text("print('demo')\n", encoding="utf-8")
     _write_truth_ledger_manifest(tmp_path)
-    _commit_truth_repo(tmp_path, "seed truth ledger stale fixture")
-
-    svc = ProgramService(tmp_path)
-    manifest = svc.load_manifest()
-    snapshot = svc.build_truth_snapshot(manifest)
-    svc.write_truth_snapshot(snapshot)
-
     payload = yaml.safe_load((tmp_path / "program-manifest.yaml").read_text(encoding="utf-8"))
-    payload["program"]["goal"] = "Updated goal after sync"
+    payload["capability_closure_audit"] = {
+        "reviewed_at": "2026-04-18T08:00:00Z",
+        "open_clusters": [],
+    }
     (tmp_path / "program-manifest.yaml").write_text(
         yaml.safe_dump(payload, sort_keys=False, allow_unicode=True),
         encoding="utf-8",
     )
+    _commit_truth_repo(tmp_path, "seed truth ledger stale fixture")
 
-    updated_manifest = svc.load_manifest()
-    surface = svc.build_truth_ledger_surface(updated_manifest)
+    svc = ProgramService(tmp_path)
+    manifest = svc.load_manifest()
+    with (
+        patch.object(
+            ProgramService,
+            "_run_close_check_ref",
+            return_value={"ok": True, "blockers": [], "checks": [], "error": None},
+        ),
+        patch.object(
+            ProgramService,
+            "_run_verify_ref",
+            return_value={
+                "ok": True,
+                "command": "uv run ai-sdlc verify constraints",
+                "blockers": [],
+                "warnings": [],
+            },
+        ),
+    ):
+        snapshot = svc.build_truth_snapshot(manifest)
+        svc.write_truth_snapshot(snapshot)
+
+        payload = yaml.safe_load(
+            (tmp_path / "program-manifest.yaml").read_text(encoding="utf-8")
+        )
+        payload["program"]["goal"] = "Updated goal after sync"
+        (tmp_path / "program-manifest.yaml").write_text(
+            yaml.safe_dump(payload, sort_keys=False, allow_unicode=True),
+            encoding="utf-8",
+        )
+
+        updated_manifest = svc.load_manifest()
+        surface = svc.build_truth_ledger_surface(updated_manifest)
 
     assert surface is not None
     assert surface["snapshot_state"] == "stale"
     assert surface["state"] == "stale"
+    assert surface["release_capabilities"] == [
+        {
+            "capability_id": "frontend-mainline-delivery",
+            "closure_state": "closed",
+            "audit_state": "ready",
+            "blocking_refs": [],
+        }
+    ]
+    assert (
+        surface["detail"]
+        == "persisted truth snapshot is stale; current recompute is ready. "
+        "Refresh the snapshot as the terminal close-out step, then rerun program truth audit."
+    )
 
 
 def test_build_truth_ledger_surface_stays_fresh_for_truth_snapshot_only_drift(

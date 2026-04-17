@@ -2320,6 +2320,7 @@ class ProgramService:
         detail = self._build_truth_ledger_detail(
             state=state,
             snapshot_state=snapshot_state,
+            current_snapshot_state=current_snapshot.state or "ready",
             release_capabilities=release_capabilities,
             migration_pending_count=migration_pending_count,
         )
@@ -2652,6 +2653,7 @@ class ProgramService:
         *,
         state: str,
         snapshot_state: str,
+        current_snapshot_state: str,
         release_capabilities: list[dict[str, object]],
         migration_pending_count: int,
     ) -> str:
@@ -2662,6 +2664,12 @@ class ProgramService:
         if snapshot_state == "invalid":
             return "persisted truth snapshot hash is invalid"
         if snapshot_state == "stale":
+            if current_snapshot_state == "ready":
+                return (
+                    "persisted truth snapshot is stale; current recompute is ready. "
+                    "Refresh the snapshot as the terminal close-out step, then rerun "
+                    "program truth audit."
+                )
             return "persisted truth snapshot is stale relative to current authoring/evidence"
         prefix = (
             f"migration pending: {migration_pending_count}; "

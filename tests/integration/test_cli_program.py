@@ -1393,6 +1393,59 @@ specs:
         assert "next action" in status.output.lower()
         assert "python -m ai_sdlc program truth sync --execute --yes" in status.output
 
+    def test_program_status_exposes_terminal_truth_sync_guidance_when_snapshot_is_stale_but_current_recompute_is_ready(
+        self, initialized_project_dir: Path
+    ) -> None:
+        root = initialized_project_dir
+        _init_truth_git_repo(root)
+        _write_program_truth_fixture(root)
+        _commit_truth_repo(root, "docs: seed truth ledger fixture")
+
+        with (
+            patch("ai_sdlc.cli.program_cmd.find_project_root", return_value=root),
+            patch.object(
+                program_service_module.ProgramService,
+                "build_truth_ledger_surface",
+                return_value={
+                    "state": "stale",
+                    "snapshot_state": "stale",
+                    "detail": (
+                        "persisted truth snapshot is stale; current recompute is ready. "
+                        "Refresh the snapshot as the terminal close-out step, then rerun program truth audit."
+                    ),
+                    "next_required_actions": [
+                        "python -m ai_sdlc program truth sync --execute --yes"
+                    ],
+                    "next_required_action": "python -m ai_sdlc program truth sync --execute --yes",
+                    "snapshot_hash": "abc123",
+                    "release_targets": ["frontend-mainline-delivery"],
+                    "release_capabilities": [
+                        {
+                            "capability_id": "frontend-mainline-delivery",
+                            "closure_state": "closed",
+                            "audit_state": "ready",
+                            "blocking_refs": [],
+                        }
+                    ],
+                    "migration_pending_count": 0,
+                    "migration_pending_specs": [],
+                    "migration_pending_sources": [],
+                    "migration_suggestions": [],
+                    "source_inventory": None,
+                    "validation_errors": [],
+                    "validation_warnings": [],
+                },
+            ),
+        ):
+            status = runner.invoke(app, ["program", "status"])
+
+        assert status.exit_code == 0, status.output
+        assert "Truth Ledger" in status.output
+        assert "snapshot state: stale" in status.output.lower()
+        assert "current recompute is ready" in status.output
+        assert "terminal close-out step" in status.output
+        assert "python -m ai_sdlc program truth sync --execute --yes" in status.output
+
     def test_program_status_exposes_frontend_readiness(
         self, initialized_project_dir: Path
     ) -> None:
