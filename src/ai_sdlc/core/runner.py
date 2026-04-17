@@ -226,7 +226,7 @@ class SDLCRunner:
     ) -> GateResult:
         """Run gate check with retry loop up to MAX_RETRIES."""
         for attempt in range(MAX_RETRIES):
-            result = self._run_gate(stage, cp)
+            result = self._run_gate(stage, cp, dry_run=dry_run)
             if not dry_run:
                 self._telemetry.record_gate_control_point(
                     step_id=self._dispatcher.current_step_id,
@@ -309,11 +309,15 @@ class SDLCRunner:
             save_checkpoint(self.root, cp)
         return cp
 
-    def _run_gate(self, stage: str, cp: Checkpoint) -> GateResult:
-        ctx = self._build_context(stage, cp)
+    def _run_gate(
+        self, stage: str, cp: Checkpoint, *, dry_run: bool = False
+    ) -> GateResult:
+        ctx = self._build_context(stage, cp, dry_run=dry_run)
         return self._registry.check(stage, ctx)
 
-    def _build_context(self, stage: str, cp: Checkpoint | None) -> dict[str, Any]:
+    def _build_context(
+        self, stage: str, cp: Checkpoint | None, *, dry_run: bool = False
+    ) -> dict[str, Any]:
         """Build gate context from persisted state, not hardcoded values."""
         ctx: dict[str, Any] = {"root": str(self.root)}
         spec_dir = self._resolve_spec_dir(cp)
@@ -323,7 +327,7 @@ class SDLCRunner:
         if stage == "execute":
             self._enrich_execute_context(ctx, spec_dir, cp)
         elif stage == "close":
-            self._enrich_close_context(ctx, spec_dir, cp)
+            self._enrich_close_context(ctx, spec_dir, cp, dry_run=dry_run)
         elif stage == "verify":
             ctx.update(build_verification_gate_context(self.root))
             if is_frontend_contract_runtime_attachment_work_item(cp):
@@ -430,6 +434,8 @@ class SDLCRunner:
         ctx: dict[str, Any],
         spec_dir: Path | None,
         cp: Checkpoint | None,
+        *,
+        dry_run: bool = False,
     ) -> None:
         """Populate close-gate context from real state."""
         ctx["all_tasks_complete"] = False
@@ -445,7 +451,12 @@ class SDLCRunner:
             )
             ctx["tests_passed"] = prog.last_commit_hash != "" and not prog.halted
         if spec_dir is not None and (not ctx["all_tasks_complete"] or not ctx["tests_passed"]):
-            close_check = run_close_check(cwd=self.root, wi=spec_dir, all_docs=False)
+            close_check = run_close_check(
+                cwd=self.root,
+                wi=spec_dir,
+                all_docs=False,
+                include_program_truth=not dry_run,
+            )
             ctx["close_check_ok"] = close_check.ok
             if close_check.ok:
                 def _flag_ok(name: str) -> bool:
@@ -463,12 +474,13 @@ class SDLCRunner:
                 ctx["close_check_attested"] = True
             else:
                 ctx["close_check_blockers"] = list(close_check.blockers)
-        truth_surface = _program_truth_gate_surface(self.root, spec_dir=spec_dir)
-        if truth_surface is not None:
-            ctx["program_truth_audit_required"] = True
-            ctx["program_truth_audit_ready"] = bool(truth_surface.get("ready"))
-            ctx["program_truth_audit_state"] = truth_surface.get("state")
-            ctx["program_truth_audit_detail"] = truth_surface.get("detail", "")
+        if not dry_run:
+            truth_surface = _program_truth_gate_surface(self.root, spec_dir=spec_dir)
+            if truth_surface is not None:
+                ctx["program_truth_audit_required"] = True
+                ctx["program_truth_audit_ready"] = bool(truth_surface.get("ready"))
+                ctx["program_truth_audit_state"] = truth_surface.get("state")
+                ctx["program_truth_audit_detail"] = truth_surface.get("detail", "")
         work_item_id = ""
         if cp and cp.linked_wi_id:
             work_item_id = cp.linked_wi_id

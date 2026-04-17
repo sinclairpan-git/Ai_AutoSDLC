@@ -151,7 +151,13 @@ class TestConfirmMode:
             ),
         )
 
-        def _fake_close_check(*, cwd: Path | None, wi: Path, all_docs: bool = False) -> CloseCheckResult:
+        def _fake_close_check(
+            *,
+            cwd: Path | None,
+            wi: Path,
+            all_docs: bool = False,
+            include_program_truth: bool = True,
+        ) -> CloseCheckResult:
             return CloseCheckResult(
                 ok=True,
                 blockers=[],
@@ -174,6 +180,135 @@ class TestConfirmMode:
         assert ctx["all_tasks_complete"] is True
         assert ctx["tests_passed"] is True
         assert ctx["close_check_attested"] is True
+
+    def test_close_context_dry_run_skips_program_truth_close_check_fanout(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        _bootstrap_project(tmp_path)
+        spec_dir = tmp_path / "specs" / "WI-001"
+        spec_dir.mkdir(parents=True, exist_ok=True)
+        (spec_dir / "development-summary.md").write_text("# Summary\n", encoding="utf-8")
+        save_checkpoint(
+            tmp_path,
+            Checkpoint(
+                current_stage="close",
+                feature=FeatureInfo(
+                    id="WI-001",
+                    spec_dir="specs/WI-001",
+                    design_branch="design/WI-001",
+                    feature_branch="feature/WI-001",
+                    current_branch="feature/WI-001",
+                ),
+            ),
+        )
+
+        captured: dict[str, bool] = {}
+
+        def _fake_close_check(
+            *,
+            cwd: Path | None,
+            wi: Path,
+            all_docs: bool = False,
+            include_program_truth: bool = True,
+        ) -> CloseCheckResult:
+            captured["include_program_truth"] = include_program_truth
+            return CloseCheckResult(
+                ok=True,
+                blockers=[],
+                checks=[
+                    {"name": "tasks_completion", "ok": True, "detail": "ok"},
+                    {"name": "verification_profile", "ok": True, "detail": "ok"},
+                ],
+                wi_dir=spec_dir,
+                error=None,
+            )
+
+        monkeypatch.setattr("ai_sdlc.core.runner.run_close_check", _fake_close_check)
+
+        runner = SDLCRunner(tmp_path)
+        cp = load_checkpoint(tmp_path)
+        assert cp is not None
+
+        ctx = runner._build_context("close", cp, dry_run=True)
+
+        assert captured["include_program_truth"] is False
+        assert ctx["all_tasks_complete"] is True
+        assert ctx["tests_passed"] is True
+        assert ctx["close_check_attested"] is True
+
+    def test_close_context_dry_run_skips_program_truth_audit_surface(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        _bootstrap_project(tmp_path)
+        spec_dir = tmp_path / "specs" / "001-wi"
+        spec_dir.mkdir(parents=True, exist_ok=True)
+        (spec_dir / "tasks.md").write_text("- [x] done\n", encoding="utf-8")
+        (spec_dir / "task-execution-log.md").write_text(
+            "# Log\n\n统一验证命令\n代码审查\n任务/计划同步状态\n",
+            encoding="utf-8",
+        )
+        (spec_dir / "development-summary.md").write_text("# Summary\n", encoding="utf-8")
+        (tmp_path / "program-manifest.yaml").write_text(
+            'schema_version: "2"\n'
+            "program:\n"
+            '  goal: "Demo truth ledger"\n'
+            "specs:\n"
+            '  - id: "001-wi"\n'
+            '    path: "specs/001-wi"\n'
+            "    depends_on: []\n",
+            encoding="utf-8",
+        )
+        save_checkpoint(
+            tmp_path,
+            Checkpoint(
+                current_stage="close",
+                feature=FeatureInfo(
+                    id="001-wi",
+                    spec_dir="specs/001-wi",
+                    design_branch="design/001-wi",
+                    feature_branch="feature/001-wi",
+                    current_branch="feature/001-wi",
+                ),
+            ),
+        )
+
+        def _fake_close_check(
+            *,
+            cwd: Path | None,
+            wi: Path,
+            all_docs: bool = False,
+            include_program_truth: bool = True,
+        ) -> CloseCheckResult:
+            return CloseCheckResult(
+                ok=True,
+                blockers=[],
+                checks=[
+                    {"name": "tasks_completion", "ok": True, "detail": "ok"},
+                    {"name": "verification_profile", "ok": True, "detail": "ok"},
+                ],
+                wi_dir=spec_dir,
+                error=None,
+            )
+
+        monkeypatch.setattr("ai_sdlc.core.runner.run_close_check", _fake_close_check)
+
+        def _explode_program_truth(*args: object, **kwargs: object) -> dict[str, object]:
+            raise AssertionError("program truth audit should be skipped in dry-run")
+
+        monkeypatch.setattr(
+            "ai_sdlc.core.runner._program_truth_gate_surface",
+            _explode_program_truth,
+        )
+
+        runner = SDLCRunner(tmp_path)
+        cp = load_checkpoint(tmp_path)
+        assert cp is not None
+
+        ctx = runner._build_context("close", cp, dry_run=True)
+
+        assert "program_truth_audit_required" not in ctx
+        assert ctx["all_tasks_complete"] is True
+        assert ctx["tests_passed"] is True
 
     def test_close_context_surfaces_stale_program_truth_for_mapped_spec(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
@@ -221,7 +356,13 @@ class TestConfirmMode:
             ),
         )
 
-        def _fake_close_check(*, cwd: Path | None, wi: Path, all_docs: bool = False) -> CloseCheckResult:
+        def _fake_close_check(
+            *,
+            cwd: Path | None,
+            wi: Path,
+            all_docs: bool = False,
+            include_program_truth: bool = True,
+        ) -> CloseCheckResult:
             return CloseCheckResult(
                 ok=True,
                 blockers=[],
@@ -599,7 +740,7 @@ class TestConfirmMode:
 
         runner = SDLCRunner(tmp_path)
 
-        def explode(_stage: str, _cp: object) -> object:
+        def explode(_stage: str, _cp: object, *, dry_run: bool = False) -> object:
             raise RuntimeError("boom")
 
         runner._run_gate = explode

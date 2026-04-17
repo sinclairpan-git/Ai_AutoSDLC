@@ -51,9 +51,15 @@ class TestRunCommand:
     def _force_passing_gates(monkeypatch: pytest.MonkeyPatch) -> None:
         original_run_gate = SDLCRunner._run_gate
 
-        def gate_wrapper(self: SDLCRunner, stage: str, cp: Checkpoint) -> GateResult:
+        def gate_wrapper(
+            self: SDLCRunner,
+            stage: str,
+            cp: Checkpoint,
+            *,
+            dry_run: bool = False,
+        ) -> GateResult:
             if stage == "init":
-                return original_run_gate(self, stage, cp)
+                return original_run_gate(self, stage, cp, dry_run=dry_run)
             return GateResult(
                 stage=stage,
                 verdict=GateVerdict.PASS,
@@ -214,9 +220,15 @@ class TestRunCommand:
 
         original_run_gate = SDLCRunner._run_gate
 
-        def gate_wrapper(self: SDLCRunner, stage: str, cp: Checkpoint) -> GateResult:
+        def gate_wrapper(
+            self: SDLCRunner,
+            stage: str,
+            cp: Checkpoint,
+            *,
+            dry_run: bool = False,
+        ) -> GateResult:
             if stage == "init":
-                return original_run_gate(self, stage, cp)
+                return original_run_gate(self, stage, cp, dry_run=dry_run)
             return GateResult(
                 stage=stage,
                 verdict=GateVerdict.PASS,
@@ -305,9 +317,15 @@ class TestRunCommand:
 
         original_run_gate = SDLCRunner._run_gate
 
-        def gate_wrapper(self: SDLCRunner, stage: str, cp: Checkpoint) -> GateResult:
+        def gate_wrapper(
+            self: SDLCRunner,
+            stage: str,
+            cp: Checkpoint,
+            *,
+            dry_run: bool = False,
+        ) -> GateResult:
             if stage == "init":
-                return original_run_gate(self, stage, cp)
+                return original_run_gate(self, stage, cp, dry_run=dry_run)
             return GateResult(
                 stage=stage,
                 verdict=GateVerdict.PASS,
