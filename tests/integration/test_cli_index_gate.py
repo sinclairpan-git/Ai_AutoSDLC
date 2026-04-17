@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 from rich.console import Console
@@ -177,6 +178,171 @@ class TestCliIndexAndGate:
 
         assert result.exit_code == 0
         assert "Gate init" in result.output
+
+    def test_gate_close_honors_explicit_work_item_override(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        init_project(tmp_path)
+        checkpoint_spec = tmp_path / "specs" / "001-ai-sdlc-framework"
+        checkpoint_spec.mkdir(parents=True, exist_ok=True)
+        target_spec = (
+            tmp_path
+            / "specs"
+            / "158-agent-adapter-verified-host-ingress-closure-audit-reconciliation-baseline"
+        )
+        target_spec.mkdir(parents=True, exist_ok=True)
+        (target_spec / "development-summary.md").write_text("# Summary\n", encoding="utf-8")
+        save_checkpoint(
+            tmp_path,
+            Checkpoint(
+                current_stage="close",
+                feature=FeatureInfo(
+                    id="001",
+                    spec_dir="specs/001-ai-sdlc-framework",
+                    design_branch="design/001",
+                    feature_branch="feature/001",
+                    current_branch="main",
+                ),
+            ),
+        )
+
+        seen: dict[str, Path] = {}
+
+        def _fake_run_close_check(*, cwd: Path, wi: Path, all_docs: bool) -> SimpleNamespace:
+            seen["cwd"] = cwd
+            seen["wi"] = wi
+            return SimpleNamespace(
+                ok=True,
+                blockers=[],
+                checks=[
+                    {"name": "tasks_completion", "ok": True, "detail": "ok"},
+                    {"name": "verification_profile", "ok": True, "detail": "ok"},
+                ],
+            )
+
+        monkeypatch.setattr(sub_apps, "run_close_check", _fake_run_close_check)
+        monkeypatch.chdir(tmp_path)
+
+        result = runner.invoke(
+            app,
+            [
+                "gate",
+                "close",
+                "--wi",
+                "specs/158-agent-adapter-verified-host-ingress-closure-audit-reconciliation-baseline",
+            ],
+        )
+
+        assert result.exit_code == 0
+        assert seen["cwd"] == tmp_path
+        assert seen["wi"] == target_spec
+        assert "Gate close: PASS" in result.output
+
+    def test_gate_close_defaults_to_checkpoint_work_item(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        init_project(tmp_path)
+        checkpoint_spec = tmp_path / "specs" / "001-ai-sdlc-framework"
+        checkpoint_spec.mkdir(parents=True, exist_ok=True)
+        (checkpoint_spec / "development-summary.md").write_text("# Summary\n", encoding="utf-8")
+        save_checkpoint(
+            tmp_path,
+            Checkpoint(
+                current_stage="close",
+                feature=FeatureInfo(
+                    id="001",
+                    spec_dir="specs/001-ai-sdlc-framework",
+                    design_branch="design/001",
+                    feature_branch="feature/001",
+                    current_branch="main",
+                ),
+            ),
+        )
+
+        seen: dict[str, Path] = {}
+
+        def _fake_run_close_check(*, cwd: Path, wi: Path, all_docs: bool) -> SimpleNamespace:
+            seen["cwd"] = cwd
+            seen["wi"] = wi
+            return SimpleNamespace(
+                ok=True,
+                blockers=[],
+                checks=[
+                    {"name": "tasks_completion", "ok": True, "detail": "ok"},
+                    {"name": "verification_profile", "ok": True, "detail": "ok"},
+                ],
+            )
+
+        monkeypatch.setattr(sub_apps, "run_close_check", _fake_run_close_check)
+        monkeypatch.chdir(tmp_path)
+
+        result = runner.invoke(app, ["gate", "close"])
+
+        assert result.exit_code == 0
+        assert seen["cwd"] == tmp_path
+        assert seen["wi"] == checkpoint_spec
+        assert "Gate close: PASS" in result.output
+
+    def test_gate_close_prefers_current_branch_work_item_over_checkpoint(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        init_project(tmp_path)
+        checkpoint_spec = tmp_path / "specs" / "001-ai-sdlc-framework"
+        checkpoint_spec.mkdir(parents=True, exist_ok=True)
+        target_spec = (
+            tmp_path
+            / "specs"
+            / "158-agent-adapter-verified-host-ingress-closure-audit-reconciliation-baseline"
+        )
+        target_spec.mkdir(parents=True, exist_ok=True)
+        (target_spec / "development-summary.md").write_text("# Summary\n", encoding="utf-8")
+        save_checkpoint(
+            tmp_path,
+            Checkpoint(
+                current_stage="close",
+                feature=FeatureInfo(
+                    id="001",
+                    spec_dir="specs/001-ai-sdlc-framework",
+                    design_branch="design/001",
+                    feature_branch="feature/001",
+                    current_branch="main",
+                ),
+            ),
+        )
+
+        class _FakeGitClient:
+            def __init__(self, root: Path) -> None:
+                assert root == tmp_path
+
+            def current_branch(self) -> str:
+                return "codex/158-agent-adapter-ingress-audit"
+
+        seen: dict[str, Path] = {}
+
+        def _fake_run_close_check(*, cwd: Path, wi: Path, all_docs: bool) -> SimpleNamespace:
+            seen["cwd"] = cwd
+            seen["wi"] = wi
+            return SimpleNamespace(
+                ok=True,
+                blockers=[],
+                checks=[
+                    {"name": "tasks_completion", "ok": True, "detail": "ok"},
+                    {"name": "verification_profile", "ok": True, "detail": "ok"},
+                ],
+            )
+
+        monkeypatch.setattr(sub_apps, "GitClient", _FakeGitClient)
+        monkeypatch.setattr(sub_apps, "run_close_check", _fake_run_close_check)
+        monkeypatch.chdir(tmp_path)
+
+        result = runner.invoke(app, ["gate", "close"])
+
+        assert result.exit_code == 0
+        assert seen["cwd"] == tmp_path
+        assert seen["wi"] == target_spec
+        assert "current-branch" in result.output
+        assert "158-agent-adapter-verified-host-ingress" in result.output
+        assert "Gate close: PASS" in result.output
 
     @pytest.mark.parametrize("stage", ["verify", "verification"])
     def test_gate_cli_surfaces_071_visual_a11y_issue_review_from_frontend_gate_summary(

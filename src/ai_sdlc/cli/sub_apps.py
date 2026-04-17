@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from pathlib import Path
 
 import typer
@@ -9,6 +10,7 @@ from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
 
+from ai_sdlc.branch.git_client import GitClient, GitError
 from ai_sdlc.context.state import load_checkpoint
 from ai_sdlc.core.close_check import run_close_check
 from ai_sdlc.core.program_service import ProgramService
@@ -69,6 +71,7 @@ from ai_sdlc.rules import RulesLoader
 from ai_sdlc.utils.helpers import find_project_root
 
 console = Console()
+_BRANCH_NUMERIC_WORK_ITEM_RE = re.compile(r"^(?P<id>\d{3,})(?:[-_].*)?$")
 
 # ---------------------------------------------------------------------------
 # gate sub-app
@@ -147,14 +150,28 @@ def _program_truth_gate_surface(
     }
 
 
-def _build_context(stage: str, root_str: str) -> dict[str, object]:
+def _build_context(
+    stage: str,
+    root_str: str,
+    *,
+    wi: Path | None = None,
+) -> dict[str, object]:
     """Build gate context from checkpoint and filesystem."""
     root = Path(root_str)
     ctx: dict[str, object] = {"root": root_str}
 
     cp = load_checkpoint(root)
-    if cp and cp.feature:
+    if wi is not None:
+        ctx["spec_dir"] = str(_resolve_work_item_path(wi))
+        ctx["spec_dir_source"] = "explicit-wi"
+    elif stage in {"close", "done"}:
+        branch_spec_dir = _infer_work_item_from_current_branch(root)
+        if branch_spec_dir is not None:
+            ctx["spec_dir"] = str(branch_spec_dir)
+            ctx["spec_dir_source"] = "current-branch"
+    if "spec_dir" not in ctx and cp and cp.feature:
         ctx["spec_dir"] = str(root / cp.feature.spec_dir)
+        ctx["spec_dir_source"] = "checkpoint"
 
     if stage in {"verify", "verification"}:
         ctx.update(build_verification_gate_context(root))
@@ -239,6 +256,48 @@ def _build_context(stage: str, root_str: str) -> dict[str, object]:
     return ctx
 
 
+def _resolve_work_item_path(wi: Path) -> Path:
+    resolved_wi = wi.expanduser()
+    if not resolved_wi.is_absolute():
+        resolved_wi = (Path.cwd() / resolved_wi).resolve()
+    return resolved_wi
+
+
+def _infer_work_item_from_current_branch(root: Path) -> Path | None:
+    try:
+        branch = GitClient(root).current_branch().strip()
+    except GitError:
+        return None
+    if not branch:
+        return None
+
+    branch_leaf = branch.rsplit("/", 1)[-1]
+    work_item_prefix = _branch_work_item_prefix(branch_leaf)
+    if not work_item_prefix:
+        return None
+
+    specs_root = root / "specs"
+    if not specs_root.is_dir():
+        return None
+
+    matches = sorted(
+        path
+        for path in specs_root.iterdir()
+        if path.is_dir()
+        and (path.name == work_item_prefix or path.name.startswith(f"{work_item_prefix}-"))
+    )
+    if len(matches) != 1:
+        return None
+    return matches[0]
+
+
+def _branch_work_item_prefix(branch_leaf: str) -> str:
+    match = _BRANCH_NUMERIC_WORK_ITEM_RE.match(branch_leaf.strip())
+    if match is None:
+        return ""
+    return match.group("id")
+
+
 @gate_app.callback()
 def gate_root(ctx: typer.Context) -> None:
     """Support both `ai-sdlc gate check <stage>` and `ai-sdlc gate <stage>`."""
@@ -261,6 +320,14 @@ def gate_check(
             "execute, review, close, done)."
         ),
     ),
+    wi: Path | None = typer.Option(
+        None,
+        "--wi",
+        help=(
+            "Optional path to specs/<WI>/ directory. When provided, gate context uses this "
+            "work item instead of checkpoint.feature.spec_dir."
+        ),
+    ),
 ) -> None:
     """Run gate check for a specific pipeline stage."""
     root = find_project_root()
@@ -276,10 +343,15 @@ def gate_check(
         )
         raise typer.Exit(code=2)
 
-    ctx = _build_context(stage, str(root))
+    ctx = _build_context(stage, str(root), wi=wi)
     result = registry.check(stage, ctx)
 
-    table = Table(title=f"Gate: {stage}")
+    gate_title = f"Gate: {stage}"
+    spec_dir_source = str(ctx.get("spec_dir_source", "")).strip()
+    spec_dir_name = Path(str(ctx.get("spec_dir", ""))).name
+    if spec_dir_source and spec_dir_name:
+        gate_title = f"Gate: {stage} ({spec_dir_source}: {spec_dir_name})"
+    table = Table(title=gate_title)
     table.add_column("Check", style="cyan")
     table.add_column("Result")
     table.add_column("Message")
@@ -305,8 +377,17 @@ def _register_gate_alias(stage_name: str) -> None:
     """Register `ai-sdlc gate <stage>` alias while keeping `gate check <stage>`."""
 
     @gate_app.command(name=stage_name)
-    def _alias_command() -> None:
-        gate_check(stage_name)
+    def _alias_command(
+        wi: Path | None = typer.Option(
+            None,
+            "--wi",
+            help=(
+                "Optional path to specs/<WI>/ directory. When provided, gate context uses "
+                "this work item instead of checkpoint.feature.spec_dir."
+            ),
+        ),
+    ) -> None:
+        gate_check(stage_name, wi=wi)
 
 
 for _stage_name in (
