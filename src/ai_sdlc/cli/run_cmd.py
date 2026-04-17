@@ -25,6 +25,21 @@ from ai_sdlc.utils.helpers import find_project_root
 console = Console()
 
 
+def _stage_start_callback(stage: str, *, dry_run: bool) -> None:
+    suffix = " (dry-run)" if dry_run else ""
+    console.print(f"[cyan]Stage {stage}: running{suffix}[/cyan]")
+
+
+def _stage_finish_callback(stage: str, result: Any) -> None:
+    verdict = str(getattr(result.verdict, "value", result.verdict)).upper()
+    style = {
+        "PASS": "green",
+        "RETRY": "yellow",
+        "HALT": "red",
+    }.get(verdict, "red")
+    console.print(f"[{style}]Stage {stage}: {verdict}[/{style}]")
+
+
 def _adapter_gate_message(root: object, *, dry_run: bool) -> str | None:
     """Return a warning/blocker based on persisted ingress truth."""
     payload = build_adapter_governance_surface(root)
@@ -114,7 +129,15 @@ def run_command(
     callback = _confirm_callback if mode == "confirm" else None
 
     try:
-        cp = runner.run(mode=mode, dry_run=dry_run, on_confirm=callback)
+        cp = runner.run(
+            mode=mode,
+            dry_run=dry_run,
+            on_confirm=callback,
+            on_stage_start=lambda stage: _stage_start_callback(
+                stage, dry_run=dry_run
+            ),
+            on_stage_finish=_stage_finish_callback,
+        )
         console.print(
             f"\n[bold green]Pipeline completed. Stage: {cp.current_stage}[/bold green]"
         )

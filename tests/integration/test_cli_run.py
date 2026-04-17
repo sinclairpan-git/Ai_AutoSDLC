@@ -168,6 +168,21 @@ class TestRunCommand:
         assert cfg.adapter_ingress_state == "materialized"
         assert cfg.adapter_verification_result == "unverified"
 
+    def test_run_dry_run_reports_stage_progress(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setenv("OPENAI_CODEX", "1")
+        monkeypatch.chdir(tmp_path)
+        assert runner.invoke(app, ["init", ".", "--agent-target", "codex"]).exit_code == 0
+        self._force_passing_gates(monkeypatch)
+
+        result = runner.invoke(app, ["run", "--dry-run"])
+
+        assert result.exit_code == 0
+        assert "Stage init" in result.output
+        assert "Stage close" in result.output
+        assert "Pipeline completed. Stage: close" in result.output
+
     def test_run_non_dry_run_blocks_when_adapter_is_not_verified_loaded(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
@@ -434,7 +449,8 @@ class TestRunCommand:
 
         result = runner.invoke(app, ["run", "--dry-run"])
         assert result.exit_code == 0
-        assert "Pipeline completed. Stage: verify" in result.output
+        assert "Stage close" in result.output
+        assert "Pipeline completed. Stage: close" in result.output
 
     def test_run_dry_run_exposes_014_runtime_attachment_summary_when_attached(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch

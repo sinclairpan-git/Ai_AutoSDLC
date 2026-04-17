@@ -53,6 +53,8 @@ from ai_sdlc.utils.helpers import now_iso
 logger = logging.getLogger(__name__)
 
 ConfirmCallback = Callable[[str, Any], bool]
+StageStartCallback = Callable[[str], None]
+StageFinishCallback = Callable[[str, GateResult], None]
 
 PIPELINE_STAGES = [
     "init",
@@ -139,6 +141,8 @@ class SDLCRunner:
         mode: str = "auto",
         dry_run: bool = False,
         on_confirm: ConfirmCallback | None = None,
+        on_stage_start: StageStartCallback | None = None,
+        on_stage_finish: StageFinishCallback | None = None,
     ) -> Checkpoint:
         """Run the pipeline from the current checkpoint position.
 
@@ -146,6 +150,8 @@ class SDLCRunner:
             mode: Execution mode ("auto" or "confirm").
             dry_run: If True, run gate checks without side effects.
             on_confirm: Called after each passing gate in confirm mode.
+            on_stage_start: Called before each stage gate is evaluated.
+            on_stage_finish: Called after each stage gate returns a result.
 
         Returns:
             The final checkpoint state.
@@ -155,6 +161,7 @@ class SDLCRunner:
         """
         cp = self._ensure_checkpoint()
         start_idx = self._stage_index(cp.current_stage)
+        last_stage = cp.current_stage
         run_open = False
         if not dry_run:
             policy = resolve_runtime_telemetry_policy(load_project_config(self.root))
@@ -168,9 +175,12 @@ class SDLCRunner:
         try:
             for idx in range(start_idx, len(PIPELINE_STAGES)):
                 stage = PIPELINE_STAGES[idx]
+                last_stage = stage
                 logger.info("Pipeline: entering stage '%s'", stage)
 
                 self._dispatcher.begin_stage(stage)
+                if on_stage_start is not None:
+                    on_stage_start(stage)
 
                 if not dry_run:
                     cp.current_stage = stage
@@ -193,6 +203,8 @@ class SDLCRunner:
                     result.verdict.value,
                 )
                 self._dispatcher.finish_stage(result.verdict.value)
+                if on_stage_finish is not None:
+                    on_stage_finish(stage, result)
                 cp = self._apply_result(
                     result,
                     stage,
@@ -219,6 +231,8 @@ class SDLCRunner:
 
         if run_open:
             self._telemetry.close_workflow_run(TelemetryEventStatus.SUCCEEDED)
+        if dry_run:
+            return cp.model_copy(update={"current_stage": last_stage})
         return cp
 
     def _run_gate_with_retry(
