@@ -127,6 +127,12 @@ def run_command(
 
     runner = SDLCRunner(root)
     callback = _confirm_callback if mode == "confirm" else None
+    last_result: Any | None = None
+
+    def _record_stage_finish(stage: str, result: Any) -> None:
+        nonlocal last_result
+        last_result = result
+        _stage_finish_callback(stage, result)
 
     try:
         cp = runner.run(
@@ -136,11 +142,27 @@ def run_command(
             on_stage_start=lambda stage: _stage_start_callback(
                 stage, dry_run=dry_run
             ),
-            on_stage_finish=_stage_finish_callback,
+            on_stage_finish=_record_stage_finish,
         )
-        console.print(
-            f"\n[bold green]Pipeline completed. Stage: {cp.current_stage}[/bold green]"
-        )
+        if (
+            dry_run
+            and last_result is not None
+            and str(getattr(last_result.verdict, "value", last_result.verdict)).upper()
+            != "PASS"
+        ):
+            verdict = str(
+                getattr(last_result.verdict, "value", last_result.verdict)
+            ).upper()
+            console.print(
+                "[bold yellow]"
+                f"Dry-run completed with open gates. Last stage: "
+                f"{cp.current_stage} ({verdict})"
+                "[/bold yellow]"
+            )
+        else:
+            console.print(
+                f"\n[bold green]Pipeline completed. Stage: {cp.current_stage}[/bold green]"
+            )
         _render_frontend_contract_runtime_attachment_summary(root, cp)
     except PipelineHaltError as exc:
         console.print(f"\n[bold red]Pipeline halted: {exc}[/bold red]")
