@@ -82,14 +82,6 @@ capability_closure_audit:
     summary: 005-008 仍是 formal baseline；仓库尚未提供对应 runtime / guard / surface 的实现闭环。
     source_refs:
     - 005-008
-  - cluster_id: frontend-evidence-class-lifecycle
-    title: Frontend Evidence Class 生命周期
-    closure_state: partial
-    summary: 107-113 已补部分 runtime/backfill，但 083-090 仍 prospective/formal-only，091
-      仍首批 implementation slice 进行中。
-    source_refs:
-    - 079-092
-    - 107-113
 source_registry:
 - path: docs/SPEC_SPLIT_AND_PROGRAM.zh-CN.md
   source_type: requirement_doc
@@ -1570,12 +1562,29 @@ specs:
   frontend_evidence_class: framework_capability
   roles: []
   capability_refs: []
+- id: 157-frontend-evidence-class-lifecycle-closure-audit-reconciliation-baseline
+  path: specs/157-frontend-evidence-class-lifecycle-closure-audit-reconciliation-baseline
+  depends_on:
+  - 120-open-capability-tranche-backlog-baseline
+  - 092-frontend-evidence-class-runtime-reality-sync-baseline
+  - 107-frontend-evidence-class-readiness-gate-runtime-baseline
+  - 108-frontend-legacy-framework-evidence-class-backfill-baseline
+  - 109-frontend-cleanup-archive-evidence-class-backfill-baseline
+  - 110-frontend-foundation-mainline-evidence-class-backfill-baseline
+  - 111-frontend-p1-child-close-check-backfill-baseline
+  - 112-frontend-072-081-close-check-backfill-baseline
+  - 113-frontend-082-092-manifest-mirror-baseline
+  branch_slug: frontend-evidence-class-lifecycle-closure-audit-reconciliation-baseline
+  owner: team-frontend-governance
+  frontend_evidence_class: framework_capability
+  roles: []
+  capability_refs: []
 truth_snapshot:
-  generated_at: '2026-04-17T02:55:15Z'
+  generated_at: '2026-04-17T03:07:04Z'
   generated_by: ai-sdlc program truth sync
   generator_version: program_truth_snapshot_v1
-  repo_revision: 558d678
-  authoring_hash: 6fa76d2ca62ef80e43674b51c2e451580cbe399cc1c7eb1d8e6757c46ba8fcc8
+  repo_revision: e689e9b
+  authoring_hash: 20dae2fcb62b2fc616766e9078afac53ebe59b4f7649f59142c56c5efc2c3a7c
   source_hashes:
     truth_check:specs/095-frontend-mainline-product-delivery-baseline: 40b5e9332011b0d8941245c0e8e7c3b192e897b2bc4aa4876a3d37a94f9b80f0
     truth_check:specs/096-frontend-mainline-host-runtime-manager-baseline: e4586cf112089fff541fc809f9ba98ad4c4c3d5593de8febfc4e64cb1179ce02
@@ -1610,7 +1619,7 @@ truth_snapshot:
     close_check:specs/143-frontend-mainline-browser-gate-real-probe-runtime-baseline: a480d33dbf6d8470c447c41456282ac360186c60435613a9f55e46d06742e555
     close_check:specs/144-frontend-mainline-host-remediation-and-workspace-integration-closure-baseline: a480d33dbf6d8470c447c41456282ac360186c60435613a9f55e46d06742e555
     verify:uv run ai-sdlc verify constraints: 67c162e8ce6369708f41fd003c4d3b2703509ebeb85aefbbc2a2d67663c45333
-  snapshot_hash: 9a9a4a4ba815124118a71c8026a50474a959680f7ac5a08de719fbd9a6568bbd
+  snapshot_hash: dbcc07c746c05d7347e514e1454a83a64c4e5445d0bafa765b70be9b3f18531f
   computed_capabilities:
   - capability_id: frontend-mainline-delivery
     closure_state: closed
@@ -1635,31 +1644,31 @@ truth_snapshot:
     stale_reason: ''
   source_inventory:
     state: complete
-    total_sources: 802
-    mapped_sources: 802
+    total_sources: 807
+    mapped_sources: 807
     unmapped_sources: 0
     missing_sources: 0
-    phase_signal_count: 3116
-    deferred_signal_count: 5692
-    non_goal_signal_count: 276
+    phase_signal_count: 3123
+    deferred_signal_count: 5721
+    non_goal_signal_count: 277
     layer_totals:
       blueprint: 1
-      spec: 157
-      plan: 157
-      tasks: 157
-      execution: 157
-      close: 157
+      spec: 158
+      plan: 158
+      tasks: 158
+      execution: 158
+      close: 158
       requirements: 2
       defect: 2
       design: 8
       release: 4
     layer_materialized:
       blueprint: 1
-      spec: 157
-      plan: 157
-      tasks: 157
-      execution: 157
-      close: 157
+      spec: 158
+      plan: 158
+      tasks: 158
+      execution: 158
+      close: 158
       requirements: 2
       defect: 2
       design: 8
@@ -8738,6 +8747,51 @@ truth_snapshot:
       mapping_ref: 156-frontend-p1-experience-stability-closure-audit-reconciliation-baseline
       phase_signal_count: 6
       deferred_signal_count: 8
+      non_goal_signal_count: 0
+    - path: specs/157-frontend-evidence-class-lifecycle-closure-audit-reconciliation-baseline/spec.md
+      source_type: spec_doc
+      truth_layer: spec
+      mapped: true
+      exists: true
+      mapping_ref: 157-frontend-evidence-class-lifecycle-closure-audit-reconciliation-baseline
+      phase_signal_count: 3
+      deferred_signal_count: 15
+      non_goal_signal_count: 1
+    - path: specs/157-frontend-evidence-class-lifecycle-closure-audit-reconciliation-baseline/plan.md
+      source_type: plan_doc
+      truth_layer: plan
+      mapped: true
+      exists: true
+      mapping_ref: 157-frontend-evidence-class-lifecycle-closure-audit-reconciliation-baseline
+      phase_signal_count: 2
+      deferred_signal_count: 3
+      non_goal_signal_count: 0
+    - path: specs/157-frontend-evidence-class-lifecycle-closure-audit-reconciliation-baseline/tasks.md
+      source_type: tasks_doc
+      truth_layer: tasks
+      mapped: true
+      exists: true
+      mapping_ref: 157-frontend-evidence-class-lifecycle-closure-audit-reconciliation-baseline
+      phase_signal_count: 1
+      deferred_signal_count: 2
+      non_goal_signal_count: 0
+    - path: specs/157-frontend-evidence-class-lifecycle-closure-audit-reconciliation-baseline/task-execution-log.md
+      source_type: execution_log
+      truth_layer: execution
+      mapped: true
+      exists: true
+      mapping_ref: 157-frontend-evidence-class-lifecycle-closure-audit-reconciliation-baseline
+      phase_signal_count: 1
+      deferred_signal_count: 7
+      non_goal_signal_count: 0
+    - path: specs/157-frontend-evidence-class-lifecycle-closure-audit-reconciliation-baseline/development-summary.md
+      source_type: development_summary
+      truth_layer: close
+      mapped: true
+      exists: true
+      mapping_ref: 157-frontend-evidence-class-lifecycle-closure-audit-reconciliation-baseline
+      phase_signal_count: 0
+      deferred_signal_count: 2
       non_goal_signal_count: 0
     - path: docs/SPEC_SPLIT_AND_PROGRAM.zh-CN.md
       source_type: requirement_doc
