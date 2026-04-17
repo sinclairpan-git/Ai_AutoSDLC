@@ -8,7 +8,12 @@ from unittest.mock import patch
 from typer.testing import CliRunner
 
 from ai_sdlc.cli.main import app
-from ai_sdlc.context.state import build_resume_pack, save_checkpoint, save_resume_pack
+from ai_sdlc.context.state import (
+    build_resume_pack,
+    load_checkpoint,
+    save_checkpoint,
+    save_resume_pack,
+)
 from ai_sdlc.core.config import YamlStore
 from ai_sdlc.models.gate import GovernanceItem, GovernanceState
 from ai_sdlc.models.state import Checkpoint, ExecuteProgress, FeatureInfo
@@ -34,6 +39,26 @@ def _write_legacy_root_artifacts(root: Path) -> None:
         "  1. 示例\n",
         encoding="utf-8",
     )
+
+
+def _write_direct_formal_artifacts(root: Path, work_item_id: str) -> Path:
+    spec_dir = root / "specs" / work_item_id
+    spec_dir.mkdir(parents=True, exist_ok=True)
+    (spec_dir / "spec.md").write_text(
+        "### 用户故事 1\n场景\n\n- **FR-001**: requirement\n",
+        encoding="utf-8",
+    )
+    (spec_dir / "plan.md").write_text("# Plan\n", encoding="utf-8")
+    (spec_dir / "tasks.md").write_text(
+        "### Task 1.1 — 示例\n"
+        "- **依赖**：无\n"
+        "- **验收标准（AC）**：\n"
+        "  1. 示例\n",
+        encoding="utf-8",
+    )
+    (spec_dir / "task-execution-log.md").write_text("# Execution Log\n", encoding="utf-8")
+    (spec_dir / "development-summary.md").write_text("# Development Summary\n", encoding="utf-8")
+    return spec_dir
 
 
 class TestCliRecover:
@@ -186,6 +211,56 @@ class TestCliRecover:
         assert "verify" in result.output.lower()
         assert "spec.md" in result.output
         assert (tmp_path / ".ai-sdlc" / "state" / "resume-pack.yaml").exists()
+
+    def test_recover_reconcile_realigns_stale_checkpoint_to_current_branch_work_item(
+        self,
+        tmp_path: Path,
+    ) -> None:
+        work_item_id = (
+            "158-agent-adapter-verified-host-ingress-closure-audit-reconciliation-baseline"
+        )
+        init_project(tmp_path)
+        _write_legacy_root_artifacts(tmp_path)
+        _write_direct_formal_artifacts(tmp_path, work_item_id)
+        save_checkpoint(
+            tmp_path,
+            Checkpoint(
+                current_stage="close",
+                feature=FeatureInfo(
+                    id="001-ai-sdlc-framework",
+                    spec_dir="specs/001-ai-sdlc-framework",
+                    design_branch="design/001-ai-sdlc-framework-docs",
+                    feature_branch="feature/001-ai-sdlc-framework-dev",
+                    current_branch="main",
+                ),
+            ),
+        )
+
+        with (
+            patch("ai_sdlc.cli.commands.find_project_root", return_value=tmp_path),
+            patch(
+                "ai_sdlc.core.reconcile.GitClient.current_branch",
+                return_value="codex/158-agent-adapter-ingress-audit",
+            ),
+        ):
+            result = runner.invoke(app, ["recover", "--reconcile"])
+
+        checkpoint = load_checkpoint(tmp_path)
+
+        assert result.exit_code == 0
+        assert checkpoint is not None
+        assert checkpoint.current_stage == "close"
+        assert checkpoint.feature.id == work_item_id
+        assert checkpoint.feature.spec_dir == f"specs/{work_item_id}"
+        assert checkpoint.feature.current_branch == "codex/158-agent-adapter-ingress-audit"
+        assert checkpoint.feature.design_branch == f"design/{work_item_id}-docs"
+        assert checkpoint.feature.feature_branch == f"feature/{work_item_id}-dev"
+        assert "close" in result.output.lower()
+        assert "Reconciled Spec Dir" in result.output
+        assert (tmp_path / ".ai-sdlc" / "state" / "resume-pack.yaml").exists()
+        assert (
+            tmp_path / ".ai-sdlc" / "work-items" / work_item_id / "resume-pack.yaml"
+        ).exists()
 
     def test_recover_prompts_and_applies_reconcile_for_legacy_artifacts(
         self, tmp_path: Path

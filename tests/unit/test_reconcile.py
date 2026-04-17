@@ -3,9 +3,10 @@
 from __future__ import annotations
 
 from pathlib import Path
+from unittest.mock import patch
 
 from ai_sdlc.context.state import load_checkpoint, save_checkpoint
-from ai_sdlc.models.state import Checkpoint, FeatureInfo
+from ai_sdlc.models.state import Checkpoint, CompletedStage, FeatureInfo
 from ai_sdlc.routers.bootstrap import init_project
 
 
@@ -45,6 +46,26 @@ def _write_specs_dir_legacy_artifacts(root: Path, work_item_id: str = "LEGACY-00
         "  1. 示例\n",
         encoding="utf-8",
     )
+    return spec_dir
+
+
+def _write_direct_formal_artifacts(root: Path, work_item_id: str) -> Path:
+    spec_dir = root / "specs" / work_item_id
+    spec_dir.mkdir(parents=True, exist_ok=True)
+    (spec_dir / "spec.md").write_text(
+        "### 用户故事 1\n场景\n\n- **FR-001**: requirement\n",
+        encoding="utf-8",
+    )
+    (spec_dir / "plan.md").write_text("# Plan\n", encoding="utf-8")
+    (spec_dir / "tasks.md").write_text(
+        "### Task 1.1 — 示例\n"
+        "- **依赖**：无\n"
+        "- **验收标准（AC）**：\n"
+        "  1. 示例\n",
+        encoding="utf-8",
+    )
+    (spec_dir / "task-execution-log.md").write_text("# Execution Log\n", encoding="utf-8")
+    (spec_dir / "development-summary.md").write_text("# Development Summary\n", encoding="utf-8")
     return spec_dir
 
 
@@ -187,3 +208,144 @@ def test_reconcile_checkpoint_ignores_legacy_project_state_residue(
     assert loaded.feature.spec_dir == "."
     assert project_state.status.value == "initialized"
     assert project_state.project_name == "legacy-project"
+
+
+def test_detect_reconcile_hint_prefers_current_branch_direct_formal_work_item(
+    tmp_path: Path,
+) -> None:
+    from ai_sdlc.core.reconcile import detect_reconcile_hint
+
+    work_item_id = "158-agent-adapter-verified-host-ingress-closure-audit-reconciliation-baseline"
+
+    (tmp_path / ".git").mkdir()
+    init_project(tmp_path)
+    _write_specs_dir_legacy_artifacts(tmp_path, "001-ai-sdlc-framework")
+    _write_direct_formal_artifacts(tmp_path, work_item_id)
+    save_checkpoint(
+        tmp_path,
+        Checkpoint(
+            current_stage="close",
+            feature=FeatureInfo(
+                id="001-ai-sdlc-framework",
+                spec_dir="specs/001-ai-sdlc-framework",
+                design_branch="design/001-ai-sdlc-framework-docs",
+                feature_branch="feature/001-ai-sdlc-framework-dev",
+                current_branch="main",
+            ),
+        ),
+    )
+
+    with patch(
+        "ai_sdlc.core.reconcile.GitClient.current_branch",
+        return_value="codex/158-agent-adapter-ingress-audit",
+    ):
+        hint = detect_reconcile_hint(tmp_path)
+
+    assert hint is not None
+    assert hint.layout == "specs_dir"
+    assert hint.spec_dir == f"specs/{work_item_id}"
+    assert hint.feature_id == work_item_id
+    assert hint.current_stage == "close"
+    assert hint.completed_stages == [
+        "init",
+        "refine",
+        "design",
+        "decompose",
+        "verify",
+        "execute",
+    ]
+    assert "development-summary.md" in hint.detected_files
+
+
+def test_reconcile_checkpoint_updates_stale_branch_alignment_for_direct_formal_work_item(
+    tmp_path: Path,
+) -> None:
+    from ai_sdlc.core.reconcile import reconcile_checkpoint
+
+    work_item_id = "158-agent-adapter-verified-host-ingress-closure-audit-reconciliation-baseline"
+
+    (tmp_path / ".git").mkdir()
+    init_project(tmp_path)
+    _write_specs_dir_legacy_artifacts(tmp_path, "001-ai-sdlc-framework")
+    _write_direct_formal_artifacts(tmp_path, work_item_id)
+    save_checkpoint(
+        tmp_path,
+        Checkpoint(
+            current_stage="close",
+            feature=FeatureInfo(
+                id="001-ai-sdlc-framework",
+                spec_dir="specs/001-ai-sdlc-framework",
+                design_branch="design/001-ai-sdlc-framework-docs",
+                feature_branch="feature/001-ai-sdlc-framework-dev",
+                current_branch="main",
+            ),
+        ),
+    )
+
+    with patch(
+        "ai_sdlc.core.reconcile.GitClient.current_branch",
+        return_value="codex/158-agent-adapter-ingress-audit",
+    ):
+        result = reconcile_checkpoint(tmp_path)
+
+    loaded = load_checkpoint(tmp_path)
+
+    assert result is not None
+    assert loaded is not None
+    assert loaded.current_stage == "close"
+    assert [s.stage for s in loaded.completed_stages] == [
+        "init",
+        "refine",
+        "design",
+        "decompose",
+        "verify",
+        "execute",
+    ]
+    assert loaded.feature.id == work_item_id
+    assert loaded.feature.spec_dir == f"specs/{work_item_id}"
+    assert loaded.feature.current_branch == "codex/158-agent-adapter-ingress-audit"
+    assert loaded.feature.design_branch == f"design/{work_item_id}-docs"
+    assert loaded.feature.feature_branch == f"feature/{work_item_id}-dev"
+
+
+def test_reconcile_checkpoint_refreshes_stale_feature_branches_when_spec_is_already_aligned(
+    tmp_path: Path,
+) -> None:
+    from ai_sdlc.core.reconcile import detect_reconcile_hint, reconcile_checkpoint
+
+    work_item_id = "158-agent-adapter-verified-host-ingress-closure-audit-reconciliation-baseline"
+
+    (tmp_path / ".git").mkdir()
+    init_project(tmp_path)
+    _write_direct_formal_artifacts(tmp_path, work_item_id)
+    save_checkpoint(
+        tmp_path,
+        Checkpoint(
+            current_stage="execute",
+            feature=FeatureInfo(
+                id=work_item_id,
+                spec_dir=f"specs/{work_item_id}",
+                design_branch="design/001-ai-sdlc-framework",
+                feature_branch="feature/001-ai-sdlc-framework",
+                current_branch="codex/158-agent-adapter-ingress-audit",
+            ),
+            completed_stages=[
+                CompletedStage(stage=stage, completed_at="2026-01-01T00:00:00+00:00")
+                for stage in ("init", "refine", "design", "decompose", "verify")
+            ],
+        ),
+    )
+
+    hint = detect_reconcile_hint(tmp_path)
+    result = reconcile_checkpoint(tmp_path)
+
+    loaded = load_checkpoint(tmp_path)
+
+    assert hint is not None
+    assert result is not None
+    assert loaded is not None
+    assert loaded.current_stage == "close"
+    assert loaded.feature.id == work_item_id
+    assert loaded.feature.spec_dir == f"specs/{work_item_id}"
+    assert loaded.feature.design_branch == f"design/{work_item_id}-docs"
+    assert loaded.feature.feature_branch == f"feature/{work_item_id}-dev"

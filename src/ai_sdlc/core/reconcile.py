@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -11,8 +12,17 @@ from ai_sdlc.gates.pipeline_gates import DecomposeGate, DesignGate, InitGate, Re
 from ai_sdlc.models.state import Checkpoint, CompletedStage, FeatureInfo, MultiAgentInfo
 from ai_sdlc.utils.helpers import now_iso, slugify
 
-DOC_STAGE_ORDER = ("init", "refine", "design", "decompose", "verify")
-DOC_FILES = ("spec.md", "research.md", "data-model.md", "plan.md", "tasks.md")
+DOC_STAGE_ORDER = ("init", "refine", "design", "decompose", "verify", "execute", "close")
+DOC_FILES = (
+    "spec.md",
+    "research.md",
+    "data-model.md",
+    "plan.md",
+    "tasks.md",
+    "task-execution-log.md",
+    "development-summary.md",
+)
+_BRANCH_NUMERIC_WORK_ITEM_RE = re.compile(r"^(?P<id>\d{3,})(?:[-_].*)?$")
 
 
 @dataclass
@@ -55,7 +65,14 @@ def detect_reconcile_hint(root: Path) -> ReconcileHint | None:
         return None
 
     feature_id = _infer_feature_id(root, cp, candidate.spec_dir_rel)
-    if not _needs_reconcile(root, cp, candidate.spec_dir_rel, completed, next_stage):
+    if not _needs_reconcile(
+        root,
+        cp,
+        candidate.spec_dir_rel,
+        feature_id,
+        completed,
+        next_stage,
+    ):
         return None
 
     cp_stage = cp.current_stage if cp else "missing"
@@ -87,15 +104,22 @@ def reconcile_checkpoint(root: Path) -> ReconcileHint | None:
     current_branch = _current_branch(root, existing)
     feature_slug = slugify(hint.feature_id) or "legacy"
 
-    design_branch = (
-        existing.feature.design_branch
-        if existing and existing.feature and "unknown" not in existing.feature.design_branch
-        else f"design/{feature_slug}-docs"
+    existing_feature_id = (
+        existing.feature.id.strip()
+        if existing and existing.feature and existing.feature.id
+        else ""
     )
-    feature_branch = (
-        existing.feature.feature_branch
-        if existing and existing.feature and "unknown" not in existing.feature.feature_branch
-        else f"feature/{feature_slug}-dev"
+    design_branch = _resolved_feature_branch(
+        existing.feature.design_branch if existing and existing.feature else "",
+        existing_feature_id=existing_feature_id,
+        reconciled_feature_id=hint.feature_id,
+        default_branch=f"design/{feature_slug}-docs",
+    )
+    feature_branch = _resolved_feature_branch(
+        existing.feature.feature_branch if existing and existing.feature else "",
+        existing_feature_id=existing_feature_id,
+        reconciled_feature_id=hint.feature_id,
+        default_branch=f"feature/{feature_slug}-dev",
     )
 
     checkpoint = Checkpoint(
@@ -128,7 +152,7 @@ def reconcile_checkpoint(root: Path) -> ReconcileHint | None:
         execute_progress=None,
         ai_decisions_count=existing.ai_decisions_count if existing else 0,
         execution_mode=existing.execution_mode if existing else "auto",
-        linked_wi_id=existing.linked_wi_id if existing else None,
+        linked_wi_id=_reconciled_linked_wi_id(existing, hint),
         linked_plan_uri=existing.linked_plan_uri if existing else None,
         last_synced_at=existing.last_synced_at if existing else None,
     )
@@ -183,6 +207,10 @@ def _best_candidate(root: Path, cp: Checkpoint | None) -> _ArtifactCandidate | N
     if not candidates:
         return None
 
+    branch_candidate = _candidate_from_current_branch(root, candidates)
+    if branch_candidate is not None:
+        return branch_candidate
+
     preferred_rel = ""
     if cp and cp.feature:
         preferred_rel = (cp.feature.spec_dir or "").strip()
@@ -201,6 +229,25 @@ def _infer_completed_stages(root: Path, spec_dir_abs: Path) -> list[str]:
     completed: list[str] = []
     if _gate_passed(InitGate().check({"root": str(root)}).verdict.value):
         completed.append("init")
+
+    if _is_direct_formal_layout(spec_dir_abs):
+        if not (spec_dir_abs / "spec.md").is_file():
+            return completed
+        completed.append("refine")
+
+        if not (spec_dir_abs / "plan.md").is_file():
+            return completed
+        completed.append("design")
+
+        if not (spec_dir_abs / "tasks.md").is_file():
+            return completed
+        completed.append("decompose")
+
+        if _has_execution_evidence(spec_dir_abs):
+            completed.append("verify")
+        if (spec_dir_abs / "development-summary.md").is_file():
+            completed.append("execute")
+        return completed
 
     ctx = {"spec_dir": str(spec_dir_abs)}
     if not _gate_passed(RefineGate().check(ctx).verdict.value):
@@ -242,6 +289,7 @@ def _needs_reconcile(
     root: Path,
     cp: Checkpoint | None,
     spec_dir_rel: str,
+    feature_id: str,
     completed: list[str],
     next_stage: str,
 ) -> bool:
@@ -250,8 +298,8 @@ def _needs_reconcile(
     if cp is None or cp.feature is None:
         return True
 
-    feature_id = (cp.feature.id or "").strip()
-    if not feature_id or feature_id == "unknown":
+    current_feature_id = (cp.feature.id or "").strip()
+    if not current_feature_id or current_feature_id == "unknown":
         return True
 
     spec_dir = (cp.feature.spec_dir or "").strip()
@@ -260,6 +308,8 @@ def _needs_reconcile(
     if not (root / spec_dir).exists():
         return True
     if spec_dir != spec_dir_rel:
+        return True
+    if _feature_branches_need_refresh(cp.feature, feature_id):
         return True
 
     current_score = _stage_score(cp.current_stage)
@@ -289,11 +339,11 @@ def _build_reason(
 
 
 def _infer_feature_id(root: Path, cp: Checkpoint | None, spec_dir_rel: str) -> str:
-    if cp and cp.linked_wi_id:
+    if cp and cp.linked_wi_id and _work_item_matches_spec_dir(cp.linked_wi_id, spec_dir_rel):
         linked = cp.linked_wi_id.strip()
         if linked:
             return linked
-    if cp and cp.feature:
+    if cp and cp.feature and _work_item_matches_spec_dir(cp.feature.id, spec_dir_rel):
         feature_id = (cp.feature.id or "").strip()
         if feature_id and feature_id != "unknown":
             return feature_id
@@ -310,6 +360,56 @@ def _current_branch(root: Path, cp: Checkpoint | None) -> str:
         if cp and cp.feature and cp.feature.current_branch:
             return cp.feature.current_branch
         return "main"
+
+
+def _candidate_from_current_branch(
+    root: Path,
+    candidates: list[_ArtifactCandidate],
+) -> _ArtifactCandidate | None:
+    work_item_prefix = _current_branch_work_item_prefix(root)
+    if not work_item_prefix:
+        return None
+
+    matches = [
+        candidate
+        for candidate in candidates
+        if candidate.spec_dir_abs.name == work_item_prefix
+        or candidate.spec_dir_abs.name.startswith(f"{work_item_prefix}-")
+    ]
+    if len(matches) != 1:
+        return None
+    return matches[0]
+
+
+def _current_branch_work_item_prefix(root: Path) -> str:
+    try:
+        branch = GitClient(root).current_branch().strip()
+    except GitError:
+        return ""
+    if not branch:
+        return ""
+    branch_leaf = branch.rsplit("/", 1)[-1].strip()
+    match = _BRANCH_NUMERIC_WORK_ITEM_RE.match(branch_leaf)
+    if match is None:
+        return ""
+    return match.group("id")
+
+
+def _is_direct_formal_layout(spec_dir_abs: Path) -> bool:
+    if not (
+        (spec_dir_abs / "spec.md").is_file()
+        and (spec_dir_abs / "plan.md").is_file()
+        and (spec_dir_abs / "tasks.md").is_file()
+    ):
+        return False
+    return _has_execution_evidence(spec_dir_abs)
+
+
+def _has_execution_evidence(spec_dir_abs: Path) -> bool:
+    return any(
+        (spec_dir_abs / name).is_file()
+        for name in ("task-execution-log.md", "development-summary.md")
+    )
 
 
 def _find_prd(root: Path) -> str:
@@ -339,6 +439,74 @@ def _artifacts_for_stage(stage: str, detected_files: list[str]) -> list[str]:
         "refine": ["spec.md", "product-requirements.md", "prd.md", "PRD.md"],
         "design": ["plan.md", "research.md", "data-model.md"],
         "decompose": ["tasks.md"],
+        "verify": ["tasks.md", "task-execution-log.md"],
+        "execute": ["task-execution-log.md", "development-summary.md"],
+        "close": ["development-summary.md"],
     }
     wanted = mapping.get(stage, [])
     return [name for name in detected_files if name in wanted]
+
+
+def _work_item_matches_spec_dir(work_item_id: str | None, spec_dir_rel: str) -> bool:
+    candidate = (work_item_id or "").strip()
+    if not candidate:
+        return False
+    if spec_dir_rel in ("", "."):
+        return False
+    spec_name = Path(spec_dir_rel).name
+    if candidate == spec_name:
+        return True
+    prefix = candidate.split("-", 1)[0]
+    return spec_name == prefix or spec_name.startswith(f"{prefix}-")
+
+
+def _feature_branches_need_refresh(feature: FeatureInfo, feature_id: str) -> bool:
+    expected_prefix = _work_item_numeric_prefix(feature_id)
+    if not expected_prefix:
+        return False
+    return any(
+        _branch_targets_other_work_item(branch_name, expected_prefix)
+        for branch_name in (feature.design_branch, feature.feature_branch)
+    )
+
+
+def _branch_targets_other_work_item(branch_name: str, expected_prefix: str) -> bool:
+    actual_prefix = _work_item_numeric_prefix(branch_name.rsplit("/", 1)[-1])
+    return bool(actual_prefix and actual_prefix != expected_prefix)
+
+
+def _work_item_numeric_prefix(value: str) -> str:
+    match = _BRANCH_NUMERIC_WORK_ITEM_RE.match(value.strip())
+    if match is None:
+        return ""
+    return match.group("id")
+
+
+def _reconciled_linked_wi_id(
+    existing: Checkpoint | None,
+    hint: ReconcileHint,
+) -> str | None:
+    if hint.spec_dir in ("", "."):
+        return existing.linked_wi_id if existing else None
+
+    if existing and _work_item_matches_spec_dir(existing.linked_wi_id, hint.spec_dir):
+        return existing.linked_wi_id
+    return hint.feature_id
+
+
+def _resolved_feature_branch(
+    branch_name: str,
+    *,
+    existing_feature_id: str,
+    reconciled_feature_id: str,
+    default_branch: str,
+) -> str:
+    branch = branch_name.strip()
+    if not branch or "unknown" in branch:
+        return default_branch
+    if existing_feature_id and existing_feature_id != reconciled_feature_id:
+        return default_branch
+    expected_prefix = _work_item_numeric_prefix(reconciled_feature_id)
+    if expected_prefix and _branch_targets_other_work_item(branch, expected_prefix):
+        return default_branch
+    return branch

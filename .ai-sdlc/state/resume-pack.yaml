@@ -5,15 +5,15 @@ working_set_snapshot:
   prd_path: AI-SDLC 全自动化框架 产品需求文档（PRD）.md
   constitution_path: /Users/sinclairpan/project/Ai_AutoSDLC/.ai-sdlc/memory/constitution.md
   tech_stack_path: /Users/sinclairpan/project/Ai_AutoSDLC/.ai-sdlc/profiles/tech-stack.yml
-  spec_path: /Users/sinclairpan/project/Ai_AutoSDLC/specs/001-ai-sdlc-framework/spec.md
-  plan_path: /Users/sinclairpan/project/Ai_AutoSDLC/specs/001-ai-sdlc-framework/plan.md
-  tasks_path: /Users/sinclairpan/project/Ai_AutoSDLC/specs/001-ai-sdlc-framework/tasks.md
+  spec_path: /Users/sinclairpan/project/Ai_AutoSDLC/specs/158-agent-adapter-verified-host-ingress-closure-audit-reconciliation-baseline/spec.md
+  plan_path: /Users/sinclairpan/project/Ai_AutoSDLC/specs/158-agent-adapter-verified-host-ingress-closure-audit-reconciliation-baseline/plan.md
+  tasks_path: /Users/sinclairpan/project/Ai_AutoSDLC/specs/158-agent-adapter-verified-host-ingress-closure-audit-reconciliation-baseline/tasks.md
   active_files: []
   context_summary: ''
-current_branch: main
+current_branch: codex/158-agent-adapter-ingress-audit
 docs_baseline_ref: ''
 docs_baseline_at: ''
-timestamp: '2026-04-16T05:37:46+00:00'
+timestamp: '2026-04-17T18:09:46+00:00'
 checkpoint_path: .ai-sdlc/state/checkpoint.yml
-checkpoint_last_updated: '2026-04-14T11:36:25+00:00'
-checkpoint_fingerprint: 7e29ce60b7f525067ce168351355a8ce9280950e4edc4e257911145b3cbe5875
+checkpoint_last_updated: '2026-04-17T18:09:46+00:00'
+checkpoint_fingerprint: 09e7073d87bc35ca41efdcad38cfb582213d2985698a83aba155338a12992fce
