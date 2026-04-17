@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import logging
 import os
 from dataclasses import dataclass, field
@@ -21,6 +22,8 @@ from ai_sdlc.utils.helpers import AI_SDLC_DIR, PROJECT_CONFIG_PATH, now_iso
 logger = logging.getLogger(__name__)
 
 ADAPTER_VERSION = "1"
+_CANONICAL_DIGEST_ENV_KEY = "AI_SDLC_ADAPTER_CANONICAL_SHA256"
+_CANONICAL_PATH_ENV_KEY = "AI_SDLC_ADAPTER_CANONICAL_PATH"
 
 _VERIFICATION_ENV_KEYS: dict[IDEKind, tuple[str, ...]] = {
     IDEKind.CURSOR: ("CURSOR_TRACE_ID", "CURSOR_AGENT"),
@@ -49,6 +52,25 @@ class ApplyResult:
     message: str = ""
 
 
+@dataclass
+class CanonicalConsumptionState:
+    """Observed proof state for canonical adapter content consumption."""
+
+    content_digest: str = ""
+    result: str = AdapterVerificationResult.UNVERIFIED.value
+    evidence: str = ""
+    consumed_at: str = ""
+    detail: str = ""
+
+    def as_persisted_fields(self) -> dict[str, str]:
+        return {
+            "adapter_canonical_content_digest": self.content_digest,
+            "adapter_canonical_consumption_result": self.result,
+            "adapter_canonical_consumption_evidence": self.evidence,
+            "adapter_canonical_consumed_at": self.consumed_at,
+        }
+
+
 def _bundle_root() -> Path:
     return Path(__file__).resolve().parent.parent / "adapters"
 
@@ -72,6 +94,10 @@ def _canonical_path(ide: IDEKind) -> str:
 
 def _legacy_paths(ide: IDEKind) -> tuple[str, ...]:
     return _LEGACY_ADAPTER_PATHS.get(ide, ())
+
+
+def _digest_file(path: Path) -> str:
+    return f"sha256:{hashlib.sha256(path.read_bytes()).hexdigest()}"
 
 
 def _detect_legacy_adapter(root: Path, ide: IDEKind) -> str | None:
@@ -263,6 +289,109 @@ def _recorded_verified_ingress(
     }
 
 
+def _recorded_verified_canonical_consumption(
+    cfg: Any,
+    target: IDEKind,
+    current_digest: str,
+) -> CanonicalConsumptionState | None:
+    canonical_path = _canonical_path(target)
+    if cfg.agent_target != target.value:
+        return None
+    if getattr(cfg, "adapter_canonical_consumption_result", "") != "verified":
+        return None
+    if getattr(cfg, "adapter_canonical_content_digest", "") != current_digest:
+        return None
+    if cfg.adapter_canonical_path and cfg.adapter_canonical_path != canonical_path:
+        return None
+    evidence = getattr(cfg, "adapter_canonical_consumption_evidence", "")
+    if not evidence:
+        return None
+    return CanonicalConsumptionState(
+        content_digest=current_digest,
+        result="verified",
+        evidence=evidence,
+        consumed_at=getattr(cfg, "adapter_canonical_consumed_at", ""),
+        detail=(
+            "Canonical adapter content consumption is recorded from "
+            f"machine-verifiable evidence: {evidence}."
+        ),
+    )
+
+
+def _evaluate_canonical_consumption(
+    root: Path,
+    cfg: Any,
+    *,
+    target: IDEKind,
+    environ: dict[str, str] | None = None,
+) -> CanonicalConsumptionState:
+    canonical_path = _canonical_path(target)
+    canonical_file = root / canonical_path
+    if not canonical_file.is_file():
+        return CanonicalConsumptionState(
+            detail="Canonical adapter content is not materialized at the expected path.",
+        )
+
+    current_digest = _digest_file(canonical_file)
+    if target == IDEKind.GENERIC:
+        return CanonicalConsumptionState(
+            content_digest=current_digest,
+            result="unverified",
+            detail=(
+                "Generic adapter targets do not provide a supported canonical "
+                "content consumption proof protocol."
+            ),
+        )
+
+    env = environ or dict(os.environ)
+    provided_digest = str(env.get(_CANONICAL_DIGEST_ENV_KEY, "")).strip()
+    provided_path = str(env.get(_CANONICAL_PATH_ENV_KEY, "")).strip()
+    has_explicit_proof = bool(provided_digest or provided_path)
+    path_matches = not provided_path or provided_path == canonical_path
+
+    if provided_digest and provided_digest == current_digest and path_matches:
+        evidence = f"env:{_CANONICAL_DIGEST_ENV_KEY}"
+        preserved = _recorded_verified_canonical_consumption(
+            cfg,
+            target,
+            current_digest,
+        )
+        if preserved is not None and preserved.evidence == evidence:
+            return preserved
+        return CanonicalConsumptionState(
+            content_digest=current_digest,
+            result="verified",
+            evidence=evidence,
+            consumed_at=now_iso(),
+            detail=(
+                "Canonical adapter content consumption is recorded from "
+                f"machine-verifiable evidence: {evidence}."
+            ),
+        )
+
+    if not has_explicit_proof:
+        preserved = _recorded_verified_canonical_consumption(cfg, target, current_digest)
+        if preserved is not None:
+            return preserved
+        return CanonicalConsumptionState(
+            content_digest=current_digest,
+            result="unverified",
+            detail=(
+                "Canonical adapter file digest is available, but machine-verifiable "
+                "host consumption proof is not recorded."
+            ),
+        )
+
+    return CanonicalConsumptionState(
+        content_digest=current_digest,
+        result="unverified",
+        detail=(
+            "Host-provided canonical consumption proof did not match the current "
+            "canonical digest and path."
+        ),
+    )
+
+
 def _ingress_metadata(
     root: Path,
     cfg: Any,
@@ -276,6 +405,12 @@ def _ingress_metadata(
             "adapter_ingress_state": AdapterIngressState.DEGRADED.value,
             "adapter_verification_result": AdapterVerificationResult.DEGRADED.value,
             "adapter_canonical_path": canonical_path,
+            **_evaluate_canonical_consumption(
+                root,
+                cfg,
+                target=target,
+                environ=environ,
+            ).as_persisted_fields(),
             "adapter_degrade_reason": "generic_target_has_no_verify_protocol",
             "adapter_verification_evidence": "",
             "adapter_verified_at": "",
@@ -288,6 +423,12 @@ def _ingress_metadata(
                 "adapter_ingress_state": AdapterIngressState.UNSUPPORTED.value,
                 "adapter_verification_result": AdapterVerificationResult.UNSUPPORTED.value,
                 "adapter_canonical_path": canonical_path,
+                **_evaluate_canonical_consumption(
+                    root,
+                    cfg,
+                    target=target,
+                    environ=environ,
+                ).as_persisted_fields(),
                 "adapter_degrade_reason": f"legacy_adapter_path_detected:{legacy_rel}",
                 "adapter_verification_evidence": "",
                 "adapter_verified_at": "",
@@ -296,6 +437,12 @@ def _ingress_metadata(
             "adapter_ingress_state": AdapterIngressState.UNSUPPORTED.value,
             "adapter_verification_result": AdapterVerificationResult.UNSUPPORTED.value,
             "adapter_canonical_path": canonical_path,
+            **_evaluate_canonical_consumption(
+                root,
+                cfg,
+                target=target,
+                environ=environ,
+            ).as_persisted_fields(),
             "adapter_degrade_reason": "canonical_path_not_materialized",
             "adapter_verification_evidence": "",
             "adapter_verified_at": "",
@@ -305,13 +452,20 @@ def _ingress_metadata(
     for key in _VERIFICATION_ENV_KEYS.get(target, ()):
         if env.get(key):
             evidence = f"env:{key}"
+            canonical_consumption = _evaluate_canonical_consumption(
+                root,
+                cfg,
+                target=target,
+                environ=env,
+            ).as_persisted_fields()
             preserved = _preserved_verified_ingress(cfg, target, evidence)
             if preserved is not None:
-                return preserved
+                return {**preserved, **canonical_consumption}
             return {
                 "adapter_ingress_state": AdapterIngressState.VERIFIED_LOADED.value,
                 "adapter_verification_result": AdapterVerificationResult.VERIFIED.value,
                 "adapter_canonical_path": canonical_path,
+                **canonical_consumption,
                 "adapter_degrade_reason": "",
                 "adapter_verification_evidence": evidence,
                 "adapter_verified_at": now_iso(),
@@ -319,24 +473,41 @@ def _ingress_metadata(
 
     preserved = _recorded_verified_ingress(cfg, target)
     if preserved is not None:
-        return preserved
+        return {
+            **preserved,
+            **_evaluate_canonical_consumption(
+                root,
+                cfg,
+                target=target,
+                environ=env,
+            ).as_persisted_fields(),
+        }
 
     return {
         "adapter_ingress_state": AdapterIngressState.MATERIALIZED.value,
         "adapter_verification_result": AdapterVerificationResult.UNVERIFIED.value,
         "adapter_canonical_path": canonical_path,
+        **_evaluate_canonical_consumption(
+            root,
+            cfg,
+            target=target,
+            environ=env,
+        ).as_persisted_fields(),
         "adapter_degrade_reason": "",
         "adapter_verification_evidence": "",
         "adapter_verified_at": "",
     }
 
 
-def _ingress_fields_from_config(cfg: Any, target: IDEKind) -> dict[str, str]:
+def _ingress_fields_from_config(root: Path, cfg: Any, target: IDEKind) -> dict[str, str]:
+    canonical_consumption = _evaluate_canonical_consumption(root, cfg, target=target)
     if cfg.adapter_ingress_state:
         return {
             "adapter_ingress_state": cfg.adapter_ingress_state,
             "adapter_verification_result": cfg.adapter_verification_result,
             "adapter_canonical_path": cfg.adapter_canonical_path or _canonical_path(target),
+            **canonical_consumption.as_persisted_fields(),
+            "adapter_canonical_consumption_detail": canonical_consumption.detail,
             "adapter_degrade_reason": cfg.adapter_degrade_reason,
             "adapter_verification_evidence": cfg.adapter_verification_evidence,
             "adapter_verified_at": cfg.adapter_verified_at,
@@ -346,6 +517,8 @@ def _ingress_fields_from_config(cfg: Any, target: IDEKind) -> dict[str, str]:
             "adapter_ingress_state": AdapterIngressState.DEGRADED.value,
             "adapter_verification_result": AdapterVerificationResult.DEGRADED.value,
             "adapter_canonical_path": _canonical_path(target),
+            **canonical_consumption.as_persisted_fields(),
+            "adapter_canonical_consumption_detail": canonical_consumption.detail,
             "adapter_degrade_reason": "generic_target_has_no_verify_protocol",
             "adapter_verification_evidence": "",
             "adapter_verified_at": "",
@@ -354,6 +527,8 @@ def _ingress_fields_from_config(cfg: Any, target: IDEKind) -> dict[str, str]:
         "adapter_ingress_state": AdapterIngressState.MATERIALIZED.value,
         "adapter_verification_result": AdapterVerificationResult.UNVERIFIED.value,
         "adapter_canonical_path": _canonical_path(target),
+        **canonical_consumption.as_persisted_fields(),
+        "adapter_canonical_consumption_detail": canonical_consumption.detail,
         "adapter_degrade_reason": "",
         "adapter_verification_evidence": "",
         "adapter_verified_at": "",
@@ -449,7 +624,7 @@ def build_adapter_governance_surface(
     target = _coerce_ide_kind(agent_target) or IDEKind.GENERIC
     activation_state = cfg.adapter_activation_state or ActivationState.INSTALLED.value
     support_tier = cfg.adapter_support_tier or _default_support_tier(activation_state)
-    ingress = _ingress_fields_from_config(cfg, target)
+    ingress = _ingress_fields_from_config(root, cfg, target)
     ingress_state = ingress["adapter_ingress_state"]
 
     if ingress_state == AdapterIngressState.VERIFIED_LOADED.value:

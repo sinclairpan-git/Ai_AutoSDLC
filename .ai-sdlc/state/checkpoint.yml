@@ -1,12 +1,12 @@
 pipeline_started_at: '2026-03-21T00:00:00'
-pipeline_last_updated: '2026-04-17T18:09:46+00:00'
-current_stage: close
+pipeline_last_updated: '2026-04-17T19:29:07+00:00'
+current_stage: execute
 feature:
-  id: 158-agent-adapter-verified-host-ingress-closure-audit-reconciliation-baseline
-  spec_dir: specs/158-agent-adapter-verified-host-ingress-closure-audit-reconciliation-baseline
-  design_branch: design/158-agent-adapter-verified-host-ingress-closure-audit-reconciliation-baseline-docs
-  feature_branch: feature/158-agent-adapter-verified-host-ingress-closure-audit-reconciliation-baseline-dev
-  current_branch: codex/158-agent-adapter-ingress-audit
+  id: 159-agent-adapter-canonical-consumption-proof-runtime-baseline
+  spec_dir: specs/159-agent-adapter-canonical-consumption-proof-runtime-baseline
+  design_branch: design/159-agent-adapter-canonical-consumption-proof-runtime-baseline-docs
+  feature_branch: feature/159-agent-adapter-canonical-consumption-proof-runtime-baseline-dev
+  current_branch: codex/159-agent-adapter-canonical-consumption-proof
   docs_baseline_ref: ''
   docs_baseline_at: ''
 multi_agent:
@@ -16,33 +16,28 @@ multi_agent:
 prd_source: AI-SDLC 全自动化框架 产品需求文档（PRD）.md
 completed_stages:
 - stage: init
-  completed_at: '2026-04-17T18:09:46+00:00'
+  completed_at: '2026-04-17T19:29:07+00:00'
   artifacts: []
 - stage: refine
-  completed_at: '2026-04-17T18:09:46+00:00'
+  completed_at: '2026-04-17T19:29:07+00:00'
   artifacts:
   - spec.md
 - stage: design
-  completed_at: '2026-04-17T18:09:46+00:00'
+  completed_at: '2026-04-17T19:29:07+00:00'
   artifacts:
   - plan.md
 - stage: decompose
-  completed_at: '2026-04-17T18:09:46+00:00'
+  completed_at: '2026-04-17T19:29:07+00:00'
   artifacts:
   - tasks.md
 - stage: verify
-  completed_at: '2026-04-17T18:09:46+00:00'
+  completed_at: '2026-04-17T19:29:07+00:00'
   artifacts:
   - task-execution-log.md
   - tasks.md
-- stage: execute
-  completed_at: '2026-04-17T18:09:46+00:00'
-  artifacts:
-  - development-summary.md
-  - task-execution-log.md
 execute_progress: null
 ai_decisions_count: 0
 execution_mode: auto
-linked_wi_id: 158-agent-adapter-verified-host-ingress-closure-audit-reconciliation-baseline
+linked_wi_id: 159-agent-adapter-canonical-consumption-proof-runtime-baseline
 linked_plan_uri: null
 last_synced_at: null

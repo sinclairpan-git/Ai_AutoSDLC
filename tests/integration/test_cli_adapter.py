@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 from pathlib import Path
 
@@ -24,6 +25,8 @@ IDE_ENV_KEYS = [
     "CODEX_CLI_READY",
     "CLAUDE_CODE_ENTRYPOINT",
     "CLAUDECODE",
+    "AI_SDLC_ADAPTER_CANONICAL_SHA256",
+    "AI_SDLC_ADAPTER_CANONICAL_PATH",
 ]
 
 
@@ -31,6 +34,10 @@ IDE_ENV_KEYS = [
 def _clear_ide_env(monkeypatch: pytest.MonkeyPatch) -> None:
     for key in IDE_ENV_KEYS:
         monkeypatch.delenv(key, raising=False)
+
+
+def _digest(path: Path) -> str:
+    return f"sha256:{hashlib.sha256(path.read_bytes()).hexdigest()}"
 
 
 class TestCliAdapter:
@@ -149,6 +156,10 @@ class TestCliAdapter:
         assert payload["adapter_ingress_state"] == "materialized"
         assert payload["adapter_verification_result"] == "unverified"
         assert payload["adapter_canonical_path"] == "AGENTS.md"
+        assert payload["adapter_canonical_content_digest"].startswith("sha256:")
+        assert payload["adapter_canonical_consumption_result"] == "unverified"
+        assert payload["adapter_canonical_consumption_evidence"] == ""
+        assert payload["adapter_canonical_consumed_at"] == ""
         assert payload["adapter_degrade_reason"] == ""
         assert payload["governance_activation_state"] == "materialized_unverified"
         assert payload["governance_activation_verifiable"] is False
@@ -172,9 +183,41 @@ class TestCliAdapter:
         assert payload["adapter_ingress_state"] == "verified_loaded"
         assert payload["adapter_verification_result"] == "verified"
         assert payload["adapter_verification_evidence"] == "env:OPENAI_CODEX"
+        assert payload["adapter_canonical_consumption_result"] == "unverified"
         assert payload["governance_activation_state"] == "verified_loaded"
         assert payload["governance_activation_verifiable"] is True
         assert payload["governance_activation_mode"] == "verified_loaded"
+
+    def test_adapter_status_json_reports_verified_canonical_consumption_when_digest_matches(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setenv("OPENAI_CODEX", "1")
+        assert (
+            runner.invoke(app, ["init", str(tmp_path), "--agent-target", "codex"]).exit_code
+            == 0
+        )
+        digest = _digest(tmp_path / "AGENTS.md")
+        monkeypatch.setenv("AI_SDLC_ADAPTER_CANONICAL_SHA256", digest)
+        monkeypatch.setenv("AI_SDLC_ADAPTER_CANONICAL_PATH", "AGENTS.md")
+        monkeypatch.chdir(tmp_path)
+        assert (
+            runner.invoke(app, ["adapter", "select", "--agent-target", "codex"]).exit_code
+            == 0
+        )
+
+        result = runner.invoke(app, ["adapter", "status", "--json"])
+
+        assert result.exit_code == 0
+        payload = json.loads(result.output)
+        assert payload["adapter_ingress_state"] == "verified_loaded"
+        assert payload["adapter_verification_result"] == "verified"
+        assert payload["adapter_canonical_content_digest"] == digest
+        assert payload["adapter_canonical_consumption_result"] == "verified"
+        assert (
+            payload["adapter_canonical_consumption_evidence"]
+            == "env:AI_SDLC_ADAPTER_CANONICAL_SHA256"
+        )
+        assert payload["adapter_canonical_consumed_at"] != ""
 
     def test_adapter_status_json_keeps_acknowledgement_out_of_ingress_truth(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch

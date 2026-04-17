@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 from pathlib import Path
 
 import pytest
@@ -27,6 +28,8 @@ IDE_ENV_KEYS = [
     "CODEX_CLI_READY",
     "CLAUDE_CODE_ENTRYPOINT",
     "CLAUDECODE",
+    "AI_SDLC_ADAPTER_CANONICAL_SHA256",
+    "AI_SDLC_ADAPTER_CANONICAL_PATH",
 ]
 
 
@@ -34,6 +37,10 @@ IDE_ENV_KEYS = [
 def _clear_ide_env(monkeypatch: pytest.MonkeyPatch) -> None:
     for key in IDE_ENV_KEYS:
         monkeypatch.delenv(key, raising=False)
+
+
+def _digest(path: Path) -> str:
+    return f"sha256:{hashlib.sha256(path.read_bytes()).hexdigest()}"
 
 
 class TestDetectIde:
@@ -247,6 +254,50 @@ class TestEnsureIdeAdaptation:
         assert cfg.adapter_ingress_state == "verified_loaded"
         assert cfg.adapter_verification_result == "verified"
         assert cfg.adapter_verification_evidence == "env:OPENAI_CODEX"
+        assert cfg.adapter_canonical_consumption_result == "unverified"
+
+    def test_explicit_target_records_verified_canonical_consumption_when_digest_matches(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setenv("OPENAI_CODEX", "1")
+        init_project(tmp_path, agent_target=IDEKind.CODEX.value)
+        canonical = tmp_path / "AGENTS.md"
+        digest = _digest(canonical)
+        monkeypatch.setenv("AI_SDLC_ADAPTER_CANONICAL_SHA256", digest)
+        monkeypatch.setenv("AI_SDLC_ADAPTER_CANONICAL_PATH", "AGENTS.md")
+
+        ensure_ide_adaptation(tmp_path, agent_target=IDEKind.CODEX)
+        from ai_sdlc.core.config import load_project_config
+
+        cfg = load_project_config(tmp_path)
+        assert cfg.adapter_ingress_state == "verified_loaded"
+        assert cfg.adapter_verification_result == "verified"
+        assert cfg.adapter_canonical_content_digest == digest
+        assert cfg.adapter_canonical_consumption_result == "verified"
+        assert (
+            cfg.adapter_canonical_consumption_evidence
+            == "env:AI_SDLC_ADAPTER_CANONICAL_SHA256"
+        )
+        assert cfg.adapter_canonical_consumed_at != ""
+
+    def test_explicit_target_keeps_canonical_consumption_unverified_on_digest_mismatch(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setenv("OPENAI_CODEX", "1")
+        init_project(tmp_path, agent_target=IDEKind.CODEX.value)
+        monkeypatch.setenv("AI_SDLC_ADAPTER_CANONICAL_SHA256", "sha256:deadbeef")
+        monkeypatch.setenv("AI_SDLC_ADAPTER_CANONICAL_PATH", "AGENTS.md")
+
+        ensure_ide_adaptation(tmp_path, agent_target=IDEKind.CODEX)
+        from ai_sdlc.core.config import load_project_config
+
+        cfg = load_project_config(tmp_path)
+        assert cfg.adapter_ingress_state == "verified_loaded"
+        assert cfg.adapter_verification_result == "verified"
+        assert cfg.adapter_canonical_content_digest == _digest(tmp_path / "AGENTS.md")
+        assert cfg.adapter_canonical_consumption_result == "unverified"
+        assert cfg.adapter_canonical_consumption_evidence == ""
+        assert cfg.adapter_canonical_consumed_at == ""
 
     def test_repeated_adaptation_preserves_recorded_verified_ingress_without_env(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
@@ -279,6 +330,8 @@ class TestEnsureIdeAdaptation:
         assert payload["agent_target"] == IDEKind.CODEX.value
         assert payload["adapter_ingress_state"] == "materialized"
         assert payload["adapter_verification_result"] == "unverified"
+        assert payload["adapter_canonical_content_digest"].startswith("sha256:")
+        assert payload["adapter_canonical_consumption_result"] == "unverified"
         assert payload["governance_activation_state"] == "materialized_unverified"
         assert payload["governance_activation_verifiable"] is False
         assert payload["governance_activation_mode"] == "materialized_only"
