@@ -1,6 +1,6 @@
 # Frontend Program 排序与能力闭环真值
 
-**更新日期**：2026-04-16
+**更新日期**：2026-04-17
 **适用范围**：所有 `specs/0xx-frontend-*` work item
 **机器真值**：根级 `program-manifest.yaml`；本文件用于说明排序口径、frontend 范围内的 capability closure 汇总与建议分支命名。
 
@@ -26,22 +26,23 @@
 
 | Capability Cluster | 状态 | 来源范围 | 当前口径 |
 |---|---|---|---|
-| `frontend-contract-foundation` | `partial` | `009-018`, `065`, `077-078` | canonical 合同、观测 provider、runtime attachment 与 gate 基线已具备 advisory-only 实现切片，但 cluster 级 closure 仍缺统一 carrier 与 ready 级收口 |
-| `frontend-program-automation-chain` | `capability_open` | `019-064` | 各 tranche 大量是 advisory-only/runtime slice，program execute/remediation/writeback/archive/cleanup 尚未被能力级收敛为 closed |
-| `frontend-p1-experience-stability` | `capability_open` | `066-072`, `076` | P1 planning 与部分 runtime closure 已落地，但 cluster 仍保留 consumer evidence / root sync 口径差异，不能等同 capability 已关闭 |
-| `frontend-evidence-class-lifecycle` | `partial` | `079-092`, `107-113` | evidence-class 主链已有 validator/mirror/runtime closure 切片，但 cluster 级 ready 口径与 root honesty sync 仍未统一收口 |
+| `frontend-evidence-class-lifecycle` | `partial` | `079-092`, `107-113` | `107-113` 已补部分 runtime/backfill，但 `083-090` 仍属 prospective/formal-only，`091` 仍是首批 implementation slice 进行中 |
 
 - 已完成：`frontend-mainline-delivery` 已于 `2026-04-16` 在根级 truth ledger 收敛为 `closure=closed / audit=ready`，因此不再列入 open capability cluster。
-- 下一条建议主线：`frontend-contract-foundation`。它位于当前仍 open clusters 的最前置 DAG 区段，且其 closure 结果会直接影响后续 observation / attachment / gate contract 的统一口径。
+- 已完成：`frontend-contract-foundation` 已于 `2026-04-17` 通过 `154` 从 root `open_clusters` 中移除；这表示 cluster closure reconciliation 已完成，不表示新增 runtime tranche。
+- 已完成：`frontend-program-automation-chain` 已于 `2026-04-17` 通过 `155` 从 root `open_clusters` 中移除；这表示既有 `019-064` close evidence 已完成 root 收束，不表示补做新的 orchestration runtime。
+- 已完成：`frontend-p1-experience-stability` 已于 `2026-04-17` 通过 `156` 从 root `open_clusters` 中移除；`072/076` 仍只是 root sync / honesty carrier，不得当作 capability delivery proof。
+- 下一条建议主线：`frontend-evidence-class-lifecycle`。这是当前 root truth 中仅剩的 frontend open cluster，且其 residual gap 已被 manifest 收敛到 `079-092`、`107-113` 这一条显式证据主线。
 
 ## 主线分段
 
 - 合同与观测基础：`009` -> `018`
 - 合同自检输入补强：`065`（依赖 `012`、`013`、`014`，不改写 production truth model）
-- P1 planning / experience stability 支线：`066`、`067` 当前 `program status` 均为 `close`；`068` ~ `071` 的 docs-only carrier closeout 已分别归档，但 root `program status` 仍未进入 `close`，并继续保持 `068` -> `069` -> (`070` || `071`) 的 DAG 位次；其共同 frontend truth gap 仍由 `missing_artifact [frontend_contract_observations]` 暴露，但按 `079` 的 framework-only policy split，应读作 consumer implementation evidence 仍外部缺失，而不是框架侧 capability 尚未存在
+- P1 planning / experience stability 支线：`066-072`、`076` 的 local/program truth 仍各自保留原有分层，但 `156` 已完成该 cluster 的 root closure reconciliation；因此这里不再把 P1 列为 open frontend capability cluster。`072/076` 仍只是 root sync / honesty carrier，`missing_artifact [frontend_contract_observations]` 也只应按 `079` 解释为外部 consumer implementation evidence 缺口，而不是框架侧 capability reopen
 - P2 provider/style solution 支线：`073`（依赖 `009`、`016`、`017`、`018`，已纳入 program DAG；`development-summary.md` 已补齐，当前 `program status` 为 `close`）
 - program orchestration / execute / remediation 主链：`019` -> `046`
 - final proof archive 与 cleanup 主链：`047` -> `064`
+- evidence-class lifecycle 主线：`079` -> `092`，并结合 `107` -> `113` 的 runtime / backfill tranche 继续收口
 
 ## 有限并行窗口
 
@@ -121,15 +122,15 @@
 - `053`、`055`、`057`、`059`、`061`、`063`、`064`、`065` 已经在当前仓库具备实现闭环；后续如需补强，应仍以当前 DAG 位次为准，不要越过其 docs-only 前置项。
 - `058`、`060`、`062` 仍是 mutation proposal / approval / gating 主线上的 canonical 冻结点；后续若继续开分支，应以它们作为 truth predecessor，而不是把 `064` 误判为待实现项。
 - `065` 是 `014` 下游的 self-check child baseline；它让框架仓库可用 sample source tree 做显式自检，但不消除真实 active spec 对 `frontend_contract_observations` 的外部输入要求。
-- `066` ~ `071` 已纳入根级 manifest，作用是保留 P1 planning branch 的 canonical DAG 与 rollout 位次；其中 `066`、`067` 当前已具备 `development-summary.md` 并被 root machine truth 视为 `close`，`068` ~ `071` 虽已各自完成 carrier closeout 归档，但 root `program status` 仍保持非 `close` 口径。
+- `066` ~ `071` 已纳入根级 manifest，作用是保留 P1 planning branch 的 canonical DAG 与 rollout 位次；`156` 已在 cluster 层完成 root closure reconciliation，但这不改写各 child work item 自身的 local/program status，也不把 docs-only carrier 升格为 capability delivery。
 - `067` 已在当前仓库完成 kernel semantic expansion formal baseline、model/artifact implementation slice 与 `development-summary.md` 补齐；当前 root machine truth 已把它视为 `close`，并释放了 `068` 的前置阻塞。
 - `070` 与 `071` 是 `069` 下游的 sibling child；root DAG 故意保留 `069 -> (070 || 071)`，不要把 `071` 误写成依赖 `070`。
 - `073` 已在当前仓库完成 provider/style solution baseline 的实现批次、fresh verification 与 `development-summary.md` 补齐；当前 root machine truth 已把它视为 `close`。这表示 close input 已具备，不等于已经执行最终 merge / archive。
-- `072` 是本轮 root sync carrier spec，用于冻结并执行 `066-071` 的 root truth sync；它不属于当前 root DAG 中待执行 / 待 close 的 frontend program item，因此不写入本表。
+- `072` 是 P1 root rollout sync carrier spec，用于冻结并执行 `066-071` 的 root truth sync；它不属于当前 root DAG 中待执行 / 待 close 的 frontend program item，也不提供 capability delivery proof，因此不写入本表。
 - `074` 是本轮 root sync carrier spec，用于冻结并执行 `073` 的 root truth sync；它不属于当前 root DAG 中待执行 / 待 close 的 frontend program item，因此不写入本表。
 - `075` 是本轮 root close sync carrier spec，用于把 `073` 的 root rollout wording 从“已纳入 program”进一步同步到当前 `close` 口径；它同样不属于当前 root DAG 中待执行 / 待 close 的 frontend program item，因此不写入本表。
-- `076` 是本轮 P1 root honesty sync carrier spec，用于把 `067` 的 `close` 口径，以及 `068` ~ `071` 的 archived carrier closeout / root non-close 区分，同步到根级 rollout wording；它同样不属于当前 root DAG 中待执行 / 待 close 的 frontend program item，因此不写入本表。
+- `076` 是 P1 root close sync carrier spec，用于把 `067` 的 `close` 口径，以及 `068` ~ `071` 的 archived carrier closeout / root honesty wording 区分，同步到根级 rollout wording；它同样不属于当前 root DAG 中待执行 / 待 close 的 frontend program item，也不提供 capability delivery proof，因此不写入本表。
 - `077` 冻结了真实 consumer implementation evidence 的回填 playbook；若未来存在真实前端项目，应按该 playbook 生成并回填 canonical observation artifact。
 - `078` 冻结了 sample self-check fallback 的边界：sample source tree 只能证明 framework pipeline 可运行，不能冒充真实 consumer implementation evidence。
 - `079` 冻结了 framework-only repository 的 closure policy split：framework capability evidence 与 consumer implementation evidence 是两层不同真值；因此当前 `068` ~ `071` 的 root non-close，应读作 consumer evidence 尚未接入，而不是框架能力仍未建立。
-- 当前 `program status` 对全部 frontend spec 统一暴露的 `missing_artifact [frontend_contract_observations]` 属于 active spec 输入缺口；在本仓库语境下，它对应的是外部 consumer implementation evidence 尚未接入，不对应仓库内还缺一条可直接扫描补齐的业务前端实现分支。
+- 若 active spec surface 继续暴露 `missing_artifact [frontend_contract_observations]`，在本仓库语境下它仍应解释为外部 consumer implementation evidence 尚未接入，不对应仓库内还缺一条可直接扫描补齐的业务前端实现分支，也不单独构成 frontend capability cluster reopen 的依据。
