@@ -64,17 +64,17 @@ capabilities:
     verify_refs:
     - uv run ai-sdlc verify constraints
 capability_closure_audit:
-  reviewed_at: '2026-04-17'
+  reviewed_at: '2026-04-18'
   open_clusters:
   - cluster_id: agent-adapter-verified-host-ingress
     title: Agent Adapter 真实接入与宿主验证
     closure_state: partial
     summary: 010/094/121/122 已冻结 target selection、acknowledgement 边界与 verified ingress
       truth；当前 `adapter status` 已以 `env:OPENAI_CODEX` 给出 Codex host ingress 的 machine-verifiable
-      `verified_loaded` 证据，但 canonical content 已被宿主实际消费仍缺独立证明，且仓库级 `run --dry-run`
-      在历史 `001` close checkpoint 上仍表现为长时间静默后完成。该 cluster 继续保留为 `partial`，缺口已收敛为 startup
-      observability / operator-facing readiness 语义，而不是“完全没有 verified host ingress
-      runtime”。
+      `verified_loaded` 证据。仓库级 `run --dry-run` 现已在当前 close checkpoint 上输出阶段进度与结论，
+      因此 operator-facing startup observability 已不再是该 cluster 的当前阻断项。该 cluster 继续保留为
+      `partial` 的唯一剩余原因，是 canonical content 已被宿主实际消费仍缺独立证明，而不是“完全没有 verified host
+      ingress runtime”。
     source_refs:
     - '010'
     - 094
@@ -1597,11 +1597,11 @@ specs:
   roles: []
   capability_refs: []
 truth_snapshot:
-  generated_at: '2026-04-17T18:45:56Z'
+  generated_at: '2026-04-17T19:12:32Z'
   generated_by: ai-sdlc program truth sync
   generator_version: program_truth_snapshot_v1
-  repo_revision: 427f0a3
-  authoring_hash: b452ef3ae7bde009284f2f2da872e246cc929750da141d03c9ec3354b02e75bc
+  repo_revision: f84f7d0
+  authoring_hash: 8b5f9c4830ebe7859cd4597e5370d92d98dbd4288acb62ce55912db04e1c667d
   source_hashes:
     truth_check:specs/095-frontend-mainline-product-delivery-baseline: 40b5e9332011b0d8941245c0e8e7c3b192e897b2bc4aa4876a3d37a94f9b80f0
     truth_check:specs/096-frontend-mainline-host-runtime-manager-baseline: e4586cf112089fff541fc809f9ba98ad4c4c3d5593de8febfc4e64cb1179ce02
@@ -1635,13 +1635,14 @@ truth_snapshot:
     close_check:specs/126-frontend-mainline-browser-gate-recheck-remediation-runtime-closure-baseline: 6953138b2d9d62e9f4d337bb97d069400c46449c785c77cdc0440eaafa6aabc6
     close_check:specs/143-frontend-mainline-browser-gate-real-probe-runtime-baseline: 6953138b2d9d62e9f4d337bb97d069400c46449c785c77cdc0440eaafa6aabc6
     close_check:specs/144-frontend-mainline-host-remediation-and-workspace-integration-closure-baseline: 6953138b2d9d62e9f4d337bb97d069400c46449c785c77cdc0440eaafa6aabc6
-    verify:uv run ai-sdlc verify constraints: 67c162e8ce6369708f41fd003c4d3b2703509ebeb85aefbbc2a2d67663c45333
-  snapshot_hash: 8c22d9b1ca0acd1363b585d91f0c6add356d1ef5e1ce02565817070039e5e60c
+    verify:uv run ai-sdlc verify constraints: 4147865e3427a1e999a2364f9f21173223e5aa2a9919ec55dbb8cb5b51a93ffe
+  snapshot_hash: eb908bdd6b3d896c6bd9a1903707b2f89332871aae60e48fc4b2dd031a993293
   computed_capabilities:
   - capability_id: frontend-mainline-delivery
     closure_state: closed
-    audit_state: ready
-    blocking_refs: []
+    audit_state: blocked
+    blocking_refs:
+    - verify:uv run ai-sdlc verify constraints
     stale_reason: ''
   source_inventory:
     state: complete
@@ -1650,7 +1651,7 @@ truth_snapshot:
     unmapped_sources: 0
     missing_sources: 0
     phase_signal_count: 3129
-    deferred_signal_count: 5739
+    deferred_signal_count: 5741
     non_goal_signal_count: 278
     layer_totals:
       blueprint: 1
@@ -8828,7 +8829,7 @@ truth_snapshot:
       exists: true
       mapping_ref: 158-agent-adapter-verified-host-ingress-closure-audit-reconciliation-baseline
       phase_signal_count: 0
-      deferred_signal_count: 1
+      deferred_signal_count: 3
       non_goal_signal_count: 0
     - path: specs/158-agent-adapter-verified-host-ingress-closure-audit-reconciliation-baseline/development-summary.md
       source_type: development_summary
@@ -8984,4 +8985,4 @@ truth_snapshot:
       deferred_signal_count: 6
       non_goal_signal_count: 1
     unmapped_paths: []
-  state: ready
+  state: blocked

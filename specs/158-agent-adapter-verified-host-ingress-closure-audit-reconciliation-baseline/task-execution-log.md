@@ -179,3 +179,100 @@
 - 当前批次 branch disposition 状态：已切至 `codex/158-agent-adapter-ingress-audit` 并完成本批提交
 - 当前批次 worktree disposition 状态：post-commit truth refresh / close-check 复核中
 - 是否继续下一批：是；若后续需要真正关闭该 cluster，应新增针对 startup observability / readiness 的独立修复 carrier
+
+### Batch 2026-04-18-001 | post-close 状态对齐补录
+
+#### 3.1 批次范围
+
+- 覆盖任务：`T22`、`T24`、`T32`、`T41`、`T42`
+- 覆盖阶段：`agent-adapter-verified-host-ingress` post-close truth alignment
+- 依赖提交：`8e554c5`、`61d5df0`
+- 激活的规则：fresh evidence first、truth-preserving update、历史结论不得覆盖新证据
+- **改动范围**：`program-manifest.yaml`、`specs/158-agent-adapter-verified-host-ingress-closure-audit-reconciliation-baseline/development-summary.md`、`specs/158-agent-adapter-verified-host-ingress-closure-audit-reconciliation-baseline/task-execution-log.md`
+- **验证画像**：`truth-only`
+
+#### 3.2 统一验证命令
+
+- `V6`（启动入口复核）
+  - 命令：`python -m ai_sdlc run --dry-run`
+  - 结果：输出 `Stage close: running (dry-run)`，并给出 close-stage verdict（最新复核为 `Stage close: RETRY` / `Dry-run completed with open gates...`）；分类更新为“结果可观察、结论可解释”
+- `V6.5`（truth snapshot 预演）
+  - 命令：`python -m ai_sdlc program truth sync --dry-run`
+  - 结果：`truth snapshot state: blocked`；当前 authoring/evidence 变更可被 truth sync 正常识别，但执行态仍受 broader release-target blocker 影响
+- `V7`（项目真值审计复核）
+  - 命令：`python -m ai_sdlc program truth audit`
+  - 结果：`state: blocked`、`snapshot state: fresh`；阻断项收敛为 `frontend-mainline-delivery` release target 的历史 close-check refs 与 `verify:uv run ai-sdlc verify constraints`
+- `V8`（close gate 复核）
+  - 命令：`python -m ai_sdlc gate close`
+  - 结果：`Gate close: RETRY`；当前 repo close-state 下 `program_truth_audit_ready=FAIL`，并伴随 `all_tasks_complete` / `final_tests_passed` 未绿
+- `V9`（治理约束复核）
+  - 命令：`uv run ai-sdlc verify constraints`
+  - 结果：`BLOCKER: branch lifecycle unresolved`，当前分支 `codex/158-agent-adapter-ingress-audit` 的 disposition 尚未完成
+
+#### 3.3 任务记录
+
+##### T22-F1 | 启动入口可观察性复核
+
+- 改动范围：执行归档证据、`program-manifest.yaml` 摘要口径
+- 改动内容：
+  - 复核 `run --dry-run` 当前已输出阶段启动与阶段结论
+  - 撤销“成功但静默”作为当前态结论，仅保留为历史现场记录
+  - 将入口状态更新为“结果可观察、结论可解释”，同时不把该事实外推成 canonical content consumption proof
+- 新增/调整的测试：无
+- 执行的命令：`V6`
+- 测试结果：operator-facing startup observability 已闭环，即使 stage verdict 仍可因 open gates 而返回 `RETRY`
+- 是否符合任务目标：是
+
+##### T24-F1 | 项目真值刷新复核
+
+- 改动范围：执行归档证据、root summary 状态口径
+- 改动内容：
+  - 复核 `program truth audit` 已回到 `fresh`，但当前仍被更上层 release target blocker 拦截
+  - 确认该结果与 158 当前 root cluster 的 `partial` 状态并不冲突
+  - 明确 158 剩余 cluster gap 已不再属于 startup observability，而 repo 级 audit blocker 仍需在主线其他条目处理
+- 新增/调整的测试：无
+- 执行的命令：`V6.5`、`V7`
+- 测试结果：truth snapshot `fresh`，但 release target 审计仍 blocked
+- 是否符合任务目标：是
+
+##### T32-F1 | root cluster 摘要再收敛
+
+- 改动范围：`program-manifest.yaml`、`development-summary.md`
+- 改动内容：
+  - 保留 `agent-adapter-verified-host-ingress` 为 `partial`
+  - 删除“仓库级 dry-run 长时间静默后完成”作为当前阻断项的旧表述
+  - 将剩余缺口收敛为 canonical content actual consumption proof 缺失
+- 新增/调整的测试：无
+- 执行的命令：`V6`、`V7`
+- 测试结果：root summary 与当前 CLI / audit 事实重新对齐
+- 是否符合任务目标：是
+
+##### T41-T42-F1 | close readiness 复核
+
+- 改动范围：`task-execution-log.md`、`development-summary.md`
+- 改动内容：
+  - 补录 post-close 复核批次
+  - 明确 close gate 当前仍为 `RETRY`，原因是 repo 级 truth / branch lifecycle blocker，而不是 158 的 startup observability
+  - 旧的未闭合口径仅保留 canonical content consumption proof
+  - 清除“需要再为 startup observability 单独开 carrier”的陈旧后续动作
+- 新增/调整的测试：无
+- 执行的命令：`V8`、`V9`
+- 测试结果：close gate 与当前结论一致，且 blocker 不属于 158 cluster gap 本身
+- 是否符合任务目标：是
+
+#### 3.4 代码审查结论（Mandatory）
+
+- 宪章/规格对齐：本次补录只修正 stale truth summary，不扩展 runtime 范围
+- 代码质量：入口可观察性修复已由先前提交实现，本批只做真值与归档对齐
+- 测试质量：`run --dry-run`、`program truth audit`、`gate close` 三项复核结果在“cluster gap”与“repo-level blocker”两个层面上可一致解释
+- 结论：root cluster 继续保持 `partial`，未闭合理由只剩 canonical content actual consumption proof；repo-level close blocker 另行存在
+
+#### 3.5 自动决策记录（如有）
+
+- `AD-004`：基于 `8e554c5` 与 `61d5df0` 的新鲜证据，撤销“startup observability 仍是当前阻断项”的旧结论
+- `AD-005`：综合复核后，不新增新的 observability carrier；后续真正需要追踪的是 canonical content actual consumption proof
+- `AD-006`：repo 级 `program truth audit` / `gate close` blocker 继续保留在主线 broader closure 治理里，不伪装成 158 cluster 自身未完成
+
+#### 3.6 批次结论
+
+- 截至 2026-04-18，`agent-adapter-verified-host-ingress` 的当前真值为：Codex host ingress 已 `verified_loaded`，仓库级 dry-run 入口已可观察且可解释；该 cluster 仍保留 `partial`，仅因为 canonical content 已被宿主实际消费尚无独立 machine-verifiable 证明。与此同时，repo 级 `program truth audit` 与 `gate close` 仍被 broader release-target / branch-lifecycle blocker 拦截。
