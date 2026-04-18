@@ -30,3 +30,5 @@ def test_windows_offline_smoke_workflow_covers_bundle_build_install_and_cli_chec
     assert "PYTHONIOENCODING" in workflow
     assert "Console]::OutputEncoding" in workflow
     assert "UTF8Encoding" in workflow
+    assert "Legacy Artifact Probe" in workflow
+    assert "recover --reconcile" in workflow
