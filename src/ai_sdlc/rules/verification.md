@@ -63,6 +63,12 @@
 
 `close-check` 负责对 latest batch 的画像与 execution-log 中的 fresh evidence 做只读核验；`verify constraints` 负责确认本仓库规则文档和 PR checklist 对上述画像的定义保持一致。
 
+## Reconcile Smoke Contract
+
+- `Legacy Artifact Probe` 与 `ai-sdlc recover --reconcile` 属于仓库状态诊断输出契约；Windows offline smoke 依赖它们识别“安装成功，但当前仓库仍需 reconcile checkpoint”的已知停止场景。
+- 变更上述诊断输出契约时，必须同步维护 `.github/workflows/windows-offline-smoke.yml`、`tests/integration/test_github_workflows.py` 与 `verify constraints` 的 reconcile smoke contract markers。
+- CLI 若继续使用“已停止当前运行，避免基于过时 checkpoint 继续执行。”提示，也视为该契约的一部分；修改这条停止语义时，同样必须同步更新相关 smoke 判定。
+
 ## 阶段化验证要求
 
 ### 批次级验证（EXECUTE 阶段内）
