@@ -469,7 +469,7 @@ class SDLCRunner:
                 cwd=self.root,
                 wi=spec_dir,
                 all_docs=False,
-                include_program_truth=not dry_run,
+                include_program_truth=True,
             )
             ctx["close_check_ok"] = close_check.ok
             if close_check.ok:

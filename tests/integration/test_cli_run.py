@@ -10,6 +10,7 @@ from typer.testing import CliRunner
 
 from ai_sdlc.cli.main import app
 from ai_sdlc.context.state import load_checkpoint, save_checkpoint
+from ai_sdlc.core.close_check import CloseCheckResult
 from ai_sdlc.core.config import load_project_config, save_project_config
 from ai_sdlc.core.frontend_contract_drift import PageImplementationObservation
 from ai_sdlc.core.frontend_contract_observation_provider import (
@@ -18,7 +19,7 @@ from ai_sdlc.core.frontend_contract_observation_provider import (
 )
 from ai_sdlc.core.runner import SDLCRunner
 from ai_sdlc.models.gate import GateCheck, GateResult, GateVerdict
-from ai_sdlc.models.state import Checkpoint, FeatureInfo
+from ai_sdlc.models.state import Checkpoint, CompletedStage, FeatureInfo
 from ai_sdlc.telemetry.enums import TelemetryMode, TelemetryProfile
 from ai_sdlc.telemetry.paths import (
     telemetry_local_root,
@@ -224,6 +225,83 @@ class TestRunCommand:
         result = runner.invoke(app, ["run", "--dry-run"])
 
         assert result.exit_code == 0
+        assert "Stage close: RETRY" in result.output
+        assert "Pipeline completed." not in result.output
+        assert "Dry-run completed with open gates. Last stage: close (RETRY)" in result.output
+
+    def test_run_dry_run_blocks_on_stale_program_truth_for_close_checkpoint(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.chdir(tmp_path)
+        assert runner.invoke(app, ["init", "."]).exit_code == 0
+
+        spec_dir = tmp_path / "specs" / "001-wi"
+        spec_dir.mkdir(parents=True, exist_ok=True)
+        (spec_dir / "development-summary.md").write_text("# Summary\n", encoding="utf-8")
+        captured: dict[str, bool] = {}
+
+        def _fake_close_check(
+            *,
+            cwd: Path | None,
+            wi: Path,
+            all_docs: bool = False,
+            include_program_truth: bool = True,
+        ) -> CloseCheckResult:
+            captured["include_program_truth"] = include_program_truth
+            if include_program_truth:
+                return CloseCheckResult(
+                    ok=False,
+                    blockers=[
+                        "BLOCKER: program truth unresolved: truth_snapshot_stale"
+                    ],
+                    checks=[],
+                    wi_dir=spec_dir,
+                    error=None,
+                )
+            return CloseCheckResult(
+                ok=True,
+                blockers=[],
+                checks=[
+                    {"name": "tasks_completion", "ok": True, "detail": "ok"},
+                    {"name": "verification_profile", "ok": True, "detail": "ok"},
+                ],
+                wi_dir=spec_dir,
+                error=None,
+            )
+
+        monkeypatch.setattr("ai_sdlc.core.runner.run_close_check", _fake_close_check)
+
+        save_checkpoint(
+            tmp_path,
+            Checkpoint(
+                current_stage="close",
+                feature=FeatureInfo(
+                    id="001-wi",
+                    spec_dir="specs/001-wi",
+                    design_branch="design/001-wi",
+                    feature_branch="feature/001-wi",
+                    current_branch="feature/001-wi",
+                ),
+                completed_stages=[
+                    CompletedStage(
+                        stage=stage, completed_at="2026-04-18T00:00:00+00:00"
+                    )
+                    for stage in (
+                        "init",
+                        "refine",
+                        "design",
+                        "decompose",
+                        "verify",
+                        "execute",
+                    )
+                ],
+            ),
+        )
+
+        result = runner.invoke(app, ["run", "--dry-run"])
+
+        assert result.exit_code == 0
+        assert captured["include_program_truth"] is True
         assert "Stage close: RETRY" in result.output
         assert "Pipeline completed." not in result.output
         assert "Dry-run completed with open gates. Last stage: close (RETRY)" in result.output

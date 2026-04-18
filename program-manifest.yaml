@@ -66,7 +66,8 @@ capabilities:
     - uv run ai-sdlc verify constraints
 - id: agent-adapter-verified-host-ingress
   title: Agent Adapter Verified Host Ingress
-  goal: Adapter host ingress 与 canonical content consumption proof 必须维持 machine-verifiable release gate。
+  goal: Adapter host ingress 与 canonical content consumption proof 必须维持 machine-verifiable
+    release gate。
   release_required: true
   spec_refs:
   - 121-agent-adapter-verified-host-ingress-truth-baseline
@@ -1646,6 +1647,9 @@ specs:
   - runtime_carrier
   capability_refs:
   - agent-adapter-verified-host-ingress
+- id: 161-close-dry-run-program-truth-parity-baseline
+  path: specs/161-close-dry-run-program-truth-parity-baseline
+  depends_on: []
 truth_snapshot:
   generated_at: '2026-04-18T04:19:25Z'
   generated_by: ai-sdlc program truth sync
