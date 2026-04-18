@@ -87,11 +87,11 @@ related_plan: specs/158-agent-adapter-verified-host-ingress-closure-audit-reconc
 
 ### Batch 3
 
-- [ ] T31 闭合路径判定（本批未选中）
+- [x] T31 闭合路径判定（由 163 fresh close sweep 复核后完成）
   - 优先级: P0
   - 依赖: T21, T22, T24
   - 文件: `program-manifest.yaml`
-  - 验收: 只有当 verified host ingress 与 canonical content consumption proof 都具备足够证据时，才允许移除或关闭 root cluster
+  - 验收: 只有当 verified host ingress 与 canonical content consumption proof 都具备足够证据时，才允许移除或关闭 root cluster；`163` 已据此执行 root cluster removal
   - 验证: root manifest diff 可由 evidence bundle 支撑
 
 - [x] T32 保守路径判定（本批选中）

@@ -276,3 +276,72 @@
 #### 3.6 批次结论
 
 - 截至 2026-04-18，`agent-adapter-verified-host-ingress` 的当前真值为：Codex host ingress 已 `verified_loaded`，仓库级 dry-run 入口已可观察且可解释；该 cluster 仍保留 `partial`，仅因为 canonical content 已被宿主实际消费尚无独立 machine-verifiable 证明。与此同时，repo 级 `program truth audit` 与 `gate close` 仍被 broader release-target / branch-lifecycle blocker 拦截。
+
+### Batch 2026-04-18-002 | close grammar normalization
+
+#### 4.1 批次范围
+
+- 覆盖任务：`T31`、`T41`、`T42`
+- 覆盖阶段：historical close grammar normalization after `163` fresh close sweep
+- 依赖输入：`specs/163-*` fresh sweep 结果、`python -m ai_sdlc workitem close-check --wi specs/158-agent-adapter-verified-host-ingress-closure-audit-reconciliation-baseline --json`
+- 激活的规则：truth-preserving update、历史 carrier 不得因 checklist/branch marker 漏项继续伪阻断
+
+#### 4.2 统一验证命令
+
+- **验证画像**：`truth-only`
+- **改动范围**：`specs/158-agent-adapter-verified-host-ingress-closure-audit-reconciliation-baseline/tasks.md`、`specs/158-agent-adapter-verified-host-ingress-closure-audit-reconciliation-baseline/task-execution-log.md`
+- `V10`：`uv run ai-sdlc verify constraints`
+- `V11`：`python -m ai_sdlc program truth sync --dry-run`
+- `V12`：`python -m ai_sdlc workitem close-check --wi specs/158-agent-adapter-verified-host-ingress-closure-audit-reconciliation-baseline --json`
+
+#### 4.3 任务记录
+
+##### T31-F2 | closure path handoff normalization
+
+- 改动范围：`tasks.md`、`task-execution-log.md`
+- 改动内容：
+  - 将 `T31` 从“本批未选中”显式收口为“由 `163` fresh close sweep 复核后完成”
+  - 保留 `158` 的历史结论边界，不回写任何新的 runtime claim
+  - 让 `158` 的 formal checklist 与后续 `163` root cluster removal 真值一致
+- 新增/调整的测试：无
+- 执行的命令：`V12`
+- 测试结果：fresh `close-check` 证实 `158` 的剩余 blocker 已不是 capability 事实缺口，而是 checklist/branch disposition 标记未补齐
+- 是否符合任务目标：是
+
+##### T41-T42-F2 | branch lifecycle archive normalization
+
+- 改动范围：`task-execution-log.md`
+- 改动内容：
+  - 将历史分支 `codex/158-agent-adapter-ingress-audit` 明确标记为 `archived`
+  - 将 worktree 处置明确为 `retained（历史分支保留作归档证据）`
+  - 不再把 `158` 自身表述为当前主线 blocker；主线收口交由 `163`
+- 新增/调整的测试：无
+- 执行的命令：`V10`、`V11`
+- 测试结果：最新批次的 branch/worktree disposition 已能被 close grammar 直接消费
+- 是否符合任务目标：是
+
+#### 4.4 代码审查结论（Mandatory）
+
+- 宪章/规格对齐：本批只补 formal close grammar，不篡改 `158` 的历史 capability 结论
+- 代码质量：未触碰 `src/` / `tests/`，只修正 tasks/log 的真值对账
+- 测试质量：采用 `truth-only` 画像，覆盖 constraints、truth sync dry-run 与 `158 close-check`
+- 结论：`无 Critical 阻塞项`
+
+#### 4.5 任务/计划同步状态（Mandatory）
+
+- `tasks.md` 同步状态：已同步；`T31` 已按 `163` 的 fresh close sweep 结果完成对账
+- `related_plan` 同步状态：已与历史 reconciliation 范围对齐
+- 关联 branch/worktree disposition 计划：`archived`
+- 说明：`158` 继续保留为历史 reconciliation carrier，但不再作为当前主线 closure blocker
+
+#### 4.6 批次结论
+
+- `158` 当前可被 `163` 直接消费为“历史 reconciliation 已完成且已归档”的 supporting carrier；其 latest batch 不再额外阻断 root cluster removal。
+
+#### 4.7 归档后动作
+
+- **已完成 git 提交**：是
+- **提交哈希**：由当前 close-out commit 统一承载；以当前分支 HEAD 为准
+- 当前批次 branch disposition 状态：archived
+- 当前批次 worktree disposition 状态：retained（历史分支保留作归档证据）
+- 是否继续下一批：否

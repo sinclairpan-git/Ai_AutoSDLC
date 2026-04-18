@@ -75,6 +75,9 @@ capabilities:
   - 158-agent-adapter-verified-host-ingress-closure-audit-reconciliation-baseline
   - 159-agent-adapter-canonical-consumption-proof-runtime-baseline
   - 160-agent-adapter-canonical-consumption-release-gate-baseline
+  - 161-close-dry-run-program-truth-parity-baseline
+  - 162-agent-adapter-canonical-consumption-proof-carrier-baseline
+  - 163-agent-adapter-verified-host-ingress-closure-audit-finalization-baseline
   required_evidence:
     truth_check_refs:
     - specs/121-agent-adapter-verified-host-ingress-truth-baseline
@@ -87,20 +90,6 @@ capabilities:
 capability_closure_audit:
   reviewed_at: '2026-04-18'
   open_clusters:
-  - cluster_id: agent-adapter-verified-host-ingress
-    title: Agent Adapter 真实接入与宿主验证
-    closure_state: partial
-    summary: 010/094/121/122 已冻结 target selection、acknowledgement 边界与 verified ingress
-      truth；当前 `adapter status` 已以 `env:OPENAI_CODEX` 给出 Codex host ingress 的 machine-verifiable
-      `verified_loaded` 证据。仓库级 `run --dry-run` 现已在当前 close checkpoint 上输出阶段进度与结论，
-      因此 operator-facing startup observability 已不再是该 cluster 的当前阻断项。该 cluster 继续保留为
-      `partial` 的唯一剩余原因，是 canonical content 已被宿主实际消费仍缺独立证明，而不是“完全没有 verified host
-      ingress runtime”。
-    source_refs:
-    - '010'
-    - 094
-    - 120-122
-    - 158-160
   - cluster_id: project-meta-foundations
     title: 项目元能力基线
     closure_state: formal_only
@@ -1652,19 +1641,53 @@ specs:
   - agent-adapter-verified-host-ingress
 - id: 161-close-dry-run-program-truth-parity-baseline
   path: specs/161-close-dry-run-program-truth-parity-baseline
-  depends_on: []
+  depends_on:
+  - 160-agent-adapter-canonical-consumption-release-gate-baseline
+  branch_slug: close-dry-run-program-truth-parity-baseline
+  owner: team-frontend-governance
+  frontend_evidence_class: ''
+  roles:
+  - runtime_carrier
+  capability_refs:
+  - agent-adapter-verified-host-ingress
 - id: 162-agent-adapter-canonical-consumption-proof-carrier-baseline
   path: specs/162-agent-adapter-canonical-consumption-proof-carrier-baseline
-  depends_on: []
+  depends_on:
+  - 121-agent-adapter-verified-host-ingress-truth-baseline
+  - 122-agent-adapter-verified-host-ingress-runtime-baseline
+  - 159-agent-adapter-canonical-consumption-proof-runtime-baseline
+  - 160-agent-adapter-canonical-consumption-release-gate-baseline
+  - 161-close-dry-run-program-truth-parity-baseline
+  branch_slug: agent-adapter-canonical-consumption-proof-carrier-baseline
+  owner: team-frontend-governance
+  frontend_evidence_class: ''
+  roles:
+  - runtime_carrier
+  capability_refs:
+  - agent-adapter-verified-host-ingress
 - id: 163-agent-adapter-verified-host-ingress-closure-audit-finalization-baseline
   path: specs/163-agent-adapter-verified-host-ingress-closure-audit-finalization-baseline
-  depends_on: []
+  depends_on:
+  - 121-agent-adapter-verified-host-ingress-truth-baseline
+  - 122-agent-adapter-verified-host-ingress-runtime-baseline
+  - 158-agent-adapter-verified-host-ingress-closure-audit-reconciliation-baseline
+  - 159-agent-adapter-canonical-consumption-proof-runtime-baseline
+  - 160-agent-adapter-canonical-consumption-release-gate-baseline
+  - 161-close-dry-run-program-truth-parity-baseline
+  - 162-agent-adapter-canonical-consumption-proof-carrier-baseline
+  branch_slug: agent-adapter-verified-host-ingress-closure-audit-finalization-baseline
+  owner: team-frontend-governance
+  frontend_evidence_class: ''
+  roles:
+  - sync_carrier
+  capability_refs:
+  - agent-adapter-verified-host-ingress
 truth_snapshot:
-  generated_at: '2026-04-18T06:41:40Z'
+  generated_at: '2026-04-18T08:14:51Z'
   generated_by: ai-sdlc program truth sync
   generator_version: program_truth_snapshot_v1
-  repo_revision: aa2700a
-  authoring_hash: 8ea0a6205555cc5379fad5072e16640a4b67096b5801f64e6d3873177a1064d5
+  repo_revision: 05cb2ce
+  authoring_hash: 014284a88af1c63cd9860ebc6c22222da3d66bd63deb09cbc7e7375300f7c052
   source_hashes:
     truth_check:specs/095-frontend-mainline-product-delivery-baseline: 40b5e9332011b0d8941245c0e8e7c3b192e897b2bc4aa4876a3d37a94f9b80f0
     truth_check:specs/096-frontend-mainline-host-runtime-manager-baseline: e4586cf112089fff541fc809f9ba98ad4c4c3d5593de8febfc4e64cb1179ce02
@@ -1703,7 +1726,7 @@ truth_snapshot:
     truth_check:specs/122-agent-adapter-verified-host-ingress-runtime-baseline: 668bc35f896163f99929da88d733d0de367d996b276b9775d659227fcafcbca7
     close_check:specs/121-agent-adapter-verified-host-ingress-truth-baseline: bb1a96307f540d67dcb9ccb06e03e5ef522ae9acfd1e9a2b5f5816aed8658072
     close_check:specs/122-agent-adapter-verified-host-ingress-runtime-baseline: bb1a96307f540d67dcb9ccb06e03e5ef522ae9acfd1e9a2b5f5816aed8658072
-  snapshot_hash: ba4d94bb9936d1ef8c78892b64889c26afebf1042c2fc8abea17205624f5ae68
+  snapshot_hash: 3e1f7db75b2e98590abc0b4126477e6e1247a9485a55cfcf346fe7b3b1d09d51
   computed_capabilities:
   - capability_id: frontend-mainline-delivery
     closure_state: closed
@@ -1711,19 +1734,18 @@ truth_snapshot:
     blocking_refs: []
     stale_reason: ''
   - capability_id: agent-adapter-verified-host-ingress
-    closure_state: partial
-    audit_state: blocked
-    blocking_refs:
-    - capability_closure_audit:partial
+    closure_state: closed
+    audit_state: ready
+    blocking_refs: []
     stale_reason: ''
   source_inventory:
     state: complete
     total_sources: 837
     mapped_sources: 837
     unmapped_sources: 0
-    missing_sources: 2
+    missing_sources: 0
     phase_signal_count: 3147
-    deferred_signal_count: 5778
+    deferred_signal_count: 5780
     non_goal_signal_count: 282
     layer_totals:
       blueprint: 1
@@ -1742,7 +1764,7 @@ truth_snapshot:
       plan: 164
       tasks: 164
       execution: 164
-      close: 162
+      close: 164
       requirements: 2
       defect: 2
       design: 8
@@ -8901,7 +8923,7 @@ truth_snapshot:
       exists: true
       mapping_ref: 158-agent-adapter-verified-host-ingress-closure-audit-reconciliation-baseline
       phase_signal_count: 0
-      deferred_signal_count: 3
+      deferred_signal_count: 4
       non_goal_signal_count: 0
     - path: specs/158-agent-adapter-verified-host-ingress-closure-audit-reconciliation-baseline/development-summary.md
       source_type: development_summary
@@ -9087,10 +9109,10 @@ truth_snapshot:
       source_type: development_summary
       truth_layer: close
       mapped: true
-      exists: false
+      exists: true
       mapping_ref: 162-agent-adapter-canonical-consumption-proof-carrier-baseline
       phase_signal_count: 0
-      deferred_signal_count: 0
+      deferred_signal_count: 1
       non_goal_signal_count: 0
     - path: specs/163-agent-adapter-verified-host-ingress-closure-audit-finalization-baseline/spec.md
       source_type: spec_doc
@@ -9132,7 +9154,7 @@ truth_snapshot:
       source_type: development_summary
       truth_layer: close
       mapped: true
-      exists: false
+      exists: true
       mapping_ref: 163-agent-adapter-verified-host-ingress-closure-audit-finalization-baseline
       phase_signal_count: 0
       deferred_signal_count: 0
@@ -9282,4 +9304,4 @@ truth_snapshot:
       deferred_signal_count: 6
       non_goal_signal_count: 1
     unmapped_paths: []
-  state: blocked
+  state: ready

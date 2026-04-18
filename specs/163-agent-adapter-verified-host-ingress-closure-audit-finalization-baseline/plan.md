@@ -38,7 +38,8 @@ specs/163-agent-adapter-verified-host-ingress-closure-audit-finalization-baselin
 ├── spec.md
 ├── plan.md
 ├── tasks.md
-└── task-execution-log.md
+├── task-execution-log.md
+└── development-summary.md
 ```
 
 ### 真值结构
@@ -101,7 +102,7 @@ specs/121-*/... specs/122-*/... specs/158-162-*/...
 
 | 问题 | 状态 | 阻塞阶段 |
 |------|------|----------|
-| `release_capabilities[].spec_refs` 是否需要纳入 `161/162` 作为正式 provenance | 待确认 | Phase 1 |
+| `release_capabilities[].spec_refs` 是否需要纳入 `161/162/163` 作为正式 provenance | 已解决：纳入 `spec_refs`，但不扩张 `required_evidence` | 已关闭 |
 | `run --dry-run` 在 cluster 关闭后是否直接转为 close-ready，还是仍有其他非 capability gate | 待验证 | Phase 2 |
 
 ## 实施顺序建议

@@ -2,8 +2,8 @@
 
 **功能编号**：`163-agent-adapter-verified-host-ingress-closure-audit-finalization-baseline`
 **创建日期**：2026-04-18
-**状态**：草稿
-**输入**：`specs/121-agent-adapter-verified-host-ingress-truth-baseline/spec.md`、`specs/122-agent-adapter-verified-host-ingress-runtime-baseline/spec.md`、`specs/158-agent-adapter-verified-host-ingress-closure-audit-reconciliation-baseline/spec.md`、`specs/159-agent-adapter-canonical-consumption-proof-runtime-baseline/spec.md`、`specs/160-agent-adapter-canonical-consumption-release-gate-baseline/spec.md`、`specs/161-agent-adapter-dry-run-program-truth-parity-baseline/spec.md`、`specs/162-agent-adapter-canonical-consumption-proof-carrier-baseline/spec.md`、`program-manifest.yaml`
+**状态**：进行中
+**输入**：`specs/121-agent-adapter-verified-host-ingress-truth-baseline/spec.md`、`specs/122-agent-adapter-verified-host-ingress-runtime-baseline/spec.md`、`specs/158-agent-adapter-verified-host-ingress-closure-audit-reconciliation-baseline/spec.md`、`specs/159-agent-adapter-canonical-consumption-proof-runtime-baseline/spec.md`、`specs/160-agent-adapter-canonical-consumption-release-gate-baseline/spec.md`、`specs/161-close-dry-run-program-truth-parity-baseline/spec.md`、`specs/162-agent-adapter-canonical-consumption-proof-carrier-baseline/spec.md`、`program-manifest.yaml`
 
 > 口径：`163` 不是继续实现 adapter runtime，而是把 `121/122/158/159/160/161/162` 已经产生的 fresh machine-verifiable evidence 正式收束到 root `capability_closure_audit`。只有当当前 close-check grammar、truth sync 与 release capability ledger 一致证明 `agent-adapter-verified-host-ingress` 已闭合时，`163` 才允许从 `program-manifest.yaml > capability_closure_audit.open_clusters` 中移除该 cluster。
 
@@ -94,6 +94,7 @@ fresh `program truth audit` 显示：
 - `162` 已 close-ready 不等于 root audit 必然可关；仍需 fresh consume 当前 close-check 结果
 - 若 manifest provenance 需要补充 `161/162` 才能诚实描述 capability lineage，该补充必须与 cluster removal 同步决议
 - `163` 不能通过修改 summary wording 来假装完成；要么移除 open cluster，要么保留并明确 blocker
+- provenance 决策固定为：`spec_refs` 追认 `161/162/163` 三个 supporting carrier，但 `required_evidence` 仍保持在 `121/122 + verify constraints` 这一组 machine-verifiable capability truth surface，不把 supporting carrier 再折叠成第二套 release gate
 
 ## 需求
 
@@ -127,7 +128,7 @@ related_doc:
   - "specs/158-agent-adapter-verified-host-ingress-closure-audit-reconciliation-baseline/spec.md"
   - "specs/159-agent-adapter-canonical-consumption-proof-runtime-baseline/spec.md"
   - "specs/160-agent-adapter-canonical-consumption-release-gate-baseline/spec.md"
-  - "specs/161-agent-adapter-dry-run-program-truth-parity-baseline/spec.md"
+  - "specs/161-close-dry-run-program-truth-parity-baseline/spec.md"
   - "specs/162-agent-adapter-canonical-consumption-proof-carrier-baseline/spec.md"
   - "program-manifest.yaml"
 frontend_evidence_class: "framework_capability"
