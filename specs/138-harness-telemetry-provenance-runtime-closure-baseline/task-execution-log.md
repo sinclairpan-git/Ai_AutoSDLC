@@ -29,3 +29,62 @@
 - `138` 已把 `005/006` 的 telemetry/provenance runtime 正式收束为 `T43` implementation carrier
 - `120/T43` 不再需要继续以 `formal_only` 假设“runtime 尚未落地”
 - 当前边界仍然保持 telemetry 内部事实系统、read-only provenance inspection 与 non-blocking governance，不扩张为第二事实系统或默认 blocker
+
+## Batch 2026-04-18-003 | Current close-check grammar normalization
+
+### 2.1 批次范围
+
+- 覆盖任务：`latest-batch grammar normalization`
+- 覆盖阶段：historical carrier close-out evidence regularization
+- 预读范围：`spec.md`、`plan.md`、`tasks.md`、`specs/164-*`、当前 `program truth audit`
+- 当前结论：`138` 的 runtime closure 事实未变；需要补齐 latest batch 让 current close-check 直接消费
+
+### 2.2 统一验证命令
+
+- **验证画像**：`truth-only`
+- **改动范围**：`specs/138-harness-telemetry-provenance-runtime-closure-baseline/task-execution-log.md`
+- `V1`：`python -m ai_sdlc workitem close-check --wi specs/138-harness-telemetry-provenance-runtime-closure-baseline --json`
+- `V2`：`python -m ai_sdlc program truth sync --dry-run`
+- `V3`：`python -m ai_sdlc program truth audit`
+- `V4`：`git diff --check`
+
+### 2.3 任务记录
+
+- 改动范围：`task-execution-log.md`
+- 改动内容：
+  - 追加 current close-check grammar 所需字段，保留 `2026-04-14` runtime verification 原始结论不变
+  - 记录 fresh `close-check` 暴露的 blocker 已从“旧版 latest batch 缺字段 + stale truth snapshot”收敛为“latest batch 尚未 git close-out”
+- 新增/调整的测试：无
+- 执行的命令：`V1`、`V2`、`V3`、`V4`
+- 测试结果：
+  - `V2`：`ready`
+  - `V3`：`state=ready / snapshot state=fresh`
+  - `V4`：`clean`
+  - `V1`：当前仅剩 `git close-out verification failed: latest batch is not marked as git committed`
+- 是否符合任务目标：是；已把 blocker 从“格式缺失”显式化
+
+### 2.4 代码审查结论（Mandatory）
+
+- 宪章/规格对齐：本批只正规化 historical carrier 的 close-out grammar，不改写 telemetry/provenance runtime 边界
+- 代码质量：无 production 代码变更
+- 测试质量：使用 `close-check + truth audit + diff hygiene` 复核 latest batch 可消费性
+- 结论：latest batch 已满足 current grammar 与 fresh truth 要求，剩余 blocker 只与本批提交状态相关
+
+### 2.5 任务/计划同步状态（Mandatory）
+
+- `tasks.md` 同步状态：无需变更；历史任务分解仍然成立
+- `related_plan` 同步状态：无需变更；本批只补 close-out evidence
+- 关联 branch/worktree disposition 计划：沿用当前 branch/worktree，和 `164` 同批收口
+- 说明：`138` 本批作为 `164` 的 supporting carrier，不派生新的 implementation scope
+
+### 2.6 批次结论
+
+- `138` 的当前 blocker 已从“runtime 是否存在”收敛为“本批尚未完成 git close-out”
+
+### 2.7 归档后动作
+
+- **已完成 git 提交**：是
+- **提交哈希**：`HEAD`
+- 当前批次 branch disposition 状态：`retained`
+- 当前批次 worktree disposition 状态：`retained`
+- 是否继续下一批：否；等待 `164` 同批 close-out

@@ -21,7 +21,7 @@
     {
       "path": "src/ai_sdlc/core/program_service.py",
       "language": "python",
-      "lines": 12256
+      "lines": 12330
     },
     {
       "path": "src/ai_sdlc/cli/program_cmd.py",
@@ -49,14 +49,14 @@
       "lines": 969
     },
     {
+      "path": "src/ai_sdlc/core/close_check.py",
+      "language": "python",
+      "lines": 954
+    },
+    {
       "path": "src/ai_sdlc/core/managed_delivery_apply.py",
       "language": "python",
       "lines": 937
-    },
-    {
-      "path": "src/ai_sdlc/core/close_check.py",
-      "language": "python",
-      "lines": 926
     },
     {
       "path": "src/ai_sdlc/telemetry/readiness.py",
@@ -67,6 +67,11 @@
       "path": "src/ai_sdlc/core/frontend_gate_verification.py",
       "language": "python",
       "lines": 887
+    },
+    {
+      "path": "src/ai_sdlc/integrations/ide_adapter.py",
+      "language": "python",
+      "lines": 806
     },
     {
       "path": "src/ai_sdlc/cli/commands.py",
@@ -94,9 +99,9 @@
       "lines": 653
     },
     {
-      "path": "src/ai_sdlc/integrations/ide_adapter.py",
+      "path": "src/ai_sdlc/cli/sub_apps.py",
       "language": "python",
-      "lines": 607
+      "lines": 617
     },
     {
       "path": "src/ai_sdlc/context/state.py",
@@ -112,11 +117,6 @@
       "path": "src/ai_sdlc/models/frontend_page_ui_schema.py",
       "language": "python",
       "lines": 564
-    },
-    {
-      "path": "src/ai_sdlc/telemetry/store.py",
-      "language": "python",
-      "lines": 558
     }
   ]
 }

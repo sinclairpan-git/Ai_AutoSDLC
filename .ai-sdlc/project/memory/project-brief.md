@@ -2,15 +2,15 @@
 
 ## 概览
 
-仓库路径 `/Users/sinclairpan/project/Ai_AutoSDLC` — 以 **python** 为主，共 420 个文件，涵盖 3 种语言。
+仓库路径 `/Users/sinclairpan/project/Ai_AutoSDLC` — 以 **python** 为主，共 1458 个文件，涵盖 4 种语言。
 
 ## 关键特征
 
 - 主语言：python
-- 源码行数合计：25686
+- 源码行数合计：65193
 - 依赖条目：5
 - API 端点：2
-- 测试文件：135 个（已检测）
+- 测试文件：985 个（已检测）
 
 ## 入口
 

@@ -1,6 +1,6 @@
 {
-  "total_test_files": 955,
-  "total_test_functions": 1753,
+  "total_test_files": 985,
+  "total_test_functions": 1778,
   "test_files": [
     {
       "path": "docs/superpowers/specs/2026-03-27-telemetry-trace-governance-design.md",
@@ -4875,6 +4875,186 @@
       "test_names": []
     },
     {
+      "path": "specs/159-agent-adapter-canonical-consumption-proof-runtime-baseline/development-summary.md",
+      "framework": "",
+      "test_count": 0,
+      "test_names": []
+    },
+    {
+      "path": "specs/159-agent-adapter-canonical-consumption-proof-runtime-baseline/plan.md",
+      "framework": "",
+      "test_count": 0,
+      "test_names": []
+    },
+    {
+      "path": "specs/159-agent-adapter-canonical-consumption-proof-runtime-baseline/spec.md",
+      "framework": "",
+      "test_count": 0,
+      "test_names": []
+    },
+    {
+      "path": "specs/159-agent-adapter-canonical-consumption-proof-runtime-baseline/task-execution-log.md",
+      "framework": "",
+      "test_count": 0,
+      "test_names": []
+    },
+    {
+      "path": "specs/159-agent-adapter-canonical-consumption-proof-runtime-baseline/tasks.md",
+      "framework": "",
+      "test_count": 0,
+      "test_names": []
+    },
+    {
+      "path": "specs/160-agent-adapter-canonical-consumption-release-gate-baseline/development-summary.md",
+      "framework": "",
+      "test_count": 0,
+      "test_names": []
+    },
+    {
+      "path": "specs/160-agent-adapter-canonical-consumption-release-gate-baseline/plan.md",
+      "framework": "",
+      "test_count": 0,
+      "test_names": []
+    },
+    {
+      "path": "specs/160-agent-adapter-canonical-consumption-release-gate-baseline/spec.md",
+      "framework": "",
+      "test_count": 0,
+      "test_names": []
+    },
+    {
+      "path": "specs/160-agent-adapter-canonical-consumption-release-gate-baseline/task-execution-log.md",
+      "framework": "",
+      "test_count": 0,
+      "test_names": []
+    },
+    {
+      "path": "specs/160-agent-adapter-canonical-consumption-release-gate-baseline/tasks.md",
+      "framework": "",
+      "test_count": 0,
+      "test_names": []
+    },
+    {
+      "path": "specs/161-close-dry-run-program-truth-parity-baseline/development-summary.md",
+      "framework": "",
+      "test_count": 0,
+      "test_names": []
+    },
+    {
+      "path": "specs/161-close-dry-run-program-truth-parity-baseline/plan.md",
+      "framework": "",
+      "test_count": 0,
+      "test_names": []
+    },
+    {
+      "path": "specs/161-close-dry-run-program-truth-parity-baseline/spec.md",
+      "framework": "",
+      "test_count": 0,
+      "test_names": []
+    },
+    {
+      "path": "specs/161-close-dry-run-program-truth-parity-baseline/task-execution-log.md",
+      "framework": "",
+      "test_count": 0,
+      "test_names": []
+    },
+    {
+      "path": "specs/161-close-dry-run-program-truth-parity-baseline/tasks.md",
+      "framework": "",
+      "test_count": 0,
+      "test_names": []
+    },
+    {
+      "path": "specs/162-agent-adapter-canonical-consumption-proof-carrier-baseline/development-summary.md",
+      "framework": "",
+      "test_count": 0,
+      "test_names": []
+    },
+    {
+      "path": "specs/162-agent-adapter-canonical-consumption-proof-carrier-baseline/plan.md",
+      "framework": "",
+      "test_count": 0,
+      "test_names": []
+    },
+    {
+      "path": "specs/162-agent-adapter-canonical-consumption-proof-carrier-baseline/spec.md",
+      "framework": "",
+      "test_count": 0,
+      "test_names": []
+    },
+    {
+      "path": "specs/162-agent-adapter-canonical-consumption-proof-carrier-baseline/task-execution-log.md",
+      "framework": "",
+      "test_count": 0,
+      "test_names": []
+    },
+    {
+      "path": "specs/162-agent-adapter-canonical-consumption-proof-carrier-baseline/tasks.md",
+      "framework": "",
+      "test_count": 0,
+      "test_names": []
+    },
+    {
+      "path": "specs/163-agent-adapter-verified-host-ingress-closure-audit-finalization-baseline/development-summary.md",
+      "framework": "",
+      "test_count": 0,
+      "test_names": []
+    },
+    {
+      "path": "specs/163-agent-adapter-verified-host-ingress-closure-audit-finalization-baseline/plan.md",
+      "framework": "",
+      "test_count": 0,
+      "test_names": []
+    },
+    {
+      "path": "specs/163-agent-adapter-verified-host-ingress-closure-audit-finalization-baseline/spec.md",
+      "framework": "",
+      "test_count": 0,
+      "test_names": []
+    },
+    {
+      "path": "specs/163-agent-adapter-verified-host-ingress-closure-audit-finalization-baseline/task-execution-log.md",
+      "framework": "",
+      "test_count": 0,
+      "test_names": []
+    },
+    {
+      "path": "specs/163-agent-adapter-verified-host-ingress-closure-audit-finalization-baseline/tasks.md",
+      "framework": "",
+      "test_count": 0,
+      "test_names": []
+    },
+    {
+      "path": "specs/164-project-meta-foundations-closure-audit-finalization-baseline/development-summary.md",
+      "framework": "",
+      "test_count": 0,
+      "test_names": []
+    },
+    {
+      "path": "specs/164-project-meta-foundations-closure-audit-finalization-baseline/plan.md",
+      "framework": "",
+      "test_count": 0,
+      "test_names": []
+    },
+    {
+      "path": "specs/164-project-meta-foundations-closure-audit-finalization-baseline/spec.md",
+      "framework": "",
+      "test_count": 0,
+      "test_names": []
+    },
+    {
+      "path": "specs/164-project-meta-foundations-closure-audit-finalization-baseline/task-execution-log.md",
+      "framework": "",
+      "test_count": 0,
+      "test_names": []
+    },
+    {
+      "path": "specs/164-project-meta-foundations-closure-audit-finalization-baseline/tasks.md",
+      "framework": "",
+      "test_count": 0,
+      "test_names": []
+    },
+    {
       "path": "src/ai_sdlc/scanners/test_scanner.py",
       "framework": "pytest",
       "test_count": 0,
@@ -5017,7 +5197,7 @@
     {
       "path": "tests/integration/test_cli_adapter.py",
       "framework": "pytest",
-      "test_count": 10,
+      "test_count": 13,
       "test_names": [
         "test_adapter_help_surfaces_governance_language",
         "test_adapter_activate_help_describes_compatibility_acknowledgement",
@@ -5028,7 +5208,10 @@
         "test_adapter_select_without_flag_uses_interactive_selector",
         "test_adapter_status_json_exposes_target_and_ingress_truth",
         "test_adapter_status_json_reports_verified_loaded_when_host_matches_target",
-        "test_adapter_status_json_keeps_acknowledgement_out_of_ingress_truth"
+        "test_adapter_status_json_reports_verified_canonical_consumption_when_digest_matches",
+        "test_adapter_status_json_keeps_acknowledgement_out_of_ingress_truth",
+        "test_adapter_exec_requires_command_after_double_dash",
+        "test_adapter_exec_injects_canonical_proof_for_child_command"
       ]
     },
     {
@@ -5069,10 +5252,14 @@
     {
       "path": "tests/integration/test_cli_index_gate.py",
       "framework": "pytest",
-      "test_count": 4,
+      "test_count": 8,
       "test_names": [
         "test_index_rebuilds_base_and_extended_indexes",
         "test_gate_alias_runs_without_check_subcommand",
+        "test_gate_close_honors_explicit_work_item_override",
+        "test_gate_close_defaults_to_checkpoint_work_item",
+        "test_gate_close_prefers_current_branch_work_item_over_checkpoint",
+        "test_gate_close_surfaces_program_truth_for_current_branch_work_item",
         "test_gate_cli_surfaces_071_visual_a11y_issue_review_from_frontend_gate_summary",
         "test_gate_cli_surfaces_071_visual_a11y_stable_empty_from_frontend_gate_summary"
       ]
@@ -5271,13 +5458,14 @@
     {
       "path": "tests/integration/test_cli_recover.py",
       "framework": "pytest",
-      "test_count": 10,
+      "test_count": 11,
       "test_names": [
         "test_recover_with_resume_pack",
         "test_recover_missing_resume_pack",
         "test_recover_corrupted_resume_pack",
         "test_recover_stale_resume_pack_rebuilds_and_uses_latest_batch",
         "test_recover_reconcile_updates_legacy_checkpoint",
+        "test_recover_reconcile_realigns_stale_checkpoint_to_current_branch_work_item",
         "test_recover_prompts_and_applies_reconcile_for_legacy_artifacts",
         "test_recover_stops_until_reconcile_is_applied_for_legacy_artifacts",
         "test_recover_invalid_checkpoint_fails",
@@ -5300,12 +5488,15 @@
     {
       "path": "tests/integration/test_cli_run.py",
       "framework": "pytest",
-      "test_count": 14,
+      "test_count": 17,
       "test_names": [
         "test_run_outside_project",
         "test_run_help",
         "test_run_dry_run_materializes_canonical_adapter_after_codex_marker",
         "test_run_dry_run_continues_without_manual_adapter_activation",
+        "test_run_dry_run_reports_stage_progress",
+        "test_run_dry_run_reports_open_gates_without_completed_message",
+        "test_run_dry_run_blocks_on_stale_program_truth_for_close_checkpoint",
         "test_run_non_dry_run_blocks_when_adapter_is_not_verified_loaded",
         "test_run_non_dry_run_continues_when_adapter_is_verified_loaded",
         "test_run_dry_run_lazy_inits_telemetry_without_governance_artifacts",
@@ -6553,7 +6744,7 @@
     {
       "path": "tests/unit/test_ide_adapter.py",
       "framework": "pytest",
-      "test_count": 27,
+      "test_count": 32,
       "test_names": [
         "test_trae_is_not_supported_as_a_distinct_target",
         "test_cursor_dir",
@@ -6580,8 +6771,13 @@
         "test_repeated_adaptation_does_not_refresh_timestamp_without_state_change",
         "test_repeated_adaptation_preserves_acknowledged_support_tier",
         "test_explicit_target_can_auto_verify_when_running_inside_matching_host",
+        "test_explicit_target_records_verified_canonical_consumption_when_digest_matches",
+        "test_explicit_target_keeps_canonical_consumption_unverified_on_digest_mismatch",
         "test_repeated_adaptation_preserves_recorded_verified_ingress_without_env",
-        "test_build_adapter_governance_surface_reports_materialized_truth"
+        "test_build_adapter_governance_surface_reports_materialized_truth",
+        "test_build_canonical_proof_env_returns_digest_and_path_for_codex_target",
+        "test_build_canonical_proof_env_rejects_generic_target",
+        "test_build_canonical_proof_env_requires_materialized_canonical_file"
       ]
     },
     {
@@ -6815,7 +7011,7 @@
     {
       "path": "tests/unit/test_program_service.py",
       "framework": "pytest",
-      "test_count": 261,
+      "test_count": 265,
       "test_names": [
         "test_build_frontend_page_ui_schema_handoff_blocks_when_solution_snapshot_missing",
         "test_build_frontend_page_ui_schema_handoff_uses_latest_solution_snapshot",
@@ -6841,8 +7037,12 @@
         "test_build_truth_snapshot_keeps_canonical_conflict_blocked_when_structural_errors_exist",
         "test_build_truth_ledger_surface_marks_stale_when_authoring_hash_changes",
         "test_build_truth_ledger_surface_stays_fresh_for_truth_snapshot_only_drift",
+        "test_build_truth_snapshot_reuses_manifest_context_for_close_check_refs",
+        "test_build_truth_ledger_surface_ignores_ephemeral_close_check_drift",
         "test_build_truth_ledger_surface_ignores_truth_check_revision_metadata_drift",
         "test_build_truth_snapshot_blocks_release_scope_when_closure_audit_missing",
+        "test_build_truth_snapshot_blocks_host_ingress_capability_when_canonical_consumption_is_unverified",
+        "test_build_truth_snapshot_allows_host_ingress_capability_when_canonical_consumption_is_verified",
         "test_build_frontend_managed_delivery_apply_request_blocks_on_host_ingress",
         "test_build_frontend_managed_delivery_apply_request_materializes_public_bundle_from_truth",
         "test_build_frontend_managed_delivery_apply_request_uses_builtin_provider_truth_when_artifacts_missing",
@@ -7096,12 +7296,15 @@
     {
       "path": "tests/unit/test_reconcile.py",
       "framework": "pytest",
-      "test_count": 4,
+      "test_count": 7,
       "test_names": [
         "test_detect_reconcile_hint_for_legacy_root_layout",
         "test_detect_reconcile_hint_for_specs_dir_layout_without_checkpoint",
         "test_reconcile_checkpoint_updates_stale_legacy_state",
-        "test_reconcile_checkpoint_ignores_legacy_project_state_residue"
+        "test_reconcile_checkpoint_ignores_legacy_project_state_residue",
+        "test_detect_reconcile_hint_prefers_current_branch_direct_formal_work_item",
+        "test_reconcile_checkpoint_updates_stale_branch_alignment_for_direct_formal_work_item",
+        "test_reconcile_checkpoint_refreshes_stale_feature_branches_when_spec_is_already_aligned"
       ]
     },
     {
@@ -7135,10 +7338,12 @@
     {
       "path": "tests/unit/test_runner_confirm.py",
       "framework": "pytest",
-      "test_count": 18,
+      "test_count": 20,
       "test_names": [
         "test_close_context_includes_incident_postmortem_and_refresh_entry",
         "test_close_context_attests_with_close_check_when_execute_progress_missing",
+        "test_close_context_dry_run_includes_program_truth_close_check_fanout",
+        "test_close_context_dry_run_skips_program_truth_audit_surface",
         "test_close_context_surfaces_stale_program_truth_for_mapped_spec",
         "test_verify_context_includes_frontend_contract_runtime_attachment_for_active_014",
         "test_verify_context_skips_frontend_contract_runtime_attachment_for_non_014",
