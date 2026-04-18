@@ -72,3 +72,64 @@
 - 当前批次 branch disposition 状态：待最终收口
 - 当前批次 worktree disposition 状态：待最终收口
 - 是否继续下一批：是，进入最终验证
+
+### Batch 2026-04-18-002 | close-check and manifest normalization
+
+#### 2.9 批次范围
+
+- 覆盖任务：`T15`、`T16`、`T17`
+- 覆盖阶段：close-check blocker triage -> manifest role repair -> historical latest-batch normalization
+
+#### 2.10 统一验证命令
+
+- **验证画像**：`truth-only`
+- **改动范围**：`program-manifest.yaml`、`specs/121-agent-adapter-verified-host-ingress-truth-baseline/task-execution-log.md`、`specs/122-agent-adapter-verified-host-ingress-runtime-baseline/task-execution-log.md`、`specs/161-close-dry-run-program-truth-parity-baseline/task-execution-log.md`
+- `V5`：`python -m ai_sdlc program validate`
+- `V6`：`uv run ai-sdlc verify constraints`
+- `V7`：`python -m ai_sdlc program truth sync --dry-run`
+- `V8`：`python -m ai_sdlc workitem close-check --wi specs/121-agent-adapter-verified-host-ingress-truth-baseline --json`
+- `V9`：`python -m ai_sdlc workitem close-check --wi specs/122-agent-adapter-verified-host-ingress-runtime-baseline --json`
+- `V10`：`python -m ai_sdlc program truth sync --execute --yes`
+- `V11`：`python -m ai_sdlc run --dry-run`
+
+#### 2.11 任务记录
+
+- `T15`：对照 `program validate` 的 release-scope 报错，把 `program-manifest.yaml` 中 `121/122/158` 的空 `roles` 修正为最小合法角色集：`formal_contract`、`runtime_carrier`、`sync_carrier`。
+- `T16`：为 `121/122` 追加 close-check normalization batch，补齐 `代码审查`、`任务/计划同步状态`、`验证画像`、review evidence 与 git close-out markers，并将 docs-only 验证命令切换到 `uv run ai-sdlc verify constraints`。
+- `T17`：重跑 `program validate`、`program truth sync`、`121/122 close-check` 与 `run --dry-run`，确认 agent-adapter release target 已从 “manifest invalid + child close-check blocked” 收敛为只剩 `adapter_canonical_consumption:unverified`。
+
+#### 2.12 结果回填
+
+- `V5`：`PASS`，`program validate: PASS`。
+- `V6`：`PASS`，`verify constraints: no BLOCKERs.`。
+- `V7`：`PASS`，dry-run 预演显示 truth snapshot 会生成 `blocked` 结果，且 `agent-adapter-verified-host-ingress` 的剩余 blocker 已收敛到 `capability_closure_audit:partial` 与 `adapter_canonical_consumption:unverified`。
+- `V8`：`FAIL as expected`，`121 close-check` 仅剩 `git working tree has uncommitted changes` 与 `program truth unresolved: capability_blocked`。
+- `V9`：`FAIL as expected`，`122 close-check` 仅剩 `git working tree has uncommitted changes` 与 `program truth unresolved: capability_blocked`。
+- `V10`：`PASS`，truth snapshot 从包含 manifest validation / child close-check blocker 收敛为 `blocked`，且 `agent-adapter-verified-host-ingress` 只剩 `capability_closure_audit:partial` 与 `adapter_canonical_consumption:unverified`。
+- `V11`：`PASS`，输出 `Stage close: RETRY` 与 `Dry-run completed with open gates. Last stage: close (RETRY)`。
+
+#### 2.13 代码审查结论
+
+- 宪章/规格对齐：本批不改 `161` 的 dry-run/live parity 判定，只修 manifest release-scope truth 与历史 close-out evidence，确保 close-check 依据的是当前真实 blocker。
+- 代码质量：本批未改 `src/` / `tests/`；runner 行为仍保持 `include_program_truth=True` 的既有修复。
+- 测试质量：采用 `truth-only` 画像，覆盖 `program validate`、`verify constraints`、truth sync dry-run/execute、child close-check 与 `run --dry-run` 现场复核。
+- 结论：`无 Critical 阻塞项`
+
+#### 2.14 任务/计划同步状态
+
+- `tasks.md` 同步状态：已同步
+- `related_plan` 同步状态：已同步
+- 关联 branch/worktree disposition 计划：待当前 close-out commit 落盘
+- 说明：当前 close-check 的真实 program truth blocker 已收敛为 canonical consumption proof 缺失，而非历史 close-out schema 漏项。
+
+#### 2.15 批次结论
+
+- `161` 所在链路上的 manifest invalid / child close-check 噪音已清干净；当前 release/program truth 只剩 machine-verifiable canonical consumption proof 尚未 verified。
+
+#### 2.16 归档后动作
+
+- **已完成 git 提交**：是
+- **提交哈希**：由当前 close-out commit 统一承载；`T11-T14` 已落盘为 `db12681`
+- 当前批次 branch disposition 状态：`retained`
+- 当前批次 worktree disposition 状态：`retained（允许 program truth sync 产生的 manifest 脏状态，待当前 close-out commit 统一收口）`
+- 是否继续下一批：是，转入 canonical consumption proof blocker 收敛

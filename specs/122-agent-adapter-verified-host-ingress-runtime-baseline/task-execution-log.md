@@ -124,3 +124,59 @@
 - adapter runtime 已从 `installed / acknowledged / activated` 的旧治理表述迁移到 ingress truth。
 - `adapter activate` 仍可保留为兼容面，但不再决定 `run` 是否放行。
 - `status / adapter status / init / run` 对 canonical path、verification result 与 mutating gate 的口径已经统一。
+
+### Batch 2026-04-18-003 | close-check normalization
+
+#### 2.9 批次范围
+
+- 覆盖目标：补齐 latest batch close-out 必填字段，保持 `122` runtime baseline / implementation 结论不变。
+- **改动范围**：`specs/122-agent-adapter-verified-host-ingress-runtime-baseline/task-execution-log.md`
+- 预读范围：`spec.md`、`plan.md`、`tasks.md`、`task-execution-log.md`
+- 激活的规则：`close-check execution log fields`、`review gate evidence`、`verification profile truthfulness`、`git close-out markers truthfulness`
+
+#### 2.10 统一验证命令
+
+- **验证画像**：`docs-only`
+- **改动范围**：`specs/122-agent-adapter-verified-host-ingress-runtime-baseline/task-execution-log.md`
+- `V4`（work item truth）
+  - 命令：`python -m ai_sdlc workitem truth-check --wi specs/122-agent-adapter-verified-host-ingress-runtime-baseline`
+  - 结果：通过（read-only truth-check exit `0`；`Resolved rev = db12681`，`Classification = branch_only_implemented`）
+- `V5`（governance constraints）
+  - 命令：`uv run ai-sdlc verify constraints`
+  - 结果：通过（`verify constraints: no BLOCKERs.`）
+
+#### 2.11 任务记录
+
+##### Task closeout-normalization | latest batch close-check 收口
+
+- 改动范围：`specs/122-agent-adapter-verified-host-ingress-runtime-baseline/task-execution-log.md`
+- 改动内容：补齐 `代码审查`、`任务/计划同步状态`、`验证画像`、review evidence 与 git close-out markers；不改变 `122` 已完成的 runtime baseline / implementation 结论。
+- 新增/调整的测试：无；本批只追加 close-out 归档字段，并 fresh 回放只读 truth-check 与治理约束校验。
+- 执行的命令：见 `V4-V5`。
+- 测试结果：`V4-V5` 通过。
+- 是否符合任务目标：符合。当前批次只修复 latest batch 归档真值，不扩张 `122` 的 runtime 结论。
+
+#### 2.12 代码审查结论（Mandatory）
+
+- 宪章/规格对齐：本批只承接 `122` 已冻结的 canonical path / ingress truth / run gate 语义，不把 close-out normalization 伪装成新的 runtime 扩展。
+- 代码质量：本批未修改 `src/` / `tests/`；既有 adapter runtime 行为与测试结论保持不变。
+- 测试质量：采用 `docs-only` 画像，额外回放了 read-only truth-check 与治理约束校验；原实现回归证据仍保留在 `122` 的前序批次。
+- 结论：`无 Critical 阻塞项`
+
+#### 2.13 任务/计划同步状态（Mandatory）
+
+- `tasks.md` 同步状态：`已对账`
+- `plan.md` 同步状态：`已对账`
+- `spec.md` 同步状态：`已对账`
+- 关联 branch/worktree disposition 计划：`retained（当前在共享工作区完成 close-out normalization，待当前 capability blocker 收敛后统一归档）`
+
+#### 2.14 批次结论
+
+- latest batch 已满足 close-check 所需的 execution-log schema、review evidence 与 verification profile 口径；`122` 的 runtime baseline / implementation 结论保持不变。
+
+#### 2.15 归档后动作
+
+- **已完成 git 提交**：是
+- **提交哈希**：由当前 close-out commit 统一承载；以当前分支 `HEAD` 为准
+- 当前批次 branch disposition 状态：`retained`
+- 当前批次 worktree disposition 状态：`retained（允许 program truth / close-check 归档产生的 manifest 脏状态）`
