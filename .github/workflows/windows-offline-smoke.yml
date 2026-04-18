@@ -126,12 +126,14 @@ jobs:
               throw "ai-sdlc run --dry-run failed with exit code $dryRunExit"
             }
             Write-Host "ai-sdlc run --dry-run reported repo-state reconciliation diagnostics; treating this as smoke pass."
+            $global:LASTEXITCODE = 0
           }
           Pop-Location
 
           Copy-Item -LiteralPath (Join-Path $bundleDir.FullName "bundle-manifest.json") -Destination $evidenceRoot
 
       - name: Upload smoke evidence
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: windows-offline-smoke-evidence
