@@ -56,19 +56,27 @@ function Get-PythonCommand {
 function Install-PythonOnline {
   if (Get-Command winget -ErrorAction SilentlyContinue) {
     winget install --id Python.Python.3.11 -e --accept-package-agreements --accept-source-agreements
-    return
+    return $true
   }
   if (Get-Command choco -ErrorAction SilentlyContinue) {
     choco install python311 -y
-    return
+    return $true
   }
-  throw "No supported Windows package manager found for automatic Python installation."
+  return $false
 }
 
 $python = Get-PythonCommand
 if (-not $python) {
   Write-Host "No Python 3.11+ detected. Attempting online installation..."
-  Install-PythonOnline
+  $installAttempted = $false
+  try {
+    $installAttempted = Install-PythonOnline
+  } catch {
+    Write-Host "Automatic Python installation failed: $_"
+  }
+  if (-not $installAttempted) {
+    Write-Host "Automatic Python installation could not be completed on this host."
+  }
   $python = Get-PythonCommand
 }
 

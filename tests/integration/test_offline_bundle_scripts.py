@@ -628,6 +628,80 @@ raise SystemExit(0)
     ]
 
 
+def test_install_online_reports_bilingual_failure_when_python_is_still_missing_after_auto_install(
+    tmp_path: Path,
+) -> None:
+    script_path = tmp_path / "install_online.sh"
+    shutil.copy2(_PACKAGING_DIR / "install_online.sh", script_path)
+    script_path.chmod(0o755)
+
+    wrapper_dir = tmp_path / "wrappers"
+    wrapper_dir.mkdir()
+    apt_log = tmp_path / "apt.log"
+
+    _write_executable(
+        wrapper_dir / "uname",
+        f"""#!{sys.executable}
+print("Linux")
+""",
+    )
+    _write_executable(
+        wrapper_dir / "id",
+        f"""#!{sys.executable}
+import sys
+if sys.argv[1:] == ["-u"]:
+    print("501")
+    raise SystemExit(0)
+raise SystemExit(1)
+""",
+    )
+    _write_executable(
+        wrapper_dir / "sudo",
+        f"""#!{sys.executable}
+import os
+import sys
+os.execvp(sys.argv[1], sys.argv[1:])
+""",
+    )
+    _write_executable(
+        wrapper_dir / "apt-get",
+        f"""#!{sys.executable}
+import sys
+from pathlib import Path
+
+log_path = Path({str(apt_log)!r})
+with log_path.open("a", encoding="utf-8") as handle:
+    handle.write(" ".join(sys.argv[1:]) + "\\n")
+
+raise SystemExit(0)
+""",
+    )
+
+    env = dict(os.environ)
+    env["PATH"] = str(wrapper_dir)
+    env.pop("PYTHON", None)
+    bash = shutil.which("bash") or "/bin/bash"
+
+    result = subprocess.run(
+        [bash, str(script_path)],
+        cwd=tmp_path,
+        capture_output=True,
+        text=True,
+        env=env,
+        check=False,
+    )
+
+    assert result.returncode != 0
+    assert "当前状态 / Current status" in result.stdout
+    assert "无法自动完成在线安装" in result.stdout
+    assert "Python 3.11+ was not detected" in result.stdout
+    assert "./packaging/install_online.sh" in result.stdout
+    assert apt_log.read_text(encoding="utf-8").splitlines() == [
+        "update",
+        "install -y python3.11 python3.11-venv python3-pip",
+    ]
+
+
 def test_install_online_reports_bilingual_failure_when_python_cannot_be_installed(
     tmp_path: Path,
 ) -> None:
@@ -661,6 +735,15 @@ def test_install_online_reports_bilingual_failure_when_python_cannot_be_installe
     assert "无法自动完成在线安装" in result.stdout
     assert "Python 3.11+ was not detected" in result.stdout
     assert "./packaging/install_online.sh" in result.stdout
+
+
+def test_windows_online_installer_catches_auto_install_failure_before_bilingual_guidance() -> None:
+    online_ps1 = (_PACKAGING_DIR / "install_online.ps1").read_text(encoding="utf-8")
+
+    assert "try {" in online_ps1
+    assert "Install-PythonOnline" in online_ps1
+    assert "Write-BilingualStatus" in online_ps1
+    assert "No supported Windows package manager found" not in online_ps1
 
 
 def test_windows_install_scripts_include_auto_python_detection_and_bilingual_guidance() -> None:

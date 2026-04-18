@@ -95,7 +95,15 @@ if ! PYTHON_BIN="$(pick_python)"; then
       "Rerun this script on a host with Homebrew, apt, dnf, or yum privileges available."
     exit 1
   fi
-  PYTHON_BIN="$(pick_python)"
+  if ! PYTHON_BIN="$(pick_python)"; then
+    print_status \
+      "当前主机未检测到 Python 3.11+，且无法自动完成在线安装。" \
+      "Python 3.11+ was not detected, and online auto-install could not be completed on this host." \
+      "./packaging/install_online.sh" \
+      "自动安装已执行，但当前 shell 还未发现可用的 Python 3.11+；请刷新环境后重试此脚本。" \
+      "Automatic installation ran, but the current shell still cannot discover Python 3.11+; refresh the environment and rerun this script."
+    exit 1
+  fi
 fi
 
 echo "Using Python runtime: ${PYTHON_BIN}"
@@ -112,4 +120,3 @@ print_status \
   "source \"${VENV_TARGET}/bin/activate\" && ai-sdlc adapter status && ai-sdlc run --dry-run" \
   "激活 venv，检查 adapter 接入真值，再执行安全预演；run --dry-run 只证明 CLI 预演成功，不证明治理已激活。" \
   "Activate the venv, inspect adapter ingress truth, then run the safe rehearsal; run --dry-run only proves the CLI rehearsal succeeded, not governance activation."
-
