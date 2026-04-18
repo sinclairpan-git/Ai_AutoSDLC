@@ -2429,7 +2429,11 @@ class ProgramService:
                 blockers.append(f"truth_check:{ref}")
 
         for ref in capability.required_evidence.close_check_refs:
-            result = self._run_close_check_ref(ref)
+            result = self._run_close_check_ref(
+                ref,
+                manifest=manifest,
+                validation_result=validation_result,
+            )
             source_key = f"close_check:{ref}"
             source_hashes[source_key] = self._hash_payload(
                 self._truth_snapshot_source_hash_payload(source_key, result)
@@ -2472,12 +2476,25 @@ class ProgramService:
         result = run_truth_check(cwd=self.root, wi=path, rev="HEAD")
         return result.to_json_dict()
 
-    def _run_close_check_ref(self, ref: str) -> dict[str, object]:
+    def _run_close_check_ref(
+        self,
+        ref: str,
+        *,
+        manifest: ProgramManifest | None = None,
+        validation_result: ProgramValidationResult | None = None,
+    ) -> dict[str, object]:
         from ai_sdlc.core.close_check import run_close_check
 
         path = self._resolve_project_relative_path(ref)
-        result = run_close_check(cwd=self.root, wi=path, include_program_truth=False)
-        return result.to_json_dict()
+        result = run_close_check(
+            cwd=self.root,
+            wi=path,
+            include_program_truth=False,
+            program_service=self,
+            program_manifest=manifest,
+            program_validation_result=validation_result,
+        )
+        return self._normalize_close_check_ref_result(result.to_json_dict())
 
     def _run_verify_ref(
         self,
@@ -2576,6 +2593,42 @@ class ProgramService:
                 "error": payload.get("error"),
             }
         return payload
+
+    def _normalize_close_check_ref_result(
+        self,
+        payload: dict[str, object],
+    ) -> dict[str, object]:
+        normalized = dict(payload)
+        checks = payload.get("checks")
+        if isinstance(checks, list):
+            normalized["checks"] = [
+                item
+                for item in checks
+                if isinstance(item, dict)
+                and not self._is_ephemeral_close_check_name(str(item.get("name", "")).strip())
+            ]
+        blockers = payload.get("blockers")
+        if isinstance(blockers, list):
+            normalized["blockers"] = [
+                str(item)
+                for item in blockers
+                if not self._is_ephemeral_close_check_blocker(str(item))
+            ]
+        normalized["ok"] = not bool(normalized.get("error")) and not bool(
+            normalized.get("blockers", [])
+        )
+        return normalized
+
+    def _is_ephemeral_close_check_name(self, name: str) -> bool:
+        return name in {"git_closure", "branch_lifecycle", "program_truth", "done_gate"}
+
+    def _is_ephemeral_close_check_blocker(self, blocker: str) -> bool:
+        prefixes = (
+            "BLOCKER: git close-out verification failed:",
+            "BLOCKER: branch lifecycle ",
+            "BLOCKER: program truth unresolved",
+        )
+        return blocker.startswith(prefixes)
 
     def _truth_snapshot_hash_payload(
         self,

@@ -105,6 +105,10 @@ def _format_frontend_evidence_class_late_resurfacing_detail(
 def _build_frontend_evidence_class_close_check_summary(
     root: Path,
     wi_dir: Path,
+    *,
+    program_service: ProgramService | None = None,
+    program_manifest: object | None = None,
+    program_validation_result: object | None = None,
 ) -> ProgramFrontendEvidenceClassStatus | None:
     if not _is_frontend_evidence_class_subject(wi_dir.name):
         return None
@@ -129,9 +133,9 @@ def _build_frontend_evidence_class_close_check_summary(
             summary_token="manifest_missing",
         )
 
-    svc = ProgramService(root, manifest_path)
+    svc = program_service or ProgramService(root, manifest_path)
     try:
-        manifest = svc.load_manifest()
+        manifest = program_manifest if program_manifest is not None else svc.load_manifest()
     except Exception:
         return ProgramFrontendEvidenceClassStatus(
             has_blocker=True,
@@ -165,7 +169,11 @@ def _build_frontend_evidence_class_close_check_summary(
         )
     matched_spec_id = matched_spec_ids[0]
 
-    validation_result = svc.validate_manifest(manifest)
+    validation_result = (
+        program_validation_result
+        if program_validation_result is not None
+        else svc.validate_manifest(manifest)
+    )
     summary = svc.build_frontend_evidence_class_statuses(
         manifest,
         validation_result=validation_result,
@@ -178,14 +186,18 @@ def _build_frontend_evidence_class_close_check_summary(
 def _build_program_truth_close_check_summary(
     root: Path,
     wi_dir: Path,
+    *,
+    program_service: ProgramService | None = None,
+    program_manifest: object | None = None,
+    program_validation_result: object | None = None,
 ) -> dict[str, object] | None:
     manifest_path = root / "program-manifest.yaml"
     if not manifest_path.is_file():
         return None
 
-    svc = ProgramService(root, manifest_path)
+    svc = program_service or ProgramService(root, manifest_path)
     try:
-        manifest = svc.load_manifest()
+        manifest = program_manifest if program_manifest is not None else svc.load_manifest()
     except Exception as exc:
         return {
             "ok": False,
@@ -200,7 +212,11 @@ def _build_program_truth_close_check_summary(
     readiness = svc.build_spec_truth_readiness(
         manifest,
         spec_path=wi_dir,
-        validation_result=svc.validate_manifest(manifest),
+        validation_result=(
+            program_validation_result
+            if program_validation_result is not None
+            else svc.validate_manifest(manifest)
+        ),
     )
     if readiness is None:
         return None
@@ -536,6 +552,9 @@ def run_close_check(
     wi: Path,
     all_docs: bool = False,
     include_program_truth: bool = True,
+    program_service: ProgramService | None = None,
+    program_manifest: object | None = None,
+    program_validation_result: object | None = None,
 ) -> CloseCheckResult:
     """Run read-only close checks for a `specs/<WI>/` directory.
 
@@ -728,7 +747,13 @@ def run_close_check(
         blockers.extend(branch_lifecycle.blockers)
 
         program_truth_status = (
-            _build_program_truth_close_check_summary(root, wi_dir)
+            _build_program_truth_close_check_summary(
+                root,
+                wi_dir,
+                program_service=program_service,
+                program_manifest=program_manifest,
+                program_validation_result=program_validation_result,
+            )
             if include_program_truth
             else None
         )
@@ -760,6 +785,9 @@ def run_close_check(
         frontend_evidence_class_status = _build_frontend_evidence_class_close_check_summary(
             root,
             wi_dir,
+            program_service=program_service,
+            program_manifest=program_manifest,
+            program_validation_result=program_validation_result,
         )
         if frontend_evidence_class_status is not None:
             frontend_evidence_class_ok = not frontend_evidence_class_status.has_blocker

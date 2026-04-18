@@ -87,25 +87,25 @@ related_plan: specs/158-agent-adapter-verified-host-ingress-closure-audit-reconc
 
 ### Batch 3
 
-- [x] T31 闭合路径判定
+- [ ] T31 闭合路径判定（本批未选中）
   - 优先级: P0
   - 依赖: T21, T22, T24
   - 文件: `program-manifest.yaml`
-  - 验收: 只有当 host ingress 与 startup behavior 都具备足够证据时，才允许移除或关闭 root cluster
+  - 验收: 只有当 verified host ingress 与 canonical content consumption proof 都具备足够证据时，才允许移除或关闭 root cluster
   - 验证: root manifest diff 可由 evidence bundle 支撑
 
-- [x] T32 保守路径判定
+- [x] T32 保守路径判定（本批选中）
   - 优先级: P0
   - 依赖: T21, T22, T24
   - 文件: `program-manifest.yaml`
-  - 验收: 若 T31 条件不满足，则保留 `partial`，并更新摘要为“verified host ingress 已成立，但 startup observability 仍待补足”的当前态
+  - 验收: 若 T31 条件不满足，则保留 `partial`，并更新摘要为“verified host ingress 已成立，但 canonical content actual consumption proof 仍缺”的当前态
   - 验证: root manifest diff 不再包含陈旧叙述
 
 - [x] T33 UX 语义对齐
   - 优先级: P1
   - 依赖: T31 或 T32
   - 文件: root summary、相关说明文档、必要时后续 work item
-  - 验收: 操作者能区分 acknowledgement、verified ingress、startup readiness 三个维度
+  - 验收: 操作者能区分 acknowledgement、verified ingress、canonical consumption proof、close readiness 四个维度
   - 验证: 人工 review root summary 与 CLI 输出说明
 
 ### Batch 4

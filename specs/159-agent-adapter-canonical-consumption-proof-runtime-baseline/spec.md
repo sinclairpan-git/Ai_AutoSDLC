@@ -2,7 +2,7 @@
 
 **功能编号**：`159-agent-adapter-canonical-consumption-proof-runtime-baseline`
 **创建日期**：2026-04-18
-**状态**：草稿
+**状态**：收口中
 **输入**：Add a distinct machine-verifiable proof path for canonical adapter content consumption so Codex/AGENTS.md truth no longer depends on inference from host-type env signals alone.
 
 **范围**：为 IDE adapter runtime 增加独立的 canonical content consumption proof 字段、环境变量协议与状态输出；不改变现有 `adapter_ingress_state` / `adapter_verification_result` 的判定语义，不假设宿主今天已经原生提供该证明信号。

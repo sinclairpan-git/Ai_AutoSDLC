@@ -14,8 +14,8 @@ related_spec: specs/158-agent-adapter-verified-host-ingress-closure-audit-reconc
 
 1. 适配器真值层：`adapter status` 已给出 `verified_loaded`，证据为 `env:OPENAI_CODEX`，canonical path 为 `AGENTS.md`。
 2. 语义冻结层：121 已把 activation 语义降为 acknowledgement；122 已把 verified host ingress 与 canonical path / truth gate 机制冻结。
-3. 启动体验层：`python -m ai_sdlc run --dry-run` 在当前会话内会成功返回，但在约 20 秒内缺少进度与中间反馈，闭环仍不足。
-4. checkpoint 现实层：当前 `.ai-sdlc/state/checkpoint.yml` 仍绑定历史 work item `specs/001-ai-sdlc-framework` 且处于 `close`，仓库级入口可能因此落到一条很重的历史路径。
+3. 启动体验层：`python -m ai_sdlc run --dry-run` 在当前会话内会进入 `Stage close: running (dry-run)`，随后以 `Stage close: RETRY` / `Dry-run completed with open gates` 结束；问题已从“静默无反馈”收敛为“close gate 仍有阻断项”。
+4. checkpoint 现实层：当前 `.ai-sdlc/state/checkpoint.yml` 已绑定 `159-agent-adapter-canonical-consumption-proof-runtime-baseline` 且处于 `close`；因此 158 需要把历史 `001` 叙事清理掉，并把 close-stage 观测交回 159 这一当前 runtime carrier。
 
 158 的工作就是把这三层重新对齐，并决定 root manifest 是否需要收敛。
 
@@ -72,8 +72,8 @@ related_spec: specs/158-agent-adapter-verified-host-ingress-closure-audit-reconc
 
 基于 Phase 2 结果作出决议：
 
-1. 若 ingress truth 与 startup behavior 均具备闭环证据，则关闭或移除 root cluster。
-2. 若 ingress truth 已 verified，但 startup behavior 仍无闭环，则保留 `partial`，并把 root summary 改写成“host ingress 已证实，startup observability 仍待修复”的当前态。
+1. 若 ingress truth 与 canonical content consumption proof 均具备闭环证据，则关闭或移除 root cluster。
+2. 若 ingress truth 已 verified，但 canonical content actual consumption proof 仍无闭环，则保留 `partial`，并把 root summary 改写成“verified host ingress 已成立，但 canonical content actual consumption proof 仍缺”的当前态。
 
 此阶段必须同步吸收 UX 合议建议，避免再出现“字段是绿的，但操作者不知道当前到底可不可以继续”的界面语义。
 

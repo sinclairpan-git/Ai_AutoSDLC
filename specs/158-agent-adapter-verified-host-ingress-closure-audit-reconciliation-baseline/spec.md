@@ -11,17 +11,17 @@
    - `adapter_canonical_path=AGENTS.md`
 2. `specs/121-*` 已把 `adapter activate` 降级为 acknowledgement-only，不再把人工确认当作 verified proof。
 3. `specs/122-*` 已明确 canonical path / auto verify / truth gate，并接受 `run --dry-run` 在 `materialized` 或 `degraded` 语义下继续，但不把它当成治理激活证明。
-4. fresh 现场观测下，`python -m ai_sdlc run --dry-run` 在本 Codex 会话内会在约 20 秒静默后输出 `Pipeline completed. Stage: close`；因此它不能再被归类为“未通过”，但也不能被表述成“启动入口可观察性已闭环”。
-5. 当前 `.ai-sdlc/state/checkpoint.yml` 仍指向 `specs/001-ai-sdlc-framework`，且 `current_stage=close`；因此仓库级 `run --dry-run` / `status` 观测到的行为，可能反映的是历史主 checkpoint 路径，而不是新建 158 work item 的轻量入口状态。
+4. 2026-04-18 fresh 现场观测下，`python -m ai_sdlc run --dry-run` 当前会先输出 `Stage close: running (dry-run)`，随后以 `Stage close: RETRY` / `Dry-run completed with open gates` 结束；因此它已具备阶段级可观察结论，但不能被表述成“治理已闭环”或“close gate 已通过”。
+5. 当前 `.ai-sdlc/state/checkpoint.yml` 已切换到 `specs/159-agent-adapter-canonical-consumption-proof-runtime-baseline`，且 `current_stage=close`；因此仓库级 `run --dry-run` / `status` 观测到的行为，反映的是后续 canonical consumption proof carrier 的 close-stage 现场，而不再是 158 初始审计时的历史 `001` 路径。
 
 因此，下一项工作不能直接宣称 S9 闭合；必须先做一次 fail-closed 的 reconciliation：重新核对 root cluster、121/122 的冻结语义、适配器实际输出，以及启动入口的可观察行为，再决定是关闭 root cluster，还是保留 `partial` 并修正文案与后续缺口。
 
 ## 问题陈述
 
-当前系统在“适配器接入真值已 verified”与“启动入口成功但长时间静默”之间存在解释张力：
+当前系统在“适配器接入真值已 verified”与“canonical content 仍缺消费证明 / close gate 仍为 RETRY”之间存在解释张力：
 
 - 从接入真值看，Codex host ingress 已有 machine-verifiable 证据。
-- 从启动体验看，`run --dry-run` 虽然会成功结束，但在 close-stage 历史 checkpoint 路径上长期无进度反馈，仍未形成可供闭环使用的可观察成功信号。
+- 从启动体验看，`run --dry-run` 当前已能输出阶段运行与阶段结论，但结果仍是 `close: RETRY`，因此不能被误写为 close-ready。
 - 从 root manifest 文案看，旧摘要仍停留在 010/094 时期的保守叙述，没有吸收 121/122 的真值冻结与当前 `adapter status` 输出。
 
 若直接删除 S9/root cluster，会把“已验证的 host ingress”与“未证明的 dry-run startup behavior”混为一谈。若继续保留旧摘要，又会低估当前已 materialized 的 verified host ingress 能力。

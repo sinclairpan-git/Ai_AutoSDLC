@@ -11,6 +11,7 @@ import yaml
 
 import ai_sdlc.core.program_service as program_service_module
 from ai_sdlc.context.state import save_checkpoint
+from ai_sdlc.core.close_check import CloseCheckResult
 from ai_sdlc.core.config import save_project_config
 from ai_sdlc.core.frontend_browser_gate_runtime import (
     BrowserGateInteractionProbeCapture,
@@ -1563,6 +1564,194 @@ def test_build_truth_ledger_surface_stays_fresh_for_truth_snapshot_only_drift(
     snapshot = svc.build_truth_snapshot(manifest)
     svc.write_truth_snapshot(snapshot)
 
+    updated_manifest = svc.load_manifest()
+    surface = svc.build_truth_ledger_surface(updated_manifest)
+
+    assert surface is not None
+    assert surface["snapshot_state"] == "fresh"
+    assert surface["state"] == snapshot.state
+
+
+def test_build_truth_snapshot_reuses_manifest_context_for_close_check_refs(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    _init_truth_git_repo(tmp_path)
+    (tmp_path / ".ai-sdlc" / "project" / "config").mkdir(parents=True)
+    (tmp_path / ".ai-sdlc" / "project" / "config" / "project-state.yaml").write_text(
+        "status: initialized\nproject_name: demo\nnext_work_item_seq: 1\nversion: '1.0'\n",
+        encoding="utf-8",
+    )
+    (tmp_path / "PRD.md").write_text("# prd\n", encoding="utf-8")
+    spec_dir = tmp_path / "specs" / "082-frontend-example"
+    spec_dir.mkdir(parents=True)
+    (spec_dir / "spec.md").write_text(
+        "# Spec\n\n---\nfrontend_evidence_class: \"framework_capability\"\n---\n",
+        encoding="utf-8",
+    )
+    (spec_dir / "plan.md").write_text("# Plan\n", encoding="utf-8")
+    (spec_dir / "tasks.md").write_text("- [x] done\n", encoding="utf-8")
+    (spec_dir / "task-execution-log.md").write_text(
+        "# Log\n\n统一验证命令\n代码审查\n任务/计划同步状态\n",
+        encoding="utf-8",
+    )
+    (tmp_path / "src").mkdir(parents=True)
+    (tmp_path / "src" / "app.py").write_text("print('demo')\n", encoding="utf-8")
+    _write_truth_ledger_manifest(tmp_path)
+    _commit_truth_repo(tmp_path, "seed truth ledger close-check context fixture")
+
+    svc = ProgramService(tmp_path)
+    manifest = svc.load_manifest()
+    validation = svc.validate_manifest(manifest)
+    seen: list[tuple[str, object | None, object | None]] = []
+
+    def _fake_close_check_ref(
+        self,
+        ref: str,
+        *,
+        manifest=None,
+        validation_result=None,
+    ) -> dict[str, object]:
+        seen.append((ref, manifest, validation_result))
+        return {"ok": True, "blockers": [], "checks": [], "error": None}
+
+    monkeypatch.setattr(ProgramService, "_run_close_check_ref", _fake_close_check_ref)
+    monkeypatch.setattr(
+        ProgramService,
+        "_run_truth_check_ref",
+        lambda self, ref: {
+            "ok": True,
+            "classification": "merged_implemented",
+            "detail": "",
+            "error": None,
+        },
+    )
+    monkeypatch.setattr(
+        ProgramService,
+        "_run_verify_ref",
+        lambda self, ref, *, constraint_report: {
+            "ok": True,
+            "command": ref,
+            "blockers": [],
+            "warnings": [],
+        },
+    )
+
+    svc.build_truth_snapshot(manifest, validation_result=validation)
+
+    assert seen
+    assert all(ref for ref, _, _ in seen)
+    assert all(passed_manifest is manifest for _, passed_manifest, _ in seen)
+    assert all(passed_validation is validation for _, _, passed_validation in seen)
+
+
+def test_build_truth_ledger_surface_ignores_ephemeral_close_check_drift(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    _init_truth_git_repo(tmp_path)
+    (tmp_path / ".ai-sdlc" / "project" / "config").mkdir(parents=True)
+    (tmp_path / ".ai-sdlc" / "project" / "config" / "project-state.yaml").write_text(
+        "status: initialized\nproject_name: demo\nnext_work_item_seq: 1\nversion: '1.0'\n",
+        encoding="utf-8",
+    )
+    (tmp_path / "PRD.md").write_text("# prd\n", encoding="utf-8")
+    spec_dir = tmp_path / "specs" / "082-frontend-example"
+    spec_dir.mkdir(parents=True)
+    (spec_dir / "spec.md").write_text(
+        "# Spec\n\n---\nfrontend_evidence_class: \"framework_capability\"\n---\n",
+        encoding="utf-8",
+    )
+    (spec_dir / "plan.md").write_text("# Plan\n", encoding="utf-8")
+    (spec_dir / "tasks.md").write_text("- [x] done\n", encoding="utf-8")
+    (spec_dir / "task-execution-log.md").write_text(
+        "# Log\n\n统一验证命令\n代码审查\n任务/计划同步状态\n",
+        encoding="utf-8",
+    )
+    (tmp_path / "src").mkdir(parents=True)
+    (tmp_path / "src" / "app.py").write_text("print('demo')\n", encoding="utf-8")
+    _write_truth_ledger_manifest(tmp_path)
+    _commit_truth_repo(tmp_path, "seed truth ledger ephemeral close-check fixture")
+
+    dirty_git = True
+
+    def _fake_run_close_check(**_: object) -> CloseCheckResult:
+        if dirty_git:
+            return CloseCheckResult(
+                ok=False,
+                blockers=[
+                    "BLOCKER: git close-out verification failed: git working tree has uncommitted changes; close-out is not fully committed"
+                ],
+                checks=[
+                    {
+                        "name": "tasks_completion",
+                        "ok": True,
+                        "detail": "all checklist items done",
+                    },
+                    {
+                        "name": "git_closure",
+                        "ok": False,
+                        "detail": "git working tree has uncommitted changes; close-out is not fully committed",
+                    },
+                    {
+                        "name": "done_gate",
+                        "ok": False,
+                        "detail": "completion still blocked",
+                    },
+                ],
+                wi_dir=spec_dir,
+            )
+        return CloseCheckResult(
+            ok=True,
+            blockers=[],
+            checks=[
+                {
+                    "name": "tasks_completion",
+                    "ok": True,
+                    "detail": "all checklist items done",
+                },
+                {
+                    "name": "git_closure",
+                    "ok": True,
+                    "detail": "latest batch marked committed and working tree clean",
+                },
+                {
+                    "name": "done_gate",
+                    "ok": True,
+                    "detail": "all close checks passed",
+                },
+            ],
+            wi_dir=spec_dir,
+        )
+
+    monkeypatch.setattr("ai_sdlc.core.close_check.run_close_check", _fake_run_close_check)
+    monkeypatch.setattr(
+        ProgramService,
+        "_run_truth_check_ref",
+        lambda self, ref: {
+            "ok": True,
+            "classification": "merged_implemented",
+            "detail": "",
+            "error": None,
+        },
+    )
+    monkeypatch.setattr(
+        ProgramService,
+        "_run_verify_ref",
+        lambda self, ref, *, constraint_report: {
+            "ok": True,
+            "command": ref,
+            "blockers": [],
+            "warnings": [],
+        },
+    )
+
+    svc = ProgramService(tmp_path)
+    manifest = svc.load_manifest()
+    snapshot = svc.build_truth_snapshot(manifest)
+    svc.write_truth_snapshot(snapshot)
+
+    dirty_git = False
     updated_manifest = svc.load_manifest()
     surface = svc.build_truth_ledger_surface(updated_manifest)
 
