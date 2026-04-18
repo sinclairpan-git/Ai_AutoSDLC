@@ -10,6 +10,7 @@ from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
 
+from ai_sdlc.cli.status_guidance import render_startup_guidance
 from ai_sdlc.context.state import (
     CHECKPOINT_PATH,
     CheckpointLoadError,
@@ -76,7 +77,6 @@ from ai_sdlc.scanners.frontend_contract_scanner import (
 )
 from ai_sdlc.telemetry.clock import utc_now_z
 from ai_sdlc.telemetry.readiness import build_status_json_surface
-from ai_sdlc.cli.status_guidance import render_startup_guidance
 from ai_sdlc.utils.helpers import AI_SDLC_DIR, find_project_root
 
 console = Console()
