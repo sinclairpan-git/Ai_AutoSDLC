@@ -45,6 +45,7 @@ jobs:
           tests/unit/test_packaging_config.py
           tests/integration/test_cli_init.py
           tests/integration/test_cli_program.py
+          tests/integration/test_github_workflows.py
           tests/integration/test_cli_workitem_init.py
           -q
 

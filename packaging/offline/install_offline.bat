@@ -7,9 +7,9 @@ if exist "%SystemRoot%\System32\WindowsPowerShell\v1.0\powershell.exe" set "POWE
 
 "%POWERSHELL_EXE%" -NoProfile -ExecutionPolicy Bypass -File "%ROOT%install_offline.ps1" %*
 if errorlevel 1 (
-  echo Offline install failed.
+  echo 离线安装失败 / Offline install failed.
   exit /b 1
 )
 
-echo Offline install complete.
+echo 离线安装完成 / Offline install complete.
 exit /b 0

@@ -159,6 +159,11 @@ RELEASE_POLICY_REL = Path("docs") / "框架自迭代开发与发布约定.md"
 README_REL = Path("README.md")
 USER_GUIDE_REL = Path("USER_GUIDE.zh-CN.md")
 OFFLINE_README_REL = Path("packaging") / "offline" / "README.md"
+WINDOWS_OFFLINE_SMOKE_WORKFLOW_REL = (
+    Path(".github") / "workflows" / "windows-offline-smoke.yml"
+)
+CLI_COMMANDS_REL = Path("src") / "ai_sdlc" / "cli" / "commands.py"
+CLI_RUN_CMD_REL = Path("src") / "ai_sdlc" / "cli" / "run_cmd.py"
 FRONTEND_CONTRACT_OBSERVATION_INPUT_FILE = "frontend-contract-observations.json"
 FRONTEND_VISUAL_A11Y_EVIDENCE_INPUT_FILE = FRONTEND_VISUAL_A11Y_EVIDENCE_ARTIFACT_NAME
 DOC_FIRST_SURFACES: dict[Path, tuple[str, ...]] = {
@@ -202,6 +207,29 @@ VERIFICATION_PROFILE_SURFACES: dict[Path, tuple[str, ...]] = {
         "python -m ai_sdlc program truth sync --dry-run",
         "uv run pytest",
         "uv run ruff check",
+    ),
+}
+RECONCILE_SMOKE_CONTRACT_SURFACES: dict[Path, tuple[str, ...]] = {
+    VERIFICATION_RULE_REL: (
+        "Reconcile Smoke Contract",
+        "Legacy Artifact Probe",
+        "ai-sdlc recover --reconcile",
+        "windows-offline-smoke.yml",
+    ),
+    CLI_COMMANDS_REL: (
+        "Legacy Artifact Probe",
+        "ai-sdlc recover --reconcile",
+    ),
+    CLI_RUN_CMD_REL: (
+        "已停止当前运行，避免基于过时 checkpoint 继续执行。",
+    ),
+    WINDOWS_OFFLINE_SMOKE_WORKFLOW_REL: (
+        "Legacy Artifact Probe",
+        "recover --reconcile",
+        (
+            "reported repo-state reconciliation diagnostics; "
+            "treating this as smoke pass."
+        ),
     ),
 }
 RELEASE_DOCS_CONSISTENCY_SURFACES: dict[Path, tuple[str, ...]] = {
@@ -276,6 +304,7 @@ FRAMEWORK_DEFECT_BACKLOG_REQUIRED_FIELDS = (
 VERIFICATION_GATE_OBJECTS = (
     "required_governance_files",
     "framework_defect_backlog",
+    "reconcile_smoke_contract",
     "doc_first_surfaces",
     "verification_profiles",
     FEATURE_CONTRACT_SURFACE_OBJECT,
@@ -1149,6 +1178,7 @@ def collect_constraint_blockers(root: Path) -> list[str]:
     blockers.extend(_formal_artifact_target_blockers(root))
     blockers.extend(_backlog_breach_reference_blockers(root))
     blockers.extend(_release_docs_consistency_blockers(root))
+    blockers.extend(_reconcile_smoke_contract_blockers(root))
     blockers.extend(_doc_first_surface_blockers(root))
     blockers.extend(_verification_profile_blockers(root))
 
@@ -3827,6 +3857,36 @@ def _verification_profile_blockers(root: Path) -> list[str]:
             blockers.append(
                 "BLOCKER: verification profile surface "
                 f"{rel.as_posix()} missing required markers: {', '.join(missing)}"
+            )
+    return blockers
+
+
+def _reconcile_smoke_contract_blockers(root: Path) -> list[str]:
+    """Validate repo-state reconcile diagnostic contract across CLI and workflow."""
+    activation_surfaces = (
+        CLI_COMMANDS_REL,
+        CLI_RUN_CMD_REL,
+        WINDOWS_OFFLINE_SMOKE_WORKFLOW_REL,
+    )
+    if not any((root / rel).is_file() for rel in activation_surfaces):
+        return []
+
+    blockers: list[str] = []
+    for rel, required_tokens in RECONCILE_SMOKE_CONTRACT_SURFACES.items():
+        path = root / rel
+        if not path.is_file():
+            blockers.append(
+                "BLOCKER: reconcile smoke contract missing required surface: "
+                f"{rel.as_posix()}"
+            )
+            continue
+        text = path.read_text(encoding="utf-8")
+        missing = [token for token in required_tokens if token not in text]
+        if missing:
+            blockers.append(
+                "BLOCKER: reconcile smoke contract drift: "
+                f"{rel.as_posix()} missing required markers: "
+                f"{', '.join(missing)}"
             )
     return blockers
 

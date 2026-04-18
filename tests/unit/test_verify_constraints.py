@@ -139,6 +139,47 @@ def _write_verification_profile_docs(
     (docs_dir / "pull-request-checklist.zh.md").write_text(checklist, encoding="utf-8")
 
 
+def _write_reconcile_smoke_contract_surfaces(
+    root: Path,
+    *,
+    include_workflow_markers: bool = True,
+) -> None:
+    rules_dir = root / "src" / "ai_sdlc" / "rules"
+    rules_dir.mkdir(parents=True, exist_ok=True)
+    (rules_dir / "verification.md").write_text(
+        "# 完成前验证协议\n\n"
+        "## Reconcile Smoke Contract\n\n"
+        "- `Legacy Artifact Probe` 与 `ai-sdlc recover --reconcile` 属于 Windows smoke 依赖的仓库状态诊断契约。\n"
+        "- 变更上述诊断输出契约时，必须同步更新 `.github/workflows/windows-offline-smoke.yml` 与相关测试。\n",
+        encoding="utf-8",
+    )
+
+    cli_dir = root / "src" / "ai_sdlc" / "cli"
+    cli_dir.mkdir(parents=True, exist_ok=True)
+    (cli_dir / "commands.py").write_text(
+        "table_title = 'Legacy Artifact Probe'\n"
+        "next_step = 'ai-sdlc recover --reconcile'\n",
+        encoding="utf-8",
+    )
+    (cli_dir / "run_cmd.py").write_text(
+        "message = '已停止当前运行，避免基于过时 checkpoint 继续执行。'\n",
+        encoding="utf-8",
+    )
+
+    workflow_dir = root / ".github" / "workflows"
+    workflow_dir.mkdir(parents=True, exist_ok=True)
+    workflow_text = "Legacy Artifact Probe\nrecover --reconcile\n"
+    if include_workflow_markers:
+        workflow_text += (
+            "ai-sdlc run --dry-run reported repo-state reconciliation diagnostics; "
+            "treating this as smoke pass.\n"
+        )
+    (workflow_dir / "windows-offline-smoke.yml").write_text(
+        workflow_text,
+        encoding="utf-8",
+    )
+
+
 def _write_doc_first_rule_surfaces(
     root: Path, *, include_pipeline_terms: bool = True, include_skip_registry_terms: bool = True
 ) -> None:
@@ -1550,6 +1591,23 @@ def test_release_docs_consistency_passes_when_release_entry_docs_align(
     )
 
     assert collect_constraint_blockers(tmp_path) == []
+
+
+def test_reconcile_smoke_contract_blocks_when_workflow_is_not_synced(
+    tmp_path: Path,
+) -> None:
+    mem = tmp_path / ".ai-sdlc" / "memory"
+    mem.mkdir(parents=True)
+    (mem / "constitution.md").write_text("# C\n", encoding="utf-8")
+    _write_reconcile_smoke_contract_surfaces(
+        tmp_path,
+        include_workflow_markers=False,
+    )
+
+    blockers = collect_constraint_blockers(tmp_path)
+
+    assert any("reconcile smoke contract" in x for x in blockers)
+    assert any("windows-offline-smoke.yml" in x for x in blockers)
 
 
 def test_verification_profile_docs_block_when_rules_surface_missing_profile(

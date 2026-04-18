@@ -10,6 +10,7 @@ AI-native SDLC automation framework — a Python CLI tool and rule file set for 
 - Windows offline bundle: `ai-sdlc-offline-0.6.0.zip`
 - macOS / Linux offline bundle: `ai-sdlc-offline-0.6.0.tar.gz`
 - Offline packaging details: `packaging/offline/README.md`
+- Offline Python runtime release checklist: `packaging/offline/RELEASE_CHECKLIST.md`
 
 ## Quick Start
 
@@ -17,6 +18,13 @@ AI-native SDLC automation framework — a Python CLI tool and rule file set for 
 uv sync
 uv run ai-sdlc --help
 ```
+
+If the target machine does not already have Python 3.11, prefer the packaged installers so the runtime can be detected and provisioned automatically instead of asking the user to install Python by hand. The offline bundle can now carry a bundled `python-runtime/` payload for zero-preinstalled-Python installs on the target host.
+
+Online installer entrypoints:
+
+- macOS / Linux: `./packaging/install_online.sh`
+- Windows PowerShell: `.\packaging\install_online.ps1`
 
 ## Windows: venv, PATH, and `ai-sdlc` not found
 
@@ -54,11 +62,11 @@ After initializing your project, explicitly start the pipeline from CLI:
 
 ```bash
 ai-sdlc init .
-ai-sdlc adapter activate
+ai-sdlc adapter status
 ai-sdlc run --dry-run
 ```
 
-`--dry-run` is the recommended safe entry. It validates stage routing and gates before real execution.
+`--dry-run` is the recommended safe entry. It validates stage routing and gates before real execution, but it does not by itself prove governance activation.
 
 `ai-sdlc adapter activate` only records operator acknowledgement for the selected adapter. For the current file-based adapters (`codex`, `cursor`, `claude_code`, `vscode`, `generic`), governance activation is not independently verifiable yet, so they remain `soft_prompt_only` until a reliable host handshake exists.
 
@@ -66,7 +74,7 @@ If your outer editor and real AI chat host are different, prefer selecting the a
 
 ```bash
 ai-sdlc init . --agent-target codex
-ai-sdlc adapter activate --agent-target codex
+ai-sdlc adapter status
 ai-sdlc run --dry-run
 ```
 
@@ -126,4 +134,5 @@ The file `.ai-sdlc/project/config/project-config.yaml` holds IDE detection metad
 - Current release notes: `docs/releases/v0.6.0.md`
 - Chinese user guide: `USER_GUIDE.zh-CN.md` (start with the **目录**, then jump to Chapter 1 or Chapter 2)
 - Offline install bundle (build + one-command install): `packaging/offline/README.md`
+- Offline Python runtime release checklist: `packaging/offline/RELEASE_CHECKLIST.md`
 - Spec split and program orchestration: `docs/SPEC_SPLIT_AND_PROGRAM.zh-CN.md`

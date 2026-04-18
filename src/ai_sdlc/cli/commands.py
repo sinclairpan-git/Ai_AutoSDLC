@@ -10,6 +10,7 @@ from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
 
+from ai_sdlc.cli.status_guidance import render_startup_guidance
 from ai_sdlc.context.state import (
     CHECKPOINT_PATH,
     CheckpointLoadError,
@@ -82,18 +83,7 @@ console = Console()
 
 
 def _startup_next_step_hint() -> str:
-    return (
-        "\n\n[bold]Next step:[/bold]\n"
-        "  Inspect adapter ingress status: [cyan]ai-sdlc adapter status[/cyan]\n"
-        "  Start framework with safe startup rehearsal only: "
-        "[cyan]ai-sdlc run --dry-run[/cyan]\n"
-        "  Or stage-by-stage: [cyan]ai-sdlc stage run init --dry-run[/cyan]\n"
-        "  Current startup rehearsal is not verified host-ingress proof; "
-        "check adapter status before mutating runs.\n"
-        "  If `ai-sdlc` is not on PATH, use the venv's Python:\n"
-        "  [cyan]python -m ai_sdlc adapter status[/cyan]\n"
-        "  [cyan]python -m ai_sdlc run --dry-run[/cyan]"
-    )
+    return "\n\n" + render_startup_guidance()
 
 
 def _is_interactive_terminal() -> bool:
