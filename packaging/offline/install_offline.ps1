@@ -7,6 +7,42 @@ $ErrorActionPreference = "Stop"
 $Root = Split-Path -Parent $MyInvocation.MyCommand.Path
 $Wheels = Join-Path $Root "wheels"
 $ManifestPath = Join-Path $Root "bundle-manifest.json"
+$BundledPython = Join-Path $Root "python-runtime\python.exe"
+
+function Normalize-Architecture {
+  param([string]$Value)
+
+  $normalized = $Value.ToLowerInvariant()
+  switch ($normalized) {
+    "x64" { return "amd64" }
+    "amd64" { return "amd64" }
+    "x86_64" { return "amd64" }
+    "arm64" { return "arm64" }
+    "aarch64" { return "arm64" }
+    default { return $normalized }
+  }
+}
+
+function Write-BilingualStatus {
+  param(
+    [string]$StatusZh,
+    [string]$StatusEn,
+    [string]$Command,
+    [string]$PurposeZh,
+    [string]$PurposeEn
+  )
+
+  Write-Host "当前状态 / Current status"
+  Write-Host "  $StatusZh"
+  Write-Host "  $StatusEn"
+  Write-Host ""
+  Write-Host "下一步命令 / Next command"
+  Write-Host "  $Command"
+  Write-Host ""
+  Write-Host "命令作用 / What this command does"
+  Write-Host "  $PurposeZh"
+  Write-Host "  $PurposeEn"
+}
 
 if (-not (Test-Path $Wheels)) {
   throw "missing wheels directory next to this script"
@@ -21,6 +57,13 @@ if ($mainWheels.Count -gt 1) {
 }
 $mainWheel = $mainWheels[0].FullName
 
+if ((-not $PSBoundParameters.ContainsKey("PythonExe")) -and (Test-Path $BundledPython)) {
+  $PythonExe = $BundledPython
+  Write-Host "Using bundled Python runtime: $PythonExe"
+} else {
+  Write-Host "Using detected Python runtime: $PythonExe"
+}
+
 & $PythonExe -c "import sys; sys.exit(0 if sys.version_info >= (3, 11) else 1)"
 if ($LASTEXITCODE -ne 0) {
   throw "Python >= 3.11 is required. Use -PythonExe to specify a correct interpreter."
@@ -29,9 +72,11 @@ if ($LASTEXITCODE -ne 0) {
 if (Test-Path $ManifestPath) {
   $manifest = Get-Content $ManifestPath -Raw | ConvertFrom-Json
   $expectedOs = [string]$manifest.platform_os
-  $expectedMachine = [string]$manifest.platform_machine
+  $expectedMachine = Normalize-Architecture ([string]$manifest.platform_machine)
   $currentOs = "windows"
-  $currentMachine = [System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture.ToString().ToLowerInvariant()
+  $currentMachine = Normalize-Architecture (
+    [System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture.ToString()
+  )
   $mismatches = @()
   if ($expectedOs -and $expectedOs.ToLowerInvariant() -ne $currentOs) {
     $mismatches += "os=$expectedOs (current=$currentOs)"
@@ -61,14 +106,13 @@ Write-Host "Installing ai-sdlc (offline)..."
 
 $cliExe = Join-Path $VenvPath "Scripts\\ai-sdlc.exe"
 Write-Host ""
-Write-Host "OK. Verify (use a PowerShell session):"
-Write-Host "  1) Activate venv (if Activate.ps1 is blocked, run first:"
-Write-Host "       Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass"
-Write-Host "  2) & '$VenvPath\\Scripts\\Activate.ps1'"
-Write-Host "  3) Get-Command ai-sdlc   # optional"
-Write-Host "  4) ai-sdlc --help"
-Write-Host "  Or without activating PATH, call the shim directly:"
+Write-BilingualStatus `
+  -StatusZh "离线安装完成，可以先验证 CLI，再进入项目执行 adapter 检查和安全预演。" `
+  -StatusEn "Offline installation completed. Verify the CLI, then enter your project and run adapter checks plus the safe rehearsal." `
+  -Command "& '$VenvPath\\Scripts\\Activate.ps1'; ai-sdlc adapter status; ai-sdlc run --dry-run" `
+  -PurposeZh "激活 venv，检查 adapter 接入真值，再执行安全预演；`run --dry-run` 只证明 CLI 预演成功，不证明治理已激活。" `
+  -PurposeEn "Activate the venv, inspect adapter ingress truth, then run the safe rehearsal; `run --dry-run` only proves the CLI rehearsal succeeded, not governance activation."
+Write-Host ""
+Write-Host "Direct shim / 直接调用:"
 Write-Host "  & '$cliExe' --help"
-Write-Host "  Or: & '$venvPython' -m ai_sdlc --help"
-Write-Host "Then in your project directory:"
-Write-Host "  ai-sdlc init ."
+Write-Host "  & '$venvPython' -m ai_sdlc --help"

@@ -36,8 +36,13 @@ class TestCliInit:
         assert result.exit_code == 0
         assert (tmp_path / ".ai-sdlc").is_dir()
         assert "Initialized" in result.output
-        assert "Inspect adapter ingress status" in result.output
+        assert "当前状态 / Current status" in result.output
+        assert "接入真值尚未确认；先检查 adapter 状态" in result.output
+        assert "Adapter ingress truth is not yet confirmed" in result.output
+        assert "下一步命令 / Next command" in result.output
         assert "ai-sdlc adapter status" in result.output
+        assert "命令作用 / What this command does" in result.output
+        assert "安全预演" in result.output
         assert "safe startup rehearsal only" in result.output
         assert "ai-sdlc run --dry-run" in result.output
         assert "not verified host-ingress proof" in result.output
@@ -49,8 +54,10 @@ class TestCliInit:
         result = runner.invoke(app, ["init", str(initialized_project_dir)])
         assert result.exit_code == 0
         assert "already initialized" in result.output
-        assert "Inspect adapter ingress status" in result.output
+        assert "当前状态 / Current status" in result.output
+        assert "下一步命令 / Next command" in result.output
         assert "ai-sdlc adapter status" in result.output
+        assert "命令作用 / What this command does" in result.output
         assert "safe startup rehearsal only" in result.output
         assert "ai-sdlc run --dry-run" in result.output
         assert "not verified host-ingress proof" in result.output

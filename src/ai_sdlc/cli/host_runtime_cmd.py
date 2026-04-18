@@ -8,6 +8,7 @@ from pathlib import Path
 import typer
 from rich.console import Console
 
+from ai_sdlc.cli.status_guidance import render_status_guidance
 from ai_sdlc.core.host_runtime_manager import evaluate_current_host_runtime
 from ai_sdlc.models.host_runtime_plan import HostRuntimePlan
 from ai_sdlc.utils.helpers import find_project_root
@@ -68,6 +69,51 @@ def _print_plan(plan: HostRuntimePlan) -> None:
             + ", ".join(plan.remediation_fragment.will_install),
             markup=False,
         )
+    console.print("")
+    console.print(_host_runtime_guidance(plan))
+
+
+def _host_runtime_guidance(plan: HostRuntimePlan) -> str:
+    if plan.status == "ready":
+        return render_status_guidance(
+            current_status_zh="宿主运行时已就绪，可以继续检查 adapter 接入真值。",
+            current_status_en="Host runtime is ready. You can now verify adapter ingress truth.",
+            next_steps=(
+                (
+                    "ai-sdlc adapter status",
+                    "检查 adapter 接入真值、验证结果和治理状态。",
+                    "Inspect adapter ingress truth, verification result, and governance state.",
+                ),
+                (
+                    "ai-sdlc run --dry-run",
+                    "执行安全预演，确认阶段路由与入口链路。",
+                    "Run the safe rehearsal to confirm stage routing and startup flow.",
+                ),
+            ),
+        )
+    if plan.status == "remediation_required":
+        return render_status_guidance(
+            current_status_zh="宿主运行时可执行，但仍缺少附加依赖；先补齐再进入完整流水线。",
+            current_status_en="Host runtime is usable, but supporting dependencies are still missing.",
+            next_steps=(
+                (
+                    "ai-sdlc adapter status",
+                    "先确认接入真值，再根据 remediation_targets 补齐剩余依赖。",
+                    "Verify adapter ingress truth, then fill the remaining remediation targets.",
+                ),
+            ),
+        )
+    return render_status_guidance(
+        current_status_zh="宿主运行时尚未就绪；先完成 bootstrap 或修复阻塞项。",
+        current_status_en="Host runtime is not ready yet. Complete bootstrap or resolve blockers first.",
+        next_steps=(
+            (
+                "ai-sdlc host-runtime plan --json",
+                "查看 machine-readable 计划，识别缺失的运行时与阻塞原因。",
+                "Inspect the machine-readable plan to see missing runtimes and blockers.",
+            ),
+        ),
+    )
 
 
 def _exit_code_for_status(status: str) -> int:

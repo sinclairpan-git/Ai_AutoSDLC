@@ -11,6 +11,7 @@ import typer
 from rich.console import Console
 from rich.table import Table
 
+from ai_sdlc.cli.status_guidance import render_status_guidance
 from ai_sdlc.core.config import load_project_config
 from ai_sdlc.integrations.agent_target import (
     interactive_select_agent_target,
@@ -70,6 +71,44 @@ def _emit_process_output(stdout: str, stderr: str) -> None:
         typer.echo(stdout, nl=False)
     if stderr:
         typer.echo(stderr, nl=False, err=True)
+
+
+def _adapter_status_guidance(payload: dict[str, object]) -> str:
+    ingress_state = str(payload.get("adapter_ingress_state", "unknown"))
+    verification = str(payload.get("adapter_verification_result", "unknown"))
+    if ingress_state == "verified_loaded":
+        return render_status_guidance(
+            current_status_zh="adapter 接入真值已验证，可继续安全预演或正式执行。",
+            current_status_en="Adapter ingress truth is verified. You can continue with dry-run or execution.",
+            next_steps=(
+                (
+                    "ai-sdlc run --dry-run",
+                    "执行安全预演，确认阶段路由和门禁状态。",
+                    "Run the safe rehearsal to confirm routing and gate state.",
+                ),
+                (
+                    "ai-sdlc run",
+                    "在确认无误后执行完整流水线。",
+                    "Execute the full pipeline after validation.",
+                ),
+            ),
+        )
+    return render_status_guidance(
+        current_status_zh=f"adapter 接入真值尚未验证；当前状态为 {ingress_state} / {verification}。",
+        current_status_en=f"Adapter ingress truth is not yet verified. Current state: {ingress_state} / {verification}.",
+        next_steps=(
+            (
+                "ai-sdlc run --dry-run",
+                "先执行安全预演；它可以继续，但不构成治理激活证明。",
+                "Run the safe rehearsal first; it may proceed, but it does not prove governance activation.",
+            ),
+            (
+                "ai-sdlc host-runtime plan",
+                "检查宿主运行时是否已就绪，避免把运行时问题误判为 adapter 问题。",
+                "Check host runtime readiness so runtime issues are not mistaken for adapter issues.",
+            ),
+        ),
+    )
 
 
 @adapter_app.command(name="select")
@@ -141,6 +180,8 @@ def adapter_status(
     for key, value in payload.items():
         table.add_row(key, str(value) if value not in ("", None) else "-")
     console.print(table)
+    console.print("")
+    console.print(_adapter_status_guidance(payload))
 
 
 @adapter_app.command(name="exec", context_settings=_EXEC_CONTEXT_SETTINGS)

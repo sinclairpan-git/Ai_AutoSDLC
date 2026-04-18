@@ -1,0 +1,121 @@
+name: Windows Offline Smoke
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/windows-offline-smoke.yml"
+      - ".github/workflows/pr-checks.yml"
+      - "AGENTS.md"
+      - "pyproject.toml"
+      - "README.md"
+      - "packaging/**"
+      - "src/**"
+      - "tests/integration/test_github_workflows.py"
+      - "tests/integration/test_offline_bundle_scripts.py"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: windows-offline-smoke-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  smoke:
+    runs-on: windows-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+
+      - name: Build Windows offline bundle
+        shell: bash
+        env:
+          PYTHON: python
+        run: |
+          set -euo pipefail
+          runtime_root="$(cygpath -u "$pythonLocation")"
+          PYTHON="$PYTHON" AI_SDLC_OFFLINE_PYTHON_RUNTIME="$runtime_root" bash packaging/offline/build_offline_bundle.sh
+
+      - name: Install bundle and run CLI smoke
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $archive = Get-ChildItem -Path "dist-offline" -Filter "ai-sdlc-offline-*.zip" -File | Select-Object -First 1
+          if (-not $archive) {
+            throw "Expected dist-offline zip archive was not produced."
+          }
+
+          $smokeRoot = Join-Path $env:RUNNER_TEMP "ai-sdlc-windows-smoke"
+          $evidenceRoot = Join-Path $env:RUNNER_TEMP "ai-sdlc-windows-smoke-evidence"
+          Remove-Item -Recurse -Force $smokeRoot, $evidenceRoot -ErrorAction SilentlyContinue
+          New-Item -ItemType Directory -Force -Path $smokeRoot, $evidenceRoot | Out-Null
+
+          Expand-Archive -LiteralPath $archive.FullName -DestinationPath $smokeRoot -Force
+          $bundleDir = Get-ChildItem -Path $smokeRoot -Directory | Select-Object -First 1
+          if (-not $bundleDir) {
+            throw "Expanded archive did not contain a bundle directory."
+          }
+
+          $digest = (Get-FileHash -Algorithm SHA256 "AGENTS.md").Hash.ToLowerInvariant()
+          $env:OPENAI_CODEX = "1"
+          $env:AI_SDLC_ADAPTER_CANONICAL_SHA256 = "sha256:$digest"
+
+          $installLog = Join-Path $evidenceRoot "install.log"
+          $helpLog = Join-Path $evidenceRoot "help.txt"
+          $statusLog = Join-Path $evidenceRoot "adapter-status.txt"
+          $dryRunLog = Join-Path $evidenceRoot "run-dry-run.txt"
+
+          Push-Location $bundleDir.FullName
+          & .\install_offline.ps1 *>&1 | Tee-Object -FilePath $installLog
+          if ($LASTEXITCODE -ne 0) {
+            throw "install_offline.ps1 failed with exit code $LASTEXITCODE"
+          }
+          Pop-Location
+
+          $cliExe = Join-Path $bundleDir.FullName ".venv\Scripts\ai-sdlc.exe"
+          if (-not (Test-Path $cliExe)) {
+            throw "Expected CLI shim was not created at $cliExe"
+          }
+
+          & $cliExe --help *>&1 | Tee-Object -FilePath $helpLog
+          if ($LASTEXITCODE -ne 0) {
+            throw "ai-sdlc --help failed with exit code $LASTEXITCODE"
+          }
+
+          Push-Location $env:GITHUB_WORKSPACE
+          if (-not (Test-Path "AGENTS.md")) {
+            throw "Expected AGENTS.md in GITHUB_WORKSPACE before adapter verification."
+          }
+          if (-not (Test-Path ".ai-sdlc")) {
+            throw "Expected .ai-sdlc directory in GITHUB_WORKSPACE before dry-run."
+          }
+
+          & $cliExe adapter status *>&1 | Tee-Object -FilePath $statusLog
+          if ($LASTEXITCODE -ne 0) {
+            throw "ai-sdlc adapter status failed with exit code $LASTEXITCODE"
+          }
+
+          & $cliExe run --dry-run *>&1 | Tee-Object -FilePath $dryRunLog
+          if ($LASTEXITCODE -ne 0) {
+            throw "ai-sdlc run --dry-run failed with exit code $LASTEXITCODE"
+          }
+          Pop-Location
+
+          Copy-Item -LiteralPath (Join-Path $bundleDir.FullName "bundle-manifest.json") -Destination $evidenceRoot
+
+      - name: Upload smoke evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-offline-smoke-evidence
+          path: ${{ runner.temp }}/ai-sdlc-windows-smoke-evidence
+          if-no-files-found: error

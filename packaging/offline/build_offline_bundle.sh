@@ -8,6 +8,7 @@
 #   ./packaging/offline/build_offline_bundle.sh
 # Env:
 #   PYTHON=/path/to/python3.11   interpreter used for pip download (default: try python3.11, then python3)
+#   AI_SDLC_OFFLINE_PYTHON_RUNTIME=/path/to/portable/python-runtime   optional runtime copied into python-runtime/
 
 set -euo pipefail
 
@@ -20,6 +21,7 @@ OUT="${ROOT}/dist-offline/ai-sdlc-offline-${VERSION}"
 ARCHIVE="${ROOT}/dist-offline/ai-sdlc-offline-${VERSION}.tar.gz"
 ZIP_ARCHIVE="${ROOT}/dist-offline/ai-sdlc-offline-${VERSION}.zip"
 MANIFEST="${OUT}/bundle-manifest.json"
+RUNTIME_BUNDLED="false"
 
 _pick_py() {
   local c
@@ -78,7 +80,17 @@ cp "${SCRIPT_DIR}/install_offline.bat" "${OUT}/"
 cp "${SCRIPT_DIR}/README_BUNDLE.txt" "${OUT}/README.txt"
 chmod +x "${OUT}/install_offline.sh"
 
-"${PY}" - "${VERSION}" "${MANIFEST}" <<'PY'
+if [[ -n "${AI_SDLC_OFFLINE_PYTHON_RUNTIME:-}" ]]; then
+  if [[ ! -d "${AI_SDLC_OFFLINE_PYTHON_RUNTIME}" ]]; then
+    echo "error: AI_SDLC_OFFLINE_PYTHON_RUNTIME must point to a portable runtime directory" >&2
+    exit 1
+  fi
+  echo "==> Copying bundled Python runtime into offline bundle…"
+  cp -R "${AI_SDLC_OFFLINE_PYTHON_RUNTIME}" "${OUT}/python-runtime"
+  RUNTIME_BUNDLED="true"
+fi
+
+"${PY}" - "${VERSION}" "${MANIFEST}" "${RUNTIME_BUNDLED}" <<'PY'
 from __future__ import annotations
 
 import json
@@ -88,6 +100,7 @@ from pathlib import Path
 
 version = sys.argv[1]
 manifest_path = Path(sys.argv[2])
+runtime_bundled = sys.argv[3].lower() == "true"
 manifest_path.write_text(
     json.dumps(
         {
@@ -95,6 +108,7 @@ manifest_path.write_text(
             "package_version": version,
             "platform_os": platform.system().lower(),
             "platform_machine": platform.machine().lower(),
+            "python_runtime_bundled": runtime_bundled,
         },
         indent=2,
     )
@@ -129,3 +143,8 @@ echo ""
 echo "Ship either archive (or the folder) to offline machines."
 echo "  Linux/macOS: tar xzf ai-sdlc-offline-${VERSION}.tar.gz && cd ai-sdlc-offline-${VERSION} && ./install_offline.sh"
 echo "  Windows:     unzip ai-sdlc-offline-${VERSION}.zip && cd ai-sdlc-offline-${VERSION} && install_offline.bat"
+if [[ "${RUNTIME_BUNDLED}" == "true" ]]; then
+  echo "  Bundled Python runtime: included"
+else
+  echo "  Bundled Python runtime: not included (set AI_SDLC_OFFLINE_PYTHON_RUNTIME=... to embed one)"
+fi

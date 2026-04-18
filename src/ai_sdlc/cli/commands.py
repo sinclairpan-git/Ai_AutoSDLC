@@ -76,24 +76,14 @@ from ai_sdlc.scanners.frontend_contract_scanner import (
 )
 from ai_sdlc.telemetry.clock import utc_now_z
 from ai_sdlc.telemetry.readiness import build_status_json_surface
+from ai_sdlc.cli.status_guidance import render_startup_guidance
 from ai_sdlc.utils.helpers import AI_SDLC_DIR, find_project_root
 
 console = Console()
 
 
 def _startup_next_step_hint() -> str:
-    return (
-        "\n\n[bold]Next step:[/bold]\n"
-        "  Inspect adapter ingress status: [cyan]ai-sdlc adapter status[/cyan]\n"
-        "  Start framework with safe startup rehearsal only: "
-        "[cyan]ai-sdlc run --dry-run[/cyan]\n"
-        "  Or stage-by-stage: [cyan]ai-sdlc stage run init --dry-run[/cyan]\n"
-        "  Current startup rehearsal is not verified host-ingress proof; "
-        "check adapter status before mutating runs.\n"
-        "  If `ai-sdlc` is not on PATH, use the venv's Python:\n"
-        "  [cyan]python -m ai_sdlc adapter status[/cyan]\n"
-        "  [cyan]python -m ai_sdlc run --dry-run[/cyan]"
-    )
+    return "\n\n" + render_startup_guidance()
 
 
 def _is_interactive_terminal() -> bool:

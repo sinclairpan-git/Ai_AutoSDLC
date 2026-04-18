@@ -74,3 +74,9 @@ def test_host_runtime_plan_text_reports_ready_status(
     assert "Host Runtime Plan" in result.output
     assert "status: ready" in result.output
     assert "surface: installed_cli / bound" in result.output
+    assert "当前状态 / Current status" in result.output
+    assert "宿主运行时已就绪" in result.output
+    assert "Host runtime is ready" in result.output
+    assert "下一步命令 / Next command" in result.output
+    assert "ai-sdlc adapter status" in result.output
+    assert "命令作用 / What this command does" in result.output

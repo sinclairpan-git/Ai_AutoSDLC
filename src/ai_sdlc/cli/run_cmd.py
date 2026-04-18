@@ -9,6 +9,7 @@ from rich.console import Console
 from rich.panel import Panel
 
 from ai_sdlc.cli.commands import _print_reconcile_guidance
+from ai_sdlc.cli.status_guidance import render_status_guidance
 from ai_sdlc.core.frontend_contract_runtime_attachment import (
     build_frontend_contract_runtime_attachment,
     is_frontend_contract_runtime_attachment_work_item,
@@ -46,13 +47,36 @@ def _adapter_gate_message(root: object, *, dry_run: bool) -> str | None:
     if payload["adapter_ingress_state"] == "verified_loaded":
         return None
     hint = verification_env_hint(payload.get("agent_target"))
+    guidance = render_status_guidance(
+        current_status_zh=(
+            f"adapter 接入真值尚未验证；当前为 {payload['adapter_ingress_state']} "
+            f"({payload['adapter_verification_result']})。"
+        ),
+        current_status_en=(
+            f"Adapter ingress truth is not yet verified. Current state: "
+            f"{payload['adapter_ingress_state']} ({payload['adapter_verification_result']})."
+        ),
+        next_steps=(
+            (
+                "ai-sdlc adapter status",
+                "检查接入真值、验证结果和治理状态。",
+                "Inspect adapter ingress truth, verification result, and governance state.",
+            ),
+            (
+                "ai-sdlc run --dry-run",
+                "执行安全预演；可继续校验阶段门禁，但不构成治理激活证明。",
+                "Run the safe rehearsal; it can validate stage gates, but it does not prove governance activation.",
+            ),
+        ),
+    )
     if dry_run:
         message = (
             f"Adapter target '{payload['agent_target']}' is not yet verified_loaded.\n"
             f"Current ingress state: {payload['adapter_ingress_state']} "
             f"({payload['adapter_verification_result']}).\n"
             "Dry-run may continue, but this is not verified host ingress.\n"
-            "Inspect `ai-sdlc adapter status` before mutating runs."
+            "Inspect `ai-sdlc adapter status` before mutating runs.\n\n"
+            f"{guidance}"
         )
         if hint:
             message += f"\n{hint}"
@@ -61,7 +85,8 @@ def _adapter_gate_message(root: object, *, dry_run: bool) -> str | None:
         f"Adapter target '{payload['agent_target']}' has not reached verified_loaded.\n"
         f"Current ingress state: {payload['adapter_ingress_state']} "
         f"({payload['adapter_verification_result']}).\n"
-        "Inspect `ai-sdlc adapter status` and continue only after host ingress is verified."
+        "Inspect `ai-sdlc adapter status` and continue only after host ingress is verified.\n\n"
+        f"{guidance}"
     )
     if hint:
         message += f"\n{hint}"
