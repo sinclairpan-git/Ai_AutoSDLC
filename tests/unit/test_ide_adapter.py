@@ -12,6 +12,7 @@ from ai_sdlc.integrations.ide_adapter import (
     acknowledge_adapter,
     apply_adapter,
     build_adapter_governance_surface,
+    build_canonical_proof_env,
     detect_ide,
     ensure_ide_adaptation,
 )
@@ -335,3 +336,32 @@ class TestEnsureIdeAdaptation:
         assert payload["governance_activation_state"] == "materialized_unverified"
         assert payload["governance_activation_verifiable"] is False
         assert payload["governance_activation_mode"] == "materialized_only"
+
+
+class TestCanonicalProofCarrier:
+    def test_build_canonical_proof_env_returns_digest_and_path_for_codex_target(
+        self, tmp_path: Path
+    ) -> None:
+        init_project(tmp_path, agent_target=IDEKind.CODEX.value)
+
+        payload = build_canonical_proof_env(tmp_path)
+
+        assert payload["AI_SDLC_ADAPTER_CANONICAL_PATH"] == "AGENTS.md"
+        assert payload["AI_SDLC_ADAPTER_CANONICAL_SHA256"] == _digest(
+            tmp_path / "AGENTS.md"
+        )
+
+    def test_build_canonical_proof_env_rejects_generic_target(self, tmp_path: Path) -> None:
+        init_project(tmp_path)
+
+        with pytest.raises(ValueError, match="do not support canonical proof carrier"):
+            build_canonical_proof_env(tmp_path)
+
+    def test_build_canonical_proof_env_requires_materialized_canonical_file(
+        self, tmp_path: Path
+    ) -> None:
+        init_project(tmp_path, agent_target=IDEKind.CODEX.value)
+        (tmp_path / "AGENTS.md").unlink()
+
+        with pytest.raises(FileNotFoundError, match="Canonical adapter content is not materialized"):
+            build_canonical_proof_env(tmp_path)

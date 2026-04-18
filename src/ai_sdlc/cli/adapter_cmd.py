@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import json
+import os
+import subprocess
 from pathlib import Path
 
 import typer
@@ -18,6 +20,7 @@ from ai_sdlc.integrations.ide_adapter import (
     IDEKind,
     acknowledge_adapter,
     build_adapter_governance_surface,
+    build_canonical_proof_env,
     detect_ide,
     ensure_ide_adaptation,
     format_adapter_notice,
@@ -32,6 +35,7 @@ adapter_app = typer.Typer(
         "and keep operator acknowledgement for compatibility/debug flows."
     )
 )
+_EXEC_CONTEXT_SETTINGS = {"allow_extra_args": True, "ignore_unknown_options": True}
 
 
 def _require_project_root() -> object:
@@ -49,6 +53,23 @@ def _is_interactive_terminal() -> bool:
 def _adapter_status_payload(root: Path) -> dict[str, object]:
     detected_ide = detect_ide(root)
     return build_adapter_governance_surface(root, detected_ide=detected_ide)
+
+
+def _resolve_command(ctx: typer.Context) -> list[str]:
+    command = list(ctx.args)
+    if command and command[0] == "--":
+        command = command[1:]
+    if not command:
+        console.print("[red]A command is required after '--'.[/red]")
+        raise typer.Exit(code=2)
+    return command
+
+
+def _emit_process_output(stdout: str, stderr: str) -> None:
+    if stdout:
+        typer.echo(stdout, nl=False)
+    if stderr:
+        typer.echo(stderr, nl=False, err=True)
 
 
 @adapter_app.command(name="select")
@@ -120,3 +141,28 @@ def adapter_status(
     for key, value in payload.items():
         table.add_row(key, str(value) if value not in ("", None) else "-")
     console.print(table)
+
+
+@adapter_app.command(name="exec", context_settings=_EXEC_CONTEXT_SETTINGS)
+def adapter_exec(ctx: typer.Context) -> None:
+    """Execute one command with canonical proof env injected."""
+    root = _require_project_root()
+    command = _resolve_command(ctx)
+    try:
+        proof_env = build_canonical_proof_env(root)
+    except (FileNotFoundError, ValueError) as exc:
+        console.print(f"[red]{exc}[/red]")
+        raise typer.Exit(code=2) from exc
+
+    env = os.environ.copy()
+    env.update(proof_env)
+    result = subprocess.run(
+        command,
+        cwd=root,
+        env=env,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    _emit_process_output(result.stdout, result.stderr)
+    raise typer.Exit(code=result.returncode)

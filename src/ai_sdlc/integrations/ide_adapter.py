@@ -112,6 +112,30 @@ def detect_ide(root: Path) -> IDEKind:
     return detect_agent_target(root)
 
 
+def build_canonical_proof_env(
+    root: Path,
+    *,
+    target: IDEKind | str | None = None,
+) -> dict[str, str]:
+    """Build the canonical proof payload for a supported materialized adapter target."""
+    cfg = load_project_config(root)
+    resolved_target = _coerce_ide_kind(target) or _coerce_ide_kind(cfg.agent_target) or detect_ide(root)
+    if resolved_target == IDEKind.GENERIC:
+        raise ValueError("Generic adapter targets do not support canonical proof carrier.")
+
+    canonical_path = _canonical_path(resolved_target)
+    canonical_file = root / canonical_path
+    if not canonical_file.is_file():
+        raise FileNotFoundError(
+            "Canonical adapter content is not materialized at the expected path."
+        )
+
+    return {
+        _CANONICAL_DIGEST_ENV_KEY: _digest_file(canonical_file),
+        _CANONICAL_PATH_ENV_KEY: canonical_path,
+    }
+
+
 def _sync_file(
     bundle: Path,
     dest: Path,

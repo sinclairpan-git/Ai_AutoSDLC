@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import sys
 from pathlib import Path
 
 import pytest
@@ -247,3 +248,63 @@ class TestCliAdapter:
         assert payload["governance_activation_verifiable"] is False
         assert payload["governance_activation_mode"] == "materialized_only"
         assert "operator acknowledgement" in payload["governance_activation_detail"]
+
+    def test_adapter_exec_requires_command_after_double_dash(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        assert (
+            runner.invoke(app, ["init", str(tmp_path), "--agent-target", "codex"]).exit_code
+            == 0
+        )
+        monkeypatch.chdir(tmp_path)
+
+        result = runner.invoke(app, ["adapter", "exec"])
+
+        assert result.exit_code == 2
+        assert "A command is required after '--'." in result.output
+
+    def test_adapter_exec_injects_canonical_proof_for_child_command(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setenv("OPENAI_CODEX", "1")
+        assert (
+            runner.invoke(app, ["init", str(tmp_path), "--agent-target", "codex"]).exit_code
+            == 0
+        )
+        monkeypatch.chdir(tmp_path)
+
+        plain = runner.invoke(app, ["adapter", "status", "--json"])
+        assert plain.exit_code == 0
+        plain_payload = json.loads(plain.output)
+        assert plain_payload["adapter_canonical_consumption_result"] == "unverified"
+
+        result = runner.invoke(
+            app,
+            [
+                "adapter",
+                "exec",
+                "--",
+                sys.executable,
+                "-m",
+                "ai_sdlc",
+                "adapter",
+                "status",
+                "--json",
+            ],
+        )
+
+        assert result.exit_code == 0
+        payload = json.loads(result.output)
+        assert payload["adapter_ingress_state"] == "verified_loaded"
+        assert payload["adapter_verification_result"] == "verified"
+        assert payload["adapter_canonical_path"] == "AGENTS.md"
+        assert payload["adapter_canonical_consumption_result"] == "verified"
+        assert (
+            payload["adapter_canonical_consumption_evidence"]
+            == "env:AI_SDLC_ADAPTER_CANONICAL_SHA256"
+        )
+
+        after = runner.invoke(app, ["adapter", "status", "--json"])
+        assert after.exit_code == 0
+        after_payload = json.loads(after.output)
+        assert after_payload["adapter_canonical_consumption_result"] == "unverified"
