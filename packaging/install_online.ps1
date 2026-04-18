@@ -36,9 +36,19 @@ function Write-BilingualStatus {
   Write-Host "  $PurposeEn"
 }
 
+function Assert-LastExitCode {
+  param(
+    [string]$Operation
+  )
+
+  if ($LASTEXITCODE -ne 0) {
+    throw "$Operation failed with exit code $LASTEXITCODE."
+  }
+}
+
 function Get-PythonCommand {
   $candidates = @(
-    @{ Command = "py"; Args = @("-3.11") },
+    @{ Command = "py"; Args = @("-3") },
     @{ Command = "python"; Args = @() }
   )
 
@@ -92,10 +102,13 @@ if (-not $python) {
 
 Write-Host ("Using Python runtime: {0} {1}" -f $python.Command, ($python.Args -join " "))
 & $python.Command @($python.Args + @("-m", "venv", $VenvPath))
+Assert-LastExitCode "python -m venv"
 
 $venvPython = Join-Path $VenvPath "Scripts\python.exe"
 & $venvPython -m pip install --upgrade pip | Out-Null
+Assert-LastExitCode "pip install --upgrade pip"
 & $venvPython -m pip install $PackageSpec
+Assert-LastExitCode "pip install $PackageSpec"
 
 Write-Host ""
 Write-BilingualStatus `

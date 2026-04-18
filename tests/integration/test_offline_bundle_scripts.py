@@ -746,6 +746,23 @@ def test_windows_online_installer_catches_auto_install_failure_before_bilingual_
     assert "No supported Windows package manager found" not in online_ps1
 
 
+def test_windows_online_installer_accepts_any_py_launcher_python_gte_311() -> None:
+    online_ps1 = (_PACKAGING_DIR / "install_online.ps1").read_text(encoding="utf-8")
+
+    assert '@{ Command = "py"; Args = @("-3") }' in online_ps1
+    assert '@{ Command = "py"; Args = @("-3.11") }' not in online_ps1
+
+
+def test_windows_online_installer_checks_native_exit_codes_before_success_guidance() -> None:
+    online_ps1 = (_PACKAGING_DIR / "install_online.ps1").read_text(encoding="utf-8")
+
+    assert "function Assert-LastExitCode" in online_ps1
+    assert '& $python.Command @($python.Args + @("-m", "venv", $VenvPath))' in online_ps1
+    assert 'Assert-LastExitCode "python -m venv"' in online_ps1
+    assert 'Assert-LastExitCode "pip install --upgrade pip"' in online_ps1
+    assert 'Assert-LastExitCode "pip install $PackageSpec"' in online_ps1
+
+
 def test_windows_install_scripts_include_auto_python_detection_and_bilingual_guidance() -> None:
     offline_bat = (_OFFLINE_DIR / "install_offline.bat").read_text(encoding="utf-8")
     offline_ps1 = (_OFFLINE_DIR / "install_offline.ps1").read_text(encoding="utf-8")
