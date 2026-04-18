@@ -337,6 +337,13 @@ def test_build_offline_bundle_embeds_portable_python_runtime_when_configured(
     assert "Bundled Python runtime: included" in result.stdout
 
 
+def test_build_offline_bundle_uses_relative_zip_paths_for_cross_platform_python() -> None:
+    script = (_OFFLINE_DIR / "build_offline_bundle.sh").read_text(encoding="utf-8")
+
+    assert 'root = Path("dist-offline")' in script
+    assert 'dst = root / f"ai-sdlc-offline-{version}.zip"' in script
+
+
 def test_install_offline_rejects_platform_manifest_mismatch(tmp_path: Path) -> None:
     bundle_dir = tmp_path / "bundle"
     wheels_dir = bundle_dir / "wheels"

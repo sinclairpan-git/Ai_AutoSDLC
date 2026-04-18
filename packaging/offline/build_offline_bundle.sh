@@ -121,13 +121,15 @@ mkdir -p "${ROOT}/dist-offline"
 rm -f "${ARCHIVE}"
 tar -czf "${ARCHIVE}" -C "${ROOT}/dist-offline" "$(basename "${OUT}")"
 rm -f "${ZIP_ARCHIVE}"
-"${PY}" - <<PY
+"${PY}" - "${VERSION}" <<'PY'
 from pathlib import Path
+import sys
 import zipfile
 
-root = Path(r"${ROOT}/dist-offline")
-src = root / Path(r"${OUT}").name
-dst = Path(r"${ZIP_ARCHIVE}")
+version = sys.argv[1]
+root = Path("dist-offline")
+src = root / f"ai-sdlc-offline-{version}"
+dst = root / f"ai-sdlc-offline-{version}.zip"
 with zipfile.ZipFile(dst, "w", zipfile.ZIP_DEFLATED) as zf:
     for path in src.rglob("*"):
         if path.is_file():
