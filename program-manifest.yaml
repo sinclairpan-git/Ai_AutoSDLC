@@ -4,6 +4,7 @@ program:
   goal: 以根级真值账本持续反映 AI-SDLC 全量蓝图、release target 与 capability closure/audit 进展。
 release_targets:
 - frontend-mainline-delivery
+- agent-adapter-verified-host-ingress
 capabilities:
 - id: frontend-mainline-delivery
   title: Frontend Mainline Delivery
@@ -63,6 +64,25 @@ capabilities:
     - specs/144-frontend-mainline-host-remediation-and-workspace-integration-closure-baseline
     verify_refs:
     - uv run ai-sdlc verify constraints
+- id: agent-adapter-verified-host-ingress
+  title: Agent Adapter Verified Host Ingress
+  goal: Adapter host ingress 与 canonical content consumption proof 必须维持 machine-verifiable release gate。
+  release_required: true
+  spec_refs:
+  - 121-agent-adapter-verified-host-ingress-truth-baseline
+  - 122-agent-adapter-verified-host-ingress-runtime-baseline
+  - 158-agent-adapter-verified-host-ingress-closure-audit-reconciliation-baseline
+  - 159-agent-adapter-canonical-consumption-proof-runtime-baseline
+  - 160-agent-adapter-canonical-consumption-release-gate-baseline
+  required_evidence:
+    truth_check_refs:
+    - specs/121-agent-adapter-verified-host-ingress-truth-baseline
+    - specs/122-agent-adapter-verified-host-ingress-runtime-baseline
+    close_check_refs:
+    - specs/121-agent-adapter-verified-host-ingress-truth-baseline
+    - specs/122-agent-adapter-verified-host-ingress-runtime-baseline
+    verify_refs:
+    - uv run ai-sdlc verify constraints
 capability_closure_audit:
   reviewed_at: '2026-04-18'
   open_clusters:
@@ -79,7 +99,7 @@ capability_closure_audit:
     - '010'
     - 094
     - 120-122
-    - '158'
+    - 158-160
   - cluster_id: project-meta-foundations
     title: 项目元能力基线
     closure_state: formal_only
@@ -1201,7 +1221,8 @@ specs:
   owner: team-frontend-governance
   frontend_evidence_class: ''
   roles: []
-  capability_refs: []
+  capability_refs:
+  - agent-adapter-verified-host-ingress
 - id: 122-agent-adapter-verified-host-ingress-runtime-baseline
   path: specs/122-agent-adapter-verified-host-ingress-runtime-baseline
   depends_on: []
@@ -1209,7 +1230,8 @@ specs:
   owner: team-frontend-governance
   frontend_evidence_class: ''
   roles: []
-  capability_refs: []
+  capability_refs:
+  - agent-adapter-verified-host-ingress
 - id: 123-frontend-mainline-managed-delivery-apply-runtime-implementation-baseline
   path: specs/123-frontend-mainline-managed-delivery-apply-runtime-implementation-baseline
   depends_on:
@@ -1595,10 +1617,35 @@ specs:
   owner: team-frontend-governance
   frontend_evidence_class: framework_capability
   roles: []
-  capability_refs: []
+  capability_refs:
+  - agent-adapter-verified-host-ingress
 - id: 159-agent-adapter-canonical-consumption-proof-runtime-baseline
   path: specs/159-agent-adapter-canonical-consumption-proof-runtime-baseline
-  depends_on: []
+  depends_on:
+  - 121-agent-adapter-verified-host-ingress-truth-baseline
+  - 122-agent-adapter-verified-host-ingress-runtime-baseline
+  - 158-agent-adapter-verified-host-ingress-closure-audit-reconciliation-baseline
+  branch_slug: agent-adapter-canonical-consumption-proof-runtime-baseline
+  owner: team-frontend-governance
+  frontend_evidence_class: ''
+  roles:
+  - runtime_carrier
+  capability_refs:
+  - agent-adapter-verified-host-ingress
+- id: 160-agent-adapter-canonical-consumption-release-gate-baseline
+  path: specs/160-agent-adapter-canonical-consumption-release-gate-baseline
+  depends_on:
+  - 121-agent-adapter-verified-host-ingress-truth-baseline
+  - 122-agent-adapter-verified-host-ingress-runtime-baseline
+  - 158-agent-adapter-verified-host-ingress-closure-audit-reconciliation-baseline
+  - 159-agent-adapter-canonical-consumption-proof-runtime-baseline
+  branch_slug: agent-adapter-canonical-consumption-release-gate-baseline
+  owner: team-frontend-governance
+  frontend_evidence_class: ''
+  roles:
+  - runtime_carrier
+  capability_refs:
+  - agent-adapter-verified-host-ingress
 truth_snapshot:
   generated_at: '2026-04-18T04:19:25Z'
   generated_by: ai-sdlc program truth sync

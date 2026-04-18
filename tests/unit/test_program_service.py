@@ -190,6 +190,45 @@ specs:
     )
 
 
+def _write_adapter_ingress_truth_ledger_manifest(root: Path) -> None:
+    _write_manifest_yaml(
+        root,
+        """
+schema_version: "2"
+prd_path: "PRD.md"
+program:
+  goal: "Demo adapter ingress release gate"
+release_targets:
+  - "agent-adapter-verified-host-ingress"
+capabilities:
+  - id: "agent-adapter-verified-host-ingress"
+    title: "Agent Adapter Verified Host Ingress"
+    goal: "Canonical consumption proof must remain verified"
+    release_required: true
+    spec_refs:
+      - "160-agent-adapter-canonical-consumption-release-gate-baseline"
+    required_evidence:
+      truth_check_refs:
+        - "specs/160-agent-adapter-canonical-consumption-release-gate-baseline"
+      close_check_refs:
+        - "specs/160-agent-adapter-canonical-consumption-release-gate-baseline"
+      verify_refs:
+        - "uv run ai-sdlc verify constraints"
+capability_closure_audit:
+  reviewed_at: "2026-04-18T00:00:00Z"
+  open_clusters: []
+specs:
+  - id: "160-agent-adapter-canonical-consumption-release-gate-baseline"
+    path: "specs/160-agent-adapter-canonical-consumption-release-gate-baseline"
+    depends_on: []
+    roles:
+      - "runtime_carrier"
+    capability_refs:
+      - "agent-adapter-verified-host-ingress"
+""",
+    )
+
+
 def _write_managed_delivery_apply_request(root: Path, *, fingerprint: str = "fp-001") -> Path:
     payload = {
         "execution_view": {
@@ -1893,6 +1932,128 @@ def test_build_truth_snapshot_blocks_release_scope_when_closure_audit_missing(
     capability = snapshot.computed_capabilities[0]
     assert capability.audit_state == "blocked"
     assert "capability_closure_audit:missing" in capability.blocking_refs
+
+
+def test_build_truth_snapshot_blocks_host_ingress_capability_when_canonical_consumption_is_unverified(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    _init_truth_git_repo(tmp_path)
+    (tmp_path / ".ai-sdlc" / "project" / "config").mkdir(parents=True)
+    (tmp_path / ".ai-sdlc" / "project" / "config" / "project-state.yaml").write_text(
+        "status: initialized\nproject_name: demo\nnext_work_item_seq: 160\nversion: '1.0'\n",
+        encoding="utf-8",
+    )
+    (tmp_path / "PRD.md").write_text("# prd\n", encoding="utf-8")
+    spec_dir = (
+        tmp_path
+        / "specs"
+        / "160-agent-adapter-canonical-consumption-release-gate-baseline"
+    )
+    spec_dir.mkdir(parents=True)
+    (tmp_path / "AGENTS.md").write_text("# Canonical adapter\n", encoding="utf-8")
+    _write_adapter_ingress_truth_ledger_manifest(tmp_path)
+    save_project_config(
+        tmp_path,
+        ProjectConfig(
+            agent_target="codex",
+            adapter_ingress_state="verified_loaded",
+            adapter_verification_result="verified",
+            adapter_canonical_path="AGENTS.md",
+            adapter_canonical_content_digest="sha256:stale",
+            adapter_canonical_consumption_result="unverified",
+        ),
+    )
+    _commit_truth_repo(tmp_path, "seed adapter ingress unverified canonical proof fixture")
+
+    svc = ProgramService(tmp_path)
+    monkeypatch.setattr(
+        svc,
+        "_run_truth_check_ref",
+        lambda ref: {"ok": True, "classification": "implemented"},
+    )
+    monkeypatch.setattr(
+        svc,
+        "_run_close_check_ref",
+        lambda ref, **kwargs: {"ok": True, "checks": [], "blockers": [], "error": None},
+    )
+    monkeypatch.setattr(
+        svc,
+        "_run_verify_ref",
+        lambda ref, **kwargs: {"ok": True, "blockers": [], "warnings": []},
+    )
+    manifest = svc.load_manifest()
+    snapshot = svc.build_truth_snapshot(manifest)
+
+    capability = snapshot.computed_capabilities[0]
+    assert snapshot.state == "blocked"
+    assert capability.capability_id == "agent-adapter-verified-host-ingress"
+    assert capability.audit_state == "blocked"
+    assert "adapter_canonical_consumption:unverified" in capability.blocking_refs
+
+
+def test_build_truth_snapshot_allows_host_ingress_capability_when_canonical_consumption_is_verified(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    _init_truth_git_repo(tmp_path)
+    (tmp_path / ".ai-sdlc" / "project" / "config").mkdir(parents=True)
+    (tmp_path / ".ai-sdlc" / "project" / "config" / "project-state.yaml").write_text(
+        "status: initialized\nproject_name: demo\nnext_work_item_seq: 160\nversion: '1.0'\n",
+        encoding="utf-8",
+    )
+    (tmp_path / "PRD.md").write_text("# prd\n", encoding="utf-8")
+    spec_dir = (
+        tmp_path
+        / "specs"
+        / "160-agent-adapter-canonical-consumption-release-gate-baseline"
+    )
+    spec_dir.mkdir(parents=True)
+    canonical_path = tmp_path / "AGENTS.md"
+    canonical_path.write_text("# Canonical adapter\n", encoding="utf-8")
+    digest = program_service_module.hashlib.sha256(
+        canonical_path.read_bytes()
+    ).hexdigest()
+    _write_adapter_ingress_truth_ledger_manifest(tmp_path)
+    save_project_config(
+        tmp_path,
+        ProjectConfig(
+            agent_target="codex",
+            adapter_ingress_state="verified_loaded",
+            adapter_verification_result="verified",
+            adapter_canonical_path="AGENTS.md",
+            adapter_canonical_content_digest=f"sha256:{digest}",
+            adapter_canonical_consumption_result="verified",
+            adapter_canonical_consumption_evidence="env:AI_SDLC_ADAPTER_CANONICAL_SHA256",
+            adapter_canonical_consumed_at="2026-04-18T00:00:00Z",
+        ),
+    )
+    _commit_truth_repo(tmp_path, "seed adapter ingress verified canonical proof fixture")
+
+    svc = ProgramService(tmp_path)
+    monkeypatch.setattr(
+        svc,
+        "_run_truth_check_ref",
+        lambda ref: {"ok": True, "classification": "implemented"},
+    )
+    monkeypatch.setattr(
+        svc,
+        "_run_close_check_ref",
+        lambda ref, **kwargs: {"ok": True, "checks": [], "blockers": [], "error": None},
+    )
+    monkeypatch.setattr(
+        svc,
+        "_run_verify_ref",
+        lambda ref, **kwargs: {"ok": True, "blockers": [], "warnings": []},
+    )
+    manifest = svc.load_manifest()
+    snapshot = svc.build_truth_snapshot(manifest)
+
+    capability = snapshot.computed_capabilities[0]
+    assert snapshot.state == "ready"
+    assert capability.capability_id == "agent-adapter-verified-host-ingress"
+    assert capability.audit_state == "ready"
+    assert "adapter_canonical_consumption:unverified" not in capability.blocking_refs
 
 
 def test_build_frontend_managed_delivery_apply_request_blocks_on_host_ingress(

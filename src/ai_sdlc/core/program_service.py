@@ -76,6 +76,7 @@ from ai_sdlc.generators.frontend_generation_constraint_artifacts import (
 from ai_sdlc.generators.frontend_solution_confirmation_artifacts import (
     frontend_solution_confirmation_memory_root,
 )
+from ai_sdlc.integrations.ide_adapter import build_adapter_governance_surface
 from ai_sdlc.models.frontend_browser_gate import (
     BrowserGateProbeRuntimeSession,
     BrowserProbeArtifactRecord,
@@ -164,6 +165,8 @@ PROGRAM_FRONTEND_BROWSER_GATE_RECHECK_COMMAND = (
 PROGRAM_TRUTH_SYNC_DRY_RUN_COMMAND = "python -m ai_sdlc program truth sync --dry-run"
 PROGRAM_TRUTH_SYNC_EXECUTE_COMMAND = "python -m ai_sdlc program truth sync --execute --yes"
 PROGRAM_TRUTH_AUDIT_COMMAND = "python -m ai_sdlc program truth audit"
+PROGRAM_HOST_INGRESS_CAPABILITY_ID = "agent-adapter-verified-host-ingress"
+PROGRAM_HOST_INGRESS_CANONICAL_BLOCKER_PREFIX = "adapter_canonical_consumption"
 PROGRAM_TRUTH_SOURCE_DISCOVERY_ROOT = Path("docs")
 PROGRAM_TRUTH_SOURCE_PHASE_RE = re.compile(
     r"(?:\bP1\b|\bP2\b|\bP3\b|\bPhase\s*[23]\b|第二期|第三期|二期|三期)",
@@ -2392,6 +2395,10 @@ class ProgramService:
             blockers.append("capability_closure_audit:missing")
         if release_scope and closure_state != "closed":
             blockers.append(f"capability_closure_audit:{closure_state}")
+        if release_scope:
+            blockers.extend(
+                self._release_gate_adapter_blockers(capability_id=capability.id)
+            )
 
         capability_validation_errors = [
             error
@@ -2470,6 +2477,20 @@ class ProgramService:
             blocking_refs=_unique_strings(blockers),
             stale_reason="",
         )
+
+    def _release_gate_adapter_blockers(self, *, capability_id: str) -> list[str]:
+        if capability_id != PROGRAM_HOST_INGRESS_CAPABILITY_ID:
+            return []
+
+        governance_surface = build_adapter_governance_surface(self.root)
+        canonical_result = str(
+            governance_surface.get("adapter_canonical_consumption_result", "")
+        ).strip() or "unverified"
+        if canonical_result == "verified":
+            return []
+        return [
+            f"{PROGRAM_HOST_INGRESS_CANONICAL_BLOCKER_PREFIX}:{canonical_result}"
+        ]
 
     def _run_truth_check_ref(self, ref: str) -> dict[str, object]:
         path = self._resolve_project_relative_path(ref)
