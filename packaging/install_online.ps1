@@ -4,6 +4,16 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
+$env:PYTHONUTF8 = "1"
+$env:PYTHONIOENCODING = "utf-8"
+try {
+  $utf8 = [System.Text.UTF8Encoding]::new($false)
+  [Console]::InputEncoding = $utf8
+  [Console]::OutputEncoding = $utf8
+  $OutputEncoding = $utf8
+} catch {
+  Write-Warning "Unable to force UTF-8 console encoding: $_"
+}
 
 function Write-BilingualStatus {
   param(
@@ -86,4 +96,3 @@ Write-BilingualStatus `
   -Command "& '$VenvPath\Scripts\Activate.ps1'; ai-sdlc adapter status; ai-sdlc run --dry-run" `
   -PurposeZh "激活 venv，检查 adapter 接入真值，再执行安全预演；run --dry-run 只证明 CLI 预演成功，不证明治理已激活。" `
   -PurposeEn "Activate the venv, inspect adapter ingress truth, then run the safe rehearsal; run --dry-run only proves the CLI rehearsal succeeded, not governance activation."
-

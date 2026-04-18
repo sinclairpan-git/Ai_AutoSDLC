@@ -26,3 +26,7 @@ def test_windows_offline_smoke_workflow_covers_bundle_build_install_and_cli_chec
     assert "adapter status" in workflow
     assert "run --dry-run" in workflow
     assert "upload-artifact" in workflow
+    assert "PYTHONUTF8" in workflow
+    assert "PYTHONIOENCODING" in workflow
+    assert "Console]::OutputEncoding" in workflow
+    assert "UTF8Encoding" in workflow

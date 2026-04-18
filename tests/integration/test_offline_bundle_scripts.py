@@ -677,8 +677,15 @@ def test_windows_install_scripts_include_auto_python_detection_and_bilingual_gui
     assert "命令作用 / What this command does" in offline_ps1
     assert "amd64" in offline_ps1
     assert "x64" in offline_ps1
+    assert "PYTHONUTF8" in offline_ps1
+    assert "PYTHONIOENCODING" in offline_ps1
+    assert "UTF8Encoding" in offline_ps1
+    assert "`run --dry-run`" not in offline_ps1
 
     assert "winget install --id Python.Python.3.11" in online_ps1
     assert "choco install python311 -y" in online_ps1
     assert "当前状态 / Current status" in online_ps1
     assert "ai-sdlc adapter status" in online_ps1
+    assert "PYTHONUTF8" in online_ps1
+    assert "PYTHONIOENCODING" in online_ps1
+    assert "UTF8Encoding" in online_ps1
