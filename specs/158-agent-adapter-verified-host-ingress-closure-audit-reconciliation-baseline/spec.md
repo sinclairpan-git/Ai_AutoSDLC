@@ -21,10 +21,11 @@
 当前系统在“适配器接入真值已 verified”与“canonical content 仍缺消费证明 / close gate 仍为 RETRY”之间存在解释张力：
 
 - 从接入真值看，Codex host ingress 已有 machine-verifiable 证据。
-- 从启动体验看，`run --dry-run` 当前已能输出阶段运行与阶段结论，但结果仍是 `close: RETRY`，因此不能被误写为 close-ready。
+- 从 canonical consumption 看，当前仍缺 machine-verifiable 证据证明宿主已实际消费 `AGENTS.md` canonical content，因此不能把 ingress verified 直接外推为治理闭环 verified。
+- 从启动入口看，`run --dry-run` 当前已能输出阶段运行与阶段结论，但结果仍是 `close: RETRY`；该观测只构成辅助现场证据，不能被误写为 close-ready 或 canonical consumption proof。
 - 从 root manifest 文案看，旧摘要仍停留在 010/094 时期的保守叙述，没有吸收 121/122 的真值冻结与当前 `adapter status` 输出。
 
-若直接删除 S9/root cluster，会把“已验证的 host ingress”与“未证明的 dry-run startup behavior”混为一谈。若继续保留旧摘要，又会低估当前已 materialized 的 verified host ingress 能力。
+若直接删除 S9/root cluster，会把“已验证的 host ingress”与“未证明的 canonical content consumption / close readiness”混为一谈。若继续保留旧摘要，又会低估当前已 materialized 的 verified host ingress 能力。
 
 ## 目标
 
@@ -34,11 +35,11 @@
 2. 明确区分以下三件事：
    - host ingress 是否 verified_loaded；
    - `adapter activate` 是否只是 acknowledgement；
-   - `run --dry-run` 是否具备可观察、可终止、可解释的启动入口行为。
+   - `run --dry-run` 是否提供可观察、可终止、可解释的辅助现场证据，但不被升格为 canonical consumption proof。
 3. 在 root manifest 中做 truth-preserving reconciliation：
    - 若证据足够，允许关闭或移除该 root cluster。
    - 若证据不足，必须保留 `partial`，但更新摘要、缺口与后续动作，不能继续沿用陈旧叙述。
-4. 将 UX 合议结论固化为约束：用户不能面对“真值已绿但入口静默挂起”的混乱反馈。
+4. 将 UX 合议结论固化为约束：用户不能面对“真值已绿，但 canonical consumption / close readiness 仍未证明”的混乱反馈。
 
 ## 非目标
 
@@ -47,7 +48,7 @@
 1. 不预设 S9 一定关闭。
 2. 不把 `adapter activate` 升格为 verified proof。
 3. 不仅凭 `env:OPENAI_CODEX` 就推断“宿主已读取 canonical path 内容”，除非当前实现能提供额外 machine-verifiable 证据。
-4. 不以文档改写掩盖 `run --dry-run` 的长时间静默或可观察性问题。
+4. 不以文档改写掩盖 canonical consumption proof 缺口、`close: RETRY` 事实，或 `run --dry-run` 的可观察性问题。
 5. 不扩展新的 IDE vendor 适配范围；本项只处理当前 Codex canonical path 与启动真值闭环。
 
 ## 输入与事实源
@@ -98,7 +99,7 @@
 - `governance_activation_state`
 - `governance_activation_verifiable`
 
-### FR-158-003 启动入口可观察性审计
+### FR-158-003 启动入口辅助证据审计
 
 必须对 `python -m ai_sdlc run --dry-run` 做一次有界观测，不允许把“长时间静默后完成”笼统表述成“已经通过”。执行结果至少要被归类为以下之一：
 
@@ -106,7 +107,7 @@
 2. 明确失败并可解释；
 3. 仍静默/阻塞，需要后续缺陷 work item 继续处理。
 
-同时必须说明该结果是否受到历史 checkpoint 路径影响，避免把“checkpoint 负载”误判为“adapter ingress 退化”。
+同时必须说明该结果是否受到历史 checkpoint 路径影响，避免把“checkpoint 负载”误判为“adapter ingress 退化”。该项输出仅作为 root cluster reconciliation 的辅助现场证据，不得替代 canonical content consumption proof。
 
 ### FR-158-004 Root Cluster Reconciliation
 
@@ -122,7 +123,7 @@
 执行结果必须把以下 UX 约束落地到文档或后续动作：
 
 - `adapter status` 的 acknowledgement 字段不得掩盖 verified ingress 真值。
-- `run --dry-run` 不得以静默行为向操作者制造“像是通过又像是挂起”的歧义。
+- `run --dry-run` 不得以静默行为向操作者制造“像是通过又像是挂起”的歧义，也不得被误读为 canonical content 已被消费。
 - 若 root cluster 不能关闭，必须明确给出操作者仍缺哪一条证据。
 
 ## 成功标准
@@ -137,7 +138,7 @@
 
 ### SC-158-003
 
-`run --dry-run` 的现场表现被明确记录为成功但静默、成功且可观察、失败或静默待修复之一，不再用模糊语言表述。
+`run --dry-run` 的现场表现被明确记录为成功但静默、成功且可观察、失败或静默待修复之一，不再用模糊语言表述，且不会被升格为 canonical consumption proof。
 
 ### SC-158-004
 
@@ -158,7 +159,7 @@
 本项至少产出：
 
 1. 一份更新后的 root manifest 决议，或一份明确说明“暂不关闭”的 root summary 修正。
-2. 一份对 `run --dry-run` 可观察行为的证据记录，至少说明“成功但静默”是否仍构成未闭环缺口。
+2. 一份对 `run --dry-run` 可观察行为的证据记录，至少说明其作为辅助现场证据时是否仍存在未闭环缺口。
 3. 一份与 121/122 保持一致的 ingress truth 说明。
 4. 必要时新增后续缺陷或改进行动项，但不得伪装为本项已关闭。
 
@@ -168,7 +169,7 @@
 
 1. root cluster 的最终状态已被证据化决议；
 2. `adapter status`、root manifest、121/122 之间无语义冲突；
-3. `run --dry-run` 的现实行为已有明确归类；
+3. `run --dry-run` 的现实行为已有明确归类，且其证据边界已被写清；
 4. 若仍存在缺口，缺口已被显式保留，而不是被文档性掩盖。
 
 ---
