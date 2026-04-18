@@ -2,7 +2,12 @@
 
 from __future__ import annotations
 
+import json
+import shutil
+import subprocess
 from pathlib import Path
+
+import pytest
 
 from ai_sdlc.core.frontend_browser_gate_runtime import (
     BrowserGateInteractionProbeCapture,
@@ -196,3 +201,78 @@ def test_materialize_browser_gate_probe_runtime_marks_missing_runner_artifact_as
     smoke_receipt = next(item for item in receipts if item.check_name == "playwright_smoke")
     assert smoke_receipt.classification_candidate == "evidence_missing"
     assert bundle.overall_gate_status == "incomplete"
+
+
+@pytest.mark.skipif(shutil.which("node") is None, reason="node runtime unavailable")
+def test_frontend_browser_gate_probe_runner_maps_goto_failure_to_navigation_failed(
+    tmp_path: Path,
+) -> None:
+    source_script_path = (
+        Path(__file__).resolve().parents[2] / "scripts" / "frontend_browser_gate_probe_runner.mjs"
+    )
+    script_dir = tmp_path / "scripts"
+    script_dir.mkdir()
+    script_path = script_dir / "frontend_browser_gate_probe_runner.mjs"
+    script_path.write_text(source_script_path.read_text(encoding="utf-8"), encoding="utf-8")
+    fake_playwright_dir = tmp_path / "node_modules" / "playwright"
+    fake_playwright_dir.mkdir(parents=True)
+    (fake_playwright_dir / "package.json").write_text(
+        json.dumps({"name": "playwright", "type": "module"}),
+        encoding="utf-8",
+    )
+    (fake_playwright_dir / "index.js").write_text(
+        """
+export const chromium = {
+  async launch() {
+    return {
+      async newContext() {
+        return {
+          tracing: {
+            async start() {},
+            async stop() {},
+          },
+          async newPage() {
+            return {
+              async goto() {
+                throw new Error("net::ERR_CONNECTION_REFUSED");
+              },
+              url() {
+                return "http://127.0.0.1:4173/";
+              },
+              async close() {},
+            };
+          },
+          async close() {},
+        };
+      },
+      async close() {},
+    };
+  },
+};
+""".strip(),
+        encoding="utf-8",
+    )
+    artifact_root = tmp_path / "artifacts"
+    artifact_root.mkdir()
+    payload = {
+        "artifact_root": str(artifact_root),
+        "artifact_root_ref": "artifacts",
+        "browser_entry_ref": "http://127.0.0.1:4173/",
+        "gate_run_id": "gate-run-001",
+        "generated_at": "2026-04-18T11:00:00Z",
+    }
+
+    completed = subprocess.run(
+        ["node", str(script_path)],
+        cwd=tmp_path,
+        input=json.dumps(payload),
+        text=True,
+        capture_output=True,
+        check=True,
+    )
+
+    result = json.loads(completed.stdout)
+    assert result["runtime_status"] == "failed_transient"
+    assert result["diagnostic_codes"] == ["navigation_failed"]
+    assert result["shared_capture"]["diagnostic_codes"] == ["navigation_failed"]
+    assert result["interaction_capture"]["blocking_reason_codes"] == ["navigation_failed"]

@@ -99,7 +99,11 @@ async function captureProbe(playwright, payload) {
   let finalUrl = "";
   try {
     const targetUrl = await resolveBrowserEntry(payload);
-    await page.goto(targetUrl, { waitUntil: "domcontentloaded", timeout: 10000 });
+    try {
+      await page.goto(targetUrl, { waitUntil: "domcontentloaded", timeout: 10000 });
+    } catch {
+      throw new Error("navigation_failed");
+    }
     finalUrl = page.url();
     await page.screenshot({ path: screenshotPath, fullPage: true });
 
