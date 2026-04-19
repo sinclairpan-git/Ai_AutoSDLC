@@ -1700,10 +1700,10 @@ specs:
   owner: team-frontend-governance
   frontend_evidence_class: framework_capability
 truth_snapshot:
-  generated_at: '2026-04-19T06:16:04Z'
+  generated_at: '2026-04-19T06:22:15Z'
   generated_by: ai-sdlc program truth sync
   generator_version: program_truth_snapshot_v1
-  repo_revision: 46f1442
+  repo_revision: 8094d00
   authoring_hash: 9a86af97a889b8e4ee420ce8d1d7b556de7c78a7690e495c0421e1eadbba12c1
   source_hashes:
     truth_check:specs/095-frontend-mainline-product-delivery-baseline: 40b5e9332011b0d8941245c0e8e7c3b192e897b2bc4aa4876a3d37a94f9b80f0
@@ -1743,7 +1743,7 @@ truth_snapshot:
     truth_check:specs/122-agent-adapter-verified-host-ingress-runtime-baseline: 668bc35f896163f99929da88d733d0de367d996b276b9775d659227fcafcbca7
     close_check:specs/121-agent-adapter-verified-host-ingress-truth-baseline: bb1a96307f540d67dcb9ccb06e03e5ef522ae9acfd1e9a2b5f5816aed8658072
     close_check:specs/122-agent-adapter-verified-host-ingress-runtime-baseline: bb1a96307f540d67dcb9ccb06e03e5ef522ae9acfd1e9a2b5f5816aed8658072
-  snapshot_hash: 0edc1b372502cd056b65282a374fe040151a9924a39126e56de39dff0a179412
+  snapshot_hash: cf7ca179c8ffeb502b84ce4d21cca60315efe325531ce12060f8fc22bd90786c
   computed_capabilities:
   - capability_id: frontend-mainline-delivery
     closure_state: closed
