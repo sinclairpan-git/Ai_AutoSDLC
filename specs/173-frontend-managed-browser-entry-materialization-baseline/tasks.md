@@ -17,4 +17,4 @@
 - [x] 跑定向 pytest
 - [x] 跑 `git diff --check`
 - [x] truth sync
-- [ ] repo dry-run
+- [x] repo dry-run

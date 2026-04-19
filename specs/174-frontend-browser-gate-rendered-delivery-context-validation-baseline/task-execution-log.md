@@ -30,6 +30,12 @@
 - `V3`（diff hygiene）
   - 命令：`git diff --check`
   - 结果：通过
+- `V4`（program truth refresh）
+  - 命令：`python -m ai_sdlc program truth sync --execute --yes`
+  - 结果：truth snapshot 已刷新为 `ready`；`174` 已登记进 `program-manifest.yaml`
+- `V5`（repo dry-run）
+  - 命令：`python -m ai_sdlc run --dry-run`
+  - 结果：`Stage close: PASS`
 
 #### 2.3 任务记录
 
@@ -68,8 +74,8 @@
 
 #### 2.5 任务/计划同步状态（Mandatory）
 
-- `tasks.md` 同步状态：truth sync / repo dry-run 之外，其余任务已完成。
-- `plan.md` 同步状态：focused tests、ruff 与 diff hygiene 已完成。
+- `tasks.md` 同步状态：Batch 1 / 2 / 3 已全部完成。
+- `plan.md` 同步状态：focused tests、ruff、diff hygiene、truth refresh 与 repo dry-run 已完成。
 - 是否继续下一批：是；默认继续回到真实 code generation runtime 主线。
 
 #### 2.6 自动决策记录（如有）

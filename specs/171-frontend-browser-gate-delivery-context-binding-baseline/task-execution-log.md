@@ -34,6 +34,9 @@
 - `V4`（touched-files lint）
   - 命令：`uv run ruff check src/ai_sdlc/cli/program_cmd.py src/ai_sdlc/core/program_service.py src/ai_sdlc/core/frontend_browser_gate_runtime.py src/ai_sdlc/models/frontend_browser_gate.py tests/unit/test_program_service.py tests/unit/test_frontend_browser_gate_runtime.py tests/integration/test_cli_program.py`
   - 结果：通过
+- `V5`（repo dry-run）
+  - 命令：`python -m ai_sdlc run --dry-run`
+  - 结果：`Stage close: PASS`
 
 #### 2.3 任务记录
 
@@ -77,8 +80,8 @@
 
 #### 2.5 任务/计划同步状态（Mandatory）
 
-- `tasks.md` 同步状态：truth sync 已完成；repo dry-run 待本批 git close-out 后 fresh 回放。
-- `plan.md` 同步状态：focused tests、diff hygiene 与 truth refresh 已完成。
+- `tasks.md` 同步状态：Batch 1 / 2 / 3 已全部完成。
+- `plan.md` 同步状态：focused tests、diff hygiene、truth refresh、touched-files lint 与 repo dry-run 已完成。
 - 是否继续下一批：是；默认继续回到“真实 code generation runtime”主线。
 
 #### 2.6 自动决策记录（如有）

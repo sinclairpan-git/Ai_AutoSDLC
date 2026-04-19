@@ -18,4 +18,4 @@
 - [x] 跑定向 pytest
 - [x] 跑 `git diff --check`
 - [x] 执行 truth sync
-- [ ] 再跑 repo dry-run
+- [x] 再跑 repo dry-run

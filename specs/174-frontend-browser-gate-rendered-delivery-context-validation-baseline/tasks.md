@@ -18,5 +18,5 @@
 - [x] 跑定向 pytest
 - [x] 跑 `uv run ruff check`
 - [x] 跑 `git diff --check`
-- [ ] truth sync
-- [ ] repo dry-run
+- [x] truth sync
+- [x] repo dry-run
