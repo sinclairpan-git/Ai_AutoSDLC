@@ -1128,6 +1128,9 @@ Phase 1 的边界要记住：
 | program validate / status / plan | `python -m ai_sdlc program ...` | Program 级校验与规划 | **可能写 adapter**：program service 自身以读和规划为主，但 CLI 入口仍可能先触发 adapter apply |
 | program solution-confirm --dry-run | `python -m ai_sdlc program solution-confirm --dry-run` | 技术方案确认预演 | **可能写 adapter**：命令主体会展示 recommendation / wizard / final preflight；若带 `--report` 会额外写 report 文件 |
 | program solution-confirm --execute --yes | `python -m ai_sdlc program solution-confirm --execute --yes` | 技术方案确认落盘 | **可能写 adapter**；确认后会写 `.ai-sdlc/memory/frontend-solution-confirmation/` snapshot artifacts，并可选写 report 文件 |
+| program solution-confirm --execute --continue --yes | `python -m ai_sdlc program solution-confirm --execute --continue --yes` | 确认后继续进入 managed delivery apply | **可能写 adapter**；会先写 solution snapshot，再进入 apply；若 `requested_* != effective_*`，还需额外提供 `--ack-effective-change` |
+| program managed-delivery-apply --dry-run | `python -m ai_sdlc program managed-delivery-apply --dry-run` | managed delivery apply 预览 | **可能写 adapter**；若省略 `--request`，会从 current truth 物化 request，并显示 guard / blocker / next step |
+| program managed-delivery-apply --execute --yes | `python -m ai_sdlc program managed-delivery-apply --execute --yes` | 执行 managed delivery apply | **可能写 adapter**；若省略 `--request` 且 `requested_* != effective_*`，还需额外提供 `--ack-effective-change` |
 | program page-ui-schema-handoff | `python -m ai_sdlc program page-ui-schema-handoff` | 查看 `147` 的 provider/kernel handoff surface | **可能写 adapter**：命令主体只读；依赖既有 `.ai-sdlc/memory/frontend-solution-confirmation/latest.yaml`，若缺失会返回 blocker |
 | program theme-token-governance-handoff | `python -m ai_sdlc program theme-token-governance-handoff` | 查看 `148` 的 theme governance handoff、requested/effective theme 与 override diagnostics | **可能写 adapter**：命令主体只读；依赖既有 solution snapshot 与 provider style-support truth，若缺失会返回 blocker |
 | program integrate --dry-run | `python -m ai_sdlc program integrate --dry-run` | guarded integration runbook 预览 | **可能写 adapter**；若带 `--report`，还会写 report 文件 |
@@ -1160,12 +1163,35 @@ Phase 1 的边界要记住：
 - 最终确认并落盘：
   - `python -m ai_sdlc program solution-confirm --mode advanced --execute --yes`
   - 会把确认后的 snapshot 落到 `.ai-sdlc/memory/frontend-solution-confirmation/`。
+- 确认后继续进入 apply：
+  - `python -m ai_sdlc program solution-confirm --execute --continue --yes`
+  - 会先写 `.ai-sdlc/memory/frontend-solution-confirmation/latest.yaml`，再进入 managed delivery apply。
+  - 如果 `requested_* != effective_*`，必须额外带上 `--ack-effective-change`。
 
 这里有三个边界需要明确：
 
 - `will_change_on_confirm` 只属于确认前的派生展示字段，不会写入最终 snapshot artifact。
 - 如果请求的 enterprise 方案不可用，但存在允许的退路，CLI 会保留 `requested_*`，并把 fallback 结果写到 `effective_*`。
 - 如果预检结果是 `blocked`，命令会停止在确认 gate，不应把它理解为“已自动完成技术选型”。
+
+### 7.0.1) `program managed-delivery-apply` 的最小使用面
+
+`program managed-delivery-apply` 是当前 managed delivery request / execute / artifact 的独立入口。
+
+- request 预览：
+  - `python -m ai_sdlc program managed-delivery-apply --dry-run`
+  - 若省略 `--request`，CLI 会从 current truth 自动物化 request，并展示 selected actions、blockers 与 next steps。
+- 执行显式 request：
+  - `python -m ai_sdlc program managed-delivery-apply --request <path> --execute --yes`
+  - 会执行该 request 对应的 narrow apply runtime，并写 `.ai-sdlc/memory/frontend-managed-delivery-apply/latest.yaml`。
+- 执行 truth-derived request：
+  - `python -m ai_sdlc program managed-delivery-apply --execute --yes`
+  - 若省略 `--request` 且 current truth 中存在 `requested_* != effective_*`，必须额外带上 `--ack-effective-change`，否则命令会 fail-closed。
+
+这里也有两个边界：
+
+- `--ack-effective-change` 只约束“从 current truth 自动物化 request”的路径，不额外注入到显式 `--request` 回放路径。
+- `Managed Delivery Apply Result` 不是最终交付完成态；`apply_succeeded_pending_browser_gate` 仍表示 browser gate 尚未运行。
 
 ### 7.1) `page-ui-schema` 的最小使用面
 

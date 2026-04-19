@@ -2195,6 +2195,110 @@ def test_build_frontend_managed_delivery_apply_request_blocks_enterprise_private
     assert "private_registry_prerequisite_missing:company-registry-token" in request.remaining_blockers
 
 
+def test_build_frontend_managed_delivery_apply_request_requires_second_confirmation_for_effective_change(
+    initialized_project_dir: Path,
+    monkeypatch,
+) -> None:
+    root = initialized_project_dir
+    save_project_config(root, ProjectConfig(adapter_ingress_state="verified_loaded"))
+    snapshot = build_mvp_solution_snapshot(
+        project_id="001-auth",
+        decision_status="fallback_required",
+        provider_mode="cross_stack_fallback",
+        fallback_reason_code="enterprise_provider_unavailable",
+        requested_provider_id="enterprise-vue2",
+        effective_provider_id="public-primevue",
+        recommended_provider_id="public-primevue",
+        requested_style_pack_id="enterprise-default",
+        effective_style_pack_id="modern-saas",
+        recommended_style_pack_id="modern-saas",
+        requested_frontend_stack="vue2",
+        effective_frontend_stack="vue3",
+        recommended_frontend_stack="vue3",
+        availability_summary={
+            "overall_status": "attention",
+            "passed_check_ids": [],
+            "failed_check_ids": ["company-registry-token"],
+            "blocking_reason_codes": [],
+        },
+        availability_reason_text="Enterprise provider prerequisites are not satisfied.",
+        preflight_status="warning",
+        preflight_reason_codes=["enterprise_provider_unavailable"],
+        style_fidelity_status="full",
+    )
+    _write_builtin_delivery_truth(root, snapshot=snapshot)
+    monkeypatch.setattr(
+        program_service_module,
+        "evaluate_current_host_runtime",
+        lambda project_root: _build_host_runtime_plan_for_tests(
+            node_runtime_available=True,
+            package_manager_available=True,
+            playwright_browsers_available=True,
+        ),
+    )
+    svc = ProgramService(root)
+
+    request = svc.build_frontend_managed_delivery_apply_request(
+        second_confirmation_acknowledged=False
+    )
+
+    assert request.apply_state == "blocked_before_start"
+    assert request.decision_receipt is not None
+    assert request.decision_receipt.second_confirmation_acknowledged is False
+    assert "second_confirmation_missing" in request.remaining_blockers
+
+
+def test_build_frontend_managed_delivery_apply_request_truth_derived_defaults_to_second_confirmation_blocker_on_effective_change(
+    initialized_project_dir: Path,
+    monkeypatch,
+) -> None:
+    root = initialized_project_dir
+    save_project_config(root, ProjectConfig(adapter_ingress_state="verified_loaded"))
+    snapshot = build_mvp_solution_snapshot(
+        project_id="001-auth",
+        decision_status="fallback_required",
+        provider_mode="cross_stack_fallback",
+        fallback_reason_code="enterprise_provider_unavailable",
+        requested_provider_id="enterprise-vue2",
+        effective_provider_id="public-primevue",
+        recommended_provider_id="public-primevue",
+        requested_style_pack_id="enterprise-default",
+        effective_style_pack_id="modern-saas",
+        recommended_style_pack_id="modern-saas",
+        requested_frontend_stack="vue2",
+        effective_frontend_stack="vue3",
+        recommended_frontend_stack="vue3",
+        availability_summary={
+            "overall_status": "attention",
+            "passed_check_ids": [],
+            "failed_check_ids": ["company-registry-token"],
+            "blocking_reason_codes": [],
+        },
+        availability_reason_text="Enterprise provider prerequisites are not satisfied.",
+        preflight_status="warning",
+        preflight_reason_codes=["enterprise_provider_unavailable"],
+        style_fidelity_status="full",
+    )
+    _write_builtin_delivery_truth(root, snapshot=snapshot)
+    monkeypatch.setattr(
+        program_service_module,
+        "evaluate_current_host_runtime",
+        lambda project_root: _build_host_runtime_plan_for_tests(
+            node_runtime_available=True,
+            package_manager_available=True,
+            playwright_browsers_available=True,
+        ),
+    )
+    svc = ProgramService(root)
+
+    request = svc.build_frontend_managed_delivery_apply_request()
+
+    assert request.apply_state == "blocked_before_start"
+    assert request.decision_receipt is not None
+    assert request.decision_receipt.second_confirmation_acknowledged is False
+    assert "second_confirmation_missing" in request.remaining_blockers
+
+
 def test_execute_frontend_managed_delivery_apply_returns_pending_browser_gate_success(
     initialized_project_dir: Path,
 ) -> None:

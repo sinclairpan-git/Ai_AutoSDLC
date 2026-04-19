@@ -2987,11 +2987,15 @@ class ProgramService:
     def build_frontend_managed_delivery_apply_request(
         self,
         request_path: str | Path | None = None,
+        *,
+        second_confirmation_acknowledged: bool | None = None,
     ) -> ProgramFrontendManagedDeliveryApplyRequest:
         """Load and gate a managed delivery apply request payload."""
 
         payload_path = (
-            self._materialize_frontend_managed_delivery_apply_request()
+            self._materialize_frontend_managed_delivery_apply_request(
+                second_confirmation_acknowledged=second_confirmation_acknowledged
+            )
             if request_path is None
             else self._resolve_project_relative_path(request_path)
         )
@@ -3055,8 +3059,14 @@ class ProgramService:
             decision_receipt=decision_receipt,
         )
 
-    def _materialize_frontend_managed_delivery_apply_request(self) -> Path:
-        payload = self._build_frontend_managed_delivery_apply_request_payload()
+    def _materialize_frontend_managed_delivery_apply_request(
+        self,
+        *,
+        second_confirmation_acknowledged: bool | None = None,
+    ) -> Path:
+        payload = self._build_frontend_managed_delivery_apply_request_payload(
+            second_confirmation_acknowledged=second_confirmation_acknowledged
+        )
         payload_path = self.root / PROGRAM_FRONTEND_MANAGED_DELIVERY_REQUEST_ARTIFACT_REL_PATH
         payload_path.parent.mkdir(parents=True, exist_ok=True)
         payload_path.write_text(
@@ -3114,10 +3124,19 @@ class ProgramService:
 
         return None, canonical_apply_rel, None, "missing"
 
-    def _build_frontend_managed_delivery_apply_request_payload(self) -> dict[str, object]:
+    def _build_frontend_managed_delivery_apply_request_payload(
+        self,
+        *,
+        second_confirmation_acknowledged: bool | None = None,
+    ) -> dict[str, object]:
         solution_snapshot, snapshot_blocker = self._load_latest_frontend_solution_snapshot()
         if solution_snapshot is None:
             raise ValueError(snapshot_blocker or "frontend_solution_snapshot_missing")
+        effective_second_confirmation_acknowledged = (
+            second_confirmation_acknowledged
+            if second_confirmation_acknowledged is not None
+            else not _frontend_solution_snapshot_has_effective_change(solution_snapshot)
+        )
 
         host_plan = evaluate_current_host_runtime(self.root)
         bundle = self._resolve_frontend_delivery_bundle(solution_snapshot)
@@ -3308,7 +3327,7 @@ class ProgramService:
                 "selected_action_ids": selected_action_ids,
                 "deselected_optional_action_ids": [workspace_integration_id],
                 "risk_acknowledgement_ids": [],
-                "second_confirmation_acknowledged": True,
+                "second_confirmation_acknowledged": effective_second_confirmation_acknowledged,
                 "confirmed_plan_fingerprint": plan_fingerprint,
                 "created_at": utc_now_z(),
             },
@@ -12193,6 +12212,24 @@ def _builtin_provider_manifest(provider_id: str) -> dict[str, object] | None:
             "default_style_pack_id": "modern-saas",
         }
     return None
+
+
+def _frontend_solution_snapshot_has_effective_change(
+    snapshot: FrontendSolutionSnapshot,
+) -> bool:
+    fields = (
+        "project_shape",
+        "frontend_stack",
+        "provider_id",
+        "backend_stack",
+        "api_collab_mode",
+        "style_pack_id",
+    )
+    return any(
+        getattr(snapshot, f"requested_{field_name}")
+        != getattr(snapshot, f"effective_{field_name}")
+        for field_name in fields
+    )
 
 
 def _builtin_provider_style_support(provider_id: str) -> dict[str, object] | None:

@@ -846,6 +846,9 @@ class TestCliProgram:
                 package_manager_available=True,
                 playwright_browsers_available=True,
             ),
+        ), patch(
+            "ai_sdlc.core.managed_delivery_apply.subprocess.run",
+            return_value=subprocess.CompletedProcess(args=["pnpm"], returncode=0),
         ):
             result = runner.invoke(app, ["program", "managed-delivery-apply", "--dry-run"])
 
@@ -891,6 +894,9 @@ class TestCliProgram:
                 package_manager_available=True,
                 playwright_browsers_available=True,
             ),
+        ), patch(
+            "ai_sdlc.core.managed_delivery_apply.subprocess.run",
+            return_value=subprocess.CompletedProcess(args=["pnpm"], returncode=0),
         ):
             result = runner.invoke(app, ["program", "managed-delivery-apply", "--dry-run"])
 
@@ -898,6 +904,115 @@ class TestCliProgram:
         assert "private_registry_prerequisite_missing:company-registry-token" in result.output
         assert "Enterprise package access is not ready" in result.output
         assert "provide company-registry-token and rerun" in result.output
+
+    def test_program_managed_delivery_apply_execute_truth_derived_requires_ack_for_effective_change(
+        self, initialized_project_dir: Path
+    ) -> None:
+        root = initialized_project_dir
+        save_project_config(root, ProjectConfig(adapter_ingress_state="verified_loaded"))
+        snapshot = build_mvp_solution_snapshot(
+            project_id="001-auth",
+            decision_status="fallback_required",
+            provider_mode="cross_stack_fallback",
+            fallback_reason_code="enterprise_provider_unavailable",
+            requested_provider_id="enterprise-vue2",
+            effective_provider_id="public-primevue",
+            recommended_provider_id="public-primevue",
+            requested_style_pack_id="enterprise-default",
+            effective_style_pack_id="modern-saas",
+            recommended_style_pack_id="modern-saas",
+            requested_frontend_stack="vue2",
+            effective_frontend_stack="vue3",
+            recommended_frontend_stack="vue3",
+            availability_summary={
+                "overall_status": "attention",
+                "passed_check_ids": [],
+                "failed_check_ids": ["company-registry-token"],
+                "blocking_reason_codes": [],
+            },
+            availability_reason_text="Enterprise provider prerequisites are not satisfied.",
+            preflight_status="warning",
+            preflight_reason_codes=["enterprise_provider_unavailable"],
+            style_fidelity_status="full",
+        )
+        _write_builtin_delivery_truth(root, snapshot=snapshot)
+
+        with patch("ai_sdlc.cli.program_cmd.find_project_root", return_value=root), patch.object(
+            program_service_module,
+            "evaluate_current_host_runtime",
+            return_value=_build_host_runtime_plan_for_tests(
+                node_runtime_available=True,
+                package_manager_available=True,
+                playwright_browsers_available=True,
+            ),
+        ):
+            result = runner.invoke(
+                app,
+                ["program", "managed-delivery-apply", "--execute", "--yes"],
+            )
+
+        assert result.exit_code == 2
+        assert "second_confirmation_missing" in result.output
+        assert "--ack-effective-change" in result.output
+
+    def test_program_managed_delivery_apply_execute_truth_derived_accepts_ack_for_effective_change(
+        self, initialized_project_dir: Path
+    ) -> None:
+        root = initialized_project_dir
+        save_project_config(root, ProjectConfig(adapter_ingress_state="verified_loaded"))
+        snapshot = build_mvp_solution_snapshot(
+            project_id="001-auth",
+            decision_status="fallback_required",
+            provider_mode="cross_stack_fallback",
+            fallback_reason_code="enterprise_provider_unavailable",
+            requested_provider_id="enterprise-vue2",
+            effective_provider_id="public-primevue",
+            recommended_provider_id="public-primevue",
+            requested_style_pack_id="enterprise-default",
+            effective_style_pack_id="modern-saas",
+            recommended_style_pack_id="modern-saas",
+            requested_frontend_stack="vue2",
+            effective_frontend_stack="vue3",
+            recommended_frontend_stack="vue3",
+            availability_summary={
+                "overall_status": "attention",
+                "passed_check_ids": [],
+                "failed_check_ids": ["company-registry-token"],
+                "blocking_reason_codes": [],
+            },
+            availability_reason_text="Enterprise provider prerequisites are not satisfied.",
+            preflight_status="warning",
+            preflight_reason_codes=["enterprise_provider_unavailable"],
+            style_fidelity_status="full",
+        )
+        _write_builtin_delivery_truth(root, snapshot=snapshot)
+
+        with patch("ai_sdlc.cli.program_cmd.find_project_root", return_value=root), patch.object(
+            program_service_module,
+            "evaluate_current_host_runtime",
+            return_value=_build_host_runtime_plan_for_tests(
+                node_runtime_available=True,
+                package_manager_available=True,
+                playwright_browsers_available=True,
+            ),
+        ), patch(
+            "ai_sdlc.core.managed_delivery_apply.subprocess.run",
+            return_value=subprocess.CompletedProcess(args=["pnpm"], returncode=0),
+        ):
+            result = runner.invoke(
+                app,
+                [
+                    "program",
+                    "managed-delivery-apply",
+                    "--execute",
+                    "--yes",
+                    "--ack-effective-change",
+                ],
+            )
+
+        assert result.exit_code == 0
+        assert "Managed Delivery Apply Result" in result.output
+        assert "status: apply_succeeded_pending_browser_gate" in result.output
 
     def test_program_browser_gate_probe_execute_materializes_gate_run_artifact(
         self, initialized_project_dir: Path
@@ -2664,6 +2779,167 @@ specs:
         assert result.exit_code == 1
         assert "Frontend solution confirmation blocked" in result.output
         assert not artifact_path.exists()
+
+    def test_program_solution_confirm_execute_continue_runs_managed_delivery_apply(
+        self, initialized_project_dir: Path
+    ) -> None:
+        root = initialized_project_dir
+        _write_manifest(root)
+        save_project_config(root, ProjectConfig(adapter_ingress_state="verified_loaded"))
+
+        with patch("ai_sdlc.cli.program_cmd.find_project_root", return_value=root), patch.object(
+            program_service_module,
+            "evaluate_current_host_runtime",
+            return_value=_build_host_runtime_plan_for_tests(
+                node_runtime_available=True,
+                package_manager_available=True,
+                playwright_browsers_available=True,
+            ),
+        ), patch(
+            "ai_sdlc.core.managed_delivery_apply.subprocess.run",
+            return_value=subprocess.CompletedProcess(args=["pnpm"], returncode=0),
+        ):
+            result = runner.invoke(
+                app,
+                [
+                    "program",
+                    "solution-confirm",
+                    "--enterprise-provider-ineligible",
+                    "--execute",
+                    "--continue",
+                    "--yes",
+                ],
+            )
+
+        snapshot_path = (
+            root
+            / ".ai-sdlc"
+            / "memory"
+            / "frontend-solution-confirmation"
+            / "latest.yaml"
+        )
+        apply_artifact_path = (
+            root
+            / ".ai-sdlc"
+            / "memory"
+            / "frontend-managed-delivery-apply"
+            / "latest.yaml"
+        )
+        assert result.exit_code == 0
+        assert snapshot_path.is_file()
+        assert apply_artifact_path.is_file()
+        assert "Frontend solution confirmation materialized" in result.output
+        assert "Managed Delivery Apply Result" in result.output
+        assert "apply artifact: .ai-sdlc/memory/frontend-managed-delivery-apply/latest.yaml" in result.output
+
+    def test_program_solution_confirm_execute_continue_requires_ack_for_effective_change(
+        self, initialized_project_dir: Path
+    ) -> None:
+        root = initialized_project_dir
+        _write_manifest(root)
+        save_project_config(root, ProjectConfig(adapter_ingress_state="verified_loaded"))
+
+        with patch("ai_sdlc.cli.program_cmd.find_project_root", return_value=root), patch.object(
+            program_service_module,
+            "evaluate_current_host_runtime",
+            return_value=_build_host_runtime_plan_for_tests(
+                node_runtime_available=True,
+                package_manager_available=True,
+                playwright_browsers_available=True,
+            ),
+        ):
+            result = runner.invoke(
+                app,
+                [
+                    "program",
+                    "solution-confirm",
+                    "--frontend-stack",
+                    "vue2",
+                    "--provider-id",
+                    "enterprise-vue2",
+                    "--style-pack-id",
+                    "enterprise-default",
+                    "--enterprise-provider-ineligible",
+                    "--execute",
+                    "--continue",
+                    "--yes",
+                ],
+            )
+
+        snapshot_path = (
+            root
+            / ".ai-sdlc"
+            / "memory"
+            / "frontend-solution-confirmation"
+            / "latest.yaml"
+        )
+        apply_artifact_path = (
+            root
+            / ".ai-sdlc"
+            / "memory"
+            / "frontend-managed-delivery-apply"
+            / "latest.yaml"
+        )
+        assert result.exit_code == 2
+        assert snapshot_path.is_file()
+        assert not apply_artifact_path.exists()
+        assert "--ack-effective-change" in result.output
+
+    def test_program_solution_confirm_execute_continue_surfaces_registry_blocker_honestly(
+        self, initialized_project_dir: Path
+    ) -> None:
+        root = initialized_project_dir
+        _write_manifest(root)
+        save_project_config(root, ProjectConfig(adapter_ingress_state="verified_loaded"))
+
+        with patch("ai_sdlc.cli.program_cmd.find_project_root", return_value=root), patch.object(
+            program_service_module,
+            "evaluate_current_host_runtime",
+            return_value=_build_host_runtime_plan_for_tests(
+                node_runtime_available=True,
+                package_manager_available=True,
+                playwright_browsers_available=True,
+            ),
+        ):
+            result = runner.invoke(
+                app,
+                [
+                    "program",
+                    "solution-confirm",
+                    "--frontend-stack",
+                    "vue2",
+                    "--provider-id",
+                    "enterprise-vue2",
+                    "--style-pack-id",
+                    "enterprise-default",
+                    "--failed-preflight-check-id",
+                    "company-registry-token",
+                    "--execute",
+                    "--continue",
+                    "--yes",
+                ],
+            )
+
+        snapshot_path = (
+            root
+            / ".ai-sdlc"
+            / "memory"
+            / "frontend-solution-confirmation"
+            / "latest.yaml"
+        )
+        apply_artifact_path = (
+            root
+            / ".ai-sdlc"
+            / "memory"
+            / "frontend-managed-delivery-apply"
+            / "latest.yaml"
+        )
+        assert result.exit_code == 1
+        assert snapshot_path.is_file()
+        assert apply_artifact_path.is_file()
+        assert "Managed Delivery Apply Result" in result.output
+        assert "status: blocked_before_start" in result.output
+        assert "private_registry_prerequisite_missing:company-registry-token" in result.output
 
     def test_program_solution_confirm_execute_blocks_unknown_provider_artifact_materialization(
         self, initialized_project_dir: Path

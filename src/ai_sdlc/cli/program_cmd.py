@@ -11,6 +11,8 @@ from rich.table import Table
 from ai_sdlc.core.program_service import (
     FRONTEND_EVIDENCE_CLASS_MIRROR_PROBLEM_FAMILY,
     ProgramFrontendEvidenceClassStatus,
+    ProgramFrontendManagedDeliveryApplyRequest,
+    ProgramFrontendManagedDeliveryApplyResult,
     ProgramFrontendReadiness,
     ProgramFrontendRemediationInput,
     ProgramService,
@@ -44,6 +46,133 @@ def _resolve_root() -> Path:
         )
         raise typer.Exit(code=1)
     return root
+
+
+def _render_managed_delivery_apply_guard(
+    mode_title: str,
+    request_payload: ProgramFrontendManagedDeliveryApplyRequest,
+) -> None:
+    table = Table(title=mode_title)
+    table.add_column("Action Plan")
+    table.add_column("Selected")
+    table.add_column("Executable")
+    table.add_column("Unsupported")
+    table.add_row(
+        request_payload.action_plan_id,
+        ", ".join(request_payload.selected_action_ids) or "-",
+        ", ".join(request_payload.executable_action_ids) or "-",
+        ", ".join(request_payload.unsupported_action_ids) or "-",
+    )
+    console.print(table)
+
+    console.print("\n[bold cyan]Managed Delivery Apply Guard[/bold cyan]")
+    console.print(
+        f"  - request source: {request_payload.request_source_path}",
+        markup=False,
+    )
+    console.print(
+        f"  - apply state: {request_payload.apply_state}",
+        markup=False,
+    )
+    console.print(
+        f"  - confirmation required: {str(request_payload.confirmation_required).lower()}",
+        markup=False,
+    )
+    if request_payload.execution_view is not None:
+        action_types = []
+        action_by_id = {
+            action.action_id: action for action in request_payload.execution_view.action_items
+        }
+        for action_id in request_payload.selected_action_ids:
+            action = action_by_id.get(action_id)
+            if action is not None:
+                action_types.append(action.action_type)
+        if action_types:
+            console.print(
+                f"  - selected action types: {', '.join(action_types)}",
+                markup=False,
+            )
+        if request_payload.execution_view.managed_target_path:
+            console.print(
+                f"  - managed target path: {request_payload.execution_view.managed_target_path}",
+                markup=False,
+            )
+        if request_payload.execution_view.will_not_touch:
+            console.print(
+                "  - will not touch: "
+                + ", ".join(request_payload.execution_view.will_not_touch),
+                markup=False,
+            )
+    console.print(
+        "  - scope: only selected managed-target actions from the confirmed plan can materialize here",
+        markup=False,
+    )
+    console.print(
+        "  - package source boundary: only registry-declared package sets auto-install here",
+        markup=False,
+    )
+    console.print(
+        "  - delivery remains incomplete until browser gate and downstream closure finish",
+        markup=False,
+    )
+    for blocker in request_payload.remaining_blockers:
+        console.print(f"  - blocker: {blocker}", markup=False)
+    for plain_text in request_payload.plain_language_blockers:
+        console.print(f"  - explain: {plain_text}", markup=False)
+    for next_step in request_payload.recommended_next_steps:
+        console.print(f"  - next step: {next_step}", markup=False)
+
+
+def _render_managed_delivery_apply_result(
+    root: Path,
+    result: ProgramFrontendManagedDeliveryApplyResult,
+    artifact_path: Path,
+) -> None:
+    console.print("\n[bold cyan]Managed Delivery Apply Result[/bold cyan]")
+    console.print(f"  - status: {result.result_status}", markup=False)
+    console.print(f"  - headline: {result.headline}", markup=False)
+    console.print(
+        f"  - delivery complete: {str(result.delivery_complete).lower()}",
+        markup=False,
+    )
+    console.print(
+        f"  - browser gate required: {str(result.browser_gate_required).lower()}",
+        markup=False,
+    )
+    console.print(
+        f"  - browser gate state: {result.browser_gate_state}",
+        markup=False,
+    )
+    if result.next_required_gate:
+        console.print(
+            f"  - next required gate: {result.next_required_gate}",
+            markup=False,
+        )
+    for blocker in result.remaining_blockers:
+        console.print(f"  - blocker: {blocker}", markup=False)
+    if result.executed_action_ids:
+        console.print(
+            f"  - executed actions: {', '.join(result.executed_action_ids)}",
+            markup=False,
+        )
+    if result.failed_action_ids:
+        console.print(
+            f"  - failed actions: {', '.join(result.failed_action_ids)}",
+            markup=False,
+        )
+    if result.blocked_action_ids:
+        console.print(
+            f"  - blocked actions: {', '.join(result.blocked_action_ids)}",
+            markup=False,
+        )
+    if result.warnings:
+        console.print("\n[bold yellow]Warnings[/bold yellow]")
+        for warning in result.warnings:
+            console.print(f"  - {warning}")
+    console.print(
+        f"  - apply artifact: {artifact_path.relative_to(root)}",
+        markup=False,
+    )
 
 
 @program_app.command("validate")
@@ -1038,87 +1167,26 @@ def program_managed_delivery_apply(
         "--yes",
         help="Confirm managed delivery apply execute mode.",
     ),
+    ack_effective_change: bool = typer.Option(
+        False,
+        "--ack-effective-change",
+        help="Acknowledge requested_* versus effective_* differences when deriving the request from current truth.",
+    ),
 ) -> None:
     """Preview or execute the narrow managed delivery apply runtime."""
     root = _resolve_root()
     svc = ProgramService(root)
 
-    request_payload = svc.build_frontend_managed_delivery_apply_request(request)
+    request_payload = svc.build_frontend_managed_delivery_apply_request(
+        request,
+        second_confirmation_acknowledged=(True if ack_effective_change else None),
+    )
     mode_title = (
         "Program Managed Delivery Apply Dry-Run"
         if dry_run
         else "Program Managed Delivery Apply Execute"
     )
-
-    table = Table(title=mode_title)
-    table.add_column("Action Plan")
-    table.add_column("Selected")
-    table.add_column("Executable")
-    table.add_column("Unsupported")
-    table.add_row(
-        request_payload.action_plan_id,
-        ", ".join(request_payload.selected_action_ids) or "-",
-        ", ".join(request_payload.executable_action_ids) or "-",
-        ", ".join(request_payload.unsupported_action_ids) or "-",
-    )
-    console.print(table)
-
-    console.print("\n[bold cyan]Managed Delivery Apply Guard[/bold cyan]")
-    console.print(
-        f"  - request source: {request_payload.request_source_path}",
-        markup=False,
-    )
-    console.print(
-        f"  - apply state: {request_payload.apply_state}",
-        markup=False,
-    )
-    console.print(
-        f"  - confirmation required: {str(request_payload.confirmation_required).lower()}",
-        markup=False,
-    )
-    if request_payload.execution_view is not None:
-        action_types = []
-        action_by_id = {
-            action.action_id: action for action in request_payload.execution_view.action_items
-        }
-        for action_id in request_payload.selected_action_ids:
-            action = action_by_id.get(action_id)
-            if action is not None:
-                action_types.append(action.action_type)
-        if action_types:
-            console.print(
-                f"  - selected action types: {', '.join(action_types)}",
-                markup=False,
-            )
-        if request_payload.execution_view.managed_target_path:
-            console.print(
-                f"  - managed target path: {request_payload.execution_view.managed_target_path}",
-                markup=False,
-            )
-        if request_payload.execution_view.will_not_touch:
-            console.print(
-                "  - will not touch: "
-                + ", ".join(request_payload.execution_view.will_not_touch),
-                markup=False,
-            )
-    console.print(
-        "  - scope: only selected managed-target actions from the confirmed plan can materialize here",
-        markup=False,
-    )
-    console.print(
-        "  - package source boundary: only registry-declared package sets auto-install here",
-        markup=False,
-    )
-    console.print(
-        "  - delivery remains incomplete until browser gate and downstream closure finish",
-        markup=False,
-    )
-    for blocker in request_payload.remaining_blockers:
-        console.print(f"  - blocker: {blocker}", markup=False)
-    for plain_text in request_payload.plain_language_blockers:
-        console.print(f"  - explain: {plain_text}", markup=False)
-    for next_step in request_payload.recommended_next_steps:
-        console.print(f"  - next step: {next_step}", markup=False)
+    _render_managed_delivery_apply_guard(mode_title, request_payload)
 
     if dry_run:
         raise typer.Exit(code=0 if not request_payload.remaining_blockers else 1)
@@ -1126,6 +1194,24 @@ def program_managed_delivery_apply(
     if not yes:
         console.print(
             "[bold yellow]`--execute` requires explicit confirmation via `--yes`.[/bold yellow]"
+        )
+        raise typer.Exit(code=2)
+
+    if (
+        request is None
+        and not ack_effective_change
+        and "second_confirmation_missing" in request_payload.remaining_blockers
+    ):
+        console.print(
+            "\n[bold yellow]Effective solution change requires explicit acknowledgement[/bold yellow]"
+        )
+        console.print(
+            "  - current truth contains requested_* versus effective_* differences; review the managed delivery guard before executing",
+            markup=False,
+        )
+        console.print(
+            "  - pass `--ack-effective-change` to confirm the effective solution may differ from the requested solution",
+            markup=False,
         )
         raise typer.Exit(code=2)
 
@@ -1139,51 +1225,7 @@ def program_managed_delivery_apply(
         request=request_payload,
         result=result,
     )
-    console.print("\n[bold cyan]Managed Delivery Apply Result[/bold cyan]")
-    console.print(f"  - status: {result.result_status}", markup=False)
-    console.print(f"  - headline: {result.headline}", markup=False)
-    console.print(
-        f"  - delivery complete: {str(result.delivery_complete).lower()}",
-        markup=False,
-    )
-    console.print(
-        f"  - browser gate required: {str(result.browser_gate_required).lower()}",
-        markup=False,
-    )
-    console.print(
-        f"  - browser gate state: {result.browser_gate_state}",
-        markup=False,
-    )
-    if result.next_required_gate:
-        console.print(
-            f"  - next required gate: {result.next_required_gate}",
-            markup=False,
-        )
-    for blocker in result.remaining_blockers:
-        console.print(f"  - blocker: {blocker}", markup=False)
-    if result.executed_action_ids:
-        console.print(
-            f"  - executed actions: {', '.join(result.executed_action_ids)}",
-            markup=False,
-        )
-    if result.failed_action_ids:
-        console.print(
-            f"  - failed actions: {', '.join(result.failed_action_ids)}",
-            markup=False,
-        )
-    if result.blocked_action_ids:
-        console.print(
-            f"  - blocked actions: {', '.join(result.blocked_action_ids)}",
-            markup=False,
-        )
-    if result.warnings:
-        console.print("\n[bold yellow]Warnings[/bold yellow]")
-        for warning in result.warnings:
-            console.print(f"  - {warning}")
-    console.print(
-        f"  - apply artifact: {artifact_path.relative_to(root)}",
-        markup=False,
-    )
+    _render_managed_delivery_apply_result(root, result, artifact_path)
 
     raise typer.Exit(code=0 if result.passed else 1)
 
@@ -1643,6 +1685,16 @@ def program_solution_confirm(
         "--yes",
         help="Confirm solution confirmation execute mode.",
     ),
+    continue_execution: bool = typer.Option(
+        False,
+        "--continue",
+        help="After persisting the solution confirmation snapshot, continue into managed delivery apply.",
+    ),
+    ack_effective_change: bool = typer.Option(
+        False,
+        "--ack-effective-change",
+        help="Acknowledge requested_* versus effective_* differences before continuing into apply.",
+    ),
 ) -> None:
     """Preview or execute the structured frontend solution confirmation baseline."""
     root = _resolve_root()
@@ -1761,6 +1813,11 @@ def program_solution_confirm(
         console.print(f"\n[green]Report written:[/green] {report_path}")
 
     if dry_run:
+        if continue_execution:
+            console.print(
+                "[bold yellow]`--continue` is only available together with `--execute`.[/bold yellow]"
+            )
+            raise typer.Exit(code=2)
         raise typer.Exit(code=0)
 
     if snapshot.preflight_status == "blocked":
@@ -1772,7 +1829,44 @@ def program_solution_confirm(
     console.print(
         "\n[bold green]Frontend solution confirmation materialized[/bold green]"
     )
-    raise typer.Exit(code=0)
+    if not continue_execution:
+        raise typer.Exit(code=0)
+
+    changed_fields = _frontend_solution_confirmation_change_fields(snapshot)
+    requires_effective_change_ack = bool(changed_fields)
+    if requires_effective_change_ack and not ack_effective_change:
+        console.print(
+            "\n[bold yellow]Effective solution change requires explicit acknowledgement[/bold yellow]"
+        )
+        console.print(
+            "  - requested_* and effective_* differ; review the confirmation diff before continuing into apply",
+            markup=False,
+        )
+        console.print(
+            "  - pass `--ack-effective-change` to confirm the effective solution may differ from the requested solution",
+            markup=False,
+        )
+        raise typer.Exit(code=2)
+
+    apply_request = svc.build_frontend_managed_delivery_apply_request(
+        second_confirmation_acknowledged=(
+            ack_effective_change or not requires_effective_change_ack
+        )
+    )
+    _render_managed_delivery_apply_guard(
+        "Program Managed Delivery Apply Execute",
+        apply_request,
+    )
+    apply_result = svc.execute_frontend_managed_delivery_apply(
+        request=apply_request,
+        confirmed=True,
+    )
+    artifact_path = svc.write_frontend_managed_delivery_apply_artifact(
+        request=apply_request,
+        result=apply_result,
+    )
+    _render_managed_delivery_apply_result(root, apply_result, artifact_path)
+    raise typer.Exit(code=0 if apply_result.passed else 1)
 
 
 @program_app.command("provider-patch-handoff")
