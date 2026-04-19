@@ -29,6 +29,7 @@ class BrowserQualityGateExecutionContext(FrontendBrowserGateModel):
     delivery_entry_id: str = ""
     component_library_packages: list[str] = Field(default_factory=list)
     provider_theme_adapter_id: str = ""
+    page_schema_ids: list[str] = Field(default_factory=list)
     required_probe_set: list[str] = Field(default_factory=list)
     browser_entry_ref: str
     source_linkage_refs: dict[str, str] = Field(default_factory=dict)
@@ -160,6 +161,7 @@ class BrowserQualityBundleMaterializationInput(FrontendBrowserGateModel):
     delivery_entry_id: str = ""
     component_library_packages: list[str] = Field(default_factory=list)
     provider_theme_adapter_id: str = ""
+    page_schema_ids: list[str] = Field(default_factory=list)
     playwright_trace_refs: list[str] = Field(default_factory=list)
     screenshot_refs: list[str] = Field(default_factory=list)
     check_receipts: list[BrowserProbeExecutionReceipt] = Field(default_factory=list)

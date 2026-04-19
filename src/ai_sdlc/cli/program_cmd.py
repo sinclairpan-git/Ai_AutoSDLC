@@ -1430,6 +1430,8 @@ def program_browser_gate_probe(
         )
         for package_name in request.execution_context.component_library_packages:
             console.print(f"  - component package: {package_name}", markup=False)
+        for page_schema_id in request.execution_context.page_schema_ids:
+            console.print(f"  - page schema: {page_schema_id}", markup=False)
         console.print(
             f"  - browser entry ref: {request.execution_context.browser_entry_ref}",
             markup=False,

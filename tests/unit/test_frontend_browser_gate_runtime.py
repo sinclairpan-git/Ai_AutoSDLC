@@ -39,6 +39,7 @@ def _context() -> BrowserQualityGateExecutionContext:
         delivery_entry_id="vue3-public-primevue",
         component_library_packages=["primevue", "@primeuix/themes"],
         provider_theme_adapter_id="public-primevue-theme-bridge",
+        page_schema_ids=["dashboard-workspace", "search-list-workspace"],
         required_probe_set=[
             "playwright_smoke",
             "visual_expectation",
@@ -89,12 +90,14 @@ def test_build_browser_quality_gate_execution_context_derives_index_html_entry_r
         delivery_entry_id="vue3-public-primevue",
         component_library_packages=["primevue", "@primeuix/themes"],
         provider_theme_adapter_id="public-primevue-theme-bridge",
+        page_schema_ids=["dashboard-workspace", "search-list-workspace"],
     )
 
     assert context.browser_entry_ref == "managed/frontend/index.html"
     assert context.delivery_entry_id == "vue3-public-primevue"
     assert context.component_library_packages == ["primevue", "@primeuix/themes"]
     assert context.provider_theme_adapter_id == "public-primevue-theme-bridge"
+    assert context.page_schema_ids == ["dashboard-workspace", "search-list-workspace"]
 
 
 def test_materialize_browser_gate_probe_runtime_executes_real_runner_and_captures_artifacts(
@@ -158,6 +161,7 @@ def test_materialize_browser_gate_probe_runtime_executes_real_runner_and_capture
     assert bundle.delivery_entry_id == "vue3-public-primevue"
     assert bundle.component_library_packages == ["primevue", "@primeuix/themes"]
     assert bundle.provider_theme_adapter_id == "public-primevue-theme-bridge"
+    assert bundle.page_schema_ids == ["dashboard-workspace", "search-list-workspace"]
 
 
 def test_materialize_browser_gate_probe_runtime_marks_missing_runner_artifact_as_evidence_missing(
@@ -374,6 +378,7 @@ export const chromium = {
         "delivery_entry_id": "vue3-public-primevue",
         "component_library_packages": ["primevue", "@primeuix/themes"],
         "provider_theme_adapter_id": "public-primevue-theme-bridge",
+        "page_schema_ids": ["dashboard-workspace", "search-list-workspace"],
         "effective_provider": "public-primevue",
         "effective_style_pack": "modern-saas",
     }
@@ -403,6 +408,10 @@ export const chromium = {
         interaction_snapshot["provider_theme_adapter_id"]
         == "public-primevue-theme-bridge"
     )
+    assert interaction_snapshot["page_schema_ids"] == [
+        "dashboard-workspace",
+        "search-list-workspace",
+    ]
 
 
 @pytest.mark.skipif(shutil.which("node") is None, reason="node runtime unavailable")
@@ -459,10 +468,46 @@ export const chromium = {
                 }
                 const packageMatches = [...html.matchAll(/<li class="package-item">([^<]+)<\\/li>/g)].map((match) => match[1]);
                 const pageMatches = [...html.matchAll(/<li class="page-item">([^<]+)<\\/li>/g)].map((match) => match[1]);
-                return {
-                  bodyText: html.replace(/<[^>]+>/g, " ").trim(),
-                  elementCount: packageMatches.length + pageMatches.length + 1,
-                };
+                const deliveryEntryMatch = html.match(/<p class="entry-eyebrow">([^<]+)<\\/p>/);
+                const validationMissingCodes = [];
+                if (!deliveryEntryMatch || deliveryEntryMatch[1] !== "vue3-public-primevue") {
+                  validationMissingCodes.push("delivery_entry_render_mismatch");
+                }
+                for (const pkg of ["primevue", "@primeuix/themes"]) {
+                  if (!packageMatches.includes(pkg)) {
+                    validationMissingCodes.push("component_library_package_render_mismatch");
+                    break;
+                  }
+                }
+                for (const schemaId of ["dashboard-workspace", "search-list-workspace"]) {
+                  if (!pageMatches.includes(schemaId)) {
+                    validationMissingCodes.push("page_schema_render_mismatch");
+                    break;
+                  }
+                }
+                return validationMissingCodes.length === 0
+                  ? {
+                      interaction_probe_id: "primary-action",
+                      anchor_refs: ["interaction:primary-action"],
+                      classification_candidate: "pass",
+                      blocking_reason_codes: [],
+                      rendered_delivery_entry_id: deliveryEntryMatch ? deliveryEntryMatch[1] : "",
+                      rendered_component_library_packages: packageMatches,
+                      rendered_page_schema_ids: pageMatches,
+                      delivery_context_validation_status: "passed",
+                      detail: "clicked-primary-candidate",
+                    }
+                  : {
+                      interaction_probe_id: "primary-action",
+                      anchor_refs: ["interaction:primary-action"],
+                      classification_candidate: "actual_quality_blocker",
+                      blocking_reason_codes: validationMissingCodes,
+                      rendered_delivery_entry_id: deliveryEntryMatch ? deliveryEntryMatch[1] : "",
+                      rendered_component_library_packages: packageMatches,
+                      rendered_page_schema_ids: pageMatches,
+                      delivery_context_validation_status: "failed",
+                      detail: "delivery-context-render-mismatch",
+                    };
               },
               async title() {
                 const match = html.match(/<title>([^<]+)<\\/title>/);
@@ -493,9 +538,169 @@ export const chromium = {
   </head>
   <body>
     <main id="frontend-browser-entry">
+      <p class="entry-eyebrow">vue3-public-primevue</p>
       <ul>
         <li class="package-item">primevue</li>
         <li class="package-item">@primeuix/themes</li>
+      </ul>
+      <ul>
+        <li class="page-item">dashboard-workspace</li>
+        <li class="page-item">search-list-workspace</li>
+      </ul>
+      <button type="button">Open</button>
+    </main>
+  </body>
+</html>
+""".strip(),
+        encoding="utf-8",
+    )
+    artifact_root = tmp_path / "artifacts"
+    artifact_root.mkdir()
+    payload = {
+        "artifact_root": str(artifact_root),
+        "artifact_root_ref": "artifacts",
+        "browser_entry_ref": "managed/frontend/index.html",
+        "gate_run_id": "gate-run-001",
+        "generated_at": "2026-04-18T11:00:00Z",
+        "delivery_entry_id": "vue3-public-primevue",
+        "component_library_packages": ["primevue", "@primeuix/themes"],
+        "provider_theme_adapter_id": "public-primevue-theme-bridge",
+        "page_schema_ids": ["dashboard-workspace", "search-list-workspace"],
+    }
+
+    completed = subprocess.run(
+        ["node", str(script_path)],
+        cwd=tmp_path,
+        input=json.dumps(payload),
+        text=True,
+        capture_output=True,
+        check=True,
+    )
+
+    result = json.loads(completed.stdout)
+    assert result["runtime_status"] == "completed"
+    assert result["shared_capture"]["capture_status"] == "captured"
+    assert result["interaction_capture"]["classification_candidate"] == "pass"
+    interaction_snapshot = json.loads(
+        (artifact_root / "interaction" / "interaction-snapshot.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    assert interaction_snapshot["delivery_context_validation_status"] == "passed"
+    assert interaction_snapshot["rendered_component_library_packages"] == [
+        "primevue",
+        "@primeuix/themes",
+    ]
+    assert interaction_snapshot["rendered_page_schema_ids"] == [
+        "dashboard-workspace",
+        "search-list-workspace",
+    ]
+
+
+@pytest.mark.skipif(shutil.which("node") is None, reason="node runtime unavailable")
+def test_frontend_browser_gate_probe_runner_blocks_when_rendered_delivery_context_mismatches(
+    tmp_path: Path,
+) -> None:
+    source_script_path = (
+        Path(__file__).resolve().parents[2] / "scripts" / "frontend_browser_gate_probe_runner.mjs"
+    )
+    script_dir = tmp_path / "scripts"
+    script_dir.mkdir()
+    script_path = script_dir / "frontend_browser_gate_probe_runner.mjs"
+    script_path.write_text(source_script_path.read_text(encoding="utf-8"), encoding="utf-8")
+    fake_playwright_dir = tmp_path / "node_modules" / "playwright"
+    fake_playwright_dir.mkdir(parents=True)
+    (fake_playwright_dir / "package.json").write_text(
+        json.dumps({"name": "playwright", "type": "module"}),
+        encoding="utf-8",
+    )
+    (fake_playwright_dir / "index.js").write_text(
+        """
+import { mkdir, readFile, writeFile } from "node:fs/promises";
+
+let currentUrl = "";
+let html = "";
+let evaluateCallCount = 0;
+
+export const chromium = {
+  async launch() {
+    return {
+      async newContext() {
+        return {
+          tracing: {
+            async start() {},
+            async stop({ path }) {
+              await mkdir(new URL(".", `file://${path}`).pathname, { recursive: true }).catch(() => {});
+              await writeFile(path, "trace");
+            },
+          },
+          async newPage() {
+            return {
+              async goto(targetUrl) {
+                currentUrl = targetUrl;
+                html = await readFile(new URL(targetUrl), "utf8");
+              },
+              url() {
+                return currentUrl;
+              },
+              async screenshot({ path }) {
+                await writeFile(path, "png");
+              },
+              async evaluate() {
+                evaluateCallCount += 1;
+                if (evaluateCallCount === 1) {
+                  return {
+                    bodyText: html.replace(/<[^>]+>/g, " ").trim(),
+                    elementCount: 3,
+                  };
+                }
+                const packageMatches = [...html.matchAll(/<li class="package-item">([^<]+)<\\/li>/g)].map((match) => match[1]);
+                const pageMatches = [...html.matchAll(/<li class="page-item">([^<]+)<\\/li>/g)].map((match) => match[1]);
+                return {
+                  interaction_probe_id: "primary-action",
+                  anchor_refs: ["interaction:primary-action"],
+                  classification_candidate: "actual_quality_blocker",
+                  blocking_reason_codes: [
+                    ...(!packageMatches.includes("@primeuix/themes") ? ["component_library_package_render_mismatch"] : []),
+                    ...(!pageMatches.includes("search-list-workspace") ? ["page_schema_render_mismatch"] : []),
+                  ],
+                  rendered_component_library_packages: packageMatches,
+                  rendered_page_schema_ids: pageMatches,
+                  delivery_context_validation_status: "failed",
+                  detail: "delivery-context-render-mismatch",
+                };
+              },
+              async title() {
+                return "frontend-browser-entry";
+              },
+              async close() {},
+            };
+          },
+          async close() {},
+        };
+      },
+      async close() {},
+    };
+  },
+};
+""".strip(),
+        encoding="utf-8",
+    )
+    managed_root = tmp_path / "managed" / "frontend"
+    managed_root.mkdir(parents=True)
+    (managed_root / "index.html").write_text(
+        """
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>frontend-browser-entry</title>
+  </head>
+  <body>
+    <main id="frontend-browser-entry">
+      <p class="entry-eyebrow">vue3-public-primevue</p>
+      <ul>
+        <li class="package-item">primevue</li>
       </ul>
       <ul>
         <li class="page-item">dashboard-workspace</li>
@@ -515,6 +720,10 @@ export const chromium = {
         "browser_entry_ref": "managed/frontend/index.html",
         "gate_run_id": "gate-run-001",
         "generated_at": "2026-04-18T11:00:00Z",
+        "delivery_entry_id": "vue3-public-primevue",
+        "component_library_packages": ["primevue", "@primeuix/themes"],
+        "provider_theme_adapter_id": "public-primevue-theme-bridge",
+        "page_schema_ids": ["dashboard-workspace", "search-list-workspace"],
     }
 
     completed = subprocess.run(
@@ -528,5 +737,10 @@ export const chromium = {
 
     result = json.loads(completed.stdout)
     assert result["runtime_status"] == "completed"
-    assert result["shared_capture"]["capture_status"] == "captured"
-    assert result["interaction_capture"]["classification_candidate"] == "pass"
+    assert result["interaction_capture"]["classification_candidate"] == "actual_quality_blocker"
+    assert "component_library_package_render_mismatch" in result["interaction_capture"][
+        "blocking_reason_codes"
+    ]
+    assert "page_schema_render_mismatch" in result["interaction_capture"][
+        "blocking_reason_codes"
+    ]

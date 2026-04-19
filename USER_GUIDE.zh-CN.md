@@ -1205,11 +1205,12 @@ Phase 1 的边界要记住：
 
 - 预演：
   - `python -m ai_sdlc program browser-gate-probe --dry-run`
-  - 会读取最新的 managed delivery apply artifact，显示当前 `managed frontend target`、`delivery entry`、`provider theme adapter`、`component packages` 与 preview gate status。
+  - 会读取最新的 managed delivery apply artifact，显示当前 `managed frontend target`、`delivery entry`、`provider theme adapter`、`component packages`、`page schema ids` 与 preview gate status。
 - 执行：
   - `python -m ai_sdlc program browser-gate-probe --execute`
   - 会写 `.ai-sdlc/memory/frontend-browser-gate/latest.yaml`，并把当前 delivery context 一并带进 `execution_context` 与 `bundle_input`。
   - 默认会优先消费 `managed/frontend/index.html` 作为最小 browser entry。
+  - 当前基线会校验页面已渲染内容是否覆盖当前 `delivery entry`、`component packages` 与 `page schema ids`；不一致时会诚实返回 blocker。
 
 这里也有两个边界：
 

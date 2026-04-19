@@ -4115,6 +4115,7 @@ const pageSchemas = frontendDeliveryContext.pageSchemas;
                 delivery_entry_id=quality_handoff.delivery_entry_id,
                 component_library_packages=list(quality_handoff.component_library_packages),
                 provider_theme_adapter_id=quality_handoff.provider_theme_adapter_id,
+                page_schema_ids=list(quality_handoff.page_schema_ids),
             )
         except ValueError as exc:
             return ProgramFrontendBrowserGateProbeRequest(
@@ -4202,6 +4203,7 @@ const pageSchemas = frontendDeliveryContext.pageSchemas;
             delivery_entry_id=quality_handoff.delivery_entry_id,
             component_library_packages=list(quality_handoff.component_library_packages),
             provider_theme_adapter_id=quality_handoff.provider_theme_adapter_id,
+            page_schema_ids=list(quality_handoff.page_schema_ids),
         )
         visual_a11y_evidence = self._load_spec_visual_a11y_evidence(Path(context.spec_dir))
         session, artifact_records, receipts, bundle = materialize_browser_gate_probe_runtime(

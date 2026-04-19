@@ -1165,6 +1165,10 @@ class TestCliProgram:
             "primevue",
             "@primeuix/themes",
         ]
+        assert payload["bundle_input"]["page_schema_ids"] == [
+            "dashboard-workspace",
+            "search-list-workspace",
+        ]
         assert all(gate_run_id in record["artifact_ref"] for record in payload["artifact_records"])
 
     def test_program_browser_gate_probe_dry_run_does_not_materialize_preview_artifacts(

@@ -51,6 +51,7 @@ def build_browser_quality_gate_execution_context(
     delivery_entry_id: str = "",
     component_library_packages: list[str] | None = None,
     provider_theme_adapter_id: str = "",
+    page_schema_ids: list[str] | None = None,
 ) -> BrowserQualityGateExecutionContext:
     """Build the frozen execution context from apply truth and solution truth."""
 
@@ -96,6 +97,7 @@ def build_browser_quality_gate_execution_context(
         delivery_entry_id=delivery_entry_id,
         component_library_packages=list(component_library_packages or []),
         provider_theme_adapter_id=provider_theme_adapter_id,
+        page_schema_ids=list(page_schema_ids or []),
         required_probe_set=list(BROWSER_GATE_REQUIRED_PROBE_SET),
         browser_entry_ref=browser_entry_ref,
         source_linkage_refs={
@@ -134,6 +136,7 @@ def run_default_browser_gate_probe(
         "delivery_entry_id": execution_context.delivery_entry_id,
         "component_library_packages": list(execution_context.component_library_packages),
         "provider_theme_adapter_id": execution_context.provider_theme_adapter_id,
+        "page_schema_ids": list(execution_context.page_schema_ids),
         "effective_provider": execution_context.effective_provider,
         "effective_style_pack": execution_context.effective_style_pack,
     }
@@ -338,6 +341,7 @@ def materialize_browser_gate_probe_runtime(
         delivery_entry_id=context.delivery_entry_id,
         component_library_packages=list(context.component_library_packages),
         provider_theme_adapter_id=context.provider_theme_adapter_id,
+        page_schema_ids=list(context.page_schema_ids),
         playwright_trace_refs=[
             record.artifact_ref
             for record in artifact_records
