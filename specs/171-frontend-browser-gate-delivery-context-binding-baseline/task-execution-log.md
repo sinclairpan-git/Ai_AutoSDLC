@@ -37,6 +37,9 @@
 - `V5`（repo dry-run）
   - 命令：`python -m ai_sdlc run --dry-run`
   - 结果：`Stage close: PASS`
+- `V6`（framework constraints）
+  - 命令：`uv run ai-sdlc verify constraints`
+  - 结果：`verify constraints: no BLOCKERs.`
 
 #### 2.3 任务记录
 

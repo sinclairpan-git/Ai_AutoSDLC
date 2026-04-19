@@ -33,6 +33,9 @@
 - `V4`（touched-files lint）
   - 命令：`uv run ruff check src/ai_sdlc/cli/program_cmd.py src/ai_sdlc/core/program_service.py src/ai_sdlc/core/frontend_browser_gate_runtime.py src/ai_sdlc/models/frontend_browser_gate.py tests/unit/test_program_service.py tests/unit/test_frontend_browser_gate_runtime.py tests/integration/test_cli_program.py`
   - 结果：通过
+- `V5`（framework constraints）
+  - 命令：`uv run ai-sdlc verify constraints`
+  - 结果：`verify constraints: no BLOCKERs.`
 
 #### 2.3 任务记录
 
