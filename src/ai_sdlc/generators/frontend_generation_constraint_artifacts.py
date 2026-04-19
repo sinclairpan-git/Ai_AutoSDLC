@@ -30,6 +30,10 @@ def materialize_frontend_generation_constraint_artifacts(
             base_dir / "generation.manifest.yaml",
             {
                 "work_item_id": constraints.work_item_id,
+                "effective_provider_id": constraints.effective_provider_id,
+                "delivery_entry_id": constraints.delivery_entry_id,
+                "component_library_packages": constraints.component_library_packages,
+                "provider_theme_adapter_id": constraints.provider_theme_adapter_id,
                 "execution_order": constraints.execution_order,
             },
         ),

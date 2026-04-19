@@ -89,6 +89,10 @@ class FrontendGenerationConstraintSet(FrontendGenerationModel):
     """Top-level generation governance control plane."""
 
     work_item_id: str
+    effective_provider_id: str = ""
+    delivery_entry_id: str = ""
+    component_library_packages: list[str] = Field(default_factory=list)
+    provider_theme_adapter_id: str = ""
     execution_order: list[str] = Field(default_factory=list)
     recipe: RecipeGenerationConstraint
     whitelist: WhitelistGenerationConstraint
@@ -107,7 +111,13 @@ class FrontendGenerationConstraintSet(FrontendGenerationModel):
         return self
 
 
-def build_mvp_frontend_generation_constraints() -> FrontendGenerationConstraintSet:
+def build_mvp_frontend_generation_constraints(
+    *,
+    effective_provider_id: str = "enterprise-vue2",
+    delivery_entry_id: str = "",
+    component_library_packages: list[str] | None = None,
+    provider_theme_adapter_id: str = "",
+) -> FrontendGenerationConstraintSet:
     """Build the MVP generation governance baseline defined by work item 017."""
 
     kernel = build_mvp_frontend_ui_kernel()
@@ -115,6 +125,10 @@ def build_mvp_frontend_generation_constraints() -> FrontendGenerationConstraintS
 
     return FrontendGenerationConstraintSet(
         work_item_id="017",
+        effective_provider_id=effective_provider_id,
+        delivery_entry_id=delivery_entry_id,
+        component_library_packages=list(component_library_packages or []),
+        provider_theme_adapter_id=provider_theme_adapter_id,
         execution_order=[
             "contract",
             "kernel",

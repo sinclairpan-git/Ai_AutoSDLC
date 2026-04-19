@@ -71,6 +71,20 @@ def test_build_mvp_frontend_generation_constraints_exposes_hard_rules_token_rule
     assert "override-non-exempt-hard-rules" in constraints.exceptions.forbidden_overrides
 
 
+def test_build_mvp_frontend_generation_constraints_preserves_delivery_context() -> None:
+    constraints = build_mvp_frontend_generation_constraints(
+        effective_provider_id="public-primevue",
+        delivery_entry_id="vue3-public-primevue",
+        component_library_packages=["primevue", "@primeuix/themes"],
+        provider_theme_adapter_id="public-primevue-theme-bridge",
+    )
+
+    assert constraints.effective_provider_id == "public-primevue"
+    assert constraints.delivery_entry_id == "vue3-public-primevue"
+    assert constraints.component_library_packages == ["primevue", "@primeuix/themes"]
+    assert constraints.provider_theme_adapter_id == "public-primevue-theme-bridge"
+
+
 def test_frontend_generation_constraint_set_rejects_duplicate_hard_rule_ids() -> None:
     with pytest.raises(ValueError, match="duplicate hard rule ids"):
         FrontendGenerationConstraintSet(

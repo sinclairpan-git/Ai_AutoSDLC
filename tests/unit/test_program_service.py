@@ -466,6 +466,49 @@ def test_build_frontend_delivery_registry_handoff_surfaces_enterprise_packages_a
     assert handoff.access_mode == "private"
 
 
+def test_build_frontend_generation_constraints_handoff_blocks_when_solution_snapshot_missing(
+    tmp_path: Path,
+) -> None:
+    svc = ProgramService(tmp_path)
+
+    handoff = svc.build_frontend_generation_constraints_handoff()
+
+    assert handoff.state == "blocked"
+    assert "frontend_solution_snapshot_missing" in handoff.blockers
+
+
+def test_build_frontend_generation_constraints_handoff_inherits_page_ui_delivery_context(
+    tmp_path: Path,
+) -> None:
+    _write_builtin_delivery_truth(
+        tmp_path,
+        snapshot=build_mvp_solution_snapshot(
+            project_id="168-demo",
+            requested_frontend_stack="vue3",
+            effective_frontend_stack="vue3",
+            recommended_frontend_stack="vue3",
+            requested_provider_id="public-primevue",
+            effective_provider_id="public-primevue",
+            recommended_provider_id="public-primevue",
+            requested_style_pack_id="modern-saas",
+            effective_style_pack_id="modern-saas",
+            recommended_style_pack_id="modern-saas",
+            style_fidelity_status="full",
+        ),
+    )
+    svc = ProgramService(tmp_path)
+
+    handoff = svc.build_frontend_generation_constraints_handoff()
+
+    assert handoff.state == "ready"
+    assert handoff.effective_provider_id == "public-primevue"
+    assert handoff.delivery_entry_id == "vue3-public-primevue"
+    assert handoff.component_library_packages == ["primevue", "@primeuix/themes"]
+    assert handoff.provider_theme_adapter_id == "public-primevue-theme-bridge"
+    assert "ListPage" in handoff.allowed_recipe_ids
+    assert "UiButton" in handoff.whitelist_component_ids
+
+
 def test_build_frontend_theme_token_governance_handoff_blocks_when_solution_snapshot_missing(
     tmp_path: Path,
 ) -> None:
@@ -565,6 +608,9 @@ def test_build_frontend_quality_platform_handoff_uses_latest_solution_snapshot_a
 
     assert handoff.state == "ready"
     assert handoff.effective_provider_id == "public-primevue"
+    assert handoff.delivery_entry_id == "vue3-public-primevue"
+    assert handoff.component_library_packages == ["primevue", "@primeuix/themes"]
+    assert handoff.provider_theme_adapter_id == "public-primevue-theme-bridge"
     assert handoff.requested_style_pack_id == "modern-saas"
     assert handoff.effective_style_pack_id == "modern-saas"
     assert handoff.matrix_coverage_count == 3

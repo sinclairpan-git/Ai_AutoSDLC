@@ -373,6 +373,20 @@ class ProgramFrontendDeliveryRegistryHandoff:
 
 
 @dataclass
+class ProgramFrontendGenerationConstraintsHandoff:
+    state: str
+    work_item_id: str
+    effective_provider_id: str
+    delivery_entry_id: str
+    provider_theme_adapter_id: str
+    component_library_packages: list[str] = field(default_factory=list)
+    allowed_recipe_ids: list[str] = field(default_factory=list)
+    whitelist_component_ids: list[str] = field(default_factory=list)
+    blockers: list[str] = field(default_factory=list)
+    warnings: list[str] = field(default_factory=list)
+
+
+@dataclass
 class ProgramFrontendThemeTokenOverrideDiagnostic:
     override_id: str
     scope: str
@@ -417,9 +431,12 @@ class ProgramFrontendQualityPlatformHandoff:
     state: str
     schema_version: str
     effective_provider_id: str
+    delivery_entry_id: str
     requested_style_pack_id: str
     effective_style_pack_id: str
     artifact_root: str
+    component_library_packages: list[str] = field(default_factory=list)
+    provider_theme_adapter_id: str = ""
     matrix_coverage_count: int = 0
     evidence_contract_ids: list[str] = field(default_factory=list)
     page_schema_ids: list[str] = field(default_factory=list)
@@ -4283,6 +4300,47 @@ class ProgramService:
             warnings=_unique_strings(warnings),
         )
 
+    def build_frontend_generation_constraints_handoff(
+        self,
+    ) -> ProgramFrontendGenerationConstraintsHandoff:
+        """Build the generation-constraints handoff surface bound to current delivery context."""
+
+        page_ui_handoff = self.build_frontend_page_ui_schema_handoff()
+        snapshot, snapshot_issue = self._load_latest_frontend_solution_snapshot()
+        blockers = list(page_ui_handoff.blockers)
+        warnings = list(page_ui_handoff.warnings)
+        if snapshot is None:
+            if snapshot_issue is not None and snapshot_issue not in blockers:
+                blockers.insert(0, snapshot_issue)
+            return ProgramFrontendGenerationConstraintsHandoff(
+                state="blocked",
+                work_item_id="017",
+                effective_provider_id="",
+                delivery_entry_id="",
+                provider_theme_adapter_id="",
+                blockers=_unique_strings(blockers),
+                warnings=_unique_strings(warnings),
+            )
+
+        constraints = build_mvp_frontend_generation_constraints(
+            effective_provider_id=snapshot.effective_provider_id,
+            delivery_entry_id=page_ui_handoff.delivery_entry_id,
+            component_library_packages=list(page_ui_handoff.component_library_packages),
+            provider_theme_adapter_id=page_ui_handoff.provider_theme_adapter_id,
+        )
+        return ProgramFrontendGenerationConstraintsHandoff(
+            state="ready" if not blockers else "blocked",
+            work_item_id=constraints.work_item_id,
+            effective_provider_id=constraints.effective_provider_id,
+            delivery_entry_id=constraints.delivery_entry_id,
+            provider_theme_adapter_id=constraints.provider_theme_adapter_id,
+            component_library_packages=list(constraints.component_library_packages),
+            allowed_recipe_ids=list(constraints.recipe.allowed_recipe_ids),
+            whitelist_component_ids=list(constraints.whitelist.default_component_ids),
+            blockers=_unique_strings(blockers),
+            warnings=_unique_strings(warnings),
+        )
+
     def build_frontend_theme_token_governance_handoff(
         self,
     ) -> ProgramFrontendThemeTokenGovernanceHandoff:
@@ -4396,17 +4454,21 @@ class ProgramService:
         """Build the Track C quality platform handoff surface for the 149 baseline."""
 
         platform = build_p2_frontend_quality_platform_baseline()
+        page_ui_handoff = self.build_frontend_page_ui_schema_handoff()
         snapshot, snapshot_issue = self._load_latest_frontend_solution_snapshot()
-        blockers: list[str] = []
-        warnings: list[str] = []
+        blockers: list[str] = list(page_ui_handoff.blockers)
+        warnings: list[str] = list(page_ui_handoff.warnings)
 
         if snapshot is None:
-            if snapshot_issue is not None:
+            if snapshot_issue is not None and snapshot_issue not in blockers:
                 blockers.append(snapshot_issue)
             return ProgramFrontendQualityPlatformHandoff(
                 state="blocked",
                 schema_version=platform.handoff_contract.current_version,
                 effective_provider_id="",
+                delivery_entry_id="",
+                component_library_packages=[],
+                provider_theme_adapter_id="",
                 requested_style_pack_id="",
                 effective_style_pack_id="",
                 artifact_root=platform.handoff_contract.artifact_root,
@@ -4422,7 +4484,7 @@ class ProgramService:
                     platform
                 ),
                 blockers=_unique_strings(blockers),
-                warnings=[],
+                warnings=_unique_strings(warnings),
             )
 
         validation = validate_frontend_quality_platform(
@@ -4437,6 +4499,9 @@ class ProgramService:
             state="ready" if not blockers else "blocked",
             schema_version=platform.handoff_contract.current_version,
             effective_provider_id=snapshot.effective_provider_id,
+            delivery_entry_id=page_ui_handoff.delivery_entry_id,
+            component_library_packages=list(page_ui_handoff.component_library_packages),
+            provider_theme_adapter_id=page_ui_handoff.provider_theme_adapter_id,
             requested_style_pack_id=snapshot.requested_style_pack_id,
             effective_style_pack_id=snapshot.effective_style_pack_id,
             artifact_root=platform.handoff_contract.artifact_root,

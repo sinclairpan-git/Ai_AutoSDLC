@@ -494,6 +494,44 @@ def program_delivery_registry_handoff() -> None:
     raise typer.Exit(code=0 if handoff.state == "ready" else 1)
 
 
+@program_app.command("generation-constraints-handoff")
+def program_generation_constraints_handoff() -> None:
+    """Show the generation constraints handoff bound to the current delivery context."""
+
+    root = _resolve_root()
+    svc = ProgramService(root)
+    handoff = svc.build_frontend_generation_constraints_handoff()
+
+    console.print("[bold cyan]Frontend Generation Constraints Handoff[/bold cyan]")
+    console.print(f"  - state: {handoff.state}", markup=False)
+    console.print(f"  - work item: {handoff.work_item_id}", markup=False)
+    console.print(
+        f"  - provider: {handoff.effective_provider_id or '-'}",
+        markup=False,
+    )
+    console.print(
+        f"  - delivery entry: {handoff.delivery_entry_id or '-'}",
+        markup=False,
+    )
+    console.print(
+        "  - provider theme adapter: "
+        + (handoff.provider_theme_adapter_id or "-"),
+        markup=False,
+    )
+    for package_name in handoff.component_library_packages:
+        console.print(f"  - component package: {package_name}", markup=False)
+    for recipe_id in handoff.allowed_recipe_ids:
+        console.print(f"  - recipe: {recipe_id}", markup=False)
+    for component_id in handoff.whitelist_component_ids:
+        console.print(f"  - whitelist component: {component_id}", markup=False)
+    for blocker in handoff.blockers:
+        console.print(f"  - blocker: {blocker}", markup=False)
+    for warning in handoff.warnings:
+        console.print(f"  - warning: {warning}", markup=False)
+
+    raise typer.Exit(code=0 if handoff.state == "ready" else 1)
+
+
 @program_app.command("theme-token-governance-handoff")
 def program_theme_token_governance_handoff() -> None:
     """Show the provider/page-schema handoff surface for the 148 theme governance baseline."""
@@ -509,6 +547,17 @@ def program_theme_token_governance_handoff() -> None:
         f"  - provider: {handoff.effective_provider_id or '-'}",
         markup=False,
     )
+    console.print(
+        f"  - delivery entry: {handoff.delivery_entry_id or '-'}",
+        markup=False,
+    )
+    console.print(
+        "  - provider theme adapter: "
+        + (handoff.provider_theme_adapter_id or "-"),
+        markup=False,
+    )
+    for package_name in handoff.component_library_packages:
+        console.print(f"  - component package: {package_name}", markup=False)
     console.print(
         f"  - requested style pack: {handoff.requested_style_pack_id or '-'}",
         markup=False,
@@ -558,6 +607,17 @@ def program_quality_platform_handoff() -> None:
         f"  - provider: {handoff.effective_provider_id or '-'}",
         markup=False,
     )
+    console.print(
+        f"  - delivery entry: {handoff.delivery_entry_id or '-'}",
+        markup=False,
+    )
+    console.print(
+        "  - provider theme adapter: "
+        + (handoff.provider_theme_adapter_id or "-"),
+        markup=False,
+    )
+    for package_name in handoff.component_library_packages:
+        console.print(f"  - component package: {package_name}", markup=False)
     console.print(
         f"  - requested style pack: {handoff.requested_style_pack_id or '-'}",
         markup=False,

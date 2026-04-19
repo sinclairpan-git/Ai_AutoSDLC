@@ -222,6 +222,54 @@ def test_program_delivery_registry_handoff_surfaces_enterprise_bundle_truth(
     assert "availability prerequisite: company-registry-token" in result.output
 
 
+def test_program_generation_constraints_handoff_blocks_without_solution_snapshot(
+    initialized_project_dir: Path,
+) -> None:
+    root = initialized_project_dir
+
+    with patch("ai_sdlc.cli.program_cmd.find_project_root", return_value=root):
+        result = runner.invoke(app, ["program", "generation-constraints-handoff"])
+
+    assert result.exit_code == 1
+    assert "Frontend Generation Constraints Handoff" in result.output
+    assert "state: blocked" in result.output
+    assert "frontend_solution_snapshot_missing" in result.output
+
+
+def test_program_generation_constraints_handoff_surfaces_delivery_context(
+    initialized_project_dir: Path,
+) -> None:
+    root = initialized_project_dir
+    _write_builtin_delivery_truth(
+        root,
+        snapshot=build_mvp_solution_snapshot(
+            project_id="168-demo",
+            requested_frontend_stack="vue3",
+            effective_frontend_stack="vue3",
+            recommended_frontend_stack="vue3",
+            requested_provider_id="public-primevue",
+            effective_provider_id="public-primevue",
+            recommended_provider_id="public-primevue",
+            requested_style_pack_id="modern-saas",
+            effective_style_pack_id="modern-saas",
+            recommended_style_pack_id="modern-saas",
+            style_fidelity_status="full",
+        ),
+    )
+
+    with patch("ai_sdlc.cli.program_cmd.find_project_root", return_value=root):
+        result = runner.invoke(app, ["program", "generation-constraints-handoff"])
+
+    assert result.exit_code == 0
+    assert "Frontend Generation Constraints Handoff" in result.output
+    assert "state: ready" in result.output
+    assert "provider: public-primevue" in result.output
+    assert "delivery entry: vue3-public-primevue" in result.output
+    assert "component package: primevue" in result.output
+    assert "component package: @primeuix/themes" in result.output
+    assert "recipe: ListPage" in result.output
+
+
 def test_program_theme_token_governance_handoff_blocks_without_solution_snapshot(
     initialized_project_dir: Path,
 ) -> None:
@@ -317,6 +365,9 @@ def test_program_quality_platform_handoff_surfaces_matrix_and_quality_diagnostic
     assert "Frontend Quality Platform Handoff" in result.output
     assert "state: ready" in result.output
     assert "provider: public-primevue" in result.output
+    assert "delivery entry: vue3-public-primevue" in result.output
+    assert "component package: primevue" in result.output
+    assert "component package: @primeuix/themes" in result.output
     assert "requested style pack: modern-saas" in result.output
     assert "effective style pack: modern-saas" in result.output
     assert "matrix coverage: 3" in result.output
