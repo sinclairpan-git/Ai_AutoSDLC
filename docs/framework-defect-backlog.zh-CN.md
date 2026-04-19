@@ -1454,16 +1454,17 @@
 - 根因分类: A, H
 - 未来杜绝方案摘要: close-check 的 git_closure 需要忽略 pipeline state 文件，避免框架自写文件触发“未提交”误判。
 - 建议改动层级: rule / policy, middleware, tool, eval
-- prompt / context: git_closure 只针对交付产物变更，不包含 `.ai-sdlc/state/checkpoint.yml(.bak)`。
-- rule / policy: pipeline state 文件不应阻断 close-check git_closure。
-- middleware: `close_check._git_closure_violation()` 读取 git status 时过滤允许路径。
+- prompt / context: git_closure 只针对交付产物变更，不包含 `.ai-sdlc/state/checkpoint.yml(.bak)` 与由 checkpoint 派生的 `.ai-sdlc/state/resume-pack.yaml`。
+- rule / policy: pipeline state 文件不应阻断 close-check git_closure；其中 checkpoint 派生的 `resume-pack.yaml` 与 checkpoint 本体具有相同的运行态 Git 语义。
+- middleware: `close_check._git_closure_violation()` 读取 git status 时过滤允许路径，并把 `resume-pack.yaml` 视为 recover/status 派生快照而非交付变更。
 - workflow: 运行 `ai-sdlc run` 触发 checkpoint 写入后仍可完成 close；必要时先 `workitem close-check` 验证收口。
 - tool: `src/ai_sdlc/core/close_check.py`, `tests/unit/test_close_check.py`
 - eval: close-check 因 pipeline state dirty 误报的次数、run close 成功率。
 - 风险等级: 中
 - 处置进展（2026-04-14）: git_closure 允许 `.ai-sdlc/state/checkpoint.yml(.bak)` 作为白名单；新增 `test_close_check_ignores_checkpoint_state_dirty_files` 回归，`uv run pytest tests/unit/test_close_check.py -q` 通过，`uv run ai-sdlc run` 已能完成 close 阶段。
+- 处置补记（2026-04-19）: 复盘发现 `recover --reconcile` / `status` 会在刷新 checkpoint 后同步改写 `.ai-sdlc/state/resume-pack.yaml`，旧白名单只覆盖 `checkpoint.yml(.bak)` 仍会让 close-check 在 state-only dirty 情况下误报未收口。本轮已将 `.ai-sdlc/state/resume-pack.yaml` 纳入 git_closure 允许路径，并将回归扩展为 `test_close_check_ignores_recover_state_dirty_files`；定向验证 `uv run pytest tests/unit/test_close_check.py -k recover_state_dirty_files -q`、`uv run ruff check src/ai_sdlc/core/close_check.py tests/unit/test_close_check.py`、`python -m ai_sdlc workitem close-check --wi specs/165-frontend-solution-confirm-continue-apply-orchestration-baseline --json`、`python -m ai_sdlc run --dry-run` 与 `python -m ai_sdlc run` 均已通过。
 - 下一步任务归属（2026-04-14）: 已在 `001` Task 6.48 收口，无新增 action item。
-- 可验证成功标准: 仅 checkpoint state 文件 dirty 时 close-check 仍 PASS；若存在其他未提交变更仍保持 BLOCKER。
+- 可验证成功标准: 仅 checkpoint / checkpoint.bak / resume-pack 这类 pipeline state 文件 dirty 时 close-check 仍 PASS；若存在其他未提交变更仍保持 BLOCKER。
 - 是否需要回归测试补充: 是：补 checkpoint state dirty 的 close-check 单测。
 
 ## FD-2026-04-14-004 | plan 收敛后跳过 tasks 阶段直接表述可进入实现
