@@ -78,6 +78,7 @@ RELEASE_GATE_EVIDENCE_FILE = "release-gate-evidence.md"
 GIT_CLOSURE_ALLOWED_DIRTY_RELS = (
     ".ai-sdlc/state/checkpoint.yml",
     ".ai-sdlc/state/checkpoint.yml.bak",
+    ".ai-sdlc/state/resume-pack.yaml",
 )
 
 

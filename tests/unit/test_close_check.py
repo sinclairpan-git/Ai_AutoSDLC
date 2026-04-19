@@ -702,7 +702,7 @@ def test_close_check_blocker_when_worktree_dirty_after_git_closeout(tmp_path: Pa
     assert any("working tree" in b for b in r.blockers)
 
 
-def test_close_check_ignores_checkpoint_state_dirty_files(tmp_path: Path) -> None:
+def test_close_check_ignores_recover_state_dirty_files(tmp_path: Path) -> None:
     root = tmp_path / "repo3c2"
     root.mkdir()
     _setup_repo(
@@ -716,6 +716,9 @@ def test_close_check_ignores_checkpoint_state_dirty_files(tmp_path: Path) -> Non
         "pipeline_started_at: '2026-04-14'\n", encoding="utf-8"
     )
     (state_dir / "checkpoint.yml.bak").write_text("backup\n", encoding="utf-8")
+    (state_dir / "resume-pack.yaml").write_text(
+        "timestamp: '2026-04-14T00:00:00+00:00'\n", encoding="utf-8"
+    )
 
     r = run_close_check(cwd=root, wi=Path("specs/001-wi"))
     assert r.ok is True
