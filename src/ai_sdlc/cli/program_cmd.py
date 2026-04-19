@@ -391,6 +391,17 @@ def program_page_ui_schema_handoff() -> None:
         f"  - style pack: {handoff.effective_style_pack_id or '-'}",
         markup=False,
     )
+    console.print(
+        f"  - delivery entry: {handoff.delivery_entry_id or '-'}",
+        markup=False,
+    )
+    console.print(
+        "  - provider theme adapter: "
+        + (handoff.provider_theme_adapter_id or "-"),
+        markup=False,
+    )
+    for package_name in handoff.component_library_packages:
+        console.print(f"  - component package: {package_name}", markup=False)
     for entry in handoff.entries:
         console.print(
             "  - page schema: "

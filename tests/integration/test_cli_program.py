@@ -167,6 +167,9 @@ def test_program_page_ui_schema_handoff_surfaces_provider_style_and_schema_entri
     assert "state: ready" in result.output
     assert "provider: public-primevue" in result.output
     assert "style pack: modern-saas" in result.output
+    assert "delivery entry: vue3-public-primevue" in result.output
+    assert "component package: primevue" in result.output
+    assert "component package: @primeuix/themes" in result.output
     assert "dashboard-workspace" in result.output
     assert "search-list-workspace" in result.output
 

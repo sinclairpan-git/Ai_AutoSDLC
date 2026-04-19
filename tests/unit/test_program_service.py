@@ -381,6 +381,9 @@ def test_build_frontend_page_ui_schema_handoff_uses_latest_solution_snapshot(
     assert handoff.schema_version == "1.0"
     assert handoff.effective_provider_id == "public-primevue"
     assert handoff.effective_style_pack_id == "modern-saas"
+    assert handoff.delivery_entry_id == "vue3-public-primevue"
+    assert handoff.component_library_packages == ["primevue", "@primeuix/themes"]
+    assert handoff.provider_theme_adapter_id == "public-primevue-theme-bridge"
     assert [entry.page_schema_id for entry in handoff.entries] == [
         "dashboard-workspace",
         "search-list-workspace",

@@ -4143,16 +4143,47 @@ class ProgramService:
             kernel=kernel,
             solution_snapshot=snapshot,
         )
-        if snapshot_issue is None or snapshot_issue in handoff.blockers:
-            return handoff
+        if snapshot is None:
+            if snapshot_issue is None or snapshot_issue in handoff.blockers:
+                return handoff
+
+            return FrontendPageUiSchemaHandoff(
+                state="blocked",
+                schema_version=handoff.schema_version,
+                effective_provider_id=handoff.effective_provider_id,
+                effective_style_pack_id=handoff.effective_style_pack_id,
+                delivery_entry_id=handoff.delivery_entry_id,
+                component_library_packages=list(handoff.component_library_packages),
+                provider_theme_adapter_id=handoff.provider_theme_adapter_id,
+                blockers=[snapshot_issue, *handoff.blockers],
+                warnings=list(handoff.warnings),
+                entries=list(handoff.entries),
+            )
+
+        delivery_handoff = self.build_frontend_delivery_registry_handoff()
+        blockers = list(handoff.blockers)
+        warnings = list(handoff.warnings)
+        warnings.extend(delivery_handoff.warnings)
+        blockers.extend(
+            blocker
+            for blocker in delivery_handoff.blockers
+            if blocker != "frontend_solution_snapshot_missing"
+        )
+        if snapshot_issue is not None and snapshot_issue not in blockers:
+            blockers.insert(0, snapshot_issue)
 
         return FrontendPageUiSchemaHandoff(
-            state="blocked",
+            state="ready" if not blockers else "blocked",
             schema_version=handoff.schema_version,
             effective_provider_id=handoff.effective_provider_id,
             effective_style_pack_id=handoff.effective_style_pack_id,
-            blockers=[snapshot_issue, *handoff.blockers],
-            warnings=list(handoff.warnings),
+            delivery_entry_id=delivery_handoff.entry_id,
+            component_library_packages=list(
+                delivery_handoff.component_library_packages
+            ),
+            provider_theme_adapter_id=delivery_handoff.provider_theme_adapter_id,
+            blockers=_unique_strings(blockers),
+            warnings=_unique_strings(warnings),
             entries=list(handoff.entries),
         )
 

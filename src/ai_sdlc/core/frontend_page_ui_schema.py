@@ -40,6 +40,9 @@ class FrontendPageUiSchemaHandoff:
     schema_version: str
     effective_provider_id: str
     effective_style_pack_id: str
+    delivery_entry_id: str = ""
+    component_library_packages: list[str] = field(default_factory=list)
+    provider_theme_adapter_id: str = ""
     blockers: list[str] = field(default_factory=list)
     warnings: list[str] = field(default_factory=list)
     entries: list[FrontendPageUiSchemaHandoffEntry] = field(default_factory=list)
