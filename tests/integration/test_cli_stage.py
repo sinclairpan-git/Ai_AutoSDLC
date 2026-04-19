@@ -55,6 +55,16 @@ class TestStageCommand:
         assert "init" in result.output
         assert "命令清单" in result.output or "steps" in result.output.lower()
 
+    def test_stage_show_refine_uses_feature_docs_branch_naming(
+        self, initialized_project_dir: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.chdir(initialized_project_dir)
+        result = runner.invoke(app, ["stage", "show", "refine"])
+
+        assert result.exit_code == 0
+        assert "创建 feature/{id}-docs 分支" in result.output
+        assert "创建 design/{id}-docs 分支" not in result.output
+
     def test_stage_status_inside_project(
         self, initialized_project_dir: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:

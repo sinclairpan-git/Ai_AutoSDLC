@@ -20,8 +20,8 @@ checklist:
     action: "运行 PRD readiness check"
     verify: "PrdReadiness.ready = True，无 TBD/TODO"
   - id: create_docs_branch
-    action: "创建 design/{id}-docs 分支"
-    verify: "git branch 输出包含 design/{id}-docs"
+    action: "创建 feature/{id}-docs 分支（legacy 仓库可兼容 design/{id}-docs）"
+    verify: "git branch 输出包含 feature/{id}-docs，或 legacy 仓库中存在 design/{id}-docs"
   - id: generate_spec
     action: "在 specs/{id}/ 下生成 spec.md（面向人读的正文须为简体中文，见 rules/pipeline.md）"
     verify: "spec.md 文件存在且非空"

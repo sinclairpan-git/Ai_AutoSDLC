@@ -30,7 +30,7 @@
 
 11. **完成前必须验证**：声称任何完成状态（批次完成、阶段完成、流水线完成）之前，必须执行 `rules/verification.md` 的门函数。没有新鲜的验证证据，不能声称完成。
 
-12. **分支策略必须遵守**：Stage 1-4 在 `design/NNN` 分支执行，Stage 5-6 在 `feature/NNN` 分支执行。切换分支前必须 commit 所有变更；切换分支后必须校验基线完整性。详见 `rules/git-branch.md`。
+12. **分支策略必须遵守**：Stage 1-4 在 docs 分支执行，当前首选命名为 `feature/<WI>-docs`（legacy 仓库可兼容 `design/<WI>-docs`）；Stage 5-6 在 `feature/<WI>-dev` 或等价 feature 分支执行。切换分支前必须 commit 所有变更；切换分支后必须校验基线完整性。详见 `rules/git-branch.md`。
 
 13. **多 Agent 并行必须安全**：当启用多 Agent 并行时，必须遵循 `rules/multi-agent.md` 的文件隔离、接口隔离、数据隔离要求。合并前必须通过冲突检测、构建验证、全量回归和逻辑一致性检查。发现问题时自动降级为串行。
 
