@@ -337,6 +337,42 @@ class ProgramFrontendReadiness:
 
 
 @dataclass
+class ProgramFrontendDeliveryRegistryStyleEntry:
+    style_pack_id: str
+    fidelity_status: str
+    resolved_style_support_ref: str
+
+
+@dataclass
+class ProgramFrontendDeliveryRegistryHandoff:
+    state: str
+    schema_version: str
+    registry_id: str
+    entry_id: str
+    effective_provider_id: str
+    requested_frontend_stack: str
+    effective_frontend_stack: str
+    requested_style_pack_id: str
+    effective_style_pack_id: str
+    access_mode: str
+    package_manager: str
+    install_strategy_ids: list[str] = field(default_factory=list)
+    availability_prerequisites: list[str] = field(default_factory=list)
+    runtime_requirements: list[str] = field(default_factory=list)
+    component_library_packages: list[str] = field(default_factory=list)
+    adapter_packages: list[str] = field(default_factory=list)
+    supported_posture_modes: list[str] = field(default_factory=list)
+    provider_manifest_ref: str = ""
+    preferred_managed_target_kind: str = ""
+    provider_theme_adapter_id: str = ""
+    supported_style_entries: list[ProgramFrontendDeliveryRegistryStyleEntry] = field(
+        default_factory=list
+    )
+    blockers: list[str] = field(default_factory=list)
+    warnings: list[str] = field(default_factory=list)
+
+
+@dataclass
 class ProgramFrontendThemeTokenOverrideDiagnostic:
     override_id: str
     scope: str
@@ -4120,6 +4156,102 @@ class ProgramService:
             entries=list(handoff.entries),
         )
 
+    def build_frontend_delivery_registry_handoff(
+        self,
+    ) -> ProgramFrontendDeliveryRegistryHandoff:
+        """Build the delivery registry handoff surface for the 099 resolver runtime."""
+
+        snapshot, snapshot_issue = self._load_latest_frontend_solution_snapshot()
+        if snapshot is None:
+            blockers = [snapshot_issue] if snapshot_issue is not None else []
+            return ProgramFrontendDeliveryRegistryHandoff(
+                state="blocked",
+                schema_version="1",
+                registry_id="frontend-delivery-registry",
+                entry_id="",
+                effective_provider_id="",
+                requested_frontend_stack="",
+                effective_frontend_stack="",
+                requested_style_pack_id="",
+                effective_style_pack_id="",
+                access_mode="",
+                package_manager="",
+                blockers=_unique_strings(blockers),
+            )
+
+        bundle = self._resolve_frontend_delivery_bundle(snapshot)
+        provider_id = snapshot.effective_provider_id
+        provider_manifest = self._load_provider_manifest(provider_id) or {}
+        style_support = self._load_provider_style_support(provider_id) or {}
+        install_strategy_ids = _normalize_string_list(
+            provider_manifest.get("install_strategy_ids", [])
+        )
+        access_mode = str(provider_manifest.get("access_mode", "")).strip()
+        availability_prerequisites = _normalize_string_list(
+            provider_manifest.get("availability_prerequisites", [])
+        )
+        bundle_blockers = _normalize_string_list(bundle.get("blockers", []))
+        blockers = [
+            blocker
+            for blocker in bundle_blockers
+            if not blocker.startswith("private_registry_prerequisite_missing:")
+            and not blocker.startswith("registry_prerequisite_missing:")
+        ]
+        warnings = list(bundle.get("warnings", []))
+        for blocker in bundle_blockers:
+            if blocker in blockers:
+                continue
+            warnings.append(f"current_prerequisite_gap:{blocker}")
+
+        if not provider_manifest:
+            blockers.append(f"delivery_provider_manifest_missing:{provider_id}")
+
+        return ProgramFrontendDeliveryRegistryHandoff(
+            state="ready" if not blockers else "blocked",
+            schema_version="1",
+            registry_id="frontend-delivery-registry",
+            entry_id=_delivery_bundle_entry_id(
+                snapshot.effective_frontend_stack,
+                provider_id,
+            ),
+            effective_provider_id=provider_id,
+            requested_frontend_stack=snapshot.requested_frontend_stack,
+            effective_frontend_stack=snapshot.effective_frontend_stack,
+            requested_style_pack_id=snapshot.requested_style_pack_id,
+            effective_style_pack_id=snapshot.effective_style_pack_id,
+            access_mode=access_mode,
+            package_manager=str(bundle.get("package_manager", "")).strip(),
+            install_strategy_ids=install_strategy_ids,
+            availability_prerequisites=availability_prerequisites,
+            runtime_requirements=[
+                "node_runtime",
+                "package_manager",
+                "playwright_browsers",
+            ],
+            component_library_packages=_normalize_string_list(
+                bundle.get("component_library_packages", [])
+            ),
+            adapter_packages=_normalize_string_list(bundle.get("adapter_packages", [])),
+            supported_posture_modes=[
+                "greenfield_new_managed_frontend",
+                "supported_existing_candidate",
+                "unsupported_existing_frontend_sidecar_only",
+            ],
+            provider_manifest_ref=(
+                f"providers/frontend/{provider_id}/provider.manifest.yaml"
+            ),
+            preferred_managed_target_kind="new_controlled_subtree",
+            provider_theme_adapter_id=str(
+                snapshot.provider_theme_adapter_config.get("adapter_id", "")
+            ).strip(),
+            supported_style_entries=self._build_delivery_registry_style_entries(
+                provider_id,
+                style_support,
+            ),
+            blockers=_unique_strings(blockers),
+            warnings=_unique_strings(warnings),
+        )
+
     def build_frontend_theme_token_governance_handoff(
         self,
     ) -> ProgramFrontendThemeTokenGovernanceHandoff:
@@ -4196,6 +4328,36 @@ class ProgramService:
             )
             for override in governance.custom_overrides
         ]
+
+    def _build_delivery_registry_style_entries(
+        self,
+        provider_id: str,
+        style_support: dict[str, object],
+    ) -> list[ProgramFrontendDeliveryRegistryStyleEntry]:
+        style_entries_by_id = {
+            str(item.get("style_pack_id", "")).strip(): item
+            for item in _normalize_mapping_list(style_support.get("items", []))
+            if str(item.get("style_pack_id", "")).strip()
+        }
+        diagnostics: list[ProgramFrontendDeliveryRegistryStyleEntry] = []
+        for manifest in build_builtin_style_pack_manifests():
+            style_entry = style_entries_by_id.get(manifest.style_pack_id)
+            if style_entry is None:
+                continue
+            diagnostics.append(
+                ProgramFrontendDeliveryRegistryStyleEntry(
+                    style_pack_id=manifest.style_pack_id,
+                    fidelity_status=str(
+                        style_entry.get("fidelity_status", "")
+                    ).strip(),
+                    resolved_style_support_ref=(
+                        "providers/frontend/"
+                        f"{provider_id}/style-support.yaml"
+                        f"#style_pack_id={manifest.style_pack_id}"
+                    ),
+                )
+            )
+        return diagnostics
 
     def build_frontend_quality_platform_handoff(
         self,
@@ -12212,6 +12374,14 @@ def _builtin_provider_manifest(provider_id: str) -> dict[str, object] | None:
             "default_style_pack_id": "modern-saas",
         }
     return None
+
+
+def _delivery_bundle_entry_id(frontend_stack: str, provider_id: str) -> str:
+    normalized_stack = str(frontend_stack).strip()
+    normalized_provider = str(provider_id).strip()
+    if not normalized_stack or not normalized_provider:
+        return ""
+    return f"{normalized_stack}-{normalized_provider}"
 
 
 def _frontend_solution_snapshot_has_effective_change(

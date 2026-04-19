@@ -405,6 +405,84 @@ def program_page_ui_schema_handoff() -> None:
     raise typer.Exit(code=0 if handoff.state == "ready" else 1)
 
 
+@program_app.command("delivery-registry-handoff")
+def program_delivery_registry_handoff() -> None:
+    """Show the delivery registry handoff surface for the 099 resolver runtime."""
+
+    root = _resolve_root()
+    svc = ProgramService(root)
+    handoff = svc.build_frontend_delivery_registry_handoff()
+
+    console.print("[bold cyan]Frontend Delivery Registry Handoff[/bold cyan]")
+    console.print(f"  - state: {handoff.state}", markup=False)
+    console.print(f"  - schema version: {handoff.schema_version}", markup=False)
+    console.print(f"  - registry: {handoff.registry_id}", markup=False)
+    console.print(f"  - entry: {handoff.entry_id or '-'}", markup=False)
+    console.print(
+        f"  - provider: {handoff.effective_provider_id or '-'}",
+        markup=False,
+    )
+    console.print(
+        f"  - requested frontend stack: {handoff.requested_frontend_stack or '-'}",
+        markup=False,
+    )
+    console.print(
+        f"  - effective frontend stack: {handoff.effective_frontend_stack or '-'}",
+        markup=False,
+    )
+    console.print(
+        f"  - requested style pack: {handoff.requested_style_pack_id or '-'}",
+        markup=False,
+    )
+    console.print(
+        f"  - effective style pack: {handoff.effective_style_pack_id or '-'}",
+        markup=False,
+    )
+    console.print(f"  - access mode: {handoff.access_mode or '-'}", markup=False)
+    if handoff.install_strategy_ids:
+        for install_strategy_id in handoff.install_strategy_ids:
+            console.print(
+                f"  - install strategy: {install_strategy_id}",
+                markup=False,
+            )
+    console.print(
+        f"  - package manager: {handoff.package_manager or '-'}",
+        markup=False,
+    )
+    console.print(
+        f"  - provider manifest ref: {handoff.provider_manifest_ref or '-'}",
+        markup=False,
+    )
+    console.print(
+        "  - provider theme adapter: "
+        + (handoff.provider_theme_adapter_id or "-"),
+        markup=False,
+    )
+    for package_name in handoff.component_library_packages:
+        console.print(f"  - component package: {package_name}", markup=False)
+    for package_name in handoff.adapter_packages:
+        console.print(f"  - adapter package: {package_name}", markup=False)
+    for requirement in handoff.availability_prerequisites:
+        console.print(f"  - availability prerequisite: {requirement}", markup=False)
+    for requirement in handoff.runtime_requirements:
+        console.print(f"  - runtime requirement: {requirement}", markup=False)
+    for posture_mode in handoff.supported_posture_modes:
+        console.print(f"  - supported posture: {posture_mode}", markup=False)
+    for style_entry in handoff.supported_style_entries:
+        console.print(
+            "  - style support: "
+            f"{style_entry.style_pack_id} | {style_entry.fidelity_status} | "
+            f"{style_entry.resolved_style_support_ref}",
+            markup=False,
+        )
+    for blocker in handoff.blockers:
+        console.print(f"  - blocker: {blocker}", markup=False)
+    for warning in handoff.warnings:
+        console.print(f"  - warning: {warning}", markup=False)
+
+    raise typer.Exit(code=0 if handoff.state == "ready" else 1)
+
+
 @program_app.command("theme-token-governance-handoff")
 def program_theme_token_governance_handoff() -> None:
     """Show the provider/page-schema handoff surface for the 148 theme governance baseline."""

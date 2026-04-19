@@ -171,6 +171,54 @@ def test_program_page_ui_schema_handoff_surfaces_provider_style_and_schema_entri
     assert "search-list-workspace" in result.output
 
 
+def test_program_delivery_registry_handoff_blocks_without_solution_snapshot(
+    initialized_project_dir: Path,
+) -> None:
+    root = initialized_project_dir
+
+    with patch("ai_sdlc.cli.program_cmd.find_project_root", return_value=root):
+        result = runner.invoke(app, ["program", "delivery-registry-handoff"])
+
+    assert result.exit_code == 1
+    assert "Frontend Delivery Registry Handoff" in result.output
+    assert "state: blocked" in result.output
+    assert "frontend_solution_snapshot_missing" in result.output
+
+
+def test_program_delivery_registry_handoff_surfaces_enterprise_bundle_truth(
+    initialized_project_dir: Path,
+) -> None:
+    root = initialized_project_dir
+    _write_builtin_delivery_truth(
+        root,
+        snapshot=build_mvp_solution_snapshot(
+            project_id="166-demo",
+            requested_provider_id="enterprise-vue2",
+            effective_provider_id="enterprise-vue2",
+            recommended_provider_id="enterprise-vue2",
+            requested_style_pack_id="enterprise-default",
+            effective_style_pack_id="enterprise-default",
+            recommended_style_pack_id="enterprise-default",
+            requested_frontend_stack="vue2",
+            effective_frontend_stack="vue2",
+            recommended_frontend_stack="vue2",
+            style_fidelity_status="full",
+        ),
+    )
+
+    with patch("ai_sdlc.cli.program_cmd.find_project_root", return_value=root):
+        result = runner.invoke(app, ["program", "delivery-registry-handoff"])
+
+    assert result.exit_code == 0
+    assert "Frontend Delivery Registry Handoff" in result.output
+    assert "state: ready" in result.output
+    assert "entry: vue2-enterprise-vue2" in result.output
+    assert "provider: enterprise-vue2" in result.output
+    assert "install strategy: enterprise-vue2-private-registry" in result.output
+    assert "@company/enterprise-vue2-ui" in result.output
+    assert "availability prerequisite: company-registry-token" in result.output
+
+
 def test_program_theme_token_governance_handoff_blocks_without_solution_snapshot(
     initialized_project_dir: Path,
 ) -> None:

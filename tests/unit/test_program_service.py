@@ -388,6 +388,81 @@ def test_build_frontend_page_ui_schema_handoff_uses_latest_solution_snapshot(
     ]
 
 
+def test_build_frontend_delivery_registry_handoff_blocks_when_solution_snapshot_missing(
+    tmp_path: Path,
+) -> None:
+    svc = ProgramService(tmp_path)
+
+    handoff = svc.build_frontend_delivery_registry_handoff()
+
+    assert handoff.state == "blocked"
+    assert handoff.registry_id == "frontend-delivery-registry"
+    assert "frontend_solution_snapshot_missing" in handoff.blockers
+
+
+def test_build_frontend_delivery_registry_handoff_uses_builtin_public_bundle_truth(
+    tmp_path: Path,
+) -> None:
+    _write_builtin_delivery_truth(tmp_path)
+    svc = ProgramService(tmp_path)
+
+    handoff = svc.build_frontend_delivery_registry_handoff()
+
+    assert handoff.state == "ready"
+    assert handoff.entry_id == "vue3-public-primevue"
+    assert handoff.effective_provider_id == "public-primevue"
+    assert handoff.install_strategy_ids == ["public-primevue-default"]
+    assert handoff.package_manager == "pnpm"
+    assert handoff.component_library_packages == ["primevue", "@primeuix/themes"]
+    assert handoff.adapter_packages == []
+    assert handoff.runtime_requirements == [
+        "node_runtime",
+        "package_manager",
+        "playwright_browsers",
+    ]
+    assert handoff.provider_manifest_ref == (
+        "providers/frontend/public-primevue/provider.manifest.yaml"
+    )
+    assert handoff.provider_theme_adapter_id == "public-primevue-theme-bridge"
+    assert any(
+        entry.style_pack_id == "modern-saas" and entry.fidelity_status == "full"
+        for entry in handoff.supported_style_entries
+    )
+
+
+def test_build_frontend_delivery_registry_handoff_surfaces_enterprise_packages_and_prereqs(
+    tmp_path: Path,
+) -> None:
+    _write_builtin_delivery_truth(
+        tmp_path,
+        snapshot=build_mvp_solution_snapshot(
+            project_id="166-demo",
+            requested_provider_id="enterprise-vue2",
+            effective_provider_id="enterprise-vue2",
+            recommended_provider_id="enterprise-vue2",
+            requested_style_pack_id="enterprise-default",
+            effective_style_pack_id="enterprise-default",
+            recommended_style_pack_id="enterprise-default",
+            requested_frontend_stack="vue2",
+            effective_frontend_stack="vue2",
+            recommended_frontend_stack="vue2",
+            style_fidelity_status="full",
+        ),
+    )
+    svc = ProgramService(tmp_path)
+
+    handoff = svc.build_frontend_delivery_registry_handoff()
+
+    assert handoff.state == "ready"
+    assert handoff.entry_id == "vue2-enterprise-vue2"
+    assert handoff.component_library_packages == ["@company/enterprise-vue2-ui"]
+    assert handoff.availability_prerequisites == [
+        "company-registry-network",
+        "company-registry-token",
+    ]
+    assert handoff.access_mode == "private"
+
+
 def test_build_frontend_theme_token_governance_handoff_blocks_when_solution_snapshot_missing(
     tmp_path: Path,
 ) -> None:
