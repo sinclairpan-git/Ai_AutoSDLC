@@ -155,6 +155,13 @@ async function captureProbe(playwright, payload) {
           generated_at: payload.generated_at,
           final_url: finalUrl,
           page_title: pageTitle,
+          delivery_entry_id: String(payload.delivery_entry_id || "").trim(),
+          component_library_packages: Array.isArray(payload.component_library_packages)
+            ? payload.component_library_packages.map((item) => String(item))
+            : [],
+          provider_theme_adapter_id: String(payload.provider_theme_adapter_id || "").trim(),
+          effective_provider: String(payload.effective_provider || "").trim(),
+          effective_style_pack: String(payload.effective_style_pack || "").trim(),
           ...interactionSnapshot,
         },
         null,

@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import hashlib
+import html
 import json
+import keyword
 import re
 import shutil
 import tempfile
@@ -3284,6 +3286,46 @@ class ProgramService:
         )
         selected_action_ids.append(dependency_install_id)
 
+        page_ui_handoff = self.build_frontend_page_ui_schema_handoff()
+        generation_handoff = self.build_frontend_generation_constraints_handoff()
+        quality_handoff = self.build_frontend_quality_platform_handoff()
+        blockers.extend(page_ui_handoff.blockers)
+        blockers.extend(generation_handoff.blockers)
+        blockers.extend(quality_handoff.blockers)
+        warnings.extend(page_ui_handoff.warnings)
+        warnings.extend(generation_handoff.warnings)
+        warnings.extend(quality_handoff.warnings)
+
+        artifact_generate_id = "artifact-generate"
+        action_items.append(
+            {
+                "action_id": artifact_generate_id,
+                "effect_kind": "mutate",
+                "action_type": "artifact_generate",
+                "required": True,
+                "selected": True,
+                "default_selected": True,
+                "depends_on_action_ids": [dependency_install_id],
+                "rollback_ref": "rollback:artifact-generate",
+                "retry_ref": "retry:artifact-generate",
+                "cleanup_ref": "cleanup:artifact-generate",
+                "risk_flags": [],
+                "source_linkage_refs": {
+                    "solution_snapshot_id": solution_snapshot.snapshot_id,
+                    "delivery_entry_id": page_ui_handoff.delivery_entry_id,
+                    "generation_work_item_id": generation_handoff.work_item_id,
+                    "quality_schema_version": quality_handoff.schema_version,
+                },
+                "executor_payload": self._artifact_generate_payload(
+                    solution_snapshot=solution_snapshot,
+                    page_ui_handoff=page_ui_handoff,
+                    generation_handoff=generation_handoff,
+                    quality_handoff=quality_handoff,
+                ),
+            }
+        )
+        selected_action_ids.append(artifact_generate_id)
+
         workspace_integration_id = "workspace-integration"
         action_items.append(
             {
@@ -3293,7 +3335,7 @@ class ProgramService:
                 "required": False,
                 "selected": False,
                 "default_selected": False,
-                "depends_on_action_ids": [dependency_install_id],
+                "depends_on_action_ids": [artifact_generate_id],
                 "rollback_ref": "rollback:workspace-integration",
                 "retry_ref": "retry:workspace-integration",
                 "cleanup_ref": "cleanup:workspace-integration",
@@ -3572,6 +3614,327 @@ class ProgramService:
             ],
         }
 
+    def _artifact_generate_payload(
+        self,
+        *,
+        solution_snapshot: FrontendSolutionSnapshot,
+        page_ui_handoff: FrontendPageUiSchemaHandoff,
+        generation_handoff: ProgramFrontendGenerationConstraintsHandoff,
+        quality_handoff: ProgramFrontendQualityPlatformHandoff,
+    ) -> dict[str, object]:
+        delivery_context = {
+            "projectId": solution_snapshot.project_id,
+            "snapshotId": solution_snapshot.snapshot_id,
+            "requestedProviderId": solution_snapshot.requested_provider_id,
+            "effectiveProviderId": solution_snapshot.effective_provider_id,
+            "requestedFrontendStack": solution_snapshot.requested_frontend_stack,
+            "effectiveFrontendStack": solution_snapshot.effective_frontend_stack,
+            "requestedStylePackId": solution_snapshot.requested_style_pack_id,
+            "effectiveStylePackId": solution_snapshot.effective_style_pack_id,
+            "deliveryEntryId": page_ui_handoff.delivery_entry_id,
+            "providerThemeAdapterId": page_ui_handoff.provider_theme_adapter_id,
+            "componentLibraryPackages": list(page_ui_handoff.component_library_packages),
+            "pageSchemas": [
+                {
+                    "pageSchemaId": entry.page_schema_id,
+                    "uiSchemaId": entry.ui_schema_id,
+                    "pageRecipeId": entry.page_recipe_id,
+                    "anchorIds": list(entry.anchor_ids),
+                    "slotIds": list(entry.slot_ids),
+                    "componentIds": list(entry.component_ids),
+                }
+                for entry in page_ui_handoff.entries
+            ],
+            "generationConstraints": {
+                "workItemId": generation_handoff.work_item_id,
+                "allowedRecipeIds": list(generation_handoff.allowed_recipe_ids),
+                "whitelistComponentIds": list(generation_handoff.whitelist_component_ids),
+            },
+            "qualityPlatform": {
+                "schemaVersion": quality_handoff.schema_version,
+                "evidenceContractIds": list(quality_handoff.evidence_contract_ids),
+                "pageSchemaIds": list(quality_handoff.page_schema_ids),
+            },
+        }
+        return {
+            "directories": ["src/generated"],
+            "files": [
+                {
+                    "path": "index.html",
+                    "content": self._managed_frontend_index_html_content(delivery_context),
+                },
+                {
+                    "path": "src/generated/frontend-delivery-context.ts",
+                    "content": self._managed_frontend_delivery_context_ts_content(
+                        delivery_context
+                    ),
+                },
+                {
+                    "path": "src/App.vue",
+                    "content": self._managed_frontend_app_vue_content(),
+                },
+            ],
+        }
+
+    def _managed_frontend_delivery_context_ts_content(
+        self,
+        delivery_context: dict[str, object],
+    ) -> str:
+        return (
+            "export const frontendDeliveryContext = "
+            + self._render_typescript_literal(delivery_context)
+            + " as const;\n\n"
+            + "export type FrontendDeliveryContext = typeof frontendDeliveryContext;\n"
+        )
+
+    def _managed_frontend_index_html_content(
+        self,
+        delivery_context: dict[str, object],
+    ) -> str:
+        component_packages = [
+            html.escape(str(item))
+            for item in list(delivery_context.get("componentLibraryPackages", []))
+        ]
+        page_schema_ids = [
+            html.escape(str(item.get("pageSchemaId", "")))
+            for item in list(delivery_context.get("pageSchemas", []))
+            if isinstance(item, dict) and str(item.get("pageSchemaId", "")).strip()
+        ]
+        package_items = "\n".join(
+            f'        <li class="package-item">{package_name}</li>'
+            for package_name in component_packages
+        ) or '        <li class="package-item">no-package-declared</li>'
+        page_items = "\n".join(
+            f'        <li class="page-item">{page_schema_id}</li>'
+            for page_schema_id in page_schema_ids
+        ) or '        <li class="page-item">no-page-schema-declared</li>'
+        delivery_entry_id = html.escape(str(delivery_context.get("deliveryEntryId", "")))
+        effective_provider_id = html.escape(
+            str(delivery_context.get("effectiveProviderId", ""))
+        )
+        effective_style_pack_id = html.escape(
+            str(delivery_context.get("effectiveStylePackId", ""))
+        )
+        theme_adapter_id = html.escape(
+            str(delivery_context.get("providerThemeAdapterId", ""))
+        )
+        serialized_context = html.escape(
+            json.dumps(delivery_context, ensure_ascii=True, indent=2)
+        )
+        return f"""<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>frontend-browser-entry</title>
+    <style>
+      body {{
+        margin: 0;
+        font-family: Inter, system-ui, sans-serif;
+        background: #f5f7fb;
+        color: #111827;
+      }}
+
+      #frontend-browser-entry {{
+        max-width: 960px;
+        margin: 0 auto;
+        padding: 32px 24px 48px;
+      }}
+
+      .entry-header {{
+        margin-bottom: 24px;
+      }}
+
+      .entry-eyebrow {{
+        margin: 0 0 8px;
+        color: #4b5563;
+        font-size: 14px;
+      }}
+
+      .entry-title {{
+        margin: 0;
+        font-size: 32px;
+      }}
+
+      .entry-subtitle {{
+        margin: 8px 0 0;
+        color: #6b7280;
+      }}
+
+      .entry-card {{
+        margin-top: 16px;
+        padding: 16px;
+        border: 1px solid #d1d5db;
+        border-radius: 8px;
+        background: #ffffff;
+      }}
+
+      .entry-list {{
+        margin: 12px 0 0;
+        padding-left: 20px;
+      }}
+
+      .entry-action {{
+        margin-top: 20px;
+        border: 1px solid #111827;
+        border-radius: 8px;
+        background: #111827;
+        color: #ffffff;
+        padding: 10px 14px;
+        cursor: pointer;
+      }}
+    </style>
+  </head>
+  <body>
+    <main id="frontend-browser-entry">
+      <header class="entry-header">
+        <p class="entry-eyebrow">{delivery_entry_id}</p>
+        <h1 class="entry-title">{effective_provider_id}</h1>
+        <p class="entry-subtitle">{effective_style_pack_id}</p>
+        <p class="entry-subtitle">{theme_adapter_id}</p>
+      </header>
+
+      <section class="entry-card">
+        <h2>Component Library Packages</h2>
+        <ul class="entry-list">
+{package_items}
+        </ul>
+      </section>
+
+      <section class="entry-card">
+        <h2>Page Schemas</h2>
+        <ul class="entry-list">
+{page_items}
+        </ul>
+      </section>
+
+      <button type="button" class="entry-action">Open Managed Frontend</button>
+
+      <script id="frontend-delivery-context" type="application/json">{serialized_context}</script>
+    </main>
+  </body>
+</html>
+"""
+
+    def _render_typescript_literal(self, value: object, *, indent: int = 0) -> str:
+        indent_text = " " * indent
+        child_indent = indent + 2
+        child_indent_text = " " * child_indent
+
+        if isinstance(value, dict):
+            if not value:
+                return "{}"
+            lines = ["{"]
+            for key, item in value.items():
+                if isinstance(key, str) and key.isidentifier() and not keyword.iskeyword(key):
+                    rendered_key = key
+                else:
+                    rendered_key = json.dumps(key, ensure_ascii=True)
+                rendered_value = self._render_typescript_literal(item, indent=child_indent)
+                lines.append(f"{child_indent_text}{rendered_key}: {rendered_value},")
+            lines.append(f"{indent_text}}}")
+            return "\n".join(lines)
+
+        if isinstance(value, list):
+            if not value:
+                return "[]"
+            lines = ["["]
+            for item in value:
+                rendered_item = self._render_typescript_literal(item, indent=child_indent)
+                lines.append(f"{child_indent_text}{rendered_item},")
+            lines.append(f"{indent_text}]")
+            return "\n".join(lines)
+
+        return json.dumps(value, ensure_ascii=True)
+
+    def _managed_frontend_app_vue_content(self) -> str:
+        return """<script setup lang="ts">
+import { frontendDeliveryContext } from "./generated/frontend-delivery-context";
+
+const pageSchemas = frontendDeliveryContext.pageSchemas;
+</script>
+
+<template>
+  <main class="delivery-shell">
+    <header class="delivery-header">
+      <p class="delivery-eyebrow">{{ frontendDeliveryContext.deliveryEntryId }}</p>
+      <h1 class="delivery-title">{{ frontendDeliveryContext.effectiveProviderId }}</h1>
+      <p class="delivery-subtitle">{{ frontendDeliveryContext.effectiveStylePackId }}</p>
+    </header>
+
+    <section class="delivery-section">
+      <h2>Component Library Packages</h2>
+      <ul class="delivery-list">
+        <li
+          v-for="packageName in frontendDeliveryContext.componentLibraryPackages"
+          :key="packageName"
+        >
+          {{ packageName }}
+        </li>
+      </ul>
+    </section>
+
+    <section class="delivery-section">
+      <h2>Page Schemas</h2>
+      <article v-for="pageSchema in pageSchemas" :key="pageSchema.pageSchemaId" class="page-card">
+        <h3>{{ pageSchema.pageSchemaId }}</h3>
+        <p>{{ pageSchema.pageRecipeId }}</p>
+        <ul class="delivery-list">
+          <li v-for="componentId in pageSchema.componentIds" :key="componentId">
+            {{ componentId }}
+          </li>
+        </ul>
+      </article>
+    </section>
+  </main>
+</template>
+
+<style scoped>
+.delivery-shell {
+  margin: 0 auto;
+  max-width: 960px;
+  padding: 32px 24px 48px;
+  font-family: Inter, system-ui, sans-serif;
+}
+
+.delivery-header {
+  margin-bottom: 24px;
+}
+
+.delivery-eyebrow {
+  margin: 0 0 8px;
+  color: #4b5563;
+  font-size: 14px;
+}
+
+.delivery-title {
+  margin: 0;
+  font-size: 32px;
+}
+
+.delivery-subtitle {
+  margin: 8px 0 0;
+  color: #6b7280;
+}
+
+.delivery-section {
+  margin-top: 24px;
+}
+
+.delivery-list {
+  margin: 12px 0 0;
+  padding-left: 20px;
+}
+
+.page-card {
+  margin-top: 16px;
+  padding: 16px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+}
+</style>
+"""
+
     def execute_frontend_managed_delivery_apply(
         self,
         request_path: str | Path | None = None,
@@ -3743,11 +4106,15 @@ class ProgramService:
                 remaining_blockers=[snapshot_blocker or "solution_snapshot_missing"],
             )
 
+        quality_handoff = self.build_frontend_quality_platform_handoff()
         try:
             context = build_browser_quality_gate_execution_context(
                 apply_payload=apply_payload,
                 solution_snapshot=solution_snapshot,
                 gate_run_id="gate-run-preview",
+                delivery_entry_id=quality_handoff.delivery_entry_id,
+                component_library_packages=list(quality_handoff.component_library_packages),
+                provider_theme_adapter_id=quality_handoff.provider_theme_adapter_id,
             )
         except ValueError as exc:
             return ProgramFrontendBrowserGateProbeRequest(
@@ -3827,10 +4194,14 @@ class ProgramService:
                 remaining_blockers=[snapshot_blocker or "solution_snapshot_missing"],
             )
         gate_run_id = _slugify_token(f"gate-run-{effective_generated_at}") or "gate-run"
+        quality_handoff = self.build_frontend_quality_platform_handoff()
         context = build_browser_quality_gate_execution_context(
             apply_payload=apply_payload,
             solution_snapshot=solution_snapshot,
             gate_run_id=gate_run_id,
+            delivery_entry_id=quality_handoff.delivery_entry_id,
+            component_library_packages=list(quality_handoff.component_library_packages),
+            provider_theme_adapter_id=quality_handoff.provider_theme_adapter_id,
         )
         visual_a11y_evidence = self._load_spec_visual_a11y_evidence(Path(context.spec_dir))
         session, artifact_records, receipts, bundle = materialize_browser_gate_probe_runtime(

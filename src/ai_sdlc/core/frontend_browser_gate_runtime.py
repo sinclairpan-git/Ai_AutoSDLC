@@ -48,6 +48,9 @@ def build_browser_quality_gate_execution_context(
     apply_payload: dict[str, object],
     solution_snapshot: FrontendSolutionSnapshot,
     gate_run_id: str,
+    delivery_entry_id: str = "",
+    component_library_packages: list[str] | None = None,
+    provider_theme_adapter_id: str = "",
 ) -> BrowserQualityGateExecutionContext:
     """Build the frozen execution context from apply truth and solution truth."""
 
@@ -90,6 +93,9 @@ def build_browser_quality_gate_execution_context(
         effective_provider=solution_snapshot.effective_provider_id,
         effective_style_pack=solution_snapshot.effective_style_pack_id,
         style_fidelity_status=solution_snapshot.style_fidelity_status,
+        delivery_entry_id=delivery_entry_id,
+        component_library_packages=list(component_library_packages or []),
+        provider_theme_adapter_id=provider_theme_adapter_id,
         required_probe_set=list(BROWSER_GATE_REQUIRED_PROBE_SET),
         browser_entry_ref=browser_entry_ref,
         source_linkage_refs={
@@ -125,6 +131,11 @@ def run_default_browser_gate_probe(
         "gate_run_id": execution_context.gate_run_id,
         "generated_at": generated_at,
         "managed_frontend_target": execution_context.managed_frontend_target,
+        "delivery_entry_id": execution_context.delivery_entry_id,
+        "component_library_packages": list(execution_context.component_library_packages),
+        "provider_theme_adapter_id": execution_context.provider_theme_adapter_id,
+        "effective_provider": execution_context.effective_provider,
+        "effective_style_pack": execution_context.effective_style_pack,
     }
     try:
         completed = subprocess.run(
@@ -324,6 +335,9 @@ def materialize_browser_gate_probe_runtime(
         managed_frontend_target=context.managed_frontend_target,
         source_artifact_ref=apply_artifact_path,
         readiness_subject_id=context.readiness_subject_id,
+        delivery_entry_id=context.delivery_entry_id,
+        component_library_packages=list(context.component_library_packages),
+        provider_theme_adapter_id=context.provider_theme_adapter_id,
         playwright_trace_refs=[
             record.artifact_ref
             for record in artifact_records

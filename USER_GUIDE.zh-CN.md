@@ -1131,6 +1131,8 @@ Phase 1 的边界要记住：
 | program solution-confirm --execute --continue --yes | `python -m ai_sdlc program solution-confirm --execute --continue --yes` | 确认后继续进入 managed delivery apply | **可能写 adapter**；会先写 solution snapshot，再进入 apply；若 `requested_* != effective_*`，还需额外提供 `--ack-effective-change` |
 | program managed-delivery-apply --dry-run | `python -m ai_sdlc program managed-delivery-apply --dry-run` | managed delivery apply 预览 | **可能写 adapter**；若省略 `--request`，会从 current truth 物化 request，并显示 guard / blocker / next step |
 | program managed-delivery-apply --execute --yes | `python -m ai_sdlc program managed-delivery-apply --execute --yes` | 执行 managed delivery apply | **可能写 adapter**；若省略 `--request` 且 `requested_* != effective_*`，还需额外提供 `--ack-effective-change` |
+| program browser-gate-probe --dry-run | `python -m ai_sdlc program browser-gate-probe --dry-run` | browser gate 预演 | **可能写 adapter**：命令主体只读；会显示 managed frontend target、delivery entry、component packages 与 overall gate status preview |
+| program browser-gate-probe --execute | `python -m ai_sdlc program browser-gate-probe --execute` | 执行 browser gate probe | **可能写 adapter**：会写 `.ai-sdlc/memory/frontend-browser-gate/latest.yaml`，并显式显示 delivery entry、component packages、gate status 与下一条命令 |
 | program page-ui-schema-handoff | `python -m ai_sdlc program page-ui-schema-handoff` | 查看 `147` 的 provider/kernel handoff surface | **可能写 adapter**：命令主体只读；依赖既有 `.ai-sdlc/memory/frontend-solution-confirmation/latest.yaml`，若缺失会返回 blocker |
 | program delivery-registry-handoff | `python -m ai_sdlc program delivery-registry-handoff` | 查看当前技术栈选择命中的官方 delivery entry、组件库包集合与 prerequisite | **可能写 adapter**：命令主体只读；会显示 install strategy、component packages、provider manifest/style-support 引用与当前 prerequisite gap |
 | program generation-constraints-handoff | `python -m ai_sdlc program generation-constraints-handoff` | 查看后续代码生成默认继承的组件库上下文与 generation constraints | **可能写 adapter**：命令主体只读；会显示 delivery entry、component packages、allowed recipes 与 whitelist components |
@@ -1190,11 +1192,29 @@ Phase 1 的边界要记住：
 - 执行 truth-derived request：
   - `python -m ai_sdlc program managed-delivery-apply --execute --yes`
   - 若省略 `--request` 且 current truth 中存在 `requested_* != effective_*`，必须额外带上 `--ack-effective-change`，否则命令会 fail-closed。
+  - 当前 truth-derived path 默认会在 `managed/frontend/` 下写出最小受控前端产物，包括 `index.html`、`src/generated/frontend-delivery-context.ts` 与 `src/App.vue`。
 
 这里也有两个边界：
 
 - `--ack-effective-change` 只约束“从 current truth 自动物化 request”的路径，不额外注入到显式 `--request` 回放路径。
 - `Managed Delivery Apply Result` 不是最终交付完成态；`apply_succeeded_pending_browser_gate` 仍表示 browser gate 尚未运行。
+
+### 7.0.2) `program browser-gate-probe` 的最小使用面
+
+`program browser-gate-probe` 是当前 browser gate 执行面。
+
+- 预演：
+  - `python -m ai_sdlc program browser-gate-probe --dry-run`
+  - 会读取最新的 managed delivery apply artifact，显示当前 `managed frontend target`、`delivery entry`、`provider theme adapter`、`component packages` 与 preview gate status。
+- 执行：
+  - `python -m ai_sdlc program browser-gate-probe --execute`
+  - 会写 `.ai-sdlc/memory/frontend-browser-gate/latest.yaml`，并把当前 delivery context 一并带进 `execution_context` 与 `bundle_input`。
+  - 默认会优先消费 `managed/frontend/index.html` 作为最小 browser entry。
+
+这里也有两个边界：
+
+- 这一步只表示 browser gate 执行面已继承当前组件库选择，不代表 provider-specific 质量探针已经全部实现。
+- 如果 Playwright runner 或运行时不可用，artifact 会诚实返回 `recheck_required` / `incomplete`，而不是把当前组件库误报成已验收通过。
 
 ### 7.1) `page-ui-schema` 的最小使用面
 

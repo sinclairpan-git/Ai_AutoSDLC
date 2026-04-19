@@ -91,6 +91,7 @@ def _render_managed_delivery_apply_guard(
             console.print(
                 f"  - selected action types: {', '.join(action_types)}",
                 markup=False,
+                soft_wrap=True,
             )
         if request_payload.execution_view.managed_target_path:
             console.print(
@@ -1418,6 +1419,17 @@ def program_browser_gate_probe(
             f"  - managed frontend target: {request.execution_context.managed_frontend_target}",
             markup=False,
         )
+        console.print(
+            f"  - delivery entry: {request.execution_context.delivery_entry_id or '-'}",
+            markup=False,
+        )
+        console.print(
+            "  - provider theme adapter: "
+            + (request.execution_context.provider_theme_adapter_id or "-"),
+            markup=False,
+        )
+        for package_name in request.execution_context.component_library_packages:
+            console.print(f"  - component package: {package_name}", markup=False)
         console.print(
             f"  - browser entry ref: {request.execution_context.browser_entry_ref}",
             markup=False,

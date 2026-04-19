@@ -2240,6 +2240,49 @@ def test_build_frontend_managed_delivery_apply_request_materializes_public_bundl
     assert workspace_action.default_selected is False
 
 
+def test_build_frontend_managed_delivery_apply_request_materializes_artifact_generate_from_delivery_context(
+    initialized_project_dir: Path,
+    monkeypatch,
+) -> None:
+    root = initialized_project_dir
+    save_project_config(root, ProjectConfig(adapter_ingress_state="verified_loaded"))
+    _write_builtin_delivery_truth(root)
+    monkeypatch.setattr(
+        program_service_module,
+        "evaluate_current_host_runtime",
+        lambda project_root: _build_host_runtime_plan_for_tests(
+            node_runtime_available=True,
+            package_manager_available=True,
+            playwright_browsers_available=True,
+        ),
+    )
+    svc = ProgramService(root)
+
+    request = svc.build_frontend_managed_delivery_apply_request()
+
+    assert request.execution_view is not None
+    artifact_action = next(
+        action
+        for action in request.execution_view.action_items
+        if action.action_type == "artifact_generate"
+    )
+    assert artifact_action.required is True
+    assert artifact_action.default_selected is True
+    assert artifact_action.depends_on_action_ids == ["dependency-install"]
+    generated_files = artifact_action.executor_payload["files"]
+    assert [item["path"] for item in generated_files] == [
+        "index.html",
+        "src/generated/frontend-delivery-context.ts",
+        "src/App.vue",
+    ]
+    assert "frontend-browser-entry" in generated_files[0]["content"]
+    assert "vue3-public-primevue" in generated_files[0]["content"]
+    assert 'deliveryEntryId: "vue3-public-primevue"' in generated_files[1]["content"]
+    assert '"primevue"' in generated_files[1]["content"]
+    assert "dashboard-workspace" in generated_files[1]["content"]
+    assert "frontendDeliveryContext" in generated_files[2]["content"]
+
+
 def test_build_frontend_managed_delivery_apply_request_uses_builtin_provider_truth_when_artifacts_missing(
     initialized_project_dir: Path,
     monkeypatch,
@@ -2647,6 +2690,24 @@ def test_execute_frontend_browser_gate_probe_materializes_gate_run_bundle(
         payload["bundle_input"]["gate_run_id"] == gate_run_id
     )
     assert payload["bundle_input"]["overall_gate_status"] == "incomplete"
+    assert payload["execution_context"]["delivery_entry_id"] == "vue3-public-primevue"
+    assert payload["execution_context"]["component_library_packages"] == [
+        "primevue",
+        "@primeuix/themes",
+    ]
+    assert (
+        payload["execution_context"]["provider_theme_adapter_id"]
+        == "public-primevue-theme-bridge"
+    )
+    assert payload["bundle_input"]["delivery_entry_id"] == "vue3-public-primevue"
+    assert payload["bundle_input"]["component_library_packages"] == [
+        "primevue",
+        "@primeuix/themes",
+    ]
+    assert (
+        payload["bundle_input"]["provider_theme_adapter_id"]
+        == "public-primevue-theme-bridge"
+    )
 
 
 def test_build_integration_dry_run_uses_browser_gate_recheck_command_when_gate_artifact_exists(

@@ -958,6 +958,7 @@ class TestCliProgram:
         assert "Program Managed Delivery Apply Dry-Run" in result.output
         assert "request source: .ai-sdlc/memory/frontend-managed-delivery/latest.yaml" in result.output
         assert "selected action types: managed_target_prepare, dependency_install" in result.output
+        assert "artifact_generate" in result.output
 
     def test_program_managed_delivery_apply_dry_run_surfaces_private_registry_blocker_from_truth_when_request_omitted(
         self, initialized_project_dir: Path
@@ -1115,6 +1116,11 @@ class TestCliProgram:
         assert result.exit_code == 0
         assert "Managed Delivery Apply Result" in result.output
         assert "status: apply_succeeded_pending_browser_gate" in result.output
+        assert (root / "managed" / "frontend" / "index.html").is_file()
+        assert (
+            root / "managed" / "frontend" / "src" / "generated" / "frontend-delivery-context.ts"
+        ).is_file()
+        assert (root / "managed" / "frontend" / "src" / "App.vue").is_file()
 
     def test_program_browser_gate_probe_execute_materializes_gate_run_artifact(
         self, initialized_project_dir: Path
@@ -1142,6 +1148,9 @@ class TestCliProgram:
         assert apply_result.exit_code == 0
         assert probe_result.exit_code == 0
         assert "Program Browser Gate Probe Execute" in probe_result.output
+        assert "delivery entry: vue3-public-primevue" in probe_result.output
+        assert "component package: primevue" in probe_result.output
+        assert "component package: @primeuix/themes" in probe_result.output
         assert "overall gate status: incomplete" in probe_result.output
         assert "execute gate state: recheck_required" in probe_result.output
         assert "next command: uv run ai-sdlc program browser-gate-probe --execute" in probe_result.output
@@ -1151,6 +1160,11 @@ class TestCliProgram:
         payload = yaml.safe_load(latest_artifact.read_text(encoding="utf-8"))
         gate_run_id = payload["gate_run_id"]
         assert payload["bundle_input"]["gate_run_id"] == gate_run_id
+        assert payload["bundle_input"]["delivery_entry_id"] == "vue3-public-primevue"
+        assert payload["bundle_input"]["component_library_packages"] == [
+            "primevue",
+            "@primeuix/themes",
+        ]
         assert all(gate_run_id in record["artifact_ref"] for record in payload["artifact_records"])
 
     def test_program_browser_gate_probe_dry_run_does_not_materialize_preview_artifacts(

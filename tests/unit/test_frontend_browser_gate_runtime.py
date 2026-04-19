@@ -36,6 +36,9 @@ def _context() -> BrowserQualityGateExecutionContext:
         effective_provider="public-primevue",
         effective_style_pack="modern-saas",
         style_fidelity_status="full",
+        delivery_entry_id="vue3-public-primevue",
+        component_library_packages=["primevue", "@primeuix/themes"],
+        provider_theme_adapter_id="public-primevue-theme-bridge",
         required_probe_set=[
             "playwright_smoke",
             "visual_expectation",
@@ -83,9 +86,15 @@ def test_build_browser_quality_gate_execution_context_derives_index_html_entry_r
         },
         solution_snapshot=build_mvp_solution_snapshot(),
         gate_run_id="gate-run-ctx",
+        delivery_entry_id="vue3-public-primevue",
+        component_library_packages=["primevue", "@primeuix/themes"],
+        provider_theme_adapter_id="public-primevue-theme-bridge",
     )
 
     assert context.browser_entry_ref == "managed/frontend/index.html"
+    assert context.delivery_entry_id == "vue3-public-primevue"
+    assert context.component_library_packages == ["primevue", "@primeuix/themes"]
+    assert context.provider_theme_adapter_id == "public-primevue-theme-bridge"
 
 
 def test_materialize_browser_gate_probe_runtime_executes_real_runner_and_captures_artifacts(
@@ -146,6 +155,9 @@ def test_materialize_browser_gate_probe_runtime_executes_real_runner_and_capture
     assert interaction_receipt.classification_candidate == "pass"
     assert any(record.artifact_type == "playwright_trace" for record in records)
     assert any(record.artifact_type == "interaction_snapshot" for record in records)
+    assert bundle.delivery_entry_id == "vue3-public-primevue"
+    assert bundle.component_library_packages == ["primevue", "@primeuix/themes"]
+    assert bundle.provider_theme_adapter_id == "public-primevue-theme-bridge"
 
 
 def test_materialize_browser_gate_probe_runtime_marks_missing_runner_artifact_as_evidence_missing(
@@ -276,3 +288,245 @@ export const chromium = {
     assert result["diagnostic_codes"] == ["navigation_failed"]
     assert result["shared_capture"]["diagnostic_codes"] == ["navigation_failed"]
     assert result["interaction_capture"]["blocking_reason_codes"] == ["navigation_failed"]
+
+
+@pytest.mark.skipif(shutil.which("node") is None, reason="node runtime unavailable")
+def test_frontend_browser_gate_probe_runner_persists_delivery_context_in_interaction_snapshot(
+    tmp_path: Path,
+) -> None:
+    source_script_path = (
+        Path(__file__).resolve().parents[2] / "scripts" / "frontend_browser_gate_probe_runner.mjs"
+    )
+    script_dir = tmp_path / "scripts"
+    script_dir.mkdir()
+    script_path = script_dir / "frontend_browser_gate_probe_runner.mjs"
+    script_path.write_text(source_script_path.read_text(encoding="utf-8"), encoding="utf-8")
+    fake_playwright_dir = tmp_path / "node_modules" / "playwright"
+    fake_playwright_dir.mkdir(parents=True)
+    (fake_playwright_dir / "package.json").write_text(
+        json.dumps({"name": "playwright", "type": "module"}),
+        encoding="utf-8",
+    )
+    (fake_playwright_dir / "index.js").write_text(
+        """
+import { mkdir, writeFile } from "node:fs/promises";
+
+let evaluateCallCount = 0;
+
+export const chromium = {
+  async launch() {
+    return {
+      async newContext() {
+        return {
+          tracing: {
+            async start() {},
+            async stop({ path }) {
+              await mkdir(new URL(".", `file://${path}`).pathname, { recursive: true }).catch(() => {});
+              await writeFile(path, "trace");
+            },
+          },
+          async newPage() {
+            return {
+              async goto() {},
+              url() {
+                return "http://127.0.0.1:4173/";
+              },
+              async screenshot({ path }) {
+                await writeFile(path, "png");
+              },
+              async evaluate() {
+                evaluateCallCount += 1;
+                if (evaluateCallCount === 1) {
+                  return { bodyText: "ok", elementCount: 1 };
+                }
+                return {
+                  interaction_probe_id: "primary-action",
+                  anchor_refs: ["interaction:primary-action"],
+                  classification_candidate: "pass",
+                  blocking_reason_codes: [],
+                  detail: "clicked-primary-candidate",
+                };
+              },
+              async title() {
+                return "Demo";
+              },
+              async close() {},
+            };
+          },
+          async close() {},
+        };
+      },
+      async close() {},
+    };
+  },
+};
+""".strip(),
+        encoding="utf-8",
+    )
+    artifact_root = tmp_path / "artifacts"
+    artifact_root.mkdir()
+    payload = {
+        "artifact_root": str(artifact_root),
+        "artifact_root_ref": "artifacts",
+        "browser_entry_ref": "http://127.0.0.1:4173/",
+        "gate_run_id": "gate-run-001",
+        "generated_at": "2026-04-18T11:00:00Z",
+        "delivery_entry_id": "vue3-public-primevue",
+        "component_library_packages": ["primevue", "@primeuix/themes"],
+        "provider_theme_adapter_id": "public-primevue-theme-bridge",
+        "effective_provider": "public-primevue",
+        "effective_style_pack": "modern-saas",
+    }
+
+    completed = subprocess.run(
+        ["node", str(script_path)],
+        cwd=tmp_path,
+        input=json.dumps(payload),
+        text=True,
+        capture_output=True,
+        check=True,
+    )
+
+    result = json.loads(completed.stdout)
+    assert result["runtime_status"] == "completed"
+    interaction_snapshot = json.loads(
+        (artifact_root / "interaction" / "interaction-snapshot.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    assert interaction_snapshot["delivery_entry_id"] == "vue3-public-primevue"
+    assert interaction_snapshot["component_library_packages"] == [
+        "primevue",
+        "@primeuix/themes",
+    ]
+    assert (
+        interaction_snapshot["provider_theme_adapter_id"]
+        == "public-primevue-theme-bridge"
+    )
+
+
+@pytest.mark.skipif(shutil.which("node") is None, reason="node runtime unavailable")
+def test_frontend_browser_gate_probe_runner_can_navigate_generated_index_html(
+    tmp_path: Path,
+) -> None:
+    source_script_path = (
+        Path(__file__).resolve().parents[2] / "scripts" / "frontend_browser_gate_probe_runner.mjs"
+    )
+    script_dir = tmp_path / "scripts"
+    script_dir.mkdir()
+    script_path = script_dir / "frontend_browser_gate_probe_runner.mjs"
+    script_path.write_text(source_script_path.read_text(encoding="utf-8"), encoding="utf-8")
+    fake_playwright_dir = tmp_path / "node_modules" / "playwright"
+    fake_playwright_dir.mkdir(parents=True)
+    (fake_playwright_dir / "package.json").write_text(
+        json.dumps({"name": "playwright", "type": "module"}),
+        encoding="utf-8",
+    )
+    (fake_playwright_dir / "index.js").write_text(
+        """
+import { mkdir, readFile, writeFile } from "node:fs/promises";
+
+let currentUrl = "";
+let html = "";
+
+export const chromium = {
+  async launch() {
+    return {
+      async newContext() {
+        return {
+          tracing: {
+            async start() {},
+            async stop({ path }) {
+              await mkdir(new URL(".", `file://${path}`).pathname, { recursive: true }).catch(() => {});
+              await writeFile(path, "trace");
+            },
+          },
+          async newPage() {
+            return {
+              async goto(targetUrl) {
+                currentUrl = targetUrl;
+                html = await readFile(new URL(targetUrl), "utf8");
+              },
+              url() {
+                return currentUrl;
+              },
+              async screenshot({ path }) {
+                await writeFile(path, "png");
+              },
+              async evaluate() {
+                if (!html) {
+                  return { bodyText: "", elementCount: 0 };
+                }
+                const packageMatches = [...html.matchAll(/<li class="package-item">([^<]+)<\\/li>/g)].map((match) => match[1]);
+                const pageMatches = [...html.matchAll(/<li class="page-item">([^<]+)<\\/li>/g)].map((match) => match[1]);
+                return {
+                  bodyText: html.replace(/<[^>]+>/g, " ").trim(),
+                  elementCount: packageMatches.length + pageMatches.length + 1,
+                };
+              },
+              async title() {
+                const match = html.match(/<title>([^<]+)<\\/title>/);
+                return match ? match[1] : "";
+              },
+              async close() {},
+            };
+          },
+          async close() {},
+        };
+      },
+      async close() {},
+    };
+  },
+};
+""".strip(),
+        encoding="utf-8",
+    )
+    managed_root = tmp_path / "managed" / "frontend"
+    managed_root.mkdir(parents=True)
+    (managed_root / "index.html").write_text(
+        """
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>frontend-browser-entry</title>
+  </head>
+  <body>
+    <main id="frontend-browser-entry">
+      <ul>
+        <li class="package-item">primevue</li>
+        <li class="package-item">@primeuix/themes</li>
+      </ul>
+      <ul>
+        <li class="page-item">dashboard-workspace</li>
+      </ul>
+      <button type="button">Open</button>
+    </main>
+  </body>
+</html>
+""".strip(),
+        encoding="utf-8",
+    )
+    artifact_root = tmp_path / "artifacts"
+    artifact_root.mkdir()
+    payload = {
+        "artifact_root": str(artifact_root),
+        "artifact_root_ref": "artifacts",
+        "browser_entry_ref": "managed/frontend/index.html",
+        "gate_run_id": "gate-run-001",
+        "generated_at": "2026-04-18T11:00:00Z",
+    }
+
+    completed = subprocess.run(
+        ["node", str(script_path)],
+        cwd=tmp_path,
+        input=json.dumps(payload),
+        text=True,
+        capture_output=True,
+        check=True,
+    )
+
+    result = json.loads(completed.stdout)
+    assert result["runtime_status"] == "completed"
+    assert result["shared_capture"]["capture_status"] == "captured"
+    assert result["interaction_capture"]["classification_candidate"] == "pass"

@@ -1723,12 +1723,48 @@ specs:
   branch_slug: frontend-quality-platform-delivery-context-binding-baseline
   owner: team-frontend-governance
   frontend_evidence_class: framework_capability
+- id: 170-frontend-managed-delivery-artifact-generate-delivery-context-baseline
+  path: specs/170-frontend-managed-delivery-artifact-generate-delivery-context-baseline
+  depends_on:
+  - 165-frontend-solution-confirm-continue-apply-orchestration-baseline
+  - 167-frontend-page-ui-schema-delivery-context-binding-baseline
+  - 168-frontend-generation-constraints-delivery-context-binding-baseline
+  - 169-frontend-quality-platform-delivery-context-binding-baseline
+  branch_slug: frontend-managed-delivery-artifact-generate-delivery-context-baseline
+  owner: team-frontend-governance
+  frontend_evidence_class: framework_capability
+- id: 171-frontend-browser-gate-delivery-context-binding-baseline
+  path: specs/171-frontend-browser-gate-delivery-context-binding-baseline
+  depends_on:
+  - 143-frontend-mainline-browser-gate-real-probe-runtime-baseline
+  - 169-frontend-quality-platform-delivery-context-binding-baseline
+  - 170-frontend-managed-delivery-artifact-generate-delivery-context-baseline
+  branch_slug: frontend-browser-gate-delivery-context-binding-baseline
+  owner: team-frontend-governance
+  frontend_evidence_class: framework_capability
+- id: 172-frontend-browser-gate-runner-delivery-context-propagation-baseline
+  path: specs/172-frontend-browser-gate-runner-delivery-context-propagation-baseline
+  depends_on:
+  - 143-frontend-mainline-browser-gate-real-probe-runtime-baseline
+  - 171-frontend-browser-gate-delivery-context-binding-baseline
+  branch_slug: frontend-browser-gate-runner-delivery-context-propagation-baseline
+  owner: team-frontend-governance
+  frontend_evidence_class: framework_capability
+- id: 173-frontend-managed-browser-entry-materialization-baseline
+  path: specs/173-frontend-managed-browser-entry-materialization-baseline
+  depends_on:
+  - 170-frontend-managed-delivery-artifact-generate-delivery-context-baseline
+  - 171-frontend-browser-gate-delivery-context-binding-baseline
+  - 172-frontend-browser-gate-runner-delivery-context-propagation-baseline
+  branch_slug: frontend-managed-browser-entry-materialization-baseline
+  owner: team-frontend-governance
+  frontend_evidence_class: framework_capability
 truth_snapshot:
-  generated_at: '2026-04-19T07:38:50Z'
+  generated_at: '2026-04-19T08:08:00Z'
   generated_by: ai-sdlc program truth sync
   generator_version: program_truth_snapshot_v1
-  repo_revision: f3a774f
-  authoring_hash: c43819df75df2520bd8b55e5229a610184a93a01ab20b457b6081497da288291
+  repo_revision: df2f4a5
+  authoring_hash: 93c23d2352b924eb0b9ed58d419fede83f2c4369522c1627f87c2e95fe8eb257
   source_hashes:
     truth_check:specs/095-frontend-mainline-product-delivery-baseline: 40b5e9332011b0d8941245c0e8e7c3b192e897b2bc4aa4876a3d37a94f9b80f0
     truth_check:specs/096-frontend-mainline-host-runtime-manager-baseline: e4586cf112089fff541fc809f9ba98ad4c4c3d5593de8febfc4e64cb1179ce02
@@ -1767,7 +1803,7 @@ truth_snapshot:
     truth_check:specs/122-agent-adapter-verified-host-ingress-runtime-baseline: 668bc35f896163f99929da88d733d0de367d996b276b9775d659227fcafcbca7
     close_check:specs/121-agent-adapter-verified-host-ingress-truth-baseline: bb1a96307f540d67dcb9ccb06e03e5ef522ae9acfd1e9a2b5f5816aed8658072
     close_check:specs/122-agent-adapter-verified-host-ingress-runtime-baseline: bb1a96307f540d67dcb9ccb06e03e5ef522ae9acfd1e9a2b5f5816aed8658072
-  snapshot_hash: df145f87da214e210662da393e255d5dc36b0f441e8fd864d59dfcecde8cec0f
+  snapshot_hash: 1c314041585a9bc147bc12d129075e50a03552cada16a1e7be8eac4f612d66f4
   computed_capabilities:
   - capability_id: frontend-mainline-delivery
     closure_state: closed
@@ -1781,31 +1817,31 @@ truth_snapshot:
     stale_reason: ''
   source_inventory:
     state: complete
-    total_sources: 867
-    mapped_sources: 867
+    total_sources: 887
+    mapped_sources: 887
     unmapped_sources: 0
     missing_sources: 0
     phase_signal_count: 3161
-    deferred_signal_count: 5818
-    non_goal_signal_count: 292
+    deferred_signal_count: 5822
+    non_goal_signal_count: 299
     layer_totals:
       blueprint: 1
-      spec: 170
-      plan: 170
-      tasks: 170
-      execution: 170
-      close: 170
+      spec: 174
+      plan: 174
+      tasks: 174
+      execution: 174
+      close: 174
       requirements: 2
       defect: 2
       design: 8
       release: 4
     layer_materialized:
       blueprint: 1
-      spec: 170
-      plan: 170
-      tasks: 170
-      execution: 170
-      close: 170
+      spec: 174
+      plan: 174
+      tasks: 174
+      execution: 174
+      close: 174
       requirements: 2
       defect: 2
       design: 8
@@ -9469,6 +9505,186 @@ truth_snapshot:
       mapping_ref: 169-frontend-quality-platform-delivery-context-binding-baseline
       phase_signal_count: 0
       deferred_signal_count: 2
+      non_goal_signal_count: 0
+    - path: specs/170-frontend-managed-delivery-artifact-generate-delivery-context-baseline/spec.md
+      source_type: spec_doc
+      truth_layer: spec
+      mapped: true
+      exists: true
+      mapping_ref: 170-frontend-managed-delivery-artifact-generate-delivery-context-baseline
+      phase_signal_count: 0
+      deferred_signal_count: 0
+      non_goal_signal_count: 1
+    - path: specs/170-frontend-managed-delivery-artifact-generate-delivery-context-baseline/plan.md
+      source_type: plan_doc
+      truth_layer: plan
+      mapped: true
+      exists: true
+      mapping_ref: 170-frontend-managed-delivery-artifact-generate-delivery-context-baseline
+      phase_signal_count: 0
+      deferred_signal_count: 0
+      non_goal_signal_count: 0
+    - path: specs/170-frontend-managed-delivery-artifact-generate-delivery-context-baseline/tasks.md
+      source_type: tasks_doc
+      truth_layer: tasks
+      mapped: true
+      exists: true
+      mapping_ref: 170-frontend-managed-delivery-artifact-generate-delivery-context-baseline
+      phase_signal_count: 0
+      deferred_signal_count: 0
+      non_goal_signal_count: 0
+    - path: specs/170-frontend-managed-delivery-artifact-generate-delivery-context-baseline/task-execution-log.md
+      source_type: execution_log
+      truth_layer: execution
+      mapped: true
+      exists: true
+      mapping_ref: 170-frontend-managed-delivery-artifact-generate-delivery-context-baseline
+      phase_signal_count: 0
+      deferred_signal_count: 0
+      non_goal_signal_count: 0
+    - path: specs/170-frontend-managed-delivery-artifact-generate-delivery-context-baseline/development-summary.md
+      source_type: development_summary
+      truth_layer: close
+      mapped: true
+      exists: true
+      mapping_ref: 170-frontend-managed-delivery-artifact-generate-delivery-context-baseline
+      phase_signal_count: 0
+      deferred_signal_count: 0
+      non_goal_signal_count: 0
+    - path: specs/171-frontend-browser-gate-delivery-context-binding-baseline/spec.md
+      source_type: spec_doc
+      truth_layer: spec
+      mapped: true
+      exists: true
+      mapping_ref: 171-frontend-browser-gate-delivery-context-binding-baseline
+      phase_signal_count: 0
+      deferred_signal_count: 2
+      non_goal_signal_count: 1
+    - path: specs/171-frontend-browser-gate-delivery-context-binding-baseline/plan.md
+      source_type: plan_doc
+      truth_layer: plan
+      mapped: true
+      exists: true
+      mapping_ref: 171-frontend-browser-gate-delivery-context-binding-baseline
+      phase_signal_count: 0
+      deferred_signal_count: 0
+      non_goal_signal_count: 1
+    - path: specs/171-frontend-browser-gate-delivery-context-binding-baseline/tasks.md
+      source_type: tasks_doc
+      truth_layer: tasks
+      mapped: true
+      exists: true
+      mapping_ref: 171-frontend-browser-gate-delivery-context-binding-baseline
+      phase_signal_count: 0
+      deferred_signal_count: 0
+      non_goal_signal_count: 0
+    - path: specs/171-frontend-browser-gate-delivery-context-binding-baseline/task-execution-log.md
+      source_type: execution_log
+      truth_layer: execution
+      mapped: true
+      exists: true
+      mapping_ref: 171-frontend-browser-gate-delivery-context-binding-baseline
+      phase_signal_count: 0
+      deferred_signal_count: 1
+      non_goal_signal_count: 0
+    - path: specs/171-frontend-browser-gate-delivery-context-binding-baseline/development-summary.md
+      source_type: development_summary
+      truth_layer: close
+      mapped: true
+      exists: true
+      mapping_ref: 171-frontend-browser-gate-delivery-context-binding-baseline
+      phase_signal_count: 0
+      deferred_signal_count: 0
+      non_goal_signal_count: 0
+    - path: specs/172-frontend-browser-gate-runner-delivery-context-propagation-baseline/spec.md
+      source_type: spec_doc
+      truth_layer: spec
+      mapped: true
+      exists: true
+      mapping_ref: 172-frontend-browser-gate-runner-delivery-context-propagation-baseline
+      phase_signal_count: 0
+      deferred_signal_count: 0
+      non_goal_signal_count: 1
+    - path: specs/172-frontend-browser-gate-runner-delivery-context-propagation-baseline/plan.md
+      source_type: plan_doc
+      truth_layer: plan
+      mapped: true
+      exists: true
+      mapping_ref: 172-frontend-browser-gate-runner-delivery-context-propagation-baseline
+      phase_signal_count: 0
+      deferred_signal_count: 0
+      non_goal_signal_count: 1
+    - path: specs/172-frontend-browser-gate-runner-delivery-context-propagation-baseline/tasks.md
+      source_type: tasks_doc
+      truth_layer: tasks
+      mapped: true
+      exists: true
+      mapping_ref: 172-frontend-browser-gate-runner-delivery-context-propagation-baseline
+      phase_signal_count: 0
+      deferred_signal_count: 0
+      non_goal_signal_count: 0
+    - path: specs/172-frontend-browser-gate-runner-delivery-context-propagation-baseline/task-execution-log.md
+      source_type: execution_log
+      truth_layer: execution
+      mapped: true
+      exists: true
+      mapping_ref: 172-frontend-browser-gate-runner-delivery-context-propagation-baseline
+      phase_signal_count: 0
+      deferred_signal_count: 0
+      non_goal_signal_count: 0
+    - path: specs/172-frontend-browser-gate-runner-delivery-context-propagation-baseline/development-summary.md
+      source_type: development_summary
+      truth_layer: close
+      mapped: true
+      exists: true
+      mapping_ref: 172-frontend-browser-gate-runner-delivery-context-propagation-baseline
+      phase_signal_count: 0
+      deferred_signal_count: 0
+      non_goal_signal_count: 0
+    - path: specs/173-frontend-managed-browser-entry-materialization-baseline/spec.md
+      source_type: spec_doc
+      truth_layer: spec
+      mapped: true
+      exists: true
+      mapping_ref: 173-frontend-managed-browser-entry-materialization-baseline
+      phase_signal_count: 0
+      deferred_signal_count: 1
+      non_goal_signal_count: 1
+    - path: specs/173-frontend-managed-browser-entry-materialization-baseline/plan.md
+      source_type: plan_doc
+      truth_layer: plan
+      mapped: true
+      exists: true
+      mapping_ref: 173-frontend-managed-browser-entry-materialization-baseline
+      phase_signal_count: 0
+      deferred_signal_count: 0
+      non_goal_signal_count: 1
+    - path: specs/173-frontend-managed-browser-entry-materialization-baseline/tasks.md
+      source_type: tasks_doc
+      truth_layer: tasks
+      mapped: true
+      exists: true
+      mapping_ref: 173-frontend-managed-browser-entry-materialization-baseline
+      phase_signal_count: 0
+      deferred_signal_count: 0
+      non_goal_signal_count: 0
+    - path: specs/173-frontend-managed-browser-entry-materialization-baseline/task-execution-log.md
+      source_type: execution_log
+      truth_layer: execution
+      mapped: true
+      exists: true
+      mapping_ref: 173-frontend-managed-browser-entry-materialization-baseline
+      phase_signal_count: 0
+      deferred_signal_count: 0
+      non_goal_signal_count: 0
+    - path: specs/173-frontend-managed-browser-entry-materialization-baseline/development-summary.md
+      source_type: development_summary
+      truth_layer: close
+      mapped: true
+      exists: true
+      mapping_ref: 173-frontend-managed-browser-entry-materialization-baseline
+      phase_signal_count: 0
+      deferred_signal_count: 0
       non_goal_signal_count: 0
     - path: docs/SPEC_SPLIT_AND_PROGRAM.zh-CN.md
       source_type: requirement_doc
