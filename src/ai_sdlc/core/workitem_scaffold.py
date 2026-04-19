@@ -66,20 +66,9 @@ class WorkitemScaffolder:
         related_docs: tuple[str, ...] = (),
     ) -> WorkitemScaffoldResult:
         """Create canonical formal docs for one work item."""
+        work_item_id = self.preview_work_item_id(root=root, title=title, wi_id=wi_id)
         title_clean = title.strip()
-        if not title_clean:
-            raise WorkitemScaffoldError("title is required for direct-formal init")
-        state_path = root / PROJECT_STATE_PATH
-        if not state_path.is_file():
-            raise WorkitemScaffoldError(self._missing_bootstrap_message(root))
-
         state = load_project_state(root)
-        work_item_id = self._resolve_work_item_id(
-            root=root,
-            title=title_clean,
-            wi_id=wi_id,
-            next_work_item_seq=state.next_work_item_seq,
-        )
         created_date = date.today().isoformat()
         spec_dir = root / "specs" / work_item_id
         canonical_paths = (
@@ -157,6 +146,29 @@ class WorkitemScaffolder:
             spec_dir=spec_dir,
             created_paths=canonical_paths,
             created_date=created_date,
+        )
+
+    def preview_work_item_id(
+        self,
+        *,
+        root: Path,
+        title: str,
+        wi_id: str | None = None,
+    ) -> str:
+        """Resolve the canonical work item id without writing files."""
+        title_clean = title.strip()
+        if not title_clean:
+            raise WorkitemScaffoldError("title is required for direct-formal init")
+        state_path = root / PROJECT_STATE_PATH
+        if not state_path.is_file():
+            raise WorkitemScaffoldError(self._missing_bootstrap_message(root))
+
+        state = load_project_state(root)
+        return self._resolve_work_item_id(
+            root=root,
+            title=title_clean,
+            wi_id=wi_id,
+            next_work_item_seq=state.next_work_item_seq,
         )
 
     def _missing_bootstrap_message(self, root: Path) -> str:

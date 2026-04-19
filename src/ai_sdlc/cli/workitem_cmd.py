@@ -8,6 +8,7 @@ import typer
 from rich.console import Console
 from rich.table import Table
 
+from ai_sdlc.branch.git_client import GitClient, GitError
 from ai_sdlc.context.state import load_checkpoint, save_checkpoint
 from ai_sdlc.core.close_check import (
     BranchCheckResult,
@@ -28,7 +29,7 @@ from ai_sdlc.core.workitem_truth import (
     format_truth_check_json,
     run_truth_check,
 )
-from ai_sdlc.utils.helpers import find_project_root, now_iso
+from ai_sdlc.utils.helpers import find_project_root, is_git_repo, now_iso
 
 workitem_app = typer.Typer(
     help=(
@@ -37,6 +38,62 @@ workitem_app = typer.Typer(
     ),
 )
 console = Console()
+
+
+def _preferred_docs_branch_name(work_item_id: str) -> str:
+    """Return the preferred Stage-1 docs branch name."""
+    return f"feature/{work_item_id}-docs"
+
+
+def _legacy_docs_branch_name(work_item_id: str) -> str:
+    """Return the legacy Stage-1 docs branch name kept for compatibility."""
+    return f"design/{work_item_id}-docs"
+
+
+def _ensure_workitem_init_git_preflight(root: Path, work_item_id: str) -> None:
+    """Block direct-formal init when the repo is not on a clean docs branch."""
+    if not is_git_repo(root):
+        return
+
+    git = GitClient(root)
+    preferred_branch = _preferred_docs_branch_name(work_item_id)
+    legacy_branch = _legacy_docs_branch_name(work_item_id)
+    accepted_branches = {preferred_branch, legacy_branch}
+
+    try:
+        current_branch = git.current_branch().strip()
+        if current_branch not in accepted_branches:
+            if git.branch_exists(preferred_branch):
+                branch_guidance = (
+                    f"Switch to the docs branch first: `git checkout {preferred_branch}`."
+                )
+            elif git.branch_exists(legacy_branch):
+                branch_guidance = (
+                    f"Switch to the existing legacy docs branch: "
+                    f"`git checkout {legacy_branch}`."
+                )
+            else:
+                branch_guidance = (
+                    "Create and switch to the docs branch first: "
+                    f"`git checkout -b {preferred_branch}`."
+                )
+
+            raise WorkitemScaffoldError(
+                "workitem init only materializes canonical Stage-1 docs from the docs "
+                f"branch for `{work_item_id}`; current branch is `{current_branch}`. "
+                f"{branch_guidance} Legacy repos may also use `{legacy_branch}`."
+            )
+
+        if git.has_uncommitted_changes():
+            raise WorkitemScaffoldError(
+                "workitem init requires a clean working tree on "
+                f"`{current_branch}` before writing `specs/{work_item_id}`. "
+                "Commit or stash changes first."
+            )
+    except GitError as exc:
+        raise WorkitemScaffoldError(
+            f"workitem init git preflight failed: {exc}"
+        ) from exc
 
 
 @workitem_app.command(
@@ -79,8 +136,15 @@ def workitem_init(
         console.print("[red]Not inside an AI-SDLC project.[/red]")
         raise typer.Exit(code=1)
 
+    scaffolder = WorkitemScaffolder()
     try:
-        result = WorkitemScaffolder().scaffold(
+        work_item_id = scaffolder.preview_work_item_id(
+            root=root,
+            title=title,
+            wi_id=wi_id,
+        )
+        _ensure_workitem_init_git_preflight(root, work_item_id)
+        result = scaffolder.scaffold(
             root=root,
             title=title,
             wi_id=wi_id,

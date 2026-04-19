@@ -71,6 +71,61 @@ def _write_manifest_yaml(root: Path, text: str) -> None:
     )
 
 
+def _init_git_repo(root: Path) -> None:
+    subprocess.run(
+        ["git", "init"],
+        cwd=root,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    subprocess.run(
+        ["git", "branch", "-M", "main"],
+        cwd=root,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    subprocess.run(
+        ["git", "config", "user.email", "test@test.com"],
+        cwd=root,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    subprocess.run(
+        ["git", "config", "user.name", "Test"],
+        cwd=root,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    subprocess.run(
+        ["git", "add", "."],
+        cwd=root,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    subprocess.run(
+        ["git", "commit", "-m", "init"],
+        cwd=root,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+
+
+def _checkout_branch(root: Path, branch_name: str) -> None:
+    subprocess.run(
+        ["git", "checkout", "-b", branch_name],
+        cwd=root,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+
+
 class TestCliWorkitemInit:
     def test_workitem_init_guides_formal_bootstrap_when_state_missing(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
@@ -101,6 +156,8 @@ class TestCliWorkitemInit:
         root = tmp_path / "repo"
         root.mkdir()
         init_project(root)
+        _init_git_repo(root)
+        _checkout_branch(root, "feature/008-direct-formal-entry-docs")
         monkeypatch.chdir(root)
 
         result = runner.invoke(
@@ -138,6 +195,62 @@ class TestCliWorkitemInit:
         assert "代码审查结论" in exec_log_text
         assert "任务/计划同步状态" in exec_log_text
         assert "已完成 git 提交：否" in exec_log_text
+
+    def test_workitem_init_blocks_main_branch_until_docs_branch_is_checked_out(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        root = tmp_path / "repo"
+        root.mkdir()
+        init_project(root)
+        _init_git_repo(root)
+        monkeypatch.chdir(root)
+
+        result = runner.invoke(
+            app,
+            [
+                "workitem",
+                "init",
+                "--title",
+                "Direct Formal Entry",
+                "--wi-id",
+                "008-direct-formal-entry",
+            ],
+        )
+
+        assert result.exit_code == 1
+        assert "main" in result.output
+        assert "docs branch" in result.output.lower()
+        assert "feature/008-direct-formal-entry-docs" in result.output
+        assert "git checkout -b feature/008-direct-formal-entry-docs" in result.output
+        assert not (root / "specs" / "008-direct-formal-entry").exists()
+
+    def test_workitem_init_blocks_dirty_docs_branch(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        root = tmp_path / "repo"
+        root.mkdir()
+        init_project(root)
+        _init_git_repo(root)
+        _checkout_branch(root, "feature/008-direct-formal-entry-docs")
+        (root / "dirty.txt").write_text("pending\n", encoding="utf-8")
+        monkeypatch.chdir(root)
+
+        result = runner.invoke(
+            app,
+            [
+                "workitem",
+                "init",
+                "--title",
+                "Direct Formal Entry",
+                "--wi-id",
+                "008-direct-formal-entry",
+            ],
+        )
+
+        assert result.exit_code == 1
+        assert "clean working tree" in result.output.lower()
+        assert "feature/008-direct-formal-entry-docs" in result.output
+        assert not (root / "specs" / "008-direct-formal-entry").exists()
 
     def test_workitem_init_auto_generated_id_updates_project_state(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
