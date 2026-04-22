@@ -71,6 +71,20 @@ def test_build_mvp_frontend_generation_constraints_exposes_hard_rules_token_rule
     assert "override-non-exempt-hard-rules" in constraints.exceptions.forbidden_overrides
 
 
+def test_build_mvp_frontend_generation_constraints_preserves_delivery_context() -> None:
+    constraints = build_mvp_frontend_generation_constraints(
+        effective_provider_id="public-primevue",
+        delivery_entry_id="vue3-public-primevue",
+        component_library_packages=["primevue", "@primeuix/themes"],
+        provider_theme_adapter_id="public-primevue-theme-bridge",
+    )
+
+    assert constraints.effective_provider_id == "public-primevue"
+    assert constraints.delivery_entry_id == "vue3-public-primevue"
+    assert constraints.component_library_packages == ["primevue", "@primeuix/themes"]
+    assert constraints.provider_theme_adapter_id == "public-primevue-theme-bridge"
+
+
 def test_frontend_generation_constraint_set_rejects_duplicate_hard_rule_ids() -> None:
     with pytest.raises(ValueError, match="duplicate hard rule ids"):
         FrontendGenerationConstraintSet(
@@ -95,3 +109,53 @@ def test_frontend_generation_constraint_set_rejects_duplicate_hard_rule_ids() ->
             token_rules=TokenRuleSet(disallowed_naked_values=["hex-color"]),
             exceptions=GenerationExceptionPolicy(),
         )
+
+
+def test_frontend_generation_constraint_models_deduplicate_set_like_lists() -> None:
+    constraints = FrontendGenerationConstraintSet(
+        work_item_id="017",
+        effective_provider_id="public-primevue",
+        delivery_entry_id="vue3-public-primevue",
+        component_library_packages=["primevue", "primevue", "@primeuix/themes"],
+        page_schema_ids=["dashboard", "dashboard", "search"],
+        execution_order=["contract", "contract", "kernel"],
+        recipe=RecipeGenerationConstraint(
+            allowed_recipe_ids=["ListPage", "ListPage", "FormPage"]
+        ),
+        whitelist=WhitelistGenerationConstraint(
+            default_component_ids=["UiButton", "UiButton", "UiInput"]
+        ),
+        hard_rules=GenerationHardRuleSet(
+            rules=[
+                GenerationHardRule(
+                    rule_id="no-default-sf-components",
+                    category="absolute",
+                    description="forbid direct sf component default entry",
+                )
+            ]
+        ),
+        token_rules=TokenRuleSet(
+            disallowed_naked_values=["hex-color", "hex-color", "shadow"]
+        ),
+        exceptions=GenerationExceptionPolicy(
+            allowed_objects=["recipe-deviation", "recipe-deviation", "token-exception"],
+            forbidden_overrides=[
+                "override-ui-kernel-standard-body",
+                "override-ui-kernel-standard-body",
+            ],
+        ),
+    )
+
+    assert constraints.component_library_packages == ["primevue", "@primeuix/themes"]
+    assert constraints.page_schema_ids == ["dashboard", "search"]
+    assert constraints.execution_order == ["contract", "contract", "kernel"]
+    assert constraints.recipe.allowed_recipe_ids == ["ListPage", "FormPage"]
+    assert constraints.whitelist.default_component_ids == ["UiButton", "UiInput"]
+    assert constraints.token_rules.disallowed_naked_values == ["hex-color", "shadow"]
+    assert constraints.exceptions.allowed_objects == [
+        "recipe-deviation",
+        "token-exception",
+    ]
+    assert constraints.exceptions.forbidden_overrides == [
+        "override-ui-kernel-standard-body"
+    ]

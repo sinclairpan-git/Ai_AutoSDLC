@@ -42,6 +42,12 @@ from ai_sdlc.generators.frontend_generation_constraint_artifacts import (
 from ai_sdlc.generators.frontend_page_ui_schema_artifacts import (
     materialize_frontend_page_ui_schema_artifacts,
 )
+from ai_sdlc.generators.frontend_provider_expansion_artifacts import (
+    materialize_frontend_provider_expansion_artifacts,
+)
+from ai_sdlc.generators.frontend_provider_runtime_adapter_artifacts import (
+    materialize_frontend_provider_runtime_adapter_artifacts,
+)
 from ai_sdlc.generators.frontend_quality_platform_artifacts import (
     materialize_frontend_quality_platform_artifacts,
 )
@@ -54,14 +60,14 @@ from ai_sdlc.models.frontend_cross_provider_consistency import (
 from ai_sdlc.models.frontend_gate_policy import (
     build_p1_frontend_gate_policy_visual_a11y_foundation,
 )
-from ai_sdlc.models.frontend_generation_constraints import (
-    build_mvp_frontend_generation_constraints,
-)
 from ai_sdlc.models.frontend_page_ui_schema import (
     build_p2_frontend_page_ui_schema_baseline,
 )
-from ai_sdlc.models.frontend_quality_platform import (
-    build_p2_frontend_quality_platform_baseline,
+from ai_sdlc.models.frontend_provider_expansion import (
+    build_p3_frontend_provider_expansion_baseline,
+)
+from ai_sdlc.models.frontend_provider_runtime_adapter import (
+    build_p3_target_project_adapter_scaffold_baseline,
 )
 from ai_sdlc.models.frontend_theme_token_governance import (
     build_p2_frontend_theme_token_governance_baseline,
@@ -72,6 +78,46 @@ from ai_sdlc.utils.helpers import find_project_root
 
 console = Console()
 _BRANCH_NUMERIC_WORK_ITEM_RE = re.compile(r"^(?P<id>\d{3,})(?:[-_].*)?$")
+
+
+def _dedupe_cli_text_items(values: object) -> list[str]:
+    deduped: list[str] = []
+    for value in values or []:
+        normalized = str(value).strip()
+        if normalized and normalized not in deduped:
+            deduped.append(normalized)
+    return deduped
+
+
+def _dedupe_text_items(values: object) -> list[str]:
+    deduped: list[str] = []
+    for value in values or []:
+        normalized = str(value).strip()
+        if normalized and normalized not in deduped:
+            deduped.append(normalized)
+    return deduped
+
+
+def _materialized_path_labels(root: Path, paths: object) -> list[str]:
+    rendered_values: list[str] = []
+    for path in paths or []:
+        if isinstance(path, Path):
+            if path.is_absolute():
+                try:
+                    rendered_values.append(str(path.relative_to(root)))
+                except ValueError:
+                    rendered_values.append(str(path))
+            else:
+                rendered_values.append(str(path))
+        else:
+            rendered_values.append(str(path))
+    return _dedupe_cli_text_items(rendered_values)
+
+
+def _print_materialized_paths(root: Path, paths: object) -> None:
+    for path in _materialized_path_labels(root, paths):
+        console.print(f"  - {path}")
+
 
 # ---------------------------------------------------------------------------
 # gate sub-app
@@ -131,7 +177,9 @@ def _program_truth_gate_surface(
         "state": readiness.state,
         "detail": readiness.detail,
         "ready": readiness.ready,
-        "matched_capabilities": list(readiness.matched_capabilities),
+        "matched_capabilities": _dedupe_text_items(readiness.matched_capabilities),
+        "frontend_inheritance_status": dict(readiness.frontend_inheritance_status),
+        "next_required_actions": _dedupe_text_items(readiness.next_required_actions),
     }
 
 
@@ -214,22 +262,20 @@ def _build_context(
             spec_dir = Path(ctx["spec_dir"])
             close_check = run_close_check(cwd=root, wi=spec_dir, all_docs=False)
             ctx["close_check_ok"] = close_check.ok
-            if close_check.ok:
-                def _flag_ok(name: str) -> bool:
-                    return any(
-                        check.get("name") == name and check.get("ok")
-                        for check in close_check.checks
-                    )
+            def _flag_ok(name: str) -> bool:
+                return any(
+                    check.get("name") == name and check.get("ok")
+                    for check in close_check.checks
+                )
 
-                ctx["all_tasks_complete"] = ctx["all_tasks_complete"] or _flag_ok(
-                    "tasks_completion"
-                )
-                ctx["tests_passed"] = ctx["tests_passed"] or _flag_ok(
-                    "verification_profile"
-                )
+            tasks_attested = _flag_ok("tasks_completion")
+            tests_attested = _flag_ok("verification_profile")
+            ctx["all_tasks_complete"] = ctx["all_tasks_complete"] or tasks_attested
+            ctx["tests_passed"] = ctx["tests_passed"] or tests_attested
+            if tasks_attested or tests_attested:
                 ctx["close_check_attested"] = True
-            else:
-                ctx["close_check_blockers"] = list(close_check.blockers)
+            if not close_check.ok:
+                ctx["close_check_blockers"] = _dedupe_text_items(close_check.blockers)
         spec_dir = Path(ctx["spec_dir"]) if "spec_dir" in ctx else None
         truth_surface = _program_truth_gate_surface(root, spec_dir=spec_dir)
         if truth_surface is not None:
@@ -237,6 +283,12 @@ def _build_context(
             ctx["program_truth_audit_ready"] = bool(truth_surface.get("ready"))
             ctx["program_truth_audit_state"] = truth_surface.get("state")
             ctx["program_truth_audit_detail"] = truth_surface.get("detail", "")
+            ctx["program_truth_audit_frontend_inheritance_status"] = dict(
+                truth_surface.get("frontend_inheritance_status", {}) or {}
+            )
+            ctx["program_truth_audit_next_actions"] = _dedupe_text_items(
+                truth_surface.get("next_required_actions", [])
+            )
 
     return ctx
 
@@ -324,7 +376,7 @@ def gate_check(
     if registry.get(stage) is None:
         console.print(
             f"[red]Unknown stage: {stage}. "
-            f"Available: {', '.join(registry.stages)}[/red]"
+            f"Available: {', '.join(_dedupe_cli_text_items(registry.stages))}[/red]"
         )
         raise typer.Exit(code=2)
 
@@ -426,7 +478,9 @@ def rules_show(
         content = loader.load_rule(name)
     except FileNotFoundError:
         console.print(f"[red]Rule not found: {name}[/red]")
-        console.print(f"Available: {', '.join(loader.list_rules())}")
+        console.print(
+            f"Available: {', '.join(_dedupe_cli_text_items(loader.list_rules()))}"
+        )
         raise typer.Exit(code=1) from None
     console.print(content)
 
@@ -462,6 +516,7 @@ def rules_materialize_frontend_mvp() -> None:
         console.print("[red]Not inside an AI-SDLC project.[/red]")
         raise typer.Exit(code=1)
 
+    svc = ProgramService(root)
     paths = [
         *materialize_frontend_gate_policy_artifacts(
             root,
@@ -469,16 +524,16 @@ def rules_materialize_frontend_mvp() -> None:
         ),
         *materialize_frontend_generation_constraint_artifacts(
             root,
-            build_mvp_frontend_generation_constraints(),
+            svc.resolve_frontend_generation_constraints(),
         ),
     ]
 
+    rendered_paths = _materialized_path_labels(root, paths)
     console.print(
         "[green]Frontend governance artifacts materialized[/green] "
-        f"({len(paths)} files)"
+        f"({len(rendered_paths)} files)"
     )
-    for path in paths:
-        console.print(f"  - {path.relative_to(root)}")
+    _print_materialized_paths(root, paths)
 
 
 @rules_app.command(name="materialize-frontend-page-ui-schema")
@@ -494,12 +549,12 @@ def rules_materialize_frontend_page_ui_schema() -> None:
         build_p2_frontend_page_ui_schema_baseline(),
     )
 
+    rendered_paths = _materialized_path_labels(root, paths)
     console.print(
         "[green]Frontend page/UI schema artifacts materialized[/green] "
-        f"({len(paths)} files)"
+        f"({len(rendered_paths)} files)"
     )
-    for path in paths:
-        console.print(f"  - {path.relative_to(root)}")
+    _print_materialized_paths(root, paths)
 
 
 @rules_app.command(name="materialize-frontend-theme-token-governance")
@@ -510,17 +565,20 @@ def rules_materialize_frontend_theme_token_governance() -> None:
         console.print("[red]Not inside an AI-SDLC project.[/red]")
         raise typer.Exit(code=1)
 
+    svc = ProgramService(root)
     paths = materialize_frontend_theme_token_governance_artifacts(
         root,
-        governance=build_p2_frontend_theme_token_governance_baseline(),
+        governance=build_p2_frontend_theme_token_governance_baseline(
+            constraints=svc.resolve_frontend_generation_constraints()
+        ),
     )
 
+    rendered_paths = _materialized_path_labels(root, paths)
     console.print(
         "[green]Frontend theme token governance artifacts materialized[/green] "
-        f"({len(paths)} files)"
+        f"({len(rendered_paths)} files)"
     )
-    for path in paths:
-        console.print(f"  - {path.relative_to(root)}")
+    _print_materialized_paths(root, paths)
 
 
 @rules_app.command(name="materialize-frontend-quality-platform")
@@ -531,17 +589,18 @@ def rules_materialize_frontend_quality_platform() -> None:
         console.print("[red]Not inside an AI-SDLC project.[/red]")
         raise typer.Exit(code=1)
 
+    svc = ProgramService(root)
     paths = materialize_frontend_quality_platform_artifacts(
         root,
-        platform=build_p2_frontend_quality_platform_baseline(),
+        platform=svc.resolve_frontend_quality_platform(),
     )
 
+    rendered_paths = _materialized_path_labels(root, paths)
     console.print(
         "[green]Frontend quality platform artifacts materialized[/green] "
-        f"({len(paths)} files)"
+        f"({len(rendered_paths)} files)"
     )
-    for path in paths:
-        console.print(f"  - {path.relative_to(root)}")
+    _print_materialized_paths(root, paths)
 
 
 @rules_app.command(name="materialize-frontend-cross-provider-consistency")
@@ -552,17 +611,63 @@ def rules_materialize_frontend_cross_provider_consistency() -> None:
         console.print("[red]Not inside an AI-SDLC project.[/red]")
         raise typer.Exit(code=1)
 
+    svc = ProgramService(root)
     paths = materialize_frontend_cross_provider_consistency_artifacts(
         root,
-        consistency=build_p2_frontend_cross_provider_consistency_baseline(),
+        consistency=build_p2_frontend_cross_provider_consistency_baseline(
+            theme_governance=svc.resolve_frontend_theme_token_governance(),
+            quality_platform=svc.resolve_frontend_quality_platform(),
+        ),
     )
 
+    rendered_paths = _materialized_path_labels(root, paths)
     console.print(
         "[green]Frontend cross-provider consistency artifacts materialized[/green] "
-        f"({len(paths)} files)"
+        f"({len(rendered_paths)} files)"
     )
-    for path in paths:
-        console.print(f"  - {path.relative_to(root)}")
+    _print_materialized_paths(root, paths)
+
+
+@rules_app.command(name="materialize-frontend-provider-expansion")
+def rules_materialize_frontend_provider_expansion() -> None:
+    """Materialize canonical frontend provider expansion artifacts."""
+    root = find_project_root()
+    if root is None:
+        console.print("[red]Not inside an AI-SDLC project.[/red]")
+        raise typer.Exit(code=1)
+
+    paths = materialize_frontend_provider_expansion_artifacts(
+        root,
+        expansion=build_p3_frontend_provider_expansion_baseline(),
+    )
+
+    rendered_paths = _materialized_path_labels(root, paths)
+    console.print(
+        "[green]Frontend provider expansion artifacts materialized[/green] "
+        f"({len(rendered_paths)} files)"
+    )
+    _print_materialized_paths(root, paths)
+
+
+@rules_app.command(name="materialize-frontend-provider-runtime-adapter")
+def rules_materialize_frontend_provider_runtime_adapter() -> None:
+    """Materialize canonical frontend provider runtime adapter artifacts."""
+    root = find_project_root()
+    if root is None:
+        console.print("[red]Not inside an AI-SDLC project.[/red]")
+        raise typer.Exit(code=1)
+
+    paths = materialize_frontend_provider_runtime_adapter_artifacts(
+        root,
+        runtime_adapter=build_p3_target_project_adapter_scaffold_baseline(),
+    )
+
+    rendered_paths = _materialized_path_labels(root, paths)
+    console.print(
+        "[green]Frontend provider runtime adapter artifacts materialized[/green] "
+        f"({len(rendered_paths)} files)"
+    )
+    _print_materialized_paths(root, paths)
 
 
 # ---------------------------------------------------------------------------
@@ -591,7 +696,10 @@ def route_command(
         wt = WorkType(work_type)
     except ValueError:
         console.print(f"[red]Unknown work type: {work_type}[/red]")
-        console.print(f"Valid types: {', '.join(t.value for t in WorkType)}")
+        console.print(
+            "Valid types: "
+            + ", ".join(_dedupe_cli_text_items(t.value for t in WorkType))
+        )
         raise typer.Exit(code=2) from None
 
     studio = FLOW_MAP.get(wt)

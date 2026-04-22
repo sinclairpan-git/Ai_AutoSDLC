@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from unittest.mock import patch
 
 import pytest
 from typer.testing import CliRunner
@@ -55,6 +56,16 @@ class TestStageCommand:
         assert "init" in result.output
         assert "命令清单" in result.output or "steps" in result.output.lower()
 
+    def test_stage_show_refine_uses_feature_docs_branch_naming(
+        self, initialized_project_dir: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.chdir(initialized_project_dir)
+        result = runner.invoke(app, ["stage", "show", "refine"])
+
+        assert result.exit_code == 0
+        assert "创建 feature/{id}-docs 分支" in result.output
+        assert "创建 design/{id}-docs 分支" not in result.output
+
     def test_stage_status_inside_project(
         self, initialized_project_dir: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
@@ -80,6 +91,34 @@ class TestStageCommand:
         assert runner.invoke(app, ["stage", "show", "init"]).exit_code == 0
         doc = tmp_path / ".claude" / "CLAUDE.md"
         assert doc.is_file()
+
+    def test_stage_show_deduplicates_missing_prerequisites(
+        self, initialized_project_dir: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.chdir(initialized_project_dir)
+        save_checkpoint(
+            initialized_project_dir,
+            Checkpoint(
+                current_stage="init",
+                feature=FeatureInfo(
+                    id="001",
+                    spec_dir="specs/001-ai-sdlc-framework",
+                    design_branch="design/001",
+                    feature_branch="feature/001",
+                    current_branch="feature/001",
+                ),
+            ),
+        )
+
+        with patch(
+            "ai_sdlc.cli.stage_cmd.StageDispatcher.check_prerequisites",
+            return_value=["clarify", "clarify", "plan"],
+        ):
+            result = runner.invoke(app, ["stage", "show", "refine"])
+
+        assert result.exit_code == 0
+        assert "前置阶段未完成: clarify, plan" in result.output
+        assert "clarify, clarify" not in result.output
 
     def test_stage_run_guides_user_when_legacy_reconcile_is_needed(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
@@ -119,3 +158,31 @@ class TestStageCommand:
         result = runner.invoke(app, ["stage", "run", "refine", "--dry-run"])
         assert result.exit_code == 1
         assert "recover --reconcile" in result.output
+
+    def test_stage_run_deduplicates_missing_prerequisites(
+        self, initialized_project_dir: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.chdir(initialized_project_dir)
+        save_checkpoint(
+            initialized_project_dir,
+            Checkpoint(
+                current_stage="init",
+                feature=FeatureInfo(
+                    id="001",
+                    spec_dir="specs/001-ai-sdlc-framework",
+                    design_branch="design/001",
+                    feature_branch="feature/001",
+                    current_branch="feature/001",
+                ),
+            ),
+        )
+
+        with patch(
+            "ai_sdlc.cli.stage_cmd.StageDispatcher.check_prerequisites",
+            return_value=["clarify", "clarify", "plan"],
+        ):
+            result = runner.invoke(app, ["stage", "run", "refine"])
+
+        assert result.exit_code == 1
+        assert "前置阶段未完成: clarify, plan" in result.output
+        assert "clarify, clarify" not in result.output

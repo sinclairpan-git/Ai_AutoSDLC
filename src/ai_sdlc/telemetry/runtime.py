@@ -711,6 +711,12 @@ class RuntimeTelemetry:
 
     @staticmethod
     def _read_ndjson(path: Path) -> Iterable[dict]:
+        seen: set[str] = set()
         for line in path.read_text(encoding="utf-8").splitlines():
             if line.strip():
-                yield json.loads(line)
+                payload = json.loads(line)
+                marker = json.dumps(payload, sort_keys=True, ensure_ascii=False)
+                if marker in seen:
+                    continue
+                seen.add(marker)
+                yield payload

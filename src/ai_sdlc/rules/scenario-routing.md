@@ -80,10 +80,10 @@
 1. 在完成当前最小原子操作后 HALT（与 autopilot「暂停」协议一致）
 2. 在 task-execution-log.md 记录：SCOPE_CHANGE、原因、影响范围、用户确认引语
 3. 切回设计层：
-   a. 若 design 分支仍存在：checkout design/NNN，更新 spec.md / plan.md / tasks.md（或增量文件）
-   b. 若 design 已合并：从 main 拉分支 docs/hotfix-scope-NNN 或在原 design 命名规范下新建分支按 git-branch.md 处理
+   a. 若当前 docs 分支仍存在：checkout `feature/<WI>-docs`（legacy 仓库可兼容 `design/<WI>-docs`），更新 spec.md / plan.md / tasks.md（或增量文件）
+   b. 若 docs 分支已合并：从 `main` 新建新的 docs 分支，命名遵循 `git-branch.md`（首选 `feature/<WI>-docs`，legacy 仓库可兼容 `design/<WI>-docs`）
 4. 重新跑 Stage 4 VERIFY（至少对变更部分做一致性校验）
-5. 按 git-branch.md：commit → 合并策略 → checkout feature/NNN（或新建）→ **基线校验**
+5. 按 git-branch.md：commit → 合并策略 → checkout feature/<WI>-dev（或当前项目约定的实现分支）→ **基线校验**
 6. 从「首个受影响任务」继续 EXECUTE；已完成的批次保持归档，作废任务标记为 CANCELLED 并说明
 ```
 

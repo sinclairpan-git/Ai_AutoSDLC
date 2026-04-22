@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 CertificationGate = Literal["ready", "conditional", "blocked"]
 RosterAdmissionState = Literal["candidate", "admitted", "deferred"]
@@ -59,6 +59,20 @@ def _find_duplicates(values: list[str]) -> list[str]:
             duplicates.append(value)
         seen.add(value)
     return duplicates
+
+
+def _dedupe_strings(value: object) -> list[str]:
+    if value is None:
+        return []
+    unique: list[str] = []
+    seen: set[str] = set()
+    for item in value:
+        text = str(item)
+        if text in seen:
+            continue
+        seen.add(text)
+        unique.append(text)
+    return unique
 
 
 def _derive_aggregate_gate(gates: list[CertificationGate]) -> CertificationGate:
@@ -137,6 +151,17 @@ class ChoiceSurfacePolicy(FrontendProviderExpansionModel):
         default_factory=lambda: ["public-visible", "simple-default-eligible"]
     )
 
+    @field_validator(
+        "internal_modeling_allowed",
+        "simple_mode_default_allowed",
+        "advanced_mode_allowed",
+        "public_choice_surface_allowed",
+        mode="before",
+    )
+    @classmethod
+    def _dedupe_policy_lists(cls, value: object) -> list[str]:
+        return _dedupe_strings(value)
+
     @model_validator(mode="after")
     def _validate_policy(self) -> ChoiceSurfacePolicy:
         if self.simple_mode_default_allowed != ["simple-default-eligible"]:
@@ -156,6 +181,11 @@ class ProviderAdmissionBundle(FrontendProviderExpansionModel):
     choice_surface_visibility: ChoiceSurfaceVisibility
     caveat_codes: list[str] = Field(default_factory=list)
     artifact_root_ref: str = _ARTIFACT_ROOT
+
+    @field_validator("source_work_item_ids", "caveat_codes", mode="before")
+    @classmethod
+    def _dedupe_bundle_lists(cls, value: object) -> list[str]:
+        return _dedupe_strings(value)
 
     @property
     def certification_gate(self) -> CertificationGate:
@@ -249,6 +279,18 @@ class ProviderExpansionHandoffContract(FrontendProviderExpansionModel):
     cli_fields: list[str] = Field(default_factory=list)
     verify_fields: list[str] = Field(default_factory=list)
 
+    @field_validator(
+        "compatible_versions",
+        "canonical_files",
+        "program_service_fields",
+        "cli_fields",
+        "verify_fields",
+        mode="before",
+    )
+    @classmethod
+    def _dedupe_contract_lists(cls, value: object) -> list[str]:
+        return _dedupe_strings(value)
+
     @model_validator(mode="after")
     def _validate_contract(self) -> ProviderExpansionHandoffContract:
         if self.current_version not in self.compatible_versions:
@@ -278,6 +320,11 @@ class FrontendProviderExpansionSet(FrontendProviderExpansionModel):
         default_factory=list
     )
     handoff_contract: ProviderExpansionHandoffContract
+
+    @field_validator("source_work_item_ids", mode="before")
+    @classmethod
+    def _dedupe_source_work_item_ids(cls, value: object) -> list[str]:
+        return _dedupe_strings(value)
 
     @model_validator(mode="after")
     def _validate_set(self) -> FrontendProviderExpansionSet:

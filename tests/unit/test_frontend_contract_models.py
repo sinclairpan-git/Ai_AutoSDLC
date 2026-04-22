@@ -163,3 +163,76 @@ def test_frontend_contract_set_rejects_duplicate_page_ids() -> None:
                 _build_page_contract(page_id="user-create"),
             ],
         )
+
+
+def test_frontend_contract_models_deduplicate_set_like_lists() -> None:
+    contract_set = FrontendContractSet(
+        work_item_id="011-frontend-contract-authoring-baseline",
+        module_contracts=[
+            ModuleContract(
+                module_id="user",
+                recipe_declarations=[
+                    RecipeDeclaration(
+                        recipe_id="form-create",
+                        required_regions=["header", "header", "form"],
+                    )
+                ],
+                shared_rules=ContractRuleBundle(
+                    hard_rules=["no-raw-copy", "no-raw-copy", "no-direct-prop-mutation"],
+                    whitelist_ref=WhitelistReference(
+                        whitelist_id="enterprise-vue2-mvp"
+                    ),
+                    token_rules_ref=TokenRulesReference(
+                        ruleset_id="mvp-minimal-token-rules"
+                    ),
+                ),
+            )
+        ],
+        page_contracts=[
+            PageContract(
+                metadata=PageMetadata(
+                    page_id="user-create",
+                    module_id="user",
+                    page_type="form",
+                    requires_validation=True,
+                    uses_i18n=True,
+                ),
+                recipe_declaration=RecipeDeclaration(
+                    recipe_id="form-create",
+                    required_regions=["header", "header", "form"],
+                ),
+                rules=ContractRuleBundle(
+                    i18n=I18nContract(
+                        namespace="user.create",
+                        existing_keys=["submit", "submit", "cancel"],
+                    ),
+                    validation=ValidationContract(
+                        fields=[
+                            ValidationFieldRule(
+                                field_name="username",
+                                field_type="string",
+                                depends_on=["tenant_id", "tenant_id"],
+                            )
+                        ]
+                    ),
+                    hard_rules=["no-raw-copy", "no-raw-copy"],
+                ),
+            )
+        ],
+    )
+
+    module_recipe = contract_set.module_contracts[0].recipe_declarations[0]
+    page_recipe = contract_set.page_contracts[0].recipe_declaration
+    i18n_contract = contract_set.page_contracts[0].rules.i18n
+    validation_field = contract_set.page_contracts[0].rules.validation.fields[0]
+
+    assert module_recipe.required_regions == ["header", "form"]
+    assert page_recipe.required_regions == ["header", "form"]
+    assert contract_set.module_contracts[0].shared_rules.hard_rules == [
+        "no-raw-copy",
+        "no-direct-prop-mutation",
+    ]
+    assert i18n_contract is not None
+    assert i18n_contract.existing_keys == ["submit", "cancel"]
+    assert validation_field.depends_on == ["tenant_id"]
+    assert contract_set.page_contracts[0].rules.hard_rules == ["no-raw-copy"]

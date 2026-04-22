@@ -13,6 +13,15 @@ import yaml
 from ai_sdlc.utils.helpers import find_project_root, is_git_repo
 
 
+def _dedupe_text_items(values: object) -> list[str]:
+    deduped: list[str] = []
+    for value in values or []:
+        normalized = str(value).strip()
+        if normalized and normalized not in deduped:
+            deduped.append(normalized)
+    return deduped
+
+
 def parse_markdown_frontmatter(path: Path) -> tuple[dict[str, Any], str]:
     """Return (frontmatter dict, body) for a Markdown file with optional YAML FM."""
     raw = path.read_text(encoding="utf-8")
@@ -108,12 +117,15 @@ class PlanCheckResult:
     changed_paths: list[str] = field(default_factory=list)
     error: str | None = None
 
+    def __post_init__(self) -> None:
+        self.changed_paths = _dedupe_text_items(self.changed_paths)
+
     def to_json_dict(self) -> dict[str, Any]:
         return {
             "drift": self.drift,
             "plan_file": str(self.plan_file) if self.plan_file else None,
             "pending_todos": self.pending_todos,
-            "changed_paths": self.changed_paths,
+            "changed_paths": _dedupe_text_items(self.changed_paths),
             "error": self.error,
         }
 

@@ -102,3 +102,20 @@ def test_frontend_solution_confirmation_roots_are_stable(tmp_path) -> None:
     assert frontend_solution_confirmation_memory_root(tmp_path) == (
         tmp_path / ".ai-sdlc" / "memory" / "frontend-solution-confirmation"
     )
+
+
+def test_materialize_frontend_solution_confirmation_artifacts_deduplicates_returned_paths(
+    tmp_path,
+) -> None:
+    style_pack = build_builtin_style_pack_manifests()[0]
+    strategy = build_builtin_install_strategies()[0]
+
+    paths = materialize_frontend_solution_confirmation_artifacts(
+        tmp_path,
+        style_packs=[style_pack, style_pack],
+        install_strategies=[strategy, strategy],
+        snapshot=build_mvp_solution_snapshot(),
+    )
+
+    rel_paths = [path.relative_to(tmp_path).as_posix() for path in paths]
+    assert rel_paths == list(dict.fromkeys(rel_paths))

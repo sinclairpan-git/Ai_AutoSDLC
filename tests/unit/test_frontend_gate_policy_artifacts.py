@@ -6,6 +6,7 @@ from pathlib import Path
 
 import yaml
 
+import ai_sdlc.generators.frontend_gate_policy_artifacts as frontend_gate_policy_artifacts_module
 from ai_sdlc.generators.frontend_gate_policy_artifacts import (
     frontend_gate_policy_root,
     materialize_frontend_gate_policy_artifacts,
@@ -196,3 +197,22 @@ def test_p1_gate_policy_artifacts_preserve_visual_a11y_payloads(tmp_path) -> Non
         "drift-report",
         "legacy-expansion-report",
     ]
+
+
+def test_materialize_frontend_gate_policy_artifacts_deduplicates_returned_paths(
+    tmp_path,
+    monkeypatch,
+) -> None:
+    policy = build_mvp_frontend_gate_policy()
+    repeated_path = tmp_path / "governance" / "frontend" / "gates" / "gate.manifest.yaml"
+
+    monkeypatch.setattr(
+        frontend_gate_policy_artifacts_module,
+        "_write_yaml",
+        lambda path, payload: repeated_path,
+    )
+
+    paths = materialize_frontend_gate_policy_artifacts(tmp_path, policy)
+
+    rel_paths = [path.relative_to(tmp_path).as_posix() for path in paths]
+    assert rel_paths == list(dict.fromkeys(rel_paths))

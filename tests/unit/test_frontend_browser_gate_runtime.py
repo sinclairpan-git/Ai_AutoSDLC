@@ -12,7 +12,11 @@ import pytest
 from ai_sdlc.core.frontend_browser_gate_runtime import (
     BrowserGateInteractionProbeCapture,
     BrowserGateProbeRunnerResult,
+    BrowserGateProbeRuntimeSession,
     BrowserGateSharedRuntimeCapture,
+    BrowserProbeArtifactRecord,
+    BrowserProbeExecutionReceipt,
+    BrowserQualityBundleMaterializationInput,
     build_browser_quality_gate_execution_context,
     materialize_browser_gate_probe_runtime,
 )
@@ -36,6 +40,13 @@ def _context() -> BrowserQualityGateExecutionContext:
         effective_provider="public-primevue",
         effective_style_pack="modern-saas",
         style_fidelity_status="full",
+        delivery_entry_id="vue3-public-primevue",
+        component_library_packages=["primevue", "@primeuix/themes"],
+        provider_theme_adapter_id="public-primevue-theme-bridge",
+        provider_runtime_adapter_carrier_mode="target-project-adapter-layer",
+        provider_runtime_adapter_delivery_state="scaffolded",
+        provider_runtime_adapter_evidence_state="missing",
+        page_schema_ids=["dashboard-workspace", "search-list-workspace"],
         required_probe_set=[
             "playwright_smoke",
             "visual_expectation",
@@ -83,9 +94,27 @@ def test_build_browser_quality_gate_execution_context_derives_index_html_entry_r
         },
         solution_snapshot=build_mvp_solution_snapshot(),
         gate_run_id="gate-run-ctx",
+        delivery_entry_id="vue3-public-primevue",
+        component_library_packages=["primevue", "primevue", "@primeuix/themes"],
+        provider_theme_adapter_id="public-primevue-theme-bridge",
+        provider_runtime_adapter_carrier_mode="target-project-adapter-layer",
+        provider_runtime_adapter_delivery_state="scaffolded",
+        provider_runtime_adapter_evidence_state="missing",
+        page_schema_ids=[
+            "dashboard-workspace",
+            "dashboard-workspace",
+            "search-list-workspace",
+        ],
     )
 
     assert context.browser_entry_ref == "managed/frontend/index.html"
+    assert context.delivery_entry_id == "vue3-public-primevue"
+    assert context.component_library_packages == ["primevue", "@primeuix/themes"]
+    assert context.provider_theme_adapter_id == "public-primevue-theme-bridge"
+    assert context.provider_runtime_adapter_carrier_mode == "target-project-adapter-layer"
+    assert context.provider_runtime_adapter_delivery_state == "scaffolded"
+    assert context.provider_runtime_adapter_evidence_state == "missing"
+    assert context.page_schema_ids == ["dashboard-workspace", "search-list-workspace"]
 
 
 def test_materialize_browser_gate_probe_runtime_executes_real_runner_and_captures_artifacts(
@@ -146,6 +175,13 @@ def test_materialize_browser_gate_probe_runtime_executes_real_runner_and_capture
     assert interaction_receipt.classification_candidate == "pass"
     assert any(record.artifact_type == "playwright_trace" for record in records)
     assert any(record.artifact_type == "interaction_snapshot" for record in records)
+    assert bundle.delivery_entry_id == "vue3-public-primevue"
+    assert bundle.component_library_packages == ["primevue", "@primeuix/themes"]
+    assert bundle.provider_theme_adapter_id == "public-primevue-theme-bridge"
+    assert bundle.provider_runtime_adapter_carrier_mode == "target-project-adapter-layer"
+    assert bundle.provider_runtime_adapter_delivery_state == "scaffolded"
+    assert bundle.provider_runtime_adapter_evidence_state == "missing"
+    assert bundle.page_schema_ids == ["dashboard-workspace", "search-list-workspace"]
 
 
 def test_materialize_browser_gate_probe_runtime_marks_missing_runner_artifact_as_evidence_missing(
@@ -201,6 +237,294 @@ def test_materialize_browser_gate_probe_runtime_marks_missing_runner_artifact_as
     smoke_receipt = next(item for item in receipts if item.check_name == "playwright_smoke")
     assert smoke_receipt.classification_candidate == "evidence_missing"
     assert bundle.overall_gate_status == "incomplete"
+
+
+def test_materialize_browser_gate_probe_runtime_deduplicates_context_lists_and_warnings(
+    tmp_path: Path,
+) -> None:
+    context = _context().model_copy(
+        update={
+            "component_library_packages": [
+                "primevue",
+                "primevue",
+                "@primeuix/themes",
+            ],
+            "page_schema_ids": [
+                "dashboard-workspace",
+                "dashboard-workspace",
+                "search-list-workspace",
+            ],
+        }
+    )
+
+    def _runner(*, artifact_root: Path, execution_context, generated_at: str):
+        trace_path = artifact_root / "shared-runtime" / "playwright-trace.zip"
+        screenshot_path = artifact_root / "shared-runtime" / "navigation-screenshot.png"
+        interaction_path = artifact_root / "interaction" / "interaction-snapshot.json"
+        trace_path.parent.mkdir(parents=True, exist_ok=True)
+        interaction_path.parent.mkdir(parents=True, exist_ok=True)
+        trace_path.write_text('{"trace":"ok"}\n', encoding="utf-8")
+        screenshot_path.write_bytes(b"png")
+        interaction_path.write_text('{"interaction":"ok"}\n', encoding="utf-8")
+        return BrowserGateProbeRunnerResult(
+            runtime_status="completed",
+            shared_capture=BrowserGateSharedRuntimeCapture(
+                gate_run_id=execution_context.gate_run_id,
+                trace_artifact_ref=str(trace_path.relative_to(tmp_path)),
+                navigation_screenshot_ref=str(screenshot_path.relative_to(tmp_path)),
+                capture_status="captured",
+                final_url="http://localhost:4173/",
+                anchor_refs=["page:landing", "page:landing"],
+                diagnostic_codes=[],
+            ),
+            interaction_capture=BrowserGateInteractionProbeCapture(
+                gate_run_id=execution_context.gate_run_id,
+                interaction_probe_id="primary-action",
+                artifact_refs=[str(interaction_path.relative_to(tmp_path))],
+                capture_status="captured",
+                classification_candidate="pass",
+                blocking_reason_codes=[],
+                anchor_refs=["interaction:primary-action", "interaction:primary-action"],
+            ),
+            diagnostic_codes=[],
+            warnings=["runner warning", "runner warning"],
+        )
+
+    session, records, receipts, bundle = materialize_browser_gate_probe_runtime(
+        root=tmp_path,
+        context=context,
+        apply_artifact_path=".ai-sdlc/memory/frontend-managed-delivery/latest.yaml",
+        visual_a11y_evidence_artifact=_visual_a11y_pass_artifact(),
+        generated_at="2026-04-14T15:05:00Z",
+        probe_runner=_runner,
+        execute_probe=True,
+    )
+
+    assert session.warnings == ["runner warning"]
+    assert bundle.component_library_packages == ["primevue", "@primeuix/themes"]
+    assert bundle.page_schema_ids == ["dashboard-workspace", "search-list-workspace"]
+
+
+def test_frontend_browser_gate_models_deduplicate_set_like_lists() -> None:
+    context = BrowserQualityGateExecutionContext(
+        gate_run_id="gate-run-001",
+        apply_result_id="apply-result-001",
+        solution_snapshot_id="solution-001",
+        spec_dir="specs/001-auth",
+        attachment_scope_ref="scope://001-auth",
+        managed_frontend_target="managed/frontend",
+        readiness_subject_id="001-auth",
+        effective_provider="public-primevue",
+        effective_style_pack="modern-saas",
+        style_fidelity_status="full",
+        component_library_packages=["primevue", "primevue", "@primeuix/themes"],
+        page_schema_ids=["dashboard", "dashboard", "search"],
+        required_probe_set=["playwright_smoke", "playwright_smoke", "basic_a11y"],
+        browser_entry_ref="managed/frontend/index.html",
+    )
+    session = BrowserGateProbeRuntimeSession(
+        probe_runtime_session_id="runtime-001",
+        gate_run_id="gate-run-001",
+        apply_result_id="apply-result-001",
+        solution_snapshot_id="solution-001",
+        spec_dir="specs/001-auth",
+        attachment_scope_ref="scope://001-auth",
+        managed_frontend_target="managed/frontend",
+        readiness_subject_id="001-auth",
+        browser_entry_ref="managed/frontend/index.html",
+        artifact_root_ref="artifacts/browser-gate",
+        status="running_checks",
+        started_at="2026-04-21T00:00:00Z",
+        updated_at="2026-04-21T00:00:00Z",
+        warnings=["probe-delayed", "probe-delayed"],
+    )
+    shared_capture = BrowserGateSharedRuntimeCapture(
+        gate_run_id="gate-run-001",
+        trace_artifact_ref="trace.zip",
+        navigation_screenshot_ref="nav.png",
+        capture_status="captured",
+        final_url="http://localhost:4173/",
+        anchor_refs=["page:landing", "page:landing"],
+        diagnostic_codes=["nav_ok", "nav_ok"],
+    )
+    interaction_capture = BrowserGateInteractionProbeCapture(
+        gate_run_id="gate-run-001",
+        interaction_probe_id="primary-action",
+        artifact_refs=["interaction.json", "interaction.json"],
+        capture_status="captured",
+        classification_candidate="pass",
+        blocking_reason_codes=["interaction_blocked", "interaction_blocked"],
+        anchor_refs=["interaction:primary", "interaction:primary"],
+    )
+    runner_result = BrowserGateProbeRunnerResult(
+        runtime_status="completed",
+        shared_capture=shared_capture,
+        interaction_capture=interaction_capture,
+        diagnostic_codes=["runner_ok", "runner_ok"],
+        warnings=["slow", "slow"],
+    )
+    record = BrowserProbeArtifactRecord(
+        artifact_id="artifact-001",
+        gate_run_id="gate-run-001",
+        check_name="playwright_smoke",
+        artifact_type="playwright_trace",
+        artifact_ref="trace.zip",
+        anchor_refs=["page:landing", "page:landing"],
+        capture_status="captured",
+        captured_at="2026-04-21T00:00:00Z",
+    )
+    receipt = BrowserProbeExecutionReceipt(
+        check_name="playwright_smoke",
+        started_at="2026-04-21T00:00:00Z",
+        finished_at="2026-04-21T00:01:00Z",
+        runtime_status="completed",
+        artifact_ids=["artifact-001", "artifact-001"],
+        anchor_refs=["page:landing", "page:landing"],
+        requirement_linkage=["req:smoke", "req:smoke"],
+        classification_candidate="pass",
+        remediation_hints=["rerun", "rerun"],
+        blocking_reason_codes=["runtime_missing", "runtime_missing"],
+        advisory_reason_codes=["slow", "slow"],
+    )
+    bundle = BrowserQualityBundleMaterializationInput(
+        bundle_id="bundle-001",
+        gate_run_id="gate-run-001",
+        apply_result_id="apply-result-001",
+        solution_snapshot_id="solution-001",
+        spec_dir="specs/001-auth",
+        attachment_scope_ref="scope://001-auth",
+        managed_frontend_target="managed/frontend",
+        source_artifact_ref="artifacts/bundle.json",
+        readiness_subject_id="001-auth",
+        component_library_packages=["primevue", "primevue", "@primeuix/themes"],
+        page_schema_ids=["dashboard", "dashboard", "search"],
+        playwright_trace_refs=["trace.zip", "trace.zip"],
+        screenshot_refs=["nav.png", "nav.png"],
+        check_receipts=[receipt],
+        smoke_verdict="pass",
+        visual_verdict="pass",
+        a11y_verdict="pass",
+        interaction_anti_pattern_verdict="pass",
+        overall_gate_status="passed_with_advisories",
+        requirement_linkage=["req:smoke", "req:smoke"],
+        blocking_reason_codes=["runtime_missing", "runtime_missing"],
+        advisory_reason_codes=["slow", "slow"],
+        generated_at="2026-04-21T00:02:00Z",
+    )
+
+    assert context.component_library_packages == ["primevue", "@primeuix/themes"]
+    assert context.page_schema_ids == ["dashboard", "search"]
+    assert context.required_probe_set == ["playwright_smoke", "basic_a11y"]
+    assert session.warnings == ["probe-delayed"]
+    assert shared_capture.anchor_refs == ["page:landing"]
+    assert shared_capture.diagnostic_codes == ["nav_ok"]
+    assert interaction_capture.artifact_refs == ["interaction.json"]
+    assert interaction_capture.blocking_reason_codes == ["interaction_blocked"]
+    assert interaction_capture.anchor_refs == ["interaction:primary"]
+    assert runner_result.diagnostic_codes == ["runner_ok"]
+    assert runner_result.warnings == ["slow"]
+    assert record.anchor_refs == ["page:landing"]
+    assert receipt.artifact_ids == ["artifact-001"]
+    assert receipt.anchor_refs == ["page:landing"]
+    assert receipt.requirement_linkage == ["req:smoke"]
+    assert receipt.remediation_hints == ["rerun"]
+    assert receipt.blocking_reason_codes == ["runtime_missing"]
+    assert receipt.advisory_reason_codes == ["slow"]
+    assert bundle.component_library_packages == ["primevue", "@primeuix/themes"]
+    assert bundle.page_schema_ids == ["dashboard", "search"]
+    assert bundle.playwright_trace_refs == ["trace.zip"]
+    assert bundle.screenshot_refs == ["nav.png"]
+    assert bundle.requirement_linkage == ["req:smoke"]
+    assert bundle.blocking_reason_codes == ["runtime_missing"]
+    assert bundle.advisory_reason_codes == ["slow"]
+
+
+def test_materialize_visual_and_a11y_receipts_deduplicates_remediation_lists(
+    tmp_path: Path,
+) -> None:
+    context = _context()
+
+    def _runner(*, artifact_root: Path, execution_context, generated_at: str):
+        trace_path = artifact_root / "shared-runtime" / "playwright-trace.zip"
+        screenshot_path = artifact_root / "shared-runtime" / "navigation-screenshot.png"
+        interaction_path = artifact_root / "interaction" / "interaction-snapshot.json"
+        trace_path.parent.mkdir(parents=True, exist_ok=True)
+        interaction_path.parent.mkdir(parents=True, exist_ok=True)
+        trace_path.write_text('{"trace":"ok"}\n', encoding="utf-8")
+        screenshot_path.write_bytes(b"png")
+        interaction_path.write_text('{"interaction":"ok"}\n', encoding="utf-8")
+        return BrowserGateProbeRunnerResult(
+            runtime_status="completed",
+            shared_capture=BrowserGateSharedRuntimeCapture(
+                gate_run_id=execution_context.gate_run_id,
+                trace_artifact_ref=str(trace_path.relative_to(tmp_path)),
+                navigation_screenshot_ref=str(screenshot_path.relative_to(tmp_path)),
+                capture_status="captured",
+                final_url="http://localhost:4173/",
+                anchor_refs=["page:landing"],
+                diagnostic_codes=[],
+            ),
+            interaction_capture=BrowserGateInteractionProbeCapture(
+                gate_run_id=execution_context.gate_run_id,
+                interaction_probe_id="primary-action",
+                artifact_refs=[str(interaction_path.relative_to(tmp_path))],
+                capture_status="captured",
+                classification_candidate="pass",
+                blocking_reason_codes=[],
+                anchor_refs=["interaction:primary-action"],
+            ),
+            diagnostic_codes=[],
+            warnings=[],
+        )
+
+    failing_artifact = build_frontend_visual_a11y_evidence_artifact(
+        evaluations=[
+            FrontendVisualA11yEvidenceEvaluation(
+                evaluation_id="001-auth-fail-1",
+                target_id="page:user-create",
+                surface_id="page:user-create",
+                outcome="fail",
+                report_type="coverage-report",
+                severity="error",
+                location_anchor="specs",
+                quality_hint="fixture fail",
+                changed_scope_explanation="runtime fixture",
+            ),
+            FrontendVisualA11yEvidenceEvaluation(
+                evaluation_id="001-auth-fail-2",
+                target_id="page:user-create",
+                surface_id="page:user-create",
+                outcome="fail",
+                report_type="coverage-report",
+                severity="error",
+                location_anchor="specs",
+                quality_hint="fixture fail",
+                changed_scope_explanation="runtime fixture",
+            ),
+        ],
+        provider_kind="manual",
+        provider_name="test-fixture",
+        generated_at="2026-04-14T15:00:00Z",
+    )
+
+    _session, _records, receipts, _bundle = materialize_browser_gate_probe_runtime(
+        root=tmp_path,
+        context=context,
+        apply_artifact_path=".ai-sdlc/memory/frontend-managed-delivery/latest.yaml",
+        visual_a11y_evidence_artifact=failing_artifact,
+        generated_at="2026-04-14T15:05:00Z",
+        probe_runner=_runner,
+        execute_probe=True,
+    )
+
+    visual_receipt = next(item for item in receipts if item.check_name == "visual_expectation")
+    a11y_receipt = next(item for item in receipts if item.check_name == "basic_a11y")
+    assert visual_receipt.remediation_hints == [
+        "review frontend visual / a11y issue findings"
+    ]
+    assert visual_receipt.blocking_reason_codes == ["visual_a11y_quality_blocker"]
+    assert a11y_receipt.remediation_hints == visual_receipt.remediation_hints
+    assert a11y_receipt.blocking_reason_codes == visual_receipt.blocking_reason_codes
 
 
 @pytest.mark.skipif(shutil.which("node") is None, reason="node runtime unavailable")
@@ -276,3 +600,470 @@ export const chromium = {
     assert result["diagnostic_codes"] == ["navigation_failed"]
     assert result["shared_capture"]["diagnostic_codes"] == ["navigation_failed"]
     assert result["interaction_capture"]["blocking_reason_codes"] == ["navigation_failed"]
+
+
+@pytest.mark.skipif(shutil.which("node") is None, reason="node runtime unavailable")
+def test_frontend_browser_gate_probe_runner_persists_delivery_context_in_interaction_snapshot(
+    tmp_path: Path,
+) -> None:
+    source_script_path = (
+        Path(__file__).resolve().parents[2] / "scripts" / "frontend_browser_gate_probe_runner.mjs"
+    )
+    script_dir = tmp_path / "scripts"
+    script_dir.mkdir()
+    script_path = script_dir / "frontend_browser_gate_probe_runner.mjs"
+    script_path.write_text(source_script_path.read_text(encoding="utf-8"), encoding="utf-8")
+    fake_playwright_dir = tmp_path / "node_modules" / "playwright"
+    fake_playwright_dir.mkdir(parents=True)
+    (fake_playwright_dir / "package.json").write_text(
+        json.dumps({"name": "playwright", "type": "module"}),
+        encoding="utf-8",
+    )
+    (fake_playwright_dir / "index.js").write_text(
+        """
+import { mkdir, writeFile } from "node:fs/promises";
+
+let evaluateCallCount = 0;
+
+export const chromium = {
+  async launch() {
+    return {
+      async newContext() {
+        return {
+          tracing: {
+            async start() {},
+            async stop({ path }) {
+              await mkdir(new URL(".", `file://${path}`).pathname, { recursive: true }).catch(() => {});
+              await writeFile(path, "trace");
+            },
+          },
+          async newPage() {
+            return {
+              async goto() {},
+              url() {
+                return "http://127.0.0.1:4173/";
+              },
+              async screenshot({ path }) {
+                await writeFile(path, "png");
+              },
+              async evaluate() {
+                evaluateCallCount += 1;
+                if (evaluateCallCount === 1) {
+                  return { bodyText: "ok", elementCount: 1 };
+                }
+                return {
+                  interaction_probe_id: "primary-action",
+                  anchor_refs: ["interaction:primary-action"],
+                  classification_candidate: "pass",
+                  blocking_reason_codes: [],
+                  detail: "clicked-primary-candidate",
+                };
+              },
+              async title() {
+                return "Demo";
+              },
+              async close() {},
+            };
+          },
+          async close() {},
+        };
+      },
+      async close() {},
+    };
+  },
+};
+""".strip(),
+        encoding="utf-8",
+    )
+    artifact_root = tmp_path / "artifacts"
+    artifact_root.mkdir()
+    payload = {
+        "artifact_root": str(artifact_root),
+        "artifact_root_ref": "artifacts",
+        "browser_entry_ref": "http://127.0.0.1:4173/",
+        "gate_run_id": "gate-run-001",
+        "generated_at": "2026-04-18T11:00:00Z",
+        "delivery_entry_id": "vue3-public-primevue",
+        "component_library_packages": ["primevue", "@primeuix/themes"],
+        "provider_theme_adapter_id": "public-primevue-theme-bridge",
+        "provider_runtime_adapter_carrier_mode": "target-project-adapter-layer",
+        "provider_runtime_adapter_delivery_state": "scaffolded",
+        "provider_runtime_adapter_evidence_state": "missing",
+        "page_schema_ids": ["dashboard-workspace", "search-list-workspace"],
+        "effective_provider": "public-primevue",
+        "effective_style_pack": "modern-saas",
+    }
+
+    completed = subprocess.run(
+        ["node", str(script_path)],
+        cwd=tmp_path,
+        input=json.dumps(payload),
+        text=True,
+        capture_output=True,
+        check=True,
+    )
+
+    result = json.loads(completed.stdout)
+    assert result["runtime_status"] == "completed"
+    interaction_snapshot = json.loads(
+        (artifact_root / "interaction" / "interaction-snapshot.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    assert interaction_snapshot["delivery_entry_id"] == "vue3-public-primevue"
+    assert interaction_snapshot["component_library_packages"] == [
+        "primevue",
+        "@primeuix/themes",
+    ]
+    assert (
+        interaction_snapshot["provider_theme_adapter_id"]
+        == "public-primevue-theme-bridge"
+    )
+    assert (
+        interaction_snapshot["provider_runtime_adapter_carrier_mode"]
+        == "target-project-adapter-layer"
+    )
+    assert interaction_snapshot["provider_runtime_adapter_delivery_state"] == "scaffolded"
+    assert interaction_snapshot["provider_runtime_adapter_evidence_state"] == "missing"
+    assert interaction_snapshot["page_schema_ids"] == [
+        "dashboard-workspace",
+        "search-list-workspace",
+    ]
+
+
+@pytest.mark.skipif(shutil.which("node") is None, reason="node runtime unavailable")
+def test_frontend_browser_gate_probe_runner_can_navigate_generated_index_html(
+    tmp_path: Path,
+) -> None:
+    source_script_path = (
+        Path(__file__).resolve().parents[2] / "scripts" / "frontend_browser_gate_probe_runner.mjs"
+    )
+    script_dir = tmp_path / "scripts"
+    script_dir.mkdir()
+    script_path = script_dir / "frontend_browser_gate_probe_runner.mjs"
+    script_path.write_text(source_script_path.read_text(encoding="utf-8"), encoding="utf-8")
+    fake_playwright_dir = tmp_path / "node_modules" / "playwright"
+    fake_playwright_dir.mkdir(parents=True)
+    (fake_playwright_dir / "package.json").write_text(
+        json.dumps({"name": "playwright", "type": "module"}),
+        encoding="utf-8",
+    )
+    (fake_playwright_dir / "index.js").write_text(
+        """
+import { mkdir, readFile, writeFile } from "node:fs/promises";
+
+let currentUrl = "";
+let html = "";
+
+export const chromium = {
+  async launch() {
+    return {
+      async newContext() {
+        return {
+          tracing: {
+            async start() {},
+            async stop({ path }) {
+              await mkdir(new URL(".", `file://${path}`).pathname, { recursive: true }).catch(() => {});
+              await writeFile(path, "trace");
+            },
+          },
+          async newPage() {
+            return {
+              async goto(targetUrl) {
+                currentUrl = targetUrl;
+                html = await readFile(new URL(targetUrl), "utf8");
+              },
+              url() {
+                return currentUrl;
+              },
+              async screenshot({ path }) {
+                await writeFile(path, "png");
+              },
+              async evaluate() {
+                if (!html) {
+                  return { bodyText: "", elementCount: 0 };
+                }
+                const packageMatches = [...html.matchAll(/<li class="package-item">([^<]+)<\\/li>/g)].map((match) => match[1]);
+                const pageMatches = [...html.matchAll(/<li class="page-item">([^<]+)<\\/li>/g)].map((match) => match[1]);
+                const deliveryEntryMatch = html.match(/<p class="entry-eyebrow">([^<]+)<\\/p>/);
+                const validationMissingCodes = [];
+                if (!deliveryEntryMatch || deliveryEntryMatch[1] !== "vue3-public-primevue") {
+                  validationMissingCodes.push("delivery_entry_render_mismatch");
+                }
+                for (const pkg of ["primevue", "@primeuix/themes"]) {
+                  if (!packageMatches.includes(pkg)) {
+                    validationMissingCodes.push("component_library_package_render_mismatch");
+                    break;
+                  }
+                }
+                for (const schemaId of ["dashboard-workspace", "search-list-workspace"]) {
+                  if (!pageMatches.includes(schemaId)) {
+                    validationMissingCodes.push("page_schema_render_mismatch");
+                    break;
+                  }
+                }
+                return validationMissingCodes.length === 0
+                  ? {
+                      interaction_probe_id: "primary-action",
+                      anchor_refs: ["interaction:primary-action"],
+                      classification_candidate: "pass",
+                      blocking_reason_codes: [],
+                      rendered_delivery_entry_id: deliveryEntryMatch ? deliveryEntryMatch[1] : "",
+                      rendered_component_library_packages: packageMatches,
+                      rendered_page_schema_ids: pageMatches,
+                      delivery_context_validation_status: "passed",
+                      detail: "clicked-primary-candidate",
+                    }
+                  : {
+                      interaction_probe_id: "primary-action",
+                      anchor_refs: ["interaction:primary-action"],
+                      classification_candidate: "actual_quality_blocker",
+                      blocking_reason_codes: validationMissingCodes,
+                      rendered_delivery_entry_id: deliveryEntryMatch ? deliveryEntryMatch[1] : "",
+                      rendered_component_library_packages: packageMatches,
+                      rendered_page_schema_ids: pageMatches,
+                      delivery_context_validation_status: "failed",
+                      detail: "delivery-context-render-mismatch",
+                    };
+              },
+              async title() {
+                const match = html.match(/<title>([^<]+)<\\/title>/);
+                return match ? match[1] : "";
+              },
+              async close() {},
+            };
+          },
+          async close() {},
+        };
+      },
+      async close() {},
+    };
+  },
+};
+""".strip(),
+        encoding="utf-8",
+    )
+    managed_root = tmp_path / "managed" / "frontend"
+    managed_root.mkdir(parents=True)
+    (managed_root / "index.html").write_text(
+        """
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>frontend-browser-entry</title>
+  </head>
+  <body>
+    <main id="frontend-browser-entry">
+      <p class="entry-eyebrow">vue3-public-primevue</p>
+      <ul>
+        <li class="package-item">primevue</li>
+        <li class="package-item">@primeuix/themes</li>
+      </ul>
+      <ul>
+        <li class="page-item">dashboard-workspace</li>
+        <li class="page-item">search-list-workspace</li>
+      </ul>
+      <button type="button">Open</button>
+    </main>
+  </body>
+</html>
+""".strip(),
+        encoding="utf-8",
+    )
+    artifact_root = tmp_path / "artifacts"
+    artifact_root.mkdir()
+    payload = {
+        "artifact_root": str(artifact_root),
+        "artifact_root_ref": "artifacts",
+        "browser_entry_ref": "managed/frontend/index.html",
+        "gate_run_id": "gate-run-001",
+        "generated_at": "2026-04-18T11:00:00Z",
+        "delivery_entry_id": "vue3-public-primevue",
+        "component_library_packages": ["primevue", "@primeuix/themes"],
+        "provider_theme_adapter_id": "public-primevue-theme-bridge",
+        "provider_runtime_adapter_carrier_mode": "target-project-adapter-layer",
+        "provider_runtime_adapter_delivery_state": "scaffolded",
+        "provider_runtime_adapter_evidence_state": "missing",
+        "page_schema_ids": ["dashboard-workspace", "search-list-workspace"],
+    }
+
+    completed = subprocess.run(
+        ["node", str(script_path)],
+        cwd=tmp_path,
+        input=json.dumps(payload),
+        text=True,
+        capture_output=True,
+        check=True,
+    )
+
+    result = json.loads(completed.stdout)
+    assert result["runtime_status"] == "completed"
+    assert result["shared_capture"]["capture_status"] == "captured"
+    assert result["interaction_capture"]["classification_candidate"] == "pass"
+    interaction_snapshot = json.loads(
+        (artifact_root / "interaction" / "interaction-snapshot.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    assert interaction_snapshot["delivery_context_validation_status"] == "passed"
+    assert interaction_snapshot["rendered_component_library_packages"] == [
+        "primevue",
+        "@primeuix/themes",
+    ]
+    assert interaction_snapshot["rendered_page_schema_ids"] == [
+        "dashboard-workspace",
+        "search-list-workspace",
+    ]
+
+
+@pytest.mark.skipif(shutil.which("node") is None, reason="node runtime unavailable")
+def test_frontend_browser_gate_probe_runner_blocks_when_rendered_delivery_context_mismatches(
+    tmp_path: Path,
+) -> None:
+    source_script_path = (
+        Path(__file__).resolve().parents[2] / "scripts" / "frontend_browser_gate_probe_runner.mjs"
+    )
+    script_dir = tmp_path / "scripts"
+    script_dir.mkdir()
+    script_path = script_dir / "frontend_browser_gate_probe_runner.mjs"
+    script_path.write_text(source_script_path.read_text(encoding="utf-8"), encoding="utf-8")
+    fake_playwright_dir = tmp_path / "node_modules" / "playwright"
+    fake_playwright_dir.mkdir(parents=True)
+    (fake_playwright_dir / "package.json").write_text(
+        json.dumps({"name": "playwright", "type": "module"}),
+        encoding="utf-8",
+    )
+    (fake_playwright_dir / "index.js").write_text(
+        """
+import { mkdir, readFile, writeFile } from "node:fs/promises";
+
+let currentUrl = "";
+let html = "";
+let evaluateCallCount = 0;
+
+export const chromium = {
+  async launch() {
+    return {
+      async newContext() {
+        return {
+          tracing: {
+            async start() {},
+            async stop({ path }) {
+              await mkdir(new URL(".", `file://${path}`).pathname, { recursive: true }).catch(() => {});
+              await writeFile(path, "trace");
+            },
+          },
+          async newPage() {
+            return {
+              async goto(targetUrl) {
+                currentUrl = targetUrl;
+                html = await readFile(new URL(targetUrl), "utf8");
+              },
+              url() {
+                return currentUrl;
+              },
+              async screenshot({ path }) {
+                await writeFile(path, "png");
+              },
+              async evaluate() {
+                evaluateCallCount += 1;
+                if (evaluateCallCount === 1) {
+                  return {
+                    bodyText: html.replace(/<[^>]+>/g, " ").trim(),
+                    elementCount: 3,
+                  };
+                }
+                const packageMatches = [...html.matchAll(/<li class="package-item">([^<]+)<\\/li>/g)].map((match) => match[1]);
+                const pageMatches = [...html.matchAll(/<li class="page-item">([^<]+)<\\/li>/g)].map((match) => match[1]);
+                return {
+                  interaction_probe_id: "primary-action",
+                  anchor_refs: ["interaction:primary-action"],
+                  classification_candidate: "actual_quality_blocker",
+                  blocking_reason_codes: [
+                    ...(!packageMatches.includes("@primeuix/themes") ? ["component_library_package_render_mismatch"] : []),
+                    ...(!pageMatches.includes("search-list-workspace") ? ["page_schema_render_mismatch"] : []),
+                  ],
+                  rendered_component_library_packages: packageMatches,
+                  rendered_page_schema_ids: pageMatches,
+                  delivery_context_validation_status: "failed",
+                  detail: "delivery-context-render-mismatch",
+                };
+              },
+              async title() {
+                return "frontend-browser-entry";
+              },
+              async close() {},
+            };
+          },
+          async close() {},
+        };
+      },
+      async close() {},
+    };
+  },
+};
+""".strip(),
+        encoding="utf-8",
+    )
+    managed_root = tmp_path / "managed" / "frontend"
+    managed_root.mkdir(parents=True)
+    (managed_root / "index.html").write_text(
+        """
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>frontend-browser-entry</title>
+  </head>
+  <body>
+    <main id="frontend-browser-entry">
+      <p class="entry-eyebrow">vue3-public-primevue</p>
+      <ul>
+        <li class="package-item">primevue</li>
+      </ul>
+      <ul>
+        <li class="page-item">dashboard-workspace</li>
+      </ul>
+      <button type="button">Open</button>
+    </main>
+  </body>
+</html>
+""".strip(),
+        encoding="utf-8",
+    )
+    artifact_root = tmp_path / "artifacts"
+    artifact_root.mkdir()
+    payload = {
+        "artifact_root": str(artifact_root),
+        "artifact_root_ref": "artifacts",
+        "browser_entry_ref": "managed/frontend/index.html",
+        "gate_run_id": "gate-run-001",
+        "generated_at": "2026-04-18T11:00:00Z",
+        "delivery_entry_id": "vue3-public-primevue",
+        "component_library_packages": ["primevue", "@primeuix/themes"],
+        "provider_theme_adapter_id": "public-primevue-theme-bridge",
+        "provider_runtime_adapter_carrier_mode": "target-project-adapter-layer",
+        "provider_runtime_adapter_delivery_state": "scaffolded",
+        "provider_runtime_adapter_evidence_state": "missing",
+        "page_schema_ids": ["dashboard-workspace", "search-list-workspace"],
+    }
+
+    completed = subprocess.run(
+        ["node", str(script_path)],
+        cwd=tmp_path,
+        input=json.dumps(payload),
+        text=True,
+        capture_output=True,
+        check=True,
+    )
+
+    result = json.loads(completed.stdout)
+    assert result["runtime_status"] == "completed"
+    assert result["interaction_capture"]["classification_candidate"] == "actual_quality_blocker"
+    assert "component_library_package_render_mismatch" in result["interaction_capture"][
+        "blocking_reason_codes"
+    ]
+    assert "page_schema_render_mismatch" in result["interaction_capture"][
+        "blocking_reason_codes"
+    ]

@@ -69,6 +69,15 @@ PIPELINE_STAGES = [
 MAX_RETRIES = 3
 
 
+def _dedupe_text_items(values: object) -> list[str]:
+    deduped: list[str] = []
+    for value in values or []:
+        normalized = str(value).strip()
+        if normalized and normalized not in deduped:
+            deduped.append(normalized)
+    return deduped
+
+
 def _program_truth_gate_surface(
     root: Path,
     *,
@@ -100,7 +109,9 @@ def _program_truth_gate_surface(
         "state": readiness.state,
         "detail": readiness.detail,
         "ready": readiness.ready,
-        "matched_capabilities": list(readiness.matched_capabilities),
+        "matched_capabilities": _dedupe_text_items(readiness.matched_capabilities),
+        "frontend_inheritance_status": dict(readiness.frontend_inheritance_status),
+        "next_required_actions": _dedupe_text_items(readiness.next_required_actions),
     }
 
 
@@ -472,29 +483,32 @@ class SDLCRunner:
                 include_program_truth=True,
             )
             ctx["close_check_ok"] = close_check.ok
-            if close_check.ok:
-                def _flag_ok(name: str) -> bool:
-                    return any(
-                        check.get("name") == name and check.get("ok")
-                        for check in close_check.checks
-                    )
+            def _flag_ok(name: str) -> bool:
+                return any(
+                    check.get("name") == name and check.get("ok")
+                    for check in close_check.checks
+                )
 
-                ctx["all_tasks_complete"] = ctx["all_tasks_complete"] or _flag_ok(
-                    "tasks_completion"
-                )
-                ctx["tests_passed"] = ctx["tests_passed"] or _flag_ok(
-                    "verification_profile"
-                )
+            tasks_attested = _flag_ok("tasks_completion")
+            tests_attested = _flag_ok("verification_profile")
+            ctx["all_tasks_complete"] = ctx["all_tasks_complete"] or tasks_attested
+            ctx["tests_passed"] = ctx["tests_passed"] or tests_attested
+            if tasks_attested or tests_attested:
                 ctx["close_check_attested"] = True
-            else:
-                ctx["close_check_blockers"] = list(close_check.blockers)
-        if not dry_run:
-            truth_surface = _program_truth_gate_surface(self.root, spec_dir=spec_dir)
-            if truth_surface is not None:
-                ctx["program_truth_audit_required"] = True
-                ctx["program_truth_audit_ready"] = bool(truth_surface.get("ready"))
-                ctx["program_truth_audit_state"] = truth_surface.get("state")
-                ctx["program_truth_audit_detail"] = truth_surface.get("detail", "")
+            if not close_check.ok:
+                ctx["close_check_blockers"] = _dedupe_text_items(close_check.blockers)
+        truth_surface = _program_truth_gate_surface(self.root, spec_dir=spec_dir)
+        if truth_surface is not None:
+            ctx["program_truth_audit_required"] = True
+            ctx["program_truth_audit_ready"] = bool(truth_surface.get("ready"))
+            ctx["program_truth_audit_state"] = truth_surface.get("state")
+            ctx["program_truth_audit_detail"] = truth_surface.get("detail", "")
+            ctx["program_truth_audit_frontend_inheritance_status"] = dict(
+                truth_surface.get("frontend_inheritance_status", {}) or {}
+            )
+            ctx["program_truth_audit_next_actions"] = _dedupe_text_items(
+                truth_surface.get("next_required_actions", [])
+            )
         work_item_id = ""
         if cp and cp.linked_wi_id:
             work_item_id = cp.linked_wi_id

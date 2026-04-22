@@ -18,6 +18,7 @@ from ai_sdlc.generators.frontend_generation_constraint_artifacts import (
 )
 from ai_sdlc.generators.frontend_page_ui_schema_artifacts import (
     frontend_page_ui_schema_root,
+    load_frontend_page_ui_schema_artifacts,
     materialize_frontend_page_ui_schema_artifacts,
 )
 from ai_sdlc.generators.frontend_provider_expansion_artifacts import (
@@ -60,6 +61,7 @@ __all__ = [
     "materialize_frontend_gate_policy_artifacts",
     "materialize_frontend_generation_constraint_artifacts",
     "frontend_page_ui_schema_root",
+    "load_frontend_page_ui_schema_artifacts",
     "materialize_frontend_page_ui_schema_artifacts",
     "frontend_provider_expansion_root",
     "frontend_provider_runtime_adapter_root",

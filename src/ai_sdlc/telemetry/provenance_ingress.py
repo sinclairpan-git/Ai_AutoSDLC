@@ -29,6 +29,20 @@ from ai_sdlc.telemetry.provenance_contracts import (
 from ai_sdlc.telemetry.writer import TelemetryWriter
 
 
+def _dedupe_model_items(values: object) -> tuple[object, ...]:
+    deduped: list[object] = []
+    seen: set[str] = set()
+    for value in values or ():
+        if not isinstance(value, BaseModel):
+            continue
+        key = value.__class__.__name__ + ":" + value.model_dump_json()
+        if key in seen:
+            continue
+        seen.add(key)
+        deduped.append(value)
+    return tuple(deduped)
+
+
 class PendingProvenanceNode(BaseModel):
     """Ingress-side provenance node without writer-owned ingestion_order."""
 
@@ -141,6 +155,18 @@ class ProvenanceIngressResult(BaseModel):
     gaps: tuple[ProvenanceGapFinding, ...] = Field(default_factory=tuple)
     parse_failures: tuple[ProvenanceParseFailure, ...] = Field(default_factory=tuple)
 
+    @field_validator(
+        "nodes",
+        "edges",
+        "evidence",
+        "gaps",
+        "parse_failures",
+        mode="after",
+    )
+    @classmethod
+    def _dedupe_result_items(cls, value: object) -> tuple[object, ...]:
+        return _dedupe_model_items(value)
+
 
 class ProvenanceIngressWriteResult(BaseModel):
     """Persisted ingress output after writer-owned fields are assigned."""
@@ -152,6 +178,18 @@ class ProvenanceIngressWriteResult(BaseModel):
     evidence: tuple[Evidence, ...] = Field(default_factory=tuple)
     gaps: tuple[ProvenanceGapFinding, ...] = Field(default_factory=tuple)
     parse_failures: tuple[ProvenanceParseFailure, ...] = Field(default_factory=tuple)
+
+    @field_validator(
+        "nodes",
+        "edges",
+        "evidence",
+        "gaps",
+        "parse_failures",
+        mode="after",
+    )
+    @classmethod
+    def _dedupe_result_items(cls, value: object) -> tuple[object, ...]:
+        return _dedupe_model_items(value)
 
 
 def apply_ingress_result(

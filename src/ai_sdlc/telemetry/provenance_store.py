@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 from typing import Any
 
@@ -185,7 +186,7 @@ class ProvenanceStore:
             for payload in self.telemetry_store._read_ndjson(path):
                 if payload.get(id_field) == source_ref:
                     matches.append((path, payload))
-        return matches
+        return _dedupe_append_only_matches(matches)
 
     def find_current_object_path(self, kind: str, source_ref: str) -> Path | None:
         directory = self._mutable_directory(kind)
@@ -220,7 +221,7 @@ class ProvenanceStore:
         for path in sorted(self.telemetry_store.local_root.rglob(f"provenance/{file_name}")):
             for payload in self.telemetry_store._read_ndjson(path):
                 payloads.append((path, payload))
-        return payloads
+        return _dedupe_append_only_matches(payloads)
 
     def _append_only_stream_path(
         self,
@@ -269,3 +270,20 @@ class ProvenanceStore:
             return _MUTABLE_DIR_BY_KIND[kind]
         except KeyError as exc:  # pragma: no cover - caller-owned surface
             raise ValueError(f"unsupported mutable provenance kind: {kind!r}") from exc
+
+
+def _dedupe_append_only_matches(
+    items: list[tuple[Path, dict[str, Any]]],
+) -> list[tuple[Path, dict[str, Any]]]:
+    deduped: list[tuple[Path, dict[str, Any]]] = []
+    seen: set[tuple[str, str]] = set()
+    for path, payload in items:
+        key = (
+            str(path),
+            json.dumps(payload, sort_keys=True, ensure_ascii=False),
+        )
+        if key in seen:
+            continue
+        seen.add(key)
+        deduped.append((path, payload))
+    return deduped

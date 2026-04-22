@@ -15,6 +15,29 @@ FRONTEND_CONTRACT_OBSERVATION_ARTIFACT_STATUS_MISSING_ARTIFACT = "missing_artifa
 FRONTEND_CONTRACT_OBSERVATION_ARTIFACT_STATUS_INVALID_ARTIFACT = "invalid_artifact"
 
 
+def _dedupe_text_items(values: object) -> list[str]:
+    deduped: list[str] = []
+    for value in values or []:
+        normalized = str(value).strip()
+        if normalized and normalized not in deduped:
+            deduped.append(normalized)
+    return deduped
+
+
+def _dedupe_mapping_items(values: object) -> list[dict[str, object]]:
+    deduped: list[dict[str, object]] = []
+    seen: set[str] = set()
+    for value in values or []:
+        if not isinstance(value, dict):
+            continue
+        key = json.dumps(value, sort_keys=True, ensure_ascii=False)
+        if key in seen:
+            continue
+        seen.add(key)
+        deduped.append(dict(value))
+    return deduped
+
+
 @dataclass(frozen=True, slots=True)
 class ObservationProviderProvenance:
     """Structured provenance for one observation artifact producer."""
@@ -43,31 +66,86 @@ class FrontendContractObservationArtifact:
     freshness: ObservationFreshnessMarker
     observations: tuple[PageImplementationObservation, ...]
 
+    def __post_init__(self) -> None:
+        object.__setattr__(
+            self,
+            "observations",
+            tuple(_dedupe_observation_items(self.observations)),
+        )
+
     def to_json_dict(self) -> dict[str, object]:
         return {
             "schema_version": self.schema_version,
-            "provenance": {
-                "provider_kind": self.provenance.provider_kind,
-                "provider_name": self.provenance.provider_name,
-                "provider_version": self.provenance.provider_version,
-                "source_ref": self.provenance.source_ref,
-            },
-            "freshness": {
-                "generated_at": self.freshness.generated_at,
-                "source_digest": self.freshness.source_digest,
-                "source_revision": self.freshness.source_revision,
-            },
-            "observations": [
-                {
-                    "page_id": observation.page_id,
-                    "recipe_id": observation.recipe_id,
-                    "i18n_keys": list(observation.i18n_keys),
-                    "validation_fields": list(observation.validation_fields),
-                    "new_legacy_usages": list(observation.new_legacy_usages),
-                }
-                for observation in self.observations
-            ],
+            "provenance": _dedupe_mapping_items(
+                [
+                    {
+                        "provider_kind": self.provenance.provider_kind,
+                        "provider_name": self.provenance.provider_name,
+                        "provider_version": self.provenance.provider_version,
+                        "source_ref": self.provenance.source_ref,
+                    }
+                ]
+            )[0],
+            "freshness": _dedupe_mapping_items(
+                [
+                    {
+                        "generated_at": self.freshness.generated_at,
+                        "source_digest": self.freshness.source_digest,
+                        "source_revision": self.freshness.source_revision,
+                    }
+                ]
+            )[0],
+            "observations": _dedupe_mapping_items(
+                [
+                    {
+                        "page_id": observation.page_id,
+                        "recipe_id": observation.recipe_id,
+                        "i18n_keys": _dedupe_text_items(observation.i18n_keys),
+                        "validation_fields": _dedupe_text_items(
+                            observation.validation_fields
+                        ),
+                        "new_legacy_usages": _dedupe_text_items(
+                            observation.new_legacy_usages
+                        ),
+                    }
+                    for observation in self.observations
+                ]
+            ),
         }
+
+
+def _dedupe_observation_items(
+    values: object,
+) -> list[PageImplementationObservation]:
+    deduped: list[PageImplementationObservation] = []
+    seen: set[str] = set()
+    for value in values or []:
+        if not isinstance(value, PageImplementationObservation):
+            continue
+        key = json.dumps(
+            {
+                "page_id": value.page_id,
+                "recipe_id": value.recipe_id,
+                "i18n_keys": _dedupe_text_items(value.i18n_keys),
+                "validation_fields": _dedupe_text_items(value.validation_fields),
+                "new_legacy_usages": _dedupe_text_items(value.new_legacy_usages),
+            },
+            sort_keys=True,
+            ensure_ascii=False,
+        )
+        if key in seen:
+            continue
+        seen.add(key)
+        deduped.append(
+            PageImplementationObservation(
+                page_id=value.page_id,
+                recipe_id=value.recipe_id,
+                i18n_keys=_dedupe_text_items(value.i18n_keys),
+                validation_fields=_dedupe_text_items(value.validation_fields),
+                new_legacy_usages=_dedupe_text_items(value.new_legacy_usages),
+            )
+        )
+    return deduped
 
 
 def observation_artifact_path(spec_dir: Path) -> Path:
@@ -199,7 +277,7 @@ def load_frontend_contract_observation_artifact(
                 context="freshness",
             ),
         ),
-        observations=tuple(observations),
+        observations=tuple(_coerce_observations(observations)),
     )
 
 
@@ -207,13 +285,35 @@ def _coerce_observations(
     observations: list[PageImplementationObservation],
 ) -> list[PageImplementationObservation]:
     items: list[PageImplementationObservation] = []
+    seen: set[str] = set()
     for index, observation in enumerate(observations):
         if not isinstance(observation, PageImplementationObservation):
             raise ValueError(
                 "observations must contain PageImplementationObservation items; "
                 f"item {index} was {type(observation).__name__}"
             )
-        items.append(observation)
+        normalized = PageImplementationObservation(
+            page_id=observation.page_id,
+            recipe_id=observation.recipe_id,
+            i18n_keys=_dedupe_text_items(observation.i18n_keys),
+            validation_fields=_dedupe_text_items(observation.validation_fields),
+            new_legacy_usages=_dedupe_text_items(observation.new_legacy_usages),
+        )
+        key = json.dumps(
+            {
+                "page_id": normalized.page_id,
+                "recipe_id": normalized.recipe_id,
+                "i18n_keys": normalized.i18n_keys,
+                "validation_fields": normalized.validation_fields,
+                "new_legacy_usages": normalized.new_legacy_usages,
+            },
+            sort_keys=True,
+            ensure_ascii=False,
+        )
+        if key in seen:
+            continue
+        seen.add(key)
+        items.append(normalized)
     return items
 
 

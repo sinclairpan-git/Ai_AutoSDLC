@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from ai_sdlc.core.frontend_theme_token_governance import (
+    FrontendThemeTokenGovernanceValidationResult,
     validate_frontend_theme_token_governance,
 )
 from ai_sdlc.models.frontend_generation_constraints import (
@@ -100,3 +101,58 @@ def test_validate_frontend_theme_token_governance_blocks_unknown_anchor_unsuppor
     assert any("unsupported provider/style pair" in blocker for blocker in result.blockers)
     assert any("illegal override namespace" in blocker for blocker in result.blockers)
     assert any("token floor bypass" in blocker for blocker in result.blockers)
+
+
+def test_validate_frontend_theme_token_governance_deduplicates_referenced_ids() -> None:
+    governance = build_p2_frontend_theme_token_governance_baseline()
+    constraints = build_mvp_frontend_generation_constraints()
+    schema_set = build_p2_frontend_page_ui_schema_baseline()
+    provider_profile = build_mvp_enterprise_vue2_provider_profile()
+    snapshot = build_mvp_solution_snapshot(
+        requested_provider_id="enterprise-vue2",
+        effective_provider_id="enterprise-vue2",
+        recommended_provider_id="enterprise-vue2",
+        requested_style_pack_id="enterprise-default",
+        effective_style_pack_id="enterprise-default",
+        recommended_style_pack_id="enterprise-default",
+        style_fidelity_status="full",
+    )
+    duplicated_mapping = governance.token_mappings[0].model_copy()
+    duplicated_override = governance.custom_overrides[0].model_copy(
+        update={
+            "schema_anchor_id": governance.token_mappings[0].schema_anchor_id,
+            "render_slot_id": governance.token_mappings[0].render_slot_id,
+        }
+    )
+    governance = governance.model_copy(
+        update={
+            "token_mappings": [duplicated_mapping, *governance.token_mappings],
+            "custom_overrides": [duplicated_override, *governance.custom_overrides],
+        }
+    )
+
+    result = validate_frontend_theme_token_governance(
+        governance,
+        constraints=constraints,
+        page_ui_schema=schema_set,
+        provider_profile=provider_profile,
+        solution_snapshot=snapshot,
+    )
+
+    assert len(result.referenced_anchor_ids) == len(set(result.referenced_anchor_ids))
+    assert len(result.referenced_slot_ids) == len(set(result.referenced_slot_ids))
+
+
+def test_frontend_theme_token_governance_validation_result_runtime_object_canonicalizes_lists() -> None:
+    result = FrontendThemeTokenGovernanceValidationResult(
+        passed=False,
+        blockers=["a", "a"],
+        warnings=["w", "w"],
+        referenced_anchor_ids=["anchor-a", "anchor-a", "anchor-b"],
+        referenced_slot_ids=["slot-a", "slot-a", "slot-b"],
+    )
+
+    assert result.blockers == ["a"]
+    assert result.warnings == ["w"]
+    assert result.referenced_anchor_ids == ["anchor-a", "anchor-b"]
+    assert result.referenced_slot_ids == ["slot-a", "slot-b"]

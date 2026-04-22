@@ -6,6 +6,7 @@ from pathlib import Path
 
 import yaml
 
+import ai_sdlc.generators.frontend_provider_profile_artifacts as frontend_provider_profile_artifacts_module
 from ai_sdlc.generators.frontend_provider_profile_artifacts import (
     frontend_provider_profile_root,
     materialize_builtin_frontend_provider_profile_artifacts,
@@ -160,3 +161,43 @@ def test_materialize_builtin_frontend_provider_profile_artifacts_writes_public_p
         "modern-saas": "full",
         "macos-glass": "full",
     }
+
+
+def test_materialize_frontend_provider_profile_artifacts_deduplicates_returned_paths(
+    tmp_path,
+    monkeypatch,
+) -> None:
+    profile = build_mvp_enterprise_vue2_provider_profile()
+    repeated_path = tmp_path / "providers" / "frontend" / "enterprise-vue2" / "provider.manifest.yaml"
+
+    monkeypatch.setattr(
+        frontend_provider_profile_artifacts_module,
+        "_write_yaml",
+        lambda path, payload: repeated_path,
+    )
+
+    paths = materialize_frontend_provider_profile_artifacts(tmp_path, profile)
+
+    rel_paths = [path.relative_to(tmp_path).as_posix() for path in paths]
+    assert rel_paths == list(dict.fromkeys(rel_paths))
+
+
+def test_materialize_builtin_frontend_provider_profile_artifacts_deduplicates_returned_paths(
+    tmp_path,
+    monkeypatch,
+) -> None:
+    repeated_path = tmp_path / "providers" / "frontend" / "public-primevue" / "provider.manifest.yaml"
+
+    monkeypatch.setattr(
+        frontend_provider_profile_artifacts_module,
+        "_write_yaml",
+        lambda path, payload: repeated_path,
+    )
+
+    paths = materialize_builtin_frontend_provider_profile_artifacts(
+        tmp_path,
+        provider_id="public-primevue",
+    )
+
+    rel_paths = [path.relative_to(tmp_path).as_posix() for path in paths]
+    assert rel_paths == list(dict.fromkeys(rel_paths))

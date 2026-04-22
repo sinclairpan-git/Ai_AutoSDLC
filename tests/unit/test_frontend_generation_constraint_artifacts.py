@@ -6,8 +6,10 @@ from pathlib import Path
 
 import yaml
 
+import ai_sdlc.generators.frontend_generation_constraint_artifacts as frontend_generation_constraint_artifacts_module
 from ai_sdlc.generators.frontend_generation_constraint_artifacts import (
     frontend_generation_governance_root,
+    load_frontend_generation_constraint_artifacts,
     materialize_frontend_generation_constraint_artifacts,
 )
 from ai_sdlc.models.frontend_generation_constraints import (
@@ -41,7 +43,13 @@ def test_materialize_frontend_generation_constraint_artifacts_writes_expected_fi
 
 
 def test_generation_constraint_artifacts_preserve_constraint_payloads(tmp_path) -> None:
-    constraints = build_mvp_frontend_generation_constraints()
+    constraints = build_mvp_frontend_generation_constraints(
+        effective_provider_id="public-primevue",
+        delivery_entry_id="vue3-public-primevue",
+        component_library_packages=["primevue", "@primeuix/themes"],
+        provider_theme_adapter_id="public-primevue-theme-bridge",
+        page_schema_ids=["dashboard-workspace", "search-list-workspace"],
+    )
 
     materialize_frontend_generation_constraint_artifacts(tmp_path, constraints)
 
@@ -55,6 +63,11 @@ def test_generation_constraint_artifacts_preserve_constraint_payloads(tmp_path) 
 
     assert manifest == {
         "work_item_id": "017",
+        "effective_provider_id": "public-primevue",
+        "delivery_entry_id": "vue3-public-primevue",
+        "component_library_packages": ["primevue", "@primeuix/themes"],
+        "provider_theme_adapter_id": "public-primevue-theme-bridge",
+        "page_schema_ids": ["dashboard-workspace", "search-list-workspace"],
         "execution_order": [
             "contract",
             "kernel",
@@ -100,3 +113,80 @@ def test_frontend_generation_governance_root_is_stable(tmp_path) -> None:
     assert frontend_generation_governance_root(tmp_path) == (
         tmp_path / "governance" / "frontend" / "generation"
     )
+
+
+def test_load_frontend_generation_constraint_artifacts_round_trips_materialized_truth(
+    tmp_path,
+) -> None:
+    constraints = build_mvp_frontend_generation_constraints(
+        effective_provider_id="public-primevue",
+        delivery_entry_id="vue3-public-primevue",
+        component_library_packages=["primevue", "@primeuix/themes"],
+        provider_theme_adapter_id="public-primevue-theme-bridge",
+        page_schema_ids=["dashboard-workspace", "search-list-workspace"],
+    )
+
+    materialize_frontend_generation_constraint_artifacts(tmp_path, constraints)
+
+    loaded = load_frontend_generation_constraint_artifacts(tmp_path)
+
+    assert loaded == constraints
+
+
+def test_load_frontend_generation_constraint_artifacts_deduplicates_manifest_lists(
+    tmp_path,
+) -> None:
+    constraints = build_mvp_frontend_generation_constraints(
+        effective_provider_id="public-primevue",
+        delivery_entry_id="vue3-public-primevue",
+        component_library_packages=["primevue", "@primeuix/themes"],
+        provider_theme_adapter_id="public-primevue-theme-bridge",
+        page_schema_ids=["dashboard-workspace", "search-list-workspace"],
+    )
+
+    materialize_frontend_generation_constraint_artifacts(tmp_path, constraints)
+
+    manifest_path = frontend_generation_governance_root(tmp_path) / "generation.manifest.yaml"
+    manifest = _read_yaml(manifest_path)
+    manifest["component_library_packages"] = [
+        "primevue",
+        "primevue",
+        "@primeuix/themes",
+    ]
+    manifest["page_schema_ids"] = [
+        "dashboard-workspace",
+        "dashboard-workspace",
+        "search-list-workspace",
+    ]
+    manifest["execution_order"] = ["contract", "contract", "kernel", "whitelist"]
+    manifest_path.write_text(
+        yaml.safe_dump(manifest, allow_unicode=True, sort_keys=False),
+        encoding="utf-8",
+    )
+
+    loaded = load_frontend_generation_constraint_artifacts(tmp_path)
+
+    assert loaded.component_library_packages == ["primevue", "@primeuix/themes"]
+    assert loaded.page_schema_ids == ["dashboard-workspace", "search-list-workspace"]
+    assert loaded.execution_order == ["contract", "contract", "kernel", "whitelist"]
+
+
+def test_materialize_frontend_generation_constraint_artifacts_deduplicates_returned_paths(
+    tmp_path,
+    monkeypatch,
+) -> None:
+    constraints = build_mvp_frontend_generation_constraints()
+    repeated_path = (
+        tmp_path / "governance" / "frontend" / "generation" / "generation.manifest.yaml"
+    )
+
+    monkeypatch.setattr(
+        frontend_generation_constraint_artifacts_module,
+        "_write_yaml",
+        lambda path, payload: repeated_path,
+    )
+
+    paths = materialize_frontend_generation_constraint_artifacts(tmp_path, constraints)
+
+    rel_paths = [path.relative_to(tmp_path).as_posix() for path in paths]
+    assert rel_paths == list(dict.fromkeys(rel_paths))

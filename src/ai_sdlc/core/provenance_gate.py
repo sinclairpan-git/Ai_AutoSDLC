@@ -8,6 +8,17 @@ from pathlib import Path
 from ai_sdlc.telemetry.provenance_contracts import ProvenanceGovernanceHook
 
 
+def _dedupe_text_items(items: Sequence[str]) -> list[str]:
+    seen: set[str] = set()
+    unique: list[str] = []
+    for item in items:
+        if item in seen:
+            continue
+        seen.add(item)
+        unique.append(item)
+    return unique
+
+
 def build_phase1_provenance_gate_payload(
     hooks: Sequence[ProvenanceGovernanceHook],
 ) -> dict[str, object]:
@@ -17,8 +28,10 @@ def build_phase1_provenance_gate_payload(
         "enforced": False,
         "published_artifact": False,
         "reason": "phase1_read_only",
-        "hook_ids": [hook.hook_id for hook in hooks],
-        "candidate_results": [hook.candidate_result.value for hook in hooks],
+        "hook_ids": _dedupe_text_items([hook.hook_id for hook in hooks]),
+        "candidate_results": _dedupe_text_items(
+            [hook.candidate_result.value for hook in hooks]
+        ),
     }
 
 

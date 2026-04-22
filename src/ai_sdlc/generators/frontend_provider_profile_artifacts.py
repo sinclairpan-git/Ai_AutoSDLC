@@ -19,6 +19,17 @@ BUILTIN_FRONTEND_PROVIDER_PROFILE_IDS = frozenset(
 )
 
 
+def _dedupe_paths(paths: list[Path]) -> list[Path]:
+    unique: list[Path] = []
+    seen: set[Path] = set()
+    for path in paths:
+        if path in seen:
+            continue
+        seen.add(path)
+        unique.append(path)
+    return unique
+
+
 def frontend_provider_profile_root(root: Path, provider_id: str) -> Path:
     """Return the canonical root for instantiated Provider profile artifacts."""
 
@@ -33,7 +44,7 @@ def materialize_frontend_provider_profile_artifacts(
 
     base_dir = frontend_provider_profile_root(root, profile.provider_id)
 
-    return [
+    return _dedupe_paths([
         _write_yaml(
             base_dir / "provider.manifest.yaml",
             {
@@ -88,7 +99,7 @@ def materialize_frontend_provider_profile_artifacts(
                 ]
             },
         ),
-    ]
+    ])
 
 
 def materialize_builtin_frontend_provider_profile_artifacts(
@@ -106,7 +117,7 @@ def materialize_builtin_frontend_provider_profile_artifacts(
 
     if provider_id == "public-primevue":
         base_dir = frontend_provider_profile_root(root, provider_id)
-        return [
+        return _dedupe_paths([
             _write_yaml(
                 base_dir / "provider.manifest.yaml",
                 {
@@ -134,7 +145,7 @@ def materialize_builtin_frontend_provider_profile_artifacts(
                     ]
                 },
             ),
-        ]
+        ])
 
     raise ValueError(f"unsupported built-in provider profile: {provider_id}")
 

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from ai_sdlc.models.frontend_ui_kernel import (
     FrontendUiKernelSet,
@@ -30,6 +30,20 @@ def _find_unknown_references(values: list[str], known_values: set[str]) -> list[
     return unknown
 
 
+def _dedupe_strings(value: object) -> list[str]:
+    if value is None:
+        return []
+    unique: list[str] = []
+    seen: set[str] = set()
+    for item in value:
+        text = str(item)
+        if text in seen:
+            continue
+        seen.add(text)
+        unique.append(text)
+    return unique
+
+
 class FrontendPageUiSchemaModel(BaseModel):
     """Base model for page/UI schema artifacts."""
 
@@ -44,6 +58,11 @@ class SchemaVersioningContract(FrontendPageUiSchemaModel):
     compatible_versions: list[str] = Field(default_factory=lambda: ["1.0"])
     forward_extension_policy: str = "additive-only"
     breaking_change_policy: str = "new-version-required"
+
+    @field_validator("compatible_versions", mode="before")
+    @classmethod
+    def _dedupe_compatible_versions(cls, value: object) -> list[str]:
+        return _dedupe_strings(value)
 
     @model_validator(mode="after")
     def _require_current_version_in_compatibility_list(
@@ -72,6 +91,11 @@ class FieldBlockDefinition(FrontendPageUiSchemaModel):
     anchor_id: str
     field_semantics: list[str] = Field(default_factory=list)
     cardinality: Literal["single", "repeatable"] = "single"
+
+    @field_validator("field_semantics", mode="before")
+    @classmethod
+    def _dedupe_field_semantics(cls, value: object) -> list[str]:
+        return _dedupe_strings(value)
 
 
 class PageSchemaDefinition(FrontendPageUiSchemaModel):
@@ -128,6 +152,11 @@ class RenderSlotDefinition(FrontendPageUiSchemaModel):
     parent_slot_id: str | None = None
     cardinality: Literal["single", "repeatable"] = "single"
     required_state_ids: list[str] = Field(default_factory=list)
+
+    @field_validator("required_state_ids", mode="before")
+    @classmethod
+    def _dedupe_required_state_ids(cls, value: object) -> list[str]:
+        return _dedupe_strings(value)
 
 
 class UiSchemaDefinition(FrontendPageUiSchemaModel):

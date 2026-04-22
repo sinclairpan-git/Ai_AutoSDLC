@@ -10,6 +10,17 @@ from ai_sdlc.models.frontend_provider_runtime_adapter import (
 from ai_sdlc.models.frontend_solution_confirmation import FrontendSolutionSnapshot
 
 
+def _dedupe_text_items(items: list[str] | tuple[str, ...]) -> list[str]:
+    seen: set[str] = set()
+    unique: list[str] = []
+    for item in items:
+        if item in seen:
+            continue
+        seen.add(item)
+        unique.append(item)
+    return unique
+
+
 @dataclass(frozen=True, slots=True)
 class FrontendProviderRuntimeAdapterValidationResult:
     """Structured validation result for runtime adapter scaffold truth."""
@@ -24,6 +35,10 @@ class FrontendProviderRuntimeAdapterValidationResult:
     carrier_mode: str = ""
     runtime_delivery_state: str = ""
     evidence_return_state: str = ""
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, "blockers", _dedupe_text_items(self.blockers))
+        object.__setattr__(self, "warnings", _dedupe_text_items(self.warnings))
 
 
 def validate_frontend_provider_runtime_adapter(
@@ -81,8 +96,8 @@ def validate_frontend_provider_runtime_adapter(
 
     return FrontendProviderRuntimeAdapterValidationResult(
         passed=not blockers,
-        blockers=blockers,
-        warnings=warnings,
+        blockers=_dedupe_text_items(blockers),
+        warnings=_dedupe_text_items(warnings),
         artifact_root=runtime_adapter.handoff_contract.artifact_root,
         effective_provider_id=solution_snapshot.effective_provider_id,
         requested_frontend_stack=solution_snapshot.requested_frontend_stack,

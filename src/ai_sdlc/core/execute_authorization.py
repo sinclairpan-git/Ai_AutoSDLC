@@ -13,6 +13,15 @@ from ai_sdlc.models.state import Checkpoint
 _AUTHORIZED_STAGES = frozenset({"execute", "close"})
 
 
+def _dedupe_text_items(values: object) -> list[str]:
+    deduped: list[str] = []
+    for value in values or []:
+        normalized = str(value).strip()
+        if normalized and normalized not in deduped:
+            deduped.append(normalized)
+    return deduped
+
+
 @dataclass
 class ExecuteAuthorizationResult:
     """Bounded execute authorization summary for status surfaces."""
@@ -29,6 +38,9 @@ class ExecuteAuthorizationResult:
     detail: str = ""
     error: str | None = None
 
+    def __post_init__(self) -> None:
+        self.reason_codes = _dedupe_text_items(self.reason_codes)
+
     def to_json_dict(self) -> dict[str, Any]:
         return {
             "state": self.state,
@@ -39,7 +51,7 @@ class ExecuteAuthorizationResult:
             "tasks_present": self.tasks_present,
             "execution_log_present": self.execution_log_present,
             "truth_classification": self.truth_classification,
-            "reason_codes": list(self.reason_codes),
+            "reason_codes": _dedupe_text_items(self.reason_codes),
             "detail": self.detail,
             "error": self.error,
         }

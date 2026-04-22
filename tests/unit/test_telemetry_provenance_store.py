@@ -30,7 +30,11 @@ from ai_sdlc.telemetry.provenance_contracts import (
     ProvenanceGovernanceHook,
     ProvenanceNodeFact,
 )
-from ai_sdlc.telemetry.provenance_resolver import ProvenanceResolver
+from ai_sdlc.telemetry.provenance_resolver import (
+    ProvenanceResolutionFailure,
+    ProvenanceResolutionReport,
+    ProvenanceResolver,
+)
 from ai_sdlc.telemetry.provenance_store import ProvenanceStore
 from ai_sdlc.telemetry.resolver import SourceResolver
 from ai_sdlc.telemetry.store import TelemetryStore
@@ -143,6 +147,78 @@ def test_provenance_node_and_edge_facts_are_append_only_ndjson(tmp_path: Path) -
     assert [line["edge_id"] for line in edge_lines] == [edge.edge_id]
     assert node_lines[0]["ingestion_order"] == 1
     assert edge_lines[0]["ingestion_order"] == 2
+
+
+def test_find_append_only_matches_deduplicates_repeated_raw_stream_entries(
+    tmp_path: Path,
+) -> None:
+    store = TelemetryStore(tmp_path)
+    writer = TelemetryWriter(store)
+    provenance_store = ProvenanceStore(store)
+
+    node = writer.write_provenance_node(_node())
+    node_stream_path = provenance_store.node_stream_path(
+        scope_level=ScopeLevel.STEP,
+        goal_session_id="gs_0123456789abcdef0123456789abcdef",
+        workflow_run_id="wr_0123456789abcdef0123456789abcdef",
+        step_id="st_0123456789abcdef0123456789abcdef",
+    )
+    with node_stream_path.open("a", encoding="utf-8") as handle:
+        handle.write(json.dumps(node.model_dump(mode="json"), ensure_ascii=False) + "\n")
+
+    matches = provenance_store.find_append_only_matches("provenance_node", node.node_id)
+
+    assert len(matches) == 1
+    assert matches[0][1]["node_id"] == node.node_id
+
+
+def test_iter_append_only_payloads_deduplicates_repeated_raw_stream_entries(
+    tmp_path: Path,
+) -> None:
+    store = TelemetryStore(tmp_path)
+    writer = TelemetryWriter(store)
+    provenance_store = ProvenanceStore(store)
+
+    node = writer.write_provenance_node(_node())
+    node_stream_path = provenance_store.node_stream_path(
+        scope_level=ScopeLevel.STEP,
+        goal_session_id="gs_0123456789abcdef0123456789abcdef",
+        workflow_run_id="wr_0123456789abcdef0123456789abcdef",
+        step_id="st_0123456789abcdef0123456789abcdef",
+    )
+    with node_stream_path.open("a", encoding="utf-8") as handle:
+        handle.write(json.dumps(node.model_dump(mode="json"), ensure_ascii=False) + "\n")
+
+    payloads = provenance_store.iter_append_only_payloads("provenance_node")
+
+    assert len(payloads) == 1
+    assert payloads[0][1]["node_id"] == node.node_id
+
+
+def test_provenance_resolution_report_runtime_object_canonicalizes_duplicates() -> None:
+    failure = ProvenanceResolutionFailure(
+        category="closure_incomplete",
+        code="missing_telemetry_object",
+        subject_ref="provenance_node:pn_0123456789abcdef0123456789abcdef",
+        object_ref="event:evt_0123456789abcdef0123456789abcdef",
+    )
+    gap = ProvenanceGapFinding(
+        gap_id="pg_0123456789abcdef0123456789abcdef",
+        subject_ref="provenance_node:pn_0123456789abcdef0123456789abcdef",
+        gap_kind=ProvenanceGapKind.INCOMPLETE,
+        gap_location="trace.parent_event",
+        detail={"reason": "missing"},
+    )
+
+    report = ProvenanceResolutionReport(
+        subject_ref="provenance_node:pn_0123456789abcdef0123456789abcdef",
+        chain_status=ProvenanceChainStatus.PARTIAL,
+        failures=(failure, failure),
+        gaps=(gap, gap),
+    )
+
+    assert report.failures == (failure,)
+    assert report.gaps == (gap,)
 
 
 def test_writer_assigns_session_local_ingestion_order_across_scopes(tmp_path: Path) -> None:

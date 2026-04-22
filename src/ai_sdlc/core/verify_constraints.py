@@ -63,35 +63,43 @@ from ai_sdlc.gates.task_ac_checks import (
     first_task_missing_acceptance,
 )
 from ai_sdlc.generators.frontend_contract_artifacts import frontend_contracts_root
+from ai_sdlc.generators.frontend_cross_provider_consistency_artifacts import (
+    frontend_cross_provider_consistency_root,
+    load_frontend_cross_provider_consistency_artifacts,
+)
+from ai_sdlc.generators.frontend_generation_constraint_artifacts import (
+    load_frontend_generation_constraint_artifacts,
+)
+from ai_sdlc.generators.frontend_page_ui_schema_artifacts import (
+    frontend_page_ui_schema_root,
+    load_frontend_page_ui_schema_artifacts,
+)
+from ai_sdlc.generators.frontend_provider_expansion_artifacts import (
+    frontend_provider_expansion_root,
+    load_frontend_provider_expansion_artifacts,
+)
 from ai_sdlc.generators.frontend_provider_runtime_adapter_artifacts import (
     frontend_provider_runtime_adapter_root,
+    load_frontend_provider_runtime_adapter_artifacts,
+)
+from ai_sdlc.generators.frontend_quality_platform_artifacts import (
+    load_frontend_quality_platform_artifacts,
+)
+from ai_sdlc.generators.frontend_theme_token_governance_artifacts import (
+    frontend_theme_token_governance_root,
+    load_frontend_theme_token_governance_artifacts,
 )
 from ai_sdlc.models.frontend_cross_provider_consistency import (
-    ConsistencyDiffRecord,
-    ConsistencyHandoffContract,
-    ConsistencyReadinessGate,
-    CoverageGapRecord,
-    FrontendCrossProviderConsistencySet,
-    ProviderPairCertificationBundle,
-    ProviderPairTruthSurfacingRecord,
-    ReadinessGateRule,
     build_p2_frontend_cross_provider_consistency_baseline,
 )
 from ai_sdlc.models.frontend_generation_constraints import (
     build_mvp_frontend_generation_constraints,
 )
 from ai_sdlc.models.frontend_page_ui_schema import (
+    FrontendPageUiSchemaSet,
     build_p2_frontend_page_ui_schema_baseline,
 )
 from ai_sdlc.models.frontend_provider_expansion import (
-    ChoiceSurfacePolicy,
-    FrontendProviderExpansionSet,
-    PairCertificationReference,
-    ProviderAdmissionBundle,
-    ProviderCertificationAggregate,
-    ProviderExpansionHandoffContract,
-    ProviderExpansionTruthSurfacingRecord,
-    ReactExposureBoundary,
     build_p3_frontend_provider_expansion_baseline,
 )
 from ai_sdlc.models.frontend_provider_profile import (
@@ -99,33 +107,11 @@ from ai_sdlc.models.frontend_provider_profile import (
     build_mvp_enterprise_vue2_provider_profile,
 )
 from ai_sdlc.models.frontend_provider_runtime_adapter import (
-    AdapterScaffoldContract,
-    FrontendProviderRuntimeAdapterSet,
-    ProviderRuntimeAdapterHandoffContract,
-    ProviderRuntimeAdapterTarget,
-    RuntimeBoundaryReceipt,
     build_p3_target_project_adapter_scaffold_baseline,
-)
-from ai_sdlc.models.frontend_quality_platform import (
-    FrontendQualityPlatformSet,
-    InteractionQualityFlow,
-    QualityCoverageMatrixEntry,
-    QualityEvidenceContract,
-    QualityPlatformHandoffContract,
-    QualityTruthSurfacingRecord,
-    QualityVerdictEnvelope,
-    build_p2_frontend_quality_platform_baseline,
 )
 from ai_sdlc.models.frontend_solution_confirmation import (
     FrontendSolutionSnapshot,
-)
-from ai_sdlc.models.frontend_theme_token_governance import (
-    CustomThemeTokenOverride,
-    FrontendThemeTokenGovernanceSet,
-    StyleEditorBoundaryContract,
-    ThemeGovernanceHandoffContract,
-    ThemeTokenMapping,
-    build_p2_frontend_theme_token_governance_baseline,
+    build_builtin_install_strategies,
 )
 from ai_sdlc.models.state import Checkpoint
 from ai_sdlc.telemetry.clock import utc_now_z
@@ -426,6 +412,18 @@ class FeatureContractEvidence:
     relative_paths: tuple[Path, ...]
     required_tokens: tuple[str, ...]
 
+    def __post_init__(self) -> None:
+        object.__setattr__(
+            self,
+            "relative_paths",
+            tuple(dict.fromkeys(self.relative_paths)),
+        )
+        object.__setattr__(
+            self,
+            "required_tokens",
+            tuple(dict.fromkeys(self.required_tokens)),
+        )
+
 
 @dataclass(frozen=True, slots=True)
 class FeatureContractSurface:
@@ -433,6 +431,13 @@ class FeatureContractSurface:
 
     label: str
     evidence_entries: tuple[FeatureContractEvidence, ...]
+
+    def __post_init__(self) -> None:
+        object.__setattr__(
+            self,
+            "evidence_entries",
+            tuple(dict.fromkeys(self.evidence_entries)),
+        )
 
 
 FEATURE_CONTRACT_SURFACES: dict[str, tuple[FeatureContractSurface, ...]] = {
@@ -540,6 +545,27 @@ class ConstraintReport:
     release_gate: dict[str, object] | None = None
     evidence_kinds: tuple[str, ...] = ("event", "structured_report")
 
+    def __post_init__(self) -> None:
+        object.__setattr__(self, "blockers", tuple(_dedupe_text_items(self.blockers)))
+        object.__setattr__(
+            self, "check_objects", tuple(_dedupe_text_items(self.check_objects))
+        )
+        object.__setattr__(
+            self, "coverage_gaps", tuple(_dedupe_text_items(self.coverage_gaps))
+        )
+        object.__setattr__(
+            self, "evidence_kinds", tuple(_dedupe_text_items(self.evidence_kinds))
+        )
+
+
+def _dedupe_text_items(values: object) -> list[str]:
+    deduped: list[str] = []
+    for value in values or []:
+        normalized = str(value).strip()
+        if normalized and normalized not in deduped:
+            deduped.append(normalized)
+    return deduped
+
 
 @dataclass(frozen=True, slots=True)
 class FrontendSolutionConfirmationVerificationReport:
@@ -554,13 +580,22 @@ class FrontendSolutionConfirmationVerificationReport:
     snapshot_id: str | None = None
     effective_provider_id: str | None = None
 
+    def __post_init__(self) -> None:
+        object.__setattr__(
+            self, "check_objects", tuple(_dedupe_text_items(self.check_objects))
+        )
+        object.__setattr__(self, "blockers", tuple(_dedupe_text_items(self.blockers)))
+        object.__setattr__(
+            self, "coverage_gaps", tuple(_dedupe_text_items(self.coverage_gaps))
+        )
+
     def to_json_dict(self) -> dict[str, object]:
         return {
             "source_name": self.source_name,
             "gate_verdict": self.gate_result,
-            "check_objects": list(self.check_objects),
-            "blockers": list(self.blockers),
-            "coverage_gaps": list(self.coverage_gaps),
+            "check_objects": _dedupe_text_items(self.check_objects),
+            "blockers": _dedupe_text_items(self.blockers),
+            "coverage_gaps": _dedupe_text_items(self.coverage_gaps),
             "snapshot_id": self.snapshot_id,
             "effective_provider_id": self.effective_provider_id,
         }
@@ -580,13 +615,22 @@ class FrontendThemeTokenGovernanceVerificationReport:
     requested_style_pack_id: str | None = None
     effective_style_pack_id: str | None = None
 
+    def __post_init__(self) -> None:
+        object.__setattr__(
+            self, "check_objects", tuple(_dedupe_text_items(self.check_objects))
+        )
+        object.__setattr__(self, "blockers", tuple(_dedupe_text_items(self.blockers)))
+        object.__setattr__(
+            self, "coverage_gaps", tuple(_dedupe_text_items(self.coverage_gaps))
+        )
+
     def to_json_dict(self) -> dict[str, object]:
         return {
             "source_name": self.source_name,
             "gate_verdict": self.gate_result,
-            "check_objects": list(self.check_objects),
-            "blockers": list(self.blockers),
-            "coverage_gaps": list(self.coverage_gaps),
+            "check_objects": _dedupe_text_items(self.check_objects),
+            "blockers": _dedupe_text_items(self.blockers),
+            "coverage_gaps": _dedupe_text_items(self.coverage_gaps),
             "effective_provider_id": self.effective_provider_id,
             "requested_style_pack_id": self.requested_style_pack_id,
             "effective_style_pack_id": self.effective_style_pack_id,
@@ -608,13 +652,22 @@ class FrontendQualityPlatformVerificationReport:
     effective_style_pack_id: str | None = None
     matrix_coverage_count: int = 0
 
+    def __post_init__(self) -> None:
+        object.__setattr__(
+            self, "check_objects", tuple(_dedupe_text_items(self.check_objects))
+        )
+        object.__setattr__(self, "blockers", tuple(_dedupe_text_items(self.blockers)))
+        object.__setattr__(
+            self, "coverage_gaps", tuple(_dedupe_text_items(self.coverage_gaps))
+        )
+
     def to_json_dict(self) -> dict[str, object]:
         return {
             "source_name": self.source_name,
             "gate_verdict": self.gate_result,
-            "check_objects": list(self.check_objects),
-            "blockers": list(self.blockers),
-            "coverage_gaps": list(self.coverage_gaps),
+            "check_objects": _dedupe_text_items(self.check_objects),
+            "blockers": _dedupe_text_items(self.blockers),
+            "coverage_gaps": _dedupe_text_items(self.coverage_gaps),
             "effective_provider_id": self.effective_provider_id,
             "requested_style_pack_id": self.requested_style_pack_id,
             "effective_style_pack_id": self.effective_style_pack_id,
@@ -638,13 +691,22 @@ class FrontendProviderExpansionVerificationReport:
     react_stack_visibility: str | None = None
     react_binding_visibility: str | None = None
 
+    def __post_init__(self) -> None:
+        object.__setattr__(
+            self, "check_objects", tuple(_dedupe_text_items(self.check_objects))
+        )
+        object.__setattr__(self, "blockers", tuple(_dedupe_text_items(self.blockers)))
+        object.__setattr__(
+            self, "coverage_gaps", tuple(_dedupe_text_items(self.coverage_gaps))
+        )
+
     def to_json_dict(self) -> dict[str, object]:
         return {
             "source_name": self.source_name,
             "gate_verdict": self.gate_result,
-            "check_objects": list(self.check_objects),
-            "blockers": list(self.blockers),
-            "coverage_gaps": list(self.coverage_gaps),
+            "check_objects": _dedupe_text_items(self.check_objects),
+            "blockers": _dedupe_text_items(self.blockers),
+            "coverage_gaps": _dedupe_text_items(self.coverage_gaps),
             "effective_provider_id": self.effective_provider_id,
             "requested_frontend_stack": self.requested_frontend_stack,
             "effective_frontend_stack": self.effective_frontend_stack,
@@ -670,13 +732,22 @@ class FrontendProviderRuntimeAdapterVerificationReport:
     runtime_delivery_state: str | None = None
     evidence_return_state: str | None = None
 
+    def __post_init__(self) -> None:
+        object.__setattr__(
+            self, "check_objects", tuple(_dedupe_text_items(self.check_objects))
+        )
+        object.__setattr__(self, "blockers", tuple(_dedupe_text_items(self.blockers)))
+        object.__setattr__(
+            self, "coverage_gaps", tuple(_dedupe_text_items(self.coverage_gaps))
+        )
+
     def to_json_dict(self) -> dict[str, object]:
         return {
             "source_name": self.source_name,
             "gate_verdict": self.gate_result,
-            "check_objects": list(self.check_objects),
-            "blockers": list(self.blockers),
-            "coverage_gaps": list(self.coverage_gaps),
+            "check_objects": _dedupe_text_items(self.check_objects),
+            "blockers": _dedupe_text_items(self.blockers),
+            "coverage_gaps": _dedupe_text_items(self.coverage_gaps),
             "effective_provider_id": self.effective_provider_id,
             "requested_frontend_stack": self.requested_frontend_stack,
             "effective_frontend_stack": self.effective_frontend_stack,
@@ -701,13 +772,22 @@ class FrontendCrossProviderConsistencyVerificationReport:
     conditional_pair_count: int = 0
     blocked_pair_count: int = 0
 
+    def __post_init__(self) -> None:
+        object.__setattr__(
+            self, "check_objects", tuple(_dedupe_text_items(self.check_objects))
+        )
+        object.__setattr__(self, "blockers", tuple(_dedupe_text_items(self.blockers)))
+        object.__setattr__(
+            self, "coverage_gaps", tuple(_dedupe_text_items(self.coverage_gaps))
+        )
+
     def to_json_dict(self) -> dict[str, object]:
         return {
             "source_name": self.source_name,
             "gate_verdict": self.gate_result,
-            "check_objects": list(self.check_objects),
-            "blockers": list(self.blockers),
-            "coverage_gaps": list(self.coverage_gaps),
+            "check_objects": _dedupe_text_items(self.check_objects),
+            "blockers": _dedupe_text_items(self.blockers),
+            "coverage_gaps": _dedupe_text_items(self.coverage_gaps),
             "pair_count": self.pair_count,
             "ready_pair_count": self.ready_pair_count,
             "conditional_pair_count": self.conditional_pair_count,
@@ -1183,7 +1263,7 @@ def collect_constraint_blockers(root: Path) -> list[str]:
     blockers.extend(_verification_profile_blockers(root))
 
     if cp is None or cp.feature is None:
-        return blockers
+        return _dedupe_text_items(blockers)
 
     spec_dir_raw = (cp.feature.spec_dir or "").strip()
     if not spec_dir_raw or spec_dir_raw == "specs/unknown":
@@ -1196,7 +1276,7 @@ def collect_constraint_blockers(root: Path) -> list[str]:
             "BLOCKER: checkpoint feature.spec_dir is not an existing directory "
             f"({spec_dir_raw!r})"
         )
-        return blockers
+        return _dedupe_text_items(blockers)
 
     tasks_file = spec_path / "tasks.md"
     if tasks_file.is_file():
@@ -1224,7 +1304,7 @@ def collect_constraint_blockers(root: Path) -> list[str]:
     if frontend_contract_report is not None:
         blockers.extend(frontend_contract_report.blockers)
     blockers.extend(_release_gate_blockers(root, cp))
-    return blockers
+    return _dedupe_text_items(blockers)
 
 
 def _frontend_evidence_class_blockers(spec_dir: Path) -> list[str]:
@@ -1422,7 +1502,7 @@ def _branch_lifecycle_blockers(root: Path, spec_path: Path) -> list[str]:
         )
     except GitError:
         return []
-    return list(result.blockers)
+    return _dedupe_text_items(list(result.blockers))
 
 
 def _feature_contract_blockers(root: Path, checkpoint: Checkpoint | None) -> list[str]:
@@ -1432,11 +1512,13 @@ def _feature_contract_blockers(root: Path, checkpoint: Checkpoint | None) -> lis
         return []
 
     work_item_id = _effective_feature_contract_wi_id(checkpoint)
-    return [
-        "BLOCKER: "
-        f"{work_item_id or 'active work item'} feature-contract surface missing: {gap}"
-        for gap in gaps
-    ]
+    return _dedupe_text_items(
+        [
+            "BLOCKER: "
+            f"{work_item_id or 'active work item'} feature-contract surface missing: {gap}"
+            for gap in gaps
+        ]
+    )
 
 
 def _feature_contract_coverage_gaps(
@@ -1618,7 +1700,7 @@ def _frontend_solution_confirmation_attachment_report(
     blockers_tuple = tuple(blockers)
     return FrontendSolutionConfirmationVerificationReport(
         root=str(root),
-        blockers=blockers_tuple,
+        blockers=_merge_unique_strings(blockers_tuple, ()),
         coverage_gaps=(
             (FRONTEND_SOLUTION_CONFIRMATION_COVERAGE_GAP,)
             if blockers_tuple
@@ -1641,7 +1723,6 @@ def _frontend_quality_platform_attachment_report(
         return None
 
     blockers: list[str] = []
-    baseline = build_p2_frontend_quality_platform_baseline()
     artifact_root = root / "governance" / "frontend" / "quality-platform"
     manifest_path = artifact_root / "quality-platform.manifest.yaml"
     handoff_schema_path = artifact_root / "handoff.schema.yaml"
@@ -1697,34 +1778,29 @@ def _frontend_quality_platform_attachment_report(
                 f"{latest_snapshot_path.as_posix()}: {exc}"
             )
 
-    manifest_payload = payloads.get("manifest")
-    handoff_schema_payload = payloads.get("handoff schema")
-    coverage_matrix_payload = payloads.get("coverage matrix")
-    evidence_platform_payload = payloads.get("evidence platform")
-    interaction_quality_payload = payloads.get("interaction quality")
-    truth_surfacing_payload = payloads.get("truth surfacing")
-
     matrix_coverage_count = 0
     effective_provider_id = snapshot.effective_provider_id if snapshot else None
     requested_style_pack_id = snapshot.requested_style_pack_id if snapshot else None
     effective_style_pack_id = snapshot.effective_style_pack_id if snapshot else None
+    theme_governance = None
+    platform = None
 
     if (
         blockers
         and (
-            manifest_payload is None
-            or handoff_schema_payload is None
-            or coverage_matrix_payload is None
-            or evidence_platform_payload is None
-            or interaction_quality_payload is None
-            or truth_surfacing_payload is None
+            "manifest" not in payloads
+            or "handoff schema" not in payloads
+            or "coverage matrix" not in payloads
+            or "evidence platform" not in payloads
+            or "interaction quality" not in payloads
+            or "truth surfacing" not in payloads
             or snapshot is None
         )
     ):
         blockers_tuple = tuple(blockers)
         return FrontendQualityPlatformVerificationReport(
             root=str(root),
-            blockers=blockers_tuple,
+            blockers=_merge_unique_strings(blockers_tuple, ()),
             coverage_gaps=((FRONTEND_QUALITY_PLATFORM_COVERAGE_GAP,) if blockers_tuple else ()),
             gate_result="RETRY" if blockers_tuple else "PASS",
             effective_provider_id=effective_provider_id,
@@ -1732,140 +1808,44 @@ def _frontend_quality_platform_attachment_report(
             effective_style_pack_id=effective_style_pack_id,
         )
 
-    assert manifest_payload is not None
-    assert handoff_schema_payload is not None
-    assert coverage_matrix_payload is not None
-    assert evidence_platform_payload is not None
-    assert interaction_quality_payload is not None
-    assert truth_surfacing_payload is not None
     assert snapshot is not None
-
-    raw_matrix_items = coverage_matrix_payload.get("items", [])
-    raw_contract_items = evidence_platform_payload.get("contracts", [])
-    raw_flow_items = interaction_quality_payload.get("flows", [])
-    raw_truth_items = truth_surfacing_payload.get("items", [])
-    if not isinstance(raw_matrix_items, list):
-        blockers.append("BLOCKER: invalid quality platform coverage matrix artifact: items must be a list")
-    if not isinstance(raw_contract_items, list):
-        blockers.append("BLOCKER: invalid quality platform evidence platform artifact: contracts must be a list")
-    if not isinstance(raw_flow_items, list):
-        blockers.append("BLOCKER: invalid quality platform interaction artifact: flows must be a list")
-    if not isinstance(raw_truth_items, list):
-        blockers.append("BLOCKER: invalid quality platform truth surfacing artifact: items must be a list")
-
-    matrix_entries: list[QualityCoverageMatrixEntry] = []
-    evidence_contracts: list[QualityEvidenceContract] = []
-    interaction_flows: list[InteractionQualityFlow] = []
-    truth_records: list[QualityTruthSurfacingRecord] = []
 
     if not blockers:
         try:
-            matrix_entries = [
-                QualityCoverageMatrixEntry.model_validate(item)
-                for item in raw_matrix_items
-                if isinstance(item, dict)
-            ]
-            evidence_contracts = [
-                QualityEvidenceContract.model_validate(item)
-                for item in raw_contract_items
-                if isinstance(item, dict)
-            ]
-            interaction_flows = [
-                InteractionQualityFlow.model_validate(item)
-                for item in raw_flow_items
-                if isinstance(item, dict)
-            ]
-            truth_records = [
-                QualityTruthSurfacingRecord.model_validate(item)
-                for item in raw_truth_items
-                if isinstance(item, dict)
-            ]
-            handoff_contract = QualityPlatformHandoffContract(
-                schema_family=str(
-                    manifest_payload.get(
-                        "schema_family",
-                        baseline.handoff_contract.schema_family,
-                    )
-                ),
-                current_version=str(
-                    manifest_payload.get(
-                        "current_version",
-                        baseline.handoff_contract.current_version,
-                    )
-                ),
-                compatible_versions=[
-                    str(
-                        manifest_payload.get(
-                            "current_version",
-                            baseline.handoff_contract.current_version,
-                        )
-                    )
-                ],
-                artifact_root=str(
-                    manifest_payload.get(
-                        "artifact_root",
-                        baseline.handoff_contract.artifact_root,
-                    )
-                ),
-                canonical_files=list(baseline.handoff_contract.canonical_files),
-                program_service_fields=list(baseline.handoff_contract.program_service_fields),
-                cli_fields=list(baseline.handoff_contract.cli_fields),
-                verify_fields=list(baseline.handoff_contract.verify_fields),
-            )
-            verdict_root = artifact_root / "verdicts"
-            # Use baseline verdict ids because manifest only stores matrix ids.
-            raw_verdict_ids = [verdict.verdict_id for verdict in baseline.verdict_envelopes]
-            verdict_envelopes: list[QualityVerdictEnvelope] = []
-            for verdict_id in raw_verdict_ids:
-                verdict_path = verdict_root / f"{verdict_id}.yaml"
-                if not verdict_path.is_file():
-                    blockers.append(
-                        "BLOCKER: frontend quality platform verdict artifact missing: "
-                        f"{verdict_path.as_posix()}"
-                    )
-                    continue
-                verdict_envelopes.append(
-                    QualityVerdictEnvelope.model_validate(_load_yaml_mapping(verdict_path))
-                )
+            theme_governance = load_frontend_theme_token_governance_artifacts(root)
+        except ValueError as exc:
+            blockers.append(f"BLOCKER: {exc}")
+        try:
+            platform = load_frontend_quality_platform_artifacts(root)
+        except ValueError as exc:
+            blockers.append(f"BLOCKER: {exc}")
+        try:
+            page_ui_schema = _resolve_frontend_page_ui_schema(root)
+        except ValueError as exc:
+            blockers.append(f"BLOCKER: {exc}")
+            page_ui_schema = None
+    else:
+        page_ui_schema = None
 
-            if not blockers:
-                platform = FrontendQualityPlatformSet(
-                    work_item_id=str(
-                        manifest_payload.get("work_item_id", baseline.work_item_id)
-                    ),
-                    source_work_item_ids=list(
-                        _string_tuple(
-                            manifest_payload.get(
-                                "source_work_item_ids",
-                                baseline.source_work_item_ids,
-                            )
-                        )
-                    ),
-                    coverage_matrix=matrix_entries,
-                    evidence_contracts=evidence_contracts,
-                    interaction_flows=interaction_flows,
-                    verdict_envelopes=verdict_envelopes,
-                    truth_surfacing_records=truth_records,
-                    handoff_contract=handoff_contract,
-                )
-                validation = validate_frontend_quality_platform(
-                    platform,
-                    page_ui_schema=build_p2_frontend_page_ui_schema_baseline(),
-                    theme_governance=build_p2_frontend_theme_token_governance_baseline(),
-                    solution_snapshot=snapshot,
-                )
-                blockers.extend(f"BLOCKER: {blocker}" for blocker in validation.blockers)
-                matrix_coverage_count = validation.matrix_coverage_count
-        except Exception as exc:
-            blockers.append(
-                "BLOCKER: invalid frontend quality platform artifact set: "
-                f"{exc}"
-            )
+    if (
+        not blockers
+        and theme_governance is not None
+        and platform is not None
+        and page_ui_schema is not None
+    ):
+        validation = validate_frontend_quality_platform(
+            platform,
+            page_ui_schema=page_ui_schema,
+            theme_governance=theme_governance,
+            solution_snapshot=snapshot,
+        )
+        blockers.extend(f"BLOCKER: {blocker}" for blocker in validation.blockers)
+        matrix_coverage_count = validation.matrix_coverage_count
 
     blockers_tuple = tuple(blockers)
     return FrontendQualityPlatformVerificationReport(
         root=str(root),
-        blockers=blockers_tuple,
+        blockers=_merge_unique_strings(blockers_tuple, ()),
         coverage_gaps=((FRONTEND_QUALITY_PLATFORM_COVERAGE_GAP,) if blockers_tuple else ()),
         gate_result="RETRY" if blockers_tuple else "PASS",
         effective_provider_id=effective_provider_id,
@@ -1873,6 +1853,72 @@ def _frontend_quality_platform_attachment_report(
         effective_style_pack_id=effective_style_pack_id,
         matrix_coverage_count=matrix_coverage_count,
     )
+
+
+def _build_expected_frontend_generation_constraints(
+    snapshot: FrontendSolutionSnapshot,
+    *,
+    root: Path,
+):
+    install_strategy = next(
+        (
+            strategy
+            for strategy in build_builtin_install_strategies()
+            if strategy.provider_id == snapshot.effective_provider_id
+        ),
+        None,
+    )
+    page_schema_ids = [
+        page_schema.page_schema_id
+        for page_schema in _resolve_frontend_page_ui_schema(root).page_schemas
+    ]
+    return build_mvp_frontend_generation_constraints(
+        effective_provider_id=snapshot.effective_provider_id,
+        delivery_entry_id=(
+            f"{snapshot.effective_frontend_stack}-{snapshot.effective_provider_id}"
+        ),
+        component_library_packages=list(install_strategy.packages)
+        if install_strategy is not None
+        else [],
+        provider_theme_adapter_id=str(
+            snapshot.provider_theme_adapter_config.get("adapter_id", "")
+        ),
+        page_schema_ids=page_schema_ids,
+    )
+
+
+def _collect_frontend_generation_constraint_drift(
+    *,
+    expected,
+    actual,
+) -> list[str]:
+    drift: list[str] = []
+    if actual.effective_provider_id != expected.effective_provider_id:
+        drift.append(
+            "effective_provider_id expected "
+            f"{expected.effective_provider_id} got {actual.effective_provider_id}"
+        )
+    if actual.delivery_entry_id != expected.delivery_entry_id:
+        drift.append(
+            "delivery_entry_id expected "
+            f"{expected.delivery_entry_id} got {actual.delivery_entry_id}"
+        )
+    if actual.component_library_packages != expected.component_library_packages:
+        drift.append(
+            "component_library_packages expected "
+            f"{expected.component_library_packages} got {actual.component_library_packages}"
+        )
+    if actual.provider_theme_adapter_id != expected.provider_theme_adapter_id:
+        drift.append(
+            "provider_theme_adapter_id expected "
+            f"{expected.provider_theme_adapter_id} got {actual.provider_theme_adapter_id}"
+        )
+    if actual.page_schema_ids != expected.page_schema_ids:
+        drift.append(
+            "page_schema_ids expected "
+            f"{expected.page_schema_ids} got {actual.page_schema_ids}"
+        )
+    return drift
 
 
 def _frontend_theme_token_governance_attachment_report(
@@ -1886,32 +1932,18 @@ def _frontend_theme_token_governance_attachment_report(
         return None
 
     blockers: list[str] = []
-    baseline = build_p2_frontend_theme_token_governance_baseline()
-    artifact_root = root / "governance" / "frontend" / "theme-token-governance"
-    manifest_path = artifact_root / "theme-governance-manifest.json"
-    token_mapping_path = artifact_root / "token-mapping.json"
-    override_policy_path = artifact_root / "override-policy.json"
-    boundary_path = artifact_root / "style-editor-boundary.json"
-
-    payloads: dict[str, dict[str, object]] = {}
-    for label, path in (
-        ("manifest", manifest_path),
-        ("token mapping", token_mapping_path),
-        ("override policy", override_policy_path),
-        ("style editor boundary", boundary_path),
-    ):
+    artifact_root = frontend_theme_token_governance_root(root)
+    required_paths = [
+        artifact_root / "theme-governance-manifest.json",
+        artifact_root / "token-mapping.json",
+        artifact_root / "override-policy.json",
+        artifact_root / "style-editor-boundary.json",
+    ]
+    for path in required_paths:
         if not path.is_file():
             blockers.append(
                 "BLOCKER: frontend theme token governance artifact missing: "
                 f"{path.as_posix()}"
-            )
-            continue
-        try:
-            payloads[label] = _load_json_mapping(path)
-        except ValueError as exc:
-            blockers.append(
-                "BLOCKER: invalid frontend theme token governance artifact "
-                f"{path.as_posix()}: {exc}"
             )
 
     latest_snapshot_path = (
@@ -1941,6 +1973,29 @@ def _frontend_theme_token_governance_attachment_report(
     effective_provider_id = snapshot.effective_provider_id if snapshot else None
     requested_style_pack_id = snapshot.requested_style_pack_id if snapshot else None
     effective_style_pack_id = snapshot.effective_style_pack_id if snapshot else None
+    generation_constraints = None
+    if snapshot is not None:
+        try:
+            generation_constraints = load_frontend_generation_constraint_artifacts(root)
+        except ValueError as exc:
+            blockers.append(f"BLOCKER: {exc}")
+        else:
+            try:
+                expected_constraints = _build_expected_frontend_generation_constraints(
+                    snapshot,
+                    root=root,
+                )
+            except ValueError as exc:
+                blockers.append(f"BLOCKER: {exc}")
+            else:
+                blockers.extend(
+                    "BLOCKER: generation constraint drift: " + detail
+                    for detail in _collect_frontend_generation_constraint_drift(
+                        expected=expected_constraints,
+                        actual=generation_constraints,
+                    )
+                )
+
     provider_style_entries: list[ProviderStyleSupportEntry] = []
     if effective_provider_id:
         style_support_path = (
@@ -1981,18 +2036,11 @@ def _frontend_theme_token_governance_attachment_report(
                             )
                             break
 
-    if blockers and (
-        "manifest" not in payloads
-        or "token mapping" not in payloads
-        or "override policy" not in payloads
-        or "style editor boundary" not in payloads
-        or snapshot is None
-        or not provider_style_entries
-    ):
+    if blockers or snapshot is None or generation_constraints is None or not provider_style_entries:
         blockers_tuple = tuple(blockers)
         return FrontendThemeTokenGovernanceVerificationReport(
             root=str(root),
-            blockers=blockers_tuple,
+            blockers=_merge_unique_strings(blockers_tuple, ()),
             coverage_gaps=(
                 (FRONTEND_THEME_TOKEN_GOVERNANCE_COVERAGE_GAP,)
                 if blockers_tuple
@@ -2004,121 +2052,39 @@ def _frontend_theme_token_governance_attachment_report(
             effective_style_pack_id=effective_style_pack_id,
         )
 
-    manifest_payload = payloads["manifest"]
-    token_mapping_payload = payloads["token mapping"]
-    override_policy_payload = payloads["override policy"]
-    boundary_payload = payloads["style editor boundary"]
-
     try:
-        raw_mappings = token_mapping_payload.get("mappings", [])
-        if not isinstance(raw_mappings, list):
-            raise ValueError("token mapping artifact `mappings` must be a list")
-        token_mappings = [
-            ThemeTokenMapping.model_validate(item)
-            for item in raw_mappings
-            if isinstance(item, dict)
-        ]
-
-        raw_overrides = override_policy_payload.get("custom_overrides", [])
-        if not isinstance(raw_overrides, list):
-            raise ValueError("override policy artifact `custom_overrides` must be a list")
-        custom_overrides = [
-            CustomThemeTokenOverride.model_validate(item)
-            for item in raw_overrides
-            if isinstance(item, dict)
-        ]
-
-        style_editor_boundary = StyleEditorBoundaryContract.model_validate(boundary_payload)
-        handoff_contract = ThemeGovernanceHandoffContract(
-            schema_family=str(
-                manifest_payload.get(
-                    "schema_family",
-                    baseline.handoff_contract.schema_family,
-                )
-            ),
-            current_version=str(
-                manifest_payload.get(
-                    "current_version",
-                    baseline.handoff_contract.current_version,
-                )
-            ),
-            compatible_versions=[
-                str(
-                    manifest_payload.get(
-                        "current_version",
-                        baseline.handoff_contract.current_version,
-                    )
-                )
-            ],
-            artifact_root=str(
-                manifest_payload.get(
-                    "artifact_root",
-                    baseline.handoff_contract.artifact_root,
-                )
-            ),
-            canonical_files=list(baseline.handoff_contract.canonical_files),
-        )
-        governance = FrontendThemeTokenGovernanceSet(
-            work_item_id=str(manifest_payload.get("work_item_id", baseline.work_item_id)),
-            source_work_item_ids=list(
-                _string_tuple(
-                    manifest_payload.get(
-                        "source_work_item_ids",
-                        baseline.source_work_item_ids,
-                    )
-                )
-            ),
-            token_floor_disallowed_naked_values=list(
-                _string_tuple(
-                    manifest_payload.get(
-                        "token_floor_disallowed_naked_values",
-                        baseline.token_floor_disallowed_naked_values,
-                    )
-                )
-            ),
-            style_pack_ids=list(
-                _string_tuple(
-                    manifest_payload.get("style_pack_ids", baseline.style_pack_ids)
-                )
-            ),
-            override_precedence=list(
-                _string_tuple(
-                    override_policy_payload.get(
-                        "override_precedence",
-                        baseline.override_precedence,
-                    )
-                )
-            ),
-            token_mappings=token_mappings,
-            custom_overrides=custom_overrides,
-            style_editor_boundary=style_editor_boundary,
-            handoff_contract=handoff_contract,
-        )
+        governance = load_frontend_theme_token_governance_artifacts(root)
     except Exception as exc:
         blockers.append(
             "BLOCKER: invalid frontend theme token governance artifact set: "
             f"{exc}"
         )
     else:
+        try:
+            page_ui_schema = _resolve_frontend_page_ui_schema(root)
+        except ValueError as exc:
+            blockers.append(f"BLOCKER: {exc}")
+            page_ui_schema = None
         provider_profile = build_mvp_enterprise_vue2_provider_profile().model_copy(
             update={
                 "provider_id": effective_provider_id or "",
                 "style_support_matrix": provider_style_entries,
             }
         )
-        validation = validate_frontend_theme_token_governance(
-            governance,
-            constraints=build_mvp_frontend_generation_constraints(),
-            page_ui_schema=build_p2_frontend_page_ui_schema_baseline(),
-            provider_profile=provider_profile,
-            solution_snapshot=snapshot,
-        )
-        blockers.extend(f"BLOCKER: {blocker}" for blocker in validation.blockers)
+        if page_ui_schema is not None:
+            validation = validate_frontend_theme_token_governance(
+                governance,
+                constraints=generation_constraints,
+                page_ui_schema=page_ui_schema,
+                provider_profile=provider_profile,
+                solution_snapshot=snapshot,
+            )
+            blockers.extend(f"BLOCKER: {blocker}" for blocker in validation.blockers)
 
     blockers_tuple = tuple(blockers)
     return FrontendThemeTokenGovernanceVerificationReport(
         root=str(root),
-        blockers=blockers_tuple,
+        blockers=_merge_unique_strings(blockers_tuple, ()),
         coverage_gaps=(
             (FRONTEND_THEME_TOKEN_GOVERNANCE_COVERAGE_GAP,)
             if blockers_tuple
@@ -2143,33 +2109,29 @@ def _frontend_provider_expansion_attachment_report(
 
     blockers: list[str] = []
     baseline = build_p3_frontend_provider_expansion_baseline()
-    artifact_root = root / "governance" / "frontend" / "provider-expansion"
-    manifest_path = artifact_root / "provider-expansion.manifest.yaml"
-    handoff_schema_path = artifact_root / "handoff.schema.yaml"
-    truth_surfacing_path = artifact_root / "truth-surfacing.yaml"
-    choice_surface_policy_path = artifact_root / "choice-surface-policy.yaml"
-    react_boundary_path = artifact_root / "react-exposure-boundary.yaml"
-
-    payloads: dict[str, dict[str, object]] = {}
-    for label, path in (
-        ("manifest", manifest_path),
-        ("handoff schema", handoff_schema_path),
-        ("truth surfacing", truth_surfacing_path),
-        ("choice surface policy", choice_surface_policy_path),
-        ("react boundary", react_boundary_path),
-    ):
+    artifact_root = frontend_provider_expansion_root(root)
+    required_paths = [
+        artifact_root / "provider-expansion.manifest.yaml",
+        artifact_root / "handoff.schema.yaml",
+        artifact_root / "truth-surfacing.yaml",
+        artifact_root / "choice-surface-policy.yaml",
+        artifact_root / "react-exposure-boundary.yaml",
+    ]
+    for provider in baseline.providers:
+        provider_root = artifact_root / "providers" / provider.provider_id
+        required_paths.extend(
+            [
+                provider_root / "admission.yaml",
+                provider_root / "roster-state.yaml",
+                provider_root / "certification-ref.yaml",
+                provider_root / "provider-certification-aggregate.yaml",
+            ]
+        )
+    for path in required_paths:
         if not path.is_file():
             blockers.append(
                 "BLOCKER: frontend provider expansion artifact missing: "
                 f"{path.as_posix()}"
-            )
-            continue
-        try:
-            payloads[label] = _load_yaml_mapping(path)
-        except ValueError as exc:
-            blockers.append(
-                "BLOCKER: invalid frontend provider expansion artifact "
-                f"{path.as_posix()}: {exc}"
             )
 
     latest_snapshot_path = (
@@ -2200,18 +2162,11 @@ def _frontend_provider_expansion_attachment_report(
     requested_frontend_stack = snapshot.requested_frontend_stack if snapshot else None
     effective_frontend_stack = snapshot.effective_frontend_stack if snapshot else None
 
-    if blockers and (
-        "manifest" not in payloads
-        or "handoff schema" not in payloads
-        or "truth surfacing" not in payloads
-        or "choice surface policy" not in payloads
-        or "react boundary" not in payloads
-        or snapshot is None
-    ):
+    if blockers or snapshot is None:
         blockers_tuple = tuple(blockers)
         return FrontendProviderExpansionVerificationReport(
             root=str(root),
-            blockers=blockers_tuple,
+            blockers=_merge_unique_strings(blockers_tuple, ()),
             coverage_gaps=(
                 (FRONTEND_PROVIDER_EXPANSION_COVERAGE_GAP,)
                 if blockers_tuple
@@ -2223,197 +2178,19 @@ def _frontend_provider_expansion_attachment_report(
             effective_frontend_stack=effective_frontend_stack,
         )
 
-    manifest_payload = payloads["manifest"]
-    handoff_schema_payload = payloads["handoff schema"]
-    truth_surfacing_payload = payloads["truth surfacing"]
-    choice_surface_policy_payload = payloads["choice surface policy"]
-    react_boundary_payload = payloads["react boundary"]
-
     react_stack_visibility: str | None = None
     react_binding_visibility: str | None = None
 
     try:
-        handoff_contract = ProviderExpansionHandoffContract(
-            schema_family=str(
-                handoff_schema_payload.get(
-                    "schema_family",
-                    baseline.handoff_contract.schema_family,
-                )
-            ),
-            current_version=str(
-                handoff_schema_payload.get(
-                    "current_version",
-                    baseline.handoff_contract.current_version,
-                )
-            ),
-            compatible_versions=list(
-                _string_tuple(
-                    handoff_schema_payload.get(
-                        "compatible_versions",
-                        baseline.handoff_contract.compatible_versions,
-                    )
-                )
-            ),
-            artifact_root=str(
-                handoff_schema_payload.get(
-                    "artifact_root",
-                    baseline.handoff_contract.artifact_root,
-                )
-            ),
-            canonical_files=list(
-                _string_tuple(
-                    handoff_schema_payload.get(
-                        "canonical_files",
-                        baseline.handoff_contract.canonical_files,
-                    )
-                )
-            ),
-            program_service_fields=list(
-                _string_tuple(
-                    handoff_schema_payload.get(
-                        "program_service_fields",
-                        baseline.handoff_contract.program_service_fields,
-                    )
-                )
-            ),
-            cli_fields=list(
-                _string_tuple(
-                    handoff_schema_payload.get(
-                        "cli_fields",
-                        baseline.handoff_contract.cli_fields,
-                    )
-                )
-            ),
-            verify_fields=list(
-                _string_tuple(
-                    handoff_schema_payload.get(
-                        "verify_fields",
-                        baseline.handoff_contract.verify_fields,
-                    )
-                )
-            ),
-        )
-
-        choice_surface_policy = ChoiceSurfacePolicy.model_validate(
-            choice_surface_policy_payload
-        )
-        react_boundary = ReactExposureBoundary.model_validate(react_boundary_payload)
-        react_stack_visibility = react_boundary.current_stack_visibility
-        react_binding_visibility = react_boundary.current_binding_visibility
-
-        raw_truth_items = truth_surfacing_payload.get("items", [])
-        if not isinstance(raw_truth_items, list):
-            raise ValueError("truth surfacing artifact `items` must be a list")
-        truth_surfacing_records = [
-            ProviderExpansionTruthSurfacingRecord.model_validate(item)
-            for item in raw_truth_items
-            if isinstance(item, dict)
-        ]
-
-        provider_ids = list(
-            _string_tuple(
-                manifest_payload.get(
-                    "provider_ids",
-                    [provider.provider_id for provider in baseline.providers],
-                )
-            )
-        )
-        providers: list[ProviderAdmissionBundle] = []
-        for provider_id in provider_ids:
-            provider_root = artifact_root / "providers" / provider_id
-            provider_payloads: dict[str, dict[str, object]] = {}
-            for label, path in (
-                ("admission", provider_root / "admission.yaml"),
-                ("roster state", provider_root / "roster-state.yaml"),
-                ("certification ref", provider_root / "certification-ref.yaml"),
-                (
-                    "provider certification aggregate",
-                    provider_root / "provider-certification-aggregate.yaml",
-                ),
-            ):
-                if not path.is_file():
-                    blockers.append(
-                        "BLOCKER: frontend provider expansion artifact missing: "
-                        f"{path.as_posix()}"
-                    )
-                    continue
-                try:
-                    provider_payloads[label] = _load_yaml_mapping(path)
-                except ValueError as exc:
-                    blockers.append(
-                        "BLOCKER: invalid frontend provider expansion artifact "
-                        f"{path.as_posix()}: {exc}"
-                    )
-            if len(provider_payloads) != 4:
-                continue
-
-            raw_certification_items = provider_payloads["certification ref"].get(
-                "items",
-                [],
-            )
-            if not isinstance(raw_certification_items, list):
-                raise ValueError("certification ref artifact `items` must be a list")
-            pair_refs = [
-                PairCertificationReference.model_validate(item)
-                for item in raw_certification_items
-                if isinstance(item, dict)
-            ]
-            aggregate_payload = provider_payloads["provider certification aggregate"]
-            aggregate = ProviderCertificationAggregate(
-                provider_id=str(
-                    aggregate_payload.get("provider_id", provider_id)
-                ),
-                source_work_item_id=str(
-                    aggregate_payload.get("source_work_item_id", "150")
-                ),
-                pair_certifications=pair_refs,
-                aggregate_gate=_optional_str(aggregate_payload.get("aggregate_gate")),
-            )
-            admission_payload = provider_payloads["admission"]
-            providers.append(
-                ProviderAdmissionBundle(
-                    provider_id=str(admission_payload.get("provider_id", provider_id)),
-                    certification_aggregate=aggregate,
-                    roster_admission_state=str(
-                        admission_payload.get("roster_admission_state", "candidate")
-                    ),
-                    choice_surface_visibility=str(
-                        admission_payload.get("choice_surface_visibility", "hidden")
-                    ),
-                    caveat_codes=list(
-                        _string_tuple(admission_payload.get("caveat_codes", ()))
-                    ),
-                    artifact_root_ref=str(
-                        admission_payload.get(
-                            "artifact_root_ref",
-                            baseline.handoff_contract.artifact_root,
-                        )
-                    ),
-                )
-            )
-
-        expansion = FrontendProviderExpansionSet(
-            work_item_id=str(manifest_payload.get("work_item_id", baseline.work_item_id)),
-            source_work_item_ids=list(
-                _string_tuple(
-                    manifest_payload.get(
-                        "source_work_item_ids",
-                        baseline.source_work_item_ids,
-                    )
-                )
-            ),
-            choice_surface_policy=choice_surface_policy,
-            providers=providers,
-            react_exposure_boundary=react_boundary,
-            truth_surfacing_records=truth_surfacing_records,
-            handoff_contract=handoff_contract,
-        )
+        expansion = load_frontend_provider_expansion_artifacts(root)
     except Exception as exc:
         blockers.append(
             "BLOCKER: invalid frontend provider expansion artifact set: "
             f"{exc}"
         )
     else:
+        react_stack_visibility = expansion.react_exposure_boundary.current_stack_visibility
+        react_binding_visibility = expansion.react_exposure_boundary.current_binding_visibility
         validation = validate_frontend_provider_expansion(
             expansion,
             solution_snapshot=snapshot,
@@ -2423,7 +2200,7 @@ def _frontend_provider_expansion_attachment_report(
     blockers_tuple = tuple(blockers)
     return FrontendProviderExpansionVerificationReport(
         root=str(root),
-        blockers=blockers_tuple,
+        blockers=_merge_unique_strings(blockers_tuple, ()),
         coverage_gaps=(
             (FRONTEND_PROVIDER_EXPANSION_COVERAGE_GAP,)
             if blockers_tuple
@@ -2451,28 +2228,24 @@ def _frontend_provider_runtime_adapter_attachment_report(
     blockers: list[str] = []
     baseline = build_p3_target_project_adapter_scaffold_baseline()
     artifact_root = frontend_provider_runtime_adapter_root(root)
-    manifest_path = artifact_root / "provider-runtime-adapter.manifest.yaml"
-    handoff_schema_path = artifact_root / "handoff.schema.yaml"
-    targets_path = artifact_root / "adapter-targets.yaml"
-
-    payloads: dict[str, dict[str, object]] = {}
-    for label, path in (
-        ("manifest", manifest_path),
-        ("handoff schema", handoff_schema_path),
-        ("targets", targets_path),
-    ):
+    required_paths = [
+        artifact_root / "provider-runtime-adapter.manifest.yaml",
+        artifact_root / "handoff.schema.yaml",
+        artifact_root / "adapter-targets.yaml",
+    ]
+    for target in baseline.adapter_targets:
+        provider_root = artifact_root / "providers" / target.provider_id
+        required_paths.extend(
+            [
+                provider_root / "adapter-scaffold.yaml",
+                provider_root / "runtime-boundary-receipt.yaml",
+            ]
+        )
+    for path in required_paths:
         if not path.is_file():
             blockers.append(
                 "BLOCKER: frontend provider runtime adapter artifact missing: "
                 f"{path.as_posix()}"
-            )
-            continue
-        try:
-            payloads[label] = _load_yaml_mapping(path)
-        except ValueError as exc:
-            blockers.append(
-                "BLOCKER: invalid frontend provider runtime adapter artifact "
-                f"{path.as_posix()}: {exc}"
             )
 
     latest_snapshot_path = (
@@ -2503,16 +2276,11 @@ def _frontend_provider_runtime_adapter_attachment_report(
     requested_frontend_stack = snapshot.requested_frontend_stack if snapshot else None
     effective_frontend_stack = snapshot.effective_frontend_stack if snapshot else None
 
-    if blockers and (
-        "manifest" not in payloads
-        or "handoff schema" not in payloads
-        or "targets" not in payloads
-        or snapshot is None
-    ):
+    if blockers or snapshot is None:
         blockers_tuple = tuple(blockers)
         return FrontendProviderRuntimeAdapterVerificationReport(
             root=str(root),
-            blockers=blockers_tuple,
+            blockers=_merge_unique_strings(blockers_tuple, ()),
             coverage_gaps=(
                 (FRONTEND_PROVIDER_RUNTIME_ADAPTER_COVERAGE_GAP,)
                 if blockers_tuple
@@ -2524,133 +2292,11 @@ def _frontend_provider_runtime_adapter_attachment_report(
             effective_frontend_stack=effective_frontend_stack,
         )
 
-    manifest_payload = payloads["manifest"]
-    handoff_schema_payload = payloads["handoff schema"]
-    targets_payload = payloads["targets"]
-
     carrier_mode: str | None = None
     runtime_delivery_state: str | None = None
     evidence_return_state: str | None = None
     try:
-        handoff_contract = ProviderRuntimeAdapterHandoffContract(
-            schema_family=str(
-                handoff_schema_payload.get(
-                    "schema_family",
-                    baseline.handoff_contract.schema_family,
-                )
-            ),
-            current_version=str(
-                handoff_schema_payload.get(
-                    "current_version",
-                    baseline.handoff_contract.current_version,
-                )
-            ),
-            compatible_versions=list(
-                _string_tuple(
-                    handoff_schema_payload.get(
-                        "compatible_versions",
-                        baseline.handoff_contract.compatible_versions,
-                    )
-                )
-            ),
-            artifact_root=str(
-                handoff_schema_payload.get(
-                    "artifact_root",
-                    baseline.handoff_contract.artifact_root,
-                )
-            ),
-            canonical_files=list(
-                _string_tuple(
-                    handoff_schema_payload.get(
-                        "canonical_files",
-                        baseline.handoff_contract.canonical_files,
-                    )
-                )
-            ),
-            program_service_fields=list(
-                _string_tuple(
-                    handoff_schema_payload.get(
-                        "program_service_fields",
-                        baseline.handoff_contract.program_service_fields,
-                    )
-                )
-            ),
-            cli_fields=list(
-                _string_tuple(
-                    handoff_schema_payload.get(
-                        "cli_fields",
-                        baseline.handoff_contract.cli_fields,
-                    )
-                )
-            ),
-            verify_fields=list(
-                _string_tuple(
-                    handoff_schema_payload.get(
-                        "verify_fields",
-                        baseline.handoff_contract.verify_fields,
-                    )
-                )
-            ),
-        )
-        target_items = targets_payload.get("items", [])
-        if not isinstance(target_items, list):
-            raise ValueError("adapter targets artifact `items` must be a list")
-        provider_ids = list(
-            _string_tuple(
-                manifest_payload.get(
-                    "provider_ids",
-                    [target.provider_id for target in baseline.adapter_targets],
-                )
-            )
-        )
-        targets: list[ProviderRuntimeAdapterTarget] = []
-        for provider_id in provider_ids:
-            provider_root = artifact_root / "providers" / provider_id
-            provider_payloads: dict[str, dict[str, object]] = {}
-            for label, path in (
-                ("scaffold", provider_root / "adapter-scaffold.yaml"),
-                ("boundary receipt", provider_root / "runtime-boundary-receipt.yaml"),
-            ):
-                if not path.is_file():
-                    blockers.append(
-                        "BLOCKER: frontend provider runtime adapter artifact missing: "
-                        f"{path.as_posix()}"
-                    )
-                    continue
-                try:
-                    provider_payloads[label] = _load_yaml_mapping(path)
-                except ValueError as exc:
-                    blockers.append(
-                        "BLOCKER: invalid frontend provider runtime adapter artifact "
-                        f"{path.as_posix()}: {exc}"
-                    )
-            if len(provider_payloads) != 2:
-                continue
-            targets.append(
-                ProviderRuntimeAdapterTarget(
-                    provider_id=provider_id,
-                    scaffold_contract=AdapterScaffoldContract.model_validate(
-                        provider_payloads["scaffold"]
-                    ),
-                    boundary_receipt=RuntimeBoundaryReceipt.model_validate(
-                        provider_payloads["boundary receipt"]
-                    ),
-                )
-            )
-
-        runtime_adapter = FrontendProviderRuntimeAdapterSet(
-            work_item_id=str(manifest_payload.get("work_item_id", baseline.work_item_id)),
-            source_work_item_ids=list(
-                _string_tuple(
-                    manifest_payload.get(
-                        "source_work_item_ids",
-                        baseline.source_work_item_ids,
-                    )
-                )
-            ),
-            adapter_targets=targets,
-            handoff_contract=handoff_contract,
-        )
+        runtime_adapter = load_frontend_provider_runtime_adapter_artifacts(root)
     except Exception as exc:
         blockers.append(
             "BLOCKER: invalid frontend provider runtime adapter artifact set: "
@@ -2669,7 +2315,7 @@ def _frontend_provider_runtime_adapter_attachment_report(
     blockers_tuple = tuple(blockers)
     return FrontendProviderRuntimeAdapterVerificationReport(
         root=str(root),
-        blockers=blockers_tuple,
+        blockers=_merge_unique_strings(blockers_tuple, ()),
         coverage_gaps=(
             (FRONTEND_PROVIDER_RUNTIME_ADAPTER_COVERAGE_GAP,)
             if blockers_tuple
@@ -2697,38 +2343,34 @@ def _frontend_cross_provider_consistency_attachment_report(
 
     blockers: list[str] = []
     baseline = build_p2_frontend_cross_provider_consistency_baseline()
-    artifact_root = root / "governance" / "frontend" / "cross-provider-consistency"
-    manifest_path = artifact_root / "consistency.manifest.yaml"
-    handoff_schema_path = artifact_root / "handoff.schema.yaml"
-    truth_surfacing_path = artifact_root / "truth-surfacing.yaml"
-    readiness_gate_path = artifact_root / "readiness-gate.yaml"
-
-    payloads: dict[str, dict[str, object]] = {}
-    for label, path in (
-        ("manifest", manifest_path),
-        ("handoff schema", handoff_schema_path),
-        ("truth surfacing", truth_surfacing_path),
-        ("readiness gate", readiness_gate_path),
-    ):
+    artifact_root = frontend_cross_provider_consistency_root(root)
+    required_paths = [
+        artifact_root / "consistency.manifest.yaml",
+        artifact_root / "handoff.schema.yaml",
+        artifact_root / "truth-surfacing.yaml",
+        artifact_root / "readiness-gate.yaml",
+    ]
+    for bundle in baseline.certification_bundles:
+        pair_root = artifact_root / "provider-pairs" / bundle.pair_id
+        required_paths.extend(
+            [
+                pair_root / "diff-summary.yaml",
+                pair_root / "certification.yaml",
+                pair_root / "evidence-index.yaml",
+            ]
+        )
+    for path in required_paths:
         if not path.is_file():
             blockers.append(
                 "BLOCKER: frontend cross-provider consistency artifact missing: "
                 f"{path.as_posix()}"
             )
-            continue
-        try:
-            payloads[label] = _load_yaml_mapping(path)
-        except ValueError as exc:
-            blockers.append(
-                "BLOCKER: invalid frontend cross-provider consistency artifact "
-                f"{path.as_posix()}: {exc}"
-            )
 
-    if blockers and len(payloads) != 4:
+    if blockers:
         blockers_tuple = tuple(blockers)
         return FrontendCrossProviderConsistencyVerificationReport(
             root=str(root),
-            blockers=blockers_tuple,
+            blockers=_merge_unique_strings(blockers_tuple, ()),
             coverage_gaps=(
                 (FRONTEND_CROSS_PROVIDER_CONSISTENCY_COVERAGE_GAP,)
                 if blockers_tuple
@@ -2738,247 +2380,15 @@ def _frontend_cross_provider_consistency_attachment_report(
             pair_count=len(baseline.certification_bundles),
         )
 
-    manifest_payload = payloads["manifest"]
-    handoff_schema_payload = payloads["handoff schema"]
-    truth_surfacing_payload = payloads["truth surfacing"]
-    readiness_gate_payload = payloads["readiness gate"]
-
     pair_count = 0
     ready_pair_count = 0
     conditional_pair_count = 0
     blocked_pair_count = 0
 
     try:
-        raw_truth_items = truth_surfacing_payload.get("items", [])
-        raw_rules = readiness_gate_payload.get("rules", [])
-        if not isinstance(raw_truth_items, list):
-            raise ValueError("truth surfacing artifact `items` must be a list")
-        if not isinstance(raw_rules, list):
-            raise ValueError("readiness gate artifact `rules` must be a list")
-
-        truth_surfacing_records = [
-            ProviderPairTruthSurfacingRecord.model_validate(item)
-            for item in raw_truth_items
-            if isinstance(item, dict)
-        ]
-        readiness_gate = ConsistencyReadinessGate(
-            gate_id=str(
-                readiness_gate_payload.get(
-                    "gate_id",
-                    baseline.readiness_gate.gate_id,
-                )
-            ),
-            required_coverage_scope=list(
-                _string_tuple(
-                    readiness_gate_payload.get(
-                        "required_coverage_scope",
-                        baseline.readiness_gate.required_coverage_scope,
-                    )
-                )
-            ),
-            optional_coverage_scope=list(
-                _string_tuple(
-                    readiness_gate_payload.get(
-                        "optional_coverage_scope",
-                        baseline.readiness_gate.optional_coverage_scope,
-                    )
-                )
-            ),
-            ux_equivalence_clause_ids=list(
-                _string_tuple(
-                    readiness_gate_payload.get(
-                        "ux_equivalence_clause_ids",
-                        baseline.readiness_gate.ux_equivalence_clause_ids,
-                    )
-                )
-            ),
-            rules=[
-                ReadinessGateRule.model_validate(item)
-                for item in raw_rules
-                if isinstance(item, dict)
-            ],
-        )
-        handoff_contract = ConsistencyHandoffContract(
-            schema_family=str(
-                handoff_schema_payload.get(
-                    "schema_family",
-                    baseline.handoff_contract.schema_family,
-                )
-            ),
-            current_version=str(
-                handoff_schema_payload.get(
-                    "current_version",
-                    baseline.handoff_contract.current_version,
-                )
-            ),
-            compatible_versions=list(
-                _string_tuple(
-                    handoff_schema_payload.get(
-                        "compatible_versions",
-                        baseline.handoff_contract.compatible_versions,
-                    )
-                )
-            ),
-            artifact_root=str(
-                handoff_schema_payload.get(
-                    "artifact_root",
-                    baseline.handoff_contract.artifact_root,
-                )
-            ),
-            canonical_files=list(
-                _string_tuple(
-                    handoff_schema_payload.get(
-                        "canonical_files",
-                        baseline.handoff_contract.canonical_files,
-                    )
-                )
-            ),
-            program_service_fields=list(
-                _string_tuple(
-                    handoff_schema_payload.get(
-                        "program_service_fields",
-                        baseline.handoff_contract.program_service_fields,
-                    )
-                )
-            ),
-            cli_fields=list(
-                _string_tuple(
-                    handoff_schema_payload.get(
-                        "cli_fields",
-                        baseline.handoff_contract.cli_fields,
-                    )
-                )
-            ),
-            verify_fields=list(
-                _string_tuple(
-                    handoff_schema_payload.get(
-                        "verify_fields",
-                        baseline.handoff_contract.verify_fields,
-                    )
-                )
-            ),
-        )
-
-        diff_records: list[ConsistencyDiffRecord] = []
-        coverage_gaps: list[CoverageGapRecord] = []
-        certification_bundles: list[ProviderPairCertificationBundle] = []
-        pair_ids = list(
-            _string_tuple(
-                manifest_payload.get(
-                    "pair_ids",
-                    [bundle.pair_id for bundle in baseline.certification_bundles],
-                )
-            )
-        )
-        pair_count = len(pair_ids)
-
-        for pair_id in pair_ids:
-            pair_root = artifact_root / "provider-pairs" / pair_id
-            pair_payloads: dict[str, dict[str, object]] = {}
-            for label, path in (
-                ("diff summary", pair_root / "diff-summary.yaml"),
-                ("certification", pair_root / "certification.yaml"),
-                ("evidence index", pair_root / "evidence-index.yaml"),
-            ):
-                if not path.is_file():
-                    blockers.append(
-                        "BLOCKER: frontend cross-provider consistency artifact missing: "
-                        f"{path.as_posix()}"
-                    )
-                    continue
-                try:
-                    pair_payloads[label] = _load_yaml_mapping(path)
-                except ValueError as exc:
-                    blockers.append(
-                        "BLOCKER: invalid frontend cross-provider consistency artifact "
-                        f"{path.as_posix()}: {exc}"
-                    )
-            if len(pair_payloads) != 3:
-                continue
-
-            diff_summary_payload = pair_payloads["diff summary"]
-            certification_payload = pair_payloads["certification"]
-            evidence_index_payload = pair_payloads["evidence index"]
-
-            raw_diffs = diff_summary_payload.get("diffs", [])
-            raw_gaps = diff_summary_payload.get("coverage_gaps", [])
-            raw_diff_refs = certification_payload.get("diff_refs", [])
-            raw_gap_refs = certification_payload.get("coverage_gap_refs", [])
-            raw_diff_evidence_refs = evidence_index_payload.get("diff_evidence_refs", [])
-            raw_upstream_truth_refs = evidence_index_payload.get("upstream_truth_refs", [])
-            if not isinstance(raw_diffs, list):
-                raise ValueError("diff summary artifact `diffs` must be a list")
-            if not isinstance(raw_gaps, list):
-                raise ValueError("diff summary artifact `coverage_gaps` must be a list")
-            if not isinstance(raw_diff_refs, list):
-                raise ValueError("certification artifact `diff_refs` must be a list")
-            if not isinstance(raw_gap_refs, list):
-                raise ValueError("certification artifact `coverage_gap_refs` must be a list")
-            if not isinstance(raw_diff_evidence_refs, list):
-                raise ValueError("evidence index artifact `diff_evidence_refs` must be a list")
-            if not isinstance(raw_upstream_truth_refs, list):
-                raise ValueError("evidence index artifact `upstream_truth_refs` must be a list")
-
-            diff_records.extend(
-                [
-                    ConsistencyDiffRecord.model_validate(item)
-                    for item in raw_diffs
-                    if isinstance(item, dict)
-                ]
-            )
-            coverage_gaps.extend(
-                [
-                    CoverageGapRecord.model_validate(item)
-                    for item in raw_gaps
-                    if isinstance(item, dict)
-                ]
-            )
-            bundle = ProviderPairCertificationBundle(
-                pair_id=str(certification_payload.get("pair_id", pair_id)),
-                baseline_provider_id=str(
-                    certification_payload.get("baseline_provider_id", "")
-                ),
-                candidate_provider_id=str(
-                    certification_payload.get("candidate_provider_id", "")
-                ),
-                page_schema_id=str(certification_payload.get("page_schema_id", "")),
-                compared_style_pack_id=str(
-                    certification_payload.get("compared_style_pack_id", "")
-                ),
-                required_journey_ids=list(
-                    _string_tuple(
-                        certification_payload.get("required_journey_ids", ())
-                    )
-                ),
-                state_vector={
-                    "final_verdict": str(
-                        certification_payload.get("final_verdict", "consistent")
-                    ),
-                    "comparability_state": str(
-                        certification_payload.get("comparability_state", "comparable")
-                    ),
-                    "blocking_state": str(
-                        certification_payload.get("blocking_state", "ready")
-                    ),
-                    "evidence_state": str(
-                        certification_payload.get("evidence_state", "fresh")
-                    ),
-                },
-                diff_record_ids=[
-                    str(ref).rsplit("#", 1)[-1]
-                    for ref in raw_diff_refs
-                    if str(ref)
-                ],
-                coverage_gap_ids=[
-                    str(ref).rsplit("#", 1)[-1]
-                    for ref in raw_gap_refs
-                    if str(ref)
-                ],
-                certification_gate=_optional_str(
-                    certification_payload.get("certification_gate")
-                ),
-            )
-            certification_bundles.append(bundle)
+        consistency = load_frontend_cross_provider_consistency_artifacts(root)
+        pair_count = len(consistency.certification_bundles)
+        for bundle in consistency.certification_bundles:
             if bundle.certification_gate == "ready":
                 ready_pair_count += 1
             elif bundle.certification_gate == "conditional":
@@ -2993,43 +2403,45 @@ def _frontend_cross_provider_consistency_attachment_report(
                     "BLOCKER: cross-provider certification gate remains blocked: "
                     f"{bundle.pair_id}"
                 )
-
-        consistency = FrontendCrossProviderConsistencySet(
-            work_item_id=str(manifest_payload.get("work_item_id", baseline.work_item_id)),
-            source_work_item_ids=list(
-                _string_tuple(
-                    manifest_payload.get(
-                        "source_work_item_ids",
-                        baseline.source_work_item_ids,
-                    )
-                )
-            ),
-            ux_equivalence_clauses=list(baseline.ux_equivalence_clauses),
-            diff_records=diff_records,
-            coverage_gaps=coverage_gaps,
-            certification_bundles=certification_bundles,
-            truth_surfacing_records=truth_surfacing_records,
-            readiness_gate=readiness_gate,
-            handoff_contract=handoff_contract,
-        )
     except Exception as exc:
         blockers.append(
             "BLOCKER: invalid frontend cross-provider consistency artifact set: "
             f"{exc}"
         )
     else:
-        validation = validate_frontend_cross_provider_consistency(
-            consistency,
-            page_ui_schema=build_p2_frontend_page_ui_schema_baseline(),
-            theme_governance=build_p2_frontend_theme_token_governance_baseline(),
-            quality_platform=build_p2_frontend_quality_platform_baseline(),
-        )
-        blockers.extend(f"BLOCKER: {blocker}" for blocker in validation.blockers)
+        theme_governance = None
+        quality_platform = None
+        try:
+            theme_governance = load_frontend_theme_token_governance_artifacts(root)
+        except ValueError as exc:
+            blockers.append(f"BLOCKER: {exc}")
+        try:
+            quality_platform = load_frontend_quality_platform_artifacts(root)
+        except ValueError as exc:
+            blockers.append(f"BLOCKER: {exc}")
+        try:
+            page_ui_schema = _resolve_frontend_page_ui_schema(root)
+        except ValueError as exc:
+            blockers.append(f"BLOCKER: {exc}")
+            page_ui_schema = None
+
+        if (
+            theme_governance is not None
+            and quality_platform is not None
+            and page_ui_schema is not None
+        ):
+            validation = validate_frontend_cross_provider_consistency(
+                consistency,
+                page_ui_schema=page_ui_schema,
+                theme_governance=theme_governance,
+                quality_platform=quality_platform,
+            )
+            blockers.extend(f"BLOCKER: {blocker}" for blocker in validation.blockers)
 
     blockers_tuple = tuple(blockers)
     return FrontendCrossProviderConsistencyVerificationReport(
         root=str(root),
-        blockers=blockers_tuple,
+        blockers=_merge_unique_strings(blockers_tuple, ()),
         coverage_gaps=(
             (FRONTEND_CROSS_PROVIDER_CONSISTENCY_COVERAGE_GAP,)
             if blockers_tuple
@@ -3231,7 +2643,7 @@ def _invalid_frontend_contract_observation_report(
         observation_artifact_status=invalid_report.observation_artifact_status,
         observation_count=invalid_report.observation_count,
         diagnostic=invalid_report.diagnostic,
-        blockers=tuple(blockers),
+        blockers=_merge_unique_strings(tuple(blockers), ()),
         coverage_gaps=_merge_unique_strings(
             _frontend_contract_projected_coverage_gaps(report),
             invalid_report.coverage_gaps,
@@ -3287,7 +2699,7 @@ def _invalid_frontend_gate_observation_report(
         generation_root=report.generation_root,
         source_name=report.source_name,
         check_objects=report.check_objects,
-        blockers=tuple(blockers),
+        blockers=_merge_unique_strings(tuple(blockers), ()),
         coverage_gaps=_merge_unique_strings(
             report.coverage_gaps,
             ("frontend_contract_observations",),
@@ -3337,7 +2749,7 @@ def _invalid_frontend_gate_visual_a11y_evidence_report(
         generation_root=report.generation_root,
         source_name=report.source_name,
         check_objects=report.check_objects,
-        blockers=tuple(blockers),
+        blockers=_merge_unique_strings(tuple(blockers), ()),
         coverage_gaps=_merge_unique_strings(
             report.coverage_gaps,
             ("frontend_visual_a11y_evidence_input",),
@@ -3526,6 +2938,13 @@ def _load_json_mapping(path: Path) -> dict[str, object]:
     return payload
 
 
+def _resolve_frontend_page_ui_schema(root: Path) -> FrontendPageUiSchemaSet:
+    manifest_path = frontend_page_ui_schema_root(root) / "schema.manifest.yaml"
+    if manifest_path.is_file():
+        return load_frontend_page_ui_schema_artifacts(root)
+    return build_p2_frontend_page_ui_schema_baseline()
+
+
 def _frontend_solution_snapshot_blockers(
     snapshot_payload: dict[str, object],
     *,
@@ -3607,7 +3026,7 @@ def _frontend_solution_provider_consistency_blockers(
         blockers.append(
             "BLOCKER: frontend solution confirmation missing effective_provider_id"
         )
-        return blockers
+        return _dedupe_text_items(blockers)
 
     provider_root = root / "providers" / "frontend" / provider_id
     provider_manifest_path = provider_root / "provider.manifest.yaml"
@@ -3724,7 +3143,7 @@ def _frontend_solution_provider_consistency_blockers(
             "BLOCKER: frontend solution consistency provider style-support truth missing "
             f"effective style pack {effective_style_pack_id}"
         )
-        return blockers
+        return _dedupe_text_items(blockers)
 
     if effective_style_support is None:
         return blockers
@@ -3750,7 +3169,7 @@ def _frontend_solution_provider_consistency_blockers(
             f"for {effective_style_pack_id} do not match provider style-support truth"
         )
 
-    return blockers
+    return _dedupe_text_items(blockers)
 
 
 def _frontend_solution_tuple(
@@ -3789,7 +3208,7 @@ def _release_gate_blockers(root: Path, checkpoint: Checkpoint | None) -> list[st
         assert report is not None
     except (ReleaseGateParseError, AssertionError) as exc:
         return [f"BLOCKER: invalid release gate evidence: {exc}"]
-    return report.blocker_lines()
+    return _dedupe_text_items(report.blocker_lines())
 
 
 def _release_gate_path(root: Path, checkpoint: Checkpoint | None) -> Path | None:
@@ -3910,7 +3329,7 @@ def _framework_defect_backlog_blockers(root: Path) -> list[str]:
                 "BLOCKER: framework-defect-backlog entry "
                 f"{title!r} missing required fields: {', '.join(missing)}"
             )
-    return blockers
+    return _dedupe_text_items(blockers)
 
 
 def _formal_artifact_target_blockers(root: Path) -> list[str]:
@@ -3921,7 +3340,7 @@ def _formal_artifact_target_blockers(root: Path) -> list[str]:
             "BLOCKER: misplaced formal artifact detected under docs/superpowers/*: "
             f"{violation.path} ({violation.artifact_kind})"
         )
-    return blockers
+    return _dedupe_text_items(blockers)
 
 
 def _backlog_breach_reference_blockers(root: Path) -> list[str]:
@@ -3933,7 +3352,7 @@ def _backlog_breach_reference_blockers(root: Path) -> list[str]:
             f"{violation.path} references missing backlog ids: "
             f"{', '.join(violation.missing_ids)}"
         )
-    return blockers
+    return _dedupe_text_items(blockers)
 
 
 def _release_docs_consistency_blockers(root: Path) -> list[str]:
@@ -4063,7 +3482,7 @@ def _scoped_skip_registry_lines(reg_text: str, effective_wi_id: str) -> list[str
             continue
         scoped.append(s)
 
-    return scoped
+    return _dedupe_text_items(scoped)
 
 
 def _skip_registry_mapping_blockers(

@@ -7,6 +7,7 @@ import subprocess
 from dataclasses import replace
 from pathlib import Path
 
+import pytest
 import yaml
 
 import ai_sdlc.core.verify_constraints as verify_constraints_module
@@ -25,6 +26,7 @@ from ai_sdlc.core.frontend_contract_verification import (
 from ai_sdlc.core.frontend_gate_verification import (
     FRONTEND_GATE_CHECK_OBJECTS,
     FRONTEND_GATE_SOURCE_NAME,
+    FrontendGateVerificationReport,
 )
 from ai_sdlc.core.frontend_visual_a11y_evidence_provider import (
     FrontendVisualA11yEvidenceEvaluation,
@@ -32,6 +34,15 @@ from ai_sdlc.core.frontend_visual_a11y_evidence_provider import (
     write_frontend_visual_a11y_evidence_artifact,
 )
 from ai_sdlc.core.verify_constraints import (
+    ConstraintReport,
+    FeatureContractEvidence,
+    FeatureContractSurface,
+    FrontendCrossProviderConsistencyVerificationReport,
+    FrontendProviderExpansionVerificationReport,
+    FrontendProviderRuntimeAdapterVerificationReport,
+    FrontendQualityPlatformVerificationReport,
+    FrontendSolutionConfirmationVerificationReport,
+    FrontendThemeTokenGovernanceVerificationReport,
     build_constraint_report,
     build_verification_gate_context,
     build_verification_governance_bundle,
@@ -45,6 +56,9 @@ from ai_sdlc.generators.frontend_gate_policy_artifacts import (
 )
 from ai_sdlc.generators.frontend_generation_constraint_artifacts import (
     materialize_frontend_generation_constraint_artifacts,
+)
+from ai_sdlc.generators.frontend_page_ui_schema_artifacts import (
+    materialize_frontend_page_ui_schema_artifacts,
 )
 from ai_sdlc.generators.frontend_provider_expansion_artifacts import (
     materialize_frontend_provider_expansion_artifacts,
@@ -74,6 +88,9 @@ from ai_sdlc.models.frontend_gate_policy import (
 from ai_sdlc.models.frontend_generation_constraints import (
     build_mvp_frontend_generation_constraints,
 )
+from ai_sdlc.models.frontend_page_ui_schema import (
+    build_p2_frontend_page_ui_schema_baseline,
+)
 from ai_sdlc.models.frontend_provider_expansion import (
     build_p3_frontend_provider_expansion_baseline,
 )
@@ -94,7 +111,86 @@ from ai_sdlc.models.frontend_solution_confirmation import (
 from ai_sdlc.models.frontend_theme_token_governance import (
     build_p2_frontend_theme_token_governance_baseline,
 )
+from ai_sdlc.models.gate import GateResult, GateVerdict
 from ai_sdlc.models.state import Checkpoint, FeatureInfo
+
+
+def test_feature_contract_runtime_objects_canonicalize_evidence_sets() -> None:
+    evidence = FeatureContractEvidence(
+        relative_paths=(
+            Path("src/ai_sdlc/models/work.py"),
+            Path("src/ai_sdlc/models/work.py"),
+        ),
+        required_tokens=("draft_prd", "draft_prd", "final_prd"),
+    )
+    surface = FeatureContractSurface(
+        label="draft_prd/final_prd",
+        evidence_entries=(evidence, evidence),
+    )
+
+    assert evidence.relative_paths == (Path("src/ai_sdlc/models/work.py"),)
+    assert evidence.required_tokens == ("draft_prd", "final_prd")
+    assert surface.evidence_entries == (evidence,)
+
+
+def test_verify_constraint_report_runtime_objects_canonicalize_lists() -> None:
+    constraint_report = ConstraintReport(
+        root=".",
+        source_name="verify constraints",
+        blockers=("blocker", "blocker"),
+        check_objects=("verify", "verify"),
+        coverage_gaps=("gap", "gap"),
+        evidence_kinds=("event", "event", "structured_report"),
+    )
+    solution_report = FrontendSolutionConfirmationVerificationReport(
+        root=".",
+        check_objects=("solution", "solution"),
+        blockers=("blocker", "blocker"),
+        coverage_gaps=("gap", "gap"),
+    )
+    theme_report = FrontendThemeTokenGovernanceVerificationReport(
+        root=".",
+        check_objects=("theme", "theme"),
+        blockers=("blocker", "blocker"),
+        coverage_gaps=("gap", "gap"),
+    )
+    quality_report = FrontendQualityPlatformVerificationReport(
+        root=".",
+        check_objects=("quality", "quality"),
+        blockers=("blocker", "blocker"),
+        coverage_gaps=("gap", "gap"),
+    )
+    expansion_report = FrontendProviderExpansionVerificationReport(
+        root=".",
+        check_objects=("expansion", "expansion"),
+        blockers=("blocker", "blocker"),
+        coverage_gaps=("gap", "gap"),
+    )
+    runtime_adapter_report = FrontendProviderRuntimeAdapterVerificationReport(
+        root=".",
+        check_objects=("adapter", "adapter"),
+        blockers=("blocker", "blocker"),
+        coverage_gaps=("gap", "gap"),
+    )
+    cross_provider_report = FrontendCrossProviderConsistencyVerificationReport(
+        root=".",
+        check_objects=("cross", "cross"),
+        blockers=("blocker", "blocker"),
+        coverage_gaps=("gap", "gap"),
+    )
+
+    assert constraint_report.blockers == ("blocker",)
+    assert constraint_report.check_objects == ("verify",)
+    assert constraint_report.coverage_gaps == ("gap",)
+    assert constraint_report.evidence_kinds == ("event", "structured_report")
+    assert solution_report.check_objects == ("solution",)
+    assert solution_report.blockers == ("blocker",)
+    assert solution_report.coverage_gaps == ("gap",)
+    assert theme_report.check_objects == ("theme",)
+    assert quality_report.check_objects == ("quality",)
+    assert expansion_report.check_objects == ("expansion",)
+    assert runtime_adapter_report.check_objects == ("adapter",)
+    assert cross_provider_report.check_objects == ("cross",)
 
 
 def _write_framework_backlog(root: Path, entry_body: str) -> None:
@@ -252,6 +348,7 @@ def _write_003_feature_contract_surfaces(
             "DENY_BLOCK = True\n",
             encoding="utf-8",
         )
+
         (core_dir / "state_machine.py").write_text(
             "\"\"\"003 state machine runtime surface.\"\"\"\n\n"
             "transition_work_item = True\n"
@@ -599,6 +696,19 @@ def _write_148_theme_token_governance_artifacts(
     *,
     snapshot_overrides: dict[str, object] | None = None,
 ) -> None:
+    snapshot = build_mvp_solution_snapshot(
+        requested_provider_id="enterprise-vue2",
+        effective_provider_id="enterprise-vue2",
+        recommended_provider_id="enterprise-vue2",
+        requested_style_pack_id="enterprise-default",
+        effective_style_pack_id="enterprise-default",
+        recommended_style_pack_id="enterprise-default",
+        requested_frontend_stack="vue2",
+        effective_frontend_stack="vue2",
+        recommended_frontend_stack="vue2",
+        style_fidelity_status="full",
+        **(snapshot_overrides or {}),
+    )
     materialize_frontend_provider_profile_artifacts(
         root,
         build_mvp_enterprise_vue2_provider_profile(),
@@ -607,18 +717,28 @@ def _write_148_theme_token_governance_artifacts(
         root,
         style_packs=build_builtin_style_pack_manifests(),
         install_strategies=build_builtin_install_strategies(),
-        snapshot=build_mvp_solution_snapshot(
-            requested_provider_id="enterprise-vue2",
-            effective_provider_id="enterprise-vue2",
-            recommended_provider_id="enterprise-vue2",
-            requested_style_pack_id="enterprise-default",
-            effective_style_pack_id="enterprise-default",
-            recommended_style_pack_id="enterprise-default",
-            requested_frontend_stack="vue2",
-            effective_frontend_stack="vue2",
-            recommended_frontend_stack="vue2",
-            style_fidelity_status="full",
-            **(snapshot_overrides or {}),
+        snapshot=snapshot,
+    )
+    install_strategy = next(
+        strategy
+        for strategy in build_builtin_install_strategies()
+        if strategy.provider_id == snapshot.effective_provider_id
+    )
+    materialize_frontend_generation_constraint_artifacts(
+        root,
+        build_mvp_frontend_generation_constraints(
+            effective_provider_id=snapshot.effective_provider_id,
+            delivery_entry_id=(
+                f"{snapshot.effective_frontend_stack}-{snapshot.effective_provider_id}"
+            ),
+            component_library_packages=list(install_strategy.packages),
+            provider_theme_adapter_id=str(
+                snapshot.provider_theme_adapter_config.get("adapter_id", "")
+            ),
+            page_schema_ids=[
+                schema.page_schema_id
+                for schema in build_p2_frontend_page_ui_schema_baseline().page_schemas
+            ],
         ),
     )
     materialize_frontend_theme_token_governance_artifacts(
@@ -986,6 +1106,58 @@ def test_blocker_missing_constitution(tmp_path: Path) -> None:
     assert "constitution.md" in b[0]
 
 
+def test_collect_constraint_blockers_deduplicates_cross_helper_duplicates(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    mem = tmp_path / ".ai-sdlc" / "memory"
+    mem.mkdir(parents=True)
+    (mem / "constitution.md").write_text("# C\n", encoding="utf-8")
+
+    monkeypatch.setattr(verify_constraints_module, "load_checkpoint", lambda _: None)
+    monkeypatch.setattr(
+        verify_constraints_module,
+        "_framework_defect_backlog_blockers",
+        lambda _: ["BLOCKER: duplicate helper blocker", "BLOCKER: duplicate helper blocker"],
+    )
+    monkeypatch.setattr(
+        verify_constraints_module,
+        "_formal_artifact_target_blockers",
+        lambda _: ["BLOCKER: duplicate helper blocker", "BLOCKER: distinct helper blocker"],
+    )
+    monkeypatch.setattr(
+        verify_constraints_module,
+        "_backlog_breach_reference_blockers",
+        lambda _: [],
+    )
+    monkeypatch.setattr(
+        verify_constraints_module,
+        "_release_docs_consistency_blockers",
+        lambda _: [],
+    )
+    monkeypatch.setattr(
+        verify_constraints_module,
+        "_reconcile_smoke_contract_blockers",
+        lambda _: [],
+    )
+    monkeypatch.setattr(
+        verify_constraints_module,
+        "_doc_first_surface_blockers",
+        lambda _: [],
+    )
+    monkeypatch.setattr(
+        verify_constraints_module,
+        "_verification_profile_blockers",
+        lambda _: [],
+    )
+
+    blockers = collect_constraint_blockers(tmp_path)
+
+    assert blockers == [
+        "BLOCKER: duplicate helper blocker",
+        "BLOCKER: distinct helper blocker",
+    ]
+
+
 def test_blocker_spec_dir_missing(tmp_path: Path) -> None:
     mem = tmp_path / ".ai-sdlc" / "memory"
     mem.mkdir(parents=True)
@@ -1236,6 +1408,163 @@ def test_skip_registry_historical_unmapped_rows_ignored_sc020(tmp_path: Path) ->
     save_checkpoint(tmp_path, cp)
 
     assert collect_constraint_blockers(tmp_path) == []
+
+
+def test_scoped_skip_registry_lines_deduplicates_matching_rows() -> None:
+    from ai_sdlc.core.verify_constraints import _scoped_skip_registry_lines
+
+    reg_text = (
+        "| 日期 | 发现阶段 | 跳过内容摘要 | 根因 | 框架强化建议 | wi_id | 状态 |\n"
+        "|------|----------|--------------|------|--------------|-------|------|\n"
+        "| 2026-03-26 | 执行 | z | A | 引入 FR-777 | 001-wi | 已记录 |\n"
+        "| 2026-03-26 | 执行 | z | A | 引入 FR-777 | 001-wi | 已记录 |\n"
+        "| 2026-03-26 | 执行 | y | A | 引入 FR-888 | other-wi | 已记录 |\n"
+    )
+
+    assert _scoped_skip_registry_lines(reg_text, "001-wi") == [
+        "| 2026-03-26 | 执行 | z | A | 引入 FR-777 | 001-wi | 已记录 |"
+    ]
+
+
+def test_branch_lifecycle_blockers_deduplicate_helper_output(
+    tmp_path: Path, monkeypatch
+) -> None:
+    spec_dir = tmp_path / "specs" / "001-wi"
+    spec_dir.mkdir(parents=True)
+    (tmp_path / ".git").mkdir()
+
+    monkeypatch.setattr(
+        verify_constraints_module,
+        "evaluate_work_item_branch_lifecycle",
+        lambda **_kwargs: type(
+            "Result",
+            (),
+            {"blockers": ["branch blocker", "branch blocker"]},
+        )(),
+    )
+
+    assert verify_constraints_module._branch_lifecycle_blockers(tmp_path, spec_dir) == [
+        "branch blocker"
+    ]
+
+
+def test_feature_contract_blockers_deduplicate_repeated_gaps(monkeypatch) -> None:
+    checkpoint = Checkpoint(
+        current_stage="execute",
+        feature=FeatureInfo(
+            id="001",
+            spec_dir="specs/001-wi",
+            design_branch="d",
+            feature_branch="f",
+            current_branch="f",
+        ),
+    )
+
+    monkeypatch.setattr(
+        verify_constraints_module,
+        "_feature_contract_coverage_gaps",
+        lambda _root, _checkpoint: ("spec.md", "spec.md"),
+    )
+
+    assert verify_constraints_module._feature_contract_blockers(
+        Path("/tmp/project"), checkpoint
+    ) == ["BLOCKER: 001-wi feature-contract surface missing: spec.md"]
+
+
+def test_release_gate_blockers_deduplicate_report_lines(tmp_path: Path, monkeypatch) -> None:
+    release_dir = tmp_path / "specs" / "003-cross-cutting-authoring-and-extension-contracts"
+    release_dir.mkdir(parents=True)
+    (release_dir / "release-gate-evidence.md").write_text("placeholder", encoding="utf-8")
+    checkpoint = Checkpoint(
+        current_stage="close",
+        feature=FeatureInfo(
+            id="003",
+            spec_dir="specs/003-cross-cutting-authoring-and-extension-contracts",
+            design_branch="d",
+            feature_branch="f",
+            current_branch="f",
+        ),
+    )
+
+    monkeypatch.setattr(
+        verify_constraints_module,
+        "load_release_gate_report",
+        lambda _path: type(
+            "Report",
+            (),
+            {"blocker_lines": lambda self: ["gate blocker", "gate blocker"]},
+        )(),
+    )
+
+    assert verify_constraints_module._release_gate_blockers(tmp_path, checkpoint) == [
+        "gate blocker"
+    ]
+
+
+def test_formal_artifact_target_blockers_deduplicate_repeated_violations(monkeypatch) -> None:
+    monkeypatch.setattr(
+        verify_constraints_module,
+        "detect_misplaced_formal_artifacts",
+        lambda _root: (
+            type("Violation", (), {"path": "docs/superpowers/spec.md", "artifact_kind": "spec"})(),
+            type("Violation", (), {"path": "docs/superpowers/spec.md", "artifact_kind": "spec"})(),
+        ),
+    )
+
+    assert verify_constraints_module._formal_artifact_target_blockers(Path("/tmp/project")) == [
+        "BLOCKER: misplaced formal artifact detected under docs/superpowers/*: "
+        "docs/superpowers/spec.md (spec)"
+    ]
+
+
+def test_backlog_breach_reference_blockers_deduplicate_repeated_violations(monkeypatch) -> None:
+    monkeypatch.setattr(
+        verify_constraints_module,
+        "collect_missing_backlog_entry_references",
+        lambda _root: (
+            type(
+                "Violation",
+                (),
+                {"path": "specs/001-wi/spec.md", "missing_ids": ("FD-2026-04-22-001",)},
+            )(),
+            type(
+                "Violation",
+                (),
+                {"path": "specs/001-wi/spec.md", "missing_ids": ("FD-2026-04-22-001",)},
+            )(),
+        ),
+    )
+
+    assert verify_constraints_module._backlog_breach_reference_blockers(
+        Path("/tmp/project")
+    ) == [
+        "BLOCKER: breach_detected_but_not_logged: "
+        "specs/001-wi/spec.md references missing backlog ids: FD-2026-04-22-001"
+    ]
+
+
+def test_framework_defect_backlog_blockers_deduplicate_repeated_entries(
+    tmp_path: Path, monkeypatch
+) -> None:
+    backlog_path = tmp_path / "docs" / "framework-defect-backlog.zh-CN.md"
+    backlog_path.parent.mkdir(parents=True)
+    backlog_path.write_text("placeholder", encoding="utf-8")
+
+    monkeypatch.setattr(
+        verify_constraints_module,
+        "_parse_framework_defect_backlog",
+        lambda _text: [
+            ("FD-1", {"问题描述": "", "影响范围": ""}),
+            ("FD-1", {"问题描述": "", "影响范围": ""}),
+        ],
+    )
+
+    blockers = verify_constraints_module._framework_defect_backlog_blockers(tmp_path)
+
+    assert blockers == [blockers[0]]
+    assert blockers[0].startswith(
+        "BLOCKER: framework-defect-backlog entry 'FD-1' missing required fields: "
+    )
 
 
 def test_skip_registry_blocker_only_matching_wi_row_sc020(tmp_path: Path) -> None:
@@ -2552,6 +2881,90 @@ def test_073_frontend_solution_confirmation_verification_surfaces_invalid_style_
     )
 
 
+def test_073_frontend_solution_confirmation_attachment_report_deduplicates_repeated_helper_blockers(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    _write_073_checkpoint(tmp_path)
+    _write_073_solution_confirmation_artifacts(tmp_path)
+
+    monkeypatch.setattr(
+        verify_constraints_module,
+        "_frontend_solution_snapshot_blockers",
+        lambda *args, **kwargs: [
+            "duplicate snapshot blocker",
+            "duplicate snapshot blocker",
+        ],
+    )
+    monkeypatch.setattr(
+        verify_constraints_module,
+        "_frontend_solution_provider_consistency_blockers",
+        lambda *args, **kwargs: [
+            "duplicate provider blocker",
+            "duplicate provider blocker",
+        ],
+    )
+
+    report = verify_constraints_module._frontend_solution_confirmation_attachment_report(
+        tmp_path,
+        verify_constraints_module.load_checkpoint(tmp_path),
+    )
+
+    assert report is not None
+    assert report.blockers == (
+        "duplicate snapshot blocker",
+        "duplicate provider blocker",
+    )
+
+
+def test_073_frontend_solution_provider_consistency_helper_deduplicates_missing_install_strategy_blockers(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    _write_073_solution_confirmation_artifacts(tmp_path)
+
+    real_load_yaml_mapping = verify_constraints_module._load_yaml_mapping
+
+    def _fake_load_yaml_mapping(path: Path) -> dict[str, object]:
+        if path.name == "provider.manifest.yaml":
+            return {
+                "default_style_pack_id": "enterprise-default",
+                "install_strategy_ids": [
+                    "missing-strategy",
+                    "missing-strategy",
+                ],
+            }
+        if path.name == "style-support.yaml":
+            return {
+                "items": [
+                    {
+                        "style_pack_id": "enterprise-default",
+                        "fidelity_status": "full",
+                        "degradation_reason_codes": [],
+                    }
+                ]
+            }
+        return real_load_yaml_mapping(path)
+
+    monkeypatch.setattr(
+        verify_constraints_module,
+        "_load_yaml_mapping",
+        _fake_load_yaml_mapping,
+    )
+
+    blockers = verify_constraints_module._frontend_solution_provider_consistency_blockers(
+        tmp_path,
+        build_mvp_solution_snapshot().model_dump(mode="json", exclude_none=True),
+    )
+
+    expected = (
+        "BLOCKER: frontend solution consistency missing install-strategy artifact "
+        "missing-strategy: "
+        f"{(tmp_path / 'governance' / 'frontend' / 'solution' / 'install-strategies' / 'missing-strategy.yaml').as_posix()}"
+    )
+    assert blockers == [expected]
+
+
 def test_148_frontend_theme_token_governance_verification_surfaces_duplicate_mapping_ids(
     tmp_path: Path,
 ) -> None:
@@ -2658,6 +3071,95 @@ def test_148_frontend_theme_token_governance_verification_surfaces_illegal_overr
     assert any("unsupported override namespace" in blocker for blocker in report.blockers)
 
 
+def test_148_frontend_theme_token_governance_verification_surfaces_generation_truth_drift(
+    tmp_path: Path,
+) -> None:
+    _write_148_checkpoint(tmp_path)
+    _write_148_theme_token_governance_artifacts(tmp_path)
+
+    materialize_frontend_generation_constraint_artifacts(
+        tmp_path,
+        build_mvp_frontend_generation_constraints(
+            effective_provider_id="public-primevue",
+            delivery_entry_id="vue3-public-primevue",
+            component_library_packages=["primevue", "@primeuix/themes"],
+            provider_theme_adapter_id="public-primevue-theme-bridge",
+            page_schema_ids=["wizard-workspace"],
+        ),
+    )
+
+    report = build_constraint_report(tmp_path)
+    context = build_verification_gate_context(tmp_path)
+
+    assert report.coverage_gaps == ("frontend_theme_token_governance_consistency",)
+    assert context["frontend_theme_token_governance_verification"]["gate_verdict"] == "RETRY"
+    assert any(
+        "generation constraint drift" in blocker for blocker in report.blockers
+    )
+
+
+def test_148_frontend_theme_token_governance_verification_surfaces_invalid_page_ui_schema_artifact_set(
+    tmp_path: Path,
+) -> None:
+    _write_148_checkpoint(tmp_path)
+    _write_148_theme_token_governance_artifacts(tmp_path)
+    materialize_frontend_page_ui_schema_artifacts(
+        tmp_path,
+        build_p2_frontend_page_ui_schema_baseline(),
+    )
+
+    manifest_path = (
+        tmp_path
+        / "kernel"
+        / "frontend"
+        / "page-ui-schema"
+        / "schema.manifest.yaml"
+    )
+    payload = yaml.safe_load(manifest_path.read_text(encoding="utf-8"))
+    assert isinstance(payload, dict)
+    payload["page_schemas"] = "dashboard-workspace"
+    manifest_path.write_text(
+        yaml.safe_dump(payload, allow_unicode=True, sort_keys=False),
+        encoding="utf-8",
+    )
+
+    report = build_constraint_report(tmp_path)
+    context = build_verification_gate_context(tmp_path)
+
+    assert report.coverage_gaps == ("frontend_theme_token_governance_consistency",)
+    assert context["frontend_theme_token_governance_verification"]["gate_verdict"] == "RETRY"
+    assert any(
+        "invalid frontend page UI schema artifact set" in blocker
+        for blocker in report.blockers
+    )
+
+
+def test_148_frontend_theme_token_governance_attachment_report_deduplicates_repeated_validation_blockers(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    _write_148_checkpoint(tmp_path)
+    _write_148_theme_token_governance_artifacts(tmp_path)
+
+    monkeypatch.setattr(
+        verify_constraints_module,
+        "validate_frontend_theme_token_governance",
+        lambda *args, **kwargs: type(
+            "ThemeValidation",
+            (),
+            {"blockers": ("duplicate governance blocker", "duplicate governance blocker")},
+        )(),
+    )
+
+    report = verify_constraints_module._frontend_theme_token_governance_attachment_report(
+        tmp_path,
+        verify_constraints_module.load_checkpoint(tmp_path),
+    )
+
+    assert report is not None
+    assert report.blockers == ("BLOCKER: duplicate governance blocker",)
+
+
 def test_149_frontend_quality_platform_verification_surfaces_missing_verdict_artifact(
     tmp_path: Path,
 ) -> None:
@@ -2719,6 +3221,61 @@ def test_149_frontend_quality_platform_verification_surfaces_unknown_style_pack(
     assert any("unknown style pack" in blocker for blocker in report.blockers)
 
 
+def test_149_frontend_quality_platform_verification_surfaces_invalid_upstream_theme_artifact(
+    tmp_path: Path,
+) -> None:
+    _write_149_checkpoint(tmp_path)
+    _write_149_quality_platform_artifacts(tmp_path)
+
+    manifest_path = (
+        tmp_path
+        / "governance"
+        / "frontend"
+        / "theme-token-governance"
+        / "theme-governance-manifest.json"
+    )
+    manifest_path.write_text("{broken\n", encoding="utf-8")
+
+    report = build_constraint_report(tmp_path)
+    context = build_verification_gate_context(tmp_path)
+
+    assert report.coverage_gaps == ("frontend_quality_platform_consistency",)
+    assert context["frontend_quality_platform_verification"]["gate_verdict"] == "RETRY"
+    assert any(
+        "theme token governance artifact" in blocker for blocker in report.blockers
+    )
+
+
+def test_149_frontend_quality_platform_attachment_report_deduplicates_repeated_validation_blockers(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    _write_149_checkpoint(tmp_path)
+    _write_149_quality_platform_artifacts(tmp_path)
+
+    monkeypatch.setattr(
+        verify_constraints_module,
+        "validate_frontend_quality_platform",
+        lambda *args, **kwargs: type(
+            "QualityValidation",
+            (),
+            {
+                "blockers": ("duplicate quality blocker", "duplicate quality blocker"),
+                "matrix_coverage_count": 7,
+            },
+        )(),
+    )
+
+    report = verify_constraints_module._frontend_quality_platform_attachment_report(
+        tmp_path,
+        verify_constraints_module.load_checkpoint(tmp_path),
+    )
+
+    assert report is not None
+    assert report.blockers == ("BLOCKER: duplicate quality blocker",)
+    assert report.matrix_coverage_count == 7
+
+
 def test_151_frontend_provider_expansion_verification_surfaces_missing_provider_admission_artifact(
     tmp_path: Path,
 ) -> None:
@@ -2749,6 +3306,34 @@ def test_151_frontend_provider_expansion_verification_surfaces_missing_provider_
     assert any("provider expansion artifact missing" in blocker for blocker in report.blockers)
 
 
+def test_151_frontend_provider_expansion_attachment_report_deduplicates_repeated_missing_paths(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    _write_151_checkpoint(tmp_path)
+    baseline = build_p3_frontend_provider_expansion_baseline()
+    duplicated = baseline.model_copy(
+        update={"providers": [baseline.providers[0], baseline.providers[0], *baseline.providers[1:]]}
+    )
+    monkeypatch.setattr(
+        verify_constraints_module,
+        "build_p3_frontend_provider_expansion_baseline",
+        lambda: duplicated,
+    )
+
+    report = verify_constraints_module._frontend_provider_expansion_attachment_report(
+        tmp_path,
+        verify_constraints_module.load_checkpoint(tmp_path),
+    )
+
+    assert report is not None
+    blocker = (
+        "BLOCKER: frontend provider expansion artifact missing: "
+        f"{(tmp_path / 'governance' / 'frontend' / 'provider-expansion' / 'providers' / baseline.providers[0].provider_id / 'admission.yaml').as_posix()}"
+    )
+    assert report.blockers.count(blocker) == 1
+
+
 def test_151_frontend_provider_expansion_verification_blocks_react_snapshot_while_boundary_hidden(
     tmp_path: Path,
 ) -> None:
@@ -2771,6 +3356,34 @@ def test_151_frontend_provider_expansion_verification_blocks_react_snapshot_whil
     assert report.coverage_gaps == ("frontend_provider_expansion_consistency",)
     assert context["frontend_provider_expansion_verification"]["gate_verdict"] == "RETRY"
     assert any("react stack remains hidden" in blocker for blocker in report.blockers)
+
+
+def test_151_frontend_provider_expansion_verification_surfaces_invalid_artifact_set(
+    tmp_path: Path,
+) -> None:
+    _write_151_checkpoint(tmp_path)
+    _write_151_provider_expansion_artifacts(tmp_path)
+
+    aggregate_path = (
+        tmp_path
+        / "governance"
+        / "frontend"
+        / "provider-expansion"
+        / "providers"
+        / "public-primevue"
+        / "provider-certification-aggregate.yaml"
+    )
+    aggregate_path.write_text("{broken\n", encoding="utf-8")
+
+    report = build_constraint_report(tmp_path)
+    context = build_verification_gate_context(tmp_path)
+
+    assert report.coverage_gaps == ("frontend_provider_expansion_consistency",)
+    assert context["frontend_provider_expansion_verification"]["gate_verdict"] == "RETRY"
+    assert any(
+        "invalid frontend provider expansion artifact set" in blocker
+        for blocker in report.blockers
+    )
 
 
 def test_153_frontend_provider_runtime_adapter_verification_surfaces_missing_scaffold_artifact(
@@ -2808,6 +3421,40 @@ def test_153_frontend_provider_runtime_adapter_verification_surfaces_missing_sca
     )
 
 
+def test_153_frontend_provider_runtime_adapter_attachment_report_deduplicates_repeated_missing_paths(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    _write_153_checkpoint(tmp_path)
+    baseline = build_p3_target_project_adapter_scaffold_baseline()
+    duplicated = baseline.model_copy(
+        update={
+            "adapter_targets": [
+                baseline.adapter_targets[0],
+                baseline.adapter_targets[0],
+                *baseline.adapter_targets[1:],
+            ]
+        }
+    )
+    monkeypatch.setattr(
+        verify_constraints_module,
+        "build_p3_target_project_adapter_scaffold_baseline",
+        lambda: duplicated,
+    )
+
+    report = verify_constraints_module._frontend_provider_runtime_adapter_attachment_report(
+        tmp_path,
+        verify_constraints_module.load_checkpoint(tmp_path),
+    )
+
+    assert report is not None
+    blocker = (
+        "BLOCKER: frontend provider runtime adapter artifact missing: "
+        f"{(tmp_path / 'governance' / 'frontend' / 'provider-runtime-adapter' / 'providers' / baseline.adapter_targets[0].provider_id / 'adapter-scaffold.yaml').as_posix()}"
+    )
+    assert report.blockers.count(blocker) == 1
+
+
 def test_153_frontend_provider_runtime_adapter_verification_blocks_react_snapshot_before_scaffold_starts(
     tmp_path: Path,
 ) -> None:
@@ -2833,6 +3480,34 @@ def test_153_frontend_provider_runtime_adapter_verification_blocks_react_snapsho
     )
     assert any(
         "runtime adapter scaffold not started" in blocker for blocker in report.blockers
+    )
+
+
+def test_153_frontend_provider_runtime_adapter_verification_surfaces_invalid_artifact_set(
+    tmp_path: Path,
+) -> None:
+    _write_153_checkpoint(tmp_path)
+    _write_153_provider_runtime_adapter_artifacts(tmp_path)
+
+    targets_path = (
+        tmp_path
+        / "governance"
+        / "frontend"
+        / "provider-runtime-adapter"
+        / "adapter-targets.yaml"
+    )
+    targets_path.write_text("items: invalid\n", encoding="utf-8")
+
+    report = build_constraint_report(tmp_path)
+    context = build_verification_gate_context(tmp_path)
+
+    assert report.coverage_gaps == ("frontend_provider_runtime_adapter_consistency",)
+    assert context["frontend_provider_runtime_adapter_verification"]["gate_verdict"] == (
+        "RETRY"
+    )
+    assert any(
+        "invalid frontend provider runtime adapter artifact set" in blocker
+        for blocker in report.blockers
     )
 
 
@@ -2872,6 +3547,40 @@ def test_150_frontend_cross_provider_consistency_verification_surfaces_missing_c
     )
 
 
+def test_150_frontend_cross_provider_consistency_attachment_report_deduplicates_repeated_missing_paths(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    _write_150_checkpoint(tmp_path)
+    baseline = build_p2_frontend_cross_provider_consistency_baseline()
+    duplicated = baseline.model_copy(
+        update={
+            "certification_bundles": [
+                baseline.certification_bundles[0],
+                baseline.certification_bundles[0],
+                *baseline.certification_bundles[1:],
+            ]
+        }
+    )
+    monkeypatch.setattr(
+        verify_constraints_module,
+        "build_p2_frontend_cross_provider_consistency_baseline",
+        lambda: duplicated,
+    )
+
+    report = verify_constraints_module._frontend_cross_provider_consistency_attachment_report(
+        tmp_path,
+        verify_constraints_module.load_checkpoint(tmp_path),
+    )
+
+    assert report is not None
+    blocker = (
+        "BLOCKER: frontend cross-provider consistency artifact missing: "
+        f"{(tmp_path / 'governance' / 'frontend' / 'cross-provider-consistency' / 'provider-pairs' / baseline.certification_bundles[0].pair_id / 'diff-summary.yaml').as_posix()}"
+    )
+    assert report.blockers.count(blocker) == 1
+
+
 def test_150_frontend_cross_provider_consistency_verification_blocks_release_truth_when_pair_gate_not_ready(
     tmp_path: Path,
 ) -> None:
@@ -2891,6 +3600,69 @@ def test_150_frontend_cross_provider_consistency_verification_blocks_release_tru
     assert any(
         "certification gate remains blocked" in blocker for blocker in report.blockers
     )
+
+
+def test_150_frontend_cross_provider_consistency_verification_surfaces_invalid_artifact_set(
+    tmp_path: Path,
+) -> None:
+    _write_150_checkpoint(tmp_path)
+    _write_150_cross_provider_consistency_artifacts(tmp_path)
+
+    evidence_index_path = (
+        tmp_path
+        / "governance"
+        / "frontend"
+        / "cross-provider-consistency"
+        / "provider-pairs"
+        / "enterprise-vue2__public-primevue__dashboard-workspace"
+        / "evidence-index.yaml"
+    )
+    evidence_index_path.write_text("{broken\n", encoding="utf-8")
+
+    report = build_constraint_report(tmp_path)
+    context = build_verification_gate_context(tmp_path)
+
+    assert report.coverage_gaps == ("frontend_cross_provider_consistency",)
+    assert context["frontend_cross_provider_consistency_verification"]["gate_verdict"] == "RETRY"
+    assert any(
+        "invalid frontend cross-provider consistency artifact set" in blocker
+        for blocker in report.blockers
+    )
+
+
+def test_150_frontend_cross_provider_consistency_verification_surfaces_upstream_quality_evidence_drift(
+    tmp_path: Path,
+) -> None:
+    _write_150_checkpoint(tmp_path)
+    _write_150_cross_provider_consistency_artifacts(tmp_path)
+
+    verdict_path = (
+        tmp_path
+        / "governance"
+        / "frontend"
+        / "quality-platform"
+        / "verdicts"
+        / "search-interaction-pass.yaml"
+    )
+    payload = yaml.safe_load(verdict_path.read_text(encoding="utf-8"))
+    assert isinstance(payload, dict)
+    payload["evidence_refs"] = [
+        "artifact:governance/frontend/quality-platform/evidence/changed.yaml"
+    ]
+    verdict_path.write_text(
+        yaml.safe_dump(payload, allow_unicode=True, sort_keys=False),
+        encoding="utf-8",
+    )
+
+    report = build_constraint_report(tmp_path)
+    context = build_verification_gate_context(tmp_path)
+
+    assert report.coverage_gaps == ("frontend_cross_provider_consistency",)
+    assert (
+        context["frontend_cross_provider_consistency_verification"]["gate_verdict"]
+        == "RETRY"
+    )
+    assert any("unknown quality evidence" in blocker for blocker in report.blockers)
 
 
 def test_build_verification_governance_bundle_emits_gate_capable_payload(
@@ -3009,6 +3781,99 @@ def test_collect_constraint_blockers_does_not_escalate_archived_branch_lifecycle
     blockers = collect_constraint_blockers(tmp_path)
 
     assert all("branch lifecycle" not in item.lower() for item in blockers)
+
+
+def test_solution_confirmation_verification_report_to_json_dict_deduplicates_lists() -> None:
+    payload = FrontendSolutionConfirmationVerificationReport(
+        root=".",
+        check_objects=("a", "a"),
+        blockers=("b", "b"),
+        coverage_gaps=("c", "c"),
+    ).to_json_dict()
+
+    assert payload["check_objects"] == ["a"]
+    assert payload["blockers"] == ["b"]
+    assert payload["coverage_gaps"] == ["c"]
+
+
+def test_cross_provider_verification_report_to_json_dict_deduplicates_lists() -> None:
+    payload = FrontendCrossProviderConsistencyVerificationReport(
+        root=".",
+        check_objects=("pair", "pair"),
+        blockers=("blocked pair", "blocked pair"),
+        coverage_gaps=("pair gap", "pair gap"),
+    ).to_json_dict()
+
+    assert payload["check_objects"] == ["pair"]
+    assert payload["blockers"] == ["blocked pair"]
+    assert payload["coverage_gaps"] == ["pair gap"]
+
+
+def test_invalid_frontend_gate_observation_report_deduplicates_repeated_blockers() -> None:
+    report = FrontendGateVerificationReport(
+        gate_policy_root=".",
+        generation_root=".",
+        source_name=FRONTEND_GATE_SOURCE_NAME,
+        check_objects=FRONTEND_GATE_CHECK_OBJECTS,
+        blockers=(
+            "BLOCKER: frontend gate prerequisite failed: frontend contract verification not clear: stale",
+            "BLOCKER: frontend gate prerequisite failed: frontend contract verification not clear: stale",
+        ),
+        coverage_gaps=("frontend_contract_observations",),
+        advisory_checks=(),
+        gate_result=GateResult(stage="verify", verdict=GateVerdict.RETRY),
+        upstream_contract_verification={
+            "blockers": [
+                "BLOCKER: frontend gate prerequisite failed: frontend contract verification not clear: stale",
+                "BLOCKER: frontend gate prerequisite failed: frontend contract verification not clear: stale",
+            ],
+            "coverage_gaps": [
+                "frontend_contract_observations",
+                "frontend_contract_observations",
+            ],
+        },
+    )
+
+    updated = verify_constraints_module._invalid_frontend_gate_observation_report(
+        report,
+        observations_path=Path("/tmp/observations.json"),
+        error_message="boom",
+    )
+
+    assert updated.blockers == (
+        "BLOCKER: frontend gate prerequisite failed: frontend contract verification not clear: invalid structured observation input /tmp/observations.json: boom",
+    )
+    assert updated.upstream_contract_verification["blockers"] == [
+        "BLOCKER: frontend gate prerequisite failed: frontend contract verification not clear: invalid structured observation input /tmp/observations.json: boom",
+        "BLOCKER: frontend gate prerequisite failed: frontend contract verification not clear: stale",
+    ]
+
+
+def test_invalid_frontend_gate_visual_a11y_report_deduplicates_repeated_blockers() -> None:
+    report = FrontendGateVerificationReport(
+        gate_policy_root=".",
+        generation_root=".",
+        source_name=FRONTEND_GATE_SOURCE_NAME,
+        check_objects=FRONTEND_GATE_CHECK_OBJECTS,
+        blockers=(
+            "BLOCKER: frontend visual / a11y evidence unavailable: stale",
+            "BLOCKER: frontend visual / a11y evidence unavailable: stale",
+        ),
+        coverage_gaps=("frontend_visual_a11y_evidence_input",),
+        advisory_checks=(),
+        gate_result=GateResult(stage="verify", verdict=GateVerdict.RETRY),
+        upstream_contract_verification={},
+    )
+
+    updated = verify_constraints_module._invalid_frontend_gate_visual_a11y_evidence_report(
+        report,
+        evidence_path=Path("/tmp/visual.json"),
+        error_message="boom",
+    )
+
+    assert updated.blockers == (
+        "BLOCKER: frontend visual / a11y evidence unavailable: invalid structured visual / a11y evidence input /tmp/visual.json: boom",
+    )
 
 
 def test_collect_constraint_blockers_ignores_unrelated_historical_branch_lifecycle(

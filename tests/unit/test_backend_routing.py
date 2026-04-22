@@ -9,7 +9,9 @@ import pytest
 from ai_sdlc.backends.native import (
     BackendCapabilityDeclaration,
     BackendDecisionKind,
+    BackendFailureEvidence,
     BackendRegistry,
+    BackendSelectionDecision,
     BackendSelectionPolicy,
 )
 from ai_sdlc.backends.routing import (
@@ -184,3 +186,41 @@ def test_unsafe_plugin_failure_blocks() -> None:
     assert excinfo.value.decision.failure.safe_to_fallback is False
     assert len(plugin.calls) == 1
     assert native.calls == []
+
+
+def test_backend_runtime_objects_canonicalize_capability_and_evidence_lists() -> None:
+    declaration = BackendCapabilityDeclaration(
+        backend_name="plugin",
+        provided_capabilities=("generate_spec", "generate_spec", "generate_plan"),
+        delegation=("delegation", "delegation"),
+        fallback=("fallback", "fallback"),
+    )
+    failure = BackendFailureEvidence(
+        backend_name="plugin",
+        error="plugin timed out",
+        safe_to_fallback=True,
+        evidence=("plugin_timeout", "plugin_timeout"),
+    )
+    decision = BackendSelectionDecision(
+        decision_kind=BackendDecisionKind.FALLBACK_NATIVE,
+        requested_backend="plugin",
+        selected_backend="native-test",
+        required_capabilities=("generate_spec", "generate_spec"),
+        available_capabilities=("generate_spec", "generate_plan", "generate_plan"),
+        missing_capabilities=("generate_tasks", "generate_tasks"),
+        policy_allow_plugin=True,
+        policy_allow_native_fallback=True,
+        reason="fallback",
+        evidence=("fallback", "fallback", "plugin_timeout"),
+        capability_declaration=declaration,
+        failure=failure,
+    )
+
+    assert declaration.provided_capabilities == ("generate_spec", "generate_plan")
+    assert declaration.delegation == ("delegation",)
+    assert declaration.fallback == ("fallback",)
+    assert failure.evidence == ("plugin_timeout",)
+    assert decision.required_capabilities == ("generate_spec",)
+    assert decision.available_capabilities == ("generate_spec", "generate_plan")
+    assert decision.missing_capabilities == ("generate_tasks",)
+    assert decision.evidence == ("fallback", "plugin_timeout")

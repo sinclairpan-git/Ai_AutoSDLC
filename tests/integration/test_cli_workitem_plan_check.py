@@ -10,6 +10,7 @@ import pytest
 from typer.testing import CliRunner
 
 from ai_sdlc.cli.main import app
+from ai_sdlc.core.plan_check import PlanCheckResult
 
 runner = CliRunner()
 
@@ -160,3 +161,32 @@ class TestCliWorkitemPlanCheck:
         assert result.exit_code == 0
         out = result.output.lower()
         assert "read-only" in out and "checkpoint" in out
+
+    def test_plan_check_deduplicates_changed_paths_display(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        root = tmp_path / "r6"
+        root.mkdir()
+        monkeypatch.chdir(root)
+
+        with patch(
+            "ai_sdlc.cli.workitem_cmd.run_plan_check",
+            return_value=PlanCheckResult(
+                drift=True,
+                plan_file=root / ".cursor" / "plans" / "p.md",
+                pending_todos=1,
+                changed_paths=[
+                    "README.md",
+                    "README.md",
+                    "src/example.py",
+                ],
+            ),
+        ):
+            result = runner.invoke(
+                app,
+                ["workitem", "plan-check", "--wi", "specs/001-wi"],
+            )
+
+        assert result.exit_code == 1
+        assert result.output.count("README.md") == 1
+        assert result.output.count("src/example.py") == 1

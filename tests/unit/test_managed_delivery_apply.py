@@ -8,8 +8,13 @@ from ai_sdlc.core.managed_delivery_apply import run_managed_delivery_apply
 from ai_sdlc.models.frontend_managed_delivery import (
     ConfirmedActionPlanExecutionView,
     DeliveryApplyDecisionReceipt,
+    DependencyInstallExecutionPayload,
     FrontendActionPlanAction,
+    ManagedDeliveryApplyResult,
+    ManagedDeliveryExecutionSession,
     ManagedDeliveryExecutorContext,
+    RuntimeRemediationExecutionPayload,
+    WorkspaceIntegrationItem,
 )
 
 
@@ -192,6 +197,149 @@ def test_run_managed_delivery_apply_blocks_when_dependency_is_unsupported() -> N
         "selected_optional_unsupported",
         "dependency_blocked_by_unsupported",
     ]
+
+
+def test_run_managed_delivery_apply_deduplicates_blocked_action_ids() -> None:
+    view = _build_view(
+        _build_action(
+            action_id="a1",
+            action_type="custom_optional_action",
+            required=False,
+            depends_on_action_ids=["a1"],
+        ),
+        _build_action(
+            action_id="a2",
+            action_type="runtime_remediation",
+            depends_on_action_ids=["a1"],
+        ),
+    )
+    receipt = _build_receipt(selected_action_ids=["a1", "a2", "a2"])
+
+    result = run_managed_delivery_apply(view, receipt, ManagedDeliveryExecutorContext())
+
+    assert result.result_status == "blocked_before_start"
+    assert result.blocked_action_ids == ["a1", "a2"]
+
+
+def test_frontend_managed_delivery_models_deduplicate_set_like_lists() -> None:
+    install_payload = DependencyInstallExecutionPayload(
+        install_strategy_id="public-primevue-default",
+        package_manager="pnpm",
+        packages=["primevue", "primevue", "@primeuix/themes"],
+    )
+    remediation_payload = RuntimeRemediationExecutionPayload(
+        managed_runtime_root=".ai-sdlc/runtime",
+        required_runtime_entries=["node_runtime", "node_runtime"],
+        install_profile_id="offline_bundle_darwin_shell",
+        acquisition_mode="managed_runtime_install",
+        will_download=["node_runtime", "node_runtime"],
+        will_install=["node_runtime", "node_runtime"],
+        will_modify=["managed_runtime_root", "managed_runtime_root"],
+        manual_prerequisites=["approve", "approve"],
+        reentry_condition="rerun managed delivery apply",
+    )
+    action = FrontendActionPlanAction(
+        action_id="a1",
+        effect_kind="mutate",
+        action_type="dependency_install",
+        required=True,
+        selected=True,
+        default_selected=True,
+        depends_on_action_ids=["setup", "setup"],
+        rollback_ref="rollback:a1",
+        retry_ref="retry:a1",
+        cleanup_ref="cleanup:a1",
+        risk_flags=["touches-lockfile", "touches-lockfile"],
+        source_linkage_refs={"spec": "specs/001-auth"},
+        executor_payload={
+            "install_strategy_id": "public-primevue-default",
+            "package_manager": "pnpm",
+            "working_directory": ".",
+            "packages": ["primevue", "@primeuix/themes"],
+        },
+    )
+    view = ConfirmedActionPlanExecutionView(
+        action_plan_id="plan-001",
+        confirmation_surface_id="surface-001",
+        plan_fingerprint="fp-001",
+        protocol_version="1",
+        managed_target_ref="managed://frontend/app",
+        managed_target_path="managed/frontend",
+        attachment_scope_ref="scope://001-auth",
+        readiness_subject_id="001-auth",
+        spec_dir="specs/001-auth",
+        action_items=[action],
+        will_not_touch=["legacy-root", "legacy-root"],
+    )
+    receipt = DeliveryApplyDecisionReceipt(
+        decision_receipt_id="receipt-001",
+        action_plan_id="plan-001",
+        confirmation_surface_id="surface-001",
+        decision="continue",
+        selected_action_ids=["a1", "a1"],
+        deselected_optional_action_ids=["optional-1", "optional-1"],
+        risk_acknowledgement_ids=["risk-1", "risk-1"],
+        second_confirmation_acknowledged=True,
+        confirmed_plan_fingerprint="fp-001",
+        created_at="2026-04-13T13:30:00Z",
+    )
+    session = ManagedDeliveryExecutionSession(
+        execution_session_id="session-001",
+        action_plan_id="plan-001",
+        confirmation_surface_id="surface-001",
+        decision_receipt_id="receipt-001",
+        plan_fingerprint="fp-001",
+        managed_target_ref="managed://frontend/app",
+        attachment_scope_ref="scope://001-auth",
+        readiness_subject_id="001-auth",
+        spec_dir="specs/001-auth",
+        status="blocked_before_start",
+        blocking_reason_codes=["risk_acknowledgement_missing"] * 2,
+    )
+    result = ManagedDeliveryApplyResult(
+        apply_result_id="apply-001",
+        execution_session_id="session-001",
+        action_plan_id="plan-001",
+        plan_fingerprint="fp-001",
+        result_status="blocked_before_start",
+        blockers=["risk_acknowledgement_missing"] * 2,
+        executed_action_ids=["a1", "a1"],
+        succeeded_action_ids=["a1", "a1"],
+        failed_action_ids=["a2", "a2"],
+        blocked_action_ids=["a3", "a3"],
+        skipped_action_ids=["a4", "a4"],
+        remediation_hints=["acknowledge-risk", "acknowledge-risk"],
+    )
+    item = WorkspaceIntegrationItem(
+        integration_id="lockfile-write",
+        target_class="lockfile",
+        target_path="pnpm-lock.yaml",
+        mutation_kind="overwrite_existing",
+        content="lockfile",
+        will_not_touch_refs=["package.json", "package.json"],
+    )
+
+    assert install_payload.packages == ["primevue", "@primeuix/themes"]
+    assert remediation_payload.required_runtime_entries == ["node_runtime"]
+    assert remediation_payload.will_download == ["node_runtime"]
+    assert remediation_payload.will_install == ["node_runtime"]
+    assert remediation_payload.will_modify == ["managed_runtime_root"]
+    assert remediation_payload.manual_prerequisites == ["approve"]
+    assert action.depends_on_action_ids == ["setup"]
+    assert action.risk_flags == ["touches-lockfile"]
+    assert view.will_not_touch == ["legacy-root"]
+    assert receipt.selected_action_ids == ["a1", "a1"]
+    assert receipt.deselected_optional_action_ids == ["optional-1", "optional-1"]
+    assert receipt.risk_acknowledgement_ids == ["risk-1", "risk-1"]
+    assert session.blocking_reason_codes == ["risk_acknowledgement_missing"]
+    assert result.blockers == ["risk_acknowledgement_missing"]
+    assert result.executed_action_ids == ["a1", "a1"]
+    assert result.succeeded_action_ids == ["a1", "a1"]
+    assert result.failed_action_ids == ["a2", "a2"]
+    assert result.blocked_action_ids == ["a3", "a3"]
+    assert result.skipped_action_ids == ["a4", "a4"]
+    assert result.remediation_hints == ["acknowledge-risk"]
+    assert item.will_not_touch_refs == ["package.json"]
 
 
 def test_run_managed_delivery_apply_executes_dependency_install_with_plan_payload(

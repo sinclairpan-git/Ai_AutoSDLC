@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import patch
 
 from typer.testing import CliRunner
@@ -80,3 +81,43 @@ def test_host_runtime_plan_text_reports_ready_status(
     assert "下一步命令 / Next command" in result.output
     assert "ai-sdlc adapter status" in result.output
     assert "命令作用 / What this command does" in result.output
+
+
+def test_host_runtime_plan_text_deduplicates_reason_codes_and_remediation_targets(
+    initialized_project_dir: Path,
+) -> None:
+    plan = SimpleNamespace(
+        status="remediation_required",
+        surface_kind="installed_cli",
+        surface_binding_state="bound",
+        platform_os="darwin",
+        platform_arch="arm64",
+        reason_codes=[
+            "node_runtime_missing",
+            "node_runtime_missing",
+            "playwright_browsers_missing",
+        ],
+        bootstrap_acquisition=None,
+        remediation_fragment=SimpleNamespace(
+            will_install=[
+                "node_runtime",
+                "node_runtime",
+                "playwright_browsers",
+            ]
+        ),
+    )
+
+    with patch(
+        "ai_sdlc.cli.host_runtime_cmd.find_project_root",
+        return_value=initialized_project_dir,
+    ), patch(
+        "ai_sdlc.cli.host_runtime_cmd.evaluate_current_host_runtime",
+        return_value=plan,
+    ):
+        result = runner.invoke(app, ["host-runtime", "plan"])
+
+    assert result.exit_code == 0
+    assert "node_runtime_missing, playwright_browsers_missing" in result.output
+    assert "node_runtime_missing, node_runtime_missing" not in result.output
+    assert "node_runtime, playwright_browsers" in result.output
+    assert "node_runtime, node_runtime" not in result.output

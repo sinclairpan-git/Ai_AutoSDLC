@@ -13,6 +13,17 @@ from ai_sdlc.models.frontend_solution_confirmation import (
 )
 
 
+def _dedupe_paths(paths: list[Path]) -> list[Path]:
+    unique: list[Path] = []
+    seen: set[Path] = set()
+    for path in paths:
+        if path in seen:
+            continue
+        seen.add(path)
+        unique.append(path)
+    return unique
+
+
 def frontend_solution_confirmation_root(root: Path) -> Path:
     """Return the canonical root for governance-facing solution artifacts."""
 
@@ -64,7 +75,7 @@ def materialize_frontend_solution_confirmation_artifacts(
             snapshot_payload,
         )
     )
-    return paths
+    return _dedupe_paths(paths)
 
 
 def _write_yaml(path: Path, payload: dict[str, object]) -> Path:

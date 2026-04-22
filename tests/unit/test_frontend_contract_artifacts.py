@@ -6,6 +6,7 @@ from pathlib import Path
 
 import yaml
 
+import ai_sdlc.generators.frontend_contract_artifacts as frontend_contract_artifacts_module
 from ai_sdlc.generators.frontend_contract_artifacts import (
     materialize_frontend_contract_artifacts,
 )
@@ -194,3 +195,52 @@ def test_module_contract_artifact_carries_shared_rules_and_legacy_context(tmp_pa
         "legacy_boundary_ref": "legacy/users",
         "migration_scope": "new-and-touched",
     }
+
+
+def test_materialize_frontend_contract_artifacts_deduplicates_returned_paths(
+    tmp_path,
+    monkeypatch,
+) -> None:
+    contract_set = _build_contract_set()
+    repeated_path = tmp_path / "contracts" / "frontend" / "pages" / "user-create" / "page.metadata.yaml"
+
+    monkeypatch.setattr(
+        frontend_contract_artifacts_module,
+        "_write_module_contract",
+        lambda base_dir, module_contract: repeated_path,
+    )
+    monkeypatch.setattr(
+        frontend_contract_artifacts_module,
+        "_write_page_contract",
+        lambda base_dir, page_contract: [repeated_path, repeated_path],
+    )
+
+    paths = materialize_frontend_contract_artifacts(tmp_path, contract_set)
+
+    rel_paths = [path.relative_to(tmp_path).as_posix() for path in paths]
+    assert rel_paths == list(dict.fromkeys(rel_paths))
+
+
+def test_write_page_contract_deduplicates_internal_returned_paths(
+    tmp_path,
+    monkeypatch,
+) -> None:
+    contract_set = _build_contract_set()
+    page_contract = contract_set.page_contracts[0]
+    repeated_path = (
+        tmp_path / "contracts" / "frontend" / "pages" / "user-create" / "page.metadata.yaml"
+    )
+
+    monkeypatch.setattr(
+        frontend_contract_artifacts_module,
+        "_write_yaml",
+        lambda path, payload: repeated_path,
+    )
+
+    paths = frontend_contract_artifacts_module._write_page_contract(
+        tmp_path / "contracts" / "frontend",
+        page_contract,
+    )
+
+    rel_paths = [path.relative_to(tmp_path).as_posix() for path in paths]
+    assert rel_paths == ["contracts/frontend/pages/user-create/page.metadata.yaml"]

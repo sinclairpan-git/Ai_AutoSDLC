@@ -104,6 +104,73 @@ def test_generate_run_reports_includes_evaluation_summary_and_audit_report(
     assert reports["audit_report"]["audit_status"] == "clean"
 
 
+def test_generate_run_reports_deduplicates_summary_refs_and_rollup_items(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    store = TelemetryStore(tmp_path)
+    writer = TelemetryWriter(store)
+    publisher = GovernancePublisher(store=store, writer=writer)
+    event, evidence, evaluation = _seed_completed_run(writer)
+    violation = Violation(
+        scope_level=ScopeLevel.RUN,
+        goal_session_id=event.goal_session_id,
+        workflow_run_id=event.workflow_run_id,
+        status=ViolationStatus.OPEN,
+        risk_level=ViolationRiskLevel.HIGH,
+        created_at="2026-03-27T10:00:00Z",
+        updated_at="2026-03-27T10:00:00Z",
+    )
+    evaluation_payload = evaluation.model_dump(mode="json")
+    violation_payload = violation.model_dump(mode="json")
+    evidence_payload = evidence.model_dump(mode="json")
+    original_load_current_snapshots = store.load_current_snapshots
+
+    def _load_current_snapshots(
+        kind: str,
+        *,
+        goal_session_id: str | None = None,
+        workflow_run_id: str | None = None,
+        step_id: str | None = None,
+    ) -> list[dict[str, object]]:
+        if kind == "evaluation":
+            return [evaluation_payload, evaluation_payload]
+        if kind == "violation":
+            return [violation_payload, violation_payload]
+        return original_load_current_snapshots(
+            kind,
+            goal_session_id=goal_session_id,
+            workflow_run_id=workflow_run_id,
+            step_id=step_id,
+        )
+
+    monkeypatch.setattr(store, "load_current_snapshots", _load_current_snapshots)
+    monkeypatch.setattr(
+        store,
+        "load_canonical_evidence_payloads",
+        lambda **_: [evidence_payload, evidence_payload],
+    )
+
+    reports = publisher.generate_run_reports(
+        goal_session_id=event.goal_session_id,
+        workflow_run_id=event.workflow_run_id,
+    )
+
+    assert reports["evaluation_summary"]["source_evidence_refs"] == [evidence.evidence_id]
+    assert reports["evaluation_summary"]["source_object_refs"] == [
+        f"evaluation:{evaluation.evaluation_id}"
+    ]
+    assert reports["evaluation_summary"]["evidence_quality_view"]["total_count"] == 1
+    assert reports["violation_summary"]["open_debt"]["count"] == 1
+    assert reports["violation_summary"]["open_items"] == [
+        {
+            "violation_id": violation.violation_id,
+            "status": ViolationStatus.OPEN.value,
+            "risk_level": ViolationRiskLevel.HIGH.value,
+        }
+    ]
+
+
 def test_publish_promotes_artifact_when_source_closure_is_valid(tmp_path: Path) -> None:
     store = TelemetryStore(tmp_path)
     writer = TelemetryWriter(store)

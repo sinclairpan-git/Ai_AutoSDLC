@@ -1128,12 +1128,28 @@ Phase 1 的边界要记住：
 | program validate / status / plan | `python -m ai_sdlc program ...` | Program 级校验与规划 | **可能写 adapter**：program service 自身以读和规划为主，但 CLI 入口仍可能先触发 adapter apply |
 | program solution-confirm --dry-run | `python -m ai_sdlc program solution-confirm --dry-run` | 技术方案确认预演 | **可能写 adapter**：命令主体会展示 recommendation / wizard / final preflight；若带 `--report` 会额外写 report 文件 |
 | program solution-confirm --execute --yes | `python -m ai_sdlc program solution-confirm --execute --yes` | 技术方案确认落盘 | **可能写 adapter**；确认后会写 `.ai-sdlc/memory/frontend-solution-confirmation/` snapshot artifacts，并可选写 report 文件 |
+| program solution-confirm --execute --continue --yes | `python -m ai_sdlc program solution-confirm --execute --continue --yes` | 确认后继续进入 managed delivery apply | **可能写 adapter**；会先写 solution snapshot，再进入 apply；若 `requested_* != effective_*`，还需额外提供 `--ack-effective-change` |
+| program managed-delivery-apply --dry-run | `python -m ai_sdlc program managed-delivery-apply --dry-run` | managed delivery apply 预览 | **可能写 adapter**；若省略 `--request`，会从 current truth 物化 request，并显示 guard / blocker / next step |
+| program managed-delivery-apply --execute --yes | `python -m ai_sdlc program managed-delivery-apply --execute --yes` | 执行 managed delivery apply | **可能写 adapter**；若省略 `--request` 且 `requested_* != effective_*`，还需额外提供 `--ack-effective-change` |
+| program browser-gate-probe --dry-run | `python -m ai_sdlc program browser-gate-probe --dry-run` | browser gate 预演 | **可能写 adapter**：命令主体只读；会显示 managed frontend target、delivery entry、component packages 与 overall gate status preview |
+| program browser-gate-probe --execute | `python -m ai_sdlc program browser-gate-probe --execute` | 执行 browser gate probe | **可能写 adapter**：会写 `.ai-sdlc/memory/frontend-browser-gate/latest.yaml`，并显式显示 delivery entry、component packages、gate status 与下一条命令 |
 | program page-ui-schema-handoff | `python -m ai_sdlc program page-ui-schema-handoff` | 查看 `147` 的 provider/kernel handoff surface | **可能写 adapter**：命令主体只读；依赖既有 `.ai-sdlc/memory/frontend-solution-confirmation/latest.yaml`，若缺失会返回 blocker |
-| program theme-token-governance-handoff | `python -m ai_sdlc program theme-token-governance-handoff` | 查看 `148` 的 theme governance handoff、requested/effective theme 与 override diagnostics | **可能写 adapter**：命令主体只读；依赖既有 solution snapshot 与 provider style-support truth，若缺失会返回 blocker |
+| program delivery-registry-handoff | `python -m ai_sdlc program delivery-registry-handoff` | 查看当前技术栈选择命中的官方 delivery entry、组件库包集合与 prerequisite | **可能写 adapter**：命令主体只读；会显示 install strategy、component packages、provider manifest/style-support 引用与当前 prerequisite gap |
+| program generation-constraints-handoff | `python -m ai_sdlc program generation-constraints-handoff` | 查看后续代码生成默认继承的组件库上下文与 generation constraints | **可能写 adapter**：命令主体只读；会显示 delivery entry、component packages、page schema ids、allowed recipes 与 whitelist components |
+| program theme-token-governance-handoff | `python -m ai_sdlc program theme-token-governance-handoff` | 查看默认继承 generation truth 的 theme governance handoff、requested/effective theme 与 override diagnostics | **可能写 adapter**：命令主体只读；依赖既有 solution snapshot、generation truth 与 provider style-support truth，若缺失会返回 blocker |
+| program quality-platform-handoff | `python -m ai_sdlc program quality-platform-handoff` | 查看默认继承 generation/theme truth 的质量矩阵、组件库上下文与 evidence contracts | **可能写 adapter**：命令主体只读；会显示 delivery entry、component packages、page schema ids、quality diagnostics 与 evidence contracts |
+| program cross-provider-consistency-handoff | `python -m ai_sdlc program cross-provider-consistency-handoff` | 查看默认继承 generation/theme/quality truth 的跨组件库一致性 pair diagnostics | **可能写 adapter**：命令主体只读；会显示 page schema ids、pair counts、pair diagnostics 与 blocker/warning |
+| program provider-expansion-handoff | `python -m ai_sdlc program provider-expansion-handoff` | 查看 provider expansion 的公开选择面、roster admission 与 React 暴露边界 | **可能写 adapter**：命令主体只读；会显示 requested/effective frontend stack、provider diagnostics、react visibility 与 blocker/warning |
+| program provider-runtime-adapter-handoff | `python -m ai_sdlc program provider-runtime-adapter-handoff` | 查看 runtime adapter 的 scaffold / runtime delivery / evidence return truth | **可能写 adapter**：命令主体只读；会显示 carrier mode、runtime delivery state、evidence return state 与 provider diagnostics |
 | program integrate --dry-run | `python -m ai_sdlc program integrate --dry-run` | guarded integration runbook 预览 | **可能写 adapter**；若带 `--report`，还会写 report 文件 |
 | program integrate --execute --yes | `python -m ai_sdlc program integrate --execute --yes` | guarded execute gate | **可能写 adapter**；当前会做 gate 校验与可选 report 写入，不会直接替你修改各 spec 内容 |
 | rules materialize-frontend-page-ui-schema | `python -m ai_sdlc rules materialize-frontend-page-ui-schema` | materialize `147` 的 canonical page/ui schema artifacts | **可能写 adapter**：命令本身会把 artifact 写到 `kernel/frontend/page-ui-schema/`；CLI 入口仍可能先触发 adapter apply |
-| rules materialize-frontend-theme-token-governance | `python -m ai_sdlc rules materialize-frontend-theme-token-governance` | materialize `148` 的 canonical theme governance artifacts | **可能写 adapter**：命令本身会把 artifact 写到 `governance/frontend/theme-token-governance/`；CLI 入口仍可能先触发 adapter apply |
+| rules materialize-frontend-mvp | `python -m ai_sdlc rules materialize-frontend-mvp` | materialize frontend governance artifacts，并优先绑定当前项目的 generation delivery context | **可能写 adapter**：命令本身会把 artifact 写到 `governance/frontend/gates/` 与 `governance/frontend/generation/`；若当前项目已有 solution snapshot，会把 delivery entry、component packages、page schema ids 一并写入 `generation.manifest.yaml` |
+| rules materialize-frontend-theme-token-governance | `python -m ai_sdlc rules materialize-frontend-theme-token-governance` | materialize `148` 的 canonical theme governance artifacts，并消费当前 generation truth | **可能写 adapter**：命令本身会把 artifact 写到 `governance/frontend/theme-token-governance/`；若当前项目已有 solution snapshot，会继承 delivery entry、component packages、page schema ids 与 requested/effective theme |
+| rules materialize-frontend-quality-platform | `python -m ai_sdlc rules materialize-frontend-quality-platform` | materialize `149` 的 canonical quality platform artifacts，并消费当前 generation/theme truth | **可能写 adapter**：命令本身会把 artifact 写到 `governance/frontend/quality-platform/`；会继承 delivery entry、component packages、page schema ids、theme governance 与 evidence contracts |
+| rules materialize-frontend-cross-provider-consistency | `python -m ai_sdlc rules materialize-frontend-cross-provider-consistency` | materialize `150` 的 canonical cross-provider consistency artifacts，并消费当前 theme/quality truth | **可能写 adapter**：命令本身会把 artifact 写到 `governance/frontend/cross-provider-consistency/`；会继承 page schema ids、pair certification truth 与 upstream quality evidence refs |
+| rules materialize-frontend-provider-expansion | `python -m ai_sdlc rules materialize-frontend-provider-expansion` | materialize `151` 的 canonical provider expansion artifacts | **可能写 adapter**：命令本身会把 artifact 写到 `governance/frontend/provider-expansion/`；会落 choice surface、react exposure boundary 与各 provider 的 roster/certification aggregate |
+| rules materialize-frontend-provider-runtime-adapter | `python -m ai_sdlc rules materialize-frontend-provider-runtime-adapter` | materialize `153` 的 canonical provider runtime adapter artifacts | **可能写 adapter**：命令本身会把 artifact 写到 `governance/frontend/provider-runtime-adapter/`；会落 adapter targets、runtime boundary receipt 与各 provider 的 scaffold contract |
 | manual telemetry | `python -m ai_sdlc telemetry open-session`、`record-*`、`close-session` | operator evidence write | **会写 telemetry**：落到 `.ai-sdlc/local/telemetry/` 与派生 indexes；CLI 入口本身也可能先触发 adapter apply |
 | workitem init | `python -m ai_sdlc workitem init --title "新 capability 标题"` | direct-formal 初始化 formal work item | **会写 formal docs**：仅适用于已完成 `ai-sdlc init .` 的项目；直接创建 `specs/<WI>/spec.md`、`plan.md`、`tasks.md`；不会要求先写 `docs/superpowers/*` |
 | workitem truth-check | `python -m ai_sdlc workitem truth-check --wi specs/<WI>/ --rev <branch|commit>` | work item 指定 revision 的阶段真值核验 | **命令主体只读，但可能写 adapter**：绑定用户指定 branch/commit 后，回答该 WI 在目标 revision 上是 `formal_freeze_only`、`branch_only_implemented` 还是 `mainline_merged`，并显式披露 HEAD/revision mismatch |
@@ -1160,12 +1176,54 @@ Phase 1 的边界要记住：
 - 最终确认并落盘：
   - `python -m ai_sdlc program solution-confirm --mode advanced --execute --yes`
   - 会把确认后的 snapshot 落到 `.ai-sdlc/memory/frontend-solution-confirmation/`。
+- 确认后继续进入 apply：
+  - `python -m ai_sdlc program solution-confirm --execute --continue --yes`
+  - 会先写 `.ai-sdlc/memory/frontend-solution-confirmation/latest.yaml`，再进入 managed delivery apply。
+  - 如果 `requested_* != effective_*`，必须额外带上 `--ack-effective-change`。
 
 这里有三个边界需要明确：
 
 - `will_change_on_confirm` 只属于确认前的派生展示字段，不会写入最终 snapshot artifact。
 - 如果请求的 enterprise 方案不可用，但存在允许的退路，CLI 会保留 `requested_*`，并把 fallback 结果写到 `effective_*`。
 - 如果预检结果是 `blocked`，命令会停止在确认 gate，不应把它理解为“已自动完成技术选型”。
+
+### 7.0.1) `program managed-delivery-apply` 的最小使用面
+
+`program managed-delivery-apply` 是当前 managed delivery request / execute / artifact 的独立入口。
+
+- request 预览：
+  - `python -m ai_sdlc program managed-delivery-apply --dry-run`
+  - 若省略 `--request`，CLI 会从 current truth 自动物化 request，并展示 selected actions、blockers 与 next steps。
+- 执行显式 request：
+  - `python -m ai_sdlc program managed-delivery-apply --request <path> --execute --yes`
+  - 会执行该 request 对应的 narrow apply runtime，并写 `.ai-sdlc/memory/frontend-managed-delivery-apply/latest.yaml`。
+- 执行 truth-derived request：
+  - `python -m ai_sdlc program managed-delivery-apply --execute --yes`
+  - 若省略 `--request` 且 current truth 中存在 `requested_* != effective_*`，必须额外带上 `--ack-effective-change`，否则命令会 fail-closed。
+  - 当前 truth-derived path 默认会在 `managed/frontend/` 下写出最小受控前端产物，包括 `index.html`、`src/generated/frontend-delivery-context.ts` 与 `src/App.vue`。
+
+这里也有两个边界：
+
+- `--ack-effective-change` 只约束“从 current truth 自动物化 request”的路径，不额外注入到显式 `--request` 回放路径。
+- `Managed Delivery Apply Result` 不是最终交付完成态；`apply_succeeded_pending_browser_gate` 仍表示 browser gate 尚未运行。
+
+### 7.0.2) `program browser-gate-probe` 的最小使用面
+
+`program browser-gate-probe` 是当前 browser gate 执行面。
+
+- 预演：
+  - `python -m ai_sdlc program browser-gate-probe --dry-run`
+  - 会读取最新的 managed delivery apply artifact，显示当前 `managed frontend target`、`delivery entry`、`provider theme adapter`、`component packages`、`page schema ids` 与 preview gate status。
+- 执行：
+  - `python -m ai_sdlc program browser-gate-probe --execute`
+  - 会写 `.ai-sdlc/memory/frontend-browser-gate/latest.yaml`，并把当前 delivery context 一并带进 `execution_context` 与 `bundle_input`。
+  - 默认会优先消费 `managed/frontend/index.html` 作为最小 browser entry。
+  - 当前基线会校验页面已渲染内容是否覆盖当前 `delivery entry`、`component packages` 与 `page schema ids`；不一致时会诚实返回 blocker。
+
+这里也有两个边界：
+
+- 这一步只表示 browser gate 执行面已继承当前组件库选择，不代表 provider-specific 质量探针已经全部实现。
+- 如果 Playwright runner 或运行时不可用，artifact 会诚实返回 `recheck_required` / `incomplete`，而不是把当前组件库误报成已验收通过。
 
 ### 7.1) `page-ui-schema` 的最小使用面
 
@@ -1196,9 +1254,55 @@ Phase 1 的边界要记住：
 
 这里同样有三个边界需要明确：
 
-- `theme-token-governance-handoff` 是只读 surfaced diagnostics，不会自动替你执行 override，也不会直接推进 Track C/D 的 runtime 消费。
-- `148` 当前只把 theme/token governance 的 models、artifacts、validator、ProgramService/CLI/verify handoff 接进 AI-SDLC；quality platform、cross-provider consistency 与 provider expansion 仍是后续承接项。
+- `theme-token-governance-handoff` 是只读 surfaced diagnostics，不会自动替你执行 override；Track C/D 的 runtime truth 由 `quality-platform-handoff` / `cross-provider-consistency-handoff` 与对应 materialize 命令继续承接。
+- `149/150` 现在已经接进当前项目的 upstream truth：quality platform 会继承 generation/theme truth，cross-provider consistency 会继承 theme/quality truth；provider expansion 仍是独立后续承接项。
 - 如果 solution snapshot、provider style-support 或 theme governance artifacts 缺失 / 损坏，命令与 `verify constraints` 都会诚实返回 `blocked` / `RETRY`，而不会静默回退为默认值。
+
+### 7.3) `quality-platform` / `cross-provider-consistency` 的最小使用面
+
+现在 Track C/D 也已经接到当前项目的 upstream truth，最小入口各有两条：
+
+- materialize `149` quality platform artifacts：
+  - `python -m ai_sdlc rules materialize-frontend-quality-platform`
+  - 会把 quality platform manifest、coverage matrix、evidence platform、interaction quality、truth surfacing 写到 `governance/frontend/quality-platform/`。
+- 查看 `149` quality platform handoff：
+  - `python -m ai_sdlc program quality-platform-handoff`
+  - 会读取当前 solution snapshot、resolved theme governance 与 quality platform truth，把 delivery entry、component packages、page schema coverage、quality diagnostics 与 evidence contracts 拼成可读 handoff。
+- materialize `150` cross-provider consistency artifacts：
+  - `python -m ai_sdlc rules materialize-frontend-cross-provider-consistency`
+  - 会把 consistency manifest、readiness gate、truth surfacing，以及每个 provider pair 的 diff/certification/evidence index 写到 `governance/frontend/cross-provider-consistency/`。
+- 查看 `150` cross-provider consistency handoff：
+  - `python -m ai_sdlc program cross-provider-consistency-handoff`
+  - 会读取当前 generation/theme/quality upstream truth，把 page schema ids、pair counts、pair diagnostics、blockers/warnings 拼成可读 handoff。
+
+这里也有三个边界需要明确：
+
+- 这两个 handoff 都是只读 surfaced diagnostics，不会替你自动执行安装、切换 provider 或补齐证据。
+- `verify constraints` 现在会把 upstream theme/quality artifacts 漂移当成显式 gate，而不是静默忽略。
+- provider expansion、runtime adapter 与真实组件库交付仍是独立后续能力，不等同于 `149/150` 已经替业务项目自动落地这些动作。
+
+### 7.4) `provider-expansion` / `provider-runtime-adapter` 的最小使用面
+
+Track E/F 现在也各有一条只读 handoff 和一条 canonical materialize 入口：
+
+- materialize `151` provider expansion artifacts：
+  - `python -m ai_sdlc rules materialize-frontend-provider-expansion`
+  - 会把 provider expansion manifest、truth surfacing、choice surface policy、react exposure boundary，以及每个 provider 的 admission / roster-state / certification aggregate 写到 `governance/frontend/provider-expansion/`。
+- 查看 `151` provider expansion handoff：
+  - `python -m ai_sdlc program provider-expansion-handoff`
+  - 会读取当前 solution snapshot 与 provider expansion truth，把 requested/effective frontend stack、公开选择面、react visibility 与 provider diagnostics 拼成可读 handoff。
+- materialize `153` provider runtime adapter artifacts：
+  - `python -m ai_sdlc rules materialize-frontend-provider-runtime-adapter`
+  - 会把 runtime adapter manifest、adapter targets，以及每个 provider 的 scaffold contract / runtime boundary receipt 写到 `governance/frontend/provider-runtime-adapter/`。
+- 查看 `153` provider runtime adapter handoff：
+  - `python -m ai_sdlc program provider-runtime-adapter-handoff`
+  - 会读取当前 solution snapshot 与 runtime adapter truth，把 carrier mode、runtime delivery state、evidence return state 与 provider diagnostics 拼成可读 handoff。
+
+这里也有三个边界需要明确：
+
+- `151` 解决的是“哪些 provider 可以公开出现在选择面上，以及 React 能否暴露”，不是自动把它们装进目标项目。
+- `153` 解决的是“target project adapter scaffold 与 runtime boundary receipt 是否存在”，不是自动替你完成真实组件库安装、注册或业务接线。
+- 如果 solution snapshot 缺失，`provider-expansion-handoff` / `provider-runtime-adapter-handoff` 会诚实返回 `blocked`；若只有 scaffold 存在但 runtime delivery/evidence 仍未完成，也会如实显示 `scaffolded` / `missing`，不会伪装成已可用。
 
 ## 交付完成（DoD）与计划 / 任务状态
 

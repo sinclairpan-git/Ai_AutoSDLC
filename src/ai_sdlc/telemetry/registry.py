@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 class CriticalControlPoint(BaseModel):
@@ -17,6 +17,23 @@ class CriticalControlPoint(BaseModel):
     minimum_evidence_closure: tuple[str, ...] = Field(default_factory=tuple)
     enabled: bool = True
     description: str = ""
+
+    @field_validator("minimum_evidence_closure", mode="before")
+    @classmethod
+    def _dedupe_minimum_evidence_closure(cls, value: object) -> tuple[str, ...]:
+        if value is None:
+            return ()
+        if isinstance(value, str):
+            return (value,)
+        unique: list[str] = []
+        seen: set[str] = set()
+        for item in value:
+            text = str(item)
+            if text in seen:
+                continue
+            seen.add(text)
+            unique.append(text)
+        return tuple(unique)
 
 
 _DEFAULT_CONTROL_POINTS: dict[str, dict[str, Any]] = {

@@ -2,7 +2,13 @@
 
 from __future__ import annotations
 
-from ai_sdlc.core.frontend_contract_drift import PageImplementationObservation
+from pathlib import Path
+
+import ai_sdlc.gates.frontend_contract_gate as frontend_contract_gate_module
+from ai_sdlc.core.frontend_contract_drift import (
+    FrontendContractDriftRecord,
+    PageImplementationObservation,
+)
 from ai_sdlc.core.frontend_contract_observation_provider import (
     FRONTEND_CONTRACT_OBSERVATION_ARTIFACT_STATUS_ATTACHED,
     FRONTEND_CONTRACT_OBSERVATION_ARTIFACT_STATUS_MISSING_ARTIFACT,
@@ -191,6 +197,29 @@ def test_frontend_contract_gate_retries_when_contract_artifacts_are_missing(
     assert "contracts/frontend/pages" in artifact_check.message
 
 
+def test_frontend_contract_gate_deduplicates_missing_required_page_artifacts(
+    tmp_path, monkeypatch
+) -> None:
+    contracts_root = tmp_path / "contracts" / "frontend"
+    pages_root = contracts_root / "pages"
+    page_dir = pages_root / "user-create"
+    page_dir.mkdir(parents=True)
+    original_iterdir = Path.iterdir
+
+    def _fake_iterdir(path: Path):
+        if path == pages_root:
+            return iter([page_dir, page_dir])
+        return original_iterdir(path)
+
+    monkeypatch.setattr(frontend_contract_gate_module.Path, "iterdir", _fake_iterdir)
+
+    passed, message = frontend_contract_gate_module._check_contract_artifacts(contracts_root)
+
+    assert passed is False
+    assert message.count("user-create/page.metadata.yaml") == 1
+    assert message.count("user-create/page.recipe.yaml") == 1
+
+
 def test_frontend_contract_gate_retries_when_observations_are_missing(tmp_path) -> None:
     materialize_frontend_contract_artifacts(tmp_path, _build_contract_set())
 
@@ -278,3 +307,110 @@ def test_frontend_contract_gate_prefers_diagnostic_truth_over_raw_observation_li
     assert "declared no implementation observations" in observation_check.message
     assert drift_check.passed is False
     assert "declared no implementation observations" in drift_check.message
+
+
+def test_frontend_contract_gate_deduplicates_missing_prerequisite_message_parts() -> None:
+    result = FrontendContractGate().check(
+        {
+            "contracts_root": Path("/tmp/missing-contracts"),
+            "observations": [],
+            "diagnostic": {
+                "diagnostic_status": "valid_empty",
+                "evidence": {
+                    "observation_count": 0,
+                    "parse_error_summary": None,
+                    "drift_summary": None,
+                },
+            },
+        }
+    )
+
+    drift_check = next(check for check in result.checks if check.name == "contract_drift_free")
+
+    assert drift_check.passed is False
+    assert drift_check.message.count("declared no implementation observations") == 1
+
+
+def test_frontend_contract_gate_deduplicates_drift_summary_lines() -> None:
+    summary = frontend_contract_gate_module._summarize_drifts(
+        [
+            FrontendContractDriftRecord(
+                page_id="user-create",
+                drift_kind="recipe_mismatch",
+                field_path="page.recipe.yaml:recipe_id",
+                expected="form-create",
+                actual="form-edit",
+            ),
+            FrontendContractDriftRecord(
+                page_id="user-create",
+                drift_kind="recipe_mismatch",
+                field_path="page.recipe.yaml:recipe_id",
+                expected="form-create",
+                actual="form-edit",
+            ),
+            FrontendContractDriftRecord(
+                page_id="user-create",
+                drift_kind="missing_i18n_keys",
+                field_path="page.i18n.yaml:new_keys",
+                expected=["submit"],
+                actual=[],
+            ),
+        ]
+    )
+
+    assert summary.count("user-create:recipe_mismatch@page.recipe.yaml:recipe_id") == 1
+    assert "user-create:missing_i18n_keys@page.i18n.yaml:new_keys" in summary
+
+
+def test_frontend_contract_gate_drift_summary_collects_first_three_unique_items() -> None:
+    summary = frontend_contract_gate_module._summarize_drifts(
+        [
+            FrontendContractDriftRecord(
+                page_id="user-create",
+                drift_kind="recipe_mismatch",
+                field_path="page.recipe.yaml:recipe_id",
+                expected="form-create",
+                actual="form-edit",
+            ),
+            FrontendContractDriftRecord(
+                page_id="user-create",
+                drift_kind="recipe_mismatch",
+                field_path="page.recipe.yaml:recipe_id",
+                expected="form-create",
+                actual="form-edit",
+            ),
+            FrontendContractDriftRecord(
+                page_id="user-create",
+                drift_kind="recipe_mismatch",
+                field_path="page.recipe.yaml:recipe_id",
+                expected="form-create",
+                actual="form-edit",
+            ),
+            FrontendContractDriftRecord(
+                page_id="user-create",
+                drift_kind="missing_i18n_keys",
+                field_path="page.i18n.yaml:new_keys",
+                expected=["submit"],
+                actual=[],
+            ),
+            FrontendContractDriftRecord(
+                page_id="user-create",
+                drift_kind="missing_validation_fields",
+                field_path="form.validation.yaml:fields",
+                expected=["username"],
+                actual=[],
+            ),
+            FrontendContractDriftRecord(
+                page_id="account-edit",
+                drift_kind="legacy_expansion",
+                field_path="page.metadata.yaml:legacy_context.compatibility_profile",
+                expected="no new legacy usages",
+                actual=["legacy-button"],
+            ),
+        ]
+    )
+
+    assert "user-create:recipe_mismatch@page.recipe.yaml:recipe_id" in summary
+    assert "user-create:missing_i18n_keys@page.i18n.yaml:new_keys" in summary
+    assert "user-create:missing_validation_fields@form.validation.yaml:fields" in summary
+    assert "+1 more" in summary

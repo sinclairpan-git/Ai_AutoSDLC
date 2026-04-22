@@ -6,6 +6,20 @@ from enum import Enum
 
 from pydantic import BaseModel, Field, field_validator
 
+
+def _dedupe_items_by_text(value: object) -> list[object]:
+    if value is None:
+        return []
+    unique: list[object] = []
+    seen: set[str] = set()
+    for item in value:
+        key = str(item)
+        if key in seen:
+            continue
+        seen.add(key)
+        unique.append(item)
+    return unique
+
 # ---------------------------------------------------------------------------
 # Enums (from work_item)
 # ---------------------------------------------------------------------------
@@ -79,6 +93,11 @@ class ClarificationState(BaseModel):
     status: ClarificationStatus = ClarificationStatus.PENDING
     halt_reason: str = ""
 
+    @field_validator("candidate_types", mode="before")
+    @classmethod
+    def _dedupe_clarification_lists(cls, value: object) -> list[object]:
+        return _dedupe_items_by_text(value)
+
 
 class WorkItem(BaseModel):
     """A single work item tracked through the SDLC pipeline."""
@@ -111,6 +130,11 @@ class PrdReadiness(BaseModel):
     missing_sections: list[str] = []
     recommendations: list[str] = []
     structured_output: dict[str, object] = Field(default_factory=dict)
+
+    @field_validator("missing_sections", mode="before")
+    @classmethod
+    def _dedupe_prd_readiness_lists(cls, value: object) -> list[object]:
+        return _dedupe_items_by_text(value)
 
 
 class PrdDocumentState(str, Enum):
@@ -299,6 +323,11 @@ class IncidentAnalysis(BaseModel):
     affected_modules: list[str] = []
     risk_assessment: str = ""
 
+    @field_validator("affected_modules", mode="before")
+    @classmethod
+    def _dedupe_incident_analysis_lists(cls, value: object) -> list[object]:
+        return _dedupe_items_by_text(value)
+
 
 class IncidentTask(BaseModel):
     """A single task within an incident fix plan."""
@@ -308,6 +337,11 @@ class IncidentTask(BaseModel):
     description: str = ""
     file_paths: list[str] = []
     verification: str = ""
+
+    @field_validator("file_paths", mode="before")
+    @classmethod
+    def _dedupe_incident_task_paths(cls, value: object) -> list[object]:
+        return _dedupe_items_by_text(value)
 
 
 class IncidentFixPlan(BaseModel):
@@ -331,7 +365,6 @@ class PostmortemRecord(BaseModel):
     lessons_learned: list[str] = []
     action_items: list[str] = []
     prevention_measures: list[str] = []
-
 
 # ---------------------------------------------------------------------------
 # Change request models (from change_request)
@@ -360,6 +393,17 @@ class ImpactAnalysis(BaseModel):
     affected_files: list[str] = []
     risk_level: str = "medium"
     notes: str = ""
+
+    @field_validator(
+        "affected_specs",
+        "affected_plan_sections",
+        "affected_tasks",
+        "affected_files",
+        mode="before",
+    )
+    @classmethod
+    def _dedupe_impact_analysis_lists(cls, value: object) -> list[object]:
+        return _dedupe_items_by_text(value)
 
 
 class RebaselineRecord(BaseModel):
@@ -435,6 +479,11 @@ class MaintenanceTask(BaseModel):
     file_paths: list[str] = []
     verification: str = ""
 
+    @field_validator("depends_on", "file_paths", mode="before")
+    @classmethod
+    def _dedupe_maintenance_task_lists(cls, value: object) -> list[object]:
+        return _dedupe_items_by_text(value)
+
 
 class SmallTaskGraph(BaseModel):
     """A lightweight task graph for maintenance work (<= 10 tasks)."""
@@ -454,6 +503,11 @@ class ExecutionPathStep(BaseModel):
     title: str
     depends_on: list[str] = Field(default_factory=list)
 
+    @field_validator("depends_on", mode="before")
+    @classmethod
+    def _dedupe_step_dependencies(cls, value: object) -> list[object]:
+        return _dedupe_items_by_text(value)
+
 
 class ExecutionPath(BaseModel):
     """Structured execution order for a lightweight maintenance plan."""
@@ -472,6 +526,11 @@ class MaintenanceBrief(BaseModel):
     impact_scope: list[str] = []
     urgency: str = "medium"
     category: str = ""
+
+    @field_validator("impact_scope", mode="before")
+    @classmethod
+    def _dedupe_impact_scope(cls, value: object) -> list[object]:
+        return _dedupe_items_by_text(value)
 
 
 class MaintenancePlan(BaseModel):

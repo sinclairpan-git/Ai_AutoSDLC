@@ -20,7 +20,7 @@ from ai_sdlc.telemetry.enums import (
     ViolationStatus,
 )
 from ai_sdlc.telemetry.evaluators import build_observer_finding_evaluation
-from ai_sdlc.telemetry.generators import observer_violation_id
+from ai_sdlc.telemetry.generators import _unique_strings, observer_violation_id
 
 
 @dataclass(frozen=True, slots=True)
@@ -37,6 +37,13 @@ class MismatchFinding:
     profile: str
     mode: str
 
+    def __post_init__(self) -> None:
+        object.__setattr__(
+            self,
+            "evidence_refs",
+            tuple(_dedupe_string_items(self.evidence_refs)),
+        )
+
 
 @dataclass(frozen=True, slots=True)
 class GovernanceViolationCandidate:
@@ -51,6 +58,18 @@ class GovernanceViolationCandidate:
     profile: str
     mode: str
 
+    def __post_init__(self) -> None:
+        object.__setattr__(
+            self,
+            "evidence_refs",
+            tuple(_dedupe_string_items(self.evidence_refs)),
+        )
+        object.__setattr__(
+            self,
+            "source_object_refs",
+            tuple(_dedupe_string_items(self.source_object_refs)),
+        )
+
 
 @dataclass(frozen=True, slots=True)
 class ViolationHit:
@@ -60,6 +79,22 @@ class ViolationHit:
     source_refs: tuple[str, ...]
     hit_count: int
     message: str
+
+    def __post_init__(self) -> None:
+        object.__setattr__(
+            self,
+            "source_refs",
+            tuple(_dedupe_string_items(self.source_refs)),
+        )
+
+
+def _dedupe_string_items(values: object) -> list[str]:
+    deduped: list[str] = []
+    for value in values or ():
+        normalized = str(value).strip()
+        if normalized and normalized not in deduped:
+            deduped.append(normalized)
+    return deduped
 
 
 def escalate_hard_gate_violation(
@@ -131,11 +166,15 @@ def detect_native_delegation_mismatches(
     """Flag native-backend delegation boundaries that lack an observed terminal tool outcome."""
     native_boundary_refs = tuple(
         sorted(
-            str(payload["evidence_id"])
-            for payload in evidence_payloads
-            if payload.get("evidence_id") is not None
-            and isinstance(payload.get("locator"), str)
-            and str(payload["locator"]).startswith("trace://native-delegation/")
+            _unique_strings(
+                [
+                    str(payload["evidence_id"])
+                    for payload in evidence_payloads
+                    if payload.get("evidence_id") is not None
+                    and isinstance(payload.get("locator"), str)
+                    and str(payload["locator"]).startswith("trace://native-delegation/")
+                ]
+            )
         )
     )
     if not native_boundary_refs:

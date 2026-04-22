@@ -32,6 +32,7 @@ from ai_sdlc.models import (
     WorkType,
 )
 from ai_sdlc.models.work import (
+    ClarificationState,
     DraftPrd,
     FinalPrd,
     PrdAuthoringResult,
@@ -165,6 +166,23 @@ class TestExecutionModels:
         assert TaskStatus.HALTED.value == "halted"
         assert TaskStatus.CANCELLED.value == "cancelled"
 
+    def test_task_deduplicates_set_like_list_fields(self) -> None:
+        task = Task(
+            task_id="T001",
+            title="Create models",
+            file_paths=["src/a.py", "src/a.py", "src/b.py"],
+            allowed_paths=["src/a.py", "src/a.py"],
+            forbidden_paths=["src/c.py", "src/c.py"],
+            interface_contracts=["contract-a", "contract-a", "contract-b"],
+            depends_on=["T000", "T000", "T099"],
+        )
+
+        assert task.file_paths == ["src/a.py", "src/b.py"]
+        assert task.allowed_paths == ["src/a.py"]
+        assert task.forbidden_paths == ["src/c.py"]
+        assert task.interface_contracts == ["contract-a", "contract-b"]
+        assert task.depends_on == ["T000", "T099"]
+
 
 class TestContextModels:
     def test_runtime_state_defaults(self) -> None:
@@ -184,6 +202,10 @@ class TestContextModels:
         ws = WorkingSet()
         assert ws.active_files == []
         assert ws.prd_path == ""
+
+    def test_working_set_deduplicates_active_files(self) -> None:
+        ws = WorkingSet(active_files=["a.md", "a.md", "b.md"])
+        assert ws.active_files == ["a.md", "b.md"]
 
     def test_resume_pack(self) -> None:
         ws = WorkingSet(prd_path="/some/prd.md")
@@ -208,6 +230,64 @@ class TestCheckpointModels:
         )
         assert stage.stage == "init"
         assert len(stage.artifacts) == 1
+
+    def test_completed_stage_deduplicates_artifacts(self) -> None:
+        stage = CompletedStage(
+            stage="init",
+            completed_at="2026-01-01T00:00:00+00:00",
+            artifacts=["file1.md", "file1.md", "file2.md"],
+        )
+
+        assert stage.artifacts == ["file1.md", "file2.md"]
+
+    def test_interface_contract_and_worker_assignment_deduplicate_list_fields(self) -> None:
+        from ai_sdlc.models.state import InterfaceContract, WorkerAssignment
+
+        contract = InterfaceContract(
+            contract_id="ic-1",
+            parallel_group="group-0",
+            shared_interfaces=["api.auth", "api.auth", "api.user"],
+            constraints=["no-db", "no-db", "read-only"],
+        )
+        assignment = WorkerAssignment(
+            worker_id="worker-1",
+            task_ids=["T1", "T1", "T2"],
+            allowed_paths=["src/auth.py", "src/auth.py"],
+            forbidden_paths=["src/payment.py", "src/payment.py"],
+        )
+
+        assert contract.shared_interfaces == ["api.auth", "api.user"]
+        assert contract.constraints == ["no-db", "read-only"]
+        assert assignment.task_ids == ["T1", "T1", "T2"]
+        assert assignment.allowed_paths == ["src/auth.py"]
+        assert assignment.forbidden_paths == ["src/payment.py"]
+
+    def test_parallel_overlap_and_merge_models_deduplicate_list_fields(self) -> None:
+        from ai_sdlc.models.state import MergeSimulation, OverlapResult
+
+        overlap = OverlapResult(
+            overlapping_files=["src/shared.py", "src/shared.py", "src/auth.py"],
+            conflicting_files={
+                "worker-1": ["src/shared.py", "src/shared.py"],
+                "worker-2": ["src/auth.py", "src/auth.py"],
+            },
+            conflicting_workers=[(1, 2), (1, 2), (2, 3)],
+        )
+        merge = MergeSimulation(
+            conflicts=["src/shared.py", "src/shared.py"],
+            predicted_conflicts=["src/auth.py", "src/auth.py"],
+            merge_order=["worker-1", "worker-1", "worker-2"],
+        )
+
+        assert overlap.overlapping_files == ["src/shared.py", "src/auth.py"]
+        assert overlap.conflicting_files == {
+            "worker-1": ["src/shared.py"],
+            "worker-2": ["src/auth.py"],
+        }
+        assert overlap.conflicting_workers == [(1, 2), (2, 3)]
+        assert merge.conflicts == ["src/shared.py"]
+        assert merge.predicted_conflicts == ["src/auth.py"]
+        assert merge.merge_order == ["worker-1", "worker-1", "worker-2"]
 
     def test_feature_info(self) -> None:
         fi = FeatureInfo(
@@ -288,6 +368,22 @@ class TestGateModels:
         assert result.verdict == GateVerdict.RETRY
         assert result.checks[0].message == "missing FR"
 
+    def test_gate_result_deduplicates_runtime_checks(self) -> None:
+        result = GateResult(
+            stage="verify",
+            verdict=GateVerdict.RETRY,
+            checks=[
+                GateCheck(name="spec", passed=False, message="missing FR"),
+                GateCheck(name="spec", passed=False, message="missing FR"),
+                GateCheck(name="tests", passed=False, message="missing tests"),
+            ],
+        )
+
+        assert result.checks == [
+            GateCheck(name="spec", passed=False, message="missing FR"),
+            GateCheck(name="tests", passed=False, message="missing tests"),
+        ]
+
 
 class TestPrdModels:
     def test_prd_readiness_pass(self) -> None:
@@ -367,3 +463,62 @@ class TestPrdModels:
         assert "draft_prd" in result.draft_markdown
         assert decision.decision == PrdReviewerDecisionKind.REVISE
         assert decision.next_action == "Update draft"
+
+    def test_prd_and_work_models_deduplicate_set_like_lists(self) -> None:
+        readiness = PrdReadiness(
+            readiness="fail",
+            missing_sections=["scope", "scope", "acceptance"],
+            recommendations=["Add scope section", "Add scope section"],
+        )
+        clarification = ClarificationState(
+            candidate_types=[WorkType.NEW_REQUIREMENT, WorkType.NEW_REQUIREMENT],
+            options_presented=["new_requirement", "new_requirement", "maintenance_task"],
+            user_responses=["same", "same"],
+        )
+        draft = DraftPrd(
+            work_item_id="WI-2026-900",
+            source_idea="新增用户登录",
+            title="PRD 草案：新增用户登录",
+            background="待确认",
+            product_goals=["goal-a", "goal-a", "goal-b"],
+            user_roles=["admin", "admin"],
+            functional_requirements=["req-a", "req-a"],
+            core_business_rules=["rule-a", "rule-a"],
+            acceptance_criteria=["ac-a", "ac-a"],
+            development_priority=["P0", "P0"],
+            assumptions=["assumption-a", "assumption-a"],
+            placeholders=["placeholder-a", "placeholder-a"],
+        )
+        authoring = PrdAuthoringResult(
+            work_item_id="WI-2026-900",
+            draft_prd=draft,
+            draft_markdown=draft.render_markdown(),
+            review_checkpoints=[
+                PrdReviewerCheckpoint.PRD_FREEZE,
+                PrdReviewerCheckpoint.PRD_FREEZE,
+                PrdReviewerCheckpoint.PRE_CLOSE,
+            ],
+        )
+
+        assert readiness.missing_sections == ["scope", "acceptance"]
+        assert readiness.recommendations == ["Add scope section", "Add scope section"]
+        assert clarification.candidate_types == [WorkType.NEW_REQUIREMENT]
+        assert clarification.options_presented == [
+            "new_requirement",
+            "new_requirement",
+            "maintenance_task",
+        ]
+        assert clarification.user_responses == ["same", "same"]
+        assert draft.product_goals == ["goal-a", "goal-a", "goal-b"]
+        assert draft.user_roles == ["admin", "admin"]
+        assert draft.functional_requirements == ["req-a", "req-a"]
+        assert draft.core_business_rules == ["rule-a", "rule-a"]
+        assert draft.acceptance_criteria == ["ac-a", "ac-a"]
+        assert draft.development_priority == ["P0", "P0"]
+        assert draft.assumptions == ["assumption-a", "assumption-a"]
+        assert draft.placeholders == ["placeholder-a", "placeholder-a"]
+        assert authoring.review_checkpoints == [
+            PrdReviewerCheckpoint.PRD_FREEZE,
+            PrdReviewerCheckpoint.PRD_FREEZE,
+            PrdReviewerCheckpoint.PRE_CLOSE,
+        ]

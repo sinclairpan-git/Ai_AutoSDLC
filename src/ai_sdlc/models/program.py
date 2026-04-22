@@ -4,7 +4,21 @@ from __future__ import annotations
 
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
+
+
+def _dedupe_strings(value: object) -> list[str]:
+    if value is None:
+        return []
+    unique: list[str] = []
+    seen: set[str] = set()
+    for item in value:
+        text = str(item)
+        if text in seen:
+            continue
+        seen.add(text)
+        unique.append(text)
+    return unique
 
 
 class ProgramGoal(BaseModel):
@@ -26,6 +40,11 @@ class ProgramRequiredEvidenceRefs(BaseModel):
     command_surface_ref: str = ""
     artifact_probe_ref: str = ""
 
+    @field_validator("truth_check_refs", "close_check_refs", "verify_refs", mode="before")
+    @classmethod
+    def _dedupe_ref_lists(cls, value: object) -> list[str]:
+        return _dedupe_strings(value)
+
 
 class ProgramCapabilityRef(BaseModel):
     """A capability entry in the program ledger."""
@@ -40,6 +59,11 @@ class ProgramCapabilityRef(BaseModel):
     required_evidence: ProgramRequiredEvidenceRefs = Field(
         default_factory=ProgramRequiredEvidenceRefs
     )
+
+    @field_validator("spec_refs", mode="before")
+    @classmethod
+    def _dedupe_spec_refs(cls, value: object) -> list[str]:
+        return _dedupe_strings(value)
 
 
 class ProgramSpecRef(BaseModel):
@@ -56,6 +80,11 @@ class ProgramSpecRef(BaseModel):
     roles: list[str] = Field(default_factory=list)
     capability_refs: list[str] = Field(default_factory=list)
 
+    @field_validator("depends_on", "roles", "capability_refs", mode="before")
+    @classmethod
+    def _dedupe_spec_lists(cls, value: object) -> list[str]:
+        return _dedupe_strings(value)
+
 
 class ProgramCapabilityClosureCluster(BaseModel):
     """A single open capability cluster in the root closure audit."""
@@ -67,6 +96,11 @@ class ProgramCapabilityClosureCluster(BaseModel):
     closure_state: Literal["formal_only", "partial", "capability_open"]
     summary: str = ""
     source_refs: list[str] = Field(default_factory=list)
+
+    @field_validator("source_refs", mode="before")
+    @classmethod
+    def _dedupe_source_refs(cls, value: object) -> list[str]:
+        return _dedupe_strings(value)
 
 
 class ProgramCapabilityClosureAudit(BaseModel):
@@ -88,6 +122,11 @@ class ProgramComputedCapabilityState(BaseModel):
     audit_state: Literal["ready", "blocked", "stale", "invalid", "migration_pending"]
     blocking_refs: list[str] = Field(default_factory=list)
     stale_reason: str = ""
+
+    @field_validator("blocking_refs", mode="before")
+    @classmethod
+    def _dedupe_blocking_refs(cls, value: object) -> list[str]:
+        return _dedupe_strings(value)
 
 
 class ProgramSourceRef(BaseModel):
@@ -163,6 +202,11 @@ class ProgramTruthSourceInventory(BaseModel):
     entries: list[ProgramTruthSourceEntry] = Field(default_factory=list)
     unmapped_paths: list[str] = Field(default_factory=list)
 
+    @field_validator("unmapped_paths", mode="before")
+    @classmethod
+    def _dedupe_unmapped_paths(cls, value: object) -> list[str]:
+        return _dedupe_strings(value)
+
 
 class ProgramTruthSnapshot(BaseModel):
     """Minimal machine-computed program truth snapshot."""
@@ -197,3 +241,8 @@ class ProgramManifest(BaseModel):
     source_registry: list[ProgramSourceRef] = Field(default_factory=list)
     truth_snapshot: ProgramTruthSnapshot | None = None
     specs: list[ProgramSpecRef] = Field(default_factory=list)
+
+    @field_validator("release_targets", mode="before")
+    @classmethod
+    def _dedupe_release_targets(cls, value: object) -> list[str]:
+        return _dedupe_strings(value)

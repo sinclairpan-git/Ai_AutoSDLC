@@ -721,3 +721,25 @@ def test_ccp_registry_supports_partial_control_point_overrides() -> None:
         "event",
         "stdout_stderr_evidence",
     )
+
+
+def test_ccp_registry_deduplicates_repeated_minimum_evidence_closure_entries() -> None:
+    registry = build_default_ccp_registry(
+        {
+            "control_points": {
+                "command_completed": {
+                    "minimum_evidence_closure": (
+                        "event",
+                        "stdout_stderr_evidence",
+                        "event",
+                        "stdout_stderr_evidence",
+                    ),
+                }
+            }
+        }
+    )
+
+    assert registry.control_points["command_completed"].minimum_evidence_closure == (
+        "event",
+        "stdout_stderr_evidence",
+    )

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from ai_sdlc.models.frontend_generation_constraints import (
     FrontendGenerationConstraintSet,
@@ -51,6 +51,20 @@ def _find_duplicates(values: list[str]) -> list[str]:
             duplicates.append(value)
         seen.add(value)
     return duplicates
+
+
+def _dedupe_strings(value: object) -> list[str]:
+    if value is None:
+        return []
+    unique: list[str] = []
+    seen: set[str] = set()
+    for item in value:
+        text = str(item)
+        if text in seen:
+            continue
+        seen.add(text)
+        unique.append(text)
+    return unique
 
 
 class FrontendThemeTokenGovernanceModel(BaseModel):
@@ -128,6 +142,16 @@ class StyleEditorBoundaryContract(FrontendThemeTokenGovernanceModel):
     allowed_actions: list[str] = Field(default_factory=list)
     forbidden_actions: list[str] = Field(default_factory=list)
 
+    @field_validator(
+        "canonical_information_architecture",
+        "allowed_actions",
+        "forbidden_actions",
+        mode="before",
+    )
+    @classmethod
+    def _dedupe_boundary_lists(cls, value: object) -> list[str]:
+        return _dedupe_strings(value)
+
     @model_validator(mode="after")
     def _validate_boundary_contract(self) -> StyleEditorBoundaryContract:
         if self.canonical_information_architecture != _CANONICAL_IA:
@@ -147,6 +171,11 @@ class ThemeGovernanceHandoffContract(FrontendThemeTokenGovernanceModel):
     compatible_versions: list[str] = Field(default_factory=list)
     artifact_root: str
     canonical_files: list[str] = Field(default_factory=list)
+
+    @field_validator("compatible_versions", "canonical_files", mode="before")
+    @classmethod
+    def _dedupe_handoff_lists(cls, value: object) -> list[str]:
+        return _dedupe_strings(value)
 
     @model_validator(mode="after")
     def _validate_handoff_contract(self) -> ThemeGovernanceHandoffContract:
@@ -171,6 +200,17 @@ class FrontendThemeTokenGovernanceSet(FrontendThemeTokenGovernanceModel):
     custom_overrides: list[CustomThemeTokenOverride] = Field(default_factory=list)
     style_editor_boundary: StyleEditorBoundaryContract
     handoff_contract: ThemeGovernanceHandoffContract
+
+    @field_validator(
+        "source_work_item_ids",
+        "token_floor_disallowed_naked_values",
+        "style_pack_ids",
+        "override_precedence",
+        mode="before",
+    )
+    @classmethod
+    def _dedupe_governance_lists(cls, value: object) -> list[str]:
+        return _dedupe_strings(value)
 
     @model_validator(mode="after")
     def _validate_governance_set(self) -> FrontendThemeTokenGovernanceSet:

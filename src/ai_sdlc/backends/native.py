@@ -21,6 +21,15 @@ BACKEND_DELEGATION_TOKEN = "delegation"
 BACKEND_FALLBACK_TOKEN = "fallback"
 
 
+def _dedupe_text_items(values: object) -> tuple[str, ...]:
+    deduped: list[str] = []
+    for value in values or ():
+        normalized = str(value).strip()
+        if normalized and normalized not in deduped:
+            deduped.append(normalized)
+    return tuple(deduped)
+
+
 # ── protocol ──
 
 
@@ -55,6 +64,15 @@ class BackendCapabilityDeclaration:
     can_delegate: bool = True
     can_fallback_to_native: bool = True
 
+    def __post_init__(self) -> None:
+        object.__setattr__(
+            self,
+            "provided_capabilities",
+            _dedupe_text_items(self.provided_capabilities),
+        )
+        object.__setattr__(self, "delegation", _dedupe_text_items(self.delegation))
+        object.__setattr__(self, "fallback", _dedupe_text_items(self.fallback))
+
     def covers(self, required_capabilities: tuple[str, ...]) -> bool:
         """Return True when the declaration covers every required capability."""
         provided = set(self.provided_capabilities)
@@ -87,6 +105,9 @@ class BackendFailureEvidence:
     safe_to_fallback: bool
     evidence: tuple[str, ...] = ()
 
+    def __post_init__(self) -> None:
+        object.__setattr__(self, "evidence", _dedupe_text_items(self.evidence))
+
 
 @dataclass(frozen=True, slots=True)
 class BackendSelectionDecision:
@@ -104,6 +125,24 @@ class BackendSelectionDecision:
     evidence: tuple[str, ...]
     capability_declaration: BackendCapabilityDeclaration | None = None
     failure: BackendFailureEvidence | None = None
+
+    def __post_init__(self) -> None:
+        object.__setattr__(
+            self,
+            "required_capabilities",
+            _dedupe_text_items(self.required_capabilities),
+        )
+        object.__setattr__(
+            self,
+            "available_capabilities",
+            _dedupe_text_items(self.available_capabilities),
+        )
+        object.__setattr__(
+            self,
+            "missing_capabilities",
+            _dedupe_text_items(self.missing_capabilities),
+        )
+        object.__setattr__(self, "evidence", _dedupe_text_items(self.evidence))
 
     def to_status_view(self) -> dict[str, object]:
         """Return a read-only summary for verify / close-check consumers."""

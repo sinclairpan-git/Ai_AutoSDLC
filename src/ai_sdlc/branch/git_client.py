@@ -15,6 +15,15 @@ from pathlib import Path
 logger = logging.getLogger(__name__)
 
 
+def _dedupe_text_items(values: object) -> tuple[str, ...]:
+    deduped: list[str] = []
+    for value in values or ():
+        normalized = str(value).strip()
+        if normalized and normalized not in deduped:
+            deduped.append(normalized)
+    return tuple(deduped)
+
+
 class GitError(Exception):
     """Raised when a git operation fails."""
 
@@ -34,6 +43,13 @@ class IndexLockInspection:
     state: IndexLockState
     path: Path
     active_processes: tuple[str, ...] = ()
+
+    def __post_init__(self) -> None:
+        object.__setattr__(
+            self,
+            "active_processes",
+            _dedupe_text_items(self.active_processes),
+        )
 
 
 @dataclass(frozen=True, slots=True)

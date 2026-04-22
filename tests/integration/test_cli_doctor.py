@@ -73,6 +73,8 @@ def _write_branch_lifecycle_fixture(
     init_project(root)
     wi_dir = root / "specs" / wi_name
     wi_dir.mkdir(parents=True, exist_ok=True)
+    (wi_dir / "spec.md").write_text("# Spec\n", encoding="utf-8")
+    (wi_dir / "plan.md").write_text("# Plan\n", encoding="utf-8")
     (wi_dir / "tasks.md").write_text(
         "### Task 1.1 — 示例\n"
         "- **依赖**：无\n"
@@ -151,6 +153,17 @@ def test_doctor_runs_and_prints_python() -> None:
     assert "Python executable" in result.output
     assert "sys.prefix" in result.output
     assert "python -m ai_sdlc" in result.output
+    assert "doctor checks environment, telemetry, and status surfaces" in result.output
+    assert "It does not" in result.output
+    assert "install component libraries" in result.output
+    assert "frontend delivery rows here describe package" in result.output
+    assert "Separate inheritance rows describe whether" in result.output
+    assert "not inherited yet (risk)" in result.output
+    assert "wrong component library" in result.output
+    assert "standard" in result.output
+    assert "program solution-confirm --execute --continue --yes" in result.output
+    assert "program browser-gate-probe" in result.output
+    assert "--execute" in result.output
 
 
 def test_doctor_reports_telemetry_readiness_without_initializing_telemetry(
@@ -164,7 +177,7 @@ def test_doctor_reports_telemetry_readiness_without_initializing_telemetry(
     result = runner.invoke(app, ["doctor"])
 
     assert result.exit_code == 0
-    assert "Telemetry readiness" in result.output
+    assert "Environment and Status Diagnostics" in result.output
     assert "telemetry root writable" in result.output
     assert "manifest state" in result.output
     assert "registry parseability" in result.output
@@ -187,6 +200,352 @@ def test_doctor_reports_branch_lifecycle_readiness_row(
     assert result.exit_code == 0
     assert "branch lifecycle readiness" in result.output
     assert "codex/001-doctor-drift" in result.output
+    assert "next=" in result.output
+    assert "task-execution-log.md" in result.output
+    assert "deleted, or archived" not in result.output
+
+
+def test_doctor_surfaces_truth_ledger_next_action_from_status_surface(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    init_project(tmp_path)
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(
+        readiness,
+        "build_status_json_surface",
+        lambda _root: {
+            "telemetry": {"state": "ready"},
+            "workitem_diagnostics": {
+                "state": "action_required",
+                "source": "program_truth",
+                "truth_classification": "mainline_merged",
+                "frontend_delivery_status": {
+                    "provider_id": "public-primevue",
+                    "package_names": "primevue,@primeuix/themes",
+                    "runtime_delivery_state": "scaffolded",
+                    "download": "installed",
+                    "integration": "integrated",
+                    "browser_gate": "pending",
+                    "delivery": "apply_succeeded_pending_browser_gate",
+                },
+                "primary_reason": (
+                    "capability_blocked: frontend-mainline-delivery (blocked) | "
+                    "delivery: provider=public-primevue | packages=primevue,@primeuix/themes | "
+                    "runtime=scaffolded | download=downloaded | integration=integrated | "
+                    "browser_gate=waiting for evidence | delivery=applied, waiting for browser gate"
+                ),
+                "next_required_action": (
+                    "verify adapter canonical consumption and rerun python -m ai_sdlc program truth audit"
+                ),
+            },
+            "truth_ledger": {
+                "state": "blocked",
+                "detail": "release targets blocked: frontend-mainline-delivery (blocked)",
+                "release_capabilities": [
+                    {
+                        "capability_id": "frontend-mainline-delivery",
+                        "audit_state": "blocked",
+                        "frontend_delivery_status": {
+                            "provider_id": "public-primevue",
+                            "package_names": "primevue,@primeuix/themes",
+                            "runtime_delivery_state": "scaffolded",
+                            "download": "installed",
+                            "integration": "integrated",
+                            "browser_gate": "pending",
+                            "delivery": "apply_succeeded_pending_browser_gate",
+                        },
+                    }
+                ],
+                "next_required_action": (
+                    "verify adapter canonical consumption and rerun python -m ai_sdlc program truth audit"
+                ),
+            },
+        },
+    )
+
+    result = runner.invoke(app, ["doctor"])
+
+    assert result.exit_code == 0
+    assert "status --json surface" in result.output
+    assert "truth=blocked" in result.output
+    assert "truth_focus=" in result.output
+    assert "frontend-mainline-delivery" in result.output
+    assert "truth_frontend=" in result.output
+    assert "integration" in result.output
+    assert "integrated" in result.output
+    assert "browser check" in result.output
+    assert "waiting" in result.output
+    assert "evidence" in result.output
+    assert "delivery" in result.output
+    assert "applied" in result.output
+    assert "workitem_frontend=" in result.output
+    assert "verify adapter" in result.output
+    assert "canonical consumption" in result.output
+    assert "program truth audit" in result.output
+
+
+def test_doctor_surfaces_not_inherited_risk_in_status_surface(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    init_project(tmp_path)
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(
+        readiness,
+        "build_status_json_surface",
+        lambda _root: {
+            "telemetry": {"state": "ready"},
+            "workitem_diagnostics": {
+                "state": "action_required",
+                "source": "program_truth",
+                "truth_classification": "mainline_merged",
+                "frontend_inheritance_status": {
+                    "generation": "not_inherited",
+                    "quality": "not_inherited",
+                },
+                "primary_reason": (
+                    "capability_ready: frontend-mainline-delivery | "
+                    "frontend inheritance pending"
+                ),
+                "next_required_action": (
+                    "python -m ai_sdlc program generation-constraints-handoff"
+                ),
+            },
+            "truth_ledger": {
+                "state": "ready",
+                "detail": "truth ledger ready",
+                "release_capabilities": [
+                    {
+                        "capability_id": "frontend-mainline-delivery",
+                        "audit_state": "ready",
+                        "frontend_inheritance_status": {
+                            "generation": "not_inherited",
+                            "quality": "not_inherited",
+                        },
+                    }
+                ],
+                "next_required_action": (
+                    "python -m ai_sdlc program generation-constraints-handoff"
+                ),
+            },
+        },
+    )
+
+    result = runner.invoke(app, ["doctor"])
+
+    assert result.exit_code == 0
+    assert "truth_inheritance=" in result.output
+    assert "not inherited yet" in result.output
+    assert "risk" in result.output
+    assert "workitem_inheritance=" in result.output
+    assert "generation-constraints-handoff" in result.output
+
+
+def test_doctor_surfaces_stale_apply_artifact_in_status_surface(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    init_project(tmp_path)
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(
+        readiness,
+        "build_status_json_surface",
+        lambda _root: {
+            "telemetry": {"state": "ready"},
+            "truth_ledger": {
+                "state": "blocked",
+                "detail": "release targets blocked: frontend-mainline-delivery (blocked)",
+                "release_capabilities": [
+                    {
+                        "capability_id": "frontend-mainline-delivery",
+                        "audit_state": "blocked",
+                        "frontend_delivery_status": {
+                            "provider_id": "public-primevue",
+                            "package_names": "primevue,@primeuix/themes",
+                            "runtime_delivery_state": "scaffolded",
+                            "download": "not_installed",
+                            "integration": "not_integrated",
+                            "browser_gate": "not_started",
+                            "delivery": "stale_apply_artifact",
+                        },
+                    }
+                ],
+            },
+        },
+    )
+
+    result = runner.invoke(app, ["doctor"])
+
+    assert result.exit_code == 0
+    assert "truth_frontend=" in result.output
+    assert "stale apply artifact" in result.output
+    assert "not downloaded" in result.output
+    assert "not integrated" in result.output
+    assert "not started" in result.output
+
+
+def test_doctor_surfaces_browser_gate_scope_linkage_invalid_in_status_surface(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    init_project(tmp_path)
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(
+        readiness,
+        "build_status_json_surface",
+        lambda _root: {
+            "telemetry": {"state": "ready"},
+            "truth_ledger": {
+                "state": "blocked",
+                "detail": "release targets blocked: frontend-mainline-delivery (blocked)",
+                "release_capabilities": [
+                    {
+                        "capability_id": "frontend-mainline-delivery",
+                        "audit_state": "blocked",
+                        "frontend_delivery_status": {
+                            "provider_id": "public-primevue",
+                            "package_names": "primevue,@primeuix/themes",
+                            "runtime_delivery_state": "scaffolded",
+                            "download": "installed",
+                            "integration": "integrated",
+                            "browser_gate": "scope_or_linkage_invalid",
+                            "delivery": "apply_succeeded_pending_browser_gate",
+                        },
+                    }
+                ],
+            },
+        },
+    )
+
+    result = runner.invoke(app, ["doctor"])
+
+    assert result.exit_code == 0
+    assert "truth_frontend=" in result.output
+    assert "scope" in result.output
+    assert "linkage" in result.output
+    assert "invalid" in result.output
+    assert "downloaded" in result.output
+    assert "integrated" in result.output
+
+
+def test_doctor_surfaces_guard_summaries_from_status_surface(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    init_project(tmp_path)
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(
+        readiness,
+        "build_status_json_surface",
+        lambda _root: {
+            "telemetry": {"state": "ready"},
+            "formal_artifact_target": {
+                "state": "blocked",
+                "detail": "misplaced formal artifact detected",
+            },
+            "backlog_breach_guard": {
+                "state": "blocked",
+                "detail": "breach detected but not logged",
+            },
+            "execute_authorization": {
+                "state": "blocked",
+                "detail": "current_stage=verify",
+            },
+        },
+    )
+
+    result = runner.invoke(app, ["doctor"])
+
+    assert result.exit_code == 0
+    assert "status --json surface" in result.output
+    assert "formal=blocked" in result.output
+    assert "misplaced" in result.output
+    assert "formal artifact detected" in result.output
+    assert "backlog=blocked" in result.output
+    assert "breach detected" in result.output
+    assert "but not logged" in result.output
+    assert "execute=blocked" in result.output
+    assert "current_stage=verify" in result.output
+
+
+def test_doctor_surfaces_capability_closure_summary_from_status_surface(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    init_project(tmp_path)
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(
+        readiness,
+        "build_status_json_surface",
+        lambda _root: {
+            "telemetry": {"state": "ready"},
+            "capability_closure": {
+                "state": "open",
+                "detail": "2 open clusters; formal_only=1, partial=0, capability_open=1",
+                "open_clusters": [
+                    {
+                        "cluster_id": "project-meta-foundations",
+                        "closure_state": "formal_only",
+                    },
+                    {
+                        "cluster_id": "frontend-mainline-delivery",
+                        "closure_state": "capability_open",
+                    },
+                ],
+            },
+        },
+    )
+
+    result = runner.invoke(app, ["doctor"])
+
+    assert result.exit_code == 0
+    assert "status --json surface" in result.output
+    assert "closure=open" in result.output
+    assert "formal_only=1" in result.output
+    assert "capability_open=1" in result.output
+    assert "closure_focus=" in result.output
+    assert "frontend-mainline-delivery" in result.output
+    assert "capability_open" in result.output
+
+
+def test_doctor_surfaces_workitem_next_action_from_status_surface(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    init_project(tmp_path)
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(
+        readiness,
+        "build_status_json_surface",
+        lambda _root: {
+            "telemetry": {"state": "ready"},
+            "workitem_diagnostics": {
+                "state": "action_required",
+                "active_work_item": "001-wi",
+                "source": "branch_lifecycle",
+                "primary_reason": (
+                    "BLOCKER: branch lifecycle unresolved: codex/001-status-drift "
+                    "is associated with 001-wi, ahead of main by 1 commit(s), "
+                    "and branch disposition is unresolved"
+                ),
+                "truth_classification": "mainline_merged",
+                "truth_detail": (
+                    "requested revision contains execution evidence or implementation changes and is already contained in main"
+                ),
+                "next_required_action": (
+                    "decide whether codex/001-status-drift should be merged, deleted, or archived, then record that branch disposition in task-execution-log.md"
+                ),
+            },
+        },
+    )
+
+    result = runner.invoke(app, ["doctor"])
+
+    assert result.exit_code == 0
+    assert "status --json surface" in result.output
+    assert "workitem=action_required" in result.output
+    assert "workitem_source=branch_lifecycle" in result.output
+    assert "workitem_truth=mainline_merged" in result.output
+    assert "branch lifecycle unresolved" in result.output
+    assert "is associated with 001-wi" not in result.output
+    assert "workitem_next=" in result.output
+    assert "codex/001-status-drift" in result.output
+    assert "task-execution-log.md" in result.output
+    assert "deleted, or archived" not in result.output
 
 
 def test_doctor_real_cli_path_does_not_mutate_project_config(

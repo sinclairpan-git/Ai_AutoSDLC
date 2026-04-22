@@ -11,6 +11,9 @@ from typing import Any
 
 from ai_sdlc.core.frontend_contract_verification import FRONTEND_CONTRACT_SOURCE_NAME
 from ai_sdlc.core.frontend_gate_verification import FRONTEND_GATE_SOURCE_NAME
+from ai_sdlc.core.frontend_inheritance_truth import (
+    summarize_frontend_inheritance_status_for_display,
+)
 from ai_sdlc.gates.extra_gates import PostmortemGate
 from ai_sdlc.gates.task_ac_checks import (
     doc_first_execute_blocker,
@@ -18,6 +21,15 @@ from ai_sdlc.gates.task_ac_checks import (
 )
 from ai_sdlc.models.gate import GateCheck, GateResult, GateVerdict
 from ai_sdlc.utils.helpers import AI_SDLC_DIR
+
+
+def _dedupe_text_items(values: list[Any]) -> list[str]:
+    deduped: list[str] = []
+    for value in values:
+        normalized = str(value).strip()
+        if normalized and normalized not in deduped:
+            deduped.append(normalized)
+    return deduped
 
 
 class InitGate:
@@ -331,10 +343,10 @@ class VerificationGate:
             coverage_gaps (tuple[str, ...] | list[str]): optional coverage gaps.
         """
         checks: list[GateCheck] = []
-        sources = tuple(context.get("verification_sources", ()))
-        objects = tuple(context.get("verification_check_objects", ()))
-        blockers = tuple(context.get("constraint_blockers", ()))
-        coverage_gaps = tuple(context.get("coverage_gaps", ()))
+        sources = _string_tuple(context.get("verification_sources", ()))
+        objects = _string_tuple(context.get("verification_check_objects", ()))
+        blockers = _string_tuple(context.get("constraint_blockers", ()))
+        coverage_gaps = _string_tuple(context.get("coverage_gaps", ()))
         frontend_contract_payload = context.get("frontend_contract_verification")
         frontend_gate_payload = context.get("frontend_gate_verification")
 
@@ -362,7 +374,7 @@ class VerificationGate:
                 GateCheck(
                     name="verification_check_objects_declared",
                     passed=bool(objects),
-                    message=", ".join(objects)
+                    message=", ".join(_dedupe_text_items(list(objects)))
                     if objects
                     else "Verification Gate has no declared check objects",
                 )
@@ -373,7 +385,7 @@ class VerificationGate:
                     passed=len(blockers) == 0,
                     message=""
                     if not blockers
-                    else "; ".join(blockers[:3]),
+                    else "; ".join(_dedupe_text_items(list(blockers))[:3]),
                 )
             )
             checks.append(
@@ -382,7 +394,7 @@ class VerificationGate:
                     passed=len(coverage_gaps) == 0,
                     message=""
                     if not coverage_gaps
-                    else "; ".join(coverage_gaps[:3]),
+                    else "; ".join(_dedupe_text_items(list(coverage_gaps))[:3]),
                 )
             )
             if _frontend_contract_summary_requested(
@@ -512,7 +524,7 @@ def _frontend_contract_gate_checks(
             message=""
             if summary_declared
             else "frontend contract verification summary missing fields: "
-            + ", ".join(missing_payload_fields),
+            + ", ".join(_dedupe_text_items(missing_payload_fields)),
         ),
         GateCheck(
             name="frontend_contract_source_linked",
@@ -527,7 +539,9 @@ def _frontend_contract_gate_checks(
             message=""
             if summary_declared and not unlinked_objects
             else "frontend contract verification summary objects missing from verification_check_objects: "
-            + ", ".join(unlinked_objects or payload_objects),
+            + ", ".join(
+                _dedupe_text_items(list(unlinked_objects or payload_objects))
+            ),
         ),
         GateCheck(
             name="frontend_contract_status_clear",
@@ -613,7 +627,7 @@ def _frontend_gate_gate_checks(
             message=""
             if summary_declared
             else "frontend gate verification summary missing fields: "
-            + ", ".join(missing_payload_fields),
+            + ", ".join(_dedupe_text_items(missing_payload_fields)),
         ),
         GateCheck(
             name="frontend_gate_source_linked",
@@ -628,7 +642,9 @@ def _frontend_gate_gate_checks(
             message=""
             if summary_declared and not unlinked_objects
             else "frontend gate verification summary objects missing from verification_check_objects: "
-            + ", ".join(unlinked_objects or payload_objects),
+            + ", ".join(
+                _dedupe_text_items(list(unlinked_objects or payload_objects))
+            ),
         ),
         GateCheck(
             name="frontend_gate_status_clear",
@@ -650,7 +666,7 @@ def _string_tuple(value: object) -> tuple[str, ...]:
     items: list[str] = []
     for item in value:
         text = str(item).strip()
-        if text:
+        if text and text not in items:
             items.append(text)
     return tuple(items)
 
@@ -665,9 +681,14 @@ def _summarize_frontend_contract_status(
     if gate_verdict:
         details.append(f"gate_verdict={gate_verdict}")
     if blockers:
-        details.append("blockers=" + "; ".join(blockers[:2]))
+        details.append(
+            "blockers=" + "; ".join(_dedupe_text_items(list(blockers))[:2])
+        )
     if coverage_gaps:
-        details.append("coverage_gaps=" + ", ".join(coverage_gaps[:3]))
+        details.append(
+            "coverage_gaps="
+            + ", ".join(_dedupe_text_items(list(coverage_gaps))[:3])
+        )
     if details:
         return "frontend contract verification not clear: " + " | ".join(details)
     return "frontend contract verification not clear"
@@ -683,9 +704,14 @@ def _summarize_frontend_gate_status(
     if gate_verdict:
         details.append(f"gate_verdict={gate_verdict}")
     if blockers:
-        details.append("blockers=" + "; ".join(blockers[:2]))
+        details.append(
+            "blockers=" + "; ".join(_dedupe_text_items(list(blockers))[:2])
+        )
     if coverage_gaps:
-        details.append("coverage_gaps=" + ", ".join(coverage_gaps[:3]))
+        details.append(
+            "coverage_gaps="
+            + ", ".join(_dedupe_text_items(list(coverage_gaps))[:3])
+        )
     if details:
         return "frontend gate verification not clear: " + " | ".join(details)
     return "frontend gate verification not clear"
@@ -878,9 +904,30 @@ class DoneGate:
             truth_ready = context.get("program_truth_audit_ready", False)
             truth_detail = context.get("program_truth_audit_detail", "")
             truth_state = str(context.get("program_truth_audit_state", "")).strip()
+            truth_inheritance_status = context.get(
+                "program_truth_audit_frontend_inheritance_status", {}
+            )
+            truth_next_actions = _dedupe_text_items(
+                list(context.get("program_truth_audit_next_actions", []) or [])
+            )
             truth_message = str(truth_detail or "Program truth audit is not ready")
             if truth_state:
                 truth_message = f"state={truth_state}; {truth_message}"
+            if isinstance(truth_inheritance_status, dict) and truth_inheritance_status:
+                inheritance_summary = summarize_frontend_inheritance_status_for_display(
+                    truth_inheritance_status
+                )
+                if inheritance_summary:
+                    truth_message += f"; inheritance: {inheritance_summary}"
+                inheritance_risk = _done_gate_frontend_inheritance_risk_note(
+                    truth_inheritance_status
+                )
+                if inheritance_risk:
+                    truth_message += f"; risk: {inheritance_risk}"
+            if not truth_ready and truth_next_actions:
+                truth_message += "; next action: " + " ; ".join(
+                    _dedupe_text_items(list(truth_next_actions))[:2]
+                )
             checks.append(
                 GateCheck(
                     name="program_truth_audit_ready",
@@ -936,6 +983,21 @@ class DoneGate:
         all_passed = all(c.passed for c in checks)
         verdict = GateVerdict.PASS if all_passed else GateVerdict.RETRY
         return GateResult(stage="done", verdict=verdict, checks=checks)
+
+
+def _done_gate_frontend_inheritance_risk_note(
+    inheritance_status: dict[str, Any],
+) -> str:
+    generation_state = str(inheritance_status.get("generation", "")).strip()
+    quality_state = str(inheritance_status.get("quality", "")).strip()
+    if generation_state == "not_inherited" or quality_state == "not_inherited":
+        return (
+            "continuing may generate against the wrong component library or validate "
+            "against the wrong standard"
+        )
+    if generation_state == "blocked" or quality_state == "blocked":
+        return "later code generation or frontend tests remain blocked"
+    return ""
 
 
 def _all_user_stories_have_scenarios(content: str) -> bool:

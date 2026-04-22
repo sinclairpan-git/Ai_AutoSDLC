@@ -13,6 +13,7 @@ import pytest
 import yaml
 from typer.testing import CliRunner
 
+import ai_sdlc.core.program_service as program_service_module
 from ai_sdlc.cli.main import app
 from ai_sdlc.context.state import (
     build_resume_pack,
@@ -20,15 +21,32 @@ from ai_sdlc.context.state import (
     save_checkpoint,
     save_resume_pack,
 )
-from ai_sdlc.core.config import YamlStore, save_project_state
+from ai_sdlc.core.config import YamlStore, save_project_config, save_project_state
 from ai_sdlc.core.p1_artifacts import (
     save_execution_path,
     save_parallel_coordination_artifact,
     save_resume_point,
 )
+from ai_sdlc.generators.frontend_generation_constraint_artifacts import (
+    materialize_frontend_generation_constraint_artifacts,
+)
+from ai_sdlc.generators.frontend_provider_profile_artifacts import (
+    materialize_builtin_frontend_provider_profile_artifacts,
+)
+from ai_sdlc.generators.frontend_solution_confirmation_artifacts import (
+    materialize_frontend_solution_confirmation_artifacts,
+)
 from ai_sdlc.integrations.ide_adapter import acknowledge_adapter
+from ai_sdlc.models.frontend_generation_constraints import (
+    build_mvp_frontend_generation_constraints,
+)
+from ai_sdlc.models.frontend_solution_confirmation import (
+    build_builtin_install_strategies,
+    build_builtin_style_pack_manifests,
+    build_mvp_solution_snapshot,
+)
 from ai_sdlc.models.gate import GovernanceItem, GovernanceState
-from ai_sdlc.models.project import ProjectState, ProjectStatus
+from ai_sdlc.models.project import ProjectConfig, ProjectState, ProjectStatus
 from ai_sdlc.models.state import (
     Checkpoint,
     ExecuteProgress,
@@ -143,6 +161,8 @@ def _write_branch_lifecycle_fixture(
     init_project(root)
     wi_dir = root / "specs" / wi_name
     wi_dir.mkdir(parents=True, exist_ok=True)
+    (wi_dir / "spec.md").write_text("# Spec\n", encoding="utf-8")
+    (wi_dir / "plan.md").write_text("# Plan\n", encoding="utf-8")
     (wi_dir / "tasks.md").write_text(
         "### Task 1.1 — 示例\n"
         "- **依赖**：无\n"
@@ -275,6 +295,35 @@ specs:
 """.strip()
         + "\n",
         encoding="utf-8",
+    )
+
+
+def _write_builtin_frontend_delivery_truth(root: Path) -> None:
+    materialize_frontend_solution_confirmation_artifacts(
+        root,
+        style_packs=build_builtin_style_pack_manifests(),
+        install_strategies=build_builtin_install_strategies(),
+        snapshot=build_mvp_solution_snapshot(
+            project_id="001-auth",
+            requested_provider_id="public-primevue",
+            effective_provider_id="public-primevue",
+            recommended_provider_id="public-primevue",
+            requested_style_pack_id="modern-saas",
+            effective_style_pack_id="modern-saas",
+            recommended_style_pack_id="modern-saas",
+            requested_frontend_stack="vue3",
+            effective_frontend_stack="vue3",
+            recommended_frontend_stack="vue3",
+            style_fidelity_status="full",
+        ),
+    )
+    materialize_builtin_frontend_provider_profile_artifacts(
+        root,
+        provider_id="enterprise-vue2",
+    )
+    materialize_builtin_frontend_provider_profile_artifacts(
+        root,
+        provider_id="public-primevue",
     )
 
 
@@ -474,6 +523,7 @@ class TestCliStatus:
         assert set(payload) == {
             "telemetry",
             "branch_lifecycle",
+            "workitem_diagnostics",
             "formal_artifact_target",
             "backlog_breach_guard",
             "execute_authorization",
@@ -501,6 +551,7 @@ class TestCliStatus:
             "last_timestamp": "2026-03-27T09:00:00Z",
         }
         assert payload["branch_lifecycle"]["state"] == "unavailable"
+        assert payload["workitem_diagnostics"]["state"] == "unavailable"
         assert payload["adapter_governance"]["agent_target"] == "codex"
         assert payload["adapter_governance"]["adapter_ingress_state"] == "materialized"
         assert payload["adapter_governance"]["governance_activation_mode"] == "materialized_only"
@@ -1149,7 +1200,66 @@ def test_status_json_includes_bounded_branch_lifecycle_summary(
     assert payload["branch_lifecycle"]["state"] == "ready"
     assert payload["branch_lifecycle"]["blocking_count"] == 1
     assert payload["branch_lifecycle"]["active_work_item"] == "001-wi"
+    assert payload["branch_lifecycle"]["next_required_action"].startswith(
+        "decide whether codex/001-status-drift should be merged"
+    )
     assert payload["branch_lifecycle"]["sample_entries"][0]["name"] == "codex/001-status-drift"
+    diagnostics = payload["workitem_diagnostics"]
+    assert diagnostics["state"] == "action_required"
+    assert diagnostics["active_work_item"] == "001-wi"
+    assert diagnostics["source"] == "branch_lifecycle"
+    assert diagnostics["blocking_count"] == 2
+    assert diagnostics["actionable_count"] == 2
+    assert diagnostics["truth_classification"] == "mainline_merged"
+    assert diagnostics["truth_detail"].startswith(
+        "requested revision contains execution evidence"
+    )
+    assert diagnostics["next_required_action"].startswith(
+        "decide whether codex/001-status-drift should be merged"
+    )
+    assert len(diagnostics["items"]) == 3
+    branch_item, execute_auth_item, truth_item = diagnostics["items"]
+    assert branch_item["id"] == "branch_lifecycle"
+    assert branch_item["source"] == "branch_lifecycle"
+    assert branch_item["state"] == "warn"
+    assert branch_item["blocking"] is True
+    assert branch_item["actionable"] is True
+    assert branch_item["summary_token"] == "blocking_1"
+    assert "codex/001-status-drift" in branch_item["detail"]
+    assert branch_item["reason_codes"] == []
+    assert branch_item["next_required_actions"] == [
+        "decide whether codex/001-status-drift should be merged, deleted, or archived, then record that branch disposition in task-execution-log.md"
+    ]
+    assert execute_auth_item == {
+        "id": "execute_authorization",
+        "source": "execute_authorization",
+        "state": "warn",
+        "blocking": True,
+        "actionable": True,
+        "summary_token": "explicit_execute_authorization_missing",
+        "detail": (
+            "active work item has tasks.md, but repo truth has not entered execute; "
+            "remain in review-to-decompose; current_stage=verify"
+        ),
+        "reason_codes": ["explicit_execute_authorization_missing"],
+        "next_required_actions": [
+            "keep the work item in review-to-decompose until repo truth explicitly enters execute"
+        ],
+    }
+    assert truth_item == {
+        "id": "workitem_truth",
+        "source": "workitem_truth",
+        "state": "ready",
+        "blocking": False,
+        "actionable": False,
+        "summary_token": "mainline_merged",
+        "detail": (
+            "requested revision contains execution evidence or implementation changes "
+            "and is already contained in main"
+        ),
+        "reason_codes": [],
+        "next_required_actions": [],
+    }
 
 
 def test_status_json_includes_execute_authorization_blocker_when_tasks_missing(
@@ -1224,6 +1334,19 @@ def test_status_json_includes_execute_authorization_blocker_before_execute_stage
     assert summary["tasks_present"] is True
     assert summary["current_stage"] == "verify"
     assert "review-to-decompose" in summary["detail"]
+    diagnostics = payload["workitem_diagnostics"]
+    assert diagnostics["state"] == "action_required"
+    assert diagnostics["source"] == "execute_authorization"
+    assert diagnostics["next_required_action"].startswith(
+        "keep the work item in review-to-decompose"
+    )
+    assert any(
+        item["id"] == "execute_authorization"
+        and item["blocking"] is True
+        and item["actionable"] is True
+        and item["reason_codes"] == ["explicit_execute_authorization_missing"]
+        for item in diagnostics["items"]
+    )
 
 
 def test_status_text_surfaces_execute_authorization_detail(
@@ -1261,6 +1384,73 @@ def test_status_text_surfaces_execute_authorization_detail(
     assert "current_stage=verify" in result.output
 
 
+def test_status_text_consumes_guard_summaries_from_status_surface(tmp_path: Path) -> None:
+    init_project(tmp_path)
+
+    def _unexpected(*args: object, **kwargs: object) -> object:
+        raise AssertionError("status text should consume prebuilt status_surface guards")
+
+    with (
+        patch("ai_sdlc.cli.commands.find_project_root", return_value=tmp_path),
+        patch(
+            "ai_sdlc.cli.commands.build_status_json_surface",
+            return_value={
+                "telemetry": {"state": "ready", "current": None, "latest": None},
+                "branch_lifecycle": {
+                    "state": "unavailable",
+                    "detail": "no active work item checkpoint",
+                },
+                "workitem_diagnostics": {
+                    "state": "unavailable",
+                    "detail": "no active work item checkpoint",
+                },
+                "formal_artifact_target": {
+                    "state": "blocked",
+                    "detail": "misplaced formal artifact detected",
+                    "reason_codes": ["misplaced_formal_artifact_detected"],
+                },
+                "backlog_breach_guard": {
+                    "state": "blocked",
+                    "detail": "breach detected but not logged",
+                    "reason_codes": ["breach_detected_but_not_logged"],
+                },
+                "execute_authorization": {
+                    "state": "blocked",
+                    "detail": "current_stage=verify",
+                    "reason_codes": ["explicit_execute_authorization_missing"],
+                },
+                "adapter_governance": {
+                    "agent_target": "codex",
+                    "adapter_ingress_state": "verified_loaded",
+                    "adapter_verification_result": "verified_loaded",
+                    "adapter_canonical_path": "AGENTS.md",
+                    "adapter_activation_state": "materialized",
+                    "governance_activation_mode": "strict",
+                    "governance_activation_detail": "verified",
+                },
+            },
+        ),
+        patch("ai_sdlc.cli.commands.evaluate_execute_authorization", side_effect=_unexpected),
+        patch(
+            "ai_sdlc.cli.commands.evaluate_formal_artifact_target_guard",
+            side_effect=_unexpected,
+        ),
+        patch(
+            "ai_sdlc.cli.commands.evaluate_backlog_breach_guard",
+            side_effect=_unexpected,
+        ),
+    ):
+        result = runner.invoke(app, ["status"])
+
+    assert result.exit_code == 0, result.output
+    assert "Formal Artifact Target" in result.output
+    assert "misplaced formal artifact detected" in result.output
+    assert "Backlog Breach Guard" in result.output
+    assert "breach detected but not logged" in result.output
+    assert "Execute Authorization" in result.output
+    assert "current_stage=verify" in result.output
+
+
 def test_status_json_includes_formal_artifact_target_guard_summary(
     tmp_path: Path,
 ) -> None:
@@ -1293,6 +1483,143 @@ def test_status_json_includes_backlog_breach_guard_summary(
     assert summary["state"] == "blocked"
     assert summary["reason_codes"] == ["breach_detected_but_not_logged"]
     assert summary["missing_ids"] == ["FD-2026-04-07-002"]
+
+
+def test_status_json_surfaces_backlog_breach_guard_in_workitem_diagnostics(
+    tmp_path: Path,
+) -> None:
+    _init_git_repo(tmp_path)
+    init_project(tmp_path)
+    spec_dir = tmp_path / "specs" / "117-formal-artifact-target-guard-baseline"
+    spec_dir.mkdir(parents=True, exist_ok=True)
+    (spec_dir / "spec.md").write_text(
+        "# 功能规格：Demo\n\n承接 `FD-2026-04-07-002`。\n",
+        encoding="utf-8",
+    )
+    (spec_dir / "plan.md").write_text("# Plan\n", encoding="utf-8")
+    (spec_dir / "tasks.md").write_text("# Tasks\n", encoding="utf-8")
+    (spec_dir / "task-execution-log.md").write_text("# Log\n\nexecution evidence\n", encoding="utf-8")
+    _commit_all(tmp_path, "docs: seed backlog breach workitem diagnostic fixture")
+    save_checkpoint(
+        tmp_path,
+        Checkpoint(
+            current_stage="close",
+            feature=FeatureInfo(
+                id="117",
+                spec_dir="specs/117-formal-artifact-target-guard-baseline",
+                design_branch="design/117",
+                feature_branch="feature/117",
+                current_branch="main",
+            ),
+        ),
+    )
+
+    with patch("ai_sdlc.cli.commands.find_project_root", return_value=tmp_path):
+        result = runner.invoke(app, ["status", "--json"])
+
+    assert result.exit_code == 0, result.output
+    payload = json.loads(result.output)
+    diagnostics = payload["workitem_diagnostics"]
+    assert diagnostics["primary_reason"].startswith(
+        "breach_detected_but_not_logged"
+    )
+    assert any(
+        item["id"] == "backlog_breach_guard"
+        and item["blocking"] is True
+        and item["actionable"] is True
+        and item["summary_token"] == "breach_detected_but_not_logged"
+        and item["reason_codes"] == ["breach_detected_but_not_logged"]
+        and item["next_required_actions"] == [
+            "add the missing framework defect ids to docs/framework-defect-backlog.zh-CN.md"
+        ]
+        for item in diagnostics["items"]
+    )
+
+
+def test_status_json_prefers_more_concrete_workitem_action_over_program_truth_governance(
+    tmp_path: Path,
+) -> None:
+    _init_git_repo(tmp_path)
+    init_project(tmp_path)
+    _write_truth_ledger_fixture(tmp_path)
+    _write_builtin_frontend_delivery_truth(tmp_path)
+    spec_dir = tmp_path / "specs" / "001-auth"
+    (spec_dir / "spec.md").write_text(
+        "# Spec\n\n承接 `FD-2026-04-07-002`。\n",
+        encoding="utf-8",
+    )
+    (spec_dir / "task-execution-log.md").write_text(
+        "# Log\n\nexecution evidence\n",
+        encoding="utf-8",
+    )
+    _commit_all(tmp_path, "docs: seed mixed backlog and program truth blockers")
+    save_checkpoint(
+        tmp_path,
+        Checkpoint(
+            current_stage="close",
+            feature=FeatureInfo(
+                id="001-auth",
+                spec_dir="specs/001-auth",
+                design_branch="design/001-auth",
+                feature_branch="feature/001-auth",
+                current_branch="main",
+            ),
+        ),
+    )
+    save_project_config(
+        tmp_path,
+        ProjectConfig(adapter_ingress_state="verified_loaded"),
+    )
+
+    svc = program_service_module.ProgramService(tmp_path)
+    request = svc.build_frontend_managed_delivery_apply_request()
+    with patch(
+        "ai_sdlc.core.managed_delivery_apply.subprocess.run",
+        return_value=subprocess.CompletedProcess(args=["pnpm"], returncode=0),
+    ):
+        result = svc.execute_frontend_managed_delivery_apply(
+            request=request,
+            confirmed=True,
+        )
+    svc.write_frontend_managed_delivery_apply_artifact(
+        request=request,
+        result=result,
+        generated_at="2026-04-20T09:00:00Z",
+    )
+
+    with patch("ai_sdlc.cli.program_cmd.find_project_root", return_value=tmp_path):
+        sync = runner.invoke(
+            app,
+            ["program", "truth", "sync", "--execute", "--yes"],
+        )
+
+    assert sync.exit_code == 0, sync.output
+
+    with patch("ai_sdlc.cli.commands.find_project_root", return_value=tmp_path):
+        result = runner.invoke(app, ["status", "--json"])
+
+    assert result.exit_code == 0, result.output
+    payload = json.loads(result.output)
+    diagnostics = payload["workitem_diagnostics"]
+    assert diagnostics["source"] == "backlog_breach_guard"
+    assert diagnostics["next_required_action"] == (
+        "add the missing framework defect ids to docs/framework-defect-backlog.zh-CN.md"
+    )
+    assert diagnostics["frontend_delivery_status"] == {
+        "provider_id": "public-primevue",
+        "package_names": "primevue,@primeuix/themes",
+        "runtime_delivery_state": "scaffolded",
+        "download": "installed",
+        "integration": "integrated",
+        "browser_gate": "pending",
+        "delivery": "apply_succeeded_pending_browser_gate",
+    }
+    assert diagnostics["items"][0]["id"] == "backlog_breach_guard"
+    assert any(
+        item["id"] == "program_truth"
+        and item["frontend_delivery_status"] == diagnostics["frontend_delivery_status"]
+        for item in diagnostics["items"]
+    )
 
 
 def test_status_json_includes_bounded_frontend_evidence_class_summary(
@@ -1344,6 +1671,65 @@ specs:
     }
     assert "source_of_truth_path" not in json.dumps(summary)
     assert "human_remediation_hint" not in json.dumps(summary)
+
+
+def test_status_json_surfaces_frontend_evidence_class_in_workitem_diagnostics(
+    tmp_path: Path,
+) -> None:
+    _init_git_repo(tmp_path)
+    init_project(tmp_path)
+    _write_frontend_evidence_class_spec(
+        tmp_path,
+        spec_rel="specs/082-frontend-example",
+        frontend_evidence_class="framework_capability",
+    )
+    spec_dir = tmp_path / "specs" / "082-frontend-example"
+    (spec_dir / "plan.md").write_text("# Plan\n", encoding="utf-8")
+    (spec_dir / "tasks.md").write_text("# Tasks\n", encoding="utf-8")
+    (spec_dir / "task-execution-log.md").write_text("# Log\n\nexecution evidence\n", encoding="utf-8")
+    (tmp_path / "program-manifest.yaml").write_text(
+        """
+schema_version: "1"
+specs:
+  - id: "082-frontend-example"
+    path: "specs/082-frontend-example"
+    depends_on: []
+""".strip()
+        + "\n",
+        encoding="utf-8",
+    )
+    _commit_all(tmp_path, "docs: seed frontend evidence class diagnostic fixture")
+    save_checkpoint(
+        tmp_path,
+        Checkpoint(
+            current_stage="close",
+            feature=FeatureInfo(
+                id="082-frontend-example",
+                spec_dir="specs/082-frontend-example",
+                design_branch="design/082-frontend-example",
+                feature_branch="feature/082-frontend-example",
+                current_branch="main",
+            ),
+        ),
+    )
+
+    with patch("ai_sdlc.cli.commands.find_project_root", return_value=tmp_path):
+        result = runner.invoke(app, ["status", "--json"])
+
+    assert result.exit_code == 0, result.output
+    payload = json.loads(result.output)
+    diagnostics = payload["workitem_diagnostics"]
+    assert any(
+        item["id"] == "frontend_evidence_class"
+        and item["blocking"] is True
+        and item["actionable"] is True
+        and item["summary_token"] == "mirror_missing"
+        and item["reason_codes"] == ["frontend_evidence_class_mirror_drift"]
+        and item["next_required_actions"] == [
+            "sync frontend_evidence_class in program-manifest.yaml to match the spec footer metadata"
+        ]
+        for item in diagnostics["items"]
+    )
 
 
 def test_status_json_includes_capability_closure_summary(
@@ -1431,14 +1817,922 @@ def test_status_json_includes_truth_ledger_summary(tmp_path: Path) -> None:
     assert summary["state"] == "blocked"
     assert summary["snapshot_state"] == "fresh"
     assert summary["release_targets"] == ["frontend-mainline-delivery"]
-    assert summary["release_capabilities"] == [
-        {
-            "capability_id": "frontend-mainline-delivery",
-            "closure_state": "capability_open",
-            "audit_state": "blocked",
-            "blocking_refs": summary["release_capabilities"][0]["blocking_refs"],
-        }
+    assert len(summary["release_capabilities"]) == 1
+    capability = summary["release_capabilities"][0]
+    assert capability["capability_id"] == "frontend-mainline-delivery"
+    assert capability["closure_state"] == "capability_open"
+    assert capability["audit_state"] == "blocked"
+    assert capability["blocking_refs"]
+    assert capability["blocking_reason_summary"]
+    assert capability["capability_next_actions"]
+
+
+def test_status_json_promotes_spec_scoped_program_truth_into_workitem_diagnostics(
+    tmp_path: Path,
+) -> None:
+    _init_git_repo(tmp_path)
+    init_project(tmp_path)
+    _write_truth_ledger_fixture(tmp_path)
+    _write_builtin_frontend_delivery_truth(tmp_path)
+    (tmp_path / "specs" / "001-auth" / "task-execution-log.md").write_text(
+        "# Log\n\nexecution evidence\n",
+        encoding="utf-8",
+    )
+    _commit_all(tmp_path, "docs: seed spec-scoped program truth fixture")
+    save_checkpoint(
+        tmp_path,
+        Checkpoint(
+            current_stage="close",
+            feature=FeatureInfo(
+                id="001-auth",
+                spec_dir="specs/001-auth",
+                design_branch="design/001-auth",
+                feature_branch="feature/001-auth",
+                current_branch="main",
+            ),
+        ),
+    )
+    save_project_config(
+        tmp_path,
+        ProjectConfig(adapter_ingress_state="verified_loaded"),
+    )
+
+    svc = program_service_module.ProgramService(tmp_path)
+    request = svc.build_frontend_managed_delivery_apply_request()
+    with patch(
+        "ai_sdlc.core.managed_delivery_apply.subprocess.run",
+        return_value=subprocess.CompletedProcess(args=["pnpm"], returncode=0),
+    ):
+        result = svc.execute_frontend_managed_delivery_apply(
+            request=request,
+            confirmed=True,
+        )
+    svc.write_frontend_managed_delivery_apply_artifact(
+        request=request,
+        result=result,
+        generated_at="2026-04-20T09:00:00Z",
+    )
+
+    with patch("ai_sdlc.cli.program_cmd.find_project_root", return_value=tmp_path):
+        sync = runner.invoke(
+            app,
+            ["program", "truth", "sync", "--execute", "--yes"],
+        )
+
+    assert sync.exit_code == 0, sync.output
+
+    with patch("ai_sdlc.cli.commands.find_project_root", return_value=tmp_path):
+        result = runner.invoke(app, ["status", "--json"])
+
+    assert result.exit_code == 0, result.output
+    payload = json.loads(result.output)
+    diagnostics = payload["workitem_diagnostics"]
+    assert diagnostics["state"] == "action_required"
+    assert diagnostics["source"] == "program_truth"
+    assert diagnostics["next_required_action"] == (
+        "python -m ai_sdlc program generation-constraints-handoff"
+    )
+    assert any(
+        item["id"] == "program_truth"
+        and item["blocking"] is True
+        and item["actionable"] is True
+        and item["summary_token"] == "capability_blocked"
+        and "frontend-mainline-delivery" in item["detail"]
+        and "provider=public-primevue" in item["detail"]
+        and "download=downloaded" in item["detail"]
+        and "integration=integrated" in item["detail"]
+        and "browser_gate=waiting for evidence" in item["detail"]
+        and "delivery=applied, waiting for browser gate" in item["detail"]
+        and item["next_required_actions"]
+        for item in diagnostics["items"]
+    )
+    assert diagnostics["frontend_delivery_status"] == {
+        "provider_id": "public-primevue",
+        "package_names": "primevue,@primeuix/themes",
+        "runtime_delivery_state": "scaffolded",
+        "download": "installed",
+        "integration": "integrated",
+        "browser_gate": "pending",
+        "delivery": "apply_succeeded_pending_browser_gate",
+    }
+    assert diagnostics["frontend_delivery_scope"] == "package_delivery_only"
+    assert diagnostics["frontend_inheritance_status"] == {
+        "generation": "not_inherited",
+        "quality": "not_inherited",
+    }
+    program_truth_item = next(
+        item for item in diagnostics["items"] if item["id"] == "program_truth"
+    )
+    assert program_truth_item["frontend_delivery_status"] == diagnostics[
+        "frontend_delivery_status"
     ]
+    assert program_truth_item["frontend_delivery_scope"] == "package_delivery_only"
+    assert program_truth_item["frontend_inheritance_status"] == {
+        "generation": "not_inherited",
+        "quality": "not_inherited",
+    }
+    truth_ledger_capability = payload["truth_ledger"]["release_capabilities"][0]
+    assert truth_ledger_capability["frontend_delivery_status"] == {
+        "provider_id": "public-primevue",
+        "package_names": "primevue,@primeuix/themes",
+        "runtime_delivery_state": "scaffolded",
+        "download": "installed",
+        "integration": "integrated",
+        "browser_gate": "pending",
+        "delivery": "apply_succeeded_pending_browser_gate",
+    }
+    assert truth_ledger_capability["frontend_delivery_scope"] == "package_delivery_only"
+    assert truth_ledger_capability["frontend_inheritance_status"] == {
+        "generation": "not_inherited",
+        "quality": "not_inherited",
+    }
+
+
+def test_status_json_surfaces_stale_apply_artifact_in_frontend_delivery_truth(
+    tmp_path: Path,
+) -> None:
+    _init_git_repo(tmp_path)
+    init_project(tmp_path)
+    _write_truth_ledger_fixture(tmp_path)
+    _write_builtin_frontend_delivery_truth(tmp_path)
+    (tmp_path / "specs" / "001-auth" / "task-execution-log.md").write_text(
+        "# Log\n\nexecution evidence\n",
+        encoding="utf-8",
+    )
+    _commit_all(tmp_path, "docs: seed stale apply artifact status fixture")
+    save_checkpoint(
+        tmp_path,
+        Checkpoint(
+            current_stage="close",
+            feature=FeatureInfo(
+                id="001-auth",
+                spec_dir="specs/001-auth",
+                design_branch="design/001-auth",
+                feature_branch="feature/001-auth",
+                current_branch="main",
+            ),
+        ),
+    )
+    save_project_config(
+        tmp_path,
+        ProjectConfig(adapter_ingress_state="verified_loaded"),
+    )
+
+    svc = program_service_module.ProgramService(tmp_path)
+    request = svc.build_frontend_managed_delivery_apply_request()
+    with patch(
+        "ai_sdlc.core.managed_delivery_apply.subprocess.run",
+        return_value=subprocess.CompletedProcess(args=["pnpm"], returncode=0),
+    ):
+        apply_result = svc.execute_frontend_managed_delivery_apply(
+            request=request,
+            confirmed=True,
+        )
+    artifact_path = svc.write_frontend_managed_delivery_apply_artifact(
+        request=request,
+        result=apply_result,
+        generated_at="2026-04-20T09:00:00Z",
+    )
+    payload = yaml.safe_load(artifact_path.read_text(encoding="utf-8"))
+    payload["execution_view"]["action_items"][0]["source_linkage_refs"][
+        "solution_snapshot_id"
+    ] = "snapshot-stale"
+    artifact_path.write_text(
+        yaml.safe_dump(payload, sort_keys=False, allow_unicode=True),
+        encoding="utf-8",
+    )
+
+    with patch("ai_sdlc.cli.program_cmd.find_project_root", return_value=tmp_path):
+        sync = runner.invoke(app, ["program", "truth", "sync", "--execute", "--yes"])
+
+    assert sync.exit_code == 0, sync.output
+
+    with patch("ai_sdlc.cli.commands.find_project_root", return_value=tmp_path):
+        result = runner.invoke(app, ["status", "--json"])
+
+    assert result.exit_code == 0, result.output
+    status_payload = json.loads(result.output)
+    capability = status_payload["truth_ledger"]["release_capabilities"][0]
+    assert capability["frontend_delivery_status"] == {
+        "provider_id": "public-primevue",
+        "package_names": "primevue,@primeuix/themes",
+        "runtime_delivery_state": "scaffolded",
+        "download": "not_installed",
+        "integration": "not_integrated",
+        "browser_gate": "not_started",
+        "delivery": "stale_apply_artifact",
+    }
+    assert capability["frontend_delivery_scope"] == "package_delivery_only"
+    assert capability["frontend_inheritance_status"] == {
+        "generation": "not_inherited",
+        "quality": "not_inherited",
+    }
+    assert "delivery=stale apply artifact" in capability["frontend_delivery_summary"]
+    diagnostics = status_payload["workitem_diagnostics"]
+    program_truth_item = next(
+        item for item in diagnostics["items"] if item["id"] == "program_truth"
+    )
+    assert program_truth_item["frontend_delivery_status"] == capability[
+        "frontend_delivery_status"
+    ]
+    assert program_truth_item["frontend_delivery_scope"] == "package_delivery_only"
+    assert program_truth_item["frontend_inheritance_status"] == {
+        "generation": "not_inherited",
+        "quality": "not_inherited",
+    }
+
+
+def test_status_json_surfaces_browser_gate_scope_linkage_invalid_in_frontend_delivery_truth(
+    tmp_path: Path,
+) -> None:
+    _init_git_repo(tmp_path)
+    init_project(tmp_path)
+    _write_truth_ledger_fixture(tmp_path)
+    _write_builtin_frontend_delivery_truth(tmp_path)
+    (tmp_path / "specs" / "001-auth" / "task-execution-log.md").write_text(
+        "# Log\n\nexecution evidence\n",
+        encoding="utf-8",
+    )
+    _commit_all(tmp_path, "docs: seed browser gate drift status fixture")
+    save_checkpoint(
+        tmp_path,
+        Checkpoint(
+            current_stage="close",
+            feature=FeatureInfo(
+                id="001-auth",
+                spec_dir="specs/001-auth",
+                design_branch="design/001-auth",
+                feature_branch="feature/001-auth",
+                current_branch="main",
+            ),
+        ),
+    )
+    save_project_config(
+        tmp_path,
+        ProjectConfig(adapter_ingress_state="verified_loaded"),
+    )
+
+    svc = program_service_module.ProgramService(tmp_path)
+    request = svc.build_frontend_managed_delivery_apply_request()
+    with patch(
+        "ai_sdlc.core.managed_delivery_apply.subprocess.run",
+        return_value=subprocess.CompletedProcess(args=["pnpm"], returncode=0),
+    ):
+        apply_result = svc.execute_frontend_managed_delivery_apply(
+            request=request,
+            confirmed=True,
+        )
+    svc.write_frontend_managed_delivery_apply_artifact(
+        request=request,
+        result=apply_result,
+        generated_at="2026-04-20T09:00:00Z",
+    )
+    probe_request = svc.build_frontend_browser_gate_probe_request()
+    probe_result = svc.execute_frontend_browser_gate_probe(
+        request=probe_request,
+        generated_at="2026-04-20T09:05:00Z",
+    )
+    artifact_path = tmp_path / probe_result.artifact_path
+    payload = yaml.safe_load(artifact_path.read_text(encoding="utf-8"))
+    payload["bundle_input"]["spec_dir"] = "specs/002-course"
+    artifact_path.write_text(
+        yaml.safe_dump(payload, sort_keys=False, allow_unicode=True),
+        encoding="utf-8",
+    )
+
+    with patch("ai_sdlc.cli.program_cmd.find_project_root", return_value=tmp_path):
+        sync = runner.invoke(app, ["program", "truth", "sync", "--execute", "--yes"])
+
+    assert sync.exit_code == 0, sync.output
+
+    with patch("ai_sdlc.cli.commands.find_project_root", return_value=tmp_path):
+        result = runner.invoke(app, ["status", "--json"])
+
+    assert result.exit_code == 0, result.output
+    status_payload = json.loads(result.output)
+    capability = status_payload["truth_ledger"]["release_capabilities"][0]
+    assert capability["frontend_delivery_status"] == {
+        "provider_id": "public-primevue",
+        "package_names": "primevue,@primeuix/themes",
+        "runtime_delivery_state": "scaffolded",
+        "download": "installed",
+        "integration": "integrated",
+        "browser_gate": "scope_or_linkage_invalid",
+        "delivery": "apply_succeeded_pending_browser_gate",
+    }
+    assert capability["frontend_delivery_scope"] == "package_delivery_only"
+    assert capability["frontend_inheritance_status"] == {
+        "generation": "not_inherited",
+        "quality": "not_inherited",
+    }
+    assert "browser_gate=scope or linkage invalid" in capability[
+        "frontend_delivery_summary"
+    ]
+
+
+def test_status_json_blocks_frontend_inheritance_drift_in_truth_ledger(
+    tmp_path: Path,
+) -> None:
+    _init_git_repo(tmp_path)
+    init_project(tmp_path)
+    _write_truth_ledger_fixture(tmp_path)
+    _write_builtin_frontend_delivery_truth(tmp_path)
+    materialize_frontend_generation_constraint_artifacts(
+        tmp_path,
+        build_mvp_frontend_generation_constraints(
+            effective_provider_id="public-primevue",
+            delivery_entry_id="drifted-delivery-entry",
+            component_library_packages=["primevue", "@primeuix/themes"],
+            provider_theme_adapter_id="public-primevue-theme-bridge",
+            page_schema_ids=[
+                "dashboard-workspace",
+                "search-list-workspace",
+                "wizard-workspace",
+            ],
+        ),
+    )
+    payload = yaml.safe_load((tmp_path / "program-manifest.yaml").read_text(encoding="utf-8"))
+    payload["capability_closure_audit"] = {
+        "reviewed_at": "2026-04-20T09:00:00Z",
+        "open_clusters": [],
+    }
+    (tmp_path / "program-manifest.yaml").write_text(
+        yaml.safe_dump(payload, sort_keys=False, allow_unicode=True),
+        encoding="utf-8",
+    )
+    (tmp_path / "specs" / "001-auth" / "task-execution-log.md").write_text(
+        "# Log\n\nexecution evidence\n",
+        encoding="utf-8",
+    )
+    _commit_all(tmp_path, "docs: seed inheritance blocker status fixture")
+    save_checkpoint(
+        tmp_path,
+        Checkpoint(
+            current_stage="close",
+            feature=FeatureInfo(
+                id="001-auth",
+                spec_dir="specs/001-auth",
+                design_branch="design/001-auth",
+                feature_branch="feature/001-auth",
+                current_branch="main",
+            ),
+        ),
+    )
+    save_project_config(
+        tmp_path,
+        ProjectConfig(adapter_ingress_state="verified_loaded"),
+    )
+
+    with (
+        patch.object(
+            program_service_module.ProgramService,
+            "_run_close_check_ref",
+            return_value={"ok": True, "blockers": [], "checks": [], "error": None},
+        ),
+        patch.object(
+            program_service_module.ProgramService,
+            "_run_verify_ref",
+            return_value={
+                "ok": True,
+                "command": "uv run ai-sdlc verify constraints",
+                "blockers": [],
+                "warnings": [],
+            },
+        ),
+        patch("ai_sdlc.cli.program_cmd.find_project_root", return_value=tmp_path),
+    ):
+        sync = runner.invoke(app, ["program", "truth", "sync", "--execute", "--yes"])
+
+    assert sync.exit_code == 0, sync.output
+
+    with (
+        patch.object(
+            program_service_module.ProgramService,
+            "_run_close_check_ref",
+            return_value={"ok": True, "blockers": [], "checks": [], "error": None},
+        ),
+        patch.object(
+            program_service_module.ProgramService,
+            "_run_verify_ref",
+            return_value={
+                "ok": True,
+                "command": "uv run ai-sdlc verify constraints",
+                "blockers": [],
+                "warnings": [],
+            },
+        ),
+        patch("ai_sdlc.cli.commands.find_project_root", return_value=tmp_path),
+    ):
+        result = runner.invoke(app, ["status", "--json"])
+
+    assert result.exit_code == 0, result.output
+    status_payload = json.loads(result.output)
+    capability = status_payload["truth_ledger"]["release_capabilities"][0]
+    assert capability["audit_state"] == "blocked"
+    assert capability["blocking_refs"] == ["frontend_inheritance:generation"]
+    assert capability["blocking_reason_summary"] == (
+        "frontend code generation inheritance is blocked"
+    )
+    assert capability["capability_next_actions"] == [
+        "python -m ai_sdlc program generation-constraints-handoff"
+    ]
+    assert capability["frontend_inheritance_status"] == {
+        "generation": "blocked",
+        "quality": "not_inherited",
+    }
+    diagnostics = status_payload["workitem_diagnostics"]
+    assert diagnostics["state"] == "action_required"
+    assert diagnostics["source"] == "program_truth"
+    assert diagnostics["frontend_inheritance_status"] == {
+        "generation": "blocked",
+        "quality": "not_inherited",
+    }
+
+
+def test_status_text_surfaces_truth_ledger_guidance_summary(tmp_path: Path) -> None:
+    init_project(tmp_path)
+
+    with (
+        patch("ai_sdlc.cli.commands.find_project_root", return_value=tmp_path),
+        patch(
+            "ai_sdlc.cli.commands.build_status_json_surface",
+            return_value={
+                "telemetry": {"state": "ready", "current": None, "latest": None},
+                "branch_lifecycle": {
+                    "state": "clean",
+                    "current_branch": "main",
+                    "work_item_branch": None,
+                    "has_uncommitted_changes": False,
+                    "has_staged_changes": False,
+                    "last_commit_summary": "",
+                },
+                "formal_artifact_target": {"state": "ready", "detail": "", "reason_codes": []},
+                "backlog_breach_guard": {"state": "ready", "detail": "", "reason_codes": []},
+                "execute_authorization": {"state": "ready", "detail": "", "reason_codes": []},
+                "adapter_governance": {
+                    "agent_target": "codex",
+                    "adapter_ingress_state": "verified_loaded",
+                    "adapter_verification_result": "verified_loaded",
+                    "adapter_canonical_path": "AGENTS.md",
+                    "adapter_activation_state": "materialized",
+                    "governance_activation_mode": "strict",
+                    "governance_activation_detail": "verified",
+                },
+                "truth_ledger": {
+                    "state": "blocked",
+                    "snapshot_state": "fresh",
+                    "detail": "release targets blocked: frontend-mainline-delivery (blocked)",
+                    "release_targets": ["frontend-mainline-delivery"],
+                    "release_capabilities": [
+                        {
+                            "capability_id": "frontend-mainline-delivery",
+                            "audit_state": "blocked",
+                                "frontend_delivery_status": {
+                                    "provider_id": "public-primevue",
+                                    "package_names": "primevue,@primeuix/themes",
+                                    "runtime_delivery_state": "scaffolded",
+                                    "download": "installed",
+                                    "integration": "integrated",
+                                    "browser_gate": "pending",
+                                "delivery": "apply_succeeded_pending_browser_gate",
+                                },
+                            "frontend_inheritance_status": {
+                                "generation": "unknown",
+                                "quality": "blocked",
+                            },
+                            "plain_language_blockers": [
+                                "browser gate evidence is still missing",
+                                "frontend test inheritance is blocked",
+                                "frontend code generation inheritance is not clear yet",
+                            ],
+                            "recommended_next_steps": [
+                                "verify adapter canonical consumption and rerun python -m ai_sdlc program truth audit",
+                                "python -m ai_sdlc program generation-constraints-handoff",
+                                "python -m ai_sdlc program quality-platform-handoff",
+                            ],
+                        }
+                    ],
+                },
+            },
+        ),
+    ):
+        result = runner.invoke(app, ["status"])
+
+    assert result.exit_code == 0, result.output
+    assert "Truth Ledger Explain" in result.output
+    assert "browser gate evidence is still missing" in result.output
+    assert "frontend test inheritance is blocked" in result.output
+    assert "frontend code generation inheritance is not" in result.output
+    assert "clear yet" in result.output
+    assert "Truth Ledger Frontend" in result.output
+    assert "Truth Ledger Frontend Scope" in result.output
+    assert "package delivery only" in result.output
+    assert "Truth Ledger Inheritance" in result.output
+    assert "codegen unknown" in result.output
+    assert "frontend tests blocked" in result.output
+    assert "selected provider public-primevue" in result.output
+    assert "primevue,@primeuix/themes" in result.output
+    assert "download" in result.output
+
+
+def test_status_text_surfaces_not_inherited_risk_summary(tmp_path: Path) -> None:
+    init_project(tmp_path)
+
+    with (
+        patch("ai_sdlc.cli.commands.find_project_root", return_value=tmp_path),
+        patch(
+            "ai_sdlc.cli.commands.build_status_json_surface",
+            return_value={
+                "telemetry": {"state": "ready", "current": None, "latest": None},
+                "branch_lifecycle": {
+                    "state": "clean",
+                    "current_branch": "main",
+                    "work_item_branch": None,
+                    "has_uncommitted_changes": False,
+                    "has_staged_changes": False,
+                    "last_commit_summary": "",
+                },
+                "formal_artifact_target": {"state": "ready", "detail": "", "reason_codes": []},
+                "backlog_breach_guard": {"state": "ready", "detail": "", "reason_codes": []},
+                "execute_authorization": {"state": "ready", "detail": "", "reason_codes": []},
+                "adapter_governance": {
+                    "agent_target": "codex",
+                    "adapter_ingress_state": "verified_loaded",
+                    "adapter_verification_result": "verified_loaded",
+                    "adapter_canonical_path": "AGENTS.md",
+                    "adapter_activation_state": "materialized",
+                    "governance_activation_mode": "strict",
+                    "governance_activation_detail": "verified",
+                },
+                "truth_ledger": {
+                    "state": "ready",
+                    "snapshot_state": "fresh",
+                    "detail": "truth ledger ready",
+                    "release_targets": ["frontend-mainline-delivery"],
+                    "release_capabilities": [
+                        {
+                            "capability_id": "frontend-mainline-delivery",
+                            "audit_state": "ready",
+                            "frontend_delivery_status": {
+                                "provider_id": "public-primevue",
+                                "package_names": "primevue,@primeuix/themes",
+                                "runtime_delivery_state": "scaffolded",
+                                "download": "installed",
+                                "integration": "integrated",
+                                "browser_gate": "pending",
+                                "delivery": "apply_succeeded_pending_browser_gate",
+                            },
+                            "frontend_inheritance_status": {
+                                "generation": "not_inherited",
+                                "quality": "not_inherited",
+                            },
+                            "plain_language_blockers": [
+                                "frontend code generation has not inherited the selected component library yet; continuing may generate against the wrong library",
+                                "frontend test inheritance has not bound the selected component library yet; continuing may validate against the wrong standard",
+                            ],
+                            "recommended_next_steps": [
+                                "python -m ai_sdlc program generation-constraints-handoff",
+                                "python -m ai_sdlc program quality-platform-handoff",
+                            ],
+                        }
+                    ],
+                },
+            },
+        ),
+    ):
+        result = runner.invoke(app, ["status"])
+
+    assert result.exit_code == 0, result.output
+    assert "Truth Ledger Inheritance" in result.output
+    assert "codegen not inherited yet" in result.output
+    assert "risk" in result.output
+    assert "Truth Ledger Explain" in result.output
+    assert "Truth Ledger Next Step" in result.output
+    assert "generation-constraints-handoff" in result.output
+    assert "quality-platform-handoff" in result.output
+
+
+def test_status_text_falls_back_to_legacy_frontend_delivery_summary(
+    tmp_path: Path,
+) -> None:
+    init_project(tmp_path)
+
+    with (
+        patch("ai_sdlc.cli.commands.find_project_root", return_value=tmp_path),
+        patch(
+            "ai_sdlc.cli.commands.build_status_json_surface",
+            return_value={
+                "telemetry": {"state": "ready", "current": None, "latest": None},
+                "branch_lifecycle": {
+                    "state": "clean",
+                    "current_branch": "main",
+                    "work_item_branch": None,
+                    "has_uncommitted_changes": False,
+                    "has_staged_changes": False,
+                    "last_commit_summary": "",
+                },
+                "formal_artifact_target": {"state": "ready", "detail": "", "reason_codes": []},
+                "backlog_breach_guard": {"state": "ready", "detail": "", "reason_codes": []},
+                "execute_authorization": {"state": "ready", "detail": "", "reason_codes": []},
+                "adapter_governance": {
+                    "agent_target": "codex",
+                    "adapter_ingress_state": "verified_loaded",
+                    "adapter_verification_result": "verified_loaded",
+                    "adapter_canonical_path": "AGENTS.md",
+                    "adapter_activation_state": "materialized",
+                    "governance_activation_mode": "strict",
+                    "governance_activation_detail": "verified",
+                },
+                "truth_ledger": {
+                    "state": "blocked",
+                    "snapshot_state": "fresh",
+                    "detail": "release targets blocked: frontend-mainline-delivery (blocked)",
+                    "release_targets": ["frontend-mainline-delivery"],
+                    "release_capabilities": [
+                        {
+                            "capability_id": "frontend-mainline-delivery",
+                            "audit_state": "blocked",
+                            "frontend_delivery_summary": (
+                                "provider=public-primevue | packages=primevue,@primeuix/themes | "
+                                "runtime=scaffolded | download=downloaded | integration=integrated | "
+                                "browser_gate=waiting for evidence | delivery=applied, waiting for browser gate"
+                            ),
+                        }
+                    ],
+                },
+            },
+        ),
+    ):
+        result = runner.invoke(app, ["status"])
+
+    assert result.exit_code == 0, result.output
+    assert "Truth Ledger Frontend" in result.output
+    assert "selected provider public-primevue" in result.output
+    assert "primevue,@primeuix/themes" in result.output
+    assert "downloaded" in result.output
+    assert "integrated" in result.output
+    assert "waiting for evidence" in result.output
+
+
+def test_status_text_surfaces_stale_apply_artifact_frontend_summary(
+    tmp_path: Path,
+) -> None:
+    init_project(tmp_path)
+
+    with (
+        patch("ai_sdlc.cli.commands.find_project_root", return_value=tmp_path),
+        patch(
+            "ai_sdlc.cli.commands.build_status_json_surface",
+            return_value={
+                "telemetry": {"state": "ready", "current": None, "latest": None},
+                "branch_lifecycle": {
+                    "state": "clean",
+                    "current_branch": "main",
+                    "work_item_branch": None,
+                    "has_uncommitted_changes": False,
+                    "has_staged_changes": False,
+                    "last_commit_summary": "",
+                },
+                "formal_artifact_target": {"state": "ready", "detail": "", "reason_codes": []},
+                "backlog_breach_guard": {"state": "ready", "detail": "", "reason_codes": []},
+                "execute_authorization": {"state": "ready", "detail": "", "reason_codes": []},
+                "adapter_governance": {
+                    "agent_target": "codex",
+                    "adapter_ingress_state": "verified_loaded",
+                    "adapter_verification_result": "verified_loaded",
+                    "adapter_canonical_path": "AGENTS.md",
+                    "adapter_activation_state": "materialized",
+                    "governance_activation_mode": "strict",
+                    "governance_activation_detail": "verified",
+                },
+                "truth_ledger": {
+                    "state": "blocked",
+                    "snapshot_state": "fresh",
+                    "detail": "release targets blocked: frontend-mainline-delivery (blocked)",
+                    "release_targets": ["frontend-mainline-delivery"],
+                    "release_capabilities": [
+                        {
+                            "capability_id": "frontend-mainline-delivery",
+                            "audit_state": "blocked",
+                            "frontend_delivery_status": {
+                                "provider_id": "public-primevue",
+                                "package_names": "primevue,@primeuix/themes",
+                                "runtime_delivery_state": "scaffolded",
+                                "download": "not_installed",
+                                "integration": "not_integrated",
+                                "browser_gate": "not_started",
+                                "delivery": "stale_apply_artifact",
+                            },
+                        }
+                    ],
+                },
+            },
+        ),
+    ):
+        result = runner.invoke(app, ["status"])
+
+    assert result.exit_code == 0, result.output
+    assert "Truth Ledger Frontend" in result.output
+    assert "stale" in result.output
+    assert "apply artifact" in result.output
+    assert "not" in result.output
+    assert "downloaded" in result.output
+    assert "integrated" in result.output
+    assert "started" in result.output
+
+
+def test_status_text_surfaces_browser_gate_scope_linkage_invalid_frontend_summary(
+    tmp_path: Path,
+) -> None:
+    init_project(tmp_path)
+
+    with (
+        patch("ai_sdlc.cli.commands.find_project_root", return_value=tmp_path),
+        patch(
+            "ai_sdlc.cli.commands.build_status_json_surface",
+            return_value={
+                "telemetry": {"state": "ready", "current": None, "latest": None},
+                "branch_lifecycle": {
+                    "state": "clean",
+                    "current_branch": "main",
+                    "work_item_branch": None,
+                    "has_uncommitted_changes": False,
+                    "has_staged_changes": False,
+                    "last_commit_summary": "",
+                },
+                "formal_artifact_target": {"state": "ready", "detail": "", "reason_codes": []},
+                "backlog_breach_guard": {"state": "ready", "detail": "", "reason_codes": []},
+                "execute_authorization": {"state": "ready", "detail": "", "reason_codes": []},
+                "adapter_governance": {
+                    "agent_target": "codex",
+                    "adapter_ingress_state": "verified_loaded",
+                    "adapter_verification_result": "verified_loaded",
+                    "adapter_canonical_path": "AGENTS.md",
+                    "adapter_activation_state": "materialized",
+                    "governance_activation_mode": "strict",
+                    "governance_activation_detail": "verified",
+                },
+                "truth_ledger": {
+                    "state": "blocked",
+                    "snapshot_state": "fresh",
+                    "detail": "release targets blocked: frontend-mainline-delivery (blocked)",
+                    "release_targets": ["frontend-mainline-delivery"],
+                    "release_capabilities": [
+                        {
+                            "capability_id": "frontend-mainline-delivery",
+                            "audit_state": "blocked",
+                            "frontend_delivery_status": {
+                                "provider_id": "public-primevue",
+                                "package_names": "primevue,@primeuix/themes",
+                                "runtime_delivery_state": "scaffolded",
+                                "download": "installed",
+                                "integration": "integrated",
+                                "browser_gate": "scope_or_linkage_invalid",
+                                "delivery": "apply_succeeded_pending_browser_gate",
+                            },
+                        }
+                    ],
+                },
+            },
+        ),
+    ):
+        result = runner.invoke(app, ["status"])
+
+    assert result.exit_code == 0, result.output
+    assert "Truth Ledger Frontend" in result.output
+    assert "scope or linkage invalid" in result.output
+    assert "downloaded" in result.output
+    assert "integrated" in result.output
+
+
+def test_status_text_surfaces_branch_lifecycle_next_action(tmp_path: Path) -> None:
+    init_project(tmp_path)
+
+    with (
+        patch("ai_sdlc.cli.commands.find_project_root", return_value=tmp_path),
+        patch(
+            "ai_sdlc.cli.commands.build_status_json_surface",
+            return_value={
+                "telemetry": {"state": "ready", "current": None, "latest": None},
+                "branch_lifecycle": {
+                    "state": "ready",
+                    "detail": "001-wi has 1 blocking branch lifecycle finding(s); first=codex/001-status-drift",
+                    "next_required_action": (
+                        "decide whether codex/001-status-drift should be merged, deleted, or archived, then record that branch disposition in task-execution-log.md"
+                    ),
+                },
+                "formal_artifact_target": {"state": "ready", "detail": "", "reason_codes": []},
+                "backlog_breach_guard": {"state": "ready", "detail": "", "reason_codes": []},
+                "execute_authorization": {"state": "ready", "detail": "", "reason_codes": []},
+                "adapter_governance": {
+                    "agent_target": "codex",
+                    "adapter_ingress_state": "verified_loaded",
+                    "adapter_verification_result": "verified_loaded",
+                    "adapter_canonical_path": "AGENTS.md",
+                    "adapter_activation_state": "materialized",
+                    "governance_activation_mode": "strict",
+                    "governance_activation_detail": "verified",
+                },
+            },
+        ),
+    ):
+        result = runner.invoke(app, ["status"])
+
+    assert result.exit_code == 0, result.output
+    assert "Branch Lifecycle" in result.output
+    assert "Branch Lifecycle Next" in result.output
+    assert "codex/001-status-drift" in result.output
+    assert "task-execution-log.md" in result.output
+
+
+def test_status_text_surfaces_workitem_diagnostics_next_action(tmp_path: Path) -> None:
+    init_project(tmp_path)
+
+    with (
+        patch("ai_sdlc.cli.commands.find_project_root", return_value=tmp_path),
+        patch(
+            "ai_sdlc.cli.commands.build_status_json_surface",
+            return_value={
+                "telemetry": {"state": "ready", "current": None, "latest": None},
+                "branch_lifecycle": {
+                    "state": "ready",
+                    "detail": "001-wi has 1 blocking branch lifecycle finding(s); first=codex/001-status-drift",
+                    "next_required_action": (
+                        "decide whether codex/001-status-drift should be merged, deleted, or archived, then record that branch disposition in task-execution-log.md"
+                    ),
+                },
+                "workitem_diagnostics": {
+                    "state": "action_required",
+                    "active_work_item": "001-wi",
+                    "source": "branch_lifecycle",
+                    "blocking_count": 2,
+                    "actionable_count": 2,
+                    "primary_reason": (
+                        "BLOCKER: branch lifecycle unresolved: codex/001-status-drift "
+                        "is associated with 001-wi, ahead of main by 1 commit(s), "
+                        "and branch disposition is unresolved"
+                    ),
+                    "truth_classification": "mainline_merged",
+                    "truth_detail": (
+                        "requested revision contains execution evidence or implementation changes and is already contained in main"
+                    ),
+                        "frontend_delivery_status": {
+                            "provider_id": "public-primevue",
+                            "package_names": "primevue,@primeuix/themes",
+                            "runtime_delivery_state": "scaffolded",
+                            "download": "installed",
+                            "integration": "integrated",
+                            "browser_gate": "pending",
+                            "delivery": "apply_succeeded_pending_browser_gate",
+                        },
+                    "next_required_action": (
+                        "decide whether codex/001-status-drift should be merged, deleted, or archived, then record that branch disposition in task-execution-log.md"
+                    ),
+                },
+                "formal_artifact_target": {"state": "ready", "detail": "", "reason_codes": []},
+                "backlog_breach_guard": {"state": "ready", "detail": "", "reason_codes": []},
+                "execute_authorization": {"state": "ready", "detail": "", "reason_codes": []},
+                "adapter_governance": {
+                    "agent_target": "codex",
+                    "adapter_ingress_state": "verified_loaded",
+                    "adapter_verification_result": "verified_loaded",
+                    "adapter_canonical_path": "AGENTS.md",
+                    "adapter_activation_state": "materialized",
+                    "governance_activation_mode": "strict",
+                    "governance_activation_detail": "verified",
+                },
+            },
+        ),
+    ):
+        result = runner.invoke(app, ["status"])
+
+    assert result.exit_code == 0, result.output
+    assert "Workitem Diagnostics" in result.output
+    assert "action_required" in result.output
+    assert "Workitem Source" in result.output
+    assert "branch_lifecycle" in result.output
+    assert "Workitem Findings" in result.output
+    assert "blocking=2" in result.output
+    assert "actionable=2" in result.output
+    assert "Workitem Detail" in result.output
+    assert "branch lifecycle unresolved" in result.output
+    assert "is associated with 001-wi" not in result.output
+    assert "Workitem Frontend" in result.output
+    assert "Workitem Frontend Scope" in result.output
+    assert "package delivery only" in result.output
+    assert "selected provider public-primevue" in result.output
+    assert "primevue,@primeuix/themes" in result.output
+    assert "download" in result.output
+    assert "downloaded" in result.output
+    assert "integration" in result.output
+    assert "integrated" in result.output
+    assert "browser" in result.output
+    assert "waiting for evidence" in result.output
+    assert "Workitem Truth" in result.output
+    assert "mainline_merged" in result.output
+    assert "Workitem Next" in result.output
+    assert "codex/001-status-drift" in result.output
+    assert "task-execution-log.md" in result.output
 
 
 def test_status_text_surfaces_capability_closure_summary(
@@ -1472,6 +2766,57 @@ specs: []
     assert "formal_only=1" in result.output
     assert "capability_open=0" in result.output
     assert "project-meta-foundations (formal_only)" in result.output
+
+
+def test_status_text_surfaces_capability_closure_summary_with_ellipsis(
+    tmp_path: Path,
+) -> None:
+    init_project(tmp_path)
+    (tmp_path / "program-manifest.yaml").write_text(
+        """
+schema_version: "1"
+capability_closure_audit:
+  reviewed_at: "2026-04-13"
+  open_clusters:
+    - cluster_id: "project-meta-foundations"
+      title: "Project Meta Foundations"
+      closure_state: "formal_only"
+      summary: "Only formal baselines exist; no implementation carrier has landed."
+      source_refs:
+        - "005-008"
+    - cluster_id: "frontend-mainline-delivery"
+      title: "Frontend Mainline Delivery"
+      closure_state: "capability_open"
+      summary: "Delivery is not end-to-end closed."
+      source_refs:
+        - "073-075"
+    - cluster_id: "runtime-adapter"
+      title: "Runtime Adapter"
+      closure_state: "partial"
+      summary: "Adapter truth is only partially materialized."
+      source_refs:
+        - "120-121"
+    - cluster_id: "docs-governance"
+      title: "Docs Governance"
+      closure_state: "formal_only"
+      summary: "Docs are formal only."
+      source_refs:
+        - "130-131"
+specs: []
+""".strip()
+        + "\n",
+        encoding="utf-8",
+    )
+
+    with patch("ai_sdlc.cli.commands.find_project_root", return_value=tmp_path):
+        result = runner.invoke(app, ["status"])
+
+    assert result.exit_code == 0
+    assert "Capability Closure Focus" in result.output
+    assert "project-meta-foundations (formal_only)" in result.output
+    assert "frontend-mainline-delivery (capability_open)" in result.output
+    assert "runtime-adapter (partial)" in result.output
+    assert "..." in result.output
 
 
 def test_status_json_frontend_evidence_class_requires_exact_spec_path_match(

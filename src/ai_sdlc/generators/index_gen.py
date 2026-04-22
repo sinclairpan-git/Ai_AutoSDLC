@@ -12,6 +12,17 @@ from ai_sdlc.utils.helpers import AI_SDLC_DIR
 logger = logging.getLogger(__name__)
 
 
+def _dedupe_strings(values: list[str]) -> list[str]:
+    seen: set[str] = set()
+    deduped: list[str] = []
+    for value in values:
+        if value in seen:
+            continue
+        seen.add(value)
+        deduped.append(value)
+    return deduped
+
+
 # ── base index ──
 
 
@@ -168,10 +179,12 @@ def generate_risk_index(root: Path, scan: ScanResult) -> str:
 
 def generate_all_extended_indexes(root: Path, scan: ScanResult) -> list[str]:
     """Generate all extended index files. Returns list of saved relative paths."""
-    return [
-        generate_key_files_index(root, scan),
-        generate_api_index(root, scan),
-        generate_dependency_index(root, scan),
-        generate_test_index(root, scan),
-        generate_risk_index(root, scan),
-    ]
+    return _dedupe_strings(
+        [
+            generate_key_files_index(root, scan),
+            generate_api_index(root, scan),
+            generate_dependency_index(root, scan),
+            generate_test_index(root, scan),
+            generate_risk_index(root, scan),
+        ]
+    )

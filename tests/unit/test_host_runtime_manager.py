@@ -2,7 +2,15 @@
 
 from __future__ import annotations
 
+from ai_sdlc.core import host_runtime_manager
 from ai_sdlc.core.host_runtime_manager import HostRuntimeProbe, build_host_runtime_plan
+from ai_sdlc.models.host_runtime_plan import (
+    BootstrapAcquisitionFacet,
+    HostRuntimePlan,
+    HostRuntimeReadiness,
+    InstallerProfileRef,
+    RemediationFragmentFacet,
+)
 
 
 def test_build_host_runtime_plan_blocks_unknown_platform() -> None:
@@ -24,6 +32,36 @@ def test_build_host_runtime_plan_blocks_unknown_platform() -> None:
     assert plan.bootstrap_acquisition is not None
     assert plan.bootstrap_acquisition.handoff_kind == "unsupported_platform"
     assert plan.remediation_fragment is None
+
+
+def test_bootstrap_missing_entries_deduplicates_required_runtime_entries(
+    monkeypatch,
+) -> None:
+    monkeypatch.setattr(
+        host_runtime_manager,
+        "_REQUIRED_RUNTIME_ENTRIES",
+        [
+            "python_runtime",
+            "python_runtime",
+            "installed_cli_runtime",
+        ],
+    )
+
+    result = host_runtime_manager._bootstrap_missing_entries(
+        "unsupported_platform",
+        probe=HostRuntimeProbe(
+            platform_os="solaris",
+            platform_arch="sparc",
+            python_version=None,
+            surface_kind="installed_cli",
+            surface_binding_state="bound",
+            installed_runtime_status="missing",
+        ),
+        python_status="missing",
+        installed_runtime_status="missing",
+    )
+
+    assert result == ["python_runtime", "installed_cli_runtime"]
 
 
 def test_build_host_runtime_plan_fail_closed_when_installed_runtime_unknown() -> None:
@@ -192,3 +230,146 @@ def test_build_host_runtime_plan_blocks_when_disk_space_insufficient() -> None:
     assert plan.status == "blocked"
     assert plan.reason_codes == ["disk_space_insufficient"]
     assert plan.remediation_fragment is None
+
+
+def test_build_host_runtime_plan_deduplicates_repeated_plan_lists(monkeypatch) -> None:
+    monkeypatch.setattr(
+        host_runtime_manager,
+        "_mainline_reason_codes",
+        lambda **_: [
+            "node_runtime_missing",
+            "node_runtime_missing",
+            "playwright_browsers_missing",
+        ],
+    )
+
+    plan = build_host_runtime_plan(
+        HostRuntimeProbe(
+            platform_os="darwin",
+            platform_arch="arm64",
+            python_version="3.11.9",
+            surface_kind="installed_cli",
+            surface_binding_state="bound",
+            installed_runtime_status="ready",
+            node_runtime_available=False,
+            playwright_browsers_available=False,
+        )
+    )
+
+    assert plan.reason_codes == [
+        "node_runtime_missing",
+        "playwright_browsers_missing",
+    ]
+    assert plan.missing_runtime_entries == [
+        "node_runtime",
+        "playwright_browsers",
+    ]
+    assert plan.remediation_fragment is not None
+    assert plan.remediation_fragment.reason_codes == [
+        "node_runtime_missing",
+        "playwright_browsers_missing",
+    ]
+    assert plan.remediation_fragment.required_actions == [
+        "plan_node_runtime_acquisition",
+        "plan_playwright_browsers_acquisition",
+    ]
+    assert plan.remediation_fragment.will_download == [
+        "node_runtime",
+        "playwright_browsers",
+    ]
+
+
+def test_host_runtime_plan_models_deduplicate_set_like_lists() -> None:
+    profile = InstallerProfileRef(
+        profile_id="darwin-arm64-default",
+        target_os="darwin",
+        target_arch="arm64",
+        channel_kind="default",
+        writes_scope="managed_runtime_root",
+        rollback_capability="best_effort",
+    )
+    plan = HostRuntimePlan(
+        plan_id="host-runtime-plan-001",
+        platform_os="darwin",
+        platform_arch="arm64",
+        surface_kind="installed_cli",
+        surface_binding_state="bound",
+        minimal_executable_host=False,
+        installed_runtime_ready=False,
+        required_runtime_entries=["python_runtime", "python_runtime", "node_runtime"],
+        missing_runtime_entries=["node_runtime", "node_runtime"],
+        installer_profile_ids=["darwin-arm64-default", "darwin-arm64-default"],
+        install_target_root=".ai-sdlc/runtime",
+        requires_network=True,
+        requires_credentials=False,
+        status="remediation_required",
+        reason_codes=["node_runtime_missing", "node_runtime_missing"],
+        evidence_refs=["probe:node", "probe:node", "probe:python"],
+        readiness=HostRuntimeReadiness(
+            python_runtime_status="ready",
+            installed_cli_runtime_status="ready",
+            node_runtime_status="remediation_required",
+            package_manager_status="ready",
+            playwright_browsers_status="ready",
+            candidate_installer_profiles=[profile],
+        ),
+        bootstrap_acquisition=BootstrapAcquisitionFacet(
+            handoff_kind="bootstrap",
+            required_targets=["node_runtime", "node_runtime"],
+            recommended_profile_ref=profile,
+            manual_steps=["download", "download", "install"],
+            operator_decisions_needed=["confirm", "confirm"],
+            blocking_reason_codes=["network_missing", "network_missing"],
+            expected_reentry_condition="host-ready",
+        ),
+        remediation_fragment=RemediationFragmentFacet(
+            readiness_subject_id="node_runtime",
+            managed_runtime_root=".ai-sdlc/runtime",
+            required_actions=["install_node", "install_node", "verify_node"],
+            optional_actions=["cache_browsers", "cache_browsers"],
+            will_download=["node_runtime", "node_runtime"],
+            will_install=["node_runtime", "node_runtime"],
+            will_modify=["managed_runtime_root", "managed_runtime_root"],
+            will_not_touch=["system_python", "system_python"],
+            rollback_units=["node_runtime", "node_runtime"],
+            cleanup_units=["node_cache", "node_cache"],
+            non_rollbackable_effects=["system_env", "system_env"],
+            manual_recovery_required=["clear_cache", "clear_cache"],
+            reason_codes=["node_runtime_missing", "node_runtime_missing"],
+        ),
+    )
+
+    assert plan.required_runtime_entries == ["python_runtime", "node_runtime"]
+    assert plan.missing_runtime_entries == ["node_runtime"]
+    assert plan.installer_profile_ids == ["darwin-arm64-default"]
+    assert plan.reason_codes == ["node_runtime_missing"]
+    assert plan.evidence_refs == ["probe:node", "probe:python"]
+    assert plan.bootstrap_acquisition is not None
+    assert plan.bootstrap_acquisition.required_targets == ["node_runtime"]
+    assert plan.bootstrap_acquisition.manual_steps == ["download", "download", "install"]
+    assert plan.bootstrap_acquisition.operator_decisions_needed == ["confirm", "confirm"]
+    assert plan.bootstrap_acquisition.blocking_reason_codes == ["network_missing"]
+    assert plan.remediation_fragment is not None
+    assert plan.remediation_fragment.required_actions == ["install_node", "verify_node"]
+    assert plan.remediation_fragment.optional_actions == ["cache_browsers"]
+    assert plan.remediation_fragment.will_download == ["node_runtime"]
+    assert plan.remediation_fragment.will_install == ["node_runtime"]
+    assert plan.remediation_fragment.will_modify == ["managed_runtime_root"]
+    assert plan.remediation_fragment.will_not_touch == ["system_python"]
+    assert plan.remediation_fragment.rollback_units == ["node_runtime"]
+    assert plan.remediation_fragment.cleanup_units == ["node_cache"]
+    assert plan.remediation_fragment.non_rollbackable_effects == ["system_env"]
+    assert plan.remediation_fragment.manual_recovery_required == ["clear_cache"]
+    assert plan.remediation_fragment.reason_codes == ["node_runtime_missing"]
+
+
+def test_mainline_missing_entries_deduplicates_reason_code_expansion() -> None:
+    from ai_sdlc.core.host_runtime_manager import _mainline_missing_entries
+
+    assert _mainline_missing_entries(
+        [
+            "node_runtime_missing",
+            "node_runtime_missing",
+            "package_manager_missing",
+        ]
+    ) == ["node_runtime", "package_manager"]

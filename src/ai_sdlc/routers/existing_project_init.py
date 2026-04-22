@@ -25,6 +25,17 @@ from ai_sdlc.utils.helpers import AI_SDLC_DIR, now_iso
 logger = logging.getLogger(__name__)
 
 
+def _dedupe_strings(values: list[str]) -> list[str]:
+    seen: set[str] = set()
+    deduped: list[str] = []
+    for value in values:
+        if value in seen:
+            continue
+        seen.add(value)
+        deduped.append(value)
+    return deduped
+
+
 def run_full_scan(root: Path) -> ScanResult:
     """Execute all scanners and aggregate into a ScanResult."""
     logger.info("Starting full project scan at %s", root)
@@ -108,7 +119,7 @@ def init_existing_project(root: Path) -> tuple[ScanResult, list[str]]:
     logger.info(
         "Existing project initialization complete. Generated %d files.", len(generated)
     )
-    return scan, generated
+    return scan, _dedupe_strings(generated)
 
 
 def _create_policy_files(root: Path) -> None:

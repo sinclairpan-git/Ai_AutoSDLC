@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Literal
 
 import yaml
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 from ai_sdlc.models.state import Checkpoint
 from ai_sdlc.rules import RulesLoader
@@ -35,6 +35,39 @@ class StageManifest(BaseModel):
     context: dict[str, list[str]] = Field(default_factory=dict)
     checklist: list[ChecklistItem] = Field(default_factory=list)
     outputs: list[str] = Field(default_factory=list)
+
+    @field_validator("prerequisites", "outputs", mode="before")
+    @classmethod
+    def _dedupe_string_lists(cls, value: object) -> list[str]:
+        if value is None:
+            return []
+        unique: list[str] = []
+        seen: set[str] = set()
+        for item in value:
+            text = str(item)
+            if text in seen:
+                continue
+            seen.add(text)
+            unique.append(text)
+        return unique
+
+    @field_validator("context", mode="before")
+    @classmethod
+    def _dedupe_context_lists(cls, value: object) -> dict[str, list[str]]:
+        if value is None:
+            return {}
+        normalized: dict[str, list[str]] = {}
+        for key, items in dict(value).items():
+            unique: list[str] = []
+            seen: set[str] = set()
+            for item in items or []:
+                text = str(item)
+                if text in seen:
+                    continue
+                seen.add(text)
+                unique.append(text)
+            normalized[str(key)] = unique
+        return normalized
 
 
 class StageResult(BaseModel):

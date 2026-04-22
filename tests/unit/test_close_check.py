@@ -4,12 +4,27 @@ from __future__ import annotations
 
 import subprocess
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
-from ai_sdlc.core.close_check import run_close_check
+import ai_sdlc.core.close_check as close_check_module
+from ai_sdlc.core.close_check import (
+    RELEASE_GATE_EVIDENCE_FILE,
+    BranchCheckResult,
+    CloseCheckResult,
+    _build_program_truth_close_check_summary,
+    _changed_paths_from_marker,
+    format_branch_check_json,
+    format_close_check_json,
+    run_branch_check,
+    run_close_check,
+)
 from ai_sdlc.core.p1_artifacts import save_reviewer_decision
-from ai_sdlc.core.program_service import ProgramService
+from ai_sdlc.core.program_service import (
+    PROGRAM_TRUTH_SYNC_DRY_RUN_COMMAND,
+    ProgramService,
+)
 from ai_sdlc.core.workitem_traceability import extract_execution_batches
 from ai_sdlc.models.work import (
     PrdReviewerCheckpoint,
@@ -127,6 +142,152 @@ def _write_release_gate_evidence(wi_dir: Path, *, overall_verdict: str = "PASS")
         "```\n",
         encoding="utf-8",
     )
+
+
+def test_run_branch_check_deduplicates_next_required_actions(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = tmp_path / "repo-branch-check-dedupe"
+    root.mkdir()
+    _setup_repo(
+        root,
+        tasks_body="- [x] done\n### Task 1.1\n- **验收标准（AC）**：ok",
+        plan_status="completed",
+    )
+
+    import ai_sdlc.core.close_check as close_check_module
+
+    fake_entry = SimpleNamespace(
+        to_json_dict=lambda: {
+            "name": "codex/001-branch-check-demo",
+            "kind": "branch",
+            "ahead_of_main": 1,
+            "branch_disposition": "unknown",
+            "status": "warn",
+            "detail": "demo",
+        }
+    )
+    fake_result = SimpleNamespace(
+        ok=False,
+        blockers=[],
+        warnings=[],
+        entries=[fake_entry],
+        branch_disposition="unknown",
+        worktree_disposition="unknown",
+        next_required_actions=[
+            "decide whether codex/001-branch-check-demo should be merged",
+            "decide whether codex/001-branch-check-demo should be merged",
+        ],
+    )
+
+    monkeypatch.setattr(
+        close_check_module,
+        "evaluate_work_item_branch_lifecycle",
+        lambda **_kwargs: fake_result,
+    )
+
+    result = run_branch_check(cwd=root, wi=Path("specs/001-wi"))
+
+    assert result.next_required_actions == [
+        "decide whether codex/001-branch-check-demo should be merged"
+    ]
+
+
+def test_branch_check_json_deduplicates_lists() -> None:
+    payload = format_branch_check_json(
+        BranchCheckResult(
+            ok=False,
+            blockers=["branch blocker", "branch blocker"],
+            warnings=["branch warning", "branch warning"],
+            next_required_actions=["next action", "next action"],
+            entries=[],
+        )
+    )
+
+    assert payload.count('"branch blocker"') == 1
+    assert payload.count('"branch warning"') == 1
+    assert payload.count('"next action"') == 1
+
+
+def test_branch_check_result_canonicalizes_runtime_lists() -> None:
+    result = BranchCheckResult(
+        ok=False,
+        blockers=["branch blocker", "branch blocker"],
+        warnings=["branch warning", "branch warning"],
+        next_required_actions=["next action", "next action"],
+        entries=[],
+    )
+
+    assert result.blockers == ["branch blocker"]
+    assert result.warnings == ["branch warning"]
+    assert result.next_required_actions == ["next action"]
+
+
+def test_close_check_json_deduplicates_blockers() -> None:
+    payload = format_close_check_json(
+        CloseCheckResult(
+            ok=False,
+            blockers=["close blocker", "close blocker"],
+            checks=[],
+        )
+    )
+
+    assert payload.count('"close blocker"') == 1
+
+
+def test_close_check_result_canonicalizes_runtime_blockers() -> None:
+    result = CloseCheckResult(
+        ok=False,
+        blockers=["close blocker", "close blocker"],
+        checks=[],
+    )
+
+    assert result.blockers == ["close blocker"]
+
+
+def test_build_program_truth_close_check_summary_deduplicates_next_required_actions(
+    tmp_path: Path,
+) -> None:
+    root = tmp_path / "repo-truth-summary-dedupe"
+    root.mkdir()
+    wi_dir = root / "specs" / "001-wi"
+    wi_dir.mkdir(parents=True, exist_ok=True)
+    (root / "program-manifest.yaml").write_text("schema_version: '2'\n", encoding="utf-8")
+
+    fake_program_service = SimpleNamespace(
+        load_manifest=lambda: object(),
+        validate_manifest=lambda _manifest: object(),
+        build_spec_truth_readiness=lambda _manifest, *, spec_path, validation_result: SimpleNamespace(
+            ready=False,
+            summary_token="truth_snapshot_stale",
+            detail="truth_snapshot_stale: drift detected",
+            next_required_actions=[
+                "python -m ai_sdlc program truth sync --execute --yes",
+                "python -m ai_sdlc program truth sync --execute --yes",
+            ],
+            frontend_delivery_status={},
+            frontend_delivery_scope="",
+            frontend_inheritance_status={},
+        ),
+    )
+
+    summary = _build_program_truth_close_check_summary(
+        root,
+        wi_dir,
+        program_service=fake_program_service,
+    )
+
+    assert summary is not None
+    assert summary["next_required_actions"] == [
+        "python -m ai_sdlc program truth sync --execute --yes"
+    ]
+
+
+def test_changed_paths_from_marker_deduplicates_repeated_paths() -> None:
+    assert _changed_paths_from_marker(
+        "`docs/example.md`、`docs/example.md`、`specs/001-wi/spec.md`"
+        "、`specs/001-wi/spec.md`"
+    ) == ["docs/example.md", "specs/001-wi/spec.md"]
 
 
 def _setup_repo(
@@ -342,7 +503,12 @@ specs:
     assert "manifest_unmapped" in str(program_truth["detail"])
     assert any("program truth" in blocker.lower() for blocker in r.blockers)
     assert any("manifest_unmapped" in blocker for blocker in r.blockers)
-    assert any("program truth sync --execute --yes" in blocker for blocker in r.blockers)
+    assert "update program-manifest.yaml specs[] so specs/001-wi is declared" in (
+        program_truth["next_required_actions"]
+    )
+    assert "python -m ai_sdlc program truth sync --execute --yes" in (
+        program_truth["next_required_actions"]
+    )
 
 
 def test_close_check_blocks_when_program_truth_snapshot_is_stale(
@@ -400,7 +566,9 @@ truth_snapshot:
     assert program_truth["ok"] is False
     assert "truth_snapshot_stale" in str(program_truth["detail"])
     assert any("truth_snapshot_stale" in blocker for blocker in r.blockers)
-    assert any("program truth sync --execute --yes" in blocker for blocker in r.blockers)
+    assert program_truth["next_required_actions"] == [
+        "python -m ai_sdlc program truth sync --execute --yes"
+    ]
 
 
 def test_close_check_distinguishes_program_truth_capability_blocker(
@@ -470,7 +638,112 @@ specs:
     assert program_truth["ok"] is False
     assert "capability_blocked" in str(program_truth["detail"])
     assert any("capability_blocked" in blocker for blocker in r.blockers)
-    assert any("program truth audit" in blocker for blocker in r.blockers)
+    assert "python -m ai_sdlc program generation-constraints-handoff" in (
+        program_truth["next_required_actions"]
+    )
+    assert "python -m ai_sdlc program quality-platform-handoff" in (
+        program_truth["next_required_actions"]
+    )
+
+
+def test_close_check_program_truth_check_preserves_structured_frontend_delivery_status(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    root = tmp_path / "repo3-program-truth-structured"
+    root.mkdir()
+    _setup_repo(
+        root,
+        tasks_body="- [x] done\n### Task 1.1\n- **验收标准（AC）**：ok",
+        plan_status="completed",
+    )
+
+    import ai_sdlc.core.close_check as close_check_module
+
+    monkeypatch.setattr(
+        close_check_module,
+        "_build_program_truth_close_check_summary",
+        lambda *args, **kwargs: {
+            "ok": False,
+            "summary_token": "capability_blocked",
+            "detail": "capability_blocked: frontend-mainline-delivery (blocked)",
+            "next_required_actions": [
+                "uv run ai-sdlc program browser-gate-probe --execute",
+                "uv run ai-sdlc program browser-gate-probe --execute"
+            ],
+            "frontend_delivery_status": {
+                "provider_id": "public-primevue",
+                "package_names": "primevue,@primeuix/themes",
+                "runtime_delivery_state": "scaffolded",
+                "download": "installed",
+                "integration": "integrated",
+                "browser_gate": "pending",
+                "delivery": "apply_succeeded_pending_browser_gate",
+            },
+            "frontend_delivery_scope": "package_delivery_only",
+            "frontend_inheritance_status": {
+                "generation": "inherited",
+                "quality": "blocked",
+            },
+        },
+    )
+
+    r = run_close_check(cwd=root, wi=Path("specs/001-wi"))
+
+    assert r.ok is False
+    program_truth = next(check for check in r.checks if check["name"] == "program_truth")
+    assert program_truth["next_required_actions"] == [
+        "uv run ai-sdlc program browser-gate-probe --execute"
+    ]
+    assert program_truth["frontend_delivery_status"] == {
+        "provider_id": "public-primevue",
+        "package_names": "primevue,@primeuix/themes",
+        "runtime_delivery_state": "scaffolded",
+        "download": "installed",
+        "integration": "integrated",
+        "browser_gate": "pending",
+        "delivery": "apply_succeeded_pending_browser_gate",
+    }
+    assert program_truth["frontend_delivery_scope"] == "package_delivery_only"
+    assert program_truth["frontend_inheritance_status"] == {
+        "generation": "inherited",
+        "quality": "blocked",
+    }
+
+
+def test_close_check_program_truth_blocker_no_longer_embeds_next_actions(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    root = tmp_path / "repo3-program-truth-blocker-shape"
+    root.mkdir()
+    _setup_repo(
+        root,
+        tasks_body="- [x] done\n### Task 1.1\n- **验收标准（AC）**：ok",
+        plan_status="completed",
+    )
+
+    import ai_sdlc.core.close_check as close_check_module
+
+    monkeypatch.setattr(
+        close_check_module,
+        "_build_program_truth_close_check_summary",
+        lambda *args, **kwargs: {
+            "ok": False,
+            "summary_token": "truth_snapshot_stale",
+            "detail": "truth_snapshot_stale: snapshot is older than program authoring state",
+            "next_required_actions": [
+                "python -m ai_sdlc program truth sync --execute --yes"
+            ],
+        },
+    )
+
+    r = run_close_check(cwd=root, wi=Path("specs/001-wi"))
+
+    assert r.ok is False
+    blocker = next(item for item in r.blockers if "program truth unresolved" in item)
+    assert "truth_snapshot_stale" in blocker
+    assert "; next action:" not in blocker
 
 
 def test_close_check_allows_non_release_workitem_when_unrelated_release_target_is_blocked(
@@ -589,6 +862,10 @@ def test_close_check_blocks_when_associated_branch_is_ahead_and_undisposed(
     assert r.ok is False
     assert any("branch lifecycle" in b.lower() for b in r.blockers)
     assert any("codex/001-branch-lifecycle-demo" in b for b in r.blockers)
+    branch_check = next(item for item in r.checks if item["name"] == "branch_lifecycle")
+    assert branch_check["next_required_actions"] == [
+        "decide whether codex/001-branch-lifecycle-demo should be merged, deleted, or archived, then record that branch disposition in task-execution-log.md"
+    ]
 
 
 def test_close_check_accepts_archived_associated_branch_without_escalating_to_blocker(
@@ -672,6 +949,42 @@ def test_close_check_blocks_when_verification_governance_source_closure_is_incom
     assert any("source closure" in b.lower() and "published" in b.lower() for b in r.blockers)
 
 
+def test_close_check_deduplicates_verification_governance_blockers(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    root = tmp_path / "repo3b-governance-dedupe"
+    root.mkdir()
+    _setup_repo(
+        root,
+        tasks_body="- [x] done\n### Task 1.1\n- **验收标准（AC）**：ok",
+        plan_status="completed",
+    )
+    monkeypatch.setattr(
+        "ai_sdlc.core.close_check.load_verification_governance_bundle",
+        lambda root, wi_dir=None: {
+            "gate_decision_payload": {
+                "decision_subject": "close:001-wi",
+                "decision_result": "block",
+                "confidence": "high",
+                "evidence_refs": ["evd_0123456789abcdef0123456789abcdef"],
+                "source_closure_status": "closed",
+                "observer_version": "v1",
+                "policy": "default",
+                "profile": "self_hosting",
+                "mode": "lite",
+                "generated_at": "2026-03-30T00:00:00Z",
+            },
+            "blockers": ("governance blocker", "governance blocker"),
+        },
+    )
+
+    r = run_close_check(cwd=root, wi=Path("specs/001-wi"))
+
+    assert r.ok is False
+    assert r.blockers.count("governance blocker") == 1
+
+
 def test_close_check_blocker_when_git_closeout_not_committed(tmp_path: Path) -> None:
     root = tmp_path / "repo3b"
     root.mkdir()
@@ -702,7 +1015,7 @@ def test_close_check_blocker_when_worktree_dirty_after_git_closeout(tmp_path: Pa
     assert any("working tree" in b for b in r.blockers)
 
 
-def test_close_check_ignores_checkpoint_state_dirty_files(tmp_path: Path) -> None:
+def test_close_check_ignores_recover_state_dirty_files(tmp_path: Path) -> None:
     root = tmp_path / "repo3c2"
     root.mkdir()
     _setup_repo(
@@ -716,6 +1029,9 @@ def test_close_check_ignores_checkpoint_state_dirty_files(tmp_path: Path) -> Non
         "pipeline_started_at: '2026-04-14'\n", encoding="utf-8"
     )
     (state_dir / "checkpoint.yml.bak").write_text("backup\n", encoding="utf-8")
+    (state_dir / "resume-pack.yaml").write_text(
+        "timestamp: '2026-04-14T00:00:00+00:00'\n", encoding="utf-8"
+    )
 
     r = run_close_check(cwd=root, wi=Path("specs/001-wi"))
     assert r.ok is True
@@ -836,6 +1152,39 @@ def test_close_check_blocker_when_latest_batch_missing_verification_profile(
     r = run_close_check(cwd=root, wi=Path("specs/001-wi"))
     assert r.ok is False
     assert any("verification profile" in b for b in r.blockers)
+
+
+def test_verification_profile_violation_deduplicates_disallowed_path_samples() -> None:
+    log_text = (
+        "### Batch 2026-04-22-001 | Task 1.1\n"
+        "- **验证画像**：`docs-only`\n"
+        "- 命令：`uv run ai-sdlc verify constraints`\n"
+        "- **改动范围**：`src/example.py`、`src/example.py`、`tests/test_example.py`\n"
+    )
+
+    detail = close_check_module._verification_profile_violation(log_text)
+
+    assert (
+        detail
+        == "latest batch verification profile docs-only includes non-doc changes: "
+        "src/example.py, tests/test_example.py"
+    )
+
+    truth_only_log_text = (
+        "### Batch 2026-04-22-001 | Task 1.1\n"
+        "- **验证画像**：`truth-only`\n"
+        "- 命令：`uv run ai-sdlc verify constraints`\n"
+        f"- 命令：`{PROGRAM_TRUTH_SYNC_DRY_RUN_COMMAND}`\n"
+        "- **改动范围**：`src/example.py`、`src/example.py`、`tests/test_example.py`\n"
+    )
+
+    detail = close_check_module._verification_profile_violation(truth_only_log_text)
+
+    assert (
+        detail
+        == "latest batch verification profile truth-only includes non-truth changes: "
+        "src/example.py, tests/test_example.py"
+    )
 
 
 def test_extract_execution_batches_handles_realistic_header_formats() -> None:
@@ -1368,6 +1717,44 @@ def test_close_check_blocks_when_release_gate_verdict_is_block(tmp_path: Path) -
     )
     assert r.ok is False
     assert any("release gate portability -> BLOCK" in b for b in r.blockers)
+
+
+def test_close_check_deduplicates_release_gate_blocker_lines(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    root = tmp_path / "repo11-release-gate-dedupe"
+    root.mkdir()
+    wi_rel = "specs/003-cross-cutting-authoring-and-extension-contracts"
+    _setup_repo(
+        root,
+        tasks_body="- [x] done\n### Task 1.1\n- **验收标准（AC）**：ok",
+        plan_status="completed",
+        wi_rel=wi_rel,
+    )
+    wi = root / wi_rel
+    (wi / RELEASE_GATE_EVIDENCE_FILE).write_text("placeholder", encoding="utf-8")
+
+    monkeypatch.setattr(
+        "ai_sdlc.core.close_check.load_release_gate_report",
+        lambda _path: type(
+            "Report",
+            (),
+            {
+                "overall_verdict": "BLOCK",
+                "summary": lambda self: "block",
+                "blocker_lines": lambda self: [
+                    "release gate blocker",
+                    "release gate blocker",
+                ],
+            },
+        )(),
+    )
+
+    r = run_close_check(cwd=root, wi=Path(wi_rel))
+
+    assert r.ok is False
+    assert r.blockers.count("release gate blocker") == 1
 
 
 def test_close_check_blocks_003_when_pre_close_approval_missing(tmp_path: Path) -> None:

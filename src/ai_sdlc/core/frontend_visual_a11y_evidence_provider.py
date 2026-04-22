@@ -16,6 +16,20 @@ FRONTEND_VISUAL_A11Y_REPORT_TYPES = (
 )
 
 
+def _dedupe_mapping_items(values: object) -> list[dict[str, object]]:
+    deduped: list[dict[str, object]] = []
+    seen: set[str] = set()
+    for value in values or []:
+        if not isinstance(value, dict):
+            continue
+        key = json.dumps(value, sort_keys=True, ensure_ascii=False)
+        if key in seen:
+            continue
+        seen.add(key)
+        deduped.append(dict(value))
+    return deduped
+
+
 @dataclass(frozen=True, slots=True)
 class FrontendVisualA11yEvidenceProvenance:
     """Structured provenance for one visual / a11y evidence producer."""
@@ -72,24 +86,55 @@ class FrontendVisualA11yEvidenceArtifact:
     freshness: FrontendVisualA11yEvidenceFreshness
     evaluations: tuple[FrontendVisualA11yEvidenceEvaluation, ...]
 
+    def __post_init__(self) -> None:
+        object.__setattr__(
+            self,
+            "evaluations",
+            tuple(_dedupe_evaluation_items(self.evaluations)),
+        )
+
     def to_json_dict(self) -> dict[str, object]:
         return {
             "schema_version": self.schema_version,
-            "provenance": {
-                "provider_kind": self.provenance.provider_kind,
-                "provider_name": self.provenance.provider_name,
-                "provider_version": self.provenance.provider_version,
-                "source_ref": self.provenance.source_ref,
-            },
-            "freshness": {
-                "generated_at": self.freshness.generated_at,
-                "source_digest": self.freshness.source_digest,
-                "source_revision": self.freshness.source_revision,
-            },
-            "evaluations": [
-                evaluation.to_json_dict() for evaluation in self.evaluations
-            ],
+            "provenance": _dedupe_mapping_items(
+                [
+                    {
+                        "provider_kind": self.provenance.provider_kind,
+                        "provider_name": self.provenance.provider_name,
+                        "provider_version": self.provenance.provider_version,
+                        "source_ref": self.provenance.source_ref,
+                    }
+                ]
+            )[0],
+            "freshness": _dedupe_mapping_items(
+                [
+                    {
+                        "generated_at": self.freshness.generated_at,
+                        "source_digest": self.freshness.source_digest,
+                        "source_revision": self.freshness.source_revision,
+                    }
+                ]
+            )[0],
+            "evaluations": _dedupe_mapping_items(
+                [evaluation.to_json_dict() for evaluation in self.evaluations]
+            ),
         }
+
+
+def _dedupe_evaluation_items(
+    values: object,
+) -> list[FrontendVisualA11yEvidenceEvaluation]:
+    deduped: list[FrontendVisualA11yEvidenceEvaluation] = []
+    seen: set[str] = set()
+    for value in values or []:
+        if not isinstance(value, FrontendVisualA11yEvidenceEvaluation):
+            continue
+        key = json.dumps(value.to_json_dict(), sort_keys=True, ensure_ascii=False)
+        if key in seen:
+            continue
+        seen.add(key)
+        deduped.append(value)
+    return deduped
 
 
 def visual_a11y_evidence_artifact_path(spec_dir: Path) -> Path:
@@ -216,7 +261,7 @@ def load_frontend_visual_a11y_evidence_artifact(
                 context="freshness",
             ),
         ),
-        evaluations=tuple(evaluations),
+        evaluations=tuple(_coerce_evaluations(evaluations)),
     )
 
 
@@ -292,12 +337,21 @@ def _coerce_evaluations(
     evaluations: list[FrontendVisualA11yEvidenceEvaluation],
 ) -> list[FrontendVisualA11yEvidenceEvaluation]:
     items: list[FrontendVisualA11yEvidenceEvaluation] = []
+    seen: set[str] = set()
     for index, evaluation in enumerate(evaluations):
         if not isinstance(evaluation, FrontendVisualA11yEvidenceEvaluation):
             raise ValueError(
                 "evaluations must contain FrontendVisualA11yEvidenceEvaluation items; "
                 f"item {index} was {type(evaluation).__name__}"
             )
+        key = json.dumps(
+            evaluation.to_json_dict(),
+            sort_keys=True,
+            ensure_ascii=False,
+        )
+        if key in seen:
+            continue
+        seen.add(key)
         items.append(evaluation)
     return items
 

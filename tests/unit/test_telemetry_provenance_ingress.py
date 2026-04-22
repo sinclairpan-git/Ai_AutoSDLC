@@ -9,13 +9,26 @@ import pytest
 
 from ai_sdlc.telemetry.contracts import ScopeLevel
 from ai_sdlc.telemetry.enums import (
+    Confidence,
     IngressKind,
     ProvenanceGapKind,
     ProvenanceNodeKind,
     ProvenanceRelationKind,
 )
 from ai_sdlc.telemetry.provenance_adapters import adapt_trace
-from ai_sdlc.telemetry.provenance_ingress import apply_ingress_result
+from ai_sdlc.telemetry.provenance_contracts import (
+    ProvenanceEdgeFact,
+    ProvenanceGapFinding,
+    ProvenanceNodeFact,
+)
+from ai_sdlc.telemetry.provenance_ingress import (
+    PendingProvenanceEdge,
+    PendingProvenanceNode,
+    ProvenanceIngressResult,
+    ProvenanceIngressWriteResult,
+    ProvenanceParseFailure,
+    apply_ingress_result,
+)
 from ai_sdlc.telemetry.provenance_store import ProvenanceStore
 from ai_sdlc.telemetry.store import TelemetryStore
 from ai_sdlc.telemetry.writer import TelemetryWriter
@@ -27,6 +40,17 @@ def _read_ndjson(path: Path) -> list[dict]:
         for line in path.read_text(encoding="utf-8").splitlines()
         if line.strip()
     ]
+
+
+def _trace_context_dict() -> dict[str, str]:
+    return {
+        "goal_session_id": "gs_0123456789abcdef0123456789abcdef",
+        "workflow_run_id": "wr_0123456789abcdef0123456789abcdef",
+        "step_id": "st_0123456789abcdef0123456789abcdef",
+        "worker_id": "worker-007",
+        "agent_id": "codex-agent",
+        "parent_event_id": "evt_0123456789abcdef0123456789abcdef",
+    }
 
 
 @pytest.mark.parametrize(
@@ -134,6 +158,103 @@ def test_injected_adapters_normalize_four_trace_types(
     assert result.evidence[0].locator.startswith(locator_prefix)
     assert result.parse_failures == ()
     assert result.gaps == ()
+
+
+def test_provenance_ingress_result_runtime_object_canonicalizes_duplicate_members() -> None:
+    node = PendingProvenanceNode(
+        node_id="pn_11111111111111111111111111111111",
+        node_kind=ProvenanceNodeKind.CONVERSATION_MESSAGE,
+        ingress_kind=IngressKind.INJECTED,
+        confidence=Confidence.HIGH,
+        scope_level=ScopeLevel.STEP,
+        trace_context=_trace_context_dict(),
+        observed_at="2026-03-31T10:00:00Z",
+        source_object_refs=("event:evt_0123456789abcdef0123456789abcdef",),
+        source_evidence_refs=("evd_0123456789abcdef0123456789abcdef",),
+    )
+    edge = PendingProvenanceEdge(
+        edge_id="pe_11111111111111111111111111111111",
+        relation_kind=ProvenanceRelationKind.TRIGGERED_BY,
+        from_ref="provenance_node:pn_11111111111111111111111111111111",
+        to_ref="event:evt_0123456789abcdef0123456789abcdef",
+        ingress_kind=IngressKind.INJECTED,
+        confidence=Confidence.MEDIUM,
+        observed_at="2026-03-31T10:00:01Z",
+        source_object_refs=("event:evt_0123456789abcdef0123456789abcdef",),
+        source_evidence_refs=("evd_0123456789abcdef0123456789abcdef",),
+    )
+    parse_failure = ProvenanceParseFailure(
+        code="invalid_subject_ref",
+        detail={"subject_ref": "bad"},
+    )
+
+    result = ProvenanceIngressResult(
+        scope_level=ScopeLevel.STEP,
+        goal_session_id="gs_0123456789abcdef0123456789abcdef",
+        workflow_run_id="wr_0123456789abcdef0123456789abcdef",
+        step_id="st_0123456789abcdef0123456789abcdef",
+        nodes=(node, node),
+        edges=(edge, edge),
+        evidence=(),
+        gaps=(),
+        parse_failures=(parse_failure, parse_failure),
+    )
+
+    assert result.nodes == (node,)
+    assert result.edges == (edge,)
+    assert result.parse_failures == (parse_failure,)
+
+
+def test_provenance_ingress_write_result_runtime_object_canonicalizes_duplicate_members() -> None:
+    node = ProvenanceNodeFact(
+        node_id="pn_11111111111111111111111111111111",
+        node_kind=ProvenanceNodeKind.CONVERSATION_MESSAGE,
+        ingress_kind=IngressKind.INJECTED,
+        confidence=Confidence.HIGH,
+        scope_level=ScopeLevel.STEP,
+        trace_context=_trace_context_dict(),
+        observed_at="2026-03-31T10:00:00Z",
+        ingestion_order=1,
+        source_object_refs=("event:evt_0123456789abcdef0123456789abcdef",),
+        source_evidence_refs=("evd_0123456789abcdef0123456789abcdef",),
+    )
+    edge = ProvenanceEdgeFact(
+        edge_id="pe_11111111111111111111111111111111",
+        relation_kind=ProvenanceRelationKind.TRIGGERED_BY,
+        from_ref="provenance_node:pn_11111111111111111111111111111111",
+        to_ref="event:evt_0123456789abcdef0123456789abcdef",
+        ingress_kind=IngressKind.INJECTED,
+        confidence=Confidence.MEDIUM,
+        observed_at="2026-03-31T10:00:01Z",
+        ingestion_order=2,
+        source_object_refs=("event:evt_0123456789abcdef0123456789abcdef",),
+        source_evidence_refs=("evd_0123456789abcdef0123456789abcdef",),
+    )
+    gap = ProvenanceGapFinding(
+        gap_id="pg_11111111111111111111111111111111",
+        subject_ref="provenance_node:pn_11111111111111111111111111111111",
+        gap_kind=ProvenanceGapKind.UNKNOWN,
+        gap_location="conversation.trigger",
+        confidence=Confidence.MEDIUM,
+        detail={"reason": "message_missing"},
+    )
+    parse_failure = ProvenanceParseFailure(
+        code="invalid_subject_ref",
+        detail={"subject_ref": "bad"},
+    )
+
+    result = ProvenanceIngressWriteResult(
+        nodes=(node, node),
+        edges=(edge, edge),
+        evidence=(),
+        gaps=(gap, gap),
+        parse_failures=(parse_failure, parse_failure),
+    )
+
+    assert result.nodes == (node,)
+    assert result.edges == (edge,)
+    assert result.gaps == (gap,)
+    assert result.parse_failures == (parse_failure,)
 
 
 @pytest.mark.parametrize(

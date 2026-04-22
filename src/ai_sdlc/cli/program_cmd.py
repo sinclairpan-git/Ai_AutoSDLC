@@ -8,12 +8,22 @@ import typer
 from rich.console import Console
 from rich.table import Table
 
+from ai_sdlc.core.frontend_delivery_truth import summarize_frontend_delivery_truth_item
+from ai_sdlc.core.frontend_inheritance_truth import (
+    summarize_frontend_inheritance_status_for_display,
+)
 from ai_sdlc.core.program_service import (
     FRONTEND_EVIDENCE_CLASS_MIRROR_PROBLEM_FAMILY,
     ProgramFrontendEvidenceClassStatus,
+    ProgramFrontendManagedDeliveryApplyRequest,
+    ProgramFrontendManagedDeliveryApplyResult,
     ProgramFrontendReadiness,
     ProgramFrontendRemediationInput,
     ProgramService,
+    humanize_frontend_browser_gate_state,
+    humanize_frontend_delivery_apply_state,
+    humanize_frontend_delivery_install_state,
+    humanize_frontend_delivery_workspace_state,
 )
 from ai_sdlc.generators.frontend_provider_profile_artifacts import (
     materialize_builtin_frontend_provider_profile_artifacts,
@@ -28,6 +38,7 @@ from ai_sdlc.models.frontend_solution_confirmation import (
     build_builtin_install_strategies,
     build_builtin_style_pack_manifests,
 )
+from ai_sdlc.telemetry.display import summarize_frontend_delivery_scope_for_display
 from ai_sdlc.utils.helpers import find_project_root
 
 program_app = typer.Typer(help="Program-level planning across multiple specs")
@@ -44,6 +55,146 @@ def _resolve_root() -> Path:
         )
         raise typer.Exit(code=1)
     return root
+
+
+def _dedupe_cli_text_items(values: object) -> list[str]:
+    deduped: list[str] = []
+    for value in values or []:
+        normalized = str(value).strip()
+        if normalized and normalized not in deduped:
+            deduped.append(normalized)
+    return deduped
+
+
+def _render_managed_delivery_apply_guard(
+    mode_title: str,
+    request_payload: ProgramFrontendManagedDeliveryApplyRequest,
+) -> None:
+    table = Table(title=mode_title)
+    table.add_column("Action Plan")
+    table.add_column("Selected")
+    table.add_column("Executable")
+    table.add_column("Unsupported")
+    table.add_row(
+        request_payload.action_plan_id,
+        ", ".join(request_payload.selected_action_ids) or "-",
+        ", ".join(request_payload.executable_action_ids) or "-",
+        ", ".join(request_payload.unsupported_action_ids) or "-",
+    )
+    console.print(table)
+
+    console.print("\n[bold cyan]Managed Delivery Apply Guard[/bold cyan]")
+    console.print(
+        f"  - request source: {request_payload.request_source_path}",
+        markup=False,
+    )
+    console.print(
+        f"  - apply state: {request_payload.apply_state}",
+        markup=False,
+    )
+    console.print(
+        f"  - confirmation required: {str(request_payload.confirmation_required).lower()}",
+        markup=False,
+    )
+    if request_payload.execution_view is not None:
+        action_types = []
+        action_by_id = {
+            action.action_id: action for action in request_payload.execution_view.action_items
+        }
+        for action_id in request_payload.selected_action_ids:
+            action = action_by_id.get(action_id)
+            if action is not None:
+                action_types.append(action.action_type)
+        if action_types:
+            console.print(
+                "  - selected action types: "
+                + ", ".join(_dedupe_cli_text_items(action_types)),
+                markup=False,
+                soft_wrap=True,
+            )
+        if request_payload.execution_view.managed_target_path:
+            console.print(
+                f"  - managed target path: {request_payload.execution_view.managed_target_path}",
+                markup=False,
+            )
+        if request_payload.execution_view.will_not_touch:
+            console.print(
+                "  - will not touch: "
+                + ", ".join(
+                    _dedupe_cli_text_items(request_payload.execution_view.will_not_touch)
+                ),
+                markup=False,
+            )
+    console.print(
+        "  - scope: only selected managed-target actions from the confirmed plan can materialize here",
+        markup=False,
+    )
+    console.print(
+        "  - package source boundary: only registry-declared package sets auto-install here",
+        markup=False,
+    )
+    console.print(
+        "  - delivery remains incomplete until browser gate and downstream closure finish",
+        markup=False,
+    )
+    for blocker in _dedupe_cli_text_items(request_payload.remaining_blockers):
+        console.print(f"  - blocker: {blocker}", markup=False)
+    for plain_text in _dedupe_cli_text_items(request_payload.plain_language_blockers):
+        console.print(f"  - explain: {plain_text}", markup=False)
+    for next_step in _dedupe_cli_text_items(request_payload.recommended_next_steps):
+        console.print(f"  - next step: {next_step}", markup=False)
+
+
+def _render_managed_delivery_apply_result(
+    root: Path,
+    result: ProgramFrontendManagedDeliveryApplyResult,
+    artifact_path: Path,
+) -> None:
+    console.print("\n[bold cyan]Managed Delivery Apply Result[/bold cyan]")
+    console.print(f"  - status: {result.result_status}", markup=False)
+    console.print(f"  - headline: {result.headline}", markup=False)
+    console.print(
+        f"  - delivery complete: {str(result.delivery_complete).lower()}",
+        markup=False,
+    )
+    console.print(
+        f"  - browser gate required: {str(result.browser_gate_required).lower()}",
+        markup=False,
+    )
+    console.print(
+        f"  - browser gate state: {result.browser_gate_state}",
+        markup=False,
+    )
+    if result.next_required_gate:
+        console.print(
+            f"  - next required gate: {result.next_required_gate}",
+            markup=False,
+        )
+    for blocker in _dedupe_cli_text_items(result.remaining_blockers):
+        console.print(f"  - blocker: {blocker}", markup=False)
+    if result.executed_action_ids:
+        console.print(
+            f"  - executed actions: {', '.join(result.executed_action_ids)}",
+            markup=False,
+        )
+    if result.failed_action_ids:
+        console.print(
+            f"  - failed actions: {', '.join(result.failed_action_ids)}",
+            markup=False,
+        )
+    if result.blocked_action_ids:
+        console.print(
+            f"  - blocked actions: {', '.join(result.blocked_action_ids)}",
+            markup=False,
+        )
+    if result.warnings:
+        console.print("\n[bold yellow]Warnings[/bold yellow]")
+        for warning in _dedupe_cli_text_items(result.warnings):
+            console.print(f"  - {warning}")
+    console.print(
+        f"  - apply artifact: {artifact_path.relative_to(root)}",
+        markup=False,
+    )
 
 
 @program_app.command("validate")
@@ -68,11 +219,11 @@ def program_validate(
 
     if result.errors:
         console.print("[bold red]Manifest errors[/bold red]")
-        for e in result.errors:
+        for e in _dedupe_cli_text_items(result.errors):
             console.print(f"  - {e}")
     if result.warnings:
         console.print("[bold yellow]Manifest warnings[/bold yellow]")
-        for w in result.warnings:
+        for w in _dedupe_cli_text_items(result.warnings):
             console.print(f"  - {w}")
 
     if result.valid:
@@ -126,7 +277,7 @@ def program_frontend_evidence_class_sync(
         console.print(
             "[bold red]Manifest invalid; cannot sync frontend evidence class mirror.[/bold red]"
         )
-        for error in blocking_errors:
+        for error in _dedupe_cli_text_items(blocking_errors):
             console.print(f"  - {error}")
         raise typer.Exit(code=1)
 
@@ -153,14 +304,14 @@ def program_frontend_evidence_class_sync(
     )
     for updated_spec in sync_result.updated_specs:
         console.print(f"  - updated spec: {updated_spec}", markup=False)
-    for written_path in sync_result.written_paths:
+    for written_path in _dedupe_cli_text_items(sync_result.written_paths):
         console.print(f"  - written path: {written_path}", markup=False)
-    for blocker in sync_result.remaining_blockers:
+    for blocker in _dedupe_cli_text_items(sync_result.remaining_blockers):
         console.print(f"  - blocker: {blocker}", markup=False)
 
     if sync_result.warnings:
         console.print("\n[bold yellow]Warnings[/bold yellow]")
-        for warning in sync_result.warnings:
+        for warning in _dedupe_cli_text_items(sync_result.warnings):
             console.print(f"  - {warning}")
 
     if dry_run:
@@ -209,7 +360,11 @@ def program_status(
         tasks = (
             f"{row.completed_tasks}/{row.total_tasks}" if row.total_tasks > 0 else "-"
         )
-        blocked = ", ".join(row.blocked_by) if row.blocked_by else "-"
+        blocked = (
+            ", ".join(_dedupe_cli_text_items(row.blocked_by))
+            if row.blocked_by
+            else "-"
+        )
         stage = row.stage_hint
         if not row.exists:
             stage = "missing_path"
@@ -227,6 +382,7 @@ def program_status(
 
     console.print(table)
     _render_frontend_status_lines(rows)
+    _render_frontend_delivery_context_lines(svc)
     if truth_surface is not None:
         _render_truth_ledger_lines(truth_surface)
 
@@ -234,7 +390,7 @@ def program_status(
         console.print(
             "\n[bold red]Manifest invalid; status shown with best-effort parsing.[/bold red]"
         )
-        for error in result.errors:
+        for error in _dedupe_cli_text_items(result.errors):
             if "problem_family=frontend_evidence_class_" in error:
                 continue
             console.print(f"  - {error}")
@@ -262,15 +418,169 @@ def program_page_ui_schema_handoff() -> None:
         f"  - style pack: {handoff.effective_style_pack_id or '-'}",
         markup=False,
     )
+    console.print(
+        f"  - delivery entry: {handoff.delivery_entry_id or '-'}",
+        markup=False,
+    )
+    console.print(
+        "  - provider theme adapter: "
+        + (handoff.provider_theme_adapter_id or "-"),
+        markup=False,
+    )
+    for package_name in _dedupe_cli_text_items(handoff.component_library_packages):
+        console.print(f"  - component package: {package_name}", markup=False)
     for entry in handoff.entries:
         console.print(
             "  - page schema: "
             f"{entry.page_schema_id} | ui schema: {entry.ui_schema_id} | recipe: {entry.page_recipe_id}",
             markup=False,
         )
-    for blocker in handoff.blockers:
+    for blocker in _dedupe_cli_text_items(handoff.blockers):
         console.print(f"  - blocker: {blocker}", markup=False)
-    for warning in handoff.warnings:
+    for warning in _dedupe_cli_text_items(handoff.warnings):
+        console.print(f"  - warning: {warning}", markup=False)
+
+    raise typer.Exit(code=0 if handoff.state == "ready" else 1)
+
+
+@program_app.command("delivery-registry-handoff")
+def program_delivery_registry_handoff() -> None:
+    """Show the delivery registry handoff surface for the 099 resolver runtime."""
+
+    root = _resolve_root()
+    svc = ProgramService(root)
+    handoff = svc.build_frontend_delivery_registry_handoff()
+
+    console.print("[bold cyan]Frontend Delivery Registry Handoff[/bold cyan]")
+    console.print(f"  - state: {handoff.state}", markup=False)
+    console.print(f"  - schema version: {handoff.schema_version}", markup=False)
+    console.print(f"  - registry: {handoff.registry_id}", markup=False)
+    console.print(f"  - entry: {handoff.entry_id or '-'}", markup=False)
+    console.print(
+        f"  - provider: {handoff.effective_provider_id or '-'}",
+        markup=False,
+    )
+    console.print(
+        f"  - requested frontend stack: {handoff.requested_frontend_stack or '-'}",
+        markup=False,
+    )
+    console.print(
+        f"  - effective frontend stack: {handoff.effective_frontend_stack or '-'}",
+        markup=False,
+    )
+    console.print(
+        f"  - requested style pack: {handoff.requested_style_pack_id or '-'}",
+        markup=False,
+    )
+    console.print(
+        f"  - effective style pack: {handoff.effective_style_pack_id or '-'}",
+        markup=False,
+    )
+    console.print(f"  - access mode: {handoff.access_mode or '-'}", markup=False)
+    if handoff.install_strategy_ids:
+        for install_strategy_id in _dedupe_cli_text_items(handoff.install_strategy_ids):
+            console.print(
+                f"  - install strategy: {install_strategy_id}",
+                markup=False,
+            )
+    console.print(
+        f"  - package manager: {handoff.package_manager or '-'}",
+        markup=False,
+    )
+    console.print(
+        f"  - provider manifest ref: {handoff.provider_manifest_ref or '-'}",
+        markup=False,
+    )
+    console.print(
+        "  - provider theme adapter: "
+        + (handoff.provider_theme_adapter_id or "-"),
+        markup=False,
+    )
+    for package_name in _dedupe_cli_text_items(handoff.component_library_packages):
+        console.print(f"  - component package: {package_name}", markup=False)
+    for package_name in _dedupe_cli_text_items(handoff.adapter_packages):
+        console.print(f"  - adapter package: {package_name}", markup=False)
+    for requirement in _dedupe_cli_text_items(handoff.availability_prerequisites):
+        console.print(f"  - availability prerequisite: {requirement}", markup=False)
+    for requirement in _dedupe_cli_text_items(handoff.runtime_requirements):
+        console.print(f"  - runtime requirement: {requirement}", markup=False)
+    for posture_mode in _dedupe_cli_text_items(handoff.supported_posture_modes):
+        console.print(f"  - supported posture: {posture_mode}", markup=False)
+    for style_entry in handoff.supported_style_entries:
+        console.print(
+            "  - style support: "
+            f"{style_entry.style_pack_id} | {style_entry.fidelity_status} | "
+            f"{style_entry.resolved_style_support_ref}",
+            markup=False,
+        )
+    for blocker in _dedupe_cli_text_items(handoff.blockers):
+        console.print(f"  - blocker: {blocker}", markup=False)
+    for warning in _dedupe_cli_text_items(handoff.warnings):
+        console.print(f"  - warning: {warning}", markup=False)
+
+    raise typer.Exit(code=0 if handoff.state == "ready" else 1)
+
+
+@program_app.command("generation-constraints-handoff")
+def program_generation_constraints_handoff() -> None:
+    """Show the generation constraints handoff bound to the current delivery context."""
+
+    root = _resolve_root()
+    svc = ProgramService(root)
+    handoff = svc.build_frontend_generation_constraints_handoff()
+
+    console.print("[bold cyan]Frontend Generation Constraints Handoff[/bold cyan]")
+    console.print(f"  - state: {handoff.state}", markup=False)
+    console.print(f"  - work item: {handoff.work_item_id}", markup=False)
+    console.print(
+        f"  - provider: {handoff.effective_provider_id or '-'}",
+        markup=False,
+    )
+    console.print(
+        f"  - delivery entry: {handoff.delivery_entry_id or '-'}",
+        markup=False,
+    )
+    console.print(
+        f"  - apply state: {handoff.managed_delivery_apply_state or '-'}",
+        markup=False,
+    )
+    if handoff.managed_delivery_apply_artifact_path:
+        console.print(
+            "  - apply artifact: "
+            + handoff.managed_delivery_apply_artifact_path,
+            markup=False,
+        )
+    console.print(
+        "  - provider theme adapter: "
+        + (handoff.provider_theme_adapter_id or "-"),
+        markup=False,
+    )
+    console.print(
+        "  - runtime adapter carrier: "
+        + (handoff.provider_runtime_adapter_carrier_mode or "-"),
+        markup=False,
+    )
+    console.print(
+        "  - runtime adapter delivery: "
+        + (handoff.provider_runtime_adapter_delivery_state or "-"),
+        markup=False,
+    )
+    console.print(
+        "  - runtime adapter evidence: "
+        + (handoff.provider_runtime_adapter_evidence_state or "-"),
+        markup=False,
+    )
+    for package_name in _dedupe_cli_text_items(handoff.component_library_packages):
+        console.print(f"  - component package: {package_name}", markup=False)
+    for page_schema_id in _dedupe_cli_text_items(handoff.page_schema_ids):
+        console.print(f"  - page schema: {page_schema_id}", markup=False)
+    for recipe_id in _dedupe_cli_text_items(handoff.allowed_recipe_ids):
+        console.print(f"  - recipe: {recipe_id}", markup=False)
+    for component_id in _dedupe_cli_text_items(handoff.whitelist_component_ids):
+        console.print(f"  - whitelist component: {component_id}", markup=False)
+    for blocker in _dedupe_cli_text_items(handoff.blockers):
+        console.print(f"  - blocker: {blocker}", markup=False)
+    for warning in _dedupe_cli_text_items(handoff.warnings):
         console.print(f"  - warning: {warning}", markup=False)
 
     raise typer.Exit(code=0 if handoff.state == "ready" else 1)
@@ -292,6 +602,32 @@ def program_theme_token_governance_handoff() -> None:
         markup=False,
     )
     console.print(
+        f"  - delivery entry: {handoff.delivery_entry_id or '-'}",
+        markup=False,
+    )
+    console.print(
+        "  - provider theme adapter: "
+        + (handoff.provider_theme_adapter_id or "-"),
+        markup=False,
+    )
+    console.print(
+        "  - runtime adapter carrier: "
+        + (handoff.provider_runtime_adapter_carrier_mode or "-"),
+        markup=False,
+    )
+    console.print(
+        "  - runtime adapter delivery: "
+        + (handoff.provider_runtime_adapter_delivery_state or "-"),
+        markup=False,
+    )
+    console.print(
+        "  - runtime adapter evidence: "
+        + (handoff.provider_runtime_adapter_evidence_state or "-"),
+        markup=False,
+    )
+    for package_name in _dedupe_cli_text_items(handoff.component_library_packages):
+        console.print(f"  - component package: {package_name}", markup=False)
+    console.print(
         f"  - requested style pack: {handoff.requested_style_pack_id or '-'}",
         markup=False,
     )
@@ -307,7 +643,7 @@ def program_theme_token_governance_handoff() -> None:
         f"  - token mappings: {handoff.token_mapping_count}",
         markup=False,
     )
-    for page_schema_id in handoff.page_schema_ids:
+    for page_schema_id in _dedupe_cli_text_items(handoff.page_schema_ids):
         console.print(f"  - page schema: {page_schema_id}", markup=False)
     for override in handoff.override_diagnostics:
         console.print(
@@ -317,9 +653,9 @@ def program_theme_token_governance_handoff() -> None:
             f"effective: {override.effective_value}",
             markup=False,
         )
-    for blocker in handoff.blockers:
+    for blocker in _dedupe_cli_text_items(handoff.blockers):
         console.print(f"  - blocker: {blocker}", markup=False)
-    for warning in handoff.warnings:
+    for warning in _dedupe_cli_text_items(handoff.warnings):
         console.print(f"  - warning: {warning}", markup=False)
 
     raise typer.Exit(code=0 if handoff.state == "ready" else 1)
@@ -341,6 +677,42 @@ def program_quality_platform_handoff() -> None:
         markup=False,
     )
     console.print(
+        f"  - delivery entry: {handoff.delivery_entry_id or '-'}",
+        markup=False,
+    )
+    console.print(
+        f"  - apply state: {handoff.managed_delivery_apply_state or '-'}",
+        markup=False,
+    )
+    if handoff.managed_delivery_apply_artifact_path:
+        console.print(
+            "  - apply artifact: "
+            + handoff.managed_delivery_apply_artifact_path,
+            markup=False,
+        )
+    console.print(
+        "  - provider theme adapter: "
+        + (handoff.provider_theme_adapter_id or "-"),
+        markup=False,
+    )
+    console.print(
+        "  - runtime adapter carrier: "
+        + (handoff.provider_runtime_adapter_carrier_mode or "-"),
+        markup=False,
+    )
+    console.print(
+        "  - runtime adapter delivery: "
+        + (handoff.provider_runtime_adapter_delivery_state or "-"),
+        markup=False,
+    )
+    console.print(
+        "  - runtime adapter evidence: "
+        + (handoff.provider_runtime_adapter_evidence_state or "-"),
+        markup=False,
+    )
+    for package_name in _dedupe_cli_text_items(handoff.component_library_packages):
+        console.print(f"  - component package: {package_name}", markup=False)
+    console.print(
         f"  - requested style pack: {handoff.requested_style_pack_id or '-'}",
         markup=False,
     )
@@ -350,9 +722,9 @@ def program_quality_platform_handoff() -> None:
     )
     console.print(f"  - artifact root: {handoff.artifact_root}", markup=False)
     console.print(f"  - matrix coverage: {handoff.matrix_coverage_count}", markup=False)
-    for evidence_contract_id in handoff.evidence_contract_ids:
+    for evidence_contract_id in _dedupe_cli_text_items(handoff.evidence_contract_ids):
         console.print(f"  - evidence contract: {evidence_contract_id}", markup=False)
-    for page_schema_id in handoff.page_schema_ids:
+    for page_schema_id in _dedupe_cli_text_items(handoff.page_schema_ids):
         console.print(f"  - page schema: {page_schema_id}", markup=False)
     for diagnostic in handoff.quality_diagnostics:
         console.print(
@@ -362,9 +734,9 @@ def program_quality_platform_handoff() -> None:
             f"gate: {diagnostic.gate_state} | evidence: {diagnostic.evidence_state}",
             markup=False,
         )
-    for blocker in handoff.blockers:
+    for blocker in _dedupe_cli_text_items(handoff.blockers):
         console.print(f"  - blocker: {blocker}", markup=False)
-    for warning in handoff.warnings:
+    for warning in _dedupe_cli_text_items(handoff.warnings):
         console.print(f"  - warning: {warning}", markup=False)
 
     raise typer.Exit(code=0 if handoff.state == "ready" else 1)
@@ -414,9 +786,9 @@ def program_provider_expansion_handoff() -> None:
             f"pair refs: {provider.pair_certification_count}",
             markup=False,
         )
-    for blocker in handoff.blockers:
+    for blocker in _dedupe_cli_text_items(handoff.blockers):
         console.print(f"  - blocker: {blocker}", markup=False)
-    for warning in handoff.warnings:
+    for warning in _dedupe_cli_text_items(handoff.warnings):
         console.print(f"  - warning: {warning}", markup=False)
 
     raise typer.Exit(code=0 if handoff.state == "ready" else 1)
@@ -465,9 +837,9 @@ def program_provider_runtime_adapter_handoff() -> None:
             f"scaffold files: {provider.scaffold_file_count}",
             markup=False,
         )
-    for blocker in handoff.blockers:
+    for blocker in _dedupe_cli_text_items(handoff.blockers):
         console.print(f"  - blocker: {blocker}", markup=False)
-    for warning in handoff.warnings:
+    for warning in _dedupe_cli_text_items(handoff.warnings):
         console.print(f"  - warning: {warning}", markup=False)
 
     raise typer.Exit(code=0 if handoff.state == "ready" else 1)
@@ -485,6 +857,21 @@ def program_cross_provider_consistency_handoff() -> None:
     console.print(f"  - state: {handoff.state}", markup=False)
     console.print(f"  - schema version: {handoff.schema_version}", markup=False)
     console.print(f"  - artifact root: {handoff.artifact_root}", markup=False)
+    console.print(
+        "  - runtime adapter carrier: "
+        f"{handoff.provider_runtime_adapter_carrier_mode or '-'}",
+        markup=False,
+    )
+    console.print(
+        "  - runtime adapter delivery: "
+        f"{handoff.provider_runtime_adapter_delivery_state or '-'}",
+        markup=False,
+    )
+    console.print(
+        "  - runtime adapter evidence: "
+        f"{handoff.provider_runtime_adapter_evidence_state or '-'}",
+        markup=False,
+    )
     console.print(f"  - pair count: {handoff.pair_count}", markup=False)
     console.print(f"  - ready pairs: {handoff.ready_pair_count}", markup=False)
     console.print(
@@ -492,7 +879,7 @@ def program_cross_provider_consistency_handoff() -> None:
         markup=False,
     )
     console.print(f"  - blocked pairs: {handoff.blocked_pair_count}", markup=False)
-    for page_schema_id in handoff.page_schema_ids:
+    for page_schema_id in _dedupe_cli_text_items(handoff.page_schema_ids):
         console.print(f"  - page schema: {page_schema_id}", markup=False)
     for diagnostic in handoff.pair_diagnostics:
         console.print(
@@ -505,9 +892,9 @@ def program_cross_provider_consistency_handoff() -> None:
             f"gate: {diagnostic.certification_gate}",
             markup=False,
         )
-    for blocker in handoff.blockers:
+    for blocker in _dedupe_cli_text_items(handoff.blockers):
         console.print(f"  - blocker: {blocker}", markup=False)
-    for warning in handoff.warnings:
+    for warning in _dedupe_cli_text_items(handoff.warnings):
         console.print(f"  - warning: {warning}", markup=False)
 
     raise typer.Exit(code=0 if handoff.state == "ready" else 1)
@@ -543,22 +930,46 @@ def program_truth_sync(
 
     validation = svc.validate_manifest(mf)
     snapshot = svc.build_truth_snapshot(mf, validation_result=validation)
+    surface = svc.build_truth_ledger_surface(mf, validation_result=validation)
+    capability_surface_by_id = {
+        str(item.get("capability_id", "")).strip(): item
+        for item in (surface or {}).get("release_capabilities", [])
+        if isinstance(item, dict)
+    }
     mode_title = "Program Truth Sync Dry-Run" if dry_run else "Program Truth Sync Execute"
     console.print(f"[bold cyan]{mode_title}[/bold cyan]")
     console.print(f"  - truth snapshot state: {snapshot.state}", markup=False)
     console.print(f"  - snapshot hash: {snapshot.snapshot_hash}", markup=False)
     console.print(
         "  - release targets: "
-        + (", ".join(mf.release_targets) if mf.release_targets else "-"),
+        + (
+            ", ".join(_dedupe_cli_text_items(mf.release_targets))
+            if mf.release_targets
+            else "-"
+        ),
         markup=False,
     )
+    capability_items: list[dict[str, object]] = []
     for item in snapshot.computed_capabilities:
-        console.print(
-            f"  - capability: {item.capability_id} | closure={item.closure_state} | audit={item.audit_state}",
-            markup=False,
-        )
-        for blocker in item.blocking_refs:
-            console.print(f"    blocker: {blocker}", markup=False)
+        capability_item: dict[str, object] = {
+            "capability_id": item.capability_id,
+            "closure_state": item.closure_state,
+            "audit_state": item.audit_state,
+            "blocking_refs": list(item.blocking_refs),
+        }
+        enriched = capability_surface_by_id.get(item.capability_id, {})
+        for key in (
+            "plain_language_blockers",
+            "recommended_next_steps",
+            "blocking_reason_summary",
+            "frontend_delivery_status",
+            "frontend_delivery_summary",
+            "capability_next_actions",
+        ):
+            if key in enriched:
+                capability_item[key] = enriched[key]
+        capability_items.append(capability_item)
+    _render_truth_release_capability_lines(capability_items)
     _render_truth_source_inventory(snapshot.source_inventory)
     _render_truth_validation_summary(validation.errors, validation.warnings)
 
@@ -607,30 +1018,30 @@ def program_truth_audit(
     console.print(f"  - state: {surface['state']}", markup=False)
     console.print(f"  - snapshot state: {surface['snapshot_state']}", markup=False)
     console.print(f"  - detail: {surface['detail']}", markup=False)
-    for action in surface.get("next_required_actions", []):
+    for action in _dedupe_cli_text_items(surface.get("next_required_actions", [])):
         console.print(f"  - next action: {action}", markup=False)
     console.print(
         "  - release targets: "
-        + (", ".join(surface["release_targets"]) if surface["release_targets"] else "-"),
+        + (
+            ", ".join(_dedupe_cli_text_items(surface["release_targets"]))
+            if surface["release_targets"]
+            else "-"
+        ),
         markup=False,
     )
-    for item in surface["release_capabilities"]:
-        console.print(
-            f"  - capability: {item['capability_id']} | closure={item['closure_state']} | audit={item['audit_state']}",
-            markup=False,
-        )
-        for blocker in item["blocking_refs"]:
-            console.print(f"    blocker: {blocker}", markup=False)
+    _render_truth_release_capability_lines(surface["release_capabilities"])
     if surface["migration_pending_count"]:
         console.print(
             f"  - migration pending: {surface['migration_pending_count']}",
             markup=False,
         )
-        for spec in surface["migration_pending_specs"][:5]:
+        for spec in _dedupe_cli_text_items(surface["migration_pending_specs"])[:5]:
             console.print(f"    pending spec: {spec}", markup=False)
-        for source in surface.get("migration_pending_sources", [])[:5]:
+        for source in _dedupe_cli_text_items(
+            surface.get("migration_pending_sources", [])
+        )[:5]:
             console.print(f"    pending source: {source}", markup=False)
-        for suggestion in surface["migration_suggestions"]:
+        for suggestion in _dedupe_cli_text_items(surface["migration_suggestions"]):
             console.print(f"    suggestion: {suggestion}", markup=False)
     _render_truth_source_inventory(surface.get("source_inventory"))
     _render_truth_validation_summary(
@@ -662,7 +1073,7 @@ def program_plan(
     result = svc.validate_manifest(mf)
     if not result.valid:
         console.print("[bold red]Manifest invalid; cannot compute plan.[/bold red]")
-        for e in result.errors:
+        for e in _dedupe_cli_text_items(result.errors):
             console.print(f"  - {e}")
         raise typer.Exit(code=1)
 
@@ -675,7 +1086,7 @@ def program_plan(
     table.add_column("Tier")
     table.add_column("Specs")
     for idx, tier in enumerate(tiers):
-        table.add_row(str(idx), ", ".join(tier))
+        table.add_row(str(idx), ", ".join(_dedupe_cli_text_items(tier)))
     console.print(table)
     raise typer.Exit(code=0)
 
@@ -721,7 +1132,7 @@ def program_integrate(
     result = svc.validate_manifest(mf)
     if not result.valid:
         console.print("[bold red]Manifest invalid; cannot build integration runbook.[/bold red]")
-        for e in result.errors:
+        for e in _dedupe_cli_text_items(result.errors):
             console.print(f"  - {e}")
         raise typer.Exit(code=1)
 
@@ -747,8 +1158,8 @@ def program_integrate(
             str(step.tier),
             step.spec_id,
             step.path,
-            " ; ".join(step.verification_commands),
-            " ; ".join(step.archive_checks),
+            " ; ".join(_dedupe_cli_text_items(step.verification_commands)),
+            " ; ".join(_dedupe_cli_text_items(step.archive_checks)),
             _format_frontend_readiness(step.frontend_readiness),
         )
     table.title = mode_title
@@ -757,7 +1168,7 @@ def program_integrate(
 
     if plan.warnings:
         console.print("\n[bold yellow]Warnings[/bold yellow]")
-        for w in plan.warnings:
+        for w in _dedupe_cli_text_items(plan.warnings):
             console.print(f"  - {w}")
 
     if report:
@@ -781,14 +1192,31 @@ def program_integrate(
                     "- Verification:",
                 ]
             )
-            lines.extend([f"  - `{cmd}`" for cmd in step.verification_commands])
+            lines.extend(
+                [
+                    f"  - `{cmd}`"
+                    for cmd in _dedupe_cli_text_items(step.verification_commands)
+                ]
+            )
             lines.append("- Archive checks:")
-            lines.extend([f"  - {item}" for item in step.archive_checks])
+            lines.extend(
+                [
+                    f"  - {item}"
+                    for item in _dedupe_cli_text_items(step.archive_checks)
+                ]
+            )
             handoff = getattr(step, "frontend_recheck_handoff", None)
             if not dry_run and handoff is not None:
                 lines.append("- Frontend recheck handoff:")
                 lines.append(f"  - {handoff.reason}")
-                lines.extend([f"  - `{cmd}`" for cmd in handoff.recommended_commands])
+                lines.extend(
+                    [
+                        f"  - `{cmd}`"
+                        for cmd in _dedupe_cli_text_items(
+                            handoff.recommended_commands
+                        )
+                    ]
+                )
             lines.append("")
         if not dry_run:
             remediation_lines = _frontend_remediation_report_lines(plan.steps)
@@ -805,7 +1233,7 @@ def program_integrate(
                 lines.append("")
         if plan.warnings:
             lines.append("## Warnings")
-            lines.extend([f"- {w}" for w in plan.warnings])
+            lines.extend([f"- {w}" for w in _dedupe_cli_text_items(plan.warnings)])
             lines.append("")
         report_path.write_text("\n".join(lines), encoding="utf-8")
         console.print(f"\n[green]Report written:[/green] {report_path}")
@@ -823,7 +1251,7 @@ def program_integrate(
     gates = svc.evaluate_execute_gates(mf, allow_dirty=allow_dirty)
     if gates.warnings:
         console.print("\n[bold yellow]Gate warnings[/bold yellow]")
-        for item in gates.warnings:
+        for item in _dedupe_cli_text_items(gates.warnings):
             console.print(f"  - {item}")
     if not gates.passed:
         console.print("\n[bold red]Execution gates failed[/bold red]")
@@ -878,7 +1306,7 @@ def program_remediate(
     result = svc.validate_manifest(mf)
     if not result.valid:
         console.print("[bold red]Manifest invalid; cannot build remediation runbook.[/bold red]")
-        for e in result.errors:
+        for e in _dedupe_cli_text_items(result.errors):
             console.print(f"  - {e}")
         raise typer.Exit(code=1)
 
@@ -902,23 +1330,33 @@ def program_remediate(
         table.add_row(
             step.spec_id,
             step.path,
-            ", ".join(step.fix_inputs[:3]) or "-",
-            " ; ".join(step.action_commands) or "-",
+            ", ".join(_dedupe_cli_text_items(step.fix_inputs)[:3]) or "-",
+            " ; ".join(_dedupe_cli_text_items(step.action_commands)) or "-",
         )
     console.print(table)
+    guidance_lines: list[str] = []
+    for step in runbook.steps:
+        for plain_text in _dedupe_cli_text_items(step.plain_language_blockers)[:2]:
+            guidance_lines.append(f"  - {step.spec_id} explain: {plain_text}")
+        for next_step in _dedupe_cli_text_items(step.recommended_next_steps)[:2]:
+            guidance_lines.append(f"  - {step.spec_id} next step: {next_step}")
+    if guidance_lines:
+        console.print("\n[bold cyan]Frontend Remediation Guidance[/bold cyan]")
+        for line in guidance_lines:
+            console.print(line, markup=False)
     if runbook.action_commands:
         console.print("\n[bold cyan]Frontend Remediation Actions[/bold cyan]")
-        for command in runbook.action_commands:
+        for command in _dedupe_cli_text_items(runbook.action_commands):
             console.print(f"  - {command}", markup=False)
 
     if runbook.follow_up_commands:
         console.print("\n[bold cyan]Frontend Remediation Follow-Up[/bold cyan]")
-        for command in runbook.follow_up_commands:
+        for command in _dedupe_cli_text_items(runbook.follow_up_commands):
             console.print(f"  - {command}", markup=False)
 
     if runbook.warnings:
         console.print("\n[bold yellow]Warnings[/bold yellow]")
-        for warning in runbook.warnings:
+        for warning in _dedupe_cli_text_items(runbook.warnings):
             console.print(f"  - {warning}")
 
     execution_result = None
@@ -939,7 +1377,7 @@ def program_remediate(
         _render_frontend_remediation_execution_result(execution_result.command_results)
         if execution_result.blockers:
             console.print("\n[bold red]Remaining Frontend Remediation Blockers[/bold red]")
-            for blocker in execution_result.blockers:
+            for blocker in _dedupe_cli_text_items(execution_result.blockers):
                 console.print(f"  - {blocker}")
         console.print(
             "\n[bold cyan]Frontend Remediation Writeback[/bold cyan]"
@@ -966,23 +1404,35 @@ def program_remediate(
                 [
                     f"### {step.spec_id}",
                     f"- Path: `{step.path}`",
-                    f"- Fix inputs: `{', '.join(step.fix_inputs) or '-'}`",
+                    f"- Fix inputs: `{', '.join(_dedupe_cli_text_items(step.fix_inputs)) or '-'}`",
+                    f"- Explain: `{'; '.join(_dedupe_cli_text_items(step.plain_language_blockers)) or '-'}`",
+                    f"- Next steps: `{'; '.join(_dedupe_cli_text_items(step.recommended_next_steps)) or '-'}`",
                     "- Action commands:",
                 ]
             )
-            lines.extend([f"  - `{command}`" for command in step.action_commands])
+            lines.extend(
+                [
+                    f"  - `{command}`"
+                    for command in _dedupe_cli_text_items(step.action_commands)
+                ]
+            )
             lines.append("")
         if runbook.follow_up_commands:
             lines.append("## Follow-Up Commands")
             lines.append("")
-            lines.extend([f"- `{command}`" for command in runbook.follow_up_commands])
+            lines.extend(
+                [
+                    f"- `{command}`"
+                    for command in _dedupe_cli_text_items(runbook.follow_up_commands)
+                ]
+            )
             lines.append("")
         if execution_result is not None:
             lines.append("## Command Results")
             lines.append("")
             for item in execution_result.command_results:
                 lines.append(f"- `{item.command}` -> `{item.status}`")
-                for path in item.written_paths:
+                for path in _dedupe_cli_text_items(item.written_paths):
                     lines.append(f"  - wrote `{path}`")
                 if item.summary:
                     lines.append(f"  - {item.summary}")
@@ -990,7 +1440,7 @@ def program_remediate(
             if execution_result.blockers:
                 lines.append("## Remaining Blockers")
                 lines.append("")
-                lines.extend([f"- {blocker}" for blocker in execution_result.blockers])
+                lines.extend([f"- {blocker}" for blocker in _dedupe_cli_text_items(execution_result.blockers)])
                 lines.append("")
             lines.append("## Writeback Artifact")
             lines.append("")
@@ -1038,87 +1488,26 @@ def program_managed_delivery_apply(
         "--yes",
         help="Confirm managed delivery apply execute mode.",
     ),
+    ack_effective_change: bool = typer.Option(
+        False,
+        "--ack-effective-change",
+        help="Acknowledge requested_* versus effective_* differences when deriving the request from current truth.",
+    ),
 ) -> None:
     """Preview or execute the narrow managed delivery apply runtime."""
     root = _resolve_root()
     svc = ProgramService(root)
 
-    request_payload = svc.build_frontend_managed_delivery_apply_request(request)
+    request_payload = svc.build_frontend_managed_delivery_apply_request(
+        request,
+        second_confirmation_acknowledged=(True if ack_effective_change else None),
+    )
     mode_title = (
         "Program Managed Delivery Apply Dry-Run"
         if dry_run
         else "Program Managed Delivery Apply Execute"
     )
-
-    table = Table(title=mode_title)
-    table.add_column("Action Plan")
-    table.add_column("Selected")
-    table.add_column("Executable")
-    table.add_column("Unsupported")
-    table.add_row(
-        request_payload.action_plan_id,
-        ", ".join(request_payload.selected_action_ids) or "-",
-        ", ".join(request_payload.executable_action_ids) or "-",
-        ", ".join(request_payload.unsupported_action_ids) or "-",
-    )
-    console.print(table)
-
-    console.print("\n[bold cyan]Managed Delivery Apply Guard[/bold cyan]")
-    console.print(
-        f"  - request source: {request_payload.request_source_path}",
-        markup=False,
-    )
-    console.print(
-        f"  - apply state: {request_payload.apply_state}",
-        markup=False,
-    )
-    console.print(
-        f"  - confirmation required: {str(request_payload.confirmation_required).lower()}",
-        markup=False,
-    )
-    if request_payload.execution_view is not None:
-        action_types = []
-        action_by_id = {
-            action.action_id: action for action in request_payload.execution_view.action_items
-        }
-        for action_id in request_payload.selected_action_ids:
-            action = action_by_id.get(action_id)
-            if action is not None:
-                action_types.append(action.action_type)
-        if action_types:
-            console.print(
-                f"  - selected action types: {', '.join(action_types)}",
-                markup=False,
-            )
-        if request_payload.execution_view.managed_target_path:
-            console.print(
-                f"  - managed target path: {request_payload.execution_view.managed_target_path}",
-                markup=False,
-            )
-        if request_payload.execution_view.will_not_touch:
-            console.print(
-                "  - will not touch: "
-                + ", ".join(request_payload.execution_view.will_not_touch),
-                markup=False,
-            )
-    console.print(
-        "  - scope: only selected managed-target actions from the confirmed plan can materialize here",
-        markup=False,
-    )
-    console.print(
-        "  - package source boundary: only registry-declared package sets auto-install here",
-        markup=False,
-    )
-    console.print(
-        "  - delivery remains incomplete until browser gate and downstream closure finish",
-        markup=False,
-    )
-    for blocker in request_payload.remaining_blockers:
-        console.print(f"  - blocker: {blocker}", markup=False)
-    for plain_text in request_payload.plain_language_blockers:
-        console.print(f"  - explain: {plain_text}", markup=False)
-    for next_step in request_payload.recommended_next_steps:
-        console.print(f"  - next step: {next_step}", markup=False)
+    _render_managed_delivery_apply_guard(mode_title, request_payload)
 
     if dry_run:
         raise typer.Exit(code=0 if not request_payload.remaining_blockers else 1)
@@ -1126,6 +1515,24 @@ def program_managed_delivery_apply(
     if not yes:
         console.print(
             "[bold yellow]`--execute` requires explicit confirmation via `--yes`.[/bold yellow]"
+        )
+        raise typer.Exit(code=2)
+
+    if (
+        request is None
+        and not ack_effective_change
+        and "second_confirmation_missing" in request_payload.remaining_blockers
+    ):
+        console.print(
+            "\n[bold yellow]Effective solution change requires explicit acknowledgement[/bold yellow]"
+        )
+        console.print(
+            "  - current truth contains requested_* versus effective_* differences; review the managed delivery guard before executing",
+            markup=False,
+        )
+        console.print(
+            "  - pass `--ack-effective-change` to confirm the effective solution may differ from the requested solution",
+            markup=False,
         )
         raise typer.Exit(code=2)
 
@@ -1139,51 +1546,7 @@ def program_managed_delivery_apply(
         request=request_payload,
         result=result,
     )
-    console.print("\n[bold cyan]Managed Delivery Apply Result[/bold cyan]")
-    console.print(f"  - status: {result.result_status}", markup=False)
-    console.print(f"  - headline: {result.headline}", markup=False)
-    console.print(
-        f"  - delivery complete: {str(result.delivery_complete).lower()}",
-        markup=False,
-    )
-    console.print(
-        f"  - browser gate required: {str(result.browser_gate_required).lower()}",
-        markup=False,
-    )
-    console.print(
-        f"  - browser gate state: {result.browser_gate_state}",
-        markup=False,
-    )
-    if result.next_required_gate:
-        console.print(
-            f"  - next required gate: {result.next_required_gate}",
-            markup=False,
-        )
-    for blocker in result.remaining_blockers:
-        console.print(f"  - blocker: {blocker}", markup=False)
-    if result.executed_action_ids:
-        console.print(
-            f"  - executed actions: {', '.join(result.executed_action_ids)}",
-            markup=False,
-        )
-    if result.failed_action_ids:
-        console.print(
-            f"  - failed actions: {', '.join(result.failed_action_ids)}",
-            markup=False,
-        )
-    if result.blocked_action_ids:
-        console.print(
-            f"  - blocked actions: {', '.join(result.blocked_action_ids)}",
-            markup=False,
-        )
-    if result.warnings:
-        console.print("\n[bold yellow]Warnings[/bold yellow]")
-        for warning in result.warnings:
-            console.print(f"  - {warning}")
-    console.print(
-        f"  - apply artifact: {artifact_path.relative_to(root)}",
-        markup=False,
-    )
+    _render_managed_delivery_apply_result(root, result, artifact_path)
 
     raise typer.Exit(code=0 if result.passed else 1)
 
@@ -1216,7 +1579,7 @@ def program_browser_gate_probe(
         request.apply_artifact_path or "-",
         request.gate_run_id or "-",
         request.spec_dir or "-",
-        ", ".join(request.required_probe_set) or "-",
+        ", ".join(_dedupe_cli_text_items(request.required_probe_set)) or "-",
     )
     console.print(table)
     console.print("\n[bold cyan]Browser Gate Probe Guard[/bold cyan]")
@@ -1228,6 +1591,23 @@ def program_browser_gate_probe(
             markup=False,
         )
         console.print(
+            f"  - delivery entry: {request.execution_context.delivery_entry_id or '-'}",
+            markup=False,
+        )
+        console.print(
+            "  - provider theme adapter: "
+            + (request.execution_context.provider_theme_adapter_id or "-"),
+            markup=False,
+        )
+        for package_name in _dedupe_cli_text_items(
+            request.execution_context.component_library_packages
+        ):
+            console.print(f"  - component package: {package_name}", markup=False)
+        for page_schema_id in _dedupe_cli_text_items(
+            request.execution_context.page_schema_ids
+        ):
+            console.print(f"  - page schema: {page_schema_id}", markup=False)
+        console.print(
             f"  - browser entry ref: {request.execution_context.browser_entry_ref}",
             markup=False,
         )
@@ -1236,8 +1616,12 @@ def program_browser_gate_probe(
             f"  - overall gate status preview: {request.overall_gate_status_preview}",
             markup=False,
         )
-    for blocker in request.remaining_blockers:
+    for blocker in _dedupe_cli_text_items(request.remaining_blockers):
         console.print(f"  - blocker: {blocker}", markup=False)
+    for plain_text in _dedupe_cli_text_items(request.plain_language_blockers):
+        console.print(f"  - explain: {plain_text}", markup=False)
+    for next_step in _dedupe_cli_text_items(request.recommended_next_steps):
+        console.print(f"  - next step: {next_step}", markup=False)
 
     if dry_run:
         raise typer.Exit(code=0 if not request.remaining_blockers else 1)
@@ -1264,11 +1648,11 @@ def program_browser_gate_probe(
             f"  - next command: {result.recommended_next_command}",
             markup=False,
         )
-    for blocker in result.remaining_blockers:
+    for blocker in _dedupe_cli_text_items(result.remaining_blockers):
         console.print(f"  - blocker: {blocker}", markup=False)
     if result.warnings:
         console.print("\n[bold yellow]Warnings[/bold yellow]")
-        for warning in result.warnings:
+        for warning in _dedupe_cli_text_items(result.warnings):
             console.print(f"  - {warning}")
     raise typer.Exit(code=0 if result.passed else 1)
 
@@ -1299,7 +1683,7 @@ def program_provider_handoff(
     result = svc.validate_manifest(mf)
     if not result.valid:
         console.print("[bold red]Manifest invalid; cannot build provider handoff.[/bold red]")
-        for e in result.errors:
+        for e in _dedupe_cli_text_items(result.errors):
             console.print(f"  - {e}")
         raise typer.Exit(code=1)
 
@@ -1315,17 +1699,21 @@ def program_provider_handoff(
             table.add_row(
                 step.spec_id,
                 step.path,
-                ", ".join(step.pending_inputs) or "-",
-                " ; ".join(step.suggested_next_actions) or "-",
+                ", ".join(_dedupe_cli_text_items(step.pending_inputs)) or "-",
+                " ; ".join(_dedupe_cli_text_items(step.suggested_next_actions)) or "-",
             )
         console.print(table)
         console.print("\n[bold cyan]Frontend Provider Handoff Steps[/bold cyan]")
         for step in handoff.steps:
             console.print(f"  - {step.spec_id}: {step.path}", markup=False)
-            for pending in step.pending_inputs:
+            for pending in _dedupe_cli_text_items(step.pending_inputs):
                 console.print(f"    pending input: {pending}", markup=False)
-            for action in step.suggested_next_actions:
+            for action in _dedupe_cli_text_items(step.suggested_next_actions):
                 console.print(f"    next action: {action}", markup=False)
+            for plain_text in _dedupe_cli_text_items(step.plain_language_blockers)[:2]:
+                console.print(f"    explain: {plain_text}", markup=False)
+            for next_step in _dedupe_cli_text_items(step.recommended_next_steps)[:2]:
+                console.print(f"    next step: {next_step}", markup=False)
     else:
         console.print("[green]No frontend provider handoff required.[/green]")
 
@@ -1343,12 +1731,12 @@ def program_provider_handoff(
             f"  - writeback generated_at: {handoff.writeback_generated_at}",
             markup=False,
         )
-    for blocker in handoff.remaining_blockers:
+    for blocker in _dedupe_cli_text_items(handoff.remaining_blockers):
         console.print(f"  - blocker: {blocker}", markup=False)
 
     if handoff.warnings:
         console.print("\n[bold yellow]Warnings[/bold yellow]")
-        for warning in handoff.warnings:
+        for warning in _dedupe_cli_text_items(handoff.warnings):
             console.print(f"  - {warning}")
 
     if report:
@@ -1372,21 +1760,23 @@ def program_provider_handoff(
                     [
                         f"### {step.spec_id}",
                         f"- Path: `{step.path}`",
-                        f"- Pending inputs: `{', '.join(step.pending_inputs) or '-'}`",
+                        f"- Pending inputs: `{', '.join(_dedupe_cli_text_items(step.pending_inputs)) or '-'}`",
+                        f"- Explain: `{'; '.join(_dedupe_cli_text_items(step.plain_language_blockers)) or '-'}`",
+                        f"- Next steps: `{'; '.join(_dedupe_cli_text_items(step.recommended_next_steps)) or '-'}`",
                         "- Suggested next actions:",
                     ]
                 )
-                lines.extend([f"  - {action}" for action in step.suggested_next_actions])
+                lines.extend([f"  - {action}" for action in _dedupe_cli_text_items(step.suggested_next_actions)])
                 lines.append("")
         if handoff.remaining_blockers:
             lines.append("## Remaining Blockers")
             lines.append("")
-            lines.extend([f"- {blocker}" for blocker in handoff.remaining_blockers])
+            lines.extend([f"- {blocker}" for blocker in _dedupe_cli_text_items(handoff.remaining_blockers)])
             lines.append("")
         if handoff.warnings:
             lines.append("## Warnings")
             lines.append("")
-            lines.extend([f"- {warning}" for warning in handoff.warnings])
+            lines.extend([f"- {warning}" for warning in _dedupe_cli_text_items(handoff.warnings)])
             lines.append("")
         report_path.write_text("\n".join(lines), encoding="utf-8")
         console.print(f"\n[green]Report written:[/green] {report_path}")
@@ -1432,7 +1822,7 @@ def program_provider_runtime(
     result = svc.validate_manifest(mf)
     if not result.valid:
         console.print("[bold red]Manifest invalid; cannot build provider runtime.[/bold red]")
-        for e in result.errors:
+        for e in _dedupe_cli_text_items(result.errors):
             console.print(f"  - {e}")
         raise typer.Exit(code=1)
 
@@ -1453,10 +1843,21 @@ def program_provider_runtime(
             table.add_row(
                 step.spec_id,
                 step.path,
-                ", ".join(step.pending_inputs) or "-",
-                " ; ".join(step.suggested_next_actions) or "-",
+                ", ".join(_dedupe_cli_text_items(step.pending_inputs)) or "-",
+                " ; ".join(_dedupe_cli_text_items(step.suggested_next_actions)) or "-",
             )
         console.print(table)
+        console.print("\n[bold cyan]Frontend Provider Runtime Steps[/bold cyan]")
+        for step in request.steps:
+            console.print(f"  - {step.spec_id}: {step.path}", markup=False)
+            for pending in _dedupe_cli_text_items(step.pending_inputs):
+                console.print(f"    pending input: {pending}", markup=False)
+            for action in _dedupe_cli_text_items(step.suggested_next_actions)[:3]:
+                console.print(f"    next action: {action}", markup=False)
+            for plain_text in _dedupe_cli_text_items(step.plain_language_blockers)[:2]:
+                console.print(f"    explain: {plain_text}", markup=False)
+            for next_step in _dedupe_cli_text_items(step.recommended_next_steps)[:2]:
+                console.print(f"    next step: {next_step}", markup=False)
     else:
         console.print("[green]No guarded frontend provider runtime steps required.[/green]")
 
@@ -1475,12 +1876,12 @@ def program_provider_runtime(
             f"  - handoff generated_at: {request.handoff_generated_at}",
             markup=False,
         )
-    for blocker in request.remaining_blockers:
+    for blocker in _dedupe_cli_text_items(request.remaining_blockers):
         console.print(f"  - blocker: {blocker}", markup=False)
 
     if request.warnings:
         console.print("\n[bold yellow]Warnings[/bold yellow]")
-        for warning in request.warnings:
+        for warning in _dedupe_cli_text_items(request.warnings):
             console.print(f"  - {warning}")
 
     runtime_result = None
@@ -1530,16 +1931,18 @@ def program_provider_runtime(
                     [
                         f"### {step.spec_id}",
                         f"- Path: `{step.path}`",
-                        f"- Pending inputs: `{', '.join(step.pending_inputs) or '-'}`",
+                        f"- Pending inputs: `{', '.join(_dedupe_cli_text_items(step.pending_inputs)) or '-'}`",
+                        f"- Explain: `{'; '.join(_dedupe_cli_text_items(step.plain_language_blockers)) or '-'}`",
+                        f"- Next steps: `{'; '.join(_dedupe_cli_text_items(step.recommended_next_steps)) or '-'}`",
                         "- Suggested next actions:",
                     ]
                 )
-                lines.extend([f"  - {action}" for action in step.suggested_next_actions])
+                lines.extend([f"  - {action}" for action in _dedupe_cli_text_items(step.suggested_next_actions)])
                 lines.append("")
         if request.remaining_blockers:
             lines.append("## Remaining Blockers")
             lines.append("")
-            lines.extend([f"- {blocker}" for blocker in request.remaining_blockers])
+            lines.extend([f"- {blocker}" for blocker in _dedupe_cli_text_items(request.remaining_blockers)])
             lines.append("")
         if runtime_result is not None:
             lines.append("## Frontend Provider Runtime Result")
@@ -1551,11 +1954,23 @@ def program_provider_runtime(
             lines.append(f"- Confirmed: `{str(runtime_result.confirmed).lower()}`")
             if runtime_result.patch_summaries:
                 lines.append("- Patch summaries:")
-                lines.extend([f"  - {item}" for item in runtime_result.patch_summaries])
+                lines.extend(
+                    [
+                        f"  - {item}"
+                        for item in _dedupe_cli_text_items(
+                            runtime_result.patch_summaries
+                        )
+                    ]
+                )
             if runtime_result.remaining_blockers:
                 lines.append("- Remaining blockers:")
                 lines.extend(
-                    [f"  - {item}" for item in runtime_result.remaining_blockers]
+                    [
+                        f"  - {item}"
+                        for item in _dedupe_cli_text_items(
+                            runtime_result.remaining_blockers
+                        )
+                    ]
                 )
             lines.append("")
         if runtime_artifact_path is not None:
@@ -1566,10 +1981,10 @@ def program_provider_runtime(
         if request.warnings or (runtime_result is not None and runtime_result.warnings):
             lines.append("## Warnings")
             lines.append("")
-            warning_lines = list(request.warnings)
+            warning_lines = _dedupe_cli_text_items(request.warnings)
             if runtime_result is not None:
-                warning_lines.extend(runtime_result.warnings)
-            lines.extend([f"- {warning}" for warning in warning_lines])
+                warning_lines.extend(_dedupe_cli_text_items(runtime_result.warnings))
+            lines.extend([f"- {warning}" for warning in _dedupe_cli_text_items(warning_lines)])
             lines.append("")
         report_path.write_text("\n".join(lines), encoding="utf-8")
         console.print(f"\n[green]Report written:[/green] {report_path}")
@@ -1643,6 +2058,16 @@ def program_solution_confirm(
         "--yes",
         help="Confirm solution confirmation execute mode.",
     ),
+    continue_execution: bool = typer.Option(
+        False,
+        "--continue",
+        help="After persisting the solution confirmation snapshot, continue into managed delivery apply.",
+    ),
+    ack_effective_change: bool = typer.Option(
+        False,
+        "--ack-effective-change",
+        help="Acknowledge requested_* versus effective_* differences before continuing into apply.",
+    ),
 ) -> None:
     """Preview or execute the structured frontend solution confirmation baseline."""
     root = _resolve_root()
@@ -1659,7 +2084,7 @@ def program_solution_confirm(
         console.print(
             "[bold red]Manifest invalid; cannot build frontend solution confirmation.[/bold red]"
         )
-        for e in result.errors:
+        for e in _dedupe_cli_text_items(result.errors):
             console.print(f"  - {e}")
         raise typer.Exit(code=1)
 
@@ -1761,6 +2186,11 @@ def program_solution_confirm(
         console.print(f"\n[green]Report written:[/green] {report_path}")
 
     if dry_run:
+        if continue_execution:
+            console.print(
+                "[bold yellow]`--continue` is only available together with `--execute`.[/bold yellow]"
+            )
+            raise typer.Exit(code=2)
         raise typer.Exit(code=0)
 
     if snapshot.preflight_status == "blocked":
@@ -1772,7 +2202,44 @@ def program_solution_confirm(
     console.print(
         "\n[bold green]Frontend solution confirmation materialized[/bold green]"
     )
-    raise typer.Exit(code=0)
+    if not continue_execution:
+        raise typer.Exit(code=0)
+
+    changed_fields = _frontend_solution_confirmation_change_fields(snapshot)
+    requires_effective_change_ack = bool(changed_fields)
+    if requires_effective_change_ack and not ack_effective_change:
+        console.print(
+            "\n[bold yellow]Effective solution change requires explicit acknowledgement[/bold yellow]"
+        )
+        console.print(
+            "  - requested_* and effective_* differ; review the confirmation diff before continuing into apply",
+            markup=False,
+        )
+        console.print(
+            "  - pass `--ack-effective-change` to confirm the effective solution may differ from the requested solution",
+            markup=False,
+        )
+        raise typer.Exit(code=2)
+
+    apply_request = svc.build_frontend_managed_delivery_apply_request(
+        second_confirmation_acknowledged=(
+            ack_effective_change or not requires_effective_change_ack
+        )
+    )
+    _render_managed_delivery_apply_guard(
+        "Program Managed Delivery Apply Execute",
+        apply_request,
+    )
+    apply_result = svc.execute_frontend_managed_delivery_apply(
+        request=apply_request,
+        confirmed=True,
+    )
+    artifact_path = svc.write_frontend_managed_delivery_apply_artifact(
+        request=apply_request,
+        result=apply_result,
+    )
+    _render_managed_delivery_apply_result(root, apply_result, artifact_path)
+    raise typer.Exit(code=0 if apply_result.passed else 1)
 
 
 @program_app.command("provider-patch-handoff")
@@ -1803,7 +2270,7 @@ def program_provider_patch_handoff(
         console.print(
             "[bold red]Manifest invalid; cannot build provider patch handoff.[/bold red]"
         )
-        for e in result.errors:
+        for e in _dedupe_cli_text_items(result.errors):
             console.print(f"  - {e}")
         raise typer.Exit(code=1)
 
@@ -1821,8 +2288,8 @@ def program_provider_patch_handoff(
                 step.spec_id,
                 step.path,
                 step.patch_availability_state,
-                ", ".join(step.pending_inputs) or "-",
-                " ; ".join(step.suggested_next_actions) or "-",
+                ", ".join(_dedupe_cli_text_items(step.pending_inputs)) or "-",
+                " ; ".join(_dedupe_cli_text_items(step.suggested_next_actions)) or "-",
             )
         console.print(table)
         console.print("\n[bold cyan]Frontend Provider Patch Handoff Steps[/bold cyan]")
@@ -1831,10 +2298,14 @@ def program_provider_patch_handoff(
                 f"  - {step.spec_id}: {step.path} [{step.patch_availability_state}]",
                 markup=False,
             )
-            for pending in step.pending_inputs:
+            for pending in _dedupe_cli_text_items(step.pending_inputs):
                 console.print(f"    pending input: {pending}", markup=False)
-            for action in step.suggested_next_actions:
+            for action in _dedupe_cli_text_items(step.suggested_next_actions):
                 console.print(f"    next action: {action}", markup=False)
+            for plain_text in _dedupe_cli_text_items(step.plain_language_blockers)[:2]:
+                console.print(f"    explain: {plain_text}", markup=False)
+            for next_step in _dedupe_cli_text_items(step.recommended_next_steps)[:2]:
+                console.print(f"    next step: {next_step}", markup=False)
     else:
         console.print("[green]No frontend provider patch handoff required.[/green]")
 
@@ -1852,14 +2323,14 @@ def program_provider_patch_handoff(
             f"  - runtime generated_at: {handoff.runtime_generated_at}",
             markup=False,
         )
-    for summary in handoff.patch_summaries:
+    for summary in _dedupe_cli_text_items(handoff.patch_summaries):
         console.print(f"  - patch summary: {summary}", markup=False)
-    for blocker in handoff.remaining_blockers:
+    for blocker in _dedupe_cli_text_items(handoff.remaining_blockers):
         console.print(f"  - blocker: {blocker}", markup=False)
 
     if handoff.warnings:
         console.print("\n[bold yellow]Warnings[/bold yellow]")
-        for warning in handoff.warnings:
+        for warning in _dedupe_cli_text_items(handoff.warnings):
             console.print(f"  - {warning}")
 
     if report:
@@ -1884,26 +2355,33 @@ def program_provider_patch_handoff(
                         f"### {step.spec_id}",
                         f"- Path: `{step.path}`",
                         f"- Patch availability: `{step.patch_availability_state}`",
-                        f"- Pending inputs: `{', '.join(step.pending_inputs) or '-'}`",
+                        f"- Pending inputs: `{', '.join(_dedupe_cli_text_items(step.pending_inputs)) or '-'}`",
+                        f"- Explain: `{'; '.join(_dedupe_cli_text_items(step.plain_language_blockers)) or '-'}`",
+                        f"- Next steps: `{'; '.join(_dedupe_cli_text_items(step.recommended_next_steps)) or '-'}`",
                         "- Suggested next actions:",
                     ]
                 )
-                lines.extend([f"  - {action}" for action in step.suggested_next_actions])
+                lines.extend([f"  - {action}" for action in _dedupe_cli_text_items(step.suggested_next_actions)])
                 lines.append("")
         if handoff.patch_summaries:
             lines.append("## Patch Summaries")
             lines.append("")
-            lines.extend([f"- {summary}" for summary in handoff.patch_summaries])
+            lines.extend(
+                [
+                    f"- {summary}"
+                    for summary in _dedupe_cli_text_items(handoff.patch_summaries)
+                ]
+            )
             lines.append("")
         if handoff.remaining_blockers:
             lines.append("## Remaining Blockers")
             lines.append("")
-            lines.extend([f"- {blocker}" for blocker in handoff.remaining_blockers])
+            lines.extend([f"- {blocker}" for blocker in _dedupe_cli_text_items(handoff.remaining_blockers)])
             lines.append("")
         if handoff.warnings:
             lines.append("## Warnings")
             lines.append("")
-            lines.extend([f"- {warning}" for warning in handoff.warnings])
+            lines.extend([f"- {warning}" for warning in _dedupe_cli_text_items(handoff.warnings)])
             lines.append("")
         report_path.write_text("\n".join(lines), encoding="utf-8")
         console.print(f"\n[green]Report written:[/green] {report_path}")
@@ -1951,7 +2429,7 @@ def program_provider_patch_apply(
         console.print(
             "[bold red]Manifest invalid; cannot build provider patch apply.[/bold red]"
         )
-        for e in result.errors:
+        for e in _dedupe_cli_text_items(result.errors):
             console.print(f"  - {e}")
         raise typer.Exit(code=1)
 
@@ -1974,10 +2452,24 @@ def program_provider_patch_apply(
                 step.spec_id,
                 step.path,
                 step.patch_availability_state,
-                ", ".join(step.pending_inputs) or "-",
-                " ; ".join(step.suggested_next_actions) or "-",
+                ", ".join(_dedupe_cli_text_items(step.pending_inputs)) or "-",
+                " ; ".join(_dedupe_cli_text_items(step.suggested_next_actions)) or "-",
             )
         console.print(table)
+        console.print("\n[bold cyan]Frontend Provider Patch Apply Steps[/bold cyan]")
+        for step in request.steps:
+            console.print(
+                f"  - {step.spec_id}: {step.path} [{step.patch_availability_state}]",
+                markup=False,
+            )
+            for pending in _dedupe_cli_text_items(step.pending_inputs):
+                console.print(f"    pending input: {pending}", markup=False)
+            for action in _dedupe_cli_text_items(step.suggested_next_actions)[:3]:
+                console.print(f"    next action: {action}", markup=False)
+            for plain_text in _dedupe_cli_text_items(step.plain_language_blockers)[:2]:
+                console.print(f"    explain: {plain_text}", markup=False)
+            for next_step in _dedupe_cli_text_items(step.recommended_next_steps)[:2]:
+                console.print(f"    next step: {next_step}", markup=False)
     else:
         console.print("[green]No guarded frontend provider patch apply steps required.[/green]")
 
@@ -2000,12 +2492,12 @@ def program_provider_patch_apply(
             f"  - handoff generated_at: {request.handoff_generated_at}",
             markup=False,
         )
-    for blocker in request.remaining_blockers:
+    for blocker in _dedupe_cli_text_items(request.remaining_blockers):
         console.print(f"  - blocker: {blocker}", markup=False)
 
     if request.warnings:
         console.print("\n[bold yellow]Warnings[/bold yellow]")
-        for warning in request.warnings:
+        for warning in _dedupe_cli_text_items(request.warnings):
             console.print(f"  - {warning}")
 
     apply_result = None
@@ -2057,16 +2549,18 @@ def program_provider_patch_apply(
                         f"### {step.spec_id}",
                         f"- Path: `{step.path}`",
                         f"- Patch availability: `{step.patch_availability_state}`",
-                        f"- Pending inputs: `{', '.join(step.pending_inputs) or '-'}`",
+                        f"- Pending inputs: `{', '.join(_dedupe_cli_text_items(step.pending_inputs)) or '-'}`",
+                        f"- Explain: `{'; '.join(_dedupe_cli_text_items(step.plain_language_blockers)) or '-'}`",
+                        f"- Next steps: `{'; '.join(_dedupe_cli_text_items(step.recommended_next_steps)) or '-'}`",
                         "- Suggested next actions:",
                     ]
                 )
-                lines.extend([f"  - {action}" for action in step.suggested_next_actions])
+                lines.extend([f"  - {action}" for action in _dedupe_cli_text_items(step.suggested_next_actions)])
                 lines.append("")
         if request.remaining_blockers:
             lines.append("## Remaining Blockers")
             lines.append("")
-            lines.extend([f"- {blocker}" for blocker in request.remaining_blockers])
+            lines.extend([f"- {blocker}" for blocker in _dedupe_cli_text_items(request.remaining_blockers)])
             lines.append("")
         if apply_result is not None:
             lines.append("## Frontend Provider Patch Apply Result")
@@ -2076,13 +2570,13 @@ def program_provider_patch_apply(
             lines.append(f"- Confirmed: `{str(apply_result.confirmed).lower()}`")
             if apply_result.apply_summaries:
                 lines.append("- Apply summaries:")
-                lines.extend([f"  - {item}" for item in apply_result.apply_summaries])
+                lines.extend([f"  - {item}" for item in _dedupe_cli_text_items(apply_result.apply_summaries)])
             if apply_result.written_paths:
                 lines.append("- Written paths:")
-                lines.extend([f"  - {item}" for item in apply_result.written_paths])
+                lines.extend([f"  - {item}" for item in _dedupe_cli_text_items(apply_result.written_paths)])
             if apply_result.remaining_blockers:
                 lines.append("- Remaining blockers:")
-                lines.extend([f"  - {item}" for item in apply_result.remaining_blockers])
+                lines.extend([f"  - {item}" for item in _dedupe_cli_text_items(apply_result.remaining_blockers)])
             lines.append("")
         if apply_artifact_path is not None:
             lines.append("## Frontend Provider Patch Apply Artifact")
@@ -2092,10 +2586,10 @@ def program_provider_patch_apply(
         if request.warnings or (apply_result is not None and apply_result.warnings):
             lines.append("## Warnings")
             lines.append("")
-            warning_lines = list(request.warnings)
+            warning_lines = _dedupe_cli_text_items(request.warnings)
             if apply_result is not None:
-                warning_lines.extend(apply_result.warnings)
-            lines.extend([f"- {warning}" for warning in warning_lines])
+                warning_lines.extend(_dedupe_cli_text_items(apply_result.warnings))
+            lines.extend([f"- {warning}" for warning in _dedupe_cli_text_items(warning_lines)])
             lines.append("")
         report_path.write_text("\n".join(lines), encoding="utf-8")
         console.print(f"\n[green]Report written:[/green] {report_path}")
@@ -2150,7 +2644,7 @@ def program_cross_spec_writeback(
         console.print(
             "[bold red]Manifest invalid; cannot build cross-spec writeback.[/bold red]"
         )
-        for e in result.errors:
+        for e in _dedupe_cli_text_items(result.errors):
             console.print(f"  - {e}")
         raise typer.Exit(code=1)
 
@@ -2173,10 +2667,24 @@ def program_cross_spec_writeback(
                 step.spec_id,
                 step.path,
                 step.writeback_state,
-                ", ".join(step.pending_inputs) or "-",
-                " ; ".join(step.suggested_next_actions) or "-",
+                ", ".join(_dedupe_cli_text_items(step.pending_inputs)) or "-",
+                " ; ".join(_dedupe_cli_text_items(step.suggested_next_actions)) or "-",
             )
         console.print(table)
+        console.print("\n[bold cyan]Frontend Cross-Spec Writeback Steps[/bold cyan]")
+        for step in request.steps:
+            console.print(
+                f"  - {step.spec_id}: {step.path} [{step.writeback_state}]",
+                markup=False,
+            )
+            for pending in _dedupe_cli_text_items(step.pending_inputs):
+                console.print(f"    pending input: {pending}", markup=False)
+            for action in _dedupe_cli_text_items(step.suggested_next_actions)[:3]:
+                console.print(f"    next action: {action}", markup=False)
+            for plain_text in _dedupe_cli_text_items(step.plain_language_blockers)[:2]:
+                console.print(f"    explain: {plain_text}", markup=False)
+            for next_step in _dedupe_cli_text_items(step.recommended_next_steps)[:2]:
+                console.print(f"    next step: {next_step}", markup=False)
     else:
         console.print("[green]No guarded frontend cross-spec writeback steps required.[/green]")
 
@@ -2193,14 +2701,14 @@ def program_cross_spec_writeback(
             f"  - artifact generated_at: {request.artifact_generated_at}",
             markup=False,
         )
-    for path in request.written_paths:
+    for path in _dedupe_cli_text_items(request.written_paths):
         console.print(f"  - existing written path: {path}", markup=False)
-    for blocker in request.remaining_blockers:
+    for blocker in _dedupe_cli_text_items(request.remaining_blockers):
         console.print(f"  - blocker: {blocker}", markup=False)
 
     if request.warnings:
         console.print("\n[bold yellow]Warnings[/bold yellow]")
-        for warning in request.warnings:
+        for warning in _dedupe_cli_text_items(request.warnings):
             console.print(f"  - {warning}")
 
     writeback_result = None
@@ -2252,21 +2760,23 @@ def program_cross_spec_writeback(
                         f"### {step.spec_id}",
                         f"- Path: `{step.path}`",
                         f"- Writeback state: `{step.writeback_state}`",
-                        f"- Pending inputs: `{', '.join(step.pending_inputs) or '-'}`",
+                        f"- Pending inputs: `{', '.join(_dedupe_cli_text_items(step.pending_inputs)) or '-'}`",
+                        f"- Explain: `{'; '.join(_dedupe_cli_text_items(step.plain_language_blockers)) or '-'}`",
+                        f"- Next steps: `{'; '.join(_dedupe_cli_text_items(step.recommended_next_steps)) or '-'}`",
                         "- Suggested next actions:",
                     ]
                 )
-                lines.extend([f"  - {action}" for action in step.suggested_next_actions])
+                lines.extend([f"  - {action}" for action in _dedupe_cli_text_items(step.suggested_next_actions)])
                 lines.append("")
         if request.written_paths:
             lines.append("## Existing Written Paths")
             lines.append("")
-            lines.extend([f"- {path}" for path in request.written_paths])
+            lines.extend([f"- {path}" for path in _dedupe_cli_text_items(request.written_paths)])
             lines.append("")
         if request.remaining_blockers:
             lines.append("## Remaining Blockers")
             lines.append("")
-            lines.extend([f"- {blocker}" for blocker in request.remaining_blockers])
+            lines.extend([f"- {blocker}" for blocker in _dedupe_cli_text_items(request.remaining_blockers)])
             lines.append("")
         if writeback_result is not None:
             lines.append("## Frontend Cross-Spec Writeback Result")
@@ -2279,15 +2789,15 @@ def program_cross_spec_writeback(
             if writeback_result.orchestration_summaries:
                 lines.append("- Orchestration summaries:")
                 lines.extend(
-                    [f"  - {item}" for item in writeback_result.orchestration_summaries]
+                    [f"  - {item}" for item in _dedupe_cli_text_items(writeback_result.orchestration_summaries)]
                 )
             if writeback_result.written_paths:
                 lines.append("- Written paths:")
-                lines.extend([f"  - {item}" for item in writeback_result.written_paths])
+                lines.extend([f"  - {item}" for item in _dedupe_cli_text_items(writeback_result.written_paths)])
             if writeback_result.remaining_blockers:
                 lines.append("- Remaining blockers:")
                 lines.extend(
-                    [f"  - {item}" for item in writeback_result.remaining_blockers]
+                    [f"  - {item}" for item in _dedupe_cli_text_items(writeback_result.remaining_blockers)]
                 )
             lines.append("")
         if writeback_artifact_path is not None:
@@ -2298,10 +2808,10 @@ def program_cross_spec_writeback(
         if request.warnings or (writeback_result is not None and writeback_result.warnings):
             lines.append("## Warnings")
             lines.append("")
-            warning_lines = list(request.warnings)
+            warning_lines = _dedupe_cli_text_items(request.warnings)
             if writeback_result is not None:
-                warning_lines.extend(writeback_result.warnings)
-            lines.extend([f"- {warning}" for warning in warning_lines])
+                warning_lines.extend(_dedupe_cli_text_items(writeback_result.warnings))
+            lines.extend([f"- {warning}" for warning in _dedupe_cli_text_items(warning_lines)])
             lines.append("")
         report_path.write_text("\n".join(lines), encoding="utf-8")
         console.print(f"\n[green]Report written:[/green] {report_path}")
@@ -2356,7 +2866,7 @@ def program_guarded_registry(
         console.print(
             "[bold red]Manifest invalid; cannot build guarded registry request.[/bold red]"
         )
-        for e in result.errors:
+        for e in _dedupe_cli_text_items(result.errors):
             console.print(f"  - {e}")
         raise typer.Exit(code=1)
 
@@ -2379,10 +2889,24 @@ def program_guarded_registry(
                 step.spec_id,
                 step.path,
                 step.registry_state,
-                ", ".join(step.pending_inputs) or "-",
-                " ; ".join(step.suggested_next_actions) or "-",
+                ", ".join(_dedupe_cli_text_items(step.pending_inputs)) or "-",
+                " ; ".join(_dedupe_cli_text_items(step.suggested_next_actions)) or "-",
             )
         console.print(table)
+        console.print("\n[bold cyan]Frontend Guarded Registry Steps[/bold cyan]")
+        for step in request.steps:
+            console.print(
+                f"  - {step.spec_id}: {step.path} [{step.registry_state}]",
+                markup=False,
+            )
+            for pending in _dedupe_cli_text_items(step.pending_inputs):
+                console.print(f"    pending input: {pending}", markup=False)
+            for action in _dedupe_cli_text_items(step.suggested_next_actions)[:3]:
+                console.print(f"    next action: {action}", markup=False)
+            for plain_text in _dedupe_cli_text_items(step.plain_language_blockers)[:2]:
+                console.print(f"    explain: {plain_text}", markup=False)
+            for next_step in _dedupe_cli_text_items(step.recommended_next_steps)[:2]:
+                console.print(f"    next step: {next_step}", markup=False)
     else:
         console.print("[green]No guarded frontend registry steps required.[/green]")
 
@@ -2399,14 +2923,14 @@ def program_guarded_registry(
             f"  - artifact generated_at: {request.artifact_generated_at}",
             markup=False,
         )
-    for path in request.written_paths:
+    for path in _dedupe_cli_text_items(request.written_paths):
         console.print(f"  - existing written path: {path}", markup=False)
-    for blocker in request.remaining_blockers:
+    for blocker in _dedupe_cli_text_items(request.remaining_blockers):
         console.print(f"  - blocker: {blocker}", markup=False)
 
     if request.warnings:
         console.print("\n[bold yellow]Warnings[/bold yellow]")
-        for warning in request.warnings:
+        for warning in _dedupe_cli_text_items(request.warnings):
             console.print(f"  - {warning}")
 
     registry_result = None
@@ -2458,21 +2982,23 @@ def program_guarded_registry(
                         f"### {step.spec_id}",
                         f"- Path: `{step.path}`",
                         f"- Registry state: `{step.registry_state}`",
-                        f"- Pending inputs: `{', '.join(step.pending_inputs) or '-'}`",
+                        f"- Pending inputs: `{', '.join(_dedupe_cli_text_items(step.pending_inputs)) or '-'}`",
+                        f"- Explain: `{'; '.join(_dedupe_cli_text_items(step.plain_language_blockers)) or '-'}`",
+                        f"- Next steps: `{'; '.join(_dedupe_cli_text_items(step.recommended_next_steps)) or '-'}`",
                         "- Suggested next actions:",
                     ]
                 )
-                lines.extend([f"  - {action}" for action in step.suggested_next_actions])
+                lines.extend([f"  - {action}" for action in _dedupe_cli_text_items(step.suggested_next_actions)])
                 lines.append("")
         if request.written_paths:
             lines.append("## Existing Written Paths")
             lines.append("")
-            lines.extend([f"- {path}" for path in request.written_paths])
+            lines.extend([f"- {path}" for path in _dedupe_cli_text_items(request.written_paths)])
             lines.append("")
         if request.remaining_blockers:
             lines.append("## Remaining Blockers")
             lines.append("")
-            lines.extend([f"- {blocker}" for blocker in request.remaining_blockers])
+            lines.extend([f"- {blocker}" for blocker in _dedupe_cli_text_items(request.remaining_blockers)])
             lines.append("")
         if registry_result is not None:
             lines.append("## Frontend Guarded Registry Result")
@@ -2482,13 +3008,13 @@ def program_guarded_registry(
             lines.append(f"- Confirmed: `{str(registry_result.confirmed).lower()}`")
             if registry_result.registry_summaries:
                 lines.append("- Registry summaries:")
-                lines.extend([f"  - {item}" for item in registry_result.registry_summaries])
+                lines.extend([f"  - {item}" for item in _dedupe_cli_text_items(registry_result.registry_summaries)])
             if registry_result.written_paths:
                 lines.append("- Written paths:")
-                lines.extend([f"  - {item}" for item in registry_result.written_paths])
+                lines.extend([f"  - {item}" for item in _dedupe_cli_text_items(registry_result.written_paths)])
             if registry_result.remaining_blockers:
                 lines.append("- Remaining blockers:")
-                lines.extend([f"  - {item}" for item in registry_result.remaining_blockers])
+                lines.extend([f"  - {item}" for item in _dedupe_cli_text_items(registry_result.remaining_blockers)])
             lines.append("")
         if registry_artifact_path is not None:
             lines.append("## Frontend Guarded Registry Artifact")
@@ -2498,10 +3024,10 @@ def program_guarded_registry(
         if request.warnings or (registry_result is not None and registry_result.warnings):
             lines.append("## Warnings")
             lines.append("")
-            warning_lines = list(request.warnings)
+            warning_lines = _dedupe_cli_text_items(request.warnings)
             if registry_result is not None:
-                warning_lines.extend(registry_result.warnings)
-            lines.extend([f"- {warning}" for warning in warning_lines])
+                warning_lines.extend(_dedupe_cli_text_items(registry_result.warnings))
+            lines.extend([f"- {warning}" for warning in _dedupe_cli_text_items(warning_lines)])
             lines.append("")
         report_path.write_text("\n".join(lines), encoding="utf-8")
         console.print(f"\n[green]Report written:[/green] {report_path}")
@@ -2556,7 +3082,7 @@ def program_broader_governance(
         console.print(
             "[bold red]Manifest invalid; cannot build broader governance request.[/bold red]"
         )
-        for e in result.errors:
+        for e in _dedupe_cli_text_items(result.errors):
             console.print(f"  - {e}")
         raise typer.Exit(code=1)
 
@@ -2579,10 +3105,24 @@ def program_broader_governance(
                 step.spec_id,
                 step.path,
                 step.governance_state,
-                ", ".join(step.pending_inputs) or "-",
-                " ; ".join(step.suggested_next_actions) or "-",
+                ", ".join(_dedupe_cli_text_items(step.pending_inputs)) or "-",
+                " ; ".join(_dedupe_cli_text_items(step.suggested_next_actions)) or "-",
             )
         console.print(table)
+        console.print("\n[bold cyan]Frontend Broader Governance Steps[/bold cyan]")
+        for step in request.steps:
+            console.print(
+                f"  - {step.spec_id}: {step.path} [{step.governance_state}]",
+                markup=False,
+            )
+            for pending in _dedupe_cli_text_items(step.pending_inputs):
+                console.print(f"    pending input: {pending}", markup=False)
+            for action in _dedupe_cli_text_items(step.suggested_next_actions)[:3]:
+                console.print(f"    next action: {action}", markup=False)
+            for plain_text in _dedupe_cli_text_items(step.plain_language_blockers)[:2]:
+                console.print(f"    explain: {plain_text}", markup=False)
+            for next_step in _dedupe_cli_text_items(step.recommended_next_steps)[:2]:
+                console.print(f"    next step: {next_step}", markup=False)
     else:
         console.print("[green]No broader frontend governance steps required.[/green]")
 
@@ -2599,14 +3139,14 @@ def program_broader_governance(
             f"  - artifact generated_at: {request.artifact_generated_at}",
             markup=False,
         )
-    for path in request.written_paths:
+    for path in _dedupe_cli_text_items(request.written_paths):
         console.print(f"  - existing written path: {path}", markup=False)
-    for blocker in request.remaining_blockers:
+    for blocker in _dedupe_cli_text_items(request.remaining_blockers):
         console.print(f"  - blocker: {blocker}", markup=False)
 
     if request.warnings:
         console.print("\n[bold yellow]Warnings[/bold yellow]")
-        for warning in request.warnings:
+        for warning in _dedupe_cli_text_items(request.warnings):
             console.print(f"  - {warning}")
 
     governance_result = None
@@ -2658,21 +3198,23 @@ def program_broader_governance(
                         f"### {step.spec_id}",
                         f"- Path: `{step.path}`",
                         f"- Governance state: `{step.governance_state}`",
-                        f"- Pending inputs: `{', '.join(step.pending_inputs) or '-'}`",
+                        f"- Pending inputs: `{', '.join(_dedupe_cli_text_items(step.pending_inputs)) or '-'}`",
+                        f"- Explain: `{'; '.join(_dedupe_cli_text_items(step.plain_language_blockers)) or '-'}`",
+                        f"- Next steps: `{'; '.join(_dedupe_cli_text_items(step.recommended_next_steps)) or '-'}`",
                         "- Suggested next actions:",
                     ]
                 )
-                lines.extend([f"  - {action}" for action in step.suggested_next_actions])
+                lines.extend([f"  - {action}" for action in _dedupe_cli_text_items(step.suggested_next_actions)])
                 lines.append("")
         if request.written_paths:
             lines.append("## Existing Written Paths")
             lines.append("")
-            lines.extend([f"- {path}" for path in request.written_paths])
+            lines.extend([f"- {path}" for path in _dedupe_cli_text_items(request.written_paths)])
             lines.append("")
         if request.remaining_blockers:
             lines.append("## Remaining Blockers")
             lines.append("")
-            lines.extend([f"- {blocker}" for blocker in request.remaining_blockers])
+            lines.extend([f"- {blocker}" for blocker in _dedupe_cli_text_items(request.remaining_blockers)])
             lines.append("")
         if governance_result is not None:
             lines.append("## Frontend Broader Governance Result")
@@ -2685,15 +3227,15 @@ def program_broader_governance(
             if governance_result.governance_summaries:
                 lines.append("- Governance summaries:")
                 lines.extend(
-                    [f"  - {item}" for item in governance_result.governance_summaries]
+                    [f"  - {item}" for item in _dedupe_cli_text_items(governance_result.governance_summaries)]
                 )
             if governance_result.written_paths:
                 lines.append("- Written paths:")
-                lines.extend([f"  - {item}" for item in governance_result.written_paths])
+                lines.extend([f"  - {item}" for item in _dedupe_cli_text_items(governance_result.written_paths)])
             if governance_result.remaining_blockers:
                 lines.append("- Remaining blockers:")
                 lines.extend(
-                    [f"  - {item}" for item in governance_result.remaining_blockers]
+                    [f"  - {item}" for item in _dedupe_cli_text_items(governance_result.remaining_blockers)]
                 )
             lines.append("")
         if governance_artifact_path is not None:
@@ -2706,10 +3248,10 @@ def program_broader_governance(
         ):
             lines.append("## Warnings")
             lines.append("")
-            warning_lines = list(request.warnings)
+            warning_lines = _dedupe_cli_text_items(request.warnings)
             if governance_result is not None:
-                warning_lines.extend(governance_result.warnings)
-            lines.extend([f"- {warning}" for warning in warning_lines])
+                warning_lines.extend(_dedupe_cli_text_items(governance_result.warnings))
+            lines.extend([f"- {warning}" for warning in _dedupe_cli_text_items(warning_lines)])
             lines.append("")
         report_path.write_text("\n".join(lines), encoding="utf-8")
         console.print(f"\n[green]Report written:[/green] {report_path}")
@@ -2764,7 +3306,7 @@ def program_final_governance(
         console.print(
             "[bold red]Manifest invalid; cannot build final governance request.[/bold red]"
         )
-        for e in result.errors:
+        for e in _dedupe_cli_text_items(result.errors):
             console.print(f"  - {e}")
         raise typer.Exit(code=1)
 
@@ -2787,10 +3329,24 @@ def program_final_governance(
                 step.spec_id,
                 step.path,
                 step.final_governance_state,
-                ", ".join(step.pending_inputs) or "-",
-                " ; ".join(step.suggested_next_actions) or "-",
+                ", ".join(_dedupe_cli_text_items(step.pending_inputs)) or "-",
+                " ; ".join(_dedupe_cli_text_items(step.suggested_next_actions)) or "-",
             )
         console.print(table)
+        console.print("\n[bold cyan]Frontend Final Governance Steps[/bold cyan]")
+        for step in request.steps:
+            console.print(
+                f"  - {step.spec_id}: {step.path} [{step.final_governance_state}]",
+                markup=False,
+            )
+            for pending in _dedupe_cli_text_items(step.pending_inputs):
+                console.print(f"    pending input: {pending}", markup=False)
+            for action in _dedupe_cli_text_items(step.suggested_next_actions)[:3]:
+                console.print(f"    next action: {action}", markup=False)
+            for plain_text in _dedupe_cli_text_items(step.plain_language_blockers)[:2]:
+                console.print(f"    explain: {plain_text}", markup=False)
+            for next_step in _dedupe_cli_text_items(step.recommended_next_steps)[:2]:
+                console.print(f"    next step: {next_step}", markup=False)
     else:
         console.print("[green]No final frontend governance steps required.[/green]")
 
@@ -2810,14 +3366,14 @@ def program_final_governance(
             f"  - artifact generated_at: {request.artifact_generated_at}",
             markup=False,
         )
-    for path in request.written_paths:
+    for path in _dedupe_cli_text_items(request.written_paths):
         console.print(f"  - existing written path: {path}", markup=False)
-    for blocker in request.remaining_blockers:
+    for blocker in _dedupe_cli_text_items(request.remaining_blockers):
         console.print(f"  - blocker: {blocker}", markup=False)
 
     if request.warnings:
         console.print("\n[bold yellow]Warnings[/bold yellow]")
-        for warning in request.warnings:
+        for warning in _dedupe_cli_text_items(request.warnings):
             console.print(f"  - {warning}")
 
     final_governance_result = None
@@ -2869,21 +3425,23 @@ def program_final_governance(
                         f"### {step.spec_id}",
                         f"- Path: `{step.path}`",
                         f"- Final governance state: `{step.final_governance_state}`",
-                        f"- Pending inputs: `{', '.join(step.pending_inputs) or '-'}`",
+                        f"- Pending inputs: `{', '.join(_dedupe_cli_text_items(step.pending_inputs)) or '-'}`",
+                        f"- Explain: `{'; '.join(_dedupe_cli_text_items(step.plain_language_blockers)) or '-'}`",
+                        f"- Next steps: `{'; '.join(_dedupe_cli_text_items(step.recommended_next_steps)) or '-'}`",
                         "- Suggested next actions:",
                     ]
                 )
-                lines.extend([f"  - {action}" for action in step.suggested_next_actions])
+                lines.extend([f"  - {action}" for action in _dedupe_cli_text_items(step.suggested_next_actions)])
                 lines.append("")
         if request.written_paths:
             lines.append("## Existing Written Paths")
             lines.append("")
-            lines.extend([f"- {path}" for path in request.written_paths])
+            lines.extend([f"- {path}" for path in _dedupe_cli_text_items(request.written_paths)])
             lines.append("")
         if request.remaining_blockers:
             lines.append("## Remaining Blockers")
             lines.append("")
-            lines.extend([f"- {blocker}" for blocker in request.remaining_blockers])
+            lines.extend([f"- {blocker}" for blocker in _dedupe_cli_text_items(request.remaining_blockers)])
             lines.append("")
         if final_governance_result is not None:
             lines.append("## Frontend Final Governance Result")
@@ -2910,14 +3468,14 @@ def program_final_governance(
             if final_governance_result.written_paths:
                 lines.append("- Written paths:")
                 lines.extend(
-                    [f"  - {item}" for item in final_governance_result.written_paths]
+                    [f"  - {item}" for item in _dedupe_cli_text_items(final_governance_result.written_paths)]
                 )
             if final_governance_result.remaining_blockers:
                 lines.append("- Remaining blockers:")
                 lines.extend(
                     [
                         f"  - {item}"
-                        for item in final_governance_result.remaining_blockers
+                        for item in _dedupe_cli_text_items(final_governance_result.remaining_blockers)
                     ]
                 )
             lines.append("")
@@ -2931,10 +3489,10 @@ def program_final_governance(
         ):
             lines.append("## Warnings")
             lines.append("")
-            warning_lines = list(request.warnings)
+            warning_lines = _dedupe_cli_text_items(request.warnings)
             if final_governance_result is not None:
-                warning_lines.extend(final_governance_result.warnings)
-            lines.extend([f"- {warning}" for warning in warning_lines])
+                warning_lines.extend(_dedupe_cli_text_items(final_governance_result.warnings))
+            lines.extend([f"- {warning}" for warning in _dedupe_cli_text_items(warning_lines)])
             lines.append("")
         report_path.write_text("\n".join(lines), encoding="utf-8")
         console.print(f"\n[green]Report written:[/green] {report_path}")
@@ -2989,7 +3547,7 @@ def program_writeback_persistence(
         console.print(
             "[bold red]Manifest invalid; cannot build writeback persistence request.[/bold red]"
         )
-        for e in result.errors:
+        for e in _dedupe_cli_text_items(result.errors):
             console.print(f"  - {e}")
         raise typer.Exit(code=1)
 
@@ -3012,10 +3570,24 @@ def program_writeback_persistence(
                 step.spec_id,
                 step.path,
                 step.persistence_state,
-                ", ".join(step.pending_inputs) or "-",
-                " ; ".join(step.suggested_next_actions) or "-",
+                ", ".join(_dedupe_cli_text_items(step.pending_inputs)) or "-",
+                " ; ".join(_dedupe_cli_text_items(step.suggested_next_actions)) or "-",
             )
         console.print(table)
+        console.print("\n[bold cyan]Frontend Writeback Persistence Steps[/bold cyan]")
+        for step in request.steps:
+            console.print(
+                f"  - {step.spec_id}: {step.path} [{step.persistence_state}]",
+                markup=False,
+            )
+            for pending in _dedupe_cli_text_items(step.pending_inputs):
+                console.print(f"    pending input: {pending}", markup=False)
+            for action in _dedupe_cli_text_items(step.suggested_next_actions)[:3]:
+                console.print(f"    next action: {action}", markup=False)
+            for plain_text in _dedupe_cli_text_items(step.plain_language_blockers)[:2]:
+                console.print(f"    explain: {plain_text}", markup=False)
+            for next_step in _dedupe_cli_text_items(step.recommended_next_steps)[:2]:
+                console.print(f"    next step: {next_step}", markup=False)
     else:
         console.print("[green]No frontend writeback persistence steps required.[/green]")
 
@@ -3035,14 +3607,14 @@ def program_writeback_persistence(
             f"  - artifact generated_at: {request.artifact_generated_at}",
             markup=False,
         )
-    for path in request.written_paths:
+    for path in _dedupe_cli_text_items(request.written_paths):
         console.print(f"  - existing written path: {path}", markup=False)
-    for blocker in request.remaining_blockers:
+    for blocker in _dedupe_cli_text_items(request.remaining_blockers):
         console.print(f"  - blocker: {blocker}", markup=False)
 
     if request.warnings:
         console.print("\n[bold yellow]Warnings[/bold yellow]")
-        for warning in request.warnings:
+        for warning in _dedupe_cli_text_items(request.warnings):
             console.print(f"  - {warning}")
 
     persistence_result = None
@@ -3094,21 +3666,23 @@ def program_writeback_persistence(
                         f"### {step.spec_id}",
                         f"- Path: `{step.path}`",
                         f"- Persistence state: `{step.persistence_state}`",
-                        f"- Pending inputs: `{', '.join(step.pending_inputs) or '-'}`",
+                        f"- Pending inputs: `{', '.join(_dedupe_cli_text_items(step.pending_inputs)) or '-'}`",
+                        f"- Explain: `{'; '.join(_dedupe_cli_text_items(step.plain_language_blockers)) or '-'}`",
+                        f"- Next steps: `{'; '.join(_dedupe_cli_text_items(step.recommended_next_steps)) or '-'}`",
                         "- Suggested next actions:",
                     ]
                 )
-                lines.extend([f"  - {action}" for action in step.suggested_next_actions])
+                lines.extend([f"  - {action}" for action in _dedupe_cli_text_items(step.suggested_next_actions)])
                 lines.append("")
         if request.written_paths:
             lines.append("## Existing Written Paths")
             lines.append("")
-            lines.extend([f"- {path}" for path in request.written_paths])
+            lines.extend([f"- {path}" for path in _dedupe_cli_text_items(request.written_paths)])
             lines.append("")
         if request.remaining_blockers:
             lines.append("## Remaining Blockers")
             lines.append("")
-            lines.extend([f"- {blocker}" for blocker in request.remaining_blockers])
+            lines.extend([f"- {blocker}" for blocker in _dedupe_cli_text_items(request.remaining_blockers)])
             lines.append("")
         if persistence_result is not None:
             lines.append("## Frontend Writeback Persistence Result")
@@ -3121,15 +3695,15 @@ def program_writeback_persistence(
             if persistence_result.persistence_summaries:
                 lines.append("- Persistence summaries:")
                 lines.extend(
-                    [f"  - {item}" for item in persistence_result.persistence_summaries]
+                    [f"  - {item}" for item in _dedupe_cli_text_items(persistence_result.persistence_summaries)]
                 )
             if persistence_result.written_paths:
                 lines.append("- Written paths:")
-                lines.extend([f"  - {item}" for item in persistence_result.written_paths])
+                lines.extend([f"  - {item}" for item in _dedupe_cli_text_items(persistence_result.written_paths)])
             if persistence_result.remaining_blockers:
                 lines.append("- Remaining blockers:")
                 lines.extend(
-                    [f"  - {item}" for item in persistence_result.remaining_blockers]
+                    [f"  - {item}" for item in _dedupe_cli_text_items(persistence_result.remaining_blockers)]
                 )
             lines.append("")
         if persistence_artifact_path is not None:
@@ -3142,10 +3716,10 @@ def program_writeback_persistence(
         ):
             lines.append("## Warnings")
             lines.append("")
-            warning_lines = list(request.warnings)
+            warning_lines = _dedupe_cli_text_items(request.warnings)
             if persistence_result is not None:
-                warning_lines.extend(persistence_result.warnings)
-            lines.extend([f"- {warning}" for warning in warning_lines])
+                warning_lines.extend(_dedupe_cli_text_items(persistence_result.warnings))
+            lines.extend([f"- {warning}" for warning in _dedupe_cli_text_items(warning_lines)])
             lines.append("")
         report_path.write_text("\n".join(lines), encoding="utf-8")
         console.print(f"\n[green]Report written:[/green] {report_path}")
@@ -3200,7 +3774,7 @@ def program_persisted_write_proof(
         console.print(
             "[bold red]Manifest invalid; cannot build persisted write proof request.[/bold red]"
         )
-        for e in result.errors:
+        for e in _dedupe_cli_text_items(result.errors):
             console.print(f"  - {e}")
         raise typer.Exit(code=1)
 
@@ -3223,10 +3797,24 @@ def program_persisted_write_proof(
                 step.spec_id,
                 step.path,
                 step.proof_state,
-                ", ".join(step.pending_inputs) or "-",
-                " ; ".join(step.suggested_next_actions) or "-",
+                ", ".join(_dedupe_cli_text_items(step.pending_inputs)) or "-",
+                " ; ".join(_dedupe_cli_text_items(step.suggested_next_actions)) or "-",
             )
         console.print(table)
+        console.print("\n[bold cyan]Frontend Persisted Write Proof Steps[/bold cyan]")
+        for step in request.steps:
+            console.print(
+                f"  - {step.spec_id}: {step.path} [{step.proof_state}]",
+                markup=False,
+            )
+            for pending in _dedupe_cli_text_items(step.pending_inputs):
+                console.print(f"    pending input: {pending}", markup=False)
+            for action in _dedupe_cli_text_items(step.suggested_next_actions)[:3]:
+                console.print(f"    next action: {action}", markup=False)
+            for plain_text in _dedupe_cli_text_items(step.plain_language_blockers)[:2]:
+                console.print(f"    explain: {plain_text}", markup=False)
+            for next_step in _dedupe_cli_text_items(step.recommended_next_steps)[:2]:
+                console.print(f"    next step: {next_step}", markup=False)
     else:
         console.print("[green]No frontend persisted write proof steps required.[/green]")
 
@@ -3246,14 +3834,14 @@ def program_persisted_write_proof(
             f"  - artifact generated_at: {request.artifact_generated_at}",
             markup=False,
         )
-    for path in request.written_paths:
+    for path in _dedupe_cli_text_items(request.written_paths):
         console.print(f"  - existing written path: {path}", markup=False)
-    for blocker in request.remaining_blockers:
+    for blocker in _dedupe_cli_text_items(request.remaining_blockers):
         console.print(f"  - blocker: {blocker}", markup=False)
 
     if request.warnings:
         console.print("\n[bold yellow]Warnings[/bold yellow]")
-        for warning in request.warnings:
+        for warning in _dedupe_cli_text_items(request.warnings):
             console.print(f"  - {warning}")
 
     proof_result = None
@@ -3305,21 +3893,23 @@ def program_persisted_write_proof(
                         f"### {step.spec_id}",
                         f"- Path: `{step.path}`",
                         f"- Proof state: `{step.proof_state}`",
-                        f"- Pending inputs: `{', '.join(step.pending_inputs) or '-'}`",
+                        f"- Pending inputs: `{', '.join(_dedupe_cli_text_items(step.pending_inputs)) or '-'}`",
+                        f"- Explain: `{'; '.join(_dedupe_cli_text_items(step.plain_language_blockers)) or '-'}`",
+                        f"- Next steps: `{'; '.join(_dedupe_cli_text_items(step.recommended_next_steps)) or '-'}`",
                         "- Suggested next actions:",
                     ]
                 )
-                lines.extend([f"  - {action}" for action in step.suggested_next_actions])
+                lines.extend([f"  - {action}" for action in _dedupe_cli_text_items(step.suggested_next_actions)])
                 lines.append("")
         if request.written_paths:
             lines.append("## Existing Written Paths")
             lines.append("")
-            lines.extend([f"- {path}" for path in request.written_paths])
+            lines.extend([f"- {path}" for path in _dedupe_cli_text_items(request.written_paths)])
             lines.append("")
         if request.remaining_blockers:
             lines.append("## Remaining Blockers")
             lines.append("")
-            lines.extend([f"- {blocker}" for blocker in request.remaining_blockers])
+            lines.extend([f"- {blocker}" for blocker in _dedupe_cli_text_items(request.remaining_blockers)])
             lines.append("")
         if proof_result is not None:
             lines.append("## Frontend Persisted Write Proof Result")
@@ -3329,13 +3919,13 @@ def program_persisted_write_proof(
             lines.append(f"- Confirmed: `{str(proof_result.confirmed).lower()}`")
             if proof_result.proof_summaries:
                 lines.append("- Proof summaries:")
-                lines.extend([f"  - {item}" for item in proof_result.proof_summaries])
+                lines.extend([f"  - {item}" for item in _dedupe_cli_text_items(proof_result.proof_summaries)])
             if proof_result.written_paths:
                 lines.append("- Written paths:")
-                lines.extend([f"  - {item}" for item in proof_result.written_paths])
+                lines.extend([f"  - {item}" for item in _dedupe_cli_text_items(proof_result.written_paths)])
             if proof_result.remaining_blockers:
                 lines.append("- Remaining blockers:")
-                lines.extend([f"  - {item}" for item in proof_result.remaining_blockers])
+                lines.extend([f"  - {item}" for item in _dedupe_cli_text_items(proof_result.remaining_blockers)])
             lines.append("")
         if proof_artifact_path is not None:
             lines.append("## Frontend Persisted Write Proof Artifact")
@@ -3345,10 +3935,10 @@ def program_persisted_write_proof(
         if request.warnings or (proof_result is not None and proof_result.warnings):
             lines.append("## Warnings")
             lines.append("")
-            warning_lines = list(request.warnings)
+            warning_lines = _dedupe_cli_text_items(request.warnings)
             if proof_result is not None:
-                warning_lines.extend(proof_result.warnings)
-            lines.extend([f"- {warning}" for warning in warning_lines])
+                warning_lines.extend(_dedupe_cli_text_items(proof_result.warnings))
+            lines.extend([f"- {warning}" for warning in _dedupe_cli_text_items(warning_lines)])
             lines.append("")
         report_path.write_text("\n".join(lines), encoding="utf-8")
         console.print(f"\n[green]Report written:[/green] {report_path}")
@@ -3403,7 +3993,7 @@ def program_final_proof_publication(
         console.print(
             "[bold red]Manifest invalid; cannot build final proof publication request.[/bold red]"
         )
-        for e in result.errors:
+        for e in _dedupe_cli_text_items(result.errors):
             console.print(f"  - {e}")
         raise typer.Exit(code=1)
 
@@ -3426,10 +4016,24 @@ def program_final_proof_publication(
                 step.spec_id,
                 step.path,
                 step.publication_state,
-                ", ".join(step.pending_inputs) or "-",
-                " ; ".join(step.suggested_next_actions) or "-",
+                ", ".join(_dedupe_cli_text_items(step.pending_inputs)) or "-",
+                " ; ".join(_dedupe_cli_text_items(step.suggested_next_actions)) or "-",
             )
         console.print(table)
+        console.print("\n[bold cyan]Frontend Final Proof Publication Steps[/bold cyan]")
+        for step in request.steps:
+            console.print(
+                f"  - {step.spec_id}: {step.path} [{step.publication_state}]",
+                markup=False,
+            )
+            for pending in _dedupe_cli_text_items(step.pending_inputs):
+                console.print(f"    pending input: {pending}", markup=False)
+            for action in _dedupe_cli_text_items(step.suggested_next_actions)[:3]:
+                console.print(f"    next action: {action}", markup=False)
+            for plain_text in _dedupe_cli_text_items(step.plain_language_blockers)[:2]:
+                console.print(f"    explain: {plain_text}", markup=False)
+            for next_step in _dedupe_cli_text_items(step.recommended_next_steps)[:2]:
+                console.print(f"    next step: {next_step}", markup=False)
     else:
         console.print("[green]No frontend final proof publication steps required.[/green]")
 
@@ -3449,14 +4053,14 @@ def program_final_proof_publication(
             f"  - artifact generated_at: {request.artifact_generated_at}",
             markup=False,
         )
-    for path in request.written_paths:
+    for path in _dedupe_cli_text_items(request.written_paths):
         console.print(f"  - existing written path: {path}", markup=False)
-    for blocker in request.remaining_blockers:
+    for blocker in _dedupe_cli_text_items(request.remaining_blockers):
         console.print(f"  - blocker: {blocker}", markup=False)
 
     if request.warnings:
         console.print("\n[bold yellow]Warnings[/bold yellow]")
-        for warning in request.warnings:
+        for warning in _dedupe_cli_text_items(request.warnings):
             console.print(f"  - {warning}")
 
     publication_result = None
@@ -3508,21 +4112,23 @@ def program_final_proof_publication(
                         f"### {step.spec_id}",
                         f"- Path: `{step.path}`",
                         f"- Publication state: `{step.publication_state}`",
-                        f"- Pending inputs: `{', '.join(step.pending_inputs) or '-'}`",
+                        f"- Pending inputs: `{', '.join(_dedupe_cli_text_items(step.pending_inputs)) or '-'}`",
+                        f"- Explain: `{'; '.join(_dedupe_cli_text_items(step.plain_language_blockers)) or '-'}`",
+                        f"- Next steps: `{'; '.join(_dedupe_cli_text_items(step.recommended_next_steps)) or '-'}`",
                         "- Suggested next actions:",
                     ]
                 )
-                lines.extend([f"  - {action}" for action in step.suggested_next_actions])
+                lines.extend([f"  - {action}" for action in _dedupe_cli_text_items(step.suggested_next_actions)])
                 lines.append("")
         if request.written_paths:
             lines.append("## Existing Written Paths")
             lines.append("")
-            lines.extend([f"- {path}" for path in request.written_paths])
+            lines.extend([f"- {path}" for path in _dedupe_cli_text_items(request.written_paths)])
             lines.append("")
         if request.remaining_blockers:
             lines.append("## Remaining Blockers")
             lines.append("")
-            lines.extend([f"- {blocker}" for blocker in request.remaining_blockers])
+            lines.extend([f"- {blocker}" for blocker in _dedupe_cli_text_items(request.remaining_blockers)])
             lines.append("")
         if publication_result is not None:
             lines.append("## Frontend Final Proof Publication Result")
@@ -3539,17 +4145,17 @@ def program_final_proof_publication(
             if publication_result.publication_summaries:
                 lines.append("- Publication summaries:")
                 lines.extend(
-                    [f"  - {item}" for item in publication_result.publication_summaries]
+                    [f"  - {item}" for item in _dedupe_cli_text_items(publication_result.publication_summaries)]
                 )
             if publication_result.written_paths:
                 lines.append("- Written paths:")
                 lines.extend(
-                    [f"  - {item}" for item in publication_result.written_paths]
+                    [f"  - {item}" for item in _dedupe_cli_text_items(publication_result.written_paths)]
                 )
             if publication_result.remaining_blockers:
                 lines.append("- Remaining blockers:")
                 lines.extend(
-                    [f"  - {item}" for item in publication_result.remaining_blockers]
+                    [f"  - {item}" for item in _dedupe_cli_text_items(publication_result.remaining_blockers)]
                 )
             lines.append("")
         if publication_artifact_path is not None:
@@ -3562,10 +4168,10 @@ def program_final_proof_publication(
         ):
             lines.append("## Warnings")
             lines.append("")
-            warning_lines = list(request.warnings)
+            warning_lines = _dedupe_cli_text_items(request.warnings)
             if publication_result is not None:
-                warning_lines.extend(publication_result.warnings)
-            lines.extend([f"- {warning}" for warning in warning_lines])
+                warning_lines.extend(_dedupe_cli_text_items(publication_result.warnings))
+            lines.extend([f"- {warning}" for warning in _dedupe_cli_text_items(warning_lines)])
             lines.append("")
         report_path.write_text("\n".join(lines), encoding="utf-8")
         console.print(f"\n[green]Report written:[/green] {report_path}")
@@ -3620,7 +4226,7 @@ def program_final_proof_closure(
         console.print(
             "[bold red]Manifest invalid; cannot build final proof closure request.[/bold red]"
         )
-        for e in result.errors:
+        for e in _dedupe_cli_text_items(result.errors):
             console.print(f"  - {e}")
         raise typer.Exit(code=1)
 
@@ -3643,10 +4249,24 @@ def program_final_proof_closure(
                 step.spec_id,
                 step.path,
                 step.closure_state,
-                ", ".join(step.pending_inputs) or "-",
-                " ; ".join(step.suggested_next_actions) or "-",
+                ", ".join(_dedupe_cli_text_items(step.pending_inputs)) or "-",
+                " ; ".join(_dedupe_cli_text_items(step.suggested_next_actions)) or "-",
             )
         console.print(table)
+        console.print("\n[bold cyan]Frontend Final Proof Closure Steps[/bold cyan]")
+        for step in request.steps:
+            console.print(
+                f"  - {step.spec_id}: {step.path} [{step.closure_state}]",
+                markup=False,
+            )
+            for pending in _dedupe_cli_text_items(step.pending_inputs):
+                console.print(f"    pending input: {pending}", markup=False)
+            for action in _dedupe_cli_text_items(step.suggested_next_actions)[:3]:
+                console.print(f"    next action: {action}", markup=False)
+            for plain_text in _dedupe_cli_text_items(step.plain_language_blockers)[:2]:
+                console.print(f"    explain: {plain_text}", markup=False)
+            for next_step in _dedupe_cli_text_items(step.recommended_next_steps)[:2]:
+                console.print(f"    next step: {next_step}", markup=False)
     else:
         console.print("[green]No frontend final proof closure steps required.[/green]")
 
@@ -3663,14 +4283,14 @@ def program_final_proof_closure(
             f"  - artifact generated_at: {request.artifact_generated_at}",
             markup=False,
         )
-    for path in request.written_paths:
+    for path in _dedupe_cli_text_items(request.written_paths):
         console.print(f"  - existing written path: {path}", markup=False)
-    for blocker in request.remaining_blockers:
+    for blocker in _dedupe_cli_text_items(request.remaining_blockers):
         console.print(f"  - blocker: {blocker}", markup=False)
 
     if request.warnings:
         console.print("\n[bold yellow]Warnings[/bold yellow]")
-        for warning in request.warnings:
+        for warning in _dedupe_cli_text_items(request.warnings):
             console.print(f"  - {warning}")
 
     closure_result = None
@@ -3722,21 +4342,23 @@ def program_final_proof_closure(
                         f"### {step.spec_id}",
                         f"- Path: `{step.path}`",
                         f"- Closure state: `{step.closure_state}`",
-                        f"- Pending inputs: `{', '.join(step.pending_inputs) or '-'}`",
+                        f"- Pending inputs: `{', '.join(_dedupe_cli_text_items(step.pending_inputs)) or '-'}`",
+                        f"- Explain: `{'; '.join(_dedupe_cli_text_items(step.plain_language_blockers)) or '-'}`",
+                        f"- Next steps: `{'; '.join(_dedupe_cli_text_items(step.recommended_next_steps)) or '-'}`",
                         "- Suggested next actions:",
                     ]
                 )
-                lines.extend([f"  - {action}" for action in step.suggested_next_actions])
+                lines.extend([f"  - {action}" for action in _dedupe_cli_text_items(step.suggested_next_actions)])
                 lines.append("")
         if request.written_paths:
             lines.append("## Existing Written Paths")
             lines.append("")
-            lines.extend([f"- {path}" for path in request.written_paths])
+            lines.extend([f"- {path}" for path in _dedupe_cli_text_items(request.written_paths)])
             lines.append("")
         if request.remaining_blockers:
             lines.append("## Remaining Blockers")
             lines.append("")
-            lines.extend([f"- {blocker}" for blocker in request.remaining_blockers])
+            lines.extend([f"- {blocker}" for blocker in _dedupe_cli_text_items(request.remaining_blockers)])
             lines.append("")
         if closure_result is not None:
             lines.append("## Frontend Final Proof Closure Result")
@@ -3746,14 +4368,14 @@ def program_final_proof_closure(
             lines.append(f"- Confirmed: `{str(closure_result.confirmed).lower()}`")
             if closure_result.closure_summaries:
                 lines.append("- Closure summaries:")
-                lines.extend([f"  - {item}" for item in closure_result.closure_summaries])
+                lines.extend([f"  - {item}" for item in _dedupe_cli_text_items(closure_result.closure_summaries)])
             if closure_result.written_paths:
                 lines.append("- Written paths:")
-                lines.extend([f"  - {item}" for item in closure_result.written_paths])
+                lines.extend([f"  - {item}" for item in _dedupe_cli_text_items(closure_result.written_paths)])
             if closure_result.remaining_blockers:
                 lines.append("- Remaining blockers:")
                 lines.extend(
-                    [f"  - {item}" for item in closure_result.remaining_blockers]
+                    [f"  - {item}" for item in _dedupe_cli_text_items(closure_result.remaining_blockers)]
                 )
             lines.append("")
         if closure_artifact_path is not None:
@@ -3764,10 +4386,10 @@ def program_final_proof_closure(
         if request.warnings or (closure_result is not None and closure_result.warnings):
             lines.append("## Warnings")
             lines.append("")
-            warning_lines = list(request.warnings)
+            warning_lines = _dedupe_cli_text_items(request.warnings)
             if closure_result is not None:
-                warning_lines.extend(closure_result.warnings)
-            lines.extend([f"- {warning}" for warning in warning_lines])
+                warning_lines.extend(_dedupe_cli_text_items(closure_result.warnings))
+            lines.extend([f"- {warning}" for warning in _dedupe_cli_text_items(warning_lines)])
             lines.append("")
         report_path.write_text("\n".join(lines), encoding="utf-8")
         console.print(f"\n[green]Report written:[/green] {report_path}")
@@ -3822,7 +4444,7 @@ def program_final_proof_archive(
         console.print(
             "[bold red]Manifest invalid; cannot build final proof archive request.[/bold red]"
         )
-        for e in result.errors:
+        for e in _dedupe_cli_text_items(result.errors):
             console.print(f"  - {e}")
         raise typer.Exit(code=1)
 
@@ -3845,10 +4467,24 @@ def program_final_proof_archive(
                 step.spec_id,
                 step.path,
                 step.archive_state,
-                ", ".join(step.pending_inputs) or "-",
-                " ; ".join(step.suggested_next_actions) or "-",
+                ", ".join(_dedupe_cli_text_items(step.pending_inputs)) or "-",
+                " ; ".join(_dedupe_cli_text_items(step.suggested_next_actions)) or "-",
             )
         console.print(table)
+        console.print("\n[bold cyan]Frontend Final Proof Archive Steps[/bold cyan]")
+        for step in request.steps:
+            console.print(
+                f"  - {step.spec_id}: {step.path} [{step.archive_state}]",
+                markup=False,
+            )
+            for pending in _dedupe_cli_text_items(step.pending_inputs):
+                console.print(f"    pending input: {pending}", markup=False)
+            for action in _dedupe_cli_text_items(step.suggested_next_actions)[:3]:
+                console.print(f"    next action: {action}", markup=False)
+            for plain_text in _dedupe_cli_text_items(step.plain_language_blockers)[:2]:
+                console.print(f"    explain: {plain_text}", markup=False)
+            for next_step in _dedupe_cli_text_items(step.recommended_next_steps)[:2]:
+                console.print(f"    next step: {next_step}", markup=False)
     else:
         console.print("[green]No frontend final proof archive steps required.[/green]")
 
@@ -3865,14 +4501,14 @@ def program_final_proof_archive(
             f"  - artifact generated_at: {request.artifact_generated_at}",
             markup=False,
         )
-    for path in request.written_paths:
+    for path in _dedupe_cli_text_items(request.written_paths):
         console.print(f"  - existing written path: {path}", markup=False)
-    for blocker in request.remaining_blockers:
+    for blocker in _dedupe_cli_text_items(request.remaining_blockers):
         console.print(f"  - blocker: {blocker}", markup=False)
 
     if request.warnings:
         console.print("\n[bold yellow]Warnings[/bold yellow]")
-        for warning in request.warnings:
+        for warning in _dedupe_cli_text_items(request.warnings):
             console.print(f"  - {warning}")
 
     archive_result = None
@@ -3924,21 +4560,23 @@ def program_final_proof_archive(
                         f"### {step.spec_id}",
                         f"- Path: `{step.path}`",
                         f"- Archive state: `{step.archive_state}`",
-                        f"- Pending inputs: `{', '.join(step.pending_inputs) or '-'}`",
+                        f"- Pending inputs: `{', '.join(_dedupe_cli_text_items(step.pending_inputs)) or '-'}`",
+                        f"- Explain: `{'; '.join(_dedupe_cli_text_items(step.plain_language_blockers)) or '-'}`",
+                        f"- Next steps: `{'; '.join(_dedupe_cli_text_items(step.recommended_next_steps)) or '-'}`",
                         "- Suggested next actions:",
                     ]
                 )
-                lines.extend([f"  - {action}" for action in step.suggested_next_actions])
+                lines.extend([f"  - {action}" for action in _dedupe_cli_text_items(step.suggested_next_actions)])
                 lines.append("")
         if request.written_paths:
             lines.append("## Existing Written Paths")
             lines.append("")
-            lines.extend([f"- {path}" for path in request.written_paths])
+            lines.extend([f"- {path}" for path in _dedupe_cli_text_items(request.written_paths)])
             lines.append("")
         if request.remaining_blockers:
             lines.append("## Remaining Blockers")
             lines.append("")
-            lines.extend([f"- {blocker}" for blocker in request.remaining_blockers])
+            lines.extend([f"- {blocker}" for blocker in _dedupe_cli_text_items(request.remaining_blockers)])
             lines.append("")
         if archive_result is not None:
             lines.append("## Frontend Final Proof Archive Result")
@@ -3948,14 +4586,14 @@ def program_final_proof_archive(
             lines.append(f"- Confirmed: `{str(archive_result.confirmed).lower()}`")
             if archive_result.archive_summaries:
                 lines.append("- Archive summaries:")
-                lines.extend([f"  - {item}" for item in archive_result.archive_summaries])
+                lines.extend([f"  - {item}" for item in _dedupe_cli_text_items(archive_result.archive_summaries)])
             if archive_result.written_paths:
                 lines.append("- Written paths:")
-                lines.extend([f"  - {item}" for item in archive_result.written_paths])
+                lines.extend([f"  - {item}" for item in _dedupe_cli_text_items(archive_result.written_paths)])
             if archive_result.remaining_blockers:
                 lines.append("- Remaining blockers:")
                 lines.extend(
-                    [f"  - {item}" for item in archive_result.remaining_blockers]
+                    [f"  - {item}" for item in _dedupe_cli_text_items(archive_result.remaining_blockers)]
                 )
             lines.append("")
         if archive_artifact_path is not None:
@@ -3966,10 +4604,10 @@ def program_final_proof_archive(
         if request.warnings or (archive_result is not None and archive_result.warnings):
             lines.append("## Warnings")
             lines.append("")
-            warning_lines = list(request.warnings)
+            warning_lines = _dedupe_cli_text_items(request.warnings)
             if archive_result is not None:
-                warning_lines.extend(archive_result.warnings)
-            lines.extend([f"- {warning}" for warning in warning_lines])
+                warning_lines.extend(_dedupe_cli_text_items(archive_result.warnings))
+            lines.extend([f"- {warning}" for warning in _dedupe_cli_text_items(warning_lines)])
             lines.append("")
         report_path.write_text("\n".join(lines), encoding="utf-8")
         console.print(f"\n[green]Report written:[/green] {report_path}")
@@ -4024,7 +4662,7 @@ def program_final_proof_archive_thread_archive(
         console.print(
             "[bold red]Manifest invalid; cannot build final proof archive thread archive request.[/bold red]"
         )
-        for e in result.errors:
+        for e in _dedupe_cli_text_items(result.errors):
             console.print(f"  - {e}")
         raise typer.Exit(code=1)
 
@@ -4047,10 +4685,26 @@ def program_final_proof_archive_thread_archive(
                 step.spec_id,
                 step.path,
                 step.thread_archive_state,
-                ", ".join(step.pending_inputs) or "-",
-                " ; ".join(step.suggested_next_actions) or "-",
+                ", ".join(_dedupe_cli_text_items(step.pending_inputs)) or "-",
+                " ; ".join(_dedupe_cli_text_items(step.suggested_next_actions)) or "-",
             )
         console.print(table)
+        console.print(
+            "\n[bold cyan]Frontend Final Proof Archive Thread Archive Steps[/bold cyan]"
+        )
+        for step in request.steps:
+            console.print(
+                f"  - {step.spec_id}: {step.path} [{step.thread_archive_state}]",
+                markup=False,
+            )
+            for pending in _dedupe_cli_text_items(step.pending_inputs):
+                console.print(f"    pending input: {pending}", markup=False)
+            for action in _dedupe_cli_text_items(step.suggested_next_actions)[:3]:
+                console.print(f"    next action: {action}", markup=False)
+            for plain_text in _dedupe_cli_text_items(step.plain_language_blockers)[:2]:
+                console.print(f"    explain: {plain_text}", markup=False)
+            for next_step in _dedupe_cli_text_items(step.recommended_next_steps)[:2]:
+                console.print(f"    next step: {next_step}", markup=False)
     else:
         console.print(
             "[green]No frontend final proof archive thread archive steps required.[/green]"
@@ -4074,14 +4728,14 @@ def program_final_proof_archive_thread_archive(
             f"  - artifact generated_at: {request.artifact_generated_at}",
             markup=False,
         )
-    for path in request.written_paths:
+    for path in _dedupe_cli_text_items(request.written_paths):
         console.print(f"  - existing written path: {path}", markup=False)
-    for blocker in request.remaining_blockers:
+    for blocker in _dedupe_cli_text_items(request.remaining_blockers):
         console.print(f"  - blocker: {blocker}", markup=False)
 
     if request.warnings:
         console.print("\n[bold yellow]Warnings[/bold yellow]")
-        for warning in request.warnings:
+        for warning in _dedupe_cli_text_items(request.warnings):
             console.print(f"  - {warning}")
 
     thread_archive_result = None
@@ -4126,21 +4780,23 @@ def program_final_proof_archive_thread_archive(
                         f"### {step.spec_id}",
                         f"- Path: `{step.path}`",
                         f"- Thread archive state: `{step.thread_archive_state}`",
-                        f"- Pending inputs: `{', '.join(step.pending_inputs) or '-'}`",
+                        f"- Pending inputs: `{', '.join(_dedupe_cli_text_items(step.pending_inputs)) or '-'}`",
+                        f"- Explain: `{'; '.join(_dedupe_cli_text_items(step.plain_language_blockers)) or '-'}`",
+                        f"- Next steps: `{'; '.join(_dedupe_cli_text_items(step.recommended_next_steps)) or '-'}`",
                         "- Suggested next actions:",
                     ]
                 )
-                lines.extend([f"  - {action}" for action in step.suggested_next_actions])
+                lines.extend([f"  - {action}" for action in _dedupe_cli_text_items(step.suggested_next_actions)])
                 lines.append("")
         if request.written_paths:
             lines.append("## Existing Written Paths")
             lines.append("")
-            lines.extend([f"- {path}" for path in request.written_paths])
+            lines.extend([f"- {path}" for path in _dedupe_cli_text_items(request.written_paths)])
             lines.append("")
         if request.remaining_blockers:
             lines.append("## Remaining Blockers")
             lines.append("")
-            lines.extend([f"- {blocker}" for blocker in request.remaining_blockers])
+            lines.extend([f"- {blocker}" for blocker in _dedupe_cli_text_items(request.remaining_blockers)])
             lines.append("")
         if thread_archive_result is not None:
             lines.append("## Frontend Final Proof Archive Thread Archive Result")
@@ -4159,20 +4815,25 @@ def program_final_proof_archive_thread_archive(
                 lines.extend(
                     [
                         f"  - {item}"
-                        for item in thread_archive_result.thread_archive_summaries
+                        for item in _dedupe_cli_text_items(thread_archive_result.thread_archive_summaries)
                     ]
                 )
             if thread_archive_result.written_paths:
                 lines.append("- Written paths:")
                 lines.extend(
-                    [f"  - {item}" for item in thread_archive_result.written_paths]
+                    [
+                        f"  - {item}"
+                        for item in _dedupe_cli_text_items(
+                            thread_archive_result.written_paths
+                        )
+                    ]
                 )
             if thread_archive_result.remaining_blockers:
                 lines.append("- Remaining blockers:")
                 lines.extend(
                     [
                         f"  - {item}"
-                        for item in thread_archive_result.remaining_blockers
+                        for item in _dedupe_cli_text_items(thread_archive_result.remaining_blockers)
                     ]
                 )
             lines.append("")
@@ -4185,10 +4846,10 @@ def program_final_proof_archive_thread_archive(
         ):
             lines.append("## Warnings")
             lines.append("")
-            warning_lines = list(request.warnings)
+            warning_lines = _dedupe_cli_text_items(request.warnings)
             if thread_archive_result is not None:
-                warning_lines.extend(thread_archive_result.warnings)
-            lines.extend([f"- {warning}" for warning in warning_lines])
+                warning_lines.extend(_dedupe_cli_text_items(thread_archive_result.warnings))
+            lines.extend([f"- {warning}" for warning in _dedupe_cli_text_items(warning_lines)])
             lines.append("")
         report_path.write_text("\n".join(lines), encoding="utf-8")
         console.print(f"\n[green]Report written:[/green] {report_path}")
@@ -4247,7 +4908,7 @@ def program_final_proof_archive_project_cleanup(
         console.print(
             "[bold red]Manifest invalid; cannot build final proof archive project cleanup request.[/bold red]"
         )
-        for e in result.errors:
+        for e in _dedupe_cli_text_items(result.errors):
             console.print(f"  - {e}")
         raise typer.Exit(code=1)
 
@@ -4270,10 +4931,26 @@ def program_final_proof_archive_project_cleanup(
                 step.spec_id,
                 step.path,
                 step.project_cleanup_state,
-                ", ".join(step.pending_inputs) or "-",
-                " ; ".join(step.suggested_next_actions) or "-",
+                ", ".join(_dedupe_cli_text_items(step.pending_inputs)) or "-",
+                " ; ".join(_dedupe_cli_text_items(step.suggested_next_actions)) or "-",
             )
         console.print(table)
+        console.print(
+            "\n[bold cyan]Frontend Final Proof Archive Project Cleanup Steps[/bold cyan]"
+        )
+        for step in request.steps:
+            console.print(
+                f"  - {step.spec_id}: {step.path} [{step.project_cleanup_state}]",
+                markup=False,
+            )
+            for pending in _dedupe_cli_text_items(step.pending_inputs):
+                console.print(f"    pending input: {pending}", markup=False)
+            for action in _dedupe_cli_text_items(step.suggested_next_actions)[:3]:
+                console.print(f"    next action: {action}", markup=False)
+            for plain_text in _dedupe_cli_text_items(step.plain_language_blockers)[:2]:
+                console.print(f"    explain: {plain_text}", markup=False)
+            for next_step in _dedupe_cli_text_items(step.recommended_next_steps)[:2]:
+                console.print(f"    next step: {next_step}", markup=False)
     else:
         console.print(
             "[green]No frontend final proof archive project cleanup steps required.[/green]"
@@ -4349,6 +5026,8 @@ def program_final_proof_archive_project_cleanup(
         + str(len(request.cleanup_mutation_execution_gating)),
         markup=False,
     )
+    for line in _project_cleanup_truth_output_lines(request):
+        console.print(line, markup=False, soft_wrap=True)
     console.print(
         f"  - confirmation required: {str(request.confirmation_required).lower()}",
         markup=False,
@@ -4358,14 +5037,14 @@ def program_final_proof_archive_project_cleanup(
             f"  - artifact generated_at: {request.artifact_generated_at}",
             markup=False,
         )
-    for path in request.written_paths:
+    for path in _dedupe_cli_text_items(request.written_paths):
         console.print(f"  - existing written path: {path}", markup=False)
-    for blocker in request.remaining_blockers:
+    for blocker in _dedupe_cli_text_items(request.remaining_blockers):
         console.print(f"  - blocker: {blocker}", markup=False)
 
     if request.warnings:
         console.print("\n[bold yellow]Warnings[/bold yellow]")
-        for warning in request.warnings:
+        for warning in _dedupe_cli_text_items(request.warnings):
             console.print(f"  - {warning}")
 
     project_cleanup_result = None
@@ -4452,6 +5131,10 @@ def program_final_proof_archive_project_cleanup(
         if request.artifact_generated_at:
             lines.append(f"- Artifact generated_at: `{request.artifact_generated_at}`")
         lines.append("")
+        request_detail_lines = _project_cleanup_truth_report_lines(request)
+        if request_detail_lines:
+            lines.extend(request_detail_lines)
+            lines.append("")
         if request.steps:
             lines.append("## Steps")
             lines.append("")
@@ -4461,21 +5144,23 @@ def program_final_proof_archive_project_cleanup(
                         f"### {step.spec_id}",
                         f"- Path: `{step.path}`",
                         f"- Project cleanup state: `{step.project_cleanup_state}`",
-                        f"- Pending inputs: `{', '.join(step.pending_inputs) or '-'}`",
+                        f"- Pending inputs: `{', '.join(_dedupe_cli_text_items(step.pending_inputs)) or '-'}`",
+                        f"- Explain: `{'; '.join(_dedupe_cli_text_items(step.plain_language_blockers)) or '-'}`",
+                        f"- Next steps: `{'; '.join(_dedupe_cli_text_items(step.recommended_next_steps)) or '-'}`",
                         "- Suggested next actions:",
                     ]
                 )
-                lines.extend([f"  - {action}" for action in step.suggested_next_actions])
+                lines.extend([f"  - {action}" for action in _dedupe_cli_text_items(step.suggested_next_actions)])
                 lines.append("")
         if request.written_paths:
             lines.append("## Existing Written Paths")
             lines.append("")
-            lines.extend([f"- {path}" for path in request.written_paths])
+            lines.extend([f"- {path}" for path in _dedupe_cli_text_items(request.written_paths)])
             lines.append("")
         if request.remaining_blockers:
             lines.append("## Remaining Blockers")
             lines.append("")
-            lines.extend([f"- {blocker}" for blocker in request.remaining_blockers])
+            lines.extend([f"- {blocker}" for blocker in _dedupe_cli_text_items(request.remaining_blockers)])
             lines.append("")
         if project_cleanup_result is not None:
             lines.append("## Frontend Final Proof Archive Project Cleanup Result")
@@ -4539,25 +5224,33 @@ def program_final_proof_archive_project_cleanup(
             lines.append(
                 f"- Confirmed: `{str(project_cleanup_result.confirmed).lower()}`"
             )
+            lines.extend(_project_cleanup_truth_report_lines(project_cleanup_result))
             if project_cleanup_result.project_cleanup_summaries:
                 lines.append("- Project cleanup summaries:")
                 lines.extend(
                     [
                         f"  - {item}"
-                        for item in project_cleanup_result.project_cleanup_summaries
+                        for item in _dedupe_cli_text_items(
+                            project_cleanup_result.project_cleanup_summaries
+                        )
                     ]
                 )
             if project_cleanup_result.written_paths:
                 lines.append("- Written paths:")
                 lines.extend(
-                    [f"  - {item}" for item in project_cleanup_result.written_paths]
+                    [
+                        f"  - {item}"
+                        for item in _dedupe_cli_text_items(
+                            project_cleanup_result.written_paths
+                        )
+                    ]
                 )
             if project_cleanup_result.remaining_blockers:
                 lines.append("- Remaining blockers:")
                 lines.extend(
                     [
                         f"  - {item}"
-                        for item in project_cleanup_result.remaining_blockers
+                        for item in _dedupe_cli_text_items(project_cleanup_result.remaining_blockers)
                     ]
                 )
             lines.append("")
@@ -4571,10 +5264,10 @@ def program_final_proof_archive_project_cleanup(
         ):
             lines.append("## Warnings")
             lines.append("")
-            warning_lines = list(request.warnings)
+            warning_lines = _dedupe_cli_text_items(request.warnings)
             if project_cleanup_result is not None:
-                warning_lines.extend(project_cleanup_result.warnings)
-            lines.extend([f"- {warning}" for warning in warning_lines])
+                warning_lines.extend(_dedupe_cli_text_items(project_cleanup_result.warnings))
+            lines.extend([f"- {warning}" for warning in _dedupe_cli_text_items(warning_lines)])
             lines.append("")
         report_path.write_text("\n".join(lines), encoding="utf-8")
         console.print(f"\n[green]Report written:[/green] {report_path}")
@@ -4612,10 +5305,12 @@ def _format_frontend_readiness(readiness: ProgramFrontendReadiness | None) -> st
     details: list[str] = []
     if effective_state != "ready" and readiness.decision_reason:
         details.append(readiness.decision_reason)
-    if readiness.coverage_gaps:
-        details.append(", ".join(readiness.coverage_gaps[:2]))
-    elif effective_state != "ready" and readiness.blockers:
-        details.append(readiness.blockers[0])
+    coverage_gaps = _dedupe_cli_text_items(readiness.coverage_gaps)
+    blockers = _dedupe_cli_text_items(readiness.blockers)
+    if coverage_gaps:
+        details.append(", ".join(coverage_gaps[:2]))
+    elif effective_state != "ready" and blockers:
+        details.append(blockers[0])
 
     suffix = f" [{'; '.join(details)}]" if details else ""
     return f"{state}{suffix}"
@@ -4630,7 +5325,7 @@ def _format_frontend_evidence_class_status(
     summary = status.problem_family
     if status.summary_token:
         summary = f"{summary}:{status.summary_token}"
-    return f"fec={summary}"
+    return f"frontend evidence: {summary}"
 
 
 def _format_program_status_frontend_cell(
@@ -4659,26 +5354,189 @@ def _render_frontend_status_lines(rows: list[object]) -> None:
         )
 
 
+def _render_frontend_delivery_context_lines(svc: ProgramService) -> None:
+    registry = svc.build_frontend_delivery_registry_handoff()
+    runtime_adapter = svc.build_frontend_provider_runtime_adapter_handoff()
+    status_surface = svc.build_frontend_delivery_status_surface()
+    inheritance_surface = svc.build_frontend_inheritance_status_surface()
+
+    console.print("\n[bold cyan]Frontend Delivery Context[/bold cyan]")
+    if status_surface:
+        status_note = _frontend_delivery_context_status_note(status_surface)
+        if status_note:
+            console.print(
+                f"  - delivery status: {status_note}",
+                markup=False,
+            )
+        console.print(
+            "  - scope note: this section covers package download/integration truth only; "
+            "later code generation and frontend test inheritance are tracked separately",
+            markup=False,
+        )
+        if inheritance_surface:
+            console.print(
+                "  - inheritance status: "
+                f"{summarize_frontend_inheritance_status_for_display(inheritance_surface)}",
+                markup=False,
+            )
+            inheritance_risk_note = _frontend_inheritance_context_risk_note(
+                inheritance_surface
+            )
+            if inheritance_risk_note:
+                console.print(
+                    f"  - inheritance risk: {inheritance_risk_note}",
+                    markup=False,
+                )
+        console.print(
+            "  - delivery result: "
+            f"{humanize_frontend_delivery_apply_state(str(status_surface.get('apply_state', '-')))}",
+            markup=False,
+        )
+        console.print(
+            "  - download: "
+            f"{humanize_frontend_delivery_install_state(str(status_surface.get('install_state', '-')))}",
+            markup=False,
+        )
+        console.print(
+            "  - integration: "
+            f"{humanize_frontend_delivery_workspace_state(str(status_surface.get('workspace_state', '-')))}",
+            markup=False,
+        )
+        console.print(
+            "  - browser gate: "
+            f"{humanize_frontend_browser_gate_state(str(status_surface.get('browser_gate_state', '-')))}",
+            markup=False,
+        )
+        apply_artifact_path = str(status_surface.get("apply_artifact_path", "")).strip()
+        if apply_artifact_path:
+            console.print(
+                f"  - apply artifact: {apply_artifact_path}",
+                markup=False,
+            )
+        browser_gate_artifact_path = str(
+            status_surface.get("browser_gate_artifact_path", "")
+        ).strip()
+        if browser_gate_artifact_path:
+            console.print(
+                f"  - browser gate artifact: {browser_gate_artifact_path}",
+                markup=False,
+            )
+        next_step = _frontend_delivery_context_next_step(status_surface)
+        if next_step:
+            console.print(
+                f"  - next step: {next_step}",
+                markup=False,
+            )
+    console.print(
+        "  - selected provider: "
+        f"{registry.effective_provider_id or runtime_adapter.effective_provider_id or '-'}",
+        markup=False,
+    )
+    console.print(
+        f"  - delivery entry: {registry.entry_id or '-'}",
+        markup=False,
+    )
+    console.print(
+        "  - requested frontend stack: "
+        f"{registry.requested_frontend_stack or runtime_adapter.requested_frontend_stack or '-'}",
+        markup=False,
+    )
+    console.print(
+        "  - effective frontend stack: "
+        f"{registry.effective_frontend_stack or runtime_adapter.effective_frontend_stack or '-'}",
+        markup=False,
+    )
+    for package_name in _dedupe_cli_text_items(registry.component_library_packages):
+        console.print(f"  - selected package: {package_name}", markup=False)
+    console.print(
+        "  - runtime adapter carrier: "
+        f"{runtime_adapter.carrier_mode or '-'}",
+        markup=False,
+    )
+    console.print(
+        "  - runtime adapter delivery: "
+        f"{runtime_adapter.runtime_delivery_state or '-'}",
+        markup=False,
+    )
+    console.print(
+        "  - runtime adapter evidence: "
+        f"{runtime_adapter.evidence_return_state or '-'}",
+        markup=False,
+    )
+
+
+def _frontend_delivery_context_status_note(
+    status_surface: dict[str, object],
+) -> str:
+    apply_state = str(status_surface.get("apply_state", "")).strip()
+    install_state = str(status_surface.get("install_state", "")).strip()
+    workspace_state = str(status_surface.get("workspace_state", "")).strip()
+    browser_gate_state = str(status_surface.get("browser_gate_state", "")).strip()
+
+    if (
+        apply_state == "not_applied"
+        and install_state != "installed"
+        and workspace_state != "integrated"
+    ):
+        return "selection recorded only; packages are not downloaded or integrated into the project yet"
+    if install_state == "installed" and workspace_state != "integrated":
+        return "packages are downloaded, but project integration is still incomplete"
+    if workspace_state == "integrated" and browser_gate_state in {"pending", "not_started"}:
+        return "packages are in the project, but browser evidence is still required before delivery can be treated as complete"
+    if apply_state == "blocked_before_start":
+        return "delivery is blocked before any project mutation happened"
+    return ""
+
+
+def _frontend_delivery_context_next_step(
+    status_surface: dict[str, object],
+) -> str:
+    apply_state = str(status_surface.get("apply_state", "")).strip()
+    browser_gate_state = str(status_surface.get("browser_gate_state", "")).strip()
+
+    if apply_state == "not_applied":
+        return "uv run ai-sdlc program solution-confirm --execute --continue --yes"
+    if (
+        apply_state == "apply_succeeded_pending_browser_gate"
+        and browser_gate_state in {"pending", "not_started"}
+    ):
+        return "uv run ai-sdlc program browser-gate-probe --execute"
+    return ""
+
+
+def _frontend_inheritance_context_risk_note(
+    inheritance_surface: dict[str, str],
+) -> str:
+    generation_state = str(inheritance_surface.get("generation", "")).strip()
+    quality_state = str(inheritance_surface.get("quality", "")).strip()
+    if generation_state == "not_inherited" or quality_state == "not_inherited":
+        return (
+            "continuing may generate against the wrong component library or validate "
+            "against the wrong standard until inheritance is bound"
+        )
+    if generation_state == "blocked" or quality_state == "blocked":
+        return (
+            "later code generation or frontend tests remain blocked until inheritance "
+            "is repaired"
+        )
+    return ""
+
+
 def _render_truth_ledger_lines(surface: dict[str, object]) -> None:
     console.print("\n[bold cyan]Truth Ledger[/bold cyan]")
     console.print(f"  - state: {surface['state']}", markup=False)
     console.print(f"  - snapshot state: {surface['snapshot_state']}", markup=False)
     console.print(f"  - detail: {surface['detail']}", markup=False)
-    for action in surface.get("next_required_actions", []):
+    for action in _dedupe_cli_text_items(surface.get("next_required_actions", [])):
         console.print(f"  - next action: {action}", markup=False)
     release_targets = surface.get("release_targets", [])
     if release_targets:
         console.print(
-            "  - release targets: " + ", ".join(str(item) for item in release_targets),
+            "  - release targets: "
+            + ", ".join(_dedupe_cli_text_items(release_targets)),
             markup=False,
         )
-    for item in surface.get("release_capabilities", []):
-        console.print(
-            f"  - capability: {item['capability_id']} | closure={item['closure_state']} | audit={item['audit_state']}",
-            markup=False,
-        )
-        for blocker in item.get("blocking_refs", []):
-            console.print(f"    blocker: {blocker}", markup=False)
+    _render_truth_release_capability_lines(surface.get("release_capabilities", []))
     migration_pending_count = int(surface.get("migration_pending_count", 0) or 0)
     if migration_pending_count:
         console.print(
@@ -4686,6 +5544,73 @@ def _render_truth_ledger_lines(surface: dict[str, object]) -> None:
             markup=False,
         )
     _render_truth_source_inventory(surface.get("source_inventory"))
+
+
+def _render_truth_release_capability_lines(items: list[object]) -> None:
+    for item in items:
+        if hasattr(item, "model_dump"):
+            item = item.model_dump(mode="json")
+        if not isinstance(item, dict):
+            continue
+        console.print(
+            f"  - capability: {item['capability_id']} | closure={item['closure_state']} | audit={item['audit_state']}",
+            markup=False,
+        )
+        plain_language_blockers = _dedupe_cli_text_items(
+            item.get("plain_language_blockers", [])
+        )
+        recommended_next_steps = _dedupe_cli_text_items(
+            item.get("recommended_next_steps", [])
+        )
+        blocking_reason_summary = str(
+            item.get("blocking_reason_summary", "")
+        ).strip()
+        if blocking_reason_summary and not plain_language_blockers:
+            console.print(
+                f"    reason: {blocking_reason_summary}",
+                markup=False,
+            )
+        for plain_text in plain_language_blockers:
+            console.print(
+                f"    explain: {plain_text}",
+                markup=False,
+            )
+        for next_step in recommended_next_steps:
+            console.print(
+                f"    next step: {next_step}",
+                markup=False,
+            )
+        frontend_delivery_summary = _format_frontend_delivery_truth_for_console(item)
+        if frontend_delivery_summary:
+            console.print(
+                f"    frontend delivery: {frontend_delivery_summary}",
+                markup=False,
+            )
+            console.print(
+                "    frontend scope: "
+                f"{summarize_frontend_delivery_scope_for_display()}",
+                markup=False,
+            )
+        frontend_inheritance_summary = summarize_frontend_inheritance_status_for_display(
+            item.get("frontend_inheritance_status")
+            if isinstance(item.get("frontend_inheritance_status"), dict)
+            else {}
+        )
+        if frontend_inheritance_summary:
+            console.print(
+                f"    frontend inheritance: {frontend_inheritance_summary}",
+                markup=False,
+            )
+        for blocker in _dedupe_cli_text_items(item.get("blocking_refs", [])):
+            console.print(f"    blocker: {blocker}", markup=False)
+        for action in _dedupe_cli_text_items(item.get("capability_next_actions", [])):
+            if recommended_next_steps:
+                break
+            console.print(f"    next action: {action}", markup=False)
+
+
+def _format_frontend_delivery_truth_for_console(item: dict[str, object]) -> str:
+    return summarize_frontend_delivery_truth_item(item)
 
 
 def _render_truth_source_inventory(source_inventory: object) -> None:
@@ -4729,7 +5654,7 @@ def _render_truth_source_inventory(source_inventory: object) -> None:
         )
     unmapped_paths = source_inventory.get("unmapped_paths", [])
     if isinstance(unmapped_paths, list):
-        for path in unmapped_paths[:5]:
+        for path in _dedupe_cli_text_items(unmapped_paths)[:5]:
             console.print(f"    unmapped source: {path}", markup=False)
 
 
@@ -4739,7 +5664,9 @@ def _render_truth_validation_summary(
 ) -> None:
     migration_prefix = "migration_pending:"
     non_migration_warnings = [
-        warning for warning in warnings if not warning.startswith(migration_prefix)
+        warning
+        for warning in _dedupe_cli_text_items(warnings)
+        if not warning.startswith(migration_prefix)
     ]
     if non_migration_warnings:
         console.print(
@@ -4748,9 +5675,10 @@ def _render_truth_validation_summary(
         )
         for warning in non_migration_warnings[:5]:
             console.print(f"    warning: {warning}", markup=False)
-    if errors:
-        console.print(f"  - validation errors: {len(errors)}", markup=False)
-        for error in errors[:5]:
+    deduped_errors = _dedupe_cli_text_items(errors)
+    if deduped_errors:
+        console.print(f"  - validation errors: {len(deduped_errors)}", markup=False)
+        for error in deduped_errors[:5]:
             console.print(f"    validation: {error}", markup=False)
 
 
@@ -4804,7 +5732,9 @@ def _frontend_recheck_output_lines(steps: list[object]) -> list[str]:
             continue
         spec_id = str(getattr(step, "spec_id", "")).strip() or "unknown-spec"
         lines.append(f"  - {spec_id}: {getattr(handoff, 'reason', '')}")
-        for command in getattr(handoff, "recommended_commands", ())[:2]:
+        for command in _dedupe_cli_text_items(
+            getattr(handoff, "recommended_commands", ())
+        )[:2]:
             lines.append(f"    command: {command}")
     return lines
 
@@ -4816,10 +5746,12 @@ def _format_frontend_remediation(
         return "-"
 
     details: list[str] = []
-    if remediation.fix_inputs:
-        details.append(", ".join(remediation.fix_inputs[:2]))
-    elif remediation.blockers:
-        details.append(remediation.blockers[0])
+    fix_inputs = _dedupe_cli_text_items(remediation.fix_inputs)
+    blockers = _dedupe_cli_text_items(remediation.blockers)
+    if fix_inputs:
+        details.append(", ".join(fix_inputs[:2]))
+    elif blockers:
+        details.append(blockers[0])
 
     suffix = f" [{'; '.join(details)}]" if details else ""
     return f"{remediation.state}{suffix}"
@@ -4833,10 +5765,20 @@ def _frontend_remediation_output_lines(steps: list[object]) -> list[str]:
             continue
         spec_id = str(getattr(step, "spec_id", "")).strip() or "unknown-spec"
         lines.append(f"  - {spec_id}: {_format_frontend_remediation(remediation)}")
-        for action in getattr(remediation, "suggested_actions", ())[:3]:
+        for action in _dedupe_cli_text_items(getattr(remediation, "suggested_actions", ()))[:3]:
             lines.append(f"    action: {action}")
-        for command in getattr(remediation, "recommended_commands", ())[:3]:
+        for command in _dedupe_cli_text_items(
+            getattr(remediation, "recommended_commands", ())
+        )[:3]:
             lines.append(f"    command: {command}")
+        for plain_text in _dedupe_cli_text_items(
+            getattr(remediation, "plain_language_blockers", ())
+        )[:2]:
+            lines.append(f"    explain: {plain_text}")
+        for next_step in _dedupe_cli_text_items(
+            getattr(remediation, "recommended_next_steps", ())
+        )[:2]:
+            lines.append(f"    next step: {next_step}")
     return lines
 
 
@@ -4848,7 +5790,9 @@ def _frontend_recheck_report_lines(steps: list[object]) -> list[str]:
             continue
         spec_id = str(getattr(step, "spec_id", "")).strip() or "unknown-spec"
         lines.append(f"- {spec_id}: {getattr(handoff, 'reason', '')}")
-        for command in getattr(handoff, "recommended_commands", ()):
+        for command in _dedupe_cli_text_items(
+            getattr(handoff, "recommended_commands", ())
+        ):
             lines.append(f"  - `{command}`")
     return lines
 
@@ -4861,10 +5805,20 @@ def _frontend_remediation_report_lines(steps: list[object]) -> list[str]:
             continue
         spec_id = str(getattr(step, "spec_id", "")).strip() or "unknown-spec"
         lines.append(f"- {spec_id}: {_format_frontend_remediation(remediation)}")
-        for action in getattr(remediation, "suggested_actions", ()):
+        for action in _dedupe_cli_text_items(getattr(remediation, "suggested_actions", ())):
             lines.append(f"  - {action}")
-        for command in getattr(remediation, "recommended_commands", ()):
+        for command in _dedupe_cli_text_items(
+            getattr(remediation, "recommended_commands", ())
+        ):
             lines.append(f"  - `{command}`")
+        for plain_text in _dedupe_cli_text_items(
+            getattr(remediation, "plain_language_blockers", ())
+        ):
+            lines.append(f"  - explain: {plain_text}")
+        for next_step in _dedupe_cli_text_items(
+            getattr(remediation, "recommended_next_steps", ())
+        ):
+            lines.append(f"  - next step: {next_step}")
     return lines
 
 
@@ -4877,7 +5831,7 @@ def _render_frontend_remediation_execution_result(results: list[object]) -> None
         command = str(getattr(item, "command", "")).strip()
         status = str(getattr(item, "status", "")).strip() or "unknown"
         console.print(f"  - {command} -> {status}", markup=False)
-        for path in getattr(item, "written_paths", ())[:4]:
+        for path in _dedupe_cli_text_items(getattr(item, "written_paths", ()))[:4]:
             console.print(f"    wrote: {path}", markup=False)
         summary = str(getattr(item, "summary", "")).strip()
         if summary:
@@ -4949,7 +5903,9 @@ def _render_frontend_solution_confirmation_recommendation(
 def _render_frontend_solution_confirmation_wizard(
     snapshot: FrontendSolutionSnapshot,
 ) -> None:
-    changed_fields = _frontend_solution_confirmation_change_fields(snapshot)
+    changed_fields = _dedupe_cli_text_items(
+        _frontend_solution_confirmation_change_fields(snapshot)
+    )
     step_lines = [
         "Step 1/7: Recommendation",
         "Step 2/7: Requested frontend stack",
@@ -4989,7 +5945,9 @@ def _render_frontend_solution_confirmation_wizard(
 def _render_frontend_solution_confirmation_final(
     snapshot: FrontendSolutionSnapshot,
 ) -> None:
-    changed_fields = _frontend_solution_confirmation_change_fields(snapshot)
+    changed_fields = _dedupe_cli_text_items(
+        _frontend_solution_confirmation_change_fields(snapshot)
+    )
     console.print("\n[bold cyan]Final Preflight[/bold cyan]")
     console.print(
         f"  - requested_frontend_stack: {snapshot.requested_frontend_stack}",
@@ -5040,7 +5998,9 @@ def _frontend_solution_confirmation_report_lines(
     latest_snapshot_path: Path | None,
     artifact_paths: list[Path],
 ) -> list[str]:
-    changed_fields = _frontend_solution_confirmation_change_fields(snapshot)
+    changed_fields = _dedupe_cli_text_items(
+        _frontend_solution_confirmation_change_fields(snapshot)
+    )
     lines: list[str] = [
         f"# {mode_title}",
         "",
@@ -5110,7 +6070,7 @@ def _frontend_solution_confirmation_report_lines(
                 "",
             ]
         )
-        lines.extend([f"- `{path}`" for path in artifact_paths])
+        lines.extend([f"- `{path}`" for path in _dedupe_cli_text_items(artifact_paths)])
         lines.append("")
     return lines
 
@@ -5130,11 +6090,11 @@ def _render_frontend_provider_runtime_result(result: object) -> None:
         f"  - confirmed: {str(getattr(result, 'confirmed', False)).lower()}",
         markup=False,
     )
-    for summary in getattr(result, "patch_summaries", ()):
+    for summary in _dedupe_cli_text_items(getattr(result, "patch_summaries", ())):
         console.print(f"  - patch summary: {summary}", markup=False)
-    for blocker in getattr(result, "remaining_blockers", ()):
+    for blocker in _dedupe_cli_text_items(getattr(result, "remaining_blockers", ())):
         console.print(f"  - blocker: {blocker}", markup=False)
-    for warning in getattr(result, "warnings", ()):
+    for warning in _dedupe_cli_text_items(getattr(result, "warnings", ())):
         console.print(f"  - warning: {warning}", markup=False)
 
 
@@ -5153,13 +6113,13 @@ def _render_frontend_provider_patch_apply_result(result: object) -> None:
         f"  - confirmed: {str(getattr(result, 'confirmed', False)).lower()}",
         markup=False,
     )
-    for summary in getattr(result, "apply_summaries", ()):
+    for summary in _dedupe_cli_text_items(getattr(result, "apply_summaries", ())):
         console.print(f"  - apply summary: {summary}", markup=False)
-    for path in getattr(result, "written_paths", ()):
+    for path in _dedupe_cli_text_items(getattr(result, "written_paths", ())):
         console.print(f"  - wrote: {path}", markup=False)
-    for blocker in getattr(result, "remaining_blockers", ()):
+    for blocker in _dedupe_cli_text_items(getattr(result, "remaining_blockers", ())):
         console.print(f"  - blocker: {blocker}", markup=False)
-    for warning in getattr(result, "warnings", ()):
+    for warning in _dedupe_cli_text_items(getattr(result, "warnings", ())):
         console.print(f"  - warning: {warning}", markup=False)
 
 
@@ -5179,13 +6139,15 @@ def _render_frontend_cross_spec_writeback_result(result: object) -> None:
         f"  - confirmed: {str(getattr(result, 'confirmed', False)).lower()}",
         markup=False,
     )
-    for summary in getattr(result, "orchestration_summaries", ()):
+    for summary in _dedupe_cli_text_items(
+        getattr(result, "orchestration_summaries", ())
+    ):
         console.print(f"  - {summary}", markup=False)
-    for path in getattr(result, "written_paths", ()):
+    for path in _dedupe_cli_text_items(getattr(result, "written_paths", ())):
         console.print(f"  - wrote: {path}", markup=False)
-    for blocker in getattr(result, "remaining_blockers", ()):
+    for blocker in _dedupe_cli_text_items(getattr(result, "remaining_blockers", ())):
         console.print(f"  - blocker: {blocker}", markup=False)
-    for warning in getattr(result, "warnings", ()):
+    for warning in _dedupe_cli_text_items(getattr(result, "warnings", ())):
         console.print(f"  - warning: {warning}", markup=False)
 
 
@@ -5205,13 +6167,13 @@ def _render_frontend_guarded_registry_result(result: object) -> None:
         f"  - confirmed: {str(getattr(result, 'confirmed', False)).lower()}",
         markup=False,
     )
-    for summary in getattr(result, "registry_summaries", ()):
+    for summary in _dedupe_cli_text_items(getattr(result, "registry_summaries", ())):
         console.print(f"  - {summary}", markup=False)
-    for path in getattr(result, "written_paths", ()):
+    for path in _dedupe_cli_text_items(getattr(result, "written_paths", ())):
         console.print(f"  - wrote: {path}", markup=False)
-    for blocker in getattr(result, "remaining_blockers", ()):
+    for blocker in _dedupe_cli_text_items(getattr(result, "remaining_blockers", ())):
         console.print(f"  - blocker: {blocker}", markup=False)
-    for warning in getattr(result, "warnings", ()):
+    for warning in _dedupe_cli_text_items(getattr(result, "warnings", ())):
         console.print(f"  - warning: {warning}", markup=False)
 
 
@@ -5231,13 +6193,15 @@ def _render_frontend_broader_governance_result(result: object) -> None:
         f"  - confirmed: {str(getattr(result, 'confirmed', False)).lower()}",
         markup=False,
     )
-    for summary in getattr(result, "governance_summaries", ()):
+    for summary in _dedupe_cli_text_items(
+        getattr(result, "governance_summaries", ())
+    ):
         console.print(f"  - {summary}", markup=False)
-    for path in getattr(result, "written_paths", ()):
+    for path in _dedupe_cli_text_items(getattr(result, "written_paths", ())):
         console.print(f"  - wrote: {path}", markup=False)
-    for blocker in getattr(result, "remaining_blockers", ()):
+    for blocker in _dedupe_cli_text_items(getattr(result, "remaining_blockers", ())):
         console.print(f"  - blocker: {blocker}", markup=False)
-    for warning in getattr(result, "warnings", ()):
+    for warning in _dedupe_cli_text_items(getattr(result, "warnings", ())):
         console.print(f"  - warning: {warning}", markup=False)
 
 
@@ -5257,13 +6221,15 @@ def _render_frontend_final_governance_result(result: object) -> None:
         f"  - confirmed: {str(getattr(result, 'confirmed', False)).lower()}",
         markup=False,
     )
-    for summary in getattr(result, "final_governance_summaries", ()):
+    for summary in _dedupe_cli_text_items(
+        getattr(result, "final_governance_summaries", ())
+    ):
         console.print(f"  - {summary}", markup=False)
-    for path in getattr(result, "written_paths", ()):
+    for path in _dedupe_cli_text_items(getattr(result, "written_paths", ())):
         console.print(f"  - wrote: {path}", markup=False)
-    for blocker in getattr(result, "remaining_blockers", ()):
+    for blocker in _dedupe_cli_text_items(getattr(result, "remaining_blockers", ())):
         console.print(f"  - blocker: {blocker}", markup=False)
-    for warning in getattr(result, "warnings", ()):
+    for warning in _dedupe_cli_text_items(getattr(result, "warnings", ())):
         console.print(f"  - warning: {warning}", markup=False)
 
 
@@ -5283,13 +6249,15 @@ def _render_frontend_writeback_persistence_result(result: object) -> None:
         f"  - confirmed: {str(getattr(result, 'confirmed', False)).lower()}",
         markup=False,
     )
-    for summary in getattr(result, "persistence_summaries", ()):
+    for summary in _dedupe_cli_text_items(
+        getattr(result, "persistence_summaries", ())
+    ):
         console.print(f"  - {summary}", markup=False)
-    for path in getattr(result, "written_paths", ()):
+    for path in _dedupe_cli_text_items(getattr(result, "written_paths", ())):
         console.print(f"  - wrote: {path}", markup=False)
-    for blocker in getattr(result, "remaining_blockers", ()):
+    for blocker in _dedupe_cli_text_items(getattr(result, "remaining_blockers", ())):
         console.print(f"  - blocker: {blocker}", markup=False)
-    for warning in getattr(result, "warnings", ()):
+    for warning in _dedupe_cli_text_items(getattr(result, "warnings", ())):
         console.print(f"  - warning: {warning}", markup=False)
 
 
@@ -5307,13 +6275,13 @@ def _render_frontend_persisted_write_proof_result(result: object) -> None:
         f"  - confirmed: {str(getattr(result, 'confirmed', False)).lower()}",
         markup=False,
     )
-    for summary in getattr(result, "proof_summaries", ()):
+    for summary in _dedupe_cli_text_items(getattr(result, "proof_summaries", ())):
         console.print(f"  - {summary}", markup=False)
-    for path in getattr(result, "written_paths", ()):
+    for path in _dedupe_cli_text_items(getattr(result, "written_paths", ())):
         console.print(f"  - wrote: {path}", markup=False)
-    for blocker in getattr(result, "remaining_blockers", ()):
+    for blocker in _dedupe_cli_text_items(getattr(result, "remaining_blockers", ())):
         console.print(f"  - blocker: {blocker}", markup=False)
-    for warning in getattr(result, "warnings", ()):
+    for warning in _dedupe_cli_text_items(getattr(result, "warnings", ())):
         console.print(f"  - warning: {warning}", markup=False)
 
 
@@ -5333,13 +6301,15 @@ def _render_frontend_final_proof_publication_result(result: object) -> None:
         f"  - confirmed: {str(getattr(result, 'confirmed', False)).lower()}",
         markup=False,
     )
-    for summary in getattr(result, "publication_summaries", ()):
+    for summary in _dedupe_cli_text_items(
+        getattr(result, "publication_summaries", ())
+    ):
         console.print(f"  - {summary}", markup=False, soft_wrap=True)
-    for path in getattr(result, "written_paths", ()):
+    for path in _dedupe_cli_text_items(getattr(result, "written_paths", ())):
         console.print(f"  - wrote: {path}", markup=False, soft_wrap=True)
-    for blocker in getattr(result, "remaining_blockers", ()):
+    for blocker in _dedupe_cli_text_items(getattr(result, "remaining_blockers", ())):
         console.print(f"  - blocker: {blocker}", markup=False, soft_wrap=True)
-    for warning in getattr(result, "warnings", ()):
+    for warning in _dedupe_cli_text_items(getattr(result, "warnings", ())):
         console.print(f"  - warning: {warning}", markup=False, soft_wrap=True)
 
 
@@ -5357,13 +6327,13 @@ def _render_frontend_final_proof_closure_result(result: object) -> None:
         f"  - confirmed: {str(getattr(result, 'confirmed', False)).lower()}",
         markup=False,
     )
-    for summary in getattr(result, "closure_summaries", ()):
+    for summary in _dedupe_cli_text_items(getattr(result, "closure_summaries", ())):
         console.print(f"  - {summary}", markup=False, soft_wrap=True)
-    for path in getattr(result, "written_paths", ()):
+    for path in _dedupe_cli_text_items(getattr(result, "written_paths", ())):
         console.print(f"  - wrote: {path}", markup=False, soft_wrap=True)
-    for blocker in getattr(result, "remaining_blockers", ()):
+    for blocker in _dedupe_cli_text_items(getattr(result, "remaining_blockers", ())):
         console.print(f"  - blocker: {blocker}", markup=False, soft_wrap=True)
-    for warning in getattr(result, "warnings", ()):
+    for warning in _dedupe_cli_text_items(getattr(result, "warnings", ())):
         console.print(f"  - warning: {warning}", markup=False, soft_wrap=True)
 
 
@@ -5381,13 +6351,13 @@ def _render_frontend_final_proof_archive_result(result: object) -> None:
         f"  - confirmed: {str(getattr(result, 'confirmed', False)).lower()}",
         markup=False,
     )
-    for summary in getattr(result, "archive_summaries", ()):
+    for summary in _dedupe_cli_text_items(getattr(result, "archive_summaries", ())):
         console.print(f"  - {summary}", markup=False, soft_wrap=True)
-    for path in getattr(result, "written_paths", ()):
+    for path in _dedupe_cli_text_items(getattr(result, "written_paths", ())):
         console.print(f"  - wrote: {path}", markup=False, soft_wrap=True)
-    for blocker in getattr(result, "remaining_blockers", ()):
+    for blocker in _dedupe_cli_text_items(getattr(result, "remaining_blockers", ())):
         console.print(f"  - blocker: {blocker}", markup=False, soft_wrap=True)
-    for warning in getattr(result, "warnings", ()):
+    for warning in _dedupe_cli_text_items(getattr(result, "warnings", ())):
         console.print(f"  - warning: {warning}", markup=False, soft_wrap=True)
 
 
@@ -5409,13 +6379,15 @@ def _render_frontend_final_proof_archive_thread_archive_result(result: object) -
         f"  - confirmed: {str(getattr(result, 'confirmed', False)).lower()}",
         markup=False,
     )
-    for summary in getattr(result, "thread_archive_summaries", ()):
+    for summary in _dedupe_cli_text_items(
+        getattr(result, "thread_archive_summaries", ())
+    ):
         console.print(f"  - {summary}", markup=False, soft_wrap=True)
-    for path in getattr(result, "written_paths", ()):
+    for path in _dedupe_cli_text_items(getattr(result, "written_paths", ())):
         console.print(f"  - wrote: {path}", markup=False, soft_wrap=True)
-    for blocker in getattr(result, "remaining_blockers", ()):
+    for blocker in _dedupe_cli_text_items(getattr(result, "remaining_blockers", ())):
         console.print(f"  - blocker: {blocker}", markup=False, soft_wrap=True)
-    for warning in getattr(result, "warnings", ()):
+    for warning in _dedupe_cli_text_items(getattr(result, "warnings", ())):
         console.print(f"  - warning: {warning}", markup=False, soft_wrap=True)
 
 
@@ -5511,11 +6483,254 @@ def _render_frontend_final_proof_archive_project_cleanup_result(
         f"  - confirmed: {str(getattr(result, 'confirmed', False)).lower()}",
         markup=False,
     )
-    for summary in getattr(result, "project_cleanup_summaries", ()):
+    for line in _project_cleanup_truth_output_lines(result):
+        console.print(line, markup=False, soft_wrap=True)
+    for summary in _dedupe_cli_text_items(
+        getattr(result, "project_cleanup_summaries", ())
+    ):
         console.print(f"  - {summary}", markup=False, soft_wrap=True)
-    for path in getattr(result, "written_paths", ()):
+    for path in _dedupe_cli_text_items(getattr(result, "written_paths", ())):
         console.print(f"  - wrote: {path}", markup=False, soft_wrap=True)
-    for blocker in getattr(result, "remaining_blockers", ()):
+    for blocker in _dedupe_cli_text_items(getattr(result, "remaining_blockers", ())):
         console.print(f"  - blocker: {blocker}", markup=False, soft_wrap=True)
-    for warning in getattr(result, "warnings", ()):
+    for warning in _dedupe_cli_text_items(getattr(result, "warnings", ())):
         console.print(f"  - warning: {warning}", markup=False, soft_wrap=True)
+
+
+def _coerce_truth_item_mapping(item: object) -> dict[str, object] | None:
+    if hasattr(item, "model_dump"):
+        item = item.model_dump(mode="json")
+    if isinstance(item, dict):
+        return item
+    return None
+
+
+def _project_cleanup_truth_output_lines(result: object) -> list[str]:
+    lines: list[str] = []
+    lines.extend(
+        _project_cleanup_truth_block_lines(
+            "cleanup target",
+            getattr(result, "cleanup_targets", ()),
+            state=str(getattr(result, "cleanup_targets_state", "unknown")),
+            action_field="cleanup_action",
+            path_field="path",
+            kind_field="kind",
+        )
+    )
+    lines.extend(
+        _project_cleanup_truth_block_lines(
+            "eligibility",
+            getattr(result, "cleanup_target_eligibility", ()),
+            state=str(
+                getattr(result, "cleanup_target_eligibility_state", "unknown")
+            ),
+            action_field="eligibility",
+        )
+    )
+    lines.extend(
+        _project_cleanup_truth_block_lines(
+            "preview",
+            getattr(result, "cleanup_preview_plan", ()),
+            state=str(getattr(result, "cleanup_preview_plan_state", "unknown")),
+            action_field="planned_action",
+        )
+    )
+    lines.extend(
+        _project_cleanup_truth_block_lines(
+            "proposal",
+            getattr(result, "cleanup_mutation_proposal", ()),
+            state=str(
+                getattr(result, "cleanup_mutation_proposal_state", "unknown")
+            ),
+            action_field="proposed_action",
+        )
+    )
+    lines.extend(
+        _project_cleanup_truth_block_lines(
+            "approval",
+            getattr(result, "cleanup_mutation_proposal_approval", ()),
+            state=str(
+                getattr(
+                    result,
+                    "cleanup_mutation_proposal_approval_state",
+                    "unknown",
+                )
+            ),
+            action_field="approved_action",
+        )
+    )
+    lines.extend(
+        _project_cleanup_truth_block_lines(
+            "gating",
+            getattr(result, "cleanup_mutation_execution_gating", ()),
+            state=str(
+                getattr(
+                    result,
+                    "cleanup_mutation_execution_gating_state",
+                    "unknown",
+                )
+            ),
+            action_field="gated_action",
+        )
+    )
+    return lines
+
+
+def _project_cleanup_truth_report_lines(result: object) -> list[str]:
+    lines: list[str] = []
+    lines.extend(
+        _project_cleanup_truth_report_block_lines(
+            "Cleanup targets",
+            getattr(result, "cleanup_targets", ()),
+            state=str(getattr(result, "cleanup_targets_state", "unknown")),
+            action_field="cleanup_action",
+            path_field="path",
+            kind_field="kind",
+        )
+    )
+    lines.extend(
+        _project_cleanup_truth_report_block_lines(
+            "Cleanup target eligibility",
+            getattr(result, "cleanup_target_eligibility", ()),
+            state=str(
+                getattr(result, "cleanup_target_eligibility_state", "unknown")
+            ),
+            action_field="eligibility",
+        )
+    )
+    lines.extend(
+        _project_cleanup_truth_report_block_lines(
+            "Cleanup preview plan",
+            getattr(result, "cleanup_preview_plan", ()),
+            state=str(getattr(result, "cleanup_preview_plan_state", "unknown")),
+            action_field="planned_action",
+        )
+    )
+    lines.extend(
+        _project_cleanup_truth_report_block_lines(
+            "Cleanup mutation proposal",
+            getattr(result, "cleanup_mutation_proposal", ()),
+            state=str(
+                getattr(result, "cleanup_mutation_proposal_state", "unknown")
+            ),
+            action_field="proposed_action",
+        )
+    )
+    lines.extend(
+        _project_cleanup_truth_report_block_lines(
+            "Cleanup mutation proposal approval",
+            getattr(result, "cleanup_mutation_proposal_approval", ()),
+            state=str(
+                getattr(
+                    result,
+                    "cleanup_mutation_proposal_approval_state",
+                    "unknown",
+                )
+            ),
+            action_field="approved_action",
+        )
+    )
+    lines.extend(
+        _project_cleanup_truth_report_block_lines(
+            "Cleanup mutation execution gating",
+            getattr(result, "cleanup_mutation_execution_gating", ()),
+            state=str(
+                getattr(
+                    result,
+                    "cleanup_mutation_execution_gating_state",
+                    "unknown",
+                )
+            ),
+            action_field="gated_action",
+        )
+    )
+    return lines
+
+
+def _project_cleanup_truth_block_lines(
+    label: str,
+    items: object,
+    *,
+    state: str,
+    action_field: str,
+    path_field: str | None = None,
+    kind_field: str | None = None,
+) -> list[str]:
+    if state in {"missing", "empty"}:
+        return []
+    lines: list[str] = []
+    seen_chunks: set[tuple[str, ...]] = set()
+    emitted = 0
+    for item in list(items):
+        payload = _coerce_truth_item_mapping(item)
+        if payload is None:
+            continue
+        target_id = str(payload.get("target_id", "")).strip() or "unknown-target"
+        action = str(payload.get(action_field, "")).strip()
+        chunk: list[str] = []
+        if path_field is not None or kind_field is not None:
+            path = str(payload.get(path_field or "", "")).strip()
+            kind = str(payload.get(kind_field or "", "")).strip()
+            chunk.append(
+                f"  - {label}: {target_id}"
+                f" | {kind or '-'}"
+                f" | {path or '-'}"
+                f" | {action or '-'}"
+            )
+        else:
+            chunk.append(f"  - {label}: {target_id} -> {action or '-'}")
+        reason = str(payload.get("reason", "")).strip()
+        if reason:
+            chunk.append(f"    reason: {reason}")
+        chunk_key = tuple(chunk)
+        if chunk_key in seen_chunks:
+            continue
+        seen_chunks.add(chunk_key)
+        lines.extend(chunk)
+        emitted += 1
+        if emitted >= 3:
+            break
+    return lines
+
+
+def _project_cleanup_truth_report_block_lines(
+    title: str,
+    items: object,
+    *,
+    state: str,
+    action_field: str,
+    path_field: str | None = None,
+    kind_field: str | None = None,
+) -> list[str]:
+    if state in {"missing", "empty"}:
+        return []
+    lines = [f"- {title}:"]
+    emitted = 0
+    seen_chunks: set[tuple[str, ...]] = set()
+    for item in list(items):
+        payload = _coerce_truth_item_mapping(item)
+        if payload is None:
+            continue
+        target_id = str(payload.get("target_id", "")).strip() or "unknown-target"
+        action = str(payload.get(action_field, "")).strip()
+        chunk: list[str] = []
+        if path_field is not None or kind_field is not None:
+            path = str(payload.get(path_field or "", "")).strip()
+            kind = str(payload.get(kind_field or "", "")).strip()
+            chunk.append(
+                f"  - `{target_id}` | `{kind or '-'}` | `{path or '-'}` | `{action or '-'}`"
+            )
+        else:
+            chunk.append(f"  - `{target_id}` -> `{action or '-'}`")
+        reason = str(payload.get("reason", "")).strip()
+        if reason:
+            chunk.append(f"    - reason: {reason}")
+        chunk_key = tuple(chunk)
+        if chunk_key in seen_chunks:
+            continue
+        seen_chunks.add(chunk_key)
+        emitted += 1
+        lines.extend(chunk)
+        if emitted >= 3:
+            break
+    return lines if emitted else []

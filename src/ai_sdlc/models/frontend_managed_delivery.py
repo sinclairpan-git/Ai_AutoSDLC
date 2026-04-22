@@ -6,7 +6,21 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
+
+
+def _dedupe_strings(value: object) -> list[str]:
+    if value is None:
+        return []
+    unique: list[str] = []
+    seen: set[str] = set()
+    for item in value:
+        text = str(item)
+        if text in seen:
+            continue
+        seen.add(text)
+        unique.append(text)
+    return unique
 
 
 class FrontendManagedDeliveryModel(BaseModel):
@@ -23,6 +37,11 @@ class DependencyInstallExecutionPayload(FrontendManagedDeliveryModel):
     working_directory: str = "."
     packages: list[str] = Field(default_factory=list)
 
+    @field_validator("packages", mode="before")
+    @classmethod
+    def _dedupe_packages(cls, value: object) -> list[str]:
+        return _dedupe_strings(value)
+
 
 class RuntimeRemediationExecutionPayload(FrontendManagedDeliveryModel):
     """Structured host runtime remediation payload."""
@@ -36,6 +55,18 @@ class RuntimeRemediationExecutionPayload(FrontendManagedDeliveryModel):
     will_modify: list[str] = Field(default_factory=list)
     manual_prerequisites: list[str] = Field(default_factory=list)
     reentry_condition: str = ""
+
+    @field_validator(
+        "required_runtime_entries",
+        "will_download",
+        "will_install",
+        "will_modify",
+        "manual_prerequisites",
+        mode="before",
+    )
+    @classmethod
+    def _dedupe_runtime_lists(cls, value: object) -> list[str]:
+        return _dedupe_strings(value)
 
 
 class GeneratedArtifactFile(FrontendManagedDeliveryModel):
@@ -52,12 +83,22 @@ class ArtifactGenerateExecutionPayload(FrontendManagedDeliveryModel):
     directories: list[str] = Field(default_factory=list)
     files: list[GeneratedArtifactFile] = Field(default_factory=list)
 
+    @field_validator("directories", mode="before")
+    @classmethod
+    def _dedupe_directories(cls, value: object) -> list[str]:
+        return _dedupe_strings(value)
+
 
 class ManagedTargetPrepareExecutionPayload(FrontendManagedDeliveryModel):
     """Structured managed target bootstrap payload."""
 
     directories: list[str] = Field(default_factory=list)
     files: list[GeneratedArtifactFile] = Field(default_factory=list)
+
+    @field_validator("directories", mode="before")
+    @classmethod
+    def _dedupe_directories(cls, value: object) -> list[str]:
+        return _dedupe_strings(value)
 
 
 class WorkspaceIntegrationItem(FrontendManagedDeliveryModel):
@@ -70,6 +111,11 @@ class WorkspaceIntegrationItem(FrontendManagedDeliveryModel):
     content: str
     requires_explicit_confirmation: bool = True
     will_not_touch_refs: list[str] = Field(default_factory=list)
+
+    @field_validator("will_not_touch_refs", mode="before")
+    @classmethod
+    def _dedupe_no_touch_refs(cls, value: object) -> list[str]:
+        return _dedupe_strings(value)
 
 
 class WorkspaceIntegrationExecutionPayload(FrontendManagedDeliveryModel):
@@ -95,6 +141,11 @@ class FrontendActionPlanAction(FrontendManagedDeliveryModel):
     source_linkage_refs: dict[str, str] = Field(default_factory=dict)
     executor_payload: dict[str, Any] = Field(default_factory=dict)
 
+    @field_validator("depends_on_action_ids", "risk_flags", mode="before")
+    @classmethod
+    def _dedupe_action_lists(cls, value: object) -> list[str]:
+        return _dedupe_strings(value)
+
 
 class ConfirmedActionPlanExecutionView(FrontendManagedDeliveryModel):
     """Runtime projection of a confirmed action plan."""
@@ -110,6 +161,11 @@ class ConfirmedActionPlanExecutionView(FrontendManagedDeliveryModel):
     spec_dir: str
     action_items: list[FrontendActionPlanAction] = Field(default_factory=list)
     will_not_touch: list[str] = Field(default_factory=list)
+
+    @field_validator("will_not_touch", mode="before")
+    @classmethod
+    def _dedupe_no_touch(cls, value: object) -> list[str]:
+        return _dedupe_strings(value)
 
 
 class DeliveryApplyDecisionReceipt(FrontendManagedDeliveryModel):
@@ -143,6 +199,11 @@ class ManagedDeliveryExecutionSession(FrontendManagedDeliveryModel):
     status: str
     current_action_id: str = ""
     blocking_reason_codes: list[str] = Field(default_factory=list)
+
+    @field_validator("blocking_reason_codes", mode="before")
+    @classmethod
+    def _dedupe_blocking_reason_codes(cls, value: object) -> list[str]:
+        return _dedupe_strings(value)
 
 
 class DeliveryActionLedgerEntry(FrontendManagedDeliveryModel):
@@ -178,6 +239,15 @@ class ManagedDeliveryApplyResult(FrontendManagedDeliveryModel):
     skipped_action_ids: list[str] = Field(default_factory=list)
     ledger_entries: list[DeliveryActionLedgerEntry] = Field(default_factory=list)
     remediation_hints: list[str] = Field(default_factory=list)
+
+    @field_validator(
+        "blockers",
+        "remediation_hints",
+        mode="before",
+    )
+    @classmethod
+    def _dedupe_result_lists(cls, value: object) -> list[str]:
+        return _dedupe_strings(value)
 
 
 class ManagedDeliveryExecutorContext(FrontendManagedDeliveryModel):

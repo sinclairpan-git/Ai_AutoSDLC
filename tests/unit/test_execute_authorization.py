@@ -5,6 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 
 import ai_sdlc.core.execute_authorization as execute_authorization_module
+from ai_sdlc.core.execute_authorization import ExecuteAuthorizationResult
 from ai_sdlc.core.workitem_truth import WorkitemTruthResult
 from ai_sdlc.models.state import Checkpoint, FeatureInfo
 
@@ -171,3 +172,27 @@ def test_evaluate_execute_authorization_surfaces_docs_only_review_truth_when_tas
     assert result.state == "blocked"
     assert result.reason_codes == ["tasks_truth_missing"]
     assert "docs-only / review-to-decompose" in result.detail
+
+
+def test_execute_authorization_to_json_dict_deduplicates_reason_codes() -> None:
+    payload = ExecuteAuthorizationResult(
+        state="blocked",
+        reason_codes=[
+            "explicit_execute_authorization_missing",
+            "explicit_execute_authorization_missing",
+        ],
+    ).to_json_dict()
+
+    assert payload["reason_codes"] == ["explicit_execute_authorization_missing"]
+
+
+def test_execute_authorization_result_canonicalizes_runtime_reason_codes() -> None:
+    result = ExecuteAuthorizationResult(
+        state="blocked",
+        reason_codes=[
+            "explicit_execute_authorization_missing",
+            "explicit_execute_authorization_missing",
+        ],
+    )
+
+    assert result.reason_codes == ["explicit_execute_authorization_missing"]

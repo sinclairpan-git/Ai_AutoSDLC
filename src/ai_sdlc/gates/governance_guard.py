@@ -33,6 +33,17 @@ class GovernanceFreezeError(Exception):
     """Raised when governance prerequisites are incomplete."""
 
 
+def _dedupe_text_items(items: list[str]) -> list[str]:
+    seen: set[str] = set()
+    unique: list[str] = []
+    for item in items:
+        if item in seen:
+            continue
+        seen.add(item)
+        unique.append(item)
+    return unique
+
+
 def governance_state_path(root: Path, work_item_id: str) -> Path:
     """Return the persisted governance snapshot path for a work item."""
     return root / AI_SDLC_DIR / "work-items" / work_item_id / "governance.yaml"
@@ -106,7 +117,8 @@ class GovernanceGuard:
         missing = [check.name for check in result.checks if not check.passed]
         if missing:
             raise GovernanceFreezeError(
-                "Missing governance prerequisites: " + ", ".join(missing)
+                "Missing governance prerequisites: "
+                + ", ".join(_dedupe_text_items(missing))
             )
 
         frozen_at = now_iso()

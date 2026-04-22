@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -54,6 +55,29 @@ FRONTEND_OBSERVATION_ATTACHMENT_COVERAGE_GAP = "frontend_contract_observations"
 FRONTEND_ATTACHMENT_REQUIREMENT_WAIVED = "waived_for_framework_capability"
 
 
+def _dedupe_text_items(values: object) -> list[str]:
+    deduped: list[str] = []
+    for value in values or []:
+        normalized = str(value).strip()
+        if normalized and normalized not in deduped:
+            deduped.append(normalized)
+    return deduped
+
+
+def _dedupe_mapping_items(values: object) -> list[dict[str, object]]:
+    deduped: list[dict[str, object]] = []
+    seen: set[str] = set()
+    for value in values or []:
+        if not isinstance(value, dict):
+            continue
+        key = json.dumps(value, sort_keys=True, ensure_ascii=False)
+        if key in seen:
+            continue
+        seen.add(key)
+        deduped.append(dict(value))
+    return deduped
+
+
 @dataclass(frozen=True, slots=True)
 class FrontendGateVerificationReport:
     """Structured frontend gate verification report for verify/gate integration."""
@@ -69,24 +93,38 @@ class FrontendGateVerificationReport:
     upstream_contract_verification: dict[str, object]
     visual_a11y_evidence_summary: dict[str, object] | None = None
 
+    def __post_init__(self) -> None:
+        object.__setattr__(
+            self, "check_objects", tuple(_dedupe_text_items(self.check_objects))
+        )
+        object.__setattr__(self, "blockers", tuple(_dedupe_text_items(self.blockers)))
+        object.__setattr__(
+            self, "coverage_gaps", tuple(_dedupe_text_items(self.coverage_gaps))
+        )
+        object.__setattr__(
+            self, "advisory_checks", tuple(_dedupe_text_items(self.advisory_checks))
+        )
+
     def to_json_dict(self) -> dict[str, object]:
         payload = {
             "gate_policy_root": self.gate_policy_root,
             "generation_root": self.generation_root,
             "source_name": self.source_name,
-            "check_objects": list(self.check_objects),
-            "blockers": list(self.blockers),
-            "coverage_gaps": list(self.coverage_gaps),
-            "advisory_checks": list(self.advisory_checks),
+            "check_objects": _dedupe_text_items(self.check_objects),
+            "blockers": _dedupe_text_items(self.blockers),
+            "coverage_gaps": _dedupe_text_items(self.coverage_gaps),
+            "advisory_checks": _dedupe_text_items(self.advisory_checks),
             "gate_verdict": self.gate_result.verdict.value,
-            "gate_checks": [
-                {
-                    "name": check.name,
-                    "passed": check.passed,
-                    "message": check.message,
-                }
-                for check in self.gate_result.checks
-            ],
+            "gate_checks": _dedupe_mapping_items(
+                [
+                    {
+                        "name": check.name,
+                        "passed": check.passed,
+                        "message": check.message,
+                    }
+                    for check in self.gate_result.checks
+                ]
+            ),
             "upstream_contract_verification": self.upstream_contract_verification,
         }
         if self.visual_a11y_evidence_summary is not None:
@@ -106,6 +144,24 @@ class FrontendGateExecuteDecision:
     remediation_hints: tuple[str, ...] = ()
     remediation_reason_codes: tuple[str, ...] = ()
     source_linkage_refs: dict[str, str] = field(default_factory=dict)
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, "blockers", tuple(_dedupe_text_items(self.blockers)))
+        object.__setattr__(
+            self,
+            "recheck_reason_codes",
+            tuple(_dedupe_text_items(self.recheck_reason_codes)),
+        )
+        object.__setattr__(
+            self,
+            "remediation_hints",
+            tuple(_dedupe_text_items(self.remediation_hints)),
+        )
+        object.__setattr__(
+            self,
+            "remediation_reason_codes",
+            tuple(_dedupe_text_items(self.remediation_reason_codes)),
+        )
 
 
 def build_frontend_gate_verification_report(
@@ -655,7 +711,11 @@ def _required_artifacts_present(
         name for name in required_files if not (base_dir / name).is_file()
     ]
     if missing:
-        return False, "missing required artifacts: " + ", ".join(missing[:3])
+        return (
+            False,
+            "missing required artifacts: "
+            + ", ".join(_dedupe_text_items(missing)[:3]),
+        )
     return True, ""
 
 
@@ -675,10 +735,12 @@ def _requires_visual_a11y_policy_artifacts(gate_root: Path) -> bool:
 def _contract_prerequisite_message(
     report: FrontendContractVerificationReport,
 ) -> str:
-    if report.blockers:
-        return report.blockers[0]
-    if report.coverage_gaps:
-        return "coverage gaps: " + ", ".join(report.coverage_gaps)
+    blockers = _dedupe_text_items(report.blockers)
+    coverage_gaps = _dedupe_text_items(report.coverage_gaps)
+    if blockers:
+        return blockers[0]
+    if coverage_gaps:
+        return "coverage gaps: " + ", ".join(coverage_gaps)
     return "frontend contract verification not clear"
 
 
@@ -755,12 +817,14 @@ def _browser_gate_blockers(
             "advisory_only",
         }:
             continue
+        remediation_hints = _dedupe_text_items(receipt.remediation_hints)
+        blocking_reason_codes = _dedupe_text_items(receipt.blocking_reason_codes)
         hint = (
-            receipt.remediation_hints[0]
-            if receipt.remediation_hints
+            remediation_hints[0]
+            if remediation_hints
             else (
-                receipt.blocking_reason_codes[0]
-                if receipt.blocking_reason_codes
+                blocking_reason_codes[0]
+                if blocking_reason_codes
                 else "review browser gate receipt"
             )
         )
@@ -768,7 +832,7 @@ def _browser_gate_blockers(
             f"browser gate check {receipt.check_name}: {hint}"
         )
     if not blockers and remediation_hints:
-        blockers.extend(remediation_hints)
+        blockers.extend(_dedupe_text_items(remediation_hints))
     return _unique_strings(blockers)
 
 

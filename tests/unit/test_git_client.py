@@ -9,7 +9,12 @@ from pathlib import Path
 
 import pytest
 
-from ai_sdlc.branch.git_client import GitClient, GitError, IndexLockState
+from ai_sdlc.branch.git_client import (
+    GitClient,
+    GitError,
+    IndexLockInspection,
+    IndexLockState,
+)
 
 
 class _RecordingGitClient(GitClient):
@@ -163,6 +168,18 @@ def test_inspect_index_lock_marks_active_git_process(git_repo: Path, monkeypatch
 
     with pytest.raises(GitError, match="Active git process appears to hold .git/index.lock"):
         git.checkout("main")
+
+
+def test_index_lock_inspection_runtime_object_canonicalizes_active_processes(
+    git_repo: Path,
+) -> None:
+    inspection = IndexLockInspection(
+        state=IndexLockState.ACTIVE,
+        path=git_repo / ".git" / "index.lock",
+        active_processes=("123 git commit", "123 git commit", "456 git merge"),
+    )
+
+    assert inspection.active_processes == ("123 git commit", "456 git merge")
 
 
 def test_remove_stale_index_lock_requires_no_active_git_process(

@@ -13,6 +13,7 @@ from ai_sdlc.telemetry.contracts import (
 from ai_sdlc.telemetry.control_points import build_canonical_control_point_event
 from ai_sdlc.telemetry.detectors import (
     GovernanceViolationCandidate,
+    MismatchFinding,
     ViolationHit,
     detect_native_delegation_mismatches,
     escalate_hard_gate_violation,
@@ -41,8 +42,10 @@ from ai_sdlc.telemetry.evaluators import (
     classify_unknown_family_outputs,
 )
 from ai_sdlc.telemetry.generators import (
+    build_evidence_quality_view,
     build_gate_decision_payload,
     build_observer_audit_summary,
+    build_violation_rollup,
     control_point_evidence_digest,
     control_point_locator,
     observer_facts_digest,
@@ -95,6 +98,57 @@ def test_build_verify_constraint_evaluation_uses_trace_event_and_evidence() -> N
     assert evaluation.result is EvaluationResult.FAILED
     assert evaluation.status is EvaluationStatus.FAILED
     assert evaluation.root_cause_class is RootCauseClass.RULE_POLICY
+
+
+def test_telemetry_runtime_objects_canonicalize_ref_lists() -> None:
+    evaluation = Evaluation(
+        scope_level=ScopeLevel.STEP,
+        goal_session_id="gs_0123456789abcdef0123456789abcdef",
+        workflow_run_id="wr_0123456789abcdef0123456789abcdef",
+        step_id="st_0123456789abcdef0123456789abcdef",
+        result=EvaluationResult.WARNING,
+        status=EvaluationStatus.FAILED,
+    )
+    finding = MismatchFinding(
+        finding_name="native_backend_external_delegation",
+        subject="external_agent_execution_boundary",
+        evaluation=evaluation,
+        evidence_refs=("evd_a", "evd_a", "evd_b"),
+        confidence=Confidence.MEDIUM,
+        observer_version="v1",
+        policy="default",
+        profile="self_hosting",
+        mode="lite",
+    )
+    candidate = GovernanceViolationCandidate(
+        violation=Violation(
+            scope_level=ScopeLevel.STEP,
+            goal_session_id="gs_0123456789abcdef0123456789abcdef",
+            workflow_run_id="wr_0123456789abcdef0123456789abcdef",
+            step_id="st_0123456789abcdef0123456789abcdef",
+            status=ViolationStatus.OPEN,
+            risk_level=ViolationRiskLevel.HIGH,
+            root_cause_class=RootCauseClass.WORKFLOW,
+        ),
+        confidence=Confidence.MEDIUM,
+        evidence_refs=("evd_a", "evd_a", "evd_b"),
+        source_object_refs=("evaluation:eva_a", "evaluation:eva_a"),
+        observer_version="v1",
+        policy="default",
+        profile="self_hosting",
+        mode="lite",
+    )
+    hit = ViolationHit(
+        parent_chain=("a", "b", "c"),
+        source_refs=("event:evt_a", "event:evt_a", "artifact:art_b"),
+        hit_count=1,
+        message="duplicate source refs",
+    )
+
+    assert finding.evidence_refs == ("evd_a", "evd_b")
+    assert candidate.evidence_refs == ("evd_a", "evd_b")
+    assert candidate.source_object_refs == ("evaluation:eva_a",)
+    assert hit.source_refs == ("event:evt_a", "artifact:art_b")
 
 
 def test_calculate_ccp_coverage_gaps_from_raw_trace_locators() -> None:
@@ -794,6 +848,123 @@ def test_observer_facts_digest_is_stable_across_payload_order() -> None:
         ],
         evidence_payloads=[evidence.model_dump(mode="json")],
     )
+
+
+def test_observer_facts_digest_ignores_duplicate_payloads() -> None:
+    goal_session_id = "gs_0123456789abcdef0123456789abcdef"
+    workflow_run_id = "wr_0123456789abcdef0123456789abcdef"
+    step_id = "st_0123456789abcdef0123456789abcdef"
+    event = TelemetryEvent(
+        scope_level=ScopeLevel.STEP,
+        goal_session_id=goal_session_id,
+        workflow_run_id=workflow_run_id,
+        step_id=step_id,
+        trace_layer=TraceLayer.TOOL,
+        status=TelemetryEventStatus.STARTED,
+    )
+    evidence = Evidence(
+        scope_level=ScopeLevel.STEP,
+        goal_session_id=goal_session_id,
+        workflow_run_id=workflow_run_id,
+        step_id=step_id,
+        locator=control_point_locator("command_completed", event_id=event.event_id),
+        digest=control_point_evidence_digest(
+            "command_completed",
+            event_id=event.event_id,
+        ),
+    )
+
+    assert observer_facts_digest(
+        event_payloads=[event.model_dump(mode="json")],
+        evidence_payloads=[evidence.model_dump(mode="json")],
+    ) == observer_facts_digest(
+        event_payloads=[event.model_dump(mode="json"), event.model_dump(mode="json")],
+        evidence_payloads=[evidence.model_dump(mode="json"), evidence.model_dump(mode="json")],
+    )
+
+
+def test_detect_native_delegation_mismatches_deduplicates_repeated_evidence_refs() -> None:
+    goal_session_id = "gs_0123456789abcdef0123456789abcdef"
+    workflow_run_id = "wr_0123456789abcdef0123456789abcdef"
+    step_id = "st_0123456789abcdef0123456789abcdef"
+    started_event = TelemetryEvent(
+        scope_level=ScopeLevel.STEP,
+        goal_session_id=goal_session_id,
+        workflow_run_id=workflow_run_id,
+        step_id=step_id,
+        trace_layer=TraceLayer.TOOL,
+        status=TelemetryEventStatus.STARTED,
+    )
+    delegation_evidence = Evidence(
+        scope_level=ScopeLevel.STEP,
+        goal_session_id=goal_session_id,
+        workflow_run_id=workflow_run_id,
+        step_id=step_id,
+        locator="trace://native-delegation/task-17/worker-3",
+        digest="sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+    )
+
+    findings = detect_native_delegation_mismatches(
+        goal_session_id=goal_session_id,
+        workflow_run_id=workflow_run_id,
+        step_id=step_id,
+        event_payloads=[started_event.model_dump(mode="json")],
+        evidence_payloads=[
+            delegation_evidence.model_dump(mode="json"),
+            delegation_evidence.model_dump(mode="json"),
+        ],
+        observer_version="v1",
+        policy="default",
+        profile="self_hosting",
+        mode="lite",
+    )
+
+    assert len(findings) == 1
+    assert findings[0].evidence_refs == (delegation_evidence.evidence_id,)
+
+
+def test_build_violation_rollup_deduplicates_open_items_and_ids() -> None:
+    violation = Violation(
+        scope_level=ScopeLevel.RUN,
+        goal_session_id="gs_0123456789abcdef0123456789abcdef",
+        workflow_run_id="wr_0123456789abcdef0123456789abcdef",
+        status=ViolationStatus.OPEN,
+        risk_level=ViolationRiskLevel.HIGH,
+    )
+
+    rollup = build_violation_rollup([violation, violation])
+
+    assert rollup["open_debt"]["count"] == 1
+    assert rollup["open_debt"]["violation_ids"] == [violation.violation_id]
+    assert rollup["open_items"] == [
+        {
+            "violation_id": violation.violation_id,
+            "status": ViolationStatus.OPEN.value,
+            "risk_level": ViolationRiskLevel.HIGH.value,
+        }
+    ]
+
+
+def test_build_evidence_quality_view_deduplicates_repeated_evidence_refs() -> None:
+    evidence = Evidence(
+        scope_level=ScopeLevel.RUN,
+        goal_session_id="gs_0123456789abcdef0123456789abcdef",
+        workflow_run_id="wr_0123456789abcdef0123456789abcdef",
+        locator="verify-constraints:report:sha256:0123456789abcdef0123456789abcdef",
+        digest="sha256:0123456789abcdef0123456789abcdef",
+    )
+    payload = evidence.model_dump(mode="json")
+
+    quality_view = build_evidence_quality_view([payload, payload])
+
+    assert quality_view["quality_state"] == "complete"
+    assert quality_view["total_count"] == 1
+    assert quality_view["missing_digest_count"] == 0
+    assert quality_view["missing_locator_count"] == 0
+    assert quality_view["non_available_count"] == 0
+    assert quality_view["missing_digest_refs"] == []
+    assert quality_view["missing_locator_refs"] == []
+    assert quality_view["non_available_refs"] == []
 
 
 def test_native_delegation_boundary_surfaces_unobserved_and_mismatch_findings() -> None:

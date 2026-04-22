@@ -3,6 +3,9 @@
 from __future__ import annotations
 
 from ai_sdlc.core.frontend_page_ui_schema import (
+    FrontendPageUiSchemaHandoff,
+    FrontendPageUiSchemaHandoffEntry,
+    FrontendPageUiSchemaValidationResult,
     build_frontend_page_ui_schema_handoff,
     validate_frontend_page_ui_schema_set,
 )
@@ -91,3 +94,98 @@ def test_build_frontend_page_ui_schema_handoff_packages_provider_style_and_schem
     ]
     assert handoff.entries[0].ui_schema_id == "dashboard-workspace-default"
     assert "page-shell" in handoff.entries[0].slot_ids
+
+
+def test_frontend_page_ui_schema_surfaces_deduplicate_repeated_ids() -> None:
+    schema_set = build_p2_frontend_page_ui_schema_baseline()
+    kernel = build_p1_frontend_ui_kernel_page_recipe_expansion()
+    snapshot = build_mvp_solution_snapshot(
+        requested_frontend_stack="vue3",
+        effective_frontend_stack="vue3",
+        recommended_frontend_stack="vue3",
+        requested_provider_id="public-primevue",
+        effective_provider_id="public-primevue",
+        recommended_provider_id="public-primevue",
+        requested_style_pack_id="modern-saas",
+        effective_style_pack_id="modern-saas",
+        recommended_style_pack_id="modern-saas",
+        style_fidelity_status="full",
+    )
+    duplicated_page = schema_set.page_schemas[0].model_copy(
+        update={
+            "section_anchors": [
+                schema_set.page_schemas[0].section_anchors[0],
+                schema_set.page_schemas[0].section_anchors[0],
+                *schema_set.page_schemas[0].section_anchors[1:],
+            ]
+        }
+    )
+    duplicated_ui = schema_set.ui_schemas[0].model_copy(
+        update={
+            "render_slots": [
+                schema_set.ui_schemas[0].render_slots[0],
+                schema_set.ui_schemas[0].render_slots[0],
+                *schema_set.ui_schemas[0].render_slots[1:],
+            ]
+        }
+    )
+    duplicated_schema_set = schema_set.model_copy(
+        update={
+            "page_schemas": [duplicated_page, duplicated_page, *schema_set.page_schemas[1:]],
+            "ui_schemas": [duplicated_ui, duplicated_ui, *schema_set.ui_schemas[1:]],
+        }
+    )
+
+    validation = validate_frontend_page_ui_schema_set(duplicated_schema_set, kernel)
+    handoff = build_frontend_page_ui_schema_handoff(
+        duplicated_schema_set,
+        kernel=kernel,
+        solution_snapshot=snapshot,
+    )
+
+    assert validation.page_schema_ids.count("dashboard-workspace") == 1
+    assert validation.ui_schema_ids.count("dashboard-workspace-default") == 1
+    assert handoff.entries[0].anchor_ids.count("page-header") == 1
+    assert len(handoff.entries[0].slot_ids) == len(set(handoff.entries[0].slot_ids))
+    assert len(handoff.entries[0].component_ids) == len(
+        set(handoff.entries[0].component_ids)
+    )
+
+
+def test_frontend_page_ui_schema_runtime_objects_canonicalize_lists() -> None:
+    validation = FrontendPageUiSchemaValidationResult(
+        passed=False,
+        blockers=["a", "a"],
+        warnings=["w", "w"],
+        page_schema_ids=["page-a", "page-a", "page-b"],
+        ui_schema_ids=["ui-a", "ui-a", "ui-b"],
+    )
+    entry = FrontendPageUiSchemaHandoffEntry(
+        page_schema_id="page-a",
+        ui_schema_id="ui-a",
+        page_recipe_id="recipe-a",
+        anchor_ids=["anchor-a", "anchor-a", "anchor-b"],
+        slot_ids=["slot-a", "slot-a", "slot-b"],
+        component_ids=["cmp-a", "cmp-a", "cmp-b"],
+    )
+    handoff = FrontendPageUiSchemaHandoff(
+        state="blocked",
+        schema_version="1.0",
+        effective_provider_id="public-primevue",
+        effective_style_pack_id="modern-saas",
+        component_library_packages=["primevue", "primevue", "@primeuix/themes"],
+        blockers=["a", "a"],
+        warnings=["w", "w"],
+        entries=[entry],
+    )
+
+    assert validation.blockers == ["a"]
+    assert validation.warnings == ["w"]
+    assert validation.page_schema_ids == ["page-a", "page-b"]
+    assert validation.ui_schema_ids == ["ui-a", "ui-b"]
+    assert entry.anchor_ids == ["anchor-a", "anchor-b"]
+    assert entry.slot_ids == ["slot-a", "slot-b"]
+    assert entry.component_ids == ["cmp-a", "cmp-b"]
+    assert handoff.component_library_packages == ["primevue", "@primeuix/themes"]
+    assert handoff.blockers == ["a"]
+    assert handoff.warnings == ["w"]

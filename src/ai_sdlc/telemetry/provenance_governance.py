@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import json
+
 from ai_sdlc.telemetry.enums import (
     ProvenanceCandidateResult,
     SourceClosureStatus,
@@ -10,6 +12,21 @@ from ai_sdlc.telemetry.provenance_contracts import ProvenanceGovernanceHook
 from ai_sdlc.telemetry.provenance_observer import ProvenanceObserverResult
 
 _PHASE1_POLICY_NAME = "provenance-phase-1"
+
+
+def _dedupe_advisories(
+    advisories: tuple[dict[str, object], ...] | list[dict[str, object]],
+) -> tuple[dict[str, object], ...]:
+    seen: set[str] = set()
+    unique: list[dict[str, object]] = []
+    for advisory in advisories:
+        item = dict(advisory)
+        marker = json.dumps(item, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
+        if marker in seen:
+            continue
+        seen.add(marker)
+        unique.append(item)
+    return tuple(unique)
 
 
 def build_provenance_governance_hooks(
@@ -42,15 +59,17 @@ def build_provenance_governance_hooks(
                 evidence_refs=evidence_refs,
                 source_object_refs=assessment.source_object_refs,
                 policy_name=policy_name,
-                advisories=(
-                    {"code": "phase1_read_only"},
-                    *(
+                advisories=_dedupe_advisories(
+                    (
+                        {"code": "phase1_read_only"},
+                        *(
                         {
                             "code": gap.gap_kind.value,
                             "location": gap.gap_location,
                         }
                         for gap in result.gaps
-                    ),
+                        ),
+                    )
                 ),
             )
         )

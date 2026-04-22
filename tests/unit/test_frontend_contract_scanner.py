@@ -8,6 +8,7 @@ from pathlib import Path
 
 import pytest
 
+from ai_sdlc.core.frontend_contract_drift import PageImplementationObservation
 from ai_sdlc.core.frontend_contract_observation_provider import (
     FRONTEND_CONTRACT_OBSERVATION_SCHEMA_VERSION,
     load_frontend_contract_observation_artifact,
@@ -16,6 +17,7 @@ from ai_sdlc.scanners.frontend_contract_scanner import (
     FRONTEND_CONTRACT_OBSERVATION_MARKER,
     FRONTEND_CONTRACT_SCANNER_PROVIDER_KIND,
     FRONTEND_CONTRACT_SCANNER_PROVIDER_NAME,
+    FrontendContractScannerResult,
     build_frontend_contract_scanner_artifact,
     scan_frontend_contract_observations,
     write_frontend_contract_scanner_artifact,
@@ -196,6 +198,22 @@ def test_scan_frontend_contract_observations_ignores_unmarked_files(
     assert result.observations == ()
     assert result.matched_files == ()
     assert FRONTEND_CONTRACT_OBSERVATION_MARKER == "ai-sdlc:frontend-contract-observation"
+
+
+def test_frontend_contract_scanner_result_runtime_object_canonicalizes_lists() -> None:
+    observation = PageImplementationObservation(
+        page_id="user-create",
+        recipe_id="form-create",
+        i18n_keys=["submit"],
+        validation_fields=["username"],
+    )
+    result = FrontendContractScannerResult(
+        observations=(observation, observation),
+        matched_files=("src/a.tsx", "src/a.tsx", "src/b.tsx"),
+    )
+
+    assert result.observations == (observation,)
+    assert result.matched_files == ("src/a.tsx", "src/b.tsx")
 
 
 def test_repository_sample_match_fixture_scans_expected_observations() -> None:

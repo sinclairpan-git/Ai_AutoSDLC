@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import subprocess
 from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import patch
 
 import pytest
@@ -78,6 +79,57 @@ def _seed_unrelated_mainline_work_item(root: Path) -> None:
 
 
 class TestCliWorkitemTruthCheck:
+    def test_truth_check_text_deduplicates_code_and_test_paths(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        root = tmp_path / "repo"
+        root.mkdir()
+        monkeypatch.chdir(root)
+
+        result_payload = SimpleNamespace(
+            wi_path="specs/006-provenance-trace-phase-1",
+            requested_revision="HEAD",
+            resolved_revision="abc123",
+            current_branch="main",
+            head_revision="abc123",
+            head_matches_revision=True,
+            classification="branch_only_implemented",
+            execution_started=True,
+            contained_in_main=False,
+            ahead_of_main=1,
+            behind_of_main=0,
+            formal_docs={"spec": True, "plan": True, "tasks": True, "execution_log": True},
+            detail="truth detail",
+            code_paths=[
+                "src/provenance.py",
+                "src/provenance.py",
+            ],
+            next_required_actions=[],
+            test_paths=[
+                "tests/test_provenance.py",
+                "tests/test_provenance.py",
+            ],
+            error=None,
+        )
+
+        with patch(
+            "ai_sdlc.cli.workitem_cmd.run_truth_check",
+            return_value=result_payload,
+        ):
+            result = runner.invoke(
+                app,
+                [
+                    "workitem",
+                    "truth-check",
+                    "--wi",
+                    "specs/006-provenance-trace-phase-1",
+                ],
+            )
+
+        assert result.exit_code == 0
+        assert result.output.count("src/provenance.py") == 1
+        assert result.output.count("tests/test_provenance.py") == 1
+
     def test_truth_check_uses_requested_revision_instead_of_current_checkout(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
@@ -123,6 +175,10 @@ class TestCliWorkitemTruthCheck:
         assert payload["execution_started"] is False
         assert payload["head_matches_revision"] is False
         assert payload["contained_in_main"] is False
+        assert payload["next_required_actions"] == [
+            "start execute work on the work item branch and record task-execution-log or implementation evidence",
+            "checkout the requested revision if you need the current workspace to match",
+        ]
         assert payload["code_paths"] == []
         assert payload["test_paths"] == []
 
@@ -174,6 +230,10 @@ class TestCliWorkitemTruthCheck:
         assert payload["classification"] == "branch_only_implemented"
         assert payload["execution_started"] is True
         assert payload["contained_in_main"] is False
+        assert payload["next_required_actions"] == [
+            "complete close-out evidence and merge the work item branch into main",
+            "checkout the requested revision if you need the current workspace to match",
+        ]
         assert "src/provenance.py" in payload["code_paths"]
         assert "tests/test_provenance.py" in payload["test_paths"]
         assert payload["formal_docs"]["execution_log"] is True
@@ -228,3 +288,93 @@ class TestCliWorkitemTruthCheck:
         assert payload["execution_started"] is True
         assert payload["contained_in_main"] is True
         assert payload["head_matches_revision"] is True
+        assert payload["next_required_actions"] == [
+            "use this revision as mainline execution truth"
+        ]
+
+    def test_truth_check_text_renders_next_actions(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        root = tmp_path / "repo"
+        root.mkdir()
+        _init_repo(root)
+        _seed_unrelated_mainline_work_item(root)
+
+        subprocess.run(
+            ["git", "checkout", "-b", "codex/006-provenance-trace-phase-1"],
+            cwd=root,
+            check=True,
+            capture_output=True,
+        )
+        _write_formal_docs(root / "specs" / "006-provenance-trace-phase-1")
+        rev = _commit_all(root, "formalize 006")
+
+        subprocess.run(["git", "checkout", "main"], cwd=root, check=True, capture_output=True)
+        monkeypatch.chdir(root)
+
+        result = runner.invoke(
+            app,
+            [
+                "workitem",
+                "truth-check",
+                "--wi",
+                "specs/006-provenance-trace-phase-1",
+                "--rev",
+                rev,
+            ],
+        )
+
+        assert result.exit_code == 0
+        assert "Next actions:" in result.output
+        assert "start execute work on the work item branch" in result.output
+
+    def test_truth_check_text_deduplicates_repeated_next_actions(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        root = tmp_path / "repo"
+        root.mkdir()
+        monkeypatch.chdir(root)
+
+        fake_result = SimpleNamespace(
+            wi_path=root / "specs" / "006-provenance-trace-phase-1",
+            requested_revision="HEAD",
+            resolved_revision="abc123",
+            current_branch="main",
+            head_revision="abc123",
+            head_matches_revision=True,
+            classification="formal_freeze_only",
+            execution_started=False,
+            contained_in_main=False,
+            ahead_of_main=0,
+            behind_of_main=0,
+            formal_docs={
+                "spec": True,
+                "plan": True,
+                "tasks": True,
+                "execution_log": False,
+            },
+            detail="detail",
+            next_required_actions=[
+                "start execute work on the work item branch",
+                "start execute work on the work item branch",
+                "checkout the requested revision if needed",
+            ],
+            code_paths=[],
+            test_paths=[],
+            error=None,
+        )
+
+        with patch("ai_sdlc.cli.workitem_cmd.run_truth_check", return_value=fake_result):
+            result = runner.invoke(
+                app,
+                [
+                    "workitem",
+                    "truth-check",
+                    "--wi",
+                    "specs/006-provenance-trace-phase-1",
+                ],
+            )
+
+        assert result.exit_code == 0
+        assert result.output.count("start execute work on the work item branch") == 1
+        assert "checkout the requested revision if needed" in result.output

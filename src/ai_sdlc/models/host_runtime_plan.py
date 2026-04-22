@@ -4,7 +4,21 @@ from __future__ import annotations
 
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
+
+
+def _dedupe_strings(value: object) -> list[str]:
+    if value is None:
+        return []
+    unique: list[str] = []
+    seen: set[str] = set()
+    for item in value:
+        text = str(item)
+        if text in seen:
+            continue
+        seen.add(text)
+        unique.append(text)
+    return unique
 
 
 class HostRuntimePlanModel(BaseModel):
@@ -83,6 +97,15 @@ class BootstrapAcquisitionFacet(HostRuntimePlanModel):
     blocking_reason_codes: list[str] = Field(default_factory=list)
     expected_reentry_condition: str
 
+    @field_validator(
+        "required_targets",
+        "blocking_reason_codes",
+        mode="before",
+    )
+    @classmethod
+    def _dedupe_bootstrap_lists(cls, value: object) -> list[str]:
+        return _dedupe_strings(value)
+
 
 class RemediationFragmentFacet(HostRuntimePlanModel):
     """Mainline-remediable fragment emitted after minimal host is ready."""
@@ -100,6 +123,24 @@ class RemediationFragmentFacet(HostRuntimePlanModel):
     non_rollbackable_effects: list[str] = Field(default_factory=list)
     manual_recovery_required: list[str] = Field(default_factory=list)
     reason_codes: list[str] = Field(default_factory=list)
+
+    @field_validator(
+        "required_actions",
+        "optional_actions",
+        "will_download",
+        "will_install",
+        "will_modify",
+        "will_not_touch",
+        "rollback_units",
+        "cleanup_units",
+        "non_rollbackable_effects",
+        "manual_recovery_required",
+        "reason_codes",
+        mode="before",
+    )
+    @classmethod
+    def _dedupe_remediation_lists(cls, value: object) -> list[str]:
+        return _dedupe_strings(value)
 
 
 class HostRuntimePlan(HostRuntimePlanModel):
@@ -131,3 +172,15 @@ class HostRuntimePlan(HostRuntimePlanModel):
     readiness: HostRuntimeReadiness
     bootstrap_acquisition: BootstrapAcquisitionFacet | None = None
     remediation_fragment: RemediationFragmentFacet | None = None
+
+    @field_validator(
+        "required_runtime_entries",
+        "missing_runtime_entries",
+        "installer_profile_ids",
+        "reason_codes",
+        "evidence_refs",
+        mode="before",
+    )
+    @classmethod
+    def _dedupe_plan_lists(cls, value: object) -> list[str]:
+        return _dedupe_strings(value)

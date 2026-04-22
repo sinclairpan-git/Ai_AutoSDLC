@@ -17,6 +17,17 @@ host_runtime_app = typer.Typer(help="Read-only host runtime planning commands")
 console = Console()
 
 
+def _dedupe_text_items(items: list[str]) -> list[str]:
+    seen: set[str] = set()
+    unique: list[str] = []
+    for item in items:
+        if item in seen:
+            continue
+        seen.add(item)
+        unique.append(item)
+    return unique
+
+
 def _resolve_root() -> Path:
     root = find_project_root()
     if root is None:
@@ -55,7 +66,11 @@ def _print_plan(plan: HostRuntimePlan) -> None:
     )
     console.print(
         "reason_codes: "
-        + (", ".join(plan.reason_codes) if plan.reason_codes else "<none>"),
+        + (
+            ", ".join(_dedupe_text_items(plan.reason_codes))
+            if plan.reason_codes
+            else "<none>"
+        ),
         markup=False,
     )
     if plan.bootstrap_acquisition is not None:
@@ -66,7 +81,7 @@ def _print_plan(plan: HostRuntimePlan) -> None:
     if plan.remediation_fragment is not None:
         console.print(
             "remediation_targets: "
-            + ", ".join(plan.remediation_fragment.will_install),
+            + ", ".join(_dedupe_text_items(plan.remediation_fragment.will_install)),
             markup=False,
         )
     console.print("")

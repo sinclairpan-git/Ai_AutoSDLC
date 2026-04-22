@@ -19,6 +19,32 @@ REQUIRED_RELEASE_GATE_CHECKS = (
 JSON_BLOCK_RE = re.compile(r"```json\s*(?P<payload>\{.*?\})\s*```", re.S)
 
 
+def _dedupe_mapping_items(values: object) -> list[dict[str, str]]:
+    deduped: list[dict[str, str]] = []
+    seen: set[str] = set()
+    for value in values or []:
+        if not isinstance(value, dict):
+            continue
+        key = json.dumps(value, sort_keys=True, ensure_ascii=False)
+        if key in seen:
+            continue
+        seen.add(key)
+        deduped.append(dict(value))
+    return deduped
+
+
+def _dedupe_checks(checks: list[ReleaseGateCheck]) -> tuple[ReleaseGateCheck, ...]:
+    deduped: list[ReleaseGateCheck] = []
+    seen: set[str] = set()
+    for check in checks:
+        key = json.dumps(check.to_json_dict(), sort_keys=True, ensure_ascii=False)
+        if key in seen:
+            continue
+        seen.add(key)
+        deduped.append(check)
+    return tuple(deduped)
+
+
 class ReleaseGateParseError(ValueError):
     """Raised when release-gate-evidence.md is missing required structure."""
 
@@ -49,6 +75,9 @@ class ReleaseGateReport:
     overall_verdict: str
     checks: tuple[ReleaseGateCheck, ...]
 
+    def __post_init__(self) -> None:
+        object.__setattr__(self, "checks", _dedupe_checks(list(self.checks)))
+
     def blocker_lines(self) -> list[str]:
         return [
             "BLOCKER: release gate "
@@ -75,7 +104,9 @@ class ReleaseGateReport:
         return {
             "source_path": self.source_path,
             "overall_verdict": self.overall_verdict,
-            "checks": [check.to_json_dict() for check in self.checks],
+            "checks": _dedupe_mapping_items(
+                [check.to_json_dict() for check in self.checks]
+            ),
         }
 
 
@@ -157,7 +188,7 @@ def parse_release_gate_report(text: str, *, source_path: str = "<memory>") -> Re
     return ReleaseGateReport(
         source_path=source_path,
         overall_verdict=overall_verdict,
-        checks=tuple(checks),
+        checks=_dedupe_checks(checks),
     )
 
 

@@ -33,6 +33,17 @@ class TaskBlock:
     block: str
 
 
+def _dedupe_text_items(items: list[str]) -> list[str]:
+    seen: set[str] = set()
+    unique: list[str] = []
+    for item in items:
+        if item in seen:
+            continue
+        seen.add(item)
+        unique.append(item)
+    return unique
+
+
 def _iter_task_blocks(tasks_md: str) -> list[TaskBlock]:
     blocks: list[TaskBlock] = []
     parts = _TASK_SPLIT_RE.split(tasks_md)
@@ -123,7 +134,7 @@ def doc_first_execute_blocker(
             return None
         forbidden = [path for path in touched_paths if _is_forbidden_execute_path(path)]
         if forbidden:
-            sample = ", ".join(forbidden[:3])
+            sample = ", ".join(_dedupe_text_items(forbidden)[:3])
             return (
                 f"Task {parsed.task_id} is doc-first/design-decompose-only; "
                 f"update spec.md / plan.md / tasks.md before execute. "

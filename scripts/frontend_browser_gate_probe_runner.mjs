@@ -115,7 +115,73 @@ async function captureProbe(playwright, payload) {
       throw new Error("browser_entry_unavailable");
     }
 
-    const interactionSnapshot = await page.evaluate(async () => {
+    const interactionSnapshot = await page.evaluate(async (probePayload) => {
+      const deliveryContextScript = document.querySelector("#frontend-delivery-context");
+      let embeddedDeliveryContext = null;
+      if (
+        deliveryContextScript instanceof HTMLScriptElement &&
+        deliveryContextScript.textContent
+      ) {
+        try {
+          embeddedDeliveryContext = JSON.parse(deliveryContextScript.textContent);
+        } catch {
+          embeddedDeliveryContext = null;
+        }
+      }
+
+      const renderedDeliveryEntryId =
+        document.querySelector(".entry-eyebrow")?.textContent?.trim() ||
+        String(embeddedDeliveryContext?.deliveryEntryId || "").trim();
+      const renderedPackages = Array.from(
+        document.querySelectorAll(".package-item"),
+        (node) => node.textContent?.trim() || "",
+      ).filter(Boolean);
+      const renderedPageSchemaIds = Array.from(
+        document.querySelectorAll(".page-item"),
+        (node) => node.textContent?.trim() || "",
+      ).filter(Boolean);
+
+      const blockingReasonCodes = [];
+      const expectedDeliveryEntryId = String(probePayload.delivery_entry_id || "").trim();
+      if (
+        expectedDeliveryEntryId &&
+        renderedDeliveryEntryId !== expectedDeliveryEntryId
+      ) {
+        blockingReasonCodes.push("delivery_entry_render_mismatch");
+      }
+
+      const expectedPackages = Array.isArray(probePayload.component_library_packages)
+        ? probePayload.component_library_packages
+            .map((item) => String(item).trim())
+            .filter(Boolean)
+        : [];
+      if (expectedPackages.some((pkg) => !renderedPackages.includes(pkg))) {
+        blockingReasonCodes.push("component_library_package_render_mismatch");
+      }
+
+      const expectedPageSchemaIds = Array.isArray(probePayload.page_schema_ids)
+        ? probePayload.page_schema_ids
+            .map((item) => String(item).trim())
+            .filter(Boolean)
+        : [];
+      if (expectedPageSchemaIds.some((schemaId) => !renderedPageSchemaIds.includes(schemaId))) {
+        blockingReasonCodes.push("page_schema_render_mismatch");
+      }
+
+      if (blockingReasonCodes.length > 0) {
+        return {
+          interaction_probe_id: "primary-action",
+          anchor_refs: ["interaction:delivery-context"],
+          classification_candidate: "actual_quality_blocker",
+          blocking_reason_codes: blockingReasonCodes,
+          rendered_delivery_entry_id: renderedDeliveryEntryId,
+          rendered_component_library_packages: renderedPackages,
+          rendered_page_schema_ids: renderedPageSchemaIds,
+          delivery_context_validation_status: "failed",
+          detail: "delivery-context-render-mismatch",
+        };
+      }
+
       const selectors = [
         "button",
         "[role='button']",
@@ -129,6 +195,10 @@ async function captureProbe(playwright, payload) {
           anchor_refs: [],
           classification_candidate: "evidence_missing",
           blocking_reason_codes: ["interaction_target_missing"],
+          rendered_delivery_entry_id: renderedDeliveryEntryId,
+          rendered_component_library_packages: renderedPackages,
+          rendered_page_schema_ids: renderedPageSchemaIds,
+          delivery_context_validation_status: "passed",
           detail: "no-interactive-target",
         };
       }
@@ -137,14 +207,18 @@ async function captureProbe(playwright, payload) {
         candidate.click();
         await new Promise((resolve) => setTimeout(resolve, 50));
       }
-      return {
-        interaction_probe_id: "primary-action",
-        anchor_refs: [html ? `interaction:${html}` : "interaction:primary-action"],
-        classification_candidate: "pass",
-        blocking_reason_codes: [],
-        detail: "clicked-primary-candidate",
-      };
-    });
+        return {
+          interaction_probe_id: "primary-action",
+          anchor_refs: [html ? `interaction:${html}` : "interaction:primary-action"],
+          classification_candidate: "pass",
+          blocking_reason_codes: [],
+          rendered_delivery_entry_id: renderedDeliveryEntryId,
+          rendered_component_library_packages: renderedPackages,
+          rendered_page_schema_ids: renderedPageSchemaIds,
+          delivery_context_validation_status: "passed",
+          detail: "clicked-primary-candidate",
+        };
+    }, payload);
 
     const pageTitle = await page.title();
     await writeFile(
@@ -155,6 +229,25 @@ async function captureProbe(playwright, payload) {
           generated_at: payload.generated_at,
           final_url: finalUrl,
           page_title: pageTitle,
+          delivery_entry_id: String(payload.delivery_entry_id || "").trim(),
+          component_library_packages: Array.isArray(payload.component_library_packages)
+            ? payload.component_library_packages.map((item) => String(item))
+            : [],
+          provider_theme_adapter_id: String(payload.provider_theme_adapter_id || "").trim(),
+          provider_runtime_adapter_carrier_mode: String(
+            payload.provider_runtime_adapter_carrier_mode || "",
+          ).trim(),
+          provider_runtime_adapter_delivery_state: String(
+            payload.provider_runtime_adapter_delivery_state || "",
+          ).trim(),
+          provider_runtime_adapter_evidence_state: String(
+            payload.provider_runtime_adapter_evidence_state || "",
+          ).trim(),
+          page_schema_ids: Array.isArray(payload.page_schema_ids)
+            ? payload.page_schema_ids.map((item) => String(item))
+            : [],
+          effective_provider: String(payload.effective_provider || "").trim(),
+          effective_style_pack: String(payload.effective_style_pack || "").trim(),
           ...interactionSnapshot,
         },
         null,

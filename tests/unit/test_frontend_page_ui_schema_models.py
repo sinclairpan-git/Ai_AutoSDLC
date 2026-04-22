@@ -134,3 +134,42 @@ def test_schema_set_rejects_ui_schema_reference_for_unknown_page_schema() -> Non
                 )
             ],
         )
+
+
+def test_frontend_page_ui_schema_models_deduplicate_set_like_lists() -> None:
+    versioning = SchemaVersioningContract(
+        current_version="1.0",
+        compatible_versions=["1.0", "1.0", "1.1"],
+    )
+    page = PageSchemaDefinition(
+        page_schema_id="dashboard-workspace",
+        page_recipe_id="DashboardPage",
+        schema_version="1.0",
+        primary_anchor_id="page-shell",
+        section_anchors=_anchors("page-shell", "hero"),
+        field_blocks=[
+            FieldBlockDefinition(
+                block_id="hero-summary",
+                anchor_id="hero",
+                field_semantics=["summary", "summary", "stats"],
+            )
+        ],
+    )
+    ui = UiSchemaDefinition(
+        ui_schema_id="dashboard-workspace-default",
+        page_schema_id="dashboard-workspace",
+        schema_version="1.0",
+        root_slot_id="page-shell",
+        render_slots=[
+            RenderSlotDefinition(
+                slot_id="page-shell",
+                anchor_id="page-shell",
+                component_id="UiSection",
+                required_state_ids=["loaded", "loaded", "ready"],
+            )
+        ],
+    )
+
+    assert versioning.compatible_versions == ["1.0", "1.1"]
+    assert page.field_blocks[0].field_semantics == ["summary", "stats"]
+    assert ui.render_slots[0].required_state_ids == ["loaded", "ready"]

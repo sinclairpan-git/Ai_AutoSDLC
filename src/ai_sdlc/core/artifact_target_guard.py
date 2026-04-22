@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import re
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -35,6 +36,29 @@ _FORMAL_ARTIFACT_MARKERS: dict[str, tuple[str, ...]] = {
 _AUXILIARY_PREFIX = "docs/superpowers/"
 
 
+def _dedupe_text_items(values: object) -> list[str]:
+    deduped: list[str] = []
+    for value in values or []:
+        normalized = str(value).strip()
+        if normalized and normalized not in deduped:
+            deduped.append(normalized)
+    return deduped
+
+
+def _dedupe_mapping_items(values: object) -> list[dict[str, str]]:
+    deduped: list[dict[str, str]] = []
+    seen: set[str] = set()
+    for value in values or []:
+        if not isinstance(value, dict):
+            continue
+        key = json.dumps(value, sort_keys=True, ensure_ascii=False)
+        if key in seen:
+            continue
+        seen.add(key)
+        deduped.append({str(k): str(v) for k, v in value.items()})
+    return deduped
+
+
 @dataclass(frozen=True, slots=True)
 class FormalArtifactTargetValidation:
     """One path validation result for a formal artifact target."""
@@ -64,13 +88,17 @@ class FormalArtifactTargetGuardResult:
     violation_count: int = 0
     sample_entries: list[dict[str, str]] = field(default_factory=list)
 
+    def __post_init__(self) -> None:
+        self.reason_codes = _dedupe_text_items(self.reason_codes)
+        self.sample_entries = _dedupe_mapping_items(self.sample_entries)
+
     def to_json_dict(self) -> dict[str, Any]:
         return {
             "state": self.state,
             "detail": self.detail,
-            "reason_codes": list(self.reason_codes),
+            "reason_codes": _dedupe_text_items(self.reason_codes),
             "violation_count": self.violation_count,
-            "sample_entries": list(self.sample_entries),
+            "sample_entries": _dedupe_mapping_items(self.sample_entries),
         }
 
 
@@ -148,10 +176,14 @@ def evaluate_formal_artifact_target_guard(root: Path) -> FormalArtifactTargetGua
             sample_entries=[],
         )
 
-    sample_entries = [
-        {"path": entry.path, "artifact_kind": entry.artifact_kind}
-        for entry in violations[:3]
-    ]
+    sample_entries: list[dict[str, str]] = []
+    for entry in violations:
+        rendered = {"path": entry.path, "artifact_kind": entry.artifact_kind}
+        if rendered in sample_entries:
+            continue
+        sample_entries.append(rendered)
+        if len(sample_entries) >= 3:
+            break
     first = violations[0]
     return FormalArtifactTargetGuardResult(
         state="blocked",
@@ -159,9 +191,9 @@ def evaluate_formal_artifact_target_guard(root: Path) -> FormalArtifactTargetGua
             "misplaced formal artifact detected under docs/superpowers/*: "
             f"{first.path} ({first.artifact_kind})"
         ),
-        reason_codes=["misplaced_formal_artifact_detected"],
+        reason_codes=_dedupe_text_items(["misplaced_formal_artifact_detected"]),
         violation_count=len(violations),
-        sample_entries=sample_entries,
+        sample_entries=_dedupe_mapping_items(sample_entries),
     )
 
 
@@ -181,4 +213,3 @@ def _repo_relative_path(path: Path, *, root: Path | None) -> str:
         except ValueError:
             normalized = path
     return normalized.as_posix()
-

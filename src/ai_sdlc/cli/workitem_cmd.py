@@ -8,6 +8,7 @@ import typer
 from rich.console import Console
 from rich.table import Table
 
+from ai_sdlc.branch.git_client import GitClient, GitError
 from ai_sdlc.context.state import load_checkpoint, save_checkpoint
 from ai_sdlc.core.close_check import (
     BranchCheckResult,
@@ -16,6 +17,12 @@ from ai_sdlc.core.close_check import (
     format_close_check_json,
     run_branch_check,
     run_close_check,
+)
+from ai_sdlc.core.frontend_delivery_truth import (
+    summarize_frontend_delivery_status_for_display,
+)
+from ai_sdlc.core.frontend_inheritance_truth import (
+    summarize_frontend_inheritance_status_for_display,
 )
 from ai_sdlc.core.plan_check import PlanCheckResult, format_json, run_plan_check
 from ai_sdlc.core.program_service import (
@@ -28,7 +35,8 @@ from ai_sdlc.core.workitem_truth import (
     format_truth_check_json,
     run_truth_check,
 )
-from ai_sdlc.utils.helpers import find_project_root, now_iso
+from ai_sdlc.telemetry.display import summarize_frontend_delivery_scope_for_display
+from ai_sdlc.utils.helpers import find_project_root, is_git_repo, now_iso
 
 workitem_app = typer.Typer(
     help=(
@@ -37,6 +45,71 @@ workitem_app = typer.Typer(
     ),
 )
 console = Console()
+
+
+def _dedupe_cli_text_items(values: object) -> list[str]:
+    deduped: list[str] = []
+    for value in values or []:
+        normalized = str(value).strip()
+        if normalized and normalized not in deduped:
+            deduped.append(normalized)
+    return deduped
+
+
+def _preferred_docs_branch_name(work_item_id: str) -> str:
+    """Return the preferred Stage-1 docs branch name."""
+    return f"feature/{work_item_id}-docs"
+
+
+def _legacy_docs_branch_name(work_item_id: str) -> str:
+    """Return the legacy Stage-1 docs branch name kept for compatibility."""
+    return f"design/{work_item_id}-docs"
+
+
+def _ensure_workitem_init_git_preflight(root: Path, work_item_id: str) -> None:
+    """Block direct-formal init when the repo is not on a clean docs branch."""
+    if not is_git_repo(root):
+        return
+
+    git = GitClient(root)
+    preferred_branch = _preferred_docs_branch_name(work_item_id)
+    legacy_branch = _legacy_docs_branch_name(work_item_id)
+    accepted_branches = {preferred_branch, legacy_branch}
+
+    try:
+        current_branch = git.current_branch().strip()
+        if current_branch not in accepted_branches:
+            if git.branch_exists(preferred_branch):
+                branch_guidance = (
+                    f"Switch to the docs branch first: `git checkout {preferred_branch}`."
+                )
+            elif git.branch_exists(legacy_branch):
+                branch_guidance = (
+                    f"Switch to the existing legacy docs branch: "
+                    f"`git checkout {legacy_branch}`."
+                )
+            else:
+                branch_guidance = (
+                    "Create and switch to the docs branch first: "
+                    f"`git checkout -b {preferred_branch}`."
+                )
+
+            raise WorkitemScaffoldError(
+                "workitem init only materializes canonical Stage-1 docs from the docs "
+                f"branch for `{work_item_id}`; current branch is `{current_branch}`. "
+                f"{branch_guidance} Legacy repos may also use `{legacy_branch}`."
+            )
+
+        if git.has_uncommitted_changes():
+            raise WorkitemScaffoldError(
+                "workitem init requires a clean working tree on "
+                f"`{current_branch}` before writing `specs/{work_item_id}`. "
+                "Commit or stash changes first."
+            )
+    except GitError as exc:
+        raise WorkitemScaffoldError(
+            f"workitem init git preflight failed: {exc}"
+        ) from exc
 
 
 @workitem_app.command(
@@ -79,8 +152,15 @@ def workitem_init(
         console.print("[red]Not inside an AI-SDLC project.[/red]")
         raise typer.Exit(code=1)
 
+    scaffolder = WorkitemScaffolder()
     try:
-        result = WorkitemScaffolder().scaffold(
+        work_item_id = scaffolder.preview_work_item_id(
+            root=root,
+            title=title,
+            wi_id=wi_id,
+        )
+        _ensure_workitem_init_git_preflight(root, work_item_id)
+        result = scaffolder.scaffold(
             root=root,
             title=title,
             wi_id=wi_id,
@@ -96,8 +176,10 @@ def workitem_init(
         "[green]Created canonical formal docs under "
         f"{result.spec_dir.relative_to(root)}[/green]"
     )
-    for path in result.created_paths:
-        console.print(f"  - {path.relative_to(root)}")
+    for path_label in _dedupe_cli_text_items(
+        str(path.relative_to(root)) for path in result.created_paths
+    ):
+        console.print(f"  - {path_label}")
     manifest_sync = ProgramService(root).ensure_manifest_spec_entry(
         spec_id=result.work_item_id,
         spec_path=result.spec_dir,
@@ -105,7 +187,7 @@ def workitem_init(
     if manifest_sync.status == "added":
         console.print(
             "[cyan]Program truth handoff: materialized manifest mapping in "
-            f"{', '.join(manifest_sync.written_paths)}[/cyan]"
+            f"{', '.join(_dedupe_cli_text_items(manifest_sync.written_paths))}[/cyan]"
         )
         console.print(
             f"[cyan]Next required action: {PROGRAM_TRUTH_SYNC_EXECUTE_COMMAND}[/cyan]"
@@ -119,9 +201,9 @@ def workitem_init(
         console.print(
             "[yellow]Program truth handoff could not materialize automatically.[/yellow]"
         )
-        for blocker in manifest_sync.blockers:
+        for blocker in _dedupe_cli_text_items(manifest_sync.blockers):
             console.print(f"  - {blocker}")
-        for action in manifest_sync.next_required_actions:
+        for action in _dedupe_cli_text_items(manifest_sync.next_required_actions):
             console.print(f"  - next action: {action}")
     elif manifest_sync.status == "not_applicable":
         console.print(
@@ -197,10 +279,11 @@ def _print_table(result: PlanCheckResult) -> None:
     console.print(table)
     if result.changed_paths:
         console.print("[dim]Changed:[/dim]")
-        for p in result.changed_paths[:50]:
+        changed_paths = _dedupe_cli_text_items(result.changed_paths)
+        for p in changed_paths[:50]:
             console.print(f"  - {p}")
-        if len(result.changed_paths) > 50:
-            console.print(f"  … ({len(result.changed_paths) - 50} more)")
+        if len(changed_paths) > 50:
+            console.print(f"  … ({len(changed_paths) - 50} more)")
 
 
 @workitem_app.command(
@@ -256,14 +339,86 @@ def _print_close_table(result: CloseCheckResult) -> None:
         table.add_row(
             str(item.get("name", "unknown")),
             "[green]PASS[/green]" if ok else "[red]BLOCKER[/red]",
-            str(item.get("detail", "")),
+            _format_close_check_detail(item),
         )
     console.print(table)
 
+    branch_lifecycle_next_actions = _extract_branch_lifecycle_next_actions(result.checks)
+    if branch_lifecycle_next_actions:
+        console.print("[bold yellow]Branch Lifecycle Next Actions[/bold yellow]")
+        for action in branch_lifecycle_next_actions:
+            console.print(f"  - {action}")
+
+    program_truth_next_actions = _extract_program_truth_next_actions(result.checks)
+    if program_truth_next_actions:
+        console.print("[bold yellow]Program Truth Next Actions[/bold yellow]")
+        for action in program_truth_next_actions:
+            console.print(f"  - {action}")
+
     if result.blockers:
         console.print("[bold red]BLOCKERs[/bold red]")
-        for b in result.blockers:
+        for b in _dedupe_cli_text_items(result.blockers):
             console.print(f"  {b}")
+
+
+def _extract_program_truth_next_actions(checks: list[dict[str, object]]) -> list[str]:
+    actions: list[str] = []
+    for check in checks:
+        if str(check.get("name", "")).strip() != "program_truth":
+            continue
+        for action in check.get("next_required_actions", []) or []:
+            normalized = str(action).strip()
+            if normalized and normalized not in actions:
+                actions.append(normalized)
+    return actions
+
+
+def _format_close_check_detail(item: dict[str, object]) -> str:
+    detail = str(item.get("detail", "")).strip()
+    frontend_delivery_status = item.get("frontend_delivery_status")
+    frontend_inheritance_status = item.get("frontend_inheritance_status")
+    inheritance_summary = ""
+    if isinstance(frontend_inheritance_status, dict):
+        inheritance_summary = summarize_frontend_inheritance_status_for_display(
+            frontend_inheritance_status
+        )
+    if isinstance(frontend_delivery_status, dict):
+        frontend_summary = summarize_frontend_delivery_status_for_display(
+            frontend_delivery_status
+        )
+        if frontend_summary:
+            scope_note = summarize_frontend_delivery_scope_for_display()
+            inheritance_block = (
+                f"\nfrontend inheritance: {inheritance_summary}"
+                if inheritance_summary
+                else ""
+            )
+            if detail:
+                return (
+                    f"{detail}\nfrontend: {frontend_summary}\n"
+                    f"frontend scope: {scope_note}"
+                    f"{inheritance_block}"
+                )
+            return (
+                f"frontend: {frontend_summary}\n"
+                f"frontend scope: {scope_note}"
+                f"{inheritance_block}"
+            )
+    if detail and inheritance_summary:
+        return f"{detail}\nfrontend inheritance: {inheritance_summary}"
+    return detail
+
+
+def _extract_branch_lifecycle_next_actions(checks: list[dict[str, object]]) -> list[str]:
+    actions: list[str] = []
+    for check in checks:
+        if str(check.get("name", "")).strip() != "branch_lifecycle":
+            continue
+        for action in check.get("next_required_actions", []) or []:
+            normalized = str(action).strip()
+            if normalized and normalized not in actions:
+                actions.append(normalized)
+    return actions
 
 
 @workitem_app.command(
@@ -318,13 +473,18 @@ def _print_branch_table(result: BranchCheckResult) -> None:
         )
     console.print(table)
 
+    if result.next_required_actions:
+        console.print("[bold yellow]Next Actions[/bold yellow]")
+        for action in _dedupe_cli_text_items(result.next_required_actions):
+            console.print(f"  - {action}")
+
     if result.blockers:
         console.print("[bold red]BLOCKERs[/bold red]")
-        for blocker in result.blockers:
+        for blocker in _dedupe_cli_text_items(result.blockers):
             console.print(f"  {blocker}")
     elif result.warnings:
         console.print("[bold yellow]Warnings[/bold yellow]")
-        for warning in result.warnings:
+        for warning in _dedupe_cli_text_items(result.warnings):
             console.print(f"  {warning}")
 
 
@@ -395,11 +555,15 @@ def _print_truth_table(result: WorkitemTruthResult) -> None:
 
     if result.code_paths:
         console.print("[dim]Code paths:[/dim]")
-        for path in result.code_paths:
+        for path in _dedupe_cli_text_items(result.code_paths):
             console.print(f"  - {path}")
+    if result.next_required_actions:
+        console.print("[dim]Next actions:[/dim]")
+        for action in _dedupe_cli_text_items(result.next_required_actions):
+            console.print(f"  - {action}")
     if result.test_paths:
         console.print("[dim]Test paths:[/dim]")
-        for path in result.test_paths:
+        for path in _dedupe_cli_text_items(result.test_paths):
             console.print(f"  - {path}")
     if result.error:
         console.print(f"[bold red]ERROR[/bold red] {result.error}")

@@ -9,6 +9,17 @@ import yaml
 from ai_sdlc.models.frontend_gate_policy import FrontendGatePolicySet
 
 
+def _dedupe_paths(paths: list[Path]) -> list[Path]:
+    unique: list[Path] = []
+    seen: set[Path] = set()
+    for path in paths:
+        if path in seen:
+            continue
+        seen.add(path)
+        unique.append(path)
+    return unique
+
+
 def frontend_gate_policy_root(root: Path) -> Path:
     """Return the canonical root for instantiated frontend gate policy artifacts."""
 
@@ -145,7 +156,7 @@ def materialize_frontend_gate_policy_artifacts(
             )
         )
 
-    return paths
+    return _dedupe_paths(paths)
 
 
 def _write_yaml(path: Path, payload: dict[str, object]) -> Path:
