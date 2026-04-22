@@ -290,3 +290,43 @@ def test_add_checkpoint_progress_rows_deduplicates_completed_stages() -> None:
     output = capture.get()
     assert "clarify, plan" in output
     assert "clarify, clarify" not in output
+
+
+def test_add_checkpoint_progress_rows_hides_terminally_merged_binding() -> None:
+    table = Table(title="AI-SDLC Status")
+    table.add_column("Property")
+    table.add_column("Value")
+
+    checkpoint = Checkpoint(
+        current_stage="close",
+        feature=FeatureInfo(
+            id="159-agent-adapter-canonical-consumption-proof-runtime-baseline",
+            spec_dir="specs/159-agent-adapter-canonical-consumption-proof-runtime-baseline",
+            design_branch="design/159-agent-adapter-canonical-consumption-proof-runtime-baseline-docs",
+            feature_branch="feature/159-agent-adapter-canonical-consumption-proof-runtime-baseline-dev",
+            current_branch="codex/159-agent-adapter-canonical-consumption-proof",
+        ),
+        linked_wi_id="159-agent-adapter-canonical-consumption-proof-runtime-baseline",
+        completed_stages=[
+            CompletedStage(stage="execute", completed_at="2026-04-22T00:00:00Z"),
+            CompletedStage(stage="close", completed_at="2026-04-22T00:00:01Z"),
+        ],
+    )
+
+    commands_module._add_checkpoint_progress_rows(
+        table,
+        checkpoint=checkpoint,
+        resume_pack=None,
+        show_active_binding=False,
+        current_branch_override="main",
+    )
+
+    with commands_module.console.capture() as capture:
+        commands_module.console.print(table)
+
+    output = capture.get()
+    assert "Feature ID" not in output
+    assert "Linked WI ID" not in output
+    assert "Current Branch" in output
+    assert "main" in output
+    assert "codex/159-agent-adapter-canonical-consumption-proof" not in output
