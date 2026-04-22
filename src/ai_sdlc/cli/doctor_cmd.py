@@ -40,9 +40,31 @@ def doctor_command() -> None:
         "\n[bold]Fallback[/bold]: run subcommands via "
         "[cyan]python -m ai_sdlc[/cyan] (same as [cyan]ai-sdlc[/cyan])."
     )
+    console.print(
+        "[bold]Scope[/bold]: doctor checks environment, telemetry, and status surfaces. "
+        "It does not install component libraries or run browser verification."
+    )
+    console.print(
+        "[bold]Frontend scope[/bold]: frontend delivery rows here describe package "
+        "download/integration truth only. Separate inheritance rows describe whether "
+        "later code generation and frontend tests already bind that choice."
+    )
+    console.print(
+        "[bold]Inheritance risk[/bold]: if a row says "
+        "[cyan]not inherited yet (risk)[/cyan], continuing may generate against the "
+        "wrong component library or validate against the wrong standard."
+    )
+    console.print(
+        "[bold]Delivery follow-up[/bold]: use [cyan]program status[/cyan] to inspect "
+        "frontend delivery truth, "
+        "[cyan]python -m ai_sdlc program solution-confirm --execute --continue --yes[/cyan] "
+        "to continue managed delivery, and "
+        "[cyan]python -m ai_sdlc program browser-gate-probe --execute[/cyan] "
+        "to collect browser evidence."
+    )
 
     readiness = build_doctor_readiness_items(find_project_root())
-    table = Table(title="Telemetry readiness")
+    table = Table(title="Environment and Status Diagnostics")
     table.add_column("Check", style="cyan")
     table.add_column("State")
     table.add_column("Detail")

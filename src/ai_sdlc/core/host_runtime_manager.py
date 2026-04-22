@@ -27,6 +27,17 @@ _SUPPORTED_ARCH = {"arm64", "amd64"}
 _MANAGED_RUNTIME_ROOT = ".ai-sdlc/runtime"
 
 
+def _dedupe_text_items(items: list[str] | tuple[str, ...]) -> list[str]:
+    seen: set[str] = set()
+    unique: list[str] = []
+    for item in items:
+        if item in seen:
+            continue
+        seen.add(item)
+        unique.append(item)
+    return unique
+
+
 @dataclass(frozen=True, slots=True)
 class HostRuntimeProbe:
     """Observed host runtime inputs for a read-only plan build."""
@@ -159,9 +170,9 @@ def build_host_runtime_plan(probe: HostRuntimeProbe) -> HostRuntimePlan:
         surface_binding_state=probe.surface_binding_state,
         minimal_executable_host=minimal_executable_host,
         installed_runtime_ready=installed_runtime_ready,
-        required_runtime_entries=list(_REQUIRED_RUNTIME_ENTRIES),
-        missing_runtime_entries=missing_runtime_entries,
-        installer_profile_ids=[profile.profile_id for profile in profiles],
+        required_runtime_entries=_dedupe_text_items(_REQUIRED_RUNTIME_ENTRIES),
+        missing_runtime_entries=_dedupe_text_items(missing_runtime_entries),
+        installer_profile_ids=_dedupe_text_items([profile.profile_id for profile in profiles]),
         install_target_root=_MANAGED_RUNTIME_ROOT,
         requires_network=(
             bool(reason_codes) and remediation_fragment is not None
@@ -170,8 +181,8 @@ def build_host_runtime_plan(probe: HostRuntimeProbe) -> HostRuntimePlan:
         ),
         requires_credentials=False,
         status=status,
-        reason_codes=reason_codes,
-        evidence_refs=evidence_refs,
+        reason_codes=_dedupe_text_items(reason_codes),
+        evidence_refs=_dedupe_text_items(evidence_refs),
         readiness=readiness,
         bootstrap_acquisition=bootstrap_acquisition,
         remediation_fragment=remediation_fragment,
@@ -329,7 +340,7 @@ def _bootstrap_missing_entries(
 ) -> list[str]:
     missing: list[str] = []
     if reason_code == "unsupported_platform":
-        return list(_REQUIRED_RUNTIME_ENTRIES)
+        return _dedupe_text_items(_REQUIRED_RUNTIME_ENTRIES)
     if python_status != "ready":
         missing.append("python_runtime")
     if installed_runtime_status != "ready":
@@ -341,7 +352,7 @@ def _bootstrap_missing_entries(
         and "installed_cli_runtime" not in missing
     ):
         missing.append("installed_cli_runtime")
-    return missing
+    return _dedupe_text_items(missing)
 
 
 def _build_bootstrap_acquisition(
@@ -377,13 +388,13 @@ def _build_bootstrap_acquisition(
         ]
     return BootstrapAcquisitionFacet(
         handoff_kind=handoff_kind,
-        required_targets=required_targets,
+        required_targets=_dedupe_text_items(required_targets),
         recommended_profile_ref=profiles[0] if profiles else None,
-        manual_steps=manual_steps,
-        operator_decisions_needed=[
-            f"confirm bootstrap path for surface={probe.surface_kind}"
-        ],
-        blocking_reason_codes=[reason_code],
+        manual_steps=_dedupe_text_items(manual_steps),
+        operator_decisions_needed=_dedupe_text_items(
+            [f"confirm bootstrap path for surface={probe.surface_kind}"]
+        ),
+        blocking_reason_codes=_dedupe_text_items([reason_code]),
         expected_reentry_condition=(
             "python >= 3.11 and installed ai-sdlc runtime are both verifiable"
         ),
@@ -420,7 +431,7 @@ def _mainline_missing_entries(reason_codes: list[str]) -> list[str]:
         "package_manager_missing": "package_manager",
         "playwright_browsers_missing": "playwright_browsers",
     }
-    return [mapping[code] for code in reason_codes]
+    return _dedupe_text_items([mapping[code] for code in reason_codes])
 
 
 def _build_remediation_fragment(reason_codes: list[str]) -> RemediationFragmentFacet:
@@ -433,21 +444,23 @@ def _build_remediation_fragment(reason_codes: list[str]) -> RemediationFragmentF
     return RemediationFragmentFacet(
         readiness_subject_id="host_runtime_plan",
         managed_runtime_root=_MANAGED_RUNTIME_ROOT,
-        required_actions=[f"plan_{item}_acquisition" for item in affected],
-        will_download=list(affected),
-        will_install=list(affected),
-        will_modify=["managed_runtime_root"],
-        will_not_touch=[
-            "system_python",
-            "system_node",
-            "global_package_manager",
-            "user_source_tree",
-        ],
-        rollback_units=["managed_runtime_root"],
-        cleanup_units=["temporary_download_cache"],
+        required_actions=_dedupe_text_items([f"plan_{item}_acquisition" for item in affected]),
+        will_download=_dedupe_text_items(affected),
+        will_install=_dedupe_text_items(affected),
+        will_modify=_dedupe_text_items(["managed_runtime_root"]),
+        will_not_touch=_dedupe_text_items(
+            [
+                "system_python",
+                "system_node",
+                "global_package_manager",
+                "user_source_tree",
+            ]
+        ),
+        rollback_units=_dedupe_text_items(["managed_runtime_root"]),
+        cleanup_units=_dedupe_text_items(["temporary_download_cache"]),
         non_rollbackable_effects=[],
         manual_recovery_required=[],
-        reason_codes=list(reason_codes),
+        reason_codes=_dedupe_text_items(reason_codes),
     )
 
 

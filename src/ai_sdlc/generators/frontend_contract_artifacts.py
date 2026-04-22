@@ -13,6 +13,17 @@ from ai_sdlc.models.frontend_contracts import (
 )
 
 
+def _dedupe_paths(paths: list[Path]) -> list[Path]:
+    unique: list[Path] = []
+    seen: set[Path] = set()
+    for path in paths:
+        if path in seen:
+            continue
+        seen.add(path)
+        unique.append(path)
+    return unique
+
+
 def frontend_contracts_root(root: Path) -> Path:
     """Return the canonical root for instantiated frontend contract artifacts."""
 
@@ -32,7 +43,7 @@ def materialize_frontend_contract_artifacts(
         output_paths.append(_write_module_contract(base_dir, module_contract))
     for page_contract in contract_set.page_contracts:
         output_paths.extend(_write_page_contract(base_dir, page_contract))
-    return output_paths
+    return _dedupe_paths(output_paths)
 
 
 def _write_module_contract(base_dir: Path, module_contract: ModuleContract) -> Path:
@@ -103,7 +114,7 @@ def _write_page_contract(base_dir: Path, page_contract: PageContract) -> list[Pa
                 ),
             )
         )
-    return output_paths
+    return _dedupe_paths(output_paths)
 
 
 def _write_yaml(path: Path, payload: dict[str, object]) -> Path:

@@ -7,6 +7,7 @@ import shutil
 import subprocess
 import sys
 from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import patch
 
 import pytest
@@ -195,6 +196,108 @@ class TestCliWorkitemInit:
         assert "代码审查结论" in exec_log_text
         assert "任务/计划同步状态" in exec_log_text
         assert "已完成 git 提交：否" in exec_log_text
+
+    def test_workitem_init_deduplicates_manifest_sync_blockers(
+        self, tmp_path: Path
+    ) -> None:
+        root = tmp_path / "repo"
+        root.mkdir()
+        spec_dir = root / "specs" / "008-direct-formal-entry"
+        scaffold_result = SimpleNamespace(
+            spec_dir=spec_dir,
+            work_item_id="008-direct-formal-entry",
+            created_paths=(),
+        )
+        manifest_sync = SimpleNamespace(
+            status="blocked",
+            blockers=[
+                "manifest sync blocked",
+                "manifest sync blocked",
+            ],
+            next_required_actions=[],
+            written_paths=[],
+        )
+
+        with (
+            patch("ai_sdlc.cli.workitem_cmd.find_project_root", return_value=root),
+            patch("ai_sdlc.cli.workitem_cmd._ensure_workitem_init_git_preflight"),
+            patch(
+                "ai_sdlc.cli.workitem_cmd.WorkitemScaffolder.preview_work_item_id",
+                return_value="008-direct-formal-entry",
+            ),
+            patch(
+                "ai_sdlc.cli.workitem_cmd.WorkitemScaffolder.scaffold",
+                return_value=scaffold_result,
+            ),
+            patch(
+                "ai_sdlc.cli.workitem_cmd.ProgramService.ensure_manifest_spec_entry",
+                return_value=manifest_sync,
+            ),
+        ):
+            result = runner.invoke(
+                app,
+                [
+                    "workitem",
+                    "init",
+                    "--title",
+                    "Direct Formal Entry",
+                    "--wi-id",
+                    "008-direct-formal-entry",
+                ],
+            )
+
+        assert result.exit_code == 0
+        assert result.output.count("manifest sync blocked") == 1
+
+    def test_workitem_init_deduplicates_created_paths_display(
+        self, tmp_path: Path
+    ) -> None:
+        root = tmp_path / "repo"
+        root.mkdir()
+        spec_dir = root / "specs" / "008-direct-formal-entry"
+        created_path = spec_dir / "spec.md"
+        scaffold_result = SimpleNamespace(
+            spec_dir=spec_dir,
+            work_item_id="008-direct-formal-entry",
+            created_paths=(created_path, created_path),
+        )
+        manifest_sync = SimpleNamespace(
+            status="existing",
+            blockers=[],
+            next_required_actions=[],
+            written_paths=[],
+        )
+
+        with (
+            patch("ai_sdlc.cli.workitem_cmd.find_project_root", return_value=root),
+            patch("ai_sdlc.cli.workitem_cmd._ensure_workitem_init_git_preflight"),
+            patch(
+                "ai_sdlc.cli.workitem_cmd.WorkitemScaffolder.preview_work_item_id",
+                return_value="008-direct-formal-entry",
+            ),
+            patch(
+                "ai_sdlc.cli.workitem_cmd.WorkitemScaffolder.scaffold",
+                return_value=scaffold_result,
+            ),
+            patch(
+                "ai_sdlc.cli.workitem_cmd.ProgramService.ensure_manifest_spec_entry",
+                return_value=manifest_sync,
+            ),
+        ):
+            result = runner.invoke(
+                app,
+                [
+                    "workitem",
+                    "init",
+                    "--title",
+                    "Direct Formal Entry",
+                    "--wi-id",
+                    "008-direct-formal-entry",
+                ],
+            )
+
+        assert result.exit_code == 0
+        assert result.output.count("specs/008-direct-formal-entry/spec.md") == 1
 
     def test_workitem_init_blocks_main_branch_until_docs_branch_is_checked_out(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch

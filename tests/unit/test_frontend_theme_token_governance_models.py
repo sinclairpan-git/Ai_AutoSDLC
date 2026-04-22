@@ -167,3 +167,77 @@ def test_custom_theme_token_override_requires_resolution_reason_when_requested_a
             requested_value="brand-accent",
             effective_value="style-pack:enterprise-default:accent_mode",
         )
+
+
+def test_frontend_theme_token_governance_models_deduplicate_set_like_lists() -> None:
+    governance = FrontendThemeTokenGovernanceSet(
+        work_item_id="148",
+        source_work_item_ids=["017", "017", "147"],
+        token_floor_disallowed_naked_values=["hex-color", "hex-color", "rgb-color"],
+        style_pack_ids=["enterprise-default", "enterprise-default"],
+        override_precedence=["global", "global", "page", "section", "slot"],
+        token_mappings=[
+            ThemeTokenMapping(
+                mapping_id="enterprise-default-global",
+                style_pack_id="enterprise-default",
+                scope="global",
+                token_refs={"surface_mode": "style-pack:enterprise-default:surface_mode"},
+            )
+        ],
+        custom_overrides=[],
+        style_editor_boundary=StyleEditorBoundaryContract(
+            surface_mode="read_only_diagnostics_structured_proposal",
+            canonical_information_architecture=[
+                "theme-list",
+                "theme-list",
+                "effective-state-summary",
+                "diff-override-drawer",
+                "revert-approve-path",
+            ],
+            allowed_actions=[
+                "inspect-effective-theme",
+                "inspect-effective-theme",
+                "submit-structured-proposal",
+            ],
+            forbidden_actions=[
+                "direct-runtime-write",
+                "direct-runtime-write",
+                "freeform-css-entry",
+            ],
+        ),
+        handoff_contract=ThemeGovernanceHandoffContract(
+            schema_family="frontend-theme-token-governance",
+            current_version="1.0",
+            compatible_versions=["1.0", "1.0"],
+            artifact_root="governance/frontend/theme-token-governance",
+            canonical_files=[
+                "theme-governance-manifest.json",
+                "theme-governance-manifest.json",
+                "token-mapping.json",
+            ],
+        ),
+    )
+
+    assert governance.source_work_item_ids == ["017", "147"]
+    assert governance.token_floor_disallowed_naked_values == ["hex-color", "rgb-color"]
+    assert governance.style_pack_ids == ["enterprise-default"]
+    assert governance.override_precedence == ["global", "page", "section", "slot"]
+    assert governance.style_editor_boundary.canonical_information_architecture == [
+        "theme-list",
+        "effective-state-summary",
+        "diff-override-drawer",
+        "revert-approve-path",
+    ]
+    assert governance.style_editor_boundary.allowed_actions == [
+        "inspect-effective-theme",
+        "submit-structured-proposal",
+    ]
+    assert governance.style_editor_boundary.forbidden_actions == [
+        "direct-runtime-write",
+        "freeform-css-entry",
+    ]
+    assert governance.handoff_contract.compatible_versions == ["1.0"]
+    assert governance.handoff_contract.canonical_files == [
+        "theme-governance-manifest.json",
+        "token-mapping.json",
+    ]

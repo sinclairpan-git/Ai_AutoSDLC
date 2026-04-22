@@ -161,3 +161,69 @@ def test_enterprise_vue2_provider_profile_rejects_duplicate_style_support_ids() 
                 ),
             ],
         )
+
+
+def test_frontend_provider_profile_models_deduplicate_set_like_lists() -> None:
+    profile = EnterpriseVue2ProviderProfile(
+        work_item_id="016",
+        provider_id="enterprise-vue2",
+        install_strategy_ids=[
+            "enterprise-vue2-private-registry",
+            "enterprise-vue2-private-registry",
+        ],
+        availability_prerequisites=[
+            "company-registry-network",
+            "company-registry-network",
+            "company-registry-token",
+        ],
+        cross_stack_fallback_targets=[
+            "vue3/public-primevue",
+            "vue3/public-primevue",
+        ],
+        mappings=[
+            ProviderMapping(
+                component_id="UiButton",
+                implementation_ref="SfButton",
+                alignment_notes=["align", "align", "replaceable"],
+            )
+        ],
+        whitelist=[
+            ProviderWhitelistEntry(
+                component_id="UiButton",
+                api_curation=["curated-props", "curated-props"],
+                capability_curation=["no-dangerous-rendering", "no-dangerous-rendering"],
+                dependency_curation=["no-global-install", "no-global-install"],
+            )
+        ],
+        style_support_matrix=[
+            ProviderStyleSupportEntry(
+                style_pack_id="enterprise-default",
+                fidelity_status="degraded",
+                degradation_reason_codes=["token-gap", "token-gap"],
+                notes=["needs-bridge", "needs-bridge"],
+            )
+        ],
+        risk_isolation=ProviderRiskIsolationPolicy(
+            disallowed_capabilities=["cap-a", "cap-a"],
+            exception_requirements=["req-a", "req-a", "req-b"],
+        ),
+        legacy_adapter=LegacyAdapterPolicy(
+            allowed_when=["cond-a", "cond-a", "cond-b"],
+        ),
+    )
+
+    assert profile.install_strategy_ids == ["enterprise-vue2-private-registry"]
+    assert profile.availability_prerequisites == [
+        "company-registry-network",
+        "company-registry-token",
+    ]
+    assert profile.cross_stack_fallback_targets == ["vue3/public-primevue"]
+    assert profile.mappings[0].alignment_notes == ["align", "replaceable"]
+    assert profile.whitelist[0].api_curation == ["curated-props"]
+    assert profile.whitelist[0].capability_curation == ["no-dangerous-rendering"]
+    assert profile.whitelist[0].dependency_curation == ["no-global-install"]
+    assert profile.style_support_matrix[0].degradation_reason_codes == ["token-gap"]
+    assert profile.style_support_matrix[0].notes == ["needs-bridge"]
+    assert profile.risk_isolation.disallowed_capabilities == ["cap-a"]
+    assert profile.risk_isolation.exception_requirements == ["req-a", "req-b"]
+    assert profile.legacy_adapter.allowed_when == ["cond-a", "cond-b"]

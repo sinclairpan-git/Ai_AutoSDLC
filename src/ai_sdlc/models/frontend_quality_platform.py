@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from ai_sdlc.models.frontend_page_ui_schema import (
     FrontendPageUiSchemaSet,
@@ -72,6 +72,20 @@ def _find_duplicates(values: list[str]) -> list[str]:
     return duplicates
 
 
+def _dedupe_strings(value: object) -> list[str]:
+    if value is None:
+        return []
+    unique: list[str] = []
+    seen: set[str] = set()
+    for item in value:
+        text = str(item)
+        if text in seen:
+            continue
+        seen.add(text)
+        unique.append(text)
+    return unique
+
+
 class FrontendQualityPlatformModel(BaseModel):
     """Base model for structured quality-platform artifacts."""
 
@@ -89,6 +103,11 @@ class QualityCoverageMatrixEntry(FrontendQualityPlatformModel):
     interaction_flow_id: str
     evidence_contract_ids: list[str] = Field(default_factory=list)
 
+    @field_validator("evidence_contract_ids", mode="before")
+    @classmethod
+    def _dedupe_evidence_contract_ids(cls, value: object) -> list[str]:
+        return _dedupe_strings(value)
+
     @model_validator(mode="after")
     def _validate_entry(self) -> QualityCoverageMatrixEntry:
         if not self.evidence_contract_ids:
@@ -103,6 +122,11 @@ class QualityEvidenceContract(FrontendQualityPlatformModel):
     evidence_kind: QualityVerdictFamily
     artifact_rel_path: str
     required_payload_fields: list[str] = Field(default_factory=list)
+
+    @field_validator("required_payload_fields", mode="before")
+    @classmethod
+    def _dedupe_required_payload_fields(cls, value: object) -> list[str]:
+        return _dedupe_strings(value)
 
     @model_validator(mode="after")
     def _validate_contract(self) -> QualityEvidenceContract:
@@ -121,6 +145,16 @@ class InteractionQualityFlow(FrontendQualityPlatformModel):
     required_probe_sources: list[str] = Field(default_factory=list)
     focus_areas: list[str] = Field(default_factory=list)
     remediation_hints: list[str] = Field(default_factory=list)
+
+    @field_validator(
+        "required_probe_sources",
+        "focus_areas",
+        "remediation_hints",
+        mode="before",
+    )
+    @classmethod
+    def _dedupe_flow_lists(cls, value: object) -> list[str]:
+        return _dedupe_strings(value)
 
     @model_validator(mode="after")
     def _validate_flow(self) -> InteractionQualityFlow:
@@ -142,6 +176,11 @@ class QualityVerdictEnvelope(FrontendQualityPlatformModel):
     severity: QualitySeverity
     evidence_refs: list[str] = Field(default_factory=list)
     remediation_hint: str | None = None
+
+    @field_validator("evidence_refs", mode="before")
+    @classmethod
+    def _dedupe_evidence_refs(cls, value: object) -> list[str]:
+        return _dedupe_strings(value)
 
     @model_validator(mode="after")
     def _validate_verdict(self) -> QualityVerdictEnvelope:
@@ -177,6 +216,18 @@ class QualityPlatformHandoffContract(FrontendQualityPlatformModel):
     cli_fields: list[str] = Field(default_factory=list)
     verify_fields: list[str] = Field(default_factory=list)
 
+    @field_validator(
+        "compatible_versions",
+        "canonical_files",
+        "program_service_fields",
+        "cli_fields",
+        "verify_fields",
+        mode="before",
+    )
+    @classmethod
+    def _dedupe_handoff_lists(cls, value: object) -> list[str]:
+        return _dedupe_strings(value)
+
     @model_validator(mode="after")
     def _validate_contract(self) -> QualityPlatformHandoffContract:
         if self.current_version not in self.compatible_versions:
@@ -203,6 +254,11 @@ class FrontendQualityPlatformSet(FrontendQualityPlatformModel):
     verdict_envelopes: list[QualityVerdictEnvelope] = Field(default_factory=list)
     truth_surfacing_records: list[QualityTruthSurfacingRecord] = Field(default_factory=list)
     handoff_contract: QualityPlatformHandoffContract
+
+    @field_validator("source_work_item_ids", mode="before")
+    @classmethod
+    def _dedupe_source_work_item_ids(cls, value: object) -> list[str]:
+        return _dedupe_strings(value)
 
     @model_validator(mode="after")
     def _validate_set(self) -> FrontendQualityPlatformSet:

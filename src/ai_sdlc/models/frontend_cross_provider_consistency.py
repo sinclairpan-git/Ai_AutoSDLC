@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from ai_sdlc.models.frontend_page_ui_schema import (
     FrontendPageUiSchemaSet,
@@ -87,6 +87,20 @@ def _find_duplicates(values: list[str]) -> list[str]:
     return duplicates
 
 
+def _dedupe_strings(value: object) -> list[str]:
+    if value is None:
+        return []
+    unique: list[str] = []
+    seen: set[str] = set()
+    for item in value:
+        text = str(item)
+        if text in seen:
+            continue
+        seen.add(text)
+        unique.append(text)
+    return unique
+
+
 def _derive_gate_from_state_vector(
     state_vector: ConsistencyStateVector,
 ) -> CertificationGateState:
@@ -129,6 +143,11 @@ class UxEquivalenceClause(FrontendCrossProviderConsistencyModel):
     required_journey_ids: list[str] = Field(default_factory=list)
     required_schema_slot_ids: list[str] = Field(default_factory=list)
 
+    @field_validator("required_journey_ids", "required_schema_slot_ids", mode="before")
+    @classmethod
+    def _dedupe_clause_lists(cls, value: object) -> list[str]:
+        return _dedupe_strings(value)
+
     @model_validator(mode="after")
     def _validate_clause(self) -> UxEquivalenceClause:
         if not self.description.strip():
@@ -150,6 +169,11 @@ class ConsistencyDiffRecord(FrontendCrossProviderConsistencyModel):
     summary: str
     evidence_refs: list[str] = Field(default_factory=list)
     remediation_hint: str | None = None
+
+    @field_validator("evidence_refs", mode="before")
+    @classmethod
+    def _dedupe_evidence_refs(cls, value: object) -> list[str]:
+        return _dedupe_strings(value)
 
     @model_validator(mode="after")
     def _validate_diff(self) -> ConsistencyDiffRecord:
@@ -176,6 +200,11 @@ class CoverageGapRecord(FrontendCrossProviderConsistencyModel):
     upstream_truth_refs: list[str] = Field(default_factory=list)
     remediation_hint: str | None = None
 
+    @field_validator("schema_slot_ids", "upstream_truth_refs", mode="before")
+    @classmethod
+    def _dedupe_gap_lists(cls, value: object) -> list[str]:
+        return _dedupe_strings(value)
+
     @model_validator(mode="after")
     def _validate_gap(self) -> CoverageGapRecord:
         if not self.detail.strip():
@@ -198,6 +227,16 @@ class ProviderPairCertificationBundle(FrontendCrossProviderConsistencyModel):
     diff_record_ids: list[str] = Field(default_factory=list)
     coverage_gap_ids: list[str] = Field(default_factory=list)
     certification_gate: CertificationGateState | None = None
+
+    @field_validator(
+        "required_journey_ids",
+        "diff_record_ids",
+        "coverage_gap_ids",
+        mode="before",
+    )
+    @classmethod
+    def _dedupe_bundle_lists(cls, value: object) -> list[str]:
+        return _dedupe_strings(value)
 
     @model_validator(mode="after")
     def _validate_and_derive_gate(self) -> ProviderPairCertificationBundle:
@@ -241,6 +280,17 @@ class ReadinessGateRule(FrontendCrossProviderConsistencyModel):
     allowed_blocking_states: list[BlockingState] = Field(default_factory=list)
     allowed_evidence_states: list[EvidenceState] = Field(default_factory=list)
     description: str
+
+    @field_validator(
+        "allowed_final_verdicts",
+        "allowed_comparability_states",
+        "allowed_blocking_states",
+        "allowed_evidence_states",
+        mode="before",
+    )
+    @classmethod
+    def _dedupe_rule_lists(cls, value: object) -> list[str]:
+        return _dedupe_strings(value)
 
     @model_validator(mode="after")
     def _validate_rule(self) -> ReadinessGateRule:
@@ -306,6 +356,16 @@ class ConsistencyReadinessGate(FrontendCrossProviderConsistencyModel):
     )
     ux_equivalence_clause_ids: list[str] = Field(default_factory=list)
 
+    @field_validator(
+        "required_coverage_scope",
+        "optional_coverage_scope",
+        "ux_equivalence_clause_ids",
+        mode="before",
+    )
+    @classmethod
+    def _dedupe_gate_lists(cls, value: object) -> list[str]:
+        return _dedupe_strings(value)
+
     @model_validator(mode="after")
     def _validate_gate(self) -> ConsistencyReadinessGate:
         duplicate_gate_states = _find_duplicates([rule.gate_state for rule in self.rules])
@@ -329,6 +389,18 @@ class ConsistencyHandoffContract(FrontendCrossProviderConsistencyModel):
     program_service_fields: list[str] = Field(default_factory=list)
     cli_fields: list[str] = Field(default_factory=list)
     verify_fields: list[str] = Field(default_factory=list)
+
+    @field_validator(
+        "compatible_versions",
+        "canonical_files",
+        "program_service_fields",
+        "cli_fields",
+        "verify_fields",
+        mode="before",
+    )
+    @classmethod
+    def _dedupe_contract_lists(cls, value: object) -> list[str]:
+        return _dedupe_strings(value)
 
     @model_validator(mode="after")
     def _validate_contract(self) -> ConsistencyHandoffContract:
@@ -359,6 +431,11 @@ class FrontendCrossProviderConsistencySet(FrontendCrossProviderConsistencyModel)
     )
     readiness_gate: ConsistencyReadinessGate
     handoff_contract: ConsistencyHandoffContract
+
+    @field_validator("source_work_item_ids", mode="before")
+    @classmethod
+    def _dedupe_source_work_item_ids(cls, value: object) -> list[str]:
+        return _dedupe_strings(value)
 
     @model_validator(mode="after")
     def _validate_set(self) -> FrontendCrossProviderConsistencySet:

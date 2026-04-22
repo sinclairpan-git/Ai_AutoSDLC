@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import re
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -11,6 +12,29 @@ from ai_sdlc.context.state import load_checkpoint
 
 _BACKLOG_REL = Path("docs") / "framework-defect-backlog.zh-CN.md"
 _DEFECT_ID_RE = re.compile(r"\bFD-\d{4}-\d{2}-\d{2}-\d{3}\b")
+
+
+def _dedupe_text_items(values: object) -> list[str]:
+    deduped: list[str] = []
+    for value in values or []:
+        normalized = str(value).strip()
+        if normalized and normalized not in deduped:
+            deduped.append(normalized)
+    return deduped
+
+
+def _dedupe_mapping_items(values: object) -> list[dict[str, Any]]:
+    deduped: list[dict[str, Any]] = []
+    seen: set[str] = set()
+    for value in values or []:
+        if not isinstance(value, dict):
+            continue
+        key = json.dumps(value, sort_keys=True, ensure_ascii=False)
+        if key in seen:
+            continue
+        seen.add(key)
+        deduped.append(dict(value))
+    return deduped
 
 
 @dataclass(frozen=True, slots=True)
@@ -31,13 +55,18 @@ class BacklogBreachGuardResult:
     missing_ids: list[str] = field(default_factory=list)
     sample_entries: list[dict[str, Any]] = field(default_factory=list)
 
+    def __post_init__(self) -> None:
+        self.reason_codes = _dedupe_text_items(self.reason_codes)
+        self.missing_ids = _dedupe_text_items(self.missing_ids)
+        self.sample_entries = _dedupe_mapping_items(self.sample_entries)
+
     def to_json_dict(self) -> dict[str, Any]:
         return {
             "state": self.state,
             "detail": self.detail,
-            "reason_codes": list(self.reason_codes),
-            "missing_ids": list(self.missing_ids),
-            "sample_entries": list(self.sample_entries),
+            "reason_codes": _dedupe_text_items(self.reason_codes),
+            "missing_ids": _dedupe_text_items(self.missing_ids),
+            "sample_entries": _dedupe_mapping_items(self.sample_entries),
         }
 
 
@@ -92,19 +121,23 @@ def evaluate_backlog_breach_guard(
         )
 
     missing_ids = sorted({defect_id for item in violations for defect_id in item.missing_ids})
-    sample_entries = [
-        {"path": entry.path, "missing_ids": list(entry.missing_ids)}
-        for entry in violations[:3]
-    ]
+    sample_entries: list[dict[str, object]] = []
+    for entry in violations:
+        rendered = {"path": entry.path, "missing_ids": _dedupe_text_items(entry.missing_ids)}
+        if rendered in sample_entries:
+            continue
+        sample_entries.append(rendered)
+        if len(sample_entries) >= 3:
+            break
     return BacklogBreachGuardResult(
         state="blocked",
         detail=(
             "breach_detected_but_not_logged: referenced framework defect ids "
             "are missing from docs/framework-defect-backlog.zh-CN.md"
         ),
-        reason_codes=["breach_detected_but_not_logged"],
-        missing_ids=missing_ids,
-        sample_entries=sample_entries,
+        reason_codes=_dedupe_text_items(["breach_detected_but_not_logged"]),
+        missing_ids=_dedupe_text_items(missing_ids),
+        sample_entries=_dedupe_mapping_items(sample_entries),
     )
 
 

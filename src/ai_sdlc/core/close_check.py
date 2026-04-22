@@ -82,6 +82,17 @@ GIT_CLOSURE_ALLOWED_DIRTY_RELS = (
 )
 
 
+def _dedupe_strings(values: list[str]) -> list[str]:
+    seen: set[str] = set()
+    deduped: list[str] = []
+    for value in values:
+        if value in seen:
+            continue
+        seen.add(value)
+        deduped.append(value)
+    return deduped
+
+
 def _registered_command_strings() -> tuple[str, ...]:
     """FR-098: commands from Typer tree (lazy import)."""
     from ai_sdlc.cli.command_names import collect_flat_command_strings
@@ -226,7 +237,10 @@ def _build_program_truth_close_check_summary(
         "ok": readiness.ready,
         "summary_token": readiness.summary_token,
         "detail": readiness.detail,
-        "next_required_actions": list(readiness.next_required_actions),
+        "next_required_actions": _dedupe_text_items(readiness.next_required_actions),
+        "frontend_delivery_status": dict(readiness.frontend_delivery_status),
+        "frontend_delivery_scope": readiness.frontend_delivery_scope,
+        "frontend_inheritance_status": dict(readiness.frontend_inheritance_status),
     }
 
 
@@ -240,10 +254,13 @@ class CloseCheckResult:
     wi_dir: Path | None = None
     error: str | None = None
 
+    def __post_init__(self) -> None:
+        self.blockers = _dedupe_text_items(self.blockers)
+
     def to_json_dict(self) -> dict[str, Any]:
         return {
             "ok": self.ok,
-            "blockers": self.blockers,
+            "blockers": _dedupe_text_items(self.blockers),
             "checks": self.checks,
             "wi_dir": str(self.wi_dir) if self.wi_dir else None,
             "error": self.error,
@@ -262,18 +279,34 @@ class BranchCheckResult:
     error: str | None = None
     branch_disposition: str | None = None
     worktree_disposition: str | None = None
+    next_required_actions: list[str] = field(default_factory=list)
+
+    def __post_init__(self) -> None:
+        self.blockers = _dedupe_text_items(self.blockers)
+        self.warnings = _dedupe_text_items(self.warnings)
+        self.next_required_actions = _dedupe_text_items(self.next_required_actions)
 
     def to_json_dict(self) -> dict[str, Any]:
         return {
             "ok": self.ok,
-            "blockers": self.blockers,
-            "warnings": self.warnings,
+            "blockers": _dedupe_text_items(self.blockers),
+            "warnings": _dedupe_text_items(self.warnings),
             "entries": self.entries,
             "wi_dir": str(self.wi_dir) if self.wi_dir else None,
             "error": self.error,
             "branch_disposition": self.branch_disposition,
             "worktree_disposition": self.worktree_disposition,
+            "next_required_actions": _dedupe_text_items(self.next_required_actions),
         }
+
+
+def _dedupe_text_items(values: object) -> list[str]:
+    deduped: list[str] = []
+    for value in values or []:
+        normalized = str(value).strip()
+        if normalized and normalized not in deduped:
+            deduped.append(normalized)
+    return deduped
 
 
 def _unchecked_tasks_count(tasks_md: str) -> int:
@@ -348,7 +381,7 @@ def _changed_paths_from_marker(value: str) -> list[str]:
         normalized = token.strip()
         if normalized:
             paths.append(normalized)
-    return paths
+    return _dedupe_strings(paths)
 
 
 def _path_allowed_for_docs_profile(path: str) -> bool:
@@ -407,7 +440,7 @@ def _verification_profile_violation(log_text: str) -> str | None:
         if disallowed:
             return (
                 f"latest batch verification profile {profile} includes non-doc changes: "
-                + ", ".join(disallowed[:5])
+                + ", ".join(_dedupe_text_items(disallowed)[:5])
             )
     if profile == "truth-only":
         raw_paths = _last_log_marker(CHANGED_PATHS_RE, batch_text)
@@ -418,7 +451,7 @@ def _verification_profile_violation(log_text: str) -> str | None:
         if disallowed:
             return (
                 "latest batch verification profile truth-only includes non-truth changes: "
-                + ", ".join(disallowed[:5])
+                + ", ".join(_dedupe_text_items(disallowed)[:5])
             )
 
     return None
@@ -544,6 +577,7 @@ def run_branch_check(*, cwd: Path | None, wi: Path) -> BranchCheckResult:
         error=None,
         branch_disposition=lifecycle.branch_disposition,
         worktree_disposition=lifecycle.worktree_disposition,
+        next_required_actions=_dedupe_text_items(lifecycle.next_required_actions),
     )
 
 
@@ -743,6 +777,9 @@ def run_close_check(
                 "name": "branch_lifecycle",
                 "ok": branch_lifecycle.ok,
                 "detail": branch_lifecycle.summary_detail(),
+                "next_required_actions": _dedupe_text_items(
+                    branch_lifecycle.next_required_actions
+                ),
             }
         )
         blockers.extend(branch_lifecycle.blockers)
@@ -761,26 +798,36 @@ def run_close_check(
         if program_truth_status is not None:
             program_truth_ok = bool(program_truth_status.get("ok"))
             program_truth_detail = str(program_truth_status.get("detail", "")).strip()
-            checks.append(
-                {
-                    "name": "program_truth",
-                    "ok": program_truth_ok,
-                    "detail": program_truth_detail
-                    if program_truth_detail
-                    else "program truth is fresh and mapped",
-                }
+            check = {
+                "name": "program_truth",
+                "ok": program_truth_ok,
+                "detail": program_truth_detail
+                if program_truth_detail
+                else "program truth is fresh and mapped",
+                "next_required_actions": _dedupe_text_items(
+                    program_truth_status.get("next_required_actions", [])
+                ),
+                "frontend_delivery_status": dict(
+                    program_truth_status.get("frontend_delivery_status", {})
+                ),
+            }
+            frontend_delivery_scope = str(
+                program_truth_status.get("frontend_delivery_scope", "")
+            ).strip()
+            if frontend_delivery_scope:
+                check["frontend_delivery_scope"] = frontend_delivery_scope
+            frontend_inheritance_status = program_truth_status.get(
+                "frontend_inheritance_status", {}
             )
+            if isinstance(frontend_inheritance_status, dict) and frontend_inheritance_status:
+                check["frontend_inheritance_status"] = dict(
+                    frontend_inheritance_status
+                )
+            checks.append(check)
             if not program_truth_ok:
-                next_actions = [
-                    str(action)
-                    for action in program_truth_status.get("next_required_actions", [])
-                    if str(action).strip()
-                ]
                 blocker = "BLOCKER: program truth unresolved"
                 if program_truth_detail:
                     blocker = f"{blocker}: {program_truth_detail}"
-                if next_actions:
-                    blocker += "; next action: " + " ; ".join(next_actions)
                 blockers.append(blocker)
 
         frontend_evidence_class_status = _build_frontend_evidence_class_close_check_summary(
@@ -840,7 +887,7 @@ def run_close_check(
                         "detail": release_gate.summary(),
                     }
                 )
-                blockers.extend(release_gate.blocker_lines())
+                blockers.extend(_dedupe_text_items(release_gate.blocker_lines()))
                 release_payload = build_release_gate_governance_payload(
                     release_gate,
                     decision_subject=f"release:{wi_dir.name}",
@@ -893,7 +940,7 @@ def run_close_check(
         elif decision_result == "block":
             governance_blockers = verification_governance.get("blockers", ())
             if governance_blockers:
-                blockers.extend(str(item) for item in governance_blockers)
+                blockers.extend(_dedupe_text_items(governance_blockers))
             else:
                 blockers.append(
                     "BLOCKER: verification governance gate decision blocked close-check"

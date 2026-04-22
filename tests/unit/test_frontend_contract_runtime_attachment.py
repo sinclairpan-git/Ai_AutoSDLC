@@ -22,6 +22,8 @@ from ai_sdlc.core.frontend_contract_runtime_attachment import (
     FRONTEND_CONTRACT_RUNTIME_ATTACHMENT_STATUS_MISSING_SCOPE,
     FRONTEND_CONTRACT_RUNTIME_ATTACHMENT_STATUS_SCOPE_OUTSIDE_ROOT,
     FRONTEND_CONTRACT_RUNTIME_ATTACHMENT_WRITE_POLICY_EXPLICIT_OPT_IN,
+    FrontendContractRuntimeAttachment,
+    FrontendContractRuntimeAttachmentScope,
     build_frontend_contract_runtime_attachment,
     resolve_frontend_contract_runtime_attachment_scope,
 )
@@ -206,6 +208,51 @@ def test_build_runtime_attachment_reports_missing_artifact_honestly(
     )
     assert attachment.coverage_gaps == ("frontend_contract_observations",)
     assert "missing canonical observation artifact" in attachment.blockers[0]
+
+
+def test_runtime_attachment_to_json_dict_deduplicates_lists() -> None:
+    payload = FrontendContractRuntimeAttachment(
+        status="missing_artifact",
+        scope=FrontendContractRuntimeAttachmentScope(
+            spec_dir=None,
+            scope_source="checkpoint",
+            work_item_id="014-demo",
+            blockers=("scope blocker", "scope blocker"),
+        ),
+        artifact_path=None,
+        artifact=None,
+        blockers=("attachment blocker", "attachment blocker"),
+        advisories=("attachment advisory", "attachment advisory"),
+        coverage_gaps=("frontend_contract_observations", "frontend_contract_observations"),
+    ).to_json_dict()
+
+    assert payload["scope"]["blockers"] == ["scope blocker"]
+    assert payload["blockers"] == ["attachment blocker"]
+    assert payload["advisories"] == ["attachment advisory"]
+    assert payload["coverage_gaps"] == ["frontend_contract_observations"]
+
+
+def test_runtime_attachment_runtime_objects_canonicalize_lists() -> None:
+    scope = FrontendContractRuntimeAttachmentScope(
+        spec_dir=None,
+        scope_source="checkpoint",
+        work_item_id="014-demo",
+        blockers=("scope blocker", "scope blocker"),
+    )
+    attachment = FrontendContractRuntimeAttachment(
+        status="missing_artifact",
+        scope=scope,
+        artifact_path=None,
+        artifact=None,
+        blockers=("attachment blocker", "attachment blocker"),
+        advisories=("attachment advisory", "attachment advisory"),
+        coverage_gaps=("frontend_contract_observations", "frontend_contract_observations"),
+    )
+
+    assert scope.blockers == ("scope blocker",)
+    assert attachment.blockers == ("attachment blocker",)
+    assert attachment.advisories == ("attachment advisory",)
+    assert attachment.coverage_gaps == ("frontend_contract_observations",)
 
 
 def test_build_runtime_attachment_reports_invalid_artifact_honestly(

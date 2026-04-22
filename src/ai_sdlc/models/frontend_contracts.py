@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 
 def _find_duplicates(values: list[str]) -> list[str]:
@@ -13,6 +13,20 @@ def _find_duplicates(values: list[str]) -> list[str]:
             duplicates.append(value)
         seen.add(value)
     return duplicates
+
+
+def _dedupe_strings(value: object) -> list[str]:
+    if value is None:
+        return []
+    unique: list[str] = []
+    seen: set[str] = set()
+    for item in value:
+        text = str(item)
+        if text in seen:
+            continue
+        seen.add(text)
+        unique.append(text)
+    return unique
 
 
 class FrontendContractModel(BaseModel):
@@ -53,6 +67,11 @@ class RecipeDeclaration(FrontendContractModel):
     params: dict[str, object] = Field(default_factory=dict)
     exceptions: list[ContractException] = Field(default_factory=list)
 
+    @field_validator("required_regions", mode="before")
+    @classmethod
+    def _dedupe_required_regions(cls, value: object) -> list[str]:
+        return _dedupe_strings(value)
+
 
 class I18nEntry(FrontendContractModel):
     """Single i18n key definition or declaration."""
@@ -70,6 +89,11 @@ class I18nContract(FrontendContractModel):
     existing_keys: list[str] = Field(default_factory=list)
     new_keys: list[I18nEntry] = Field(default_factory=list)
 
+    @field_validator("existing_keys", mode="before")
+    @classmethod
+    def _dedupe_existing_keys(cls, value: object) -> list[str]:
+        return _dedupe_strings(value)
+
 
 class ValidationFieldRule(FrontendContractModel):
     """Validation rule for one form field."""
@@ -85,6 +109,11 @@ class ValidationFieldRule(FrontendContractModel):
     trigger: str = ""
     conditional_required_when: dict[str, object] = Field(default_factory=dict)
     default_value_constraint: str = ""
+
+    @field_validator("depends_on", mode="before")
+    @classmethod
+    def _dedupe_depends_on(cls, value: object) -> list[str]:
+        return _dedupe_strings(value)
 
 
 class ValidationContract(FrontendContractModel):
@@ -115,6 +144,11 @@ class ContractRuleBundle(FrontendContractModel):
     hard_rules: list[str] = Field(default_factory=list)
     whitelist_ref: WhitelistReference | None = None
     token_rules_ref: TokenRulesReference | None = None
+
+    @field_validator("hard_rules", mode="before")
+    @classmethod
+    def _dedupe_hard_rules(cls, value: object) -> list[str]:
+        return _dedupe_strings(value)
 
 
 class ContractLegacyContext(FrontendContractModel):

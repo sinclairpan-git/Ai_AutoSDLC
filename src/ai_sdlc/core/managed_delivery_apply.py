@@ -34,6 +34,18 @@ ALLOWED_ACTION_TYPES = frozenset(
 )
 
 
+def _dedupe_text_items(values: list[str] | tuple[str, ...]) -> list[str]:
+    seen: set[str] = set()
+    unique: list[str] = []
+    for value in values:
+        item = str(value).strip()
+        if not item or item in seen:
+            continue
+        seen.add(item)
+        unique.append(item)
+    return unique
+
+
 def run_managed_delivery_apply(
     view: ConfirmedActionPlanExecutionView,
     receipt: DeliveryApplyDecisionReceipt,
@@ -199,10 +211,12 @@ def run_managed_delivery_apply(
             action_plan_id=view.action_plan_id,
             plan_fingerprint=view.plan_fingerprint,
             result_status="blocked_before_start",
-            blockers=["required_unsupported"],
-            blocked_action_ids=[action.action_id for action in required_unsupported],
+            blockers=_dedupe_text_items(["required_unsupported"]),
+            blocked_action_ids=_dedupe_text_items(
+                [action.action_id for action in required_unsupported]
+            ),
             ledger_entries=entries,
-            skipped_action_ids=skipped_action_ids,
+            skipped_action_ids=_dedupe_text_items(skipped_action_ids),
         )
     selected_optional_unsupported = [
         action
@@ -249,13 +263,15 @@ def run_managed_delivery_apply(
             action_plan_id=view.action_plan_id,
             plan_fingerprint=view.plan_fingerprint,
             result_status="blocked_before_start",
-            blockers=["dependency_blocked_by_unsupported"],
-            blocked_action_ids=[
-                action.action_id
-                for action in [*selected_optional_unsupported, *dependency_blocked_actions]
-            ],
+            blockers=_dedupe_text_items(["dependency_blocked_by_unsupported"]),
+            blocked_action_ids=_dedupe_text_items(
+                [
+                    action.action_id
+                    for action in [*selected_optional_unsupported, *dependency_blocked_actions]
+                ]
+            ),
             ledger_entries=entries,
-            skipped_action_ids=skipped_action_ids,
+            skipped_action_ids=_dedupe_text_items(skipped_action_ids),
         )
 
     ordered_actions, ordering_blockers = _topological_sort(selected_actions)
@@ -267,8 +283,8 @@ def run_managed_delivery_apply(
             action_plan_id=view.action_plan_id,
             plan_fingerprint=view.plan_fingerprint,
             result_status="blocked_before_start",
-            blockers=ordering_blockers,
-            skipped_action_ids=skipped_action_ids,
+            blockers=_dedupe_text_items(ordering_blockers),
+            skipped_action_ids=_dedupe_text_items(skipped_action_ids),
         )
     prepared_actions, validation_entries, validation_blockers = _prepare_action_execution(
         ordered_actions,
@@ -283,10 +299,12 @@ def run_managed_delivery_apply(
             action_plan_id=view.action_plan_id,
             plan_fingerprint=view.plan_fingerprint,
             result_status="blocked_before_start",
-            blockers=validation_blockers,
-            blocked_action_ids=[entry.action_id for entry in validation_entries],
+            blockers=_dedupe_text_items(validation_blockers),
+            blocked_action_ids=_dedupe_text_items(
+                [entry.action_id for entry in validation_entries]
+            ),
             ledger_entries=validation_entries,
-            skipped_action_ids=skipped_action_ids,
+            skipped_action_ids=_dedupe_text_items(skipped_action_ids),
         )
     ledger_entries: list[DeliveryActionLedgerEntry] = []
     executed_action_ids: list[str] = []
@@ -318,12 +336,12 @@ def run_managed_delivery_apply(
                 action_plan_id=view.action_plan_id,
                 plan_fingerprint=view.plan_fingerprint,
                 result_status="manual_recovery_required",
-                blockers=blockers,
-                executed_action_ids=executed_action_ids,
-                succeeded_action_ids=succeeded_action_ids,
-                failed_action_ids=failed_action_ids,
+                blockers=_dedupe_text_items(blockers),
+                executed_action_ids=_dedupe_text_items(executed_action_ids),
+                succeeded_action_ids=_dedupe_text_items(succeeded_action_ids),
+                failed_action_ids=_dedupe_text_items(failed_action_ids),
                 ledger_entries=ledger_entries,
-                skipped_action_ids=skipped_action_ids,
+                skipped_action_ids=_dedupe_text_items(skipped_action_ids),
             )
 
         prepared = prepared_actions.get(action.action_id, {})
@@ -353,12 +371,12 @@ def run_managed_delivery_apply(
                 action_plan_id=view.action_plan_id,
                 plan_fingerprint=view.plan_fingerprint,
                 result_status="manual_recovery_required",
-                blockers=blockers,
-                executed_action_ids=executed_action_ids,
-                succeeded_action_ids=succeeded_action_ids,
-                failed_action_ids=failed_action_ids,
+                blockers=_dedupe_text_items(blockers),
+                executed_action_ids=_dedupe_text_items(executed_action_ids),
+                succeeded_action_ids=_dedupe_text_items(succeeded_action_ids),
+                failed_action_ids=_dedupe_text_items(failed_action_ids),
                 ledger_entries=ledger_entries,
-                skipped_action_ids=skipped_action_ids,
+                skipped_action_ids=_dedupe_text_items(skipped_action_ids),
             )
         ledger_entries.append(
             DeliveryActionLedgerEntry(
@@ -385,15 +403,17 @@ def run_managed_delivery_apply(
         plan_fingerprint=view.plan_fingerprint,
         result_status="apply_succeeded_pending_browser_gate",
         browser_gate_required=True,
-        executed_action_ids=executed_action_ids,
-        succeeded_action_ids=succeeded_action_ids,
-        skipped_action_ids=skipped_action_ids,
+        executed_action_ids=_dedupe_text_items(executed_action_ids),
+        succeeded_action_ids=_dedupe_text_items(succeeded_action_ids),
+        skipped_action_ids=_dedupe_text_items(skipped_action_ids),
         ledger_entries=ledger_entries,
-        remediation_hints=[
-            "delivery is not complete",
-            "browser gate has not run",
-            "rollback/retry/cleanup refs recorded only",
-        ],
+        remediation_hints=_dedupe_text_items(
+            [
+                "delivery is not complete",
+                "browser gate has not run",
+                "rollback/retry/cleanup refs recorded only",
+            ]
+        ),
     )
 
 

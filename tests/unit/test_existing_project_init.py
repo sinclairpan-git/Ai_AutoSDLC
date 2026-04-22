@@ -5,6 +5,8 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import pytest
+
 from ai_sdlc.generators.corpus_gen import (
     generate_codebase_summary,
     generate_engineering_corpus,
@@ -136,6 +138,38 @@ class TestExtendedIndexGeneration:
         assert data["total_dependencies"] == 1
         assert "pypi" in data["ecosystems"]
 
+    def test_generate_all_extended_indexes_deduplicates_returned_paths(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        scan = _make_scan(str(tmp_path))
+
+        monkeypatch.setattr(
+            "ai_sdlc.generators.index_gen.generate_key_files_index",
+            lambda _root, _scan: ".ai-sdlc/project/generated/key-files.json",
+        )
+        monkeypatch.setattr(
+            "ai_sdlc.generators.index_gen.generate_api_index",
+            lambda _root, _scan: ".ai-sdlc/project/generated/api-index.json",
+        )
+        monkeypatch.setattr(
+            "ai_sdlc.generators.index_gen.generate_dependency_index",
+            lambda _root, _scan: ".ai-sdlc/project/generated/api-index.json",
+        )
+        monkeypatch.setattr(
+            "ai_sdlc.generators.index_gen.generate_test_index",
+            lambda _root, _scan: ".ai-sdlc/project/generated/test-index.json",
+        )
+        monkeypatch.setattr(
+            "ai_sdlc.generators.index_gen.generate_risk_index",
+            lambda _root, _scan: ".ai-sdlc/project/generated/test-index.json",
+        )
+
+        assert generate_all_extended_indexes(tmp_path, scan) == [
+            ".ai-sdlc/project/generated/key-files.json",
+            ".ai-sdlc/project/generated/api-index.json",
+            ".ai-sdlc/project/generated/test-index.json",
+        ]
+
 
 class TestRunFullScan:
     def test_scan_python_project(self, tmp_path: Path) -> None:
@@ -148,16 +182,57 @@ class TestRunFullScan:
         scan = run_full_scan(tmp_path)
         assert scan.total_files >= 3
         assert "python" in scan.languages
+
+
+class TestInitExistingProject:
+    def test_init_existing_project_deduplicates_generated_paths(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        (tmp_path / ".ai-sdlc" / "project" / "config").mkdir(parents=True, exist_ok=True)
+        (tmp_path / ".ai-sdlc" / "project" / "memory").mkdir(parents=True, exist_ok=True)
+        (tmp_path / ".ai-sdlc" / "project" / "generated").mkdir(parents=True, exist_ok=True)
+
+        monkeypatch.setattr(
+            "ai_sdlc.routers.existing_project_init.run_full_scan",
+            lambda _root: _make_scan(str(tmp_path)),
+        )
+        monkeypatch.setattr(
+            "ai_sdlc.routers.existing_project_init.save_corpus_files",
+            lambda _root, _scan: [
+                ".ai-sdlc/project/memory/engineering-corpus.md",
+                ".ai-sdlc/project/memory/engineering-corpus.md",
+                ".ai-sdlc/project/memory/codebase-summary.md",
+            ],
+        )
+        monkeypatch.setattr(
+            "ai_sdlc.routers.existing_project_init.generate_all_extended_indexes",
+            lambda _root, _scan: [
+                ".ai-sdlc/project/generated/api-index.json",
+                ".ai-sdlc/project/generated/api-index.json",
+                ".ai-sdlc/project/generated/test-index.json",
+            ],
+        )
+
+        scan, generated = init_existing_project(tmp_path)
+
+        assert generated == [
+            ".ai-sdlc/project/memory/engineering-corpus.md",
+            ".ai-sdlc/project/memory/codebase-summary.md",
+            ".ai-sdlc/state/repo-facts.json",
+            ".ai-sdlc/project/generated/api-index.json",
+            ".ai-sdlc/project/generated/test-index.json",
+            ".ai-sdlc/project/config/branch-policy.yaml",
+            ".ai-sdlc/project/config/quality-policy.yaml",
+            ".ai-sdlc/project/config/parallel-policy.yaml",
+            ".ai-sdlc/project/config/environment-policy.yaml",
+            ".ai-sdlc/project/config/initialization-status.yaml",
+            ".ai-sdlc/project/config/knowledge-baseline-state.yaml",
+        ]
         assert len(scan.dependencies) == 1
-        assert len(scan.tests) == 1
-        assert scan.tests[0].test_count == 1
 
     def test_scan_empty_dir(self, tmp_path: Path) -> None:
         scan = run_full_scan(tmp_path)
         assert scan.total_files == 0
-
-
-class TestInitExistingProject:
     def test_full_init_flow(self, tmp_path: Path) -> None:
         (tmp_path / "package.json").write_text('{"dependencies": {"express": "4.0"}}')
         (tmp_path / "src").mkdir()

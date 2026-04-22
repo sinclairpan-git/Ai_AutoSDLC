@@ -48,6 +48,18 @@ class FrontendContractScannerResult:
     observations: tuple[PageImplementationObservation, ...]
     matched_files: tuple[str, ...]
 
+    def __post_init__(self) -> None:
+        object.__setattr__(
+            self,
+            "observations",
+            tuple(_dedupe_observation_items(self.observations)),
+        )
+        object.__setattr__(
+            self,
+            "matched_files",
+            tuple(_dedupe_text_items(self.matched_files)),
+        )
+
 
 def scan_frontend_contract_observations(root: Path) -> FrontendContractScannerResult:
     """Scan source files for structured frontend contract observation annotations."""
@@ -150,6 +162,41 @@ def _extract_annotation_blocks(source: str) -> list[str]:
     for pattern in _BLOCK_PATTERNS:
         blocks.extend(match.group("payload").strip() for match in pattern.finditer(source))
     return blocks
+
+
+def _dedupe_text_items(values: object) -> list[str]:
+    deduped: list[str] = []
+    for value in values or ():
+        normalized = str(value).strip()
+        if normalized and normalized not in deduped:
+            deduped.append(normalized)
+    return deduped
+
+
+def _dedupe_observation_items(
+    values: object,
+) -> list[PageImplementationObservation]:
+    deduped: list[PageImplementationObservation] = []
+    seen: set[str] = set()
+    for value in values or ():
+        if not isinstance(value, PageImplementationObservation):
+            continue
+        key = json.dumps(
+            {
+                "page_id": value.page_id,
+                "recipe_id": value.recipe_id,
+                "i18n_keys": value.i18n_keys,
+                "validation_fields": value.validation_fields,
+                "new_legacy_usages": value.new_legacy_usages,
+            },
+            sort_keys=True,
+            ensure_ascii=False,
+        )
+        if key in seen:
+            continue
+        seen.add(key)
+        deduped.append(value)
+    return deduped
 
 
 def _parse_observation_block(

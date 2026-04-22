@@ -89,6 +89,44 @@ class TestKnowledgeModels:
         log.entries.append(entry)
         assert len(log.entries) == 1
 
+    def test_scanner_models_deduplicate_set_like_lists(self) -> None:
+        symbol = SymbolInfo(
+            name="App",
+            kind="class",
+            source_file="main.py",
+            decorators=["public", "public", "api"],
+        )
+        discovered_test = DiscoveredTestFile(
+            path="tests/test_app.py",
+            framework="pytest",
+            test_names=["test_a", "test_a", "test_b"],
+        )
+        scan = ScanResult(
+            root="/project",
+            entry_points=["main.py", "main.py", "cli.py"],
+            config_files=["pyproject.toml", "pyproject.toml"],
+            ignored_dirs=["node_modules", "node_modules", ".git"],
+            symbols=[symbol],
+            tests=[discovered_test],
+        )
+        refresh = RefreshEntry(
+            work_item_id="WI-2026-001",
+            refresh_level=RefreshLevel.L1,
+            triggered_at="2026-03-21T00:00:00",
+            changed_files=["src/app.py", "src/app.py"],
+            updated_indexes=["repo-facts.json", "repo-facts.json"],
+            updated_docs=["codebase-summary.md", "codebase-summary.md"],
+        )
+
+        assert symbol.decorators == ["public", "api"]
+        assert discovered_test.test_names == ["test_a", "test_b"]
+        assert scan.entry_points == ["main.py", "cli.py"]
+        assert scan.config_files == ["pyproject.toml"]
+        assert scan.ignored_dirs == ["node_modules", ".git"]
+        assert refresh.changed_files == ["src/app.py"]
+        assert refresh.updated_indexes == ["repo-facts.json"]
+        assert refresh.updated_docs == ["codebase-summary.md"]
+
 
 class TestIncidentModels:
     def test_brief_defaults(self) -> None:
@@ -124,6 +162,77 @@ class TestIncidentModels:
             lessons_learned=["Add memory limits"],
         )
         assert len(pm.lessons_learned) == 1
+
+    def test_incident_change_and_maintenance_models_deduplicate_set_like_lists(
+        self,
+    ) -> None:
+        analysis = IncidentAnalysis(
+            work_item_id="WI-2026-001",
+            summary="OOM crash in payment service",
+            probable_causes=["Memory leak", "Memory leak", "Config drift"],
+            affected_modules=["payment", "payment"],
+        )
+        incident_task = IncidentTask(
+            task_id="IT-1",
+            title="Fix memory leak",
+            file_paths=["src/batch.py", "src/batch.py"],
+        )
+        postmortem = PostmortemRecord(
+            work_item_id="WI-2026-001",
+            lessons_learned=["Add limits", "Add limits"],
+            action_items=["add-alert", "add-alert"],
+            prevention_measures=["budget", "budget"],
+        )
+        impact = ImpactAnalysis(
+            change_request_id="CR-001",
+            affected_specs=["spec-a", "spec-a"],
+            affected_plan_sections=["section-a", "section-a"],
+            affected_tasks=["task-a", "task-a"],
+            affected_files=["src/app.py", "src/app.py"],
+        )
+        maintenance_task = MaintenanceTask(
+            task_id="MT-1",
+            title="Bump version",
+            depends_on=["MT-0", "MT-0"],
+            file_paths=["package.json", "package.json"],
+        )
+        graph = SmallTaskGraph(
+            tasks=[maintenance_task],
+            execution_order=["MT-1", "MT-1", "MT-2"],
+        )
+        path = ExecutionPath(
+            steps=[
+                ExecutionPathStep(
+                    task_id="MT-2",
+                    title="Execute",
+                    depends_on=["MT-1", "MT-1"],
+                )
+            ]
+        )
+        brief = MaintenanceBrief(
+            description="Upgrade React",
+            impact_scope=["frontend/", "frontend/", "shared/"],
+        )
+
+        assert analysis.probable_causes == [
+            "Memory leak",
+            "Memory leak",
+            "Config drift",
+        ]
+        assert analysis.affected_modules == ["payment"]
+        assert incident_task.file_paths == ["src/batch.py"]
+        assert postmortem.lessons_learned == ["Add limits", "Add limits"]
+        assert postmortem.action_items == ["add-alert", "add-alert"]
+        assert postmortem.prevention_measures == ["budget", "budget"]
+        assert impact.affected_specs == ["spec-a"]
+        assert impact.affected_plan_sections == ["section-a"]
+        assert impact.affected_tasks == ["task-a"]
+        assert impact.affected_files == ["src/app.py"]
+        assert maintenance_task.depends_on == ["MT-0"]
+        assert maintenance_task.file_paths == ["package.json"]
+        assert graph.execution_order == ["MT-1", "MT-1", "MT-2"]
+        assert path.steps[0].depends_on == ["MT-1"]
+        assert brief.impact_scope == ["frontend/", "shared/"]
 
 
 class TestChangeRequestModels:

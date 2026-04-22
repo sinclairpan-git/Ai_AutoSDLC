@@ -9,6 +9,17 @@ import yaml
 from ai_sdlc.models.frontend_ui_kernel import FrontendUiKernelSet, PageRecipeStandard
 
 
+def _dedupe_paths(paths: list[Path]) -> list[Path]:
+    unique: list[Path] = []
+    seen: set[Path] = set()
+    for path in paths:
+        if path in seen:
+            continue
+        seen.add(path)
+        unique.append(path)
+    return unique
+
+
 def frontend_ui_kernel_root(root: Path) -> Path:
     """Return the canonical root for instantiated UI Kernel artifacts."""
 
@@ -57,7 +68,7 @@ def materialize_frontend_ui_kernel_artifacts(
 
     for recipe in kernel_set.page_recipes:
         output_paths.append(_write_page_recipe(base_dir, recipe))
-    return output_paths
+    return _dedupe_paths(output_paths)
 
 
 def _write_page_recipe(base_dir: Path, recipe: PageRecipeStandard) -> Path:

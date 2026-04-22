@@ -39,6 +39,17 @@ telemetry_app = typer.Typer(help="Manual telemetry recording commands.", no_args
 console = Console()
 
 
+def _dedupe_text_items(items: list[str]) -> list[str]:
+    seen: set[str] = set()
+    unique: list[str] = []
+    for item in items:
+        if item in seen:
+            continue
+        seen.add(item)
+        unique.append(item)
+    return unique
+
+
 def _resolve_root() -> Path:
     root = find_project_root()
     if root is None:
@@ -48,7 +59,7 @@ def _resolve_root() -> Path:
 
 
 def _bad_parameter(exc: ValidationError) -> typer.BadParameter:
-    message = "; ".join(error["msg"] for error in exc.errors())
+    message = "; ".join(_dedupe_text_items([error["msg"] for error in exc.errors()]))
     return typer.BadParameter(message)
 
 

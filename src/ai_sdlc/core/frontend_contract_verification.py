@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -30,6 +31,29 @@ FRONTEND_CONTRACT_DIAGNOSTIC_STATUS_SOURCE_PROFILE_MISMATCH = (
 FRONTEND_CONTRACT_DIAGNOSTIC_STATUS_VALID_EMPTY = "valid_empty"
 FRONTEND_CONTRACT_DIAGNOSTIC_STATUS_DRIFT = "drift"
 FRONTEND_CONTRACT_DIAGNOSTIC_STATUS_CLEAN = "clean"
+
+
+def _dedupe_text_items(values: object) -> list[str]:
+    deduped: list[str] = []
+    for value in values or []:
+        normalized = str(value).strip()
+        if normalized and normalized not in deduped:
+            deduped.append(normalized)
+    return deduped
+
+
+def _dedupe_mapping_items(values: object) -> list[dict[str, object]]:
+    deduped: list[dict[str, object]] = []
+    seen: set[str] = set()
+    for value in values or []:
+        if not isinstance(value, dict):
+            continue
+        key = json.dumps(value, sort_keys=True, ensure_ascii=False)
+        if key in seen:
+            continue
+        seen.add(key)
+        deduped.append(dict(value))
+    return deduped
 
 
 @dataclass(frozen=True, slots=True)
@@ -108,27 +132,41 @@ class FrontendContractVerificationReport:
     advisory_checks: tuple[str, ...]
     gate_result: GateResult
 
+    def __post_init__(self) -> None:
+        object.__setattr__(
+            self, "check_objects", tuple(_dedupe_text_items(self.check_objects))
+        )
+        object.__setattr__(self, "blockers", tuple(_dedupe_text_items(self.blockers)))
+        object.__setattr__(
+            self, "coverage_gaps", tuple(_dedupe_text_items(self.coverage_gaps))
+        )
+        object.__setattr__(
+            self, "advisory_checks", tuple(_dedupe_text_items(self.advisory_checks))
+        )
+
     def to_json_dict(self) -> dict[str, object]:
         return {
             "contracts_root": self.contracts_root,
             "source_name": self.source_name,
-            "check_objects": list(self.check_objects),
+            "check_objects": _dedupe_text_items(self.check_objects),
             "observation_artifact_ref": self.observation_artifact_ref,
             "observation_artifact_status": self.observation_artifact_status,
             "observation_count": self.observation_count,
             "diagnostic": self.diagnostic.to_json_dict(),
-            "blockers": list(self.blockers),
-            "coverage_gaps": list(self.coverage_gaps),
-            "advisory_checks": list(self.advisory_checks),
+            "blockers": _dedupe_text_items(self.blockers),
+            "coverage_gaps": _dedupe_text_items(self.coverage_gaps),
+            "advisory_checks": _dedupe_text_items(self.advisory_checks),
             "gate_verdict": self.gate_result.verdict.value,
-            "gate_checks": [
-                {
-                    "name": check.name,
-                    "passed": check.passed,
-                    "message": check.message,
-                }
-                for check in self.gate_result.checks
-            ],
+            "gate_checks": _dedupe_mapping_items(
+                [
+                    {
+                        "name": check.name,
+                        "passed": check.passed,
+                        "message": check.message,
+                    }
+                    for check in self.gate_result.checks
+                ]
+            ),
         }
 
 

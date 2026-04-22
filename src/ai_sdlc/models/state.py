@@ -5,7 +5,49 @@ from __future__ import annotations
 from enum import Enum
 from typing import Any
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
+
+
+def _dedupe_string_items(value: object) -> list[str]:
+    if value is None:
+        return []
+    unique: list[str] = []
+    seen: set[str] = set()
+    for item in value:
+        text = str(item)
+        if text in seen:
+            continue
+        seen.add(text)
+        unique.append(text)
+    return unique
+
+
+def _dedupe_int_pairs(value: object) -> list[tuple[int, int]]:
+    if value is None:
+        return []
+    unique: list[tuple[int, int]] = []
+    seen: set[tuple[int, int]] = set()
+    for item in value:
+        pair = tuple(item)
+        if len(pair) != 2:
+            continue
+        normalized = (int(pair[0]), int(pair[1]))
+        if normalized in seen:
+            continue
+        seen.add(normalized)
+        unique.append(normalized)
+    return unique
+
+
+def _dedupe_dict_string_lists(
+    value: object,
+) -> dict[str, list[str]]:
+    if value is None:
+        return {}
+    deduped: dict[str, list[str]] = {}
+    for key, items in dict(value).items():
+        deduped[str(key)] = _dedupe_string_items(items)
+    return deduped
 
 # ---------------------------------------------------------------------------
 # Checkpoint models (from checkpoint)
@@ -18,6 +60,11 @@ class CompletedStage(BaseModel):
     stage: str
     completed_at: str
     artifacts: list[str] = []
+
+    @field_validator("artifacts", mode="before")
+    @classmethod
+    def _dedupe_artifacts(cls, value: object) -> list[str]:
+        return _dedupe_string_items(value)
 
 
 class FeatureInfo(BaseModel):
@@ -129,6 +176,11 @@ class WorkingSet(BaseModel):
     active_files: list[str] = []
     context_summary: str = ""
 
+    @field_validator("active_files", mode="before")
+    @classmethod
+    def _dedupe_active_files(cls, value: object) -> list[str]:
+        return _dedupe_string_items(value)
+
 
 class ResumePack(BaseModel):
     """Snapshot for resuming after interruption."""
@@ -177,6 +229,18 @@ class Task(BaseModel):
     status: TaskStatus = TaskStatus.PENDING
     depends_on: list[str] = []
 
+    @field_validator(
+        "file_paths",
+        "allowed_paths",
+        "forbidden_paths",
+        "interface_contracts",
+        "depends_on",
+        mode="before",
+    )
+    @classmethod
+    def _dedupe_task_lists(cls, value: object) -> list[str]:
+        return _dedupe_string_items(value)
+
 
 class ExecutionBatch(BaseModel):
     """A batch of tasks to be executed together."""
@@ -223,6 +287,11 @@ class InterfaceContract(BaseModel):
     shared_interfaces: list[str] = []
     constraints: list[str] = []
 
+    @field_validator("shared_interfaces", "constraints", mode="before")
+    @classmethod
+    def _dedupe_interface_lists(cls, value: object) -> list[str]:
+        return _dedupe_string_items(value)
+
 
 class WorkerAssignment(BaseModel):
     """Assignment of a task slice to a specific worker."""
@@ -237,6 +306,11 @@ class WorkerAssignment(BaseModel):
     forbidden_paths: list[str] = []
     contract_id: str = ""
 
+    @field_validator("allowed_paths", "forbidden_paths", mode="before")
+    @classmethod
+    def _dedupe_assignment_lists(cls, value: object) -> list[str]:
+        return _dedupe_string_items(value)
+
 
 class OverlapResult(BaseModel):
     """Result of overlap detection between worker branches."""
@@ -250,6 +324,23 @@ class OverlapResult(BaseModel):
     recommendation: str = ""
     details: str = ""
 
+    @field_validator("overlapping_files", mode="before")
+    @classmethod
+    def _dedupe_overlapping_files(cls, value: object) -> list[str]:
+        return _dedupe_string_items(value)
+
+    @field_validator("conflicting_files", mode="before")
+    @classmethod
+    def _dedupe_conflicting_files(cls, value: object) -> dict[str, list[str]]:
+        return _dedupe_dict_string_lists(value)
+
+    @field_validator("conflicting_workers", mode="before")
+    @classmethod
+    def _dedupe_conflicting_workers(
+        cls, value: object
+    ) -> list[tuple[int, int]]:
+        return _dedupe_int_pairs(value)
+
 
 class MergeSimulation(BaseModel):
     """Result of a dry-run merge simulation."""
@@ -259,6 +350,11 @@ class MergeSimulation(BaseModel):
     predicted_conflicts: list[str] = Field(default_factory=list)
     merge_order: list[str] = Field(default_factory=list)
     notes: str = ""
+
+    @field_validator("conflicts", "predicted_conflicts", mode="before")
+    @classmethod
+    def _dedupe_merge_lists(cls, value: object) -> list[str]:
+        return _dedupe_string_items(value)
 
 
 class ParallelCoordinationArtifact(BaseModel):

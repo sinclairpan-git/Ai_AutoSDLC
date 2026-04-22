@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 from ai_sdlc.telemetry.contracts import (
@@ -32,6 +33,9 @@ from ai_sdlc.telemetry.provenance_contracts import (
     ProvenanceNodeFact,
 )
 from ai_sdlc.telemetry.provenance_inspection import (
+    ProvenanceAssessmentView,
+    ProvenanceChainModeView,
+    ProvenanceInspectionView,
     inspect_provenance_subject,
     render_provenance_explain,
     render_provenance_gaps,
@@ -290,6 +294,39 @@ def _write_sample_scope(tmp_path: Path) -> tuple[TelemetryStore, str]:
     return store, "provenance_node:pn_33333333333333333333333333333333"
 
 
+def test_provenance_inspection_view_runtime_object_canonicalizes_duplicates() -> None:
+    chain_mode = ProvenanceChainModeView(
+        kind="conversation_message",
+        mode="injected",
+        ref="provenance_node:pn_11111111111111111111111111111111",
+    )
+    view = ProvenanceInspectionView(
+        subject_ref="provenance_node:pn_33333333333333333333333333333333",
+        triggered_by=("prov://conversation/message-001", "prov://conversation/message-001"),
+        invoked=("prov://skill/skill-001", "prov://skill/skill-001"),
+        cited=("prov://rule/src/ai_sdlc/rules/pipeline.md#execute-gate",) * 2,
+        chain_modes=(chain_mode, chain_mode),
+        assessment=ProvenanceAssessmentView(
+            overall_chain_status="partial",
+            highest_confidence_source="injected",
+            key_gaps=("provenance_gap:pg_1", "provenance_gap:pg_1"),
+        ),
+        failures=(
+            {"code": "missing_telemetry_object", "object_ref": "event:evt_1"},
+            {"code": "missing_telemetry_object", "object_ref": "event:evt_1"},
+        ),
+    )
+
+    assert view.triggered_by == ("prov://conversation/message-001",)
+    assert view.invoked == ("prov://skill/skill-001",)
+    assert view.cited == ("prov://rule/src/ai_sdlc/rules/pipeline.md#execute-gate",)
+    assert view.chain_modes == (chain_mode,)
+    assert view.assessment.key_gaps == ("provenance_gap:pg_1",)
+    assert view.failures == (
+        {"code": "missing_telemetry_object", "object_ref": "event:evt_1"},
+    )
+
+
 def test_inspection_view_answers_required_questions_with_stable_json_shape(
     tmp_path: Path,
 ) -> None:
@@ -327,6 +364,33 @@ def test_inspection_view_answers_required_questions_with_stable_json_shape(
         "highest_confidence_source",
         "key_gaps",
     ]
+
+
+def test_inspection_view_deduplicates_repeated_loaded_nodes_and_gaps(tmp_path: Path) -> None:
+    store, subject_ref = _write_sample_scope(tmp_path)
+
+    nodes_path = next(store.local_root.rglob("nodes.ndjson"))
+    node_payload = json.loads(
+        next(
+            line
+            for line in nodes_path.read_text(encoding="utf-8").splitlines()
+            if line.strip()
+        )
+    )
+    with nodes_path.open("a", encoding="utf-8") as handle:
+        handle.write(json.dumps(node_payload, ensure_ascii=False) + "\n")
+
+    gap_path = next(store.local_root.rglob("gaps/*.json"))
+    duplicate_gap_path = gap_path.with_name("duplicate-" + gap_path.name)
+    duplicate_gap_path.write_text(gap_path.read_text(encoding="utf-8"), encoding="utf-8")
+
+    payload = inspect_provenance_subject(store, subject_ref).model_dump(mode="json")
+
+    assert payload["triggered_by"] == ["prov://conversation/message-001"]
+    assert payload["assessment"]["key_gaps"] == ["unsupported @ rule.segment"]
+    assert [entry["ref"] for entry in payload["chain_modes"]].count(
+        "provenance_gap:pg_11111111111111111111111111111111"
+    ) == 1
 
 
 def test_human_views_match_summary_and_gap_semantics(tmp_path: Path) -> None:

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from ai_sdlc.models.frontend_provider_expansion import (
     build_p3_frontend_provider_expansion_baseline,
@@ -56,6 +56,20 @@ def _find_duplicates(values: list[str]) -> list[str]:
     return duplicates
 
 
+def _dedupe_strings(value: object) -> list[str]:
+    if value is None:
+        return []
+    unique: list[str] = []
+    seen: set[str] = set()
+    for item in value:
+        text = str(item)
+        if text in seen:
+            continue
+        seen.add(text)
+        unique.append(text)
+    return unique
+
+
 class FrontendProviderRuntimeAdapterModel(BaseModel):
     """Base model for structured provider runtime adapter artifacts."""
 
@@ -93,6 +107,11 @@ class AdapterScaffoldContract(FrontendProviderRuntimeAdapterModel):
     files: list[AdapterScaffoldFile] = Field(default_factory=list)
     boundary_violation_codes: list[str] = Field(default_factory=list)
 
+    @field_validator("required_layer_ids", "boundary_violation_codes", mode="before")
+    @classmethod
+    def _dedupe_scaffold_lists(cls, value: object) -> list[str]:
+        return _dedupe_strings(value)
+
     @model_validator(mode="after")
     def _validate_contract(self) -> AdapterScaffoldContract:
         if not self.files:
@@ -122,6 +141,11 @@ class RuntimeBoundaryReceipt(FrontendProviderRuntimeAdapterModel):
     evidence_return_state: EvidenceReturnState
     boundary_constraints: list[str] = Field(default_factory=list)
     default_entry_contract_id: str = "kernel-wrapper"
+
+    @field_validator("source_work_item_ids", "boundary_constraints", mode="before")
+    @classmethod
+    def _dedupe_receipt_lists(cls, value: object) -> list[str]:
+        return _dedupe_strings(value)
 
     @model_validator(mode="after")
     def _validate_receipt(self) -> RuntimeBoundaryReceipt:
@@ -171,6 +195,18 @@ class ProviderRuntimeAdapterHandoffContract(FrontendProviderRuntimeAdapterModel)
     cli_fields: list[str] = Field(default_factory=list)
     verify_fields: list[str] = Field(default_factory=list)
 
+    @field_validator(
+        "compatible_versions",
+        "canonical_files",
+        "program_service_fields",
+        "cli_fields",
+        "verify_fields",
+        mode="before",
+    )
+    @classmethod
+    def _dedupe_contract_lists(cls, value: object) -> list[str]:
+        return _dedupe_strings(value)
+
     @model_validator(mode="after")
     def _validate_contract(self) -> ProviderRuntimeAdapterHandoffContract:
         if self.current_version not in self.compatible_versions:
@@ -193,6 +229,11 @@ class FrontendProviderRuntimeAdapterSet(FrontendProviderRuntimeAdapterModel):
     source_work_item_ids: list[str] = Field(default_factory=list)
     adapter_targets: list[ProviderRuntimeAdapterTarget] = Field(default_factory=list)
     handoff_contract: ProviderRuntimeAdapterHandoffContract
+
+    @field_validator("source_work_item_ids", mode="before")
+    @classmethod
+    def _dedupe_source_work_item_ids(cls, value: object) -> list[str]:
+        return _dedupe_strings(value)
 
     @model_validator(mode="after")
     def _validate_set(self) -> FrontendProviderRuntimeAdapterSet:

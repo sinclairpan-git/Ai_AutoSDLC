@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from ai_sdlc.models.frontend_ui_kernel import build_mvp_frontend_ui_kernel
 
@@ -17,6 +17,20 @@ def _find_duplicates(values: list[str]) -> list[str]:
             duplicates.append(value)
         seen.add(value)
     return duplicates
+
+
+def _dedupe_strings(value: object) -> list[str]:
+    if value is None:
+        return []
+    unique: list[str] = []
+    seen: set[str] = set()
+    for item in value:
+        text = str(item)
+        if text in seen:
+            continue
+        seen.add(text)
+        unique.append(text)
+    return unique
 
 
 class FrontendProviderProfileModel(BaseModel):
@@ -33,6 +47,11 @@ class ProviderMapping(FrontendProviderProfileModel):
     mapping_kind: str = "wrapper"
     alignment_notes: list[str] = Field(default_factory=list)
 
+    @field_validator("alignment_notes", mode="before")
+    @classmethod
+    def _dedupe_alignment_notes(cls, value: object) -> list[str]:
+        return _dedupe_strings(value)
+
 
 class ProviderWhitelistEntry(FrontendProviderProfileModel):
     """Whitelisted Provider entry for one semantic component."""
@@ -42,6 +61,16 @@ class ProviderWhitelistEntry(FrontendProviderProfileModel):
     capability_curation: list[str] = Field(default_factory=list)
     dependency_curation: list[str] = Field(default_factory=list)
 
+    @field_validator(
+        "api_curation",
+        "capability_curation",
+        "dependency_curation",
+        mode="before",
+    )
+    @classmethod
+    def _dedupe_whitelist_lists(cls, value: object) -> list[str]:
+        return _dedupe_strings(value)
+
 
 class ProviderStyleSupportEntry(FrontendProviderProfileModel):
     """Canonical style support truth for one style pack within a Provider."""
@@ -50,6 +79,11 @@ class ProviderStyleSupportEntry(FrontendProviderProfileModel):
     fidelity_status: Literal["full", "partial", "degraded", "unsupported"]
     degradation_reason_codes: list[str] = Field(default_factory=list)
     notes: list[str] = Field(default_factory=list)
+
+    @field_validator("degradation_reason_codes", "notes", mode="before")
+    @classmethod
+    def _dedupe_style_support_lists(cls, value: object) -> list[str]:
+        return _dedupe_strings(value)
 
 
 class ProviderRiskIsolationPolicy(FrontendProviderProfileModel):
@@ -73,6 +107,11 @@ class ProviderRiskIsolationPolicy(FrontendProviderProfileModel):
         ]
     )
 
+    @field_validator("disallowed_capabilities", "exception_requirements", mode="before")
+    @classmethod
+    def _dedupe_risk_isolation_lists(cls, value: object) -> list[str]:
+        return _dedupe_strings(value)
+
     @model_validator(mode="after")
     def _reject_full_vue_use(self) -> ProviderRiskIsolationPolicy:
         if self.allow_full_vue_use:
@@ -93,6 +132,11 @@ class LegacyAdapterPolicy(FrontendProviderProfileModel):
             "migration-level-declared",
         ]
     )
+
+    @field_validator("allowed_when", mode="before")
+    @classmethod
+    def _dedupe_allowed_when(cls, value: object) -> list[str]:
+        return _dedupe_strings(value)
 
     @model_validator(mode="after")
     def _reject_default_entry(self) -> LegacyAdapterPolicy:
@@ -119,6 +163,16 @@ class EnterpriseVue2ProviderProfile(FrontendProviderProfileModel):
         default_factory=ProviderRiskIsolationPolicy
     )
     legacy_adapter: LegacyAdapterPolicy = Field(default_factory=LegacyAdapterPolicy)
+
+    @field_validator(
+        "install_strategy_ids",
+        "availability_prerequisites",
+        "cross_stack_fallback_targets",
+        mode="before",
+    )
+    @classmethod
+    def _dedupe_profile_lists(cls, value: object) -> list[str]:
+        return _dedupe_strings(value)
 
     @model_validator(mode="after")
     def _enforce_unique_ids(self) -> EnterpriseVue2ProviderProfile:

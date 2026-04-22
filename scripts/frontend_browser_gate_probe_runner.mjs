@@ -234,6 +234,15 @@ async function captureProbe(playwright, payload) {
             ? payload.component_library_packages.map((item) => String(item))
             : [],
           provider_theme_adapter_id: String(payload.provider_theme_adapter_id || "").trim(),
+          provider_runtime_adapter_carrier_mode: String(
+            payload.provider_runtime_adapter_carrier_mode || "",
+          ).trim(),
+          provider_runtime_adapter_delivery_state: String(
+            payload.provider_runtime_adapter_delivery_state || "",
+          ).trim(),
+          provider_runtime_adapter_evidence_state: String(
+            payload.provider_runtime_adapter_evidence_state || "",
+          ).trim(),
           page_schema_ids: Array.isArray(payload.page_schema_ids)
             ? payload.page_schema_ids.map((item) => String(item))
             : [],

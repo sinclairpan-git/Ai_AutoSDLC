@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from ai_sdlc.telemetry.contracts import validate_object_ref
 from ai_sdlc.telemetry.enums import (
@@ -32,6 +32,20 @@ _FAILURE_GAP_KIND = {
 }
 
 
+def _dedupe_model_items(values: object) -> tuple[object, ...]:
+    deduped: list[object] = []
+    seen: set[str] = set()
+    for value in values or ():
+        if not isinstance(value, BaseModel):
+            continue
+        key = value.__class__.__name__ + ":" + value.model_dump_json()
+        if key in seen:
+            continue
+        seen.add(key)
+        deduped.append(value)
+    return tuple(deduped)
+
+
 class ProvenanceResolutionFailure(BaseModel):
     """Stable machine-readable provenance failure detail."""
 
@@ -54,6 +68,11 @@ class ProvenanceResolutionReport(BaseModel):
     failures: tuple[ProvenanceResolutionFailure, ...] = Field(default_factory=tuple)
     assessment: ProvenanceAssessment | None = None
     gaps: tuple[ProvenanceGapFinding, ...] = Field(default_factory=tuple)
+
+    @field_validator("failures", "gaps", mode="after")
+    @classmethod
+    def _dedupe_report_items(cls, value: object) -> tuple[object, ...]:
+        return _dedupe_model_items(value)
 
 
 class ProvenanceResolver:

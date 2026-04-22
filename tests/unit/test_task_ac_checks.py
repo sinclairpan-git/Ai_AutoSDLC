@@ -89,6 +89,26 @@ def test_doc_first_execute_blocker_reports_forbidden_touched_paths() -> None:
     assert "tests/unit/test_verify_constraints.py" in blocker
 
 
+def test_doc_first_execute_blocker_deduplicates_forbidden_touched_paths() -> None:
+    md = (
+        "### Task 6.44 — 仅需求沉淀\n"
+        "- **产物**：`specs/001-ai-sdlc-framework/spec.md`\n"
+        "- **验证**：审阅通过\n"
+    )
+    blocker = doc_first_execute_blocker(
+        md,
+        task_ref="6.44",
+        touched_paths=(
+            "tests/unit/test_verify_constraints.py",
+            "tests/unit/test_verify_constraints.py",
+            "src/ai_sdlc/core/verify_constraints.py",
+        ),
+    )
+    assert blocker is not None
+    assert blocker.count("tests/unit/test_verify_constraints.py") == 1
+    assert blocker.count("src/ai_sdlc/core/verify_constraints.py") == 1
+
+
 def test_next_pending_task_ref_uses_current_batch_and_last_committed(tmp_path: Path) -> None:
     tasks_md = tmp_path / "tasks.md"
     tasks_md.write_text(

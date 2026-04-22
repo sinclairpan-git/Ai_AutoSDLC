@@ -340,7 +340,7 @@ class TelemetryStore:
             for payload in self._read_ndjson(path):
                 if payload.get(id_field) == source_ref:
                     matches.append((path, payload))
-        return matches
+        return self._dedupe_append_only_matches(matches)
 
     def canonical_evidence_payload(self, source_ref: str) -> tuple[Path, dict[str, Any]] | None:
         """Return the latest legal evidence payload for an evidence id."""
@@ -471,13 +471,23 @@ class TelemetryStore:
     def _iter_event_payloads(self) -> list[dict[str, Any]]:
         payloads: list[dict[str, Any]] = []
         for path in sorted(self.local_root.rglob("events.ndjson")):
-            payloads.extend(self._read_ndjson(path))
+            payloads.extend(
+                payload
+                for _path, payload in self._dedupe_append_only_matches(
+                    [(path, item) for item in self._read_ndjson(path)]
+                )
+            )
         return payloads
 
     def _iter_evidence_payloads(self) -> list[dict[str, Any]]:
         payloads: list[dict[str, Any]] = []
         for path in sorted(self.local_root.rglob("evidence.ndjson")):
-            payloads.extend(self._read_ndjson(path))
+            payloads.extend(
+                payload
+                for _path, payload in self._dedupe_append_only_matches(
+                    [(path, item) for item in self._read_ndjson(path)]
+                )
+            )
         return payloads
 
     def _latest_scope_ids(self) -> dict[str, str | None]:
@@ -556,3 +566,20 @@ class TelemetryStore:
             for line in path.read_text(encoding="utf-8").splitlines()
             if line.strip()
         ]
+
+    @staticmethod
+    def _dedupe_append_only_matches(
+        items: list[tuple[Path, dict[str, Any]]],
+    ) -> list[tuple[Path, dict[str, Any]]]:
+        deduped: list[tuple[Path, dict[str, Any]]] = []
+        seen: set[tuple[str, str]] = set()
+        for path, payload in items:
+            key = (
+                str(path),
+                json.dumps(payload, sort_keys=True, ensure_ascii=False),
+            )
+            if key in seen:
+                continue
+            seen.add(key)
+            deduped.append((path, payload))
+        return deduped

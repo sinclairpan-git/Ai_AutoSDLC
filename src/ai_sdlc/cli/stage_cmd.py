@@ -16,6 +16,17 @@ stage_app = typer.Typer(help="Stage-based pipeline dispatch")
 console = Console()
 
 
+def _dedupe_text_items(items: list[str]) -> list[str]:
+    seen: set[str] = set()
+    unique: list[str] = []
+    for item in items:
+        if item in seen:
+            continue
+        seen.add(item)
+        unique.append(item)
+    return unique
+
+
 @stage_app.command("show")
 def stage_show(
     name: str = typer.Argument(..., help="Stage name to display"),
@@ -37,7 +48,9 @@ def stage_show(
     if cp:
         missing = dispatcher.check_prerequisites(name, cp)
         if missing:
-            console.print(f"[yellow]前置阶段未完成: {', '.join(missing)}[/yellow]\n")
+            console.print(
+                f"[yellow]前置阶段未完成: {', '.join(_dedupe_text_items(missing))}[/yellow]\n"
+            )
 
     output = dispatcher.format_checklist(manifest)
     console.print(output)
@@ -83,7 +96,9 @@ def stage_run(
     if cp:
         missing = dispatcher.check_prerequisites(name, cp)
         if missing:
-            console.print(f"[red]前置阶段未完成: {', '.join(missing)}[/red]")
+            console.print(
+                f"[red]前置阶段未完成: {', '.join(_dedupe_text_items(missing))}[/red]"
+            )
             console.print("请先完成前置阶段后再执行此阶段。")
             raise typer.Exit(code=1)
 

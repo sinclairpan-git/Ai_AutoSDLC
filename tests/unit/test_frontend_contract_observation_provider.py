@@ -10,6 +10,9 @@ from ai_sdlc.core.frontend_contract_drift import PageImplementationObservation
 from ai_sdlc.core.frontend_contract_observation_provider import (
     FRONTEND_CONTRACT_OBSERVATION_ARTIFACT_NAME,
     FRONTEND_CONTRACT_OBSERVATION_SCHEMA_VERSION,
+    FrontendContractObservationArtifact,
+    ObservationFreshnessMarker,
+    ObservationProviderProvenance,
     build_frontend_contract_observation_artifact,
     load_frontend_contract_observation_artifact,
     observation_artifact_path,
@@ -121,3 +124,163 @@ def test_load_frontend_contract_observation_artifact_rejects_invalid_observation
 
     with pytest.raises(ValueError, match="observations\\[0\\] invalid"):
         load_frontend_contract_observation_artifact(artifact_path)
+
+
+def test_frontend_contract_observation_artifact_to_json_dict_deduplicates_lists() -> None:
+    artifact = build_frontend_contract_observation_artifact(
+        observations=[
+            PageImplementationObservation(
+                page_id="user-create",
+                recipe_id="form-create",
+                i18n_keys=["submit", "submit"],
+                validation_fields=["username", "username"],
+                new_legacy_usages=["legacy.users.create", "legacy.users.create"],
+            ),
+            PageImplementationObservation(
+                page_id="user-create",
+                recipe_id="form-create",
+                i18n_keys=["submit", "submit"],
+                validation_fields=["username", "username"],
+                new_legacy_usages=["legacy.users.create", "legacy.users.create"],
+            ),
+        ],
+        provider_kind="scanner",
+        provider_name="frontend-contract-scanner",
+        generated_at="2026-04-03T09:00:00Z",
+    )
+
+    payload = artifact.to_json_dict()
+
+    assert payload["observations"] == [
+        {
+            "page_id": "user-create",
+            "recipe_id": "form-create",
+            "i18n_keys": ["submit"],
+            "validation_fields": ["username"],
+            "new_legacy_usages": ["legacy.users.create"],
+        }
+    ]
+
+
+def test_build_frontend_contract_observation_artifact_deduplicates_observations_in_source_object() -> None:
+    artifact = build_frontend_contract_observation_artifact(
+        observations=[
+            PageImplementationObservation(
+                page_id="user-create",
+                recipe_id="form-create",
+                i18n_keys=["submit", "submit"],
+                validation_fields=["username", "username"],
+                new_legacy_usages=["legacy.users.create", "legacy.users.create"],
+            ),
+            PageImplementationObservation(
+                page_id="user-create",
+                recipe_id="form-create",
+                i18n_keys=["submit", "submit"],
+                validation_fields=["username", "username"],
+                new_legacy_usages=["legacy.users.create", "legacy.users.create"],
+            ),
+        ],
+        provider_kind="scanner",
+        provider_name="frontend-contract-scanner",
+        generated_at="2026-04-03T09:00:00Z",
+    )
+
+    assert artifact.observations == (
+        PageImplementationObservation(
+            page_id="user-create",
+            recipe_id="form-create",
+            i18n_keys=["submit"],
+            validation_fields=["username"],
+            new_legacy_usages=["legacy.users.create"],
+        ),
+    )
+
+
+def test_frontend_contract_observation_artifact_runtime_object_canonicalizes_observations() -> None:
+    artifact = FrontendContractObservationArtifact(
+        schema_version=FRONTEND_CONTRACT_OBSERVATION_SCHEMA_VERSION,
+        provenance=ObservationProviderProvenance(
+            provider_kind="scanner",
+            provider_name="frontend-contract-scanner",
+        ),
+        freshness=ObservationFreshnessMarker(generated_at="2026-04-03T09:00:00Z"),
+        observations=(
+            PageImplementationObservation(
+                page_id="user-create",
+                recipe_id="form-create",
+                i18n_keys=["submit", "submit"],
+                validation_fields=["username", "username"],
+                new_legacy_usages=["legacy.users.create", "legacy.users.create"],
+            ),
+            PageImplementationObservation(
+                page_id="user-create",
+                recipe_id="form-create",
+                i18n_keys=["submit", "submit"],
+                validation_fields=["username", "username"],
+                new_legacy_usages=["legacy.users.create", "legacy.users.create"],
+            ),
+        ),
+    )
+
+    assert artifact.observations == (
+        PageImplementationObservation(
+            page_id="user-create",
+            recipe_id="form-create",
+            i18n_keys=["submit"],
+            validation_fields=["username"],
+            new_legacy_usages=["legacy.users.create"],
+        ),
+    )
+
+
+def test_load_frontend_contract_observation_artifact_deduplicates_repeated_observations(
+    tmp_path,
+) -> None:
+    artifact_path = tmp_path / FRONTEND_CONTRACT_OBSERVATION_ARTIFACT_NAME
+    artifact_path.write_text(
+        json.dumps(
+            {
+                "schema_version": FRONTEND_CONTRACT_OBSERVATION_SCHEMA_VERSION,
+                "provenance": {
+                    "provider_kind": "scanner",
+                    "provider_name": "frontend-contract-scanner",
+                },
+                "freshness": {"generated_at": "2026-04-02T12:00:00Z"},
+                "observations": [
+                    {
+                        "page_id": "user-create",
+                        "recipe_id": "form-create",
+                        "i18n_keys": ["submit", "submit"],
+                        "validation_fields": ["username", "username"],
+                        "new_legacy_usages": [
+                            "legacy.users.create",
+                            "legacy.users.create",
+                        ],
+                    },
+                    {
+                        "page_id": "user-create",
+                        "recipe_id": "form-create",
+                        "i18n_keys": ["submit", "submit"],
+                        "validation_fields": ["username", "username"],
+                        "new_legacy_usages": [
+                            "legacy.users.create",
+                            "legacy.users.create",
+                        ],
+                    },
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    loaded = load_frontend_contract_observation_artifact(artifact_path)
+
+    assert loaded.observations == (
+        PageImplementationObservation(
+            page_id="user-create",
+            recipe_id="form-create",
+            i18n_keys=["submit"],
+            validation_fields=["username"],
+            new_legacy_usages=["legacy.users.create"],
+        ),
+    )

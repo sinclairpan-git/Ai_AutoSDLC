@@ -10,6 +10,17 @@ from ai_sdlc.models.frontend_provider_expansion import (
 from ai_sdlc.models.frontend_solution_confirmation import FrontendSolutionSnapshot
 
 
+def _dedupe_text_items(items: list[str] | tuple[str, ...]) -> list[str]:
+    seen: set[str] = set()
+    unique: list[str] = []
+    for item in items:
+        if item in seen:
+            continue
+        seen.add(item)
+        unique.append(item)
+    return unique
+
+
 @dataclass(frozen=True, slots=True)
 class FrontendProviderExpansionValidationResult:
     """Structured validation result for provider expansion truth."""
@@ -24,6 +35,15 @@ class FrontendProviderExpansionValidationResult:
     react_stack_visibility: str = ""
     react_binding_visibility: str = ""
     admitted_provider_ids: list[str] = field(default_factory=list)
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, "blockers", _dedupe_text_items(self.blockers))
+        object.__setattr__(self, "warnings", _dedupe_text_items(self.warnings))
+        object.__setattr__(
+            self,
+            "admitted_provider_ids",
+            _dedupe_text_items(self.admitted_provider_ids),
+        )
 
 
 def validate_frontend_provider_expansion(
@@ -81,8 +101,8 @@ def validate_frontend_provider_expansion(
 
     return FrontendProviderExpansionValidationResult(
         passed=not blockers,
-        blockers=blockers,
-        warnings=warnings,
+        blockers=_dedupe_text_items(blockers),
+        warnings=_dedupe_text_items(warnings),
         artifact_root=expansion.handoff_contract.artifact_root,
         effective_provider_id=solution_snapshot.effective_provider_id,
         requested_frontend_stack=solution_snapshot.requested_frontend_stack,
@@ -90,9 +110,13 @@ def validate_frontend_provider_expansion(
         react_stack_visibility=expansion.react_exposure_boundary.current_stack_visibility,
         react_binding_visibility=expansion.react_exposure_boundary.current_binding_visibility,
         admitted_provider_ids=sorted(
-            provider.provider_id
-            for provider in expansion.providers
-            if provider.roster_admission_state == "admitted"
+            _dedupe_text_items(
+                [
+                    provider.provider_id
+                    for provider in expansion.providers
+                    if provider.roster_admission_state == "admitted"
+                ]
+            )
         ),
     )
 

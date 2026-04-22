@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Callable
 from pathlib import Path
+from typing import Any
 
 import typer
 from rich.console import Console
@@ -76,10 +78,33 @@ from ai_sdlc.scanners.frontend_contract_scanner import (
     write_frontend_contract_scanner_artifact,
 )
 from ai_sdlc.telemetry.clock import utc_now_z
+from ai_sdlc.telemetry.display import (
+    summarize_capability_closure_focus_for_display,
+    summarize_frontend_delivery_scope_for_display,
+    summarize_frontend_delivery_status_for_display,
+    summarize_frontend_inheritance_status_for_display,
+    summarize_next_action_for_display,
+    summarize_truth_ledger_explain_for_display,
+    summarize_truth_ledger_focus_for_display,
+    summarize_truth_ledger_frontend_delivery_for_display,
+    summarize_truth_ledger_frontend_inheritance_for_display,
+    summarize_truth_ledger_next_steps_for_display,
+    summarize_workitem_findings_for_display,
+    summarize_workitem_reason_for_display,
+)
 from ai_sdlc.telemetry.readiness import build_status_json_surface
 from ai_sdlc.utils.helpers import AI_SDLC_DIR, find_project_root
 
 console = Console()
+
+
+def _dedupe_status_text_items(values: object) -> list[str]:
+    deduped: list[str] = []
+    for value in values or []:
+        normalized = str(value).strip()
+        if normalized and normalized not in deduped:
+            deduped.append(normalized)
+    return deduped
 
 
 def _startup_next_step_hint() -> str:
@@ -118,11 +143,9 @@ def _print_reconcile_guidance(
         )
     )
 
-    table = Table(title="Legacy Artifact Probe")
-    table.add_column("Property", style="cyan")
-    table.add_column("Value")
+    table = _property_table("Legacy Artifact Probe")
     table.add_row("Artifact Layout", hint.layout)
-    table.add_row("Detected Files", ", ".join(hint.detected_files))
+    table.add_row("Detected Files", ", ".join(_dedupe_status_text_items(hint.detected_files)))
     table.add_row("Checkpoint Stage", hint.checkpoint_stage)
     table.add_row("Checkpoint Feature", hint.checkpoint_feature_id)
     table.add_row("Suggested Stage", hint.current_stage)
@@ -146,6 +169,448 @@ def _latest_summary_preview(summary: str) -> str:
 
 def _print_resume_pack_event(message: str) -> None:
     console.print(f"[yellow]{message}[/yellow]")
+
+
+def _add_optional_row(table: Table, title: str, value: object) -> bool:
+    text = str(value).strip()
+    if not text:
+        return False
+    table.add_row(title, text)
+    return True
+
+
+def _property_table(title: str) -> Table:
+    table = Table(title=title)
+    table.add_column("Property", style="cyan")
+    table.add_column("Value")
+    return table
+
+
+def _add_state_detail_rows(
+    table: Table,
+    *,
+    title: str,
+    state: object,
+    detail_title: str,
+    detail: object,
+) -> None:
+    table.add_row(title, str(state))
+    table.add_row(detail_title, str(detail))
+
+
+def _add_workitem_diagnostics_rows(
+    table: Table,
+    workitem_diagnostics: dict[str, Any],
+) -> None:
+    table.add_row("Workitem Diagnostics", str(workitem_diagnostics.get("state", "-")))
+    active_work_item = str(workitem_diagnostics.get("active_work_item", "")).strip()
+    _add_optional_row(table, "Workitem Scope", active_work_item)
+    workitem_source = str(workitem_diagnostics.get("source", "")).strip()
+    _add_optional_row(table, "Workitem Source", workitem_source)
+    blocking_count = workitem_diagnostics.get("blocking_count")
+    actionable_count = workitem_diagnostics.get("actionable_count")
+    if blocking_count is not None or actionable_count is not None:
+        findings = summarize_workitem_findings_for_display(
+            blocking_count=blocking_count,
+            actionable_count=actionable_count,
+        )
+        _add_optional_row(table, "Workitem Findings", findings)
+    workitem_truth = str(workitem_diagnostics.get("truth_classification", "")).strip()
+    _add_optional_row(table, "Workitem Truth", workitem_truth)
+    workitem_detail = str(
+        workitem_diagnostics.get("primary_reason")
+        or workitem_diagnostics.get("truth_detail")
+        or workitem_diagnostics.get("detail", "-")
+    ).strip()
+    if workitem_detail:
+        workitem_detail = summarize_workitem_reason_for_display(
+            workitem_detail,
+            source=workitem_source,
+        )
+    _add_optional_row(table, "Workitem Detail", workitem_detail)
+    workitem_frontend = workitem_diagnostics.get("frontend_delivery_status")
+    workitem_inheritance = workitem_diagnostics.get("frontend_inheritance_status")
+    if isinstance(workitem_frontend, dict):
+        _add_optional_row(
+            table,
+            "Workitem Frontend",
+            summarize_frontend_delivery_status_for_display(workitem_frontend),
+        )
+        _add_optional_row(
+            table,
+            "Workitem Frontend Scope",
+            summarize_frontend_delivery_scope_for_display(),
+        )
+    if isinstance(workitem_inheritance, dict):
+        _add_optional_row(
+            table,
+            "Workitem Inheritance",
+            summarize_frontend_inheritance_status_for_display(workitem_inheritance),
+        )
+    workitem_next = str(workitem_diagnostics.get("next_required_action", "")).strip()
+    _add_optional_row(
+        table,
+        "Workitem Next",
+        summarize_next_action_for_display(workitem_next),
+    )
+
+
+def _add_truth_ledger_rows(
+    table: Table,
+    truth_ledger: dict[str, Any],
+) -> None:
+    _add_state_detail_rows(
+        table,
+        title="Truth Ledger",
+        state=truth_ledger["state"],
+        detail_title="Truth Ledger Detail",
+        detail=truth_ledger["detail"],
+    )
+    table.add_row("Truth Snapshot", str(truth_ledger["snapshot_state"]))
+    if truth_ledger.get("release_targets"):
+        table.add_row(
+            "Truth Release Targets",
+            ", ".join(_dedupe_status_text_items(truth_ledger["release_targets"])),
+        )
+    if truth_ledger.get("release_capabilities"):
+        summary = summarize_truth_ledger_focus_for_display(
+            truth_ledger["release_capabilities"]
+        )
+        _add_optional_row(table, "Truth Ledger Focus", summary)
+        explanations = summarize_truth_ledger_explain_for_display(
+            truth_ledger["release_capabilities"]
+        )
+        _add_optional_row(table, "Truth Ledger Explain", explanations)
+        frontend_delivery = summarize_truth_ledger_frontend_delivery_for_display(
+            truth_ledger["release_capabilities"]
+        )
+        _add_optional_row(table, "Truth Ledger Frontend", frontend_delivery)
+        if frontend_delivery:
+            _add_optional_row(
+                table,
+                "Truth Ledger Frontend Scope",
+                summarize_frontend_delivery_scope_for_display(),
+            )
+        frontend_inheritance = summarize_truth_ledger_frontend_inheritance_for_display(
+            truth_ledger["release_capabilities"]
+        )
+        _add_optional_row(table, "Truth Ledger Inheritance", frontend_inheritance)
+        next_steps = summarize_truth_ledger_next_steps_for_display(
+            truth_ledger["release_capabilities"]
+        )
+        _add_optional_row(table, "Truth Ledger Next Step", next_steps)
+
+
+def _add_capability_closure_rows(
+    table: Table,
+    capability_closure: dict[str, Any],
+) -> None:
+    _add_state_detail_rows(
+        table,
+        title="Capability Closure",
+        state=capability_closure["state"],
+        detail_title="Capability Closure Detail",
+        detail=capability_closure["detail"],
+    )
+    summary = summarize_capability_closure_focus_for_display(
+        capability_closure.get("open_clusters", [])
+    )
+    _add_optional_row(table, "Capability Closure Focus", summary)
+
+
+def _add_guard_rows(
+    table: Table,
+    *,
+    title: str,
+    detail_title: str,
+    reasons_title: str,
+    surface: dict[str, Any],
+) -> None:
+    _add_state_detail_rows(
+        table,
+        title=title,
+        state=surface.get("state", "-"),
+        detail_title=detail_title,
+        detail=surface.get("detail", "") or "-",
+    )
+    if surface.get("reason_codes"):
+        table.add_row(
+            reasons_title,
+            ", ".join(_dedupe_status_text_items(surface["reason_codes"])),
+        )
+
+
+def _add_branch_lifecycle_rows(
+    table: Table,
+    branch_lifecycle: dict[str, Any],
+) -> None:
+    _add_state_detail_rows(
+        table,
+        title="Branch Lifecycle",
+        state=branch_lifecycle.get("state", "-"),
+        detail_title="Branch Lifecycle Detail",
+        detail=branch_lifecycle.get("detail", "-"),
+    )
+    branch_lifecycle_next = str(branch_lifecycle.get("next_required_action", "")).strip()
+    if branch_lifecycle_next:
+        table.add_row("Branch Lifecycle Next", branch_lifecycle_next)
+
+
+def _add_status_guard_rows(
+    table: Table,
+    *,
+    formal_artifact_target: dict[str, Any],
+    backlog_breach_guard: dict[str, Any],
+    execute_authorization: dict[str, Any],
+) -> None:
+    for title, detail_title, reasons_title, surface in (
+        (
+            "Formal Artifact Target",
+            "Formal Artifact Detail",
+            "Formal Artifact Reasons",
+            formal_artifact_target,
+        ),
+        (
+            "Backlog Breach Guard",
+            "Backlog Breach Detail",
+            "Backlog Breach Reasons",
+            backlog_breach_guard,
+        ),
+        (
+            "Execute Authorization",
+            "Execute Authorization Detail",
+            "Execute Auth Reasons",
+            execute_authorization,
+        ),
+    ):
+        _add_guard_rows(
+            table,
+            title=title,
+            detail_title=detail_title,
+            reasons_title=reasons_title,
+            surface=surface,
+        )
+
+
+def _add_status_surface_optional_rows(
+    table: Table,
+    status_surface: dict[str, Any],
+) -> None:
+    branch_lifecycle = status_surface.get("branch_lifecycle")
+    if branch_lifecycle is not None:
+        _add_branch_lifecycle_rows(table, branch_lifecycle)
+    workitem_diagnostics = status_surface.get("workitem_diagnostics")
+    if workitem_diagnostics is not None:
+        _add_workitem_diagnostics_rows(table, workitem_diagnostics)
+    capability_closure = status_surface.get("capability_closure")
+    if capability_closure is not None:
+        _add_capability_closure_rows(table, capability_closure)
+    truth_ledger = status_surface.get("truth_ledger")
+    if truth_ledger is not None:
+        _add_truth_ledger_rows(table, truth_ledger)
+
+
+def _add_governance_rows(table: Table, governance: Any) -> None:
+    table.add_row("Governance Frozen", "yes" if governance.frozen else "no")
+    if governance.frozen_at:
+        table.add_row("Governance Frozen At", governance.frozen_at)
+
+
+def _add_branch_context_rows(
+    table: Table,
+    *,
+    current_branch: str | None,
+    docs_baseline_ref: str | None,
+    docs_baseline_at: str | None,
+) -> None:
+    if current_branch:
+        table.add_row("Current Branch", current_branch)
+    if docs_baseline_ref:
+        table.add_row("Docs Baseline", docs_baseline_ref)
+    if docs_baseline_at:
+        table.add_row("Docs Baseline At", docs_baseline_at)
+
+
+def _add_reconcile_rows(table: Table, hint: ReconcileHint) -> None:
+    table.add_row("Reconciled Stage", hint.current_stage)
+    table.add_row("Reconciled Spec Dir", hint.spec_dir)
+    table.add_row("Detected Files", ", ".join(_dedupe_status_text_items(hint.detected_files)))
+
+
+def _add_working_set_snapshot_rows(table: Table, snapshot: Any) -> None:
+    if snapshot.prd_path:
+        table.add_row("PRD", snapshot.prd_path)
+    if snapshot.spec_path:
+        table.add_row("Spec", snapshot.spec_path)
+    if snapshot.plan_path:
+        table.add_row("Plan", snapshot.plan_path)
+
+
+def _add_adapter_governance_rows(
+    table: Table, adapter_governance: dict[str, Any]
+) -> None:
+    table.add_row("Agent Target", str(adapter_governance["agent_target"] or "-"))
+    table.add_row(
+        "Ingress State",
+        str(adapter_governance["adapter_ingress_state"] or "-"),
+    )
+    table.add_row(
+        "Verification Result",
+        str(adapter_governance["adapter_verification_result"] or "-"),
+    )
+    table.add_row(
+        "Canonical Path",
+        str(adapter_governance["adapter_canonical_path"] or "-"),
+    )
+    table.add_row(
+        "Activation State",
+        str(adapter_governance["adapter_activation_state"] or "-"),
+    )
+    table.add_row(
+        "Governance Activation",
+        str(adapter_governance["governance_activation_mode"]).replace("_", " "),
+    )
+    table.add_row(
+        "Governance Detail",
+        str(adapter_governance["governance_activation_detail"]),
+    )
+
+
+def _load_resume_pack_or_exit(root: Path, *, refreshed_notice: str) -> Any:
+    try:
+        resume_events: list[str] = []
+        pack = load_resume_pack(
+            root,
+            observer=_print_resume_pack_event,
+            event_log=resume_events,
+        )
+    except ResumePackError as exc:
+        console.print(f"[red]{exc}[/red]")
+        raise typer.Exit(code=1) from None
+    except CheckpointLoadError as exc:
+        console.print(f"[red]Invalid checkpoint: {exc}[/red]")
+        raise typer.Exit(code=1) from None
+    if resume_events:
+        console.print(f"[yellow]{refreshed_notice}[/yellow]")
+    return pack
+
+
+def _resolve_guard_surface(
+    surface: dict[str, Any] | None,
+    *,
+    evaluator: Callable[[], Any],
+) -> dict[str, Any]:
+    if surface is not None:
+        normalized_surface = dict(surface)
+        normalized_surface["reason_codes"] = _dedupe_status_text_items(
+            normalized_surface.get("reason_codes", [])
+        )
+        return normalized_surface
+    evaluated = evaluator()
+    return {
+        "state": evaluated.state,
+        "detail": evaluated.detail,
+        "reason_codes": _dedupe_status_text_items(evaluated.reason_codes),
+    }
+
+
+def _add_checkpoint_progress_rows(
+    table: Table,
+    *,
+    checkpoint: Checkpoint,
+    resume_pack: Any,
+) -> None:
+    table.add_row("Pipeline Stage", checkpoint.current_stage)
+    table.add_row("Execution Mode", checkpoint.execution_mode)
+    table.add_row("AI Decisions", str(checkpoint.ai_decisions_count))
+    completed = (
+        ", ".join(
+            _dedupe_status_text_items(s.stage for s in checkpoint.completed_stages)
+        )
+        or "none"
+    )
+    table.add_row("Completed Stages", completed)
+    if checkpoint.feature:
+        table.add_row("Feature ID", checkpoint.feature.id)
+        _add_branch_context_rows(
+            table,
+            current_branch=checkpoint.feature.current_branch,
+            docs_baseline_ref=checkpoint.feature.docs_baseline_ref,
+            docs_baseline_at=checkpoint.feature.docs_baseline_at,
+        )
+    if checkpoint.execute_progress:
+        progress = checkpoint.execute_progress
+        table.add_row(
+            "Execute Progress",
+            f"Batch {progress.current_batch}/{progress.total_batches}",
+        )
+    if resume_pack is not None and resume_pack.current_batch:
+        table.add_row("Resume Batch", str(resume_pack.current_batch))
+    if resume_pack is not None and resume_pack.last_committed_task:
+        table.add_row("Resume Last Task", resume_pack.last_committed_task)
+    if checkpoint.linked_wi_id:
+        table.add_row("Linked WI ID", checkpoint.linked_wi_id)
+    if checkpoint.linked_plan_uri:
+        table.add_row("Linked plan URI", checkpoint.linked_plan_uri)
+    if checkpoint.last_synced_at:
+        table.add_row("Last synced (plan)", checkpoint.last_synced_at)
+
+
+def _add_active_work_item_status_rows(
+    table: Table,
+    *,
+    root: Path,
+    active_work_item: str,
+) -> None:
+    execution_plan = load_execution_plan(root, active_work_item)
+    runtime = load_runtime_state(root, active_work_item)
+    working_set = load_working_set(root, active_work_item)
+    latest_summary = load_latest_summary(root, active_work_item)
+    if execution_plan is not None:
+        table.add_row(
+            "Execution Plan",
+            f"{execution_plan.total_tasks} tasks / {execution_plan.total_batches} batches",
+        )
+    if runtime is not None:
+        if runtime.current_task:
+            table.add_row("Runtime Task", runtime.current_task)
+        if runtime.last_updated:
+            table.add_row("Runtime Updated", runtime.last_updated)
+    if working_set is not None and working_set.active_files:
+        table.add_row("Active Files", ", ".join(_dedupe_status_text_items(working_set.active_files)))
+    if latest_summary:
+        table.add_row("Latest Summary", _latest_summary_preview(latest_summary))
+    reviewer_decision = load_latest_reviewer_decision(root, active_work_item)
+    if reviewer_decision is not None:
+        status_view = reviewer_decision.to_status_view()
+        table.add_row(
+            "Latest Reviewer Decision",
+            f"{status_view['summary']} | next: {status_view['next_action']}",
+        )
+
+    resume_point = load_resume_point(root, active_work_item)
+    if resume_point is not None:
+        table.add_row(
+            "Resume Point",
+            f"{resume_point.stage} / batch {resume_point.batch}",
+        )
+    execution_path = load_execution_path(root, active_work_item)
+    if execution_path is not None and execution_path.ordered_task_ids:
+        table.add_row(
+            "Execution Path",
+            ", ".join(execution_path.ordered_task_ids[:3]),
+        )
+    coordination = load_parallel_coordination_artifact(root, active_work_item)
+    if coordination is not None:
+        table.add_row(
+            "Parallel Coordination",
+            f"{coordination.worker_count} workers",
+        )
+        if coordination.merge_order:
+            table.add_row(
+                "Parallel Merge Order",
+                ", ".join(coordination.merge_order),
+            )
 
 
 # ---------------------------------------------------------------------------
@@ -269,208 +734,62 @@ def status_command(
         raise typer.Exit(code=1)
 
     hint = detect_reconcile_hint(root)
-    table = Table(title="AI-SDLC Status")
-    table.add_column("Property", style="cyan")
-    table.add_column("Value")
+    table = _property_table("AI-SDLC Status")
 
     table.add_row("Project", state.project_name)
     table.add_row("Status", state.status.value)
     table.add_row("Version", state.version)
     table.add_row("Next WI Seq", str(state.next_work_item_seq))
-    table.add_row("Agent Target", str(adapter_governance["agent_target"] or "-"))
-    table.add_row(
-        "Ingress State",
-        str(adapter_governance["adapter_ingress_state"] or "-"),
-    )
-    table.add_row(
-        "Verification Result",
-        str(adapter_governance["adapter_verification_result"] or "-"),
-    )
-    table.add_row(
-        "Canonical Path",
-        str(adapter_governance["adapter_canonical_path"] or "-"),
-    )
-    table.add_row(
-        "Activation State",
-        str(adapter_governance["adapter_activation_state"] or "-"),
-    )
-    table.add_row(
-        "Governance Activation",
-        str(adapter_governance["governance_activation_mode"]).replace("_", " "),
-    )
-    table.add_row(
-        "Governance Detail",
-        str(adapter_governance["governance_activation_detail"]),
-    )
+    _add_adapter_governance_rows(table, adapter_governance)
 
     resume_pack = None
     checkpoint_usable = not (hint is not None and hint.checkpoint_stage == "missing")
     cp = load_checkpoint(root) if checkpoint_usable else None
     if (root / CHECKPOINT_PATH).exists() and checkpoint_usable:
-        resume_events: list[str] = []
-        try:
-            resume_pack = load_resume_pack(
-                root,
-                observer=_print_resume_pack_event,
-                event_log=resume_events,
-            )
-        except CheckpointLoadError as exc:
-            console.print(f"[red]Invalid checkpoint: {exc}[/red]")
-            raise typer.Exit(code=1) from None
-        except ResumePackError as exc:
-            console.print(f"[red]{exc}[/red]")
-            raise typer.Exit(code=1) from None
-        if resume_events:
-            console.print("[yellow]status using refreshed resume-pack[/yellow]")
+        resume_pack = _load_resume_pack_or_exit(
+            root,
+            refreshed_notice="status using refreshed resume-pack",
+        )
         cp = load_checkpoint(root, strict=True)
 
     if cp:
-        table.add_row("Pipeline Stage", cp.current_stage)
-        table.add_row("Execution Mode", cp.execution_mode)
-        table.add_row("AI Decisions", str(cp.ai_decisions_count))
-        completed = ", ".join(s.stage for s in cp.completed_stages) or "none"
-        table.add_row("Completed Stages", completed)
-        if cp.feature:
-            table.add_row("Feature ID", cp.feature.id)
-            table.add_row("Current Branch", cp.feature.current_branch)
-            if cp.feature.docs_baseline_ref:
-                table.add_row("Docs Baseline", cp.feature.docs_baseline_ref)
-            if cp.feature.docs_baseline_at:
-                table.add_row("Docs Baseline At", cp.feature.docs_baseline_at)
-        if cp.execute_progress:
-            ep = cp.execute_progress
-            table.add_row(
-                "Execute Progress",
-                f"Batch {ep.current_batch}/{ep.total_batches}",
-            )
-        if resume_pack is not None and resume_pack.current_batch:
-            table.add_row("Resume Batch", str(resume_pack.current_batch))
-        if resume_pack is not None and resume_pack.last_committed_task:
-            table.add_row("Resume Last Task", resume_pack.last_committed_task)
-        if cp.linked_wi_id:
-            table.add_row("Linked WI ID", cp.linked_wi_id)
-        if cp.linked_plan_uri:
-            table.add_row("Linked plan URI", cp.linked_plan_uri)
-        if cp.last_synced_at:
-            table.add_row("Last synced (plan)", cp.last_synced_at)
+        _add_checkpoint_progress_rows(
+            table,
+            checkpoint=cp,
+            resume_pack=resume_pack,
+        )
         work_item_id = _surface_work_item_id(cp)
         active_wi_id = active_work_item_id(cp)
         if active_wi_id:
-            execution_plan = load_execution_plan(root, active_wi_id)
-            runtime = load_runtime_state(root, active_wi_id)
-            working_set = load_working_set(root, active_wi_id)
-            latest_summary = load_latest_summary(root, active_wi_id)
-            if execution_plan is not None:
-                table.add_row(
-                    "Execution Plan",
-                    f"{execution_plan.total_tasks} tasks / {execution_plan.total_batches} batches",
-                )
-            if runtime is not None:
-                if runtime.current_task:
-                    table.add_row("Runtime Task", runtime.current_task)
-                if runtime.last_updated:
-                    table.add_row("Runtime Updated", runtime.last_updated)
-            if working_set is not None and working_set.active_files:
-                table.add_row("Active Files", ", ".join(working_set.active_files))
-            if latest_summary:
-                table.add_row("Latest Summary", _latest_summary_preview(latest_summary))
-            reviewer_decision = load_latest_reviewer_decision(root, active_wi_id)
-            if reviewer_decision is not None:
-                status_view = reviewer_decision.to_status_view()
-                table.add_row(
-                    "Latest Reviewer Decision",
-                    f"{status_view['summary']} | next: {status_view['next_action']}",
-                )
+            _add_active_work_item_status_rows(
+                table,
+                root=root,
+                active_work_item=active_wi_id,
+            )
         if work_item_id:
             governance = load_governance_state(root, work_item_id)
             if governance is not None:
-                table.add_row("Governance Frozen", "yes" if governance.frozen else "no")
-                if governance.frozen_at:
-                    table.add_row("Governance Frozen At", governance.frozen_at)
-        if active_wi_id:
-            resume_point = load_resume_point(root, active_wi_id)
-            if resume_point is not None:
-                table.add_row(
-                    "Resume Point",
-                    f"{resume_point.stage} / batch {resume_point.batch}",
-                )
-            execution_path = load_execution_path(root, active_wi_id)
-            if execution_path is not None and execution_path.ordered_task_ids:
-                table.add_row(
-                    "Execution Path",
-                    ", ".join(execution_path.ordered_task_ids[:3]),
-                )
-            coordination = load_parallel_coordination_artifact(root, active_wi_id)
-            if coordination is not None:
-                table.add_row(
-                    "Parallel Coordination",
-                    f"{coordination.worker_count} workers",
-                )
-                if coordination.merge_order:
-                    table.add_row(
-                        "Parallel Merge Order",
-                        ", ".join(coordination.merge_order),
-                    )
+                _add_governance_rows(table, governance)
 
-    execute_authorization = evaluate_execute_authorization(root=root, checkpoint=cp)
-    formal_artifact_target = evaluate_formal_artifact_target_guard(root)
-    backlog_breach_guard = evaluate_backlog_breach_guard(root)
-    table.add_row("Formal Artifact Target", formal_artifact_target.state)
-    table.add_row("Formal Artifact Detail", formal_artifact_target.detail or "-")
-    if formal_artifact_target.reason_codes:
-        table.add_row(
-            "Formal Artifact Reasons",
-            ", ".join(formal_artifact_target.reason_codes),
-        )
-    table.add_row("Backlog Breach Guard", backlog_breach_guard.state)
-    table.add_row("Backlog Breach Detail", backlog_breach_guard.detail or "-")
-    if backlog_breach_guard.reason_codes:
-        table.add_row(
-            "Backlog Breach Reasons",
-            ", ".join(backlog_breach_guard.reason_codes),
-        )
-    table.add_row("Execute Authorization", execute_authorization.state)
-    table.add_row("Execute Authorization Detail", execute_authorization.detail or "-")
-    if execute_authorization.reason_codes:
-        table.add_row(
-            "Execute Auth Reasons",
-            ", ".join(execute_authorization.reason_codes),
-        )
-    capability_closure = status_surface.get("capability_closure")
-    if capability_closure is not None:
-        table.add_row("Capability Closure", str(capability_closure["state"]))
-        table.add_row(
-            "Capability Closure Detail",
-            str(capability_closure["detail"]),
-        )
-        sample_clusters = capability_closure.get("open_clusters", [])[:3]
-        if sample_clusters:
-            summary = ", ".join(
-                f"{cluster['cluster_id']} ({cluster['closure_state']})"
-                for cluster in sample_clusters
-            )
-            if capability_closure["open_cluster_count"] > len(sample_clusters):
-                summary += ", ..."
-            table.add_row("Capability Closure Focus", summary)
-    truth_ledger = status_surface.get("truth_ledger")
-    if truth_ledger is not None:
-        table.add_row("Truth Ledger", str(truth_ledger["state"]))
-        table.add_row("Truth Snapshot", str(truth_ledger["snapshot_state"]))
-        table.add_row("Truth Ledger Detail", str(truth_ledger["detail"]))
-        if truth_ledger.get("release_targets"):
-            table.add_row(
-                "Truth Release Targets",
-                ", ".join(str(item) for item in truth_ledger["release_targets"]),
-            )
-        sample_capabilities = truth_ledger.get("release_capabilities", [])[:3]
-        if sample_capabilities:
-            summary = ", ".join(
-                f"{item['capability_id']} ({item['audit_state']})"
-                for item in sample_capabilities
-            )
-            if len(truth_ledger["release_capabilities"]) > len(sample_capabilities):
-                summary += ", ..."
-            table.add_row("Truth Ledger Focus", summary)
+    execute_authorization = _resolve_guard_surface(
+        status_surface.get("execute_authorization"),
+        evaluator=lambda: evaluate_execute_authorization(root=root, checkpoint=cp),
+    )
+    formal_artifact_target = _resolve_guard_surface(
+        status_surface.get("formal_artifact_target"),
+        evaluator=lambda: evaluate_formal_artifact_target_guard(root),
+    )
+    backlog_breach_guard = _resolve_guard_surface(
+        status_surface.get("backlog_breach_guard"),
+        evaluator=lambda: evaluate_backlog_breach_guard(root),
+    )
+    _add_status_guard_rows(
+        table,
+        formal_artifact_target=formal_artifact_target,
+        backlog_breach_guard=backlog_breach_guard,
+        execute_authorization=execute_authorization,
+    )
+    _add_status_surface_optional_rows(table, status_surface)
 
     console.print(table)
     if hint is not None:
@@ -533,55 +852,32 @@ def recover_command(
             )
             hint = applied
 
-    try:
-        resume_events: list[str] = []
-        pack = load_resume_pack(
-            root,
-            observer=_print_resume_pack_event,
-            event_log=resume_events,
-        )
-    except ResumePackError as exc:
-        console.print(f"[red]{exc}[/red]")
-        raise typer.Exit(code=1) from None
-    except CheckpointLoadError as exc:
-        console.print(f"[red]Invalid checkpoint: {exc}[/red]")
-        raise typer.Exit(code=1) from None
-    if resume_events:
-        console.print("[yellow]recover continuing with refreshed resume-pack[/yellow]")
+    pack = _load_resume_pack_or_exit(
+        root,
+        refreshed_notice="recover continuing with refreshed resume-pack",
+    )
     cp = load_checkpoint(root)
 
-    table = Table(title="Recovery Info")
-    table.add_column("Property", style="cyan")
-    table.add_column("Value")
+    table = _property_table("Recovery Info")
     table.add_row("Resume Stage", pack.current_stage)
     table.add_row("Current Batch", str(pack.current_batch))
     table.add_row("Last Task", pack.last_committed_task or "none")
     table.add_row("Timestamp", pack.timestamp)
-    if pack.current_branch:
-        table.add_row("Current Branch", pack.current_branch)
-    if pack.docs_baseline_ref:
-        table.add_row("Docs Baseline", pack.docs_baseline_ref)
-    if pack.docs_baseline_at:
-        table.add_row("Docs Baseline At", pack.docs_baseline_at)
+    _add_branch_context_rows(
+        table,
+        current_branch=pack.current_branch,
+        docs_baseline_ref=pack.docs_baseline_ref,
+        docs_baseline_at=pack.docs_baseline_at,
+    )
     if hint is not None:
-        table.add_row("Reconciled Stage", hint.current_stage)
-        table.add_row("Reconciled Spec Dir", hint.spec_dir)
-        table.add_row("Detected Files", ", ".join(hint.detected_files))
+        _add_reconcile_rows(table, hint)
 
-    ws = pack.working_set_snapshot
-    if ws.prd_path:
-        table.add_row("PRD", ws.prd_path)
-    if ws.spec_path:
-        table.add_row("Spec", ws.spec_path)
-    if ws.plan_path:
-        table.add_row("Plan", ws.plan_path)
+    _add_working_set_snapshot_rows(table, pack.working_set_snapshot)
     work_item_id = _surface_work_item_id(cp)
     if work_item_id:
         governance = load_governance_state(root, work_item_id)
         if governance is not None:
-            table.add_row("Governance Frozen", "yes" if governance.frozen else "no")
-            if governance.frozen_at:
-                table.add_row("Governance Frozen At", governance.frozen_at)
+            _add_governance_rows(table, governance)
 
     console.print(
         Panel(
@@ -708,10 +1004,16 @@ def scan_command(
 
     if scan.risks:
         console.print(f"\n[yellow]Risks detected: {len(scan.risks)}[/yellow]")
-        for risk in scan.risks[:10]:
-            console.print(
-                f"  [{risk.severity}] {risk.category}: {risk.path} — {risk.description}"
-            )
+        risk_lines: list[str] = []
+        for risk in scan.risks:
+            rendered = f"[{risk.severity}] {risk.category}: {risk.path} — {risk.description}"
+            if rendered in risk_lines:
+                continue
+            risk_lines.append(rendered)
+            if len(risk_lines) >= 10:
+                break
+        for risk_line in risk_lines:
+            console.print(f"  {risk_line}")
 
 
 # ---------------------------------------------------------------------------

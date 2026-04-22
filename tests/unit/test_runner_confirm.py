@@ -17,7 +17,11 @@ from ai_sdlc.core.frontend_contract_observation_provider import (
     write_frontend_contract_observation_artifact,
 )
 from ai_sdlc.core.program_service import ProgramService
-from ai_sdlc.core.runner import PipelineHaltError, SDLCRunner
+from ai_sdlc.core.runner import (
+    PipelineHaltError,
+    SDLCRunner,
+    _program_truth_gate_surface,
+)
 from ai_sdlc.core.state_machine import save_work_item
 from ai_sdlc.models.gate import GateCheck, GateResult, GateVerdict
 from ai_sdlc.models.project import ProjectConfig
@@ -236,7 +240,7 @@ class TestConfirmMode:
         assert ctx["tests_passed"] is True
         assert ctx["close_check_attested"] is True
 
-    def test_close_context_dry_run_skips_program_truth_audit_surface(
+    def test_close_context_dry_run_includes_program_truth_audit_surface(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         _bootstrap_project(tmp_path)
@@ -292,12 +296,25 @@ class TestConfirmMode:
 
         monkeypatch.setattr("ai_sdlc.core.runner.run_close_check", _fake_close_check)
 
-        def _explode_program_truth(*args: object, **kwargs: object) -> dict[str, object]:
-            raise AssertionError("program truth audit should be skipped in dry-run")
+        def _fake_program_truth(*args: object, **kwargs: object) -> dict[str, object]:
+            return {
+                "required": True,
+                "ready": False,
+                "state": "stale",
+                "detail": "truth_snapshot_stale: drift detected",
+                "frontend_inheritance_status": {
+                    "generation": "not_inherited",
+                    "quality": "not_inherited",
+                },
+                "next_required_actions": [
+                    "python -m ai_sdlc program truth sync --execute --yes",
+                    "python -m ai_sdlc program truth sync --execute --yes"
+                ],
+            }
 
         monkeypatch.setattr(
             "ai_sdlc.core.runner._program_truth_gate_surface",
-            _explode_program_truth,
+            _fake_program_truth,
         )
 
         runner = SDLCRunner(tmp_path)
@@ -306,9 +323,187 @@ class TestConfirmMode:
 
         ctx = runner._build_context("close", cp, dry_run=True)
 
-        assert "program_truth_audit_required" not in ctx
+        assert ctx["program_truth_audit_required"] is True
+        assert ctx["program_truth_audit_ready"] is False
+        assert ctx["program_truth_audit_state"] == "stale"
+        assert "truth_snapshot_stale" in str(ctx["program_truth_audit_detail"])
+        assert ctx["program_truth_audit_frontend_inheritance_status"] == {
+            "generation": "not_inherited",
+            "quality": "not_inherited",
+        }
+        assert ctx["program_truth_audit_next_actions"] == [
+            "python -m ai_sdlc program truth sync --execute --yes"
+        ]
         assert ctx["all_tasks_complete"] is True
         assert ctx["tests_passed"] is True
+
+    def test_close_context_attests_task_and_test_truth_even_when_close_check_has_other_blockers(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        _bootstrap_project(tmp_path)
+        spec_dir = tmp_path / "specs" / "WI-001"
+        spec_dir.mkdir(parents=True, exist_ok=True)
+        (spec_dir / "development-summary.md").write_text("# Summary\n", encoding="utf-8")
+        save_checkpoint(
+            tmp_path,
+            Checkpoint(
+                current_stage="close",
+                feature=FeatureInfo(
+                    id="WI-001",
+                    spec_dir="specs/WI-001",
+                    design_branch="design/WI-001",
+                    feature_branch="feature/WI-001",
+                    current_branch="feature/WI-001",
+                ),
+            ),
+        )
+
+        def _fake_close_check(
+            *,
+            cwd: Path | None,
+            wi: Path,
+            all_docs: bool = False,
+            include_program_truth: bool = True,
+        ) -> CloseCheckResult:
+            return CloseCheckResult(
+                ok=False,
+                blockers=[
+                    "BLOCKER: git close-out verification failed: git working tree has uncommitted changes; close-out is not fully committed"
+                ],
+                checks=[
+                    {"name": "tasks_completion", "ok": True, "detail": "ok"},
+                    {"name": "verification_profile", "ok": True, "detail": "ok"},
+                    {"name": "git_closure", "ok": False, "detail": "dirty"},
+                    {"name": "done_gate", "ok": False, "detail": "completion still blocked"},
+                ],
+                wi_dir=spec_dir,
+                error=None,
+            )
+
+        monkeypatch.setattr("ai_sdlc.core.runner.run_close_check", _fake_close_check)
+
+        runner = SDLCRunner(tmp_path)
+        cp = load_checkpoint(tmp_path)
+        assert cp is not None
+
+        ctx = runner._build_context("close", cp)
+
+        assert ctx["all_tasks_complete"] is True
+        assert ctx["tests_passed"] is True
+        assert ctx["close_check_ok"] is False
+        assert ctx["close_check_blockers"] == [
+            "BLOCKER: git close-out verification failed: git working tree has uncommitted changes; close-out is not fully committed"
+        ]
+
+    def test_close_context_deduplicates_program_truth_capabilities_and_close_check_blockers(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        _bootstrap_project(tmp_path)
+        spec_dir = tmp_path / "specs" / "WI-001"
+        spec_dir.mkdir(parents=True, exist_ok=True)
+        (spec_dir / "development-summary.md").write_text("# Summary\n", encoding="utf-8")
+        save_checkpoint(
+            tmp_path,
+            Checkpoint(
+                current_stage="close",
+                feature=FeatureInfo(
+                    id="WI-001",
+                    spec_dir="specs/WI-001",
+                    design_branch="design/WI-001",
+                    feature_branch="feature/WI-001",
+                    current_branch="feature/WI-001",
+                ),
+            ),
+        )
+
+        def _fake_close_check(
+            *,
+            cwd: Path | None,
+            wi: Path,
+            all_docs: bool = False,
+            include_program_truth: bool = True,
+        ) -> CloseCheckResult:
+            return CloseCheckResult(
+                ok=False,
+                blockers=["tasks_incomplete", "tasks_incomplete", "tests_failed"],
+                checks=[],
+                wi_dir=spec_dir,
+                error=None,
+            )
+
+        def _fake_program_truth(*args: object, **kwargs: object) -> dict[str, object]:
+            return {
+                "required": True,
+                "ready": False,
+                "state": "blocked",
+                "detail": "detail",
+                "matched_capabilities": [
+                    "frontend-mainline-delivery",
+                    "frontend-mainline-delivery",
+                    "close-attestation",
+                ],
+                "frontend_inheritance_status": {},
+                "next_required_actions": [],
+            }
+
+        monkeypatch.setattr("ai_sdlc.core.runner.run_close_check", _fake_close_check)
+        monkeypatch.setattr(
+            "ai_sdlc.core.runner._program_truth_gate_surface",
+            _fake_program_truth,
+        )
+
+        runner = SDLCRunner(tmp_path)
+        cp = load_checkpoint(tmp_path)
+        assert cp is not None
+
+        ctx = runner._build_context("close", cp)
+
+        assert ctx["close_check_blockers"] == ["tasks_incomplete", "tests_failed"]
+        assert ctx["program_truth_audit_required"] is True
+
+    def test_program_truth_gate_surface_deduplicates_matched_capabilities(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        manifest_path = tmp_path / "program-manifest.yaml"
+        manifest_path.write_text("schema_version: '2'\nprogram:\n  goal: 'x'\n", encoding="utf-8")
+        spec_dir = tmp_path / "specs" / "WI-001"
+        spec_dir.mkdir(parents=True, exist_ok=True)
+
+        class _FakeProgramService:
+            def __init__(self, root: Path, manifest: Path) -> None:
+                self.root = root
+                self.manifest = manifest
+
+            def load_manifest(self) -> dict[str, object]:
+                return {}
+
+            def validate_manifest(self, manifest: object) -> object:
+                return object()
+
+            def build_spec_truth_readiness(self, manifest: object, *, spec_path: Path, validation_result: object):
+                class _Readiness:
+                    state = "blocked"
+                    detail = "detail"
+                    ready = False
+                    matched_capabilities = [
+                        "frontend-mainline-delivery",
+                        "frontend-mainline-delivery",
+                        "close-attestation",
+                    ]
+                    frontend_inheritance_status: dict[str, str] = {}
+                    next_required_actions = ["python -m ai_sdlc program truth sync --execute --yes"]
+
+                return _Readiness()
+
+        monkeypatch.setattr("ai_sdlc.core.runner.ProgramService", _FakeProgramService)
+
+        surface = _program_truth_gate_surface(tmp_path, spec_dir=spec_dir)
+
+        assert surface is not None
+        assert surface["matched_capabilities"] == [
+            "frontend-mainline-delivery",
+            "close-attestation",
+        ]
 
     def test_close_context_surfaces_stale_program_truth_for_mapped_spec(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
@@ -386,6 +581,10 @@ class TestConfirmMode:
         assert ctx["program_truth_audit_ready"] is False
         assert ctx["program_truth_audit_state"] == "stale"
         assert "truth_snapshot_stale" in str(ctx["program_truth_audit_detail"])
+        assert ctx["program_truth_audit_frontend_inheritance_status"] == {}
+        assert ctx["program_truth_audit_next_actions"] == [
+            "python -m ai_sdlc program truth sync --execute --yes"
+        ]
 
     def test_verify_context_includes_frontend_contract_runtime_attachment_for_active_014(
         self, tmp_path: Path

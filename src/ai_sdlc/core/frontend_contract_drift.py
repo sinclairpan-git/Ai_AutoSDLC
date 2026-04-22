@@ -11,6 +11,15 @@ import yaml
 ALLOWED_DRIFT_RESOLUTIONS = ("update_contract", "fix_implementation")
 
 
+def _dedupe_text_items(values: list[str]) -> list[str]:
+    unique: list[str] = []
+    for value in values:
+        text = str(value)
+        if text not in unique:
+            unique.append(text)
+    return unique
+
+
 @dataclass(frozen=True, slots=True)
 class PageImplementationObservation:
     """Structured implementation-side observation for one page."""
@@ -20,6 +29,19 @@ class PageImplementationObservation:
     i18n_keys: list[str] = field(default_factory=list)
     validation_fields: list[str] = field(default_factory=list)
     new_legacy_usages: list[str] = field(default_factory=list)
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, "i18n_keys", _dedupe_text_items(self.i18n_keys))
+        object.__setattr__(
+            self,
+            "validation_fields",
+            _dedupe_text_items(self.validation_fields),
+        )
+        object.__setattr__(
+            self,
+            "new_legacy_usages",
+            _dedupe_text_items(self.new_legacy_usages),
+        )
 
 
 @dataclass(frozen=True, slots=True)

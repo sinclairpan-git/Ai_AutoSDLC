@@ -15,6 +15,7 @@ from ai_sdlc.core.executor import (
     BatchExecutor,
     CircuitBreakerError,
     ExecutionLogger,
+    ExecutionResult,
     Executor,
 )
 from ai_sdlc.models.state import (
@@ -139,6 +140,18 @@ def _git_commit_count(root: Path) -> int:
         text=True,
     )
     return int(result.stdout.strip())
+
+
+def test_execution_result_deduplicates_commit_hashes(tmp_path: Path) -> None:
+    result = ExecutionResult(
+        plan=ExecutionPlan(),
+        runtime=RuntimeState(),
+        log_path=tmp_path / "execution.log",
+        summary_path=tmp_path / "summary.md",
+        commit_hashes=["abc123", "abc123", "def456"],
+    )
+
+    assert result.commit_hashes == ["abc123", "def456"]
 
 
 class TestBatchExecutorNormalFlow:

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from ai_sdlc.models.frontend_generation_constraints import (
     build_mvp_frontend_generation_constraints,
@@ -62,6 +62,36 @@ def _find_unknown_references(values: list[str], known_values: set[str]) -> list[
     return unknown
 
 
+def _dedupe_strings(value: object) -> list[str]:
+    if value is None:
+        return []
+    unique: list[str] = []
+    seen: set[str] = set()
+    for item in value:
+        text = str(item)
+        if text in seen:
+            continue
+        seen.add(text)
+        unique.append(text)
+    return unique
+
+
+def _dedupe_model_items(value: object) -> list[BaseModel]:
+    if value is None:
+        return []
+    unique: list[BaseModel] = []
+    seen: set[str] = set()
+    for item in value:
+        if not isinstance(item, BaseModel):
+            continue
+        key = item.model_dump_json()
+        if key in seen:
+            continue
+        seen.add(key)
+        unique.append(item)
+    return unique
+
+
 class FrontendGateModel(BaseModel):
     """Base model for frontend gate policy payloads."""
 
@@ -78,6 +108,11 @@ class FrontendGateRule(FrontendGateModel):
     description: str = ""
     source_rule_refs: list[str] = Field(default_factory=list)
     allow_structured_exceptions: bool = True
+
+    @field_validator("required_sources", "source_rule_refs", mode="before")
+    @classmethod
+    def _dedupe_rule_lists(cls, value: object) -> list[str]:
+        return _dedupe_strings(value)
 
 
 class CompatibilityExecutionPolicy(FrontendGateModel):
@@ -102,6 +137,11 @@ class FrontendDiagnosticsCoverageEntry(FrontendGateModel):
     diagnostic_focus: str
     boundary: str = ""
 
+    @field_validator("governed_targets", "source_truth_refs", mode="before")
+    @classmethod
+    def _dedupe_diagnostics_lists(cls, value: object) -> list[str]:
+        return _dedupe_strings(value)
+
 
 class FrontendDriftClassification(FrontendGateModel):
     """P1 drift, gap, or leakage classification entry."""
@@ -113,6 +153,11 @@ class FrontendDriftClassification(FrontendGateModel):
     source_truth_refs: list[str] = Field(default_factory=list)
     boundary: str = ""
 
+    @field_validator("source_truth_refs", mode="before")
+    @classmethod
+    def _dedupe_truth_refs(cls, value: object) -> list[str]:
+        return _dedupe_strings(value)
+
 
 class FrontendCompatibilityFeedbackBoundary(FrontendGateModel):
     """Compatibility feedback boundary for one shared gate mode."""
@@ -121,6 +166,11 @@ class FrontendCompatibilityFeedbackBoundary(FrontendGateModel):
     allowed_feedback_surfaces: list[str] = Field(default_factory=list)
     forbidden_truth_mutations: list[str] = Field(default_factory=list)
     description: str = ""
+
+    @field_validator("allowed_feedback_surfaces", "forbidden_truth_mutations", mode="before")
+    @classmethod
+    def _dedupe_feedback_lists(cls, value: object) -> list[str]:
+        return _dedupe_strings(value)
 
     @model_validator(mode="after")
     def _enforce_unique_feedback_lists(self) -> FrontendCompatibilityFeedbackBoundary:
@@ -150,6 +200,11 @@ class FrontendVisualFoundationCoverageEntry(FrontendGateModel):
     expectation: str
     boundary: str = ""
 
+    @field_validator("governed_targets", "source_truth_refs", mode="before")
+    @classmethod
+    def _dedupe_coverage_lists(cls, value: object) -> list[str]:
+        return _dedupe_strings(value)
+
 
 class FrontendA11yFoundationCoverageEntry(FrontendGateModel):
     """P1 accessibility foundation coverage entry."""
@@ -161,6 +216,11 @@ class FrontendA11yFoundationCoverageEntry(FrontendGateModel):
     expectation: str
     boundary: str = ""
 
+    @field_validator("governed_targets", "source_truth_refs", mode="before")
+    @classmethod
+    def _dedupe_coverage_lists(cls, value: object) -> list[str]:
+        return _dedupe_strings(value)
+
 
 class FrontendVisualA11yEvidenceBoundary(FrontendGateModel):
     """Boundary describing allowed evidence sources for visual/a11y feedback."""
@@ -170,6 +230,16 @@ class FrontendVisualA11yEvidenceBoundary(FrontendGateModel):
     forbidden_implicit_sources: list[str] = Field(default_factory=list)
     source_truth_refs: list[str] = Field(default_factory=list)
     description: str = ""
+
+    @field_validator(
+        "allowed_evidence_sources",
+        "forbidden_implicit_sources",
+        "source_truth_refs",
+        mode="before",
+    )
+    @classmethod
+    def _dedupe_evidence_lists(cls, value: object) -> list[str]:
+        return _dedupe_strings(value)
 
     @model_validator(mode="after")
     def _enforce_unique_evidence_lists(self) -> FrontendVisualA11yEvidenceBoundary:
@@ -200,6 +270,17 @@ class FrontendVisualA11yFeedbackBoundary(FrontendGateModel):
     forbidden_expansions: list[str] = Field(default_factory=list)
     source_truth_refs: list[str] = Field(default_factory=list)
     description: str = ""
+
+    @field_validator(
+        "allowed_feedback_surfaces",
+        "report_types",
+        "forbidden_expansions",
+        "source_truth_refs",
+        mode="before",
+    )
+    @classmethod
+    def _dedupe_feedback_lists(cls, value: object) -> list[str]:
+        return _dedupe_strings(value)
 
     @model_validator(mode="after")
     def _enforce_unique_feedback_lists(self) -> FrontendVisualA11yFeedbackBoundary:
@@ -288,12 +369,26 @@ class FrontendViolationReport(FrontendGateModel):
     report_type: str = "violation-report"
     violations: list[FrontendViolation] = Field(default_factory=list)
 
+    @field_validator("violations", mode="after")
+    @classmethod
+    def _dedupe_violations(
+        cls, value: object
+    ) -> list[FrontendViolation]:
+        return _dedupe_model_items(value)
+
 
 class FrontendCoverageReport(FrontendGateModel):
     """Structured coverage report payload."""
 
     report_type: str = "coverage-report"
     gaps: list[FrontendCoverageGap] = Field(default_factory=list)
+
+    @field_validator("gaps", mode="after")
+    @classmethod
+    def _dedupe_gaps(
+        cls, value: object
+    ) -> list[FrontendCoverageGap]:
+        return _dedupe_model_items(value)
 
 
 class FrontendDriftReport(FrontendGateModel):
@@ -302,12 +397,26 @@ class FrontendDriftReport(FrontendGateModel):
     report_type: str = "drift-report"
     drifts: list[FrontendDriftFinding] = Field(default_factory=list)
 
+    @field_validator("drifts", mode="after")
+    @classmethod
+    def _dedupe_drifts(
+        cls, value: object
+    ) -> list[FrontendDriftFinding]:
+        return _dedupe_model_items(value)
+
 
 class FrontendLegacyExpansionReport(FrontendGateModel):
     """Structured legacy expansion report payload."""
 
     report_type: str = "legacy-expansion-report"
     expansions: list[FrontendLegacyExpansionFinding] = Field(default_factory=list)
+
+    @field_validator("expansions", mode="after")
+    @classmethod
+    def _dedupe_expansions(
+        cls, value: object
+    ) -> list[FrontendLegacyExpansionFinding]:
+        return _dedupe_model_items(value)
 
 
 class FrontendGatePolicySet(FrontendGateModel):
@@ -339,6 +448,11 @@ class FrontendGatePolicySet(FrontendGateModel):
     visual_a11y_feedback_boundary: list[FrontendVisualA11yFeedbackBoundary] = Field(
         default_factory=list
     )
+
+    @field_validator("execution_priority", "report_types", mode="before")
+    @classmethod
+    def _dedupe_policy_lists(cls, value: object) -> list[str]:
+        return _dedupe_strings(value)
 
     @model_validator(mode="after")
     def _enforce_unique_rule_ids_and_modes(self) -> FrontendGatePolicySet:

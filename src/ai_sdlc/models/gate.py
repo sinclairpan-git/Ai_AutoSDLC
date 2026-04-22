@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from enum import Enum
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 # ---------------------------------------------------------------------------
 # Gate verdict / checks (from gate)
@@ -25,6 +25,20 @@ class GateCheck(BaseModel):
     message: str = ""
 
 
+def _dedupe_gate_checks(values: object) -> list[GateCheck]:
+    deduped: list[GateCheck] = []
+    seen: set[str] = set()
+    for value in values or []:
+        if not isinstance(value, GateCheck):
+            continue
+        key = value.model_dump_json()
+        if key in seen:
+            continue
+        seen.add(key)
+        deduped.append(value)
+    return deduped
+
+
 class GateResult(BaseModel):
     """Aggregate result of a stage gate check."""
 
@@ -33,6 +47,11 @@ class GateResult(BaseModel):
     checks: list[GateCheck] = []
     retry_count: int = 0
     max_retries: int = 3
+
+    @field_validator("checks", mode="after")
+    @classmethod
+    def _dedupe_checks(cls, value: object) -> list[GateCheck]:
+        return _dedupe_gate_checks(value)
 
 
 # ---------------------------------------------------------------------------

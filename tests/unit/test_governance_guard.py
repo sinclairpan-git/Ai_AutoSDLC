@@ -109,6 +109,37 @@ class TestGovernanceGuard:
         with pytest.raises(GovernanceFreezeError, match="constitution"):
             guard.freeze()
 
+    def test_freeze_deduplicates_missing_prerequisites_in_error_message(
+        self, tmp_path: Path
+    ) -> None:
+        root = tmp_path / "proj"
+        root.mkdir()
+        item_paths = _canonical_item_paths(root)
+
+        guard = GovernanceGuard(root, _make_work_item(), item_paths=item_paths)
+
+        def _duplicate_check():
+            from ai_sdlc.models.gate import GateCheck, GateResult, GateVerdict
+
+            return GateResult(
+                stage="governance",
+                verdict=GateVerdict.RETRY,
+                checks=[
+                    GateCheck(name="constitution", passed=False, message="constitution missing"),
+                    GateCheck(name="constitution", passed=False, message="constitution missing"),
+                    GateCheck(name="clarify", passed=False, message="clarify missing"),
+                ],
+            )
+
+        guard.check = _duplicate_check  # type: ignore[method-assign]
+
+        with pytest.raises(GovernanceFreezeError) as exc_info:
+            guard.freeze()
+
+        message = str(exc_info.value)
+        assert "constitution, clarify" in message
+        assert "constitution, constitution" not in message
+
     def test_legacy_check_governance_wrapper_delegates_to_new_contract(
         self, tmp_path: Path
     ) -> None:

@@ -21,6 +21,7 @@ from ai_sdlc.telemetry.enums import (
     SourceClosureStatus,
 )
 from ai_sdlc.telemetry.generators import (
+    _unique_strings,
     build_audit_report,
     build_evaluation_coverage_view,
     build_evaluation_rollup,
@@ -85,12 +86,12 @@ class GovernancePublisher:
         evaluation_summary["evidence_quality_view"] = build_evidence_quality_view(
             evidence_payloads
         )
-        evaluation_summary["source_evidence_refs"] = [
-            payload["evidence_id"] for payload in evidence_payloads
-        ]
-        evaluation_summary["source_object_refs"] = [
-            f"evaluation:{evaluation.evaluation_id}" for evaluation in evaluations
-        ]
+        evaluation_summary["source_evidence_refs"] = _unique_strings(
+            [payload["evidence_id"] for payload in evidence_payloads]
+        )
+        evaluation_summary["source_object_refs"] = _unique_strings(
+            [f"evaluation:{evaluation.evaluation_id}" for evaluation in evaluations]
+        )
         audit_report = build_audit_report(evaluations, violations)
         return {
             "evaluation_summary": evaluation_summary,

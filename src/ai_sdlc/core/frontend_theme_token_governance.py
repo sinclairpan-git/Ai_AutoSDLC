@@ -33,6 +33,17 @@ _ALLOWED_OVERRIDE_NAMESPACES = {
 }
 
 
+def _dedupe_text_items(items: list[str] | tuple[str, ...]) -> list[str]:
+    seen: set[str] = set()
+    unique: list[str] = []
+    for item in items:
+        if item in seen:
+            continue
+        seen.add(item)
+        unique.append(item)
+    return unique
+
+
 @dataclass(frozen=True, slots=True)
 class FrontendThemeTokenGovernanceValidationResult:
     """Structured validation result for theme/token governance truth."""
@@ -45,6 +56,20 @@ class FrontendThemeTokenGovernanceValidationResult:
     effective_style_pack_id: str = ""
     referenced_anchor_ids: list[str] = field(default_factory=list)
     referenced_slot_ids: list[str] = field(default_factory=list)
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, "blockers", _dedupe_text_items(self.blockers))
+        object.__setattr__(self, "warnings", _dedupe_text_items(self.warnings))
+        object.__setattr__(
+            self,
+            "referenced_anchor_ids",
+            _dedupe_text_items(self.referenced_anchor_ids),
+        )
+        object.__setattr__(
+            self,
+            "referenced_slot_ids",
+            _dedupe_text_items(self.referenced_slot_ids),
+        )
 
 
 def validate_frontend_theme_token_governance(
@@ -119,34 +144,38 @@ def validate_frontend_theme_token_governance(
 
     return FrontendThemeTokenGovernanceValidationResult(
         passed=not blockers,
-        blockers=blockers,
-        warnings=warnings,
+        blockers=_dedupe_text_items(blockers),
+        warnings=_dedupe_text_items(warnings),
         artifact_root=governance.handoff_contract.artifact_root,
         provider_id=solution_snapshot.effective_provider_id,
         effective_style_pack_id=solution_snapshot.effective_style_pack_id,
         referenced_anchor_ids=sorted(
-            {
-                mapping.schema_anchor_id
-                for mapping in governance.token_mappings
-                if mapping.schema_anchor_id
-            }
-            | {
-                override.schema_anchor_id
-                for override in governance.custom_overrides
-                if override.schema_anchor_id
-            }
+            _dedupe_text_items(
+                [
+                    mapping.schema_anchor_id
+                    for mapping in governance.token_mappings
+                    if mapping.schema_anchor_id
+                ]
+                + [
+                    override.schema_anchor_id
+                    for override in governance.custom_overrides
+                    if override.schema_anchor_id
+                ]
+            )
         ),
         referenced_slot_ids=sorted(
-            {
-                mapping.render_slot_id
-                for mapping in governance.token_mappings
-                if mapping.render_slot_id
-            }
-            | {
-                override.render_slot_id
-                for override in governance.custom_overrides
-                if override.render_slot_id
-            }
+            _dedupe_text_items(
+                [
+                    mapping.render_slot_id
+                    for mapping in governance.token_mappings
+                    if mapping.render_slot_id
+                ]
+                + [
+                    override.render_slot_id
+                    for override in governance.custom_overrides
+                    if override.render_slot_id
+                ]
+            )
         ),
     )
 

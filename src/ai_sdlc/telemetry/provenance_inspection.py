@@ -2,10 +2,11 @@
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from ai_sdlc.telemetry.enums import ProvenanceChainStatus, ProvenanceNodeKind
 from ai_sdlc.telemetry.provenance_contracts import (
@@ -24,6 +25,43 @@ _NODE_KIND_ORDER = {
     ProvenanceNodeKind.RULE_REFERENCE.value: 3,
     ProvenanceNodeKind.TRIGGER_POINT.value: 4,
 }
+
+
+def _dedupe_text_items(values: object) -> tuple[str, ...]:
+    deduped: list[str] = []
+    for value in values or ():
+        normalized = str(value).strip()
+        if normalized and normalized not in deduped:
+            deduped.append(normalized)
+    return tuple(deduped)
+
+
+def _dedupe_model_items(values: object) -> tuple[object, ...]:
+    deduped: list[object] = []
+    seen: set[str] = set()
+    for value in values or ():
+        if not isinstance(value, BaseModel):
+            continue
+        key = value.__class__.__name__ + ":" + value.model_dump_json()
+        if key in seen:
+            continue
+        seen.add(key)
+        deduped.append(value)
+    return tuple(deduped)
+
+
+def _dedupe_mapping_items(values: object) -> tuple[dict[str, Any], ...]:
+    deduped: list[dict[str, Any]] = []
+    seen: set[str] = set()
+    for value in values or ():
+        if not isinstance(value, dict):
+            continue
+        key = json.dumps(value, sort_keys=True, ensure_ascii=False)
+        if key in seen:
+            continue
+        seen.add(key)
+        deduped.append(dict(value))
+    return tuple(deduped)
 
 
 class ProvenanceChainModeView(BaseModel):
@@ -55,6 +93,11 @@ class ProvenanceAssessmentView(BaseModel):
     highest_confidence_source: str
     key_gaps: tuple[str, ...] = Field(default_factory=tuple)
 
+    @field_validator("key_gaps", mode="after")
+    @classmethod
+    def _dedupe_key_gaps(cls, value: object) -> tuple[str, ...]:
+        return _dedupe_text_items(value)
+
 
 class ProvenanceInspectionView(BaseModel):
     """Stable read-only provenance inspection surface."""
@@ -69,6 +112,21 @@ class ProvenanceInspectionView(BaseModel):
     blocking_gap: ProvenanceBlockingGapView | None = None
     assessment: ProvenanceAssessmentView
     failures: tuple[dict[str, Any], ...] = Field(default_factory=tuple)
+
+    @field_validator("triggered_by", "invoked", "cited", mode="after")
+    @classmethod
+    def _dedupe_locator_refs(cls, value: object) -> tuple[str, ...]:
+        return _dedupe_text_items(value)
+
+    @field_validator("chain_modes", mode="after")
+    @classmethod
+    def _dedupe_chain_modes(cls, value: object) -> tuple[object, ...]:
+        return _dedupe_model_items(value)
+
+    @field_validator("failures", mode="after")
+    @classmethod
+    def _dedupe_failures(cls, value: object) -> tuple[dict[str, Any], ...]:
+        return _dedupe_mapping_items(value)
 
 
 def inspect_provenance_subject(
@@ -178,10 +236,16 @@ def _load_scope_nodes(store: TelemetryStore, scope_root: Path | None) -> tuple[P
     path = scope_root / "nodes.ndjson"
     if not path.exists():
         return ()
-    return tuple(
-        ProvenanceNodeFact.model_validate(payload)
-        for payload in store._read_ndjson(path)
-    )
+    nodes: list[ProvenanceNodeFact] = []
+    seen: set[str] = set()
+    for payload in store._read_ndjson(path):
+        node = ProvenanceNodeFact.model_validate(payload)
+        key = json.dumps(node.model_dump(mode="json"), sort_keys=True, ensure_ascii=False)
+        if key in seen:
+            continue
+        seen.add(key)
+        nodes.append(node)
+    return tuple(nodes)
 
 
 def _load_scope_gaps(
@@ -192,10 +256,16 @@ def _load_scope_gaps(
     gap_dir = scope_root / "gaps"
     if not gap_dir.exists():
         return ()
-    return tuple(
-        ProvenanceGapFinding.model_validate(store._read_json(path))
-        for path in sorted(gap_dir.glob("*.json"))
-    )
+    gaps: list[ProvenanceGapFinding] = []
+    seen: set[str] = set()
+    for path in sorted(gap_dir.glob("*.json")):
+        gap = ProvenanceGapFinding.model_validate(store._read_json(path))
+        key = json.dumps(gap.model_dump(mode="json"), sort_keys=True, ensure_ascii=False)
+        if key in seen:
+            continue
+        seen.add(key)
+        gaps.append(gap)
+    return tuple(gaps)
 
 
 def _collect_locators(

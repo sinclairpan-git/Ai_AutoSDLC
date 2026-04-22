@@ -12,7 +12,11 @@ import pytest
 from ai_sdlc.core.frontend_browser_gate_runtime import (
     BrowserGateInteractionProbeCapture,
     BrowserGateProbeRunnerResult,
+    BrowserGateProbeRuntimeSession,
     BrowserGateSharedRuntimeCapture,
+    BrowserProbeArtifactRecord,
+    BrowserProbeExecutionReceipt,
+    BrowserQualityBundleMaterializationInput,
     build_browser_quality_gate_execution_context,
     materialize_browser_gate_probe_runtime,
 )
@@ -39,6 +43,9 @@ def _context() -> BrowserQualityGateExecutionContext:
         delivery_entry_id="vue3-public-primevue",
         component_library_packages=["primevue", "@primeuix/themes"],
         provider_theme_adapter_id="public-primevue-theme-bridge",
+        provider_runtime_adapter_carrier_mode="target-project-adapter-layer",
+        provider_runtime_adapter_delivery_state="scaffolded",
+        provider_runtime_adapter_evidence_state="missing",
         page_schema_ids=["dashboard-workspace", "search-list-workspace"],
         required_probe_set=[
             "playwright_smoke",
@@ -88,15 +95,25 @@ def test_build_browser_quality_gate_execution_context_derives_index_html_entry_r
         solution_snapshot=build_mvp_solution_snapshot(),
         gate_run_id="gate-run-ctx",
         delivery_entry_id="vue3-public-primevue",
-        component_library_packages=["primevue", "@primeuix/themes"],
+        component_library_packages=["primevue", "primevue", "@primeuix/themes"],
         provider_theme_adapter_id="public-primevue-theme-bridge",
-        page_schema_ids=["dashboard-workspace", "search-list-workspace"],
+        provider_runtime_adapter_carrier_mode="target-project-adapter-layer",
+        provider_runtime_adapter_delivery_state="scaffolded",
+        provider_runtime_adapter_evidence_state="missing",
+        page_schema_ids=[
+            "dashboard-workspace",
+            "dashboard-workspace",
+            "search-list-workspace",
+        ],
     )
 
     assert context.browser_entry_ref == "managed/frontend/index.html"
     assert context.delivery_entry_id == "vue3-public-primevue"
     assert context.component_library_packages == ["primevue", "@primeuix/themes"]
     assert context.provider_theme_adapter_id == "public-primevue-theme-bridge"
+    assert context.provider_runtime_adapter_carrier_mode == "target-project-adapter-layer"
+    assert context.provider_runtime_adapter_delivery_state == "scaffolded"
+    assert context.provider_runtime_adapter_evidence_state == "missing"
     assert context.page_schema_ids == ["dashboard-workspace", "search-list-workspace"]
 
 
@@ -161,6 +178,9 @@ def test_materialize_browser_gate_probe_runtime_executes_real_runner_and_capture
     assert bundle.delivery_entry_id == "vue3-public-primevue"
     assert bundle.component_library_packages == ["primevue", "@primeuix/themes"]
     assert bundle.provider_theme_adapter_id == "public-primevue-theme-bridge"
+    assert bundle.provider_runtime_adapter_carrier_mode == "target-project-adapter-layer"
+    assert bundle.provider_runtime_adapter_delivery_state == "scaffolded"
+    assert bundle.provider_runtime_adapter_evidence_state == "missing"
     assert bundle.page_schema_ids == ["dashboard-workspace", "search-list-workspace"]
 
 
@@ -217,6 +237,294 @@ def test_materialize_browser_gate_probe_runtime_marks_missing_runner_artifact_as
     smoke_receipt = next(item for item in receipts if item.check_name == "playwright_smoke")
     assert smoke_receipt.classification_candidate == "evidence_missing"
     assert bundle.overall_gate_status == "incomplete"
+
+
+def test_materialize_browser_gate_probe_runtime_deduplicates_context_lists_and_warnings(
+    tmp_path: Path,
+) -> None:
+    context = _context().model_copy(
+        update={
+            "component_library_packages": [
+                "primevue",
+                "primevue",
+                "@primeuix/themes",
+            ],
+            "page_schema_ids": [
+                "dashboard-workspace",
+                "dashboard-workspace",
+                "search-list-workspace",
+            ],
+        }
+    )
+
+    def _runner(*, artifact_root: Path, execution_context, generated_at: str):
+        trace_path = artifact_root / "shared-runtime" / "playwright-trace.zip"
+        screenshot_path = artifact_root / "shared-runtime" / "navigation-screenshot.png"
+        interaction_path = artifact_root / "interaction" / "interaction-snapshot.json"
+        trace_path.parent.mkdir(parents=True, exist_ok=True)
+        interaction_path.parent.mkdir(parents=True, exist_ok=True)
+        trace_path.write_text('{"trace":"ok"}\n', encoding="utf-8")
+        screenshot_path.write_bytes(b"png")
+        interaction_path.write_text('{"interaction":"ok"}\n', encoding="utf-8")
+        return BrowserGateProbeRunnerResult(
+            runtime_status="completed",
+            shared_capture=BrowserGateSharedRuntimeCapture(
+                gate_run_id=execution_context.gate_run_id,
+                trace_artifact_ref=str(trace_path.relative_to(tmp_path)),
+                navigation_screenshot_ref=str(screenshot_path.relative_to(tmp_path)),
+                capture_status="captured",
+                final_url="http://localhost:4173/",
+                anchor_refs=["page:landing", "page:landing"],
+                diagnostic_codes=[],
+            ),
+            interaction_capture=BrowserGateInteractionProbeCapture(
+                gate_run_id=execution_context.gate_run_id,
+                interaction_probe_id="primary-action",
+                artifact_refs=[str(interaction_path.relative_to(tmp_path))],
+                capture_status="captured",
+                classification_candidate="pass",
+                blocking_reason_codes=[],
+                anchor_refs=["interaction:primary-action", "interaction:primary-action"],
+            ),
+            diagnostic_codes=[],
+            warnings=["runner warning", "runner warning"],
+        )
+
+    session, records, receipts, bundle = materialize_browser_gate_probe_runtime(
+        root=tmp_path,
+        context=context,
+        apply_artifact_path=".ai-sdlc/memory/frontend-managed-delivery/latest.yaml",
+        visual_a11y_evidence_artifact=_visual_a11y_pass_artifact(),
+        generated_at="2026-04-14T15:05:00Z",
+        probe_runner=_runner,
+        execute_probe=True,
+    )
+
+    assert session.warnings == ["runner warning"]
+    assert bundle.component_library_packages == ["primevue", "@primeuix/themes"]
+    assert bundle.page_schema_ids == ["dashboard-workspace", "search-list-workspace"]
+
+
+def test_frontend_browser_gate_models_deduplicate_set_like_lists() -> None:
+    context = BrowserQualityGateExecutionContext(
+        gate_run_id="gate-run-001",
+        apply_result_id="apply-result-001",
+        solution_snapshot_id="solution-001",
+        spec_dir="specs/001-auth",
+        attachment_scope_ref="scope://001-auth",
+        managed_frontend_target="managed/frontend",
+        readiness_subject_id="001-auth",
+        effective_provider="public-primevue",
+        effective_style_pack="modern-saas",
+        style_fidelity_status="full",
+        component_library_packages=["primevue", "primevue", "@primeuix/themes"],
+        page_schema_ids=["dashboard", "dashboard", "search"],
+        required_probe_set=["playwright_smoke", "playwright_smoke", "basic_a11y"],
+        browser_entry_ref="managed/frontend/index.html",
+    )
+    session = BrowserGateProbeRuntimeSession(
+        probe_runtime_session_id="runtime-001",
+        gate_run_id="gate-run-001",
+        apply_result_id="apply-result-001",
+        solution_snapshot_id="solution-001",
+        spec_dir="specs/001-auth",
+        attachment_scope_ref="scope://001-auth",
+        managed_frontend_target="managed/frontend",
+        readiness_subject_id="001-auth",
+        browser_entry_ref="managed/frontend/index.html",
+        artifact_root_ref="artifacts/browser-gate",
+        status="running_checks",
+        started_at="2026-04-21T00:00:00Z",
+        updated_at="2026-04-21T00:00:00Z",
+        warnings=["probe-delayed", "probe-delayed"],
+    )
+    shared_capture = BrowserGateSharedRuntimeCapture(
+        gate_run_id="gate-run-001",
+        trace_artifact_ref="trace.zip",
+        navigation_screenshot_ref="nav.png",
+        capture_status="captured",
+        final_url="http://localhost:4173/",
+        anchor_refs=["page:landing", "page:landing"],
+        diagnostic_codes=["nav_ok", "nav_ok"],
+    )
+    interaction_capture = BrowserGateInteractionProbeCapture(
+        gate_run_id="gate-run-001",
+        interaction_probe_id="primary-action",
+        artifact_refs=["interaction.json", "interaction.json"],
+        capture_status="captured",
+        classification_candidate="pass",
+        blocking_reason_codes=["interaction_blocked", "interaction_blocked"],
+        anchor_refs=["interaction:primary", "interaction:primary"],
+    )
+    runner_result = BrowserGateProbeRunnerResult(
+        runtime_status="completed",
+        shared_capture=shared_capture,
+        interaction_capture=interaction_capture,
+        diagnostic_codes=["runner_ok", "runner_ok"],
+        warnings=["slow", "slow"],
+    )
+    record = BrowserProbeArtifactRecord(
+        artifact_id="artifact-001",
+        gate_run_id="gate-run-001",
+        check_name="playwright_smoke",
+        artifact_type="playwright_trace",
+        artifact_ref="trace.zip",
+        anchor_refs=["page:landing", "page:landing"],
+        capture_status="captured",
+        captured_at="2026-04-21T00:00:00Z",
+    )
+    receipt = BrowserProbeExecutionReceipt(
+        check_name="playwright_smoke",
+        started_at="2026-04-21T00:00:00Z",
+        finished_at="2026-04-21T00:01:00Z",
+        runtime_status="completed",
+        artifact_ids=["artifact-001", "artifact-001"],
+        anchor_refs=["page:landing", "page:landing"],
+        requirement_linkage=["req:smoke", "req:smoke"],
+        classification_candidate="pass",
+        remediation_hints=["rerun", "rerun"],
+        blocking_reason_codes=["runtime_missing", "runtime_missing"],
+        advisory_reason_codes=["slow", "slow"],
+    )
+    bundle = BrowserQualityBundleMaterializationInput(
+        bundle_id="bundle-001",
+        gate_run_id="gate-run-001",
+        apply_result_id="apply-result-001",
+        solution_snapshot_id="solution-001",
+        spec_dir="specs/001-auth",
+        attachment_scope_ref="scope://001-auth",
+        managed_frontend_target="managed/frontend",
+        source_artifact_ref="artifacts/bundle.json",
+        readiness_subject_id="001-auth",
+        component_library_packages=["primevue", "primevue", "@primeuix/themes"],
+        page_schema_ids=["dashboard", "dashboard", "search"],
+        playwright_trace_refs=["trace.zip", "trace.zip"],
+        screenshot_refs=["nav.png", "nav.png"],
+        check_receipts=[receipt],
+        smoke_verdict="pass",
+        visual_verdict="pass",
+        a11y_verdict="pass",
+        interaction_anti_pattern_verdict="pass",
+        overall_gate_status="passed_with_advisories",
+        requirement_linkage=["req:smoke", "req:smoke"],
+        blocking_reason_codes=["runtime_missing", "runtime_missing"],
+        advisory_reason_codes=["slow", "slow"],
+        generated_at="2026-04-21T00:02:00Z",
+    )
+
+    assert context.component_library_packages == ["primevue", "@primeuix/themes"]
+    assert context.page_schema_ids == ["dashboard", "search"]
+    assert context.required_probe_set == ["playwright_smoke", "basic_a11y"]
+    assert session.warnings == ["probe-delayed"]
+    assert shared_capture.anchor_refs == ["page:landing"]
+    assert shared_capture.diagnostic_codes == ["nav_ok"]
+    assert interaction_capture.artifact_refs == ["interaction.json"]
+    assert interaction_capture.blocking_reason_codes == ["interaction_blocked"]
+    assert interaction_capture.anchor_refs == ["interaction:primary"]
+    assert runner_result.diagnostic_codes == ["runner_ok"]
+    assert runner_result.warnings == ["slow"]
+    assert record.anchor_refs == ["page:landing"]
+    assert receipt.artifact_ids == ["artifact-001"]
+    assert receipt.anchor_refs == ["page:landing"]
+    assert receipt.requirement_linkage == ["req:smoke"]
+    assert receipt.remediation_hints == ["rerun"]
+    assert receipt.blocking_reason_codes == ["runtime_missing"]
+    assert receipt.advisory_reason_codes == ["slow"]
+    assert bundle.component_library_packages == ["primevue", "@primeuix/themes"]
+    assert bundle.page_schema_ids == ["dashboard", "search"]
+    assert bundle.playwright_trace_refs == ["trace.zip"]
+    assert bundle.screenshot_refs == ["nav.png"]
+    assert bundle.requirement_linkage == ["req:smoke"]
+    assert bundle.blocking_reason_codes == ["runtime_missing"]
+    assert bundle.advisory_reason_codes == ["slow"]
+
+
+def test_materialize_visual_and_a11y_receipts_deduplicates_remediation_lists(
+    tmp_path: Path,
+) -> None:
+    context = _context()
+
+    def _runner(*, artifact_root: Path, execution_context, generated_at: str):
+        trace_path = artifact_root / "shared-runtime" / "playwright-trace.zip"
+        screenshot_path = artifact_root / "shared-runtime" / "navigation-screenshot.png"
+        interaction_path = artifact_root / "interaction" / "interaction-snapshot.json"
+        trace_path.parent.mkdir(parents=True, exist_ok=True)
+        interaction_path.parent.mkdir(parents=True, exist_ok=True)
+        trace_path.write_text('{"trace":"ok"}\n', encoding="utf-8")
+        screenshot_path.write_bytes(b"png")
+        interaction_path.write_text('{"interaction":"ok"}\n', encoding="utf-8")
+        return BrowserGateProbeRunnerResult(
+            runtime_status="completed",
+            shared_capture=BrowserGateSharedRuntimeCapture(
+                gate_run_id=execution_context.gate_run_id,
+                trace_artifact_ref=str(trace_path.relative_to(tmp_path)),
+                navigation_screenshot_ref=str(screenshot_path.relative_to(tmp_path)),
+                capture_status="captured",
+                final_url="http://localhost:4173/",
+                anchor_refs=["page:landing"],
+                diagnostic_codes=[],
+            ),
+            interaction_capture=BrowserGateInteractionProbeCapture(
+                gate_run_id=execution_context.gate_run_id,
+                interaction_probe_id="primary-action",
+                artifact_refs=[str(interaction_path.relative_to(tmp_path))],
+                capture_status="captured",
+                classification_candidate="pass",
+                blocking_reason_codes=[],
+                anchor_refs=["interaction:primary-action"],
+            ),
+            diagnostic_codes=[],
+            warnings=[],
+        )
+
+    failing_artifact = build_frontend_visual_a11y_evidence_artifact(
+        evaluations=[
+            FrontendVisualA11yEvidenceEvaluation(
+                evaluation_id="001-auth-fail-1",
+                target_id="page:user-create",
+                surface_id="page:user-create",
+                outcome="fail",
+                report_type="coverage-report",
+                severity="error",
+                location_anchor="specs",
+                quality_hint="fixture fail",
+                changed_scope_explanation="runtime fixture",
+            ),
+            FrontendVisualA11yEvidenceEvaluation(
+                evaluation_id="001-auth-fail-2",
+                target_id="page:user-create",
+                surface_id="page:user-create",
+                outcome="fail",
+                report_type="coverage-report",
+                severity="error",
+                location_anchor="specs",
+                quality_hint="fixture fail",
+                changed_scope_explanation="runtime fixture",
+            ),
+        ],
+        provider_kind="manual",
+        provider_name="test-fixture",
+        generated_at="2026-04-14T15:00:00Z",
+    )
+
+    _session, _records, receipts, _bundle = materialize_browser_gate_probe_runtime(
+        root=tmp_path,
+        context=context,
+        apply_artifact_path=".ai-sdlc/memory/frontend-managed-delivery/latest.yaml",
+        visual_a11y_evidence_artifact=failing_artifact,
+        generated_at="2026-04-14T15:05:00Z",
+        probe_runner=_runner,
+        execute_probe=True,
+    )
+
+    visual_receipt = next(item for item in receipts if item.check_name == "visual_expectation")
+    a11y_receipt = next(item for item in receipts if item.check_name == "basic_a11y")
+    assert visual_receipt.remediation_hints == [
+        "review frontend visual / a11y issue findings"
+    ]
+    assert visual_receipt.blocking_reason_codes == ["visual_a11y_quality_blocker"]
+    assert a11y_receipt.remediation_hints == visual_receipt.remediation_hints
+    assert a11y_receipt.blocking_reason_codes == visual_receipt.blocking_reason_codes
 
 
 @pytest.mark.skipif(shutil.which("node") is None, reason="node runtime unavailable")
@@ -378,6 +686,9 @@ export const chromium = {
         "delivery_entry_id": "vue3-public-primevue",
         "component_library_packages": ["primevue", "@primeuix/themes"],
         "provider_theme_adapter_id": "public-primevue-theme-bridge",
+        "provider_runtime_adapter_carrier_mode": "target-project-adapter-layer",
+        "provider_runtime_adapter_delivery_state": "scaffolded",
+        "provider_runtime_adapter_evidence_state": "missing",
         "page_schema_ids": ["dashboard-workspace", "search-list-workspace"],
         "effective_provider": "public-primevue",
         "effective_style_pack": "modern-saas",
@@ -408,6 +719,12 @@ export const chromium = {
         interaction_snapshot["provider_theme_adapter_id"]
         == "public-primevue-theme-bridge"
     )
+    assert (
+        interaction_snapshot["provider_runtime_adapter_carrier_mode"]
+        == "target-project-adapter-layer"
+    )
+    assert interaction_snapshot["provider_runtime_adapter_delivery_state"] == "scaffolded"
+    assert interaction_snapshot["provider_runtime_adapter_evidence_state"] == "missing"
     assert interaction_snapshot["page_schema_ids"] == [
         "dashboard-workspace",
         "search-list-workspace",
@@ -565,6 +882,9 @@ export const chromium = {
         "delivery_entry_id": "vue3-public-primevue",
         "component_library_packages": ["primevue", "@primeuix/themes"],
         "provider_theme_adapter_id": "public-primevue-theme-bridge",
+        "provider_runtime_adapter_carrier_mode": "target-project-adapter-layer",
+        "provider_runtime_adapter_delivery_state": "scaffolded",
+        "provider_runtime_adapter_evidence_state": "missing",
         "page_schema_ids": ["dashboard-workspace", "search-list-workspace"],
     }
 
@@ -723,6 +1043,9 @@ export const chromium = {
         "delivery_entry_id": "vue3-public-primevue",
         "component_library_packages": ["primevue", "@primeuix/themes"],
         "provider_theme_adapter_id": "public-primevue-theme-bridge",
+        "provider_runtime_adapter_carrier_mode": "target-project-adapter-layer",
+        "provider_runtime_adapter_delivery_state": "scaffolded",
+        "provider_runtime_adapter_evidence_state": "missing",
         "page_schema_ids": ["dashboard-workspace", "search-list-workspace"],
     }
 

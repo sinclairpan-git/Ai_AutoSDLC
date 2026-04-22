@@ -29,6 +29,24 @@ WORKTREE_STATUS_DISPOSITION_RE = re.compile(
 WI_SEQ_RE = re.compile(r"^(?P<seq>\d{3})\b")
 
 
+def _dedupe_text_items(values: object) -> list[str]:
+    deduped: list[str] = []
+    for value in values or []:
+        normalized = str(value).strip()
+        if normalized and normalized not in deduped:
+            deduped.append(normalized)
+    return deduped
+
+
+def _dedupe_int_items(values: object) -> list[int]:
+    deduped: list[int] = []
+    for value in values or []:
+        normalized = int(value)
+        if normalized not in deduped:
+            deduped.append(normalized)
+    return deduped
+
+
 @dataclass
 class CompletionTruthResult:
     """Outcome of planned-vs-executed work item traceability checks."""
@@ -39,12 +57,17 @@ class CompletionTruthResult:
     executed_batches: list[int] = field(default_factory=list)
     reopened_status_note: bool = False
 
+    def __post_init__(self) -> None:
+        self.blockers = _dedupe_text_items(self.blockers)
+        self.planned_batches = _dedupe_int_items(self.planned_batches)
+        self.executed_batches = _dedupe_int_items(self.executed_batches)
+
     def to_json_dict(self) -> dict[str, Any]:
         return {
             "ok": self.ok,
-            "blockers": self.blockers,
-            "planned_batches": self.planned_batches,
-            "executed_batches": self.executed_batches,
+            "blockers": _dedupe_text_items(self.blockers),
+            "planned_batches": _dedupe_int_items(self.planned_batches),
+            "executed_batches": _dedupe_int_items(self.executed_batches),
             "reopened_status_note": self.reopened_status_note,
         }
 
@@ -100,12 +123,18 @@ class WorkItemBranchLifecycleResult:
     entries: list[WorkItemBranchLifecycleEntry] = field(default_factory=list)
     branch_disposition: str | None = None
     worktree_disposition: str | None = None
+    next_required_actions: list[str] = field(default_factory=list)
+
+    def __post_init__(self) -> None:
+        self.blockers = _dedupe_text_items(self.blockers)
+        self.warnings = _dedupe_text_items(self.warnings)
+        self.next_required_actions = _dedupe_text_items(self.next_required_actions)
 
     def summary_detail(self) -> str:
         if self.blockers:
-            return "; ".join(self.blockers)
+            return "; ".join(_dedupe_text_items(self.blockers))
         if self.warnings:
-            return "; ".join(self.warnings)
+            return "; ".join(_dedupe_text_items(self.warnings))
         if self.entries:
             return (
                 "associated branch/worktree disposition resolved: "
@@ -116,12 +145,47 @@ class WorkItemBranchLifecycleResult:
     def to_json_dict(self) -> dict[str, object]:
         return {
             "ok": self.ok,
-            "blockers": self.blockers,
-            "warnings": self.warnings,
+            "blockers": _dedupe_text_items(self.blockers),
+            "warnings": _dedupe_text_items(self.warnings),
             "branch_disposition": self.branch_disposition,
             "worktree_disposition": self.worktree_disposition,
+            "next_required_actions": _dedupe_text_items(self.next_required_actions),
             "entries": [item.to_json_dict() for item in self.entries],
         }
+
+
+def _branch_lifecycle_next_actions(
+    *,
+    entries: list[WorkItemBranchLifecycleEntry],
+    branch_disposition: str | None,
+    worktree_disposition: str | None,
+) -> list[str]:
+    actions: list[str] = []
+    unresolved_disposition = branch_disposition in {None, "", "待最终收口"}
+
+    for entry in entries:
+        if unresolved_disposition:
+            actions.append(
+                f"decide whether {entry.name} should be merged, deleted, or archived, then record that branch disposition in task-execution-log.md"
+            )
+        if entry.branch_disposition == "merged" and entry.ahead_of_main > 0:
+            actions.append(
+                f"merge {entry.name} into main or correct the branch disposition marker from merged"
+            )
+        if entry.branch_disposition == "deleted":
+            actions.append(
+                f"delete local branch {entry.name} or correct the branch disposition marker from deleted"
+            )
+        if entry.worktree_path is not None and worktree_disposition == "removed":
+            actions.append(
+                f"remove stale worktree {entry.worktree_path} or correct the worktree disposition marker from removed"
+            )
+
+    deduped: list[str] = []
+    for action in actions:
+        if action not in deduped:
+            deduped.append(action)
+    return deduped
 
 
 def _unique_preserve_order(values: list[int]) -> list[int]:
@@ -157,7 +221,7 @@ def _explicit_contract_lines(*texts: str) -> list[str]:
         for line in text.splitlines():
             if STATUS_CORRECTION_LINE_RE.search(line):
                 lines.append(line)
-    return lines
+    return _dedupe_text_items(lines)
 
 
 def _completion_truth_contract_enabled(tasks_text: str, log_text: str) -> bool:
@@ -266,6 +330,7 @@ def analyze_work_item_branch_lifecycle(
             entries=[],
             branch_disposition=branch_disposition,
             worktree_disposition=worktree_disposition,
+            next_required_actions=[],
         )
 
     for entry in associated:
@@ -337,6 +402,11 @@ def analyze_work_item_branch_lifecycle(
         entries=entries,
         branch_disposition=branch_disposition,
         worktree_disposition=worktree_disposition,
+        next_required_actions=_branch_lifecycle_next_actions(
+            entries=entries,
+            branch_disposition=branch_disposition,
+            worktree_disposition=worktree_disposition,
+        ),
     )
 
 

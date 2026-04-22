@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 
 def _find_duplicates(values: list[str]) -> list[str]:
@@ -23,6 +23,20 @@ def _find_unknown_references(values: list[str], known_values: set[str]) -> list[
     return unknown
 
 
+def _dedupe_strings(value: object) -> list[str]:
+    if value is None:
+        return []
+    unique: list[str] = []
+    seen: set[str] = set()
+    for item in value:
+        text = str(item)
+        if text in seen:
+            continue
+        seen.add(text)
+        unique.append(text)
+    return unique
+
+
 class FrontendUiKernelModel(BaseModel):
     """Base model for frontend UI Kernel artifacts."""
 
@@ -38,6 +52,16 @@ class UiProtocolComponent(FrontendUiKernelModel):
     supported_events: list[str] = Field(default_factory=list)
     disallowed_capabilities: list[str] = Field(default_factory=list)
 
+    @field_validator(
+        "supported_states",
+        "supported_events",
+        "disallowed_capabilities",
+        mode="before",
+    )
+    @classmethod
+    def _dedupe_component_lists(cls, value: object) -> list[str]:
+        return _dedupe_strings(value)
+
 
 class PageRecipeStandard(FrontendUiKernelModel):
     """Canonical recipe body for one page shape."""
@@ -50,6 +74,20 @@ class PageRecipeStandard(FrontendUiKernelModel):
     minimum_state_expectations: list[str] = Field(default_factory=list)
     forbidden_patterns: list[str] = Field(default_factory=list)
     interaction_rules: list[str] = Field(default_factory=list)
+
+    @field_validator(
+        "required_areas",
+        "optional_areas",
+        "required_protocols",
+        "consumed_protocols",
+        "minimum_state_expectations",
+        "forbidden_patterns",
+        "interaction_rules",
+        mode="before",
+    )
+    @classmethod
+    def _dedupe_recipe_lists(cls, value: object) -> list[str]:
+        return _dedupe_strings(value)
 
     @model_validator(mode="after")
     def _validate_recipe_structure(self) -> PageRecipeStandard:
@@ -88,6 +126,11 @@ class KernelStateBaseline(FrontendUiKernelModel):
     state_priority_scope: str = "page_or_recipe"
     state_semantics: list[KernelStateSemantic] | None = None
 
+    @field_validator("required_states", mode="before")
+    @classmethod
+    def _dedupe_required_states(cls, value: object) -> list[str]:
+        return _dedupe_strings(value)
+
     @model_validator(mode="after")
     def _enforce_state_semantics_reference_declared_states(self) -> KernelStateBaseline:
         if self.state_semantics is None:
@@ -116,6 +159,11 @@ class KernelInteractionBaseline(FrontendUiKernelModel):
 
     rules: list[str] = Field(default_factory=list)
     minimum_a11y_rules: list[str] = Field(default_factory=list)
+
+    @field_validator("rules", "minimum_a11y_rules", mode="before")
+    @classmethod
+    def _dedupe_interaction_lists(cls, value: object) -> list[str]:
+        return _dedupe_strings(value)
 
 
 class FrontendUiKernelSet(FrontendUiKernelModel):

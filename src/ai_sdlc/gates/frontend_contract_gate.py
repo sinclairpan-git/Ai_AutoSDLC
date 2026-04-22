@@ -34,6 +34,17 @@ class _DiagnosticSummary:
     drift_summary: str | None
 
 
+def _dedupe_text_items(items: list[str]) -> list[str]:
+    seen: set[str] = set()
+    unique: list[str] = []
+    for item in items:
+        if item in seen:
+            continue
+        seen.add(item)
+        unique.append(item)
+    return unique
+
+
 class FrontendContractGate:
     """Read-only gate that aggregates artifact and drift checks for contracts."""
 
@@ -156,7 +167,11 @@ def _check_contract_artifacts(contracts_root: Path) -> tuple[bool, str]:
                 missing_required.append(f"{page_dir.name}/{artifact_name}")
 
     if missing_required:
-        return False, "missing required page artifacts: " + ", ".join(missing_required[:3])
+        return (
+            False,
+            "missing required page artifacts: "
+            + ", ".join(_dedupe_text_items(missing_required)[:3]),
+        )
     return True, ""
 
 
@@ -257,15 +272,23 @@ def _missing_prerequisite_message(
         messages.append(artifact_message or "frontend contract artifacts missing")
     if observation_message:
         messages.append(observation_message)
-    return "; ".join(messages) if messages else "frontend contract prerequisites unavailable"
+    return (
+        "; ".join(_dedupe_text_items(messages))
+        if messages
+        else "frontend contract prerequisites unavailable"
+    )
 
 
 def _summarize_drifts(drifts: list[FrontendContractDriftRecord]) -> str:
-    summary = [
-        f"{drift.page_id}:{drift.drift_kind}@{drift.field_path}"
-        for drift in drifts[:3]
-    ]
-    remaining = len(drifts) - len(summary)
+    summary: list[str] = []
+    for drift in drifts:
+        rendered = f"{drift.page_id}:{drift.drift_kind}@{drift.field_path}"
+        if rendered in summary:
+            continue
+        summary.append(rendered)
+        if len(summary) >= 3:
+            break
+    remaining = len(_dedupe_text_items([f"{drift.page_id}:{drift.drift_kind}@{drift.field_path}" for drift in drifts])) - len(summary)
     if remaining > 0:
         summary.append(f"+{remaining} more")
     return "; ".join(summary)

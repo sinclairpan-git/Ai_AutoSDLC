@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 from ai_sdlc.telemetry.contracts import (
@@ -125,3 +126,193 @@ def test_observe_provenance_step_enriches_with_assessments_and_gaps(
     assert result.assessments[0].highest_confidence_source == "injected"
     assert {gap.gap_kind for gap in result.gaps} == {ProvenanceGapKind.UNSUPPORTED}
     assert result.overrides_default_blocker is False
+
+
+def test_observe_provenance_step_deduplicates_repeated_assessments_from_duplicate_nodes(
+    tmp_path: Path,
+) -> None:
+    store = TelemetryStore(tmp_path)
+    writer = TelemetryWriter(store)
+    writer.write_event(
+        TelemetryEvent(
+            event_id="evt_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            scope_level=ScopeLevel.STEP,
+            goal_session_id="gs_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            workflow_run_id="wr_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            step_id="st_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            capture_mode=CaptureMode.AUTO,
+            created_at="2026-03-31T10:00:00Z",
+            updated_at="2026-03-31T10:00:00Z",
+            timestamp="2026-03-31T10:00:00Z",
+        )
+    )
+    writer.write_evidence(
+        Evidence(
+            evidence_id="evd_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            scope_level=ScopeLevel.STEP,
+            goal_session_id="gs_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            workflow_run_id="wr_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            step_id="st_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            locator="prov://conversation/message-002",
+            digest="sha256:message-2",
+            created_at="2026-03-31T10:00:00Z",
+            updated_at="2026-03-31T10:00:00Z",
+        )
+    )
+    node = ProvenanceNodeFact(
+        node_id="pn_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        node_kind=ProvenanceNodeKind.CONVERSATION_MESSAGE,
+        ingress_kind=IngressKind.INJECTED,
+        confidence=Confidence.MEDIUM,
+        scope_level=ScopeLevel.STEP,
+        trace_context={
+            "goal_session_id": "gs_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "workflow_run_id": "wr_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "step_id": "st_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "parent_event_id": "evt_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        },
+        observed_at="2026-03-31T10:00:00Z",
+        ingestion_order=0,
+        source_object_refs=("event:evt_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",),
+        source_evidence_refs=("evd_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",),
+    )
+    writer.write_provenance_node(node)
+    writer.write_provenance_node(node)
+    writer.write_provenance_edge(
+        ProvenanceEdgeFact(
+            edge_id="pe_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            relation_kind=ProvenanceRelationKind.TRIGGERED_BY,
+            from_ref="event:evt_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            to_ref=f"provenance_node:{node.node_id}",
+            ingress_kind=IngressKind.INJECTED,
+            confidence=Confidence.MEDIUM,
+            observed_at="2026-03-31T10:00:00Z",
+            ingestion_order=0,
+            source_object_refs=("event:evt_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",),
+            source_evidence_refs=("evd_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",),
+        ),
+        scope_level=ScopeLevel.STEP,
+        goal_session_id="gs_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        workflow_run_id="wr_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        step_id="st_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    )
+
+    result = observe_provenance_step(
+        store,
+        goal_session_id="gs_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        workflow_run_id="wr_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        step_id="st_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    )
+
+    assert len(result.assessments) == 1
+    assert result.assessments[0].subject_ref == f"provenance_node:{node.node_id}"
+
+
+def test_observe_provenance_step_deduplicates_repeated_loaded_nodes_and_gap_files(
+    tmp_path: Path,
+) -> None:
+    store = TelemetryStore(tmp_path)
+    writer = TelemetryWriter(store)
+    writer.write_event(
+        TelemetryEvent(
+            event_id="evt_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+            scope_level=ScopeLevel.STEP,
+            goal_session_id="gs_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+            workflow_run_id="wr_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+            step_id="st_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+            capture_mode=CaptureMode.AUTO,
+            created_at="2026-03-31T10:00:00Z",
+            updated_at="2026-03-31T10:00:00Z",
+            timestamp="2026-03-31T10:00:00Z",
+        )
+    )
+    writer.write_evidence(
+        Evidence(
+            evidence_id="evd_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+            scope_level=ScopeLevel.STEP,
+            goal_session_id="gs_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+            workflow_run_id="wr_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+            step_id="st_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+            locator="prov://conversation/message-003",
+            digest="sha256:message-3",
+            created_at="2026-03-31T10:00:00Z",
+            updated_at="2026-03-31T10:00:00Z",
+        )
+    )
+    node = writer.write_provenance_node(
+        ProvenanceNodeFact(
+            node_id="pn_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+            node_kind=ProvenanceNodeKind.CONVERSATION_MESSAGE,
+            ingress_kind=IngressKind.INJECTED,
+            confidence=Confidence.MEDIUM,
+            scope_level=ScopeLevel.STEP,
+            trace_context={
+                "goal_session_id": "gs_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+                "workflow_run_id": "wr_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+                "step_id": "st_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+                "parent_event_id": "evt_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+            },
+            observed_at="2026-03-31T10:00:00Z",
+            ingestion_order=0,
+            source_object_refs=("event:evt_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",),
+            source_evidence_refs=("evd_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",),
+        )
+    )
+    writer.write_provenance_edge(
+        ProvenanceEdgeFact(
+            edge_id="pe_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+            relation_kind=ProvenanceRelationKind.TRIGGERED_BY,
+            from_ref="event:evt_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+            to_ref=f"provenance_node:{node.node_id}",
+            ingress_kind=IngressKind.INJECTED,
+            confidence=Confidence.MEDIUM,
+            observed_at="2026-03-31T10:00:00Z",
+            ingestion_order=0,
+            source_object_refs=("event:evt_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",),
+            source_evidence_refs=("evd_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",),
+        ),
+        scope_level=ScopeLevel.STEP,
+        goal_session_id="gs_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        workflow_run_id="wr_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        step_id="st_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    )
+    writer.write_provenance_gap(
+        ProvenanceGapFinding(
+            gap_id="pg_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+            subject_ref=f"provenance_node:{node.node_id}",
+            gap_kind=ProvenanceGapKind.UNSUPPORTED,
+            gap_location="skill.segment",
+            expected_relation=ProvenanceRelationKind.INVOKED,
+            confidence=Confidence.LOW,
+            detail={"reason": "host_skill_ingress_missing"},
+            source_object_refs=("event:evt_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",),
+            source_evidence_refs=(),
+        ),
+        scope_level=ScopeLevel.STEP,
+        goal_session_id="gs_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        workflow_run_id="wr_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        step_id="st_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    )
+
+    nodes_path = next(store.local_root.rglob("provenance/nodes.ndjson"))
+    node_payload = json.loads(
+        next(line for line in nodes_path.read_text(encoding="utf-8").splitlines() if line.strip())
+    )
+    with nodes_path.open("a", encoding="utf-8") as handle:
+        handle.write(json.dumps(node_payload, ensure_ascii=False) + "\n")
+
+    gap_path = next(store.local_root.rglob("provenance/gaps/*.json"))
+    duplicate_gap_path = gap_path.with_name("duplicate-" + gap_path.name)
+    duplicate_gap_path.write_text(gap_path.read_text(encoding="utf-8"), encoding="utf-8")
+
+    result = observe_provenance_step(
+        store,
+        goal_session_id="gs_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        workflow_run_id="wr_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        step_id="st_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    )
+
+    assert len(result.assessments) == 1
+    assert result.assessments[0].subject_ref == f"provenance_node:{node.node_id}"
+    assert len(result.gaps) == 1
+    assert result.gaps[0].gap_id == "pg_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"

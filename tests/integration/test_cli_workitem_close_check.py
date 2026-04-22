@@ -2,18 +2,24 @@
 
 from __future__ import annotations
 
+import json
 import subprocess
 import textwrap
 from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import patch
 
 import pytest
+import yaml
 from typer.testing import CliRunner
 
+import ai_sdlc.cli.workitem_cmd as workitem_cmd_module
 from ai_sdlc.cli.main import app
+from ai_sdlc.cli.workitem_cmd import _format_close_check_detail
 from ai_sdlc.context.state import save_checkpoint
-from ai_sdlc.core.close_check import run_close_check
+from ai_sdlc.core.close_check import BranchCheckResult, run_close_check
 from ai_sdlc.core.p1_artifacts import save_reviewer_decision
+from ai_sdlc.core.program_service import ProgramService
 from ai_sdlc.models.state import Checkpoint, FeatureInfo
 from ai_sdlc.models.work import (
     PrdReviewerCheckpoint,
@@ -407,6 +413,268 @@ class TestCliWorkitemCloseCheck:
         result = runner.invoke(app, ["workitem", "close-check", "--wi", "specs/001-wi"])
         assert result.exit_code == 1, result.output
         assert "git" in result.output.lower()
+
+    def test_exit_1_when_program_truth_stale_surfaces_next_actions(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        root = tmp_path / "r2b-truth"
+        root.mkdir()
+        wi_rel = "specs/001-wi"
+        _setup_repo(
+            root,
+            tasks_body="- [x] done\n### Task 1.1\n- **验收标准（AC）**：ok",
+            plan_status="completed",
+            wi_rel=wi_rel,
+        )
+        wi = root / wi_rel
+        wi.joinpath("spec.md").write_text("# Spec\n", encoding="utf-8")
+        wi.joinpath("plan.md").write_text("# Plan\n", encoding="utf-8")
+        _write_manifest_yaml(
+            root,
+            """
+            schema_version: "2"
+            program:
+              goal: "Demo truth ledger"
+            specs:
+              - id: "001-wi"
+                path: "specs/001-wi"
+                depends_on: []
+            """,
+        )
+        svc = ProgramService(root)
+        snapshot = svc.build_truth_snapshot(svc.load_manifest())
+        svc.write_truth_snapshot(snapshot)
+        _commit_all(root, "docs: materialize truth snapshot")
+
+        payload = yaml.safe_load((root / "program-manifest.yaml").read_text(encoding="utf-8"))
+        payload["program"]["goal"] = "Updated goal after truth sync"
+        (root / "program-manifest.yaml").write_text(
+            yaml.safe_dump(payload, sort_keys=False, allow_unicode=True),
+            encoding="utf-8",
+        )
+        _commit_all(root, "docs: drift truth authoring after sync")
+        monkeypatch.chdir(root)
+
+        result = runner.invoke(app, ["workitem", "close-check", "--wi", wi_rel])
+
+        assert result.exit_code == 1, result.output
+        assert "Program Truth Next Actions" in result.output
+        assert "python -m ai_sdlc program truth sync --execute --yes" in result.output
+        assert "truth_snapshot_stale" in result.output
+        assert "; next action:" not in result.output
+
+    def test_close_check_surfaces_frontend_delivery_context_from_program_truth(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        root = tmp_path / "r2b-truth-delivery"
+        root.mkdir()
+        wi_rel = "specs/001-wi"
+        _setup_repo(
+            root,
+            tasks_body="- [x] done\n### Task 1.1\n- **验收标准（AC）**：ok",
+            plan_status="completed",
+            wi_rel=wi_rel,
+        )
+        monkeypatch.chdir(root)
+
+        import ai_sdlc.core.close_check as close_check_module
+
+        monkeypatch.setattr(
+            close_check_module,
+            "_build_program_truth_close_check_summary",
+            lambda *args, **kwargs: {
+                "ok": False,
+                "summary_token": "capability_blocked",
+                "detail": (
+                    "capability_blocked: frontend-mainline-delivery (blocked) | "
+                    "delivery: provider=public-primevue | runtime=scaffolded | "
+                    "download=downloaded | integration=integrated | "
+                    "browser_gate=waiting for evidence | "
+                    "delivery=applied, waiting for browser gate"
+                ),
+            "next_required_actions": [
+                "uv run ai-sdlc program browser-gate-probe --execute",
+                "uv run ai-sdlc program browser-gate-probe --execute"
+            ],
+            "frontend_delivery_status": {
+                "provider_id": "public-primevue",
+                "package_names": "primevue,@primeuix/themes",
+                    "runtime_delivery_state": "scaffolded",
+                    "download": "installed",
+                    "integration": "integrated",
+                    "browser_gate": "pending",
+                    "delivery": "apply_succeeded_pending_browser_gate",
+                },
+                "frontend_delivery_scope": "package_delivery_only",
+                "frontend_inheritance_status": {
+                    "generation": "inherited",
+                    "quality": "blocked",
+                },
+            },
+        )
+
+        result = runner.invoke(app, ["workitem", "close-check", "--wi", wi_rel])
+
+        assert result.exit_code == 1, result.output
+        assert "program_truth" in result.output
+        assert "frontend-mainline-delivery" in result.output
+        assert "frontend:" in result.output
+        assert "frontend scope:" in result.output
+        assert "package delivery only" in result.output
+        assert "frontend inheritance:" in result.output
+        assert "codegen inherited" in result.output
+        assert "frontend tests blocked" in result.output
+        assert "selected" in result.output
+        assert "public-primevue" in result.output
+        assert "primevue,@primeuix/themes" in result.output
+        assert "waiting for browser gate" in result.output
+        assert "Program Truth Next Actions" in result.output
+        assert "uv run ai-sdlc program browser-gate-probe --execute" in result.output
+
+    def test_close_check_json_preserves_program_truth_frontend_delivery_status(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        root = tmp_path / "r2b-truth-delivery-json"
+        root.mkdir()
+        wi_rel = "specs/001-wi"
+        _setup_repo(
+            root,
+            tasks_body="- [x] done\n### Task 1.1\n- **验收标准（AC）**：ok",
+            plan_status="completed",
+            wi_rel=wi_rel,
+        )
+        monkeypatch.chdir(root)
+
+        import ai_sdlc.core.close_check as close_check_module
+
+        monkeypatch.setattr(
+            close_check_module,
+            "_build_program_truth_close_check_summary",
+            lambda *args, **kwargs: {
+                "ok": False,
+                "summary_token": "capability_blocked",
+                "detail": (
+                    "capability_blocked: frontend-mainline-delivery (blocked) | "
+                    "delivery: provider=public-primevue | runtime=scaffolded | "
+                    "download=downloaded | integration=integrated | "
+                    "browser_gate=waiting for evidence | "
+                    "delivery=applied, waiting for browser gate"
+                ),
+                "next_required_actions": [
+                    "uv run ai-sdlc program browser-gate-probe --execute"
+                ],
+                "frontend_delivery_status": {
+                    "provider_id": "public-primevue",
+                    "package_names": "primevue,@primeuix/themes",
+                    "runtime_delivery_state": "scaffolded",
+                    "download": "installed",
+                    "integration": "integrated",
+                    "browser_gate": "pending",
+                    "delivery": "apply_succeeded_pending_browser_gate",
+                },
+                "frontend_delivery_scope": "package_delivery_only",
+                "frontend_inheritance_status": {
+                    "generation": "inherited",
+                    "quality": "blocked",
+                },
+            },
+        )
+
+        result = runner.invoke(app, ["workitem", "close-check", "--wi", wi_rel, "--json"])
+
+        assert result.exit_code == 1, result.output
+        payload = json.loads(result.output)
+        program_truth = next(
+            item for item in payload["checks"] if item["name"] == "program_truth"
+        )
+        assert program_truth["next_required_actions"] == [
+            "uv run ai-sdlc program browser-gate-probe --execute"
+        ]
+        assert program_truth["frontend_delivery_status"] == {
+            "provider_id": "public-primevue",
+            "package_names": "primevue,@primeuix/themes",
+            "runtime_delivery_state": "scaffolded",
+            "download": "installed",
+            "integration": "integrated",
+            "browser_gate": "pending",
+            "delivery": "apply_succeeded_pending_browser_gate",
+        }
+        assert program_truth["frontend_delivery_scope"] == "package_delivery_only"
+        assert program_truth["frontend_inheritance_status"] == {
+            "generation": "inherited",
+            "quality": "blocked",
+        }
+
+    def test_close_check_text_surfaces_not_inherited_risk_summary(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        root = tmp_path / "r2b-truth-inheritance-risk"
+        root.mkdir()
+        wi_rel = "specs/001-wi"
+        _setup_repo(
+            root,
+            tasks_body="- [x] done\n### Task 1.1\n- **验收标准（AC）**：ok",
+            plan_status="completed",
+            wi_rel=wi_rel,
+        )
+        monkeypatch.chdir(root)
+
+        import ai_sdlc.core.close_check as close_check_module
+
+        monkeypatch.setattr(
+            close_check_module,
+            "_build_program_truth_close_check_summary",
+            lambda *args, **kwargs: {
+                "ok": False,
+                "summary_token": "capability_ready",
+                "detail": "capability_ready: frontend-mainline-delivery",
+                "next_required_actions": [
+                    "python -m ai_sdlc program generation-constraints-handoff",
+                    "python -m ai_sdlc program quality-platform-handoff",
+                ],
+                "frontend_delivery_status": {
+                    "provider_id": "public-primevue",
+                    "package_names": "primevue,@primeuix/themes",
+                    "runtime_delivery_state": "scaffolded",
+                    "download": "installed",
+                    "integration": "integrated",
+                    "browser_gate": "pending",
+                    "delivery": "apply_succeeded_pending_browser_gate",
+                },
+                "frontend_delivery_scope": "package_delivery_only",
+                "frontend_inheritance_status": {
+                    "generation": "not_inherited",
+                    "quality": "not_inherited",
+                },
+            },
+        )
+
+        result = runner.invoke(app, ["workitem", "close-check", "--wi", wi_rel])
+
+        assert result.exit_code == 1, result.output
+        assert "generation-constraints-handoff" in result.output
+        assert "quality-platform-handoff" in result.output
+        formatted_detail = _format_close_check_detail(
+            {
+                "detail": "capability_ready: frontend-mainline-delivery",
+                "frontend_delivery_status": {
+                    "provider_id": "public-primevue",
+                    "package_names": "primevue,@primeuix/themes",
+                    "runtime_delivery_state": "scaffolded",
+                    "download": "installed",
+                    "integration": "integrated",
+                    "browser_gate": "pending",
+                    "delivery": "apply_succeeded_pending_browser_gate",
+                },
+                "frontend_inheritance_status": {
+                    "generation": "not_inherited",
+                    "quality": "not_inherited",
+                },
+            }
+        )
+        assert "frontend inheritance:" in formatted_detail
+        assert "codegen not inherited yet (risk)" in formatted_detail
+        assert "frontend tests not inherited yet (risk)" in formatted_detail
 
     def test_exit_1_when_worktree_dirty_after_git_closeout(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
@@ -983,6 +1251,65 @@ class TestCliWorkitemCloseCheck:
         assert result.exit_code == 1
         assert "branch_lifecycle" in result.output
         assert "codex/001-branch-check-demo" in result.output
+        assert "Branch Lifecycle Next Actions" in result.output
+        assert "decide whether codex/001-branch-check-demo should be merged" in result.output
+
+    def test_branch_check_text_surfaces_next_actions_for_unresolved_associated_branch(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        root = tmp_path / "r10-branch-text"
+        root.mkdir()
+        _setup_repo(
+            root,
+            tasks_body="- [x] done\n### Task 1.1\n- **验收标准（AC）**：ok",
+            plan_status="completed",
+        )
+        _create_branch_ahead_of_main(root, "codex/001-branch-check-demo")
+        monkeypatch.chdir(root)
+
+        result = runner.invoke(app, ["workitem", "branch-check", "--wi", "specs/001-wi"])
+
+        assert result.exit_code == 1
+        assert "Next Actions" in result.output
+        assert "decide whether codex/001-branch-check-demo should be merged" in result.output
+
+    def test_branch_check_text_deduplicates_repeated_warnings(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        root = tmp_path / "r10-branch-warning-dedupe"
+        root.mkdir()
+        monkeypatch.chdir(root)
+
+        with patch(
+            "ai_sdlc.cli.workitem_cmd.run_branch_check",
+            return_value=BranchCheckResult(
+                ok=True,
+                warnings=[
+                    "branch lifecycle warning",
+                    "branch lifecycle warning",
+                ],
+                entries=[],
+            ),
+        ):
+            result = runner.invoke(app, ["workitem", "branch-check", "--wi", "specs/001-wi"])
+
+        assert result.exit_code == 0
+        assert result.output.count("branch lifecycle warning") == 1
+
+    def test_close_check_text_deduplicates_repeated_blockers(self) -> None:
+        result = SimpleNamespace(
+            checks=[],
+            blockers=[
+                "program truth unresolved",
+                "program truth unresolved",
+            ],
+        )
+
+        with workitem_cmd_module.console.capture() as capture:
+            workitem_cmd_module._print_close_table(result)
+
+        output = capture.get()
+        assert output.count("program truth unresolved") == 1
 
     def test_exit_1_when_close_check_late_resurfaces_frontend_evidence_class_mirror_drift(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
@@ -1119,6 +1446,8 @@ class TestCliWorkitemCloseCheck:
         assert result.exit_code == 1
         assert '"ok": false' in result.output
         assert '"name": "codex/001-worktree-demo"' in result.output
+        assert '"next_required_actions": [' in result.output
+        assert "decide whether codex/001-worktree-demo should be merged" in result.output
         assert str(worktree_path) in result.output
 
     def test_branch_check_ignores_unrelated_historical_branch(

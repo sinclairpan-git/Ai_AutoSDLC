@@ -26,6 +26,15 @@ from ai_sdlc.utils.helpers import find_project_root
 console = Console()
 
 
+def _dedupe_text_items(values: object) -> list[str]:
+    deduped: list[str] = []
+    for value in values or []:
+        normalized = str(value).strip()
+        if normalized and normalized not in deduped:
+            deduped.append(normalized)
+    return deduped
+
+
 def _stage_start_callback(stage: str, *, dry_run: bool) -> None:
     suffix = " (dry-run)" if dry_run else ""
     console.print(f"[cyan]Stage {stage}: running{suffix}[/cyan]")
@@ -39,6 +48,28 @@ def _stage_finish_callback(stage: str, result: Any) -> None:
         "HALT": "red",
     }.get(verdict, "red")
     console.print(f"[{style}]Stage {stage}: {verdict}[/{style}]")
+
+
+def _failed_gate_messages(result: Any) -> list[str]:
+    prioritized: dict[str, int] = {}
+    for check in getattr(result, "checks", []) or []:
+        passed = bool(getattr(check, "passed", False))
+        if passed:
+            continue
+        message = str(getattr(check, "message", "")).strip()
+        if not message:
+            continue
+        name = str(getattr(check, "name", "")).strip()
+        priority = 0 if name == "program_truth_audit_ready" else 1
+        current = prioritized.get(message)
+        if current is None or priority < current:
+            prioritized[message] = priority
+    return [
+        message
+        for message, _priority in sorted(
+            prioritized.items(), key=lambda item: (item[1], item[0])
+        )
+    ]
 
 
 def _adapter_gate_message(root: object, *, dry_run: bool) -> str | None:
@@ -184,6 +215,8 @@ def run_command(
                 f"{cp.current_stage} ({verdict})"
                 "[/bold yellow]"
             )
+            for message in _failed_gate_messages(last_result)[:2]:
+                console.print(f"  reason: {message}", markup=False)
         else:
             console.print(
                 f"\n[bold green]Pipeline completed. Stage: {cp.current_stage}[/bold green]"
@@ -207,8 +240,8 @@ def _render_frontend_contract_runtime_attachment_summary(
         root,
         checkpoint=checkpoint,
     )
-    coverage_gaps = list(attachment.coverage_gaps[:3])
-    blockers = list(attachment.blockers[:1])
+    coverage_gaps = _dedupe_text_items(attachment.coverage_gaps)[:3]
+    blockers = _dedupe_text_items(attachment.blockers)[:1]
     details: list[str] = []
     if coverage_gaps:
         details.append("coverage gaps: " + ", ".join(coverage_gaps))

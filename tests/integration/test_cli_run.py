@@ -228,6 +228,68 @@ class TestRunCommand:
         assert "Stage close: RETRY" in result.output
         assert "Pipeline completed." not in result.output
         assert "Dry-run completed with open gates. Last stage: close (RETRY)" in result.output
+        assert "reason: Final tests did not pass" in result.output
+
+    def test_run_dry_run_surfaces_frontend_inheritance_risk_from_program_truth_audit(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setenv("OPENAI_CODEX", "1")
+        monkeypatch.chdir(tmp_path)
+        assert runner.invoke(app, ["init", ".", "--agent-target", "codex"]).exit_code == 0
+
+        original_run_gate = SDLCRunner._run_gate
+
+        def gate_wrapper(
+            self: SDLCRunner,
+            stage: str,
+            cp: Checkpoint,
+            *,
+            dry_run: bool = False,
+        ) -> GateResult:
+            if stage == "init":
+                return original_run_gate(self, stage, cp, dry_run=dry_run)
+            if stage == "close":
+                return GateResult(
+                    stage=stage,
+                    verdict=GateVerdict.RETRY,
+                    checks=[
+                        GateCheck(
+                            name="program_truth_audit_ready",
+                            passed=False,
+                            message=(
+                                "state=blocked; capability_blocked: "
+                                "frontend-mainline-delivery (blocked) | "
+                                "explain: browser gate evidence is still missing; "
+                                "inheritance: codegen not inherited yet (risk); "
+                                "frontend tests not inherited yet (risk); "
+                                "risk: continuing may generate against the wrong "
+                                "component library or validate against the wrong "
+                                "standard; next action: python -m ai_sdlc program "
+                                "generation-constraints-handoff ; python -m ai_sdlc "
+                                "program quality-platform-handoff"
+                            ),
+                        )
+                    ],
+                )
+            return GateResult(
+                stage=stage,
+                verdict=GateVerdict.PASS,
+                checks=[GateCheck(name=f"{stage}_ok", passed=True)],
+            )
+
+        monkeypatch.setattr(SDLCRunner, "_run_gate", gate_wrapper)
+
+        result = runner.invoke(app, ["run", "--dry-run"])
+
+        assert result.exit_code == 0
+        assert "Stage close: RETRY" in result.output
+        assert "Dry-run completed with open gates. Last stage: close (RETRY)" in result.output
+        assert "reason: state=blocked;" in result.output
+        assert "codegen not inherited yet (risk)" in result.output
+        assert "wrong component library" in result.output
+        assert "wrong standard" in result.output
+        assert "generation-constraints-handoff" in result.output
+        assert "quality-platform-handoff" in result.output
 
     def test_run_dry_run_blocks_on_stale_program_truth_for_close_checkpoint(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
@@ -270,6 +332,21 @@ class TestRunCommand:
             )
 
         monkeypatch.setattr("ai_sdlc.core.runner.run_close_check", _fake_close_check)
+        monkeypatch.setattr(
+            "ai_sdlc.core.runner._program_truth_gate_surface",
+            lambda *_args, **_kwargs: {
+                "required": True,
+                "ready": False,
+                "state": "stale",
+                "detail": (
+                    "truth_snapshot_stale: persisted truth snapshot is stale relative "
+                    "to current authoring/evidence"
+                ),
+                "next_required_actions": [
+                    "python -m ai_sdlc program truth sync --execute --yes"
+                ],
+            },
+        )
 
         save_checkpoint(
             tmp_path,
@@ -305,6 +382,10 @@ class TestRunCommand:
         assert "Stage close: RETRY" in result.output
         assert "Pipeline completed." not in result.output
         assert "Dry-run completed with open gates. Last stage: close (RETRY)" in result.output
+        assert "reason: state=stale;" in result.output
+        assert "truth_snapshot_stale" in result.output
+        assert "python -m ai_sdlc program" in result.output
+        assert "truth sync --execute --yes" in result.output
 
     def test_run_non_dry_run_blocks_when_adapter_is_not_verified_loaded(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
@@ -574,6 +655,7 @@ class TestRunCommand:
         assert result.exit_code == 0
         assert "Stage close" in result.output
         assert "Dry-run completed with open gates. Last stage: close (RETRY)" in result.output
+        assert "reason:" in result.output
 
     def test_run_dry_run_exposes_014_runtime_attachment_summary_when_attached(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch

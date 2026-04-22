@@ -28,6 +28,13 @@ from ai_sdlc.core.frontend_contract_runtime_attachment import (
 from ai_sdlc.core.frontend_cross_provider_consistency import (
     validate_frontend_cross_provider_consistency,
 )
+from ai_sdlc.core.frontend_delivery_truth import (
+    frontend_delivery_scope_for_status,
+    normalize_frontend_delivery_scope,
+    normalize_frontend_delivery_status,
+    summarize_frontend_delivery_status,
+    summarize_frontend_delivery_truth_item,
+)
 from ai_sdlc.core.frontend_gate_verification import (
     FRONTEND_GATE_EXECUTE_STATE_READY,
     FRONTEND_GATE_EXECUTE_STATE_RECHECK_REQUIRED,
@@ -36,6 +43,9 @@ from ai_sdlc.core.frontend_gate_verification import (
     build_frontend_browser_gate_execute_decision,
     build_frontend_gate_execute_decision,
     build_frontend_gate_verification_report,
+)
+from ai_sdlc.core.frontend_inheritance_truth import (
+    normalize_frontend_inheritance_status,
 )
 from ai_sdlc.core.frontend_page_ui_schema import (
     FrontendPageUiSchemaHandoff,
@@ -69,14 +79,40 @@ from ai_sdlc.core.verify_constraints import (
     split_terminal_markdown_footer,
 )
 from ai_sdlc.core.workitem_truth import run_truth_check
+from ai_sdlc.generators.frontend_cross_provider_consistency_artifacts import (
+    frontend_cross_provider_consistency_root,
+    load_frontend_cross_provider_consistency_artifacts,
+)
 from ai_sdlc.generators.frontend_gate_policy_artifacts import (
     materialize_frontend_gate_policy_artifacts,
 )
 from ai_sdlc.generators.frontend_generation_constraint_artifacts import (
+    frontend_generation_governance_root,
+    load_frontend_generation_constraint_artifacts,
     materialize_frontend_generation_constraint_artifacts,
+)
+from ai_sdlc.generators.frontend_page_ui_schema_artifacts import (
+    frontend_page_ui_schema_root,
+    load_frontend_page_ui_schema_artifacts,
+)
+from ai_sdlc.generators.frontend_provider_expansion_artifacts import (
+    frontend_provider_expansion_root,
+    load_frontend_provider_expansion_artifacts,
+)
+from ai_sdlc.generators.frontend_provider_runtime_adapter_artifacts import (
+    frontend_provider_runtime_adapter_root,
+    load_frontend_provider_runtime_adapter_artifacts,
+)
+from ai_sdlc.generators.frontend_quality_platform_artifacts import (
+    frontend_quality_platform_root,
+    load_frontend_quality_platform_artifacts,
 )
 from ai_sdlc.generators.frontend_solution_confirmation_artifacts import (
     frontend_solution_confirmation_memory_root,
+)
+from ai_sdlc.generators.frontend_theme_token_governance_artifacts import (
+    frontend_theme_token_governance_root,
+    load_frontend_theme_token_governance_artifacts,
 )
 from ai_sdlc.integrations.ide_adapter import build_adapter_governance_surface
 from ai_sdlc.models.frontend_browser_gate import (
@@ -92,6 +128,7 @@ from ai_sdlc.models.frontend_gate_policy import (
     build_p1_frontend_gate_policy_visual_a11y_foundation,
 )
 from ai_sdlc.models.frontend_generation_constraints import (
+    FrontendGenerationConstraintSet,
     build_mvp_frontend_generation_constraints,
 )
 from ai_sdlc.models.frontend_managed_delivery import (
@@ -100,6 +137,7 @@ from ai_sdlc.models.frontend_managed_delivery import (
     ManagedDeliveryExecutorContext,
 )
 from ai_sdlc.models.frontend_page_ui_schema import (
+    FrontendPageUiSchemaSet,
     build_p2_frontend_page_ui_schema_baseline,
 )
 from ai_sdlc.models.frontend_provider_expansion import (
@@ -167,6 +205,8 @@ PROGRAM_FRONTEND_BROWSER_GATE_RECHECK_COMMAND = (
 PROGRAM_TRUTH_SYNC_DRY_RUN_COMMAND = "python -m ai_sdlc program truth sync --dry-run"
 PROGRAM_TRUTH_SYNC_EXECUTE_COMMAND = "python -m ai_sdlc program truth sync --execute --yes"
 PROGRAM_TRUTH_AUDIT_COMMAND = "python -m ai_sdlc program truth audit"
+PROGRAM_FRONTEND_MAINLINE_DELIVERY_CAPABILITY_ID = "frontend-mainline-delivery"
+PROGRAM_FRONTEND_INHERITANCE_BLOCKER_PREFIX = "frontend_inheritance"
 PROGRAM_HOST_INGRESS_CAPABILITY_ID = "agent-adapter-verified-host-ingress"
 PROGRAM_HOST_INGRESS_CANONICAL_BLOCKER_PREFIX = "adapter_canonical_consumption"
 PROGRAM_TRUTH_SOURCE_DISCOVERY_ROOT = Path("docs")
@@ -321,6 +361,9 @@ class ProgramValidationResult:
     errors: list[str] = field(default_factory=list)
     warnings: list[str] = field(default_factory=list)
 
+    def __post_init__(self) -> None:
+        _canonicalize_program_runtime_string_fields(self, "errors", "warnings")
+
 
 @dataclass
 class ProgramFrontendReadiness:
@@ -336,6 +379,16 @@ class ProgramFrontendReadiness:
     coverage_gaps: list[str] = field(default_factory=list)
     blockers: list[str] = field(default_factory=list)
     source_linkage: dict[str, str] = field(default_factory=dict)
+
+    def __post_init__(self) -> None:
+        _canonicalize_program_runtime_string_fields(
+            self,
+            "recheck_reason_codes",
+            "remediation_reason_codes",
+            "remediation_hints",
+            "coverage_gaps",
+            "blockers",
+        )
 
 
 @dataclass
@@ -373,6 +426,19 @@ class ProgramFrontendDeliveryRegistryHandoff:
     blockers: list[str] = field(default_factory=list)
     warnings: list[str] = field(default_factory=list)
 
+    def __post_init__(self) -> None:
+        _canonicalize_program_runtime_string_fields(
+            self,
+            "install_strategy_ids",
+            "availability_prerequisites",
+            "runtime_requirements",
+            "component_library_packages",
+            "adapter_packages",
+            "supported_posture_modes",
+            "blockers",
+            "warnings",
+        )
+
 
 @dataclass
 class ProgramFrontendGenerationConstraintsHandoff:
@@ -381,11 +447,28 @@ class ProgramFrontendGenerationConstraintsHandoff:
     effective_provider_id: str
     delivery_entry_id: str
     provider_theme_adapter_id: str
+    managed_delivery_apply_state: str = "not_applied"
+    managed_delivery_apply_artifact_path: str = ""
+    provider_runtime_adapter_carrier_mode: str = ""
+    provider_runtime_adapter_delivery_state: str = ""
+    provider_runtime_adapter_evidence_state: str = ""
     component_library_packages: list[str] = field(default_factory=list)
+    page_schema_ids: list[str] = field(default_factory=list)
     allowed_recipe_ids: list[str] = field(default_factory=list)
     whitelist_component_ids: list[str] = field(default_factory=list)
     blockers: list[str] = field(default_factory=list)
     warnings: list[str] = field(default_factory=list)
+
+    def __post_init__(self) -> None:
+        _canonicalize_program_runtime_string_fields(
+            self,
+            "component_library_packages",
+            "page_schema_ids",
+            "allowed_recipe_ids",
+            "whitelist_component_ids",
+            "blockers",
+            "warnings",
+        )
 
 
 @dataclass
@@ -408,6 +491,12 @@ class ProgramFrontendThemeTokenGovernanceHandoff:
     requested_style_pack_id: str
     effective_style_pack_id: str
     artifact_root: str
+    delivery_entry_id: str = ""
+    provider_theme_adapter_id: str = ""
+    provider_runtime_adapter_carrier_mode: str = ""
+    provider_runtime_adapter_delivery_state: str = ""
+    provider_runtime_adapter_evidence_state: str = ""
+    component_library_packages: list[str] = field(default_factory=list)
     token_mapping_count: int = 0
     page_schema_ids: list[str] = field(default_factory=list)
     override_diagnostics: list[ProgramFrontendThemeTokenOverrideDiagnostic] = field(
@@ -415,6 +504,15 @@ class ProgramFrontendThemeTokenGovernanceHandoff:
     )
     blockers: list[str] = field(default_factory=list)
     warnings: list[str] = field(default_factory=list)
+
+    def __post_init__(self) -> None:
+        _canonicalize_program_runtime_string_fields(
+            self,
+            "component_library_packages",
+            "page_schema_ids",
+            "blockers",
+            "warnings",
+        )
 
 
 @dataclass
@@ -437,8 +535,13 @@ class ProgramFrontendQualityPlatformHandoff:
     requested_style_pack_id: str
     effective_style_pack_id: str
     artifact_root: str
+    managed_delivery_apply_state: str = "not_applied"
+    managed_delivery_apply_artifact_path: str = ""
     component_library_packages: list[str] = field(default_factory=list)
     provider_theme_adapter_id: str = ""
+    provider_runtime_adapter_carrier_mode: str = ""
+    provider_runtime_adapter_delivery_state: str = ""
+    provider_runtime_adapter_evidence_state: str = ""
     matrix_coverage_count: int = 0
     evidence_contract_ids: list[str] = field(default_factory=list)
     page_schema_ids: list[str] = field(default_factory=list)
@@ -447,6 +550,16 @@ class ProgramFrontendQualityPlatformHandoff:
     )
     blockers: list[str] = field(default_factory=list)
     warnings: list[str] = field(default_factory=list)
+
+    def __post_init__(self) -> None:
+        _canonicalize_program_runtime_string_fields(
+            self,
+            "component_library_packages",
+            "evidence_contract_ids",
+            "page_schema_ids",
+            "blockers",
+            "warnings",
+        )
 
 
 @dataclass
@@ -473,6 +586,9 @@ class ProgramFrontendProviderExpansionHandoff:
     )
     blockers: list[str] = field(default_factory=list)
     warnings: list[str] = field(default_factory=list)
+
+    def __post_init__(self) -> None:
+        _canonicalize_program_runtime_string_fields(self, "blockers", "warnings")
 
 
 @dataclass
@@ -503,6 +619,9 @@ class ProgramFrontendProviderRuntimeAdapterHandoff:
     blockers: list[str] = field(default_factory=list)
     warnings: list[str] = field(default_factory=list)
 
+    def __post_init__(self) -> None:
+        _canonicalize_program_runtime_string_fields(self, "blockers", "warnings")
+
 
 @dataclass
 class ProgramFrontendCrossProviderConsistencyDiagnostic:
@@ -522,6 +641,9 @@ class ProgramFrontendCrossProviderConsistencyHandoff:
     state: str
     schema_version: str
     artifact_root: str
+    provider_runtime_adapter_carrier_mode: str = ""
+    provider_runtime_adapter_delivery_state: str = ""
+    provider_runtime_adapter_evidence_state: str = ""
     pair_count: int = 0
     ready_pair_count: int = 0
     conditional_pair_count: int = 0
@@ -532,6 +654,14 @@ class ProgramFrontendCrossProviderConsistencyHandoff:
     )
     blockers: list[str] = field(default_factory=list)
     warnings: list[str] = field(default_factory=list)
+
+    def __post_init__(self) -> None:
+        _canonicalize_program_runtime_string_fields(
+            self,
+            "page_schema_ids",
+            "blockers",
+            "warnings",
+        )
 
 
 @dataclass
@@ -554,6 +684,9 @@ class ProgramSpecStatus:
     frontend_readiness: ProgramFrontendReadiness | None = None
     frontend_evidence_class_status: ProgramFrontendEvidenceClassStatus | None = None
 
+    def __post_init__(self) -> None:
+        _canonicalize_program_runtime_string_fields(self, "blocked_by")
+
 
 @dataclass
 class ProgramFrontendRecheckHandoff:
@@ -561,6 +694,9 @@ class ProgramFrontendRecheckHandoff:
     reason: str
     recommended_commands: list[str] = field(default_factory=list)
     source_linkage: dict[str, str] = field(default_factory=dict)
+
+    def __post_init__(self) -> None:
+        _canonicalize_program_runtime_string_fields(self, "recommended_commands")
 
 
 @dataclass
@@ -570,7 +706,20 @@ class ProgramFrontendRemediationInput:
     blockers: list[str] = field(default_factory=list)
     suggested_actions: list[str] = field(default_factory=list)
     recommended_commands: list[str] = field(default_factory=list)
+    plain_language_blockers: list[str] = field(default_factory=list)
+    recommended_next_steps: list[str] = field(default_factory=list)
     source_linkage: dict[str, str] = field(default_factory=dict)
+
+    def __post_init__(self) -> None:
+        _canonicalize_program_runtime_string_fields(
+            self,
+            "fix_inputs",
+            "blockers",
+            "suggested_actions",
+            "recommended_commands",
+            "plain_language_blockers",
+            "recommended_next_steps",
+        )
 
 
 @dataclass
@@ -581,7 +730,19 @@ class ProgramFrontendRemediationRunbookStep:
     fix_inputs: list[str] = field(default_factory=list)
     suggested_actions: list[str] = field(default_factory=list)
     action_commands: list[str] = field(default_factory=list)
+    plain_language_blockers: list[str] = field(default_factory=list)
+    recommended_next_steps: list[str] = field(default_factory=list)
     source_linkage: dict[str, str] = field(default_factory=dict)
+
+    def __post_init__(self) -> None:
+        _canonicalize_program_runtime_string_fields(
+            self,
+            "fix_inputs",
+            "suggested_actions",
+            "action_commands",
+            "plain_language_blockers",
+            "recommended_next_steps",
+        )
 
 
 @dataclass
@@ -590,6 +751,11 @@ class ProgramFrontendRemediationRunbook:
     action_commands: list[str] = field(default_factory=list)
     follow_up_commands: list[str] = field(default_factory=list)
     warnings: list[str] = field(default_factory=list)
+
+    def __post_init__(self) -> None:
+        _canonicalize_program_runtime_string_fields(
+            self, "action_commands", "follow_up_commands", "warnings"
+        )
 
 
 @dataclass
@@ -600,6 +766,9 @@ class ProgramFrontendRemediationCommandResult:
     blockers: list[str] = field(default_factory=list)
     summary: str = ""
 
+    def __post_init__(self) -> None:
+        _canonicalize_program_runtime_string_fields(self, "written_paths", "blockers")
+
 
 @dataclass
 class ProgramFrontendRemediationExecutionResult:
@@ -608,6 +777,9 @@ class ProgramFrontendRemediationExecutionResult:
         default_factory=list
     )
     blockers: list[str] = field(default_factory=list)
+
+    def __post_init__(self) -> None:
+        _canonicalize_program_runtime_string_fields(self, "blockers")
 
 
 @dataclass
@@ -628,6 +800,15 @@ class ProgramFrontendManagedDeliveryApplyRequest:
     execution_view: ConfirmedActionPlanExecutionView | None = None
     decision_receipt: DeliveryApplyDecisionReceipt | None = None
 
+    def __post_init__(self) -> None:
+        _canonicalize_program_runtime_string_fields(
+            self,
+            "remaining_blockers",
+            "warnings",
+            "plain_language_blockers",
+            "recommended_next_steps",
+        )
+
 
 @dataclass
 class ProgramFrontendManagedDeliveryApplyResult:
@@ -647,6 +828,13 @@ class ProgramFrontendManagedDeliveryApplyResult:
     remaining_blockers: list[str] = field(default_factory=list)
     warnings: list[str] = field(default_factory=list)
 
+    def __post_init__(self) -> None:
+        _canonicalize_program_runtime_string_fields(
+            self,
+            "remaining_blockers",
+            "warnings",
+        )
+
 
 @dataclass
 class ProgramFrontendBrowserGateProbeRequest:
@@ -660,8 +848,20 @@ class ProgramFrontendBrowserGateProbeRequest:
     required_probe_set: list[str] = field(default_factory=list)
     overall_gate_status_preview: str = ""
     remaining_blockers: list[str] = field(default_factory=list)
+    plain_language_blockers: list[str] = field(default_factory=list)
+    recommended_next_steps: list[str] = field(default_factory=list)
     warnings: list[str] = field(default_factory=list)
     execution_context: BrowserQualityGateExecutionContext | None = None
+
+    def __post_init__(self) -> None:
+        _canonicalize_program_runtime_string_fields(
+            self,
+            "required_probe_set",
+            "remaining_blockers",
+            "plain_language_blockers",
+            "recommended_next_steps",
+            "warnings",
+        )
 
 
 @dataclass
@@ -679,6 +879,11 @@ class ProgramFrontendBrowserGateProbeResult:
     remaining_blockers: list[str] = field(default_factory=list)
     warnings: list[str] = field(default_factory=list)
 
+    def __post_init__(self) -> None:
+        _canonicalize_program_runtime_string_fields(
+            self, "required_probe_set", "remaining_blockers", "warnings"
+        )
+
 
 @dataclass
 class ProgramFrontendProviderHandoffStep:
@@ -686,7 +891,18 @@ class ProgramFrontendProviderHandoffStep:
     path: str
     pending_inputs: list[str] = field(default_factory=list)
     suggested_next_actions: list[str] = field(default_factory=list)
+    plain_language_blockers: list[str] = field(default_factory=list)
+    recommended_next_steps: list[str] = field(default_factory=list)
     source_linkage: dict[str, str] = field(default_factory=dict)
+
+    def __post_init__(self) -> None:
+        _canonicalize_program_runtime_string_fields(
+            self,
+            "pending_inputs",
+            "suggested_next_actions",
+            "plain_language_blockers",
+            "recommended_next_steps",
+        )
 
 
 @dataclass
@@ -700,6 +916,11 @@ class ProgramFrontendProviderHandoff:
     warnings: list[str] = field(default_factory=list)
     source_linkage: dict[str, str] = field(default_factory=dict)
 
+    def __post_init__(self) -> None:
+        _canonicalize_program_runtime_string_fields(
+            self, "remaining_blockers", "warnings"
+        )
+
 
 @dataclass
 class ProgramFrontendProviderRuntimeRequestStep:
@@ -707,7 +928,18 @@ class ProgramFrontendProviderRuntimeRequestStep:
     path: str
     pending_inputs: list[str] = field(default_factory=list)
     suggested_next_actions: list[str] = field(default_factory=list)
+    plain_language_blockers: list[str] = field(default_factory=list)
+    recommended_next_steps: list[str] = field(default_factory=list)
     source_linkage: dict[str, str] = field(default_factory=dict)
+
+    def __post_init__(self) -> None:
+        _canonicalize_program_runtime_string_fields(
+            self,
+            "pending_inputs",
+            "suggested_next_actions",
+            "plain_language_blockers",
+            "recommended_next_steps",
+        )
 
 
 @dataclass
@@ -724,6 +956,11 @@ class ProgramFrontendProviderRuntimeRequest:
     warnings: list[str] = field(default_factory=list)
     source_linkage: dict[str, str] = field(default_factory=dict)
 
+    def __post_init__(self) -> None:
+        _canonicalize_program_runtime_string_fields(
+            self, "remaining_blockers", "warnings"
+        )
+
 
 @dataclass
 class ProgramFrontendProviderRuntimeResult:
@@ -736,6 +973,11 @@ class ProgramFrontendProviderRuntimeResult:
     warnings: list[str] = field(default_factory=list)
     source_linkage: dict[str, str] = field(default_factory=dict)
 
+    def __post_init__(self) -> None:
+        _canonicalize_program_runtime_string_fields(
+            self, "patch_summaries", "remaining_blockers", "warnings"
+        )
+
 
 @dataclass
 class ProgramFrontendProviderPatchHandoffStep:
@@ -744,7 +986,18 @@ class ProgramFrontendProviderPatchHandoffStep:
     patch_availability_state: str
     pending_inputs: list[str] = field(default_factory=list)
     suggested_next_actions: list[str] = field(default_factory=list)
+    plain_language_blockers: list[str] = field(default_factory=list)
+    recommended_next_steps: list[str] = field(default_factory=list)
     source_linkage: dict[str, str] = field(default_factory=dict)
+
+    def __post_init__(self) -> None:
+        _canonicalize_program_runtime_string_fields(
+            self,
+            "pending_inputs",
+            "suggested_next_actions",
+            "plain_language_blockers",
+            "recommended_next_steps",
+        )
 
 
 @dataclass
@@ -759,6 +1012,11 @@ class ProgramFrontendProviderPatchHandoff:
     warnings: list[str] = field(default_factory=list)
     source_linkage: dict[str, str] = field(default_factory=dict)
 
+    def __post_init__(self) -> None:
+        _canonicalize_program_runtime_string_fields(
+            self, "patch_summaries", "remaining_blockers", "warnings"
+        )
+
 
 @dataclass
 class ProgramFrontendProviderPatchApplyRequestStep:
@@ -767,7 +1025,18 @@ class ProgramFrontendProviderPatchApplyRequestStep:
     patch_availability_state: str
     pending_inputs: list[str] = field(default_factory=list)
     suggested_next_actions: list[str] = field(default_factory=list)
+    plain_language_blockers: list[str] = field(default_factory=list)
+    recommended_next_steps: list[str] = field(default_factory=list)
     source_linkage: dict[str, str] = field(default_factory=dict)
+
+    def __post_init__(self) -> None:
+        _canonicalize_program_runtime_string_fields(
+            self,
+            "pending_inputs",
+            "suggested_next_actions",
+            "plain_language_blockers",
+            "recommended_next_steps",
+        )
 
 
 @dataclass
@@ -785,6 +1054,11 @@ class ProgramFrontendProviderPatchApplyRequest:
     warnings: list[str] = field(default_factory=list)
     source_linkage: dict[str, str] = field(default_factory=dict)
 
+    def __post_init__(self) -> None:
+        _canonicalize_program_runtime_string_fields(
+            self, "remaining_blockers", "warnings"
+        )
+
 
 @dataclass
 class ProgramFrontendProviderPatchApplyResult:
@@ -798,6 +1072,15 @@ class ProgramFrontendProviderPatchApplyResult:
     warnings: list[str] = field(default_factory=list)
     source_linkage: dict[str, str] = field(default_factory=dict)
 
+    def __post_init__(self) -> None:
+        _canonicalize_program_runtime_string_fields(
+            self,
+            "apply_summaries",
+            "written_paths",
+            "remaining_blockers",
+            "warnings",
+        )
+
 
 @dataclass
 class ProgramFrontendCrossSpecWritebackRequestStep:
@@ -806,7 +1089,18 @@ class ProgramFrontendCrossSpecWritebackRequestStep:
     writeback_state: str
     pending_inputs: list[str] = field(default_factory=list)
     suggested_next_actions: list[str] = field(default_factory=list)
+    plain_language_blockers: list[str] = field(default_factory=list)
+    recommended_next_steps: list[str] = field(default_factory=list)
     source_linkage: dict[str, str] = field(default_factory=dict)
+
+    def __post_init__(self) -> None:
+        _canonicalize_program_runtime_string_fields(
+            self,
+            "pending_inputs",
+            "suggested_next_actions",
+            "plain_language_blockers",
+            "recommended_next_steps",
+        )
 
 
 @dataclass
@@ -825,6 +1119,11 @@ class ProgramFrontendCrossSpecWritebackRequest:
     warnings: list[str] = field(default_factory=list)
     source_linkage: dict[str, str] = field(default_factory=dict)
 
+    def __post_init__(self) -> None:
+        _canonicalize_program_runtime_string_fields(
+            self, "written_paths", "remaining_blockers", "warnings"
+        )
+
 
 @dataclass
 class ProgramFrontendCrossSpecWritebackResult:
@@ -838,6 +1137,15 @@ class ProgramFrontendCrossSpecWritebackResult:
     warnings: list[str] = field(default_factory=list)
     source_linkage: dict[str, str] = field(default_factory=dict)
 
+    def __post_init__(self) -> None:
+        _canonicalize_program_runtime_string_fields(
+            self,
+            "orchestration_summaries",
+            "written_paths",
+            "remaining_blockers",
+            "warnings",
+        )
+
 
 @dataclass
 class ProgramFrontendGuardedRegistryRequestStep:
@@ -846,7 +1154,18 @@ class ProgramFrontendGuardedRegistryRequestStep:
     registry_state: str
     pending_inputs: list[str] = field(default_factory=list)
     suggested_next_actions: list[str] = field(default_factory=list)
+    plain_language_blockers: list[str] = field(default_factory=list)
+    recommended_next_steps: list[str] = field(default_factory=list)
     source_linkage: dict[str, str] = field(default_factory=dict)
+
+    def __post_init__(self) -> None:
+        _canonicalize_program_runtime_string_fields(
+            self,
+            "pending_inputs",
+            "suggested_next_actions",
+            "plain_language_blockers",
+            "recommended_next_steps",
+        )
 
 
 @dataclass
@@ -865,6 +1184,11 @@ class ProgramFrontendGuardedRegistryRequest:
     warnings: list[str] = field(default_factory=list)
     source_linkage: dict[str, str] = field(default_factory=dict)
 
+    def __post_init__(self) -> None:
+        _canonicalize_program_runtime_string_fields(
+            self, "written_paths", "remaining_blockers", "warnings"
+        )
+
 
 @dataclass
 class ProgramFrontendGuardedRegistryResult:
@@ -878,6 +1202,15 @@ class ProgramFrontendGuardedRegistryResult:
     warnings: list[str] = field(default_factory=list)
     source_linkage: dict[str, str] = field(default_factory=dict)
 
+    def __post_init__(self) -> None:
+        _canonicalize_program_runtime_string_fields(
+            self,
+            "registry_summaries",
+            "written_paths",
+            "remaining_blockers",
+            "warnings",
+        )
+
 
 @dataclass
 class ProgramFrontendBroaderGovernanceRequestStep:
@@ -886,7 +1219,18 @@ class ProgramFrontendBroaderGovernanceRequestStep:
     governance_state: str
     pending_inputs: list[str] = field(default_factory=list)
     suggested_next_actions: list[str] = field(default_factory=list)
+    plain_language_blockers: list[str] = field(default_factory=list)
+    recommended_next_steps: list[str] = field(default_factory=list)
     source_linkage: dict[str, str] = field(default_factory=dict)
+
+    def __post_init__(self) -> None:
+        _canonicalize_program_runtime_string_fields(
+            self,
+            "pending_inputs",
+            "suggested_next_actions",
+            "plain_language_blockers",
+            "recommended_next_steps",
+        )
 
 
 @dataclass
@@ -905,6 +1249,11 @@ class ProgramFrontendBroaderGovernanceRequest:
     warnings: list[str] = field(default_factory=list)
     source_linkage: dict[str, str] = field(default_factory=dict)
 
+    def __post_init__(self) -> None:
+        _canonicalize_program_runtime_string_fields(
+            self, "written_paths", "remaining_blockers", "warnings"
+        )
+
 
 @dataclass
 class ProgramFrontendBroaderGovernanceResult:
@@ -918,6 +1267,15 @@ class ProgramFrontendBroaderGovernanceResult:
     warnings: list[str] = field(default_factory=list)
     source_linkage: dict[str, str] = field(default_factory=dict)
 
+    def __post_init__(self) -> None:
+        _canonicalize_program_runtime_string_fields(
+            self,
+            "governance_summaries",
+            "written_paths",
+            "remaining_blockers",
+            "warnings",
+        )
+
 
 @dataclass
 class ProgramFrontendFinalGovernanceRequestStep:
@@ -926,7 +1284,18 @@ class ProgramFrontendFinalGovernanceRequestStep:
     final_governance_state: str
     pending_inputs: list[str] = field(default_factory=list)
     suggested_next_actions: list[str] = field(default_factory=list)
+    plain_language_blockers: list[str] = field(default_factory=list)
+    recommended_next_steps: list[str] = field(default_factory=list)
     source_linkage: dict[str, str] = field(default_factory=dict)
+
+    def __post_init__(self) -> None:
+        _canonicalize_program_runtime_string_fields(
+            self,
+            "pending_inputs",
+            "suggested_next_actions",
+            "plain_language_blockers",
+            "recommended_next_steps",
+        )
 
 
 @dataclass
@@ -945,6 +1314,11 @@ class ProgramFrontendFinalGovernanceRequest:
     warnings: list[str] = field(default_factory=list)
     source_linkage: dict[str, str] = field(default_factory=dict)
 
+    def __post_init__(self) -> None:
+        _canonicalize_program_runtime_string_fields(
+            self, "written_paths", "remaining_blockers", "warnings"
+        )
+
 
 @dataclass
 class ProgramFrontendFinalGovernanceResult:
@@ -958,6 +1332,15 @@ class ProgramFrontendFinalGovernanceResult:
     warnings: list[str] = field(default_factory=list)
     source_linkage: dict[str, str] = field(default_factory=dict)
 
+    def __post_init__(self) -> None:
+        _canonicalize_program_runtime_string_fields(
+            self,
+            "final_governance_summaries",
+            "written_paths",
+            "remaining_blockers",
+            "warnings",
+        )
+
 
 @dataclass
 class ProgramFrontendWritebackPersistenceRequestStep:
@@ -966,7 +1349,18 @@ class ProgramFrontendWritebackPersistenceRequestStep:
     persistence_state: str
     pending_inputs: list[str] = field(default_factory=list)
     suggested_next_actions: list[str] = field(default_factory=list)
+    plain_language_blockers: list[str] = field(default_factory=list)
+    recommended_next_steps: list[str] = field(default_factory=list)
     source_linkage: dict[str, str] = field(default_factory=dict)
+
+    def __post_init__(self) -> None:
+        _canonicalize_program_runtime_string_fields(
+            self,
+            "pending_inputs",
+            "suggested_next_actions",
+            "plain_language_blockers",
+            "recommended_next_steps",
+        )
 
 
 @dataclass
@@ -985,6 +1379,11 @@ class ProgramFrontendWritebackPersistenceRequest:
     warnings: list[str] = field(default_factory=list)
     source_linkage: dict[str, str] = field(default_factory=dict)
 
+    def __post_init__(self) -> None:
+        _canonicalize_program_runtime_string_fields(
+            self, "written_paths", "remaining_blockers", "warnings"
+        )
+
 
 @dataclass
 class ProgramFrontendWritebackPersistenceResult:
@@ -998,6 +1397,15 @@ class ProgramFrontendWritebackPersistenceResult:
     warnings: list[str] = field(default_factory=list)
     source_linkage: dict[str, str] = field(default_factory=dict)
 
+    def __post_init__(self) -> None:
+        _canonicalize_program_runtime_string_fields(
+            self,
+            "persistence_summaries",
+            "written_paths",
+            "remaining_blockers",
+            "warnings",
+        )
+
 
 @dataclass
 class ProgramFrontendPersistedWriteProofRequestStep:
@@ -1006,7 +1414,18 @@ class ProgramFrontendPersistedWriteProofRequestStep:
     proof_state: str
     pending_inputs: list[str] = field(default_factory=list)
     suggested_next_actions: list[str] = field(default_factory=list)
+    plain_language_blockers: list[str] = field(default_factory=list)
+    recommended_next_steps: list[str] = field(default_factory=list)
     source_linkage: dict[str, str] = field(default_factory=dict)
+
+    def __post_init__(self) -> None:
+        _canonicalize_program_runtime_string_fields(
+            self,
+            "pending_inputs",
+            "suggested_next_actions",
+            "plain_language_blockers",
+            "recommended_next_steps",
+        )
 
 
 @dataclass
@@ -1025,6 +1444,11 @@ class ProgramFrontendPersistedWriteProofRequest:
     warnings: list[str] = field(default_factory=list)
     source_linkage: dict[str, str] = field(default_factory=dict)
 
+    def __post_init__(self) -> None:
+        _canonicalize_program_runtime_string_fields(
+            self, "written_paths", "remaining_blockers", "warnings"
+        )
+
 
 @dataclass
 class ProgramFrontendPersistedWriteProofResult:
@@ -1038,6 +1462,15 @@ class ProgramFrontendPersistedWriteProofResult:
     warnings: list[str] = field(default_factory=list)
     source_linkage: dict[str, str] = field(default_factory=dict)
 
+    def __post_init__(self) -> None:
+        _canonicalize_program_runtime_string_fields(
+            self,
+            "proof_summaries",
+            "written_paths",
+            "remaining_blockers",
+            "warnings",
+        )
+
 
 @dataclass
 class ProgramFrontendFinalProofPublicationRequestStep:
@@ -1046,7 +1479,18 @@ class ProgramFrontendFinalProofPublicationRequestStep:
     publication_state: str
     pending_inputs: list[str] = field(default_factory=list)
     suggested_next_actions: list[str] = field(default_factory=list)
+    plain_language_blockers: list[str] = field(default_factory=list)
+    recommended_next_steps: list[str] = field(default_factory=list)
     source_linkage: dict[str, str] = field(default_factory=dict)
+
+    def __post_init__(self) -> None:
+        _canonicalize_program_runtime_string_fields(
+            self,
+            "pending_inputs",
+            "suggested_next_actions",
+            "plain_language_blockers",
+            "recommended_next_steps",
+        )
 
 
 @dataclass
@@ -1065,6 +1509,11 @@ class ProgramFrontendFinalProofPublicationRequest:
     warnings: list[str] = field(default_factory=list)
     source_linkage: dict[str, str] = field(default_factory=dict)
 
+    def __post_init__(self) -> None:
+        _canonicalize_program_runtime_string_fields(
+            self, "written_paths", "remaining_blockers", "warnings"
+        )
+
 
 @dataclass
 class ProgramFrontendFinalProofPublicationResult:
@@ -1078,6 +1527,15 @@ class ProgramFrontendFinalProofPublicationResult:
     warnings: list[str] = field(default_factory=list)
     source_linkage: dict[str, str] = field(default_factory=dict)
 
+    def __post_init__(self) -> None:
+        _canonicalize_program_runtime_string_fields(
+            self,
+            "publication_summaries",
+            "written_paths",
+            "remaining_blockers",
+            "warnings",
+        )
+
 
 @dataclass
 class ProgramFrontendFinalProofClosureRequestStep:
@@ -1086,7 +1544,18 @@ class ProgramFrontendFinalProofClosureRequestStep:
     closure_state: str
     pending_inputs: list[str] = field(default_factory=list)
     suggested_next_actions: list[str] = field(default_factory=list)
+    plain_language_blockers: list[str] = field(default_factory=list)
+    recommended_next_steps: list[str] = field(default_factory=list)
     source_linkage: dict[str, str] = field(default_factory=dict)
+
+    def __post_init__(self) -> None:
+        _canonicalize_program_runtime_string_fields(
+            self,
+            "pending_inputs",
+            "suggested_next_actions",
+            "plain_language_blockers",
+            "recommended_next_steps",
+        )
 
 
 @dataclass
@@ -1105,6 +1574,11 @@ class ProgramFrontendFinalProofClosureRequest:
     warnings: list[str] = field(default_factory=list)
     source_linkage: dict[str, str] = field(default_factory=dict)
 
+    def __post_init__(self) -> None:
+        _canonicalize_program_runtime_string_fields(
+            self, "written_paths", "remaining_blockers", "warnings"
+        )
+
 
 @dataclass
 class ProgramFrontendFinalProofClosureResult:
@@ -1118,6 +1592,15 @@ class ProgramFrontendFinalProofClosureResult:
     warnings: list[str] = field(default_factory=list)
     source_linkage: dict[str, str] = field(default_factory=dict)
 
+    def __post_init__(self) -> None:
+        _canonicalize_program_runtime_string_fields(
+            self,
+            "closure_summaries",
+            "written_paths",
+            "remaining_blockers",
+            "warnings",
+        )
+
 
 @dataclass
 class ProgramFrontendFinalProofArchiveRequestStep:
@@ -1126,7 +1609,18 @@ class ProgramFrontendFinalProofArchiveRequestStep:
     archive_state: str
     pending_inputs: list[str] = field(default_factory=list)
     suggested_next_actions: list[str] = field(default_factory=list)
+    plain_language_blockers: list[str] = field(default_factory=list)
+    recommended_next_steps: list[str] = field(default_factory=list)
     source_linkage: dict[str, str] = field(default_factory=dict)
+
+    def __post_init__(self) -> None:
+        _canonicalize_program_runtime_string_fields(
+            self,
+            "pending_inputs",
+            "suggested_next_actions",
+            "plain_language_blockers",
+            "recommended_next_steps",
+        )
 
 
 @dataclass
@@ -1145,6 +1639,11 @@ class ProgramFrontendFinalProofArchiveRequest:
     warnings: list[str] = field(default_factory=list)
     source_linkage: dict[str, str] = field(default_factory=dict)
 
+    def __post_init__(self) -> None:
+        _canonicalize_program_runtime_string_fields(
+            self, "written_paths", "remaining_blockers", "warnings"
+        )
+
 
 @dataclass
 class ProgramFrontendFinalProofArchiveResult:
@@ -1158,6 +1657,15 @@ class ProgramFrontendFinalProofArchiveResult:
     warnings: list[str] = field(default_factory=list)
     source_linkage: dict[str, str] = field(default_factory=dict)
 
+    def __post_init__(self) -> None:
+        _canonicalize_program_runtime_string_fields(
+            self,
+            "archive_summaries",
+            "written_paths",
+            "remaining_blockers",
+            "warnings",
+        )
+
 
 @dataclass
 class ProgramFrontendFinalProofArchiveThreadArchiveRequestStep:
@@ -1166,7 +1674,18 @@ class ProgramFrontendFinalProofArchiveThreadArchiveRequestStep:
     thread_archive_state: str
     pending_inputs: list[str] = field(default_factory=list)
     suggested_next_actions: list[str] = field(default_factory=list)
+    plain_language_blockers: list[str] = field(default_factory=list)
+    recommended_next_steps: list[str] = field(default_factory=list)
     source_linkage: dict[str, str] = field(default_factory=dict)
+
+    def __post_init__(self) -> None:
+        _canonicalize_program_runtime_string_fields(
+            self,
+            "pending_inputs",
+            "suggested_next_actions",
+            "plain_language_blockers",
+            "recommended_next_steps",
+        )
 
 
 @dataclass
@@ -1185,6 +1704,11 @@ class ProgramFrontendFinalProofArchiveThreadArchiveRequest:
     warnings: list[str] = field(default_factory=list)
     source_linkage: dict[str, str] = field(default_factory=dict)
 
+    def __post_init__(self) -> None:
+        _canonicalize_program_runtime_string_fields(
+            self, "written_paths", "remaining_blockers", "warnings"
+        )
+
 
 @dataclass
 class ProgramFrontendFinalProofArchiveThreadArchiveResult:
@@ -1198,6 +1722,15 @@ class ProgramFrontendFinalProofArchiveThreadArchiveResult:
     warnings: list[str] = field(default_factory=list)
     source_linkage: dict[str, str] = field(default_factory=dict)
 
+    def __post_init__(self) -> None:
+        _canonicalize_program_runtime_string_fields(
+            self,
+            "thread_archive_summaries",
+            "written_paths",
+            "remaining_blockers",
+            "warnings",
+        )
+
 
 @dataclass
 class ProgramFrontendFinalProofArchiveProjectCleanupRequestStep:
@@ -1206,7 +1739,18 @@ class ProgramFrontendFinalProofArchiveProjectCleanupRequestStep:
     project_cleanup_state: str
     pending_inputs: list[str] = field(default_factory=list)
     suggested_next_actions: list[str] = field(default_factory=list)
+    plain_language_blockers: list[str] = field(default_factory=list)
+    recommended_next_steps: list[str] = field(default_factory=list)
     source_linkage: dict[str, str] = field(default_factory=dict)
+
+    def __post_init__(self) -> None:
+        _canonicalize_program_runtime_string_fields(
+            self,
+            "pending_inputs",
+            "suggested_next_actions",
+            "plain_language_blockers",
+            "recommended_next_steps",
+        )
 
 
 @dataclass
@@ -1237,6 +1781,11 @@ class ProgramFrontendFinalProofArchiveProjectCleanupRequest:
     warnings: list[str] = field(default_factory=list)
     source_linkage: dict[str, str] = field(default_factory=dict)
 
+    def __post_init__(self) -> None:
+        _canonicalize_program_runtime_string_fields(
+            self, "written_paths", "remaining_blockers", "warnings"
+        )
+
 
 @dataclass
 class ProgramFrontendFinalProofArchiveProjectCleanupResult:
@@ -1262,6 +1811,15 @@ class ProgramFrontendFinalProofArchiveProjectCleanupResult:
     warnings: list[str] = field(default_factory=list)
     source_linkage: dict[str, str] = field(default_factory=dict)
 
+    def __post_init__(self) -> None:
+        _canonicalize_program_runtime_string_fields(
+            self,
+            "project_cleanup_summaries",
+            "written_paths",
+            "remaining_blockers",
+            "warnings",
+        )
+
 
 @dataclass
 class ProgramIntegrationStep:
@@ -1281,12 +1839,18 @@ class ProgramIntegrationPlan:
     steps: list[ProgramIntegrationStep] = field(default_factory=list)
     warnings: list[str] = field(default_factory=list)
 
+    def __post_init__(self) -> None:
+        _canonicalize_program_runtime_string_fields(self, "warnings")
+
 
 @dataclass
 class ProgramExecuteGates:
     passed: bool
     failed: list[str] = field(default_factory=list)
     warnings: list[str] = field(default_factory=list)
+
+    def __post_init__(self) -> None:
+        _canonicalize_program_runtime_string_fields(self, "failed", "warnings")
 
 
 @dataclass
@@ -1299,6 +1863,11 @@ class ProgramFrontendEvidenceClassSyncResult:
     remaining_blockers: list[str] = field(default_factory=list)
     warnings: list[str] = field(default_factory=list)
 
+    def __post_init__(self) -> None:
+        _canonicalize_program_runtime_string_fields(
+            self, "updated_specs", "written_paths", "remaining_blockers", "warnings"
+        )
+
 
 @dataclass
 class ProgramManifestSpecEntrySyncResult:
@@ -1309,6 +1878,11 @@ class ProgramManifestSpecEntrySyncResult:
     blockers: list[str] = field(default_factory=list)
     next_required_actions: list[str] = field(default_factory=list)
 
+    def __post_init__(self) -> None:
+        _canonicalize_program_runtime_string_fields(
+            self, "written_paths", "blockers", "next_required_actions"
+        )
+
 
 @dataclass
 class ProgramSpecTruthReadinessResult:
@@ -1317,9 +1891,17 @@ class ProgramSpecTruthReadinessResult:
     state: str
     summary_token: str = ""
     detail: str = ""
+    frontend_delivery_status: dict[str, str] = field(default_factory=dict)
+    frontend_delivery_scope: str = ""
+    frontend_inheritance_status: dict[str, str] = field(default_factory=dict)
     next_required_actions: list[str] = field(default_factory=list)
     matched_spec_ids: list[str] = field(default_factory=list)
     matched_capabilities: list[str] = field(default_factory=list)
+
+    def __post_init__(self) -> None:
+        self.next_required_actions = _unique_strings(self.next_required_actions)
+        self.matched_spec_ids = _unique_strings(self.matched_spec_ids)
+        self.matched_capabilities = _unique_strings(self.matched_capabilities)
 
 
 class ProgramService:
@@ -1555,18 +2137,79 @@ class ProgramService:
             for item in surface.get("release_capabilities", [])
             if item.get("capability_id") in matched_capabilities
         ]
+        matched_frontend_delivery_status: dict[str, str] = {}
+        matched_frontend_delivery_scope = ""
+        matched_frontend_inheritance_status: dict[str, str] = {}
+        for item in matched_items:
+            if not matched_frontend_inheritance_status:
+                matched_frontend_inheritance_status = (
+                    normalize_frontend_inheritance_status(
+                        item.get("frontend_inheritance_status")
+                    )
+                )
+            status_surface = item.get("frontend_delivery_status")
+            if isinstance(status_surface, dict):
+                matched_frontend_delivery_status = {
+                    key: str(value).strip()
+                    for key, value in status_surface.items()
+                    if str(value).strip()
+                }
+                if matched_frontend_delivery_status:
+                    matched_frontend_delivery_scope = normalize_frontend_delivery_scope(
+                        item.get("frontend_delivery_scope")
+                    ) or frontend_delivery_scope_for_status(
+                        matched_frontend_delivery_status
+                    )
+                    break
         if matched_items and any(item.get("audit_state") != "ready" for item in matched_items):
             blocked_capabilities = ", ".join(
                 f"{item.get('capability_id')} ({item.get('audit_state')})"
                 for item in matched_items
             )
+            blocked_delivery_summaries = _unique_strings(
+                [
+                    summary
+                    for item in matched_items
+                    for summary in [summarize_frontend_delivery_truth_item(item)]
+                    if summary
+                ]
+            )
+            blocked_explanations = _unique_strings(
+                [
+                    explanation
+                    for item in matched_items
+                    for explanation in _normalize_string_list(
+                        item.get("plain_language_blockers", [])
+                    )
+                ]
+            )
+            next_required_actions = _unique_strings(
+                [
+                    *[
+                        action
+                        for item in matched_items
+                        for action in _normalize_string_list(
+                            item.get("recommended_next_steps", [])
+                        )
+                    ],
+                    PROGRAM_TRUTH_AUDIT_COMMAND,
+                ]
+            )
+            detail = f"capability_blocked: {blocked_capabilities}"
+            if blocked_delivery_summaries:
+                detail += " | delivery: " + "; ".join(blocked_delivery_summaries[:1])
+            if blocked_explanations:
+                detail += " | explain: " + "; ".join(blocked_explanations[:2])
             return ProgramSpecTruthReadinessResult(
                 required=True,
                 ready=False,
                 state="blocked",
                 summary_token="capability_blocked",
-                detail=f"capability_blocked: {blocked_capabilities}",
-                next_required_actions=[PROGRAM_TRUTH_AUDIT_COMMAND],
+                detail=detail,
+                frontend_delivery_status=matched_frontend_delivery_status,
+                frontend_delivery_scope=matched_frontend_delivery_scope,
+                frontend_inheritance_status=matched_frontend_inheritance_status,
+                next_required_actions=next_required_actions,
                 matched_spec_ids=matched_spec_ids,
                 matched_capabilities=matched_capabilities,
             )
@@ -1613,6 +2256,9 @@ class ProgramService:
             ready=True,
             state="ready",
             detail=detail,
+            frontend_delivery_status=matched_frontend_delivery_status,
+            frontend_delivery_scope=matched_frontend_delivery_scope,
+            frontend_inheritance_status=matched_frontend_inheritance_status,
             matched_spec_ids=matched_spec_ids,
             matched_capabilities=matched_capabilities,
         )
@@ -2366,14 +3012,82 @@ class ProgramService:
             item = release_capability_map.get(capability_id)
             if item is None:
                 continue
-            release_capabilities.append(
-                {
-                    "capability_id": item.capability_id,
-                    "closure_state": item.closure_state,
-                    "audit_state": item.audit_state,
-                    "blocking_refs": list(item.blocking_refs),
-                }
+            capability_surface = {
+                "capability_id": item.capability_id,
+                "closure_state": item.closure_state,
+                "audit_state": item.audit_state,
+                "blocking_refs": list(item.blocking_refs),
+            }
+            frontend_delivery_status = self._truth_ledger_frontend_delivery_status(
+                capability_id=item.capability_id
             )
+            frontend_inheritance_status = self._truth_ledger_frontend_inheritance_status(
+                capability_id=item.capability_id
+            )
+            if frontend_delivery_status:
+                capability_surface["frontend_delivery_status"] = (
+                    frontend_delivery_status
+                )
+                capability_surface["frontend_delivery_scope"] = (
+                    frontend_delivery_scope_for_status(frontend_delivery_status)
+                )
+            if frontend_inheritance_status:
+                capability_surface["frontend_inheritance_status"] = (
+                    frontend_inheritance_status
+                )
+            frontend_delivery_summary = self._truth_ledger_frontend_delivery_summary(
+                capability_id=item.capability_id,
+                status_surface=frontend_delivery_status,
+            )
+            if frontend_delivery_summary:
+                capability_surface["frontend_delivery_summary"] = (
+                    frontend_delivery_summary
+                )
+            plain_language_blockers, recommended_next_steps = (
+                self._truth_ledger_frontend_capability_user_guidance(
+                    manifest,
+                    capability_id=item.capability_id,
+                )
+            )
+            if plain_language_blockers:
+                capability_surface["plain_language_blockers"] = (
+                    plain_language_blockers
+                )
+            if recommended_next_steps:
+                capability_surface["recommended_next_steps"] = (
+                    recommended_next_steps
+                )
+            blocking_reason_summary = self._truth_ledger_blocking_reason_summary(
+                capability_id=item.capability_id,
+                blocking_refs=list(item.blocking_refs),
+            )
+            if blocking_reason_summary:
+                capability_surface["blocking_reason_summary"] = (
+                    blocking_reason_summary
+                )
+            capability_next_actions = self._truth_ledger_capability_next_actions(
+                capability_id=item.capability_id,
+                blocking_refs=list(item.blocking_refs),
+            )
+            if capability_next_actions:
+                capability_surface["capability_next_actions"] = (
+                    capability_next_actions
+                )
+            if (
+                "plain_language_blockers" not in capability_surface
+                and blocking_reason_summary
+            ):
+                capability_surface["plain_language_blockers"] = [
+                    blocking_reason_summary
+                ]
+            if (
+                "recommended_next_steps" not in capability_surface
+                and capability_next_actions
+            ):
+                capability_surface["recommended_next_steps"] = (
+                    capability_next_actions
+                )
+            release_capabilities.append(capability_surface)
 
         detail = self._build_truth_ledger_detail(
             state=state,
@@ -2419,6 +3133,326 @@ class ProgramService:
             "validation_warnings": list(validation.warnings),
         }
 
+    def _truth_ledger_frontend_delivery_status(
+        self,
+        *,
+        capability_id: str,
+    ) -> dict[str, str]:
+        if capability_id != PROGRAM_FRONTEND_MAINLINE_DELIVERY_CAPABILITY_ID:
+            return {}
+
+        status_surface = self.build_frontend_delivery_status_surface()
+        if not status_surface:
+            return {}
+
+        return normalize_frontend_delivery_status(
+            {
+                "provider_id": status_surface["provider_id"],
+                "package_names": status_surface["package_names"],
+                "runtime_delivery_state": status_surface["runtime_delivery_state"],
+                "download": status_surface["install_state"],
+                "integration": status_surface["workspace_state"],
+                "browser_gate": status_surface["browser_gate_state"],
+                "delivery": status_surface["apply_state"],
+            }
+        )
+
+    def _truth_ledger_frontend_delivery_summary(
+        self,
+        *,
+        capability_id: str,
+        status_surface: dict[str, str] | None = None,
+    ) -> str:
+        effective_surface = status_surface or self._truth_ledger_frontend_delivery_status(
+            capability_id=capability_id
+        )
+        if not effective_surface:
+            return ""
+
+        return summarize_frontend_delivery_status(effective_surface)
+
+    def _truth_ledger_frontend_inheritance_status(
+        self,
+        *,
+        capability_id: str,
+    ) -> dict[str, str]:
+        if capability_id != PROGRAM_FRONTEND_MAINLINE_DELIVERY_CAPABILITY_ID:
+            return {}
+        return self.build_frontend_inheritance_status_surface()
+
+    def build_frontend_inheritance_status_surface(self) -> dict[str, str]:
+        return normalize_frontend_inheritance_status(
+            {
+                "generation": self._frontend_generation_inheritance_state(),
+                "quality": self._frontend_quality_inheritance_state(),
+            }
+        )
+
+    def _frontend_generation_inheritance_state(self) -> str:
+        handoff = self.build_frontend_generation_constraints_handoff()
+        manifest_path = (
+            frontend_generation_governance_root(self.root) / "generation.manifest.yaml"
+        )
+        manifest_exists = manifest_path.is_file()
+        if handoff.state != "ready":
+            return "blocked" if manifest_exists else "unknown"
+        if not manifest_exists:
+            return "not_inherited"
+        try:
+            constraints = load_frontend_generation_constraint_artifacts(self.root)
+        except ValueError:
+            return "blocked"
+        expected_page_schema_ids = list(handoff.page_schema_ids)
+        if (
+            constraints.effective_provider_id != handoff.effective_provider_id
+            or constraints.delivery_entry_id != handoff.delivery_entry_id
+            or constraints.component_library_packages
+            != list(handoff.component_library_packages)
+            or constraints.provider_theme_adapter_id
+            != handoff.provider_theme_adapter_id
+            or constraints.page_schema_ids != expected_page_schema_ids
+        ):
+            return "blocked"
+        return "inherited"
+
+    def _frontend_quality_inheritance_state(self) -> str:
+        handoff = self.build_frontend_quality_platform_handoff()
+        manifest_path = (
+            frontend_quality_platform_root(self.root) / "quality-platform.manifest.yaml"
+        )
+        manifest_exists = manifest_path.is_file()
+        if handoff.state != "ready":
+            return "blocked" if manifest_exists else "unknown"
+        if not manifest_exists:
+            return "not_inherited"
+        snapshot, _snapshot_issue = self._load_latest_frontend_solution_snapshot()
+        if snapshot is None:
+            return "blocked"
+        try:
+            platform = load_frontend_quality_platform_artifacts(self.root)
+            page_ui_schema = self.resolve_frontend_page_ui_schema()
+            theme_governance = self.resolve_frontend_theme_token_governance()
+            validation = validate_frontend_quality_platform(
+                platform,
+                page_ui_schema=page_ui_schema,
+                theme_governance=theme_governance,
+                solution_snapshot=snapshot,
+            )
+        except Exception:
+            return "blocked"
+        if validation.blockers:
+            return "blocked"
+        return "inherited"
+
+    def _truth_ledger_frontend_capability_user_guidance(
+        self,
+        manifest: ProgramManifest,
+        *,
+        capability_id: str,
+    ) -> tuple[list[str], list[str]]:
+        if capability_id != PROGRAM_FRONTEND_MAINLINE_DELIVERY_CAPABILITY_ID:
+            return [], []
+
+        plain_language_blockers: list[str] = []
+        recommended_next_steps: list[str] = []
+        for spec in manifest.specs:
+            if capability_id not in spec.capability_refs:
+                continue
+            try:
+                spec_dir = self._resolve_spec_dir(spec.path)
+            except ValueError:
+                continue
+            readiness = self._build_frontend_readiness(spec_dir)
+            remediation = self._build_frontend_remediation_input(
+                readiness,
+                spec.path,
+            )
+            if remediation is None:
+                continue
+            plain_language_blockers.extend(remediation.plain_language_blockers)
+            recommended_next_steps.extend(remediation.recommended_next_steps)
+
+        inheritance_status = self._truth_ledger_frontend_inheritance_status(
+            capability_id=capability_id
+        )
+        generation_state = str(inheritance_status.get("generation", "")).strip()
+        if generation_state == "unknown":
+            plain_language_blockers.append(
+                "frontend code generation inheritance is not clear yet"
+            )
+            recommended_next_steps.append(
+                "python -m ai_sdlc program generation-constraints-handoff"
+            )
+        elif generation_state == "not_inherited":
+            plain_language_blockers.append(
+                "frontend code generation has not inherited the selected component library yet; continuing may generate against the wrong library"
+            )
+            recommended_next_steps.append(
+                "python -m ai_sdlc program generation-constraints-handoff"
+            )
+        elif generation_state == "blocked":
+            plain_language_blockers.append(
+                "frontend code generation inheritance is blocked"
+            )
+            recommended_next_steps.append(
+                "python -m ai_sdlc program generation-constraints-handoff"
+            )
+
+        quality_state = str(inheritance_status.get("quality", "")).strip()
+        if quality_state == "unknown":
+            plain_language_blockers.append(
+                "frontend test inheritance is not clear yet"
+            )
+            recommended_next_steps.append(
+                "python -m ai_sdlc program quality-platform-handoff"
+            )
+        elif quality_state == "not_inherited":
+            plain_language_blockers.append(
+                "frontend test inheritance has not bound the selected component library yet; continuing may validate against the wrong standard"
+            )
+            recommended_next_steps.append(
+                "python -m ai_sdlc program quality-platform-handoff"
+            )
+        elif quality_state == "blocked":
+            plain_language_blockers.append(
+                "frontend test inheritance is blocked"
+            )
+            recommended_next_steps.append(
+                "python -m ai_sdlc program quality-platform-handoff"
+            )
+
+        return (
+            _unique_strings(plain_language_blockers),
+            _unique_strings(recommended_next_steps),
+        )
+
+    def _truth_ledger_blocking_reason_summary(
+        self,
+        *,
+        capability_id: str,
+        blocking_refs: list[str],
+    ) -> str:
+        if not blocking_refs:
+            return ""
+
+        reasons: list[str] = []
+        for blocker in blocking_refs:
+            if blocker.startswith("verify:"):
+                if capability_id == PROGRAM_FRONTEND_MAINLINE_DELIVERY_CAPABILITY_ID:
+                    reasons.append("frontend verification is not clear")
+                else:
+                    reasons.append("verification is not clear")
+            elif blocker == "capability_closure_audit:missing":
+                reasons.append("capability closure audit is missing")
+            elif blocker.startswith("capability_closure_audit:"):
+                closure_state = blocker.split(":", 1)[1].strip() or "open"
+                reasons.append(f"capability closure remains {closure_state}")
+            elif blocker.startswith("canonical_conflict:"):
+                reasons.append("canonical capability evidence is inconsistent")
+            elif blocker.startswith("manifest_validation:"):
+                reasons.append("program manifest validation failed for this capability")
+            elif blocker.startswith("truth_check:"):
+                reasons.append("truth check is not satisfied")
+            elif blocker.startswith("close_check:"):
+                reasons.append("close check is not satisfied")
+            elif blocker == f"{PROGRAM_FRONTEND_INHERITANCE_BLOCKER_PREFIX}:generation":
+                reasons.append("frontend code generation inheritance is blocked")
+            elif blocker == f"{PROGRAM_FRONTEND_INHERITANCE_BLOCKER_PREFIX}:quality":
+                reasons.append("frontend test inheritance is blocked")
+            elif blocker.startswith(f"{PROGRAM_HOST_INGRESS_CANONICAL_BLOCKER_PREFIX}:"):
+                reasons.append("adapter canonical consumption is not verified")
+            else:
+                reasons.append(blocker)
+        return "; ".join(_unique_strings(reasons)[:3])
+
+    def _truth_ledger_capability_next_actions(
+        self,
+        *,
+        capability_id: str,
+        blocking_refs: list[str],
+    ) -> list[str]:
+        if not blocking_refs:
+            return []
+
+        actions: list[str] = []
+        for blocker in blocking_refs:
+            if blocker.startswith("verify:"):
+                verify_command = blocker.split(":", 1)[1].strip()
+                if verify_command:
+                    actions.append(verify_command)
+            elif blocker == "capability_closure_audit:missing":
+                actions.append(
+                    "update capability_closure_audit for the blocked release target in program-manifest.yaml"
+                )
+                actions.append(PROGRAM_TRUTH_AUDIT_COMMAND)
+            elif blocker.startswith("capability_closure_audit:"):
+                actions.append(
+                    "close the capability_closure_audit entry for the blocked release target"
+                )
+                actions.append(PROGRAM_TRUTH_AUDIT_COMMAND)
+            elif blocker.startswith("canonical_conflict:") or blocker.startswith(
+                "manifest_validation:"
+            ):
+                actions.append("python -m ai_sdlc program validate")
+            elif blocker.startswith("truth_check:") or blocker.startswith("close_check:"):
+                actions.append(PROGRAM_TRUTH_AUDIT_COMMAND)
+            elif blocker == f"{PROGRAM_FRONTEND_INHERITANCE_BLOCKER_PREFIX}:generation":
+                actions.append(
+                    "python -m ai_sdlc program generation-constraints-handoff"
+                )
+            elif blocker == f"{PROGRAM_FRONTEND_INHERITANCE_BLOCKER_PREFIX}:quality":
+                actions.append("python -m ai_sdlc program quality-platform-handoff")
+            elif blocker.startswith(
+                f"{PROGRAM_HOST_INGRESS_CANONICAL_BLOCKER_PREFIX}:"
+            ):
+                actions.append(
+                    "verify adapter canonical consumption and rerun python -m ai_sdlc program truth audit"
+                )
+
+        if capability_id == PROGRAM_FRONTEND_MAINLINE_DELIVERY_CAPABILITY_ID and any(
+            blocker.startswith("verify:") for blocker in blocking_refs
+        ):
+            actions.append(PROGRAM_FRONTEND_BROWSER_GATE_RECHECK_COMMAND)
+
+        return _unique_strings(actions)
+
+    def _build_release_capability_user_guidance(
+        self,
+        *,
+        capability_id: str,
+    ) -> tuple[list[str], list[str]]:
+        try:
+            manifest = self.load_manifest()
+        except Exception:
+            return [], []
+
+        validation = self.validate_manifest(manifest)
+        surface = self.build_truth_ledger_surface(manifest, validation_result=validation)
+        if surface is None:
+            return [], []
+
+        capability_item = next(
+            (
+                item
+                for item in surface.get("release_capabilities", [])
+                if str(item.get("capability_id", "")).strip() == capability_id
+            ),
+            None,
+        )
+        if capability_item is None:
+            return [], []
+
+        if str(capability_item.get("audit_state", "")).strip() == "ready":
+            return [], []
+
+        plain_language = _normalize_string_list(
+            capability_item.get("plain_language_blockers", [])
+        )
+        next_steps = _normalize_string_list(
+            capability_item.get("recommended_next_steps", [])
+        )
+        return plain_language, next_steps
+
     def _build_truth_capability_state(
         self,
         manifest: ProgramManifest,
@@ -2453,6 +3487,11 @@ class ProgramService:
         if release_scope:
             blockers.extend(
                 self._release_gate_adapter_blockers(capability_id=capability.id)
+            )
+            blockers.extend(
+                self._release_gate_frontend_inheritance_blockers(
+                    capability_id=capability.id
+                )
             )
 
         capability_validation_errors = [
@@ -2547,6 +3586,24 @@ class ProgramService:
             f"{PROGRAM_HOST_INGRESS_CANONICAL_BLOCKER_PREFIX}:{canonical_result}"
         ]
 
+    def _release_gate_frontend_inheritance_blockers(
+        self,
+        *,
+        capability_id: str,
+    ) -> list[str]:
+        if capability_id != PROGRAM_FRONTEND_MAINLINE_DELIVERY_CAPABILITY_ID:
+            return []
+
+        status = self._truth_ledger_frontend_inheritance_status(
+            capability_id=capability_id
+        )
+        blockers: list[str] = []
+        if status.get("generation") == "blocked":
+            blockers.append(f"{PROGRAM_FRONTEND_INHERITANCE_BLOCKER_PREFIX}:generation")
+        if status.get("quality") == "blocked":
+            blockers.append(f"{PROGRAM_FRONTEND_INHERITANCE_BLOCKER_PREFIX}:quality")
+        return blockers
+
     def _run_truth_check_ref(self, ref: str) -> dict[str, object]:
         path = self._resolve_project_relative_path(ref)
         result = run_truth_check(cwd=self.root, wi=path, rev="HEAD")
@@ -2580,8 +3637,8 @@ class ProgramService:
     ) -> dict[str, object]:
         normalized = ref.strip()
         if normalized == "uv run ai-sdlc verify constraints":
-            blockers = list(getattr(constraint_report, "blockers", []))
-            warnings = list(getattr(constraint_report, "warnings", []))
+            blockers = _unique_strings(list(getattr(constraint_report, "blockers", [])))
+            warnings = _unique_strings(list(getattr(constraint_report, "warnings", [])))
             return {
                 "ok": not blockers,
                 "command": normalized,
@@ -2806,10 +3863,15 @@ class ProgramService:
             else ""
         )
         if release_capabilities:
-            focus = ", ".join(
-                f"{item['capability_id']} ({item['audit_state']})"
-                for item in release_capabilities[:3]
+            capability_focus = _unique_strings(
+                [
+                    f"{item['capability_id']} ({item['audit_state']})"
+                    for item in release_capabilities
+                ]
             )
+            focus = ", ".join(capability_focus[:3])
+            if len(capability_focus) > 3:
+                focus += ", ..."
             return f"{prefix}release targets blocked: {focus}".strip()
         return f"{prefix}truth ledger state: {state}".strip()
 
@@ -2820,7 +3882,7 @@ class ProgramService:
             if not warning.startswith(prefix):
                 continue
             pending_specs.append(warning.removeprefix(prefix).strip())
-        return pending_specs
+        return _unique_strings(pending_specs)
 
     def _migration_pending_sources(self, warnings: list[str]) -> list[str]:
         prefix = "migration_pending: truth source unmapped for "
@@ -2829,7 +3891,7 @@ class ProgramService:
             if not warning.startswith(prefix):
                 continue
             pending_sources.append(warning.removeprefix(prefix).strip())
-        return pending_sources
+        return _unique_strings(pending_sources)
 
     def topo_tiers(self, manifest: ProgramManifest) -> list[list[str]]:
         graph = self._build_graph(manifest)
@@ -3096,6 +4158,9 @@ class ProgramService:
         plain_language_blockers, recommended_next_steps = (
             _build_managed_delivery_user_guidance(normalized_blockers)
         )
+        truth_plain_language, truth_next_steps = self._build_release_capability_user_guidance(
+            capability_id=PROGRAM_FRONTEND_MAINLINE_DELIVERY_CAPABILITY_ID
+        )
         return ProgramFrontendManagedDeliveryApplyRequest(
             required=True,
             confirmation_required=True,
@@ -3108,8 +4173,12 @@ class ProgramService:
             unsupported_action_ids=unsupported_action_ids,
             remaining_blockers=normalized_blockers,
             warnings=warnings,
-            plain_language_blockers=plain_language_blockers,
-            recommended_next_steps=recommended_next_steps,
+            plain_language_blockers=_unique_strings(
+                [*plain_language_blockers, *truth_plain_language]
+            ),
+            recommended_next_steps=_unique_strings(
+                [*recommended_next_steps, *truth_next_steps]
+            ),
             execution_view=execution_view,
             decision_receipt=decision_receipt,
         )
@@ -3178,6 +4247,166 @@ class ProgramService:
                 return legacy_apply_path, legacy_apply_rel, payload, None
 
         return None, canonical_apply_rel, None, "missing"
+
+    def _load_frontend_managed_delivery_apply_truth(
+        self,
+    ) -> tuple[str, str]:
+        """Return the latest managed delivery apply state and artifact path when available."""
+
+        _path, relative_path, payload, artifact_error = (
+            self._load_frontend_managed_delivery_apply_artifact()
+        )
+        if artifact_error == "missing":
+            return "not_applied", ""
+        if artifact_error is not None:
+            return artifact_error.removeprefix("invalid:") or "invalid_apply_artifact", relative_path
+        if not isinstance(payload, dict):
+            return "invalid_apply_artifact", relative_path
+        result_status = str(payload.get("result_status", "")).strip()
+        if not result_status:
+            return "invalid_apply_artifact", relative_path
+        return result_status, relative_path
+
+    def _validate_frontend_managed_delivery_apply_surface_context(
+        self,
+        payload: dict[str, object],
+    ) -> tuple[bool, str, ConfirmedActionPlanExecutionView | None]:
+        """Check whether apply truth still binds to the current frontend delivery context."""
+
+        try:
+            execution_view = ConfirmedActionPlanExecutionView.model_validate(
+                payload.get("execution_view", {})
+            )
+        except Exception:
+            return False, "invalid_apply_artifact", None
+
+        current_snapshot, snapshot_blocker = self._load_latest_frontend_solution_snapshot()
+        if current_snapshot is None:
+            return False, snapshot_blocker or "frontend_solution_snapshot_missing", execution_view
+
+        current_delivery_entry_id = (
+            self.build_frontend_page_ui_schema_handoff().delivery_entry_id.strip()
+        )
+        current_provider_id = current_snapshot.effective_provider_id.strip()
+        current_spec_dir = f"specs/{current_snapshot.project_id}".strip()
+        if current_spec_dir and execution_view.spec_dir.strip() != current_spec_dir:
+            return False, "stale_apply_artifact", execution_view
+
+        for action in execution_view.action_items:
+            linkage = dict(action.source_linkage_refs)
+            snapshot_id = str(linkage.get("solution_snapshot_id", "")).strip()
+            if snapshot_id and snapshot_id != current_snapshot.snapshot_id:
+                return False, "stale_apply_artifact", execution_view
+            delivery_entry_id = str(linkage.get("delivery_entry_id", "")).strip()
+            if (
+                delivery_entry_id
+                and current_delivery_entry_id
+                and delivery_entry_id != current_delivery_entry_id
+            ):
+                return False, "stale_apply_artifact", execution_view
+            provider_id = str(linkage.get("delivery_provider_id", "")).strip()
+            if provider_id and provider_id != current_provider_id:
+                return False, "stale_apply_artifact", execution_view
+
+        return True, "", execution_view
+
+    def build_frontend_delivery_status_surface(self) -> dict[str, str]:
+        """Project frontend delivery truth into one reusable status surface."""
+
+        registry = self.build_frontend_delivery_registry_handoff()
+        runtime_adapter = self.build_frontend_provider_runtime_adapter_handoff()
+        provider_id = (
+            registry.effective_provider_id or runtime_adapter.effective_provider_id
+        ).strip()
+        if not provider_id:
+            return {}
+
+        (
+            _apply_path,
+            apply_artifact_rel,
+            apply_payload,
+            apply_artifact_error,
+        ) = self._load_frontend_managed_delivery_apply_artifact()
+
+        apply_state = "not_applied"
+        install_state = "not_installed"
+        workspace_state = "not_integrated"
+        browser_gate_state = "not_started"
+        apply_artifact_path = ""
+        browser_gate_artifact_path = ""
+
+        if apply_artifact_error == "missing":
+            apply_state = "not_applied"
+        elif apply_artifact_error is not None:
+            apply_state = (
+                apply_artifact_error.removeprefix("invalid:")
+                or "invalid_apply_artifact"
+            )
+            apply_artifact_path = apply_artifact_rel
+        elif isinstance(apply_payload, dict):
+            is_current_apply, apply_context_state, execution_view = (
+                self._validate_frontend_managed_delivery_apply_surface_context(
+                    apply_payload
+                )
+            )
+            apply_artifact_path = apply_artifact_rel
+            if not is_current_apply:
+                apply_state = apply_context_state or "stale_apply_artifact"
+            else:
+                apply_state = str(apply_payload.get("result_status", "")).strip() or (
+                    "invalid_apply_artifact"
+                )
+                executed_action_ids = set(
+                    _normalize_string_list(apply_payload.get("executed_action_ids", []))
+                )
+                if "dependency-install" in executed_action_ids:
+                    install_state = "installed"
+                if "workspace-integration" in executed_action_ids:
+                    workspace_state = "integrated"
+                browser_gate_state = (
+                    str(apply_payload.get("browser_gate_state", "")).strip()
+                    or "not_started"
+                )
+
+                browser_gate_artifact = (
+                    self.root / PROGRAM_FRONTEND_BROWSER_GATE_ARTIFACT_REL_PATH
+                )
+                if browser_gate_artifact.is_file() and execution_view is not None:
+                    browser_gate_artifact_path = _relative_to_root_or_str(
+                        self.root,
+                        browser_gate_artifact,
+                    )
+                    execute_decision, overall_gate_status = (
+                        self._build_frontend_browser_gate_execute_decision(
+                            Path(execution_view.spec_dir)
+                        )
+                    )
+                    if execute_decision is not None:
+                        if execute_decision.decision_reason == "scope_or_linkage_invalid":
+                            browser_gate_state = "scope_or_linkage_invalid"
+                        elif overall_gate_status:
+                            browser_gate_state = overall_gate_status
+                        elif (
+                            execute_decision.execute_gate_state
+                            != FRONTEND_GATE_EXECUTE_STATE_READY
+                        ):
+                            browser_gate_state = execute_decision.execute_gate_state
+        else:
+            apply_state = "invalid_apply_artifact"
+            apply_artifact_path = apply_artifact_rel
+
+        return {
+            "provider_id": provider_id,
+            "package_names": ",".join(registry.component_library_packages) or "-",
+            "runtime_delivery_state": runtime_adapter.runtime_delivery_state.strip()
+            or "-",
+            "apply_state": apply_state,
+            "install_state": install_state,
+            "workspace_state": workspace_state,
+            "browser_gate_state": browser_gate_state,
+            "apply_artifact_path": apply_artifact_path,
+            "browser_gate_artifact_path": browser_gate_artifact_path,
+        }
 
     def _build_frontend_managed_delivery_apply_request_payload(
         self,
@@ -3289,6 +4518,19 @@ class ProgramService:
         page_ui_handoff = self.build_frontend_page_ui_schema_handoff()
         generation_handoff = self.build_frontend_generation_constraints_handoff()
         quality_handoff = self.build_frontend_quality_platform_handoff()
+        runtime_adapter_handoff = self.build_frontend_provider_runtime_adapter_handoff()
+        delivery_context = self._build_delivery_context(
+            solution_snapshot=solution_snapshot,
+            page_ui_handoff=page_ui_handoff,
+            generation_handoff=generation_handoff,
+            quality_handoff=quality_handoff,
+            runtime_adapter_handoff=runtime_adapter_handoff,
+        )
+        workspace_integration_items = self._build_workspace_integration_items(
+            solution_snapshot=solution_snapshot,
+            delivery_context=delivery_context,
+        )
+        workspace_integration_default_selected = bool(workspace_integration_items)
         blockers.extend(page_ui_handoff.blockers)
         blockers.extend(generation_handoff.blockers)
         blockers.extend(quality_handoff.blockers)
@@ -3321,6 +4563,7 @@ class ProgramService:
                     page_ui_handoff=page_ui_handoff,
                     generation_handoff=generation_handoff,
                     quality_handoff=quality_handoff,
+                    runtime_adapter_handoff=runtime_adapter_handoff,
                 ),
             }
         )
@@ -3333,8 +4576,8 @@ class ProgramService:
                 "effect_kind": "mutate",
                 "action_type": "workspace_integration",
                 "required": False,
-                "selected": False,
-                "default_selected": False,
+                "selected": workspace_integration_default_selected,
+                "default_selected": workspace_integration_default_selected,
                 "depends_on_action_ids": [artifact_generate_id],
                 "rollback_ref": "rollback:workspace-integration",
                 "retry_ref": "retry:workspace-integration",
@@ -3342,11 +4585,17 @@ class ProgramService:
                 "risk_flags": ["risk:root-level-mutate"],
                 "source_linkage_refs": {
                     "solution_snapshot_id": solution_snapshot.snapshot_id,
-                    "root_integration_mode": "default_off",
+                    "root_integration_mode": (
+                        "default_selected_controlled_adapter_scaffold"
+                        if workspace_integration_default_selected
+                        else "default_off"
+                    ),
                 },
-                "executor_payload": {"items": []},
+                "executor_payload": {"items": workspace_integration_items},
             }
         )
+        if workspace_integration_default_selected:
+            selected_action_ids.append(workspace_integration_id)
 
         plan_seed = {
             "solution_snapshot_id": solution_snapshot.snapshot_id,
@@ -3363,6 +4612,15 @@ class ProgramService:
         normalized_blockers = _unique_strings(blockers)
         plain_language_blockers, recommended_next_steps = _build_managed_delivery_user_guidance(
             normalized_blockers
+        )
+        truth_plain_language, truth_next_steps = self._build_release_capability_user_guidance(
+            capability_id=PROGRAM_FRONTEND_MAINLINE_DELIVERY_CAPABILITY_ID
+        )
+        plain_language_blockers = _unique_strings(
+            [*plain_language_blockers, *truth_plain_language]
+        )
+        recommended_next_steps = _unique_strings(
+            [*recommended_next_steps, *truth_next_steps]
         )
         reentry_condition = (
             recommended_next_steps[0]
@@ -3411,7 +4669,9 @@ class ProgramService:
                 "surface_id": f"surface-{solution_snapshot.snapshot_id}",
                 "action_plan_id": f"plan-{solution_snapshot.snapshot_id}",
                 "selected_action_ids": selected_action_ids,
-                "deselected_optional_action_ids": [workspace_integration_id],
+                "deselected_optional_action_ids": (
+                    [] if workspace_integration_default_selected else [workspace_integration_id]
+                ),
                 "required_action_ids": selected_action_ids,
             },
             "decision_receipt": {
@@ -3420,8 +4680,12 @@ class ProgramService:
                 "confirmation_surface_id": f"surface-{solution_snapshot.snapshot_id}",
                 "decision": "continue",
                 "selected_action_ids": selected_action_ids,
-                "deselected_optional_action_ids": [workspace_integration_id],
-                "risk_acknowledgement_ids": [],
+                "deselected_optional_action_ids": (
+                    [] if workspace_integration_default_selected else [workspace_integration_id]
+                ),
+                "risk_acknowledgement_ids": (
+                    ["risk:root-level-mutate"] if workspace_integration_default_selected else []
+                ),
                 "second_confirmation_acknowledged": effective_second_confirmation_acknowledged,
                 "confirmed_plan_fingerprint": plan_fingerprint,
                 "created_at": utc_now_z(),
@@ -3621,8 +4885,45 @@ class ProgramService:
         page_ui_handoff: FrontendPageUiSchemaHandoff,
         generation_handoff: ProgramFrontendGenerationConstraintsHandoff,
         quality_handoff: ProgramFrontendQualityPlatformHandoff,
+        runtime_adapter_handoff: ProgramFrontendProviderRuntimeAdapterHandoff,
     ) -> dict[str, object]:
-        delivery_context = {
+        delivery_context = self._build_delivery_context(
+            solution_snapshot=solution_snapshot,
+            page_ui_handoff=page_ui_handoff,
+            generation_handoff=generation_handoff,
+            quality_handoff=quality_handoff,
+            runtime_adapter_handoff=runtime_adapter_handoff,
+        )
+        return {
+            "directories": ["src/generated"],
+            "files": [
+                {
+                    "path": "index.html",
+                    "content": self._managed_frontend_index_html_content(delivery_context),
+                },
+                {
+                    "path": "src/generated/frontend-delivery-context.ts",
+                    "content": self._managed_frontend_delivery_context_ts_content(
+                        delivery_context
+                    ),
+                },
+                {
+                    "path": "src/App.vue",
+                    "content": self._managed_frontend_app_vue_content(),
+                },
+            ],
+        }
+
+    def _build_delivery_context(
+        self,
+        *,
+        solution_snapshot: FrontendSolutionSnapshot,
+        page_ui_handoff: FrontendPageUiSchemaHandoff,
+        generation_handoff: ProgramFrontendGenerationConstraintsHandoff,
+        quality_handoff: ProgramFrontendQualityPlatformHandoff,
+        runtime_adapter_handoff: ProgramFrontendProviderRuntimeAdapterHandoff,
+    ) -> dict[str, object]:
+        return {
             "projectId": solution_snapshot.project_id,
             "snapshotId": solution_snapshot.snapshot_id,
             "requestedProviderId": solution_snapshot.requested_provider_id,
@@ -3655,26 +4956,130 @@ class ProgramService:
                 "evidenceContractIds": list(quality_handoff.evidence_contract_ids),
                 "pageSchemaIds": list(quality_handoff.page_schema_ids),
             },
+            "providerRuntimeAdapter": {
+                "state": runtime_adapter_handoff.state,
+                "carrierMode": runtime_adapter_handoff.carrier_mode,
+                "runtimeDeliveryState": runtime_adapter_handoff.runtime_delivery_state,
+                "evidenceReturnState": runtime_adapter_handoff.evidence_return_state,
+            },
         }
-        return {
-            "directories": ["src/generated"],
-            "files": [
+
+    def _build_workspace_integration_items(
+        self,
+        *,
+        solution_snapshot: FrontendSolutionSnapshot,
+        delivery_context: dict[str, object],
+    ) -> list[dict[str, object]]:
+        try:
+            runtime_adapter = self.resolve_frontend_provider_runtime_adapter()
+        except ValueError:
+            return []
+
+        target = next(
+            (
+                item
+                for item in runtime_adapter.adapter_targets
+                if item.provider_id == solution_snapshot.effective_provider_id
+            ),
+            None,
+        )
+        if target is None:
+            return []
+        if solution_snapshot.effective_provider_id != "public-primevue":
+            return []
+        if target.boundary_receipt.carrier_mode != "target-project-adapter-layer":
+            return []
+        if target.boundary_receipt.runtime_delivery_state != "scaffolded":
+            return []
+
+        items: list[dict[str, object]] = []
+        for scaffold_file in target.scaffold_contract.files:
+            content = self._workspace_integration_content_for_scaffold_file(
+                scaffold_file.contract_id,
+                scaffold_file.relative_path,
+                delivery_context=delivery_context,
+                solution_snapshot=solution_snapshot,
+                target=target,
+            )
+            if not content:
+                continue
+            items.append(
                 {
-                    "path": "index.html",
-                    "content": self._managed_frontend_index_html_content(delivery_context),
-                },
-                {
-                    "path": "src/generated/frontend-delivery-context.ts",
-                    "content": self._managed_frontend_delivery_context_ts_content(
-                        delivery_context
-                    ),
-                },
-                {
-                    "path": "src/App.vue",
-                    "content": self._managed_frontend_app_vue_content(),
-                },
-            ],
-        }
+                    "integration_id": scaffold_file.contract_id,
+                    "target_class": "workspace",
+                    "target_path": scaffold_file.relative_path,
+                    "mutation_kind": "write_new",
+                    "content": content,
+                    "requires_explicit_confirmation": True,
+                    "will_not_touch_refs": ["legacy-root"],
+                }
+            )
+        return items
+
+    def _workspace_integration_content_for_scaffold_file(
+        self,
+        contract_id: str,
+        relative_path: str,
+        *,
+        delivery_context: dict[str, object],
+        solution_snapshot: FrontendSolutionSnapshot,
+        target,
+    ) -> str:
+        if contract_id == "kernel-wrapper":
+            return (
+                "export type KernelWrapperProps = {\n"
+                "  children?: unknown;\n"
+                "};\n\n"
+                "export function KernelWrapper(props: KernelWrapperProps): unknown {\n"
+                "  return props.children ?? null;\n"
+                "}\n\n"
+                "export const kernelWrapperDeliveryContext = "
+                + self._render_typescript_literal(delivery_context)
+                + " as const;\n"
+            )
+        if contract_id == "provider-adapter":
+            provider_symbol = _slugify_token(str(delivery_context.get("effectiveProviderId", ""))).replace("-", "_") or "provider"
+            return (
+                f"export const {provider_symbol}_provider_adapter = "
+                + self._render_typescript_literal(
+                    {
+                        "providerId": delivery_context.get("effectiveProviderId", ""),
+                        "deliveryEntryId": delivery_context.get("deliveryEntryId", ""),
+                        "providerThemeAdapterId": delivery_context.get(
+                            "providerThemeAdapterId", ""
+                        ),
+                        "componentLibraryPackages": delivery_context.get(
+                            "componentLibraryPackages", []
+                        ),
+                        "relativePath": relative_path,
+                    }
+                )
+                + " as const;\n"
+            )
+        if contract_id == "legacy-adapter":
+            return (
+                "export const legacyAdapterBridge = "
+                + self._render_typescript_literal(
+                    {
+                        "providerId": delivery_context.get("effectiveProviderId", ""),
+                        "legacyUsagePolicy": "bridge-only",
+                        "deliveryEntryId": delivery_context.get("deliveryEntryId", ""),
+                    }
+                )
+                + " as const;\n"
+            )
+        if contract_id == "runtime-boundary-receipt":
+            payload = {
+                "provider_id": target.provider_id,
+                "snapshot_id": solution_snapshot.snapshot_id,
+                "delivery_entry_id": delivery_context.get("deliveryEntryId", ""),
+                "carrier_mode": target.boundary_receipt.carrier_mode,
+                "runtime_delivery_state": target.boundary_receipt.runtime_delivery_state,
+                "evidence_return_state": target.boundary_receipt.evidence_return_state,
+                "boundary_constraints": list(target.boundary_receipt.boundary_constraints),
+            }
+            return yaml.safe_dump(payload, sort_keys=False, allow_unicode=True)
+        return ""
 
     def _managed_frontend_delivery_context_ts_content(
         self,
@@ -3960,7 +5365,7 @@ const pageSchemas = frontendDeliveryContext.pageSchemas;
                 browser_gate_required=True,
                 browser_gate_state="not_run",
                 next_required_gate="browser_gate",
-                remaining_blockers=list(effective_request.remaining_blockers),
+                remaining_blockers=_unique_strings(list(effective_request.remaining_blockers)),
             )
 
         apply_result = run_managed_delivery_apply(
@@ -3986,8 +5391,8 @@ const pageSchemas = frontendDeliveryContext.pageSchemas;
             failed_action_ids=list(apply_result.failed_action_ids),
             blocked_action_ids=list(apply_result.blocked_action_ids),
             skipped_action_ids=list(apply_result.skipped_action_ids),
-            remaining_blockers=list(apply_result.blockers),
-            warnings=list(apply_result.remediation_hints),
+            remaining_blockers=_unique_strings(list(apply_result.blockers)),
+            warnings=_unique_strings(list(apply_result.remediation_hints)),
         )
 
     def write_frontend_managed_delivery_apply_artifact(
@@ -4036,8 +5441,10 @@ const pageSchemas = frontendDeliveryContext.pageSchemas;
             "failed_action_ids": list(effective_result.failed_action_ids),
             "blocked_action_ids": list(effective_result.blocked_action_ids),
             "skipped_action_ids": list(effective_result.skipped_action_ids),
-            "remaining_blockers": list(effective_result.remaining_blockers),
+            "remaining_blockers": _unique_strings(list(effective_result.remaining_blockers)),
             "warnings": _unique_strings([*effective_request.warnings, *effective_result.warnings]),
+            "plain_language_blockers": _unique_strings(list(effective_request.plain_language_blockers)),
+            "recommended_next_steps": _unique_strings(list(effective_request.recommended_next_steps)),
             "execution_view": (
                 effective_request.execution_view.model_dump(mode="json")
                 if effective_request.execution_view is not None
@@ -4107,6 +5514,7 @@ const pageSchemas = frontendDeliveryContext.pageSchemas;
             )
 
         quality_handoff = self.build_frontend_quality_platform_handoff()
+        runtime_adapter_handoff = self.build_frontend_provider_runtime_adapter_handoff()
         try:
             context = build_browser_quality_gate_execution_context(
                 apply_payload=apply_payload,
@@ -4115,6 +5523,9 @@ const pageSchemas = frontendDeliveryContext.pageSchemas;
                 delivery_entry_id=quality_handoff.delivery_entry_id,
                 component_library_packages=list(quality_handoff.component_library_packages),
                 provider_theme_adapter_id=quality_handoff.provider_theme_adapter_id,
+                provider_runtime_adapter_carrier_mode=runtime_adapter_handoff.carrier_mode,
+                provider_runtime_adapter_delivery_state=runtime_adapter_handoff.runtime_delivery_state,
+                provider_runtime_adapter_evidence_state=runtime_adapter_handoff.evidence_return_state,
                 page_schema_ids=list(quality_handoff.page_schema_ids),
             )
         except ValueError as exc:
@@ -4147,6 +5558,12 @@ const pageSchemas = frontendDeliveryContext.pageSchemas;
             spec_dir=context.spec_dir,
             required_probe_set=list(context.required_probe_set),
             overall_gate_status_preview=bundle.overall_gate_status,
+            plain_language_blockers=_normalize_string_list(
+                apply_payload.get("plain_language_blockers", [])
+            ),
+            recommended_next_steps=_normalize_string_list(
+                apply_payload.get("recommended_next_steps", [])
+            ),
             warnings=warnings,
             execution_context=context,
         )
@@ -4174,8 +5591,8 @@ const pageSchemas = frontendDeliveryContext.pageSchemas;
                 artifact_path="",
                 artifact_root="",
                 required_probe_set=list(effective_request.required_probe_set),
-                remaining_blockers=list(effective_request.remaining_blockers),
-                warnings=list(effective_request.warnings),
+                remaining_blockers=_unique_strings(list(effective_request.remaining_blockers)),
+                warnings=_unique_strings(list(effective_request.warnings)),
             )
 
         apply_artifact_rel = effective_request.apply_artifact_path
@@ -4196,6 +5613,7 @@ const pageSchemas = frontendDeliveryContext.pageSchemas;
             )
         gate_run_id = _slugify_token(f"gate-run-{effective_generated_at}") or "gate-run"
         quality_handoff = self.build_frontend_quality_platform_handoff()
+        runtime_adapter_handoff = self.build_frontend_provider_runtime_adapter_handoff()
         context = build_browser_quality_gate_execution_context(
             apply_payload=apply_payload,
             solution_snapshot=solution_snapshot,
@@ -4203,6 +5621,9 @@ const pageSchemas = frontendDeliveryContext.pageSchemas;
             delivery_entry_id=quality_handoff.delivery_entry_id,
             component_library_packages=list(quality_handoff.component_library_packages),
             provider_theme_adapter_id=quality_handoff.provider_theme_adapter_id,
+            provider_runtime_adapter_carrier_mode=runtime_adapter_handoff.carrier_mode,
+            provider_runtime_adapter_delivery_state=runtime_adapter_handoff.runtime_delivery_state,
+            provider_runtime_adapter_evidence_state=runtime_adapter_handoff.evidence_return_state,
             page_schema_ids=list(quality_handoff.page_schema_ids),
         )
         visual_a11y_evidence = self._load_spec_visual_a11y_evidence(Path(context.spec_dir))
@@ -4238,6 +5659,8 @@ const pageSchemas = frontendDeliveryContext.pageSchemas;
             "bundle_input": bundle.model_dump(mode="json"),
             "overall_gate_status": bundle.overall_gate_status,
             "warnings": result_warnings,
+            "plain_language_blockers": _unique_strings(list(effective_request.plain_language_blockers)),
+            "recommended_next_steps": _unique_strings(list(effective_request.recommended_next_steps)),
             "source_linkage": {
                 **context.source_linkage_refs,
                 "frontend_browser_gate_artifact_path": relative_artifact_path,
@@ -4525,7 +5948,7 @@ const pageSchemas = frontendDeliveryContext.pageSchemas;
     ) -> FrontendPageUiSchemaHandoff:
         """Build the provider/kernel handoff surface for the 147 page/UI schema baseline."""
 
-        schema_set = build_p2_frontend_page_ui_schema_baseline()
+        schema_set = self.resolve_frontend_page_ui_schema()
         kernel = build_p1_frontend_ui_kernel_page_recipe_expansion()
         snapshot, snapshot_issue = self._load_latest_frontend_solution_snapshot()
         handoff = build_frontend_page_ui_schema_handoff(
@@ -4546,13 +5969,13 @@ const pageSchemas = frontendDeliveryContext.pageSchemas;
                 component_library_packages=list(handoff.component_library_packages),
                 provider_theme_adapter_id=handoff.provider_theme_adapter_id,
                 blockers=[snapshot_issue, *handoff.blockers],
-                warnings=list(handoff.warnings),
+                warnings=_unique_strings(list(handoff.warnings)),
                 entries=list(handoff.entries),
             )
 
         delivery_handoff = self.build_frontend_delivery_registry_handoff()
         blockers = list(handoff.blockers)
-        warnings = list(handoff.warnings)
+        warnings = _unique_strings(list(handoff.warnings))
         warnings.extend(delivery_handoff.warnings)
         blockers.extend(
             blocker
@@ -4679,6 +6102,10 @@ const pageSchemas = frontendDeliveryContext.pageSchemas;
         """Build the generation-constraints handoff surface bound to current delivery context."""
 
         page_ui_handoff = self.build_frontend_page_ui_schema_handoff()
+        runtime_adapter_handoff = self.build_frontend_provider_runtime_adapter_handoff()
+        managed_delivery_apply_state, managed_delivery_apply_artifact_path = (
+            self._load_frontend_managed_delivery_apply_truth()
+        )
         snapshot, snapshot_issue = self._load_latest_frontend_solution_snapshot()
         blockers = list(page_ui_handoff.blockers)
         warnings = list(page_ui_handoff.warnings)
@@ -4691,6 +6118,12 @@ const pageSchemas = frontendDeliveryContext.pageSchemas;
                 effective_provider_id="",
                 delivery_entry_id="",
                 provider_theme_adapter_id="",
+                managed_delivery_apply_state=managed_delivery_apply_state,
+                managed_delivery_apply_artifact_path=managed_delivery_apply_artifact_path,
+                provider_runtime_adapter_carrier_mode="",
+                provider_runtime_adapter_delivery_state="",
+                provider_runtime_adapter_evidence_state="",
+                page_schema_ids=[],
                 blockers=_unique_strings(blockers),
                 warnings=_unique_strings(warnings),
             )
@@ -4700,6 +6133,7 @@ const pageSchemas = frontendDeliveryContext.pageSchemas;
             delivery_entry_id=page_ui_handoff.delivery_entry_id,
             component_library_packages=list(page_ui_handoff.component_library_packages),
             provider_theme_adapter_id=page_ui_handoff.provider_theme_adapter_id,
+            page_schema_ids=[entry.page_schema_id for entry in page_ui_handoff.entries],
         )
         return ProgramFrontendGenerationConstraintsHandoff(
             state="ready" if not blockers else "blocked",
@@ -4707,11 +6141,126 @@ const pageSchemas = frontendDeliveryContext.pageSchemas;
             effective_provider_id=constraints.effective_provider_id,
             delivery_entry_id=constraints.delivery_entry_id,
             provider_theme_adapter_id=constraints.provider_theme_adapter_id,
+            managed_delivery_apply_state=managed_delivery_apply_state,
+            managed_delivery_apply_artifact_path=managed_delivery_apply_artifact_path,
+            provider_runtime_adapter_carrier_mode=runtime_adapter_handoff.carrier_mode,
+            provider_runtime_adapter_delivery_state=runtime_adapter_handoff.runtime_delivery_state,
+            provider_runtime_adapter_evidence_state=runtime_adapter_handoff.evidence_return_state,
             component_library_packages=list(constraints.component_library_packages),
+            page_schema_ids=list(constraints.page_schema_ids),
             allowed_recipe_ids=list(constraints.recipe.allowed_recipe_ids),
             whitelist_component_ids=list(constraints.whitelist.default_component_ids),
             blockers=_unique_strings(blockers),
             warnings=_unique_strings(warnings),
+        )
+
+    def resolve_frontend_generation_constraints(self) -> FrontendGenerationConstraintSet:
+        """Resolve effective generation constraints bound to current delivery context when available."""
+
+        manifest_path = (
+            frontend_generation_governance_root(self.root)
+            / "generation.manifest.yaml"
+        )
+        if manifest_path.is_file():
+            return load_frontend_generation_constraint_artifacts(self.root)
+        handoff = self.build_frontend_generation_constraints_handoff()
+        return build_mvp_frontend_generation_constraints(
+            effective_provider_id=handoff.effective_provider_id or "enterprise-vue2",
+            delivery_entry_id=handoff.delivery_entry_id,
+            component_library_packages=list(handoff.component_library_packages),
+            provider_theme_adapter_id=handoff.provider_theme_adapter_id,
+            page_schema_ids=list(handoff.page_schema_ids),
+        )
+
+    def resolve_frontend_page_ui_schema(self) -> FrontendPageUiSchemaSet:
+        """Resolve effective page/UI schema truth from artifacts when available."""
+
+        manifest_path = (
+            frontend_page_ui_schema_root(self.root) / "schema.manifest.yaml"
+        )
+        if manifest_path.is_file():
+            return load_frontend_page_ui_schema_artifacts(self.root)
+        return build_p2_frontend_page_ui_schema_baseline()
+
+    def resolve_frontend_theme_token_governance(self, constraints=None):
+        """Resolve effective theme/token governance bound to current generation truth."""
+
+        manifest_path = (
+            frontend_theme_token_governance_root(self.root)
+            / "theme-governance-manifest.json"
+        )
+        if manifest_path.is_file():
+            return load_frontend_theme_token_governance_artifacts(self.root)
+        effective_constraints = (
+            constraints or self.resolve_frontend_generation_constraints()
+        )
+        return build_p2_frontend_theme_token_governance_baseline(
+            constraints=effective_constraints
+        )
+
+    def resolve_frontend_quality_platform(self, theme_governance=None):
+        """Resolve effective quality platform bound to current theme governance truth."""
+
+        manifest_path = (
+            frontend_quality_platform_root(self.root)
+            / "quality-platform.manifest.yaml"
+        )
+        if manifest_path.is_file():
+            return load_frontend_quality_platform_artifacts(self.root)
+        effective_theme_governance = (
+            theme_governance or self.resolve_frontend_theme_token_governance()
+        )
+        return build_p2_frontend_quality_platform_baseline(
+            theme_governance=effective_theme_governance
+        )
+
+    def resolve_frontend_provider_expansion(self):
+        """Resolve effective provider expansion truth from artifacts when available."""
+
+        manifest_path = (
+            frontend_provider_expansion_root(self.root)
+            / "provider-expansion.manifest.yaml"
+        )
+        if manifest_path.is_file():
+            return load_frontend_provider_expansion_artifacts(self.root)
+        return build_p3_frontend_provider_expansion_baseline()
+
+    def resolve_frontend_provider_runtime_adapter(self):
+        """Resolve effective provider runtime adapter truth from artifacts when available."""
+
+        manifest_path = (
+            frontend_provider_runtime_adapter_root(self.root)
+            / "provider-runtime-adapter.manifest.yaml"
+        )
+        if manifest_path.is_file():
+            return load_frontend_provider_runtime_adapter_artifacts(self.root)
+        return build_p3_target_project_adapter_scaffold_baseline()
+
+    def resolve_frontend_cross_provider_consistency(
+        self,
+        *,
+        theme_governance=None,
+        quality_platform=None,
+    ):
+        """Resolve effective cross-provider consistency truth from artifacts when available."""
+
+        manifest_path = (
+            frontend_cross_provider_consistency_root(self.root)
+            / "consistency.manifest.yaml"
+        )
+        if manifest_path.is_file():
+            return load_frontend_cross_provider_consistency_artifacts(self.root)
+        effective_theme_governance = (
+            theme_governance or self.resolve_frontend_theme_token_governance()
+        )
+        effective_quality_platform = (
+            quality_platform or self.resolve_frontend_quality_platform(
+                theme_governance=effective_theme_governance
+            )
+        )
+        return build_p2_frontend_cross_provider_consistency_baseline(
+            theme_governance=effective_theme_governance,
+            quality_platform=effective_quality_platform,
         )
 
     def build_frontend_theme_token_governance_handoff(
@@ -4719,11 +6268,16 @@ const pageSchemas = frontendDeliveryContext.pageSchemas;
     ) -> ProgramFrontendThemeTokenGovernanceHandoff:
         """Build the provider/page-schema handoff surface for the 148 theme governance baseline."""
 
-        governance = build_p2_frontend_theme_token_governance_baseline()
+        constraints = self.resolve_frontend_generation_constraints()
+        governance = self.resolve_frontend_theme_token_governance(
+            constraints=constraints
+        )
         page_ui_handoff = self.build_frontend_page_ui_schema_handoff()
+        runtime_adapter_handoff = self.build_frontend_provider_runtime_adapter_handoff()
         snapshot, snapshot_issue = self._load_latest_frontend_solution_snapshot()
         blockers = list(page_ui_handoff.blockers)
         warnings = list(page_ui_handoff.warnings)
+        page_ui_schema = self.resolve_frontend_page_ui_schema()
 
         if snapshot is None:
             if snapshot_issue is not None and snapshot_issue not in blockers:
@@ -4732,6 +6286,12 @@ const pageSchemas = frontendDeliveryContext.pageSchemas;
                 state="blocked",
                 schema_version=governance.handoff_contract.current_version,
                 effective_provider_id="",
+                delivery_entry_id="",
+                provider_theme_adapter_id="",
+                provider_runtime_adapter_carrier_mode="",
+                provider_runtime_adapter_delivery_state="",
+                provider_runtime_adapter_evidence_state="",
+                component_library_packages=[],
                 requested_style_pack_id="",
                 effective_style_pack_id="",
                 artifact_root=governance.handoff_contract.artifact_root,
@@ -4749,8 +6309,8 @@ const pageSchemas = frontendDeliveryContext.pageSchemas;
         )
         validation = validate_frontend_theme_token_governance(
             governance,
-            constraints=build_mvp_frontend_generation_constraints(),
-            page_ui_schema=build_p2_frontend_page_ui_schema_baseline(),
+            constraints=constraints,
+            page_ui_schema=page_ui_schema,
             provider_profile=provider_profile,
             solution_snapshot=snapshot,
         )
@@ -4761,6 +6321,12 @@ const pageSchemas = frontendDeliveryContext.pageSchemas;
             state="ready" if not blockers else "blocked",
             schema_version=governance.handoff_contract.current_version,
             effective_provider_id=snapshot.effective_provider_id,
+            delivery_entry_id=page_ui_handoff.delivery_entry_id,
+            provider_theme_adapter_id=page_ui_handoff.provider_theme_adapter_id,
+            provider_runtime_adapter_carrier_mode=runtime_adapter_handoff.carrier_mode,
+            provider_runtime_adapter_delivery_state=runtime_adapter_handoff.runtime_delivery_state,
+            provider_runtime_adapter_evidence_state=runtime_adapter_handoff.evidence_return_state,
+            component_library_packages=list(page_ui_handoff.component_library_packages),
             requested_style_pack_id=snapshot.requested_style_pack_id,
             effective_style_pack_id=snapshot.effective_style_pack_id,
             artifact_root=governance.handoff_contract.artifact_root,
@@ -4826,11 +6392,19 @@ const pageSchemas = frontendDeliveryContext.pageSchemas;
     ) -> ProgramFrontendQualityPlatformHandoff:
         """Build the Track C quality platform handoff surface for the 149 baseline."""
 
-        platform = build_p2_frontend_quality_platform_baseline()
+        theme_governance = self.resolve_frontend_theme_token_governance()
+        platform = self.resolve_frontend_quality_platform(
+            theme_governance=theme_governance
+        )
         page_ui_handoff = self.build_frontend_page_ui_schema_handoff()
+        runtime_adapter_handoff = self.build_frontend_provider_runtime_adapter_handoff()
+        managed_delivery_apply_state, managed_delivery_apply_artifact_path = (
+            self._load_frontend_managed_delivery_apply_truth()
+        )
         snapshot, snapshot_issue = self._load_latest_frontend_solution_snapshot()
         blockers: list[str] = list(page_ui_handoff.blockers)
         warnings: list[str] = list(page_ui_handoff.warnings)
+        page_ui_schema = self.resolve_frontend_page_ui_schema()
 
         if snapshot is None:
             if snapshot_issue is not None and snapshot_issue not in blockers:
@@ -4842,6 +6416,11 @@ const pageSchemas = frontendDeliveryContext.pageSchemas;
                 delivery_entry_id="",
                 component_library_packages=[],
                 provider_theme_adapter_id="",
+                managed_delivery_apply_state=managed_delivery_apply_state,
+                managed_delivery_apply_artifact_path=managed_delivery_apply_artifact_path,
+                provider_runtime_adapter_carrier_mode="",
+                provider_runtime_adapter_delivery_state="",
+                provider_runtime_adapter_evidence_state="",
                 requested_style_pack_id="",
                 effective_style_pack_id="",
                 artifact_root=platform.handoff_contract.artifact_root,
@@ -4862,8 +6441,8 @@ const pageSchemas = frontendDeliveryContext.pageSchemas;
 
         validation = validate_frontend_quality_platform(
             platform,
-            page_ui_schema=build_p2_frontend_page_ui_schema_baseline(),
-            theme_governance=build_p2_frontend_theme_token_governance_baseline(),
+            page_ui_schema=page_ui_schema,
+            theme_governance=theme_governance,
             solution_snapshot=snapshot,
         )
         blockers.extend(validation.blockers)
@@ -4875,6 +6454,11 @@ const pageSchemas = frontendDeliveryContext.pageSchemas;
             delivery_entry_id=page_ui_handoff.delivery_entry_id,
             component_library_packages=list(page_ui_handoff.component_library_packages),
             provider_theme_adapter_id=page_ui_handoff.provider_theme_adapter_id,
+            managed_delivery_apply_state=managed_delivery_apply_state,
+            managed_delivery_apply_artifact_path=managed_delivery_apply_artifact_path,
+            provider_runtime_adapter_carrier_mode=runtime_adapter_handoff.carrier_mode,
+            provider_runtime_adapter_delivery_state=runtime_adapter_handoff.runtime_delivery_state,
+            provider_runtime_adapter_evidence_state=runtime_adapter_handoff.evidence_return_state,
             requested_style_pack_id=snapshot.requested_style_pack_id,
             effective_style_pack_id=snapshot.effective_style_pack_id,
             artifact_root=platform.handoff_contract.artifact_root,
@@ -4920,6 +6504,11 @@ const pageSchemas = frontendDeliveryContext.pageSchemas;
         snapshot, snapshot_issue = self._load_latest_frontend_solution_snapshot()
         blockers: list[str] = []
         warnings: list[str] = []
+
+        try:
+            expansion = self.resolve_frontend_provider_expansion()
+        except ValueError as exc:
+            blockers.append(str(exc))
 
         if snapshot is None:
             if snapshot_issue is not None:
@@ -4971,6 +6560,11 @@ const pageSchemas = frontendDeliveryContext.pageSchemas;
         snapshot, snapshot_issue = self._load_latest_frontend_solution_snapshot()
         blockers: list[str] = []
         warnings: list[str] = []
+
+        try:
+            runtime_adapter = self.resolve_frontend_provider_runtime_adapter()
+        except ValueError as exc:
+            blockers.append(str(exc))
 
         if snapshot is None:
             if snapshot_issue is not None:
@@ -5054,12 +6648,21 @@ const pageSchemas = frontendDeliveryContext.pageSchemas;
     ) -> ProgramFrontendCrossProviderConsistencyHandoff:
         """Build the pair-level cross-provider consistency handoff surface for 150."""
 
-        consistency = build_p2_frontend_cross_provider_consistency_baseline()
+        runtime_adapter_handoff = self.build_frontend_provider_runtime_adapter_handoff()
+        theme_governance = self.resolve_frontend_theme_token_governance()
+        quality_platform = self.resolve_frontend_quality_platform(
+            theme_governance=theme_governance
+        )
+        consistency = self.resolve_frontend_cross_provider_consistency(
+            theme_governance=theme_governance,
+            quality_platform=quality_platform,
+        )
+        page_ui_schema = self.resolve_frontend_page_ui_schema()
         validation = validate_frontend_cross_provider_consistency(
             consistency,
-            page_ui_schema=build_p2_frontend_page_ui_schema_baseline(),
-            theme_governance=build_p2_frontend_theme_token_governance_baseline(),
-            quality_platform=build_p2_frontend_quality_platform_baseline(),
+            page_ui_schema=page_ui_schema,
+            theme_governance=theme_governance,
+            quality_platform=quality_platform,
         )
         blockers = list(validation.blockers)
         warnings = list(validation.warnings)
@@ -5091,6 +6694,9 @@ const pageSchemas = frontendDeliveryContext.pageSchemas;
             state="ready" if not blockers else "blocked",
             schema_version=consistency.handoff_contract.current_version,
             artifact_root=consistency.handoff_contract.artifact_root,
+            provider_runtime_adapter_carrier_mode=runtime_adapter_handoff.carrier_mode,
+            provider_runtime_adapter_delivery_state=runtime_adapter_handoff.runtime_delivery_state,
+            provider_runtime_adapter_evidence_state=runtime_adapter_handoff.evidence_return_state,
             pair_count=len(consistency.certification_bundles),
             ready_pair_count=ready_pair_count,
             conditional_pair_count=conditional_pair_count,
@@ -5154,6 +6760,30 @@ const pageSchemas = frontendDeliveryContext.pageSchemas;
             return load_frontend_visual_a11y_evidence_artifact(evidence_path)
         except ValueError:
             return None
+
+    def _load_frontend_browser_gate_guidance(
+        self,
+        artifact_path: str | Path | None,
+    ) -> tuple[list[str], list[str]]:
+        if artifact_path is None:
+            return [], []
+
+        try:
+            resolved_path = self._resolve_project_relative_path(artifact_path)
+        except ValueError:
+            return [], []
+        if not resolved_path.is_file():
+            return [], []
+
+        try:
+            payload = yaml.safe_load(resolved_path.read_text(encoding="utf-8")) or {}
+        except yaml.YAMLError:
+            return [], []
+
+        return (
+            _normalize_string_list(payload.get("plain_language_blockers", [])),
+            _normalize_string_list(payload.get("recommended_next_steps", [])),
+        )
 
     def _build_frontend_browser_gate_execute_decision(
         self,
@@ -5220,10 +6850,14 @@ const pageSchemas = frontendDeliveryContext.pageSchemas;
                 str(payload.get("overall_gate_status", "")).strip(),
             )
         try:
+            runtime_adapter_handoff = self.build_frontend_provider_runtime_adapter_handoff()
             expected_context = build_browser_quality_gate_execution_context(
                 apply_payload=current_apply_payload,
                 solution_snapshot=current_snapshot,
                 gate_run_id=execution_context.gate_run_id,
+                provider_runtime_adapter_carrier_mode=runtime_adapter_handoff.carrier_mode,
+                provider_runtime_adapter_delivery_state=runtime_adapter_handoff.runtime_delivery_state,
+                provider_runtime_adapter_evidence_state=runtime_adapter_handoff.evidence_return_state,
             )
         except ValueError as exc:
             return (
@@ -5250,6 +6884,12 @@ const pageSchemas = frontendDeliveryContext.pageSchemas;
                 != execution_context.effective_style_pack,
                 expected_context.style_fidelity_status
                 != execution_context.style_fidelity_status,
+                expected_context.provider_runtime_adapter_carrier_mode
+                != execution_context.provider_runtime_adapter_carrier_mode,
+                expected_context.provider_runtime_adapter_delivery_state
+                != execution_context.provider_runtime_adapter_delivery_state,
+                expected_context.provider_runtime_adapter_evidence_state
+                != execution_context.provider_runtime_adapter_evidence_state,
                 expected_context.browser_entry_ref != execution_context.browser_entry_ref,
                 tuple(expected_context.required_probe_set)
                 != tuple(execution_context.required_probe_set),
@@ -5445,8 +7085,10 @@ const pageSchemas = frontendDeliveryContext.pageSchemas;
                     path=step.path,
                     state=remediation.state,
                     fix_inputs=list(remediation.fix_inputs),
-                    suggested_actions=list(remediation.suggested_actions),
+                    suggested_actions=_unique_strings(list(remediation.suggested_actions)),
                     action_commands=step_action_commands,
+                    plain_language_blockers=_unique_strings(list(remediation.plain_language_blockers)),
+                    recommended_next_steps=_unique_strings(list(remediation.recommended_next_steps)),
                     source_linkage=dict(remediation.source_linkage),
                 )
             )
@@ -5456,7 +7098,7 @@ const pageSchemas = frontendDeliveryContext.pageSchemas;
             steps=steps,
             action_commands=_unique_strings(action_commands),
             follow_up_commands=_unique_strings(follow_up_commands),
-            warnings=list(plan.warnings),
+            warnings=_unique_strings(list(plan.warnings)),
         )
 
     def execute_frontend_remediation_runbook(
@@ -5613,6 +7255,12 @@ const pageSchemas = frontendDeliveryContext.pageSchemas;
                         suggested_next_actions=_normalize_string_list(
                             step_payload.get("suggested_actions", [])
                         ),
+                        plain_language_blockers=_normalize_string_list(
+                            step_payload.get("plain_language_blockers", [])
+                        ),
+                        recommended_next_steps=_normalize_string_list(
+                            step_payload.get("recommended_next_steps", [])
+                        ),
                         source_linkage=source_linkage,
                     )
                 )
@@ -5656,7 +7304,9 @@ const pageSchemas = frontendDeliveryContext.pageSchemas;
                 spec_id=step.spec_id,
                 path=step.path,
                 pending_inputs=list(step.pending_inputs),
-                suggested_next_actions=list(step.suggested_next_actions),
+                suggested_next_actions=_unique_strings(list(step.suggested_next_actions)),
+                plain_language_blockers=_unique_strings(list(step.plain_language_blockers)),
+                recommended_next_steps=_unique_strings(list(step.recommended_next_steps)),
                 source_linkage={
                     **dict(step.source_linkage),
                     "provider_runtime_state": "not_started",
@@ -5672,8 +7322,8 @@ const pageSchemas = frontendDeliveryContext.pageSchemas;
             handoff_source_path=effective_handoff.writeback_artifact_path,
             handoff_generated_at=effective_handoff.writeback_generated_at,
             steps=steps,
-            remaining_blockers=list(effective_handoff.remaining_blockers),
-            warnings=list(effective_handoff.warnings),
+            remaining_blockers=_unique_strings(list(effective_handoff.remaining_blockers)),
+            warnings=_unique_strings(list(effective_handoff.warnings)),
             source_linkage=source_linkage,
         )
 
@@ -5694,8 +7344,8 @@ const pageSchemas = frontendDeliveryContext.pageSchemas;
                 confirmed=confirmed,
                 provider_execution_state="blocked",
                 invocation_result="blocked",
-                remaining_blockers=list(effective_request.remaining_blockers),
-                warnings=list(effective_request.warnings),
+                remaining_blockers=_unique_strings(list(effective_request.remaining_blockers)),
+                warnings=_unique_strings(list(effective_request.warnings)),
                 source_linkage={
                     **dict(effective_request.source_linkage),
                     "provider_runtime_state": "blocked",
@@ -5709,7 +7359,7 @@ const pageSchemas = frontendDeliveryContext.pageSchemas;
                 provider_execution_state="not_started",
                 invocation_result="skipped",
                 remaining_blockers=[],
-                warnings=list(effective_request.warnings),
+                warnings=_unique_strings(list(effective_request.warnings)),
                 source_linkage={
                     **dict(effective_request.source_linkage),
                     "provider_runtime_state": "not_started",
@@ -5722,11 +7372,8 @@ const pageSchemas = frontendDeliveryContext.pageSchemas;
                 confirmed=False,
                 provider_execution_state="confirmation_required",
                 invocation_result="blocked",
-                remaining_blockers=list(effective_request.remaining_blockers),
-                warnings=[
-                    *effective_request.warnings,
-                    "provider runtime requires explicit confirmation",
-                ],
+                remaining_blockers=_unique_strings(list(effective_request.remaining_blockers)),
+                warnings=_unique_strings([*effective_request.warnings, "provider runtime requires explicit confirmation"]),
                 source_linkage={
                     **dict(effective_request.source_linkage),
                     "provider_runtime_state": "confirmation_required",
@@ -5735,7 +7382,7 @@ const pageSchemas = frontendDeliveryContext.pageSchemas;
             )
         patch_summaries: list[str] = []
         remaining_blockers: list[str] = []
-        warnings = list(effective_request.warnings)
+        warnings = _unique_strings(list(effective_request.warnings))
 
         for step in effective_request.steps:
             if not step.spec_id:
@@ -5889,6 +7536,12 @@ const pageSchemas = frontendDeliveryContext.pageSchemas;
                     suggested_next_actions=_normalize_string_list(
                         step_payload.get("suggested_next_actions", [])
                     ),
+                    plain_language_blockers=_normalize_string_list(
+                        step_payload.get("plain_language_blockers", [])
+                    ),
+                    recommended_next_steps=_normalize_string_list(
+                        step_payload.get("recommended_next_steps", [])
+                    ),
                     source_linkage=source_linkage,
                 )
             )
@@ -5936,7 +7589,9 @@ const pageSchemas = frontendDeliveryContext.pageSchemas;
                 path=step.path,
                 patch_availability_state=step.patch_availability_state,
                 pending_inputs=list(step.pending_inputs),
-                suggested_next_actions=list(step.suggested_next_actions),
+                suggested_next_actions=_unique_strings(list(step.suggested_next_actions)),
+                plain_language_blockers=_unique_strings(list(step.plain_language_blockers)),
+                recommended_next_steps=_unique_strings(list(step.recommended_next_steps)),
                 source_linkage={
                     **dict(step.source_linkage),
                     "patch_apply_state": "not_started",
@@ -5953,8 +7608,8 @@ const pageSchemas = frontendDeliveryContext.pageSchemas;
             handoff_source_path=effective_handoff.runtime_artifact_path,
             handoff_generated_at=effective_handoff.runtime_generated_at,
             steps=steps,
-            remaining_blockers=list(effective_handoff.remaining_blockers),
-            warnings=list(effective_handoff.warnings),
+            remaining_blockers=_unique_strings(list(effective_handoff.remaining_blockers)),
+            warnings=_unique_strings(list(effective_handoff.warnings)),
             source_linkage=source_linkage,
         )
 
@@ -5975,8 +7630,8 @@ const pageSchemas = frontendDeliveryContext.pageSchemas;
                 confirmed=confirmed,
                 patch_apply_state="blocked",
                 apply_result="blocked",
-                remaining_blockers=list(effective_request.remaining_blockers),
-                warnings=list(effective_request.warnings),
+                remaining_blockers=_unique_strings(list(effective_request.remaining_blockers)),
+                warnings=_unique_strings(list(effective_request.warnings)),
                 source_linkage={
                     **dict(effective_request.source_linkage),
                     "patch_apply_state": "blocked",
@@ -5990,7 +7645,7 @@ const pageSchemas = frontendDeliveryContext.pageSchemas;
                 patch_apply_state="not_started",
                 apply_result="skipped",
                 remaining_blockers=[],
-                warnings=list(effective_request.warnings),
+                warnings=_unique_strings(list(effective_request.warnings)),
                 source_linkage={
                     **dict(effective_request.source_linkage),
                     "patch_apply_state": "not_started",
@@ -6003,11 +7658,8 @@ const pageSchemas = frontendDeliveryContext.pageSchemas;
                 confirmed=False,
                 patch_apply_state="confirmation_required",
                 apply_result="blocked",
-                remaining_blockers=list(effective_request.remaining_blockers),
-                warnings=[
-                    *effective_request.warnings,
-                    "provider patch apply requires explicit confirmation",
-                ],
+                remaining_blockers=_unique_strings(list(effective_request.remaining_blockers)),
+                warnings=_unique_strings([*effective_request.warnings, "provider patch apply requires explicit confirmation"]),
                 source_linkage={
                     **dict(effective_request.source_linkage),
                     "patch_apply_state": "confirmation_required",
@@ -6016,7 +7668,7 @@ const pageSchemas = frontendDeliveryContext.pageSchemas;
             )
         written_paths: list[str] = []
         remaining_blockers: list[str] = []
-        warnings = list(effective_request.warnings)
+        warnings = _unique_strings(list(effective_request.warnings))
         executable_steps = 0
         steps_root = (
             self.root / PROGRAM_FRONTEND_PROVIDER_PATCH_APPLY_STEP_DIR
@@ -6209,6 +7861,12 @@ const pageSchemas = frontendDeliveryContext.pageSchemas;
                     suggested_next_actions=_normalize_string_list(
                         step_payload.get("suggested_next_actions", [])
                     ),
+                    plain_language_blockers=_normalize_string_list(
+                        step_payload.get("plain_language_blockers", [])
+                    ),
+                    recommended_next_steps=_normalize_string_list(
+                        step_payload.get("recommended_next_steps", [])
+                    ),
                     source_linkage=source_linkage,
                 )
             )
@@ -6254,8 +7912,8 @@ const pageSchemas = frontendDeliveryContext.pageSchemas;
                 writeback_state="blocked",
                 orchestration_result="blocked",
                 written_paths=list(effective_request.written_paths),
-                remaining_blockers=list(effective_request.remaining_blockers),
-                warnings=list(effective_request.warnings),
+                remaining_blockers=_unique_strings(list(effective_request.remaining_blockers)),
+                warnings=_unique_strings(list(effective_request.warnings)),
                 source_linkage={
                     **dict(effective_request.source_linkage),
                     "cross_spec_writeback_state": "blocked",
@@ -6270,7 +7928,7 @@ const pageSchemas = frontendDeliveryContext.pageSchemas;
                 orchestration_result="skipped",
                 written_paths=list(effective_request.written_paths),
                 remaining_blockers=[],
-                warnings=list(effective_request.warnings),
+                warnings=_unique_strings(list(effective_request.warnings)),
                 source_linkage={
                     **dict(effective_request.source_linkage),
                     "cross_spec_writeback_state": "not_started",
@@ -6284,11 +7942,8 @@ const pageSchemas = frontendDeliveryContext.pageSchemas;
                 writeback_state="confirmation_required",
                 orchestration_result="blocked",
                 written_paths=list(effective_request.written_paths),
-                remaining_blockers=list(effective_request.remaining_blockers),
-                warnings=[
-                    *effective_request.warnings,
-                    "cross-spec writeback requires explicit confirmation",
-                ],
+                remaining_blockers=_unique_strings(list(effective_request.remaining_blockers)),
+                warnings=_unique_strings([*effective_request.warnings, "cross-spec writeback requires explicit confirmation"]),
                 source_linkage={
                     **dict(effective_request.source_linkage),
                     "cross_spec_writeback_state": "confirmation_required",
@@ -6309,7 +7964,7 @@ const pageSchemas = frontendDeliveryContext.pageSchemas;
                         f"(apply_result={effective_request.apply_result or 'unknown'})",
                     ]
                 ),
-                warnings=list(effective_request.warnings),
+                warnings=_unique_strings(list(effective_request.warnings)),
                 source_linkage={
                     **dict(effective_request.source_linkage),
                     "cross_spec_writeback_state": "blocked",
@@ -6317,8 +7972,8 @@ const pageSchemas = frontendDeliveryContext.pageSchemas;
                 },
             )
         written_paths: list[str] = []
-        remaining_blockers: list[str] = list(effective_request.remaining_blockers)
-        warnings = list(effective_request.warnings)
+        remaining_blockers: list[str] = _unique_strings(list(effective_request.remaining_blockers))
+        warnings = _unique_strings(list(effective_request.warnings))
         executable_steps = 0
         spec_by_id = {spec.id: spec for spec in manifest.specs}
 
@@ -6482,8 +8137,28 @@ const pageSchemas = frontendDeliveryContext.pageSchemas;
                 "",
             ]
         )
-        suggested_actions = list(step.suggested_next_actions) or ["none"]
+        suggested_actions = _unique_strings(list(step.suggested_next_actions)) or ["none"]
         lines.extend([f"- {item}" for item in suggested_actions])
+        plain_language_blockers = _unique_strings(list(step.plain_language_blockers))
+        if plain_language_blockers:
+            lines.extend(
+                [
+                    "",
+                    "## Explain",
+                    "",
+                ]
+            )
+            lines.extend([f"- {item}" for item in plain_language_blockers])
+        recommended_next_steps = _unique_strings(list(step.recommended_next_steps))
+        if recommended_next_steps:
+            lines.extend(
+                [
+                    "",
+                    "## Recommended Next Steps",
+                    "",
+                ]
+            )
+            lines.extend([f"- {item}" for item in recommended_next_steps])
         lines.extend(
             [
                 "",
@@ -6530,8 +8205,28 @@ const pageSchemas = frontendDeliveryContext.pageSchemas;
                 "",
             ]
         )
-        suggested_actions = list(step.suggested_next_actions) or ["none"]
+        suggested_actions = _unique_strings(list(step.suggested_next_actions)) or ["none"]
         lines.extend([f"- {item}" for item in suggested_actions])
+        plain_language_blockers = _unique_strings(list(step.plain_language_blockers))
+        if plain_language_blockers:
+            lines.extend(
+                [
+                    "",
+                    "## Explain",
+                    "",
+                ]
+            )
+            lines.extend([f"- {item}" for item in plain_language_blockers])
+        recommended_next_steps = _unique_strings(list(step.recommended_next_steps))
+        if recommended_next_steps:
+            lines.extend(
+                [
+                    "",
+                    "## Recommended Next Steps",
+                    "",
+                ]
+            )
+            lines.extend([f"- {item}" for item in recommended_next_steps])
         if request.written_paths:
             lines.extend(
                 [
@@ -6577,7 +8272,11 @@ const pageSchemas = frontendDeliveryContext.pageSchemas;
     ) -> str:
         step_spec_id = getattr(step, "spec_id", "")
         pending_inputs = list(getattr(step, "pending_inputs", [])) or ["none"]
-        suggested_actions = list(getattr(step, "suggested_next_actions", [])) or ["none"]
+        suggested_actions = _unique_strings(
+            list(getattr(step, "suggested_next_actions", []))
+        ) or ["none"]
+        plain_language_blockers = _unique_strings(list(getattr(step, "plain_language_blockers", [])))
+        recommended_next_steps = _unique_strings(list(getattr(step, "recommended_next_steps", [])))
         source_linkage = dict(getattr(step, "source_linkage", {}))
         lines = [
             f"# {title}: {step_spec_id}",
@@ -6599,6 +8298,24 @@ const pageSchemas = frontendDeliveryContext.pageSchemas;
             ]
         )
         lines.extend([f"- {item}" for item in suggested_actions])
+        if plain_language_blockers:
+            lines.extend(
+                [
+                    "",
+                    "## Explain",
+                    "",
+                ]
+            )
+            lines.extend([f"- {item}" for item in plain_language_blockers])
+        if recommended_next_steps:
+            lines.extend(
+                [
+                    "",
+                    "## Recommended Next Steps",
+                    "",
+                ]
+            )
+            lines.extend([f"- {item}" for item in recommended_next_steps])
         if source_written_paths:
             lines.extend(
                 [
@@ -6697,6 +8414,12 @@ const pageSchemas = frontendDeliveryContext.pageSchemas;
                     suggested_next_actions=_normalize_string_list(
                         step_payload.get("suggested_next_actions", [])
                     ),
+                    plain_language_blockers=_normalize_string_list(
+                        step_payload.get("plain_language_blockers", [])
+                    ),
+                    recommended_next_steps=_normalize_string_list(
+                        step_payload.get("recommended_next_steps", [])
+                    ),
                     source_linkage=source_linkage,
                 )
             )
@@ -6743,8 +8466,8 @@ const pageSchemas = frontendDeliveryContext.pageSchemas;
                 registry_state="blocked",
                 registry_result="blocked",
                 written_paths=list(effective_request.written_paths),
-                remaining_blockers=list(effective_request.remaining_blockers),
-                warnings=list(effective_request.warnings),
+                remaining_blockers=_unique_strings(list(effective_request.remaining_blockers)),
+                warnings=_unique_strings(list(effective_request.warnings)),
                 source_linkage={
                     **dict(effective_request.source_linkage),
                     "registry_state": "blocked",
@@ -6758,11 +8481,8 @@ const pageSchemas = frontendDeliveryContext.pageSchemas;
                 registry_state="confirmation_required",
                 registry_result="blocked",
                 written_paths=list(effective_request.written_paths),
-                remaining_blockers=list(effective_request.remaining_blockers),
-                warnings=[
-                    *effective_request.warnings,
-                    "guarded registry orchestration requires explicit confirmation",
-                ],
+                remaining_blockers=_unique_strings(list(effective_request.remaining_blockers)),
+                warnings=_unique_strings([*effective_request.warnings, "guarded registry orchestration requires explicit confirmation"]),
                 source_linkage={
                     **dict(effective_request.source_linkage),
                     "registry_state": "confirmation_required",
@@ -6784,7 +8504,7 @@ const pageSchemas = frontendDeliveryContext.pageSchemas;
                 remaining_blockers=_unique_strings(
                     [*effective_request.remaining_blockers, blocker]
                 ),
-                warnings=list(effective_request.warnings),
+                warnings=_unique_strings(list(effective_request.warnings)),
                 source_linkage={
                     **dict(effective_request.source_linkage),
                     "registry_state": "blocked",
@@ -6803,7 +8523,7 @@ const pageSchemas = frontendDeliveryContext.pageSchemas;
                 remaining_blockers=_unique_strings(
                     [*effective_request.remaining_blockers, blocker]
                 ),
-                warnings=list(effective_request.warnings),
+                warnings=_unique_strings(list(effective_request.warnings)),
                 source_linkage={
                     **dict(effective_request.source_linkage),
                     "registry_state": "blocked",
@@ -6818,7 +8538,7 @@ const pageSchemas = frontendDeliveryContext.pageSchemas;
                 registry_result="skipped",
                 written_paths=list(effective_request.written_paths),
                 remaining_blockers=[],
-                warnings=list(effective_request.warnings),
+                warnings=_unique_strings(list(effective_request.warnings)),
                 source_linkage={
                     **dict(effective_request.source_linkage),
                     "registry_state": "not_started",
@@ -6826,8 +8546,8 @@ const pageSchemas = frontendDeliveryContext.pageSchemas;
                 },
             )
         written_paths: list[str] = []
-        remaining_blockers: list[str] = list(effective_request.remaining_blockers)
-        warnings = list(effective_request.warnings)
+        remaining_blockers: list[str] = _unique_strings(list(effective_request.remaining_blockers))
+        warnings = _unique_strings(list(effective_request.warnings))
         executable_steps = 0
         for step in effective_request.steps:
             target_path, target_blocker = self._resolve_frontend_stage_step_target(
@@ -7019,6 +8739,12 @@ const pageSchemas = frontendDeliveryContext.pageSchemas;
                     suggested_next_actions=_normalize_string_list(
                         step_payload.get("suggested_next_actions", [])
                     ),
+                    plain_language_blockers=_normalize_string_list(
+                        step_payload.get("plain_language_blockers", [])
+                    ),
+                    recommended_next_steps=_normalize_string_list(
+                        step_payload.get("recommended_next_steps", [])
+                    ),
                     source_linkage=source_linkage,
                 )
             )
@@ -7065,8 +8791,8 @@ const pageSchemas = frontendDeliveryContext.pageSchemas;
                 governance_state="blocked",
                 governance_result="blocked",
                 written_paths=list(effective_request.written_paths),
-                remaining_blockers=list(effective_request.remaining_blockers),
-                warnings=list(effective_request.warnings),
+                remaining_blockers=_unique_strings(list(effective_request.remaining_blockers)),
+                warnings=_unique_strings(list(effective_request.warnings)),
                 source_linkage={
                     **dict(effective_request.source_linkage),
                     "governance_state": "blocked",
@@ -7080,11 +8806,8 @@ const pageSchemas = frontendDeliveryContext.pageSchemas;
                 governance_state="confirmation_required",
                 governance_result="blocked",
                 written_paths=list(effective_request.written_paths),
-                remaining_blockers=list(effective_request.remaining_blockers),
-                warnings=[
-                    *effective_request.warnings,
-                    "broader governance orchestration requires explicit confirmation",
-                ],
+                remaining_blockers=_unique_strings(list(effective_request.remaining_blockers)),
+                warnings=_unique_strings([*effective_request.warnings, "broader governance orchestration requires explicit confirmation"]),
                 source_linkage={
                     **dict(effective_request.source_linkage),
                     "governance_state": "confirmation_required",
@@ -7106,7 +8829,7 @@ const pageSchemas = frontendDeliveryContext.pageSchemas;
                 remaining_blockers=_unique_strings(
                     [*effective_request.remaining_blockers, blocker]
                 ),
-                warnings=list(effective_request.warnings),
+                warnings=_unique_strings(list(effective_request.warnings)),
                 source_linkage={
                     **dict(effective_request.source_linkage),
                     "governance_state": "blocked",
@@ -7125,7 +8848,7 @@ const pageSchemas = frontendDeliveryContext.pageSchemas;
                 remaining_blockers=_unique_strings(
                     [*effective_request.remaining_blockers, blocker]
                 ),
-                warnings=list(effective_request.warnings),
+                warnings=_unique_strings(list(effective_request.warnings)),
                 source_linkage={
                     **dict(effective_request.source_linkage),
                     "governance_state": "blocked",
@@ -7140,7 +8863,7 @@ const pageSchemas = frontendDeliveryContext.pageSchemas;
                 governance_result="skipped",
                 written_paths=list(effective_request.written_paths),
                 remaining_blockers=[],
-                warnings=list(effective_request.warnings),
+                warnings=_unique_strings(list(effective_request.warnings)),
                 source_linkage={
                     **dict(effective_request.source_linkage),
                     "governance_state": "not_started",
@@ -7148,8 +8871,8 @@ const pageSchemas = frontendDeliveryContext.pageSchemas;
                 },
             )
         written_paths: list[str] = []
-        remaining_blockers: list[str] = list(effective_request.remaining_blockers)
-        warnings = list(effective_request.warnings)
+        remaining_blockers: list[str] = _unique_strings(list(effective_request.remaining_blockers))
+        warnings = _unique_strings(list(effective_request.warnings))
         executable_steps = 0
         for step in effective_request.steps:
             target_path, target_blocker = self._resolve_frontend_stage_step_target(
@@ -7345,6 +9068,12 @@ const pageSchemas = frontendDeliveryContext.pageSchemas;
                     suggested_next_actions=_normalize_string_list(
                         step_payload.get("suggested_next_actions", [])
                     ),
+                    plain_language_blockers=_normalize_string_list(
+                        step_payload.get("plain_language_blockers", [])
+                    ),
+                    recommended_next_steps=_normalize_string_list(
+                        step_payload.get("recommended_next_steps", [])
+                    ),
                     source_linkage=source_linkage,
                 )
             )
@@ -7393,8 +9122,8 @@ const pageSchemas = frontendDeliveryContext.pageSchemas;
                 final_governance_state="blocked",
                 final_governance_result="blocked",
                 written_paths=list(effective_request.written_paths),
-                remaining_blockers=list(effective_request.remaining_blockers),
-                warnings=list(effective_request.warnings),
+                remaining_blockers=_unique_strings(list(effective_request.remaining_blockers)),
+                warnings=_unique_strings(list(effective_request.warnings)),
                 source_linkage={
                     **dict(effective_request.source_linkage),
                     "final_governance_state": "blocked",
@@ -7408,11 +9137,8 @@ const pageSchemas = frontendDeliveryContext.pageSchemas;
                 final_governance_state="confirmation_required",
                 final_governance_result="blocked",
                 written_paths=list(effective_request.written_paths),
-                remaining_blockers=list(effective_request.remaining_blockers),
-                warnings=[
-                    *effective_request.warnings,
-                    "final governance orchestration requires explicit confirmation",
-                ],
+                remaining_blockers=_unique_strings(list(effective_request.remaining_blockers)),
+                warnings=_unique_strings([*effective_request.warnings, "final governance orchestration requires explicit confirmation"]),
                 source_linkage={
                     **dict(effective_request.source_linkage),
                     "final_governance_state": "confirmation_required",
@@ -7434,7 +9160,7 @@ const pageSchemas = frontendDeliveryContext.pageSchemas;
                 remaining_blockers=_unique_strings(
                     [*effective_request.remaining_blockers, blocker]
                 ),
-                warnings=list(effective_request.warnings),
+                warnings=_unique_strings(list(effective_request.warnings)),
                 source_linkage={
                     **dict(effective_request.source_linkage),
                     "final_governance_state": "blocked",
@@ -7453,7 +9179,7 @@ const pageSchemas = frontendDeliveryContext.pageSchemas;
                 remaining_blockers=_unique_strings(
                     [*effective_request.remaining_blockers, blocker]
                 ),
-                warnings=list(effective_request.warnings),
+                warnings=_unique_strings(list(effective_request.warnings)),
                 source_linkage={
                     **dict(effective_request.source_linkage),
                     "final_governance_state": "blocked",
@@ -7468,7 +9194,7 @@ const pageSchemas = frontendDeliveryContext.pageSchemas;
                 final_governance_result="skipped",
                 written_paths=list(effective_request.written_paths),
                 remaining_blockers=[],
-                warnings=list(effective_request.warnings),
+                warnings=_unique_strings(list(effective_request.warnings)),
                 source_linkage={
                     **dict(effective_request.source_linkage),
                     "final_governance_state": "not_started",
@@ -7476,8 +9202,8 @@ const pageSchemas = frontendDeliveryContext.pageSchemas;
                 },
             )
         written_paths: list[str] = []
-        remaining_blockers: list[str] = list(effective_request.remaining_blockers)
-        warnings = list(effective_request.warnings)
+        remaining_blockers: list[str] = _unique_strings(list(effective_request.remaining_blockers))
+        warnings = _unique_strings(list(effective_request.warnings))
         executable_steps = 0
         for step in effective_request.steps:
             target_path, target_blocker = self._resolve_frontend_stage_step_target(
@@ -7675,6 +9401,12 @@ const pageSchemas = frontendDeliveryContext.pageSchemas;
                     suggested_next_actions=_normalize_string_list(
                         step_payload.get("suggested_next_actions", [])
                     ),
+                    plain_language_blockers=_normalize_string_list(
+                        step_payload.get("plain_language_blockers", [])
+                    ),
+                    recommended_next_steps=_normalize_string_list(
+                        step_payload.get("recommended_next_steps", [])
+                    ),
                     source_linkage=source_linkage,
                 )
             )
@@ -7723,8 +9455,8 @@ const pageSchemas = frontendDeliveryContext.pageSchemas;
                 persistence_state="blocked",
                 persistence_result="blocked",
                 written_paths=list(effective_request.written_paths),
-                remaining_blockers=list(effective_request.remaining_blockers),
-                warnings=list(effective_request.warnings),
+                remaining_blockers=_unique_strings(list(effective_request.remaining_blockers)),
+                warnings=_unique_strings(list(effective_request.warnings)),
                 source_linkage={
                     **dict(effective_request.source_linkage),
                     "persistence_state": "blocked",
@@ -7738,11 +9470,8 @@ const pageSchemas = frontendDeliveryContext.pageSchemas;
                 persistence_state="confirmation_required",
                 persistence_result="blocked",
                 written_paths=list(effective_request.written_paths),
-                remaining_blockers=list(effective_request.remaining_blockers),
-                warnings=[
-                    *effective_request.warnings,
-                    "writeback persistence orchestration requires explicit confirmation",
-                ],
+                remaining_blockers=_unique_strings(list(effective_request.remaining_blockers)),
+                warnings=_unique_strings([*effective_request.warnings, "writeback persistence orchestration requires explicit confirmation"]),
                 source_linkage={
                     **dict(effective_request.source_linkage),
                     "persistence_state": "confirmation_required",
@@ -7764,7 +9493,7 @@ const pageSchemas = frontendDeliveryContext.pageSchemas;
                 remaining_blockers=_unique_strings(
                     [*effective_request.remaining_blockers, blocker]
                 ),
-                warnings=list(effective_request.warnings),
+                warnings=_unique_strings(list(effective_request.warnings)),
                 source_linkage={
                     **dict(effective_request.source_linkage),
                     "persistence_state": "blocked",
@@ -7783,7 +9512,7 @@ const pageSchemas = frontendDeliveryContext.pageSchemas;
                 remaining_blockers=_unique_strings(
                     [*effective_request.remaining_blockers, blocker]
                 ),
-                warnings=list(effective_request.warnings),
+                warnings=_unique_strings(list(effective_request.warnings)),
                 source_linkage={
                     **dict(effective_request.source_linkage),
                     "persistence_state": "blocked",
@@ -7798,7 +9527,7 @@ const pageSchemas = frontendDeliveryContext.pageSchemas;
                 persistence_result="skipped",
                 written_paths=list(effective_request.written_paths),
                 remaining_blockers=[],
-                warnings=list(effective_request.warnings),
+                warnings=_unique_strings(list(effective_request.warnings)),
                 source_linkage={
                     **dict(effective_request.source_linkage),
                     "persistence_state": "not_started",
@@ -7806,8 +9535,8 @@ const pageSchemas = frontendDeliveryContext.pageSchemas;
                 },
             )
         written_paths: list[str] = []
-        remaining_blockers: list[str] = list(effective_request.remaining_blockers)
-        warnings = list(effective_request.warnings)
+        remaining_blockers: list[str] = _unique_strings(list(effective_request.remaining_blockers))
+        warnings = _unique_strings(list(effective_request.warnings))
         executable_steps = 0
         for step in effective_request.steps:
             target_path, target_blocker = self._resolve_frontend_stage_step_target(
@@ -8003,6 +9732,12 @@ const pageSchemas = frontendDeliveryContext.pageSchemas;
                     suggested_next_actions=_normalize_string_list(
                         step_payload.get("suggested_next_actions", [])
                     ),
+                    plain_language_blockers=_normalize_string_list(
+                        step_payload.get("plain_language_blockers", [])
+                    ),
+                    recommended_next_steps=_normalize_string_list(
+                        step_payload.get("recommended_next_steps", [])
+                    ),
                     source_linkage=source_linkage,
                 )
             )
@@ -8051,8 +9786,8 @@ const pageSchemas = frontendDeliveryContext.pageSchemas;
                 proof_state="blocked",
                 proof_result="blocked",
                 written_paths=list(effective_request.written_paths),
-                remaining_blockers=list(effective_request.remaining_blockers),
-                warnings=list(effective_request.warnings),
+                remaining_blockers=_unique_strings(list(effective_request.remaining_blockers)),
+                warnings=_unique_strings(list(effective_request.warnings)),
                 source_linkage={
                     **dict(effective_request.source_linkage),
                     "proof_state": "blocked",
@@ -8066,11 +9801,8 @@ const pageSchemas = frontendDeliveryContext.pageSchemas;
                 proof_state="confirmation_required",
                 proof_result="blocked",
                 written_paths=list(effective_request.written_paths),
-                remaining_blockers=list(effective_request.remaining_blockers),
-                warnings=[
-                    *effective_request.warnings,
-                    "persisted write proof orchestration requires explicit confirmation",
-                ],
+                remaining_blockers=_unique_strings(list(effective_request.remaining_blockers)),
+                warnings=_unique_strings([*effective_request.warnings, "persisted write proof orchestration requires explicit confirmation"]),
                 source_linkage={
                     **dict(effective_request.source_linkage),
                     "proof_state": "confirmation_required",
@@ -8092,7 +9824,7 @@ const pageSchemas = frontendDeliveryContext.pageSchemas;
                 remaining_blockers=_unique_strings(
                     [*effective_request.remaining_blockers, blocker]
                 ),
-                warnings=list(effective_request.warnings),
+                warnings=_unique_strings(list(effective_request.warnings)),
                 source_linkage={
                     **dict(effective_request.source_linkage),
                     "proof_state": "blocked",
@@ -8111,7 +9843,7 @@ const pageSchemas = frontendDeliveryContext.pageSchemas;
                 remaining_blockers=_unique_strings(
                     [*effective_request.remaining_blockers, blocker]
                 ),
-                warnings=list(effective_request.warnings),
+                warnings=_unique_strings(list(effective_request.warnings)),
                 source_linkage={
                     **dict(effective_request.source_linkage),
                     "proof_state": "blocked",
@@ -8126,7 +9858,7 @@ const pageSchemas = frontendDeliveryContext.pageSchemas;
                 proof_result="skipped",
                 written_paths=list(effective_request.written_paths),
                 remaining_blockers=[],
-                warnings=list(effective_request.warnings),
+                warnings=_unique_strings(list(effective_request.warnings)),
                 source_linkage={
                     **dict(effective_request.source_linkage),
                     "proof_state": "not_started",
@@ -8134,8 +9866,8 @@ const pageSchemas = frontendDeliveryContext.pageSchemas;
                 },
             )
         written_paths: list[str] = []
-        remaining_blockers: list[str] = list(effective_request.remaining_blockers)
-        warnings = list(effective_request.warnings)
+        remaining_blockers: list[str] = _unique_strings(list(effective_request.remaining_blockers))
+        warnings = _unique_strings(list(effective_request.warnings))
         executable_steps = 0
         for step in effective_request.steps:
             target_path, target_blocker = self._resolve_frontend_stage_step_target(
@@ -8331,6 +10063,12 @@ const pageSchemas = frontendDeliveryContext.pageSchemas;
                     suggested_next_actions=_normalize_string_list(
                         step_payload.get("suggested_next_actions", [])
                     ),
+                    plain_language_blockers=_normalize_string_list(
+                        step_payload.get("plain_language_blockers", [])
+                    ),
+                    recommended_next_steps=_normalize_string_list(
+                        step_payload.get("recommended_next_steps", [])
+                    ),
                     source_linkage=source_linkage,
                 )
             )
@@ -8379,8 +10117,8 @@ const pageSchemas = frontendDeliveryContext.pageSchemas;
                 publication_state="blocked",
                 publication_result="blocked",
                 written_paths=list(effective_request.written_paths),
-                remaining_blockers=list(effective_request.remaining_blockers),
-                warnings=list(effective_request.warnings),
+                remaining_blockers=_unique_strings(list(effective_request.remaining_blockers)),
+                warnings=_unique_strings(list(effective_request.warnings)),
                 source_linkage={
                     **dict(effective_request.source_linkage),
                     "publication_state": "blocked",
@@ -8394,11 +10132,8 @@ const pageSchemas = frontendDeliveryContext.pageSchemas;
                 publication_state="confirmation_required",
                 publication_result="blocked",
                 written_paths=list(effective_request.written_paths),
-                remaining_blockers=list(effective_request.remaining_blockers),
-                warnings=[
-                    *effective_request.warnings,
-                    "final proof publication orchestration requires explicit confirmation",
-                ],
+                remaining_blockers=_unique_strings(list(effective_request.remaining_blockers)),
+                warnings=_unique_strings([*effective_request.warnings, "final proof publication orchestration requires explicit confirmation"]),
                 source_linkage={
                     **dict(effective_request.source_linkage),
                     "publication_state": "confirmation_required",
@@ -8420,7 +10155,7 @@ const pageSchemas = frontendDeliveryContext.pageSchemas;
                 remaining_blockers=_unique_strings(
                     [*effective_request.remaining_blockers, blocker]
                 ),
-                warnings=list(effective_request.warnings),
+                warnings=_unique_strings(list(effective_request.warnings)),
                 source_linkage={
                     **dict(effective_request.source_linkage),
                     "publication_state": "blocked",
@@ -8439,7 +10174,7 @@ const pageSchemas = frontendDeliveryContext.pageSchemas;
                 remaining_blockers=_unique_strings(
                     [*effective_request.remaining_blockers, blocker]
                 ),
-                warnings=list(effective_request.warnings),
+                warnings=_unique_strings(list(effective_request.warnings)),
                 source_linkage={
                     **dict(effective_request.source_linkage),
                     "publication_state": "blocked",
@@ -8454,7 +10189,7 @@ const pageSchemas = frontendDeliveryContext.pageSchemas;
                 publication_result="skipped",
                 written_paths=list(effective_request.written_paths),
                 remaining_blockers=[],
-                warnings=list(effective_request.warnings),
+                warnings=_unique_strings(list(effective_request.warnings)),
                 source_linkage={
                     **dict(effective_request.source_linkage),
                     "publication_state": "not_started",
@@ -8462,8 +10197,8 @@ const pageSchemas = frontendDeliveryContext.pageSchemas;
                 },
             )
         written_paths: list[str] = []
-        remaining_blockers: list[str] = list(effective_request.remaining_blockers)
-        warnings = list(effective_request.warnings)
+        remaining_blockers: list[str] = _unique_strings(list(effective_request.remaining_blockers))
+        warnings = _unique_strings(list(effective_request.warnings))
         executable_steps = 0
         for step in effective_request.steps:
             target_path, target_blocker = self._resolve_frontend_stage_step_target(
@@ -8661,6 +10396,12 @@ const pageSchemas = frontendDeliveryContext.pageSchemas;
                     suggested_next_actions=_normalize_string_list(
                         step_payload.get("suggested_next_actions", [])
                     ),
+                    plain_language_blockers=_normalize_string_list(
+                        step_payload.get("plain_language_blockers", [])
+                    ),
+                    recommended_next_steps=_normalize_string_list(
+                        step_payload.get("recommended_next_steps", [])
+                    ),
                     source_linkage=source_linkage,
                 )
             )
@@ -8709,8 +10450,8 @@ const pageSchemas = frontendDeliveryContext.pageSchemas;
                 closure_state="blocked",
                 closure_result="blocked",
                 written_paths=list(effective_request.written_paths),
-                remaining_blockers=list(effective_request.remaining_blockers),
-                warnings=list(effective_request.warnings),
+                remaining_blockers=_unique_strings(list(effective_request.remaining_blockers)),
+                warnings=_unique_strings(list(effective_request.warnings)),
                 source_linkage={
                     **dict(effective_request.source_linkage),
                     "closure_state": "blocked",
@@ -8724,11 +10465,8 @@ const pageSchemas = frontendDeliveryContext.pageSchemas;
                 closure_state="confirmation_required",
                 closure_result="blocked",
                 written_paths=list(effective_request.written_paths),
-                remaining_blockers=list(effective_request.remaining_blockers),
-                warnings=[
-                    *effective_request.warnings,
-                    "final proof closure orchestration requires explicit confirmation",
-                ],
+                remaining_blockers=_unique_strings(list(effective_request.remaining_blockers)),
+                warnings=_unique_strings([*effective_request.warnings, "final proof closure orchestration requires explicit confirmation"]),
                 source_linkage={
                     **dict(effective_request.source_linkage),
                     "closure_state": "confirmation_required",
@@ -8750,7 +10488,7 @@ const pageSchemas = frontendDeliveryContext.pageSchemas;
                 remaining_blockers=_unique_strings(
                     [*effective_request.remaining_blockers, blocker]
                 ),
-                warnings=list(effective_request.warnings),
+                warnings=_unique_strings(list(effective_request.warnings)),
                 source_linkage={
                     **dict(effective_request.source_linkage),
                     "closure_state": "blocked",
@@ -8769,7 +10507,7 @@ const pageSchemas = frontendDeliveryContext.pageSchemas;
                 remaining_blockers=_unique_strings(
                     [*effective_request.remaining_blockers, blocker]
                 ),
-                warnings=list(effective_request.warnings),
+                warnings=_unique_strings(list(effective_request.warnings)),
                 source_linkage={
                     **dict(effective_request.source_linkage),
                     "closure_state": "blocked",
@@ -8784,7 +10522,7 @@ const pageSchemas = frontendDeliveryContext.pageSchemas;
                 closure_result="skipped",
                 written_paths=list(effective_request.written_paths),
                 remaining_blockers=[],
-                warnings=list(effective_request.warnings),
+                warnings=_unique_strings(list(effective_request.warnings)),
                 source_linkage={
                     **dict(effective_request.source_linkage),
                     "closure_state": "not_started",
@@ -8792,8 +10530,8 @@ const pageSchemas = frontendDeliveryContext.pageSchemas;
                 },
             )
         written_paths: list[str] = []
-        remaining_blockers: list[str] = list(effective_request.remaining_blockers)
-        warnings = list(effective_request.warnings)
+        remaining_blockers: list[str] = _unique_strings(list(effective_request.remaining_blockers))
+        warnings = _unique_strings(list(effective_request.warnings))
         executable_steps = 0
         for step in effective_request.steps:
             target_path, target_blocker = self._resolve_frontend_stage_step_target(
@@ -8989,6 +10727,12 @@ const pageSchemas = frontendDeliveryContext.pageSchemas;
                     suggested_next_actions=_normalize_string_list(
                         step_payload.get("suggested_next_actions", [])
                     ),
+                    plain_language_blockers=_normalize_string_list(
+                        step_payload.get("plain_language_blockers", [])
+                    ),
+                    recommended_next_steps=_normalize_string_list(
+                        step_payload.get("recommended_next_steps", [])
+                    ),
                     source_linkage=source_linkage,
                 )
             )
@@ -9037,8 +10781,8 @@ const pageSchemas = frontendDeliveryContext.pageSchemas;
                 archive_state="blocked",
                 archive_result="blocked",
                 written_paths=list(effective_request.written_paths),
-                remaining_blockers=list(effective_request.remaining_blockers),
-                warnings=list(effective_request.warnings),
+                remaining_blockers=_unique_strings(list(effective_request.remaining_blockers)),
+                warnings=_unique_strings(list(effective_request.warnings)),
                 source_linkage={
                     **dict(effective_request.source_linkage),
                     "archive_state": "blocked",
@@ -9052,11 +10796,8 @@ const pageSchemas = frontendDeliveryContext.pageSchemas;
                 archive_state="confirmation_required",
                 archive_result="blocked",
                 written_paths=list(effective_request.written_paths),
-                remaining_blockers=list(effective_request.remaining_blockers),
-                warnings=[
-                    *effective_request.warnings,
-                    "final proof archive orchestration requires explicit confirmation",
-                ],
+                remaining_blockers=_unique_strings(list(effective_request.remaining_blockers)),
+                warnings=_unique_strings([*effective_request.warnings, "final proof archive orchestration requires explicit confirmation"]),
                 source_linkage={
                     **dict(effective_request.source_linkage),
                     "archive_state": "confirmation_required",
@@ -9078,7 +10819,7 @@ const pageSchemas = frontendDeliveryContext.pageSchemas;
                 remaining_blockers=_unique_strings(
                     [*effective_request.remaining_blockers, blocker]
                 ),
-                warnings=list(effective_request.warnings),
+                warnings=_unique_strings(list(effective_request.warnings)),
                 source_linkage={
                     **dict(effective_request.source_linkage),
                     "archive_state": "blocked",
@@ -9097,7 +10838,7 @@ const pageSchemas = frontendDeliveryContext.pageSchemas;
                 remaining_blockers=_unique_strings(
                     [*effective_request.remaining_blockers, blocker]
                 ),
-                warnings=list(effective_request.warnings),
+                warnings=_unique_strings(list(effective_request.warnings)),
                 source_linkage={
                     **dict(effective_request.source_linkage),
                     "archive_state": "blocked",
@@ -9112,7 +10853,7 @@ const pageSchemas = frontendDeliveryContext.pageSchemas;
                 archive_result="skipped",
                 written_paths=list(effective_request.written_paths),
                 remaining_blockers=[],
-                warnings=list(effective_request.warnings),
+                warnings=_unique_strings(list(effective_request.warnings)),
                 source_linkage={
                     **dict(effective_request.source_linkage),
                     "archive_state": "not_started",
@@ -9120,8 +10861,8 @@ const pageSchemas = frontendDeliveryContext.pageSchemas;
                 },
             )
         written_paths: list[str] = []
-        remaining_blockers: list[str] = list(effective_request.remaining_blockers)
-        warnings = list(effective_request.warnings)
+        remaining_blockers: list[str] = _unique_strings(list(effective_request.remaining_blockers))
+        warnings = _unique_strings(list(effective_request.warnings))
         executable_steps = 0
         for step in effective_request.steps:
             target_path, target_blocker = self._resolve_frontend_stage_step_target(
@@ -9317,6 +11058,12 @@ const pageSchemas = frontendDeliveryContext.pageSchemas;
                     suggested_next_actions=_normalize_string_list(
                         step_payload.get("suggested_next_actions", [])
                     ),
+                    plain_language_blockers=_normalize_string_list(
+                        step_payload.get("plain_language_blockers", [])
+                    ),
+                    recommended_next_steps=_normalize_string_list(
+                        step_payload.get("recommended_next_steps", [])
+                    ),
                     source_linkage=source_linkage,
                 )
             )
@@ -9366,8 +11113,8 @@ const pageSchemas = frontendDeliveryContext.pageSchemas;
                 thread_archive_state="blocked",
                 thread_archive_result="blocked",
                 written_paths=list(effective_request.written_paths),
-                remaining_blockers=list(effective_request.remaining_blockers),
-                warnings=list(effective_request.warnings),
+                remaining_blockers=_unique_strings(list(effective_request.remaining_blockers)),
+                warnings=_unique_strings(list(effective_request.warnings)),
                 source_linkage={
                     **dict(effective_request.source_linkage),
                     "thread_archive_state": "blocked",
@@ -9381,11 +11128,8 @@ const pageSchemas = frontendDeliveryContext.pageSchemas;
                 thread_archive_state="confirmation_required",
                 thread_archive_result="blocked",
                 written_paths=list(effective_request.written_paths),
-                remaining_blockers=list(effective_request.remaining_blockers),
-                warnings=[
-                    *effective_request.warnings,
-                    "final proof archive thread archive requires explicit confirmation",
-                ],
+                remaining_blockers=_unique_strings(list(effective_request.remaining_blockers)),
+                warnings=_unique_strings([*effective_request.warnings, "final proof archive thread archive requires explicit confirmation"]),
                 source_linkage={
                     **dict(effective_request.source_linkage),
                     "thread_archive_state": "confirmation_required",
@@ -9407,7 +11151,7 @@ const pageSchemas = frontendDeliveryContext.pageSchemas;
                 remaining_blockers=_unique_strings(
                     [*effective_request.remaining_blockers, blocker]
                 ),
-                warnings=list(effective_request.warnings),
+                warnings=_unique_strings(list(effective_request.warnings)),
                 source_linkage={
                     **dict(effective_request.source_linkage),
                     "thread_archive_state": "blocked",
@@ -9428,7 +11172,7 @@ const pageSchemas = frontendDeliveryContext.pageSchemas;
                 remaining_blockers=_unique_strings(
                     [*effective_request.remaining_blockers, blocker]
                 ),
-                warnings=list(effective_request.warnings),
+                warnings=_unique_strings(list(effective_request.warnings)),
                 source_linkage={
                     **dict(effective_request.source_linkage),
                     "thread_archive_state": "blocked",
@@ -9443,7 +11187,7 @@ const pageSchemas = frontendDeliveryContext.pageSchemas;
                 thread_archive_result="skipped",
                 written_paths=list(effective_request.written_paths),
                 remaining_blockers=[],
-                warnings=list(effective_request.warnings),
+                warnings=_unique_strings(list(effective_request.warnings)),
                 source_linkage={
                     **dict(effective_request.source_linkage),
                     "thread_archive_state": "not_started",
@@ -9451,8 +11195,8 @@ const pageSchemas = frontendDeliveryContext.pageSchemas;
                 },
             )
         written_paths: list[str] = []
-        remaining_blockers: list[str] = list(effective_request.remaining_blockers)
-        warnings = list(effective_request.warnings)
+        remaining_blockers: list[str] = _unique_strings(list(effective_request.remaining_blockers))
+        warnings = _unique_strings(list(effective_request.warnings))
         executable_steps = 0
         for step in effective_request.steps:
             target_path, target_blocker = self._resolve_frontend_stage_step_target(
@@ -9712,7 +11456,9 @@ const pageSchemas = frontendDeliveryContext.pageSchemas;
                 path=step.path,
                 project_cleanup_state="not_started",
                 pending_inputs=list(step.pending_inputs),
-                suggested_next_actions=list(step.suggested_next_actions),
+                suggested_next_actions=_unique_strings(list(step.suggested_next_actions)),
+                plain_language_blockers=_unique_strings(list(step.plain_language_blockers)),
+                recommended_next_steps=_unique_strings(list(step.recommended_next_steps)),
                 source_linkage={
                     **dict(step.source_linkage),
                     "final_proof_archive_artifact_path": relative_artifact_path,
@@ -9807,7 +11553,7 @@ const pageSchemas = frontendDeliveryContext.pageSchemas;
                 cleanup_mutation_execution_gating
             ),
             steps=steps,
-            remaining_blockers=list(thread_archive_result.remaining_blockers),
+            remaining_blockers=_unique_strings(list(thread_archive_result.remaining_blockers)),
             warnings=_unique_strings(
                 [
                     *thread_archive_request.warnings,
@@ -9869,8 +11615,8 @@ const pageSchemas = frontendDeliveryContext.pageSchemas;
                     effective_request.cleanup_mutation_execution_gating
                 ),
                 written_paths=list(effective_request.written_paths),
-                remaining_blockers=list(effective_request.remaining_blockers),
-                warnings=list(effective_request.warnings),
+                remaining_blockers=_unique_strings(list(effective_request.remaining_blockers)),
+                warnings=_unique_strings(list(effective_request.warnings)),
                 source_linkage={
                     **dict(effective_request.source_linkage),
                     "cleanup_targets_state": effective_request.cleanup_targets_state,
@@ -9928,11 +11674,8 @@ const pageSchemas = frontendDeliveryContext.pageSchemas;
                     effective_request.cleanup_mutation_execution_gating
                 ),
                 written_paths=list(effective_request.written_paths),
-                remaining_blockers=list(effective_request.remaining_blockers),
-                warnings=[
-                    *effective_request.warnings,
-                    "final proof archive project cleanup requires explicit confirmation",
-                ],
+                remaining_blockers=_unique_strings(list(effective_request.remaining_blockers)),
+                warnings=_unique_strings([*effective_request.warnings, "final proof archive project cleanup requires explicit confirmation"]),
                 source_linkage={
                     **dict(effective_request.source_linkage),
                     "cleanup_targets_state": effective_request.cleanup_targets_state,
@@ -10002,7 +11745,7 @@ const pageSchemas = frontendDeliveryContext.pageSchemas;
                 remaining_blockers=_unique_strings(
                     [*effective_request.remaining_blockers, blocker]
                 ),
-                warnings=list(effective_request.warnings),
+                warnings=_unique_strings(list(effective_request.warnings)),
                 source_linkage={
                     **dict(effective_request.source_linkage),
                     "cleanup_targets_state": effective_request.cleanup_targets_state,
@@ -10061,7 +11804,7 @@ const pageSchemas = frontendDeliveryContext.pageSchemas;
                 ),
                 written_paths=list(effective_request.written_paths),
                 remaining_blockers=[],
-                warnings=list(effective_request.warnings),
+                warnings=_unique_strings(list(effective_request.warnings)),
                 source_linkage={
                     **dict(effective_request.source_linkage),
                     "cleanup_targets_state": effective_request.cleanup_targets_state,
@@ -10654,6 +12397,13 @@ const pageSchemas = frontendDeliveryContext.pageSchemas;
         if not fix_inputs:
             fix_inputs = [readiness.execute_gate_state or readiness.state]
 
+        browser_gate_artifact_path = readiness.source_linkage.get(
+            "frontend_browser_gate_artifact_path", ""
+        )
+        plain_language_blockers, recommended_next_steps = (
+            self._load_frontend_browser_gate_guidance(browser_gate_artifact_path)
+        )
+
         suggested_actions: list[str] = []
         if "frontend_contract_observations" in fix_inputs:
             suggested_actions.append("materialize frontend contract observations")
@@ -10705,6 +12455,8 @@ const pageSchemas = frontendDeliveryContext.pageSchemas;
             blockers=list(readiness.blockers),
             suggested_actions=suggested_actions,
             recommended_commands=_unique_strings(recommended_commands),
+            plain_language_blockers=plain_language_blockers,
+            recommended_next_steps=recommended_next_steps,
             source_linkage=dict(readiness.source_linkage),
         )
 
@@ -10740,7 +12492,7 @@ const pageSchemas = frontendDeliveryContext.pageSchemas;
                     ),
                     *materialize_frontend_generation_constraint_artifacts(
                         self.root,
-                        build_mvp_frontend_generation_constraints(),
+                        self.resolve_frontend_generation_constraints(),
                     ),
                 ]
             except Exception as exc:
@@ -10759,14 +12511,15 @@ const pageSchemas = frontendDeliveryContext.pageSchemas;
 
         if command == PROGRAM_FRONTEND_BROWSER_GATE_RECHECK_COMMAND:
             request = self.build_frontend_browser_gate_probe_request()
+            request_blockers = _unique_strings(list(request.remaining_blockers))
             if request.execution_context is None:
                 return ProgramFrontendRemediationCommandResult(
                     command=command,
                     status="failed",
-                    blockers=list(request.remaining_blockers),
+                    blockers=request_blockers,
                     summary=(
-                        request.remaining_blockers[0]
-                        if request.remaining_blockers
+                        request_blockers[0]
+                        if request_blockers
                         else "browser gate probe request not executable"
                     ),
                 )
@@ -10787,12 +12540,13 @@ const pageSchemas = frontendDeliveryContext.pageSchemas;
 
         if command == PROGRAM_FRONTEND_RECHECK_COMMAND:
             report = build_constraint_report(self.root)
+            report_blockers = _unique_strings(list(report.blockers))
             if report.blockers:
                 return ProgramFrontendRemediationCommandResult(
                     command=command,
                     status="failed",
-                    blockers=list(report.blockers),
-                    summary=str(report.blockers[0]),
+                    blockers=report_blockers,
+                    summary=str(report_blockers[0]),
                 )
             return ProgramFrontendRemediationCommandResult(
                 command=command,
@@ -10828,8 +12582,10 @@ const pageSchemas = frontendDeliveryContext.pageSchemas;
                     "path": step.path,
                     "state": step.state,
                     "fix_inputs": list(step.fix_inputs),
-                    "suggested_actions": list(step.suggested_actions),
+                    "suggested_actions": _unique_strings(list(step.suggested_actions)),
                     "action_commands": list(step.action_commands),
+                    "plain_language_blockers": _unique_strings(list(step.plain_language_blockers)),
+                    "recommended_next_steps": _unique_strings(list(step.recommended_next_steps)),
                     "source_linkage": dict(step.source_linkage),
                 }
                 for step in runbook.steps
@@ -10841,7 +12597,7 @@ const pageSchemas = frontendDeliveryContext.pageSchemas;
                     "command": item.command,
                     "status": item.status,
                     "written_paths": list(item.written_paths),
-                    "blockers": list(item.blockers),
+                    "blockers": _unique_strings(list(item.blockers)),
                     "summary": item.summary,
                 }
                 for item in execution_result.command_results
@@ -10853,7 +12609,7 @@ const pageSchemas = frontendDeliveryContext.pageSchemas;
                     for path in item.written_paths
                 ]
             ),
-            "remaining_blockers": list(execution_result.blockers),
+            "remaining_blockers": _unique_strings(list(execution_result.blockers)),
         }
 
     def _build_frontend_provider_runtime_artifact_payload(
@@ -10880,15 +12636,19 @@ const pageSchemas = frontendDeliveryContext.pageSchemas;
             "confirmed": result.confirmed,
             "provider_execution_state": result.provider_execution_state,
             "invocation_result": result.invocation_result,
-            "patch_summaries": list(result.patch_summaries),
-            "remaining_blockers": list(result.remaining_blockers),
+            "patch_summaries": _unique_strings(list(result.patch_summaries)),
+            "remaining_blockers": _unique_strings(list(result.remaining_blockers)),
             "warnings": _unique_strings([*request.warnings, *result.warnings]),
             "steps": [
                 {
                     "spec_id": step.spec_id,
                     "path": step.path,
                     "pending_inputs": list(step.pending_inputs),
-                    "suggested_next_actions": list(step.suggested_next_actions),
+                    "suggested_next_actions": _unique_strings(
+                        list(step.suggested_next_actions)
+                    ),
+                    "plain_language_blockers": _unique_strings(list(step.plain_language_blockers)),
+                    "recommended_next_steps": _unique_strings(list(step.recommended_next_steps)),
                     "source_linkage": dict(step.source_linkage),
                 }
                 for step in request.steps
@@ -10921,9 +12681,9 @@ const pageSchemas = frontendDeliveryContext.pageSchemas;
             "patch_availability_state": request.patch_availability_state,
             "patch_apply_state": result.patch_apply_state,
             "apply_result": result.apply_result,
-            "apply_summaries": list(result.apply_summaries),
-            "written_paths": list(result.written_paths),
-            "remaining_blockers": list(result.remaining_blockers),
+            "apply_summaries": _unique_strings(list(result.apply_summaries)),
+            "written_paths": _unique_strings(list(result.written_paths)),
+            "remaining_blockers": _unique_strings(list(result.remaining_blockers)),
             "warnings": _unique_strings([*request.warnings, *result.warnings]),
             "steps": [
                 {
@@ -10931,7 +12691,11 @@ const pageSchemas = frontendDeliveryContext.pageSchemas;
                     "path": step.path,
                     "patch_availability_state": step.patch_availability_state,
                     "pending_inputs": list(step.pending_inputs),
-                    "suggested_next_actions": list(step.suggested_next_actions),
+                    "suggested_next_actions": _unique_strings(
+                        list(step.suggested_next_actions)
+                    ),
+                    "plain_language_blockers": _unique_strings(list(step.plain_language_blockers)),
+                    "recommended_next_steps": _unique_strings(list(step.recommended_next_steps)),
                     "source_linkage": dict(step.source_linkage),
                 }
                 for step in request.steps
@@ -10964,10 +12728,12 @@ const pageSchemas = frontendDeliveryContext.pageSchemas;
             "apply_result": request.apply_result,
             "writeback_state": result.writeback_state,
             "orchestration_result": result.orchestration_result,
-            "orchestration_summaries": list(result.orchestration_summaries),
-            "existing_written_paths": list(request.written_paths),
-            "written_paths": list(result.written_paths),
-            "remaining_blockers": list(result.remaining_blockers),
+            "orchestration_summaries": _unique_strings(
+                list(result.orchestration_summaries)
+            ),
+            "existing_written_paths": _unique_strings(list(request.written_paths)),
+            "written_paths": _unique_strings(list(result.written_paths)),
+            "remaining_blockers": _unique_strings(list(result.remaining_blockers)),
             "warnings": _unique_strings([*request.warnings, *result.warnings]),
             "steps": [
                 {
@@ -10975,7 +12741,11 @@ const pageSchemas = frontendDeliveryContext.pageSchemas;
                     "path": step.path,
                     "writeback_state": step.writeback_state,
                     "pending_inputs": list(step.pending_inputs),
-                    "suggested_next_actions": list(step.suggested_next_actions),
+                    "suggested_next_actions": _unique_strings(
+                        list(step.suggested_next_actions)
+                    ),
+                    "plain_language_blockers": _unique_strings(list(step.plain_language_blockers)),
+                    "recommended_next_steps": _unique_strings(list(step.recommended_next_steps)),
                     "source_linkage": dict(step.source_linkage),
                 }
                 for step in request.steps
@@ -11008,10 +12778,10 @@ const pageSchemas = frontendDeliveryContext.pageSchemas;
             "writeback_state": request.writeback_state,
             "registry_state": result.registry_state,
             "registry_result": result.registry_result,
-            "registry_summaries": list(result.registry_summaries),
-            "existing_written_paths": list(request.written_paths),
-            "written_paths": list(result.written_paths),
-            "remaining_blockers": list(result.remaining_blockers),
+            "registry_summaries": _unique_strings(list(result.registry_summaries)),
+            "existing_written_paths": _unique_strings(list(request.written_paths)),
+            "written_paths": _unique_strings(list(result.written_paths)),
+            "remaining_blockers": _unique_strings(list(result.remaining_blockers)),
             "warnings": _unique_strings([*request.warnings, *result.warnings]),
             "steps": [
                 {
@@ -11019,7 +12789,11 @@ const pageSchemas = frontendDeliveryContext.pageSchemas;
                     "path": step.path,
                     "registry_state": step.registry_state,
                     "pending_inputs": list(step.pending_inputs),
-                    "suggested_next_actions": list(step.suggested_next_actions),
+                    "suggested_next_actions": _unique_strings(
+                        list(step.suggested_next_actions)
+                    ),
+                    "plain_language_blockers": _unique_strings(list(step.plain_language_blockers)),
+                    "recommended_next_steps": _unique_strings(list(step.recommended_next_steps)),
                     "source_linkage": dict(step.source_linkage),
                 }
                 for step in request.steps
@@ -11052,10 +12826,10 @@ const pageSchemas = frontendDeliveryContext.pageSchemas;
             "registry_state": request.registry_state,
             "governance_state": result.governance_state,
             "governance_result": result.governance_result,
-            "governance_summaries": list(result.governance_summaries),
-            "existing_written_paths": list(request.written_paths),
-            "written_paths": list(result.written_paths),
-            "remaining_blockers": list(result.remaining_blockers),
+            "governance_summaries": _unique_strings(list(result.governance_summaries)),
+            "existing_written_paths": _unique_strings(list(request.written_paths)),
+            "written_paths": _unique_strings(list(result.written_paths)),
+            "remaining_blockers": _unique_strings(list(result.remaining_blockers)),
             "warnings": _unique_strings([*request.warnings, *result.warnings]),
             "steps": [
                 {
@@ -11063,7 +12837,11 @@ const pageSchemas = frontendDeliveryContext.pageSchemas;
                     "path": step.path,
                     "governance_state": step.governance_state,
                     "pending_inputs": list(step.pending_inputs),
-                    "suggested_next_actions": list(step.suggested_next_actions),
+                    "suggested_next_actions": _unique_strings(
+                        list(step.suggested_next_actions)
+                    ),
+                    "plain_language_blockers": _unique_strings(list(step.plain_language_blockers)),
+                    "recommended_next_steps": _unique_strings(list(step.recommended_next_steps)),
                     "source_linkage": dict(step.source_linkage),
                 }
                 for step in request.steps
@@ -11096,10 +12874,12 @@ const pageSchemas = frontendDeliveryContext.pageSchemas;
             "governance_state": request.governance_state,
             "final_governance_state": result.final_governance_state,
             "final_governance_result": result.final_governance_result,
-            "final_governance_summaries": list(result.final_governance_summaries),
-            "existing_written_paths": list(request.written_paths),
-            "written_paths": list(result.written_paths),
-            "remaining_blockers": list(result.remaining_blockers),
+            "final_governance_summaries": _unique_strings(
+                list(result.final_governance_summaries)
+            ),
+            "existing_written_paths": _unique_strings(list(request.written_paths)),
+            "written_paths": _unique_strings(list(result.written_paths)),
+            "remaining_blockers": _unique_strings(list(result.remaining_blockers)),
             "warnings": _unique_strings([*request.warnings, *result.warnings]),
             "steps": [
                 {
@@ -11107,7 +12887,11 @@ const pageSchemas = frontendDeliveryContext.pageSchemas;
                     "path": step.path,
                     "final_governance_state": step.final_governance_state,
                     "pending_inputs": list(step.pending_inputs),
-                    "suggested_next_actions": list(step.suggested_next_actions),
+                    "suggested_next_actions": _unique_strings(
+                        list(step.suggested_next_actions)
+                    ),
+                    "plain_language_blockers": _unique_strings(list(step.plain_language_blockers)),
+                    "recommended_next_steps": _unique_strings(list(step.recommended_next_steps)),
                     "source_linkage": dict(step.source_linkage),
                 }
                 for step in request.steps
@@ -11140,10 +12924,12 @@ const pageSchemas = frontendDeliveryContext.pageSchemas;
             "final_governance_state": request.final_governance_state,
             "persistence_state": result.persistence_state,
             "persistence_result": result.persistence_result,
-            "persistence_summaries": list(result.persistence_summaries),
-            "existing_written_paths": list(request.written_paths),
-            "written_paths": list(result.written_paths),
-            "remaining_blockers": list(result.remaining_blockers),
+            "persistence_summaries": _unique_strings(
+                list(result.persistence_summaries)
+            ),
+            "existing_written_paths": _unique_strings(list(request.written_paths)),
+            "written_paths": _unique_strings(list(result.written_paths)),
+            "remaining_blockers": _unique_strings(list(result.remaining_blockers)),
             "warnings": _unique_strings([*request.warnings, *result.warnings]),
             "steps": [
                 {
@@ -11151,7 +12937,11 @@ const pageSchemas = frontendDeliveryContext.pageSchemas;
                     "path": step.path,
                     "persistence_state": step.persistence_state,
                     "pending_inputs": list(step.pending_inputs),
-                    "suggested_next_actions": list(step.suggested_next_actions),
+                    "suggested_next_actions": _unique_strings(
+                        list(step.suggested_next_actions)
+                    ),
+                    "plain_language_blockers": _unique_strings(list(step.plain_language_blockers)),
+                    "recommended_next_steps": _unique_strings(list(step.recommended_next_steps)),
                     "source_linkage": dict(step.source_linkage),
                 }
                 for step in request.steps
@@ -11184,10 +12974,10 @@ const pageSchemas = frontendDeliveryContext.pageSchemas;
             "persistence_state": request.persistence_state,
             "proof_state": result.proof_state,
             "proof_result": result.proof_result,
-            "proof_summaries": list(result.proof_summaries),
-            "existing_written_paths": list(request.written_paths),
-            "written_paths": list(result.written_paths),
-            "remaining_blockers": list(result.remaining_blockers),
+            "proof_summaries": _unique_strings(list(result.proof_summaries)),
+            "existing_written_paths": _unique_strings(list(request.written_paths)),
+            "written_paths": _unique_strings(list(result.written_paths)),
+            "remaining_blockers": _unique_strings(list(result.remaining_blockers)),
             "warnings": _unique_strings([*request.warnings, *result.warnings]),
             "steps": [
                 {
@@ -11195,7 +12985,11 @@ const pageSchemas = frontendDeliveryContext.pageSchemas;
                     "path": step.path,
                     "proof_state": step.proof_state,
                     "pending_inputs": list(step.pending_inputs),
-                    "suggested_next_actions": list(step.suggested_next_actions),
+                    "suggested_next_actions": _unique_strings(
+                        list(step.suggested_next_actions)
+                    ),
+                    "plain_language_blockers": _unique_strings(list(step.plain_language_blockers)),
+                    "recommended_next_steps": _unique_strings(list(step.recommended_next_steps)),
                     "source_linkage": dict(step.source_linkage),
                 }
                 for step in request.steps
@@ -11228,10 +13022,12 @@ const pageSchemas = frontendDeliveryContext.pageSchemas;
             "proof_state": request.proof_state,
             "publication_state": result.publication_state,
             "publication_result": result.publication_result,
-            "publication_summaries": list(result.publication_summaries),
-            "existing_written_paths": list(request.written_paths),
-            "written_paths": list(result.written_paths),
-            "remaining_blockers": list(result.remaining_blockers),
+            "publication_summaries": _unique_strings(
+                list(result.publication_summaries)
+            ),
+            "existing_written_paths": _unique_strings(list(request.written_paths)),
+            "written_paths": _unique_strings(list(result.written_paths)),
+            "remaining_blockers": _unique_strings(list(result.remaining_blockers)),
             "warnings": _unique_strings([*request.warnings, *result.warnings]),
             "steps": [
                 {
@@ -11239,7 +13035,11 @@ const pageSchemas = frontendDeliveryContext.pageSchemas;
                     "path": step.path,
                     "publication_state": step.publication_state,
                     "pending_inputs": list(step.pending_inputs),
-                    "suggested_next_actions": list(step.suggested_next_actions),
+                    "suggested_next_actions": _unique_strings(
+                        list(step.suggested_next_actions)
+                    ),
+                    "plain_language_blockers": _unique_strings(list(step.plain_language_blockers)),
+                    "recommended_next_steps": _unique_strings(list(step.recommended_next_steps)),
                     "source_linkage": dict(step.source_linkage),
                 }
                 for step in request.steps
@@ -11272,10 +13072,10 @@ const pageSchemas = frontendDeliveryContext.pageSchemas;
             "publication_state": request.publication_state,
             "closure_state": result.closure_state,
             "closure_result": result.closure_result,
-            "closure_summaries": list(result.closure_summaries),
-            "existing_written_paths": list(request.written_paths),
-            "written_paths": list(result.written_paths),
-            "remaining_blockers": list(result.remaining_blockers),
+            "closure_summaries": _unique_strings(list(result.closure_summaries)),
+            "existing_written_paths": _unique_strings(list(request.written_paths)),
+            "written_paths": _unique_strings(list(result.written_paths)),
+            "remaining_blockers": _unique_strings(list(result.remaining_blockers)),
             "warnings": _unique_strings([*request.warnings, *result.warnings]),
             "steps": [
                 {
@@ -11283,7 +13083,11 @@ const pageSchemas = frontendDeliveryContext.pageSchemas;
                     "path": step.path,
                     "closure_state": step.closure_state,
                     "pending_inputs": list(step.pending_inputs),
-                    "suggested_next_actions": list(step.suggested_next_actions),
+                    "suggested_next_actions": _unique_strings(
+                        list(step.suggested_next_actions)
+                    ),
+                    "plain_language_blockers": _unique_strings(list(step.plain_language_blockers)),
+                    "recommended_next_steps": _unique_strings(list(step.recommended_next_steps)),
                     "source_linkage": dict(step.source_linkage),
                 }
                 for step in request.steps
@@ -11316,10 +13120,10 @@ const pageSchemas = frontendDeliveryContext.pageSchemas;
             "closure_state": request.closure_state,
             "archive_state": result.archive_state,
             "archive_result": result.archive_result,
-            "archive_summaries": list(result.archive_summaries),
-            "existing_written_paths": list(request.written_paths),
-            "written_paths": list(result.written_paths),
-            "remaining_blockers": list(result.remaining_blockers),
+            "archive_summaries": _unique_strings(list(result.archive_summaries)),
+            "existing_written_paths": _unique_strings(list(request.written_paths)),
+            "written_paths": _unique_strings(list(result.written_paths)),
+            "remaining_blockers": _unique_strings(list(result.remaining_blockers)),
             "warnings": _unique_strings([*request.warnings, *result.warnings]),
             "steps": [
                 {
@@ -11327,7 +13131,11 @@ const pageSchemas = frontendDeliveryContext.pageSchemas;
                     "path": step.path,
                     "archive_state": step.archive_state,
                     "pending_inputs": list(step.pending_inputs),
-                    "suggested_next_actions": list(step.suggested_next_actions),
+                    "suggested_next_actions": _unique_strings(
+                        list(step.suggested_next_actions)
+                    ),
+                    "plain_language_blockers": _unique_strings(list(step.plain_language_blockers)),
+                    "recommended_next_steps": _unique_strings(list(step.recommended_next_steps)),
                     "source_linkage": dict(step.source_linkage),
                 }
                 for step in request.steps
@@ -11396,10 +13204,12 @@ const pageSchemas = frontendDeliveryContext.pageSchemas;
             ),
             "project_cleanup_state": result.project_cleanup_state,
             "project_cleanup_result": result.project_cleanup_result,
-            "project_cleanup_summaries": list(result.project_cleanup_summaries),
-            "existing_written_paths": list(request.written_paths),
-            "written_paths": list(result.written_paths),
-            "remaining_blockers": list(result.remaining_blockers),
+            "project_cleanup_summaries": _unique_strings(
+                list(result.project_cleanup_summaries)
+            ),
+            "existing_written_paths": _unique_strings(list(request.written_paths)),
+            "written_paths": _unique_strings(list(result.written_paths)),
+            "remaining_blockers": _unique_strings(list(result.remaining_blockers)),
             "warnings": _unique_strings(artifact_warnings),
             "steps": [
                 {
@@ -11407,7 +13217,11 @@ const pageSchemas = frontendDeliveryContext.pageSchemas;
                     "path": step.path,
                     "project_cleanup_state": step.project_cleanup_state,
                     "pending_inputs": list(step.pending_inputs),
-                    "suggested_next_actions": list(step.suggested_next_actions),
+                    "suggested_next_actions": _unique_strings(
+                        list(step.suggested_next_actions)
+                    ),
+                    "plain_language_blockers": _unique_strings(list(step.plain_language_blockers)),
+                    "recommended_next_steps": _unique_strings(list(step.recommended_next_steps)),
                     "source_linkage": dict(step.source_linkage),
                 }
                 for step in request.steps
@@ -11829,7 +13643,7 @@ const pageSchemas = frontendDeliveryContext.pageSchemas;
                     + _relative_to_root_or_str(self.root, artifact_path)
                 ],
             )
-        return payload, []
+        return payload, _normalize_string_list(payload.get("warnings", []))
 
     def _resolve_frontend_final_proof_archive_cleanup_targets(
         self,
@@ -11854,18 +13668,15 @@ const pageSchemas = frontendDeliveryContext.pageSchemas;
             return (
                 "missing",
                 [],
-                [
-                    *warnings,
-                    (
+                _unique_strings([*warnings, (
                         "invalid final proof archive project cleanup artifact: "
                         f"{relative_artifact_path} cleanup_targets must be a list"
-                    ),
-                ],
+                    )]),
                 relative_artifact_path,
             )
 
         normalized_targets = list(cleanup_targets)
-        normalized_warnings = list(warnings)
+        normalized_warnings = _unique_strings(list(warnings))
         for index, item in enumerate(normalized_targets):
             if not isinstance(item, dict):
                 normalized_warnings.append(
@@ -11889,7 +13700,7 @@ const pageSchemas = frontendDeliveryContext.pageSchemas;
         return (
             cleanup_targets_state,
             normalized_targets,
-            normalized_warnings,
+            _unique_strings(normalized_warnings),
             relative_artifact_path,
         )
 
@@ -11918,19 +13729,16 @@ const pageSchemas = frontendDeliveryContext.pageSchemas;
             return (
                 "missing",
                 [],
-                [
-                    *warnings,
-                    (
+                _unique_strings([*warnings, (
                         "invalid final proof archive project cleanup artifact: "
                         f"{relative_artifact_path} "
                         "cleanup_target_eligibility must be a list"
-                    ),
-                ],
+                    )]),
                 relative_artifact_path,
             )
 
         normalized_eligibility = list(cleanup_target_eligibility)
-        normalized_warnings = list(warnings)
+        normalized_warnings = _unique_strings(list(warnings))
         cleanup_target_ids: set[str] = set()
         eligibility_target_ids: set[str] = set()
 
@@ -11983,7 +13791,7 @@ const pageSchemas = frontendDeliveryContext.pageSchemas;
         return (
             cleanup_target_eligibility_state,
             normalized_eligibility,
-            normalized_warnings,
+            _unique_strings(normalized_warnings),
             relative_artifact_path,
         )
 
@@ -12013,18 +13821,15 @@ const pageSchemas = frontendDeliveryContext.pageSchemas;
             return (
                 "missing",
                 [],
-                [
-                    *warnings,
-                    (
+                _unique_strings([*warnings, (
                         "invalid final proof archive project cleanup artifact: "
                         f"{relative_artifact_path} cleanup_preview_plan must be a list"
-                    ),
-                ],
+                    )]),
                 relative_artifact_path,
             )
 
         normalized_preview_plan = list(cleanup_preview_plan)
-        normalized_warnings = list(warnings)
+        normalized_warnings = _unique_strings(list(warnings))
         cleanup_targets_by_id: dict[str, dict[str, object]] = {}
         eligibility_by_target_id: dict[str, dict[str, object]] = {}
 
@@ -12095,7 +13900,7 @@ const pageSchemas = frontendDeliveryContext.pageSchemas;
         return (
             cleanup_preview_plan_state,
             normalized_preview_plan,
-            normalized_warnings,
+            _unique_strings(normalized_warnings),
             relative_artifact_path,
         )
 
@@ -12126,18 +13931,15 @@ const pageSchemas = frontendDeliveryContext.pageSchemas;
             return (
                 "missing",
                 [],
-                [
-                    *warnings,
-                    (
+                _unique_strings([*warnings, (
                         "invalid final proof archive project cleanup artifact: "
                         f"{relative_artifact_path} cleanup_mutation_proposal must be a list"
-                    ),
-                ],
+                    )]),
                 relative_artifact_path,
             )
 
         normalized_proposal = list(cleanup_mutation_proposal)
-        normalized_warnings = list(warnings)
+        normalized_warnings = _unique_strings(list(warnings))
         cleanup_targets_by_id: dict[str, dict[str, object]] = {}
         eligibility_by_target_id: dict[str, dict[str, object]] = {}
         preview_plan_by_target_id: dict[str, dict[str, object]] = {}
@@ -12236,7 +14038,7 @@ const pageSchemas = frontendDeliveryContext.pageSchemas;
         return (
             cleanup_mutation_proposal_state,
             normalized_proposal,
-            normalized_warnings,
+            _unique_strings(normalized_warnings),
             relative_artifact_path,
         )
 
@@ -12270,18 +14072,15 @@ const pageSchemas = frontendDeliveryContext.pageSchemas;
             return (
                 "missing",
                 [],
-                [
-                    *warnings,
-                    (
+                _unique_strings([*warnings, (
                         "invalid final proof archive project cleanup artifact: "
                         f"{relative_artifact_path} cleanup_mutation_proposal_approval must be a list"
-                    ),
-                ],
+                    )]),
                 relative_artifact_path,
             )
 
         normalized_approval = list(cleanup_mutation_proposal_approval)
-        normalized_warnings = list(warnings)
+        normalized_warnings = _unique_strings(list(warnings))
         cleanup_targets_by_id: dict[str, dict[str, object]] = {}
         eligibility_by_target_id: dict[str, dict[str, object]] = {}
         preview_plan_by_target_id: dict[str, dict[str, object]] = {}
@@ -12402,7 +14201,7 @@ const pageSchemas = frontendDeliveryContext.pageSchemas;
         return (
             cleanup_mutation_proposal_approval_state,
             normalized_approval,
-            normalized_warnings,
+            _unique_strings(normalized_warnings),
             relative_artifact_path,
         )
 
@@ -12436,18 +14235,15 @@ const pageSchemas = frontendDeliveryContext.pageSchemas;
             return (
                 "missing",
                 [],
-                [
-                    *warnings,
-                    (
+                _unique_strings([*warnings, (
                         "invalid final proof archive project cleanup artifact: "
                         f"{relative_artifact_path} cleanup_mutation_execution_gating must be a list"
-                    ),
-                ],
+                    )]),
                 relative_artifact_path,
             )
 
         normalized_execution_gating = list(cleanup_mutation_execution_gating)
-        normalized_warnings = list(warnings)
+        normalized_warnings = _unique_strings(list(warnings))
         cleanup_targets_by_id: dict[str, dict[str, object]] = {}
         eligibility_by_target_id: dict[str, dict[str, object]] = {}
         preview_plan_by_target_id: dict[str, dict[str, object]] = {}
@@ -12569,7 +14365,7 @@ const pageSchemas = frontendDeliveryContext.pageSchemas;
         return (
             cleanup_mutation_execution_gating_state,
             normalized_execution_gating,
-            normalized_warnings,
+            _unique_strings(normalized_warnings),
             relative_artifact_path,
         )
 
@@ -12610,7 +14406,7 @@ const pageSchemas = frontendDeliveryContext.pageSchemas;
                     f"cleanup_targets[{target_index}] target_id={target_id} "
                     f"remains blocked ({reason})"
                 )
-        return warnings
+        return _unique_strings(warnings)
 
     def _resolve_spec_dir(self, spec_path: str) -> Path:
         path = (self.root / spec_path).resolve()
@@ -12755,6 +14551,14 @@ def _unique_strings(values: list[str] | tuple[str, ...]) -> list[str]:
         if text and text not in unique:
             unique.append(text)
     return unique
+
+
+def _canonicalize_program_runtime_string_fields(
+    instance: object,
+    *field_names: str,
+) -> None:
+    for field_name in field_names:
+        setattr(instance, field_name, _unique_strings(getattr(instance, field_name, ())))
 
 
 def _normalize_string_list(value: object) -> list[str]:
@@ -12943,11 +14747,65 @@ def _summarize_frontend_execute_gate(
         details.append(f"execute_gate_state={readiness.execute_gate_state}")
     if readiness.decision_reason:
         details.append(f"reason={readiness.decision_reason}")
-    if readiness.coverage_gaps:
-        details.append("coverage_gaps=" + ",".join(readiness.coverage_gaps[:2]))
-    elif readiness.blockers:
-        details.append("remediation_hint=" + readiness.blockers[0])
+    coverage_gaps = _unique_strings(list(readiness.coverage_gaps))
+    blockers = _unique_strings(list(readiness.blockers))
+    if coverage_gaps:
+        details.append("coverage_gaps=" + ",".join(coverage_gaps[:2]))
+    elif blockers:
+        details.append("remediation_hint=" + blockers[0])
     return "; ".join(details)
+
+
+def humanize_frontend_delivery_apply_state(state: str) -> str:
+    normalized = state.strip()
+    if not normalized:
+        return "-"
+    if normalized == "not_applied":
+        return "not applied"
+    if normalized == "apply_succeeded_pending_browser_gate":
+        return "applied, waiting for browser gate"
+    if normalized == "blocked_before_start":
+        return "blocked before start"
+    if normalized == "manual_recovery_required":
+        return "manual recovery required"
+    if normalized == "invalid_apply_artifact":
+        return "apply artifact invalid"
+    return normalized.replace("_", " ")
+
+
+def humanize_frontend_delivery_install_state(state: str) -> str:
+    normalized = state.strip()
+    if not normalized:
+        return "-"
+    if normalized == "installed":
+        return "downloaded"
+    if normalized == "not_installed":
+        return "not downloaded"
+    return normalized.replace("_", " ")
+
+
+def humanize_frontend_delivery_workspace_state(state: str) -> str:
+    normalized = state.strip()
+    if not normalized:
+        return "-"
+    if normalized == "integrated":
+        return "integrated"
+    if normalized == "not_integrated":
+        return "not integrated"
+    return normalized.replace("_", " ")
+
+
+def humanize_frontend_browser_gate_state(state: str) -> str:
+    normalized = state.strip()
+    if not normalized:
+        return "-"
+    if normalized == "pending":
+        return "waiting for evidence"
+    if normalized == "not_started":
+        return "not started"
+    if normalized == "invalid_browser_gate_artifact":
+        return "browser gate artifact invalid"
+    return normalized.replace("_", " ")
 
 
 def _frontend_recheck_reason(readiness: ProgramFrontendReadiness) -> str:

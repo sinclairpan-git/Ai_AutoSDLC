@@ -125,6 +125,20 @@ def test_detect_frontend_contract_drift_returns_empty_when_observation_matches(
     assert result == []
 
 
+def test_page_implementation_observation_deduplicates_set_like_lists() -> None:
+    observation = PageImplementationObservation(
+        page_id="user-create",
+        recipe_id="form-create",
+        i18n_keys=["submit", "submit", "cancel"],
+        validation_fields=["username", "username", "email"],
+        new_legacy_usages=["legacy.open()", "legacy.open()", "legacy.close()"],
+    )
+
+    assert observation.i18n_keys == ["submit", "cancel"]
+    assert observation.validation_fields == ["username", "email"]
+    assert observation.new_legacy_usages == ["legacy.open()", "legacy.close()"]
+
+
 def test_detect_frontend_contract_drift_surfaces_recipe_i18n_and_validation_gaps(
     tmp_path,
 ) -> None:

@@ -3,6 +3,10 @@
 from __future__ import annotations
 
 from ai_sdlc.models.frontend_solution_confirmation import (
+    AvailabilitySummary,
+    FrontendSolutionSnapshot,
+    InstallStrategy,
+    StylePackManifest,
     build_builtin_install_strategies,
     build_builtin_style_pack_manifests,
     build_mvp_solution_snapshot,
@@ -158,3 +162,83 @@ def test_build_mvp_solution_snapshot_preserves_unknown_style_tokens_without_keye
     }
     assert derived.effective_style_pack_id == "brand-x"
     assert derived.resolved_style_tokens == original.resolved_style_tokens
+
+
+def test_frontend_solution_confirmation_models_deduplicate_set_like_lists() -> None:
+    summary = AvailabilitySummary(
+        overall_status="blocked",
+        passed_check_ids=["registry", "registry", "token"],
+        failed_check_ids=["network", "network"],
+        blocking_reason_codes=["private_registry", "private_registry"],
+    )
+    manifest = StylePackManifest(
+        style_pack_id="modern-saas",
+        display_name="Modern SaaS",
+        description="Soft brand-led SaaS visuals.",
+        recommended_for=["marketing-sites", "marketing-sites", "self-serve-saas"],
+        not_recommended_for=["legacy-enterprise-lockstep"] * 2,
+    )
+    strategy = InstallStrategy(
+        strategy_id="public-primevue-default",
+        provider_id="public-primevue",
+        access_mode="public",
+        packages=["primevue", "primevue", "@primeuix/themes"],
+        registry_requirements=["npmjs", "npmjs"],
+        credential_requirements=["token", "token"],
+    )
+    snapshot = FrontendSolutionSnapshot(
+        snapshot_id="solution-snapshot-001",
+        project_id="demo",
+        version=1,
+        created_at="2026-04-21T00:00:00Z",
+        confirmed_at="2026-04-21T00:00:00Z",
+        confirmed_by_mode="dry-run",
+        decision_status="user_confirmed",
+        recommended_project_shape="single-page-app",
+        recommended_frontend_stack="vue3",
+        recommended_provider_id="public-primevue",
+        recommended_backend_stack="bff",
+        recommended_api_collab_mode="contract-first",
+        recommended_style_pack_id="modern-saas",
+        recommendation_source="default",
+        recommendation_reason_codes=["preferred", "preferred", "available"],
+        recommendation_reason_text="Preferred and available.",
+        requested_project_shape="single-page-app",
+        requested_frontend_stack="vue3",
+        requested_provider_id="public-primevue",
+        requested_backend_stack="bff",
+        requested_api_collab_mode="contract-first",
+        requested_style_pack_id="modern-saas",
+        effective_project_shape="single-page-app",
+        effective_frontend_stack="vue3",
+        effective_provider_id="public-primevue",
+        effective_backend_stack="bff",
+        effective_api_collab_mode="contract-first",
+        effective_style_pack_id="modern-saas",
+        enterprise_provider_eligible=False,
+        availability_checks=["registry", "registry", "token"],
+        availability_summary=summary,
+        availability_reason_text="Ready.",
+        preflight_status="warning",
+        preflight_reason_codes=["network", "network", "slow"],
+        user_overrode_recommendation=True,
+        user_override_fields=["provider_id", "provider_id", "style_pack_id"],
+        resolved_style_tokens={"surface_mode": "soft-gradient"},
+        provider_theme_adapter_config={"adapter_id": "primevue-theme-bridge"},
+        style_fidelity_status="partial",
+        style_degradation_reason_codes=["token_gap", "token_gap"],
+    )
+
+    assert summary.passed_check_ids == ["registry", "token"]
+    assert summary.failed_check_ids == ["network"]
+    assert summary.blocking_reason_codes == ["private_registry"]
+    assert manifest.recommended_for == ["marketing-sites", "self-serve-saas"]
+    assert manifest.not_recommended_for == ["legacy-enterprise-lockstep"]
+    assert strategy.packages == ["primevue", "@primeuix/themes"]
+    assert strategy.registry_requirements == ["npmjs"]
+    assert strategy.credential_requirements == ["token"]
+    assert snapshot.recommendation_reason_codes == ["preferred", "available"]
+    assert snapshot.availability_checks == ["registry", "token"]
+    assert snapshot.preflight_reason_codes == ["network", "slow"]
+    assert snapshot.user_override_fields == ["provider_id", "style_pack_id"]
+    assert snapshot.style_degradation_reason_codes == ["token_gap"]

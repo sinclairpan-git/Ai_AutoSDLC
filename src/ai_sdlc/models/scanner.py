@@ -4,7 +4,21 @@ from __future__ import annotations
 
 from enum import Enum
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
+
+
+def _dedupe_strings(value: object) -> list[str]:
+    if value is None:
+        return []
+    unique: list[str] = []
+    seen: set[str] = set()
+    for item in value:
+        text = str(item)
+        if text in seen:
+            continue
+        seen.add(text)
+        unique.append(text)
+    return unique
 
 # ---------------------------------------------------------------------------
 # Scanner models (from scanner)
@@ -55,6 +69,11 @@ class SymbolInfo(BaseModel):
     decorators: list[str] = []
     is_public: bool = True
 
+    @field_validator("decorators", mode="before")
+    @classmethod
+    def _dedupe_decorators(cls, value: object) -> list[str]:
+        return _dedupe_strings(value)
+
 
 class DiscoveredTestFile(BaseModel):
     """Information about a test file or test function."""
@@ -63,6 +82,11 @@ class DiscoveredTestFile(BaseModel):
     framework: str = ""
     test_count: int = 0
     test_names: list[str] = []
+
+    @field_validator("test_names", mode="before")
+    @classmethod
+    def _dedupe_test_names(cls, value: object) -> list[str]:
+        return _dedupe_strings(value)
 
 
 class RiskItem(BaseModel):
@@ -91,6 +115,11 @@ class ScanResult(BaseModel):
     risks: list[RiskItem] = Field(default_factory=list)
     config_files: list[str] = []
     ignored_dirs: list[str] = []
+
+    @field_validator("entry_points", "config_files", "ignored_dirs", mode="before")
+    @classmethod
+    def _dedupe_scan_lists(cls, value: object) -> list[str]:
+        return _dedupe_strings(value)
 
 
 # ---------------------------------------------------------------------------
@@ -130,6 +159,11 @@ class RefreshEntry(BaseModel):
     updated_indexes: list[str] = []
     updated_docs: list[str] = []
     notes: str = ""
+
+    @field_validator("changed_files", "updated_indexes", "updated_docs", mode="before")
+    @classmethod
+    def _dedupe_refresh_lists(cls, value: object) -> list[str]:
+        return _dedupe_strings(value)
 
 
 class KnowledgeRefreshLog(BaseModel):

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -37,6 +38,29 @@ FRONTEND_CONTRACT_RUNTIME_ATTACHMENT_WRITE_POLICY_EXPLICIT_OPT_IN = (
 )
 
 
+def _dedupe_text_items(values: object) -> list[str]:
+    deduped: list[str] = []
+    for value in values or []:
+        normalized = str(value).strip()
+        if normalized and normalized not in deduped:
+            deduped.append(normalized)
+    return deduped
+
+
+def _dedupe_mapping_items(values: object) -> list[dict[str, object]]:
+    deduped: list[dict[str, object]] = []
+    seen: set[str] = set()
+    for value in values or []:
+        if not isinstance(value, dict):
+            continue
+        key = json.dumps(value, sort_keys=True, ensure_ascii=False)
+        if key in seen:
+            continue
+        seen.add(key)
+        deduped.append(dict(value))
+    return deduped
+
+
 @dataclass(frozen=True, slots=True)
 class FrontendContractRuntimeAttachmentScope:
     """Resolved scope for runtime attachment."""
@@ -46,12 +70,15 @@ class FrontendContractRuntimeAttachmentScope:
     work_item_id: str
     blockers: tuple[str, ...] = ()
 
+    def __post_init__(self) -> None:
+        object.__setattr__(self, "blockers", tuple(_dedupe_text_items(self.blockers)))
+
     def to_json_dict(self) -> dict[str, object]:
         return {
             "spec_dir": str(self.spec_dir) if self.spec_dir is not None else None,
             "scope_source": self.scope_source,
             "work_item_id": self.work_item_id,
-            "blockers": list(self.blockers),
+            "blockers": _dedupe_text_items(self.blockers),
         }
 
 
@@ -75,6 +102,15 @@ class FrontendContractRuntimeAttachment:
     allow_artifact_write: bool = False
     write_policy: str = FRONTEND_CONTRACT_RUNTIME_ATTACHMENT_WRITE_POLICY_EXPLICIT_OPT_IN
 
+    def __post_init__(self) -> None:
+        object.__setattr__(self, "blockers", tuple(_dedupe_text_items(self.blockers)))
+        object.__setattr__(self, "advisories", tuple(_dedupe_text_items(self.advisories)))
+        object.__setattr__(
+            self,
+            "coverage_gaps",
+            tuple(_dedupe_text_items(self.coverage_gaps)),
+        )
+
     @property
     def observations(self) -> tuple[PageImplementationObservation, ...]:
         if self.artifact is None:
@@ -88,9 +124,9 @@ class FrontendContractRuntimeAttachment:
             "artifact_path": (
                 str(self.artifact_path) if self.artifact_path is not None else None
             ),
-            "blockers": list(self.blockers),
-            "advisories": list(self.advisories),
-            "coverage_gaps": list(self.coverage_gaps),
+            "blockers": _dedupe_text_items(self.blockers),
+            "advisories": _dedupe_text_items(self.advisories),
+            "coverage_gaps": _dedupe_text_items(self.coverage_gaps),
             "freshness_status": self.freshness_status,
             "observation_source_profile": self.observation_source_profile,
             "observation_source_requirement": self.observation_source_requirement,
@@ -100,17 +136,25 @@ class FrontendContractRuntimeAttachment:
             "observation_count": len(self.observations),
         }
         if self.artifact is not None:
-            payload["provenance"] = {
-                "provider_kind": self.artifact.provenance.provider_kind,
-                "provider_name": self.artifact.provenance.provider_name,
-                "provider_version": self.artifact.provenance.provider_version,
-                "source_ref": self.artifact.provenance.source_ref,
-            }
-            payload["freshness"] = {
-                "generated_at": self.artifact.freshness.generated_at,
-                "source_digest": self.artifact.freshness.source_digest,
-                "source_revision": self.artifact.freshness.source_revision,
-            }
+            payload["provenance"] = _dedupe_mapping_items(
+                [
+                    {
+                        "provider_kind": self.artifact.provenance.provider_kind,
+                        "provider_name": self.artifact.provenance.provider_name,
+                        "provider_version": self.artifact.provenance.provider_version,
+                        "source_ref": self.artifact.provenance.source_ref,
+                    }
+                ]
+            )[0]
+            payload["freshness"] = _dedupe_mapping_items(
+                [
+                    {
+                        "generated_at": self.artifact.freshness.generated_at,
+                        "source_digest": self.artifact.freshness.source_digest,
+                        "source_revision": self.artifact.freshness.source_revision,
+                    }
+                ]
+            )[0]
         return payload
 
 

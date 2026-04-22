@@ -190,11 +190,11 @@ def verify_constraints(
     else:
         if effective_blockers:
             console.print("[bold red]Constraint violations[/bold red]")
-            for b in effective_blockers:
+            for b in _string_list(effective_blockers):
                 console.print(f"  {b}")
         else:
             console.print("[green]verify constraints: no BLOCKERs.[/green]")
-            for advisory in advisories:
+            for advisory in _string_list(advisories):
                 console.print(f"[yellow]{advisory}[/yellow]")
             if report.release_gate is not None:
                 verdict = str(report.release_gate.get("overall_verdict", "UNKNOWN"))
@@ -241,7 +241,7 @@ def _string_list(value: object) -> list[str]:
     items: list[str] = []
     for item in value:
         text = str(item).strip()
-        if text:
+        if text and text not in items:
             items.append(text)
     return items
 

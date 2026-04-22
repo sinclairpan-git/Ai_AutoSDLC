@@ -8,6 +8,7 @@ from pathlib import Path
 import pytest
 
 from ai_sdlc.core.plan_check import (
+    PlanCheckResult,
     count_pending_todos,
     git_changed_paths,
     parse_markdown_frontmatter,
@@ -136,3 +137,25 @@ def test_run_plan_check_no_drift_pending_clean_tree(git_project_with_plan: Path)
 
 def test_git_changed_paths_empty_when_not_git(tmp_path: Path) -> None:
     assert git_changed_paths(tmp_path) == []
+
+
+def test_plan_check_to_json_dict_deduplicates_changed_paths() -> None:
+    payload = PlanCheckResult(
+        drift=True,
+        plan_file=None,
+        pending_todos=1,
+        changed_paths=["README.md", "README.md"],
+    ).to_json_dict()
+
+    assert payload["changed_paths"] == ["README.md"]
+
+
+def test_plan_check_result_canonicalizes_runtime_changed_paths() -> None:
+    result = PlanCheckResult(
+        drift=True,
+        plan_file=None,
+        pending_todos=1,
+        changed_paths=["README.md", "README.md"],
+    )
+
+    assert result.changed_paths == ["README.md"]

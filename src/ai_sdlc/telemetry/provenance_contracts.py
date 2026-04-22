@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from typing import Any, ClassVar, Self
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
@@ -64,6 +65,20 @@ def _validate_fact_basis_refs(
         raise ValueError(
             "source_object_refs and source_evidence_refs must not both be empty"
         )
+
+
+def _dedupe_structured_mappings(
+    values: tuple[dict[str, Any], ...],
+) -> tuple[dict[str, Any], ...]:
+    deduped: list[dict[str, Any]] = []
+    seen: set[str] = set()
+    for value in values:
+        key = json.dumps(value, sort_keys=True, ensure_ascii=False)
+        if key in seen:
+            continue
+        seen.add(key)
+        deduped.append(dict(value))
+    return tuple(deduped)
 
 
 class ProvenanceContract(BaseModel):
@@ -343,4 +358,6 @@ class ProvenanceGovernanceHook(ProvenanceMutableRecord):
     @field_validator("advisories", mode="before")
     @classmethod
     def _validate_advisories(cls, value: object | None) -> tuple[dict[str, Any], ...]:
-        return normalize_structured_mappings(value, field_name="advisories")
+        return _dedupe_structured_mappings(
+            normalize_structured_mappings(value, field_name="advisories")
+        )

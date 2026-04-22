@@ -276,6 +276,76 @@ def test_build_p1_frontend_ui_kernel_semantic_expansion_preserves_component_and_
     )
 
 
+def test_frontend_ui_kernel_models_deduplicate_set_like_lists() -> None:
+    kernel = FrontendUiKernelSet(
+        work_item_id="015",
+        semantic_components=[
+            UiProtocolComponent(
+                component_id="UiButton",
+                semantic_role="action_trigger",
+                supported_states=["disabled", "disabled"],
+                supported_events=["click", "click", "submit"],
+                disallowed_capabilities=["raw api", "raw api"],
+            ),
+            UiProtocolComponent(
+                component_id="UiInput",
+                semantic_role="text_input",
+                supported_states=["disabled"],
+                supported_events=["change"],
+                disallowed_capabilities=["unstyled fallback"],
+            ),
+        ],
+        page_recipes=[
+            PageRecipeStandard(
+                recipe_id="ListPage",
+                required_areas=["Header", "Header", "Content"],
+                optional_areas=["Toolbar", "Toolbar"],
+                required_protocols=["UiButton", "UiButton"],
+                consumed_protocols=["UiButton", "UiButton", "UiInput"],
+                minimum_state_expectations=["loading", "loading"],
+                forbidden_patterns=["freeform", "freeform"],
+                interaction_rules=["ordered", "ordered"],
+            )
+        ],
+        state_baseline=KernelStateBaseline(
+            required_states=["loading", "loading", "error"],
+            state_semantics=[
+                KernelStateSemantic(
+                    state_id="loading",
+                    semantic_meaning="Loading data",
+                    boundary="page",
+                ),
+                KernelStateSemantic(
+                    state_id="error",
+                    semantic_meaning="Error state",
+                    boundary="page",
+                ),
+            ],
+        ),
+        interaction_baseline=KernelInteractionBaseline(
+            rules=["rule-a", "rule-a"],
+            minimum_a11y_rules=["a11y-a", "a11y-a", "a11y-b"],
+        ),
+    )
+
+    component = kernel.semantic_components[0]
+    recipe = kernel.page_recipes[0]
+
+    assert component.supported_states == ["disabled"]
+    assert component.supported_events == ["click", "submit"]
+    assert component.disallowed_capabilities == ["raw api"]
+    assert recipe.required_areas == ["Header", "Content"]
+    assert recipe.optional_areas == ["Toolbar"]
+    assert recipe.required_protocols == ["UiButton"]
+    assert recipe.consumed_protocols == ["UiButton", "UiInput"]
+    assert recipe.minimum_state_expectations == ["loading"]
+    assert recipe.forbidden_patterns == ["freeform"]
+    assert recipe.interaction_rules == ["ordered"]
+    assert kernel.state_baseline.required_states == ["loading", "error"]
+    assert kernel.interaction_baseline.rules == ["rule-a"]
+    assert kernel.interaction_baseline.minimum_a11y_rules == ["a11y-a", "a11y-b"]
+
+
 def test_build_mvp_frontend_ui_kernel_contains_required_mvp_states_and_interactions() -> None:
     kernel = build_mvp_frontend_ui_kernel()
 

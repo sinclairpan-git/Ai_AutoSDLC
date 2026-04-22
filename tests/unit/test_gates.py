@@ -406,6 +406,29 @@ class TestVerifyGate:
 
 
 class TestVerificationGate:
+    def test_deduplicates_verification_surface_inputs_before_checks(self) -> None:
+        result = VerificationGate().check(
+            {
+                "verification_check_objects": (
+                    "required_governance_files",
+                    "required_governance_files",
+                    "release_gate_evidence",
+                ),
+                "verification_sources": (
+                    "verify constraints",
+                    "verify constraints",
+                ),
+                "constraint_blockers": (),
+                "coverage_gaps": (),
+            }
+        )
+
+        objects_check = next(
+            c for c in result.checks if c.name == "verification_check_objects_declared"
+        )
+        assert objects_check.message.count("required_governance_files") == 1
+        assert objects_check.message.count("release_gate_evidence") == 1
+
     def test_blocks_when_constraint_blockers_exist(self) -> None:
         result = VerificationGate().check(
             {
@@ -418,6 +441,33 @@ class TestVerificationGate:
         assert result.stage == "verification"
         assert result.verdict == GateVerdict.RETRY
         assert any(c.name == "constraint_blockers_clear" and not c.passed for c in result.checks)
+
+    def test_deduplicates_constraint_blockers_and_coverage_gap_messages(self) -> None:
+        result = VerificationGate().check(
+            {
+                "verification_check_objects": ("required_governance_files",),
+                "verification_sources": ("verify constraints",),
+                "constraint_blockers": (
+                    "BLOCKER: missing constitution",
+                    "BLOCKER: missing constitution",
+                    "BLOCKER: missing backlog",
+                ),
+                "coverage_gaps": (
+                    "frontend_contract_observations",
+                    "frontend_contract_observations",
+                    "frontend_gate_policy_artifacts",
+                ),
+            }
+        )
+
+        blocker_check = next(
+            c for c in result.checks if c.name == "constraint_blockers_clear"
+        )
+        coverage_check = next(c for c in result.checks if c.name == "coverage_gaps_clear")
+        assert blocker_check.message.count("BLOCKER: missing constitution") == 1
+        assert blocker_check.message.count("BLOCKER: missing backlog") == 1
+        assert coverage_check.message.count("frontend_contract_observations") == 1
+        assert coverage_check.message.count("frontend_gate_policy_artifacts") == 1
 
     def test_retries_when_frontend_contract_source_has_no_summary_payload(self) -> None:
         result = VerificationGate().check(
@@ -440,6 +490,80 @@ class TestVerificationGate:
             c.name == "frontend_contract_summary_declared" and not c.passed
             for c in result.checks
         )
+
+    def test_deduplicates_frontend_contract_summary_messages(self) -> None:
+        result = VerificationGate().check(
+            {
+                "verification_check_objects": (
+                    "required_governance_files",
+                    *FRONTEND_CONTRACT_CHECK_OBJECTS,
+                ),
+                "verification_sources": (
+                    "verify constraints",
+                    FRONTEND_CONTRACT_SOURCE_NAME,
+                ),
+                "constraint_blockers": (),
+                "coverage_gaps": (),
+                "frontend_contract_verification": {
+                    "source_name": FRONTEND_CONTRACT_SOURCE_NAME,
+                    "check_objects": [
+                        FRONTEND_CONTRACT_CHECK_OBJECTS[0],
+                        FRONTEND_CONTRACT_CHECK_OBJECTS[0],
+                    ],
+                    "blockers": [
+                        "BLOCKER: frontend contract observations unavailable",
+                        "BLOCKER: frontend contract observations unavailable",
+                    ],
+                    "coverage_gaps": [
+                        "frontend_contract_observations",
+                        "frontend_contract_observations",
+                    ],
+                    "gate_verdict": "RETRY",
+                },
+            }
+        )
+
+        status_check = next(
+            c for c in result.checks if c.name == "frontend_contract_status_clear"
+        )
+        assert (
+            status_check.message.count(
+                "BLOCKER: frontend contract observations unavailable"
+            )
+            == 1
+        )
+        assert status_check.message.count("frontend_contract_observations") == 1
+
+    def test_deduplicates_frontend_contract_summary_payload_check_objects(self) -> None:
+        result = VerificationGate().check(
+            {
+                "verification_check_objects": (
+                    "required_governance_files",
+                    FRONTEND_CONTRACT_CHECK_OBJECTS[0],
+                ),
+                "verification_sources": (
+                    "verify constraints",
+                    FRONTEND_CONTRACT_SOURCE_NAME,
+                ),
+                "constraint_blockers": (),
+                "coverage_gaps": (),
+                "frontend_contract_verification": {
+                    "source_name": FRONTEND_CONTRACT_SOURCE_NAME,
+                    "check_objects": [
+                        "unknown-object",
+                        "unknown-object",
+                    ],
+                    "blockers": [],
+                    "coverage_gaps": [],
+                    "gate_verdict": "PASS",
+                },
+            }
+        )
+
+        objects_check = next(
+            c for c in result.checks if c.name == "frontend_contract_check_objects_linked"
+        )
+        assert objects_check.message.count("unknown-object") == 1
 
     def test_retries_when_frontend_contract_summary_reports_gap(self) -> None:
         result = VerificationGate().check(
@@ -868,6 +992,9 @@ class TestDoneGate:
                 "program_truth_audit_required": True,
                 "program_truth_audit_ready": False,
                 "program_truth_audit_detail": "migration pending: 3; release targets blocked",
+                "program_truth_audit_next_actions": [
+                    "python -m ai_sdlc program truth sync --execute --yes"
+                ],
             }
         )
 
@@ -876,6 +1003,79 @@ class TestDoneGate:
             c.name == "program_truth_audit_ready" and not c.passed
             for c in result.checks
         )
+        assert any(
+            "python -m ai_sdlc program truth sync --execute --yes" in c.message
+            for c in result.checks
+            if c.name == "program_truth_audit_ready"
+        )
+
+    def test_program_truth_audit_message_surfaces_frontend_inheritance_risk(
+        self, tmp_path: Path
+    ) -> None:
+        summary = tmp_path / "development-summary.md"
+        summary.write_text("# Summary\n", encoding="utf-8")
+
+        result = DoneGate().check(
+            {
+                "root": str(tmp_path),
+                "all_tasks_complete": True,
+                "tests_passed": True,
+                "review_recorded": True,
+                "summary_path": str(summary),
+                "program_truth_audit_required": True,
+                "program_truth_audit_ready": False,
+                "program_truth_audit_state": "blocked",
+                "program_truth_audit_detail": "capability_blocked: frontend-mainline-delivery (blocked)",
+                "program_truth_audit_frontend_inheritance_status": {
+                    "generation": "not_inherited",
+                    "quality": "not_inherited",
+                },
+                "program_truth_audit_next_actions": [
+                    "python -m ai_sdlc program generation-constraints-handoff"
+                ],
+            }
+        )
+
+        check = next(c for c in result.checks if c.name == "program_truth_audit_ready")
+        assert check.passed is False
+        assert "codegen not inherited yet (risk)" in check.message
+        assert "wrong component library" in check.message
+        assert "wrong standard" in check.message
+        assert "generation-constraints-handoff" in check.message
+
+    def test_program_truth_audit_message_deduplicates_next_actions(
+        self, tmp_path: Path
+    ) -> None:
+        summary = tmp_path / "development-summary.md"
+        summary.write_text("# Summary\n", encoding="utf-8")
+
+        result = DoneGate().check(
+            {
+                "root": str(tmp_path),
+                "all_tasks_complete": True,
+                "tests_passed": True,
+                "review_recorded": True,
+                "summary_path": str(summary),
+                "program_truth_audit_required": True,
+                "program_truth_audit_ready": False,
+                "program_truth_audit_detail": "migration pending: 3; release targets blocked",
+                "program_truth_audit_next_actions": [
+                    "python -m ai_sdlc program truth sync --execute --yes",
+                    "python -m ai_sdlc program truth sync --execute --yes",
+                    "python -m ai_sdlc program generation-constraints-handoff",
+                ],
+            }
+        )
+
+        check = next(c for c in result.checks if c.name == "program_truth_audit_ready")
+        assert check.passed is False
+        assert (
+            check.message.count(
+                "python -m ai_sdlc program truth sync --execute --yes"
+            )
+            == 1
+        )
+        assert "python -m ai_sdlc program generation-constraints-handoff" in check.message
 
     def test_blocks_when_knowledge_refresh_is_pending(self, tmp_path: Path) -> None:
         summary = tmp_path / "development-summary.md"

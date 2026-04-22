@@ -9,7 +9,10 @@ import pytest
 from ai_sdlc.core.frontend_visual_a11y_evidence_provider import (
     FRONTEND_VISUAL_A11Y_EVIDENCE_ARTIFACT_NAME,
     FRONTEND_VISUAL_A11Y_EVIDENCE_SCHEMA_VERSION,
+    FrontendVisualA11yEvidenceArtifact,
     FrontendVisualA11yEvidenceEvaluation,
+    FrontendVisualA11yEvidenceFreshness,
+    FrontendVisualA11yEvidenceProvenance,
     build_frontend_visual_a11y_evidence_artifact,
     load_frontend_visual_a11y_evidence_artifact,
     visual_a11y_evidence_artifact_path,
@@ -115,3 +118,163 @@ def test_load_frontend_visual_a11y_evidence_artifact_rejects_invalid_issue_repor
 
     with pytest.raises(ValueError, match="report_type"):
         load_frontend_visual_a11y_evidence_artifact(artifact_path)
+
+
+def test_frontend_visual_a11y_evidence_artifact_to_json_dict_deduplicates_evaluations() -> None:
+    artifact = build_frontend_visual_a11y_evidence_artifact(
+        evaluations=[
+            FrontendVisualA11yEvidenceEvaluation(
+                evaluation_id="eval-issue",
+                target_id="orders.form",
+                surface_id="refreshing",
+                outcome="issue",
+                report_type="violation-report",
+            ),
+            FrontendVisualA11yEvidenceEvaluation(
+                evaluation_id="eval-issue",
+                target_id="orders.form",
+                surface_id="refreshing",
+                outcome="issue",
+                report_type="violation-report",
+            ),
+        ],
+        provider_kind="manual",
+        provider_name="qa-review",
+        generated_at="2026-04-07T12:00:00Z",
+    )
+
+    payload = artifact.to_json_dict()
+
+    assert payload["evaluations"] == [
+        {
+            "evaluation_id": "eval-issue",
+            "target_id": "orders.form",
+            "surface_id": "refreshing",
+            "outcome": "issue",
+            "report_type": "violation-report",
+            "severity": None,
+            "location_anchor": None,
+            "quality_hint": None,
+            "changed_scope_explanation": None,
+        }
+    ]
+
+
+def test_build_frontend_visual_a11y_evidence_artifact_deduplicates_source_evaluations() -> None:
+    artifact = build_frontend_visual_a11y_evidence_artifact(
+        evaluations=[
+            FrontendVisualA11yEvidenceEvaluation(
+                evaluation_id="eval-issue",
+                target_id="orders.form",
+                surface_id="refreshing",
+                outcome="issue",
+                report_type="violation-report",
+            ),
+            FrontendVisualA11yEvidenceEvaluation(
+                evaluation_id="eval-issue",
+                target_id="orders.form",
+                surface_id="refreshing",
+                outcome="issue",
+                report_type="violation-report",
+            ),
+        ],
+        provider_kind="manual",
+        provider_name="qa-review",
+        generated_at="2026-04-07T12:00:00Z",
+    )
+
+    assert artifact.evaluations == (
+        FrontendVisualA11yEvidenceEvaluation(
+            evaluation_id="eval-issue",
+            target_id="orders.form",
+            surface_id="refreshing",
+            outcome="issue",
+            report_type="violation-report",
+        ),
+    )
+
+
+def test_frontend_visual_a11y_evidence_artifact_runtime_object_canonicalizes_evaluations() -> None:
+    artifact = FrontendVisualA11yEvidenceArtifact(
+        schema_version=FRONTEND_VISUAL_A11Y_EVIDENCE_SCHEMA_VERSION,
+        provenance=FrontendVisualA11yEvidenceProvenance(
+            provider_kind="manual",
+            provider_name="qa-review",
+        ),
+        freshness=FrontendVisualA11yEvidenceFreshness(
+            generated_at="2026-04-07T12:00:00Z"
+        ),
+        evaluations=(
+            FrontendVisualA11yEvidenceEvaluation(
+                evaluation_id="eval-issue",
+                target_id="orders.form",
+                surface_id="refreshing",
+                outcome="issue",
+                report_type="violation-report",
+            ),
+            FrontendVisualA11yEvidenceEvaluation(
+                evaluation_id="eval-issue",
+                target_id="orders.form",
+                surface_id="refreshing",
+                outcome="issue",
+                report_type="violation-report",
+            ),
+        ),
+    )
+
+    assert artifact.evaluations == (
+        FrontendVisualA11yEvidenceEvaluation(
+            evaluation_id="eval-issue",
+            target_id="orders.form",
+            surface_id="refreshing",
+            outcome="issue",
+            report_type="violation-report",
+        ),
+    )
+
+
+def test_load_frontend_visual_a11y_evidence_artifact_deduplicates_repeated_evaluations(
+    tmp_path,
+) -> None:
+    artifact_path = tmp_path / FRONTEND_VISUAL_A11Y_EVIDENCE_ARTIFACT_NAME
+    artifact_path.write_text(
+        json.dumps(
+            {
+                "schema_version": FRONTEND_VISUAL_A11Y_EVIDENCE_SCHEMA_VERSION,
+                "provenance": {
+                    "provider_kind": "manual",
+                    "provider_name": "fixture",
+                },
+                "freshness": {"generated_at": "2026-04-07T12:00:00Z"},
+                "evaluations": [
+                    {
+                        "evaluation_id": "eval-issue",
+                        "target_id": "orders.form",
+                        "surface_id": "refreshing",
+                        "outcome": "issue",
+                        "report_type": "violation-report",
+                    },
+                    {
+                        "evaluation_id": "eval-issue",
+                        "target_id": "orders.form",
+                        "surface_id": "refreshing",
+                        "outcome": "issue",
+                        "report_type": "violation-report",
+                    },
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    loaded = load_frontend_visual_a11y_evidence_artifact(artifact_path)
+
+    assert loaded.evaluations == (
+        FrontendVisualA11yEvidenceEvaluation(
+            evaluation_id="eval-issue",
+            target_id="orders.form",
+            surface_id="refreshing",
+            outcome="issue",
+            report_type="violation-report",
+        ),
+    )

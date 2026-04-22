@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from ai_sdlc.models.frontend_provider_profile import (
     build_mvp_enterprise_vue2_provider_profile,
@@ -20,6 +20,20 @@ def _find_duplicates(values: list[str]) -> list[str]:
     return duplicates
 
 
+def _dedupe_strings(value: object) -> list[str]:
+    if value is None:
+        return []
+    unique: list[str] = []
+    seen: set[str] = set()
+    for item in value:
+        text = str(item)
+        if text in seen:
+            continue
+        seen.add(text)
+        unique.append(text)
+    return unique
+
+
 class FrontendGenerationModel(BaseModel):
     """Base model for frontend generation governance artifacts."""
 
@@ -34,6 +48,11 @@ class RecipeGenerationConstraint(FrontendGenerationModel):
     enforce_required_optional_forbidden_boundaries: bool = True
     allow_instance_override: bool = False
 
+    @field_validator("allowed_recipe_ids", mode="before")
+    @classmethod
+    def _dedupe_allowed_recipe_ids(cls, value: object) -> list[str]:
+        return _dedupe_strings(value)
+
 
 class WhitelistGenerationConstraint(FrontendGenerationModel):
     """Whitelist-side generation constraints."""
@@ -42,6 +61,11 @@ class WhitelistGenerationConstraint(FrontendGenerationModel):
     require_exception_for_non_whitelist: bool = True
     forbid_sf_default_entry: bool = True
     forbid_native_structure_substitution: bool = True
+
+    @field_validator("default_component_ids", mode="before")
+    @classmethod
+    def _dedupe_default_component_ids(cls, value: object) -> list[str]:
+        return _dedupe_strings(value)
 
 
 class GenerationHardRule(FrontendGenerationModel):
@@ -64,6 +88,11 @@ class TokenRuleSet(FrontendGenerationModel):
     disallowed_naked_values: list[str] = Field(default_factory=list)
     forbid_inline_core_style: bool = True
 
+    @field_validator("disallowed_naked_values", mode="before")
+    @classmethod
+    def _dedupe_disallowed_naked_values(cls, value: object) -> list[str]:
+        return _dedupe_strings(value)
+
 
 class GenerationExceptionPolicy(FrontendGenerationModel):
     """Structured exception policy for generation governance."""
@@ -84,6 +113,11 @@ class GenerationExceptionPolicy(FrontendGenerationModel):
         ]
     )
 
+    @field_validator("allowed_objects", "forbidden_overrides", mode="before")
+    @classmethod
+    def _dedupe_exception_policy_lists(cls, value: object) -> list[str]:
+        return _dedupe_strings(value)
+
 
 class FrontendGenerationConstraintSet(FrontendGenerationModel):
     """Top-level generation governance control plane."""
@@ -93,12 +127,22 @@ class FrontendGenerationConstraintSet(FrontendGenerationModel):
     delivery_entry_id: str = ""
     component_library_packages: list[str] = Field(default_factory=list)
     provider_theme_adapter_id: str = ""
+    page_schema_ids: list[str] = Field(default_factory=list)
     execution_order: list[str] = Field(default_factory=list)
     recipe: RecipeGenerationConstraint
     whitelist: WhitelistGenerationConstraint
     hard_rules: GenerationHardRuleSet
     token_rules: TokenRuleSet
     exceptions: GenerationExceptionPolicy
+
+    @field_validator(
+        "component_library_packages",
+        "page_schema_ids",
+        mode="before",
+    )
+    @classmethod
+    def _dedupe_constraint_set_lists(cls, value: object) -> list[str]:
+        return _dedupe_strings(value)
 
     @model_validator(mode="after")
     def _enforce_unique_hard_rule_ids(self) -> FrontendGenerationConstraintSet:
@@ -117,6 +161,7 @@ def build_mvp_frontend_generation_constraints(
     delivery_entry_id: str = "",
     component_library_packages: list[str] | None = None,
     provider_theme_adapter_id: str = "",
+    page_schema_ids: list[str] | None = None,
 ) -> FrontendGenerationConstraintSet:
     """Build the MVP generation governance baseline defined by work item 017."""
 
@@ -129,6 +174,7 @@ def build_mvp_frontend_generation_constraints(
         delivery_entry_id=delivery_entry_id,
         component_library_packages=list(component_library_packages or []),
         provider_theme_adapter_id=provider_theme_adapter_id,
+        page_schema_ids=list(page_schema_ids or []),
         execution_order=[
             "contract",
             "kernel",

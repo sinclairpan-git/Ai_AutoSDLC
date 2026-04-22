@@ -46,6 +46,22 @@ class ObserverEvaluationFinding:
     profile: str
     mode: str
 
+    def __post_init__(self) -> None:
+        object.__setattr__(
+            self,
+            "evidence_refs",
+            tuple(_dedupe_string_items(self.evidence_refs)),
+        )
+
+
+def _dedupe_string_items(values: object) -> list[str]:
+    deduped: list[str] = []
+    for value in values or ():
+        normalized = str(value).strip()
+        if normalized and normalized not in deduped:
+            deduped.append(normalized)
+    return deduped
+
 
 def calculate_ccp_coverage_gaps(
     registry: CCPRegistry,

@@ -30,6 +30,31 @@ _GATE_CONTROL_POINTS_BY_VERDICT = {
 }
 
 
+def _unique_strings(values: Sequence[object] | tuple[object, ...]) -> list[str]:
+    seen: set[str] = set()
+    unique: list[str] = []
+    for value in values:
+        text = str(value).strip()
+        if not text or text in seen:
+            continue
+        seen.add(text)
+        unique.append(text)
+    return unique
+
+
+def _unique_mapping_items(values: Sequence[Mapping[str, object]]) -> list[dict[str, object]]:
+    seen: set[str] = set()
+    unique: list[dict[str, object]] = []
+    for value in values:
+        item = dict(value)
+        marker = json.dumps(item, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
+        if marker in seen:
+            continue
+        seen.add(marker)
+        unique.append(item)
+    return unique
+
+
 def constraint_report_digest(report: ConstraintReport) -> str:
     """Return a deterministic digest for a structured verify-constraints report."""
     payload = json.dumps(asdict(report), sort_keys=True, separators=(",", ":"), ensure_ascii=False)
@@ -248,7 +273,7 @@ def build_violation_rollup(violations: Sequence[Violation]) -> dict[str, object]
         status_counts[violation.status.value] = status_counts.get(violation.status.value, 0) + 1
         risk_counts[violation.risk_level.value] = risk_counts.get(violation.risk_level.value, 0) + 1
     open_items = sorted(
-        (
+        _unique_mapping_items(
             {
                 "violation_id": violation.violation_id,
                 "status": violation.status.value,
@@ -258,15 +283,19 @@ def build_violation_rollup(violations: Sequence[Violation]) -> dict[str, object]
         ),
         key=lambda item: str(item["violation_id"]),
     )
+    open_violation_ids = sorted(_unique_strings([violation.violation_id for violation in open_violations]))
+    resolved_violation_ids = sorted(
+        _unique_strings([violation.violation_id for violation in resolved_violations])
+    )
     return {
         "open_debt": {
-            "count": len(open_violations),
+            "count": len(open_violation_ids),
             "accepted_count": len(accepted_violations),
-            "violation_ids": sorted(violation.violation_id for violation in open_violations),
+            "violation_ids": open_violation_ids,
         },
         "resolved": {
-            "count": len(resolved_violations),
-            "violation_ids": sorted(violation.violation_id for violation in resolved_violations),
+            "count": len(resolved_violation_ids),
+            "violation_ids": resolved_violation_ids,
         },
         "by_status": status_counts,
         "by_risk": risk_counts,
@@ -295,24 +324,41 @@ def build_evaluation_coverage_view(evaluations: Sequence[Evaluation]) -> dict[st
 def build_evidence_quality_view(evidence_payloads: Sequence[Mapping[str, object]]) -> dict[str, object]:
     """Build a minimal evidence-quality view from canonical evidence payloads."""
     evidence_refs = sorted(
-        str(payload["evidence_id"])
-        for payload in evidence_payloads
-        if payload.get("evidence_id") is not None
+        _unique_strings(
+            [
+                str(payload["evidence_id"])
+                for payload in evidence_payloads
+                if payload.get("evidence_id") is not None
+            ]
+        )
     )
     missing_digest_refs = sorted(
-        str(payload["evidence_id"])
-        for payload in evidence_payloads
-        if payload.get("evidence_id") is not None and not payload.get("digest")
+        _unique_strings(
+            [
+                str(payload["evidence_id"])
+                for payload in evidence_payloads
+                if payload.get("evidence_id") is not None and not payload.get("digest")
+            ]
+        )
     )
     missing_locator_refs = sorted(
-        str(payload["evidence_id"])
-        for payload in evidence_payloads
-        if payload.get("evidence_id") is not None and not payload.get("locator")
+        _unique_strings(
+            [
+                str(payload["evidence_id"])
+                for payload in evidence_payloads
+                if payload.get("evidence_id") is not None and not payload.get("locator")
+            ]
+        )
     )
     non_available_refs = sorted(
-        str(payload["evidence_id"])
-        for payload in evidence_payloads
-        if payload.get("evidence_id") is not None and payload.get("status") != "available"
+        _unique_strings(
+            [
+                str(payload["evidence_id"])
+                for payload in evidence_payloads
+                if payload.get("evidence_id") is not None
+                and payload.get("status") != "available"
+            ]
+        )
     )
     total_count = len(evidence_refs)
     if total_count == 0:
@@ -456,7 +502,20 @@ def _sorted_payloads(
     *,
     primary_key: str,
 ) -> list[dict[str, object]]:
-    normalized = [dict(payload) for payload in payloads]
+    normalized: list[dict[str, object]] = []
+    seen: set[str] = set()
+    for payload in payloads:
+        candidate = dict(payload)
+        marker = json.dumps(
+            candidate,
+            sort_keys=True,
+            separators=(",", ":"),
+            ensure_ascii=False,
+        )
+        if marker in seen:
+            continue
+        seen.add(marker)
+        normalized.append(candidate)
     return sorted(
         normalized,
         key=lambda payload: (

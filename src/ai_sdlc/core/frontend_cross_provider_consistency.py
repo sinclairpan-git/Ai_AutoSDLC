@@ -14,6 +14,17 @@ from ai_sdlc.models.frontend_theme_token_governance import (
 )
 
 
+def _dedupe_text_items(items: list[str] | tuple[str, ...]) -> list[str]:
+    seen: set[str] = set()
+    unique: list[str] = []
+    for item in items:
+        if item in seen:
+            continue
+        seen.add(item)
+        unique.append(item)
+    return unique
+
+
 @dataclass(frozen=True, slots=True)
 class FrontendCrossProviderConsistencyValidationResult:
     """Structured validation result for Track D pair-centric consistency truth."""
@@ -24,6 +35,10 @@ class FrontendCrossProviderConsistencyValidationResult:
     artifact_root: str = ""
     pair_count: int = 0
     certification_gates: dict[str, str] = field(default_factory=dict)
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, "blockers", _dedupe_text_items(self.blockers))
+        object.__setattr__(self, "warnings", _dedupe_text_items(self.warnings))
 
 
 def validate_frontend_cross_provider_consistency(
@@ -107,8 +122,8 @@ def validate_frontend_cross_provider_consistency(
 
     return FrontendCrossProviderConsistencyValidationResult(
         passed=not blockers,
-        blockers=blockers,
-        warnings=warnings,
+        blockers=_dedupe_text_items(blockers),
+        warnings=_dedupe_text_items(warnings),
         artifact_root=consistency.handoff_contract.artifact_root,
         pair_count=len(consistency.certification_bundles),
         certification_gates={

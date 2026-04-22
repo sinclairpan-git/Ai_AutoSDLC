@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -16,7 +17,7 @@ from ai_sdlc.telemetry.evaluators import (
     build_observer_coverage_evaluation,
     classify_unknown_family_outputs,
 )
-from ai_sdlc.telemetry.generators import observer_facts_digest
+from ai_sdlc.telemetry.generators import _unique_strings, observer_facts_digest
 from ai_sdlc.telemetry.provenance_contracts import (
     ProvenanceAssessment,
     ProvenanceGapFinding,
@@ -64,6 +65,39 @@ class StepObserverResult:
     source_evidence_refs: tuple[str, ...]
     provenance_assessments: tuple[ProvenanceAssessment, ...] = ()
     provenance_gaps: tuple[ProvenanceGapFinding, ...] = ()
+
+    def __post_init__(self) -> None:
+        object.__setattr__(
+            self,
+            "coverage_gaps",
+            _dedupe_observer_findings(self.coverage_gaps),
+        )
+        object.__setattr__(self, "unknowns", _dedupe_observer_findings(self.unknowns))
+        object.__setattr__(
+            self,
+            "unobserved",
+            _dedupe_observer_findings(self.unobserved),
+        )
+        object.__setattr__(
+            self,
+            "mismatch_findings",
+            _dedupe_mismatch_findings(self.mismatch_findings),
+        )
+        object.__setattr__(
+            self,
+            "source_evidence_refs",
+            tuple(sorted(_unique_strings(self.source_evidence_refs))),
+        )
+        object.__setattr__(
+            self,
+            "provenance_assessments",
+            tuple(_dedupe_provenance_models(self.provenance_assessments)),
+        )
+        object.__setattr__(
+            self,
+            "provenance_gaps",
+            tuple(_dedupe_provenance_models(self.provenance_gaps)),
+        )
 
 
 class TelemetryObserver:
@@ -136,11 +170,24 @@ class TelemetryObserver:
             mode=self.conditions.mode,
             issue_count=len(unknown_family) + len(mismatch_findings),
         )
+        coverage_gaps = _dedupe_observer_findings(
+            finding for finding in unknown_family if finding.kind == "coverage_gap"
+        )
+        unknowns = _dedupe_observer_findings(
+            finding for finding in unknown_family if finding.kind == "unknown"
+        )
+        unobserved = _dedupe_observer_findings(
+            finding for finding in unknown_family if finding.kind == "unobserved"
+        )
         source_evidence_refs = tuple(
             sorted(
-                str(payload["evidence_id"])
-                for payload in evidence_payloads
-                if payload.get("evidence_id") is not None
+                _unique_strings(
+                    [
+                        str(payload["evidence_id"])
+                        for payload in evidence_payloads
+                        if payload.get("evidence_id") is not None
+                    ]
+                )
             )
         )
         provenance = observe_provenance_step(
@@ -156,14 +203,10 @@ class TelemetryObserver:
             step_id=step_id,
             facts_digest=facts_digest,
             coverage_evaluation=coverage_evaluation,
-            coverage_gaps=tuple(
-                finding for finding in unknown_family if finding.kind == "coverage_gap"
-            ),
-            unknowns=tuple(finding for finding in unknown_family if finding.kind == "unknown"),
-            unobserved=tuple(
-                finding for finding in unknown_family if finding.kind == "unobserved"
-            ),
-            mismatch_findings=mismatch_findings,
+            coverage_gaps=coverage_gaps,
+            unknowns=unknowns,
+            unobserved=unobserved,
+            mismatch_findings=_dedupe_mismatch_findings(mismatch_findings),
             source_evidence_refs=source_evidence_refs,
             provenance_assessments=provenance.assessments,
             provenance_gaps=provenance.gaps,
@@ -176,7 +219,7 @@ class TelemetryObserver:
         workflow_run_id: str,
         step_id: str,
     ) -> list[dict[str, object]]:
-        payloads: list[dict[str, object]] = []
+        payloads: list[tuple[Path, dict[str, object]]] = []
         for scope_level, scope_step_id in (
             (ScopeLevel.SESSION, None),
             (ScopeLevel.RUN, None),
@@ -189,5 +232,68 @@ class TelemetryObserver:
                 step_id=scope_step_id,
             )
             if stream_path.exists():
-                payloads.extend(self.store._read_ndjson(stream_path))
-        return payloads
+                payloads.extend(
+                    (stream_path, payload) for payload in self.store._read_ndjson(stream_path)
+                )
+        return [payload for _path, payload in _dedupe_stream_payloads(payloads)]
+
+
+def _dedupe_observer_findings(
+    findings: tuple[ObserverEvaluationFinding, ...]
+    | list[ObserverEvaluationFinding]
+    | object,
+) -> tuple[ObserverEvaluationFinding, ...]:
+    unique: dict[tuple[str, str, str], ObserverEvaluationFinding] = {}
+    for finding in findings or ():
+        marker = (finding.kind, finding.subject, finding.evaluation.evaluation_id)
+        unique.setdefault(marker, finding)
+    return tuple(unique.values())
+
+
+def _dedupe_mismatch_findings(
+    findings: tuple[MismatchFinding, ...] | list[MismatchFinding] | object,
+) -> tuple[MismatchFinding, ...]:
+    unique: dict[tuple[str, str, str], MismatchFinding] = {}
+    for finding in findings or ():
+        marker = (
+            finding.finding_name,
+            finding.subject,
+            finding.evaluation.evaluation_id,
+        )
+        unique.setdefault(marker, finding)
+    return tuple(unique.values())
+
+
+def _dedupe_stream_payloads(
+    payloads: list[tuple[Path, dict[str, object]]],
+) -> list[tuple[Path, dict[str, object]]]:
+    deduped: list[tuple[Path, dict[str, object]]] = []
+    seen: set[tuple[str, str]] = set()
+    for path, payload in payloads:
+        marker = (
+            str(path),
+            json.dumps(payload, sort_keys=True, ensure_ascii=False),
+        )
+        if marker in seen:
+            continue
+        seen.add(marker)
+        deduped.append((path, payload))
+    return deduped
+
+
+def _dedupe_provenance_models(values: object) -> list[object]:
+    deduped: list[object] = []
+    seen: set[str] = set()
+    for value in values or ():
+        if not hasattr(value, "model_dump"):
+            continue
+        marker = json.dumps(
+            value.model_dump(mode="json"),
+            sort_keys=True,
+            ensure_ascii=False,
+        )
+        if marker in seen:
+            continue
+        seen.add(marker)
+        deduped.append(value)
+    return deduped

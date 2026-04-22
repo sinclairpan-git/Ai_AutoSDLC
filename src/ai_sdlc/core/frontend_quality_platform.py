@@ -15,6 +15,17 @@ _ALLOWED_BROWSERS = {"chromium", "webkit", "firefox"}
 _ALLOWED_VIEWPORTS = {"desktop-1440", "tablet-834", "mobile-390"}
 
 
+def _dedupe_text_items(items: list[str] | tuple[str, ...]) -> list[str]:
+    seen: set[str] = set()
+    unique: list[str] = []
+    for item in items:
+        if item in seen:
+            continue
+        seen.add(item)
+        unique.append(item)
+    return unique
+
+
 @dataclass(frozen=True, slots=True)
 class FrontendQualityPlatformValidationResult:
     """Structured validation result for Track C quality truth."""
@@ -26,6 +37,20 @@ class FrontendQualityPlatformValidationResult:
     matrix_coverage_count: int = 0
     page_schema_ids: list[str] = field(default_factory=list)
     evidence_contract_ids: list[str] = field(default_factory=list)
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, "blockers", _dedupe_text_items(self.blockers))
+        object.__setattr__(self, "warnings", _dedupe_text_items(self.warnings))
+        object.__setattr__(
+            self,
+            "page_schema_ids",
+            _dedupe_text_items(self.page_schema_ids),
+        )
+        object.__setattr__(
+            self,
+            "evidence_contract_ids",
+            _dedupe_text_items(self.evidence_contract_ids),
+        )
 
 
 def validate_frontend_quality_platform(
@@ -76,13 +101,22 @@ def validate_frontend_quality_platform(
 
     return FrontendQualityPlatformValidationResult(
         passed=not blockers,
-        blockers=blockers,
-        warnings=warnings,
+        blockers=_dedupe_text_items(blockers),
+        warnings=_dedupe_text_items(warnings),
         artifact_root=platform.handoff_contract.artifact_root,
         matrix_coverage_count=len(platform.coverage_matrix),
-        page_schema_ids=sorted({entry.page_schema_id for entry in platform.coverage_matrix}),
+        page_schema_ids=sorted(
+            _dedupe_text_items(
+                [entry.page_schema_id for entry in platform.coverage_matrix]
+            )
+        ),
         evidence_contract_ids=sorted(
-            contract.evidence_contract_id for contract in platform.evidence_contracts
+            _dedupe_text_items(
+                [
+                    contract.evidence_contract_id
+                    for contract in platform.evidence_contracts
+                ]
+            )
         ),
     )
 

@@ -25,6 +25,15 @@ DOC_FILES = (
 _BRANCH_NUMERIC_WORK_ITEM_RE = re.compile(r"^(?P<id>\d{3,})(?:[-_].*)?$")
 
 
+def _dedupe_text_items(values: list[str]) -> list[str]:
+    unique: list[str] = []
+    for value in values:
+        text = str(value)
+        if text not in unique:
+            unique.append(text)
+    return unique
+
+
 @dataclass
 class _ArtifactCandidate:
     layout: str
@@ -32,6 +41,9 @@ class _ArtifactCandidate:
     spec_dir_rel: str
     detected_files: list[str] = field(default_factory=list)
     prd_source: str = ""
+
+    def __post_init__(self) -> None:
+        self.detected_files = _dedupe_text_items(self.detected_files)
 
 
 @dataclass
@@ -49,6 +61,10 @@ class ReconcileHint:
     prd_source: str = ""
     checkpoint_stage: str = "missing"
     checkpoint_feature_id: str = "unknown"
+
+    def __post_init__(self) -> None:
+        self.completed_stages = _dedupe_text_items(self.completed_stages)
+        self.detected_files = _dedupe_text_items(self.detected_files)
 
 
 def detect_reconcile_hint(root: Path) -> ReconcileHint | None:
@@ -444,7 +460,7 @@ def _artifacts_for_stage(stage: str, detected_files: list[str]) -> list[str]:
         "close": ["development-summary.md"],
     }
     wanted = mapping.get(stage, [])
-    return [name for name in detected_files if name in wanted]
+    return _dedupe_text_items([name for name in detected_files if name in wanted])
 
 
 def _work_item_matches_spec_dir(work_item_id: str | None, spec_dir_rel: str) -> bool:

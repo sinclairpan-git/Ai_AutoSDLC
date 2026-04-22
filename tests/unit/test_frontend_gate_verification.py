@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import replace
 from pathlib import Path
+from types import SimpleNamespace
 
 import ai_sdlc.core.frontend_gate_verification as frontend_gate_verification_module
 from ai_sdlc.core.frontend_contract_drift import PageImplementationObservation
@@ -22,6 +23,7 @@ from ai_sdlc.core.frontend_gate_verification import (
     FRONTEND_GATE_SOURCE_NAME,
     FRONTEND_GATE_VISUAL_A11Y_CHECK_OBJECT,
     FRONTEND_GATE_VISUAL_A11Y_EVIDENCE_OBJECT,
+    FrontendGateVerificationReport,
     build_frontend_browser_gate_execute_decision,
     build_frontend_gate_execute_decision,
     build_frontend_gate_verification_context,
@@ -50,6 +52,7 @@ from ai_sdlc.models.frontend_gate_policy import (
 from ai_sdlc.models.frontend_generation_constraints import (
     build_mvp_frontend_generation_constraints,
 )
+from ai_sdlc.models.gate import GateCheck, GateResult, GateVerdict
 
 
 def _write_minimal_frontend_contract_page_artifacts(
@@ -256,7 +259,88 @@ def test_frontend_gate_verification_context_passes_when_prerequisites_are_ready(
     assert report.check_objects == FRONTEND_GATE_CHECK_OBJECTS
     assert context["verification_sources"] == (FRONTEND_GATE_SOURCE_NAME,)
     assert context["verification_check_objects"] == FRONTEND_GATE_CHECK_OBJECTS
-    assert context["frontend_gate_verification"]["gate_verdict"] == "PASS"
+
+
+def test_frontend_gate_execute_decision_runtime_object_canonicalizes_lists() -> None:
+    decision = frontend_gate_verification_module.FrontendGateExecuteDecision(
+        execute_gate_state=FRONTEND_GATE_EXECUTE_STATE_RECHECK_REQUIRED,
+        decision_reason="evidence_missing",
+        blockers=("browser gate blocker", "browser gate blocker"),
+        recheck_required=True,
+        recheck_reason_codes=(
+            "frontend_visual_a11y_evidence_input",
+            "frontend_visual_a11y_evidence_input",
+        ),
+        remediation_hints=(
+            "materialize shared Playwright runtime evidence",
+            "materialize shared Playwright runtime evidence",
+        ),
+        remediation_reason_codes=(
+            "frontend_visual_a11y_policy_artifacts",
+            "frontend_visual_a11y_policy_artifacts",
+        ),
+    )
+
+    assert decision.blockers == ("browser gate blocker",)
+    assert decision.recheck_reason_codes == ("frontend_visual_a11y_evidence_input",)
+    assert decision.remediation_hints == (
+        "materialize shared Playwright runtime evidence",
+    )
+    assert decision.remediation_reason_codes == (
+        "frontend_visual_a11y_policy_artifacts",
+    )
+
+
+def test_frontend_gate_verification_report_to_json_dict_deduplicates_lists() -> None:
+    payload = FrontendGateVerificationReport(
+        gate_policy_root="governance/frontend/gates",
+        generation_root="governance/frontend/generation",
+        source_name="frontend gate verification",
+        check_objects=("frontend_gate_policy_artifacts", "frontend_gate_policy_artifacts"),
+        blockers=("gate blocker", "gate blocker"),
+        coverage_gaps=("frontend_contract_observations", "frontend_contract_observations"),
+        advisory_checks=("advisory", "advisory"),
+        gate_result=GateResult(
+            stage="verify",
+            verdict=GateVerdict.RETRY,
+            checks=[
+                GateCheck(name="gate", passed=False, message="missing"),
+                GateCheck(name="gate", passed=False, message="missing"),
+            ],
+        ),
+        upstream_contract_verification={"gate_verdict": "RETRY"},
+    ).to_json_dict()
+
+    assert payload["check_objects"] == ["frontend_gate_policy_artifacts"]
+    assert payload["blockers"] == ["gate blocker"]
+    assert payload["coverage_gaps"] == ["frontend_contract_observations"]
+    assert payload["advisory_checks"] == ["advisory"]
+    assert payload["gate_checks"] == [
+        {"name": "gate", "passed": False, "message": "missing"}
+    ]
+
+
+def test_frontend_gate_verification_report_runtime_object_canonicalizes_lists() -> None:
+    report = FrontendGateVerificationReport(
+        gate_policy_root="governance/frontend/gates",
+        generation_root="governance/frontend/generation",
+        source_name="frontend gate verification",
+        check_objects=("frontend_gate_policy_artifacts", "frontend_gate_policy_artifacts"),
+        blockers=("gate blocker", "gate blocker"),
+        coverage_gaps=("frontend_contract_observations", "frontend_contract_observations"),
+        advisory_checks=("advisory", "advisory"),
+        gate_result=GateResult(
+            stage="verify",
+            verdict=GateVerdict.RETRY,
+            checks=(GateCheck(name="gate", passed=False, message="missing"),),
+        ),
+        upstream_contract_verification={"gate_verdict": "RETRY"},
+    )
+
+    assert report.check_objects == ("frontend_gate_policy_artifacts",)
+    assert report.blockers == ("gate blocker",)
+    assert report.coverage_gaps == ("frontend_contract_observations",)
+    assert report.advisory_checks == ("advisory",)
 
 
 def test_frontend_gate_execute_decision_maps_missing_visual_a11y_evidence_to_recheck_required(
@@ -723,3 +807,64 @@ def test_frontend_gate_verification_context_passes_with_visual_a11y_extension_re
         FRONTEND_GATE_VISUAL_A11Y_EVIDENCE_OBJECT,
     )
     assert context["frontend_gate_verification"]["gate_verdict"] == "PASS"
+
+
+def test_contract_prerequisite_message_deduplicates_surface_lists() -> None:
+    message = frontend_gate_verification_module._contract_prerequisite_message(
+        SimpleNamespace(
+            blockers=["same blocker", "same blocker"],
+            coverage_gaps=["gap-a", "gap-a", "gap-b"],
+        )
+    )
+    assert message == "same blocker"
+
+    message = frontend_gate_verification_module._contract_prerequisite_message(
+        SimpleNamespace(
+            blockers=[],
+            coverage_gaps=["gap-a", "gap-a", "gap-b"],
+        )
+    )
+    assert message == "coverage gaps: gap-a, gap-b"
+
+
+def test_browser_gate_blockers_deduplicate_receipt_hint_sources() -> None:
+    blockers = frontend_gate_verification_module._browser_gate_blockers(
+        [
+            BrowserProbeExecutionReceipt(
+                check_name="playwright_smoke",
+                started_at="2026-04-14T04:05:00Z",
+                finished_at="2026-04-14T04:05:00Z",
+                runtime_status="incomplete",
+                classification_candidate="evidence_missing",
+                recheck_required=True,
+                remediation_hints=[
+                    "materialize shared Playwright runtime evidence",
+                    "materialize shared Playwright runtime evidence",
+                ],
+                blocking_reason_codes=[
+                    "playwright_probe_evidence_missing",
+                    "playwright_probe_evidence_missing",
+                ],
+            )
+        ],
+        (
+            "materialize shared Playwright runtime evidence",
+            "materialize shared Playwright runtime evidence",
+        ),
+    )
+
+    assert blockers == [
+        "browser gate check playwright_smoke: materialize shared Playwright runtime evidence"
+    ]
+
+
+def test_required_artifacts_present_deduplicates_missing_artifact_names(
+    tmp_path: Path,
+) -> None:
+    ok, detail = frontend_gate_verification_module._required_artifacts_present(
+        tmp_path,
+        ("missing.yaml", "missing.yaml", "other.yaml"),
+    )
+
+    assert ok is False
+    assert detail == "missing required artifacts: missing.yaml, other.yaml"

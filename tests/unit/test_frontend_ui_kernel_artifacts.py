@@ -6,6 +6,7 @@ from pathlib import Path
 
 import yaml
 
+import ai_sdlc.generators.frontend_ui_kernel_artifacts as frontend_ui_kernel_artifacts_module
 from ai_sdlc.generators.frontend_ui_kernel_artifacts import (
     frontend_ui_kernel_root,
     materialize_frontend_ui_kernel_artifacts,
@@ -241,3 +242,22 @@ def test_p1_page_recipe_expansion_artifacts_preserve_recipe_truth(tmp_path) -> N
 
 def test_frontend_ui_kernel_root_is_stable(tmp_path) -> None:
     assert frontend_ui_kernel_root(tmp_path) == tmp_path / "kernel" / "frontend"
+
+
+def test_materialize_frontend_ui_kernel_artifacts_deduplicates_returned_paths(
+    tmp_path,
+    monkeypatch,
+) -> None:
+    kernel = build_mvp_frontend_ui_kernel()
+    repeated_path = tmp_path / "kernel" / "frontend" / "page-recipes" / "FormPage.yaml"
+
+    monkeypatch.setattr(
+        frontend_ui_kernel_artifacts_module,
+        "_write_page_recipe",
+        lambda base_dir, recipe: repeated_path,
+    )
+
+    paths = materialize_frontend_ui_kernel_artifacts(tmp_path, kernel)
+
+    rel_paths = [path.relative_to(tmp_path).as_posix() for path in paths]
+    assert rel_paths == list(dict.fromkeys(rel_paths))

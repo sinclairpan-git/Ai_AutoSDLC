@@ -11,6 +11,10 @@ from ai_sdlc.core.frontend_contract_observation_provider import (
 from ai_sdlc.core.frontend_contract_verification import (
     FRONTEND_CONTRACT_CHECK_OBJECTS,
     FRONTEND_CONTRACT_SOURCE_NAME,
+    FrontendContractVerificationReport,
+    VerificationDiagnosticEvidence,
+    VerificationDiagnosticPolicyProjection,
+    VerificationDiagnosticRecord,
     build_frontend_contract_verification_context,
     build_frontend_contract_verification_report,
 )
@@ -33,6 +37,7 @@ from ai_sdlc.models import (
     ValidationFieldRule,
     WhitelistReference,
 )
+from ai_sdlc.models.gate import GateCheck, GateResult, GateVerdict
 
 
 def _build_contract_set() -> FrontendContractSet:
@@ -212,6 +217,49 @@ def test_build_frontend_contract_verification_report_returns_pass_context(tmp_pa
     )
 
 
+def test_frontend_contract_verification_report_runtime_object_canonicalizes_lists() -> None:
+    report = FrontendContractVerificationReport(
+        contracts_root="contracts/frontend",
+        source_name="frontend contract verification",
+        check_objects=("frontend_contract_artifacts", "frontend_contract_artifacts"),
+        observation_artifact_ref=None,
+        observation_artifact_status="missing_artifact",
+        observation_count=0,
+        diagnostic=VerificationDiagnosticRecord(
+            source_family="frontend_contract",
+            source_key="frontend_contract_observations",
+            diagnostic_status="missing_artifact",
+            evidence=VerificationDiagnosticEvidence(
+                artifact_ref=None,
+                observation_count=0,
+                parse_error_summary=None,
+                drift_summary=None,
+                source_linkage={},
+            ),
+            policy_projection=VerificationDiagnosticPolicyProjection(
+                readiness_effect="retry",
+                report_family_member="frontend_contract_observations",
+                severity="blocker",
+                blocker_class="artifact_missing",
+                coverage_effect="gap",
+            ),
+        ),
+        blockers=("blocker", "blocker"),
+        coverage_gaps=("frontend_contract_observations", "frontend_contract_observations"),
+        advisory_checks=("advisory", "advisory"),
+        gate_result=GateResult(
+            stage="verify",
+            verdict=GateVerdict.RETRY,
+            checks=(GateCheck(name="gate", passed=False, message="missing"),),
+        ),
+    )
+
+    assert report.check_objects == ("frontend_contract_artifacts",)
+    assert report.blockers == ("blocker",)
+    assert report.coverage_gaps == ("frontend_contract_observations",)
+    assert report.advisory_checks == ("advisory",)
+
+
 def test_build_frontend_contract_verification_report_maps_missing_artifacts_to_gap(
     tmp_path,
 ) -> None:
@@ -259,6 +307,57 @@ def test_build_frontend_contract_verification_report_maps_missing_observations_t
         expected_parse_error_summary=None,
         expected_drift_summary_substring=None,
     )
+
+
+def test_frontend_contract_verification_report_to_json_dict_deduplicates_lists() -> None:
+    report = FrontendContractVerificationReport(
+        contracts_root="contracts/frontend",
+        source_name="frontend contract verification",
+        check_objects=("frontend_contract_artifacts", "frontend_contract_artifacts"),
+        observation_artifact_ref=None,
+        observation_artifact_status="missing_artifact",
+        observation_count=0,
+        diagnostic=VerificationDiagnosticRecord(
+            source_family="frontend_contract",
+            source_key="frontend_contract_observations",
+            diagnostic_status="missing_artifact",
+            evidence=VerificationDiagnosticEvidence(
+                artifact_ref=None,
+                observation_count=0,
+                parse_error_summary=None,
+                drift_summary=None,
+                source_linkage={},
+            ),
+            policy_projection=VerificationDiagnosticPolicyProjection(
+                readiness_effect="retry",
+                report_family_member="frontend_contract_observations",
+                severity="blocker",
+                blocker_class="coverage_gap",
+                coverage_effect="gap",
+            ),
+        ),
+        blockers=("missing observations", "missing observations"),
+        coverage_gaps=("frontend_contract_observations", "frontend_contract_observations"),
+        advisory_checks=("advisory", "advisory"),
+        gate_result=GateResult(
+            stage="verify",
+            verdict=GateVerdict.RETRY,
+            checks=(
+                GateCheck(name="present", passed=False, message="missing"),
+                GateCheck(name="present", passed=False, message="missing"),
+            ),
+        ),
+    )
+
+    payload = report.to_json_dict()
+
+    assert payload["check_objects"] == ["frontend_contract_artifacts"]
+    assert payload["blockers"] == ["missing observations"]
+    assert payload["coverage_gaps"] == ["frontend_contract_observations"]
+    assert payload["advisory_checks"] == ["advisory"]
+    assert payload["gate_checks"] == [
+        {"name": "present", "passed": False, "message": "missing"}
+    ]
 
 
 def test_build_frontend_contract_verification_report_short_circuits_invalid_before_valid_empty(

@@ -4,11 +4,14 @@ from __future__ import annotations
 
 import subprocess
 from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import patch
 
+import pytest
 import yaml
 from typer.testing import CliRunner
 
+import ai_sdlc.cli.program_cmd as program_cmd_module
 import ai_sdlc.core.program_service as program_service_module
 from ai_sdlc.cli.main import app
 from ai_sdlc.core.config import save_project_config
@@ -139,6 +142,1158 @@ def _write_frontend_solution_confirmation_artifacts(root: Path, *, snapshot=None
     )
 
 
+def test_frontend_recheck_and_remediation_helper_lines_deduplicate_nested_items() -> None:
+    step = SimpleNamespace(
+        spec_id="001-auth",
+        frontend_recheck_handoff=SimpleNamespace(
+            reason="recheck required",
+            recommended_commands=("cmd-a", "cmd-a", "cmd-b"),
+        ),
+        frontend_remediation_input=SimpleNamespace(
+            state="blocked",
+            fix_inputs=["contract-observations"],
+            blockers=["context missing"],
+            suggested_actions=("action-a", "action-a", "action-b"),
+            recommended_commands=("cmd-a", "cmd-a", "cmd-b"),
+            plain_language_blockers=("explain-a", "explain-a", "explain-b"),
+            recommended_next_steps=("next-a", "next-a", "next-b"),
+        ),
+    )
+
+    recheck_lines = program_cmd_module._frontend_recheck_output_lines([step])
+    remediation_lines = program_cmd_module._frontend_remediation_output_lines([step])
+    recheck_report_lines = program_cmd_module._frontend_recheck_report_lines([step])
+    remediation_report_lines = program_cmd_module._frontend_remediation_report_lines([step])
+
+    assert recheck_lines == [
+        "  - 001-auth: recheck required",
+        "    command: cmd-a",
+        "    command: cmd-b",
+    ]
+    assert remediation_lines == [
+        "  - 001-auth: blocked [contract-observations]",
+        "    action: action-a",
+        "    action: action-b",
+        "    command: cmd-a",
+        "    command: cmd-b",
+        "    explain: explain-a",
+        "    explain: explain-b",
+        "    next step: next-a",
+        "    next step: next-b",
+    ]
+    assert recheck_report_lines == [
+        "- 001-auth: recheck required",
+        "  - `cmd-a`",
+        "  - `cmd-b`",
+    ]
+    assert remediation_report_lines == [
+        "- 001-auth: blocked [contract-observations]",
+        "  - action-a",
+        "  - action-b",
+        "  - `cmd-a`",
+        "  - `cmd-b`",
+        "  - explain: explain-a",
+        "  - explain: explain-b",
+        "  - next step: next-a",
+        "  - next step: next-b",
+    ]
+
+
+def test_render_frontend_remediation_execution_result_deduplicates_written_paths() -> None:
+    results = [
+        SimpleNamespace(
+            command="materialize frontend contract observations",
+            status="completed",
+            written_paths=[
+                "specs/001-auth/frontend-contract-observations.yaml",
+                "specs/001-auth/frontend-contract-observations.yaml",
+                "specs/001-auth/frontend-contract-index.yaml",
+            ],
+            summary="done",
+        )
+    ]
+
+    with program_cmd_module.console.capture() as capture:
+        program_cmd_module._render_frontend_remediation_execution_result(results)
+
+    output = capture.get()
+    assert output.count("wrote: specs/001-auth/frontend-contract-observations.yaml") == 1
+    assert output.count("wrote: specs/001-auth/frontend-contract-index.yaml") == 1
+
+
+def test_frontend_solution_confirmation_report_lines_deduplicate_artifact_paths() -> None:
+    snapshot = build_mvp_solution_snapshot()
+
+    lines = program_cmd_module._frontend_solution_confirmation_report_lines(
+        manifest="program-manifest.yaml",
+        mode_title="Frontend Solution Confirmation Dry-Run",
+        snapshot=snapshot,
+        mode="simple",
+        latest_snapshot_path=None,
+        artifact_paths=[
+            Path("governance/frontend/solution/style-packs/a.yaml"),
+            Path("governance/frontend/solution/style-packs/a.yaml"),
+            Path("governance/frontend/solution/style-packs/b.yaml"),
+        ],
+    )
+
+    assert lines.count("- `governance/frontend/solution/style-packs/a.yaml`") == 1
+    assert lines.count("- `governance/frontend/solution/style-packs/b.yaml`") == 1
+
+
+def test_project_cleanup_truth_helper_lines_deduplicate_duplicate_items() -> None:
+    duplicate_items = [
+        {
+            "target_id": "cleanup-thread-archive-report",
+            "path": "specs/001-auth/threads/archive-001.md",
+            "kind": "thread_archive",
+            "cleanup_action": "archive_thread_report",
+            "reason": "same reason",
+        },
+        {
+            "target_id": "cleanup-thread-archive-report",
+            "path": "specs/001-auth/threads/archive-001.md",
+            "kind": "thread_archive",
+            "cleanup_action": "archive_thread_report",
+            "reason": "same reason",
+        },
+    ]
+
+    output_lines = program_cmd_module._project_cleanup_truth_block_lines(
+        "cleanup target",
+        duplicate_items,
+        state="listed",
+        action_field="cleanup_action",
+        path_field="path",
+        kind_field="kind",
+    )
+    report_lines = program_cmd_module._project_cleanup_truth_report_block_lines(
+        "Cleanup targets",
+        duplicate_items,
+        state="listed",
+        action_field="cleanup_action",
+        path_field="path",
+        kind_field="kind",
+    )
+
+    assert output_lines == [
+        "  - cleanup target: cleanup-thread-archive-report | thread_archive | specs/001-auth/threads/archive-001.md | archive_thread_report",
+        "    reason: same reason",
+    ]
+    assert report_lines == [
+        "- Cleanup targets:",
+        "  - `cleanup-thread-archive-report` | `thread_archive` | `specs/001-auth/threads/archive-001.md` | `archive_thread_report`",
+        "    - reason: same reason",
+    ]
+
+
+def test_project_cleanup_truth_helper_lines_collect_first_three_unique_items() -> None:
+    items = [
+        {
+            "target_id": "cleanup-thread-archive-report-a",
+            "path": "specs/001-auth/threads/archive-001.md",
+            "kind": "thread_archive",
+            "cleanup_action": "archive_thread_report",
+            "reason": "same reason",
+        },
+        {
+            "target_id": "cleanup-thread-archive-report-a",
+            "path": "specs/001-auth/threads/archive-001.md",
+            "kind": "thread_archive",
+            "cleanup_action": "archive_thread_report",
+            "reason": "same reason",
+        },
+        {
+            "target_id": "cleanup-thread-archive-report-b",
+            "path": "specs/001-auth/threads/archive-002.md",
+            "kind": "thread_archive",
+            "cleanup_action": "archive_thread_report",
+            "reason": "second reason",
+        },
+        {
+            "target_id": "cleanup-thread-archive-report-c",
+            "path": "specs/001-auth/threads/archive-003.md",
+            "kind": "thread_archive",
+            "cleanup_action": "archive_thread_report",
+            "reason": "third reason",
+        },
+    ]
+
+    output_lines = program_cmd_module._project_cleanup_truth_block_lines(
+        "cleanup target",
+        items,
+        state="listed",
+        action_field="cleanup_action",
+        path_field="path",
+        kind_field="kind",
+    )
+    report_lines = program_cmd_module._project_cleanup_truth_report_block_lines(
+        "Cleanup targets",
+        items,
+        state="listed",
+        action_field="cleanup_action",
+        path_field="path",
+        kind_field="kind",
+    )
+
+    output = "\n".join(output_lines)
+    report = "\n".join(report_lines)
+    assert output.count("cleanup-thread-archive-report-a") == 1
+    assert output.count("cleanup-thread-archive-report-b") == 1
+    assert output.count("cleanup-thread-archive-report-c") == 1
+    assert report.count("cleanup-thread-archive-report-a") == 1
+    assert report.count("cleanup-thread-archive-report-b") == 1
+    assert report.count("cleanup-thread-archive-report-c") == 1
+
+
+def test_render_truth_release_capability_lines_deduplicates_repeated_display_lists() -> None:
+    capability = {
+        "capability_id": "frontend-mainline-delivery",
+        "closure_state": "capability_open",
+        "audit_state": "blocked",
+        "plain_language_blockers": [
+            "browser gate evidence is still missing",
+            "browser gate evidence is still missing",
+        ],
+        "recommended_next_steps": [
+            "python -m ai_sdlc program browser-gate-probe --execute",
+            "python -m ai_sdlc program browser-gate-probe --execute",
+        ],
+        "blocking_refs": [
+            "frontend_delivery:browser_gate",
+            "frontend_delivery:browser_gate",
+        ],
+        "capability_next_actions": [],
+    }
+
+    with program_cmd_module.console.capture() as capture:
+        program_cmd_module._render_truth_release_capability_lines([capability])
+
+    output = capture.get()
+    assert output.count("explain: browser gate evidence is still missing") == 1
+    assert output.count(
+        "next step: python -m ai_sdlc program browser-gate-probe --execute"
+    ) == 1
+    assert output.count("blocker: frontend_delivery:browser_gate") == 1
+
+
+def test_render_truth_ledger_lines_deduplicates_release_targets() -> None:
+    with program_cmd_module.console.capture() as capture:
+        program_cmd_module._render_truth_ledger_lines(
+            {
+                "state": "blocked",
+                "snapshot_state": "fresh",
+                "detail": "release targets blocked",
+                "next_required_actions": [],
+                "release_targets": [
+                    "frontend-mainline-delivery",
+                    "frontend-mainline-delivery",
+                    "project-meta-foundations",
+                ],
+                "release_capabilities": [],
+                "migration_pending_count": 0,
+                "source_inventory": None,
+            }
+        )
+
+    output = capture.get()
+    assert (
+        output.count(
+            "release targets: frontend-mainline-delivery, project-meta-foundations"
+        )
+        == 1
+    )
+
+
+def test_render_truth_validation_summary_deduplicates_counts_and_samples() -> None:
+    with program_cmd_module.console.capture() as capture:
+        program_cmd_module._render_truth_validation_summary(
+            errors=["validation drift", "validation drift"],
+            warnings=[
+                "duplicate warning",
+                "duplicate warning",
+                "second warning",
+                "migration_pending:001-auth",
+                "migration_pending:001-auth",
+            ],
+        )
+
+    output = capture.get()
+    assert "warnings: 2" in output
+    assert output.count("warning: duplicate warning") == 1
+    assert output.count("warning: second warning") == 1
+    assert "migration_pending:001-auth" not in output
+    assert "validation errors: 1" in output
+    assert output.count("validation: validation drift") == 1
+
+
+def test_render_truth_source_inventory_deduplicates_unmapped_paths() -> None:
+    with program_cmd_module.console.capture() as capture:
+        program_cmd_module._render_truth_source_inventory(
+            {
+                "state": "blocked",
+                "mapped_sources": 1,
+                "total_sources": 3,
+                "unmapped_sources": 2,
+                "missing_sources": 0,
+                "phase_signal_count": 0,
+                "deferred_signal_count": 0,
+                "non_goal_signal_count": 0,
+                "layer_totals": {},
+                "layer_materialized": {},
+                "unmapped_paths": [
+                    "specs/001-auth/spec.md",
+                    "specs/001-auth/spec.md",
+                    "specs/002-course/spec.md",
+                ],
+            }
+        )
+
+    output = capture.get()
+    assert output.count("unmapped source: specs/001-auth/spec.md") == 1
+    assert output.count("unmapped source: specs/002-course/spec.md") == 1
+
+
+def test_format_frontend_readiness_deduplicates_coverage_gap_summary() -> None:
+    formatted = program_cmd_module._format_frontend_readiness(
+        SimpleNamespace(
+            state="blocked",
+            execute_gate_state="blocked",
+            decision_reason="coverage_missing",
+            coverage_gaps=[
+                "frontend_contract_observations",
+                "frontend_contract_observations",
+                "frontend_visual_a11y_evidence",
+            ],
+            blockers=[],
+        )
+    )
+
+    assert (
+        formatted
+        == "blocked [coverage_missing; frontend_contract_observations, frontend_visual_a11y_evidence]"
+    )
+
+
+def test_format_frontend_remediation_deduplicates_fix_inputs() -> None:
+    formatted = program_cmd_module._format_frontend_remediation(
+        SimpleNamespace(
+            state="required",
+            fix_inputs=[
+                "frontend_contract_observations",
+                "frontend_contract_observations",
+                "frontend_gate_policy_artifacts",
+            ],
+            blockers=[],
+        )
+    )
+
+    assert (
+        formatted
+        == "required [frontend_contract_observations, frontend_gate_policy_artifacts]"
+    )
+
+
+def test_format_frontend_readiness_deduplicates_blocker_summary() -> None:
+    formatted = program_cmd_module._format_frontend_readiness(
+        SimpleNamespace(
+            state="blocked",
+            execute_gate_state="blocked",
+            decision_reason="blocked",
+            coverage_gaps=[],
+            blockers=["same blocker", "same blocker"],
+        )
+    )
+
+    assert formatted == "blocked [blocked; same blocker]"
+
+
+def test_format_frontend_remediation_deduplicates_blocker_summary() -> None:
+    formatted = program_cmd_module._format_frontend_remediation(
+        SimpleNamespace(
+            state="required",
+            fix_inputs=[],
+            blockers=["same blocker", "same blocker"],
+        )
+    )
+
+    assert formatted == "required [same blocker]"
+
+
+def test_render_frontend_delivery_context_lines_deduplicates_selected_packages() -> None:
+    class _FakeProgramService:
+        def build_frontend_delivery_registry_handoff(self) -> SimpleNamespace:
+            return SimpleNamespace(
+                effective_provider_id="public-primevue",
+                entry_id="vue3-public-primevue",
+                requested_frontend_stack="vue3",
+                effective_frontend_stack="vue3",
+                component_library_packages=[
+                    "primevue",
+                    "primevue",
+                    "@primeuix/themes",
+                    "@primeuix/themes",
+                ],
+            )
+
+        def build_frontend_provider_runtime_adapter_handoff(self) -> SimpleNamespace:
+            return SimpleNamespace(
+                effective_provider_id="public-primevue",
+                requested_frontend_stack="vue3",
+                carrier_mode="target-project-adapter-layer",
+                runtime_delivery_state="scaffolded",
+                evidence_return_state="missing",
+            )
+
+        def build_frontend_delivery_status_surface(self) -> dict[str, object]:
+            return {}
+
+        def build_frontend_inheritance_status_surface(self) -> dict[str, str]:
+            return {}
+
+    with program_cmd_module.console.capture() as capture:
+        program_cmd_module._render_frontend_delivery_context_lines(_FakeProgramService())
+
+    output = capture.get()
+    assert output.count("selected package: primevue") == 1
+    assert output.count("selected package: @primeuix/themes") == 1
+
+
+def test_render_managed_delivery_apply_guard_deduplicates_low_risk_display_lists() -> None:
+    request = SimpleNamespace(
+        action_plan_id="delivery-plan-001",
+        selected_action_ids=["action-a", "action-b"],
+        executable_action_ids=["action-a"],
+        unsupported_action_ids=["action-b"],
+        request_source_path=".ai-sdlc/memory/frontend-managed-delivery/latest.yaml",
+        apply_state="ready",
+        confirmation_required=False,
+        execution_view=SimpleNamespace(
+            action_items=[
+                SimpleNamespace(action_id="action-a", action_type="dependency_install"),
+                SimpleNamespace(action_id="action-b", action_type="dependency_install"),
+            ],
+            managed_target_path="managed/frontend",
+            will_not_touch=["legacy-root", "legacy-root", "src/legacy"],
+        ),
+        remaining_blockers=[],
+        plain_language_blockers=[],
+        recommended_next_steps=[],
+    )
+
+    with program_cmd_module.console.capture() as capture:
+        program_cmd_module._render_managed_delivery_apply_guard(
+            "Program Managed Delivery Apply Dry-Run",
+            request,
+        )
+
+    output = capture.get()
+    assert output.count("selected action types: dependency_install") == 1
+    assert output.count("will not touch: legacy-root, src/legacy") == 1
+
+
+def test_frontend_solution_confirmation_display_deduplicates_changed_fields() -> None:
+    snapshot = build_mvp_solution_snapshot()
+
+    with (
+        patch.object(
+            program_cmd_module,
+            "_frontend_solution_confirmation_change_fields",
+            return_value=[
+                "frontend_stack",
+                "frontend_stack",
+                "provider_id",
+                "style_pack_id",
+                "style_pack_id",
+            ],
+        ),
+        program_cmd_module.console.capture() as capture,
+    ):
+        program_cmd_module._render_frontend_solution_confirmation_wizard(snapshot)
+        program_cmd_module._render_frontend_solution_confirmation_final(snapshot)
+
+    output = capture.get()
+    assert output.count(
+        "effective_diff: frontend_stack, provider_id, style_pack_id"
+    ) == 1
+    assert output.count(
+        "will_change_on_confirm: frontend_stack, provider_id, style_pack_id"
+    ) == 1
+
+
+def test_frontend_solution_confirmation_report_lines_deduplicate_changed_fields() -> None:
+    snapshot = build_mvp_solution_snapshot()
+
+    with patch.object(
+        program_cmd_module,
+        "_frontend_solution_confirmation_change_fields",
+        return_value=[
+            "frontend_stack",
+            "frontend_stack",
+            "provider_id",
+            "style_pack_id",
+            "style_pack_id",
+        ],
+    ):
+        lines = program_cmd_module._frontend_solution_confirmation_report_lines(
+            manifest="program-manifest.yaml",
+            mode_title="Frontend Solution Confirmation Dry-Run",
+            snapshot=snapshot,
+            mode="advanced",
+            latest_snapshot_path=None,
+            artifact_paths=[],
+        )
+
+    assert lines.count(
+        "- will_change_on_confirm: `frontend_stack, provider_id, style_pack_id`"
+    ) == 1
+
+
+def test_program_validate_deduplicates_repeated_manifest_errors(tmp_path: Path) -> None:
+    with (
+        patch("ai_sdlc.cli.program_cmd.find_project_root", return_value=tmp_path),
+        patch.object(program_service_module.ProgramService, "load_manifest", return_value=object()),
+        patch.object(
+            program_service_module.ProgramService,
+            "validate_manifest",
+            return_value=SimpleNamespace(
+                valid=False,
+                errors=[
+                    "duplicate manifest error",
+                    "duplicate manifest error",
+                ],
+                warnings=[],
+            ),
+        ),
+    ):
+        result = runner.invoke(app, ["program", "validate"])
+
+    assert result.exit_code == 1
+    assert result.output.count("duplicate manifest error") == 1
+
+
+def test_program_browser_gate_probe_dry_run_deduplicates_execution_context_lists(
+    tmp_path: Path,
+) -> None:
+    request = SimpleNamespace(
+        apply_artifact_path=".ai-sdlc/memory/frontend-managed-delivery-apply/latest.yaml",
+        gate_run_id="gate-run-001",
+        spec_dir="specs/001-auth",
+        required_probe_set=[
+            "visual-regression",
+            "visual-regression",
+            "interaction",
+        ],
+        probe_state="ready",
+        execution_context=SimpleNamespace(
+            managed_frontend_target="src/frontend",
+            delivery_entry_id="vue3-public-primevue",
+            provider_theme_adapter_id="primevue-theme-adapter",
+            component_library_packages=[
+                "primevue",
+                "primevue",
+                "@primeuix/themes",
+                "@primeuix/themes",
+            ],
+            page_schema_ids=[
+                "dashboard-workspace",
+                "dashboard-workspace",
+                "search-list-workspace",
+            ],
+            browser_entry_ref="contracts/frontend/browser-entry.yaml",
+        ),
+        overall_gate_status_preview="pending",
+        remaining_blockers=[],
+        plain_language_blockers=[],
+        recommended_next_steps=[],
+    )
+
+    with (
+        patch("ai_sdlc.cli.program_cmd.find_project_root", return_value=tmp_path),
+        patch.object(
+            program_service_module.ProgramService,
+            "build_frontend_browser_gate_probe_request",
+            return_value=request,
+        ),
+    ):
+        result = runner.invoke(app, ["program", "browser-gate-probe", "--dry-run"])
+
+    assert result.exit_code == 0
+    assert result.output.count("visual-regression") == 1
+    assert "interaction" in result.output
+    assert result.output.count("component package: primevue") == 1
+    assert result.output.count("component package: @primeuix/themes") == 1
+    assert result.output.count("page schema: dashboard-workspace") == 1
+    assert result.output.count("page schema: search-list-workspace") == 1
+
+
+@pytest.mark.parametrize(
+    ("command_name", "builder_name", "handoff"),
+    [
+        (
+            "page-ui-schema-handoff",
+            "build_frontend_page_ui_schema_handoff",
+            SimpleNamespace(
+                state="ready",
+                schema_version="1",
+                effective_provider_id="public-primevue",
+                effective_style_pack_id="modern-saas",
+                delivery_entry_id="vue3-public-primevue",
+                provider_theme_adapter_id="primevue-theme-adapter",
+                component_library_packages=[
+                    "primevue",
+                    "primevue",
+                    "@primeuix/themes",
+                    "@primeuix/themes",
+                ],
+                entries=[],
+                blockers=[],
+                warnings=[],
+            ),
+        ),
+        (
+            "delivery-registry-handoff",
+            "build_frontend_delivery_registry_handoff",
+            SimpleNamespace(
+                state="ready",
+                schema_version="1",
+                registry_id="frontend-delivery-registry",
+                entry_id="vue3-public-primevue",
+                effective_provider_id="public-primevue",
+                requested_frontend_stack="vue3",
+                effective_frontend_stack="vue3",
+                requested_style_pack_id="modern-saas",
+                effective_style_pack_id="modern-saas",
+                access_mode="public",
+                install_strategy_ids=[],
+                package_manager="npm",
+                provider_manifest_ref="governance/frontend/provider.manifest.yaml",
+                provider_theme_adapter_id="primevue-theme-adapter",
+                component_library_packages=[
+                    "primevue",
+                    "primevue",
+                    "@primeuix/themes",
+                    "@primeuix/themes",
+                ],
+                adapter_packages=[],
+                availability_prerequisites=[],
+                runtime_requirements=[],
+                supported_posture_modes=[],
+                supported_style_entries=[],
+                blockers=[],
+                warnings=[],
+            ),
+        ),
+        (
+            "generation-constraints-handoff",
+            "build_frontend_generation_constraints_handoff",
+            SimpleNamespace(
+                state="ready",
+                work_item_id="001-auth",
+                effective_provider_id="public-primevue",
+                delivery_entry_id="vue3-public-primevue",
+                managed_delivery_apply_state="not_applied",
+                managed_delivery_apply_artifact_path=None,
+                provider_theme_adapter_id="primevue-theme-adapter",
+                provider_runtime_adapter_carrier_mode="target-project-adapter-layer",
+                provider_runtime_adapter_delivery_state="scaffolded",
+                provider_runtime_adapter_evidence_state="missing",
+                component_library_packages=[
+                    "primevue",
+                    "primevue",
+                    "@primeuix/themes",
+                    "@primeuix/themes",
+                ],
+                page_schema_ids=[],
+                allowed_recipe_ids=[],
+                whitelist_component_ids=[],
+                blockers=[],
+                warnings=[],
+            ),
+        ),
+        (
+            "theme-token-governance-handoff",
+            "build_frontend_theme_token_governance_handoff",
+            SimpleNamespace(
+                state="ready",
+                schema_version="1",
+                effective_provider_id="public-primevue",
+                delivery_entry_id="vue3-public-primevue",
+                provider_theme_adapter_id="primevue-theme-adapter",
+                provider_runtime_adapter_carrier_mode="target-project-adapter-layer",
+                provider_runtime_adapter_delivery_state="scaffolded",
+                provider_runtime_adapter_evidence_state="missing",
+                component_library_packages=[
+                    "primevue",
+                    "primevue",
+                    "@primeuix/themes",
+                    "@primeuix/themes",
+                ],
+                requested_style_pack_id="modern-saas",
+                effective_style_pack_id="modern-saas",
+                artifact_root="governance/frontend/theme-token-governance",
+                token_mapping_count=3,
+                page_schema_ids=[],
+                override_diagnostics=[],
+                blockers=[],
+                warnings=[],
+            ),
+        ),
+        (
+            "quality-platform-handoff",
+            "build_frontend_quality_platform_handoff",
+            SimpleNamespace(
+                state="ready",
+                schema_version="1",
+                effective_provider_id="public-primevue",
+                delivery_entry_id="vue3-public-primevue",
+                managed_delivery_apply_state="not_applied",
+                managed_delivery_apply_artifact_path=None,
+                provider_theme_adapter_id="primevue-theme-adapter",
+                provider_runtime_adapter_carrier_mode="target-project-adapter-layer",
+                provider_runtime_adapter_delivery_state="scaffolded",
+                provider_runtime_adapter_evidence_state="missing",
+                component_library_packages=[
+                    "primevue",
+                    "primevue",
+                    "@primeuix/themes",
+                    "@primeuix/themes",
+                ],
+                requested_style_pack_id="modern-saas",
+                effective_style_pack_id="modern-saas",
+                artifact_root="governance/frontend/quality-platform",
+                matrix_coverage_count=3,
+                evidence_contract_ids=[],
+                page_schema_ids=[],
+                quality_diagnostics=[],
+                blockers=[],
+                warnings=[],
+            ),
+        ),
+    ],
+)
+def test_frontend_handoff_commands_deduplicate_component_packages(
+    command_name: str,
+    builder_name: str,
+    handoff: SimpleNamespace,
+    tmp_path: Path,
+) -> None:
+    with (
+        patch("ai_sdlc.cli.program_cmd.find_project_root", return_value=tmp_path),
+        patch.object(program_service_module.ProgramService, builder_name, return_value=handoff),
+    ):
+        result = runner.invoke(app, ["program", command_name])
+
+    assert result.exit_code == 0
+    assert result.output.count("component package: primevue") == 1
+    assert result.output.count("component package: @primeuix/themes") == 1
+
+
+@pytest.mark.parametrize(
+    ("command_name", "builder_name", "handoff"),
+    [
+        (
+            "page-ui-schema-handoff",
+            "build_frontend_page_ui_schema_handoff",
+            SimpleNamespace(
+                state="blocked",
+                schema_version="1",
+                effective_provider_id="public-primevue",
+                effective_style_pack_id="modern-saas",
+                delivery_entry_id="vue3-public-primevue",
+                provider_theme_adapter_id="primevue-theme-adapter",
+                component_library_packages=[],
+                entries=[],
+                blockers=["duplicate blocker", "duplicate blocker"],
+                warnings=[],
+            ),
+        ),
+        (
+            "delivery-registry-handoff",
+            "build_frontend_delivery_registry_handoff",
+            SimpleNamespace(
+                state="blocked",
+                schema_version="1",
+                registry_id="frontend-delivery-registry",
+                entry_id="vue3-public-primevue",
+                effective_provider_id="public-primevue",
+                requested_frontend_stack="vue3",
+                effective_frontend_stack="vue3",
+                requested_style_pack_id="modern-saas",
+                effective_style_pack_id="modern-saas",
+                access_mode="public",
+                install_strategy_ids=[],
+                package_manager="npm",
+                provider_manifest_ref="governance/frontend/provider.manifest.yaml",
+                provider_theme_adapter_id="primevue-theme-adapter",
+                component_library_packages=[],
+                adapter_packages=[],
+                availability_prerequisites=[],
+                runtime_requirements=[],
+                supported_posture_modes=[],
+                supported_style_entries=[],
+                blockers=["duplicate blocker", "duplicate blocker"],
+                warnings=[],
+            ),
+        ),
+        (
+            "generation-constraints-handoff",
+            "build_frontend_generation_constraints_handoff",
+            SimpleNamespace(
+                state="blocked",
+                work_item_id="001-auth",
+                effective_provider_id="public-primevue",
+                delivery_entry_id="vue3-public-primevue",
+                managed_delivery_apply_state="not_applied",
+                managed_delivery_apply_artifact_path=None,
+                provider_theme_adapter_id="primevue-theme-adapter",
+                provider_runtime_adapter_carrier_mode="target-project-adapter-layer",
+                provider_runtime_adapter_delivery_state="scaffolded",
+                provider_runtime_adapter_evidence_state="missing",
+                component_library_packages=[],
+                page_schema_ids=[],
+                allowed_recipe_ids=[],
+                whitelist_component_ids=[],
+                blockers=["duplicate blocker", "duplicate blocker"],
+                warnings=[],
+            ),
+        ),
+        (
+            "theme-token-governance-handoff",
+            "build_frontend_theme_token_governance_handoff",
+            SimpleNamespace(
+                state="blocked",
+                schema_version="1",
+                effective_provider_id="public-primevue",
+                delivery_entry_id="vue3-public-primevue",
+                provider_theme_adapter_id="primevue-theme-adapter",
+                provider_runtime_adapter_carrier_mode="target-project-adapter-layer",
+                provider_runtime_adapter_delivery_state="scaffolded",
+                provider_runtime_adapter_evidence_state="missing",
+                component_library_packages=[],
+                requested_style_pack_id="modern-saas",
+                effective_style_pack_id="modern-saas",
+                artifact_root="governance/frontend/theme-token-governance",
+                token_mapping_count=3,
+                page_schema_ids=[],
+                override_diagnostics=[],
+                blockers=["duplicate blocker", "duplicate blocker"],
+                warnings=[],
+            ),
+        ),
+        (
+            "quality-platform-handoff",
+            "build_frontend_quality_platform_handoff",
+            SimpleNamespace(
+                state="blocked",
+                schema_version="1",
+                effective_provider_id="public-primevue",
+                delivery_entry_id="vue3-public-primevue",
+                managed_delivery_apply_state="not_applied",
+                managed_delivery_apply_artifact_path=None,
+                provider_theme_adapter_id="primevue-theme-adapter",
+                provider_runtime_adapter_carrier_mode="target-project-adapter-layer",
+                provider_runtime_adapter_delivery_state="scaffolded",
+                provider_runtime_adapter_evidence_state="missing",
+                component_library_packages=[],
+                requested_style_pack_id="modern-saas",
+                effective_style_pack_id="modern-saas",
+                artifact_root="governance/frontend/quality-platform",
+                matrix_coverage_count=3,
+                evidence_contract_ids=[],
+                page_schema_ids=[],
+                quality_diagnostics=[],
+                blockers=["duplicate blocker", "duplicate blocker"],
+                warnings=[],
+            ),
+        ),
+        (
+            "provider-expansion-handoff",
+            "build_frontend_provider_expansion_handoff",
+            SimpleNamespace(
+                state="blocked",
+                schema_version="1",
+                effective_provider_id="public-primevue",
+                requested_frontend_stack="vue3",
+                effective_frontend_stack="vue3",
+                artifact_root="governance/frontend/provider-expansion",
+                react_stack_visibility="hidden",
+                react_binding_visibility="hidden",
+                provider_diagnostics=[],
+                blockers=["duplicate blocker", "duplicate blocker"],
+                warnings=[],
+            ),
+        ),
+        (
+            "provider-runtime-adapter-handoff",
+            "build_frontend_provider_runtime_adapter_handoff",
+            SimpleNamespace(
+                state="blocked",
+                schema_version="1",
+                effective_provider_id="public-primevue",
+                requested_frontend_stack="vue3",
+                effective_frontend_stack="vue3",
+                artifact_root="governance/frontend/provider-runtime-adapter",
+                carrier_mode="target-project-adapter-layer",
+                runtime_delivery_state="scaffolded",
+                evidence_return_state="missing",
+                provider_diagnostics=[],
+                blockers=["duplicate blocker", "duplicate blocker"],
+                warnings=[],
+            ),
+        ),
+        (
+            "cross-provider-consistency-handoff",
+            "build_frontend_cross_provider_consistency_handoff",
+            SimpleNamespace(
+                state="blocked",
+                schema_version="1",
+                artifact_root="governance/frontend/cross-provider-consistency",
+                provider_runtime_adapter_carrier_mode="target-project-adapter-layer",
+                provider_runtime_adapter_delivery_state="scaffolded",
+                provider_runtime_adapter_evidence_state="missing",
+                pair_count=3,
+                ready_pair_count=1,
+                conditional_pair_count=1,
+                blocked_pair_count=1,
+                page_schema_ids=[],
+                pair_diagnostics=[],
+                blockers=["duplicate blocker", "duplicate blocker"],
+                warnings=[],
+            ),
+        ),
+    ],
+)
+def test_frontend_handoff_commands_deduplicate_blockers(
+    command_name: str,
+    builder_name: str,
+    handoff: SimpleNamespace,
+    tmp_path: Path,
+) -> None:
+    with (
+        patch("ai_sdlc.cli.program_cmd.find_project_root", return_value=tmp_path),
+        patch.object(program_service_module.ProgramService, builder_name, return_value=handoff),
+    ):
+        result = runner.invoke(app, ["program", command_name])
+
+    assert result.exit_code == 1
+    assert result.output.count("blocker: duplicate blocker") == 1
+
+
+def test_delivery_registry_handoff_deduplicates_registry_list_fields(
+    tmp_path: Path,
+) -> None:
+    handoff = SimpleNamespace(
+        state="ready",
+        schema_version="1",
+        registry_id="frontend-delivery-registry",
+        entry_id="vue3-public-primevue",
+        effective_provider_id="public-primevue",
+        requested_frontend_stack="vue3",
+        effective_frontend_stack="vue3",
+        requested_style_pack_id="modern-saas",
+        effective_style_pack_id="modern-saas",
+        access_mode="public",
+        install_strategy_ids=[
+            "npm-public",
+            "npm-public",
+        ],
+        package_manager="npm",
+        provider_manifest_ref="governance/frontend/provider.manifest.yaml",
+        provider_theme_adapter_id="primevue-theme-adapter",
+        component_library_packages=[],
+        adapter_packages=[
+            "@company/adapter",
+            "@company/adapter",
+        ],
+        availability_prerequisites=[
+            "registry-token",
+            "registry-token",
+        ],
+        runtime_requirements=[
+            "node>=20",
+            "node>=20",
+        ],
+        supported_posture_modes=[
+            "strict",
+            "strict",
+        ],
+        supported_style_entries=[],
+        blockers=[],
+        warnings=[],
+    )
+
+    with (
+        patch("ai_sdlc.cli.program_cmd.find_project_root", return_value=tmp_path),
+        patch.object(
+            program_service_module.ProgramService,
+            "build_frontend_delivery_registry_handoff",
+            return_value=handoff,
+        ),
+    ):
+        result = runner.invoke(app, ["program", "delivery-registry-handoff"])
+
+    assert result.exit_code == 0
+    assert result.output.count("install strategy: npm-public") == 1
+    assert result.output.count("adapter package: @company/adapter") == 1
+    assert result.output.count("availability prerequisite: registry-token") == 1
+    assert result.output.count("runtime requirement: node>=20") == 1
+    assert result.output.count("supported posture: strict") == 1
+
+
+def test_generation_constraints_handoff_deduplicates_constraint_list_fields(
+    tmp_path: Path,
+) -> None:
+    handoff = SimpleNamespace(
+        state="ready",
+        work_item_id="001-auth",
+        effective_provider_id="public-primevue",
+        delivery_entry_id="vue3-public-primevue",
+        managed_delivery_apply_state="not_applied",
+        managed_delivery_apply_artifact_path=None,
+        provider_theme_adapter_id="primevue-theme-adapter",
+        provider_runtime_adapter_carrier_mode="target-project-adapter-layer",
+        provider_runtime_adapter_delivery_state="scaffolded",
+        provider_runtime_adapter_evidence_state="missing",
+        component_library_packages=[],
+        page_schema_ids=[
+            "dashboard-workspace",
+            "dashboard-workspace",
+        ],
+        allowed_recipe_ids=[
+            "ListPage",
+            "ListPage",
+        ],
+        whitelist_component_ids=[
+            "UiButton",
+            "UiButton",
+        ],
+        blockers=[],
+        warnings=[],
+    )
+
+    with (
+        patch("ai_sdlc.cli.program_cmd.find_project_root", return_value=tmp_path),
+        patch.object(
+            program_service_module.ProgramService,
+            "build_frontend_generation_constraints_handoff",
+            return_value=handoff,
+        ),
+    ):
+        result = runner.invoke(app, ["program", "generation-constraints-handoff"])
+
+    assert result.exit_code == 0
+    assert result.output.count("page schema: dashboard-workspace") == 1
+    assert result.output.count("recipe: ListPage") == 1
+    assert result.output.count("whitelist component: UiButton") == 1
+
+
+@pytest.mark.parametrize(
+    ("command_name", "builder_name", "handoff", "expected_line"),
+    [
+        (
+            "theme-token-governance-handoff",
+            "build_frontend_theme_token_governance_handoff",
+            SimpleNamespace(
+                state="ready",
+                schema_version="1",
+                effective_provider_id="public-primevue",
+                delivery_entry_id="vue3-public-primevue",
+                provider_theme_adapter_id="primevue-theme-adapter",
+                provider_runtime_adapter_carrier_mode="target-project-adapter-layer",
+                provider_runtime_adapter_delivery_state="scaffolded",
+                provider_runtime_adapter_evidence_state="missing",
+                component_library_packages=[],
+                requested_style_pack_id="modern-saas",
+                effective_style_pack_id="modern-saas",
+                artifact_root="governance/frontend/theme-token-governance",
+                token_mapping_count=3,
+                page_schema_ids=[
+                    "dashboard-workspace",
+                    "dashboard-workspace",
+                ],
+                override_diagnostics=[],
+                blockers=[],
+                warnings=[],
+            ),
+            "page schema: dashboard-workspace",
+        ),
+        (
+            "quality-platform-handoff",
+            "build_frontend_quality_platform_handoff",
+            SimpleNamespace(
+                state="ready",
+                schema_version="1",
+                effective_provider_id="public-primevue",
+                delivery_entry_id="vue3-public-primevue",
+                managed_delivery_apply_state="not_applied",
+                managed_delivery_apply_artifact_path=None,
+                provider_theme_adapter_id="primevue-theme-adapter",
+                provider_runtime_adapter_carrier_mode="target-project-adapter-layer",
+                provider_runtime_adapter_delivery_state="scaffolded",
+                provider_runtime_adapter_evidence_state="missing",
+                component_library_packages=[],
+                requested_style_pack_id="modern-saas",
+                effective_style_pack_id="modern-saas",
+                artifact_root="governance/frontend/quality-platform",
+                matrix_coverage_count=3,
+                evidence_contract_ids=[
+                    "visual-regression-evidence",
+                    "visual-regression-evidence",
+                ],
+                page_schema_ids=[
+                    "dashboard-workspace",
+                    "dashboard-workspace",
+                ],
+                quality_diagnostics=[],
+                blockers=[],
+                warnings=[],
+            ),
+            "evidence contract: visual-regression-evidence",
+        ),
+        (
+            "cross-provider-consistency-handoff",
+            "build_frontend_cross_provider_consistency_handoff",
+            SimpleNamespace(
+                state="ready",
+                schema_version="1",
+                artifact_root="governance/frontend/cross-provider-consistency",
+                provider_runtime_adapter_carrier_mode="target-project-adapter-layer",
+                provider_runtime_adapter_delivery_state="scaffolded",
+                provider_runtime_adapter_evidence_state="missing",
+                pair_count=3,
+                ready_pair_count=1,
+                conditional_pair_count=1,
+                blocked_pair_count=1,
+                page_schema_ids=[
+                    "dashboard-workspace",
+                    "dashboard-workspace",
+                ],
+                pair_diagnostics=[],
+                blockers=[],
+                warnings=[],
+            ),
+            "page schema: dashboard-workspace",
+        ),
+    ],
+)
+def test_frontend_handoff_commands_deduplicate_remaining_list_fields(
+    command_name: str,
+    builder_name: str,
+    handoff: SimpleNamespace,
+    expected_line: str,
+    tmp_path: Path,
+) -> None:
+    with (
+        patch("ai_sdlc.cli.program_cmd.find_project_root", return_value=tmp_path),
+        patch.object(program_service_module.ProgramService, builder_name, return_value=handoff),
+    ):
+        result = runner.invoke(app, ["program", command_name])
+
+    assert result.exit_code == 0
+    assert result.output.count(expected_line) == 1
+
+
 def test_program_page_ui_schema_handoff_blocks_without_solution_snapshot(
     initialized_project_dir: Path,
 ) -> None:
@@ -265,8 +1420,15 @@ def test_program_generation_constraints_handoff_surfaces_delivery_context(
     assert "state: ready" in result.output
     assert "provider: public-primevue" in result.output
     assert "delivery entry: vue3-public-primevue" in result.output
+    assert "apply state: not_applied" in result.output
+    assert "runtime adapter carrier: target-project-adapter-layer" in result.output
+    assert "runtime adapter delivery: scaffolded" in result.output
+    assert "runtime adapter evidence: missing" in result.output
     assert "component package: primevue" in result.output
     assert "component package: @primeuix/themes" in result.output
+    assert "page schema: dashboard-workspace" in result.output
+    assert "page schema: search-list-workspace" in result.output
+    assert "page schema: wizard-workspace" in result.output
     assert "recipe: ListPage" in result.output
 
 
@@ -312,6 +1474,12 @@ def test_program_theme_token_governance_handoff_surfaces_requested_effective_the
     assert "Frontend Theme Token Governance Handoff" in result.output
     assert "state: ready" in result.output
     assert "provider: enterprise-vue2" in result.output
+    assert "delivery entry: vue2-enterprise-vue2" in result.output
+    assert "provider theme adapter: enterprise-vue2-theme-bridge" in result.output
+    assert "runtime adapter carrier: -" in result.output
+    assert "runtime adapter delivery: -" in result.output
+    assert "runtime adapter evidence: -" in result.output
+    assert "component package: @company/enterprise-vue2-ui" in result.output
     assert "requested style pack: enterprise-default" in result.output
     assert "effective style pack: enterprise-default" in result.output
     assert "dashboard-workspace" in result.output
@@ -366,11 +1534,18 @@ def test_program_quality_platform_handoff_surfaces_matrix_and_quality_diagnostic
     assert "state: ready" in result.output
     assert "provider: public-primevue" in result.output
     assert "delivery entry: vue3-public-primevue" in result.output
+    assert "apply state: not_applied" in result.output
+    assert "runtime adapter carrier: target-project-adapter-layer" in result.output
+    assert "runtime adapter delivery: scaffolded" in result.output
+    assert "runtime adapter evidence: missing" in result.output
     assert "component package: primevue" in result.output
     assert "component package: @primeuix/themes" in result.output
     assert "requested style pack: modern-saas" in result.output
     assert "effective style pack: modern-saas" in result.output
     assert "matrix coverage: 3" in result.output
+    assert "evidence contract: visual-regression-evidence" in result.output
+    assert "evidence contract: a11y-matrix-evidence" in result.output
+    assert "evidence contract: interaction-quality-evidence" in result.output
     assert "page schema: dashboard-workspace" in result.output
     assert "page schema: search-list-workspace" in result.output
     assert "quality diagnostic: dashboard-modern-saas-desktop-chromium" in result.output
@@ -496,12 +1671,22 @@ def test_program_cross_provider_consistency_handoff_surfaces_pair_truth(
     assert result.exit_code == 1
     assert "Frontend Cross Provider Consistency Handoff" in result.output
     assert "state: blocked" in result.output
+    assert "runtime adapter carrier: -" in result.output
+    assert "runtime adapter delivery: -" in result.output
+    assert "runtime adapter evidence: -" in result.output
     assert "pair count: 3" in result.output
     assert "ready pairs: 1" in result.output
     assert "conditional pairs: 1" in result.output
     assert "blocked pairs: 1" in result.output
+    assert "page schema: dashboard-workspace" in result.output
+    assert "page schema: search-list-workspace" in result.output
+    assert "page schema: wizard-workspace" in result.output
     assert (
         "pair diagnostic: enterprise-vue2__public-primevue__dashboard-workspace"
+        in result.output
+    )
+    assert (
+        "pair diagnostic: enterprise-vue2__public-primevue__search-list-workspace"
         in result.output
     )
     assert (
@@ -948,6 +2133,23 @@ class TestCliProgram:
                 package_manager_available=True,
                 playwright_browsers_available=True,
             ),
+        ), patch.object(
+            program_service_module.ProgramService,
+            "_run_truth_check_ref",
+            return_value={"ok": True, "classification": "implemented"},
+        ), patch.object(
+            program_service_module.ProgramService,
+            "_run_close_check_ref",
+            return_value={"ok": True, "checks": [], "blockers": [], "error": None},
+        ), patch.object(
+            program_service_module.ProgramService,
+            "_run_verify_ref",
+            return_value={
+                "ok": True,
+                "command": "uv run ai-sdlc verify constraints",
+                "blockers": [],
+                "warnings": [],
+            },
         ), patch(
             "ai_sdlc.core.managed_delivery_apply.subprocess.run",
             return_value=subprocess.CompletedProcess(args=["pnpm"], returncode=0),
@@ -959,6 +2161,91 @@ class TestCliProgram:
         assert "request source: .ai-sdlc/memory/frontend-managed-delivery/latest.yaml" in result.output
         assert "selected action types: managed_target_prepare, dependency_install" in result.output
         assert "artifact_generate" in result.output
+
+    def test_program_managed_delivery_apply_dry_run_truth_derived_surfaces_release_capability_guidance(
+        self, initialized_project_dir: Path
+    ) -> None:
+        root = initialized_project_dir
+        _init_truth_git_repo(root)
+        _write_program_truth_fixture(root)
+        _write_builtin_delivery_truth(root)
+        save_project_config(root, ProjectConfig(adapter_ingress_state="verified_loaded"))
+        _commit_truth_repo(root, "seed managed delivery truth guidance fixture")
+        real_subprocess_run = subprocess.run
+
+        def _selective_subprocess_run(command, *args, **kwargs):
+            if isinstance(command, (list, tuple)) and command and command[0] == "pnpm":
+                return subprocess.CompletedProcess(
+                    args=command,
+                    returncode=0,
+                    stdout="",
+                    stderr="",
+                )
+            return real_subprocess_run(command, *args, **kwargs)
+
+        with patch("ai_sdlc.cli.program_cmd.find_project_root", return_value=root), patch.object(
+            program_service_module,
+            "evaluate_current_host_runtime",
+            return_value=_build_host_runtime_plan_for_tests(
+                node_runtime_available=True,
+                package_manager_available=True,
+                playwright_browsers_available=True,
+            ),
+        ), patch.object(
+            program_service_module.ProgramService,
+            "_run_truth_check_ref",
+            return_value={"ok": True, "classification": "implemented"},
+        ), patch.object(
+            program_service_module.ProgramService,
+            "_run_close_check_ref",
+            return_value={"ok": True, "checks": [], "blockers": [], "error": None},
+        ), patch.object(
+            program_service_module.ProgramService,
+            "_run_verify_ref",
+            return_value={
+                "ok": True,
+                "command": "uv run ai-sdlc verify constraints",
+                "blockers": [],
+                "warnings": [],
+            },
+        ), patch(
+            "ai_sdlc.core.managed_delivery_apply.subprocess.run",
+            side_effect=_selective_subprocess_run,
+        ):
+            result = runner.invoke(app, ["program", "managed-delivery-apply", "--dry-run"])
+
+        request_payload = yaml.safe_load(
+            (
+                root / ".ai-sdlc" / "memory" / "frontend-managed-delivery" / "latest.yaml"
+            ).read_text(encoding="utf-8")
+        )
+        assert result.exit_code == 0
+        assert (
+            "explain: frontend code generation has not inherited the selected component"
+            in result.output
+        )
+        assert (
+            "explain: frontend test inheritance has not bound the selected component"
+            in result.output
+        )
+        assert "next step: python -m ai_sdlc program generation-constraints-handoff" in result.output
+        assert "next step: python -m ai_sdlc program quality-platform-handoff" in result.output
+        assert (
+            "frontend code generation has not inherited the selected component library yet; continuing may generate against the wrong library"
+            in request_payload["plain_language_blockers"]
+        )
+        assert (
+            "frontend test inheritance has not bound the selected component library yet; continuing may validate against the wrong standard"
+            in request_payload["plain_language_blockers"]
+        )
+        assert (
+            "python -m ai_sdlc program generation-constraints-handoff"
+            in request_payload["recommended_next_steps"]
+        )
+        assert (
+            "python -m ai_sdlc program quality-platform-handoff"
+            in request_payload["recommended_next_steps"]
+        )
 
     def test_program_managed_delivery_apply_dry_run_surfaces_private_registry_blocker_from_truth_when_request_omitted(
         self, initialized_project_dir: Path
@@ -1098,6 +2385,23 @@ class TestCliProgram:
                 package_manager_available=True,
                 playwright_browsers_available=True,
             ),
+        ), patch.object(
+            program_service_module.ProgramService,
+            "_run_truth_check_ref",
+            return_value={"ok": True, "classification": "implemented"},
+        ), patch.object(
+            program_service_module.ProgramService,
+            "_run_close_check_ref",
+            return_value={"ok": True, "checks": [], "blockers": [], "error": None},
+        ), patch.object(
+            program_service_module.ProgramService,
+            "_run_verify_ref",
+            return_value={
+                "ok": True,
+                "command": "uv run ai-sdlc verify constraints",
+                "blockers": [],
+                "warnings": [],
+            },
         ), patch(
             "ai_sdlc.core.managed_delivery_apply.subprocess.run",
             return_value=subprocess.CompletedProcess(args=["pnpm"], returncode=0),
@@ -1121,6 +2425,26 @@ class TestCliProgram:
             root / "managed" / "frontend" / "src" / "generated" / "frontend-delivery-context.ts"
         ).is_file()
         assert (root / "managed" / "frontend" / "src" / "App.vue").is_file()
+        assert (
+            root / "src" / "frontend-governance" / "runtime" / "kernel" / "KernelWrapper.tsx"
+        ).is_file()
+        assert (
+            root
+            / "src"
+            / "frontend-governance"
+            / "runtime"
+            / "providers"
+            / "public-primevue"
+            / "ProviderAdapter.tsx"
+        ).is_file()
+        assert (
+            root
+            / ".ai-sdlc"
+            / "evidence"
+            / "frontend-runtime"
+            / "public-primevue"
+            / "runtime-boundary-receipt.yaml"
+        ).is_file()
 
     def test_program_browser_gate_probe_execute_materializes_gate_run_artifact(
         self, initialized_project_dir: Path
@@ -1165,11 +2489,66 @@ class TestCliProgram:
             "primevue",
             "@primeuix/themes",
         ]
+        assert (
+            payload["bundle_input"]["provider_runtime_adapter_carrier_mode"]
+            == "target-project-adapter-layer"
+        )
+        assert payload["bundle_input"]["provider_runtime_adapter_delivery_state"] == (
+            "scaffolded"
+        )
+        assert payload["bundle_input"]["provider_runtime_adapter_evidence_state"] == (
+            "missing"
+        )
         assert payload["bundle_input"]["page_schema_ids"] == [
             "dashboard-workspace",
             "search-list-workspace",
         ]
         assert all(gate_run_id in record["artifact_ref"] for record in payload["artifact_records"])
+
+    def test_program_browser_gate_probe_dry_run_surfaces_apply_guidance(
+        self, initialized_project_dir: Path
+    ) -> None:
+        root = initialized_project_dir
+        save_project_config(root, ProjectConfig(adapter_ingress_state="verified_loaded"))
+        _write_frontend_solution_confirmation_artifacts(root)
+        _write_frontend_visual_a11y_evidence(root / "specs" / "001-auth")
+        request_rel = _write_artifact_generate_apply_request(root)
+
+        with patch("ai_sdlc.cli.program_cmd.find_project_root", return_value=root):
+            apply_result = runner.invoke(
+                app,
+                [
+                    "program",
+                    "managed-delivery-apply",
+                    "--request",
+                    request_rel,
+                    "--execute",
+                    "--yes",
+                ],
+            )
+
+        apply_payload_path = (
+            root / ".ai-sdlc" / "memory" / "frontend-managed-delivery-apply" / "latest.yaml"
+        )
+        apply_payload = yaml.safe_load(apply_payload_path.read_text(encoding="utf-8"))
+        apply_payload["plain_language_blockers"] = [
+            "capability closure remains capability_open"
+        ]
+        apply_payload["recommended_next_steps"] = [
+            "close the capability_closure_audit entry for the blocked release target"
+        ]
+        apply_payload_path.write_text(
+            yaml.safe_dump(apply_payload, sort_keys=False, allow_unicode=True),
+            encoding="utf-8",
+        )
+
+        with patch("ai_sdlc.cli.program_cmd.find_project_root", return_value=root):
+            probe_result = runner.invoke(app, ["program", "browser-gate-probe", "--dry-run"])
+
+        assert apply_result.exit_code == 0
+        assert probe_result.exit_code == 0
+        assert "explain: capability closure remains capability_open" in probe_result.output
+        assert "next step: close the capability_closure_audit entry" in probe_result.output
 
     def test_program_browser_gate_probe_dry_run_does_not_materialize_preview_artifacts(
         self, initialized_project_dir: Path
@@ -1315,6 +2694,12 @@ class TestCliProgram:
             )
             payload["overall_gate_status"] = "blocked"
             payload["bundle_input"]["overall_gate_status"] = "blocked"
+            payload["plain_language_blockers"] = [
+                "browser gate still blocks frontend delivery"
+            ]
+            payload["recommended_next_steps"] = [
+                "review the browser gate findings before re-running remediation"
+            ]
             for receipt in payload["bundle_input"]["check_receipts"]:
                 if receipt["check_name"] in {
                     "playwright_smoke",
@@ -1352,6 +2737,8 @@ class TestCliProgram:
         assert probe_result.exit_code == 0
         assert remediate_result.exit_code == 0
         assert "uv run ai-sdlc program browser-gate-probe --execute" in remediate_result.output
+        assert "001-auth explain: browser gate still blocks frontend delivery" in remediate_result.output
+        assert "001-auth next step:" in remediate_result.output
 
     def test_program_validate_pass(self, initialized_project_dir: Path) -> None:
         _write_manifest(initialized_project_dir)
@@ -1518,6 +2905,86 @@ specs:
         assert "Program Plan" in plan.output
         assert "003-enroll" in plan.output
 
+    def test_program_status_deduplicates_blocked_by_display(
+        self, initialized_project_dir: Path
+    ) -> None:
+        root = initialized_project_dir
+        _write_manifest(root)
+
+        with (
+            patch("ai_sdlc.cli.program_cmd.find_project_root", return_value=root),
+            patch.object(
+                program_service_module.ProgramService,
+                "load_manifest",
+                return_value=object(),
+            ),
+            patch.object(
+                program_service_module.ProgramService,
+                "validate_manifest",
+                return_value=SimpleNamespace(valid=True, errors=[], warnings=[]),
+            ),
+            patch.object(
+                program_service_module.ProgramService,
+                "build_status",
+                return_value=[
+                    SimpleNamespace(
+                        spec_id="003-enroll",
+                        path="specs/003-enroll",
+                        stage_hint="review",
+                        completed_tasks=1,
+                        total_tasks=3,
+                        blocked_by=["001-auth", "001-auth", "002-course"],
+                        exists=True,
+                        frontend_readiness=None,
+                        frontend_evidence_class_status=None,
+                    )
+                ],
+            ),
+            patch.object(
+                program_service_module.ProgramService,
+                "build_truth_ledger_surface",
+                return_value=None,
+            ),
+        ):
+            result = runner.invoke(app, ["program", "status"])
+
+        assert result.exit_code == 0, result.output
+        assert result.output.count("001-auth") == 1
+        assert result.output.count("002-course") == 1
+
+    def test_program_plan_deduplicates_tier_specs_display(
+        self, initialized_project_dir: Path
+    ) -> None:
+        root = initialized_project_dir
+        _write_manifest(root)
+
+        with (
+            patch("ai_sdlc.cli.program_cmd.find_project_root", return_value=root),
+            patch.object(
+                program_service_module.ProgramService,
+                "load_manifest",
+                return_value=object(),
+            ),
+            patch.object(
+                program_service_module.ProgramService,
+                "validate_manifest",
+                return_value=SimpleNamespace(valid=True, errors=[], warnings=[]),
+            ),
+            patch.object(
+                program_service_module.ProgramService,
+                "topo_tiers",
+                return_value=[
+                    ["001-auth", "001-auth", "002-course"],
+                    ["003-enroll", "003-enroll"],
+                ],
+            ),
+        ):
+            result = runner.invoke(app, ["program", "plan"])
+
+        assert result.exit_code == 0, result.output
+        assert result.output.count("001-auth, 002-course") == 1
+        assert result.output.count("003-enroll") >= 1
+
     def test_program_truth_sync_and_audit_surface_blocked_release_state(
         self, initialized_project_dir: Path
     ) -> None:
@@ -1536,6 +3003,10 @@ specs:
 
         assert sync.exit_code == 0, sync.output
         assert "Program Truth Sync Execute" in sync.output
+        assert "frontend code generation inheritance is not clear yet" in sync.output
+        assert "frontend test inheritance is not clear yet" in sync.output
+        assert "next step: python -m ai_sdlc program generation-constraints-handoff" in sync.output
+        assert "next step: python -m ai_sdlc program quality-platform-handoff" in sync.output
         payload = yaml.safe_load((root / "program-manifest.yaml").read_text(encoding="utf-8"))
         snapshot = payload["truth_snapshot"]
         assert snapshot["state"] == "blocked"
@@ -1558,6 +3029,11 @@ specs:
         assert "state: blocked" in audit.output.lower()
         assert "snapshot state: fresh" in audit.output.lower()
         assert "frontend-mainline-delivery" in audit.output
+        assert "frontend code generation inheritance is not clear yet" in audit.output
+        assert "frontend test inheritance is not clear yet" in audit.output
+        assert "frontend inheritance: codegen unknown; frontend tests unknown" in audit.output
+        assert "next step: python -m ai_sdlc program generation-constraints-handoff" in audit.output
+        assert "next step: python -m ai_sdlc program quality-platform-handoff" in audit.output
 
         assert status.exit_code == 0, status.output
         assert "Truth Ledger" in status.output
@@ -1595,6 +3071,70 @@ specs:
         assert "source inventory: incomplete" in audit.output.lower()
         assert "unmapped sources: 2" in audit.output.lower()
         assert "docs/superpowers/specs/2026-04-02-design.md" in audit.output
+
+    def test_program_truth_audit_deduplicates_migration_pending_lists(
+        self, tmp_path: Path
+    ) -> None:
+        root = tmp_path
+
+        with (
+            patch("ai_sdlc.cli.program_cmd.find_project_root", return_value=root),
+            patch.object(
+                program_service_module.ProgramService,
+                "load_manifest",
+                return_value=SimpleNamespace(release_targets=[]),
+            ),
+            patch.object(
+                program_service_module.ProgramService,
+                "validate_manifest",
+                return_value=SimpleNamespace(errors=[], warnings=[]),
+            ),
+            patch.object(
+                program_service_module.ProgramService,
+                "build_truth_ledger_surface",
+                return_value={
+                    "state": "blocked",
+                    "snapshot_state": "fresh",
+                    "detail": "migration pending",
+                    "next_required_actions": [],
+                    "release_targets": [],
+                    "release_capabilities": [],
+                    "migration_pending_count": 4,
+                    "migration_pending_specs": [
+                        "001-auth",
+                        "001-auth",
+                        "002-course",
+                    ],
+                    "migration_pending_sources": [
+                        "docs/superpowers/specs/legacy.md",
+                        "docs/superpowers/specs/legacy.md",
+                        "docs/framework-defect-backlog.zh-CN.md",
+                    ],
+                    "migration_suggestions": [
+                        "run truth sync",
+                        "run truth sync",
+                        "update mapping",
+                    ],
+                    "source_inventory": None,
+                    "validation_errors": [],
+                    "validation_warnings": [],
+                },
+            ),
+        ):
+            result = runner.invoke(app, ["program", "truth", "audit"])
+
+        assert result.exit_code == 1
+        assert result.output.count("pending spec: 001-auth") == 1
+        assert result.output.count("pending spec: 002-course") == 1
+        assert result.output.count("pending source: docs/superpowers/specs/legacy.md") == 1
+        assert (
+            result.output.count(
+                "pending source: docs/framework-defect-backlog.zh-CN.md"
+            )
+            == 1
+        )
+        assert result.output.count("suggestion: run truth sync") == 1
+        assert result.output.count("suggestion: update mapping") == 1
 
     def test_program_status_exposes_next_required_truth_action_when_snapshot_is_stale(
         self, initialized_project_dir: Path
@@ -1681,6 +3221,509 @@ specs:
         assert "terminal close-out step" in status.output
         assert "python -m ai_sdlc program truth sync --execute --yes" in status.output
 
+    def test_program_status_renders_frontend_delivery_summary_in_truth_ledger(
+        self, initialized_project_dir: Path
+    ) -> None:
+        root = initialized_project_dir
+        _write_manifest(root)
+
+        with (
+            patch("ai_sdlc.cli.program_cmd.find_project_root", return_value=root),
+            patch.object(
+                program_service_module.ProgramService,
+                "build_truth_ledger_surface",
+                return_value={
+                    "state": "ready",
+                    "snapshot_state": "fresh",
+                    "detail": "truth ledger ready",
+                    "next_required_actions": [],
+                    "next_required_action": "",
+                    "snapshot_hash": "abc123",
+                    "release_targets": ["frontend-mainline-delivery"],
+                    "release_capabilities": [
+                        {
+                            "capability_id": "frontend-mainline-delivery",
+                            "closure_state": "closed",
+                            "audit_state": "ready",
+                            "blocking_refs": [],
+                            "frontend_delivery_status": {
+                                "provider_id": "public-primevue",
+                                "package_names": "primevue,@primeuix/themes",
+                                "runtime_delivery_state": "scaffolded",
+                                "download": "installed",
+                                "integration": "integrated",
+                                "browser_gate": "pending",
+                                "delivery": "apply_succeeded_pending_browser_gate",
+                            },
+                            "frontend_delivery_summary": (
+                                "provider=legacy | packages=legacy-ui | runtime=legacy | "
+                                "download=not downloaded | integration=not integrated | "
+                                "browser_gate=not started | delivery=not applied"
+                            ),
+                            "frontend_inheritance_status": {
+                                "generation": "inherited",
+                                "quality": "blocked",
+                            },
+                        }
+                    ],
+                    "migration_pending_count": 0,
+                    "migration_pending_specs": [],
+                    "migration_pending_sources": [],
+                    "migration_suggestions": [],
+                    "source_inventory": None,
+                    "validation_errors": [],
+                    "validation_warnings": [],
+                },
+            ),
+        ):
+            status = runner.invoke(app, ["program", "status"])
+
+        assert status.exit_code == 0, status.output
+        assert "frontend delivery: provider=public-primevue" in status.output
+        assert "packages=primevue,@primeuix/themes" in status.output
+        assert "runtime=scaffolded" in status.output
+        assert "download=downloaded" in status.output
+        assert "integration=integrated" in status.output
+        assert "browser_gate=waiting for evidence" in status.output
+        assert "delivery=applied," in status.output
+        assert "waiting for browser gate" in status.output
+        assert "frontend scope:" in status.output
+        assert "package delivery only" in status.output
+        assert "frontend inheritance:" in status.output
+        assert "codegen inherited" in status.output
+        assert "frontend tests blocked" in status.output
+
+    def test_program_status_renders_not_inherited_risk_in_truth_ledger(
+        self, initialized_project_dir: Path
+    ) -> None:
+        root = initialized_project_dir
+        _write_manifest(root)
+
+        with (
+            patch("ai_sdlc.cli.program_cmd.find_project_root", return_value=root),
+            patch.object(
+                program_service_module.ProgramService,
+                "build_truth_ledger_surface",
+                return_value={
+                    "state": "ready",
+                    "snapshot_state": "fresh",
+                    "detail": "truth ledger ready",
+                    "next_required_actions": [],
+                    "next_required_action": "",
+                    "snapshot_hash": "abc123",
+                    "release_targets": ["frontend-mainline-delivery"],
+                    "release_capabilities": [
+                        {
+                            "capability_id": "frontend-mainline-delivery",
+                            "closure_state": "closed",
+                            "audit_state": "ready",
+                            "blocking_refs": [],
+                            "frontend_inheritance_status": {
+                                "generation": "not_inherited",
+                                "quality": "not_inherited",
+                            },
+                            "plain_language_blockers": [
+                                "frontend code generation has not inherited the selected component library yet; continuing may generate against the wrong library",
+                                "frontend test inheritance has not bound the selected component library yet; continuing may validate against the wrong standard",
+                            ],
+                            "recommended_next_steps": [
+                                "python -m ai_sdlc program generation-constraints-handoff",
+                                "python -m ai_sdlc program quality-platform-handoff",
+                            ],
+                        }
+                    ],
+                    "migration_pending_count": 0,
+                    "migration_pending_specs": [],
+                    "migration_pending_sources": [],
+                    "migration_suggestions": [],
+                    "source_inventory": None,
+                    "validation_errors": [],
+                    "validation_warnings": [],
+                },
+            ),
+        ):
+            status = runner.invoke(app, ["program", "status"])
+
+        assert status.exit_code == 0, status.output
+        assert "frontend inheritance:" in status.output
+        assert "codegen not inherited yet (risk)" in status.output
+        assert "frontend tests not" in status.output
+        assert "inherited yet (risk)" in status.output
+        assert "continuing may generate against the wrong library" in status.output
+        assert "continuing may validate against the wrong standard" in status.output
+        assert "generation-constraints-handoff" in status.output
+        assert "quality-platform-handoff" in status.output
+
+    def test_program_status_renders_capability_reason_and_next_actions_in_truth_ledger(
+        self, initialized_project_dir: Path
+    ) -> None:
+        root = initialized_project_dir
+        _write_manifest(root)
+
+        with (
+            patch("ai_sdlc.cli.program_cmd.find_project_root", return_value=root),
+            patch.object(
+                program_service_module.ProgramService,
+                "build_truth_ledger_surface",
+                return_value={
+                    "state": "blocked",
+                    "snapshot_state": "fresh",
+                    "detail": "release targets blocked: frontend-mainline-delivery (blocked)",
+                    "next_required_actions": ["python -m ai_sdlc program truth audit"],
+                    "next_required_action": "python -m ai_sdlc program truth audit",
+                    "snapshot_hash": "abc123",
+                    "release_targets": ["frontend-mainline-delivery"],
+                    "release_capabilities": [
+                        {
+                            "capability_id": "frontend-mainline-delivery",
+                            "closure_state": "closed",
+                            "audit_state": "blocked",
+                            "blocking_refs": ["verify:uv run ai-sdlc verify constraints"],
+                            "blocking_reason_summary": "frontend verification is not clear",
+                            "plain_language_blockers": [
+                                "browser gate evidence is still missing",
+                                "frontend test inheritance is blocked",
+                                "frontend code generation inheritance is not clear yet",
+                            ],
+                            "recommended_next_steps": [
+                                "materialize browser gate evidence before rerunning verification",
+                                "python -m ai_sdlc program generation-constraints-handoff",
+                                "python -m ai_sdlc program quality-platform-handoff",
+                            ],
+                            "capability_next_actions": [
+                                "uv run ai-sdlc verify constraints"
+                            ],
+                        }
+                    ],
+                    "migration_pending_count": 0,
+                    "migration_pending_specs": [],
+                    "migration_pending_sources": [],
+                    "migration_suggestions": [],
+                    "source_inventory": None,
+                    "validation_errors": [],
+                    "validation_warnings": [],
+                },
+            ),
+        ):
+            status = runner.invoke(app, ["program", "status"])
+
+        assert status.exit_code == 0, status.output
+        assert "explain: browser gate evidence is still missing" in status.output
+        assert "explain: frontend test inheritance is blocked" in status.output
+        assert "explain: frontend code generation inheritance is not clear yet" in status.output
+        assert (
+            "next step: materialize browser gate evidence before rerunning verification"
+            in status.output
+        )
+        assert "next step: python -m ai_sdlc program generation-constraints-handoff" in status.output
+        assert "next step: python -m ai_sdlc program quality-platform-handoff" in status.output
+        assert "reason: frontend verification is not clear" not in status.output
+        assert "next action: uv run ai-sdlc verify constraints" not in status.output
+
+    def test_program_truth_sync_renders_capability_explain_and_next_step(
+        self, initialized_project_dir: Path
+    ) -> None:
+        root = initialized_project_dir
+        _write_manifest(root)
+
+        with (
+            patch("ai_sdlc.cli.program_cmd.find_project_root", return_value=root),
+            patch.object(
+                program_service_module.ProgramService,
+                "build_truth_snapshot",
+                return_value=SimpleNamespace(
+                    state="blocked",
+                    snapshot_hash="abc123",
+                    computed_capabilities=[
+                        SimpleNamespace(
+                            capability_id="frontend-mainline-delivery",
+                            closure_state="closed",
+                            audit_state="blocked",
+                            blocking_refs=[
+                                "verify:uv run ai-sdlc verify constraints"
+                            ],
+                        )
+                    ],
+                    source_inventory=None,
+                ),
+            ),
+            patch.object(
+                program_service_module.ProgramService,
+                "build_truth_ledger_surface",
+                return_value={
+                    "state": "blocked",
+                    "snapshot_state": "fresh",
+                    "detail": "release targets blocked: frontend-mainline-delivery (blocked)",
+                    "next_required_actions": [],
+                    "next_required_action": "",
+                    "snapshot_hash": "abc123",
+                    "release_targets": ["frontend-mainline-delivery"],
+                    "release_capabilities": [
+                        {
+                            "capability_id": "frontend-mainline-delivery",
+                            "closure_state": "closed",
+                            "audit_state": "blocked",
+                            "blocking_refs": ["verify:uv run ai-sdlc verify constraints"],
+                            "plain_language_blockers": [
+                                "browser gate evidence is still missing"
+                            ],
+                            "recommended_next_steps": [
+                                "materialize browser gate evidence before rerunning verification"
+                            ],
+                            "blocking_reason_summary": "frontend verification is not clear",
+                            "capability_next_actions": [
+                                "uv run ai-sdlc verify constraints"
+                            ],
+                        }
+                    ],
+                    "migration_pending_count": 0,
+                    "migration_pending_specs": [],
+                    "migration_pending_sources": [],
+                    "migration_suggestions": [],
+                    "source_inventory": None,
+                    "validation_errors": [],
+                    "validation_warnings": [],
+                },
+            ),
+        ):
+            result = runner.invoke(app, ["program", "truth", "sync"])
+
+        assert result.exit_code == 0, result.output
+        assert "explain: browser gate evidence is still missing" in result.output
+        assert (
+            "next step: materialize browser gate evidence before rerunning verification"
+            in result.output
+        )
+        assert "next action: uv run ai-sdlc verify constraints" not in result.output
+
+    def test_program_truth_sync_deduplicates_release_targets(
+        self, initialized_project_dir: Path
+    ) -> None:
+        root = initialized_project_dir
+        _write_manifest(root)
+
+        with (
+            patch("ai_sdlc.cli.program_cmd.find_project_root", return_value=root),
+            patch.object(
+                program_service_module.ProgramService,
+                "load_manifest",
+                return_value=SimpleNamespace(
+                    release_targets=[
+                        "frontend-mainline-delivery",
+                        "frontend-mainline-delivery",
+                        "project-meta-foundations",
+                    ]
+                ),
+            ),
+            patch.object(
+                program_service_module.ProgramService,
+                "validate_manifest",
+                return_value=SimpleNamespace(valid=True, errors=[], warnings=[]),
+            ),
+            patch.object(
+                program_service_module.ProgramService,
+                "build_truth_snapshot",
+                return_value=SimpleNamespace(
+                    state="blocked",
+                    snapshot_hash="abc123",
+                    computed_capabilities=[],
+                    source_inventory=None,
+                ),
+            ),
+            patch.object(
+                program_service_module.ProgramService,
+                "build_truth_ledger_surface",
+                return_value={
+                    "state": "blocked",
+                    "snapshot_state": "fresh",
+                    "detail": "release targets blocked",
+                    "next_required_actions": [],
+                    "snapshot_hash": "abc123",
+                    "release_targets": [
+                        "frontend-mainline-delivery",
+                        "frontend-mainline-delivery",
+                        "project-meta-foundations",
+                    ],
+                    "release_capabilities": [],
+                    "migration_pending_count": 0,
+                    "migration_pending_specs": [],
+                    "migration_pending_sources": [],
+                    "migration_suggestions": [],
+                    "source_inventory": None,
+                    "validation_errors": [],
+                    "validation_warnings": [],
+                },
+            ),
+        ):
+            result = runner.invoke(app, ["program", "truth", "sync"])
+
+        assert result.exit_code == 0, result.output
+        assert (
+            result.output.count(
+                "release targets: frontend-mainline-delivery, project-meta-foundations"
+            )
+            == 1
+        )
+
+    def test_program_truth_audit_renders_capability_explain_and_next_step(
+        self, initialized_project_dir: Path
+    ) -> None:
+        root = initialized_project_dir
+        _write_manifest(root)
+
+        with (
+            patch("ai_sdlc.cli.program_cmd.find_project_root", return_value=root),
+            patch.object(
+                program_service_module.ProgramService,
+                "build_truth_ledger_surface",
+                return_value={
+                    "state": "blocked",
+                    "snapshot_state": "fresh",
+                    "detail": "release targets blocked: frontend-mainline-delivery (blocked)",
+                    "next_required_actions": ["python -m ai_sdlc program truth audit"],
+                    "next_required_action": "python -m ai_sdlc program truth audit",
+                    "snapshot_hash": "abc123",
+                    "release_targets": ["frontend-mainline-delivery"],
+                    "release_capabilities": [
+                        {
+                            "capability_id": "frontend-mainline-delivery",
+                            "closure_state": "closed",
+                            "audit_state": "blocked",
+                            "blocking_refs": ["verify:uv run ai-sdlc verify constraints"],
+                            "plain_language_blockers": [
+                                "browser gate evidence is still missing"
+                            ],
+                            "recommended_next_steps": [
+                                "materialize browser gate evidence before rerunning verification"
+                            ],
+                            "blocking_reason_summary": "frontend verification is not clear",
+                            "capability_next_actions": [
+                                "uv run ai-sdlc verify constraints"
+                            ],
+                        }
+                    ],
+                    "migration_pending_count": 0,
+                    "migration_pending_specs": [],
+                    "migration_pending_sources": [],
+                    "migration_suggestions": [],
+                    "source_inventory": None,
+                    "validation_errors": [],
+                    "validation_warnings": [],
+                },
+            ),
+        ):
+            result = runner.invoke(app, ["program", "truth", "audit"])
+
+        assert result.exit_code == 1, result.output
+        assert "explain: browser gate evidence is still missing" in result.output
+        assert (
+            "next step: materialize browser gate evidence before rerunning verification"
+            in result.output
+        )
+        assert "next action: uv run ai-sdlc verify constraints" not in result.output
+
+    def test_program_truth_audit_deduplicates_repeated_next_actions(
+        self, initialized_project_dir: Path
+    ) -> None:
+        root = initialized_project_dir
+        _write_manifest(root)
+
+        with (
+            patch("ai_sdlc.cli.program_cmd.find_project_root", return_value=root),
+            patch.object(
+                program_service_module.ProgramService,
+                "build_truth_ledger_surface",
+                return_value={
+                    "state": "blocked",
+                    "snapshot_state": "fresh",
+                    "detail": "release targets blocked: frontend-mainline-delivery (blocked)",
+                    "next_required_actions": [
+                        "python -m ai_sdlc program truth audit",
+                        "python -m ai_sdlc program truth audit",
+                    ],
+                    "next_required_action": "python -m ai_sdlc program truth audit",
+                    "snapshot_hash": "abc123",
+                    "release_targets": ["frontend-mainline-delivery"],
+                    "release_capabilities": [
+                        {
+                            "capability_id": "frontend-mainline-delivery",
+                            "closure_state": "closed",
+                            "audit_state": "blocked",
+                            "blocking_refs": [],
+                            "plain_language_blockers": [],
+                            "recommended_next_steps": [],
+                            "capability_next_actions": [
+                                "uv run ai-sdlc verify constraints",
+                                "uv run ai-sdlc verify constraints",
+                            ],
+                        }
+                    ],
+                    "migration_pending_count": 0,
+                    "migration_pending_specs": [],
+                    "migration_pending_sources": [],
+                    "migration_suggestions": [],
+                    "source_inventory": None,
+                    "validation_errors": [],
+                    "validation_warnings": [],
+                },
+            ),
+        ):
+            result = runner.invoke(app, ["program", "truth", "audit"])
+
+        assert result.exit_code == 1, result.output
+        assert (
+            result.output.count("next action: python -m ai_sdlc program truth audit")
+            == 1
+        )
+        assert (
+            result.output.count("next action: uv run ai-sdlc verify constraints")
+            == 1
+        )
+
+    def test_program_truth_audit_deduplicates_release_targets(
+        self, initialized_project_dir: Path
+    ) -> None:
+        root = initialized_project_dir
+        _write_manifest(root)
+
+        with (
+            patch("ai_sdlc.cli.program_cmd.find_project_root", return_value=root),
+            patch.object(
+                program_service_module.ProgramService,
+                "build_truth_ledger_surface",
+                return_value={
+                    "state": "blocked",
+                    "snapshot_state": "fresh",
+                    "detail": "release targets blocked",
+                    "next_required_actions": [],
+                    "next_required_action": "",
+                    "snapshot_hash": "abc123",
+                    "release_targets": [
+                        "frontend-mainline-delivery",
+                        "frontend-mainline-delivery",
+                        "project-meta-foundations",
+                    ],
+                    "release_capabilities": [],
+                    "migration_pending_count": 0,
+                    "migration_pending_specs": [],
+                    "migration_pending_sources": [],
+                    "migration_suggestions": [],
+                    "source_inventory": None,
+                    "validation_errors": [],
+                    "validation_warnings": [],
+                },
+            ),
+        ):
+            result = runner.invoke(app, ["program", "truth", "audit"])
+
+        assert result.exit_code == 1, result.output
+        assert (
+            result.output.count(
+                "release targets: frontend-mainline-delivery, project-meta-foundations"
+            )
+            == 1
+        )
+
     def test_program_status_exposes_frontend_readiness(
         self, initialized_project_dir: Path
     ) -> None:
@@ -1698,6 +3741,162 @@ specs:
         assert "ready" in result.output
         assert "missing_artifact" in result.output
         assert "scope_or_linkage_invalid" in result.output
+
+    def test_program_status_surfaces_frontend_delivery_context(
+        self, initialized_project_dir: Path
+    ) -> None:
+        root = initialized_project_dir
+        _write_manifest(root)
+        _write_builtin_delivery_truth(
+            root,
+            snapshot=build_mvp_solution_snapshot(
+                project_id="status-delivery-context",
+                requested_frontend_stack="vue3",
+                effective_frontend_stack="vue3",
+                recommended_frontend_stack="vue3",
+                requested_provider_id="public-primevue",
+                effective_provider_id="public-primevue",
+                recommended_provider_id="public-primevue",
+                requested_style_pack_id="modern-saas",
+                effective_style_pack_id="modern-saas",
+                recommended_style_pack_id="modern-saas",
+                style_fidelity_status="full",
+            ),
+        )
+
+        with patch("ai_sdlc.cli.program_cmd.find_project_root", return_value=root):
+            result = runner.invoke(app, ["program", "status"])
+
+        assert result.exit_code == 0
+        assert "Frontend Delivery Context" in result.output
+        assert (
+            "delivery status: selection recorded only; packages are not downloaded"
+            in result.output
+        )
+        assert "integrated into the project yet" in result.output
+        assert "scope note: this section covers package download/integration truth only" in result.output
+        assert "inheritance status: codegen not inherited yet (risk)" in result.output
+        assert "frontend tests not" in result.output
+        assert "inherited yet (risk)" in result.output
+        assert "inheritance risk:" in result.output
+        assert "selected provider: public-primevue" in result.output
+        assert "delivery entry: vue3-public-primevue" in result.output
+        assert "requested frontend stack: vue3" in result.output
+        assert "effective frontend stack: vue3" in result.output
+        assert "selected package: primevue" in result.output
+        assert "selected package: @primeuix/themes" in result.output
+        assert "runtime adapter carrier: target-project-adapter-layer" in result.output
+        assert "runtime adapter delivery: scaffolded" in result.output
+        assert "runtime adapter evidence: missing" in result.output
+        assert "delivery result: not applied" in result.output
+        assert "download: not downloaded" in result.output
+        assert "integration: not integrated" in result.output
+        assert "browser gate: not started" in result.output
+        assert (
+            "next step: uv run ai-sdlc program solution-confirm --execute --continue"
+            in result.output
+        )
+        assert "--yes" in result.output
+
+    def test_program_status_surfaces_frontend_delivery_execution_states(
+        self, initialized_project_dir: Path
+    ) -> None:
+        root = initialized_project_dir
+        _write_manifest(root)
+        save_project_config(root, ProjectConfig(adapter_ingress_state="verified_loaded"))
+        _write_builtin_delivery_truth(
+            root,
+            snapshot=build_mvp_solution_snapshot(
+                project_id="001-auth",
+                requested_frontend_stack="vue3",
+                effective_frontend_stack="vue3",
+                recommended_frontend_stack="vue3",
+                requested_provider_id="public-primevue",
+                effective_provider_id="public-primevue",
+                recommended_provider_id="public-primevue",
+                requested_style_pack_id="modern-saas",
+                effective_style_pack_id="modern-saas",
+                recommended_style_pack_id="modern-saas",
+                style_fidelity_status="full",
+            ),
+        )
+
+        svc = program_service_module.ProgramService(root)
+        request = svc.build_frontend_managed_delivery_apply_request()
+        with patch(
+            "ai_sdlc.core.managed_delivery_apply.subprocess.run",
+            return_value=subprocess.CompletedProcess(args=["pnpm"], returncode=0),
+        ):
+            result = svc.execute_frontend_managed_delivery_apply(
+                request=request,
+                confirmed=True,
+            )
+        svc.write_frontend_managed_delivery_apply_artifact(
+            request=request,
+            result=result,
+            generated_at="2026-04-20T09:00:00Z",
+        )
+
+        with patch("ai_sdlc.cli.program_cmd.find_project_root", return_value=root):
+            status = runner.invoke(app, ["program", "status"])
+
+        assert status.exit_code == 0, status.output
+        assert "delivery status: packages are in the project, but browser evidence" in status.output
+        assert "before delivery can be treated as complete" in status.output
+        assert "delivery result: applied, waiting for browser gate" in status.output
+        assert "download: downloaded" in status.output
+        assert "integration: integrated" in status.output
+        assert "browser gate: waiting for evidence" in status.output
+        assert (
+            "apply artifact: .ai-sdlc/memory/frontend-managed-delivery-apply/latest.yaml"
+            in status.output
+        )
+        assert (
+            "next step: uv run ai-sdlc program browser-gate-probe --execute"
+            in status.output
+        )
+
+    def test_program_status_fails_closed_on_stale_apply_artifact(
+        self, initialized_project_dir: Path
+    ) -> None:
+        root = initialized_project_dir
+        _write_manifest(root)
+        save_project_config(root, ProjectConfig(adapter_ingress_state="verified_loaded"))
+        _write_builtin_delivery_truth(root)
+
+        svc = program_service_module.ProgramService(root)
+        request = svc.build_frontend_managed_delivery_apply_request()
+        with patch(
+            "ai_sdlc.core.managed_delivery_apply.subprocess.run",
+            return_value=subprocess.CompletedProcess(args=["pnpm"], returncode=0),
+        ):
+            result = svc.execute_frontend_managed_delivery_apply(
+                request=request,
+                confirmed=True,
+            )
+        artifact_path = svc.write_frontend_managed_delivery_apply_artifact(
+            request=request,
+            result=result,
+            generated_at="2026-04-20T09:00:00Z",
+        )
+
+        payload = yaml.safe_load(artifact_path.read_text(encoding="utf-8"))
+        payload["execution_view"]["action_items"][0]["source_linkage_refs"][
+            "solution_snapshot_id"
+        ] = "snapshot-stale"
+        artifact_path.write_text(
+            yaml.safe_dump(payload, sort_keys=False, allow_unicode=True),
+            encoding="utf-8",
+        )
+
+        with patch("ai_sdlc.cli.program_cmd.find_project_root", return_value=root):
+            status = runner.invoke(app, ["program", "status"])
+
+        assert status.exit_code == 0, status.output
+        assert "delivery result: stale apply artifact" in status.output
+        assert "download: not downloaded" in status.output
+        assert "integration: not integrated" in status.output
+        assert "browser gate: not started" in status.output
 
     def test_program_status_waives_observation_gap_for_framework_capability(
         self, initialized_project_dir: Path
@@ -1870,6 +4069,75 @@ specs:
         assert result.exit_code == 0
         assert "Program Integrate Dry-Run" in result.output
         assert (root / report_rel).is_file()
+
+    def test_program_integrate_dry_run_report_deduplicates_verification_and_archive_lists(
+        self, initialized_project_dir: Path
+    ) -> None:
+        root = initialized_project_dir
+        report_rel = ".ai-sdlc/memory/program-integration-dedup.md"
+        plan = SimpleNamespace(
+            steps=[
+                SimpleNamespace(
+                    order=1,
+                    tier=0,
+                    spec_id="001-auth",
+                    path="specs/001-auth",
+                    verification_commands=[
+                        "uv run pytest tests/unit/test_auth.py",
+                        "uv run pytest tests/unit/test_auth.py",
+                        "uv run pytest tests/unit/test_auth.py -k smoke",
+                    ],
+                    archive_checks=[
+                        "archive-ready",
+                        "archive-ready",
+                        "thread-clean",
+                    ],
+                    frontend_readiness=None,
+                )
+            ],
+            warnings=[],
+        )
+
+        with (
+            patch("ai_sdlc.cli.program_cmd.find_project_root", return_value=root),
+            patch.object(program_cmd_module.ProgramService, "load_manifest", return_value={}),
+            patch.object(
+                program_cmd_module.ProgramService,
+                "validate_manifest",
+                return_value=SimpleNamespace(valid=True, errors=[]),
+            ),
+            patch.object(
+                program_cmd_module.ProgramService,
+                "build_integration_dry_run",
+                return_value=plan,
+            ),
+        ):
+            result = runner.invoke(
+                app,
+                [
+                    "program",
+                    "integrate",
+                    "--dry-run",
+                    "--report",
+                    report_rel,
+                ],
+            )
+
+        assert result.exit_code == 0, result.output
+        assert (
+            "uv run pytest tests/unit/test_auth.py ; "
+            "uv run pytest tests/unit/test_auth.py ;"
+        ) not in result.output
+        assert "archive-ready ; archive-ready" not in result.output
+
+        report = (root / report_rel).read_text(encoding="utf-8")
+        report_lines = [line.rstrip() for line in report.splitlines()]
+        assert report_lines.count("  - `uv run pytest tests/unit/test_auth.py`") == 1
+        assert report_lines.count(
+            "  - `uv run pytest tests/unit/test_auth.py -k smoke`"
+        ) == 1
+        assert report_lines.count("  - archive-ready") == 1
+        assert report_lines.count("  - thread-clean") == 1
 
     def test_program_integrate_dry_run_exposes_frontend_hint(
         self, initialized_project_dir: Path
@@ -2177,6 +4445,72 @@ specs:
         assert "Frontend Recheck Handoff" in report
         assert "uv run ai-sdlc verify constraints" in report
 
+    def test_program_integrate_execute_report_deduplicates_recheck_commands(
+        self, initialized_project_dir: Path
+    ) -> None:
+        root = initialized_project_dir
+        report_rel = ".ai-sdlc/memory/program-integrate-dedup-recheck.md"
+
+        plan = SimpleNamespace(
+            steps=[
+                SimpleNamespace(
+                    order=1,
+                    tier=0,
+                    spec_id="001-auth",
+                    path="specs/001-auth",
+                    verification_commands=["uv run pytest tests/unit/test_auth.py"],
+                    archive_checks=["archive-ready"],
+                    frontend_readiness=None,
+                    frontend_recheck_handoff=SimpleNamespace(
+                        reason="recheck required",
+                        recommended_commands=[
+                            "uv run ai-sdlc verify constraints",
+                            "uv run ai-sdlc verify constraints",
+                            "uv run ai-sdlc verify constraints --strict",
+                        ],
+                    ),
+                )
+            ],
+            warnings=[],
+        )
+
+        with (
+            patch("ai_sdlc.cli.program_cmd.find_project_root", return_value=root),
+            patch.object(program_cmd_module.ProgramService, "load_manifest", return_value={}),
+            patch.object(
+                program_cmd_module.ProgramService,
+                "validate_manifest",
+                return_value=SimpleNamespace(valid=True, errors=[]),
+            ),
+            patch.object(
+                program_cmd_module.ProgramService,
+                "build_integration_dry_run",
+                return_value=plan,
+            ),
+            patch.object(
+                program_cmd_module.ProgramService,
+                "evaluate_execute_gates",
+                return_value=SimpleNamespace(passed=True, warnings=[], failed=[]),
+            ),
+        ):
+            result = runner.invoke(
+                app,
+                [
+                    "program",
+                    "integrate",
+                    "--execute",
+                    "--yes",
+                    "--allow-dirty",
+                    "--report",
+                    report_rel,
+                ],
+            )
+
+        assert result.exit_code == 0, result.output
+        report = (root / report_rel).read_text(encoding="utf-8")
+        assert report.count("`uv run ai-sdlc verify constraints`") == 2
+        assert report.count("`uv run ai-sdlc verify constraints --strict`") == 2
+
     def test_program_integrate_execute_failure_report_surfaces_remediation_handoff(
         self, initialized_project_dir: Path
     ) -> None:
@@ -2381,6 +4715,179 @@ specs:
             for item in payload["command_results"]
         )
 
+    def test_program_remediate_report_deduplicates_explain_and_next_steps(
+        self, initialized_project_dir: Path
+    ) -> None:
+        root = initialized_project_dir
+        report_rel = "artifacts/frontend-remediation-report.md"
+        runbook = SimpleNamespace(
+            steps=[
+                SimpleNamespace(
+                    spec_id="001-auth",
+                    path="specs/001-auth",
+                    fix_inputs=[
+                        "frontend_contract_observations",
+                        "frontend_contract_observations",
+                    ],
+                    action_commands=["uv run ai-sdlc verify constraints"],
+                    plain_language_blockers=[
+                        "frontend contract evidence is still missing",
+                        "frontend contract evidence is still missing",
+                    ],
+                    recommended_next_steps=[
+                        "materialize frontend contract observations",
+                        "materialize frontend contract observations",
+                    ],
+                )
+            ],
+            action_commands=[],
+            follow_up_commands=[],
+            warnings=[],
+        )
+
+        with (
+            patch("ai_sdlc.cli.program_cmd.find_project_root", return_value=root),
+            patch.object(
+                program_cmd_module.ProgramService,
+                "load_manifest",
+                return_value=object(),
+            ),
+            patch.object(
+                program_cmd_module.ProgramService,
+                "validate_manifest",
+                return_value=SimpleNamespace(valid=True, errors=[]),
+            ),
+            patch.object(
+                program_cmd_module.ProgramService,
+                "build_frontend_remediation_runbook",
+                return_value=runbook,
+            ),
+        ):
+            result = runner.invoke(
+                app,
+                ["program", "remediate", "--dry-run", "--report", report_rel],
+            )
+
+        assert result.exit_code == 0
+        assert result.output.count("frontend contract evidence is still missing") == 1
+        assert result.output.count("materialize frontend contract observations") == 1
+
+        report = (root / report_rel).read_text(encoding="utf-8")
+        assert report.count("frontend contract evidence is still missing") == 1
+        assert report.count("materialize frontend contract observations") == 1
+        assert report.count("frontend_contract_observations") == 1
+
+    def test_program_remediate_report_deduplicates_action_command_lists(
+        self, initialized_project_dir: Path
+    ) -> None:
+        root = initialized_project_dir
+        report_rel = "artifacts/frontend-remediation-actions-report.md"
+        runbook = SimpleNamespace(
+            steps=[
+                SimpleNamespace(
+                    spec_id="001-auth",
+                    path="specs/001-auth",
+                    fix_inputs=["frontend_contract_observations"],
+                    action_commands=[
+                        "uv run ai-sdlc verify constraints",
+                        "uv run ai-sdlc verify constraints",
+                        "uv run ai-sdlc verify constraints --strict",
+                    ],
+                    plain_language_blockers=[],
+                    recommended_next_steps=[],
+                )
+            ],
+            action_commands=[
+                "uv run ai-sdlc verify constraints",
+                "uv run ai-sdlc verify constraints",
+                "uv run ai-sdlc verify constraints --strict",
+            ],
+            follow_up_commands=[
+                "uv run ai-sdlc verify constraints",
+                "uv run ai-sdlc verify constraints",
+                "uv run ai-sdlc verify constraints --strict",
+            ],
+            warnings=[],
+        )
+
+        with (
+            patch("ai_sdlc.cli.program_cmd.find_project_root", return_value=root),
+            patch.object(
+                program_cmd_module.ProgramService,
+                "load_manifest",
+                return_value=object(),
+            ),
+            patch.object(
+                program_cmd_module.ProgramService,
+                "validate_manifest",
+                return_value=SimpleNamespace(valid=True, errors=[]),
+            ),
+            patch.object(
+                program_cmd_module.ProgramService,
+                "build_frontend_remediation_runbook",
+                return_value=runbook,
+            ),
+        ):
+            result = runner.invoke(
+                app,
+                ["program", "remediate", "--dry-run", "--report", report_rel],
+            )
+
+        assert result.exit_code == 0
+        output_lines = [line.rstrip() for line in result.output.splitlines()]
+        assert output_lines.count("  - uv run ai-sdlc verify constraints") == 2
+        assert output_lines.count("  - uv run ai-sdlc verify constraints --strict") == 2
+
+        report = (root / report_rel).read_text(encoding="utf-8")
+        report_lines = [line.rstrip() for line in report.splitlines()]
+        assert report_lines.count("  - `uv run ai-sdlc verify constraints`") == 1
+        assert report_lines.count("  - `uv run ai-sdlc verify constraints --strict`") == 1
+        assert report_lines.count("- `uv run ai-sdlc verify constraints`") == 1
+        assert report_lines.count("- `uv run ai-sdlc verify constraints --strict`") == 1
+
+    def test_program_provider_handoff_deduplicates_pending_inputs_in_output_and_report(
+        self, initialized_project_dir: Path
+    ) -> None:
+        root = initialized_project_dir
+        _write_manifest(root)
+        _write_frontend_remediation_writeback_artifact(
+            root,
+            passed=False,
+            remaining_blockers=["spec 001-auth remediation still required"],
+            steps=[
+                {
+                    "spec_id": "001-auth",
+                    "path": "specs/001-auth",
+                    "state": "required",
+                    "fix_inputs": [
+                        "frontend_contract_observations",
+                        "frontend_contract_observations",
+                    ],
+                    "suggested_actions": [
+                        "materialize frontend contract observations",
+                        "re-run ai-sdlc verify constraints",
+                    ],
+                    "action_commands": [],
+                    "source_linkage": {
+                        "runtime_attachment_status": "missing_artifact",
+                        "frontend_gate_verdict": "UNRESOLVED",
+                    },
+                }
+            ],
+        )
+        report_rel = ".ai-sdlc/memory/frontend-provider-handoff-dedup.md"
+
+        with patch("ai_sdlc.cli.program_cmd.find_project_root", return_value=root):
+            result = runner.invoke(
+                app,
+                ["program", "provider-handoff", "--report", report_rel],
+            )
+
+        assert result.exit_code == 0
+        assert result.output.count("frontend_contract_observations") == 1
+        report = (root / report_rel).read_text(encoding="utf-8")
+        assert report.count("frontend_contract_observations") == 1
+
     def test_program_provider_handoff_surfaces_pending_frontend_inputs(
         self, initialized_project_dir: Path
     ) -> None:
@@ -2403,11 +4910,14 @@ specs:
         assert "Program Frontend Provider Handoff" in result.output
         assert ".ai-sdlc/memory/frontend-remediation/latest.yaml" in result.output
         assert "frontend_contract_observations" in result.output
+        assert "frontend contract evidence is still missing" in result.output
+        assert "next step:" in result.output
         assert "not_started" in result.output
         report = (root / report_rel).read_text(encoding="utf-8")
         assert "Frontend Provider Handoff" in report
         assert ".ai-sdlc/memory/frontend-remediation/latest.yaml" in report
         assert "materialize frontend contract observations" in report
+        assert "frontend contract evidence is still missing" in report
 
     def test_program_provider_handoff_surfaces_stable_empty_visual_a11y_pending_input(
         self, initialized_project_dir: Path
@@ -2541,10 +5051,13 @@ specs:
         assert "Program Frontend Provider Runtime Execute" in result.output
         assert "patches_generated" in result.output
         assert "generated provider patch plan for 001-auth" in result.output
+        assert "frontend contract evidence is still missing" in result.output
+        assert "next step:" in result.output
         report = (root / report_rel).read_text(encoding="utf-8")
         assert "Frontend Provider Runtime Result" in report
         assert "patches_generated" in report
         assert "generated provider patch plan for 001-auth" in report
+        assert "frontend contract evidence is still missing" in report
 
     def test_program_provider_runtime_execute_preserves_stable_empty_visual_a11y_pending_input(
         self, initialized_project_dir: Path
@@ -2600,6 +5113,8 @@ specs:
             "review stable empty frontend visual / a11y evidence",
             "re-run ai-sdlc verify constraints",
         ]
+        assert payload["steps"][0]["plain_language_blockers"] == []
+        assert payload["steps"][0]["recommended_next_steps"] == []
         report = (root / report_rel).read_text(encoding="utf-8")
         assert "frontend_visual_a11y_evidence_stable_empty" in report
         assert "review stable empty frontend visual / a11y evidence" in report
@@ -2915,6 +5430,23 @@ specs:
                 package_manager_available=True,
                 playwright_browsers_available=True,
             ),
+        ), patch.object(
+            program_service_module.ProgramService,
+            "_run_truth_check_ref",
+            return_value={"ok": True, "classification": "implemented"},
+        ), patch.object(
+            program_service_module.ProgramService,
+            "_run_close_check_ref",
+            return_value={"ok": True, "checks": [], "blockers": [], "error": None},
+        ), patch.object(
+            program_service_module.ProgramService,
+            "_run_verify_ref",
+            return_value={
+                "ok": True,
+                "command": "uv run ai-sdlc verify constraints",
+                "blockers": [],
+                "warnings": [],
+            },
         ), patch(
             "ai_sdlc.core.managed_delivery_apply.subprocess.run",
             return_value=subprocess.CompletedProcess(args=["pnpm"], returncode=0),
@@ -3061,6 +5593,105 @@ specs:
         assert "status: blocked_before_start" in result.output
         assert "private_registry_prerequisite_missing:company-registry-token" in result.output
 
+    def test_program_solution_confirm_execute_continue_surfaces_release_capability_guidance(
+        self, initialized_project_dir: Path
+    ) -> None:
+        root = initialized_project_dir
+        _init_truth_git_repo(root)
+        _write_program_truth_fixture(root)
+        save_project_config(root, ProjectConfig(adapter_ingress_state="verified_loaded"))
+        _commit_truth_repo(root, "seed solution confirm truth guidance fixture")
+        real_subprocess_run = subprocess.run
+
+        def _selective_subprocess_run(command, *args, **kwargs):
+            if isinstance(command, (list, tuple)) and command and command[0] == "pnpm":
+                return subprocess.CompletedProcess(
+                    args=command,
+                    returncode=0,
+                    stdout="",
+                    stderr="",
+                )
+            return real_subprocess_run(command, *args, **kwargs)
+
+        with patch("ai_sdlc.cli.program_cmd.find_project_root", return_value=root), patch.object(
+            program_service_module,
+            "evaluate_current_host_runtime",
+            return_value=_build_host_runtime_plan_for_tests(
+                node_runtime_available=True,
+                package_manager_available=True,
+                playwright_browsers_available=True,
+            ),
+        ), patch.object(
+            program_service_module.ProgramService,
+            "_run_truth_check_ref",
+            return_value={"ok": True, "classification": "implemented"},
+        ), patch.object(
+            program_service_module.ProgramService,
+            "_run_close_check_ref",
+            return_value={"ok": True, "checks": [], "blockers": [], "error": None},
+        ), patch.object(
+            program_service_module.ProgramService,
+            "_run_verify_ref",
+            return_value={
+                "ok": True,
+                "command": "uv run ai-sdlc verify constraints",
+                "blockers": [],
+                "warnings": [],
+            },
+        ), patch(
+            "ai_sdlc.core.managed_delivery_apply.subprocess.run",
+            side_effect=_selective_subprocess_run,
+        ):
+            result = runner.invoke(
+                app,
+                [
+                    "program",
+                    "solution-confirm",
+                    "--enterprise-provider-ineligible",
+                    "--execute",
+                    "--continue",
+                    "--yes",
+                ],
+            )
+
+        apply_payload = yaml.safe_load(
+            (
+                root
+                / ".ai-sdlc"
+                / "memory"
+                / "frontend-managed-delivery-apply"
+                / "latest.yaml"
+            ).read_text(encoding="utf-8")
+        )
+        assert result.exit_code == 0
+        assert "Frontend solution confirmation materialized" in result.output
+        assert (
+            "explain: frontend code generation has not inherited the selected component"
+            in result.output
+        )
+        assert (
+            "explain: frontend test inheritance has not bound the selected component"
+            in result.output
+        )
+        assert "next step: python -m ai_sdlc program generation-constraints-handoff" in result.output
+        assert "next step: python -m ai_sdlc program quality-platform-handoff" in result.output
+        assert (
+            "frontend code generation has not inherited the selected component library yet; continuing may generate against the wrong library"
+            in apply_payload["plain_language_blockers"]
+        )
+        assert (
+            "frontend test inheritance has not bound the selected component library yet; continuing may validate against the wrong standard"
+            in apply_payload["plain_language_blockers"]
+        )
+        assert (
+            "python -m ai_sdlc program generation-constraints-handoff"
+            in apply_payload["recommended_next_steps"]
+        )
+        assert (
+            "python -m ai_sdlc program quality-platform-handoff"
+            in apply_payload["recommended_next_steps"]
+        )
+
     def test_program_solution_confirm_execute_blocks_unknown_provider_artifact_materialization(
         self, initialized_project_dir: Path
     ) -> None:
@@ -3120,10 +5751,12 @@ specs:
         assert ".ai-sdlc/memory/frontend-provider-runtime/latest.yaml" in result.output
         assert "patches_generated" in result.output
         assert "frontend_contract_observations" in result.output
+        assert "frontend contract evidence is still missing" in result.output
         report = (root / report_rel).read_text(encoding="utf-8")
         assert "Frontend Provider Patch Handoff" in report
         assert ".ai-sdlc/memory/frontend-provider-runtime/latest.yaml" in report
         assert "patches_generated" in report
+        assert "frontend contract evidence is still missing" in report
 
     def test_program_provider_patch_handoff_surfaces_stable_empty_visual_a11y_pending_input(
         self, initialized_project_dir: Path
@@ -3165,6 +5798,48 @@ specs:
         report = (root / report_rel).read_text(encoding="utf-8")
         assert "frontend_visual_a11y_evidence_stable_empty" in report
         assert "review stable empty frontend visual / a11y evidence" in report
+
+    def test_program_provider_patch_handoff_deduplicates_repeated_suggested_next_actions(
+        self, initialized_project_dir: Path
+    ) -> None:
+        root = initialized_project_dir
+        _write_manifest(root)
+        _write_frontend_provider_runtime_artifact(
+            root,
+            invocation_result="deferred",
+            provider_execution_state="deferred",
+            remaining_blockers=["spec 001-auth remediation still required"],
+            steps=[
+                {
+                    "spec_id": "001-auth",
+                    "path": "specs/001-auth",
+                    "pending_inputs": ["frontend_visual_a11y_issue_review"],
+                    "suggested_next_actions": [
+                        "review frontend visual / a11y issue findings",
+                        "review frontend visual / a11y issue findings",
+                        "re-run ai-sdlc verify constraints",
+                    ],
+                    "source_linkage": {
+                        "writeback_artifact_path": ".ai-sdlc/memory/frontend-remediation/latest.yaml",
+                        "provider_runtime_state": "deferred",
+                    },
+                }
+            ],
+        )
+        report_rel = ".ai-sdlc/memory/frontend-provider-patch-handoff.md"
+
+        with patch("ai_sdlc.cli.program_cmd.find_project_root", return_value=root):
+            result = runner.invoke(
+                app,
+                ["program", "provider-patch-handoff", "--report", report_rel],
+            )
+
+        assert result.exit_code == 0
+        assert (
+            result.output.count("review frontend visual / a11y issue findings") == 1
+        )
+        report = (root / report_rel).read_text(encoding="utf-8")
+        assert report.count("review frontend visual / a11y issue findings") == 1
 
     def test_program_provider_patch_handoff_surfaces_visual_a11y_issue_review_input(
         self, initialized_project_dir: Path
@@ -3268,10 +5943,12 @@ specs:
         assert "applied" in result.output
         assert "applied 1 provider patch file(s) from readonly patch handoff" in result.output
         assert ".ai-sdlc/memory/frontend-provider-patch-apply/steps/001-auth.md" in result.output
+        assert "frontend contract evidence is still missing" in result.output
         report = (root / report_rel).read_text(encoding="utf-8")
         assert "Frontend Provider Patch Apply Result" in report
         assert "applied" in report
         assert "applied 1 provider patch file(s) from readonly patch handoff" in report
+        assert "frontend contract evidence is still missing" in report
 
     def test_program_provider_patch_apply_execute_preserves_stable_empty_visual_a11y_pending_input(
         self, initialized_project_dir: Path
@@ -3330,6 +6007,8 @@ specs:
             "review stable empty frontend visual / a11y evidence",
             "re-run ai-sdlc verify constraints",
         ]
+        assert payload["steps"][0]["plain_language_blockers"] == []
+        assert payload["steps"][0]["recommended_next_steps"] == []
         report = (root / report_rel).read_text(encoding="utf-8")
         assert "frontend_visual_a11y_evidence_stable_empty" in report
         assert "review stable empty frontend visual / a11y evidence" in report
@@ -3517,10 +6196,12 @@ specs:
         assert "completed" in result.output
         assert "wrote 1 cross-spec writeback file(s) from canonical patch apply artifact" in result.output
         assert "specs/001-auth/frontend-provider-writeback.md" in result.output
+        assert "frontend contract evidence is still missing" in result.output
         report = (root / report_rel).read_text(encoding="utf-8")
         assert "Frontend Cross-Spec Writeback Result" in report
         assert "completed" in report
         assert "wrote 1 cross-spec writeback file(s) from canonical patch apply artifact" in report
+        assert "frontend contract evidence is still missing" in report
 
     def test_program_cross_spec_writeback_execute_preserves_stable_empty_visual_a11y_pending_input(
         self, initialized_project_dir: Path
@@ -3580,6 +6261,8 @@ specs:
             "review stable empty frontend visual / a11y evidence",
             "re-run ai-sdlc verify constraints",
         ]
+        assert payload["steps"][0]["plain_language_blockers"] == []
+        assert payload["steps"][0]["recommended_next_steps"] == []
         report = (root / report_rel).read_text(encoding="utf-8")
         assert "frontend_visual_a11y_evidence_stable_empty" in report
         assert "review stable empty frontend visual / a11y evidence" in report
@@ -3713,6 +6396,12 @@ specs:
         assert payload["writeback_state"] == "blocked"
         assert payload["confirmed"] is True
         assert payload["written_paths"] == []
+        assert payload["steps"][0]["plain_language_blockers"] == [
+            "frontend contract evidence is still missing"
+        ]
+        assert payload["steps"][0]["recommended_next_steps"] == [
+            "materialize the missing frontend contract evidence before provider patch apply"
+        ]
         assert payload["remaining_blockers"] == [
             "spec 001-auth remediation still required",
             "cross-spec writeback requires applied patch artifact (apply_result=deferred)",
@@ -3720,6 +6409,7 @@ specs:
         report = (root / report_rel).read_text(encoding="utf-8")
         assert "Frontend Cross-Spec Writeback Artifact" in report
         assert ".ai-sdlc/memory/frontend-cross-spec-writeback/latest.yaml" in report
+        assert "frontend contract evidence is still missing" in report
 
     def test_program_guarded_registry_execute_requires_explicit_confirmation(
         self, initialized_project_dir: Path
@@ -3787,10 +6477,12 @@ specs:
         assert result.exit_code == 0
         assert "Program Frontend Guarded Registry Execute" in result.output
         assert "completed" in result.output
+        assert "frontend contract evidence is still missing" in result.output
         report = (root / report_rel).read_text(encoding="utf-8")
         assert "Frontend Guarded Registry Result" in report
         assert "completed" in report
         assert "materialized 1 guarded registry step file(s) from canonical cross-spec writeback artifact" in report
+        assert "frontend contract evidence is still missing" in report
 
     def test_program_guarded_registry_execute_preserves_stable_empty_visual_a11y_pending_input(
         self, initialized_project_dir: Path
@@ -3982,6 +6674,12 @@ specs:
         assert payload["registry_result"] == "blocked"
         assert payload["registry_state"] == "blocked"
         assert payload["confirmed"] is True
+        assert payload["steps"][0]["plain_language_blockers"] == [
+            "frontend contract evidence is still missing"
+        ]
+        assert payload["steps"][0]["recommended_next_steps"] == [
+            "materialize the missing frontend contract evidence before guarded registry"
+        ]
         assert payload["remaining_blockers"] == [
             "spec 001-auth remediation still required",
             "guarded registry requires completed cross-spec writeback artifact (writeback_state=deferred)",
@@ -3989,6 +6687,7 @@ specs:
         report = (root / report_rel).read_text(encoding="utf-8")
         assert "Frontend Guarded Registry Artifact" in report
         assert ".ai-sdlc/memory/frontend-guarded-registry/latest.yaml" in report
+        assert "frontend contract evidence is still missing" in report
 
     def test_program_broader_governance_execute_requires_explicit_confirmation(
         self, initialized_project_dir: Path
@@ -4056,10 +6755,12 @@ specs:
         assert result.exit_code == 0
         assert "Program Frontend Broader Governance Execute" in result.output
         assert "completed" in result.output
+        assert "frontend contract evidence is still missing" in result.output
         report = (root / report_rel).read_text(encoding="utf-8")
         assert "Frontend Broader Governance Result" in report
         assert "completed" in report
         assert "materialized 1 broader governance step file(s) from canonical guarded registry artifact" in report
+        assert "frontend contract evidence is still missing" in report
 
     def test_program_broader_governance_execute_preserves_stable_empty_visual_a11y_pending_input(
         self, initialized_project_dir: Path
@@ -4251,6 +6952,12 @@ specs:
         assert payload["governance_result"] == "blocked"
         assert payload["governance_state"] == "blocked"
         assert payload["confirmed"] is True
+        assert payload["steps"][0]["plain_language_blockers"] == [
+            "frontend contract evidence is still missing"
+        ]
+        assert payload["steps"][0]["recommended_next_steps"] == [
+            "materialize the missing frontend contract evidence before broader governance"
+        ]
         assert payload["remaining_blockers"] == [
             "spec 001-auth remediation still required",
             "broader governance requires completed guarded registry artifact (registry_state=deferred)",
@@ -4258,6 +6965,7 @@ specs:
         report = (root / report_rel).read_text(encoding="utf-8")
         assert "Frontend Broader Governance Artifact" in report
         assert ".ai-sdlc/memory/frontend-broader-governance/latest.yaml" in report
+        assert "frontend contract evidence is still missing" in report
 
     def test_program_final_governance_execute_requires_explicit_confirmation(
         self, initialized_project_dir: Path
@@ -4325,10 +7033,12 @@ specs:
         assert result.exit_code == 0
         assert "Program Frontend Final Governance Execute" in result.output
         assert "completed" in result.output
+        assert "frontend contract evidence is still missing" in result.output
         report = (root / report_rel).read_text(encoding="utf-8")
         assert "Frontend Final Governance Result" in report
         assert "completed" in report
         assert "materialized 1 final governance step file(s) from canonical broader governance artifact" in report
+        assert "frontend contract evidence is still missing" in report
 
     def test_program_final_governance_dry_run_does_not_write_artifact(
         self, initialized_project_dir: Path
@@ -4395,6 +7105,12 @@ specs:
         assert payload["final_governance_result"] == "blocked"
         assert payload["final_governance_state"] == "blocked"
         assert payload["confirmed"] is True
+        assert payload["steps"][0]["plain_language_blockers"] == [
+            "frontend contract evidence is still missing"
+        ]
+        assert payload["steps"][0]["recommended_next_steps"] == [
+            "materialize the missing frontend contract evidence before final governance"
+        ]
         assert payload["remaining_blockers"] == [
             "spec 001-auth remediation still required",
             "final governance requires completed broader governance artifact (governance_state=deferred)",
@@ -4402,6 +7118,7 @@ specs:
         report = (root / report_rel).read_text(encoding="utf-8")
         assert "Frontend Final Governance Artifact" in report
         assert ".ai-sdlc/memory/frontend-final-governance/latest.yaml" in report
+        assert "frontend contract evidence is still missing" in report
 
     def test_program_final_governance_execute_preserves_stable_empty_visual_a11y_pending_input(
         self, initialized_project_dir: Path
@@ -4593,10 +7310,17 @@ specs:
         assert result.exit_code == 0
         assert "Program Frontend Writeback Persistence Execute" in result.output
         assert "completed" in result.output
+        assert "Frontend Writeback Persistence Steps" in result.output
+        assert "frontend contract evidence is still missing" in result.output
         report = (root / report_rel).read_text(encoding="utf-8")
         assert "Frontend Writeback Persistence Result" in report
         assert "completed" in report
         assert "materialized 1 writeback persistence step file(s) from canonical final governance artifact" in report
+        assert "frontend contract evidence is still missing" in report
+        assert (
+            "materialize the missing frontend contract evidence before final governance"
+            in report
+        )
 
     def test_program_writeback_persistence_dry_run_does_not_write_artifact(
         self, initialized_project_dir: Path
@@ -4663,6 +7387,12 @@ specs:
         assert payload["persistence_result"] == "blocked"
         assert payload["persistence_state"] == "blocked"
         assert payload["confirmed"] is True
+        assert payload["steps"][0]["plain_language_blockers"] == [
+            "frontend contract evidence is still missing"
+        ]
+        assert payload["steps"][0]["recommended_next_steps"] == [
+            "materialize the missing frontend contract evidence before final governance"
+        ]
         assert payload["remaining_blockers"] == [
             "spec 001-auth remediation still required",
             "writeback persistence requires completed final governance artifact (final_governance_state=deferred)",
@@ -4670,6 +7400,7 @@ specs:
         report = (root / report_rel).read_text(encoding="utf-8")
         assert "Frontend Writeback Persistence Artifact" in report
         assert ".ai-sdlc/memory/frontend-writeback-persistence/latest.yaml" in report
+        assert "frontend contract evidence is still missing" in report
 
     def test_program_writeback_persistence_execute_preserves_stable_empty_visual_a11y_pending_input(
         self, initialized_project_dir: Path
@@ -4729,6 +7460,8 @@ specs:
             "review stable empty frontend visual / a11y evidence",
             "re-run ai-sdlc verify constraints",
         ]
+        assert payload["steps"][0]["plain_language_blockers"] == []
+        assert payload["steps"][0]["recommended_next_steps"] == []
         report = (root / report_rel).read_text(encoding="utf-8")
         assert "frontend_visual_a11y_evidence_stable_empty" in report
         assert "review stable empty frontend visual / a11y evidence" in report
@@ -4793,6 +7526,8 @@ specs:
             "review frontend visual / a11y issue findings",
             "re-run ai-sdlc verify constraints",
         ]
+        assert payload["steps"][0]["plain_language_blockers"] == []
+        assert payload["steps"][0]["recommended_next_steps"] == []
         report = (root / report_rel).read_text(encoding="utf-8")
         assert "frontend_visual_a11y_issue_review" in report
         assert "review frontend visual / a11y issue findings" in report
@@ -4863,11 +7598,18 @@ specs:
         assert result.exit_code == 0
         assert "Program Frontend Persisted Write Proof Execute" in result.output
         assert "completed" in result.output
+        assert "Frontend Persisted Write Proof Steps" in result.output
+        assert "frontend contract evidence is still missing" in result.output
         report = (root / report_rel).read_text(encoding="utf-8")
         assert "Frontend Persisted Write Proof Result" in report
         assert "completed" in report
         assert (
             "materialized 1 persisted write proof step file(s) from canonical writeback persistence artifact"
+            in report
+        )
+        assert "frontend contract evidence is still missing" in report
+        assert (
+            "materialize the missing frontend contract evidence before writeback persistence"
             in report
         )
 
@@ -4939,9 +7681,16 @@ specs:
         assert payload["written_paths"] == [
             ".ai-sdlc/memory/frontend-persisted-write-proof/steps/001-auth.md"
         ]
+        assert payload["steps"][0]["plain_language_blockers"] == [
+            "frontend contract evidence is still missing"
+        ]
+        assert payload["steps"][0]["recommended_next_steps"] == [
+            "materialize the missing frontend contract evidence before writeback persistence"
+        ]
         report = (root / report_rel).read_text(encoding="utf-8")
         assert "Frontend Persisted Write Proof Artifact" in report
         assert ".ai-sdlc/memory/frontend-persisted-write-proof/latest.yaml" in report
+        assert "frontend contract evidence is still missing" in report
 
     def test_program_persisted_write_proof_execute_preserves_stable_empty_visual_a11y_pending_input(
         self, initialized_project_dir: Path
@@ -5001,6 +7750,8 @@ specs:
             "review stable empty frontend visual / a11y evidence",
             "re-run ai-sdlc verify constraints",
         ]
+        assert payload["steps"][0]["plain_language_blockers"] == []
+        assert payload["steps"][0]["recommended_next_steps"] == []
         report = (root / report_rel).read_text(encoding="utf-8")
         assert "frontend_visual_a11y_evidence_stable_empty" in report
         assert "review stable empty frontend visual / a11y evidence" in report
@@ -5063,6 +7814,8 @@ specs:
             "review frontend visual / a11y issue findings",
             "re-run ai-sdlc verify constraints",
         ]
+        assert payload["steps"][0]["plain_language_blockers"] == []
+        assert payload["steps"][0]["recommended_next_steps"] == []
         report = (root / report_rel).read_text(encoding="utf-8")
         assert "frontend_visual_a11y_issue_review" in report
         assert "review frontend visual / a11y issue findings" in report
@@ -5259,6 +8012,8 @@ specs:
         assert result.exit_code == 0
         assert "Program Frontend Final Proof Publication Execute" in result.output
         assert "completed" in result.output
+        assert "Frontend Final Proof Publication Steps" in result.output
+        assert "frontend contract evidence is still missing" in result.output
         assert (
             "materialized 1 final proof publication step file(s) from canonical persisted write proof artifact"
             in result.output
@@ -5266,6 +8021,11 @@ specs:
         report = (root / report_rel).read_text(encoding="utf-8")
         assert "Frontend Final Proof Publication Result" in report
         assert "completed" in report
+        assert "frontend contract evidence is still missing" in report
+        assert (
+            "materialize the missing frontend contract evidence before persisted write proof"
+            in report
+        )
         assert (
             "materialized 1 final proof publication step file(s) from canonical persisted write proof artifact"
             in report
@@ -5339,9 +8099,16 @@ specs:
         assert payload["written_paths"] == [
             ".ai-sdlc/memory/frontend-final-proof-publication/steps/001-auth.md"
         ]
+        assert payload["steps"][0]["plain_language_blockers"] == [
+            "frontend contract evidence is still missing"
+        ]
+        assert payload["steps"][0]["recommended_next_steps"] == [
+            "materialize the missing frontend contract evidence before persisted write proof"
+        ]
         report = (root / report_rel).read_text(encoding="utf-8")
         assert "Frontend Final Proof Publication Artifact" in report
         assert ".ai-sdlc/memory/frontend-final-proof-publication/latest.yaml" in report
+        assert "frontend contract evidence is still missing" in report
 
     def test_program_final_proof_closure_execute_preserves_stable_empty_visual_a11y_pending_input(
         self, initialized_project_dir: Path
@@ -5401,6 +8168,8 @@ specs:
             "review stable empty frontend visual / a11y evidence",
             "re-run ai-sdlc verify constraints",
         ]
+        assert payload["steps"][0]["plain_language_blockers"] == []
+        assert payload["steps"][0]["recommended_next_steps"] == []
         report = (root / report_rel).read_text(encoding="utf-8")
         assert "frontend_visual_a11y_evidence_stable_empty" in report
         assert "review stable empty frontend visual / a11y evidence" in report
@@ -5463,6 +8232,8 @@ specs:
             "review frontend visual / a11y issue findings",
             "re-run ai-sdlc verify constraints",
         ]
+        assert payload["steps"][0]["plain_language_blockers"] == []
+        assert payload["steps"][0]["recommended_next_steps"] == []
         report = (root / report_rel).read_text(encoding="utf-8")
         assert "frontend_visual_a11y_issue_review" in report
         assert "review frontend visual / a11y issue findings" in report
@@ -5547,6 +8318,8 @@ specs:
         assert result.exit_code == 0
         assert "Program Frontend Final Proof Closure Execute" in result.output
         assert "completed" in result.output
+        assert "Frontend Final Proof Closure Steps" in result.output
+        assert "frontend contract evidence is still missing" in result.output
         assert (
             "materialized 1 final proof closure step file(s) from canonical final proof publication artifact"
             in result.output
@@ -5560,10 +8333,21 @@ specs:
         assert payload["written_paths"] == [
             ".ai-sdlc/memory/frontend-final-proof-closure/steps/001-auth.md"
         ]
+        assert payload["steps"][0]["plain_language_blockers"] == [
+            "frontend contract evidence is still missing"
+        ]
+        assert payload["steps"][0]["recommended_next_steps"] == [
+            "materialize the missing frontend contract evidence before final proof publication"
+        ]
         report = (root / report_rel).read_text(encoding="utf-8")
         assert "Frontend Final Proof Closure Result" in report
         assert "Frontend Final Proof Closure Artifact" in report
         assert "completed" in report
+        assert "frontend contract evidence is still missing" in report
+        assert (
+            "materialize the missing frontend contract evidence before final proof publication"
+            in report
+        )
         assert (
             "materialized 1 final proof closure step file(s) from canonical final proof publication artifact"
             in report
@@ -5774,6 +8558,8 @@ specs:
         assert result.exit_code == 0
         assert "Program Frontend Final Proof Archive Execute" in result.output
         assert "completed" in result.output
+        assert "Frontend Final Proof Archive Steps" in result.output
+        assert "frontend contract evidence is still missing" in result.output
         assert (
             "materialized 1 final proof archive step file(s) from canonical final proof closure artifact"
             in result.output
@@ -5788,10 +8574,21 @@ specs:
         assert payload["written_paths"] == [
             ".ai-sdlc/memory/frontend-final-proof-archive/steps/001-auth.md"
         ]
+        assert payload["steps"][0]["plain_language_blockers"] == [
+            "frontend contract evidence is still missing"
+        ]
+        assert payload["steps"][0]["recommended_next_steps"] == [
+            "materialize the missing frontend contract evidence before final proof closure"
+        ]
         report = (root / report_rel).read_text(encoding="utf-8")
         assert "Frontend Final Proof Archive Result" in report
         assert "Frontend Final Proof Archive Artifact" in report
         assert "completed" in report
+        assert "frontend contract evidence is still missing" in report
+        assert (
+            "materialize the missing frontend contract evidence before final proof closure"
+            in report
+        )
         assert (
             "materialized 1 final proof archive step file(s) from canonical final proof closure artifact"
             in report
@@ -5879,6 +8676,7 @@ specs:
         assert result.exit_code == 0
         assert "Program Frontend Final Proof Archive Thread Archive Execute" in result.output
         assert "Frontend Final Proof Archive Thread Archive Result" in result.output
+        assert "frontend contract evidence is still missing" in result.output
         assert "completed" in result.output
         assert (
             "materialized 1 final proof archive thread archive step file(s) from canonical final proof archive artifact"
@@ -5887,6 +8685,11 @@ specs:
         report = (root / report_rel).read_text(encoding="utf-8")
         assert "Frontend Final Proof Archive Thread Archive Result" in report
         assert "Frontend Final Proof Archive Artifact" in report
+        assert "frontend contract evidence is still missing" in report
+        assert (
+            "materialize the missing frontend contract evidence before final proof archive"
+            in report
+        )
         assert "completed" in report
         assert (
             "materialized 1 final proof archive thread archive step file(s) from canonical final proof archive artifact"
@@ -6065,13 +8868,100 @@ specs:
         assert "cleanup mutation proposal approval count: 0" in result.output
         assert "cleanup mutation execution gating state: missing" in result.output
         assert "cleanup mutation execution gating count: 0" in result.output
-        assert not (
+
+    def test_program_final_proof_archive_project_cleanup_dry_run_surfaces_cleanup_truth_details(
+        self, initialized_project_dir: Path
+    ) -> None:
+        root = initialized_project_dir
+        _write_manifest(root)
+        _write_frontend_final_proof_archive_artifact(
+            root,
+            archive_result="deferred",
+            archive_state="deferred",
+            remaining_blockers=["spec 001-auth remediation still required"],
+        )
+        _write_frontend_final_proof_archive_project_cleanup_seed_artifact(
+            root,
+            cleanup_targets=[
+                {
+                    "target_id": "cleanup-thread-archive-report",
+                    "path": "specs/001-auth/threads/archive-001.md",
+                    "kind": "thread_archive",
+                    "cleanup_action": "archive_thread_report",
+                }
+            ],
+            cleanup_target_eligibility=[
+                {
+                    "target_id": "cleanup-thread-archive-report",
+                    "eligibility": "eligible",
+                    "reason": "thread archive report may proceed to preview planning truth",
+                }
+            ],
+            cleanup_preview_plan=[
+                {
+                    "target_id": "cleanup-thread-archive-report",
+                    "planned_action": "archive_thread_report",
+                    "reason": "preview canonical archive-only cleanup action",
+                }
+            ],
+            cleanup_mutation_proposal=[
+                {
+                    "target_id": "cleanup-thread-archive-report",
+                    "proposed_action": "archive_thread_report",
+                    "reason": "proposal mirrors previewed archive-only cleanup action",
+                }
+            ],
+            cleanup_mutation_proposal_approval=[
+                {
+                    "target_id": "cleanup-thread-archive-report",
+                    "approved_action": "archive_thread_report",
+                    "reason": "approval matches the proposed archive-only cleanup action",
+                }
+            ],
+            cleanup_mutation_execution_gating=[
+                {
+                    "target_id": "cleanup-thread-archive-report",
+                    "gated_action": "archive_thread_report",
+                    "reason": "execution gating matches the approved archive-only cleanup action",
+                }
+            ],
+        )
+        artifact_path = (
             root
             / ".ai-sdlc"
             / "memory"
             / "frontend-final-proof-archive-project-cleanup"
             / "latest.yaml"
-        ).exists()
+        )
+        artifact_before = artifact_path.read_text(encoding="utf-8")
+        report_rel = ".ai-sdlc/memory/frontend-final-proof-archive-project-cleanup-dry-run.md"
+
+        with patch("ai_sdlc.cli.program_cmd.find_project_root", return_value=root):
+            result = runner.invoke(
+                app,
+                [
+                    "program",
+                    "final-proof-archive-project-cleanup",
+                    "--report",
+                    report_rel,
+                ],
+            )
+
+        assert result.exit_code == 0
+        assert "cleanup target: cleanup-thread-archive-report" in result.output
+        assert "eligibility: cleanup-thread-archive-report -> eligible" in result.output
+        assert "preview: cleanup-thread-archive-report -> archive_thread_report" in result.output
+        assert "proposal: cleanup-thread-archive-report -> archive_thread_report" in result.output
+        assert "approval: cleanup-thread-archive-report -> archive_thread_report" in result.output
+        assert "gating: cleanup-thread-archive-report -> archive_thread_report" in result.output
+        report = (root / report_rel).read_text(encoding="utf-8")
+        assert "cleanup-thread-archive-report" in report
+        assert "thread archive report may proceed to preview planning truth" in report
+        assert "preview canonical archive-only cleanup action" in report
+        assert "proposal mirrors previewed archive-only cleanup action" in report
+        assert "approval matches the proposed archive-only cleanup action" in report
+        assert "execution gating matches the approved archive-only cleanup action" in report
+        assert artifact_path.read_text(encoding="utf-8") == artifact_before
 
     def test_program_final_proof_archive_project_cleanup_dry_run_does_not_materialize_thread_archive_steps(
         self, initialized_project_dir: Path
@@ -6101,6 +8991,220 @@ specs:
             / "steps"
             / "001-auth.md"
         ).exists()
+
+    def test_program_final_proof_archive_project_cleanup_deduplicates_project_cleanup_summaries(
+        self, initialized_project_dir: Path
+    ) -> None:
+        result = SimpleNamespace(
+            project_cleanup_result="blocked",
+            project_cleanup_state="blocked",
+            cleanup_targets_state="missing",
+            cleanup_targets=[],
+            cleanup_target_eligibility_state="missing",
+            cleanup_target_eligibility=[],
+            cleanup_preview_plan_state="missing",
+            cleanup_preview_plan=[],
+            cleanup_mutation_proposal_state="missing",
+            cleanup_mutation_proposal=[],
+            cleanup_mutation_proposal_approval_state="missing",
+            cleanup_mutation_proposal_approval=[],
+            cleanup_mutation_execution_gating_state="missing",
+            cleanup_mutation_execution_gating=[],
+            confirmed=True,
+            project_cleanup_summaries=[
+                "seeded cleanup target truth for CLI tests",
+                "seeded cleanup target truth for CLI tests",
+            ],
+            written_paths=[],
+            remaining_blockers=[],
+            warnings=[],
+        )
+
+        with program_cmd_module.console.capture() as capture:
+            program_cmd_module._render_frontend_final_proof_archive_project_cleanup_result(
+                result
+            )
+
+        output = capture.get()
+        assert output.count("seeded cleanup target truth for CLI tests") == 1
+
+    def test_render_frontend_provider_patch_apply_result_deduplicates_apply_summaries(
+        self, initialized_project_dir: Path
+    ) -> None:
+        result = SimpleNamespace(
+            apply_result="applied",
+            patch_apply_state="completed",
+            confirmed=True,
+            apply_summaries=[
+                "applied 1 provider patch file(s) from readonly patch handoff",
+                "applied 1 provider patch file(s) from readonly patch handoff",
+            ],
+            written_paths=[],
+            remaining_blockers=[],
+            warnings=[],
+        )
+
+        with program_cmd_module.console.capture() as capture:
+            program_cmd_module._render_frontend_provider_patch_apply_result(result)
+
+        output = capture.get()
+        assert (
+            output.count(
+                "applied 1 provider patch file(s) from readonly patch handoff"
+            )
+            == 1
+        )
+
+    def test_render_frontend_provider_runtime_result_deduplicates_patch_summaries(
+        self, initialized_project_dir: Path
+    ) -> None:
+        result = SimpleNamespace(
+            invocation_result="patches_generated",
+            provider_execution_state="completed",
+            confirmed=True,
+            patch_summaries=[
+                "generated provider patch plan for 001-auth (pending_inputs=frontend_contract_observations)",
+                "generated provider patch plan for 001-auth (pending_inputs=frontend_contract_observations)",
+            ],
+            remaining_blockers=[
+                "provider runtime blocker",
+                "provider runtime blocker",
+            ],
+            warnings=[
+                "provider runtime warning",
+                "provider runtime warning",
+            ],
+        )
+
+        with program_cmd_module.console.capture() as capture:
+            program_cmd_module._render_frontend_provider_runtime_result(result)
+
+        output = capture.get()
+        assert output.count("patch summary:") == 1
+        assert output.count("blocker:") == 1
+        assert output.count("warning:") == 1
+
+    def test_render_frontend_provider_patch_apply_result_deduplicates_written_paths(
+        self, initialized_project_dir: Path
+    ) -> None:
+        result = SimpleNamespace(
+            apply_result="applied",
+            patch_apply_state="completed",
+            confirmed=True,
+            apply_summaries=[],
+            written_paths=[
+                ".ai-sdlc/memory/frontend-provider-patch-apply/steps/001-auth.md",
+                ".ai-sdlc/memory/frontend-provider-patch-apply/steps/001-auth.md",
+            ],
+            remaining_blockers=[
+                "provider patch apply blocker",
+                "provider patch apply blocker",
+            ],
+            warnings=[
+                "provider patch apply warning",
+                "provider patch apply warning",
+            ],
+        )
+
+        with program_cmd_module.console.capture() as capture:
+            program_cmd_module._render_frontend_provider_patch_apply_result(result)
+
+        output = capture.get()
+        assert output.count("wrote:") == 1
+        assert output.count("blocker:") == 1
+        assert output.count("warning:") == 1
+
+    def test_program_final_proof_publication_report_deduplicates_result_lists(
+        self, initialized_project_dir: Path
+    ) -> None:
+        root = initialized_project_dir
+        report_rel = "artifacts/frontend-final-proof-publication-report.md"
+        request = SimpleNamespace(
+            artifact_source_path=".ai-sdlc/memory/frontend-persisted-write-proof/latest.yaml",
+            publication_state="ready",
+            proof_state="completed",
+            confirmation_required=True,
+            artifact_generated_at=None,
+            steps=[],
+            written_paths=[],
+            remaining_blockers=[],
+            warnings=[],
+        )
+        publication_result = SimpleNamespace(
+            publication_result="completed",
+            publication_state="completed",
+            confirmed=True,
+            publication_summaries=[
+                "final proof publication summary",
+                "final proof publication summary",
+            ],
+            written_paths=[
+                "artifacts/frontend/final-proof-publication.md",
+                "artifacts/frontend/final-proof-publication.md",
+            ],
+            remaining_blockers=[
+                "final proof publication blocker",
+                "final proof publication blocker",
+            ],
+            warnings=[
+                "final proof publication warning",
+                "final proof publication warning",
+            ],
+            passed=True,
+        )
+
+        with (
+            patch("ai_sdlc.cli.program_cmd.find_project_root", return_value=root),
+            patch.object(
+                program_cmd_module.ProgramService,
+                "load_manifest",
+                return_value=object(),
+            ),
+            patch.object(
+                program_cmd_module.ProgramService,
+                "validate_manifest",
+                return_value=SimpleNamespace(valid=True, errors=[]),
+            ),
+            patch.object(
+                program_cmd_module.ProgramService,
+                "build_frontend_final_proof_publication_request",
+                return_value=request,
+            ),
+            patch.object(
+                program_cmd_module.ProgramService,
+                "execute_frontend_final_proof_publication",
+                return_value=publication_result,
+            ),
+            patch.object(
+                program_cmd_module.ProgramService,
+                "write_frontend_final_proof_publication_artifact",
+                return_value=(
+                    root
+                    / ".ai-sdlc"
+                    / "memory"
+                    / "frontend-final-proof-publication"
+                    / "latest.yaml"
+                ),
+            ),
+        ):
+            result = runner.invoke(
+                app,
+                [
+                    "program",
+                    "final-proof-publication",
+                    "--execute",
+                    "--yes",
+                    "--report",
+                    report_rel,
+                ],
+            )
+
+        assert result.exit_code == 0
+        report = (root / report_rel).read_text(encoding="utf-8")
+        assert report.count("final proof publication summary") == 1
+        assert report.count("artifacts/frontend/final-proof-publication.md") == 1
+        assert report.count("final proof publication blocker") == 1
+        assert report.count("final proof publication warning") == 1
 
     def test_program_final_proof_archive_project_cleanup_execute_runs_canonical_gated_cleanup_mutations(
         self, initialized_project_dir: Path
@@ -6235,6 +9339,14 @@ specs:
         assert "cleanup mutation proposal approval count: 2" in result.output
         assert "cleanup mutation execution gating state: listed" in result.output
         assert "cleanup mutation execution gating count: 2" in result.output
+        assert "cleanup target: cleanup-thread-archive-report" in result.output
+        assert "eligibility: cleanup-thread-archive-report -> eligible" in result.output
+        assert "preview: cleanup-thread-archive-report -> archive_thread_report" in result.output
+        assert "proposal: cleanup-thread-archive-report -> archive_thread_report" in result.output
+        assert "approval: cleanup-thread-archive-report -> archive_thread_report" in result.output
+        assert "gating: cleanup-thread-archive-report -> archive_thread_report" in result.output
+        assert "thread archive report may proceed to preview planning truth" in result.output
+        assert "frontend contract evidence is still missing" in result.output
         assert (
             "executed 2 cleanup mutation(s) from canonical cleanup_mutation_execution_gating"
             in result.output
@@ -6262,6 +9374,12 @@ specs:
             "specs/001-auth/threads/archive-001.md",
             "specs/002-course",
         ]
+        assert payload["steps"][0]["plain_language_blockers"] == [
+            "frontend contract evidence is still missing"
+        ]
+        assert payload["steps"][0]["recommended_next_steps"] == [
+            "materialize the missing frontend contract evidence before final proof archive"
+        ]
         assert payload["remaining_blockers"] == []
         assert payload["warnings"] == []
         assert payload["source_linkage"]["project_cleanup_state"] == "completed"
@@ -6283,6 +9401,17 @@ specs:
         assert "Cleanup mutation proposal approval count: `2`" in report
         assert "Cleanup mutation execution gating state: `listed`" in report
         assert "Cleanup mutation execution gating count: `2`" in report
+        assert "cleanup-thread-archive-report" in report
+        assert "thread archive report may proceed to preview planning truth" in report
+        assert "preview canonical archive-only cleanup action" in report
+        assert "proposal mirrors previewed archive-only cleanup action" in report
+        assert "approval matches the proposed archive-only cleanup action" in report
+        assert "execution gating matches the approved archive-only cleanup action" in report
+        assert "frontend contract evidence is still missing" in report
+        assert (
+            "materialize the missing frontend contract evidence before final proof archive"
+            in report
+        )
         assert (
             "executed 2 cleanup mutation(s) from canonical cleanup_mutation_execution_gating"
             in report
@@ -6431,6 +9560,8 @@ specs:
             "review stable empty frontend visual / a11y evidence",
             "re-run ai-sdlc verify constraints",
         ]
+        assert payload["steps"][0]["plain_language_blockers"] == []
+        assert payload["steps"][0]["recommended_next_steps"] == []
         report = (root / report_rel).read_text(encoding="utf-8")
         assert "frontend_visual_a11y_evidence_stable_empty" in report
         assert "review stable empty frontend visual / a11y evidence" in report
@@ -6496,6 +9627,8 @@ specs:
             "review frontend visual / a11y issue findings",
             "re-run ai-sdlc verify constraints",
         ]
+        assert payload["steps"][0]["plain_language_blockers"] == []
+        assert payload["steps"][0]["recommended_next_steps"] == []
         report = (root / report_rel).read_text(encoding="utf-8")
         assert "frontend_visual_a11y_issue_review" in report
         assert "review frontend visual / a11y issue findings" in report
@@ -6518,6 +9651,12 @@ def _write_frontend_remediation_writeback_artifact(
             "suggested_actions": [
                 "materialize frontend contract observations",
                 "re-run ai-sdlc verify constraints",
+            ],
+            "plain_language_blockers": [
+                "frontend contract evidence is still missing"
+            ],
+            "recommended_next_steps": [
+                "materialize the missing frontend contract evidence before provider handoff"
             ],
             "action_commands": [
                 "uv run ai-sdlc scan <frontend-source-root> --frontend-contract-spec-dir specs/001-auth"
@@ -6582,6 +9721,12 @@ def _write_frontend_provider_runtime_artifact(
             "suggested_next_actions": [
                 "materialize frontend contract observations",
                 "re-run ai-sdlc verify constraints",
+            ],
+            "plain_language_blockers": [
+                "frontend contract evidence is still missing"
+            ],
+            "recommended_next_steps": [
+                "materialize the missing frontend contract evidence before provider patch handoff"
             ],
             "source_linkage": {
                 "writeback_artifact_path": ".ai-sdlc/memory/frontend-remediation/latest.yaml",
@@ -6650,6 +9795,12 @@ def _write_frontend_provider_patch_apply_artifact(
             "suggested_next_actions": [
                 "materialize frontend contract observations",
                 "re-run ai-sdlc verify constraints",
+            ],
+            "plain_language_blockers": [
+                "frontend contract evidence is still missing"
+            ],
+            "recommended_next_steps": [
+                "materialize the missing frontend contract evidence before provider patch apply"
             ],
             "source_linkage": {
                 "provider_runtime_artifact_path": ".ai-sdlc/memory/frontend-provider-runtime/latest.yaml",
@@ -6728,6 +9879,12 @@ def _write_frontend_cross_spec_writeback_artifact(
             "suggested_next_actions": [
                 "materialize frontend contract observations",
                 "re-run ai-sdlc verify constraints",
+            ],
+            "plain_language_blockers": [
+                "frontend contract evidence is still missing"
+            ],
+            "recommended_next_steps": [
+                "materialize the missing frontend contract evidence before guarded registry"
             ],
             "source_linkage": {
                 "cross_spec_writeback_state": writeback_state,
@@ -6816,6 +9973,12 @@ def _write_frontend_guarded_registry_artifact(
                 "materialize frontend contract observations",
                 "re-run ai-sdlc verify constraints",
             ],
+            "plain_language_blockers": [
+                "frontend contract evidence is still missing"
+            ],
+            "recommended_next_steps": [
+                "materialize the missing frontend contract evidence before broader governance"
+            ],
             "source_linkage": {
                 "registry_state": registry_state,
                 "cross_spec_writeback_artifact_path": ".ai-sdlc/memory/frontend-cross-spec-writeback/latest.yaml",
@@ -6886,6 +10049,12 @@ def _write_frontend_broader_governance_artifact(
                 "materialize broader governance review context",
                 "re-run ai-sdlc verify constraints",
             ],
+            "plain_language_blockers": [
+                "frontend contract evidence is still missing"
+            ],
+            "recommended_next_steps": [
+                "materialize the missing frontend contract evidence before final governance"
+            ],
             "source_linkage": {
                 "governance_state": governance_state,
                 "guarded_registry_artifact_path": ".ai-sdlc/memory/frontend-guarded-registry/latest.yaml",
@@ -6952,6 +10121,12 @@ def _write_frontend_final_governance_artifact(
             "suggested_next_actions": [
                 "materialize writeback persistence review context",
                 "re-run ai-sdlc verify constraints",
+            ],
+            "plain_language_blockers": [
+                "frontend contract evidence is still missing"
+            ],
+            "recommended_next_steps": [
+                "materialize the missing frontend contract evidence before final governance"
             ],
             "source_linkage": {
                 "final_governance_state": final_governance_state,
@@ -7020,6 +10195,12 @@ def _write_frontend_writeback_persistence_artifact(
                 "materialize persisted write proof review context",
                 "re-run ai-sdlc verify constraints",
             ],
+            "plain_language_blockers": [
+                "frontend contract evidence is still missing"
+            ],
+            "recommended_next_steps": [
+                "materialize the missing frontend contract evidence before writeback persistence"
+            ],
             "source_linkage": {
                 "persistence_state": persistence_state,
                 "final_governance_artifact_path": ".ai-sdlc/memory/frontend-final-governance/latest.yaml",
@@ -7086,6 +10267,12 @@ def _write_frontend_persisted_write_proof_artifact(
             "suggested_next_actions": [
                 "materialize final proof publication review context",
                 "re-run ai-sdlc verify constraints",
+            ],
+            "plain_language_blockers": [
+                "frontend contract evidence is still missing"
+            ],
+            "recommended_next_steps": [
+                "materialize the missing frontend contract evidence before persisted write proof"
             ],
             "source_linkage": {
                 "proof_state": proof_state,
@@ -7154,6 +10341,12 @@ def _write_frontend_final_proof_publication_artifact(
                 "materialize final proof closure review context",
                 "re-run ai-sdlc verify constraints",
             ],
+            "plain_language_blockers": [
+                "frontend contract evidence is still missing"
+            ],
+            "recommended_next_steps": [
+                "materialize the missing frontend contract evidence before final proof publication"
+            ],
             "source_linkage": {
                 "publication_state": publication_state,
                 "persisted_write_proof_artifact_path": ".ai-sdlc/memory/frontend-persisted-write-proof/latest.yaml",
@@ -7221,6 +10414,12 @@ def _write_frontend_final_proof_closure_artifact(
                 "materialize final proof archive review context",
                 "re-run ai-sdlc verify constraints",
             ],
+            "plain_language_blockers": [
+                "frontend contract evidence is still missing"
+            ],
+            "recommended_next_steps": [
+                "materialize the missing frontend contract evidence before final proof closure"
+            ],
             "source_linkage": {
                 "closure_state": closure_state,
                 "final_proof_publication_artifact_path": ".ai-sdlc/memory/frontend-final-proof-publication/latest.yaml",
@@ -7287,6 +10486,12 @@ def _write_frontend_final_proof_archive_artifact(
                 "materialize final proof archive thread archive review context",
                 "prepare bounded thread archive execution",
             ],
+            "plain_language_blockers": [
+                "frontend contract evidence is still missing"
+            ],
+            "recommended_next_steps": [
+                "materialize the missing frontend contract evidence before final proof archive"
+            ],
             "source_linkage": {
                 "archive_state": archive_state,
                 "final_proof_closure_artifact_path": ".ai-sdlc/memory/frontend-final-proof-closure/latest.yaml",
@@ -7341,6 +10546,7 @@ def _write_frontend_final_proof_archive_project_cleanup_seed_artifact(
     cleanup_mutation_proposal: object | None = None,
     cleanup_mutation_proposal_approval: object | None = None,
     cleanup_mutation_execution_gating: object | None = None,
+    project_cleanup_summaries: list[str] | None = None,
 ) -> None:
     artifact_path = (
         root / ".ai-sdlc" / "memory" / "frontend-final-proof-archive-project-cleanup" / "latest.yaml"
@@ -7360,9 +10566,9 @@ def _write_frontend_final_proof_archive_project_cleanup_seed_artifact(
         "project_cleanup_result": "deferred",
         "cleanup_targets_state": "seeded",
         "cleanup_targets": cleanup_targets,
-        "project_cleanup_summaries": [
-            "seeded cleanup target truth for CLI tests"
-        ],
+        "project_cleanup_summaries": list(
+            project_cleanup_summaries or ["seeded cleanup target truth for CLI tests"]
+        ),
         "written_paths": [],
         "remaining_blockers": ["spec 001-auth remediation still required"],
         "warnings": [],

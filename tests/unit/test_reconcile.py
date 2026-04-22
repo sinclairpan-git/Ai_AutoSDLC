@@ -116,6 +116,41 @@ def test_detect_reconcile_hint_for_legacy_root_layout(tmp_path: Path) -> None:
     assert "spec.md" in hint.detected_files
 
 
+def test_reconcile_hint_and_artifact_candidate_deduplicate_set_like_lists() -> None:
+    from ai_sdlc.core.reconcile import ReconcileHint, _ArtifactCandidate
+
+    candidate = _ArtifactCandidate(
+        layout="legacy_root",
+        spec_dir_abs=Path("/tmp/example"),
+        spec_dir_rel=".",
+        detected_files=["spec.md", "spec.md", "plan.md"],
+        prd_source="product-requirements.md",
+    )
+    hint = ReconcileHint(
+        needed=True,
+        reason="legacy artifacts outpace checkpoint",
+        layout="legacy_root",
+        spec_dir=".",
+        feature_id="LEGACY-001",
+        current_stage="verify",
+        completed_stages=["init", "init", "refine"],
+        detected_files=["spec.md", "spec.md", "plan.md"],
+    )
+
+    assert candidate.detected_files == ["spec.md", "plan.md"]
+    assert hint.completed_stages == ["init", "refine"]
+    assert hint.detected_files == ["spec.md", "plan.md"]
+
+
+def test_artifacts_for_stage_deduplicates_detected_files() -> None:
+    from ai_sdlc.core.reconcile import _artifacts_for_stage
+
+    assert _artifacts_for_stage(
+        "verify",
+        ["tasks.md", "tasks.md", "task-execution-log.md", "task-execution-log.md"],
+    ) == ["tasks.md", "task-execution-log.md"]
+
+
 def test_detect_reconcile_hint_for_specs_dir_layout_without_checkpoint(
     tmp_path: Path,
 ) -> None:

@@ -8,6 +8,7 @@ from pathlib import Path
 import pytest
 
 from ai_sdlc.integrations.ide_adapter import (
+    ApplyResult,
     IDEKind,
     acknowledge_adapter,
     apply_adapter,
@@ -116,6 +117,20 @@ class TestDetectIde:
 
 
 class TestApplyAdapter:
+    def test_apply_result_runtime_object_canonicalizes_lists(self) -> None:
+        result = ApplyResult(
+            ide=IDEKind.CODEX.value,
+            written=["AGENTS.md", "AGENTS.md"],
+            skipped_existing=["AGENTS.md", "AGENTS.md"],
+            skipped_user_modified=["AGENTS.md", "AGENTS.md"],
+            legacy_migrated=[".codex/AI-SDLC.md", ".codex/AI-SDLC.md"],
+        )
+
+        assert result.written == ["AGENTS.md"]
+        assert result.skipped_existing == ["AGENTS.md"]
+        assert result.skipped_user_modified == ["AGENTS.md"]
+        assert result.legacy_migrated == [".codex/AI-SDLC.md"]
+
     def test_writes_cursor_rule(self, tmp_path: Path) -> None:
         (tmp_path / AI_SDLC_DIR).mkdir(parents=True)
         r = apply_adapter(tmp_path, IDEKind.CURSOR)

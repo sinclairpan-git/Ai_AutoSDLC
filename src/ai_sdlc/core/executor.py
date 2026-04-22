@@ -36,6 +36,15 @@ MAX_DEBUG_ROUNDS = 3
 MAX_CONSECUTIVE_HALTS = 2
 
 
+def _dedupe_text_items(values: list[str]) -> list[str]:
+    unique: list[str] = []
+    for value in values:
+        text = str(value)
+        if text not in unique:
+            unique.append(text)
+    return unique
+
+
 @dataclass(slots=True)
 class ExecutorSettings:
     """Runtime settings loaded from pipeline.yml for execute stage behavior."""
@@ -69,6 +78,9 @@ class ExecutionResult:
     last_commit_timestamp: str = ""
     halted: bool = False
     error: str = ""
+
+    def __post_init__(self) -> None:
+        self.commit_hashes = _dedupe_text_items(self.commit_hashes)
 
 
 TaskRunner = Callable[[Task, RuntimeState], TaskStatus | TaskExecutionOutcome]

@@ -5,6 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from ai_sdlc.core.artifact_target_guard import (
+    FormalArtifactTargetGuardResult,
     detect_misplaced_formal_artifacts,
     evaluate_formal_artifact_target_guard,
     validate_formal_artifact_target,
@@ -85,3 +86,113 @@ def test_evaluate_formal_artifact_target_guard_reports_blocker(
     assert result.reason_codes == ["misplaced_formal_artifact_detected"]
     assert result.violation_count == 1
 
+
+def test_evaluate_formal_artifact_target_guard_deduplicates_source_summary_lists(
+    tmp_path: Path,
+) -> None:
+    for idx in range(2):
+        misplaced = tmp_path / "docs" / "superpowers" / "plans" / f"formal-plan-{idx}.md"
+        misplaced.parent.mkdir(parents=True, exist_ok=True)
+        misplaced.write_text(
+            "# 实施计划：Misplaced\n\n"
+            "```text\n"
+            "spec.md\n"
+            "tasks.md\n"
+            "task-execution-log.md\n"
+            "```\n",
+            encoding="utf-8",
+        )
+
+    result = evaluate_formal_artifact_target_guard(tmp_path)
+
+    assert result.reason_codes == ["misplaced_formal_artifact_detected"]
+    assert len(result.sample_entries) == len({entry["path"] for entry in result.sample_entries})
+
+
+def test_evaluate_formal_artifact_target_guard_collects_first_three_unique_sample_entries(
+    tmp_path: Path,
+) -> None:
+    repeated = tmp_path / "docs" / "superpowers" / "plans" / "formal-plan-0.md"
+    repeated.parent.mkdir(parents=True, exist_ok=True)
+    repeated.write_text(
+        "# 实施计划：Misplaced\n\n"
+        "```text\n"
+        "spec.md\n"
+        "tasks.md\n"
+        "task-execution-log.md\n"
+        "```\n",
+        encoding="utf-8",
+    )
+    for idx in range(1, 5):
+        misplaced = tmp_path / "docs" / "superpowers" / "plans" / f"formal-plan-{idx}.md"
+        misplaced.write_text(
+            "# 实施计划：Misplaced\n\n"
+            "```text\n"
+            "spec.md\n"
+            "tasks.md\n"
+            "task-execution-log.md\n"
+            "```\n",
+            encoding="utf-8",
+        )
+
+    result = evaluate_formal_artifact_target_guard(tmp_path)
+
+    assert len(result.sample_entries) == 3
+    assert len({entry["path"] for entry in result.sample_entries}) == 3
+
+
+def test_formal_artifact_target_guard_to_json_dict_deduplicates_lists() -> None:
+    payload = FormalArtifactTargetGuardResult(
+        state="blocked",
+        reason_codes=[
+            "misplaced_formal_artifact_detected",
+            "misplaced_formal_artifact_detected",
+        ],
+        violation_count=2,
+        sample_entries=[
+            {
+                "path": "docs/superpowers/plans/formal-plan.md",
+                "artifact_kind": "plan",
+            },
+            {
+                "path": "docs/superpowers/plans/formal-plan.md",
+                "artifact_kind": "plan",
+            },
+        ],
+    ).to_json_dict()
+
+    assert payload["reason_codes"] == ["misplaced_formal_artifact_detected"]
+    assert payload["sample_entries"] == [
+        {
+            "path": "docs/superpowers/plans/formal-plan.md",
+            "artifact_kind": "plan",
+        }
+    ]
+
+
+def test_formal_artifact_target_guard_result_canonicalizes_runtime_lists() -> None:
+    result = FormalArtifactTargetGuardResult(
+        state="blocked",
+        reason_codes=[
+            "misplaced_formal_artifact_detected",
+            "misplaced_formal_artifact_detected",
+        ],
+        sample_entries=[
+            {
+                "path": "docs/superpowers/plans/formal-plan.md",
+                "artifact_kind": "plan",
+            },
+            {
+                "path": "docs/superpowers/plans/formal-plan.md",
+                "artifact_kind": "plan",
+            },
+        ],
+    )
+
+    assert result.reason_codes == ["misplaced_formal_artifact_detected"]
+    assert result.sample_entries == [
+        {
+            "path": "docs/superpowers/plans/formal-plan.md",
+            "artifact_kind": "plan",
+        }
+    ]

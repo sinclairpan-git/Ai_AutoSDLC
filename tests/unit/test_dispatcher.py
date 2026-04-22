@@ -7,7 +7,7 @@ from pathlib import Path
 
 import pytest
 
-from ai_sdlc.core.dispatcher import VALID_STAGES, StageDispatcher
+from ai_sdlc.core.dispatcher import VALID_STAGES, StageDispatcher, StageManifest
 from ai_sdlc.models.state import Checkpoint, CompletedStage, FeatureInfo
 from ai_sdlc.telemetry.paths import telemetry_local_root
 from ai_sdlc.telemetry.runtime import RuntimeTelemetry
@@ -38,6 +38,28 @@ def _base_cp() -> Checkpoint:
 
 
 class TestStageDispatcher:
+    def test_stage_manifest_deduplicates_repeated_context_and_output_lists(self) -> None:
+        manifest = StageManifest.model_validate(
+            {
+                "stage": "execute",
+                "description": "demo",
+                "prerequisites": ["design", "design", "verify"],
+                "context": {
+                    "rules": ["pipeline", "pipeline", "execute"],
+                    "artifacts": ["spec.md", "spec.md", "plan.md"],
+                },
+                "checklist": [],
+                "outputs": ["summary.md", "summary.md", "handoff.md"],
+            }
+        )
+
+        assert manifest.prerequisites == ["design", "verify"]
+        assert manifest.context == {
+            "rules": ["pipeline", "execute"],
+            "artifacts": ["spec.md", "plan.md"],
+        }
+        assert manifest.outputs == ["summary.md", "handoff.md"]
+
     def test_load_manifest_execute(self) -> None:
         d = StageDispatcher()
         m = d.load_manifest("execute")

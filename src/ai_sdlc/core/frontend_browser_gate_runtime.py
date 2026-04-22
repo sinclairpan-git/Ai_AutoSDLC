@@ -51,6 +51,9 @@ def build_browser_quality_gate_execution_context(
     delivery_entry_id: str = "",
     component_library_packages: list[str] | None = None,
     provider_theme_adapter_id: str = "",
+    provider_runtime_adapter_carrier_mode: str = "",
+    provider_runtime_adapter_delivery_state: str = "",
+    provider_runtime_adapter_evidence_state: str = "",
     page_schema_ids: list[str] | None = None,
 ) -> BrowserQualityGateExecutionContext:
     """Build the frozen execution context from apply truth and solution truth."""
@@ -95,10 +98,13 @@ def build_browser_quality_gate_execution_context(
         effective_style_pack=solution_snapshot.effective_style_pack_id,
         style_fidelity_status=solution_snapshot.style_fidelity_status,
         delivery_entry_id=delivery_entry_id,
-        component_library_packages=list(component_library_packages or []),
+        component_library_packages=_unique_strings(component_library_packages or []),
         provider_theme_adapter_id=provider_theme_adapter_id,
-        page_schema_ids=list(page_schema_ids or []),
-        required_probe_set=list(BROWSER_GATE_REQUIRED_PROBE_SET),
+        provider_runtime_adapter_carrier_mode=provider_runtime_adapter_carrier_mode,
+        provider_runtime_adapter_delivery_state=provider_runtime_adapter_delivery_state,
+        provider_runtime_adapter_evidence_state=provider_runtime_adapter_evidence_state,
+        page_schema_ids=_unique_strings(page_schema_ids or []),
+        required_probe_set=_unique_strings(BROWSER_GATE_REQUIRED_PROBE_SET),
         browser_entry_ref=browser_entry_ref,
         source_linkage_refs={
             "apply_result_status": result_status,
@@ -134,9 +140,20 @@ def run_default_browser_gate_probe(
         "generated_at": generated_at,
         "managed_frontend_target": execution_context.managed_frontend_target,
         "delivery_entry_id": execution_context.delivery_entry_id,
-        "component_library_packages": list(execution_context.component_library_packages),
+        "component_library_packages": _unique_strings(
+            execution_context.component_library_packages
+        ),
         "provider_theme_adapter_id": execution_context.provider_theme_adapter_id,
-        "page_schema_ids": list(execution_context.page_schema_ids),
+        "provider_runtime_adapter_carrier_mode": (
+            execution_context.provider_runtime_adapter_carrier_mode
+        ),
+        "provider_runtime_adapter_delivery_state": (
+            execution_context.provider_runtime_adapter_delivery_state
+        ),
+        "provider_runtime_adapter_evidence_state": (
+            execution_context.provider_runtime_adapter_evidence_state
+        ),
+        "page_schema_ids": _unique_strings(execution_context.page_schema_ids),
         "effective_provider": execution_context.effective_provider,
         "effective_style_pack": execution_context.effective_style_pack,
     }
@@ -253,12 +270,14 @@ def materialize_browser_gate_probe_runtime(
             started_at=generated_at,
             finished_at=generated_at,
             runtime_status="incomplete",
-            artifact_ids=[record.artifact_id for record in smoke_records],
+            artifact_ids=_unique_strings(record.artifact_id for record in smoke_records),
             classification_candidate="evidence_missing",
             recheck_required=True,
-            remediation_hints=["materialize shared Playwright runtime evidence"],
-            blocking_reason_codes=["playwright_probe_evidence_missing"],
-            requirement_linkage=["browser_quality_gate:playwright_smoke"],
+            remediation_hints=_unique_strings(
+                ["materialize shared Playwright runtime evidence"]
+            ),
+            blocking_reason_codes=_unique_strings(["playwright_probe_evidence_missing"]),
+            requirement_linkage=_unique_strings(["browser_quality_gate:playwright_smoke"]),
         )
         interaction_records = _materialize_missing_probe_artifacts(
             root=root,
@@ -275,12 +294,20 @@ def materialize_browser_gate_probe_runtime(
             started_at=generated_at,
             finished_at=generated_at,
             runtime_status="incomplete",
-            artifact_ids=[record.artifact_id for record in interaction_records],
+            artifact_ids=_unique_strings(
+                record.artifact_id for record in interaction_records
+            ),
             classification_candidate="evidence_missing",
             recheck_required=True,
-            remediation_hints=["materialize interaction anti-pattern probe evidence"],
-            blocking_reason_codes=["interaction_probe_evidence_missing"],
-            requirement_linkage=["browser_quality_gate:interaction_anti_pattern_checks"],
+            remediation_hints=_unique_strings(
+                ["materialize interaction anti-pattern probe evidence"]
+            ),
+            blocking_reason_codes=_unique_strings(
+                ["interaction_probe_evidence_missing"]
+            ),
+            requirement_linkage=_unique_strings(
+                ["browser_quality_gate:interaction_anti_pattern_checks"]
+            ),
         )
 
     artifact_records.extend(smoke_records)
@@ -321,7 +348,7 @@ def materialize_browser_gate_probe_runtime(
         started_at=generated_at,
         updated_at=generated_at,
         finished_at=generated_at,
-        warnings=list(runner_warnings),
+        warnings=_unique_strings(runner_warnings),
         source_linkage_refs={
             **context.source_linkage_refs,
             "apply_artifact_path": apply_artifact_path,
@@ -339,9 +366,18 @@ def materialize_browser_gate_probe_runtime(
         source_artifact_ref=apply_artifact_path,
         readiness_subject_id=context.readiness_subject_id,
         delivery_entry_id=context.delivery_entry_id,
-        component_library_packages=list(context.component_library_packages),
+        component_library_packages=_unique_strings(context.component_library_packages),
         provider_theme_adapter_id=context.provider_theme_adapter_id,
-        page_schema_ids=list(context.page_schema_ids),
+        provider_runtime_adapter_carrier_mode=(
+            context.provider_runtime_adapter_carrier_mode
+        ),
+        provider_runtime_adapter_delivery_state=(
+            context.provider_runtime_adapter_delivery_state
+        ),
+        provider_runtime_adapter_evidence_state=(
+            context.provider_runtime_adapter_evidence_state
+        ),
+        page_schema_ids=_unique_strings(context.page_schema_ids),
         playwright_trace_refs=[
             record.artifact_ref
             for record in artifact_records
@@ -477,7 +513,7 @@ def _materialize_real_smoke_receipt(
                 check_name="playwright_smoke",
                 artifact_type=artifact_type,
                 artifact_ref=artifact_ref,
-                anchor_refs=list(capture.anchor_refs),
+                anchor_refs=_unique_strings(capture.anchor_refs),
                 capture_status=resolved_status,
                 captured_at=generated_at,
                 source_linkage_refs={"artifact_reason": ",".join(diagnostic_codes)},
@@ -490,12 +526,14 @@ def _materialize_real_smoke_receipt(
             started_at=generated_at,
             finished_at=generated_at,
             runtime_status="failed_transient",
-            artifact_ids=[record.artifact_id for record in records],
-            anchor_refs=list(capture.anchor_refs),
-            requirement_linkage=["browser_quality_gate:playwright_smoke"],
+            artifact_ids=_unique_strings(record.artifact_id for record in records),
+            anchor_refs=_unique_strings(capture.anchor_refs),
+            requirement_linkage=_unique_strings(["browser_quality_gate:playwright_smoke"]),
             classification_candidate="transient_run_failure",
             recheck_required=True,
-            remediation_hints=["re-run the browser gate probe after restoring the Playwright runtime"],
+            remediation_hints=_unique_strings(
+                ["re-run the browser gate probe after restoring the Playwright runtime"]
+            ),
             blocking_reason_codes=diagnostic_codes or ["playwright_probe_transient_failure"],
         )
 
@@ -505,12 +543,14 @@ def _materialize_real_smoke_receipt(
             started_at=generated_at,
             finished_at=generated_at,
             runtime_status="incomplete",
-            artifact_ids=[record.artifact_id for record in records],
-            anchor_refs=list(capture.anchor_refs),
-            requirement_linkage=["browser_quality_gate:playwright_smoke"],
+            artifact_ids=_unique_strings(record.artifact_id for record in records),
+            anchor_refs=_unique_strings(capture.anchor_refs),
+            requirement_linkage=_unique_strings(["browser_quality_gate:playwright_smoke"]),
             classification_candidate="evidence_missing",
             recheck_required=True,
-            remediation_hints=["materialize shared Playwright runtime evidence"],
+            remediation_hints=_unique_strings(
+                ["materialize shared Playwright runtime evidence"]
+            ),
             blocking_reason_codes=diagnostic_codes or ["playwright_probe_evidence_missing"],
         )
 
@@ -519,9 +559,9 @@ def _materialize_real_smoke_receipt(
         started_at=generated_at,
         finished_at=generated_at,
         runtime_status="completed",
-        artifact_ids=[record.artifact_id for record in records],
-        anchor_refs=list(capture.anchor_refs),
-        requirement_linkage=["browser_quality_gate:playwright_smoke"],
+        artifact_ids=_unique_strings(record.artifact_id for record in records),
+        anchor_refs=_unique_strings(capture.anchor_refs),
+        requirement_linkage=_unique_strings(["browser_quality_gate:playwright_smoke"]),
         classification_candidate="pass",
     )
 
@@ -539,7 +579,7 @@ def _materialize_real_interaction_receipt(
     diagnostic_codes = _unique_strings(
         [*runner_result.diagnostic_codes, *capture.blocking_reason_codes]
     )
-    artifact_refs = list(capture.artifact_refs) or [
+    artifact_refs = _unique_strings(capture.artifact_refs) or [
         f"{artifact_root_rel}/{_INTERACTION_SNAPSHOT_REL_PATH}"
     ]
     records: list[BrowserProbeArtifactRecord] = []
@@ -562,7 +602,7 @@ def _materialize_real_interaction_receipt(
                 check_name="interaction_anti_pattern_checks",
                 artifact_type="interaction_snapshot",
                 artifact_ref=artifact_ref,
-                anchor_refs=list(capture.anchor_refs),
+                anchor_refs=_unique_strings(capture.anchor_refs),
                 capture_status=resolved_status,
                 captured_at=generated_at,
                 source_linkage_refs={"interaction_probe_id": capture.interaction_probe_id},
@@ -579,12 +619,16 @@ def _materialize_real_interaction_receipt(
             started_at=generated_at,
             finished_at=generated_at,
             runtime_status="failed_transient",
-            artifact_ids=[record.artifact_id for record in records],
-            anchor_refs=list(capture.anchor_refs),
-            requirement_linkage=["browser_quality_gate:interaction_anti_pattern_checks"],
+            artifact_ids=_unique_strings(record.artifact_id for record in records),
+            anchor_refs=_unique_strings(capture.anchor_refs),
+            requirement_linkage=_unique_strings(
+                ["browser_quality_gate:interaction_anti_pattern_checks"]
+            ),
             classification_candidate="transient_run_failure",
             recheck_required=True,
-            remediation_hints=["re-run the browser gate probe after restoring the interaction runtime"],
+            remediation_hints=_unique_strings(
+                ["re-run the browser gate probe after restoring the interaction runtime"]
+            ),
             blocking_reason_codes=diagnostic_codes or ["interaction_probe_transient_failure"],
         )
 
@@ -594,12 +638,16 @@ def _materialize_real_interaction_receipt(
             started_at=generated_at,
             finished_at=generated_at,
             runtime_status="incomplete",
-            artifact_ids=[record.artifact_id for record in records],
-            anchor_refs=list(capture.anchor_refs),
-            requirement_linkage=["browser_quality_gate:interaction_anti_pattern_checks"],
+            artifact_ids=_unique_strings(record.artifact_id for record in records),
+            anchor_refs=_unique_strings(capture.anchor_refs),
+            requirement_linkage=_unique_strings(
+                ["browser_quality_gate:interaction_anti_pattern_checks"]
+            ),
             classification_candidate="evidence_missing",
             recheck_required=True,
-            remediation_hints=["materialize interaction anti-pattern probe evidence"],
+            remediation_hints=_unique_strings(
+                ["materialize interaction anti-pattern probe evidence"]
+            ),
             blocking_reason_codes=diagnostic_codes or ["interaction_probe_evidence_missing"],
         )
 
@@ -609,11 +657,15 @@ def _materialize_real_interaction_receipt(
             started_at=generated_at,
             finished_at=generated_at,
             runtime_status="completed",
-            artifact_ids=[record.artifact_id for record in records],
-            anchor_refs=list(capture.anchor_refs),
-            requirement_linkage=["browser_quality_gate:interaction_anti_pattern_checks"],
+            artifact_ids=_unique_strings(record.artifact_id for record in records),
+            anchor_refs=_unique_strings(capture.anchor_refs),
+            requirement_linkage=_unique_strings(
+                ["browser_quality_gate:interaction_anti_pattern_checks"]
+            ),
             classification_candidate="actual_quality_blocker",
-            remediation_hints=["review interaction anti-pattern issue findings"],
+            remediation_hints=_unique_strings(
+                ["review interaction anti-pattern issue findings"]
+            ),
             blocking_reason_codes=diagnostic_codes or ["interaction_probe_quality_blocker"],
         )
 
@@ -622,9 +674,11 @@ def _materialize_real_interaction_receipt(
         started_at=generated_at,
         finished_at=generated_at,
         runtime_status="completed",
-        artifact_ids=[record.artifact_id for record in records],
-        anchor_refs=list(capture.anchor_refs),
-        requirement_linkage=["browser_quality_gate:interaction_anti_pattern_checks"],
+        artifact_ids=_unique_strings(record.artifact_id for record in records),
+        anchor_refs=_unique_strings(capture.anchor_refs),
+        requirement_linkage=_unique_strings(
+            ["browser_quality_gate:interaction_anti_pattern_checks"]
+        ),
         classification_candidate="pass",
     )
 
@@ -714,24 +768,32 @@ def _materialize_visual_and_a11y_receipts(
                 started_at=generated_at,
                 finished_at=generated_at,
                 runtime_status="incomplete",
-                artifact_ids=[records[0].artifact_id],
+                artifact_ids=_unique_strings([records[0].artifact_id]),
                 classification_candidate="evidence_missing",
                 recheck_required=True,
-                remediation_hints=["materialize frontend visual / a11y evidence input"],
-                blocking_reason_codes=["visual_expectation_evidence_missing"],
-                requirement_linkage=["browser_quality_gate:visual_expectation"],
+                remediation_hints=_unique_strings(
+                    ["materialize frontend visual / a11y evidence input"]
+                ),
+                blocking_reason_codes=_unique_strings(
+                    ["visual_expectation_evidence_missing"]
+                ),
+                requirement_linkage=_unique_strings(
+                    ["browser_quality_gate:visual_expectation"]
+                ),
             ),
             BrowserProbeExecutionReceipt(
                 check_name="basic_a11y",
                 started_at=generated_at,
                 finished_at=generated_at,
                 runtime_status="incomplete",
-                artifact_ids=[a11y_records[0].artifact_id],
+                artifact_ids=_unique_strings([a11y_records[0].artifact_id]),
                 classification_candidate="evidence_missing",
                 recheck_required=True,
-                remediation_hints=["materialize frontend visual / a11y evidence input"],
-                blocking_reason_codes=["basic_a11y_evidence_missing"],
-                requirement_linkage=["browser_quality_gate:basic_a11y"],
+                remediation_hints=_unique_strings(
+                    ["materialize frontend visual / a11y evidence input"]
+                ),
+                blocking_reason_codes=_unique_strings(["basic_a11y_evidence_missing"]),
+                requirement_linkage=_unique_strings(["browser_quality_gate:basic_a11y"]),
             ),
         )
 
@@ -792,24 +854,24 @@ def _materialize_visual_and_a11y_receipts(
             started_at=generated_at,
             finished_at=generated_at,
             runtime_status=runtime_status,
-            artifact_ids=[visual_record.artifact_id],
+            artifact_ids=_unique_strings([visual_record.artifact_id]),
             classification_candidate=classification,
             recheck_required=False,
-            remediation_hints=list(remediation_hints),
-            blocking_reason_codes=list(blocking_reason_codes),
-            requirement_linkage=["browser_quality_gate:visual_expectation"],
+            remediation_hints=_unique_strings(remediation_hints),
+            blocking_reason_codes=_unique_strings(blocking_reason_codes),
+            requirement_linkage=_unique_strings(["browser_quality_gate:visual_expectation"]),
         ),
         BrowserProbeExecutionReceipt(
             check_name="basic_a11y",
             started_at=generated_at,
             finished_at=generated_at,
             runtime_status=runtime_status,
-            artifact_ids=[a11y_record.artifact_id],
+            artifact_ids=_unique_strings([a11y_record.artifact_id]),
             classification_candidate=classification,
             recheck_required=False,
-            remediation_hints=list(remediation_hints),
-            blocking_reason_codes=list(blocking_reason_codes),
-            requirement_linkage=["browser_quality_gate:basic_a11y"],
+            remediation_hints=_unique_strings(remediation_hints),
+            blocking_reason_codes=_unique_strings(blocking_reason_codes),
+            requirement_linkage=_unique_strings(["browser_quality_gate:basic_a11y"]),
         ),
     )
 
@@ -898,13 +960,13 @@ def _transient_probe_runner_result(
         interaction_capture=BrowserGateInteractionProbeCapture(
             gate_run_id=gate_run_id,
             interaction_probe_id="primary-action",
-            artifact_refs=[f"{artifact_root_rel}/{_INTERACTION_SNAPSHOT_REL_PATH}"],
+            artifact_refs=_unique_strings([f"{artifact_root_rel}/{_INTERACTION_SNAPSHOT_REL_PATH}"]),
             capture_status="capture_failed",
             classification_candidate="transient_run_failure",
-            blocking_reason_codes=[diagnostic_code],
+            blocking_reason_codes=_unique_strings([diagnostic_code]),
         ),
-        diagnostic_codes=[diagnostic_code],
-        warnings=[warning],
+        diagnostic_codes=_unique_strings([diagnostic_code]),
+        warnings=_unique_strings([warning]),
     )
 
 

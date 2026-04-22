@@ -5,9 +5,23 @@ from __future__ import annotations
 import re
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 _SNAPSHOT_ID_PATTERN = re.compile(r"^(?P<prefix>.*?)(?P<number>\d+)$")
+
+
+def _dedupe_strings(value: object) -> list[str]:
+    if value is None:
+        return []
+    unique: list[str] = []
+    seen: set[str] = set()
+    for item in value:
+        text = str(item)
+        if text in seen:
+            continue
+        seen.add(text)
+        unique.append(text)
+    return unique
 
 
 class FrontendSolutionConfirmationModel(BaseModel):
@@ -24,6 +38,16 @@ class AvailabilitySummary(FrontendSolutionConfirmationModel):
     failed_check_ids: list[str] = Field(default_factory=list)
     blocking_reason_codes: list[str] = Field(default_factory=list)
 
+    @field_validator(
+        "passed_check_ids",
+        "failed_check_ids",
+        "blocking_reason_codes",
+        mode="before",
+    )
+    @classmethod
+    def _dedupe_summary_lists(cls, value: object) -> list[str]:
+        return _dedupe_strings(value)
+
 
 class StylePackManifest(FrontendSolutionConfirmationModel):
     """Canonical style pack manifest."""
@@ -37,6 +61,11 @@ class StylePackManifest(FrontendSolutionConfirmationModel):
     not_recommended_for: list[str] = Field(default_factory=list)
     design_tokens: dict[str, str] = Field(default_factory=dict)
 
+    @field_validator("recommended_for", "not_recommended_for", mode="before")
+    @classmethod
+    def _dedupe_manifest_lists(cls, value: object) -> list[str]:
+        return _dedupe_strings(value)
+
 
 class InstallStrategy(FrontendSolutionConfirmationModel):
     """Install strategy truth for one provider distribution path."""
@@ -49,6 +78,16 @@ class InstallStrategy(FrontendSolutionConfirmationModel):
     registry_requirements: list[str] = Field(default_factory=list)
     credential_requirements: list[str] = Field(default_factory=list)
     private_package_required: bool = False
+
+    @field_validator(
+        "packages",
+        "registry_requirements",
+        "credential_requirements",
+        mode="before",
+    )
+    @classmethod
+    def _dedupe_strategy_lists(cls, value: object) -> list[str]:
+        return _dedupe_strings(value)
 
 
 class FrontendSolutionSnapshot(FrontendSolutionConfirmationModel):
@@ -104,6 +143,18 @@ class FrontendSolutionSnapshot(FrontendSolutionConfirmationModel):
     style_fidelity_status: Literal["full", "partial", "degraded", "unsupported"]
     style_degradation_reason_codes: list[str] = Field(default_factory=list)
     changed_from_snapshot_id: str | None = None
+
+    @field_validator(
+        "recommendation_reason_codes",
+        "availability_checks",
+        "preflight_reason_codes",
+        "user_override_fields",
+        "style_degradation_reason_codes",
+        mode="before",
+    )
+    @classmethod
+    def _dedupe_snapshot_lists(cls, value: object) -> list[str]:
+        return _dedupe_strings(value)
 
 
 def build_builtin_style_pack_manifests() -> list[StylePackManifest]:

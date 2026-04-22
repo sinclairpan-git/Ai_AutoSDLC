@@ -682,6 +682,81 @@ def test_source_resolver_rejects_ambiguous_append_only_source_refs(tmp_path: Pat
         resolver.resolve("event", duplicate_event_id)
 
 
+def test_source_resolver_ignores_identical_repeated_event_entries_on_same_stream(
+    tmp_path: Path,
+) -> None:
+    store = TelemetryStore(tmp_path)
+    resolver = SourceResolver(store)
+    event = TelemetryEvent(
+        event_id="evt_dededededededededededededededede",
+        scope_level=ScopeLevel.RUN,
+        goal_session_id="gs_0123456789abcdef0123456789abcdef",
+        workflow_run_id="wr_0123456789abcdef0123456789abcdef",
+        created_at="2026-03-27T10:00:00Z",
+        updated_at="2026-03-27T10:00:00Z",
+        timestamp="2026-03-27T10:00:00Z",
+    )
+    store.register_scope(
+        scope_level=ScopeLevel.RUN,
+        goal_session_id=event.goal_session_id,
+        workflow_run_id=event.workflow_run_id,
+    )
+    event_path = store.event_stream_path(
+        scope_level=ScopeLevel.RUN,
+        goal_session_id=event.goal_session_id,
+        workflow_run_id=event.workflow_run_id,
+    )
+    payload = event.model_dump(mode="json")
+    store._append_ndjson(event_path, payload)
+    store._append_ndjson(event_path, payload)
+
+    resolved = resolver.resolve("event", event.event_id)
+
+    assert resolved.path == event_path
+    assert resolved.payload["event_id"] == event.event_id
+
+
+def test_canonical_evidence_payload_ignores_identical_repeated_raw_entries(
+    tmp_path: Path,
+) -> None:
+    store = TelemetryStore(tmp_path)
+    evidence = Evidence(
+        evidence_id="evd_f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0",
+        scope_level=ScopeLevel.RUN,
+        goal_session_id="gs_0123456789abcdef0123456789abcdef",
+        workflow_run_id="wr_0123456789abcdef0123456789abcdef",
+        created_at="2026-03-27T10:00:00Z",
+        updated_at="2026-03-27T10:00:00Z",
+    )
+    backfill = evidence.validated_update(
+        locator="file:///tmp/deduped-evidence.txt",
+        digest="sha256:deduped",
+        updated_at="2026-03-27T10:00:05Z",
+    )
+    store.register_scope(
+        scope_level=ScopeLevel.RUN,
+        goal_session_id=evidence.goal_session_id,
+        workflow_run_id=evidence.workflow_run_id,
+    )
+    evidence_path = store.evidence_stream_path(
+        scope_level=ScopeLevel.RUN,
+        goal_session_id=evidence.goal_session_id,
+        workflow_run_id=evidence.workflow_run_id,
+    )
+    store._append_ndjson(evidence_path, evidence.model_dump(mode="json"))
+    store._append_ndjson(evidence_path, evidence.model_dump(mode="json"))
+    store._append_ndjson(evidence_path, backfill.model_dump(mode="json"))
+
+    resolved_path, resolved_payload = store.canonical_evidence_payload(evidence.evidence_id) or (
+        None,
+        None,
+    )
+
+    assert resolved_path == evidence_path
+    assert resolved_payload["locator"] == "file:///tmp/deduped-evidence.txt"
+    assert resolved_payload["digest"] == "sha256:deduped"
+
+
 def test_rebuild_indexes_restores_deleted_index_directory(tmp_path: Path) -> None:
     store = TelemetryStore(tmp_path)
     writer = TelemetryWriter(store)

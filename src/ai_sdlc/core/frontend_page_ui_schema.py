@@ -9,6 +9,17 @@ from ai_sdlc.models.frontend_solution_confirmation import FrontendSolutionSnapsh
 from ai_sdlc.models.frontend_ui_kernel import FrontendUiKernelSet
 
 
+def _dedupe_text_items(items: list[str] | tuple[str, ...]) -> list[str]:
+    seen: set[str] = set()
+    unique: list[str] = []
+    for item in items:
+        if item in seen:
+            continue
+        seen.add(item)
+        unique.append(item)
+    return unique
+
+
 @dataclass(frozen=True, slots=True)
 class FrontendPageUiSchemaValidationResult:
     """Structured validation result for page/UI schema truth."""
@@ -18,6 +29,14 @@ class FrontendPageUiSchemaValidationResult:
     warnings: list[str] = field(default_factory=list)
     page_schema_ids: list[str] = field(default_factory=list)
     ui_schema_ids: list[str] = field(default_factory=list)
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, "blockers", _dedupe_text_items(self.blockers))
+        object.__setattr__(self, "warnings", _dedupe_text_items(self.warnings))
+        object.__setattr__(
+            self, "page_schema_ids", _dedupe_text_items(self.page_schema_ids)
+        )
+        object.__setattr__(self, "ui_schema_ids", _dedupe_text_items(self.ui_schema_ids))
 
 
 @dataclass(frozen=True, slots=True)
@@ -30,6 +49,13 @@ class FrontendPageUiSchemaHandoffEntry:
     anchor_ids: list[str] = field(default_factory=list)
     slot_ids: list[str] = field(default_factory=list)
     component_ids: list[str] = field(default_factory=list)
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, "anchor_ids", _dedupe_text_items(self.anchor_ids))
+        object.__setattr__(self, "slot_ids", _dedupe_text_items(self.slot_ids))
+        object.__setattr__(
+            self, "component_ids", _dedupe_text_items(self.component_ids)
+        )
 
 
 @dataclass(frozen=True, slots=True)
@@ -46,6 +72,15 @@ class FrontendPageUiSchemaHandoff:
     blockers: list[str] = field(default_factory=list)
     warnings: list[str] = field(default_factory=list)
     entries: list[FrontendPageUiSchemaHandoffEntry] = field(default_factory=list)
+
+    def __post_init__(self) -> None:
+        object.__setattr__(
+            self,
+            "component_library_packages",
+            _dedupe_text_items(self.component_library_packages),
+        )
+        object.__setattr__(self, "blockers", _dedupe_text_items(self.blockers))
+        object.__setattr__(self, "warnings", _dedupe_text_items(self.warnings))
 
 
 def validate_frontend_page_ui_schema_set(
@@ -111,9 +146,10 @@ def validate_frontend_page_ui_schema_set(
 
     return FrontendPageUiSchemaValidationResult(
         passed=not blockers,
-        blockers=blockers,
-        page_schema_ids=page_schema_ids,
-        ui_schema_ids=ui_schema_ids,
+        blockers=_dedupe_text_items(blockers),
+        warnings=_dedupe_text_items([]),
+        page_schema_ids=_dedupe_text_items(page_schema_ids),
+        ui_schema_ids=_dedupe_text_items(ui_schema_ids),
     )
 
 
@@ -143,17 +179,21 @@ def build_frontend_page_ui_schema_handoff(
             page_schema_id=page_schema.page_schema_id,
             ui_schema_id=ui_schema_by_page_id[page_schema.page_schema_id].ui_schema_id,
             page_recipe_id=page_schema.page_recipe_id,
-            anchor_ids=[
-                anchor.anchor_id for anchor in page_schema.section_anchors
-            ],
-            slot_ids=[
-                slot.slot_id
-                for slot in ui_schema_by_page_id[page_schema.page_schema_id].render_slots
-            ],
-            component_ids=[
-                slot.component_id
-                for slot in ui_schema_by_page_id[page_schema.page_schema_id].render_slots
-            ],
+            anchor_ids=_dedupe_text_items(
+                [anchor.anchor_id for anchor in page_schema.section_anchors]
+            ),
+            slot_ids=_dedupe_text_items(
+                [
+                    slot.slot_id
+                    for slot in ui_schema_by_page_id[page_schema.page_schema_id].render_slots
+                ]
+            ),
+            component_ids=_dedupe_text_items(
+                [
+                    slot.component_id
+                    for slot in ui_schema_by_page_id[page_schema.page_schema_id].render_slots
+                ]
+            ),
         )
         for page_schema in schema_set.page_schemas
         if page_schema.page_schema_id in ui_schema_by_page_id
@@ -164,8 +204,8 @@ def build_frontend_page_ui_schema_handoff(
         schema_version=schema_set.versioning.current_version,
         effective_provider_id=effective_provider_id,
         effective_style_pack_id=effective_style_pack_id,
-        blockers=blockers,
-        warnings=list(validation.warnings),
+        blockers=_dedupe_text_items(blockers),
+        warnings=_dedupe_text_items(validation.warnings),
         entries=entries,
     )
 

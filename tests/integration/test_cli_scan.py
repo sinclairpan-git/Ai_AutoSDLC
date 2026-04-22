@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import patch
 
 from typer.testing import CliRunner
@@ -254,3 +255,64 @@ def test_scan_frontend_contract_export_is_analysis_only_on_initialized_project(
 
     assert result.exit_code == 0
     assert "Frontend contract observations exported" in result.output
+
+
+def test_scan_deduplicates_risk_display_lines(tmp_path: Path) -> None:
+    risk = SimpleNamespace(
+        severity="high",
+        category="dependency",
+        path="src/app.py",
+        description="duplicate risk",
+    )
+    scan = SimpleNamespace(
+        total_files=1,
+        total_lines=10,
+        languages={"python": 1},
+        dependencies=[],
+        api_endpoints=[],
+        tests=[],
+        symbols=[],
+        risks=[risk, risk],
+    )
+
+    with patch("ai_sdlc.cli.commands.run_full_scan", return_value=scan):
+        result = runner.invoke(app, ["scan", str(tmp_path)])
+
+    assert result.exit_code == 0
+    assert result.output.count("dependency: src/app.py — duplicate risk") == 1
+
+
+def test_scan_collects_first_ten_unique_risk_display_lines(tmp_path: Path) -> None:
+    repeated = SimpleNamespace(
+        severity="high",
+        category="dependency",
+        path="src/repeated.py",
+        description="duplicate risk",
+    )
+    unique_risks = [
+        SimpleNamespace(
+            severity="medium",
+            category="dependency",
+            path=f"src/file-{idx}.py",
+            description=f"risk-{idx}",
+        )
+        for idx in range(10)
+    ]
+    scan = SimpleNamespace(
+        total_files=1,
+        total_lines=10,
+        languages={"python": 1},
+        dependencies=[],
+        api_endpoints=[],
+        tests=[],
+        symbols=[],
+        risks=[repeated, repeated, repeated, *unique_risks],
+    )
+
+    with patch("ai_sdlc.cli.commands.run_full_scan", return_value=scan):
+        result = runner.invoke(app, ["scan", str(tmp_path)])
+
+    assert result.exit_code == 0
+    assert result.output.count("dependency: src/repeated.py — duplicate risk") == 1
+    assert "dependency: src/file-8.py — risk-8" in result.output
+    assert "dependency: src/file-9.py — risk-9" not in result.output

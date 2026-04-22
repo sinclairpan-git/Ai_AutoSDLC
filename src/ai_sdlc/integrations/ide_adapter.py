@@ -51,6 +51,12 @@ class ApplyResult:
     skipped_no_project: bool = False
     message: str = ""
 
+    def __post_init__(self) -> None:
+        self.written = _dedupe_string_items(self.written)
+        self.skipped_existing = _dedupe_string_items(self.skipped_existing)
+        self.skipped_user_modified = _dedupe_string_items(self.skipped_user_modified)
+        self.legacy_migrated = _dedupe_string_items(self.legacy_migrated)
+
 
 @dataclass
 class CanonicalConsumptionState:
@@ -69,6 +75,15 @@ class CanonicalConsumptionState:
             "adapter_canonical_consumption_evidence": self.evidence,
             "adapter_canonical_consumed_at": self.consumed_at,
         }
+
+
+def _dedupe_string_items(values: list[str]) -> list[str]:
+    unique: list[str] = []
+    for value in values:
+        normalized = str(value).strip()
+        if normalized and normalized not in unique:
+            unique.append(normalized)
+    return unique
 
 
 def _bundle_root() -> Path:
