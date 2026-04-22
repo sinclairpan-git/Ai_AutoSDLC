@@ -8,7 +8,7 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
-from ai_sdlc.branch.git_client import GitError
+from ai_sdlc.branch.git_client import GitClient, GitError
 from ai_sdlc.context.state import load_checkpoint
 from ai_sdlc.core.artifact_target_guard import evaluate_formal_artifact_target_guard
 from ai_sdlc.core.backlog_breach_guard import evaluate_backlog_breach_guard
@@ -163,6 +163,15 @@ def _load_checkpoint_feature_binding(
     checkpoint, spec_dir_raw = _load_checkpoint_feature_spec_dir(repo_root)
     if checkpoint is None or checkpoint.feature is None:
         return None, None
+    if (
+        spec_dir_raw is not None
+        and not _checkpoint_feature_binding_is_active(
+            repo_root,
+            checkpoint=checkpoint,
+            spec_dir_raw=spec_dir_raw,
+        )
+    ):
+        return None, None
     return checkpoint.feature.id, spec_dir_raw
 
 
@@ -174,7 +183,53 @@ def _load_active_work_item_dir(
         return None, None, "no active work item checkpoint"
     if spec_dir_raw is None:
         return None, None, "checkpoint has no concrete spec_dir"
+    if not _checkpoint_feature_binding_is_active(
+        repo_root,
+        checkpoint=checkpoint,
+        spec_dir_raw=spec_dir_raw,
+    ):
+        return None, None, "no active work item on current branch"
     return checkpoint.feature.id, _resolve_spec_dir_path(repo_root, spec_dir_raw), None
+
+
+def _checkpoint_feature_binding_is_active(
+    repo_root: Path,
+    *,
+    checkpoint: Any,
+    spec_dir_raw: str,
+) -> bool:
+    current_branch = _live_current_branch(repo_root, checkpoint)
+    checkpoint_branch = (
+        str(checkpoint.feature.current_branch or "").strip()
+        if checkpoint is not None and checkpoint.feature is not None
+        else ""
+    )
+    if not current_branch:
+        return True
+    if current_branch == checkpoint_branch:
+        return True
+    if current_branch not in {"main", "master"}:
+        return True
+    if str(getattr(checkpoint, "current_stage", "")).strip() != "close":
+        return True
+
+    wi_dir = _resolve_spec_dir_path(repo_root, spec_dir_raw)
+    if not wi_dir.is_dir():
+        return False
+
+    truth_result = run_truth_check(cwd=repo_root, wi=wi_dir, rev="HEAD")
+    if truth_result.error:
+        return True
+    return str(truth_result.classification).strip() != "mainline_merged"
+
+
+def _live_current_branch(repo_root: Path, checkpoint: Any) -> str:
+    try:
+        return GitClient(repo_root).current_branch().strip()
+    except GitError:
+        if checkpoint is not None and checkpoint.feature is not None:
+            return str(checkpoint.feature.current_branch or "").strip()
+        return ""
 
 
 def _unavailable_active_work_item_surface(

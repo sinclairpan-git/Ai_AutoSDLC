@@ -12,6 +12,7 @@ from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
 
+from ai_sdlc.branch.git_client import GitClient, GitError
 from ai_sdlc.cli.status_guidance import render_startup_guidance
 from ai_sdlc.context.state import (
     CHECKPOINT_PATH,
@@ -125,6 +126,15 @@ def _surface_work_item_id(cp: Checkpoint | None) -> str | None:
     return None
 
 
+def _live_current_branch(root: Path, checkpoint: Checkpoint | None) -> str:
+    try:
+        return GitClient(root).current_branch().strip()
+    except GitError:
+        if checkpoint is not None and checkpoint.feature is not None:
+            return str(checkpoint.feature.current_branch or "").strip()
+        return ""
+
+
 def _print_reconcile_guidance(
     hint: ReconcileHint,
     *,
@@ -203,7 +213,12 @@ def _add_workitem_diagnostics_rows(
     workitem_diagnostics: dict[str, Any],
 ) -> None:
     table.add_row("Workitem Diagnostics", str(workitem_diagnostics.get("state", "-")))
-    active_work_item = str(workitem_diagnostics.get("active_work_item", "")).strip()
+    active_work_item_value = workitem_diagnostics.get("active_work_item")
+    active_work_item = (
+        active_work_item_value.strip()
+        if isinstance(active_work_item_value, str)
+        else ""
+    )
     _add_optional_row(table, "Workitem Scope", active_work_item)
     workitem_source = str(workitem_diagnostics.get("source", "")).strip()
     _add_optional_row(table, "Workitem Source", workitem_source)
@@ -215,7 +230,12 @@ def _add_workitem_diagnostics_rows(
             actionable_count=actionable_count,
         )
         _add_optional_row(table, "Workitem Findings", findings)
-    workitem_truth = str(workitem_diagnostics.get("truth_classification", "")).strip()
+    truth_classification_value = workitem_diagnostics.get("truth_classification")
+    workitem_truth = (
+        truth_classification_value.strip()
+        if isinstance(truth_classification_value, str)
+        else ""
+    )
     _add_optional_row(table, "Workitem Truth", workitem_truth)
     workitem_detail = str(
         workitem_diagnostics.get("primary_reason")
@@ -519,6 +539,8 @@ def _add_checkpoint_progress_rows(
     *,
     checkpoint: Checkpoint,
     resume_pack: Any,
+    show_active_binding: bool = True,
+    current_branch_override: str | None = None,
 ) -> None:
     table.add_row("Pipeline Stage", checkpoint.current_stage)
     table.add_row("Execution Mode", checkpoint.execution_mode)
@@ -530,13 +552,23 @@ def _add_checkpoint_progress_rows(
         or "none"
     )
     table.add_row("Completed Stages", completed)
-    if checkpoint.feature:
+    display_current_branch = current_branch_override
+    if not display_current_branch and checkpoint.feature is not None:
+        display_current_branch = checkpoint.feature.current_branch
+    if checkpoint.feature and show_active_binding:
         table.add_row("Feature ID", checkpoint.feature.id)
         _add_branch_context_rows(
             table,
-            current_branch=checkpoint.feature.current_branch,
+            current_branch=display_current_branch,
             docs_baseline_ref=checkpoint.feature.docs_baseline_ref,
             docs_baseline_at=checkpoint.feature.docs_baseline_at,
+        )
+    elif display_current_branch:
+        _add_branch_context_rows(
+            table,
+            current_branch=display_current_branch,
+            docs_baseline_ref=None,
+            docs_baseline_at=None,
         )
     if checkpoint.execute_progress:
         progress = checkpoint.execute_progress
@@ -548,7 +580,7 @@ def _add_checkpoint_progress_rows(
         table.add_row("Resume Batch", str(resume_pack.current_batch))
     if resume_pack is not None and resume_pack.last_committed_task:
         table.add_row("Resume Last Task", resume_pack.last_committed_task)
-    if checkpoint.linked_wi_id:
+    if show_active_binding and checkpoint.linked_wi_id:
         table.add_row("Linked WI ID", checkpoint.linked_wi_id)
     if checkpoint.linked_plan_uri:
         table.add_row("Linked plan URI", checkpoint.linked_plan_uri)
@@ -753,20 +785,39 @@ def status_command(
         cp = load_checkpoint(root, strict=True)
 
     if cp:
+        workitem_diagnostics_surface = status_surface.get("workitem_diagnostics")
+        active_workitem = (
+            workitem_diagnostics_surface.get("active_work_item")
+            if isinstance(workitem_diagnostics_surface, dict)
+            else None
+        )
+        show_active_binding = bool(
+            isinstance(active_workitem, str) and active_workitem.strip()
+        )
         _add_checkpoint_progress_rows(
             table,
             checkpoint=cp,
             resume_pack=resume_pack,
+            show_active_binding=show_active_binding,
+            current_branch_override=_live_current_branch(root, cp),
         )
         work_item_id = _surface_work_item_id(cp)
-        active_wi_id = active_work_item_id(cp)
+        active_wi_id = (
+            (
+                active_workitem.strip()
+                if isinstance(active_workitem, str)
+                else ""
+            )
+            if show_active_binding
+            else ""
+        ) or (active_work_item_id(cp) if show_active_binding else "")
         if active_wi_id:
             _add_active_work_item_status_rows(
                 table,
                 root=root,
                 active_work_item=active_wi_id,
             )
-        if work_item_id:
+        if show_active_binding and work_item_id:
             governance = load_governance_state(root, work_item_id)
             if governance is not None:
                 _add_governance_rows(table, governance)
