@@ -7920,6 +7920,10 @@ const tableRows = [
                 != execution_context.effective_style_pack,
                 expected_context.style_fidelity_status
                 != execution_context.style_fidelity_status,
+                expected_context.visual_regression_matrix_id
+                != execution_context.visual_regression_matrix_id,
+                expected_context.visual_regression_viewport_id
+                != execution_context.visual_regression_viewport_id,
                 expected_context.provider_runtime_adapter_carrier_mode
                 != execution_context.provider_runtime_adapter_carrier_mode,
                 expected_context.provider_runtime_adapter_delivery_state

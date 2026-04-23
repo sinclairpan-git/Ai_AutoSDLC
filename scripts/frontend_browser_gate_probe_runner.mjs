@@ -180,6 +180,77 @@ function resolveVisualRegressionPaths(payload) {
   };
 }
 
+function parseBaselineYamlScalar(value) {
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return "";
+  }
+  if (trimmed === "true") {
+    return true;
+  }
+  if (trimmed === "false") {
+    return false;
+  }
+  if (trimmed === "null" || trimmed === "~") {
+    return null;
+  }
+  if (
+    (trimmed.startsWith('"') && trimmed.endsWith('"')) ||
+    (trimmed.startsWith("'") && trimmed.endsWith("'"))
+  ) {
+    return trimmed.slice(1, -1);
+  }
+  const numeric = Number(trimmed);
+  if (Number.isFinite(numeric)) {
+    return numeric;
+  }
+  if (
+    (trimmed.startsWith("[") && !trimmed.endsWith("]")) ||
+    (trimmed.startsWith("{") && !trimmed.endsWith("}"))
+  ) {
+    throw new Error("invalid_yaml_scalar");
+  }
+  return trimmed;
+}
+
+function parseBaselineMetadata(raw) {
+  const trimmed = raw.trim();
+  if (!trimmed) {
+    return {};
+  }
+  try {
+    return JSON.parse(trimmed);
+  } catch {
+    // JSON is a YAML subset, but committed metadata may be plain YAML.
+  }
+
+  const metadata = {};
+  let topLevelKeyCount = 0;
+  for (const rawLine of raw.split(/\r?\n/)) {
+    const line = rawLine.replace(/\s+#.*$/, "").trimEnd();
+    if (!line.trim() || line.trimStart().startsWith("#")) {
+      continue;
+    }
+    if (/^\s/.test(rawLine)) {
+      continue;
+    }
+    if (line.startsWith("- ")) {
+      throw new Error("invalid_yaml_top_level_sequence");
+    }
+    const match = line.match(/^([A-Za-z0-9_-]+):(?:\s*(.*))?$/);
+    if (!match) {
+      throw new Error("invalid_yaml_mapping");
+    }
+    const value = match[2] ?? "";
+    metadata[match[1]] = value.trim() ? parseBaselineYamlScalar(value) : {};
+    topLevelKeyCount += 1;
+  }
+  if (topLevelKeyCount === 0) {
+    throw new Error("invalid_yaml_empty_mapping");
+  }
+  return metadata;
+}
+
 async function captureProbe(playwright, payload) {
   const artifactRoot = path.resolve(String(payload.artifact_root || ""));
   const artifactRootRef = String(payload.artifact_root_ref || "").trim();
@@ -825,11 +896,85 @@ async function compareVisualRegression({
 
   let baselineMetadata;
   try {
-    baselineMetadata = JSON.parse(await readFile(matrixPaths.baselineMetadataPath, "utf8"));
-  } catch {
-    baselineMetadata = {};
+    baselineMetadata = parseBaselineMetadata(
+      await readFile(matrixPaths.baselineMetadataPath, "utf8"),
+    );
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    await writeFile(
+      bootstrapPath,
+      JSON.stringify(
+        {
+          schema_version: "frontend-visual-regression-bootstrap/v1",
+          gate_run_id: payload.gate_run_id,
+          matrix_id: matrixPaths.matrixId,
+          managed_frontend_target: String(payload.managed_frontend_target || "").trim(),
+          package_manager: "npm",
+          dependency_refs: ["pixelmatch", "pngjs"],
+          lockfile_ref: "managed/frontend/package-lock.json",
+          status: "failed",
+          failure_reason: `baseline-metadata-invalid:${message}`,
+        },
+        null,
+        2,
+      ),
+      "utf8",
+    );
+    return {
+      matrix_id: matrixPaths.matrixId,
+      gate_run_id: payload.gate_run_id,
+      capture_status: "capture_failed",
+      screenshot_ref: screenshotRef,
+      baseline_ref: baselineRef,
+      baseline_metadata_ref: baselineMetadataRef,
+      diff_image_ref: "",
+      diff_ratio: 1,
+      threshold: 0.03,
+      region_summaries: [],
+      change_summary: "baseline-metadata-invalid",
+      capture_protocol_ref: `matrix:${matrixPaths.matrixId}`,
+      bootstrap_ref: bootstrapRef,
+      verdict: "recheck",
+    };
   }
   const threshold = Number(baselineMetadata.threshold ?? 0.03);
+  if (!Number.isFinite(threshold) || threshold < 0) {
+    await writeFile(
+      bootstrapPath,
+      JSON.stringify(
+        {
+          schema_version: "frontend-visual-regression-bootstrap/v1",
+          gate_run_id: payload.gate_run_id,
+          matrix_id: matrixPaths.matrixId,
+          managed_frontend_target: String(payload.managed_frontend_target || "").trim(),
+          package_manager: "npm",
+          dependency_refs: ["pixelmatch", "pngjs"],
+          lockfile_ref: "managed/frontend/package-lock.json",
+          status: "failed",
+          failure_reason: "baseline-threshold-invalid",
+        },
+        null,
+        2,
+      ),
+      "utf8",
+    );
+    return {
+      matrix_id: matrixPaths.matrixId,
+      gate_run_id: payload.gate_run_id,
+      capture_status: "capture_failed",
+      screenshot_ref: screenshotRef,
+      baseline_ref: baselineRef,
+      baseline_metadata_ref: baselineMetadataRef,
+      diff_image_ref: "",
+      diff_ratio: 1,
+      threshold: 0.03,
+      region_summaries: [],
+      change_summary: "baseline-threshold-invalid",
+      capture_protocol_ref: `matrix:${matrixPaths.matrixId}`,
+      bootstrap_ref: bootstrapRef,
+      verdict: "recheck",
+    };
+  }
 
   let pngjs;
   let pixelmatch;

@@ -1540,6 +1540,156 @@ export const chromium = {
 
 
 @pytest.mark.skipif(shutil.which("node") is None, reason="node runtime unavailable")
+def test_frontend_browser_gate_probe_runner_reads_visual_baseline_metadata_as_yaml(
+    tmp_path: Path,
+) -> None:
+    source_script_path = (
+        Path(__file__).resolve().parents[2] / "scripts" / "frontend_browser_gate_probe_runner.mjs"
+    )
+    script_dir = tmp_path / "scripts"
+    script_dir.mkdir()
+    script_path = script_dir / "frontend_browser_gate_probe_runner.mjs"
+    script_path.write_text(source_script_path.read_text(encoding="utf-8"), encoding="utf-8")
+    fake_playwright_dir = tmp_path / "node_modules" / "playwright"
+    fake_playwright_dir.mkdir(parents=True)
+    (fake_playwright_dir / "package.json").write_text(
+        json.dumps({"name": "playwright", "type": "module"}),
+        encoding="utf-8",
+    )
+    (fake_playwright_dir / "index.js").write_text(
+        """
+import { mkdir, writeFile } from "node:fs/promises";
+
+export const chromium = {
+  async launch() {
+    return {
+      async newContext() {
+        return {
+          tracing: {
+            async start() {},
+            async stop({ path }) {
+              await mkdir(new URL(".", `file://${path}`).pathname, { recursive: true }).catch(() => {});
+              await writeFile(path, "trace");
+            },
+          },
+          async newPage() {
+            return {
+              async goto() {},
+              url() {
+                return "http://127.0.0.1:4173/";
+              },
+              async screenshot({ path }) {
+                await writeFile(path, "current");
+              },
+              async evaluate() {
+                return {
+                  interaction_probe_id: "primary-action",
+                  anchor_refs: ["interaction:primary-action"],
+                  classification_candidate: "pass",
+                  blocking_reason_codes: [],
+                  rendered_delivery_entry_id: "vue3-public-primevue",
+                  rendered_component_library_packages: ["primevue", "@primeuix/themes"],
+                  rendered_page_schema_ids: ["dashboard-workspace", "search-list-workspace"],
+                  delivery_context_validation_status: "passed",
+                  detail: "clicked-primary-candidate",
+                };
+              },
+              async title() {
+                return "frontend-browser-entry";
+              },
+              async close() {},
+            };
+          },
+          async close() {},
+        };
+      },
+      async close() {},
+    };
+  },
+};
+""".strip(),
+        encoding="utf-8",
+    )
+    fake_pngjs_dir = tmp_path / "node_modules" / "pngjs"
+    fake_pngjs_dir.mkdir()
+    (fake_pngjs_dir / "index.js").write_text(
+        """
+class PNG {
+  constructor({ width, height }) {
+    this.width = width;
+    this.height = height;
+    this.data = Buffer.from([0, 0, 0, 0]);
+  }
+}
+PNG.sync = {
+  read() {
+    return { width: 1, height: 1, data: Buffer.from([0, 0, 0, 0]) };
+  },
+  write() {
+    return Buffer.from("diff");
+  },
+};
+module.exports = { PNG };
+""".strip(),
+        encoding="utf-8",
+    )
+    fake_pixelmatch_dir = tmp_path / "node_modules" / "pixelmatch"
+    fake_pixelmatch_dir.mkdir()
+    (fake_pixelmatch_dir / "index.js").write_text(
+        "module.exports = function pixelmatch() { return 0; };\n",
+        encoding="utf-8",
+    )
+    baseline_root = (
+        tmp_path
+        / "governance"
+        / "frontend"
+        / "quality-platform"
+        / "evidence"
+        / "visual-regression"
+        / "baselines"
+        / "yaml-matrix"
+    )
+    baseline_root.mkdir(parents=True)
+    (baseline_root / "baseline.png").write_text("baseline", encoding="utf-8")
+    (baseline_root / "baseline.yaml").write_text(
+        """
+matrix_id: yaml-matrix
+threshold: 0.42
+critical_regions:
+  - region_id: overall
+""".strip(),
+        encoding="utf-8",
+    )
+    artifact_root = tmp_path / "artifacts"
+    artifact_root.mkdir()
+    payload = {
+        "artifact_root": str(artifact_root),
+        "artifact_root_ref": "artifacts",
+        "browser_entry_ref": "http://127.0.0.1:4173/",
+        "gate_run_id": "gate-run-001",
+        "generated_at": "2026-04-18T11:00:00Z",
+        "delivery_entry_id": "vue3-public-primevue",
+        "component_library_packages": ["primevue", "@primeuix/themes"],
+        "page_schema_ids": ["dashboard-workspace", "search-list-workspace"],
+        "visual_regression_matrix_id": "yaml-matrix",
+        "visual_regression_viewport_id": "desktop-1440",
+    }
+
+    completed = subprocess.run(
+        ["node", str(script_path)],
+        cwd=tmp_path,
+        input=json.dumps(payload),
+        text=True,
+        capture_output=True,
+        check=True,
+    )
+
+    result = json.loads(completed.stdout)
+    assert result["visual_regression_capture"]["threshold"] == 0.42
+    assert result["visual_regression_capture"]["verdict"] == "pass"
+
+
+@pytest.mark.skipif(shutil.which("node") is None, reason="node runtime unavailable")
 def test_frontend_browser_gate_probe_runner_resolves_playwright_from_managed_frontend_node_modules(
     tmp_path: Path,
 ) -> None:
