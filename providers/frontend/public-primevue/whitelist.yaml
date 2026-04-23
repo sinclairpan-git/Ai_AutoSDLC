@@ -1,0 +1,156 @@
+items:
+- component_id: UiButton
+  api_curation:
+  - curated-props-and-events
+  - semantic-variant-bridge
+  capability_curation:
+  - button-actions-stay-explicit
+  - no-provider-specific-click-contract
+  dependency_curation:
+  - primevue/button
+- component_id: UiInput
+  api_curation:
+  - curated-props-and-events
+  - text-entry-only
+  capability_curation:
+  - text-input-keeps-error-and-disabled-state
+  - no-freeform-provider-api-passthrough
+  dependency_curation:
+  - primevue/inputtext
+- component_id: UiSelect
+  api_curation:
+  - curated-props-and-events
+  - option-selection-only
+  capability_curation:
+  - selection-stays-structured
+  - provider-option-rendering-remains-contained
+  dependency_curation:
+  - primevue/select
+- component_id: UiForm
+  api_curation:
+  - curated-layout-and-legend-surface
+  capability_curation:
+  - form-container-remains-structured
+  - no-layout-only-form-substitution
+  dependency_curation:
+  - primevue/fieldset
+- component_id: UiFormItem
+  api_curation:
+  - curated-slot-based-field-shell
+  capability_curation:
+  - field-label-remains-explicit
+  - validation-copy-stays-attached-to-field-slot
+  dependency_curation:
+  - primevue/floatlabel
+- component_id: UiTable
+  api_curation:
+  - curated-columns-and-value-contract
+  capability_curation:
+  - loading-empty-error-states-remain-explicit
+  - table-layout-stays-provider-governed
+  dependency_curation:
+  - primevue/datatable
+- component_id: UiDialog
+  api_curation:
+  - curated-visibility-and-header-contract
+  capability_curation:
+  - confirmation-flow-stays-explicit
+  - dangerous-actions-do-not-auto-run
+  dependency_curation:
+  - primevue/dialog
+- component_id: UiDrawer
+  api_curation:
+  - curated-visibility-and-placement-contract
+  capability_curation:
+  - drawer-ownership-stays-contained
+  - no-layout-only-provider-escape-hatch
+  dependency_curation:
+  - primevue/drawer
+- component_id: UiEmpty
+  api_curation:
+  - curated-severity-and-copy-surface
+  capability_curation:
+  - empty-state-feedback-remains-explicit
+  - no-silent-empty-rendering
+  dependency_curation:
+  - primevue/message
+- component_id: UiSpinner
+  api_curation:
+  - curated-loading-indicator-surface
+  capability_curation:
+  - loading-feedback-stays-visible
+  - no-invisible-transition-defaults
+  dependency_curation:
+  - primevue/progressspinner
+- component_id: UiPageHeader
+  api_curation:
+  - curated-start-end-slot-surface
+  capability_curation:
+  - header-actions-stay-separated-from-content
+  - primary-action-slot-remains-explicit
+  dependency_curation:
+  - primevue/toolbar
+- component_id: UiTabs
+  api_curation:
+  - curated-tab-value-contract
+  capability_curation:
+  - tab-navigation-stays-structured
+  - no-provider-tab-api-passthrough
+  dependency_curation:
+  - primevue/tabs
+- component_id: UiSearchBar
+  api_curation:
+  - curated-input-and-trigger-slot-surface
+  capability_curation:
+  - search-trigger-stays-bound-to-search-input
+  - no-implicit-page-recipe-replacement
+  dependency_curation:
+  - primevue/inputgroup
+- component_id: UiFilterBar
+  api_curation:
+  - curated-filter-slot-surface
+  capability_curation:
+  - filter-controls-remain-clustered
+  - provider-filter-panels-stay-contained
+  dependency_curation:
+  - primevue/toolbar
+- component_id: UiResult
+  api_curation:
+  - curated-result-copy-and-severity-surface
+  capability_curation:
+  - success-feedback-stays-bounded
+  - partial-errors-remain-explicit
+  dependency_curation:
+  - primevue/message
+- component_id: UiSection
+  api_curation:
+  - curated-header-and-content-surface
+  capability_curation:
+  - section-boundaries-stay-visible
+  - page-body-does-not-collapse-into-layout-only-boxes
+  dependency_curation:
+  - primevue/panel
+- component_id: UiToolbar
+  api_curation:
+  - curated-start-end-slot-surface
+  capability_curation:
+  - action-clusters-remain-grouped
+  - no-layout-api-passthrough
+  dependency_curation:
+  - primevue/toolbar
+- component_id: UiPagination
+  api_curation:
+  - curated-page-navigation-contract
+  capability_curation:
+  - pagination-remains-explicit
+  - no-provider-table-pagination-binding-leak
+  dependency_curation:
+  - primevue/paginator
+- component_id: UiCard
+  api_curation:
+  - curated-title-subtitle-content-slots
+  capability_curation:
+  - cards-remain-structured-info-blocks
+  - no-pure-visual-box-contracts
+  dependency_curation:
+  - primevue/card

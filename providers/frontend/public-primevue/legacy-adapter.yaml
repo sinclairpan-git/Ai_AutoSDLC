@@ -1,0 +1,7 @@
+default_entry_allowed: false
+expansion_forbidden: true
+requires_declared_migration_intent: true
+allowed_when:
+- cannot-switch-to-standard-ui-within-reasonable-cost
+- legacy-adapter-established
+- migration-level-declared

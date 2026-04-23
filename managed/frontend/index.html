@@ -1,0 +1,415 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>frontend-browser-entry</title>
+    <style>
+      body {
+        margin: 0;
+        font-family: Inter, system-ui, sans-serif;
+        background: #f5f7fb;
+        color: #111827;
+      }
+
+      #frontend-browser-entry {
+        max-width: 960px;
+        margin: 0 auto;
+        padding: 32px 24px 48px;
+      }
+
+      .entry-header {
+        margin-bottom: 24px;
+      }
+
+      .entry-eyebrow {
+        margin: 0 0 8px;
+        color: #4b5563;
+        font-size: 14px;
+      }
+
+      .entry-title {
+        margin: 0;
+        font-size: 32px;
+      }
+
+      .entry-subtitle {
+        margin: 8px 0 0;
+        color: #6b7280;
+      }
+
+      .entry-card {
+        margin-top: 16px;
+        padding: 16px;
+        border: 1px solid #d1d5db;
+        border-radius: 8px;
+        background: #ffffff;
+      }
+
+      .entry-list {
+        margin: 12px 0 0;
+        padding-left: 20px;
+      }
+
+      .entry-action {
+        margin-top: 20px;
+        border: 1px solid #111827;
+        border-radius: 8px;
+        background: #111827;
+        color: #ffffff;
+        padding: 10px 14px;
+        cursor: pointer;
+      }
+    </style>
+  </head>
+  <body>
+    <main id="frontend-browser-entry">
+      <header class="entry-header">
+        <p class="entry-eyebrow">vue3-public-primevue</p>
+        <h1 class="entry-title">public-primevue</h1>
+        <p class="entry-subtitle">modern-saas</p>
+        <p class="entry-subtitle">public-primevue-theme-bridge</p>
+      </header>
+
+      <section class="entry-card">
+        <h2>Component Library Packages</h2>
+        <ul class="entry-list">
+        <li class="package-item">primevue</li>
+        <li class="package-item">@primeuix/themes</li>
+        </ul>
+      </section>
+
+      <section class="entry-card">
+        <h2>Page Schemas</h2>
+        <ul class="entry-list">
+        <li class="page-item">dashboard-workspace</li>
+        <li class="page-item">search-list-workspace</li>
+        <li class="page-item">wizard-workspace</li>
+        </ul>
+      </section>
+
+      <button type="button" class="entry-action">Open Managed Frontend</button>
+
+      <script id="frontend-delivery-context" type="application/json">{
+  &quot;projectId&quot;: &quot;Ai_AutoSDLC&quot;,
+  &quot;snapshotId&quot;: &quot;solution-snapshot-001&quot;,
+  &quot;requestedProviderId&quot;: &quot;public-primevue&quot;,
+  &quot;effectiveProviderId&quot;: &quot;public-primevue&quot;,
+  &quot;requestedFrontendStack&quot;: &quot;vue3&quot;,
+  &quot;effectiveFrontendStack&quot;: &quot;vue3&quot;,
+  &quot;requestedStylePackId&quot;: &quot;modern-saas&quot;,
+  &quot;effectiveStylePackId&quot;: &quot;modern-saas&quot;,
+  &quot;deliveryEntryId&quot;: &quot;vue3-public-primevue&quot;,
+  &quot;providerThemeAdapterId&quot;: &quot;public-primevue-theme-bridge&quot;,
+  &quot;componentLibraryPackages&quot;: [
+    &quot;primevue&quot;,
+    &quot;@primeuix/themes&quot;
+  ],
+  &quot;providerMappings&quot;: [
+    {
+      &quot;componentId&quot;: &quot;UiButton&quot;,
+      &quot;implementationRef&quot;: &quot;Button&quot;,
+      &quot;mappingKind&quot;: &quot;provider-component&quot;,
+      &quot;alignmentNotes&quot;: [
+        &quot;maps Kernel action semantics onto PrimeVue Button&quot;
+      ]
+    },
+    {
+      &quot;componentId&quot;: &quot;UiInput&quot;,
+      &quot;implementationRef&quot;: &quot;InputText&quot;,
+      &quot;mappingKind&quot;: &quot;provider-component&quot;,
+      &quot;alignmentNotes&quot;: [
+        &quot;maps Kernel text input semantics onto PrimeVue InputText&quot;
+      ]
+    },
+    {
+      &quot;componentId&quot;: &quot;UiSelect&quot;,
+      &quot;implementationRef&quot;: &quot;Select&quot;,
+      &quot;mappingKind&quot;: &quot;provider-component&quot;,
+      &quot;alignmentNotes&quot;: [
+        &quot;maps Kernel selection semantics onto PrimeVue Select&quot;
+      ]
+    },
+    {
+      &quot;componentId&quot;: &quot;UiForm&quot;,
+      &quot;implementationRef&quot;: &quot;Fieldset&quot;,
+      &quot;mappingKind&quot;: &quot;semantic-wrapper&quot;,
+      &quot;alignmentNotes&quot;: [
+        &quot;uses PrimeVue Fieldset as the governed form container shell&quot;
+      ]
+    },
+    {
+      &quot;componentId&quot;: &quot;UiFormItem&quot;,
+      &quot;implementationRef&quot;: &quot;FloatLabel&quot;,
+      &quot;mappingKind&quot;: &quot;semantic-wrapper&quot;,
+      &quot;alignmentNotes&quot;: [
+        &quot;uses PrimeVue FloatLabel to keep field label semantics explicit&quot;
+      ]
+    },
+    {
+      &quot;componentId&quot;: &quot;UiTable&quot;,
+      &quot;implementationRef&quot;: &quot;DataTable&quot;,
+      &quot;mappingKind&quot;: &quot;provider-component&quot;,
+      &quot;alignmentNotes&quot;: [
+        &quot;maps Kernel structured list semantics onto PrimeVue DataTable&quot;
+      ]
+    },
+    {
+      &quot;componentId&quot;: &quot;UiDialog&quot;,
+      &quot;implementationRef&quot;: &quot;Dialog&quot;,
+      &quot;mappingKind&quot;: &quot;provider-component&quot;,
+      &quot;alignmentNotes&quot;: [
+        &quot;maps Kernel modal confirmation semantics onto PrimeVue Dialog&quot;
+      ]
+    },
+    {
+      &quot;componentId&quot;: &quot;UiDrawer&quot;,
+      &quot;implementationRef&quot;: &quot;Drawer&quot;,
+      &quot;mappingKind&quot;: &quot;provider-component&quot;,
+      &quot;alignmentNotes&quot;: [
+        &quot;maps Kernel side panel semantics onto PrimeVue Drawer&quot;
+      ]
+    },
+    {
+      &quot;componentId&quot;: &quot;UiEmpty&quot;,
+      &quot;implementationRef&quot;: &quot;Message&quot;,
+      &quot;mappingKind&quot;: &quot;semantic-wrapper&quot;,
+      &quot;alignmentNotes&quot;: [
+        &quot;uses PrimeVue Message to keep empty-state feedback visible&quot;
+      ]
+    },
+    {
+      &quot;componentId&quot;: &quot;UiSpinner&quot;,
+      &quot;implementationRef&quot;: &quot;ProgressSpinner&quot;,
+      &quot;mappingKind&quot;: &quot;provider-component&quot;,
+      &quot;alignmentNotes&quot;: [
+        &quot;maps Kernel loading semantics onto PrimeVue ProgressSpinner&quot;
+      ]
+    },
+    {
+      &quot;componentId&quot;: &quot;UiPageHeader&quot;,
+      &quot;implementationRef&quot;: &quot;Toolbar&quot;,
+      &quot;mappingKind&quot;: &quot;semantic-wrapper&quot;,
+      &quot;alignmentNotes&quot;: [
+        &quot;uses PrimeVue Toolbar to keep page header actions semantically partitioned&quot;
+      ]
+    },
+    {
+      &quot;componentId&quot;: &quot;UiTabs&quot;,
+      &quot;implementationRef&quot;: &quot;Tabs&quot;,
+      &quot;mappingKind&quot;: &quot;provider-component&quot;,
+      &quot;alignmentNotes&quot;: [
+        &quot;maps Kernel segmented navigation semantics onto PrimeVue Tabs&quot;
+      ]
+    },
+    {
+      &quot;componentId&quot;: &quot;UiSearchBar&quot;,
+      &quot;implementationRef&quot;: &quot;InputGroup&quot;,
+      &quot;mappingKind&quot;: &quot;semantic-wrapper&quot;,
+      &quot;alignmentNotes&quot;: [
+        &quot;uses PrimeVue InputGroup for governed search input plus trigger composition&quot;
+      ]
+    },
+    {
+      &quot;componentId&quot;: &quot;UiFilterBar&quot;,
+      &quot;implementationRef&quot;: &quot;Toolbar&quot;,
+      &quot;mappingKind&quot;: &quot;semantic-wrapper&quot;,
+      &quot;alignmentNotes&quot;: [
+        &quot;uses PrimeVue Toolbar to keep filter controls grouped and governed&quot;
+      ]
+    },
+    {
+      &quot;componentId&quot;: &quot;UiResult&quot;,
+      &quot;implementationRef&quot;: &quot;Message&quot;,
+      &quot;mappingKind&quot;: &quot;semantic-wrapper&quot;,
+      &quot;alignmentNotes&quot;: [
+        &quot;uses PrimeVue Message for structured success and partial-error feedback&quot;
+      ]
+    },
+    {
+      &quot;componentId&quot;: &quot;UiSection&quot;,
+      &quot;implementationRef&quot;: &quot;Panel&quot;,
+      &quot;mappingKind&quot;: &quot;semantic-wrapper&quot;,
+      &quot;alignmentNotes&quot;: [
+        &quot;uses PrimeVue Panel to preserve explicit page section boundaries&quot;
+      ]
+    },
+    {
+      &quot;componentId&quot;: &quot;UiToolbar&quot;,
+      &quot;implementationRef&quot;: &quot;Toolbar&quot;,
+      &quot;mappingKind&quot;: &quot;provider-component&quot;,
+      &quot;alignmentNotes&quot;: [
+        &quot;maps Kernel in-page action cluster semantics onto PrimeVue Toolbar&quot;
+      ]
+    },
+    {
+      &quot;componentId&quot;: &quot;UiPagination&quot;,
+      &quot;implementationRef&quot;: &quot;Paginator&quot;,
+      &quot;mappingKind&quot;: &quot;provider-component&quot;,
+      &quot;alignmentNotes&quot;: [
+        &quot;maps Kernel result-set navigation semantics onto PrimeVue Paginator&quot;
+      ]
+    },
+    {
+      &quot;componentId&quot;: &quot;UiCard&quot;,
+      &quot;implementationRef&quot;: &quot;Card&quot;,
+      &quot;mappingKind&quot;: &quot;provider-component&quot;,
+      &quot;alignmentNotes&quot;: [
+        &quot;maps Kernel structured info block semantics onto PrimeVue Card&quot;
+      ]
+    }
+  ],
+  &quot;providerWhitelistComponentIds&quot;: [
+    &quot;UiButton&quot;,
+    &quot;UiInput&quot;,
+    &quot;UiSelect&quot;,
+    &quot;UiForm&quot;,
+    &quot;UiFormItem&quot;,
+    &quot;UiTable&quot;,
+    &quot;UiDialog&quot;,
+    &quot;UiDrawer&quot;,
+    &quot;UiEmpty&quot;,
+    &quot;UiSpinner&quot;,
+    &quot;UiPageHeader&quot;,
+    &quot;UiTabs&quot;,
+    &quot;UiSearchBar&quot;,
+    &quot;UiFilterBar&quot;,
+    &quot;UiResult&quot;,
+    &quot;UiSection&quot;,
+    &quot;UiToolbar&quot;,
+    &quot;UiPagination&quot;,
+    &quot;UiCard&quot;
+  ],
+  &quot;pageSchemas&quot;: [
+    {
+      &quot;pageSchemaId&quot;: &quot;dashboard-workspace&quot;,
+      &quot;uiSchemaId&quot;: &quot;dashboard-workspace-default&quot;,
+      &quot;pageRecipeId&quot;: &quot;DashboardPage&quot;,
+      &quot;anchorIds&quot;: [
+        &quot;page-shell&quot;,
+        &quot;page-header&quot;,
+        &quot;summary-band&quot;,
+        &quot;filter-scope&quot;,
+        &quot;main-insight&quot;,
+        &quot;secondary-section&quot;,
+        &quot;state-feedback&quot;
+      ],
+      &quot;slotIds&quot;: [
+        &quot;page-shell&quot;,
+        &quot;page-header&quot;,
+        &quot;summary-band&quot;,
+        &quot;main-insight&quot;,
+        &quot;secondary-section&quot;,
+        &quot;state-feedback&quot;
+      ],
+      &quot;componentIds&quot;: [
+        &quot;UiSection&quot;,
+        &quot;UiPageHeader&quot;,
+        &quot;UiCard&quot;,
+        &quot;UiResult&quot;
+      ]
+    },
+    {
+      &quot;pageSchemaId&quot;: &quot;search-list-workspace&quot;,
+      &quot;uiSchemaId&quot;: &quot;search-list-workspace-default&quot;,
+      &quot;pageRecipeId&quot;: &quot;SearchListPage&quot;,
+      &quot;anchorIds&quot;: [
+        &quot;page-shell&quot;,
+        &quot;page-header&quot;,
+        &quot;search-area&quot;,
+        &quot;result-summary&quot;,
+        &quot;content-area&quot;,
+        &quot;pagination-area&quot;,
+        &quot;state-feedback&quot;
+      ],
+      &quot;slotIds&quot;: [
+        &quot;page-shell&quot;,
+        &quot;page-header&quot;,
+        &quot;search-area&quot;,
+        &quot;result-summary&quot;,
+        &quot;content-area&quot;,
+        &quot;pagination-area&quot;,
+        &quot;state-feedback&quot;
+      ],
+      &quot;componentIds&quot;: [
+        &quot;UiSection&quot;,
+        &quot;UiPageHeader&quot;,
+        &quot;UiSearchBar&quot;,
+        &quot;UiResult&quot;,
+        &quot;UiTable&quot;,
+        &quot;UiPagination&quot;
+      ]
+    },
+    {
+      &quot;pageSchemaId&quot;: &quot;wizard-workspace&quot;,
+      &quot;uiSchemaId&quot;: &quot;wizard-workspace-default&quot;,
+      &quot;pageRecipeId&quot;: &quot;WizardPage&quot;,
+      &quot;anchorIds&quot;: [
+        &quot;page-shell&quot;,
+        &quot;page-header&quot;,
+        &quot;step-progress&quot;,
+        &quot;step-content&quot;,
+        &quot;action-bar&quot;,
+        &quot;state-feedback&quot;
+      ],
+      &quot;slotIds&quot;: [
+        &quot;page-shell&quot;,
+        &quot;page-header&quot;,
+        &quot;step-content&quot;,
+        &quot;step-fields&quot;,
+        &quot;action-bar&quot;,
+        &quot;state-feedback&quot;
+      ],
+      &quot;componentIds&quot;: [
+        &quot;UiSection&quot;,
+        &quot;UiPageHeader&quot;,
+        &quot;UiForm&quot;,
+        &quot;UiFormItem&quot;,
+        &quot;UiToolbar&quot;,
+        &quot;UiResult&quot;
+      ]
+    }
+  ],
+  &quot;generationConstraints&quot;: {
+    &quot;workItemId&quot;: &quot;017&quot;,
+    &quot;allowedRecipeIds&quot;: [
+      &quot;ListPage&quot;,
+      &quot;FormPage&quot;,
+      &quot;DetailPage&quot;
+    ],
+    &quot;whitelistComponentIds&quot;: [
+      &quot;UiButton&quot;,
+      &quot;UiInput&quot;,
+      &quot;UiSelect&quot;,
+      &quot;UiForm&quot;,
+      &quot;UiFormItem&quot;,
+      &quot;UiTable&quot;,
+      &quot;UiDialog&quot;,
+      &quot;UiDrawer&quot;,
+      &quot;UiEmpty&quot;,
+      &quot;UiSpinner&quot;,
+      &quot;UiPageHeader&quot;
+    ]
+  },
+  &quot;qualityPlatform&quot;: {
+    &quot;schemaVersion&quot;: &quot;1.0&quot;,
+    &quot;evidenceContractIds&quot;: [
+      &quot;a11y-matrix-evidence&quot;,
+      &quot;interaction-quality-evidence&quot;,
+      &quot;visual-regression-evidence&quot;
+    ],
+    &quot;pageSchemaIds&quot;: [
+      &quot;dashboard-workspace&quot;,
+      &quot;search-list-workspace&quot;
+    ]
+  },
+  &quot;providerRuntimeAdapter&quot;: {
+    &quot;state&quot;: &quot;ready&quot;,
+    &quot;carrierMode&quot;: &quot;target-project-adapter-layer&quot;,
+    &quot;runtimeDeliveryState&quot;: &quot;scaffolded&quot;,
+    &quot;evidenceReturnState&quot;: &quot;missing&quot;
+  }
+}</script>
+    </main>
+  </body>
+</html>
