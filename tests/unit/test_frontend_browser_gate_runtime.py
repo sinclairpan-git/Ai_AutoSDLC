@@ -341,7 +341,7 @@ def test_materialize_browser_gate_probe_runtime_prefers_visual_regression_verdic
                 evaluation_id="001-auth-block",
                 target_id="page:user-create",
                 surface_id="page:user-create",
-                outcome="block",
+                outcome="issue",
                 report_type="coverage-report",
                 severity="high",
                 location_anchor="specs",
@@ -521,6 +521,83 @@ def test_materialize_browser_gate_probe_runtime_fails_closed_when_visual_diff_mi
     assert "visual_regression_evidence_missing" in visual_receipt.blocking_reason_codes
     assert bundle.overall_gate_status == "incomplete"
     assert bundle.visual_verdict == "evidence_missing"
+
+
+def test_materialize_browser_gate_probe_runtime_marks_visual_transient_as_failed_session(
+    tmp_path: Path,
+) -> None:
+    context = _context()
+
+    def _runner(*, artifact_root: Path, execution_context, generated_at: str):
+        trace_path = artifact_root / "shared-runtime" / "playwright-trace.zip"
+        screenshot_path = artifact_root / "shared-runtime" / "navigation-screenshot.png"
+        interaction_path = artifact_root / "interaction" / "interaction-snapshot.json"
+        trace_path.parent.mkdir(parents=True, exist_ok=True)
+        interaction_path.parent.mkdir(parents=True, exist_ok=True)
+        trace_path.write_text('{"trace":"ok"}\n', encoding="utf-8")
+        screenshot_path.write_bytes(b"png")
+        interaction_path.write_text('{"interaction":"ok"}\n', encoding="utf-8")
+        return BrowserGateProbeRunnerResult.model_validate(
+            {
+                "runtime_status": "completed",
+                "shared_capture": {
+                    "gate_run_id": execution_context.gate_run_id,
+                    "trace_artifact_ref": str(trace_path.relative_to(tmp_path)),
+                    "navigation_screenshot_ref": str(screenshot_path.relative_to(tmp_path)),
+                    "capture_status": "captured",
+                    "final_url": "http://localhost:4173/",
+                    "anchor_refs": ["page:landing"],
+                    "diagnostic_codes": [],
+                },
+                "interaction_capture": {
+                    "gate_run_id": execution_context.gate_run_id,
+                    "interaction_probe_id": "primary-action",
+                    "artifact_refs": [str(interaction_path.relative_to(tmp_path))],
+                    "capture_status": "captured",
+                    "classification_candidate": "pass",
+                    "blocking_reason_codes": [],
+                    "anchor_refs": ["interaction:primary-action"],
+                },
+                "visual_regression_capture": {
+                    "matrix_id": "dashboard-modern-saas-desktop-chromium",
+                    "gate_run_id": execution_context.gate_run_id,
+                    "capture_status": "capture_failed",
+                    "screenshot_ref": str(screenshot_path.relative_to(tmp_path)),
+                    "baseline_ref": "governance/frontend/baseline.png",
+                    "baseline_metadata_ref": "governance/frontend/baseline.yaml",
+                    "diff_image_ref": "",
+                    "diff_ratio": 0.0,
+                    "threshold": 0.03,
+                    "region_summaries": [],
+                    "change_summary": "visual-regression-dependencies-unavailable",
+                    "capture_protocol_ref": (
+                        "matrix:dashboard-modern-saas-desktop-chromium"
+                    ),
+                    "bootstrap_ref": "",
+                    "verdict": "transient_run_failure",
+                },
+                "diagnostic_codes": [],
+                "warnings": [],
+            }
+        )
+
+    session, _records, receipts, bundle = materialize_browser_gate_probe_runtime(
+        root=tmp_path,
+        context=context,
+        apply_artifact_path=".ai-sdlc/memory/frontend-managed-delivery/latest.yaml",
+        visual_a11y_evidence_artifact=_visual_a11y_pass_artifact(),
+        generated_at="2026-04-14T15:05:00Z",
+        probe_runner=_runner,
+        execute_probe=True,
+    )
+
+    visual_receipt = next(item for item in receipts if item.check_name == "visual_regression")
+    assert visual_receipt.runtime_status == "failed_transient"
+    assert visual_receipt.classification_candidate == "transient_run_failure"
+    assert "visual_regression_transient_failure" in visual_receipt.blocking_reason_codes
+    assert session.status == "failed"
+    assert bundle.overall_gate_status == "incomplete"
+    assert bundle.visual_verdict == "transient_run_failure"
 
 
 def test_materialize_browser_gate_probe_runtime_normalizes_artifact_prefixed_visual_regression_refs(
@@ -1282,7 +1359,7 @@ def test_materialize_visual_and_a11y_receipts_deduplicates_remediation_lists(
                 evaluation_id="001-auth-fail-1",
                 target_id="page:user-create",
                 surface_id="page:user-create",
-                outcome="fail",
+                outcome="issue",
                 report_type="coverage-report",
                 severity="error",
                 location_anchor="specs",
@@ -1293,7 +1370,7 @@ def test_materialize_visual_and_a11y_receipts_deduplicates_remediation_lists(
                 evaluation_id="001-auth-fail-2",
                 target_id="page:user-create",
                 surface_id="page:user-create",
-                outcome="fail",
+                outcome="issue",
                 report_type="coverage-report",
                 severity="error",
                 location_anchor="specs",

@@ -373,8 +373,7 @@ def materialize_browser_gate_probe_runtime(
     overall_gate_status = _overall_gate_status(receipts)
     session_status = _session_status(
         overall_gate_status,
-        smoke_receipt=smoke_receipt,
-        interaction_receipt=interaction_receipt,
+        receipts=receipts,
     )
     session = BrowserGateProbeRuntimeSession(
         probe_runtime_session_id=f"{context.gate_run_id}-session",
@@ -1317,11 +1316,12 @@ def _diagnostic_warning_messages(codes: Iterable[str]) -> list[str]:
 def _session_status(
     overall_gate_status: str,
     *,
-    smoke_receipt: BrowserProbeExecutionReceipt,
-    interaction_receipt: BrowserProbeExecutionReceipt,
+    receipts: list[BrowserProbeExecutionReceipt],
 ) -> str:
-    if smoke_receipt.classification_candidate == "transient_run_failure" or (
-        interaction_receipt.classification_candidate == "transient_run_failure"
+    if any(
+        receipt.runtime_status == "failed_transient"
+        or receipt.classification_candidate == "transient_run_failure"
+        for receipt in receipts
     ):
         return "failed"
     if overall_gate_status in {"passed", "passed_with_advisories"}:
