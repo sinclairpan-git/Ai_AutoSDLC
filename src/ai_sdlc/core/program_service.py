@@ -5005,6 +5005,10 @@ class ProgramService:
         provider_id = solution_snapshot.effective_provider_id
         blockers: list[str] = []
         warnings: list[str] = []
+        _mapping_items, mapping_blockers = self._load_provider_mapping_items(provider_id)
+        _whitelist_items, whitelist_blockers = self._load_provider_whitelist_items(provider_id)
+        blockers.extend(mapping_blockers)
+        blockers.extend(whitelist_blockers)
 
         provider_manifest = self._load_provider_manifest(provider_id)
         if provider_manifest is None:
@@ -5164,6 +5168,53 @@ class ProgramService:
             return yaml.safe_load(whitelist_path.read_text(encoding="utf-8")) or {}
         return _builtin_provider_whitelist(provider_id)
 
+    def _normalize_provider_payload_items(
+        self,
+        *,
+        provider_id: str,
+        payload_kind: str,
+        payload: object,
+    ) -> tuple[list[dict[str, object]], list[str]]:
+        if payload is None:
+            return [], []
+        if not isinstance(payload, dict):
+            return [], [f"delivery_provider_{payload_kind}_invalid:{provider_id}"]
+        if "items" not in payload:
+            return [], []
+        items = payload.get("items")
+        if not isinstance(items, list):
+            return [], [f"delivery_provider_{payload_kind}_items_invalid:{provider_id}"]
+        normalized_items: list[dict[str, object]] = []
+        blockers: list[str] = []
+        for index, item in enumerate(items):
+            if isinstance(item, dict):
+                normalized_items.append(item)
+            else:
+                blockers.append(
+                    f"delivery_provider_{payload_kind}_item_invalid:{provider_id}:{index}"
+                )
+        return normalized_items, blockers
+
+    def _load_provider_mapping_items(
+        self,
+        provider_id: str,
+    ) -> tuple[list[dict[str, object]], list[str]]:
+        return self._normalize_provider_payload_items(
+            provider_id=provider_id,
+            payload_kind="mappings",
+            payload=self._load_provider_mappings(provider_id),
+        )
+
+    def _load_provider_whitelist_items(
+        self,
+        provider_id: str,
+    ) -> tuple[list[dict[str, object]], list[str]]:
+        return self._normalize_provider_payload_items(
+            provider_id=provider_id,
+            payload_kind="whitelist",
+            payload=self._load_provider_whitelist(provider_id),
+        )
+
     def _runtime_remediation_payload_from_host_plan(
         self,
         host_plan,
@@ -5260,8 +5311,10 @@ class ProgramService:
         runtime_adapter_handoff: ProgramFrontendProviderRuntimeAdapterHandoff,
     ) -> dict[str, object]:
         provider_id = solution_snapshot.effective_provider_id
-        provider_mappings = self._load_provider_mappings(provider_id) or {}
-        provider_whitelist = self._load_provider_whitelist(provider_id) or {}
+        provider_mapping_items, _mapping_blockers = self._load_provider_mapping_items(provider_id)
+        provider_whitelist_items, _whitelist_blockers = self._load_provider_whitelist_items(
+            provider_id
+        )
         return {
             "projectId": solution_snapshot.project_id,
             "snapshotId": solution_snapshot.snapshot_id,
@@ -5283,12 +5336,12 @@ class ProgramService:
                         entry.get("alignment_notes", [])
                     ),
                 }
-                for entry in provider_mappings.get("items", [])
+                for entry in provider_mapping_items
                 if str(entry.get("component_id", "")).strip()
             ],
             "providerWhitelistComponentIds": [
                 str(entry.get("component_id", "")).strip()
-                for entry in provider_whitelist.get("items", [])
+                for entry in provider_whitelist_items
                 if str(entry.get("component_id", "")).strip()
             ],
             "pageSchemas": [
@@ -5385,12 +5438,12 @@ class ProgramService:
         target,
     ) -> str:
         provider_id = str(delivery_context.get("effectiveProviderId", "")).strip()
-        provider_mappings = self._load_provider_mappings(provider_id) or {}
+        provider_mapping_items, _mapping_blockers = self._load_provider_mapping_items(provider_id)
         mapped_components = {
             str(entry.get("component_id", "")).strip(): str(
                 entry.get("implementation_ref", "")
             ).strip()
-            for entry in provider_mappings.get("items", [])
+            for entry in provider_mapping_items
             if str(entry.get("component_id", "")).strip()
             and str(entry.get("implementation_ref", "")).strip()
         }
@@ -6146,16 +6199,18 @@ const tableRows = [
                 provider_id
             )
 
-        mapping_payload = self._load_provider_mappings(provider_id) or {}
-        whitelist_payload = self._load_provider_whitelist(provider_id) or {}
+        mapping_payload, _mapping_blockers = self._load_provider_mapping_items(provider_id)
+        whitelist_payload, _whitelist_blockers = self._load_provider_whitelist_items(
+            provider_id
+        )
         whitelist_by_component = {
             str(entry.get("component_id", "")).strip(): entry
-            for entry in whitelist_payload.get("items", [])
+            for entry in whitelist_payload
             if str(entry.get("component_id", "")).strip()
         }
         mapping_items = [
             entry
-            for entry in mapping_payload.get("items", [])
+            for entry in mapping_payload
             if str(entry.get("component_id", "")).strip()
             and str(entry.get("implementation_ref", "")).strip()
         ]
@@ -6221,10 +6276,10 @@ const tableRows = [
         self,
         provider_id: str,
     ) -> str:
-        mapping_payload = self._load_provider_mappings(provider_id) or {}
+        mapping_payload, _mapping_blockers = self._load_provider_mapping_items(provider_id)
         mapped_component_ids = [
             str(entry.get("component_id", "")).strip()
-            for entry in mapping_payload.get("items", [])
+            for entry in mapping_payload
             if str(entry.get("component_id", "")).strip()
         ]
         required_component_ids = [
@@ -6249,7 +6304,7 @@ const tableRows = [
         component_ids = _unique_strings([*mapped_component_ids, *required_component_ids])
         mapping_by_component = {
             str(entry.get("component_id", "")).strip(): entry
-            for entry in mapping_payload.get("items", [])
+            for entry in mapping_payload
             if str(entry.get("component_id", "")).strip()
         }
 

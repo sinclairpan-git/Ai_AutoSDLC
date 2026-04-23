@@ -4617,6 +4617,82 @@ def test_build_frontend_managed_delivery_apply_request_materializes_public_bundl
     assert 'UiButton: "Button"' in provider_adapter_item["content"]
 
 
+def test_build_frontend_managed_delivery_apply_request_blocks_malformed_provider_mappings(
+    initialized_project_dir: Path,
+    monkeypatch,
+) -> None:
+    root = initialized_project_dir
+    save_project_config(root, ProjectConfig(adapter_ingress_state="verified_loaded"))
+    _write_builtin_delivery_truth(root)
+    provider_root = root / "providers" / "frontend" / "public-primevue"
+    provider_root.mkdir(parents=True, exist_ok=True)
+    (provider_root / "mappings.yaml").write_text(
+        "items:\n  bad: shape\n",
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(
+        program_service_module,
+        "evaluate_current_host_runtime",
+        lambda project_root: _build_host_runtime_plan_for_tests(
+            node_runtime_available=True,
+            package_manager_available=True,
+            playwright_browsers_available=True,
+        ),
+    )
+    monkeypatch.setattr(
+        program_service_module.shutil,
+        "which",
+        lambda executable: f"/mock/bin/{executable}" if executable == "pnpm" else None,
+    )
+    svc = ProgramService(root)
+
+    request = svc.build_frontend_managed_delivery_apply_request()
+
+    assert request.apply_state == "blocked_before_start"
+    assert (
+        "delivery_provider_mappings_items_invalid:public-primevue"
+        in request.remaining_blockers
+    )
+
+
+def test_build_frontend_managed_delivery_apply_request_blocks_malformed_provider_whitelist(
+    initialized_project_dir: Path,
+    monkeypatch,
+) -> None:
+    root = initialized_project_dir
+    save_project_config(root, ProjectConfig(adapter_ingress_state="verified_loaded"))
+    _write_builtin_delivery_truth(root)
+    provider_root = root / "providers" / "frontend" / "public-primevue"
+    provider_root.mkdir(parents=True, exist_ok=True)
+    (provider_root / "whitelist.yaml").write_text(
+        "items:\n  bad: shape\n",
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(
+        program_service_module,
+        "evaluate_current_host_runtime",
+        lambda project_root: _build_host_runtime_plan_for_tests(
+            node_runtime_available=True,
+            package_manager_available=True,
+            playwright_browsers_available=True,
+        ),
+    )
+    monkeypatch.setattr(
+        program_service_module.shutil,
+        "which",
+        lambda executable: f"/mock/bin/{executable}" if executable == "pnpm" else None,
+    )
+    svc = ProgramService(root)
+
+    request = svc.build_frontend_managed_delivery_apply_request()
+
+    assert request.apply_state == "blocked_before_start"
+    assert (
+        "delivery_provider_whitelist_items_invalid:public-primevue"
+        in request.remaining_blockers
+    )
+
+
 def test_build_frontend_managed_delivery_apply_request_falls_back_to_available_package_manager(
     initialized_project_dir: Path,
     monkeypatch,
