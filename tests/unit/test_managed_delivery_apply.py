@@ -787,6 +787,63 @@ def test_verify_dependency_installation_accepts_playwright_test_runtime_layout(
     assert result["playwright_browser_runtime"] == "/ms-playwright/chromium/chrome"
 
 
+def test_verify_dependency_installation_skips_playwright_runtime_for_unrequested_package(
+    tmp_path: Path,
+) -> None:
+    (tmp_path / "node_modules" / "primevue").mkdir(parents=True)
+    (tmp_path / "node_modules" / "primevue" / "package.json").write_text(
+        json.dumps({"name": "primevue", "version": "4.0.0"}) + "\n",
+        encoding="utf-8",
+    )
+    (tmp_path / "package.json").write_text(
+        json.dumps(
+            {
+                "name": "managed-frontend",
+                "private": True,
+                "dependencies": {
+                    "primevue": "^4.0.0",
+                    "playwright": "^1.38.0",
+                },
+            },
+            indent=2,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    (tmp_path / "package-lock.json").write_text("# fixture lockfile\n", encoding="utf-8")
+    payload = DependencyInstallExecutionPayload(
+        install_strategy_id="public-primevue-default",
+        package_manager="npm",
+        working_directory=".",
+        packages=["primevue"],
+    )
+
+    def _node_side_effect(command, *args, **kwargs):
+        script = str(command[-2] if command[-1] == "primevue" else command[-1])
+        if "chromium.executablePath" in script:
+            raise AssertionError("Playwright runtime check should not run")
+        return subprocess.CompletedProcess(
+            args=command,
+            returncode=0,
+            stdout=json.dumps(
+                {
+                    "primevue": str(
+                        tmp_path / "node_modules" / "primevue" / "package.json"
+                    )
+                }
+            ),
+            stderr="",
+        )
+
+    with patch(
+        "ai_sdlc.core.managed_delivery_apply.subprocess.run",
+        side_effect=_node_side_effect,
+    ):
+        result = verify_dependency_installation(payload, tmp_path)
+
+    assert result["playwright_browser_runtime"] == ""
+
+
 def test_run_managed_delivery_apply_fails_when_dependency_lockfile_verification_is_missing(
     tmp_path: Path,
 ) -> None:

@@ -4505,7 +4505,7 @@ class ProgramService:
         preferred = preferred_package_manager.strip() or "pnpm"
         if shutil.which(preferred) is not None:
             return preferred, None
-        for candidate in ("npm", "pnpm"):
+        for candidate in ("npm", "pnpm", "yarn"):
             if candidate == preferred:
                 continue
             if shutil.which(candidate) is not None:
@@ -5238,7 +5238,7 @@ class ProgramService:
     def _managed_target_prepare_payload(self, package_manager: str) -> dict[str, object]:
         package_manager_line = {
             "npm": "npm@10",
-            "yarn": "yarn@1",
+            "yarn": "yarn@1.22.22",
         }.get(package_manager, "pnpm@9")
         return {
             "directories": ["src"],

@@ -4733,7 +4733,7 @@ def test_build_frontend_managed_delivery_apply_request_falls_back_to_available_p
     assert '"packageManager": "npm@10"' in prepare_action.executor_payload["files"][0]["content"]
 
 
-def test_build_frontend_managed_delivery_apply_request_does_not_fallback_to_yarn(
+def test_build_frontend_managed_delivery_apply_request_falls_back_to_yarn_classic(
     initialized_project_dir: Path,
     monkeypatch,
 ) -> None:
@@ -4763,15 +4763,15 @@ def test_build_frontend_managed_delivery_apply_request_does_not_fallback_to_yarn
         for action in request.execution_view.action_items
         if action.action_type == "dependency_install"
     )
-    assert dependency_action.executor_payload["package_manager"] == "pnpm"
-    assert "delivery_package_manager_missing:pnpm" in request.remaining_blockers
-    assert not any("delivery_package_manager_fallback:pnpm->yarn" in warning for warning in request.warnings)
+    assert dependency_action.executor_payload["package_manager"] == "yarn"
+    assert "delivery_package_manager_fallback:pnpm->yarn" in request.warnings
+    assert "delivery_package_manager_missing:pnpm" not in request.remaining_blockers
     prepare_action = next(
         action
         for action in request.execution_view.action_items
         if action.action_type == "managed_target_prepare"
     )
-    assert '"packageManager": "pnpm@9"' in prepare_action.executor_payload["files"][0]["content"]
+    assert '"packageManager": "yarn@1.22.22"' in prepare_action.executor_payload["files"][0]["content"]
 
 
 def test_build_frontend_managed_delivery_apply_request_persists_release_capability_guidance_in_request_payload(

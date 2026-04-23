@@ -1119,7 +1119,8 @@ def _requires_playwright_browser_runtime(
     expected_packages: list[str],
     declared_packages: set[str],
 ) -> bool:
-    package_names = set(expected_packages) | declared_packages
+    _ = declared_packages
+    package_names = set(expected_packages)
     return bool(package_names & _PLAYWRIGHT_BROWSER_RUNTIME_PACKAGES)
 
 
