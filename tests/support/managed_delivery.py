@@ -32,10 +32,16 @@ def build_dependency_install_subprocess_side_effect(
                 stderr="",
             )
         if command_parts and command_parts[0] == "node":
+            stdout = ""
+            if len(command_parts) >= 3 and command_parts[1] == "-e":
+                stdout = _maybe_materialize_playwright_runtime_probe(
+                    cwd,
+                    script=command_parts[2],
+                )
             return subprocess.CompletedProcess(
                 args=command_parts,
                 returncode=0,
-                stdout="",
+                stdout=stdout,
                 stderr="",
             )
         return subprocess.CompletedProcess(
@@ -46,6 +52,12 @@ def build_dependency_install_subprocess_side_effect(
         )
 
     return _side_effect
+
+
+def _maybe_materialize_playwright_runtime_probe(cwd: Path, *, script: str) -> str:
+    if "chromium.executablePath()" not in script:
+        return ""
+    return str(_materialize_playwright_executable(cwd))
 
 
 def _extract_requested_packages(command_parts: list[str]) -> list[str]:
@@ -94,10 +106,27 @@ def _materialize_install_footprint(
         package_path = cwd / "node_modules" / Path(*package_name.split("/"))
         package_path.mkdir(parents=True, exist_ok=True)
         (package_path / "package.json").write_text(
-            json.dumps({"name": package_name, "version": "0.0.0-test"}, indent=2)
+            json.dumps(
+                {
+                    "name": package_name,
+                    "version": "0.0.0-test",
+                    "main": "index.js",
+                },
+                indent=2,
+            )
             + "\n",
             encoding="utf-8",
         )
+        if package_name in {"playwright", "@playwright/test"}:
+            executable_path = _materialize_playwright_executable(cwd)
+            (package_path / "index.js").write_text(
+                "module.exports = {\n"
+                "  chromium: {\n"
+                f"    executablePath() {{ return {json.dumps(str(executable_path))}; }}\n"
+                "  }\n"
+                "};\n",
+                encoding="utf-8",
+            )
     manifest_path.write_text(
         json.dumps(manifest_payload, ensure_ascii=True, indent=2) + "\n",
         encoding="utf-8",
@@ -110,3 +139,10 @@ def _materialize_install_footprint(
         "yarn": "yarn.lock",
     }[package_manager]
     (cwd / lockfile_name).write_text("# fixture lockfile\n", encoding="utf-8")
+
+
+def _materialize_playwright_executable(cwd: Path) -> Path:
+    executable_path = cwd / "node_modules" / ".cache" / "ms-playwright" / "chromium-fixture"
+    executable_path.parent.mkdir(parents=True, exist_ok=True)
+    executable_path.write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
+    return executable_path
