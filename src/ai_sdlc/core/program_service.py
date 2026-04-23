@@ -3352,7 +3352,7 @@ class ProgramService:
                 spec_dir = self._resolve_spec_dir(spec.path)
             except ValueError:
                 continue
-            readiness = self._build_frontend_readiness(spec_dir)
+            readiness = self._build_frontend_readiness(spec_dir, spec)
             remediation = self._build_frontend_remediation_input(
                 readiness,
                 spec.path,
@@ -4054,7 +4054,7 @@ class ProgramService:
                     completed, total = _task_counts(tasks_md)
 
             frontend_readiness = (
-                self._build_frontend_readiness(spec_dir)
+                self._build_frontend_readiness(spec_dir, spec)
                 if spec_dir is not None
                 else None
             )
@@ -12976,10 +12976,23 @@ const tableRows = [
             warnings=warnings,
         )
 
-    def _build_frontend_readiness(self, spec_dir: Path) -> ProgramFrontendReadiness:
-        frontend_evidence_class = _load_frontend_evidence_class_from_spec(
-            spec_dir / "spec.md"
-        ) or ""
+    def _build_frontend_readiness(
+        self,
+        spec_dir: Path,
+        spec_ref: ProgramSpecRef | None = None,
+    ) -> ProgramFrontendReadiness | None:
+        frontend_evidence_class = _effective_frontend_evidence_class(
+            spec_dir / "spec.md",
+            manifest_value=(
+                spec_ref.frontend_evidence_class if spec_ref is not None else ""
+            ),
+        )
+        if not _frontend_readiness_is_applicable(
+            spec_dir=spec_dir,
+            frontend_evidence_class=frontend_evidence_class,
+            spec_ref=spec_ref,
+        ):
+            return None
         attachment = build_frontend_contract_runtime_attachment(
             self.root,
             explicit_spec_dir=spec_dir,
@@ -15256,6 +15269,36 @@ def _load_frontend_evidence_class_from_spec(spec_path: Path) -> str | None:
     if normalized_value not in FRONTEND_EVIDENCE_CLASS_ALLOWED_VALUES:
         return None
     return normalized_value
+
+
+def _effective_frontend_evidence_class(
+    spec_path: Path,
+    *,
+    manifest_value: str = "",
+) -> str:
+    spec_value = _load_frontend_evidence_class_from_spec(spec_path)
+    if spec_value:
+        return spec_value
+    normalized_manifest_value = str(manifest_value).strip()
+    if normalized_manifest_value in FRONTEND_EVIDENCE_CLASS_ALLOWED_VALUES:
+        return normalized_manifest_value
+    return ""
+
+
+def _frontend_readiness_is_applicable(
+    *,
+    spec_dir: Path,
+    frontend_evidence_class: str,
+    spec_ref: ProgramSpecRef | None,
+) -> bool:
+    capability_refs = (
+        spec_ref.capability_refs if spec_ref is not None else []
+    )
+    if PROGRAM_FRONTEND_MAINLINE_DELIVERY_CAPABILITY_ID in capability_refs:
+        return True
+    if not frontend_evidence_class:
+        return False
+    return _is_frontend_evidence_class_subject(spec_dir.name)
 
 
 def _is_frontend_evidence_class_subject(spec_dir_name: str) -> bool:

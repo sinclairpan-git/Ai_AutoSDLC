@@ -112,17 +112,31 @@ def _manifest() -> ProgramManifest:
     return ProgramManifest(
         schema_version="1",
         prd_path="PRD.md",
+        capabilities=[
+            {
+                "id": "frontend-mainline-delivery",
+                "title": "Frontend Mainline Delivery",
+                "spec_refs": ["001-auth", "002-course", "003-enroll"],
+            }
+        ],
         specs=[
-            ProgramSpecRef(id="001-auth", path="specs/001-auth", depends_on=[]),
+            ProgramSpecRef(
+                id="001-auth",
+                path="specs/001-auth",
+                depends_on=[],
+                capability_refs=["frontend-mainline-delivery"],
+            ),
             ProgramSpecRef(
                 id="002-course",
                 path="specs/002-course",
                 depends_on=[],
+                capability_refs=["frontend-mainline-delivery"],
             ),
             ProgramSpecRef(
                 id="003-enroll",
                 path="specs/003-enroll",
                 depends_on=["001-auth", "002-course"],
+                capability_refs=["frontend-mainline-delivery"],
             ),
         ],
     )
@@ -13728,6 +13742,23 @@ def test_build_status_surfaces_frontend_readiness_gap_when_attachment_missing(
     assert readiness.source_linkage["frontend_gate_verdict"] == "UNRESOLVED"
 
 
+def test_build_status_omits_frontend_readiness_for_non_frontend_spec_without_subject_signals(
+    tmp_path: Path,
+) -> None:
+    spec_dir = tmp_path / "specs" / "001-auth"
+    spec_dir.mkdir(parents=True)
+
+    svc = ProgramService(tmp_path)
+    rows = svc.build_status(
+        ProgramManifest(
+            specs=[ProgramSpecRef(id="001-auth", path="specs/001-auth", depends_on=[])]
+        )
+    )
+
+    readiness = rows[0].frontend_readiness
+    assert readiness is None
+
+
 def test_build_status_waives_observation_gap_for_framework_capability(
     tmp_path: Path,
 ) -> None:
@@ -13755,6 +13786,63 @@ def test_build_status_waives_observation_gap_for_framework_capability(
         readiness.source_linkage["frontend_attachment_requirement"]
         == "waived_for_framework_capability"
     )
+
+
+def test_build_status_uses_manifest_frontend_evidence_class_for_frontend_subject(
+    tmp_path: Path,
+) -> None:
+    spec_dir = tmp_path / "specs" / "165-frontend-example"
+    spec_dir.mkdir(parents=True)
+
+    svc = ProgramService(tmp_path)
+    rows = svc.build_status(
+        ProgramManifest(
+            specs=[
+                ProgramSpecRef(
+                    id="165-frontend-example",
+                    path="specs/165-frontend-example",
+                    depends_on=[],
+                    frontend_evidence_class="framework_capability",
+                )
+            ]
+        )
+    )
+
+    readiness = rows[0].frontend_readiness
+    assert readiness is not None
+    assert readiness.state == "ready"
+    assert readiness.execute_gate_state == "ready"
+    assert readiness.decision_reason == "advisory_only"
+    assert readiness.source_linkage["runtime_attachment_status"] == "missing_artifact"
+    assert (
+        readiness.source_linkage["frontend_attachment_requirement"]
+        == "waived_for_framework_capability"
+    )
+
+
+def test_build_status_omits_frontend_readiness_for_non_frontend_capability_scope(
+    tmp_path: Path,
+) -> None:
+    spec_dir = tmp_path / "specs" / "158-agent-adapter-example"
+    spec_dir.mkdir(parents=True)
+
+    svc = ProgramService(tmp_path)
+    rows = svc.build_status(
+        ProgramManifest(
+            specs=[
+                ProgramSpecRef(
+                    id="158-agent-adapter-example",
+                    path="specs/158-agent-adapter-example",
+                    depends_on=[],
+                    frontend_evidence_class="framework_capability",
+                    capability_refs=["agent-adapter-verified-host-ingress"],
+                )
+            ]
+        )
+    )
+
+    readiness = rows[0].frontend_readiness
+    assert readiness is None
 
 
 def test_build_status_blocks_sample_selfcheck_observation_artifact_for_general_spec(
