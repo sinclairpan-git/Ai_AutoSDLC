@@ -2093,6 +2093,20 @@ class ProgramService:
             if validation_result is not None
             else self.validate_manifest(manifest)
         )
+        matched_capabilities = self.release_target_capability_ids_for_spec(
+            manifest,
+            resolved_spec_dir,
+        )
+        quick_readiness = self._build_persisted_spec_truth_readiness_fast_path(
+            manifest,
+            resolved_spec_dir=resolved_spec_dir,
+            matched_spec_ids=matched_spec_ids,
+            matched_capabilities=matched_capabilities,
+            validation_result=validation,
+        )
+        if quick_readiness is not None:
+            return quick_readiness
+
         surface = self.build_truth_ledger_surface(
             manifest,
             validation_result=validation,
@@ -2100,10 +2114,6 @@ class ProgramService:
         if surface is None:
             return None
 
-        matched_capabilities = self.release_target_capability_ids_for_spec(
-            manifest,
-            resolved_spec_dir,
-        )
         snapshot_state = str(surface.get("snapshot_state", "")).strip()
         if snapshot_state != "fresh":
             summary_token = f"truth_snapshot_{snapshot_state or 'missing'}"
@@ -2270,6 +2280,72 @@ class ProgramService:
             frontend_delivery_status=matched_frontend_delivery_status,
             frontend_delivery_scope=matched_frontend_delivery_scope,
             frontend_inheritance_status=matched_frontend_inheritance_status,
+            matched_spec_ids=matched_spec_ids,
+            matched_capabilities=matched_capabilities,
+        )
+
+    def _build_persisted_spec_truth_readiness_fast_path(
+        self,
+        manifest: ProgramManifest,
+        *,
+        resolved_spec_dir: Path,
+        matched_spec_ids: list[str],
+        matched_capabilities: list[str],
+        validation_result: ProgramValidationResult,
+    ) -> ProgramSpecTruthReadinessResult | None:
+        snapshot = manifest.truth_snapshot
+        if snapshot is None or snapshot.state != "ready":
+            return None
+        if not self._truth_snapshot_hash_matches(snapshot):
+            return None
+        if snapshot.authoring_hash != self._truth_authoring_hash():
+            return None
+        if validation_result.errors or self._migration_pending_specs(
+            validation_result.warnings
+        ) or self._migration_pending_sources(validation_result.warnings):
+            return None
+        if self._spec_truth_readiness_relevant_dirty_paths(
+            manifest,
+            resolved_spec_dir=resolved_spec_dir,
+            matched_capabilities=matched_capabilities,
+        ):
+            return None
+
+        capability_map = {
+            item.capability_id: item for item in snapshot.computed_capabilities
+        }
+        if any(
+            capability_map.get(capability_id) is None
+            or capability_map[capability_id].audit_state != "ready"
+            for capability_id in matched_capabilities
+        ):
+            return None
+
+        frontend_delivery_status: dict[str, str] = {}
+        frontend_delivery_scope = ""
+        frontend_inheritance_status: dict[str, str] = {}
+        if PROGRAM_FRONTEND_MAINLINE_DELIVERY_CAPABILITY_ID in matched_capabilities:
+            frontend_delivery_status = self._truth_ledger_frontend_delivery_status(
+                capability_id=PROGRAM_FRONTEND_MAINLINE_DELIVERY_CAPABILITY_ID
+            )
+            frontend_delivery_scope = frontend_delivery_scope_for_status(
+                frontend_delivery_status
+            )
+            frontend_inheritance_status = self._truth_ledger_frontend_inheritance_status(
+                capability_id=PROGRAM_FRONTEND_MAINLINE_DELIVERY_CAPABILITY_ID
+            )
+
+        detail = "truth snapshot is fresh and spec is mapped"
+        if matched_capabilities:
+            detail = "truth snapshot is fresh and matched release capabilities are ready"
+        return ProgramSpecTruthReadinessResult(
+            required=True,
+            ready=True,
+            state="ready",
+            detail=detail,
+            frontend_delivery_status=frontend_delivery_status,
+            frontend_delivery_scope=frontend_delivery_scope,
+            frontend_inheritance_status=frontend_inheritance_status,
             matched_spec_ids=matched_spec_ids,
             matched_capabilities=matched_capabilities,
         )
@@ -4034,6 +4110,79 @@ class ProgramService:
             if any(spec_id in capability.spec_refs for spec_id in matched_spec_ids):
                 matched_capabilities.append(capability.id)
         return _unique_strings(matched_capabilities)
+
+    def _spec_truth_readiness_relevant_dirty_paths(
+        self,
+        manifest: ProgramManifest,
+        *,
+        resolved_spec_dir: Path,
+        matched_capabilities: list[str],
+    ) -> list[str]:
+        dirty_paths = self._dirty_worktree_paths()
+        if not dirty_paths:
+            return []
+
+        exact_paths: set[str] = set()
+        prefix_paths: set[str] = set()
+
+        spec_rel = _relative_to_root_or_str(self.root, resolved_spec_dir).strip()
+        if spec_rel:
+            exact_paths.add(spec_rel)
+            prefix_paths.add(spec_rel.rstrip("/") + "/")
+
+        capability_map = {capability.id: capability for capability in manifest.capabilities}
+        for capability_id in matched_capabilities:
+            capability = capability_map.get(capability_id)
+            if capability is None:
+                continue
+            for ref in (
+                *capability.required_evidence.truth_check_refs,
+                *capability.required_evidence.close_check_refs,
+            ):
+                try:
+                    resolved_ref = self._resolve_project_relative_path(ref)
+                except ValueError:
+                    continue
+                ref_rel = _relative_to_root_or_str(self.root, resolved_ref).strip()
+                if not ref_rel:
+                    continue
+                exact_paths.add(ref_rel)
+                prefix_paths.add(ref_rel.rstrip("/") + "/")
+
+        relevant: list[str] = []
+        for path in dirty_paths:
+            normalized = path.strip()
+            if not normalized or normalized == "program-manifest.yaml":
+                continue
+            if normalized in exact_paths or any(
+                normalized.startswith(prefix) for prefix in prefix_paths
+            ):
+                relevant.append(normalized)
+        return _unique_strings(relevant)
+
+    def _dirty_worktree_paths(self) -> list[str]:
+        try:
+            raw = GitClient(self.root)._run(
+                "status",
+                "--porcelain",
+                "--untracked-files=all",
+            )
+        except GitError:
+            return []
+
+        paths: list[str] = []
+        for line in raw.splitlines():
+            if len(line) < 4:
+                continue
+            payload = line[3:].strip()
+            if not payload:
+                continue
+            if " -> " in payload:
+                before, after = payload.split(" -> ", 1)
+                paths.extend([before.strip(), after.strip()])
+            else:
+                paths.append(payload)
+        return _unique_strings(paths)
 
     def build_frontend_evidence_class_statuses(
         self,
