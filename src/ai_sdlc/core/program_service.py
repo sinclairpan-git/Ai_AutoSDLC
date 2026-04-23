@@ -214,7 +214,11 @@ PROGRAM_TRUTH_SYNC_EXECUTE_COMMAND = "python -m ai_sdlc program truth sync --exe
 PROGRAM_TRUTH_AUDIT_COMMAND = "python -m ai_sdlc program truth audit"
 PROGRAM_FRONTEND_MAINLINE_DELIVERY_CAPABILITY_ID = "frontend-mainline-delivery"
 PROGRAM_FRONTEND_INHERITANCE_BLOCKER_PREFIX = "frontend_inheritance"
-PROGRAM_FRONTEND_VISUAL_REGRESSION_RUNTIME_PACKAGES = ("pixelmatch", "pngjs")
+PROGRAM_FRONTEND_VISUAL_REGRESSION_RUNTIME_PACKAGES = (
+    "playwright",
+    "pixelmatch",
+    "pngjs",
+)
 PROGRAM_HOST_INGRESS_CAPABILITY_ID = "agent-adapter-verified-host-ingress"
 PROGRAM_HOST_INGRESS_CANONICAL_BLOCKER_PREFIX = "adapter_canonical_consumption"
 PROGRAM_TRUTH_SOURCE_DISCOVERY_ROOT = Path("docs")

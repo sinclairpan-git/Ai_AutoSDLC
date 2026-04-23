@@ -4481,6 +4481,7 @@ def test_build_frontend_managed_delivery_apply_request_materializes_public_bundl
     assert dependency_action.executor_payload["packages"] == [
         "primevue",
         "@primeuix/themes",
+        "playwright",
         "pixelmatch",
         "pngjs",
     ]
@@ -4896,6 +4897,7 @@ def test_build_frontend_managed_delivery_apply_request_uses_builtin_provider_tru
     assert dependency_action.executor_payload["packages"] == [
         "primevue",
         "@primeuix/themes",
+        "playwright",
         "pixelmatch",
         "pngjs",
     ]

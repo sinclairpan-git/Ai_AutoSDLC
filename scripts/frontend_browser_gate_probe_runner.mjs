@@ -1019,8 +1019,48 @@ async function compareVisualRegression({
     };
   }
 
-  const currentPng = pngjs.PNG.sync.read(await readFile(screenshotPath));
-  const baselinePng = pngjs.PNG.sync.read(await readFile(matrixPaths.baselineImagePath));
+  let currentPng;
+  let baselinePng;
+  try {
+    currentPng = pngjs.PNG.sync.read(await readFile(screenshotPath));
+    baselinePng = pngjs.PNG.sync.read(await readFile(matrixPaths.baselineImagePath));
+  } catch {
+    await writeFile(
+      bootstrapPath,
+      JSON.stringify(
+        {
+          schema_version: "frontend-visual-regression-bootstrap/v1",
+          gate_run_id: payload.gate_run_id,
+          matrix_id: matrixPaths.matrixId,
+          managed_frontend_target: String(payload.managed_frontend_target || "").trim(),
+          package_manager: "npm",
+          dependency_refs: ["pixelmatch", "pngjs"],
+          lockfile_ref: "managed/frontend/package-lock.json",
+          status: "failed",
+          failure_reason: "visual-regression-image-decode-failed",
+        },
+        null,
+        2,
+      ),
+      "utf8",
+    );
+    return {
+      matrix_id: matrixPaths.matrixId,
+      gate_run_id: payload.gate_run_id,
+      capture_status: "capture_failed",
+      screenshot_ref: screenshotRef,
+      baseline_ref: baselineRef,
+      baseline_metadata_ref: baselineMetadataRef,
+      diff_image_ref: "",
+      diff_ratio: 1,
+      threshold,
+      region_summaries: [],
+      change_summary: "visual-regression-image-decode-failed",
+      capture_protocol_ref: `matrix:${matrixPaths.matrixId}`,
+      bootstrap_ref: bootstrapRef,
+      verdict: "recheck",
+    };
+  }
   if (
     currentPng.width !== baselinePng.width ||
     currentPng.height !== baselinePng.height
