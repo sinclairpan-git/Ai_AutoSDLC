@@ -71,6 +71,46 @@ def test_frontend_quality_platform_artifacts_preserve_matrix_and_verdict_semanti
     assert verdict["evidence_state"] == "partial"
 
 
+def test_committed_visual_regression_matrices_have_baseline_assets() -> None:
+    platform = build_p2_frontend_quality_platform_baseline()
+    repo_root = Path(__file__).resolve().parents[2]
+    baseline_root = (
+        repo_root
+        / "governance"
+        / "frontend"
+        / "quality-platform"
+        / "evidence"
+        / "visual-regression"
+        / "baselines"
+    )
+
+    visual_matrix_ids = [
+        entry.matrix_id
+        for entry in platform.coverage_matrix
+        if "visual-regression-evidence" in entry.evidence_contract_ids
+    ]
+
+    assert visual_matrix_ids
+    for matrix_id in visual_matrix_ids:
+        matrix_baseline_root = baseline_root / matrix_id
+        baseline_png = matrix_baseline_root / "baseline.png"
+        baseline_yaml = matrix_baseline_root / "baseline.yaml"
+        assert baseline_png.is_file(), f"missing visual baseline image for {matrix_id}"
+        assert baseline_yaml.is_file(), f"missing visual baseline metadata for {matrix_id}"
+        metadata = _read_yaml(baseline_yaml)
+        assert metadata["matrix_id"] == matrix_id
+        assert metadata["baseline_image_ref"] == (
+            "artifact:"
+            f"governance/frontend/quality-platform/evidence/visual-regression/"
+            f"baselines/{matrix_id}/baseline.png"
+        )
+        assert metadata["baseline_metadata_ref"] == (
+            "artifact:"
+            f"governance/frontend/quality-platform/evidence/visual-regression/"
+            f"baselines/{matrix_id}/baseline.yaml"
+        )
+
+
 def test_frontend_quality_platform_root_is_stable(tmp_path) -> None:
     assert frontend_quality_platform_root(tmp_path) == (
         tmp_path / "governance" / "frontend" / "quality-platform"
