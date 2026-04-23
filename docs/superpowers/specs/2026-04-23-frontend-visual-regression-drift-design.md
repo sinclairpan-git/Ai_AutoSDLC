@@ -4,6 +4,8 @@
 **状态**：draft  
 **目标**：把当前已存在的 browser gate 截图变成可执行、可阻断、可追踪的视觉回归证据，并且在缺少新依赖时自动完成 workspace bootstrap，保证自动化测试可以在干净环境中继续跑下去。
 
+**备注**：本文件仅作为 design reference；正式 work item 已迁移到 [`specs/178-frontend-visual-regression-drift-baseline/spec.md`](../../../specs/178-frontend-visual-regression-drift-baseline/spec.md)。
+
 ## 背景
 
 当前仓库已经具备三类相关能力：
