@@ -8068,38 +8068,8 @@ const tableRows = [
                 ),
                 str(payload.get("overall_gate_status", "")).strip(),
             )
-        if any(
-            (
-                expected_context.apply_result_id != execution_context.apply_result_id,
-                expected_context.solution_snapshot_id
-                != execution_context.solution_snapshot_id,
-                expected_context.spec_dir != execution_context.spec_dir,
-                expected_context.attachment_scope_ref
-                != execution_context.attachment_scope_ref,
-                expected_context.managed_frontend_target
-                != execution_context.managed_frontend_target,
-                expected_context.readiness_subject_id
-                != execution_context.readiness_subject_id,
-                expected_context.effective_provider
-                != execution_context.effective_provider,
-                expected_context.effective_style_pack
-                != execution_context.effective_style_pack,
-                expected_context.style_fidelity_status
-                != execution_context.style_fidelity_status,
-                expected_context.visual_regression_matrix_id
-                != execution_context.visual_regression_matrix_id,
-                expected_context.visual_regression_viewport_id
-                != execution_context.visual_regression_viewport_id,
-                expected_context.provider_runtime_adapter_carrier_mode
-                != execution_context.provider_runtime_adapter_carrier_mode,
-                expected_context.provider_runtime_adapter_delivery_state
-                != execution_context.provider_runtime_adapter_delivery_state,
-                expected_context.provider_runtime_adapter_evidence_state
-                != execution_context.provider_runtime_adapter_evidence_state,
-                expected_context.browser_entry_ref != execution_context.browser_entry_ref,
-                tuple(expected_context.required_probe_set)
-                != tuple(execution_context.required_probe_set),
-            )
+        if expected_context.model_dump(mode="json") != execution_context.model_dump(
+            mode="json"
         ):
             return (
                 _invalid_browser_gate_artifact_decision(

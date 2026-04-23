@@ -6308,6 +6308,58 @@ def test_build_status_fails_closed_when_visual_regression_matrix_context_drifts(
     assert any("current_truth_drift" in blocker for blocker in readiness.blockers)
 
 
+def test_build_status_fails_closed_when_browser_gate_full_context_drifts(
+    initialized_project_dir: Path,
+) -> None:
+    root = initialized_project_dir
+    save_project_config(root, ProjectConfig(adapter_ingress_state="verified_loaded"))
+    _write_frontend_solution_confirmation_artifacts(root)
+    request_path = _write_artifact_generate_apply_request(root)
+    svc = ProgramService(root)
+    apply_request = svc.build_frontend_managed_delivery_apply_request(request_path)
+    apply_result = svc.execute_frontend_managed_delivery_apply(
+        request_path,
+        request=apply_request,
+        confirmed=True,
+    )
+    svc.write_frontend_managed_delivery_apply_artifact(
+        request_path,
+        request=apply_request,
+        result=apply_result,
+        generated_at="2026-04-14T04:00:00Z",
+    )
+    probe_request = svc.build_frontend_browser_gate_probe_request()
+    probe_result = svc.execute_frontend_browser_gate_probe(
+        request=probe_request,
+        generated_at="2026-04-14T04:05:00Z",
+    )
+
+    artifact_path = root / probe_result.artifact_path
+    payload = yaml.safe_load(artifact_path.read_text(encoding="utf-8"))
+    payload["execution_context"].update(
+        {
+            "delivery_entry_id": "stale-delivery-entry",
+            "package_manager": "stale-package-manager",
+            "component_library_packages": ["stale-component-library"],
+            "provider_theme_adapter_id": "stale-theme-adapter",
+            "page_schema_ids": ["stale-page-schema"],
+        }
+    )
+    artifact_path.write_text(
+        yaml.safe_dump(payload, sort_keys=False, allow_unicode=True),
+        encoding="utf-8",
+    )
+
+    rows = svc.build_status(_manifest())
+    by = {r.spec_id: r for r in rows}
+
+    readiness = by["001-auth"].frontend_readiness
+    assert readiness is not None
+    assert readiness.execute_gate_state == "blocked"
+    assert readiness.decision_reason == "scope_or_linkage_invalid"
+    assert any("current_truth_drift" in blocker for blocker in readiness.blockers)
+
+
 def test_build_integration_dry_run_surfaces_browser_gate_remediation_follow_up_command(
     initialized_project_dir: Path,
 ) -> None:
