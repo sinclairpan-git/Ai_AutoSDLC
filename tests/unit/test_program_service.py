@@ -4526,6 +4526,47 @@ def test_build_frontend_managed_delivery_apply_request_falls_back_to_available_p
     assert '"packageManager": "npm@10"' in prepare_action.executor_payload["files"][0]["content"]
 
 
+def test_build_frontend_managed_delivery_apply_request_does_not_fallback_to_yarn(
+    initialized_project_dir: Path,
+    monkeypatch,
+) -> None:
+    root = initialized_project_dir
+    save_project_config(root, ProjectConfig(adapter_ingress_state="verified_loaded"))
+    _write_builtin_delivery_truth(root)
+    monkeypatch.setattr(
+        program_service_module,
+        "evaluate_current_host_runtime",
+        lambda project_root: _build_host_runtime_plan_for_tests(
+            node_runtime_available=True,
+            package_manager_available=True,
+            playwright_browsers_available=True,
+        ),
+    )
+    monkeypatch.setattr(
+        program_service_module.shutil,
+        "which",
+        lambda executable: f"/mock/bin/{executable}" if executable == "yarn" else None,
+    )
+    svc = ProgramService(root)
+
+    request = svc.build_frontend_managed_delivery_apply_request()
+
+    dependency_action = next(
+        action
+        for action in request.execution_view.action_items
+        if action.action_type == "dependency_install"
+    )
+    assert dependency_action.executor_payload["package_manager"] == "pnpm"
+    assert "delivery_package_manager_missing:pnpm" in request.warnings
+    assert not any("delivery_package_manager_fallback:pnpm->yarn" in warning for warning in request.warnings)
+    prepare_action = next(
+        action
+        for action in request.execution_view.action_items
+        if action.action_type == "managed_target_prepare"
+    )
+    assert '"packageManager": "pnpm@9"' in prepare_action.executor_payload["files"][0]["content"]
+
+
 def test_build_frontend_managed_delivery_apply_request_persists_release_capability_guidance_in_request_payload(
     initialized_project_dir: Path,
     monkeypatch,

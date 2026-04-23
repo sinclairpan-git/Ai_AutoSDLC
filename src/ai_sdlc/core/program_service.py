@@ -4493,7 +4493,7 @@ class ProgramService:
         preferred = preferred_package_manager.strip() or "pnpm"
         if shutil.which(preferred) is not None:
             return preferred, None
-        for candidate in ("npm", "pnpm", "yarn"):
+        for candidate in ("npm", "pnpm"):
             if candidate == preferred:
                 continue
             if shutil.which(candidate) is not None:
