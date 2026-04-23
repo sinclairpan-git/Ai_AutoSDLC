@@ -1,0 +1,49 @@
+ui_schema_id: search-list-workspace-default
+page_schema_id: search-list-workspace
+schema_version: '1.0'
+root_slot_id: page-shell
+render_slots:
+- slot_id: page-shell
+  anchor_id: page-shell
+  component_id: UiSection
+  cardinality: single
+  required_state_ids: []
+- slot_id: page-header
+  anchor_id: page-header
+  component_id: UiPageHeader
+  parent_slot_id: page-shell
+  cardinality: single
+  required_state_ids: []
+- slot_id: search-area
+  anchor_id: search-area
+  component_id: UiSearchBar
+  parent_slot_id: page-shell
+  cardinality: single
+  required_state_ids: []
+- slot_id: result-summary
+  anchor_id: result-summary
+  component_id: UiResult
+  parent_slot_id: page-shell
+  cardinality: single
+  required_state_ids:
+  - no-results
+- slot_id: content-area
+  anchor_id: content-area
+  component_id: UiTable
+  parent_slot_id: page-shell
+  cardinality: single
+  required_state_ids:
+  - refreshing
+- slot_id: pagination-area
+  anchor_id: pagination-area
+  component_id: UiPagination
+  parent_slot_id: page-shell
+  cardinality: single
+  required_state_ids: []
+- slot_id: state-feedback
+  anchor_id: state-feedback
+  component_id: UiResult
+  parent_slot_id: page-shell
+  cardinality: single
+  required_state_ids:
+  - partial-error

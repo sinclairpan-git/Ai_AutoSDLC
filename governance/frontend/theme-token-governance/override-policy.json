@@ -1,0 +1,21 @@
+{
+  "override_precedence": [
+    "global",
+    "page",
+    "section",
+    "slot"
+  ],
+  "custom_overrides": [
+    {
+      "override_id": "dashboard-page-header-accent-proposal",
+      "scope": "section",
+      "page_schema_id": "dashboard-workspace",
+      "schema_anchor_id": "summary-band",
+      "namespace": "accent",
+      "token_key": "accent_mode",
+      "requested_value": "brand-accent",
+      "effective_value": "style-pack:enterprise-default:accent_mode",
+      "fallback_reason_code": "style-editor-read-only-proposal"
+    }
+  ]
+}

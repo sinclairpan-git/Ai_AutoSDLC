@@ -1,0 +1,20 @@
+contracts:
+- evidence_contract_id: visual-regression-evidence
+  evidence_kind: visual-regression
+  artifact_rel_path: governance/frontend/quality-platform/evidence/visual-regression
+  required_payload_fields:
+  - screenshot_ref
+  - diff_ratio
+- evidence_contract_id: a11y-matrix-evidence
+  evidence_kind: complete-a11y
+  artifact_rel_path: governance/frontend/quality-platform/evidence/a11y
+  required_payload_fields:
+  - axe_summary_ref
+  - issue_count
+- evidence_contract_id: interaction-quality-evidence
+  evidence_kind: interaction-quality
+  artifact_rel_path: governance/frontend/quality-platform/evidence/interaction
+  required_payload_fields:
+  - trace_ref
+  - focus_jumps
+  - feedback_latency_ms

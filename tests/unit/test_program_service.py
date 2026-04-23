@@ -29,6 +29,7 @@ from ai_sdlc.core.frontend_contract_observation_provider import (
 from ai_sdlc.core.frontend_visual_a11y_evidence_provider import (
     FrontendVisualA11yEvidenceEvaluation,
     build_frontend_visual_a11y_evidence_artifact,
+    load_frontend_visual_a11y_evidence_artifact,
     write_frontend_visual_a11y_evidence_artifact,
 )
 from ai_sdlc.core.host_runtime_manager import HostRuntimeProbe, build_host_runtime_plan
@@ -100,6 +101,9 @@ from ai_sdlc.models.frontend_theme_token_governance import (
 from ai_sdlc.models.program import ProgramManifest, ProgramSpecRef
 from ai_sdlc.models.project import ProjectConfig
 from ai_sdlc.models.state import Checkpoint, FeatureInfo
+from tests.support.managed_delivery import (
+    build_dependency_install_subprocess_side_effect,
+)
 
 SAMPLE_FIXTURE_SOURCE_REF = "tests/fixtures/frontend-contract-sample-src/match"
 
@@ -496,8 +500,14 @@ def test_build_frontend_delivery_registry_handoff_blocks_when_solution_snapshot_
 
 def test_build_frontend_delivery_registry_handoff_uses_builtin_public_bundle_truth(
     tmp_path: Path,
+    monkeypatch,
 ) -> None:
     _write_builtin_delivery_truth(tmp_path)
+    monkeypatch.setattr(
+        program_service_module.shutil,
+        "which",
+        lambda executable: f"/mock/bin/{executable}" if executable == "pnpm" else None,
+    )
     svc = ProgramService(tmp_path)
 
     handoff = svc.build_frontend_delivery_registry_handoff()
@@ -950,6 +960,8 @@ def test_build_frontend_quality_platform_handoff_uses_latest_solution_snapshot_a
         "visual-regression-evidence",
     ]
     assert handoff.page_schema_ids == ["dashboard-workspace", "search-list-workspace"]
+    assert handoff.active_visual_regression_matrix_id == "dashboard-modern-saas-desktop-chromium"
+    assert handoff.active_visual_regression_viewport_id == "desktop-1440"
     assert {item.matrix_id for item in handoff.quality_diagnostics} == {
         "dashboard-modern-saas-desktop-chromium",
         "dashboard-modern-saas-mobile-webkit",
@@ -2484,7 +2496,7 @@ def test_build_truth_ledger_surface_attaches_frontend_delivery_apply_states(
     request = svc.build_frontend_managed_delivery_apply_request()
     with patch(
         "ai_sdlc.core.managed_delivery_apply.subprocess.run",
-        return_value=subprocess.CompletedProcess(args=["pnpm"], returncode=0),
+        side_effect=build_dependency_install_subprocess_side_effect(),
     ):
         result = svc.execute_frontend_managed_delivery_apply(
             request=request,
@@ -2857,7 +2869,7 @@ def test_build_frontend_delivery_status_surface_fails_closed_on_stale_apply_arti
     request = svc.build_frontend_managed_delivery_apply_request()
     with patch(
         "ai_sdlc.core.managed_delivery_apply.subprocess.run",
-        return_value=subprocess.CompletedProcess(args=["pnpm"], returncode=0),
+        side_effect=build_dependency_install_subprocess_side_effect(),
     ):
         result = svc.execute_frontend_managed_delivery_apply(
             request=request,
@@ -2896,7 +2908,7 @@ def test_build_frontend_delivery_status_surface_fails_closed_on_browser_gate_dri
     request = svc.build_frontend_managed_delivery_apply_request()
     with patch(
         "ai_sdlc.core.managed_delivery_apply.subprocess.run",
-        return_value=subprocess.CompletedProcess(args=["pnpm"], returncode=0),
+        side_effect=build_dependency_install_subprocess_side_effect(),
     ):
         result = svc.execute_frontend_managed_delivery_apply(
             request=request,
@@ -2927,6 +2939,102 @@ def test_build_frontend_delivery_status_surface_fails_closed_on_browser_gate_dri
     assert status_surface["install_state"] == "installed"
     assert status_surface["workspace_state"] == "integrated"
     assert status_surface["browser_gate_state"] == "scope_or_linkage_invalid"
+
+
+def test_build_frontend_delivery_status_surface_fails_closed_when_lockfile_is_deleted(
+    initialized_project_dir: Path,
+    monkeypatch,
+) -> None:
+    root = initialized_project_dir
+    save_project_config(root, ProjectConfig(adapter_ingress_state="verified_loaded"))
+    _write_builtin_delivery_truth(root)
+    monkeypatch.setattr(
+        program_service_module.shutil,
+        "which",
+        lambda executable: f"/mock/bin/{executable}" if executable == "pnpm" else None,
+    )
+    svc = ProgramService(root)
+    request = svc.build_frontend_managed_delivery_apply_request()
+    with patch(
+        "ai_sdlc.core.managed_delivery_apply.subprocess.run",
+        side_effect=build_dependency_install_subprocess_side_effect(),
+    ):
+        result = svc.execute_frontend_managed_delivery_apply(
+            request=request,
+            confirmed=True,
+        )
+    svc.write_frontend_managed_delivery_apply_artifact(
+        request=request,
+        result=result,
+        generated_at="2026-04-20T09:00:00Z",
+    )
+    (root / "managed" / "frontend" / "pnpm-lock.yaml").unlink()
+
+    status_surface = svc.build_frontend_delivery_status_surface()
+
+    assert status_surface["apply_state"] == "apply_succeeded_pending_browser_gate"
+    assert status_surface["install_state"] == "not_installed"
+    assert status_surface["workspace_state"] == "integrated"
+
+
+def test_build_frontend_delivery_status_surface_marks_delivery_verified_when_browser_gate_passes(
+    initialized_project_dir: Path,
+) -> None:
+    root = initialized_project_dir
+    save_project_config(root, ProjectConfig(adapter_ingress_state="verified_loaded"))
+    _write_frontend_solution_confirmation_artifacts(root)
+    _write_frontend_visual_a11y_evidence(
+        root / "specs" / "001-auth",
+        [
+            FrontendVisualA11yEvidenceEvaluation(
+                evaluation_id="001-auth-visual-pass",
+                target_id="user-create",
+                surface_id="page:user-create",
+                outcome="pass",
+                report_type="coverage-report",
+                severity="info",
+            )
+        ],
+    )
+    request_path = _write_artifact_generate_apply_request(root)
+    svc = ProgramService(root)
+    apply_request = svc.build_frontend_managed_delivery_apply_request(request_path)
+    apply_result = svc.execute_frontend_managed_delivery_apply(
+        request_path,
+        request=apply_request,
+        confirmed=True,
+    )
+    svc.write_frontend_managed_delivery_apply_artifact(
+        request_path,
+        request=apply_request,
+        result=apply_result,
+        generated_at="2026-04-14T04:00:00Z",
+    )
+    probe_request = svc.build_frontend_browser_gate_probe_request()
+    probe_result = svc.execute_frontend_browser_gate_probe(
+        request=probe_request,
+        generated_at="2026-04-14T04:05:00Z",
+    )
+    artifact_path = root / probe_result.artifact_path
+    payload = yaml.safe_load(artifact_path.read_text(encoding="utf-8"))
+    payload["overall_gate_status"] = "passed"
+    payload["bundle_input"]["overall_gate_status"] = "passed"
+    for receipt in payload["bundle_input"]["check_receipts"]:
+        receipt["classification_candidate"] = "pass"
+        receipt["recheck_required"] = False
+        receipt["blocking_reason_codes"] = []
+        receipt["remediation_hints"] = []
+        receipt["runtime_status"] = "completed"
+    payload["bundle_input"]["blocking_reason_codes"] = []
+    artifact_path.write_text(
+        yaml.safe_dump(payload, sort_keys=False, allow_unicode=True),
+        encoding="utf-8",
+    )
+
+    status_surface = svc.build_frontend_delivery_status_surface()
+
+    assert status_surface["browser_gate_state"] == "passed"
+    assert status_surface["delivery_state"] == "delivery_verified"
 
 
 def test_build_truth_ledger_surface_attaches_blocking_reason_and_actions_for_frontend_verify_gap(
@@ -3858,6 +3966,11 @@ def test_build_frontend_managed_delivery_apply_request_materializes_public_bundl
             playwright_browsers_available=True,
         ),
     )
+    monkeypatch.setattr(
+        program_service_module.shutil,
+        "which",
+        lambda executable: f"/mock/bin/{executable}" if executable == "pnpm" else None,
+    )
     svc = ProgramService(root)
 
     request = svc.build_frontend_managed_delivery_apply_request()
@@ -3898,6 +4011,54 @@ def test_build_frontend_managed_delivery_apply_request_materializes_public_bundl
         "src/frontend-governance/runtime/legacy/LegacyAdapterBridge.tsx",
         ".ai-sdlc/evidence/frontend-runtime/public-primevue/runtime-boundary-receipt.yaml",
     ]
+    provider_adapter_item = next(
+        item
+        for item in workspace_action.executor_payload["items"]
+        if item["target_path"]
+        == "src/frontend-governance/runtime/providers/public-primevue/ProviderAdapter.tsx"
+    )
+    assert "mappedComponents" in provider_adapter_item["content"]
+    assert 'UiButton: "Button"' in provider_adapter_item["content"]
+
+
+def test_build_frontend_managed_delivery_apply_request_falls_back_to_available_package_manager(
+    initialized_project_dir: Path,
+    monkeypatch,
+) -> None:
+    root = initialized_project_dir
+    save_project_config(root, ProjectConfig(adapter_ingress_state="verified_loaded"))
+    _write_builtin_delivery_truth(root)
+    monkeypatch.setattr(
+        program_service_module,
+        "evaluate_current_host_runtime",
+        lambda project_root: _build_host_runtime_plan_for_tests(
+            node_runtime_available=True,
+            package_manager_available=True,
+            playwright_browsers_available=True,
+        ),
+    )
+    monkeypatch.setattr(
+        program_service_module.shutil,
+        "which",
+        lambda executable: f"/mock/bin/{executable}" if executable == "npm" else None,
+    )
+    svc = ProgramService(root)
+
+    request = svc.build_frontend_managed_delivery_apply_request()
+
+    dependency_action = next(
+        action
+        for action in request.execution_view.action_items
+        if action.action_type == "dependency_install"
+    )
+    assert dependency_action.executor_payload["package_manager"] == "npm"
+    assert "delivery_package_manager_fallback:pnpm->npm" in request.warnings
+    prepare_action = next(
+        action
+        for action in request.execution_view.action_items
+        if action.action_type == "managed_target_prepare"
+    )
+    assert '"packageManager": "npm@10"' in prepare_action.executor_payload["files"][0]["content"]
 
 
 def test_build_frontend_managed_delivery_apply_request_persists_release_capability_guidance_in_request_payload(
@@ -3978,6 +4139,7 @@ def test_build_frontend_managed_delivery_apply_request_materializes_artifact_gen
     assert [item["path"] for item in generated_files] == [
         "index.html",
         "src/generated/frontend-delivery-context.ts",
+        "src/generated/provider-adapter.ts",
         "src/App.vue",
     ]
     assert "frontend-browser-entry" in generated_files[0]["content"]
@@ -3988,7 +4150,13 @@ def test_build_frontend_managed_delivery_apply_request_materializes_artifact_gen
     assert 'runtimeDeliveryState: "scaffolded"' in generated_files[1]["content"]
     assert 'evidenceReturnState: "missing"' in generated_files[1]["content"]
     assert "dashboard-workspace" in generated_files[1]["content"]
-    assert "frontendDeliveryContext" in generated_files[2]["content"]
+    assert 'import Button from "primevue/button";' in generated_files[2]["content"]
+    assert '"UiTable"' in generated_files[2]["content"]
+    assert '"primevue/datatable"' in generated_files[2]["content"]
+    assert 'from "./generated/provider-adapter"' in generated_files[3]["content"]
+    assert "publicPrimeVueProviderComponents" in generated_files[3]["content"]
+    assert "providerComponents.UiSearchBar.component" in generated_files[3]["content"]
+    assert "providerComponents.UiTable.component" in generated_files[3]["content"]
 
 
 def test_build_frontend_managed_delivery_apply_request_keeps_workspace_integration_default_off_when_runtime_adapter_not_started(
@@ -4039,6 +4207,62 @@ def test_build_frontend_managed_delivery_apply_request_keeps_workspace_integrati
     assert "workspace-integration" not in request.decision_receipt.selected_action_ids
     assert "workspace-integration" in request.decision_receipt.deselected_optional_action_ids
     assert "risk:root-level-mutate" not in request.decision_receipt.risk_acknowledgement_ids
+
+
+def test_build_frontend_managed_delivery_apply_request_marks_existing_scaffold_targets_as_overwrite_existing(
+    initialized_project_dir: Path,
+    monkeypatch,
+) -> None:
+    root = initialized_project_dir
+    save_project_config(root, ProjectConfig(adapter_ingress_state="verified_loaded"))
+    _write_builtin_delivery_truth(root)
+    existing_targets = [
+        root / "src" / "frontend-governance" / "runtime" / "kernel" / "KernelWrapper.tsx",
+        root
+        / "src"
+        / "frontend-governance"
+        / "runtime"
+        / "providers"
+        / "public-primevue"
+        / "ProviderAdapter.tsx",
+        root / "src" / "frontend-governance" / "runtime" / "legacy" / "LegacyAdapterBridge.tsx",
+        root
+        / ".ai-sdlc"
+        / "evidence"
+        / "frontend-runtime"
+        / "public-primevue"
+        / "runtime-boundary-receipt.yaml",
+    ]
+    for path in existing_targets:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text("stale\n", encoding="utf-8")
+    monkeypatch.setattr(
+        program_service_module,
+        "evaluate_current_host_runtime",
+        lambda project_root: _build_host_runtime_plan_for_tests(
+            node_runtime_available=True,
+            package_manager_available=True,
+            playwright_browsers_available=True,
+        ),
+    )
+    monkeypatch.setattr(
+        program_service_module.shutil,
+        "which",
+        lambda executable: f"/mock/bin/{executable}" if executable == "pnpm" else None,
+    )
+    svc = ProgramService(root)
+
+    request = svc.build_frontend_managed_delivery_apply_request()
+
+    workspace_action = next(
+        action
+        for action in request.execution_view.action_items
+        if action.action_type == "workspace_integration"
+    )
+    assert workspace_action.executor_payload["items"]
+    assert {
+        item["mutation_kind"] for item in workspace_action.executor_payload["items"]
+    } == {"overwrite_existing"}
 
 def test_build_frontend_managed_delivery_apply_request_uses_builtin_provider_truth_when_artifacts_missing(
     initialized_project_dir: Path,
@@ -4249,6 +4473,128 @@ def test_execute_frontend_managed_delivery_apply_returns_pending_browser_gate_su
     ).read_text(encoding="utf-8") == "<template>generated</template>\n"
 
 
+def test_execute_frontend_managed_delivery_apply_reapplies_existing_workspace_scaffold(
+    initialized_project_dir: Path,
+    monkeypatch,
+) -> None:
+    root = initialized_project_dir
+    save_project_config(root, ProjectConfig(adapter_ingress_state="verified_loaded"))
+    _write_builtin_delivery_truth(root)
+    existing_targets = {
+        root / "src" / "frontend-governance" / "runtime" / "kernel" / "KernelWrapper.tsx": "stale kernel\n",
+        root
+        / "src"
+        / "frontend-governance"
+        / "runtime"
+        / "providers"
+        / "public-primevue"
+        / "ProviderAdapter.tsx": "stale provider\n",
+        root / "src" / "frontend-governance" / "runtime" / "legacy" / "LegacyAdapterBridge.tsx": "stale legacy\n",
+        root
+        / ".ai-sdlc"
+        / "evidence"
+        / "frontend-runtime"
+        / "public-primevue"
+        / "runtime-boundary-receipt.yaml": "stale receipt\n",
+    }
+    for path, content in existing_targets.items():
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(content, encoding="utf-8")
+    monkeypatch.setattr(
+        program_service_module,
+        "evaluate_current_host_runtime",
+        lambda project_root: _build_host_runtime_plan_for_tests(
+            node_runtime_available=True,
+            package_manager_available=True,
+            playwright_browsers_available=True,
+        ),
+    )
+    monkeypatch.setattr(
+        program_service_module.shutil,
+        "which",
+        lambda executable: f"/mock/bin/{executable}" if executable == "npm" else None,
+    )
+    svc = ProgramService(root)
+    request = svc.build_frontend_managed_delivery_apply_request()
+
+    with patch(
+        "ai_sdlc.core.managed_delivery_apply.subprocess.run",
+        side_effect=build_dependency_install_subprocess_side_effect(),
+    ):
+        result = svc.execute_frontend_managed_delivery_apply(
+            request=request,
+            confirmed=True,
+        )
+
+    assert result.result_status == "apply_succeeded_pending_browser_gate"
+    assert "workspace-integration" in result.executed_action_ids
+    provider_adapter = (
+        root
+        / "src"
+        / "frontend-governance"
+        / "runtime"
+        / "providers"
+        / "public-primevue"
+        / "ProviderAdapter.tsx"
+    ).read_text(encoding="utf-8")
+    assert "mappedComponents" in provider_adapter
+    assert "UiSearchBar" in provider_adapter
+
+
+def test_execute_frontend_managed_delivery_apply_materializes_inheritance_governance_artifacts(
+    initialized_project_dir: Path,
+    monkeypatch,
+) -> None:
+    root = initialized_project_dir
+    save_project_config(root, ProjectConfig(adapter_ingress_state="verified_loaded"))
+    _write_builtin_delivery_truth(root)
+    monkeypatch.setattr(
+        program_service_module,
+        "evaluate_current_host_runtime",
+        lambda project_root: _build_host_runtime_plan_for_tests(
+            node_runtime_available=True,
+            package_manager_available=True,
+            playwright_browsers_available=True,
+        ),
+    )
+    monkeypatch.setattr(
+        program_service_module.shutil,
+        "which",
+        lambda executable: f"/mock/bin/{executable}" if executable == "npm" else None,
+    )
+    svc = ProgramService(root)
+    request = svc.build_frontend_managed_delivery_apply_request()
+
+    with patch(
+        "ai_sdlc.core.managed_delivery_apply.subprocess.run",
+        side_effect=build_dependency_install_subprocess_side_effect(),
+    ):
+        result = svc.execute_frontend_managed_delivery_apply(
+            request=request,
+            confirmed=True,
+        )
+
+    assert result.result_status == "apply_succeeded_pending_browser_gate"
+    assert (
+        root
+        / "governance"
+        / "frontend"
+        / "generation"
+        / "generation.manifest.yaml"
+    ).is_file()
+    assert (
+        root
+        / "governance"
+        / "frontend"
+        / "quality-platform"
+        / "quality-platform.manifest.yaml"
+    ).is_file()
+    assert svc.build_frontend_inheritance_status_surface() == {
+        "generation": "inherited",
+        "quality": "inherited",
+    }
+
+
 def test_build_frontend_managed_delivery_apply_request_surfaces_executor_preflight_blockers(
     initialized_project_dir: Path,
 ) -> None:
@@ -4316,10 +4662,14 @@ def test_write_frontend_managed_delivery_apply_artifact_keeps_materialized_reque
     )
     svc = ProgramService(root)
     request = svc.build_frontend_managed_delivery_apply_request()
-    result = svc.execute_frontend_managed_delivery_apply(
-        request=request,
-        confirmed=True,
-    )
+    with patch(
+        "ai_sdlc.core.managed_delivery_apply.subprocess.run",
+        side_effect=build_dependency_install_subprocess_side_effect(),
+    ):
+        result = svc.execute_frontend_managed_delivery_apply(
+            request=request,
+            confirmed=True,
+        )
 
     artifact_path = svc.write_frontend_managed_delivery_apply_artifact(
         request=request,
@@ -4591,6 +4941,98 @@ def test_execute_frontend_browser_gate_probe_materializes_gate_run_bundle(
     assert payload["recommended_next_steps"] == [
         "close the capability_closure_audit entry for the blocked release target"
     ]
+
+
+def test_execute_frontend_browser_gate_probe_auto_materializes_visual_a11y_evidence_when_missing(
+    initialized_project_dir: Path,
+) -> None:
+    root = initialized_project_dir
+    save_project_config(root, ProjectConfig(adapter_ingress_state="verified_loaded"))
+    _write_frontend_solution_confirmation_artifacts(root)
+    request_path = _write_artifact_generate_apply_request(root)
+
+    def _runner(*, artifact_root: Path, execution_context, generated_at: str):
+        trace_path = artifact_root / "shared-runtime" / "playwright-trace.zip"
+        screenshot_path = artifact_root / "shared-runtime" / "navigation-screenshot.png"
+        interaction_path = artifact_root / "interaction" / "interaction-snapshot.json"
+        trace_path.parent.mkdir(parents=True, exist_ok=True)
+        interaction_path.parent.mkdir(parents=True, exist_ok=True)
+        trace_path.write_text('{"trace":"ok"}\n', encoding="utf-8")
+        screenshot_path.write_bytes(b"png")
+        interaction_path.write_text('{"interaction":"ok"}\n', encoding="utf-8")
+        return BrowserGateProbeRunnerResult.model_validate(
+            {
+                "runtime_status": "completed",
+                "shared_capture": {
+                    "gate_run_id": execution_context.gate_run_id,
+                    "trace_artifact_ref": str(trace_path.relative_to(root)),
+                    "navigation_screenshot_ref": str(screenshot_path.relative_to(root)),
+                    "capture_status": "captured",
+                    "final_url": "http://localhost:4173/",
+                    "anchor_refs": ["page:landing"],
+                    "diagnostic_codes": [],
+                },
+                "interaction_capture": {
+                    "gate_run_id": execution_context.gate_run_id,
+                    "interaction_probe_id": "primary-action",
+                    "artifact_refs": [str(interaction_path.relative_to(root))],
+                    "capture_status": "captured",
+                    "classification_candidate": "pass",
+                    "blocking_reason_codes": [],
+                    "anchor_refs": ["interaction:primary-action"],
+                },
+                "quality_capture": {
+                    "gate_run_id": execution_context.gate_run_id,
+                    "page_title": "frontend-browser-entry",
+                    "final_url": "http://localhost:4173/",
+                    "screenshot_ref": str(screenshot_path.relative_to(root)),
+                    "body_text_char_count": 420,
+                    "heading_count": 2,
+                    "landmark_count": 3,
+                    "interactive_count": 4,
+                    "unlabeled_button_count": 0,
+                    "unlabeled_input_count": 0,
+                    "image_missing_alt_count": 0,
+                    "viewport_width": 1280,
+                    "viewport_height": 720,
+                    "document_scroll_width": 1280,
+                    "document_scroll_height": 720,
+                    "horizontal_overflow_count": 0,
+                    "console_error_messages": [],
+                    "page_error_messages": [],
+                },
+                "diagnostic_codes": [],
+                "warnings": [],
+            }
+        )
+
+    svc = ProgramService(root, browser_gate_probe_runner=_runner)
+    apply_request = svc.build_frontend_managed_delivery_apply_request(request_path)
+    apply_result = svc.execute_frontend_managed_delivery_apply(
+        request_path,
+        request=apply_request,
+        confirmed=True,
+    )
+    svc.write_frontend_managed_delivery_apply_artifact(
+        request_path,
+        request=apply_request,
+        result=apply_result,
+        generated_at="2026-04-14T04:00:00Z",
+    )
+
+    probe_request = svc.build_frontend_browser_gate_probe_request()
+    probe_result = svc.execute_frontend_browser_gate_probe(
+        request=probe_request,
+        generated_at="2026-04-14T04:05:00Z",
+    )
+
+    assert probe_result.overall_gate_status == "incomplete"
+    assert probe_result.execute_gate_state == "recheck_required"
+    assert probe_result.decision_reason == "evidence_missing"
+    evidence_path = root / "specs" / "001-auth" / "frontend-visual-a11y-evidence.json"
+    assert evidence_path.is_file()
+    artifact = load_frontend_visual_a11y_evidence_artifact(evidence_path)
+    assert artifact.provenance.provider_kind == "browser_gate_auto"
 
 
 def test_build_integration_dry_run_uses_browser_gate_recheck_command_when_gate_artifact_exists(

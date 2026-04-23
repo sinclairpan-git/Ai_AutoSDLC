@@ -1,0 +1,14 @@
+style_pack_id: macos-glass
+display_name: macOS Glass
+status: active
+visibility: internal
+description: Translucent layered surfaces with glassmorphism bias.
+recommended_for:
+- premium-dashboard
+- design-forward-prototype
+not_recommended_for:
+- strict-enterprise-baseline
+design_tokens:
+  surface_mode: translucent-glass
+  density: comfortable
+  accent_mode: frosted-depth

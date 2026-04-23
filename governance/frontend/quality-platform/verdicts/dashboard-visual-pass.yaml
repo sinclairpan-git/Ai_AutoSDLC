@@ -1,0 +1,8 @@
+verdict_id: dashboard-visual-pass
+matrix_id: dashboard-modern-saas-desktop-chromium
+verdict_family: visual-regression
+gate_state: pass
+evidence_state: complete
+severity: info
+evidence_refs:
+- artifact:governance/frontend/quality-platform/evidence/visual-regression/dashboard-visual-pass.yaml

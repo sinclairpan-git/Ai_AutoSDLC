@@ -1,0 +1,43 @@
+ui_schema_id: wizard-workspace-default
+page_schema_id: wizard-workspace
+schema_version: '1.0'
+root_slot_id: page-shell
+render_slots:
+- slot_id: page-shell
+  anchor_id: page-shell
+  component_id: UiSection
+  cardinality: single
+  required_state_ids: []
+- slot_id: page-header
+  anchor_id: page-header
+  component_id: UiPageHeader
+  parent_slot_id: page-shell
+  cardinality: single
+  required_state_ids: []
+- slot_id: step-content
+  anchor_id: step-content
+  component_id: UiForm
+  parent_slot_id: page-shell
+  cardinality: single
+  required_state_ids:
+  - submitting
+- slot_id: step-fields
+  anchor_id: step-content
+  component_id: UiFormItem
+  parent_slot_id: step-content
+  cardinality: repeatable
+  required_state_ids: []
+- slot_id: action-bar
+  anchor_id: action-bar
+  component_id: UiToolbar
+  parent_slot_id: page-shell
+  cardinality: single
+  required_state_ids: []
+- slot_id: state-feedback
+  anchor_id: state-feedback
+  component_id: UiResult
+  parent_slot_id: page-shell
+  cardinality: single
+  required_state_ids:
+  - success-feedback
+  - partial-error

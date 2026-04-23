@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from unittest.mock import patch
 
 from ai_sdlc.core.managed_delivery_apply import run_managed_delivery_apply
 from ai_sdlc.models.frontend_managed_delivery import (
@@ -15,6 +16,9 @@ from ai_sdlc.models.frontend_managed_delivery import (
     ManagedDeliveryExecutorContext,
     RuntimeRemediationExecutionPayload,
     WorkspaceIntegrationItem,
+)
+from tests.support.managed_delivery import (
+    build_dependency_install_subprocess_side_effect,
 )
 
 
@@ -383,6 +387,85 @@ def test_run_managed_delivery_apply_executes_dependency_install_with_plan_payloa
     assert result.ledger_entries[0].after_state["command"] == "pnpm add primevue @primeuix/themes"
 
 
+def test_run_managed_delivery_apply_verifies_dependency_install_footprint(
+    tmp_path: Path,
+) -> None:
+    action = _build_action(
+        action_id="a1",
+        action_type="dependency_install",
+        executor_payload={
+            "install_strategy_id": "public-primevue-default",
+            "package_manager": "npm",
+            "working_directory": ".",
+            "packages": ["primevue", "@primeuix/themes"],
+        },
+    )
+    view = _build_view(action)
+    receipt = _build_receipt(selected_action_ids=["a1"])
+
+    with patch(
+        "ai_sdlc.core.managed_delivery_apply.subprocess.run",
+        side_effect=build_dependency_install_subprocess_side_effect(),
+    ):
+        result = run_managed_delivery_apply(
+            view,
+            receipt,
+            ManagedDeliveryExecutorContext(
+                host_ingress_allowed=True,
+                execute_actions=True,
+                repo_root=tmp_path,
+            ),
+        )
+
+    assert result.result_status == "apply_succeeded_pending_browser_gate"
+    after_state = result.ledger_entries[0].after_state
+    assert (
+        after_state["verification_state"]
+        == "package_manifest_lockfile_dependency_resolution_verified"
+    )
+    assert after_state["lockfile_path"].endswith("package-lock.json")
+    assert "primevue" in after_state["resolved_package_manifests"]
+    assert "node_modules" in after_state["resolved_package_manifests"]
+
+
+def test_run_managed_delivery_apply_fails_when_dependency_lockfile_verification_is_missing(
+    tmp_path: Path,
+) -> None:
+    action = _build_action(
+        action_id="a1",
+        action_type="dependency_install",
+        executor_payload={
+            "install_strategy_id": "public-primevue-default",
+            "package_manager": "npm",
+            "working_directory": ".",
+            "packages": ["primevue"],
+        },
+    )
+    view = _build_view(action)
+    receipt = _build_receipt(selected_action_ids=["a1"])
+
+    with patch(
+        "ai_sdlc.core.managed_delivery_apply.subprocess.run",
+        side_effect=build_dependency_install_subprocess_side_effect(
+            lockfile_required=False
+        ),
+    ):
+        result = run_managed_delivery_apply(
+            view,
+            receipt,
+            ManagedDeliveryExecutorContext(
+                host_ingress_allowed=True,
+                execute_actions=True,
+                repo_root=tmp_path,
+            ),
+        )
+
+    assert result.result_status == "manual_recovery_required"
+    assert result.failed_action_ids == ["a1"]
+    assert result.blockers == ["dependency_install_lockfile_missing:npm"]
+    assert result.ledger_entries[0].result_status == "failed"
+
+
 def test_run_managed_delivery_apply_blocks_dependency_install_when_manifest_is_no_touch(
     tmp_path: Path,
 ) -> None:
@@ -668,6 +751,47 @@ def test_run_managed_delivery_apply_executes_workspace_integration_when_selected
                         "target_class": "workspace",
                         "target_path": "package.json",
                         "mutation_kind": "write_new",
+                        "content": '{\n  "name": "root-app"\n}\n',
+                        "requires_explicit_confirmation": True,
+                        "will_not_touch_refs": ["legacy-root"],
+                    }
+                ]
+            },
+        )
+    )
+    receipt = _build_receipt(selected_action_ids=["a1"])
+
+    result = run_managed_delivery_apply(
+        view,
+        receipt,
+        ManagedDeliveryExecutorContext(
+            host_ingress_allowed=True,
+            execute_actions=True,
+            repo_root=tmp_path,
+        ),
+    )
+
+    assert result.result_status == "apply_succeeded_pending_browser_gate"
+    assert (tmp_path / "package.json").read_text(encoding="utf-8") == '{\n  "name": "root-app"\n}\n'
+    assert result.ledger_entries[0].after_state["applied_integrations"] == "workspace-package-json"
+
+
+def test_run_managed_delivery_apply_executes_workspace_integration_overwrite_existing(
+    tmp_path: Path,
+) -> None:
+    (tmp_path / "package.json").write_text('{\n  "name": "old-root-app"\n}\n', encoding="utf-8")
+    view = _build_view(
+        _build_action(
+            action_id="a1",
+            action_type="workspace_integration",
+            required=False,
+            executor_payload={
+                "items": [
+                    {
+                        "integration_id": "workspace-package-json",
+                        "target_class": "workspace",
+                        "target_path": "package.json",
+                        "mutation_kind": "overwrite_existing",
                         "content": '{\n  "name": "root-app"\n}\n',
                         "requires_explicit_confirmation": True,
                         "will_not_touch_refs": ["legacy-root"],

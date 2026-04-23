@@ -1,0 +1,33 @@
+schema_family: frontend-quality-platform
+current_version: '1.0'
+compatible_versions:
+- '1.0'
+artifact_root: governance/frontend/quality-platform
+canonical_files:
+- quality-platform.manifest.yaml
+- handoff.schema.yaml
+- coverage-matrix.yaml
+- evidence-platform.yaml
+- interaction-quality.yaml
+- truth-surfacing.yaml
+program_service_fields:
+- browser_id
+- gate_state
+- matrix_id
+- page_schema_id
+- style_pack_id
+- viewport_id
+cli_fields:
+- browser_id
+- gate_state
+- matrix_id
+- page_schema_id
+- viewport_id
+verify_fields:
+- browser_id
+- evidence_state
+- gate_state
+- matrix_id
+- page_schema_id
+- style_pack_id
+- viewport_id

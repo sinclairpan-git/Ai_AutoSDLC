@@ -75,6 +75,9 @@ from ai_sdlc.models.frontend_solution_confirmation import (
     build_mvp_solution_snapshot,
 )
 from ai_sdlc.models.project import ProjectConfig
+from tests.support.managed_delivery import (
+    build_dependency_install_subprocess_side_effect,
+)
 
 runner = CliRunner()
 SAMPLE_FIXTURE_SOURCE_REF = "tests/fixtures/frontend-contract-sample-src/match"
@@ -2152,7 +2155,7 @@ class TestCliProgram:
             },
         ), patch(
             "ai_sdlc.core.managed_delivery_apply.subprocess.run",
-            return_value=subprocess.CompletedProcess(args=["pnpm"], returncode=0),
+            side_effect=build_dependency_install_subprocess_side_effect(),
         ):
             result = runner.invoke(app, ["program", "managed-delivery-apply", "--dry-run"])
 
@@ -2172,15 +2175,16 @@ class TestCliProgram:
         save_project_config(root, ProjectConfig(adapter_ingress_state="verified_loaded"))
         _commit_truth_repo(root, "seed managed delivery truth guidance fixture")
         real_subprocess_run = subprocess.run
+        install_side_effect = build_dependency_install_subprocess_side_effect()
 
         def _selective_subprocess_run(command, *args, **kwargs):
-            if isinstance(command, (list, tuple)) and command and command[0] == "pnpm":
-                return subprocess.CompletedProcess(
-                    args=command,
-                    returncode=0,
-                    stdout="",
-                    stderr="",
-                )
+            if isinstance(command, (list, tuple)) and command and command[0] in {
+                "npm",
+                "pnpm",
+                "yarn",
+                "node",
+            }:
+                return install_side_effect(command, *args, **kwargs)
             return real_subprocess_run(command, *args, **kwargs)
 
         with patch("ai_sdlc.cli.program_cmd.find_project_root", return_value=root), patch.object(
@@ -2286,7 +2290,7 @@ class TestCliProgram:
             ),
         ), patch(
             "ai_sdlc.core.managed_delivery_apply.subprocess.run",
-            return_value=subprocess.CompletedProcess(args=["pnpm"], returncode=0),
+            side_effect=build_dependency_install_subprocess_side_effect(),
         ):
             result = runner.invoke(app, ["program", "managed-delivery-apply", "--dry-run"])
 
@@ -2404,7 +2408,7 @@ class TestCliProgram:
             },
         ), patch(
             "ai_sdlc.core.managed_delivery_apply.subprocess.run",
-            return_value=subprocess.CompletedProcess(args=["pnpm"], returncode=0),
+            side_effect=build_dependency_install_subprocess_side_effect(),
         ):
             result = runner.invoke(
                 app,
@@ -2423,6 +2427,9 @@ class TestCliProgram:
         assert (root / "managed" / "frontend" / "index.html").is_file()
         assert (
             root / "managed" / "frontend" / "src" / "generated" / "frontend-delivery-context.ts"
+        ).is_file()
+        assert (
+            root / "managed" / "frontend" / "src" / "generated" / "provider-adapter.ts"
         ).is_file()
         assert (root / "managed" / "frontend" / "src" / "App.vue").is_file()
         assert (
@@ -2445,6 +2452,70 @@ class TestCliProgram:
             / "public-primevue"
             / "runtime-boundary-receipt.yaml"
         ).is_file()
+
+    def test_program_managed_delivery_apply_execute_reapplies_existing_workspace_scaffold(
+        self, initialized_project_dir: Path
+    ) -> None:
+        root = initialized_project_dir
+        save_project_config(root, ProjectConfig(adapter_ingress_state="verified_loaded"))
+        _write_builtin_delivery_truth(root)
+        existing_targets = {
+            root / "src" / "frontend-governance" / "runtime" / "kernel" / "KernelWrapper.tsx": "stale kernel\n",
+            root
+            / "src"
+            / "frontend-governance"
+            / "runtime"
+            / "providers"
+            / "public-primevue"
+            / "ProviderAdapter.tsx": "stale provider\n",
+            root / "src" / "frontend-governance" / "runtime" / "legacy" / "LegacyAdapterBridge.tsx": "stale legacy\n",
+            root
+            / ".ai-sdlc"
+            / "evidence"
+            / "frontend-runtime"
+            / "public-primevue"
+            / "runtime-boundary-receipt.yaml": "stale receipt\n",
+        }
+        for path, content in existing_targets.items():
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(content, encoding="utf-8")
+
+        with patch("ai_sdlc.cli.program_cmd.find_project_root", return_value=root), patch.object(
+            program_service_module,
+            "evaluate_current_host_runtime",
+            return_value=_build_host_runtime_plan_for_tests(
+                node_runtime_available=True,
+                package_manager_available=True,
+                playwright_browsers_available=True,
+            ),
+        ), patch(
+            "ai_sdlc.core.managed_delivery_apply.subprocess.run",
+            side_effect=build_dependency_install_subprocess_side_effect(),
+        ):
+            result = runner.invoke(
+                app,
+                [
+                    "program",
+                    "managed-delivery-apply",
+                    "--execute",
+                    "--yes",
+                ],
+            )
+
+        assert result.exit_code == 0
+        assert "status: apply_succeeded_pending_browser_gate" in result.output
+        assert "executed actions:" in result.output
+        assert "workspace-integration" in result.output
+        provider_adapter = (
+            root
+            / "src"
+            / "frontend-governance"
+            / "runtime"
+            / "providers"
+            / "public-primevue"
+            / "ProviderAdapter.tsx"
+        ).read_text(encoding="utf-8")
+        assert "mappedComponents" in provider_adapter
 
     def test_program_browser_gate_probe_execute_materializes_gate_run_artifact(
         self, initialized_project_dir: Path
@@ -3825,7 +3896,7 @@ specs:
         request = svc.build_frontend_managed_delivery_apply_request()
         with patch(
             "ai_sdlc.core.managed_delivery_apply.subprocess.run",
-            return_value=subprocess.CompletedProcess(args=["pnpm"], returncode=0),
+            side_effect=build_dependency_install_subprocess_side_effect(),
         ):
             result = svc.execute_frontend_managed_delivery_apply(
                 request=request,
@@ -3868,7 +3939,7 @@ specs:
         request = svc.build_frontend_managed_delivery_apply_request()
         with patch(
             "ai_sdlc.core.managed_delivery_apply.subprocess.run",
-            return_value=subprocess.CompletedProcess(args=["pnpm"], returncode=0),
+            side_effect=build_dependency_install_subprocess_side_effect(),
         ):
             result = svc.execute_frontend_managed_delivery_apply(
                 request=request,
@@ -5449,7 +5520,7 @@ specs:
             },
         ), patch(
             "ai_sdlc.core.managed_delivery_apply.subprocess.run",
-            return_value=subprocess.CompletedProcess(args=["pnpm"], returncode=0),
+            side_effect=build_dependency_install_subprocess_side_effect(),
         ):
             result = runner.invoke(
                 app,
@@ -5602,15 +5673,16 @@ specs:
         save_project_config(root, ProjectConfig(adapter_ingress_state="verified_loaded"))
         _commit_truth_repo(root, "seed solution confirm truth guidance fixture")
         real_subprocess_run = subprocess.run
+        install_side_effect = build_dependency_install_subprocess_side_effect()
 
         def _selective_subprocess_run(command, *args, **kwargs):
-            if isinstance(command, (list, tuple)) and command and command[0] == "pnpm":
-                return subprocess.CompletedProcess(
-                    args=command,
-                    returncode=0,
-                    stdout="",
-                    stderr="",
-                )
+            if isinstance(command, (list, tuple)) and command and command[0] in {
+                "npm",
+                "pnpm",
+                "yarn",
+                "node",
+            }:
+                return install_side_effect(command, *args, **kwargs)
             return real_subprocess_run(command, *args, **kwargs)
 
         with patch("ai_sdlc.cli.program_cmd.find_project_root", return_value=root), patch.object(

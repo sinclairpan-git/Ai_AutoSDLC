@@ -1,0 +1,15 @@
+default_component_ids:
+- UiButton
+- UiInput
+- UiSelect
+- UiForm
+- UiFormItem
+- UiTable
+- UiDialog
+- UiDrawer
+- UiEmpty
+- UiSpinner
+- UiPageHeader
+require_exception_for_non_whitelist: true
+forbid_sf_default_entry: true
+forbid_native_structure_substitution: true

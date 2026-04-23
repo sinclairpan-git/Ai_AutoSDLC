@@ -1,0 +1,9 @@
+verdict_id: dashboard-a11y-advisory
+matrix_id: dashboard-modern-saas-mobile-webkit
+verdict_family: complete-a11y
+gate_state: advisory
+evidence_state: partial
+severity: medium
+evidence_refs:
+- artifact:governance/frontend/quality-platform/evidence/a11y/dashboard-a11y-advisory.yaml
+remediation_hint: verify mobile dialog semantics and heading hierarchy

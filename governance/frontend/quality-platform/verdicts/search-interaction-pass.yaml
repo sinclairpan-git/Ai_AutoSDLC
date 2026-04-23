@@ -1,0 +1,8 @@
+verdict_id: search-interaction-pass
+matrix_id: search-enterprise-default-desktop-chromium
+verdict_family: interaction-quality
+gate_state: pass
+evidence_state: complete
+severity: info
+evidence_refs:
+- artifact:governance/frontend/quality-platform/evidence/interaction/search-interaction-pass.yaml

@@ -11,12 +11,18 @@ from pathlib import Path
 import yaml
 
 from ai_sdlc.core.frontend_visual_a11y_evidence_provider import (
+    AUTO_FRONTEND_VISUAL_A11Y_PROVIDER_KIND,
     FrontendVisualA11yEvidenceArtifact,
+    build_auto_frontend_visual_a11y_evidence_artifact,
+    load_frontend_visual_a11y_evidence_artifact,
+    visual_a11y_evidence_artifact_path,
+    write_frontend_visual_a11y_evidence_artifact,
 )
 from ai_sdlc.models.frontend_browser_gate import (
     BrowserGateInteractionProbeCapture,
     BrowserGateProbeRunnerResult,
     BrowserGateProbeRuntimeSession,
+    BrowserGateQualityCapture,
     BrowserGateSharedRuntimeCapture,
     BrowserProbeArtifactRecord,
     BrowserProbeExecutionReceipt,
@@ -28,6 +34,7 @@ from ai_sdlc.models.frontend_solution_confirmation import FrontendSolutionSnapsh
 BROWSER_GATE_REQUIRED_PROBE_SET = (
     "playwright_smoke",
     "visual_expectation",
+    "visual_regression",
     "basic_a11y",
     "interaction_anti_pattern_checks",
 )
@@ -55,6 +62,8 @@ def build_browser_quality_gate_execution_context(
     provider_runtime_adapter_delivery_state: str = "",
     provider_runtime_adapter_evidence_state: str = "",
     page_schema_ids: list[str] | None = None,
+    visual_regression_matrix_id: str = "",
+    visual_regression_viewport_id: str = "",
 ) -> BrowserQualityGateExecutionContext:
     """Build the frozen execution context from apply truth and solution truth."""
 
@@ -104,6 +113,8 @@ def build_browser_quality_gate_execution_context(
         provider_runtime_adapter_delivery_state=provider_runtime_adapter_delivery_state,
         provider_runtime_adapter_evidence_state=provider_runtime_adapter_evidence_state,
         page_schema_ids=_unique_strings(page_schema_ids or []),
+        visual_regression_matrix_id=visual_regression_matrix_id,
+        visual_regression_viewport_id=visual_regression_viewport_id,
         required_probe_set=_unique_strings(BROWSER_GATE_REQUIRED_PROBE_SET),
         browser_entry_ref=browser_entry_ref,
         source_linkage_refs={
@@ -154,6 +165,8 @@ def run_default_browser_gate_probe(
             execution_context.provider_runtime_adapter_evidence_state
         ),
         "page_schema_ids": _unique_strings(execution_context.page_schema_ids),
+        "visual_regression_matrix_id": execution_context.visual_regression_matrix_id,
+        "visual_regression_viewport_id": execution_context.visual_regression_viewport_id,
         "effective_provider": execution_context.effective_provider,
         "effective_style_pack": execution_context.effective_style_pack,
     }
@@ -217,6 +230,7 @@ def materialize_browser_gate_probe_runtime(
     write_artifacts: bool = True,
     probe_runner: BrowserGateProbeRunner | None = None,
     execute_probe: bool = False,
+    auto_visual_a11y_provider: bool = False,
 ) -> tuple[
     BrowserGateProbeRuntimeSession,
     list[BrowserProbeArtifactRecord],
@@ -235,6 +249,7 @@ def materialize_browser_gate_probe_runtime(
     artifact_records: list[BrowserProbeArtifactRecord] = []
     receipts: list[BrowserProbeExecutionReceipt] = []
     runner_warnings: list[str] = []
+    runner_result: BrowserGateProbeRunnerResult | None = None
 
     if execute_probe:
         (
@@ -243,6 +258,7 @@ def materialize_browser_gate_probe_runtime(
             interaction_records,
             interaction_receipt,
             runner_warnings,
+            runner_result,
         ) = _materialize_real_probe_receipts(
             root=root,
             artifact_root=artifact_root,
@@ -313,16 +329,39 @@ def materialize_browser_gate_probe_runtime(
     artifact_records.extend(smoke_records)
     receipts.append(smoke_receipt)
 
+    effective_visual_a11y_evidence_artifact = _resolve_visual_a11y_evidence_artifact(
+        root=root,
+        context=context,
+        generated_at=generated_at,
+        visual_a11y_evidence_artifact=visual_a11y_evidence_artifact,
+        runner_result=runner_result,
+        write_artifacts=write_artifacts,
+        auto_visual_a11y_provider=auto_visual_a11y_provider,
+    )
     visual_records, visual_receipt, a11y_receipt = _materialize_visual_and_a11y_receipts(
         root=root,
         artifact_root=artifact_root,
         gate_run_id=context.gate_run_id,
-        visual_a11y_evidence_artifact=visual_a11y_evidence_artifact,
+        visual_a11y_evidence_artifact=effective_visual_a11y_evidence_artifact,
         generated_at=generated_at,
         write_artifacts=write_artifacts,
     )
     artifact_records.extend(visual_records)
     receipts.extend([visual_receipt, a11y_receipt])
+    visual_regression_records, visual_regression_receipt = (
+        _materialize_visual_regression_receipt(
+            root=root,
+            artifact_root=artifact_root,
+            gate_run_id=context.gate_run_id,
+            visual_regression_capture=(
+                runner_result.visual_regression_capture if runner_result is not None else None
+            ),
+            generated_at=generated_at,
+            write_artifacts=write_artifacts,
+        )
+    )
+    artifact_records.extend(visual_regression_records)
+    receipts.append(visual_regression_receipt)
 
     artifact_records.extend(interaction_records)
     receipts.append(interaction_receipt)
@@ -392,7 +431,10 @@ def materialize_browser_gate_probe_runtime(
         ],
         check_receipts=receipts,
         smoke_verdict=_receipt_verdict(receipts, "playwright_smoke"),
-        visual_verdict=_receipt_verdict(receipts, "visual_expectation"),
+        visual_verdict=_resolve_visual_verdict(
+            runner_result=runner_result,
+            receipts=receipts,
+        ),
         a11y_verdict=_receipt_verdict(receipts, "basic_a11y"),
         interaction_anti_pattern_verdict=_receipt_verdict(
             receipts,
@@ -438,6 +480,7 @@ def _materialize_real_probe_receipts(
     list[BrowserProbeArtifactRecord],
     BrowserProbeExecutionReceipt,
     list[str],
+    BrowserGateProbeRunnerResult,
 ]:
     runner_result = _invoke_probe_runner(
         probe_runner,
@@ -466,7 +509,96 @@ def _materialize_real_probe_receipts(
         runner_result.warnings
         or _diagnostic_warning_messages(runner_result.diagnostic_codes)
     )
-    return smoke_records, smoke_receipt, interaction_records, interaction_receipt, warnings
+    return (
+        smoke_records,
+        smoke_receipt,
+        interaction_records,
+        interaction_receipt,
+        warnings,
+        runner_result,
+    )
+
+
+def _resolve_visual_a11y_evidence_artifact(
+    *,
+    root: Path,
+    context: BrowserQualityGateExecutionContext,
+    generated_at: str,
+    visual_a11y_evidence_artifact: FrontendVisualA11yEvidenceArtifact | None,
+    runner_result: BrowserGateProbeRunnerResult | None,
+    write_artifacts: bool,
+    auto_visual_a11y_provider: bool,
+) -> FrontendVisualA11yEvidenceArtifact | None:
+    if not auto_visual_a11y_provider or runner_result is None:
+        return visual_a11y_evidence_artifact
+    quality_capture = runner_result.quality_capture
+    if quality_capture is None:
+        return visual_a11y_evidence_artifact
+
+    spec_dir = root / context.spec_dir
+    evidence_path = visual_a11y_evidence_artifact_path(spec_dir)
+    existing_artifact = visual_a11y_evidence_artifact
+    if existing_artifact is None and evidence_path.is_file():
+        try:
+            existing_artifact = load_frontend_visual_a11y_evidence_artifact(evidence_path)
+        except ValueError:
+            return None
+
+    if (
+        existing_artifact is not None
+        and existing_artifact.provenance.provider_kind
+        != AUTO_FRONTEND_VISUAL_A11Y_PROVIDER_KIND
+    ):
+        return existing_artifact
+
+    auto_artifact = _build_auto_visual_a11y_evidence_artifact(
+        context=context,
+        generated_at=generated_at,
+        quality_capture=quality_capture,
+        runner_result=runner_result,
+    )
+    if write_artifacts:
+        write_frontend_visual_a11y_evidence_artifact(spec_dir, auto_artifact)
+    return auto_artifact
+
+
+def _build_auto_visual_a11y_evidence_artifact(
+    *,
+    context: BrowserQualityGateExecutionContext,
+    generated_at: str,
+    quality_capture: BrowserGateQualityCapture,
+    runner_result: BrowserGateProbeRunnerResult,
+) -> FrontendVisualA11yEvidenceArtifact:
+    return build_auto_frontend_visual_a11y_evidence_artifact(
+        target_id=context.delivery_entry_id or context.readiness_subject_id,
+        surface_id=context.browser_entry_ref or context.managed_frontend_target,
+        generated_at=generated_at,
+        screenshot_ref=(
+            quality_capture.screenshot_ref
+            or runner_result.shared_capture.navigation_screenshot_ref
+        ),
+        final_url=quality_capture.final_url or runner_result.shared_capture.final_url,
+        page_title=quality_capture.page_title,
+        body_text_char_count=quality_capture.body_text_char_count,
+        heading_count=quality_capture.heading_count,
+        landmark_count=quality_capture.landmark_count,
+        interactive_count=quality_capture.interactive_count,
+        unlabeled_button_count=quality_capture.unlabeled_button_count,
+        unlabeled_input_count=quality_capture.unlabeled_input_count,
+        image_missing_alt_count=quality_capture.image_missing_alt_count,
+        viewport_width=quality_capture.viewport_width,
+        viewport_height=quality_capture.viewport_height,
+        document_scroll_width=quality_capture.document_scroll_width,
+        document_scroll_height=quality_capture.document_scroll_height,
+        horizontal_overflow_count=quality_capture.horizontal_overflow_count,
+        low_contrast_text_count=quality_capture.low_contrast_text_count,
+        focusable_count=quality_capture.focusable_count,
+        focusable_without_visible_focus_count=(
+            quality_capture.focusable_without_visible_focus_count
+        ),
+        console_error_messages=list(quality_capture.console_error_messages),
+        page_error_messages=list(quality_capture.page_error_messages),
+    )
 
 
 def _materialize_real_smoke_receipt(
@@ -496,11 +628,12 @@ def _materialize_real_smoke_receipt(
     records: list[BrowserProbeArtifactRecord] = []
     missing_artifact = False
     for index, (artifact_type, artifact_ref) in enumerate(refs, start=1):
+        normalized_artifact_ref = _normalize_runner_artifact_ref(artifact_ref)
         resolved_status = capture.capture_status
         if resolved_status == "captured" and not _runner_artifact_exists(
             root=root,
             artifact_root=artifact_root,
-            artifact_ref=artifact_ref,
+            artifact_ref=normalized_artifact_ref,
         ):
             resolved_status = "missing"
             missing_artifact = True
@@ -512,7 +645,7 @@ def _materialize_real_smoke_receipt(
                 gate_run_id=gate_run_id,
                 check_name="playwright_smoke",
                 artifact_type=artifact_type,
-                artifact_ref=artifact_ref,
+                artifact_ref=normalized_artifact_ref,
                 anchor_refs=_unique_strings(capture.anchor_refs),
                 capture_status=resolved_status,
                 captured_at=generated_at,
@@ -585,11 +718,12 @@ def _materialize_real_interaction_receipt(
     records: list[BrowserProbeArtifactRecord] = []
     missing_artifact = False
     for index, artifact_ref in enumerate(artifact_refs, start=1):
+        normalized_artifact_ref = _normalize_runner_artifact_ref(artifact_ref)
         resolved_status = capture.capture_status
         if resolved_status == "captured" and not _runner_artifact_exists(
             root=root,
             artifact_root=artifact_root,
-            artifact_ref=artifact_ref,
+            artifact_ref=normalized_artifact_ref,
         ):
             resolved_status = "missing"
             missing_artifact = True
@@ -601,7 +735,7 @@ def _materialize_real_interaction_receipt(
                 gate_run_id=gate_run_id,
                 check_name="interaction_anti_pattern_checks",
                 artifact_type="interaction_snapshot",
-                artifact_ref=artifact_ref,
+                artifact_ref=normalized_artifact_ref,
                 anchor_refs=_unique_strings(capture.anchor_refs),
                 capture_status=resolved_status,
                 captured_at=generated_at,
@@ -876,10 +1010,117 @@ def _materialize_visual_and_a11y_receipts(
     )
 
 
+def _materialize_visual_regression_receipt(
+    *,
+    root: Path,
+    artifact_root: Path,
+    gate_run_id: str,
+    visual_regression_capture: object | None,
+    generated_at: str,
+    write_artifacts: bool,
+) -> tuple[list[BrowserProbeArtifactRecord], BrowserProbeExecutionReceipt]:
+    if visual_regression_capture is None:
+        return (
+            [],
+            BrowserProbeExecutionReceipt(
+                check_name="visual_regression",
+                started_at=generated_at,
+                finished_at=generated_at,
+                runtime_status="incomplete",
+                artifact_ids=[],
+                classification_candidate="evidence_missing",
+                recheck_required=True,
+                remediation_hints=_unique_strings(
+                    ["materialize visual regression baseline"]
+                ),
+                blocking_reason_codes=_unique_strings(
+                    ["visual_regression_evidence_missing"]
+                ),
+                requirement_linkage=_unique_strings(
+                    ["browser_quality_gate:visual_regression"]
+                ),
+            ),
+        )
+
+    capture = visual_regression_capture
+    artifact_ref = _normalize_runner_artifact_ref(
+        str(getattr(capture, "diff_image_ref", "")).strip()
+    )
+    artifact_ids: list[str] = []
+    records: list[BrowserProbeArtifactRecord] = []
+    if artifact_ref:
+        artifact_ids.append(f"{gate_run_id}-visual-regression-1")
+        records.append(
+            BrowserProbeArtifactRecord(
+                artifact_id=f"{gate_run_id}-visual-regression-1",
+                gate_run_id=gate_run_id,
+                check_name="visual_regression",
+                artifact_type="visual_diff",
+                artifact_ref=artifact_ref,
+                capture_status=str(getattr(capture, "capture_status", "missing")).strip(),
+                captured_at=generated_at,
+                source_linkage_refs={
+                    "matrix_id": str(getattr(capture, "matrix_id", "")).strip(),
+                    "bootstrap_ref": _normalize_runner_artifact_ref(
+                        str(getattr(capture, "bootstrap_ref", "")).strip()
+                    ),
+                },
+            )
+        )
+
+    verdict = str(getattr(capture, "verdict", "evidence_missing")).strip()
+    runtime_status = (
+        "failed_transient"
+        if verdict == "transient_run_failure"
+        else "incomplete"
+        if verdict == "evidence_missing"
+        else "completed"
+    )
+    return (
+        records,
+        BrowserProbeExecutionReceipt(
+            check_name="visual_regression",
+            started_at=generated_at,
+            finished_at=generated_at,
+            runtime_status=runtime_status,
+            artifact_ids=_unique_strings(artifact_ids),
+            classification_candidate=verdict,  # type: ignore[arg-type]
+            recheck_required=verdict == "evidence_missing",
+            remediation_hints=_unique_strings(
+                ["review visual regression diff output"]
+                if verdict == "actual_quality_blocker"
+                else ["materialize visual regression baseline"]
+                if verdict == "evidence_missing"
+                else []
+            ),
+            blocking_reason_codes=_unique_strings(
+                ["visual_regression_quality_blocker"]
+                if verdict == "actual_quality_blocker"
+                else ["visual_regression_evidence_missing"]
+                if verdict == "evidence_missing"
+                else ["visual_regression_transient_failure"]
+                if verdict == "transient_run_failure"
+                else []
+            ),
+            requirement_linkage=_unique_strings(
+                ["browser_quality_gate:visual_regression"]
+            ),
+        ),
+    )
+
+
+def _normalize_runner_artifact_ref(artifact_ref: str) -> str:
+    ref = artifact_ref.strip()
+    if ref.startswith("artifact:"):
+        ref = ref.removeprefix("artifact:").strip()
+    return ref
+
+
 def _runner_artifact_exists(*, root: Path, artifact_root: Path, artifact_ref: str) -> bool:
-    if not artifact_ref.strip():
+    normalized_ref = _normalize_runner_artifact_ref(artifact_ref)
+    if not normalized_ref:
         return False
-    artifact_path = (root / artifact_ref).resolve()
+    artifact_path = (root / normalized_ref).resolve()
     try:
         artifact_path.relative_to(artifact_root.resolve())
     except ValueError:
@@ -1035,6 +1276,19 @@ def _receipt_verdict(receipts: list[BrowserProbeExecutionReceipt], check_name: s
         if receipt.check_name == check_name:
             return receipt.classification_candidate
     raise ValueError(f"missing receipt for check {check_name}")
+
+
+def _resolve_visual_verdict(
+    *,
+    runner_result: BrowserGateProbeRunnerResult | None,
+    receipts: list[BrowserProbeExecutionReceipt],
+) -> str:
+    visual_regression_capture = (
+        runner_result.visual_regression_capture if runner_result is not None else None
+    )
+    if visual_regression_capture is not None:
+        return visual_regression_capture.verdict
+    return _receipt_verdict(receipts, "visual_expectation")
 
 
 def _unique_strings(values: Iterable[object]) -> list[str]:

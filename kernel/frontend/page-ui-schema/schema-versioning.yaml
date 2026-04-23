@@ -1,0 +1,6 @@
+schema_family: frontend-page-ui-schema
+current_version: '1.0'
+compatible_versions:
+- '1.0'
+forward_extension_policy: additive-only
+breaking_change_policy: new-version-required

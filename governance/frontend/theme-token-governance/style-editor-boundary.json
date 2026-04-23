@@ -1,0 +1,19 @@
+{
+  "surface_mode": "read_only_diagnostics_structured_proposal",
+  "canonical_information_architecture": [
+    "theme-list",
+    "effective-state-summary",
+    "diff-override-drawer",
+    "revert-approve-path"
+  ],
+  "allowed_actions": [
+    "inspect-effective-theme",
+    "inspect-token-mapping",
+    "submit-structured-proposal"
+  ],
+  "forbidden_actions": [
+    "direct-runtime-write",
+    "freeform-css-entry",
+    "provider-token-edit"
+  ]
+}

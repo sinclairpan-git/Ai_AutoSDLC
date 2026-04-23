@@ -1,0 +1,10 @@
+strategy_id: public-primevue-default
+provider_id: public-primevue
+access_mode: public
+package_manager: pnpm
+packages:
+- primevue
+- '@primeuix/themes'
+registry_requirements: []
+credential_requirements: []
+private_package_required: false

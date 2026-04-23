@@ -1,0 +1,83 @@
+{
+  "mappings": [
+    {
+      "mapping_id": "enterprise-default-global",
+      "style_pack_id": "enterprise-default",
+      "scope": "global",
+      "token_refs": {
+        "surface_mode": "style-pack:enterprise-default:surface_mode",
+        "density": "style-pack:enterprise-default:density",
+        "accent_mode": "style-pack:enterprise-default:accent_mode"
+      }
+    },
+    {
+      "mapping_id": "data-console-global",
+      "style_pack_id": "data-console",
+      "scope": "global",
+      "token_refs": {
+        "surface_mode": "style-pack:data-console:surface_mode",
+        "density": "style-pack:data-console:density",
+        "accent_mode": "style-pack:data-console:accent_mode"
+      }
+    },
+    {
+      "mapping_id": "high-clarity-global",
+      "style_pack_id": "high-clarity",
+      "scope": "global",
+      "token_refs": {
+        "surface_mode": "style-pack:high-clarity:surface_mode",
+        "density": "style-pack:high-clarity:density",
+        "accent_mode": "style-pack:high-clarity:accent_mode"
+      }
+    },
+    {
+      "mapping_id": "modern-saas-global",
+      "style_pack_id": "modern-saas",
+      "scope": "global",
+      "token_refs": {
+        "surface_mode": "style-pack:modern-saas:surface_mode",
+        "density": "style-pack:modern-saas:density",
+        "accent_mode": "style-pack:modern-saas:accent_mode"
+      }
+    },
+    {
+      "mapping_id": "macos-glass-global",
+      "style_pack_id": "macos-glass",
+      "scope": "global",
+      "token_refs": {
+        "surface_mode": "style-pack:macos-glass:surface_mode",
+        "density": "style-pack:macos-glass:density",
+        "accent_mode": "style-pack:macos-glass:accent_mode"
+      }
+    },
+    {
+      "mapping_id": "dashboard-workspace-page-theme",
+      "style_pack_id": "enterprise-default",
+      "scope": "page",
+      "page_schema_id": "dashboard-workspace",
+      "token_refs": {
+        "surface_mode": "style-pack:enterprise-default:surface_mode"
+      }
+    },
+    {
+      "mapping_id": "dashboard-page-header-section-theme",
+      "style_pack_id": "enterprise-default",
+      "scope": "section",
+      "page_schema_id": "dashboard-workspace",
+      "schema_anchor_id": "page-header",
+      "token_refs": {
+        "accent_mode": "style-pack:enterprise-default:accent_mode"
+      }
+    },
+    {
+      "mapping_id": "dashboard-summary-slot-theme",
+      "style_pack_id": "enterprise-default",
+      "scope": "slot",
+      "page_schema_id": "dashboard-workspace",
+      "render_slot_id": "page-header",
+      "token_refs": {
+        "density": "style-pack:enterprise-default:density"
+      }
+    }
+  ]
+}

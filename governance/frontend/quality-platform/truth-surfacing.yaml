@@ -1,0 +1,19 @@
+items:
+- matrix_id: dashboard-modern-saas-desktop-chromium
+  truth_layer: runtime-truth
+  gate_state: pass
+  evidence_state: complete
+  artifact_root_ref: governance/frontend/quality-platform
+  verdict_ref: verdict:dashboard-visual-pass
+- matrix_id: dashboard-modern-saas-mobile-webkit
+  truth_layer: runtime-truth
+  gate_state: advisory
+  evidence_state: partial
+  artifact_root_ref: governance/frontend/quality-platform
+  verdict_ref: verdict:dashboard-a11y-advisory
+- matrix_id: search-enterprise-default-desktop-chromium
+  truth_layer: runtime-truth
+  gate_state: pass
+  evidence_state: complete
+  artifact_root_ref: governance/frontend/quality-platform
+  verdict_ref: verdict:search-interaction-pass

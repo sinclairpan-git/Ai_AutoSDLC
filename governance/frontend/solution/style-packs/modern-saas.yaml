@@ -1,0 +1,14 @@
+style_pack_id: modern-saas
+display_name: Modern SaaS
+status: active
+visibility: internal
+description: Soft brand-led SaaS visuals for product marketing and app chrome.
+recommended_for:
+- marketing-sites
+- self-serve-saas
+not_recommended_for:
+- legacy-enterprise-lockstep
+design_tokens:
+  surface_mode: soft-gradient
+  density: balanced
+  accent_mode: brand-forward

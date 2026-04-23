@@ -68,6 +68,9 @@ from ai_sdlc.telemetry.enums import ArtifactRole, ArtifactType, ScopeLevel, Trac
 from ai_sdlc.telemetry.paths import telemetry_indexes_root, telemetry_local_root
 from ai_sdlc.telemetry.store import TelemetryStore
 from ai_sdlc.telemetry.writer import TelemetryWriter
+from tests.support.managed_delivery import (
+    build_dependency_install_subprocess_side_effect,
+)
 
 runner = CliRunner()
 
@@ -1575,7 +1578,7 @@ def test_status_json_prefers_more_concrete_workitem_action_over_program_truth_go
     request = svc.build_frontend_managed_delivery_apply_request()
     with patch(
         "ai_sdlc.core.managed_delivery_apply.subprocess.run",
-        return_value=subprocess.CompletedProcess(args=["pnpm"], returncode=0),
+        side_effect=build_dependency_install_subprocess_side_effect(),
     ):
         result = svc.execute_frontend_managed_delivery_apply(
             request=request,
@@ -1861,7 +1864,7 @@ def test_status_json_promotes_spec_scoped_program_truth_into_workitem_diagnostic
     request = svc.build_frontend_managed_delivery_apply_request()
     with patch(
         "ai_sdlc.core.managed_delivery_apply.subprocess.run",
-        return_value=subprocess.CompletedProcess(args=["pnpm"], returncode=0),
+        side_effect=build_dependency_install_subprocess_side_effect(),
     ):
         result = svc.execute_frontend_managed_delivery_apply(
             request=request,
@@ -1982,7 +1985,7 @@ def test_status_json_surfaces_stale_apply_artifact_in_frontend_delivery_truth(
     request = svc.build_frontend_managed_delivery_apply_request()
     with patch(
         "ai_sdlc.core.managed_delivery_apply.subprocess.run",
-        return_value=subprocess.CompletedProcess(args=["pnpm"], returncode=0),
+        side_effect=build_dependency_install_subprocess_side_effect(),
     ):
         apply_result = svc.execute_frontend_managed_delivery_apply(
             request=request,
@@ -2076,7 +2079,7 @@ def test_status_json_surfaces_browser_gate_scope_linkage_invalid_in_frontend_del
     request = svc.build_frontend_managed_delivery_apply_request()
     with patch(
         "ai_sdlc.core.managed_delivery_apply.subprocess.run",
-        return_value=subprocess.CompletedProcess(args=["pnpm"], returncode=0),
+        side_effect=build_dependency_install_subprocess_side_effect(),
     ):
         apply_result = svc.execute_frontend_managed_delivery_apply(
             request=request,

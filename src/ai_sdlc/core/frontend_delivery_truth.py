@@ -199,6 +199,10 @@ def _humanize_frontend_delivery_value(key: str, value: str) -> str:
             return "not applied"
         if normalized == "apply_succeeded_pending_browser_gate":
             return "applied, waiting for browser gate"
+        if normalized == "delivery_verified":
+            return "delivery verified"
+        if normalized == "delivery_verified_with_advisories":
+            return "delivery verified with advisories"
         if normalized == "blocked_before_start":
             return "blocked before start"
         if normalized == "manual_recovery_required":

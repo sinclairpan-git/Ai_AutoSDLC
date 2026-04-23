@@ -1,0 +1,14 @@
+style_pack_id: data-console
+display_name: Data Console
+status: active
+visibility: internal
+description: Dense, analysis-oriented control room styling.
+recommended_for:
+- analytics
+- monitoring
+not_recommended_for:
+- storytelling-landing-pages
+design_tokens:
+  surface_mode: high-contrast-panel
+  density: dense
+  accent_mode: signal-coded

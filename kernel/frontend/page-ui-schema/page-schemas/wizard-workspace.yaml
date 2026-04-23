@@ -1,0 +1,36 @@
+page_schema_id: wizard-workspace
+page_recipe_id: WizardPage
+schema_version: '1.0'
+primary_anchor_id: page-shell
+section_anchors:
+- anchor_id: page-shell
+  semantic_role: page_shell
+  layout_role: shell
+  required: true
+- anchor_id: page-header
+  semantic_role: page_header
+  layout_role: header
+  required: true
+- anchor_id: step-progress
+  semantic_role: step_progress
+  layout_role: progress
+  required: true
+- anchor_id: step-content
+  semantic_role: step_content
+  layout_role: content
+  required: true
+- anchor_id: action-bar
+  semantic_role: action_bar
+  layout_role: footer
+  required: true
+- anchor_id: state-feedback
+  semantic_role: state_feedback
+  layout_role: state
+  required: true
+field_blocks:
+- block_id: wizard-step-fields
+  anchor_id: step-content
+  field_semantics:
+  - form_fields
+  - step_notes
+  cardinality: repeatable

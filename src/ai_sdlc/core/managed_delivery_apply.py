@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import subprocess
 from collections import defaultdict, deque
 from pathlib import Path
@@ -864,11 +865,15 @@ def _default_dependency_installer(
     else:
         command = ["pnpm", "add", *payload.packages]
     subprocess.run(command, cwd=working_directory, check=True, capture_output=True, text=True)
-    return {
+    verification = verify_dependency_installation(payload, working_directory)
+    verification.update(
+        {
         "command": " ".join(command),
         "working_directory": str(working_directory),
         "packages": ",".join(payload.packages),
-    }
+        }
+    )
+    return verification
 
 
 def _default_artifact_writer(
@@ -955,3 +960,165 @@ def _lockfile_names_for_package_manager(package_manager: str) -> tuple[str, ...]
     if package_manager == "yarn":
         return ("yarn.lock",)
     return ("pnpm-lock.yaml",)
+
+
+def verify_dependency_installation(
+    payload: DependencyInstallExecutionPayload,
+    working_directory: Path,
+) -> dict[str, str]:
+    """Verify that dependency installation produced manifest, lockfile, and package evidence."""
+
+    manifest_path = working_directory / "package.json"
+    if not manifest_path.is_file():
+        raise ValueError("dependency_install_manifest_missing")
+    try:
+        manifest_payload = json.loads(manifest_path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as exc:
+        raise ValueError("dependency_install_manifest_invalid") from exc
+    if not isinstance(manifest_payload, dict):
+        raise ValueError("dependency_install_manifest_invalid")
+
+    declared_packages = _collect_declared_dependency_packages(manifest_payload)
+    missing_declared = [package for package in payload.packages if package not in declared_packages]
+    if missing_declared:
+        raise ValueError(
+            "dependency_install_manifest_missing_packages:" + ",".join(missing_declared)
+        )
+
+    existing_lockfiles = [
+        working_directory / lockfile_name
+        for lockfile_name in _lockfile_names_for_package_manager(payload.package_manager)
+        if (working_directory / lockfile_name).is_file()
+    ]
+    if not existing_lockfiles:
+        raise ValueError(f"dependency_install_lockfile_missing:{payload.package_manager}")
+
+    resolved_manifests = _resolve_installed_package_manifests(
+        payload.packages,
+        working_directory,
+    )
+    missing_resolved = [
+        package for package in payload.packages if package not in resolved_manifests
+    ]
+    if missing_resolved:
+        raise ValueError(
+            "dependency_install_resolution_missing:" + ",".join(missing_resolved)
+        )
+
+    return {
+        "verification_state": (
+            "package_manifest_lockfile_dependency_resolution_verified"
+        ),
+        "manifest_path": str(manifest_path.resolve()),
+        "lockfile_path": str(existing_lockfiles[0].resolve()),
+        "resolved_package_manifests": json.dumps(
+            resolved_manifests,
+            ensure_ascii=True,
+            sort_keys=True,
+        ),
+    }
+
+
+def _collect_declared_dependency_packages(manifest_payload: dict[str, object]) -> set[str]:
+    declared_packages: set[str] = set()
+    for section_name in (
+        "dependencies",
+        "devDependencies",
+        "optionalDependencies",
+        "peerDependencies",
+    ):
+        section_payload = manifest_payload.get(section_name)
+        if not isinstance(section_payload, dict):
+            continue
+        for package_name in section_payload:
+            declared_packages.add(str(package_name))
+    return declared_packages
+
+
+def _resolve_installed_package_manifests(
+    packages: list[str],
+    working_directory: Path,
+) -> dict[str, str]:
+    resolved_manifests = _resolve_package_manifests_with_node(packages, working_directory)
+    verified: dict[str, str] = {}
+    for package_name in packages:
+        candidate = Path(resolved_manifests.get(package_name, ""))
+        if candidate.is_file():
+            verified[package_name] = str(candidate.resolve())
+            continue
+
+        fallback = working_directory / "node_modules" / Path(*package_name.split("/")) / "package.json"
+        if fallback.is_file():
+            verified[package_name] = str(fallback.resolve())
+    return verified
+
+
+def _resolve_package_manifests_with_node(
+    packages: list[str],
+    working_directory: Path,
+) -> dict[str, str]:
+    if not packages:
+        return {}
+    script = """
+const fs = require("fs");
+const path = require("path");
+const { createRequire } = require("module");
+const requireFromCwd = createRequire(path.join(process.cwd(), "package.json"));
+const resolved = {};
+for (const packageName of process.argv.slice(1)) {
+  let manifestPath = "";
+  try {
+    manifestPath = requireFromCwd.resolve(`${packageName}/package.json`);
+  } catch {}
+  if (!manifestPath) {
+    try {
+      let cursor = path.dirname(requireFromCwd.resolve(packageName));
+      while (true) {
+        const candidate = path.join(cursor, "package.json");
+        if (fs.existsSync(candidate)) {
+          try {
+            const payload = JSON.parse(fs.readFileSync(candidate, "utf8"));
+            if (payload && payload.name === packageName) {
+              manifestPath = candidate;
+              break;
+            }
+          } catch {}
+        }
+        const parent = path.dirname(cursor);
+        if (parent === cursor) {
+          break;
+        }
+        cursor = parent;
+      }
+    } catch {}
+  }
+  if (manifestPath) {
+    resolved[packageName] = manifestPath;
+  }
+}
+process.stdout.write(JSON.stringify(resolved));
+"""
+    try:
+        result = subprocess.run(
+            ["node", "-e", script, *packages],
+            cwd=working_directory,
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+    except Exception:
+        return {}
+    stdout = result.stdout.strip()
+    if not stdout:
+        return {}
+    try:
+        payload = json.loads(stdout)
+    except json.JSONDecodeError:
+        return {}
+    if not isinstance(payload, dict):
+        return {}
+    return {
+        str(package_name): str(manifest_path)
+        for package_name, manifest_path in payload.items()
+        if str(package_name).strip() and str(manifest_path).strip()
+    }

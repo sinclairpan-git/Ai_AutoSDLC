@@ -1,0 +1,126 @@
+{
+  "schema_version": "frontend-visual-a11y-evidence/v1",
+  "provenance": {
+    "provider_kind": "browser_gate_auto",
+    "provider_name": "browser_gate_auto_heuristic_v1",
+    "provider_version": null,
+    "source_ref": ".ai-sdlc/artifacts/frontend-browser-gate/gate-run-2026-04-23t02-15-45z/shared-runtime/navigation-screenshot.png"
+  },
+  "freshness": {
+    "generated_at": "2026-04-23T02:15:45Z",
+    "source_digest": "sha256:e15cc9a10c3b5000103f8648cd9d6ff355b8ef9eeabaefada10dba6717853751",
+    "source_revision": null
+  },
+  "evaluations": [
+    {
+      "evaluation_id": "auto-visual-coverage-screenshot",
+      "target_id": "vue3-public-primevue",
+      "surface_id": "managed/frontend/index.html",
+      "outcome": "pass",
+      "report_type": "coverage-report",
+      "severity": "info",
+      "location_anchor": ".ai-sdlc/artifacts/frontend-browser-gate/gate-run-2026-04-23t02-15-45z/shared-runtime/navigation-screenshot.png",
+      "quality_hint": "captured a populated browser entry screenshot",
+      "changed_scope_explanation": "derived from browser gate auto heuristic provider"
+    },
+    {
+      "evaluation_id": "auto-visual-structure-heading",
+      "target_id": "vue3-public-primevue",
+      "surface_id": "managed/frontend/index.html",
+      "outcome": "pass",
+      "report_type": "coverage-report",
+      "severity": "info",
+      "location_anchor": ".ai-sdlc/artifacts/frontend-browser-gate/gate-run-2026-04-23t02-15-45z/shared-runtime/navigation-screenshot.png",
+      "quality_hint": "detected 3 heading anchors",
+      "changed_scope_explanation": "derived from browser gate auto heuristic provider"
+    },
+    {
+      "evaluation_id": "auto-a11y-landmarks",
+      "target_id": "vue3-public-primevue",
+      "surface_id": "managed/frontend/index.html",
+      "outcome": "pass",
+      "report_type": "coverage-report",
+      "severity": "info",
+      "location_anchor": ".ai-sdlc/artifacts/frontend-browser-gate/gate-run-2026-04-23t02-15-45z/shared-runtime/navigation-screenshot.png",
+      "quality_hint": "detected 2 semantic landmark regions",
+      "changed_scope_explanation": "derived from browser gate auto heuristic provider"
+    },
+    {
+      "evaluation_id": "auto-a11y-button-labels",
+      "target_id": "vue3-public-primevue",
+      "surface_id": "managed/frontend/index.html",
+      "outcome": "pass",
+      "report_type": "coverage-report",
+      "severity": "info",
+      "location_anchor": ".ai-sdlc/artifacts/frontend-browser-gate/gate-run-2026-04-23t02-15-45z/shared-runtime/navigation-screenshot.png",
+      "quality_hint": "button-like controls expose accessible labels",
+      "changed_scope_explanation": "derived from browser gate auto heuristic provider"
+    },
+    {
+      "evaluation_id": "auto-a11y-input-labels",
+      "target_id": "vue3-public-primevue",
+      "surface_id": "managed/frontend/index.html",
+      "outcome": "pass",
+      "report_type": "coverage-report",
+      "severity": "info",
+      "location_anchor": ".ai-sdlc/artifacts/frontend-browser-gate/gate-run-2026-04-23t02-15-45z/shared-runtime/navigation-screenshot.png",
+      "quality_hint": "form controls expose labels or ARIA names",
+      "changed_scope_explanation": "derived from browser gate auto heuristic provider"
+    },
+    {
+      "evaluation_id": "auto-a11y-image-alt",
+      "target_id": "vue3-public-primevue",
+      "surface_id": "managed/frontend/index.html",
+      "outcome": "pass",
+      "report_type": "coverage-report",
+      "severity": "info",
+      "location_anchor": ".ai-sdlc/artifacts/frontend-browser-gate/gate-run-2026-04-23t02-15-45z/shared-runtime/navigation-screenshot.png",
+      "quality_hint": "images with alternate text coverage are clear",
+      "changed_scope_explanation": "derived from browser gate auto heuristic provider"
+    },
+    {
+      "evaluation_id": "auto-visual-text-contrast",
+      "target_id": "vue3-public-primevue",
+      "surface_id": "managed/frontend/index.html",
+      "outcome": "pass",
+      "report_type": "coverage-report",
+      "severity": "info",
+      "location_anchor": ".ai-sdlc/artifacts/frontend-browser-gate/gate-run-2026-04-23t02-15-45z/shared-runtime/navigation-screenshot.png",
+      "quality_hint": "sampled visible text meets contrast thresholds",
+      "changed_scope_explanation": "derived from browser gate auto heuristic provider"
+    },
+    {
+      "evaluation_id": "auto-visual-layout-fit",
+      "target_id": "vue3-public-primevue",
+      "surface_id": "managed/frontend/index.html",
+      "outcome": "pass",
+      "report_type": "coverage-report",
+      "severity": "info",
+      "location_anchor": ".ai-sdlc/artifacts/frontend-browser-gate/gate-run-2026-04-23t02-15-45z/shared-runtime/navigation-screenshot.png",
+      "quality_hint": "page layout fits the viewport without horizontal overflow",
+      "changed_scope_explanation": "derived from browser gate auto heuristic provider"
+    },
+    {
+      "evaluation_id": "auto-a11y-focus-visible",
+      "target_id": "vue3-public-primevue",
+      "surface_id": "managed/frontend/index.html",
+      "outcome": "pass",
+      "report_type": "coverage-report",
+      "severity": "info",
+      "location_anchor": ".ai-sdlc/artifacts/frontend-browser-gate/gate-run-2026-04-23t02-15-45z/shared-runtime/navigation-screenshot.png",
+      "quality_hint": "focusable controls expose visible focus indicators",
+      "changed_scope_explanation": "derived from browser gate auto heuristic provider"
+    },
+    {
+      "evaluation_id": "auto-runtime-console-errors",
+      "target_id": "vue3-public-primevue",
+      "surface_id": "managed/frontend/index.html",
+      "outcome": "pass",
+      "report_type": "coverage-report",
+      "severity": "info",
+      "location_anchor": "file:///Users/sinclairpan/project/Ai_AutoSDLC/managed/frontend/index.html",
+      "quality_hint": "no browser console or page errors were captured",
+      "changed_scope_explanation": "derived from browser gate auto heuristic provider"
+    }
+  ]
+}

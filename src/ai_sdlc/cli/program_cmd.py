@@ -5389,7 +5389,7 @@ def _render_frontend_delivery_context_lines(svc: ProgramService) -> None:
                 )
         console.print(
             "  - delivery result: "
-            f"{humanize_frontend_delivery_apply_state(str(status_surface.get('apply_state', '-')))}",
+            f"{humanize_frontend_delivery_apply_state(str(status_surface.get('delivery_state', status_surface.get('apply_state', '-'))))}",
             markup=False,
         )
         console.print(

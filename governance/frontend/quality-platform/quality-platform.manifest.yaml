@@ -1,0 +1,15 @@
+work_item_id: '149'
+source_work_item_ids:
+- '071'
+- '137'
+- '143'
+- '144'
+- '147'
+- '148'
+artifact_root: governance/frontend/quality-platform
+schema_family: frontend-quality-platform
+current_version: '1.0'
+matrix_ids:
+- dashboard-modern-saas-desktop-chromium
+- dashboard-modern-saas-mobile-webkit
+- search-enterprise-default-desktop-chromium
