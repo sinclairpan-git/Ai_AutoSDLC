@@ -2,11 +2,15 @@
 
 from __future__ import annotations
 
+import json
 import subprocess
 from pathlib import Path
 from unittest.mock import patch
 
-from ai_sdlc.core.managed_delivery_apply import run_managed_delivery_apply
+from ai_sdlc.core.managed_delivery_apply import (
+    run_managed_delivery_apply,
+    verify_dependency_installation,
+)
 from ai_sdlc.models.frontend_managed_delivery import (
     ConfirmedActionPlanExecutionView,
     DeliveryApplyDecisionReceipt,
@@ -457,6 +461,70 @@ def test_run_managed_delivery_apply_passes_registry_url_to_default_dependency_in
     ]
 
 
+def test_run_managed_delivery_apply_configures_yarn_registry_without_add_flag(
+    tmp_path: Path,
+) -> None:
+    action = _build_action(
+        action_id="a1",
+        action_type="dependency_install",
+        executor_payload={
+            "install_strategy_id": "enterprise-vue2-company-registry",
+            "package_manager": "yarn",
+            "registry_url": "http://npm.uedc.sangfor.com.cn/",
+            "working_directory": ".",
+            "packages": ["@sxf/er-components"],
+        },
+    )
+    view = _build_view(action)
+    receipt = _build_receipt(selected_action_ids=["a1"])
+    recorded_commands: list[list[str]] = []
+
+    def _side_effect(command, *args, **kwargs):
+        command_parts = [str(part) for part in command]
+        recorded_commands.append(command_parts)
+        if command_parts[:4] == ["yarn", "config", "set", "npmRegistryServer"]:
+            return subprocess.CompletedProcess(
+                args=command_parts,
+                returncode=0,
+                stdout="",
+                stderr="",
+            )
+        return build_dependency_install_subprocess_side_effect()(
+            command,
+            *args,
+            **kwargs,
+        )
+
+    with patch(
+        "ai_sdlc.core.managed_delivery_apply.subprocess.run",
+        side_effect=_side_effect,
+    ):
+        result = run_managed_delivery_apply(
+            view,
+            receipt,
+            ManagedDeliveryExecutorContext(
+                host_ingress_allowed=True,
+                execute_actions=True,
+                repo_root=tmp_path,
+            ),
+        )
+
+    assert result.result_status == "apply_succeeded_pending_browser_gate"
+    assert recorded_commands[0] == [
+        "yarn",
+        "config",
+        "set",
+        "npmRegistryServer",
+        "http://npm.uedc.sangfor.com.cn/",
+    ]
+    assert recorded_commands[1] == ["yarn", "add", "@sxf/er-components"]
+    assert "--registry" not in recorded_commands[1]
+    assert (
+        result.ledger_entries[0].after_state["registry_config_command"]
+        == "yarn config set npmRegistryServer http://npm.uedc.sangfor.com.cn/"
+    )
+
+
 def test_run_managed_delivery_apply_retries_transient_registry_failures(
     tmp_path: Path,
 ) -> None:
@@ -546,6 +614,58 @@ def test_run_managed_delivery_apply_verifies_dependency_install_footprint(
     assert after_state["lockfile_path"].endswith("package-lock.json")
     assert "primevue" in after_state["resolved_package_manifests"]
     assert "node_modules" in after_state["resolved_package_manifests"]
+
+
+def test_verify_dependency_installation_normalizes_package_specs(
+    tmp_path: Path,
+) -> None:
+    (tmp_path / "node_modules" / "primevue").mkdir(parents=True)
+    (tmp_path / "node_modules" / "@primeuix" / "themes").mkdir(parents=True)
+    (tmp_path / "node_modules" / "ui-kit").mkdir(parents=True)
+    (tmp_path / "package.json").write_text(
+        json.dumps(
+            {
+                "name": "managed-frontend",
+                "private": True,
+                "dependencies": {
+                    "primevue": "^4.0.0",
+                    "@primeuix/themes": "^1.2.3",
+                    "ui-kit": "npm:real-ui-kit@2.0.0",
+                },
+            },
+            indent=2,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    (tmp_path / "node_modules" / "primevue" / "package.json").write_text(
+        json.dumps({"name": "primevue", "version": "4.0.0"}) + "\n",
+        encoding="utf-8",
+    )
+    (tmp_path / "node_modules" / "@primeuix" / "themes" / "package.json").write_text(
+        json.dumps({"name": "@primeuix/themes", "version": "1.2.3"}) + "\n",
+        encoding="utf-8",
+    )
+    (tmp_path / "node_modules" / "ui-kit" / "package.json").write_text(
+        json.dumps({"name": "ui-kit", "version": "2.0.0"}) + "\n",
+        encoding="utf-8",
+    )
+    (tmp_path / "package-lock.json").write_text("# fixture lockfile\n", encoding="utf-8")
+    payload = DependencyInstallExecutionPayload(
+        install_strategy_id="public-primevue-default",
+        package_manager="npm",
+        working_directory=".",
+        packages=["primevue@latest", "@primeuix/themes@1.2.3", "ui-kit@npm:real-ui-kit@2"],
+    )
+
+    result = verify_dependency_installation(payload, tmp_path)
+
+    assert (
+        result["verification_state"]
+        == "package_manifest_lockfile_dependency_resolution_verified"
+    )
+    resolved = json.loads(result["resolved_package_manifests"])
+    assert sorted(resolved) == ["@primeuix/themes", "primevue", "ui-kit"]
 
 
 def test_run_managed_delivery_apply_fails_when_dependency_lockfile_verification_is_missing(

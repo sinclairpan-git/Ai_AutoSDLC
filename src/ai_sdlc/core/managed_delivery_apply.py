@@ -865,9 +865,27 @@ def _default_dependency_installer(
         command = ["yarn", "add"]
     else:
         command = ["pnpm", "add"]
-    if payload.registry_url.strip():
-        command.extend(["--registry", payload.registry_url.strip()])
+    registry_url = payload.registry_url.strip()
+    registry_config_command: list[str] | None = None
+    if registry_url and payload.package_manager in {"npm", "pnpm"}:
+        command.extend(["--registry", registry_url])
+    elif registry_url and payload.package_manager == "yarn":
+        registry_config_command = [
+            "yarn",
+            "config",
+            "set",
+            "npmRegistryServer",
+            registry_url,
+        ]
     command.extend(payload.packages)
+    if registry_config_command is not None:
+        subprocess.run(
+            registry_config_command,
+            cwd=working_directory,
+            check=True,
+            capture_output=True,
+            text=True,
+        )
     for attempt in range(1, 4):
         try:
             subprocess.run(
@@ -885,6 +903,9 @@ def _default_dependency_installer(
     verification.update(
         {
             "command": " ".join(command),
+            "registry_config_command": (
+                " ".join(registry_config_command) if registry_config_command else ""
+            ),
             "working_directory": str(working_directory),
             "packages": ",".join(payload.packages),
         }
@@ -1017,8 +1038,11 @@ def verify_dependency_installation(
     if not isinstance(manifest_payload, dict):
         raise ValueError("dependency_install_manifest_invalid")
 
+    expected_packages = _normalize_dependency_package_specs(payload.packages)
     declared_packages = _collect_declared_dependency_packages(manifest_payload)
-    missing_declared = [package for package in payload.packages if package not in declared_packages]
+    missing_declared = [
+        package for package in expected_packages if package not in declared_packages
+    ]
     if missing_declared:
         raise ValueError(
             "dependency_install_manifest_missing_packages:" + ",".join(missing_declared)
@@ -1033,11 +1057,11 @@ def verify_dependency_installation(
         raise ValueError(f"dependency_install_lockfile_missing:{payload.package_manager}")
 
     resolved_manifests = _resolve_installed_package_manifests(
-        payload.packages,
+        expected_packages,
         working_directory,
     )
     missing_resolved = [
-        package for package in payload.packages if package not in resolved_manifests
+        package for package in expected_packages if package not in resolved_manifests
     ]
     if missing_resolved:
         raise ValueError(
@@ -1056,6 +1080,33 @@ def verify_dependency_installation(
             sort_keys=True,
         ),
     }
+
+
+def _normalize_dependency_package_specs(packages: list[str]) -> list[str]:
+    return _dedupe_text_items(
+        [
+            _dependency_package_name_from_spec(package_spec)
+            for package_spec in packages
+        ]
+    )
+
+
+def _dependency_package_name_from_spec(package_spec: str) -> str:
+    spec = str(package_spec).strip()
+    if not spec:
+        return ""
+    alias_marker = "@npm:"
+    if alias_marker in spec:
+        return spec.split(alias_marker, 1)[0].strip()
+    if spec.startswith("@"):
+        scope, separator, remainder = spec.partition("/")
+        if not separator:
+            return spec
+        package_name = remainder.split("@", 1)[0].strip()
+        if not package_name:
+            return spec
+        return f"{scope}/{package_name}"
+    return spec.split("@", 1)[0].strip() or spec
 
 
 def _collect_declared_dependency_packages(manifest_payload: dict[str, object]) -> set[str]:
