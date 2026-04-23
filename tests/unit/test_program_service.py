@@ -4364,6 +4364,72 @@ def test_build_frontend_managed_delivery_apply_request_materializes_artifact_gen
     assert "providerComponents.UiTable.component" in generated_files[3]["content"]
 
 
+def test_build_frontend_managed_delivery_apply_request_generates_safe_enterprise_adapter(
+    initialized_project_dir: Path,
+    monkeypatch,
+) -> None:
+    root = initialized_project_dir
+    save_project_config(root, ProjectConfig(adapter_ingress_state="verified_loaded"))
+    _write_builtin_delivery_truth(
+        root,
+        snapshot=build_mvp_solution_snapshot(
+            project_id="001-auth",
+            effective_provider_id="enterprise-vue2",
+            effective_style_pack_id="enterprise-default",
+            requested_provider_id="enterprise-vue2",
+            requested_style_pack_id="enterprise-default",
+            recommended_provider_id="enterprise-vue2",
+            recommended_style_pack_id="enterprise-default",
+            recommended_frontend_stack="vue2",
+            requested_frontend_stack="vue2",
+            effective_frontend_stack="vue2",
+            availability_summary={
+                "overall_status": "ready",
+                "passed_check_ids": ["company-registry-network"],
+                "failed_check_ids": [],
+                "blocking_reason_codes": [],
+            },
+            preflight_status="ready",
+            style_fidelity_status="full",
+        ),
+    )
+    monkeypatch.setattr(
+        program_service_module,
+        "evaluate_current_host_runtime",
+        lambda project_root: _build_host_runtime_plan_for_tests(
+            node_runtime_available=True,
+            package_manager_available=True,
+            playwright_browsers_available=True,
+        ),
+    )
+    svc = ProgramService(root)
+
+    request = svc.build_frontend_managed_delivery_apply_request()
+
+    assert request.execution_view is not None
+    artifact_action = next(
+        action
+        for action in request.execution_view.action_items
+        if action.action_type == "artifact_generate"
+    )
+    generated_files = artifact_action.executor_payload["files"]
+    provider_adapter = next(
+        item
+        for item in generated_files
+        if item["path"] == "src/generated/provider-adapter.ts"
+    )["content"]
+    app_vue = next(
+        item for item in generated_files if item["path"] == "src/App.vue"
+    )["content"]
+    assert "ProviderFallbackComponent" in provider_adapter
+    assert '"UiPageHeader"' in provider_adapter
+    assert '"UiCard"' in provider_adapter
+    assert "Column: ProviderFallbackColumn" in provider_adapter
+    assert "publicPrimeVueProviderComponents = {}" not in provider_adapter
+    assert "providerComponents.UiPageHeader.component" in app_vue
+    assert "Managed provider adapter scaffold" in app_vue
+
+
 def test_build_frontend_managed_delivery_apply_request_keeps_workspace_integration_default_off_when_runtime_adapter_not_started(
     initialized_project_dir: Path,
     monkeypatch,

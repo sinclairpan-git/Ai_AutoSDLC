@@ -5176,7 +5176,7 @@ class ProgramService:
                 },
                 {
                     "path": "src/App.vue",
-                    "content": self._managed_frontend_app_vue_content(),
+                    "content": self._managed_frontend_app_vue_content(delivery_context),
                 },
             ],
         }
@@ -5556,7 +5556,145 @@ class ProgramService:
 
         return json.dumps(value, ensure_ascii=True)
 
-    def _managed_frontend_app_vue_content(self) -> str:
+    def _managed_frontend_app_vue_content(
+        self,
+        delivery_context: dict[str, object] | None = None,
+    ) -> str:
+        provider_id = (
+            str((delivery_context or {}).get("effectiveProviderId", "")).strip()
+        )
+        if provider_id and provider_id != "public-primevue":
+            return """<script setup lang="ts">
+import { frontendDeliveryContext } from "./generated/frontend-delivery-context";
+import {
+  publicPrimeVueProviderComponents,
+  publicPrimeVueProviderHelpers,
+} from "./generated/provider-adapter";
+
+const providerComponents = publicPrimeVueProviderComponents;
+const ProviderColumn = publicPrimeVueProviderHelpers.Column;
+const pageSchemas = frontendDeliveryContext.pageSchemas;
+const providerMappings = frontendDeliveryContext.providerMappings;
+const componentCount = Object.keys(providerComponents).length;
+</script>
+
+<template>
+  <main class="delivery-shell">
+    <component :is="providerComponents.UiPageHeader.component" class="page-header">
+      <template #start>
+        <div>
+          <p class="delivery-eyebrow">{{ frontendDeliveryContext.deliveryEntryId }}</p>
+          <h1 class="delivery-title">Managed provider adapter scaffold</h1>
+          <p class="delivery-subtitle">
+            {{ frontendDeliveryContext.effectiveProviderId }} is bound through the
+            generated provider adapter. The fallback scaffold keeps the managed
+            frontend runnable until provider-specific wrappers are supplied.
+          </p>
+        </div>
+      </template>
+    </component>
+
+    <component :is="providerComponents.UiCard.component" class="hero-card">
+      <template #title>Provider Mapping Coverage</template>
+      <template #content>
+        <component :is="providerComponents.UiResult.component" class="result-banner">
+          {{ componentCount }} semantic components are available from the generated
+          adapter. {{ providerMappings.length }} mappings came from provider truth.
+        </component>
+        <ul class="component-chip-list">
+          <li
+            v-for="mapping in providerMappings"
+            :key="mapping.componentId"
+            class="component-chip"
+          >
+            {{ mapping.componentId }} -> {{ mapping.implementationRef }}
+          </li>
+        </ul>
+      </template>
+    </component>
+
+    <component
+      :is="providerComponents.UiSection.component"
+      header="Page schema coverage"
+      class="results-panel"
+    >
+      <component :is="providerComponents.UiTable.component" :value="pageSchemas">
+        <component :is="ProviderColumn" field="pageSchemaId" header="Page schema" />
+        <component :is="ProviderColumn" field="pageRecipeId" header="Recipe" />
+      </component>
+    </component>
+  </main>
+</template>
+
+<style scoped>
+.delivery-shell {
+  min-height: 100vh;
+  padding: 48px;
+  color: #10233c;
+  background:
+    radial-gradient(circle at top left, rgba(20, 184, 166, 0.18), transparent 32%),
+    linear-gradient(135deg, #f8fafc 0%, #e8f2f7 100%);
+}
+
+.page-header,
+.hero-card,
+.results-panel {
+  margin: 0 auto 24px;
+  max-width: 1080px;
+}
+
+.delivery-eyebrow {
+  margin: 0 0 8px;
+  color: #0f766e;
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.delivery-title {
+  margin: 0;
+  font-size: clamp(2rem, 5vw, 4rem);
+  line-height: 0.95;
+}
+
+.delivery-subtitle {
+  max-width: 760px;
+  color: #506273;
+  font-size: 1rem;
+  line-height: 1.65;
+}
+
+.result-banner {
+  margin-bottom: 18px;
+}
+
+.component-chip-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 0;
+  list-style: none;
+}
+
+.component-chip {
+  border: 1px solid rgba(15, 118, 110, 0.22);
+  border-radius: 999px;
+  padding: 8px 12px;
+  background: rgba(255, 255, 255, 0.72);
+  color: #0f3f3b;
+  font-size: 0.88rem;
+}
+
+:global(.provider-fallback) {
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  border-radius: 20px;
+  padding: 18px;
+  background: rgba(255, 255, 255, 0.86);
+  box-shadow: 0 18px 45px rgba(15, 23, 42, 0.08);
+}
+</style>
+"""
         return """<script setup lang="ts">
 import { frontendDeliveryContext } from "./generated/frontend-delivery-context";
 import {
@@ -5935,9 +6073,8 @@ const tableRows = [
     ) -> str:
         provider_id = str(delivery_context.get("effectiveProviderId", "")).strip()
         if provider_id != "public-primevue":
-            return (
-                "export const publicPrimeVueProviderComponents = {} as const;\n"
-                "export const publicPrimeVueProviderHelpers = {} as const;\n"
+            return self._managed_frontend_fallback_provider_adapter_ts_content(
+                provider_id
             )
 
         mapping_payload = self._load_provider_mappings(provider_id) or {}
@@ -6008,6 +6145,121 @@ const tableRows = [
             "} as const;\n\n"
             "export const publicPrimeVueProviderHelpers = {\n"
             "  Column,\n"
+            "} as const;\n"
+        )
+
+    def _managed_frontend_fallback_provider_adapter_ts_content(
+        self,
+        provider_id: str,
+    ) -> str:
+        mapping_payload = self._load_provider_mappings(provider_id) or {}
+        mapped_component_ids = [
+            str(entry.get("component_id", "")).strip()
+            for entry in mapping_payload.get("items", [])
+            if str(entry.get("component_id", "")).strip()
+        ]
+        required_component_ids = [
+            "UiButton",
+            "UiInput",
+            "UiSelect",
+            "UiForm",
+            "UiFormItem",
+            "UiTable",
+            "UiDialog",
+            "UiDrawer",
+            "UiEmpty",
+            "UiSpinner",
+            "UiPageHeader",
+            "UiSearchBar",
+            "UiResult",
+            "UiSection",
+            "UiToolbar",
+            "UiPagination",
+            "UiCard",
+        ]
+        component_ids = _unique_strings([*mapped_component_ids, *required_component_ids])
+        mapping_by_component = {
+            str(entry.get("component_id", "")).strip(): entry
+            for entry in mapping_payload.get("items", [])
+            if str(entry.get("component_id", "")).strip()
+        }
+
+        descriptor_lines: list[str] = []
+        for component_id in component_ids:
+            entry = mapping_by_component.get(component_id, {})
+            implementation_ref = (
+                str(entry.get("implementation_ref", "")).strip()
+                or "ProviderFallbackComponent"
+            )
+            alignment_notes = self._render_typescript_literal(
+                _normalize_string_list(entry.get("alignment_notes", []))
+                or [
+                    "fallback scaffold keeps managed frontend runnable",
+                    "replace with provider-specific wrapper before production handoff",
+                ]
+            )
+            descriptor_lines.append(
+                f'  "{component_id}": {{\n'
+                f'    componentId: "{component_id}",\n'
+                f'    implementationRef: "{implementation_ref}",\n'
+                f'    packageRef: "{provider_id}",\n'
+                "    component: ProviderFallbackComponent,\n"
+                f"    alignmentNotes: {alignment_notes},\n"
+                "  },"
+            )
+
+        descriptor_block = "\n".join(descriptor_lines)
+        return (
+            'import { h } from "vue";\n\n'
+            "const slotContent = (slots: Record<string, (() => unknown) | undefined>, name = \"default\") => {\n"
+            "  const slot = slots[name];\n"
+            "  return slot ? slot() : [];\n"
+            "};\n\n"
+            "const withClass = (attrs: Record<string, unknown>, fallbackClass: string) => ({\n"
+            "  ...attrs,\n"
+            "  class: [fallbackClass, attrs.class].filter(Boolean),\n"
+            "});\n\n"
+            "const ProviderFallbackComponent = {\n"
+            '  name: "ProviderFallbackComponent",\n'
+            "  inheritAttrs: false,\n"
+            "  props: [\n"
+            '    "field",\n'
+            '    "header",\n'
+            '    "label",\n'
+            '    "legend",\n'
+            '    "options",\n'
+            '    "optionLabel",\n'
+            '    "placeholder",\n'
+            '    "value",\n'
+            "  ],\n"
+            "  setup(props: Record<string, unknown>, { attrs, slots }: { attrs: Record<string, unknown>; slots: Record<string, (() => unknown) | undefined> }) {\n"
+            "    return () => h(\n"
+            '      "section",\n'
+            '      withClass(attrs, "provider-fallback"),\n'
+            "      [\n"
+            '        props.header ? h("h2", String(props.header)) : null,\n'
+            '        props.legend ? h("strong", String(props.legend)) : null,\n'
+            '        props.label ? h("span", String(props.label)) : null,\n'
+            "        ...slotContent(slots, \"start\"),\n"
+            "        ...slotContent(slots),\n"
+            "        ...slotContent(slots, \"content\"),\n"
+            "        ...slotContent(slots, \"end\"),\n"
+            "      ],\n"
+            "    );\n"
+            "  },\n"
+            "};\n\n"
+            "const ProviderFallbackColumn = {\n"
+            '  name: "ProviderFallbackColumn",\n'
+            '  props: ["field", "header"],\n'
+            "  setup(props: Record<string, unknown>) {\n"
+            '    return () => h("span", { class: "provider-fallback-column" }, String(props.header || props.field || ""));\n'
+            "  },\n"
+            "};\n\n"
+            "export const publicPrimeVueProviderComponents = {\n"
+            f"{descriptor_block}\n"
+            "} as const;\n\n"
+            "export const publicPrimeVueProviderHelpers = {\n"
+            "  Column: ProviderFallbackColumn,\n"
             "} as const;\n"
         )
 

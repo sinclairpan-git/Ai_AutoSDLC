@@ -1069,11 +1069,14 @@ def _materialize_visual_regression_receipt(
         )
 
     verdict = str(getattr(capture, "verdict", "evidence_missing")).strip()
+    classification_candidate = (
+        "evidence_missing" if verdict == "recheck" else verdict
+    )
     runtime_status = (
         "failed_transient"
         if verdict == "transient_run_failure"
         else "incomplete"
-        if verdict == "evidence_missing"
+        if verdict in {"evidence_missing", "recheck"}
         else "completed"
     )
     return (
@@ -1084,13 +1087,15 @@ def _materialize_visual_regression_receipt(
             finished_at=generated_at,
             runtime_status=runtime_status,
             artifact_ids=_unique_strings(artifact_ids),
-            classification_candidate=verdict,  # type: ignore[arg-type]
-            recheck_required=verdict == "evidence_missing",
+            classification_candidate=classification_candidate,  # type: ignore[arg-type]
+            recheck_required=verdict in {"evidence_missing", "recheck"},
             remediation_hints=_unique_strings(
                 ["review visual regression diff output"]
                 if verdict == "actual_quality_blocker"
                 else ["materialize visual regression baseline"]
                 if verdict == "evidence_missing"
+                else ["rerun visual regression after recheck signal"]
+                if verdict == "recheck"
                 else []
             ),
             blocking_reason_codes=_unique_strings(
@@ -1098,6 +1103,8 @@ def _materialize_visual_regression_receipt(
                 if verdict == "actual_quality_blocker"
                 else ["visual_regression_evidence_missing"]
                 if verdict == "evidence_missing"
+                else ["visual_regression_recheck_required"]
+                if verdict == "recheck"
                 else ["visual_regression_transient_failure"]
                 if verdict == "transient_run_failure"
                 else []
