@@ -149,6 +149,30 @@ def test_build_browser_quality_gate_execution_context_derives_index_html_entry_r
     assert context.page_schema_ids == ["dashboard-workspace", "search-list-workspace"]
     assert context.visual_regression_matrix_id == "dashboard-modern-saas-desktop-chromium"
     assert context.visual_regression_viewport_id == "desktop-1440"
+    assert "visual_regression" in context.required_probe_set
+
+
+def test_build_browser_quality_gate_execution_context_skips_visual_regression_without_matrix() -> None:
+    context = build_browser_quality_gate_execution_context(
+        apply_payload={
+            "result_status": "apply_succeeded_pending_browser_gate",
+            "browser_gate_required": True,
+            "apply_result_id": "apply-result-001",
+            "execution_view": {
+                "spec_dir": "specs/001-auth",
+                "attachment_scope_ref": "scope://001-auth",
+                "readiness_subject_id": "001-auth",
+                "managed_target_path": "managed/frontend",
+            },
+        },
+        solution_snapshot=build_mvp_solution_snapshot(),
+        gate_run_id="gate-run-ctx",
+        delivery_entry_id="vue3-public-primevue",
+    )
+
+    assert context.visual_regression_matrix_id == ""
+    assert context.visual_regression_viewport_id == ""
+    assert "visual_regression" not in context.required_probe_set
 
 
 def test_materialize_browser_gate_probe_runtime_executes_real_runner_and_captures_artifacts(
@@ -223,6 +247,72 @@ def test_materialize_browser_gate_probe_runtime_executes_real_runner_and_capture
     assert bundle.provider_runtime_adapter_delivery_state == "scaffolded"
     assert bundle.provider_runtime_adapter_evidence_state == "missing"
     assert bundle.page_schema_ids == ["dashboard-workspace", "search-list-workspace"]
+
+
+def test_materialize_browser_gate_probe_runtime_can_pass_without_visual_regression_matrix(
+    tmp_path: Path,
+) -> None:
+    context = _context().model_copy(
+        update={
+            "visual_regression_matrix_id": "",
+            "visual_regression_viewport_id": "",
+            "required_probe_set": [
+                "playwright_smoke",
+                "visual_expectation",
+                "basic_a11y",
+                "interaction_anti_pattern_checks",
+            ],
+        }
+    )
+
+    def _runner(*, artifact_root: Path, execution_context, generated_at: str):
+        trace_path = artifact_root / "shared-runtime" / "playwright-trace.zip"
+        screenshot_path = artifact_root / "shared-runtime" / "navigation-screenshot.png"
+        interaction_path = artifact_root / "interaction" / "interaction-snapshot.json"
+        trace_path.parent.mkdir(parents=True, exist_ok=True)
+        interaction_path.parent.mkdir(parents=True, exist_ok=True)
+        trace_path.write_text('{"trace":"ok"}\n', encoding="utf-8")
+        screenshot_path.write_bytes(b"png")
+        interaction_path.write_text('{"interaction":"ok"}\n', encoding="utf-8")
+        return BrowserGateProbeRunnerResult(
+            runtime_status="completed",
+            shared_capture=BrowserGateSharedRuntimeCapture(
+                gate_run_id=execution_context.gate_run_id,
+                trace_artifact_ref=str(trace_path.relative_to(tmp_path)),
+                navigation_screenshot_ref=str(screenshot_path.relative_to(tmp_path)),
+                capture_status="captured",
+                final_url="http://localhost:4173/",
+                anchor_refs=["page:landing"],
+                diagnostic_codes=[],
+            ),
+            interaction_capture=BrowserGateInteractionProbeCapture(
+                gate_run_id=execution_context.gate_run_id,
+                interaction_probe_id="primary-action",
+                artifact_refs=[str(interaction_path.relative_to(tmp_path))],
+                capture_status="captured",
+                classification_candidate="pass",
+                blocking_reason_codes=[],
+                anchor_refs=["interaction:primary-action"],
+            ),
+            diagnostic_codes=[],
+            warnings=[],
+        )
+
+    session, records, receipts, bundle = materialize_browser_gate_probe_runtime(
+        root=tmp_path,
+        context=context,
+        apply_artifact_path=".ai-sdlc/memory/frontend-managed-delivery/latest.yaml",
+        visual_a11y_evidence_artifact=_visual_a11y_pass_artifact(),
+        generated_at="2026-04-14T15:05:00Z",
+        probe_runner=_runner,
+        execute_probe=True,
+    )
+
+    assert session.status == "completed"
+    assert bundle.overall_gate_status == "passed"
+    assert bundle.visual_verdict == "pass"
+    assert {receipt.check_name for receipt in receipts} == set(context.required_probe_set)
+    assert not any(record.check_name == "visual_regression" for record in records)
 
 
 def test_materialize_browser_gate_probe_runtime_prefers_visual_regression_verdict_when_available(

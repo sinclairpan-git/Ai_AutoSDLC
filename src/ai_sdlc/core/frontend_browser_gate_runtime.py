@@ -34,7 +34,6 @@ from ai_sdlc.models.frontend_solution_confirmation import FrontendSolutionSnapsh
 BROWSER_GATE_REQUIRED_PROBE_SET = (
     "playwright_smoke",
     "visual_expectation",
-    "visual_regression",
     "basic_a11y",
     "interaction_anti_pattern_checks",
 )
@@ -95,6 +94,10 @@ def build_browser_quality_gate_execution_context(
         raise ValueError("browser_gate_scope_linkage_incomplete")
 
     browser_entry_ref = _derive_browser_entry_ref(managed_frontend_target)
+    required_probe_set = list(BROWSER_GATE_REQUIRED_PROBE_SET)
+    if visual_regression_matrix_id.strip() and visual_regression_viewport_id.strip():
+        required_probe_set.insert(2, "visual_regression")
+
     return BrowserQualityGateExecutionContext(
         gate_run_id=gate_run_id,
         apply_result_id=apply_result_id,
@@ -115,7 +118,7 @@ def build_browser_quality_gate_execution_context(
         page_schema_ids=_unique_strings(page_schema_ids or []),
         visual_regression_matrix_id=visual_regression_matrix_id,
         visual_regression_viewport_id=visual_regression_viewport_id,
-        required_probe_set=_unique_strings(BROWSER_GATE_REQUIRED_PROBE_SET),
+        required_probe_set=_unique_strings(required_probe_set),
         browser_entry_ref=browser_entry_ref,
         source_linkage_refs={
             "apply_result_status": result_status,
@@ -348,20 +351,21 @@ def materialize_browser_gate_probe_runtime(
     )
     artifact_records.extend(visual_records)
     receipts.extend([visual_receipt, a11y_receipt])
-    visual_regression_records, visual_regression_receipt = (
-        _materialize_visual_regression_receipt(
-            root=root,
-            artifact_root=artifact_root,
-            gate_run_id=context.gate_run_id,
-            visual_regression_capture=(
-                runner_result.visual_regression_capture if runner_result is not None else None
-            ),
-            generated_at=generated_at,
-            write_artifacts=write_artifacts,
+    if "visual_regression" in context.required_probe_set:
+        visual_regression_records, visual_regression_receipt = (
+            _materialize_visual_regression_receipt(
+                root=root,
+                artifact_root=artifact_root,
+                gate_run_id=context.gate_run_id,
+                visual_regression_capture=(
+                    runner_result.visual_regression_capture if runner_result is not None else None
+                ),
+                generated_at=generated_at,
+                write_artifacts=write_artifacts,
+            )
         )
-    )
-    artifact_records.extend(visual_regression_records)
-    receipts.append(visual_regression_receipt)
+        artifact_records.extend(visual_regression_records)
+        receipts.append(visual_regression_receipt)
 
     artifact_records.extend(interaction_records)
     receipts.append(interaction_receipt)
