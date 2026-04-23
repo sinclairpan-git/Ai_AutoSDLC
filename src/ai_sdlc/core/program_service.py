@@ -5019,6 +5019,12 @@ class ProgramService:
                 whitelist_items=whitelist_items,
             )
         )
+        blockers.extend(
+            self._validate_required_provider_mappings(
+                provider_id=provider_id,
+                mapping_items=mapping_items,
+            )
+        )
 
         provider_manifest = self._load_provider_manifest(provider_id)
         if provider_manifest is None:
@@ -5253,6 +5259,40 @@ class ProgramService:
                     f"{provider_id}:{component_id}"
                 )
         return _unique_strings(blockers)
+
+    def _validate_required_provider_mappings(
+        self,
+        *,
+        provider_id: str,
+        mapping_items: list[dict[str, object]],
+    ) -> list[str]:
+        if provider_id != "public-primevue":
+            return []
+        mapped_components = {
+            str(entry.get("component_id", "")).strip()
+            for entry in mapping_items
+            if str(entry.get("component_id", "")).strip()
+            and str(entry.get("implementation_ref", "")).strip()
+        }
+        required_components = {
+            "UiButton",
+            "UiCard",
+            "UiForm",
+            "UiFormItem",
+            "UiInput",
+            "UiPageHeader",
+            "UiPagination",
+            "UiResult",
+            "UiSearchBar",
+            "UiSection",
+            "UiSelect",
+            "UiTable",
+            "UiToolbar",
+        }
+        return [
+            f"delivery_provider_mapping_required_missing:{provider_id}:{component_id}"
+            for component_id in sorted(required_components - mapped_components)
+        ]
 
     def _primevue_package_ref_for_component(
         self,

@@ -4810,6 +4810,73 @@ def test_build_frontend_managed_delivery_apply_request_blocks_unresolved_provide
     )
 
 
+def test_build_frontend_managed_delivery_apply_request_blocks_missing_required_public_primevue_mappings(
+    initialized_project_dir: Path,
+    monkeypatch,
+) -> None:
+    root = initialized_project_dir
+    save_project_config(root, ProjectConfig(adapter_ingress_state="verified_loaded"))
+    _write_builtin_delivery_truth(root)
+    provider_root = root / "providers" / "frontend" / "public-primevue"
+    provider_root.mkdir(parents=True, exist_ok=True)
+    (provider_root / "mappings.yaml").write_text(
+        yaml.safe_dump(
+            {
+                "items": [
+                    {
+                        "component_id": "UiButton",
+                        "implementation_ref": "Button",
+                        "mapping_kind": "direct",
+                    }
+                ]
+            },
+            sort_keys=False,
+        ),
+        encoding="utf-8",
+    )
+    (provider_root / "whitelist.yaml").write_text(
+        yaml.safe_dump(
+            {
+                "items": [
+                    {
+                        "component_id": "UiButton",
+                        "dependency_curation": ["primevue/button"],
+                    }
+                ]
+            },
+            sort_keys=False,
+        ),
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(
+        program_service_module,
+        "evaluate_current_host_runtime",
+        lambda project_root: _build_host_runtime_plan_for_tests(
+            node_runtime_available=True,
+            package_manager_available=True,
+            playwright_browsers_available=True,
+        ),
+    )
+    monkeypatch.setattr(
+        program_service_module.shutil,
+        "which",
+        lambda executable: f"/mock/bin/{executable}" if executable == "pnpm" else None,
+    )
+    svc = ProgramService(root)
+
+    request = svc.build_frontend_managed_delivery_apply_request()
+
+    assert request.apply_state == "blocked_before_start"
+    assert (
+        "delivery_provider_mapping_required_missing:public-primevue:UiSearchBar"
+        in request.remaining_blockers
+    )
+    assert (
+        "delivery_provider_mapping_required_missing:public-primevue:UiTable"
+        in request.remaining_blockers
+    )
+
+
 def test_build_frontend_managed_delivery_apply_request_falls_back_to_available_package_manager(
     initialized_project_dir: Path,
     monkeypatch,

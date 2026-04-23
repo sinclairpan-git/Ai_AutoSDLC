@@ -658,6 +658,54 @@ def test_verify_dependency_installation_normalizes_package_specs(
     assert sorted(resolved) == ["@primeuix/themes", "primevue", "ui-kit"]
 
 
+def test_verify_dependency_installation_uses_yarn_node_for_pnp_resolution(
+    tmp_path: Path,
+) -> None:
+    manifest_ref = tmp_path / ".yarn" / "cache" / "primevue" / "package.json"
+    manifest_ref.parent.mkdir(parents=True, exist_ok=True)
+    manifest_ref.write_text(
+        json.dumps({"name": "primevue", "version": "4.0.0"}) + "\n",
+        encoding="utf-8",
+    )
+    (tmp_path / "package.json").write_text(
+        json.dumps(
+            {
+                "name": "managed-frontend",
+                "private": True,
+                "dependencies": {"primevue": "^4.0.0"},
+            },
+            indent=2,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    (tmp_path / "yarn.lock").write_text("# fixture lockfile\n", encoding="utf-8")
+    payload = DependencyInstallExecutionPayload(
+        install_strategy_id="public-primevue-default",
+        package_manager="yarn",
+        working_directory=".",
+        packages=["primevue"],
+    )
+
+    def _resolution_check(command, *args, **kwargs):
+        assert command[:3] == ["yarn", "node", "-e"]
+        return subprocess.CompletedProcess(
+            args=command,
+            returncode=0,
+            stdout=json.dumps({"primevue": str(manifest_ref)}),
+            stderr="",
+        )
+
+    with patch(
+        "ai_sdlc.core.managed_delivery_apply.subprocess.run",
+        side_effect=_resolution_check,
+    ):
+        result = verify_dependency_installation(payload, tmp_path)
+
+    resolved = json.loads(result["resolved_package_manifests"])
+    assert resolved == {"primevue": str(manifest_ref.resolve())}
+
+
 def test_verify_dependency_installation_requires_playwright_browser_runtime(
     tmp_path: Path,
 ) -> None:
@@ -738,6 +786,64 @@ def test_verify_dependency_installation_records_playwright_browser_runtime(
         result = verify_dependency_installation(payload, tmp_path)
 
     assert result["playwright_browser_runtime"] == "/ms-playwright/chromium/chrome"
+
+
+def test_verify_dependency_installation_uses_yarn_node_for_playwright_runtime(
+    tmp_path: Path,
+) -> None:
+    manifest_ref = tmp_path / ".yarn" / "cache" / "@playwright" / "test" / "package.json"
+    manifest_ref.parent.mkdir(parents=True, exist_ok=True)
+    manifest_ref.write_text(
+        json.dumps({"name": "@playwright/test", "version": "1.38.0"}) + "\n",
+        encoding="utf-8",
+    )
+    (tmp_path / "package.json").write_text(
+        json.dumps(
+            {
+                "name": "managed-frontend",
+                "private": True,
+                "dependencies": {"@playwright/test": "^1.38.0"},
+            },
+            indent=2,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    (tmp_path / "yarn.lock").write_text("# fixture lockfile\n", encoding="utf-8")
+    payload = DependencyInstallExecutionPayload(
+        install_strategy_id="browser-runtime",
+        package_manager="yarn",
+        working_directory=".",
+        packages=["@playwright/test"],
+    )
+
+    def _runtime_check(command, *args, **kwargs):
+        assert command[:3] == ["yarn", "node", "-e"]
+        script = command[3]
+        if "process.argv.slice(1)" in script:
+            return subprocess.CompletedProcess(
+                args=command,
+                returncode=0,
+                stdout=json.dumps({"@playwright/test": str(manifest_ref)}),
+                stderr="",
+            )
+        return subprocess.CompletedProcess(
+            args=command,
+            returncode=0,
+            stdout="/virtual/.cache/ms-playwright/chromium/chrome",
+            stderr="",
+        )
+
+    with patch(
+        "ai_sdlc.core.managed_delivery_apply.subprocess.run",
+        side_effect=_runtime_check,
+    ):
+        result = verify_dependency_installation(payload, tmp_path)
+
+    assert (
+        result["playwright_browser_runtime"]
+        == "/virtual/.cache/ms-playwright/chromium/chrome"
+    )
 
 
 def test_verify_dependency_installation_accepts_playwright_test_runtime_layout(

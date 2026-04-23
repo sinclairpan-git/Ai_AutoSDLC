@@ -1054,6 +1054,7 @@ def verify_dependency_installation(
     resolved_manifests = _resolve_installed_package_manifests(
         expected_packages,
         working_directory,
+        package_manager=payload.package_manager,
     )
     missing_resolved = [
         package for package in expected_packages if package not in resolved_manifests
@@ -1069,7 +1070,8 @@ def verify_dependency_installation(
         declared_packages=declared_packages,
     ):
         playwright_browser_runtime_path = _verify_playwright_browser_runtime(
-            working_directory
+            working_directory,
+            package_manager=payload.package_manager,
         )
 
     return {
@@ -1124,7 +1126,11 @@ def _requires_playwright_browser_runtime(
     return bool(package_names & _PLAYWRIGHT_BROWSER_RUNTIME_PACKAGES)
 
 
-def _verify_playwright_browser_runtime(working_directory: Path) -> str:
+def _verify_playwright_browser_runtime(
+    working_directory: Path,
+    *,
+    package_manager: str = "",
+) -> str:
     script = """
 const fs = require('fs');
 let runtime = null;
@@ -1146,12 +1152,11 @@ if (!executablePath || !fs.existsSync(executablePath)) {
 process.stdout.write(executablePath);
 """.strip()
     try:
-        result = subprocess.run(
-            ["node", "-e", script],
-            cwd=working_directory,
-            check=True,
-            capture_output=True,
-            text=True,
+        result = _run_package_resolution_script(
+            package_manager=package_manager,
+            script=script,
+            packages=[],
+            working_directory=working_directory,
         )
     except (FileNotFoundError, subprocess.CalledProcessError) as exc:
         raise ValueError("dependency_install_playwright_browser_runtime_missing") from exc
@@ -1180,8 +1185,14 @@ def _collect_declared_dependency_packages(manifest_payload: dict[str, object]) -
 def _resolve_installed_package_manifests(
     packages: list[str],
     working_directory: Path,
+    *,
+    package_manager: str = "",
 ) -> dict[str, str]:
-    resolved_manifests = _resolve_package_manifests_with_node(packages, working_directory)
+    resolved_manifests = _resolve_package_manifests_with_node(
+        packages,
+        working_directory,
+        package_manager=package_manager,
+    )
     verified: dict[str, str] = {}
     for package_name in packages:
         candidate = Path(resolved_manifests.get(package_name, ""))
@@ -1198,6 +1209,8 @@ def _resolve_installed_package_manifests(
 def _resolve_package_manifests_with_node(
     packages: list[str],
     working_directory: Path,
+    *,
+    package_manager: str = "",
 ) -> dict[str, str]:
     if not packages:
         return {}
@@ -1241,12 +1254,11 @@ for (const packageName of process.argv.slice(1)) {
 process.stdout.write(JSON.stringify(resolved));
 """
     try:
-        result = subprocess.run(
-            ["node", "-e", script, *packages],
-            cwd=working_directory,
-            check=True,
-            capture_output=True,
-            text=True,
+        result = _run_package_resolution_script(
+            package_manager=package_manager,
+            script=script,
+            packages=packages,
+            working_directory=working_directory,
         )
     except Exception:
         return {}
@@ -1264,3 +1276,34 @@ process.stdout.write(JSON.stringify(resolved));
         for package_name, manifest_path in payload.items()
         if str(package_name).strip() and str(manifest_path).strip()
     }
+
+
+def _run_package_resolution_script(
+    *,
+    package_manager: str,
+    script: str,
+    packages: list[str],
+    working_directory: Path,
+) -> subprocess.CompletedProcess[str]:
+    commands: list[list[str]]
+    if package_manager == "yarn":
+        commands = [
+            ["yarn", "node", "-e", script, *packages],
+            ["node", "-e", script, *packages],
+        ]
+    else:
+        commands = [["node", "-e", script, *packages]]
+    last_error: FileNotFoundError | subprocess.CalledProcessError | None = None
+    for command in commands:
+        try:
+            return subprocess.run(
+                command,
+                cwd=working_directory,
+                check=True,
+                capture_output=True,
+                text=True,
+            )
+        except (FileNotFoundError, subprocess.CalledProcessError) as exc:
+            last_error = exc
+    assert last_error is not None
+    raise last_error
