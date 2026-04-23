@@ -4813,7 +4813,7 @@ class ProgramService:
                     "executor_payload": {
                         "install_strategy_id": "public-visual-regression-runtime",
                         "package_manager": bundle["package_manager"],
-                        "registry_url": "",
+                        "registry_url": bundle.get("registry_url", ""),
                         "working_directory": ".",
                         "packages": visual_runtime_dependency_packages,
                     },

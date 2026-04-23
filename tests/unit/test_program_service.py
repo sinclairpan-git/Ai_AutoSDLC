@@ -5058,7 +5058,9 @@ def test_build_frontend_managed_delivery_apply_request_splits_enterprise_and_pub
         package.startswith("@sxf/")
         for package in enterprise_action.executor_payload["packages"]
     )
-    assert public_runtime_action.executor_payload["registry_url"] == ""
+    assert public_runtime_action.executor_payload["registry_url"] == (
+        "http://npm.uedc.sangfor.com.cn/"
+    )
     assert public_runtime_action.executor_payload["install_strategy_id"] == (
         "public-visual-regression-runtime"
     )
