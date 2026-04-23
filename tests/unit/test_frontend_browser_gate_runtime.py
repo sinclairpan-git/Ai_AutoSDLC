@@ -614,11 +614,14 @@ def test_materialize_browser_gate_probe_runtime_normalizes_visual_regression_rec
         trace_path = artifact_root / "shared-runtime" / "playwright-trace.zip"
         screenshot_path = artifact_root / "shared-runtime" / "navigation-screenshot.png"
         interaction_path = artifact_root / "interaction" / "interaction-snapshot.json"
+        bootstrap_path = artifact_root / "bootstrap" / "bootstrap-receipt.yaml"
         trace_path.parent.mkdir(parents=True, exist_ok=True)
         interaction_path.parent.mkdir(parents=True, exist_ok=True)
+        bootstrap_path.parent.mkdir(parents=True, exist_ok=True)
         trace_path.write_text('{"trace":"ok"}\n', encoding="utf-8")
         screenshot_path.write_bytes(b"png")
         interaction_path.write_text('{"interaction":"ok"}\n', encoding="utf-8")
+        bootstrap_path.write_text("state: recheck\n", encoding="utf-8")
         return BrowserGateProbeRunnerResult.model_validate(
             {
                 "runtime_status": "completed",
@@ -657,7 +660,7 @@ def test_materialize_browser_gate_probe_runtime_normalizes_visual_regression_rec
                     "capture_protocol_ref": (
                         "matrix:dashboard-modern-saas-desktop-chromium"
                     ),
-                    "bootstrap_ref": "",
+                    "bootstrap_ref": str(bootstrap_path.relative_to(tmp_path)),
                     "verdict": "recheck",
                 },
                 "diagnostic_codes": [],
@@ -675,9 +678,20 @@ def test_materialize_browser_gate_probe_runtime_normalizes_visual_regression_rec
         execute_probe=True,
     )
 
+    visual_record = next(
+        record
+        for record in _records
+        if record.artifact_type == "visual_regression_bootstrap"
+    )
     visual_receipt = next(
         item for item in receipts if item.check_name == "visual_regression"
     )
+    assert visual_record.capture_status == "captured"
+    assert visual_record.artifact_ref == (
+        ".ai-sdlc/artifacts/frontend-browser-gate/"
+        "gate-run-001/bootstrap/bootstrap-receipt.yaml"
+    )
+    assert visual_receipt.artifact_ids == [visual_record.artifact_id]
     assert visual_receipt.classification_candidate == "evidence_missing"
     assert visual_receipt.recheck_required is True
     assert "visual_regression_recheck_required" in visual_receipt.blocking_reason_codes

@@ -1050,6 +1050,9 @@ def _materialize_visual_regression_receipt(
     artifact_ref = _normalize_runner_artifact_ref(
         str(getattr(capture, "diff_image_ref", "")).strip()
     )
+    bootstrap_ref = _normalize_runner_artifact_ref(
+        str(getattr(capture, "bootstrap_ref", "")).strip()
+    )
     artifact_ids: list[str] = []
     records: list[BrowserProbeArtifactRecord] = []
     missing_artifact = False
@@ -1076,9 +1079,33 @@ def _materialize_visual_regression_receipt(
                 captured_at=generated_at,
                 source_linkage_refs={
                     "matrix_id": str(getattr(capture, "matrix_id", "")).strip(),
-                    "bootstrap_ref": _normalize_runner_artifact_ref(
-                        str(getattr(capture, "bootstrap_ref", "")).strip()
-                    ),
+                    "bootstrap_ref": bootstrap_ref,
+                },
+            )
+        )
+    elif bootstrap_ref:
+        resolved_status = (
+            "captured"
+            if _runner_artifact_exists(
+                root=root,
+                artifact_root=artifact_root,
+                artifact_ref=bootstrap_ref,
+            )
+            else "missing"
+        )
+        artifact_ids.append(f"{gate_run_id}-visual-regression-bootstrap-1")
+        records.append(
+            BrowserProbeArtifactRecord(
+                artifact_id=f"{gate_run_id}-visual-regression-bootstrap-1",
+                gate_run_id=gate_run_id,
+                check_name="visual_regression",
+                artifact_type="visual_regression_bootstrap",
+                artifact_ref=bootstrap_ref,
+                capture_status=resolved_status,
+                captured_at=generated_at,
+                source_linkage_refs={
+                    "matrix_id": str(getattr(capture, "matrix_id", "")).strip(),
+                    "diff_image_ref": artifact_ref,
                 },
             )
         )
