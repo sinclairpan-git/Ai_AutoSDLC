@@ -478,17 +478,12 @@ def test_run_managed_delivery_apply_configures_yarn_registry_without_add_flag(
     view = _build_view(action)
     receipt = _build_receipt(selected_action_ids=["a1"])
     recorded_commands: list[list[str]] = []
+    recorded_env: list[dict[str, str] | None] = []
 
     def _side_effect(command, *args, **kwargs):
         command_parts = [str(part) for part in command]
         recorded_commands.append(command_parts)
-        if command_parts[:4] == ["yarn", "config", "set", "npmRegistryServer"]:
-            return subprocess.CompletedProcess(
-                args=command_parts,
-                returncode=0,
-                stdout="",
-                stderr="",
-            )
+        recorded_env.append(kwargs.get("env"))
         return build_dependency_install_subprocess_side_effect()(
             command,
             *args,
@@ -510,18 +505,16 @@ def test_run_managed_delivery_apply_configures_yarn_registry_without_add_flag(
         )
 
     assert result.result_status == "apply_succeeded_pending_browser_gate"
-    assert recorded_commands[0] == [
-        "yarn",
-        "config",
-        "set",
-        "npmRegistryServer",
-        "http://npm.uedc.sangfor.com.cn/",
-    ]
-    assert recorded_commands[1] == ["yarn", "add", "@sxf/er-components"]
-    assert "--registry" not in recorded_commands[1]
+    assert recorded_commands[0] == ["yarn", "add", "@sxf/er-components"]
+    assert "--registry" not in recorded_commands[0]
+    assert recorded_env[0] is not None
     assert (
-        result.ledger_entries[0].after_state["registry_config_command"]
-        == "yarn config set npmRegistryServer http://npm.uedc.sangfor.com.cn/"
+        recorded_env[0]["YARN_NPM_REGISTRY_SERVER"]
+        == "http://npm.uedc.sangfor.com.cn/"
+    )
+    assert (
+        result.ledger_entries[0].after_state["registry_env_var"]
+        == "YARN_NPM_REGISTRY_SERVER"
     )
 
 

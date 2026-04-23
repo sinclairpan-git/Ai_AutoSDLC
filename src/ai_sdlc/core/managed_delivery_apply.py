@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import os
 import subprocess
 from collections import defaultdict, deque
 from pathlib import Path
@@ -866,26 +867,12 @@ def _default_dependency_installer(
     else:
         command = ["pnpm", "add"]
     registry_url = payload.registry_url.strip()
-    registry_config_command: list[str] | None = None
+    install_env: dict[str, str] | None = None
     if registry_url and payload.package_manager in {"npm", "pnpm"}:
         command.extend(["--registry", registry_url])
     elif registry_url and payload.package_manager == "yarn":
-        registry_config_command = [
-            "yarn",
-            "config",
-            "set",
-            "npmRegistryServer",
-            registry_url,
-        ]
+        install_env = {**os.environ, "YARN_NPM_REGISTRY_SERVER": registry_url}
     command.extend(payload.packages)
-    if registry_config_command is not None:
-        subprocess.run(
-            registry_config_command,
-            cwd=working_directory,
-            check=True,
-            capture_output=True,
-            text=True,
-        )
     for attempt in range(1, 4):
         try:
             subprocess.run(
@@ -894,6 +881,7 @@ def _default_dependency_installer(
                 check=True,
                 capture_output=True,
                 text=True,
+                env=install_env,
             )
             break
         except subprocess.CalledProcessError as exc:
@@ -903,8 +891,8 @@ def _default_dependency_installer(
     verification.update(
         {
             "command": " ".join(command),
-            "registry_config_command": (
-                " ".join(registry_config_command) if registry_config_command else ""
+            "registry_env_var": (
+                "YARN_NPM_REGISTRY_SERVER" if install_env is not None else ""
             ),
             "working_directory": str(working_directory),
             "packages": ",".join(payload.packages),

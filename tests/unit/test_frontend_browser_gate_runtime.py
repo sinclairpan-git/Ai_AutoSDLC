@@ -919,6 +919,94 @@ def test_materialize_browser_gate_probe_runtime_auto_materializes_visual_a11y_ev
     )
 
 
+def test_materialize_browser_gate_probe_runtime_rejects_outside_spec_dir_for_auto_visual_a11y_evidence(
+    tmp_path: Path,
+) -> None:
+    outside_dir_name = f"{tmp_path.name}-outside-spec"
+    context = _context().model_copy(update={"spec_dir": f"../{outside_dir_name}"})
+
+    def _runner(*, artifact_root: Path, execution_context, generated_at: str):
+        trace_path = artifact_root / "shared-runtime" / "playwright-trace.zip"
+        screenshot_path = artifact_root / "shared-runtime" / "navigation-screenshot.png"
+        interaction_path = artifact_root / "interaction" / "interaction-snapshot.json"
+        trace_path.parent.mkdir(parents=True, exist_ok=True)
+        interaction_path.parent.mkdir(parents=True, exist_ok=True)
+        trace_path.write_text('{"trace":"ok"}\n', encoding="utf-8")
+        screenshot_path.write_bytes(b"png")
+        interaction_path.write_text('{"interaction":"ok"}\n', encoding="utf-8")
+        return BrowserGateProbeRunnerResult.model_validate(
+            {
+                "runtime_status": "completed",
+                "shared_capture": {
+                    "gate_run_id": execution_context.gate_run_id,
+                    "trace_artifact_ref": str(trace_path.relative_to(tmp_path)),
+                    "navigation_screenshot_ref": str(
+                        screenshot_path.relative_to(tmp_path)
+                    ),
+                    "capture_status": "captured",
+                    "final_url": "http://localhost:4173/",
+                    "anchor_refs": ["page:landing"],
+                    "diagnostic_codes": [],
+                },
+                "interaction_capture": {
+                    "gate_run_id": execution_context.gate_run_id,
+                    "interaction_probe_id": "primary-action",
+                    "artifact_refs": [str(interaction_path.relative_to(tmp_path))],
+                    "capture_status": "captured",
+                    "classification_candidate": "pass",
+                    "blocking_reason_codes": [],
+                    "anchor_refs": ["interaction:primary-action"],
+                },
+                "quality_capture": {
+                    "gate_run_id": execution_context.gate_run_id,
+                    "page_title": "frontend-browser-entry",
+                    "final_url": "http://localhost:4173/",
+                    "screenshot_ref": str(screenshot_path.relative_to(tmp_path)),
+                    "body_text_char_count": 420,
+                    "heading_count": 2,
+                    "landmark_count": 3,
+                    "interactive_count": 4,
+                    "unlabeled_button_count": 0,
+                    "unlabeled_input_count": 0,
+                    "image_missing_alt_count": 0,
+                    "viewport_width": 1280,
+                    "viewport_height": 720,
+                    "document_scroll_width": 1280,
+                    "document_scroll_height": 720,
+                    "horizontal_overflow_count": 0,
+                    "low_contrast_text_count": 0,
+                    "focusable_count": 4,
+                    "focusable_without_visible_focus_count": 0,
+                    "console_error_messages": [],
+                    "page_error_messages": [],
+                },
+                "diagnostic_codes": [],
+                "warnings": [],
+            }
+        )
+
+    _session, _records, receipts, bundle = materialize_browser_gate_probe_runtime(
+        root=tmp_path,
+        context=context,
+        apply_artifact_path=".ai-sdlc/memory/frontend-managed-delivery/latest.yaml",
+        visual_a11y_evidence_artifact=None,
+        generated_at="2026-04-22T16:27:00Z",
+        probe_runner=_runner,
+        execute_probe=True,
+        auto_visual_a11y_provider=True,
+    )
+
+    escaped_evidence_path = (
+        tmp_path.parent / outside_dir_name / "frontend-visual-a11y-evidence.json"
+    )
+    assert not escaped_evidence_path.exists()
+    visual_receipt = next(
+        item for item in receipts if item.check_name == "visual_expectation"
+    )
+    assert visual_receipt.classification_candidate == "evidence_missing"
+    assert bundle.overall_gate_status == "incomplete"
+
+
 def test_materialize_browser_gate_probe_runtime_does_not_overwrite_invalid_explicit_visual_a11y_evidence(
     tmp_path: Path,
 ) -> None:

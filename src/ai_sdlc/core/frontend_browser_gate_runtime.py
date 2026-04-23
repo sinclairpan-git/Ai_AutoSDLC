@@ -539,7 +539,10 @@ def _resolve_visual_a11y_evidence_artifact(
     if quality_capture is None:
         return visual_a11y_evidence_artifact
 
-    spec_dir = root / context.spec_dir
+    try:
+        spec_dir = _resolve_repo_relative_path(root, context.spec_dir)
+    except ValueError:
+        return None
     evidence_path = visual_a11y_evidence_artifact_path(spec_dir)
     existing_artifact = visual_a11y_evidence_artifact
     if existing_artifact is None and evidence_path.is_file():
@@ -564,6 +567,19 @@ def _resolve_visual_a11y_evidence_artifact(
     if write_artifacts:
         write_frontend_visual_a11y_evidence_artifact(spec_dir, auto_artifact)
     return auto_artifact
+
+
+def _resolve_repo_relative_path(root: Path, relative_path: str) -> Path:
+    raw_path = Path(str(relative_path).strip())
+    if raw_path.is_absolute():
+        raise ValueError("path_outside_repo_root")
+    resolved_root = root.resolve()
+    resolved = (resolved_root / raw_path).resolve()
+    try:
+        resolved.relative_to(resolved_root)
+    except ValueError as exc:
+        raise ValueError("path_outside_repo_root") from exc
+    return resolved
 
 
 def _build_auto_visual_a11y_evidence_artifact(
