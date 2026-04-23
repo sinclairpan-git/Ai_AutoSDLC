@@ -1317,9 +1317,10 @@ def _resolve_visual_verdict(
             (receipt for receipt in receipts if receipt.check_name == "visual_regression"),
             None,
         )
+        if visual_regression_receipt is None:
+            return _receipt_verdict(receipts, "visual_expectation")
         if (
             visual_regression_capture.verdict != "recheck"
-            and visual_regression_receipt is not None
             and visual_regression_receipt.classification_candidate
             != visual_regression_capture.verdict
         ):

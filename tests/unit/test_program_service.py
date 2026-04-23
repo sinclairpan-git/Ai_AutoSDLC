@@ -3064,6 +3064,98 @@ def test_build_spec_truth_readiness_does_not_skip_recompute_for_relevant_dirty_s
     build_surface.assert_called_once()
 
 
+def test_build_spec_truth_readiness_does_not_skip_recompute_for_dirty_manifest(
+    tmp_path: Path,
+) -> None:
+    _init_truth_git_repo(tmp_path)
+    (tmp_path / ".ai-sdlc" / "project" / "config").mkdir(parents=True)
+    (tmp_path / ".ai-sdlc" / "project" / "config" / "project-state.yaml").write_text(
+        "status: initialized\nproject_name: demo\nnext_work_item_seq: 1\nversion: '1.0'\n",
+        encoding="utf-8",
+    )
+    (tmp_path / "PRD.md").write_text("# prd\n", encoding="utf-8")
+    spec_dir = tmp_path / "specs" / "082-frontend-example"
+    spec_dir.mkdir(parents=True)
+    (spec_dir / "spec.md").write_text(
+        "# Spec\n\n---\nfrontend_evidence_class: \"framework_capability\"\n---\n",
+        encoding="utf-8",
+    )
+    (spec_dir / "plan.md").write_text("# Plan\n", encoding="utf-8")
+    (spec_dir / "tasks.md").write_text("- [x] done\n", encoding="utf-8")
+    (spec_dir / "task-execution-log.md").write_text(
+        "# Log\n\n统一验证命令\n代码审查\n任务/计划同步状态\n",
+        encoding="utf-8",
+    )
+    _write_truth_ledger_manifest(tmp_path)
+    payload = yaml.safe_load((tmp_path / "program-manifest.yaml").read_text(encoding="utf-8"))
+    payload["capability_closure_audit"] = {
+        "reviewed_at": "2026-04-18T08:00:00Z",
+        "open_clusters": [],
+    }
+    (tmp_path / "program-manifest.yaml").write_text(
+        yaml.safe_dump(payload, sort_keys=False, allow_unicode=True),
+        encoding="utf-8",
+    )
+    _commit_truth_repo(tmp_path, "seed truth snapshot dirty manifest fixture")
+
+    svc = ProgramService(tmp_path)
+    manifest = svc.load_manifest()
+    with (
+        patch.object(
+            ProgramService,
+            "_run_close_check_ref",
+            return_value={"ok": True, "blockers": [], "checks": [], "error": None},
+        ),
+        patch.object(
+            ProgramService,
+            "_run_verify_ref",
+            return_value={
+                "ok": True,
+                "command": "uv run ai-sdlc verify constraints",
+                "blockers": [],
+                "warnings": [],
+            },
+        ),
+    ):
+        snapshot = svc.build_truth_snapshot(manifest)
+        svc.write_truth_snapshot(snapshot)
+        manifest = svc.load_manifest()
+
+    payload = yaml.safe_load((tmp_path / "program-manifest.yaml").read_text(encoding="utf-8"))
+    payload["capability_closure_audit"]["reviewed_at"] = "2026-04-18T09:00:00Z"
+    (tmp_path / "program-manifest.yaml").write_text(
+        yaml.safe_dump(payload, sort_keys=False, allow_unicode=True),
+        encoding="utf-8",
+    )
+    expected_surface = {
+        "snapshot_state": "fresh",
+        "state": "ready",
+        "detail": "truth snapshot is fresh and release targets are ready",
+        "release_capabilities": [
+            {
+                "capability_id": "frontend-mainline-delivery",
+                "audit_state": "ready",
+            }
+        ],
+        "migration_pending_specs": [],
+        "migration_pending_sources": [],
+        "validation_errors": [],
+    }
+    with patch.object(
+        ProgramService,
+        "build_truth_ledger_surface",
+        return_value=expected_surface,
+    ) as build_surface:
+        readiness = svc.build_spec_truth_readiness(
+            manifest,
+            spec_path=spec_dir,
+        )
+
+    assert readiness is not None
+    assert readiness.ready is True
+    build_surface.assert_called_once()
+
+
 def test_build_frontend_delivery_status_surface_fails_closed_on_stale_apply_artifact(
     initialized_project_dir: Path,
 ) -> None:

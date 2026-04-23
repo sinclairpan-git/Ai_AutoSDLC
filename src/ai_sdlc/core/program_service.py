@@ -4150,9 +4150,13 @@ class ProgramService:
                 prefix_paths.add(ref_rel.rstrip("/") + "/")
 
         relevant: list[str] = []
+        manifest_rel = _relative_to_root_or_str(self.root, self.manifest_path).strip()
         for path in dirty_paths:
             normalized = path.strip()
-            if not normalized or normalized == "program-manifest.yaml":
+            if not normalized:
+                continue
+            if manifest_rel and normalized == manifest_rel:
+                relevant.append(normalized)
                 continue
             if normalized in exact_paths or any(
                 normalized.startswith(prefix) for prefix in prefix_paths
