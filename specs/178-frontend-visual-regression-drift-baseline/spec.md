@@ -3,9 +3,9 @@
 **功能编号**：`178-frontend-visual-regression-drift-baseline`  
 **状态**：草案（待评审）  
 **创建日期**：2026-04-23  
-**输入**：[`../../docs/superpowers/specs/2026-04-23-frontend-visual-regression-drift-design.md`](../../docs/superpowers/specs/2026-04-23-frontend-visual-regression-drift-design.md)、[`../149-frontend-p2-quality-platform-baseline/spec.md`](../149-frontend-p2-quality-platform-baseline/spec.md)、[`../171-frontend-browser-gate-delivery-context-binding-baseline/spec.md`](../171-frontend-browser-gate-delivery-context-binding-baseline/spec.md)、[`../172-frontend-browser-gate-runner-delivery-context-propagation-baseline/spec.md`](../172-frontend-browser-gate-runner-delivery-context-propagation-baseline/spec.md)、[`../../governance/frontend/quality-platform/evidence-platform.yaml`](../../governance/frontend/quality-platform/evidence-platform.yaml)、[`../../src/ai_sdlc/core/frontend_browser_gate_runtime.py`](../../src/ai_sdlc/core/frontend_browser_gate_runtime.py)、[`../../src/ai_sdlc/models/frontend_browser_gate.py`](../../src/ai_sdlc/models/frontend_browser_gate.py)
+**输入**：[`../149-frontend-p2-quality-platform-baseline/spec.md`](../149-frontend-p2-quality-platform-baseline/spec.md)、[`../171-frontend-browser-gate-delivery-context-binding-baseline/spec.md`](../171-frontend-browser-gate-delivery-context-binding-baseline/spec.md)、[`../172-frontend-browser-gate-runner-delivery-context-propagation-baseline/spec.md`](../172-frontend-browser-gate-runner-delivery-context-propagation-baseline/spec.md)、[`../../governance/frontend/quality-platform/evidence-platform.yaml`](../../governance/frontend/quality-platform/evidence-platform.yaml)、[`../../src/ai_sdlc/core/frontend_browser_gate_runtime.py`](../../src/ai_sdlc/core/frontend_browser_gate_runtime.py)、[`../../src/ai_sdlc/models/frontend_browser_gate.py`](../../src/ai_sdlc/models/frontend_browser_gate.py)
 
-> 口径：`178` 不是在重写 browser gate 的启发式 a11y/visual foundation，也不是在另起一套视觉平台。它只把当前 browser gate 已经采集到的 screenshot 变成 contract-backed 的 visual regression drift 证据，并把这条证据接回现有 quality-platform contract plane 与 `visual_verdict` 交接面。
+> 口径：`178` 不是在重写 browser gate 的启发式 a11y/visual foundation，也不是在另起一套视觉平台。它只把当前 browser gate 已经采集到的 screenshot 变成 contract-backed 的 visual regression drift 证据，并把这条证据接回现有 quality-platform contract plane 与 `visual_verdict` 交接面。任何依赖补齐都必须是独立、可审计的 bootstrap 前置步骤，不能伪装成 verdict-producing runtime 的隐式副作用。
 
 ## 问题定义
 
@@ -45,7 +45,8 @@
 - baseline 是 reference asset，不是运行时 evidence
 - baseline 以 `matrix_id` 为主键，不以 `delivery_entry_id` 为主键
 - `diff_ratio` 只是一项全局指标，必须配合 critical region / ignore region 语义使用，不能单独代表 human-perceived quality
-- 缺少 diff 依赖时必须自动补齐 `managed/frontend` workspace 的依赖；如果 bootstrap 失败，结果必须诚实落入 `transient_run_failure`
+- 缺少 diff 依赖时必须先执行 `managed/frontend` workspace 的独立 bootstrap；bootstrap 成功后才允许进入 comparison runtime，失败时只能诚实落入 `transient_run_failure`
+- canonical diff comparator 固定为 `pixelmatch` + `pngjs` 的 PNG compare 组合，原因是它是纯 JavaScript、确定性强、无 native build 依赖，并且可以稳定产出 diff image
 - `visual_expectation` 作为既有 heuristic lane 继续存在，但不能在 `visual_regression` 生效后继续充当最终视觉回归真值
 
 ## 关键实体
@@ -89,10 +90,15 @@ baseline 参考资产建议按下面的路径 materialize：
 - `governance/frontend/quality-platform/evidence/visual-regression/baselines/<matrix_id>/baseline.png`
 - `governance/frontend/quality-platform/evidence/visual-regression/baselines/<matrix_id>/baseline.yaml`
 
+bootstrap 的审计 receipt 建议按下面的路径 materialize，但它不是主 contract 的替代品：
+
+- `governance/frontend/quality-platform/evidence/visual-regression/bootstrap/<matrix_id>/<bootstrap_run_id>.yaml`
+
 运行时 evidence 的最小 payload 应包含：
 
 - `matrix_id`
 - `gate_run_id`
+- `bootstrap_ref`
 - `screenshot_ref`
 - `baseline_ref`
 - `diff_image_ref`
@@ -107,7 +113,9 @@ baseline 参考资产建议按下面的路径 materialize：
 
 - 运行时 evidence 必须有 `artifact:` 语义的可回读引用
 - `.ai-sdlc/artifacts/...` 只能保留为临时调试输出，不得成为 canonical contract location
+- `bootstrap_ref` 必须指向 bootstrap receipt 的 `artifact:` 引用，而不是裸字符串路径
 - `diff_ratio` 必须和 region-level summaries 一起消费，不能单独决定最终 verdict
+- comparator family 在同一 matrix 里必须保持稳定，不得因为运行环境差异切换成不同 diff 引擎
 
 ### 3. Browser Gate Visual Verdict
 
@@ -115,21 +123,34 @@ baseline 参考资产建议按下面的路径 materialize：
 
 规则：
 
-- 当 `visual-regression` evidence 可用时，`visual_verdict` 以其结果为主
-- 当 baseline 缺失、diff 依赖 bootstrap 失败或当前 screenshot 缺失时，`visual_verdict` 不得伪装成 pass
-- `visual_expectation` 仍可作为 legacy heuristic receipt 存在，但不能在 visual regression lane 生效后继续代表最终视觉回归真值
+- 当 matrix 已有 blessed baseline profile 时，`visual-regression` evidence 是 `visual_verdict` 的唯一主真值
+- 当 baseline 缺失、profile mis-keyed、diff 依赖 bootstrap 失败或当前 screenshot 缺失时，`visual_verdict` 不得伪装成 pass，必须显式落到 `evidence_missing` / `recheck` / `transient_run_failure` 之一
+- `visual_expectation` 仍可作为 legacy heuristic receipt 存在，但只能在“该 matrix 还没有 blessed visual regression baseline”时作为辅助信号；它不能把缺 baseline 的 visual regression lane 伪装成 pass
+- 只要 `visual-regression` lane 对某个 matrix 已启用，legacy heuristic pass 就不能覆盖或抵消 visual-regression 的 blocker / missing verdict
 
 ### 4. Managed Frontend Bootstrap
 
-缺少视觉回归 diff 依赖时，browser gate orchestration 必须自动触发 managed frontend bootstrap。
+缺少视觉回归 diff 依赖时，browser gate orchestration 必须先触发 managed frontend bootstrap，再进入 comparison runtime。
 
 规则：
 
 - bootstrap 目标是 `managed/frontend`
 - bootstrap 需要使用该 workspace 的 lockfile 解析
-- bootstrap 成功后继续 probe execution
+- bootstrap 必须先写出可审计 receipt，再允许 probe execution 继续
+- bootstrap 成功后继续 comparison / probe execution
 - bootstrap 失败时，probe 必须诚实落为 `transient_run_failure`
 - bootstrap 过程必须可审计，不得在 verdict-producing runtime 中隐式改写 workspace 状态而不留证据
+
+bootstrap receipt 的最小 payload 应包含：
+
+- `matrix_id`
+- `bootstrap_run_id`
+- `managed_frontend_target`
+- `package_manager`
+- `lockfile_ref`
+- `resolved_package_refs`
+- `status`
+- `failure_reason`
 
 ## Runtime Truth Order
 
@@ -138,16 +159,18 @@ baseline 参考资产建议按下面的路径 materialize：
    - 当前 pipeline 需要 visual regression verdict
 2. **Dependency bootstrap**
    - 检查 managed frontend diff comparator 依赖是否已可解析
-   - 若不可解析，自动执行 workspace bootstrap
-   - 失败则返回 `transient_run_failure`
+   - 若不可解析，先 materialize bootstrap receipt，再执行 workspace bootstrap
+   - bootstrap 成功后才允许进入 comparison runtime
+   - bootstrap 失败则返回 `transient_run_failure`
 3. **Profile resolution**
    - 通过 quality platform 的 `matrix_id` 解析 browser / viewport / style pack
    - 读取对应 baseline profile
 4. **Capture protocol freeze**
    - 固定 viewport/device profile
    - 冻结动画与过渡
-   - 等待字体和首屏内容稳定
+   - 等待字体 ready、页面达到稳定布局、首屏内容可比较
    - 应用 dynamic-region masks / ignore regions
+   - 保证当前 capture 与 blessed baseline 使用同一 capture protocol ref
 5. **Screenshot comparison**
    - 生成当前 gate run screenshot
    - 使用 diff comparator 计算 `diff_ratio`
@@ -202,6 +225,7 @@ baseline 参考资产建议按下面的路径 materialize：
 4. **Given** baseline 缺失或 mis-keyed，**When** 比较完成，**Then** 必须返回 `evidence_missing`，而不是伪装成 blocker 或 pass。
 5. **Given** 当前 screenshot 在关键 region 上产生稳定回归，**When** 比较完成，**Then** 必须返回 `actual_quality_blocker`，并携带 `diff_image_ref`、`diff_ratio` 与 region summaries。
 6. **Given** `visual_expectation` 仍然产生 legacy heuristic 结论，**When** `visual-regression` 已可用，**Then** bundle 的 `visual_verdict` 仍必须以 visual regression 结果为主，不能被 heuristic pass 误导。
+7. **Given** managed frontend 缺少 diff comparator 依赖，**When** bootstrap 成功，**Then** 必须留下 bootstrap receipt，且 comparison runtime 才能继续。
 
 ## 影响文件
 
@@ -233,8 +257,8 @@ baseline 参考资产建议按下面的路径 materialize：
 
 ---
 related_doc:
-  - "docs/superpowers/specs/2026-04-23-frontend-visual-regression-drift-design.md"
   - "specs/149-frontend-p2-quality-platform-baseline/spec.md"
   - "specs/171-frontend-browser-gate-delivery-context-binding-baseline/spec.md"
   - "specs/172-frontend-browser-gate-runner-delivery-context-propagation-baseline/spec.md"
 frontend_evidence_class: "framework_capability"
+---
