@@ -73,7 +73,7 @@ function visualRegressionBootstrapPayload(payload, matrixId, status, failureReas
     matrix_id: matrixId,
     managed_frontend_target: String(payload.managed_frontend_target || "").trim(),
     package_manager: activePackageManager(payload),
-    dependency_refs: ["pixelmatch", "pngjs"],
+    dependency_refs: ["pixelmatch", "pngjs", "yaml"],
     lockfile_ref: activeLockfileRef(payload),
     status,
     failure_reason: failureReason,
@@ -246,7 +246,33 @@ function parseBaselineYamlScalar(value) {
   return trimmed;
 }
 
-function parseBaselineMetadata(raw) {
+async function loadOptionalYamlParser(payload) {
+  try {
+    return await loadRuntimeModule(payload, "yaml");
+  } catch {
+    return null;
+  }
+}
+
+function parseYamlModuleMetadata(yamlModule, raw) {
+  let parsed;
+  if (typeof yamlModule.parse === "function") {
+    parsed = yamlModule.parse(raw);
+  } else if (typeof yamlModule.load === "function") {
+    parsed = yamlModule.load(raw);
+  } else if (typeof yamlModule.parseDocument === "function") {
+    const document = yamlModule.parseDocument(raw);
+    parsed = typeof document.toJSON === "function" ? document.toJSON() : document;
+  } else {
+    throw new Error("yaml_parser_unavailable");
+  }
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+    throw new Error("invalid_yaml_mapping");
+  }
+  return parsed;
+}
+
+async function parseBaselineMetadata(payload, raw) {
   const trimmed = raw.trim();
   if (!trimmed) {
     return {};
@@ -257,11 +283,19 @@ function parseBaselineMetadata(raw) {
     // JSON is a YAML subset, but committed metadata may be plain YAML.
   }
 
+  const yamlModule = await loadOptionalYamlParser(payload);
+  if (yamlModule) {
+    return parseYamlModuleMetadata(yamlModule, raw);
+  }
+
   const metadata = {};
   let topLevelKeyCount = 0;
   for (const rawLine of raw.split(/\r?\n/)) {
     const line = rawLine.replace(/\s+#.*$/, "").trimEnd();
     if (!line.trim() || line.trimStart().startsWith("#")) {
+      continue;
+    }
+    if (line.trim() === "---" || line.trim() === "...") {
       continue;
     }
     if (/^\s/.test(rawLine)) {
@@ -919,7 +953,8 @@ async function compareVisualRegression({
 
   let baselineMetadata;
   try {
-    baselineMetadata = parseBaselineMetadata(
+    baselineMetadata = await parseBaselineMetadata(
+      payload,
       await readFile(matrixPaths.baselineMetadataPath, "utf8"),
     );
   } catch (error) {

@@ -218,6 +218,7 @@ PROGRAM_FRONTEND_VISUAL_REGRESSION_RUNTIME_PACKAGES = (
     "playwright",
     "pixelmatch",
     "pngjs",
+    "yaml",
 )
 PROGRAM_HOST_INGRESS_CAPABILITY_ID = "agent-adapter-verified-host-ingress"
 PROGRAM_HOST_INGRESS_CANONICAL_BLOCKER_PREFIX = "adapter_canonical_consumption"

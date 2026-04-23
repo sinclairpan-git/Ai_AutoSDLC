@@ -2052,6 +2052,25 @@ module.exports = { PNG };
         "module.exports = function pixelmatch() { return 0; };\n",
         encoding="utf-8",
     )
+    fake_yaml_dir = tmp_path / "node_modules" / "yaml"
+    fake_yaml_dir.mkdir()
+    (fake_yaml_dir / "index.js").write_text(
+        """
+module.exports = {
+  parse(raw) {
+    if (!raw.includes('"threshold"')) {
+      throw new Error("expected_yaml_parser_input");
+    }
+    return {
+      matrix_id: "yaml-matrix",
+      threshold: 0.42,
+      critical_regions: [{ region_id: "overall" }],
+    };
+  },
+};
+""".strip(),
+        encoding="utf-8",
+    )
     baseline_root = (
         tmp_path
         / "governance"
@@ -2066,8 +2085,9 @@ module.exports = { PNG };
     (baseline_root / "baseline.png").write_text("baseline", encoding="utf-8")
     (baseline_root / "baseline.yaml").write_text(
         """
+---
 matrix_id: yaml-matrix
-threshold: 0.42
+"threshold": 0.42
 critical_regions:
   - region_id: overall
 """.strip(),

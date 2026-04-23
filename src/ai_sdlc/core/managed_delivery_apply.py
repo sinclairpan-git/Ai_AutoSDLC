@@ -872,7 +872,11 @@ def _default_dependency_installer(
     if registry_url and payload.package_manager in {"npm", "pnpm"}:
         command.extend(["--registry", registry_url])
     elif registry_url and payload.package_manager == "yarn":
-        install_env = {**os.environ, "npm_config_registry": registry_url}
+        install_env = {
+            **os.environ,
+            "npm_config_registry": registry_url,
+            "YARN_NPM_REGISTRY_SERVER": registry_url,
+        }
     command.extend(payload.packages)
     for attempt in range(1, 4):
         try:
@@ -892,7 +896,11 @@ def _default_dependency_installer(
     verification.update(
         {
             "command": " ".join(command),
-            "registry_env_var": ("npm_config_registry" if install_env is not None else ""),
+            "registry_env_var": (
+                "npm_config_registry,YARN_NPM_REGISTRY_SERVER"
+                if install_env is not None
+                else ""
+            ),
             "working_directory": str(working_directory),
             "packages": ",".join(payload.packages),
         }

@@ -509,7 +509,10 @@ def test_run_managed_delivery_apply_configures_yarn_registry_without_add_flag(
     assert "--registry" not in recorded_commands[0]
     assert recorded_env[0] is not None
     assert recorded_env[0]["npm_config_registry"] == "http://npm.uedc.sangfor.com.cn/"
-    assert result.ledger_entries[0].after_state["registry_env_var"] == "npm_config_registry"
+    assert recorded_env[0]["YARN_NPM_REGISTRY_SERVER"] == "http://npm.uedc.sangfor.com.cn/"
+    assert result.ledger_entries[0].after_state["registry_env_var"] == (
+        "npm_config_registry,YARN_NPM_REGISTRY_SERVER"
+    )
 
 
 def test_run_managed_delivery_apply_retries_transient_registry_failures(

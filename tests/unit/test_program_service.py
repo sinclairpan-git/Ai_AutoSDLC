@@ -4583,6 +4583,7 @@ def test_build_frontend_managed_delivery_apply_request_materializes_public_bundl
         "playwright",
         "pixelmatch",
         "pngjs",
+        "yaml",
     ]
     workspace_action = next(
         action
@@ -4935,6 +4936,7 @@ def test_build_frontend_managed_delivery_apply_request_splits_enterprise_and_pub
         "playwright",
         "pixelmatch",
         "pngjs",
+        "yaml",
     ]
 
 
@@ -5078,6 +5080,7 @@ def test_build_frontend_managed_delivery_apply_request_uses_builtin_provider_tru
         "playwright",
         "pixelmatch",
         "pngjs",
+        "yaml",
     ]
 
 
