@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import subprocess
 from pathlib import Path
 from unittest.mock import patch
 
@@ -229,6 +230,7 @@ def test_frontend_managed_delivery_models_deduplicate_set_like_lists() -> None:
     install_payload = DependencyInstallExecutionPayload(
         install_strategy_id="public-primevue-default",
         package_manager="pnpm",
+        registry_url="https://registry.npmjs.org",
         packages=["primevue", "primevue", "@primeuix/themes"],
     )
     remediation_payload = RuntimeRemediationExecutionPayload(
@@ -258,6 +260,7 @@ def test_frontend_managed_delivery_models_deduplicate_set_like_lists() -> None:
         executor_payload={
             "install_strategy_id": "public-primevue-default",
             "package_manager": "pnpm",
+            "registry_url": "https://registry.npmjs.org",
             "working_directory": ".",
             "packages": ["primevue", "@primeuix/themes"],
         },
@@ -324,6 +327,7 @@ def test_frontend_managed_delivery_models_deduplicate_set_like_lists() -> None:
     )
 
     assert install_payload.packages == ["primevue", "@primeuix/themes"]
+    assert install_payload.registry_url == "https://registry.npmjs.org"
     assert remediation_payload.required_runtime_entries == ["node_runtime"]
     assert remediation_payload.will_download == ["node_runtime"]
     assert remediation_payload.will_install == ["node_runtime"]
@@ -349,13 +353,14 @@ def test_frontend_managed_delivery_models_deduplicate_set_like_lists() -> None:
 def test_run_managed_delivery_apply_executes_dependency_install_with_plan_payload(
     tmp_path: Path,
 ) -> None:
-    recorded: list[tuple[str, str, list[str]]] = []
+    recorded: list[tuple[str, str, str, list[str]]] = []
     action = _build_action(
         action_id="a1",
         action_type="dependency_install",
         executor_payload={
             "install_strategy_id": "public-primevue-default",
             "package_manager": "pnpm",
+            "registry_url": "https://registry.npmjs.org",
             "working_directory": ".",
             "packages": ["primevue", "@primeuix/themes"],
         },
@@ -364,7 +369,14 @@ def test_run_managed_delivery_apply_executes_dependency_install_with_plan_payloa
     receipt = _build_receipt(selected_action_ids=["a1"])
 
     def _installer(payload, working_directory: Path) -> dict[str, str]:
-        recorded.append((payload.package_manager, str(working_directory), payload.packages))
+        recorded.append(
+            (
+                payload.package_manager,
+                payload.registry_url,
+                str(working_directory),
+                payload.packages,
+            )
+        )
         return {
             "command": "pnpm add primevue @primeuix/themes",
             "working_directory": str(working_directory),
@@ -383,8 +395,116 @@ def test_run_managed_delivery_apply_executes_dependency_install_with_plan_payloa
 
     assert result.result_status == "apply_succeeded_pending_browser_gate"
     assert result.executed_action_ids == ["a1"]
-    assert recorded == [("pnpm", str((tmp_path / "managed/frontend").resolve()), ["primevue", "@primeuix/themes"])]
+    assert recorded == [
+        (
+            "pnpm",
+            "https://registry.npmjs.org",
+            str((tmp_path / "managed/frontend").resolve()),
+            ["primevue", "@primeuix/themes"],
+        )
+    ]
     assert result.ledger_entries[0].after_state["command"] == "pnpm add primevue @primeuix/themes"
+
+
+def test_run_managed_delivery_apply_passes_registry_url_to_default_dependency_installer(
+    tmp_path: Path,
+) -> None:
+    action = _build_action(
+        action_id="a1",
+        action_type="dependency_install",
+        executor_payload={
+            "install_strategy_id": "enterprise-vue2-company-registry",
+            "package_manager": "npm",
+            "registry_url": "http://npm.uedc.sangfor.com.cn/",
+            "working_directory": ".",
+            "packages": ["@sxf/er-components"],
+        },
+    )
+    view = _build_view(action)
+    receipt = _build_receipt(selected_action_ids=["a1"])
+    recorded_commands: list[list[str]] = []
+
+    def _side_effect(command, *args, **kwargs):
+        command_parts = [str(part) for part in command]
+        recorded_commands.append(command_parts)
+        return build_dependency_install_subprocess_side_effect()(
+            command,
+            *args,
+            **kwargs,
+        )
+
+    with patch(
+        "ai_sdlc.core.managed_delivery_apply.subprocess.run",
+        side_effect=_side_effect,
+    ):
+        result = run_managed_delivery_apply(
+            view,
+            receipt,
+            ManagedDeliveryExecutorContext(
+                host_ingress_allowed=True,
+                execute_actions=True,
+                repo_root=tmp_path,
+            ),
+        )
+
+    assert result.result_status == "apply_succeeded_pending_browser_gate"
+    assert recorded_commands[0] == [
+        "npm",
+        "install",
+        "--registry",
+        "http://npm.uedc.sangfor.com.cn/",
+        "@sxf/er-components",
+    ]
+
+
+def test_run_managed_delivery_apply_retries_transient_registry_failures(
+    tmp_path: Path,
+) -> None:
+    action = _build_action(
+        action_id="a1",
+        action_type="dependency_install",
+        executor_payload={
+            "install_strategy_id": "enterprise-vue2-company-registry",
+            "package_manager": "npm",
+            "registry_url": "http://npm.uedc.sangfor.com.cn/",
+            "working_directory": ".",
+            "packages": ["@sxf/er-components"],
+        },
+    )
+    view = _build_view(action)
+    receipt = _build_receipt(selected_action_ids=["a1"])
+    attempts = {"count": 0}
+
+    def _side_effect(command, *args, **kwargs):
+        attempts["count"] += 1
+        if attempts["count"] == 1:
+            raise subprocess.CalledProcessError(
+                returncode=1,
+                cmd=command,
+                stderr="npm ERR! code E503\nnpm ERR! 503 Service Unavailable - GET http://npm.uedc.sangfor.com.cn/graphql",
+            )
+        return build_dependency_install_subprocess_side_effect()(
+            command,
+            *args,
+            **kwargs,
+        )
+
+    with patch(
+        "ai_sdlc.core.managed_delivery_apply.subprocess.run",
+        side_effect=_side_effect,
+    ):
+        result = run_managed_delivery_apply(
+            view,
+            receipt,
+            ManagedDeliveryExecutorContext(
+                host_ingress_allowed=True,
+                execute_actions=True,
+                repo_root=tmp_path,
+            ),
+        )
+
+    assert attempts["count"] == 3
+    assert result.result_status == "apply_succeeded_pending_browser_gate"
 
 
 def test_run_managed_delivery_apply_verifies_dependency_install_footprint(

@@ -1375,9 +1375,9 @@ def test_program_delivery_registry_handoff_surfaces_enterprise_bundle_truth(
     assert "state: ready" in result.output
     assert "entry: vue2-enterprise-vue2" in result.output
     assert "provider: enterprise-vue2" in result.output
-    assert "install strategy: enterprise-vue2-private-registry" in result.output
-    assert "@company/enterprise-vue2-ui" in result.output
-    assert "availability prerequisite: company-registry-token" in result.output
+    assert "install strategy: enterprise-vue2-company-registry" in result.output
+    assert "@sxf/er-components" in result.output
+    assert "availability prerequisite: company-registry-network" in result.output
 
 
 def test_program_generation_constraints_handoff_blocks_without_solution_snapshot(
@@ -1482,7 +1482,7 @@ def test_program_theme_token_governance_handoff_surfaces_requested_effective_the
     assert "runtime adapter carrier: -" in result.output
     assert "runtime adapter delivery: -" in result.output
     assert "runtime adapter evidence: -" in result.output
-    assert "component package: @company/enterprise-vue2-ui" in result.output
+    assert "component package: @sxf/er-components" in result.output
     assert "requested style pack: enterprise-default" in result.output
     assert "effective style pack: enterprise-default" in result.output
     assert "dashboard-workspace" in result.output
@@ -2270,12 +2270,12 @@ class TestCliProgram:
             availability_summary={
                 "overall_status": "attention",
                 "passed_check_ids": ["company-registry-network"],
-                "failed_check_ids": ["company-registry-token"],
+                "failed_check_ids": [],
                 "blocking_reason_codes": [],
             },
-            availability_reason_text="Registry token missing.",
+            availability_reason_text="Company registry network not ready.",
             preflight_status="warning",
-            preflight_reason_codes=["company-registry-token"],
+            preflight_reason_codes=["company-registry-network"],
             style_fidelity_status="full",
         )
         _write_builtin_delivery_truth(root, snapshot=snapshot)
@@ -2295,9 +2295,9 @@ class TestCliProgram:
             result = runner.invoke(app, ["program", "managed-delivery-apply", "--dry-run"])
 
         assert result.exit_code == 1
-        assert "private_registry_prerequisite_missing:company-registry-token" in result.output
+        assert "private_registry_prerequisite_missing:company-registry-network" in result.output
         assert "Enterprise package access is not ready" in result.output
-        assert "provide company-registry-token and rerun" in result.output
+        assert "connect company network and rerun" in result.output
 
     def test_program_managed_delivery_apply_execute_truth_derived_requires_ack_for_effective_change(
         self, initialized_project_dir: Path
@@ -2321,7 +2321,7 @@ class TestCliProgram:
             availability_summary={
                 "overall_status": "attention",
                 "passed_check_ids": [],
-                "failed_check_ids": ["company-registry-token"],
+                "failed_check_ids": ["company-registry-network"],
                 "blocking_reason_codes": [],
             },
             availability_reason_text="Enterprise provider prerequisites are not satisfied.",
@@ -2371,7 +2371,7 @@ class TestCliProgram:
             availability_summary={
                 "overall_status": "attention",
                 "passed_check_ids": [],
-                "failed_check_ids": ["company-registry-token"],
+                "failed_check_ids": ["company-registry-network"],
                 "blocking_reason_codes": [],
             },
             availability_reason_text="Enterprise provider prerequisites are not satisfied.",
@@ -5636,7 +5636,7 @@ specs:
                     "--style-pack-id",
                     "enterprise-default",
                     "--failed-preflight-check-id",
-                    "company-registry-token",
+                    "company-registry-network",
                     "--execute",
                     "--continue",
                     "--yes",
@@ -5662,7 +5662,7 @@ specs:
         assert apply_artifact_path.is_file()
         assert "Managed Delivery Apply Result" in result.output
         assert "status: blocked_before_start" in result.output
-        assert "private_registry_prerequisite_missing:company-registry-token" in result.output
+        assert "private_registry_prerequisite_missing:company-registry-network" in result.output
 
     def test_program_solution_confirm_execute_continue_surfaces_release_capability_guidance(
         self, initialized_project_dir: Path

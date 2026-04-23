@@ -34,11 +34,25 @@ def test_build_builtin_install_strategies_preserves_private_and_public_distribut
     strategies = build_builtin_install_strategies()
 
     assert [strategy.strategy_id for strategy in strategies] == [
-        "enterprise-vue2-private-registry",
+        "enterprise-vue2-company-registry",
         "public-primevue-default",
     ]
     assert strategies[0].access_mode == "private"
     assert strategies[0].private_package_required is True
+    assert strategies[0].registry_url == "http://npm.uedc.sangfor.com.cn/"
+    assert strategies[0].packages == [
+        "@sxf/er-charts",
+        "@sxf/er-components",
+        "@sxf/er-config",
+        "@sxf/er-feature",
+        "@sxf/er-hooks",
+        "@sxf/er-lib",
+        "@sxf/er-pro",
+        "@sxf/er-style",
+        "@sxf/er-utils",
+        "@sxf/er-validator",
+        "@sxf/er-widget",
+    ]
     assert strategies[1].access_mode == "public"
     assert strategies[1].packages == ["primevue", "@primeuix/themes"]
 
@@ -183,6 +197,7 @@ def test_frontend_solution_confirmation_models_deduplicate_set_like_lists() -> N
         provider_id="public-primevue",
         access_mode="public",
         packages=["primevue", "primevue", "@primeuix/themes"],
+        registry_url="https://registry.npmjs.org",
         registry_requirements=["npmjs", "npmjs"],
         credential_requirements=["token", "token"],
     )
@@ -235,6 +250,7 @@ def test_frontend_solution_confirmation_models_deduplicate_set_like_lists() -> N
     assert manifest.recommended_for == ["marketing-sites", "self-serve-saas"]
     assert manifest.not_recommended_for == ["legacy-enterprise-lockstep"]
     assert strategy.packages == ["primevue", "@primeuix/themes"]
+    assert strategy.registry_url == "https://registry.npmjs.org"
     assert strategy.registry_requirements == ["npmjs"]
     assert strategy.credential_requirements == ["token"]
     assert snapshot.recommendation_reason_codes == ["preferred", "available"]

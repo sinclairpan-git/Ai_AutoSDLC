@@ -418,6 +418,7 @@ class ProgramFrontendDeliveryRegistryHandoff:
     effective_style_pack_id: str
     access_mode: str
     package_manager: str
+    registry_url: str = ""
     install_strategy_ids: list[str] = field(default_factory=list)
     availability_prerequisites: list[str] = field(default_factory=list)
     runtime_requirements: list[str] = field(default_factory=list)
@@ -4593,6 +4594,7 @@ class ProgramService:
                 "executor_payload": {
                     "install_strategy_id": bundle["install_strategy_id"],
                     "package_manager": bundle["package_manager"],
+                    "registry_url": bundle.get("registry_url", ""),
                     "working_directory": ".",
                     "packages": [*bundle["component_library_packages"], *bundle["adapter_packages"]],
                 },
@@ -4792,6 +4794,7 @@ class ProgramService:
                 "provider_id": provider_id,
                 "install_strategy_id": "",
                 "package_manager": "pnpm",
+                "registry_url": "",
                 "component_library_packages": [],
                 "adapter_packages": [],
                 "blockers": [f"delivery_provider_manifest_missing:{provider_id}"],
@@ -4828,6 +4831,7 @@ class ProgramService:
                 "provider_id": provider_id,
                 "install_strategy_id": "",
                 "package_manager": "pnpm",
+                "registry_url": "",
                 "component_library_packages": [],
                 "adapter_packages": [],
                 "blockers": blockers,
@@ -4841,6 +4845,7 @@ class ProgramService:
                 "provider_id": provider_id,
                 "install_strategy_id": "",
                 "package_manager": "pnpm",
+                "registry_url": "",
                 "component_library_packages": [],
                 "adapter_packages": [],
                 "blockers": blockers,
@@ -4882,6 +4887,7 @@ class ProgramService:
             "provider_id": provider_id,
             "install_strategy_id": strategy.strategy_id,
             "package_manager": effective_package_manager,
+            "registry_url": strategy.registry_url,
             "component_library_packages": list(strategy.packages),
             "adapter_packages": [],
             "blockers": blockers,
@@ -6304,10 +6310,7 @@ const tableRows = [
         if mode != "simple":
             raise ValueError("only simple mode is supported in Batch 7 baseline")
 
-        availability_checks = [
-            "company-registry-network",
-            "company-registry-token",
-        ]
+        availability_checks = ["company-registry-network"]
         failed_check_ids = list(failed_preflight_check_ids or [])
         passed_check_ids = [
             check_id
@@ -6654,6 +6657,7 @@ const tableRows = [
             effective_style_pack_id=snapshot.effective_style_pack_id,
             access_mode=access_mode,
             package_manager=str(bundle.get("package_manager", "")).strip(),
+            registry_url=str(bundle.get("registry_url", "")).strip(),
             install_strategy_ids=install_strategy_ids,
             availability_prerequisites=availability_prerequisites,
             runtime_requirements=[
@@ -15234,6 +15238,11 @@ def _build_managed_delivery_user_guidance(
     ]
     if private_registry_missing:
         plain_language.append("Enterprise package access is not ready.")
+        if any("network" in requirement for requirement in private_registry_missing):
+            next_steps.append(
+                "connect company network and rerun `ai-sdlc program managed-delivery-apply --dry-run`"
+            )
+            return _unique_strings(plain_language), _unique_strings(next_steps)
         actionable_requirements = [
             requirement
             for requirement in private_registry_missing

@@ -559,11 +559,20 @@ def test_build_frontend_delivery_registry_handoff_surfaces_enterprise_packages_a
 
     assert handoff.state == "ready"
     assert handoff.entry_id == "vue2-enterprise-vue2"
-    assert handoff.component_library_packages == ["@company/enterprise-vue2-ui"]
-    assert handoff.availability_prerequisites == [
-        "company-registry-network",
-        "company-registry-token",
+    assert handoff.component_library_packages == [
+        "@sxf/er-charts",
+        "@sxf/er-components",
+        "@sxf/er-config",
+        "@sxf/er-feature",
+        "@sxf/er-hooks",
+        "@sxf/er-lib",
+        "@sxf/er-pro",
+        "@sxf/er-style",
+        "@sxf/er-utils",
+        "@sxf/er-validator",
+        "@sxf/er-widget",
     ]
+    assert handoff.availability_prerequisites == ["company-registry-network"]
     assert handoff.access_mode == "private"
 
 
@@ -793,7 +802,19 @@ def test_build_frontend_theme_token_governance_handoff_uses_latest_solution_snap
     assert handoff.provider_runtime_adapter_carrier_mode == ""
     assert handoff.provider_runtime_adapter_delivery_state == ""
     assert handoff.provider_runtime_adapter_evidence_state == ""
-    assert handoff.component_library_packages == ["@company/enterprise-vue2-ui"]
+    assert handoff.component_library_packages == [
+        "@sxf/er-charts",
+        "@sxf/er-components",
+        "@sxf/er-config",
+        "@sxf/er-feature",
+        "@sxf/er-hooks",
+        "@sxf/er-lib",
+        "@sxf/er-pro",
+        "@sxf/er-style",
+        "@sxf/er-utils",
+        "@sxf/er-validator",
+        "@sxf/er-widget",
+    ]
     assert handoff.requested_style_pack_id == "enterprise-default"
     assert handoff.effective_style_pack_id == "enterprise-default"
     assert handoff.page_schema_ids == [
@@ -4316,13 +4337,13 @@ def test_build_frontend_managed_delivery_apply_request_blocks_enterprise_private
         effective_frontend_stack="vue2",
         availability_summary={
             "overall_status": "attention",
-            "passed_check_ids": ["company-registry-network"],
-            "failed_check_ids": ["company-registry-token"],
+            "passed_check_ids": [],
+            "failed_check_ids": ["company-registry-network"],
             "blocking_reason_codes": [],
         },
-        availability_reason_text="Registry token missing.",
+        availability_reason_text="Company registry network not ready.",
         preflight_status="warning",
-        preflight_reason_codes=["company-registry-token"],
+        preflight_reason_codes=["company-registry-network"],
         style_fidelity_status="full",
     )
     _write_builtin_delivery_truth(root, snapshot=snapshot)
@@ -4340,7 +4361,10 @@ def test_build_frontend_managed_delivery_apply_request_blocks_enterprise_private
     request = svc.build_frontend_managed_delivery_apply_request()
 
     assert request.apply_state == "blocked_before_start"
-    assert "private_registry_prerequisite_missing:company-registry-token" in request.remaining_blockers
+    assert (
+        "private_registry_prerequisite_missing:company-registry-network"
+        in request.remaining_blockers
+    )
 
 
 def test_build_frontend_managed_delivery_apply_request_requires_second_confirmation_for_effective_change(
@@ -4366,7 +4390,7 @@ def test_build_frontend_managed_delivery_apply_request_requires_second_confirmat
         availability_summary={
             "overall_status": "attention",
             "passed_check_ids": [],
-            "failed_check_ids": ["company-registry-token"],
+            "failed_check_ids": ["company-registry-network"],
             "blocking_reason_codes": [],
         },
         availability_reason_text="Enterprise provider prerequisites are not satisfied.",
@@ -4419,7 +4443,7 @@ def test_build_frontend_managed_delivery_apply_request_truth_derived_defaults_to
         availability_summary={
             "overall_status": "attention",
             "passed_check_ids": [],
-            "failed_check_ids": ["company-registry-token"],
+            "failed_check_ids": ["company-registry-network"],
             "blocking_reason_codes": [],
         },
         availability_reason_text="Enterprise provider prerequisites are not satisfied.",
@@ -14036,7 +14060,7 @@ def test_build_frontend_solution_confirmation_recommends_public_fallback_in_simp
     snapshot = svc.build_frontend_solution_confirmation(
         _manifest(),
         enterprise_provider_eligible=False,
-        failed_preflight_check_ids=["company-registry-token"],
+        failed_preflight_check_ids=["company-registry-network"],
     )
 
     assert snapshot.decision_status == "recommended"
@@ -14051,7 +14075,7 @@ def test_build_frontend_solution_confirmation_recommends_public_fallback_in_simp
     assert snapshot.effective_provider_id == "public-primevue"
     assert snapshot.effective_style_pack_id == "modern-saas"
     assert snapshot.availability_summary.failed_check_ids == [
-        "company-registry-token"
+        "company-registry-network"
     ]
     assert snapshot.style_fidelity_status == "full"
     assert snapshot.provider_mode == "normal"
@@ -14067,7 +14091,7 @@ def test_build_frontend_solution_confirmation_preserves_failed_preflight_checks_
     snapshot = svc.build_frontend_solution_confirmation(
         _manifest(),
         enterprise_provider_eligible=True,
-        failed_preflight_check_ids=["company-registry-token"],
+        failed_preflight_check_ids=["company-registry-network"],
     )
 
     assert snapshot.decision_status == "recommended"
@@ -14076,10 +14100,8 @@ def test_build_frontend_solution_confirmation_preserves_failed_preflight_checks_
     assert snapshot.recommended_provider_id == "enterprise-vue2"
     assert snapshot.effective_provider_id == "enterprise-vue2"
     assert snapshot.availability_summary.overall_status == "attention"
-    assert snapshot.availability_summary.passed_check_ids == ["company-registry-network"]
-    assert snapshot.availability_summary.failed_check_ids == [
-        "company-registry-token"
-    ]
+    assert snapshot.availability_summary.passed_check_ids == []
+    assert snapshot.availability_summary.failed_check_ids == ["company-registry-network"]
     assert snapshot.availability_summary.blocking_reason_codes == []
 
 
@@ -14093,7 +14115,7 @@ def test_build_frontend_solution_confirmation_blocks_when_defaulted_public_fallb
     snapshot = svc.build_frontend_solution_confirmation(
         _manifest(),
         enterprise_provider_eligible=False,
-        failed_preflight_check_ids=["company-registry-token"],
+        failed_preflight_check_ids=["company-registry-network"],
         fallback_candidate_available=False,
     )
 
@@ -14113,7 +14135,7 @@ def test_build_frontend_solution_confirmation_blocks_when_defaulted_public_fallb
     assert snapshot.preflight_reason_codes == ["enterprise_provider_unavailable"]
     assert snapshot.availability_summary.overall_status == "blocked"
     assert snapshot.availability_summary.failed_check_ids == [
-        "company-registry-token"
+        "company-registry-network"
     ]
 
 
@@ -14130,7 +14152,7 @@ def test_build_frontend_solution_confirmation_requires_explicit_cross_stack_fall
         requested_provider_id="enterprise-vue2",
         requested_style_pack_id="enterprise-default",
         enterprise_provider_eligible=False,
-        failed_preflight_check_ids=["company-registry-token"],
+        failed_preflight_check_ids=["company-registry-network"],
     )
 
     assert snapshot.decision_status == "fallback_required"
@@ -14144,7 +14166,7 @@ def test_build_frontend_solution_confirmation_requires_explicit_cross_stack_fall
     assert snapshot.provider_mode == "cross_stack_fallback"
     assert snapshot.fallback_reason_code == "enterprise_provider_unavailable"
     assert snapshot.availability_summary.failed_check_ids == [
-        "company-registry-token"
+        "company-registry-network"
     ]
 
 
@@ -14161,7 +14183,7 @@ def test_build_frontend_solution_confirmation_blocks_when_enterprise_unavailable
         requested_provider_id="enterprise-vue2",
         requested_style_pack_id="enterprise-default",
         enterprise_provider_eligible=False,
-        failed_preflight_check_ids=["company-registry-token"],
+        failed_preflight_check_ids=["company-registry-network"],
         fallback_candidate_available=False,
     )
 
@@ -14188,7 +14210,7 @@ def test_build_frontend_solution_confirmation_requires_fallback_when_enterprise_
         _manifest(),
         requested_provider_id="enterprise-vue2",
         enterprise_provider_eligible=False,
-        failed_preflight_check_ids=["company-registry-token"],
+        failed_preflight_check_ids=["company-registry-network"],
     )
 
     assert snapshot.decision_status == "fallback_required"

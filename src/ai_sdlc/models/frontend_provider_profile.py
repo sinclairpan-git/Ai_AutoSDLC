@@ -443,11 +443,8 @@ def build_mvp_enterprise_vue2_provider_profile() -> EnterpriseVue2ProviderProfil
     return EnterpriseVue2ProviderProfile(
         work_item_id="016",
         provider_id="enterprise-vue2",
-        install_strategy_ids=["enterprise-vue2-private-registry"],
-        availability_prerequisites=[
-            "company-registry-network",
-            "company-registry-token",
-        ],
+        install_strategy_ids=["enterprise-vue2-company-registry"],
+        availability_prerequisites=["company-registry-network"],
         style_support_matrix=[
             ProviderStyleSupportEntry(
                 style_pack_id="enterprise-default",

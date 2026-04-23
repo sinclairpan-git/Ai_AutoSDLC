@@ -51,11 +51,21 @@ def build_dependency_install_subprocess_side_effect(
 def _extract_requested_packages(command_parts: list[str]) -> list[str]:
     if len(command_parts) <= 2:
         return []
-    return [
-        item
-        for item in command_parts[2:]
-        if item.strip() and not item.startswith("-")
-    ]
+    packages: list[str] = []
+    skip_next = False
+    for item in command_parts[2:]:
+        if skip_next:
+            skip_next = False
+            continue
+        if not item.strip():
+            continue
+        if item == "--registry":
+            skip_next = True
+            continue
+        if item.startswith("-"):
+            continue
+        packages.append(item)
+    return packages
 
 
 def _materialize_install_footprint(

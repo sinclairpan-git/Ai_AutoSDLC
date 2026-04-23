@@ -858,22 +858,61 @@ def _default_dependency_installer(
     payload: DependencyInstallExecutionPayload,
     working_directory: Path,
 ) -> dict[str, str]:
+    command: list[str]
     if payload.package_manager == "npm":
-        command = ["npm", "install", *payload.packages]
+        command = ["npm", "install"]
     elif payload.package_manager == "yarn":
-        command = ["yarn", "add", *payload.packages]
+        command = ["yarn", "add"]
     else:
-        command = ["pnpm", "add", *payload.packages]
-    subprocess.run(command, cwd=working_directory, check=True, capture_output=True, text=True)
+        command = ["pnpm", "add"]
+    if payload.registry_url.strip():
+        command.extend(["--registry", payload.registry_url.strip()])
+    command.extend(payload.packages)
+    for attempt in range(1, 4):
+        try:
+            subprocess.run(
+                command,
+                cwd=working_directory,
+                check=True,
+                capture_output=True,
+                text=True,
+            )
+            break
+        except subprocess.CalledProcessError as exc:
+            if attempt >= 3 or not _is_retryable_dependency_install_error(exc):
+                raise
     verification = verify_dependency_installation(payload, working_directory)
     verification.update(
         {
-        "command": " ".join(command),
-        "working_directory": str(working_directory),
-        "packages": ",".join(payload.packages),
+            "command": " ".join(command),
+            "working_directory": str(working_directory),
+            "packages": ",".join(payload.packages),
         }
     )
     return verification
+
+
+def _is_retryable_dependency_install_error(exc: subprocess.CalledProcessError) -> bool:
+    diagnostic = " ".join(
+        part.strip()
+        for part in (
+            str(exc.stderr or ""),
+            str(exc.stdout or ""),
+        )
+        if part and str(part).strip()
+    ).lower()
+    retry_markers = (
+        "503",
+        "service unavailable",
+        "e503",
+        "timed out",
+        "etimedout",
+        "econnreset",
+        "socket hang up",
+        "eai_again",
+        "enotfound",
+    )
+    return any(marker in diagnostic for marker in retry_markers)
 
 
 def _default_artifact_writer(

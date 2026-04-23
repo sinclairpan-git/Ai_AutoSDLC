@@ -487,6 +487,12 @@ def program_delivery_registry_handoff() -> None:
         f"  - package manager: {handoff.package_manager or '-'}",
         markup=False,
     )
+    registry_url = getattr(handoff, "registry_url", "")
+    if registry_url:
+        console.print(
+            f"  - install registry url: {registry_url}",
+            markup=False,
+        )
     console.print(
         f"  - provider manifest ref: {handoff.provider_manifest_ref or '-'}",
         markup=False,

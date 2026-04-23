@@ -34,6 +34,7 @@ class DependencyInstallExecutionPayload(FrontendManagedDeliveryModel):
 
     install_strategy_id: str
     package_manager: Literal["npm", "pnpm", "yarn"]
+    registry_url: str = ""
     working_directory: str = "."
     packages: list[str] = Field(default_factory=list)
 
