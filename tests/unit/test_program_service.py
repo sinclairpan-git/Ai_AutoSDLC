@@ -2954,10 +2954,27 @@ def test_build_spec_truth_readiness_reuses_fresh_persisted_snapshot_for_unrelate
     (tmp_path / "src").mkdir()
     (tmp_path / "src" / "unrelated.py").write_text("VALUE = 1\n", encoding="utf-8")
 
-    with patch.object(
-        ProgramService,
-        "build_truth_ledger_surface",
-        side_effect=AssertionError("slow truth ledger recompute should be skipped"),
+    with (
+        patch.object(
+            ProgramService,
+            "_run_close_check_ref",
+            return_value={"ok": True, "blockers": [], "checks": [], "error": None},
+        ),
+        patch.object(
+            ProgramService,
+            "_run_verify_ref",
+            return_value={
+                "ok": True,
+                "command": "uv run ai-sdlc verify constraints",
+                "blockers": [],
+                "warnings": [],
+            },
+        ),
+        patch.object(
+            ProgramService,
+            "build_truth_ledger_surface",
+            side_effect=AssertionError("slow truth ledger recompute should be skipped"),
+        ),
     ):
         readiness = svc.build_spec_truth_readiness(
             manifest,
@@ -2971,6 +2988,101 @@ def test_build_spec_truth_readiness_reuses_fresh_persisted_snapshot_for_unrelate
         readiness.detail
         == "truth snapshot is fresh and matched release capabilities are ready"
     )
+
+
+def test_build_spec_truth_readiness_recomputes_when_persisted_snapshot_is_stale(
+    tmp_path: Path,
+) -> None:
+    _init_truth_git_repo(tmp_path)
+    (tmp_path / ".ai-sdlc" / "project" / "config").mkdir(parents=True)
+    (tmp_path / ".ai-sdlc" / "project" / "config" / "project-state.yaml").write_text(
+        "status: initialized\nproject_name: demo\nnext_work_item_seq: 1\nversion: '1.0'\n",
+        encoding="utf-8",
+    )
+    (tmp_path / "PRD.md").write_text("# prd\n", encoding="utf-8")
+    spec_dir = tmp_path / "specs" / "082-frontend-example"
+    spec_dir.mkdir(parents=True)
+    (spec_dir / "spec.md").write_text(
+        "# Spec\n\n---\nfrontend_evidence_class: \"framework_capability\"\n---\n",
+        encoding="utf-8",
+    )
+    (spec_dir / "plan.md").write_text("# Plan\n", encoding="utf-8")
+    (spec_dir / "tasks.md").write_text("- [x] done\n", encoding="utf-8")
+    (spec_dir / "task-execution-log.md").write_text(
+        "# Log\n\n统一验证命令\n代码审查\n任务/计划同步状态\n",
+        encoding="utf-8",
+    )
+    _write_truth_ledger_manifest(tmp_path)
+    payload = yaml.safe_load((tmp_path / "program-manifest.yaml").read_text(encoding="utf-8"))
+    payload["capability_closure_audit"] = {
+        "reviewed_at": "2026-04-18T08:00:00Z",
+        "open_clusters": [],
+    }
+    (tmp_path / "program-manifest.yaml").write_text(
+        yaml.safe_dump(payload, sort_keys=False, allow_unicode=True),
+        encoding="utf-8",
+    )
+    _commit_truth_repo(tmp_path, "seed stale truth snapshot fast path fixture")
+
+    svc = ProgramService(tmp_path)
+    manifest = svc.load_manifest()
+    with (
+        patch.object(
+            ProgramService,
+            "_run_close_check_ref",
+            return_value={"ok": True, "blockers": [], "checks": [], "error": None},
+        ),
+        patch.object(
+            ProgramService,
+            "_run_verify_ref",
+            return_value={
+                "ok": True,
+                "command": "uv run ai-sdlc verify constraints",
+                "blockers": [],
+                "warnings": [],
+            },
+        ),
+    ):
+        snapshot = svc.build_truth_snapshot(manifest)
+        svc.write_truth_snapshot(snapshot)
+        manifest = svc.load_manifest()
+
+    current_snapshot = snapshot.model_copy(deep=True)
+    current_snapshot.source_hashes = {
+        **current_snapshot.source_hashes,
+        "specs/082-frontend-example/task-execution-log.md": "changed",
+    }
+    expected_surface = {
+        "snapshot_state": "stale",
+        "state": "stale",
+        "detail": "truth snapshot is stale",
+        "release_capabilities": [],
+        "migration_pending_specs": [],
+        "migration_pending_sources": [],
+        "validation_errors": [],
+    }
+    with (
+        patch.object(
+            ProgramService,
+            "build_truth_snapshot",
+            return_value=current_snapshot,
+        ),
+        patch.object(
+            ProgramService,
+            "build_truth_ledger_surface",
+            return_value=expected_surface,
+        ) as build_surface,
+    ):
+        readiness = svc.build_spec_truth_readiness(
+            manifest,
+            spec_path=spec_dir,
+        )
+
+    assert readiness is not None
+    assert readiness.ready is False
+    assert readiness.state == "stale"
+    assert readiness.summary_token == "truth_snapshot_stale"
+    build_surface.assert_called_once()
 
 
 def test_build_spec_truth_readiness_does_not_skip_recompute_for_relevant_dirty_spec_changes(

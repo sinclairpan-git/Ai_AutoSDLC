@@ -2310,6 +2310,14 @@ class ProgramService:
             matched_capabilities=matched_capabilities,
         ):
             return None
+        current_snapshot = self.build_truth_snapshot(
+            manifest,
+            validation_result=validation_result,
+        )
+        if self._truth_snapshot_stable_payload(
+            snapshot
+        ) != self._truth_snapshot_stable_payload(current_snapshot):
+            return None
 
         capability_map = {
             item.capability_id: item for item in snapshot.computed_capabilities
