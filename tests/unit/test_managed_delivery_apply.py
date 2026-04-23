@@ -661,6 +661,88 @@ def test_verify_dependency_installation_normalizes_package_specs(
     assert sorted(resolved) == ["@primeuix/themes", "primevue", "ui-kit"]
 
 
+def test_verify_dependency_installation_requires_playwright_browser_runtime(
+    tmp_path: Path,
+) -> None:
+    (tmp_path / "node_modules" / "playwright").mkdir(parents=True)
+    (tmp_path / "node_modules" / "playwright" / "package.json").write_text(
+        json.dumps({"name": "playwright", "version": "1.38.0"}) + "\n",
+        encoding="utf-8",
+    )
+    (tmp_path / "package.json").write_text(
+        json.dumps(
+            {
+                "name": "managed-frontend",
+                "private": True,
+                "dependencies": {"playwright": "^1.38.0"},
+            },
+            indent=2,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    (tmp_path / "package-lock.json").write_text("# fixture lockfile\n", encoding="utf-8")
+    payload = DependencyInstallExecutionPayload(
+        install_strategy_id="browser-runtime",
+        package_manager="npm",
+        working_directory=".",
+        packages=["playwright"],
+    )
+
+    with patch(
+        "ai_sdlc.core.managed_delivery_apply.subprocess.run",
+        side_effect=subprocess.CalledProcessError(42, ["node"]),
+    ):
+        try:
+            verify_dependency_installation(payload, tmp_path)
+        except ValueError as exc:
+            assert str(exc) == "dependency_install_playwright_browser_runtime_missing"
+        else:  # pragma: no cover - defensive assertion path
+            raise AssertionError("expected missing Playwright browser runtime blocker")
+
+
+def test_verify_dependency_installation_records_playwright_browser_runtime(
+    tmp_path: Path,
+) -> None:
+    (tmp_path / "node_modules" / "playwright").mkdir(parents=True)
+    (tmp_path / "node_modules" / "playwright" / "package.json").write_text(
+        json.dumps({"name": "playwright", "version": "1.38.0"}) + "\n",
+        encoding="utf-8",
+    )
+    (tmp_path / "package.json").write_text(
+        json.dumps(
+            {
+                "name": "managed-frontend",
+                "private": True,
+                "dependencies": {"playwright": "^1.38.0"},
+            },
+            indent=2,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    (tmp_path / "package-lock.json").write_text("# fixture lockfile\n", encoding="utf-8")
+    payload = DependencyInstallExecutionPayload(
+        install_strategy_id="browser-runtime",
+        package_manager="npm",
+        working_directory=".",
+        packages=["playwright"],
+    )
+
+    with patch(
+        "ai_sdlc.core.managed_delivery_apply.subprocess.run",
+        return_value=subprocess.CompletedProcess(
+            args=["node"],
+            returncode=0,
+            stdout="/ms-playwright/chromium/chrome",
+            stderr="",
+        ),
+    ):
+        result = verify_dependency_installation(payload, tmp_path)
+
+    assert result["playwright_browser_runtime"] == "/ms-playwright/chromium/chrome"
+
+
 def test_run_managed_delivery_apply_fails_when_dependency_lockfile_verification_is_missing(
     tmp_path: Path,
 ) -> None:

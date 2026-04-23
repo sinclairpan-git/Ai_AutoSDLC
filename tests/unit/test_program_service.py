@@ -78,6 +78,7 @@ from ai_sdlc.models.frontend_gate_policy import (
 from ai_sdlc.models.frontend_generation_constraints import (
     build_mvp_frontend_generation_constraints,
 )
+from ai_sdlc.models.frontend_managed_delivery import ConfirmedActionPlanExecutionView
 from ai_sdlc.models.frontend_page_ui_schema import (
     build_p2_frontend_page_ui_schema_baseline,
 )
@@ -3384,6 +3385,59 @@ def test_build_frontend_delivery_status_surface_fails_closed_when_lockfile_is_de
     assert status_surface["apply_state"] == "apply_succeeded_pending_browser_gate"
     assert status_surface["install_state"] == "not_installed"
     assert status_surface["workspace_state"] == "integrated"
+
+
+def test_build_frontend_dependency_install_state_uses_actual_dependency_action_id(
+    initialized_project_dir: Path,
+    monkeypatch,
+) -> None:
+    root = initialized_project_dir
+    save_project_config(root, ProjectConfig(adapter_ingress_state="verified_loaded"))
+    _write_builtin_delivery_truth(root)
+    monkeypatch.setattr(
+        program_service_module,
+        "evaluate_current_host_runtime",
+        lambda project_root: _build_host_runtime_plan_for_tests(
+            node_runtime_available=True,
+            package_manager_available=True,
+            playwright_browsers_available=True,
+        ),
+    )
+    monkeypatch.setattr(
+        program_service_module.shutil,
+        "which",
+        lambda executable: f"/mock/bin/{executable}" if executable == "pnpm" else None,
+    )
+    svc = ProgramService(root)
+    request = svc.build_frontend_managed_delivery_apply_request()
+    with patch(
+        "ai_sdlc.core.managed_delivery_apply.subprocess.run",
+        side_effect=build_dependency_install_subprocess_side_effect(),
+    ):
+        svc.execute_frontend_managed_delivery_apply(
+            request=request,
+            confirmed=True,
+        )
+
+    assert request.execution_view is not None
+    execution_view_payload = request.execution_view.model_dump(mode="json")
+    dependency_action = next(
+        action
+        for action in execution_view_payload["action_items"]
+        if action["action_type"] == "dependency_install"
+    )
+    dependency_action["action_id"] = "custom-dependency-install"
+    execution_view = ConfirmedActionPlanExecutionView.model_validate(
+        execution_view_payload
+    )
+
+    assert (
+        svc._build_frontend_dependency_install_state(
+            execution_view=execution_view,
+            executed_action_ids={"custom-dependency-install"},
+        )
+        == "installed"
+    )
 
 
 def test_build_frontend_delivery_status_surface_marks_delivery_verified_when_browser_gate_passes(

@@ -34,6 +34,7 @@ ALLOWED_ACTION_TYPES = frozenset(
         "workspace_integration",
     }
 )
+_PLAYWRIGHT_BROWSER_RUNTIME_PACKAGES = frozenset({"playwright", "@playwright/test"})
 
 
 def _dedupe_text_items(values: list[str] | tuple[str, ...]) -> list[str]:
@@ -1056,12 +1057,22 @@ def verify_dependency_installation(
             "dependency_install_resolution_missing:" + ",".join(missing_resolved)
         )
 
+    playwright_browser_runtime_path = ""
+    if _requires_playwright_browser_runtime(
+        expected_packages=expected_packages,
+        declared_packages=declared_packages,
+    ):
+        playwright_browser_runtime_path = _verify_playwright_browser_runtime(
+            working_directory
+        )
+
     return {
         "verification_state": (
             "package_manifest_lockfile_dependency_resolution_verified"
         ),
         "manifest_path": str(manifest_path.resolve()),
         "lockfile_path": str(existing_lockfiles[0].resolve()),
+        "playwright_browser_runtime": playwright_browser_runtime_path,
         "resolved_package_manifests": json.dumps(
             resolved_manifests,
             ensure_ascii=True,
@@ -1095,6 +1106,41 @@ def _dependency_package_name_from_spec(package_spec: str) -> str:
             return spec
         return f"{scope}/{package_name}"
     return spec.split("@", 1)[0].strip() or spec
+
+
+def _requires_playwright_browser_runtime(
+    *,
+    expected_packages: list[str],
+    declared_packages: set[str],
+) -> bool:
+    package_names = set(expected_packages) | declared_packages
+    return bool(package_names & _PLAYWRIGHT_BROWSER_RUNTIME_PACKAGES)
+
+
+def _verify_playwright_browser_runtime(working_directory: Path) -> str:
+    script = """
+const fs = require('fs');
+const { chromium } = require('playwright');
+const executablePath = chromium.executablePath();
+if (!executablePath || !fs.existsSync(executablePath)) {
+  process.exit(42);
+}
+process.stdout.write(executablePath);
+""".strip()
+    try:
+        result = subprocess.run(
+            ["node", "-e", script],
+            cwd=working_directory,
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+    except (FileNotFoundError, subprocess.CalledProcessError) as exc:
+        raise ValueError("dependency_install_playwright_browser_runtime_missing") from exc
+    executable_path = str(result.stdout or "").strip()
+    if not executable_path:
+        raise ValueError("dependency_install_playwright_browser_runtime_missing")
+    return executable_path
 
 
 def _collect_declared_dependency_packages(manifest_payload: dict[str, object]) -> set[str]:

@@ -4521,7 +4521,7 @@ class ProgramService:
         execution_view: ConfirmedActionPlanExecutionView | None,
         executed_action_ids: set[str],
     ) -> str:
-        if execution_view is None or "dependency-install" not in executed_action_ids:
+        if execution_view is None:
             return "not_installed"
         dependency_action = next(
             (
@@ -4532,6 +4532,8 @@ class ProgramService:
             None,
         )
         if dependency_action is None:
+            return "not_installed"
+        if dependency_action.action_id not in executed_action_ids:
             return "not_installed"
         try:
             payload = DependencyInstallExecutionPayload.model_validate(
