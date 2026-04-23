@@ -4177,24 +4177,31 @@ class ProgramService:
         try:
             raw = GitClient(self.root)._run(
                 "status",
-                "--porcelain",
+                "--porcelain=v1",
+                "-z",
                 "--untracked-files=all",
             )
         except GitError:
             return []
 
         paths: list[str] = []
-        for line in raw.splitlines():
-            if len(line) < 4:
+        records = [record for record in raw.split("\0") if record]
+        index = 0
+        while index < len(records):
+            record = records[index]
+            index += 1
+            if len(record) < 4:
                 continue
-            payload = line[3:].strip()
+            status = record[:2]
+            payload = record[3:].strip()
             if not payload:
                 continue
-            if " -> " in payload:
-                before, after = payload.split(" -> ", 1)
-                paths.extend([before.strip(), after.strip()])
-            else:
-                paths.append(payload)
+            paths.append(payload)
+            if any(marker in status for marker in ("R", "C")) and index < len(records):
+                source_payload = records[index].strip()
+                index += 1
+                if source_payload:
+                    paths.append(source_payload)
         return _unique_strings(paths)
 
     def build_frontend_evidence_class_statuses(

@@ -4238,6 +4238,36 @@ def test_build_truth_ledger_surface_ignores_truth_check_revision_metadata_drift(
     assert surface["state"] == snapshot.state
 
 
+def test_dirty_worktree_paths_parse_porcelain_z_paths_with_spaces(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    svc = ProgramService(tmp_path)
+
+    def _fake_run(self, *args):
+        assert args == (
+            "status",
+            "--porcelain=v1",
+            "-z",
+            "--untracked-files=all",
+        )
+        return (
+            " M specs/082 frontend example/spec.md\0"
+            "R  specs/renamed spec/spec.md\0"
+            "specs/old spec/spec.md\0"
+            "?? program-manifest.yaml\0"
+        )
+
+    monkeypatch.setattr(program_service_module.GitClient, "_run", _fake_run)
+
+    assert svc._dirty_worktree_paths() == [
+        "specs/082 frontend example/spec.md",
+        "specs/renamed spec/spec.md",
+        "specs/old spec/spec.md",
+        "program-manifest.yaml",
+    ]
+
+
 def test_build_truth_snapshot_blocks_release_scope_when_closure_audit_missing(
     tmp_path: Path,
 ) -> None:

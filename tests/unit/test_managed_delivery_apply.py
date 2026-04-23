@@ -737,6 +737,53 @@ def test_verify_dependency_installation_records_playwright_browser_runtime(
     assert result["playwright_browser_runtime"] == "/ms-playwright/chromium/chrome"
 
 
+def test_verify_dependency_installation_accepts_playwright_test_runtime_layout(
+    tmp_path: Path,
+) -> None:
+    (tmp_path / "node_modules" / "@playwright" / "test").mkdir(parents=True)
+    (tmp_path / "node_modules" / "@playwright" / "test" / "package.json").write_text(
+        json.dumps({"name": "@playwright/test", "version": "1.38.0"}) + "\n",
+        encoding="utf-8",
+    )
+    (tmp_path / "package.json").write_text(
+        json.dumps(
+            {
+                "name": "managed-frontend",
+                "private": True,
+                "dependencies": {"@playwright/test": "^1.38.0"},
+            },
+            indent=2,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    (tmp_path / "package-lock.json").write_text("# fixture lockfile\n", encoding="utf-8")
+    payload = DependencyInstallExecutionPayload(
+        install_strategy_id="browser-runtime",
+        package_manager="npm",
+        working_directory=".",
+        packages=["@playwright/test"],
+    )
+
+    def _runtime_check(command, *args, **kwargs):
+        script = command[-1]
+        assert "@playwright/test" in script
+        return subprocess.CompletedProcess(
+            args=command,
+            returncode=0,
+            stdout="/ms-playwright/chromium/chrome",
+            stderr="",
+        )
+
+    with patch(
+        "ai_sdlc.core.managed_delivery_apply.subprocess.run",
+        side_effect=_runtime_check,
+    ):
+        result = verify_dependency_installation(payload, tmp_path)
+
+    assert result["playwright_browser_runtime"] == "/ms-playwright/chromium/chrome"
+
+
 def test_run_managed_delivery_apply_fails_when_dependency_lockfile_verification_is_missing(
     tmp_path: Path,
 ) -> None:

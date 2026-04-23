@@ -1118,7 +1118,18 @@ def _requires_playwright_browser_runtime(
 def _verify_playwright_browser_runtime(working_directory: Path) -> str:
     script = """
 const fs = require('fs');
-const { chromium } = require('playwright');
+let runtime = null;
+for (const packageName of ['playwright', '@playwright/test']) {
+  try {
+    runtime = require(packageName);
+    break;
+  } catch (error) {
+  }
+}
+if (!runtime || !runtime.chromium) {
+  process.exit(43);
+}
+const { chromium } = runtime;
 const executablePath = chromium.executablePath();
 if (!executablePath || !fs.existsSync(executablePath)) {
   process.exit(42);
