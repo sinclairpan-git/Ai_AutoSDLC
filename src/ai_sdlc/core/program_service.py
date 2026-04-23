@@ -5006,10 +5006,19 @@ class ProgramService:
         provider_id = solution_snapshot.effective_provider_id
         blockers: list[str] = []
         warnings: list[str] = []
-        _mapping_items, mapping_blockers = self._load_provider_mapping_items(provider_id)
-        _whitelist_items, whitelist_blockers = self._load_provider_whitelist_items(provider_id)
+        mapping_items, mapping_blockers = self._load_provider_mapping_items(provider_id)
+        whitelist_items, whitelist_blockers = self._load_provider_whitelist_items(
+            provider_id
+        )
         blockers.extend(mapping_blockers)
         blockers.extend(whitelist_blockers)
+        blockers.extend(
+            self._validate_provider_mapping_imports(
+                provider_id=provider_id,
+                mapping_items=mapping_items,
+                whitelist_items=whitelist_items,
+            )
+        )
 
         provider_manifest = self._load_provider_manifest(provider_id)
         if provider_manifest is None:
@@ -5215,6 +5224,46 @@ class ProgramService:
             payload_kind="whitelist",
             payload=self._load_provider_whitelist(provider_id),
         )
+
+    def _validate_provider_mapping_imports(
+        self,
+        *,
+        provider_id: str,
+        mapping_items: list[dict[str, object]],
+        whitelist_items: list[dict[str, object]],
+    ) -> list[str]:
+        if provider_id != "public-primevue":
+            return []
+        whitelist_by_component = {
+            str(entry.get("component_id", "")).strip(): entry
+            for entry in whitelist_items
+            if str(entry.get("component_id", "")).strip()
+        }
+        blockers: list[str] = []
+        for entry in mapping_items:
+            component_id = str(entry.get("component_id", "")).strip()
+            implementation_ref = str(entry.get("implementation_ref", "")).strip()
+            if not component_id or not implementation_ref:
+                continue
+            if not self._primevue_package_ref_for_component(
+                whitelist_by_component.get(component_id, {})
+            ):
+                blockers.append(
+                    "delivery_provider_mapping_import_unresolved:"
+                    f"{provider_id}:{component_id}"
+                )
+        return _unique_strings(blockers)
+
+    def _primevue_package_ref_for_component(
+        self,
+        whitelist_entry: dict[str, object],
+    ) -> str:
+        for dependency in _normalize_string_list(
+            whitelist_entry.get("dependency_curation", [])
+        ):
+            if dependency.startswith("primevue/"):
+                return dependency
+        return ""
 
     def _runtime_remediation_payload_from_host_plan(
         self,
@@ -6221,11 +6270,7 @@ const tableRows = [
         for entry in mapping_items:
             component_id = str(entry.get("component_id", "")).strip()
             whitelist_entry = whitelist_by_component.get(component_id, {})
-            package_ref = ""
-            for dependency in whitelist_entry.get("dependency_curation", []):
-                if str(dependency).startswith("primevue/"):
-                    package_ref = str(dependency)
-                    break
+            package_ref = self._primevue_package_ref_for_component(whitelist_entry)
             implementation_ref = str(entry.get("implementation_ref", "")).strip()
             if package_ref and (implementation_ref, package_ref) not in seen_imports:
                 imports.append((implementation_ref, package_ref))
@@ -6244,11 +6289,7 @@ const tableRows = [
             component_id = str(entry.get("component_id", "")).strip()
             implementation_ref = str(entry.get("implementation_ref", "")).strip()
             whitelist_entry = whitelist_by_component.get(component_id, {})
-            package_ref = ""
-            for dependency in whitelist_entry.get("dependency_curation", []):
-                if str(dependency).startswith("primevue/"):
-                    package_ref = str(dependency)
-                    break
+            package_ref = self._primevue_package_ref_for_component(whitelist_entry)
             alignment_notes = self._render_typescript_literal(
                 _normalize_string_list(entry.get("alignment_notes", []))
             )
@@ -6475,11 +6516,11 @@ const tableRows = [
             provider_theme_adapter_id=generation_handoff.provider_theme_adapter_id,
             page_schema_ids=list(generation_handoff.page_schema_ids),
         )
-        page_ui_schema = build_p2_frontend_page_ui_schema_baseline()
-        theme_governance = build_p2_frontend_theme_token_governance_baseline(
+        page_ui_schema = self.resolve_frontend_page_ui_schema()
+        theme_governance = self.resolve_frontend_theme_token_governance(
             constraints=constraints
         )
-        quality_platform = build_p2_frontend_quality_platform_baseline(
+        quality_platform = self.resolve_frontend_quality_platform(
             theme_governance=theme_governance
         )
 

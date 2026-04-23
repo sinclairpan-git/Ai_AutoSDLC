@@ -4747,6 +4747,69 @@ def test_build_frontend_managed_delivery_apply_request_blocks_malformed_provider
     )
 
 
+def test_build_frontend_managed_delivery_apply_request_blocks_unresolved_provider_mapping_imports(
+    initialized_project_dir: Path,
+    monkeypatch,
+) -> None:
+    root = initialized_project_dir
+    save_project_config(root, ProjectConfig(adapter_ingress_state="verified_loaded"))
+    _write_builtin_delivery_truth(root)
+    provider_root = root / "providers" / "frontend" / "public-primevue"
+    provider_root.mkdir(parents=True, exist_ok=True)
+    (provider_root / "mappings.yaml").write_text(
+        yaml.safe_dump(
+            {
+                "items": [
+                    {
+                        "component_id": "UiButton",
+                        "implementation_ref": "Button",
+                        "mapping_kind": "direct",
+                    }
+                ]
+            },
+            sort_keys=False,
+        ),
+        encoding="utf-8",
+    )
+    (provider_root / "whitelist.yaml").write_text(
+        yaml.safe_dump(
+            {
+                "items": [
+                    {
+                        "component_id": "UiButton",
+                        "dependency_curation": [],
+                    }
+                ]
+            },
+            sort_keys=False,
+        ),
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(
+        program_service_module,
+        "evaluate_current_host_runtime",
+        lambda project_root: _build_host_runtime_plan_for_tests(
+            node_runtime_available=True,
+            package_manager_available=True,
+            playwright_browsers_available=True,
+        ),
+    )
+    monkeypatch.setattr(
+        program_service_module.shutil,
+        "which",
+        lambda executable: f"/mock/bin/{executable}" if executable == "pnpm" else None,
+    )
+    svc = ProgramService(root)
+
+    request = svc.build_frontend_managed_delivery_apply_request()
+
+    assert request.apply_state == "blocked_before_start"
+    assert (
+        "delivery_provider_mapping_import_unresolved:public-primevue:UiButton"
+        in request.remaining_blockers
+    )
+
+
 def test_build_frontend_managed_delivery_apply_request_falls_back_to_available_package_manager(
     initialized_project_dir: Path,
     monkeypatch,
@@ -5515,6 +5578,62 @@ def test_execute_frontend_managed_delivery_apply_materializes_inheritance_govern
         "generation": "inherited",
         "quality": "inherited",
     }
+
+
+def test_execute_frontend_managed_delivery_apply_preserves_custom_page_schema_artifacts(
+    initialized_project_dir: Path,
+    monkeypatch,
+) -> None:
+    root = initialized_project_dir
+    save_project_config(root, ProjectConfig(adapter_ingress_state="verified_loaded"))
+    _write_builtin_delivery_truth(root)
+    custom_page_ui_schema = build_p2_frontend_page_ui_schema_baseline().model_copy(
+        deep=True
+    )
+    custom_page_ui_schema.page_schemas[0].section_anchors[0].semantic_role = (
+        "custom_project_shell"
+    )
+    materialize_frontend_page_ui_schema_artifacts(root, custom_page_ui_schema)
+    monkeypatch.setattr(
+        program_service_module,
+        "evaluate_current_host_runtime",
+        lambda project_root: _build_host_runtime_plan_for_tests(
+            node_runtime_available=True,
+            package_manager_available=True,
+            playwright_browsers_available=True,
+        ),
+    )
+    monkeypatch.setattr(
+        program_service_module.shutil,
+        "which",
+        lambda executable: f"/mock/bin/{executable}" if executable == "npm" else None,
+    )
+    svc = ProgramService(root)
+    request = svc.build_frontend_managed_delivery_apply_request()
+
+    with patch(
+        "ai_sdlc.core.managed_delivery_apply.subprocess.run",
+        side_effect=build_dependency_install_subprocess_side_effect(),
+    ):
+        result = svc.execute_frontend_managed_delivery_apply(
+            request=request,
+            confirmed=True,
+        )
+
+    assert result.result_status == "apply_succeeded_pending_browser_gate"
+    page_schema_payload = yaml.safe_load(
+        (
+            root
+            / "kernel"
+            / "frontend"
+            / "page-ui-schema"
+            / "page-schemas"
+            / "dashboard-workspace.yaml"
+        ).read_text(encoding="utf-8")
+    )
+    assert page_schema_payload["section_anchors"][0]["semantic_role"] == (
+        "custom_project_shell"
+    )
 
 
 def test_build_frontend_managed_delivery_apply_request_surfaces_executor_preflight_blockers(
