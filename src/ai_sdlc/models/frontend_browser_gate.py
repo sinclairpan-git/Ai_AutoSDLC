@@ -151,14 +151,14 @@ class BrowserGateQualityCapture(FrontendBrowserGateModel):
     unlabeled_button_count: int
     unlabeled_input_count: int
     image_missing_alt_count: int
-    viewport_width: int = 0
-    viewport_height: int = 0
-    document_scroll_width: int = 0
-    document_scroll_height: int = 0
-    horizontal_overflow_count: int = 0
-    low_contrast_text_count: int = 0
-    focusable_count: int = 0
-    focusable_without_visible_focus_count: int = 0
+    viewport_width: int | None = None
+    viewport_height: int | None = None
+    document_scroll_width: int | None = None
+    document_scroll_height: int | None = None
+    horizontal_overflow_count: int | None = None
+    low_contrast_text_count: int | None = None
+    focusable_count: int | None = None
+    focusable_without_visible_focus_count: int | None = None
     console_error_messages: list[str] = Field(default_factory=list)
     page_error_messages: list[str] = Field(default_factory=list)
 

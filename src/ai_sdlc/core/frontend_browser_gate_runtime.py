@@ -1048,7 +1048,18 @@ def _materialize_visual_regression_receipt(
     )
     artifact_ids: list[str] = []
     records: list[BrowserProbeArtifactRecord] = []
+    missing_artifact = False
     if artifact_ref:
+        resolved_status = str(getattr(capture, "capture_status", "missing")).strip()
+        if resolved_status == "captured" and not _runner_artifact_exists(
+            root=root,
+            artifact_root=artifact_root,
+            artifact_ref=artifact_ref,
+        ):
+            resolved_status = "missing"
+            missing_artifact = True
+        elif resolved_status == "missing":
+            missing_artifact = True
         artifact_ids.append(f"{gate_run_id}-visual-regression-1")
         records.append(
             BrowserProbeArtifactRecord(
@@ -1057,7 +1068,7 @@ def _materialize_visual_regression_receipt(
                 check_name="visual_regression",
                 artifact_type="visual_diff",
                 artifact_ref=artifact_ref,
-                capture_status=str(getattr(capture, "capture_status", "missing")).strip(),
+                capture_status=resolved_status,
                 captured_at=generated_at,
                 source_linkage_refs={
                     "matrix_id": str(getattr(capture, "matrix_id", "")).strip(),
@@ -1067,8 +1078,12 @@ def _materialize_visual_regression_receipt(
                 },
             )
         )
+    elif str(getattr(capture, "capture_status", "missing")).strip() == "captured":
+        missing_artifact = True
 
     verdict = str(getattr(capture, "verdict", "evidence_missing")).strip()
+    if missing_artifact and verdict == "pass":
+        verdict = "evidence_missing"
     classification_candidate = (
         "evidence_missing" if verdict == "recheck" else verdict
     )
@@ -1294,6 +1309,17 @@ def _resolve_visual_verdict(
         runner_result.visual_regression_capture if runner_result is not None else None
     )
     if visual_regression_capture is not None:
+        visual_regression_receipt = next(
+            (receipt for receipt in receipts if receipt.check_name == "visual_regression"),
+            None,
+        )
+        if (
+            visual_regression_capture.verdict != "recheck"
+            and visual_regression_receipt is not None
+            and visual_regression_receipt.classification_candidate
+            != visual_regression_capture.verdict
+        ):
+            return visual_regression_receipt.classification_candidate
         return visual_regression_capture.verdict
     return _receipt_verdict(receipts, "visual_expectation")
 
