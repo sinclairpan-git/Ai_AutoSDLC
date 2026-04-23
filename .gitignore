@@ -6,6 +6,9 @@ __pycache__/
 .ai-sdlc/state/checkpoint.yml.bak
 .ai-sdlc/work-items/*/resume-pack.yaml
 .ai-sdlc/local/
+.ai-sdlc/artifacts/
+.ai-sdlc/evidence/
+.ai-sdlc/memory/frontend-*/
 .superpowers/
 .playwright-cli/
 
@@ -15,5 +18,6 @@ __pycache__/
 dist-offline/
 .deliverables/
 output/
+managed/frontend/node_modules/
 .DS_Store
 **/.DS_Store
