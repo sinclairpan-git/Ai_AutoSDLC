@@ -214,6 +214,7 @@ PROGRAM_TRUTH_SYNC_EXECUTE_COMMAND = "python -m ai_sdlc program truth sync --exe
 PROGRAM_TRUTH_AUDIT_COMMAND = "python -m ai_sdlc program truth audit"
 PROGRAM_FRONTEND_MAINLINE_DELIVERY_CAPABILITY_ID = "frontend-mainline-delivery"
 PROGRAM_FRONTEND_INHERITANCE_BLOCKER_PREFIX = "frontend_inheritance"
+PROGRAM_FRONTEND_VISUAL_REGRESSION_RUNTIME_PACKAGES = ("pixelmatch", "pngjs")
 PROGRAM_HOST_INGRESS_CAPABILITY_ID = "agent-adapter-verified-host-ingress"
 PROGRAM_HOST_INGRESS_CANONICAL_BLOCKER_PREFIX = "adapter_canonical_consumption"
 PROGRAM_TRUTH_SOURCE_DISCOVERY_ROOT = Path("docs")
@@ -4731,6 +4732,16 @@ class ProgramService:
         )
         selected_action_ids.append(managed_target_prepare_id)
 
+        quality_handoff = self.build_frontend_quality_platform_handoff()
+        dependency_packages = _unique_strings(
+            [
+                *bundle["component_library_packages"],
+                *bundle["adapter_packages"],
+                *_visual_regression_runtime_dependency_packages(
+                    quality_handoff.active_visual_regression_matrix_id
+                ),
+            ]
+        )
         dependency_install_id = "dependency-install"
         dependency_dependencies = [managed_target_prepare_id]
         if runtime_action_id:
@@ -4757,7 +4768,7 @@ class ProgramService:
                     "package_manager": bundle["package_manager"],
                     "registry_url": bundle.get("registry_url", ""),
                     "working_directory": ".",
-                    "packages": [*bundle["component_library_packages"], *bundle["adapter_packages"]],
+                    "packages": dependency_packages,
                 },
             }
         )
@@ -4765,7 +4776,6 @@ class ProgramService:
 
         page_ui_handoff = self.build_frontend_page_ui_schema_handoff()
         generation_handoff = self.build_frontend_generation_constraints_handoff()
-        quality_handoff = self.build_frontend_quality_platform_handoff()
         runtime_adapter_handoff = self.build_frontend_provider_runtime_adapter_handoff()
         delivery_context = self._build_delivery_context(
             solution_snapshot=solution_snapshot,
@@ -15646,6 +15656,12 @@ def _unique_strings(values: list[str] | tuple[str, ...]) -> list[str]:
         if text and text not in unique:
             unique.append(text)
     return unique
+
+
+def _visual_regression_runtime_dependency_packages(matrix_id: str) -> list[str]:
+    if not str(matrix_id).strip():
+        return []
+    return list(PROGRAM_FRONTEND_VISUAL_REGRESSION_RUNTIME_PACKAGES)
 
 
 def _canonicalize_program_runtime_string_fields(
