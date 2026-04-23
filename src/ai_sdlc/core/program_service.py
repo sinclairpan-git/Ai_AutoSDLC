@@ -4541,7 +4541,10 @@ class ProgramService:
         ]
         if not dependency_actions:
             return "not_installed"
-        managed_root = self._resolve_frontend_managed_target_root(execution_view)
+        try:
+            managed_root = self._resolve_frontend_managed_target_root(execution_view)
+        except Exception:
+            return "not_installed"
         for dependency_action in dependency_actions:
             if dependency_action.action_id not in executed_action_ids:
                 return "not_installed"

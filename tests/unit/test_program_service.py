@@ -3387,6 +3387,47 @@ def test_build_frontend_delivery_status_surface_fails_closed_when_lockfile_is_de
     assert status_surface["workspace_state"] == "integrated"
 
 
+def test_build_frontend_delivery_status_surface_fails_closed_for_invalid_managed_target_path(
+    initialized_project_dir: Path,
+    monkeypatch,
+) -> None:
+    root = initialized_project_dir
+    save_project_config(root, ProjectConfig(adapter_ingress_state="verified_loaded"))
+    _write_builtin_delivery_truth(root)
+    monkeypatch.setattr(
+        program_service_module.shutil,
+        "which",
+        lambda executable: f"/mock/bin/{executable}" if executable == "pnpm" else None,
+    )
+    svc = ProgramService(root)
+    request = svc.build_frontend_managed_delivery_apply_request()
+    with patch(
+        "ai_sdlc.core.managed_delivery_apply.subprocess.run",
+        side_effect=build_dependency_install_subprocess_side_effect(),
+    ):
+        result = svc.execute_frontend_managed_delivery_apply(
+            request=request,
+            confirmed=True,
+        )
+    apply_artifact_path = svc.write_frontend_managed_delivery_apply_artifact(
+        request=request,
+        result=result,
+        generated_at="2026-04-20T09:00:00Z",
+    )
+    payload = yaml.safe_load(apply_artifact_path.read_text(encoding="utf-8"))
+    payload["execution_view"]["managed_target_path"] = "../outside-managed-target"
+    apply_artifact_path.write_text(
+        yaml.safe_dump(payload, sort_keys=False, allow_unicode=True),
+        encoding="utf-8",
+    )
+
+    status_surface = svc.build_frontend_delivery_status_surface()
+
+    assert status_surface["apply_state"] == "apply_succeeded_pending_browser_gate"
+    assert status_surface["install_state"] == "not_installed"
+    assert status_surface["workspace_state"] == "integrated"
+
+
 def test_build_frontend_dependency_install_state_uses_actual_dependency_action_id(
     initialized_project_dir: Path,
     monkeypatch,
