@@ -47,6 +47,39 @@ async function pathExists(targetPath) {
   }
 }
 
+function activePackageManager(payload) {
+  const packageManager = String(payload.package_manager || "").trim();
+  if (["npm", "pnpm", "yarn"].includes(packageManager)) {
+    return packageManager;
+  }
+  return "npm";
+}
+
+function activeLockfileRef(payload) {
+  const packageManager = activePackageManager(payload);
+  if (packageManager === "pnpm") {
+    return "managed/frontend/pnpm-lock.yaml";
+  }
+  if (packageManager === "yarn") {
+    return "managed/frontend/yarn.lock";
+  }
+  return "managed/frontend/package-lock.json";
+}
+
+function visualRegressionBootstrapPayload(payload, matrixId, status, failureReason = "") {
+  return {
+    schema_version: "frontend-visual-regression-bootstrap/v1",
+    gate_run_id: payload.gate_run_id,
+    matrix_id: matrixId,
+    managed_frontend_target: String(payload.managed_frontend_target || "").trim(),
+    package_manager: activePackageManager(payload),
+    dependency_refs: ["pixelmatch", "pngjs"],
+    lockfile_ref: activeLockfileRef(payload),
+    status,
+    failure_reason: failureReason,
+  };
+}
+
 async function resolveBrowserEntry(payload) {
   const raw = String(payload.browser_entry_ref || "").trim();
   if (!raw) {
@@ -860,17 +893,7 @@ async function compareVisualRegression({
     await writeFile(
       bootstrapPath,
       JSON.stringify(
-        {
-          schema_version: "frontend-visual-regression-bootstrap/v1",
-          gate_run_id: payload.gate_run_id,
-          matrix_id: matrixPaths.matrixId,
-          managed_frontend_target: String(payload.managed_frontend_target || "").trim(),
-          package_manager: "npm",
-          dependency_refs: ["pixelmatch", "pngjs"],
-          lockfile_ref: "managed/frontend/package-lock.json",
-          status: "ready",
-          failure_reason: "",
-        },
+        visualRegressionBootstrapPayload(payload, matrixPaths.matrixId, "ready"),
         null,
         2,
       ),
@@ -904,17 +927,12 @@ async function compareVisualRegression({
     await writeFile(
       bootstrapPath,
       JSON.stringify(
-        {
-          schema_version: "frontend-visual-regression-bootstrap/v1",
-          gate_run_id: payload.gate_run_id,
-          matrix_id: matrixPaths.matrixId,
-          managed_frontend_target: String(payload.managed_frontend_target || "").trim(),
-          package_manager: "npm",
-          dependency_refs: ["pixelmatch", "pngjs"],
-          lockfile_ref: "managed/frontend/package-lock.json",
-          status: "failed",
-          failure_reason: `baseline-metadata-invalid:${message}`,
-        },
+        visualRegressionBootstrapPayload(
+          payload,
+          matrixPaths.matrixId,
+          "failed",
+          `baseline-metadata-invalid:${message}`,
+        ),
         null,
         2,
       ),
@@ -942,17 +960,12 @@ async function compareVisualRegression({
     await writeFile(
       bootstrapPath,
       JSON.stringify(
-        {
-          schema_version: "frontend-visual-regression-bootstrap/v1",
-          gate_run_id: payload.gate_run_id,
-          matrix_id: matrixPaths.matrixId,
-          managed_frontend_target: String(payload.managed_frontend_target || "").trim(),
-          package_manager: "npm",
-          dependency_refs: ["pixelmatch", "pngjs"],
-          lockfile_ref: "managed/frontend/package-lock.json",
-          status: "failed",
-          failure_reason: "baseline-threshold-invalid",
-        },
+        visualRegressionBootstrapPayload(
+          payload,
+          matrixPaths.matrixId,
+          "failed",
+          "baseline-threshold-invalid",
+        ),
         null,
         2,
       ),
@@ -985,17 +998,12 @@ async function compareVisualRegression({
     await writeFile(
       bootstrapPath,
       JSON.stringify(
-        {
-          schema_version: "frontend-visual-regression-bootstrap/v1",
-          gate_run_id: payload.gate_run_id,
-          matrix_id: matrixPaths.matrixId,
-          managed_frontend_target: String(payload.managed_frontend_target || "").trim(),
-          package_manager: "npm",
-          dependency_refs: ["pixelmatch", "pngjs"],
-          lockfile_ref: "managed/frontend/package-lock.json",
-          status: "failed",
-          failure_reason: "visual-regression-dependencies-unavailable",
-        },
+        visualRegressionBootstrapPayload(
+          payload,
+          matrixPaths.matrixId,
+          "failed",
+          "visual-regression-dependencies-unavailable",
+        ),
         null,
         2,
       ),
@@ -1028,17 +1036,12 @@ async function compareVisualRegression({
     await writeFile(
       bootstrapPath,
       JSON.stringify(
-        {
-          schema_version: "frontend-visual-regression-bootstrap/v1",
-          gate_run_id: payload.gate_run_id,
-          matrix_id: matrixPaths.matrixId,
-          managed_frontend_target: String(payload.managed_frontend_target || "").trim(),
-          package_manager: "npm",
-          dependency_refs: ["pixelmatch", "pngjs"],
-          lockfile_ref: "managed/frontend/package-lock.json",
-          status: "failed",
-          failure_reason: "visual-regression-image-decode-failed",
-        },
+        visualRegressionBootstrapPayload(
+          payload,
+          matrixPaths.matrixId,
+          "failed",
+          "visual-regression-image-decode-failed",
+        ),
         null,
         2,
       ),
@@ -1068,17 +1071,7 @@ async function compareVisualRegression({
     await writeFile(
       bootstrapPath,
       JSON.stringify(
-        {
-          schema_version: "frontend-visual-regression-bootstrap/v1",
-          gate_run_id: payload.gate_run_id,
-          matrix_id: matrixPaths.matrixId,
-          managed_frontend_target: String(payload.managed_frontend_target || "").trim(),
-          package_manager: "npm",
-          dependency_refs: ["pixelmatch", "pngjs"],
-          lockfile_ref: "managed/frontend/package-lock.json",
-          status: "ready",
-          failure_reason: "",
-        },
+        visualRegressionBootstrapPayload(payload, matrixPaths.matrixId, "ready"),
         null,
         2,
       ),
@@ -1118,17 +1111,7 @@ async function compareVisualRegression({
   await writeFile(
     bootstrapPath,
     JSON.stringify(
-      {
-        schema_version: "frontend-visual-regression-bootstrap/v1",
-        gate_run_id: payload.gate_run_id,
-        matrix_id: matrixPaths.matrixId,
-        managed_frontend_target: String(payload.managed_frontend_target || "").trim(),
-        package_manager: "npm",
-        dependency_refs: ["pixelmatch", "pngjs"],
-        lockfile_ref: "managed/frontend/package-lock.json",
-        status: "ready",
-        failure_reason: "",
-      },
+      visualRegressionBootstrapPayload(payload, matrixPaths.matrixId, "ready"),
       null,
       2,
     ),

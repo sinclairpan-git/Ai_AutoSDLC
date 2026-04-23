@@ -120,6 +120,12 @@ def test_build_browser_quality_gate_execution_context_derives_index_html_entry_r
                 "attachment_scope_ref": "scope://001-auth",
                 "readiness_subject_id": "001-auth",
                 "managed_target_path": "managed/frontend",
+                "action_items": [
+                    {
+                        "action_type": "dependency_install",
+                        "executor_payload": {"package_manager": "pnpm"},
+                    }
+                ],
             },
         },
         solution_snapshot=build_mvp_solution_snapshot(),
@@ -141,6 +147,7 @@ def test_build_browser_quality_gate_execution_context_derives_index_html_entry_r
 
     assert context.browser_entry_ref == "managed/frontend/index.html"
     assert context.delivery_entry_id == "vue3-public-primevue"
+    assert context.package_manager == "pnpm"
     assert context.component_library_packages == ["primevue", "@primeuix/themes"]
     assert context.provider_theme_adapter_id == "public-primevue-theme-bridge"
     assert context.provider_runtime_adapter_carrier_mode == "target-project-adapter-layer"
@@ -2340,6 +2347,7 @@ module.exports = { PNG };
         "page_schema_ids": ["dashboard-workspace", "search-list-workspace"],
         "visual_regression_matrix_id": "decode-failure-matrix",
         "visual_regression_viewport_id": "desktop-1440",
+        "package_manager": "pnpm",
     }
 
     completed = subprocess.run(
@@ -2357,6 +2365,13 @@ module.exports = { PNG };
     assert capture["change_summary"] == "visual-regression-image-decode-failed"
     assert capture["verdict"] == "recheck"
     assert result["runtime_status"] == "completed"
+    bootstrap_payload = json.loads(
+        (artifact_root / "bootstrap" / "bootstrap-receipt.yaml").read_text(
+            encoding="utf-8"
+        )
+    )
+    assert bootstrap_payload["package_manager"] == "pnpm"
+    assert bootstrap_payload["lockfile_ref"] == "managed/frontend/pnpm-lock.yaml"
 
 
 @pytest.mark.skipif(shutil.which("node") is None, reason="node runtime unavailable")

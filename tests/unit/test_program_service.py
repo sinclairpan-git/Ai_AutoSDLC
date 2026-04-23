@@ -3434,9 +3434,54 @@ def test_build_frontend_dependency_install_state_uses_actual_dependency_action_i
     assert (
         svc._build_frontend_dependency_install_state(
             execution_view=execution_view,
-            executed_action_ids={"custom-dependency-install"},
+            executed_action_ids={
+                "custom-dependency-install",
+                "visual-regression-runtime-install",
+            },
         )
         == "installed"
+    )
+
+
+def test_build_frontend_dependency_install_state_requires_all_dependency_actions(
+    initialized_project_dir: Path,
+    monkeypatch,
+) -> None:
+    root = initialized_project_dir
+    save_project_config(root, ProjectConfig(adapter_ingress_state="verified_loaded"))
+    _write_builtin_delivery_truth(root)
+    monkeypatch.setattr(
+        program_service_module,
+        "evaluate_current_host_runtime",
+        lambda project_root: _build_host_runtime_plan_for_tests(
+            node_runtime_available=True,
+            package_manager_available=True,
+            playwright_browsers_available=True,
+        ),
+    )
+    monkeypatch.setattr(
+        program_service_module.shutil,
+        "which",
+        lambda executable: f"/mock/bin/{executable}" if executable == "pnpm" else None,
+    )
+    svc = ProgramService(root)
+    request = svc.build_frontend_managed_delivery_apply_request()
+    with patch(
+        "ai_sdlc.core.managed_delivery_apply.subprocess.run",
+        side_effect=build_dependency_install_subprocess_side_effect(),
+    ):
+        svc.execute_frontend_managed_delivery_apply(
+            request=request,
+            confirmed=True,
+        )
+
+    assert request.execution_view is not None
+    assert (
+        svc._build_frontend_dependency_install_state(
+            execution_view=request.execution_view,
+            executed_action_ids={"dependency-install"},
+        )
+        == "not_installed"
     )
 
 
@@ -4471,16 +4516,29 @@ def test_build_frontend_managed_delivery_apply_request_materializes_public_bundl
     assert request.request_source_path == ".ai-sdlc/memory/frontend-managed-delivery/latest.yaml"
     assert request.apply_state == "ready_to_execute"
     assert request.execution_view is not None
-    dependency_action = next(
+    dependency_actions = [
         action
         for action in request.execution_view.action_items
         if action.action_type == "dependency_install"
-    )
+    ]
+    assert [action.action_id for action in dependency_actions] == [
+        "dependency-install",
+        "visual-regression-runtime-install",
+    ]
+    dependency_action = dependency_actions[0]
+    visual_runtime_action = dependency_actions[1]
     assert dependency_action.executor_payload["install_strategy_id"] == "public-primevue-default"
     assert dependency_action.executor_payload["package_manager"] == "pnpm"
     assert dependency_action.executor_payload["packages"] == [
         "primevue",
         "@primeuix/themes",
+    ]
+    assert visual_runtime_action.executor_payload["install_strategy_id"] == (
+        "public-visual-regression-runtime"
+    )
+    assert visual_runtime_action.executor_payload["package_manager"] == "pnpm"
+    assert visual_runtime_action.executor_payload["registry_url"] == ""
+    assert visual_runtime_action.executor_payload["packages"] == [
         "playwright",
         "pixelmatch",
         "pngjs",
@@ -4588,7 +4646,7 @@ def test_build_frontend_managed_delivery_apply_request_does_not_fallback_to_yarn
         if action.action_type == "dependency_install"
     )
     assert dependency_action.executor_payload["package_manager"] == "pnpm"
-    assert "delivery_package_manager_missing:pnpm" in request.warnings
+    assert "delivery_package_manager_missing:pnpm" in request.remaining_blockers
     assert not any("delivery_package_manager_fallback:pnpm->yarn" in warning for warning in request.warnings)
     prepare_action = next(
         action
@@ -4671,7 +4729,7 @@ def test_build_frontend_managed_delivery_apply_request_materializes_artifact_gen
     )
     assert artifact_action.required is True
     assert artifact_action.default_selected is True
-    assert artifact_action.depends_on_action_ids == ["dependency-install"]
+    assert artifact_action.depends_on_action_ids == ["visual-regression-runtime-install"]
     generated_files = artifact_action.executor_payload["files"]
     assert [item["path"] for item in generated_files] == [
         "index.html",
@@ -4760,6 +4818,83 @@ def test_build_frontend_managed_delivery_apply_request_generates_safe_enterprise
     assert "publicPrimeVueProviderComponents = {}" not in provider_adapter
     assert "providerComponents.UiPageHeader.component" in app_vue
     assert "Managed provider adapter scaffold" in app_vue
+
+
+def test_build_frontend_managed_delivery_apply_request_splits_enterprise_and_public_runtime_installs(
+    initialized_project_dir: Path,
+    monkeypatch,
+) -> None:
+    root = initialized_project_dir
+    save_project_config(root, ProjectConfig(adapter_ingress_state="verified_loaded"))
+    _write_builtin_delivery_truth(
+        root,
+        snapshot=build_mvp_solution_snapshot(
+            project_id="001-auth",
+            effective_provider_id="enterprise-vue2",
+            effective_style_pack_id="enterprise-default",
+            requested_provider_id="enterprise-vue2",
+            requested_style_pack_id="enterprise-default",
+            recommended_provider_id="enterprise-vue2",
+            recommended_style_pack_id="enterprise-default",
+            recommended_frontend_stack="vue2",
+            requested_frontend_stack="vue2",
+            effective_frontend_stack="vue2",
+            availability_summary={
+                "overall_status": "ready",
+                "passed_check_ids": ["company-registry-network"],
+                "failed_check_ids": [],
+                "blocking_reason_codes": [],
+            },
+            preflight_status="ready",
+            style_fidelity_status="full",
+        ),
+    )
+    monkeypatch.setattr(
+        program_service_module,
+        "evaluate_current_host_runtime",
+        lambda project_root: _build_host_runtime_plan_for_tests(
+            node_runtime_available=True,
+            package_manager_available=True,
+            playwright_browsers_available=True,
+        ),
+    )
+    monkeypatch.setattr(
+        program_service_module.shutil,
+        "which",
+        lambda executable: f"/mock/bin/{executable}" if executable == "npm" else None,
+    )
+    svc = ProgramService(root)
+
+    request = svc.build_frontend_managed_delivery_apply_request()
+
+    assert request.execution_view is not None
+    dependency_actions = [
+        action
+        for action in request.execution_view.action_items
+        if action.action_type == "dependency_install"
+    ]
+    assert [action.action_id for action in dependency_actions] == [
+        "dependency-install",
+        "visual-regression-runtime-install",
+    ]
+    enterprise_action = dependency_actions[0]
+    public_runtime_action = dependency_actions[1]
+    assert enterprise_action.executor_payload["registry_url"] == (
+        "http://npm.uedc.sangfor.com.cn/"
+    )
+    assert all(
+        package.startswith("@sxf/")
+        for package in enterprise_action.executor_payload["packages"]
+    )
+    assert public_runtime_action.executor_payload["registry_url"] == ""
+    assert public_runtime_action.executor_payload["install_strategy_id"] == (
+        "public-visual-regression-runtime"
+    )
+    assert public_runtime_action.executor_payload["packages"] == [
+        "playwright",
+        "pixelmatch",
+        "pngjs",
+    ]
 
 
 def test_build_frontend_managed_delivery_apply_request_keeps_workspace_integration_default_off_when_runtime_adapter_not_started(
@@ -4889,14 +5024,16 @@ def test_build_frontend_managed_delivery_apply_request_uses_builtin_provider_tru
 
     assert request.apply_state == "ready_to_execute"
     assert request.execution_view is not None
-    dependency_action = next(
+    dependency_actions = [
         action
         for action in request.execution_view.action_items
         if action.action_type == "dependency_install"
-    )
-    assert dependency_action.executor_payload["packages"] == [
+    ]
+    assert dependency_actions[0].executor_payload["packages"] == [
         "primevue",
         "@primeuix/themes",
+    ]
+    assert dependency_actions[1].executor_payload["packages"] == [
         "playwright",
         "pixelmatch",
         "pngjs",

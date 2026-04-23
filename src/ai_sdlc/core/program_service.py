@@ -4534,33 +4534,31 @@ class ProgramService:
     ) -> str:
         if execution_view is None:
             return "not_installed"
-        dependency_action = next(
-            (
-                action
-                for action in execution_view.action_items
-                if action.action_type == "dependency_install"
-            ),
-            None,
-        )
-        if dependency_action is None:
+        dependency_actions = [
+            action
+            for action in execution_view.action_items
+            if action.action_type == "dependency_install"
+        ]
+        if not dependency_actions:
             return "not_installed"
-        if dependency_action.action_id not in executed_action_ids:
-            return "not_installed"
-        try:
-            payload = DependencyInstallExecutionPayload.model_validate(
-                dependency_action.executor_payload
-            )
-            managed_root = self._resolve_frontend_managed_target_root(execution_view)
-            working_directory = (
-                managed_root / Path(payload.working_directory.strip() or ".")
-            ).resolve()
+        managed_root = self._resolve_frontend_managed_target_root(execution_view)
+        for dependency_action in dependency_actions:
+            if dependency_action.action_id not in executed_action_ids:
+                return "not_installed"
             try:
-                working_directory.relative_to(managed_root.resolve())
-            except ValueError as exc:
-                raise ValueError("dependency_install_outside_managed_target") from exc
-            verify_dependency_installation(payload, working_directory)
-        except Exception:
-            return "not_installed"
+                payload = DependencyInstallExecutionPayload.model_validate(
+                    dependency_action.executor_payload
+                )
+                working_directory = (
+                    managed_root / Path(payload.working_directory.strip() or ".")
+                ).resolve()
+                try:
+                    working_directory.relative_to(managed_root.resolve())
+                except ValueError as exc:
+                    raise ValueError("dependency_install_outside_managed_target") from exc
+                verify_dependency_installation(payload, working_directory)
+            except Exception:
+                return "not_installed"
         return "installed"
 
     def build_frontend_delivery_status_surface(self) -> dict[str, str]:
@@ -4746,14 +4744,14 @@ class ProgramService:
         selected_action_ids.append(managed_target_prepare_id)
 
         quality_handoff = self.build_frontend_quality_platform_handoff()
-        dependency_packages = _unique_strings(
+        provider_dependency_packages = _unique_strings(
             [
                 *bundle["component_library_packages"],
                 *bundle["adapter_packages"],
-                *_visual_regression_runtime_dependency_packages(
-                    quality_handoff.active_visual_regression_matrix_id
-                ),
             ]
+        )
+        visual_runtime_dependency_packages = _visual_regression_runtime_dependency_packages(
+            quality_handoff.active_visual_regression_matrix_id
         )
         dependency_install_id = "dependency-install"
         dependency_dependencies = [managed_target_prepare_id]
@@ -4781,11 +4779,43 @@ class ProgramService:
                     "package_manager": bundle["package_manager"],
                     "registry_url": bundle.get("registry_url", ""),
                     "working_directory": ".",
-                    "packages": dependency_packages,
+                    "packages": provider_dependency_packages,
                 },
             }
         )
         selected_action_ids.append(dependency_install_id)
+        last_dependency_install_id = dependency_install_id
+        if visual_runtime_dependency_packages:
+            visual_runtime_dependency_install_id = "visual-regression-runtime-install"
+            action_items.append(
+                {
+                    "action_id": visual_runtime_dependency_install_id,
+                    "effect_kind": "mutate",
+                    "action_type": "dependency_install",
+                    "required": True,
+                    "selected": True,
+                    "default_selected": True,
+                    "depends_on_action_ids": [dependency_install_id],
+                    "rollback_ref": "rollback:visual-regression-runtime-install",
+                    "retry_ref": "retry:visual-regression-runtime-install",
+                    "cleanup_ref": "cleanup:visual-regression-runtime-install",
+                    "risk_flags": [],
+                    "source_linkage_refs": {
+                        "solution_snapshot_id": solution_snapshot.snapshot_id,
+                        "install_strategy_id": "public-visual-regression-runtime",
+                        "public_runtime_dependency_scope": "visual_regression",
+                    },
+                    "executor_payload": {
+                        "install_strategy_id": "public-visual-regression-runtime",
+                        "package_manager": bundle["package_manager"],
+                        "registry_url": "",
+                        "working_directory": ".",
+                        "packages": visual_runtime_dependency_packages,
+                    },
+                }
+            )
+            selected_action_ids.append(visual_runtime_dependency_install_id)
+            last_dependency_install_id = visual_runtime_dependency_install_id
 
         page_ui_handoff = self.build_frontend_page_ui_schema_handoff()
         generation_handoff = self.build_frontend_generation_constraints_handoff()
@@ -4818,7 +4848,7 @@ class ProgramService:
                 "required": True,
                 "selected": True,
                 "default_selected": True,
-                "depends_on_action_ids": [dependency_install_id],
+                "depends_on_action_ids": [last_dependency_install_id],
                 "rollback_ref": "rollback:artifact-generate",
                 "retry_ref": "retry:artifact-generate",
                 "cleanup_ref": "cleanup:artifact-generate",

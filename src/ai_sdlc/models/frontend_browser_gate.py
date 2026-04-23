@@ -41,6 +41,7 @@ class BrowserQualityGateExecutionContext(FrontendBrowserGateModel):
     effective_style_pack: str
     style_fidelity_status: str
     delivery_entry_id: str = ""
+    package_manager: str = ""
     component_library_packages: list[str] = Field(default_factory=list)
     provider_theme_adapter_id: str = ""
     provider_runtime_adapter_carrier_mode: str = ""

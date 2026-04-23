@@ -83,6 +83,7 @@ def build_browser_quality_gate_execution_context(
         str(execution_view.get("managed_target_path", "")).strip()
         or str(execution_view.get("managed_target_ref", "")).strip()
     )
+    package_manager = _derive_browser_gate_package_manager(execution_view)
     apply_result_id = str(apply_payload.get("apply_result_id", "")).strip()
     if not (
         spec_dir
@@ -110,6 +111,7 @@ def build_browser_quality_gate_execution_context(
         effective_style_pack=solution_snapshot.effective_style_pack_id,
         style_fidelity_status=solution_snapshot.style_fidelity_status,
         delivery_entry_id=delivery_entry_id,
+        package_manager=package_manager,
         component_library_packages=_unique_strings(component_library_packages or []),
         provider_theme_adapter_id=provider_theme_adapter_id,
         provider_runtime_adapter_carrier_mode=provider_runtime_adapter_carrier_mode,
@@ -125,6 +127,24 @@ def build_browser_quality_gate_execution_context(
             "solution_snapshot_id": solution_snapshot.snapshot_id,
         },
     )
+
+
+def _derive_browser_gate_package_manager(execution_view: dict[str, object]) -> str:
+    action_items = execution_view.get("action_items")
+    if not isinstance(action_items, list):
+        return ""
+    for action in action_items:
+        if not isinstance(action, dict):
+            continue
+        if str(action.get("action_type", "")).strip() != "dependency_install":
+            continue
+        executor_payload = action.get("executor_payload")
+        if not isinstance(executor_payload, dict):
+            continue
+        package_manager = str(executor_payload.get("package_manager", "")).strip()
+        if package_manager:
+            return package_manager
+    return ""
 
 
 def run_default_browser_gate_probe(
@@ -154,6 +174,7 @@ def run_default_browser_gate_probe(
         "generated_at": generated_at,
         "managed_frontend_target": execution_context.managed_frontend_target,
         "delivery_entry_id": execution_context.delivery_entry_id,
+        "package_manager": execution_context.package_manager,
         "component_library_packages": _unique_strings(
             execution_context.component_library_packages
         ),
