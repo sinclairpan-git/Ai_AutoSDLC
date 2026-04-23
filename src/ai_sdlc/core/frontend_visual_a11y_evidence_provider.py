@@ -129,9 +129,10 @@ def _dedupe_evaluation_items(
 ) -> list[FrontendVisualA11yEvidenceEvaluation]:
     deduped: list[FrontendVisualA11yEvidenceEvaluation] = []
     seen: set[str] = set()
-    for value in values or []:
+    for index, value in enumerate(values or []):
         if not isinstance(value, FrontendVisualA11yEvidenceEvaluation):
             continue
+        value = _validate_evaluation_for_write(value, index=index)
         key = json.dumps(value.to_json_dict(), sort_keys=True, ensure_ascii=False)
         if key in seen:
             continue
@@ -741,6 +742,7 @@ def _coerce_evaluations(
                 "evaluations must contain FrontendVisualA11yEvidenceEvaluation items; "
                 f"item {index} was {type(evaluation).__name__}"
             )
+        evaluation = _validate_evaluation_for_write(evaluation, index=index)
         key = json.dumps(
             evaluation.to_json_dict(),
             sort_keys=True,
@@ -751,6 +753,14 @@ def _coerce_evaluations(
         seen.add(key)
         items.append(evaluation)
     return items
+
+
+def _validate_evaluation_for_write(
+    evaluation: FrontendVisualA11yEvidenceEvaluation,
+    *,
+    index: int,
+) -> FrontendVisualA11yEvidenceEvaluation:
+    return _load_evaluation(evaluation.to_json_dict(), index=index)
 
 
 def _auto_pass_evaluation(

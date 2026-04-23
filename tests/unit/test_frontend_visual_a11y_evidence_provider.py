@@ -195,6 +195,59 @@ def test_build_frontend_visual_a11y_evidence_artifact_deduplicates_source_evalua
     )
 
 
+def test_build_frontend_visual_a11y_evidence_artifact_rejects_invalid_outcome() -> None:
+    with pytest.raises(ValueError, match="outcome"):
+        build_frontend_visual_a11y_evidence_artifact(
+            evaluations=[
+                FrontendVisualA11yEvidenceEvaluation(
+                    evaluation_id="eval-invalid",
+                    target_id="orders.form",
+                    surface_id="refreshing",
+                    outcome="warn",
+                    report_type="coverage-report",
+                )
+            ],
+            provider_kind="manual",
+            provider_name="qa-review",
+            generated_at="2026-04-07T12:00:00Z",
+        )
+
+
+def test_build_frontend_visual_a11y_evidence_artifact_rejects_issue_without_report_type() -> None:
+    with pytest.raises(ValueError, match="report_type"):
+        build_frontend_visual_a11y_evidence_artifact(
+            evaluations=[
+                FrontendVisualA11yEvidenceEvaluation(
+                    evaluation_id="eval-issue",
+                    target_id="orders.form",
+                    surface_id="refreshing",
+                    outcome="issue",
+                )
+            ],
+            provider_kind="manual",
+            provider_name="qa-review",
+            generated_at="2026-04-07T12:00:00Z",
+        )
+
+
+def test_build_frontend_visual_a11y_evidence_artifact_rejects_invalid_issue_report_type() -> None:
+    with pytest.raises(ValueError, match="report_type"):
+        build_frontend_visual_a11y_evidence_artifact(
+            evaluations=[
+                FrontendVisualA11yEvidenceEvaluation(
+                    evaluation_id="eval-issue",
+                    target_id="orders.form",
+                    surface_id="refreshing",
+                    outcome="issue",
+                    report_type="unsupported-report",
+                )
+            ],
+            provider_kind="manual",
+            provider_name="qa-review",
+            generated_at="2026-04-07T12:00:00Z",
+        )
+
+
 def test_frontend_visual_a11y_evidence_artifact_runtime_object_canonicalizes_evaluations() -> None:
     artifact = FrontendVisualA11yEvidenceArtifact(
         schema_version=FRONTEND_VISUAL_A11Y_EVIDENCE_SCHEMA_VERSION,
