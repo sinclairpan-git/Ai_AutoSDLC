@@ -90,16 +90,29 @@ def _write_manifest(root: Path) -> None:
     (root / "program-manifest.yaml").write_text(
         """
 schema_version: "1"
+capabilities:
+  - id: "frontend-mainline-delivery"
+    title: "Frontend Mainline Delivery"
+    spec_refs:
+      - "001-auth"
+      - "002-course"
+      - "003-enroll"
 specs:
   - id: "001-auth"
     path: "specs/001-auth"
     depends_on: []
+    capability_refs:
+      - "frontend-mainline-delivery"
   - id: "002-course"
     path: "specs/002-course"
     depends_on: []
+    capability_refs:
+      - "frontend-mainline-delivery"
   - id: "003-enroll"
     path: "specs/003-enroll"
     depends_on: ["001-auth", "002-course"]
+    capability_refs:
+      - "frontend-mainline-delivery"
 """.strip()
         + "\n",
         encoding="utf-8",
@@ -2269,9 +2282,11 @@ class TestCliProgram:
             effective_frontend_stack="vue2",
             availability_summary={
                 "overall_status": "attention",
-                "passed_check_ids": ["company-registry-network"],
-                "failed_check_ids": [],
-                "blocking_reason_codes": [],
+                "passed_check_ids": [],
+                "failed_check_ids": ["company-registry-network"],
+                "blocking_reason_codes": [
+                    "private_registry_prerequisite_missing:company-registry-network"
+                ],
             },
             availability_reason_text="Company registry network not ready.",
             preflight_status="warning",
