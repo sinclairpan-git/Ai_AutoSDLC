@@ -938,7 +938,7 @@ async function compareVisualRegression({
     };
   }
   const threshold = Number(baselineMetadata.threshold ?? 0.03);
-  if (!Number.isFinite(threshold) || threshold < 0) {
+  if (!Number.isFinite(threshold) || threshold < 0 || threshold > 1) {
     await writeFile(
       bootstrapPath,
       JSON.stringify(
