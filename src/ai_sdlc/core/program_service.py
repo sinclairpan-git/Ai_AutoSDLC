@@ -214,6 +214,7 @@ PROGRAM_TRUTH_SYNC_EXECUTE_COMMAND = "python -m ai_sdlc program truth sync --exe
 PROGRAM_TRUTH_AUDIT_COMMAND = "python -m ai_sdlc program truth audit"
 PROGRAM_FRONTEND_MAINLINE_DELIVERY_CAPABILITY_ID = "frontend-mainline-delivery"
 PROGRAM_FRONTEND_INHERITANCE_BLOCKER_PREFIX = "frontend_inheritance"
+PROGRAM_FRONTEND_BROWSER_GATE_SMOKE_RUNTIME_PACKAGES = ("playwright",)
 PROGRAM_FRONTEND_VISUAL_REGRESSION_RUNTIME_PACKAGES = (
     "playwright",
     "pixelmatch",
@@ -15761,9 +15762,15 @@ def _unique_strings(values: list[str] | tuple[str, ...]) -> list[str]:
 
 
 def _visual_regression_runtime_dependency_packages(matrix_id: str) -> list[str]:
+    packages = list(PROGRAM_FRONTEND_BROWSER_GATE_SMOKE_RUNTIME_PACKAGES)
     if not str(matrix_id).strip():
-        return []
-    return list(PROGRAM_FRONTEND_VISUAL_REGRESSION_RUNTIME_PACKAGES)
+        return packages
+    return _unique_strings(
+        [
+            *packages,
+            *PROGRAM_FRONTEND_VISUAL_REGRESSION_RUNTIME_PACKAGES,
+        ]
+    )
 
 
 def _canonicalize_program_runtime_string_fields(

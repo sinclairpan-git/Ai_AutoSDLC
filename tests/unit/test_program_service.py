@@ -4617,6 +4617,60 @@ def test_build_frontend_managed_delivery_apply_request_materializes_public_bundl
     assert 'UiButton: "Button"' in provider_adapter_item["content"]
 
 
+def test_build_frontend_managed_delivery_apply_request_installs_playwright_without_visual_matrix(
+    initialized_project_dir: Path,
+    monkeypatch,
+) -> None:
+    root = initialized_project_dir
+    save_project_config(root, ProjectConfig(adapter_ingress_state="verified_loaded"))
+    _write_builtin_delivery_truth(root)
+    monkeypatch.setattr(
+        program_service_module,
+        "evaluate_current_host_runtime",
+        lambda project_root: _build_host_runtime_plan_for_tests(
+            node_runtime_available=True,
+            package_manager_available=True,
+            playwright_browsers_available=True,
+        ),
+    )
+    monkeypatch.setattr(
+        program_service_module.shutil,
+        "which",
+        lambda executable: f"/mock/bin/{executable}" if executable == "pnpm" else None,
+    )
+    svc = ProgramService(root)
+    quality_handoff = svc.build_frontend_quality_platform_handoff()
+    monkeypatch.setattr(
+        svc,
+        "build_frontend_quality_platform_handoff",
+        lambda: replace(
+            quality_handoff,
+            active_visual_regression_matrix_id="",
+            active_visual_regression_viewport_id="",
+        ),
+    )
+
+    request = svc.build_frontend_managed_delivery_apply_request()
+
+    assert request.execution_view is not None
+    dependency_actions = [
+        action
+        for action in request.execution_view.action_items
+        if action.action_type == "dependency_install"
+    ]
+    assert [action.action_id for action in dependency_actions] == [
+        "dependency-install",
+        "visual-regression-runtime-install",
+    ]
+    assert dependency_actions[1].executor_payload["packages"] == ["playwright"]
+    artifact_action = next(
+        action
+        for action in request.execution_view.action_items
+        if action.action_type == "artifact_generate"
+    )
+    assert artifact_action.depends_on_action_ids == ["visual-regression-runtime-install"]
+
+
 def test_build_frontend_managed_delivery_apply_request_blocks_malformed_provider_mappings(
     initialized_project_dir: Path,
     monkeypatch,
