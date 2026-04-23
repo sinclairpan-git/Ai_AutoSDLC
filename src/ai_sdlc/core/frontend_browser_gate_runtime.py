@@ -549,7 +549,7 @@ def _resolve_visual_a11y_evidence_artifact(
         try:
             existing_artifact = load_frontend_visual_a11y_evidence_artifact(evidence_path)
         except ValueError:
-            return None
+            existing_artifact = None
 
     if (
         existing_artifact is not None

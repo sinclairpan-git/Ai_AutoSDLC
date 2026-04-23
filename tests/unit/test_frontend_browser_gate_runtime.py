@@ -1007,7 +1007,7 @@ def test_materialize_browser_gate_probe_runtime_rejects_outside_spec_dir_for_aut
     assert bundle.overall_gate_status == "incomplete"
 
 
-def test_materialize_browser_gate_probe_runtime_does_not_overwrite_invalid_explicit_visual_a11y_evidence(
+def test_materialize_browser_gate_probe_runtime_regenerates_invalid_auto_visual_a11y_evidence(
     tmp_path: Path,
 ) -> None:
     context = _context()
@@ -1087,13 +1087,21 @@ def test_materialize_browser_gate_probe_runtime_does_not_overwrite_invalid_expli
         auto_visual_a11y_provider=True,
     )
 
-    assert bundle.overall_gate_status == "incomplete"
     evidence_path = spec_dir / "frontend-visual-a11y-evidence.json"
-    assert evidence_path.read_text(encoding="utf-8") == (
-        '{"schema_version":"frontend-visual-a11y-evidence/v1","provenance":'
+    regenerated_artifact = load_frontend_visual_a11y_evidence_artifact(evidence_path)
+    assert bundle.overall_gate_status == "incomplete"
+    assert any(
+        item.evaluation_id == "auto-visual-text-contrast" and item.outcome == "pass"
+        for item in regenerated_artifact.evaluations
+    )
+    assert any(
+        item.evaluation_id == "auto-a11y-focus-visible" and item.outcome == "pass"
+        for item in regenerated_artifact.evaluations
     )
     visual_receipt = next(item for item in receipts if item.check_name == "visual_expectation")
-    assert visual_receipt.classification_candidate == "evidence_missing"
+    a11y_receipt = next(item for item in receipts if item.check_name == "basic_a11y")
+    assert visual_receipt.classification_candidate == "pass"
+    assert a11y_receipt.classification_candidate == "pass"
 
 
 def test_frontend_browser_gate_models_deduplicate_set_like_lists() -> None:
