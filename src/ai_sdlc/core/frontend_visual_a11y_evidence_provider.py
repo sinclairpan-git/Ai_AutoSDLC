@@ -2,12 +2,15 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 from dataclasses import dataclass
 from pathlib import Path
 
 FRONTEND_VISUAL_A11Y_EVIDENCE_ARTIFACT_NAME = "frontend-visual-a11y-evidence.json"
 FRONTEND_VISUAL_A11Y_EVIDENCE_SCHEMA_VERSION = "frontend-visual-a11y-evidence/v1"
+AUTO_FRONTEND_VISUAL_A11Y_PROVIDER_KIND = "browser_gate_auto"
+AUTO_FRONTEND_VISUAL_A11Y_PROVIDER_NAME = "browser_gate_auto_heuristic_v1"
 FRONTEND_VISUAL_A11Y_REPORT_TYPES = (
     "violation-report",
     "coverage-report",
@@ -126,9 +129,10 @@ def _dedupe_evaluation_items(
 ) -> list[FrontendVisualA11yEvidenceEvaluation]:
     deduped: list[FrontendVisualA11yEvidenceEvaluation] = []
     seen: set[str] = set()
-    for value in values or []:
+    for index, value in enumerate(values or []):
         if not isinstance(value, FrontendVisualA11yEvidenceEvaluation):
             continue
+        value = _validate_evaluation_for_write(value, index=index)
         key = json.dumps(value.to_json_dict(), sort_keys=True, ensure_ascii=False)
         if key in seen:
             continue
@@ -170,6 +174,400 @@ def build_frontend_visual_a11y_evidence_artifact(
             source_revision=_optional_text(source_revision, "source_revision"),
         ),
         evaluations=tuple(_coerce_evaluations(evaluations)),
+    )
+
+
+def build_auto_frontend_visual_a11y_evidence_artifact(
+    *,
+    target_id: str,
+    surface_id: str,
+    generated_at: str,
+    screenshot_ref: str,
+    final_url: str,
+    page_title: str,
+    body_text_char_count: int,
+    heading_count: int,
+    landmark_count: int,
+    interactive_count: int,
+    unlabeled_button_count: int,
+    unlabeled_input_count: int,
+    image_missing_alt_count: int,
+    viewport_width: int | None = None,
+    viewport_height: int | None = None,
+    document_scroll_width: int | None = None,
+    document_scroll_height: int | None = None,
+    horizontal_overflow_count: int | None = None,
+    low_contrast_text_count: int | None = None,
+    focusable_count: int | None = None,
+    focusable_without_visible_focus_count: int | None = None,
+    console_error_messages: list[str] | tuple[str, ...] = (),
+    page_error_messages: list[str] | tuple[str, ...] = (),
+) -> FrontendVisualA11yEvidenceArtifact:
+    """Build one auto-derived visual / a11y evidence artifact from browser gate capture."""
+
+    target = _require_non_empty_text(target_id, "target_id")
+    surface = _require_non_empty_text(surface_id, "surface_id")
+    screenshot = _optional_text(screenshot_ref, "screenshot_ref") or ""
+    url = _optional_text(final_url, "final_url") or ""
+    title = _optional_text(page_title, "page_title") or ""
+
+    normalized_console_errors = _dedupe_text_items(console_error_messages)
+    normalized_page_errors = _dedupe_text_items(page_error_messages)
+
+    evaluations: list[FrontendVisualA11yEvidenceEvaluation] = []
+    shared_scope_note = "derived from browser gate auto heuristic provider"
+    if screenshot and body_text_char_count > 0 and title:
+        evaluations.append(
+            _auto_pass_evaluation(
+                evaluation_id="auto-visual-coverage-screenshot",
+                target_id=target,
+                surface_id=surface,
+                location_anchor=screenshot or url,
+                quality_hint="captured a populated browser entry screenshot",
+                changed_scope_explanation=shared_scope_note,
+            )
+        )
+    else:
+        evaluations.append(
+            _auto_issue_evaluation(
+                evaluation_id="auto-visual-coverage-screenshot",
+                target_id=target,
+                surface_id=surface,
+                report_type="coverage-report",
+                severity="high",
+                location_anchor=screenshot or url,
+                quality_hint=(
+                    "browser entry did not expose a stable screenshot, readable text, "
+                    "or page title during auto verification"
+                ),
+                changed_scope_explanation=shared_scope_note,
+            )
+        )
+
+    if heading_count > 0:
+        evaluations.append(
+            _auto_pass_evaluation(
+                evaluation_id="auto-visual-structure-heading",
+                target_id=target,
+                surface_id=surface,
+                location_anchor=screenshot or url,
+                quality_hint=f"detected {heading_count} heading anchors",
+                changed_scope_explanation=shared_scope_note,
+            )
+        )
+    else:
+        evaluations.append(
+            _auto_issue_evaluation(
+                evaluation_id="auto-visual-structure-heading",
+                target_id=target,
+                surface_id=surface,
+                report_type="coverage-report",
+                severity="medium",
+                location_anchor=screenshot or url,
+                quality_hint="page should expose at least one heading landmark",
+                changed_scope_explanation=shared_scope_note,
+            )
+        )
+
+    if landmark_count > 0:
+        evaluations.append(
+            _auto_pass_evaluation(
+                evaluation_id="auto-a11y-landmarks",
+                target_id=target,
+                surface_id=surface,
+                location_anchor=screenshot or url,
+                quality_hint=f"detected {landmark_count} semantic landmark regions",
+                changed_scope_explanation=shared_scope_note,
+            )
+        )
+    else:
+        evaluations.append(
+            _auto_issue_evaluation(
+                evaluation_id="auto-a11y-landmarks",
+                target_id=target,
+                surface_id=surface,
+                report_type="coverage-report",
+                severity="medium",
+                location_anchor=screenshot or url,
+                quality_hint="page should expose semantic landmark regions such as main or header",
+                changed_scope_explanation=shared_scope_note,
+            )
+        )
+
+    if interactive_count > 0 and unlabeled_button_count == 0:
+        evaluations.append(
+            _auto_pass_evaluation(
+                evaluation_id="auto-a11y-button-labels",
+                target_id=target,
+                surface_id=surface,
+                location_anchor=screenshot or url,
+                quality_hint="button-like controls expose accessible labels",
+                changed_scope_explanation=shared_scope_note,
+            )
+        )
+    elif unlabeled_button_count > 0:
+        evaluations.append(
+            _auto_issue_evaluation(
+                evaluation_id="auto-a11y-button-labels",
+                target_id=target,
+                surface_id=surface,
+                report_type="violation-report",
+                severity="high",
+                location_anchor=screenshot or url,
+                quality_hint=(
+                    f"detected {unlabeled_button_count} button-like controls without "
+                    "accessible labels"
+                ),
+                changed_scope_explanation=shared_scope_note,
+            )
+        )
+
+    if interactive_count > 0 and unlabeled_input_count == 0:
+        evaluations.append(
+            _auto_pass_evaluation(
+                evaluation_id="auto-a11y-input-labels",
+                target_id=target,
+                surface_id=surface,
+                location_anchor=screenshot or url,
+                quality_hint="form controls expose labels or ARIA names",
+                changed_scope_explanation=shared_scope_note,
+            )
+        )
+    elif unlabeled_input_count > 0:
+        evaluations.append(
+            _auto_issue_evaluation(
+                evaluation_id="auto-a11y-input-labels",
+                target_id=target,
+                surface_id=surface,
+                report_type="violation-report",
+                severity="high",
+                location_anchor=screenshot or url,
+                quality_hint=(
+                    f"detected {unlabeled_input_count} form controls without labels"
+                ),
+                changed_scope_explanation=shared_scope_note,
+            )
+        )
+
+    if image_missing_alt_count == 0:
+        evaluations.append(
+            _auto_pass_evaluation(
+                evaluation_id="auto-a11y-image-alt",
+                target_id=target,
+                surface_id=surface,
+                location_anchor=screenshot or url,
+                quality_hint="images with alternate text coverage are clear",
+                changed_scope_explanation=shared_scope_note,
+            )
+        )
+    else:
+        evaluations.append(
+            _auto_issue_evaluation(
+                evaluation_id="auto-a11y-image-alt",
+                target_id=target,
+                surface_id=surface,
+                report_type="violation-report",
+                severity="medium",
+                location_anchor=screenshot or url,
+                quality_hint=(
+                    f"detected {image_missing_alt_count} images missing alternate text"
+                ),
+                changed_scope_explanation=shared_scope_note,
+            )
+        )
+
+    if low_contrast_text_count is not None:
+        if int(low_contrast_text_count) == 0:
+            evaluations.append(
+                _auto_pass_evaluation(
+                    evaluation_id="auto-visual-text-contrast",
+                    target_id=target,
+                    surface_id=surface,
+                    location_anchor=screenshot or url,
+                    quality_hint="sampled visible text meets contrast thresholds",
+                    changed_scope_explanation=shared_scope_note,
+                )
+            )
+        else:
+            evaluations.append(
+                _auto_issue_evaluation(
+                    evaluation_id="auto-visual-text-contrast",
+                    target_id=target,
+                    surface_id=surface,
+                    report_type="violation-report",
+                    severity="medium",
+                    location_anchor=screenshot or url,
+                    quality_hint=(
+                        f"detected {int(low_contrast_text_count)} low-contrast text "
+                        "sample(s) during browser verification"
+                    ),
+                    changed_scope_explanation=shared_scope_note,
+                )
+            )
+
+    layout_metrics_present = all(
+        value is not None
+        for value in (
+            viewport_width,
+            viewport_height,
+            document_scroll_width,
+            document_scroll_height,
+            horizontal_overflow_count,
+        )
+    )
+    if layout_metrics_present:
+        viewport_w = int(viewport_width or 0)
+        viewport_h = int(viewport_height or 0)
+        scroll_w = int(document_scroll_width or 0)
+        scroll_h = int(document_scroll_height or 0)
+        overflow_count = int(horizontal_overflow_count or 0)
+        if overflow_count == 0 and scroll_w <= viewport_w + 2:
+            evaluations.append(
+                _auto_pass_evaluation(
+                    evaluation_id="auto-visual-layout-fit",
+                    target_id=target,
+                    surface_id=surface,
+                    location_anchor=screenshot or url,
+                    quality_hint=(
+                        "page layout fits the viewport without horizontal overflow"
+                    ),
+                    changed_scope_explanation=shared_scope_note,
+                )
+            )
+        else:
+            overflow_px = max(0, scroll_w - viewport_w)
+            evaluations.append(
+                _auto_issue_evaluation(
+                    evaluation_id="auto-visual-layout-fit",
+                    target_id=target,
+                    surface_id=surface,
+                    report_type="violation-report",
+                    severity="high",
+                    location_anchor=screenshot or url,
+                    quality_hint=(
+                        "page layout exceeds the viewport horizontally by "
+                        f"{overflow_px}px; observed {overflow_count} overflowing "
+                        f"element(s) within a {viewport_w}x{viewport_h} viewport and "
+                        f"{scroll_w}x{scroll_h} document bounds"
+                    ),
+                    changed_scope_explanation=shared_scope_note,
+                )
+            )
+
+    if (
+        focusable_count is not None
+        and focusable_without_visible_focus_count is not None
+        and int(focusable_count) > 0
+    ):
+        focusable_total = int(focusable_count)
+        focusable_missing = int(focusable_without_visible_focus_count)
+        if focusable_missing == 0:
+            evaluations.append(
+                _auto_pass_evaluation(
+                    evaluation_id="auto-a11y-focus-visible",
+                    target_id=target,
+                    surface_id=surface,
+                    location_anchor=screenshot or url,
+                    quality_hint="focusable controls expose visible focus indicators",
+                    changed_scope_explanation=shared_scope_note,
+                )
+            )
+        else:
+            evaluations.append(
+                _auto_issue_evaluation(
+                    evaluation_id="auto-a11y-focus-visible",
+                    target_id=target,
+                    surface_id=surface,
+                    report_type="violation-report",
+                    severity="medium",
+                    location_anchor=screenshot or url,
+                    quality_hint=(
+                        f"detected {focusable_missing} of {focusable_total} focusable "
+                        "control(s) without a visible keyboard focus indicator"
+                    ),
+                    changed_scope_explanation=shared_scope_note,
+                )
+            )
+
+    runtime_error_count = len(normalized_console_errors) + len(normalized_page_errors)
+    if runtime_error_count == 0:
+        evaluations.append(
+            _auto_pass_evaluation(
+                evaluation_id="auto-runtime-console-errors",
+                target_id=target,
+                surface_id=surface,
+                location_anchor=url or screenshot,
+                quality_hint="no browser console or page errors were captured",
+                changed_scope_explanation=shared_scope_note,
+            )
+        )
+    else:
+        evaluations.append(
+            _auto_issue_evaluation(
+                evaluation_id="auto-runtime-console-errors",
+                target_id=target,
+                surface_id=surface,
+                report_type="violation-report",
+                severity="high",
+                location_anchor=url or screenshot,
+                quality_hint=(
+                    "browser runtime surfaced errors: "
+                    + "; ".join([*normalized_console_errors, *normalized_page_errors][:3])
+                ),
+                changed_scope_explanation=shared_scope_note,
+            )
+        )
+
+    source_signature = json.dumps(
+        {
+            "target_id": target,
+            "surface_id": surface,
+            "screenshot_ref": screenshot,
+            "final_url": url,
+            "page_title": title,
+            "body_text_char_count": int(body_text_char_count),
+            "heading_count": int(heading_count),
+            "landmark_count": int(landmark_count),
+            "interactive_count": int(interactive_count),
+            "unlabeled_button_count": int(unlabeled_button_count),
+            "unlabeled_input_count": int(unlabeled_input_count),
+            "image_missing_alt_count": int(image_missing_alt_count),
+            "viewport_width": None if viewport_width is None else int(viewport_width),
+            "viewport_height": None if viewport_height is None else int(viewport_height),
+            "document_scroll_width": (
+                None if document_scroll_width is None else int(document_scroll_width)
+            ),
+            "document_scroll_height": (
+                None if document_scroll_height is None else int(document_scroll_height)
+            ),
+            "horizontal_overflow_count": (
+                None if horizontal_overflow_count is None else int(horizontal_overflow_count)
+            ),
+            "low_contrast_text_count": (
+                None if low_contrast_text_count is None else int(low_contrast_text_count)
+            ),
+            "focusable_count": None if focusable_count is None else int(focusable_count),
+            "focusable_without_visible_focus_count": (
+                None
+                if focusable_without_visible_focus_count is None
+                else int(focusable_without_visible_focus_count)
+            ),
+            "console_error_messages": normalized_console_errors,
+            "page_error_messages": normalized_page_errors,
+        },
+        sort_keys=True,
+        ensure_ascii=False,
+    )
+    source_digest = "sha256:" + hashlib.sha256(
+        source_signature.encode("utf-8")
+    ).hexdigest()
+    return build_frontend_visual_a11y_evidence_artifact(
+        evaluations=evaluations,
+        provider_kind=AUTO_FRONTEND_VISUAL_A11Y_PROVIDER_KIND,
+        provider_name=AUTO_FRONTEND_VISUAL_A11Y_PROVIDER_NAME,
+        generated_at=generated_at,
+        source_ref=screenshot or url or surface,
+        source_digest=source_digest,
     )
 
 
@@ -344,6 +742,7 @@ def _coerce_evaluations(
                 "evaluations must contain FrontendVisualA11yEvidenceEvaluation items; "
                 f"item {index} was {type(evaluation).__name__}"
             )
+        evaluation = _validate_evaluation_for_write(evaluation, index=index)
         key = json.dumps(
             evaluation.to_json_dict(),
             sort_keys=True,
@@ -354,6 +753,69 @@ def _coerce_evaluations(
         seen.add(key)
         items.append(evaluation)
     return items
+
+
+def _validate_evaluation_for_write(
+    evaluation: FrontendVisualA11yEvidenceEvaluation,
+    *,
+    index: int,
+) -> FrontendVisualA11yEvidenceEvaluation:
+    return _load_evaluation(evaluation.to_json_dict(), index=index)
+
+
+def _auto_pass_evaluation(
+    *,
+    evaluation_id: str,
+    target_id: str,
+    surface_id: str,
+    location_anchor: str,
+    quality_hint: str,
+    changed_scope_explanation: str,
+) -> FrontendVisualA11yEvidenceEvaluation:
+    return FrontendVisualA11yEvidenceEvaluation(
+        evaluation_id=evaluation_id,
+        target_id=target_id,
+        surface_id=surface_id,
+        outcome="pass",
+        report_type="coverage-report",
+        severity="info",
+        location_anchor=location_anchor or None,
+        quality_hint=quality_hint,
+        changed_scope_explanation=changed_scope_explanation,
+    )
+
+
+def _auto_issue_evaluation(
+    *,
+    evaluation_id: str,
+    target_id: str,
+    surface_id: str,
+    report_type: str,
+    severity: str,
+    location_anchor: str,
+    quality_hint: str,
+    changed_scope_explanation: str,
+) -> FrontendVisualA11yEvidenceEvaluation:
+    return FrontendVisualA11yEvidenceEvaluation(
+        evaluation_id=evaluation_id,
+        target_id=target_id,
+        surface_id=surface_id,
+        outcome="issue",
+        report_type=report_type,
+        severity=severity,
+        location_anchor=location_anchor or None,
+        quality_hint=quality_hint,
+        changed_scope_explanation=changed_scope_explanation,
+    )
+
+
+def _dedupe_text_items(values: object) -> list[str]:
+    deduped: list[str] = []
+    for value in values or []:
+        normalized = str(value).strip()
+        if normalized and normalized not in deduped:
+            deduped.append(normalized)
+    return deduped
 
 
 def _require_mapping(
@@ -404,11 +866,14 @@ def _optional_text(value: object, field_name: str) -> str | None:
 __all__ = [
     "FRONTEND_VISUAL_A11Y_EVIDENCE_ARTIFACT_NAME",
     "FRONTEND_VISUAL_A11Y_EVIDENCE_SCHEMA_VERSION",
+    "AUTO_FRONTEND_VISUAL_A11Y_PROVIDER_KIND",
+    "AUTO_FRONTEND_VISUAL_A11Y_PROVIDER_NAME",
     "FRONTEND_VISUAL_A11Y_REPORT_TYPES",
     "FrontendVisualA11yEvidenceArtifact",
     "FrontendVisualA11yEvidenceEvaluation",
     "FrontendVisualA11yEvidenceFreshness",
     "FrontendVisualA11yEvidenceProvenance",
+    "build_auto_frontend_visual_a11y_evidence_artifact",
     "build_frontend_visual_a11y_evidence_artifact",
     "load_frontend_visual_a11y_evidence_artifact",
     "visual_a11y_evidence_artifact_path",

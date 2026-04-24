@@ -75,6 +75,7 @@ class InstallStrategy(FrontendSolutionConfirmationModel):
     access_mode: Literal["public", "private"]
     package_manager: Literal["npm", "pnpm", "yarn"] = "pnpm"
     packages: list[str] = Field(default_factory=list)
+    registry_url: str = ""
     registry_requirements: list[str] = Field(default_factory=list)
     credential_requirements: list[str] = Field(default_factory=list)
     private_package_required: bool = False
@@ -229,12 +230,26 @@ def build_builtin_install_strategies() -> list[InstallStrategy]:
 
     return [
         InstallStrategy(
-            strategy_id="enterprise-vue2-private-registry",
+            strategy_id="enterprise-vue2-company-registry",
             provider_id="enterprise-vue2",
             access_mode="private",
-            packages=["@company/enterprise-vue2-ui"],
-            registry_requirements=["company-private-registry"],
-            credential_requirements=["company-registry-token"],
+            package_manager="npm",
+            packages=[
+                "@sxf/er-charts",
+                "@sxf/er-components",
+                "@sxf/er-config",
+                "@sxf/er-feature",
+                "@sxf/er-hooks",
+                "@sxf/er-lib",
+                "@sxf/er-pro",
+                "@sxf/er-style",
+                "@sxf/er-utils",
+                "@sxf/er-validator",
+                "@sxf/er-widget",
+            ],
+            registry_url="http://npm.uedc.sangfor.com.cn/",
+            registry_requirements=["company-registry-network"],
+            credential_requirements=[],
             private_package_required=True,
         ),
         InstallStrategy(
@@ -325,13 +340,10 @@ def build_mvp_solution_snapshot(
             "effective_api_collab_mode": "typed-bff",
             "effective_style_pack_id": effective_style_pack_id,
             "enterprise_provider_eligible": True,
-            "availability_checks": [
-                "company-registry-network",
-                "company-registry-token",
-            ],
+            "availability_checks": ["company-registry-network"],
             "availability_summary": AvailabilitySummary(
                 overall_status="ready",
-                passed_check_ids=["company-registry-network", "company-registry-token"],
+                passed_check_ids=["company-registry-network"],
                 failed_check_ids=[],
                 blocking_reason_codes=[],
             ),

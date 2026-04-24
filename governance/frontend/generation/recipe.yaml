@@ -1,0 +1,7 @@
+required_recipe_declaration: true
+allowed_recipe_ids:
+- ListPage
+- FormPage
+- DetailPage
+enforce_required_optional_forbidden_boundaries: true
+allow_instance_override: false

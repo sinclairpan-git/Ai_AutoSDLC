@@ -1,0 +1,21 @@
+items:
+- style_pack_id: enterprise-default
+  fidelity_status: full
+  degradation_reason_codes: []
+  notes: []
+- style_pack_id: data-console
+  fidelity_status: full
+  degradation_reason_codes: []
+  notes: []
+- style_pack_id: high-clarity
+  fidelity_status: full
+  degradation_reason_codes: []
+  notes: []
+- style_pack_id: modern-saas
+  fidelity_status: full
+  degradation_reason_codes: []
+  notes: []
+- style_pack_id: macos-glass
+  fidelity_status: full
+  degradation_reason_codes: []
+  notes: []

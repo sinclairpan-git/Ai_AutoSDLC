@@ -1,0 +1,33 @@
+{
+  "matrix_id": "search-enterprise-default-desktop-chromium",
+  "browser_id": "chromium",
+  "viewport_id": "desktop-1440",
+  "style_pack_id": "enterprise-default",
+  "baseline_image_ref": "artifact:governance/frontend/quality-platform/evidence/visual-regression/baselines/search-enterprise-default-desktop-chromium/baseline.png",
+  "baseline_metadata_ref": "artifact:governance/frontend/quality-platform/evidence/visual-regression/baselines/search-enterprise-default-desktop-chromium/baseline.yaml",
+  "threshold": 0.03,
+  "critical_regions": [
+    {
+      "region_id": "enterprise-header",
+      "description": "enterprise provider identity and primary action area"
+    },
+    {
+      "region_id": "search-filter-panel",
+      "description": "search/filter form and governed trigger controls"
+    },
+    {
+      "region_id": "result-list-table",
+      "description": "search list table result scaffold"
+    }
+  ],
+  "ignore_regions": [
+    {
+      "region_id": "none",
+      "description": "no ignore regions defined for this enterprise baseline seed"
+    }
+  ],
+  "capture_protocol_ref": "matrix:search-enterprise-default-desktop-chromium@viewport:desktop-1440",
+  "blessed_at": "2026-04-23T09:10:00Z",
+  "source_screenshot_ref": "synthetic:enterprise-default-managed-provider-scaffold",
+  "source_digest": "771b64efe1fb4bd59eff7588adc3ae4b6d95cb12c1d2202cd32d9a1fa65a6408"
+}

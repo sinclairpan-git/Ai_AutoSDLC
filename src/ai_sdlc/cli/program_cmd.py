@@ -487,6 +487,12 @@ def program_delivery_registry_handoff() -> None:
         f"  - package manager: {handoff.package_manager or '-'}",
         markup=False,
     )
+    registry_url = getattr(handoff, "registry_url", "")
+    if registry_url:
+        console.print(
+            f"  - install registry url: {registry_url}",
+            markup=False,
+        )
     console.print(
         f"  - provider manifest ref: {handoff.provider_manifest_ref or '-'}",
         markup=False,
@@ -5389,7 +5395,7 @@ def _render_frontend_delivery_context_lines(svc: ProgramService) -> None:
                 )
         console.print(
             "  - delivery result: "
-            f"{humanize_frontend_delivery_apply_state(str(status_surface.get('apply_state', '-')))}",
+            f"{humanize_frontend_delivery_apply_state(str(status_surface.get('delivery_state', status_surface.get('apply_state', '-'))))}",
             markup=False,
         )
         console.print(

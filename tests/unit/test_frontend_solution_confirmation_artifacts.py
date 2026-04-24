@@ -39,7 +39,7 @@ def test_materialize_frontend_solution_confirmation_artifacts_writes_expected_fi
     assert rel_paths == {
         ".ai-sdlc/memory/frontend-solution-confirmation/latest.yaml",
         ".ai-sdlc/memory/frontend-solution-confirmation/versions/solution-snapshot-001.yaml",
-        "governance/frontend/solution/install-strategies/enterprise-vue2-private-registry.yaml",
+        "governance/frontend/solution/install-strategies/enterprise-vue2-company-registry.yaml",
         "governance/frontend/solution/install-strategies/public-primevue-default.yaml",
         "governance/frontend/solution/style-packs/data-console.yaml",
         "governance/frontend/solution/style-packs/enterprise-default.yaml",
@@ -71,7 +71,7 @@ def test_solution_confirmation_artifacts_preserve_style_strategy_and_snapshot_tr
     enterprise_install = _read_yaml(
         solution_root
         / "install-strategies"
-        / "enterprise-vue2-private-registry.yaml"
+        / "enterprise-vue2-company-registry.yaml"
     )
     latest_snapshot = _read_yaml(memory_root / "latest.yaml")
     versioned_snapshot = _read_yaml(
@@ -81,7 +81,22 @@ def test_solution_confirmation_artifacts_preserve_style_strategy_and_snapshot_tr
     assert modern_saas["style_pack_id"] == "modern-saas"
     assert modern_saas["design_tokens"]["surface_mode"] == "soft-gradient"
     assert enterprise_install["private_package_required"] is True
-    assert enterprise_install["credential_requirements"] == ["company-registry-token"]
+    assert enterprise_install["registry_url"] == "http://npm.uedc.sangfor.com.cn/"
+    assert enterprise_install["registry_requirements"] == ["company-registry-network"]
+    assert enterprise_install["credential_requirements"] == []
+    assert enterprise_install["packages"] == [
+        "@sxf/er-charts",
+        "@sxf/er-components",
+        "@sxf/er-config",
+        "@sxf/er-feature",
+        "@sxf/er-hooks",
+        "@sxf/er-lib",
+        "@sxf/er-pro",
+        "@sxf/er-style",
+        "@sxf/er-utils",
+        "@sxf/er-validator",
+        "@sxf/er-widget",
+    ]
     assert latest_snapshot["effective_style_pack_id"] == "modern-saas"
     assert latest_snapshot["resolved_style_tokens"]["surface_mode"] == "soft-gradient"
     assert latest_snapshot["provider_theme_adapter_config"] == {

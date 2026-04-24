@@ -1,0 +1,12 @@
+{
+  "name": "Ai_AutoSDLC-managed-frontend",
+  "private": true,
+  "packageManager": "npm@10",
+  "dependencies": {
+    "@primeuix/themes": "^2.0.3",
+    "pixelmatch": "^7.1.0",
+    "playwright": "^1.59.1",
+    "pngjs": "^7.0.0",
+    "primevue": "^4.5.5"
+  }
+}

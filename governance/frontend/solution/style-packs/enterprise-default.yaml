@@ -1,0 +1,14 @@
+style_pack_id: enterprise-default
+display_name: Enterprise Default
+status: active
+visibility: internal
+description: Conservative enterprise console baseline.
+recommended_for:
+- ops-consoles
+- internal-admin
+not_recommended_for:
+- brand-led-marketing
+design_tokens:
+  surface_mode: flat-neutral
+  density: balanced
+  accent_mode: subtle-enterprise

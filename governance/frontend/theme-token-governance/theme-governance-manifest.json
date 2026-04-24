@@ -1,0 +1,25 @@
+{
+  "work_item_id": "148",
+  "source_work_item_ids": [
+    "017",
+    "073",
+    "147"
+  ],
+  "token_floor_disallowed_naked_values": [
+    "hex-color",
+    "rgb-color",
+    "rgba-color",
+    "shadow",
+    "spacing-or-size"
+  ],
+  "style_pack_ids": [
+    "enterprise-default",
+    "data-console",
+    "high-clarity",
+    "modern-saas",
+    "macos-glass"
+  ],
+  "artifact_root": "governance/frontend/theme-token-governance",
+  "schema_family": "frontend-theme-token-governance",
+  "current_version": "1.0"
+}

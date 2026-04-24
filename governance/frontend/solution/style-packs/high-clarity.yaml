@@ -1,0 +1,14 @@
+style_pack_id: high-clarity
+display_name: High Clarity
+status: active
+visibility: internal
+description: Accessibility-first, high-legibility presentation.
+recommended_for:
+- compliance-heavy-ui
+- long-form-forms
+not_recommended_for:
+- ornamental-brand-showcase
+design_tokens:
+  surface_mode: clean-solid
+  density: comfortable
+  accent_mode: clarity-first

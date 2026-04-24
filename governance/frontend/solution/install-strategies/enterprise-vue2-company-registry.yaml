@@ -1,0 +1,21 @@
+strategy_id: enterprise-vue2-company-registry
+provider_id: enterprise-vue2
+access_mode: private
+package_manager: npm
+packages:
+- '@sxf/er-charts'
+- '@sxf/er-components'
+- '@sxf/er-config'
+- '@sxf/er-feature'
+- '@sxf/er-hooks'
+- '@sxf/er-lib'
+- '@sxf/er-pro'
+- '@sxf/er-style'
+- '@sxf/er-utils'
+- '@sxf/er-validator'
+- '@sxf/er-widget'
+registry_url: http://npm.uedc.sangfor.com.cn/
+registry_requirements:
+- company-registry-network
+credential_requirements: []
+private_package_required: true

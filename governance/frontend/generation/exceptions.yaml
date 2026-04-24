@@ -1,0 +1,9 @@
+requires_structured_declaration: true
+allowed_objects:
+- recipe-deviation
+- whitelist-extension
+- token-exception
+- provider-controlled-extension
+forbidden_overrides:
+- override-ui-kernel-standard-body
+- override-non-exempt-hard-rules

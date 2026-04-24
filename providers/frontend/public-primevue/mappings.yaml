@@ -1,0 +1,96 @@
+items:
+- component_id: UiButton
+  implementation_ref: Button
+  mapping_kind: provider-component
+  alignment_notes:
+  - maps Kernel action semantics onto PrimeVue Button
+- component_id: UiInput
+  implementation_ref: InputText
+  mapping_kind: provider-component
+  alignment_notes:
+  - maps Kernel text input semantics onto PrimeVue InputText
+- component_id: UiSelect
+  implementation_ref: Select
+  mapping_kind: provider-component
+  alignment_notes:
+  - maps Kernel selection semantics onto PrimeVue Select
+- component_id: UiForm
+  implementation_ref: Fieldset
+  mapping_kind: semantic-wrapper
+  alignment_notes:
+  - uses PrimeVue Fieldset as the governed form container shell
+- component_id: UiFormItem
+  implementation_ref: FloatLabel
+  mapping_kind: semantic-wrapper
+  alignment_notes:
+  - uses PrimeVue FloatLabel to keep field label semantics explicit
+- component_id: UiTable
+  implementation_ref: DataTable
+  mapping_kind: provider-component
+  alignment_notes:
+  - maps Kernel structured list semantics onto PrimeVue DataTable
+- component_id: UiDialog
+  implementation_ref: Dialog
+  mapping_kind: provider-component
+  alignment_notes:
+  - maps Kernel modal confirmation semantics onto PrimeVue Dialog
+- component_id: UiDrawer
+  implementation_ref: Drawer
+  mapping_kind: provider-component
+  alignment_notes:
+  - maps Kernel side panel semantics onto PrimeVue Drawer
+- component_id: UiEmpty
+  implementation_ref: Message
+  mapping_kind: semantic-wrapper
+  alignment_notes:
+  - uses PrimeVue Message to keep empty-state feedback visible
+- component_id: UiSpinner
+  implementation_ref: ProgressSpinner
+  mapping_kind: provider-component
+  alignment_notes:
+  - maps Kernel loading semantics onto PrimeVue ProgressSpinner
+- component_id: UiPageHeader
+  implementation_ref: Toolbar
+  mapping_kind: semantic-wrapper
+  alignment_notes:
+  - uses PrimeVue Toolbar to keep page header actions semantically partitioned
+- component_id: UiTabs
+  implementation_ref: Tabs
+  mapping_kind: provider-component
+  alignment_notes:
+  - maps Kernel segmented navigation semantics onto PrimeVue Tabs
+- component_id: UiSearchBar
+  implementation_ref: InputGroup
+  mapping_kind: semantic-wrapper
+  alignment_notes:
+  - uses PrimeVue InputGroup for governed search input plus trigger composition
+- component_id: UiFilterBar
+  implementation_ref: Toolbar
+  mapping_kind: semantic-wrapper
+  alignment_notes:
+  - uses PrimeVue Toolbar to keep filter controls grouped and governed
+- component_id: UiResult
+  implementation_ref: Message
+  mapping_kind: semantic-wrapper
+  alignment_notes:
+  - uses PrimeVue Message for structured success and partial-error feedback
+- component_id: UiSection
+  implementation_ref: Panel
+  mapping_kind: semantic-wrapper
+  alignment_notes:
+  - uses PrimeVue Panel to preserve explicit page section boundaries
+- component_id: UiToolbar
+  implementation_ref: Toolbar
+  mapping_kind: provider-component
+  alignment_notes:
+  - maps Kernel in-page action cluster semantics onto PrimeVue Toolbar
+- component_id: UiPagination
+  implementation_ref: Paginator
+  mapping_kind: provider-component
+  alignment_notes:
+  - maps Kernel result-set navigation semantics onto PrimeVue Paginator
+- component_id: UiCard
+  implementation_ref: Card
+  mapping_kind: provider-component
+  alignment_notes:
+  - maps Kernel structured info block semantics onto PrimeVue Card

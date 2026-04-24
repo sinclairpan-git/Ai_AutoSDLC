@@ -1,0 +1,23 @@
+flows:
+- flow_id: dashboard-review-flow
+  page_schema_id: dashboard-workspace
+  required_probe_sources:
+  - 143:browser-probe
+  - 144:host-remediation
+  focus_areas:
+  - focus-continuity
+  - feedback-timing
+  remediation_hints:
+  - stabilize async loading placeholders
+  - preserve keyboard focus across review actions
+- flow_id: search-filter-flow
+  page_schema_id: search-list-workspace
+  required_probe_sources:
+  - 143:browser-probe
+  - 144:workspace-runtime
+  focus_areas:
+  - input-continuity
+  - result-feedback-ordering
+  remediation_hints:
+  - keep filter inputs mounted during result refresh
+  - surface loading and empty states deterministically

@@ -1,0 +1,28 @@
+items:
+- matrix_id: dashboard-modern-saas-desktop-chromium
+  page_schema_id: dashboard-workspace
+  browser_id: chromium
+  viewport_id: desktop-1440
+  style_pack_id: modern-saas
+  interaction_flow_id: dashboard-review-flow
+  evidence_contract_ids:
+  - visual-regression-evidence
+  - a11y-matrix-evidence
+- matrix_id: dashboard-modern-saas-mobile-webkit
+  page_schema_id: dashboard-workspace
+  browser_id: webkit
+  viewport_id: mobile-390
+  style_pack_id: modern-saas
+  interaction_flow_id: dashboard-review-flow
+  evidence_contract_ids:
+  - a11y-matrix-evidence
+  - interaction-quality-evidence
+- matrix_id: search-enterprise-default-desktop-chromium
+  page_schema_id: search-list-workspace
+  browser_id: chromium
+  viewport_id: desktop-1440
+  style_pack_id: enterprise-default
+  interaction_flow_id: search-filter-flow
+  evidence_contract_ids:
+  - visual-regression-evidence
+  - interaction-quality-evidence

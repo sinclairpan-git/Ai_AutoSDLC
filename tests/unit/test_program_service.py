@@ -29,6 +29,7 @@ from ai_sdlc.core.frontend_contract_observation_provider import (
 from ai_sdlc.core.frontend_visual_a11y_evidence_provider import (
     FrontendVisualA11yEvidenceEvaluation,
     build_frontend_visual_a11y_evidence_artifact,
+    load_frontend_visual_a11y_evidence_artifact,
     write_frontend_visual_a11y_evidence_artifact,
 )
 from ai_sdlc.core.host_runtime_manager import HostRuntimeProbe, build_host_runtime_plan
@@ -77,6 +78,7 @@ from ai_sdlc.models.frontend_gate_policy import (
 from ai_sdlc.models.frontend_generation_constraints import (
     build_mvp_frontend_generation_constraints,
 )
+from ai_sdlc.models.frontend_managed_delivery import ConfirmedActionPlanExecutionView
 from ai_sdlc.models.frontend_page_ui_schema import (
     build_p2_frontend_page_ui_schema_baseline,
 )
@@ -100,6 +102,9 @@ from ai_sdlc.models.frontend_theme_token_governance import (
 from ai_sdlc.models.program import ProgramManifest, ProgramSpecRef
 from ai_sdlc.models.project import ProjectConfig
 from ai_sdlc.models.state import Checkpoint, FeatureInfo
+from tests.support.managed_delivery import (
+    build_dependency_install_subprocess_side_effect,
+)
 
 SAMPLE_FIXTURE_SOURCE_REF = "tests/fixtures/frontend-contract-sample-src/match"
 
@@ -108,17 +113,31 @@ def _manifest() -> ProgramManifest:
     return ProgramManifest(
         schema_version="1",
         prd_path="PRD.md",
+        capabilities=[
+            {
+                "id": "frontend-mainline-delivery",
+                "title": "Frontend Mainline Delivery",
+                "spec_refs": ["001-auth", "002-course", "003-enroll"],
+            }
+        ],
         specs=[
-            ProgramSpecRef(id="001-auth", path="specs/001-auth", depends_on=[]),
+            ProgramSpecRef(
+                id="001-auth",
+                path="specs/001-auth",
+                depends_on=[],
+                capability_refs=["frontend-mainline-delivery"],
+            ),
             ProgramSpecRef(
                 id="002-course",
                 path="specs/002-course",
                 depends_on=[],
+                capability_refs=["frontend-mainline-delivery"],
             ),
             ProgramSpecRef(
                 id="003-enroll",
                 path="specs/003-enroll",
                 depends_on=["001-auth", "002-course"],
+                capability_refs=["frontend-mainline-delivery"],
             ),
         ],
     )
@@ -496,8 +515,14 @@ def test_build_frontend_delivery_registry_handoff_blocks_when_solution_snapshot_
 
 def test_build_frontend_delivery_registry_handoff_uses_builtin_public_bundle_truth(
     tmp_path: Path,
+    monkeypatch,
 ) -> None:
     _write_builtin_delivery_truth(tmp_path)
+    monkeypatch.setattr(
+        program_service_module.shutil,
+        "which",
+        lambda executable: f"/mock/bin/{executable}" if executable == "pnpm" else None,
+    )
     svc = ProgramService(tmp_path)
 
     handoff = svc.build_frontend_delivery_registry_handoff()
@@ -549,11 +574,20 @@ def test_build_frontend_delivery_registry_handoff_surfaces_enterprise_packages_a
 
     assert handoff.state == "ready"
     assert handoff.entry_id == "vue2-enterprise-vue2"
-    assert handoff.component_library_packages == ["@company/enterprise-vue2-ui"]
-    assert handoff.availability_prerequisites == [
-        "company-registry-network",
-        "company-registry-token",
+    assert handoff.component_library_packages == [
+        "@sxf/er-charts",
+        "@sxf/er-components",
+        "@sxf/er-config",
+        "@sxf/er-feature",
+        "@sxf/er-hooks",
+        "@sxf/er-lib",
+        "@sxf/er-pro",
+        "@sxf/er-style",
+        "@sxf/er-utils",
+        "@sxf/er-validator",
+        "@sxf/er-widget",
     ]
+    assert handoff.availability_prerequisites == ["company-registry-network"]
     assert handoff.access_mode == "private"
 
 
@@ -783,7 +817,19 @@ def test_build_frontend_theme_token_governance_handoff_uses_latest_solution_snap
     assert handoff.provider_runtime_adapter_carrier_mode == ""
     assert handoff.provider_runtime_adapter_delivery_state == ""
     assert handoff.provider_runtime_adapter_evidence_state == ""
-    assert handoff.component_library_packages == ["@company/enterprise-vue2-ui"]
+    assert handoff.component_library_packages == [
+        "@sxf/er-charts",
+        "@sxf/er-components",
+        "@sxf/er-config",
+        "@sxf/er-feature",
+        "@sxf/er-hooks",
+        "@sxf/er-lib",
+        "@sxf/er-pro",
+        "@sxf/er-style",
+        "@sxf/er-utils",
+        "@sxf/er-validator",
+        "@sxf/er-widget",
+    ]
     assert handoff.requested_style_pack_id == "enterprise-default"
     assert handoff.effective_style_pack_id == "enterprise-default"
     assert handoff.page_schema_ids == [
@@ -950,6 +996,8 @@ def test_build_frontend_quality_platform_handoff_uses_latest_solution_snapshot_a
         "visual-regression-evidence",
     ]
     assert handoff.page_schema_ids == ["dashboard-workspace", "search-list-workspace"]
+    assert handoff.active_visual_regression_matrix_id == "dashboard-modern-saas-desktop-chromium"
+    assert handoff.active_visual_regression_viewport_id == "desktop-1440"
     assert {item.matrix_id for item in handoff.quality_diagnostics} == {
         "dashboard-modern-saas-desktop-chromium",
         "dashboard-modern-saas-mobile-webkit",
@@ -2484,7 +2532,7 @@ def test_build_truth_ledger_surface_attaches_frontend_delivery_apply_states(
     request = svc.build_frontend_managed_delivery_apply_request()
     with patch(
         "ai_sdlc.core.managed_delivery_apply.subprocess.run",
-        return_value=subprocess.CompletedProcess(args=["pnpm"], returncode=0),
+        side_effect=build_dependency_install_subprocess_side_effect(),
     ):
         result = svc.execute_frontend_managed_delivery_apply(
             request=request,
@@ -2847,6 +2895,380 @@ def test_build_spec_truth_readiness_blocks_on_frontend_inheritance_drift(
     assert "python -m ai_sdlc program truth audit" in readiness.next_required_actions
 
 
+def test_build_spec_truth_readiness_reuses_fresh_persisted_snapshot_for_unrelated_dirty_changes(
+    tmp_path: Path,
+) -> None:
+    _init_truth_git_repo(tmp_path)
+    (tmp_path / ".ai-sdlc" / "project" / "config").mkdir(parents=True)
+    (tmp_path / ".ai-sdlc" / "project" / "config" / "project-state.yaml").write_text(
+        "status: initialized\nproject_name: demo\nnext_work_item_seq: 1\nversion: '1.0'\n",
+        encoding="utf-8",
+    )
+    (tmp_path / "PRD.md").write_text("# prd\n", encoding="utf-8")
+    spec_dir = tmp_path / "specs" / "082-frontend-example"
+    spec_dir.mkdir(parents=True)
+    (spec_dir / "spec.md").write_text(
+        "# Spec\n\n---\nfrontend_evidence_class: \"framework_capability\"\n---\n",
+        encoding="utf-8",
+    )
+    (spec_dir / "plan.md").write_text("# Plan\n", encoding="utf-8")
+    (spec_dir / "tasks.md").write_text("- [x] done\n", encoding="utf-8")
+    (spec_dir / "task-execution-log.md").write_text(
+        "# Log\n\n统一验证命令\n代码审查\n任务/计划同步状态\n",
+        encoding="utf-8",
+    )
+    _write_truth_ledger_manifest(tmp_path)
+    payload = yaml.safe_load((tmp_path / "program-manifest.yaml").read_text(encoding="utf-8"))
+    payload["capability_closure_audit"] = {
+        "reviewed_at": "2026-04-18T08:00:00Z",
+        "open_clusters": [],
+    }
+    (tmp_path / "program-manifest.yaml").write_text(
+        yaml.safe_dump(payload, sort_keys=False, allow_unicode=True),
+        encoding="utf-8",
+    )
+    _commit_truth_repo(tmp_path, "seed truth snapshot fast path fixture")
+
+    svc = ProgramService(tmp_path)
+    manifest = svc.load_manifest()
+    with (
+        patch.object(
+            ProgramService,
+            "_run_close_check_ref",
+            return_value={"ok": True, "blockers": [], "checks": [], "error": None},
+        ),
+        patch.object(
+            ProgramService,
+            "_run_verify_ref",
+            return_value={
+                "ok": True,
+                "command": "uv run ai-sdlc verify constraints",
+                "blockers": [],
+                "warnings": [],
+            },
+        ),
+    ):
+        snapshot = svc.build_truth_snapshot(manifest)
+        svc.write_truth_snapshot(snapshot)
+        manifest = svc.load_manifest()
+
+    (tmp_path / "src").mkdir()
+    (tmp_path / "src" / "unrelated.py").write_text("VALUE = 1\n", encoding="utf-8")
+
+    with (
+        patch.object(
+            ProgramService,
+            "_run_close_check_ref",
+            return_value={"ok": True, "blockers": [], "checks": [], "error": None},
+        ),
+        patch.object(
+            ProgramService,
+            "_run_verify_ref",
+            return_value={
+                "ok": True,
+                "command": "uv run ai-sdlc verify constraints",
+                "blockers": [],
+                "warnings": [],
+            },
+        ),
+        patch.object(
+            ProgramService,
+            "build_truth_ledger_surface",
+            side_effect=AssertionError("slow truth ledger recompute should be skipped"),
+        ),
+    ):
+        readiness = svc.build_spec_truth_readiness(
+            manifest,
+            spec_path=spec_dir,
+        )
+
+    assert readiness is not None
+    assert readiness.ready is True
+    assert readiness.state == "ready"
+    assert (
+        readiness.detail
+        == "truth snapshot is fresh and matched release capabilities are ready"
+    )
+
+
+def test_build_spec_truth_readiness_recomputes_when_persisted_snapshot_is_stale(
+    tmp_path: Path,
+) -> None:
+    _init_truth_git_repo(tmp_path)
+    (tmp_path / ".ai-sdlc" / "project" / "config").mkdir(parents=True)
+    (tmp_path / ".ai-sdlc" / "project" / "config" / "project-state.yaml").write_text(
+        "status: initialized\nproject_name: demo\nnext_work_item_seq: 1\nversion: '1.0'\n",
+        encoding="utf-8",
+    )
+    (tmp_path / "PRD.md").write_text("# prd\n", encoding="utf-8")
+    spec_dir = tmp_path / "specs" / "082-frontend-example"
+    spec_dir.mkdir(parents=True)
+    (spec_dir / "spec.md").write_text(
+        "# Spec\n\n---\nfrontend_evidence_class: \"framework_capability\"\n---\n",
+        encoding="utf-8",
+    )
+    (spec_dir / "plan.md").write_text("# Plan\n", encoding="utf-8")
+    (spec_dir / "tasks.md").write_text("- [x] done\n", encoding="utf-8")
+    (spec_dir / "task-execution-log.md").write_text(
+        "# Log\n\n统一验证命令\n代码审查\n任务/计划同步状态\n",
+        encoding="utf-8",
+    )
+    _write_truth_ledger_manifest(tmp_path)
+    payload = yaml.safe_load((tmp_path / "program-manifest.yaml").read_text(encoding="utf-8"))
+    payload["capability_closure_audit"] = {
+        "reviewed_at": "2026-04-18T08:00:00Z",
+        "open_clusters": [],
+    }
+    (tmp_path / "program-manifest.yaml").write_text(
+        yaml.safe_dump(payload, sort_keys=False, allow_unicode=True),
+        encoding="utf-8",
+    )
+    _commit_truth_repo(tmp_path, "seed stale truth snapshot fast path fixture")
+
+    svc = ProgramService(tmp_path)
+    manifest = svc.load_manifest()
+    with (
+        patch.object(
+            ProgramService,
+            "_run_close_check_ref",
+            return_value={"ok": True, "blockers": [], "checks": [], "error": None},
+        ),
+        patch.object(
+            ProgramService,
+            "_run_verify_ref",
+            return_value={
+                "ok": True,
+                "command": "uv run ai-sdlc verify constraints",
+                "blockers": [],
+                "warnings": [],
+            },
+        ),
+    ):
+        snapshot = svc.build_truth_snapshot(manifest)
+        svc.write_truth_snapshot(snapshot)
+        manifest = svc.load_manifest()
+
+    current_snapshot = snapshot.model_copy(deep=True)
+    current_snapshot.source_hashes = {
+        **current_snapshot.source_hashes,
+        "specs/082-frontend-example/task-execution-log.md": "changed",
+    }
+    expected_surface = {
+        "snapshot_state": "stale",
+        "state": "stale",
+        "detail": "truth snapshot is stale",
+        "release_capabilities": [],
+        "migration_pending_specs": [],
+        "migration_pending_sources": [],
+        "validation_errors": [],
+    }
+    with (
+        patch.object(
+            ProgramService,
+            "build_truth_snapshot",
+            return_value=current_snapshot,
+        ),
+        patch.object(
+            ProgramService,
+            "build_truth_ledger_surface",
+            return_value=expected_surface,
+        ) as build_surface,
+    ):
+        readiness = svc.build_spec_truth_readiness(
+            manifest,
+            spec_path=spec_dir,
+        )
+
+    assert readiness is not None
+    assert readiness.ready is False
+    assert readiness.state == "stale"
+    assert readiness.summary_token == "truth_snapshot_stale"
+    build_surface.assert_called_once()
+
+
+def test_build_spec_truth_readiness_does_not_skip_recompute_for_relevant_dirty_spec_changes(
+    tmp_path: Path,
+) -> None:
+    _init_truth_git_repo(tmp_path)
+    (tmp_path / ".ai-sdlc" / "project" / "config").mkdir(parents=True)
+    (tmp_path / ".ai-sdlc" / "project" / "config" / "project-state.yaml").write_text(
+        "status: initialized\nproject_name: demo\nnext_work_item_seq: 1\nversion: '1.0'\n",
+        encoding="utf-8",
+    )
+    (tmp_path / "PRD.md").write_text("# prd\n", encoding="utf-8")
+    spec_dir = tmp_path / "specs" / "082-frontend-example"
+    spec_dir.mkdir(parents=True)
+    (spec_dir / "spec.md").write_text(
+        "# Spec\n\n---\nfrontend_evidence_class: \"framework_capability\"\n---\n",
+        encoding="utf-8",
+    )
+    (spec_dir / "plan.md").write_text("# Plan\n", encoding="utf-8")
+    (spec_dir / "tasks.md").write_text("- [x] done\n", encoding="utf-8")
+    (spec_dir / "task-execution-log.md").write_text(
+        "# Log\n\n统一验证命令\n代码审查\n任务/计划同步状态\n",
+        encoding="utf-8",
+    )
+    _write_truth_ledger_manifest(tmp_path)
+    payload = yaml.safe_load((tmp_path / "program-manifest.yaml").read_text(encoding="utf-8"))
+    payload["capability_closure_audit"] = {
+        "reviewed_at": "2026-04-18T08:00:00Z",
+        "open_clusters": [],
+    }
+    (tmp_path / "program-manifest.yaml").write_text(
+        yaml.safe_dump(payload, sort_keys=False, allow_unicode=True),
+        encoding="utf-8",
+    )
+    _commit_truth_repo(tmp_path, "seed truth snapshot relevant dirty fixture")
+
+    svc = ProgramService(tmp_path)
+    manifest = svc.load_manifest()
+    with (
+        patch.object(
+            ProgramService,
+            "_run_close_check_ref",
+            return_value={"ok": True, "blockers": [], "checks": [], "error": None},
+        ),
+        patch.object(
+            ProgramService,
+            "_run_verify_ref",
+            return_value={
+                "ok": True,
+                "command": "uv run ai-sdlc verify constraints",
+                "blockers": [],
+                "warnings": [],
+            },
+        ),
+    ):
+        snapshot = svc.build_truth_snapshot(manifest)
+        svc.write_truth_snapshot(snapshot)
+        manifest = svc.load_manifest()
+
+    (spec_dir / "task-execution-log.md").write_text(
+        "# Log\n\n统一验证命令\n代码审查\n任务/计划同步状态\nextra line\n",
+        encoding="utf-8",
+    )
+
+    expected_surface = {
+        "snapshot_state": "fresh",
+        "state": "ready",
+        "detail": "truth snapshot is fresh and release targets are ready",
+        "release_capabilities": [
+            {
+                "capability_id": "frontend-mainline-delivery",
+                "audit_state": "ready",
+            }
+        ],
+        "migration_pending_specs": [],
+        "migration_pending_sources": [],
+        "validation_errors": [],
+    }
+    with patch.object(
+        ProgramService,
+        "build_truth_ledger_surface",
+        return_value=expected_surface,
+    ) as build_surface:
+        readiness = svc.build_spec_truth_readiness(
+            manifest,
+            spec_path=spec_dir,
+        )
+
+    assert readiness is not None
+    assert readiness.ready is True
+    build_surface.assert_called_once()
+
+
+def test_build_spec_truth_readiness_does_not_skip_recompute_for_dirty_manifest(
+    tmp_path: Path,
+) -> None:
+    _init_truth_git_repo(tmp_path)
+    (tmp_path / ".ai-sdlc" / "project" / "config").mkdir(parents=True)
+    (tmp_path / ".ai-sdlc" / "project" / "config" / "project-state.yaml").write_text(
+        "status: initialized\nproject_name: demo\nnext_work_item_seq: 1\nversion: '1.0'\n",
+        encoding="utf-8",
+    )
+    (tmp_path / "PRD.md").write_text("# prd\n", encoding="utf-8")
+    spec_dir = tmp_path / "specs" / "082-frontend-example"
+    spec_dir.mkdir(parents=True)
+    (spec_dir / "spec.md").write_text(
+        "# Spec\n\n---\nfrontend_evidence_class: \"framework_capability\"\n---\n",
+        encoding="utf-8",
+    )
+    (spec_dir / "plan.md").write_text("# Plan\n", encoding="utf-8")
+    (spec_dir / "tasks.md").write_text("- [x] done\n", encoding="utf-8")
+    (spec_dir / "task-execution-log.md").write_text(
+        "# Log\n\n统一验证命令\n代码审查\n任务/计划同步状态\n",
+        encoding="utf-8",
+    )
+    _write_truth_ledger_manifest(tmp_path)
+    payload = yaml.safe_load((tmp_path / "program-manifest.yaml").read_text(encoding="utf-8"))
+    payload["capability_closure_audit"] = {
+        "reviewed_at": "2026-04-18T08:00:00Z",
+        "open_clusters": [],
+    }
+    (tmp_path / "program-manifest.yaml").write_text(
+        yaml.safe_dump(payload, sort_keys=False, allow_unicode=True),
+        encoding="utf-8",
+    )
+    _commit_truth_repo(tmp_path, "seed truth snapshot dirty manifest fixture")
+
+    svc = ProgramService(tmp_path)
+    manifest = svc.load_manifest()
+    with (
+        patch.object(
+            ProgramService,
+            "_run_close_check_ref",
+            return_value={"ok": True, "blockers": [], "checks": [], "error": None},
+        ),
+        patch.object(
+            ProgramService,
+            "_run_verify_ref",
+            return_value={
+                "ok": True,
+                "command": "uv run ai-sdlc verify constraints",
+                "blockers": [],
+                "warnings": [],
+            },
+        ),
+    ):
+        snapshot = svc.build_truth_snapshot(manifest)
+        svc.write_truth_snapshot(snapshot)
+        manifest = svc.load_manifest()
+
+    payload = yaml.safe_load((tmp_path / "program-manifest.yaml").read_text(encoding="utf-8"))
+    payload["capability_closure_audit"]["reviewed_at"] = "2026-04-18T09:00:00Z"
+    (tmp_path / "program-manifest.yaml").write_text(
+        yaml.safe_dump(payload, sort_keys=False, allow_unicode=True),
+        encoding="utf-8",
+    )
+    expected_surface = {
+        "snapshot_state": "fresh",
+        "state": "ready",
+        "detail": "truth snapshot is fresh and release targets are ready",
+        "release_capabilities": [
+            {
+                "capability_id": "frontend-mainline-delivery",
+                "audit_state": "ready",
+            }
+        ],
+        "migration_pending_specs": [],
+        "migration_pending_sources": [],
+        "validation_errors": [],
+    }
+    with patch.object(
+        ProgramService,
+        "build_truth_ledger_surface",
+        return_value=expected_surface,
+    ) as build_surface:
+        readiness = svc.build_spec_truth_readiness(
+            manifest,
+            spec_path=spec_dir,
+        )
+
+    assert readiness is not None
+    assert readiness.ready is True
+    build_surface.assert_called_once()
+
+
 def test_build_frontend_delivery_status_surface_fails_closed_on_stale_apply_artifact(
     initialized_project_dir: Path,
 ) -> None:
@@ -2857,7 +3279,7 @@ def test_build_frontend_delivery_status_surface_fails_closed_on_stale_apply_arti
     request = svc.build_frontend_managed_delivery_apply_request()
     with patch(
         "ai_sdlc.core.managed_delivery_apply.subprocess.run",
-        return_value=subprocess.CompletedProcess(args=["pnpm"], returncode=0),
+        side_effect=build_dependency_install_subprocess_side_effect(),
     ):
         result = svc.execute_frontend_managed_delivery_apply(
             request=request,
@@ -2896,7 +3318,7 @@ def test_build_frontend_delivery_status_surface_fails_closed_on_browser_gate_dri
     request = svc.build_frontend_managed_delivery_apply_request()
     with patch(
         "ai_sdlc.core.managed_delivery_apply.subprocess.run",
-        return_value=subprocess.CompletedProcess(args=["pnpm"], returncode=0),
+        side_effect=build_dependency_install_subprocess_side_effect(),
     ):
         result = svc.execute_frontend_managed_delivery_apply(
             request=request,
@@ -2927,6 +3349,241 @@ def test_build_frontend_delivery_status_surface_fails_closed_on_browser_gate_dri
     assert status_surface["install_state"] == "installed"
     assert status_surface["workspace_state"] == "integrated"
     assert status_surface["browser_gate_state"] == "scope_or_linkage_invalid"
+
+
+def test_build_frontend_delivery_status_surface_fails_closed_when_lockfile_is_deleted(
+    initialized_project_dir: Path,
+    monkeypatch,
+) -> None:
+    root = initialized_project_dir
+    save_project_config(root, ProjectConfig(adapter_ingress_state="verified_loaded"))
+    _write_builtin_delivery_truth(root)
+    monkeypatch.setattr(
+        program_service_module.shutil,
+        "which",
+        lambda executable: f"/mock/bin/{executable}" if executable == "pnpm" else None,
+    )
+    svc = ProgramService(root)
+    request = svc.build_frontend_managed_delivery_apply_request()
+    with patch(
+        "ai_sdlc.core.managed_delivery_apply.subprocess.run",
+        side_effect=build_dependency_install_subprocess_side_effect(),
+    ):
+        result = svc.execute_frontend_managed_delivery_apply(
+            request=request,
+            confirmed=True,
+        )
+    svc.write_frontend_managed_delivery_apply_artifact(
+        request=request,
+        result=result,
+        generated_at="2026-04-20T09:00:00Z",
+    )
+    (root / "managed" / "frontend" / "pnpm-lock.yaml").unlink()
+
+    status_surface = svc.build_frontend_delivery_status_surface()
+
+    assert status_surface["apply_state"] == "apply_succeeded_pending_browser_gate"
+    assert status_surface["install_state"] == "not_installed"
+    assert status_surface["workspace_state"] == "integrated"
+
+
+def test_build_frontend_delivery_status_surface_fails_closed_for_invalid_managed_target_path(
+    initialized_project_dir: Path,
+    monkeypatch,
+) -> None:
+    root = initialized_project_dir
+    save_project_config(root, ProjectConfig(adapter_ingress_state="verified_loaded"))
+    _write_builtin_delivery_truth(root)
+    monkeypatch.setattr(
+        program_service_module.shutil,
+        "which",
+        lambda executable: f"/mock/bin/{executable}" if executable == "pnpm" else None,
+    )
+    svc = ProgramService(root)
+    request = svc.build_frontend_managed_delivery_apply_request()
+    with patch(
+        "ai_sdlc.core.managed_delivery_apply.subprocess.run",
+        side_effect=build_dependency_install_subprocess_side_effect(),
+    ):
+        result = svc.execute_frontend_managed_delivery_apply(
+            request=request,
+            confirmed=True,
+        )
+    apply_artifact_path = svc.write_frontend_managed_delivery_apply_artifact(
+        request=request,
+        result=result,
+        generated_at="2026-04-20T09:00:00Z",
+    )
+    payload = yaml.safe_load(apply_artifact_path.read_text(encoding="utf-8"))
+    payload["execution_view"]["managed_target_path"] = "../outside-managed-target"
+    apply_artifact_path.write_text(
+        yaml.safe_dump(payload, sort_keys=False, allow_unicode=True),
+        encoding="utf-8",
+    )
+
+    status_surface = svc.build_frontend_delivery_status_surface()
+
+    assert status_surface["apply_state"] == "apply_succeeded_pending_browser_gate"
+    assert status_surface["install_state"] == "not_installed"
+    assert status_surface["workspace_state"] == "integrated"
+
+
+def test_build_frontend_dependency_install_state_uses_actual_dependency_action_id(
+    initialized_project_dir: Path,
+    monkeypatch,
+) -> None:
+    root = initialized_project_dir
+    save_project_config(root, ProjectConfig(adapter_ingress_state="verified_loaded"))
+    _write_builtin_delivery_truth(root)
+    monkeypatch.setattr(
+        program_service_module,
+        "evaluate_current_host_runtime",
+        lambda project_root: _build_host_runtime_plan_for_tests(
+            node_runtime_available=True,
+            package_manager_available=True,
+            playwright_browsers_available=True,
+        ),
+    )
+    monkeypatch.setattr(
+        program_service_module.shutil,
+        "which",
+        lambda executable: f"/mock/bin/{executable}" if executable == "pnpm" else None,
+    )
+    svc = ProgramService(root)
+    request = svc.build_frontend_managed_delivery_apply_request()
+    with patch(
+        "ai_sdlc.core.managed_delivery_apply.subprocess.run",
+        side_effect=build_dependency_install_subprocess_side_effect(),
+    ):
+        svc.execute_frontend_managed_delivery_apply(
+            request=request,
+            confirmed=True,
+        )
+
+    assert request.execution_view is not None
+    execution_view_payload = request.execution_view.model_dump(mode="json")
+    dependency_action = next(
+        action
+        for action in execution_view_payload["action_items"]
+        if action["action_type"] == "dependency_install"
+    )
+    dependency_action["action_id"] = "custom-dependency-install"
+    execution_view = ConfirmedActionPlanExecutionView.model_validate(
+        execution_view_payload
+    )
+
+    assert (
+        svc._build_frontend_dependency_install_state(
+            execution_view=execution_view,
+            executed_action_ids={
+                "custom-dependency-install",
+                "visual-regression-runtime-install",
+            },
+        )
+        == "installed"
+    )
+
+
+def test_build_frontend_dependency_install_state_requires_all_dependency_actions(
+    initialized_project_dir: Path,
+    monkeypatch,
+) -> None:
+    root = initialized_project_dir
+    save_project_config(root, ProjectConfig(adapter_ingress_state="verified_loaded"))
+    _write_builtin_delivery_truth(root)
+    monkeypatch.setattr(
+        program_service_module,
+        "evaluate_current_host_runtime",
+        lambda project_root: _build_host_runtime_plan_for_tests(
+            node_runtime_available=True,
+            package_manager_available=True,
+            playwright_browsers_available=True,
+        ),
+    )
+    monkeypatch.setattr(
+        program_service_module.shutil,
+        "which",
+        lambda executable: f"/mock/bin/{executable}" if executable == "pnpm" else None,
+    )
+    svc = ProgramService(root)
+    request = svc.build_frontend_managed_delivery_apply_request()
+    with patch(
+        "ai_sdlc.core.managed_delivery_apply.subprocess.run",
+        side_effect=build_dependency_install_subprocess_side_effect(),
+    ):
+        svc.execute_frontend_managed_delivery_apply(
+            request=request,
+            confirmed=True,
+        )
+
+    assert request.execution_view is not None
+    assert (
+        svc._build_frontend_dependency_install_state(
+            execution_view=request.execution_view,
+            executed_action_ids={"dependency-install"},
+        )
+        == "not_installed"
+    )
+
+
+def test_build_frontend_delivery_status_surface_marks_delivery_verified_when_browser_gate_passes(
+    initialized_project_dir: Path,
+) -> None:
+    root = initialized_project_dir
+    save_project_config(root, ProjectConfig(adapter_ingress_state="verified_loaded"))
+    _write_frontend_solution_confirmation_artifacts(root)
+    _write_frontend_visual_a11y_evidence(
+        root / "specs" / "001-auth",
+        [
+            FrontendVisualA11yEvidenceEvaluation(
+                evaluation_id="001-auth-visual-pass",
+                target_id="user-create",
+                surface_id="page:user-create",
+                outcome="pass",
+                report_type="coverage-report",
+                severity="info",
+            )
+        ],
+    )
+    request_path = _write_artifact_generate_apply_request(root)
+    svc = ProgramService(root)
+    apply_request = svc.build_frontend_managed_delivery_apply_request(request_path)
+    apply_result = svc.execute_frontend_managed_delivery_apply(
+        request_path,
+        request=apply_request,
+        confirmed=True,
+    )
+    svc.write_frontend_managed_delivery_apply_artifact(
+        request_path,
+        request=apply_request,
+        result=apply_result,
+        generated_at="2026-04-14T04:00:00Z",
+    )
+    probe_request = svc.build_frontend_browser_gate_probe_request()
+    probe_result = svc.execute_frontend_browser_gate_probe(
+        request=probe_request,
+        generated_at="2026-04-14T04:05:00Z",
+    )
+    artifact_path = root / probe_result.artifact_path
+    payload = yaml.safe_load(artifact_path.read_text(encoding="utf-8"))
+    payload["overall_gate_status"] = "passed"
+    payload["bundle_input"]["overall_gate_status"] = "passed"
+    for receipt in payload["bundle_input"]["check_receipts"]:
+        receipt["classification_candidate"] = "pass"
+        receipt["recheck_required"] = False
+        receipt["blocking_reason_codes"] = []
+        receipt["remediation_hints"] = []
+        receipt["runtime_status"] = "completed"
+    payload["bundle_input"]["blocking_reason_codes"] = []
+    artifact_path.write_text(
+        yaml.safe_dump(payload, sort_keys=False, allow_unicode=True),
+        encoding="utf-8",
+    )
+
+    status_surface = svc.build_frontend_delivery_status_surface()
+
+    assert status_surface["browser_gate_state"] == "passed"
+    assert status_surface["delivery_state"] == "delivery_verified"
 
 
 def test_build_truth_ledger_surface_attaches_blocking_reason_and_actions_for_frontend_verify_gap(
@@ -3667,6 +4324,36 @@ def test_build_truth_ledger_surface_ignores_truth_check_revision_metadata_drift(
     assert surface["state"] == snapshot.state
 
 
+def test_dirty_worktree_paths_parse_porcelain_z_paths_with_spaces(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    svc = ProgramService(tmp_path)
+
+    def _fake_run(self, *args):
+        assert args == (
+            "status",
+            "--porcelain=v1",
+            "-z",
+            "--untracked-files=all",
+        )
+        return (
+            " M specs/082 frontend example/spec.md\0"
+            "R  specs/renamed spec/spec.md\0"
+            "specs/old spec/spec.md\0"
+            "?? program-manifest.yaml\0"
+        )
+
+    monkeypatch.setattr(program_service_module.GitClient, "_run", _fake_run)
+
+    assert svc._dirty_worktree_paths() == [
+        "specs/082 frontend example/spec.md",
+        "specs/renamed spec/spec.md",
+        "specs/old spec/spec.md",
+        "program-manifest.yaml",
+    ]
+
+
 def test_build_truth_snapshot_blocks_release_scope_when_closure_audit_missing(
     tmp_path: Path,
 ) -> None:
@@ -3858,6 +4545,11 @@ def test_build_frontend_managed_delivery_apply_request_materializes_public_bundl
             playwright_browsers_available=True,
         ),
     )
+    monkeypatch.setattr(
+        program_service_module.shutil,
+        "which",
+        lambda executable: f"/mock/bin/{executable}" if executable == "pnpm" else None,
+    )
     svc = ProgramService(root)
 
     request = svc.build_frontend_managed_delivery_apply_request()
@@ -3865,16 +4557,33 @@ def test_build_frontend_managed_delivery_apply_request_materializes_public_bundl
     assert request.request_source_path == ".ai-sdlc/memory/frontend-managed-delivery/latest.yaml"
     assert request.apply_state == "ready_to_execute"
     assert request.execution_view is not None
-    dependency_action = next(
+    dependency_actions = [
         action
         for action in request.execution_view.action_items
         if action.action_type == "dependency_install"
-    )
+    ]
+    assert [action.action_id for action in dependency_actions] == [
+        "dependency-install",
+        "visual-regression-runtime-install",
+    ]
+    dependency_action = dependency_actions[0]
+    visual_runtime_action = dependency_actions[1]
     assert dependency_action.executor_payload["install_strategy_id"] == "public-primevue-default"
     assert dependency_action.executor_payload["package_manager"] == "pnpm"
     assert dependency_action.executor_payload["packages"] == [
         "primevue",
         "@primeuix/themes",
+    ]
+    assert visual_runtime_action.executor_payload["install_strategy_id"] == (
+        "public-visual-regression-runtime"
+    )
+    assert visual_runtime_action.executor_payload["package_manager"] == "pnpm"
+    assert visual_runtime_action.executor_payload["registry_url"] == ""
+    assert visual_runtime_action.executor_payload["packages"] == [
+        "playwright",
+        "pixelmatch",
+        "pngjs",
+        "yaml",
     ]
     workspace_action = next(
         action
@@ -3898,6 +4607,355 @@ def test_build_frontend_managed_delivery_apply_request_materializes_public_bundl
         "src/frontend-governance/runtime/legacy/LegacyAdapterBridge.tsx",
         ".ai-sdlc/evidence/frontend-runtime/public-primevue/runtime-boundary-receipt.yaml",
     ]
+    provider_adapter_item = next(
+        item
+        for item in workspace_action.executor_payload["items"]
+        if item["target_path"]
+        == "src/frontend-governance/runtime/providers/public-primevue/ProviderAdapter.tsx"
+    )
+    assert "mappedComponents" in provider_adapter_item["content"]
+    assert 'UiButton: "Button"' in provider_adapter_item["content"]
+
+
+def test_build_frontend_managed_delivery_apply_request_installs_playwright_without_visual_matrix(
+    initialized_project_dir: Path,
+    monkeypatch,
+) -> None:
+    root = initialized_project_dir
+    save_project_config(root, ProjectConfig(adapter_ingress_state="verified_loaded"))
+    _write_builtin_delivery_truth(root)
+    monkeypatch.setattr(
+        program_service_module,
+        "evaluate_current_host_runtime",
+        lambda project_root: _build_host_runtime_plan_for_tests(
+            node_runtime_available=True,
+            package_manager_available=True,
+            playwright_browsers_available=True,
+        ),
+    )
+    monkeypatch.setattr(
+        program_service_module.shutil,
+        "which",
+        lambda executable: f"/mock/bin/{executable}" if executable == "pnpm" else None,
+    )
+    svc = ProgramService(root)
+    quality_handoff = svc.build_frontend_quality_platform_handoff()
+    monkeypatch.setattr(
+        svc,
+        "build_frontend_quality_platform_handoff",
+        lambda: replace(
+            quality_handoff,
+            active_visual_regression_matrix_id="",
+            active_visual_regression_viewport_id="",
+        ),
+    )
+
+    request = svc.build_frontend_managed_delivery_apply_request()
+
+    assert request.execution_view is not None
+    dependency_actions = [
+        action
+        for action in request.execution_view.action_items
+        if action.action_type == "dependency_install"
+    ]
+    assert [action.action_id for action in dependency_actions] == [
+        "dependency-install",
+        "visual-regression-runtime-install",
+    ]
+    assert dependency_actions[1].executor_payload["packages"] == ["playwright"]
+    artifact_action = next(
+        action
+        for action in request.execution_view.action_items
+        if action.action_type == "artifact_generate"
+    )
+    assert artifact_action.depends_on_action_ids == ["visual-regression-runtime-install"]
+
+
+def test_build_frontend_managed_delivery_apply_request_blocks_malformed_provider_mappings(
+    initialized_project_dir: Path,
+    monkeypatch,
+) -> None:
+    root = initialized_project_dir
+    save_project_config(root, ProjectConfig(adapter_ingress_state="verified_loaded"))
+    _write_builtin_delivery_truth(root)
+    provider_root = root / "providers" / "frontend" / "public-primevue"
+    provider_root.mkdir(parents=True, exist_ok=True)
+    (provider_root / "mappings.yaml").write_text(
+        "items:\n  bad: shape\n",
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(
+        program_service_module,
+        "evaluate_current_host_runtime",
+        lambda project_root: _build_host_runtime_plan_for_tests(
+            node_runtime_available=True,
+            package_manager_available=True,
+            playwright_browsers_available=True,
+        ),
+    )
+    monkeypatch.setattr(
+        program_service_module.shutil,
+        "which",
+        lambda executable: f"/mock/bin/{executable}" if executable == "pnpm" else None,
+    )
+    svc = ProgramService(root)
+
+    request = svc.build_frontend_managed_delivery_apply_request()
+
+    assert request.apply_state == "blocked_before_start"
+    assert (
+        "delivery_provider_mappings_items_invalid:public-primevue"
+        in request.remaining_blockers
+    )
+
+
+def test_build_frontend_managed_delivery_apply_request_blocks_malformed_provider_whitelist(
+    initialized_project_dir: Path,
+    monkeypatch,
+) -> None:
+    root = initialized_project_dir
+    save_project_config(root, ProjectConfig(adapter_ingress_state="verified_loaded"))
+    _write_builtin_delivery_truth(root)
+    provider_root = root / "providers" / "frontend" / "public-primevue"
+    provider_root.mkdir(parents=True, exist_ok=True)
+    (provider_root / "whitelist.yaml").write_text(
+        "items:\n  bad: shape\n",
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(
+        program_service_module,
+        "evaluate_current_host_runtime",
+        lambda project_root: _build_host_runtime_plan_for_tests(
+            node_runtime_available=True,
+            package_manager_available=True,
+            playwright_browsers_available=True,
+        ),
+    )
+    monkeypatch.setattr(
+        program_service_module.shutil,
+        "which",
+        lambda executable: f"/mock/bin/{executable}" if executable == "pnpm" else None,
+    )
+    svc = ProgramService(root)
+
+    request = svc.build_frontend_managed_delivery_apply_request()
+
+    assert request.apply_state == "blocked_before_start"
+    assert (
+        "delivery_provider_whitelist_items_invalid:public-primevue"
+        in request.remaining_blockers
+    )
+
+
+def test_build_frontend_managed_delivery_apply_request_blocks_unresolved_provider_mapping_imports(
+    initialized_project_dir: Path,
+    monkeypatch,
+) -> None:
+    root = initialized_project_dir
+    save_project_config(root, ProjectConfig(adapter_ingress_state="verified_loaded"))
+    _write_builtin_delivery_truth(root)
+    provider_root = root / "providers" / "frontend" / "public-primevue"
+    provider_root.mkdir(parents=True, exist_ok=True)
+    (provider_root / "mappings.yaml").write_text(
+        yaml.safe_dump(
+            {
+                "items": [
+                    {
+                        "component_id": "UiButton",
+                        "implementation_ref": "Button",
+                        "mapping_kind": "direct",
+                    }
+                ]
+            },
+            sort_keys=False,
+        ),
+        encoding="utf-8",
+    )
+    (provider_root / "whitelist.yaml").write_text(
+        yaml.safe_dump(
+            {
+                "items": [
+                    {
+                        "component_id": "UiButton",
+                        "dependency_curation": [],
+                    }
+                ]
+            },
+            sort_keys=False,
+        ),
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(
+        program_service_module,
+        "evaluate_current_host_runtime",
+        lambda project_root: _build_host_runtime_plan_for_tests(
+            node_runtime_available=True,
+            package_manager_available=True,
+            playwright_browsers_available=True,
+        ),
+    )
+    monkeypatch.setattr(
+        program_service_module.shutil,
+        "which",
+        lambda executable: f"/mock/bin/{executable}" if executable == "pnpm" else None,
+    )
+    svc = ProgramService(root)
+
+    request = svc.build_frontend_managed_delivery_apply_request()
+
+    assert request.apply_state == "blocked_before_start"
+    assert (
+        "delivery_provider_mapping_import_unresolved:public-primevue:UiButton"
+        in request.remaining_blockers
+    )
+
+
+def test_build_frontend_managed_delivery_apply_request_blocks_missing_required_public_primevue_mappings(
+    initialized_project_dir: Path,
+    monkeypatch,
+) -> None:
+    root = initialized_project_dir
+    save_project_config(root, ProjectConfig(adapter_ingress_state="verified_loaded"))
+    _write_builtin_delivery_truth(root)
+    provider_root = root / "providers" / "frontend" / "public-primevue"
+    provider_root.mkdir(parents=True, exist_ok=True)
+    (provider_root / "mappings.yaml").write_text(
+        yaml.safe_dump(
+            {
+                "items": [
+                    {
+                        "component_id": "UiButton",
+                        "implementation_ref": "Button",
+                        "mapping_kind": "direct",
+                    }
+                ]
+            },
+            sort_keys=False,
+        ),
+        encoding="utf-8",
+    )
+    (provider_root / "whitelist.yaml").write_text(
+        yaml.safe_dump(
+            {
+                "items": [
+                    {
+                        "component_id": "UiButton",
+                        "dependency_curation": ["primevue/button"],
+                    }
+                ]
+            },
+            sort_keys=False,
+        ),
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(
+        program_service_module,
+        "evaluate_current_host_runtime",
+        lambda project_root: _build_host_runtime_plan_for_tests(
+            node_runtime_available=True,
+            package_manager_available=True,
+            playwright_browsers_available=True,
+        ),
+    )
+    monkeypatch.setattr(
+        program_service_module.shutil,
+        "which",
+        lambda executable: f"/mock/bin/{executable}" if executable == "pnpm" else None,
+    )
+    svc = ProgramService(root)
+
+    request = svc.build_frontend_managed_delivery_apply_request()
+
+    assert request.apply_state == "blocked_before_start"
+    assert (
+        "delivery_provider_mapping_required_missing:public-primevue:UiSearchBar"
+        in request.remaining_blockers
+    )
+    assert (
+        "delivery_provider_mapping_required_missing:public-primevue:UiTable"
+        in request.remaining_blockers
+    )
+
+
+def test_build_frontend_managed_delivery_apply_request_falls_back_to_available_package_manager(
+    initialized_project_dir: Path,
+    monkeypatch,
+) -> None:
+    root = initialized_project_dir
+    save_project_config(root, ProjectConfig(adapter_ingress_state="verified_loaded"))
+    _write_builtin_delivery_truth(root)
+    monkeypatch.setattr(
+        program_service_module,
+        "evaluate_current_host_runtime",
+        lambda project_root: _build_host_runtime_plan_for_tests(
+            node_runtime_available=True,
+            package_manager_available=True,
+            playwright_browsers_available=True,
+        ),
+    )
+    monkeypatch.setattr(
+        program_service_module.shutil,
+        "which",
+        lambda executable: f"/mock/bin/{executable}" if executable == "npm" else None,
+    )
+    svc = ProgramService(root)
+
+    request = svc.build_frontend_managed_delivery_apply_request()
+
+    dependency_action = next(
+        action
+        for action in request.execution_view.action_items
+        if action.action_type == "dependency_install"
+    )
+    assert dependency_action.executor_payload["package_manager"] == "npm"
+    assert "delivery_package_manager_fallback:pnpm->npm" in request.warnings
+    prepare_action = next(
+        action
+        for action in request.execution_view.action_items
+        if action.action_type == "managed_target_prepare"
+    )
+    assert '"packageManager": "npm@10"' in prepare_action.executor_payload["files"][0]["content"]
+
+
+def test_build_frontend_managed_delivery_apply_request_falls_back_to_yarn_classic(
+    initialized_project_dir: Path,
+    monkeypatch,
+) -> None:
+    root = initialized_project_dir
+    save_project_config(root, ProjectConfig(adapter_ingress_state="verified_loaded"))
+    _write_builtin_delivery_truth(root)
+    monkeypatch.setattr(
+        program_service_module,
+        "evaluate_current_host_runtime",
+        lambda project_root: _build_host_runtime_plan_for_tests(
+            node_runtime_available=True,
+            package_manager_available=True,
+            playwright_browsers_available=True,
+        ),
+    )
+    monkeypatch.setattr(
+        program_service_module.shutil,
+        "which",
+        lambda executable: f"/mock/bin/{executable}" if executable == "yarn" else None,
+    )
+    svc = ProgramService(root)
+
+    request = svc.build_frontend_managed_delivery_apply_request()
+
+    dependency_action = next(
+        action
+        for action in request.execution_view.action_items
+        if action.action_type == "dependency_install"
+    )
+    assert dependency_action.executor_payload["package_manager"] == "yarn"
+    assert "delivery_package_manager_fallback:pnpm->yarn" in request.warnings
+    assert "delivery_package_manager_missing:pnpm" not in request.remaining_blockers
+    prepare_action = next(
+        action
+        for action in request.execution_view.action_items
+        if action.action_type == "managed_target_prepare"
+    )
+    assert '"packageManager": "yarn@1.22.22"' in prepare_action.executor_payload["files"][0]["content"]
 
 
 def test_build_frontend_managed_delivery_apply_request_persists_release_capability_guidance_in_request_payload(
@@ -3973,11 +5031,12 @@ def test_build_frontend_managed_delivery_apply_request_materializes_artifact_gen
     )
     assert artifact_action.required is True
     assert artifact_action.default_selected is True
-    assert artifact_action.depends_on_action_ids == ["dependency-install"]
+    assert artifact_action.depends_on_action_ids == ["visual-regression-runtime-install"]
     generated_files = artifact_action.executor_payload["files"]
     assert [item["path"] for item in generated_files] == [
         "index.html",
         "src/generated/frontend-delivery-context.ts",
+        "src/generated/provider-adapter.ts",
         "src/App.vue",
     ]
     assert "frontend-browser-entry" in generated_files[0]["content"]
@@ -3988,7 +5047,159 @@ def test_build_frontend_managed_delivery_apply_request_materializes_artifact_gen
     assert 'runtimeDeliveryState: "scaffolded"' in generated_files[1]["content"]
     assert 'evidenceReturnState: "missing"' in generated_files[1]["content"]
     assert "dashboard-workspace" in generated_files[1]["content"]
-    assert "frontendDeliveryContext" in generated_files[2]["content"]
+    assert 'import Button from "primevue/button";' in generated_files[2]["content"]
+    assert '"UiTable"' in generated_files[2]["content"]
+    assert '"primevue/datatable"' in generated_files[2]["content"]
+    assert 'from "./generated/provider-adapter"' in generated_files[3]["content"]
+    assert "publicPrimeVueProviderComponents" in generated_files[3]["content"]
+    assert "providerComponents.UiSearchBar.component" in generated_files[3]["content"]
+    assert "providerComponents.UiTable.component" in generated_files[3]["content"]
+
+
+def test_build_frontend_managed_delivery_apply_request_generates_safe_enterprise_adapter(
+    initialized_project_dir: Path,
+    monkeypatch,
+) -> None:
+    root = initialized_project_dir
+    save_project_config(root, ProjectConfig(adapter_ingress_state="verified_loaded"))
+    _write_builtin_delivery_truth(
+        root,
+        snapshot=build_mvp_solution_snapshot(
+            project_id="001-auth",
+            effective_provider_id="enterprise-vue2",
+            effective_style_pack_id="enterprise-default",
+            requested_provider_id="enterprise-vue2",
+            requested_style_pack_id="enterprise-default",
+            recommended_provider_id="enterprise-vue2",
+            recommended_style_pack_id="enterprise-default",
+            recommended_frontend_stack="vue2",
+            requested_frontend_stack="vue2",
+            effective_frontend_stack="vue2",
+            availability_summary={
+                "overall_status": "ready",
+                "passed_check_ids": ["company-registry-network"],
+                "failed_check_ids": [],
+                "blocking_reason_codes": [],
+            },
+            preflight_status="ready",
+            style_fidelity_status="full",
+        ),
+    )
+    monkeypatch.setattr(
+        program_service_module,
+        "evaluate_current_host_runtime",
+        lambda project_root: _build_host_runtime_plan_for_tests(
+            node_runtime_available=True,
+            package_manager_available=True,
+            playwright_browsers_available=True,
+        ),
+    )
+    svc = ProgramService(root)
+
+    request = svc.build_frontend_managed_delivery_apply_request()
+
+    assert request.execution_view is not None
+    artifact_action = next(
+        action
+        for action in request.execution_view.action_items
+        if action.action_type == "artifact_generate"
+    )
+    generated_files = artifact_action.executor_payload["files"]
+    provider_adapter = next(
+        item
+        for item in generated_files
+        if item["path"] == "src/generated/provider-adapter.ts"
+    )["content"]
+    app_vue = next(
+        item for item in generated_files if item["path"] == "src/App.vue"
+    )["content"]
+    assert "ProviderFallbackComponent" in provider_adapter
+    assert '"UiPageHeader"' in provider_adapter
+    assert '"UiCard"' in provider_adapter
+    assert "Column: ProviderFallbackColumn" in provider_adapter
+    assert "publicPrimeVueProviderComponents = {}" not in provider_adapter
+    assert "providerComponents.UiPageHeader.component" in app_vue
+    assert "Managed provider adapter scaffold" in app_vue
+
+
+def test_build_frontend_managed_delivery_apply_request_splits_enterprise_and_public_runtime_installs(
+    initialized_project_dir: Path,
+    monkeypatch,
+) -> None:
+    root = initialized_project_dir
+    save_project_config(root, ProjectConfig(adapter_ingress_state="verified_loaded"))
+    _write_builtin_delivery_truth(
+        root,
+        snapshot=build_mvp_solution_snapshot(
+            project_id="001-auth",
+            effective_provider_id="enterprise-vue2",
+            effective_style_pack_id="enterprise-default",
+            requested_provider_id="enterprise-vue2",
+            requested_style_pack_id="enterprise-default",
+            recommended_provider_id="enterprise-vue2",
+            recommended_style_pack_id="enterprise-default",
+            recommended_frontend_stack="vue2",
+            requested_frontend_stack="vue2",
+            effective_frontend_stack="vue2",
+            availability_summary={
+                "overall_status": "ready",
+                "passed_check_ids": ["company-registry-network"],
+                "failed_check_ids": [],
+                "blocking_reason_codes": [],
+            },
+            preflight_status="ready",
+            style_fidelity_status="full",
+        ),
+    )
+    monkeypatch.setattr(
+        program_service_module,
+        "evaluate_current_host_runtime",
+        lambda project_root: _build_host_runtime_plan_for_tests(
+            node_runtime_available=True,
+            package_manager_available=True,
+            playwright_browsers_available=True,
+        ),
+    )
+    monkeypatch.setattr(
+        program_service_module.shutil,
+        "which",
+        lambda executable: f"/mock/bin/{executable}" if executable == "npm" else None,
+    )
+    svc = ProgramService(root)
+
+    request = svc.build_frontend_managed_delivery_apply_request()
+
+    assert request.execution_view is not None
+    dependency_actions = [
+        action
+        for action in request.execution_view.action_items
+        if action.action_type == "dependency_install"
+    ]
+    assert [action.action_id for action in dependency_actions] == [
+        "dependency-install",
+        "visual-regression-runtime-install",
+    ]
+    enterprise_action = dependency_actions[0]
+    public_runtime_action = dependency_actions[1]
+    assert enterprise_action.executor_payload["registry_url"] == (
+        "http://npm.uedc.sangfor.com.cn/"
+    )
+    assert all(
+        package.startswith("@sxf/")
+        for package in enterprise_action.executor_payload["packages"]
+    )
+    assert public_runtime_action.executor_payload["registry_url"] == (
+        "http://npm.uedc.sangfor.com.cn/"
+    )
+    assert public_runtime_action.executor_payload["install_strategy_id"] == (
+        "public-visual-regression-runtime"
+    )
+    assert public_runtime_action.executor_payload["packages"] == [
+        "playwright",
+        "pixelmatch",
+        "pngjs",
+        "yaml",
+    ]
 
 
 def test_build_frontend_managed_delivery_apply_request_keeps_workspace_integration_default_off_when_runtime_adapter_not_started(
@@ -4040,6 +5251,62 @@ def test_build_frontend_managed_delivery_apply_request_keeps_workspace_integrati
     assert "workspace-integration" in request.decision_receipt.deselected_optional_action_ids
     assert "risk:root-level-mutate" not in request.decision_receipt.risk_acknowledgement_ids
 
+
+def test_build_frontend_managed_delivery_apply_request_marks_existing_scaffold_targets_as_overwrite_existing(
+    initialized_project_dir: Path,
+    monkeypatch,
+) -> None:
+    root = initialized_project_dir
+    save_project_config(root, ProjectConfig(adapter_ingress_state="verified_loaded"))
+    _write_builtin_delivery_truth(root)
+    existing_targets = [
+        root / "src" / "frontend-governance" / "runtime" / "kernel" / "KernelWrapper.tsx",
+        root
+        / "src"
+        / "frontend-governance"
+        / "runtime"
+        / "providers"
+        / "public-primevue"
+        / "ProviderAdapter.tsx",
+        root / "src" / "frontend-governance" / "runtime" / "legacy" / "LegacyAdapterBridge.tsx",
+        root
+        / ".ai-sdlc"
+        / "evidence"
+        / "frontend-runtime"
+        / "public-primevue"
+        / "runtime-boundary-receipt.yaml",
+    ]
+    for path in existing_targets:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text("stale\n", encoding="utf-8")
+    monkeypatch.setattr(
+        program_service_module,
+        "evaluate_current_host_runtime",
+        lambda project_root: _build_host_runtime_plan_for_tests(
+            node_runtime_available=True,
+            package_manager_available=True,
+            playwright_browsers_available=True,
+        ),
+    )
+    monkeypatch.setattr(
+        program_service_module.shutil,
+        "which",
+        lambda executable: f"/mock/bin/{executable}" if executable == "pnpm" else None,
+    )
+    svc = ProgramService(root)
+
+    request = svc.build_frontend_managed_delivery_apply_request()
+
+    workspace_action = next(
+        action
+        for action in request.execution_view.action_items
+        if action.action_type == "workspace_integration"
+    )
+    assert workspace_action.executor_payload["items"]
+    assert {
+        item["mutation_kind"] for item in workspace_action.executor_payload["items"]
+    } == {"overwrite_existing"}
+
 def test_build_frontend_managed_delivery_apply_request_uses_builtin_provider_truth_when_artifacts_missing(
     initialized_project_dir: Path,
     monkeypatch,
@@ -4062,14 +5329,20 @@ def test_build_frontend_managed_delivery_apply_request_uses_builtin_provider_tru
 
     assert request.apply_state == "ready_to_execute"
     assert request.execution_view is not None
-    dependency_action = next(
+    dependency_actions = [
         action
         for action in request.execution_view.action_items
         if action.action_type == "dependency_install"
-    )
-    assert dependency_action.executor_payload["packages"] == [
+    ]
+    assert dependency_actions[0].executor_payload["packages"] == [
         "primevue",
         "@primeuix/themes",
+    ]
+    assert dependency_actions[1].executor_payload["packages"] == [
+        "playwright",
+        "pixelmatch",
+        "pngjs",
+        "yaml",
     ]
 
 
@@ -4092,13 +5365,13 @@ def test_build_frontend_managed_delivery_apply_request_blocks_enterprise_private
         effective_frontend_stack="vue2",
         availability_summary={
             "overall_status": "attention",
-            "passed_check_ids": ["company-registry-network"],
-            "failed_check_ids": ["company-registry-token"],
+            "passed_check_ids": [],
+            "failed_check_ids": ["company-registry-network"],
             "blocking_reason_codes": [],
         },
-        availability_reason_text="Registry token missing.",
+        availability_reason_text="Company registry network not ready.",
         preflight_status="warning",
-        preflight_reason_codes=["company-registry-token"],
+        preflight_reason_codes=["company-registry-network"],
         style_fidelity_status="full",
     )
     _write_builtin_delivery_truth(root, snapshot=snapshot)
@@ -4116,7 +5389,10 @@ def test_build_frontend_managed_delivery_apply_request_blocks_enterprise_private
     request = svc.build_frontend_managed_delivery_apply_request()
 
     assert request.apply_state == "blocked_before_start"
-    assert "private_registry_prerequisite_missing:company-registry-token" in request.remaining_blockers
+    assert (
+        "private_registry_prerequisite_missing:company-registry-network"
+        in request.remaining_blockers
+    )
 
 
 def test_build_frontend_managed_delivery_apply_request_requires_second_confirmation_for_effective_change(
@@ -4142,7 +5418,7 @@ def test_build_frontend_managed_delivery_apply_request_requires_second_confirmat
         availability_summary={
             "overall_status": "attention",
             "passed_check_ids": [],
-            "failed_check_ids": ["company-registry-token"],
+            "failed_check_ids": ["company-registry-network"],
             "blocking_reason_codes": [],
         },
         availability_reason_text="Enterprise provider prerequisites are not satisfied.",
@@ -4195,7 +5471,7 @@ def test_build_frontend_managed_delivery_apply_request_truth_derived_defaults_to
         availability_summary={
             "overall_status": "attention",
             "passed_check_ids": [],
-            "failed_check_ids": ["company-registry-token"],
+            "failed_check_ids": ["company-registry-network"],
             "blocking_reason_codes": [],
         },
         availability_reason_text="Enterprise provider prerequisites are not satisfied.",
@@ -4247,6 +5523,184 @@ def test_execute_frontend_managed_delivery_apply_returns_pending_browser_gate_su
     assert (
         initialized_project_dir / "managed" / "frontend" / "src" / "App.vue"
     ).read_text(encoding="utf-8") == "<template>generated</template>\n"
+
+
+def test_execute_frontend_managed_delivery_apply_reapplies_existing_workspace_scaffold(
+    initialized_project_dir: Path,
+    monkeypatch,
+) -> None:
+    root = initialized_project_dir
+    save_project_config(root, ProjectConfig(adapter_ingress_state="verified_loaded"))
+    _write_builtin_delivery_truth(root)
+    existing_targets = {
+        root / "src" / "frontend-governance" / "runtime" / "kernel" / "KernelWrapper.tsx": "stale kernel\n",
+        root
+        / "src"
+        / "frontend-governance"
+        / "runtime"
+        / "providers"
+        / "public-primevue"
+        / "ProviderAdapter.tsx": "stale provider\n",
+        root / "src" / "frontend-governance" / "runtime" / "legacy" / "LegacyAdapterBridge.tsx": "stale legacy\n",
+        root
+        / ".ai-sdlc"
+        / "evidence"
+        / "frontend-runtime"
+        / "public-primevue"
+        / "runtime-boundary-receipt.yaml": "stale receipt\n",
+    }
+    for path, content in existing_targets.items():
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(content, encoding="utf-8")
+    monkeypatch.setattr(
+        program_service_module,
+        "evaluate_current_host_runtime",
+        lambda project_root: _build_host_runtime_plan_for_tests(
+            node_runtime_available=True,
+            package_manager_available=True,
+            playwright_browsers_available=True,
+        ),
+    )
+    monkeypatch.setattr(
+        program_service_module.shutil,
+        "which",
+        lambda executable: f"/mock/bin/{executable}" if executable == "npm" else None,
+    )
+    svc = ProgramService(root)
+    request = svc.build_frontend_managed_delivery_apply_request()
+
+    with patch(
+        "ai_sdlc.core.managed_delivery_apply.subprocess.run",
+        side_effect=build_dependency_install_subprocess_side_effect(),
+    ):
+        result = svc.execute_frontend_managed_delivery_apply(
+            request=request,
+            confirmed=True,
+        )
+
+    assert result.result_status == "apply_succeeded_pending_browser_gate"
+    assert "workspace-integration" in result.executed_action_ids
+    provider_adapter = (
+        root
+        / "src"
+        / "frontend-governance"
+        / "runtime"
+        / "providers"
+        / "public-primevue"
+        / "ProviderAdapter.tsx"
+    ).read_text(encoding="utf-8")
+    assert "mappedComponents" in provider_adapter
+    assert "UiSearchBar" in provider_adapter
+
+
+def test_execute_frontend_managed_delivery_apply_materializes_inheritance_governance_artifacts(
+    initialized_project_dir: Path,
+    monkeypatch,
+) -> None:
+    root = initialized_project_dir
+    save_project_config(root, ProjectConfig(adapter_ingress_state="verified_loaded"))
+    _write_builtin_delivery_truth(root)
+    monkeypatch.setattr(
+        program_service_module,
+        "evaluate_current_host_runtime",
+        lambda project_root: _build_host_runtime_plan_for_tests(
+            node_runtime_available=True,
+            package_manager_available=True,
+            playwright_browsers_available=True,
+        ),
+    )
+    monkeypatch.setattr(
+        program_service_module.shutil,
+        "which",
+        lambda executable: f"/mock/bin/{executable}" if executable == "npm" else None,
+    )
+    svc = ProgramService(root)
+    request = svc.build_frontend_managed_delivery_apply_request()
+
+    with patch(
+        "ai_sdlc.core.managed_delivery_apply.subprocess.run",
+        side_effect=build_dependency_install_subprocess_side_effect(),
+    ):
+        result = svc.execute_frontend_managed_delivery_apply(
+            request=request,
+            confirmed=True,
+        )
+
+    assert result.result_status == "apply_succeeded_pending_browser_gate"
+    assert (
+        root
+        / "governance"
+        / "frontend"
+        / "generation"
+        / "generation.manifest.yaml"
+    ).is_file()
+    assert (
+        root
+        / "governance"
+        / "frontend"
+        / "quality-platform"
+        / "quality-platform.manifest.yaml"
+    ).is_file()
+    assert svc.build_frontend_inheritance_status_surface() == {
+        "generation": "inherited",
+        "quality": "inherited",
+    }
+
+
+def test_execute_frontend_managed_delivery_apply_preserves_custom_page_schema_artifacts(
+    initialized_project_dir: Path,
+    monkeypatch,
+) -> None:
+    root = initialized_project_dir
+    save_project_config(root, ProjectConfig(adapter_ingress_state="verified_loaded"))
+    _write_builtin_delivery_truth(root)
+    custom_page_ui_schema = build_p2_frontend_page_ui_schema_baseline().model_copy(
+        deep=True
+    )
+    custom_page_ui_schema.page_schemas[0].section_anchors[0].semantic_role = (
+        "custom_project_shell"
+    )
+    materialize_frontend_page_ui_schema_artifacts(root, custom_page_ui_schema)
+    monkeypatch.setattr(
+        program_service_module,
+        "evaluate_current_host_runtime",
+        lambda project_root: _build_host_runtime_plan_for_tests(
+            node_runtime_available=True,
+            package_manager_available=True,
+            playwright_browsers_available=True,
+        ),
+    )
+    monkeypatch.setattr(
+        program_service_module.shutil,
+        "which",
+        lambda executable: f"/mock/bin/{executable}" if executable == "npm" else None,
+    )
+    svc = ProgramService(root)
+    request = svc.build_frontend_managed_delivery_apply_request()
+
+    with patch(
+        "ai_sdlc.core.managed_delivery_apply.subprocess.run",
+        side_effect=build_dependency_install_subprocess_side_effect(),
+    ):
+        result = svc.execute_frontend_managed_delivery_apply(
+            request=request,
+            confirmed=True,
+        )
+
+    assert result.result_status == "apply_succeeded_pending_browser_gate"
+    page_schema_payload = yaml.safe_load(
+        (
+            root
+            / "kernel"
+            / "frontend"
+            / "page-ui-schema"
+            / "page-schemas"
+            / "dashboard-workspace.yaml"
+        ).read_text(encoding="utf-8")
+    )
+    assert page_schema_payload["section_anchors"][0]["semantic_role"] == (
+        "custom_project_shell"
+    )
 
 
 def test_build_frontend_managed_delivery_apply_request_surfaces_executor_preflight_blockers(
@@ -4316,10 +5770,14 @@ def test_write_frontend_managed_delivery_apply_artifact_keeps_materialized_reque
     )
     svc = ProgramService(root)
     request = svc.build_frontend_managed_delivery_apply_request()
-    result = svc.execute_frontend_managed_delivery_apply(
-        request=request,
-        confirmed=True,
-    )
+    with patch(
+        "ai_sdlc.core.managed_delivery_apply.subprocess.run",
+        side_effect=build_dependency_install_subprocess_side_effect(),
+    ):
+        result = svc.execute_frontend_managed_delivery_apply(
+            request=request,
+            confirmed=True,
+        )
 
     artifact_path = svc.write_frontend_managed_delivery_apply_artifact(
         request=request,
@@ -4593,6 +6051,98 @@ def test_execute_frontend_browser_gate_probe_materializes_gate_run_bundle(
     ]
 
 
+def test_execute_frontend_browser_gate_probe_auto_materializes_visual_a11y_evidence_when_missing(
+    initialized_project_dir: Path,
+) -> None:
+    root = initialized_project_dir
+    save_project_config(root, ProjectConfig(adapter_ingress_state="verified_loaded"))
+    _write_frontend_solution_confirmation_artifacts(root)
+    request_path = _write_artifact_generate_apply_request(root)
+
+    def _runner(*, artifact_root: Path, execution_context, generated_at: str):
+        trace_path = artifact_root / "shared-runtime" / "playwright-trace.zip"
+        screenshot_path = artifact_root / "shared-runtime" / "navigation-screenshot.png"
+        interaction_path = artifact_root / "interaction" / "interaction-snapshot.json"
+        trace_path.parent.mkdir(parents=True, exist_ok=True)
+        interaction_path.parent.mkdir(parents=True, exist_ok=True)
+        trace_path.write_text('{"trace":"ok"}\n', encoding="utf-8")
+        screenshot_path.write_bytes(b"png")
+        interaction_path.write_text('{"interaction":"ok"}\n', encoding="utf-8")
+        return BrowserGateProbeRunnerResult.model_validate(
+            {
+                "runtime_status": "completed",
+                "shared_capture": {
+                    "gate_run_id": execution_context.gate_run_id,
+                    "trace_artifact_ref": str(trace_path.relative_to(root)),
+                    "navigation_screenshot_ref": str(screenshot_path.relative_to(root)),
+                    "capture_status": "captured",
+                    "final_url": "http://localhost:4173/",
+                    "anchor_refs": ["page:landing"],
+                    "diagnostic_codes": [],
+                },
+                "interaction_capture": {
+                    "gate_run_id": execution_context.gate_run_id,
+                    "interaction_probe_id": "primary-action",
+                    "artifact_refs": [str(interaction_path.relative_to(root))],
+                    "capture_status": "captured",
+                    "classification_candidate": "pass",
+                    "blocking_reason_codes": [],
+                    "anchor_refs": ["interaction:primary-action"],
+                },
+                "quality_capture": {
+                    "gate_run_id": execution_context.gate_run_id,
+                    "page_title": "frontend-browser-entry",
+                    "final_url": "http://localhost:4173/",
+                    "screenshot_ref": str(screenshot_path.relative_to(root)),
+                    "body_text_char_count": 420,
+                    "heading_count": 2,
+                    "landmark_count": 3,
+                    "interactive_count": 4,
+                    "unlabeled_button_count": 0,
+                    "unlabeled_input_count": 0,
+                    "image_missing_alt_count": 0,
+                    "viewport_width": 1280,
+                    "viewport_height": 720,
+                    "document_scroll_width": 1280,
+                    "document_scroll_height": 720,
+                    "horizontal_overflow_count": 0,
+                    "console_error_messages": [],
+                    "page_error_messages": [],
+                },
+                "diagnostic_codes": [],
+                "warnings": [],
+            }
+        )
+
+    svc = ProgramService(root, browser_gate_probe_runner=_runner)
+    apply_request = svc.build_frontend_managed_delivery_apply_request(request_path)
+    apply_result = svc.execute_frontend_managed_delivery_apply(
+        request_path,
+        request=apply_request,
+        confirmed=True,
+    )
+    svc.write_frontend_managed_delivery_apply_artifact(
+        request_path,
+        request=apply_request,
+        result=apply_result,
+        generated_at="2026-04-14T04:00:00Z",
+    )
+
+    probe_request = svc.build_frontend_browser_gate_probe_request()
+    probe_result = svc.execute_frontend_browser_gate_probe(
+        request=probe_request,
+        generated_at="2026-04-14T04:05:00Z",
+    )
+
+    assert probe_result.overall_gate_status == "incomplete"
+    assert probe_result.execute_gate_state == "recheck_required"
+    assert probe_result.decision_reason == "evidence_missing"
+    evidence_path = root / "specs" / "001-auth" / "frontend-visual-a11y-evidence.json"
+    assert evidence_path.is_file()
+    artifact = load_frontend_visual_a11y_evidence_artifact(evidence_path)
+    assert artifact.provenance.provider_kind == "browser_gate_auto"
+
+
 def test_build_integration_dry_run_uses_browser_gate_recheck_command_when_gate_artifact_exists(
     initialized_project_dir: Path,
 ) -> None:
@@ -4767,6 +6317,103 @@ def test_build_status_fails_closed_when_current_apply_truth_drift_detected(
     apply_payload["apply_result_id"] = "apply-result-drifted"
     apply_artifact_path.write_text(
         yaml.safe_dump(apply_payload, sort_keys=False, allow_unicode=True),
+        encoding="utf-8",
+    )
+
+    rows = svc.build_status(_manifest())
+    by = {r.spec_id: r for r in rows}
+
+    readiness = by["001-auth"].frontend_readiness
+    assert readiness is not None
+    assert readiness.execute_gate_state == "blocked"
+    assert readiness.decision_reason == "scope_or_linkage_invalid"
+    assert any("current_truth_drift" in blocker for blocker in readiness.blockers)
+
+
+def test_build_status_fails_closed_when_visual_regression_matrix_context_drifts(
+    initialized_project_dir: Path,
+) -> None:
+    root = initialized_project_dir
+    save_project_config(root, ProjectConfig(adapter_ingress_state="verified_loaded"))
+    _write_frontend_solution_confirmation_artifacts(root)
+    request_path = _write_artifact_generate_apply_request(root)
+    svc = ProgramService(root)
+    apply_request = svc.build_frontend_managed_delivery_apply_request(request_path)
+    apply_result = svc.execute_frontend_managed_delivery_apply(
+        request_path,
+        request=apply_request,
+        confirmed=True,
+    )
+    svc.write_frontend_managed_delivery_apply_artifact(
+        request_path,
+        request=apply_request,
+        result=apply_result,
+        generated_at="2026-04-14T04:00:00Z",
+    )
+    probe_request = svc.build_frontend_browser_gate_probe_request()
+    probe_result = svc.execute_frontend_browser_gate_probe(
+        request=probe_request,
+        generated_at="2026-04-14T04:05:00Z",
+    )
+
+    artifact_path = root / probe_result.artifact_path
+    payload = yaml.safe_load(artifact_path.read_text(encoding="utf-8"))
+    payload["execution_context"]["visual_regression_matrix_id"] = "stale-matrix"
+    payload["execution_context"]["visual_regression_viewport_id"] = "mobile-390"
+    artifact_path.write_text(
+        yaml.safe_dump(payload, sort_keys=False, allow_unicode=True),
+        encoding="utf-8",
+    )
+
+    rows = svc.build_status(_manifest())
+    by = {r.spec_id: r for r in rows}
+
+    readiness = by["001-auth"].frontend_readiness
+    assert readiness is not None
+    assert readiness.execute_gate_state == "blocked"
+    assert readiness.decision_reason == "scope_or_linkage_invalid"
+    assert any("current_truth_drift" in blocker for blocker in readiness.blockers)
+
+
+def test_build_status_fails_closed_when_browser_gate_full_context_drifts(
+    initialized_project_dir: Path,
+) -> None:
+    root = initialized_project_dir
+    save_project_config(root, ProjectConfig(adapter_ingress_state="verified_loaded"))
+    _write_frontend_solution_confirmation_artifacts(root)
+    request_path = _write_artifact_generate_apply_request(root)
+    svc = ProgramService(root)
+    apply_request = svc.build_frontend_managed_delivery_apply_request(request_path)
+    apply_result = svc.execute_frontend_managed_delivery_apply(
+        request_path,
+        request=apply_request,
+        confirmed=True,
+    )
+    svc.write_frontend_managed_delivery_apply_artifact(
+        request_path,
+        request=apply_request,
+        result=apply_result,
+        generated_at="2026-04-14T04:00:00Z",
+    )
+    probe_request = svc.build_frontend_browser_gate_probe_request()
+    probe_result = svc.execute_frontend_browser_gate_probe(
+        request=probe_request,
+        generated_at="2026-04-14T04:05:00Z",
+    )
+
+    artifact_path = root / probe_result.artifact_path
+    payload = yaml.safe_load(artifact_path.read_text(encoding="utf-8"))
+    payload["execution_context"].update(
+        {
+            "delivery_entry_id": "stale-delivery-entry",
+            "package_manager": "stale-package-manager",
+            "component_library_packages": ["stale-component-library"],
+            "provider_theme_adapter_id": "stale-theme-adapter",
+            "page_schema_ids": ["stale-page-schema"],
+        }
+    )
+    artifact_path.write_text(
+        yaml.safe_dump(payload, sort_keys=False, allow_unicode=True),
         encoding="utf-8",
     )
 
@@ -13092,6 +14739,23 @@ def test_build_status_surfaces_frontend_readiness_gap_when_attachment_missing(
     assert readiness.source_linkage["frontend_gate_verdict"] == "UNRESOLVED"
 
 
+def test_build_status_omits_frontend_readiness_for_non_frontend_spec_without_subject_signals(
+    tmp_path: Path,
+) -> None:
+    spec_dir = tmp_path / "specs" / "001-auth"
+    spec_dir.mkdir(parents=True)
+
+    svc = ProgramService(tmp_path)
+    rows = svc.build_status(
+        ProgramManifest(
+            specs=[ProgramSpecRef(id="001-auth", path="specs/001-auth", depends_on=[])]
+        )
+    )
+
+    readiness = rows[0].frontend_readiness
+    assert readiness is None
+
+
 def test_build_status_waives_observation_gap_for_framework_capability(
     tmp_path: Path,
 ) -> None:
@@ -13119,6 +14783,63 @@ def test_build_status_waives_observation_gap_for_framework_capability(
         readiness.source_linkage["frontend_attachment_requirement"]
         == "waived_for_framework_capability"
     )
+
+
+def test_build_status_uses_manifest_frontend_evidence_class_for_frontend_subject(
+    tmp_path: Path,
+) -> None:
+    spec_dir = tmp_path / "specs" / "165-frontend-example"
+    spec_dir.mkdir(parents=True)
+
+    svc = ProgramService(tmp_path)
+    rows = svc.build_status(
+        ProgramManifest(
+            specs=[
+                ProgramSpecRef(
+                    id="165-frontend-example",
+                    path="specs/165-frontend-example",
+                    depends_on=[],
+                    frontend_evidence_class="framework_capability",
+                )
+            ]
+        )
+    )
+
+    readiness = rows[0].frontend_readiness
+    assert readiness is not None
+    assert readiness.state == "ready"
+    assert readiness.execute_gate_state == "ready"
+    assert readiness.decision_reason == "advisory_only"
+    assert readiness.source_linkage["runtime_attachment_status"] == "missing_artifact"
+    assert (
+        readiness.source_linkage["frontend_attachment_requirement"]
+        == "waived_for_framework_capability"
+    )
+
+
+def test_build_status_omits_frontend_readiness_for_non_frontend_capability_scope(
+    tmp_path: Path,
+) -> None:
+    spec_dir = tmp_path / "specs" / "158-agent-adapter-example"
+    spec_dir.mkdir(parents=True)
+
+    svc = ProgramService(tmp_path)
+    rows = svc.build_status(
+        ProgramManifest(
+            specs=[
+                ProgramSpecRef(
+                    id="158-agent-adapter-example",
+                    path="specs/158-agent-adapter-example",
+                    depends_on=[],
+                    frontend_evidence_class="framework_capability",
+                    capability_refs=["agent-adapter-verified-host-ingress"],
+                )
+            ]
+        )
+    )
+
+    readiness = rows[0].frontend_readiness
+    assert readiness is None
 
 
 def test_build_status_blocks_sample_selfcheck_observation_artifact_for_general_spec(
@@ -13594,7 +15315,7 @@ def test_build_frontend_solution_confirmation_recommends_public_fallback_in_simp
     snapshot = svc.build_frontend_solution_confirmation(
         _manifest(),
         enterprise_provider_eligible=False,
-        failed_preflight_check_ids=["company-registry-token"],
+        failed_preflight_check_ids=["company-registry-network"],
     )
 
     assert snapshot.decision_status == "recommended"
@@ -13609,7 +15330,7 @@ def test_build_frontend_solution_confirmation_recommends_public_fallback_in_simp
     assert snapshot.effective_provider_id == "public-primevue"
     assert snapshot.effective_style_pack_id == "modern-saas"
     assert snapshot.availability_summary.failed_check_ids == [
-        "company-registry-token"
+        "company-registry-network"
     ]
     assert snapshot.style_fidelity_status == "full"
     assert snapshot.provider_mode == "normal"
@@ -13625,7 +15346,7 @@ def test_build_frontend_solution_confirmation_preserves_failed_preflight_checks_
     snapshot = svc.build_frontend_solution_confirmation(
         _manifest(),
         enterprise_provider_eligible=True,
-        failed_preflight_check_ids=["company-registry-token"],
+        failed_preflight_check_ids=["company-registry-network"],
     )
 
     assert snapshot.decision_status == "recommended"
@@ -13634,10 +15355,8 @@ def test_build_frontend_solution_confirmation_preserves_failed_preflight_checks_
     assert snapshot.recommended_provider_id == "enterprise-vue2"
     assert snapshot.effective_provider_id == "enterprise-vue2"
     assert snapshot.availability_summary.overall_status == "attention"
-    assert snapshot.availability_summary.passed_check_ids == ["company-registry-network"]
-    assert snapshot.availability_summary.failed_check_ids == [
-        "company-registry-token"
-    ]
+    assert snapshot.availability_summary.passed_check_ids == []
+    assert snapshot.availability_summary.failed_check_ids == ["company-registry-network"]
     assert snapshot.availability_summary.blocking_reason_codes == []
 
 
@@ -13651,7 +15370,7 @@ def test_build_frontend_solution_confirmation_blocks_when_defaulted_public_fallb
     snapshot = svc.build_frontend_solution_confirmation(
         _manifest(),
         enterprise_provider_eligible=False,
-        failed_preflight_check_ids=["company-registry-token"],
+        failed_preflight_check_ids=["company-registry-network"],
         fallback_candidate_available=False,
     )
 
@@ -13671,7 +15390,7 @@ def test_build_frontend_solution_confirmation_blocks_when_defaulted_public_fallb
     assert snapshot.preflight_reason_codes == ["enterprise_provider_unavailable"]
     assert snapshot.availability_summary.overall_status == "blocked"
     assert snapshot.availability_summary.failed_check_ids == [
-        "company-registry-token"
+        "company-registry-network"
     ]
 
 
@@ -13688,7 +15407,7 @@ def test_build_frontend_solution_confirmation_requires_explicit_cross_stack_fall
         requested_provider_id="enterprise-vue2",
         requested_style_pack_id="enterprise-default",
         enterprise_provider_eligible=False,
-        failed_preflight_check_ids=["company-registry-token"],
+        failed_preflight_check_ids=["company-registry-network"],
     )
 
     assert snapshot.decision_status == "fallback_required"
@@ -13702,7 +15421,7 @@ def test_build_frontend_solution_confirmation_requires_explicit_cross_stack_fall
     assert snapshot.provider_mode == "cross_stack_fallback"
     assert snapshot.fallback_reason_code == "enterprise_provider_unavailable"
     assert snapshot.availability_summary.failed_check_ids == [
-        "company-registry-token"
+        "company-registry-network"
     ]
 
 
@@ -13719,7 +15438,7 @@ def test_build_frontend_solution_confirmation_blocks_when_enterprise_unavailable
         requested_provider_id="enterprise-vue2",
         requested_style_pack_id="enterprise-default",
         enterprise_provider_eligible=False,
-        failed_preflight_check_ids=["company-registry-token"],
+        failed_preflight_check_ids=["company-registry-network"],
         fallback_candidate_available=False,
     )
 
@@ -13746,7 +15465,7 @@ def test_build_frontend_solution_confirmation_requires_fallback_when_enterprise_
         _manifest(),
         requested_provider_id="enterprise-vue2",
         enterprise_provider_eligible=False,
-        failed_preflight_check_ids=["company-registry-token"],
+        failed_preflight_check_ids=["company-registry-network"],
     )
 
     assert snapshot.decision_status == "fallback_required"

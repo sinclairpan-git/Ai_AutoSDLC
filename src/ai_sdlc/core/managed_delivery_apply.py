@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import json
+import os
 import subprocess
 from collections import defaultdict, deque
 from pathlib import Path
@@ -32,6 +34,7 @@ ALLOWED_ACTION_TYPES = frozenset(
         "workspace_integration",
     }
 )
+_PLAYWRIGHT_BROWSER_RUNTIME_PACKAGES = frozenset({"playwright", "@playwright/test"})
 
 
 def _dedupe_text_items(values: list[str] | tuple[str, ...]) -> list[str]:
@@ -857,18 +860,75 @@ def _default_dependency_installer(
     payload: DependencyInstallExecutionPayload,
     working_directory: Path,
 ) -> dict[str, str]:
+    command: list[str]
     if payload.package_manager == "npm":
-        command = ["npm", "install", *payload.packages]
+        command = ["npm", "install"]
     elif payload.package_manager == "yarn":
-        command = ["yarn", "add", *payload.packages]
+        command = ["yarn", "add"]
     else:
-        command = ["pnpm", "add", *payload.packages]
-    subprocess.run(command, cwd=working_directory, check=True, capture_output=True, text=True)
-    return {
-        "command": " ".join(command),
-        "working_directory": str(working_directory),
-        "packages": ",".join(payload.packages),
-    }
+        command = ["pnpm", "add"]
+    registry_url = payload.registry_url.strip()
+    install_env: dict[str, str] | None = None
+    if registry_url and payload.package_manager in {"npm", "pnpm"}:
+        command.extend(["--registry", registry_url])
+    elif registry_url and payload.package_manager == "yarn":
+        install_env = {
+            **os.environ,
+            "npm_config_registry": registry_url,
+            "YARN_NPM_REGISTRY_SERVER": registry_url,
+        }
+    command.extend(payload.packages)
+    for attempt in range(1, 4):
+        try:
+            subprocess.run(
+                command,
+                cwd=working_directory,
+                check=True,
+                capture_output=True,
+                text=True,
+                env=install_env,
+            )
+            break
+        except subprocess.CalledProcessError as exc:
+            if attempt >= 3 or not _is_retryable_dependency_install_error(exc):
+                raise
+    verification = verify_dependency_installation(payload, working_directory)
+    verification.update(
+        {
+            "command": " ".join(command),
+            "registry_env_var": (
+                "npm_config_registry,YARN_NPM_REGISTRY_SERVER"
+                if install_env is not None
+                else ""
+            ),
+            "working_directory": str(working_directory),
+            "packages": ",".join(payload.packages),
+        }
+    )
+    return verification
+
+
+def _is_retryable_dependency_install_error(exc: subprocess.CalledProcessError) -> bool:
+    diagnostic = " ".join(
+        part.strip()
+        for part in (
+            str(exc.stderr or ""),
+            str(exc.stdout or ""),
+        )
+        if part and str(part).strip()
+    ).lower()
+    retry_markers = (
+        "503",
+        "service unavailable",
+        "e503",
+        "timed out",
+        "etimedout",
+        "econnreset",
+        "socket hang up",
+        "eai_again",
+        "enotfound",
+    )
+    return any(marker in diagnostic for marker in retry_markers)
 
 
 def _default_artifact_writer(
@@ -955,3 +1015,295 @@ def _lockfile_names_for_package_manager(package_manager: str) -> tuple[str, ...]
     if package_manager == "yarn":
         return ("yarn.lock",)
     return ("pnpm-lock.yaml",)
+
+
+def verify_dependency_installation(
+    payload: DependencyInstallExecutionPayload,
+    working_directory: Path,
+) -> dict[str, str]:
+    """Verify that dependency installation produced manifest, lockfile, and package evidence."""
+
+    manifest_path = working_directory / "package.json"
+    if not manifest_path.is_file():
+        raise ValueError("dependency_install_manifest_missing")
+    try:
+        manifest_payload = json.loads(manifest_path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as exc:
+        raise ValueError("dependency_install_manifest_invalid") from exc
+    if not isinstance(manifest_payload, dict):
+        raise ValueError("dependency_install_manifest_invalid")
+
+    expected_packages = _normalize_dependency_package_specs(payload.packages)
+    declared_packages = _collect_declared_dependency_packages(manifest_payload)
+    missing_declared = [
+        package for package in expected_packages if package not in declared_packages
+    ]
+    if missing_declared:
+        raise ValueError(
+            "dependency_install_manifest_missing_packages:" + ",".join(missing_declared)
+        )
+
+    existing_lockfiles = [
+        working_directory / lockfile_name
+        for lockfile_name in _lockfile_names_for_package_manager(payload.package_manager)
+        if (working_directory / lockfile_name).is_file()
+    ]
+    if not existing_lockfiles:
+        raise ValueError(f"dependency_install_lockfile_missing:{payload.package_manager}")
+
+    resolved_manifests = _resolve_installed_package_manifests(
+        expected_packages,
+        working_directory,
+        package_manager=payload.package_manager,
+    )
+    missing_resolved = [
+        package for package in expected_packages if package not in resolved_manifests
+    ]
+    if missing_resolved:
+        raise ValueError(
+            "dependency_install_resolution_missing:" + ",".join(missing_resolved)
+        )
+
+    playwright_browser_runtime_path = ""
+    if _requires_playwright_browser_runtime(
+        expected_packages=expected_packages,
+        declared_packages=declared_packages,
+    ):
+        playwright_browser_runtime_path = _verify_playwright_browser_runtime(
+            working_directory,
+            package_manager=payload.package_manager,
+        )
+
+    return {
+        "verification_state": (
+            "package_manifest_lockfile_dependency_resolution_verified"
+        ),
+        "manifest_path": str(manifest_path.resolve()),
+        "lockfile_path": str(existing_lockfiles[0].resolve()),
+        "playwright_browser_runtime": playwright_browser_runtime_path,
+        "resolved_package_manifests": json.dumps(
+            resolved_manifests,
+            ensure_ascii=True,
+            sort_keys=True,
+        ),
+    }
+
+
+def _normalize_dependency_package_specs(packages: list[str]) -> list[str]:
+    return _dedupe_text_items(
+        [
+            _dependency_package_name_from_spec(package_spec)
+            for package_spec in packages
+        ]
+    )
+
+
+def _dependency_package_name_from_spec(package_spec: str) -> str:
+    spec = str(package_spec).strip()
+    if not spec:
+        return ""
+    alias_marker = "@npm:"
+    if alias_marker in spec:
+        return spec.split(alias_marker, 1)[0].strip()
+    if spec.startswith("@"):
+        scope, separator, remainder = spec.partition("/")
+        if not separator:
+            return spec
+        package_name = remainder.split("@", 1)[0].strip()
+        if not package_name:
+            return spec
+        return f"{scope}/{package_name}"
+    return spec.split("@", 1)[0].strip() or spec
+
+
+def _requires_playwright_browser_runtime(
+    *,
+    expected_packages: list[str],
+    declared_packages: set[str],
+) -> bool:
+    _ = declared_packages
+    package_names = set(expected_packages)
+    return bool(package_names & _PLAYWRIGHT_BROWSER_RUNTIME_PACKAGES)
+
+
+def _verify_playwright_browser_runtime(
+    working_directory: Path,
+    *,
+    package_manager: str = "",
+) -> str:
+    script = """
+const fs = require('fs');
+let runtime = null;
+for (const packageName of ['playwright', '@playwright/test']) {
+  try {
+    runtime = require(packageName);
+    break;
+  } catch (error) {
+  }
+}
+if (!runtime || !runtime.chromium) {
+  process.exit(43);
+}
+const { chromium } = runtime;
+const executablePath = chromium.executablePath();
+if (!executablePath || !fs.existsSync(executablePath)) {
+  process.exit(42);
+}
+process.stdout.write(executablePath);
+""".strip()
+    try:
+        result = _run_package_resolution_script(
+            package_manager=package_manager,
+            script=script,
+            packages=[],
+            working_directory=working_directory,
+        )
+    except (FileNotFoundError, subprocess.CalledProcessError) as exc:
+        raise ValueError("dependency_install_playwright_browser_runtime_missing") from exc
+    executable_path = str(result.stdout or "").strip()
+    if not executable_path:
+        raise ValueError("dependency_install_playwright_browser_runtime_missing")
+    return executable_path
+
+
+def _collect_declared_dependency_packages(manifest_payload: dict[str, object]) -> set[str]:
+    declared_packages: set[str] = set()
+    for section_name in (
+        "dependencies",
+        "devDependencies",
+        "optionalDependencies",
+        "peerDependencies",
+    ):
+        section_payload = manifest_payload.get(section_name)
+        if not isinstance(section_payload, dict):
+            continue
+        for package_name in section_payload:
+            declared_packages.add(str(package_name))
+    return declared_packages
+
+
+def _resolve_installed_package_manifests(
+    packages: list[str],
+    working_directory: Path,
+    *,
+    package_manager: str = "",
+) -> dict[str, str]:
+    resolved_manifests = _resolve_package_manifests_with_node(
+        packages,
+        working_directory,
+        package_manager=package_manager,
+    )
+    verified: dict[str, str] = {}
+    for package_name in packages:
+        candidate = Path(resolved_manifests.get(package_name, ""))
+        if candidate.is_file():
+            verified[package_name] = str(candidate.resolve())
+            continue
+
+        fallback = working_directory / "node_modules" / Path(*package_name.split("/")) / "package.json"
+        if fallback.is_file():
+            verified[package_name] = str(fallback.resolve())
+    return verified
+
+
+def _resolve_package_manifests_with_node(
+    packages: list[str],
+    working_directory: Path,
+    *,
+    package_manager: str = "",
+) -> dict[str, str]:
+    if not packages:
+        return {}
+    script = """
+const fs = require("fs");
+const path = require("path");
+const { createRequire } = require("module");
+const requireFromCwd = createRequire(path.join(process.cwd(), "package.json"));
+const resolved = {};
+for (const packageName of process.argv.slice(1)) {
+  let manifestPath = "";
+  try {
+    manifestPath = requireFromCwd.resolve(`${packageName}/package.json`);
+  } catch {}
+  if (!manifestPath) {
+    try {
+      let cursor = path.dirname(requireFromCwd.resolve(packageName));
+      while (true) {
+        const candidate = path.join(cursor, "package.json");
+        if (fs.existsSync(candidate)) {
+          try {
+            const payload = JSON.parse(fs.readFileSync(candidate, "utf8"));
+            if (payload && payload.name === packageName) {
+              manifestPath = candidate;
+              break;
+            }
+          } catch {}
+        }
+        const parent = path.dirname(cursor);
+        if (parent === cursor) {
+          break;
+        }
+        cursor = parent;
+      }
+    } catch {}
+  }
+  if (manifestPath) {
+    resolved[packageName] = manifestPath;
+  }
+}
+process.stdout.write(JSON.stringify(resolved));
+"""
+    try:
+        result = _run_package_resolution_script(
+            package_manager=package_manager,
+            script=script,
+            packages=packages,
+            working_directory=working_directory,
+        )
+    except Exception:
+        return {}
+    stdout = result.stdout.strip()
+    if not stdout:
+        return {}
+    try:
+        payload = json.loads(stdout)
+    except json.JSONDecodeError:
+        return {}
+    if not isinstance(payload, dict):
+        return {}
+    return {
+        str(package_name): str(manifest_path)
+        for package_name, manifest_path in payload.items()
+        if str(package_name).strip() and str(manifest_path).strip()
+    }
+
+
+def _run_package_resolution_script(
+    *,
+    package_manager: str,
+    script: str,
+    packages: list[str],
+    working_directory: Path,
+) -> subprocess.CompletedProcess[str]:
+    commands: list[list[str]]
+    if package_manager == "yarn":
+        commands = [
+            ["yarn", "node", "-e", script, *packages],
+            ["node", "-e", script, *packages],
+        ]
+    else:
+        commands = [["node", "-e", script, *packages]]
+    last_error: FileNotFoundError | subprocess.CalledProcessError | None = None
+    for command in commands:
+        try:
+            return subprocess.run(
+                command,
+                cwd=working_directory,
+                check=True,
+                capture_output=True,
+                text=True,
+            )
+        except (FileNotFoundError, subprocess.CalledProcessError) as exc:
+            last_error = exc
+    assert last_error is not None
+    raise last_error

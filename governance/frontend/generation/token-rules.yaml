@@ -1,0 +1,7 @@
+disallowed_naked_values:
+- hex-color
+- rgb-color
+- rgba-color
+- shadow
+- spacing-or-size
+forbid_inline_core_style: true

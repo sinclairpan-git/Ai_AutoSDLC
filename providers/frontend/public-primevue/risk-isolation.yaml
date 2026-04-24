@@ -1,0 +1,11 @@
+allow_full_vue_use: false
+disallowed_capabilities:
+- full-vue-use-company-library
+- global-install-side-effects
+- provider-wide-api-passthrough
+- dangerous-rendering-default-open
+- legacy-components-as-default-entry
+exception_requirements:
+- provider-controlled-wrapper
+- structured-contract-exception
+- checker-visible-surface

@@ -63,7 +63,7 @@ def test_build_mvp_enterprise_vue2_provider_profile_exposes_style_support_and_in
     profile = build_mvp_enterprise_vue2_provider_profile()
 
     assert profile.access_mode == "private"
-    assert profile.install_strategy_ids == ["enterprise-vue2-private-registry"]
+    assert profile.install_strategy_ids == ["enterprise-vue2-company-registry"]
     assert profile.default_style_pack_id == "enterprise-default"
     assert profile.cross_stack_fallback_targets == ["vue3/public-primevue"]
     assert {
@@ -168,13 +168,12 @@ def test_frontend_provider_profile_models_deduplicate_set_like_lists() -> None:
         work_item_id="016",
         provider_id="enterprise-vue2",
         install_strategy_ids=[
-            "enterprise-vue2-private-registry",
-            "enterprise-vue2-private-registry",
+            "enterprise-vue2-company-registry",
+            "enterprise-vue2-company-registry",
         ],
         availability_prerequisites=[
             "company-registry-network",
             "company-registry-network",
-            "company-registry-token",
         ],
         cross_stack_fallback_targets=[
             "vue3/public-primevue",
@@ -212,11 +211,8 @@ def test_frontend_provider_profile_models_deduplicate_set_like_lists() -> None:
         ),
     )
 
-    assert profile.install_strategy_ids == ["enterprise-vue2-private-registry"]
-    assert profile.availability_prerequisites == [
-        "company-registry-network",
-        "company-registry-token",
-    ]
+    assert profile.install_strategy_ids == ["enterprise-vue2-company-registry"]
+    assert profile.availability_prerequisites == ["company-registry-network"]
     assert profile.cross_stack_fallback_targets == ["vue3/public-primevue"]
     assert profile.mappings[0].alignment_notes == ["align", "replaceable"]
     assert profile.whitelist[0].api_curation == ["curated-props"]

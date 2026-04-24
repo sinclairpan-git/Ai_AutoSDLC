@@ -41,12 +41,15 @@ class BrowserQualityGateExecutionContext(FrontendBrowserGateModel):
     effective_style_pack: str
     style_fidelity_status: str
     delivery_entry_id: str = ""
+    package_manager: str = ""
     component_library_packages: list[str] = Field(default_factory=list)
     provider_theme_adapter_id: str = ""
     provider_runtime_adapter_carrier_mode: str = ""
     provider_runtime_adapter_delivery_state: str = ""
     provider_runtime_adapter_evidence_state: str = ""
     page_schema_ids: list[str] = Field(default_factory=list)
+    visual_regression_matrix_id: str = ""
+    visual_regression_viewport_id: str = ""
     required_probe_set: list[str] = Field(default_factory=list)
     browser_entry_ref: str
     source_linkage_refs: dict[str, str] = Field(default_factory=dict)
@@ -135,12 +138,70 @@ class BrowserGateInteractionProbeCapture(FrontendBrowserGateModel):
         return _dedupe_strings(value)
 
 
+class BrowserGateQualityCapture(FrontendBrowserGateModel):
+    """Structured browser-side quality signals captured during one probe run."""
+
+    gate_run_id: str
+    page_title: str
+    final_url: str
+    screenshot_ref: str
+    body_text_char_count: int
+    heading_count: int
+    landmark_count: int
+    interactive_count: int
+    unlabeled_button_count: int
+    unlabeled_input_count: int
+    image_missing_alt_count: int
+    viewport_width: int | None = None
+    viewport_height: int | None = None
+    document_scroll_width: int | None = None
+    document_scroll_height: int | None = None
+    horizontal_overflow_count: int | None = None
+    low_contrast_text_count: int | None = None
+    focusable_count: int | None = None
+    focusable_without_visible_focus_count: int | None = None
+    console_error_messages: list[str] = Field(default_factory=list)
+    page_error_messages: list[str] = Field(default_factory=list)
+
+    @field_validator("console_error_messages", "page_error_messages", mode="before")
+    @classmethod
+    def _dedupe_quality_capture_lists(cls, value: object) -> list[str]:
+        return _dedupe_strings(value)
+
+
+class BrowserGateVisualRegressionCapture(FrontendBrowserGateModel):
+    """Structured screenshot comparison capture returned by the probe runner."""
+
+    matrix_id: str
+    gate_run_id: str
+    capture_status: Literal["captured", "missing", "capture_failed"]
+    screenshot_ref: str
+    baseline_ref: str
+    baseline_metadata_ref: str
+    diff_image_ref: str
+    diff_ratio: float
+    threshold: float
+    region_summaries: list[dict[str, object]] = Field(default_factory=list)
+    change_summary: str = ""
+    capture_protocol_ref: str = ""
+    bootstrap_ref: str = ""
+    verdict: Literal[
+        "pass",
+        "evidence_missing",
+        "transient_run_failure",
+        "actual_quality_blocker",
+        "recheck",
+    ]
+
+
 class BrowserGateProbeRunnerResult(FrontendBrowserGateModel):
     """Structured stdout contract between the probe runner and Python runtime."""
 
     runtime_status: Literal["completed", "incomplete", "failed_transient"]
     shared_capture: BrowserGateSharedRuntimeCapture
     interaction_capture: BrowserGateInteractionProbeCapture
+    quality_capture: BrowserGateQualityCapture | None = None
+    visual_regression_capture: BrowserGateVisualRegressionCapture | None = None
     diagnostic_codes: list[str] = Field(default_factory=list)
     warnings: list[str] = Field(default_factory=list)
 

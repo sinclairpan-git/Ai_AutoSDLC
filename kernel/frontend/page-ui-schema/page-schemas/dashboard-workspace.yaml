@@ -1,0 +1,40 @@
+page_schema_id: dashboard-workspace
+page_recipe_id: DashboardPage
+schema_version: '1.0'
+primary_anchor_id: page-shell
+section_anchors:
+- anchor_id: page-shell
+  semantic_role: page_shell
+  layout_role: shell
+  required: true
+- anchor_id: page-header
+  semantic_role: page_header
+  layout_role: header
+  required: true
+- anchor_id: summary-band
+  semantic_role: summary_band
+  layout_role: summary
+  required: true
+- anchor_id: filter-scope
+  semantic_role: filter_scope
+  layout_role: toolbar
+  required: false
+- anchor_id: main-insight
+  semantic_role: main_insight
+  layout_role: content
+  required: true
+- anchor_id: secondary-section
+  semantic_role: secondary_section
+  layout_role: aside
+  required: false
+- anchor_id: state-feedback
+  semantic_role: state_feedback
+  layout_role: state
+  required: true
+field_blocks:
+- block_id: dashboard-filter-inputs
+  anchor_id: filter-scope
+  field_semantics:
+  - date_range
+  - segment_filter
+  cardinality: repeatable

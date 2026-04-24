@@ -1,0 +1,11 @@
+work_item_id: '147'
+schema_family: frontend-page-ui-schema
+current_version: '1.0'
+page_schemas:
+- dashboard-workspace
+- search-list-workspace
+- wizard-workspace
+ui_schemas:
+- dashboard-workspace-default
+- search-list-workspace-default
+- wizard-workspace-default

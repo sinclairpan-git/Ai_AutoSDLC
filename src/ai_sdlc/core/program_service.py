@@ -72,6 +72,7 @@ from ai_sdlc.core.host_runtime_manager import evaluate_current_host_runtime
 from ai_sdlc.core.managed_delivery_apply import (
     ALLOWED_ACTION_TYPES,
     run_managed_delivery_apply,
+    verify_dependency_installation,
 )
 from ai_sdlc.core.verify_constraints import (
     build_constraint_report,
@@ -94,6 +95,7 @@ from ai_sdlc.generators.frontend_generation_constraint_artifacts import (
 from ai_sdlc.generators.frontend_page_ui_schema_artifacts import (
     frontend_page_ui_schema_root,
     load_frontend_page_ui_schema_artifacts,
+    materialize_frontend_page_ui_schema_artifacts,
 )
 from ai_sdlc.generators.frontend_provider_expansion_artifacts import (
     frontend_provider_expansion_root,
@@ -106,6 +108,7 @@ from ai_sdlc.generators.frontend_provider_runtime_adapter_artifacts import (
 from ai_sdlc.generators.frontend_quality_platform_artifacts import (
     frontend_quality_platform_root,
     load_frontend_quality_platform_artifacts,
+    materialize_frontend_quality_platform_artifacts,
 )
 from ai_sdlc.generators.frontend_solution_confirmation_artifacts import (
     frontend_solution_confirmation_memory_root,
@@ -113,6 +116,7 @@ from ai_sdlc.generators.frontend_solution_confirmation_artifacts import (
 from ai_sdlc.generators.frontend_theme_token_governance_artifacts import (
     frontend_theme_token_governance_root,
     load_frontend_theme_token_governance_artifacts,
+    materialize_frontend_theme_token_governance_artifacts,
 )
 from ai_sdlc.integrations.ide_adapter import build_adapter_governance_surface
 from ai_sdlc.models.frontend_browser_gate import (
@@ -133,7 +137,9 @@ from ai_sdlc.models.frontend_generation_constraints import (
 )
 from ai_sdlc.models.frontend_managed_delivery import (
     ConfirmedActionPlanExecutionView,
+    DeliveryActionLedgerEntry,
     DeliveryApplyDecisionReceipt,
+    DependencyInstallExecutionPayload,
     ManagedDeliveryExecutorContext,
 )
 from ai_sdlc.models.frontend_page_ui_schema import (
@@ -146,6 +152,7 @@ from ai_sdlc.models.frontend_provider_expansion import (
 from ai_sdlc.models.frontend_provider_profile import (
     ProviderStyleSupportEntry,
     build_mvp_enterprise_vue2_provider_profile,
+    build_mvp_public_primevue_provider_profile,
 )
 from ai_sdlc.models.frontend_provider_runtime_adapter import (
     build_p3_target_project_adapter_scaffold_baseline,
@@ -207,6 +214,13 @@ PROGRAM_TRUTH_SYNC_EXECUTE_COMMAND = "python -m ai_sdlc program truth sync --exe
 PROGRAM_TRUTH_AUDIT_COMMAND = "python -m ai_sdlc program truth audit"
 PROGRAM_FRONTEND_MAINLINE_DELIVERY_CAPABILITY_ID = "frontend-mainline-delivery"
 PROGRAM_FRONTEND_INHERITANCE_BLOCKER_PREFIX = "frontend_inheritance"
+PROGRAM_FRONTEND_BROWSER_GATE_SMOKE_RUNTIME_PACKAGES = ("playwright",)
+PROGRAM_FRONTEND_VISUAL_REGRESSION_RUNTIME_PACKAGES = (
+    "playwright",
+    "pixelmatch",
+    "pngjs",
+    "yaml",
+)
 PROGRAM_HOST_INGRESS_CAPABILITY_ID = "agent-adapter-verified-host-ingress"
 PROGRAM_HOST_INGRESS_CANONICAL_BLOCKER_PREFIX = "adapter_canonical_consumption"
 PROGRAM_TRUTH_SOURCE_DISCOVERY_ROOT = Path("docs")
@@ -411,6 +425,7 @@ class ProgramFrontendDeliveryRegistryHandoff:
     effective_style_pack_id: str
     access_mode: str
     package_manager: str
+    registry_url: str = ""
     install_strategy_ids: list[str] = field(default_factory=list)
     availability_prerequisites: list[str] = field(default_factory=list)
     runtime_requirements: list[str] = field(default_factory=list)
@@ -545,6 +560,8 @@ class ProgramFrontendQualityPlatformHandoff:
     matrix_coverage_count: int = 0
     evidence_contract_ids: list[str] = field(default_factory=list)
     page_schema_ids: list[str] = field(default_factory=list)
+    active_visual_regression_matrix_id: str = ""
+    active_visual_regression_viewport_id: str = ""
     quality_diagnostics: list[ProgramFrontendQualityPlatformDiagnostic] = field(
         default_factory=list
     )
@@ -825,6 +842,7 @@ class ProgramFrontendManagedDeliveryApplyResult:
     failed_action_ids: list[str] = field(default_factory=list)
     blocked_action_ids: list[str] = field(default_factory=list)
     skipped_action_ids: list[str] = field(default_factory=list)
+    ledger_entries: list[DeliveryActionLedgerEntry] = field(default_factory=list)
     remaining_blockers: list[str] = field(default_factory=list)
     warnings: list[str] = field(default_factory=list)
 
@@ -2082,6 +2100,20 @@ class ProgramService:
             if validation_result is not None
             else self.validate_manifest(manifest)
         )
+        matched_capabilities = self.release_target_capability_ids_for_spec(
+            manifest,
+            resolved_spec_dir,
+        )
+        quick_readiness = self._build_persisted_spec_truth_readiness_fast_path(
+            manifest,
+            resolved_spec_dir=resolved_spec_dir,
+            matched_spec_ids=matched_spec_ids,
+            matched_capabilities=matched_capabilities,
+            validation_result=validation,
+        )
+        if quick_readiness is not None:
+            return quick_readiness
+
         surface = self.build_truth_ledger_surface(
             manifest,
             validation_result=validation,
@@ -2089,10 +2121,6 @@ class ProgramService:
         if surface is None:
             return None
 
-        matched_capabilities = self.release_target_capability_ids_for_spec(
-            manifest,
-            resolved_spec_dir,
-        )
         snapshot_state = str(surface.get("snapshot_state", "")).strip()
         if snapshot_state != "fresh":
             summary_token = f"truth_snapshot_{snapshot_state or 'missing'}"
@@ -2259,6 +2287,80 @@ class ProgramService:
             frontend_delivery_status=matched_frontend_delivery_status,
             frontend_delivery_scope=matched_frontend_delivery_scope,
             frontend_inheritance_status=matched_frontend_inheritance_status,
+            matched_spec_ids=matched_spec_ids,
+            matched_capabilities=matched_capabilities,
+        )
+
+    def _build_persisted_spec_truth_readiness_fast_path(
+        self,
+        manifest: ProgramManifest,
+        *,
+        resolved_spec_dir: Path,
+        matched_spec_ids: list[str],
+        matched_capabilities: list[str],
+        validation_result: ProgramValidationResult,
+    ) -> ProgramSpecTruthReadinessResult | None:
+        snapshot = manifest.truth_snapshot
+        if snapshot is None or snapshot.state != "ready":
+            return None
+        if not self._truth_snapshot_hash_matches(snapshot):
+            return None
+        if snapshot.authoring_hash != self._truth_authoring_hash():
+            return None
+        if validation_result.errors or self._migration_pending_specs(
+            validation_result.warnings
+        ) or self._migration_pending_sources(validation_result.warnings):
+            return None
+        if self._spec_truth_readiness_relevant_dirty_paths(
+            manifest,
+            resolved_spec_dir=resolved_spec_dir,
+            matched_capabilities=matched_capabilities,
+        ):
+            return None
+        current_snapshot = self.build_truth_snapshot(
+            manifest,
+            validation_result=validation_result,
+        )
+        if self._truth_snapshot_stable_payload(
+            snapshot
+        ) != self._truth_snapshot_stable_payload(current_snapshot):
+            return None
+
+        capability_map = {
+            item.capability_id: item for item in snapshot.computed_capabilities
+        }
+        if any(
+            capability_map.get(capability_id) is None
+            or capability_map[capability_id].audit_state != "ready"
+            for capability_id in matched_capabilities
+        ):
+            return None
+
+        frontend_delivery_status: dict[str, str] = {}
+        frontend_delivery_scope = ""
+        frontend_inheritance_status: dict[str, str] = {}
+        if PROGRAM_FRONTEND_MAINLINE_DELIVERY_CAPABILITY_ID in matched_capabilities:
+            frontend_delivery_status = self._truth_ledger_frontend_delivery_status(
+                capability_id=PROGRAM_FRONTEND_MAINLINE_DELIVERY_CAPABILITY_ID
+            )
+            frontend_delivery_scope = frontend_delivery_scope_for_status(
+                frontend_delivery_status
+            )
+            frontend_inheritance_status = self._truth_ledger_frontend_inheritance_status(
+                capability_id=PROGRAM_FRONTEND_MAINLINE_DELIVERY_CAPABILITY_ID
+            )
+
+        detail = "truth snapshot is fresh and spec is mapped"
+        if matched_capabilities:
+            detail = "truth snapshot is fresh and matched release capabilities are ready"
+        return ProgramSpecTruthReadinessResult(
+            required=True,
+            ready=True,
+            state="ready",
+            detail=detail,
+            frontend_delivery_status=frontend_delivery_status,
+            frontend_delivery_scope=frontend_delivery_scope,
+            frontend_inheritance_status=frontend_inheritance_status,
             matched_spec_ids=matched_spec_ids,
             matched_capabilities=matched_capabilities,
         )
@@ -3153,7 +3255,10 @@ class ProgramService:
                 "download": status_surface["install_state"],
                 "integration": status_surface["workspace_state"],
                 "browser_gate": status_surface["browser_gate_state"],
-                "delivery": status_surface["apply_state"],
+                "delivery": status_surface.get(
+                    "delivery_state",
+                    status_surface["apply_state"],
+                ),
             }
         )
 
@@ -3262,7 +3367,7 @@ class ProgramService:
                 spec_dir = self._resolve_spec_dir(spec.path)
             except ValueError:
                 continue
-            readiness = self._build_frontend_readiness(spec_dir)
+            readiness = self._build_frontend_readiness(spec_dir, spec)
             remediation = self._build_frontend_remediation_input(
                 readiness,
                 spec.path,
@@ -3964,7 +4069,7 @@ class ProgramService:
                     completed, total = _task_counts(tasks_md)
 
             frontend_readiness = (
-                self._build_frontend_readiness(spec_dir)
+                self._build_frontend_readiness(spec_dir, spec)
                 if spec_dir is not None
                 else None
             )
@@ -4020,6 +4125,90 @@ class ProgramService:
             if any(spec_id in capability.spec_refs for spec_id in matched_spec_ids):
                 matched_capabilities.append(capability.id)
         return _unique_strings(matched_capabilities)
+
+    def _spec_truth_readiness_relevant_dirty_paths(
+        self,
+        manifest: ProgramManifest,
+        *,
+        resolved_spec_dir: Path,
+        matched_capabilities: list[str],
+    ) -> list[str]:
+        dirty_paths = self._dirty_worktree_paths()
+        if not dirty_paths:
+            return []
+
+        exact_paths: set[str] = set()
+        prefix_paths: set[str] = set()
+
+        spec_rel = _relative_to_root_or_str(self.root, resolved_spec_dir).strip()
+        if spec_rel:
+            exact_paths.add(spec_rel)
+            prefix_paths.add(spec_rel.rstrip("/") + "/")
+
+        capability_map = {capability.id: capability for capability in manifest.capabilities}
+        for capability_id in matched_capabilities:
+            capability = capability_map.get(capability_id)
+            if capability is None:
+                continue
+            for ref in (
+                *capability.required_evidence.truth_check_refs,
+                *capability.required_evidence.close_check_refs,
+            ):
+                try:
+                    resolved_ref = self._resolve_project_relative_path(ref)
+                except ValueError:
+                    continue
+                ref_rel = _relative_to_root_or_str(self.root, resolved_ref).strip()
+                if not ref_rel:
+                    continue
+                exact_paths.add(ref_rel)
+                prefix_paths.add(ref_rel.rstrip("/") + "/")
+
+        relevant: list[str] = []
+        manifest_rel = _relative_to_root_or_str(self.root, self.manifest_path).strip()
+        for path in dirty_paths:
+            normalized = path.strip()
+            if not normalized:
+                continue
+            if manifest_rel and normalized == manifest_rel:
+                relevant.append(normalized)
+                continue
+            if normalized in exact_paths or any(
+                normalized.startswith(prefix) for prefix in prefix_paths
+            ):
+                relevant.append(normalized)
+        return _unique_strings(relevant)
+
+    def _dirty_worktree_paths(self) -> list[str]:
+        try:
+            raw = GitClient(self.root)._run(
+                "status",
+                "--porcelain=v1",
+                "-z",
+                "--untracked-files=all",
+            )
+        except GitError:
+            return []
+
+        paths: list[str] = []
+        records = [record for record in raw.split("\0") if record]
+        index = 0
+        while index < len(records):
+            record = records[index]
+            index += 1
+            if len(record) < 4:
+                continue
+            status = record[:2]
+            payload = record[3:].strip()
+            if not payload:
+                continue
+            paths.append(payload)
+            if any(marker in status for marker in ("R", "C")) and index < len(records):
+                source_payload = records[index].strip()
+                index += 1
+                if source_payload:
+                    paths.append(source_payload)
+        return _unique_strings(paths)
 
     def build_frontend_evidence_class_statuses(
         self,
@@ -4310,6 +4499,73 @@ class ProgramService:
 
         return True, "", execution_view
 
+    def _resolve_available_package_manager(
+        self,
+        preferred_package_manager: str,
+    ) -> tuple[str, str | None]:
+        preferred = preferred_package_manager.strip() or "pnpm"
+        if shutil.which(preferred) is not None:
+            return preferred, None
+        for candidate in ("npm", "pnpm", "yarn"):
+            if candidate == preferred:
+                continue
+            if shutil.which(candidate) is not None:
+                return candidate, f"delivery_package_manager_fallback:{preferred}->{candidate}"
+        return preferred, f"delivery_package_manager_missing:{preferred}"
+
+    def _resolve_frontend_managed_target_root(
+        self,
+        execution_view: ConfirmedActionPlanExecutionView,
+    ) -> Path:
+        relative_path = execution_view.managed_target_path.strip() or "managed/frontend"
+        candidate = Path(relative_path)
+        if candidate.is_absolute():
+            raise ValueError("managed_target_path_invalid")
+        resolved = (self.root / candidate).resolve()
+        try:
+            resolved.relative_to(self.root.resolve())
+        except ValueError as exc:
+            raise ValueError("managed_target_path_invalid") from exc
+        return resolved
+
+    def _build_frontend_dependency_install_state(
+        self,
+        *,
+        execution_view: ConfirmedActionPlanExecutionView | None,
+        executed_action_ids: set[str],
+    ) -> str:
+        if execution_view is None:
+            return "not_installed"
+        dependency_actions = [
+            action
+            for action in execution_view.action_items
+            if action.action_type == "dependency_install"
+        ]
+        if not dependency_actions:
+            return "not_installed"
+        try:
+            managed_root = self._resolve_frontend_managed_target_root(execution_view)
+        except Exception:
+            return "not_installed"
+        for dependency_action in dependency_actions:
+            if dependency_action.action_id not in executed_action_ids:
+                return "not_installed"
+            try:
+                payload = DependencyInstallExecutionPayload.model_validate(
+                    dependency_action.executor_payload
+                )
+                working_directory = (
+                    managed_root / Path(payload.working_directory.strip() or ".")
+                ).resolve()
+                try:
+                    working_directory.relative_to(managed_root.resolve())
+                except ValueError as exc:
+                    raise ValueError("dependency_install_outside_managed_target") from exc
+                verify_dependency_installation(payload, working_directory)
+            except Exception:
+                return "not_installed"
+        return "installed"
+
     def build_frontend_delivery_status_surface(self) -> dict[str, str]:
         """Project frontend delivery truth into one reusable status surface."""
 
@@ -4359,8 +4615,10 @@ class ProgramService:
                 executed_action_ids = set(
                     _normalize_string_list(apply_payload.get("executed_action_ids", []))
                 )
-                if "dependency-install" in executed_action_ids:
-                    install_state = "installed"
+                install_state = self._build_frontend_dependency_install_state(
+                    execution_view=execution_view,
+                    executed_action_ids=executed_action_ids,
+                )
                 if "workspace-integration" in executed_action_ids:
                     workspace_state = "integrated"
                 browser_gate_state = (
@@ -4395,12 +4653,18 @@ class ProgramService:
             apply_state = "invalid_apply_artifact"
             apply_artifact_path = apply_artifact_rel
 
+        delivery_state = _frontend_delivery_gate_adjusted_state(
+            apply_state,
+            browser_gate_state,
+        )
+
         return {
             "provider_id": provider_id,
             "package_names": ",".join(registry.component_library_packages) or "-",
             "runtime_delivery_state": runtime_adapter.runtime_delivery_state.strip()
             or "-",
             "apply_state": apply_state,
+            "delivery_state": delivery_state,
             "install_state": install_state,
             "workspace_state": workspace_state,
             "browser_gate_state": browser_gate_state,
@@ -4484,6 +4748,16 @@ class ProgramService:
         )
         selected_action_ids.append(managed_target_prepare_id)
 
+        quality_handoff = self.build_frontend_quality_platform_handoff()
+        provider_dependency_packages = _unique_strings(
+            [
+                *bundle["component_library_packages"],
+                *bundle["adapter_packages"],
+            ]
+        )
+        visual_runtime_dependency_packages = _visual_regression_runtime_dependency_packages(
+            quality_handoff.active_visual_regression_matrix_id
+        )
         dependency_install_id = "dependency-install"
         dependency_dependencies = [managed_target_prepare_id]
         if runtime_action_id:
@@ -4508,16 +4782,48 @@ class ProgramService:
                 "executor_payload": {
                     "install_strategy_id": bundle["install_strategy_id"],
                     "package_manager": bundle["package_manager"],
+                    "registry_url": bundle.get("registry_url", ""),
                     "working_directory": ".",
-                    "packages": [*bundle["component_library_packages"], *bundle["adapter_packages"]],
+                    "packages": provider_dependency_packages,
                 },
             }
         )
         selected_action_ids.append(dependency_install_id)
+        last_dependency_install_id = dependency_install_id
+        if visual_runtime_dependency_packages:
+            visual_runtime_dependency_install_id = "visual-regression-runtime-install"
+            action_items.append(
+                {
+                    "action_id": visual_runtime_dependency_install_id,
+                    "effect_kind": "mutate",
+                    "action_type": "dependency_install",
+                    "required": True,
+                    "selected": True,
+                    "default_selected": True,
+                    "depends_on_action_ids": [dependency_install_id],
+                    "rollback_ref": "rollback:visual-regression-runtime-install",
+                    "retry_ref": "retry:visual-regression-runtime-install",
+                    "cleanup_ref": "cleanup:visual-regression-runtime-install",
+                    "risk_flags": [],
+                    "source_linkage_refs": {
+                        "solution_snapshot_id": solution_snapshot.snapshot_id,
+                        "install_strategy_id": "public-visual-regression-runtime",
+                        "public_runtime_dependency_scope": "visual_regression",
+                    },
+                    "executor_payload": {
+                        "install_strategy_id": "public-visual-regression-runtime",
+                        "package_manager": bundle["package_manager"],
+                        "registry_url": bundle.get("registry_url", ""),
+                        "working_directory": ".",
+                        "packages": visual_runtime_dependency_packages,
+                    },
+                }
+            )
+            selected_action_ids.append(visual_runtime_dependency_install_id)
+            last_dependency_install_id = visual_runtime_dependency_install_id
 
         page_ui_handoff = self.build_frontend_page_ui_schema_handoff()
         generation_handoff = self.build_frontend_generation_constraints_handoff()
-        quality_handoff = self.build_frontend_quality_platform_handoff()
         runtime_adapter_handoff = self.build_frontend_provider_runtime_adapter_handoff()
         delivery_context = self._build_delivery_context(
             solution_snapshot=solution_snapshot,
@@ -4547,7 +4853,7 @@ class ProgramService:
                 "required": True,
                 "selected": True,
                 "default_selected": True,
-                "depends_on_action_ids": [dependency_install_id],
+                "depends_on_action_ids": [last_dependency_install_id],
                 "rollback_ref": "rollback:artifact-generate",
                 "retry_ref": "retry:artifact-generate",
                 "cleanup_ref": "cleanup:artifact-generate",
@@ -4700,6 +5006,25 @@ class ProgramService:
         provider_id = solution_snapshot.effective_provider_id
         blockers: list[str] = []
         warnings: list[str] = []
+        mapping_items, mapping_blockers = self._load_provider_mapping_items(provider_id)
+        whitelist_items, whitelist_blockers = self._load_provider_whitelist_items(
+            provider_id
+        )
+        blockers.extend(mapping_blockers)
+        blockers.extend(whitelist_blockers)
+        blockers.extend(
+            self._validate_provider_mapping_imports(
+                provider_id=provider_id,
+                mapping_items=mapping_items,
+                whitelist_items=whitelist_items,
+            )
+        )
+        blockers.extend(
+            self._validate_required_provider_mappings(
+                provider_id=provider_id,
+                mapping_items=mapping_items,
+            )
+        )
 
         provider_manifest = self._load_provider_manifest(provider_id)
         if provider_manifest is None:
@@ -4707,6 +5032,7 @@ class ProgramService:
                 "provider_id": provider_id,
                 "install_strategy_id": "",
                 "package_manager": "pnpm",
+                "registry_url": "",
                 "component_library_packages": [],
                 "adapter_packages": [],
                 "blockers": [f"delivery_provider_manifest_missing:{provider_id}"],
@@ -4743,6 +5069,7 @@ class ProgramService:
                 "provider_id": provider_id,
                 "install_strategy_id": "",
                 "package_manager": "pnpm",
+                "registry_url": "",
                 "component_library_packages": [],
                 "adapter_packages": [],
                 "blockers": blockers,
@@ -4756,6 +5083,7 @@ class ProgramService:
                 "provider_id": provider_id,
                 "install_strategy_id": "",
                 "package_manager": "pnpm",
+                "registry_url": "",
                 "component_library_packages": [],
                 "adapter_packages": [],
                 "blockers": blockers,
@@ -4784,10 +5112,20 @@ class ProgramService:
             )
             blockers.append(f"{prefix}:{requirement}")
 
+        effective_package_manager, package_manager_note = self._resolve_available_package_manager(
+            strategy.package_manager
+        )
+        if package_manager_note:
+            if package_manager_note.startswith("delivery_package_manager_missing:"):
+                blockers.append(package_manager_note)
+            else:
+                warnings.append(package_manager_note)
+
         return {
             "provider_id": provider_id,
             "install_strategy_id": strategy.strategy_id,
-            "package_manager": strategy.package_manager,
+            "package_manager": effective_package_manager,
+            "registry_url": strategy.registry_url,
             "component_library_packages": list(strategy.packages),
             "adapter_packages": [],
             "blockers": blockers,
@@ -4834,6 +5172,139 @@ class ProgramService:
             return yaml.safe_load(style_support_path.read_text(encoding="utf-8")) or {}
         return _builtin_provider_style_support(provider_id)
 
+    def _load_provider_mappings(self, provider_id: str) -> dict[str, object] | None:
+        mappings_path = self.root / "providers" / "frontend" / provider_id / "mappings.yaml"
+        if mappings_path.is_file():
+            return yaml.safe_load(mappings_path.read_text(encoding="utf-8")) or {}
+        return _builtin_provider_mappings(provider_id)
+
+    def _load_provider_whitelist(self, provider_id: str) -> dict[str, object] | None:
+        whitelist_path = self.root / "providers" / "frontend" / provider_id / "whitelist.yaml"
+        if whitelist_path.is_file():
+            return yaml.safe_load(whitelist_path.read_text(encoding="utf-8")) or {}
+        return _builtin_provider_whitelist(provider_id)
+
+    def _normalize_provider_payload_items(
+        self,
+        *,
+        provider_id: str,
+        payload_kind: str,
+        payload: object,
+    ) -> tuple[list[dict[str, object]], list[str]]:
+        if payload is None:
+            return [], []
+        if not isinstance(payload, dict):
+            return [], [f"delivery_provider_{payload_kind}_invalid:{provider_id}"]
+        if "items" not in payload:
+            return [], []
+        items = payload.get("items")
+        if not isinstance(items, list):
+            return [], [f"delivery_provider_{payload_kind}_items_invalid:{provider_id}"]
+        normalized_items: list[dict[str, object]] = []
+        blockers: list[str] = []
+        for index, item in enumerate(items):
+            if isinstance(item, dict):
+                normalized_items.append(item)
+            else:
+                blockers.append(
+                    f"delivery_provider_{payload_kind}_item_invalid:{provider_id}:{index}"
+                )
+        return normalized_items, blockers
+
+    def _load_provider_mapping_items(
+        self,
+        provider_id: str,
+    ) -> tuple[list[dict[str, object]], list[str]]:
+        return self._normalize_provider_payload_items(
+            provider_id=provider_id,
+            payload_kind="mappings",
+            payload=self._load_provider_mappings(provider_id),
+        )
+
+    def _load_provider_whitelist_items(
+        self,
+        provider_id: str,
+    ) -> tuple[list[dict[str, object]], list[str]]:
+        return self._normalize_provider_payload_items(
+            provider_id=provider_id,
+            payload_kind="whitelist",
+            payload=self._load_provider_whitelist(provider_id),
+        )
+
+    def _validate_provider_mapping_imports(
+        self,
+        *,
+        provider_id: str,
+        mapping_items: list[dict[str, object]],
+        whitelist_items: list[dict[str, object]],
+    ) -> list[str]:
+        if provider_id != "public-primevue":
+            return []
+        whitelist_by_component = {
+            str(entry.get("component_id", "")).strip(): entry
+            for entry in whitelist_items
+            if str(entry.get("component_id", "")).strip()
+        }
+        blockers: list[str] = []
+        for entry in mapping_items:
+            component_id = str(entry.get("component_id", "")).strip()
+            implementation_ref = str(entry.get("implementation_ref", "")).strip()
+            if not component_id or not implementation_ref:
+                continue
+            if not self._primevue_package_ref_for_component(
+                whitelist_by_component.get(component_id, {})
+            ):
+                blockers.append(
+                    "delivery_provider_mapping_import_unresolved:"
+                    f"{provider_id}:{component_id}"
+                )
+        return _unique_strings(blockers)
+
+    def _validate_required_provider_mappings(
+        self,
+        *,
+        provider_id: str,
+        mapping_items: list[dict[str, object]],
+    ) -> list[str]:
+        if provider_id != "public-primevue":
+            return []
+        mapped_components = {
+            str(entry.get("component_id", "")).strip()
+            for entry in mapping_items
+            if str(entry.get("component_id", "")).strip()
+            and str(entry.get("implementation_ref", "")).strip()
+        }
+        required_components = {
+            "UiButton",
+            "UiCard",
+            "UiForm",
+            "UiFormItem",
+            "UiInput",
+            "UiPageHeader",
+            "UiPagination",
+            "UiResult",
+            "UiSearchBar",
+            "UiSection",
+            "UiSelect",
+            "UiTable",
+            "UiToolbar",
+        }
+        return [
+            f"delivery_provider_mapping_required_missing:{provider_id}:{component_id}"
+            for component_id in sorted(required_components - mapped_components)
+        ]
+
+    def _primevue_package_ref_for_component(
+        self,
+        whitelist_entry: dict[str, object],
+    ) -> str:
+        for dependency in _normalize_string_list(
+            whitelist_entry.get("dependency_curation", [])
+        ):
+            if dependency.startswith("primevue/"):
+                return dependency
+        return ""
+
     def _runtime_remediation_payload_from_host_plan(
         self,
         host_plan,
@@ -4857,7 +5328,7 @@ class ProgramService:
     def _managed_target_prepare_payload(self, package_manager: str) -> dict[str, object]:
         package_manager_line = {
             "npm": "npm@10",
-            "yarn": "yarn@1",
+            "yarn": "yarn@1.22.22",
         }.get(package_manager, "pnpm@9")
         return {
             "directories": ["src"],
@@ -4908,8 +5379,14 @@ class ProgramService:
                     ),
                 },
                 {
+                    "path": "src/generated/provider-adapter.ts",
+                    "content": self._managed_frontend_provider_adapter_ts_content(
+                        delivery_context
+                    ),
+                },
+                {
                     "path": "src/App.vue",
-                    "content": self._managed_frontend_app_vue_content(),
+                    "content": self._managed_frontend_app_vue_content(delivery_context),
                 },
             ],
         }
@@ -4923,6 +5400,11 @@ class ProgramService:
         quality_handoff: ProgramFrontendQualityPlatformHandoff,
         runtime_adapter_handoff: ProgramFrontendProviderRuntimeAdapterHandoff,
     ) -> dict[str, object]:
+        provider_id = solution_snapshot.effective_provider_id
+        provider_mapping_items, _mapping_blockers = self._load_provider_mapping_items(provider_id)
+        provider_whitelist_items, _whitelist_blockers = self._load_provider_whitelist_items(
+            provider_id
+        )
         return {
             "projectId": solution_snapshot.project_id,
             "snapshotId": solution_snapshot.snapshot_id,
@@ -4935,6 +5417,23 @@ class ProgramService:
             "deliveryEntryId": page_ui_handoff.delivery_entry_id,
             "providerThemeAdapterId": page_ui_handoff.provider_theme_adapter_id,
             "componentLibraryPackages": list(page_ui_handoff.component_library_packages),
+            "providerMappings": [
+                {
+                    "componentId": str(entry.get("component_id", "")).strip(),
+                    "implementationRef": str(entry.get("implementation_ref", "")).strip(),
+                    "mappingKind": str(entry.get("mapping_kind", "")).strip(),
+                    "alignmentNotes": _normalize_string_list(
+                        entry.get("alignment_notes", [])
+                    ),
+                }
+                for entry in provider_mapping_items
+                if str(entry.get("component_id", "")).strip()
+            ],
+            "providerWhitelistComponentIds": [
+                str(entry.get("component_id", "")).strip()
+                for entry in provider_whitelist_items
+                if str(entry.get("component_id", "")).strip()
+            ],
             "pageSchemas": [
                 {
                     "pageSchemaId": entry.page_schema_id,
@@ -5003,12 +5502,15 @@ class ProgramService:
             )
             if not content:
                 continue
+            target_path = self.root / scaffold_file.relative_path
             items.append(
                 {
                     "integration_id": scaffold_file.contract_id,
                     "target_class": "workspace",
                     "target_path": scaffold_file.relative_path,
-                    "mutation_kind": "write_new",
+                    "mutation_kind": (
+                        "overwrite_existing" if target_path.exists() else "write_new"
+                    ),
                     "content": content,
                     "requires_explicit_confirmation": True,
                     "will_not_touch_refs": ["legacy-root"],
@@ -5025,6 +5527,16 @@ class ProgramService:
         solution_snapshot: FrontendSolutionSnapshot,
         target,
     ) -> str:
+        provider_id = str(delivery_context.get("effectiveProviderId", "")).strip()
+        provider_mapping_items, _mapping_blockers = self._load_provider_mapping_items(provider_id)
+        mapped_components = {
+            str(entry.get("component_id", "")).strip(): str(
+                entry.get("implementation_ref", "")
+            ).strip()
+            for entry in provider_mapping_items
+            if str(entry.get("component_id", "")).strip()
+            and str(entry.get("implementation_ref", "")).strip()
+        }
         if contract_id == "kernel-wrapper":
             return (
                 "export type KernelWrapperProps = {\n"
@@ -5050,6 +5562,10 @@ class ProgramService:
                         ),
                         "componentLibraryPackages": delivery_context.get(
                             "componentLibraryPackages", []
+                        ),
+                        "mappedComponents": mapped_components,
+                        "whitelistComponentIds": delivery_context.get(
+                            "providerWhitelistComponentIds", []
                         ),
                         "relativePath": relative_path,
                     }
@@ -5252,93 +5768,706 @@ class ProgramService:
 
         return json.dumps(value, ensure_ascii=True)
 
-    def _managed_frontend_app_vue_content(self) -> str:
-        return """<script setup lang="ts">
+    def _managed_frontend_app_vue_content(
+        self,
+        delivery_context: dict[str, object] | None = None,
+    ) -> str:
+        provider_id = (
+            str((delivery_context or {}).get("effectiveProviderId", "")).strip()
+        )
+        if provider_id and provider_id != "public-primevue":
+            return """<script setup lang="ts">
 import { frontendDeliveryContext } from "./generated/frontend-delivery-context";
+import {
+  publicPrimeVueProviderComponents,
+  publicPrimeVueProviderHelpers,
+} from "./generated/provider-adapter";
 
+const providerComponents = publicPrimeVueProviderComponents;
+const ProviderColumn = publicPrimeVueProviderHelpers.Column;
 const pageSchemas = frontendDeliveryContext.pageSchemas;
+const providerMappings = frontendDeliveryContext.providerMappings;
+const componentCount = Object.keys(providerComponents).length;
 </script>
 
 <template>
   <main class="delivery-shell">
-    <header class="delivery-header">
-      <p class="delivery-eyebrow">{{ frontendDeliveryContext.deliveryEntryId }}</p>
-      <h1 class="delivery-title">{{ frontendDeliveryContext.effectiveProviderId }}</h1>
-      <p class="delivery-subtitle">{{ frontendDeliveryContext.effectiveStylePackId }}</p>
-    </header>
+    <component :is="providerComponents.UiPageHeader.component" class="page-header">
+      <template #start>
+        <div>
+          <p class="delivery-eyebrow">{{ frontendDeliveryContext.deliveryEntryId }}</p>
+          <h1 class="delivery-title">Managed provider adapter scaffold</h1>
+          <p class="delivery-subtitle">
+            {{ frontendDeliveryContext.effectiveProviderId }} is bound through the
+            generated provider adapter. The fallback scaffold keeps the managed
+            frontend runnable until provider-specific wrappers are supplied.
+          </p>
+        </div>
+      </template>
+    </component>
 
-    <section class="delivery-section">
-      <h2>Component Library Packages</h2>
-      <ul class="delivery-list">
-        <li
-          v-for="packageName in frontendDeliveryContext.componentLibraryPackages"
-          :key="packageName"
-        >
-          {{ packageName }}
-        </li>
-      </ul>
-    </section>
-
-    <section class="delivery-section">
-      <h2>Page Schemas</h2>
-      <article v-for="pageSchema in pageSchemas" :key="pageSchema.pageSchemaId" class="page-card">
-        <h3>{{ pageSchema.pageSchemaId }}</h3>
-        <p>{{ pageSchema.pageRecipeId }}</p>
-        <ul class="delivery-list">
-          <li v-for="componentId in pageSchema.componentIds" :key="componentId">
-            {{ componentId }}
+    <component :is="providerComponents.UiCard.component" class="hero-card">
+      <template #title>Provider Mapping Coverage</template>
+      <template #content>
+        <component :is="providerComponents.UiResult.component" class="result-banner">
+          {{ componentCount }} semantic components are available from the generated
+          adapter. {{ providerMappings.length }} mappings came from provider truth.
+        </component>
+        <ul class="component-chip-list">
+          <li
+            v-for="mapping in providerMappings"
+            :key="mapping.componentId"
+            class="component-chip"
+          >
+            {{ mapping.componentId }} -> {{ mapping.implementationRef }}
           </li>
         </ul>
-      </article>
-    </section>
+      </template>
+    </component>
+
+    <component
+      :is="providerComponents.UiSection.component"
+      header="Page schema coverage"
+      class="results-panel"
+    >
+      <component :is="providerComponents.UiTable.component" :value="pageSchemas">
+        <component :is="ProviderColumn" field="pageSchemaId" header="Page schema" />
+        <component :is="ProviderColumn" field="pageRecipeId" header="Recipe" />
+      </component>
+    </component>
   </main>
 </template>
 
 <style scoped>
 .delivery-shell {
-  margin: 0 auto;
-  max-width: 960px;
-  padding: 32px 24px 48px;
-  font-family: Inter, system-ui, sans-serif;
+  min-height: 100vh;
+  padding: 48px;
+  color: #10233c;
+  background:
+    radial-gradient(circle at top left, rgba(20, 184, 166, 0.18), transparent 32%),
+    linear-gradient(135deg, #f8fafc 0%, #e8f2f7 100%);
 }
 
-.delivery-header {
-  margin-bottom: 24px;
+.page-header,
+.hero-card,
+.results-panel {
+  margin: 0 auto 24px;
+  max-width: 1080px;
 }
 
 .delivery-eyebrow {
   margin: 0 0 8px;
-  color: #4b5563;
-  font-size: 14px;
+  color: #0f766e;
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
 }
 
 .delivery-title {
   margin: 0;
-  font-size: 32px;
+  font-size: clamp(2rem, 5vw, 4rem);
+  line-height: 0.95;
 }
 
 .delivery-subtitle {
-  margin: 8px 0 0;
-  color: #6b7280;
+  max-width: 760px;
+  color: #506273;
+  font-size: 1rem;
+  line-height: 1.65;
 }
 
-.delivery-section {
-  margin-top: 24px;
+.result-banner {
+  margin-bottom: 18px;
 }
 
-.delivery-list {
-  margin: 12px 0 0;
-  padding-left: 20px;
+.component-chip-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 0;
+  list-style: none;
 }
 
-.page-card {
-  margin-top: 16px;
-  padding: 16px;
-  border: 1px solid #d1d5db;
-  border-radius: 8px;
+.component-chip {
+  border: 1px solid rgba(15, 118, 110, 0.22);
+  border-radius: 999px;
+  padding: 8px 12px;
+  background: rgba(255, 255, 255, 0.72);
+  color: #0f3f3b;
+  font-size: 0.88rem;
+}
+
+:global(.provider-fallback) {
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  border-radius: 20px;
+  padding: 18px;
+  background: rgba(255, 255, 255, 0.86);
+  box-shadow: 0 18px 45px rgba(15, 23, 42, 0.08);
 }
 </style>
 """
+        return """<script setup lang="ts">
+import { frontendDeliveryContext } from "./generated/frontend-delivery-context";
+import {
+  publicPrimeVueProviderComponents,
+  publicPrimeVueProviderHelpers,
+} from "./generated/provider-adapter";
+
+const pageSchemas = frontendDeliveryContext.pageSchemas;
+const providerMappings = frontendDeliveryContext.providerMappings;
+const providerComponents = publicPrimeVueProviderComponents;
+const ProviderColumn = publicPrimeVueProviderHelpers.Column;
+
+const statusOptions = [
+  { label: "Active", value: "active" },
+  { label: "Draft", value: "draft" },
+  { label: "Blocked", value: "blocked" },
+];
+
+const tableRows = [
+  { id: "ws-001", name: "Search workspace", owner: "Growth", status: "Active" },
+  { id: "ws-002", name: "Revenue dashboard", owner: "Analytics", status: "Draft" },
+  { id: "ws-003", name: "Partner onboarding", owner: "Operations", status: "Blocked" },
+];
+</script>
+
+<template>
+  <main class="delivery-shell">
+    <component :is="providerComponents.UiPageHeader.component" class="page-header">
+      <template #start>
+        <div>
+          <p class="delivery-eyebrow">{{ frontendDeliveryContext.deliveryEntryId }}</p>
+          <h1 class="delivery-title">PrimeVue adapter 已落地</h1>
+          <p class="delivery-subtitle">
+            下载到项目中的组件通过 generated provider adapter 进入 Kernel 语义层，不再只是包名清单。
+          </p>
+        </div>
+      </template>
+      <template #end>
+        <component
+          :is="providerComponents.UiButton.component"
+          label="Create workspace"
+          severity="contrast"
+        />
+      </template>
+    </component>
+
+    <section class="hero-grid">
+      <component :is="providerComponents.UiCard.component" class="hero-card">
+        <template #title>Kernel to Provider Mapping</template>
+        <template #subtitle>
+          {{ frontendDeliveryContext.effectiveProviderId }} / {{
+            frontendDeliveryContext.effectiveStylePackId
+          }}
+        </template>
+        <template #content>
+          <component
+            :is="providerComponents.UiResult.component"
+            severity="success"
+            variant="outlined"
+            class="result-banner"
+          >
+            {{ providerMappings.length }} semantic components are now mapped to PrimeVue
+            implementations.
+          </component>
+          <component
+            :is="providerComponents.UiForm.component"
+            legend="Workspace query"
+            class="form-shell"
+          >
+            <div class="form-grid">
+              <component :is="providerComponents.UiSearchBar.component" class="search-bar">
+                <component
+                  :is="providerComponents.UiInput.component"
+                  placeholder="Search workspaces"
+                />
+                <component :is="providerComponents.UiButton.component" label="Search" />
+              </component>
+              <component
+                :is="providerComponents.UiFormItem.component"
+                class="field-shell"
+                variant="on"
+              >
+                <component
+                  :is="providerComponents.UiSelect.component"
+                  :options="statusOptions"
+                  optionLabel="label"
+                  placeholder="Lifecycle status"
+                  class="full-width"
+                />
+                <label>Status</label>
+              </component>
+            </div>
+          </component>
+        </template>
+      </component>
+
+      <component :is="providerComponents.UiCard.component" class="hero-card">
+        <template #title>Page Schema Coverage</template>
+        <template #content>
+          <div class="schema-grid">
+            <component
+              :is="providerComponents.UiCard.component"
+              v-for="pageSchema in pageSchemas"
+              :key="pageSchema.pageSchemaId"
+              class="schema-card"
+            >
+              <template #title>{{ pageSchema.pageSchemaId }}</template>
+              <template #subtitle>{{ pageSchema.pageRecipeId }}</template>
+              <template #content>
+                <ul class="component-chip-list">
+                  <li
+                    v-for="componentId in pageSchema.componentIds"
+                    :key="componentId"
+                    class="component-chip"
+                  >
+                    {{ componentId }}
+                  </li>
+                </ul>
+              </template>
+            </component>
+          </div>
+        </template>
+      </component>
+    </section>
+
+    <component :is="providerComponents.UiToolbar.component" class="results-toolbar">
+      <template #start>
+        <div>
+          <p class="toolbar-kicker">Managed frontend</p>
+          <strong>Mapped list recipe preview</strong>
+        </div>
+      </template>
+      <template #end>
+        <component
+          :is="providerComponents.UiButton.component"
+          label="Export CSV"
+          severity="secondary"
+          variant="outlined"
+        />
+      </template>
+    </component>
+
+    <component
+      :is="providerComponents.UiSection.component"
+      header="Search list workspace"
+      class="results-panel"
+    >
+      <component
+        :is="providerComponents.UiTable.component"
+        :value="tableRows"
+        stripedRows
+        tableStyle="min-width: 100%"
+      >
+        <component :is="ProviderColumn" field="name" header="Workspace" />
+        <component :is="ProviderColumn" field="owner" header="Owner" />
+        <component :is="ProviderColumn" field="status" header="Status" />
+      </component>
+      <div class="pagination-row">
+        <component
+          :is="providerComponents.UiPagination.component"
+          :rows="5"
+          :totalRecords="tableRows.length"
+          :first="0"
+          template="PrevPageLink PageLinks NextPageLink"
+        />
+      </div>
+    </component>
+
+    <section class="state-grid">
+      <component :is="providerComponents.UiCard.component" class="state-card">
+        <template #title>Loading state</template>
+        <template #content>
+          <div class="state-preview">
+            <component :is="providerComponents.UiSpinner.component" strokeWidth="6" />
+            <span>PrimeVue spinner is bound to the Kernel loading semantic.</span>
+          </div>
+        </template>
+      </component>
+
+      <component :is="providerComponents.UiCard.component" class="state-card">
+        <template #title>No results state</template>
+        <template #content>
+          <component
+            :is="providerComponents.UiEmpty.component"
+            severity="secondary"
+            variant="outlined"
+          >
+            No workspace matched the current filters.
+          </component>
+        </template>
+      </component>
+    </section>
+  </main>
+</template>
+
+<style scoped>
+:global(:root) {
+  color-scheme: light;
+}
+
+.delivery-shell {
+  --surface: rgba(255, 255, 255, 0.88);
+  --surface-strong: #ffffff;
+  --surface-border: rgba(15, 23, 42, 0.08);
+  --text-strong: #10233c;
+  --text-muted: #506273;
+  --brand: #0f766e;
+  --brand-soft: rgba(15, 118, 110, 0.14);
+  margin: 0 auto;
+  min-height: 100vh;
+  max-width: 1200px;
+  padding: 40px 24px 72px;
+  color: var(--text-strong);
+  background:
+    radial-gradient(circle at top left, rgba(14, 165, 233, 0.18), transparent 28%),
+    radial-gradient(circle at top right, rgba(16, 185, 129, 0.14), transparent 24%),
+    linear-gradient(180deg, #f4fbfb 0%, #eef4ff 48%, #f7fafc 100%);
+  font-family: "Avenir Next", "Segoe UI", sans-serif;
+}
+
+.page-header {
+  margin-bottom: 28px;
+  padding: 18px 20px;
+  border: 1px solid var(--surface-border);
+  border-radius: 22px;
+  background: var(--surface);
+  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.08);
+  backdrop-filter: blur(18px);
+}
+
+.delivery-eyebrow {
+  margin: 0 0 8px;
+  color: var(--brand);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.delivery-title {
+  margin: 0;
+  font-size: clamp(2.2rem, 4vw, 3.6rem);
+  line-height: 1.02;
+}
+
+.delivery-subtitle {
+  margin: 10px 0 0;
+  max-width: 52rem;
+  color: var(--text-muted);
+  font-size: 1rem;
+  line-height: 1.6;
+}
+
+.hero-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 20px;
+  margin-bottom: 24px;
+}
+
+.hero-card,
+.schema-card,
+.state-card,
+.results-panel {
+  border-radius: 22px;
+  border: 1px solid var(--surface-border);
+  background: var(--surface-strong);
+  box-shadow: 0 18px 42px rgba(15, 23, 42, 0.08);
+}
+
+.result-banner {
+  margin-bottom: 18px;
+}
+
+.form-shell {
+  background: linear-gradient(180deg, rgba(241, 245, 249, 0.7), rgba(255, 255, 255, 0.96));
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: 1.4fr minmax(180px, 260px);
+  gap: 16px;
+  align-items: end;
+}
+
+.search-bar,
+.field-shell {
+  width: 100%;
+}
+
+.full-width {
+  width: 100%;
+}
+
+.schema-grid {
+  display: grid;
+  gap: 14px;
+}
+
+.component-chip-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.component-chip {
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: var(--brand-soft);
+  color: var(--brand);
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.results-toolbar {
+  margin-bottom: 16px;
+  padding: 10px 4px;
+  border-radius: 18px;
+  border: 1px solid var(--surface-border);
+  background: var(--surface);
+}
+
+.toolbar-kicker {
+  margin: 0 0 4px;
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.results-panel {
+  margin-bottom: 24px;
+}
+
+.pagination-row {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 16px;
+}
+
+.state-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 20px;
+}
+
+.state-preview {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  color: var(--text-muted);
+}
+
+@media (max-width: 768px) {
+  .delivery-shell {
+    padding: 24px 16px 48px;
+  }
+
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .page-header {
+    padding: 16px;
+  }
+}
+</style>
+"""
+
+    def _managed_frontend_provider_adapter_ts_content(
+        self,
+        delivery_context: dict[str, object],
+    ) -> str:
+        provider_id = str(delivery_context.get("effectiveProviderId", "")).strip()
+        if provider_id != "public-primevue":
+            return self._managed_frontend_fallback_provider_adapter_ts_content(
+                provider_id
+            )
+
+        mapping_payload, _mapping_blockers = self._load_provider_mapping_items(provider_id)
+        whitelist_payload, _whitelist_blockers = self._load_provider_whitelist_items(
+            provider_id
+        )
+        whitelist_by_component = {
+            str(entry.get("component_id", "")).strip(): entry
+            for entry in whitelist_payload
+            if str(entry.get("component_id", "")).strip()
+        }
+        mapping_items = [
+            entry
+            for entry in mapping_payload
+            if str(entry.get("component_id", "")).strip()
+            and str(entry.get("implementation_ref", "")).strip()
+        ]
+
+        imports: list[tuple[str, str]] = []
+        seen_imports: set[tuple[str, str]] = set()
+        for entry in mapping_items:
+            component_id = str(entry.get("component_id", "")).strip()
+            whitelist_entry = whitelist_by_component.get(component_id, {})
+            package_ref = self._primevue_package_ref_for_component(whitelist_entry)
+            implementation_ref = str(entry.get("implementation_ref", "")).strip()
+            if package_ref and (implementation_ref, package_ref) not in seen_imports:
+                imports.append((implementation_ref, package_ref))
+                seen_imports.add((implementation_ref, package_ref))
+
+        helper_import = ("Column", "primevue/column")
+        if helper_import not in seen_imports:
+            imports.append(helper_import)
+
+        import_block = "\n".join(
+            f'import {symbol} from "{package_ref}";'
+            for symbol, package_ref in sorted(imports, key=lambda item: item[0].lower())
+        )
+        descriptor_lines: list[str] = []
+        for entry in mapping_items:
+            component_id = str(entry.get("component_id", "")).strip()
+            implementation_ref = str(entry.get("implementation_ref", "")).strip()
+            whitelist_entry = whitelist_by_component.get(component_id, {})
+            package_ref = self._primevue_package_ref_for_component(whitelist_entry)
+            alignment_notes = self._render_typescript_literal(
+                _normalize_string_list(entry.get("alignment_notes", []))
+            )
+            descriptor_lines.append(
+                f'  "{component_id}": {{\n'
+                f'    componentId: "{component_id}",\n'
+                f'    implementationRef: "{implementation_ref}",\n'
+                f'    packageRef: "{package_ref}",\n'
+                f"    component: {implementation_ref},\n"
+                f"    alignmentNotes: {alignment_notes},\n"
+                "  },"
+            )
+
+        descriptor_block = "\n".join(descriptor_lines)
+        return (
+            f"{import_block}\n\n"
+            "export const publicPrimeVueProviderComponents = {\n"
+            f"{descriptor_block}\n"
+            "} as const;\n\n"
+            "export const publicPrimeVueProviderHelpers = {\n"
+            "  Column,\n"
+            "} as const;\n"
+        )
+
+    def _managed_frontend_fallback_provider_adapter_ts_content(
+        self,
+        provider_id: str,
+    ) -> str:
+        mapping_payload, _mapping_blockers = self._load_provider_mapping_items(provider_id)
+        mapped_component_ids = [
+            str(entry.get("component_id", "")).strip()
+            for entry in mapping_payload
+            if str(entry.get("component_id", "")).strip()
+        ]
+        required_component_ids = [
+            "UiButton",
+            "UiInput",
+            "UiSelect",
+            "UiForm",
+            "UiFormItem",
+            "UiTable",
+            "UiDialog",
+            "UiDrawer",
+            "UiEmpty",
+            "UiSpinner",
+            "UiPageHeader",
+            "UiSearchBar",
+            "UiResult",
+            "UiSection",
+            "UiToolbar",
+            "UiPagination",
+            "UiCard",
+        ]
+        component_ids = _unique_strings([*mapped_component_ids, *required_component_ids])
+        mapping_by_component = {
+            str(entry.get("component_id", "")).strip(): entry
+            for entry in mapping_payload
+            if str(entry.get("component_id", "")).strip()
+        }
+
+        descriptor_lines: list[str] = []
+        for component_id in component_ids:
+            entry = mapping_by_component.get(component_id, {})
+            implementation_ref = (
+                str(entry.get("implementation_ref", "")).strip()
+                or "ProviderFallbackComponent"
+            )
+            alignment_notes = self._render_typescript_literal(
+                _normalize_string_list(entry.get("alignment_notes", []))
+                or [
+                    "fallback scaffold keeps managed frontend runnable",
+                    "replace with provider-specific wrapper before production handoff",
+                ]
+            )
+            descriptor_lines.append(
+                f'  "{component_id}": {{\n'
+                f'    componentId: "{component_id}",\n'
+                f'    implementationRef: "{implementation_ref}",\n'
+                f'    packageRef: "{provider_id}",\n'
+                "    component: ProviderFallbackComponent,\n"
+                f"    alignmentNotes: {alignment_notes},\n"
+                "  },"
+            )
+
+        descriptor_block = "\n".join(descriptor_lines)
+        return (
+            'import { h } from "vue";\n\n'
+            "const slotContent = (slots: Record<string, (() => unknown) | undefined>, name = \"default\") => {\n"
+            "  const slot = slots[name];\n"
+            "  return slot ? slot() : [];\n"
+            "};\n\n"
+            "const withClass = (attrs: Record<string, unknown>, fallbackClass: string) => ({\n"
+            "  ...attrs,\n"
+            "  class: [fallbackClass, attrs.class].filter(Boolean),\n"
+            "});\n\n"
+            "const ProviderFallbackComponent = {\n"
+            '  name: "ProviderFallbackComponent",\n'
+            "  inheritAttrs: false,\n"
+            "  props: [\n"
+            '    "field",\n'
+            '    "header",\n'
+            '    "label",\n'
+            '    "legend",\n'
+            '    "options",\n'
+            '    "optionLabel",\n'
+            '    "placeholder",\n'
+            '    "value",\n'
+            "  ],\n"
+            "  setup(props: Record<string, unknown>, { attrs, slots }: { attrs: Record<string, unknown>; slots: Record<string, (() => unknown) | undefined> }) {\n"
+            "    return () => h(\n"
+            '      "section",\n'
+            '      withClass(attrs, "provider-fallback"),\n'
+            "      [\n"
+            '        props.header ? h("h2", String(props.header)) : null,\n'
+            '        props.legend ? h("strong", String(props.legend)) : null,\n'
+            '        props.label ? h("span", String(props.label)) : null,\n'
+            "        ...slotContent(slots, \"start\"),\n"
+            "        ...slotContent(slots),\n"
+            "        ...slotContent(slots, \"content\"),\n"
+            "        ...slotContent(slots, \"end\"),\n"
+            "      ],\n"
+            "    );\n"
+            "  },\n"
+            "};\n\n"
+            "const ProviderFallbackColumn = {\n"
+            '  name: "ProviderFallbackColumn",\n'
+            '  props: ["field", "header"],\n'
+            "  setup(props: Record<string, unknown>) {\n"
+            '    return () => h("span", { class: "provider-fallback-column" }, String(props.header || props.field || ""));\n'
+            "  },\n"
+            "};\n\n"
+            "export const publicPrimeVueProviderComponents = {\n"
+            f"{descriptor_block}\n"
+            "} as const;\n\n"
+            "export const publicPrimeVueProviderHelpers = {\n"
+            "  Column: ProviderFallbackColumn,\n"
+            "} as const;\n"
+        )
 
     def execute_frontend_managed_delivery_apply(
         self,
@@ -5377,6 +6506,18 @@ const pageSchemas = frontendDeliveryContext.pageSchemas;
                 repo_root=self.root,
             ),
         )
+        warnings = _unique_strings(list(apply_result.remediation_hints))
+        if apply_result.result_status == "apply_succeeded_pending_browser_gate":
+            try:
+                self._materialize_frontend_inheritance_governance_artifacts()
+            except Exception as exc:
+                warnings = _unique_strings(
+                    [
+                        *warnings,
+                        "frontend inheritance governance materialization failed: "
+                        f"{exc}",
+                    ]
+                )
         return ProgramFrontendManagedDeliveryApplyResult(
             passed=apply_result.result_status == "apply_succeeded_pending_browser_gate",
             confirmed=confirmed,
@@ -5391,8 +6532,61 @@ const pageSchemas = frontendDeliveryContext.pageSchemas;
             failed_action_ids=list(apply_result.failed_action_ids),
             blocked_action_ids=list(apply_result.blocked_action_ids),
             skipped_action_ids=list(apply_result.skipped_action_ids),
+            ledger_entries=list(apply_result.ledger_entries),
             remaining_blockers=_unique_strings(list(apply_result.blockers)),
-            warnings=_unique_strings(list(apply_result.remediation_hints)),
+            warnings=warnings,
+        )
+
+    def _materialize_frontend_inheritance_governance_artifacts(self) -> list[str]:
+        generation_handoff = self.build_frontend_generation_constraints_handoff()
+        if generation_handoff.state != "ready":
+            raise ValueError(
+                "frontend_generation_constraints_handoff_not_ready:"
+                f"{generation_handoff.state}"
+            )
+
+        constraints = build_mvp_frontend_generation_constraints(
+            effective_provider_id=(
+                generation_handoff.effective_provider_id or "enterprise-vue2"
+            ),
+            delivery_entry_id=generation_handoff.delivery_entry_id,
+            component_library_packages=list(
+                generation_handoff.component_library_packages
+            ),
+            provider_theme_adapter_id=generation_handoff.provider_theme_adapter_id,
+            page_schema_ids=list(generation_handoff.page_schema_ids),
+        )
+        page_ui_schema = self.resolve_frontend_page_ui_schema()
+        theme_governance = self.resolve_frontend_theme_token_governance(
+            constraints=constraints
+        )
+        quality_platform = self.resolve_frontend_quality_platform(
+            theme_governance=theme_governance
+        )
+
+        paths = [
+            *materialize_frontend_generation_constraint_artifacts(
+                self.root,
+                constraints,
+            ),
+            *materialize_frontend_page_ui_schema_artifacts(
+                self.root,
+                page_ui_schema,
+            ),
+            *materialize_frontend_theme_token_governance_artifacts(
+                self.root,
+                governance=theme_governance,
+            ),
+            *materialize_frontend_quality_platform_artifacts(
+                self.root,
+                platform=quality_platform,
+            ),
+        ]
+        return _unique_strings(
+            [
+                _relative_to_root_or_str(self.root, path)
+                for path in paths
+            ]
         )
 
     def write_frontend_managed_delivery_apply_artifact(
@@ -5441,6 +6635,9 @@ const pageSchemas = frontendDeliveryContext.pageSchemas;
             "failed_action_ids": list(effective_result.failed_action_ids),
             "blocked_action_ids": list(effective_result.blocked_action_ids),
             "skipped_action_ids": list(effective_result.skipped_action_ids),
+            "ledger_entries": [
+                entry.model_dump(mode="json") for entry in effective_result.ledger_entries
+            ],
             "remaining_blockers": _unique_strings(list(effective_result.remaining_blockers)),
             "warnings": _unique_strings([*effective_request.warnings, *effective_result.warnings]),
             "plain_language_blockers": _unique_strings(list(effective_request.plain_language_blockers)),
@@ -5527,6 +6724,8 @@ const pageSchemas = frontendDeliveryContext.pageSchemas;
                 provider_runtime_adapter_delivery_state=runtime_adapter_handoff.runtime_delivery_state,
                 provider_runtime_adapter_evidence_state=runtime_adapter_handoff.evidence_return_state,
                 page_schema_ids=list(quality_handoff.page_schema_ids),
+                visual_regression_matrix_id=quality_handoff.active_visual_regression_matrix_id,
+                visual_regression_viewport_id=quality_handoff.active_visual_regression_viewport_id,
             )
         except ValueError as exc:
             return ProgramFrontendBrowserGateProbeRequest(
@@ -5625,6 +6824,8 @@ const pageSchemas = frontendDeliveryContext.pageSchemas;
             provider_runtime_adapter_delivery_state=runtime_adapter_handoff.runtime_delivery_state,
             provider_runtime_adapter_evidence_state=runtime_adapter_handoff.evidence_return_state,
             page_schema_ids=list(quality_handoff.page_schema_ids),
+            visual_regression_matrix_id=quality_handoff.active_visual_regression_matrix_id,
+            visual_regression_viewport_id=quality_handoff.active_visual_regression_viewport_id,
         )
         visual_a11y_evidence = self._load_spec_visual_a11y_evidence(Path(context.spec_dir))
         session, artifact_records, receipts, bundle = materialize_browser_gate_probe_runtime(
@@ -5635,6 +6836,7 @@ const pageSchemas = frontendDeliveryContext.pageSchemas;
             generated_at=effective_generated_at,
             probe_runner=self.browser_gate_probe_runner,
             execute_probe=True,
+            auto_visual_a11y_provider=True,
         )
         result_warnings = _unique_strings([*effective_request.warnings, *session.warnings])
         artifact_path = output_path or (
@@ -5715,10 +6917,7 @@ const pageSchemas = frontendDeliveryContext.pageSchemas;
         if mode != "simple":
             raise ValueError("only simple mode is supported in Batch 7 baseline")
 
-        availability_checks = [
-            "company-registry-network",
-            "company-registry-token",
-        ]
+        availability_checks = ["company-registry-network"]
         failed_check_ids = list(failed_preflight_check_ids or [])
         passed_check_ids = [
             check_id
@@ -6065,6 +7264,7 @@ const pageSchemas = frontendDeliveryContext.pageSchemas;
             effective_style_pack_id=snapshot.effective_style_pack_id,
             access_mode=access_mode,
             package_manager=str(bundle.get("package_manager", "")).strip(),
+            registry_url=str(bundle.get("registry_url", "")).strip(),
             install_strategy_ids=install_strategy_ids,
             availability_prerequisites=availability_prerequisites,
             runtime_requirements=[
@@ -6447,6 +7647,10 @@ const pageSchemas = frontendDeliveryContext.pageSchemas;
         )
         blockers.extend(validation.blockers)
         warnings.extend(validation.warnings)
+        active_visual_regression_matrix = self._resolve_active_visual_regression_matrix(
+            platform=platform,
+            effective_style_pack_id=snapshot.effective_style_pack_id,
+        )
         return ProgramFrontendQualityPlatformHandoff(
             state="ready" if not blockers else "blocked",
             schema_version=platform.handoff_contract.current_version,
@@ -6465,12 +7669,43 @@ const pageSchemas = frontendDeliveryContext.pageSchemas;
             matrix_coverage_count=validation.matrix_coverage_count,
             evidence_contract_ids=validation.evidence_contract_ids,
             page_schema_ids=validation.page_schema_ids,
+            active_visual_regression_matrix_id=(
+                active_visual_regression_matrix.matrix_id
+                if active_visual_regression_matrix is not None
+                else ""
+            ),
+            active_visual_regression_viewport_id=(
+                active_visual_regression_matrix.viewport_id
+                if active_visual_regression_matrix is not None
+                else ""
+            ),
             quality_diagnostics=self._build_frontend_quality_platform_diagnostics(
                 platform
             ),
             blockers=_unique_strings(blockers),
             warnings=_unique_strings(warnings),
         )
+
+    def _resolve_active_visual_regression_matrix(
+        self,
+        *,
+        platform,
+        effective_style_pack_id: str,
+    ):
+        visual_contract_id = "visual-regression-evidence"
+        matches = [
+            entry
+            for entry in platform.coverage_matrix
+            if entry.style_pack_id == effective_style_pack_id
+            and entry.browser_id == "chromium"
+            and visual_contract_id in entry.evidence_contract_ids
+        ]
+        if not matches:
+            return None
+        preferred_matches = [
+            entry for entry in matches if entry.viewport_id == "desktop-1440"
+        ]
+        return preferred_matches[0] if preferred_matches else matches[0]
 
     def _build_frontend_quality_platform_diagnostics(
         self,
@@ -6850,14 +8085,21 @@ const pageSchemas = frontendDeliveryContext.pageSchemas;
                 str(payload.get("overall_gate_status", "")).strip(),
             )
         try:
+            quality_handoff = self.build_frontend_quality_platform_handoff()
             runtime_adapter_handoff = self.build_frontend_provider_runtime_adapter_handoff()
             expected_context = build_browser_quality_gate_execution_context(
                 apply_payload=current_apply_payload,
                 solution_snapshot=current_snapshot,
                 gate_run_id=execution_context.gate_run_id,
+                delivery_entry_id=quality_handoff.delivery_entry_id,
+                component_library_packages=list(quality_handoff.component_library_packages),
+                provider_theme_adapter_id=quality_handoff.provider_theme_adapter_id,
                 provider_runtime_adapter_carrier_mode=runtime_adapter_handoff.carrier_mode,
                 provider_runtime_adapter_delivery_state=runtime_adapter_handoff.runtime_delivery_state,
                 provider_runtime_adapter_evidence_state=runtime_adapter_handoff.evidence_return_state,
+                page_schema_ids=list(quality_handoff.page_schema_ids),
+                visual_regression_matrix_id=quality_handoff.active_visual_regression_matrix_id,
+                visual_regression_viewport_id=quality_handoff.active_visual_regression_viewport_id,
             )
         except ValueError as exc:
             return (
@@ -6866,34 +8108,8 @@ const pageSchemas = frontendDeliveryContext.pageSchemas;
                 ),
                 str(payload.get("overall_gate_status", "")).strip(),
             )
-        if any(
-            (
-                expected_context.apply_result_id != execution_context.apply_result_id,
-                expected_context.solution_snapshot_id
-                != execution_context.solution_snapshot_id,
-                expected_context.spec_dir != execution_context.spec_dir,
-                expected_context.attachment_scope_ref
-                != execution_context.attachment_scope_ref,
-                expected_context.managed_frontend_target
-                != execution_context.managed_frontend_target,
-                expected_context.readiness_subject_id
-                != execution_context.readiness_subject_id,
-                expected_context.effective_provider
-                != execution_context.effective_provider,
-                expected_context.effective_style_pack
-                != execution_context.effective_style_pack,
-                expected_context.style_fidelity_status
-                != execution_context.style_fidelity_status,
-                expected_context.provider_runtime_adapter_carrier_mode
-                != execution_context.provider_runtime_adapter_carrier_mode,
-                expected_context.provider_runtime_adapter_delivery_state
-                != execution_context.provider_runtime_adapter_delivery_state,
-                expected_context.provider_runtime_adapter_evidence_state
-                != execution_context.provider_runtime_adapter_evidence_state,
-                expected_context.browser_entry_ref != execution_context.browser_entry_ref,
-                tuple(expected_context.required_probe_set)
-                != tuple(execution_context.required_probe_set),
-            )
+        if expected_context.model_dump(mode="json") != execution_context.model_dump(
+            mode="json"
         ):
             return (
                 _invalid_browser_gate_artifact_decision(
@@ -12192,10 +13408,23 @@ const pageSchemas = frontendDeliveryContext.pageSchemas;
             warnings=warnings,
         )
 
-    def _build_frontend_readiness(self, spec_dir: Path) -> ProgramFrontendReadiness:
-        frontend_evidence_class = _load_frontend_evidence_class_from_spec(
-            spec_dir / "spec.md"
-        ) or ""
+    def _build_frontend_readiness(
+        self,
+        spec_dir: Path,
+        spec_ref: ProgramSpecRef | None = None,
+    ) -> ProgramFrontendReadiness | None:
+        frontend_evidence_class = _effective_frontend_evidence_class(
+            spec_dir / "spec.md",
+            manifest_value=(
+                spec_ref.frontend_evidence_class if spec_ref is not None else ""
+            ),
+        )
+        if not _frontend_readiness_is_applicable(
+            spec_dir=spec_dir,
+            frontend_evidence_class=frontend_evidence_class,
+            spec_ref=spec_ref,
+        ):
+            return None
         attachment = build_frontend_contract_runtime_attachment(
             self.root,
             explicit_spec_dir=spec_dir,
@@ -14474,6 +15703,36 @@ def _load_frontend_evidence_class_from_spec(spec_path: Path) -> str | None:
     return normalized_value
 
 
+def _effective_frontend_evidence_class(
+    spec_path: Path,
+    *,
+    manifest_value: str = "",
+) -> str:
+    spec_value = _load_frontend_evidence_class_from_spec(spec_path)
+    if spec_value:
+        return spec_value
+    normalized_manifest_value = str(manifest_value).strip()
+    if normalized_manifest_value in FRONTEND_EVIDENCE_CLASS_ALLOWED_VALUES:
+        return normalized_manifest_value
+    return ""
+
+
+def _frontend_readiness_is_applicable(
+    *,
+    spec_dir: Path,
+    frontend_evidence_class: str,
+    spec_ref: ProgramSpecRef | None,
+) -> bool:
+    capability_refs = (
+        spec_ref.capability_refs if spec_ref is not None else []
+    )
+    if PROGRAM_FRONTEND_MAINLINE_DELIVERY_CAPABILITY_ID in capability_refs:
+        return True
+    if not frontend_evidence_class:
+        return False
+    return _is_frontend_evidence_class_subject(spec_dir.name)
+
+
 def _is_frontend_evidence_class_subject(spec_dir_name: str) -> bool:
     match = re.fullmatch(r"(?P<seq>\d{3})-(?P<slug>[a-z0-9-]+)", spec_dir_name.strip())
     if match is None:
@@ -14553,6 +15812,18 @@ def _unique_strings(values: list[str] | tuple[str, ...]) -> list[str]:
     return unique
 
 
+def _visual_regression_runtime_dependency_packages(matrix_id: str) -> list[str]:
+    packages = list(PROGRAM_FRONTEND_BROWSER_GATE_SMOKE_RUNTIME_PACKAGES)
+    if not str(matrix_id).strip():
+        return packages
+    return _unique_strings(
+        [
+            *packages,
+            *PROGRAM_FRONTEND_VISUAL_REGRESSION_RUNTIME_PACKAGES,
+        ]
+    )
+
+
 def _canonicalize_program_runtime_string_fields(
     instance: object,
     *field_names: str,
@@ -14603,6 +15874,11 @@ def _build_managed_delivery_user_guidance(
     ]
     if private_registry_missing:
         plain_language.append("Enterprise package access is not ready.")
+        if any("network" in requirement for requirement in private_registry_missing):
+            next_steps.append(
+                "connect company network and rerun `ai-sdlc program managed-delivery-apply --dry-run`"
+            )
+            return _unique_strings(plain_language), _unique_strings(next_steps)
         actionable_requirements = [
             requirement
             for requirement in private_registry_missing
@@ -14637,14 +15913,19 @@ def _builtin_provider_manifest(provider_id: str) -> dict[str, object] | None:
             "install_strategy_ids": list(profile.install_strategy_ids),
             "availability_prerequisites": list(profile.availability_prerequisites),
             "default_style_pack_id": profile.default_style_pack_id,
+            "mapped_components": [mapping.component_id for mapping in profile.mappings],
+            "whitelist_components": [entry.component_id for entry in profile.whitelist],
         }
     if provider_id == "public-primevue":
+        profile = build_mvp_public_primevue_provider_profile()
         return {
-            "provider_id": "public-primevue",
-            "access_mode": "public",
-            "install_strategy_ids": ["public-primevue-default"],
-            "availability_prerequisites": [],
-            "default_style_pack_id": "modern-saas",
+            "provider_id": profile.provider_id,
+            "access_mode": profile.access_mode,
+            "install_strategy_ids": list(profile.install_strategy_ids),
+            "availability_prerequisites": list(profile.availability_prerequisites),
+            "default_style_pack_id": profile.default_style_pack_id,
+            "mapped_components": [mapping.component_id for mapping in profile.mappings],
+            "whitelist_components": [entry.component_id for entry in profile.whitelist],
         }
     return None
 
@@ -14685,13 +15966,51 @@ def _builtin_provider_style_support(provider_id: str) -> dict[str, object] | Non
             ]
         }
     if provider_id == "public-primevue":
+        profile = build_mvp_public_primevue_provider_profile()
         return {
             "items": [
-                {
-                    "style_pack_id": manifest.style_pack_id,
-                    "fidelity_status": "full",
-                }
-                for manifest in build_builtin_style_pack_manifests()
+                entry.model_dump(mode="json", exclude_none=True)
+                for entry in profile.style_support_matrix
+            ]
+        }
+    return None
+
+
+def _builtin_provider_mappings(provider_id: str) -> dict[str, object] | None:
+    if provider_id == "enterprise-vue2":
+        profile = build_mvp_enterprise_vue2_provider_profile()
+        return {
+            "items": [
+                entry.model_dump(mode="json", exclude_none=True)
+                for entry in profile.mappings
+            ]
+        }
+    if provider_id == "public-primevue":
+        profile = build_mvp_public_primevue_provider_profile()
+        return {
+            "items": [
+                entry.model_dump(mode="json", exclude_none=True)
+                for entry in profile.mappings
+            ]
+        }
+    return None
+
+
+def _builtin_provider_whitelist(provider_id: str) -> dict[str, object] | None:
+    if provider_id == "enterprise-vue2":
+        profile = build_mvp_enterprise_vue2_provider_profile()
+        return {
+            "items": [
+                entry.model_dump(mode="json", exclude_none=True)
+                for entry in profile.whitelist
+            ]
+        }
+    if provider_id == "public-primevue":
+        profile = build_mvp_public_primevue_provider_profile()
+        return {
+            "items": [
+                entry.model_dump(mode="json", exclude_none=True)
+                for entry in profile.whitelist
             ]
         }
     return None
@@ -14764,6 +16083,10 @@ def humanize_frontend_delivery_apply_state(state: str) -> str:
         return "not applied"
     if normalized == "apply_succeeded_pending_browser_gate":
         return "applied, waiting for browser gate"
+    if normalized == "delivery_verified":
+        return "delivery verified"
+    if normalized == "delivery_verified_with_advisories":
+        return "delivery verified with advisories"
     if normalized == "blocked_before_start":
         return "blocked before start"
     if normalized == "manual_recovery_required":
@@ -14771,6 +16094,19 @@ def humanize_frontend_delivery_apply_state(state: str) -> str:
     if normalized == "invalid_apply_artifact":
         return "apply artifact invalid"
     return normalized.replace("_", " ")
+
+
+def _frontend_delivery_gate_adjusted_state(
+    apply_state: str,
+    browser_gate_state: str,
+) -> str:
+    if apply_state != "apply_succeeded_pending_browser_gate":
+        return apply_state
+    if browser_gate_state == "passed":
+        return "delivery_verified"
+    if browser_gate_state == "passed_with_advisories":
+        return "delivery_verified_with_advisories"
+    return apply_state
 
 
 def humanize_frontend_delivery_install_state(state: str) -> str:

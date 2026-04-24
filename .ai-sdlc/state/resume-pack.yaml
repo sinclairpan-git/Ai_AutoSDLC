@@ -5,15 +5,15 @@ working_set_snapshot:
   prd_path: AI-SDLC 全自动化框架 产品需求文档（PRD）.md
   constitution_path: /Users/sinclairpan/project/Ai_AutoSDLC/.ai-sdlc/memory/constitution.md
   tech_stack_path: /Users/sinclairpan/project/Ai_AutoSDLC/.ai-sdlc/profiles/tech-stack.yml
-  spec_path: /Users/sinclairpan/project/Ai_AutoSDLC/specs/159-agent-adapter-canonical-consumption-proof-runtime-baseline/spec.md
-  plan_path: /Users/sinclairpan/project/Ai_AutoSDLC/specs/159-agent-adapter-canonical-consumption-proof-runtime-baseline/plan.md
-  tasks_path: /Users/sinclairpan/project/Ai_AutoSDLC/specs/159-agent-adapter-canonical-consumption-proof-runtime-baseline/tasks.md
+  spec_path: /Users/sinclairpan/project/Ai_AutoSDLC/specs/178-frontend-visual-regression-drift-baseline/spec.md
+  plan_path: /Users/sinclairpan/project/Ai_AutoSDLC/specs/178-frontend-visual-regression-drift-baseline/plan.md
+  tasks_path: /Users/sinclairpan/project/Ai_AutoSDLC/specs/178-frontend-visual-regression-drift-baseline/tasks.md
   active_files: []
   context_summary: ''
-current_branch: codex/159-agent-adapter-canonical-consumption-proof
+current_branch: feature/178-frontend-visual-regression-drift-baseline-docs
 docs_baseline_ref: ''
 docs_baseline_at: ''
-timestamp: '2026-04-17T19:37:15+00:00'
+timestamp: '2026-04-23T08:10:23+00:00'
 checkpoint_path: .ai-sdlc/state/checkpoint.yml
-checkpoint_last_updated: '2026-04-17T19:37:15+00:00'
-checkpoint_fingerprint: 093a1adba4161157d67668f69585063bd35a0ada2efa5607188af4b8680dd755
+checkpoint_last_updated: '2026-04-23T08:10:23+00:00'
+checkpoint_fingerprint: 39b2adfd1433cdec44971d8bae6d3b1fd43bbbd70d4b9c25936013869aca52c8

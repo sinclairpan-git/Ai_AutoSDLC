@@ -9,9 +9,7 @@ import yaml
 from ai_sdlc.models.frontend_provider_profile import (
     EnterpriseVue2ProviderProfile,
     build_mvp_enterprise_vue2_provider_profile,
-)
-from ai_sdlc.models.frontend_solution_confirmation import (
-    build_builtin_style_pack_manifests,
+    build_mvp_public_primevue_provider_profile,
 )
 
 BUILTIN_FRONTEND_PROVIDER_PROFILE_IDS = frozenset(
@@ -116,36 +114,10 @@ def materialize_builtin_frontend_provider_profile_artifacts(
         )
 
     if provider_id == "public-primevue":
-        base_dir = frontend_provider_profile_root(root, provider_id)
-        return _dedupe_paths([
-            _write_yaml(
-                base_dir / "provider.manifest.yaml",
-                {
-                    "work_item_id": "073",
-                    "provider_id": "public-primevue",
-                    "kernel_artifact_ref": "kernel/frontend",
-                    "access_mode": "public",
-                    "install_strategy_ids": ["public-primevue-default"],
-                    "availability_prerequisites": [],
-                    "default_style_pack_id": "modern-saas",
-                    "mapped_components": [],
-                    "whitelist_components": [],
-                    "cross_stack_fallback_targets": [],
-                },
-            ),
-            _write_yaml(
-                base_dir / "style-support.yaml",
-                {
-                    "items": [
-                        {
-                            "style_pack_id": manifest.style_pack_id,
-                            "fidelity_status": "full",
-                        }
-                        for manifest in build_builtin_style_pack_manifests()
-                    ]
-                },
-            ),
-        ])
+        return materialize_frontend_provider_profile_artifacts(
+            root,
+            build_mvp_public_primevue_provider_profile(),
+        )
 
     raise ValueError(f"unsupported built-in provider profile: {provider_id}")
 

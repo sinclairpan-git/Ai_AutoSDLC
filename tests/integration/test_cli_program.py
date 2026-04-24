@@ -75,6 +75,9 @@ from ai_sdlc.models.frontend_solution_confirmation import (
     build_mvp_solution_snapshot,
 )
 from ai_sdlc.models.project import ProjectConfig
+from tests.support.managed_delivery import (
+    build_dependency_install_subprocess_side_effect,
+)
 
 runner = CliRunner()
 SAMPLE_FIXTURE_SOURCE_REF = "tests/fixtures/frontend-contract-sample-src/match"
@@ -87,16 +90,29 @@ def _write_manifest(root: Path) -> None:
     (root / "program-manifest.yaml").write_text(
         """
 schema_version: "1"
+capabilities:
+  - id: "frontend-mainline-delivery"
+    title: "Frontend Mainline Delivery"
+    spec_refs:
+      - "001-auth"
+      - "002-course"
+      - "003-enroll"
 specs:
   - id: "001-auth"
     path: "specs/001-auth"
     depends_on: []
+    capability_refs:
+      - "frontend-mainline-delivery"
   - id: "002-course"
     path: "specs/002-course"
     depends_on: []
+    capability_refs:
+      - "frontend-mainline-delivery"
   - id: "003-enroll"
     path: "specs/003-enroll"
     depends_on: ["001-auth", "002-course"]
+    capability_refs:
+      - "frontend-mainline-delivery"
 """.strip()
         + "\n",
         encoding="utf-8",
@@ -1372,9 +1388,9 @@ def test_program_delivery_registry_handoff_surfaces_enterprise_bundle_truth(
     assert "state: ready" in result.output
     assert "entry: vue2-enterprise-vue2" in result.output
     assert "provider: enterprise-vue2" in result.output
-    assert "install strategy: enterprise-vue2-private-registry" in result.output
-    assert "@company/enterprise-vue2-ui" in result.output
-    assert "availability prerequisite: company-registry-token" in result.output
+    assert "install strategy: enterprise-vue2-company-registry" in result.output
+    assert "@sxf/er-components" in result.output
+    assert "availability prerequisite: company-registry-network" in result.output
 
 
 def test_program_generation_constraints_handoff_blocks_without_solution_snapshot(
@@ -1479,7 +1495,7 @@ def test_program_theme_token_governance_handoff_surfaces_requested_effective_the
     assert "runtime adapter carrier: -" in result.output
     assert "runtime adapter delivery: -" in result.output
     assert "runtime adapter evidence: -" in result.output
-    assert "component package: @company/enterprise-vue2-ui" in result.output
+    assert "component package: @sxf/er-components" in result.output
     assert "requested style pack: enterprise-default" in result.output
     assert "effective style pack: enterprise-default" in result.output
     assert "dashboard-workspace" in result.output
@@ -2152,7 +2168,7 @@ class TestCliProgram:
             },
         ), patch(
             "ai_sdlc.core.managed_delivery_apply.subprocess.run",
-            return_value=subprocess.CompletedProcess(args=["pnpm"], returncode=0),
+            side_effect=build_dependency_install_subprocess_side_effect(),
         ):
             result = runner.invoke(app, ["program", "managed-delivery-apply", "--dry-run"])
 
@@ -2172,15 +2188,16 @@ class TestCliProgram:
         save_project_config(root, ProjectConfig(adapter_ingress_state="verified_loaded"))
         _commit_truth_repo(root, "seed managed delivery truth guidance fixture")
         real_subprocess_run = subprocess.run
+        install_side_effect = build_dependency_install_subprocess_side_effect()
 
         def _selective_subprocess_run(command, *args, **kwargs):
-            if isinstance(command, (list, tuple)) and command and command[0] == "pnpm":
-                return subprocess.CompletedProcess(
-                    args=command,
-                    returncode=0,
-                    stdout="",
-                    stderr="",
-                )
+            if isinstance(command, (list, tuple)) and command and command[0] in {
+                "npm",
+                "pnpm",
+                "yarn",
+                "node",
+            }:
+                return install_side_effect(command, *args, **kwargs)
             return real_subprocess_run(command, *args, **kwargs)
 
         with patch("ai_sdlc.cli.program_cmd.find_project_root", return_value=root), patch.object(
@@ -2265,13 +2282,15 @@ class TestCliProgram:
             effective_frontend_stack="vue2",
             availability_summary={
                 "overall_status": "attention",
-                "passed_check_ids": ["company-registry-network"],
-                "failed_check_ids": ["company-registry-token"],
-                "blocking_reason_codes": [],
+                "passed_check_ids": [],
+                "failed_check_ids": ["company-registry-network"],
+                "blocking_reason_codes": [
+                    "private_registry_prerequisite_missing:company-registry-network"
+                ],
             },
-            availability_reason_text="Registry token missing.",
+            availability_reason_text="Company registry network not ready.",
             preflight_status="warning",
-            preflight_reason_codes=["company-registry-token"],
+            preflight_reason_codes=["company-registry-network"],
             style_fidelity_status="full",
         )
         _write_builtin_delivery_truth(root, snapshot=snapshot)
@@ -2286,14 +2305,14 @@ class TestCliProgram:
             ),
         ), patch(
             "ai_sdlc.core.managed_delivery_apply.subprocess.run",
-            return_value=subprocess.CompletedProcess(args=["pnpm"], returncode=0),
+            side_effect=build_dependency_install_subprocess_side_effect(),
         ):
             result = runner.invoke(app, ["program", "managed-delivery-apply", "--dry-run"])
 
         assert result.exit_code == 1
-        assert "private_registry_prerequisite_missing:company-registry-token" in result.output
+        assert "private_registry_prerequisite_missing:company-registry-network" in result.output
         assert "Enterprise package access is not ready" in result.output
-        assert "provide company-registry-token and rerun" in result.output
+        assert "connect company network and rerun" in result.output
 
     def test_program_managed_delivery_apply_execute_truth_derived_requires_ack_for_effective_change(
         self, initialized_project_dir: Path
@@ -2317,7 +2336,7 @@ class TestCliProgram:
             availability_summary={
                 "overall_status": "attention",
                 "passed_check_ids": [],
-                "failed_check_ids": ["company-registry-token"],
+                "failed_check_ids": ["company-registry-network"],
                 "blocking_reason_codes": [],
             },
             availability_reason_text="Enterprise provider prerequisites are not satisfied.",
@@ -2367,7 +2386,7 @@ class TestCliProgram:
             availability_summary={
                 "overall_status": "attention",
                 "passed_check_ids": [],
-                "failed_check_ids": ["company-registry-token"],
+                "failed_check_ids": ["company-registry-network"],
                 "blocking_reason_codes": [],
             },
             availability_reason_text="Enterprise provider prerequisites are not satisfied.",
@@ -2404,7 +2423,7 @@ class TestCliProgram:
             },
         ), patch(
             "ai_sdlc.core.managed_delivery_apply.subprocess.run",
-            return_value=subprocess.CompletedProcess(args=["pnpm"], returncode=0),
+            side_effect=build_dependency_install_subprocess_side_effect(),
         ):
             result = runner.invoke(
                 app,
@@ -2423,6 +2442,9 @@ class TestCliProgram:
         assert (root / "managed" / "frontend" / "index.html").is_file()
         assert (
             root / "managed" / "frontend" / "src" / "generated" / "frontend-delivery-context.ts"
+        ).is_file()
+        assert (
+            root / "managed" / "frontend" / "src" / "generated" / "provider-adapter.ts"
         ).is_file()
         assert (root / "managed" / "frontend" / "src" / "App.vue").is_file()
         assert (
@@ -2445,6 +2467,70 @@ class TestCliProgram:
             / "public-primevue"
             / "runtime-boundary-receipt.yaml"
         ).is_file()
+
+    def test_program_managed_delivery_apply_execute_reapplies_existing_workspace_scaffold(
+        self, initialized_project_dir: Path
+    ) -> None:
+        root = initialized_project_dir
+        save_project_config(root, ProjectConfig(adapter_ingress_state="verified_loaded"))
+        _write_builtin_delivery_truth(root)
+        existing_targets = {
+            root / "src" / "frontend-governance" / "runtime" / "kernel" / "KernelWrapper.tsx": "stale kernel\n",
+            root
+            / "src"
+            / "frontend-governance"
+            / "runtime"
+            / "providers"
+            / "public-primevue"
+            / "ProviderAdapter.tsx": "stale provider\n",
+            root / "src" / "frontend-governance" / "runtime" / "legacy" / "LegacyAdapterBridge.tsx": "stale legacy\n",
+            root
+            / ".ai-sdlc"
+            / "evidence"
+            / "frontend-runtime"
+            / "public-primevue"
+            / "runtime-boundary-receipt.yaml": "stale receipt\n",
+        }
+        for path, content in existing_targets.items():
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(content, encoding="utf-8")
+
+        with patch("ai_sdlc.cli.program_cmd.find_project_root", return_value=root), patch.object(
+            program_service_module,
+            "evaluate_current_host_runtime",
+            return_value=_build_host_runtime_plan_for_tests(
+                node_runtime_available=True,
+                package_manager_available=True,
+                playwright_browsers_available=True,
+            ),
+        ), patch(
+            "ai_sdlc.core.managed_delivery_apply.subprocess.run",
+            side_effect=build_dependency_install_subprocess_side_effect(),
+        ):
+            result = runner.invoke(
+                app,
+                [
+                    "program",
+                    "managed-delivery-apply",
+                    "--execute",
+                    "--yes",
+                ],
+            )
+
+        assert result.exit_code == 0
+        assert "status: apply_succeeded_pending_browser_gate" in result.output
+        assert "executed actions:" in result.output
+        assert "workspace-integration" in result.output
+        provider_adapter = (
+            root
+            / "src"
+            / "frontend-governance"
+            / "runtime"
+            / "providers"
+            / "public-primevue"
+            / "ProviderAdapter.tsx"
+        ).read_text(encoding="utf-8")
+        assert "mappedComponents" in provider_adapter
 
     def test_program_browser_gate_probe_execute_materializes_gate_run_artifact(
         self, initialized_project_dir: Path
@@ -3825,7 +3911,7 @@ specs:
         request = svc.build_frontend_managed_delivery_apply_request()
         with patch(
             "ai_sdlc.core.managed_delivery_apply.subprocess.run",
-            return_value=subprocess.CompletedProcess(args=["pnpm"], returncode=0),
+            side_effect=build_dependency_install_subprocess_side_effect(),
         ):
             result = svc.execute_frontend_managed_delivery_apply(
                 request=request,
@@ -3868,7 +3954,7 @@ specs:
         request = svc.build_frontend_managed_delivery_apply_request()
         with patch(
             "ai_sdlc.core.managed_delivery_apply.subprocess.run",
-            return_value=subprocess.CompletedProcess(args=["pnpm"], returncode=0),
+            side_effect=build_dependency_install_subprocess_side_effect(),
         ):
             result = svc.execute_frontend_managed_delivery_apply(
                 request=request,
@@ -5449,7 +5535,7 @@ specs:
             },
         ), patch(
             "ai_sdlc.core.managed_delivery_apply.subprocess.run",
-            return_value=subprocess.CompletedProcess(args=["pnpm"], returncode=0),
+            side_effect=build_dependency_install_subprocess_side_effect(),
         ):
             result = runner.invoke(
                 app,
@@ -5565,7 +5651,7 @@ specs:
                     "--style-pack-id",
                     "enterprise-default",
                     "--failed-preflight-check-id",
-                    "company-registry-token",
+                    "company-registry-network",
                     "--execute",
                     "--continue",
                     "--yes",
@@ -5591,7 +5677,7 @@ specs:
         assert apply_artifact_path.is_file()
         assert "Managed Delivery Apply Result" in result.output
         assert "status: blocked_before_start" in result.output
-        assert "private_registry_prerequisite_missing:company-registry-token" in result.output
+        assert "private_registry_prerequisite_missing:company-registry-network" in result.output
 
     def test_program_solution_confirm_execute_continue_surfaces_release_capability_guidance(
         self, initialized_project_dir: Path
@@ -5602,15 +5688,16 @@ specs:
         save_project_config(root, ProjectConfig(adapter_ingress_state="verified_loaded"))
         _commit_truth_repo(root, "seed solution confirm truth guidance fixture")
         real_subprocess_run = subprocess.run
+        install_side_effect = build_dependency_install_subprocess_side_effect()
 
         def _selective_subprocess_run(command, *args, **kwargs):
-            if isinstance(command, (list, tuple)) and command and command[0] == "pnpm":
-                return subprocess.CompletedProcess(
-                    args=command,
-                    returncode=0,
-                    stdout="",
-                    stderr="",
-                )
+            if isinstance(command, (list, tuple)) and command and command[0] in {
+                "npm",
+                "pnpm",
+                "yarn",
+                "node",
+            }:
+                return install_side_effect(command, *args, **kwargs)
             return real_subprocess_run(command, *args, **kwargs)
 
         with patch("ai_sdlc.cli.program_cmd.find_project_root", return_value=root), patch.object(

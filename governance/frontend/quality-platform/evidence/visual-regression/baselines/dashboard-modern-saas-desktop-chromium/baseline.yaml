@@ -1,0 +1,37 @@
+{
+  "matrix_id": "dashboard-modern-saas-desktop-chromium",
+  "browser_id": "chromium",
+  "viewport_id": "desktop-1440",
+  "style_pack_id": "modern-saas",
+  "baseline_image_ref": "artifact:governance/frontend/quality-platform/evidence/visual-regression/baselines/dashboard-modern-saas-desktop-chromium/baseline.png",
+  "baseline_metadata_ref": "artifact:governance/frontend/quality-platform/evidence/visual-regression/baselines/dashboard-modern-saas-desktop-chromium/baseline.yaml",
+  "threshold": 0.03,
+  "critical_regions": [
+    {
+      "region_id": "hero-header",
+      "description": "delivery shell header and provider identity"
+    },
+    {
+      "region_id": "component-packages",
+      "description": "component library package summary card"
+    },
+    {
+      "region_id": "page-schemas",
+      "description": "page schema coverage card"
+    },
+    {
+      "region_id": "primary-cta",
+      "description": "open managed frontend button"
+    }
+  ],
+  "ignore_regions": [
+    {
+      "region_id": "none",
+      "description": "no ignore regions defined for this baseline seed"
+    }
+  ],
+  "capture_protocol_ref": "matrix:dashboard-modern-saas-desktop-chromium@viewport:desktop-1440",
+  "blessed_at": "2026-04-23T02:00:01Z",
+  "source_screenshot_ref": "artifact:.ai-sdlc/artifacts/frontend-browser-gate/gate-run-2026-04-23t02-00-01z/shared-runtime/navigation-screenshot.png",
+  "source_digest": "2a7d7822f6d18dbebbf117586208dd6575b067dcb38ef0dbf86256f79bc402e9"
+}
