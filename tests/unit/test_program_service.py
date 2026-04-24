@@ -6299,6 +6299,63 @@ def test_build_frontend_browser_gate_baseline_request_fails_closed_for_non_mappi
     ]
 
 
+def test_build_frontend_browser_gate_baseline_request_fails_closed_for_matrix_path_traversal(
+    initialized_project_dir: Path,
+) -> None:
+    root = initialized_project_dir
+    svc = ProgramService(root)
+    artifact_path = root / ".ai-sdlc" / "artifacts" / "frontend-browser-gate.yaml"
+    artifact_path.parent.mkdir(parents=True, exist_ok=True)
+    artifact_path.write_text(
+        yaml.safe_dump(
+            {
+                "execution_context": {
+                    "gate_run_id": "gate-run-123",
+                    "apply_result_id": "apply-result-123",
+                    "solution_snapshot_id": "snapshot-123",
+                    "spec_dir": "specs/001-demo",
+                    "attachment_scope_ref": "scope:frontend",
+                    "managed_frontend_target": "managed/frontend",
+                    "readiness_subject_id": "subject-123",
+                    "effective_provider": "public-primevue",
+                    "effective_style_pack": "modern-saas",
+                    "style_fidelity_status": "verified",
+                    "visual_regression_matrix_id": "../../outside-workspace",
+                    "browser_entry_ref": "managed/frontend/src/main.ts",
+                },
+                "artifact_records": [
+                    {
+                        "artifact_id": "artifact-123",
+                        "gate_run_id": "gate-run-123",
+                        "check_name": "visual_regression",
+                        "artifact_type": "visual_regression_bootstrap",
+                        "artifact_ref": ".ai-sdlc/artifacts/frontend-browser-gate/gate-run-123/visual-regression/bootstrap.png",
+                        "anchor_refs": [],
+                        "capture_status": "captured",
+                        "captured_at": "2026-04-24T04:00:00Z",
+                        "source_linkage_refs": {},
+                    }
+                ],
+            },
+            sort_keys=False,
+            allow_unicode=True,
+        ),
+        encoding="utf-8",
+    )
+
+    request = svc.build_frontend_browser_gate_baseline_request(
+        artifact_path=artifact_path.relative_to(root)
+    )
+
+    assert request.required is False
+    assert request.confirmation_required is False
+    assert request.baseline_state == "invalid_matrix_id"
+    assert request.matrix_id == "../../outside-workspace"
+    assert request.remaining_blockers == [
+        "visual_regression_matrix_outside_baselines"
+    ]
+
+
 def test_execute_frontend_browser_gate_probe_auto_materializes_visual_a11y_evidence_when_missing(
     initialized_project_dir: Path,
 ) -> None:

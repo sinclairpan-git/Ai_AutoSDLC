@@ -7078,7 +7078,7 @@ const tableRows = [
                 remaining_blockers=["visual_regression_bootstrap_capture_missing"],
             )
 
-        baseline_root = (
+        baselines_root = (
             self.root
             / "governance"
             / "frontend"
@@ -7086,8 +7086,20 @@ const tableRows = [
             / "evidence"
             / "visual-regression"
             / "baselines"
-            / matrix_id
         )
+        try:
+            baseline_root = (baselines_root / matrix_id).resolve()
+            baseline_root.relative_to(baselines_root.resolve())
+        except ValueError:
+            return ProgramFrontendBrowserGateBaselineRequest(
+                required=False,
+                confirmation_required=False,
+                baseline_state="invalid_matrix_id",
+                artifact_path=relative_artifact_path,
+                gate_run_id=execution_context.gate_run_id,
+                matrix_id=matrix_id,
+                remaining_blockers=["visual_regression_matrix_outside_baselines"],
+            )
         return ProgramFrontendBrowserGateBaselineRequest(
             required=True,
             confirmation_required=True,
