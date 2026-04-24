@@ -6278,6 +6278,27 @@ def test_execute_frontend_browser_gate_baseline_fails_closed_for_invalid_bootstr
     ]
 
 
+def test_build_frontend_browser_gate_baseline_request_fails_closed_for_non_mapping_artifact_root(
+    initialized_project_dir: Path,
+) -> None:
+    root = initialized_project_dir
+    svc = ProgramService(root)
+    artifact_path = root / ".ai-sdlc" / "artifacts" / "frontend-browser-gate.yaml"
+    artifact_path.parent.mkdir(parents=True, exist_ok=True)
+    artifact_path.write_text("- not-a-mapping\n", encoding="utf-8")
+
+    request = svc.build_frontend_browser_gate_baseline_request(
+        artifact_path=artifact_path.relative_to(root)
+    )
+
+    assert request.required is False
+    assert request.confirmation_required is False
+    assert request.baseline_state == "invalid_browser_gate_artifact"
+    assert request.remaining_blockers == [
+        "browser_gate_artifact_invalid:expected_mapping_root"
+    ]
+
+
 def test_execute_frontend_browser_gate_probe_auto_materializes_visual_a11y_evidence_when_missing(
     initialized_project_dir: Path,
 ) -> None:

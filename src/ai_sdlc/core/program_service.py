@@ -7006,6 +7006,16 @@ const tableRows = [
                 artifact_path=relative_artifact_path,
                 remaining_blockers=[f"browser_gate_artifact_invalid:{exc}"],
             )
+        if not isinstance(payload, dict):
+            return ProgramFrontendBrowserGateBaselineRequest(
+                required=False,
+                confirmation_required=False,
+                baseline_state="invalid_browser_gate_artifact",
+                artifact_path=relative_artifact_path,
+                remaining_blockers=[
+                    "browser_gate_artifact_invalid:expected_mapping_root"
+                ],
+            )
 
         try:
             execution_context = BrowserQualityGateExecutionContext.model_validate(
