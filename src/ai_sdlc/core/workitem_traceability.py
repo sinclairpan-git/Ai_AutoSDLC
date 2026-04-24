@@ -7,7 +7,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-from ai_sdlc.branch.git_client import GitClient
+from ai_sdlc.branch.git_client import GitClient, GitError
 from ai_sdlc.core.branch_inventory import BranchInventoryEntry, build_branch_inventory
 
 BATCH_SUMMARY_RE = re.compile(r"(?m)^\s*Batch\s+(?P<num>\d+)\s*[:：]")
@@ -417,7 +417,19 @@ def evaluate_work_item_branch_lifecycle(
     log_text: str | None,
 ) -> WorkItemBranchLifecycleResult:
     """Build inventory from Git and evaluate associated branch lifecycle for one WI."""
-    inventory = build_branch_inventory(GitClient(root))
+    try:
+        inventory = build_branch_inventory(GitClient(root))
+    except GitError as exc:
+        detail = str(exc).strip() or "git repository is not initialized for this workspace"
+        return WorkItemBranchLifecycleResult(
+            ok=False,
+            blockers=[
+                f"BLOCKER: branch lifecycle inventory unavailable: {detail}"
+            ],
+            next_required_actions=[
+                "initialize git and create an initial commit before relying on close-stage branch lifecycle checks"
+            ],
+        )
     return analyze_work_item_branch_lifecycle(
         inventory=inventory,
         wi_name=wi_dir.name,

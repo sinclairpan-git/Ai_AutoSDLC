@@ -458,6 +458,42 @@ specs: []
             }
         ]
 
+    def test_workitem_init_bootstraps_program_manifest_when_missing(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        root = tmp_path / "repo"
+        root.mkdir()
+        init_project(root)
+        _init_git_repo(root)
+        _checkout_branch(root, "feature/149-bootstrap-manifest-docs")
+        monkeypatch.chdir(root)
+
+        result = runner.invoke(
+            app,
+            [
+                "workitem",
+                "init",
+                "--title",
+                "Bootstrap Manifest",
+                "--wi-id",
+                "149-bootstrap-manifest",
+            ],
+        )
+
+        assert result.exit_code == 0
+        assert "program truth handoff" in result.output.lower()
+        manifest = yaml.safe_load(
+            (root / "program-manifest.yaml").read_text(encoding="utf-8")
+        )
+        assert manifest["schema_version"] == "2"
+        assert manifest["specs"] == [
+            {
+                "id": "149-bootstrap-manifest",
+                "path": "specs/149-bootstrap-manifest",
+                "depends_on": [],
+            }
+        ]
+
     def test_workitem_init_skips_existing_sequences_when_project_state_lags(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:

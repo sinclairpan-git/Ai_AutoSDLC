@@ -892,6 +892,18 @@ def _default_dependency_installer(
         except subprocess.CalledProcessError as exc:
             if attempt >= 3 or not _is_retryable_dependency_install_error(exc):
                 raise
+    playwright_runtime_installed = ""
+    normalized_packages = _normalize_dependency_package_specs(payload.packages)
+    if any(
+        package_name in _PLAYWRIGHT_BROWSER_RUNTIME_PACKAGES
+        for package_name in normalized_packages
+    ):
+        _install_playwright_browser_runtime(
+            package_manager=payload.package_manager,
+            working_directory=working_directory,
+            install_env=install_env,
+        )
+        playwright_runtime_installed = "chromium"
     verification = verify_dependency_installation(payload, working_directory)
     verification.update(
         {
@@ -903,9 +915,43 @@ def _default_dependency_installer(
             ),
             "working_directory": str(working_directory),
             "packages": ",".join(payload.packages),
+            "playwright_runtime_installed": playwright_runtime_installed,
         }
     )
     return verification
+
+
+def _install_playwright_browser_runtime(
+    *,
+    package_manager: str,
+    working_directory: Path,
+    install_env: dict[str, str] | None,
+) -> None:
+    if package_manager == "npm":
+        commands = [["npx", "playwright", "install", "chromium"]]
+    elif package_manager == "yarn":
+        commands = [
+            ["yarn", "exec", "playwright", "install", "chromium"],
+            ["yarn", "playwright", "install", "chromium"],
+        ]
+    else:
+        commands = [["pnpm", "exec", "playwright", "install", "chromium"]]
+    last_error: subprocess.CalledProcessError | FileNotFoundError | None = None
+    for command in commands:
+        try:
+            subprocess.run(
+                command,
+                cwd=working_directory,
+                check=True,
+                capture_output=True,
+                text=True,
+                env=install_env,
+            )
+            return
+        except (subprocess.CalledProcessError, FileNotFoundError) as exc:
+            last_error = exc
+    if last_error is not None:
+        raise last_error
 
 
 def _is_retryable_dependency_install_error(exc: subprocess.CalledProcessError) -> bool:

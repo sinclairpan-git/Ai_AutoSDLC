@@ -144,6 +144,31 @@ def _write_release_gate_evidence(wi_dir: Path, *, overall_verdict: str = "PASS")
     )
 
 
+def test_run_close_check_reports_non_git_workspace_instead_of_raising(
+    tmp_path: Path,
+) -> None:
+    (tmp_path / ".ai-sdlc").mkdir()
+    wi_dir = tmp_path / "specs" / "001-wi"
+    wi_dir.mkdir(parents=True)
+    (wi_dir / "tasks.md").write_text("- [x] done\n", encoding="utf-8")
+    (wi_dir / "plan.md").write_text("# Plan\n", encoding="utf-8")
+    _write_execution_log(
+        wi_dir,
+        git_committed=True,
+        commit_hash="abc123",
+        changed_paths=("specs/001-wi/spec.md",),
+        verification_profile="docs-only",
+        verification_commands=("uv run ai-sdlc verify constraints",),
+    )
+
+    result = run_close_check(cwd=tmp_path, wi=wi_dir)
+
+    assert result.ok is False
+    assert any(
+        "branch lifecycle inventory unavailable" in blocker for blocker in result.blockers
+    )
+
+
 def test_run_branch_check_deduplicates_next_required_actions(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

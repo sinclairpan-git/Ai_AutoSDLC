@@ -2,11 +2,19 @@
 
 AI-native SDLC automation framework — a Python CLI tool and rule file set for automating the full software development lifecycle with AI agents.
 
-## Current Release
+## Release And Current Source
 
-`v0.6.0` is the current staged framework release for the frontend governance P1 rollout. This release turns the P1 frontend line into a verifiable baseline across contract diagnostics, visual/a11y foundation, and governed remediation flow.
+`v0.6.0` is still the current staged framework release for the frontend governance P1 rollout. It turns the P1 frontend line into a verifiable baseline across contract diagnostics, visual/a11y foundation, and governed remediation flow.
 
-- Release notes: `docs/releases/v0.6.0.md`
+The current source tree in `main` may already contain newer unreleased behavior beyond `v0.6.0`. At the time of writing, that newer behavior includes:
+
+- `workitem init` can bootstrap a minimal `program-manifest.yaml` when the target project does not have one yet
+- `program managed-delivery-apply --execute --yes` can install component-library packages into the target project's `managed/frontend/` workspace and auto-install Playwright browser runtime when required
+- `program browser-gate-baseline --execute --yes` can promote the latest visual-regression bootstrap capture into a formal baseline
+
+If you are evaluating the latest unreleased framework behavior, prefer the source-checkout path below instead of installing the `v0.6.0` release archive.
+
+- Current release notes: `docs/releases/v0.6.0.md`
 - Windows offline bundle: `ai-sdlc-offline-0.6.0.zip`
 - macOS / Linux offline bundle: `ai-sdlc-offline-0.6.0.tar.gz`
 - Offline packaging details: `packaging/offline/README.md`
@@ -14,10 +22,14 @@ AI-native SDLC automation framework — a Python CLI tool and rule file set for 
 
 ## Quick Start
 
+If you are working from the current source checkout:
+
 ```bash
 uv sync
 uv run ai-sdlc --help
 ```
+
+Run the CLI from the source checkout with `uv run ai-sdlc ...`, or use `python -m ai_sdlc ...` inside an environment where the current checkout has been installed.
 
 If the target machine does not already have Python 3.11, prefer the packaged installers so the runtime can be detected and provisioned automatically instead of asking the user to install Python by hand. The offline bundle can now carry a bundled `python-runtime/` payload for zero-preinstalled-Python installs on the target host.
 
@@ -79,6 +91,48 @@ ai-sdlc run --dry-run
 ```
 
 Use `ai-sdlc adapter status` to inspect the current `agent_target`, raw adapter activation state, and derived governance activation mode, or `ai-sdlc adapter select --agent-target <target>` to correct a wrong target before `run --dry-run`. `run --dry-run` is a startup rehearsal only; it does not by itself prove governance activation.
+
+## Frontend Managed Delivery Loop
+
+If your goal is the current governed frontend path from requirement to browser-gate closure, the minimum command loop is:
+
+1. `python -m ai_sdlc init .`
+What it does: initializes `.ai-sdlc/`, installs the canonical adapter file for the selected host, and records project bootstrap state.
+Next command: `python -m ai_sdlc adapter status`
+
+2. `python -m ai_sdlc adapter status`
+What it does: shows the detected `agent_target`, ingress truth, and whether the adapter is only materialized or already `verified_loaded`.
+Next command: `python -m ai_sdlc run --dry-run`
+
+3. `python -m ai_sdlc run --dry-run`
+What it does: performs a safe rehearsal of the pipeline and gates. This does not generate product code and does not itself prove governance activation.
+Next command: `python -m ai_sdlc workitem init --title "<your capability>"`
+
+4. `python -m ai_sdlc workitem init --title "<your capability>"`
+What it does: creates `spec.md`, `plan.md`, `tasks.md`, and `task-execution-log.md` under `specs/<WI>/`. If `program-manifest.yaml` does not exist yet, the command now bootstraps a minimal manifest entry automatically.
+Next command: describe the requirement in chat, then confirm the frontend solution.
+
+5. `python -m ai_sdlc program solution-confirm --execute --yes`
+What it does: freezes the requested/effective frontend stack, provider, component library, and style choice into `.ai-sdlc/memory/frontend-solution-confirmation/`.
+What it downloads: nothing yet.
+Next command: `python -m ai_sdlc program managed-delivery-apply --execute --yes`
+
+6. `python -m ai_sdlc program managed-delivery-apply --execute --yes`
+What it does: materializes the managed frontend scaffold under `managed/frontend/` and writes the latest apply artifact under `.ai-sdlc/memory/frontend-managed-delivery-apply/`.
+What it may download: component-library packages into `managed/frontend/package.json`, lockfile resolution into `managed/frontend/package-lock.json` or the active package-manager lockfile, package contents into the package-manager install location, and Playwright browser runtime when the selected delivery path requires browser-gate execution.
+Next command: `python -m ai_sdlc program browser-gate-probe --execute`
+
+7. `python -m ai_sdlc program browser-gate-probe --execute`
+What it does: runs the browser gate against the managed frontend entry, writes `.ai-sdlc/memory/frontend-browser-gate/latest.yaml`, and reports the next action based on gate state.
+What it may download: nothing by itself if runtime prerequisites already exist; otherwise the earlier apply step should already have installed the browser runtime.
+Next command:
+- If the output says the baseline is ready to materialize: `python -m ai_sdlc program browser-gate-baseline --execute --yes`
+- If the output says recheck is required: fix the runtime issue and rerun `python -m ai_sdlc program browser-gate-probe --execute`
+
+8. `python -m ai_sdlc program browser-gate-baseline --execute --yes`
+What it does: copies the latest visual-regression bootstrap capture into `governance/frontend/quality-platform/evidence/visual-regression/baselines/<matrix-id>/baseline.png` and writes the matching `baseline.yaml`.
+What it downloads: nothing.
+Next command: rerun `python -m ai_sdlc program browser-gate-probe --execute` to verify the gate passes against the newly promoted baseline.
 
 ## Stage-based dispatch (LLM-friendly)
 

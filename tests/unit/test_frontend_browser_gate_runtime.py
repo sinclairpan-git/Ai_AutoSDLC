@@ -5,10 +5,12 @@ from __future__ import annotations
 import json
 import shutil
 import subprocess
+from contextlib import contextmanager
 from pathlib import Path
 
 import pytest
 
+import ai_sdlc.core.frontend_browser_gate_runtime as runtime_module
 from ai_sdlc.core.frontend_browser_gate_runtime import (
     BrowserGateInteractionProbeCapture,
     BrowserGateProbeRunnerResult,
@@ -19,6 +21,7 @@ from ai_sdlc.core.frontend_browser_gate_runtime import (
     BrowserQualityBundleMaterializationInput,
     build_browser_quality_gate_execution_context,
     materialize_browser_gate_probe_runtime,
+    run_default_browser_gate_probe,
 )
 from ai_sdlc.core.frontend_visual_a11y_evidence_provider import (
     FrontendVisualA11yEvidenceEvaluation,
@@ -902,6 +905,74 @@ def test_materialize_browser_gate_probe_runtime_deduplicates_context_lists_and_w
     assert session.warnings == ["runner warning"]
     assert bundle.component_library_packages == ["primevue", "@primeuix/themes"]
     assert bundle.page_schema_ids == ["dashboard-workspace", "search-list-workspace"]
+
+
+def test_run_default_browser_gate_probe_uses_packaged_runner_when_project_script_missing(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    packaged_runner = tmp_path / "frontend_browser_gate_probe_runner.mjs"
+    packaged_runner.write_text("// packaged runner\n", encoding="utf-8")
+
+    @contextmanager
+    def _as_file(_resource):
+        yield packaged_runner
+
+    class _FakeResource:
+        def joinpath(self, _name: str) -> Path:
+            return packaged_runner
+
+    def _fake_run(*args, **kwargs):
+        assert args[0] == ["node", str(packaged_runner)]
+        return subprocess.CompletedProcess(
+            args=args[0],
+            returncode=0,
+            stdout=json.dumps(
+                {
+                    "runtime_status": "completed",
+                    "shared_capture": {
+                        "gate_run_id": "gate-run-001",
+                        "trace_artifact_ref": ".ai-sdlc/artifacts/frontend-browser-gate/gate-run-001/shared-runtime/playwright-trace.zip",
+                        "navigation_screenshot_ref": ".ai-sdlc/artifacts/frontend-browser-gate/gate-run-001/shared-runtime/navigation-screenshot.png",
+                        "capture_status": "captured",
+                        "final_url": "http://localhost:4173/",
+                        "anchor_refs": ["page:landing"],
+                        "diagnostic_codes": [],
+                    },
+                    "interaction_capture": {
+                        "gate_run_id": "gate-run-001",
+                        "interaction_probe_id": "primary-action",
+                        "artifact_refs": [
+                            ".ai-sdlc/artifacts/frontend-browser-gate/gate-run-001/interaction/interaction-snapshot.json"
+                        ],
+                        "capture_status": "captured",
+                        "classification_candidate": "pass",
+                        "blocking_reason_codes": [],
+                        "anchor_refs": ["interaction:primary-action"],
+                    },
+                    "diagnostic_codes": [],
+                    "warnings": [],
+                }
+            ),
+            stderr="",
+        )
+
+    monkeypatch.setattr(runtime_module.importlib_resources, "files", lambda _pkg: _FakeResource())
+    monkeypatch.setattr(runtime_module.importlib_resources, "as_file", _as_file)
+    monkeypatch.setattr(runtime_module.subprocess, "run", _fake_run)
+    monkeypatch.setattr(
+        runtime_module,
+        "__file__",
+        str(tmp_path / "pkg" / "src" / "ai_sdlc" / "core" / "frontend_browser_gate_runtime.py"),
+    )
+
+    result = run_default_browser_gate_probe(
+        root=tmp_path,
+        artifact_root=tmp_path / ".ai-sdlc" / "artifacts" / "frontend-browser-gate" / "gate-run-001",
+        execution_context=_context(),
+        generated_at="2026-04-24T10:00:00Z",
+    )
+
+    assert result.runtime_status == "completed"
 
 
 def test_materialize_browser_gate_probe_runtime_auto_materializes_visual_a11y_evidence_from_runner_quality_capture(

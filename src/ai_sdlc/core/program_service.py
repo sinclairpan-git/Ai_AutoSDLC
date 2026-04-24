@@ -209,6 +209,9 @@ PROGRAM_FRONTEND_RECHECK_COMMAND = "uv run ai-sdlc verify constraints"
 PROGRAM_FRONTEND_BROWSER_GATE_RECHECK_COMMAND = (
     "uv run ai-sdlc program browser-gate-probe --execute"
 )
+PROGRAM_FRONTEND_BROWSER_GATE_BASELINE_COMMAND = (
+    "python -m ai_sdlc program browser-gate-baseline --execute --yes"
+)
 PROGRAM_TRUTH_SYNC_DRY_RUN_COMMAND = "python -m ai_sdlc program truth sync --dry-run"
 PROGRAM_TRUTH_SYNC_EXECUTE_COMMAND = "python -m ai_sdlc program truth sync --execute --yes"
 PROGRAM_TRUTH_AUDIT_COMMAND = "python -m ai_sdlc program truth audit"
@@ -900,6 +903,50 @@ class ProgramFrontendBrowserGateProbeResult:
     def __post_init__(self) -> None:
         _canonicalize_program_runtime_string_fields(
             self, "required_probe_set", "remaining_blockers", "warnings"
+        )
+
+
+@dataclass
+class ProgramFrontendBrowserGateBaselineRequest:
+    required: bool
+    confirmation_required: bool
+    baseline_state: str
+    artifact_path: str
+    gate_run_id: str = ""
+    matrix_id: str = ""
+    bootstrap_artifact_ref: str = ""
+    baseline_image_path: str = ""
+    baseline_metadata_path: str = ""
+    threshold: float = 0.03
+    remaining_blockers: list[str] = field(default_factory=list)
+    warnings: list[str] = field(default_factory=list)
+
+    def __post_init__(self) -> None:
+        _canonicalize_program_runtime_string_fields(
+            self,
+            "remaining_blockers",
+            "warnings",
+        )
+
+
+@dataclass
+class ProgramFrontendBrowserGateBaselineResult:
+    passed: bool
+    baseline_state: str
+    artifact_path: str
+    gate_run_id: str = ""
+    matrix_id: str = ""
+    baseline_image_path: str = ""
+    baseline_metadata_path: str = ""
+    threshold: float = 0.03
+    remaining_blockers: list[str] = field(default_factory=list)
+    warnings: list[str] = field(default_factory=list)
+
+    def __post_init__(self) -> None:
+        _canonicalize_program_runtime_string_fields(
+            self,
+            "remaining_blockers",
+            "warnings",
         )
 
 
@@ -1965,13 +2012,6 @@ class ProgramService:
                 blockers=[f"spec path resolves outside project root: {spec_path}"],
             )
 
-        if not self.manifest_path.is_file():
-            return ProgramManifestSpecEntrySyncResult(
-                status="not_applicable",
-                spec_id=normalized_id,
-                spec_path=normalized_path,
-            )
-
         remediation_actions = [
             (
                 "update program-manifest.yaml specs[] so "
@@ -1979,6 +2019,28 @@ class ProgramService:
             ),
             PROGRAM_TRUTH_SYNC_EXECUTE_COMMAND,
         ]
+
+        if not self.manifest_path.is_file():
+            payload = {
+                "schema_version": "2",
+                "program": {"goal": ""},
+                "specs": [
+                    {
+                        "id": normalized_id,
+                        "path": normalized_path,
+                        "depends_on": [],
+                    }
+                ],
+            }
+            serialized = yaml.safe_dump(payload, sort_keys=False, allow_unicode=True)
+            self._atomic_write_text(self.manifest_path, serialized)
+            return ProgramManifestSpecEntrySyncResult(
+                status="added",
+                spec_id=normalized_id,
+                spec_path=normalized_path,
+                written_paths=[_relative_to_root_or_str(self.root, self.manifest_path)],
+                next_required_actions=[PROGRAM_TRUTH_SYNC_EXECUTE_COMMAND],
+            )
 
         try:
             payload = self._load_manifest_yaml_payload()
@@ -6880,7 +6942,14 @@ const tableRows = [
             apply_artifact_path=apply_artifact_rel,
         )
         recommended_next_command = ""
-        if execute_decision.execute_gate_state == FRONTEND_GATE_EXECUTE_STATE_RECHECK_REQUIRED:
+        if (
+            self.build_frontend_browser_gate_baseline_request(
+                artifact_path=relative_artifact_path
+            ).baseline_state
+            == "ready_to_execute"
+        ):
+            recommended_next_command = PROGRAM_FRONTEND_BROWSER_GATE_BASELINE_COMMAND
+        elif execute_decision.execute_gate_state == FRONTEND_GATE_EXECUTE_STATE_RECHECK_REQUIRED:
             recommended_next_command = PROGRAM_FRONTEND_BROWSER_GATE_RECHECK_COMMAND
         elif execute_decision.execute_gate_state != FRONTEND_GATE_EXECUTE_STATE_READY:
             recommended_next_command = "uv run ai-sdlc program remediate --dry-run"
@@ -6896,6 +6965,251 @@ const tableRows = [
             recommended_next_command=recommended_next_command,
             required_probe_set=list(context.required_probe_set),
             warnings=result_warnings,
+        )
+
+    def build_frontend_browser_gate_baseline_request(
+        self,
+        *,
+        artifact_path: str | Path | None = None,
+        threshold: float = 0.03,
+    ) -> ProgramFrontendBrowserGateBaselineRequest:
+        relative_artifact_path = (
+            str(artifact_path).strip()
+            if artifact_path is not None
+            else PROGRAM_FRONTEND_BROWSER_GATE_ARTIFACT_REL_PATH
+        )
+        try:
+            resolved_artifact_path = self._resolve_project_relative_path(relative_artifact_path)
+        except ValueError:
+            return ProgramFrontendBrowserGateBaselineRequest(
+                required=False,
+                confirmation_required=False,
+                baseline_state="invalid_artifact_path",
+                artifact_path=relative_artifact_path,
+                remaining_blockers=["browser_gate_artifact_outside_workspace"],
+            )
+        if not resolved_artifact_path.is_file():
+            return ProgramFrontendBrowserGateBaselineRequest(
+                required=False,
+                confirmation_required=False,
+                baseline_state="missing_browser_gate_artifact",
+                artifact_path=relative_artifact_path,
+                remaining_blockers=["browser_gate_artifact_missing"],
+            )
+        try:
+            payload = yaml.safe_load(resolved_artifact_path.read_text(encoding="utf-8")) or {}
+        except yaml.YAMLError as exc:
+            return ProgramFrontendBrowserGateBaselineRequest(
+                required=False,
+                confirmation_required=False,
+                baseline_state="invalid_browser_gate_artifact",
+                artifact_path=relative_artifact_path,
+                remaining_blockers=[f"browser_gate_artifact_invalid:{exc}"],
+            )
+        if not isinstance(payload, dict):
+            return ProgramFrontendBrowserGateBaselineRequest(
+                required=False,
+                confirmation_required=False,
+                baseline_state="invalid_browser_gate_artifact",
+                artifact_path=relative_artifact_path,
+                remaining_blockers=[
+                    "browser_gate_artifact_invalid:expected_mapping_root"
+                ],
+            )
+
+        try:
+            execution_context = BrowserQualityGateExecutionContext.model_validate(
+                payload.get("execution_context", {})
+            )
+        except Exception as exc:
+            return ProgramFrontendBrowserGateBaselineRequest(
+                required=False,
+                confirmation_required=False,
+                baseline_state="invalid_execution_context",
+                artifact_path=relative_artifact_path,
+                remaining_blockers=[f"browser_gate_execution_context_invalid:{exc}"],
+            )
+
+        matrix_id = execution_context.visual_regression_matrix_id.strip()
+        if not matrix_id:
+            return ProgramFrontendBrowserGateBaselineRequest(
+                required=False,
+                confirmation_required=False,
+                baseline_state="visual_regression_not_configured",
+                artifact_path=relative_artifact_path,
+                gate_run_id=execution_context.gate_run_id,
+                remaining_blockers=["visual_regression_matrix_missing"],
+            )
+
+        try:
+            artifact_records = [
+                BrowserProbeArtifactRecord.model_validate(item)
+                for item in payload.get("artifact_records", []) or []
+            ]
+        except Exception as exc:
+            return ProgramFrontendBrowserGateBaselineRequest(
+                required=False,
+                confirmation_required=False,
+                baseline_state="invalid_artifact_records",
+                artifact_path=relative_artifact_path,
+                gate_run_id=execution_context.gate_run_id,
+                matrix_id=matrix_id,
+                remaining_blockers=[f"browser_gate_artifact_records_invalid:{exc}"],
+            )
+
+        bootstrap_record = next(
+            (
+                record
+                for record in artifact_records
+                if record.check_name == "visual_regression"
+                and record.artifact_type == "visual_regression_bootstrap"
+                and record.capture_status == "captured"
+            ),
+            None,
+        )
+        if bootstrap_record is None:
+            return ProgramFrontendBrowserGateBaselineRequest(
+                required=False,
+                confirmation_required=False,
+                baseline_state="bootstrap_capture_missing",
+                artifact_path=relative_artifact_path,
+                gate_run_id=execution_context.gate_run_id,
+                matrix_id=matrix_id,
+                remaining_blockers=["visual_regression_bootstrap_capture_missing"],
+            )
+
+        baselines_root = (
+            self.root
+            / "governance"
+            / "frontend"
+            / "quality-platform"
+            / "evidence"
+            / "visual-regression"
+            / "baselines"
+        )
+        try:
+            baseline_root = (baselines_root / matrix_id).resolve()
+            baseline_root.relative_to(baselines_root.resolve())
+        except ValueError:
+            return ProgramFrontendBrowserGateBaselineRequest(
+                required=False,
+                confirmation_required=False,
+                baseline_state="invalid_matrix_id",
+                artifact_path=relative_artifact_path,
+                gate_run_id=execution_context.gate_run_id,
+                matrix_id=matrix_id,
+                remaining_blockers=["visual_regression_matrix_outside_baselines"],
+            )
+        return ProgramFrontendBrowserGateBaselineRequest(
+            required=True,
+            confirmation_required=True,
+            baseline_state="ready_to_execute",
+            artifact_path=relative_artifact_path,
+            gate_run_id=execution_context.gate_run_id,
+            matrix_id=matrix_id,
+            bootstrap_artifact_ref=bootstrap_record.artifact_ref,
+            baseline_image_path=_relative_to_root_or_str(self.root, baseline_root / "baseline.png"),
+            baseline_metadata_path=_relative_to_root_or_str(self.root, baseline_root / "baseline.yaml"),
+            threshold=threshold,
+        )
+
+    def execute_frontend_browser_gate_baseline(
+        self,
+        *,
+        request: ProgramFrontendBrowserGateBaselineRequest | None = None,
+        artifact_path: str | Path | None = None,
+        threshold: float = 0.03,
+    ) -> ProgramFrontendBrowserGateBaselineResult:
+        effective_request = request or self.build_frontend_browser_gate_baseline_request(
+            artifact_path=artifact_path,
+            threshold=threshold,
+        )
+        if effective_request.remaining_blockers:
+            return ProgramFrontendBrowserGateBaselineResult(
+                passed=False,
+                baseline_state=effective_request.baseline_state,
+                artifact_path=effective_request.artifact_path,
+                gate_run_id=effective_request.gate_run_id,
+                matrix_id=effective_request.matrix_id,
+                baseline_image_path=effective_request.baseline_image_path,
+                baseline_metadata_path=effective_request.baseline_metadata_path,
+                threshold=effective_request.threshold,
+                remaining_blockers=list(effective_request.remaining_blockers),
+                warnings=list(effective_request.warnings),
+            )
+
+        try:
+            bootstrap_path = self._resolve_project_relative_path(
+                effective_request.bootstrap_artifact_ref
+            )
+        except ValueError:
+            return ProgramFrontendBrowserGateBaselineResult(
+                passed=False,
+                baseline_state="invalid_bootstrap_artifact_ref",
+                artifact_path=effective_request.artifact_path,
+                gate_run_id=effective_request.gate_run_id,
+                matrix_id=effective_request.matrix_id,
+                baseline_image_path=effective_request.baseline_image_path,
+                baseline_metadata_path=effective_request.baseline_metadata_path,
+                threshold=effective_request.threshold,
+                remaining_blockers=[
+                    "visual_regression_bootstrap_capture_outside_workspace"
+                ],
+            )
+        if not bootstrap_path.is_file():
+            return ProgramFrontendBrowserGateBaselineResult(
+                passed=False,
+                baseline_state="bootstrap_capture_missing",
+                artifact_path=effective_request.artifact_path,
+                gate_run_id=effective_request.gate_run_id,
+                matrix_id=effective_request.matrix_id,
+                baseline_image_path=effective_request.baseline_image_path,
+                baseline_metadata_path=effective_request.baseline_metadata_path,
+                threshold=effective_request.threshold,
+                remaining_blockers=["visual_regression_bootstrap_capture_missing"],
+            )
+
+        try:
+            baseline_image_path = self._resolve_project_relative_path(
+                effective_request.baseline_image_path
+            )
+            baseline_metadata_path = self._resolve_project_relative_path(
+                effective_request.baseline_metadata_path
+            )
+        except ValueError:
+            return ProgramFrontendBrowserGateBaselineResult(
+                passed=False,
+                baseline_state="invalid_baseline_output_path",
+                artifact_path=effective_request.artifact_path,
+                gate_run_id=effective_request.gate_run_id,
+                matrix_id=effective_request.matrix_id,
+                baseline_image_path=effective_request.baseline_image_path,
+                baseline_metadata_path=effective_request.baseline_metadata_path,
+                threshold=effective_request.threshold,
+                remaining_blockers=[
+                    "visual_regression_baseline_output_outside_workspace"
+                ],
+            )
+        baseline_image_path.parent.mkdir(parents=True, exist_ok=True)
+        baseline_metadata_path.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(bootstrap_path, baseline_image_path)
+        baseline_metadata_path.write_text(
+            yaml.safe_dump(
+                {"threshold": float(effective_request.threshold)},
+                sort_keys=False,
+                allow_unicode=True,
+            ),
+            encoding="utf-8",
+        )
+        return ProgramFrontendBrowserGateBaselineResult(
+            passed=True,
+            baseline_state="baseline_materialized",
+            artifact_path=effective_request.artifact_path,
+            gate_run_id=effective_request.gate_run_id,
+            matrix_id=effective_request.matrix_id,
+            baseline_image_path=effective_request.baseline_image_path,
+            baseline_metadata_path=effective_request.baseline_metadata_path,
+            threshold=effective_request.threshold,
         )
 
     def build_frontend_solution_confirmation(

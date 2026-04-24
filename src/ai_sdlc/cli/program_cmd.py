@@ -1663,6 +1663,107 @@ def program_browser_gate_probe(
     raise typer.Exit(code=0 if result.passed else 1)
 
 
+@program_app.command("browser-gate-baseline")
+def program_browser_gate_baseline(
+    dry_run: bool = typer.Option(
+        True,
+        "--dry-run/--execute",
+        help="Preview or materialize the current visual regression baseline bootstrap.",
+    ),
+    threshold: float = typer.Option(
+        0.03,
+        "--threshold",
+        help="Diff threshold written into baseline metadata.",
+    ),
+    artifact: str = typer.Option(
+        "",
+        "--artifact",
+        help="Optional browser gate artifact path relative to project root; defaults to latest.",
+    ),
+    yes: bool = typer.Option(
+        False,
+        "--yes",
+        help="Confirm execute mode for baseline materialization.",
+    ),
+) -> None:
+    """Preview or execute visual regression baseline bootstrap from the latest gate run."""
+    root = _resolve_root()
+    svc = ProgramService(root)
+    request = svc.build_frontend_browser_gate_baseline_request(
+        artifact_path=artifact or None,
+        threshold=threshold,
+    )
+
+    table = Table(
+        title=(
+            "Program Browser Gate Baseline Dry-Run"
+            if dry_run
+            else "Program Browser Gate Baseline Execute"
+        )
+    )
+    table.add_column("Artifact")
+    table.add_column("Gate Run")
+    table.add_column("Matrix")
+    table.add_row(
+        request.artifact_path or "-",
+        request.gate_run_id or "-",
+        request.matrix_id or "-",
+    )
+    console.print(table)
+    console.print("\n[bold cyan]Browser Gate Baseline Guard[/bold cyan]")
+    console.print(f"  - baseline state: {request.baseline_state}", markup=False)
+    console.print(f"  - threshold: {request.threshold}", markup=False)
+    if request.bootstrap_artifact_ref:
+        console.print(
+            f"  - bootstrap artifact: {request.bootstrap_artifact_ref}",
+            markup=False,
+        )
+    if request.baseline_image_path:
+        console.print(
+            f"  - baseline image path: {request.baseline_image_path}",
+            markup=False,
+        )
+    if request.baseline_metadata_path:
+        console.print(
+            f"  - baseline metadata path: {request.baseline_metadata_path}",
+            markup=False,
+        )
+    for blocker in _dedupe_cli_text_items(request.remaining_blockers):
+        console.print(f"  - blocker: {blocker}", markup=False)
+
+    if dry_run:
+        raise typer.Exit(code=0 if not request.remaining_blockers else 1)
+
+    if not yes:
+        console.print(
+            "[bold yellow]`--execute` requires explicit confirmation via `--yes`.[/bold yellow]"
+        )
+        raise typer.Exit(code=2)
+
+    result = svc.execute_frontend_browser_gate_baseline(request=request)
+    console.print("\n[bold cyan]Browser Gate Baseline Result[/bold cyan]")
+    console.print(f"  - baseline state: {result.baseline_state}", markup=False)
+    console.print(f"  - gate run id: {result.gate_run_id}", markup=False)
+    console.print(f"  - matrix id: {result.matrix_id}", markup=False)
+    if result.baseline_image_path:
+        console.print(
+            f"  - baseline image path: {result.baseline_image_path}",
+            markup=False,
+        )
+    if result.baseline_metadata_path:
+        console.print(
+            f"  - baseline metadata path: {result.baseline_metadata_path}",
+            markup=False,
+        )
+    for blocker in _dedupe_cli_text_items(result.remaining_blockers):
+        console.print(f"  - blocker: {blocker}", markup=False)
+    if result.warnings:
+        console.print("\n[bold yellow]Warnings[/bold yellow]")
+        for warning in _dedupe_cli_text_items(result.warnings):
+            console.print(f"  - {warning}")
+    raise typer.Exit(code=0 if result.passed else 1)
+
+
 @program_app.command("provider-handoff")
 def program_provider_handoff(
     manifest: str = typer.Option(

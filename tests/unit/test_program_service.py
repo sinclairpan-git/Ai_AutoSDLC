@@ -34,6 +34,8 @@ from ai_sdlc.core.frontend_visual_a11y_evidence_provider import (
 )
 from ai_sdlc.core.host_runtime_manager import HostRuntimeProbe, build_host_runtime_plan
 from ai_sdlc.core.program_service import (
+    PROGRAM_FRONTEND_BROWSER_GATE_ARTIFACT_REL_PATH,
+    ProgramFrontendBrowserGateBaselineRequest,
     ProgramFrontendRemediationCommandResult,
     ProgramFrontendRemediationExecutionResult,
     ProgramService,
@@ -68,6 +70,7 @@ from ai_sdlc.generators.frontend_solution_confirmation_artifacts import (
 from ai_sdlc.generators.frontend_theme_token_governance_artifacts import (
     materialize_frontend_theme_token_governance_artifacts,
 )
+from ai_sdlc.models.frontend_browser_gate import BrowserGateVisualRegressionCapture
 from ai_sdlc.models.frontend_cross_provider_consistency import (
     build_p2_frontend_cross_provider_consistency_baseline,
 )
@@ -6048,6 +6051,308 @@ def test_execute_frontend_browser_gate_probe_materializes_gate_run_bundle(
     ]
     assert payload["recommended_next_steps"] == [
         "close the capability_closure_audit entry for the blocked release target"
+    ]
+
+
+def test_execute_frontend_browser_gate_probe_recommends_baseline_bootstrap_when_available(
+    initialized_project_dir: Path,
+) -> None:
+    root = initialized_project_dir
+    save_project_config(root, ProjectConfig(adapter_ingress_state="verified_loaded"))
+    _write_frontend_solution_confirmation_artifacts(root)
+    request_path = _write_artifact_generate_apply_request(root)
+    def _runner(*, artifact_root: Path, execution_context, generated_at: str):
+        trace_path = artifact_root / "shared-runtime" / "playwright-trace.zip"
+        screenshot_path = artifact_root / "shared-runtime" / "navigation-screenshot.png"
+        interaction_path = artifact_root / "interaction" / "interaction-snapshot.json"
+        bootstrap_path = artifact_root / "visual-regression" / "bootstrap.png"
+        trace_path.parent.mkdir(parents=True, exist_ok=True)
+        interaction_path.parent.mkdir(parents=True, exist_ok=True)
+        bootstrap_path.parent.mkdir(parents=True, exist_ok=True)
+        trace_path.write_text('{"trace":"ok"}\n', encoding="utf-8")
+        screenshot_path.write_bytes(b"smoke-png")
+        interaction_path.write_text('{"interaction":"ok"}\n', encoding="utf-8")
+        bootstrap_path.write_bytes(b"visual-bootstrap-png")
+        return BrowserGateProbeRunnerResult(
+            runtime_status="completed",
+            shared_capture=BrowserGateSharedRuntimeCapture(
+                gate_run_id=execution_context.gate_run_id,
+                trace_artifact_ref=str(trace_path.relative_to(root)),
+                navigation_screenshot_ref=str(screenshot_path.relative_to(root)),
+                capture_status="captured",
+                final_url="http://localhost:4173/",
+                anchor_refs=["page:landing"],
+                diagnostic_codes=[],
+            ),
+            interaction_capture=BrowserGateInteractionProbeCapture(
+                gate_run_id=execution_context.gate_run_id,
+                interaction_probe_id="primary-action",
+                artifact_refs=[str(interaction_path.relative_to(root))],
+                capture_status="captured",
+                classification_candidate="pass",
+                blocking_reason_codes=[],
+                anchor_refs=["interaction:primary-action"],
+            ),
+            visual_regression_capture=BrowserGateVisualRegressionCapture(
+                matrix_id=execution_context.visual_regression_matrix_id,
+                gate_run_id=execution_context.gate_run_id,
+                capture_status="captured",
+                screenshot_ref=str(screenshot_path.relative_to(root)),
+                baseline_ref="",
+                baseline_metadata_ref="",
+                diff_image_ref="",
+                diff_ratio=0.0,
+                threshold=0.03,
+                change_summary="visual-regression-matrix-unavailable",
+                capture_protocol_ref="artifact:visual-regression/protocol.yaml",
+                bootstrap_ref=str(bootstrap_path.relative_to(root)),
+                verdict="evidence_missing",
+            ),
+            diagnostic_codes=[],
+            warnings=[],
+        )
+
+    svc = ProgramService(root, browser_gate_probe_runner=_runner)
+    apply_request = svc.build_frontend_managed_delivery_apply_request(request_path)
+    apply_result = svc.execute_frontend_managed_delivery_apply(
+        request_path,
+        request=apply_request,
+        confirmed=True,
+    )
+    svc.write_frontend_managed_delivery_apply_artifact(
+        request_path,
+        request=apply_request,
+        result=apply_result,
+        generated_at="2026-04-14T04:00:00Z",
+    )
+
+    probe_request = svc.build_frontend_browser_gate_probe_request()
+    probe_result = svc.execute_frontend_browser_gate_probe(
+        request=probe_request,
+        generated_at="2026-04-14T04:05:00Z",
+    )
+
+    assert (
+        probe_result.recommended_next_command
+        == "python -m ai_sdlc program browser-gate-baseline --execute --yes"
+    )
+
+
+def test_execute_frontend_browser_gate_baseline_materializes_baseline_files(
+    initialized_project_dir: Path,
+) -> None:
+    root = initialized_project_dir
+    save_project_config(root, ProjectConfig(adapter_ingress_state="verified_loaded"))
+    _write_frontend_solution_confirmation_artifacts(root)
+    request_path = _write_artifact_generate_apply_request(root)
+    def _runner(*, artifact_root: Path, execution_context, generated_at: str):
+        trace_path = artifact_root / "shared-runtime" / "playwright-trace.zip"
+        screenshot_path = artifact_root / "shared-runtime" / "navigation-screenshot.png"
+        interaction_path = artifact_root / "interaction" / "interaction-snapshot.json"
+        bootstrap_path = artifact_root / "visual-regression" / "bootstrap.png"
+        trace_path.parent.mkdir(parents=True, exist_ok=True)
+        interaction_path.parent.mkdir(parents=True, exist_ok=True)
+        bootstrap_path.parent.mkdir(parents=True, exist_ok=True)
+        trace_path.write_text('{"trace":"ok"}\n', encoding="utf-8")
+        screenshot_path.write_bytes(b"smoke-png")
+        interaction_path.write_text('{"interaction":"ok"}\n', encoding="utf-8")
+        bootstrap_path.write_bytes(b"visual-bootstrap-png")
+        return BrowserGateProbeRunnerResult(
+            runtime_status="completed",
+            shared_capture=BrowserGateSharedRuntimeCapture(
+                gate_run_id=execution_context.gate_run_id,
+                trace_artifact_ref=str(trace_path.relative_to(root)),
+                navigation_screenshot_ref=str(screenshot_path.relative_to(root)),
+                capture_status="captured",
+                final_url="http://localhost:4173/",
+                anchor_refs=["page:landing"],
+                diagnostic_codes=[],
+            ),
+            interaction_capture=BrowserGateInteractionProbeCapture(
+                gate_run_id=execution_context.gate_run_id,
+                interaction_probe_id="primary-action",
+                artifact_refs=[str(interaction_path.relative_to(root))],
+                capture_status="captured",
+                classification_candidate="pass",
+                blocking_reason_codes=[],
+                anchor_refs=["interaction:primary-action"],
+            ),
+            visual_regression_capture=BrowserGateVisualRegressionCapture(
+                matrix_id=execution_context.visual_regression_matrix_id,
+                gate_run_id=execution_context.gate_run_id,
+                capture_status="captured",
+                screenshot_ref=str(screenshot_path.relative_to(root)),
+                baseline_ref="",
+                baseline_metadata_ref="",
+                diff_image_ref="",
+                diff_ratio=0.0,
+                threshold=0.03,
+                change_summary="visual-regression-matrix-unavailable",
+                capture_protocol_ref="artifact:visual-regression/protocol.yaml",
+                bootstrap_ref=str(bootstrap_path.relative_to(root)),
+                verdict="evidence_missing",
+            ),
+            diagnostic_codes=[],
+            warnings=[],
+        )
+
+    svc = ProgramService(root, browser_gate_probe_runner=_runner)
+    apply_request = svc.build_frontend_managed_delivery_apply_request(request_path)
+    apply_result = svc.execute_frontend_managed_delivery_apply(
+        request_path,
+        request=apply_request,
+        confirmed=True,
+    )
+    svc.write_frontend_managed_delivery_apply_artifact(
+        request_path,
+        request=apply_request,
+        result=apply_result,
+        generated_at="2026-04-14T04:00:00Z",
+    )
+
+    probe_request = svc.build_frontend_browser_gate_probe_request()
+    svc.execute_frontend_browser_gate_probe(
+        request=probe_request,
+        generated_at="2026-04-14T04:05:00Z",
+    )
+
+    baseline_request = svc.build_frontend_browser_gate_baseline_request()
+    bootstrap_artifact = root / baseline_request.bootstrap_artifact_ref
+    bootstrap_bytes = bootstrap_artifact.read_bytes()
+    shared_screenshot = (
+        root
+        / ".ai-sdlc"
+        / "artifacts"
+        / "frontend-browser-gate"
+        / baseline_request.gate_run_id
+        / "shared-runtime"
+        / "navigation-screenshot.png"
+    )
+    assert shared_screenshot.read_bytes() != bootstrap_bytes
+    baseline_result = svc.execute_frontend_browser_gate_baseline(
+        request=baseline_request
+    )
+
+    assert baseline_result.passed is True
+    assert baseline_result.baseline_state == "baseline_materialized"
+    baseline_image = root / baseline_result.baseline_image_path
+    baseline_metadata = root / baseline_result.baseline_metadata_path
+    assert baseline_image.is_file()
+    assert baseline_metadata.is_file()
+    assert baseline_image.read_bytes() == bootstrap_bytes
+    metadata = yaml.safe_load(baseline_metadata.read_text(encoding="utf-8"))
+    assert metadata == {"threshold": 0.03}
+
+
+def test_execute_frontend_browser_gate_baseline_fails_closed_for_invalid_bootstrap_ref(
+    initialized_project_dir: Path,
+) -> None:
+    root = initialized_project_dir
+    svc = ProgramService(root)
+
+    baseline_result = svc.execute_frontend_browser_gate_baseline(
+        request=ProgramFrontendBrowserGateBaselineRequest(
+            required=True,
+            confirmation_required=True,
+            baseline_state="ready_to_execute",
+            artifact_path=PROGRAM_FRONTEND_BROWSER_GATE_ARTIFACT_REL_PATH,
+            gate_run_id="gate-run-123",
+            matrix_id="search-list-workspace",
+            bootstrap_artifact_ref="/tmp/outside-workspace/bootstrap.png",
+            baseline_image_path=(
+                "governance/frontend/quality-platform/evidence/visual-regression/"
+                "baselines/search-list-workspace/baseline.png"
+            ),
+            baseline_metadata_path=(
+                "governance/frontend/quality-platform/evidence/visual-regression/"
+                "baselines/search-list-workspace/baseline.yaml"
+            ),
+            threshold=0.03,
+        )
+    )
+
+    assert baseline_result.passed is False
+    assert baseline_result.baseline_state == "invalid_bootstrap_artifact_ref"
+    assert baseline_result.remaining_blockers == [
+        "visual_regression_bootstrap_capture_outside_workspace"
+    ]
+
+
+def test_build_frontend_browser_gate_baseline_request_fails_closed_for_non_mapping_artifact_root(
+    initialized_project_dir: Path,
+) -> None:
+    root = initialized_project_dir
+    svc = ProgramService(root)
+    artifact_path = root / ".ai-sdlc" / "artifacts" / "frontend-browser-gate.yaml"
+    artifact_path.parent.mkdir(parents=True, exist_ok=True)
+    artifact_path.write_text("- not-a-mapping\n", encoding="utf-8")
+
+    request = svc.build_frontend_browser_gate_baseline_request(
+        artifact_path=artifact_path.relative_to(root)
+    )
+
+    assert request.required is False
+    assert request.confirmation_required is False
+    assert request.baseline_state == "invalid_browser_gate_artifact"
+    assert request.remaining_blockers == [
+        "browser_gate_artifact_invalid:expected_mapping_root"
+    ]
+
+
+def test_build_frontend_browser_gate_baseline_request_fails_closed_for_matrix_path_traversal(
+    initialized_project_dir: Path,
+) -> None:
+    root = initialized_project_dir
+    svc = ProgramService(root)
+    artifact_path = root / ".ai-sdlc" / "artifacts" / "frontend-browser-gate.yaml"
+    artifact_path.parent.mkdir(parents=True, exist_ok=True)
+    artifact_path.write_text(
+        yaml.safe_dump(
+            {
+                "execution_context": {
+                    "gate_run_id": "gate-run-123",
+                    "apply_result_id": "apply-result-123",
+                    "solution_snapshot_id": "snapshot-123",
+                    "spec_dir": "specs/001-demo",
+                    "attachment_scope_ref": "scope:frontend",
+                    "managed_frontend_target": "managed/frontend",
+                    "readiness_subject_id": "subject-123",
+                    "effective_provider": "public-primevue",
+                    "effective_style_pack": "modern-saas",
+                    "style_fidelity_status": "verified",
+                    "visual_regression_matrix_id": "../../outside-workspace",
+                    "browser_entry_ref": "managed/frontend/src/main.ts",
+                },
+                "artifact_records": [
+                    {
+                        "artifact_id": "artifact-123",
+                        "gate_run_id": "gate-run-123",
+                        "check_name": "visual_regression",
+                        "artifact_type": "visual_regression_bootstrap",
+                        "artifact_ref": ".ai-sdlc/artifacts/frontend-browser-gate/gate-run-123/visual-regression/bootstrap.png",
+                        "anchor_refs": [],
+                        "capture_status": "captured",
+                        "captured_at": "2026-04-24T04:00:00Z",
+                        "source_linkage_refs": {},
+                    }
+                ],
+            },
+            sort_keys=False,
+            allow_unicode=True,
+        ),
+        encoding="utf-8",
+    )
+
+    request = svc.build_frontend_browser_gate_baseline_request(
+        artifact_path=artifact_path.relative_to(root)
+    )
+
+    assert request.required is False
+    assert request.confirmation_required is False
+    assert request.baseline_state == "invalid_matrix_id"
+    assert request.matrix_id == "../../outside-workspace"
+    assert request.remaining_blockers == [
+        "visual_regression_matrix_outside_baselines"
     ]
 
 

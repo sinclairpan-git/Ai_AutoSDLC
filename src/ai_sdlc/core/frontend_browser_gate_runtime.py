@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
+import importlib.resources as importlib_resources
 import inspect
 import json
 import subprocess
 from collections.abc import Callable, Iterable
+from contextlib import contextmanager
 from pathlib import Path
 
 import yaml
@@ -157,71 +159,71 @@ def run_default_browser_gate_probe(
     """Run the default Playwright-backed browser gate probe."""
 
     artifact_root_rel = str(artifact_root.relative_to(root))
-    script_path = root / "scripts" / "frontend_browser_gate_probe_runner.mjs"
-    if not script_path.is_file():
-        return _transient_probe_runner_result(
-            gate_run_id=execution_context.gate_run_id,
-            artifact_root_rel=artifact_root_rel,
-            diagnostic_code="playwright_runner_script_missing",
-            warning="Playwright probe runner is not available in this installation.",
-        )
+    with _resolved_probe_runner_script(root) as script_path:
+        if script_path is None:
+            return _transient_probe_runner_result(
+                gate_run_id=execution_context.gate_run_id,
+                artifact_root_rel=artifact_root_rel,
+                diagnostic_code="playwright_runner_script_missing",
+                warning="Playwright probe runner is not available in this installation.",
+            )
 
-    payload = {
-        "artifact_root": str(artifact_root),
-        "artifact_root_ref": artifact_root_rel,
-        "browser_entry_ref": execution_context.browser_entry_ref,
-        "gate_run_id": execution_context.gate_run_id,
-        "generated_at": generated_at,
-        "managed_frontend_target": execution_context.managed_frontend_target,
-        "delivery_entry_id": execution_context.delivery_entry_id,
-        "package_manager": execution_context.package_manager,
-        "component_library_packages": _unique_strings(
-            execution_context.component_library_packages
-        ),
-        "provider_theme_adapter_id": execution_context.provider_theme_adapter_id,
-        "provider_runtime_adapter_carrier_mode": (
-            execution_context.provider_runtime_adapter_carrier_mode
-        ),
-        "provider_runtime_adapter_delivery_state": (
-            execution_context.provider_runtime_adapter_delivery_state
-        ),
-        "provider_runtime_adapter_evidence_state": (
-            execution_context.provider_runtime_adapter_evidence_state
-        ),
-        "page_schema_ids": _unique_strings(execution_context.page_schema_ids),
-        "visual_regression_matrix_id": execution_context.visual_regression_matrix_id,
-        "visual_regression_viewport_id": execution_context.visual_regression_viewport_id,
-        "effective_provider": execution_context.effective_provider,
-        "effective_style_pack": execution_context.effective_style_pack,
-    }
-    try:
-        completed = subprocess.run(
-            ["node", str(script_path)],
-            cwd=root,
-            input=json.dumps(payload),
-            text=True,
-            capture_output=True,
-            check=False,
-            timeout=_DEFAULT_BROWSER_GATE_PROBE_TIMEOUT_SECONDS,
-        )
-    except FileNotFoundError:
-        return _transient_probe_runner_result(
-            gate_run_id=execution_context.gate_run_id,
-            artifact_root_rel=artifact_root_rel,
-            diagnostic_code="playwright_runtime_unavailable",
-            warning=(
-                "Playwright runtime is not available on this host. Install Playwright and its browsers for this frontend host, then re-run `uv run ai-sdlc program browser-gate-probe --execute`."
+        payload = {
+            "artifact_root": str(artifact_root),
+            "artifact_root_ref": artifact_root_rel,
+            "browser_entry_ref": execution_context.browser_entry_ref,
+            "gate_run_id": execution_context.gate_run_id,
+            "generated_at": generated_at,
+            "managed_frontend_target": execution_context.managed_frontend_target,
+            "delivery_entry_id": execution_context.delivery_entry_id,
+            "package_manager": execution_context.package_manager,
+            "component_library_packages": _unique_strings(
+                execution_context.component_library_packages
             ),
-        )
-    except subprocess.TimeoutExpired:
-        return _transient_probe_runner_result(
-            gate_run_id=execution_context.gate_run_id,
-            artifact_root_rel=artifact_root_rel,
-            diagnostic_code="browser_probe_timeout",
-            warning=(
-                "Browser gate probe timed out before completion. Confirm the frontend host is ready, then re-run `uv run ai-sdlc program browser-gate-probe --execute`."
+            "provider_theme_adapter_id": execution_context.provider_theme_adapter_id,
+            "provider_runtime_adapter_carrier_mode": (
+                execution_context.provider_runtime_adapter_carrier_mode
             ),
-        )
+            "provider_runtime_adapter_delivery_state": (
+                execution_context.provider_runtime_adapter_delivery_state
+            ),
+            "provider_runtime_adapter_evidence_state": (
+                execution_context.provider_runtime_adapter_evidence_state
+            ),
+            "page_schema_ids": _unique_strings(execution_context.page_schema_ids),
+            "visual_regression_matrix_id": execution_context.visual_regression_matrix_id,
+            "visual_regression_viewport_id": execution_context.visual_regression_viewport_id,
+            "effective_provider": execution_context.effective_provider,
+            "effective_style_pack": execution_context.effective_style_pack,
+        }
+        try:
+            completed = subprocess.run(
+                ["node", str(script_path)],
+                cwd=root,
+                input=json.dumps(payload),
+                text=True,
+                capture_output=True,
+                check=False,
+                timeout=_DEFAULT_BROWSER_GATE_PROBE_TIMEOUT_SECONDS,
+            )
+        except FileNotFoundError:
+            return _transient_probe_runner_result(
+                gate_run_id=execution_context.gate_run_id,
+                artifact_root_rel=artifact_root_rel,
+                diagnostic_code="playwright_runtime_unavailable",
+                warning=(
+                    "Playwright runtime is not available on this host. Install Playwright and its browsers for this frontend host, then re-run `uv run ai-sdlc program browser-gate-probe --execute`."
+                ),
+            )
+        except subprocess.TimeoutExpired:
+            return _transient_probe_runner_result(
+                gate_run_id=execution_context.gate_run_id,
+                artifact_root_rel=artifact_root_rel,
+                diagnostic_code="browser_probe_timeout",
+                warning=(
+                    "Browser gate probe timed out before completion. Confirm the frontend host is ready, then re-run `uv run ai-sdlc program browser-gate-probe --execute`."
+                ),
+            )
     stdout = completed.stdout.strip()
     if not stdout:
         warning = completed.stderr.strip() or "Playwright runtime is not available on this host."
@@ -242,6 +244,35 @@ def run_default_browser_gate_probe(
             diagnostic_code="playwright_runner_output_invalid",
             warning=warning,
         )
+
+
+@contextmanager
+def _resolved_probe_runner_script(root: Path) -> Iterable[Path | None]:
+    project_script = root / "scripts" / "frontend_browser_gate_probe_runner.mjs"
+    if project_script.is_file():
+        yield project_script
+        return
+
+    editable_source_script = (
+        Path(__file__).resolve().parents[3]
+        / "scripts"
+        / "frontend_browser_gate_probe_runner.mjs"
+    )
+    if editable_source_script.is_file():
+        yield editable_source_script
+        return
+
+    try:
+        packaged_runner = importlib_resources.files("ai_sdlc").joinpath(
+            "runtime_assets/frontend_browser_gate_probe_runner.mjs"
+        )
+        with importlib_resources.as_file(packaged_runner) as packaged_path:
+            if packaged_path.is_file():
+                yield packaged_path
+                return
+    except (FileNotFoundError, ModuleNotFoundError):
+        pass
+    yield None
 
 
 def materialize_browser_gate_probe_runtime(

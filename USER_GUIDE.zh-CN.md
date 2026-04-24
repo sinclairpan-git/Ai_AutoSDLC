@@ -2,15 +2,19 @@
 
 ## 升级兼容提示（2026-04）
 
+- 这份手册现在默认以**当前仓库源码版 / 未发版最新版**为准。如果你正在验证当前仓库里的新能力，不要默认安装 `v0.6.0` 压缩包，优先在目标项目的虚拟环境里执行 `pip install -e <Ai_AutoSDLC 本地源码目录>`。
 - adapter 的 canonical path 已切换到厂商默认入口：
   - Codex -> `AGENTS.md`
   - Cursor -> `.cursor/rules/ai-sdlc.mdc`
   - VS Code -> `.github/copilot-instructions.md`
   - Claude Code -> `.claude/CLAUDE.md`
 - 旧路径（`.vscode/AI-SDLC.md` / `.claude/AI-SDLC.md` / `.codex/AI-SDLC.md` / `.cursor/rules/ai-sdlc.md`）只作为迁移输入；新版会把内容迁到 canonical path，但不会覆盖你在新路径上的自定义修改。
-- `adapter activate` 现在只保留为兼容/调试入口，不代表 “verified_loaded”；是否已验证以 `adapter status` 的 ingress truth 为准。
+- `adapter status` 才是正式检查入口；`adapter activate` 只保留为兼容/调试入口，不代表 “verified_loaded”，也不是开始聊天前的必经步骤。
 - 示例输出（`Adapter acknowledged` / `Pipeline completed`）不代表 verified_loaded；以 `adapter status` 的 ingress truth 为准。
 - `close-check` 只在 `execute_progress` 缺失时作为可信补证，仍要求 tasks.md / execution-log / fresh verification，不能替代正常 execute 收口。
+- `workitem init` 如果发现根目录还没有 `program-manifest.yaml`，现在会先自动创建最小 manifest，再把当前 work item 写进去。
+- `program managed-delivery-apply --execute --yes` 现在不只是写 apply artifact；它会把组件库包真正安装到目标项目的 `managed/frontend/`，并在需要时自动安装 Playwright browser runtime。
+- `program browser-gate-baseline --execute --yes` 是新增正式入口，用来把最近一次 browser gate 的 visual-regression bootstrap capture 提升成 baseline。
 - 如果 status 仍显示 `materialized only` 或 `unsupported`，请在 IDE 自带终端重新运行 `python -m ai_sdlc adapter select`，或按提示设置宿主环境变量后再跑 `status`。
 
 ## 目录
@@ -23,7 +27,7 @@
   - 第 4 步：在这个空项目里创建虚拟环境并安装 AI-SDLC
   - 第 5 步：验证 AI-SDLC 安装成功
   - 第 6 步：初始化这个空项目
-  - 第 7 步：先确认 adapter 已被宿主认可
+  - 第 7 步：先确认 adapter 状态，不要盲目继续
   - 第 8 步：现在不要聊天，先在终端里做一次预演启动
   - 第 9 步：到这里，才切换到 IDE 聊天输入框
 - 第二章：已有项目完整演练
@@ -34,7 +38,7 @@
   - 第 5 步：验证安装成功
   - 第 6 步：初始化这个已有项目
   - 第 7 步：看一下当前状态
-  - 第 8 步：先确认 adapter 已被宿主认可
+  - 第 8 步：先确认 adapter 状态，不要盲目继续
   - 第 9 步：先在终端做一次预演启动
   - 第 10 步：到这里，才切换到 IDE 聊天输入框
 - Telemetry 运维边界（status/doctor）
@@ -63,7 +67,7 @@
 - 不是 PowerShell 识别 IDE。
 - AI-SDLC 识别的是项目里的 IDE 标记目录，例如 `.cursor`、`.codex`、`.claude`、`.vscode`。
 - 所以最稳的做法是：**先用你的 IDE 打开项目文件夹一次，再去终端跑 `init`。**
-- 如果你先在 PowerShell 跑了 `init`，后面才打开 IDE，也没关系。打开 IDE 以后，再在终端执行一次 `python -m ai_sdlc status`，AI-SDLC 仍然可以补装 IDE 适配文件；补装完以后，再执行一次 `python -m ai_sdlc adapter activate`。
+- 如果你先在 PowerShell 跑了 `init`，后面才打开 IDE，也没关系。打开 IDE 以后，再在终端执行一次 `python -m ai_sdlc adapter status`，AI-SDLC 仍然可以补装 IDE 适配文件；如果 target 识别错了，再执行 `python -m ai_sdlc adapter select --agent-target <真实聊天入口>`。
 
 如果你问“AI-SDLC 到底应该认哪个工具”，答案是：
 
@@ -214,6 +218,15 @@ python3 --version
 
 - 终端
 
+**推荐装法：当前仓库源码版（未发版最新版）**
+
+先确认你本机已经有一份 `Ai_AutoSDLC` 源码目录，例如：
+
+- Windows: `D:\work\Ai_AutoSDLC`
+- macOS / Linux: `~/work/Ai_AutoSDLC`
+
+然后在你的**目标项目目录**里创建虚拟环境，并把当前源码版安装进去。
+
 **Windows 直接复制：**
 
 ```powershell
@@ -221,7 +234,7 @@ py -3.11 -m venv .venv
 Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
 .\.venv\Scripts\Activate.ps1
 python -m pip install -U pip
-pip install "https://github.com/sinclairpan-git/Ai_AutoSDLC/archive/refs/tags/v0.6.0.zip"
+pip install -e D:\work\Ai_AutoSDLC
 ```
 
 **macOS 直接复制：**
@@ -230,7 +243,7 @@ pip install "https://github.com/sinclairpan-git/Ai_AutoSDLC/archive/refs/tags/v0
 python3 -m venv .venv
 source .venv/bin/activate
 python -m pip install -U pip
-pip install "https://github.com/sinclairpan-git/Ai_AutoSDLC/archive/refs/tags/v0.6.0.tar.gz"
+pip install -e ~/work/Ai_AutoSDLC
 ```
 
 **Linux 直接复制：**
@@ -239,6 +252,20 @@ pip install "https://github.com/sinclairpan-git/Ai_AutoSDLC/archive/refs/tags/v0
 python3 -m venv .venv
 source .venv/bin/activate
 python -m pip install -U pip
+pip install -e ~/work/Ai_AutoSDLC
+```
+
+**如果你只想装当前已发布版 `v0.6.0`，再改用下面这组：**
+
+- Windows：
+
+```powershell
+pip install "https://github.com/sinclairpan-git/Ai_AutoSDLC/archive/refs/tags/v0.6.0.zip"
+```
+
+- macOS / Linux：
+
+```bash
 pip install "https://github.com/sinclairpan-git/Ai_AutoSDLC/archive/refs/tags/v0.6.0.tar.gz"
 ```
 
@@ -265,28 +292,28 @@ Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
 - 当前项目目录里已经有 `.venv`
 - 下面命令是在项目根目录执行
 
-**Windows 升级直接复制：**
+**Windows 升级到当前仓库源码版直接复制：**
 
 ```powershell
 .\.venv\Scripts\Activate.ps1
 python -m pip install -U pip
-pip install --upgrade --force-reinstall "https://github.com/sinclairpan-git/Ai_AutoSDLC/archive/refs/tags/v0.6.0.zip"
+pip install --upgrade --force-reinstall -e D:\work\Ai_AutoSDLC
 ```
 
-**Linux 升级直接复制：**
+**Linux 升级到当前仓库源码版直接复制：**
 
 ```bash
 source .venv/bin/activate
 python -m pip install -U pip
-pip install --upgrade --force-reinstall "https://github.com/sinclairpan-git/Ai_AutoSDLC/archive/refs/tags/v0.6.0.tar.gz"
+pip install --upgrade --force-reinstall -e ~/work/Ai_AutoSDLC
 ```
 
-**macOS 升级直接复制：**
+**macOS 升级到当前仓库源码版直接复制：**
 
 ```bash
 source .venv/bin/activate
 python -m pip install -U pip
-pip install --upgrade --force-reinstall "https://github.com/sinclairpan-git/Ai_AutoSDLC/archive/refs/tags/v0.6.0.tar.gz"
+pip install --upgrade --force-reinstall -e ~/work/Ai_AutoSDLC
 ```
 
 ### 第 5 步：验证 AI-SDLC 安装成功
@@ -360,7 +387,8 @@ python -m ai_sdlc init . --agent-target codex
 
 - 输出里出现 `Initialized AI-SDLC project`
 - 当前项目目录里出现 `.ai-sdlc`
-- 输出的下一步提示里会出现 `adapter activate`
+- 对应宿主的 canonical adapter 文件已经落盘，例如 `AGENTS.md`、`.cursor/rules/ai-sdlc.mdc`、`.github/copilot-instructions.md` 或 `.claude/CLAUDE.md`
+- 你接下来应该先执行 `python -m ai_sdlc adapter status`，确认 target 和 ingress truth，而不是盲目执行 `adapter activate`
 
 你可以把结果大致对照成下面这样：
 
@@ -371,8 +399,8 @@ python -m ai_sdlc init . --agent-target codex
 │   Path: .../ui-test-platform/.ai-sdlc  │
 │                                        │
 │ Next step:                             │
-│   Acknowledge adapter:                 │
-│     ai-sdlc adapter activate           │
+│   Inspect adapter truth:               │
+│     ai-sdlc adapter status             │
 │   Start framework in safe mode:        │
 │     ai-sdlc run --dry-run              │
 ╰────────────────────────────────────────╯
@@ -390,7 +418,8 @@ python -m ai_sdlc status
 
 - `status` 正常输出项目状态
 - IDE 适配文件有机会在这一步补装
-- 但这一步还不算“已认可”，后面还要执行一次 `adapter activate`
+- 你能看到当前 `agent_target`、`adapter_ingress_state`、`adapter_verification_result`
+- 如果 target 识别错了，下一步应该执行 `python -m ai_sdlc adapter select --agent-target <真实聊天入口>`
 
 你可以把结果大致对照成下面这样：
 
@@ -401,7 +430,7 @@ Status         initialized
 Pipeline Stage init
 ```
 
-### 第 7 步：先确认 adapter 已被宿主认可
+### 第 7 步：先确认 adapter 状态，不要盲目继续
 
 **这一步在哪执行：**
 
@@ -411,30 +440,32 @@ Pipeline Stage init
 **Windows / macOS / Linux 都直接复制：**
 
 ```bash
-python -m ai_sdlc adapter activate
+python -m ai_sdlc adapter status
 ```
 
 **执行成功以后，你应该看到：**
 
-- 输出里出现 `Adapter acknowledged`
-- 行尾会看到类似 `(acknowledged)` 的状态字样
-- 这只表示你在 CLI 里人工确认了当前 adapter target
-- 对目前的 Markdown / 文件型 adapter（`codex`、`cursor`、`claude_code`、`vscode`、`generic`），这还不是“宿主可验证激活”；治理侧仍按 `soft_prompt_only` 看待
+- 输出里会明确显示当前 `agent_target`
+- 输出里会明确显示 `adapter_ingress_state` 和 `adapter_verification_result`
+- 如果当前还是 `materialized` / `unverified`，这表示 adapter 文件已经装上，但宿主侧还没有 machine-verifiable 证明
+- 这一步的目的不是“把状态手工改绿”，而是先确认框架认的是不是你真实聊天的那个 AI 入口
 
 你可以把结果大致对照成下面这样：
 
 ```text
-IDE adapter (codex): installed 1 file(s)
-Adapter acknowledged: codex (acknowledged)
+Adapter Status
+agent_target                  codex
+adapter_ingress_state         materialized
+adapter_verification_result   unverified
 ```
 
 **如果你怀疑它认错了工具：**
 
-比如你实际在 VS Code 里用的是 Codex，而不是只想装 VS Code 工作区提示，那么不要硬着头皮往下走。先改成真正的聊天工具，再重新激活：
+比如你实际在 VS Code 里用的是 Codex，而不是只想装 VS Code 工作区提示，那么不要硬着头皮往下走。先改成真正的聊天工具，再重新检查：
 
 ```bash
-python -m ai_sdlc adapter select
-python -m ai_sdlc adapter activate --agent-target codex
+python -m ai_sdlc adapter select --agent-target codex
+python -m ai_sdlc adapter status
 ```
 
 `adapter select` 会进入和 `init` 相同的五项列表；如果你在 CI 或非交互终端里操作，再改用 `--agent-target` 明确指定。
@@ -490,21 +521,11 @@ Pipeline completed. Stage: verify
 
 ```bash
 python -m ai_sdlc recover --reconcile
-python -m ai_sdlc status
-python -m ai_sdlc adapter activate
+python -m ai_sdlc adapter status
 python -m ai_sdlc run --dry-run
 ```
 
 如果照做仍失败，不要继续往下走，先回到第 5～7 步检查安装与路径。
-
-**如果它提示你先执行 `adapter activate`：**
-
-这不是坏事，说明 AI-SDLC 只是在保护你，不让你跳过 adapter 认可步骤。直接回到上一步，再执行一遍：
-
-```bash
-python -m ai_sdlc adapter activate
-python -m ai_sdlc run --dry-run
-```
 
 **如果你第一次空项目执行 `run --dry-run` 就提示缺少 `spec.md`：**
 
@@ -513,8 +534,7 @@ python -m ai_sdlc run --dry-run
 
 ```bash
 python -m ai_sdlc init .
-python -m ai_sdlc status
-python -m ai_sdlc adapter activate
+python -m ai_sdlc adapter status
 python -m ai_sdlc run --dry-run
 ```
 
@@ -522,7 +542,7 @@ python -m ai_sdlc run --dry-run
 
 ```bash
 python -m ai_sdlc recover --reconcile
-python -m ai_sdlc adapter activate
+python -m ai_sdlc adapter status
 python -m ai_sdlc run --dry-run
 ```
 
@@ -538,7 +558,7 @@ python -m ai_sdlc run --dry-run
 - 安装
 - 验证
 - 初始化
-- adapter 认可
+- adapter 状态确认
 - 预演启动
 
 现在你可以开始需求沟通、需求扩展、拆解和设计。
@@ -548,7 +568,7 @@ python -m ai_sdlc run --dry-run
 ```text
 我已经在这个项目根目录执行过：
 1. python -m ai_sdlc init .
-2. python -m ai_sdlc adapter activate
+2. python -m ai_sdlc adapter status
 3. python -m ai_sdlc run --dry-run
 
 现在我要开始一个新需求。
@@ -564,7 +584,7 @@ python -m ai_sdlc run --dry-run
 ```text
 我已经在这个项目根目录执行过：
 1. python -m ai_sdlc init .
-2. python -m ai_sdlc adapter activate
+2. python -m ai_sdlc adapter status
 3. python -m ai_sdlc run --dry-run
 
 我现在会上传一份 PRD。
@@ -577,9 +597,9 @@ python -m ai_sdlc run --dry-run
 
 - 安装命令在终端执行
 - 初始化命令在终端执行
-- `adapter activate` 在终端执行
+- `adapter status` 在终端执行
 - `run --dry-run` 在终端执行
-- 至少要把 `init`、`adapter activate`、`run --dry-run` 做完以后，才进入 IDE 聊天输入框说需求
+- 至少要把 `init`、`adapter status`、`run --dry-run` 做完以后，才进入 IDE 聊天输入框说需求
 
 ## 第二章：已有项目完整演练
 
@@ -711,6 +731,15 @@ python3 --version
 
 - 终端
 
+**推荐装法：当前仓库源码版（未发版最新版）**
+
+先确认你本机已经有一份 `Ai_AutoSDLC` 源码目录，例如：
+
+- Windows: `D:\work\Ai_AutoSDLC`
+- macOS / Linux: `~/work/Ai_AutoSDLC`
+
+然后在你的**已有项目目录**里创建虚拟环境，并把当前源码版安装进去。
+
 **Windows 直接复制：**
 
 ```powershell
@@ -718,7 +747,7 @@ py -3.11 -m venv .venv
 Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
 .\.venv\Scripts\Activate.ps1
 python -m pip install -U pip
-pip install "https://github.com/sinclairpan-git/Ai_AutoSDLC/archive/refs/tags/v0.6.0.zip"
+pip install -e D:\work\Ai_AutoSDLC
 ```
 
 **macOS 直接复制：**
@@ -727,7 +756,7 @@ pip install "https://github.com/sinclairpan-git/Ai_AutoSDLC/archive/refs/tags/v0
 python3 -m venv .venv
 source .venv/bin/activate
 python -m pip install -U pip
-pip install "https://github.com/sinclairpan-git/Ai_AutoSDLC/archive/refs/tags/v0.6.0.tar.gz"
+pip install -e ~/work/Ai_AutoSDLC
 ```
 
 **Linux 直接复制：**
@@ -736,6 +765,20 @@ pip install "https://github.com/sinclairpan-git/Ai_AutoSDLC/archive/refs/tags/v0
 python3 -m venv .venv
 source .venv/bin/activate
 python -m pip install -U pip
+pip install -e ~/work/Ai_AutoSDLC
+```
+
+**如果你只想装当前已发布版 `v0.6.0`，再改用下面这组：**
+
+- Windows：
+
+```powershell
+pip install "https://github.com/sinclairpan-git/Ai_AutoSDLC/archive/refs/tags/v0.6.0.zip"
+```
+
+- macOS / Linux：
+
+```bash
 pip install "https://github.com/sinclairpan-git/Ai_AutoSDLC/archive/refs/tags/v0.6.0.tar.gz"
 ```
 
@@ -751,28 +794,28 @@ pip install "https://github.com/sinclairpan-git/Ai_AutoSDLC/archive/refs/tags/v0
 - 当前项目目录里已经有 `.venv`
 - 下面命令是在项目根目录执行
 
-**Windows 升级直接复制：**
+**Windows 升级到当前仓库源码版直接复制：**
 
 ```powershell
 .\.venv\Scripts\Activate.ps1
 python -m pip install -U pip
-pip install --upgrade --force-reinstall "https://github.com/sinclairpan-git/Ai_AutoSDLC/archive/refs/tags/v0.6.0.zip"
+pip install --upgrade --force-reinstall -e D:\work\Ai_AutoSDLC
 ```
 
-**Linux 升级直接复制：**
+**Linux 升级到当前仓库源码版直接复制：**
 
 ```bash
 source .venv/bin/activate
 python -m pip install -U pip
-pip install --upgrade --force-reinstall "https://github.com/sinclairpan-git/Ai_AutoSDLC/archive/refs/tags/v0.6.0.tar.gz"
+pip install --upgrade --force-reinstall -e ~/work/Ai_AutoSDLC
 ```
 
-**macOS 升级直接复制：**
+**macOS 升级到当前仓库源码版直接复制：**
 
 ```bash
 source .venv/bin/activate
 python -m pip install -U pip
-pip install --upgrade --force-reinstall "https://github.com/sinclairpan-git/Ai_AutoSDLC/archive/refs/tags/v0.6.0.tar.gz"
+pip install --upgrade --force-reinstall -e ~/work/Ai_AutoSDLC
 ```
 
 ### 第 5 步：验证安装成功
@@ -845,6 +888,7 @@ python -m ai_sdlc init . --agent-target codex
 - 输出里出现 `Initialized AI-SDLC project`
 - 项目根目录里出现 `.ai-sdlc`
 - 由于这是已有项目，输出里可能会出现 existing project / deep scan / baseline 之类的信息
+- 你接下来应该先执行 `python -m ai_sdlc adapter status`，确认 target 和 ingress truth
 
 你可以把结果大致对照成下面这样：
 
@@ -855,8 +899,8 @@ python -m ai_sdlc init . --agent-target codex
 │   Path: .../my-existing-project/.ai-sdlc   │
 │                                            │
 │ Next step:                                 │
-│   Acknowledge adapter:                     │
-│     ai-sdlc adapter activate               │
+│   Inspect adapter truth:                   │
+│     ai-sdlc adapter status                 │
 │   Start framework in safe mode:            │
 │     ai-sdlc run --dry-run                  │
 ╰────────────────────────────────────────────╯
@@ -878,7 +922,8 @@ python -m ai_sdlc status
 
 - 一张项目状态表
 - 说明 AI-SDLC 已经认到这个已有项目了
-- 如果你刚才是先 `init`、后打开 IDE，这一步也可能顺手补装 adapter 文件；补装完以后，下一步仍然要执行 `adapter activate`
+- 如果你刚才是先 `init`、后打开 IDE，这一步也可能顺手补装 adapter 文件
+- 但正式继续之前，仍应先执行 `python -m ai_sdlc adapter status`
 
 你可以把结果大致对照成下面这样：
 
@@ -889,7 +934,7 @@ Status         initialized
 Pipeline Stage init
 ```
 
-### 第 8 步：先确认 adapter 已被宿主认可
+### 第 8 步：先确认 adapter 状态，不要盲目继续
 
 **这一步在哪执行：**
 
@@ -899,30 +944,32 @@ Pipeline Stage init
 **Windows / macOS / Linux 都直接复制：**
 
 ```bash
-python -m ai_sdlc adapter activate
+python -m ai_sdlc adapter status
 ```
 
 **执行成功以后，你应该看到：**
 
-- 输出里出现 `Adapter acknowledged`
-- 行尾会看到类似 `(acknowledged)` 的状态字样
-- 这只表示你在 CLI 里人工确认了当前 adapter target
-- 对目前的 Markdown / 文件型 adapter（`codex`、`cursor`、`claude_code`、`vscode`、`generic`），这还不是“宿主可验证激活”；治理侧仍按 `soft_prompt_only` 看待
+- 输出里会明确显示当前 `agent_target`
+- 输出里会明确显示 `adapter_ingress_state` 和 `adapter_verification_result`
+- 如果 target 识别错了，这一步就应该先修正 target，再往下走
+- `adapter activate` 仍可作为兼容/调试动作，但不是这里的正式主路径
 
 你可以把结果大致对照成下面这样：
 
 ```text
-IDE adapter (codex): installed 1 file(s)
-Adapter acknowledged: codex (acknowledged)
+Adapter Status
+agent_target                  codex
+adapter_ingress_state         materialized
+adapter_verification_result   unverified
 ```
 
 **如果你怀疑它认错了工具：**
 
-比如你实际在 VS Code 里用的是 Codex，而不是只想装 VS Code 工作区提示，那么不要硬着头皮往下走。先改成真正的聊天工具，再重新激活：
+比如你实际在 VS Code 里用的是 Codex，而不是只想装 VS Code 工作区提示，那么不要硬着头皮往下走。先改成真正的聊天工具，再重新检查：
 
 ```bash
-python -m ai_sdlc adapter select
-python -m ai_sdlc adapter activate --agent-target codex
+python -m ai_sdlc adapter select --agent-target codex
+python -m ai_sdlc adapter status
 ```
 
 `adapter select` 会进入和 `init` 相同的五项列表；如果你在 CI 或非交互终端里操作，再改用 `--agent-target` 明确指定。
@@ -968,18 +1015,11 @@ Pipeline completed. Stage: verify
 ```bash
 python -m ai_sdlc recover --reconcile
 python -m ai_sdlc status
-python -m ai_sdlc adapter activate
+python -m ai_sdlc adapter status
 python -m ai_sdlc run --dry-run
 ```
 
 如果照做仍失败，不要继续第 10 步，先回到第 5～7 步检查安装与路径。
-
-**如果它提示你先执行 `adapter activate`：**
-
-```bash
-python -m ai_sdlc adapter activate
-python -m ai_sdlc run --dry-run
-```
 
 ### 第 10 步：到这里，才切换到 IDE 聊天输入框
 
@@ -994,7 +1034,7 @@ python -m ai_sdlc run --dry-run
 - 验证
 - 初始化
 - 状态检查
-- adapter 认可
+- adapter 状态确认
 - 预演启动
 
 现在可以开始在聊天输入框里说增量需求。
@@ -1005,7 +1045,7 @@ python -m ai_sdlc run --dry-run
 我已经在这个已有项目根目录执行过：
 1. python -m ai_sdlc init .
 2. python -m ai_sdlc status
-3. python -m ai_sdlc adapter activate
+3. python -m ai_sdlc adapter status
 4. python -m ai_sdlc run --dry-run
 
 现在我要做一个增量需求。
@@ -1022,7 +1062,7 @@ python -m ai_sdlc run --dry-run
 我已经在这个已有项目根目录执行过：
 1. python -m ai_sdlc init .
 2. python -m ai_sdlc status
-3. python -m ai_sdlc adapter activate
+3. python -m ai_sdlc adapter status
 4. python -m ai_sdlc run --dry-run
 
 我现在会上传一份已有需求说明或 PRD。
@@ -1035,7 +1075,7 @@ python -m ai_sdlc run --dry-run
 
 - 命令还是在终端执行
 - 初始化还是在终端执行
-- `adapter activate` 还是在终端执行
+- `adapter status` 还是在终端执行
 - `run --dry-run` 还是在终端执行
 - 真正开始需求沟通，是在 IDE 聊天输入框里执行自然语言对话
 
@@ -1130,9 +1170,11 @@ Phase 1 的边界要记住：
 | program solution-confirm --execute --yes | `python -m ai_sdlc program solution-confirm --execute --yes` | 技术方案确认落盘 | **可能写 adapter**；确认后会写 `.ai-sdlc/memory/frontend-solution-confirmation/` snapshot artifacts，并可选写 report 文件 |
 | program solution-confirm --execute --continue --yes | `python -m ai_sdlc program solution-confirm --execute --continue --yes` | 确认后继续进入 managed delivery apply | **可能写 adapter**；会先写 solution snapshot，再进入 apply；若 `requested_* != effective_*`，还需额外提供 `--ack-effective-change` |
 | program managed-delivery-apply --dry-run | `python -m ai_sdlc program managed-delivery-apply --dry-run` | managed delivery apply 预览 | **可能写 adapter**；若省略 `--request`，会从 current truth 物化 request，并显示 guard / blocker / next step |
-| program managed-delivery-apply --execute --yes | `python -m ai_sdlc program managed-delivery-apply --execute --yes` | 执行 managed delivery apply | **可能写 adapter**；若省略 `--request` 且 `requested_* != effective_*`，还需额外提供 `--ack-effective-change` |
+| program managed-delivery-apply --execute --yes | `python -m ai_sdlc program managed-delivery-apply --execute --yes` | 执行 managed delivery apply | **可能写 adapter**；若省略 `--request` 且 `requested_* != effective_*`，还需额外提供 `--ack-effective-change`；会把组件库包真正安装到 `managed/frontend/`，更新 lockfile，并在需要时安装 Playwright browser runtime |
 | program browser-gate-probe --dry-run | `python -m ai_sdlc program browser-gate-probe --dry-run` | browser gate 预演 | **可能写 adapter**：命令主体只读；会显示 managed frontend target、delivery entry、component packages 与 overall gate status preview |
-| program browser-gate-probe --execute | `python -m ai_sdlc program browser-gate-probe --execute` | 执行 browser gate probe | **可能写 adapter**：会写 `.ai-sdlc/memory/frontend-browser-gate/latest.yaml`，并显式显示 delivery entry、component packages、gate status 与下一条命令 |
+| program browser-gate-probe --execute | `python -m ai_sdlc program browser-gate-probe --execute` | 执行 browser gate probe | **可能写 adapter**：会写 `.ai-sdlc/memory/frontend-browser-gate/latest.yaml`，并显式显示 delivery entry、component packages、gate status 与下一条命令；如果 visual bootstrap 已经可用，下一条通常会指向 `program browser-gate-baseline --execute --yes` |
+| program browser-gate-baseline --dry-run | `python -m ai_sdlc program browser-gate-baseline --dry-run` | 查看当前 visual bootstrap 是否已满足 baseline 提升条件 | **可能写 adapter**：命令主体只读；会显示当前 artifact、gate run、matrix id、baseline state 与 blocker |
+| program browser-gate-baseline --execute --yes | `python -m ai_sdlc program browser-gate-baseline --execute --yes` | 正式提升 browser gate 的 visual bootstrap baseline | **可能写 adapter**：会把 visual-regression bootstrap capture 复制到 `governance/frontend/quality-platform/evidence/visual-regression/baselines/<matrix-id>/baseline.png` 并写 `baseline.yaml` |
 | program page-ui-schema-handoff | `python -m ai_sdlc program page-ui-schema-handoff` | 查看 `147` 的 provider/kernel handoff surface | **可能写 adapter**：命令主体只读；依赖既有 `.ai-sdlc/memory/frontend-solution-confirmation/latest.yaml`，若缺失会返回 blocker |
 | program delivery-registry-handoff | `python -m ai_sdlc program delivery-registry-handoff` | 查看当前技术栈选择命中的官方 delivery entry、组件库包集合与 prerequisite | **可能写 adapter**：命令主体只读；会显示 install strategy、component packages、provider manifest/style-support 引用与当前 prerequisite gap |
 | program generation-constraints-handoff | `python -m ai_sdlc program generation-constraints-handoff` | 查看后续代码生成默认继承的组件库上下文与 generation constraints | **可能写 adapter**：命令主体只读；会显示 delivery entry、component packages、page schema ids、allowed recipes 与 whitelist components |
@@ -1151,7 +1193,7 @@ Phase 1 的边界要记住：
 | rules materialize-frontend-provider-expansion | `python -m ai_sdlc rules materialize-frontend-provider-expansion` | materialize `151` 的 canonical provider expansion artifacts | **可能写 adapter**：命令本身会把 artifact 写到 `governance/frontend/provider-expansion/`；会落 choice surface、react exposure boundary 与各 provider 的 roster/certification aggregate |
 | rules materialize-frontend-provider-runtime-adapter | `python -m ai_sdlc rules materialize-frontend-provider-runtime-adapter` | materialize `153` 的 canonical provider runtime adapter artifacts | **可能写 adapter**：命令本身会把 artifact 写到 `governance/frontend/provider-runtime-adapter/`；会落 adapter targets、runtime boundary receipt 与各 provider 的 scaffold contract |
 | manual telemetry | `python -m ai_sdlc telemetry open-session`、`record-*`、`close-session` | operator evidence write | **会写 telemetry**：落到 `.ai-sdlc/local/telemetry/` 与派生 indexes；CLI 入口本身也可能先触发 adapter apply |
-| workitem init | `python -m ai_sdlc workitem init --title "新 capability 标题"` | direct-formal 初始化 formal work item | **会写 formal docs**：仅适用于已完成 `ai-sdlc init .` 的项目；直接创建 `specs/<WI>/spec.md`、`plan.md`、`tasks.md`；不会要求先写 `docs/superpowers/*` |
+| workitem init | `python -m ai_sdlc workitem init --title "新 capability 标题"` | direct-formal 初始化 formal work item | **会写 formal docs**：仅适用于已完成 `ai-sdlc init .` 的项目；直接创建 `specs/<WI>/spec.md`、`plan.md`、`tasks.md`；如果根目录尚无 `program-manifest.yaml`，现在会先自动创建最小 manifest 并写入当前 spec entry；不会要求先写 `docs/superpowers/*` |
 | workitem truth-check | `python -m ai_sdlc workitem truth-check --wi specs/<WI>/ --rev <branch|commit>` | work item 指定 revision 的阶段真值核验 | **命令主体只读，但可能写 adapter**：绑定用户指定 branch/commit 后，回答该 WI 在目标 revision 上是 `formal_freeze_only`、`branch_only_implemented` 还是 `mainline_merged`，并显式披露 HEAD/revision mismatch |
 | workitem branch-check | `python -m ai_sdlc workitem branch-check --wi specs/<WI>/` | work item 关联 branch/worktree 只读盘点 | **命令主体只读，但可能写 adapter**：回答当前 WI 尚有哪些未处置 branch/worktree，以及它们相对 `main` 的 divergence 与 disposition |
 | workitem close-check | `python -m ai_sdlc workitem close-check --wi specs/<WI>/` | work item 收口真值核验 | **命令主体只读，但可能写 adapter**：会核对 tasks / planned batch / traceability / execution-log / fresh verification / git closure / branch lifecycle disposition truth；若关联 scratch/worktree 分支仍未处置且相对 `main` 存在漂移，会返回 `BLOCKER` |
@@ -1224,6 +1266,26 @@ Phase 1 的边界要记住：
 
 - 这一步只表示 browser gate 执行面已继承当前组件库选择，不代表 provider-specific 质量探针已经全部实现。
 - 如果 Playwright runner 或运行时不可用，artifact 会诚实返回 `recheck_required` / `incomplete`，而不是把当前组件库误报成已验收通过。
+
+### 7.0.3) `program browser-gate-baseline` 的最小使用面
+
+`program browser-gate-baseline` 是当前 visual-regression baseline promotion 的正式入口。
+
+- 预演：
+  - `python -m ai_sdlc program browser-gate-baseline --dry-run`
+  - 会读取最近一次 browser gate artifact，显示当前 `gate run`、`matrix id`、`baseline state`、`bootstrap artifact`、`baseline image path` 与 `baseline metadata path`。
+- 执行：
+  - `python -m ai_sdlc program browser-gate-baseline --execute --yes`
+  - 会把最近一次 browser gate 中的 `visual_regression_bootstrap` capture 提升成正式 baseline，写到 `governance/frontend/quality-platform/evidence/visual-regression/baselines/<matrix-id>/baseline.png` 和 `baseline.yaml`。
+- 执行完以后：
+  - 下一步应该重新执行 `python -m ai_sdlc program browser-gate-probe --execute`
+  - 用新 baseline 再跑一轮 gate，确认最终状态是不是已经变成 `passed`
+
+这里有三个边界：
+
+- baseline 来源是 `visual_regression_bootstrap`，不是 smoke 的 `navigation_screenshot`。
+- 这个命令本身不重新跑浏览器，只负责把最近一次 gate 产出的 bootstrap capture 提升成正式 baseline。
+- 如果最近一次 browser gate 还没有生成 bootstrap capture，这个命令会 fail-closed，并诚实返回 blocker。
 
 ### 7.1) `page-ui-schema` 的最小使用面
 
