@@ -1,11 +1,11 @@
 # 离线一键安装包（含 Windows）
 
-> 当前 staged release：`v0.6.0`
+> 当前 staged release：`v0.7.0`
 >
 > 发布入口口径：
-> - Windows 使用 `ai-sdlc-offline-0.6.0.zip`
-> - Linux/macOS 使用 `ai-sdlc-offline-0.6.0.tar.gz`
-> - Release Notes：`docs/releases/v0.6.0.md`
+> - Windows 使用 `ai-sdlc-offline-0.7.0.zip`
+> - Linux/macOS 使用 `ai-sdlc-offline-0.7.0.tar.gz`
+> - Release Notes：`docs/releases/v0.7.0.md`
 
 ## 角色分工
 

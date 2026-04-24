@@ -4,19 +4,13 @@ AI-native SDLC automation framework — a Python CLI tool and rule file set for 
 
 ## Release And Current Source
 
-`v0.6.0` is still the current staged framework release for the frontend governance P1 rollout. It turns the P1 frontend line into a verifiable baseline across contract diagnostics, visual/a11y foundation, and governed remediation flow.
+`v0.7.0` is the current staged framework release. This version turns the previously unreleased frontend managed-delivery closure work into a published path: empty-project bootstrap, real component-library installation, browser-gate baseline promotion, and fail-closed hardening for artifact-driven frontend quality checks are now part of the release line.
 
-The current source tree in `main` may already contain newer unreleased behavior beyond `v0.6.0`. At the time of writing, that newer behavior includes:
+If you want the published release, install `v0.7.0`. If you are evaluating newer unreleased behavior beyond this tag, prefer the source-checkout path below.
 
-- `workitem init` can bootstrap a minimal `program-manifest.yaml` when the target project does not have one yet
-- `program managed-delivery-apply --execute --yes` can install component-library packages into the target project's `managed/frontend/` workspace and auto-install Playwright browser runtime when required
-- `program browser-gate-baseline --execute --yes` can promote the latest visual-regression bootstrap capture into a formal baseline
-
-If you are evaluating the latest unreleased framework behavior, prefer the source-checkout path below instead of installing the `v0.6.0` release archive.
-
-- Current release notes: `docs/releases/v0.6.0.md`
-- Windows offline bundle: `ai-sdlc-offline-0.6.0.zip`
-- macOS / Linux offline bundle: `ai-sdlc-offline-0.6.0.tar.gz`
+- Current release notes: `docs/releases/v0.7.0.md`
+- Windows offline bundle: `ai-sdlc-offline-0.7.0.zip`
+- macOS / Linux offline bundle: `ai-sdlc-offline-0.7.0.tar.gz`
 - Offline packaging details: `packaging/offline/README.md`
 - Offline Python runtime release checklist: `packaging/offline/RELEASE_CHECKLIST.md`
 
@@ -185,7 +179,7 @@ The file `.ai-sdlc/project/config/project-config.yaml` holds IDE detection metad
 
 ## Documentation
 
-- Current release notes: `docs/releases/v0.6.0.md`
+- Current release notes: `docs/releases/v0.7.0.md`
 - Chinese user guide: `USER_GUIDE.zh-CN.md` (start with the **目录**, then jump to Chapter 1 or Chapter 2)
 - Offline install bundle (build + one-command install): `packaging/offline/README.md`
 - Offline Python runtime release checklist: `packaging/offline/RELEASE_CHECKLIST.md`

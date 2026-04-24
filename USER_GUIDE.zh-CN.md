@@ -2,7 +2,7 @@
 
 ## 升级兼容提示（2026-04）
 
-- 这份手册现在默认以**当前仓库源码版 / 未发版最新版**为准。如果你正在验证当前仓库里的新能力，不要默认安装 `v0.6.0` 压缩包，优先在目标项目的虚拟环境里执行 `pip install -e <Ai_AutoSDLC 本地源码目录>`。
+- 这份手册现在默认以**当前仓库源码版 / 当前发布版 `v0.7.0`** 为准。如果你正在验证当前仓库里的新能力，优先在目标项目的虚拟环境里执行 `pip install -e <Ai_AutoSDLC 本地源码目录>`；如果你只想安装当前已发布版，再使用下文的 `v0.7.0` tag 安装命令。
 - adapter 的 canonical path 已切换到厂商默认入口：
   - Codex -> `AGENTS.md`
   - Cursor -> `.cursor/rules/ai-sdlc.mdc`
@@ -255,18 +255,18 @@ python -m pip install -U pip
 pip install -e ~/work/Ai_AutoSDLC
 ```
 
-**如果你只想装当前已发布版 `v0.6.0`，再改用下面这组：**
+**如果你只想装当前已发布版 `v0.7.0`，再改用下面这组：**
 
 - Windows：
 
 ```powershell
-pip install "https://github.com/sinclairpan-git/Ai_AutoSDLC/archive/refs/tags/v0.6.0.zip"
+pip install "https://github.com/sinclairpan-git/Ai_AutoSDLC/archive/refs/tags/v0.7.0.zip"
 ```
 
 - macOS / Linux：
 
 ```bash
-pip install "https://github.com/sinclairpan-git/Ai_AutoSDLC/archive/refs/tags/v0.6.0.tar.gz"
+pip install "https://github.com/sinclairpan-git/Ai_AutoSDLC/archive/refs/tags/v0.7.0.tar.gz"
 ```
 
 **执行成功以后，你应该看到：**
@@ -768,18 +768,18 @@ python -m pip install -U pip
 pip install -e ~/work/Ai_AutoSDLC
 ```
 
-**如果你只想装当前已发布版 `v0.6.0`，再改用下面这组：**
+**如果你只想装当前已发布版 `v0.7.0`，再改用下面这组：**
 
 - Windows：
 
 ```powershell
-pip install "https://github.com/sinclairpan-git/Ai_AutoSDLC/archive/refs/tags/v0.6.0.zip"
+pip install "https://github.com/sinclairpan-git/Ai_AutoSDLC/archive/refs/tags/v0.7.0.zip"
 ```
 
 - macOS / Linux：
 
 ```bash
-pip install "https://github.com/sinclairpan-git/Ai_AutoSDLC/archive/refs/tags/v0.6.0.tar.gz"
+pip install "https://github.com/sinclairpan-git/Ai_AutoSDLC/archive/refs/tags/v0.7.0.tar.gz"
 ```
 
 **执行成功以后，你应该看到：**

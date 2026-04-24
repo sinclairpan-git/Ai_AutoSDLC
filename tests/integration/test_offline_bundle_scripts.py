@@ -522,7 +522,7 @@ def test_install_online_uses_detected_python_and_prints_bilingual_guidance(
 
     env = dict(os.environ)
     env["PATH"] = str(wrapper_dir)
-    env["AI_SDLC_PACKAGE_SPEC"] = "ai-sdlc==0.6.0"
+    env["AI_SDLC_PACKAGE_SPEC"] = "ai-sdlc==0.7.0"
     bash = shutil.which("bash") or "/bin/bash"
 
     result = subprocess.run(
@@ -604,7 +604,7 @@ raise SystemExit(0)
 
     env = dict(os.environ)
     env["PATH"] = str(wrapper_dir)
-    env["AI_SDLC_PACKAGE_SPEC"] = "ai-sdlc==0.6.0"
+    env["AI_SDLC_PACKAGE_SPEC"] = "ai-sdlc==0.7.0"
     env.pop("PYTHON", None)
     bash = shutil.which("bash") or "/bin/bash"
 

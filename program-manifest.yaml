@@ -118,6 +118,9 @@ source_registry:
 - path: docs/releases/v0.6.0.md
   source_type: release_doc
   truth_layer: release
+- path: docs/releases/v0.7.0.md
+  source_type: release_doc
+  truth_layer: release
 - path: docs/superpowers/specs/2026-03-27-telemetry-trace-governance-design.md
   source_type: design_doc
   truth_layer: design
@@ -1803,11 +1806,11 @@ specs:
   owner: team-frontend-governance
   frontend_evidence_class: framework_capability
 truth_snapshot:
-  generated_at: '2026-04-24T01:30:13Z'
+  generated_at: '2026-04-24T06:15:35Z'
   generated_by: ai-sdlc program truth sync
   generator_version: program_truth_snapshot_v1
-  repo_revision: 20ceca3
-  authoring_hash: c0da4411d99a45ee3f5f172eebe17aaf0c187dd1f34e7d34fa8c35793c5a684a
+  repo_revision: '4287106'
+  authoring_hash: bfbe2ab1cc45c9a706fcc796bfd91cae26e094c12d2352c904173533e0d87a3d
   source_hashes:
     truth_check:specs/095-frontend-mainline-product-delivery-baseline: bcf72ac70e6022d849c24a3380b63f01cabe8c7b5c610420f20ac79448033787
     truth_check:specs/096-frontend-mainline-host-runtime-manager-baseline: a713784c4de31cb89ebb0edaa78707f4b6f61309a8c5b66ab1eb387743fe29a2
@@ -1846,7 +1849,7 @@ truth_snapshot:
     truth_check:specs/122-agent-adapter-verified-host-ingress-runtime-baseline: ea9855423cdf1938816f7257609dbf2d16d5029ce5265f2f1f1787fe70f79048
     close_check:specs/121-agent-adapter-verified-host-ingress-truth-baseline: bb1a96307f540d67dcb9ccb06e03e5ef522ae9acfd1e9a2b5f5816aed8658072
     close_check:specs/122-agent-adapter-verified-host-ingress-runtime-baseline: bb1a96307f540d67dcb9ccb06e03e5ef522ae9acfd1e9a2b5f5816aed8658072
-  snapshot_hash: 29bf37321f8c341e7a9608772a61c74b0c78707e6f3906dfe43780d9827ddb28
+  snapshot_hash: e756b1d20dc96a692a5c0b453c8e1aa9f508cccac3b7426e4318df1084724a2d
   computed_capabilities:
   - capability_id: frontend-mainline-delivery
     closure_state: closed
@@ -1860,8 +1863,8 @@ truth_snapshot:
     stale_reason: ''
   source_inventory:
     state: complete
-    total_sources: 912
-    mapped_sources: 912
+    total_sources: 913
+    mapped_sources: 913
     unmapped_sources: 0
     missing_sources: 0
     phase_signal_count: 3167
@@ -1877,7 +1880,7 @@ truth_snapshot:
       requirements: 2
       defect: 2
       design: 8
-      release: 4
+      release: 5
     layer_materialized:
       blueprint: 1
       spec: 179
@@ -1888,7 +1891,7 @@ truth_snapshot:
       requirements: 2
       defect: 2
       design: 8
-      release: 4
+      release: 5
     entries:
     - path: AI-SDLC 全自动化框架 产品需求文档（PRD）.md
       source_type: prd
@@ -10025,6 +10028,15 @@ truth_snapshot:
       mapping_ref: docs/releases/v0.6.0.md
       phase_signal_count: 8
       deferred_signal_count: 8
+      non_goal_signal_count: 0
+    - path: docs/releases/v0.7.0.md
+      source_type: release_doc
+      truth_layer: release
+      mapped: true
+      exists: true
+      mapping_ref: docs/releases/v0.7.0.md
+      phase_signal_count: 0
+      deferred_signal_count: 0
       non_goal_signal_count: 0
     - path: docs/requirements-gap-reconciliation.zh-CN.md
       source_type: requirement_doc
