@@ -6068,9 +6068,9 @@ def test_execute_frontend_browser_gate_probe_recommends_baseline_bootstrap_when_
         interaction_path.parent.mkdir(parents=True, exist_ok=True)
         bootstrap_path.parent.mkdir(parents=True, exist_ok=True)
         trace_path.write_text('{"trace":"ok"}\n', encoding="utf-8")
-        screenshot_path.write_bytes(b"png")
+        screenshot_path.write_bytes(b"smoke-png")
         interaction_path.write_text('{"interaction":"ok"}\n', encoding="utf-8")
-        bootstrap_path.write_bytes(b"png")
+        bootstrap_path.write_bytes(b"visual-bootstrap-png")
         return BrowserGateProbeRunnerResult(
             runtime_status="completed",
             shared_capture=BrowserGateSharedRuntimeCapture(
@@ -6152,9 +6152,9 @@ def test_execute_frontend_browser_gate_baseline_materializes_baseline_files(
         interaction_path.parent.mkdir(parents=True, exist_ok=True)
         bootstrap_path.parent.mkdir(parents=True, exist_ok=True)
         trace_path.write_text('{"trace":"ok"}\n', encoding="utf-8")
-        screenshot_path.write_bytes(b"png")
+        screenshot_path.write_bytes(b"smoke-png")
         interaction_path.write_text('{"interaction":"ok"}\n', encoding="utf-8")
-        bootstrap_path.write_bytes(b"png")
+        bootstrap_path.write_bytes(b"visual-bootstrap-png")
         return BrowserGateProbeRunnerResult(
             runtime_status="completed",
             shared_capture=BrowserGateSharedRuntimeCapture(
@@ -6215,6 +6215,18 @@ def test_execute_frontend_browser_gate_baseline_materializes_baseline_files(
     )
 
     baseline_request = svc.build_frontend_browser_gate_baseline_request()
+    bootstrap_artifact = root / baseline_request.bootstrap_artifact_ref
+    bootstrap_bytes = bootstrap_artifact.read_bytes()
+    shared_screenshot = (
+        root
+        / ".ai-sdlc"
+        / "artifacts"
+        / "frontend-browser-gate"
+        / baseline_request.gate_run_id
+        / "shared-runtime"
+        / "navigation-screenshot.png"
+    )
+    assert shared_screenshot.read_bytes() != bootstrap_bytes
     baseline_result = svc.execute_frontend_browser_gate_baseline(
         request=baseline_request
     )
@@ -6225,6 +6237,7 @@ def test_execute_frontend_browser_gate_baseline_materializes_baseline_files(
     baseline_metadata = root / baseline_result.baseline_metadata_path
     assert baseline_image.is_file()
     assert baseline_metadata.is_file()
+    assert baseline_image.read_bytes() == bootstrap_bytes
     metadata = yaml.safe_load(baseline_metadata.read_text(encoding="utf-8"))
     assert metadata == {"threshold": 0.03}
 

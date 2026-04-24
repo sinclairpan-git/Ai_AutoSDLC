@@ -7068,27 +7068,6 @@ const tableRows = [
                 remaining_blockers=["visual_regression_bootstrap_capture_missing"],
             )
 
-        screenshot_record = next(
-            (
-                record
-                for record in artifact_records
-                if record.check_name == "playwright_smoke"
-                and record.artifact_type == "navigation_screenshot"
-                and record.capture_status == "captured"
-            ),
-            None,
-        )
-        if screenshot_record is None:
-            return ProgramFrontendBrowserGateBaselineRequest(
-                required=False,
-                confirmation_required=False,
-                baseline_state="bootstrap_screenshot_missing",
-                artifact_path=relative_artifact_path,
-                gate_run_id=execution_context.gate_run_id,
-                matrix_id=matrix_id,
-                remaining_blockers=["visual_regression_bootstrap_screenshot_missing"],
-            )
-
         baseline_root = (
             self.root
             / "governance"
@@ -7106,7 +7085,7 @@ const tableRows = [
             artifact_path=relative_artifact_path,
             gate_run_id=execution_context.gate_run_id,
             matrix_id=matrix_id,
-            bootstrap_artifact_ref=screenshot_record.artifact_ref,
+            bootstrap_artifact_ref=bootstrap_record.artifact_ref,
             baseline_image_path=_relative_to_root_or_str(self.root, baseline_root / "baseline.png"),
             baseline_metadata_path=_relative_to_root_or_str(self.root, baseline_root / "baseline.yaml"),
             threshold=threshold,
