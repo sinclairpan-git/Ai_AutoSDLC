@@ -124,6 +124,16 @@ def build_editable(
             pth_name,
             f"{SRC_ROOT}\n".encode(),
         )
+        metadata = _load_metadata()
+        for source_name, destination_name in sorted(metadata["force_include"].items()):
+            source = ROOT / source_name
+            destination = PurePosixPath(destination_name)
+            _write_wheel_file(
+                archive,
+                record_rows,
+                destination.as_posix(),
+                source.read_bytes(),
+            )
         _write_wheel_file(
             archive,
             record_rows,
@@ -259,6 +269,10 @@ def _iter_sdist_sources() -> list[Path]:
             if not _should_include(relative):
                 continue
             sources.append(relative)
+
+    metadata = _load_metadata()
+    for source_name in sorted(metadata["force_include"]):
+        sources.append(Path(source_name))
 
     deduped: list[Path] = []
     for source in sources:

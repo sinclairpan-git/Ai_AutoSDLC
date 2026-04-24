@@ -8,6 +8,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 from ai_sdlc.core.managed_delivery_apply import (
+    _default_dependency_installer,
     run_managed_delivery_apply,
     verify_dependency_installation,
 )
@@ -844,6 +845,40 @@ def test_verify_dependency_installation_uses_yarn_node_for_playwright_runtime(
         result["playwright_browser_runtime"]
         == "/virtual/.cache/ms-playwright/chromium/chrome"
     )
+
+
+def test_default_dependency_installer_bootstraps_playwright_browser_runtime(
+    tmp_path: Path,
+) -> None:
+    payload = DependencyInstallExecutionPayload(
+        install_strategy_id="browser-runtime",
+        package_manager="npm",
+        working_directory=".",
+        packages=["playwright"],
+    )
+
+    with (
+        patch(
+            "ai_sdlc.core.managed_delivery_apply.subprocess.run",
+            return_value=subprocess.CompletedProcess(
+                args=["npm", "install", "playwright"],
+                returncode=0,
+                stdout="",
+                stderr="",
+            ),
+        ),
+        patch(
+            "ai_sdlc.core.managed_delivery_apply._install_playwright_browser_runtime"
+        ) as install_runtime,
+        patch(
+            "ai_sdlc.core.managed_delivery_apply.verify_dependency_installation",
+            return_value={},
+        ),
+    ):
+        result = _default_dependency_installer(payload, tmp_path)
+
+    install_runtime.assert_called_once()
+    assert result["playwright_runtime_installed"] == "chromium"
 
 
 def test_verify_dependency_installation_accepts_playwright_test_runtime_layout(

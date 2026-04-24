@@ -27,6 +27,7 @@ backend-path = ["."]
 "templates/plan-template.md" = "ai_sdlc/templates/plan-template.md"
 "templates/tasks-template.md" = "ai_sdlc/templates/tasks-template.md"
 "templates/execution-log-template.md" = "ai_sdlc/templates/execution-log-template.md"
+"scripts/frontend_browser_gate_probe_runner.mjs" = "ai_sdlc/runtime_assets/frontend_browser_gate_probe_runner.mjs"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
