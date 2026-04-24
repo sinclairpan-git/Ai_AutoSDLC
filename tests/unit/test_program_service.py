@@ -34,6 +34,8 @@ from ai_sdlc.core.frontend_visual_a11y_evidence_provider import (
 )
 from ai_sdlc.core.host_runtime_manager import HostRuntimeProbe, build_host_runtime_plan
 from ai_sdlc.core.program_service import (
+    PROGRAM_FRONTEND_BROWSER_GATE_ARTIFACT_REL_PATH,
+    ProgramFrontendBrowserGateBaselineRequest,
     ProgramFrontendRemediationCommandResult,
     ProgramFrontendRemediationExecutionResult,
     ProgramService,
@@ -6240,6 +6242,40 @@ def test_execute_frontend_browser_gate_baseline_materializes_baseline_files(
     assert baseline_image.read_bytes() == bootstrap_bytes
     metadata = yaml.safe_load(baseline_metadata.read_text(encoding="utf-8"))
     assert metadata == {"threshold": 0.03}
+
+
+def test_execute_frontend_browser_gate_baseline_fails_closed_for_invalid_bootstrap_ref(
+    initialized_project_dir: Path,
+) -> None:
+    root = initialized_project_dir
+    svc = ProgramService(root)
+
+    baseline_result = svc.execute_frontend_browser_gate_baseline(
+        request=ProgramFrontendBrowserGateBaselineRequest(
+            required=True,
+            confirmation_required=True,
+            baseline_state="ready_to_execute",
+            artifact_path=PROGRAM_FRONTEND_BROWSER_GATE_ARTIFACT_REL_PATH,
+            gate_run_id="gate-run-123",
+            matrix_id="search-list-workspace",
+            bootstrap_artifact_ref="/tmp/outside-workspace/bootstrap.png",
+            baseline_image_path=(
+                "governance/frontend/quality-platform/evidence/visual-regression/"
+                "baselines/search-list-workspace/baseline.png"
+            ),
+            baseline_metadata_path=(
+                "governance/frontend/quality-platform/evidence/visual-regression/"
+                "baselines/search-list-workspace/baseline.yaml"
+            ),
+            threshold=0.03,
+        )
+    )
+
+    assert baseline_result.passed is False
+    assert baseline_result.baseline_state == "invalid_bootstrap_artifact_ref"
+    assert baseline_result.remaining_blockers == [
+        "visual_regression_bootstrap_capture_outside_workspace"
+    ]
 
 
 def test_execute_frontend_browser_gate_probe_auto_materializes_visual_a11y_evidence_when_missing(

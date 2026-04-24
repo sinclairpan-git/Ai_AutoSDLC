@@ -7116,9 +7116,24 @@ const tableRows = [
                 warnings=list(effective_request.warnings),
             )
 
-        bootstrap_path = self._resolve_project_relative_path(
-            effective_request.bootstrap_artifact_ref
-        )
+        try:
+            bootstrap_path = self._resolve_project_relative_path(
+                effective_request.bootstrap_artifact_ref
+            )
+        except ValueError:
+            return ProgramFrontendBrowserGateBaselineResult(
+                passed=False,
+                baseline_state="invalid_bootstrap_artifact_ref",
+                artifact_path=effective_request.artifact_path,
+                gate_run_id=effective_request.gate_run_id,
+                matrix_id=effective_request.matrix_id,
+                baseline_image_path=effective_request.baseline_image_path,
+                baseline_metadata_path=effective_request.baseline_metadata_path,
+                threshold=effective_request.threshold,
+                remaining_blockers=[
+                    "visual_regression_bootstrap_capture_outside_workspace"
+                ],
+            )
         if not bootstrap_path.is_file():
             return ProgramFrontendBrowserGateBaselineResult(
                 passed=False,
@@ -7132,12 +7147,27 @@ const tableRows = [
                 remaining_blockers=["visual_regression_bootstrap_capture_missing"],
             )
 
-        baseline_image_path = self._resolve_project_relative_path(
-            effective_request.baseline_image_path
-        )
-        baseline_metadata_path = self._resolve_project_relative_path(
-            effective_request.baseline_metadata_path
-        )
+        try:
+            baseline_image_path = self._resolve_project_relative_path(
+                effective_request.baseline_image_path
+            )
+            baseline_metadata_path = self._resolve_project_relative_path(
+                effective_request.baseline_metadata_path
+            )
+        except ValueError:
+            return ProgramFrontendBrowserGateBaselineResult(
+                passed=False,
+                baseline_state="invalid_baseline_output_path",
+                artifact_path=effective_request.artifact_path,
+                gate_run_id=effective_request.gate_run_id,
+                matrix_id=effective_request.matrix_id,
+                baseline_image_path=effective_request.baseline_image_path,
+                baseline_metadata_path=effective_request.baseline_metadata_path,
+                threshold=effective_request.threshold,
+                remaining_blockers=[
+                    "visual_regression_baseline_output_outside_workspace"
+                ],
+            )
         baseline_image_path.parent.mkdir(parents=True, exist_ok=True)
         baseline_metadata_path.parent.mkdir(parents=True, exist_ok=True)
         shutil.copyfile(bootstrap_path, baseline_image_path)
