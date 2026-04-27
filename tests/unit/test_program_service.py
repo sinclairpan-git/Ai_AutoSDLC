@@ -4573,6 +4573,7 @@ def test_build_frontend_managed_delivery_apply_request_materializes_public_bundl
     visual_runtime_action = dependency_actions[1]
     assert dependency_action.executor_payload["install_strategy_id"] == "public-primevue-default"
     assert dependency_action.executor_payload["package_manager"] == "pnpm"
+    assert dependency_action.executor_payload["dependency_mode"] == "public_registry"
     assert dependency_action.executor_payload["packages"] == [
         "primevue",
         "@primeuix/themes",
@@ -4581,6 +4582,7 @@ def test_build_frontend_managed_delivery_apply_request_materializes_public_bundl
         "public-visual-regression-runtime"
     )
     assert visual_runtime_action.executor_payload["package_manager"] == "pnpm"
+    assert visual_runtime_action.executor_payload["dependency_mode"] == "public_registry"
     assert visual_runtime_action.executor_payload["registry_url"] == ""
     assert visual_runtime_action.executor_payload["packages"] == [
         "playwright",
@@ -5184,6 +5186,7 @@ def test_build_frontend_managed_delivery_apply_request_splits_enterprise_and_pub
     ]
     enterprise_action = dependency_actions[0]
     public_runtime_action = dependency_actions[1]
+    assert enterprise_action.executor_payload["dependency_mode"] == "enterprise_registry"
     assert enterprise_action.executor_payload["registry_url"] == (
         "http://npm.uedc.sangfor.com.cn/"
     )
@@ -5193,6 +5196,9 @@ def test_build_frontend_managed_delivery_apply_request_splits_enterprise_and_pub
     )
     assert public_runtime_action.executor_payload["registry_url"] == (
         "http://npm.uedc.sangfor.com.cn/"
+    )
+    assert public_runtime_action.executor_payload["dependency_mode"] == (
+        "enterprise_registry"
     )
     assert public_runtime_action.executor_payload["install_strategy_id"] == (
         "public-visual-regression-runtime"

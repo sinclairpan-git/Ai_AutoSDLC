@@ -123,13 +123,13 @@ class BranchManager:
         )
 
     def merge_to_main(self, branch_name: str) -> None:
-        """Merge a branch into main.
+        """Merge a branch into the repository default branch.
 
         Raises:
             BranchError: If there are uncommitted changes.
         """
         self._guard_uncommitted()
-        self._git.merge(branch_name, "main")
+        self._git.merge(branch_name, self._git.default_branch_name())
 
     def check_baseline(self, spec_dir: str) -> bool:
         """Verify that docs-branch artifacts are accessible from current branch.

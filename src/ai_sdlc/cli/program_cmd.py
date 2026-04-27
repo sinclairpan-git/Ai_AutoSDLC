@@ -66,6 +66,10 @@ def _dedupe_cli_text_items(values: object) -> list[str]:
     return deduped
 
 
+def _format_cli_path(path: Path) -> str:
+    return path.as_posix()
+
+
 def _render_managed_delivery_apply_guard(
     mode_title: str,
     request_payload: ProgramFrontendManagedDeliveryApplyRequest,
@@ -192,7 +196,7 @@ def _render_managed_delivery_apply_result(
         for warning in _dedupe_cli_text_items(result.warnings):
             console.print(f"  - {warning}")
     console.print(
-        f"  - apply artifact: {artifact_path.relative_to(root)}",
+        f"  - apply artifact: {_format_cli_path(artifact_path.relative_to(root))}",
         markup=False,
     )
 

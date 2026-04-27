@@ -75,7 +75,7 @@ class TestBranchManager:
         bm = BranchManager(gc)
         _write_frozen_governance(git_repo, "WI-2026-001")
         bm.create_docs_branch("WI-2026-001")
-        gc.checkout("main")
+        gc.checkout(gc.default_branch_name())
         bm.switch_to_docs("WI-2026-001")
         assert gc.current_branch() == "feature/WI-2026-001-docs"
 
@@ -85,7 +85,7 @@ class TestBranchManager:
         gc = GitClient(git_repo)
         _write_frozen_governance(git_repo, "WI-2026-001")
         gc.create_branch("design/WI-2026-001-docs", checkout=True)
-        gc.checkout("main")
+        gc.checkout(gc.default_branch_name())
 
         bm = BranchManager(gc)
         bm.switch_to_docs("WI-2026-001")
@@ -97,7 +97,7 @@ class TestBranchManager:
         bm = BranchManager(gc)
         _write_frozen_governance(git_repo, "WI-2026-001")
         bm.create_dev_branch("WI-2026-001")
-        gc.checkout("main")
+        gc.checkout(gc.default_branch_name())
         bm.switch_to_dev("WI-2026-001")
         assert gc.current_branch() == "feature/WI-2026-001-dev"
 
@@ -106,7 +106,7 @@ class TestBranchManager:
         bm = BranchManager(gc)
         _write_frozen_governance(git_repo, "WI-2026-001")
         bm.create_docs_branch("WI-2026-001")
-        gc.checkout("main")
+        gc.checkout(gc.default_branch_name())
         (git_repo / "dirty.txt").write_text("uncommitted")
         gc._run("add", "dirty.txt")
         with pytest.raises(BranchError, match="uncommitted"):
@@ -119,7 +119,7 @@ class TestBranchManager:
         bm.create_docs_branch("WI-2026-001")
         (git_repo / "spec.md").write_text("# Spec")
         gc.add_and_commit("add spec", ["spec.md"])
-        gc.checkout("main")
+        gc.checkout(gc.default_branch_name())
         bm.merge_to_main("feature/WI-2026-001-docs")
         assert (git_repo / "spec.md").exists()
 
@@ -143,7 +143,7 @@ class TestBranchManager:
         bm = BranchManager(gc)
         _write_frozen_governance(git_repo, "WI-2026-001")
         bm.create_docs_branch("WI-2026-001")
-        gc.checkout("main")
+        gc.checkout(gc.default_branch_name())
         name = bm.create_docs_branch("WI-2026-001")
         assert name == "feature/WI-2026-001-docs"
 

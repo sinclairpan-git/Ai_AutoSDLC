@@ -6,9 +6,9 @@
 
 ## 执行清单
 
-- [ ] T179-01 跨平台包管理器命令解析
-- [ ] T179-02 前端依赖模式与 mutate 前 preflight
-- [ ] T179-03 失败 artifact 和下游阻断合同
+- [x] T179-01 跨平台包管理器命令解析
+- [x] T179-02 前端依赖模式与 mutate 前 preflight
+- [x] T179-03 失败 artifact 和下游阻断合同
 - [ ] T179-04 Windows release asset P0 smoke
 - [ ] T179-05 中文标题 work item id 降级策略
 - [ ] T179-06 业务模板与 framework formal 模板隔离

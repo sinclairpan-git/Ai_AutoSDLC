@@ -239,6 +239,7 @@ def test_list_local_branches_includes_worktree_binding(git_repo: Path, tmp_path:
 
 
 def test_branch_divergence_against_main_reports_ahead_and_behind(git_repo: Path) -> None:
+    default_branch = GitClient(git_repo).default_branch_name()
     subprocess.run(
         ["git", "checkout", "-b", "feature/diverge-demo"],
         cwd=git_repo,
@@ -256,7 +257,7 @@ def test_branch_divergence_against_main_reports_ahead_and_behind(git_repo: Path)
         text=True,
     )
     subprocess.run(
-        ["git", "checkout", "main"],
+        ["git", "checkout", default_branch],
         cwd=git_repo,
         check=True,
         capture_output=True,
@@ -272,10 +273,12 @@ def test_branch_divergence_against_main_reports_ahead_and_behind(git_repo: Path)
         text=True,
     )
 
-    divergence = GitClient(git_repo).branch_divergence("feature/diverge-demo", base="main")
+    divergence = GitClient(git_repo).branch_divergence(
+        "feature/diverge-demo", base=default_branch
+    )
 
     assert divergence.branch == "feature/diverge-demo"
-    assert divergence.base == "main"
+    assert divergence.base == default_branch
     assert divergence.ahead_of_base == 1
     assert divergence.behind_base == 1
 
@@ -300,11 +303,50 @@ def test_list_worktrees_returns_paths_and_checked_out_branches(
     )
 
     worktrees = GitClient(git_repo).list_worktrees()
+    default_branch = GitClient(git_repo).default_branch_name()
 
     assert any(
-        item.path == git_repo.resolve() and item.branch == "main" for item in worktrees
+        item.path == git_repo.resolve() and item.branch == default_branch
+        for item in worktrees
     )
     assert any(
         item.path == scratch_tree.resolve() and item.branch == "codex/worktree-demo"
         for item in worktrees
     )
+
+
+def test_default_branch_name_supports_custom_initial_branch(tmp_path: Path) -> None:
+    repo = tmp_path / "custom-default-branch"
+    repo.mkdir()
+    subprocess.run(
+        ["git", "init", "--initial-branch=trunk"],
+        cwd=repo,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    subprocess.run(
+        ["git", "config", "user.email", "test@test.com"],
+        cwd=repo,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    subprocess.run(
+        ["git", "config", "user.name", "Test"],
+        cwd=repo,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    (repo / "README.md").write_text("# trunk repo\n", encoding="utf-8")
+    subprocess.run(["git", "add", "."], cwd=repo, check=True, capture_output=True, text=True)
+    subprocess.run(
+        ["git", "commit", "-m", "Initial commit"],
+        cwd=repo,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+
+    assert GitClient(repo).default_branch_name() == "trunk"

@@ -7,6 +7,7 @@ import os
 import subprocess
 from collections import defaultdict, deque
 from pathlib import Path
+from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
 from ai_sdlc.models.frontend_managed_delivery import (
     ArtifactGenerateExecutionPayload,
@@ -35,6 +36,7 @@ ALLOWED_ACTION_TYPES = frozenset(
     }
 )
 _PLAYWRIGHT_BROWSER_RUNTIME_PACKAGES = frozenset({"playwright", "@playwright/test"})
+_WINDOWS_COMMAND_SHIMS = frozenset({"corepack", "npm", "npx", "pnpm", "yarn"})
 
 
 def _dedupe_text_items(values: list[str] | tuple[str, ...]) -> list[str]:
@@ -167,9 +169,7 @@ def run_managed_delivery_apply(
         status="running",
     )
     selected_risk_flags = {
-        risk_flag
-        for action in selected_actions
-        for risk_flag in action.risk_flags
+        risk_flag for action in selected_actions for risk_flag in action.risk_flags
     }
     if not set(receipt.risk_acknowledgement_ids).issuperset(selected_risk_flags):
         return ManagedDeliveryApplyResult(
@@ -230,7 +230,10 @@ def run_managed_delivery_apply(
     dependency_blocked_actions = [
         action
         for action in selected_actions
-        if any(dependency_id in unsupported_ids for dependency_id in action.depends_on_action_ids)
+        if any(
+            dependency_id in unsupported_ids
+            for dependency_id in action.depends_on_action_ids
+        )
     ]
     if selected_optional_unsupported or dependency_blocked_actions:
         entries = [
@@ -270,7 +273,10 @@ def run_managed_delivery_apply(
             blocked_action_ids=_dedupe_text_items(
                 [
                     action.action_id
-                    for action in [*selected_optional_unsupported, *dependency_blocked_actions]
+                    for action in [
+                        *selected_optional_unsupported,
+                        *dependency_blocked_actions,
+                    ]
                 ]
             ),
             ledger_entries=entries,
@@ -289,10 +295,12 @@ def run_managed_delivery_apply(
             blockers=_dedupe_text_items(ordering_blockers),
             skipped_action_ids=_dedupe_text_items(skipped_action_ids),
         )
-    prepared_actions, validation_entries, validation_blockers = _prepare_action_execution(
-        ordered_actions,
-        view,
-        context,
+    prepared_actions, validation_entries, validation_blockers = (
+        _prepare_action_execution(
+            ordered_actions,
+            view,
+            context,
+        )
     )
     if validation_blockers:
         return ManagedDeliveryApplyResult(
@@ -313,6 +321,7 @@ def run_managed_delivery_apply(
     executed_action_ids: list[str] = []
     succeeded_action_ids: list[str] = []
     failed_action_ids: list[str] = []
+    blocked_action_ids: list[str] = []
     blockers: list[str] = []
 
     for action in ordered_actions:
@@ -352,21 +361,50 @@ def run_managed_delivery_apply(
         try:
             after_state = _execute_action(action, view, context, prepared)
         except Exception as exc:
+            failure_classification = "manual_recovery_required"
+            failure_after_state: dict[str, str] = {}
+            remediation_hints: list[str] = []
+            blocker = str(exc) or "action_execution_failed"
+            if isinstance(exc, DependencyInstallCommandNotFoundError):
+                failure_classification = "dependency_install_command_not_found"
+                failure_after_state = exc.diagnostic()
+                remediation_hints = exc.remediation_hints()
+                blocker = exc.blocker
+            dependency_blocked_entries = _dependency_blocked_entries(
+                failed_action=action,
+                ordered_actions=ordered_actions,
+                failure_classification=failure_classification,
+            )
             ledger_entries.append(
                 DeliveryActionLedgerEntry(
                     action_id=action.action_id,
                     action_type=action.action_type,
                     result_status="failed",
-                    failure_classification="manual_recovery_required",
+                    failure_classification=failure_classification,
                     before_state=before_state,
+                    after_state=failure_after_state,
                     rollback_ref=action.rollback_ref,
                     retry_ref=action.retry_ref,
                     cleanup_ref=action.cleanup_ref,
                     source_linkage_refs=action.source_linkage_refs,
                 )
             )
+            ledger_entries.extend(dependency_blocked_entries)
             failed_action_ids.append(action.action_id)
-            blockers.append(str(exc) or "action_execution_failed")
+            blocked_action_ids.extend(
+                entry.action_id for entry in dependency_blocked_entries
+            )
+            blockers.append(blocker)
+            plain_language_blockers = _build_apply_plain_language_blockers(
+                failed_action=action,
+                blocker=blocker,
+                blocked_action_ids=blocked_action_ids,
+                failure_classification=failure_classification,
+            )
+            recommended_next_steps = _build_apply_recommended_next_steps(
+                remediation_hints=remediation_hints,
+                failed_action=action,
+            )
             return ManagedDeliveryApplyResult(
                 apply_result_id="apply-result-001",
                 execution_session_id=session.execution_session_id,
@@ -378,8 +416,12 @@ def run_managed_delivery_apply(
                 executed_action_ids=_dedupe_text_items(executed_action_ids),
                 succeeded_action_ids=_dedupe_text_items(succeeded_action_ids),
                 failed_action_ids=_dedupe_text_items(failed_action_ids),
+                blocked_action_ids=_dedupe_text_items(blocked_action_ids),
                 ledger_entries=ledger_entries,
                 skipped_action_ids=_dedupe_text_items(skipped_action_ids),
+                remediation_hints=_dedupe_text_items(remediation_hints),
+                plain_language_blockers=plain_language_blockers,
+                recommended_next_steps=recommended_next_steps,
             )
         ledger_entries.append(
             DeliveryActionLedgerEntry(
@@ -448,7 +490,9 @@ def _topological_sort(
             indegree[action.action_id] += 1
     if blockers:
         return [], blockers
-    queue = deque(sorted(action_id for action_id, degree in indegree.items() if degree == 0))
+    queue = deque(
+        sorted(action_id for action_id, degree in indegree.items() if degree == 0)
+    )
     ordered: list[FrontendActionPlanAction] = []
     while queue:
         action_id = queue.popleft()
@@ -462,6 +506,83 @@ def _topological_sort(
     return ordered, []
 
 
+def _dependency_blocked_entries(
+    *,
+    failed_action: FrontendActionPlanAction,
+    ordered_actions: list[FrontendActionPlanAction],
+    failure_classification: str,
+) -> list[DeliveryActionLedgerEntry]:
+    blocked_ids: set[str] = {failed_action.action_id}
+    entries: list[DeliveryActionLedgerEntry] = []
+    for candidate in ordered_actions:
+        if candidate.action_id == failed_action.action_id:
+            continue
+        if not any(
+            dependency_id in blocked_ids
+            for dependency_id in candidate.depends_on_action_ids
+        ):
+            continue
+        blocked_ids.add(candidate.action_id)
+        entries.append(
+            DeliveryActionLedgerEntry(
+                action_id=candidate.action_id,
+                action_type=candidate.action_type,
+                result_status="blocked",
+                failure_classification="dependency_blocked",
+                after_state={
+                    "blocked_by_action_id": failed_action.action_id,
+                    "blocked_by_failure_classification": failure_classification,
+                },
+                rollback_ref=candidate.rollback_ref,
+                retry_ref=candidate.retry_ref,
+                cleanup_ref=candidate.cleanup_ref,
+                source_linkage_refs=candidate.source_linkage_refs,
+            )
+        )
+    return entries
+
+
+def _build_apply_plain_language_blockers(
+    *,
+    failed_action: FrontendActionPlanAction,
+    blocker: str,
+    blocked_action_ids: list[str],
+    failure_classification: str,
+) -> list[str]:
+    messages = [
+        (
+            f"Action {failed_action.action_id} failed during "
+            f"{failed_action.action_type}: {blocker}"
+        )
+    ]
+    if blocked_action_ids:
+        messages.append(
+            "Dependent actions were not executed because the failed action did not "
+            f"complete: {', '.join(blocked_action_ids)}"
+        )
+    if failure_classification == "dependency_install_command_not_found":
+        messages.append(
+            "The configured package-manager command is not available from the "
+            "current process environment."
+        )
+    return _dedupe_text_items(messages)
+
+
+def _build_apply_recommended_next_steps(
+    *,
+    remediation_hints: list[str],
+    failed_action: FrontendActionPlanAction,
+) -> list[str]:
+    if remediation_hints:
+        return _dedupe_text_items(remediation_hints)
+    return _dedupe_text_items(
+        [
+            f"Inspect the ledger entry for action {failed_action.action_id}.",
+            "Resolve the blocker, then rerun ai-sdlc run.",
+        ]
+    )
+
+
 def _prepare_action_execution(
     actions: list[FrontendActionPlanAction],
     view: ConfirmedActionPlanExecutionView,
@@ -472,7 +593,9 @@ def _prepare_action_execution(
     blockers: list[str] = []
     for action in actions:
         try:
-            prepared[action.action_id] = _validate_executor_payload(action, view, context)
+            prepared[action.action_id] = _validate_executor_payload(
+                action, view, context
+            )
         except ValueError as exc:
             blocker = str(exc)
             blockers.append(blocker)
@@ -500,7 +623,9 @@ def _validate_executor_payload(
     repo_root = _repo_root(context)
     managed_root = _resolve_managed_target_root(view, repo_root)
     if action.action_type == "dependency_install":
-        payload = DependencyInstallExecutionPayload.model_validate(action.executor_payload)
+        payload = DependencyInstallExecutionPayload.model_validate(
+            action.executor_payload
+        )
         if not payload.packages:
             raise ValueError("dependency_install_packages_missing")
         working_directory = _resolve_managed_child(
@@ -518,7 +643,9 @@ def _validate_executor_payload(
             working_directory / "package.json",
             *[
                 working_directory / lockfile_name
-                for lockfile_name in _lockfile_names_for_package_manager(payload.package_manager)
+                for lockfile_name in _lockfile_names_for_package_manager(
+                    payload.package_manager
+                )
             ],
         ]
         for target in dependency_targets:
@@ -528,6 +655,17 @@ def _validate_executor_payload(
                 view.will_not_touch,
                 blocker="dependency_install_hits_will_not_touch",
             )
+        if payload.dependency_mode == "offline_strict":
+            try:
+                verify_dependency_installation(
+                    payload,
+                    working_directory,
+                )
+            except ValueError as exc:
+                reason = str(exc) or "unknown"
+                raise ValueError(
+                    f"dependency_install_offline_cache_missing:{reason}"
+                ) from exc
         return {
             "managed_root": managed_root,
             "working_directory": working_directory,
@@ -535,7 +673,9 @@ def _validate_executor_payload(
             "dependency_targets": dependency_targets,
         }
     if action.action_type == "runtime_remediation":
-        payload = RuntimeRemediationExecutionPayload.model_validate(action.executor_payload)
+        payload = RuntimeRemediationExecutionPayload.model_validate(
+            action.executor_payload
+        )
         if not payload.required_runtime_entries:
             raise ValueError("runtime_remediation_required_runtime_entries_missing")
         if payload.manual_prerequisites:
@@ -550,7 +690,9 @@ def _validate_executor_payload(
             "payload": payload,
         }
     if action.action_type == "managed_target_prepare":
-        payload = ManagedTargetPrepareExecutionPayload.model_validate(action.executor_payload)
+        payload = ManagedTargetPrepareExecutionPayload.model_validate(
+            action.executor_payload
+        )
         if not payload.files and not payload.directories:
             raise ValueError("managed_target_prepare_payload_empty")
         file_paths = [
@@ -583,7 +725,9 @@ def _validate_executor_payload(
             "dir_paths": dir_paths,
         }
     if action.action_type == "artifact_generate":
-        payload = ArtifactGenerateExecutionPayload.model_validate(action.executor_payload)
+        payload = ArtifactGenerateExecutionPayload.model_validate(
+            action.executor_payload
+        )
         if not payload.files and not payload.directories:
             raise ValueError("artifact_generate_payload_empty")
         file_paths = [
@@ -616,7 +760,9 @@ def _validate_executor_payload(
             "dir_paths": dir_paths,
         }
     if action.action_type == "workspace_integration":
-        payload = WorkspaceIntegrationExecutionPayload.model_validate(action.executor_payload)
+        payload = WorkspaceIntegrationExecutionPayload.model_validate(
+            action.executor_payload
+        )
         if not payload.items:
             raise ValueError("workspace_integration_payload_empty")
         target_classes = {item.target_class for item in payload.items}
@@ -794,7 +940,9 @@ def _execute_action(
         else:
             after_state = {
                 "mode": "preflight",
-                "applied_integrations": ",".join(item.integration_id for item in payload.items),
+                "applied_integrations": ",".join(
+                    item.integration_id for item in payload.items
+                ),
             }
         after_state.setdefault("state", f"after:{action.action_id}")
         after_state.setdefault("managed_target_ref", view.managed_target_ref)
@@ -856,6 +1004,180 @@ def _ensure_not_in_will_not_touch(
         raise ValueError(blocker)
 
 
+class DependencyInstallCommandNotFoundError(RuntimeError):
+    """Actionable diagnostic for host package-manager executable lookup failures."""
+
+    def __init__(
+        self,
+        *,
+        command: list[str],
+        resolution: dict[str, str],
+        working_directory: Path,
+        environ: dict[str, str],
+        retry_count: int,
+        original: FileNotFoundError,
+    ) -> None:
+        self.command = command
+        self.resolution = resolution
+        self.working_directory = working_directory
+        self.environ = environ
+        self.retry_count = retry_count
+        self.original = original
+        self.blocker = (
+            "dependency_install_command_not_found:"
+            f"{resolution['requested_command']}:{resolution['resolved_executable']}"
+        )
+        super().__init__(self.blocker)
+
+    def diagnostic(self) -> dict[str, str]:
+        return {
+            "classification": "command_not_found",
+            "exception_type": type(self.original).__name__,
+            "requested_command": self.resolution["requested_command"],
+            "resolved_executable": self.resolution["resolved_executable"],
+            "resolution_strategy": self.resolution["resolution_strategy"],
+            "platform": self.resolution["platform"],
+            "attempted_command": " ".join(_redact_command_for_diagnostic(self.command)),
+            "cwd": str(self.working_directory),
+            "env_PATH": self.environ.get("PATH", ""),
+            "env_PATHEXT": self.environ.get("PATHEXT", ""),
+            "stdout": "",
+            "stderr": "",
+            "exception_message": self.original.strerror or str(self.original),
+            "retry_count": str(self.retry_count),
+        }
+
+    def remediation_hints(self) -> list[str]:
+        executable = self.resolution["resolved_executable"]
+        requested = self.resolution["requested_command"]
+        if _is_windows_platform(self.resolution["platform"]):
+            hints = [
+                f"where {executable}",
+                f"{requested} -v",
+                "Install or repair Node.js, then reopen the configured terminal so package-manager shims are visible in PATH.",
+                "Rerun ai-sdlc run after the package-manager command works.",
+            ]
+            if requested in {"pnpm", "yarn"}:
+                hints.insert(
+                    3,
+                    f"If {requested} is managed through Corepack, run corepack enable.",
+                )
+            return hints
+        return [
+            f"command -v {executable}",
+            f"{requested} -v",
+            f"Install the {requested} package manager or add it to PATH.",
+            "Rerun ai-sdlc run after the package-manager command works.",
+        ]
+
+
+def _resolve_host_command(
+    command: str,
+    *,
+    platform_id: str | None = None,
+    environ: dict[str, str] | None = None,
+) -> dict[str, str]:
+    platform = (platform_id or ("windows" if os.name == "nt" else os.name)).lower()
+    environment = environ or os.environ
+    requested_command = str(command)
+    resolved_executable = requested_command
+    resolution_strategy = "which"
+
+    if _should_prefer_windows_cmd_shim(requested_command, platform, environment):
+        resolved_executable = f"{requested_command}.cmd"
+        resolution_strategy = "windows_pathext"
+
+    return {
+        "requested_command": requested_command,
+        "resolved_executable": resolved_executable,
+        "resolution_strategy": resolution_strategy,
+        "platform": platform,
+    }
+
+
+def _should_prefer_windows_cmd_shim(
+    command: str,
+    platform_id: str,
+    environ: dict[str, str],
+) -> bool:
+    if not _is_windows_platform(platform_id):
+        return False
+    if Path(command).name != command:
+        return False
+    normalized_command = command.lower()
+    if normalized_command not in _WINDOWS_COMMAND_SHIMS:
+        return False
+    if Path(normalized_command).suffix:
+        return False
+    pathext = environ.get("PATHEXT", ".COM;.EXE;.BAT;.CMD")
+    return ".cmd" in {entry.lower() for entry in pathext.split(";") if entry}
+
+
+def _is_windows_platform(platform_id: str) -> bool:
+    normalized = platform_id.lower()
+    return normalized in {"nt", "win32", "windows"} or normalized.startswith("win")
+
+
+def _resolve_command_parts(command: list[str]) -> tuple[list[str], dict[str, str]]:
+    if not command:
+        resolution = _resolve_host_command("")
+        return command, resolution
+    resolution = _resolve_host_command(command[0])
+    return [resolution["resolved_executable"], *command[1:]], resolution
+
+
+def _redact_command_for_diagnostic(command: list[str]) -> list[str]:
+    redacted: list[str] = []
+    redact_next = False
+    for part in command:
+        if redact_next:
+            redacted.append(_redact_command_argument(part))
+            redact_next = False
+            continue
+        if part in {"--registry"}:
+            redacted.append(part)
+            redact_next = True
+            continue
+        if part.startswith("--registry="):
+            flag, value = part.split("=", 1)
+            redacted.append(f"{flag}={_redact_command_argument(value)}")
+            continue
+        redacted.append(_redact_command_argument(part))
+    return redacted
+
+
+def _redact_command_argument(value: str) -> str:
+    if "://" not in value:
+        return value
+    return _redact_url(value)
+
+
+def _redact_url(value: str) -> str:
+    parsed = urlsplit(value)
+    if not parsed.scheme or not parsed.netloc:
+        return value
+
+    host = parsed.hostname or ""
+    if ":" in host and not host.startswith("["):
+        host = f"[{host}]"
+    if parsed.port is not None:
+        host = f"{host}:{parsed.port}"
+    netloc = host
+    if parsed.username or parsed.password:
+        netloc = f"***@{host}"
+
+    query = ""
+    if parsed.query:
+        query = urlencode(
+            [
+                (key, "***")
+                for key, _value in parse_qsl(parsed.query, keep_blank_values=True)
+            ]
+        )
+    fragment = "***" if parsed.fragment else ""
+    return urlunsplit((parsed.scheme, netloc, parsed.path, query, fragment))
+
+
 def _default_dependency_installer(
     payload: DependencyInstallExecutionPayload,
     working_directory: Path,
@@ -878,6 +1200,7 @@ def _default_dependency_installer(
             "YARN_NPM_REGISTRY_SERVER": registry_url,
         }
     command.extend(payload.packages)
+    command, command_resolution = _resolve_command_parts(command)
     for attempt in range(1, 4):
         try:
             subprocess.run(
@@ -889,6 +1212,15 @@ def _default_dependency_installer(
                 env=install_env,
             )
             break
+        except FileNotFoundError as exc:
+            raise DependencyInstallCommandNotFoundError(
+                command=command,
+                resolution=command_resolution,
+                working_directory=working_directory,
+                environ=install_env or os.environ,
+                retry_count=attempt,
+                original=exc,
+            ) from exc
         except subprocess.CalledProcessError as exc:
             if attempt >= 3 or not _is_retryable_dependency_install_error(exc):
                 raise
@@ -908,6 +1240,8 @@ def _default_dependency_installer(
     verification.update(
         {
             "command": " ".join(command),
+            "resolved_executable": command_resolution["resolved_executable"],
+            "resolution_strategy": command_resolution["resolution_strategy"],
             "registry_env_var": (
                 "npm_config_registry,YARN_NPM_REGISTRY_SERVER"
                 if install_env is not None
@@ -936,8 +1270,14 @@ def _install_playwright_browser_runtime(
         ]
     else:
         commands = [["pnpm", "exec", "playwright", "install", "chromium"]]
-    last_error: subprocess.CalledProcessError | FileNotFoundError | None = None
+    last_error: (
+        subprocess.CalledProcessError
+        | FileNotFoundError
+        | DependencyInstallCommandNotFoundError
+        | None
+    ) = None
     for command in commands:
+        command, command_resolution = _resolve_command_parts(command)
         try:
             subprocess.run(
                 command,
@@ -949,6 +1289,16 @@ def _install_playwright_browser_runtime(
             )
             return
         except (subprocess.CalledProcessError, FileNotFoundError) as exc:
+            if isinstance(exc, FileNotFoundError):
+                last_error = DependencyInstallCommandNotFoundError(
+                    command=command,
+                    resolution=command_resolution,
+                    working_directory=working_directory,
+                    environ=install_env or os.environ,
+                    retry_count=1,
+                    original=exc,
+                )
+                continue
             last_error = exc
     if last_error is not None:
         raise last_error
@@ -1091,11 +1441,15 @@ def verify_dependency_installation(
 
     existing_lockfiles = [
         working_directory / lockfile_name
-        for lockfile_name in _lockfile_names_for_package_manager(payload.package_manager)
+        for lockfile_name in _lockfile_names_for_package_manager(
+            payload.package_manager
+        )
         if (working_directory / lockfile_name).is_file()
     ]
     if not existing_lockfiles:
-        raise ValueError(f"dependency_install_lockfile_missing:{payload.package_manager}")
+        raise ValueError(
+            f"dependency_install_lockfile_missing:{payload.package_manager}"
+        )
 
     resolved_manifests = _resolve_installed_package_manifests(
         expected_packages,
@@ -1137,10 +1491,7 @@ def verify_dependency_installation(
 
 def _normalize_dependency_package_specs(packages: list[str]) -> list[str]:
     return _dedupe_text_items(
-        [
-            _dependency_package_name_from_spec(package_spec)
-            for package_spec in packages
-        ]
+        [_dependency_package_name_from_spec(package_spec) for package_spec in packages]
     )
 
 
@@ -1205,14 +1556,18 @@ process.stdout.write(executablePath);
             working_directory=working_directory,
         )
     except (FileNotFoundError, subprocess.CalledProcessError) as exc:
-        raise ValueError("dependency_install_playwright_browser_runtime_missing") from exc
+        raise ValueError(
+            "dependency_install_playwright_browser_runtime_missing"
+        ) from exc
     executable_path = str(result.stdout or "").strip()
     if not executable_path:
         raise ValueError("dependency_install_playwright_browser_runtime_missing")
     return executable_path
 
 
-def _collect_declared_dependency_packages(manifest_payload: dict[str, object]) -> set[str]:
+def _collect_declared_dependency_packages(
+    manifest_payload: dict[str, object],
+) -> set[str]:
     declared_packages: set[str] = set()
     for section_name in (
         "dependencies",
@@ -1246,7 +1601,12 @@ def _resolve_installed_package_manifests(
             verified[package_name] = str(candidate.resolve())
             continue
 
-        fallback = working_directory / "node_modules" / Path(*package_name.split("/")) / "package.json"
+        fallback = (
+            working_directory
+            / "node_modules"
+            / Path(*package_name.split("/"))
+            / "package.json"
+        )
         if fallback.is_file():
             verified[package_name] = str(fallback.resolve())
     return verified
@@ -1341,6 +1701,7 @@ def _run_package_resolution_script(
         commands = [["node", "-e", script, *packages]]
     last_error: FileNotFoundError | subprocess.CalledProcessError | None = None
     for command in commands:
+        command, _command_resolution = _resolve_command_parts(command)
         try:
             return subprocess.run(
                 command,

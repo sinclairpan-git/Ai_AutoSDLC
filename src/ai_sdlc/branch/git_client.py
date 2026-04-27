@@ -344,6 +344,21 @@ class GitClient:
         """Return the name of the current branch."""
         return self._run("rev-parse", "--abbrev-ref", "HEAD")
 
+    def default_branch_name(self) -> str:
+        """Return the repository default branch, tolerating local-only repos."""
+        remote_head = self._read_symbolic_ref("refs/remotes/origin/HEAD")
+        if remote_head:
+            return remote_head.removeprefix("refs/remotes/origin/")
+
+        for candidate in ("main", "master"):
+            if self.branch_exists(candidate):
+                return candidate
+
+        current = self.current_branch()
+        if current and current != "HEAD":
+            return current
+        raise GitError("unable to determine repository default branch")
+
     def branch_exists(self, name: str) -> bool:
         """Check if a branch exists."""
         try:
@@ -367,6 +382,24 @@ class GitClient:
             args.append("--short")
         args.extend(["--verify", f"{revision}^{{commit}}"])
         return self._run(*args)
+
+    def _read_symbolic_ref(self, ref: str) -> str | None:
+        """Return a symbolic ref target, or ``None`` when absent."""
+        result = subprocess.run(
+            ["git", "symbolic-ref", "--quiet", ref],
+            cwd=self.repo_path,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        if result.returncode == 0:
+            return result.stdout.strip()
+        if result.returncode == 1:
+            return None
+        raise GitError(
+            f"git symbolic-ref --quiet {ref} failed (exit {result.returncode}): "
+            f"{result.stderr.strip()}"
+        )
 
     def create_branch(self, name: str, *, checkout: bool = True) -> None:
         """Create a new branch, optionally checking it out."""
@@ -411,13 +444,21 @@ class GitClient:
         raw = self._run("diff", "--name-only", f"{base}..{target}")
         return tuple(path for path in raw.splitlines() if path.strip())
 
-    def revision_divergence(self, revision: str, *, base: str = "main") -> BranchDivergence:
+    def revision_divergence(
+        self, revision: str, *, base: str | None = None
+    ) -> BranchDivergence:
         """Return ahead/behind counts for ``revision`` relative to ``base``."""
-        raw = self._run("rev-list", "--left-right", "--count", f"{base}...{revision}")
+        resolved_base = base or self.default_branch_name()
+        raw = self._run(
+            "rev-list",
+            "--left-right",
+            "--count",
+            f"{resolved_base}...{revision}",
+        )
         behind_raw, ahead_raw = raw.split()
         return BranchDivergence(
             branch=revision,
-            base=base,
+            base=resolved_base,
             ahead_of_base=int(ahead_raw),
             behind_base=int(behind_raw),
         )
@@ -510,13 +551,21 @@ class GitClient:
             )
         return tuple(sorted(items, key=lambda item: item.name))
 
-    def branch_divergence(self, branch: str, *, base: str = "main") -> BranchDivergence:
+    def branch_divergence(
+        self, branch: str, *, base: str | None = None
+    ) -> BranchDivergence:
         """Return ahead/behind counts for ``branch`` relative to ``base``."""
-        raw = self._run("rev-list", "--left-right", "--count", f"{base}...{branch}")
+        resolved_base = base or self.default_branch_name()
+        raw = self._run(
+            "rev-list",
+            "--left-right",
+            "--count",
+            f"{resolved_base}...{branch}",
+        )
         behind_raw, ahead_raw = raw.split()
         return BranchDivergence(
             branch=branch,
-            base=base,
+            base=resolved_base,
             ahead_of_base=int(ahead_raw),
             behind_base=int(behind_raw),
         )

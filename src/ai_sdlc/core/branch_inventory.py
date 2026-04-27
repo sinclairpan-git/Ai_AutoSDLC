@@ -39,7 +39,9 @@ class BranchInventoryEntry:
             "head_commit": self.head_commit,
             "is_current": self.is_current,
             "upstream": self.upstream,
-            "worktree_path": str(self.worktree_path) if self.worktree_path else None,
+            "worktree_path": (
+                self.worktree_path.as_posix() if self.worktree_path else None
+            ),
             "ahead_of_main": self.ahead_of_main,
             "behind_of_main": self.behind_of_main,
         }
@@ -84,7 +86,7 @@ def sort_branch_inventory(
 def build_branch_inventory(
     git: GitClient,
     *,
-    base: str = "main",
+    base: str | None = None,
 ) -> tuple[BranchInventoryEntry, ...]:
     """Build a lifecycle-aware inventory from local branches."""
     entries: list[BranchInventoryEntry] = []
