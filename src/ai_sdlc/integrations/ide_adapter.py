@@ -652,6 +652,7 @@ def build_adapter_governance_surface(
     root: Path,
     *,
     detected_ide: IDEKind | str | None = None,
+    environ: dict[str, str] | None = None,
 ) -> dict[str, Any]:
     """Return persisted adapter facts plus derived governance truth."""
     cfg = load_project_config(root)
@@ -663,7 +664,8 @@ def build_adapter_governance_surface(
     target = _coerce_ide_kind(agent_target) or IDEKind.GENERIC
     activation_state = cfg.adapter_activation_state or ActivationState.INSTALLED.value
     support_tier = cfg.adapter_support_tier or _default_support_tier(activation_state)
-    ingress = _ingress_fields_from_config(root, cfg, target)
+    env = environ or dict(os.environ)
+    ingress = _ingress_metadata(root, cfg, target=target, environ=env)
     ingress_state = ingress["adapter_ingress_state"]
 
     if ingress_state == AdapterIngressState.VERIFIED_LOADED.value:

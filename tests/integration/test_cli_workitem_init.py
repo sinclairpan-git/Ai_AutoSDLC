@@ -74,7 +74,7 @@ def _write_manifest_yaml(root: Path, text: str) -> None:
 
 def _init_git_repo(root: Path) -> None:
     subprocess.run(
-        ["git", "init"],
+        ["git", "init", "--initial-branch=main"],
         cwd=root,
         check=True,
         capture_output=True,

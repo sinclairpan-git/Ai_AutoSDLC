@@ -23,7 +23,12 @@ def _no_ide_adapter_hook() -> None:
 
 
 def _setup_git_ai_sdlc(root: Path) -> None:
-    subprocess.run(["git", "init"], cwd=root, check=True, capture_output=True)
+    subprocess.run(
+        ["git", "init", "--initial-branch=main"],
+        cwd=root,
+        check=True,
+        capture_output=True,
+    )
     subprocess.run(
         ["git", "config", "user.email", "t@t.com"],
         cwd=root,

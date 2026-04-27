@@ -22,14 +22,21 @@ ID_PREFIXES = {
 }
 
 _PREFIXES = tuple(sorted(ID_PREFIXES.values(), key=len, reverse=True))
-TELEMETRY_ID_RE = re.compile(rf"^(?:{'|'.join(prefix[:-1] for prefix in _PREFIXES)})_[a-f0-9]{{32}}$")
+_DEFAULT_SUFFIX_HEX_LENGTH = 16
+_SUPPORTED_SUFFIX_HEX_LENGTHS = (16, 32)
+_ID_SUFFIX_PATTERN = "|".join(
+    rf"[a-f0-9]{{{length}}}" for length in _SUPPORTED_SUFFIX_HEX_LENGTHS
+)
+TELEMETRY_ID_RE = re.compile(
+    rf"^(?:{'|'.join(prefix[:-1] for prefix in _PREFIXES)})_(?:{_ID_SUFFIX_PATTERN})$"
+)
 
 
 def new_prefixed_id(prefix: str) -> str:
     """Generate a new telemetry ID with the provided prefix."""
     if prefix not in ID_PREFIXES.values():
         raise ValueError(f"unsupported telemetry ID prefix: {prefix!r}")
-    return f"{prefix}{uuid4().hex}"
+    return f"{prefix}{uuid4().hex[:_DEFAULT_SUFFIX_HEX_LENGTH]}"
 
 
 def validate_telemetry_id(value: str, prefix: str) -> str:
@@ -41,7 +48,10 @@ def validate_telemetry_id(value: str, prefix: str) -> str:
     if not value.startswith(prefix):
         raise ValueError(f"expected telemetry ID to start with {prefix!r}")
     suffix = value.removeprefix(prefix)
-    if not re.fullmatch(r"[a-f0-9]{32}", suffix):
+    if not any(
+        re.fullmatch(rf"[a-f0-9]{{{length}}}", suffix)
+        for length in _SUPPORTED_SUFFIX_HEX_LENGTHS
+    ):
         raise ValueError(f"invalid telemetry ID suffix: {value!r}")
     return value
 

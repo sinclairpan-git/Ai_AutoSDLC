@@ -430,6 +430,42 @@ def _add_status_surface_optional_rows(
         _add_truth_ledger_rows(table, truth_ledger)
 
 
+def _print_plain_status_summaries(status_surface: dict[str, Any]) -> None:
+    capability_closure = status_surface.get("capability_closure")
+    if isinstance(capability_closure, dict):
+        summary = summarize_capability_closure_focus_for_display(
+            capability_closure.get("open_clusters", [])
+        )
+        if summary:
+            typer.echo(f"Capability Closure Focus: {summary}")
+
+    truth_ledger = status_surface.get("truth_ledger")
+    if isinstance(truth_ledger, dict):
+        summary = summarize_truth_ledger_focus_for_display(
+            truth_ledger.get("release_capabilities", [])
+        )
+        if summary:
+            typer.echo(f"Truth Ledger Focus: {summary}")
+
+        frontend_delivery = summarize_truth_ledger_frontend_delivery_for_display(
+            truth_ledger.get("release_capabilities", [])
+        )
+        if frontend_delivery:
+            typer.echo(f"Truth Ledger Frontend: {frontend_delivery}")
+
+        frontend_inheritance = summarize_truth_ledger_frontend_inheritance_for_display(
+            truth_ledger.get("release_capabilities", [])
+        )
+        if frontend_inheritance:
+            typer.echo(f"Truth Ledger Inheritance: {frontend_inheritance}")
+
+        next_steps = summarize_truth_ledger_next_steps_for_display(
+            truth_ledger.get("release_capabilities", [])
+        )
+        if next_steps:
+            typer.echo(f"Truth Ledger Next Step: {next_steps}")
+
+
 def _add_governance_rows(table: Table, governance: Any) -> None:
     table.add_row("Governance Frozen", "yes" if governance.frozen else "no")
     if governance.frozen_at:
@@ -843,6 +879,7 @@ def status_command(
     _add_status_surface_optional_rows(table, status_surface)
 
     console.print(table)
+    _print_plain_status_summaries(status_surface)
     if hint is not None:
         _print_reconcile_guidance(
             hint,

@@ -233,6 +233,7 @@ def _render_frontend_summary(label: str, summary: object) -> None:
     suffix = f" ({'; '.join(details)})" if details else ""
     style = "green" if verdict == "PASS" else "yellow"
     console.print(f"[{style}]{label}: {verdict}{suffix}[/{style}]")
+    typer.echo(f"{label}: {verdict}{suffix}")
 
 
 def _string_list(value: object) -> list[str]:

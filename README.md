@@ -13,6 +13,7 @@ If you want the published release, install `v0.7.0`. If you are evaluating newer
 - macOS / Linux offline bundle: `ai-sdlc-offline-0.7.0.tar.gz`
 - Offline packaging details: `packaging/offline/README.md`
 - Offline Python runtime release checklist: `packaging/offline/RELEASE_CHECKLIST.md`
+- Windows CI smoke evidence: `.github/workflows/windows-offline-smoke.yml` uploads `windows-offline-smoke-evidence` with `install.log`, `help.txt`, `adapter-status.txt`, `run-dry-run.txt`, and `bundle-manifest.json`
 
 ## Quick Start
 

@@ -62,7 +62,12 @@ def git_project_with_plan(tmp_path: Path) -> Path:
     """Git repo with .ai-sdlc, specs WI, and external plan with one pending todo."""
     root = tmp_path / "proj"
     root.mkdir()
-    subprocess.run(["git", "init"], cwd=root, check=True, capture_output=True)
+    subprocess.run(
+        ["git", "init", "--initial-branch=main"],
+        cwd=root,
+        check=True,
+        capture_output=True,
+    )
     subprocess.run(
         ["git", "config", "user.email", "t@t.com"],
         cwd=root,

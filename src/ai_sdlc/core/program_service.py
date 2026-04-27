@@ -2203,6 +2203,18 @@ class ProgramService:
 
         state = str(surface.get("state", "")).strip()
         if state == "migration_pending":
+            if not matched_capabilities:
+                return ProgramSpecTruthReadinessResult(
+                    required=True,
+                    ready=True,
+                    state="ready",
+                    detail=(
+                        "truth snapshot is fresh and spec is mapped; "
+                        "unrelated truth inventory remains pending"
+                    ),
+                    matched_spec_ids=matched_spec_ids,
+                    matched_capabilities=matched_capabilities,
+                )
             return ProgramSpecTruthReadinessResult(
                 required=True,
                 ready=False,

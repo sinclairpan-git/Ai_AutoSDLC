@@ -9,19 +9,19 @@
 - [x] T179-01 跨平台包管理器命令解析
 - [x] T179-02 前端依赖模式与 mutate 前 preflight
 - [x] T179-03 失败 artifact 和下游阻断合同
-- [ ] T179-04 Windows release asset P0 smoke
-- [ ] T179-05 中文标题 work item id 降级策略
-- [ ] T179-06 业务模板与 framework formal 模板隔离
-- [ ] T179-07 artifact-generate 执行顺序和摘要语义
-- [ ] T179-08 adapter 状态机与展示一致性
-- [ ] T179-09 telemetry artifact/open violation 接线
-- [ ] T179-10 verify/final proof 失败语义
-- [ ] T179-11 公共 PrimeVue 真实安装与 runtime proof
-- [ ] T179-12 企业 Vue2 错误分类与 provider 隔离
-- [ ] T179-13 browser gate baseline and final proof E2E
-- [ ] T179-14 Windows 安装和文档编码体验
-- [ ] T179-15 PRD/Git/default branch/PowerShell 收口前置
-- [ ] T179-16 发布口径和 release proof 回链
+- [x] T179-04 Windows release asset P0 smoke
+- [x] T179-05 中文标题 work item id 降级策略
+- [x] T179-06 业务模板与 framework formal 模板隔离
+- [x] T179-07 artifact-generate 执行顺序和摘要语义
+- [x] T179-08 adapter 状态机与展示一致性
+- [x] T179-09 telemetry artifact/open violation 接线
+- [x] T179-10 verify/final proof 失败语义
+- [x] T179-11 公共 PrimeVue 真实安装与 runtime proof
+- [x] T179-12 企业 Vue2 错误分类与 provider 隔离
+- [x] T179-13 browser gate baseline and final proof E2E
+- [x] T179-14 Windows 安装和文档编码体验
+- [x] T179-15 PRD/Git/default branch/PowerShell 收口前置
+- [x] T179-16 发布口径和 release proof 回链
 
 ## Batch 1：P0 Windows dependency runtime closure
 

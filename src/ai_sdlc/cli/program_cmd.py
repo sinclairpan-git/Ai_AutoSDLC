@@ -70,6 +70,12 @@ def _format_cli_path(path: Path) -> str:
     return path.as_posix()
 
 
+def _format_cli_path_value(path: object) -> str:
+    if isinstance(path, Path):
+        return path.as_posix()
+    return str(path).replace("\\", "/")
+
+
 def _render_managed_delivery_apply_guard(
     mode_title: str,
     request_payload: ProgramFrontendManagedDeliveryApplyRequest,
@@ -1393,7 +1399,7 @@ def program_remediate(
             "\n[bold cyan]Frontend Remediation Writeback[/bold cyan]"
         )
         console.print(
-            f"  - saved: {writeback_path.relative_to(root)}",
+            f"  - saved: {_format_cli_path(writeback_path.relative_to(root))}",
             markup=False,
         )
 
@@ -1455,7 +1461,7 @@ def program_remediate(
             lines.append("## Writeback Artifact")
             lines.append("")
             lines.append(
-                f"- `{writeback_path.relative_to(root)}`"
+                f"- `{_format_cli_path(writeback_path.relative_to(root))}`"
             )
             lines.append("")
         report_path.write_text("\n".join(lines), encoding="utf-8")
@@ -1467,14 +1473,16 @@ def program_remediate(
     assert execution_result is not None
     if execution_result.passed:
         console.print(
-            f"Frontend remediation writeback saved: {writeback_path.relative_to(root)}",
+            "Frontend remediation writeback saved: "
+            + _format_cli_path(writeback_path.relative_to(root)),
             markup=False,
         )
         console.print("\n[bold green]Frontend remediation execute completed[/bold green]")
         raise typer.Exit(code=0)
 
     console.print(
-        f"Frontend remediation writeback saved: {writeback_path.relative_to(root)}",
+        "Frontend remediation writeback saved: "
+        + _format_cli_path(writeback_path.relative_to(root)),
         markup=False,
     )
     console.print("\n[bold red]Frontend remediation execute incomplete[/bold red]")
@@ -2016,7 +2024,7 @@ def program_provider_runtime(
         _render_frontend_provider_runtime_result(runtime_result)
         console.print("\n[bold cyan]Frontend Provider Runtime Artifact[/bold cyan]")
         console.print(
-            f"  - saved: {runtime_artifact_path.relative_to(root)}",
+            f"  - saved: {_format_cli_path(runtime_artifact_path.relative_to(root))}",
             markup=False,
         )
 
@@ -2087,7 +2095,9 @@ def program_provider_runtime(
         if runtime_artifact_path is not None:
             lines.append("## Frontend Provider Runtime Artifact")
             lines.append("")
-            lines.append(f"- `{runtime_artifact_path.relative_to(root)}`")
+            lines.append(
+                f"- `{_format_cli_path(runtime_artifact_path.relative_to(root))}`"
+            )
             lines.append("")
         if request.warnings or (runtime_result is not None and runtime_result.warnings):
             lines.append("## Warnings")
@@ -2278,7 +2288,7 @@ def program_solution_confirm(
             )
             console.print("\n[bold cyan]Frontend Solution Confirmation Artifact[/bold cyan]")
             console.print(
-                f"  - saved: {latest_snapshot_path.relative_to(root)}",
+                f"  - saved: {_format_cli_path(latest_snapshot_path.relative_to(root))}",
                 markup=False,
             )
 
@@ -2294,7 +2304,9 @@ def program_solution_confirm(
             artifact_paths=artifact_paths,
         )
         report_path.write_text("\n".join(lines), encoding="utf-8")
-        console.print(f"\n[green]Report written:[/green] {report_path}")
+        console.print(
+            f"\n[green]Report written:[/green] {_format_cli_path(report_path.relative_to(root))}"
+        )
 
     if dry_run:
         if continue_execution:
@@ -2632,7 +2644,7 @@ def program_provider_patch_apply(
         _render_frontend_provider_patch_apply_result(apply_result)
         console.print("\n[bold cyan]Frontend Provider Patch Apply Artifact[/bold cyan]")
         console.print(
-            f"  - saved: {apply_artifact_path.relative_to(root)}",
+            f"  - saved: {_format_cli_path(apply_artifact_path.relative_to(root))}",
             markup=False,
         )
 
@@ -2692,7 +2704,7 @@ def program_provider_patch_apply(
         if apply_artifact_path is not None:
             lines.append("## Frontend Provider Patch Apply Artifact")
             lines.append("")
-            lines.append(f"- `{apply_artifact_path.relative_to(root)}`")
+            lines.append(f"- `{_format_cli_path(apply_artifact_path.relative_to(root))}`")
             lines.append("")
         if request.warnings or (apply_result is not None and apply_result.warnings):
             lines.append("## Warnings")
@@ -2703,7 +2715,9 @@ def program_provider_patch_apply(
             lines.extend([f"- {warning}" for warning in _dedupe_cli_text_items(warning_lines)])
             lines.append("")
         report_path.write_text("\n".join(lines), encoding="utf-8")
-        console.print(f"\n[green]Report written:[/green] {report_path}")
+        console.print(
+            f"\n[green]Report written:[/green] {_format_cli_path(report_path.relative_to(root))}"
+        )
 
     if dry_run:
         raise typer.Exit(code=0)
@@ -2843,7 +2857,7 @@ def program_cross_spec_writeback(
         _render_frontend_cross_spec_writeback_result(writeback_result)
         console.print("\n[bold cyan]Frontend Cross-Spec Writeback Artifact[/bold cyan]")
         console.print(
-            f"  - saved: {writeback_artifact_path.relative_to(root)}",
+            f"  - saved: {_format_cli_path(writeback_artifact_path.relative_to(root))}",
             markup=False,
         )
 
@@ -2914,7 +2928,7 @@ def program_cross_spec_writeback(
         if writeback_artifact_path is not None:
             lines.append("## Frontend Cross-Spec Writeback Artifact")
             lines.append("")
-            lines.append(f"- `{writeback_artifact_path.relative_to(root)}`")
+            lines.append(f"- `{_format_cli_path(writeback_artifact_path.relative_to(root))}`")
             lines.append("")
         if request.warnings or (writeback_result is not None and writeback_result.warnings):
             lines.append("## Warnings")
@@ -2925,7 +2939,9 @@ def program_cross_spec_writeback(
             lines.extend([f"- {warning}" for warning in _dedupe_cli_text_items(warning_lines)])
             lines.append("")
         report_path.write_text("\n".join(lines), encoding="utf-8")
-        console.print(f"\n[green]Report written:[/green] {report_path}")
+        console.print(
+            f"\n[green]Report written:[/green] {_format_cli_path(report_path.relative_to(root))}"
+        )
 
     if dry_run:
         raise typer.Exit(code=0)
@@ -3065,7 +3081,7 @@ def program_guarded_registry(
         _render_frontend_guarded_registry_result(registry_result)
         console.print("\n[bold cyan]Frontend Guarded Registry Artifact[/bold cyan]")
         console.print(
-            f"  - saved: {registry_artifact_path.relative_to(root)}",
+            f"  - saved: {_format_cli_path(registry_artifact_path.relative_to(root))}",
             markup=False,
         )
 
@@ -3130,7 +3146,7 @@ def program_guarded_registry(
         if registry_artifact_path is not None:
             lines.append("## Frontend Guarded Registry Artifact")
             lines.append("")
-            lines.append(f"- `{registry_artifact_path.relative_to(root)}`")
+            lines.append(f"- `{_format_cli_path(registry_artifact_path.relative_to(root))}`")
             lines.append("")
         if request.warnings or (registry_result is not None and registry_result.warnings):
             lines.append("## Warnings")
@@ -3141,7 +3157,9 @@ def program_guarded_registry(
             lines.extend([f"- {warning}" for warning in _dedupe_cli_text_items(warning_lines)])
             lines.append("")
         report_path.write_text("\n".join(lines), encoding="utf-8")
-        console.print(f"\n[green]Report written:[/green] {report_path}")
+        console.print(
+            f"\n[green]Report written:[/green] {_format_cli_path(report_path.relative_to(root))}"
+        )
 
     if dry_run:
         raise typer.Exit(code=0)
@@ -3281,7 +3299,7 @@ def program_broader_governance(
         _render_frontend_broader_governance_result(governance_result)
         console.print("\n[bold cyan]Frontend Broader Governance Artifact[/bold cyan]")
         console.print(
-            f"  - saved: {governance_artifact_path.relative_to(root)}",
+            f"  - saved: {_format_cli_path(governance_artifact_path.relative_to(root))}",
             markup=False,
         )
 
@@ -3352,7 +3370,7 @@ def program_broader_governance(
         if governance_artifact_path is not None:
             lines.append("## Frontend Broader Governance Artifact")
             lines.append("")
-            lines.append(f"- `{governance_artifact_path.relative_to(root)}`")
+            lines.append(f"- `{_format_cli_path(governance_artifact_path.relative_to(root))}`")
             lines.append("")
         if request.warnings or (
             governance_result is not None and governance_result.warnings
@@ -3365,7 +3383,9 @@ def program_broader_governance(
             lines.extend([f"- {warning}" for warning in _dedupe_cli_text_items(warning_lines)])
             lines.append("")
         report_path.write_text("\n".join(lines), encoding="utf-8")
-        console.print(f"\n[green]Report written:[/green] {report_path}")
+        console.print(
+            f"\n[green]Report written:[/green] {_format_cli_path(report_path.relative_to(root))}"
+        )
 
     if dry_run:
         raise typer.Exit(code=0)
@@ -3508,7 +3528,7 @@ def program_final_governance(
         _render_frontend_final_governance_result(final_governance_result)
         console.print("\n[bold cyan]Frontend Final Governance Artifact[/bold cyan]")
         console.print(
-            f"  - saved: {final_governance_artifact_path.relative_to(root)}",
+            f"  - saved: {_format_cli_path(final_governance_artifact_path.relative_to(root))}",
             markup=False,
         )
 
@@ -3593,7 +3613,9 @@ def program_final_governance(
         if final_governance_artifact_path is not None:
             lines.append("## Frontend Final Governance Artifact")
             lines.append("")
-            lines.append(f"- `{final_governance_artifact_path.relative_to(root)}`")
+            lines.append(
+                f"- `{_format_cli_path(final_governance_artifact_path.relative_to(root))}`"
+            )
             lines.append("")
         if request.warnings or (
             final_governance_result is not None and final_governance_result.warnings
@@ -3606,7 +3628,9 @@ def program_final_governance(
             lines.extend([f"- {warning}" for warning in _dedupe_cli_text_items(warning_lines)])
             lines.append("")
         report_path.write_text("\n".join(lines), encoding="utf-8")
-        console.print(f"\n[green]Report written:[/green] {report_path}")
+        console.print(
+            f"\n[green]Report written:[/green] {_format_cli_path(report_path.relative_to(root))}"
+        )
 
     if dry_run:
         raise typer.Exit(code=0)
@@ -3749,7 +3773,7 @@ def program_writeback_persistence(
         _render_frontend_writeback_persistence_result(persistence_result)
         console.print("\n[bold cyan]Frontend Writeback Persistence Artifact[/bold cyan]")
         console.print(
-            f"  - saved: {persistence_artifact_path.relative_to(root)}",
+            f"  - saved: {_format_cli_path(persistence_artifact_path.relative_to(root))}",
             markup=False,
         )
 
@@ -3820,7 +3844,7 @@ def program_writeback_persistence(
         if persistence_artifact_path is not None:
             lines.append("## Frontend Writeback Persistence Artifact")
             lines.append("")
-            lines.append(f"- `{persistence_artifact_path.relative_to(root)}`")
+            lines.append(f"- `{_format_cli_path(persistence_artifact_path.relative_to(root))}`")
             lines.append("")
         if request.warnings or (
             persistence_result is not None and persistence_result.warnings
@@ -3833,7 +3857,9 @@ def program_writeback_persistence(
             lines.extend([f"- {warning}" for warning in _dedupe_cli_text_items(warning_lines)])
             lines.append("")
         report_path.write_text("\n".join(lines), encoding="utf-8")
-        console.print(f"\n[green]Report written:[/green] {report_path}")
+        console.print(
+            f"\n[green]Report written:[/green] {_format_cli_path(report_path.relative_to(root))}"
+        )
 
     if dry_run:
         raise typer.Exit(code=0)
@@ -3976,7 +4002,7 @@ def program_persisted_write_proof(
         _render_frontend_persisted_write_proof_result(proof_result)
         console.print("\n[bold cyan]Frontend Persisted Write Proof Artifact[/bold cyan]")
         console.print(
-            f"  - saved: {proof_artifact_path.relative_to(root)}",
+            f"  - saved: {_format_cli_path(proof_artifact_path.relative_to(root))}",
             markup=False,
         )
 
@@ -4041,7 +4067,7 @@ def program_persisted_write_proof(
         if proof_artifact_path is not None:
             lines.append("## Frontend Persisted Write Proof Artifact")
             lines.append("")
-            lines.append(f"- `{proof_artifact_path.relative_to(root)}`")
+            lines.append(f"- `{_format_cli_path(proof_artifact_path.relative_to(root))}`")
             lines.append("")
         if request.warnings or (proof_result is not None and proof_result.warnings):
             lines.append("## Warnings")
@@ -4052,7 +4078,9 @@ def program_persisted_write_proof(
             lines.extend([f"- {warning}" for warning in _dedupe_cli_text_items(warning_lines)])
             lines.append("")
         report_path.write_text("\n".join(lines), encoding="utf-8")
-        console.print(f"\n[green]Report written:[/green] {report_path}")
+        console.print(
+            f"\n[green]Report written:[/green] {_format_cli_path(report_path.relative_to(root))}"
+        )
 
     if dry_run:
         raise typer.Exit(code=0)
@@ -4195,7 +4223,7 @@ def program_final_proof_publication(
         _render_frontend_final_proof_publication_result(publication_result)
         console.print("\n[bold cyan]Frontend Final Proof Publication Artifact[/bold cyan]")
         console.print(
-            f"  - saved: {publication_artifact_path.relative_to(root)}",
+            f"  - saved: {_format_cli_path(publication_artifact_path.relative_to(root))}",
             markup=False,
         )
 
@@ -4272,7 +4300,7 @@ def program_final_proof_publication(
         if publication_artifact_path is not None:
             lines.append("## Frontend Final Proof Publication Artifact")
             lines.append("")
-            lines.append(f"- `{publication_artifact_path.relative_to(root)}`")
+            lines.append(f"- `{_format_cli_path(publication_artifact_path.relative_to(root))}`")
             lines.append("")
         if request.warnings or (
             publication_result is not None and publication_result.warnings
@@ -4285,7 +4313,9 @@ def program_final_proof_publication(
             lines.extend([f"- {warning}" for warning in _dedupe_cli_text_items(warning_lines)])
             lines.append("")
         report_path.write_text("\n".join(lines), encoding="utf-8")
-        console.print(f"\n[green]Report written:[/green] {report_path}")
+        console.print(
+            f"\n[green]Report written:[/green] {_format_cli_path(report_path.relative_to(root))}"
+        )
 
     if dry_run:
         raise typer.Exit(code=0)
@@ -4425,7 +4455,7 @@ def program_final_proof_closure(
         _render_frontend_final_proof_closure_result(closure_result)
         console.print("\n[bold cyan]Frontend Final Proof Closure Artifact[/bold cyan]")
         console.print(
-            f"  - saved: {closure_artifact_path.relative_to(root)}",
+            f"  - saved: {_format_cli_path(closure_artifact_path.relative_to(root))}",
             markup=False,
         )
 
@@ -4492,7 +4522,7 @@ def program_final_proof_closure(
         if closure_artifact_path is not None:
             lines.append("## Frontend Final Proof Closure Artifact")
             lines.append("")
-            lines.append(f"- `{closure_artifact_path.relative_to(root)}`")
+            lines.append(f"- `{_format_cli_path(closure_artifact_path.relative_to(root))}`")
             lines.append("")
         if request.warnings or (closure_result is not None and closure_result.warnings):
             lines.append("## Warnings")
@@ -4503,7 +4533,9 @@ def program_final_proof_closure(
             lines.extend([f"- {warning}" for warning in _dedupe_cli_text_items(warning_lines)])
             lines.append("")
         report_path.write_text("\n".join(lines), encoding="utf-8")
-        console.print(f"\n[green]Report written:[/green] {report_path}")
+        console.print(
+            f"\n[green]Report written:[/green] {_format_cli_path(report_path.relative_to(root))}"
+        )
 
     if dry_run:
         raise typer.Exit(code=0)
@@ -4643,7 +4675,7 @@ def program_final_proof_archive(
         _render_frontend_final_proof_archive_result(archive_result)
         console.print("\n[bold cyan]Frontend Final Proof Archive Artifact[/bold cyan]")
         console.print(
-            f"  - saved: {archive_artifact_path.relative_to(root)}",
+            f"  - saved: {_format_cli_path(archive_artifact_path.relative_to(root))}",
             markup=False,
         )
 
@@ -4710,7 +4742,7 @@ def program_final_proof_archive(
         if archive_artifact_path is not None:
             lines.append("## Frontend Final Proof Archive Artifact")
             lines.append("")
-            lines.append(f"- `{archive_artifact_path.relative_to(root)}`")
+            lines.append(f"- `{_format_cli_path(archive_artifact_path.relative_to(root))}`")
             lines.append("")
         if request.warnings or (archive_result is not None and archive_result.warnings):
             lines.append("## Warnings")
@@ -4721,7 +4753,9 @@ def program_final_proof_archive(
             lines.extend([f"- {warning}" for warning in _dedupe_cli_text_items(warning_lines)])
             lines.append("")
         report_path.write_text("\n".join(lines), encoding="utf-8")
-        console.print(f"\n[green]Report written:[/green] {report_path}")
+        console.print(
+            f"\n[green]Report written:[/green] {_format_cli_path(report_path.relative_to(root))}"
+        )
 
     if dry_run:
         raise typer.Exit(code=0)
@@ -5187,7 +5221,7 @@ def program_final_proof_archive_project_cleanup(
             "\n[bold cyan]Frontend Final Proof Archive Project Cleanup Artifact[/bold cyan]"
         )
         console.print(
-            f"  - saved: {project_cleanup_artifact_path.relative_to(root)}",
+            f"  - saved: {_format_cli_path(project_cleanup_artifact_path.relative_to(root))}",
             markup=False,
         )
 
@@ -5368,7 +5402,9 @@ def program_final_proof_archive_project_cleanup(
         if project_cleanup_artifact_path is not None:
             lines.append("## Frontend Final Proof Archive Project Cleanup Artifact")
             lines.append("")
-            lines.append(f"- `{project_cleanup_artifact_path.relative_to(root)}`")
+            lines.append(
+                f"- `{_format_cli_path(project_cleanup_artifact_path.relative_to(root))}`"
+            )
             lines.append("")
         if request.warnings or (
             project_cleanup_result is not None and project_cleanup_result.warnings
@@ -5381,7 +5417,9 @@ def program_final_proof_archive_project_cleanup(
             lines.extend([f"- {warning}" for warning in _dedupe_cli_text_items(warning_lines)])
             lines.append("")
         report_path.write_text("\n".join(lines), encoding="utf-8")
-        console.print(f"\n[green]Report written:[/green] {report_path}")
+        console.print(
+            f"\n[green]Report written:[/green] {_format_cli_path(report_path.relative_to(root))}"
+        )
 
     if dry_run:
         raise typer.Exit(code=0)
@@ -6181,7 +6219,12 @@ def _frontend_solution_confirmation_report_lines(
                 "",
             ]
         )
-        lines.extend([f"- `{path}`" for path in _dedupe_cli_text_items(artifact_paths)])
+        lines.extend(
+            [
+                f"- `{_format_cli_path_value(path)}`"
+                for path in _dedupe_cli_text_items(artifact_paths)
+            ]
+        )
         lines.append("")
     return lines
 

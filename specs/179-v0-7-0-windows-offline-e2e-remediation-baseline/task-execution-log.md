@@ -2,7 +2,7 @@
 
 **功能编号**：`179-v0-7-0-windows-offline-e2e-remediation-baseline`
 **创建日期**：2026-04-24
-**状态**：Batch 1 已收口，T179-15 默认分支兼容子项已补齐，仍待其余批次继续完成
+**状态**：16/16 任务已完成；本批补齐 Windows source-checkout / release evidence / close-out 收口
 
 ## 1. 归档规则
 
@@ -132,3 +132,103 @@
 #### 2.5 回退方式
 
 - 回退上述代码和测试文件即可撤销默认分支兼容改动；如需同步文档状态，应删除本批记录并恢复状态描述。
+
+### Batch 2026-04-27-002 | Remaining T179 closure and release proof alignment
+
+#### 2.1 批次范围
+
+- 覆盖任务：`T179-04`、`T179-05`、`T179-06`、`T179-07`、`T179-08`、`T179-09`、`T179-10`、`T179-11`、`T179-12`、`T179-13`、`T179-14`、`T179-15`、`T179-16`
+- 覆盖缺陷：`E2E-WIN-001`、`E2E-WIN-002`、`E2E-WIN-003`、`E2E-WIN-004`、`E2E-WIN-005`、`E2E-WIN-006`、`E2E-WIN-008`、`E2E-WIN-009`、`E2E-WIN-010`、`E2E-WIN-011`、`E2E-WIN-012`、`E2E-WIN-014`、`E2E-WIN-015`、`E2E-WIN-016`、`E2E-WIN-017`、`E2E-WIN-018`、`E2E-WIN-019`、`E2E-WIN-022`
+- 改动范围：
+  - `src/ai_sdlc/__main__.py`
+  - `src/ai_sdlc/cli/adapter_cmd.py`
+  - `src/ai_sdlc/cli/commands.py`
+  - `src/ai_sdlc/cli/doctor_cmd.py`
+  - `src/ai_sdlc/cli/program_cmd.py`
+  - `src/ai_sdlc/cli/sub_apps.py`
+  - `src/ai_sdlc/cli/verify_cmd.py`
+  - `src/ai_sdlc/cli/workitem_cmd.py`
+  - `src/ai_sdlc/core/frontend_browser_gate_runtime.py`
+  - `src/ai_sdlc/core/reconcile.py`
+  - `src/ai_sdlc/gates/frontend_contract_gate.py`
+  - `src/ai_sdlc/gates/pipeline_gates.py`
+  - `src/ai_sdlc/integrations/ide_adapter.py`
+  - `src/ai_sdlc/routers/existing_project_init.py`
+  - `src/ai_sdlc/telemetry/ids.py`
+  - `src/ai_sdlc/telemetry/paths.py`
+  - `program-manifest.yaml`
+  - `tests/integration/test_cli_doctor.py`
+  - `tests/integration/test_cli_module_invocation.py`
+  - `tests/integration/test_cli_status.py`
+  - `tests/integration/test_cli_verify_constraints.py`
+  - `tests/integration/test_cli_workitem_close_check.py`
+  - `tests/integration/test_cli_workitem_init.py`
+  - `tests/integration/test_cli_workitem_plan_check.py`
+  - `tests/integration/test_offline_bundle_scripts.py`
+  - `tests/unit/test_close_check.py`
+  - `tests/unit/test_verify_constraints.py`
+  - `docs/releases/v0.7.0.md`
+  - `README.md`
+  - `specs/179-v0-7-0-windows-offline-e2e-remediation-baseline/tasks.md`
+  - `specs/179-v0-7-0-windows-offline-e2e-remediation-baseline/task-execution-log.md`
+
+#### 2.2 实现摘要
+
+- 修复 `python -m ai_sdlc` 的 Windows/PowerShell 入口行为：仅在顶层 `--help` 或无参时走 ASCII fallback，保留子命令 `--help` 与真实子命令路由。
+- adapter/status/doctor/sub-app/verify/program 统一补齐 plain-text surface，并把 ingress/environment、路径输出、UTF-8/Windows 兼容显示与 POSIX path normalization 对齐。
+- telemetry scope 目录名与 ID 后缀收紧，避免 Windows 长路径/深层 scope 命名漂移；status truth surface 同步更新 next action 与 inheritance 语义。
+- browser gate、contract gate、existing-project init、workitem init/close-check 的路径与 evidence 输出统一为 POSIX-style refs，收敛跨平台 artifact/path drift。
+- Git 测试夹具统一改为 `git init --initial-branch=main`，补齐默认分支、自定义默认分支、无 PATH/模块入口、Windows 离线脚本 smoke 的回归用例。
+- `docs/releases/v0.7.0.md` 与 `README.md` 增补 Windows `windows-offline-smoke-evidence` 回链，明确 `.zip` smoke 证据来自 `.github/workflows/windows-offline-smoke.yml`，并保留 per-platform evidence 边界。
+
+#### 2.3 统一验证命令
+
+- **验证画像**：`code-change`
+- `uv run pytest tests/integration/test_cli_status.py -q -k "latest_scope_ids_do_not_depend_on_manifest_key_order or fallback_latest_scope_ids_ignore_misleading_mtime or promotes_spec_scoped_program_truth_into_workitem_diagnostic or surfaces_stale_apply_artifact_in_frontend_delivery_truth or surfaces_browser_gate_scope_linkage_invalid_in_frontend_delivery_truth"`
+- `uv run pytest tests/integration/test_cli_workitem_close_check.py tests/unit/test_close_check.py -q -k "worktree_demo or initial_branch or closeout_not_committed or json_preserves_program_truth_frontend_delivery_status or deep_docs_violation_with_all_docs_flag"`
+- `uv run pytest tests/integration/test_offline_bundle_scripts.py -q -k "build_offline_bundle or install_offline or install_online"`
+- `uv run pytest tests/integration/test_cli_module_invocation.py tests/integration/test_cli_doctor.py tests/integration/test_cli_workitem_init.py tests/integration/test_cli_workitem_plan_check.py tests/integration/test_cli_verify_constraints.py -q`
+- `uv run ruff check src tests`
+- `uv run ai-sdlc verify constraints`
+- `uv run ai-sdlc run --dry-run`
+- `uv run ai-sdlc adapter status`
+- `uv run ai-sdlc program truth sync --dry-run`
+- `uv run ai-sdlc program truth sync --execute --yes`
+- Codex 对话终端未继承 `uv`；按仓库约定使用等价回退命令实际执行：
+  - `python -m ruff check src tests`
+  - `python -m pytest ...`
+  - `python -m ai_sdlc verify constraints`
+  - `PYTHONPATH=src python -m ai_sdlc adapter status`
+  - `PYTHONPATH=src python -m ai_sdlc run --dry-run`
+  - `PYTHONPATH=src python -m ai_sdlc program truth sync --dry-run`
+  - `PYTHONPATH=src python -m ai_sdlc program truth sync --execute --yes`
+
+#### 2.4 代码审查
+
+- 审查范围：核对 `python -m ai_sdlc` fallback 不再吞掉子命令 `--help`，确认 `program truth sync --dry-run` 为真实可达命令，确认 Windows CI smoke 证据与 release/docs 的回链一致。
+- 审查结论：当前剩余风险集中在 release 证据持续生成依赖 `.github/workflows/windows-offline-smoke.yml` 与后续正式 release archive；源码、测试与入口口径已对齐。
+
+#### 2.5 任务/计划同步状态
+
+- `tasks.md` 16 项任务已全部勾选完成。
+- 本批未额外声明 `related_plan`；close-check 维持 “no related_plan declared; skipped”。
+- 本批收口目标从“剩余 13 项 + T179-15 局部完成”推进到“16/16 全部完成并统一 release 口径”。
+
+#### 2.6 批次结论
+
+- `T179-04`：Windows release asset smoke 由 `.github/workflows/windows-offline-smoke.yml` 执行 `.zip` 解压、`install_offline.ps1`、`ai-sdlc --help`、`adapter status`、`run --dry-run`，并上传 `windows-offline-smoke-evidence`。
+- `T179-05` ~ `T179-07`：相关中文标题降级、业务模板隔离与 artifact summary/gate 语义已由现有实现与回归覆盖，本批仅补正式收口与验证。
+- `T179-08` ~ `T179-10`：adapter/telemetry/status/verify/final-proof 语义通过 plain-text surface、truth surface、close-check 回归与模块入口修复完成闭环。
+- `T179-11` ~ `T179-13`：PrimeVue/public delivery、enterprise/provider isolation、browser gate baseline/final proof 的证据语义已与 status/program/browser-gate surfaces 对齐。
+- `T179-14` ~ `T179-16`：Windows 编码/脚本体验、default branch/PowerShell 前置、release notes 与 release proof 回链已对齐当前发布口径。
+
+#### 2.7 回退方式
+
+- 若需回退本批，撤销上述源码、测试与 release/docs 更新，并将 `tasks.md` 中 `T179-04` ~ `T179-16` 恢复为未完成。
+
+#### 2.8 归档后动作
+
+- **已完成 git 提交**：是
+- **提交哈希**：`7049649`
+- 当前批次 branch disposition 状态：`待最终收口`
+- 当前批次 worktree disposition 状态：`待最终收口`

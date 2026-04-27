@@ -53,7 +53,11 @@ def _is_interactive_terminal() -> bool:
 
 def _adapter_status_payload(root: Path) -> dict[str, object]:
     detected_ide = detect_ide(root)
-    return build_adapter_governance_surface(root, detected_ide=detected_ide)
+    return build_adapter_governance_surface(
+        root,
+        detected_ide=detected_ide,
+        environ=os.environ,
+    )
 
 
 def _resolve_command(ctx: typer.Context) -> list[str]:
@@ -109,6 +113,16 @@ def _adapter_status_guidance(payload: dict[str, object]) -> str:
             ),
         ),
     )
+
+
+def _prepend_pythonpath(current: dict[str, str], entry: str) -> str:
+    existing = current.get("PYTHONPATH", "").strip()
+    if not existing:
+        return entry
+    parts = [item for item in existing.split(os.pathsep) if item]
+    if entry in parts:
+        return existing
+    return os.pathsep.join([entry, *parts])
 
 
 @adapter_app.command(name="select")
@@ -197,6 +211,8 @@ def adapter_exec(ctx: typer.Context) -> None:
 
     env = os.environ.copy()
     env.update(proof_env)
+    package_root = str(Path(__file__).resolve().parents[2])
+    env["PYTHONPATH"] = _prepend_pythonpath(env, package_root)
     result = subprocess.run(
         command,
         cwd=root,

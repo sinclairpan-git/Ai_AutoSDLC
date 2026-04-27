@@ -13,6 +13,8 @@ import textwrap
 import zipfile
 from pathlib import Path
 
+import pytest
+
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 _OFFLINE_DIR = _REPO_ROOT / "packaging" / "offline"
 _PACKAGING_DIR = _REPO_ROOT / "packaging"
@@ -22,6 +24,13 @@ def _write_executable(path: Path, content: str) -> Path:
     path.write_text(content, encoding="utf-8")
     path.chmod(0o755)
     return path
+
+
+def _bash_command() -> str:
+    bash = shutil.which("bash")
+    if bash:
+        return bash
+    pytest.skip("bash is required to execute POSIX shell installer tests")
 
 
 def _make_fake_python(wrapper_dir: Path) -> Path:
@@ -279,7 +288,7 @@ def test_build_offline_bundle_emits_platform_manifest_and_archives(tmp_path: Pat
     _make_fake_uv(wrapper_dir)
 
     result = subprocess.run(
-        ["bash", str(repo / "packaging" / "offline" / "build_offline_bundle.sh")],
+        [_bash_command(), str(repo / "packaging" / "offline" / "build_offline_bundle.sh")],
         cwd=repo,
         capture_output=True,
         text=True,
@@ -321,7 +330,7 @@ def test_build_offline_bundle_embeds_portable_python_runtime_when_configured(
     env["AI_SDLC_OFFLINE_PYTHON_RUNTIME"] = str(portable_runtime)
 
     result = subprocess.run(
-        ["bash", str(repo / "packaging" / "offline" / "build_offline_bundle.sh")],
+        [_bash_command(), str(repo / "packaging" / "offline" / "build_offline_bundle.sh")],
         cwd=repo,
         capture_output=True,
         text=True,
@@ -369,7 +378,7 @@ def test_install_offline_rejects_platform_manifest_mismatch(tmp_path: Path) -> N
     fake_python = _make_fake_python(wrapper_dir)
 
     result = subprocess.run(
-        ["bash", str(bundle_dir / "install_offline.sh")],
+        [_bash_command(), str(bundle_dir / "install_offline.sh")],
         cwd=bundle_dir,
         capture_output=True,
         text=True,
@@ -407,7 +416,7 @@ def test_install_offline_accepts_matching_platform_manifest(tmp_path: Path) -> N
     fake_python = _make_fake_python(wrapper_dir)
 
     result = subprocess.run(
-        ["bash", str(bundle_dir / "install_offline.sh")],
+        [_bash_command(), str(bundle_dir / "install_offline.sh")],
         cwd=bundle_dir,
         capture_output=True,
         text=True,
@@ -448,10 +457,9 @@ def test_install_offline_uses_bundled_python_runtime_when_system_python_missing(
     env = dict(os.environ)
     env["PATH"] = ""
     env.pop("PYTHON", None)
-    bash = shutil.which("bash") or "/bin/bash"
 
     result = subprocess.run(
-        [bash, str(bundle_dir / "install_offline.sh")],
+        [_bash_command(), str(bundle_dir / "install_offline.sh")],
         cwd=bundle_dir,
         capture_output=True,
         text=True,
@@ -491,10 +499,9 @@ def test_install_offline_uses_versioned_bundled_python_runtime_when_only_python3
     env = dict(os.environ)
     env["PATH"] = ""
     env.pop("PYTHON", None)
-    bash = shutil.which("bash") or "/bin/bash"
 
     result = subprocess.run(
-        [bash, str(bundle_dir / "install_offline.sh")],
+        [_bash_command(), str(bundle_dir / "install_offline.sh")],
         cwd=bundle_dir,
         capture_output=True,
         text=True,
@@ -523,10 +530,9 @@ def test_install_online_uses_detected_python_and_prints_bilingual_guidance(
     env = dict(os.environ)
     env["PATH"] = str(wrapper_dir)
     env["AI_SDLC_PACKAGE_SPEC"] = "ai-sdlc==0.7.0"
-    bash = shutil.which("bash") or "/bin/bash"
 
     result = subprocess.run(
-        [bash, str(script_path)],
+        [_bash_command(), str(script_path)],
         cwd=tmp_path,
         capture_output=True,
         text=True,
@@ -606,10 +612,9 @@ raise SystemExit(0)
     env["PATH"] = str(wrapper_dir)
     env["AI_SDLC_PACKAGE_SPEC"] = "ai-sdlc==0.7.0"
     env.pop("PYTHON", None)
-    bash = shutil.which("bash") or "/bin/bash"
 
     result = subprocess.run(
-        [bash, str(script_path)],
+        [_bash_command(), str(script_path)],
         cwd=tmp_path,
         capture_output=True,
         text=True,
@@ -680,10 +685,9 @@ raise SystemExit(0)
     env = dict(os.environ)
     env["PATH"] = str(wrapper_dir)
     env.pop("PYTHON", None)
-    bash = shutil.which("bash") or "/bin/bash"
 
     result = subprocess.run(
-        [bash, str(script_path)],
+        [_bash_command(), str(script_path)],
         cwd=tmp_path,
         capture_output=True,
         text=True,
@@ -719,10 +723,9 @@ def test_install_online_reports_bilingual_failure_when_python_cannot_be_installe
     env = dict(os.environ)
     env["PATH"] = str(wrapper_dir)
     env.pop("PYTHON", None)
-    bash = shutil.which("bash") or "/bin/bash"
 
     result = subprocess.run(
-        [bash, str(script_path)],
+        [_bash_command(), str(script_path)],
         cwd=tmp_path,
         capture_output=True,
         text=True,

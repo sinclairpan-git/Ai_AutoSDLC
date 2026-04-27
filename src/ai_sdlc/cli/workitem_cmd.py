@@ -56,6 +56,10 @@ def _dedupe_cli_text_items(values: object) -> list[str]:
     return deduped
 
 
+def _format_cli_path(path: Path) -> str:
+    return path.as_posix()
+
+
 def _preferred_docs_branch_name(work_item_id: str) -> str:
     """Return the preferred Stage-1 docs branch name."""
     return f"feature/{work_item_id}-docs"
@@ -174,10 +178,10 @@ def workitem_init(
 
     console.print(
         "[green]Created canonical formal docs under "
-        f"{result.spec_dir.relative_to(root)}[/green]"
+        f"{_format_cli_path(result.spec_dir.relative_to(root))}[/green]"
     )
     for path_label in _dedupe_cli_text_items(
-        str(path.relative_to(root)) for path in result.created_paths
+        _format_cli_path(path.relative_to(root)) for path in result.created_paths
     ):
         console.print(f"  - {path_label}")
     manifest_sync = ProgramService(root).ensure_manifest_spec_entry(

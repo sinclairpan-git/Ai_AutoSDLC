@@ -63,7 +63,7 @@ def git_repo(tmp_path: Path) -> Generator[Path, None, None]:
     repo = tmp_path / "git-repo"
     repo.mkdir()
     subprocess.run(
-        ["git", "init"],
+        ["git", "init", "--initial-branch=main"],
         cwd=repo,
         check=True,
         capture_output=True,
