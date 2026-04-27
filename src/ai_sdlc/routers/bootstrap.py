@@ -5,7 +5,11 @@ from __future__ import annotations
 import logging
 from pathlib import Path
 
-from ai_sdlc.core.config import load_project_state, save_project_state
+from ai_sdlc.core.config import (
+    load_project_state,
+    persist_preferred_shell,
+    save_project_state,
+)
 from ai_sdlc.models.project import ProjectState, ProjectStatus
 from ai_sdlc.utils.helpers import AI_SDLC_DIR, has_project_markers, now_iso
 
@@ -38,6 +42,7 @@ def init_project(
     project_name: str = "",
     *,
     agent_target: str | None = None,
+    preferred_shell: str | None = None,
 ) -> ProjectState:
     """Initialize AI-SDLC in a project directory.
 
@@ -99,6 +104,8 @@ def init_project(
     from ai_sdlc.integrations.ide_adapter import ensure_ide_adaptation
 
     ensure_ide_adaptation(root, agent_target=agent_target)
+    if preferred_shell:
+        persist_preferred_shell(root, preferred_shell)
 
     logger.info("Initialized AI-SDLC project '%s' at %s", project_name, root)
     return state

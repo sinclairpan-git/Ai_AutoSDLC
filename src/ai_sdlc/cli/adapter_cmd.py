@@ -12,10 +12,13 @@ from rich.console import Console
 from rich.table import Table
 
 from ai_sdlc.cli.status_guidance import render_status_guidance
-from ai_sdlc.core.config import load_project_config
+from ai_sdlc.core.config import load_project_config, persist_preferred_shell
 from ai_sdlc.integrations.agent_target import (
     interactive_select_agent_target,
+    interactive_select_preferred_shell,
     is_interactive_terminal,
+    preferred_shell_label,
+    recommended_shell_for_platform,
 )
 from ai_sdlc.integrations.ide_adapter import (
     IDEKind,
@@ -26,6 +29,7 @@ from ai_sdlc.integrations.ide_adapter import (
     ensure_ide_adaptation,
     format_adapter_notice,
 )
+from ai_sdlc.models.project import PreferredShell
 from ai_sdlc.utils.helpers import find_project_root
 
 console = Console()
@@ -152,6 +156,40 @@ def adapter_select(
     console.print(
         "[green]Adapter target selected:[/green] "
         f"{cfg.agent_target} ({cfg.adapter_ingress_state or 'unknown'})"
+    )
+
+
+@adapter_app.command(name="shell-select")
+def adapter_shell_select(
+    shell: PreferredShell | None = typer.Option(
+        None,
+        "--shell",
+        help="Preferred shell to persist for this project.",
+    ),
+) -> None:
+    """Persist the project shell preference and refresh adapter instructions."""
+    root = _require_project_root()
+    selected_shell = shell
+    if selected_shell is None:
+        if not _is_interactive_terminal():
+            console.print(
+                "[red]Specify --shell in non-interactive mode, or rerun in a TTY.[/red]"
+            )
+            raise typer.Exit(code=2)
+        selected_shell = interactive_select_preferred_shell(
+            recommended_shell_for_platform()
+        )
+
+    persist_preferred_shell(root, selected_shell.value)
+    cfg = load_project_config(root)
+    current_target = cfg.agent_target or detect_ide(root).value
+    result = ensure_ide_adaptation(root, agent_target=current_target)
+    note = format_adapter_notice(result)
+    if note:
+        console.print(note)
+    console.print(
+        "[green]Project shell selected:[/green] "
+        f"{preferred_shell_label(selected_shell)}"
     )
 
 

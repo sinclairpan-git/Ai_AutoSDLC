@@ -56,7 +56,10 @@ from ai_sdlc.generators.index_gen import (
 from ai_sdlc.integrations.agent_target import (
     agent_target_label,
     interactive_select_agent_target,
+    interactive_select_preferred_shell,
     is_interactive_terminal,
+    preferred_shell_label,
+    recommended_shell_for_platform,
 )
 from ai_sdlc.integrations.ide_adapter import (
     IDEKind,
@@ -507,6 +510,15 @@ def _add_adapter_governance_rows(
 ) -> None:
     table.add_row("Agent Target", str(adapter_governance["agent_target"] or "-"))
     table.add_row(
+        "Preferred Shell",
+        str(adapter_governance.get("preferred_shell") or "-"),
+    )
+    if adapter_governance.get("preferred_shell_migration_hint"):
+        table.add_row(
+            "Shell Migration",
+            str(adapter_governance["preferred_shell_migration_hint"]),
+        )
+    table.add_row(
         "Ingress State",
         str(adapter_governance["adapter_ingress_state"] or "-"),
     )
@@ -743,10 +755,29 @@ def init_command(
             "(explicit override)[/dim]"
         )
 
-    state = init_project(root, agent_target=selected_target.value if selected_target else None)
+    default_shell = recommended_shell_for_platform()
+    if _is_interactive_terminal():
+        selected_shell = interactive_select_preferred_shell(default_shell)
+        shell_note = (
+            f"[dim]Project shell: {preferred_shell_label(selected_shell)} "
+            f"(recommended default: {preferred_shell_label(default_shell)})[/dim]"
+        )
+    else:
+        selected_shell = default_shell
+        shell_note = (
+            f"[dim]Project shell: {preferred_shell_label(selected_shell)} "
+            "(non-interactive default)[/dim]"
+        )
+
+    state = init_project(
+        root,
+        agent_target=selected_target.value if selected_target else None,
+        preferred_shell=selected_shell.value,
+    )
     cfg = load_project_config(root)
     if target_note:
         console.print(target_note)
+    console.print(shell_note)
 
     info = (
         f"[green]Initialized AI-SDLC project[/green]\n"

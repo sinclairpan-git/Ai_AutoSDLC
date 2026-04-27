@@ -10,12 +10,18 @@ from pathlib import Path
 from typing import Any
 
 from ai_sdlc.core.config import load_project_config, save_project_config
-from ai_sdlc.integrations.agent_target import IDEKind, detect_agent_target
+from ai_sdlc.integrations.agent_target import (
+    IDEKind,
+    detect_agent_target,
+    preferred_shell_label,
+    recommended_shell_for_platform,
+)
 from ai_sdlc.models.project import (
     ActivationState,
     AdapterIngressState,
     AdapterSupportTier,
     AdapterVerificationResult,
+    PreferredShell,
 )
 from ai_sdlc.utils.helpers import AI_SDLC_DIR, PROJECT_CONFIG_PATH, now_iso
 
@@ -37,6 +43,7 @@ _LEGACY_ADAPTER_PATHS: dict[IDEKind, tuple[str, ...]] = {
     IDEKind.CODEX: (".codex/AI-SDLC.md",),
     IDEKind.CLAUDE_CODE: (".claude/AI-SDLC.md",),
 }
+_SHELL_GUIDANCE_MARKER = "<!-- AI-SDLC managed shell guidance -->"
 
 
 @dataclass
@@ -84,6 +91,61 @@ def _dedupe_string_items(values: list[str]) -> list[str]:
         if normalized and normalized not in unique:
             unique.append(normalized)
     return unique
+
+
+def _render_shell_guidance(preferred_shell: str) -> str:
+    raw = str(preferred_shell or "").strip().lower()
+    if not raw:
+        recommended = recommended_shell_for_platform()
+        return (
+            f"{_SHELL_GUIDANCE_MARKER}\n"
+            "Project preferred shell is not configured yet.\n"
+            f"Recommended default for this host: {preferred_shell_label(recommended)}.\n"
+            "Run `ai-sdlc adapter shell-select` and persist one shell before executing commands.\n"
+            "Until then, do not guess shell syntax across PowerShell, cmd, and POSIX shells."
+        )
+
+    shell = PreferredShell(raw)
+    label = preferred_shell_label(shell)
+    if shell == PreferredShell.POWERSHELL:
+        shell_detail = (
+            "Use PowerShell syntax for commands, env vars, pipes, and filesystem operations. "
+            "Do not start with POSIX shell syntax and then retry in PowerShell."
+        )
+    elif shell == PreferredShell.CMD:
+        shell_detail = (
+            "Use cmd.exe syntax for commands and environment variables. "
+            "Do not start with PowerShell cmdlets or POSIX shell syntax."
+        )
+    elif shell == PreferredShell.AUTO:
+        shell_detail = (
+            "Shell is set to auto. Inspect the live terminal before executing commands, "
+            "then stay consistent with that shell for the rest of the session."
+        )
+    else:
+        shell_detail = (
+            f"Use {label} POSIX shell syntax for commands and environment variables. "
+            "Do not start with PowerShell or cmd.exe syntax."
+        )
+    return (
+        f"{_SHELL_GUIDANCE_MARKER}\n"
+        f"Project preferred shell: {label}.\n"
+        f"{shell_detail}"
+    )
+
+
+def _render_adapter_content(base_text: str, preferred_shell: str) -> str:
+    return base_text.rstrip() + "\n\n" + _render_shell_guidance(preferred_shell) + "\n"
+
+
+def _managed_adapter_variants(base_texts: tuple[str, ...]) -> set[str]:
+    variants: set[str] = set()
+    for text in base_texts:
+        variants.add(text)
+        variants.add(_render_adapter_content(text, ""))
+        for shell in PreferredShell:
+            variants.add(_render_adapter_content(text, shell.value))
+    return variants
 
 
 def _bundle_root() -> Path:
@@ -157,13 +219,25 @@ def _sync_file(
     result: ApplyResult,
     *,
     legacy_sources: tuple[Path, ...] = (),
+    preferred_shell: str = "",
 ) -> None:
-    expected = bundle.read_text(encoding="utf-8")
+    bundle_text = bundle.read_text(encoding="utf-8")
+    expected = _render_adapter_content(bundle_text, preferred_shell)
     dest.parent.mkdir(parents=True, exist_ok=True)
+    variant_sources = [bundle_text]
+    variant_sources.extend(
+        path.read_text(encoding="utf-8") for path in legacy_sources if path.is_file()
+    )
+    managed_variants = _managed_adapter_variants(tuple(variant_sources))
     if not dest.exists():
         legacy_source = next((path for path in legacy_sources if path.is_file()), None)
         if legacy_source is not None:
-            dest.write_text(legacy_source.read_text(encoding="utf-8"), encoding="utf-8")
+            dest.write_text(
+                _render_adapter_content(
+                    legacy_source.read_text(encoding="utf-8"), preferred_shell
+                ),
+                encoding="utf-8",
+            )
             result.written.append(str(dest))
             result.legacy_migrated.append(str(legacy_source))
             return
@@ -174,6 +248,10 @@ def _sync_file(
     if existing == expected:
         result.skipped_existing.append(str(dest))
         return
+    if existing in managed_variants:
+        dest.write_text(expected, encoding="utf-8")
+        result.written.append(str(dest))
+        return
     result.skipped_user_modified.append(str(dest))
 
 
@@ -181,6 +259,7 @@ def apply_adapter(root: Path, ide: IDEKind) -> ApplyResult:
     """Copy bundled templates into the project without overwriting user edits."""
     result = ApplyResult(ide=ide.value)
     base = _bundle_root()
+    cfg = load_project_config(root)
     for rel_bundle, rel_dest in _install_pairs(ide):
         src = base / rel_bundle
         if not src.is_file():
@@ -188,7 +267,13 @@ def apply_adapter(root: Path, ide: IDEKind) -> ApplyResult:
             continue
         dst = root / rel_dest
         legacy_sources = tuple(root / rel for rel in _legacy_paths(ide))
-        _sync_file(src, dst, result, legacy_sources=legacy_sources)
+        _sync_file(
+            src,
+            dst,
+            result,
+            legacy_sources=legacy_sources,
+            preferred_shell=cfg.preferred_shell,
+        )
     return result
 
 
@@ -693,10 +778,23 @@ def build_adapter_governance_surface(
         activation_state=activation_state,
         verification_hint=_verification_env_hint(target),
     )
+    preferred_shell = str(cfg.preferred_shell or "").strip()
+    preferred_shell_configured = bool(preferred_shell)
+    preferred_shell_recommended = recommended_shell_for_platform().value
+    preferred_shell_migration_hint = ""
+    if not preferred_shell_configured:
+        preferred_shell_migration_hint = (
+            "preferred shell not configured; run `ai-sdlc adapter shell-select` "
+            f"(recommended: {preferred_shell_label(recommended_shell_for_platform())})."
+        )
 
     return {
         "detected_ide": resolved_detected_ide,
         "agent_target": agent_target,
+        "preferred_shell": preferred_shell,
+        "preferred_shell_configured": preferred_shell_configured,
+        "preferred_shell_recommended": preferred_shell_recommended,
+        "preferred_shell_migration_hint": preferred_shell_migration_hint,
         "adapter_applied": cfg.adapter_applied,
         "adapter_activation_state": activation_state,
         "adapter_support_tier": support_tier,

@@ -1,0 +1,60 @@
+# 任务执行日志：跨平台 Shell 偏好持久化与迁移基线
+
+**功能编号**：`180-shell-preference-persistence-and-migration-baseline`  
+**创建日期**：2026-04-27  
+**状态**：草案
+
+## 1. 归档规则
+
+- 本文件是 `180-shell-preference-persistence-and-migration-baseline` 的固定执行归档文件。
+- 后续每完成一批任务，都在本文末尾追加一个新的批次章节。
+- 每批开始前必须完成固定预读：`spec.md`、`plan.md`、`tasks.md`、宪章与相关 adapter/shell 配置代码。
+- 每批结束后必须按顺序完成：实现、验证、归档、更新 `tasks.md` 勾选状态，再执行单次提交。
+
+## 2. 初始批次记录
+
+### Batch 2026-04-27-001 | Stage-1 formalization
+
+#### 2.1 批次范围
+
+- 覆盖任务：Stage-1 formal docs freeze
+- 覆盖阶段：spec / plan / tasks / task-execution-log 初始化
+- 预读范围：workitem init baseline、adapter shell feedback、相关 project-config / adapter 代码
+
+#### 2.2 统一验证命令
+
+- `V1`
+  - 命令：`python -m ai_sdlc run --dry-run`
+  - 结果：PASS；当前 adapter 仍为 `materialized (unverified)`，但允许继续预演
+- `V2`
+  - 命令：`python -m ai_sdlc workitem init --help`
+  - 结果：PASS；确认 canonical Stage-1 docs 入口和分支约束
+
+#### 2.3 本批结果
+
+- 已完成 `specs/180-shell-preference-persistence-and-migration-baseline/` canonical docs 物化
+- 已冻结首版范围：配置持久化、init 选择、老项目迁移提示、独立重选命令、adapter 文案物化、状态面补齐
+- 已明确后续 next action：`python -m ai_sdlc program truth sync --execute --yes`
+
+#### 2.4 待后续批次补充
+
+- 代码实现记录：待后续批次追加
+- 测试结果：待实现批次追加
+- 提交哈希：待正式提交后追加
+
+### Batch 2026-04-27-002 | Shell preference persistence + migration rollout
+
+#### Scope
+- Implemented project-level preferred shell persistence and normalization.
+- Added interactive init shell selection plus non-interactive recommended defaults.
+- Added standalone `ai-sdlc adapter shell-select` for already-initialized projects.
+- Rendered adapter instructions with managed shell guidance and safe managed rewrites.
+- Surfaced missing-shell migration hints through adapter governance, status surfaces, and doctor summaries.
+
+#### Verification
+- `python -m pytest tests\\unit\\test_models.py::TestProjectModels::test_project_config_defaults tests\\unit\\test_models.py::TestProjectModels::test_preferred_shell_values tests\\unit\\test_project_config.py::test_load_project_config_missing_file_returns_defaults tests\\unit\\test_project_config.py::test_save_project_config_creates_file tests\\unit\\test_shell_preference.py::test_recommended_shell_for_windows tests\\unit\\test_shell_preference.py::test_recommended_shell_for_macos tests\\unit\\test_shell_preference.py::test_recommended_shell_for_linux tests\\unit\\test_shell_preference.py::test_recommended_shell_for_unknown_platform_falls_back_to_auto tests\\unit\\test_ide_adapter.py::TestApplyAdapter::test_all_ide_templates_point_to_status_then_safe_start tests\\unit\\test_ide_adapter.py::TestApplyAdapter::test_adapter_template_includes_selected_shell_guidance tests\\integration\\test_cli_init.py::TestCliInit::test_init_empty_dir tests\\integration\\test_cli_init.py::TestCliInit::test_init_with_codex_marker_prefers_codex_target tests\\integration\\test_cli_init.py::TestCliInit::test_init_interactive_shell_selector_persists_user_choice tests\\integration\\test_cli_adapter.py::TestCliAdapter::test_adapter_shell_select_with_explicit_shell_persists_and_rewrites_adapter_doc tests\\integration\\test_cli_adapter.py::TestCliAdapter::test_adapter_shell_select_without_flag_uses_interactive_selector tests\\integration\\test_cli_adapter.py::TestCliAdapter::test_adapter_status_json_exposes_target_and_ingress_truth tests\\integration\\test_cli_adapter.py::TestCliAdapter::test_adapter_status_json_reports_shell_selection_migration_hint_for_legacy_project tests\\integration\\test_cli_doctor.py::test_doctor_surfaces_shell_selection_migration_hint_in_status_surface -q` -> PASS (18 passed)
+- `python -m ruff check src\\ai_sdlc\\integrations\\agent_target.py src\\ai_sdlc\\integrations\\ide_adapter.py src\\ai_sdlc\\cli\\adapter_cmd.py src\\ai_sdlc\\cli\\commands.py src\\ai_sdlc\\telemetry\\display.py tests\\unit\\test_ide_adapter.py tests\\integration\\test_cli_adapter.py tests\\integration\\test_cli_doctor.py` -> PASS
+
+#### Notes
+- Stage-1 docs remain intact; this batch appends implementation evidence only.
+- T180-06 remains open for broader doc sweep and close-out regression scope.

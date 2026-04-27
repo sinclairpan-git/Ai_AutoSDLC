@@ -20,6 +20,7 @@ from ai_sdlc.models import (
     ProjectConfig,
     ProjectState,
     ProjectStatus,
+    PreferredShell,
     ResumePack,
     RuntimeState,
     Severity,
@@ -69,6 +70,14 @@ class TestProjectModels:
         assert config.default_branch_strategy == "dual"
         assert config.max_parallel_agents == 3
         assert config.document_locale == "zh-CN"
+        assert config.preferred_shell == ""
+
+    def test_preferred_shell_values(self) -> None:
+        assert PreferredShell.POWERSHELL.value == "powershell"
+        assert PreferredShell.BASH.value == "bash"
+        assert PreferredShell.ZSH.value == "zsh"
+        assert PreferredShell.CMD.value == "cmd"
+        assert PreferredShell.AUTO.value == "auto"
 
 
 class TestWorkItemModels:

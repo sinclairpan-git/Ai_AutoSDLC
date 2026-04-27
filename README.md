@@ -87,6 +87,8 @@ ai-sdlc run --dry-run
 
 Use `ai-sdlc adapter status` to inspect the current `agent_target`, raw adapter activation state, and derived governance activation mode, or `ai-sdlc adapter select --agent-target <target>` to correct a wrong target before `run --dry-run`. `run --dry-run` is a startup rehearsal only; it does not by itself prove governance activation.
 
+AI-SDLC now also persists a project-level preferred command shell in `.ai-sdlc/project/config/project-config.yaml`. `ai-sdlc init` selects a recommended default for the host OS and writes it to config. For already-initialized projects, run `ai-sdlc adapter shell-select` to re-pick the shell and refresh `AGENTS.md` / adapter instructions so Codex, Cursor, Claude Code, and VS Code stop guessing between PowerShell, bash, zsh, or cmd syntax.
+
 ## Frontend Managed Delivery Loop
 
 If your goal is the current governed frontend path from requirement to browser-gate closure, the minimum command loop is:
@@ -172,7 +174,7 @@ uv run mypy src/ai_sdlc/
 
 ### Local `project-config.yaml`
 
-The file `.ai-sdlc/project/config/project-config.yaml` holds IDE detection metadata, the selected `agent_target`, adapter activation state, and timestamps. It is **gitignored** in this repo; use `.ai-sdlc/project/config/project-config.example.yaml` as the schema reference. Running `ai-sdlc init` (or any path that runs IDE adaptation) recreates it. Missing file ⇒ `load_project_config` returns Pydantic defaults.
+The file `.ai-sdlc/project/config/project-config.yaml` holds IDE detection metadata, the selected `agent_target`, the preferred project shell, adapter activation state, and timestamps. It is **gitignored** in this repo; use `.ai-sdlc/project/config/project-config.example.yaml` as the schema reference. Running `ai-sdlc init` (or any path that runs IDE adaptation) recreates it. Missing file ⇒ `load_project_config` returns Pydantic defaults.
 
 ### Git branches
 

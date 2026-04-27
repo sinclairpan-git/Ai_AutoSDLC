@@ -335,6 +335,17 @@ def summarize_status_surface_detail(payload: dict[str, Any]) -> str:
                 "workitem_next=" + summarize_next_action_for_display(workitem_next)
             )
 
+    adapter_governance = payload.get("adapter_governance")
+    if isinstance(adapter_governance, dict):
+        preferred_shell = str(adapter_governance.get("preferred_shell", "")).strip()
+        preferred_shell_hint = str(
+            adapter_governance.get("preferred_shell_migration_hint", "")
+        ).strip()
+        if preferred_shell:
+            parts.append("preferred_shell=" + preferred_shell)
+        if preferred_shell_hint:
+            parts.append("shell_next=" + preferred_shell_hint)
+
     return "; ".join(_dedupe_display_text_items(parts))
 
 

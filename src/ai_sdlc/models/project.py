@@ -49,6 +49,16 @@ class AdapterVerificationResult(str, Enum):
     UNSUPPORTED = "unsupported"
 
 
+class PreferredShell(str, Enum):
+    """Supported project-level shell preferences."""
+
+    POWERSHELL = "powershell"
+    BASH = "bash"
+    ZSH = "zsh"
+    CMD = "cmd"
+    AUTO = "auto"
+
+
 class ProjectState(BaseModel):
     """Represents the project initialization state stored in project-state.yaml."""
 
@@ -80,6 +90,7 @@ class ProjectConfig(BaseModel):
     max_parallel_agents: int = 3
     #: Default language for human-readable generated docs (Markdown). Use zh-CN for 简体中文.
     document_locale: str = "zh-CN"
+    preferred_shell: str = ""
     # Auto IDE adapter (first command + init)
     detected_ide: str = ""
     agent_target: str = ""
@@ -104,3 +115,13 @@ class ProjectConfig(BaseModel):
     adapter_verified_at: str = ""
     telemetry_profile: TelemetryProfile = TelemetryProfile.SELF_HOSTING
     telemetry_mode: TelemetryMode = TelemetryMode.LITE
+
+    @field_validator("preferred_shell", mode="before")
+    @classmethod
+    def _normalize_preferred_shell(cls, value: object) -> object:
+        if value in (None, ""):
+            return ""
+        raw = str(value).strip().lower()
+        if not raw:
+            return ""
+        return PreferredShell(raw).value
