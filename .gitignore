@@ -11,6 +11,7 @@ __pycache__/
 .ai-sdlc/memory/frontend-*/
 .superpowers/
 .playwright-cli/
+.codex/
 
 .venv/
 .worktrees/
