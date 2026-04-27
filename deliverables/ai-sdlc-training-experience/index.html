@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>AI-SDLC 交付演示台</title>
+    <link
+      rel="icon"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%2305070d'/%3E%3Cpath d='M16 42h32M16 32h32M16 22h20' stroke='%234de9ff' stroke-width='5' stroke-linecap='round'/%3E%3Cpath d='M44 18l6 6-14 14-6-6' fill='none' stroke='%2342f5a7' stroke-width='5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"
+    />
+    <link rel="stylesheet" href="./styles.css?v=20260427b" />
+  </head>
+  <body>
+    <canvas class="signal-canvas" id="signalCanvas" aria-hidden="true"></canvas>
+    <div class="scanline" aria-hidden="true"></div>
+
+    <main class="deck-shell" data-ready="false">
+      <aside class="side-rail" aria-label="培训导航">
+        <div class="brand-lockup">
+          <span class="brand-mark">SD</span>
+          <div>
+            <p>AI-SDLC</p>
+            <strong>交付演示台</strong>
+          </div>
+        </div>
+
+        <nav class="chapter-nav" id="chapterNav" aria-label="章节"></nav>
+
+        <div class="rail-status">
+          <span>页码</span>
+          <strong id="frameCount">01 / 19</strong>
+        </div>
+      </aside>
+
+      <section class="stage" aria-live="polite">
+        <header class="stage-chrome">
+          <div>
+            <span class="mode-chip" id="modeChip">入门视角</span>
+            <span class="mode-chip ghost" id="chapterChip">认知建立</span>
+          </div>
+          <div class="progress-shell" aria-hidden="true">
+            <span id="progressBar"></span>
+          </div>
+        </header>
+
+        <article class="slide" id="slideRoot"></article>
+
+        <footer class="stage-footer">
+          <button class="nav-button" id="prevButton" type="button" aria-label="上一页">‹</button>
+          <div class="footer-center">
+            <div class="section-meter" id="sectionMeter"></div>
+            <p>← / → 翻页 · 空格下一页 · 首页 / 末页快速定位</p>
+          </div>
+          <button class="nav-button" id="nextButton" type="button" aria-label="下一页">›</button>
+        </footer>
+      </section>
+    </main>
+
+    <script src="./app.js?v=20260427b"></script>
+  </body>
+</html>
