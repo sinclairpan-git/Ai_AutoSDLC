@@ -181,6 +181,8 @@ class GitClient:
                 cwd=self.repo_path,
                 capture_output=True,
                 text=True,
+                encoding="utf-8",
+                errors="replace",
                 check=False,
             )
         except FileNotFoundError as exc:
@@ -354,9 +356,9 @@ class GitClient:
             if self.branch_exists(candidate):
                 return candidate
 
-        current = self.current_branch()
-        if current and current != "HEAD":
-            return current
+        branches = self.list_local_branches()
+        if len(branches) == 1 and not branches[0].upstream:
+            return branches[0].name
         raise GitError("unable to determine repository default branch")
 
     def branch_exists(self, name: str) -> bool:
@@ -390,6 +392,8 @@ class GitClient:
             cwd=self.repo_path,
             capture_output=True,
             text=True,
+            encoding="utf-8",
+            errors="replace",
             check=False,
         )
         if result.returncode == 0:

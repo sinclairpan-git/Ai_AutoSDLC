@@ -72,3 +72,17 @@ def test_close_session_still_rejects_distinct_started_run_event_after_terminal(
 
     with pytest.raises(ValueError, match="workflow run is still open"):
         telemetry.close_session(context.goal_session_id)
+
+
+def test_close_session_rejects_open_workflow_run_for_hashed_session_path(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(
+        "ai_sdlc.telemetry.runtime.new_goal_session_id",
+        lambda: "gs_" + "a" * 32,
+    )
+    telemetry = RuntimeTelemetry(tmp_path)
+    context = telemetry.open_workflow_run()
+
+    with pytest.raises(ValueError, match="workflow run is still open"):
+        telemetry.close_session(context.goal_session_id)

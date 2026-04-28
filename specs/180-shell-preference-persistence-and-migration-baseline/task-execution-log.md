@@ -58,3 +58,27 @@
 #### Notes
 - Stage-1 docs remain intact; this batch appends implementation evidence only.
 - T180-06 remains open for broader doc sweep and close-out regression scope.
+
+### Batch 2026-04-27-003 | Independent review findings archive
+
+#### Findings captured before remediation
+- `program-manifest.yaml` was stale relative to `HEAD`, which would force program-truth-gated flows into `truth_snapshot_stale` until another `python -m ai_sdlc program truth sync --execute --yes` ran.
+- `src/ai_sdlc/branch/git_client.py` default-branch fallback could silently collapse to the current feature branch when neither `origin/HEAD` nor local `main`/`master` existed, corrupting divergence and merge targeting.
+- `src/ai_sdlc/routers/bootstrap.py` persisted `preferred_shell` after adapter materialization, so fresh init could emit `AGENTS.md` with “not configured yet” shell guidance despite config already containing the selected shell.
+
+#### Remediation plan
+- Re-run program truth sync after fixes so committed manifest state matches the repaired code path.
+- Tighten default-branch detection to require an actual default-branch signal instead of falling back to the current feature branch.
+- Persist preferred shell before adapter materialization and add a regression test that checks the first generated adapter document.
+
+### Batch 2026-04-28-001 | Follow-up review findings archive
+
+#### Additional findings captured before remediation
+- `offline_strict` preflight was incorrectly calling post-install verification and treating missing installed output as “offline cache missing”.
+- telemetry close-session open-run detection still scanned unhashed `sessions/<goal_session_id>` paths even though long session IDs are materialized under hashed scope directories.
+- `ai-sdlc init` had no `--shell` override, so TTY-driven scripted flows could block on the raw-key selector even when callers already knew the shell choice.
+
+#### Remediation summary
+- Removed the offline-strict preflight that depended on post-install artifacts and added a regression test that proves clean workspaces are no longer rejected before execution.
+- Updated runtime open-run detection to resolve session directories through `session_root(...)` and added a hashed-session regression test.
+- Added `ai-sdlc init --shell <value>` and regression coverage for explicit shell persistence, first-render adapter guidance, and skipping the interactive selector when a shell is supplied.

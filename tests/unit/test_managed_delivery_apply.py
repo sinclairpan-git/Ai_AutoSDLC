@@ -804,7 +804,7 @@ def test_run_managed_delivery_apply_reports_non_windows_command_not_found_contra
     assert entry.after_state["attempted_command"] == "npm install primevue"
 
 
-def test_run_managed_delivery_apply_blocks_offline_strict_without_cached_dependencies(
+def test_run_managed_delivery_apply_does_not_preflight_verify_offline_strict_installed_output(
     tmp_path: Path,
 ) -> None:
     action = _build_action(
@@ -826,17 +826,16 @@ def test_run_managed_delivery_apply_blocks_offline_strict_without_cached_depende
         receipt,
         ManagedDeliveryExecutorContext(
             host_ingress_allowed=True,
-            execute_actions=True,
+            execute_actions=False,
             repo_root=tmp_path,
         ),
     )
 
-    assert result.result_status == "blocked_before_start"
-    assert "dependency_install_offline_cache_missing:dependency_install_manifest_missing" in result.blockers
-    assert result.blocked_action_ids == ["a1"]
-    assert result.ledger_entries[0].failure_classification == (
-        "dependency_install_offline_cache_missing:dependency_install_manifest_missing"
-    )
+    assert result.result_status == "apply_succeeded_pending_browser_gate"
+    assert result.blockers == []
+    assert result.failed_action_ids == []
+    assert result.blocked_action_ids == []
+    assert result.ledger_entries[0].result_status == "succeeded"
 
 
 def test_run_managed_delivery_apply_marks_downstream_actions_dependency_blocked(

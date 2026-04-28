@@ -14,6 +14,7 @@ from ai_sdlc.branch.git_client import (
     GitError,
     IndexLockInspection,
     IndexLockState,
+    LocalBranchInspection,
 )
 
 
@@ -350,3 +351,49 @@ def test_default_branch_name_supports_custom_initial_branch(tmp_path: Path) -> N
     )
 
     assert GitClient(repo).default_branch_name() == "trunk"
+
+
+def test_default_branch_name_rejects_feature_only_upstream_branch(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    repo = tmp_path / "feature-only"
+    repo.mkdir()
+    client = GitClient(repo)
+    monkeypatch.setattr(client, "_read_symbolic_ref", lambda _ref: None)
+    monkeypatch.setattr(client, "branch_exists", lambda _name: False)
+    monkeypatch.setattr(
+        client,
+        "list_local_branches",
+        lambda: (
+            LocalBranchInspection(
+                name="feature/demo",
+                head_commit="abc1234",
+                is_current=True,
+                upstream="origin/feature/demo",
+                worktree_path=repo,
+            ),
+        ),
+    )
+
+    with pytest.raises(GitError, match="unable to determine repository default branch"):
+        client.default_branch_name()
+
+
+def test_run_raw_forces_utf8_decoding(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    client = GitClient(tmp_path)
+    captured: dict[str, object] = {}
+
+    def _fake_run(*_args, **kwargs):
+        captured.update(kwargs)
+        return subprocess.CompletedProcess(
+            args=["git", "status"],
+            returncode=0,
+            stdout="ok\n",
+            stderr="",
+        )
+
+    monkeypatch.setattr("ai_sdlc.branch.git_client.subprocess.run", _fake_run)
+
+    assert client._run_raw("status") == "ok"
+    assert captured["encoding"] == "utf-8"
+    assert captured["errors"] == "replace"

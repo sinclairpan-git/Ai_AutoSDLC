@@ -69,7 +69,7 @@ from ai_sdlc.integrations.ide_adapter import (
     format_adapter_notice,
 )
 from ai_sdlc.knowledge.engine import apply_refresh, compute_refresh_level, load_baseline
-from ai_sdlc.models.project import ProjectStatus
+from ai_sdlc.models.project import PreferredShell, ProjectStatus
 from ai_sdlc.models.state import Checkpoint
 from ai_sdlc.routers.bootstrap import (
     EXISTING_INITIALIZED,
@@ -705,6 +705,11 @@ def init_command(
         "--agent-target",
         help="Explicit IDE/agent target to install instead of auto-detection.",
     ),
+    shell: PreferredShell | None = typer.Option(
+        None,
+        "--shell",
+        help="Explicit project shell to persist instead of prompting.",
+    ),
 ) -> None:
     """Initialize AI-SDLC in a project directory.
 
@@ -756,7 +761,13 @@ def init_command(
         )
 
     default_shell = recommended_shell_for_platform()
-    if _is_interactive_terminal():
+    if shell is not None:
+        selected_shell = shell
+        shell_note = (
+            f"[dim]Project shell: {preferred_shell_label(selected_shell)} "
+            "(explicit override)[/dim]"
+        )
+    elif _is_interactive_terminal():
         selected_shell = interactive_select_preferred_shell(default_shell)
         shell_note = (
             f"[dim]Project shell: {preferred_shell_label(selected_shell)} "

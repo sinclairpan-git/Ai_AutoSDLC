@@ -101,11 +101,11 @@ def init_project(
         _scan, _generated = init_existing_project(root)
         logger.info("Generated %d knowledge baseline files", len(_generated))
 
+    if preferred_shell:
+        persist_preferred_shell(root, preferred_shell)
     from ai_sdlc.integrations.ide_adapter import ensure_ide_adaptation
 
     ensure_ide_adaptation(root, agent_target=agent_target)
-    if preferred_shell:
-        persist_preferred_shell(root, preferred_shell)
 
     logger.info("Initialized AI-SDLC project '%s' at %s", project_name, root)
     return state

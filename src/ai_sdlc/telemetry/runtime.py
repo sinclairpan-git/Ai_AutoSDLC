@@ -39,6 +39,7 @@ from ai_sdlc.telemetry.ids import (
     validate_telemetry_id,
 )
 from ai_sdlc.telemetry.observer import ObserverTrigger
+from ai_sdlc.telemetry.paths import session_root
 from ai_sdlc.telemetry.store import TelemetryStore
 from ai_sdlc.telemetry.writer import TelemetryWriter
 
@@ -681,11 +682,11 @@ class RuntimeTelemetry:
             TelemetryEventStatus.SKIPPED.value,
             TelemetryEventStatus.CANCELLED.value,
         }
-        session_root = self.store.local_root / "sessions" / goal_session_id
-        if not session_root.exists():
+        session_path = session_root(self.store.repo_root, goal_session_id)
+        if not session_path.exists():
             return False
 
-        for path in sorted(session_root.rglob("events.ndjson")):
+        for path in sorted(session_path.rglob("events.ndjson")):
             for payload in self._read_ndjson(path):
                 if not self._is_runtime_owned_workflow_payload(payload):
                     continue

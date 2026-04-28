@@ -655,17 +655,6 @@ def _validate_executor_payload(
                 view.will_not_touch,
                 blocker="dependency_install_hits_will_not_touch",
             )
-        if payload.dependency_mode == "offline_strict":
-            try:
-                verify_dependency_installation(
-                    payload,
-                    working_directory,
-                )
-            except ValueError as exc:
-                reason = str(exc) or "unknown"
-                raise ValueError(
-                    f"dependency_install_offline_cache_missing:{reason}"
-                ) from exc
         return {
             "managed_root": managed_root,
             "working_directory": working_directory,

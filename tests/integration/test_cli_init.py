@@ -95,6 +95,25 @@ class TestCliInit:
         assert cfg.agent_target == "codex"
         assert cfg.preferred_shell != ""
 
+    def test_init_with_explicit_shell_persists_shell_and_first_adapter_render(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        (tmp_path / ".codex").mkdir()
+        monkeypatch.setattr("ai_sdlc.cli.commands._is_interactive_terminal", lambda: True)
+        monkeypatch.setattr(
+            "ai_sdlc.cli.commands.interactive_select_agent_target",
+            lambda _default: _default,
+        )
+
+        result = runner.invoke(app, ["init", str(tmp_path), "--shell", "powershell"])
+
+        assert result.exit_code == 0
+        cfg = load_project_config(tmp_path)
+        assert cfg.preferred_shell == PreferredShell.POWERSHELL.value
+        text = (tmp_path / "AGENTS.md").read_text(encoding="utf-8")
+        assert "Project preferred shell is not configured yet" not in text
+        assert "Project preferred shell: PowerShell." in text
+
     def test_init_generic_hint_without_ide_dirs(self, tmp_path: Path) -> None:
         result = runner.invoke(app, ["init", str(tmp_path)])
         assert result.exit_code == 0
@@ -119,3 +138,22 @@ class TestCliInit:
         assert result.exit_code == 0
         cfg = load_project_config(tmp_path)
         assert cfg.preferred_shell == PreferredShell.POWERSHELL.value
+
+    def test_init_explicit_shell_skips_interactive_shell_selector(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setattr("ai_sdlc.cli.commands._is_interactive_terminal", lambda: True)
+        monkeypatch.setattr(
+            "ai_sdlc.cli.commands.interactive_select_agent_target",
+            lambda _default: _default,
+        )
+        monkeypatch.setattr(
+            "ai_sdlc.cli.commands.interactive_select_preferred_shell",
+            lambda _default: (_ for _ in ()).throw(AssertionError("selector should not run")),
+        )
+
+        result = runner.invoke(app, ["init", str(tmp_path), "--shell", "zsh"])
+
+        assert result.exit_code == 0
+        cfg = load_project_config(tmp_path)
+        assert cfg.preferred_shell == PreferredShell.ZSH.value
