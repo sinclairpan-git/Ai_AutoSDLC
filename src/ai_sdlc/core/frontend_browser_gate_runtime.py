@@ -51,6 +51,11 @@ BrowserGateProbeRunner = Callable[
 ]
 
 
+def _posix_ref(path: Path) -> str:
+    """Return a stable POSIX-style path reference."""
+    return path.as_posix()
+
+
 def build_browser_quality_gate_execution_context(
     *,
     apply_payload: dict[str, object],
@@ -158,7 +163,7 @@ def run_default_browser_gate_probe(
 ) -> BrowserGateProbeRunnerResult:
     """Run the default Playwright-backed browser gate probe."""
 
-    artifact_root_rel = str(artifact_root.relative_to(root))
+    artifact_root_rel = _posix_ref(artifact_root.relative_to(root))
     with _resolved_probe_runner_script(root) as script_path:
         if script_path is None:
             return _transient_probe_runner_result(
@@ -919,7 +924,7 @@ def _materialize_missing_probe_artifacts(
                 ),
                 encoding="utf-8",
             )
-        relative_ref = str(artifact_path.relative_to(root))
+        relative_ref = _posix_ref(artifact_path.relative_to(root))
         records.append(
             BrowserProbeArtifactRecord(
                 artifact_id=f"{gate_run_id}-{check_name}-{index}",
@@ -1037,7 +1042,7 @@ def _materialize_visual_and_a11y_receipts(
         gate_run_id=gate_run_id,
         check_name="visual_expectation",
         artifact_type="checkpoint_screenshot",
-        artifact_ref=str(visual_path.relative_to(root)),
+        artifact_ref=_posix_ref(visual_path.relative_to(root)),
         capture_status="captured",
         captured_at=generated_at,
         source_linkage_refs={"evidence_provider": visual_a11y_evidence_artifact.provenance.provider_name},
@@ -1047,7 +1052,7 @@ def _materialize_visual_and_a11y_receipts(
         gate_run_id=gate_run_id,
         check_name="basic_a11y",
         artifact_type="a11y_scan",
-        artifact_ref=str(a11y_path.relative_to(root)),
+        artifact_ref=_posix_ref(a11y_path.relative_to(root)),
         capture_status="captured",
         captured_at=generated_at,
         source_linkage_refs={"evidence_provider": visual_a11y_evidence_artifact.provenance.provider_name},
@@ -1233,7 +1238,7 @@ def _normalize_runner_artifact_ref(artifact_ref: str) -> str:
     ref = artifact_ref.strip()
     if ref.startswith("artifact:"):
         ref = ref.removeprefix("artifact:").strip()
-    return ref
+    return ref.replace("\\", "/")
 
 
 def _runner_artifact_exists(*, root: Path, artifact_root: Path, artifact_ref: str) -> bool:

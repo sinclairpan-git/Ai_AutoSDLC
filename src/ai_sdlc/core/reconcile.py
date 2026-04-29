@@ -205,7 +205,7 @@ def _best_candidate(root: Path, cp: Checkpoint | None) -> _ArtifactCandidate | N
         for spec_dir, files in found.items():
             if "spec.md" not in files:
                 continue
-            rel = str(spec_dir.relative_to(root))
+            rel = spec_dir.relative_to(root).as_posix()
             prd_source = _find_prd(root)
             detected = sorted(files)
             if prd_source:

@@ -36,6 +36,11 @@ def _dedupe_strings(values: list[str]) -> list[str]:
     return deduped
 
 
+def _posix_rel(path: Path) -> str:
+    """Return a stable POSIX-style project-relative path string."""
+    return path.as_posix()
+
+
 def run_full_scan(root: Path) -> ScanResult:
     """Execute all scanners and aggregate into a ScanResult."""
     logger.info("Starting full project scan at %s", root)
@@ -91,7 +96,7 @@ def init_existing_project(root: Path) -> tuple[ScanResult, list[str]]:
 
     base_index = generate_index(root)
     save_index(root, base_index)
-    generated.append(str(Path(AI_SDLC_DIR) / "state" / "repo-facts.json"))
+    generated.append(_posix_rel(Path(AI_SDLC_DIR) / "state" / "repo-facts.json"))
 
     ext_indexes = generate_all_extended_indexes(root, scan)
     generated.extend(ext_indexes)
@@ -99,21 +104,21 @@ def init_existing_project(root: Path) -> tuple[ScanResult, list[str]]:
     _create_policy_files(root)
     generated.extend(
         [
-            str(Path(AI_SDLC_DIR) / "project" / "config" / "branch-policy.yaml"),
-            str(Path(AI_SDLC_DIR) / "project" / "config" / "quality-policy.yaml"),
-            str(Path(AI_SDLC_DIR) / "project" / "config" / "parallel-policy.yaml"),
-            str(Path(AI_SDLC_DIR) / "project" / "config" / "environment-policy.yaml"),
+            _posix_rel(Path(AI_SDLC_DIR) / "project" / "config" / "branch-policy.yaml"),
+            _posix_rel(Path(AI_SDLC_DIR) / "project" / "config" / "quality-policy.yaml"),
+            _posix_rel(Path(AI_SDLC_DIR) / "project" / "config" / "parallel-policy.yaml"),
+            _posix_rel(Path(AI_SDLC_DIR) / "project" / "config" / "environment-policy.yaml"),
         ]
     )
 
     _create_initialization_status(root, scan)
     generated.append(
-        str(Path(AI_SDLC_DIR) / "project" / "config" / "initialization-status.yaml")
+        _posix_rel(Path(AI_SDLC_DIR) / "project" / "config" / "initialization-status.yaml")
     )
 
     _create_knowledge_baseline_state(root)
     generated.append(
-        str(Path(AI_SDLC_DIR) / "project" / "config" / "knowledge-baseline-state.yaml")
+        _posix_rel(Path(AI_SDLC_DIR) / "project" / "config" / "knowledge-baseline-state.yaml")
     )
 
     logger.info(

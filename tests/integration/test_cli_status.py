@@ -65,7 +65,13 @@ from ai_sdlc.models.work import ExecutionPath, ExecutionPathStep, ResumePoint
 from ai_sdlc.routers.bootstrap import init_project
 from ai_sdlc.telemetry.contracts import Artifact, TelemetryEvent, Violation
 from ai_sdlc.telemetry.enums import ArtifactRole, ArtifactType, ScopeLevel, TraceLayer
-from ai_sdlc.telemetry.paths import telemetry_indexes_root, telemetry_local_root
+from ai_sdlc.telemetry.paths import (
+    run_root,
+    session_root,
+    step_root,
+    telemetry_indexes_root,
+    telemetry_local_root,
+)
 from ai_sdlc.telemetry.store import TelemetryStore
 from ai_sdlc.telemetry.writer import TelemetryWriter
 from tests.support.managed_delivery import (
@@ -116,7 +122,12 @@ def _write_specs_dir_legacy_artifacts(root: Path, work_item_id: str = "LEGACY-00
 
 
 def _init_git_repo(root: Path) -> None:
-    subprocess.run(["git", "init"], cwd=root, check=True, capture_output=True)
+    subprocess.run(
+        ["git", "init", "--initial-branch=main"],
+        cwd=root,
+        check=True,
+        capture_output=True,
+    )
     subprocess.run(
         ["git", "config", "user.email", "t@t.com"],
         cwd=root,
@@ -934,26 +945,8 @@ def test_status_json_latest_scope_ids_do_not_depend_on_manifest_key_order(
         encoding="utf-8",
     )
 
-    old_events_path = (
-        local_root
-        / "sessions"
-        / gs_old
-        / "runs"
-        / wr_old
-        / "steps"
-        / st_old
-        / "events.ndjson"
-    )
-    new_events_path = (
-        local_root
-        / "sessions"
-        / gs_new
-        / "runs"
-        / wr_new
-        / "steps"
-        / st_new
-        / "events.ndjson"
-    )
+    old_events_path = step_root(tmp_path, gs_old, wr_old, st_old) / "events.ndjson"
+    new_events_path = step_root(tmp_path, gs_new, wr_new, st_new) / "events.ndjson"
     old_events_path.parent.mkdir(parents=True, exist_ok=True)
     new_events_path.parent.mkdir(parents=True, exist_ok=True)
     old_events_path.write_text(
@@ -1893,7 +1886,7 @@ def test_status_json_promotes_spec_scoped_program_truth_into_workitem_diagnostic
     assert diagnostics["state"] == "action_required"
     assert diagnostics["source"] == "program_truth"
     assert diagnostics["next_required_action"] == (
-        "python -m ai_sdlc program generation-constraints-handoff"
+        "close the capability_closure_audit entry for the blocked release target"
     )
     assert any(
         item["id"] == "program_truth"
@@ -1920,8 +1913,8 @@ def test_status_json_promotes_spec_scoped_program_truth_into_workitem_diagnostic
     }
     assert diagnostics["frontend_delivery_scope"] == "package_delivery_only"
     assert diagnostics["frontend_inheritance_status"] == {
-        "generation": "not_inherited",
-        "quality": "not_inherited",
+        "generation": "inherited",
+        "quality": "inherited",
     }
     program_truth_item = next(
         item for item in diagnostics["items"] if item["id"] == "program_truth"
@@ -1931,8 +1924,8 @@ def test_status_json_promotes_spec_scoped_program_truth_into_workitem_diagnostic
     ]
     assert program_truth_item["frontend_delivery_scope"] == "package_delivery_only"
     assert program_truth_item["frontend_inheritance_status"] == {
-        "generation": "not_inherited",
-        "quality": "not_inherited",
+        "generation": "inherited",
+        "quality": "inherited",
     }
     truth_ledger_capability = payload["truth_ledger"]["release_capabilities"][0]
     assert truth_ledger_capability["frontend_delivery_status"] == {
@@ -1946,8 +1939,8 @@ def test_status_json_promotes_spec_scoped_program_truth_into_workitem_diagnostic
     }
     assert truth_ledger_capability["frontend_delivery_scope"] == "package_delivery_only"
     assert truth_ledger_capability["frontend_inheritance_status"] == {
-        "generation": "not_inherited",
-        "quality": "not_inherited",
+        "generation": "inherited",
+        "quality": "inherited",
     }
 
 
@@ -2027,8 +2020,8 @@ def test_status_json_surfaces_stale_apply_artifact_in_frontend_delivery_truth(
     }
     assert capability["frontend_delivery_scope"] == "package_delivery_only"
     assert capability["frontend_inheritance_status"] == {
-        "generation": "not_inherited",
-        "quality": "not_inherited",
+        "generation": "inherited",
+        "quality": "inherited",
     }
     assert "delivery=stale apply artifact" in capability["frontend_delivery_summary"]
     diagnostics = status_payload["workitem_diagnostics"]
@@ -2040,8 +2033,8 @@ def test_status_json_surfaces_stale_apply_artifact_in_frontend_delivery_truth(
     ]
     assert program_truth_item["frontend_delivery_scope"] == "package_delivery_only"
     assert program_truth_item["frontend_inheritance_status"] == {
-        "generation": "not_inherited",
-        "quality": "not_inherited",
+        "generation": "inherited",
+        "quality": "inherited",
     }
 
 
@@ -2125,8 +2118,8 @@ def test_status_json_surfaces_browser_gate_scope_linkage_invalid_in_frontend_del
     }
     assert capability["frontend_delivery_scope"] == "package_delivery_only"
     assert capability["frontend_inheritance_status"] == {
-        "generation": "not_inherited",
-        "quality": "not_inherited",
+        "generation": "inherited",
+        "quality": "inherited",
     }
     assert "browser_gate=scope or linkage invalid" in capability[
         "frontend_delivery_summary"
@@ -3107,18 +3100,17 @@ def test_status_json_fallback_latest_scope_ids_ignore_misleading_mtime(
         )
     )
 
-    local_root = telemetry_local_root(tmp_path)
     stale_scope_paths = [
-        local_root / "sessions" / session_b,
-        local_root / "sessions" / session_b / "runs" / run_b,
-        local_root / "sessions" / session_b / "runs" / run_b / "steps" / step_b,
-        local_root / "sessions" / session_b / "runs" / run_b / "steps" / step_b / "events.ndjson",
+        session_root(tmp_path, session_b),
+        run_root(tmp_path, session_b, run_b),
+        step_root(tmp_path, session_b, run_b, step_b),
+        step_root(tmp_path, session_b, run_b, step_b) / "events.ndjson",
     ]
     fresh_scope_paths = [
-        local_root / "sessions" / session_a,
-        local_root / "sessions" / session_a / "runs" / run_a,
-        local_root / "sessions" / session_a / "runs" / run_a / "steps" / step_a,
-        local_root / "sessions" / session_a / "runs" / run_a / "steps" / step_a / "events.ndjson",
+        session_root(tmp_path, session_a),
+        run_root(tmp_path, session_a, run_a),
+        step_root(tmp_path, session_a, run_a, step_a),
+        step_root(tmp_path, session_a, run_a, step_a) / "events.ndjson",
     ]
     stale_mtime = 2_000_000_000
     fresh_mtime = stale_mtime - 1_000

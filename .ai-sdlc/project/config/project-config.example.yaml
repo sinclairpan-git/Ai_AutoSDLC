@@ -5,6 +5,7 @@ default_execution_mode: auto
 default_branch_strategy: dual
 max_parallel_agents: 3
 document_locale: zh-CN
+preferred_shell: ""
 detected_ide: ""
 adapter_applied: ""
 adapter_version: ""

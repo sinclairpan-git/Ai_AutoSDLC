@@ -104,13 +104,13 @@ def _materialized_path_labels(root: Path, paths: object) -> list[str]:
         if isinstance(path, Path):
             if path.is_absolute():
                 try:
-                    rendered_values.append(str(path.relative_to(root)))
+                    rendered_values.append(path.relative_to(root).as_posix())
                 except ValueError:
-                    rendered_values.append(str(path))
+                    rendered_values.append(path.as_posix())
             else:
-                rendered_values.append(str(path))
+                rendered_values.append(path.as_posix())
         else:
-            rendered_values.append(str(path))
+            rendered_values.append(str(path).replace("\\", "/"))
     return _dedupe_cli_text_items(rendered_values)
 
 
@@ -398,6 +398,16 @@ def gate_check(
         table.add_row(check.name, status, check.message)
 
     console.print(table)
+    detail_lines = [
+        f"{check.name}: {check.message}"
+        for check in result.checks
+        if str(check.message).strip()
+    ]
+    if detail_lines:
+        console.print()
+        console.print("[bold]Check Details[/bold]")
+        for line in detail_lines:
+            console.print(line)
 
     if result.verdict == GateVerdict.PASS:
         console.print(f"\n[bold green]Gate {stage}: PASS[/bold green]")

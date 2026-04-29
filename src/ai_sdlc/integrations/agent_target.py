@@ -9,6 +9,8 @@ from enum import Enum
 from pathlib import Path
 from typing import TextIO
 
+from ai_sdlc.models.project import PreferredShell
+
 
 class IDEKind(str, Enum):
     CURSOR = "cursor"
@@ -41,10 +43,43 @@ _MARKER_PRIORITY: tuple[tuple[str, IDEKind], ...] = (
     (".vscode", IDEKind.VSCODE),
 )
 
+PREFERRED_SHELL_OPTIONS: tuple[PreferredShell, ...] = (
+    PreferredShell.POWERSHELL,
+    PreferredShell.BASH,
+    PreferredShell.ZSH,
+    PreferredShell.CMD,
+    PreferredShell.AUTO,
+)
+
+_SHELL_LABELS: dict[PreferredShell, str] = {
+    PreferredShell.POWERSHELL: "PowerShell",
+    PreferredShell.BASH: "bash",
+    PreferredShell.ZSH: "zsh",
+    PreferredShell.CMD: "cmd",
+    PreferredShell.AUTO: "auto",
+}
+
 
 def agent_target_label(kind: IDEKind) -> str:
     """Return the user-facing label for an agent target."""
     return _TARGET_LABELS[kind]
+
+
+def preferred_shell_label(kind: PreferredShell) -> str:
+    """Return the user-facing label for a preferred shell."""
+    return _SHELL_LABELS[kind]
+
+
+def recommended_shell_for_platform(platform: str | None = None) -> PreferredShell:
+    """Return the recommended shell for the current host platform."""
+    current = (platform or sys.platform).lower()
+    if current.startswith("win"):
+        return PreferredShell.POWERSHELL
+    if current == "darwin":
+        return PreferredShell.ZSH
+    if current.startswith("linux"):
+        return PreferredShell.BASH
+    return PreferredShell.AUTO
 
 
 def detect_agent_target(
@@ -106,6 +141,33 @@ def interactive_select_agent_target(
             raise KeyboardInterrupt
 
 
+def interactive_select_preferred_shell(
+    default_shell: PreferredShell,
+    *,
+    output_stream: TextIO | None = None,
+    read_key: Callable[[], str] | None = None,
+) -> PreferredShell:
+    """Select a preferred shell with arrow keys and Enter confirmation."""
+    output = output_stream or sys.stdout
+    options = PREFERRED_SHELL_OPTIONS
+    index = options.index(default_shell) if default_shell in options else 0
+    next_key = read_key or _read_selector_key
+
+    while True:
+        _render_shell_selector(output, index)
+        key = next_key()
+        if key == "up":
+            index = (index - 1) % len(options)
+        elif key == "down":
+            index = (index + 1) % len(options)
+        elif key == "enter":
+            output.write("\n")
+            output.flush()
+            return options[index]
+        elif key == "interrupt":
+            raise KeyboardInterrupt
+
+
 def _render_selector(output: TextIO, index: int) -> None:
     lines = [
         "请选择当前实际用于聊天开发的 AI 代理入口（方向键选择，回车确认）：",
@@ -113,6 +175,17 @@ def _render_selector(output: TextIO, index: int) -> None:
     for position, option in enumerate(AGENT_TARGET_OPTIONS):
         prefix = ">" if position == index else " "
         lines.append(f"{prefix} {agent_target_label(option)}")
+    output.write("\x1b[2J\x1b[H" + "\n".join(lines))
+    output.flush()
+
+
+def _render_shell_selector(output: TextIO, index: int) -> None:
+    lines = [
+        "请选择当前项目默认使用的命令 Shell（方向键选择，回车确认）：",
+    ]
+    for position, option in enumerate(PREFERRED_SHELL_OPTIONS):
+        prefix = ">" if position == index else " "
+        lines.append(f"{prefix} {preferred_shell_label(option)}")
     output.write("\x1b[2J\x1b[H" + "\n".join(lines))
     output.flush()
 

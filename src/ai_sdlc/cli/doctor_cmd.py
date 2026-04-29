@@ -6,6 +6,7 @@ import shutil
 import sys
 from pathlib import Path
 
+import typer
 from rich.console import Console
 from rich.table import Table
 
@@ -81,3 +82,7 @@ def doctor_command() -> None:
         table.add_row(item["name"], rendered, item["detail"])
     console.print()
     console.print(table)
+    console.print()
+    console.print("[bold]Plain Diagnostics[/bold]")
+    for item in readiness:
+        typer.echo(f"{item['name']}: {item['state']} | {item['detail']}")

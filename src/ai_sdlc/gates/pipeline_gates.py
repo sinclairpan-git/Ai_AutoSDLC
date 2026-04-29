@@ -32,6 +32,16 @@ def _dedupe_text_items(values: list[Any]) -> list[str]:
     return deduped
 
 
+def _read_gate_text(path: Path) -> str:
+    """Read stage artifacts with a UTF-8-first strategy and locale fallback."""
+    for encoding in ("utf-8", "utf-8-sig"):
+        try:
+            return path.read_text(encoding=encoding)
+        except UnicodeDecodeError:
+            continue
+    return path.read_text()
+
+
 class InitGate:
     """Gate check for the INIT stage."""
 
@@ -146,7 +156,7 @@ class RefineGate:
         )
 
         if spec_exists:
-            content = spec_file.read_text(encoding="utf-8")
+            content = _read_gate_text(spec_file)
 
             us_count = len(re.findall(r"###\s+用户故事", content))
             checks.append(
@@ -262,7 +272,7 @@ class DecomposeGate:
         )
 
         if exists:
-            content = tasks_file.read_text(encoding="utf-8")
+            content = _read_gate_text(tasks_file)
             task_count = len(re.findall(r"### Task \d+\.\d+", content))
             checks.append(
                 GateCheck(

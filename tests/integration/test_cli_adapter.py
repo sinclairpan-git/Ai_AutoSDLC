@@ -13,7 +13,7 @@ from typer.testing import CliRunner
 from ai_sdlc.cli.main import app
 from ai_sdlc.core.config import load_project_config
 from ai_sdlc.integrations.ide_adapter import IDEKind
-from ai_sdlc.models.project import ActivationState, AdapterSupportTier
+from ai_sdlc.models.project import ActivationState, AdapterSupportTier, PreferredShell
 
 runner = CliRunner()
 
@@ -141,6 +141,44 @@ class TestCliAdapter:
         assert cfg.agent_target == IDEKind.CODEX.value
         assert (tmp_path / "AGENTS.md").is_file()
 
+    def test_adapter_shell_select_with_explicit_shell_persists_and_rewrites_adapter_doc(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        assert (
+            runner.invoke(app, ["init", str(tmp_path), "--agent-target", "codex"]).exit_code
+            == 0
+        )
+        monkeypatch.chdir(tmp_path)
+
+        result = runner.invoke(
+            app,
+            ["adapter", "shell-select", "--shell", "powershell"],
+        )
+
+        assert result.exit_code == 0
+        cfg = load_project_config(tmp_path)
+        assert cfg.preferred_shell == PreferredShell.POWERSHELL.value
+        text = (tmp_path / "AGENTS.md").read_text(encoding="utf-8")
+        assert "PowerShell" in text
+        assert "Do not start with POSIX shell syntax" in text
+
+    def test_adapter_shell_select_without_flag_uses_interactive_selector(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        assert runner.invoke(app, ["init", str(tmp_path)]).exit_code == 0
+        monkeypatch.chdir(tmp_path)
+        monkeypatch.setattr("ai_sdlc.cli.adapter_cmd._is_interactive_terminal", lambda: True)
+        monkeypatch.setattr(
+            "ai_sdlc.cli.adapter_cmd.interactive_select_preferred_shell",
+            lambda _default: PreferredShell.ZSH,
+        )
+
+        result = runner.invoke(app, ["adapter", "shell-select"])
+
+        assert result.exit_code == 0
+        cfg = load_project_config(tmp_path)
+        assert cfg.preferred_shell == PreferredShell.ZSH.value
+
     def test_adapter_status_json_exposes_target_and_ingress_truth(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
@@ -162,10 +200,34 @@ class TestCliAdapter:
         assert payload["adapter_canonical_consumption_evidence"] == ""
         assert payload["adapter_canonical_consumed_at"] == ""
         assert payload["adapter_degrade_reason"] == ""
+        assert payload["preferred_shell"]
+        assert payload["preferred_shell_configured"] is True
         assert payload["governance_activation_state"] == "materialized_unverified"
         assert payload["governance_activation_verifiable"] is False
         assert payload["governance_activation_mode"] == "materialized_only"
         assert "machine-verifiable evidence" in payload["governance_activation_detail"]
+
+    def test_adapter_status_json_reports_shell_selection_migration_hint_for_legacy_project(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        assert (
+            runner.invoke(app, ["init", str(tmp_path), "--agent-target", "codex"]).exit_code
+            == 0
+        )
+        cfg = load_project_config(tmp_path)
+        cfg = cfg.model_copy(update={"preferred_shell": ""})
+        from ai_sdlc.core.config import save_project_config
+
+        save_project_config(tmp_path, cfg)
+        monkeypatch.chdir(tmp_path)
+
+        result = runner.invoke(app, ["adapter", "status", "--json"])
+
+        assert result.exit_code == 0
+        payload = json.loads(result.output)
+        assert payload["preferred_shell"] == ""
+        assert payload["preferred_shell_configured"] is False
+        assert "adapter shell-select" in payload["preferred_shell_migration_hint"]
 
     def test_adapter_status_json_reports_verified_loaded_when_host_matches_target(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch

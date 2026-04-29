@@ -18,6 +18,7 @@ def test_load_project_config_missing_file_returns_defaults(tmp_path: Path) -> No
     assert isinstance(cfg, ProjectConfig)
     assert cfg.document_locale == "zh-CN"
     assert cfg.product_form == "hybrid"
+    assert cfg.preferred_shell == ""
     assert cfg.detected_ide == ""
     assert cfg.telemetry_profile is TelemetryProfile.SELF_HOSTING
     assert cfg.telemetry_mode is TelemetryMode.LITE
@@ -27,6 +28,7 @@ def test_save_project_config_creates_file(tmp_path: Path) -> None:
     cfg = ProjectConfig(
         detected_ide="vscode",
         adapter_applied="vscode",
+        preferred_shell="powershell",
         telemetry_profile=TelemetryProfile.EXTERNAL_PROJECT,
         telemetry_mode=TelemetryMode.STRICT,
     )
@@ -36,6 +38,7 @@ def test_save_project_config_creates_file(tmp_path: Path) -> None:
     again = load_project_config(tmp_path)
     assert again.detected_ide == "vscode"
     assert again.adapter_applied == "vscode"
+    assert again.preferred_shell == "powershell"
     assert again.telemetry_profile is TelemetryProfile.EXTERNAL_PROJECT
     assert again.telemetry_mode is TelemetryMode.STRICT
 

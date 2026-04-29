@@ -12,6 +12,7 @@ from typer.testing import CliRunner
 
 from ai_sdlc.cli.main import app
 from ai_sdlc.context.state import save_checkpoint
+from ai_sdlc.core.config import load_project_config, save_project_config
 from ai_sdlc.models.state import Checkpoint, FeatureInfo
 from ai_sdlc.routers.bootstrap import init_project
 from ai_sdlc.telemetry import readiness
@@ -25,7 +26,12 @@ runner = CliRunner()
 
 
 def _init_git_repo(root: Path) -> None:
-    subprocess.run(["git", "init"], cwd=root, check=True, capture_output=True)
+    subprocess.run(
+        ["git", "init", "--initial-branch=main"],
+        cwd=root,
+        check=True,
+        capture_output=True,
+    )
     subprocess.run(
         ["git", "config", "user.email", "t@t.com"],
         cwd=root,
@@ -186,6 +192,21 @@ def test_doctor_reports_telemetry_readiness_without_initializing_telemetry(
     assert "status --json surface" in result.output
     assert "not_initialized" in result.output
     assert telemetry_root.exists() is False
+
+
+def test_doctor_surfaces_shell_selection_migration_hint_in_status_surface(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    init_project(tmp_path)
+    cfg = load_project_config(tmp_path)
+    save_project_config(tmp_path, cfg.model_copy(update={"preferred_shell": ""}))
+    monkeypatch.chdir(tmp_path)
+
+    result = runner.invoke(app, ["doctor"])
+
+    assert result.exit_code == 0
+    assert "adapter shell-select" in result.output
+    assert "preferred shell" in result.output
 
 
 def test_doctor_reports_branch_lifecycle_readiness_row(

@@ -848,12 +848,16 @@ class ProgramFrontendManagedDeliveryApplyResult:
     ledger_entries: list[DeliveryActionLedgerEntry] = field(default_factory=list)
     remaining_blockers: list[str] = field(default_factory=list)
     warnings: list[str] = field(default_factory=list)
+    plain_language_blockers: list[str] = field(default_factory=list)
+    recommended_next_steps: list[str] = field(default_factory=list)
 
     def __post_init__(self) -> None:
         _canonicalize_program_runtime_string_fields(
             self,
             "remaining_blockers",
             "warnings",
+            "plain_language_blockers",
+            "recommended_next_steps",
         )
 
 
@@ -2199,6 +2203,18 @@ class ProgramService:
 
         state = str(surface.get("state", "")).strip()
         if state == "migration_pending":
+            if not matched_capabilities:
+                return ProgramSpecTruthReadinessResult(
+                    required=True,
+                    ready=True,
+                    state="ready",
+                    detail=(
+                        "truth snapshot is fresh and spec is mapped; "
+                        "unrelated truth inventory remains pending"
+                    ),
+                    matched_spec_ids=matched_spec_ids,
+                    matched_capabilities=matched_capabilities,
+                )
             return ProgramSpecTruthReadinessResult(
                 required=True,
                 ready=False,
@@ -2445,7 +2461,7 @@ class ProgramService:
 
     def _safe_relative_path(self, path: Path) -> str:
         try:
-            return str(path.relative_to(self.root))
+            return path.relative_to(self.root).as_posix()
         except ValueError:
             return path.as_posix()
 
@@ -4844,6 +4860,7 @@ class ProgramService:
                 "executor_payload": {
                     "install_strategy_id": bundle["install_strategy_id"],
                     "package_manager": bundle["package_manager"],
+                    "dependency_mode": bundle["dependency_mode"],
                     "registry_url": bundle.get("registry_url", ""),
                     "working_directory": ".",
                     "packages": provider_dependency_packages,
@@ -4875,6 +4892,7 @@ class ProgramService:
                     "executor_payload": {
                         "install_strategy_id": "public-visual-regression-runtime",
                         "package_manager": bundle["package_manager"],
+                        "dependency_mode": bundle["dependency_mode"],
                         "registry_url": bundle.get("registry_url", ""),
                         "working_directory": ".",
                         "packages": visual_runtime_dependency_packages,
@@ -5094,6 +5112,7 @@ class ProgramService:
                 "provider_id": provider_id,
                 "install_strategy_id": "",
                 "package_manager": "pnpm",
+                "dependency_mode": "public_registry",
                 "registry_url": "",
                 "component_library_packages": [],
                 "adapter_packages": [],
@@ -5131,6 +5150,7 @@ class ProgramService:
                 "provider_id": provider_id,
                 "install_strategy_id": "",
                 "package_manager": "pnpm",
+                "dependency_mode": "public_registry",
                 "registry_url": "",
                 "component_library_packages": [],
                 "adapter_packages": [],
@@ -5145,6 +5165,7 @@ class ProgramService:
                 "provider_id": provider_id,
                 "install_strategy_id": "",
                 "package_manager": "pnpm",
+                "dependency_mode": "public_registry",
                 "registry_url": "",
                 "component_library_packages": [],
                 "adapter_packages": [],
@@ -5187,6 +5208,7 @@ class ProgramService:
             "provider_id": provider_id,
             "install_strategy_id": strategy.strategy_id,
             "package_manager": effective_package_manager,
+            "dependency_mode": _dependency_mode_for_install_strategy(strategy),
             "registry_url": strategy.registry_url,
             "component_library_packages": list(strategy.packages),
             "adapter_packages": [],
@@ -6597,6 +6619,8 @@ const tableRows = [
             ledger_entries=list(apply_result.ledger_entries),
             remaining_blockers=_unique_strings(list(apply_result.blockers)),
             warnings=warnings,
+            plain_language_blockers=list(apply_result.plain_language_blockers),
+            recommended_next_steps=list(apply_result.recommended_next_steps),
         )
 
     def _materialize_frontend_inheritance_governance_artifacts(self) -> list[str]:
@@ -6702,8 +6726,18 @@ const tableRows = [
             ],
             "remaining_blockers": _unique_strings(list(effective_result.remaining_blockers)),
             "warnings": _unique_strings([*effective_request.warnings, *effective_result.warnings]),
-            "plain_language_blockers": _unique_strings(list(effective_request.plain_language_blockers)),
-            "recommended_next_steps": _unique_strings(list(effective_request.recommended_next_steps)),
+            "plain_language_blockers": _unique_strings(
+                [
+                    *effective_request.plain_language_blockers,
+                    *effective_result.plain_language_blockers,
+                ]
+            ),
+            "recommended_next_steps": _unique_strings(
+                [
+                    *effective_request.recommended_next_steps,
+                    *effective_result.recommended_next_steps,
+                ]
+            ),
             "execution_view": (
                 effective_request.execution_view.model_dump(mode="json")
                 if effective_request.execution_view is not None
@@ -16138,6 +16172,12 @@ def _visual_regression_runtime_dependency_packages(matrix_id: str) -> list[str]:
     )
 
 
+def _dependency_mode_for_install_strategy(strategy: InstallStrategy) -> str:
+    if strategy.access_mode == "private":
+        return "enterprise_registry"
+    return "public_registry"
+
+
 def _canonicalize_program_runtime_string_fields(
     instance: object,
     *field_names: str,
@@ -16346,9 +16386,9 @@ def _has_frontend_visual_a11y_issue_blocker(
 
 def _relative_to_root_or_str(root: Path, path: Path) -> str:
     try:
-        return str(path.resolve().relative_to(root.resolve()))
+        return path.resolve().relative_to(root.resolve()).as_posix()
     except ValueError:
-        return str(path)
+        return path.as_posix()
 
 
 def _slugify_token(value: str) -> str:

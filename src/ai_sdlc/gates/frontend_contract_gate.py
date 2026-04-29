@@ -153,11 +153,11 @@ def _coerce_observation_artifact_status(value: object) -> str:
 def _check_contract_artifacts(contracts_root: Path) -> tuple[bool, str]:
     pages_root = contracts_root / "pages"
     if not pages_root.is_dir():
-        return False, f"{pages_root} not found"
+        return False, f"{pages_root.as_posix()} not found"
 
     page_dirs = sorted(path for path in pages_root.iterdir() if path.is_dir())
     if not page_dirs:
-        return False, f"{pages_root} has no page contract directories"
+        return False, f"{pages_root.as_posix()} has no page contract directories"
 
     missing_required: list[str] = []
     for page_dir in page_dirs:

@@ -2193,6 +2193,7 @@ class TestCliProgram:
         def _selective_subprocess_run(command, *args, **kwargs):
             if isinstance(command, (list, tuple)) and command and command[0] in {
                 "npm",
+                "npx",
                 "pnpm",
                 "yarn",
                 "node",
@@ -5471,6 +5472,34 @@ specs:
         assert "Frontend Solution Confirmation Artifact" in report
         assert ".ai-sdlc/memory/frontend-solution-confirmation/latest.yaml" in report
 
+    def test_program_solution_confirm_execute_accepts_absolute_report_path(
+        self, initialized_project_dir: Path
+    ) -> None:
+        root = initialized_project_dir
+        _write_manifest(root)
+        report_path = root.parent / "solution-confirm-report.md"
+
+        with patch("ai_sdlc.cli.program_cmd.find_project_root", return_value=root):
+            result = runner.invoke(
+                app,
+                [
+                    "program",
+                    "solution-confirm",
+                    "--enterprise-provider-ineligible",
+                    "--execute",
+                    "--yes",
+                    "--report",
+                    str(report_path),
+                ],
+            )
+
+        assert result.exit_code == 0
+        assert report_path.is_file()
+        assert "Report written:" in result.output
+        assert "Frontend Solution Confirmation Artifact" in report_path.read_text(
+            encoding="utf-8"
+        )
+
     def test_program_solution_confirm_execute_does_not_persist_blocked_snapshot(
         self, initialized_project_dir: Path
     ) -> None:
@@ -5693,6 +5722,7 @@ specs:
         def _selective_subprocess_run(command, *args, **kwargs):
             if isinstance(command, (list, tuple)) and command and command[0] in {
                 "npm",
+                "npx",
                 "pnpm",
                 "yarn",
                 "node",

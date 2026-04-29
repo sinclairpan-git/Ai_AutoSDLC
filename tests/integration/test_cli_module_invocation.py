@@ -15,6 +15,16 @@ def _env_with_src_on_path() -> dict[str, str]:
     env = dict(os.environ)
     prev = env.get("PYTHONPATH", "")
     env["PYTHONPATH"] = str(_SRC) if not prev else f"{_SRC}{os.pathsep}{prev}"
+    env["PYTHONUTF8"] = "1"
+    env["PYTHONIOENCODING"] = "utf-8"
+    return env
+
+
+def _env_without_pythonpath() -> dict[str, str]:
+    env = dict(os.environ)
+    env.pop("PYTHONPATH", None)
+    env["PYTHONUTF8"] = "1"
+    env["PYTHONIOENCODING"] = "utf-8"
     return env
 
 
@@ -23,6 +33,7 @@ def test_python_m_ai_sdlc_help_exits_zero() -> None:
         [sys.executable, "-m", "ai_sdlc", "--help"],
         capture_output=True,
         text=True,
+        encoding="utf-8",
         cwd=str(_REPO_ROOT),
         env=_env_with_src_on_path(),
         check=False,
@@ -37,6 +48,7 @@ def test_python_m_ai_sdlc_no_args_shows_help() -> None:
         [sys.executable, "-m", "ai_sdlc"],
         capture_output=True,
         text=True,
+        encoding="utf-8",
         cwd=str(_REPO_ROOT),
         env=_env_with_src_on_path(),
         check=False,
@@ -45,3 +57,42 @@ def test_python_m_ai_sdlc_no_args_shows_help() -> None:
     assert result.returncode in (0, 2), result.stderr
     combined = f"{result.stdout}\n{result.stderr}"
     assert "Usage:" in combined and "COMMAND" in combined
+
+
+def test_python_m_ai_sdlc_subcommand_help_is_not_shadowed() -> None:
+    result = subprocess.run(
+        [sys.executable, "-m", "ai_sdlc", "program", "--help"],
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        cwd=str(_REPO_ROOT),
+        env=_env_with_src_on_path(),
+        check=False,
+    )
+    assert result.returncode == 0, result.stderr
+    combined = f"{result.stdout}\n{result.stderr}"
+    assert "Program-level planning across multiple specs" in combined
+    assert "truth" in combined
+
+
+def test_source_checkout_module_invocation_prefers_local_src_without_pythonpath() -> None:
+    result = subprocess.run(
+        [
+            sys.executable,
+            "-c",
+            (
+                "import inspect; "
+                "import ai_sdlc.cli.adapter_cmd as adapter_cmd; "
+                "print(inspect.getsourcefile(adapter_cmd))"
+            ),
+        ],
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        cwd=str(_REPO_ROOT),
+        env=_env_without_pythonpath(),
+        check=False,
+    )
+    assert result.returncode == 0, result.stderr
+    resolved = result.stdout.strip()
+    assert resolved == str(_SRC / "ai_sdlc" / "cli" / "adapter_cmd.py")

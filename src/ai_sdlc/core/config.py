@@ -142,3 +142,11 @@ def save_project_state(root: Path, state: ProjectState) -> None:
 def save_project_config(root: Path, config: ProjectConfig) -> None:
     """Save project config to the .ai-sdlc directory."""
     YamlStore.save(root / PROJECT_CONFIG_PATH, config)
+
+
+def persist_preferred_shell(root: Path, preferred_shell: str) -> ProjectConfig:
+    """Persist the selected project-level preferred shell."""
+    config = load_project_config(root)
+    updated = config.model_copy(update={"preferred_shell": preferred_shell})
+    save_project_config(root, updated)
+    return updated

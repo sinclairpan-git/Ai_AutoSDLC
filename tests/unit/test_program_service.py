@@ -3272,6 +3272,87 @@ def test_build_spec_truth_readiness_does_not_skip_recompute_for_dirty_manifest(
     build_surface.assert_called_once()
 
 
+def test_build_spec_truth_readiness_allows_unrelated_migration_pending_for_non_release_spec(
+    tmp_path: Path,
+) -> None:
+    _init_truth_git_repo(tmp_path)
+    (tmp_path / ".ai-sdlc" / "project" / "config").mkdir(parents=True)
+    (tmp_path / ".ai-sdlc" / "project" / "config" / "project-state.yaml").write_text(
+        "status: initialized\nproject_name: demo\nnext_work_item_seq: 1\nversion: '1.0'\n",
+        encoding="utf-8",
+    )
+    (tmp_path / "PRD.md").write_text("# prd\n", encoding="utf-8")
+    spec_dir = tmp_path / "specs" / "179-remediation"
+    spec_dir.mkdir(parents=True)
+    (spec_dir / "spec.md").write_text("# Spec\n", encoding="utf-8")
+    (spec_dir / "plan.md").write_text("# Plan\n", encoding="utf-8")
+    (spec_dir / "tasks.md").write_text("- [x] done\n", encoding="utf-8")
+    (spec_dir / "task-execution-log.md").write_text(
+        "# Log\n\n缁熶竴楠岃瘉鍛戒护\n浠ｇ爜瀹℃煡\n浠诲姟/璁″垝鍚屾鐘舵€乗n",
+        encoding="utf-8",
+    )
+    _write_manifest_yaml(
+        tmp_path,
+        """
+schema_version: "2"
+prd_path: "PRD.md"
+program:
+  goal: "Demo truth ledger"
+release_targets:
+  - "frontend-mainline-delivery"
+capabilities:
+  - id: "frontend-mainline-delivery"
+    title: "Frontend Mainline Delivery"
+    goal: "Demo release target"
+    release_required: true
+    spec_refs:
+      - "082-frontend-example"
+specs:
+  - id: "179-remediation"
+    path: "specs/179-remediation"
+    depends_on: []
+        """,
+    )
+
+    svc = ProgramService(tmp_path)
+    manifest = svc.load_manifest()
+    expected_surface = {
+        "snapshot_state": "fresh",
+        "state": "migration_pending",
+        "detail": "migration pending: 1; release targets blocked: frontend-mainline-delivery (blocked)",
+        "release_capabilities": [
+            {
+                "capability_id": "frontend-mainline-delivery",
+                "audit_state": "blocked",
+            }
+        ],
+        "migration_pending_specs": [],
+        "migration_pending_sources": [
+            {"path": "docs/defects/example.md"},
+        ],
+        "validation_errors": [],
+    }
+    with patch.object(
+        ProgramService,
+        "build_truth_ledger_surface",
+        return_value=expected_surface,
+    ) as build_surface:
+        readiness = svc.build_spec_truth_readiness(
+            manifest,
+            spec_path=spec_dir,
+        )
+
+    assert readiness is not None
+    assert readiness.ready is True
+    assert readiness.state == "ready"
+    assert readiness.matched_capabilities == []
+    assert (
+        readiness.detail
+        == "truth snapshot is fresh and spec is mapped; unrelated truth inventory remains pending"
+    )
+    build_surface.assert_called_once()
+
+
 def test_build_frontend_delivery_status_surface_fails_closed_on_stale_apply_artifact(
     initialized_project_dir: Path,
 ) -> None:
@@ -4573,6 +4654,7 @@ def test_build_frontend_managed_delivery_apply_request_materializes_public_bundl
     visual_runtime_action = dependency_actions[1]
     assert dependency_action.executor_payload["install_strategy_id"] == "public-primevue-default"
     assert dependency_action.executor_payload["package_manager"] == "pnpm"
+    assert dependency_action.executor_payload["dependency_mode"] == "public_registry"
     assert dependency_action.executor_payload["packages"] == [
         "primevue",
         "@primeuix/themes",
@@ -4581,6 +4663,7 @@ def test_build_frontend_managed_delivery_apply_request_materializes_public_bundl
         "public-visual-regression-runtime"
     )
     assert visual_runtime_action.executor_payload["package_manager"] == "pnpm"
+    assert visual_runtime_action.executor_payload["dependency_mode"] == "public_registry"
     assert visual_runtime_action.executor_payload["registry_url"] == ""
     assert visual_runtime_action.executor_payload["packages"] == [
         "playwright",
@@ -5184,6 +5267,7 @@ def test_build_frontend_managed_delivery_apply_request_splits_enterprise_and_pub
     ]
     enterprise_action = dependency_actions[0]
     public_runtime_action = dependency_actions[1]
+    assert enterprise_action.executor_payload["dependency_mode"] == "enterprise_registry"
     assert enterprise_action.executor_payload["registry_url"] == (
         "http://npm.uedc.sangfor.com.cn/"
     )
@@ -5193,6 +5277,9 @@ def test_build_frontend_managed_delivery_apply_request_splits_enterprise_and_pub
     )
     assert public_runtime_action.executor_payload["registry_url"] == (
         "http://npm.uedc.sangfor.com.cn/"
+    )
+    assert public_runtime_action.executor_payload["dependency_mode"] == (
+        "enterprise_registry"
     )
     assert public_runtime_action.executor_payload["install_strategy_id"] == (
         "public-visual-regression-runtime"

@@ -16,12 +16,14 @@ def build_dependency_install_subprocess_side_effect(
 
     def _side_effect(command, *args, **kwargs):
         command_parts = [str(part) for part in command]
+        executable_name = Path(command_parts[0]).name if command_parts else ""
+        normalized_executable = _normalize_host_executable_name(executable_name)
         cwd = Path(kwargs.get("cwd") or Path.cwd())
-        if command_parts and command_parts[0] in {"npm", "pnpm", "yarn"}:
+        if command_parts and normalized_executable in {"npm", "pnpm", "yarn"}:
             packages = _extract_requested_packages(command_parts)
             _materialize_install_footprint(
                 cwd,
-                package_manager=command_parts[0],
+                package_manager=normalized_executable,
                 packages=packages,
                 lockfile_required=lockfile_required,
             )
@@ -52,6 +54,13 @@ def build_dependency_install_subprocess_side_effect(
         )
 
     return _side_effect
+
+
+def _normalize_host_executable_name(executable_name: str) -> str:
+    for suffix in (".cmd", ".exe", ".bat"):
+        if executable_name.lower().endswith(suffix):
+            return executable_name[: -len(suffix)]
+    return executable_name
 
 
 def _maybe_materialize_playwright_runtime_probe(cwd: Path, *, script: str) -> str:
@@ -142,7 +151,9 @@ def _materialize_install_footprint(
 
 
 def _materialize_playwright_executable(cwd: Path) -> Path:
-    executable_path = cwd / "node_modules" / ".cache" / "ms-playwright" / "chromium-fixture"
+    executable_path = (
+        cwd / "node_modules" / ".cache" / "ms-playwright" / "chromium-fixture"
+    )
     executable_path.parent.mkdir(parents=True, exist_ok=True)
     executable_path.write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
     return executable_path

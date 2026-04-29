@@ -33,6 +33,11 @@ class DependencyInstallExecutionPayload(FrontendManagedDeliveryModel):
     """Structured install payload for one dependency install action."""
 
     install_strategy_id: str
+    dependency_mode: Literal[
+        "offline_strict",
+        "enterprise_registry",
+        "public_registry",
+    ] = "public_registry"
     package_manager: Literal["npm", "pnpm", "yarn"]
     registry_url: str = ""
     working_directory: str = "."
@@ -240,10 +245,14 @@ class ManagedDeliveryApplyResult(FrontendManagedDeliveryModel):
     skipped_action_ids: list[str] = Field(default_factory=list)
     ledger_entries: list[DeliveryActionLedgerEntry] = Field(default_factory=list)
     remediation_hints: list[str] = Field(default_factory=list)
+    plain_language_blockers: list[str] = Field(default_factory=list)
+    recommended_next_steps: list[str] = Field(default_factory=list)
 
     @field_validator(
         "blockers",
         "remediation_hints",
+        "plain_language_blockers",
+        "recommended_next_steps",
         mode="before",
     )
     @classmethod

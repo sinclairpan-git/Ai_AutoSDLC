@@ -334,7 +334,12 @@ def _setup_repo(
     branch_disposition_status: str = "待最终收口",
     worktree_disposition_status: str = "待最终收口",
 ) -> None:
-    subprocess.run(["git", "init"], cwd=root, check=True, capture_output=True)
+    subprocess.run(
+        ["git", "init", "--initial-branch=main"],
+        cwd=root,
+        check=True,
+        capture_output=True,
+    )
     subprocess.run(
         ["git", "config", "user.email", "t@t.com"],
         cwd=root,

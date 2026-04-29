@@ -7,6 +7,7 @@ from pathlib import Path
 
 import pytest
 
+from ai_sdlc.core.config import load_project_config, save_project_config
 from ai_sdlc.integrations.ide_adapter import (
     ApplyResult,
     IDEKind,
@@ -17,7 +18,7 @@ from ai_sdlc.integrations.ide_adapter import (
     detect_ide,
     ensure_ide_adaptation,
 )
-from ai_sdlc.models.project import ActivationState, AdapterSupportTier
+from ai_sdlc.models.project import ActivationState, AdapterSupportTier, PreferredShell
 from ai_sdlc.routers.bootstrap import init_project
 from ai_sdlc.utils.helpers import AI_SDLC_DIR
 
@@ -188,6 +189,22 @@ class TestApplyAdapter:
             assert "python -m ai_sdlc run --dry-run" in text
             assert "verified_loaded" in text
             assert "adapter activate" not in text
+
+    def test_adapter_template_includes_selected_shell_guidance(
+        self, tmp_path: Path
+    ) -> None:
+        init_project(tmp_path)
+        cfg = load_project_config(tmp_path)
+        save_project_config(
+            tmp_path,
+            cfg.model_copy(update={"preferred_shell": PreferredShell.POWERSHELL.value}),
+        )
+
+        apply_adapter(tmp_path, IDEKind.CODEX)
+
+        text = (tmp_path / "AGENTS.md").read_text(encoding="utf-8")
+        assert "PowerShell" in text
+        assert "Do not start with POSIX shell syntax" in text
 
 
 class TestEnsureIdeAdaptation:

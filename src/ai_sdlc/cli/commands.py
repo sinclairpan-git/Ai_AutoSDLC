@@ -56,7 +56,10 @@ from ai_sdlc.generators.index_gen import (
 from ai_sdlc.integrations.agent_target import (
     agent_target_label,
     interactive_select_agent_target,
+    interactive_select_preferred_shell,
     is_interactive_terminal,
+    preferred_shell_label,
+    recommended_shell_for_platform,
 )
 from ai_sdlc.integrations.ide_adapter import (
     IDEKind,
@@ -66,7 +69,7 @@ from ai_sdlc.integrations.ide_adapter import (
     format_adapter_notice,
 )
 from ai_sdlc.knowledge.engine import apply_refresh, compute_refresh_level, load_baseline
-from ai_sdlc.models.project import ProjectStatus
+from ai_sdlc.models.project import PreferredShell, ProjectStatus
 from ai_sdlc.models.state import Checkpoint
 from ai_sdlc.routers.bootstrap import (
     EXISTING_INITIALIZED,
@@ -430,6 +433,42 @@ def _add_status_surface_optional_rows(
         _add_truth_ledger_rows(table, truth_ledger)
 
 
+def _print_plain_status_summaries(status_surface: dict[str, Any]) -> None:
+    capability_closure = status_surface.get("capability_closure")
+    if isinstance(capability_closure, dict):
+        summary = summarize_capability_closure_focus_for_display(
+            capability_closure.get("open_clusters", [])
+        )
+        if summary:
+            typer.echo(f"Capability Closure Focus: {summary}")
+
+    truth_ledger = status_surface.get("truth_ledger")
+    if isinstance(truth_ledger, dict):
+        summary = summarize_truth_ledger_focus_for_display(
+            truth_ledger.get("release_capabilities", [])
+        )
+        if summary:
+            typer.echo(f"Truth Ledger Focus: {summary}")
+
+        frontend_delivery = summarize_truth_ledger_frontend_delivery_for_display(
+            truth_ledger.get("release_capabilities", [])
+        )
+        if frontend_delivery:
+            typer.echo(f"Truth Ledger Frontend: {frontend_delivery}")
+
+        frontend_inheritance = summarize_truth_ledger_frontend_inheritance_for_display(
+            truth_ledger.get("release_capabilities", [])
+        )
+        if frontend_inheritance:
+            typer.echo(f"Truth Ledger Inheritance: {frontend_inheritance}")
+
+        next_steps = summarize_truth_ledger_next_steps_for_display(
+            truth_ledger.get("release_capabilities", [])
+        )
+        if next_steps:
+            typer.echo(f"Truth Ledger Next Step: {next_steps}")
+
+
 def _add_governance_rows(table: Table, governance: Any) -> None:
     table.add_row("Governance Frozen", "yes" if governance.frozen else "no")
     if governance.frozen_at:
@@ -470,6 +509,15 @@ def _add_adapter_governance_rows(
     table: Table, adapter_governance: dict[str, Any]
 ) -> None:
     table.add_row("Agent Target", str(adapter_governance["agent_target"] or "-"))
+    table.add_row(
+        "Preferred Shell",
+        str(adapter_governance.get("preferred_shell") or "-"),
+    )
+    if adapter_governance.get("preferred_shell_migration_hint"):
+        table.add_row(
+            "Shell Migration",
+            str(adapter_governance["preferred_shell_migration_hint"]),
+        )
     table.add_row(
         "Ingress State",
         str(adapter_governance["adapter_ingress_state"] or "-"),
@@ -657,6 +705,11 @@ def init_command(
         "--agent-target",
         help="Explicit IDE/agent target to install instead of auto-detection.",
     ),
+    shell: PreferredShell | None = typer.Option(
+        None,
+        "--shell",
+        help="Explicit project shell to persist instead of prompting.",
+    ),
 ) -> None:
     """Initialize AI-SDLC in a project directory.
 
@@ -707,10 +760,35 @@ def init_command(
             "(explicit override)[/dim]"
         )
 
-    state = init_project(root, agent_target=selected_target.value if selected_target else None)
+    default_shell = recommended_shell_for_platform()
+    if shell is not None:
+        selected_shell = shell
+        shell_note = (
+            f"[dim]Project shell: {preferred_shell_label(selected_shell)} "
+            "(explicit override)[/dim]"
+        )
+    elif _is_interactive_terminal():
+        selected_shell = interactive_select_preferred_shell(default_shell)
+        shell_note = (
+            f"[dim]Project shell: {preferred_shell_label(selected_shell)} "
+            f"(recommended default: {preferred_shell_label(default_shell)})[/dim]"
+        )
+    else:
+        selected_shell = default_shell
+        shell_note = (
+            f"[dim]Project shell: {preferred_shell_label(selected_shell)} "
+            "(non-interactive default)[/dim]"
+        )
+
+    state = init_project(
+        root,
+        agent_target=selected_target.value if selected_target else None,
+        preferred_shell=selected_shell.value,
+    )
     cfg = load_project_config(root)
     if target_note:
         console.print(target_note)
+    console.print(shell_note)
 
     info = (
         f"[green]Initialized AI-SDLC project[/green]\n"
@@ -843,6 +921,7 @@ def status_command(
     _add_status_surface_optional_rows(table, status_surface)
 
     console.print(table)
+    _print_plain_status_summaries(status_surface)
     if hint is not None:
         _print_reconcile_guidance(
             hint,
