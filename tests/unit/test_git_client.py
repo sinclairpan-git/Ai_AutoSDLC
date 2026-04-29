@@ -131,15 +131,20 @@ def test_clear_stale_repo_write_lock_keeps_incomplete_payload(
 def test_pid_is_active_uses_windows_process_query_without_os_kill(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    def _open_process(_access: int, _inherit: bool, _pid: int) -> int:
-        return 123
+    signature_attrs: dict[str, tuple[object, object]] = {}
 
-    def _get_exit_code_process(_handle: int, exit_code) -> int:
-        exit_code._obj.value = 259
-        return 1
+    class _FakeWinFunc:
+        def __init__(self, name: str, result: int) -> None:
+            self.name = name
+            self.result = result
+            self.argtypes = None
+            self.restype = None
 
-    def _close_handle(_handle: int) -> int:
-        return 1
+        def __call__(self, *_args):
+            signature_attrs[self.name] = (self.argtypes, self.restype)
+            if self.name == "GetExitCodeProcess":
+                _args[1]._obj.value = 259
+            return self.result
 
     def _unexpected_kill(_pid: int, _signal: int) -> None:
         raise AssertionError("Windows PID probing must not call os.kill")
@@ -150,15 +155,19 @@ def test_pid_is_active_uses_windows_process_query_without_os_kill(
         "ai_sdlc.branch.git_client.ctypes.windll",
         SimpleNamespace(
             kernel32=SimpleNamespace(
-                OpenProcess=_open_process,
-                GetExitCodeProcess=_get_exit_code_process,
-                CloseHandle=_close_handle,
+                OpenProcess=_FakeWinFunc("OpenProcess", 123),
+                GetExitCodeProcess=_FakeWinFunc("GetExitCodeProcess", 1),
+                CloseHandle=_FakeWinFunc("CloseHandle", 1),
+                GetLastError=_FakeWinFunc("GetLastError", 0),
             )
         ),
         raising=False,
     )
 
     assert GitClient._pid_is_active(42) is True
+    assert signature_attrs["OpenProcess"][1] is not None
+    assert signature_attrs["GetExitCodeProcess"][1] is not None
+    assert signature_attrs["CloseHandle"][1] is not None
 
 
 def test_inspect_index_lock_marks_active_git_process(git_repo: Path, monkeypatch: pytest.MonkeyPatch) -> None:

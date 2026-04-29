@@ -19,6 +19,7 @@ from ai_sdlc.telemetry.contracts import (
 from ai_sdlc.telemetry.enums import HardFailCategory
 from ai_sdlc.telemetry.paths import (
     run_root,
+    scope_id_from_dir_name,
     session_root,
     step_root,
     telemetry_indexes_root,
@@ -436,14 +437,14 @@ class TelemetryStore:
         if len(parts) < 2 or parts[0] != "sessions":
             raise ValueError(f"path is outside telemetry sessions root: {path}")
 
-        goal_session_id = parts[1]
+        goal_session_id = scope_id_from_dir_name(parts[1])
         workflow_run_id: str | None = None
         step_id: str | None = None
 
         if len(parts) >= 4 and parts[2] == "runs":
-            workflow_run_id = parts[3]
+            workflow_run_id = scope_id_from_dir_name(parts[3])
         if len(parts) >= 6 and parts[4] == "steps":
-            step_id = parts[5]
+            step_id = scope_id_from_dir_name(parts[5])
 
         if step_id is not None:
             return (ScopeLevel.STEP, goal_session_id, workflow_run_id, step_id)

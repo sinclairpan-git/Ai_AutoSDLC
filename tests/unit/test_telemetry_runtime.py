@@ -74,7 +74,7 @@ def test_close_session_still_rejects_distinct_started_run_event_after_terminal(
         telemetry.close_session(context.goal_session_id)
 
 
-def test_close_session_rejects_open_workflow_run_for_hashed_session_path(
+def test_close_session_rejects_open_workflow_run_for_legacy_long_session_path(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     monkeypatch.setattr(
@@ -86,3 +86,24 @@ def test_close_session_rejects_open_workflow_run_for_hashed_session_path(
 
     with pytest.raises(ValueError, match="workflow run is still open"):
         telemetry.close_session(context.goal_session_id)
+
+
+def test_legacy_long_session_path_remains_reversible(tmp_path: Path) -> None:
+    telemetry = RuntimeTelemetry(tmp_path)
+    goal_session_id = "gs_" + "a" * 32
+    workflow_run_id = "wr_" + "b" * 32
+    step_id = "st_" + "c" * 32
+
+    path = telemetry.store.event_stream_path(
+        scope_level="step",
+        goal_session_id=goal_session_id,
+        workflow_run_id=workflow_run_id,
+        step_id=step_id,
+    )
+
+    assert telemetry.store.scope_chain_from_path(path) == (
+        "step",
+        goal_session_id,
+        workflow_run_id,
+        step_id,
+    )

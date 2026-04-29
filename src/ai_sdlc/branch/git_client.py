@@ -354,6 +354,18 @@ class GitClient:
         still_active = 259
         error_access_denied = 5
 
+        kernel32.OpenProcess.argtypes = (ctypes.c_ulong, ctypes.c_int, ctypes.c_ulong)
+        kernel32.OpenProcess.restype = ctypes.c_void_p
+        kernel32.GetExitCodeProcess.argtypes = (
+            ctypes.c_void_p,
+            ctypes.POINTER(ctypes.c_ulong),
+        )
+        kernel32.GetExitCodeProcess.restype = ctypes.c_int
+        kernel32.CloseHandle.argtypes = (ctypes.c_void_p,)
+        kernel32.CloseHandle.restype = ctypes.c_int
+        kernel32.GetLastError.argtypes = ()
+        kernel32.GetLastError.restype = ctypes.c_ulong
+
         handle = kernel32.OpenProcess(
             process_query_limited_information,
             False,
