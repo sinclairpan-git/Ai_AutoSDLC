@@ -5496,7 +5496,9 @@ specs:
         assert result.exit_code == 0
         assert report_path.is_file()
         assert "Report written:" in result.output
-        assert report_path.name in result.output
+        assert "Frontend Solution Confirmation Artifact" in report_path.read_text(
+            encoding="utf-8"
+        )
 
     def test_program_solution_confirm_execute_does_not_persist_blocked_snapshot(
         self, initialized_project_dir: Path
