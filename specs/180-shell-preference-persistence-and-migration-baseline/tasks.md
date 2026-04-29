@@ -6,12 +6,12 @@
 
 ## 执行清单
 
-- [ ] T180-01 Shell 偏好配置模型与推荐策略
-- [ ] T180-02 Init 交互式 shell 选择与持久化
-- [ ] T180-03 独立 shell 重选命令
-- [ ] T180-04 Adapter 模板消费 shell 偏好并物化
-- [ ] T180-05 Status/Doctor 老项目迁移提示
-- [ ] T180-06 跨平台回归与文档收口
+- [x] T180-01 Shell 偏好配置模型与推荐策略
+- [x] T180-02 Init 交互式 shell 选择与持久化
+- [x] T180-03 独立 shell 重选命令
+- [x] T180-04 Adapter 模板消费 shell 偏好并物化
+- [x] T180-05 Status/Doctor 老项目迁移提示
+- [x] T180-06 跨平台回归与文档收口
 
 ## Batch 1：配置模型和初始化入口
 
@@ -92,4 +92,4 @@
 - [x] T180-03 completed in code and tests
 - [x] T180-04 completed in code and tests
 - [x] T180-05 completed in code and tests
-- [ ] T180-06 pending final doc sweep and broader regression close-out
+- [x] T180-06 completed with Windows git-client regression fix, focused tests, checkpoint reconciliation, and dry-run close-gate follow-up

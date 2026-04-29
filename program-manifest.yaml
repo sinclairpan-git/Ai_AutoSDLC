@@ -1818,10 +1818,10 @@ specs:
   path: specs/180-shell-preference-persistence-and-migration-baseline
   depends_on: []
 truth_snapshot:
-  generated_at: '2026-04-28T07:31:52Z'
+  generated_at: '2026-04-29T03:33:45Z'
   generated_by: ai-sdlc program truth sync
   generator_version: program_truth_snapshot_v1
-  repo_revision: 9ef2ae4
+  repo_revision: 86bfe30
   authoring_hash: 5fb559919ac59edf2a15b81e1c191a127756f37ad2f2e8bb3881378dfa3ebd6f
   source_hashes:
     truth_check:specs/095-frontend-mainline-product-delivery-baseline: 40b5e9332011b0d8941245c0e8e7c3b192e897b2bc4aa4876a3d37a94f9b80f0
@@ -1856,12 +1856,12 @@ truth_snapshot:
     close_check:specs/126-frontend-mainline-browser-gate-recheck-remediation-runtime-closure-baseline: 35266eb3da9e13ff82f745fd7f785ab0ac4fec7d2cd2e026da973fdf5033e0bf
     close_check:specs/143-frontend-mainline-browser-gate-real-probe-runtime-baseline: 35266eb3da9e13ff82f745fd7f785ab0ac4fec7d2cd2e026da973fdf5033e0bf
     close_check:specs/144-frontend-mainline-host-remediation-and-workspace-integration-closure-baseline: 35266eb3da9e13ff82f745fd7f785ab0ac4fec7d2cd2e026da973fdf5033e0bf
-    verify:uv run ai-sdlc verify constraints: 10a3f72718124cc0a0504e23e0699ac783651b0a1922ddac4d7071c3d0a9467f
+    verify:uv run ai-sdlc verify constraints: 67c162e8ce6369708f41fd003c4d3b2703509ebeb85aefbbc2a2d67663c45333
     truth_check:specs/121-agent-adapter-verified-host-ingress-truth-baseline: 4dc83697eff99a6a0eb5d52b5352c8fb073736a704a1533370a5521d699cdfbc
     truth_check:specs/122-agent-adapter-verified-host-ingress-runtime-baseline: 668bc35f896163f99929da88d733d0de367d996b276b9775d659227fcafcbca7
     close_check:specs/121-agent-adapter-verified-host-ingress-truth-baseline: bb1a96307f540d67dcb9ccb06e03e5ef522ae9acfd1e9a2b5f5816aed8658072
     close_check:specs/122-agent-adapter-verified-host-ingress-runtime-baseline: bb1a96307f540d67dcb9ccb06e03e5ef522ae9acfd1e9a2b5f5816aed8658072
-  snapshot_hash: 9ad2d2a4b7f9e950cba26f8f14332e88c2f91c27ef9af1d3a522bcbfe79d389a
+  snapshot_hash: 23ccdca4397d6db5b88c9b084b897f8c03e05cc3cb39125fe882a9a7b1fba644
   computed_capabilities:
   - capability_id: frontend-mainline-delivery
     closure_state: closed
@@ -1869,21 +1869,19 @@ truth_snapshot:
     blocking_refs:
     - frontend_inheritance:generation
     - frontend_inheritance:quality
-    - verify:uv run ai-sdlc verify constraints
     stale_reason: ''
   - capability_id: agent-adapter-verified-host-ingress
     closure_state: closed
     audit_state: blocked
     blocking_refs:
     - adapter_canonical_consumption:unverified
-    - verify:uv run ai-sdlc verify constraints
     stale_reason: ''
   source_inventory:
     state: incomplete
     total_sources: 924
     mapped_sources: 923
     unmapped_sources: 1
-    missing_sources: 1
+    missing_sources: 0
     phase_signal_count: 3214
     deferred_signal_count: 5900
     non_goal_signal_count: 314
@@ -1904,7 +1902,7 @@ truth_snapshot:
       plan: 181
       tasks: 181
       execution: 181
-      close: 180
+      close: 181
       requirements: 2
       defect: 3
       design: 8
@@ -10059,7 +10057,7 @@ truth_snapshot:
       source_type: development_summary
       truth_layer: close
       mapped: true
-      exists: false
+      exists: true
       mapping_ref: 180-shell-preference-persistence-and-migration-baseline
       phase_signal_count: 0
       deferred_signal_count: 0

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import ctypes
 import json
 import logging
 import os
@@ -329,6 +330,10 @@ class GitClient:
 
     @staticmethod
     def _pid_is_active(pid: int) -> bool:
+        if pid <= 0:
+            return False
+        if os.name == "nt":
+            return GitClient._windows_pid_is_active(pid)
         try:
             os.kill(pid, 0)
         except ProcessLookupError:
@@ -337,6 +342,33 @@ class GitClient:
             return True
         else:
             return True
+
+    @staticmethod
+    def _windows_pid_is_active(pid: int) -> bool:
+        windll = getattr(ctypes, "windll", None)
+        if windll is None:
+            return True
+
+        kernel32 = windll.kernel32
+        process_query_limited_information = 0x1000
+        still_active = 259
+        error_access_denied = 5
+
+        handle = kernel32.OpenProcess(
+            process_query_limited_information,
+            False,
+            int(pid),
+        )
+        if not handle:
+            return kernel32.GetLastError() == error_access_denied
+
+        try:
+            exit_code = ctypes.c_ulong()
+            if not kernel32.GetExitCodeProcess(handle, ctypes.byref(exit_code)):
+                return True
+            return exit_code.value == still_active
+        finally:
+            kernel32.CloseHandle(handle)
 
     def init(self) -> None:
         """Initialize a new git repository."""

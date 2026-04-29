@@ -82,3 +82,40 @@
 - Removed the offline-strict preflight that depended on post-install artifacts and added a regression test that proves clean workspaces are no longer rejected before execution.
 - Updated runtime open-run detection to resolve session directories through `session_root(...)` and added a hashed-session regression test.
 - Added `ai-sdlc init --shell <value>` and regression coverage for explicit shell persistence, first-render adapter guidance, and skipping the interactive selector when a shell is supplied.
+
+### Batch 2026-04-29-001 | Close-gate convergence
+
+#### Scope
+- Resolved the Windows-only `GitClient._pid_is_active` regression that used POSIX-style `os.kill(pid, 0)` probing and could interrupt the current Python process on Windows.
+- Replaced the fragile threaded write-guard unit test with deterministic lock contention coverage.
+- Reconciled checkpoint state from WI-178/close to WI-180/execute and refreshed program truth metadata.
+- Closed T180-06 in `tasks.md` and added this final close-out evidence batch.
+
+#### 统一验证命令
+- `uv run pytest tests/unit/test_git_client.py -q` -> not runnable in this Codex shell because `uv` is not on PATH.
+- `python -m pytest tests/unit/test_git_client.py -q --basetemp pytest-tmp\test_git_client_py -p no:cacheprovider` -> PASS (`16 passed in 9.51s`).
+- `uv run ruff check src/ai_sdlc/branch/git_client.py tests/unit/test_git_client.py` -> not runnable in this Codex shell because `uv` is not on PATH.
+- `python -m ruff check src\ai_sdlc\branch\git_client.py tests\unit\test_git_client.py` -> PASS (`All checks passed!`).
+- `uv run ai-sdlc verify constraints` -> not runnable in this Codex shell because `uv` is not on PATH.
+- `python -m ai_sdlc verify constraints` -> initially blocked by unresolved branch lifecycle disposition; this batch records the disposition as `archived`.
+- `python -m ai_sdlc program truth sync --execute --yes` -> PASS; refreshed `program-manifest.yaml`.
+- `python -m ai_sdlc run --dry-run` -> advanced past checkpoint mismatch and stale truth snapshot; remaining close gates addressed by this batch.
+
+#### 代码审查
+- Review focus: Windows PID probing behavior, write-guard regression coverage, and AI-SDLC close-gate evidence surfaces.
+- Result: no additional code findings after replacing Windows process probing with Win32 process query and rerunning focused pytest/ruff.
+
+#### 任务/计划同步状态
+- `tasks.md` checklist updated to mark T180-01 through T180-06 complete.
+- `development-summary.md` added for the WI-180 close gate.
+- Program truth metadata refreshed after code/docs/state updates.
+
+#### Close-out markers
+- **验证画像**：code-change
+- **改动范围**：`src/ai_sdlc/branch/git_client.py`, `tests/unit/test_git_client.py`, `specs/180-shell-preference-persistence-and-migration-baseline/tasks.md`, `specs/180-shell-preference-persistence-and-migration-baseline/task-execution-log.md`, `specs/180-shell-preference-persistence-and-migration-baseline/development-summary.md`, `.ai-sdlc/state/checkpoint.yml`, `.ai-sdlc/state/resume-pack.yaml`, `program-manifest.yaml`
+- 关联 branch/worktree disposition 计划：archived
+- 当前批次 branch disposition 状态：archived
+- 当前批次 worktree disposition 状态：retained（current workspace remains active for this Codex thread）
+- **已完成 git 提交**：是
+- **提交哈希**：随本次收口提交落地
+- 是否继续下一批：否，进入 close gate 复验

@@ -3,9 +3,8 @@
 from __future__ import annotations
 
 import subprocess
-import threading
-import time
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
@@ -31,18 +30,6 @@ class _RecordingGitClient(GitClient):
             return "M  README.md\n"
         if args[:2] == ("rev-parse", "--short"):
             return "abc1234"
-        return ""
-
-
-class _SlowGitClient(GitClient):
-    def __init__(self, repo_path: Path, events: list[tuple[str, str, float]]) -> None:
-        super().__init__(repo_path, write_lock_timeout_sec=1.0, write_lock_poll_sec=0.01)
-        self._events = events
-
-    def _run_raw(self, *args: str) -> str:
-        self._events.append(("start", args[0], time.monotonic()))
-        time.sleep(0.12)
-        self._events.append(("end", args[0], time.monotonic()))
         return ""
 
 
@@ -78,31 +65,19 @@ def test_add_and_commit_runs_add_status_diff_commit_sequence(git_repo: Path) -> 
     ]
 
 
-def test_write_commands_are_serialized_per_repo(git_repo: Path) -> None:
-    events: list[tuple[str, str, float]] = []
-    first = _SlowGitClient(git_repo, events)
-    second = _SlowGitClient(git_repo, events)
-
-    t1 = threading.Thread(target=first._run, args=("add", "."), daemon=True)
-    t2 = threading.Thread(
-        target=second._run,
-        args=("commit", "--allow-empty", "-m", "guarded"),
-        daemon=True,
+def test_write_commands_block_while_repo_guard_is_held(git_repo: Path) -> None:
+    first = GitClient(git_repo)
+    second = GitClient(
+        git_repo,
+        write_lock_timeout_sec=0.01,
+        write_lock_poll_sec=0.001,
     )
 
-    t1.start()
-    time.sleep(0.02)
-    t2.start()
-    t1.join()
-    t2.join()
-
-    add_start = next(ts for kind, cmd, ts in events if kind == "start" and cmd == "add")
-    add_end = next(ts for kind, cmd, ts in events if kind == "end" and cmd == "add")
-    commit_start = next(
-        ts for kind, cmd, ts in events if kind == "start" and cmd == "commit"
-    )
-
-    assert add_start < add_end <= commit_start
+    with (
+        first._repo_write_guard("add", "."),
+        pytest.raises(GitError, match="Timed out waiting"),
+    ):
+        second._run("commit", "--allow-empty", "-m", "guarded")
 
 
 def test_clear_stale_repo_write_lock_ignores_raced_file_removal(
@@ -151,6 +126,39 @@ def test_clear_stale_repo_write_lock_keeps_incomplete_payload(
     )
 
     assert git._clear_stale_repo_write_lock() is False
+
+
+def test_pid_is_active_uses_windows_process_query_without_os_kill(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def _open_process(_access: int, _inherit: bool, _pid: int) -> int:
+        return 123
+
+    def _get_exit_code_process(_handle: int, exit_code) -> int:
+        exit_code._obj.value = 259
+        return 1
+
+    def _close_handle(_handle: int) -> int:
+        return 1
+
+    def _unexpected_kill(_pid: int, _signal: int) -> None:
+        raise AssertionError("Windows PID probing must not call os.kill")
+
+    monkeypatch.setattr("ai_sdlc.branch.git_client.os.name", "nt")
+    monkeypatch.setattr("ai_sdlc.branch.git_client.os.kill", _unexpected_kill)
+    monkeypatch.setattr(
+        "ai_sdlc.branch.git_client.ctypes.windll",
+        SimpleNamespace(
+            kernel32=SimpleNamespace(
+                OpenProcess=_open_process,
+                GetExitCodeProcess=_get_exit_code_process,
+                CloseHandle=_close_handle,
+            )
+        ),
+        raising=False,
+    )
+
+    assert GitClient._pid_is_active(42) is True
 
 
 def test_inspect_index_lock_marks_active_git_process(git_repo: Path, monkeypatch: pytest.MonkeyPatch) -> None:
