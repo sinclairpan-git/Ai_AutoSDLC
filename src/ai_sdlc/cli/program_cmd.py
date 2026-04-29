@@ -70,6 +70,13 @@ def _format_cli_path(path: Path) -> str:
     return path.as_posix()
 
 
+def _format_cli_project_path(root: Path, path: Path) -> str:
+    try:
+        return _format_cli_path(path.relative_to(root))
+    except ValueError:
+        return _format_cli_path(path)
+
+
 def _format_cli_path_value(path: object) -> str:
     if isinstance(path, Path):
         return path.as_posix()
@@ -2305,7 +2312,7 @@ def program_solution_confirm(
         )
         report_path.write_text("\n".join(lines), encoding="utf-8")
         console.print(
-            f"\n[green]Report written:[/green] {_format_cli_path(report_path.relative_to(root))}"
+            f"\n[green]Report written:[/green] {_format_cli_project_path(root, report_path)}"
         )
 
     if dry_run:
@@ -2716,7 +2723,7 @@ def program_provider_patch_apply(
             lines.append("")
         report_path.write_text("\n".join(lines), encoding="utf-8")
         console.print(
-            f"\n[green]Report written:[/green] {_format_cli_path(report_path.relative_to(root))}"
+            f"\n[green]Report written:[/green] {_format_cli_project_path(root, report_path)}"
         )
 
     if dry_run:
@@ -2940,7 +2947,7 @@ def program_cross_spec_writeback(
             lines.append("")
         report_path.write_text("\n".join(lines), encoding="utf-8")
         console.print(
-            f"\n[green]Report written:[/green] {_format_cli_path(report_path.relative_to(root))}"
+            f"\n[green]Report written:[/green] {_format_cli_project_path(root, report_path)}"
         )
 
     if dry_run:
@@ -3158,7 +3165,7 @@ def program_guarded_registry(
             lines.append("")
         report_path.write_text("\n".join(lines), encoding="utf-8")
         console.print(
-            f"\n[green]Report written:[/green] {_format_cli_path(report_path.relative_to(root))}"
+            f"\n[green]Report written:[/green] {_format_cli_project_path(root, report_path)}"
         )
 
     if dry_run:
@@ -3384,7 +3391,7 @@ def program_broader_governance(
             lines.append("")
         report_path.write_text("\n".join(lines), encoding="utf-8")
         console.print(
-            f"\n[green]Report written:[/green] {_format_cli_path(report_path.relative_to(root))}"
+            f"\n[green]Report written:[/green] {_format_cli_project_path(root, report_path)}"
         )
 
     if dry_run:
@@ -3629,7 +3636,7 @@ def program_final_governance(
             lines.append("")
         report_path.write_text("\n".join(lines), encoding="utf-8")
         console.print(
-            f"\n[green]Report written:[/green] {_format_cli_path(report_path.relative_to(root))}"
+            f"\n[green]Report written:[/green] {_format_cli_project_path(root, report_path)}"
         )
 
     if dry_run:
@@ -3858,7 +3865,7 @@ def program_writeback_persistence(
             lines.append("")
         report_path.write_text("\n".join(lines), encoding="utf-8")
         console.print(
-            f"\n[green]Report written:[/green] {_format_cli_path(report_path.relative_to(root))}"
+            f"\n[green]Report written:[/green] {_format_cli_project_path(root, report_path)}"
         )
 
     if dry_run:
@@ -4079,7 +4086,7 @@ def program_persisted_write_proof(
             lines.append("")
         report_path.write_text("\n".join(lines), encoding="utf-8")
         console.print(
-            f"\n[green]Report written:[/green] {_format_cli_path(report_path.relative_to(root))}"
+            f"\n[green]Report written:[/green] {_format_cli_project_path(root, report_path)}"
         )
 
     if dry_run:
@@ -4314,7 +4321,7 @@ def program_final_proof_publication(
             lines.append("")
         report_path.write_text("\n".join(lines), encoding="utf-8")
         console.print(
-            f"\n[green]Report written:[/green] {_format_cli_path(report_path.relative_to(root))}"
+            f"\n[green]Report written:[/green] {_format_cli_project_path(root, report_path)}"
         )
 
     if dry_run:
@@ -4534,7 +4541,7 @@ def program_final_proof_closure(
             lines.append("")
         report_path.write_text("\n".join(lines), encoding="utf-8")
         console.print(
-            f"\n[green]Report written:[/green] {_format_cli_path(report_path.relative_to(root))}"
+            f"\n[green]Report written:[/green] {_format_cli_project_path(root, report_path)}"
         )
 
     if dry_run:
@@ -4754,7 +4761,7 @@ def program_final_proof_archive(
             lines.append("")
         report_path.write_text("\n".join(lines), encoding="utf-8")
         console.print(
-            f"\n[green]Report written:[/green] {_format_cli_path(report_path.relative_to(root))}"
+            f"\n[green]Report written:[/green] {_format_cli_project_path(root, report_path)}"
         )
 
     if dry_run:
@@ -5418,7 +5425,7 @@ def program_final_proof_archive_project_cleanup(
             lines.append("")
         report_path.write_text("\n".join(lines), encoding="utf-8")
         console.print(
-            f"\n[green]Report written:[/green] {_format_cli_path(report_path.relative_to(root))}"
+            f"\n[green]Report written:[/green] {_format_cli_project_path(root, report_path)}"
         )
 
     if dry_run:
