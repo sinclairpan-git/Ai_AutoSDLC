@@ -2193,6 +2193,7 @@ class TestCliProgram:
         def _selective_subprocess_run(command, *args, **kwargs):
             if isinstance(command, (list, tuple)) and command and command[0] in {
                 "npm",
+                "npx",
                 "pnpm",
                 "yarn",
                 "node",
@@ -5693,6 +5694,7 @@ specs:
         def _selective_subprocess_run(command, *args, **kwargs):
             if isinstance(command, (list, tuple)) and command and command[0] in {
                 "npm",
+                "npx",
                 "pnpm",
                 "yarn",
                 "node",
