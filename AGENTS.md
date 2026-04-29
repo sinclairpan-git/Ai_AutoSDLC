@@ -18,7 +18,5 @@
 （自动安装；不覆盖已有同名自定义文件。）
 
 <!-- AI-SDLC managed shell guidance -->
-Project preferred shell is not configured yet.
-Recommended default for this host: PowerShell.
-Run `ai-sdlc adapter shell-select` and persist one shell before executing commands.
-Until then, do not guess shell syntax across PowerShell, cmd, and POSIX shells.
+Project preferred shell: PowerShell.
+Use PowerShell syntax for commands, env vars, pipes, and filesystem operations. Do not start with POSIX shell syntax and then retry in PowerShell.
