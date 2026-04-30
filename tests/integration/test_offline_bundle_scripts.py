@@ -74,6 +74,13 @@ def _bash_command() -> str:
     pytest.skip("bash is required to execute POSIX shell installer tests")
 
 
+def _set_env_path(env: dict[str, str], value: str) -> None:
+    for key in list(env):
+        if key.lower() == "path":
+            env.pop(key)
+    env["PATH"] = value
+
+
 def _make_fake_python(wrapper_dir: Path) -> Path:
     wrapper_path = wrapper_dir / "fake-python"
     real_python = sys.executable
@@ -316,7 +323,7 @@ def _prepare_fake_bundle_repo(tmp_path: Path, version: str = "0.2.0") -> Path:
 def _script_env(wrapper_dir: Path, fake_python: Path) -> dict[str, str]:
     env = dict(os.environ)
     wrapper_path = str(wrapper_dir) if os.name == "nt" else _bash_path(wrapper_dir)
-    env["PATH"] = os.pathsep.join([wrapper_path, env.get("PATH", "")])
+    _set_env_path(env, os.pathsep.join([wrapper_path, os.environ.get("PATH", "")]))
     env["PYTHON"] = _bash_path(fake_python)
     return env
 
@@ -502,7 +509,7 @@ def test_install_offline_uses_bundled_python_runtime_when_system_python_missing(
     _make_fake_portable_python(portable_runtime)
 
     env = dict(os.environ)
-    env["PATH"] = ""
+    _set_env_path(env, "")
     env.pop("PYTHON", None)
 
     result = subprocess.run(
@@ -544,7 +551,7 @@ def test_install_offline_uses_versioned_bundled_python_runtime_when_only_python3
     _make_fake_portable_python_versioned(portable_runtime)
 
     env = dict(os.environ)
-    env["PATH"] = ""
+    _set_env_path(env, "")
     env.pop("PYTHON", None)
 
     result = subprocess.run(
@@ -575,7 +582,7 @@ def test_install_online_uses_detected_python_and_prints_bilingual_guidance(
     _make_path_alias(fake_python, wrapper_dir / "python3.11")
 
     env = dict(os.environ)
-    env["PATH"] = _bash_wrapper_path(wrapper_dir)
+    _set_env_path(env, _bash_wrapper_path(wrapper_dir))
     env["AI_SDLC_PACKAGE_SPEC"] = "ai-sdlc==0.7.0"
 
     result = subprocess.run(
@@ -660,7 +667,7 @@ raise SystemExit(0)
     )
 
     env = dict(os.environ)
-    env["PATH"] = _bash_wrapper_path(wrapper_dir)
+    _set_env_path(env, _bash_wrapper_path(wrapper_dir))
     env["AI_SDLC_PACKAGE_SPEC"] = "ai-sdlc==0.7.0"
     env.pop("PYTHON", None)
 
@@ -738,7 +745,7 @@ raise SystemExit(0)
     )
 
     env = dict(os.environ)
-    env["PATH"] = _bash_wrapper_path(wrapper_dir)
+    _set_env_path(env, _bash_wrapper_path(wrapper_dir))
     env.pop("PYTHON", None)
 
     result = subprocess.run(
@@ -776,7 +783,7 @@ def test_install_online_reports_bilingual_failure_when_python_cannot_be_installe
     )
 
     env = dict(os.environ)
-    env["PATH"] = _bash_wrapper_path(wrapper_dir)
+    _set_env_path(env, _bash_wrapper_path(wrapper_dir))
     env.pop("PYTHON", None)
 
     result = subprocess.run(
