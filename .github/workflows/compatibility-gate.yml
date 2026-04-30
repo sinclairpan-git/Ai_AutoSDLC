@@ -92,9 +92,9 @@ jobs:
         if: matrix.shell == 'cmd'
         shell: cmd
         run: |
-          python -m pip install uv || exit /b %ERRORLEVEL%
-          uv sync --locked || exit /b %ERRORLEVEL%
-          uv run ai-sdlc doctor || exit /b %ERRORLEVEL%
+          python -m pip install uv || exit /b 1
+          uv sync --locked || exit /b 1
+          uv run ai-sdlc doctor || exit /b 1
 
   compatibility-gate-result:
     name: Compatibility Gate Result
