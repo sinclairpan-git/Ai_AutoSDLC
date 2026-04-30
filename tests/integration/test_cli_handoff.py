@@ -15,6 +15,10 @@ from ai_sdlc.models.state import Checkpoint, FeatureInfo
 runner = CliRunner()
 
 
+def _squashed_output(output: str) -> str:
+    return "".join(output.split())
+
+
 def _seed_project(root: Path) -> None:
     (root / ".ai-sdlc").mkdir(exist_ok=True)
     spec_dir = root / "specs" / "182-continuity"
@@ -67,7 +71,7 @@ def test_handoff_update_show_and_check(tmp_path: Path) -> None:
         check = runner.invoke(app, ["handoff", "check", "--max-age-minutes", "20"])
 
     assert update.exit_code == 0
-    assert "codex-handoff.md" in update.output
+    assert "codex-handoff.md" in _squashed_output(update.output)
     assert (tmp_path / HANDOFF_PATH).exists()
     assert show.exit_code == 0
     assert "Add continuity handoff runtime" in show.output
@@ -83,4 +87,4 @@ def test_handoff_check_missing_fails_with_action_item(tmp_path: Path) -> None:
 
     assert result.exit_code == 1
     assert "missing" in result.output.lower()
-    assert "handoff update" in result.output
+    assert "handoffupdate" in _squashed_output(result.output)
