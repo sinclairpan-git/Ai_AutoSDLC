@@ -582,13 +582,13 @@ def test_install_online_auto_installs_python_when_linux_package_manager_is_avail
 
     _write_executable(
         wrapper_dir / "uname",
-        f"""#!{sys.executable}
+        f"""#!{_bash_shebang_python()}
 print("Linux")
 """,
     )
     _write_executable(
         wrapper_dir / "id",
-        f"""#!{sys.executable}
+        f"""#!{_bash_shebang_python()}
 import sys
 if sys.argv[1:] == ["-u"]:
     print("501")
@@ -598,7 +598,7 @@ raise SystemExit(1)
     )
     _write_executable(
         wrapper_dir / "sudo",
-        f"""#!{sys.executable}
+        f"""#!{_bash_shebang_python()}
 import os
 import sys
 os.execvp(sys.argv[1], sys.argv[1:])
@@ -606,7 +606,7 @@ os.execvp(sys.argv[1], sys.argv[1:])
     )
     _write_executable(
         wrapper_dir / "apt-get",
-        f"""#!{sys.executable}
+        f"""#!{_bash_shebang_python()}
 import os
 import shutil
 import sys
@@ -664,13 +664,13 @@ def test_install_online_reports_bilingual_failure_when_python_is_still_missing_a
 
     _write_executable(
         wrapper_dir / "uname",
-        f"""#!{sys.executable}
+        f"""#!{_bash_shebang_python()}
 print("Linux")
 """,
     )
     _write_executable(
         wrapper_dir / "id",
-        f"""#!{sys.executable}
+        f"""#!{_bash_shebang_python()}
 import sys
 if sys.argv[1:] == ["-u"]:
     print("501")
@@ -680,7 +680,7 @@ raise SystemExit(1)
     )
     _write_executable(
         wrapper_dir / "sudo",
-        f"""#!{sys.executable}
+        f"""#!{_bash_shebang_python()}
 import os
 import sys
 os.execvp(sys.argv[1], sys.argv[1:])
@@ -688,7 +688,7 @@ os.execvp(sys.argv[1], sys.argv[1:])
     )
     _write_executable(
         wrapper_dir / "apt-get",
-        f"""#!{sys.executable}
+        f"""#!{_bash_shebang_python()}
 import sys
 from pathlib import Path
 
