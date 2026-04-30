@@ -79,9 +79,10 @@ def _observe_step_with_scope_path(
         derived_gaps.extend(report.gaps)
 
     explicit_gaps: list[ProvenanceGapFinding] = []
-    gap_dir = scope_root / "gaps"
-    if gap_dir.exists():
-        seen_gaps: set[str] = set()
+    seen_gaps: set[str] = set()
+    for gap_dir in (scope_root / "gaps", scope_root / "g"):
+        if not gap_dir.exists():
+            continue
         for path in sorted(gap_dir.glob("*.json")):
             gap = ProvenanceGapFinding.model_validate(store._read_json(path))
             marker = json.dumps(gap.model_dump(mode="json"), sort_keys=True, ensure_ascii=False)

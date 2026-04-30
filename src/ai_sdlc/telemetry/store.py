@@ -22,6 +22,7 @@ from ai_sdlc.telemetry.paths import (
     scope_id_from_dir_name,
     session_root,
     step_root,
+    telemetry_id_file_name,
     telemetry_indexes_root,
     telemetry_local_root,
     telemetry_manifest_path,
@@ -131,7 +132,11 @@ class TelemetryStore:
         """Return the current snapshot path for a mutable telemetry object."""
         kind = self._kind_for_record(record)
         id_field = _ID_FIELD_BY_KIND[kind]
-        return self._scope_root_for_record(record) / _MUTABLE_KIND_DIRS[kind] / f"{getattr(record, id_field)}.json"
+        return (
+            self._scope_root_for_record(record)
+            / _MUTABLE_KIND_DIRS[kind]
+            / telemetry_id_file_name(getattr(record, id_field))
+        )
 
     def revisions_path(self, record: Evaluation | Violation | Artifact) -> Path:
         """Return the revisions path for a mutable telemetry object."""
@@ -326,7 +331,12 @@ class TelemetryStore:
         """Return the snapshot path for a mutable object id if it exists."""
         if kind not in _MUTABLE_KIND_DIRS:
             return None
-        matches = list(self.local_root.rglob(f"{_MUTABLE_KIND_DIRS[kind]}/{source_ref}.json"))
+        file_name = telemetry_id_file_name(source_ref)
+        matches = list(self.local_root.rglob(f"{_MUTABLE_KIND_DIRS[kind]}/{file_name}"))
+        if not matches and file_name != f"{source_ref}.json":
+            matches = list(
+                self.local_root.rglob(f"{_MUTABLE_KIND_DIRS[kind]}/{source_ref}.json")
+            )
         if not matches:
             return None
         if len(matches) > 1:
@@ -449,7 +459,7 @@ class TelemetryStore:
         """Derive the canonical scope chain from an on-disk telemetry path."""
         relative = path.resolve().relative_to(self.local_root.resolve())
         parts = relative.parts
-        if len(parts) < 2 or parts[0] != "sessions":
+        if len(parts) < 2 or parts[0] not in {"sessions", "s"}:
             raise ValueError(f"path is outside telemetry sessions root: {path}")
 
         from_manifest = self._scope_chain_from_manifest(relative)
@@ -460,9 +470,9 @@ class TelemetryStore:
         workflow_run_id: str | None = None
         step_id: str | None = None
 
-        if len(parts) >= 4 and parts[2] == "runs":
+        if len(parts) >= 4 and parts[2] in {"runs", "r"}:
             workflow_run_id = scope_id_from_dir_name(parts[3])
-        if len(parts) >= 6 and parts[4] == "steps":
+        if len(parts) >= 6 and parts[4] in {"steps", "t"}:
             step_id = scope_id_from_dir_name(parts[5])
 
         if step_id is not None:

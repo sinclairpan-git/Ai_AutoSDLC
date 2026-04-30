@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Any
 
 from ai_sdlc.telemetry.enums import ScopeLevel
-from ai_sdlc.telemetry.paths import provenance_root
+from ai_sdlc.telemetry.paths import provenance_root, telemetry_id_file_name
 from ai_sdlc.telemetry.provenance_contracts import (
     ProvenanceAssessment,
     ProvenanceEdgeFact,
@@ -29,6 +29,11 @@ _MUTABLE_DIR_BY_KIND = {
     "provenance_assessment": "assessments",
     "provenance_gap": "gaps",
     "provenance_hook": "hooks",
+}
+_COMPACT_MUTABLE_DIR_BY_KIND = {
+    "provenance_assessment": "a",
+    "provenance_gap": "g",
+    "provenance_hook": "h",
 }
 
 
@@ -78,16 +83,17 @@ class ProvenanceStore:
         workflow_run_id: str | None = None,
         step_id: str | None = None,
     ) -> Path:
-        directory = self._mutable_directory(kind)
+        root = self._scope_root(
+            scope_level=scope_level,
+            goal_session_id=goal_session_id,
+            workflow_run_id=workflow_run_id,
+            step_id=step_id,
+        )
+        directory = self._mutable_directory(kind, compact=root.name == "p")
         return (
-            self._scope_root(
-                scope_level=scope_level,
-                goal_session_id=goal_session_id,
-                workflow_run_id=workflow_run_id,
-                step_id=step_id,
-            )
+            root
             / directory
-            / f"{object_id}.json"
+            / telemetry_id_file_name(object_id)
         )
 
     def revisions_path(
@@ -99,14 +105,15 @@ class ProvenanceStore:
         workflow_run_id: str | None = None,
         step_id: str | None = None,
     ) -> Path:
-        directory = self._mutable_directory(kind)
+        root = self._scope_root(
+            scope_level=scope_level,
+            goal_session_id=goal_session_id,
+            workflow_run_id=workflow_run_id,
+            step_id=step_id,
+        )
+        directory = self._mutable_directory(kind, compact=root.name == "p")
         return (
-            self._scope_root(
-                scope_level=scope_level,
-                goal_session_id=goal_session_id,
-                workflow_run_id=workflow_run_id,
-                step_id=step_id,
-            )
+            root
             / f"{directory}.revisions.ndjson"
         )
 
@@ -182,7 +189,9 @@ class ProvenanceStore:
         file_name = _APPEND_ONLY_FILE_BY_KIND[kind]
         id_field = _APPEND_ONLY_ID_FIELD_BY_KIND[kind]
         matches: list[tuple[Path, dict[str, Any]]] = []
-        for path in sorted(self.telemetry_store.local_root.rglob(f"provenance/{file_name}")):
+        paths = list(self.telemetry_store.local_root.rglob(f"provenance/{file_name}"))
+        paths.extend(self.telemetry_store.local_root.rglob(f"p/{file_name}"))
+        for path in sorted(paths):
             for payload in self.telemetry_store._read_ndjson(path):
                 if payload.get(id_field) == source_ref:
                     matches.append((path, payload))
@@ -190,11 +199,27 @@ class ProvenanceStore:
 
     def find_current_object_path(self, kind: str, source_ref: str) -> Path | None:
         directory = self._mutable_directory(kind)
+        compact_directory = self._mutable_directory(kind, compact=True)
+        file_name = telemetry_id_file_name(source_ref)
         matches = list(
             self.telemetry_store.local_root.rglob(
-                f"provenance/{directory}/{source_ref}.json"
+                f"provenance/{directory}/{file_name}"
             )
         )
+        matches.extend(
+            self.telemetry_store.local_root.rglob(f"p/{compact_directory}/{file_name}")
+        )
+        if not matches and file_name != f"{source_ref}.json":
+            matches = list(
+                self.telemetry_store.local_root.rglob(
+                    f"provenance/{directory}/{source_ref}.json"
+                )
+            )
+            matches.extend(
+                self.telemetry_store.local_root.rglob(
+                    f"p/{compact_directory}/{source_ref}.json"
+                )
+            )
         if not matches:
             return None
         if len(matches) > 1:
@@ -218,7 +243,9 @@ class ProvenanceStore:
     ) -> list[tuple[Path, dict[str, Any]]]:
         file_name = _APPEND_ONLY_FILE_BY_KIND[kind]
         payloads: list[tuple[Path, dict[str, Any]]] = []
-        for path in sorted(self.telemetry_store.local_root.rglob(f"provenance/{file_name}")):
+        paths = list(self.telemetry_store.local_root.rglob(f"provenance/{file_name}"))
+        paths.extend(self.telemetry_store.local_root.rglob(f"p/{file_name}"))
+        for path in sorted(paths):
             for payload in self.telemetry_store._read_ndjson(path):
                 payloads.append((path, payload))
         return _dedupe_append_only_matches(payloads)
@@ -265,8 +292,10 @@ class ProvenanceStore:
             )
         )
 
-    def _mutable_directory(self, kind: str) -> str:
+    def _mutable_directory(self, kind: str, *, compact: bool = False) -> str:
         try:
+            if compact:
+                return _COMPACT_MUTABLE_DIR_BY_KIND[kind]
             return _MUTABLE_DIR_BY_KIND[kind]
         except KeyError as exc:  # pragma: no cover - caller-owned surface
             raise ValueError(f"unsupported mutable provenance kind: {kind!r}") from exc

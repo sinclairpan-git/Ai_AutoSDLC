@@ -253,19 +253,21 @@ def _load_scope_gaps(
 ) -> tuple[ProvenanceGapFinding, ...]:
     if scope_root is None:
         return ()
-    gap_dir = scope_root / "gaps"
-    if not gap_dir.exists():
-        return ()
     gaps: list[ProvenanceGapFinding] = []
     seen: set[str] = set()
-    for path in sorted(gap_dir.glob("*.json")):
-        gap = ProvenanceGapFinding.model_validate(store._read_json(path))
-        key = json.dumps(gap.model_dump(mode="json"), sort_keys=True, ensure_ascii=False)
-        if key in seen:
-            continue
-        seen.add(key)
-        gaps.append(gap)
+    for gap_dir in _scope_gap_dirs(scope_root):
+        for path in sorted(gap_dir.glob("*.json")):
+            gap = ProvenanceGapFinding.model_validate(store._read_json(path))
+            key = json.dumps(gap.model_dump(mode="json"), sort_keys=True, ensure_ascii=False)
+            if key in seen:
+                continue
+            seen.add(key)
+            gaps.append(gap)
     return tuple(gaps)
+
+
+def _scope_gap_dirs(scope_root: Path) -> tuple[Path, ...]:
+    return tuple(path for path in (scope_root / "gaps", scope_root / "g") if path.exists())
 
 
 def _collect_locators(
