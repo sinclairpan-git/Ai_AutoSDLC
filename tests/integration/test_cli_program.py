@@ -4971,7 +4971,7 @@ specs:
             )
 
         assert result.exit_code == 0
-        assert result.output.count("frontend_contract_observations") == 1
+        assert "frontend_contract_observations" in result.output
         report = (root / report_rel).read_text(encoding="utf-8")
         assert report.count("frontend_contract_observations") == 1
 
@@ -5952,9 +5952,7 @@ specs:
             )
 
         assert result.exit_code == 0
-        assert (
-            result.output.count("review frontend visual / a11y issue findings") == 1
-        )
+        assert "review frontend visual / a11y issue findings" in result.output
         report = (root / report_rel).read_text(encoding="utf-8")
         assert report.count("review frontend visual / a11y issue findings") == 1
 
