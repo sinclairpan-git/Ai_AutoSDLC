@@ -480,7 +480,7 @@ class SDLCRunner:
                 cwd=self.root,
                 wi=spec_dir,
                 all_docs=False,
-                include_program_truth=True,
+                include_program_truth=not dry_run,
             )
             ctx["close_check_ok"] = close_check.ok
             def _flag_ok(name: str) -> bool:
@@ -497,7 +497,9 @@ class SDLCRunner:
                 ctx["close_check_attested"] = True
             if not close_check.ok:
                 ctx["close_check_blockers"] = _dedupe_text_items(close_check.blockers)
-        truth_surface = _program_truth_gate_surface(self.root, spec_dir=spec_dir)
+        truth_surface = (
+            None if dry_run else _program_truth_gate_surface(self.root, spec_dir=spec_dir)
+        )
         if truth_surface is not None:
             ctx["program_truth_audit_required"] = True
             ctx["program_truth_audit_ready"] = bool(truth_surface.get("ready"))
@@ -527,7 +529,9 @@ class SDLCRunner:
                     / "postmortem.md"
                 )
                 if postmortem.exists():
-                    ctx["postmortem_path"] = str(postmortem.relative_to(self.root))
+                    ctx["postmortem_path"] = postmortem.relative_to(
+                        self.root
+                    ).as_posix()
         refresh_entries = [
             entry
             for entry in load_refresh_log(self.root).entries

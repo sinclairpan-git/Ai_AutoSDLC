@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import hashlib
+import locale
 import logging
 from pathlib import Path
 
@@ -200,10 +201,17 @@ def _refresh_corpus_partial(root: Path, changed_files: list[str]) -> list[str]:
     if not corpus_path.exists():
         return _refresh_corpus_full(root)
 
-    content = corpus_path.read_text(encoding="utf-8")
+    try:
+        content = corpus_path.read_text(encoding="utf-8")
+    except UnicodeDecodeError:
+        content = corpus_path.read_text(encoding=locale.getpreferredencoding(False))
     digest = hashlib.sha256(content.encode()).hexdigest()[:16]
     footer = f"\n\n<!-- Partial refresh at {now_iso()}, hash={digest}, files={len(changed_files)} -->\n"
-    corpus_path.write_text(content + footer, encoding="utf-8")
+    corpus_path.write_text(
+        content + footer,
+        encoding=locale.getpreferredencoding(False),
+        errors="replace",
+    )
 
     return [str(corpus_path.relative_to(root))]
 

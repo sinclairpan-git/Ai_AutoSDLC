@@ -291,7 +291,7 @@ class TestRunCommand:
         assert "generation-constraints-handoff" in result.output
         assert "quality-platform-handoff" in result.output
 
-    def test_run_dry_run_blocks_on_stale_program_truth_for_close_checkpoint(
+    def test_run_dry_run_uses_lightweight_close_check_for_close_checkpoint(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         monkeypatch.chdir(tmp_path)
@@ -378,14 +378,9 @@ class TestRunCommand:
         result = runner.invoke(app, ["run", "--dry-run"])
 
         assert result.exit_code == 0
-        assert captured["include_program_truth"] is True
-        assert "Stage close: RETRY" in result.output
-        assert "Pipeline completed." not in result.output
-        assert "Dry-run completed with open gates. Last stage: close (RETRY)" in result.output
-        assert "reason: state=stale;" in result.output
-        assert "truth_snapshot_stale" in result.output
-        assert "python -m ai_sdlc program" in result.output
-        assert "truth sync --execute --yes" in result.output
+        assert captured["include_program_truth"] is False
+        assert "Pipeline completed." in result.output
+        assert "truth_snapshot_stale" not in result.output
 
     def test_run_non_dry_run_blocks_when_adapter_is_not_verified_loaded(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch

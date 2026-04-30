@@ -36,6 +36,7 @@ from ai_sdlc.core.frontend_contract_observation_provider import (
 from ai_sdlc.core.frontend_contract_observation_runtime_policy import (
     classify_frontend_contract_observation_source,
 )
+from ai_sdlc.core.handoff import check_handoff
 from ai_sdlc.core.p1_artifacts import (
     load_execution_path,
     load_latest_reviewer_decision,
@@ -469,6 +470,13 @@ def _print_plain_status_summaries(status_surface: dict[str, Any]) -> None:
             typer.echo(f"Truth Ledger Next Step: {next_steps}")
 
 
+def _print_plain_handoff_summary(root: Path) -> None:
+    handoff = check_handoff(root)
+    typer.echo(f"Continuity Handoff: {handoff.state} ({handoff.path})")
+    if handoff.next_steps:
+        typer.echo(f"Continuity Handoff Next: {handoff.next_steps[0]}")
+
+
 def _add_governance_rows(table: Table, governance: Any) -> None:
     table.add_row("Governance Frozen", "yes" if governance.frozen else "no")
     if governance.frozen_at:
@@ -503,6 +511,18 @@ def _add_working_set_snapshot_rows(table: Table, snapshot: Any) -> None:
         table.add_row("Spec", snapshot.spec_path)
     if snapshot.plan_path:
         table.add_row("Plan", snapshot.plan_path)
+    if snapshot.context_summary:
+        table.add_row("Context Summary", snapshot.context_summary)
+
+
+def _add_handoff_status_rows(table: Table, root: Path) -> None:
+    handoff = check_handoff(root)
+    table.add_row("Continuity Handoff", handoff.state)
+    table.add_row("Continuity Handoff Path", str(handoff.path))
+    if handoff.summary:
+        table.add_row("Continuity Handoff Summary", handoff.summary)
+    if handoff.next_steps:
+        table.add_row("Continuity Handoff Next", handoff.next_steps[0])
 
 
 def _add_adapter_governance_rows(
@@ -828,7 +848,12 @@ def status_command(
         )
         raise typer.Exit(code=1)
 
-    status_surface = build_status_json_surface(root)
+    status_surface = build_status_json_surface(
+        root,
+        include_program_truth=as_json,
+        include_truth_ledger=as_json,
+        include_workitem_truth=as_json,
+    )
     if as_json:
         typer.echo(json.dumps(status_surface, indent=2))
         raise typer.Exit(code=0)
@@ -869,8 +894,10 @@ def status_command(
             if isinstance(workitem_diagnostics_surface, dict)
             else None
         )
+        checkpoint_workitem = active_work_item_id(cp)
         show_active_binding = bool(
-            isinstance(active_workitem, str) and active_workitem.strip()
+            (isinstance(active_workitem, str) and active_workitem.strip())
+            or checkpoint_workitem
         )
         _add_checkpoint_progress_rows(
             table,
@@ -888,7 +915,7 @@ def status_command(
             )
             if show_active_binding
             else ""
-        ) or (active_work_item_id(cp) if show_active_binding else "")
+        ) or (checkpoint_workitem if show_active_binding else "")
         if active_wi_id:
             _add_active_work_item_status_rows(
                 table,
@@ -921,6 +948,7 @@ def status_command(
     _add_status_surface_optional_rows(table, status_surface)
 
     console.print(table)
+    _print_plain_handoff_summary(root)
     _print_plain_status_summaries(status_surface)
     if hint is not None:
         _print_reconcile_guidance(
@@ -1003,6 +1031,7 @@ def recover_command(
         _add_reconcile_rows(table, hint)
 
     _add_working_set_snapshot_rows(table, pack.working_set_snapshot)
+    _add_handoff_status_rows(table, root)
     work_item_id = _surface_work_item_id(cp)
     if work_item_id:
         governance = load_governance_state(root, work_item_id)

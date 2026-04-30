@@ -106,6 +106,9 @@ source_registry:
 - path: docs/defects/2026-03-26-legacy-checkpoint-reconcile.zh-CN.md
   source_type: defect_report
   truth_layer: defect
+- path: docs/defects/2026-04-24-v0.7.0-windows-offline-e2e-issues.zh-CN.md
+  source_type: defect_report
+  truth_layer: defect
 - path: docs/releases/v0.4.0.md
   source_type: release_doc
   truth_layer: release
@@ -1817,12 +1820,18 @@ specs:
 - id: 180-shell-preference-persistence-and-migration-baseline
   path: specs/180-shell-preference-persistence-and-migration-baseline
   depends_on: []
+- id: 181-cross-platform-release-gate-matrix-baseline
+  path: specs/181-cross-platform-release-gate-matrix-baseline
+  depends_on: []
+- id: 182-continuity-handoff-runtime-baseline
+  path: specs/182-continuity-handoff-runtime-baseline
+  depends_on: []
 truth_snapshot:
-  generated_at: '2026-04-29T03:33:45Z'
+  generated_at: '2026-04-30T02:41:51Z'
   generated_by: ai-sdlc program truth sync
   generator_version: program_truth_snapshot_v1
-  repo_revision: 86bfe30
-  authoring_hash: 5fb559919ac59edf2a15b81e1c191a127756f37ad2f2e8bb3881378dfa3ebd6f
+  repo_revision: d1b5076
+  authoring_hash: d08da5c582a413bc5c008bf844fdc7a8761df1494ae94b9aabf15743b03bceb6
   source_hashes:
     truth_check:specs/095-frontend-mainline-product-delivery-baseline: 40b5e9332011b0d8941245c0e8e7c3b192e897b2bc4aa4876a3d37a94f9b80f0
     truth_check:specs/096-frontend-mainline-host-runtime-manager-baseline: e4586cf112089fff541fc809f9ba98ad4c4c3d5593de8febfc4e64cb1179ce02
@@ -1861,7 +1870,7 @@ truth_snapshot:
     truth_check:specs/122-agent-adapter-verified-host-ingress-runtime-baseline: 668bc35f896163f99929da88d733d0de367d996b276b9775d659227fcafcbca7
     close_check:specs/121-agent-adapter-verified-host-ingress-truth-baseline: bb1a96307f540d67dcb9ccb06e03e5ef522ae9acfd1e9a2b5f5816aed8658072
     close_check:specs/122-agent-adapter-verified-host-ingress-runtime-baseline: bb1a96307f540d67dcb9ccb06e03e5ef522ae9acfd1e9a2b5f5816aed8658072
-  snapshot_hash: 23ccdca4397d6db5b88c9b084b897f8c03e05cc3cb39125fe882a9a7b1fba644
+  snapshot_hash: 3d8acd56161967099e390b9efc97c6b11549d39d3b5df198415a13d2060e2180
   computed_capabilities:
   - capability_id: frontend-mainline-delivery
     closure_state: closed
@@ -1872,37 +1881,36 @@ truth_snapshot:
     stale_reason: ''
   - capability_id: agent-adapter-verified-host-ingress
     closure_state: closed
-    audit_state: blocked
-    blocking_refs:
-    - adapter_canonical_consumption:unverified
+    audit_state: ready
+    blocking_refs: []
     stale_reason: ''
   source_inventory:
-    state: incomplete
-    total_sources: 924
-    mapped_sources: 923
-    unmapped_sources: 1
+    state: complete
+    total_sources: 929
+    mapped_sources: 929
+    unmapped_sources: 0
     missing_sources: 0
-    phase_signal_count: 3214
-    deferred_signal_count: 5900
-    non_goal_signal_count: 314
+    phase_signal_count: 3218
+    deferred_signal_count: 5904
+    non_goal_signal_count: 315
     layer_totals:
       blueprint: 1
-      spec: 181
-      plan: 181
-      tasks: 181
-      execution: 181
-      close: 181
+      spec: 182
+      plan: 182
+      tasks: 182
+      execution: 182
+      close: 182
       requirements: 2
       defect: 3
       design: 8
       release: 5
     layer_materialized:
       blueprint: 1
-      spec: 181
-      plan: 181
-      tasks: 181
-      execution: 181
-      close: 181
+      spec: 182
+      plan: 182
+      tasks: 182
+      execution: 182
+      close: 182
       requirements: 2
       defect: 3
       design: 8
@@ -10062,6 +10070,51 @@ truth_snapshot:
       phase_signal_count: 0
       deferred_signal_count: 0
       non_goal_signal_count: 0
+    - path: specs/181-cross-platform-release-gate-matrix-baseline/spec.md
+      source_type: spec_doc
+      truth_layer: spec
+      mapped: true
+      exists: true
+      mapping_ref: 181-cross-platform-release-gate-matrix-baseline
+      phase_signal_count: 0
+      deferred_signal_count: 0
+      non_goal_signal_count: 1
+    - path: specs/181-cross-platform-release-gate-matrix-baseline/plan.md
+      source_type: plan_doc
+      truth_layer: plan
+      mapped: true
+      exists: true
+      mapping_ref: 181-cross-platform-release-gate-matrix-baseline
+      phase_signal_count: 2
+      deferred_signal_count: 2
+      non_goal_signal_count: 0
+    - path: specs/181-cross-platform-release-gate-matrix-baseline/tasks.md
+      source_type: tasks_doc
+      truth_layer: tasks
+      mapped: true
+      exists: true
+      mapping_ref: 181-cross-platform-release-gate-matrix-baseline
+      phase_signal_count: 2
+      deferred_signal_count: 2
+      non_goal_signal_count: 0
+    - path: specs/181-cross-platform-release-gate-matrix-baseline/task-execution-log.md
+      source_type: execution_log
+      truth_layer: execution
+      mapped: true
+      exists: true
+      mapping_ref: 181-cross-platform-release-gate-matrix-baseline
+      phase_signal_count: 0
+      deferred_signal_count: 0
+      non_goal_signal_count: 0
+    - path: specs/181-cross-platform-release-gate-matrix-baseline/development-summary.md
+      source_type: development_summary
+      truth_layer: close
+      mapped: true
+      exists: true
+      mapping_ref: 181-cross-platform-release-gate-matrix-baseline
+      phase_signal_count: 0
+      deferred_signal_count: 0
+      non_goal_signal_count: 0
     - path: docs/SPEC_SPLIT_AND_PROGRAM.zh-CN.md
       source_type: requirement_doc
       truth_layer: requirements
@@ -10083,9 +10136,9 @@ truth_snapshot:
     - path: docs/defects/2026-04-24-v0.7.0-windows-offline-e2e-issues.zh-CN.md
       source_type: defect_report
       truth_layer: defect
-      mapped: false
+      mapped: true
       exists: true
-      mapping_ref: ''
+      mapping_ref: docs/defects/2026-04-24-v0.7.0-windows-offline-e2e-issues.zh-CN.md
       phase_signal_count: 23
       deferred_signal_count: 32
       non_goal_signal_count: 3
@@ -10224,6 +10277,5 @@ truth_snapshot:
       phase_signal_count: 0
       deferred_signal_count: 6
       non_goal_signal_count: 1
-    unmapped_paths:
-    - docs/defects/2026-04-24-v0.7.0-windows-offline-e2e-issues.zh-CN.md
-  state: migration_pending
+    unmapped_paths: []
+  state: blocked

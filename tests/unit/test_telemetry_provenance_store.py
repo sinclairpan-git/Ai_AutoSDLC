@@ -439,10 +439,6 @@ def test_mutable_provenance_objects_write_current_snapshots_and_revisions(
         step_id="st_0123456789abcdef0123456789abcdef",
     )
 
-    assert revision_name in order
-    assert snapshot_name in order
-    assert order.index(revision_name) < order.index(snapshot_name)
-
     snapshot_path = provenance_store.current_object_path(
         kind,
         object_id=object_id,
@@ -458,6 +454,12 @@ def test_mutable_provenance_objects_write_current_snapshots_and_revisions(
         workflow_run_id="wr_0123456789abcdef0123456789abcdef",
         step_id="st_0123456789abcdef0123456789abcdef",
     )
+
+    expected_revision_name = revisions_path.name
+    expected_snapshot_name = snapshot_path.name
+    assert expected_revision_name in order
+    assert expected_snapshot_name in order
+    assert order.index(expected_revision_name) < order.index(expected_snapshot_name)
 
     assert _read_json(snapshot_path) == updated_record.model_dump(mode="json")
     assert _read_ndjson(revisions_path)[-1] == updated_record.model_dump(mode="json")

@@ -380,7 +380,11 @@ def test_inspection_view_deduplicates_repeated_loaded_nodes_and_gaps(tmp_path: P
     with nodes_path.open("a", encoding="utf-8") as handle:
         handle.write(json.dumps(node_payload, ensure_ascii=False) + "\n")
 
-    gap_path = next(store.local_root.rglob("gaps/*.json"))
+    gap_path = next(
+        path
+        for path in store.local_root.rglob("*.json")
+        if path.name.startswith(("pg_", "pg~"))
+    )
     duplicate_gap_path = gap_path.with_name("duplicate-" + gap_path.name)
     duplicate_gap_path.write_text(gap_path.read_text(encoding="utf-8"), encoding="utf-8")
 

@@ -216,16 +216,17 @@ def scan_files(root: Path) -> list[FileInfo]:
         if _should_ignore(rel):
             continue
 
+        rel_path = rel.as_posix()
         language = _detect_language(path)
         line_count = _count_lines(path)
 
         results.append(
             FileInfo(
-                path=str(rel),
+                path=rel_path,
                 language=language,
                 line_count=line_count,
                 is_entry_point=_is_entry_point(path),
-                is_test=_is_test_file(path),
+                is_test=_is_test_file(rel),
                 is_config=_is_config(path),
                 category=_categorize(path),
             )

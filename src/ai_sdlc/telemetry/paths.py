@@ -6,7 +6,7 @@ import base64
 import hashlib
 from pathlib import Path
 
-from ai_sdlc.telemetry.ids import TELEMETRY_ID_RE, validate_telemetry_id
+from ai_sdlc.telemetry.ids import TELEMETRY_ID_RE
 
 _MAX_SCOPE_DIRNAME_LENGTH = 24
 _COMPACT_SCOPE_SEPARATOR = "~"
@@ -44,10 +44,20 @@ def scope_id_from_dir_name(dirname: str) -> str:
     except (ValueError, TypeError):
         return normalized
     candidate = f"{prefix}_{suffix}"
-    try:
-        return validate_telemetry_id(candidate, f"{prefix}_")
-    except ValueError:
-        return normalized
+    if TELEMETRY_ID_RE.fullmatch(candidate):
+        return candidate
+    return normalized
+
+
+def _scope_container(long_name: str, short_name: str, identifier: str) -> str:
+    if _scope_dir_name(identifier) != identifier:
+        return short_name
+    return long_name
+
+
+def telemetry_id_file_name(identifier: str, extension: str = ".json") -> str:
+    """Return a Windows-safe file name for a telemetry object id."""
+    return f"{_scope_dir_name(identifier)}{extension}"
 
 
 def telemetry_local_root(repo_root: Path) -> Path:
@@ -72,23 +82,35 @@ def telemetry_indexes_root(repo_root: Path) -> Path:
 
 def session_root(repo_root: Path, goal_session_id: str) -> Path:
     """Return the filesystem root for a goal session."""
-    return telemetry_local_root(repo_root) / "sessions" / _scope_dir_name(goal_session_id)
+    return (
+        telemetry_local_root(repo_root)
+        / _scope_container("sessions", "s", goal_session_id)
+        / _scope_dir_name(goal_session_id)
+    )
 
 
 def run_root(repo_root: Path, goal_session_id: str, workflow_run_id: str) -> Path:
     """Return the filesystem root for a workflow run."""
-    return session_root(repo_root, goal_session_id) / "runs" / _scope_dir_name(workflow_run_id)
+    return (
+        session_root(repo_root, goal_session_id)
+        / _scope_container("runs", "r", workflow_run_id)
+        / _scope_dir_name(workflow_run_id)
+    )
 
 
 def step_root(
     repo_root: Path, goal_session_id: str, workflow_run_id: str, step_id: str
 ) -> Path:
     """Return the filesystem root for a workflow step."""
-    return run_root(repo_root, goal_session_id, workflow_run_id) / "steps" / _scope_dir_name(
-        step_id
+    return (
+        run_root(repo_root, goal_session_id, workflow_run_id)
+        / _scope_container("steps", "t", step_id)
+        / _scope_dir_name(step_id)
     )
 
 
 def provenance_root(scope_root: Path) -> Path:
     """Return the provenance subtree for a telemetry scope."""
+    if any(part in {"s", "r", "t"} for part in scope_root.parts):
+        return scope_root / "p"
     return scope_root / "provenance"

@@ -14,6 +14,7 @@ from enum import Enum
 from pathlib import Path
 
 logger = logging.getLogger(__name__)
+_DEFAULT_COMMAND_TIMEOUT_SEC = 5.0
 
 
 def _dedupe_text_items(values: object) -> tuple[str, ...]:
@@ -92,10 +93,12 @@ class GitClient:
         *,
         write_lock_timeout_sec: float = 10.0,
         write_lock_poll_sec: float = 0.05,
+        command_timeout_sec: float = _DEFAULT_COMMAND_TIMEOUT_SEC,
     ) -> None:
         self.repo_path = repo_path.resolve()
         self._write_lock_timeout_sec = write_lock_timeout_sec
         self._write_lock_poll_sec = write_lock_poll_sec
+        self._command_timeout_sec = command_timeout_sec
 
     @property
     def git_dir(self) -> Path:
@@ -185,9 +188,15 @@ class GitClient:
                 encoding="utf-8",
                 errors="replace",
                 check=False,
+                timeout=self._command_timeout_sec,
             )
         except FileNotFoundError as exc:
             raise GitError("git is not installed or not on PATH") from exc
+        except subprocess.TimeoutExpired as exc:
+            raise GitError(
+                f"git {' '.join(args)} timed out after "
+                f"{self._command_timeout_sec:g} second(s)"
+            ) from exc
 
         if result.returncode != 0:
             raise GitError(
@@ -431,15 +440,22 @@ class GitClient:
 
     def _read_symbolic_ref(self, ref: str) -> str | None:
         """Return a symbolic ref target, or ``None`` when absent."""
-        result = subprocess.run(
-            ["git", "symbolic-ref", "--quiet", ref],
-            cwd=self.repo_path,
-            capture_output=True,
-            text=True,
-            encoding="utf-8",
-            errors="replace",
-            check=False,
-        )
+        try:
+            result = subprocess.run(
+                ["git", "symbolic-ref", "--quiet", ref],
+                cwd=self.repo_path,
+                capture_output=True,
+                text=True,
+                encoding="utf-8",
+                errors="replace",
+                check=False,
+                timeout=self._command_timeout_sec,
+            )
+        except subprocess.TimeoutExpired as exc:
+            raise GitError(
+                f"git symbolic-ref --quiet {ref} timed out after "
+                f"{self._command_timeout_sec:g} second(s)"
+            ) from exc
         if result.returncode == 0:
             return result.stdout.strip()
         if result.returncode == 1:
@@ -471,13 +487,20 @@ class GitClient:
 
     def is_ancestor(self, ancestor: str, descendant: str) -> bool:
         """Return whether ``ancestor`` is contained in ``descendant`` history."""
-        result = subprocess.run(
-            ["git", "merge-base", "--is-ancestor", ancestor, descendant],
-            cwd=self.repo_path,
-            capture_output=True,
-            text=True,
-            check=False,
-        )
+        try:
+            result = subprocess.run(
+                ["git", "merge-base", "--is-ancestor", ancestor, descendant],
+                cwd=self.repo_path,
+                capture_output=True,
+                text=True,
+                check=False,
+                timeout=self._command_timeout_sec,
+            )
+        except subprocess.TimeoutExpired as exc:
+            raise GitError(
+                "git merge-base --is-ancestor timed out after "
+                f"{self._command_timeout_sec:g} second(s)"
+            ) from exc
         if result.returncode == 0:
             return True
         if result.returncode == 1:
@@ -513,13 +536,20 @@ class GitClient:
 
     def path_exists_at_revision(self, revision: str, path: str) -> bool:
         """Return whether ``path`` exists at ``revision``."""
-        result = subprocess.run(
-            ["git", "cat-file", "-e", f"{revision}:{path}"],
-            cwd=self.repo_path,
-            capture_output=True,
-            text=True,
-            check=False,
-        )
+        try:
+            result = subprocess.run(
+                ["git", "cat-file", "-e", f"{revision}:{path}"],
+                cwd=self.repo_path,
+                capture_output=True,
+                text=True,
+                check=False,
+                timeout=self._command_timeout_sec,
+            )
+        except subprocess.TimeoutExpired as exc:
+            raise GitError(
+                f"git cat-file -e {revision}:{path} timed out after "
+                f"{self._command_timeout_sec:g} second(s)"
+            ) from exc
         if result.returncode == 0:
             return True
         if result.returncode == 128:

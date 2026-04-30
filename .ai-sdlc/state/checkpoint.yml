@@ -1,12 +1,12 @@
 pipeline_started_at: '2026-03-21T00:00:00'
-pipeline_last_updated: '2026-04-29T03:20:00+00:00'
+pipeline_last_updated: '2026-04-30T03:04:43+00:00'
 current_stage: close
 feature:
-  id: 180-shell-preference-persistence-and-migration-baseline
-  spec_dir: specs/180-shell-preference-persistence-and-migration-baseline
-  design_branch: design/180-shell-preference-persistence-and-migration-baseline-docs
-  feature_branch: feature/180-shell-preference-persistence-and-migration-baseline-dev
-  current_branch: feature/180-shell-preference-persistence-and-migration-baseline-docs
+  id: 181-cross-platform-release-gate-matrix-baseline
+  spec_dir: specs/181-cross-platform-release-gate-matrix-baseline
+  design_branch: design/181-cross-platform-release-gate-matrix-baseline-docs
+  feature_branch: feature/181-cross-platform-release-gate-matrix-baseline-dev
+  current_branch: feature/181-cross-platform-release-gate-matrix-baseline-docs
   docs_baseline_ref: ''
   docs_baseline_at: ''
 multi_agent:
@@ -16,45 +16,33 @@ multi_agent:
 prd_source: AI-SDLC 全自动化框架 产品需求文档（PRD）.md
 completed_stages:
 - stage: init
-  completed_at: '2026-04-28T14:14:05+00:00'
+  completed_at: '2026-04-30T03:04:43+00:00'
   artifacts: []
 - stage: refine
-  completed_at: '2026-04-28T14:14:05+00:00'
+  completed_at: '2026-04-30T03:04:43+00:00'
   artifacts:
   - spec.md
 - stage: design
-  completed_at: '2026-04-28T14:14:05+00:00'
+  completed_at: '2026-04-30T03:04:43+00:00'
   artifacts:
   - plan.md
 - stage: decompose
-  completed_at: '2026-04-28T14:14:05+00:00'
+  completed_at: '2026-04-30T03:04:43+00:00'
   artifacts:
   - tasks.md
 - stage: verify
-  completed_at: '2026-04-28T14:14:05+00:00'
+  completed_at: '2026-04-30T03:04:43+00:00'
   artifacts:
   - task-execution-log.md
   - tasks.md
 - stage: execute
-  completed_at: '2026-04-29T03:20:00+00:00'
+  completed_at: '2026-04-30T03:04:43+00:00'
   artifacts:
-  - task-execution-log.md
-  - tasks.md
   - development-summary.md
-execute_progress:
-  total_batches: 1
-  completed_batches: 1
-  current_batch: 1
-  last_committed_task: T180-06
-  tasks_file: specs/180-shell-preference-persistence-and-migration-baseline/tasks.md
-  execution_log: specs/180-shell-preference-persistence-and-migration-baseline/task-execution-log.md
-  last_log_at: '2026-04-29T03:20:00+00:00'
-  last_commit_at: '2026-04-29T03:20:00+00:00'
-  last_commit_hash: 86bfe30
-  halted: false
-  error: ''
+  - task-execution-log.md
+execute_progress: null
 ai_decisions_count: 0
 execution_mode: auto
-linked_wi_id: 180-shell-preference-persistence-and-migration-baseline
+linked_wi_id: 181-cross-platform-release-gate-matrix-baseline
 linked_plan_uri: null
 last_synced_at: null

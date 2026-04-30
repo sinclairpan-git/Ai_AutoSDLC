@@ -213,3 +213,31 @@ blockers:
     prerequisites:
       - close_check:specs/124-frontend-mainline-delivery-materialization-runtime-baseline
       - close_check:specs/143-frontend-mainline-browser-gate-real-probe-runtime-baseline
+  - blocker_ref: frontend_inheritance:quality
+    carrier_spec: frontend-mainline-delivery
+    execution_batch: phase-5-closure-audit
+    verification_command_or_surface:
+      - uv run ai-sdlc program truth audit
+    expected_close_evidence:
+      - frontend inheritance quality blocker removed from truth audit
+    prerequisites:
+      - close_check:specs/144-frontend-mainline-host-remediation-and-workspace-integration-closure-baseline
+  - blocker_ref: frontend_inheritance:generation
+    carrier_spec: frontend-mainline-delivery
+    execution_batch: phase-5-closure-audit
+    verification_command_or_surface:
+      - uv run ai-sdlc program truth audit
+    expected_close_evidence:
+      - frontend inheritance generation blocker removed from truth audit
+    prerequisites:
+      - close_check:specs/144-frontend-mainline-host-remediation-and-workspace-integration-closure-baseline
+  - blocker_ref: verify:uv run ai-sdlc verify constraints
+    carrier_spec: frontend-mainline-delivery
+    execution_batch: phase-5-closure-audit
+    verification_command_or_surface:
+      - uv run ai-sdlc verify constraints
+    expected_close_evidence:
+      - verify constraints no longer blocks frontend mainline release truth
+    prerequisites:
+      - frontend_inheritance:quality
+      - frontend_inheritance:generation

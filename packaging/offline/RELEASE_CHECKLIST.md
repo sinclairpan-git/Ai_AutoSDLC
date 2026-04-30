@@ -94,6 +94,13 @@ PY
 - [ ] 再执行 `ai-sdlc run --dry-run`
 - [ ] CLI 输出包含双语状态块：`当前状态 / Current status`、`下一步命令 / Next command`、`命令作用 / What this command does`
 
+跨平台 release 额外门禁：
+
+- [ ] **Windows target gate**：运行 `.github/workflows/windows-offline-smoke.yml`，并留存 `windows-offline-smoke-evidence`
+- [ ] **POSIX target gate**：运行 `.github/workflows/posix-offline-smoke.yml`，并留存 `posix-offline-smoke-evidence-*`
+- [ ] `windows-offline-smoke-evidence` 与 `posix-offline-smoke-evidence-*` 均至少包含 `install.log`、`help.txt`、`adapter-status.txt`、`run-dry-run.txt`、`bundle-manifest.json`
+- [ ] 若 release note 声称 Windows、macOS、Linux 或“零 Python 预装”跨平台支持，必须同时引用 Windows 与 POSIX target gate 证据
+
 如果本次 bundle 不包含 `python-runtime/`，也必须显式记录“本次未提供零 Python 预装能力”，避免对外误导。
 
 当手头没有 Windows 实机时，可接受的替代证据是：
@@ -104,6 +111,14 @@ PY
 - [ ] release note / PR 描述明确写出“Windows 证据来自 CI runner，而非本地实机”
 - [ ] 不把 CI runner 内临时构建出的 bundle 归档当成正式对外交付件；CI 在这里的职责是产出 smoke 证据，而不是替代正式发布物
 
+当手头没有 macOS/Linux 实机时，可接受的替代证据是：
+
+- [ ] 运行 GitHub Actions 工作流 `.github/workflows/posix-offline-smoke.yml`
+- [ ] 下载并留存 `posix-offline-smoke-evidence-macos-latest` 与 `posix-offline-smoke-evidence-ubuntu-latest` artifact
+- [ ] artifact 中至少包含 `install.log`、`help.txt`、`adapter-status.txt`、`run-dry-run.txt`、`bundle-manifest.json`
+- [ ] release note / PR 描述明确写出“POSIX 证据来自 CI runner，而非本地实机”
+- [ ] 不把 CI runner 内临时构建出的 bundle 归档当成正式对外交付件；CI 在这里的职责是产出 smoke 证据，而不是替代正式发布物
+
 ## 6.1 跨平台证据边界
 
 - [ ] 不要把 `.zip` 已生成当作 “Windows 已验证” 的证据；`.zip` 只说明已归档，不说明其中 runtime / wheels / 安装脚本在 Windows 可用
@@ -112,6 +127,7 @@ PY
 - [ ] 若当前只在单一平台完成了真实 smoke，release note 必须明确写成“已验证的平台”与“未验证的平台”
 - [ ] 若要对外同时承诺 Windows 与 POSIX 都支持“零 Python 预装”，必须分别提供对应平台构建出的 bundle，并分别保留真实 smoke 证据
 - [ ] 非目标平台机器最多只能做归档内容检查、manifest 检查、脚本静态检查；这些都不能替代目标平台真实安装验证
+- [ ] macOS/Linux 开发必须通过 Windows target gate；Windows 开发必须通过 POSIX target gate；任何单平台成功都不得升级为跨平台 release 结论
 
 ## 7. Release Notes / 分发文案
 

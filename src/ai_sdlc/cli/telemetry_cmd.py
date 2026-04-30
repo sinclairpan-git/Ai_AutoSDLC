@@ -36,7 +36,7 @@ from ai_sdlc.utils.helpers import find_project_root
 
 telemetry_app = typer.Typer(help="Manual telemetry recording commands.", no_args_is_help=True)
 
-console = Console()
+console = Console(soft_wrap=True)
 
 
 def _dedupe_text_items(items: list[str]) -> list[str]:

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import locale
 import logging
 import re
 from pathlib import Path
@@ -206,12 +207,20 @@ class PrdStudio:
                 missing_sections=REQUIRED_SECTIONS[:],
                 recommendations=["PRD file does not exist"],
             )
-        return self.review(prd_path.read_text(encoding="utf-8"))
+        return self.review(_read_text_with_locale_fallback(prd_path))
 
 
 def check_prd_readiness(prd_path: Path) -> PrdReadiness:
     """Compatibility wrapper: keep path-based review while using PrdStudio."""
     return PrdStudio().review_path(prd_path)
+
+
+def _read_text_with_locale_fallback(path: Path) -> str:
+    try:
+        return path.read_text(encoding="utf-8")
+    except UnicodeDecodeError:
+        fallback = locale.getpreferredencoding(False)
+        return path.read_text(encoding=fallback)
 
 
 class PrdStudioAdapter:

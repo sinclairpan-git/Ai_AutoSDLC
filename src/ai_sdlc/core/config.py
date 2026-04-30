@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import logging
 import os
-import tempfile
 import time
 from pathlib import Path
 from typing import TypeVar
@@ -71,20 +70,23 @@ class YamlStore:
         if path.exists() and path.read_text(encoding="utf-8") == serialized:
             return
 
-        tmp_fd = tempfile.NamedTemporaryFile(
-            mode="w",
-            suffix=".tmp",
-            dir=path.parent,
-            delete=False,
-            encoding="utf-8",
-        )
+        temp_path = YamlStore._sibling_temp_path(path)
         try:
-            tmp_fd.write(serialized)
-            tmp_fd.close()
-            YamlStore._replace_with_retry(Path(tmp_fd.name), path)
+            try:
+                temp_path.write_text(serialized, encoding="utf-8")
+            except PermissionError:
+                # Some locked-down Windows hosts allow updating existing config
+                # files but deny creating sibling temp files. Preserve progress.
+                path.write_text(serialized, encoding="utf-8")
+                return
+            YamlStore._replace_with_retry(temp_path, path)
         except Exception:
-            Path(tmp_fd.name).unlink(missing_ok=True)
+            temp_path.unlink(missing_ok=True)
             raise
+
+    @staticmethod
+    def _sibling_temp_path(path: Path) -> Path:
+        return path.with_name(f".{path.name}.{os.getpid()}.{time.monotonic_ns()}.tmp")
 
     @staticmethod
     def _serialize_model(model: BaseModel) -> str:

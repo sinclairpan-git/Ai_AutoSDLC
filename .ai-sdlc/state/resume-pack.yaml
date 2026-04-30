@@ -1,19 +1,22 @@
 current_stage: close
-current_batch: 1
-last_committed_task: T180-06
+current_batch: 0
+last_committed_task: ''
 working_set_snapshot:
   prd_path: AI-SDLC 全自动化框架 产品需求文档（PRD）.md
   constitution_path: D:\project\Ai_AutoSDLC\.ai-sdlc\memory\constitution.md
   tech_stack_path: D:\project\Ai_AutoSDLC\.ai-sdlc\profiles\tech-stack.yml
-  spec_path: D:\project\Ai_AutoSDLC\specs\180-shell-preference-persistence-and-migration-baseline\spec.md
-  plan_path: D:\project\Ai_AutoSDLC\specs\180-shell-preference-persistence-and-migration-baseline\plan.md
-  tasks_path: D:\project\Ai_AutoSDLC\specs\180-shell-preference-persistence-and-migration-baseline\tasks.md
+  spec_path: D:\project\Ai_AutoSDLC\specs\181-cross-platform-release-gate-matrix-baseline\spec.md
+  plan_path: D:\project\Ai_AutoSDLC\specs\181-cross-platform-release-gate-matrix-baseline\plan.md
+  tasks_path: D:\project\Ai_AutoSDLC\specs\181-cross-platform-release-gate-matrix-baseline\tasks.md
   active_files: []
-  context_summary: ''
-current_branch: feature/180-shell-preference-persistence-and-migration-baseline-docs
+  context_summary: 'Goal: Push PR #25 and resolve Codex review feedback | State: Codex
+    review found telemetry compact path reversibility/collision issues; fixed with
+    reversible base64 scope/object names plus short static dirs for long IDs; affected
+    tests pass | Next: Commit review fix, push, rerun CI and @codex review'
+current_branch: feature/181-cross-platform-release-gate-matrix-baseline-docs
 docs_baseline_ref: ''
 docs_baseline_at: ''
-timestamp: '2026-04-29T03:20:00+00:00'
+timestamp: '2026-04-30T03:04:43+00:00'
 checkpoint_path: .ai-sdlc/state/checkpoint.yml
-checkpoint_last_updated: '2026-04-29T03:20:00+00:00'
-checkpoint_fingerprint: pending-close-verification
+checkpoint_last_updated: '2026-04-30T03:04:43+00:00'
+checkpoint_fingerprint: 3a88fbdb372f95712ec6c6bcb34729d78927236171d0e7ea4f1e0002f7f06d10

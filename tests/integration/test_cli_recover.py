@@ -15,6 +15,7 @@ from ai_sdlc.context.state import (
     save_resume_pack,
 )
 from ai_sdlc.core.config import YamlStore
+from ai_sdlc.core.handoff import update_handoff
 from ai_sdlc.models.gate import GovernanceItem, GovernanceState
 from ai_sdlc.models.state import Checkpoint, ExecuteProgress, FeatureInfo
 from ai_sdlc.routers.bootstrap import init_project
@@ -62,6 +63,44 @@ def _write_direct_formal_artifacts(root: Path, work_item_id: str) -> Path:
 
 
 class TestCliRecover:
+    def test_recover_surfaces_continuity_handoff_next_steps(
+        self, tmp_path: Path
+    ) -> None:
+        (tmp_path / ".ai-sdlc").mkdir()
+        spec_dir = tmp_path / "specs" / "182-continuity"
+        spec_dir.mkdir(parents=True)
+        (spec_dir / "spec.md").write_text("# Spec\n", encoding="utf-8")
+        save_checkpoint(
+            tmp_path,
+            Checkpoint(
+                current_stage="execute",
+                feature=FeatureInfo(
+                    id="182-continuity",
+                    spec_dir="specs/182-continuity",
+                    design_branch="design/182-continuity",
+                    feature_branch="feature/182-continuity",
+                    current_branch="feature/182-continuity",
+                ),
+            ),
+        )
+        pack = build_resume_pack(tmp_path)
+        assert pack is not None
+        save_resume_pack(tmp_path, pack)
+        update_handoff(
+            tmp_path,
+            goal="Expose handoff in recover",
+            state="Recover should show the fast resume file",
+            next_steps=["Continue with handoff CLI implementation"],
+        )
+
+        with patch("ai_sdlc.cli.commands.find_project_root", return_value=tmp_path):
+            result = runner.invoke(app, ["recover"])
+
+        assert result.exit_code == 0
+        assert "Continuity Handoff" in result.output
+        assert "ready" in result.output.lower()
+        assert "Continue with handoff CLI implementation" in result.output
+
     def test_recover_with_resume_pack(self, tmp_path: Path) -> None:
         (tmp_path / ".ai-sdlc").mkdir()
         spec_dir = tmp_path / "specs" / "001"

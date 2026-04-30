@@ -22,6 +22,7 @@ from ai_sdlc.telemetry.paths import (
     scope_id_from_dir_name,
     session_root,
     step_root,
+    telemetry_id_file_name,
     telemetry_indexes_root,
     telemetry_local_root,
     telemetry_manifest_path,
@@ -40,6 +41,21 @@ _ID_FIELD_BY_KIND = {
     "telemetry_event": "event_id",
     "evidence": "evidence_id",
 }
+
+
+def _path_is_within(path: str, parent: str) -> bool:
+    return path == parent or path.startswith(f"{parent.rstrip('/')}/")
+
+
+def _choose_longer_scope_match(
+    current: tuple[int, tuple[ScopeLevel, str, str | None, str | None]] | None,
+    entry_path: str,
+    candidate: tuple[ScopeLevel, str, str | None, str | None],
+) -> tuple[int, tuple[ScopeLevel, str, str | None, str | None]]:
+    length = len(entry_path)
+    if current is None or length > current[0]:
+        return (length, candidate)
+    return current
 
 
 class TelemetryStore:
@@ -116,7 +132,11 @@ class TelemetryStore:
         """Return the current snapshot path for a mutable telemetry object."""
         kind = self._kind_for_record(record)
         id_field = _ID_FIELD_BY_KIND[kind]
-        return self._scope_root_for_record(record) / _MUTABLE_KIND_DIRS[kind] / f"{getattr(record, id_field)}.json"
+        return (
+            self._scope_root_for_record(record)
+            / _MUTABLE_KIND_DIRS[kind]
+            / telemetry_id_file_name(getattr(record, id_field))
+        )
 
     def revisions_path(self, record: Evaluation | Violation | Artifact) -> Path:
         """Return the revisions path for a mutable telemetry object."""
@@ -311,7 +331,12 @@ class TelemetryStore:
         """Return the snapshot path for a mutable object id if it exists."""
         if kind not in _MUTABLE_KIND_DIRS:
             return None
-        matches = list(self.local_root.rglob(f"{_MUTABLE_KIND_DIRS[kind]}/{source_ref}.json"))
+        file_name = telemetry_id_file_name(source_ref)
+        matches = list(self.local_root.rglob(f"{_MUTABLE_KIND_DIRS[kind]}/{file_name}"))
+        if not matches and file_name != f"{source_ref}.json":
+            matches = list(
+                self.local_root.rglob(f"{_MUTABLE_KIND_DIRS[kind]}/{source_ref}.json")
+            )
         if not matches:
             return None
         if len(matches) > 1:
@@ -434,16 +459,20 @@ class TelemetryStore:
         """Derive the canonical scope chain from an on-disk telemetry path."""
         relative = path.resolve().relative_to(self.local_root.resolve())
         parts = relative.parts
-        if len(parts) < 2 or parts[0] != "sessions":
+        if len(parts) < 2 or parts[0] not in {"sessions", "s"}:
             raise ValueError(f"path is outside telemetry sessions root: {path}")
+
+        from_manifest = self._scope_chain_from_manifest(relative)
+        if from_manifest is not None:
+            return from_manifest
 
         goal_session_id = scope_id_from_dir_name(parts[1])
         workflow_run_id: str | None = None
         step_id: str | None = None
 
-        if len(parts) >= 4 and parts[2] == "runs":
+        if len(parts) >= 4 and parts[2] in {"runs", "r"}:
             workflow_run_id = scope_id_from_dir_name(parts[3])
-        if len(parts) >= 6 and parts[4] == "steps":
+        if len(parts) >= 6 and parts[4] in {"steps", "t"}:
             step_id = scope_id_from_dir_name(parts[5])
 
         if step_id is not None:
@@ -451,6 +480,43 @@ class TelemetryStore:
         if workflow_run_id is not None:
             return (ScopeLevel.RUN, goal_session_id, workflow_run_id, None)
         return (ScopeLevel.SESSION, goal_session_id, None, None)
+
+    def _scope_chain_from_manifest(
+        self, relative: Path
+    ) -> tuple[ScopeLevel, str, str | None, str | None] | None:
+        """Resolve compact scope directories through the manifest when available."""
+        if not self.manifest_path.exists():
+            return None
+        try:
+            manifest = self._read_json(self.manifest_path)
+        except (OSError, json.JSONDecodeError):
+            return None
+        relative_posix = relative.as_posix()
+        best: tuple[int, tuple[ScopeLevel, str, str | None, str | None]] | None = None
+        for session_id, entry in (manifest.get("sessions") or {}).items():
+            entry_path = str((entry or {}).get("path", "")).strip()
+            if entry_path and _path_is_within(relative_posix, entry_path):
+                candidate = (ScopeLevel.SESSION, str(session_id), None, None)
+                best = _choose_longer_scope_match(best, entry_path, candidate)
+        for run_id, entry in (manifest.get("runs") or {}).items():
+            entry_path = str((entry or {}).get("path", "")).strip()
+            session_id = str((entry or {}).get("goal_session_id", "")).strip()
+            if entry_path and session_id and _path_is_within(relative_posix, entry_path):
+                candidate = (ScopeLevel.RUN, session_id, str(run_id), None)
+                best = _choose_longer_scope_match(best, entry_path, candidate)
+        for step_id, entry in (manifest.get("steps") or {}).items():
+            entry_path = str((entry or {}).get("path", "")).strip()
+            session_id = str((entry or {}).get("goal_session_id", "")).strip()
+            run_id = str((entry or {}).get("workflow_run_id", "")).strip()
+            if (
+                entry_path
+                and session_id
+                and run_id
+                and _path_is_within(relative_posix, entry_path)
+            ):
+                candidate = (ScopeLevel.STEP, session_id, run_id, str(step_id))
+                best = _choose_longer_scope_match(best, entry_path, candidate)
+        return best[1] if best is not None else None
 
     def _kind_for_record(self, record: TelemetryEvent | Evidence | Evaluation | Violation | Artifact) -> str:
         if isinstance(record, TelemetryEvent):

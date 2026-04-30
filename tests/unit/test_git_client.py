@@ -414,3 +414,18 @@ def test_run_raw_forces_utf8_decoding(monkeypatch: pytest.MonkeyPatch, tmp_path:
     assert client._run_raw("status") == "ok"
     assert captured["encoding"] == "utf-8"
     assert captured["errors"] == "replace"
+    assert captured["timeout"] == 5.0
+
+
+def test_run_raw_reports_git_command_timeout(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    client = GitClient(tmp_path, command_timeout_sec=0.25)
+
+    def _fake_run(*_args, **_kwargs):
+        raise subprocess.TimeoutExpired(cmd=["git", "status"], timeout=0.25)
+
+    monkeypatch.setattr("ai_sdlc.branch.git_client.subprocess.run", _fake_run)
+
+    with pytest.raises(GitError, match="git status timed out after 0.25 second"):
+        client._run_raw("status")
