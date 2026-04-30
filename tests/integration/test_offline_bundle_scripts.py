@@ -81,6 +81,17 @@ def _set_env_path(env: dict[str, str], value: str) -> None:
     env["PATH"] = value
 
 
+def _set_bash_wrapper_env(env: dict[str, str], wrapper_dir: Path, cwd: Path) -> None:
+    _set_env_path(env, _bash_wrapper_path(wrapper_dir))
+    if os.name == "nt":
+        bash_env = cwd / ".test-bash-env"
+        bash_env.write_text(
+            f'export PATH="{_bash_path(wrapper_dir)}:/usr/bin:/bin"\n',
+            encoding="utf-8",
+        )
+        env["BASH_ENV"] = _bash_path(bash_env)
+
+
 def _make_fake_python(wrapper_dir: Path) -> Path:
     wrapper_path = wrapper_dir / "fake-python"
     real_python = sys.executable
@@ -582,7 +593,7 @@ def test_install_online_uses_detected_python_and_prints_bilingual_guidance(
     _make_path_alias(fake_python, wrapper_dir / "python3.11")
 
     env = dict(os.environ)
-    _set_env_path(env, _bash_wrapper_path(wrapper_dir))
+    _set_bash_wrapper_env(env, wrapper_dir, tmp_path)
     env["AI_SDLC_PACKAGE_SPEC"] = "ai-sdlc==0.7.0"
 
     result = subprocess.run(
@@ -667,7 +678,7 @@ raise SystemExit(0)
     )
 
     env = dict(os.environ)
-    _set_env_path(env, _bash_wrapper_path(wrapper_dir))
+    _set_bash_wrapper_env(env, wrapper_dir, tmp_path)
     env["AI_SDLC_PACKAGE_SPEC"] = "ai-sdlc==0.7.0"
     env.pop("PYTHON", None)
 
@@ -745,7 +756,7 @@ raise SystemExit(0)
     )
 
     env = dict(os.environ)
-    _set_env_path(env, _bash_wrapper_path(wrapper_dir))
+    _set_bash_wrapper_env(env, wrapper_dir, tmp_path)
     env.pop("PYTHON", None)
 
     result = subprocess.run(
