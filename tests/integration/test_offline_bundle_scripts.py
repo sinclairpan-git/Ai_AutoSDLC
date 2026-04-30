@@ -56,6 +56,12 @@ def _bash_path(path: Path) -> str:
     return result.stdout.strip() if result.returncode == 0 else str(path)
 
 
+def _bash_wrapper_path(wrapper_dir: Path) -> str:
+    if os.name != "nt":
+        return str(wrapper_dir)
+    return f"{_bash_path(wrapper_dir)}:/usr/bin:/bin"
+
+
 def _bash_command() -> str:
     bash = shutil.which("bash")
     if bash:
@@ -564,7 +570,7 @@ def test_install_online_uses_detected_python_and_prints_bilingual_guidance(
     _make_path_alias(fake_python, wrapper_dir / "python3.11")
 
     env = dict(os.environ)
-    env["PATH"] = _bash_path(wrapper_dir)
+    env["PATH"] = _bash_wrapper_path(wrapper_dir)
     env["AI_SDLC_PACKAGE_SPEC"] = "ai-sdlc==0.7.0"
 
     result = subprocess.run(
@@ -649,7 +655,7 @@ raise SystemExit(0)
     )
 
     env = dict(os.environ)
-    env["PATH"] = _bash_path(wrapper_dir)
+    env["PATH"] = _bash_wrapper_path(wrapper_dir)
     env["AI_SDLC_PACKAGE_SPEC"] = "ai-sdlc==0.7.0"
     env.pop("PYTHON", None)
 
@@ -727,7 +733,7 @@ raise SystemExit(0)
     )
 
     env = dict(os.environ)
-    env["PATH"] = _bash_path(wrapper_dir)
+    env["PATH"] = _bash_wrapper_path(wrapper_dir)
     env.pop("PYTHON", None)
 
     result = subprocess.run(
@@ -765,7 +771,7 @@ def test_install_online_reports_bilingual_failure_when_python_cannot_be_installe
     )
 
     env = dict(os.environ)
-    env["PATH"] = _bash_path(wrapper_dir)
+    env["PATH"] = _bash_wrapper_path(wrapper_dir)
     env.pop("PYTHON", None)
 
     result = subprocess.run(
