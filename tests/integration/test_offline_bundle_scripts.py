@@ -70,6 +70,7 @@ def _make_fake_python(wrapper_dir: Path) -> Path:
     wrapper = f"""#!{shebang_python}
 import os
 import shutil
+import subprocess
 import sys
 from pathlib import Path
 
@@ -130,7 +131,8 @@ raise SystemExit(0)
     )
     raise SystemExit(0)
 
-os.execv(REAL_PYTHON, [REAL_PYTHON, *sys.argv[1:]])
+completed = subprocess.run([REAL_PYTHON, *sys.argv[1:]], check=False)
+raise SystemExit(completed.returncode)
 """
     return _write_executable(wrapper_path, wrapper)
 
@@ -615,9 +617,13 @@ raise SystemExit(1)
     _write_executable(
         wrapper_dir / "sudo",
         f"""#!{_bash_shebang_python()}
-import os
+import subprocess
 import sys
-os.execvp(sys.argv[1], sys.argv[1:])
+from pathlib import Path
+
+command = Path(__file__).resolve().parent / sys.argv[1]
+completed = subprocess.run([sys.executable, str(command), *sys.argv[2:]], check=False)
+raise SystemExit(completed.returncode)
 """,
     )
     _write_executable(
@@ -697,9 +703,13 @@ raise SystemExit(1)
     _write_executable(
         wrapper_dir / "sudo",
         f"""#!{_bash_shebang_python()}
-import os
+import subprocess
 import sys
-os.execvp(sys.argv[1], sys.argv[1:])
+from pathlib import Path
+
+command = Path(__file__).resolve().parent / sys.argv[1]
+completed = subprocess.run([sys.executable, str(command), *sys.argv[2:]], check=False)
+raise SystemExit(completed.returncode)
 """,
     )
     _write_executable(
