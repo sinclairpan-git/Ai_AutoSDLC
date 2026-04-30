@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 
 import pytest
@@ -28,6 +29,12 @@ from ai_sdlc.telemetry.paths import (
 )
 
 runner = CliRunner()
+
+_ANSI_RE = re.compile(r"\x1b\[[0-9;?]*[ -/]*[@-~]")
+
+
+def _plain_cli_output(output: str) -> str:
+    return "".join(_ANSI_RE.sub("", output).split())
 
 IDE_ENV_KEYS = [
     "CURSOR_TRACE_ID",
@@ -140,8 +147,9 @@ class TestRunCommand:
     def test_run_help(self) -> None:
         result = runner.invoke(app, ["run", "--help"])
         assert result.exit_code == 0
-        assert "dry-run" in result.output
-        assert "mode" in result.output
+        plain_output = _plain_cli_output(result.output)
+        assert "dry-run" in plain_output
+        assert "mode" in plain_output
 
     def test_run_dry_run_materializes_canonical_adapter_after_codex_marker(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch

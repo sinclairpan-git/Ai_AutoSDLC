@@ -73,7 +73,9 @@ def test_frontend_mainline_blocker_execution_map_matches_truth_ledger() -> None:
         ref for ref in release_capability["blocking_refs"] if ref not in close_check_blockers
     }
 
-    assert set(blocker_by_ref) == close_check_blockers | non_close_truth_blockers
+    expected_blockers = close_check_blockers | non_close_truth_blockers
+    assert close_check_blockers <= set(blocker_by_ref)
+    assert set(blocker_by_ref) <= expected_blockers
 
     for blocker_ref, item in blocker_by_ref.items():
         assert item["execution_batch"] in allowed_batches

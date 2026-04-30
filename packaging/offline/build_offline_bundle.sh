@@ -119,7 +119,11 @@ PY
 
 mkdir -p "${ROOT}/dist-offline"
 rm -f "${ARCHIVE}"
-tar -czf "${ARCHIVE}" -C "${ROOT}/dist-offline" "$(basename "${OUT}")"
+if tar --version 2>/dev/null | grep -qi 'gnu tar'; then
+  tar --warning=no-file-changed -czf "${ARCHIVE}" -C "${ROOT}/dist-offline" "$(basename "${OUT}")"
+else
+  tar -czf "${ARCHIVE}" -C "${ROOT}/dist-offline" "$(basename "${OUT}")"
+fi
 rm -f "${ZIP_ARCHIVE}"
 "${PY}" - "${VERSION}" <<'PY'
 from pathlib import Path

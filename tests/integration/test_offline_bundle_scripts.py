@@ -26,6 +26,47 @@ def _write_executable(path: Path, content: str) -> Path:
     return path
 
 
+def _bash_shebang_python() -> str:
+    if os.name != "nt":
+        return sys.executable
+    cygpath = shutil.which("cygpath")
+    if not cygpath:
+        return sys.executable
+    result = subprocess.run(
+        [cygpath, "-u", sys.executable],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    return result.stdout.strip() if result.returncode == 0 else sys.executable
+
+
+def _bash_path(path: Path) -> str:
+    if os.name != "nt":
+        return str(path)
+    cygpath = shutil.which("cygpath")
+    if not cygpath:
+        return str(path)
+    result = subprocess.run(
+        [cygpath, "-u", str(path)],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    return result.stdout.strip() if result.returncode == 0 else str(path)
+
+
+def _bash_wrapper_path(wrapper_dir: Path) -> str:
+    if os.name != "nt":
+        return str(wrapper_dir)
+    bash = shutil.which("bash")
+    git_paths: list[str] = []
+    if bash:
+        git_bin = Path(bash).resolve().parent
+        git_paths = [str(git_bin.parent / "usr" / "bin"), str(git_bin)]
+    return os.pathsep.join([str(wrapper_dir), *git_paths])
+
+
 def _bash_command() -> str:
     bash = shutil.which("bash")
     if bash:
@@ -33,12 +74,32 @@ def _bash_command() -> str:
     pytest.skip("bash is required to execute POSIX shell installer tests")
 
 
+def _set_env_path(env: dict[str, str], value: str) -> None:
+    for key in list(env):
+        if key.lower() == "path":
+            env.pop(key)
+    env["PATH"] = value
+
+
+def _set_bash_wrapper_env(env: dict[str, str], wrapper_dir: Path, cwd: Path) -> None:
+    _set_env_path(env, _bash_wrapper_path(wrapper_dir))
+    if os.name == "nt":
+        bash_env = cwd / ".test-bash-env"
+        bash_env.write_text(
+            f'export PATH="{_bash_path(wrapper_dir)}:/usr/bin:/bin"\n',
+            encoding="utf-8",
+        )
+        env["BASH_ENV"] = _bash_path(bash_env)
+
+
 def _make_fake_python(wrapper_dir: Path) -> Path:
     wrapper_path = wrapper_dir / "fake-python"
     real_python = sys.executable
-    wrapper = f"""#!{real_python}
+    shebang_python = _bash_shebang_python()
+    wrapper = f"""#!{shebang_python}
 import os
 import shutil
+import subprocess
 import sys
 from pathlib import Path
 
@@ -72,7 +133,7 @@ if args[:2] == ["-m", "venv"]:
     )
     _write(
         bin_dir / "python",
-        f'''#!{real_python}
+        f'''#!{shebang_python}
 from pathlib import Path
 import sys
 if sys.argv[1:4] == ["-m", "pip", "install"]:
@@ -85,7 +146,7 @@ raise SystemExit(0)
     )
     _write(
         bin_dir / "pip",
-        f'''#!{real_python}
+        f'''#!{shebang_python}
 from pathlib import Path
 import sys
 
@@ -99,7 +160,8 @@ raise SystemExit(0)
     )
     raise SystemExit(0)
 
-os.execv(REAL_PYTHON, [REAL_PYTHON, *sys.argv[1:]])
+completed = subprocess.run([REAL_PYTHON, *sys.argv[1:]], check=False)
+raise SystemExit(completed.returncode)
 """
     return _write_executable(wrapper_path, wrapper)
 
@@ -109,7 +171,8 @@ def _make_fake_portable_python(runtime_dir: Path) -> Path:
     bin_dir.mkdir(parents=True, exist_ok=True)
     wrapper_path = bin_dir / "python3"
     real_python = sys.executable
-    wrapper = f"""#!{real_python}
+    shebang_python = _bash_shebang_python()
+    wrapper = f"""#!{shebang_python}
 import os
 import sys
 from pathlib import Path
@@ -133,7 +196,7 @@ if args[:2] == ["-m", "venv"]:
     )
     _write(
         bin_dir / "python",
-        f'''#!{real_python}
+        f'''#!{shebang_python}
 from pathlib import Path
 import sys
 if sys.argv[1:4] == ["-m", "pip", "install"]:
@@ -145,7 +208,7 @@ raise SystemExit(0)
     )
     _write(
         bin_dir / "pip",
-        f'''#!{real_python}
+        f'''#!{shebang_python}
 from pathlib import Path
 import sys
 
@@ -169,7 +232,8 @@ def _make_fake_portable_python_versioned(runtime_dir: Path) -> Path:
     bin_dir.mkdir(parents=True, exist_ok=True)
     wrapper_path = bin_dir / "python3.11"
     real_python = sys.executable
-    wrapper = f"""#!{real_python}
+    shebang_python = _bash_shebang_python()
+    wrapper = f"""#!{shebang_python}
 import os
 import sys
 from pathlib import Path
@@ -193,7 +257,7 @@ if args[:2] == ["-m", "venv"]:
     )
     _write(
         bin_dir / "python",
-        f'''#!{real_python}
+        f'''#!{shebang_python}
 from pathlib import Path
 import sys
 if sys.argv[1:4] == ["-m", "pip", "install"]:
@@ -205,7 +269,7 @@ raise SystemExit(0)
     )
     _write(
         bin_dir / "pip",
-        f'''#!{real_python}
+        f'''#!{shebang_python}
 from pathlib import Path
 import sys
 
@@ -269,8 +333,9 @@ def _prepare_fake_bundle_repo(tmp_path: Path, version: str = "0.2.0") -> Path:
 
 def _script_env(wrapper_dir: Path, fake_python: Path) -> dict[str, str]:
     env = dict(os.environ)
-    env["PATH"] = f"{wrapper_dir}{os.pathsep}{env.get('PATH', '')}"
-    env["PYTHON"] = str(fake_python)
+    wrapper_path = str(wrapper_dir) if os.name == "nt" else _bash_path(wrapper_dir)
+    _set_env_path(env, os.pathsep.join([wrapper_path, os.environ.get("PATH", "")]))
+    env["PYTHON"] = _bash_path(fake_python)
     return env
 
 
@@ -455,7 +520,7 @@ def test_install_offline_uses_bundled_python_runtime_when_system_python_missing(
     _make_fake_portable_python(portable_runtime)
 
     env = dict(os.environ)
-    env["PATH"] = ""
+    _set_env_path(env, "")
     env.pop("PYTHON", None)
 
     result = subprocess.run(
@@ -497,7 +562,7 @@ def test_install_offline_uses_versioned_bundled_python_runtime_when_only_python3
     _make_fake_portable_python_versioned(portable_runtime)
 
     env = dict(os.environ)
-    env["PATH"] = ""
+    _set_env_path(env, "")
     env.pop("PYTHON", None)
 
     result = subprocess.run(
@@ -528,7 +593,7 @@ def test_install_online_uses_detected_python_and_prints_bilingual_guidance(
     _make_path_alias(fake_python, wrapper_dir / "python3.11")
 
     env = dict(os.environ)
-    env["PATH"] = str(wrapper_dir)
+    _set_bash_wrapper_env(env, wrapper_dir, tmp_path)
     env["AI_SDLC_PACKAGE_SPEC"] = "ai-sdlc==0.7.0"
 
     result = subprocess.run(
@@ -564,13 +629,13 @@ def test_install_online_auto_installs_python_when_linux_package_manager_is_avail
 
     _write_executable(
         wrapper_dir / "uname",
-        f"""#!{sys.executable}
+        f"""#!{_bash_shebang_python()}
 print("Linux")
 """,
     )
     _write_executable(
         wrapper_dir / "id",
-        f"""#!{sys.executable}
+        f"""#!{_bash_shebang_python()}
 import sys
 if sys.argv[1:] == ["-u"]:
     print("501")
@@ -580,15 +645,19 @@ raise SystemExit(1)
     )
     _write_executable(
         wrapper_dir / "sudo",
-        f"""#!{sys.executable}
-import os
+        f"""#!{_bash_shebang_python()}
+import subprocess
 import sys
-os.execvp(sys.argv[1], sys.argv[1:])
+from pathlib import Path
+
+command = Path(__file__).resolve().parent / sys.argv[1]
+completed = subprocess.run([sys.executable, str(command), *sys.argv[2:]], check=False)
+raise SystemExit(completed.returncode)
 """,
     )
     _write_executable(
         wrapper_dir / "apt-get",
-        f"""#!{sys.executable}
+        f"""#!{_bash_shebang_python()}
 import os
 import shutil
 import sys
@@ -609,7 +678,7 @@ raise SystemExit(0)
     )
 
     env = dict(os.environ)
-    env["PATH"] = str(wrapper_dir)
+    _set_bash_wrapper_env(env, wrapper_dir, tmp_path)
     env["AI_SDLC_PACKAGE_SPEC"] = "ai-sdlc==0.7.0"
     env.pop("PYTHON", None)
 
@@ -646,13 +715,13 @@ def test_install_online_reports_bilingual_failure_when_python_is_still_missing_a
 
     _write_executable(
         wrapper_dir / "uname",
-        f"""#!{sys.executable}
+        f"""#!{_bash_shebang_python()}
 print("Linux")
 """,
     )
     _write_executable(
         wrapper_dir / "id",
-        f"""#!{sys.executable}
+        f"""#!{_bash_shebang_python()}
 import sys
 if sys.argv[1:] == ["-u"]:
     print("501")
@@ -662,15 +731,19 @@ raise SystemExit(1)
     )
     _write_executable(
         wrapper_dir / "sudo",
-        f"""#!{sys.executable}
-import os
+        f"""#!{_bash_shebang_python()}
+import subprocess
 import sys
-os.execvp(sys.argv[1], sys.argv[1:])
+from pathlib import Path
+
+command = Path(__file__).resolve().parent / sys.argv[1]
+completed = subprocess.run([sys.executable, str(command), *sys.argv[2:]], check=False)
+raise SystemExit(completed.returncode)
 """,
     )
     _write_executable(
         wrapper_dir / "apt-get",
-        f"""#!{sys.executable}
+        f"""#!{_bash_shebang_python()}
 import sys
 from pathlib import Path
 
@@ -683,7 +756,7 @@ raise SystemExit(0)
     )
 
     env = dict(os.environ)
-    env["PATH"] = str(wrapper_dir)
+    _set_bash_wrapper_env(env, wrapper_dir, tmp_path)
     env.pop("PYTHON", None)
 
     result = subprocess.run(
@@ -721,7 +794,7 @@ def test_install_online_reports_bilingual_failure_when_python_cannot_be_installe
     )
 
     env = dict(os.environ)
-    env["PATH"] = str(wrapper_dir)
+    _set_env_path(env, _bash_wrapper_path(wrapper_dir))
     env.pop("PYTHON", None)
 
     result = subprocess.run(

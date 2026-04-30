@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -22,6 +23,12 @@ from ai_sdlc.routers.bootstrap import init_project
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 runner = CliRunner()
+
+_ANSI_RE = re.compile(r"\x1b\[[0-9;?]*[ -/]*[@-~]")
+
+
+def _plain_cli_output(output: str) -> str:
+    return " ".join(_ANSI_RE.sub("", output).split())
 
 
 @pytest.fixture(autouse=True)
@@ -324,7 +331,10 @@ class TestCliWorkitemInit:
         assert "main" in result.output
         assert "docs branch" in result.output.lower()
         assert "feature/008-direct-formal-entry-docs" in result.output
-        assert "git checkout -b feature/008-direct-formal-entry-docs" in result.output
+        assert (
+            "git checkout -b feature/008-direct-formal-entry-docs"
+            in _plain_cli_output(result.output)
+        )
         assert not (root / "specs" / "008-direct-formal-entry").exists()
 
     def test_workitem_init_blocks_dirty_docs_branch(
