@@ -59,7 +59,12 @@ def _bash_path(path: Path) -> str:
 def _bash_wrapper_path(wrapper_dir: Path) -> str:
     if os.name != "nt":
         return str(wrapper_dir)
-    return f"{_bash_path(wrapper_dir)}:/usr/bin:/bin"
+    bash = shutil.which("bash")
+    git_paths: list[str] = []
+    if bash:
+        git_bin = Path(bash).resolve().parent
+        git_paths = [str(git_bin.parent / "usr" / "bin"), str(git_bin)]
+    return os.pathsep.join([str(wrapper_dir), *git_paths])
 
 
 def _bash_command() -> str:
@@ -310,8 +315,8 @@ def _prepare_fake_bundle_repo(tmp_path: Path, version: str = "0.2.0") -> Path:
 
 def _script_env(wrapper_dir: Path, fake_python: Path) -> dict[str, str]:
     env = dict(os.environ)
-    path_separator = ":" if os.name == "nt" else os.pathsep
-    env["PATH"] = f"{_bash_path(wrapper_dir)}{path_separator}{env.get('PATH', '')}"
+    wrapper_path = str(wrapper_dir) if os.name == "nt" else _bash_path(wrapper_dir)
+    env["PATH"] = os.pathsep.join([wrapper_path, env.get("PATH", "")])
     env["PYTHON"] = _bash_path(fake_python)
     return env
 
