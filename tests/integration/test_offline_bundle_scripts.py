@@ -41,6 +41,21 @@ def _bash_shebang_python() -> str:
     return result.stdout.strip() if result.returncode == 0 else sys.executable
 
 
+def _bash_path(path: Path) -> str:
+    if os.name != "nt":
+        return str(path)
+    cygpath = shutil.which("cygpath")
+    if not cygpath:
+        return str(path)
+    result = subprocess.run(
+        [cygpath, "-u", str(path)],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    return result.stdout.strip() if result.returncode == 0 else str(path)
+
+
 def _bash_command() -> str:
     bash = shutil.which("bash")
     if bash:
@@ -287,8 +302,9 @@ def _prepare_fake_bundle_repo(tmp_path: Path, version: str = "0.2.0") -> Path:
 
 def _script_env(wrapper_dir: Path, fake_python: Path) -> dict[str, str]:
     env = dict(os.environ)
-    env["PATH"] = f"{wrapper_dir}{os.pathsep}{env.get('PATH', '')}"
-    env["PYTHON"] = str(fake_python)
+    path_separator = ":" if os.name == "nt" else os.pathsep
+    env["PATH"] = f"{_bash_path(wrapper_dir)}{path_separator}{env.get('PATH', '')}"
+    env["PYTHON"] = _bash_path(fake_python)
     return env
 
 
@@ -546,7 +562,7 @@ def test_install_online_uses_detected_python_and_prints_bilingual_guidance(
     _make_path_alias(fake_python, wrapper_dir / "python3.11")
 
     env = dict(os.environ)
-    env["PATH"] = str(wrapper_dir)
+    env["PATH"] = _bash_path(wrapper_dir)
     env["AI_SDLC_PACKAGE_SPEC"] = "ai-sdlc==0.7.0"
 
     result = subprocess.run(
@@ -627,7 +643,7 @@ raise SystemExit(0)
     )
 
     env = dict(os.environ)
-    env["PATH"] = str(wrapper_dir)
+    env["PATH"] = _bash_path(wrapper_dir)
     env["AI_SDLC_PACKAGE_SPEC"] = "ai-sdlc==0.7.0"
     env.pop("PYTHON", None)
 
@@ -701,7 +717,7 @@ raise SystemExit(0)
     )
 
     env = dict(os.environ)
-    env["PATH"] = str(wrapper_dir)
+    env["PATH"] = _bash_path(wrapper_dir)
     env.pop("PYTHON", None)
 
     result = subprocess.run(
@@ -739,7 +755,7 @@ def test_install_online_reports_bilingual_failure_when_python_cannot_be_installe
     )
 
     env = dict(os.environ)
-    env["PATH"] = str(wrapper_dir)
+    env["PATH"] = _bash_path(wrapper_dir)
     env.pop("PYTHON", None)
 
     result = subprocess.run(
