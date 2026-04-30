@@ -12,6 +12,11 @@ on:
 permissions:
   contents: read
 
+env:
+  COLUMNS: "200"
+  PYTHONUTF8: "1"
+  PYTHONIOENCODING: utf-8
+
 concurrency:
   group: compatibility-gate-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true

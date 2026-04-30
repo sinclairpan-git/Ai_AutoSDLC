@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import re
 import subprocess
 import textwrap
 from pathlib import Path
@@ -28,6 +29,12 @@ from ai_sdlc.models.work import (
 )
 
 runner = CliRunner()
+
+_ANSI_RE = re.compile(r"\x1b\[[0-9;?]*[ -/]*[@-~]")
+
+
+def _plain_cli_output(output: str) -> str:
+    return "".join(_ANSI_RE.sub("", output).split())
 
 
 def _commit_all(root: Path, message: str) -> None:
@@ -1129,7 +1136,7 @@ class TestCliWorkitemCloseCheck:
     def test_help_mentions_all_docs_option(self) -> None:
         result = runner.invoke(app, ["workitem", "close-check", "--help"])
         assert result.exit_code == 0
-        assert "--all-docs" in result.output
+        assert "--all-docs" in _plain_cli_output(result.output)
 
     def test_exit_1_when_003_pre_close_approval_missing(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch

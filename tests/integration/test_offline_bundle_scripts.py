@@ -26,6 +26,21 @@ def _write_executable(path: Path, content: str) -> Path:
     return path
 
 
+def _bash_shebang_python() -> str:
+    if os.name != "nt":
+        return sys.executable
+    cygpath = shutil.which("cygpath")
+    if not cygpath:
+        return sys.executable
+    result = subprocess.run(
+        [cygpath, "-u", sys.executable],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    return result.stdout.strip() if result.returncode == 0 else sys.executable
+
+
 def _bash_command() -> str:
     bash = shutil.which("bash")
     if bash:
@@ -36,7 +51,8 @@ def _bash_command() -> str:
 def _make_fake_python(wrapper_dir: Path) -> Path:
     wrapper_path = wrapper_dir / "fake-python"
     real_python = sys.executable
-    wrapper = f"""#!{real_python}
+    shebang_python = _bash_shebang_python()
+    wrapper = f"""#!{shebang_python}
 import os
 import shutil
 import sys
@@ -72,7 +88,7 @@ if args[:2] == ["-m", "venv"]:
     )
     _write(
         bin_dir / "python",
-        f'''#!{real_python}
+        f'''#!{shebang_python}
 from pathlib import Path
 import sys
 if sys.argv[1:4] == ["-m", "pip", "install"]:
@@ -85,7 +101,7 @@ raise SystemExit(0)
     )
     _write(
         bin_dir / "pip",
-        f'''#!{real_python}
+        f'''#!{shebang_python}
 from pathlib import Path
 import sys
 
@@ -109,7 +125,8 @@ def _make_fake_portable_python(runtime_dir: Path) -> Path:
     bin_dir.mkdir(parents=True, exist_ok=True)
     wrapper_path = bin_dir / "python3"
     real_python = sys.executable
-    wrapper = f"""#!{real_python}
+    shebang_python = _bash_shebang_python()
+    wrapper = f"""#!{shebang_python}
 import os
 import sys
 from pathlib import Path
@@ -133,7 +150,7 @@ if args[:2] == ["-m", "venv"]:
     )
     _write(
         bin_dir / "python",
-        f'''#!{real_python}
+        f'''#!{shebang_python}
 from pathlib import Path
 import sys
 if sys.argv[1:4] == ["-m", "pip", "install"]:
@@ -145,7 +162,7 @@ raise SystemExit(0)
     )
     _write(
         bin_dir / "pip",
-        f'''#!{real_python}
+        f'''#!{shebang_python}
 from pathlib import Path
 import sys
 
@@ -169,7 +186,8 @@ def _make_fake_portable_python_versioned(runtime_dir: Path) -> Path:
     bin_dir.mkdir(parents=True, exist_ok=True)
     wrapper_path = bin_dir / "python3.11"
     real_python = sys.executable
-    wrapper = f"""#!{real_python}
+    shebang_python = _bash_shebang_python()
+    wrapper = f"""#!{shebang_python}
 import os
 import sys
 from pathlib import Path
@@ -193,7 +211,7 @@ if args[:2] == ["-m", "venv"]:
     )
     _write(
         bin_dir / "python",
-        f'''#!{real_python}
+        f'''#!{shebang_python}
 from pathlib import Path
 import sys
 if sys.argv[1:4] == ["-m", "pip", "install"]:
@@ -205,7 +223,7 @@ raise SystemExit(0)
     )
     _write(
         bin_dir / "pip",
-        f'''#!{real_python}
+        f'''#!{shebang_python}
 from pathlib import Path
 import sys
 
