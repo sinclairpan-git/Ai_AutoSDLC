@@ -185,7 +185,7 @@ class TestConfirmMode:
         assert ctx["tests_passed"] is True
         assert ctx["close_check_attested"] is True
 
-    def test_close_context_dry_run_includes_program_truth_close_check_fanout(
+    def test_close_context_dry_run_skips_program_truth_close_check_fanout(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         _bootstrap_project(tmp_path)
@@ -235,12 +235,12 @@ class TestConfirmMode:
 
         ctx = runner._build_context("close", cp, dry_run=True)
 
-        assert captured["include_program_truth"] is True
+        assert captured["include_program_truth"] is False
         assert ctx["all_tasks_complete"] is True
         assert ctx["tests_passed"] is True
         assert ctx["close_check_attested"] is True
 
-    def test_close_context_dry_run_includes_program_truth_audit_surface(
+    def test_close_context_dry_run_skips_program_truth_audit_surface(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         _bootstrap_project(tmp_path)
@@ -323,17 +323,8 @@ class TestConfirmMode:
 
         ctx = runner._build_context("close", cp, dry_run=True)
 
-        assert ctx["program_truth_audit_required"] is True
-        assert ctx["program_truth_audit_ready"] is False
-        assert ctx["program_truth_audit_state"] == "stale"
-        assert "truth_snapshot_stale" in str(ctx["program_truth_audit_detail"])
-        assert ctx["program_truth_audit_frontend_inheritance_status"] == {
-            "generation": "not_inherited",
-            "quality": "not_inherited",
-        }
-        assert ctx["program_truth_audit_next_actions"] == [
-            "python -m ai_sdlc program truth sync --execute --yes"
-        ]
+        assert "program_truth_audit_required" not in ctx
+        assert "program_truth_audit_ready" not in ctx
         assert ctx["all_tasks_complete"] is True
         assert ctx["tests_passed"] is True
 

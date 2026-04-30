@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import locale
 import logging
 from pathlib import Path
 
@@ -109,18 +110,26 @@ def save_corpus_files(root: Path, scan: ScanResult) -> list[str]:
     saved: list[str] = []
 
     corpus_path = memory_dir / "engineering-corpus.md"
-    corpus_path.write_text(generate_engineering_corpus(root, scan), encoding="utf-8")
+    _write_generated_text(corpus_path, generate_engineering_corpus(root, scan))
     saved.append(str(corpus_path.relative_to(root)))
 
     summary_path = memory_dir / "codebase-summary.md"
-    summary_path.write_text(generate_codebase_summary(scan), encoding="utf-8")
+    _write_generated_text(summary_path, generate_codebase_summary(scan))
     saved.append(str(summary_path.relative_to(root)))
 
     brief_path = memory_dir / "project-brief.md"
-    brief_path.write_text(generate_project_brief(scan), encoding="utf-8")
+    _write_generated_text(brief_path, generate_project_brief(scan))
     saved.append(str(brief_path.relative_to(root)))
 
     return saved
+
+
+def _write_generated_text(path: Path, content: str) -> None:
+    path.write_text(
+        content,
+        encoding=locale.getpreferredencoding(False),
+        errors="replace",
+    )
 
 
 # --- Section generators ---

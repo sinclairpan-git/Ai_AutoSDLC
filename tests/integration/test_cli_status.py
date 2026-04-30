@@ -22,6 +22,7 @@ from ai_sdlc.context.state import (
     save_resume_pack,
 )
 from ai_sdlc.core.config import YamlStore, save_project_config, save_project_state
+from ai_sdlc.core.handoff import update_handoff
 from ai_sdlc.core.p1_artifacts import (
     save_execution_path,
     save_parallel_coordination_artifact,
@@ -79,6 +80,43 @@ from tests.support.managed_delivery import (
 )
 
 runner = CliRunner()
+
+
+def test_status_surfaces_continuity_handoff_state(tmp_path: Path) -> None:
+    init_project(tmp_path)
+    spec_dir = tmp_path / "specs" / "182-continuity"
+    spec_dir.mkdir(parents=True, exist_ok=True)
+    (spec_dir / "spec.md").write_text("# Spec\n", encoding="utf-8")
+    save_checkpoint(
+        tmp_path,
+        Checkpoint(
+            current_stage="execute",
+            feature=FeatureInfo(
+                id="182-continuity",
+                spec_dir="specs/182-continuity",
+                design_branch="design/182-continuity",
+                feature_branch="feature/182-continuity",
+                current_branch="feature/182-continuity",
+            ),
+        ),
+    )
+    pack = build_resume_pack(tmp_path)
+    assert pack is not None
+    save_resume_pack(tmp_path, pack)
+    update_handoff(
+        tmp_path,
+        goal="Expose handoff in status",
+        state="Ready for status display",
+        next_steps=["Run recover integration"],
+    )
+
+    with patch("ai_sdlc.cli.commands.find_project_root", return_value=tmp_path):
+        result = runner.invoke(app, ["status"])
+
+    assert result.exit_code == 0
+    assert "Continuity Handoff" in result.output
+    assert "ready" in result.output.lower()
+    assert "codex-handoff.md" in result.output
 
 
 def _write_legacy_root_artifacts(root: Path) -> None:
@@ -377,6 +415,50 @@ class TestCliStatus:
         with patch("ai_sdlc.cli.commands.find_project_root", return_value=None):
             result = runner.invoke(app, ["status"])
             assert result.exit_code == 1
+
+    def test_status_text_skips_full_truth_ledger_surface(
+        self, tmp_path: Path
+    ) -> None:
+        init_project(tmp_path)
+        calls: list[bool] = []
+
+        def _fake_status_surface(
+            _root: Path,
+            *,
+            include_program_truth: bool = True,
+            include_truth_ledger: bool = True,
+            include_workitem_truth: bool = True,
+        ) -> dict[str, object]:
+            calls.append(
+                include_program_truth or include_truth_ledger or include_workitem_truth
+            )
+            return {
+                "telemetry": {"state": "ready", "current": None, "latest": None},
+                "branch_lifecycle": {"state": "unavailable", "detail": ""},
+                "formal_artifact_target": {"state": "ready", "detail": "", "reason_codes": []},
+                "backlog_breach_guard": {"state": "ready", "detail": "", "reason_codes": []},
+                "execute_authorization": {"state": "unavailable", "detail": "", "reason_codes": []},
+                "adapter_governance": {
+                    "agent_target": "codex",
+                    "adapter_ingress_state": "materialized",
+                    "adapter_verification_result": "unverified",
+                    "adapter_activation_state": "installed",
+                    "governance_activation_mode": "materialized_only",
+                    "governance_activation_detail": "materialized only",
+                },
+            }
+
+        with (
+            patch("ai_sdlc.cli.commands.find_project_root", return_value=tmp_path),
+            patch(
+                "ai_sdlc.cli.commands.build_status_json_surface",
+                side_effect=_fake_status_surface,
+            ),
+        ):
+            result = runner.invoke(app, ["status"])
+
+        assert result.exit_code == 0, result.output
+        assert calls == [False]
 
     def test_status_guides_user_when_legacy_artifacts_need_reconcile(
         self, tmp_path: Path

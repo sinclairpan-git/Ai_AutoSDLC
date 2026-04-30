@@ -20,3 +20,32 @@
 <!-- AI-SDLC managed shell guidance -->
 Project preferred shell: PowerShell.
 Use PowerShell syntax for commands, env vars, pipes, and filesystem operations. Do not start with POSIX shell syntax and then retry in PowerShell.
+
+## Continuity Protocol
+
+For long-running Codex/ChatGPT tasks, maintain `.ai-sdlc/state/codex-handoff.md`.
+When a checkpoint is linked to an active work item, also keep the scoped copy at
+`.ai-sdlc/work-items/<wi-id>/codex-handoff.md`.
+
+Update the handoff with `ai-sdlc handoff update` or `python -m ai_sdlc handoff update`:
+
+- after any meaningful code or document change batch
+- after running tests or debugging a failure
+- before reading or producing very large logs
+- whenever the task direction changes
+- before handing off after an interruption or context compaction
+- at least every 20 minutes during extended work
+
+The handoff must include:
+
+- current goal
+- current state
+- changed files
+- key decisions
+- commands/tests run and results
+- blockers or risks
+- exact next steps
+
+When resuming interrupted work, first run `ai-sdlc handoff show` or read
+`.ai-sdlc/state/codex-handoff.md`, then continue from its exact next steps.
+Keep the handoff concise enough for a fresh thread to read quickly.

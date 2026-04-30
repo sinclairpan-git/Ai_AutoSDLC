@@ -232,12 +232,7 @@ def _sync_file(
     if not dest.exists():
         legacy_source = next((path for path in legacy_sources if path.is_file()), None)
         if legacy_source is not None:
-            dest.write_text(
-                _render_adapter_content(
-                    legacy_source.read_text(encoding="utf-8"), preferred_shell
-                ),
-                encoding="utf-8",
-            )
+            dest.write_text(legacy_source.read_text(encoding="utf-8"), encoding="utf-8")
             result.written.append(str(dest))
             result.legacy_migrated.append(str(legacy_source))
             return

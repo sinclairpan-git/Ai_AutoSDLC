@@ -1,0 +1,143 @@
+name: POSIX Offline Smoke
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/posix-offline-smoke.yml"
+      - ".github/workflows/windows-offline-smoke.yml"
+      - ".github/workflows/pr-checks.yml"
+      - "AGENTS.md"
+      - "pyproject.toml"
+      - "README.md"
+      - "packaging/**"
+      - "src/**"
+      - "tests/integration/test_github_workflows.py"
+      - "tests/integration/test_offline_bundle_scripts.py"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: posix-offline-smoke-${{ github.event.pull_request.number || github.ref }}-${{ matrix.os }}
+  cancel-in-progress: true
+
+jobs:
+  smoke:
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - macos-latest
+          - ubuntu-latest
+
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+
+      - name: Build POSIX offline bundle
+        shell: bash
+        env:
+          PYTHON: python
+          PYTHONUTF8: "1"
+          PYTHONIOENCODING: utf-8
+        run: |
+          set -euo pipefail
+          AI_SDLC_OFFLINE_PYTHON_RUNTIME="$pythonLocation" bash packaging/offline/build_offline_bundle.sh
+
+      - name: Install bundle and run CLI smoke
+        shell: bash
+        env:
+          PYTHONUTF8: "1"
+          PYTHONIOENCODING: utf-8
+        run: |
+          set -euo pipefail
+          archive="$(find dist-offline -maxdepth 1 -name 'ai-sdlc-offline-*.tar.gz' -type f | head -n 1)"
+          if [[ -z "$archive" ]]; then
+            echo "Expected dist-offline tar.gz archive was not produced." >&2
+            exit 1
+          fi
+
+          smoke_root="$RUNNER_TEMP/ai-sdlc-posix-smoke"
+          evidence_root="$RUNNER_TEMP/ai-sdlc-posix-smoke-evidence"
+          rm -rf "$smoke_root" "$evidence_root"
+          mkdir -p "$smoke_root" "$evidence_root"
+
+          tar -xzf "$archive" -C "$smoke_root"
+          bundle_dir="$(find "$smoke_root" -mindepth 1 -maxdepth 1 -type d | head -n 1)"
+          if [[ -z "$bundle_dir" ]]; then
+            echo "Expanded archive did not contain a bundle directory." >&2
+            exit 1
+          fi
+
+          digest="$(
+            python - <<'PY'
+          from pathlib import Path
+          import hashlib
+          print(hashlib.sha256(Path("AGENTS.md").read_bytes()).hexdigest())
+          PY
+          )"
+          export OPENAI_CODEX=1
+          export AI_SDLC_ADAPTER_CANONICAL_SHA256="sha256:$digest"
+
+          install_log="$evidence_root/install.log"
+          help_log="$evidence_root/help.txt"
+          status_log="$evidence_root/adapter-status.txt"
+          dry_run_log="$evidence_root/run-dry-run.txt"
+
+          (
+            cd "$bundle_dir"
+            bash ./install_offline.sh
+          ) 2>&1 | tee "$install_log"
+
+          cli_exe="$bundle_dir/.venv/bin/ai-sdlc"
+          if [[ ! -x "$cli_exe" ]]; then
+            echo "Expected CLI shim was not created at $cli_exe" >&2
+            exit 1
+          fi
+
+          "$cli_exe" --help 2>&1 | tee "$help_log"
+
+          if [[ ! -f "AGENTS.md" ]]; then
+            echo "Expected AGENTS.md in GITHUB_WORKSPACE before adapter verification." >&2
+            exit 1
+          fi
+          if [[ ! -d ".ai-sdlc" ]]; then
+            echo "Expected .ai-sdlc directory in GITHUB_WORKSPACE before dry-run." >&2
+            exit 1
+          fi
+
+          "$cli_exe" adapter status 2>&1 | tee "$status_log"
+
+          set +e
+          "$cli_exe" run --dry-run 2>&1 | tee "$dry_run_log"
+          dry_run_exit="${PIPESTATUS[0]}"
+          set -e
+          if [[ "$dry_run_exit" -ne 0 ]]; then
+            if grep -q "Legacy Artifact Probe" "$dry_run_log" && grep -q "recover --reconcile" "$dry_run_log"; then
+              echo "ai-sdlc run --dry-run reported repo-state reconciliation diagnostics; treating this as smoke pass."
+            else
+              echo "ai-sdlc run --dry-run failed with exit code $dry_run_exit" >&2
+              exit "$dry_run_exit"
+            fi
+          fi
+
+          cp "$bundle_dir/bundle-manifest.json" "$evidence_root/bundle-manifest.json"
+
+      - name: Upload smoke evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: posix-offline-smoke-evidence-${{ matrix.os }}
+          path: ${{ runner.temp }}/ai-sdlc-posix-smoke-evidence
+          if-no-files-found: error

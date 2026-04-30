@@ -243,15 +243,23 @@ def _unavailable_active_work_item_surface(
     )
 
 
-def build_status_json_surface(repo_root: Path) -> dict[str, Any]:
+def build_status_json_surface(
+    repo_root: Path,
+    *,
+    include_program_truth: bool = True,
+    include_truth_ledger: bool = True,
+    include_workitem_truth: bool = True,
+) -> dict[str, Any]:
     """Return bounded telemetry status JSON without implicit init/rebuild."""
     manifest_state = _load_manifest_state(repo_root)
     store = TelemetryStore(repo_root)
     branch_lifecycle = _build_branch_lifecycle_surface(repo_root)
     capability_closure = _build_capability_closure_surface(repo_root)
-    truth_ledger = _build_truth_ledger_surface(repo_root)
+    truth_ledger = _build_truth_ledger_surface(repo_root) if include_truth_ledger else None
     execute_authorization = _build_execute_authorization_surface(repo_root)
-    spec_program_truth = _build_spec_program_truth_surface(repo_root)
+    spec_program_truth = (
+        _build_spec_program_truth_surface(repo_root) if include_program_truth else None
+    )
     backlog_breach_guard = _build_backlog_breach_guard_surface(repo_root)
     frontend_evidence_class = _build_frontend_evidence_class_surface(repo_root)
     if frontend_evidence_class is not None:
@@ -259,12 +267,19 @@ def build_status_json_surface(repo_root: Path) -> dict[str, Any]:
             **branch_lifecycle,
             "frontend_evidence_class": frontend_evidence_class,
         }
-    workitem_diagnostics = _build_workitem_diagnostics_surface(
-        repo_root,
-        branch_lifecycle=branch_lifecycle,
-        execute_authorization=execute_authorization,
-        spec_program_truth=spec_program_truth,
-        backlog_breach_guard=backlog_breach_guard,
+    workitem_diagnostics = (
+        _build_workitem_diagnostics_surface(
+            repo_root,
+            branch_lifecycle=branch_lifecycle,
+            execute_authorization=execute_authorization,
+            spec_program_truth=spec_program_truth,
+            backlog_breach_guard=backlog_breach_guard,
+        )
+        if include_workitem_truth
+        else _unavailable_workitem_diagnostics_surface(
+            detail="full work item truth skipped for fast status",
+            active_work_item=None,
+        )
     )
     formal_artifact_target = _build_formal_artifact_target_surface(repo_root)
     adapter_governance = build_adapter_governance_surface(repo_root)

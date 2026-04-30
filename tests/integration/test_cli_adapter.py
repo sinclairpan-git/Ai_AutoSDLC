@@ -4,12 +4,14 @@ from __future__ import annotations
 
 import hashlib
 import json
+import subprocess
 import sys
 from pathlib import Path
 
 import pytest
 from typer.testing import CliRunner
 
+from ai_sdlc.cli import adapter_cmd
 from ai_sdlc.cli.main import app
 from ai_sdlc.core.config import load_project_config
 from ai_sdlc.integrations.ide_adapter import IDEKind
@@ -74,6 +76,10 @@ class TestCliAdapter:
         monkeypatch.setattr(
             "ai_sdlc.cli.commands.interactive_select_agent_target",
             lambda _default: IDEKind.CLAUDE_CODE,
+        )
+        monkeypatch.setattr(
+            "ai_sdlc.cli.commands.interactive_select_preferred_shell",
+            lambda _default: PreferredShell.POWERSHELL,
         )
 
         result = runner.invoke(app, ["init", str(tmp_path)])
@@ -370,3 +376,42 @@ class TestCliAdapter:
         assert after.exit_code == 0
         after_payload = json.loads(after.output)
         assert after_payload["adapter_canonical_consumption_result"] == "unverified"
+
+    def test_adapter_exec_times_out_stuck_child_command(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        def fake_run(*args: object, **kwargs: object) -> subprocess.CompletedProcess[str]:
+            timeout = kwargs.get("timeout")
+            assert timeout == 120
+            assert kwargs.get("encoding") == "utf-8"
+            assert kwargs.get("errors") == "replace"
+            raise subprocess.TimeoutExpired(
+                cmd=args[0],
+                timeout=timeout,
+                output="partial stdout\n",
+                stderr="partial stderr\n",
+            )
+
+        monkeypatch.setattr(adapter_cmd.subprocess, "run", fake_run)
+        monkeypatch.setattr(adapter_cmd, "_require_project_root", lambda: Path.cwd())
+
+        result = runner.invoke(
+            app,
+            [
+                "adapter",
+                "exec",
+                "--",
+                sys.executable,
+                "-m",
+                "ai_sdlc",
+                "adapter",
+                "select",
+                "--agent-target",
+                "codex",
+            ],
+        )
+
+        assert result.exit_code == 124
+        assert "partial stdout" in result.output
+        assert "partial stderr" in result.output
+        assert "timed out after 120 second(s)" in result.output

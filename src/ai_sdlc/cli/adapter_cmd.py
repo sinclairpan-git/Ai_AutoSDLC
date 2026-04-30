@@ -41,6 +41,7 @@ adapter_app = typer.Typer(
     )
 )
 _EXEC_CONTEXT_SETTINGS = {"allow_extra_args": True, "ignore_unknown_options": True}
+_DEFAULT_ADAPTER_EXEC_TIMEOUT_SECONDS = 120
 
 
 def _require_project_root() -> object:
@@ -79,6 +80,14 @@ def _emit_process_output(stdout: str, stderr: str) -> None:
         typer.echo(stdout, nl=False)
     if stderr:
         typer.echo(stderr, nl=False, err=True)
+
+
+def _coerce_timeout_output(value: str | bytes | None) -> str:
+    if value is None:
+        return ""
+    if isinstance(value, bytes):
+        return value.decode(errors="replace")
+    return value
 
 
 def _adapter_status_guidance(payload: dict[str, object]) -> str:
@@ -237,7 +246,15 @@ def adapter_status(
 
 
 @adapter_app.command(name="exec", context_settings=_EXEC_CONTEXT_SETTINGS)
-def adapter_exec(ctx: typer.Context) -> None:
+def adapter_exec(
+    ctx: typer.Context,
+    timeout_seconds: int = typer.Option(
+        _DEFAULT_ADAPTER_EXEC_TIMEOUT_SECONDS,
+        "--timeout-seconds",
+        min=1,
+        help="Maximum seconds to wait for the child command.",
+    ),
+) -> None:
     """Execute one command with canonical proof env injected."""
     root = _require_project_root()
     command = _resolve_command(ctx)
@@ -251,13 +268,27 @@ def adapter_exec(ctx: typer.Context) -> None:
     env.update(proof_env)
     package_root = str(Path(__file__).resolve().parents[2])
     env["PYTHONPATH"] = _prepend_pythonpath(env, package_root)
-    result = subprocess.run(
-        command,
-        cwd=root,
-        env=env,
-        capture_output=True,
-        text=True,
-        check=False,
-    )
+    try:
+        result = subprocess.run(
+            command,
+            cwd=root,
+            env=env,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            check=False,
+            timeout=timeout_seconds,
+        )
+    except subprocess.TimeoutExpired as exc:
+        _emit_process_output(
+            _coerce_timeout_output(exc.output),
+            _coerce_timeout_output(exc.stderr),
+        )
+        console.print(
+            "[red]adapter exec child command timed out after "
+            f"{timeout_seconds} second(s).[/red]"
+        )
+        raise typer.Exit(code=124) from exc
     _emit_process_output(result.stdout, result.stderr)
     raise typer.Exit(code=result.returncode)

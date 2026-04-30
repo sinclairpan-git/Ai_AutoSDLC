@@ -2,14 +2,15 @@
 
 from __future__ import annotations
 
-import base64
 import hashlib
 from pathlib import Path
 
-from ai_sdlc.telemetry.ids import TELEMETRY_ID_RE, validate_telemetry_id
+from ai_sdlc.telemetry.ids import TELEMETRY_ID_RE
 
 _MAX_SCOPE_DIRNAME_LENGTH = 24
 _COMPACT_SCOPE_SEPARATOR = "~"
+_COMPACT_SCOPE_HASH_LENGTH = 12
+_COMPACT_SCOPE_IDS: dict[str, str] = {}
 
 
 def _scope_dir_name(identifier: str) -> str:
@@ -18,8 +19,12 @@ def _scope_dir_name(identifier: str) -> str:
     if TELEMETRY_ID_RE.fullmatch(normalized):
         if len(normalized) > _MAX_SCOPE_DIRNAME_LENGTH:
             prefix, suffix = normalized.split("_", 1)
-            encoded = base64.urlsafe_b64encode(bytes.fromhex(suffix)).decode("ascii")
-            return f"{prefix}{_COMPACT_SCOPE_SEPARATOR}{encoded.rstrip('=')}"
+            digest = hashlib.sha1(suffix.encode("ascii")).hexdigest()[
+                :_COMPACT_SCOPE_HASH_LENGTH
+            ]
+            compact = f"{prefix}{_COMPACT_SCOPE_SEPARATOR}{digest}"
+            _COMPACT_SCOPE_IDS[compact] = normalized
+            return compact
         return normalized
     if len(normalized) <= _MAX_SCOPE_DIRNAME_LENGTH:
         return normalized
@@ -35,19 +40,12 @@ def scope_id_from_dir_name(dirname: str) -> str:
     normalized = str(dirname).strip()
     if _COMPACT_SCOPE_SEPARATOR not in normalized:
         return normalized
-    prefix, encoded = normalized.split(_COMPACT_SCOPE_SEPARATOR, 1)
-    if not prefix or not encoded:
+    if normalized in _COMPACT_SCOPE_IDS:
+        return _COMPACT_SCOPE_IDS[normalized]
+    prefix, digest = normalized.split(_COMPACT_SCOPE_SEPARATOR, 1)
+    if not prefix or not digest:
         return normalized
-    padded = encoded + ("=" * (-len(encoded) % 4))
-    try:
-        suffix = base64.urlsafe_b64decode(padded.encode("ascii")).hex()
-    except (ValueError, TypeError):
-        return normalized
-    candidate = f"{prefix}_{suffix}"
-    try:
-        return validate_telemetry_id(candidate, f"{prefix}_")
-    except ValueError:
-        return normalized
+    return normalized
 
 
 def telemetry_local_root(repo_root: Path) -> Path:
