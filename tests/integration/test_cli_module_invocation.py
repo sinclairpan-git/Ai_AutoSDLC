@@ -29,6 +29,12 @@ def _env_without_pythonpath() -> dict[str, str]:
     return env
 
 
+def _env_without_pythonpath() -> dict[str, str]:
+    env = dict(os.environ)
+    env.pop("PYTHONPATH", None)
+    return env
+
+
 def test_python_m_ai_sdlc_help_exits_zero() -> None:
     result = subprocess.run(
         [sys.executable, "-m", "ai_sdlc", "--help"],

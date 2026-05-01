@@ -10,6 +10,7 @@ import subprocess
 import time
 from contextlib import contextmanager, suppress
 from dataclasses import dataclass
+from datetime import UTC, datetime
 from enum import Enum
 from pathlib import Path
 
@@ -671,7 +672,15 @@ class GitClient:
 
     def head_commit_timestamp(self) -> str:
         """Return the ISO timestamp of the current HEAD commit."""
-        return self._run("show", "-s", "--format=%cI", "HEAD")
+        raw = self._run("show", "-s", "--format=%cI", "HEAD")
+        try:
+            return (
+                datetime.fromisoformat(raw)
+                .astimezone(UTC)
+                .isoformat(timespec="seconds")
+            )
+        except ValueError:
+            return raw
 
     def merge(self, source: str, target: str) -> None:
         """Merge source branch into target branch.

@@ -907,7 +907,8 @@ def status_command(
             current_branch_override=_live_current_branch(root, cp),
         )
         work_item_id = _surface_work_item_id(cp)
-        active_wi_id = (
+        linked_active_wi = active_work_item_id(cp)
+        active_wi_id = linked_active_wi or (
             (
                 active_workitem.strip()
                 if isinstance(active_workitem, str)
