@@ -72,3 +72,15 @@ def test_posix_offline_smoke_workflow_covers_macos_linux_bundle_install_and_cli_
     assert "upload-artifact" in workflow
     assert "PYTHONUTF8" in workflow
     assert "PYTHONIOENCODING" in workflow
+
+
+def test_posix_offline_smoke_matrix_concurrency_is_job_scoped() -> None:
+    workflow_path = _WORKFLOWS_DIR / "posix-offline-smoke.yml"
+
+    workflow = yaml.safe_load(workflow_path.read_text(encoding="utf-8"))
+
+    assert "concurrency" not in workflow
+    assert workflow["jobs"]["smoke"]["concurrency"] == {
+        "group": "posix-offline-smoke-${{ github.event.pull_request.number || github.ref }}-${{ matrix.os }}",
+        "cancel-in-progress": True,
+    }
