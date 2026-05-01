@@ -20,12 +20,12 @@ on:
 permissions:
   contents: read
 
-concurrency:
-  group: posix-offline-smoke-${{ github.event.pull_request.number || github.ref }}-${{ matrix.os }}
-  cancel-in-progress: true
-
 jobs:
   smoke:
+    concurrency:
+      group: posix-offline-smoke-${{ github.event.pull_request.number || github.ref }}-${{ matrix.os }}
+      cancel-in-progress: true
+
     strategy:
       fail-fast: false
       matrix:
