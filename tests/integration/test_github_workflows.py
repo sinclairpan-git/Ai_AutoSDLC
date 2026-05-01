@@ -84,3 +84,17 @@ def test_posix_offline_smoke_matrix_concurrency_is_job_scoped() -> None:
         "group": "posix-offline-smoke-${{ github.event.pull_request.number || github.ref }}-${{ matrix.os }}",
         "cancel-in-progress": True,
     }
+
+
+def test_github_workflows_use_node24_compatible_core_actions() -> None:
+    legacy_actions = {
+        "actions/checkout@v4",
+        "actions/setup-python@v5",
+    }
+
+    for workflow_path in sorted(_WORKFLOWS_DIR.glob("*.yml")):
+        workflow = workflow_path.read_text(encoding="utf-8")
+        for legacy_action in legacy_actions:
+            assert legacy_action not in workflow, (
+                f"{workflow_path.relative_to(_REPO_ROOT)} still uses {legacy_action}"
+            )
