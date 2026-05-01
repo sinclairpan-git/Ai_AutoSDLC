@@ -1826,6 +1826,16 @@ specs:
 - id: 182-continuity-handoff-runtime-baseline
   path: specs/182-continuity-handoff-runtime-baseline
   depends_on: []
+- id: 183-v0-7-mainline-value-closure-audit-baseline
+  path: specs/183-v0-7-mainline-value-closure-audit-baseline
+  depends_on:
+  - 179-v0-7-0-windows-offline-e2e-remediation-baseline
+  - 180-shell-preference-persistence-and-migration-baseline
+  - 181-cross-platform-release-gate-matrix-baseline
+  - 182-continuity-handoff-runtime-baseline
+  branch_slug: v0-7-mainline-value-closure-audit-baseline
+  owner: team-frontend-governance
+  frontend_evidence_class: framework_capability
 truth_snapshot:
   generated_at: '2026-04-30T02:41:51Z'
   generated_by: ai-sdlc program truth sync
