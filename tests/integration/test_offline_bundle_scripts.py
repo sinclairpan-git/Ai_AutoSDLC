@@ -426,10 +426,12 @@ def test_build_offline_bundle_can_suffix_platform_release_assets(tmp_path: Path)
     _make_fake_uv(wrapper_dir)
 
     env = _script_env(wrapper_dir, fake_python)
+    if os.name == "nt":
+        _set_bash_wrapper_env(env, wrapper_dir, tmp_path)
     env["AI_SDLC_OFFLINE_ASSET_SUFFIX"] = "-windows-amd64"
 
     result = subprocess.run(
-        ["bash", str(repo / "packaging" / "offline" / "build_offline_bundle.sh")],
+        [_bash_command(), str(repo / "packaging" / "offline" / "build_offline_bundle.sh")],
         cwd=repo,
         capture_output=True,
         text=True,

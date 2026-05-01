@@ -118,3 +118,11 @@
 - 当前批次 branch disposition 状态：待最终收口
 - 当前批次 worktree disposition 状态：retained（当前分支已有用户/历史改动，未切换分支）
 - 是否继续下一批：是
+
+#### 2.9 PR #31 CI follow-up
+
+- 触发原因：GitHub Actions `Compatibility Gate` 在 `windows-latest` / Python 3.11 与 3.12 上失败。
+- 失败根因：`test_build_offline_bundle_can_suffix_platform_release_assets` 直接调用 `bash`，Windows runner 将其解析到 WSL，但 runner 未安装 WSL distribution。
+- 修复内容：该测试改用已有 `_bash_command()` helper，并仅在 Windows 下应用 `_set_bash_wrapper_env(...)`，保持 POSIX PATH 不被收窄。
+- 执行的命令：`uv run pytest tests/integration/test_offline_bundle_scripts.py::test_build_offline_bundle_can_suffix_platform_release_assets -q`；`uv run pytest tests/integration/test_offline_bundle_scripts.py -q`；`uv run ruff check tests/integration/test_offline_bundle_scripts.py`
+- 测试结果：PASS（目标测试 1 passed；offline bundle 测试 16 passed；ruff passed）
