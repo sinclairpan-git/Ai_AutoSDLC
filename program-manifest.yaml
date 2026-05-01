@@ -1832,12 +1832,16 @@ specs:
 - id: 184-release-0-7-1-offline-smoke-and-artifact-verification
   path: specs/184-release-0-7-1-offline-smoke-and-artifact-verification
   depends_on: []
+- id: 185-self-update-update-advisor-runtime
+  path: specs/185-self-update-update-advisor-runtime
+  depends_on:
+  - 093-stage0-installed-runtime-update-advisor-baseline
 truth_snapshot:
-  generated_at: '2026-05-01T18:24:55Z'
+  generated_at: '2026-05-01T19:37:52Z'
   generated_by: ai-sdlc program truth sync
   generator_version: program_truth_snapshot_v1
-  repo_revision: 27ddbb4
-  authoring_hash: 7226147f51d7cd77ba5f4fdf3b7fbf46e4d0113035a30e393d9c5ec0144d4e78
+  repo_revision: c344421
+  authoring_hash: f903f3a2effa959673c506dca6c0ed499b38824959ff0bae34c5630770ea9d56
   source_hashes:
     truth_check:specs/095-frontend-mainline-product-delivery-baseline: 40b5e9332011b0d8941245c0e8e7c3b192e897b2bc4aa4876a3d37a94f9b80f0
     truth_check:specs/096-frontend-mainline-host-runtime-manager-baseline: e4586cf112089fff541fc809f9ba98ad4c4c3d5593de8febfc4e64cb1179ce02
@@ -1876,7 +1880,7 @@ truth_snapshot:
     truth_check:specs/122-agent-adapter-verified-host-ingress-runtime-baseline: 668bc35f896163f99929da88d733d0de367d996b276b9775d659227fcafcbca7
     close_check:specs/121-agent-adapter-verified-host-ingress-truth-baseline: bb1a96307f540d67dcb9ccb06e03e5ef522ae9acfd1e9a2b5f5816aed8658072
     close_check:specs/122-agent-adapter-verified-host-ingress-runtime-baseline: bb1a96307f540d67dcb9ccb06e03e5ef522ae9acfd1e9a2b5f5816aed8658072
-  snapshot_hash: 01a0024b01a694c18e53417d4960a2930996b8b22fe35014ecdabedec14cea82
+  snapshot_hash: e57b1e37e7d11ae0ae6d2f1c57fde3f830c45ff01ad76b01189e4da0d3f1927a
   computed_capabilities:
   - capability_id: frontend-mainline-delivery
     closure_state: closed
@@ -1893,31 +1897,31 @@ truth_snapshot:
     stale_reason: ''
   source_inventory:
     state: complete
-    total_sources: 940
-    mapped_sources: 940
+    total_sources: 945
+    mapped_sources: 945
     unmapped_sources: 0
     missing_sources: 0
     phase_signal_count: 3229
-    deferred_signal_count: 5915
-    non_goal_signal_count: 317
+    deferred_signal_count: 5918
+    non_goal_signal_count: 318
     layer_totals:
       blueprint: 1
-      spec: 184
-      plan: 184
-      tasks: 184
-      execution: 184
-      close: 184
+      spec: 185
+      plan: 185
+      tasks: 185
+      execution: 185
+      close: 185
       requirements: 2
       defect: 3
       design: 8
       release: 6
     layer_materialized:
       blueprint: 1
-      spec: 184
-      plan: 184
-      tasks: 184
-      execution: 184
-      close: 184
+      spec: 185
+      plan: 185
+      tasks: 185
+      execution: 185
+      close: 185
       requirements: 2
       defect: 3
       design: 8
@@ -10211,6 +10215,51 @@ truth_snapshot:
       mapping_ref: 184-release-0-7-1-offline-smoke-and-artifact-verification
       phase_signal_count: 0
       deferred_signal_count: 0
+      non_goal_signal_count: 0
+    - path: specs/185-self-update-update-advisor-runtime/spec.md
+      source_type: spec_doc
+      truth_layer: spec
+      mapped: true
+      exists: true
+      mapping_ref: 185-self-update-update-advisor-runtime
+      phase_signal_count: 0
+      deferred_signal_count: 1
+      non_goal_signal_count: 1
+    - path: specs/185-self-update-update-advisor-runtime/plan.md
+      source_type: plan_doc
+      truth_layer: plan
+      mapped: true
+      exists: true
+      mapping_ref: 185-self-update-update-advisor-runtime
+      phase_signal_count: 0
+      deferred_signal_count: 1
+      non_goal_signal_count: 0
+    - path: specs/185-self-update-update-advisor-runtime/tasks.md
+      source_type: tasks_doc
+      truth_layer: tasks
+      mapped: true
+      exists: true
+      mapping_ref: 185-self-update-update-advisor-runtime
+      phase_signal_count: 0
+      deferred_signal_count: 0
+      non_goal_signal_count: 0
+    - path: specs/185-self-update-update-advisor-runtime/task-execution-log.md
+      source_type: execution_log
+      truth_layer: execution
+      mapped: true
+      exists: true
+      mapping_ref: 185-self-update-update-advisor-runtime
+      phase_signal_count: 0
+      deferred_signal_count: 0
+      non_goal_signal_count: 0
+    - path: specs/185-self-update-update-advisor-runtime/development-summary.md
+      source_type: development_summary
+      truth_layer: close
+      mapped: true
+      exists: true
+      mapping_ref: 185-self-update-update-advisor-runtime
+      phase_signal_count: 0
+      deferred_signal_count: 1
       non_goal_signal_count: 0
     - path: docs/SPEC_SPLIT_AND_PROGRAM.zh-CN.md
       source_type: requirement_doc

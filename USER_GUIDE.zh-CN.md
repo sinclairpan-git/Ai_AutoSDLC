@@ -292,6 +292,25 @@ Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
 - 当前项目目录里已经有 `.venv`
 - 下面命令是在项目根目录执行
 
+**检查是否有 AI-SDLC 新版本：**
+
+```bash
+ai-sdlc self-update check
+```
+
+AI-SDLC 只会做非阻断检测和明确提醒，不会静默替换你当前的安装环境。若你使用的是
+GitHub Release 离线包安装，可以查看当前平台的显式更新步骤：
+
+```bash
+ai-sdlc self-update instructions --version 0.7.1
+```
+
+如果你在公司内网、离线环境或受控终端里不希望检查上游版本，可以设置：
+
+```bash
+AI_SDLC_DISABLE_UPDATE_CHECK=1
+```
+
 **Windows 升级到当前仓库源码版直接复制：**
 
 ```powershell
@@ -793,6 +812,25 @@ pip install "https://github.com/sinclairpan-git/Ai_AutoSDLC/archive/refs/tags/v0
 
 - 当前项目目录里已经有 `.venv`
 - 下面命令是在项目根目录执行
+
+**检查是否有 AI-SDLC 新版本：**
+
+```bash
+ai-sdlc self-update check
+```
+
+AI-SDLC 只会做非阻断检测和明确提醒，不会静默替换你当前的安装环境。若你使用的是
+GitHub Release 离线包安装，可以查看当前平台的显式更新步骤：
+
+```bash
+ai-sdlc self-update instructions --version 0.7.1
+```
+
+如果你在公司内网、离线环境或受控终端里不希望检查上游版本，可以设置：
+
+```bash
+AI_SDLC_DISABLE_UPDATE_CHECK=1
+```
 
 **Windows 升级到当前仓库源码版直接复制：**
 

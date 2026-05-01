@@ -33,6 +33,25 @@ Online installer entrypoints:
 - macOS / Linux: `./packaging/install_online.sh`
 - Windows PowerShell: `.\packaging\install_online.ps1`
 
+## Update Advisor
+
+Installed `ai-sdlc` runtimes include a non-blocking update advisor. During normal
+interactive CLI use it may check the latest stable GitHub Release, cache the
+result, and print a short notice when a newer framework release exists.
+
+The advisor does **not** silently upgrade the framework. Use the explicit helper
+commands when you want to inspect or act on the result:
+
+```bash
+ai-sdlc self-update check
+ai-sdlc self-update instructions --version 0.7.1
+```
+
+Source-checkout runs such as `uv run ai-sdlc ...`, `python -m ai_sdlc ...`, and
+editable installs stay quiet so framework development is not polluted by release
+notices. Set `AI_SDLC_DISABLE_UPDATE_CHECK=1` to disable the advisor globally in
+managed or offline environments.
+
 ## Windows: venv, PATH, and `ai-sdlc` not found
 
 After `pip install` or the offline installer, the `ai-sdlc.exe` shim lives under your venv’s `Scripts` folder. That directory is only on `PATH` while the venv is activated.
