@@ -2,7 +2,7 @@
 
 > 适用范围：发布或分发携带 `python-runtime/` 的 AI-SDLC 离线安装包。
 >
-> 当前 staged release：`v0.7.0`
+> 当前 staged release：`v0.7.1`
 
 这份清单只回答一件事：当离线 bundle 要承诺“目标机无需预装 Python 3.11+”时，发布人需要交付哪些产物、逐项确认哪些约束、保留哪些验证证据。
 

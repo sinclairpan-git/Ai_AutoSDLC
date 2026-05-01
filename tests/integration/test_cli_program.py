@@ -2098,7 +2098,7 @@ class TestCliProgram:
                 ],
             )
 
-        assert result.exit_code == 0
+        assert result.exit_code == 0, result.output
         assert "Program Managed Delivery Apply Execute" in result.output
         assert "delivery is not complete" in result.output.lower()
         assert "browser gate has not run" in result.output.lower()
@@ -5780,7 +5780,7 @@ specs:
                 / "latest.yaml"
             ).read_text(encoding="utf-8")
         )
-        assert result.exit_code == 0
+        assert result.exit_code == 0, result.output
         assert "Frontend solution confirmation materialized" in result.output
         assert (
             "explain: frontend code generation has not inherited the selected component"

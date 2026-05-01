@@ -412,7 +412,7 @@ class TestRunCommand:
 
         result = runner.invoke(app, ["run"])
 
-        assert result.exit_code == 0
+        assert result.exit_code == 0, result.output
         assert "Pipeline completed. Stage: close" in result.output
         cfg = load_project_config(tmp_path)
         assert cfg.adapter_ingress_state == "verified_loaded"
@@ -511,7 +511,7 @@ class TestRunCommand:
 
         result = runner.invoke(app, ["run"])
 
-        assert result.exit_code == 0
+        assert result.exit_code == 0, result.output
         assert "Pipeline completed. Stage: close" in result.output
         assert (spec_dir / "task-execution-log.md").exists()
         assert (spec_dir / "development-summary.md").exists()

@@ -1,0 +1,233 @@
+name: Release Build
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Release tag that will receive the platform assets.
+        required: true
+        default: v0.7.1
+      upload_to_release:
+        description: Upload smoke-passed assets to the existing GitHub Release.
+        required: true
+        default: "true"
+        type: choice
+        options:
+          - "true"
+          - "false"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-build-${{ inputs.tag }}
+  cancel-in-progress: false
+
+jobs:
+  build-smoke-upload:
+    name: ${{ matrix.asset_os }} ${{ matrix.archive }}
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 40
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - asset_os: windows
+            runner: windows-latest
+            archive: zip
+          - asset_os: macos
+            runner: macos-latest
+            archive: tar.gz
+          - asset_os: linux
+            runner: ubuntu-latest
+            archive: tar.gz
+
+    env:
+      RELEASE_TAG: ${{ inputs.tag }}
+      GH_TOKEN: ${{ github.token }}
+      PYTHONUTF8: "1"
+      PYTHONIOENCODING: utf-8
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+
+      - name: Compute platform asset suffix
+        if: runner.os != 'Windows'
+        shell: bash
+        run: |
+          set -euo pipefail
+          os="$(uname -s | tr '[:upper:]' '[:lower:]')"
+          case "${os}" in
+            darwin) os="macos" ;;
+            linux) os="linux" ;;
+          esac
+          machine="$(uname -m | tr '[:upper:]' '[:lower:]')"
+          case "${machine}" in
+            x86_64|amd64) machine="amd64" ;;
+            arm64|aarch64) machine="arm64" ;;
+          esac
+          echo "AI_SDLC_OFFLINE_ASSET_SUFFIX=-${os}-${machine}" >> "${GITHUB_ENV}"
+          echo "AI_SDLC_RELEASE_ASSET_OS=${os}" >> "${GITHUB_ENV}"
+          echo "AI_SDLC_RELEASE_ASSET_MACHINE=${machine}" >> "${GITHUB_ENV}"
+
+      - name: Compute Windows asset suffix
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $arch = [System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture.ToString().ToLowerInvariant()
+          if ($arch -eq "x64" -or $arch -eq "x86_64") {
+            $arch = "amd64"
+          } elseif ($arch -eq "aarch64") {
+            $arch = "arm64"
+          }
+          "AI_SDLC_OFFLINE_ASSET_SUFFIX=-windows-$arch" | Out-File -FilePath $env:GITHUB_ENV -Append
+          "AI_SDLC_RELEASE_ASSET_OS=windows" | Out-File -FilePath $env:GITHUB_ENV -Append
+          "AI_SDLC_RELEASE_ASSET_MACHINE=$arch" | Out-File -FilePath $env:GITHUB_ENV -Append
+
+      - name: Build offline bundle
+        shell: bash
+        env:
+          PYTHON: python
+        run: |
+          set -euo pipefail
+          runtime_root="${pythonLocation}"
+          if command -v cygpath >/dev/null 2>&1; then
+            runtime_root="$(cygpath -u "${pythonLocation}")"
+          fi
+          PYTHON="${PYTHON}" \
+            AI_SDLC_OFFLINE_PYTHON_RUNTIME="${runtime_root}" \
+            AI_SDLC_OFFLINE_ASSET_SUFFIX="${AI_SDLC_OFFLINE_ASSET_SUFFIX}" \
+            bash packaging/offline/build_offline_bundle.sh
+
+      - name: Smoke Windows zip
+        if: matrix.archive == 'zip'
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $utf8 = [System.Text.UTF8Encoding]::new($false)
+          [Console]::InputEncoding = $utf8
+          [Console]::OutputEncoding = $utf8
+          $OutputEncoding = $utf8
+
+          $archive = Get-ChildItem -Path "dist-offline" -Filter "ai-sdlc-offline-*.zip" -File | Select-Object -First 1
+          if (-not $archive) {
+            throw "Expected platform zip archive was not produced."
+          }
+
+          $smokeRoot = Join-Path $env:RUNNER_TEMP "ai-sdlc-release-build-smoke"
+          $evidenceRoot = Join-Path $env:RUNNER_TEMP "ai-sdlc-release-build-evidence"
+          Remove-Item -Recurse -Force $smokeRoot, $evidenceRoot -ErrorAction SilentlyContinue
+          New-Item -ItemType Directory -Force -Path $smokeRoot, $evidenceRoot | Out-Null
+
+          Expand-Archive -LiteralPath $archive.FullName -DestinationPath $smokeRoot -Force
+          $bundleDir = Get-ChildItem -Path $smokeRoot -Directory | Select-Object -First 1
+          if (-not $bundleDir) {
+            throw "Expanded archive did not contain a bundle directory."
+          }
+
+          $digest = (Get-FileHash -Algorithm SHA256 "AGENTS.md").Hash.ToLowerInvariant()
+          $env:OPENAI_CODEX = "1"
+          $env:AI_SDLC_ADAPTER_CANONICAL_SHA256 = "sha256:$digest"
+
+          Push-Location $bundleDir.FullName
+          & .\install_offline.ps1 *>&1 | Tee-Object -FilePath (Join-Path $evidenceRoot "install.log")
+          if ($LASTEXITCODE -ne 0) {
+            throw "install_offline.ps1 failed with exit code $LASTEXITCODE"
+          }
+          Pop-Location
+
+          $cliExe = Join-Path $bundleDir.FullName ".venv\Scripts\ai-sdlc.exe"
+          & $cliExe --help *>&1 | Tee-Object -FilePath (Join-Path $evidenceRoot "help.txt")
+          if ($LASTEXITCODE -ne 0) {
+            throw "ai-sdlc --help failed with exit code $LASTEXITCODE"
+          }
+          Push-Location $env:GITHUB_WORKSPACE
+          & $cliExe adapter status *>&1 | Tee-Object -FilePath (Join-Path $evidenceRoot "adapter-status.txt")
+          if ($LASTEXITCODE -ne 0) {
+            throw "ai-sdlc adapter status failed with exit code $LASTEXITCODE"
+          }
+          & $cliExe run --dry-run *>&1 | Tee-Object -FilePath (Join-Path $evidenceRoot "run-dry-run.txt")
+          if ($LASTEXITCODE -ne 0) {
+            throw "ai-sdlc run --dry-run failed with exit code $LASTEXITCODE"
+          }
+          Pop-Location
+          Copy-Item -LiteralPath (Join-Path $bundleDir.FullName "bundle-manifest.json") -Destination $evidenceRoot
+
+      - name: Smoke POSIX tar
+        if: matrix.archive == 'tar.gz'
+        shell: bash
+        run: |
+          set -euo pipefail
+          archive="$(find dist-offline -maxdepth 1 -name 'ai-sdlc-offline-*.tar.gz' -type f | head -n 1)"
+          if [[ -z "${archive}" ]]; then
+            echo "Expected platform tar archive was not produced." >&2
+            exit 1
+          fi
+
+          smoke_root="${RUNNER_TEMP}/ai-sdlc-release-build-smoke"
+          evidence_root="${RUNNER_TEMP}/ai-sdlc-release-build-evidence"
+          rm -rf "${smoke_root}" "${evidence_root}"
+          mkdir -p "${smoke_root}" "${evidence_root}"
+
+          tar xzf "${archive}" -C "${smoke_root}"
+          bundle_dir="$(find "${smoke_root}" -mindepth 1 -maxdepth 1 -type d | head -n 1)"
+          if [[ -z "${bundle_dir}" ]]; then
+            echo "Expanded archive did not contain a bundle directory." >&2
+            exit 1
+          fi
+
+          digest="$(python - <<'PY'
+          from pathlib import Path
+          import hashlib
+          print(hashlib.sha256(Path("AGENTS.md").read_bytes()).hexdigest())
+          PY
+          )"
+          export OPENAI_CODEX=1
+          export AI_SDLC_ADAPTER_CANONICAL_SHA256="sha256:${digest}"
+
+          (
+            cd "${bundle_dir}"
+            ./install_offline.sh 2>&1 | tee "${evidence_root}/install.log"
+          )
+
+          cli="${bundle_dir}/.venv/bin/ai-sdlc"
+          "${cli}" --help 2>&1 | tee "${evidence_root}/help.txt"
+          "${cli}" adapter status 2>&1 | tee "${evidence_root}/adapter-status.txt"
+          "${cli}" run --dry-run 2>&1 | tee "${evidence_root}/run-dry-run.txt"
+          cp "${bundle_dir}/bundle-manifest.json" "${evidence_root}/"
+
+      - name: Upload build smoke evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: release-build-${{ matrix.asset_os }}-${{ matrix.archive }}-evidence
+          path: ${{ runner.temp }}/ai-sdlc-release-build-evidence
+          if-no-files-found: error
+
+      - name: Upload smoke-passed asset to release
+        if: inputs.upload_to_release == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ "${{ matrix.archive }}" == "zip" ]]; then
+            asset="$(find dist-offline -maxdepth 1 -name 'ai-sdlc-offline-*.zip' -type f | head -n 1)"
+          else
+            asset="$(find dist-offline -maxdepth 1 -name 'ai-sdlc-offline-*.tar.gz' -type f | head -n 1)"
+          fi
+          if [[ -z "${asset}" ]]; then
+            echo "No asset found for release upload." >&2
+            exit 1
+          fi
+          gh release view "${RELEASE_TAG}" --repo "${GITHUB_REPOSITORY}" >/dev/null
+          gh release upload "${RELEASE_TAG}" "${asset}" --clobber --repo "${GITHUB_REPOSITORY}"

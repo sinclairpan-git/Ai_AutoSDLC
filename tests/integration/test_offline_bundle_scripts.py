@@ -415,7 +415,41 @@ def test_build_offline_bundle_uses_relative_zip_paths_for_cross_platform_python(
     script = (_OFFLINE_DIR / "build_offline_bundle.sh").read_text(encoding="utf-8")
 
     assert 'root = Path("dist-offline")' in script
-    assert 'dst = root / f"ai-sdlc-offline-{version}.zip"' in script
+    assert 'dst = root / f"{out_basename}.zip"' in script
+
+
+def test_build_offline_bundle_can_suffix_platform_release_assets(tmp_path: Path) -> None:
+    repo = _prepare_fake_bundle_repo(tmp_path)
+    wrapper_dir = tmp_path / "wrappers"
+    wrapper_dir.mkdir()
+    fake_python = _make_fake_python(wrapper_dir)
+    _make_fake_uv(wrapper_dir)
+
+    env = _script_env(wrapper_dir, fake_python)
+    env["AI_SDLC_OFFLINE_ASSET_SUFFIX"] = "-windows-amd64"
+
+    result = subprocess.run(
+        ["bash", str(repo / "packaging" / "offline" / "build_offline_bundle.sh")],
+        cwd=repo,
+        capture_output=True,
+        text=True,
+        env=env,
+        check=False,
+    )
+
+    assert result.returncode == 0, result.stderr
+    bundle_root = repo / "dist-offline" / "ai-sdlc-offline-0.2.0-windows-amd64"
+    assert (bundle_root / "bundle-manifest.json").is_file()
+    assert (
+        repo / "dist-offline" / "ai-sdlc-offline-0.2.0-windows-amd64.tar.gz"
+    ).is_file()
+    zip_path = repo / "dist-offline" / "ai-sdlc-offline-0.2.0-windows-amd64.zip"
+    assert zip_path.is_file()
+    with zipfile.ZipFile(zip_path) as archive:
+        assert (
+            "ai-sdlc-offline-0.2.0-windows-amd64/bundle-manifest.json"
+            in archive.namelist()
+        )
 
 
 def test_install_offline_rejects_platform_manifest_mismatch(tmp_path: Path) -> None:
@@ -594,7 +628,7 @@ def test_install_online_uses_detected_python_and_prints_bilingual_guidance(
 
     env = dict(os.environ)
     _set_bash_wrapper_env(env, wrapper_dir, tmp_path)
-    env["AI_SDLC_PACKAGE_SPEC"] = "ai-sdlc==0.7.0"
+    env["AI_SDLC_PACKAGE_SPEC"] = "ai-sdlc==0.7.1"
 
     result = subprocess.run(
         [_bash_command(), str(script_path)],
@@ -679,7 +713,7 @@ raise SystemExit(0)
 
     env = dict(os.environ)
     _set_bash_wrapper_env(env, wrapper_dir, tmp_path)
-    env["AI_SDLC_PACKAGE_SPEC"] = "ai-sdlc==0.7.0"
+    env["AI_SDLC_PACKAGE_SPEC"] = "ai-sdlc==0.7.1"
     env.pop("PYTHON", None)
 
     result = subprocess.run(
