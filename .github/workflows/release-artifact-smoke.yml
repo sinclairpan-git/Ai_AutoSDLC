@@ -38,7 +38,7 @@ jobs:
           $ErrorActionPreference = "Stop"
           $assetDir = Join-Path $env:RUNNER_TEMP "ai-sdlc-release-assets"
           New-Item -ItemType Directory -Force -Path $assetDir | Out-Null
-          gh release download $env:RELEASE_TAG --pattern "ai-sdlc-offline-*.zip" --dir $assetDir --repo $env:GITHUB_REPOSITORY
+          gh release download $env:RELEASE_TAG --pattern "ai-sdlc-offline-*-windows-*.zip" --dir $assetDir --repo $env:GITHUB_REPOSITORY
 
       - name: Install release zip and run CLI smoke
         shell: pwsh
@@ -55,7 +55,7 @@ jobs:
           Remove-Item -Recurse -Force $smokeRoot, $evidenceRoot -ErrorAction SilentlyContinue
           New-Item -ItemType Directory -Force -Path $smokeRoot, $evidenceRoot | Out-Null
 
-          $archive = Get-ChildItem -Path $assetDir -Filter "ai-sdlc-offline-*.zip" -File | Select-Object -First 1
+          $archive = Get-ChildItem -Path $assetDir -Filter "ai-sdlc-offline-*-windows-*.zip" -File | Select-Object -First 1
           if (-not $archive) {
             throw "Expected release zip asset was not downloaded."
           }
@@ -105,10 +105,20 @@ jobs:
           if-no-files-found: error
 
   posix-tar:
-    runs-on: ubuntu-latest
+    name: ${{ matrix.asset_os }} tar.gz
+    runs-on: ${{ matrix.runner }}
     timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - asset_os: macos
+            runner: macos-latest
+          - asset_os: linux
+            runner: ubuntu-latest
     env:
       RELEASE_TAG: ${{ github.event.release.tag_name || inputs.tag }}
+      RELEASE_ASSET_OS: ${{ matrix.asset_os }}
       GH_TOKEN: ${{ github.token }}
       PYTHONUTF8: "1"
       PYTHONIOENCODING: utf-8
@@ -123,7 +133,7 @@ jobs:
           set -euo pipefail
           asset_dir="${RUNNER_TEMP}/ai-sdlc-release-assets"
           mkdir -p "${asset_dir}"
-          gh release download "${RELEASE_TAG}" --pattern "ai-sdlc-offline-*.tar.gz" --dir "${asset_dir}" --repo "${GITHUB_REPOSITORY}"
+          gh release download "${RELEASE_TAG}" --pattern "ai-sdlc-offline-*-${RELEASE_ASSET_OS}-*.tar.gz" --dir "${asset_dir}" --repo "${GITHUB_REPOSITORY}"
 
       - name: Install release tar and run CLI smoke
         shell: bash
@@ -135,9 +145,9 @@ jobs:
           rm -rf "${smoke_root}" "${evidence_root}"
           mkdir -p "${smoke_root}" "${evidence_root}"
 
-          archive="$(find "${asset_dir}" -maxdepth 1 -name 'ai-sdlc-offline-*.tar.gz' -type f | head -n 1)"
+          archive="$(find "${asset_dir}" -maxdepth 1 -name "ai-sdlc-offline-*-${RELEASE_ASSET_OS}-*.tar.gz" -type f | head -n 1)"
           if [[ -z "${archive}" ]]; then
-            echo "Expected release tar asset was not downloaded." >&2
+            echo "Expected ${RELEASE_ASSET_OS} release tar asset was not downloaded." >&2
             exit 1
           fi
 
@@ -148,7 +158,12 @@ jobs:
             exit 1
           fi
 
-          digest="$(sha256sum AGENTS.md | awk '{print $1}')"
+          digest="$(python - <<'PY'
+          from pathlib import Path
+          import hashlib
+          print(hashlib.sha256(Path("AGENTS.md").read_bytes()).hexdigest())
+          PY
+          )"
           export OPENAI_CODEX=1
           export AI_SDLC_ADAPTER_CANONICAL_SHA256="sha256:${digest}"
 
@@ -167,6 +182,6 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: release-tar-smoke-evidence
+          name: release-${{ matrix.asset_os }}-tar-smoke-evidence
           path: ${{ runner.temp }}/ai-sdlc-release-tar-evidence
           if-no-files-found: error
