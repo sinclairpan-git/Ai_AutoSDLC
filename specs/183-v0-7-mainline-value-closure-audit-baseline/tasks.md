@@ -51,7 +51,7 @@ Batch 4: Gap assignment and closeout recommendation
 ### Task T21: Audit frontend technology-stack and provider evidence
 
 - **Priority**: P0
-- **Status**: Pending
+- **Status**: Complete
 - **Dependencies**: T12
 - **Files**: `value-target-matrix.md`
 - **Acceptance**:
@@ -63,7 +63,7 @@ Batch 4: Gap assignment and closeout recommendation
 ### Task T22: Audit beginner-friendly CLI evidence
 
 - **Priority**: P0
-- **Status**: Pending
+- **Status**: Complete
 - **Dependencies**: T12
 - **Files**: `value-target-matrix.md`
 - **Acceptance**:
@@ -74,7 +74,7 @@ Batch 4: Gap assignment and closeout recommendation
 ### Task T23: Audit shell preference persistence evidence
 
 - **Priority**: P1
-- **Status**: Pending
+- **Status**: Complete
 - **Dependencies**: T12
 - **Files**: `value-target-matrix.md`
 - **Acceptance**:
@@ -86,7 +86,7 @@ Batch 4: Gap assignment and closeout recommendation
 ### Task T31: Record current-main GitHub Actions evidence
 
 - **Priority**: P0
-- **Status**: Pending
+- **Status**: Complete
 - **Dependencies**: T12
 - **Files**: `value-target-matrix.md`, `task-execution-log.md`
 - **Acceptance**:
@@ -98,7 +98,7 @@ Batch 4: Gap assignment and closeout recommendation
 ### Task T32: Verify release-package smoke evidence
 
 - **Priority**: P0
-- **Status**: Pending
+- **Status**: Complete
 - **Dependencies**: T31
 - **Files**: `value-target-matrix.md`, `task-execution-log.md`
 - **Acceptance**:
@@ -112,7 +112,7 @@ Batch 4: Gap assignment and closeout recommendation
 ### Task T41: Reconcile stale or conflicting status documents
 
 - **Priority**: P1
-- **Status**: Pending
+- **Status**: In Progress
 - **Dependencies**: T21, T22, T23, T31, T32
 - **Files**: `value-target-matrix.md`, `task-execution-log.md`
 - **Acceptance**:
@@ -123,7 +123,7 @@ Batch 4: Gap assignment and closeout recommendation
 ### Task T42: Produce final completion recommendation
 
 - **Priority**: P0
-- **Status**: Pending
+- **Status**: Complete
 - **Dependencies**: T41
 - **Files**: `value-target-matrix.md`, `development-summary.md`
 - **Acceptance**:

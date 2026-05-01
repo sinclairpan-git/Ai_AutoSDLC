@@ -2,7 +2,7 @@
 
 **Work item**: `183-v0-7-mainline-value-closure-audit-baseline`
 **Created**: 2026-05-01
-**Status**: Planned
+**Status**: Audit baseline recorded; stale-doc reconciliation remains open
 **Input**: Create a v0.7 mainline value closure audit that maps each stated value target to implementation files, tests, CI evidence, release-package validation, and remaining gaps so maintainers can decide what is complete, what belongs in v0.7.x, and what moves to v0.8.
 **References**: `docs/releases/v0.7.0.md`, `README.md`, `USER_GUIDE.zh-CN.md`, `specs/179-v0-7-0-windows-offline-e2e-remediation-baseline/`, `specs/180-shell-preference-persistence-and-migration-baseline/`, `specs/181-cross-platform-release-gate-matrix-baseline/`, `.github/workflows/compatibility-gate.yml`
 
