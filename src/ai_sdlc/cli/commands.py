@@ -802,7 +802,8 @@ def status_command(
             current_branch_override=_live_current_branch(root, cp),
         )
         work_item_id = _surface_work_item_id(cp)
-        active_wi_id = (
+        linked_active_wi = active_work_item_id(cp)
+        active_wi_id = linked_active_wi or (
             (
                 active_workitem.strip()
                 if isinstance(active_workitem, str)
@@ -810,7 +811,7 @@ def status_command(
             )
             if show_active_binding
             else ""
-        ) or (active_work_item_id(cp) if show_active_binding else "")
+        )
         if active_wi_id:
             _add_active_work_item_status_rows(
                 table,

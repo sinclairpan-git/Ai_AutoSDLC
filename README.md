@@ -4,13 +4,13 @@ AI-native SDLC automation framework — a Python CLI tool and rule file set for 
 
 ## Release And Current Source
 
-`v0.7.0` is the current staged framework release. This version turns the previously unreleased frontend managed-delivery closure work into a published path: empty-project bootstrap, real component-library installation, browser-gate baseline promotion, and fail-closed hardening for artifact-driven frontend quality checks are now part of the release line.
+`v0.7.1` is the current staged framework release. This patch release keeps the `v0.7.0` frontend managed-delivery contract and adds release-path hardening: the Windows offline smoke workflow uses the current artifact action runtime, and published offline assets now have a dedicated release-artifact smoke workflow.
 
-If you want the published release, install `v0.7.0`. If you are evaluating newer unreleased behavior beyond this tag, prefer the source-checkout path below.
+If you want the published release, install `v0.7.1`. If you are evaluating newer unreleased behavior beyond this tag, prefer the source-checkout path below.
 
-- Current release notes: `docs/releases/v0.7.0.md`
-- Windows offline bundle: `ai-sdlc-offline-0.7.0.zip`
-- macOS / Linux offline bundle: `ai-sdlc-offline-0.7.0.tar.gz`
+- Current release notes: `docs/releases/v0.7.1.md`
+- Windows offline bundle: `ai-sdlc-offline-0.7.1.zip`
+- macOS / Linux offline bundle: `ai-sdlc-offline-0.7.1.tar.gz`
 - Offline packaging details: `packaging/offline/README.md`
 - Offline Python runtime release checklist: `packaging/offline/RELEASE_CHECKLIST.md`
 
@@ -179,7 +179,7 @@ The file `.ai-sdlc/project/config/project-config.yaml` holds IDE detection metad
 
 ## Documentation
 
-- Current release notes: `docs/releases/v0.7.0.md`
+- Current release notes: `docs/releases/v0.7.1.md`
 - Chinese user guide: `USER_GUIDE.zh-CN.md` (start with the **目录**, then jump to Chapter 1 or Chapter 2)
 - Offline install bundle (build + one-command install): `packaging/offline/README.md`
 - Offline Python runtime release checklist: `packaging/offline/RELEASE_CHECKLIST.md`

@@ -9,6 +9,7 @@
 # Env:
 #   PYTHON=/path/to/python3.11   interpreter used for pip download (default: try python3.11, then python3)
 #   AI_SDLC_OFFLINE_PYTHON_RUNTIME=/path/to/portable/python-runtime   optional runtime copied into python-runtime/
+#   AI_SDLC_OFFLINE_ASSET_SUFFIX=-windows-amd64   optional suffix for platform-specific release assets
 
 set -euo pipefail
 
@@ -17,9 +18,11 @@ ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 cd "${ROOT}"
 
 VERSION="$(awk -F'"' '/^version =/ {print $2; exit}' pyproject.toml)"
-OUT="${ROOT}/dist-offline/ai-sdlc-offline-${VERSION}"
-ARCHIVE="${ROOT}/dist-offline/ai-sdlc-offline-${VERSION}.tar.gz"
-ZIP_ARCHIVE="${ROOT}/dist-offline/ai-sdlc-offline-${VERSION}.zip"
+ASSET_SUFFIX="${AI_SDLC_OFFLINE_ASSET_SUFFIX:-}"
+OUT_BASENAME="ai-sdlc-offline-${VERSION}${ASSET_SUFFIX}"
+OUT="${ROOT}/dist-offline/${OUT_BASENAME}"
+ARCHIVE="${ROOT}/dist-offline/${OUT_BASENAME}.tar.gz"
+ZIP_ARCHIVE="${ROOT}/dist-offline/${OUT_BASENAME}.zip"
 MANIFEST="${OUT}/bundle-manifest.json"
 RUNTIME_BUNDLED="false"
 
@@ -121,15 +124,16 @@ mkdir -p "${ROOT}/dist-offline"
 rm -f "${ARCHIVE}"
 tar -czf "${ARCHIVE}" -C "${ROOT}/dist-offline" "$(basename "${OUT}")"
 rm -f "${ZIP_ARCHIVE}"
-"${PY}" - "${VERSION}" <<'PY'
+"${PY}" - "${VERSION}" "${OUT_BASENAME}" <<'PY'
 from pathlib import Path
 import sys
 import zipfile
 
 version = sys.argv[1]
+out_basename = sys.argv[2]
 root = Path("dist-offline")
-src = root / f"ai-sdlc-offline-{version}"
-dst = root / f"ai-sdlc-offline-{version}.zip"
+src = root / out_basename
+dst = root / f"{out_basename}.zip"
 with zipfile.ZipFile(dst, "w", zipfile.ZIP_DEFLATED) as zf:
     for path in src.rglob("*"):
         if path.is_file():
@@ -143,8 +147,8 @@ echo "  Archive: ${ZIP_ARCHIVE}"
 echo "  Folder:  ${OUT}"
 echo ""
 echo "Ship either archive (or the folder) to offline machines."
-echo "  Linux/macOS: tar xzf ai-sdlc-offline-${VERSION}.tar.gz && cd ai-sdlc-offline-${VERSION} && ./install_offline.sh"
-echo "  Windows:     unzip ai-sdlc-offline-${VERSION}.zip && cd ai-sdlc-offline-${VERSION} && install_offline.bat"
+echo "  Linux/macOS: tar xzf ${OUT_BASENAME}.tar.gz && cd ${OUT_BASENAME} && ./install_offline.sh"
+echo "  Windows:     unzip ${OUT_BASENAME}.zip && cd ${OUT_BASENAME} && install_offline.bat"
 if [[ "${RUNTIME_BUNDLED}" == "true" ]]; then
   echo "  Bundled Python runtime: included"
 else

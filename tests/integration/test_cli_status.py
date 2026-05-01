@@ -1893,7 +1893,7 @@ def test_status_json_promotes_spec_scoped_program_truth_into_workitem_diagnostic
     assert diagnostics["state"] == "action_required"
     assert diagnostics["source"] == "program_truth"
     assert diagnostics["next_required_action"] == (
-        "python -m ai_sdlc program generation-constraints-handoff"
+        "close the capability_closure_audit entry for the blocked release target"
     )
     assert any(
         item["id"] == "program_truth"
@@ -1920,8 +1920,8 @@ def test_status_json_promotes_spec_scoped_program_truth_into_workitem_diagnostic
     }
     assert diagnostics["frontend_delivery_scope"] == "package_delivery_only"
     assert diagnostics["frontend_inheritance_status"] == {
-        "generation": "not_inherited",
-        "quality": "not_inherited",
+        "generation": "inherited",
+        "quality": "inherited",
     }
     program_truth_item = next(
         item for item in diagnostics["items"] if item["id"] == "program_truth"
@@ -1931,8 +1931,8 @@ def test_status_json_promotes_spec_scoped_program_truth_into_workitem_diagnostic
     ]
     assert program_truth_item["frontend_delivery_scope"] == "package_delivery_only"
     assert program_truth_item["frontend_inheritance_status"] == {
-        "generation": "not_inherited",
-        "quality": "not_inherited",
+        "generation": "inherited",
+        "quality": "inherited",
     }
     truth_ledger_capability = payload["truth_ledger"]["release_capabilities"][0]
     assert truth_ledger_capability["frontend_delivery_status"] == {
@@ -1946,8 +1946,8 @@ def test_status_json_promotes_spec_scoped_program_truth_into_workitem_diagnostic
     }
     assert truth_ledger_capability["frontend_delivery_scope"] == "package_delivery_only"
     assert truth_ledger_capability["frontend_inheritance_status"] == {
-        "generation": "not_inherited",
-        "quality": "not_inherited",
+        "generation": "inherited",
+        "quality": "inherited",
     }
 
 
@@ -2027,8 +2027,8 @@ def test_status_json_surfaces_stale_apply_artifact_in_frontend_delivery_truth(
     }
     assert capability["frontend_delivery_scope"] == "package_delivery_only"
     assert capability["frontend_inheritance_status"] == {
-        "generation": "not_inherited",
-        "quality": "not_inherited",
+        "generation": "inherited",
+        "quality": "inherited",
     }
     assert "delivery=stale apply artifact" in capability["frontend_delivery_summary"]
     diagnostics = status_payload["workitem_diagnostics"]
@@ -2040,8 +2040,8 @@ def test_status_json_surfaces_stale_apply_artifact_in_frontend_delivery_truth(
     ]
     assert program_truth_item["frontend_delivery_scope"] == "package_delivery_only"
     assert program_truth_item["frontend_inheritance_status"] == {
-        "generation": "not_inherited",
-        "quality": "not_inherited",
+        "generation": "inherited",
+        "quality": "inherited",
     }
 
 
@@ -2125,8 +2125,8 @@ def test_status_json_surfaces_browser_gate_scope_linkage_invalid_in_frontend_del
     }
     assert capability["frontend_delivery_scope"] == "package_delivery_only"
     assert capability["frontend_inheritance_status"] == {
-        "generation": "not_inherited",
-        "quality": "not_inherited",
+        "generation": "inherited",
+        "quality": "inherited",
     }
     assert "browser_gate=scope or linkage invalid" in capability[
         "frontend_delivery_summary"
