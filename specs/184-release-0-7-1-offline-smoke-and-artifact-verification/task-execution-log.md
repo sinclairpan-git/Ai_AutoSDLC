@@ -126,3 +126,11 @@
 - 修复内容：该测试改用已有 `_bash_command()` helper，并仅在 Windows 下应用 `_set_bash_wrapper_env(...)`，保持 POSIX PATH 不被收窄。
 - 执行的命令：`uv run pytest tests/integration/test_offline_bundle_scripts.py::test_build_offline_bundle_can_suffix_platform_release_assets -q`；`uv run pytest tests/integration/test_offline_bundle_scripts.py -q`；`uv run ruff check tests/integration/test_offline_bundle_scripts.py`
 - 测试结果：PASS（目标测试 1 passed；offline bundle 测试 16 passed；ruff passed）
+
+#### 2.10 Release publication follow-up
+
+- 触发原因：`v0.7.1` draft Release 已由 `release-build.yml` 上传 Windows / macOS / Linux 三个平台资产；发布前复核发现 `release-artifact-smoke.yml` 的 POSIX 验证只在 Ubuntu 下载任意 `*.tar.gz`，可能误取 macOS tar 并在 Linux runner 上验证。
+- 修复内容：`release-artifact-smoke.yml` 的 Windows zip 下载改为匹配 `*-windows-*`；POSIX tar smoke 改为 macOS / Linux matrix，按 `${RELEASE_ASSET_OS}` 精确下载对应 tar，并用 Python 计算 `AGENTS.md` digest 以兼容 macOS runner。
+- 新增/调整的测试：`tests/integration/test_github_workflows.py`
+- 执行的命令：`uv run pytest tests/integration/test_github_workflows.py -q`；`uv run ruff check tests/integration/test_github_workflows.py`；`uv run ai-sdlc run --dry-run`
+- 测试结果：PASS（workflow 测试 7 passed；ruff passed；dry-run 命令退出 0，但全局 close checkpoint 仍指向旧 work item，显示 close RETRY）

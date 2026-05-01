@@ -85,8 +85,12 @@ def test_release_artifact_smoke_workflow_installs_published_assets() -> None:
     assert "release:" in workflow
     assert "default: v0.7.1" in workflow
     assert "gh release download" in workflow
-    assert 'ai-sdlc-offline-*.zip' in workflow
-    assert 'ai-sdlc-offline-*.tar.gz' in workflow
+    assert "windows-latest" in workflow
+    assert "macos-latest" in workflow
+    assert "ubuntu-latest" in workflow
+    assert "ai-sdlc-offline-*-windows-*.zip" in workflow
+    assert "ai-sdlc-offline-*-${RELEASE_ASSET_OS}-*.tar.gz" in workflow
+    assert "RELEASE_ASSET_OS" in workflow
     assert "install_offline.ps1" in workflow
     assert "./install_offline.sh" in workflow
     assert "adapter status" in workflow

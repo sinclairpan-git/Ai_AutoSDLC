@@ -1833,10 +1833,10 @@ specs:
   path: specs/184-release-0-7-1-offline-smoke-and-artifact-verification
   depends_on: []
 truth_snapshot:
-  generated_at: '2026-05-01T17:41:59Z'
+  generated_at: '2026-05-01T18:24:55Z'
   generated_by: ai-sdlc program truth sync
   generator_version: program_truth_snapshot_v1
-  repo_revision: 295807e
+  repo_revision: 27ddbb4
   authoring_hash: 7226147f51d7cd77ba5f4fdf3b7fbf46e4d0113035a30e393d9c5ec0144d4e78
   source_hashes:
     truth_check:specs/095-frontend-mainline-product-delivery-baseline: 40b5e9332011b0d8941245c0e8e7c3b192e897b2bc4aa4876a3d37a94f9b80f0
@@ -1876,7 +1876,7 @@ truth_snapshot:
     truth_check:specs/122-agent-adapter-verified-host-ingress-runtime-baseline: 668bc35f896163f99929da88d733d0de367d996b276b9775d659227fcafcbca7
     close_check:specs/121-agent-adapter-verified-host-ingress-truth-baseline: bb1a96307f540d67dcb9ccb06e03e5ef522ae9acfd1e9a2b5f5816aed8658072
     close_check:specs/122-agent-adapter-verified-host-ingress-runtime-baseline: bb1a96307f540d67dcb9ccb06e03e5ef522ae9acfd1e9a2b5f5816aed8658072
-  snapshot_hash: a47198361c3ed3dee1b10382239e602f535482a620dba2ef1bece65c79793cfe
+  snapshot_hash: 01a0024b01a694c18e53417d4960a2930996b8b22fe35014ecdabedec14cea82
   computed_capabilities:
   - capability_id: frontend-mainline-delivery
     closure_state: closed
