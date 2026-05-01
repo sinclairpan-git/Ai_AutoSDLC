@@ -1,5 +1,7 @@
 """AI-SDLC CLI entry point."""
 
+import sys
+
 import typer
 from rich.console import Console
 
@@ -19,6 +21,7 @@ from ai_sdlc.cli.host_runtime_cmd import host_runtime_app
 from ai_sdlc.cli.program_cmd import program_app
 from ai_sdlc.cli.provenance_cmd import provenance_app
 from ai_sdlc.cli.run_cmd import run_command
+from ai_sdlc.cli.self_update_cmd import maybe_render_update_notice, self_update_app
 from ai_sdlc.cli.stage_cmd import stage_app
 from ai_sdlc.cli.sub_apps import gate_app, rules_app, studio_app
 from ai_sdlc.cli.telemetry_cmd import telemetry_app
@@ -40,6 +43,15 @@ def _global_before_command(ctx: typer.Context) -> None:
     """First non-init command in an initialized project applies IDE adapter."""
     if ctx.invoked_subcommand is None:
         return
+    if (
+        ctx.invoked_subcommand != "self-update"
+        and "--json" not in sys.argv
+        and "--help" not in sys.argv
+        and "-h" not in sys.argv
+        and "--install-completion" not in sys.argv
+        and "--show-completion" not in sys.argv
+    ):
+        maybe_render_update_notice()
     # Read-only and analysis surfaces must not trigger adapter writes.
     if ctx.invoked_subcommand in (
         "adapter",
@@ -77,6 +89,7 @@ app.add_typer(verify_app, name="verify")
 app.add_typer(telemetry_app, name="telemetry")
 app.add_typer(provenance_app, name="provenance")
 app.add_typer(trace_app, name="trace")
+app.add_typer(self_update_app, name="self-update")
 
 if __name__ == "__main__":
     app()
