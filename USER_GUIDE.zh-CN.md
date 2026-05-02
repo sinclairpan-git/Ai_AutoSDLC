@@ -29,10 +29,11 @@
   - 命令卡 1：确认 Python
   - 命令卡 2：确认 CLI 已安装
   - 命令卡 3：初始化项目
-  - 命令卡 4：查看项目状态
-  - 命令卡 5：查看 adapter 接入真值
-  - 命令卡 6：执行安全预演
-  - 命令卡 7：进入 IDE 聊天
+  - 命令卡 4：确认或选择 shell 入口
+  - 命令卡 5：查看项目状态
+  - 命令卡 6：查看 adapter 接入真值
+  - 命令卡 7：执行安全预演
+  - 命令卡 8：进入 IDE 聊天
   - 常见错误怎么处理
 - 第一章：空项目完整演练
   - 第 1 步：先用 IDE 打开你准备放项目的目录一次
@@ -78,6 +79,13 @@
 - 最合适：先用 Cursor / Codex / Claude Code 打开项目文件夹一次，然后在这个 IDE 自带的 Terminal 里执行本文命令。
 - 也可以：Windows 用 PowerShell，macOS / Linux 用 Terminal。
 - 但是不管你用哪种终端，**都不要把 `python -m ai_sdlc init .` 这种命令粘贴到 IDE 聊天输入框里。**
+
+如果你问“shell 入口要不要选”，答案是：
+
+- 新项目执行 `init` 时，AI-SDLC 会写入一个推荐 shell。
+- 如果你后续实际执行命令的终端不是这个推荐值，就要运行 `python -m ai_sdlc adapter shell-select` 改掉。
+- 这个选择会写进项目配置，并刷新 `AGENTS.md` / adapter instructions，让 AI 后续给命令时按 PowerShell、bash、zsh 或 cmd 的语法来写。
+- 它不是 AI 代理入口选择。AI 代理入口用 `adapter select`；命令 shell 入口用 `adapter shell-select`。
 
 如果你问“PowerShell 怎么识别 IDE”，答案是：
 
@@ -350,7 +358,7 @@ python -m ai_sdlc init . --agent-target codex
 **下一步执行：**
 
 ```bash
-python -m ai_sdlc status
+python -m ai_sdlc adapter shell-select
 ```
 
 **如果失败：**
@@ -359,7 +367,73 @@ python -m ai_sdlc status
 - 初始化到了错误目录：先 `pwd`（macOS / Linux）或 `Get-Location`（Windows）确认当前目录，再进入业务项目根目录重跑。
 - 你在 IDE 聊天框里粘贴了命令：停下来，改到终端执行。
 
-### 命令卡 4：查看项目状态
+### 命令卡 4：确认或选择 shell 入口
+
+这一步决定 AI-SDLC 后续给你展示命令时，优先按哪种 shell 语法来写。
+
+不要把它和 AI 代理入口混在一起：
+
+- AI 代理入口：你用 Codex / Cursor / Claude Code / VS Code Copilot 哪个聊天。
+- shell 入口：你实际在 PowerShell / zsh / bash / cmd 哪个终端执行命令。
+
+**如果你愿意交互选择，执行：**
+
+```bash
+python -m ai_sdlc adapter shell-select
+```
+
+**如果你想直接指定，按实际终端选一个执行：**
+
+Windows PowerShell：
+
+```powershell
+python -m ai_sdlc adapter shell-select --shell powershell
+```
+
+Windows cmd：
+
+```bat
+python -m ai_sdlc adapter shell-select --shell cmd
+```
+
+macOS 默认 zsh：
+
+```bash
+python -m ai_sdlc adapter shell-select --shell zsh
+```
+
+Linux 常见 bash：
+
+```bash
+python -m ai_sdlc adapter shell-select --shell bash
+```
+
+让 AI-SDLC 按当前系统推荐值选择：
+
+```bash
+python -m ai_sdlc adapter shell-select --shell auto
+```
+
+**成功后你应该看到：**
+
+- 输出里包含 `Project shell selected:`。
+- 后面跟着 `PowerShell`、`cmd`、`zsh` 或 `bash` 之一。
+- 项目里的 adapter instructions 会被刷新。
+
+**下一步执行：**
+
+```bash
+python -m ai_sdlc status
+```
+
+**如果失败：**
+
+- 提示 `Invalid value for '--shell'`：只使用 `powershell`、`bash`、`zsh`、`cmd`、`auto` 这几个值。
+- 你不确定自己用的是哪个 shell：Windows 优先选 `powershell`；macOS 终端默认通常选 `zsh`；Linux 常见选 `bash`。
+- 公司 IDE 内置终端实际是 PowerShell，但文档示例是 bash：先运行 `python -m ai_sdlc adapter shell-select --shell powershell`。
+- 想确认当前配置是否生效：继续执行命令卡 6 的 `python -m ai_sdlc adapter status`，看 `preferred_shell` 和 `preferred_shell_configured`。
+
+### 命令卡 5：查看项目状态
 
 **执行：**
 
@@ -396,7 +470,7 @@ python -m ai_sdlc adapter status
 - 提示找不到 `.ai-sdlc` 或未初始化：回到命令卡 3。
 - 输出里有 `doctor` 建议：先执行 `python -m ai_sdlc doctor`，看 Python、PATH、telemetry 状态。
 
-### 命令卡 5：查看 adapter 接入真值
+### 命令卡 6：查看 adapter 接入真值
 
 **执行：**
 
@@ -408,8 +482,18 @@ python -m ai_sdlc adapter status
 
 - 输出表格标题包含 `Adapter Status`。
 - 能看到 `agent_target`。
+- 能看到 `preferred_shell`。
+- 能看到 `preferred_shell_configured`。
 - 能看到 `adapter_canonical_path`。Codex 应是 `AGENTS.md`。
 - 能看到 `governance_activation_mode`。
+
+**如果 `preferred_shell_configured` 是 `False`：**
+
+先不要继续。回到命令卡 4，执行：
+
+```bash
+python -m ai_sdlc adapter shell-select
+```
 
 **如果看到 `verified_loaded`：**
 
@@ -444,7 +528,7 @@ python -m ai_sdlc adapter status
 python -m ai_sdlc run --dry-run
 ```
 
-### 命令卡 6：执行安全预演
+### 命令卡 7：执行安全预演
 
 **执行：**
 
@@ -470,16 +554,16 @@ Dry-run completed with open gates. Last stage: close (RETRY)
 
 **下一步执行：**
 
-- 如果只是首次接入项目，继续命令卡 7，到 IDE 聊天里发自然语言需求。
+- 如果只是首次接入项目，继续命令卡 8，到 IDE 聊天里发自然语言需求。
 - 如果你已经有 work item，则按输出里的 `reason:` 补齐缺失项，例如 spec、tasks、测试或 execution log。
 
 **如果失败：**
 
 - 提示缺 `spec.md`、tasks 或 final tests：先不要硬跑 `run`，在 IDE 聊天里让 AI 按 AI-SDLC 流程创建或补齐 work item。
-- 提示 adapter 未验证：回到命令卡 5。`run --dry-run` 可以作为预演继续，但不要把它当成治理激活证明。
+- 提示 adapter 未验证：回到命令卡 6。`run --dry-run` 可以作为预演继续，但不要把它当成治理激活证明。
 - Python import 或 PATH 错误：回到命令卡 2。
 
-### 命令卡 7：进入 IDE 聊天
+### 命令卡 8：进入 IDE 聊天
 
 **这一步不要在终端执行。**
 
@@ -524,6 +608,8 @@ Dry-run completed with open gates. Last stage: close (RETRY)
 | Windows 无法激活 `.venv` | `Get-ExecutionPolicy -Scope Process` | 执行 `Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass` 后再激活 |
 | `pip install` 下载失败 | `python -m pip --version` | 通常是网络或公司代理问题；改用离线包，或让管理员配置代理 |
 | 离线包提示平台不匹配 | 查看 `bundle-manifest.json` | 换对应 Windows/macOS/Linux 和 CPU 的包，不要强行安装 |
+| AI 给出的命令总是 PowerShell/bash 风格不对 | `python -m ai_sdlc adapter status` | 查看 `preferred_shell`；不对就运行 `python -m ai_sdlc adapter shell-select --shell <shell>` |
+| `preferred_shell_configured` 是 `False` | `python -m ai_sdlc adapter status` | 执行 `python -m ai_sdlc adapter shell-select`，然后重新看 status |
 | `adapter status` 是 `materialized_only` | `python -m ai_sdlc adapter status` | 规则已写入但宿主加载未验证；在 IDE 自带终端重跑，或按提示设置宿主环境变量 |
 | `run --dry-run` 是 `RETRY` | 看输出里的 `reason:` | 首次项目可能正常；若已有 work item，按 reason 补 spec、tasks、测试或执行记录 |
 | 更新检查显示 `editable_runtime` | `python -m ai_sdlc self-update check` | 你在源码/开发安装路径里，更新提醒会安静退出；正式安装用户才需要按提醒更新 |
