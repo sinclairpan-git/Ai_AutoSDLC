@@ -2,7 +2,7 @@
 
 ## 升级兼容提示（2026-04）
 
-- 这份手册现在默认以**当前仓库源码版 / 当前发布版 `v0.7.1`** 为准。如果你正在验证当前仓库里的新能力，优先在目标项目的虚拟环境里执行 `pip install -e <Ai_AutoSDLC 本地源码目录>`；如果你只想安装当前已发布版，再使用下文的 `v0.7.1` tag 安装命令。
+- 这份手册现在默认以**当前仓库源码版 / 当前发布版 `v0.7.2`** 为准。如果你正在验证当前仓库里的新能力，优先在目标项目的虚拟环境里执行 `pip install -e <Ai_AutoSDLC 本地源码目录>`；如果你只想安装当前已发布版，再使用下文的 `v0.7.2` tag 安装命令。
 - adapter 的 canonical path 已切换到厂商默认入口：
   - Codex -> `AGENTS.md`
   - Cursor -> `.cursor/rules/ai-sdlc.mdc`
@@ -255,18 +255,18 @@ python -m pip install -U pip
 pip install -e ~/work/Ai_AutoSDLC
 ```
 
-**如果你只想装当前已发布版 `v0.7.1`，再改用下面这组：**
+**如果你只想装当前已发布版 `v0.7.2`，再改用下面这组：**
 
 - Windows：
 
 ```powershell
-pip install "https://github.com/sinclairpan-git/Ai_AutoSDLC/archive/refs/tags/v0.7.1.zip"
+pip install "https://github.com/sinclairpan-git/Ai_AutoSDLC/archive/refs/tags/v0.7.2.zip"
 ```
 
 - macOS / Linux：
 
 ```bash
-pip install "https://github.com/sinclairpan-git/Ai_AutoSDLC/archive/refs/tags/v0.7.1.tar.gz"
+pip install "https://github.com/sinclairpan-git/Ai_AutoSDLC/archive/refs/tags/v0.7.2.tar.gz"
 ```
 
 **执行成功以后，你应该看到：**
@@ -302,7 +302,7 @@ AI-SDLC 只会做非阻断检测和明确提醒，不会静默替换你当前的
 GitHub Release 离线包安装，可以查看当前平台的显式更新步骤：
 
 ```bash
-ai-sdlc self-update instructions --version 0.7.1
+ai-sdlc self-update instructions --version 0.7.2
 ```
 
 如果你在公司内网、离线环境或受控终端里不希望检查上游版本，可以设置：
@@ -787,18 +787,18 @@ python -m pip install -U pip
 pip install -e ~/work/Ai_AutoSDLC
 ```
 
-**如果你只想装当前已发布版 `v0.7.1`，再改用下面这组：**
+**如果你只想装当前已发布版 `v0.7.2`，再改用下面这组：**
 
 - Windows：
 
 ```powershell
-pip install "https://github.com/sinclairpan-git/Ai_AutoSDLC/archive/refs/tags/v0.7.1.zip"
+pip install "https://github.com/sinclairpan-git/Ai_AutoSDLC/archive/refs/tags/v0.7.2.zip"
 ```
 
 - macOS / Linux：
 
 ```bash
-pip install "https://github.com/sinclairpan-git/Ai_AutoSDLC/archive/refs/tags/v0.7.1.tar.gz"
+pip install "https://github.com/sinclairpan-git/Ai_AutoSDLC/archive/refs/tags/v0.7.2.tar.gz"
 ```
 
 **执行成功以后，你应该看到：**
@@ -823,7 +823,7 @@ AI-SDLC 只会做非阻断检测和明确提醒，不会静默替换你当前的
 GitHub Release 离线包安装，可以查看当前平台的显式更新步骤：
 
 ```bash
-ai-sdlc self-update instructions --version 0.7.1
+ai-sdlc self-update instructions --version 0.7.2
 ```
 
 如果你在公司内网、离线环境或受控终端里不希望检查上游版本，可以设置：

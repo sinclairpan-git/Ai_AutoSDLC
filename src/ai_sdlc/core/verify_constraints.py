@@ -140,7 +140,7 @@ SKIP_REGISTRY_REL = Path("src") / "ai_sdlc" / "rules" / "agent-skip-registry.zh.
 FRAMEWORK_DEFECT_BACKLOG_REL = Path("docs") / "framework-defect-backlog.zh-CN.md"
 VERIFICATION_RULE_REL = Path("src") / "ai_sdlc" / "rules" / "verification.md"
 PR_CHECKLIST_REL = Path("docs") / "pull-request-checklist.zh.md"
-RELEASE_NOTES_CURRENT_REL = Path("docs") / "releases" / "v0.7.1.md"
+RELEASE_NOTES_CURRENT_REL = Path("docs") / "releases" / "v0.7.2.md"
 RELEASE_POLICY_REL = Path("docs") / "框架自迭代开发与发布约定.md"
 README_REL = Path("README.md")
 USER_GUIDE_REL = Path("USER_GUIDE.zh-CN.md")
@@ -220,13 +220,13 @@ RECONCILE_SMOKE_CONTRACT_SURFACES: dict[Path, tuple[str, ...]] = {
 }
 RELEASE_DOCS_CONSISTENCY_SURFACES: dict[Path, tuple[str, ...]] = {
     README_REL: (
-        "v0.7.1",
-        "docs/releases/v0.7.1.md",
-        "ai-sdlc-offline-0.7.1.zip",
-        "ai-sdlc-offline-0.7.1.tar.gz",
+        "v0.7.2",
+        "docs/releases/v0.7.2.md",
+        "ai-sdlc-offline-0.7.2.zip",
+        "ai-sdlc-offline-0.7.2.tar.gz",
     ),
     RELEASE_NOTES_CURRENT_REL: (
-        "v0.7.1",
+        "v0.7.2",
         "Windows",
         ".zip",
         "macOS / Linux",
@@ -235,7 +235,7 @@ RELEASE_DOCS_CONSISTENCY_SURFACES: dict[Path, tuple[str, ...]] = {
         "release-artifact-smoke.yml",
     ),
     USER_GUIDE_REL: (
-        "v0.7.1",
+        "v0.7.2",
         "Windows",
         "macOS",
         "Linux",
@@ -243,7 +243,7 @@ RELEASE_DOCS_CONSISTENCY_SURFACES: dict[Path, tuple[str, ...]] = {
         ".tar.gz",
     ),
     OFFLINE_README_REL: (
-        "v0.7.1",
+        "v0.7.2",
         "Windows",
         ".zip",
         "Linux/macOS",
@@ -251,7 +251,7 @@ RELEASE_DOCS_CONSISTENCY_SURFACES: dict[Path, tuple[str, ...]] = {
     ),
     RELEASE_POLICY_REL: (
         "README.md",
-        "docs/releases/v0.7.1.md",
+        "docs/releases/v0.7.2.md",
         "USER_GUIDE.zh-CN.md",
         "packaging/offline/README.md",
         "docs/pull-request-checklist.zh.md",
@@ -262,10 +262,10 @@ RELEASE_DOCS_CONSISTENCY_SURFACES: dict[Path, tuple[str, ...]] = {
     ),
     PR_CHECKLIST_REL: (
         "README.md",
-        "docs/releases/v0.7.1.md",
+        "docs/releases/v0.7.2.md",
         "USER_GUIDE.zh-CN.md",
         "packaging/offline/README.md",
-        "v0.7.1",
+        "v0.7.2",
         "Windows",
         ".zip",
         "macOS / Linux",
