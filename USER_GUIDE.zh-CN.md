@@ -20,6 +20,20 @@
 ## 目录
 
 - 使用前先记住
+- 第零章：先选一种安装方式
+  - 方案 A：用 GitHub tag 在线安装当前发布版
+  - 方案 B：用 0.7.2 Release 离线包安装
+  - 方案 C：用本地源码安装最新开发版
+  - 已安装用户：检查更新与显式升级
+- 第零点五章：从安装到首次使用的命令卡片
+  - 命令卡 1：确认 Python
+  - 命令卡 2：确认 CLI 已安装
+  - 命令卡 3：初始化项目
+  - 命令卡 4：查看项目状态
+  - 命令卡 5：查看 adapter 接入真值
+  - 命令卡 6：执行安全预演
+  - 命令卡 7：进入 IDE 聊天
+  - 常见错误怎么处理
 - 第一章：空项目完整演练
   - 第 1 步：先用 IDE 打开你准备放项目的目录一次
   - 第 2 步：在终端里创建一个空项目文件夹
@@ -47,9 +61,12 @@
 
 ## 使用前先记住
 
-这份文档只有两章。
-第一章用一个空项目，从 0 开始，完整跑到“可以开始在 IDE 聊天窗里说需求”。
-第二章用一个已有项目，从安装一直跑到“可以开始在 IDE 聊天窗里说增量需求”。
+这份文档按“先选安装方式，再照步骤演练”的方式写。
+
+- 第零章：帮你先选安装方式。
+- 第零点五章：给你一条最小成功路径，每一步都有命令、成功判据、下一步和报错处理。
+- 第一章：用一个空项目，从 0 开始，完整跑到“可以开始在 IDE 聊天窗里说需求”。
+- 第二章：用一个已有项目，从安装一直跑到“可以开始在 IDE 聊天窗里说增量需求”。
 
 **先记住一条铁规则：**
 
@@ -75,6 +92,443 @@
 - 例如你在 VS Code 里用 Codex 聊天，AI-SDLC 应该认 `codex`，不是只认 `vscode`。
 - 例如你在 VS Code 里用 Claude Code 聊天，AI-SDLC 应该认 `claude_code`。
 - 如果自动识别错了，也不用怕。交互式 `init` 会先给你一个五项列表；如果后面还想改，可以直接运行 `python -m ai_sdlc adapter select` 进入同一个列表，`--agent-target` 只作为非交互 override。
+
+## 第零章：先选一种安装方式
+
+如果你只是想把 AI-SDLC 用起来，优先按下面顺序选：
+
+1. 电脑能访问 GitHub，且已经有 Python 3.11+：选 **方案 A**。
+2. 公司内网、不能访问 GitHub，或希望管理员先给大家发一个包：选 **方案 B**。
+3. 你正在开发 AI-SDLC 框架本身，或要验证尚未发布的新改动：选 **方案 C**。
+
+### 方案 A：用 GitHub tag 在线安装当前发布版
+
+这是普通用户最推荐的方式。它安装的是当前正式发布版 `v0.7.2`。
+
+**Windows：**
+
+```powershell
+py -3.11 -m venv .venv
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
+.\.venv\Scripts\Activate.ps1
+python -m pip install -U pip
+pip install "https://github.com/sinclairpan-git/Ai_AutoSDLC/archive/refs/tags/v0.7.2.zip"
+python -m ai_sdlc --help
+```
+
+**macOS / Linux：**
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install -U pip
+pip install "https://github.com/sinclairpan-git/Ai_AutoSDLC/archive/refs/tags/v0.7.2.tar.gz"
+python -m ai_sdlc --help
+```
+
+看到 help 输出，就说明 CLI 已安装成功。下一步去第一章或第二章继续做 `init`。
+
+### 方案 B：用 0.7.2 Release 离线包安装
+
+如果用户机器不能联网，先让管理员从 GitHub Release 下载与你机器匹配的包，再拷贝到目标机器。
+
+当前 `v0.7.2` 正式发布资产：
+
+- Windows x64：`ai-sdlc-offline-0.7.2-windows-amd64.zip`
+- macOS Apple Silicon：`ai-sdlc-offline-0.7.2-macos-arm64.tar.gz`
+- Linux x64：`ai-sdlc-offline-0.7.2-linux-amd64.tar.gz`
+
+下载入口：
+
+```text
+https://github.com/sinclairpan-git/Ai_AutoSDLC/releases/tag/v0.7.2
+```
+
+**Windows：**
+
+```powershell
+Expand-Archive -LiteralPath .\ai-sdlc-offline-0.7.2-windows-amd64.zip -DestinationPath .
+cd .\ai-sdlc-offline-0.7.2-windows-amd64
+powershell -ExecutionPolicy Bypass -File .\install_offline.ps1
+.\.venv\Scripts\python.exe -m ai_sdlc --help
+```
+
+**macOS Apple Silicon：**
+
+```bash
+tar xzf ai-sdlc-offline-0.7.2-macos-arm64.tar.gz
+cd ai-sdlc-offline-0.7.2-macos-arm64
+chmod +x install_offline.sh
+./install_offline.sh
+./.venv/bin/python -m ai_sdlc --help
+```
+
+**Linux x64：**
+
+```bash
+tar xzf ai-sdlc-offline-0.7.2-linux-amd64.tar.gz
+cd ai-sdlc-offline-0.7.2-linux-amd64
+chmod +x install_offline.sh
+./install_offline.sh
+./.venv/bin/python -m ai_sdlc --help
+```
+
+如果安装脚本提示平台不匹配，说明这个包不是给当前机器用的。不要强行改脚本，请换对应系统和 CPU 的包，或让管理员重新打包。
+
+离线包只负责把 AI-SDLC CLI 安装好；真正让业务项目接入 AI-SDLC，仍然要进入业务项目根目录，再按第一章或第二章执行 `python -m ai_sdlc init .`。
+
+### 方案 C：用本地源码安装最新开发版
+
+只有在你本机已经有一份 `Ai_AutoSDLC` 源码目录时才选这个方式。
+
+**Windows 示例：**
+
+```powershell
+py -3.11 -m venv .venv
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
+.\.venv\Scripts\Activate.ps1
+python -m pip install -U pip
+pip install -e D:\work\Ai_AutoSDLC
+python -m ai_sdlc --help
+```
+
+**macOS / Linux 示例：**
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install -U pip
+pip install -e ~/work/Ai_AutoSDLC
+python -m ai_sdlc --help
+```
+
+如果你不是框架开发者，通常不需要选这个方案。
+
+### 已安装用户：检查更新与显式升级
+
+`v0.7.2` 开始，已安装的 CLI 可以做非阻断更新提醒。它只会提醒，不会偷偷替你下载或覆盖当前环境。
+
+在已经激活 `.venv` 的终端里执行：
+
+```bash
+ai-sdlc self-update check
+```
+
+如果你是从 GitHub Release 离线包安装的，可以让 CLI 打印当前平台的更新步骤：
+
+```bash
+ai-sdlc self-update instructions --version 0.7.2
+```
+
+如果公司内网不允许访问 GitHub，或你希望完全关闭更新检查，可以在终端环境里设置：
+
+**Windows：**
+
+```powershell
+$env:AI_SDLC_DISABLE_UPDATE_CHECK = "1"
+```
+
+**macOS / Linux：**
+
+```bash
+export AI_SDLC_DISABLE_UPDATE_CHECK=1
+```
+
+记住：更新检查只是帮助你发现新版本；是否升级，仍然由你或公司的工具管理员明确执行。
+
+## 第零点五章：从安装到首次使用的命令卡片
+
+这一章是最短可执行路径。你可以先照这一章跑通，再回到第一章或第二章看完整解释。
+
+**重要：预期结果不要逐字硬比对。**
+
+AI-SDLC 的输出可能因为终端宽度、操作系统、IDE、路径不同而换行不同。判断成功时，只看本章写出的“关键字”。如果关键字一致，就继续下一步；如果命令退出码失败或出现本章列出的错误，再按故障分支处理。
+
+### 命令卡 1：确认 Python
+
+**Windows 执行：**
+
+```powershell
+py -3.11 --version
+```
+
+**macOS / Linux 执行：**
+
+```bash
+python3 --version
+```
+
+**成功后你应该看到：**
+
+- 输出里包含 `Python 3.11`、`Python 3.12` 或更高版本。
+- 命令没有报错返回。
+
+**下一步执行：**
+
+- 如果你还没安装 AI-SDLC，回到第零章选择安装方案。
+- 如果你已经安装过，继续命令卡 2。
+
+**如果失败：**
+
+- Windows 提示 `py` 找不到：安装 Python Launcher，或先运行 `winget install -e --id Python.Python.3.11`。
+- macOS / Linux 显示 Python 低于 3.11：先安装 Python 3.11+，不要继续跑 AI-SDLC。
+- 公司电脑不能安装 Python：使用第零章的 Release 离线包，并让管理员提供带 `python-runtime/` 的包。
+
+### 命令卡 2：确认 CLI 已安装
+
+**推荐先激活虚拟环境。**
+
+Windows：
+
+```powershell
+.\.venv\Scripts\Activate.ps1
+python -m ai_sdlc --help
+```
+
+macOS / Linux：
+
+```bash
+source .venv/bin/activate
+python -m ai_sdlc --help
+```
+
+**成功后你应该看到：**
+
+- 输出顶部包含 `Usage: ai-sdlc`。
+- 输出里能看到 `Commands`。
+- 命令列表里至少包含 `init`、`adapter`、`run`、`self-update`。
+
+**下一步执行：**
+
+```bash
+python -m ai_sdlc init .
+```
+
+**如果失败：**
+
+- `No module named ai_sdlc`：说明当前虚拟环境里没有安装 AI-SDLC。回到第零章重新安装。
+- Windows `Activate.ps1 cannot be loaded`：执行：
+
+```powershell
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
+.\.venv\Scripts\Activate.ps1
+```
+
+- `ai-sdlc` 命令找不到但 `python -m ai_sdlc --help` 成功：继续使用 `python -m ai_sdlc ...`，不用卡在 PATH 问题上。
+- 想看当前 Python 和 shim 路径：执行：
+
+```bash
+python -m ai_sdlc doctor
+```
+
+成功时，`doctor` 输出里通常会包含 `Python executable`、`sys.prefix`、`Fallback: run subcommands via python -m ai_sdlc`。
+
+### 命令卡 3：初始化项目
+
+**在业务项目根目录执行：**
+
+```bash
+python -m ai_sdlc init .
+```
+
+如果你想避免交互选择，可以显式指定你真正使用的 AI 入口：
+
+```bash
+python -m ai_sdlc init . --agent-target codex
+```
+
+可选值按你的真实聊天入口选择，例如 `codex`、`cursor`、`vscode`、`claude_code`。
+
+**成功后你应该看到：**
+
+- 输出里包含 `Initialized AI-SDLC project`。
+- 输出里包含 `Agent Target:`。
+- 输出里会出现 `下一步命令 / Next command`。
+- 项目目录里出现 `.ai-sdlc/`。
+- 对 Codex，项目根目录里应出现或更新 `AGENTS.md`。
+
+**下一步执行：**
+
+```bash
+python -m ai_sdlc status
+```
+
+**如果失败：**
+
+- 提示不清楚 agent target：重新执行并加上 `--agent-target`。
+- 初始化到了错误目录：先 `pwd`（macOS / Linux）或 `Get-Location`（Windows）确认当前目录，再进入业务项目根目录重跑。
+- 你在 IDE 聊天框里粘贴了命令：停下来，改到终端执行。
+
+### 命令卡 4：查看项目状态
+
+**执行：**
+
+```bash
+python -m ai_sdlc status
+```
+
+**成功后你应该看到：**
+
+- 输出表格标题包含 `AI-SDLC Status`。
+- `Status` 通常是 `initialized`。
+- 能看到 `Agent Target`。
+- 能看到 `Pipeline Stage`。
+
+**注意：**
+
+第一次运行时，可能先出现：
+
+```text
+resume-pack missing; rebuilding from checkpoint
+resume-pack rebuilt successfully
+```
+
+这不是错误，表示 CLI 正在补齐本地 resume-pack。
+
+**下一步执行：**
+
+```bash
+python -m ai_sdlc adapter status
+```
+
+**如果失败：**
+
+- 提示找不到 `.ai-sdlc` 或未初始化：回到命令卡 3。
+- 输出里有 `doctor` 建议：先执行 `python -m ai_sdlc doctor`，看 Python、PATH、telemetry 状态。
+
+### 命令卡 5：查看 adapter 接入真值
+
+**执行：**
+
+```bash
+python -m ai_sdlc adapter status
+```
+
+**成功后你应该看到：**
+
+- 输出表格标题包含 `Adapter Status`。
+- 能看到 `agent_target`。
+- 能看到 `adapter_canonical_path`。Codex 应是 `AGENTS.md`。
+- 能看到 `governance_activation_mode`。
+
+**如果看到 `verified_loaded`：**
+
+说明当前宿主接入已有可机读证据。继续下一步。
+
+**如果看到 `materialized_only`、`materialized / unverified` 或 `unsupported`：**
+
+这不一定是安装失败。它通常表示规则文件已经写到项目里，但当前终端还没有提供“AI 宿主确实加载了规则”的可机读证据。
+
+先执行 CLI 提示里的下一步：
+
+```bash
+python -m ai_sdlc run --dry-run
+```
+
+如果你想进一步检查宿主运行时：
+
+```bash
+python -m ai_sdlc host-runtime plan --json
+```
+
+如果你确认是在 Codex 环境里，但仍未验证，可以在 IDE 自带终端里重新选择：
+
+```bash
+python -m ai_sdlc adapter select --agent-target codex
+python -m ai_sdlc adapter status
+```
+
+**下一步执行：**
+
+```bash
+python -m ai_sdlc run --dry-run
+```
+
+### 命令卡 6：执行安全预演
+
+**执行：**
+
+```bash
+python -m ai_sdlc run --dry-run
+```
+
+**成功后你可能看到两类结果。**
+
+第一类：全部通过：
+
+```text
+Pipeline completed. Stage: close
+```
+
+第二类：命令成功退出，但仍有 open gates：
+
+```text
+Dry-run completed with open gates. Last stage: close (RETRY)
+```
+
+对刚初始化的新项目，第二类也可能出现，因为还没有真实 spec、tasks 或最终测试证据。它表示“CLI 能启动并完成安全预演”，不表示你的业务需求已经完成。
+
+**下一步执行：**
+
+- 如果只是首次接入项目，继续命令卡 7，到 IDE 聊天里发自然语言需求。
+- 如果你已经有 work item，则按输出里的 `reason:` 补齐缺失项，例如 spec、tasks、测试或 execution log。
+
+**如果失败：**
+
+- 提示缺 `spec.md`、tasks 或 final tests：先不要硬跑 `run`，在 IDE 聊天里让 AI 按 AI-SDLC 流程创建或补齐 work item。
+- 提示 adapter 未验证：回到命令卡 5。`run --dry-run` 可以作为预演继续，但不要把它当成治理激活证明。
+- Python import 或 PATH 错误：回到命令卡 2。
+
+### 命令卡 7：进入 IDE 聊天
+
+**这一步不要在终端执行。**
+
+切换到 Codex / Cursor / Claude Code / VS Code Copilot 的聊天输入框，输入自然语言。
+
+空项目可以复制：
+
+```text
+我已经在项目根目录执行过：
+1. python -m ai_sdlc init .
+2. python -m ai_sdlc status
+3. python -m ai_sdlc adapter status
+4. python -m ai_sdlc run --dry-run
+
+现在我要从零开始做一个新项目。
+需求是：我想开发一个全自动的UI测试平台。
+
+请按 AI-SDLC 流程，先帮我做需求澄清、影响分析、拆解和设计，不要直接写代码。
+```
+
+已有项目可以复制：
+
+```text
+我已经在这个已有项目根目录执行过：
+1. python -m ai_sdlc init .
+2. python -m ai_sdlc status
+3. python -m ai_sdlc adapter status
+4. python -m ai_sdlc run --dry-run
+
+现在我要做一个增量需求。
+需求是：我想新增一个E2E的UI测试场景覆盖。
+
+请按 AI-SDLC 流程，先帮我做需求澄清、影响分析、拆解和设计，不要直接写代码。
+```
+
+### 常见错误怎么处理
+
+| 你看到的现象 | 先执行什么检查 | 怎么处理 |
+|---|---|---|
+| `python: No module named ai_sdlc` | `python -m pip show ai-sdlc` | 当前环境没装，回到第零章重新安装 |
+| `ai-sdlc: command not found` | `python -m ai_sdlc --help` | 如果模块入口成功，就继续使用 `python -m ai_sdlc ...` |
+| Windows 无法激活 `.venv` | `Get-ExecutionPolicy -Scope Process` | 执行 `Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass` 后再激活 |
+| `pip install` 下载失败 | `python -m pip --version` | 通常是网络或公司代理问题；改用离线包，或让管理员配置代理 |
+| 离线包提示平台不匹配 | 查看 `bundle-manifest.json` | 换对应 Windows/macOS/Linux 和 CPU 的包，不要强行安装 |
+| `adapter status` 是 `materialized_only` | `python -m ai_sdlc adapter status` | 规则已写入但宿主加载未验证；在 IDE 自带终端重跑，或按提示设置宿主环境变量 |
+| `run --dry-run` 是 `RETRY` | 看输出里的 `reason:` | 首次项目可能正常；若已有 work item，按 reason 补 spec、tasks、测试或执行记录 |
+| 更新检查显示 `editable_runtime` | `python -m ai_sdlc self-update check` | 你在源码/开发安装路径里，更新提醒会安静退出；正式安装用户才需要按提醒更新 |
+
+后面第一章和第二章里的输出片段是帮助你理解流程的示例；真正判断是否能继续，以本章每张命令卡里的“关键字”和“下一步执行”为准。
 
 ## 第一章：空项目完整演练
 
@@ -307,8 +761,16 @@ ai-sdlc self-update instructions --version 0.7.2
 
 如果你在公司内网、离线环境或受控终端里不希望检查上游版本，可以设置：
 
+Windows：
+
+```powershell
+$env:AI_SDLC_DISABLE_UPDATE_CHECK = "1"
+```
+
+macOS / Linux：
+
 ```bash
-AI_SDLC_DISABLE_UPDATE_CHECK=1
+export AI_SDLC_DISABLE_UPDATE_CHECK=1
 ```
 
 **Windows 升级到当前仓库源码版直接复制：**
@@ -828,8 +1290,16 @@ ai-sdlc self-update instructions --version 0.7.2
 
 如果你在公司内网、离线环境或受控终端里不希望检查上游版本，可以设置：
 
+Windows：
+
+```powershell
+$env:AI_SDLC_DISABLE_UPDATE_CHECK = "1"
+```
+
+macOS / Linux：
+
 ```bash
-AI_SDLC_DISABLE_UPDATE_CHECK=1
+export AI_SDLC_DISABLE_UPDATE_CHECK=1
 ```
 
 **Windows 升级到当前仓库源码版直接复制：**
