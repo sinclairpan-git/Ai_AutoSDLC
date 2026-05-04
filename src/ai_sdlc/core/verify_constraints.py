@@ -144,6 +144,7 @@ RELEASE_NOTES_CURRENT_REL = Path("docs") / "releases" / "v0.7.4.md"
 RELEASE_POLICY_REL = Path("docs") / "框架自迭代开发与发布约定.md"
 README_REL = Path("README.md")
 USER_GUIDE_REL = Path("USER_GUIDE.zh-CN.md")
+AGENTS_REL = Path("AGENTS.md")
 OFFLINE_README_REL = Path("packaging") / "offline" / "README.md"
 WINDOWS_OFFLINE_SMOKE_WORKFLOW_REL = (
     Path(".github") / "workflows" / "windows-offline-smoke.yml"
@@ -272,6 +273,56 @@ RELEASE_DOCS_CONSISTENCY_SURFACES: dict[Path, tuple[str, ...]] = {
         ".tar.gz",
     ),
 }
+BEGINNER_GUIDE_REQUIRED_TOKENS = (
+    "第零点五章：从安装到首次使用的命令卡片",
+    "当前结果 / Result",
+    "下一步 / Next",
+    "不用再手动执行初始化命令",
+    "切换到 AI 对话",
+)
+BEGINNER_GUIDE_FORBIDDEN_TOKENS = (
+    "命令卡 1：确认 Python",
+    "命令卡 5：查看项目状态",
+    "命令卡 6：查看 adapter 接入真值",
+    "命令卡 7：执行安全预演",
+    "第 7 步：先确认 adapter",
+    "第 8 步：现在不要聊天，先在终端里做一次预演启动",
+    "第 9 步：先在终端做一次预演启动",
+    "第 10 步：到这里，才切换到 IDE 聊天输入框",
+    "Next step:\n│   Inspect adapter truth",
+    "Start framework in safe mode",
+    "至少要把 `init`、`adapter status`、`run --dry-run`",
+)
+README_CLI_PATH_REQUIRED_TOKENS = (
+    "## Start The Framework",
+    "ai-sdlc init .",
+    "automatically runs the safe startup rehearsal",
+    "switch to the AI chat",
+    "one next command in Chinese and English",
+    "It is not a beginner-path setup step.",
+)
+README_CLI_PATH_FORBIDDEN_TOKENS = (
+    "the minimum command loop is:",
+    "2. `python -m ai_sdlc run --dry-run`",
+    "Next command: `python -m ai_sdlc workitem init --title",
+)
+AGENTS_CLI_PATH_REQUIRED_TOKENS = (
+    "初始化入口（普通用户先执行）",
+    "自动执行必要检查与安全预演",
+    "排查入口（仅当 CLI 明确要求时执行）",
+    "不要再要求用户手动执行 `adapter status` 或 `run --dry-run`",
+)
+AGENTS_CLI_PATH_FORBIDDEN_TOKENS = (
+    "先检查接入真值：`ai-sdlc adapter status`",
+    "启动入口（先执行）：`ai-sdlc run --dry-run`",
+    "优先引导并先执行上述启动入口",
+)
+ADAPTER_TEMPLATE_CLI_PATH_RELS = (
+    Path("src") / "ai_sdlc" / "adapters" / "codex" / "AI-SDLC.md",
+    Path("src") / "ai_sdlc" / "adapters" / "claude_code" / "AI-SDLC.md",
+    Path("src") / "ai_sdlc" / "adapters" / "vscode" / "AI-SDLC.md",
+    Path("src") / "ai_sdlc" / "adapters" / "cursor" / "rules" / "ai-sdlc.md",
+)
 FEATURE_CONTRACT_SURFACE_OBJECT = "feature_contract_surfaces"
 FRAMEWORK_DEFECT_BACKLOG_REQUIRED_FIELDS = (
     "现象",
@@ -1260,6 +1311,10 @@ def collect_constraint_blockers(root: Path) -> list[str]:
     blockers.extend(_formal_artifact_target_blockers(root))
     blockers.extend(_backlog_breach_reference_blockers(root))
     blockers.extend(_release_docs_consistency_blockers(root))
+    blockers.extend(_readme_cli_path_blockers(root))
+    blockers.extend(_beginner_guide_cli_path_blockers(root))
+    blockers.extend(_agent_instruction_cli_path_blockers(root))
+    blockers.extend(_adapter_template_cli_path_blockers(root))
     blockers.extend(_reconcile_smoke_contract_blockers(root))
     blockers.extend(_doc_first_surface_blockers(root))
     blockers.extend(_verification_profile_blockers(root))
@@ -3384,6 +3439,102 @@ def _release_docs_consistency_blockers(root: Path) -> list[str]:
             blockers.append(
                 "BLOCKER: release docs consistency drift: "
                 f"{rel.as_posix()} missing required markers: {', '.join(missing)}"
+            )
+    return blockers
+
+
+def _beginner_guide_cli_path_blockers(root: Path) -> list[str]:
+    """Block beginner docs that regress to the old multi-command setup path."""
+    path = root / USER_GUIDE_REL
+    if not path.is_file():
+        return []
+    text = path.read_text(encoding="utf-8")
+
+    blockers: list[str] = []
+    missing = [token for token in BEGINNER_GUIDE_REQUIRED_TOKENS if token not in text]
+    if missing:
+        blockers.append(
+            "BLOCKER: beginner guide CLI path missing required current-flow markers: "
+            f"{', '.join(missing)}"
+        )
+    forbidden = [token for token in BEGINNER_GUIDE_FORBIDDEN_TOKENS if token in text]
+    if forbidden:
+        blockers.append(
+            "BLOCKER: beginner guide CLI path regressed to old manual setup steps: "
+            f"{', '.join(forbidden)}"
+        )
+    return blockers
+
+
+def _readme_cli_path_blockers(root: Path) -> list[str]:
+    """Block README drift away from the init-first beginner CLI path."""
+    path = root / README_REL
+    if not path.is_file():
+        return []
+    text = path.read_text(encoding="utf-8")
+
+    blockers: list[str] = []
+    missing = [token for token in README_CLI_PATH_REQUIRED_TOKENS if token not in text]
+    if missing:
+        blockers.append(
+            "BLOCKER: README CLI path missing required current-flow markers: "
+            f"{', '.join(missing)}"
+        )
+    forbidden = [token for token in README_CLI_PATH_FORBIDDEN_TOKENS if token in text]
+    if forbidden:
+        blockers.append(
+            "BLOCKER: README CLI path regressed to old manual setup steps: "
+            f"{', '.join(forbidden)}"
+        )
+    return blockers
+
+
+def _agent_instruction_cli_path_blockers(root: Path) -> list[str]:
+    """Keep canonical agent instructions aligned with the beginner CLI path."""
+    if not any((root / rel).is_file() for rel in ADAPTER_TEMPLATE_CLI_PATH_RELS):
+        return []
+    path = root / AGENTS_REL
+    if not path.is_file():
+        return [
+            "BLOCKER: AGENTS.md CLI path missing while adapter templates are present"
+        ]
+    text = path.read_text(encoding="utf-8")
+
+    blockers: list[str] = []
+    missing = [token for token in AGENTS_CLI_PATH_REQUIRED_TOKENS if token not in text]
+    if missing:
+        blockers.append(
+            "BLOCKER: AGENTS.md CLI path missing required current-flow markers: "
+            f"{', '.join(missing)}"
+        )
+    forbidden = [token for token in AGENTS_CLI_PATH_FORBIDDEN_TOKENS if token in text]
+    if forbidden:
+        blockers.append(
+            "BLOCKER: AGENTS.md CLI path regressed to old manual startup steps: "
+            f"{', '.join(forbidden)}"
+        )
+    return blockers
+
+
+def _adapter_template_cli_path_blockers(root: Path) -> list[str]:
+    """Keep generated adapter instructions aligned with AGENTS.md guidance."""
+    blockers: list[str] = []
+    for rel in ADAPTER_TEMPLATE_CLI_PATH_RELS:
+        path = root / rel
+        if not path.is_file():
+            continue
+        text = path.read_text(encoding="utf-8")
+        missing = [token for token in AGENTS_CLI_PATH_REQUIRED_TOKENS if token not in text]
+        if missing:
+            blockers.append(
+                "BLOCKER: adapter template CLI path missing required current-flow "
+                f"markers in {rel.as_posix()}: {', '.join(missing)}"
+            )
+        forbidden = [token for token in AGENTS_CLI_PATH_FORBIDDEN_TOKENS if token in text]
+        if forbidden:
+            blockers.append(
+                "BLOCKER: adapter template CLI path regressed to old manual startup "
+                f"steps in {rel.as_posix()}: {', '.join(forbidden)}"
             )
     return blockers
 

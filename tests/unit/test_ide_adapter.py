@@ -170,7 +170,7 @@ class TestApplyAdapter:
         assert canonical.read_text(encoding="utf-8") == "legacy content"
         assert str(legacy) in result.legacy_migrated
 
-    def test_all_ide_templates_point_to_status_then_safe_start(
+    def test_all_ide_templates_point_to_init_then_troubleshooting_only(
         self, tmp_path: Path
     ) -> None:
         (tmp_path / AI_SDLC_DIR).mkdir(parents=True)
@@ -183,11 +183,19 @@ class TestApplyAdapter:
         for ide, path in targets:
             apply_adapter(tmp_path, ide)
             text = path.read_text(encoding="utf-8")
+            assert "不要要求普通用户手动安装 Python、venv、pip 或依赖" in text
+            assert "初始化入口" in text
+            assert "python -m ai_sdlc init ." in text
+            assert "init` 会" in text
+            assert "安全预演" in text
+            assert "切换到 AI 对话" in text
             assert "ai-sdlc adapter status" in text
             assert "machine-verifiable" in text
             assert "ai-sdlc run --dry-run" in text
-            assert "python -m ai_sdlc run --dry-run" in text
             assert "verified_loaded" in text
+            assert "先检查接入真值" not in text
+            assert "启动入口（先执行）" not in text
+            assert "优先引导并先执行上述启动入口" not in text
             assert "adapter activate" not in text
 
     def test_adapter_template_includes_selected_shell_guidance(
