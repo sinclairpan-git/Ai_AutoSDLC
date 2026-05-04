@@ -7,6 +7,7 @@ from pathlib import Path
 import pytest
 from typer.testing import CliRunner
 
+from ai_sdlc.cli import commands
 from ai_sdlc.cli.main import app
 from ai_sdlc.core.config import load_project_config
 from ai_sdlc.integrations.agent_target import PreferredShell
@@ -37,35 +38,50 @@ class TestCliInit:
         assert result.exit_code == 0
         assert (tmp_path / ".ai-sdlc").is_dir()
         assert "Initialized" in result.output
-        assert "当前状态 / Current status" in result.output
-        assert "接入真值尚未确认；先检查 adapter 状态" in result.output
-        assert "Adapter ingress truth is not yet confirmed" in result.output
-        assert "下一步命令 / Next command" in result.output
-        assert "ai-sdlc adapter status" in result.output
-        assert "命令作用 / What this command does" in result.output
-        assert "安全预演" in result.output
-        assert "safe startup rehearsal only" in result.output
-        assert "ai-sdlc run --dry-run" in result.output
-        assert "not verified host-ingress proof" in result.output
-        assert "python -m ai_sdlc adapter status" in result.output
-        assert "python -m ai_sdlc run --dry-run" in result.output
+        assert "当前结果 / Result" in result.output
+        assert "初始化完成" in result.output
+        assert "Initialization complete" in result.output
+        assert "安全预演已自动执行" in result.output
+        assert "Safe rehearsal ran automatically" in result.output
+        assert "不用再手动执行初始化命令" in result.output
+        assert "No more setup commands are needed" in result.output
+        assert "ai-sdlc adapter status" not in result.output
+        assert "python -m ai_sdlc adapter status" not in result.output
+        assert "python -m ai_sdlc run --dry-run" not in result.output
         assert "ai-sdlc adapter activate" not in result.output
         cfg = load_project_config(tmp_path)
         assert cfg.preferred_shell != ""
+
+    def test_init_fails_when_automatic_dry_run_crashes(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        def crash_dry_run(*_args: object, **_kwargs: object) -> None:
+            raise RuntimeError("runtime exploded")
+
+        monkeypatch.setattr(commands.SDLCRunner, "run", crash_dry_run)
+
+        result = runner.invoke(app, ["init", str(tmp_path)])
+
+        assert result.exit_code == 1
+        assert "初始化未完成" in result.output
+        assert "Initialization is not complete" in result.output
+        assert "ai-sdlc doctor" in result.output
+        assert "runtime exploded" in result.output
+        assert "初始化完成" not in result.output
+        assert "Initialization complete" not in result.output
 
     def test_init_already_initialized(self, initialized_project_dir: Path) -> None:
         result = runner.invoke(app, ["init", str(initialized_project_dir)])
         assert result.exit_code == 0
         assert "already initialized" in result.output
-        assert "当前状态 / Current status" in result.output
-        assert "下一步命令 / Next command" in result.output
-        assert "ai-sdlc adapter status" in result.output
-        assert "命令作用 / What this command does" in result.output
-        assert "safe startup rehearsal only" in result.output
-        assert "ai-sdlc run --dry-run" in result.output
-        assert "not verified host-ingress proof" in result.output
-        assert "python -m ai_sdlc adapter status" in result.output
-        assert "python -m ai_sdlc run --dry-run" in result.output
+        assert "当前结果 / Result" in result.output
+        assert "初始化完成" in result.output
+        assert "Initialization complete" in result.output
+        assert "不用再手动执行初始化命令" in result.output
+        assert "No more setup commands are needed" in result.output
+        assert "ai-sdlc adapter status" not in result.output
+        assert "python -m ai_sdlc adapter status" not in result.output
+        assert "python -m ai_sdlc run --dry-run" not in result.output
         assert "ai-sdlc adapter activate" not in result.output
 
     def test_init_nonexistent_dir(self, tmp_path: Path) -> None:

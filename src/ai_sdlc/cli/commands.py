@@ -13,7 +13,7 @@ from rich.panel import Panel
 from rich.table import Table
 
 from ai_sdlc.branch.git_client import GitClient, GitError
-from ai_sdlc.cli.status_guidance import render_startup_guidance
+from ai_sdlc.cli.beginner_guidance import render_init_complete_guidance
 from ai_sdlc.context.state import (
     CHECKPOINT_PATH,
     CheckpointLoadError,
@@ -48,6 +48,7 @@ from ai_sdlc.core.reconcile import (
     detect_reconcile_hint,
     reconcile_checkpoint,
 )
+from ai_sdlc.core.runner import PipelineHaltError, SDLCRunner
 from ai_sdlc.gates.governance_guard import load_governance_state
 from ai_sdlc.generators.index_gen import (
     generate_all_extended_indexes,
@@ -70,6 +71,7 @@ from ai_sdlc.integrations.ide_adapter import (
     format_adapter_notice,
 )
 from ai_sdlc.knowledge.engine import apply_refresh, compute_refresh_level, load_baseline
+from ai_sdlc.models.gate import GateResult
 from ai_sdlc.models.project import PreferredShell, ProjectStatus
 from ai_sdlc.models.state import Checkpoint
 from ai_sdlc.routers.bootstrap import (
@@ -112,8 +114,64 @@ def _dedupe_status_text_items(values: object) -> list[str]:
     return deduped
 
 
-def _startup_next_step_hint() -> str:
-    return "\n\n" + render_startup_guidance()
+def _failed_gate_messages_for_init(result: GateResult | None) -> list[str]:
+    if result is None:
+        return []
+    messages: list[str] = []
+    for check in result.checks:
+        if check.passed or not check.message:
+            continue
+        if check.message not in messages:
+            messages.append(check.message)
+    return messages
+
+
+class InitSafeRehearsalError(RuntimeError):
+    """Raised when init's automatic dry-run crashes instead of reaching gates."""
+
+
+def _run_init_safe_rehearsal(root: Path) -> tuple[bool, list[str]]:
+    """Run the same dry-run startup check that users previously ran manually."""
+
+    last_result: GateResult | None = None
+
+    def remember_result(_stage: str, result: GateResult) -> None:
+        nonlocal last_result
+        last_result = result
+
+    try:
+        SDLCRunner(root).run(dry_run=True, on_stage_finish=remember_result)
+    except PipelineHaltError as exc:
+        return False, [str(exc)]
+    except Exception as exc:  # pragma: no cover - defensive CLI boundary
+        raise InitSafeRehearsalError(str(exc)) from exc
+
+    if last_result is None:
+        raise InitSafeRehearsalError("dry-run did not report a final gate result")
+    verdict = str(getattr(last_result.verdict, "value", last_result.verdict)).upper()
+    return verdict == "PASS", _failed_gate_messages_for_init(last_result)
+
+
+def _run_init_safe_rehearsal_or_exit(root: Path) -> tuple[bool, list[str]]:
+    try:
+        return _run_init_safe_rehearsal(root)
+    except InitSafeRehearsalError as exc:
+        console.print(
+            Panel(
+                "[bold]当前结果 / Result[/bold]\n"
+                "  初始化未完成：自动安全预演运行失败。\n"
+                "  Initialization is not complete: the automatic safe rehearsal failed.\n\n"
+                "[bold]下一步 / Next[/bold]\n"
+                "  [cyan]ai-sdlc doctor[/cyan]\n"
+                "  先检查本机运行环境；修复错误后重新执行 init。\n"
+                "  Check the local runtime first; rerun init after fixing the error.\n\n"
+                "[bold]错误 / Error[/bold]\n"
+                f"  {exc}",
+                title="ai-sdlc init",
+                border_style="red",
+            )
+        )
+        raise typer.Exit(code=1) from exc
 
 
 def _is_interactive_terminal() -> bool:
@@ -744,10 +802,20 @@ def init_command(
     project_type = detect_project_state(root)
     if project_type == EXISTING_INITIALIZED:
         ensure_ide_adaptation(root, agent_target=agent_target)
+        adapter_payload = build_adapter_governance_surface(
+            root,
+            detected_ide=detect_ide(root),
+        )
+        dry_run_passed, open_reasons = _run_init_safe_rehearsal_or_exit(root)
         console.print(
             Panel(
                 f"Project already initialized at [bold]{root}[/bold]"
-                f"{_startup_next_step_hint()}",
+                "\n\n"
+                + render_init_complete_guidance(
+                    adapter_payload=adapter_payload,
+                    dry_run_passed=dry_run_passed,
+                    open_reasons=open_reasons,
+                ),
                 title="ai-sdlc init",
                 border_style="yellow",
             )
@@ -822,7 +890,16 @@ def init_command(
         info += f"\n  Detected Host: {cfg.detected_ide}"
     if is_existing:
         info += "\n  [dim]Knowledge baseline generated (corpus + indexes)[/dim]"
-    info += _startup_next_step_hint()
+    adapter_payload = build_adapter_governance_surface(
+        root,
+        detected_ide=detect_ide(root),
+    )
+    dry_run_passed, open_reasons = _run_init_safe_rehearsal_or_exit(root)
+    info += "\n\n" + render_init_complete_guidance(
+        adapter_payload=adapter_payload,
+        dry_run_passed=dry_run_passed,
+        open_reasons=open_reasons,
+    )
 
     console.print(Panel(info, title="ai-sdlc init", border_style="green"))
     raise typer.Exit(code=0)
