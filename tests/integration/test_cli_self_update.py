@@ -10,6 +10,7 @@ import pytest
 from typer.testing import CliRunner
 
 import ai_sdlc.cli.self_update_cmd as self_update_cmd
+from ai_sdlc import __version__
 from ai_sdlc.cli.main import app
 
 runner = CliRunner()
@@ -25,6 +26,13 @@ def _env(tmp_path, *, channel: str = "github-archive") -> dict[str, str]:
         "PYTHONUTF8": "1",
         "PYTHONIOENCODING": "utf-8",
     }
+
+
+def test_global_version_option_prints_installed_version() -> None:
+    result = runner.invoke(app, ["--version"])
+
+    assert result.exit_code == 0
+    assert result.output.strip() == __version__
 
 
 def test_self_update_identity_json_exposes_machine_contract(tmp_path) -> None:

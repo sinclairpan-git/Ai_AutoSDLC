@@ -3,6 +3,7 @@
 # Usage:
 #   ./install_offline.sh              # creates ./.venv and installs ai-sdlc
 #   ./install_offline.sh /path/to/venv
+#   ./install_offline.sh --upgrade-existing
 # Env:
 #   PYTHON=/path/to/python3.11  (optional override)
 
@@ -12,6 +13,11 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 WHEELS="${ROOT}/wheels"
 MANIFEST="${ROOT}/bundle-manifest.json"
 PYTHON_RUNTIME_ROOT="${ROOT}/python-runtime"
+UPGRADE_EXISTING=0
+if [[ "${1:-}" == "--upgrade-existing" ]]; then
+  UPGRADE_EXISTING=1
+  shift
+fi
 
 print_status() {
   local status_zh="$1"
@@ -91,11 +97,76 @@ pick_python() {
   return 1
 }
 
-if ! PY="$(pick_python)"; then
-  fail_install "no usable Python runtime found. Bundle a python-runtime/ directory or set PYTHON=..."
-fi
+pick_existing_ai_sdlc_python() {
+  local cli_path
+  local target
+  local dir
+  local shebang
+  local exec_line
+  local interpreter
+  if ! cli_path="$(command -v ai-sdlc 2>/dev/null)"; then
+    return 1
+  fi
+  while [[ -L "${cli_path}" ]]; do
+    target="$(readlink "${cli_path}")"
+    dir="$(cd -P "$(dirname "${cli_path}")" >/dev/null 2>&1 && pwd)"
+    if [[ "${target}" == /* ]]; then
+      cli_path="${target}"
+    else
+      cli_path="${dir}/${target}"
+    fi
+  done
+  if [[ ! -f "${cli_path}" ]]; then
+    return 1
+  fi
+  if ! IFS= read -r shebang < "${cli_path}"; then
+    return 1
+  fi
+  shebang="${shebang#\#!}"
+  if [[ "${shebang}" == "/bin/sh" || "${shebang}" == "/usr/bin/sh" || "${shebang}" == *"/sh" ]]; then
+    exec_line="$(sed -n "2s/^'''exec' //p" "${cli_path}" 2>/dev/null || true)"
+    if [[ -z "${exec_line}" ]]; then
+      return 1
+    fi
+    if [[ "${exec_line}" == \"* ]]; then
+      interpreter="${exec_line#\"}"
+      interpreter="${interpreter%%\"*}"
+    else
+      interpreter="${exec_line%% *}"
+    fi
+  else
+    if [[ "${shebang}" == /usr/bin/env\ * ]]; then
+      shebang="${shebang#/usr/bin/env }"
+      if [[ "${shebang}" == -S\ * ]]; then
+        shebang="${shebang#-S }"
+      fi
+    fi
+    # shellcheck disable=SC2086
+    set -- ${shebang}
+    interpreter="${1:-}"
+  fi
+  if [[ -z "${interpreter}" ]]; then
+    return 1
+  fi
+  if [[ -x "${interpreter}" ]]; then
+    printf '%s' "${interpreter}"
+    return 0
+  fi
+  if command -v "${interpreter}" >/dev/null 2>&1; then
+    printf '%s' "${interpreter}"
+    return 0
+  fi
+  return 1
+}
 
-if [[ "${PY}" == "${PYTHON_RUNTIME_ROOT}"/bin/* ]]; then
+if [[ "${UPGRADE_EXISTING}" == "1" ]]; then
+  if ! PY="$(pick_existing_ai_sdlc_python)"; then
+    fail_install "cannot find the Python runtime behind the current ai-sdlc command"
+  fi
+  echo "Using existing AI-SDLC runtime: ${PY}"
+elif ! PY="$(pick_python)"; then
+  fail_install "no usable Python runtime found. Bundle a python-runtime/ directory or set PYTHON=..."
+elif [[ "${PY}" == "${PYTHON_RUNTIME_ROOT}"/bin/* ]]; then
   echo "Using bundled Python runtime: ${PY}"
 else
   echo "Using detected system Python runtime: ${PY}"
@@ -140,6 +211,34 @@ PY
   echo "Validated offline bundle platform manifest."
 else
   echo "warning: bundle-manifest.json missing; skipping platform compatibility check." >&2
+fi
+
+if [[ "${UPGRADE_EXISTING}" == "1" ]]; then
+  WHEEL_NAME="$(basename "${MAIN[0]}")"
+  EXPECTED_VERSION="${WHEEL_NAME#ai_sdlc-}"
+  EXPECTED_VERSION="${EXPECTED_VERSION%%-*}"
+  echo "Upgrading current ai-sdlc installation from this offline bundle..."
+  if ! "${PY}" -m pip install --force-reinstall --no-index --find-links="${WHEELS}" "${MAIN[0]}"; then
+    fail_install "failed to upgrade the current ai-sdlc installation"
+  fi
+  hash -r 2>/dev/null || true
+  if ! INSTALLED_VERSION="$("${PY}" -c "from importlib.metadata import version; print(version('ai-sdlc'))" 2>/dev/null)"; then
+    fail_install "upgraded runtime could not report the installed ai-sdlc version"
+  fi
+  if [[ "${INSTALLED_VERSION}" != "${EXPECTED_VERSION}" ]]; then
+    fail_install "installed version is ${INSTALLED_VERSION}, expected ${EXPECTED_VERSION}"
+  fi
+  if ! ai-sdlc self-update install --help >/dev/null 2>&1; then
+    fail_install "current PATH still resolves an older ai-sdlc command after installation"
+  fi
+  echo ""
+  print_status \
+    "升级完成。安装包已覆盖当前 ai-sdlc 入口对应的运行环境。" \
+    "Upgrade completed. The package installer updated the runtime behind the current ai-sdlc command." \
+    "ai-sdlc --version && ai-sdlc self-update check" \
+    "确认版本；以后更新只执行 self-update check。" \
+    "Confirm the version; future updates only need self-update check."
+  exit 0
 fi
 
 VENV_TARGET="${1:-${ROOT}/.venv}"

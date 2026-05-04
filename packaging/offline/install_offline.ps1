@@ -1,6 +1,7 @@
 param(
   [string]$VenvPath = ".venv",
-  [string]$PythonExe = "python"
+  [string]$PythonExe = "python",
+  [switch]$UpgradeExisting
 )
 
 $ErrorActionPreference = "Stop"
@@ -65,7 +66,27 @@ if ($mainWheels.Count -gt 1) {
 }
 $mainWheel = $mainWheels[0].FullName
 
-if ((-not $PSBoundParameters.ContainsKey("PythonExe")) -and (Test-Path $BundledPython)) {
+if ($UpgradeExisting) {
+  $aiSdlcCommand = Get-Command ai-sdlc -ErrorAction Stop
+  $shimDir = Split-Path -Parent $aiSdlcCommand.Source
+  $baseDir = Split-Path -Parent $shimDir
+  $candidatePythons = @(
+    (Join-Path $shimDir "python.exe"),
+    (Join-Path $baseDir "python.exe")
+  )
+  $existingPython = $null
+  foreach ($candidatePython in $candidatePythons) {
+    if (Test-Path $candidatePython) {
+      $existingPython = $candidatePython
+      break
+    }
+  }
+  if (-not $existingPython) {
+    throw "cannot find the Python runtime behind the current ai-sdlc command; run normal install instead"
+  }
+  $PythonExe = $existingPython
+  Write-Host "Using existing AI-SDLC runtime: $PythonExe"
+} elseif ((-not $PSBoundParameters.ContainsKey("PythonExe")) -and (Test-Path $BundledPython)) {
   $PythonExe = $BundledPython
   Write-Host "Using bundled Python runtime: $PythonExe"
 } else {
@@ -98,6 +119,31 @@ if (Test-Path $ManifestPath) {
   Write-Host "Validated offline bundle platform manifest."
 } else {
   Write-Warning "bundle-manifest.json missing; skipping platform compatibility check."
+}
+
+if ($UpgradeExisting) {
+  Write-Host "Upgrading current ai-sdlc installation from this offline bundle..."
+  & $PythonExe -m pip install --force-reinstall --no-index --find-links "$Wheels" "$mainWheel"
+  if ($LASTEXITCODE -ne 0) {
+    throw "failed to upgrade the current ai-sdlc installation"
+  }
+  $expectedVersion = $mainWheels[0].BaseName -replace '^ai_sdlc-', '' -replace '-.*$', ''
+  $installedVersion = (& $PythonExe -c "from importlib.metadata import version; print(version('ai-sdlc'))").Trim()
+  if ($installedVersion -ne $expectedVersion) {
+    throw "installed version is $installedVersion, expected $expectedVersion"
+  }
+  & ai-sdlc self-update install --help | Out-Null
+  if ($LASTEXITCODE -ne 0) {
+    throw "current PATH still resolves an older ai-sdlc command after installation"
+  }
+  Write-Host ""
+  Write-BilingualStatus `
+    -StatusZh "升级完成。安装包已覆盖当前 ai-sdlc 入口对应的运行环境。" `
+    -StatusEn "Upgrade completed. The package installer updated the runtime behind the current ai-sdlc command." `
+    -Command "ai-sdlc --version; ai-sdlc self-update check" `
+    -PurposeZh "确认版本；以后更新只执行 self-update check。" `
+    -PurposeEn "Confirm the version; future updates only need self-update check."
+  exit 0
 }
 
 Write-Host "Creating venv: $VenvPath"

@@ -1,11 +1,12 @@
 # 离线一键安装包（含 Windows）
 
-> 当前 staged release：`v0.7.6`
+> 当前 staged release：`v0.7.7`
 >
 > 发布入口口径：
-> - Windows 使用 `ai-sdlc-offline-0.7.6.zip`
-> - Linux/macOS 使用 `ai-sdlc-offline-0.7.6.tar.gz`
-> - Release Notes：`docs/releases/v0.7.6.md`
+> - Windows 使用 `ai-sdlc-offline-0.7.7-windows-amd64.zip`
+> - macOS 使用 `ai-sdlc-offline-0.7.7-macos-arm64.tar.gz`
+> - Linux 使用 `ai-sdlc-offline-0.7.7-linux-amd64.tar.gz`
+> - Release Notes：`docs/releases/v0.7.7.md`
 
 ## 角色分工
 
@@ -38,6 +39,29 @@ AI_SDLC_OFFLINE_PYTHON_RUNTIME=/path/to/python-runtime \
 > 平台合同：新 bundle 会写出 `bundle-manifest.json`，安装脚本会校验目标机 OS/CPU 是否匹配；请尽量在和目标机相同的 OS/CPU 环境打包。
 
 ## 二、离线安装（目标机器）
+
+如果机器上已经有旧版 `ai-sdlc`，并且你要覆盖当前 `PATH` 命中的旧入口，使用升级模式：
+
+### Linux/macOS 升级旧入口
+
+```bash
+tar xzf ai-sdlc-offline-<version>-<platform>.tar.gz
+cd ai-sdlc-offline-<version>-<platform>
+chmod +x install_offline.sh
+./install_offline.sh --upgrade-existing
+```
+
+### Windows 升级旧入口
+
+```powershell
+Expand-Archive -LiteralPath .\ai-sdlc-offline-<version>-windows-amd64.zip -DestinationPath .
+cd .\ai-sdlc-offline-<version>-windows-amd64
+powershell -ExecutionPolicy Bypass -File .\install_offline.ps1 -UpgradeExisting
+```
+
+升级模式会安装到当前 `ai-sdlc` 入口背后的运行环境，并在结束前校验版本和 `self-update` 子命令。如果无法安全覆盖旧入口，脚本会失败并输出明确原因。
+
+如果是全新安装，使用下面的默认模式。
 
 ### Linux/macOS
 
@@ -111,7 +135,7 @@ CLI 安装器与后续命令提示均会以中英双语输出以下信息：
 - 若当前手里没有 Windows 实机，可运行 GitHub Actions 工作流 [windows-offline-smoke.yml](/Users/sinclairpan/project/Ai_AutoSDLC/.github/workflows/windows-offline-smoke.yml) 获取 Windows 目标机安装证据；只有工作流成功并产出 artifact 后，才能把它记为 Windows smoke 证据
 - 上述 CI 工作流产出的是 Windows smoke 证据，不是正式对外交付的离线包来源；正式发布物仍应来自你认可的目标平台构建流程
 - 若希望由云端生成正式发布资产，可运行 GitHub Actions 工作流 [release-build.yml](/Users/sinclairpan/project/Ai_AutoSDLC/.github/workflows/release-build.yml)。该 workflow 在 Windows / macOS / Linux runner 上分别构建、安装 smoke，并把通过 smoke 的平台资产上传到既有 GitHub Release
-- 发布 `v0.7.6` 后，可运行 GitHub Actions 工作流 [release-artifact-smoke.yml](/Users/sinclairpan/project/Ai_AutoSDLC/.github/workflows/release-artifact-smoke.yml) 从 GitHub Release 下载正式 `.zip` / `.tar.gz` 资产并执行安装冒烟；该证据证明的是发布资产，而不是当前源码树临时构建产物
+- 发布 `v0.7.7` 后，可运行 GitHub Actions 工作流 [release-artifact-smoke.yml](/Users/sinclairpan/project/Ai_AutoSDLC/.github/workflows/release-artifact-smoke.yml) 从 GitHub Release 下载正式 `.zip` / `.tar.gz` 资产并执行安装冒烟；该证据证明的是发布资产，而不是当前源码树临时构建产物
 
 ## 四、脚本说明
 

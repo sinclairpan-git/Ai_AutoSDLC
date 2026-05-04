@@ -5,6 +5,7 @@ import sys
 import typer
 from rich.console import Console
 
+from ai_sdlc import __version__
 from ai_sdlc.cli.adapter_cmd import adapter_app
 from ai_sdlc.cli.cli_hooks import run_ide_adapter_if_initialized
 from ai_sdlc.cli.commands import (
@@ -38,9 +39,25 @@ app = typer.Typer(
 _hook_console = Console()
 
 
+def _version_callback(value: bool) -> None:
+    if value:
+        typer.echo(__version__)
+        raise typer.Exit()
+
+
 @app.callback()
-def _global_before_command(ctx: typer.Context) -> None:
+def _global_before_command(
+    ctx: typer.Context,
+    version: bool = typer.Option(
+        False,
+        "--version",
+        help="Show the installed AI-SDLC version and exit.",
+        callback=_version_callback,
+        is_eager=True,
+    ),
+) -> None:
     """First non-init command in an initialized project applies IDE adapter."""
+    _ = version
     if ctx.invoked_subcommand is None:
         return
     if (
