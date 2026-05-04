@@ -4,7 +4,7 @@
 #   ./packaging/install_online.sh
 #   ./packaging/install_online.sh /path/to/venv
 # Env:
-#   AI_SDLC_PACKAGE_SPEC=ai-sdlc==0.7.5   optional package spec for pip install
+#   AI_SDLC_PACKAGE_SPEC=ai-sdlc==0.7.6   optional package spec for pip install
 #   PYTHON=/path/to/python3.11            optional interpreter override
 
 set -euo pipefail

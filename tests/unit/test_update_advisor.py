@@ -52,7 +52,7 @@ def test_github_archive_installed_runtime_gets_actionable_notice(
     assert evaluation.channel_latest_version == "0.7.4"
     assert NOTICE_LIGHT in evaluation.eligible_notice_classes
     assert NOTICE_ACTIONABLE in evaluation.eligible_notice_classes
-    assert evaluation.upgrade_command == "ai-sdlc self-update install --version 0.7.4"
+    assert evaluation.upgrade_command == "ai-sdlc self-update check"
 
 
 def test_cache_path_sanitizes_runtime_identity_for_windows(monkeypatch, tmp_path) -> None:
@@ -64,16 +64,19 @@ def test_cache_path_sanitizes_runtime_identity_for_windows(monkeypatch, tmp_path
     assert ":" not in _cache_path(identity).name
 
 
-def test_unknown_channel_only_gets_light_notice(monkeypatch, tmp_path) -> None:
+def test_unknown_installed_channel_still_gets_actionable_update(
+    monkeypatch, tmp_path
+) -> None:
     _force_installed(monkeypatch, tmp_path, channel="unknown")
     monkeypatch.setenv("AI_SDLC_UPDATE_ADVISOR_TEST_LATEST_VERSION", "v0.7.4")
 
     evaluation = evaluate_update_advisor()
 
     assert evaluation.upstream_latest_version == "0.7.4"
-    assert evaluation.channel_latest_version is None
-    assert evaluation.eligible_notice_classes == (NOTICE_LIGHT,)
-    assert evaluation.upgrade_command is None
+    assert evaluation.channel_latest_version == "0.7.4"
+    assert NOTICE_LIGHT in evaluation.eligible_notice_classes
+    assert NOTICE_ACTIONABLE in evaluation.eligible_notice_classes
+    assert evaluation.upgrade_command == "ai-sdlc self-update check"
 
 
 def test_failure_backoff_prevents_repeated_refresh(monkeypatch, tmp_path) -> None:

@@ -375,7 +375,7 @@ def render_notice_lines(evaluation: UpdateEvaluation) -> list[str]:
             f"检测到 GitHub 上游新 release：AI-SDLC {latest}。",
             f"A newer upstream AI-SDLC release is available: {latest}.",
             f"查看发布 / Release: {release_url}",
-            "当前安装渠道未确认可自动升级；请使用你的安装渠道更新。",
+            "当前运行环境不支持 CLI 自动更新；请使用公司或项目提供的安装入口更新。",
         ]
     if evaluation.refresh_result in {REFRESH_NETWORK_ERROR, REFRESH_PARSE_ERROR, REFRESH_TIMEOUT}:
         return [
@@ -429,9 +429,7 @@ def _refresh_cache(
         latest = _normalize_version_label(tag)
         cache.upstream_latest_version = latest
         cache.release_url = _optional_str(raw.get("html_url") or raw.get("url"))
-        cache.channel_latest_version = (
-            latest if identity.install_channel == "github-archive" else None
-        )
+        cache.channel_latest_version = latest
         cache.last_success_checked_at = _iso(now)
         cache.last_check_status = REFRESH_SUCCESS
         cache.failure_count = 0
@@ -482,10 +480,9 @@ def _eligible_notice_classes(
 
 
 def _upgrade_command(identity: RuntimeIdentity, cache: UpdateCache) -> str | None:
-    if identity.install_channel != "github-archive" or not cache.channel_latest_version:
+    if not identity.installed_runtime or not cache.channel_latest_version:
         return None
-    version = _normalize_version_label(cache.channel_latest_version)
-    return f"ai-sdlc self-update install --version {version}"
+    return "ai-sdlc self-update check"
 
 
 def _evaluation_from_identity(

@@ -59,10 +59,10 @@ def test_self_update_evaluate_json_reports_actionable_github_archive(
     assert payload["channel_latest_version"] == "0.7.4"
     assert "light_upstream_release_notice" in payload["eligible_notice_classes"]
     assert "actionable_cli_update_notice" in payload["eligible_notice_classes"]
-    assert payload["upgrade_command"] == "ai-sdlc self-update install --version 0.7.4"
+    assert payload["upgrade_command"] == "ai-sdlc self-update check"
 
 
-def test_self_update_evaluate_unknown_channel_stays_light_notice(tmp_path) -> None:
+def test_self_update_evaluate_unknown_installed_channel_is_actionable(tmp_path) -> None:
     result = runner.invoke(
         app,
         ["self-update", "evaluate", "--json"],
@@ -71,9 +71,34 @@ def test_self_update_evaluate_unknown_channel_stays_light_notice(tmp_path) -> No
 
     assert result.exit_code == 0
     payload = json.loads(result.output)
-    assert payload["eligible_notice_classes"] == ["light_upstream_release_notice"]
-    assert payload["channel_latest_version"] is None
-    assert payload["upgrade_command"] is None
+    assert "light_upstream_release_notice" in payload["eligible_notice_classes"]
+    assert "actionable_cli_update_notice" in payload["eligible_notice_classes"]
+    assert payload["channel_latest_version"] == "0.7.4"
+    assert payload["upgrade_command"] == "ai-sdlc self-update check"
+
+
+def test_self_update_check_auto_installs_actionable_update(
+    tmp_path, monkeypatch
+) -> None:
+    calls: list[str] = []
+
+    def fake_install(*, version: str) -> None:
+        calls.append(version)
+
+    monkeypatch.setattr(self_update_cmd, "self_update_install", fake_install)
+
+    result = runner.invoke(
+        app,
+        ["self-update", "check"],
+        env=_env(tmp_path, channel="unknown"),
+    )
+
+    assert result.exit_code == 0
+    assert calls == ["0.7.4"]
+    assert "现在自动更新" in result.output
+    assert "Updating now" in result.output
+    assert "无需复制下一条命令" in result.output
+    assert "ai-sdlc self-update install --version" not in result.output
 
 
 def test_interactive_cli_renders_update_notice_once(tmp_path) -> None:
@@ -86,7 +111,7 @@ def test_interactive_cli_renders_update_notice_once(tmp_path) -> None:
     assert first.exit_code == 0
     assert "AI-SDLC Update Advisor" in first.output
     assert "自动下载、安装并校验版本" in first.output
-    assert "ai-sdlc self-update install --version 0.7.4" in first.output
+    assert "ai-sdlc self-update check" in first.output
     assert second.exit_code == 0
     assert "AI-SDLC Update Advisor" not in second.output
 
@@ -226,8 +251,8 @@ def test_self_update_instructions_are_user_result_oriented(tmp_path) -> None:
     assert "当前结果 / Result" in result.output
     assert "当前安装尚未变化" in result.output
     assert "下一步 / Next" in result.output
-    assert "ai-sdlc self-update install --version 0.7.4" in result.output
-    assert "自动下载、安装并校验版本" in result.output
+    assert "ai-sdlc self-update check" in result.output
+    assert "自动检查最新" in result.output
     assert "curl -L" not in result.output
     assert "install_offline" not in result.output
     assert "does not silently modify your install" not in result.output

@@ -4,13 +4,13 @@ AI-native SDLC automation framework — a Python CLI tool and rule file set for 
 
 ## Release And Current Source
 
-`v0.7.5` is the current staged framework release. This patch release aligns the published beginner docs, README, AGENTS guidance, and generated adapter templates around the single `init`-first setup path. It also adds release constraints so future changes cannot quietly drift back to the old manual `adapter status` plus `run --dry-run` onboarding chain.
+`v0.7.6` is the current staged framework release. This patch release fixes the self-update break exposed by older installed CLIs: `ai-sdlc self-update check` now performs the update directly when a newer GitHub Release is available, and installed runtimes with an unrecognized channel can still use the release asset updater instead of falling back to vague manual guidance.
 
-If you want the published release, install `v0.7.5`. If you are evaluating newer unreleased behavior beyond this tag, prefer the source-checkout path below.
+If you want the published release, install `v0.7.6`. If you are evaluating newer unreleased behavior beyond this tag, prefer the source-checkout path below.
 
-- Current release notes: `docs/releases/v0.7.5.md`
-- Windows offline bundle: `ai-sdlc-offline-0.7.5.zip`
-- macOS / Linux offline bundle: `ai-sdlc-offline-0.7.5.tar.gz`
+- Current release notes: `docs/releases/v0.7.6.md`
+- Windows offline bundle: `ai-sdlc-offline-0.7.6.zip`
+- macOS / Linux offline bundle: `ai-sdlc-offline-0.7.6.tar.gz`
 - Offline packaging details: `packaging/offline/README.md`
 - Offline Python runtime release checklist: `packaging/offline/RELEASE_CHECKLIST.md`
 - Windows CI smoke evidence: `.github/workflows/windows-offline-smoke.yml` uploads `windows-offline-smoke-evidence` with `install.log`, `help.txt`, `adapter-status.txt`, `run-dry-run.txt`, and `bundle-manifest.json`
@@ -39,12 +39,30 @@ Installed `ai-sdlc` runtimes include a non-blocking update advisor. During norma
 interactive CLI use it may check the latest stable GitHub Release, cache the
 result, and print a short notice when a newer framework release exists.
 
-When a newer GitHub Release is available, the advisor prints one update command.
-That command downloads, installs, and verifies the target version automatically:
+When a newer GitHub Release is available, run one command. It checks, downloads,
+installs, and verifies the target version automatically:
 
 ```bash
 ai-sdlc self-update check
-ai-sdlc self-update install --version 0.7.5
+```
+
+### Legacy Upgrade From Older CLIs
+
+Legacy installs that report `No such command 'install'` are older than the
+automatic updater. They cannot learn a missing subcommand from the new release
+until the package itself is replaced. Use the one-time rescue command for your
+shell, then use `ai-sdlc self-update check` for future updates.
+
+macOS / Linux, activated venv:
+
+```bash
+"$(dirname "$(command -v ai-sdlc)")/python" -m pip install --upgrade --force-reinstall "https://github.com/sinclairpan-git/Ai_AutoSDLC/archive/refs/tags/v0.7.6.tar.gz"
+```
+
+Windows PowerShell, activated venv:
+
+```powershell
+& (Join-Path (Split-Path (Get-Command ai-sdlc).Source) "python.exe") -m pip install --upgrade --force-reinstall "https://github.com/sinclairpan-git/Ai_AutoSDLC/archive/refs/tags/v0.7.6.zip"
 ```
 
 Source-checkout runs such as `uv run ai-sdlc ...`, `python -m ai_sdlc ...`, and
@@ -193,7 +211,7 @@ The file `.ai-sdlc/project/config/project-config.yaml` holds IDE detection metad
 
 ## Documentation
 
-- Current release notes: `docs/releases/v0.7.5.md`
+- Current release notes: `docs/releases/v0.7.6.md`
 - Chinese user guide: `USER_GUIDE.zh-CN.md` (start with the **目录**, then jump to Chapter 1 or Chapter 2)
 - Offline install bundle (build + one-command install): `packaging/offline/README.md`
 - Offline Python runtime release checklist: `packaging/offline/RELEASE_CHECKLIST.md`
