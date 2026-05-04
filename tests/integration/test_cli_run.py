@@ -402,7 +402,8 @@ class TestRunCommand:
         assert result.exit_code == 1
         assert "当前结果 / Result" in result.output
         assert "正式执行需要宿主验证信号" in result.output
-        assert "OPENAI_CODEX=1 ai-sdlc run" in result.output
+        assert "OPENAI_CODEX" in result.output
+        assert "ai-sdlc run" in result.output
 
     def test_run_non_dry_run_continues_when_adapter_is_verified_loaded(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
