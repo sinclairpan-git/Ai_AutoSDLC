@@ -108,38 +108,36 @@ AI-SDLC now also persists a project-level preferred command shell in `.ai-sdlc/p
 
 ## Frontend Managed Delivery Loop
 
-If your goal is the current governed frontend path from requirement to browser-gate closure, the minimum command loop is:
+If your goal is the current governed frontend path from requirement to browser-gate closure, the beginner command loop starts with one setup command:
 
 1. `python -m ai_sdlc init .`
 What it does: initializes `.ai-sdlc/`, asks only for the necessary AI-agent and shell choices, installs the adapter file, records project bootstrap state, and runs the safe rehearsal automatically.
 Next command: describe the requirement in chat.
 
-2. `python -m ai_sdlc run --dry-run`
-What it does: optional troubleshooting rehearsal if `init` reported an error or you need to rerun startup checks.
-Next command: `python -m ai_sdlc workitem init --title "<your capability>"`
+`python -m ai_sdlc run --dry-run` remains available as an optional troubleshooting rehearsal if `init` reports an error or you need to rerun startup checks. It is not a beginner-path setup step.
 
-3. `python -m ai_sdlc workitem init --title "<your capability>"`
+2. `python -m ai_sdlc workitem init --title "<your capability>"`
 What it does: creates `spec.md`, `plan.md`, `tasks.md`, and `task-execution-log.md` under `specs/<WI>/`. If `program-manifest.yaml` does not exist yet, the command now bootstraps a minimal manifest entry automatically.
 Next command: describe the requirement in chat, then confirm the frontend solution.
 
-4. `python -m ai_sdlc program solution-confirm --execute --yes`
+3. `python -m ai_sdlc program solution-confirm --execute --yes`
 What it does: freezes the requested/effective frontend stack, provider, component library, and style choice into `.ai-sdlc/memory/frontend-solution-confirmation/`.
 What it downloads: nothing yet.
 Next command: `python -m ai_sdlc program managed-delivery-apply --execute --yes`
 
-6. `python -m ai_sdlc program managed-delivery-apply --execute --yes`
+4. `python -m ai_sdlc program managed-delivery-apply --execute --yes`
 What it does: materializes the managed frontend scaffold under `managed/frontend/` and writes the latest apply artifact under `.ai-sdlc/memory/frontend-managed-delivery-apply/`.
 What it may download: component-library packages into `managed/frontend/package.json`, lockfile resolution into `managed/frontend/package-lock.json` or the active package-manager lockfile, package contents into the package-manager install location, and Playwright browser runtime when the selected delivery path requires browser-gate execution.
 Next command: `python -m ai_sdlc program browser-gate-probe --execute`
 
-7. `python -m ai_sdlc program browser-gate-probe --execute`
+5. `python -m ai_sdlc program browser-gate-probe --execute`
 What it does: runs the browser gate against the managed frontend entry, writes `.ai-sdlc/memory/frontend-browser-gate/latest.yaml`, and reports the next action based on gate state.
 What it may download: nothing by itself if runtime prerequisites already exist; otherwise the earlier apply step should already have installed the browser runtime.
 Next command:
 - If the output says the baseline is ready to materialize: `python -m ai_sdlc program browser-gate-baseline --execute --yes`
 - If the output says recheck is required: fix the runtime issue and rerun `python -m ai_sdlc program browser-gate-probe --execute`
 
-8. `python -m ai_sdlc program browser-gate-baseline --execute --yes`
+6. `python -m ai_sdlc program browser-gate-baseline --execute --yes`
 What it does: copies the latest visual-regression bootstrap capture into `governance/frontend/quality-platform/evidence/visual-regression/baselines/<matrix-id>/baseline.png` and writes the matching `baseline.yaml`.
 What it downloads: nothing.
 Next command: rerun `python -m ai_sdlc program browser-gate-probe --execute` to verify the gate passes against the newly promoted baseline.

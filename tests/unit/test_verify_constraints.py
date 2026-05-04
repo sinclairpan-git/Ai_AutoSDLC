@@ -1860,7 +1860,14 @@ def test_release_docs_consistency_blocks_when_release_entry_docs_drift(
     (mem / "constitution.md").write_text("# C\n", encoding="utf-8")
     _write_verification_profile_docs(tmp_path)
     (tmp_path / "README.md").write_text(
-        "# AI-SDLC\n\n`v0.7.4`\n\n- Windows offline bundle: `ai-sdlc-offline-0.7.4.zip`\n"
+        "# AI-SDLC\n\n`v0.7.4`\n\n"
+        "## Start The Framework\n\n"
+        "```bash\nai-sdlc init .\n```\n\n"
+        "`init` automatically runs the safe startup rehearsal, then tells you "
+        "to switch to the AI chat and prints one next command in Chinese and English.\n\n"
+        "`python -m ai_sdlc run --dry-run` remains available for troubleshooting. "
+        "It is not a beginner-path setup step.\n\n"
+        "- Windows offline bundle: `ai-sdlc-offline-0.7.4.zip`\n"
         "- macOS / Linux offline bundle: `ai-sdlc-offline-0.7.4.tar.gz`\n"
         "- Release notes: `docs/releases/v0.7.4.md`\n",
         encoding="utf-8",
@@ -1895,7 +1902,14 @@ def test_release_docs_consistency_passes_when_release_entry_docs_align(
     (mem / "constitution.md").write_text("# C\n", encoding="utf-8")
     _write_verification_profile_docs(tmp_path)
     (tmp_path / "README.md").write_text(
-        "# AI-SDLC\n\n`v0.7.4`\n\n- Windows offline bundle: `ai-sdlc-offline-0.7.4.zip`\n"
+        "# AI-SDLC\n\n`v0.7.4`\n\n"
+        "## Start The Framework\n\n"
+        "```bash\nai-sdlc init .\n```\n\n"
+        "`init` automatically runs the safe startup rehearsal, then tells you "
+        "to switch to the AI chat and prints one next command in Chinese and English.\n\n"
+        "`python -m ai_sdlc run --dry-run` remains available for troubleshooting. "
+        "It is not a beginner-path setup step.\n\n"
+        "- Windows offline bundle: `ai-sdlc-offline-0.7.4.zip`\n"
         "- macOS / Linux offline bundle: `ai-sdlc-offline-0.7.4.tar.gz`\n"
         "- Release notes: `docs/releases/v0.7.4.md`\n",
         encoding="utf-8",
@@ -1906,7 +1920,15 @@ def test_release_docs_consistency_passes_when_release_entry_docs_align(
         "# AI-SDLC v0.7.4 Release Notes\n\nWindows `.zip`\nmacOS / Linux `.tar.gz`\nrelease-build.yml\nrelease-artifact-smoke.yml\n",
         encoding="utf-8",
     )
-    (tmp_path / "USER_GUIDE.zh-CN.md").write_text("v0.7.4\nWindows\n.zip\nmacOS\nLinux\n.tar.gz\n", encoding="utf-8")
+    (tmp_path / "USER_GUIDE.zh-CN.md").write_text(
+        "v0.7.4\nWindows\n.zip\nmacOS\nLinux\n.tar.gz\n"
+        "第零点五章：从安装到首次使用的命令卡片\n"
+        "当前结果 / Result\n"
+        "下一步 / Next\n"
+        "不用再手动执行初始化命令\n"
+        "切换到 AI 对话\n",
+        encoding="utf-8",
+    )
     offline_dir = tmp_path / "packaging" / "offline"
     offline_dir.mkdir(parents=True, exist_ok=True)
     (offline_dir / "README.md").write_text("v0.7.4\nWindows\n.zip\nLinux/macOS\n.tar.gz\n", encoding="utf-8")
@@ -1925,6 +1947,209 @@ def test_release_docs_consistency_passes_when_release_entry_docs_align(
     )
 
     assert collect_constraint_blockers(tmp_path) == []
+
+
+def test_beginner_guide_blocks_old_manual_setup_path(tmp_path: Path) -> None:
+    mem = tmp_path / ".ai-sdlc" / "memory"
+    mem.mkdir(parents=True)
+    (mem / "constitution.md").write_text("# C\n", encoding="utf-8")
+    (tmp_path / "USER_GUIDE.zh-CN.md").write_text(
+        "# Renamed User Guide\n\n"
+        "## 第零点五章：从安装到首次使用的命令卡片\n\n"
+        "### 命令卡 1：确认 Python\n\n"
+        "### 命令卡 7：执行安全预演\n\n"
+        "至少要把 `init`、`adapter status`、`run --dry-run` 做完以后。\n",
+        encoding="utf-8",
+    )
+
+    blockers = collect_constraint_blockers(tmp_path)
+
+    assert any("beginner guide CLI path regressed" in x for x in blockers)
+
+
+def test_beginner_guide_accepts_single_init_next_action_path(tmp_path: Path) -> None:
+    mem = tmp_path / ".ai-sdlc" / "memory"
+    mem.mkdir(parents=True)
+    (mem / "constitution.md").write_text("# C\n", encoding="utf-8")
+    (tmp_path / "USER_GUIDE.zh-CN.md").write_text(
+        "# AI-SDLC 小白实操手册\n\n"
+        "## 第零点五章：从安装到首次使用的命令卡片\n\n"
+        "当前结果 / Result\n"
+        "下一步 / Next\n"
+        "不用再手动执行初始化命令\n"
+        "现在切换到 AI 对话中输入你的需求即可。\n",
+        encoding="utf-8",
+    )
+
+    blockers = collect_constraint_blockers(tmp_path)
+
+    assert not any("beginner guide CLI path" in x for x in blockers)
+
+
+def test_readme_blocks_old_manual_setup_path(tmp_path: Path) -> None:
+    mem = tmp_path / ".ai-sdlc" / "memory"
+    mem.mkdir(parents=True)
+    (mem / "constitution.md").write_text("# C\n", encoding="utf-8")
+    (tmp_path / "README.md").write_text(
+        "## Start The Framework\n\n"
+        "If your goal is the current governed frontend path, "
+        "the minimum command loop is:\n\n"
+        "1. `python -m ai_sdlc init .`\n"
+        "2. `python -m ai_sdlc run --dry-run`\n"
+        "Next command: `python -m ai_sdlc workitem init --title \"x\"`\n",
+        encoding="utf-8",
+    )
+
+    blockers = collect_constraint_blockers(tmp_path)
+
+    assert any("README CLI path regressed" in x for x in blockers)
+
+
+def test_readme_accepts_single_init_next_action_path(tmp_path: Path) -> None:
+    mem = tmp_path / ".ai-sdlc" / "memory"
+    mem.mkdir(parents=True)
+    (mem / "constitution.md").write_text("# C\n", encoding="utf-8")
+    (tmp_path / "README.md").write_text(
+        "## Start The Framework\n\n"
+        "```bash\n"
+        "ai-sdlc init .\n"
+        "```\n\n"
+        "`init` automatically runs the safe startup rehearsal, then tells you "
+        "to switch to the AI chat and prints one next command in Chinese and "
+        "English.\n\n"
+        "`python -m ai_sdlc run --dry-run` remains available for troubleshooting. "
+        "It is not a beginner-path setup step.\n",
+        encoding="utf-8",
+    )
+
+    blockers = collect_constraint_blockers(tmp_path)
+
+    assert not any("README CLI path" in x for x in blockers)
+
+
+def test_agent_instructions_block_old_manual_startup_path(tmp_path: Path) -> None:
+    mem = tmp_path / ".ai-sdlc" / "memory"
+    mem.mkdir(parents=True)
+    (mem / "constitution.md").write_text("# C\n", encoding="utf-8")
+    template = tmp_path / "src" / "ai_sdlc" / "adapters" / "codex" / "AI-SDLC.md"
+    template.parent.mkdir(parents=True)
+    template.write_text(
+        "- 初始化入口（普通用户先执行）：`ai-sdlc init .`\n"
+        "- `init` 会自动执行必要检查与安全预演。\n"
+        "- 排查入口（仅当 CLI 明确要求时执行）：`ai-sdlc adapter status`\n"
+        "如果 `init` 已完成，不要再要求用户手动执行 `adapter status` 或 `run --dry-run`。\n",
+        encoding="utf-8",
+    )
+    (tmp_path / "AGENTS.md").write_text(
+        "- 先检查接入真值：`ai-sdlc adapter status`\n"
+        "- 启动入口（先执行）：`ai-sdlc run --dry-run`\n"
+        "当用户输入需求时，优先引导并先执行上述启动入口。\n",
+        encoding="utf-8",
+    )
+
+    blockers = collect_constraint_blockers(tmp_path)
+
+    assert any("AGENTS.md CLI path regressed" in x for x in blockers)
+
+
+def test_agent_instructions_do_not_block_custom_project_agents(
+    tmp_path: Path,
+) -> None:
+    mem = tmp_path / ".ai-sdlc" / "memory"
+    mem.mkdir(parents=True)
+    (mem / "constitution.md").write_text("# C\n", encoding="utf-8")
+    (tmp_path / "AGENTS.md").write_text(
+        "# Custom project instructions\n\n"
+        "This project keeps hand-written agent guidance.\n",
+        encoding="utf-8",
+    )
+
+    blockers = collect_constraint_blockers(tmp_path)
+
+    assert not any("AGENTS.md CLI path" in x for x in blockers)
+
+
+def test_agent_instructions_block_missing_agents_in_framework_source(
+    tmp_path: Path,
+) -> None:
+    mem = tmp_path / ".ai-sdlc" / "memory"
+    mem.mkdir(parents=True)
+    (mem / "constitution.md").write_text("# C\n", encoding="utf-8")
+    template = tmp_path / "src" / "ai_sdlc" / "adapters" / "codex" / "AI-SDLC.md"
+    template.parent.mkdir(parents=True)
+    template.write_text(
+        "- 初始化入口（普通用户先执行）：`ai-sdlc init .`\n"
+        "- `init` 会自动执行必要检查与安全预演。\n"
+        "- 排查入口（仅当 CLI 明确要求时执行）：`ai-sdlc adapter status`\n"
+        "如果 `init` 已完成，不要再要求用户手动执行 `adapter status` 或 `run --dry-run`。\n",
+        encoding="utf-8",
+    )
+
+    blockers = collect_constraint_blockers(tmp_path)
+
+    assert any("AGENTS.md CLI path missing" in x for x in blockers)
+
+
+def test_agent_instructions_accept_current_init_first_path(tmp_path: Path) -> None:
+    mem = tmp_path / ".ai-sdlc" / "memory"
+    mem.mkdir(parents=True)
+    (mem / "constitution.md").write_text("# C\n", encoding="utf-8")
+    template = tmp_path / "src" / "ai_sdlc" / "adapters" / "codex" / "AI-SDLC.md"
+    template.parent.mkdir(parents=True)
+    template.write_text(
+        "- 初始化入口（普通用户先执行）：`ai-sdlc init .`\n"
+        "- `init` 会自动执行必要检查与安全预演。\n"
+        "- 排查入口（仅当 CLI 明确要求时执行）：`ai-sdlc adapter status`\n"
+        "如果 `init` 已完成，不要再要求用户手动执行 `adapter status` 或 `run --dry-run`。\n",
+        encoding="utf-8",
+    )
+    (tmp_path / "AGENTS.md").write_text(
+        "- 初始化入口（普通用户先执行）：`ai-sdlc init .`\n"
+        "- `init` 会自动执行必要检查与安全预演。\n"
+        "- 排查入口（仅当 CLI 明确要求时执行）：`ai-sdlc adapter status`\n"
+        "如果 `init` 已完成，不要再要求用户手动执行 `adapter status` 或 `run --dry-run`。\n",
+        encoding="utf-8",
+    )
+
+    blockers = collect_constraint_blockers(tmp_path)
+
+    assert not any("AGENTS.md CLI path" in x for x in blockers)
+
+
+def test_adapter_template_blocks_old_manual_startup_path(tmp_path: Path) -> None:
+    mem = tmp_path / ".ai-sdlc" / "memory"
+    mem.mkdir(parents=True)
+    (mem / "constitution.md").write_text("# C\n", encoding="utf-8")
+    template = tmp_path / "src" / "ai_sdlc" / "adapters" / "codex" / "AI-SDLC.md"
+    template.parent.mkdir(parents=True)
+    template.write_text(
+        "- 先检查接入真值：`ai-sdlc adapter status`\n"
+        "- 启动入口（先执行）：`ai-sdlc run --dry-run`\n",
+        encoding="utf-8",
+    )
+
+    blockers = collect_constraint_blockers(tmp_path)
+
+    assert any("adapter template CLI path regressed" in x for x in blockers)
+
+
+def test_adapter_template_accepts_current_init_first_path(tmp_path: Path) -> None:
+    mem = tmp_path / ".ai-sdlc" / "memory"
+    mem.mkdir(parents=True)
+    (mem / "constitution.md").write_text("# C\n", encoding="utf-8")
+    template = tmp_path / "src" / "ai_sdlc" / "adapters" / "codex" / "AI-SDLC.md"
+    template.parent.mkdir(parents=True)
+    template.write_text(
+        "- 初始化入口（普通用户先执行）：`ai-sdlc init .`\n"
+        "- `init` 会自动执行必要检查与安全预演。\n"
+        "- 排查入口（仅当 CLI 明确要求时执行）：`ai-sdlc adapter status`\n"
+        "如果 `init` 已完成，不要再要求用户手动执行 `adapter status` 或 `run --dry-run`。\n",
+        encoding="utf-8",
+    )
+
+    blockers = collect_constraint_blockers(tmp_path)
+
+    assert not any("adapter template CLI path" in x for x in blockers)
 
 
 def test_reconcile_smoke_contract_blocks_when_workflow_is_not_synced(
