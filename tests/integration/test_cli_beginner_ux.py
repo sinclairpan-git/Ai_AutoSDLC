@@ -73,3 +73,21 @@ def test_adapter_status_default_is_beginner_safe_but_json_keeps_truth(
     assert machine.exit_code == 0
     assert "governance_activation_state" in machine.output
     assert "adapter_canonical_content_digest" in machine.output
+
+
+def test_adapter_status_generic_recovery_does_not_reselect_generic(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    assert (
+        runner.invoke(app, ["init", str(tmp_path), "--agent-target", "generic"]).exit_code
+        == 0
+    )
+
+    monkeypatch.chdir(tmp_path)
+
+    status = runner.invoke(app, ["adapter", "status"])
+
+    assert status.exit_code == 0
+    assert "ai-sdlc adapter select" in status.output
+    assert "--agent-target generic" not in status.output

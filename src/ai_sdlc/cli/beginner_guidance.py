@@ -105,10 +105,13 @@ def render_adapter_status_for_beginner(payload: dict[str, object]) -> str:
             next_zh="继续安全预演；预演会检查初始化路径，但不会真正执行开发改动。",
             next_en="Continue with the safe rehearsal; it checks startup flow without making development changes.",
         )
+    select_command = "ai-sdlc adapter select"
+    if target in _VERIFICATION_ENV_FOR_TARGET:
+        select_command = f"{select_command} --agent-target {target}"
     return render_single_next_step(
         result_zh=result_zh,
         result_en=result_en,
-        next_command=f"ai-sdlc adapter select --agent-target {target}",
+        next_command=select_command,
         next_zh="重新选择实际用于聊天开发的 AI 入口，然后再运行安全预演。",
         next_en="Select the AI entry you actually use for chat development, then run the safe rehearsal.",
     )
