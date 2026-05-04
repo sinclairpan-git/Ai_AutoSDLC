@@ -4,13 +4,13 @@ AI-native SDLC automation framework — a Python CLI tool and rule file set for 
 
 ## Release And Current Source
 
-`v0.7.4` is the current staged framework release. This patch release turns the update flow into an automatic install path: the update command downloads, installs, and verifies the requested release instead of printing manual asset commands. It also keeps the beginner-safe CLI onboarding from `v0.7.3`.
+`v0.7.5` is the current staged framework release. This patch release aligns the published beginner docs, README, AGENTS guidance, and generated adapter templates around the single `init`-first setup path. It also adds release constraints so future changes cannot quietly drift back to the old manual `adapter status` plus `run --dry-run` onboarding chain.
 
-If you want the published release, install `v0.7.4`. If you are evaluating newer unreleased behavior beyond this tag, prefer the source-checkout path below.
+If you want the published release, install `v0.7.5`. If you are evaluating newer unreleased behavior beyond this tag, prefer the source-checkout path below.
 
-- Current release notes: `docs/releases/v0.7.4.md`
-- Windows offline bundle: `ai-sdlc-offline-0.7.4.zip`
-- macOS / Linux offline bundle: `ai-sdlc-offline-0.7.4.tar.gz`
+- Current release notes: `docs/releases/v0.7.5.md`
+- Windows offline bundle: `ai-sdlc-offline-0.7.5.zip`
+- macOS / Linux offline bundle: `ai-sdlc-offline-0.7.5.tar.gz`
 - Offline packaging details: `packaging/offline/README.md`
 - Offline Python runtime release checklist: `packaging/offline/RELEASE_CHECKLIST.md`
 - Windows CI smoke evidence: `.github/workflows/windows-offline-smoke.yml` uploads `windows-offline-smoke-evidence` with `install.log`, `help.txt`, `adapter-status.txt`, `run-dry-run.txt`, and `bundle-manifest.json`
@@ -44,7 +44,7 @@ That command downloads, installs, and verifies the target version automatically:
 
 ```bash
 ai-sdlc self-update check
-ai-sdlc self-update install --version 0.7.4
+ai-sdlc self-update install --version 0.7.5
 ```
 
 Source-checkout runs such as `uv run ai-sdlc ...`, `python -m ai_sdlc ...`, and
@@ -193,7 +193,7 @@ The file `.ai-sdlc/project/config/project-config.yaml` holds IDE detection metad
 
 ## Documentation
 
-- Current release notes: `docs/releases/v0.7.4.md`
+- Current release notes: `docs/releases/v0.7.5.md`
 - Chinese user guide: `USER_GUIDE.zh-CN.md` (start with the **目录**, then jump to Chapter 1 or Chapter 2)
 - Offline install bundle (build + one-command install): `packaging/offline/README.md`
 - Offline Python runtime release checklist: `packaging/offline/RELEASE_CHECKLIST.md`
