@@ -39,12 +39,12 @@ Installed `ai-sdlc` runtimes include a non-blocking update advisor. During norma
 interactive CLI use it may check the latest stable GitHub Release, cache the
 result, and print a short notice when a newer framework release exists.
 
-The advisor does **not** silently upgrade the framework. Use the explicit helper
-commands when you want to inspect or act on the result:
+When a newer GitHub Release is available, the advisor prints one update command.
+That command downloads, installs, and verifies the target version automatically:
 
 ```bash
 ai-sdlc self-update check
-ai-sdlc self-update instructions --version 0.7.3
+ai-sdlc self-update install --version 0.7.3
 ```
 
 Source-checkout runs such as `uv run ai-sdlc ...`, `python -m ai_sdlc ...`, and
@@ -111,22 +111,18 @@ AI-SDLC now also persists a project-level preferred command shell in `.ai-sdlc/p
 If your goal is the current governed frontend path from requirement to browser-gate closure, the minimum command loop is:
 
 1. `python -m ai_sdlc init .`
-What it does: initializes `.ai-sdlc/`, installs the canonical adapter file for the selected host, and records project bootstrap state.
-Next command: `python -m ai_sdlc adapter status`
+What it does: initializes `.ai-sdlc/`, asks only for the necessary AI-agent and shell choices, installs the adapter file, records project bootstrap state, and runs the safe rehearsal automatically.
+Next command: describe the requirement in chat.
 
-2. `python -m ai_sdlc adapter status`
-What it does: shows the detected `agent_target`, ingress truth, and whether the adapter is only materialized or already `verified_loaded`.
-Next command: `python -m ai_sdlc run --dry-run`
-
-3. `python -m ai_sdlc run --dry-run`
-What it does: performs a safe rehearsal of the pipeline and gates. This does not generate product code and does not itself prove governance activation.
+2. `python -m ai_sdlc run --dry-run`
+What it does: optional troubleshooting rehearsal if `init` reported an error or you need to rerun startup checks.
 Next command: `python -m ai_sdlc workitem init --title "<your capability>"`
 
-4. `python -m ai_sdlc workitem init --title "<your capability>"`
+3. `python -m ai_sdlc workitem init --title "<your capability>"`
 What it does: creates `spec.md`, `plan.md`, `tasks.md`, and `task-execution-log.md` under `specs/<WI>/`. If `program-manifest.yaml` does not exist yet, the command now bootstraps a minimal manifest entry automatically.
 Next command: describe the requirement in chat, then confirm the frontend solution.
 
-5. `python -m ai_sdlc program solution-confirm --execute --yes`
+4. `python -m ai_sdlc program solution-confirm --execute --yes`
 What it does: freezes the requested/effective frontend stack, provider, component library, and style choice into `.ai-sdlc/memory/frontend-solution-confirmation/`.
 What it downloads: nothing yet.
 Next command: `python -m ai_sdlc program managed-delivery-apply --execute --yes`

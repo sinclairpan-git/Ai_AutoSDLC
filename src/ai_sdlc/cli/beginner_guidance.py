@@ -49,6 +49,30 @@ def render_single_next_step(
     return "\n".join(lines)
 
 
+def render_project_required_guidance(command: str = "ai-sdlc init .") -> str:
+    """Render a consistent message for commands run outside a project."""
+
+    return render_single_next_step(
+        result_zh="未找到 AI-SDLC 项目配置；当前目录还没有初始化。",
+        result_en="No AI-SDLC project configuration was found in this directory.",
+        next_command=command,
+        next_zh="请先进入业务项目根目录并初始化；如果已经初始化，请切换到包含 .ai-sdlc/ 的目录再重试。",
+        next_en="Go to the project root and initialize first; if it is already initialized, switch to the directory that contains .ai-sdlc/ and retry.",
+    )
+
+
+def render_command_missing_guidance(example: str) -> str:
+    """Render a consistent message for wrapper commands missing child command."""
+
+    return render_single_next_step(
+        result_zh="命令不完整：`--` 后面缺少要执行的子命令。",
+        result_en="The command is incomplete: no child command was provided after `--`.",
+        next_command=example,
+        next_zh="把要执行的真实命令放在 `--` 后面。",
+        next_en="Put the real command to run after `--`.",
+    )
+
+
 def _verified_run_command(payload: dict[str, object]) -> str | None:
     target = str(payload.get("agent_target") or "").strip().lower()
     key = _VERIFICATION_ENV_FOR_TARGET.get(target)

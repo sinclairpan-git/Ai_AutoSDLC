@@ -329,7 +329,9 @@ class TestCliAdapter:
         result = runner.invoke(app, ["adapter", "exec"])
 
         assert result.exit_code == 2
-        assert "A command is required after '--'." in result.output
+        assert "当前结果 / Result" in result.output
+        assert "no child command was provided after `--`" in result.output
+        assert "ai-sdlc adapter exec -- ai-sdlc --help" in result.output
 
     def test_adapter_exec_injects_canonical_proof_for_child_command(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch

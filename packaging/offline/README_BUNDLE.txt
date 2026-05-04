@@ -33,14 +33,11 @@ Windows 安装:
     powershell -ExecutionPolicy Bypass -File .\install_offline.ps1 -PythonExe "py -3.11" -VenvPath ".venv"
 
 安装后:
-  当前状态 / Current status
-    离线安装完成
-    Offline installation completed
+  当前结果 / Result
+    离线安装完成。安装脚本已创建运行环境并安装 AI-SDLC。
+    Offline installation completed. The installer created the runtime and installed AI-SDLC.
 
-  下一步命令 / Next command
-    ai-sdlc adapter status
-    ai-sdlc run --dry-run
-
-  命令作用 / What this command does
-    先检查 adapter 接入真值，再执行安全预演。
-    First inspect adapter ingress truth, then run the safe startup rehearsal.
+  下一步 / Next
+    ai-sdlc init .
+    进入你的项目后执行初始化；init 会自动完成必要检查和安全预演。
+    Enter your project and initialize it; init will automatically run the required checks and safe rehearsal.
