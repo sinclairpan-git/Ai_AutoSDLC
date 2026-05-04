@@ -8,6 +8,13 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 
+_VERIFICATION_ENV_FOR_TARGET = {
+    "codex": "OPENAI_CODEX",
+    "cursor": "CURSOR_AGENT",
+    "vscode": "VSCODE_IPC_HOOK_CLI",
+    "claude_code": "CLAUDE_CODE_ENTRYPOINT",
+}
+
 
 def render_single_next_step(
     *,
@@ -40,6 +47,19 @@ def render_single_next_step(
             lines.append(f"  {en}")
 
     return "\n".join(lines)
+
+
+def _verified_run_command(payload: dict[str, object]) -> str:
+    target = str(payload.get("agent_target") or "").strip().lower()
+    key = _VERIFICATION_ENV_FOR_TARGET.get(target, "AI_SDLC_ADAPTER_VERIFIED")
+    shell = str(
+        payload.get("preferred_shell") or payload.get("preferred_shell_recommended") or ""
+    ).strip().lower()
+    if shell == "powershell":
+        return f"$env:{key}='1'; ai-sdlc run"
+    if shell == "cmd":
+        return f"set {key}=1 && ai-sdlc run"
+    return f"{key}=1 ai-sdlc run"
 
 
 def adapter_result_text(payload: dict[str, object]) -> tuple[str, str]:
@@ -89,6 +109,19 @@ def render_adapter_status_for_beginner(payload: dict[str, object]) -> str:
         next_command=f"ai-sdlc adapter select --agent-target {target}",
         next_zh="重新选择实际用于聊天开发的 AI 入口，然后再运行安全预演。",
         next_en="Select the AI entry you actually use for chat development, then run the safe rehearsal.",
+    )
+
+
+def render_mutating_run_blocker(payload: dict[str, object]) -> str:
+    """Render a run-unblocking command for mutating runs."""
+
+    result_zh, result_en = adapter_result_text(payload)
+    return render_single_next_step(
+        result_zh=result_zh,
+        result_en=result_en,
+        next_command=_verified_run_command(payload),
+        next_zh="正式执行需要宿主验证信号。请在实际 AI 工具终端中重新运行，或在当前 shell 用上面的命令带上验证信号后再运行。",
+        next_en="A mutating run needs host verification. Run it from the actual AI-tool terminal, or use the command above to pass the verification signal in this shell.",
     )
 
 

@@ -12,6 +12,7 @@ from ai_sdlc.cli.beginner_guidance import (
     adapter_result_text,
     render_dry_run_open_gate_guidance,
     render_dry_run_pass_guidance,
+    render_mutating_run_blocker,
     render_single_next_step,
 )
 from ai_sdlc.cli.commands import _print_reconcile_guidance
@@ -90,14 +91,7 @@ def _adapter_gate_message(root: object, *, dry_run: bool) -> str | None:
             next_zh="本次 dry-run 会自动继续执行；你不需要先手动理解这些内部验证状态。",
             next_en="This dry-run will continue automatically; you do not need to interpret internal verification states first.",
         )
-    target = str(payload.get("agent_target") or "codex")
-    return render_single_next_step(
-        result_zh=result_zh,
-        result_en=result_en,
-        next_command=f"ai-sdlc adapter select --agent-target {target}",
-        next_zh="正式执行前先确认 AI 入口；确认后再运行完整流水线。",
-        next_en="Confirm the AI entry before a mutating run, then run the full pipeline.",
-    )
+    return render_mutating_run_blocker(payload)
 
 
 def _confirm_callback(stage: str, _result: Any) -> bool:
