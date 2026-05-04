@@ -126,6 +126,10 @@ def _failed_gate_messages_for_init(result: GateResult | None) -> list[str]:
     return messages
 
 
+class InitSafeRehearsalError(RuntimeError):
+    """Raised when init's automatic dry-run crashes instead of reaching gates."""
+
+
 def _run_init_safe_rehearsal(root: Path) -> tuple[bool, list[str]]:
     """Run the same dry-run startup check that users previously ran manually."""
 
@@ -140,12 +144,34 @@ def _run_init_safe_rehearsal(root: Path) -> tuple[bool, list[str]]:
     except PipelineHaltError as exc:
         return False, [str(exc)]
     except Exception as exc:  # pragma: no cover - defensive CLI boundary
-        return False, [f"dry-run failed: {exc}"]
+        raise InitSafeRehearsalError(str(exc)) from exc
 
     if last_result is None:
-        return False, ["dry-run did not report a final gate result"]
+        raise InitSafeRehearsalError("dry-run did not report a final gate result")
     verdict = str(getattr(last_result.verdict, "value", last_result.verdict)).upper()
     return verdict == "PASS", _failed_gate_messages_for_init(last_result)
+
+
+def _run_init_safe_rehearsal_or_exit(root: Path) -> tuple[bool, list[str]]:
+    try:
+        return _run_init_safe_rehearsal(root)
+    except InitSafeRehearsalError as exc:
+        console.print(
+            Panel(
+                "[bold]当前结果 / Result[/bold]\n"
+                "  初始化未完成：自动安全预演运行失败。\n"
+                "  Initialization is not complete: the automatic safe rehearsal failed.\n\n"
+                "[bold]下一步 / Next[/bold]\n"
+                "  [cyan]ai-sdlc doctor[/cyan]\n"
+                "  先检查本机运行环境；修复错误后重新执行 init。\n"
+                "  Check the local runtime first; rerun init after fixing the error.\n\n"
+                "[bold]错误 / Error[/bold]\n"
+                f"  {exc}",
+                title="ai-sdlc init",
+                border_style="red",
+            )
+        )
+        raise typer.Exit(code=1) from exc
 
 
 def _is_interactive_terminal() -> bool:
@@ -780,7 +806,7 @@ def init_command(
             root,
             detected_ide=detect_ide(root),
         )
-        dry_run_passed, open_reasons = _run_init_safe_rehearsal(root)
+        dry_run_passed, open_reasons = _run_init_safe_rehearsal_or_exit(root)
         console.print(
             Panel(
                 f"Project already initialized at [bold]{root}[/bold]"
@@ -868,7 +894,7 @@ def init_command(
         root,
         detected_ide=detect_ide(root),
     )
-    dry_run_passed, open_reasons = _run_init_safe_rehearsal(root)
+    dry_run_passed, open_reasons = _run_init_safe_rehearsal_or_exit(root)
     info += "\n\n" + render_init_complete_guidance(
         adapter_payload=adapter_payload,
         dry_run_passed=dry_run_passed,

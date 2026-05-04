@@ -7,6 +7,7 @@ from pathlib import Path
 import pytest
 from typer.testing import CliRunner
 
+from ai_sdlc.cli import commands
 from ai_sdlc.cli.main import app
 from ai_sdlc.core.config import load_project_config
 from ai_sdlc.integrations.agent_target import PreferredShell
@@ -50,6 +51,24 @@ class TestCliInit:
         assert "ai-sdlc adapter activate" not in result.output
         cfg = load_project_config(tmp_path)
         assert cfg.preferred_shell != ""
+
+    def test_init_fails_when_automatic_dry_run_crashes(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        def crash_dry_run(*_args: object, **_kwargs: object) -> None:
+            raise RuntimeError("runtime exploded")
+
+        monkeypatch.setattr(commands.SDLCRunner, "run", crash_dry_run)
+
+        result = runner.invoke(app, ["init", str(tmp_path)])
+
+        assert result.exit_code == 1
+        assert "初始化未完成" in result.output
+        assert "Initialization is not complete" in result.output
+        assert "ai-sdlc doctor" in result.output
+        assert "runtime exploded" in result.output
+        assert "初始化完成" not in result.output
+        assert "Initialization complete" not in result.output
 
     def test_init_already_initialized(self, initialized_project_dir: Path) -> None:
         result = runner.invoke(app, ["init", str(initialized_project_dir)])
