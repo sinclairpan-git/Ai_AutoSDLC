@@ -8,6 +8,7 @@ from pathlib import Path
 import typer
 from rich.console import Console
 
+from ai_sdlc.cli.beginner_guidance import render_single_next_step
 from ai_sdlc.cli.status_guidance import render_status_guidance
 from ai_sdlc.core.host_runtime_manager import evaluate_current_host_runtime
 from ai_sdlc.models.host_runtime_plan import HostRuntimePlan
@@ -39,7 +40,14 @@ def _resolve_root() -> Path:
 
 
 @host_runtime_app.command("plan")
-def host_runtime_plan(as_json: bool = typer.Option(False, "--json", help="Machine-readable plan.")) -> None:
+def host_runtime_plan(
+    as_json: bool = typer.Option(False, "--json", help="Machine-readable plan."),
+    details: bool = typer.Option(
+        False,
+        "--details",
+        help="Show the full diagnostic plan for framework developers.",
+    ),
+) -> None:
     """Print the bounded host runtime plan for the current project host."""
 
     root = _resolve_root()
@@ -47,8 +55,10 @@ def host_runtime_plan(as_json: bool = typer.Option(False, "--json", help="Machin
 
     if as_json:
         typer.echo(json.dumps(plan.model_dump(mode="json"), indent=2, ensure_ascii=False))
-    else:
+    elif details:
         _print_plan(plan)
+    else:
+        console.print(_host_runtime_beginner_guidance(plan))
 
     raise typer.Exit(code=_exit_code_for_status(plan.status))
 
@@ -135,3 +145,33 @@ def _exit_code_for_status(status: str) -> int:
     if status in {"ready", "remediation_required"}:
         return 0
     return 1
+
+
+def _host_runtime_beginner_guidance(plan: HostRuntimePlan) -> str:
+    if plan.status == "ready":
+        return render_single_next_step(
+            result_zh="正常：运行环境已就绪。你不需要手动检查 Python 或安装额外依赖。",
+            result_en="OK: the runtime is ready. You do not need to manually check Python or install extra dependencies.",
+            next_command="ai-sdlc run --dry-run",
+            next_zh="继续安全预演，确认项目初始化路径正常。",
+            next_en="Continue with the safe rehearsal to confirm the project startup path.",
+        )
+    if plan.status == "remediation_required":
+        missing_entries = getattr(plan, "missing_runtime_entries", None)
+        if missing_entries is None and plan.remediation_fragment is not None:
+            missing_entries = plan.remediation_fragment.will_install
+        missing = ", ".join(_dedupe_text_items(list(missing_entries or [])))
+        return render_single_next_step(
+            result_zh=f"基础运行环境可用；仍缺少 {missing or '附加运行时'}。框架会把这些依赖放在托管运行时目录中处理，不要求你手动改系统环境。",
+            result_en=f"The base runtime is usable; {missing or 'supporting runtime entries'} are still missing. The framework handles these in the managed runtime area instead of asking you to change the system environment manually.",
+            next_command="ai-sdlc run --dry-run",
+            next_zh="先继续安全预演；真正需要附加依赖的阶段会给出自动化处理路径。",
+            next_en="Continue with the safe rehearsal; stages that need extra dependencies will provide an automated handling path.",
+        )
+    return render_single_next_step(
+        result_zh="运行环境还不能直接启动。请使用 AI-SDLC 官方安装器或离线包完成框架运行时安装，不要手动拼装 Python/Node 环境。",
+        result_en="The runtime cannot start directly yet. Use the official AI-SDLC installer or offline bundle to prepare the framework runtime instead of assembling Python/Node manually.",
+        next_command="ai-sdlc host-runtime plan --details",
+        next_zh="查看诊断详情；安装器/离线包应负责后续运行时准备。",
+        next_en="Inspect diagnostic details; the installer/offline bundle should own runtime preparation.",
+    )

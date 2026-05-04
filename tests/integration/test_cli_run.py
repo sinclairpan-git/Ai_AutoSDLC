@@ -159,7 +159,8 @@ class TestRunCommand:
         (tmp_path / ".codex").mkdir()
         result = runner.invoke(app, ["run", "--dry-run"])
         assert result.exit_code == 0
-        assert "not yet verified_loaded" in result.output
+        assert "当前结果 / Result" in result.output
+        assert "本次 dry-run 会自动继续执行" in result.output
         doc = tmp_path / "AGENTS.md"
         assert doc.is_file()
 
@@ -399,8 +400,8 @@ class TestRunCommand:
         result = runner.invoke(app, ["run"])
 
         assert result.exit_code == 1
-        assert "verified_loaded" in result.output
-        assert "ai-sdlc adapter status" in result.output
+        assert "当前结果 / Result" in result.output
+        assert "正式执行前先确认 AI 入口" in result.output
 
     def test_run_non_dry_run_continues_when_adapter_is_verified_loaded(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch

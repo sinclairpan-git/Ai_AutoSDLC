@@ -8,8 +8,13 @@ import typer
 from rich.console import Console
 from rich.panel import Panel
 
+from ai_sdlc.cli.beginner_guidance import (
+    adapter_result_text,
+    render_dry_run_open_gate_guidance,
+    render_dry_run_pass_guidance,
+    render_single_next_step,
+)
 from ai_sdlc.cli.commands import _print_reconcile_guidance
-from ai_sdlc.cli.status_guidance import render_status_guidance
 from ai_sdlc.core.frontend_contract_runtime_attachment import (
     build_frontend_contract_runtime_attachment,
     is_frontend_contract_runtime_attachment_work_item,
@@ -18,7 +23,6 @@ from ai_sdlc.core.reconcile import detect_reconcile_hint
 from ai_sdlc.core.runner import PipelineHaltError, SDLCRunner
 from ai_sdlc.integrations.ide_adapter import (
     build_adapter_governance_surface,
-    verification_env_hint,
 )
 from ai_sdlc.models.state import Checkpoint
 from ai_sdlc.utils.helpers import find_project_root
@@ -77,51 +81,23 @@ def _adapter_gate_message(root: object, *, dry_run: bool) -> str | None:
     payload = build_adapter_governance_surface(root)
     if payload["adapter_ingress_state"] == "verified_loaded":
         return None
-    hint = verification_env_hint(payload.get("agent_target"))
-    guidance = render_status_guidance(
-        current_status_zh=(
-            f"adapter 接入真值尚未验证；当前为 {payload['adapter_ingress_state']} "
-            f"({payload['adapter_verification_result']})。"
-        ),
-        current_status_en=(
-            f"Adapter ingress truth is not yet verified. Current state: "
-            f"{payload['adapter_ingress_state']} ({payload['adapter_verification_result']})."
-        ),
-        next_steps=(
-            (
-                "ai-sdlc adapter status",
-                "检查接入真值、验证结果和治理状态。",
-                "Inspect adapter ingress truth, verification result, and governance state.",
-            ),
-            (
-                "ai-sdlc run --dry-run",
-                "执行安全预演；可继续校验阶段门禁，但不构成治理激活证明。",
-                "Run the safe rehearsal; it can validate stage gates, but it does not prove governance activation.",
-            ),
-        ),
-    )
+    result_zh, result_en = adapter_result_text(payload)
     if dry_run:
-        message = (
-            f"Adapter target '{payload['agent_target']}' is not yet verified_loaded.\n"
-            f"Current ingress state: {payload['adapter_ingress_state']} "
-            f"({payload['adapter_verification_result']}).\n"
-            "Dry-run may continue, but this is not verified host ingress.\n"
-            "Inspect `ai-sdlc adapter status` before mutating runs.\n\n"
-            f"{guidance}"
+        return render_single_next_step(
+            result_zh=result_zh,
+            result_en=result_en,
+            next_command=None,
+            next_zh="本次 dry-run 会自动继续执行；你不需要先手动理解这些内部验证状态。",
+            next_en="This dry-run will continue automatically; you do not need to interpret internal verification states first.",
         )
-        if hint:
-            message += f"\n{hint}"
-        return message
-    message = (
-        f"Adapter target '{payload['agent_target']}' has not reached verified_loaded.\n"
-        f"Current ingress state: {payload['adapter_ingress_state']} "
-        f"({payload['adapter_verification_result']}).\n"
-        "Inspect `ai-sdlc adapter status` and continue only after host ingress is verified.\n\n"
-        f"{guidance}"
+    target = str(payload.get("agent_target") or "codex")
+    return render_single_next_step(
+        result_zh=result_zh,
+        result_en=result_en,
+        next_command=f"ai-sdlc adapter select --agent-target {target}",
+        next_zh="正式执行前先确认 AI 入口；确认后再运行完整流水线。",
+        next_en="Confirm the AI entry before a mutating run, then run the full pipeline.",
     )
-    if hint:
-        message += f"\n{hint}"
-    return message
 
 
 def _confirm_callback(stage: str, _result: Any) -> bool:
@@ -217,10 +193,15 @@ def run_command(
             )
             for message in _failed_gate_messages(last_result)[:2]:
                 console.print(f"  reason: {message}", markup=False)
+            console.print("")
+            console.print(render_dry_run_open_gate_guidance(_failed_gate_messages(last_result)))
         else:
             console.print(
                 f"\n[bold green]Pipeline completed. Stage: {cp.current_stage}[/bold green]"
             )
+            if dry_run:
+                console.print("")
+                console.print(render_dry_run_pass_guidance())
         _render_frontend_contract_runtime_attachment_summary(root, cp)
     except PipelineHaltError as exc:
         console.print(f"\n[bold red]Pipeline halted: {exc}[/bold red]")

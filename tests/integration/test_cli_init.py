@@ -37,18 +37,16 @@ class TestCliInit:
         assert result.exit_code == 0
         assert (tmp_path / ".ai-sdlc").is_dir()
         assert "Initialized" in result.output
-        assert "当前状态 / Current status" in result.output
-        assert "接入真值尚未确认；先检查 adapter 状态" in result.output
-        assert "Adapter ingress truth is not yet confirmed" in result.output
-        assert "下一步命令 / Next command" in result.output
-        assert "ai-sdlc adapter status" in result.output
-        assert "命令作用 / What this command does" in result.output
-        assert "安全预演" in result.output
-        assert "safe startup rehearsal only" in result.output
-        assert "ai-sdlc run --dry-run" in result.output
-        assert "not verified host-ingress proof" in result.output
-        assert "python -m ai_sdlc adapter status" in result.output
-        assert "python -m ai_sdlc run --dry-run" in result.output
+        assert "当前结果 / Result" in result.output
+        assert "初始化完成" in result.output
+        assert "Initialization complete" in result.output
+        assert "安全预演已自动执行" in result.output
+        assert "Safe rehearsal ran automatically" in result.output
+        assert "不用再手动执行初始化命令" in result.output
+        assert "No more setup commands are needed" in result.output
+        assert "ai-sdlc adapter status" not in result.output
+        assert "python -m ai_sdlc adapter status" not in result.output
+        assert "python -m ai_sdlc run --dry-run" not in result.output
         assert "ai-sdlc adapter activate" not in result.output
         cfg = load_project_config(tmp_path)
         assert cfg.preferred_shell != ""
@@ -57,15 +55,14 @@ class TestCliInit:
         result = runner.invoke(app, ["init", str(initialized_project_dir)])
         assert result.exit_code == 0
         assert "already initialized" in result.output
-        assert "当前状态 / Current status" in result.output
-        assert "下一步命令 / Next command" in result.output
-        assert "ai-sdlc adapter status" in result.output
-        assert "命令作用 / What this command does" in result.output
-        assert "safe startup rehearsal only" in result.output
-        assert "ai-sdlc run --dry-run" in result.output
-        assert "not verified host-ingress proof" in result.output
-        assert "python -m ai_sdlc adapter status" in result.output
-        assert "python -m ai_sdlc run --dry-run" in result.output
+        assert "当前结果 / Result" in result.output
+        assert "初始化完成" in result.output
+        assert "Initialization complete" in result.output
+        assert "不用再手动执行初始化命令" in result.output
+        assert "No more setup commands are needed" in result.output
+        assert "ai-sdlc adapter status" not in result.output
+        assert "python -m ai_sdlc adapter status" not in result.output
+        assert "python -m ai_sdlc run --dry-run" not in result.output
         assert "ai-sdlc adapter activate" not in result.output
 
     def test_init_nonexistent_dir(self, tmp_path: Path) -> None:

@@ -375,16 +375,20 @@ def _build_bootstrap_acquisition(
     elif reason_code == "offline_bundle_missing":
         handoff_kind = "offline_bundle_required"
         required_targets = ["offline_bundle"]
-        manual_steps = ["obtain the matching offline bundle or install an official runtime first"]
+        manual_steps = [
+            "run the official online installer or provide the matching offline bundle"
+        ]
     elif reason_code in {"python_runtime_missing", "python_runtime_version_unsupported"}:
-        handoff_kind = "manual_python_install_required"
+        handoff_kind = "managed_runtime_bootstrap_required"
         required_targets = ["python_runtime"]
-        manual_steps = ["install Python 3.11+ and re-run host-runtime plan"]
+        manual_steps = [
+            "run the official installer or offline bundle so AI-SDLC can prepare the managed Python runtime"
+        ]
     else:
         handoff_kind = "installed_runtime_binding_required"
         required_targets = ["installed_cli_runtime"]
         manual_steps = [
-            "bind the frontend mainline to an installed ai-sdlc runtime before retrying"
+            "run the official installer or bind this source checkout to an installed ai-sdlc runtime"
         ]
     return BootstrapAcquisitionFacet(
         handoff_kind=handoff_kind,
