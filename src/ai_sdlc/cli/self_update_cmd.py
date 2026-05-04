@@ -157,7 +157,7 @@ def self_update_instructions(
     version: str = typer.Option(
         "",
         "--version",
-        help="Release version to install, for example 0.7.2.",
+        help="Release version to install, for example 0.7.3.",
     ),
 ) -> None:
     """Print platform-specific manual update instructions."""
