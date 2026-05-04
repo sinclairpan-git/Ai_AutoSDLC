@@ -2,7 +2,7 @@
 
 ## 升级兼容提示（2026-04）
 
-- 这份手册现在默认以**当前仓库源码版 / 当前发布版 `v0.7.3`** 为准。如果你正在验证当前仓库里的新能力，优先在目标项目的虚拟环境里执行 `pip install -e <Ai_AutoSDLC 本地源码目录>`；如果你只想安装当前已发布版，再使用下文的 `v0.7.3` tag 安装命令。
+- 这份手册现在默认以**当前仓库源码版 / 当前发布版 `v0.7.4`** 为准。如果你正在验证当前仓库里的新能力，优先在目标项目的虚拟环境里执行 `pip install -e <Ai_AutoSDLC 本地源码目录>`；如果你只想安装当前已发布版，再使用下文的 `v0.7.4` tag 安装命令。
 - adapter 的 canonical path 已切换到厂商默认入口：
   - Codex -> `AGENTS.md`
   - Cursor -> `.cursor/rules/ai-sdlc.mdc`
@@ -11,7 +11,7 @@
 - 旧路径（`.vscode/AI-SDLC.md` / `.claude/AI-SDLC.md` / `.codex/AI-SDLC.md` / `.cursor/rules/ai-sdlc.md`）只作为迁移输入；新版会把内容迁到 canonical path，但不会覆盖你在新路径上的自定义修改。
 - `adapter status` 才是正式检查入口；`adapter activate` 只保留为兼容/调试入口，不代表 “verified_loaded”，也不是开始聊天前的必经步骤。
 - 示例输出（`Adapter acknowledged` / `Pipeline completed`）不代表 verified_loaded；以 `adapter status` 的 ingress truth 为准。
-- `v0.7.3` 开始，默认 `init` 会在你完成 AI 代理入口和 shell 选择后自动做安全预演。正常时输出会直接告诉你“初始化完成，切换到 AI 对话输入需求”；异常时只给一个明确的下一步命令。
+- `v0.7.4` 开始，默认 `init` 会在你完成 AI 代理入口和 shell 选择后自动做安全预演。正常时输出会直接告诉你“初始化完成，切换到 AI 对话输入需求”；异常时只给一个明确的下一步命令。
 - 如果你只是使用 CLI，不需要先理解 `verified_loaded`、`governance_activation`、digest 这类内部状态；需要机器真值时再看 `adapter status --json`。
 - `close-check` 只在 `execute_progress` 缺失时作为可信补证，仍要求 tasks.md / execution-log / fresh verification，不能替代正常 execute 收口。
 - `workitem init` 如果发现根目录还没有 `program-manifest.yaml`，现在会先自动创建最小 manifest，再把当前 work item 写进去。
@@ -24,7 +24,7 @@
 - 使用前先记住
 - 第零章：先选一种安装方式
   - 方案 A：用 GitHub tag 在线安装当前发布版
-  - 方案 B：用 0.7.3 Release 离线包安装
+  - 方案 B：用 0.7.4 Release 离线包安装
   - 方案 C：用本地源码安装最新开发版
   - 已安装用户：检查更新与显式升级
 - 第零点五章：从安装到首次使用的命令卡片
@@ -113,7 +113,7 @@
 
 ### 方案 A：用 GitHub tag 在线安装当前发布版
 
-这是普通用户最推荐的方式。它安装的是当前正式发布版 `v0.7.3`。
+这是普通用户最推荐的方式。它安装的是当前正式发布版 `v0.7.4`。
 
 **Windows：**
 
@@ -122,7 +122,7 @@ py -3.11 -m venv .venv
 Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
 .\.venv\Scripts\Activate.ps1
 python -m pip install -U pip
-pip install "https://github.com/sinclairpan-git/Ai_AutoSDLC/archive/refs/tags/v0.7.3.zip"
+pip install "https://github.com/sinclairpan-git/Ai_AutoSDLC/archive/refs/tags/v0.7.4.zip"
 python -m ai_sdlc --help
 ```
 
@@ -132,33 +132,33 @@ python -m ai_sdlc --help
 python3 -m venv .venv
 source .venv/bin/activate
 python -m pip install -U pip
-pip install "https://github.com/sinclairpan-git/Ai_AutoSDLC/archive/refs/tags/v0.7.3.tar.gz"
+pip install "https://github.com/sinclairpan-git/Ai_AutoSDLC/archive/refs/tags/v0.7.4.tar.gz"
 python -m ai_sdlc --help
 ```
 
 看到 help 输出，就说明 CLI 已安装成功。下一步去第一章或第二章继续做 `init`。
 
-### 方案 B：用 0.7.3 Release 离线包安装
+### 方案 B：用 0.7.4 Release 离线包安装
 
 如果用户机器不能联网，先让管理员从 GitHub Release 下载与你机器匹配的包，再拷贝到目标机器。
 
-当前 `v0.7.3` 正式发布资产：
+当前 `v0.7.4` 正式发布资产：
 
-- Windows x64：`ai-sdlc-offline-0.7.3-windows-amd64.zip`
-- macOS Apple Silicon：`ai-sdlc-offline-0.7.3-macos-arm64.tar.gz`
-- Linux x64：`ai-sdlc-offline-0.7.3-linux-amd64.tar.gz`
+- Windows x64：`ai-sdlc-offline-0.7.4-windows-amd64.zip`
+- macOS Apple Silicon：`ai-sdlc-offline-0.7.4-macos-arm64.tar.gz`
+- Linux x64：`ai-sdlc-offline-0.7.4-linux-amd64.tar.gz`
 
 下载入口：
 
 ```text
-https://github.com/sinclairpan-git/Ai_AutoSDLC/releases/tag/v0.7.3
+https://github.com/sinclairpan-git/Ai_AutoSDLC/releases/tag/v0.7.4
 ```
 
 **Windows：**
 
 ```powershell
-Expand-Archive -LiteralPath .\ai-sdlc-offline-0.7.3-windows-amd64.zip -DestinationPath .
-cd .\ai-sdlc-offline-0.7.3-windows-amd64
+Expand-Archive -LiteralPath .\ai-sdlc-offline-0.7.4-windows-amd64.zip -DestinationPath .
+cd .\ai-sdlc-offline-0.7.4-windows-amd64
 powershell -ExecutionPolicy Bypass -File .\install_offline.ps1
 .\.venv\Scripts\python.exe -m ai_sdlc --help
 ```
@@ -166,8 +166,8 @@ powershell -ExecutionPolicy Bypass -File .\install_offline.ps1
 **macOS Apple Silicon：**
 
 ```bash
-tar xzf ai-sdlc-offline-0.7.3-macos-arm64.tar.gz
-cd ai-sdlc-offline-0.7.3-macos-arm64
+tar xzf ai-sdlc-offline-0.7.4-macos-arm64.tar.gz
+cd ai-sdlc-offline-0.7.4-macos-arm64
 chmod +x install_offline.sh
 ./install_offline.sh
 ./.venv/bin/python -m ai_sdlc --help
@@ -176,8 +176,8 @@ chmod +x install_offline.sh
 **Linux x64：**
 
 ```bash
-tar xzf ai-sdlc-offline-0.7.3-linux-amd64.tar.gz
-cd ai-sdlc-offline-0.7.3-linux-amd64
+tar xzf ai-sdlc-offline-0.7.4-linux-amd64.tar.gz
+cd ai-sdlc-offline-0.7.4-linux-amd64
 chmod +x install_offline.sh
 ./install_offline.sh
 ./.venv/bin/python -m ai_sdlc --help
@@ -216,7 +216,7 @@ python -m ai_sdlc --help
 
 ### 已安装用户：检查更新与显式升级
 
-`v0.7.3` 开始，已安装的 CLI 可以做非阻断更新提醒。检测到可升级版本时，CLI 会给出一条自动更新命令。
+`v0.7.4` 开始，已安装的 CLI 可以做非阻断更新提醒。检测到可升级版本时，CLI 会给出一条自动更新命令。
 
 在已经激活 `.venv` 的终端里执行：
 
@@ -227,7 +227,7 @@ ai-sdlc self-update check
 如果你是从 GitHub Release 离线包安装的，执行下面这一条命令即可自动下载、安装并校验版本：
 
 ```bash
-ai-sdlc self-update install --version 0.7.3
+ai-sdlc self-update install --version 0.7.4
 ```
 
 如果公司内网不允许访问 GitHub，或你希望完全关闭更新检查，可以在终端环境里设置：
@@ -793,18 +793,18 @@ python -m pip install -U pip
 pip install -e ~/work/Ai_AutoSDLC
 ```
 
-**如果你只想装当前已发布版 `v0.7.3`，再改用下面这组：**
+**如果你只想装当前已发布版 `v0.7.4`，再改用下面这组：**
 
 - Windows：
 
 ```powershell
-pip install "https://github.com/sinclairpan-git/Ai_AutoSDLC/archive/refs/tags/v0.7.3.zip"
+pip install "https://github.com/sinclairpan-git/Ai_AutoSDLC/archive/refs/tags/v0.7.4.zip"
 ```
 
 - macOS / Linux：
 
 ```bash
-pip install "https://github.com/sinclairpan-git/Ai_AutoSDLC/archive/refs/tags/v0.7.3.tar.gz"
+pip install "https://github.com/sinclairpan-git/Ai_AutoSDLC/archive/refs/tags/v0.7.4.tar.gz"
 ```
 
 **执行成功以后，你应该看到：**
@@ -840,7 +840,7 @@ AI-SDLC 只会做非阻断检测和明确提醒。若你使用的是 GitHub Rele
 执行下面这一条命令即可自动下载、安装并校验版本：
 
 ```bash
-ai-sdlc self-update install --version 0.7.3
+ai-sdlc self-update install --version 0.7.4
 ```
 
 如果你在公司内网、离线环境或受控终端里不希望检查上游版本，可以设置：
@@ -1333,18 +1333,18 @@ python -m pip install -U pip
 pip install -e ~/work/Ai_AutoSDLC
 ```
 
-**如果你只想装当前已发布版 `v0.7.3`，再改用下面这组：**
+**如果你只想装当前已发布版 `v0.7.4`，再改用下面这组：**
 
 - Windows：
 
 ```powershell
-pip install "https://github.com/sinclairpan-git/Ai_AutoSDLC/archive/refs/tags/v0.7.3.zip"
+pip install "https://github.com/sinclairpan-git/Ai_AutoSDLC/archive/refs/tags/v0.7.4.zip"
 ```
 
 - macOS / Linux：
 
 ```bash
-pip install "https://github.com/sinclairpan-git/Ai_AutoSDLC/archive/refs/tags/v0.7.3.tar.gz"
+pip install "https://github.com/sinclairpan-git/Ai_AutoSDLC/archive/refs/tags/v0.7.4.tar.gz"
 ```
 
 **执行成功以后，你应该看到：**
@@ -1369,7 +1369,7 @@ AI-SDLC 只会做非阻断检测和明确提醒。若你使用的是 GitHub Rele
 执行下面这一条命令即可自动下载、安装并校验版本：
 
 ```bash
-ai-sdlc self-update install --version 0.7.3
+ai-sdlc self-update install --version 0.7.4
 ```
 
 如果你在公司内网、离线环境或受控终端里不希望检查上游版本，可以设置：

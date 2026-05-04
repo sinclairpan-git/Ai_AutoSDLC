@@ -11,7 +11,7 @@
 - [ ] 若 `tasks.md` / `plan.md` 含 **`related_plan`**：路径仍有效。
 - [ ] 自动化：`uv run pytest`（或 CI 等价）与 `uv run ruff check src tests` 已通过（若有 Python 变更）。
 - [ ] （可选）`uv run ai-sdlc verify constraints` 与 `uv run ai-sdlc workitem plan-check --wi specs/<WI>/`（若本 PR 涉及外部计划或 `related_plan`）。
-- [ ] 若本 PR 涉及 release / 安装包 / 版本号：已同步核对 `README.md`、`docs/releases/v0.7.3.md`、`USER_GUIDE.zh-CN.md`、`packaging/offline/README.md` 与 release 资产文案，确保版本入口和平台资产分工一致（当前 staged release `v0.7.3`：Windows `.zip`，macOS / Linux `.tar.gz`）。
+- [ ] 若本 PR 涉及 release / 安装包 / 版本号：已同步核对 `README.md`、`docs/releases/v0.7.4.md`、`USER_GUIDE.zh-CN.md`、`packaging/offline/README.md` 与 release 资产文案，确保版本入口和平台资产分工一致（当前 staged release `v0.7.4`：Windows `.zip`，macOS / Linux `.tar.gz`）。
 - [ ] 若本 PR 涉及离线 bundle 的 `python-runtime/`、在线/离线安装器或“无需预装 Python”口径：已按 `packaging/offline/RELEASE_CHECKLIST.md` 逐项核对，并在 PR 或 execution log 中留下 manifest / smoke / CLI 验证证据。
 
 ## 最小验证集（Mandatory）
