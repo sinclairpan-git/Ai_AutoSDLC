@@ -39,7 +39,7 @@ def test_github_archive_installed_runtime_gets_actionable_notice(
     monkeypatch, tmp_path
 ) -> None:
     _force_installed(monkeypatch, tmp_path, channel="github-archive")
-    monkeypatch.setenv("AI_SDLC_UPDATE_ADVISOR_TEST_LATEST_VERSION", "v0.7.2")
+    monkeypatch.setenv("AI_SDLC_UPDATE_ADVISOR_TEST_LATEST_VERSION", "v0.7.3")
 
     evaluation = evaluate_update_advisor(
         now=datetime(2026, 5, 1, 12, 0, tzinfo=UTC)
@@ -48,11 +48,11 @@ def test_github_archive_installed_runtime_gets_actionable_notice(
     assert evaluation.refresh_attempted is True
     assert evaluation.refresh_result == "success"
     assert evaluation.freshness == "fresh"
-    assert evaluation.upstream_latest_version == "0.7.2"
-    assert evaluation.channel_latest_version == "0.7.2"
+    assert evaluation.upstream_latest_version == "0.7.3"
+    assert evaluation.channel_latest_version == "0.7.3"
     assert NOTICE_LIGHT in evaluation.eligible_notice_classes
     assert NOTICE_ACTIONABLE in evaluation.eligible_notice_classes
-    assert evaluation.upgrade_command == "ai-sdlc self-update instructions --version 0.7.2"
+    assert evaluation.upgrade_command == "ai-sdlc self-update instructions --version 0.7.3"
 
 
 def test_cache_path_sanitizes_runtime_identity_for_windows(monkeypatch, tmp_path) -> None:
@@ -66,11 +66,11 @@ def test_cache_path_sanitizes_runtime_identity_for_windows(monkeypatch, tmp_path
 
 def test_unknown_channel_only_gets_light_notice(monkeypatch, tmp_path) -> None:
     _force_installed(monkeypatch, tmp_path, channel="unknown")
-    monkeypatch.setenv("AI_SDLC_UPDATE_ADVISOR_TEST_LATEST_VERSION", "v0.7.2")
+    monkeypatch.setenv("AI_SDLC_UPDATE_ADVISOR_TEST_LATEST_VERSION", "v0.7.3")
 
     evaluation = evaluate_update_advisor()
 
-    assert evaluation.upstream_latest_version == "0.7.2"
+    assert evaluation.upstream_latest_version == "0.7.3"
     assert evaluation.channel_latest_version is None
     assert evaluation.eligible_notice_classes == (NOTICE_LIGHT,)
     assert evaluation.upgrade_command is None
@@ -103,7 +103,7 @@ def test_failure_backoff_prevents_repeated_refresh(monkeypatch, tmp_path) -> Non
 
 def test_stale_cache_does_not_emit_notice_without_refresh(monkeypatch, tmp_path) -> None:
     _force_installed(monkeypatch, tmp_path)
-    monkeypatch.setenv("AI_SDLC_UPDATE_ADVISOR_TEST_LATEST_VERSION", "v0.7.2")
+    monkeypatch.setenv("AI_SDLC_UPDATE_ADVISOR_TEST_LATEST_VERSION", "v0.7.3")
     now = datetime(2026, 5, 1, 12, 0, tzinfo=UTC)
     evaluate_update_advisor(now=now)
 
@@ -116,10 +116,10 @@ def test_stale_cache_does_not_emit_notice_without_refresh(monkeypatch, tmp_path)
 
 def test_ack_notice_records_notice_version(monkeypatch, tmp_path) -> None:
     _force_installed(monkeypatch, tmp_path)
-    monkeypatch.setenv("AI_SDLC_UPDATE_ADVISOR_TEST_LATEST_VERSION", "v0.7.2")
+    monkeypatch.setenv("AI_SDLC_UPDATE_ADVISOR_TEST_LATEST_VERSION", "v0.7.3")
     evaluation = evaluate_update_advisor()
 
-    ack = ack_notice(NOTICE_LIGHT, "0.7.2")
+    ack = ack_notice(NOTICE_LIGHT, "0.7.3")
 
     assert ack.ack_recorded is True
     assert notice_already_acknowledged(evaluation, NOTICE_LIGHT) is True

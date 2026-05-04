@@ -16,7 +16,7 @@ def _env(tmp_path, *, channel: str = "github-archive") -> dict[str, str]:
         "AI_SDLC_UPDATE_ADVISOR_TEST_INSTALLED": "1",
         "AI_SDLC_UPDATE_ADVISOR_TEST_VERSION": "0.7.0",
         "AI_SDLC_UPDATE_ADVISOR_TEST_CHANNEL": channel,
-        "AI_SDLC_UPDATE_ADVISOR_TEST_LATEST_VERSION": "v0.7.2",
+        "AI_SDLC_UPDATE_ADVISOR_TEST_LATEST_VERSION": "v0.7.3",
         "AI_SDLC_UPDATE_ADVISOR_CACHE_DIR": str(tmp_path),
         "PYTHONUTF8": "1",
         "PYTHONIOENCODING": "utf-8",
@@ -51,12 +51,12 @@ def test_self_update_evaluate_json_reports_actionable_github_archive(
     assert result.exit_code == 0
     payload = json.loads(result.output)
     assert payload["refresh_result"] == "success"
-    assert payload["upstream_latest_version"] == "0.7.2"
-    assert payload["channel_latest_version"] == "0.7.2"
+    assert payload["upstream_latest_version"] == "0.7.3"
+    assert payload["channel_latest_version"] == "0.7.3"
     assert "light_upstream_release_notice" in payload["eligible_notice_classes"]
     assert "actionable_cli_update_notice" in payload["eligible_notice_classes"]
     assert payload["upgrade_command"] == (
-        "ai-sdlc self-update instructions --version 0.7.2"
+        "ai-sdlc self-update instructions --version 0.7.3"
     )
 
 
@@ -83,7 +83,7 @@ def test_interactive_cli_renders_update_notice_once(tmp_path) -> None:
 
     assert first.exit_code == 0
     assert "AI-SDLC Update Advisor" in first.output
-    assert "ai-sdlc self-update instructions --version 0.7.2" in first.output
+    assert "ai-sdlc self-update instructions --version 0.7.3" in first.output
     assert second.exit_code == 0
     assert "AI-SDLC Update Advisor" not in second.output
 

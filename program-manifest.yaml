@@ -130,6 +130,9 @@ source_registry:
 - path: docs/releases/v0.7.2.md
   source_type: release_doc
   truth_layer: release
+- path: docs/releases/v0.7.3.md
+  source_type: release_doc
+  truth_layer: release
 - path: docs/superpowers/specs/2026-03-27-telemetry-trace-governance-design.md
   source_type: design_doc
   truth_layer: design
@@ -10369,6 +10372,15 @@ truth_snapshot:
       mapped: true
       exists: true
       mapping_ref: docs/releases/v0.7.2.md
+      phase_signal_count: 0
+      deferred_signal_count: 0
+      non_goal_signal_count: 0
+    - path: docs/releases/v0.7.3.md
+      source_type: release_doc
+      truth_layer: release
+      mapped: true
+      exists: true
+      mapping_ref: docs/releases/v0.7.3.md
       phase_signal_count: 0
       deferred_signal_count: 0
       non_goal_signal_count: 0

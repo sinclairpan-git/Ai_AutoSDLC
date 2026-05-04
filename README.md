@@ -4,13 +4,13 @@ AI-native SDLC automation framework — a Python CLI tool and rule file set for 
 
 ## Release And Current Source
 
-`v0.7.2` is the current staged framework release. This patch release keeps the `v0.7.1` release-path hardening and adds the installed-runtime update advisor: installed CLI users can be notified when a newer stable GitHub Release is available and can run an explicit `self-update` helper for platform-specific update instructions.
+`v0.7.3` is the current staged framework release. This patch release keeps the `v0.7.2` update-advisor surface and makes first-run CLI onboarding beginner-safe: `init` now performs the required safe checks automatically, default status output gives a clear result plus one next action, and advanced adapter truth remains available through JSON/detail surfaces.
 
-If you want the published release, install `v0.7.2`. If you are evaluating newer unreleased behavior beyond this tag, prefer the source-checkout path below.
+If you want the published release, install `v0.7.3`. If you are evaluating newer unreleased behavior beyond this tag, prefer the source-checkout path below.
 
-- Current release notes: `docs/releases/v0.7.2.md`
-- Windows offline bundle: `ai-sdlc-offline-0.7.2.zip`
-- macOS / Linux offline bundle: `ai-sdlc-offline-0.7.2.tar.gz`
+- Current release notes: `docs/releases/v0.7.3.md`
+- Windows offline bundle: `ai-sdlc-offline-0.7.3.zip`
+- macOS / Linux offline bundle: `ai-sdlc-offline-0.7.3.tar.gz`
 - Offline packaging details: `packaging/offline/README.md`
 - Offline Python runtime release checklist: `packaging/offline/RELEASE_CHECKLIST.md`
 - Windows CI smoke evidence: `.github/workflows/windows-offline-smoke.yml` uploads `windows-offline-smoke-evidence` with `install.log`, `help.txt`, `adapter-status.txt`, `run-dry-run.txt`, and `bundle-manifest.json`
@@ -44,7 +44,7 @@ commands when you want to inspect or act on the result:
 
 ```bash
 ai-sdlc self-update check
-ai-sdlc self-update instructions --version 0.7.2
+ai-sdlc self-update instructions --version 0.7.3
 ```
 
 Source-checkout runs such as `uv run ai-sdlc ...`, `python -m ai_sdlc ...`, and
@@ -84,15 +84,15 @@ See also `packaging/offline/README.md` for offline bundles: build wheels on the 
 
 ## Start The Framework
 
-After initializing your project, explicitly start the pipeline from CLI:
+Initialize the project from CLI:
 
 ```bash
 ai-sdlc init .
-ai-sdlc adapter status
-ai-sdlc run --dry-run
 ```
 
-`--dry-run` is the recommended safe entry. It validates stage routing and gates before real execution, but it does not by itself prove governance activation.
+`init` writes the project scaffold, installs the selected adapter instructions, records the preferred shell, and automatically runs the safe startup rehearsal. If setup is complete, the CLI tells you to switch to the AI chat and describe the requirement. If something still needs action, it prints one next command in Chinese and English.
+
+`ai-sdlc run --dry-run` remains available as the explicit safe entry for troubleshooting. It validates stage routing and gates before real execution, but it does not by itself prove governance activation.
 
 `ai-sdlc adapter activate` only records operator acknowledgement for the selected adapter. For the current file-based adapters (`codex`, `cursor`, `claude_code`, `vscode`, `generic`), governance activation is not independently verifiable yet, so they remain `soft_prompt_only` until a reliable host handshake exists.
 
@@ -100,11 +100,9 @@ If your outer editor and real AI chat host are different, prefer selecting the a
 
 ```bash
 ai-sdlc init . --agent-target codex
-ai-sdlc adapter status
-ai-sdlc run --dry-run
 ```
 
-Use `ai-sdlc adapter status` to inspect the current `agent_target`, raw adapter activation state, and derived governance activation mode, or `ai-sdlc adapter select --agent-target <target>` to correct a wrong target before `run --dry-run`. `run --dry-run` is a startup rehearsal only; it does not by itself prove governance activation.
+Use `ai-sdlc adapter status` to see the beginner-safe result and one next action, `ai-sdlc adapter status --json` to inspect raw machine truth, or `ai-sdlc adapter select --agent-target <target>` to correct a wrong target.
 
 AI-SDLC now also persists a project-level preferred command shell in `.ai-sdlc/project/config/project-config.yaml`. `ai-sdlc init` selects a recommended default for the host OS and writes it to config. For already-initialized projects, run `ai-sdlc adapter shell-select` to re-pick the shell and refresh `AGENTS.md` / adapter instructions so Codex, Cursor, Claude Code, and VS Code stop guessing between PowerShell, bash, zsh, or cmd syntax.
 
@@ -201,7 +199,7 @@ The file `.ai-sdlc/project/config/project-config.yaml` holds IDE detection metad
 
 ## Documentation
 
-- Current release notes: `docs/releases/v0.7.2.md`
+- Current release notes: `docs/releases/v0.7.3.md`
 - Chinese user guide: `USER_GUIDE.zh-CN.md` (start with the **目录**, then jump to Chapter 1 or Chapter 2)
 - Offline install bundle (build + one-command install): `packaging/offline/README.md`
 - Offline Python runtime release checklist: `packaging/offline/RELEASE_CHECKLIST.md`
