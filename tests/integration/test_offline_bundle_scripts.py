@@ -345,6 +345,72 @@ def _make_path_alias(source: Path, target: Path) -> Path:
     return target
 
 
+def _write_basic_bundle(bundle_dir: Path, version: str = "0.2.0") -> None:
+    wheels_dir = bundle_dir / "wheels"
+    wheels_dir.mkdir(parents=True)
+    shutil.copy2(_OFFLINE_DIR / "install_offline.sh", bundle_dir / "install_offline.sh")
+    (wheels_dir / f"ai_sdlc-{version}-py3-none-any.whl").write_text(
+        "fake wheel\n",
+        encoding="utf-8",
+    )
+    (bundle_dir / "bundle-manifest.json").write_text(
+        json.dumps(
+            {
+                "package_version": version,
+                "platform_os": platform.system().lower(),
+                "platform_machine": platform.machine().lower(),
+            }
+        ),
+        encoding="utf-8",
+    )
+
+
+def _make_upgrade_existing_python(bin_dir: Path, version: str = "0.2.0") -> Path:
+    bin_dir.mkdir(parents=True, exist_ok=True)
+    wrapper_path = bin_dir / "python"
+    shebang_python = _bash_shebang_python()
+    wrapper = f"""#!{shebang_python}
+from pathlib import Path
+import sys
+
+BIN_DIR = Path({str(bin_dir)!r})
+VERSION = {version!r}
+MARKER = BIN_DIR / "installed-version.txt"
+
+
+def _write(path: Path, content: str) -> None:
+    path.write_text(content, encoding="utf-8")
+    path.chmod(0o755)
+
+
+args = sys.argv[1:]
+if len(args) >= 2 and args[0] == "-c" and "sys.version_info" in args[1]:
+    raise SystemExit(0)
+if len(args) >= 2 and args[0] == "-c" and "importlib.metadata" in args[1]:
+    print(MARKER.read_text(encoding="utf-8").strip() if MARKER.exists() else "0.1.0")
+    raise SystemExit(0)
+if len(args) >= 3 and args[:3] == ["-m", "pip", "install"]:
+    MARKER.write_text(VERSION, encoding="utf-8")
+    _write(
+        BIN_DIR / "ai-sdlc",
+        f'''#!/usr/bin/env bash
+if [[ "$1" == "--version" ]]; then
+  echo "{{VERSION}}"
+  exit 0
+fi
+if [[ "$1" == "self-update" && "$2" == "install" && "$3" == "--help" ]]; then
+  echo "self-update install help"
+  exit 0
+fi
+echo "ai-sdlc {{VERSION}}"
+''',
+    )
+    raise SystemExit(0)
+raise SystemExit(0)
+"""
+    return _write_executable(wrapper_path, wrapper)
+
+
 def test_build_offline_bundle_emits_platform_manifest_and_archives(tmp_path: Path) -> None:
     repo = _prepare_fake_bundle_repo(tmp_path)
     wrapper_dir = tmp_path / "wrappers"
@@ -572,6 +638,70 @@ def test_install_offline_uses_bundled_python_runtime_when_system_python_missing(
     assert result.returncode == 0, result.stderr
     assert "Using bundled Python runtime" in result.stdout
     assert (bundle_dir / ".venv" / "bin" / "ai-sdlc").is_file()
+
+
+def test_install_offline_upgrade_existing_uses_current_cli_runtime(tmp_path: Path) -> None:
+    if os.name == "nt":
+        pytest.skip("POSIX upgrade-existing installer path is covered on POSIX runners")
+    bundle_dir = tmp_path / "bundle"
+    _write_basic_bundle(bundle_dir)
+    existing_bin = tmp_path / "existing-bin"
+    fake_python = _make_upgrade_existing_python(existing_bin)
+    _write_executable(existing_bin / "ai-sdlc", f"#!{fake_python}\n")
+
+    env = dict(os.environ)
+    _set_env_path(env, os.pathsep.join([str(existing_bin), "/usr/bin", "/bin"]))
+    env.pop("PYTHON", None)
+
+    result = subprocess.run(
+        [_bash_command(), str(bundle_dir / "install_offline.sh"), "--upgrade-existing"],
+        cwd=bundle_dir,
+        capture_output=True,
+        text=True,
+        env=env,
+        check=False,
+    )
+
+    assert result.returncode == 0, result.stderr
+    assert "Using existing AI-SDLC runtime" in result.stdout
+    assert "Upgrade completed" in result.stdout
+    assert (existing_bin / "installed-version.txt").read_text(encoding="utf-8") == "0.2.0"
+    assert not (bundle_dir / ".venv").exists()
+
+
+def test_install_offline_upgrade_existing_reads_distlib_shell_wrapper(
+    tmp_path: Path,
+) -> None:
+    if os.name == "nt":
+        pytest.skip("POSIX upgrade-existing installer path is covered on POSIX runners")
+    bundle_dir = tmp_path / "bundle"
+    _write_basic_bundle(bundle_dir)
+    existing_bin = tmp_path / "existing bin"
+    fake_python = _make_upgrade_existing_python(existing_bin)
+    _write_executable(
+        existing_bin / "ai-sdlc",
+        "#!/bin/sh\n"
+        f"'''exec' \"{fake_python}\" \"$0\" \"$@\"\n"
+        "' '''\n",
+    )
+
+    env = dict(os.environ)
+    _set_env_path(env, os.pathsep.join([str(existing_bin), "/usr/bin", "/bin"]))
+    env.pop("PYTHON", None)
+
+    result = subprocess.run(
+        [_bash_command(), str(bundle_dir / "install_offline.sh"), "--upgrade-existing"],
+        cwd=bundle_dir,
+        capture_output=True,
+        text=True,
+        env=env,
+        check=False,
+    )
+
+    assert result.returncode == 0, result.stderr
+    assert "Using existing AI-SDLC runtime" in result.stdout
+    assert (existing_bin / "installed-version.txt").read_text(encoding="utf-8") == "0.2.0"
+    assert not (bundle_dir / ".venv").exists()
 
 
 def test_install_offline_uses_versioned_bundled_python_runtime_when_only_python311_exists(
@@ -886,6 +1016,12 @@ def test_windows_install_scripts_include_auto_python_detection_and_bilingual_gui
 
     assert "python-runtime\\python.exe" in offline_ps1
     assert "Using bundled Python runtime" in offline_ps1
+    assert "UpgradeExisting" in offline_ps1
+    assert "Using existing AI-SDLC runtime" in offline_ps1
+    assert 'Join-Path $baseDir "python.exe"' in offline_ps1
+    assert "self-update install --help" in offline_ps1
+    assert "failed to upgrade the current ai-sdlc installation" in offline_ps1
+    assert "$LASTEXITCODE -ne 0" in offline_ps1
     assert "当前结果 / Result" in offline_ps1
     assert "下一步 / Next" in offline_ps1
     assert "amd64" in offline_ps1

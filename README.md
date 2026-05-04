@@ -4,13 +4,14 @@ AI-native SDLC automation framework — a Python CLI tool and rule file set for 
 
 ## Release And Current Source
 
-`v0.7.6` is the current staged framework release. This patch release fixes the self-update break exposed by older installed CLIs: `ai-sdlc self-update check` now performs the update directly when a newer GitHub Release is available, and installed runtimes with an unrecognized channel can still use the release asset updater instead of falling back to vague manual guidance.
+`v0.7.7` is the current staged framework release. This patch release fixes the self-update break exposed by older installed CLIs: `ai-sdlc self-update check` now performs the update directly when a newer GitHub Release is available, and installed runtimes with an unrecognized channel can still use the release asset updater instead of falling back to vague manual guidance.
 
-If you want the published release, install `v0.7.6`. If you are evaluating newer unreleased behavior beyond this tag, prefer the source-checkout path below.
+If you want the published release, install `v0.7.7`. If you are evaluating newer unreleased behavior beyond this tag, prefer the source-checkout path below.
 
-- Current release notes: `docs/releases/v0.7.6.md`
-- Windows offline bundle: `ai-sdlc-offline-0.7.6.zip`
-- macOS / Linux offline bundle: `ai-sdlc-offline-0.7.6.tar.gz`
+- Current release notes: `docs/releases/v0.7.7.md`
+- Windows offline bundle: `ai-sdlc-offline-0.7.7-windows-amd64.zip`
+- macOS offline bundle: `ai-sdlc-offline-0.7.7-macos-arm64.tar.gz`
+- Linux offline bundle: `ai-sdlc-offline-0.7.7-linux-amd64.tar.gz`
 - Offline packaging details: `packaging/offline/README.md`
 - Offline Python runtime release checklist: `packaging/offline/RELEASE_CHECKLIST.md`
 - Windows CI smoke evidence: `.github/workflows/windows-offline-smoke.yml` uploads `windows-offline-smoke-evidence` with `install.log`, `help.txt`, `adapter-status.txt`, `run-dry-run.txt`, and `bundle-manifest.json`
@@ -50,19 +51,35 @@ ai-sdlc self-update check
 
 Legacy installs that report `No such command 'install'` are older than the
 automatic updater. They cannot learn a missing subcommand from the new release
-until the package itself is replaced. Use the one-time rescue command for your
-shell, then use `ai-sdlc self-update check` for future updates.
+until the package itself is replaced. Download the latest platform install
+package and run its `--upgrade-existing` mode once; after that, use
+`ai-sdlc self-update check` for future updates.
 
-macOS / Linux, activated venv:
+macOS Apple Silicon:
 
 ```bash
-"$(dirname "$(command -v ai-sdlc)")/python" -m pip install --upgrade --force-reinstall "https://github.com/sinclairpan-git/Ai_AutoSDLC/archive/refs/tags/v0.7.6.tar.gz"
+curl -L -o ai-sdlc-offline-0.7.7-macos-arm64.tar.gz "https://github.com/sinclairpan-git/Ai_AutoSDLC/releases/download/v0.7.7/ai-sdlc-offline-0.7.7-macos-arm64.tar.gz"
+tar xzf ai-sdlc-offline-0.7.7-macos-arm64.tar.gz
+cd ai-sdlc-offline-0.7.7-macos-arm64
+./install_offline.sh --upgrade-existing
 ```
 
-Windows PowerShell, activated venv:
+Linux x64:
+
+```bash
+curl -L -o ai-sdlc-offline-0.7.7-linux-amd64.tar.gz "https://github.com/sinclairpan-git/Ai_AutoSDLC/releases/download/v0.7.7/ai-sdlc-offline-0.7.7-linux-amd64.tar.gz"
+tar xzf ai-sdlc-offline-0.7.7-linux-amd64.tar.gz
+cd ai-sdlc-offline-0.7.7-linux-amd64
+./install_offline.sh --upgrade-existing
+```
+
+Windows PowerShell:
 
 ```powershell
-& (Join-Path (Split-Path (Get-Command ai-sdlc).Source) "python.exe") -m pip install --upgrade --force-reinstall "https://github.com/sinclairpan-git/Ai_AutoSDLC/archive/refs/tags/v0.7.6.zip"
+Invoke-WebRequest -Uri "https://github.com/sinclairpan-git/Ai_AutoSDLC/releases/download/v0.7.7/ai-sdlc-offline-0.7.7-windows-amd64.zip" -OutFile "ai-sdlc-offline-0.7.7-windows-amd64.zip"
+Expand-Archive -LiteralPath .\ai-sdlc-offline-0.7.7-windows-amd64.zip -DestinationPath .
+cd .\ai-sdlc-offline-0.7.7-windows-amd64
+powershell -ExecutionPolicy Bypass -File .\install_offline.ps1 -UpgradeExisting
 ```
 
 Source-checkout runs such as `uv run ai-sdlc ...`, `python -m ai_sdlc ...`, and
@@ -211,7 +228,7 @@ The file `.ai-sdlc/project/config/project-config.yaml` holds IDE detection metad
 
 ## Documentation
 
-- Current release notes: `docs/releases/v0.7.6.md`
+- Current release notes: `docs/releases/v0.7.7.md`
 - Chinese user guide: `USER_GUIDE.zh-CN.md` (start with the **目录**, then jump to Chapter 1 or Chapter 2)
 - Offline install bundle (build + one-command install): `packaging/offline/README.md`
 - Offline Python runtime release checklist: `packaging/offline/RELEASE_CHECKLIST.md`
