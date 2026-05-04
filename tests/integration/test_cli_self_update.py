@@ -20,7 +20,7 @@ def _env(tmp_path, *, channel: str = "github-archive") -> dict[str, str]:
         "AI_SDLC_UPDATE_ADVISOR_TEST_INSTALLED": "1",
         "AI_SDLC_UPDATE_ADVISOR_TEST_VERSION": "0.7.0",
         "AI_SDLC_UPDATE_ADVISOR_TEST_CHANNEL": channel,
-        "AI_SDLC_UPDATE_ADVISOR_TEST_LATEST_VERSION": "v0.7.3",
+        "AI_SDLC_UPDATE_ADVISOR_TEST_LATEST_VERSION": "v0.7.4",
         "AI_SDLC_UPDATE_ADVISOR_CACHE_DIR": str(tmp_path),
         "PYTHONUTF8": "1",
         "PYTHONIOENCODING": "utf-8",
@@ -55,11 +55,11 @@ def test_self_update_evaluate_json_reports_actionable_github_archive(
     assert result.exit_code == 0
     payload = json.loads(result.output)
     assert payload["refresh_result"] == "success"
-    assert payload["upstream_latest_version"] == "0.7.3"
-    assert payload["channel_latest_version"] == "0.7.3"
+    assert payload["upstream_latest_version"] == "0.7.4"
+    assert payload["channel_latest_version"] == "0.7.4"
     assert "light_upstream_release_notice" in payload["eligible_notice_classes"]
     assert "actionable_cli_update_notice" in payload["eligible_notice_classes"]
-    assert payload["upgrade_command"] == "ai-sdlc self-update install --version 0.7.3"
+    assert payload["upgrade_command"] == "ai-sdlc self-update install --version 0.7.4"
 
 
 def test_self_update_evaluate_unknown_channel_stays_light_notice(tmp_path) -> None:
@@ -86,7 +86,7 @@ def test_interactive_cli_renders_update_notice_once(tmp_path) -> None:
     assert first.exit_code == 0
     assert "AI-SDLC Update Advisor" in first.output
     assert "自动下载、安装并校验版本" in first.output
-    assert "ai-sdlc self-update install --version 0.7.3" in first.output
+    assert "ai-sdlc self-update install --version 0.7.4" in first.output
     assert second.exit_code == 0
     assert "AI-SDLC Update Advisor" not in second.output
 
@@ -103,7 +103,7 @@ def test_self_update_install_completes_without_manual_followup(monkeypatch, tmp_
         bundle = extract_root / "bundle"
         wheels = bundle / "wheels"
         wheels.mkdir(parents=True)
-        (wheels / "ai_sdlc-0.7.3-py3-none-any.whl").write_text(
+        (wheels / "ai_sdlc-0.7.4-py3-none-any.whl").write_text(
             "wheel", encoding="utf-8"
         )
         return bundle
@@ -116,11 +116,11 @@ def test_self_update_install_completes_without_manual_followup(monkeypatch, tmp_
     monkeypatch.setattr(
         self_update_cmd, "_install_bundle_into_current_runtime", fake_install
     )
-    monkeypatch.setattr(self_update_cmd, "_read_installed_version", lambda: "0.7.3")
+    monkeypatch.setattr(self_update_cmd, "_read_installed_version", lambda: "0.7.4")
 
     result = runner.invoke(
         app,
-        ["self-update", "install", "--version", "0.7.3"],
+        ["self-update", "install", "--version", "0.7.4"],
         env=_env(tmp_path),
     )
 
@@ -190,17 +190,17 @@ def test_self_update_reexecs_windows_launcher_only_once() -> None:
 def test_self_update_rejects_tar_link_members(tmp_path) -> None:
     archive_path = tmp_path / "bundle.tar.gz"
     with tarfile.open(archive_path, "w:gz") as archive:
-        root = tarfile.TarInfo("ai-sdlc-offline-0.7.3-macos-arm64")
+        root = tarfile.TarInfo("ai-sdlc-offline-0.7.4-macos-arm64")
         root.type = tarfile.DIRTYPE
         archive.addfile(root)
 
-        link = tarfile.TarInfo("ai-sdlc-offline-0.7.3-macos-arm64/link")
+        link = tarfile.TarInfo("ai-sdlc-offline-0.7.4-macos-arm64/link")
         link.type = tarfile.SYMTYPE
         link.linkname = "/tmp"
         archive.addfile(link)
 
         payload = b"payload"
-        member = tarfile.TarInfo("ai-sdlc-offline-0.7.3-macos-arm64/link/payload")
+        member = tarfile.TarInfo("ai-sdlc-offline-0.7.4-macos-arm64/link/payload")
         member.size = len(payload)
         archive.addfile(member, io.BytesIO(payload))
 
@@ -210,7 +210,7 @@ def test_self_update_rejects_tar_link_members(tmp_path) -> None:
             tmp_path / "extract",
             {
                 "archive": "tar.gz",
-                "filename": "ai-sdlc-offline-0.7.3-macos-arm64.tar.gz",
+                "filename": "ai-sdlc-offline-0.7.4-macos-arm64.tar.gz",
             },
         )
 
@@ -218,7 +218,7 @@ def test_self_update_rejects_tar_link_members(tmp_path) -> None:
 def test_self_update_instructions_are_user_result_oriented(tmp_path) -> None:
     result = runner.invoke(
         app,
-        ["self-update", "instructions", "--version", "0.7.3"],
+        ["self-update", "instructions", "--version", "0.7.4"],
         env=_env(tmp_path),
     )
 
@@ -226,7 +226,7 @@ def test_self_update_instructions_are_user_result_oriented(tmp_path) -> None:
     assert "当前结果 / Result" in result.output
     assert "当前安装尚未变化" in result.output
     assert "下一步 / Next" in result.output
-    assert "ai-sdlc self-update install --version 0.7.3" in result.output
+    assert "ai-sdlc self-update install --version 0.7.4" in result.output
     assert "自动下载、安装并校验版本" in result.output
     assert "curl -L" not in result.output
     assert "install_offline" not in result.output
