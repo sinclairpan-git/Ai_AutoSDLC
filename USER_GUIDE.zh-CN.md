@@ -216,7 +216,7 @@ python -m ai_sdlc --help
 
 ### 已安装用户：检查更新与显式升级
 
-`v0.7.2` 开始，已安装的 CLI 可以做非阻断更新提醒。它只会提醒，不会偷偷替你下载或覆盖当前环境。
+`v0.7.3` 开始，已安装的 CLI 可以做非阻断更新提醒。检测到可升级版本时，CLI 会给出一条自动更新命令。
 
 在已经激活 `.venv` 的终端里执行：
 
@@ -224,10 +224,10 @@ python -m ai_sdlc --help
 ai-sdlc self-update check
 ```
 
-如果你是从 GitHub Release 离线包安装的，可以让 CLI 打印当前平台的更新步骤：
+如果你是从 GitHub Release 离线包安装的，执行下面这一条命令即可自动下载、安装并校验版本：
 
 ```bash
-ai-sdlc self-update instructions --version 0.7.3
+ai-sdlc self-update install --version 0.7.3
 ```
 
 如果公司内网不允许访问 GitHub，或你希望完全关闭更新检查，可以在终端环境里设置：
@@ -353,15 +353,11 @@ python -m ai_sdlc init . --agent-target codex
 
 - 输出里包含 `Initialized AI-SDLC project`。
 - 输出里包含 `Agent Target:`。
-- 输出里会出现 `下一步命令 / Next command`。
+- 输出里会出现 `当前结果 / Result` 和 `下一步 / Next`。
 - 项目目录里出现 `.ai-sdlc/`。
 - 对 Codex，项目根目录里应出现或更新 `AGENTS.md`。
 
-**下一步执行：**
-
-```bash
-python -m ai_sdlc adapter shell-select
-```
+正常情况下不用继续执行初始化相关命令；切换到 AI 对话里输入需求即可。
 
 **如果失败：**
 
@@ -840,11 +836,11 @@ Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
 ai-sdlc self-update check
 ```
 
-AI-SDLC 只会做非阻断检测和明确提醒，不会静默替换你当前的安装环境。若你使用的是
-GitHub Release 离线包安装，可以查看当前平台的显式更新步骤：
+AI-SDLC 只会做非阻断检测和明确提醒。若你使用的是 GitHub Release 离线包安装，
+执行下面这一条命令即可自动下载、安装并校验版本：
 
 ```bash
-ai-sdlc self-update instructions --version 0.7.3
+ai-sdlc self-update install --version 0.7.3
 ```
 
 如果你在公司内网、离线环境或受控终端里不希望检查上游版本，可以设置：
@@ -1369,11 +1365,11 @@ pip install "https://github.com/sinclairpan-git/Ai_AutoSDLC/archive/refs/tags/v0
 ai-sdlc self-update check
 ```
 
-AI-SDLC 只会做非阻断检测和明确提醒，不会静默替换你当前的安装环境。若你使用的是
-GitHub Release 离线包安装，可以查看当前平台的显式更新步骤：
+AI-SDLC 只会做非阻断检测和明确提醒。若你使用的是 GitHub Release 离线包安装，
+执行下面这一条命令即可自动下载、安装并校验版本：
 
 ```bash
-ai-sdlc self-update instructions --version 0.7.3
+ai-sdlc self-update install --version 0.7.3
 ```
 
 如果你在公司内网、离线环境或受控终端里不希望检查上游版本，可以设置：

@@ -52,7 +52,7 @@ def test_github_archive_installed_runtime_gets_actionable_notice(
     assert evaluation.channel_latest_version == "0.7.3"
     assert NOTICE_LIGHT in evaluation.eligible_notice_classes
     assert NOTICE_ACTIONABLE in evaluation.eligible_notice_classes
-    assert evaluation.upgrade_command == "ai-sdlc self-update instructions --version 0.7.3"
+    assert evaluation.upgrade_command == "ai-sdlc self-update install --version 0.7.3"
 
 
 def test_cache_path_sanitizes_runtime_identity_for_windows(monkeypatch, tmp_path) -> None:

@@ -2,10 +2,14 @@
 
 from __future__ import annotations
 
+import io
 import json
+import tarfile
 
+import pytest
 from typer.testing import CliRunner
 
+import ai_sdlc.cli.self_update_cmd as self_update_cmd
 from ai_sdlc.cli.main import app
 
 runner = CliRunner()
@@ -55,9 +59,7 @@ def test_self_update_evaluate_json_reports_actionable_github_archive(
     assert payload["channel_latest_version"] == "0.7.3"
     assert "light_upstream_release_notice" in payload["eligible_notice_classes"]
     assert "actionable_cli_update_notice" in payload["eligible_notice_classes"]
-    assert payload["upgrade_command"] == (
-        "ai-sdlc self-update instructions --version 0.7.3"
-    )
+    assert payload["upgrade_command"] == "ai-sdlc self-update install --version 0.7.3"
 
 
 def test_self_update_evaluate_unknown_channel_stays_light_notice(tmp_path) -> None:
@@ -83,9 +85,153 @@ def test_interactive_cli_renders_update_notice_once(tmp_path) -> None:
 
     assert first.exit_code == 0
     assert "AI-SDLC Update Advisor" in first.output
-    assert "ai-sdlc self-update instructions --version 0.7.3" in first.output
+    assert "自动下载、安装并校验版本" in first.output
+    assert "ai-sdlc self-update install --version 0.7.3" in first.output
     assert second.exit_code == 0
     assert "AI-SDLC Update Advisor" not in second.output
+
+
+def test_self_update_install_completes_without_manual_followup(monkeypatch, tmp_path) -> None:
+    calls: list[tuple[str, object]] = []
+
+    def fake_download(asset_url, archive_path):
+        calls.append(("download", asset_url))
+        archive_path.write_text("archive", encoding="utf-8")
+
+    def fake_extract(archive_path, extract_root, hint):
+        calls.append(("extract", hint["filename"]))
+        bundle = extract_root / "bundle"
+        wheels = bundle / "wheels"
+        wheels.mkdir(parents=True)
+        (wheels / "ai_sdlc-0.7.3-py3-none-any.whl").write_text(
+            "wheel", encoding="utf-8"
+        )
+        return bundle
+
+    def fake_install(bundle_dir, release_version):
+        calls.append(("install", f"{bundle_dir.name}:{release_version}"))
+
+    monkeypatch.setattr(self_update_cmd, "_download_asset", fake_download)
+    monkeypatch.setattr(self_update_cmd, "_extract_release_asset", fake_extract)
+    monkeypatch.setattr(
+        self_update_cmd, "_install_bundle_into_current_runtime", fake_install
+    )
+    monkeypatch.setattr(self_update_cmd, "_read_installed_version", lambda: "0.7.3")
+
+    result = runner.invoke(
+        app,
+        ["self-update", "install", "--version", "0.7.3"],
+        env=_env(tmp_path),
+    )
+
+    assert result.exit_code == 0
+    assert [call[0] for call in calls] == ["download", "extract", "install"]
+    assert "更新完成" in result.output
+    assert "Update completed" in result.output
+    assert "不需要继续执行升级命令" in result.output
+    assert "执行下面整段命令" not in result.output
+    assert "curl -L" not in result.output
+    assert "install_offline" not in result.output
+
+
+def test_self_update_installs_wheel_matching_requested_version(
+    tmp_path, monkeypatch
+) -> None:
+    bundle = tmp_path / "bundle"
+    wheels = bundle / "wheels"
+    wheels.mkdir(parents=True)
+    (wheels / "ai_sdlc-0.7.9-py3-none-any.whl").write_text("old", encoding="utf-8")
+    target = wheels / "ai_sdlc-0.7.10-py3-none-any.whl"
+    target.write_text("new", encoding="utf-8")
+
+    commands: list[list[str]] = []
+
+    def fake_run(command, **_kwargs):
+        commands.append(command)
+
+        class Result:
+            returncode = 0
+            stdout = ""
+            stderr = ""
+
+        return Result()
+
+    monkeypatch.setattr(self_update_cmd.subprocess, "run", fake_run)
+
+    self_update_cmd._install_bundle_into_current_runtime(bundle, "0.7.10")
+
+    assert commands
+    assert commands[0][-1] == str(target)
+
+
+def test_self_update_reexecs_windows_launcher_only_once() -> None:
+    assert self_update_cmd._should_reexec_windows_launcher(
+        platform_name="win32",
+        argv0=r"C:\venv\Scripts\ai-sdlc.exe",
+        env={},
+    )
+    assert not self_update_cmd._should_reexec_windows_launcher(
+        platform_name="win32",
+        argv0=r"C:\venv\Scripts\ai-sdlc.exe",
+        env={"AI_SDLC_SELF_UPDATE_REEXEC": "1"},
+    )
+    assert not self_update_cmd._should_reexec_windows_launcher(
+        platform_name="win32",
+        argv0=r"C:\Python311\python.exe",
+        env={},
+    )
+    assert not self_update_cmd._should_reexec_windows_launcher(
+        platform_name="darwin",
+        argv0="/venv/bin/ai-sdlc",
+        env={},
+    )
+
+
+def test_self_update_rejects_tar_link_members(tmp_path) -> None:
+    archive_path = tmp_path / "bundle.tar.gz"
+    with tarfile.open(archive_path, "w:gz") as archive:
+        root = tarfile.TarInfo("ai-sdlc-offline-0.7.3-macos-arm64")
+        root.type = tarfile.DIRTYPE
+        archive.addfile(root)
+
+        link = tarfile.TarInfo("ai-sdlc-offline-0.7.3-macos-arm64/link")
+        link.type = tarfile.SYMTYPE
+        link.linkname = "/tmp"
+        archive.addfile(link)
+
+        payload = b"payload"
+        member = tarfile.TarInfo("ai-sdlc-offline-0.7.3-macos-arm64/link/payload")
+        member.size = len(payload)
+        archive.addfile(member, io.BytesIO(payload))
+
+    with pytest.raises(self_update_cmd.SelfUpdateError, match="link member"):
+        self_update_cmd._extract_release_asset(
+            archive_path,
+            tmp_path / "extract",
+            {
+                "archive": "tar.gz",
+                "filename": "ai-sdlc-offline-0.7.3-macos-arm64.tar.gz",
+            },
+        )
+
+
+def test_self_update_instructions_are_user_result_oriented(tmp_path) -> None:
+    result = runner.invoke(
+        app,
+        ["self-update", "instructions", "--version", "0.7.3"],
+        env=_env(tmp_path),
+    )
+
+    assert result.exit_code == 0
+    assert "当前结果 / Result" in result.output
+    assert "当前安装尚未变化" in result.output
+    assert "下一步 / Next" in result.output
+    assert "ai-sdlc self-update install --version 0.7.3" in result.output
+    assert "自动下载、安装并校验版本" in result.output
+    assert "curl -L" not in result.output
+    assert "install_offline" not in result.output
+    assert "does not silently modify your install" not in result.output
+    assert "不会静默改写你的安装环境" not in result.output
 
 
 def test_python_module_style_runtime_can_disable_update_notice(tmp_path) -> None:

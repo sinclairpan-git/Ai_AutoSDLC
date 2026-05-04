@@ -528,7 +528,8 @@ def test_install_offline_accepts_matching_platform_manifest(tmp_path: Path) -> N
     assert result.returncode == 0, result.stderr
     assert (bundle_dir / ".venv" / "bin" / "activate").is_file()
     assert (bundle_dir / ".venv" / "bin" / "ai-sdlc").is_file()
-    assert "OK. Verify:" in result.stdout
+    assert "当前结果 / Result" in result.stdout
+    assert "ai-sdlc init ." in result.stdout
 
 
 def test_install_offline_uses_bundled_python_runtime_when_system_python_missing(
@@ -644,11 +645,11 @@ def test_install_online_uses_detected_python_and_prints_bilingual_guidance(
     assert result.returncode == 0, result.stderr
     assert (tmp_path / ".venv" / "bin" / "ai-sdlc").is_file()
     assert "Using Python runtime: python3.11" in result.stdout
-    assert "当前状态 / Current status" in result.stdout
-    assert "下一步命令 / Next command" in result.stdout
-    assert "命令作用 / What this command does" in result.stdout
-    assert "ai-sdlc adapter status" in result.stdout
-    assert "ai-sdlc run --dry-run" in result.stdout
+    assert "当前结果 / Result" in result.stdout
+    assert "下一步 / Next" in result.stdout
+    assert "ai-sdlc init ." in result.stdout
+    assert "ai-sdlc adapter status" not in result.stdout
+    assert "ai-sdlc run --dry-run" not in result.stdout
 
 
 def test_install_online_auto_installs_python_when_linux_package_manager_is_available(
@@ -731,7 +732,7 @@ raise SystemExit(0)
     assert (tmp_path / ".venv" / "bin" / "ai-sdlc").is_file()
     assert "No Python 3.11+ detected. Attempting online installation" in result.stdout
     assert "Using Python runtime: python3.11" in result.stdout
-    assert "当前状态 / Current status" in result.stdout
+    assert "当前结果 / Result" in result.stdout
     assert apt_log.read_text(encoding="utf-8").splitlines() == [
         "update",
         "install -y python3.11 python3.11-venv python3-pip",
@@ -805,7 +806,7 @@ raise SystemExit(0)
     )
 
     assert result.returncode != 0
-    assert "当前状态 / Current status" in result.stdout
+    assert "当前结果 / Result" in result.stdout
     assert "无法自动完成在线安装" in result.stdout
     assert "Python 3.11+ was not detected" in result.stdout
     assert "./packaging/install_online.sh" in result.stdout
@@ -843,7 +844,7 @@ def test_install_online_reports_bilingual_failure_when_python_cannot_be_installe
     )
 
     assert result.returncode != 0
-    assert "当前状态 / Current status" in result.stdout
+    assert "当前结果 / Result" in result.stdout
     assert "无法自动完成在线安装" in result.stdout
     assert "Python 3.11+ was not detected" in result.stdout
     assert "./packaging/install_online.sh" in result.stdout
@@ -885,8 +886,8 @@ def test_windows_install_scripts_include_auto_python_detection_and_bilingual_gui
 
     assert "python-runtime\\python.exe" in offline_ps1
     assert "Using bundled Python runtime" in offline_ps1
-    assert "当前状态 / Current status" in offline_ps1
-    assert "命令作用 / What this command does" in offline_ps1
+    assert "当前结果 / Result" in offline_ps1
+    assert "下一步 / Next" in offline_ps1
     assert "amd64" in offline_ps1
     assert "x64" in offline_ps1
     assert "PYTHONUTF8" in offline_ps1
@@ -896,8 +897,10 @@ def test_windows_install_scripts_include_auto_python_detection_and_bilingual_gui
 
     assert "winget install --id Python.Python.3.11" in online_ps1
     assert "choco install python311 -y" in online_ps1
-    assert "当前状态 / Current status" in online_ps1
-    assert "ai-sdlc adapter status" in online_ps1
+    assert "当前结果 / Result" in online_ps1
+    assert "下一步 / Next" in online_ps1
+    assert "ai-sdlc init ." in online_ps1
+    assert "ai-sdlc adapter status" not in online_ps1
     assert "PYTHONUTF8" in online_ps1
     assert "PYTHONIOENCODING" in online_ps1
     assert "UTF8Encoding" in online_ps1

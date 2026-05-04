@@ -42,14 +42,12 @@ function Write-BilingualStatus {
     [string]$PurposeEn
   )
 
-  Write-Host "当前状态 / Current status"
+  Write-Host "当前结果 / Result"
   Write-Host "  $StatusZh"
   Write-Host "  $StatusEn"
   Write-Host ""
-  Write-Host "下一步命令 / Next command"
+  Write-Host "下一步 / Next"
   Write-Host "  $Command"
-  Write-Host ""
-  Write-Host "命令作用 / What this command does"
   Write-Host "  $PurposeZh"
   Write-Host "  $PurposeEn"
 }
@@ -117,11 +115,11 @@ Write-Host "Installing ai-sdlc (offline)..."
 $cliExe = Join-Path $VenvPath "Scripts\\ai-sdlc.exe"
 Write-Host ""
 Write-BilingualStatus `
-  -StatusZh "离线安装完成，可以先验证 CLI，再进入项目执行 adapter 检查和安全预演。" `
-  -StatusEn "Offline installation completed. Verify the CLI, then enter your project and run adapter checks plus the safe rehearsal." `
-  -Command "& '$VenvPath\\Scripts\\Activate.ps1'; ai-sdlc adapter status; ai-sdlc run --dry-run" `
-  -PurposeZh "激活 venv，检查 adapter 接入真值，再执行安全预演；run --dry-run 只证明 CLI 预演成功，不证明治理已激活。" `
-  -PurposeEn "Activate the venv, inspect adapter ingress truth, then run the safe rehearsal; run --dry-run only proves the CLI rehearsal succeeded, not governance activation."
+  -StatusZh "离线安装完成。安装脚本已创建运行环境并安装 AI-SDLC。" `
+  -StatusEn "Offline installation completed. The installer created the runtime and installed AI-SDLC." `
+  -Command "& '$VenvPath\\Scripts\\Activate.ps1'; cd <your-project>; ai-sdlc init ." `
+  -PurposeZh "进入你的项目后执行初始化；init 会自动完成必要检查和安全预演。" `
+  -PurposeEn "Enter your project and initialize it; init will automatically run the required checks and safe rehearsal."
 Write-Host ""
 Write-Host "Direct shim / 直接调用:"
 Write-Host "  & '$cliExe' --help"

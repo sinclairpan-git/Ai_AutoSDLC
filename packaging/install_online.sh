@@ -18,14 +18,12 @@ print_status() {
   local command="$3"
   local purpose_zh="$4"
   local purpose_en="$5"
-  echo "当前状态 / Current status"
+  echo "当前结果 / Result"
   echo "  ${status_zh}"
   echo "  ${status_en}"
   echo ""
-  echo "下一步命令 / Next command"
+  echo "下一步 / Next"
   echo "  ${command}"
-  echo ""
-  echo "命令作用 / What this command does"
   echo "  ${purpose_zh}"
   echo "  ${purpose_en}"
 }
@@ -115,8 +113,8 @@ VENV_PYTHON="${VENV_TARGET}/bin/python"
 
 echo ""
 print_status \
-  "在线安装完成，可以进入项目检查 adapter 接入真值并执行安全预演。" \
-  "Online installation completed. Enter your project, inspect adapter ingress truth, and run the safe rehearsal." \
-  "source \"${VENV_TARGET}/bin/activate\" && ai-sdlc adapter status && ai-sdlc run --dry-run" \
-  "激活 venv，检查 adapter 接入真值，再执行安全预演；run --dry-run 只证明 CLI 预演成功，不证明治理已激活。" \
-  "Activate the venv, inspect adapter ingress truth, then run the safe rehearsal; run --dry-run only proves the CLI rehearsal succeeded, not governance activation."
+  "在线安装完成。安装脚本已创建运行环境并安装 AI-SDLC。" \
+  "Online installation completed. The installer created the runtime and installed AI-SDLC." \
+  "source \"${VENV_TARGET}/bin/activate\" && cd <your-project> && ai-sdlc init ." \
+  "进入你的项目后执行初始化；init 会自动完成必要检查和安全预演。" \
+  "Enter your project and initialize it; init will automatically run the required checks and safe rehearsal."

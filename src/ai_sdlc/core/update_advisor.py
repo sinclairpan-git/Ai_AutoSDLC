@@ -364,6 +364,8 @@ def render_notice_lines(evaluation: UpdateEvaluation) -> list[str]:
         return [
             f"检测到 AI-SDLC {latest} 可用于当前安装渠道。",
             f"AI-SDLC {latest} is available for this install channel.",
+            "更新命令会自动下载、安装并校验版本。",
+            "The update command downloads, installs, and verifies the version automatically.",
             f"更新命令 / Update command: {evaluation.upgrade_command}",
         ]
     if NOTICE_LIGHT in classes:
@@ -483,7 +485,7 @@ def _upgrade_command(identity: RuntimeIdentity, cache: UpdateCache) -> str | Non
     if identity.install_channel != "github-archive" or not cache.channel_latest_version:
         return None
     version = _normalize_version_label(cache.channel_latest_version)
-    return f"ai-sdlc self-update instructions --version {version}"
+    return f"ai-sdlc self-update install --version {version}"
 
 
 def _evaluation_from_identity(

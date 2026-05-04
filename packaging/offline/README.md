@@ -82,18 +82,17 @@ ai-sdlc --help
 & .\.venv\Scripts\python.exe -m ai_sdlc --help
 ```
 
-然后进入业务项目目录，先执行仓库规定的启动入口：
+然后进入业务项目目录，执行初始化入口。`init` 会自动完成必要检查和安全预演：
 
 ```bash
-ai-sdlc adapter status
-ai-sdlc run --dry-run
+ai-sdlc init .
 ```
 
-CLI 安装器与后续命令提示均会以中英双语输出以下三类信息：
+CLI 安装器与后续命令提示均会以中英双语输出以下信息：
 
-- 当前状态 / Current status
-- 下一步命令 / Next command
-- 命令作用 / What this command does
+- 当前结果 / Result
+- 下一步 / Next
+- 说明 / Notes（仅在需要时出现）
 
 ## 平台兼容提醒
 

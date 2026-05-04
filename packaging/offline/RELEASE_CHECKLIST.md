@@ -90,9 +90,8 @@ PY
 - [ ] **POSIX smoke**：在不暴露系统 Python 的环境中执行 `install_offline.sh`，确认脚本输出 `Using bundled Python runtime`
 - [ ] **Windows smoke**：执行 `install_offline.ps1` 或 `install_offline.bat`，确认安装完成且 CLI 可调用
 - [ ] 安装后执行 `ai-sdlc --help`，或用 `python -m ai_sdlc --help` 验证 CLI 可用
-- [ ] 进入业务仓库后执行 `ai-sdlc adapter status`
-- [ ] 再执行 `ai-sdlc run --dry-run`
-- [ ] CLI 输出包含双语状态块：`当前状态 / Current status`、`下一步命令 / Next command`、`命令作用 / What this command does`
+- [ ] 进入业务仓库后执行 `ai-sdlc init .`，确认初始化会自动完成必要检查和安全预演
+- [ ] CLI 输出包含双语结果块：`当前结果 / Result`、`下一步 / Next`
 
 跨平台 release 额外门禁：
 

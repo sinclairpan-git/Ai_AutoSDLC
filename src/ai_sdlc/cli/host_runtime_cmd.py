@@ -105,14 +105,9 @@ def _host_runtime_guidance(plan: HostRuntimePlan) -> str:
             current_status_en="Host runtime is ready. You can now verify adapter ingress truth.",
             next_steps=(
                 (
-                    "ai-sdlc adapter status",
-                    "检查 adapter 接入真值、验证结果和治理状态。",
-                    "Inspect adapter ingress truth, verification result, and governance state.",
-                ),
-                (
                     "ai-sdlc run --dry-run",
-                    "执行安全预演，确认阶段路由与入口链路。",
-                    "Run the safe rehearsal to confirm stage routing and startup flow.",
+                    "执行安全预演；如 adapter 还没验证，输出会给出恢复动作。",
+                    "Run the safe rehearsal; if adapter verification is still missing, the output will give the recovery action.",
                 ),
             ),
         )

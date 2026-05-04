@@ -9,9 +9,15 @@ from pathlib import Path
 
 import typer
 from rich.console import Console
+from rich.panel import Panel
 from rich.table import Table
 
-from ai_sdlc.cli.beginner_guidance import render_adapter_status_for_beginner
+from ai_sdlc.cli.beginner_guidance import (
+    render_adapter_status_for_beginner,
+    render_command_missing_guidance,
+    render_project_required_guidance,
+    render_single_next_step,
+)
 from ai_sdlc.core.config import load_project_config, persist_preferred_shell
 from ai_sdlc.integrations.agent_target import (
     interactive_select_agent_target,
@@ -47,7 +53,7 @@ _DEFAULT_ADAPTER_EXEC_TIMEOUT_SECONDS = 120
 def _require_project_root() -> object:
     root = find_project_root()
     if root is None:
-        console.print("[red]Not inside an AI-SDLC project.[/red]")
+        console.print(render_project_required_guidance())
         raise typer.Exit(code=1)
     return root
 
@@ -70,7 +76,7 @@ def _resolve_command(ctx: typer.Context) -> list[str]:
     if command and command[0] == "--":
         command = command[1:]
     if not command:
-        console.print("[red]A command is required after '--'.[/red]")
+        console.print(render_command_missing_guidance("ai-sdlc adapter exec -- ai-sdlc --help"))
         raise typer.Exit(code=2)
     return command
 
@@ -114,7 +120,13 @@ def adapter_select(
     if selected_target is None:
         if not _is_interactive_terminal():
             console.print(
-                "[red]Specify --agent-target in non-interactive mode, or rerun in a TTY.[/red]"
+                render_single_next_step(
+                    result_zh="需要选择 AI 代理入口；当前终端不能交互选择。",
+                    result_en="An AI agent target is required, and this terminal cannot prompt interactively.",
+                    next_command="ai-sdlc adapter select --agent-target codex",
+                    next_zh="把 `codex` 替换成你实际用于聊天开发的入口。",
+                    next_en="Replace `codex` with the AI entry you actually use for chat development.",
+                )
             )
             raise typer.Exit(code=2)
         selected_target = interactive_select_agent_target(detect_ide(root))
@@ -125,8 +137,19 @@ def adapter_select(
         console.print(note)
     cfg = load_project_config(root)
     console.print(
-        "[green]Adapter target selected:[/green] "
-        f"{cfg.agent_target} ({cfg.adapter_ingress_state or 'unknown'})"
+        render_single_next_step(
+            result_zh=f"已选择 AI 代理入口：{cfg.agent_target}。",
+            result_en=f"AI agent target selected: {cfg.agent_target}.",
+            next_command="ai-sdlc run --dry-run",
+            next_zh="继续安全预演；如果这是 init 自动流程的一部分，可以直接回到 init 输出继续判断。",
+            next_en="Continue with the safe rehearsal; if this ran inside init, follow the init output.",
+            notes=(
+                (
+                    f"当前接入状态：{cfg.adapter_ingress_state or 'unknown'}",
+                    f"Current ingress state: {cfg.adapter_ingress_state or 'unknown'}",
+                ),
+            ),
+        )
     )
 
 
@@ -144,7 +167,13 @@ def adapter_shell_select(
     if selected_shell is None:
         if not _is_interactive_terminal():
             console.print(
-                "[red]Specify --shell in non-interactive mode, or rerun in a TTY.[/red]"
+                render_single_next_step(
+                    result_zh="需要选择项目命令 shell；当前终端不能交互选择。",
+                    result_en="A project command shell is required, and this terminal cannot prompt interactively.",
+                    next_command="ai-sdlc adapter shell-select --shell zsh",
+                    next_zh="把 `zsh` 替换成你实际执行命令的 shell。",
+                    next_en="Replace `zsh` with the shell you actually use to run commands.",
+                )
             )
             raise typer.Exit(code=2)
         selected_shell = interactive_select_preferred_shell(
@@ -159,8 +188,13 @@ def adapter_shell_select(
     if note:
         console.print(note)
     console.print(
-        "[green]Project shell selected:[/green] "
-        f"{preferred_shell_label(selected_shell)}"
+        render_single_next_step(
+            result_zh=f"已选择项目命令 shell：{preferred_shell_label(selected_shell)}。",
+            result_en=f"Project command shell selected: {preferred_shell_label(selected_shell)}.",
+            next_command="ai-sdlc run --dry-run",
+            next_zh="继续安全预演；后续 CLI/AI 指令会优先按这个 shell 展示命令。",
+            next_en="Continue with the safe rehearsal; future CLI/AI commands will prefer this shell.",
+        )
     )
 
 
@@ -180,9 +214,19 @@ def adapter_activate(
         console.print(note)
     cfg = _adapter_status_payload(root)
     console.print(
-        "[green]Adapter acknowledgement recorded:[/green] "
-        f"{cfg['agent_target']} ({cfg['adapter_activation_state']}); "
-        "this does not change ingress verification."
+        render_single_next_step(
+            result_zh="已记录 adapter 人工确认；这不是宿主加载验证。",
+            result_en="Adapter acknowledgement was recorded; this is not host-load verification.",
+            next_command="ai-sdlc adapter status",
+            next_zh="查看当前是否已经 verified_loaded；默认状态页会告诉你下一步。",
+            next_en="Check whether the adapter is verified_loaded; the default status view will show the next step.",
+            notes=(
+                (
+                    f"当前入口：{cfg['agent_target']}，确认状态：{cfg['adapter_activation_state']}",
+                    f"Current target: {cfg['agent_target']}, acknowledgement state: {cfg['adapter_activation_state']}",
+                ),
+            ),
+        )
     )
 
 
@@ -230,7 +274,19 @@ def adapter_exec(
     try:
         proof_env = build_canonical_proof_env(root)
     except (FileNotFoundError, ValueError) as exc:
-        console.print(f"[red]{exc}[/red]")
+        console.print(
+            Panel(
+                render_single_next_step(
+                    result_zh=f"无法生成 adapter 执行凭证：{exc}",
+                    result_en=f"Could not build adapter execution proof: {exc}",
+                    next_command="ai-sdlc adapter status",
+                    next_zh="先检查 adapter 状态，再按状态页给出的单一下一步处理。",
+                    next_en="Check adapter status first, then follow the single next step it prints.",
+                ),
+                title="ai-sdlc adapter exec",
+                border_style="red",
+            )
+        )
         raise typer.Exit(code=2) from exc
 
     env = os.environ.copy()
@@ -255,8 +311,13 @@ def adapter_exec(
             _coerce_timeout_output(exc.stderr),
         )
         console.print(
-            "[red]adapter exec child command timed out after "
-            f"{timeout_seconds} second(s).[/red]"
+            render_single_next_step(
+                result_zh=f"子命令超时：超过 {timeout_seconds} 秒未结束。",
+                result_en=f"Child command timed out after {timeout_seconds} second(s).",
+                next_command=None,
+                next_zh="检查上方子命令输出；需要更长时间时增加 `--timeout-seconds` 后重试。",
+                next_en="Review the child command output above; increase `--timeout-seconds` and retry if it needs more time.",
+            )
         )
         raise typer.Exit(code=124) from exc
     _emit_process_output(result.stdout, result.stderr)
