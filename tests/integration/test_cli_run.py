@@ -405,6 +405,22 @@ class TestRunCommand:
         assert "OPENAI_CODEX" in result.output
         assert "ai-sdlc run" in result.output
 
+    def test_run_non_dry_run_does_not_suggest_fake_env_for_generic_adapter(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.chdir(tmp_path)
+        assert (
+            runner.invoke(app, ["init", ".", "--agent-target", "generic"]).exit_code == 0
+        )
+
+        result = runner.invoke(app, ["run"])
+
+        assert result.exit_code == 1
+        assert "AI_SDLC_ADAPTER_VERIFIED" not in result.output
+        assert "ai-sdlc adapter select" in result.output
+        assert "重新选择实际用于聊天开发的 AI" in result.output
+        assert "工具入口" in result.output
+
     def test_run_non_dry_run_continues_when_adapter_is_verified_loaded(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:

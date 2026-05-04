@@ -49,9 +49,11 @@ def render_single_next_step(
     return "\n".join(lines)
 
 
-def _verified_run_command(payload: dict[str, object]) -> str:
+def _verified_run_command(payload: dict[str, object]) -> str | None:
     target = str(payload.get("agent_target") or "").strip().lower()
-    key = _VERIFICATION_ENV_FOR_TARGET.get(target, "AI_SDLC_ADAPTER_VERIFIED")
+    key = _VERIFICATION_ENV_FOR_TARGET.get(target)
+    if key is None:
+        return None
     shell = str(
         payload.get("preferred_shell") or payload.get("preferred_shell_recommended") or ""
     ).strip().lower()
@@ -116,10 +118,19 @@ def render_mutating_run_blocker(payload: dict[str, object]) -> str:
     """Render a run-unblocking command for mutating runs."""
 
     result_zh, result_en = adapter_result_text(payload)
+    command = _verified_run_command(payload)
+    if command is None:
+        return render_single_next_step(
+            result_zh=result_zh,
+            result_en=result_en,
+            next_command="ai-sdlc adapter select",
+            next_zh="当前入口无法用环境信号验证。请重新选择实际用于聊天开发的 AI 工具入口，然后再运行正式流程。",
+            next_en="The current entry cannot be verified with an environment signal. Select the AI tool you actually use for chat development, then run the full flow again.",
+        )
     return render_single_next_step(
         result_zh=result_zh,
         result_en=result_en,
-        next_command=_verified_run_command(payload),
+        next_command=command,
         next_zh="正式执行需要宿主验证信号。请在实际 AI 工具终端中重新运行，或在当前 shell 用上面的命令带上验证信号后再运行。",
         next_en="A mutating run needs host verification. Run it from the actual AI-tool terminal, or use the command above to pass the verification signal in this shell.",
     )
