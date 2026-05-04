@@ -141,7 +141,58 @@ def self_update_check(
     )
 ) -> None:
     """User-facing update check for the current installed runtime."""
-    self_update_evaluate(json_output=json_output, no_refresh=False)
+    evaluation = evaluate_update_advisor(allow_refresh=True)
+    if json_output:
+        _print_json(evaluation.to_machine_dict())
+        return
+
+    target_version = evaluation.channel_latest_version or evaluation.upstream_latest_version
+    if evaluation.upgrade_command and target_version:
+        console.print(
+            Panel(
+                render_single_next_step(
+                    result_zh=f"检测到可更新版本：AI-SDLC {target_version}，现在自动更新。",
+                    result_en=f"Update available: AI-SDLC {target_version}. Updating now.",
+                    next_command=None,
+                    next_zh="无需复制下一条命令；CLI 会继续下载、安装并校验版本。",
+                    next_en="No extra command is needed; the CLI will download, install, and verify the version.",
+                ),
+                title="AI-SDLC Self Update",
+                border_style="yellow",
+            )
+        )
+        self_update_install(version=target_version)
+        return
+
+    lines = render_notice_lines(evaluation)
+    if lines:
+        console.print(Panel("\n".join(lines), title="AI-SDLC Update Advisor"))
+        return
+
+    installed = evaluation.runtime_identity.installed_version or "unknown"
+    if evaluation.reason_code in {
+        "source_or_module_runtime",
+        "editable_runtime",
+        "distribution_not_found",
+    }:
+        result_zh = "当前是源码/开发运行环境，不执行自动更新。"
+        result_en = "Current runtime is source/development mode; automatic update is skipped."
+    else:
+        result_zh = f"当前已是最新可用版本：AI-SDLC {installed}。"
+        result_en = f"Current AI-SDLC is already up to date: {installed}."
+    console.print(
+        Panel(
+            render_single_next_step(
+                result_zh=result_zh,
+                result_en=result_en,
+                next_command=None,
+                next_zh="不需要继续执行升级命令。",
+                next_en="No further update command is needed.",
+            ),
+            title="AI-SDLC Self Update",
+            border_style="green",
+        )
+    )
 
 
 @self_update_app.command("install")
@@ -149,7 +200,7 @@ def self_update_install(
     version: str = typer.Option(
         ...,
         "--version",
-        help="Release version to install, for example 0.7.5.",
+        help="Release version to install, for example 0.7.6.",
     ),
 ) -> None:
     """Download, install, and verify a GitHub release for the current runtime."""
@@ -409,7 +460,7 @@ def self_update_instructions(
     version: str = typer.Option(
         "",
         "--version",
-        help="Release version to install, for example 0.7.5.",
+        help="Release version to install, for example 0.7.6.",
     ),
 ) -> None:
     """Point users to the automatic self-update command."""
@@ -419,9 +470,15 @@ def self_update_instructions(
             render_single_next_step(
                 result_zh="这不是更新执行命令；当前安装尚未变化。",
                 result_en="This is not the update execution command; your current install has not changed.",
-                next_command=f"ai-sdlc self-update install --version {display_version}",
-                next_zh="执行这一条命令即可自动下载、安装并校验版本。",
-                next_en="Run this one command to download, install, and verify the version automatically.",
+                next_command="ai-sdlc self-update check",
+                next_zh=(
+                    "执行这一条命令即可自动检查最新 release，并在需要时下载、"
+                    f"安装并校验版本；目标版本示例：{display_version}。"
+                ),
+                next_en=(
+                    "Run this one command to check the latest release and, when needed, "
+                    f"download, install, and verify it; example target: {display_version}."
+                ),
                 notes=(
                     (
                         "正常用户不需要手动下载 release 包或运行离线安装脚本。",
