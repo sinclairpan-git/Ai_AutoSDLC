@@ -1,8 +1,8 @@
 # AI-SDLC 小白实操手册
 
-## 升级兼容提示（2026-04）
+## 升级兼容提示（2026-05）
 
-- 这份手册现在默认以**当前仓库源码版 / 当前发布版 `v0.7.8`** 为准。如果你正在验证当前仓库里的新能力，优先在目标项目的虚拟环境里执行 `pip install -e <Ai_AutoSDLC 本地源码目录>`；如果你只想安装当前已发布版，再使用下文的 `v0.7.8` tag 安装命令。
+- 这份手册现在默认以**当前发布版 `v0.7.8`** 为准。普通用户优先使用 Release 离线包或公司管理员分发的安装包；只有框架开发者验证源码改动时，才使用本地源码安装。
 - adapter 的 canonical path 已切换到厂商默认入口：
   - Codex -> `AGENTS.md`
   - Cursor -> `.cursor/rules/ai-sdlc.mdc`
@@ -17,7 +17,7 @@
 - `workitem init` 如果发现根目录还没有 `program-manifest.yaml`，现在会先自动创建最小 manifest，再把当前 work item 写进去。
 - `program managed-delivery-apply --execute --yes` 现在不只是写 apply artifact；它会把组件库包真正安装到目标项目的 `managed/frontend/`，并在需要时自动安装 Playwright browser runtime。
 - `program browser-gate-baseline --execute --yes` 是新增正式入口，用来把最近一次 browser gate 的 visual-regression bootstrap capture 提升成 baseline。
-- 如果异常排查时 `status` 仍显示 `materialized only` 或 `unsupported`，请在 IDE 自带终端重新运行 `python -m ai_sdlc adapter select`，或按提示设置宿主环境变量后再跑 `status`。
+- 如果初始化或排查输出提示 adapter target 不匹配，只执行 CLI 在 `下一步 / Next` 里给出的那一条命令。通常是 `python -m ai_sdlc adapter select --agent-target <真实聊天入口>`，然后重新执行 `init` 或 `adapter status` 确认。
 
 ## 目录
 
@@ -83,10 +83,11 @@
 如果你问“PowerShell 怎么识别 IDE”，答案是：
 
 - 不是 PowerShell 识别 IDE。
-- AI-SDLC 识别的是项目里的 IDE 标记目录，例如 `.cursor`、`.codex`、`.claude`、`.vscode`。
-- 所以最稳的做法是：**先用你的 IDE 打开项目文件夹一次，再去终端跑 `init`。**
-- 如果你先在 PowerShell 跑了 `init`，后面才打开 IDE，也没关系。打开 IDE 以后，再在终端执行一次 `python -m ai_sdlc adapter status`，AI-SDLC 仍然可以补装 IDE 适配文件；如果 target 识别错了，再执行 `python -m ai_sdlc adapter select --agent-target <真实聊天入口>`。
-- `v0.7.8` 起，如果当前终端带有真实 AI 宿主信号（例如 Codex / Claude Code / Cursor / VS Code 的运行时环境变量），AI-SDLC 会优先相信这个 live host，而不是仓库里历史遗留的 `.cursor`、`.vscode`、`.codex` 或 `.claude` 目录。
+- AI-SDLC 先看当前终端是否带有真实 AI 宿主信号，例如 Codex / Claude Code / Cursor / VS Code 的运行时环境变量。
+- `v0.7.8` 起，live host 信号优先级高于仓库里历史遗留的 `.cursor`、`.vscode`、`.codex` 或 `.claude` 目录。
+- 如果没有 live host 信号，AI-SDLC 才退回到项目里的 IDE 标记目录做 fallback，例如 `.cursor`、`.codex`、`.claude`、`.vscode`。
+- 所以最稳的做法是：**在真正用于聊天开发的 AI 宿主环境里打开项目，再去同一个环境的终端跑 `init`。**
+- 如果 target 识别错了，不要反复手动跑 `adapter status` 当主流程；按 CLI 提示执行 `python -m ai_sdlc adapter select --agent-target <真实聊天入口>`，再回到 `init` 或需求聊天。
 
 如果你问“AI-SDLC 到底应该认哪个工具”，答案是：
 

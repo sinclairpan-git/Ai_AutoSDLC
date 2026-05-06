@@ -268,6 +268,9 @@ RELEASE_DOCS_CONSISTENCY_SURFACES: dict[Path, tuple[str, ...]] = {
         "USER_GUIDE.zh-CN.md",
         "packaging/offline/README.md",
         "docs/pull-request-checklist.zh.md",
+        "普通用户主路径",
+        "live host evidence",
+        "materialized only",
         "ai-sdlc-offline-0.7.8-windows-amd64.zip",
         "ai-sdlc-offline-0.7.8-macos-arm64.tar.gz",
         "ai-sdlc-offline-0.7.8-linux-amd64.tar.gz",
@@ -278,6 +281,8 @@ RELEASE_DOCS_CONSISTENCY_SURFACES: dict[Path, tuple[str, ...]] = {
         "USER_GUIDE.zh-CN.md",
         "packaging/offline/README.md",
         "v0.7.8",
+        "普通用户主路径",
+        "materialized only",
         "ai-sdlc-offline-0.7.8-windows-amd64.zip",
         "ai-sdlc-offline-0.7.8-macos-arm64.tar.gz",
         "ai-sdlc-offline-0.7.8-linux-amd64.tar.gz",
@@ -302,6 +307,11 @@ BEGINNER_GUIDE_FORBIDDEN_TOKENS = (
     "Next step:\n│   Inspect adapter truth",
     "Start framework in safe mode",
     "至少要把 `init`、`adapter status`、`run --dry-run`",
+    "当前仓库源码版 / 当前发布版",
+    "优先在目标项目的虚拟环境里执行 `pip install -e <Ai_AutoSDLC 本地源码目录>`",
+    "如果异常排查时 `status` 仍显示 `materialized only` 或 `unsupported`",
+    "AI-SDLC 识别的是项目里的 IDE 标记目录",
+    "再在终端执行一次 `python -m ai_sdlc adapter status`，AI-SDLC 仍然可以补装 IDE 适配文件",
 )
 README_CLI_PATH_REQUIRED_TOKENS = (
     "## Start The Framework",
@@ -315,6 +325,9 @@ README_CLI_PATH_FORBIDDEN_TOKENS = (
     "the minimum command loop is:",
     "2. `python -m ai_sdlc run --dry-run`",
     "Next command: `python -m ai_sdlc workitem init --title",
+    "current staged framework release",
+    "After `pip install` or the offline installer, the `ai-sdlc.exe` shim lives under your venv",
+    "Create and activate the venv",
 )
 AGENTS_CLI_PATH_REQUIRED_TOKENS = (
     "初始化入口（普通用户先执行）",

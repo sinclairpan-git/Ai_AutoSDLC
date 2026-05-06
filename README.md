@@ -4,7 +4,7 @@ AI-native SDLC automation framework — a Python CLI tool and rule file set for 
 
 ## Release And Current Source
 
-`v0.7.8` is the current staged framework release. This patch release fixes two production safety issues: `recover --reconcile` no longer advances direct-formal placeholder `plan.md` / `tasks.md` files merely because execution-log evidence exists, and adapter target detection now prefers live AI host evidence over stale repo-local IDE marker directories.
+`v0.7.8` is the current published framework release. This patch release fixes two production safety issues: `recover --reconcile` no longer advances direct-formal placeholder `plan.md` / `tasks.md` files merely because execution-log evidence exists, and adapter target detection now prefers live AI host evidence over stale repo-local IDE marker directories.
 
 If you want the published release, install `v0.7.8`. If you are evaluating newer unreleased behavior beyond this tag, prefer the source-checkout path below.
 
@@ -87,33 +87,39 @@ editable installs stay quiet so framework development is not polluted by release
 notices. Set `AI_SDLC_DISABLE_UPDATE_CHECK=1` to disable the advisor globally in
 managed or offline environments.
 
-## Windows: venv, PATH, and `ai-sdlc` not found
+## Windows: PATH and `ai-sdlc` not found
 
-After `pip install` or the offline installer, the `ai-sdlc.exe` shim lives under your venv’s `Scripts` folder. That directory is only on `PATH` while the venv is activated.
+For ordinary users, prefer the release installer or your company-provided package. Do not create a Python venv, install pip dependencies, or adjust PATH by hand unless the installer or `ai-sdlc doctor` asks you to.
 
-1. Create and activate the venv (PowerShell). If `Activate.ps1` is blocked, use bypass for this session only:
+1. First try the command the installer prints. For bundled offline installs, that may be the module entry under the installed `.venv`:
 
    ```powershell
-   Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
-   .\.venv\Scripts\Activate.ps1
+   python -m ai_sdlc --help
    ```
 
-2. Check that the CLI resolves:
+2. If your terminal should already have the shim on PATH, check that the CLI resolves:
 
    ```powershell
    Get-Command ai-sdlc
    ai-sdlc --help
    ```
 
-3. If `ai-sdlc` is still not found, call the shim by full path (adjust `.venv` if you used another name):
+3. If you intentionally installed into a project venv with pip, activate that venv before using the shim. If `Activate.ps1` is blocked, use the bypass for this session only:
+
+   ```powershell
+   Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
+   .\.venv\Scripts\Activate.ps1
+   ```
+
+4. If `ai-sdlc` is still not found in that venv, call the shim by full path:
 
    ```powershell
    & .\.venv\Scripts\ai-sdlc.exe --help
    ```
 
-4. If `ai-sdlc` is not on `PATH` but Python can import the package, you can use `python -m ai_sdlc` (same subcommands as `ai-sdlc`).
+5. If `ai-sdlc` is not on `PATH` but Python can import the package, use `python -m ai_sdlc` with the same subcommands as `ai-sdlc`.
 
-5. Run `python -m ai_sdlc doctor` (or `ai-sdlc doctor` after activation) to print the active interpreter, whether `ai-sdlc` is on `PATH`, and the typical shim path for this Python.
+6. Run `python -m ai_sdlc doctor` (or `ai-sdlc doctor` if the shim resolves) to print the active interpreter, whether `ai-sdlc` is on `PATH`, and the typical shim path for this Python.
 
 See also `packaging/offline/README.md` for offline bundles: build wheels on the **same OS/CPU** as the target machine; do not reuse a macOS wheel set on Windows.
 
