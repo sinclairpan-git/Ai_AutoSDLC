@@ -104,6 +104,29 @@ def test_failure_backoff_prevents_repeated_refresh(monkeypatch, tmp_path) -> Non
     assert calls == 1
 
 
+def test_explicit_check_can_ignore_failure_backoff(monkeypatch, tmp_path) -> None:
+    _force_installed(monkeypatch, tmp_path)
+    calls = 0
+
+    def fail_fetch(timeout: float) -> dict[str, object]:
+        nonlocal calls
+        calls += 1
+        raise OSError("network unavailable")
+
+    now = datetime(2026, 5, 1, 12, 0, tzinfo=UTC)
+    first = evaluate_update_advisor(now=now, fetch_latest=fail_fetch)
+    second = evaluate_update_advisor(
+        now=now + timedelta(hours=1),
+        fetch_latest=fail_fetch,
+        ignore_failure_backoff=True,
+    )
+
+    assert first.refresh_attempted is True
+    assert second.refresh_attempted is True
+    assert second.refresh_result == "network_error"
+    assert calls == 2
+
+
 def test_stale_cache_does_not_emit_notice_without_refresh(monkeypatch, tmp_path) -> None:
     _force_installed(monkeypatch, tmp_path)
     monkeypatch.setenv("AI_SDLC_UPDATE_ADVISOR_TEST_LATEST_VERSION", "v0.7.4")

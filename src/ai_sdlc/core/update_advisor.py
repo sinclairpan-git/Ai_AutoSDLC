@@ -39,6 +39,7 @@ REFRESH_DISABLED = "disabled"
 FRESH_WINDOW = timedelta(hours=24)
 EXPIRED_WINDOW = timedelta(days=7)
 DEFAULT_TIMEOUT_SECONDS = 1.5
+EXPLICIT_CHECK_TIMEOUT_SECONDS = 20.0
 
 FetchLatest = Callable[[float], dict[str, Any]]
 
@@ -250,6 +251,7 @@ def evaluate_update_advisor(
     fetch_latest: FetchLatest | None = None,
     timeout_seconds: float = DEFAULT_TIMEOUT_SECONDS,
     allow_refresh: bool = True,
+    ignore_failure_backoff: bool = False,
 ) -> UpdateEvaluation:
     """Evaluate update notice eligibility and optionally refresh upstream truth."""
     env_map = env or os.environ
@@ -282,7 +284,11 @@ def evaluate_update_advisor(
 
     if allow_refresh and freshness != "fresh":
         backoff_until = _parse_iso(cache.failure_backoff_until)
-        if backoff_until is not None and current_time < backoff_until:
+        if (
+            backoff_until is not None
+            and current_time < backoff_until
+            and not ignore_failure_backoff
+        ):
             refresh_result = REFRESH_BACKOFF
             reason_code = "failure_backoff"
         else:

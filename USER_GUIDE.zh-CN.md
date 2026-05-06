@@ -2,7 +2,7 @@
 
 ## 升级兼容提示（2026-05）
 
-- 这份手册现在默认以**当前发布版 `v0.7.8`** 为准。普通用户优先使用 Release 离线包或公司管理员分发的安装包；只有框架开发者验证源码改动时，才使用本地源码安装。
+- 这份手册现在默认以**当前发布版 `v0.7.9`** 为准。普通用户优先使用 Release 离线包或公司管理员分发的安装包；只有框架开发者验证源码改动时，才使用本地源码安装。
 - adapter 的 canonical path 已切换到厂商默认入口：
   - Codex -> `AGENTS.md`
   - Cursor -> `.cursor/rules/ai-sdlc.mdc`
@@ -24,7 +24,7 @@
 - 使用前先记住
 - 第零章：先选一种安装方式
   - 方案 A：用 GitHub tag 在线安装当前发布版
-  - 方案 B：用 0.7.8 Release 离线包安装
+  - 方案 B：用 0.7.9 Release 离线包安装
   - 方案 C：用本地源码安装最新开发版
   - 已安装用户：检查更新与显式升级
 - 第零点五章：从安装到首次使用的命令卡片
@@ -115,7 +115,7 @@ py -3.11 -m venv .venv
 Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
 .\.venv\Scripts\Activate.ps1
 python -m pip install -U pip
-pip install "https://github.com/sinclairpan-git/Ai_AutoSDLC/archive/refs/tags/v0.7.8.zip"
+pip install "https://github.com/sinclairpan-git/Ai_AutoSDLC/archive/refs/tags/v0.7.9.zip"
 python -m ai_sdlc --help
 ```
 
@@ -125,33 +125,33 @@ python -m ai_sdlc --help
 python3 -m venv .venv
 source .venv/bin/activate
 python -m pip install -U pip
-pip install "https://github.com/sinclairpan-git/Ai_AutoSDLC/archive/refs/tags/v0.7.8.tar.gz"
+pip install "https://github.com/sinclairpan-git/Ai_AutoSDLC/archive/refs/tags/v0.7.9.tar.gz"
 python -m ai_sdlc --help
 ```
 
 看到 help 输出，就说明 CLI 已安装成功。下一步去第一章或第二章继续做 `init`。
 
-### 方案 B：用 0.7.8 Release 离线包安装
+### 方案 B：用 0.7.9 Release 离线包安装
 
 这是普通用户最推荐的方式。先让管理员或你自己从 GitHub Release 下载与你机器匹配的包，再拷贝或放到目标机器。安装脚本会自己检测运行时；除非脚本明确报错，否则不要先手动安装 Python、pip 或其他依赖。
 
-当前 `v0.7.8` 正式发布资产：
+当前 `v0.7.9` 正式发布资产：
 
-- Windows x64：`ai-sdlc-offline-0.7.8-windows-amd64.zip`
-- macOS Apple Silicon：`ai-sdlc-offline-0.7.8-macos-arm64.tar.gz`
-- Linux x64：`ai-sdlc-offline-0.7.8-linux-amd64.tar.gz`
+- Windows x64：`ai-sdlc-offline-0.7.9-windows-amd64.zip`
+- macOS Apple Silicon：`ai-sdlc-offline-0.7.9-macos-arm64.tar.gz`
+- Linux x64：`ai-sdlc-offline-0.7.9-linux-amd64.tar.gz`
 
 下载入口：
 
 ```text
-https://github.com/sinclairpan-git/Ai_AutoSDLC/releases/tag/v0.7.8
+https://github.com/sinclairpan-git/Ai_AutoSDLC/releases/tag/v0.7.9
 ```
 
 **Windows：**
 
 ```powershell
-Expand-Archive -LiteralPath .\ai-sdlc-offline-0.7.8-windows-amd64.zip -DestinationPath .
-cd .\ai-sdlc-offline-0.7.8-windows-amd64
+Expand-Archive -LiteralPath .\ai-sdlc-offline-0.7.9-windows-amd64.zip -DestinationPath .
+cd .\ai-sdlc-offline-0.7.9-windows-amd64
 powershell -ExecutionPolicy Bypass -File .\install_offline.ps1
 .\.venv\Scripts\python.exe -m ai_sdlc --help
 ```
@@ -159,8 +159,8 @@ powershell -ExecutionPolicy Bypass -File .\install_offline.ps1
 **macOS Apple Silicon：**
 
 ```bash
-tar xzf ai-sdlc-offline-0.7.8-macos-arm64.tar.gz
-cd ai-sdlc-offline-0.7.8-macos-arm64
+tar xzf ai-sdlc-offline-0.7.9-macos-arm64.tar.gz
+cd ai-sdlc-offline-0.7.9-macos-arm64
 chmod +x install_offline.sh
 ./install_offline.sh
 ./.venv/bin/python -m ai_sdlc --help
@@ -169,8 +169,8 @@ chmod +x install_offline.sh
 **Linux x64：**
 
 ```bash
-tar xzf ai-sdlc-offline-0.7.8-linux-amd64.tar.gz
-cd ai-sdlc-offline-0.7.8-linux-amd64
+tar xzf ai-sdlc-offline-0.7.9-linux-amd64.tar.gz
+cd ai-sdlc-offline-0.7.9-linux-amd64
 chmod +x install_offline.sh
 ./install_offline.sh
 ./.venv/bin/python -m ai_sdlc --help
@@ -211,7 +211,7 @@ python -m ai_sdlc --help
 
 `v0.7.6` 起，已安装的 CLI 可以做非阻断更新提醒。检测到可升级版本时，普通用户只需要执行 `check`，CLI 会继续下载、安装并校验版本。
 
-在已经激活 `.venv` 的终端里执行：
+在安装脚本提示可用的终端里执行；如果你的安装方式要求先激活 `.venv`，就先按安装脚本输出激活：
 
 ```bash
 ai-sdlc self-update check
@@ -219,30 +219,32 @@ ai-sdlc self-update check
 
 如果你现在的旧版本提示 `No such command 'install'`、提示“当前安装渠道未确认可自动升级”，或者执行更新后版本仍没有变化，说明本机 CLI 太旧，不能靠旧 CLI 自己完成升级。不要继续尝试 `pip` 或不存在的子命令，直接下载最新安装包，并让安装包覆盖当前 `PATH` 命中的旧入口。成功后，未来更新再回到 `ai-sdlc self-update check`。
 
+如果你看到的是 `Update check failed; the main command continues.` 或“本次无法刷新 AI-SDLC update state”，说明当前 CLI 没能从 GitHub 刷新最新 release 信息，当前安装并没有变化。`v0.7.9` 起，显式 `self-update check` 会使用更长超时并绕过上次失败缓存；但在旧版 CLI 上，最稳的救援路径仍然是直接下载最新 Release 离线包，然后执行下面对应平台的 `--upgrade-existing`。
+
 **macOS Apple Silicon：**
 
 ```bash
-curl -L -o ai-sdlc-offline-0.7.8-macos-arm64.tar.gz "https://github.com/sinclairpan-git/Ai_AutoSDLC/releases/download/v0.7.8/ai-sdlc-offline-0.7.8-macos-arm64.tar.gz"
-tar xzf ai-sdlc-offline-0.7.8-macos-arm64.tar.gz
-cd ai-sdlc-offline-0.7.8-macos-arm64
+curl -L -o ai-sdlc-offline-0.7.9-macos-arm64.tar.gz "https://github.com/sinclairpan-git/Ai_AutoSDLC/releases/download/v0.7.9/ai-sdlc-offline-0.7.9-macos-arm64.tar.gz"
+tar xzf ai-sdlc-offline-0.7.9-macos-arm64.tar.gz
+cd ai-sdlc-offline-0.7.9-macos-arm64
 ./install_offline.sh --upgrade-existing
 ```
 
 **Linux x64：**
 
 ```bash
-curl -L -o ai-sdlc-offline-0.7.8-linux-amd64.tar.gz "https://github.com/sinclairpan-git/Ai_AutoSDLC/releases/download/v0.7.8/ai-sdlc-offline-0.7.8-linux-amd64.tar.gz"
-tar xzf ai-sdlc-offline-0.7.8-linux-amd64.tar.gz
-cd ai-sdlc-offline-0.7.8-linux-amd64
+curl -L -o ai-sdlc-offline-0.7.9-linux-amd64.tar.gz "https://github.com/sinclairpan-git/Ai_AutoSDLC/releases/download/v0.7.9/ai-sdlc-offline-0.7.9-linux-amd64.tar.gz"
+tar xzf ai-sdlc-offline-0.7.9-linux-amd64.tar.gz
+cd ai-sdlc-offline-0.7.9-linux-amd64
 ./install_offline.sh --upgrade-existing
 ```
 
 **Windows PowerShell：**
 
 ```powershell
-Invoke-WebRequest -Uri "https://github.com/sinclairpan-git/Ai_AutoSDLC/releases/download/v0.7.8/ai-sdlc-offline-0.7.8-windows-amd64.zip" -OutFile "ai-sdlc-offline-0.7.8-windows-amd64.zip"
-Expand-Archive -LiteralPath .\ai-sdlc-offline-0.7.8-windows-amd64.zip -DestinationPath .
-cd .\ai-sdlc-offline-0.7.8-windows-amd64
+Invoke-WebRequest -Uri "https://github.com/sinclairpan-git/Ai_AutoSDLC/releases/download/v0.7.9/ai-sdlc-offline-0.7.9-windows-amd64.zip" -OutFile "ai-sdlc-offline-0.7.9-windows-amd64.zip"
+Expand-Archive -LiteralPath .\ai-sdlc-offline-0.7.9-windows-amd64.zip -DestinationPath .
+cd .\ai-sdlc-offline-0.7.9-windows-amd64
 powershell -ExecutionPolicy Bypass -File .\install_offline.ps1 -UpgradeExisting
 ```
 
@@ -285,7 +287,7 @@ ai-sdlc self-update check
 **成功后你应该看到：**
 
 - `更新完成 / Update completed`
-- `Installed version: 0.7.8`
+- `Installed version: 0.7.9`
 - 没有要求你继续手动执行 `curl`、`tar`、`install_offline` 之类命令
 
 **下一步执行：**
@@ -295,6 +297,7 @@ ai-sdlc self-update check
 **如果失败：**
 
 - CLI 会给出一条重试命令；只执行那一条。
+- 如果输出包含 `Update check failed` 或“无法刷新 update state”，说明当前安装没有变化；旧版 CLI 请回到第零章下载最新 Release 离线包并执行 `--upgrade-existing`。
 - 如果公司网络不能访问 GitHub，改用第零章的 Release 离线包，不要自己拼下载命令。
 - 如果 `ai-sdlc` 命令找不到，但安装目录里的 Python 可用，按安装脚本输出的提示使用 `python -m ai_sdlc ...`。
 
@@ -521,7 +524,7 @@ ai-sdlc self-update check
 成功时你应该看到：
 
 - `更新完成 / Update completed`
-- `Installed version: 0.7.8`
+- `Installed version: 0.7.9`
 
 如果公司内网不能访问 GitHub，使用离线包，不要自己拼 `curl`、`tar` 或 `pip` 命令。
 
@@ -747,7 +750,7 @@ ai-sdlc self-update check
 成功时你应该看到：
 
 - `更新完成 / Update completed`
-- `Installed version: 0.7.8`
+- `Installed version: 0.7.9`
 
 如果你还没有安装，先回到第零章选择 Release 安装包。安装完成后，回到这个已有项目根目录继续。
 

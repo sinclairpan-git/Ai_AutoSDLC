@@ -5,6 +5,7 @@ from __future__ import annotations
 import io
 import json
 import tarfile
+from pathlib import Path
 
 import pytest
 from typer.testing import CliRunner
@@ -49,6 +50,21 @@ def test_self_update_identity_json_exposes_machine_contract(tmp_path) -> None:
     assert payload["binding_verified"] is True
     assert payload["installed_version"] == "0.7.0"
     assert payload["install_channel"] == "github-archive"
+
+
+def test_self_update_commands_do_not_trigger_project_adapter_hook(tmp_path) -> None:
+    with runner.isolated_filesystem():
+        Path(".ai-sdlc").mkdir()
+        Path(".cursor/rules").mkdir(parents=True)
+        result = runner.invoke(
+            app,
+            ["self-update", "identity", "--json"],
+            env=_env(tmp_path),
+        )
+
+        assert result.exit_code == 0
+        assert "IDE adapter" not in result.output
+        assert not Path(".cursor/rules/ai-sdlc.mdc").exists()
 
 
 def test_self_update_evaluate_json_reports_actionable_github_archive(
@@ -107,6 +123,56 @@ def test_self_update_check_auto_installs_actionable_update(
     assert "Updating now" in result.output
     assert "无需复制下一条命令" in result.output
     assert "ai-sdlc self-update install --version" not in result.output
+
+
+def test_self_update_check_reports_retry_and_offline_rescue_on_refresh_failure(
+    tmp_path, monkeypatch
+) -> None:
+    from ai_sdlc.core.update_advisor import (
+        REFRESH_NETWORK_ERROR,
+        RuntimeIdentity,
+        UpdateEvaluation,
+    )
+
+    seen: dict[str, object] = {}
+
+    def fake_evaluate(**kwargs):
+        seen.update(kwargs)
+        return UpdateEvaluation(
+            runtime_identity=RuntimeIdentity(
+                installed_runtime=True,
+                binding_verified=True,
+                runtime_identity="sha256:test",
+                installed_version="0.7.7",
+                install_channel="github-archive",
+                executable_path="ai-sdlc",
+                distribution_path=str(tmp_path),
+                reason_code="installed_runtime",
+            ),
+            freshness="expired",
+            refresh_attempted=True,
+            refresh_result=REFRESH_NETWORK_ERROR,
+            last_success_checked_at=None,
+            failure_backoff_until=None,
+            upstream_latest_version=None,
+            channel_latest_version=None,
+            release_url=None,
+            eligible_notice_classes=(),
+            reason_code="network_error",
+            upgrade_command=None,
+        )
+
+    monkeypatch.setattr(self_update_cmd, "evaluate_update_advisor", fake_evaluate)
+
+    result = runner.invoke(app, ["self-update", "check"], env=_env(tmp_path))
+
+    assert result.exit_code == 1
+    assert seen["ignore_failure_backoff"] is True
+    assert seen["timeout_seconds"] == 20.0
+    assert "当前安装尚未变化" in result.output
+    assert "ai-sdlc self-update check" in result.output
+    assert "./install_offline.sh --upgrade-existing" in result.output
+    assert "install_offline.ps1 -UpgradeExisting" in result.output
 
 
 def test_interactive_cli_renders_update_notice_once(tmp_path) -> None:

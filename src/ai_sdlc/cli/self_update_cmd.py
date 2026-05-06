@@ -19,9 +19,14 @@ from rich.panel import Panel
 
 from ai_sdlc.cli.beginner_guidance import render_single_next_step
 from ai_sdlc.core.update_advisor import (
+    EXPLICIT_CHECK_TIMEOUT_SECONDS,
     NOTICE_ACTIONABLE,
     NOTICE_FAILED,
     NOTICE_LIGHT,
+    REFRESH_BACKOFF,
+    REFRESH_NETWORK_ERROR,
+    REFRESH_PARSE_ERROR,
+    REFRESH_TIMEOUT,
     ack_notice,
     detect_runtime_identity,
     evaluate_update_advisor,
@@ -141,7 +146,11 @@ def self_update_check(
     )
 ) -> None:
     """User-facing update check for the current installed runtime."""
-    evaluation = evaluate_update_advisor(allow_refresh=True)
+    evaluation = evaluate_update_advisor(
+        allow_refresh=True,
+        ignore_failure_backoff=True,
+        timeout_seconds=EXPLICIT_CHECK_TIMEOUT_SECONDS,
+    )
     if json_output:
         _print_json(evaluation.to_machine_dict())
         return
@@ -166,6 +175,36 @@ def self_update_check(
 
     lines = render_notice_lines(evaluation)
     if lines:
+        if evaluation.refresh_result in {
+            REFRESH_BACKOFF,
+            REFRESH_NETWORK_ERROR,
+            REFRESH_PARSE_ERROR,
+            REFRESH_TIMEOUT,
+        }:
+            console.print(
+                Panel(
+                    render_single_next_step(
+                        result_zh="本次无法刷新 AI-SDLC 最新版本信息，当前安装尚未变化。",
+                        result_en="AI-SDLC could not refresh latest-version truth; the current install was not changed.",
+                        next_command="ai-sdlc self-update check",
+                        next_zh="网络恢复后重新执行同一条命令；显式 check 会重新尝试，不会被上次失败缓存挡住。",
+                        next_en="After network access recovers, rerun the same command; explicit check retries instead of being blocked by the previous failure cache.",
+                        notes=(
+                            (
+                                "如果你已经拿到更新版本的 Release 离线包，请在解压后的包目录执行 `./install_offline.sh --upgrade-existing`。",
+                                "If you already have the newer Release offline package, run `./install_offline.sh --upgrade-existing` from the unpacked bundle directory.",
+                            ),
+                            (
+                                "Windows 使用 `powershell -ExecutionPolicy Bypass -File .\\install_offline.ps1 -UpgradeExisting`。",
+                                "On Windows, use `powershell -ExecutionPolicy Bypass -File .\\install_offline.ps1 -UpgradeExisting`.",
+                            ),
+                        ),
+                    ),
+                    title="AI-SDLC Self Update",
+                    border_style="red",
+                )
+            )
+            raise typer.Exit(1)
         console.print(Panel("\n".join(lines), title="AI-SDLC Update Advisor"))
         return
 
@@ -200,7 +239,7 @@ def self_update_install(
     version: str = typer.Option(
         ...,
         "--version",
-        help="Release version to install, for example 0.7.8.",
+        help="Release version to install, for example 0.7.9.",
     ),
 ) -> None:
     """Download, install, and verify a GitHub release for the current runtime."""
@@ -460,7 +499,7 @@ def self_update_instructions(
     version: str = typer.Option(
         "",
         "--version",
-        help="Release version to install, for example 0.7.8.",
+        help="Release version to install, for example 0.7.9.",
     ),
 ) -> None:
     """Point users to the automatic self-update command."""
