@@ -31,8 +31,10 @@ from ai_sdlc.core.update_advisor import (
     detect_runtime_identity,
     evaluate_update_advisor,
     notice_already_acknowledged,
+    notice_recently_rendered,
     notice_version_for,
     platform_asset_hint,
+    record_notice_rendered,
     render_notice_lines,
     should_auto_render_notice,
 )
@@ -74,7 +76,11 @@ def maybe_render_update_notice() -> None:
     elif evaluation.refresh_attempted:
         notice_class = NOTICE_FAILED
 
-    if notice_class is None or notice_already_acknowledged(evaluation, notice_class):
+    if notice_class is None:
+        return
+    if notice_already_acknowledged(evaluation, notice_class) or notice_recently_rendered(
+        evaluation, notice_class
+    ):
         return
 
     lines = render_notice_lines(evaluation)
@@ -87,7 +93,7 @@ def maybe_render_update_notice() -> None:
             border_style="yellow",
         )
     )
-    ack_notice(
+    record_notice_rendered(
         notice_class,
         notice_version_for(evaluation, notice_class),
     )
@@ -239,7 +245,7 @@ def self_update_install(
     version: str = typer.Option(
         ...,
         "--version",
-        help="Release version to install, for example 0.7.9.",
+        help="Release version to install, for example 0.7.10.",
     ),
 ) -> None:
     """Download, install, and verify a GitHub release for the current runtime."""
@@ -499,7 +505,7 @@ def self_update_instructions(
     version: str = typer.Option(
         "",
         "--version",
-        help="Release version to install, for example 0.7.9.",
+        help="Release version to install, for example 0.7.10.",
     ),
 ) -> None:
     """Point users to the automatic self-update command."""

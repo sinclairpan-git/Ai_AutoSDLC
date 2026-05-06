@@ -140,7 +140,7 @@ SKIP_REGISTRY_REL = Path("src") / "ai_sdlc" / "rules" / "agent-skip-registry.zh.
 FRAMEWORK_DEFECT_BACKLOG_REL = Path("docs") / "framework-defect-backlog.zh-CN.md"
 VERIFICATION_RULE_REL = Path("src") / "ai_sdlc" / "rules" / "verification.md"
 PR_CHECKLIST_REL = Path("docs") / "pull-request-checklist.zh.md"
-RELEASE_NOTES_CURRENT_REL = Path("docs") / "releases" / "v0.7.9.md"
+RELEASE_NOTES_CURRENT_REL = Path("docs") / "releases" / "v0.7.10.md"
 RELEASE_POLICY_REL = Path("docs") / "框架自迭代开发与发布约定.md"
 README_REL = Path("README.md")
 USER_GUIDE_REL = Path("USER_GUIDE.zh-CN.md")
@@ -221,22 +221,22 @@ RECONCILE_SMOKE_CONTRACT_SURFACES: dict[Path, tuple[str, ...]] = {
 }
 RELEASE_DOCS_CONSISTENCY_SURFACES: dict[Path, tuple[str, ...]] = {
     README_REL: (
-        "v0.7.9",
-        "docs/releases/v0.7.9.md",
-        "ai-sdlc-offline-0.7.9-windows-amd64.zip",
-        "ai-sdlc-offline-0.7.9-macos-arm64.tar.gz",
-        "ai-sdlc-offline-0.7.9-linux-amd64.tar.gz",
+        "v0.7.10",
+        "docs/releases/v0.7.10.md",
+        "ai-sdlc-offline-0.7.10-windows-amd64.zip",
+        "ai-sdlc-offline-0.7.10-macos-arm64.tar.gz",
+        "ai-sdlc-offline-0.7.10-linux-amd64.tar.gz",
         "No such command 'install'",
         "ai-sdlc self-update check",
         "--upgrade-existing",
-        "releases/download/v0.7.9",
+        "releases/download/v0.7.10",
     ),
     RELEASE_NOTES_CURRENT_REL: (
-        "v0.7.9",
+        "v0.7.10",
         "No such command 'install'",
         "ai-sdlc self-update check",
         "--upgrade-existing",
-        "releases/download/v0.7.9",
+        "releases/download/v0.7.10",
         "Windows",
         ".zip",
         "macOS / Linux",
@@ -245,11 +245,11 @@ RELEASE_DOCS_CONSISTENCY_SURFACES: dict[Path, tuple[str, ...]] = {
         "release-artifact-smoke.yml",
     ),
     USER_GUIDE_REL: (
-        "v0.7.9",
+        "v0.7.10",
         "No such command 'install'",
         "ai-sdlc self-update check",
         "--upgrade-existing",
-        "releases/download/v0.7.9",
+        "releases/download/v0.7.10",
         "Windows",
         "macOS",
         "Linux",
@@ -257,35 +257,35 @@ RELEASE_DOCS_CONSISTENCY_SURFACES: dict[Path, tuple[str, ...]] = {
         ".tar.gz",
     ),
     OFFLINE_README_REL: (
-        "v0.7.9",
-        "ai-sdlc-offline-0.7.9-windows-amd64.zip",
-        "ai-sdlc-offline-0.7.9-macos-arm64.tar.gz",
-        "ai-sdlc-offline-0.7.9-linux-amd64.tar.gz",
+        "v0.7.10",
+        "ai-sdlc-offline-0.7.10-windows-amd64.zip",
+        "ai-sdlc-offline-0.7.10-macos-arm64.tar.gz",
+        "ai-sdlc-offline-0.7.10-linux-amd64.tar.gz",
     ),
     RELEASE_POLICY_REL: (
         "README.md",
-        "docs/releases/v0.7.9.md",
+        "docs/releases/v0.7.10.md",
         "USER_GUIDE.zh-CN.md",
         "packaging/offline/README.md",
         "docs/pull-request-checklist.zh.md",
         "普通用户主路径",
         "live host evidence",
         "materialized only",
-        "ai-sdlc-offline-0.7.9-windows-amd64.zip",
-        "ai-sdlc-offline-0.7.9-macos-arm64.tar.gz",
-        "ai-sdlc-offline-0.7.9-linux-amd64.tar.gz",
+        "ai-sdlc-offline-0.7.10-windows-amd64.zip",
+        "ai-sdlc-offline-0.7.10-macos-arm64.tar.gz",
+        "ai-sdlc-offline-0.7.10-linux-amd64.tar.gz",
     ),
     PR_CHECKLIST_REL: (
         "README.md",
-        "docs/releases/v0.7.9.md",
+        "docs/releases/v0.7.10.md",
         "USER_GUIDE.zh-CN.md",
         "packaging/offline/README.md",
-        "v0.7.9",
+        "v0.7.10",
         "普通用户主路径",
         "materialized only",
-        "ai-sdlc-offline-0.7.9-windows-amd64.zip",
-        "ai-sdlc-offline-0.7.9-macos-arm64.tar.gz",
-        "ai-sdlc-offline-0.7.9-linux-amd64.tar.gz",
+        "ai-sdlc-offline-0.7.10-windows-amd64.zip",
+        "ai-sdlc-offline-0.7.10-macos-arm64.tar.gz",
+        "ai-sdlc-offline-0.7.10-linux-amd64.tar.gz",
     ),
 }
 BEGINNER_GUIDE_REQUIRED_TOKENS = (

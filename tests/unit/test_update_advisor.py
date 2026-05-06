@@ -5,6 +5,7 @@ from __future__ import annotations
 from datetime import UTC, datetime, timedelta
 
 from ai_sdlc.core.update_advisor import (
+    AUTO_NOTICE_REPEAT_INTERVAL,
     NOTICE_ACTIONABLE,
     NOTICE_LIGHT,
     _cache_path,
@@ -12,6 +13,8 @@ from ai_sdlc.core.update_advisor import (
     detect_runtime_identity,
     evaluate_update_advisor,
     notice_already_acknowledged,
+    notice_recently_rendered,
+    record_notice_rendered,
 )
 
 
@@ -127,7 +130,9 @@ def test_explicit_check_can_ignore_failure_backoff(monkeypatch, tmp_path) -> Non
     assert calls == 2
 
 
-def test_stale_cache_does_not_emit_notice_without_refresh(monkeypatch, tmp_path) -> None:
+def test_stale_cache_still_emits_known_update_notice_without_refresh(
+    monkeypatch, tmp_path
+) -> None:
     _force_installed(monkeypatch, tmp_path)
     monkeypatch.setenv("AI_SDLC_UPDATE_ADVISOR_TEST_LATEST_VERSION", "v0.7.4")
     now = datetime(2026, 5, 1, 12, 0, tzinfo=UTC)
@@ -137,7 +142,33 @@ def test_stale_cache_does_not_emit_notice_without_refresh(monkeypatch, tmp_path)
 
     assert stale.freshness == "stale_but_usable"
     assert stale.refresh_attempted is False
-    assert stale.eligible_notice_classes == ()
+    assert NOTICE_LIGHT in stale.eligible_notice_classes
+    assert NOTICE_ACTIONABLE in stale.eligible_notice_classes
+    assert stale.upgrade_command == "ai-sdlc self-update check"
+
+
+def test_rendered_notice_throttles_without_acknowledging(
+    monkeypatch, tmp_path
+) -> None:
+    _force_installed(monkeypatch, tmp_path)
+    monkeypatch.setenv("AI_SDLC_UPDATE_ADVISOR_TEST_LATEST_VERSION", "v0.7.4")
+    now = datetime(2026, 5, 1, 12, 0, tzinfo=UTC)
+    evaluation = evaluate_update_advisor(now=now)
+
+    recorded = record_notice_rendered(NOTICE_ACTIONABLE, "0.7.4", now=now)
+
+    assert recorded is True
+    assert notice_already_acknowledged(evaluation, NOTICE_ACTIONABLE) is False
+    assert notice_recently_rendered(
+        evaluation,
+        NOTICE_ACTIONABLE,
+        now=now + AUTO_NOTICE_REPEAT_INTERVAL - timedelta(seconds=1),
+    )
+    assert not notice_recently_rendered(
+        evaluation,
+        NOTICE_ACTIONABLE,
+        now=now + AUTO_NOTICE_REPEAT_INTERVAL + timedelta(seconds=1),
+    )
 
 
 def test_ack_notice_records_notice_version(monkeypatch, tmp_path) -> None:
