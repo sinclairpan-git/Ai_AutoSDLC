@@ -101,6 +101,22 @@ class TestCliInit:
         assert rule.is_file()
         assert "cursor" in result.output.lower()
 
+    def test_init_live_codex_env_wins_over_stale_cursor_marker(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        (tmp_path / ".cursor").mkdir()
+        monkeypatch.setenv("OPENAI_CODEX", "1")
+
+        result = runner.invoke(app, ["init", str(tmp_path)])
+
+        assert result.exit_code == 0
+        assert (tmp_path / "AGENTS.md").is_file()
+        cfg = load_project_config(tmp_path)
+        assert cfg.detected_ide == "codex"
+        assert cfg.agent_target == "codex"
+        assert cfg.adapter_ingress_state == "verified_loaded"
+        assert cfg.adapter_verification_result == "verified"
+
     def test_init_with_codex_marker_prefers_codex_target(self, tmp_path: Path) -> None:
         (tmp_path / ".vscode").mkdir()
         (tmp_path / ".codex").mkdir()

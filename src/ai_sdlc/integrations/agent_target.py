@@ -88,19 +88,22 @@ def detect_agent_target(
     environ: Mapping[str, str] | None = None,
 ) -> IDEKind:
     """Detect the most likely AI agent target for the current project."""
-    for dirname, kind in _MARKER_PRIORITY:
-        if (root / dirname).is_dir():
-            return kind
-
     env = environ or os.environ
-    if env.get("CURSOR_TRACE_ID") or env.get("CURSOR_AGENT"):
-        return IDEKind.CURSOR
+    # Live agent runtime evidence is more authoritative than repo-local IDE
+    # markers, which may be historical artifacts from a different tool.
     if env.get("OPENAI_CODEX") or env.get("CODEX_CLI_READY"):
         return IDEKind.CODEX
     if env.get("CLAUDE_CODE_ENTRYPOINT") or env.get("CLAUDECODE"):
         return IDEKind.CLAUDE_CODE
+    if env.get("CURSOR_TRACE_ID") or env.get("CURSOR_AGENT"):
+        return IDEKind.CURSOR
     if env.get("VSCODE_IPC_HOOK_CLI"):
         return IDEKind.VSCODE
+
+    for dirname, kind in _MARKER_PRIORITY:
+        if (root / dirname).is_dir():
+            return kind
+
     if env.get("TERM_PROGRAM", "").lower() == "vscode":
         return IDEKind.VSCODE
     return IDEKind.GENERIC

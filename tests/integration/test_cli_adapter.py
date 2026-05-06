@@ -235,6 +235,27 @@ class TestCliAdapter:
         assert payload["preferred_shell_configured"] is False
         assert "adapter shell-select" in payload["preferred_shell_migration_hint"]
 
+    def test_adapter_status_reports_target_mismatch_when_live_host_changes(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        (tmp_path / ".cursor").mkdir()
+        assert runner.invoke(app, ["init", str(tmp_path)]).exit_code == 0
+        monkeypatch.setenv("OPENAI_CODEX", "1")
+        monkeypatch.chdir(tmp_path)
+
+        result = runner.invoke(app, ["adapter", "status", "--json"])
+
+        assert result.exit_code == 0
+        payload = json.loads(result.output)
+        assert payload["detected_ide"] == "codex"
+        assert payload["agent_target"] == "cursor"
+        assert payload["adapter_target_mismatch"] is True
+        assert "adapter select --agent-target codex" in payload["adapter_target_mismatch_hint"]
+
+        human = runner.invoke(app, ["adapter", "status"])
+        assert human.exit_code == 0
+        assert "adapter select --agent-target codex" in human.output
+
     def test_adapter_status_json_reports_verified_loaded_when_host_matches_target(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
