@@ -503,6 +503,10 @@ class FeatureContractSurface:
         )
 
 
+FRAMEWORK_003_FEATURE_CONTRACT_WORK_ITEM_ID = (
+    "003-cross-cutting-authoring-and-extension-contracts"
+)
+
 FEATURE_CONTRACT_SURFACES: dict[str, tuple[FeatureContractSurface, ...]] = {
     "003": (
         # The 003 work item is intentionally scoped to the four missing contract groups
@@ -1596,8 +1600,7 @@ def _feature_contract_coverage_gaps(
     if checkpoint is None or checkpoint.feature is None:
         return ()
 
-    work_item_id = _effective_feature_contract_wi_id(checkpoint)
-    surfaces = _feature_contract_surfaces_for_work_item(work_item_id)
+    surfaces = _feature_contract_surfaces_for_checkpoint(checkpoint)
     if not surfaces:
         return ()
 
@@ -2828,11 +2831,11 @@ def _invalid_frontend_gate_visual_a11y_evidence_report(
     )
 
 
-def _feature_contract_surfaces_for_work_item(
-    work_item_id: str,
+def _feature_contract_surfaces_for_checkpoint(
+    checkpoint: Checkpoint | None,
 ) -> tuple[FeatureContractSurface, ...]:
     """Return the work-item-scoped feature-contract registry."""
-    if not _is_003_work_item(work_item_id):
+    if not _is_framework_003_feature_contract_work_item(checkpoint):
         return ()
     return FEATURE_CONTRACT_SURFACES["003"]
 
@@ -2863,9 +2866,15 @@ def _feature_contract_evidence_present(
     return False
 
 
-def _is_003_work_item(work_item_id: str) -> bool:
-    normalized = work_item_id.strip()
-    return normalized == "003" or normalized.startswith("003-") or normalized.startswith("003/")
+def _is_framework_003_feature_contract_work_item(
+    checkpoint: Checkpoint | None,
+) -> bool:
+    """Return True only for Ai_AutoSDLC's framework-owned 003 contract WI."""
+    if checkpoint is None or checkpoint.feature is None:
+        return False
+
+    canonical = FRAMEWORK_003_FEATURE_CONTRACT_WORK_ITEM_ID
+    return _effective_wi_id_for_registry(checkpoint).strip() == canonical
 
 
 def _is_012_work_item(work_item_id: str) -> bool:
@@ -3279,13 +3288,12 @@ def _release_gate_blockers(root: Path, checkpoint: Checkpoint | None) -> list[st
 
 
 def _release_gate_path(root: Path, checkpoint: Checkpoint | None) -> Path | None:
-    work_item_id = _effective_feature_contract_wi_id(checkpoint)
-    if not _is_003_work_item(work_item_id):
+    if not _is_framework_003_feature_contract_work_item(checkpoint):
         return None
     return (
         root
         / "specs"
-        / "003-cross-cutting-authoring-and-extension-contracts"
+        / FRAMEWORK_003_FEATURE_CONTRACT_WORK_ITEM_ID
         / "release-gate-evidence.md"
     )
 
