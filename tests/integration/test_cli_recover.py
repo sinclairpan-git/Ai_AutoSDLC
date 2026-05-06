@@ -62,6 +62,33 @@ def _write_direct_formal_artifacts(root: Path, work_item_id: str) -> Path:
     return spec_dir
 
 
+def _write_direct_formal_placeholder_artifacts(root: Path, work_item_id: str) -> Path:
+    spec_dir = root / "specs" / work_item_id
+    spec_dir.mkdir(parents=True, exist_ok=True)
+    (spec_dir / "spec.md").write_text(
+        "### 用户故事 1\n场景\n\n- **FR-001**: requirement\n",
+        encoding="utf-8",
+    )
+    (spec_dir / "plan.md").write_text(
+        "---\n"
+        "stage: design-placeholder\n"
+        "---\n"
+        "# Plan\n\n"
+        "等待 design 阶段补齐。\n",
+        encoding="utf-8",
+    )
+    (spec_dir / "tasks.md").write_text(
+        "---\n"
+        "stage: decompose-placeholder\n"
+        "---\n"
+        "# Tasks\n\n"
+        "等待 decompose 阶段补齐。\n",
+        encoding="utf-8",
+    )
+    (spec_dir / "task-execution-log.md").write_text("# Execution Log\n", encoding="utf-8")
+    return spec_dir
+
+
 class TestCliRecover:
     def test_recover_surfaces_continuity_handoff_next_steps(
         self, tmp_path: Path
@@ -300,6 +327,41 @@ class TestCliRecover:
         assert (
             tmp_path / ".ai-sdlc" / "work-items" / work_item_id / "resume-pack.yaml"
         ).exists()
+
+    def test_recover_reconcile_stops_at_design_for_direct_formal_placeholders(
+        self,
+        tmp_path: Path,
+    ) -> None:
+        work_item_id = "001-agent-store-phase1-trusted-min-loop"
+        init_project(tmp_path)
+        _write_direct_formal_placeholder_artifacts(tmp_path, work_item_id)
+        save_checkpoint(
+            tmp_path,
+            Checkpoint(
+                current_stage="init",
+                feature=FeatureInfo(
+                    id="unknown",
+                    spec_dir="specs/unknown",
+                    design_branch="design/unknown",
+                    feature_branch="feature/unknown",
+                    current_branch="main",
+                ),
+            ),
+        )
+
+        with patch("ai_sdlc.cli.commands.find_project_root", return_value=tmp_path):
+            result = runner.invoke(app, ["recover", "--reconcile"])
+
+        checkpoint = load_checkpoint(tmp_path)
+
+        assert result.exit_code == 0
+        assert checkpoint is not None
+        assert checkpoint.current_stage == "design"
+        assert checkpoint.feature.id == work_item_id
+        assert checkpoint.feature.spec_dir == f"specs/{work_item_id}"
+        assert [stage.stage for stage in checkpoint.completed_stages] == ["init", "refine"]
+        assert "design" in result.output.lower()
+        assert "execute" not in result.output.lower()
 
     def test_recover_prompts_and_applies_reconcile_for_legacy_artifacts(
         self, tmp_path: Path

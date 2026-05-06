@@ -120,6 +120,40 @@
   - `003` 线：已全部收口
   - `004` 线：已全部收口
 
+## FD-2026-05-06-001 | recover reconcile 误将占位 formal 文档识别为 execute 就绪
+
+- 日期 (UTC): 2026-05-06
+- 来源: user_review
+- 状态: closed
+- 缺陷类型: recover_placeholder_stage_false_advance
+- owner: codex
+- wi_id: 001-agent-store-phase1-trusted-min-loop
+- related_doc: src/ai_sdlc/core/reconcile.py, src/ai_sdlc/rules/pipeline.md, tests/unit/test_reconcile.py, tests/integration/test_cli_recover.py
+- detection_surface: user_review
+- trace_anchor: manual_review_only
+- observed_scope: repo
+- subject_ref: 无（当前无稳定 provenance inspection subject）
+- chain_status: unknown（当前以用户复现记录、formal 文档 frontmatter 与回归测试为准）
+- highest_confidence_source: manual_review_only
+- key_gaps: stage_inference_gap: `recover --reconcile` 的 direct-formal 推断路径主要按文件存在性判断阶段完成，未读取 formal 文档 frontmatter 中的 placeholder 语义；gate_evidence_gap: `task-execution-log.md` 的存在被误当成 verify evidence，导致占位 plan/tasks 仍可能推进到 execute。
+- evidence_refs: manual_review_only; file:src/ai_sdlc/core/reconcile.py; file:tests/unit/test_reconcile.py; file:tests/integration/test_cli_recover.py
+- 现象: 在 `001-agent-store-phase1-trusted-min-loop` 仅完成 refine，且 `plan.md` / `tasks.md` 明确为占位时，执行 `ai-sdlc recover --reconcile` 后 checkpoint 被推进到 execute。
+- 触发场景: 使用 `ai-sdlc workitem init` 生成 direct-formal 骨架，随后将 `plan.md`、`tasks.md` 标注为等待 design/decompose 的占位，再运行 `recover --reconcile`。
+- 影响范围: 可能让后续操作者误以为 design、decompose、verify 已完成，从而绕过阶段门禁进入实现。
+- 根因分类: B, E, G（workflow + tool：recover reconcile 按文件存在性推断阶段，未识别占位元数据和 gate/evidence 结果）
+- 未来杜绝方案摘要: recover reconcile 推断阶段时必须读取 formal 文档 frontmatter / gate evidence；若存在 `stage: design-placeholder` 或 `stage: decompose-placeholder`，不得推进到对应阶段之后。文件存在只能作为候选信号，不能替代阶段门禁和可验证完成证据。
+- 建议改动层级: rule / policy, middleware, workflow, tool, eval
+- prompt / context: 用户要求按 AI-SDLC 继续沉淀 Agent Store 阶段 1 规格，当前应停在 refine/design 边界。
+- rule / policy: 强化 pipeline 规则中“文件存在不等于阶段完成”的约束，要求 reconcile 尊重占位状态和 gate/evidence 结果。
+- middleware: checkpoint reconcile 中增加 placeholder detector，并在 direct-formal 推断链里把 placeholder 作为阶段推进停止信号。
+- workflow: direct-formal 初始化后，如果 plan/tasks 是占位，推荐当前阶段为 design 或 decompose，而不是 execute。
+- tool: 修改 `ai-sdlc recover --reconcile` 的阶段推断逻辑，使 `stage: design-placeholder` 停在 design，`stage: decompose-placeholder` 停在 decompose，并禁止继续推断 verify/execute。
+- eval: 增加回归用例：spec 存在、plan/tasks 为 placeholder、存在 execution-log 时，recover 后 `current_stage` 必须为 design，completed stages 只包含 init/refine。
+- 风险等级: 高
+- 可验证成功标准: 在同类占位 work item 上运行 recover 后，checkpoint 只记录 init/refine 完成，`current_stage` 为 design。
+- 是否需要回归测试补充: 是：补 direct-formal placeholder 的单元测试和 `recover --reconcile` CLI 集成测试。
+- 收口说明（2026-05-06）: 已在 reconcile direct-formal 推断链中接入 formal frontmatter placeholder detector，并补充单元与 CLI 回归，覆盖 `plan.md` 为 `design-placeholder`、`tasks.md` 为 `decompose-placeholder` 且存在 `task-execution-log.md` 时不得推进到 execute 的场景。
+
 ## FD-2026-04-07-001 | v0.6.0 发布后入口文档未与 release / offline 包更新同步，导致 README 与发布约定缺少一致性收口
 
 - 日期 (UTC): 2026-04-07
