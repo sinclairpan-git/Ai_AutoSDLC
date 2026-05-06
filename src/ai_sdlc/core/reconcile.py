@@ -5,14 +5,20 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import Any
 
 from ai_sdlc.branch.git_client import GitClient, GitError
 from ai_sdlc.context.state import load_checkpoint, save_checkpoint
+from ai_sdlc.core.plan_check import parse_markdown_frontmatter
 from ai_sdlc.gates.pipeline_gates import DecomposeGate, DesignGate, InitGate, RefineGate
 from ai_sdlc.models.state import Checkpoint, CompletedStage, FeatureInfo, MultiAgentInfo
 from ai_sdlc.utils.helpers import now_iso, slugify
 
 DOC_STAGE_ORDER = ("init", "refine", "design", "decompose", "verify", "execute", "close")
+FORMAL_PLACEHOLDER_STAGES = {
+    "design-placeholder": "design",
+    "decompose-placeholder": "decompose",
+}
 DOC_FILES = (
     "spec.md",
     "research.md",
@@ -253,9 +259,13 @@ def _infer_completed_stages(root: Path, spec_dir_abs: Path) -> list[str]:
 
         if not (spec_dir_abs / "plan.md").is_file():
             return completed
+        if _has_formal_placeholder_for_stage(spec_dir_abs, "design"):
+            return completed
         completed.append("design")
 
         if not (spec_dir_abs / "tasks.md").is_file():
+            return completed
+        if _has_formal_placeholder_for_stage(spec_dir_abs, "decompose"):
             return completed
         completed.append("decompose")
 
@@ -419,6 +429,29 @@ def _is_direct_formal_layout(spec_dir_abs: Path) -> bool:
     ):
         return False
     return _has_execution_evidence(spec_dir_abs)
+
+
+def _has_formal_placeholder_for_stage(spec_dir_abs: Path, stage: str) -> bool:
+    expected = f"{stage}-placeholder"
+    return any(
+        _formal_doc_stage(spec_dir_abs / name) == expected
+        for name in ("plan.md", "tasks.md")
+    )
+
+
+def _formal_doc_stage(path: Path) -> str:
+    if not path.is_file():
+        return ""
+    frontmatter, _ = parse_markdown_frontmatter(path)
+    stage = frontmatter.get("stage")
+    return _normalized_formal_stage(stage)
+
+
+def _normalized_formal_stage(value: Any) -> str:
+    stage = str(value or "").strip().lower()
+    if stage not in FORMAL_PLACEHOLDER_STAGES:
+        return ""
+    return stage
 
 
 def _has_execution_evidence(spec_dir_abs: Path) -> bool:

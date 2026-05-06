@@ -46,6 +46,8 @@
 
 19. **close 前工作项、计划与分支处置对账**：进入 **close** 阶段前，须核对 `specs/<WI>/tasks.md` 中任务完成情况、（若存在）`related_plan` 指向的外部计划之待办状态，以及与当前 work item 明确关联的 branch/worktree disposition 是否已与 Git 事实一致，或已登记延期/保留原因；与「归档先于继续」一致。若当前 work item 仍有关联 scratch/worktree 分支相对 `main` 存在未处置偏离，不得把 close 表述为已完整收口。
 
+20. **文件存在不等于阶段完成**：`recover --reconcile`、断点修复、resume-pack 重建等状态恢复路径不得仅依据 `spec.md` / `plan.md` / `tasks.md` / `task-execution-log.md` 的文件存在性推断阶段已完成。若 formal 文档 frontmatter 标记 `stage: design-placeholder`，当前阶段最多停在 **design**，不得记录 design/decompose/verify/execute 已完成；若标记 `stage: decompose-placeholder`，当前阶段最多停在 **decompose**，不得记录 decompose/verify/execute 已完成。阶段推进必须尊重 frontmatter、门禁结果与可验证 evidence，缺少这些证据时应 fail-closed 到对应下一阶段。
+
 ## 阶段执行顺序
 
 严格按以下顺序执行，不允许跳阶段：

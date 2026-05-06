@@ -69,6 +69,33 @@ def _write_direct_formal_artifacts(root: Path, work_item_id: str) -> Path:
     return spec_dir
 
 
+def _write_direct_formal_placeholder_artifacts(root: Path, work_item_id: str) -> Path:
+    spec_dir = root / "specs" / work_item_id
+    spec_dir.mkdir(parents=True, exist_ok=True)
+    (spec_dir / "spec.md").write_text(
+        "### 用户故事 1\n场景\n\n- **FR-001**: requirement\n",
+        encoding="utf-8",
+    )
+    (spec_dir / "plan.md").write_text(
+        "---\n"
+        "stage: design-placeholder\n"
+        "---\n"
+        "# Plan\n\n"
+        "等待 design 阶段补齐。\n",
+        encoding="utf-8",
+    )
+    (spec_dir / "tasks.md").write_text(
+        "---\n"
+        "stage: decompose-placeholder\n"
+        "---\n"
+        "# Tasks\n\n"
+        "等待 decompose 阶段补齐。\n",
+        encoding="utf-8",
+    )
+    (spec_dir / "task-execution-log.md").write_text("# Execution Log\n", encoding="utf-8")
+    return spec_dir
+
+
 def _write_legacy_project_state_residue(root: Path) -> None:
     state_path = root / ".ai-sdlc" / "project" / "config" / "project-state.yaml"
     state_path.write_text(
@@ -341,6 +368,84 @@ def test_reconcile_checkpoint_updates_stale_branch_alignment_for_direct_formal_w
     assert loaded.feature.current_branch == "codex/158-agent-adapter-ingress-audit"
     assert loaded.feature.design_branch == f"design/{work_item_id}-docs"
     assert loaded.feature.feature_branch == f"feature/{work_item_id}-dev"
+
+
+def test_reconcile_stops_at_design_for_direct_formal_placeholders(
+    tmp_path: Path,
+) -> None:
+    from ai_sdlc.core.reconcile import detect_reconcile_hint, reconcile_checkpoint
+
+    work_item_id = "001-agent-store-phase1-trusted-min-loop"
+
+    (tmp_path / ".git").mkdir()
+    init_project(tmp_path)
+    _write_direct_formal_placeholder_artifacts(tmp_path, work_item_id)
+    save_checkpoint(
+        tmp_path,
+        Checkpoint(
+            current_stage="init",
+            feature=FeatureInfo(
+                id="unknown",
+                spec_dir="specs/unknown",
+                design_branch="design/unknown",
+                feature_branch="feature/unknown",
+                current_branch="main",
+            ),
+        ),
+    )
+
+    hint = detect_reconcile_hint(tmp_path)
+    result = reconcile_checkpoint(tmp_path)
+    loaded = load_checkpoint(tmp_path)
+
+    assert hint is not None
+    assert hint.current_stage == "design"
+    assert hint.completed_stages == ["init", "refine"]
+    assert result is not None
+    assert loaded is not None
+    assert loaded.current_stage == "design"
+    assert [stage.stage for stage in loaded.completed_stages] == ["init", "refine"]
+    assert loaded.feature.id == work_item_id
+    assert loaded.feature.spec_dir == f"specs/{work_item_id}"
+
+
+def test_reconcile_stops_at_decompose_for_direct_formal_task_placeholder(
+    tmp_path: Path,
+) -> None:
+    from ai_sdlc.core.reconcile import detect_reconcile_hint
+
+    work_item_id = "001-agent-store-phase1-trusted-min-loop"
+
+    (tmp_path / ".git").mkdir()
+    init_project(tmp_path)
+    spec_dir = _write_direct_formal_artifacts(tmp_path, work_item_id)
+    (spec_dir / "tasks.md").write_text(
+        "---\n"
+        "stage: decompose-placeholder\n"
+        "---\n"
+        "# Tasks\n\n"
+        "等待 decompose 阶段补齐。\n",
+        encoding="utf-8",
+    )
+    save_checkpoint(
+        tmp_path,
+        Checkpoint(
+            current_stage="init",
+            feature=FeatureInfo(
+                id="unknown",
+                spec_dir="specs/unknown",
+                design_branch="design/unknown",
+                feature_branch="feature/unknown",
+                current_branch="main",
+            ),
+        ),
+    )
+
+    hint = detect_reconcile_hint(tmp_path)
+
+    assert hint is not None
+    assert hint.current_stage == "decompose"
+    assert hint.completed_stages == ["init", "refine", "design"]
 
 
 def test_reconcile_checkpoint_refreshes_stale_feature_branches_when_spec_is_already_aligned(
