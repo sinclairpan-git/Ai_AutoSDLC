@@ -1985,6 +1985,7 @@ def test_release_docs_consistency_passes_when_release_entry_docs_align(
     (tmp_path / "docs" / "框架自迭代开发与发布约定.md").write_text(
         "README.md\ndocs/releases/v0.7.8.md\nUSER_GUIDE.zh-CN.md\npackaging/offline/README.md\n"
         "docs/pull-request-checklist.zh.md\nv0.7.8\n"
+        "普通用户主路径\nlive host evidence\nmaterialized only\n"
         "ai-sdlc-offline-0.7.8-windows-amd64.zip\n"
         "ai-sdlc-offline-0.7.8-macos-arm64.tar.gz\n"
         "ai-sdlc-offline-0.7.8-linux-amd64.tar.gz\n",
@@ -1993,6 +1994,7 @@ def test_release_docs_consistency_passes_when_release_entry_docs_align(
     (tmp_path / "docs" / "pull-request-checklist.zh.md").write_text(
         "README.md\ndocs/releases/v0.7.8.md\nUSER_GUIDE.zh-CN.md\npackaging/offline/README.md\n"
         "v0.7.8\nai-sdlc-offline-0.7.8-windows-amd64.zip\n"
+        "普通用户主路径\nmaterialized only\n"
         "ai-sdlc-offline-0.7.8-macos-arm64.tar.gz\n"
         "ai-sdlc-offline-0.7.8-linux-amd64.tar.gz\n"
         "docs-only\nrules-only\ntruth-only\ncode-change\nuv run ai-sdlc verify constraints\n"
@@ -2014,6 +2016,29 @@ def test_beginner_guide_blocks_old_manual_setup_path(tmp_path: Path) -> None:
         "### 命令卡 1：确认 Python\n\n"
         "### 命令卡 7：执行安全预演\n\n"
         "至少要把 `init`、`adapter status`、`run --dry-run` 做完以后。\n",
+        encoding="utf-8",
+    )
+
+    blockers = collect_constraint_blockers(tmp_path)
+
+    assert any("beginner guide CLI path regressed" in x for x in blockers)
+
+
+def test_beginner_guide_blocks_stale_release_guidance_wording(tmp_path: Path) -> None:
+    mem = tmp_path / ".ai-sdlc" / "memory"
+    mem.mkdir(parents=True)
+    (mem / "constitution.md").write_text("# C\n", encoding="utf-8")
+    (tmp_path / "USER_GUIDE.zh-CN.md").write_text(
+        "# AI-SDLC 小白实操手册\n\n"
+        "## 第零点五章：从安装到首次使用的命令卡片\n\n"
+        "当前结果 / Result\n"
+        "下一步 / Next\n"
+        "不用再手动执行初始化命令\n"
+        "切换到 AI 对话\n"
+        "这份手册现在默认以**当前仓库源码版 / 当前发布版 `v0.7.8`** 为准。\n"
+        "优先在目标项目的虚拟环境里执行 `pip install -e <Ai_AutoSDLC 本地源码目录>`。\n"
+        "如果异常排查时 `status` 仍显示 `materialized only` 或 `unsupported`。\n"
+        "AI-SDLC 识别的是项目里的 IDE 标记目录。\n",
         encoding="utf-8",
     )
 
@@ -2052,6 +2077,27 @@ def test_readme_blocks_old_manual_setup_path(tmp_path: Path) -> None:
         "1. `python -m ai_sdlc init .`\n"
         "2. `python -m ai_sdlc run --dry-run`\n"
         "Next command: `python -m ai_sdlc workitem init --title \"x\"`\n",
+        encoding="utf-8",
+    )
+
+    blockers = collect_constraint_blockers(tmp_path)
+
+    assert any("README CLI path regressed" in x for x in blockers)
+
+
+def test_readme_blocks_stale_release_guidance_wording(tmp_path: Path) -> None:
+    mem = tmp_path / ".ai-sdlc" / "memory"
+    mem.mkdir(parents=True)
+    (mem / "constitution.md").write_text("# C\n", encoding="utf-8")
+    (tmp_path / "README.md").write_text(
+        "## Start The Framework\n\n"
+        "ai-sdlc init .\n"
+        "`init` automatically runs the safe startup rehearsal, tells you to "
+        "switch to the AI chat, and prints one next command in Chinese and English.\n"
+        "It is not a beginner-path setup step.\n"
+        "`v0.7.8` is the current staged framework release.\n"
+        "After `pip install` or the offline installer, the `ai-sdlc.exe` shim lives under your venv.\n"
+        "Create and activate the venv.\n",
         encoding="utf-8",
     )
 
