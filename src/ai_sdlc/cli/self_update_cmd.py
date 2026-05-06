@@ -200,7 +200,7 @@ def self_update_install(
     version: str = typer.Option(
         ...,
         "--version",
-        help="Release version to install, for example 0.7.7.",
+        help="Release version to install, for example 0.7.8.",
     ),
 ) -> None:
     """Download, install, and verify a GitHub release for the current runtime."""
@@ -460,7 +460,7 @@ def self_update_instructions(
     version: str = typer.Option(
         "",
         "--version",
-        help="Release version to install, for example 0.7.7.",
+        help="Release version to install, for example 0.7.8.",
     ),
 ) -> None:
     """Point users to the automatic self-update command."""
