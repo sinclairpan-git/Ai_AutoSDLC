@@ -479,6 +479,28 @@ def _write_003_checkpoint(root: Path) -> None:
     save_checkpoint(root, cp)
 
 
+def _write_downstream_003_checkpoint(root: Path) -> None:
+    mem = root / ".ai-sdlc" / "memory"
+    mem.mkdir(parents=True, exist_ok=True)
+    (mem / "constitution.md").write_text("# C\n", encoding="utf-8")
+
+    spec = root / "specs" / "003-agentops-framework-run"
+    spec.mkdir(parents=True, exist_ok=True)
+
+    cp = Checkpoint(
+        current_stage="design",
+        feature=FeatureInfo(
+            id="003",
+            spec_dir="specs/003-agentops-framework-run",
+            design_branch="d",
+            feature_branch="f",
+            current_branch="main",
+        ),
+        linked_wi_id="003-agentops-framework-run",
+    )
+    save_checkpoint(root, cp)
+
+
 def _write_012_checkpoint(root: Path) -> None:
     mem = root / ".ai-sdlc" / "memory"
     mem.mkdir(parents=True, exist_ok=True)
@@ -2450,6 +2472,48 @@ def test_003_feature_contract_blocks_when_feature_id_unknown_but_spec_dir_points
 
     report = build_constraint_report(tmp_path)
     assert report.coverage_gaps == ("draft_prd/final_prd",)
+
+
+def test_003_feature_contract_honors_linked_wi_id_precedence(
+    tmp_path: Path,
+) -> None:
+    mem = tmp_path / ".ai-sdlc" / "memory"
+    mem.mkdir(parents=True)
+    (mem / "constitution.md").write_text("# C\n", encoding="utf-8")
+    spec = tmp_path / "specs" / "003-cross-cutting-authoring-and-extension-contracts"
+    spec.mkdir(parents=True)
+    save_checkpoint(
+        tmp_path,
+        Checkpoint(
+            current_stage="design",
+            feature=FeatureInfo(
+                id="003",
+                spec_dir="specs/003-cross-cutting-authoring-and-extension-contracts",
+                design_branch="d",
+                feature_branch="f",
+                current_branch="main",
+            ),
+            linked_wi_id="004-relinked-work-item",
+        ),
+    )
+
+    report = build_constraint_report(tmp_path)
+
+    assert report.coverage_gaps == ()
+    assert report.release_gate is None
+    assert collect_constraint_blockers(tmp_path) == []
+
+
+def test_003_feature_contract_ignores_downstream_number_collision(
+    tmp_path: Path,
+) -> None:
+    _write_downstream_003_checkpoint(tmp_path)
+
+    report = build_constraint_report(tmp_path)
+
+    assert report.coverage_gaps == ()
+    assert report.release_gate is None
+    assert collect_constraint_blockers(tmp_path) == []
 
 
 def test_003_feature_contract_passes_when_all_surfaces_present(tmp_path: Path) -> None:

@@ -674,6 +674,46 @@ def _write_003_checkpoint(root: Path, *, feature_id: str = "003") -> None:
     )
 
 
+def _write_downstream_003_checkpoint(root: Path) -> None:
+    _minimal_constitution(root)
+    spec = root / "specs" / "003-agentops-framework-run"
+    spec.mkdir(parents=True, exist_ok=True)
+    save_checkpoint(
+        root,
+        Checkpoint(
+            current_stage="design",
+            feature=FeatureInfo(
+                id="003",
+                spec_dir="specs/003-agentops-framework-run",
+                design_branch="d",
+                feature_branch="f",
+                current_branch="main",
+            ),
+            linked_wi_id="003-agentops-framework-run",
+        ),
+    )
+
+
+def _write_relinked_003_checkpoint(root: Path) -> None:
+    _minimal_constitution(root)
+    spec = root / "specs" / "003-cross-cutting-authoring-and-extension-contracts"
+    spec.mkdir(parents=True, exist_ok=True)
+    save_checkpoint(
+        root,
+        Checkpoint(
+            current_stage="design",
+            feature=FeatureInfo(
+                id="003",
+                spec_dir="specs/003-cross-cutting-authoring-and-extension-contracts",
+                design_branch="d",
+                feature_branch="f",
+                current_branch="main",
+            ),
+            linked_wi_id="004-relinked-work-item",
+        ),
+    )
+
+
 def _write_frontend_evidence_class_checkpoint(
     root: Path,
     *,
@@ -1519,6 +1559,36 @@ class TestCliVerifyConstraints:
             "backend delegation/fallback",
             "release-gate evidence",
         ]
+
+    def test_exit_0_when_downstream_003_number_collision_does_not_trigger_framework_contracts(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        init_project(tmp_path)
+        _write_downstream_003_checkpoint(tmp_path)
+        monkeypatch.chdir(tmp_path)
+
+        result = runner.invoke(app, ["verify", "constraints", "--json"])
+
+        assert result.exit_code == 0
+        payload = json.loads(result.output)
+        assert payload["ok"] is True
+        assert payload["verification_gate"]["coverage_gaps"] == []
+        assert payload["verification_gate"]["release_gate"] is None
+
+    def test_exit_0_when_linked_wi_id_overrides_003_spec_dir_contract_scope(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        init_project(tmp_path)
+        _write_relinked_003_checkpoint(tmp_path)
+        monkeypatch.chdir(tmp_path)
+
+        result = runner.invoke(app, ["verify", "constraints", "--json"])
+
+        assert result.exit_code == 0
+        payload = json.loads(result.output)
+        assert payload["ok"] is True
+        assert payload["verification_gate"]["coverage_gaps"] == []
+        assert payload["verification_gate"]["release_gate"] is None
 
     def test_json_output_outside_project_includes_root(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
