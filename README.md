@@ -4,14 +4,14 @@ AI-native SDLC automation framework — a Python CLI tool and rule file set for 
 
 ## Release And Current Source
 
-`v0.7.9` is the current published framework release. This patch release fixes the installed-runtime update path exposed by `v0.7.7`: explicit `ai-sdlc self-update check` now retries latest-release refresh with a user-command timeout, bypasses the previous failed-check backoff, does not trigger project adapter writes, and prints an offline-package rescue path if GitHub release truth still cannot be refreshed.
+`v0.7.10` is the current published framework release. This patch release fixes installed-runtime update reminder visibility: automatic "new version available" notices are throttled instead of treated as acknowledged, and cached newer-version truth can still remind users while it remains usable.
 
-If you want the published release, install `v0.7.9`. If you are evaluating newer unreleased behavior beyond this tag, prefer the source-checkout path below.
+If you want the published release, install `v0.7.10`. If you are evaluating newer unreleased behavior beyond this tag, prefer the source-checkout path below.
 
-- Current release notes: `docs/releases/v0.7.9.md`
-- Windows offline bundle: `ai-sdlc-offline-0.7.9-windows-amd64.zip`
-- macOS offline bundle: `ai-sdlc-offline-0.7.9-macos-arm64.tar.gz`
-- Linux offline bundle: `ai-sdlc-offline-0.7.9-linux-amd64.tar.gz`
+- Current release notes: `docs/releases/v0.7.10.md`
+- Windows offline bundle: `ai-sdlc-offline-0.7.10-windows-amd64.zip`
+- macOS offline bundle: `ai-sdlc-offline-0.7.10-macos-arm64.tar.gz`
+- Linux offline bundle: `ai-sdlc-offline-0.7.10-linux-amd64.tar.gz`
 - Offline packaging details: `packaging/offline/README.md`
 - Offline Python runtime release checklist: `packaging/offline/RELEASE_CHECKLIST.md`
 - Windows CI smoke evidence: `.github/workflows/windows-offline-smoke.yml` uploads `windows-offline-smoke-evidence` with `install.log`, `help.txt`, `adapter-status.txt`, `run-dry-run.txt`, and `bundle-manifest.json`
@@ -39,6 +39,9 @@ Online installer entrypoints:
 Installed `ai-sdlc` runtimes include a non-blocking update advisor. During normal
 interactive CLI use it may check the latest stable GitHub Release, cache the
 result, and print a short notice when a newer framework release exists.
+`v0.7.10` keeps that notice visible over time by recording automatic rendering
+separately from explicit acknowledgement, so missing the first notice does not
+hide the same update forever.
 
 When a newer GitHub Release is available, run one command. It checks, downloads,
 installs, and verifies the target version automatically:
@@ -64,27 +67,27 @@ package and run its `--upgrade-existing` mode once; after that, use
 macOS Apple Silicon:
 
 ```bash
-curl -L -o ai-sdlc-offline-0.7.9-macos-arm64.tar.gz "https://github.com/sinclairpan-git/Ai_AutoSDLC/releases/download/v0.7.9/ai-sdlc-offline-0.7.9-macos-arm64.tar.gz"
-tar xzf ai-sdlc-offline-0.7.9-macos-arm64.tar.gz
-cd ai-sdlc-offline-0.7.9-macos-arm64
+curl -L -o ai-sdlc-offline-0.7.10-macos-arm64.tar.gz "https://github.com/sinclairpan-git/Ai_AutoSDLC/releases/download/v0.7.10/ai-sdlc-offline-0.7.10-macos-arm64.tar.gz"
+tar xzf ai-sdlc-offline-0.7.10-macos-arm64.tar.gz
+cd ai-sdlc-offline-0.7.10-macos-arm64
 ./install_offline.sh --upgrade-existing
 ```
 
 Linux x64:
 
 ```bash
-curl -L -o ai-sdlc-offline-0.7.9-linux-amd64.tar.gz "https://github.com/sinclairpan-git/Ai_AutoSDLC/releases/download/v0.7.9/ai-sdlc-offline-0.7.9-linux-amd64.tar.gz"
-tar xzf ai-sdlc-offline-0.7.9-linux-amd64.tar.gz
-cd ai-sdlc-offline-0.7.9-linux-amd64
+curl -L -o ai-sdlc-offline-0.7.10-linux-amd64.tar.gz "https://github.com/sinclairpan-git/Ai_AutoSDLC/releases/download/v0.7.10/ai-sdlc-offline-0.7.10-linux-amd64.tar.gz"
+tar xzf ai-sdlc-offline-0.7.10-linux-amd64.tar.gz
+cd ai-sdlc-offline-0.7.10-linux-amd64
 ./install_offline.sh --upgrade-existing
 ```
 
 Windows PowerShell:
 
 ```powershell
-Invoke-WebRequest -Uri "https://github.com/sinclairpan-git/Ai_AutoSDLC/releases/download/v0.7.9/ai-sdlc-offline-0.7.9-windows-amd64.zip" -OutFile "ai-sdlc-offline-0.7.9-windows-amd64.zip"
-Expand-Archive -LiteralPath .\ai-sdlc-offline-0.7.9-windows-amd64.zip -DestinationPath .
-cd .\ai-sdlc-offline-0.7.9-windows-amd64
+Invoke-WebRequest -Uri "https://github.com/sinclairpan-git/Ai_AutoSDLC/releases/download/v0.7.10/ai-sdlc-offline-0.7.10-windows-amd64.zip" -OutFile "ai-sdlc-offline-0.7.10-windows-amd64.zip"
+Expand-Archive -LiteralPath .\ai-sdlc-offline-0.7.10-windows-amd64.zip -DestinationPath .
+cd .\ai-sdlc-offline-0.7.10-windows-amd64
 powershell -ExecutionPolicy Bypass -File .\install_offline.ps1 -UpgradeExisting
 ```
 
@@ -240,7 +243,7 @@ The file `.ai-sdlc/project/config/project-config.yaml` holds IDE detection metad
 
 ## Documentation
 
-- Current release notes: `docs/releases/v0.7.9.md`
+- Current release notes: `docs/releases/v0.7.10.md`
 - Chinese user guide: `USER_GUIDE.zh-CN.md` (start with the **目录**, then jump to Chapter 1 or Chapter 2)
 - Offline install bundle (build + one-command install): `packaging/offline/README.md`
 - Offline Python runtime release checklist: `packaging/offline/RELEASE_CHECKLIST.md`

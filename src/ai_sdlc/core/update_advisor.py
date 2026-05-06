@@ -40,6 +40,7 @@ FRESH_WINDOW = timedelta(hours=24)
 EXPIRED_WINDOW = timedelta(days=7)
 DEFAULT_TIMEOUT_SECONDS = 1.5
 EXPLICIT_CHECK_TIMEOUT_SECONDS = 20.0
+AUTO_NOTICE_REPEAT_INTERVAL = timedelta(hours=6)
 
 FetchLatest = Callable[[float], dict[str, Any]]
 
@@ -354,6 +355,28 @@ def ack_notice(
     )
 
 
+def record_notice_rendered(
+    notice_class: str,
+    notice_version: str,
+    *,
+    env: dict[str, str] | None = None,
+    now: datetime | None = None,
+) -> bool:
+    identity = detect_runtime_identity(env or os.environ)
+    if not identity.installed_runtime or not notice_version:
+        return False
+    cache = _load_cache(identity)
+    cache.notice_state.setdefault(notice_class, {})
+    cache.notice_state[notice_class].update(
+        {
+            "last_rendered_at": _iso(_utc_now(now)),
+            "rendered_notice_version": notice_version,
+        }
+    )
+    _save_cache(identity, cache)
+    return True
+
+
 def should_auto_render_notice(env: dict[str, str] | None = None) -> bool:
     env_map = env or os.environ
     if _update_check_disabled(env_map):
@@ -410,6 +433,28 @@ def notice_already_acknowledged(
     if not isinstance(notice, dict):
         return False
     return notice.get("notice_version") == notice_version
+
+
+def notice_recently_rendered(
+    evaluation: UpdateEvaluation,
+    notice_class: str,
+    *,
+    now: datetime | None = None,
+    repeat_interval: timedelta = AUTO_NOTICE_REPEAT_INTERVAL,
+) -> bool:
+    notice_version = notice_version_for(evaluation, notice_class)
+    if not notice_version:
+        return False
+    cache = _load_cache(evaluation.runtime_identity)
+    notice = cache.notice_state.get(notice_class)
+    if not isinstance(notice, dict):
+        return False
+    if notice.get("rendered_notice_version") != notice_version:
+        return False
+    last_rendered_at = _parse_iso(notice.get("last_rendered_at"))
+    if last_rendered_at is None:
+        return False
+    return _utc_now(now) - last_rendered_at < repeat_interval
 
 
 def _refresh_cache(
@@ -471,7 +516,7 @@ def fetch_latest_github_release(timeout_seconds: float) -> dict[str, Any]:
 def _eligible_notice_classes(
     identity: RuntimeIdentity, cache: UpdateCache, freshness: str
 ) -> list[str]:
-    if freshness != "fresh" or not identity.installed_version:
+    if freshness not in {"fresh", "stale_but_usable"} or not identity.installed_version:
         return []
     eligible: list[str] = []
     if _version_gt(cache.upstream_latest_version, identity.installed_version):

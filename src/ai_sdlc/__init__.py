@@ -5,4 +5,4 @@ from importlib.metadata import PackageNotFoundError, version
 try:
     __version__ = version("ai-sdlc")
 except PackageNotFoundError:  # pragma: no cover — editable/src-only runs
-    __version__ = "0.7.9"
+    __version__ = "0.7.10"
