@@ -1882,40 +1882,40 @@ def test_release_docs_consistency_blocks_when_release_entry_docs_drift(
     (mem / "constitution.md").write_text("# C\n", encoding="utf-8")
     _write_verification_profile_docs(tmp_path)
     (tmp_path / "README.md").write_text(
-        "# AI-SDLC\n\n`v0.7.8`\n\n"
+        "# AI-SDLC\n\n`v0.7.9`\n\n"
         "## Start The Framework\n\n"
         "```bash\nai-sdlc init .\n```\n\n"
         "`init` automatically runs the safe startup rehearsal, then tells you "
         "to switch to the AI chat and prints one next command in Chinese and English.\n\n"
         "`python -m ai_sdlc run --dry-run` remains available for troubleshooting. "
         "It is not a beginner-path setup step.\n\n"
-        "- Windows offline bundle: `ai-sdlc-offline-0.7.8-windows-amd64.zip`\n"
-        "- macOS offline bundle: `ai-sdlc-offline-0.7.8-macos-arm64.tar.gz`\n"
-        "- Linux offline bundle: `ai-sdlc-offline-0.7.8-linux-amd64.tar.gz`\n"
-        "- Release notes: `docs/releases/v0.7.8.md`\n",
+        "- Windows offline bundle: `ai-sdlc-offline-0.7.9-windows-amd64.zip`\n"
+        "- macOS offline bundle: `ai-sdlc-offline-0.7.9-macos-arm64.tar.gz`\n"
+        "- Linux offline bundle: `ai-sdlc-offline-0.7.9-linux-amd64.tar.gz`\n"
+        "- Release notes: `docs/releases/v0.7.9.md`\n",
         encoding="utf-8",
     )
     release_notes = tmp_path / "docs" / "releases"
     release_notes.mkdir(parents=True, exist_ok=True)
-    (release_notes / "v0.7.8.md").write_text("# AI-SDLC v0.7.8 Release Notes\n", encoding="utf-8")
-    (tmp_path / "USER_GUIDE.zh-CN.md").write_text("v0.7.8\nWindows\nzip\nmacOS\nLinux\ntar.gz\n", encoding="utf-8")
+    (release_notes / "v0.7.9.md").write_text("# AI-SDLC v0.7.9 Release Notes\n", encoding="utf-8")
+    (tmp_path / "USER_GUIDE.zh-CN.md").write_text("v0.7.9\nWindows\nzip\nmacOS\nLinux\ntar.gz\n", encoding="utf-8")
     offline_dir = tmp_path / "packaging" / "offline"
     offline_dir.mkdir(parents=True, exist_ok=True)
     (offline_dir / "README.md").write_text(
-        "v0.7.8\nai-sdlc-offline-0.7.8-windows-amd64.zip\n"
-        "ai-sdlc-offline-0.7.8-macos-arm64.tar.gz\n"
-        "ai-sdlc-offline-0.7.8-linux-amd64.tar.gz\n",
+        "v0.7.9\nai-sdlc-offline-0.7.9-windows-amd64.zip\n"
+        "ai-sdlc-offline-0.7.9-macos-arm64.tar.gz\n"
+        "ai-sdlc-offline-0.7.9-linux-amd64.tar.gz\n",
         encoding="utf-8",
     )
     (tmp_path / "docs" / "框架自迭代开发与发布约定.md").write_text(
-        "README.md\ndocs/releases/v0.7.8.md\nUSER_GUIDE.zh-CN.md\npackaging/offline/README.md\n"
-        "ai-sdlc-offline-0.7.8-windows-amd64.zip\n"
-        "ai-sdlc-offline-0.7.8-macos-arm64.tar.gz\n"
-        "ai-sdlc-offline-0.7.8-linux-amd64.tar.gz\n",
+        "README.md\ndocs/releases/v0.7.9.md\nUSER_GUIDE.zh-CN.md\npackaging/offline/README.md\n"
+        "ai-sdlc-offline-0.7.9-windows-amd64.zip\n"
+        "ai-sdlc-offline-0.7.9-macos-arm64.tar.gz\n"
+        "ai-sdlc-offline-0.7.9-linux-amd64.tar.gz\n",
         encoding="utf-8",
     )
     (tmp_path / "docs" / "pull-request-checklist.zh.md").write_text(
-        "README.md\ndocs/releases/v0.7.8.md\nUSER_GUIDE.zh-CN.md\npackaging/offline/README.md\n",
+        "README.md\ndocs/releases/v0.7.9.md\nUSER_GUIDE.zh-CN.md\npackaging/offline/README.md\n",
         encoding="utf-8",
     )
 
@@ -1932,41 +1932,41 @@ def test_release_docs_consistency_passes_when_release_entry_docs_align(
     (mem / "constitution.md").write_text("# C\n", encoding="utf-8")
     _write_verification_profile_docs(tmp_path)
     (tmp_path / "README.md").write_text(
-        "# AI-SDLC\n\n`v0.7.8`\n\n"
+        "# AI-SDLC\n\n`v0.7.9`\n\n"
         "## Start The Framework\n\n"
         "```bash\nai-sdlc init .\n```\n\n"
         "`init` automatically runs the safe startup rehearsal, then tells you "
         "to switch to the AI chat and prints one next command in Chinese and English.\n\n"
         "`python -m ai_sdlc run --dry-run` remains available for troubleshooting. "
         "It is not a beginner-path setup step.\n\n"
-        "- Windows offline bundle: `ai-sdlc-offline-0.7.8-windows-amd64.zip`\n"
-        "- macOS offline bundle: `ai-sdlc-offline-0.7.8-macos-arm64.tar.gz`\n"
-        "- Linux offline bundle: `ai-sdlc-offline-0.7.8-linux-amd64.tar.gz`\n"
-        "- Release notes: `docs/releases/v0.7.8.md`\n"
+        "- Windows offline bundle: `ai-sdlc-offline-0.7.9-windows-amd64.zip`\n"
+        "- macOS offline bundle: `ai-sdlc-offline-0.7.9-macos-arm64.tar.gz`\n"
+        "- Linux offline bundle: `ai-sdlc-offline-0.7.9-linux-amd64.tar.gz`\n"
+        "- Release notes: `docs/releases/v0.7.9.md`\n"
         "No such command 'install'\n"
         "ai-sdlc self-update check\n"
         "--upgrade-existing\n"
-        "releases/download/v0.7.8\n",
+        "releases/download/v0.7.9\n",
         encoding="utf-8",
     )
     release_notes = tmp_path / "docs" / "releases"
     release_notes.mkdir(parents=True, exist_ok=True)
-    (release_notes / "v0.7.8.md").write_text(
-        "# AI-SDLC v0.7.8 Release Notes\n\n"
+    (release_notes / "v0.7.9.md").write_text(
+        "# AI-SDLC v0.7.9 Release Notes\n\n"
         "No such command 'install'\n"
         "ai-sdlc self-update check\n"
         "--upgrade-existing\n"
-        "releases/download/v0.7.8\n"
+        "releases/download/v0.7.9\n"
         "Windows `.zip`\nmacOS / Linux `.tar.gz`\n"
         "release-build.yml\nrelease-artifact-smoke.yml\n",
         encoding="utf-8",
     )
     (tmp_path / "USER_GUIDE.zh-CN.md").write_text(
-        "v0.7.8\nWindows\n.zip\nmacOS\nLinux\n.tar.gz\n"
+        "v0.7.9\nWindows\n.zip\nmacOS\nLinux\n.tar.gz\n"
         "No such command 'install'\n"
         "ai-sdlc self-update check\n"
         "--upgrade-existing\n"
-        "releases/download/v0.7.8\n"
+        "releases/download/v0.7.9\n"
         "第零点五章：从安装到首次使用的命令卡片\n"
         "当前结果 / Result\n"
         "下一步 / Next\n"
@@ -1977,26 +1977,26 @@ def test_release_docs_consistency_passes_when_release_entry_docs_align(
     offline_dir = tmp_path / "packaging" / "offline"
     offline_dir.mkdir(parents=True, exist_ok=True)
     (offline_dir / "README.md").write_text(
-        "v0.7.8\nai-sdlc-offline-0.7.8-windows-amd64.zip\n"
-        "ai-sdlc-offline-0.7.8-macos-arm64.tar.gz\n"
-        "ai-sdlc-offline-0.7.8-linux-amd64.tar.gz\n",
+        "v0.7.9\nai-sdlc-offline-0.7.9-windows-amd64.zip\n"
+        "ai-sdlc-offline-0.7.9-macos-arm64.tar.gz\n"
+        "ai-sdlc-offline-0.7.9-linux-amd64.tar.gz\n",
         encoding="utf-8",
     )
     (tmp_path / "docs" / "框架自迭代开发与发布约定.md").write_text(
-        "README.md\ndocs/releases/v0.7.8.md\nUSER_GUIDE.zh-CN.md\npackaging/offline/README.md\n"
-        "docs/pull-request-checklist.zh.md\nv0.7.8\n"
+        "README.md\ndocs/releases/v0.7.9.md\nUSER_GUIDE.zh-CN.md\npackaging/offline/README.md\n"
+        "docs/pull-request-checklist.zh.md\nv0.7.9\n"
         "普通用户主路径\nlive host evidence\nmaterialized only\n"
-        "ai-sdlc-offline-0.7.8-windows-amd64.zip\n"
-        "ai-sdlc-offline-0.7.8-macos-arm64.tar.gz\n"
-        "ai-sdlc-offline-0.7.8-linux-amd64.tar.gz\n",
+        "ai-sdlc-offline-0.7.9-windows-amd64.zip\n"
+        "ai-sdlc-offline-0.7.9-macos-arm64.tar.gz\n"
+        "ai-sdlc-offline-0.7.9-linux-amd64.tar.gz\n",
         encoding="utf-8",
     )
     (tmp_path / "docs" / "pull-request-checklist.zh.md").write_text(
-        "README.md\ndocs/releases/v0.7.8.md\nUSER_GUIDE.zh-CN.md\npackaging/offline/README.md\n"
-        "v0.7.8\nai-sdlc-offline-0.7.8-windows-amd64.zip\n"
+        "README.md\ndocs/releases/v0.7.9.md\nUSER_GUIDE.zh-CN.md\npackaging/offline/README.md\n"
+        "v0.7.9\nai-sdlc-offline-0.7.9-windows-amd64.zip\n"
         "普通用户主路径\nmaterialized only\n"
-        "ai-sdlc-offline-0.7.8-macos-arm64.tar.gz\n"
-        "ai-sdlc-offline-0.7.8-linux-amd64.tar.gz\n"
+        "ai-sdlc-offline-0.7.9-macos-arm64.tar.gz\n"
+        "ai-sdlc-offline-0.7.9-linux-amd64.tar.gz\n"
         "docs-only\nrules-only\ntruth-only\ncode-change\nuv run ai-sdlc verify constraints\n"
         "python -m ai_sdlc program truth sync --dry-run\n"
         "uv run pytest\nuv run ruff check\n",
@@ -2035,7 +2035,7 @@ def test_beginner_guide_blocks_stale_release_guidance_wording(tmp_path: Path) ->
         "下一步 / Next\n"
         "不用再手动执行初始化命令\n"
         "切换到 AI 对话\n"
-        "这份手册现在默认以**当前仓库源码版 / 当前发布版 `v0.7.8`** 为准。\n"
+        "这份手册现在默认以**当前仓库源码版 / 当前发布版 `v0.7.9`** 为准。\n"
         "优先在目标项目的虚拟环境里执行 `pip install -e <Ai_AutoSDLC 本地源码目录>`。\n"
         "如果异常排查时 `status` 仍显示 `materialized only` 或 `unsupported`。\n"
         "AI-SDLC 识别的是项目里的 IDE 标记目录。\n",
@@ -2095,7 +2095,7 @@ def test_readme_blocks_stale_release_guidance_wording(tmp_path: Path) -> None:
         "`init` automatically runs the safe startup rehearsal, tells you to "
         "switch to the AI chat, and prints one next command in Chinese and English.\n"
         "It is not a beginner-path setup step.\n"
-        "`v0.7.8` is the current staged framework release.\n"
+        "`v0.7.9` is the current staged framework release.\n"
         "After `pip install` or the offline installer, the `ai-sdlc.exe` shim lives under your venv.\n"
         "Create and activate the venv.\n",
         encoding="utf-8",

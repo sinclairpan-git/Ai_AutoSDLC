@@ -50,3 +50,20 @@ The handoff must include:
 When resuming interrupted work, first run `ai-sdlc handoff show` or read
 `.ai-sdlc/state/codex-handoff.md`, then continue from its exact next steps.
 Keep the handoff concise enough for a fresh thread to read quickly.
+
+## Local Repository PR Protocol
+
+This section is for development of this AI-SDLC repository itself. Do not copy
+it into external user guidance or framework runtime rules.
+
+When a Codex change is ready for mainline:
+
+- Push the branch and open a PR.
+- Request Codex review on the PR.
+- Monitor review threads and required checks until there is a clear conclusion.
+- If review finds actionable issues, implement focused fixes on the same branch,
+  rerun relevant local tests, push, and continue monitoring.
+- If Codex review reports no actionable issues and all required checks pass,
+  mark the PR ready when needed and merge it into `main`.
+- For long-running PR monitoring, create or keep a heartbeat that checks at about
+  five-minute intervals until the PR is merged or a blocker is reported.

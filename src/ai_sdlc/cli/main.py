@@ -80,6 +80,7 @@ def _global_before_command(
         "scan",
         "verify",
         "provenance",
+        "self-update",
     ):
         return
     run_ide_adapter_if_initialized(console=_hook_console)
