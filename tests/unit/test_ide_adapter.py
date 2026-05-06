@@ -103,6 +103,15 @@ class TestDetectIde:
         monkeypatch.setenv("OPENAI_CODEX", "1")
         assert detect_ide(tmp_path) == IDEKind.CODEX
 
+    def test_live_codex_env_wins_over_repo_ide_markers(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        (tmp_path / ".cursor").mkdir()
+        (tmp_path / ".vscode").mkdir()
+        monkeypatch.setenv("OPENAI_CODEX", "1")
+
+        assert detect_ide(tmp_path) == IDEKind.CODEX
+
     def test_claude_code_env(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
@@ -114,6 +123,15 @@ class TestDetectIde:
     ) -> None:
         monkeypatch.setenv("TERM_PROGRAM", "vscode")
         monkeypatch.setenv("CLAUDE_CODE_ENTRYPOINT", "cli")
+        assert detect_ide(tmp_path) == IDEKind.CLAUDE_CODE
+
+    def test_live_claude_env_wins_over_repo_ide_markers(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        (tmp_path / ".cursor").mkdir()
+        (tmp_path / ".vscode").mkdir()
+        monkeypatch.setenv("CLAUDE_CODE_ENTRYPOINT", "cli")
+
         assert detect_ide(tmp_path) == IDEKind.CLAUDE_CODE
 
 
@@ -376,6 +394,23 @@ class TestEnsureIdeAdaptation:
         assert payload["governance_activation_state"] == "materialized_unverified"
         assert payload["governance_activation_verifiable"] is False
         assert payload["governance_activation_mode"] == "materialized_only"
+
+    def test_build_adapter_governance_surface_tolerates_unknown_persisted_detected_ide(
+        self, tmp_path: Path
+    ) -> None:
+        (tmp_path / ".codex").mkdir()
+        init_project(tmp_path)
+        cfg = load_project_config(tmp_path)
+        save_project_config(
+            tmp_path,
+            cfg.model_copy(update={"detected_ide": "legacy_custom_host"}),
+        )
+
+        payload = build_adapter_governance_surface(tmp_path, detected_ide=IDEKind.CODEX)
+
+        assert payload["detected_ide"] == IDEKind.CODEX.value
+        assert payload["agent_target"] == IDEKind.CODEX.value
+        assert payload["adapter_ingress_state"] == "materialized"
 
 
 class TestCanonicalProofCarrier:

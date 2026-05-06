@@ -284,6 +284,14 @@ def _coerce_ide_kind(value: IDEKind | str | None) -> IDEKind | None:
     return IDEKind(raw)
 
 
+def _coerce_persisted_ide_kind(value: IDEKind | str | None) -> IDEKind | None:
+    """Normalize persisted IDE values while tolerating legacy/custom strings."""
+    try:
+        return _coerce_ide_kind(value)
+    except ValueError:
+        return None
+
+
 def _resolve_agent_target(
     root: Path,
     cfg_agent_target: str,
@@ -736,10 +744,12 @@ def build_adapter_governance_surface(
 ) -> dict[str, Any]:
     """Return persisted adapter facts plus derived governance truth."""
     cfg = load_project_config(root)
-    resolved_detected_ide = cfg.detected_ide
-    if not resolved_detected_ide:
-        fallback = _coerce_ide_kind(detected_ide) or detect_ide(root)
-        resolved_detected_ide = fallback.value
+    fallback = (
+        _coerce_ide_kind(detected_ide)
+        or _coerce_persisted_ide_kind(cfg.detected_ide)
+        or detect_ide(root)
+    )
+    resolved_detected_ide = fallback.value
     agent_target = cfg.agent_target or resolved_detected_ide
     target = _coerce_ide_kind(agent_target) or IDEKind.GENERIC
     activation_state = cfg.adapter_activation_state or ActivationState.INSTALLED.value
@@ -782,10 +792,27 @@ def build_adapter_governance_surface(
             "preferred shell not configured; run `ai-sdlc adapter shell-select` "
             f"(recommended: {preferred_shell_label(recommended_shell_for_platform())})."
         )
+    target_mismatch = (
+        bool(resolved_detected_ide)
+        and bool(agent_target)
+        and resolved_detected_ide != agent_target
+        and resolved_detected_ide != IDEKind.GENERIC.value
+    )
+    target_mismatch_hint = ""
+    if target_mismatch:
+        target_mismatch_hint = (
+            f"Detected host '{resolved_detected_ide}' differs from configured "
+            f"agent target '{agent_target}'. If '{resolved_detected_ide}' is the "
+            "current AI chat host, run "
+            f"`ai-sdlc adapter select --agent-target {resolved_detected_ide}` "
+            "and then rerun `ai-sdlc adapter status`."
+        )
 
     return {
         "detected_ide": resolved_detected_ide,
         "agent_target": agent_target,
+        "adapter_target_mismatch": target_mismatch,
+        "adapter_target_mismatch_hint": target_mismatch_hint,
         "preferred_shell": preferred_shell,
         "preferred_shell_configured": preferred_shell_configured,
         "preferred_shell_recommended": preferred_shell_recommended,

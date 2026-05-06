@@ -121,6 +121,19 @@ def render_adapter_status_for_beginner(payload: dict[str, object]) -> str:
     result_zh, result_en = adapter_result_text(payload)
     ingress = str(payload.get("adapter_ingress_state") or "")
     target = str(payload.get("agent_target") or "codex")
+    if payload.get("adapter_target_mismatch"):
+        detected = str(payload.get("detected_ide") or target)
+        return render_single_next_step(
+            result_zh=(
+                f"{result_zh} 检测到的宿主是 {detected}，但项目 target 是 {target}。"
+            ),
+            result_en=(
+                f"{result_en} The detected host is {detected}, but the project target is {target}."
+            ),
+            next_command=f"ai-sdlc adapter select --agent-target {detected}",
+            next_zh="如果这是当前聊天宿主，先重选 adapter target 并刷新 canonical 文件。",
+            next_en="If this is the current chat host, reselect the adapter target and refresh canonical files.",
+        )
     if ingress in {"verified_loaded", "materialized"}:
         return render_single_next_step(
             result_zh=result_zh,
