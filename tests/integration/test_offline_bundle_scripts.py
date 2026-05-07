@@ -232,6 +232,9 @@ def _make_verifiable_portable_python(runtime_dir: Path) -> Path:
         runtime_dir.mkdir(parents=True, exist_ok=True)
         target = runtime_dir / "python.exe"
         shutil.copy2(sys.executable, target)
+        pyvenv_cfg = Path(sys.executable).resolve().parents[1] / "pyvenv.cfg"
+        if pyvenv_cfg.is_file():
+            shutil.copy2(pyvenv_cfg, runtime_dir / "pyvenv.cfg")
         return target
     return _make_fake_portable_python(runtime_dir)
 
