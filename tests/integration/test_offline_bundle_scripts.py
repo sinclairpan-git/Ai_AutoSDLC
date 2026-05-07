@@ -227,6 +227,15 @@ os.execv(REAL_PYTHON, [REAL_PYTHON, *sys.argv[1:]])
     return _write_executable(wrapper_path, wrapper)
 
 
+def _make_verifiable_portable_python(runtime_dir: Path) -> Path:
+    if os.name == "nt":
+        runtime_dir.mkdir(parents=True, exist_ok=True)
+        target = runtime_dir / "python.exe"
+        shutil.copy2(sys.executable, target)
+        return target
+    return _make_fake_portable_python(runtime_dir)
+
+
 def _make_fake_portable_python_versioned(runtime_dir: Path) -> Path:
     bin_dir = runtime_dir / "bin"
     bin_dir.mkdir(parents=True, exist_ok=True)
@@ -458,7 +467,7 @@ def test_build_offline_bundle_embeds_portable_python_runtime_when_configured(
     fake_python = _make_fake_python(wrapper_dir)
     _make_fake_uv(wrapper_dir)
     portable_runtime = tmp_path / "portable-python"
-    _make_fake_portable_python(portable_runtime)
+    portable_python = _make_verifiable_portable_python(portable_runtime)
 
     env = _script_env(wrapper_dir, fake_python)
     env["AI_SDLC_OFFLINE_PYTHON_RUNTIME"] = str(portable_runtime)
@@ -474,7 +483,7 @@ def test_build_offline_bundle_embeds_portable_python_runtime_when_configured(
 
     assert result.returncode == 0, result.stderr
     bundle_root = repo / "dist-offline" / "ai-sdlc-offline-0.2.0"
-    assert (bundle_root / "python-runtime" / "bin" / "python3").is_file()
+    assert (bundle_root / "python-runtime" / portable_python.relative_to(portable_runtime)).is_file()
     manifest = json.loads((bundle_root / "bundle-manifest.json").read_text(encoding="utf-8"))
     assert manifest["python_runtime_bundled"] is True
     assert "Bundled Python runtime: included" in result.stdout
@@ -563,7 +572,7 @@ def test_verify_offline_bundle_accepts_install_log_with_bundled_runtime(
 ) -> None:
     bundle_dir = tmp_path / "bundle"
     runtime_dir = bundle_dir / "python-runtime"
-    _make_fake_portable_python(runtime_dir)
+    _make_verifiable_portable_python(runtime_dir)
     (bundle_dir / "bundle-manifest.json").write_text(
         json.dumps(
             {

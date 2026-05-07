@@ -103,6 +103,7 @@ def test_release_artifact_smoke_workflow_installs_published_assets() -> None:
     assert "verify_offline_bundle.py" in workflow
     assert "--require-bundled-runtime" in workflow
     assert "--install-log" in workflow
+    assert "verify_offline_bundle.py failed with exit code" in workflow
     assert "adapter status" in workflow
     assert "run --dry-run" in workflow
     assert "actions/upload-artifact@v7" in workflow
@@ -128,6 +129,7 @@ def test_release_build_workflow_matrix_builds_smokes_and_uploads_assets() -> Non
     assert "verify_offline_bundle.py" in workflow
     assert "--require-bundled-runtime" in workflow
     assert "--install-log" in workflow
+    assert "verify_offline_bundle.py failed with exit code" in workflow
     assert "adapter status" in workflow
     assert "run --dry-run" in workflow
     assert "actions/upload-artifact@v7" in workflow

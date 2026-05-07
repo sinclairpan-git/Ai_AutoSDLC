@@ -150,6 +150,9 @@ jobs:
           python packaging/offline/verify_offline_bundle.py $bundleDir.FullName `
             --require-bundled-runtime `
             --install-log (Join-Path $evidenceRoot "install.log")
+          if ($LASTEXITCODE -ne 0) {
+            throw "verify_offline_bundle.py failed with exit code $LASTEXITCODE"
+          }
 
           $cliExe = Join-Path $bundleDir.FullName ".venv\Scripts\ai-sdlc.exe"
           & $cliExe --help *>&1 | Tee-Object -FilePath (Join-Path $evidenceRoot "help.txt")
