@@ -227,6 +227,18 @@ os.execv(REAL_PYTHON, [REAL_PYTHON, *sys.argv[1:]])
     return _write_executable(wrapper_path, wrapper)
 
 
+def _make_verifiable_portable_python(runtime_dir: Path) -> Path:
+    if os.name == "nt":
+        runtime_dir.mkdir(parents=True, exist_ok=True)
+        target = runtime_dir / "python.exe"
+        shutil.copy2(sys.executable, target)
+        pyvenv_cfg = Path(sys.executable).resolve().parents[1] / "pyvenv.cfg"
+        if pyvenv_cfg.is_file():
+            shutil.copy2(pyvenv_cfg, runtime_dir / "pyvenv.cfg")
+        return target
+    return _make_fake_portable_python(runtime_dir)
+
+
 def _make_fake_portable_python_versioned(runtime_dir: Path) -> Path:
     bin_dir = runtime_dir / "bin"
     bin_dir.mkdir(parents=True, exist_ok=True)
@@ -314,6 +326,7 @@ def _prepare_fake_bundle_repo(tmp_path: Path, version: str = "0.2.0") -> Path:
         "install_offline.sh",
         "install_offline.ps1",
         "install_offline.bat",
+        "verify_offline_bundle.py",
         "README_BUNDLE.txt",
     ):
         shutil.copy2(_OFFLINE_DIR / name, offline_dir / name)
@@ -435,6 +448,8 @@ def test_build_offline_bundle_emits_platform_manifest_and_archives(tmp_path: Pat
     assert manifest["package_version"] == "0.2.0"
     assert manifest["platform_os"]
     assert manifest["platform_machine"]
+    assert manifest["wheel_python_version"]
+    assert manifest["wheel_python_tag"].startswith("cp")
 
     tar_path = repo / "dist-offline" / "ai-sdlc-offline-0.2.0.tar.gz"
     zip_path = repo / "dist-offline" / "ai-sdlc-offline-0.2.0.zip"
@@ -455,7 +470,7 @@ def test_build_offline_bundle_embeds_portable_python_runtime_when_configured(
     fake_python = _make_fake_python(wrapper_dir)
     _make_fake_uv(wrapper_dir)
     portable_runtime = tmp_path / "portable-python"
-    _make_fake_portable_python(portable_runtime)
+    portable_python = _make_verifiable_portable_python(portable_runtime)
 
     env = _script_env(wrapper_dir, fake_python)
     env["AI_SDLC_OFFLINE_PYTHON_RUNTIME"] = str(portable_runtime)
@@ -471,10 +486,127 @@ def test_build_offline_bundle_embeds_portable_python_runtime_when_configured(
 
     assert result.returncode == 0, result.stderr
     bundle_root = repo / "dist-offline" / "ai-sdlc-offline-0.2.0"
-    assert (bundle_root / "python-runtime" / "bin" / "python3").is_file()
+    assert (bundle_root / "python-runtime" / portable_python.relative_to(portable_runtime)).is_file()
     manifest = json.loads((bundle_root / "bundle-manifest.json").read_text(encoding="utf-8"))
     assert manifest["python_runtime_bundled"] is True
     assert "Bundled Python runtime: included" in result.stdout
+    assert "Offline bundle runtime verification passed." in result.stdout
+
+
+def test_verify_offline_bundle_rejects_runtime_symlinks_that_escape_bundle(
+    tmp_path: Path,
+) -> None:
+    bundle_dir = tmp_path / "bundle"
+    runtime_dir = bundle_dir / "python-runtime"
+    bin_dir = runtime_dir / "bin"
+    wheels_dir = bundle_dir / "wheels"
+    bin_dir.mkdir(parents=True)
+    wheels_dir.mkdir()
+    outside_python = tmp_path / "outside-python"
+    _write_executable(
+        outside_python,
+        f"#!{_bash_shebang_python()}\nimport sys\nprint('outside')\n",
+    )
+    (bin_dir / "python3").symlink_to(outside_python)
+    (bundle_dir / "bundle-manifest.json").write_text(
+        json.dumps(
+            {
+                "package_version": "0.2.0",
+                "platform_os": platform.system().lower(),
+                "platform_machine": platform.machine().lower(),
+                "python_runtime_bundled": True,
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(_OFFLINE_DIR / "verify_offline_bundle.py"),
+            str(bundle_dir),
+            "--require-bundled-runtime",
+        ],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    assert result.returncode != 0
+    assert "points outside the bundle" in result.stderr
+
+
+def test_verify_offline_bundle_rejects_runtime_root_symlink(tmp_path: Path) -> None:
+    bundle_dir = tmp_path / "bundle"
+    real_runtime = tmp_path / "real-python-runtime"
+    _make_fake_portable_python(real_runtime)
+    (bundle_dir).mkdir()
+    (bundle_dir / "python-runtime").symlink_to(real_runtime)
+    (bundle_dir / "bundle-manifest.json").write_text(
+        json.dumps(
+            {
+                "package_version": "0.2.0",
+                "platform_os": platform.system().lower(),
+                "platform_machine": platform.machine().lower(),
+                "python_runtime_bundled": True,
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(_OFFLINE_DIR / "verify_offline_bundle.py"),
+            str(bundle_dir),
+            "--require-bundled-runtime",
+        ],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    assert result.returncode != 0
+    assert "python-runtime itself is a symlink" in result.stderr
+
+
+def test_verify_offline_bundle_accepts_install_log_with_bundled_runtime(
+    tmp_path: Path,
+) -> None:
+    bundle_dir = tmp_path / "bundle"
+    runtime_dir = bundle_dir / "python-runtime"
+    _make_verifiable_portable_python(runtime_dir)
+    (bundle_dir / "bundle-manifest.json").write_text(
+        json.dumps(
+            {
+                "package_version": "0.2.0",
+                "platform_os": platform.system().lower(),
+                "platform_machine": platform.machine().lower(),
+                "python_runtime_bundled": True,
+                "wheel_python_version": f"{sys.version_info.major}.{sys.version_info.minor}",
+            }
+        ),
+        encoding="utf-8",
+    )
+    install_log = tmp_path / "install.log"
+    install_log.write_text("Using bundled Python runtime: python-runtime/bin/python3\n")
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(_OFFLINE_DIR / "verify_offline_bundle.py"),
+            str(bundle_dir),
+            "--require-bundled-runtime",
+            "--install-log",
+            str(install_log),
+        ],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    assert result.returncode == 0, result.stderr
+    assert "Offline bundle runtime verification passed." in result.stdout
 
 
 def test_build_offline_bundle_uses_relative_zip_paths_for_cross_platform_python() -> None:
@@ -596,6 +728,45 @@ def test_install_offline_accepts_matching_platform_manifest(tmp_path: Path) -> N
     assert (bundle_dir / ".venv" / "bin" / "ai-sdlc").is_file()
     assert "当前结果 / Result" in result.stdout
     assert "ai-sdlc init ." in result.stdout
+
+
+def test_install_offline_rejects_python_abi_manifest_mismatch(tmp_path: Path) -> None:
+    bundle_dir = tmp_path / "bundle"
+    wheels_dir = bundle_dir / "wheels"
+    wheels_dir.mkdir(parents=True)
+    shutil.copy2(_OFFLINE_DIR / "install_offline.sh", bundle_dir / "install_offline.sh")
+    (wheels_dir / "ai_sdlc-0.2.0-py3-none-any.whl").write_text(
+        "fake wheel\n",
+        encoding="utf-8",
+    )
+    (bundle_dir / "bundle-manifest.json").write_text(
+        json.dumps(
+            {
+                "package_version": "0.2.0",
+                "platform_os": platform.system().lower(),
+                "platform_machine": platform.machine().lower(),
+                "wheel_python_version": "9.9",
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    wrapper_dir = tmp_path / "wrappers"
+    wrapper_dir.mkdir()
+    fake_python = _make_fake_python(wrapper_dir)
+
+    result = subprocess.run(
+        [_bash_command(), str(bundle_dir / "install_offline.sh")],
+        cwd=bundle_dir,
+        capture_output=True,
+        text=True,
+        env=_script_env(wrapper_dir, fake_python),
+        check=False,
+    )
+
+    combined = f"{result.stdout}\n{result.stderr}"
+    assert result.returncode != 0
+    assert "python=9.9 wheel ABI" in combined
 
 
 def test_install_offline_uses_bundled_python_runtime_when_system_python_missing(

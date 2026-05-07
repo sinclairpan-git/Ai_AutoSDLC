@@ -41,6 +41,9 @@ def test_windows_offline_smoke_workflow_covers_bundle_build_install_and_cli_chec
     assert "PYTHONIOENCODING" in workflow
     assert "Console]::OutputEncoding" in workflow
     assert "UTF8Encoding" in workflow
+    assert "verify_offline_bundle.py" in workflow
+    assert "--require-bundled-runtime" in workflow
+    assert "--install-log" in workflow
     assert "Legacy Artifact Probe" in workflow
     assert "recover --reconcile" in workflow
 
@@ -72,6 +75,9 @@ def test_posix_offline_smoke_workflow_covers_macos_linux_bundle_install_and_cli_
     assert "upload-artifact" in workflow
     assert "PYTHONUTF8" in workflow
     assert "PYTHONIOENCODING" in workflow
+    assert "verify_offline_bundle.py" in workflow
+    assert "--require-bundled-runtime" in workflow
+    assert "--install-log" in workflow
 
 
 def test_release_artifact_smoke_workflow_installs_published_assets() -> None:
@@ -83,7 +89,7 @@ def test_release_artifact_smoke_workflow_installs_published_assets() -> None:
 
     assert "workflow_dispatch:" in workflow
     assert "release:" in workflow
-    assert "default: v0.7.10" in workflow
+    assert "default: v0.7.11" in workflow
     assert "gh release download" in workflow
     assert "windows-latest" in workflow
     assert "macos-latest" in workflow
@@ -93,6 +99,11 @@ def test_release_artifact_smoke_workflow_installs_published_assets() -> None:
     assert "RELEASE_ASSET_OS" in workflow
     assert "install_offline.ps1" in workflow
     assert "./install_offline.sh" in workflow
+    assert "actions/setup-python@v6" in workflow
+    assert "verify_offline_bundle.py" in workflow
+    assert "--require-bundled-runtime" in workflow
+    assert "--install-log" in workflow
+    assert "verify_offline_bundle.py failed with exit code" in workflow
     assert "adapter status" in workflow
     assert "run --dry-run" in workflow
     assert "actions/upload-artifact@v7" in workflow
@@ -106,7 +117,7 @@ def test_release_build_workflow_matrix_builds_smokes_and_uploads_assets() -> Non
     workflow = workflow_path.read_text(encoding="utf-8")
 
     assert "workflow_dispatch:" in workflow
-    assert "default: v0.7.10" in workflow
+    assert "default: v0.7.11" in workflow
     assert "windows-latest" in workflow
     assert "macos-latest" in workflow
     assert "ubuntu-latest" in workflow
@@ -115,6 +126,10 @@ def test_release_build_workflow_matrix_builds_smokes_and_uploads_assets() -> Non
     assert "build_offline_bundle.sh" in workflow
     assert "install_offline.ps1" in workflow
     assert "./install_offline.sh" in workflow
+    assert "verify_offline_bundle.py" in workflow
+    assert "--require-bundled-runtime" in workflow
+    assert "--install-log" in workflow
+    assert "verify_offline_bundle.py failed with exit code" in workflow
     assert "adapter status" in workflow
     assert "run --dry-run" in workflow
     assert "actions/upload-artifact@v7" in workflow

@@ -102,10 +102,12 @@ if (Test-Path $ManifestPath) {
   $manifest = Get-Content $ManifestPath -Raw | ConvertFrom-Json
   $expectedOs = [string]$manifest.platform_os
   $expectedMachine = Normalize-Architecture ([string]$manifest.platform_machine)
+  $expectedPythonVersion = [string]$manifest.wheel_python_version
   $currentOs = "windows"
   $currentMachine = Normalize-Architecture (
     [System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture.ToString()
   )
+  $currentPythonVersion = (& $PythonExe -c "import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}')").Trim()
   $mismatches = @()
   if ($expectedOs -and $expectedOs.ToLowerInvariant() -ne $currentOs) {
     $mismatches += "os=$expectedOs (current=$currentOs)"
@@ -113,8 +115,11 @@ if (Test-Path $ManifestPath) {
   if ($expectedMachine -and $expectedMachine.ToLowerInvariant() -ne $currentMachine) {
     $mismatches += "machine=$expectedMachine (current=$currentMachine)"
   }
+  if ($expectedPythonVersion -and $expectedPythonVersion -ne $currentPythonVersion) {
+    $mismatches += "python=$expectedPythonVersion wheel ABI (selected=$currentPythonVersion)"
+  }
   if ($mismatches.Count -gt 0) {
-    throw "offline bundle platform mismatch: $($mismatches -join '; '). Rebuild the bundle on the target OS/CPU or use a matching archive."
+    throw "offline bundle platform mismatch: $($mismatches -join '; '). Rebuild the bundle on the target OS/CPU/Python ABI or use a matching archive."
   }
   Write-Host "Validated offline bundle platform manifest."
 } else {

@@ -6,7 +6,7 @@ on:
       tag:
         description: Release tag that will receive the platform assets.
         required: true
-        default: v0.7.10
+        default: v0.7.11
       upload_to_release:
         description: Upload smoke-passed assets to the existing GitHub Release.
         required: true
@@ -147,6 +147,13 @@ jobs:
           }
           Pop-Location
 
+          python packaging/offline/verify_offline_bundle.py $bundleDir.FullName `
+            --require-bundled-runtime `
+            --install-log (Join-Path $evidenceRoot "install.log")
+          if ($LASTEXITCODE -ne 0) {
+            throw "verify_offline_bundle.py failed with exit code $LASTEXITCODE"
+          }
+
           $cliExe = Join-Path $bundleDir.FullName ".venv\Scripts\ai-sdlc.exe"
           & $cliExe --help *>&1 | Tee-Object -FilePath (Join-Path $evidenceRoot "help.txt")
           if ($LASTEXITCODE -ne 0) {
@@ -200,6 +207,10 @@ jobs:
             cd "${bundle_dir}"
             ./install_offline.sh 2>&1 | tee "${evidence_root}/install.log"
           )
+
+          python packaging/offline/verify_offline_bundle.py "${bundle_dir}" \
+            --require-bundled-runtime \
+            --install-log "${evidence_root}/install.log"
 
           cli="${bundle_dir}/.venv/bin/ai-sdlc"
           "${cli}" --help 2>&1 | tee "${evidence_root}/help.txt"

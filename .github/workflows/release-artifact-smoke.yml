@@ -6,7 +6,7 @@ on:
       tag:
         description: Release tag to verify.
         required: true
-        default: v0.7.10
+        default: v0.7.11
   release:
     types:
       - published
@@ -31,6 +31,11 @@ jobs:
     steps:
       - name: Checkout repository truth
         uses: actions/checkout@v6
+
+      - name: Set up verifier Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
 
       - name: Download release zip asset
         shell: pwsh
@@ -76,6 +81,13 @@ jobs:
             throw "release install_offline.ps1 failed with exit code $LASTEXITCODE"
           }
           Pop-Location
+
+          python packaging/offline/verify_offline_bundle.py $bundleDir.FullName `
+            --require-bundled-runtime `
+            --install-log (Join-Path $evidenceRoot "install.log")
+          if ($LASTEXITCODE -ne 0) {
+            throw "verify_offline_bundle.py failed with exit code $LASTEXITCODE"
+          }
 
           $cliExe = Join-Path $bundleDir.FullName ".venv\Scripts\ai-sdlc.exe"
           & $cliExe --help *>&1 | Tee-Object -FilePath (Join-Path $evidenceRoot "help.txt")
@@ -127,6 +139,11 @@ jobs:
       - name: Checkout repository truth
         uses: actions/checkout@v6
 
+      - name: Set up verifier Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+
       - name: Download release tar asset
         shell: bash
         run: |
@@ -171,6 +188,10 @@ jobs:
             cd "${bundle_dir}"
             ./install_offline.sh 2>&1 | tee "${evidence_root}/install.log"
           )
+
+          python packaging/offline/verify_offline_bundle.py "${bundle_dir}" \
+            --require-bundled-runtime \
+            --install-log "${evidence_root}/install.log"
 
           cli="${bundle_dir}/.venv/bin/ai-sdlc"
           "${cli}" --help 2>&1 | tee "${evidence_root}/help.txt"

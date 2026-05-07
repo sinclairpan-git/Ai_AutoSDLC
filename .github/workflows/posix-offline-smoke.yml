@@ -100,6 +100,10 @@ jobs:
             bash ./install_offline.sh
           ) 2>&1 | tee "$install_log"
 
+          python packaging/offline/verify_offline_bundle.py "$bundle_dir" \
+            --require-bundled-runtime \
+            --install-log "$install_log"
+
           cli_exe="$bundle_dir/.venv/bin/ai-sdlc"
           if [[ ! -x "$cli_exe" ]]; then
             echo "Expected CLI shim was not created at $cli_exe" >&2
