@@ -240,7 +240,7 @@ def test_self_update_installs_wheel_matching_requested_version(
     wheels = bundle / "wheels"
     wheels.mkdir(parents=True)
     (wheels / "ai_sdlc-0.7.9-py3-none-any.whl").write_text("old", encoding="utf-8")
-    target = wheels / "ai_sdlc-0.7.10-py3-none-any.whl"
+    target = wheels / "ai_sdlc-0.7.11-py3-none-any.whl"
     target.write_text("new", encoding="utf-8")
 
     commands: list[list[str]] = []
@@ -257,7 +257,7 @@ def test_self_update_installs_wheel_matching_requested_version(
 
     monkeypatch.setattr(self_update_cmd.subprocess, "run", fake_run)
 
-    self_update_cmd._install_bundle_into_current_runtime(bundle, "0.7.10")
+    self_update_cmd._install_bundle_into_current_runtime(bundle, "0.7.11")
 
     assert commands
     assert commands[0][-1] == str(target)

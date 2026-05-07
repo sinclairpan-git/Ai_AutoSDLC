@@ -89,7 +89,7 @@ if [[ -n "${AI_SDLC_OFFLINE_PYTHON_RUNTIME:-}" ]]; then
     exit 1
   fi
   echo "==> Copying bundled Python runtime into offline bundle…"
-  cp -R "${AI_SDLC_OFFLINE_PYTHON_RUNTIME}" "${OUT}/python-runtime"
+  cp -R -L "${AI_SDLC_OFFLINE_PYTHON_RUNTIME}" "${OUT}/python-runtime"
   RUNTIME_BUNDLED="true"
 fi
 
@@ -112,6 +112,8 @@ manifest_path.write_text(
             "platform_os": platform.system().lower(),
             "platform_machine": platform.machine().lower(),
             "python_runtime_bundled": runtime_bundled,
+            "wheel_python_version": f"{sys.version_info.major}.{sys.version_info.minor}",
+            "wheel_python_tag": f"cp{sys.version_info.major}{sys.version_info.minor}",
         },
         indent=2,
     )
@@ -119,6 +121,8 @@ manifest_path.write_text(
     encoding="utf-8",
 )
 PY
+
+"${PY}" "${SCRIPT_DIR}/verify_offline_bundle.py" "${OUT}"
 
 mkdir -p "${ROOT}/dist-offline"
 rm -f "${ARCHIVE}"

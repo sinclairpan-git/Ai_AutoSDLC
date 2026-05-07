@@ -91,6 +91,10 @@ jobs:
           }
           Pop-Location
 
+          python packaging/offline/verify_offline_bundle.py $bundleDir.FullName `
+            --require-bundled-runtime `
+            --install-log $installLog
+
           $cliExe = Join-Path $bundleDir.FullName ".venv\Scripts\ai-sdlc.exe"
           if (-not (Test-Path $cliExe)) {
             throw "Expected CLI shim was not created at $cliExe"

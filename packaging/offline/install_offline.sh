@@ -191,18 +191,24 @@ expected_os = str(payload.get("platform_os", "")).strip().lower()
 expected_machine = str(payload.get("platform_machine", "")).strip().lower()
 current_os = platform.system().lower()
 current_machine = platform.machine().lower()
+wheel_python_version = str(payload.get("wheel_python_version", "")).strip()
+current_python_version = f"{sys.version_info.major}.{sys.version_info.minor}"
 
 mismatches: list[str] = []
 if expected_os and expected_os != current_os:
     mismatches.append(f"os={expected_os} (current={current_os})")
 if expected_machine and expected_machine != current_machine:
     mismatches.append(f"machine={expected_machine} (current={current_machine})")
+if wheel_python_version and wheel_python_version != current_python_version:
+    mismatches.append(
+        f"python={wheel_python_version} wheel ABI (selected={current_python_version})"
+    )
 
 if mismatches:
     raise SystemExit(
         "error: offline bundle platform mismatch: "
         + "; ".join(mismatches)
-        + ". Rebuild the bundle on the target OS/CPU or use a matching archive."
+        + ". Rebuild the bundle on the target OS/CPU/Python ABI or use a matching archive."
     )
 PY
   then
