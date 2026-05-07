@@ -524,6 +524,40 @@ def test_verify_offline_bundle_rejects_runtime_symlinks_that_escape_bundle(
     assert "points outside the bundle" in result.stderr
 
 
+def test_verify_offline_bundle_rejects_runtime_root_symlink(tmp_path: Path) -> None:
+    bundle_dir = tmp_path / "bundle"
+    real_runtime = tmp_path / "real-python-runtime"
+    _make_fake_portable_python(real_runtime)
+    (bundle_dir).mkdir()
+    (bundle_dir / "python-runtime").symlink_to(real_runtime)
+    (bundle_dir / "bundle-manifest.json").write_text(
+        json.dumps(
+            {
+                "package_version": "0.2.0",
+                "platform_os": platform.system().lower(),
+                "platform_machine": platform.machine().lower(),
+                "python_runtime_bundled": True,
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(_OFFLINE_DIR / "verify_offline_bundle.py"),
+            str(bundle_dir),
+            "--require-bundled-runtime",
+        ],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    assert result.returncode != 0
+    assert "python-runtime itself is a symlink" in result.stderr
+
+
 def test_verify_offline_bundle_accepts_install_log_with_bundled_runtime(
     tmp_path: Path,
 ) -> None:

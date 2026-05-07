@@ -50,6 +50,11 @@ def _pick_runtime_python(runtime_root: Path) -> Path:
 
 
 def _assert_no_escaping_symlinks(runtime_root: Path) -> None:
+    if runtime_root.is_symlink():
+        _fail(
+            "python-runtime itself is a symlink; copy a real runtime directory "
+            "into the bundle instead"
+        )
     root_resolved = runtime_root.resolve()
     for path in runtime_root.rglob("*"):
         if not path.is_symlink():
