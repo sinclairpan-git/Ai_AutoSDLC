@@ -37,16 +37,24 @@ jobs:
         with:
           python-version: "3.11"
 
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+
       - name: Build Windows offline bundle
         shell: bash
-        env:
-          PYTHON: python
-          PYTHONUTF8: "1"
-          PYTHONIOENCODING: utf-8
         run: |
           set -euo pipefail
-          runtime_root="$(cygpath -u "$pythonLocation")"
-          PYTHON="$PYTHON" AI_SDLC_OFFLINE_PYTHON_RUNTIME="$runtime_root" bash packaging/offline/build_offline_bundle.sh
+          uv python install 3.11
+          runtime_python="$(uv python find 3.11)"
+          runtime_python="$(cygpath -u "$runtime_python")"
+          runtime_root="$(dirname "$runtime_python")"
+          PYTHON="$runtime_python" \
+            PYTHONUTF8="1" \
+            PYTHONIOENCODING="utf-8" \
+            AI_SDLC_OFFLINE_PYTHON_RUNTIME="$runtime_root" \
+            bash packaging/offline/build_offline_bundle.sh
 
       - name: Install bundle and run CLI smoke
         shell: pwsh

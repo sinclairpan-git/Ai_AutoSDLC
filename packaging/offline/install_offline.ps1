@@ -93,9 +93,38 @@ if ($UpgradeExisting) {
   Write-Host "Using detected Python runtime: $PythonExe"
 }
 
-& $PythonExe -c "import sys; sys.exit(0 if sys.version_info >= (3, 11) else 1)"
-if ($LASTEXITCODE -ne 0) {
-  throw "Python >= 3.11 is required. Use -PythonExe to specify a correct interpreter."
+$usingBundledPython = $false
+if ((-not $UpgradeExisting) -and (Test-Path $BundledPython)) {
+  try {
+    $usingBundledPython = (
+      (Resolve-Path -LiteralPath $PythonExe).Path -eq
+      (Resolve-Path -LiteralPath $BundledPython).Path
+    )
+  } catch {
+    $usingBundledPython = $false
+  }
+}
+
+$pythonProbe = & $PythonExe -c "import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}'); sys.exit(0 if sys.version_info >= (3, 11) else 42)" 2>&1
+$pythonProbeExit = $LASTEXITCODE
+if ($pythonProbeExit -ne 0) {
+  $probeText = ($pythonProbe | Out-String).Trim()
+  if ($pythonProbeExit -eq 42) {
+    if (-not $probeText) {
+      $probeText = $PythonExe
+    }
+    throw "Python >= 3.11 is required (found $probeText). Use -PythonExe to specify a correct interpreter."
+  }
+  if ($usingBundledPython) {
+    if (-not $probeText) {
+      $probeText = "no output"
+    }
+    throw "bundled Python runtime is not executable or cannot import the standard library (selected $PythonExe); this offline bundle is invalid for this machine. Details: $probeText"
+  }
+  if (-not $probeText) {
+    $probeText = "no output"
+  }
+  throw "selected Python runtime failed to start (selected $PythonExe). Details: $probeText"
 }
 
 if (Test-Path $ManifestPath) {

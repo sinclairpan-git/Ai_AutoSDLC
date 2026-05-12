@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import platform
 import subprocess
 from pathlib import Path
 
@@ -93,6 +94,134 @@ def _assert_runtime_executes(runtime_python: Path, expected_version: str | None)
         )
 
 
+def _native_binary_kind(path: Path) -> str | None:
+    try:
+        header = path.read_bytes()[:4]
+    except OSError:
+        return None
+    if header == b"\x7fELF":
+        return "elf"
+    if header[:2] == b"MZ":
+        return "pe"
+    if header in {
+        b"\xca\xfe\xba\xbe",
+        b"\xbe\xba\xfe\xca",
+        b"\xca\xfe\xba\xbf",
+        b"\xbf\xba\xfe\xca",
+        b"\xfe\xed\xfa\xce",
+        b"\xce\xfa\xed\xfe",
+        b"\xfe\xed\xfa\xcf",
+        b"\xcf\xfa\xed\xfe",
+    }:
+        return "macho"
+    return None
+
+
+def _reject_build_host_dependency(dep: str, runtime_root: Path, *, system: str) -> None:
+    dep = dep.strip()
+    if not dep or dep.startswith("@"):
+        return
+    if not dep.startswith("/"):
+        return
+
+    if system == "darwin" and (
+        dep.startswith("/usr/lib/")
+        or dep.startswith("/System/Library/")
+    ):
+        return
+    if system == "linux" and (
+        dep.startswith("/lib/")
+        or dep.startswith("/lib64/")
+        or dep.startswith("/usr/lib/")
+        or dep.startswith("/usr/lib64/")
+    ):
+        return
+
+    try:
+        Path(dep).resolve().relative_to(runtime_root.resolve())
+    except ValueError:
+        pass
+    else:
+        _fail(
+            "bundled Python runtime has an absolute dependency inside the bundle. "
+            "Use a relocatable runtime that references bundled libraries via "
+            f"@loader_path/@rpath or relative loader config: {dep}"
+        )
+
+    _fail(
+        "bundled Python runtime depends on a build-host absolute path and is not "
+        f"portable: {dep}"
+    )
+
+
+def _assert_macos_dynamic_dependencies(runtime_python: Path, runtime_root: Path) -> None:
+    completed = subprocess.run(
+        ["otool", "-L", str(runtime_python)],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    if completed.returncode != 0:
+        _fail(
+            "could not inspect bundled Python macOS dependencies with otool: "
+            + (completed.stderr.strip() or completed.stdout.strip() or "no output")
+        )
+    for raw_line in completed.stdout.splitlines()[1:]:
+        dep = raw_line.strip().split(" (", 1)[0]
+        _reject_build_host_dependency(dep, runtime_root, system="darwin")
+
+
+def _assert_linux_dynamic_dependencies(runtime_python: Path, runtime_root: Path) -> None:
+    completed = subprocess.run(
+        ["ldd", str(runtime_python)],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    output = "\n".join(part for part in (completed.stdout, completed.stderr) if part)
+    if completed.returncode != 0:
+        _fail(
+            "could not inspect bundled Python Linux dependencies with ldd: "
+            + (output.strip() or "no output")
+        )
+    for raw_line in output.splitlines():
+        line = raw_line.strip()
+        if "not found" in line:
+            _fail(f"bundled Python runtime has an unresolved Linux dependency: {line}")
+        if "=>" in line:
+            dep = line.split("=>", 1)[1].strip().split(" ", 1)[0]
+        else:
+            dep = line.split(" ", 1)[0]
+        _reject_build_host_dependency(dep, runtime_root, system="linux")
+
+
+def _assert_windows_runtime_dlls(runtime_root: Path, expected_version: str | None) -> None:
+    if not expected_version:
+        return
+    major_minor = expected_version.replace(".", "")
+    dll_name = f"python{major_minor}.dll"
+    if not (runtime_root / dll_name).is_file() and not any(runtime_root.rglob(dll_name)):
+        _fail(
+            "bundled Windows Python runtime is missing its Python DLL "
+            f"({dll_name}); copy the full redistributable runtime, not only python.exe"
+        )
+
+
+def _assert_portable_dynamic_dependencies(
+    runtime_python: Path,
+    runtime_root: Path,
+    expected_version: str | None,
+) -> None:
+    system = platform.system().lower()
+    binary_kind = _native_binary_kind(runtime_python)
+    if system == "darwin" and binary_kind == "macho":
+        _assert_macos_dynamic_dependencies(runtime_python, runtime_root)
+    elif system == "linux" and binary_kind == "elf":
+        _assert_linux_dynamic_dependencies(runtime_python, runtime_root)
+    elif system == "windows" and binary_kind == "pe":
+        _assert_windows_runtime_dlls(runtime_root, expected_version)
+
+
 def _assert_install_log_used_bundled_runtime(log_path: Path) -> None:
     text = log_path.read_text(encoding="utf-8")
     if "Using bundled Python runtime" not in text:
@@ -121,6 +250,7 @@ def main(argv: list[str] | None = None) -> int:
         _assert_no_escaping_symlinks(runtime_root)
         expected_version = str(manifest.get("wheel_python_version") or "").strip() or None
         _assert_runtime_executes(runtime_python, expected_version)
+        _assert_portable_dynamic_dependencies(runtime_python, runtime_root, expected_version)
     elif runtime_root.exists():
         _fail("python-runtime/ exists but bundle manifest does not mark it as bundled")
 

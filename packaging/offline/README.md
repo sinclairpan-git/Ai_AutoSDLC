@@ -36,7 +36,7 @@ AI_SDLC_OFFLINE_PYTHON_RUNTIME=/path/to/python-runtime \
 - `dist-offline/ai-sdlc-offline-<version>/bundle-manifest.json`（记录 bundle 适用的 OS/CPU 平台）
 - `dist-offline/ai-sdlc-offline-<version>/python-runtime/`（可选；若打包时提供，则离线机无需自备 Python）
 
-> 平台合同：新 bundle 会写出 `bundle-manifest.json`，安装脚本会校验目标机 OS/CPU 与 Python wheel ABI 是否匹配；请尽量在和目标机相同的 OS/CPU 环境打包，并使用发布矩阵固定的 Python 版本生成依赖 wheels。
+> 平台合同：新 bundle 会写出 `bundle-manifest.json`，安装脚本会校验目标机 OS/CPU 与 Python wheel ABI 是否匹配；请尽量在和目标机相同的 OS/CPU 环境打包，并使用发布矩阵固定的 Python 版本生成依赖 wheels。若提供 `AI_SDLC_OFFLINE_PYTHON_RUNTIME`，构建会运行 `verify_offline_bundle.py`，拒绝不可启动、缺少 stdlib/venv、symlink 逃逸、macOS framework 绝对依赖、Linux 缺失动态库、Windows 缺少 Python DLL 等非便携 runtime。
 
 ## 二、离线安装（目标机器）
 
@@ -152,8 +152,9 @@ CLI 安装器与后续命令提示均会以中英双语输出以下信息：
 
 1. **平台匹配**：在 **Windows** 上构建/下载的 `wheels` 只给 Windows 用；在 **Linux/macOS** 上生成的依赖 wheel 不要与 Windows 混用（否则会出现缺依赖或无法安装的二进制包）。若捆绑 `python-runtime/`，runtime 本身也必须与目标机 OS/CPU 匹配。
 2. **版本一致**：`wheels/` 内仅保留一个 `ai_sdlc-<version>-*.whl`，与 `pyproject.toml` / 标签版本一致。
-3. **冒烟**：在目标平台解压后运行对应 `install_offline` 脚本，再按上文「安装后验证」执行 `ai-sdlc --help` 或 `python -m ai_sdlc --help`。
-4. **发行说明**：在 Release Notes 中写明「离线包需与目标操作系统一致」，并指向本文档。
+3. **runtime 便携性**：不得把 python.org framework、Homebrew、pyenv、actions/setup-python 目录或单独 `python` 可执行文件直接当作可分发 runtime；必须使用能在解压位置自启动的完整 runtime。macOS 产物不得依赖 `/Library/Frameworks/Python.framework/...`。
+4. **冒烟**：在目标平台解压后运行对应 `install_offline` 脚本，再按上文「安装后验证」执行 `ai-sdlc --help` 或 `python -m ai_sdlc --help`。
+5. **发行说明**：在 Release Notes 中写明「离线包需与目标操作系统一致」，并指向本文档。
 
 若本次离线 bundle 要对外承诺“**目标机无需预装 Python 3.11+**”，则必须额外执行专门的 runtime 发布清单：
 

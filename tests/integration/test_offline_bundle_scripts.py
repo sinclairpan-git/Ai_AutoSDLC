@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import importlib.util
 import json
 import os
 import platform
@@ -18,6 +19,18 @@ import pytest
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 _OFFLINE_DIR = _REPO_ROOT / "packaging" / "offline"
 _PACKAGING_DIR = _REPO_ROOT / "packaging"
+
+
+def _load_verify_offline_bundle_module():
+    spec = importlib.util.spec_from_file_location(
+        "verify_offline_bundle",
+        _OFFLINE_DIR / "verify_offline_bundle.py",
+    )
+    assert spec is not None
+    assert spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
 
 
 def _write_executable(path: Path, content: str) -> Path:
@@ -609,6 +622,46 @@ def test_verify_offline_bundle_accepts_install_log_with_bundled_runtime(
     assert "Offline bundle runtime verification passed." in result.stdout
 
 
+def test_verify_offline_bundle_rejects_macos_framework_dependency(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    module = _load_verify_offline_bundle_module()
+    runtime_root = tmp_path / "python-runtime"
+    bin_dir = runtime_root / "bin"
+    bin_dir.mkdir(parents=True)
+    runtime_python = bin_dir / "python3"
+    runtime_python.write_bytes(b"\xcf\xfa\xed\xfe" + b"\x00" * 16)
+    runtime_python.chmod(0o755)
+
+    def fake_run(*_args, **_kwargs):
+        return subprocess.CompletedProcess(
+            args=["otool", "-L", str(runtime_python)],
+            returncode=0,
+            stdout=(
+                f"{runtime_python}:\n"
+                "\t/Library/Frameworks/Python.framework/Versions/3.11/Python "
+                "(compatibility version 3.11.0, current version 3.11.0)\n"
+                "\t/usr/lib/libSystem.B.dylib "
+                "(compatibility version 1.0.0, current version 1311.0.0)\n"
+            ),
+            stderr="",
+        )
+
+    monkeypatch.setattr(module.platform, "system", lambda: "Darwin")
+    monkeypatch.setattr(module.subprocess, "run", fake_run)
+
+    with pytest.raises(SystemExit) as exc_info:
+        module._assert_portable_dynamic_dependencies(
+            runtime_python,
+            runtime_root,
+            "3.11",
+        )
+
+    assert "build-host absolute path" in str(exc_info.value)
+    assert "/Library/Frameworks/Python.framework" in str(exc_info.value)
+
+
 def test_build_offline_bundle_uses_relative_zip_paths_for_cross_platform_python() -> None:
     script = (_OFFLINE_DIR / "build_offline_bundle.sh").read_text(encoding="utf-8")
 
@@ -767,6 +820,46 @@ def test_install_offline_rejects_python_abi_manifest_mismatch(tmp_path: Path) ->
     combined = f"{result.stdout}\n{result.stderr}"
     assert result.returncode != 0
     assert "python=9.9 wheel ABI" in combined
+
+
+def test_install_offline_reports_bundled_runtime_startup_crash(
+    tmp_path: Path,
+) -> None:
+    bundle_dir = tmp_path / "bundle"
+    wheels_dir = bundle_dir / "wheels"
+    runtime_bin = bundle_dir / "python-runtime" / "bin"
+    wheels_dir.mkdir(parents=True)
+    runtime_bin.mkdir(parents=True)
+    shutil.copy2(_OFFLINE_DIR / "install_offline.sh", bundle_dir / "install_offline.sh")
+    (wheels_dir / "ai_sdlc-0.2.0-py3-none-any.whl").write_text(
+        "fake wheel\n",
+        encoding="utf-8",
+    )
+    _write_executable(
+        runtime_bin / "python3",
+        "#!/bin/sh\n"
+        "echo 'dyld: Library not loaded: /Library/Frameworks/Python.framework/Versions/3.11/Python' >&2\n"
+        "exit 134\n",
+    )
+
+    env = dict(os.environ)
+    _set_env_path(env, "/usr/bin:/bin")
+    env.pop("PYTHON", None)
+
+    result = subprocess.run(
+        [_bash_command(), str(bundle_dir / "install_offline.sh")],
+        cwd=bundle_dir,
+        capture_output=True,
+        text=True,
+        env=env,
+        check=False,
+    )
+
+    combined = f"{result.stdout}\n{result.stderr}"
+    assert result.returncode != 0
+    assert "bundled Python runtime is not executable" in combined
+    assert "/Library/Frameworks/Python.framework" in combined
+    assert "need Python >= 3.11" not in combined
 
 
 def test_install_offline_uses_bundled_python_runtime_when_system_python_missing(

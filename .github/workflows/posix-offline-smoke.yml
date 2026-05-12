@@ -45,15 +45,23 @@ jobs:
         with:
           python-version: "3.11"
 
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+
       - name: Build POSIX offline bundle
         shell: bash
-        env:
-          PYTHON: python
-          PYTHONUTF8: "1"
-          PYTHONIOENCODING: utf-8
         run: |
           set -euo pipefail
-          AI_SDLC_OFFLINE_PYTHON_RUNTIME="$pythonLocation" bash packaging/offline/build_offline_bundle.sh
+          uv python install 3.11
+          runtime_python="$(uv python find 3.11)"
+          runtime_root="$(cd "$(dirname "${runtime_python}")/.." && pwd)"
+          PYTHON="${runtime_python}" \
+            PYTHONUTF8="1" \
+            PYTHONIOENCODING="utf-8" \
+            AI_SDLC_OFFLINE_PYTHON_RUNTIME="${runtime_root}" \
+            bash packaging/offline/build_offline_bundle.sh
 
       - name: Install bundle and run CLI smoke
         shell: bash

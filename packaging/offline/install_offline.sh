@@ -172,9 +172,21 @@ else
   echo "Using detected system Python runtime: ${PY}"
 fi
 
-if ! "${PY}" -c 'import sys; sys.exit(0 if sys.version_info >= (3, 11) else 1)' 2>/dev/null; then
-  fail_install "need Python >= 3.11 (found ${PY})"
+PY_PROBE_OUTPUT="$(
+  "${PY}" -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}"); sys.exit(0 if sys.version_info >= (3, 11) else 42)' 2>&1
+)" || PY_PROBE_STATUS=$?
+PY_PROBE_STATUS="${PY_PROBE_STATUS:-0}"
+if [[ "${PY_PROBE_STATUS}" != "0" ]]; then
+  if [[ "${PY_PROBE_STATUS}" == "42" ]]; then
+    PY_FOUND_VERSION="$(printf '%s\n' "${PY_PROBE_OUTPUT}" | tail -n 1)"
+    fail_install "need Python >= 3.11 (found ${PY_FOUND_VERSION:-${PY}})"
+  fi
+  if [[ "${PY}" == "${PYTHON_RUNTIME_ROOT}"/bin/* ]]; then
+    fail_install "bundled Python runtime is not executable or cannot import the standard library (selected ${PY}); this offline bundle is invalid for this machine. Details: ${PY_PROBE_OUTPUT:-no output}"
+  fi
+  fail_install "selected Python runtime failed to start (selected ${PY}). Details: ${PY_PROBE_OUTPUT:-no output}"
 fi
+unset PY_PROBE_STATUS
 
 if [[ -f "${MANIFEST}" ]]; then
   if ! "${PY}" - "${MANIFEST}" <<'PY'
