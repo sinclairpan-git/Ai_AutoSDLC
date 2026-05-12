@@ -10,12 +10,11 @@ working_set_snapshot:
   tasks_path: /Users/sinclairpan/project/Ai_AutoSDLC-offline-runtime-validation/specs/181-cross-platform-release-gate-matrix-baseline/tasks.md
   active_files: []
   context_summary: 'Goal: Fix critical offline bundled Python runtime packaging failure
-    | State: Codex review conclusion is clean. GitHub checks exposed Windows 3.11/3.12
-    failures in test fixture: _make_verifiable_portable_python copied python.exe from
-    venv but missed python3xx.dll in base runtime. Updated fixture to search sys.executable
-    parent, sys._base_executable parent, sys.base_prefix, and sys.exec_prefix for
-    python3xx.dll. | Next: Commit and push Windows fixture fix, then monitor PR #55
-    until all checks pass and Codex review remains clean.'
+    | State: Latest Codex review on commit 84d6c52 found P1: uv python find 3.11 could
+    resolve system/toolcache Python unless --managed-python is required. Updated release-build,
+    POSIX smoke, and Windows smoke workflows to use uv python find --managed-python
+    3.11; updated workflow tests. | Next: Commit/push managed-python workflow fix,
+    comment @codex review, then wait for checks and review conclusion.'
 current_branch: feature/181-cross-platform-release-gate-matrix-baseline-docs
 docs_baseline_ref: ''
 docs_baseline_at: ''

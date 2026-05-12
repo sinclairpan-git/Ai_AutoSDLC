@@ -31,7 +31,7 @@ def test_windows_offline_smoke_workflow_covers_bundle_build_install_and_cli_chec
     assert "windows-latest" in workflow
     assert "astral-sh/setup-uv@v7" in workflow
     assert "uv python install 3.11" in workflow
-    assert "uv python find 3.11" in workflow
+    assert "uv python find --managed-python 3.11" in workflow
     assert "AI_SDLC_OFFLINE_PYTHON_RUNTIME" in workflow
     assert "build_offline_bundle.sh" in workflow
     assert "install_offline.ps1" in workflow
@@ -64,7 +64,7 @@ def test_posix_offline_smoke_workflow_covers_macos_linux_bundle_install_and_cli_
     assert "ubuntu-latest" in workflow
     assert "astral-sh/setup-uv@v7" in workflow
     assert "uv python install 3.11" in workflow
-    assert "uv python find 3.11" in workflow
+    assert "uv python find --managed-python 3.11" in workflow
     assert "build_offline_bundle.sh" in workflow
     assert "install_offline.sh" in workflow
     assert ".venv/bin/ai-sdlc" in workflow
@@ -130,7 +130,7 @@ def test_release_build_workflow_matrix_builds_smokes_and_uploads_assets() -> Non
     assert "AI_SDLC_OFFLINE_ASSET_SUFFIX" in workflow
     assert "AI_SDLC_OFFLINE_PYTHON_RUNTIME" in workflow
     assert "uv python install 3.11" in workflow
-    assert "uv python find 3.11" in workflow
+    assert "uv python find --managed-python 3.11" in workflow
     assert "build_offline_bundle.sh" in workflow
     assert "install_offline.ps1" in workflow
     assert "./install_offline.sh" in workflow

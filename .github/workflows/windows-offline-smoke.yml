@@ -47,7 +47,7 @@ jobs:
         run: |
           set -euo pipefail
           uv python install 3.11
-          runtime_python="$(uv python find 3.11)"
+          runtime_python="$(uv python find --managed-python 3.11)"
           runtime_python="$(cygpath -u "$runtime_python")"
           runtime_root="$(dirname "$runtime_python")"
           PYTHON="$runtime_python" \
