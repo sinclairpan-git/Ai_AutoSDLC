@@ -1970,6 +1970,12 @@ def test_release_docs_consistency_passes_when_release_entry_docs_align(
         "ai-sdlc-offline-0.7.11-windows-amd64.zip\n"
         "ai-sdlc-offline-0.7.11-macos-arm64.tar.gz\n"
         "ai-sdlc-offline-0.7.11-linux-amd64.tar.gz\n"
+        "cd ..\\my-existing-project\n"
+        "..\\ai-sdlc-offline-0.7.11-windows-amd64\\.venv\\Scripts\\python.exe -m ai_sdlc init .\n"
+        "cd ../my-existing-project\n"
+        "../ai-sdlc-offline-0.7.11-macos-arm64/.venv/bin/python -m ai_sdlc init .\n"
+        "cd ../my-existing-project\n"
+        "../ai-sdlc-offline-0.7.11-linux-amd64/.venv/bin/python -m ai_sdlc init .\n"
         "当前正式发布版：`v0.7.11`\n"
         "## 第一章：全新用户 + 全新空项目\n"
         "## 第二章：全新用户 + 已有项目\n"
@@ -2065,6 +2071,40 @@ def test_beginner_guide_blocks_stale_release_guidance_wording(tmp_path: Path) ->
     assert any("beginner guide CLI path regressed" in x for x in blockers)
 
 
+def test_beginner_guide_blocks_existing_project_init_without_cd_back(
+    tmp_path: Path,
+) -> None:
+    mem = tmp_path / ".ai-sdlc" / "memory"
+    mem.mkdir(parents=True)
+    (mem / "constitution.md").write_text("# C\n", encoding="utf-8")
+    (tmp_path / "USER_GUIDE.zh-CN.md").write_text(
+        "# AI-SDLC 小白实操手册\n\n"
+        "当前正式发布版：`v0.7.11`\n"
+        "## 第一章：全新用户 + 全新空项目\n"
+        "## 第二章：全新用户 + 已有项目\n"
+        "## 第三章：老用户升级\n"
+        "## 附录：常用命令和常见报错\n"
+        "当前结果 / Result\n"
+        "下一步 / Next\n"
+        "执行成功以后，你应该看到\n"
+        "如果失败\n"
+        "切换到 AI 对话\n"
+        "ai-sdlc-offline-0.7.11-windows-amd64.zip\n"
+        "ai-sdlc-offline-0.7.11-macos-arm64.tar.gz\n"
+        "ai-sdlc-offline-0.7.11-linux-amd64.tar.gz\n"
+        "No such command 'install'\n"
+        "--upgrade-existing\n"
+        "..\\ai-sdlc-offline-0.7.11-windows-amd64\\.venv\\Scripts\\python.exe -m ai_sdlc init .\n"
+        "../ai-sdlc-offline-0.7.11-macos-arm64/.venv/bin/python -m ai_sdlc init .\n"
+        "../ai-sdlc-offline-0.7.11-linux-amd64/.venv/bin/python -m ai_sdlc init .\n",
+        encoding="utf-8",
+    )
+
+    blockers = collect_constraint_blockers(tmp_path)
+
+    assert any("existing-project init path is not copyable" in x for x in blockers)
+
+
 def test_beginner_guide_accepts_single_init_next_action_path(tmp_path: Path) -> None:
     mem = tmp_path / ".ai-sdlc" / "memory"
     mem.mkdir(parents=True)
@@ -2085,13 +2125,19 @@ def test_beginner_guide_accepts_single_init_next_action_path(tmp_path: Path) -> 
         "ai-sdlc-offline-0.7.11-macos-arm64.tar.gz\n"
         "ai-sdlc-offline-0.7.11-linux-amd64.tar.gz\n"
         "No such command 'install'\n"
-        "--upgrade-existing\n",
+        "--upgrade-existing\n"
+        "cd ..\\my-existing-project\n"
+        "..\\ai-sdlc-offline-0.7.11-windows-amd64\\.venv\\Scripts\\python.exe -m ai_sdlc init .\n"
+        "cd ../my-existing-project\n"
+        "../ai-sdlc-offline-0.7.11-macos-arm64/.venv/bin/python -m ai_sdlc init .\n"
+        "cd ../my-existing-project\n"
+        "../ai-sdlc-offline-0.7.11-linux-amd64/.venv/bin/python -m ai_sdlc init .\n",
         encoding="utf-8",
     )
 
     blockers = collect_constraint_blockers(tmp_path)
 
-    assert not any("beginner guide CLI path" in x for x in blockers)
+    assert not any("beginner guide" in x for x in blockers)
 
 
 def test_readme_blocks_old_manual_setup_path(tmp_path: Path) -> None:

@@ -305,6 +305,14 @@ BEGINNER_GUIDE_REQUIRED_TOKENS = (
     "No such command 'install'",
     "--upgrade-existing",
 )
+BEGINNER_GUIDE_EXISTING_PROJECT_INIT_TOKENS = (
+    "cd ..\\my-existing-project\n"
+    "..\\ai-sdlc-offline-0.7.11-windows-amd64\\.venv\\Scripts\\python.exe -m ai_sdlc init .",
+    "cd ../my-existing-project\n"
+    "../ai-sdlc-offline-0.7.11-macos-arm64/.venv/bin/python -m ai_sdlc init .",
+    "cd ../my-existing-project\n"
+    "../ai-sdlc-offline-0.7.11-linux-amd64/.venv/bin/python -m ai_sdlc init .",
+)
 BEGINNER_GUIDE_FORBIDDEN_TOKENS = (
     "升级兼容提示",
     "使用前先记住",
@@ -3505,6 +3513,17 @@ def _beginner_guide_cli_path_blockers(root: Path) -> list[str]:
         blockers.append(
             "BLOCKER: beginner guide CLI path missing required current-flow markers: "
             f"{', '.join(missing)}"
+        )
+    missing_existing_init = [
+        token
+        for token in BEGINNER_GUIDE_EXISTING_PROJECT_INIT_TOKENS
+        if token not in text
+    ]
+    if missing_existing_init:
+        blockers.append(
+            "BLOCKER: beginner guide existing-project init path is not copyable "
+            "from the offline bundle directory: "
+            f"{', '.join(missing_existing_init)}"
         )
     forbidden = [token for token in BEGINNER_GUIDE_FORBIDDEN_TOKENS if token in text]
     if forbidden:

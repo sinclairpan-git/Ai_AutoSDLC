@@ -275,21 +275,24 @@ chmod +x install_offline.sh
 Windows 示例：
 
 ```powershell
-# 如果安装包目录不在项目父目录，请替换成真实路径
+# 先从安装包目录回到业务项目根目录；如果路径不同，请替换成真实项目路径
+cd ..\my-existing-project
 ..\ai-sdlc-offline-0.7.11-windows-amd64\.venv\Scripts\python.exe -m ai_sdlc init .
 ```
 
 macOS 示例：
 
 ```bash
-# 如果安装包目录不在项目父目录，请替换成真实路径
+# 先从安装包目录回到业务项目根目录；如果路径不同，请替换成真实项目路径
+cd ../my-existing-project
 ../ai-sdlc-offline-0.7.11-macos-arm64/.venv/bin/python -m ai_sdlc init .
 ```
 
 Linux 示例：
 
 ```bash
-# 如果安装包目录不在项目父目录，请替换成真实路径
+# 先从安装包目录回到业务项目根目录；如果路径不同，请替换成真实项目路径
+cd ../my-existing-project
 ../ai-sdlc-offline-0.7.11-linux-amd64/.venv/bin/python -m ai_sdlc init .
 ```
 
