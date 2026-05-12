@@ -3,22 +3,23 @@ current_batch: 0
 last_committed_task: ''
 working_set_snapshot:
   prd_path: AI-SDLC 全自动化框架 产品需求文档（PRD）.md
-  constitution_path: /Users/sinclairpan/project/Ai_AutoSDLC-offline-runtime-validation/.ai-sdlc/memory/constitution.md
-  tech_stack_path: /Users/sinclairpan/project/Ai_AutoSDLC-offline-runtime-validation/.ai-sdlc/profiles/tech-stack.yml
-  spec_path: /Users/sinclairpan/project/Ai_AutoSDLC-offline-runtime-validation/specs/181-cross-platform-release-gate-matrix-baseline/spec.md
-  plan_path: /Users/sinclairpan/project/Ai_AutoSDLC-offline-runtime-validation/specs/181-cross-platform-release-gate-matrix-baseline/plan.md
-  tasks_path: /Users/sinclairpan/project/Ai_AutoSDLC-offline-runtime-validation/specs/181-cross-platform-release-gate-matrix-baseline/tasks.md
+  constitution_path: /private/tmp/aisdlc-v0712-release/.ai-sdlc/memory/constitution.md
+  tech_stack_path: /private/tmp/aisdlc-v0712-release/.ai-sdlc/profiles/tech-stack.yml
+  spec_path: /private/tmp/aisdlc-v0712-release/specs/181-cross-platform-release-gate-matrix-baseline/spec.md
+  plan_path: /private/tmp/aisdlc-v0712-release/specs/181-cross-platform-release-gate-matrix-baseline/plan.md
+  tasks_path: /private/tmp/aisdlc-v0712-release/specs/181-cross-platform-release-gate-matrix-baseline/tasks.md
   active_files: []
-  context_summary: 'Goal: Fix critical offline bundled Python runtime packaging failure
-    | State: Latest Codex review on commit 84d6c52 found P1: uv python find 3.11 could
-    resolve system/toolcache Python unless --managed-python is required. Updated release-build,
-    POSIX smoke, and Windows smoke workflows to use uv python find --managed-python
-    3.11; updated workflow tests. | Next: Commit/push managed-python workflow fix,
-    comment @codex review, then wait for checks and review conclusion.'
+  context_summary: 'Goal: Release AI-SDLC v0.7.12 patch after merging PR #55 | State:
+    Local v0.7.12 release prep is implemented and locally verified. Release branch
+    codex/release-v0.7.12 contains version/doc/workflow default updates plus docs/releases/v0.7.12.md;
+    unrelated .cursor rule regeneration was restored and is not part of the diff.
+    | Next: Commit and push codex/release-v0.7.12, open release PR, request Codex
+    review, wait for all checks and review before merging; then tag v0.7.12, create
+    draft release, run release-build.yml, publish, and wait for release-artifact-smoke.yml.'
 current_branch: feature/181-cross-platform-release-gate-matrix-baseline-docs
 docs_baseline_ref: ''
 docs_baseline_at: ''
-timestamp: '2026-05-12T12:59:56+00:00'
+timestamp: '2026-05-12T14:22:00+00:00'
 checkpoint_path: .ai-sdlc/state/checkpoint.yml
 checkpoint_last_updated: '2026-04-30T03:04:43+00:00'
 checkpoint_fingerprint: 3a88fbdb372f95712ec6c6bcb34729d78927236171d0e7ea4f1e0002f7f06d10

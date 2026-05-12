@@ -1,12 +1,12 @@
 # 离线一键安装包（含 Windows）
 
-> 当前 published release：`v0.7.11`
+> 当前 published release：`v0.7.12`
 >
 > 发布入口口径：
-> - Windows 使用 `ai-sdlc-offline-0.7.11-windows-amd64.zip`
-> - macOS 使用 `ai-sdlc-offline-0.7.11-macos-arm64.tar.gz`
-> - Linux 使用 `ai-sdlc-offline-0.7.11-linux-amd64.tar.gz`
-> - Release Notes：`docs/releases/v0.7.11.md`
+> - Windows 使用 `ai-sdlc-offline-0.7.12-windows-amd64.zip`
+> - macOS 使用 `ai-sdlc-offline-0.7.12-macos-arm64.tar.gz`
+> - Linux 使用 `ai-sdlc-offline-0.7.12-linux-amd64.tar.gz`
+> - Release Notes：`docs/releases/v0.7.12.md`
 
 ## 角色分工
 
@@ -135,7 +135,7 @@ CLI 安装器与后续命令提示均会以中英双语输出以下信息：
 - 若当前手里没有 Windows 实机，可运行 GitHub Actions 工作流 [windows-offline-smoke.yml](/Users/sinclairpan/project/Ai_AutoSDLC/.github/workflows/windows-offline-smoke.yml) 获取 Windows 目标机安装证据；只有工作流成功并产出 artifact 后，才能把它记为 Windows smoke 证据
 - 上述 CI 工作流产出的是 Windows smoke 证据，不是正式对外交付的离线包来源；正式发布物仍应来自你认可的目标平台构建流程
 - 若希望由云端生成正式发布资产，可运行 GitHub Actions 工作流 [release-build.yml](/Users/sinclairpan/project/Ai_AutoSDLC/.github/workflows/release-build.yml)。该 workflow 在 Windows / macOS / Linux runner 上分别构建、安装 smoke，并把通过 smoke 的平台资产上传到既有 GitHub Release
-- 发布 `v0.7.11` 后，可运行 GitHub Actions 工作流 [release-artifact-smoke.yml](/Users/sinclairpan/project/Ai_AutoSDLC/.github/workflows/release-artifact-smoke.yml) 从 GitHub Release 下载正式 `.zip` / `.tar.gz` 资产并执行安装冒烟；该证据证明的是发布资产，而不是当前源码树临时构建产物
+- 发布 `v0.7.12` 后，可运行 GitHub Actions 工作流 [release-artifact-smoke.yml](/Users/sinclairpan/project/Ai_AutoSDLC/.github/workflows/release-artifact-smoke.yml) 从 GitHub Release 下载正式 `.zip` / `.tar.gz` 资产并执行安装冒烟；该证据证明的是发布资产，而不是当前源码树临时构建产物
 
 ## 四、脚本说明
 
