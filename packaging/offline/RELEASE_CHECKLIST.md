@@ -43,6 +43,7 @@
   - Windows 至少存在 `python-runtime/python.exe`
 - [ ] **可自举 venv**：runtime 能成功执行 `-m venv`
 - [ ] **可完成 pip 安装**：runtime 创建出的 venv 能执行 `python -m pip install <wheel>`
+- [ ] **无构建机绝对依赖**：macOS `otool -L` 不得出现 `/Library/Frameworks/Python.framework`、Homebrew、用户目录或 bundle 内绝对路径；Linux `ldd` 不得出现 `not found` 或构建机私有路径；Windows 必须携带匹配的 `python3xx.dll`
 - [ ] **不覆盖 bundle 其他真值**：`bundle-manifest.json` 仍描述 bundle 适用平台；runtime 只是安装载体，不替代 manifest
 - [ ] **manifest 已标记**：`bundle-manifest.json` 中存在 `"python_runtime_bundled": true`
 
@@ -69,6 +70,7 @@ AI_SDLC_OFFLINE_PYTHON_RUNTIME=/path/to/python-runtime \
 - [ ] `bundle-manifest.json` 中 `python_runtime_bundled` 为 `true`
 - [ ] `wheels/` 内只有当前版本的 `ai_sdlc-<version>-*.whl`
 - [ ] `python-runtime/` 已被拷入 bundle 根目录，而不是遗漏在本机构建目录
+- [ ] `packaging/offline/verify_offline_bundle.py dist-offline/ai-sdlc-offline-<version> --require-bundled-runtime` 已通过
 - [ ] `.tar.gz` 与 `.zip` 都已生成
 
 可直接检查：

@@ -15,6 +15,10 @@ ai-sdlc 离线安装包
   - 若 bundle 未内含 `python-runtime/`，需提供 Python 3.11+
   - 与 `bundle-manifest.json` 中记录的平台一致
 
+若安装时报 `bundled Python runtime is not executable`，说明当前离线包内置的
+Python runtime 不是目标机可用的便携产物；请换用匹配平台且通过 runtime 验证的
+离线包，不要在目标机上手工修改 `.venv`。
+
 Linux/macOS 安装:
   chmod +x install_offline.sh
   ./install_offline.sh

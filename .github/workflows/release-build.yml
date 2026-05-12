@@ -97,15 +97,20 @@ jobs:
 
       - name: Build offline bundle
         shell: bash
-        env:
-          PYTHON: python
         run: |
           set -euo pipefail
-          runtime_root="${pythonLocation}"
+          uv python install 3.11
+          runtime_python="$(uv python find --managed-python 3.11)"
           if command -v cygpath >/dev/null 2>&1; then
-            runtime_root="$(cygpath -u "${pythonLocation}")"
+            runtime_python="$(cygpath -u "${runtime_python}")"
           fi
-          PYTHON="${PYTHON}" \
+          runtime_dir="$(dirname "${runtime_python}")"
+          if [[ "${RUNNER_OS}" == "Windows" ]]; then
+            runtime_root="${runtime_dir}"
+          else
+            runtime_root="$(cd "${runtime_dir}/.." && pwd)"
+          fi
+          PYTHON="${runtime_python}" \
             AI_SDLC_OFFLINE_PYTHON_RUNTIME="${runtime_root}" \
             AI_SDLC_OFFLINE_ASSET_SUFFIX="${AI_SDLC_OFFLINE_ASSET_SUFFIX}" \
             bash packaging/offline/build_offline_bundle.sh

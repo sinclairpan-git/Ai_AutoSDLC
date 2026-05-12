@@ -1,33 +1,28 @@
 # Continuity Handoff
 
-- Updated: 2026-04-30T07:04:18+00:00
-- Reason: after addressing Codex review feedback
-- Goal: Push PR #25 and resolve Codex review feedback
-- State: Codex review found telemetry compact path reversibility/collision issues; fixed with reversible base64 scope/object names plus short static dirs for long IDs; affected tests pass
+- Updated: 2026-05-12T13:51:06+00:00
+- Reason: after addressing latest Codex P1 review on uv managed runtime resolution
+- Goal: Fix critical offline bundled Python runtime packaging failure
+- State: Latest Codex review on commit 84d6c52 found P1: uv python find 3.11 could resolve system/toolcache Python unless --managed-python is required. Updated release-build, POSIX smoke, and Windows smoke workflows to use uv python find --managed-python 3.11; updated workflow tests.
 - Stage: close
 - Work Item: 181-cross-platform-release-gate-matrix-baseline
-- Branch: feature/181-cross-platform-release-gate-matrix-baseline-docs
+- Branch: codex/offline-runtime-validation
 
 ## Changed Files
-- M src/ai_sdlc/telemetry/paths.py
-- M src/ai_sdlc/telemetry/provenance_inspection.py
-- M src/ai_sdlc/telemetry/provenance_observer.py
-- M src/ai_sdlc/telemetry/provenance_store.py
-- M src/ai_sdlc/telemetry/store.py
-- M tests/unit/test_telemetry_provenance_inspection.py
-- M tests/unit/test_telemetry_provenance_observer.py
-- M tests/unit/test_telemetry_provenance_store.py
+- M .github/workflows/posix-offline-smoke.yml
+- M .github/workflows/release-build.yml
+- M .github/workflows/windows-offline-smoke.yml
+- M tests/integration/test_github_workflows.py
 
 ## Key Decisions
-- Use collision-free reversible base64 for long telemetry IDs; shorten only static directory labels for long-scope storage
+- CI runtime packaging must require uv-managed interpreters, not merely prefer them.
 
 ## Commands / Tests
-- python -m pytest -q affected telemetry/provenance set: 16 passed
-- python -m pytest -q previous failure set plus review regression: 29 passed
-- python -m ruff check targeted telemetry/provenance files: passed
+- uv run pytest tests/integration/test_github_workflows.py tests/integration/test_offline_bundle_scripts.py -q: 32 passed
+- uv run ruff check targeted files: passed
 
 ## Blockers / Risks
-- none
+- Need latest CI rerun and latest Codex review after push.
 
 ## Exact Next Steps
-- Commit review fix, push, rerun CI and @codex review
+- Commit/push managed-python workflow fix, comment @codex review, then wait for checks and review conclusion.
