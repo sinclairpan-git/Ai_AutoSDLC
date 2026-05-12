@@ -245,11 +245,18 @@ def _make_verifiable_portable_python(runtime_dir: Path) -> Path:
         runtime_dir.mkdir(parents=True, exist_ok=True)
         target = runtime_dir / "python.exe"
         shutil.copy2(sys.executable, target)
-        python_dll = Path(sys.executable).with_name(
-            f"python{sys.version_info.major}{sys.version_info.minor}.dll"
-        )
-        if python_dll.is_file():
-            shutil.copy2(python_dll, runtime_dir / python_dll.name)
+        dll_name = f"python{sys.version_info.major}{sys.version_info.minor}.dll"
+        dll_search_roots = [
+            Path(sys.executable).parent,
+            Path(getattr(sys, "_base_executable", sys.executable)).parent,
+            Path(sys.base_prefix),
+            Path(sys.exec_prefix),
+        ]
+        for root in dll_search_roots:
+            python_dll = root / dll_name
+            if python_dll.is_file():
+                shutil.copy2(python_dll, runtime_dir / python_dll.name)
+                break
         pyvenv_cfg = Path(sys.executable).resolve().parents[1] / "pyvenv.cfg"
         if pyvenv_cfg.is_file():
             shutil.copy2(pyvenv_cfg, runtime_dir / "pyvenv.cfg")
