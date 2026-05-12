@@ -137,11 +137,18 @@ def _reject_build_host_dependency(dep: str, runtime_root: Path, *, system: str) 
     ):
         return
 
+    dep_path = Path(dep).resolve()
     try:
-        Path(dep).resolve().relative_to(runtime_root.resolve())
+        dep_path.relative_to(runtime_root.resolve())
     except ValueError:
-        pass
+        inside_runtime = False
     else:
+        inside_runtime = True
+
+    if inside_runtime and system == "linux":
+        return
+
+    if inside_runtime:
         _fail(
             "bundled Python runtime has an absolute dependency inside the bundle. "
             "Use a relocatable runtime that references bundled libraries via "

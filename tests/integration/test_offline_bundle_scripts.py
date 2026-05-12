@@ -245,6 +245,11 @@ def _make_verifiable_portable_python(runtime_dir: Path) -> Path:
         runtime_dir.mkdir(parents=True, exist_ok=True)
         target = runtime_dir / "python.exe"
         shutil.copy2(sys.executable, target)
+        python_dll = Path(sys.executable).with_name(
+            f"python{sys.version_info.major}{sys.version_info.minor}.dll"
+        )
+        if python_dll.is_file():
+            shutil.copy2(python_dll, runtime_dir / python_dll.name)
         pyvenv_cfg = Path(sys.executable).resolve().parents[1] / "pyvenv.cfg"
         if pyvenv_cfg.is_file():
             shutil.copy2(pyvenv_cfg, runtime_dir / "pyvenv.cfg")
@@ -660,6 +665,45 @@ def test_verify_offline_bundle_rejects_macos_framework_dependency(
 
     assert "build-host absolute path" in str(exc_info.value)
     assert "/Library/Frameworks/Python.framework" in str(exc_info.value)
+
+
+def test_verify_offline_bundle_accepts_linux_ldd_dependency_inside_bundle(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    module = _load_verify_offline_bundle_module()
+    runtime_root = tmp_path / "python-runtime"
+    bin_dir = runtime_root / "bin"
+    lib_dir = runtime_root / "lib"
+    bin_dir.mkdir(parents=True)
+    lib_dir.mkdir(parents=True)
+    runtime_python = bin_dir / "python3"
+    bundled_libpython = lib_dir / "libpython3.11.so.1.0"
+    runtime_python.write_bytes(b"\x7fELF" + b"\x00" * 16)
+    bundled_libpython.write_text("fake libpython\n", encoding="utf-8")
+    runtime_python.chmod(0o755)
+
+    def fake_run(*_args, **_kwargs):
+        return subprocess.CompletedProcess(
+            args=["ldd", str(runtime_python)],
+            returncode=0,
+            stdout=(
+                f"libpython3.11.so.1.0 => {bundled_libpython} "
+                "(0x00007f0000000000)\n"
+                "libc.so.6 => /lib/x86_64-linux-gnu/libc.so.6 "
+                "(0x00007f0000000000)\n"
+            ),
+            stderr="",
+        )
+
+    monkeypatch.setattr(module.platform, "system", lambda: "Linux")
+    monkeypatch.setattr(module.subprocess, "run", fake_run)
+
+    module._assert_portable_dynamic_dependencies(
+        runtime_python,
+        runtime_root,
+        "3.11",
+    )
 
 
 def test_build_offline_bundle_uses_relative_zip_paths_for_cross_platform_python() -> None:
