@@ -414,7 +414,7 @@ def test_run_raw_forces_utf8_decoding(monkeypatch: pytest.MonkeyPatch, tmp_path:
     assert client._run_raw("status") == "ok"
     assert captured["encoding"] == "utf-8"
     assert captured["errors"] == "replace"
-    assert captured["timeout"] == 5.0
+    assert captured["timeout"] == 30.0
 
 
 def test_run_raw_reports_git_command_timeout(

@@ -1,29 +1,30 @@
 # Continuity Handoff
 
-- Updated: 2026-05-13T03:26:12+00:00
-- Reason: after addressing Codex review P2 about exit 1 in interactive Bash snippets
-- Goal: Make pre-downloaded offline install guide executable and non-destructive in interactive shells
-- State: Wrapped macOS/Linux pre-downloaded offline install snippets in install_ai_sdlc_offline functions. Missing package now returns 1 from the function instead of exit 1, so copy-pasting into an interactive shell does not close the terminal. Regression asserts return 1 is used and exit 1 is absent from USER_GUIDE.
+- Updated: 2026-05-13T04:13:01+00:00
+- Reason: after fixing Windows git command timeout
+- Goal: Publish v0.7.14 patch release with corrected offline install guidance
+- State: PR #59 Windows 3.11 compatibility failed because GitClient default git command timeout was 5s and a Windows git commit in executor tests timed out. Raised the default timeout to 30s and updated the unit assertion. Local targeted tests and release checks passed.
 - Stage: close
 - Work Item: 181-cross-platform-release-gate-matrix-baseline
-- Branch: codex/fix-offline-zip-path-guidance
+- Branch: codex/release-v0.7.14
 
 ## Changed Files
-- M .ai-sdlc/state/codex-handoff.md
-- M .ai-sdlc/state/resume-pack.yaml
-- M .ai-sdlc/work-items/181-cross-platform-release-gate-matrix-baseline/codex-handoff.md
-- M USER_GUIDE.zh-CN.md
-- M tests/integration/test_offline_bundle_scripts.py
+- M .cursor/rules/ai-sdlc.mdc
+- M src/ai_sdlc/branch/git_client.py
+- M tests/unit/test_git_client.py
 
 ## Key Decisions
 - none
 
 ## Commands / Tests
-- uv run pytest tests/integration/test_offline_bundle_scripts.py -q: 27 passed
-- uv run ruff check tests/integration/test_offline_bundle_scripts.py: passed
+- uv run pytest tests/unit/test_executor.py tests/unit/test_git_client.py -q: 45 passed
+- uv run pytest tests/integration/test_offline_bundle_scripts.py tests/integration/test_github_workflows.py tests/unit/test_verify_constraints.py tests/unit/test_packaging_backend.py tests/integration/test_cli_self_update.py -q: 173 passed
+- uv run ruff check src/ai_sdlc/branch/git_client.py tests/unit/test_git_client.py tests/unit/test_executor.py: passed
+- uv run ai-sdlc verify constraints: no BLOCKERs
+- uv build: built 0.7.14 sdist/wheel
 
 ## Blockers / Risks
-- Need amend/push PR #58 and request Codex review again.
+- Need amend commit, force-push PR #59, request Codex review again, and wait for GitHub checks.
 
 ## Exact Next Steps
-- Amend commit, force-push PR #58, request @codex review, wait for checks and merge when clean.
+- Amend/push PR #59 and re-request @codex review.
