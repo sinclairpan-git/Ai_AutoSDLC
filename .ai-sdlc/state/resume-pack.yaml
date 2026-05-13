@@ -3,21 +3,20 @@ current_batch: 0
 last_committed_task: ''
 working_set_snapshot:
   prd_path: AI-SDLC 全自动化框架 产品需求文档（PRD）.md
-  constitution_path: /private/tmp/aisdlc-v0715-current-dir-hotfix/.ai-sdlc/memory/constitution.md
-  tech_stack_path: /private/tmp/aisdlc-v0715-current-dir-hotfix/.ai-sdlc/profiles/tech-stack.yml
-  spec_path: /private/tmp/aisdlc-v0715-current-dir-hotfix/specs/181-cross-platform-release-gate-matrix-baseline/spec.md
-  plan_path: /private/tmp/aisdlc-v0715-current-dir-hotfix/specs/181-cross-platform-release-gate-matrix-baseline/plan.md
-  tasks_path: /private/tmp/aisdlc-v0715-current-dir-hotfix/specs/181-cross-platform-release-gate-matrix-baseline/tasks.md
+  constitution_path: /private/tmp/aisdlc-v0715-init-simplify/.ai-sdlc/memory/constitution.md
+  tech_stack_path: /private/tmp/aisdlc-v0715-init-simplify/.ai-sdlc/profiles/tech-stack.yml
+  spec_path: /private/tmp/aisdlc-v0715-init-simplify/specs/181-cross-platform-release-gate-matrix-baseline/spec.md
+  plan_path: /private/tmp/aisdlc-v0715-init-simplify/specs/181-cross-platform-release-gate-matrix-baseline/plan.md
+  tasks_path: /private/tmp/aisdlc-v0715-init-simplify/specs/181-cross-platform-release-gate-matrix-baseline/tasks.md
   active_files: []
-  context_summary: 'Goal: Publish v0.7.15 hotfix for current-directory offline install
-    guidance | State: Current-directory guide fix and v0.7.15 version sync are implemented.
-    Local verification passed, including PowerShell current-directory package lookup.
-    | Next: Review diff, commit, push branch, create PR, request @codex review, wait
-    for checks/review, then merge and publish v0.7.15.'
+  context_summary: 'Goal: Simplify and clarify user guide init flow | State: Added
+    inline comments above every init cd command stating that the path is an example
+    and must be replaced with the user''s real project root. Updated constraints and
+    tests. | Next: Amend PR #61 commit, push, and wait for checks/review.'
 current_branch: feature/181-cross-platform-release-gate-matrix-baseline-docs
 docs_baseline_ref: ''
 docs_baseline_at: ''
-timestamp: '2026-05-13T05:11:56+00:00'
+timestamp: '2026-05-13T06:25:57+00:00'
 checkpoint_path: .ai-sdlc/state/checkpoint.yml
 checkpoint_last_updated: '2026-04-30T03:04:43+00:00'
 checkpoint_fingerprint: 3a88fbdb372f95712ec6c6bcb34729d78927236171d0e7ea4f1e0002f7f06d10

@@ -1388,6 +1388,11 @@ def test_user_guide_splits_pre_downloaded_and_online_release_install_paths() -> 
     assert "场景 A：已提前下载离线包" in guide
     assert "场景 B：在线从 Release 下载并安装" in guide
     assert "不要把两套命令混用" in guide
+    assert "根据你刚才使用的安装场景选择对应命令" not in guide
+    assert "如果使用场景 A，在业务项目目录" not in guide
+    assert "如果使用场景 B，在线下载到项目父目录并安装" not in guide
+    assert "ai-sdlc init ." in guide
+    assert "是示例路径；请替换成你的真实项目根目录" in guide
     assert len(scenario_a_sections) == 2
     assert guide.count("Invoke-WebRequest -Uri") >= 2
     for section in scenario_a_sections:
