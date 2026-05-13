@@ -1380,15 +1380,24 @@ def test_windows_install_guidance_is_safe_for_windows_powershell_parser() -> Non
 
 def test_user_guide_splits_pre_downloaded_and_online_release_install_paths() -> None:
     guide = (_REPO_ROOT / "USER_GUIDE.zh-CN.md").read_text(encoding="utf-8")
+    scenario_a_sections = [
+        section.split("#### 场景 B：在线从 Release 下载并安装", maxsplit=1)[0]
+        for section in guide.split("#### 场景 A：已提前下载离线包")[1:]
+    ]
 
     assert "场景 A：已提前下载离线包" in guide
     assert "场景 B：在线从 Release 下载并安装" in guide
     assert "不要把两套命令混用" in guide
+    assert len(scenario_a_sections) == 2
     assert guide.count("Invoke-WebRequest -Uri") >= 2
-    assert "先把 zip 放到业务项目父目录，并进入该父目录" in guide
-    assert "先把 tar.gz 放到业务项目父目录，并进入该父目录" in guide
-    assert "This assumes you are in the project root" in guide
-    assert guide.count("cd ..") >= 6
+    for section in scenario_a_sections:
+        assert "Invoke-WebRequest -Uri" not in section
+        assert "curl -L" not in section
+        assert "cd .." not in section
+        assert "业务项目父目录" not in section
+        assert "project parent directory" not in section
+        assert "脚本只检查当前目录，不扫描其他目录" in section
+        assert "The script checks only the current directory" in section
     assert "install_ai_sdlc_offline() {" in guide
     assert "return 1" in guide
     assert "exit 1" not in guide
@@ -1400,7 +1409,7 @@ def test_user_guide_splits_pre_downloaded_and_online_release_install_paths() -> 
     assert "$env:USERPROFILE\\Downloads" not in guide
     assert "当前目录没有找到安装包" in guide
     assert "Package not found in the current directory" in guide
-    assert "请把 zip 放到业务项目父目录，并先 cd 到该父目录后重试" in guide
-    assert "Place the zip in the project parent directory, cd into that directory, then retry" in guide
-    assert "请把 tar.gz 放到业务项目父目录，并先 cd 到该父目录后重试" in guide
-    assert "Place the tar.gz in the project parent directory, cd into that directory, then retry" in guide
+    assert "请把 zip 放到当前目录，并先 cd 到该目录后重试" in guide
+    assert "Place the zip in the current directory, cd into that directory, then retry" in guide
+    assert "请把 tar.gz 放到当前目录，并先 cd 到该目录后重试" in guide
+    assert "Place the tar.gz in the current directory, cd into that directory, then retry" in guide
