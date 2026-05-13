@@ -1,30 +1,57 @@
 # Continuity Handoff
 
-- Updated: 2026-05-13T04:13:01+00:00
-- Reason: after fixing Windows git command timeout
-- Goal: Publish v0.7.14 patch release with corrected offline install guidance
-- State: PR #59 Windows 3.11 compatibility failed because GitClient default git command timeout was 5s and a Windows git commit in executor tests timed out. Raised the default timeout to 30s and updated the unit assertion. Local targeted tests and release checks passed.
+- Updated: 2026-05-13T05:17:40+00:00
+- Reason: after local verification for v0.7.15 hotfix
+- Goal: Publish v0.7.15 hotfix for current-directory offline install guidance
+- State: Current-directory guide fix and v0.7.15 version sync are implemented. Local verification passed, including PowerShell current-directory package lookup.
 - Stage: close
 - Work Item: 181-cross-platform-release-gate-matrix-baseline
-- Branch: codex/release-v0.7.14
+- Branch: codex/release-v0.7.15-current-dir-install
 
 ## Changed Files
+- M .ai-sdlc/state/codex-handoff.md
+- M .ai-sdlc/state/resume-pack.yaml
+- M .ai-sdlc/work-items/181-cross-platform-release-gate-matrix-baseline/codex-handoff.md
 - M .cursor/rules/ai-sdlc.mdc
-- M src/ai_sdlc/branch/git_client.py
-- M tests/unit/test_git_client.py
+- M .github/workflows/release-artifact-smoke.yml
+- M .github/workflows/release-build.yml
+- M README.md
+- M USER_GUIDE.zh-CN.md
+- M docs/pull-request-checklist.zh.md
+- M docs/releases/v0.7.0.md
+- M docs/releases/v0.7.1.md
+- M docs/releases/v0.7.2.md
+- M docs/releases/v0.7.3.md
+- M docs/releases/v0.7.4.md
+- M "docs/\346\241\206\346\236\266\350\207\252\350\277\255\344\273\243\345\274\200\345\217\221\344\270\216\345\217\221\345\270\203\347\272\246\345\256\232.md"
+- M packaging/install_online.sh
+- M packaging/offline/README.md
+- M packaging/offline/RELEASE_CHECKLIST.md
+- M pyproject.toml
+- M src/ai_sdlc/__init__.py
+- M src/ai_sdlc/core/verify_constraints.py
+- M tests/integration/test_cli_self_update.py
+- M tests/integration/test_github_workflows.py
+- M tests/integration/test_offline_bundle_scripts.py
+- M tests/unit/test_packaging_backend.py
+- M tests/unit/test_verify_constraints.py
+- M uv.lock
+- ?? docs/releases/v0.7.15.md
 
 ## Key Decisions
 - none
 
 ## Commands / Tests
-- uv run pytest tests/unit/test_executor.py tests/unit/test_git_client.py -q: 45 passed
-- uv run pytest tests/integration/test_offline_bundle_scripts.py tests/integration/test_github_workflows.py tests/unit/test_verify_constraints.py tests/unit/test_packaging_backend.py tests/integration/test_cli_self_update.py -q: 173 passed
-- uv run ruff check src/ai_sdlc/branch/git_client.py tests/unit/test_git_client.py tests/unit/test_executor.py: passed
+- uv run pytest tests/integration/test_offline_bundle_scripts.py tests/unit/test_verify_constraints.py -q: 151 passed
+- PowerShell current-directory lookup simulation: found ai-sdlc-offline-0.7.15-windows-amd64.zip without changing directory
+- uv run pytest tests/integration/test_offline_bundle_scripts.py tests/unit/test_verify_constraints.py tests/integration/test_github_workflows.py tests/unit/test_packaging_backend.py tests/integration/test_cli_self_update.py -q: 173 passed
+- uv run ruff check src tests packaging/offline/verify_offline_bundle.py: passed
 - uv run ai-sdlc verify constraints: no BLOCKERs
-- uv build: built 0.7.14 sdist/wheel
+- uv build: built ai_sdlc-0.7.15 sdist/wheel
+- uv run pytest -q: 2531 passed, 2 skipped
 
 ## Blockers / Risks
-- Need amend commit, force-push PR #59, request Codex review again, and wait for GitHub checks.
+- none
 
 ## Exact Next Steps
-- Amend/push PR #59 and re-request @codex review.
+- Review diff, commit, push branch, create PR, request @codex review, wait for checks/review, then merge and publish v0.7.15.
