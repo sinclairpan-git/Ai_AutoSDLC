@@ -47,11 +47,53 @@ cd ui-test-platform
 
 ### 2. 安装 AI-SDLC
 
-先从 Release 下载与你机器匹配的 `v0.7.13` 安装包：
+这里分两种场景。不要把两套命令混用：
+
+- **场景 A：安装包已经提前下载好**，并且放在业务项目的父目录里，和业务项目目录同级
+- **场景 B：当前机器可以访问 GitHub**，直接从 Release 下载、解压并安装
 
 ```text
 https://github.com/sinclairpan-git/Ai_AutoSDLC/releases/tag/v0.7.13
 ```
+
+#### 场景 A：已提前下载离线包
+
+Windows x64 直接复制：
+
+```powershell
+# 回到项目父目录；这里应能看到 ui-test-platform 和下载好的 zip
+cd ..
+Expand-Archive -LiteralPath .\ai-sdlc-offline-0.7.13-windows-amd64.zip -DestinationPath .
+cd .\ai-sdlc-offline-0.7.13-windows-amd64
+powershell -ExecutionPolicy Bypass -File .\install_offline.ps1
+.\.venv\Scripts\python.exe -m ai_sdlc --help
+```
+
+macOS Apple Silicon 直接复制：
+
+```bash
+# 回到项目父目录；这里应能看到 ui-test-platform 和下载好的 tar.gz
+cd ..
+tar xzf ai-sdlc-offline-0.7.13-macos-arm64.tar.gz
+cd ai-sdlc-offline-0.7.13-macos-arm64
+chmod +x install_offline.sh
+./install_offline.sh
+./.venv/bin/python -m ai_sdlc --help
+```
+
+Linux x64 直接复制：
+
+```bash
+# 回到项目父目录；这里应能看到 ui-test-platform 和下载好的 tar.gz
+cd ..
+tar xzf ai-sdlc-offline-0.7.13-linux-amd64.tar.gz
+cd ai-sdlc-offline-0.7.13-linux-amd64
+chmod +x install_offline.sh
+./install_offline.sh
+./.venv/bin/python -m ai_sdlc --help
+```
+
+#### 场景 B：在线从 Release 下载并安装
 
 Windows x64 直接复制：
 
@@ -93,8 +135,7 @@ chmod +x install_offline.sh
 
 执行成功以后，你应该看到：
 
-- 安装脚本输出 `当前结果 / Result`
-- 安装脚本输出 `下一步 / Next`
+- 安装脚本输出 `Result` / `Next`；macOS 和 Linux 也可能显示 `当前结果 / Result` / `下一步 / Next`
 - 结果里包含“离线安装完成”或 `Offline installation completed`
 - `--help` 输出里包含 `Usage` 和 `Commands`
 - 命令列表里至少能看到 `init`、`adapter`、`run`、`self-update`
@@ -214,7 +255,46 @@ git status
 
 ### 2. 安装 AI-SDLC
 
-已有项目也优先使用 `v0.7.13` Release 包或公司安装包。下面的命令会把安装包目录放在已有项目的父目录里，和业务项目目录同级。
+已有项目也优先使用 `v0.7.13` Release 包或公司安装包。这里也分两种场景：已提前下载离线包，或在线从 Release 下载并安装。
+
+#### 场景 A：已提前下载离线包
+
+Windows x64 直接复制：
+
+```powershell
+# 当前假设你还在 D:\work\my-existing-project；先回到父目录 D:\work，这里应能看到下载好的 zip
+cd ..
+Expand-Archive -LiteralPath .\ai-sdlc-offline-0.7.13-windows-amd64.zip -DestinationPath .
+cd .\ai-sdlc-offline-0.7.13-windows-amd64
+powershell -ExecutionPolicy Bypass -File .\install_offline.ps1
+.\.venv\Scripts\python.exe -m ai_sdlc --help
+```
+
+macOS Apple Silicon 直接复制：
+
+```bash
+# 当前假设你还在 ~/work/my-existing-project；先回到父目录 ~/work，这里应能看到下载好的 tar.gz
+cd ..
+tar xzf ai-sdlc-offline-0.7.13-macos-arm64.tar.gz
+cd ai-sdlc-offline-0.7.13-macos-arm64
+chmod +x install_offline.sh
+./install_offline.sh
+./.venv/bin/python -m ai_sdlc --help
+```
+
+Linux x64 直接复制：
+
+```bash
+# 当前假设你还在 ~/work/my-existing-project；先回到父目录 ~/work，这里应能看到下载好的 tar.gz
+cd ..
+tar xzf ai-sdlc-offline-0.7.13-linux-amd64.tar.gz
+cd ai-sdlc-offline-0.7.13-linux-amd64
+chmod +x install_offline.sh
+./install_offline.sh
+./.venv/bin/python -m ai_sdlc --help
+```
+
+#### 场景 B：在线从 Release 下载并安装
 
 Windows x64 直接复制：
 
@@ -256,8 +336,7 @@ chmod +x install_offline.sh
 
 安装成功以后，你应该看到：
 
-- `当前结果 / Result`
-- `下一步 / Next`
+- `Result` / `Next`；macOS 和 Linux 也可能显示 `当前结果 / Result` / `下一步 / Next`
 - `--help` 输出中包含 `Usage`、`Commands`、`init`、`adapter`、`run`、`self-update`
 
 如果失败：

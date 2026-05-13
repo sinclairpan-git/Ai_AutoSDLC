@@ -17,20 +17,20 @@ try {
 
 function Write-BilingualStatus {
   param(
-    [string]$StatusZh,
+    [string]$Status,
     [string]$StatusEn,
     [string]$Command,
-    [string]$PurposeZh,
+    [string]$Purpose,
     [string]$PurposeEn
   )
 
-  Write-Host "当前结果 / Result"
-  Write-Host "  $StatusZh"
+  Write-Host "Result"
+  Write-Host "  $Status"
   Write-Host "  $StatusEn"
   Write-Host ""
-  Write-Host "下一步 / Next"
+  Write-Host "Next"
   Write-Host "  $Command"
-  Write-Host "  $PurposeZh"
+  Write-Host "  $Purpose"
   Write-Host "  $PurposeEn"
 }
 
@@ -90,10 +90,10 @@ if (-not $python) {
 
 if (-not $python) {
   Write-BilingualStatus `
-    -StatusZh "当前主机未检测到 Python 3.11+，且无法自动完成在线安装。" `
+    -Status "Python 3.11+ was not detected, and online auto-install could not be completed on this host." `
     -StatusEn "Python 3.11+ was not detected, and online auto-install could not be completed on this host." `
     -Command ".\packaging\install_online.ps1" `
-    -PurposeZh "在具备 winget 或 choco 的环境中重新执行此脚本。" `
+    -Purpose "Rerun this script on a host with winget or choco available." `
     -PurposeEn "Rerun this script on a host with winget or choco available."
   exit 1
 }
@@ -114,8 +114,8 @@ $nextCommand = 'cd YOUR_PROJECT_PATH; Start-Process -Wait -NoNewWindow -FilePath
 
 Write-Host ""
 Write-BilingualStatus `
-  -StatusZh "在线安装完成。安装脚本已创建运行环境并安装 AI-SDLC。" `
+  -Status "Online installation completed. The installer created the runtime and installed AI-SDLC." `
   -StatusEn "Online installation completed. The installer created the runtime and installed AI-SDLC." `
   -Command $nextCommand `
-  -PurposeZh "进入你的项目后执行初始化；init 会自动完成必要检查和安全预演。" `
+  -Purpose "Enter your project and initialize it; init will automatically run the required checks and safe rehearsal." `
   -PurposeEn "Enter your project and initialize it; init will automatically run the required checks and safe rehearsal."
