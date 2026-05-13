@@ -310,18 +310,12 @@ BEGINNER_GUIDE_REQUIRED_TOKENS = (
     "--upgrade-existing",
 )
 BEGINNER_GUIDE_EXISTING_PROJECT_INIT_TOKENS = (
-    "cd ..\n"
-    ".\\ai-sdlc-offline-0.7.15-windows-amd64\\.venv\\Scripts\\python.exe -m ai_sdlc init .",
-    "cd ..\\my-existing-project\n"
-    "..\\ai-sdlc-offline-0.7.15-windows-amd64\\.venv\\Scripts\\python.exe -m ai_sdlc init .",
-    "cd ..\n"
-    "./ai-sdlc-offline-0.7.15-macos-arm64/.venv/bin/python -m ai_sdlc init .",
-    "cd ../my-existing-project\n"
-    "../ai-sdlc-offline-0.7.15-macos-arm64/.venv/bin/python -m ai_sdlc init .",
-    "cd ..\n"
-    "./ai-sdlc-offline-0.7.15-linux-amd64/.venv/bin/python -m ai_sdlc init .",
-    "cd ../my-existing-project\n"
-    "../ai-sdlc-offline-0.7.15-linux-amd64/.venv/bin/python -m ai_sdlc init .",
+    "D:\\work\\my-existing-project 是示例路径；请替换成你的真实项目根目录",
+    "cd D:\\work\\my-existing-project\nai-sdlc init .",
+    "~/work/my-existing-project 是示例路径；请替换成你的真实项目根目录",
+    "cd ~/work/my-existing-project\nai-sdlc init .",
+    "如果 `ai-sdlc` 不在 PATH",
+    "把 `--help` 换成 `init .`",
 )
 BEGINNER_GUIDE_FORBIDDEN_TOKENS = (
     "升级兼容提示",

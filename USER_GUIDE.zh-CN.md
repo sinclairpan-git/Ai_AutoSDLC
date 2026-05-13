@@ -180,52 +180,33 @@ chmod +x install_offline.sh
 
 ### 3. 回到空项目并初始化
 
-安装包目录只是安装位置，不是业务项目。下一步必须回到刚创建的项目目录。根据你刚才使用的安装场景选择对应命令。
+安装包目录只是安装位置，不是业务项目。下一步统一回到刚创建的项目目录执行初始化；不要在安装包目录里执行 `init`。
 
-Windows：如果使用场景 A，在业务项目目录里放 zip 并安装，直接复制：
-
-```powershell
-cd ..
-.\ai-sdlc-offline-0.7.15-windows-amd64\.venv\Scripts\python.exe -m ai_sdlc init .
-```
-
-Windows：如果使用场景 B，在线下载到项目父目录并安装，直接复制：
+Windows 直接复制：
 
 ```powershell
-# 回到你的业务项目目录；如果项目名不是 ui-test-platform，请替换路径
+# D:\work\ui-test-platform 是示例路径；请替换成你的真实项目根目录
 cd D:\work\ui-test-platform
-..\ai-sdlc-offline-0.7.15-windows-amd64\.venv\Scripts\python.exe -m ai_sdlc init .
+ai-sdlc init .
 ```
 
-macOS：如果使用场景 A，在业务项目目录里放 tar.gz 并安装，直接复制：
+macOS 直接复制：
 
 ```bash
-cd ..
-./ai-sdlc-offline-0.7.15-macos-arm64/.venv/bin/python -m ai_sdlc init .
-```
-
-macOS：如果使用场景 B，在线下载到项目父目录并安装，直接复制：
-
-```bash
-# 回到你的业务项目目录；如果项目名不是 ui-test-platform，请替换路径
+# ~/work/ui-test-platform 是示例路径；请替换成你的真实项目根目录
 cd ~/work/ui-test-platform
-../ai-sdlc-offline-0.7.15-macos-arm64/.venv/bin/python -m ai_sdlc init .
+ai-sdlc init .
 ```
 
-Linux：如果使用场景 A，在业务项目目录里放 tar.gz 并安装，直接复制：
+Linux 直接复制：
 
 ```bash
-cd ..
-./ai-sdlc-offline-0.7.15-linux-amd64/.venv/bin/python -m ai_sdlc init .
-```
-
-Linux：如果使用场景 B，在线下载到项目父目录并安装，直接复制：
-
-```bash
-# 回到你的业务项目目录；如果项目名不是 ui-test-platform，请替换路径
+# ~/work/ui-test-platform 是示例路径；请替换成你的真实项目根目录
 cd ~/work/ui-test-platform
-../ai-sdlc-offline-0.7.15-linux-amd64/.venv/bin/python -m ai_sdlc init .
+ai-sdlc init .
 ```
+
+如果 `ai-sdlc` 不在 PATH，使用安装脚本最后输出的完整 Python 路径，把 `--help` 换成 `init .` 后在业务项目根目录执行。
 
 `v0.7.5` 起，`init` 会在你完成 AI 代理入口和 shell 选择后自动做安全预演。正常时你应该看到：
 
@@ -430,52 +411,33 @@ chmod +x install_offline.sh
 
 ### 3. 初始化已有项目
 
-根据你刚才使用的安装场景选择对应命令。
+进入已有项目根目录后执行；不要在安装包目录里执行 `init`。
 
-Windows：如果使用场景 A，在已有项目目录里放 zip 并安装，直接复制：
-
-```powershell
-cd ..
-.\ai-sdlc-offline-0.7.15-windows-amd64\.venv\Scripts\python.exe -m ai_sdlc init .
-```
-
-Windows：如果使用场景 B，在线下载到项目父目录并安装，直接复制：
+Windows 示例：
 
 ```powershell
-# 先从安装包目录回到业务项目根目录；如果路径不同，请替换成真实项目路径
-cd ..\my-existing-project
-..\ai-sdlc-offline-0.7.15-windows-amd64\.venv\Scripts\python.exe -m ai_sdlc init .
+# D:\work\my-existing-project 是示例路径；请替换成你的真实项目根目录
+cd D:\work\my-existing-project
+ai-sdlc init .
 ```
 
-macOS：如果使用场景 A，在已有项目目录里放 tar.gz 并安装，直接复制：
+macOS 示例：
 
 ```bash
-cd ..
-./ai-sdlc-offline-0.7.15-macos-arm64/.venv/bin/python -m ai_sdlc init .
+# ~/work/my-existing-project 是示例路径；请替换成你的真实项目根目录
+cd ~/work/my-existing-project
+ai-sdlc init .
 ```
 
-macOS：如果使用场景 B，在线下载到项目父目录并安装，直接复制：
+Linux 示例：
 
 ```bash
-# 先从安装包目录回到业务项目根目录；如果路径不同，请替换成真实项目路径
-cd ../my-existing-project
-../ai-sdlc-offline-0.7.15-macos-arm64/.venv/bin/python -m ai_sdlc init .
+# ~/work/my-existing-project 是示例路径；请替换成你的真实项目根目录
+cd ~/work/my-existing-project
+ai-sdlc init .
 ```
 
-Linux：如果使用场景 A，在已有项目目录里放 tar.gz 并安装，直接复制：
-
-```bash
-cd ..
-./ai-sdlc-offline-0.7.15-linux-amd64/.venv/bin/python -m ai_sdlc init .
-```
-
-Linux：如果使用场景 B，在线下载到项目父目录并安装，直接复制：
-
-```bash
-# 先从安装包目录回到业务项目根目录；如果路径不同，请替换成真实项目路径
-cd ../my-existing-project
-../ai-sdlc-offline-0.7.15-linux-amd64/.venv/bin/python -m ai_sdlc init .
-```
+如果 `ai-sdlc` 不在 PATH，使用安装脚本最后输出的完整 Python 路径，把 `--help` 换成 `init .` 后在业务项目根目录执行。
 
 正常时你应该看到：
 
