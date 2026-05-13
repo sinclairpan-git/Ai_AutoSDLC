@@ -109,7 +109,8 @@ Assert-LastExitCode "pip install --upgrade pip"
 Assert-LastExitCode "pip install $PackageSpec"
 
 $resolvedVenvPython = (Resolve-Path -LiteralPath $venvPython).Path
-$nextCommand = "cd YOUR_PROJECT_PATH; Start-Process -Wait -NoNewWindow -FilePath `"$resolvedVenvPython`" -ArgumentList '-m', 'ai_sdlc', 'init', '.'"
+$doubleQuote = [char]34
+$nextCommand = 'cd YOUR_PROJECT_PATH; Start-Process -Wait -NoNewWindow -FilePath {0}{1}{0} -ArgumentList ''-m'', ''ai_sdlc'', ''init'', ''.''' -f $doubleQuote, $resolvedVenvPython
 
 Write-Host ""
 Write-BilingualStatus `

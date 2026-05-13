@@ -10,13 +10,12 @@ working_set_snapshot:
   tasks_path: /private/tmp/aisdlc-v0713-windows-installer-hotfix/specs/181-cross-platform-release-gate-matrix-baseline/tasks.md
   active_files: []
   context_summary: 'Goal: Fix PR #57 Windows PowerShell 5.1 installer parse failure
-    and publish v0.7.13 | State: Fixed remaining Windows PowerShell 5.1 parse-sensitive
-    direct-shim guidance by formatting output with [char]34; local parser check passed
-    for offline/online installers; targeted installer/workflow tests passed; ruff
-    passed; dry-run completed with open close gate because final tests gate is not
-    considered complete in dry-run. | Next: Commit and push parser hotfix to PR #57;
-    wait for Windows Offline Smoke and all checks; confirm latest Codex review is
-    clean; merge PR; tag and publish v0.7.13; wait for release artifact smoke.'
+    and publish v0.7.13 | State: Replaced parser-sensitive double-quoted/escaped Windows
+    guidance construction in offline and online installers with single-quoted format
+    strings plus [char]34; parser check, targeted installer/workflow tests, and ruff
+    all pass locally. | Next: Commit and push latest parser fix; wait for Windows
+    Offline Smoke and all checks; confirm latest Codex review is clean; merge PR;
+    tag and publish v0.7.13; wait for release artifact smoke.'
 current_branch: feature/181-cross-platform-release-gate-matrix-baseline-docs
 docs_baseline_ref: ''
 docs_baseline_at: ''

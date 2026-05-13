@@ -1,14 +1,15 @@
 # Continuity Handoff
 
-- Updated: 2026-05-13T02:05:44+00:00
-- Reason: after fixing PR #57 Windows PowerShell parser failure
+- Updated: 2026-05-13T02:10:19+00:00
+- Reason: after second Windows PowerShell 5.1 parser fix
 - Goal: Fix PR #57 Windows PowerShell 5.1 installer parse failure and publish v0.7.13
-- State: Fixed remaining Windows PowerShell 5.1 parse-sensitive direct-shim guidance by formatting output with [char]34; local parser check passed for offline/online installers; targeted installer/workflow tests passed; ruff passed; dry-run completed with open close gate because final tests gate is not considered complete in dry-run.
+- State: Replaced parser-sensitive double-quoted/escaped Windows guidance construction in offline and online installers with single-quoted format strings plus [char]34; parser check, targeted installer/workflow tests, and ruff all pass locally.
 - Stage: close
 - Work Item: 181-cross-platform-release-gate-matrix-baseline
 - Branch: codex/fix-v0712-windows-installer
 
 ## Changed Files
+- M packaging/install_online.ps1
 - M packaging/offline/install_offline.ps1
 - M tests/integration/test_offline_bundle_scripts.py
 
@@ -19,11 +20,9 @@
 - PowerShell parser check for install_offline.ps1 and install_online.ps1: passed
 - uv run pytest tests/integration/test_offline_bundle_scripts.py tests/integration/test_github_workflows.py -q: 33 passed
 - uv run ruff check src tests packaging/offline/verify_offline_bundle.py: passed
-- python -m ai_sdlc adapter status: materialized/degraded terminal proof only
-- python -m ai_sdlc run --dry-run: completed with open close gate Final tests did not pass
 
 ## Blockers / Risks
-- Need push fix, wait for PR checks and latest Codex review; merge only if all checks pass and Codex review is clean.
+- Need push latest parser fix and wait for PR checks/latest Codex review again.
 
 ## Exact Next Steps
-- Commit and push parser hotfix to PR #57; wait for Windows Offline Smoke and all checks; confirm latest Codex review is clean; merge PR; tag and publish v0.7.13; wait for release artifact smoke.
+- Commit and push latest parser fix; wait for Windows Offline Smoke and all checks; confirm latest Codex review is clean; merge PR; tag and publish v0.7.13; wait for release artifact smoke.
