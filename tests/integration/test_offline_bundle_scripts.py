@@ -1337,8 +1337,9 @@ def test_windows_install_scripts_include_auto_python_detection_and_bilingual_gui
     assert "self-update install --help" in offline_ps1
     assert "failed to upgrade the current ai-sdlc installation" in offline_ps1
     assert "$LASTEXITCODE -ne 0" in offline_ps1
-    assert "当前结果 / Result" in offline_ps1
-    assert "下一步 / Next" in offline_ps1
+    assert "Result" in offline_ps1
+    assert "Next" in offline_ps1
+    assert not any(ord(char) > 127 for char in offline_ps1)
     assert "amd64" in offline_ps1
     assert "x64" in offline_ps1
     assert "PYTHONUTF8" in offline_ps1
@@ -1348,10 +1349,41 @@ def test_windows_install_scripts_include_auto_python_detection_and_bilingual_gui
 
     assert "winget install --id Python.Python.3.11" in online_ps1
     assert "choco install python311 -y" in online_ps1
-    assert "当前结果 / Result" in online_ps1
-    assert "下一步 / Next" in online_ps1
-    assert "ai-sdlc init ." in online_ps1
+    assert "Result" in online_ps1
+    assert "Next" in online_ps1
+    assert not any(ord(char) > 127 for char in online_ps1)
+    assert "''-m'', ''ai_sdlc'', ''init'', ''.''" in online_ps1
     assert "ai-sdlc adapter status" not in online_ps1
     assert "PYTHONUTF8" in online_ps1
     assert "PYTHONIOENCODING" in online_ps1
     assert "UTF8Encoding" in online_ps1
+
+
+def test_windows_install_guidance_is_safe_for_windows_powershell_parser() -> None:
+    offline_ps1 = (_OFFLINE_DIR / "install_offline.ps1").read_text(encoding="utf-8")
+    online_ps1 = (_PACKAGING_DIR / "install_online.ps1").read_text(encoding="utf-8")
+
+    for script in (offline_ps1, online_ps1):
+        assert "Start-Process -Wait -NoNewWindow" in script
+        assert "Resolve-Path -LiteralPath $venvPython" in script
+        assert "YOUR_PROJECT_PATH" in script
+        assert '[char]34' in script
+        assert '`"$resolvedVenvPython`"' not in script
+        assert "cd <your-project>" not in script
+        assert '-Command "&' not in script
+        assert "Activate.ps1'; cd <your-project>" not in script
+
+    assert "$doubleQuote = [char]34" in offline_ps1
+    assert "Write-Host \"  $callOperator '$resolvedCliExe' --help\"" not in offline_ps1
+    assert "Write-Host \"  $callOperator '$resolvedVenvPython' -m ai_sdlc --help\"" not in offline_ps1
+
+
+def test_user_guide_splits_pre_downloaded_and_online_release_install_paths() -> None:
+    guide = (_REPO_ROOT / "USER_GUIDE.zh-CN.md").read_text(encoding="utf-8")
+
+    assert "场景 A：已提前下载离线包" in guide
+    assert "场景 B：在线从 Release 下载并安装" in guide
+    assert "不要把两套命令混用" in guide
+    assert guide.count("Invoke-WebRequest -Uri") >= 2
+    assert "这里应能看到 ui-test-platform 和下载好的 zip" in guide
+    assert "这里应能看到下载好的 zip" in guide

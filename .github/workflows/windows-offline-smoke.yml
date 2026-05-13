@@ -86,6 +86,10 @@ jobs:
           $digest = (Get-FileHash -Algorithm SHA256 "AGENTS.md").Hash.ToLowerInvariant()
           $env:OPENAI_CODEX = "1"
           $env:AI_SDLC_ADAPTER_CANONICAL_SHA256 = "sha256:$digest"
+          $windowsPowerShell = Join-Path $env:SystemRoot "System32\WindowsPowerShell\v1.0\powershell.exe"
+          if (-not (Test-Path $windowsPowerShell)) {
+            throw "Expected Windows PowerShell 5.1 at $windowsPowerShell"
+          }
 
           $installLog = Join-Path $evidenceRoot "install.log"
           $helpLog = Join-Path $evidenceRoot "help.txt"
@@ -93,9 +97,9 @@ jobs:
           $dryRunLog = Join-Path $evidenceRoot "run-dry-run.txt"
 
           Push-Location $bundleDir.FullName
-          & .\install_offline.ps1 *>&1 | Tee-Object -FilePath $installLog
+          & $windowsPowerShell -NoProfile -ExecutionPolicy Bypass -File .\install_offline.ps1 *>&1 | Tee-Object -FilePath $installLog
           if ($LASTEXITCODE -ne 0) {
-            throw "install_offline.ps1 failed with exit code $LASTEXITCODE"
+            throw "Windows PowerShell install_offline.ps1 failed with exit code $LASTEXITCODE"
           }
           Pop-Location
 

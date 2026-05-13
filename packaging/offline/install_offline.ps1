@@ -36,20 +36,20 @@ function Normalize-Architecture {
 
 function Write-BilingualStatus {
   param(
-    [string]$StatusZh,
+    [string]$Status,
     [string]$StatusEn,
     [string]$Command,
-    [string]$PurposeZh,
+    [string]$Purpose,
     [string]$PurposeEn
   )
 
-  Write-Host "当前结果 / Result"
-  Write-Host "  $StatusZh"
+  Write-Host "Result"
+  Write-Host "  $Status"
   Write-Host "  $StatusEn"
   Write-Host ""
-  Write-Host "下一步 / Next"
+  Write-Host "Next"
   Write-Host "  $Command"
-  Write-Host "  $PurposeZh"
+  Write-Host "  $Purpose"
   Write-Host "  $PurposeEn"
 }
 
@@ -172,10 +172,10 @@ if ($UpgradeExisting) {
   }
   Write-Host ""
   Write-BilingualStatus `
-    -StatusZh "升级完成。安装包已覆盖当前 ai-sdlc 入口对应的运行环境。" `
+    -Status "Upgrade completed. The package installer updated the runtime behind the current ai-sdlc command." `
     -StatusEn "Upgrade completed. The package installer updated the runtime behind the current ai-sdlc command." `
     -Command "ai-sdlc --version; ai-sdlc self-update check" `
-    -PurposeZh "确认版本；以后更新只执行 self-update check。" `
+    -Purpose "Confirm the version; future updates only need self-update check." `
     -PurposeEn "Confirm the version; future updates only need self-update check."
   exit 0
 }
@@ -192,15 +192,20 @@ if (-not (Test-Path $venvPython)) {
 Write-Host "Installing ai-sdlc (offline)..."
 & $venvPython -m pip install --no-index --find-links "$Wheels" "$mainWheel"
 
+$resolvedVenvPython = (Resolve-Path -LiteralPath $venvPython).Path
 $cliExe = Join-Path $VenvPath "Scripts\\ai-sdlc.exe"
+$resolvedCliExe = (Resolve-Path -LiteralPath $cliExe).Path
+$callOperator = [char]38
+$doubleQuote = [char]34
+$nextCommand = 'cd YOUR_PROJECT_PATH; Start-Process -Wait -NoNewWindow -FilePath {0}{1}{0} -ArgumentList ''-m'', ''ai_sdlc'', ''init'', ''.''' -f $doubleQuote, $resolvedVenvPython
 Write-Host ""
 Write-BilingualStatus `
-  -StatusZh "离线安装完成。安装脚本已创建运行环境并安装 AI-SDLC。" `
+  -Status "Offline installation completed. The installer created the runtime and installed AI-SDLC." `
   -StatusEn "Offline installation completed. The installer created the runtime and installed AI-SDLC." `
-  -Command "& '$VenvPath\\Scripts\\Activate.ps1'; cd <your-project>; ai-sdlc init ." `
-  -PurposeZh "进入你的项目后执行初始化；init 会自动完成必要检查和安全预演。" `
+  -Command $nextCommand `
+  -Purpose "Enter your project and initialize it; init will automatically run the required checks and safe rehearsal." `
   -PurposeEn "Enter your project and initialize it; init will automatically run the required checks and safe rehearsal."
 Write-Host ""
-Write-Host "Direct shim / 直接调用:"
-Write-Host "  & '$cliExe' --help"
-Write-Host "  & '$venvPython' -m ai_sdlc --help"
+Write-Host "Direct shim:"
+Write-Host ('  {0} {1}{2}{1} --help' -f $callOperator, $doubleQuote, $resolvedCliExe)
+Write-Host ('  {0} {1}{2}{1} -m ai_sdlc --help' -f $callOperator, $doubleQuote, $resolvedVenvPython)
