@@ -197,6 +197,7 @@ $cliExe = Join-Path $VenvPath "Scripts\\ai-sdlc.exe"
 $resolvedCliExe = (Resolve-Path -LiteralPath $cliExe).Path
 $nextCommand = "cd YOUR_PROJECT_PATH; Start-Process -Wait -NoNewWindow -FilePath `"$resolvedVenvPython`" -ArgumentList '-m', 'ai_sdlc', 'init', '.'"
 $callOperator = [char]38
+$doubleQuote = [char]34
 Write-Host ""
 Write-BilingualStatus `
   -StatusZh "离线安装完成。安装脚本已创建运行环境并安装 AI-SDLC。" `
@@ -206,5 +207,5 @@ Write-BilingualStatus `
   -PurposeEn "Enter your project and initialize it; init will automatically run the required checks and safe rehearsal."
 Write-Host ""
 Write-Host "Direct shim / 直接调用:"
-Write-Host "  $callOperator '$resolvedCliExe' --help"
-Write-Host "  $callOperator '$resolvedVenvPython' -m ai_sdlc --help"
+Write-Host ("  {0} {1}{2}{1} --help" -f $callOperator, $doubleQuote, $resolvedCliExe)
+Write-Host ("  {0} {1}{2}{1} -m ai_sdlc --help" -f $callOperator, $doubleQuote, $resolvedVenvPython)

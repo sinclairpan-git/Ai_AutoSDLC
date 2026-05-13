@@ -1368,3 +1368,7 @@ def test_windows_install_guidance_is_safe_for_windows_powershell_parser() -> Non
         assert "cd <your-project>" not in script
         assert '-Command "&' not in script
         assert "Activate.ps1'; cd <your-project>" not in script
+
+    assert "$doubleQuote = [char]34" in offline_ps1
+    assert "Write-Host \"  $callOperator '$resolvedCliExe' --help\"" not in offline_ps1
+    assert "Write-Host \"  $callOperator '$resolvedVenvPython' -m ai_sdlc --help\"" not in offline_ps1
