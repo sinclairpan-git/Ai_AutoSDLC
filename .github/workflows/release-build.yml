@@ -6,7 +6,7 @@ on:
       tag:
         description: Release tag that will receive the platform assets.
         required: true
-        default: v0.7.12
+        default: v0.7.13
       upload_to_release:
         description: Upload smoke-passed assets to the existing GitHub Release.
         required: true
@@ -144,11 +144,15 @@ jobs:
           $digest = (Get-FileHash -Algorithm SHA256 "AGENTS.md").Hash.ToLowerInvariant()
           $env:OPENAI_CODEX = "1"
           $env:AI_SDLC_ADAPTER_CANONICAL_SHA256 = "sha256:$digest"
+          $windowsPowerShell = Join-Path $env:SystemRoot "System32\WindowsPowerShell\v1.0\powershell.exe"
+          if (-not (Test-Path $windowsPowerShell)) {
+            throw "Expected Windows PowerShell 5.1 at $windowsPowerShell"
+          }
 
           Push-Location $bundleDir.FullName
-          & .\install_offline.ps1 *>&1 | Tee-Object -FilePath (Join-Path $evidenceRoot "install.log")
+          & $windowsPowerShell -NoProfile -ExecutionPolicy Bypass -File .\install_offline.ps1 *>&1 | Tee-Object -FilePath (Join-Path $evidenceRoot "install.log")
           if ($LASTEXITCODE -ne 0) {
-            throw "install_offline.ps1 failed with exit code $LASTEXITCODE"
+            throw "Windows PowerShell install_offline.ps1 failed with exit code $LASTEXITCODE"
           }
           Pop-Location
 

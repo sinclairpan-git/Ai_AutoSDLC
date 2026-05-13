@@ -140,7 +140,7 @@ SKIP_REGISTRY_REL = Path("src") / "ai_sdlc" / "rules" / "agent-skip-registry.zh.
 FRAMEWORK_DEFECT_BACKLOG_REL = Path("docs") / "framework-defect-backlog.zh-CN.md"
 VERIFICATION_RULE_REL = Path("src") / "ai_sdlc" / "rules" / "verification.md"
 PR_CHECKLIST_REL = Path("docs") / "pull-request-checklist.zh.md"
-RELEASE_NOTES_CURRENT_REL = Path("docs") / "releases" / "v0.7.12.md"
+RELEASE_NOTES_CURRENT_REL = Path("docs") / "releases" / "v0.7.13.md"
 RELEASE_POLICY_REL = Path("docs") / "框架自迭代开发与发布约定.md"
 README_REL = Path("README.md")
 USER_GUIDE_REL = Path("USER_GUIDE.zh-CN.md")
@@ -221,22 +221,22 @@ RECONCILE_SMOKE_CONTRACT_SURFACES: dict[Path, tuple[str, ...]] = {
 }
 RELEASE_DOCS_CONSISTENCY_SURFACES: dict[Path, tuple[str, ...]] = {
     README_REL: (
-        "v0.7.12",
-        "docs/releases/v0.7.12.md",
-        "ai-sdlc-offline-0.7.12-windows-amd64.zip",
-        "ai-sdlc-offline-0.7.12-macos-arm64.tar.gz",
-        "ai-sdlc-offline-0.7.12-linux-amd64.tar.gz",
+        "v0.7.13",
+        "docs/releases/v0.7.13.md",
+        "ai-sdlc-offline-0.7.13-windows-amd64.zip",
+        "ai-sdlc-offline-0.7.13-macos-arm64.tar.gz",
+        "ai-sdlc-offline-0.7.13-linux-amd64.tar.gz",
         "No such command 'install'",
         "ai-sdlc self-update check",
         "--upgrade-existing",
-        "releases/download/v0.7.12",
+        "releases/download/v0.7.13",
     ),
     RELEASE_NOTES_CURRENT_REL: (
-        "v0.7.12",
+        "v0.7.13",
         "No such command 'install'",
         "ai-sdlc self-update check",
         "--upgrade-existing",
-        "releases/download/v0.7.12",
+        "releases/download/v0.7.13",
         "Windows",
         ".zip",
         "macOS / Linux",
@@ -245,11 +245,11 @@ RELEASE_DOCS_CONSISTENCY_SURFACES: dict[Path, tuple[str, ...]] = {
         "release-artifact-smoke.yml",
     ),
     USER_GUIDE_REL: (
-        "v0.7.12",
+        "v0.7.13",
         "No such command 'install'",
         "ai-sdlc self-update check",
         "--upgrade-existing",
-        "releases/download/v0.7.12",
+        "releases/download/v0.7.13",
         "Windows",
         "macOS",
         "Linux",
@@ -257,39 +257,39 @@ RELEASE_DOCS_CONSISTENCY_SURFACES: dict[Path, tuple[str, ...]] = {
         ".tar.gz",
     ),
     OFFLINE_README_REL: (
-        "v0.7.12",
-        "ai-sdlc-offline-0.7.12-windows-amd64.zip",
-        "ai-sdlc-offline-0.7.12-macos-arm64.tar.gz",
-        "ai-sdlc-offline-0.7.12-linux-amd64.tar.gz",
+        "v0.7.13",
+        "ai-sdlc-offline-0.7.13-windows-amd64.zip",
+        "ai-sdlc-offline-0.7.13-macos-arm64.tar.gz",
+        "ai-sdlc-offline-0.7.13-linux-amd64.tar.gz",
     ),
     RELEASE_POLICY_REL: (
         "README.md",
-        "docs/releases/v0.7.12.md",
+        "docs/releases/v0.7.13.md",
         "USER_GUIDE.zh-CN.md",
         "packaging/offline/README.md",
         "docs/pull-request-checklist.zh.md",
         "普通用户主路径",
         "live host evidence",
         "materialized only",
-        "ai-sdlc-offline-0.7.12-windows-amd64.zip",
-        "ai-sdlc-offline-0.7.12-macos-arm64.tar.gz",
-        "ai-sdlc-offline-0.7.12-linux-amd64.tar.gz",
+        "ai-sdlc-offline-0.7.13-windows-amd64.zip",
+        "ai-sdlc-offline-0.7.13-macos-arm64.tar.gz",
+        "ai-sdlc-offline-0.7.13-linux-amd64.tar.gz",
     ),
     PR_CHECKLIST_REL: (
         "README.md",
-        "docs/releases/v0.7.12.md",
+        "docs/releases/v0.7.13.md",
         "USER_GUIDE.zh-CN.md",
         "packaging/offline/README.md",
-        "v0.7.12",
+        "v0.7.13",
         "普通用户主路径",
         "materialized only",
-        "ai-sdlc-offline-0.7.12-windows-amd64.zip",
-        "ai-sdlc-offline-0.7.12-macos-arm64.tar.gz",
-        "ai-sdlc-offline-0.7.12-linux-amd64.tar.gz",
+        "ai-sdlc-offline-0.7.13-windows-amd64.zip",
+        "ai-sdlc-offline-0.7.13-macos-arm64.tar.gz",
+        "ai-sdlc-offline-0.7.13-linux-amd64.tar.gz",
     ),
 }
 BEGINNER_GUIDE_REQUIRED_TOKENS = (
-    "当前正式发布版：`v0.7.12`",
+    "当前正式发布版：`v0.7.13`",
     "## 第一章：全新用户 + 全新空项目",
     "## 第二章：全新用户 + 已有项目",
     "## 第三章：老用户升级",
@@ -299,19 +299,19 @@ BEGINNER_GUIDE_REQUIRED_TOKENS = (
     "执行成功以后，你应该看到",
     "如果失败",
     "切换到 AI 对话",
-    "ai-sdlc-offline-0.7.12-windows-amd64.zip",
-    "ai-sdlc-offline-0.7.12-macos-arm64.tar.gz",
-    "ai-sdlc-offline-0.7.12-linux-amd64.tar.gz",
+    "ai-sdlc-offline-0.7.13-windows-amd64.zip",
+    "ai-sdlc-offline-0.7.13-macos-arm64.tar.gz",
+    "ai-sdlc-offline-0.7.13-linux-amd64.tar.gz",
     "No such command 'install'",
     "--upgrade-existing",
 )
 BEGINNER_GUIDE_EXISTING_PROJECT_INIT_TOKENS = (
     "cd ..\\my-existing-project\n"
-    "..\\ai-sdlc-offline-0.7.12-windows-amd64\\.venv\\Scripts\\python.exe -m ai_sdlc init .",
+    "..\\ai-sdlc-offline-0.7.13-windows-amd64\\.venv\\Scripts\\python.exe -m ai_sdlc init .",
     "cd ../my-existing-project\n"
-    "../ai-sdlc-offline-0.7.12-macos-arm64/.venv/bin/python -m ai_sdlc init .",
+    "../ai-sdlc-offline-0.7.13-macos-arm64/.venv/bin/python -m ai_sdlc init .",
     "cd ../my-existing-project\n"
-    "../ai-sdlc-offline-0.7.12-linux-amd64/.venv/bin/python -m ai_sdlc init .",
+    "../ai-sdlc-offline-0.7.13-linux-amd64/.venv/bin/python -m ai_sdlc init .",
 )
 BEGINNER_GUIDE_FORBIDDEN_TOKENS = (
     "升级兼容提示",

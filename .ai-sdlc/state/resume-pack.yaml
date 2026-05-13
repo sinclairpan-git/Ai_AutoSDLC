@@ -3,23 +3,23 @@ current_batch: 0
 last_committed_task: ''
 working_set_snapshot:
   prd_path: AI-SDLC 全自动化框架 产品需求文档（PRD）.md
-  constitution_path: /private/tmp/aisdlc-v0712-release/.ai-sdlc/memory/constitution.md
-  tech_stack_path: /private/tmp/aisdlc-v0712-release/.ai-sdlc/profiles/tech-stack.yml
-  spec_path: /private/tmp/aisdlc-v0712-release/specs/181-cross-platform-release-gate-matrix-baseline/spec.md
-  plan_path: /private/tmp/aisdlc-v0712-release/specs/181-cross-platform-release-gate-matrix-baseline/plan.md
-  tasks_path: /private/tmp/aisdlc-v0712-release/specs/181-cross-platform-release-gate-matrix-baseline/tasks.md
+  constitution_path: /private/tmp/aisdlc-v0713-windows-installer-hotfix/.ai-sdlc/memory/constitution.md
+  tech_stack_path: /private/tmp/aisdlc-v0713-windows-installer-hotfix/.ai-sdlc/profiles/tech-stack.yml
+  spec_path: /private/tmp/aisdlc-v0713-windows-installer-hotfix/specs/181-cross-platform-release-gate-matrix-baseline/spec.md
+  plan_path: /private/tmp/aisdlc-v0713-windows-installer-hotfix/specs/181-cross-platform-release-gate-matrix-baseline/plan.md
+  tasks_path: /private/tmp/aisdlc-v0713-windows-installer-hotfix/specs/181-cross-platform-release-gate-matrix-baseline/tasks.md
   active_files: []
-  context_summary: 'Goal: Release AI-SDLC v0.7.12 patch after merging PR #55 | State:
-    Local v0.7.12 release prep is implemented and locally verified. Release branch
-    codex/release-v0.7.12 contains version/doc/workflow default updates plus docs/releases/v0.7.12.md;
-    unrelated .cursor rule regeneration was restored and is not part of the diff.
-    | Next: Commit and push codex/release-v0.7.12, open release PR, request Codex
-    review, wait for all checks and review before merging; then tag v0.7.12, create
-    draft release, run release-build.yml, publish, and wait for release-artifact-smoke.yml.'
+  context_summary: 'State: Implemented v0.7.13 hotfix and reverified after absolute-path
+    guidance fix. Windows offline/online installers now build next-step commands with
+    resolved venv Python paths; Windows smoke/release workflows execute install_offline.ps1
+    through WindowsPowerShell v1.0 powershell.exe; current release docs/version advanced
+    to 0.7.13. | Next: Commit/push hotfix PR, request Codex review, wait for checks
+    including Windows PowerShell 5.1 smoke; merge only if Codex clean and checks pass;
+    then tag/publish v0.7.13 and wait for release-artifact-smoke.'
 current_branch: feature/181-cross-platform-release-gate-matrix-baseline-docs
 docs_baseline_ref: ''
 docs_baseline_at: ''
-timestamp: '2026-05-12T14:22:00+00:00'
+timestamp: '2026-05-13T01:50:51+00:00'
 checkpoint_path: .ai-sdlc/state/checkpoint.yml
 checkpoint_last_updated: '2026-04-30T03:04:43+00:00'
 checkpoint_fingerprint: 3a88fbdb372f95712ec6c6bcb34729d78927236171d0e7ea4f1e0002f7f06d10

@@ -47,6 +47,8 @@ def test_windows_offline_smoke_workflow_covers_bundle_build_install_and_cli_chec
     assert "verify_offline_bundle.py" in workflow
     assert "--require-bundled-runtime" in workflow
     assert "--install-log" in workflow
+    assert "WindowsPowerShell\\v1.0\\powershell.exe" in workflow
+    assert "-NoProfile -ExecutionPolicy Bypass -File .\\install_offline.ps1" in workflow
     assert "Legacy Artifact Probe" in workflow
     assert "recover --reconcile" in workflow
 
@@ -95,7 +97,7 @@ def test_release_artifact_smoke_workflow_installs_published_assets() -> None:
 
     assert "workflow_dispatch:" in workflow
     assert "release:" in workflow
-    assert "default: v0.7.12" in workflow
+    assert "default: v0.7.13" in workflow
     assert "gh release download" in workflow
     assert "windows-latest" in workflow
     assert "macos-latest" in workflow
@@ -113,6 +115,8 @@ def test_release_artifact_smoke_workflow_installs_published_assets() -> None:
     assert "adapter status" in workflow
     assert "run --dry-run" in workflow
     assert "actions/upload-artifact@v7" in workflow
+    assert "WindowsPowerShell\\v1.0\\powershell.exe" in workflow
+    assert "-NoProfile -ExecutionPolicy Bypass -File .\\install_offline.ps1" in workflow
 
 
 def test_release_build_workflow_matrix_builds_smokes_and_uploads_assets() -> None:
@@ -123,7 +127,7 @@ def test_release_build_workflow_matrix_builds_smokes_and_uploads_assets() -> Non
     workflow = workflow_path.read_text(encoding="utf-8")
 
     assert "workflow_dispatch:" in workflow
-    assert "default: v0.7.12" in workflow
+    assert "default: v0.7.13" in workflow
     assert "windows-latest" in workflow
     assert "macos-latest" in workflow
     assert "ubuntu-latest" in workflow
@@ -142,6 +146,8 @@ def test_release_build_workflow_matrix_builds_smokes_and_uploads_assets() -> Non
     assert "run --dry-run" in workflow
     assert "actions/upload-artifact@v7" in workflow
     assert "gh release upload" in workflow
+    assert "WindowsPowerShell\\v1.0\\powershell.exe" in workflow
+    assert "-NoProfile -ExecutionPolicy Bypass -File .\\install_offline.ps1" in workflow
 
 
 def test_posix_offline_smoke_matrix_concurrency_is_job_scoped() -> None:

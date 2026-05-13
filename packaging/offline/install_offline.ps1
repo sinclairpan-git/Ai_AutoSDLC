@@ -192,15 +192,19 @@ if (-not (Test-Path $venvPython)) {
 Write-Host "Installing ai-sdlc (offline)..."
 & $venvPython -m pip install --no-index --find-links "$Wheels" "$mainWheel"
 
+$resolvedVenvPython = (Resolve-Path -LiteralPath $venvPython).Path
 $cliExe = Join-Path $VenvPath "Scripts\\ai-sdlc.exe"
+$resolvedCliExe = (Resolve-Path -LiteralPath $cliExe).Path
+$nextCommand = "cd YOUR_PROJECT_PATH; Start-Process -Wait -NoNewWindow -FilePath `"$resolvedVenvPython`" -ArgumentList '-m', 'ai_sdlc', 'init', '.'"
+$callOperator = [char]38
 Write-Host ""
 Write-BilingualStatus `
   -StatusZh "离线安装完成。安装脚本已创建运行环境并安装 AI-SDLC。" `
   -StatusEn "Offline installation completed. The installer created the runtime and installed AI-SDLC." `
-  -Command "& '$VenvPath\\Scripts\\Activate.ps1'; cd <your-project>; ai-sdlc init ." `
+  -Command $nextCommand `
   -PurposeZh "进入你的项目后执行初始化；init 会自动完成必要检查和安全预演。" `
   -PurposeEn "Enter your project and initialize it; init will automatically run the required checks and safe rehearsal."
 Write-Host ""
 Write-Host "Direct shim / 直接调用:"
-Write-Host "  & '$cliExe' --help"
-Write-Host "  & '$venvPython' -m ai_sdlc --help"
+Write-Host "  $callOperator '$resolvedCliExe' --help"
+Write-Host "  $callOperator '$resolvedVenvPython' -m ai_sdlc --help"

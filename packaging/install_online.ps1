@@ -108,10 +108,13 @@ Assert-LastExitCode "pip install --upgrade pip"
 & $venvPython -m pip install $PackageSpec
 Assert-LastExitCode "pip install $PackageSpec"
 
+$resolvedVenvPython = (Resolve-Path -LiteralPath $venvPython).Path
+$nextCommand = "cd YOUR_PROJECT_PATH; Start-Process -Wait -NoNewWindow -FilePath `"$resolvedVenvPython`" -ArgumentList '-m', 'ai_sdlc', 'init', '.'"
+
 Write-Host ""
 Write-BilingualStatus `
   -StatusZh "在线安装完成。安装脚本已创建运行环境并安装 AI-SDLC。" `
   -StatusEn "Online installation completed. The installer created the runtime and installed AI-SDLC." `
-  -Command "& '$VenvPath\Scripts\Activate.ps1'; cd <your-project>; ai-sdlc init ." `
+  -Command $nextCommand `
   -PurposeZh "进入你的项目后执行初始化；init 会自动完成必要检查和安全预演。" `
   -PurposeEn "Enter your project and initialize it; init will automatically run the required checks and safe rehearsal."

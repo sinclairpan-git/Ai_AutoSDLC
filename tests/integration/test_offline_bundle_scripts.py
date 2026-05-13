@@ -1350,8 +1350,21 @@ def test_windows_install_scripts_include_auto_python_detection_and_bilingual_gui
     assert "choco install python311 -y" in online_ps1
     assert "当前结果 / Result" in online_ps1
     assert "下一步 / Next" in online_ps1
-    assert "ai-sdlc init ." in online_ps1
+    assert "'-m', 'ai_sdlc', 'init', '.'" in online_ps1
     assert "ai-sdlc adapter status" not in online_ps1
     assert "PYTHONUTF8" in online_ps1
     assert "PYTHONIOENCODING" in online_ps1
     assert "UTF8Encoding" in online_ps1
+
+
+def test_windows_install_guidance_is_safe_for_windows_powershell_parser() -> None:
+    offline_ps1 = (_OFFLINE_DIR / "install_offline.ps1").read_text(encoding="utf-8")
+    online_ps1 = (_PACKAGING_DIR / "install_online.ps1").read_text(encoding="utf-8")
+
+    for script in (offline_ps1, online_ps1):
+        assert "Start-Process -Wait -NoNewWindow" in script
+        assert "Resolve-Path -LiteralPath $venvPython" in script
+        assert "YOUR_PROJECT_PATH" in script
+        assert "cd <your-project>" not in script
+        assert '-Command "&' not in script
+        assert "Activate.ps1'; cd <your-project>" not in script
