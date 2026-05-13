@@ -3,23 +3,23 @@ current_batch: 0
 last_committed_task: ''
 working_set_snapshot:
   prd_path: AI-SDLC 全自动化框架 产品需求文档（PRD）.md
-  constitution_path: /private/tmp/aisdlc-v0713-windows-installer-hotfix/.ai-sdlc/memory/constitution.md
-  tech_stack_path: /private/tmp/aisdlc-v0713-windows-installer-hotfix/.ai-sdlc/profiles/tech-stack.yml
-  spec_path: /private/tmp/aisdlc-v0713-windows-installer-hotfix/specs/181-cross-platform-release-gate-matrix-baseline/spec.md
-  plan_path: /private/tmp/aisdlc-v0713-windows-installer-hotfix/specs/181-cross-platform-release-gate-matrix-baseline/plan.md
-  tasks_path: /private/tmp/aisdlc-v0713-windows-installer-hotfix/specs/181-cross-platform-release-gate-matrix-baseline/tasks.md
+  constitution_path: /private/tmp/aisdlc-v0713-install-guide-path/.ai-sdlc/memory/constitution.md
+  tech_stack_path: /private/tmp/aisdlc-v0713-install-guide-path/.ai-sdlc/profiles/tech-stack.yml
+  spec_path: /private/tmp/aisdlc-v0713-install-guide-path/specs/181-cross-platform-release-gate-matrix-baseline/spec.md
+  plan_path: /private/tmp/aisdlc-v0713-install-guide-path/specs/181-cross-platform-release-gate-matrix-baseline/plan.md
+  tasks_path: /private/tmp/aisdlc-v0713-install-guide-path/specs/181-cross-platform-release-gate-matrix-baseline/tasks.md
   active_files: []
-  context_summary: 'Goal: Fix PR #57 Windows PowerShell 5.1 installer parse failure
-    and publish v0.7.13 | State: Replaced parser-sensitive double-quoted/escaped Windows
-    guidance construction in offline and online installers with single-quoted format
-    strings plus [char]34; parser check, targeted installer/workflow tests, and ruff
-    all pass locally. | Next: Commit and push latest parser fix; wait for Windows
-    Offline Smoke and all checks; confirm latest Codex review is clean; merge PR;
-    tag and publish v0.7.13; wait for release artifact smoke.'
+  context_summary: 'Goal: Make pre-downloaded offline install guide executable and
+    non-destructive in interactive shells | State: Wrapped macOS/Linux pre-downloaded
+    offline install snippets in install_ai_sdlc_offline functions. Missing package
+    now returns 1 from the function instead of exit 1, so copy-pasting into an interactive
+    shell does not close the terminal. Regression asserts return 1 is used and exit
+    1 is absent from USER_GUIDE. | Next: Amend commit, force-push PR #58, request
+    @codex review, wait for checks and merge when clean.'
 current_branch: feature/181-cross-platform-release-gate-matrix-baseline-docs
 docs_baseline_ref: ''
 docs_baseline_at: ''
-timestamp: '2026-05-13T01:50:51+00:00'
+timestamp: '2026-05-13T02:52:10+00:00'
 checkpoint_path: .ai-sdlc/state/checkpoint.yml
 checkpoint_last_updated: '2026-04-30T03:04:43+00:00'
 checkpoint_fingerprint: 3a88fbdb372f95712ec6c6bcb34729d78927236171d0e7ea4f1e0002f7f06d10
