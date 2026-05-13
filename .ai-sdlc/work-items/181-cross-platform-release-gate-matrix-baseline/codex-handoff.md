@@ -1,28 +1,29 @@
 # Continuity Handoff
 
-- Updated: 2026-05-13T02:10:19+00:00
-- Reason: after second Windows PowerShell 5.1 parser fix
-- Goal: Fix PR #57 Windows PowerShell 5.1 installer parse failure and publish v0.7.13
-- State: Replaced parser-sensitive double-quoted/escaped Windows guidance construction in offline and online installers with single-quoted format strings plus [char]34; parser check, targeted installer/workflow tests, and ruff all pass locally.
+- Updated: 2026-05-13T03:26:12+00:00
+- Reason: after addressing Codex review P2 about exit 1 in interactive Bash snippets
+- Goal: Make pre-downloaded offline install guide executable and non-destructive in interactive shells
+- State: Wrapped macOS/Linux pre-downloaded offline install snippets in install_ai_sdlc_offline functions. Missing package now returns 1 from the function instead of exit 1, so copy-pasting into an interactive shell does not close the terminal. Regression asserts return 1 is used and exit 1 is absent from USER_GUIDE.
 - Stage: close
 - Work Item: 181-cross-platform-release-gate-matrix-baseline
-- Branch: codex/fix-v0712-windows-installer
+- Branch: codex/fix-offline-zip-path-guidance
 
 ## Changed Files
-- M packaging/install_online.ps1
-- M packaging/offline/install_offline.ps1
+- M .ai-sdlc/state/codex-handoff.md
+- M .ai-sdlc/state/resume-pack.yaml
+- M .ai-sdlc/work-items/181-cross-platform-release-gate-matrix-baseline/codex-handoff.md
+- M USER_GUIDE.zh-CN.md
 - M tests/integration/test_offline_bundle_scripts.py
 
 ## Key Decisions
 - none
 
 ## Commands / Tests
-- PowerShell parser check for install_offline.ps1 and install_online.ps1: passed
-- uv run pytest tests/integration/test_offline_bundle_scripts.py tests/integration/test_github_workflows.py -q: 33 passed
-- uv run ruff check src tests packaging/offline/verify_offline_bundle.py: passed
+- uv run pytest tests/integration/test_offline_bundle_scripts.py -q: 27 passed
+- uv run ruff check tests/integration/test_offline_bundle_scripts.py: passed
 
 ## Blockers / Risks
-- Need push latest parser fix and wait for PR checks/latest Codex review again.
+- Need amend/push PR #58 and request Codex review again.
 
 ## Exact Next Steps
-- Commit and push latest parser fix; wait for Windows Offline Smoke and all checks; confirm latest Codex review is clean; merge PR; tag and publish v0.7.13; wait for release artifact smoke.
+- Amend commit, force-push PR #58, request @codex review, wait for checks and merge when clean.

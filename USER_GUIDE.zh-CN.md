@@ -61,10 +61,19 @@ https://github.com/sinclairpan-git/Ai_AutoSDLC/releases/tag/v0.7.13
 Windows x64 直接复制：
 
 ```powershell
-# 回到项目父目录；这里应能看到 ui-test-platform 和下载好的 zip
+# 当前假设你在业务项目根目录；先把 zip 放到业务项目父目录，并进入该父目录；例如 D:\work
+# This assumes you are in the project root. Place the zip in the project parent directory, then cd into that directory; for example, D:\work
 cd ..
-Expand-Archive -LiteralPath .\ai-sdlc-offline-0.7.13-windows-amd64.zip -DestinationPath .
-cd .\ai-sdlc-offline-0.7.13-windows-amd64
+$PackageName = "ai-sdlc-offline-0.7.13-windows-amd64.zip"
+$PackageDir = (Get-Location).Path
+$Zip = Get-ChildItem -LiteralPath . -Filter $PackageName -File | Select-Object -First 1
+if (-not $Zip) {
+  Write-Host "当前目录没有找到安装包：$PackageDir\$PackageName"
+  Write-Host "Package not found in the current directory: $PackageDir\$PackageName"
+  throw "请把 zip 放到业务项目父目录，并先 cd 到该父目录后重试。Place the zip in the project parent directory, cd into that directory, then retry."
+}
+Expand-Archive -LiteralPath $Zip.FullName -DestinationPath $PackageDir -Force
+Set-Location (Join-Path $PackageDir "ai-sdlc-offline-0.7.13-windows-amd64")
 powershell -ExecutionPolicy Bypass -File .\install_offline.ps1
 .\.venv\Scripts\python.exe -m ai_sdlc --help
 ```
@@ -72,25 +81,49 @@ powershell -ExecutionPolicy Bypass -File .\install_offline.ps1
 macOS Apple Silicon 直接复制：
 
 ```bash
-# 回到项目父目录；这里应能看到 ui-test-platform 和下载好的 tar.gz
-cd ..
-tar xzf ai-sdlc-offline-0.7.13-macos-arm64.tar.gz
-cd ai-sdlc-offline-0.7.13-macos-arm64
-chmod +x install_offline.sh
-./install_offline.sh
-./.venv/bin/python -m ai_sdlc --help
+# 当前假设你在业务项目根目录；先把 tar.gz 放到业务项目父目录，并进入该父目录；例如 ~/work
+# This assumes you are in the project root. Place the tar.gz in the project parent directory, then cd into that directory; for example, ~/work
+install_ai_sdlc_offline() {
+  cd ..
+  PackageName="ai-sdlc-offline-0.7.13-macos-arm64.tar.gz"
+  PackageDir="$(pwd)"
+  if [ ! -f "$PackageName" ]; then
+    echo "当前目录没有找到安装包：$PackageDir/$PackageName"
+    echo "Package not found in the current directory: $PackageDir/$PackageName"
+    echo "请把 tar.gz 放到业务项目父目录，并先 cd 到该父目录后重试。Place the tar.gz in the project parent directory, cd into that directory, then retry."
+    return 1
+  fi
+  tar xzf "$PackageName"
+  cd ai-sdlc-offline-0.7.13-macos-arm64
+  chmod +x install_offline.sh
+  ./install_offline.sh
+  ./.venv/bin/python -m ai_sdlc --help
+}
+install_ai_sdlc_offline
 ```
 
 Linux x64 直接复制：
 
 ```bash
-# 回到项目父目录；这里应能看到 ui-test-platform 和下载好的 tar.gz
-cd ..
-tar xzf ai-sdlc-offline-0.7.13-linux-amd64.tar.gz
-cd ai-sdlc-offline-0.7.13-linux-amd64
-chmod +x install_offline.sh
-./install_offline.sh
-./.venv/bin/python -m ai_sdlc --help
+# 当前假设你在业务项目根目录；先把 tar.gz 放到业务项目父目录，并进入该父目录；例如 ~/work
+# This assumes you are in the project root. Place the tar.gz in the project parent directory, then cd into that directory; for example, ~/work
+install_ai_sdlc_offline() {
+  cd ..
+  PackageName="ai-sdlc-offline-0.7.13-linux-amd64.tar.gz"
+  PackageDir="$(pwd)"
+  if [ ! -f "$PackageName" ]; then
+    echo "当前目录没有找到安装包：$PackageDir/$PackageName"
+    echo "Package not found in the current directory: $PackageDir/$PackageName"
+    echo "请把 tar.gz 放到业务项目父目录，并先 cd 到该父目录后重试。Place the tar.gz in the project parent directory, cd into that directory, then retry."
+    return 1
+  fi
+  tar xzf "$PackageName"
+  cd ai-sdlc-offline-0.7.13-linux-amd64
+  chmod +x install_offline.sh
+  ./install_offline.sh
+  ./.venv/bin/python -m ai_sdlc --help
+}
+install_ai_sdlc_offline
 ```
 
 #### 场景 B：在线从 Release 下载并安装
@@ -262,10 +295,19 @@ git status
 Windows x64 直接复制：
 
 ```powershell
-# 当前假设你还在 D:\work\my-existing-project；先回到父目录 D:\work，这里应能看到下载好的 zip
+# 当前假设你在业务项目根目录；先把 zip 放到业务项目父目录，并进入该父目录；例如 D:\work
+# This assumes you are in the project root. Place the zip in the project parent directory, then cd into that directory; for example, D:\work
 cd ..
-Expand-Archive -LiteralPath .\ai-sdlc-offline-0.7.13-windows-amd64.zip -DestinationPath .
-cd .\ai-sdlc-offline-0.7.13-windows-amd64
+$PackageName = "ai-sdlc-offline-0.7.13-windows-amd64.zip"
+$PackageDir = (Get-Location).Path
+$Zip = Get-ChildItem -LiteralPath . -Filter $PackageName -File | Select-Object -First 1
+if (-not $Zip) {
+  Write-Host "当前目录没有找到安装包：$PackageDir\$PackageName"
+  Write-Host "Package not found in the current directory: $PackageDir\$PackageName"
+  throw "请把 zip 放到业务项目父目录，并先 cd 到该父目录后重试。Place the zip in the project parent directory, cd into that directory, then retry."
+}
+Expand-Archive -LiteralPath $Zip.FullName -DestinationPath $PackageDir -Force
+Set-Location (Join-Path $PackageDir "ai-sdlc-offline-0.7.13-windows-amd64")
 powershell -ExecutionPolicy Bypass -File .\install_offline.ps1
 .\.venv\Scripts\python.exe -m ai_sdlc --help
 ```
@@ -273,25 +315,49 @@ powershell -ExecutionPolicy Bypass -File .\install_offline.ps1
 macOS Apple Silicon 直接复制：
 
 ```bash
-# 当前假设你还在 ~/work/my-existing-project；先回到父目录 ~/work，这里应能看到下载好的 tar.gz
-cd ..
-tar xzf ai-sdlc-offline-0.7.13-macos-arm64.tar.gz
-cd ai-sdlc-offline-0.7.13-macos-arm64
-chmod +x install_offline.sh
-./install_offline.sh
-./.venv/bin/python -m ai_sdlc --help
+# 当前假设你在业务项目根目录；先把 tar.gz 放到业务项目父目录，并进入该父目录；例如 ~/work
+# This assumes you are in the project root. Place the tar.gz in the project parent directory, then cd into that directory; for example, ~/work
+install_ai_sdlc_offline() {
+  cd ..
+  PackageName="ai-sdlc-offline-0.7.13-macos-arm64.tar.gz"
+  PackageDir="$(pwd)"
+  if [ ! -f "$PackageName" ]; then
+    echo "当前目录没有找到安装包：$PackageDir/$PackageName"
+    echo "Package not found in the current directory: $PackageDir/$PackageName"
+    echo "请把 tar.gz 放到业务项目父目录，并先 cd 到该父目录后重试。Place the tar.gz in the project parent directory, cd into that directory, then retry."
+    return 1
+  fi
+  tar xzf "$PackageName"
+  cd ai-sdlc-offline-0.7.13-macos-arm64
+  chmod +x install_offline.sh
+  ./install_offline.sh
+  ./.venv/bin/python -m ai_sdlc --help
+}
+install_ai_sdlc_offline
 ```
 
 Linux x64 直接复制：
 
 ```bash
-# 当前假设你还在 ~/work/my-existing-project；先回到父目录 ~/work，这里应能看到下载好的 tar.gz
-cd ..
-tar xzf ai-sdlc-offline-0.7.13-linux-amd64.tar.gz
-cd ai-sdlc-offline-0.7.13-linux-amd64
-chmod +x install_offline.sh
-./install_offline.sh
-./.venv/bin/python -m ai_sdlc --help
+# 当前假设你在业务项目根目录；先把 tar.gz 放到业务项目父目录，并进入该父目录；例如 ~/work
+# This assumes you are in the project root. Place the tar.gz in the project parent directory, then cd into that directory; for example, ~/work
+install_ai_sdlc_offline() {
+  cd ..
+  PackageName="ai-sdlc-offline-0.7.13-linux-amd64.tar.gz"
+  PackageDir="$(pwd)"
+  if [ ! -f "$PackageName" ]; then
+    echo "当前目录没有找到安装包：$PackageDir/$PackageName"
+    echo "Package not found in the current directory: $PackageDir/$PackageName"
+    echo "请把 tar.gz 放到业务项目父目录，并先 cd 到该父目录后重试。Place the tar.gz in the project parent directory, cd into that directory, then retry."
+    return 1
+  fi
+  tar xzf "$PackageName"
+  cd ai-sdlc-offline-0.7.13-linux-amd64
+  chmod +x install_offline.sh
+  ./install_offline.sh
+  ./.venv/bin/python -m ai_sdlc --help
+}
+install_ai_sdlc_offline
 ```
 
 #### 场景 B：在线从 Release 下载并安装

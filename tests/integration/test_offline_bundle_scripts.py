@@ -1385,5 +1385,22 @@ def test_user_guide_splits_pre_downloaded_and_online_release_install_paths() -> 
     assert "场景 B：在线从 Release 下载并安装" in guide
     assert "不要把两套命令混用" in guide
     assert guide.count("Invoke-WebRequest -Uri") >= 2
-    assert "这里应能看到 ui-test-platform 和下载好的 zip" in guide
-    assert "这里应能看到下载好的 zip" in guide
+    assert "先把 zip 放到业务项目父目录，并进入该父目录" in guide
+    assert "先把 tar.gz 放到业务项目父目录，并进入该父目录" in guide
+    assert "This assumes you are in the project root" in guide
+    assert guide.count("cd ..") >= 6
+    assert "install_ai_sdlc_offline() {" in guide
+    assert "return 1" in guide
+    assert "exit 1" not in guide
+    assert "$PackageDir = (Get-Location).Path" in guide
+    assert "Get-ChildItem -LiteralPath . -Filter $PackageName -File" in guide
+    assert 'PackageDir="$(pwd)"' in guide
+    assert '[ ! -f "$PackageName" ]' in guide
+    assert "$HOME/Downloads" not in guide
+    assert "$env:USERPROFILE\\Downloads" not in guide
+    assert "当前目录没有找到安装包" in guide
+    assert "Package not found in the current directory" in guide
+    assert "请把 zip 放到业务项目父目录，并先 cd 到该父目录后重试" in guide
+    assert "Place the zip in the project parent directory, cd into that directory, then retry" in guide
+    assert "请把 tar.gz 放到业务项目父目录，并先 cd 到该父目录后重试" in guide
+    assert "Place the tar.gz in the project parent directory, cd into that directory, then retry" in guide
