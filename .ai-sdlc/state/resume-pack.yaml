@@ -3,23 +3,22 @@ current_batch: 0
 last_committed_task: ''
 working_set_snapshot:
   prd_path: AI-SDLC 全自动化框架 产品需求文档（PRD）.md
-  constitution_path: /private/tmp/aisdlc-v0713-install-guide-path/.ai-sdlc/memory/constitution.md
-  tech_stack_path: /private/tmp/aisdlc-v0713-install-guide-path/.ai-sdlc/profiles/tech-stack.yml
-  spec_path: /private/tmp/aisdlc-v0713-install-guide-path/specs/181-cross-platform-release-gate-matrix-baseline/spec.md
-  plan_path: /private/tmp/aisdlc-v0713-install-guide-path/specs/181-cross-platform-release-gate-matrix-baseline/plan.md
-  tasks_path: /private/tmp/aisdlc-v0713-install-guide-path/specs/181-cross-platform-release-gate-matrix-baseline/tasks.md
+  constitution_path: /private/tmp/aisdlc-v0714-release/.ai-sdlc/memory/constitution.md
+  tech_stack_path: /private/tmp/aisdlc-v0714-release/.ai-sdlc/profiles/tech-stack.yml
+  spec_path: /private/tmp/aisdlc-v0714-release/specs/181-cross-platform-release-gate-matrix-baseline/spec.md
+  plan_path: /private/tmp/aisdlc-v0714-release/specs/181-cross-platform-release-gate-matrix-baseline/plan.md
+  tasks_path: /private/tmp/aisdlc-v0714-release/specs/181-cross-platform-release-gate-matrix-baseline/tasks.md
   active_files: []
-  context_summary: 'Goal: Make pre-downloaded offline install guide executable and
-    non-destructive in interactive shells | State: Wrapped macOS/Linux pre-downloaded
-    offline install snippets in install_ai_sdlc_offline functions. Missing package
-    now returns 1 from the function instead of exit 1, so copy-pasting into an interactive
-    shell does not close the terminal. Regression asserts return 1 is used and exit
-    1 is absent from USER_GUIDE. | Next: Amend commit, force-push PR #58, request
-    @codex review, wait for checks and merge when clean.'
+  context_summary: 'Goal: Publish v0.7.14 patch release with corrected offline install
+    guidance | State: PR #59 Windows 3.11 compatibility failed because GitClient default
+    git command timeout was 5s and a Windows git commit in executor tests timed out.
+    Raised the default timeout to 30s and updated the unit assertion. Local targeted
+    tests and release checks passed. | Next: Amend/push PR #59 and re-request @codex
+    review.'
 current_branch: feature/181-cross-platform-release-gate-matrix-baseline-docs
 docs_baseline_ref: ''
 docs_baseline_at: ''
-timestamp: '2026-05-13T02:52:10+00:00'
+timestamp: '2026-05-13T03:50:59+00:00'
 checkpoint_path: .ai-sdlc/state/checkpoint.yml
 checkpoint_last_updated: '2026-04-30T03:04:43+00:00'
 checkpoint_fingerprint: 3a88fbdb372f95712ec6c6bcb34729d78927236171d0e7ea4f1e0002f7f06d10

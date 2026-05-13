@@ -15,7 +15,7 @@ from enum import Enum
 from pathlib import Path
 
 logger = logging.getLogger(__name__)
-_DEFAULT_COMMAND_TIMEOUT_SEC = 5.0
+_DEFAULT_COMMAND_TIMEOUT_SEC = 30.0
 
 
 def _dedupe_text_items(values: object) -> tuple[str, ...]:
