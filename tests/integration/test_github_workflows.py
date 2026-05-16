@@ -49,6 +49,8 @@ def test_windows_offline_smoke_workflow_covers_bundle_build_install_and_cli_chec
     assert "--install-log" in workflow
     assert "WindowsPowerShell\\v1.0\\powershell.exe" in workflow
     assert "-NoProfile -ExecutionPolicy Bypass -File .\\install_offline.ps1 -AddToPath" in workflow
+    assert '$cliDir = Join-Path $bundleDir.FullName ".venv\\Scripts"' in workflow
+    assert "$env:Path = $cliDir + [IO.Path]::PathSeparator + $env:Path" in workflow
     assert "Get-Command ai-sdlc" in workflow
     assert "ai-sdlc --help" in workflow
     assert "Legacy Artifact Probe" in workflow
@@ -121,6 +123,8 @@ def test_release_artifact_smoke_workflow_installs_published_assets() -> None:
     assert "actions/upload-artifact@v7" in workflow
     assert "WindowsPowerShell\\v1.0\\powershell.exe" in workflow
     assert "-NoProfile -ExecutionPolicy Bypass -File .\\install_offline.ps1 -AddToPath" in workflow
+    assert '$cliDir = Join-Path $bundleDir.FullName ".venv\\Scripts"' in workflow
+    assert "$env:Path = $cliDir + [IO.Path]::PathSeparator + $env:Path" in workflow
     assert "Get-Command ai-sdlc" in workflow
     assert "ai-sdlc --help" in workflow
     assert "install_offline.sh --add-to-path" in workflow
@@ -156,6 +160,8 @@ def test_release_build_workflow_matrix_builds_smokes_and_uploads_assets() -> Non
     assert "gh release upload" in workflow
     assert "WindowsPowerShell\\v1.0\\powershell.exe" in workflow
     assert "-NoProfile -ExecutionPolicy Bypass -File .\\install_offline.ps1 -AddToPath" in workflow
+    assert '$cliDir = Join-Path $bundleDir.FullName ".venv\\Scripts"' in workflow
+    assert "$env:Path = $cliDir + [IO.Path]::PathSeparator + $env:Path" in workflow
     assert "Get-Command ai-sdlc" in workflow
     assert "ai-sdlc --help" in workflow
     assert "install_offline.sh --add-to-path" in workflow

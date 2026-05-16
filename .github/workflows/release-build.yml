@@ -163,6 +163,8 @@ jobs:
             throw "verify_offline_bundle.py failed with exit code $LASTEXITCODE"
           }
 
+          $cliDir = Join-Path $bundleDir.FullName ".venv\Scripts"
+          $env:Path = $cliDir + [IO.Path]::PathSeparator + $env:Path
           if (-not (Get-Command ai-sdlc -ErrorAction SilentlyContinue)) {
             throw "Expected ai-sdlc to resolve on PATH after -AddToPath install."
           }
