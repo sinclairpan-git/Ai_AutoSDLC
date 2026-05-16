@@ -831,7 +831,41 @@ def test_install_offline_accepts_matching_platform_manifest(tmp_path: Path) -> N
     assert (bundle_dir / ".venv" / "bin" / "activate").is_file()
     assert (bundle_dir / ".venv" / "bin" / "ai-sdlc").is_file()
     assert "当前结果 / Result" in result.stdout
-    assert "ai-sdlc init ." in result.stdout
+    expected_python = _bash_path(bundle_dir / ".venv" / "bin" / "python")
+    assert f'"{expected_python}" -m ai_sdlc init .' in result.stdout
+    assert "PATH was not changed" in result.stdout
+
+
+def test_install_offline_add_to_path_enables_bare_cli_guidance(tmp_path: Path) -> None:
+    bundle_dir = tmp_path / "bundle"
+    _write_basic_bundle(bundle_dir)
+    home_dir = tmp_path / "home"
+    wrapper_dir = tmp_path / "wrappers"
+    home_dir.mkdir()
+    wrapper_dir.mkdir()
+    fake_python = _make_fake_python(wrapper_dir)
+
+    env = _script_env(wrapper_dir, fake_python)
+    env["HOME"] = str(home_dir)
+    env["SHELL"] = "/bin/bash"
+
+    result = subprocess.run(
+        [_bash_command(), str(bundle_dir / "install_offline.sh"), "--add-to-path"],
+        cwd=bundle_dir,
+        capture_output=True,
+        text=True,
+        env=env,
+        check=False,
+    )
+
+    assert result.returncode == 0, result.stderr
+    assert (bundle_dir / ".venv" / "bin" / "ai-sdlc").is_file()
+    assert (home_dir / ".local" / "bin" / "ai-sdlc").is_symlink()
+    assert "cd <your-project> && ai-sdlc init ." in result.stdout
+    assert f"PATH entry added: {_bash_path(home_dir / '.local' / 'bin')}" in result.stdout
+    assert f'export PATH="{_bash_path(home_dir / ".local" / "bin")}:$PATH"' in (
+        home_dir / ".bashrc"
+    ).read_text(encoding="utf-8")
 
 
 def test_install_offline_rejects_python_abi_manifest_mismatch(tmp_path: Path) -> None:
@@ -1092,9 +1126,48 @@ def test_install_online_uses_detected_python_and_prints_bilingual_guidance(
     assert "Using Python runtime: python3.11" in result.stdout
     assert "当前结果 / Result" in result.stdout
     assert "下一步 / Next" in result.stdout
-    assert "ai-sdlc init ." in result.stdout
+    expected_python = _bash_path(tmp_path / ".venv" / "bin" / "python")
+    assert f'"{expected_python}" -m ai_sdlc init .' in result.stdout
+    assert "PATH was not changed" in result.stdout
     assert "ai-sdlc adapter status" not in result.stdout
     assert "ai-sdlc run --dry-run" not in result.stdout
+
+
+def test_install_online_add_to_path_enables_bare_cli_guidance(tmp_path: Path) -> None:
+    script_path = tmp_path / "install_online.sh"
+    shutil.copy2(_PACKAGING_DIR / "install_online.sh", script_path)
+    script_path.chmod(0o755)
+
+    home_dir = tmp_path / "home"
+    wrapper_dir = tmp_path / "wrappers"
+    home_dir.mkdir()
+    wrapper_dir.mkdir()
+    fake_python = _make_fake_python(wrapper_dir)
+    _make_path_alias(fake_python, wrapper_dir / "python3.11")
+
+    env = dict(os.environ)
+    _set_bash_wrapper_env(env, wrapper_dir, tmp_path)
+    env["AI_SDLC_PACKAGE_SPEC"] = "ai-sdlc==0.7.4"
+    env["HOME"] = str(home_dir)
+    env["SHELL"] = "/bin/bash"
+
+    result = subprocess.run(
+        [_bash_command(), str(script_path), "--add-to-path"],
+        cwd=tmp_path,
+        capture_output=True,
+        text=True,
+        env=env,
+        check=False,
+    )
+
+    assert result.returncode == 0, result.stderr
+    assert (tmp_path / ".venv" / "bin" / "ai-sdlc").is_file()
+    assert (home_dir / ".local" / "bin" / "ai-sdlc").is_symlink()
+    assert "cd <your-project> && ai-sdlc init ." in result.stdout
+    assert f"PATH entry added: {_bash_path(home_dir / '.local' / 'bin')}" in result.stdout
+    assert f'export PATH="{_bash_path(home_dir / ".local" / "bin")}:$PATH"' in (
+        home_dir / ".bashrc"
+    ).read_text(encoding="utf-8")
 
 
 def test_install_online_auto_installs_python_when_linux_package_manager_is_available(

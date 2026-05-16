@@ -3,14 +3,31 @@
 # Usage:
 #   ./packaging/install_online.sh
 #   ./packaging/install_online.sh /path/to/venv
+#   ./packaging/install_online.sh --add-to-path
 # Env:
-#   AI_SDLC_PACKAGE_SPEC=ai-sdlc==0.7.15   optional package spec for pip install
+#   AI_SDLC_PACKAGE_SPEC=ai-sdlc==0.7.16   optional package spec for pip install
 #   PYTHON=/path/to/python3.11            optional interpreter override
 
 set -euo pipefail
 
-VENV_TARGET="${1:-.venv}"
 PACKAGE_SPEC="${AI_SDLC_PACKAGE_SPEC:-ai-sdlc}"
+ADD_TO_PATH=0
+POSITIONAL_VENV_TARGET=""
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --add-to-path)
+      ADD_TO_PATH=1
+      shift
+      ;;
+    *)
+      if [[ -z "${POSITIONAL_VENV_TARGET}" ]]; then
+        POSITIONAL_VENV_TARGET="$1"
+      fi
+      shift
+      ;;
+  esac
+done
+VENV_TARGET="${POSITIONAL_VENV_TARGET:-.venv}"
 
 print_status() {
   local status_zh="$1"
@@ -36,6 +53,45 @@ run_privileged() {
   else
     return 1
   fi
+}
+
+append_path_export_if_needed() {
+  local bin_dir="$1"
+  local shell_name
+  local rc_file
+  shell_name="${SHELL##*/}"
+  case "${shell_name}" in
+    zsh) rc_file="${HOME}/.zshrc" ;;
+    bash) rc_file="${HOME}/.bashrc" ;;
+    *) rc_file="${HOME}/.profile" ;;
+  esac
+  local export_line="export PATH=\"${bin_dir}:\$PATH\""
+  if [[ -f "${rc_file}" ]]; then
+    while IFS= read -r line; do
+      if [[ "${line}" == *"${bin_dir}"* ]]; then
+        return 0
+      fi
+    done < "${rc_file}"
+  fi
+  printf '\n# AI-SDLC CLI entrypoint\n%s\n' "${export_line}" >> "${rc_file}"
+}
+
+create_user_cli_link() {
+  local user_bin="$1"
+  local cli_path="$2"
+  "${PYTHON_BIN}" - "${user_bin}" "${cli_path}" <<'PY'
+from pathlib import Path
+import os
+import sys
+
+user_bin = Path(os.path.expanduser(sys.argv[1]))
+cli_path = Path(sys.argv[2]).resolve()
+user_bin.mkdir(parents=True, exist_ok=True)
+link = user_bin / "ai-sdlc"
+if link.exists() or link.is_symlink():
+    link.unlink()
+link.symlink_to(cli_path)
+PY
 }
 
 pick_python() {
@@ -111,10 +167,31 @@ VENV_PYTHON="${VENV_TARGET}/bin/python"
 "${VENV_PYTHON}" -m pip install -U pip >/dev/null
 "${VENV_PYTHON}" -m pip install "${PACKAGE_SPEC}"
 
+CLI_PATH="${VENV_TARGET}/bin/ai-sdlc"
+VENV_PYTHON_DIR="${VENV_PYTHON%/*}"
+VENV_PYTHON_BASE="${VENV_PYTHON##*/}"
+RESOLVED_VENV_PYTHON="$(cd "${VENV_PYTHON_DIR}" && pwd)/${VENV_PYTHON_BASE}"
+NEXT_COMMAND="cd <your-project> && \"${RESOLVED_VENV_PYTHON}\" -m ai_sdlc init ."
+if [[ "${ADD_TO_PATH}" == "1" ]]; then
+  USER_BIN="${HOME}/.local/bin"
+  create_user_cli_link "${USER_BIN}" "${CLI_PATH}"
+  append_path_export_if_needed "${USER_BIN}"
+  export PATH="${USER_BIN}:${PATH}"
+  NEXT_COMMAND="cd <your-project> && ai-sdlc init ."
+fi
+
 echo ""
 print_status \
   "在线安装完成。安装脚本已创建运行环境并安装 AI-SDLC。" \
   "Online installation completed. The installer created the runtime and installed AI-SDLC." \
-  "source \"${VENV_TARGET}/bin/activate\" && cd <your-project> && ai-sdlc init ." \
+  "${NEXT_COMMAND}" \
   "进入你的项目后执行初始化；init 会自动完成必要检查和安全预演。" \
   "Enter your project and initialize it; init will automatically run the required checks and safe rehearsal."
+
+if [[ "${ADD_TO_PATH}" == "1" ]]; then
+  echo ""
+  echo "PATH entry added: ${HOME}/.local/bin"
+else
+  echo ""
+  echo "PATH was not changed. Rerun with --add-to-path to enable bare ai-sdlc commands."
+fi
