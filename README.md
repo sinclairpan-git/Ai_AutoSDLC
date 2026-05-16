@@ -4,18 +4,18 @@ AI-native SDLC automation framework — a Python CLI tool and rule file set for 
 
 ## Release And Current Source
 
-`v0.7.16` is the current published framework release. This patch release
+`v0.7.17` is the current published framework release. This patch release
 hardens the first-run install path: installers can explicitly write the CLI
 entrypoint to PATH, documentation now distinguishes PATH and no-PATH command
 forms, and release gates verify that published assets support the documented
 bare `ai-sdlc ...` commands.
 
-If you want the published release, install `v0.7.16`. If you are evaluating newer unreleased behavior beyond this tag, prefer the source-checkout path below.
+If you want the published release, install `v0.7.17`. If you are evaluating newer unreleased behavior beyond this tag, prefer the source-checkout path below.
 
-- Current release notes: `docs/releases/v0.7.16.md`
-- Windows offline bundle: `ai-sdlc-offline-0.7.16-windows-amd64.zip`
-- macOS offline bundle: `ai-sdlc-offline-0.7.16-macos-arm64.tar.gz`
-- Linux offline bundle: `ai-sdlc-offline-0.7.16-linux-amd64.tar.gz`
+- Current release notes: `docs/releases/v0.7.17.md`
+- Windows offline bundle: `ai-sdlc-offline-0.7.17-windows-amd64.zip`
+- macOS offline bundle: `ai-sdlc-offline-0.7.17-macos-arm64.tar.gz`
+- Linux offline bundle: `ai-sdlc-offline-0.7.17-linux-amd64.tar.gz`
 - Offline packaging details: `packaging/offline/README.md`
 - Offline Python runtime release checklist: `packaging/offline/RELEASE_CHECKLIST.md`
 - Windows CI smoke evidence: `.github/workflows/windows-offline-smoke.yml` uploads `windows-offline-smoke-evidence` with `install.log`, `help.txt`, `adapter-status.txt`, `run-dry-run.txt`, and `bundle-manifest.json`
@@ -71,27 +71,27 @@ package and run its `--upgrade-existing` mode once; after that, use
 macOS Apple Silicon:
 
 ```bash
-curl -L -o ai-sdlc-offline-0.7.16-macos-arm64.tar.gz "https://github.com/sinclairpan-git/Ai_AutoSDLC/releases/download/v0.7.16/ai-sdlc-offline-0.7.16-macos-arm64.tar.gz"
-tar xzf ai-sdlc-offline-0.7.16-macos-arm64.tar.gz
-cd ai-sdlc-offline-0.7.16-macos-arm64
+curl -L -o ai-sdlc-offline-0.7.17-macos-arm64.tar.gz "https://github.com/sinclairpan-git/Ai_AutoSDLC/releases/download/v0.7.17/ai-sdlc-offline-0.7.17-macos-arm64.tar.gz"
+tar xzf ai-sdlc-offline-0.7.17-macos-arm64.tar.gz
+cd ai-sdlc-offline-0.7.17-macos-arm64
 ./install_offline.sh --upgrade-existing
 ```
 
 Linux x64:
 
 ```bash
-curl -L -o ai-sdlc-offline-0.7.16-linux-amd64.tar.gz "https://github.com/sinclairpan-git/Ai_AutoSDLC/releases/download/v0.7.16/ai-sdlc-offline-0.7.16-linux-amd64.tar.gz"
-tar xzf ai-sdlc-offline-0.7.16-linux-amd64.tar.gz
-cd ai-sdlc-offline-0.7.16-linux-amd64
+curl -L -o ai-sdlc-offline-0.7.17-linux-amd64.tar.gz "https://github.com/sinclairpan-git/Ai_AutoSDLC/releases/download/v0.7.17/ai-sdlc-offline-0.7.17-linux-amd64.tar.gz"
+tar xzf ai-sdlc-offline-0.7.17-linux-amd64.tar.gz
+cd ai-sdlc-offline-0.7.17-linux-amd64
 ./install_offline.sh --upgrade-existing
 ```
 
 Windows PowerShell:
 
 ```powershell
-Invoke-WebRequest -Uri "https://github.com/sinclairpan-git/Ai_AutoSDLC/releases/download/v0.7.16/ai-sdlc-offline-0.7.16-windows-amd64.zip" -OutFile "ai-sdlc-offline-0.7.16-windows-amd64.zip"
-Expand-Archive -LiteralPath .\ai-sdlc-offline-0.7.16-windows-amd64.zip -DestinationPath .
-cd .\ai-sdlc-offline-0.7.16-windows-amd64
+Invoke-WebRequest -Uri "https://github.com/sinclairpan-git/Ai_AutoSDLC/releases/download/v0.7.17/ai-sdlc-offline-0.7.17-windows-amd64.zip" -OutFile "ai-sdlc-offline-0.7.17-windows-amd64.zip"
+Expand-Archive -LiteralPath .\ai-sdlc-offline-0.7.17-windows-amd64.zip -DestinationPath .
+cd .\ai-sdlc-offline-0.7.17-windows-amd64
 powershell -ExecutionPolicy Bypass -File .\install_offline.ps1 -UpgradeExisting
 ```
 
@@ -158,7 +158,7 @@ ai-sdlc init . --agent-target codex
 
 Use `ai-sdlc adapter status` to see the beginner-safe result and one next action, `ai-sdlc adapter status --json` to inspect raw machine truth, or `ai-sdlc adapter select --agent-target <target>` to correct a wrong target.
 
-AI-SDLC now also persists a project-level preferred command shell in `.ai-sdlc/project/config/project-config.yaml`. `ai-sdlc init` selects a recommended default for the host OS and writes it to config. For already-initialized projects, run `ai-sdlc adapter shell-select` to re-pick the shell and refresh `AGENTS.md` / adapter instructions so Codex, Cursor, Claude Code, and VS Code stop guessing between PowerShell, bash, zsh, or cmd syntax.
+AI-SDLC now also persists a project-level preferred command shell in `.ai-sdlc/project/config/project-config.yaml`. In an interactive terminal, `ai-sdlc init` prompts for that shell; in non-interactive automation, it records the recommended default for the host OS. For already-initialized projects, run `ai-sdlc adapter shell-select` to re-pick the shell and refresh `AGENTS.md` / adapter instructions so Codex, Cursor, Claude Code, and VS Code stop guessing between PowerShell, bash, zsh, or cmd syntax.
 
 ## Frontend Managed Delivery Loop
 
@@ -247,7 +247,7 @@ The file `.ai-sdlc/project/config/project-config.yaml` holds IDE detection metad
 
 ## Documentation
 
-- Current release notes: `docs/releases/v0.7.16.md`
+- Current release notes: `docs/releases/v0.7.17.md`
 - Chinese user guide: `USER_GUIDE.zh-CN.md` (start with the **目录**, then jump to Chapter 1 or Chapter 2)
 - Offline install bundle (build + one-command install): `packaging/offline/README.md`
 - Offline Python runtime release checklist: `packaging/offline/RELEASE_CHECKLIST.md`

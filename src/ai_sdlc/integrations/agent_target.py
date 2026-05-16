@@ -172,25 +172,55 @@ def interactive_select_preferred_shell(
 
 
 def _render_selector(output: TextIO, index: int) -> None:
+    _clear_selector_screen(output)
     lines = [
         "请选择当前实际用于聊天开发的 AI 代理入口（方向键选择，回车确认）：",
     ]
     for position, option in enumerate(AGENT_TARGET_OPTIONS):
         prefix = ">" if position == index else " "
         lines.append(f"{prefix} {agent_target_label(option)}")
-    output.write("\x1b[2J\x1b[H" + "\n".join(lines))
+    output.write("\n".join(lines))
     output.flush()
 
 
 def _render_shell_selector(output: TextIO, index: int) -> None:
+    _clear_selector_screen(output)
     lines = [
         "请选择当前项目默认使用的命令 Shell（方向键选择，回车确认）：",
     ]
     for position, option in enumerate(PREFERRED_SHELL_OPTIONS):
         prefix = ">" if position == index else " "
         lines.append(f"{prefix} {preferred_shell_label(option)}")
-    output.write("\x1b[2J\x1b[H" + "\n".join(lines))
+    output.write("\n".join(lines))
     output.flush()
+
+
+def _clear_selector_screen(output: TextIO) -> None:
+    if not _selector_output_is_tty(output):
+        should_separate = False
+        tell = getattr(output, "tell", None)
+        if callable(tell):
+            try:
+                should_separate = tell() > 0
+            except Exception:
+                should_separate = False
+        if should_separate:
+            output.write("\n")
+        return
+    if os.name == "nt":
+        os.system("cls")
+        return
+    output.write("\x1b[2J\x1b[H")
+
+
+def _selector_output_is_tty(output: TextIO) -> bool:
+    isatty = getattr(output, "isatty", None)
+    if not callable(isatty):
+        return False
+    try:
+        return bool(isatty())
+    except Exception:
+        return False
 
 
 def _read_selector_key() -> str:

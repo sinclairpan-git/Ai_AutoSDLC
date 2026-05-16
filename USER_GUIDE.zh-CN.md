@@ -1,14 +1,14 @@
 # AI-SDLC 用户指引
 
-当前正式发布版：`v0.7.16`。
+当前正式发布版：`v0.7.17`。
 
 普通用户优先使用 GitHub Release 离线包或公司管理员提供的安装包。安装脚本会自己检测运行时；不要一上来就手动创建 venv、拼 pip 依赖或改 PATH。
 
 ## 命令入口规则：PATH 与无 PATH
 
-本手册推荐安装时显式同意写入 PATH，这样后续可以直接执行 `ai-sdlc ...`。Windows 用 `-AddToPath`，macOS / Linux 用 `--add-to-path`。
+本手册推荐安装时显式同意写入 PATH，这样后续可以直接执行 `ai-sdlc ...`。Windows 用 `-AddToPath`，macOS / Linux 用 `--add-to-path`。这些参数本身就是写入 PATH 的确认信号；安装器不会再弹出第二次确认。
 
-Windows 注意：如果你是用 `powershell -ExecutionPolicy Bypass -File ... -AddToPath` 启动安装脚本，PATH 会写入用户 PATH，通常需要新开一个终端后裸 `ai-sdlc ...` 才会被父终端识别。安装完成后的当前终端如果要立刻验证，请使用安装包目录里的 `.\.venv\Scripts\python.exe -m ai_sdlc --help`，或者使用安装脚本最后打印的 Direct shim。
+Windows 注意：如果你是用 `powershell -ExecutionPolicy Bypass -File ... -AddToPath` 启动安装脚本，PATH 会写入用户 PATH，通常需要新开一个终端后裸 `ai-sdlc ...` 才会被父终端识别。安装完成后的当前终端如果要立刻初始化项目，请使用安装脚本最后打印的 Direct shim；否则裸 `ai-sdlc init .` 可能仍解析到机器上已有的旧版本。可用 `Get-Command ai-sdlc | Select-Object Source` 检查当前命中的入口。
 
 写入 PATH 后，通用命令就是：
 
@@ -80,7 +80,7 @@ cd ui-test-platform
 - **场景 B：当前机器可以访问 GitHub**，直接从 Release 下载、解压并安装
 
 ```text
-https://github.com/sinclairpan-git/Ai_AutoSDLC/releases/tag/v0.7.16
+https://github.com/sinclairpan-git/Ai_AutoSDLC/releases/tag/v0.7.17
 ```
 
 #### 场景 A：已提前下载离线包
@@ -90,7 +90,7 @@ Windows x64 直接复制：
 ```powershell
 # 当前假设你已经 cd 到 zip 所在目录；脚本只检查当前目录，不扫描其他目录
 # This assumes you have cd'ed into the directory containing the zip. The script checks only the current directory.
-$PackageName = "ai-sdlc-offline-0.7.16-windows-amd64.zip"
+$PackageName = "ai-sdlc-offline-0.7.17-windows-amd64.zip"
 $PackageDir = (Get-Location).Path
 $Zip = Get-ChildItem -LiteralPath . -Filter $PackageName -File | Select-Object -First 1
 if (-not $Zip) {
@@ -99,7 +99,7 @@ if (-not $Zip) {
   throw "请把 zip 放到当前目录，并先 cd 到该目录后重试。Place the zip in the current directory, cd into that directory, then retry."
 }
 Expand-Archive -LiteralPath $Zip.FullName -DestinationPath $PackageDir -Force
-Set-Location (Join-Path $PackageDir "ai-sdlc-offline-0.7.16-windows-amd64")
+Set-Location (Join-Path $PackageDir "ai-sdlc-offline-0.7.17-windows-amd64")
 powershell -ExecutionPolicy Bypass -File .\install_offline.ps1 -AddToPath
 .\.venv\Scripts\python.exe -m ai_sdlc --help
 ```
@@ -110,7 +110,7 @@ macOS Apple Silicon 直接复制：
 # 当前假设你已经 cd 到 tar.gz 所在目录；脚本只检查当前目录，不扫描其他目录
 # This assumes you have cd'ed into the directory containing the tar.gz. The script checks only the current directory.
 install_ai_sdlc_offline() {
-  PackageName="ai-sdlc-offline-0.7.16-macos-arm64.tar.gz"
+  PackageName="ai-sdlc-offline-0.7.17-macos-arm64.tar.gz"
   PackageDir="$(pwd)"
   if [ ! -f "$PackageName" ]; then
     echo "当前目录没有找到安装包：$PackageDir/$PackageName"
@@ -119,7 +119,7 @@ install_ai_sdlc_offline() {
     return 1
   fi
   tar xzf "$PackageName"
-  cd ai-sdlc-offline-0.7.16-macos-arm64
+  cd ai-sdlc-offline-0.7.17-macos-arm64
   chmod +x install_offline.sh
   ./install_offline.sh --add-to-path
   ai-sdlc --help
@@ -133,7 +133,7 @@ Linux x64 直接复制：
 # 当前假设你已经 cd 到 tar.gz 所在目录；脚本只检查当前目录，不扫描其他目录
 # This assumes you have cd'ed into the directory containing the tar.gz. The script checks only the current directory.
 install_ai_sdlc_offline() {
-  PackageName="ai-sdlc-offline-0.7.16-linux-amd64.tar.gz"
+  PackageName="ai-sdlc-offline-0.7.17-linux-amd64.tar.gz"
   PackageDir="$(pwd)"
   if [ ! -f "$PackageName" ]; then
     echo "当前目录没有找到安装包：$PackageDir/$PackageName"
@@ -142,7 +142,7 @@ install_ai_sdlc_offline() {
     return 1
   fi
   tar xzf "$PackageName"
-  cd ai-sdlc-offline-0.7.16-linux-amd64
+  cd ai-sdlc-offline-0.7.17-linux-amd64
   chmod +x install_offline.sh
   ./install_offline.sh --add-to-path
   ai-sdlc --help
@@ -157,9 +157,9 @@ Windows x64 直接复制：
 ```powershell
 # 回到项目父目录，让安装包目录和业务项目目录同级
 cd ..
-Invoke-WebRequest -Uri "https://github.com/sinclairpan-git/Ai_AutoSDLC/releases/download/v0.7.16/ai-sdlc-offline-0.7.16-windows-amd64.zip" -OutFile "ai-sdlc-offline-0.7.16-windows-amd64.zip"
-Expand-Archive -LiteralPath .\ai-sdlc-offline-0.7.16-windows-amd64.zip -DestinationPath .
-cd .\ai-sdlc-offline-0.7.16-windows-amd64
+Invoke-WebRequest -Uri "https://github.com/sinclairpan-git/Ai_AutoSDLC/releases/download/v0.7.17/ai-sdlc-offline-0.7.17-windows-amd64.zip" -OutFile "ai-sdlc-offline-0.7.17-windows-amd64.zip"
+Expand-Archive -LiteralPath .\ai-sdlc-offline-0.7.17-windows-amd64.zip -DestinationPath .
+cd .\ai-sdlc-offline-0.7.17-windows-amd64
 powershell -ExecutionPolicy Bypass -File .\install_offline.ps1 -AddToPath
 .\.venv\Scripts\python.exe -m ai_sdlc --help
 ```
@@ -169,9 +169,9 @@ macOS Apple Silicon 直接复制：
 ```bash
 # 回到项目父目录，让安装包目录和业务项目目录同级
 cd ..
-curl -L -o ai-sdlc-offline-0.7.16-macos-arm64.tar.gz "https://github.com/sinclairpan-git/Ai_AutoSDLC/releases/download/v0.7.16/ai-sdlc-offline-0.7.16-macos-arm64.tar.gz"
-tar xzf ai-sdlc-offline-0.7.16-macos-arm64.tar.gz
-cd ai-sdlc-offline-0.7.16-macos-arm64
+curl -L -o ai-sdlc-offline-0.7.17-macos-arm64.tar.gz "https://github.com/sinclairpan-git/Ai_AutoSDLC/releases/download/v0.7.17/ai-sdlc-offline-0.7.17-macos-arm64.tar.gz"
+tar xzf ai-sdlc-offline-0.7.17-macos-arm64.tar.gz
+cd ai-sdlc-offline-0.7.17-macos-arm64
 chmod +x install_offline.sh
 ./install_offline.sh --add-to-path
 ai-sdlc --help
@@ -182,9 +182,9 @@ Linux x64 直接复制：
 ```bash
 # 回到项目父目录，让安装包目录和业务项目目录同级
 cd ..
-curl -L -o ai-sdlc-offline-0.7.16-linux-amd64.tar.gz "https://github.com/sinclairpan-git/Ai_AutoSDLC/releases/download/v0.7.16/ai-sdlc-offline-0.7.16-linux-amd64.tar.gz"
-tar xzf ai-sdlc-offline-0.7.16-linux-amd64.tar.gz
-cd ai-sdlc-offline-0.7.16-linux-amd64
+curl -L -o ai-sdlc-offline-0.7.17-linux-amd64.tar.gz "https://github.com/sinclairpan-git/Ai_AutoSDLC/releases/download/v0.7.17/ai-sdlc-offline-0.7.17-linux-amd64.tar.gz"
+tar xzf ai-sdlc-offline-0.7.17-linux-amd64.tar.gz
+cd ai-sdlc-offline-0.7.17-linux-amd64
 chmod +x install_offline.sh
 ./install_offline.sh --add-to-path
 ai-sdlc --help
@@ -314,7 +314,7 @@ git status
 
 ### 2. 安装 AI-SDLC
 
-已有项目也优先使用 `v0.7.16` Release 包或公司安装包。这里也分两种场景：已提前下载离线包，或在线从 Release 下载并安装。
+已有项目也优先使用 `v0.7.17` Release 包或公司安装包。这里也分两种场景：已提前下载离线包，或在线从 Release 下载并安装。
 
 #### 场景 A：已提前下载离线包
 
@@ -323,7 +323,7 @@ Windows x64 直接复制：
 ```powershell
 # 当前假设你已经 cd 到 zip 所在目录；脚本只检查当前目录，不扫描其他目录
 # This assumes you have cd'ed into the directory containing the zip. The script checks only the current directory.
-$PackageName = "ai-sdlc-offline-0.7.16-windows-amd64.zip"
+$PackageName = "ai-sdlc-offline-0.7.17-windows-amd64.zip"
 $PackageDir = (Get-Location).Path
 $Zip = Get-ChildItem -LiteralPath . -Filter $PackageName -File | Select-Object -First 1
 if (-not $Zip) {
@@ -332,7 +332,7 @@ if (-not $Zip) {
   throw "请把 zip 放到当前目录，并先 cd 到该目录后重试。Place the zip in the current directory, cd into that directory, then retry."
 }
 Expand-Archive -LiteralPath $Zip.FullName -DestinationPath $PackageDir -Force
-Set-Location (Join-Path $PackageDir "ai-sdlc-offline-0.7.16-windows-amd64")
+Set-Location (Join-Path $PackageDir "ai-sdlc-offline-0.7.17-windows-amd64")
 powershell -ExecutionPolicy Bypass -File .\install_offline.ps1 -AddToPath
 .\.venv\Scripts\python.exe -m ai_sdlc --help
 ```
@@ -343,7 +343,7 @@ macOS Apple Silicon 直接复制：
 # 当前假设你已经 cd 到 tar.gz 所在目录；脚本只检查当前目录，不扫描其他目录
 # This assumes you have cd'ed into the directory containing the tar.gz. The script checks only the current directory.
 install_ai_sdlc_offline() {
-  PackageName="ai-sdlc-offline-0.7.16-macos-arm64.tar.gz"
+  PackageName="ai-sdlc-offline-0.7.17-macos-arm64.tar.gz"
   PackageDir="$(pwd)"
   if [ ! -f "$PackageName" ]; then
     echo "当前目录没有找到安装包：$PackageDir/$PackageName"
@@ -352,7 +352,7 @@ install_ai_sdlc_offline() {
     return 1
   fi
   tar xzf "$PackageName"
-  cd ai-sdlc-offline-0.7.16-macos-arm64
+  cd ai-sdlc-offline-0.7.17-macos-arm64
   chmod +x install_offline.sh
   ./install_offline.sh --add-to-path
   ai-sdlc --help
@@ -366,7 +366,7 @@ Linux x64 直接复制：
 # 当前假设你已经 cd 到 tar.gz 所在目录；脚本只检查当前目录，不扫描其他目录
 # This assumes you have cd'ed into the directory containing the tar.gz. The script checks only the current directory.
 install_ai_sdlc_offline() {
-  PackageName="ai-sdlc-offline-0.7.16-linux-amd64.tar.gz"
+  PackageName="ai-sdlc-offline-0.7.17-linux-amd64.tar.gz"
   PackageDir="$(pwd)"
   if [ ! -f "$PackageName" ]; then
     echo "当前目录没有找到安装包：$PackageDir/$PackageName"
@@ -375,7 +375,7 @@ install_ai_sdlc_offline() {
     return 1
   fi
   tar xzf "$PackageName"
-  cd ai-sdlc-offline-0.7.16-linux-amd64
+  cd ai-sdlc-offline-0.7.17-linux-amd64
   chmod +x install_offline.sh
   ./install_offline.sh --add-to-path
   ai-sdlc --help
@@ -390,9 +390,9 @@ Windows x64 直接复制：
 ```powershell
 # 当前假设你还在 D:\work\my-existing-project；先回到父目录 D:\work
 cd ..
-Invoke-WebRequest -Uri "https://github.com/sinclairpan-git/Ai_AutoSDLC/releases/download/v0.7.16/ai-sdlc-offline-0.7.16-windows-amd64.zip" -OutFile "ai-sdlc-offline-0.7.16-windows-amd64.zip"
-Expand-Archive -LiteralPath .\ai-sdlc-offline-0.7.16-windows-amd64.zip -DestinationPath .
-cd .\ai-sdlc-offline-0.7.16-windows-amd64
+Invoke-WebRequest -Uri "https://github.com/sinclairpan-git/Ai_AutoSDLC/releases/download/v0.7.17/ai-sdlc-offline-0.7.17-windows-amd64.zip" -OutFile "ai-sdlc-offline-0.7.17-windows-amd64.zip"
+Expand-Archive -LiteralPath .\ai-sdlc-offline-0.7.17-windows-amd64.zip -DestinationPath .
+cd .\ai-sdlc-offline-0.7.17-windows-amd64
 powershell -ExecutionPolicy Bypass -File .\install_offline.ps1 -AddToPath
 .\.venv\Scripts\python.exe -m ai_sdlc --help
 ```
@@ -402,9 +402,9 @@ macOS Apple Silicon 直接复制：
 ```bash
 # 当前假设你还在 ~/work/my-existing-project；先回到父目录 ~/work
 cd ..
-curl -L -o ai-sdlc-offline-0.7.16-macos-arm64.tar.gz "https://github.com/sinclairpan-git/Ai_AutoSDLC/releases/download/v0.7.16/ai-sdlc-offline-0.7.16-macos-arm64.tar.gz"
-tar xzf ai-sdlc-offline-0.7.16-macos-arm64.tar.gz
-cd ai-sdlc-offline-0.7.16-macos-arm64
+curl -L -o ai-sdlc-offline-0.7.17-macos-arm64.tar.gz "https://github.com/sinclairpan-git/Ai_AutoSDLC/releases/download/v0.7.17/ai-sdlc-offline-0.7.17-macos-arm64.tar.gz"
+tar xzf ai-sdlc-offline-0.7.17-macos-arm64.tar.gz
+cd ai-sdlc-offline-0.7.17-macos-arm64
 chmod +x install_offline.sh
 ./install_offline.sh --add-to-path
 ai-sdlc --help
@@ -415,9 +415,9 @@ Linux x64 直接复制：
 ```bash
 # 当前假设你还在 ~/work/my-existing-project；先回到父目录 ~/work
 cd ..
-curl -L -o ai-sdlc-offline-0.7.16-linux-amd64.tar.gz "https://github.com/sinclairpan-git/Ai_AutoSDLC/releases/download/v0.7.16/ai-sdlc-offline-0.7.16-linux-amd64.tar.gz"
-tar xzf ai-sdlc-offline-0.7.16-linux-amd64.tar.gz
-cd ai-sdlc-offline-0.7.16-linux-amd64
+curl -L -o ai-sdlc-offline-0.7.17-linux-amd64.tar.gz "https://github.com/sinclairpan-git/Ai_AutoSDLC/releases/download/v0.7.17/ai-sdlc-offline-0.7.17-linux-amd64.tar.gz"
+tar xzf ai-sdlc-offline-0.7.17-linux-amd64.tar.gz
+cd ai-sdlc-offline-0.7.17-linux-amd64
 chmod +x install_offline.sh
 ./install_offline.sh --add-to-path
 ai-sdlc --help
@@ -509,7 +509,7 @@ ai-sdlc self-update check
 升级成功以后，你应该看到：
 
 - 输出包含更新完成或安装完成的信息
-- 输出包含当前安装版本，例如 `Installed version: 0.7.16`
+- 输出包含当前安装版本，例如 `Installed version: 0.7.17`
 - 后续再执行 `ai-sdlc --version` 或 `ai-sdlc self-update check`，应显示新版本入口可用
 
 如果失败：
@@ -525,9 +525,9 @@ ai-sdlc self-update check
 Windows x64：
 
 ```powershell
-Invoke-WebRequest -Uri "https://github.com/sinclairpan-git/Ai_AutoSDLC/releases/download/v0.7.16/ai-sdlc-offline-0.7.16-windows-amd64.zip" -OutFile "ai-sdlc-offline-0.7.16-windows-amd64.zip"
-Expand-Archive -LiteralPath .\ai-sdlc-offline-0.7.16-windows-amd64.zip -DestinationPath .
-cd .\ai-sdlc-offline-0.7.16-windows-amd64
+Invoke-WebRequest -Uri "https://github.com/sinclairpan-git/Ai_AutoSDLC/releases/download/v0.7.17/ai-sdlc-offline-0.7.17-windows-amd64.zip" -OutFile "ai-sdlc-offline-0.7.17-windows-amd64.zip"
+Expand-Archive -LiteralPath .\ai-sdlc-offline-0.7.17-windows-amd64.zip -DestinationPath .
+cd .\ai-sdlc-offline-0.7.17-windows-amd64
 powershell -ExecutionPolicy Bypass -File .\install_offline.ps1 -UpgradeExisting
 ai-sdlc --version
 ai-sdlc self-update check
@@ -536,9 +536,9 @@ ai-sdlc self-update check
 macOS Apple Silicon：
 
 ```bash
-curl -L -o ai-sdlc-offline-0.7.16-macos-arm64.tar.gz "https://github.com/sinclairpan-git/Ai_AutoSDLC/releases/download/v0.7.16/ai-sdlc-offline-0.7.16-macos-arm64.tar.gz"
-tar xzf ai-sdlc-offline-0.7.16-macos-arm64.tar.gz
-cd ai-sdlc-offline-0.7.16-macos-arm64
+curl -L -o ai-sdlc-offline-0.7.17-macos-arm64.tar.gz "https://github.com/sinclairpan-git/Ai_AutoSDLC/releases/download/v0.7.17/ai-sdlc-offline-0.7.17-macos-arm64.tar.gz"
+tar xzf ai-sdlc-offline-0.7.17-macos-arm64.tar.gz
+cd ai-sdlc-offline-0.7.17-macos-arm64
 ./install_offline.sh --upgrade-existing
 ai-sdlc --version
 ai-sdlc self-update check
@@ -547,9 +547,9 @@ ai-sdlc self-update check
 Linux x64：
 
 ```bash
-curl -L -o ai-sdlc-offline-0.7.16-linux-amd64.tar.gz "https://github.com/sinclairpan-git/Ai_AutoSDLC/releases/download/v0.7.16/ai-sdlc-offline-0.7.16-linux-amd64.tar.gz"
-tar xzf ai-sdlc-offline-0.7.16-linux-amd64.tar.gz
-cd ai-sdlc-offline-0.7.16-linux-amd64
+curl -L -o ai-sdlc-offline-0.7.17-linux-amd64.tar.gz "https://github.com/sinclairpan-git/Ai_AutoSDLC/releases/download/v0.7.17/ai-sdlc-offline-0.7.17-linux-amd64.tar.gz"
+tar xzf ai-sdlc-offline-0.7.17-linux-amd64.tar.gz
+cd ai-sdlc-offline-0.7.17-linux-amd64
 ./install_offline.sh --upgrade-existing
 ai-sdlc --version
 ai-sdlc self-update check
@@ -620,7 +620,7 @@ python -m ai_sdlc <子命令>
 | --- | --- |
 | `ai-sdlc: command not found` / `ai-sdlc 不是内部或外部命令` | 用安装包输出的完整路径，或执行 `python -m ai_sdlc --help`；再用 `ai-sdlc doctor` 排查 PATH |
 | `No module named ai_sdlc` | 当前 Python 环境没有安装 AI-SDLC；回到安装包目录重新安装 |
-| `No such command 'install'` | 旧 CLI 太老；下载 `v0.7.16` 同平台包并执行 `--upgrade-existing` / `-UpgradeExisting` |
+| `No such command 'install'` | 旧 CLI 太老；下载 `v0.7.17` 同平台包并执行 `--upgrade-existing` / `-UpgradeExisting` |
 | `Update check failed` | GitHub 网络不可用或超时；用离线包救援升级 |
 | `offline bundle platform mismatch` | 安装包平台不匹配；换 Windows x64、macOS arm64 或 Linux x64 对应包 |
 | `need Python >= 3.11` | 包内没有可用 Python runtime 且系统 Python 太旧；换带 `python-runtime/` 的安装包 |
