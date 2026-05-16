@@ -831,7 +831,8 @@ def test_install_offline_accepts_matching_platform_manifest(tmp_path: Path) -> N
     assert (bundle_dir / ".venv" / "bin" / "activate").is_file()
     assert (bundle_dir / ".venv" / "bin" / "ai-sdlc").is_file()
     assert "当前结果 / Result" in result.stdout
-    assert f'"{bundle_dir / ".venv" / "bin" / "python"}" -m ai_sdlc init .' in result.stdout
+    expected_python = _bash_path(bundle_dir / ".venv" / "bin" / "python")
+    assert f'"{expected_python}" -m ai_sdlc init .' in result.stdout
     assert "PATH was not changed" in result.stdout
 
 
@@ -861,7 +862,7 @@ def test_install_offline_add_to_path_enables_bare_cli_guidance(tmp_path: Path) -
     assert (bundle_dir / ".venv" / "bin" / "ai-sdlc").is_file()
     assert (home_dir / ".local" / "bin" / "ai-sdlc").is_symlink()
     assert "cd <your-project> && ai-sdlc init ." in result.stdout
-    assert f"PATH entry added: {home_dir / '.local' / 'bin'}" in result.stdout
+    assert f"PATH entry added: {_bash_path(home_dir / '.local' / 'bin')}" in result.stdout
     assert f'export PATH="{home_dir / ".local" / "bin"}:$PATH"' in (
         home_dir / ".bashrc"
     ).read_text(encoding="utf-8")
@@ -1125,7 +1126,8 @@ def test_install_online_uses_detected_python_and_prints_bilingual_guidance(
     assert "Using Python runtime: python3.11" in result.stdout
     assert "当前结果 / Result" in result.stdout
     assert "下一步 / Next" in result.stdout
-    assert f'"{tmp_path / ".venv" / "bin" / "python"}" -m ai_sdlc init .' in result.stdout
+    expected_python = _bash_path(tmp_path / ".venv" / "bin" / "python")
+    assert f'"{expected_python}" -m ai_sdlc init .' in result.stdout
     assert "PATH was not changed" in result.stdout
     assert "ai-sdlc adapter status" not in result.stdout
     assert "ai-sdlc run --dry-run" not in result.stdout
@@ -1162,7 +1164,7 @@ def test_install_online_add_to_path_enables_bare_cli_guidance(tmp_path: Path) ->
     assert (tmp_path / ".venv" / "bin" / "ai-sdlc").is_file()
     assert (home_dir / ".local" / "bin" / "ai-sdlc").is_symlink()
     assert "cd <your-project> && ai-sdlc init ." in result.stdout
-    assert f"PATH entry added: {home_dir / '.local' / 'bin'}" in result.stdout
+    assert f"PATH entry added: {_bash_path(home_dir / '.local' / 'bin')}" in result.stdout
     assert f'export PATH="{home_dir / ".local" / "bin"}:$PATH"' in (
         home_dir / ".bashrc"
     ).read_text(encoding="utf-8")
