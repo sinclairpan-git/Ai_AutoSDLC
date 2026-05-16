@@ -42,6 +42,8 @@ AI_SDLC_OFFLINE_PYTHON_RUNTIME=/path/to/python-runtime \
 
 推荐显式写入 PATH，这样后续可以直接执行 `ai-sdlc --help`、`ai-sdlc init .`、`ai-sdlc adapter status` 和 `ai-sdlc run --dry-run`。
 
+Windows 注意：如果从父 PowerShell 里用 `powershell -ExecutionPolicy Bypass -File .\install_offline.ps1 -AddToPath` 启动安装脚本，用户 PATH 会被写入，但父终端当前会话不会继承子进程的 `$env:Path`。新开终端后可直接运行裸 `ai-sdlc ...`；当前终端立即验证时，请用下方未写 PATH 的完整 Python 入口或安装脚本输出的 Direct shim。
+
 如果没有写入 PATH，就不能直接执行裸 `ai-sdlc` 命令；需要使用包内 Python 入口。相对路径只适用于仍在安装包目录里验证 CLI；如果要先进入业务项目目录，请使用安装脚本最后输出的完整 Python 路径。
 
 - Windows：`.\.venv\Scripts\python.exe -m ai_sdlc <子命令>`

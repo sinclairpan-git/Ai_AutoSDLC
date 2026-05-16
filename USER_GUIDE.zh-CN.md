@@ -8,6 +8,8 @@
 
 本手册推荐安装时显式同意写入 PATH，这样后续可以直接执行 `ai-sdlc ...`。Windows 用 `-AddToPath`，macOS / Linux 用 `--add-to-path`。
 
+Windows 注意：如果你是用 `powershell -ExecutionPolicy Bypass -File ... -AddToPath` 启动安装脚本，PATH 会写入用户 PATH，通常需要新开一个终端后裸 `ai-sdlc ...` 才会被父终端识别。安装完成后的当前终端如果要立刻验证，请使用安装包目录里的 `.\.venv\Scripts\python.exe -m ai_sdlc --help`，或者使用安装脚本最后打印的 Direct shim。
+
 写入 PATH 后，通用命令就是：
 
 | 命令 | 用途 |
@@ -99,7 +101,7 @@ if (-not $Zip) {
 Expand-Archive -LiteralPath $Zip.FullName -DestinationPath $PackageDir -Force
 Set-Location (Join-Path $PackageDir "ai-sdlc-offline-0.7.16-windows-amd64")
 powershell -ExecutionPolicy Bypass -File .\install_offline.ps1 -AddToPath
-ai-sdlc --help
+.\.venv\Scripts\python.exe -m ai_sdlc --help
 ```
 
 macOS Apple Silicon 直接复制：
@@ -159,7 +161,7 @@ Invoke-WebRequest -Uri "https://github.com/sinclairpan-git/Ai_AutoSDLC/releases/
 Expand-Archive -LiteralPath .\ai-sdlc-offline-0.7.16-windows-amd64.zip -DestinationPath .
 cd .\ai-sdlc-offline-0.7.16-windows-amd64
 powershell -ExecutionPolicy Bypass -File .\install_offline.ps1 -AddToPath
-ai-sdlc --help
+.\.venv\Scripts\python.exe -m ai_sdlc --help
 ```
 
 macOS Apple Silicon 直接复制：
@@ -332,7 +334,7 @@ if (-not $Zip) {
 Expand-Archive -LiteralPath $Zip.FullName -DestinationPath $PackageDir -Force
 Set-Location (Join-Path $PackageDir "ai-sdlc-offline-0.7.16-windows-amd64")
 powershell -ExecutionPolicy Bypass -File .\install_offline.ps1 -AddToPath
-ai-sdlc --help
+.\.venv\Scripts\python.exe -m ai_sdlc --help
 ```
 
 macOS Apple Silicon 直接复制：
@@ -392,7 +394,7 @@ Invoke-WebRequest -Uri "https://github.com/sinclairpan-git/Ai_AutoSDLC/releases/
 Expand-Archive -LiteralPath .\ai-sdlc-offline-0.7.16-windows-amd64.zip -DestinationPath .
 cd .\ai-sdlc-offline-0.7.16-windows-amd64
 powershell -ExecutionPolicy Bypass -File .\install_offline.ps1 -AddToPath
-ai-sdlc --help
+.\.venv\Scripts\python.exe -m ai_sdlc --help
 ```
 
 macOS Apple Silicon 直接复制：
