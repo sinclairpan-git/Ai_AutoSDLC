@@ -863,7 +863,7 @@ def test_install_offline_add_to_path_enables_bare_cli_guidance(tmp_path: Path) -
     assert (home_dir / ".local" / "bin" / "ai-sdlc").is_symlink()
     assert "cd <your-project> && ai-sdlc init ." in result.stdout
     assert f"PATH entry added: {_bash_path(home_dir / '.local' / 'bin')}" in result.stdout
-    assert f'export PATH="{home_dir / ".local" / "bin"}:$PATH"' in (
+    assert f'export PATH="{_bash_path(home_dir / ".local" / "bin")}:$PATH"' in (
         home_dir / ".bashrc"
     ).read_text(encoding="utf-8")
 
@@ -1165,7 +1165,7 @@ def test_install_online_add_to_path_enables_bare_cli_guidance(tmp_path: Path) ->
     assert (home_dir / ".local" / "bin" / "ai-sdlc").is_symlink()
     assert "cd <your-project> && ai-sdlc init ." in result.stdout
     assert f"PATH entry added: {_bash_path(home_dir / '.local' / 'bin')}" in result.stdout
-    assert f'export PATH="{home_dir / ".local" / "bin"}:$PATH"' in (
+    assert f'export PATH="{_bash_path(home_dir / ".local" / "bin")}:$PATH"' in (
         home_dir / ".bashrc"
     ).read_text(encoding="utf-8")
 
