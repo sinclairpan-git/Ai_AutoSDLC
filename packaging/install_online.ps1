@@ -150,10 +150,12 @@ $resolvedVenvPython = (Resolve-Path -LiteralPath $venvPython).Path
 $cliExe = Join-Path $VenvPath "Scripts\ai-sdlc.exe"
 $resolvedCliExe = (Resolve-Path -LiteralPath $cliExe).Path
 $cliDir = Split-Path -Parent $resolvedCliExe
+$callOperator = [char]38
 $doubleQuote = [char]34
+$directInitCommand = 'cd YOUR_PROJECT_PATH; {0} {1}{2}{1} init .' -f $callOperator, $doubleQuote, $resolvedCliExe
 if ($AddToPath) {
   Add-DirectoryToUserPath $cliDir
-  $nextCommand = 'cd YOUR_PROJECT_PATH; ai-sdlc init .'
+  $nextCommand = $directInitCommand
 } else {
   $nextCommand = 'cd YOUR_PROJECT_PATH; Start-Process -Wait -NoNewWindow -FilePath {0}{1}{0} -ArgumentList ''-m'', ''ai_sdlc'', ''init'', ''.''' -f $doubleQuote, $resolvedVenvPython
 }
@@ -167,8 +169,17 @@ Write-BilingualStatus `
   -PurposeEn "Enter your project and initialize it; init will automatically run the required checks and safe rehearsal."
 Write-Host ""
 if ($AddToPath) {
+  Write-Host "PATH consent:"
+  Write-Host "  -AddToPath was provided, so the installer wrote User PATH for future terminals."
+  Write-Host "  The current parent terminal may still resolve an older ai-sdlc command."
   Write-Host "PATH entry added:"
   Write-Host "  $cliDir"
+  Write-Host "Check resolved command before using bare ai-sdlc:"
+  Write-Host "  Get-Command ai-sdlc | Select-Object Source"
 } else {
   Write-Host "PATH was not changed. Rerun with -AddToPath to enable bare ai-sdlc commands."
 }
+Write-Host "Direct shim:"
+Write-Host ('  {0} {1}{2}{1} init .' -f $callOperator, $doubleQuote, $resolvedCliExe)
+Write-Host ('  {0} {1}{2}{1} --help' -f $callOperator, $doubleQuote, $resolvedCliExe)
+Write-Host ('  {0} {1}{2}{1} -m ai_sdlc --help' -f $callOperator, $doubleQuote, $resolvedVenvPython)
