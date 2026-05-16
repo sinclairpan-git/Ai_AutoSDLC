@@ -6,7 +6,7 @@ on:
       tag:
         description: Release tag to verify.
         required: true
-        default: v0.7.15
+        default: v0.7.16
   release:
     types:
       - published
@@ -80,7 +80,7 @@ jobs:
           }
 
           Push-Location $bundleDir.FullName
-          & $windowsPowerShell -NoProfile -ExecutionPolicy Bypass -File .\install_offline.ps1 *>&1 | Tee-Object -FilePath (Join-Path $evidenceRoot "install.log")
+          & $windowsPowerShell -NoProfile -ExecutionPolicy Bypass -File .\install_offline.ps1 -AddToPath *>&1 | Tee-Object -FilePath (Join-Path $evidenceRoot "install.log")
           if ($LASTEXITCODE -ne 0) {
             throw "release Windows PowerShell install_offline.ps1 failed with exit code $LASTEXITCODE"
           }
@@ -93,18 +93,20 @@ jobs:
             throw "verify_offline_bundle.py failed with exit code $LASTEXITCODE"
           }
 
-          $cliExe = Join-Path $bundleDir.FullName ".venv\Scripts\ai-sdlc.exe"
-          & $cliExe --help *>&1 | Tee-Object -FilePath (Join-Path $evidenceRoot "help.txt")
+          if (-not (Get-Command ai-sdlc -ErrorAction SilentlyContinue)) {
+            throw "Expected ai-sdlc to resolve on PATH after -AddToPath install."
+          }
+          ai-sdlc --help *>&1 | Tee-Object -FilePath (Join-Path $evidenceRoot "help.txt")
           if ($LASTEXITCODE -ne 0) {
             throw "release ai-sdlc --help failed with exit code $LASTEXITCODE"
           }
 
           Push-Location $env:GITHUB_WORKSPACE
-          & $cliExe adapter status *>&1 | Tee-Object -FilePath (Join-Path $evidenceRoot "adapter-status.txt")
+          ai-sdlc adapter status *>&1 | Tee-Object -FilePath (Join-Path $evidenceRoot "adapter-status.txt")
           if ($LASTEXITCODE -ne 0) {
             throw "release ai-sdlc adapter status failed with exit code $LASTEXITCODE"
           }
-          & $cliExe run --dry-run *>&1 | Tee-Object -FilePath (Join-Path $evidenceRoot "run-dry-run.txt")
+          ai-sdlc run --dry-run *>&1 | Tee-Object -FilePath (Join-Path $evidenceRoot "run-dry-run.txt")
           if ($LASTEXITCODE -ne 0) {
             throw "release ai-sdlc run --dry-run failed with exit code $LASTEXITCODE"
           }
@@ -190,17 +192,18 @@ jobs:
 
           (
             cd "${bundle_dir}"
-            ./install_offline.sh 2>&1 | tee "${evidence_root}/install.log"
+            ./install_offline.sh --add-to-path 2>&1 | tee "${evidence_root}/install.log"
           )
 
           python packaging/offline/verify_offline_bundle.py "${bundle_dir}" \
             --require-bundled-runtime \
             --install-log "${evidence_root}/install.log"
 
-          cli="${bundle_dir}/.venv/bin/ai-sdlc"
-          "${cli}" --help 2>&1 | tee "${evidence_root}/help.txt"
-          "${cli}" adapter status 2>&1 | tee "${evidence_root}/adapter-status.txt"
-          "${cli}" run --dry-run 2>&1 | tee "${evidence_root}/run-dry-run.txt"
+          export PATH="${HOME}/.local/bin:${PATH}"
+          command -v ai-sdlc >/dev/null
+          ai-sdlc --help 2>&1 | tee "${evidence_root}/help.txt"
+          ai-sdlc adapter status 2>&1 | tee "${evidence_root}/adapter-status.txt"
+          ai-sdlc run --dry-run 2>&1 | tee "${evidence_root}/run-dry-run.txt"
           cp "${bundle_dir}/bundle-manifest.json" "${evidence_root}/"
 
       - name: Upload release tar smoke evidence

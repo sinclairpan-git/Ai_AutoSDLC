@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import re
+import tomllib
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -140,12 +141,18 @@ SKIP_REGISTRY_REL = Path("src") / "ai_sdlc" / "rules" / "agent-skip-registry.zh.
 FRAMEWORK_DEFECT_BACKLOG_REL = Path("docs") / "framework-defect-backlog.zh-CN.md"
 VERIFICATION_RULE_REL = Path("src") / "ai_sdlc" / "rules" / "verification.md"
 PR_CHECKLIST_REL = Path("docs") / "pull-request-checklist.zh.md"
-RELEASE_NOTES_CURRENT_REL = Path("docs") / "releases" / "v0.7.15.md"
+RELEASE_NOTES_CURRENT_REL = Path("docs") / "releases" / "v0.7.16.md"
 RELEASE_POLICY_REL = Path("docs") / "框架自迭代开发与发布约定.md"
 README_REL = Path("README.md")
 USER_GUIDE_REL = Path("USER_GUIDE.zh-CN.md")
 AGENTS_REL = Path("AGENTS.md")
 OFFLINE_README_REL = Path("packaging") / "offline" / "README.md"
+PYPROJECT_REL = Path("pyproject.toml")
+PACKAGE_INIT_REL = Path("src") / "ai_sdlc" / "__init__.py"
+RELEASE_BUILD_WORKFLOW_REL = Path(".github") / "workflows" / "release-build.yml"
+RELEASE_ARTIFACT_SMOKE_WORKFLOW_REL = (
+    Path(".github") / "workflows" / "release-artifact-smoke.yml"
+)
 WINDOWS_OFFLINE_SMOKE_WORKFLOW_REL = (
     Path(".github") / "workflows" / "windows-offline-smoke.yml"
 )
@@ -221,75 +228,91 @@ RECONCILE_SMOKE_CONTRACT_SURFACES: dict[Path, tuple[str, ...]] = {
 }
 RELEASE_DOCS_CONSISTENCY_SURFACES: dict[Path, tuple[str, ...]] = {
     README_REL: (
-        "v0.7.15",
-        "docs/releases/v0.7.15.md",
-        "ai-sdlc-offline-0.7.15-windows-amd64.zip",
-        "ai-sdlc-offline-0.7.15-macos-arm64.tar.gz",
-        "ai-sdlc-offline-0.7.15-linux-amd64.tar.gz",
+        "v0.7.16",
+        "docs/releases/v0.7.16.md",
+        "ai-sdlc-offline-0.7.16-windows-amd64.zip",
+        "ai-sdlc-offline-0.7.16-macos-arm64.tar.gz",
+        "ai-sdlc-offline-0.7.16-linux-amd64.tar.gz",
         "No such command 'install'",
         "ai-sdlc self-update check",
         "--upgrade-existing",
-        "releases/download/v0.7.15",
+        "releases/download/v0.7.16",
+        "-AddToPath",
+        "--add-to-path",
+        "python -m ai_sdlc",
     ),
     RELEASE_NOTES_CURRENT_REL: (
-        "v0.7.15",
+        "v0.7.16",
         "No such command 'install'",
         "ai-sdlc self-update check",
         "--upgrade-existing",
-        "releases/download/v0.7.15",
+        "releases/download/v0.7.16",
         "Windows",
         ".zip",
         "macOS / Linux",
         ".tar.gz",
         "release-build.yml",
         "release-artifact-smoke.yml",
+        "-AddToPath",
+        "--add-to-path",
+        "python -m ai_sdlc",
     ),
     USER_GUIDE_REL: (
-        "v0.7.15",
+        "v0.7.16",
         "No such command 'install'",
         "ai-sdlc self-update check",
         "--upgrade-existing",
-        "releases/download/v0.7.15",
+        "releases/download/v0.7.16",
         "Windows",
         "macOS",
         "Linux",
         ".zip",
         ".tar.gz",
+        "-AddToPath",
+        "--add-to-path",
+        "ai-sdlc --help",
+        "python -m ai_sdlc",
     ),
     OFFLINE_README_REL: (
-        "v0.7.15",
-        "ai-sdlc-offline-0.7.15-windows-amd64.zip",
-        "ai-sdlc-offline-0.7.15-macos-arm64.tar.gz",
-        "ai-sdlc-offline-0.7.15-linux-amd64.tar.gz",
+        "v0.7.16",
+        "ai-sdlc-offline-0.7.16-windows-amd64.zip",
+        "ai-sdlc-offline-0.7.16-macos-arm64.tar.gz",
+        "ai-sdlc-offline-0.7.16-linux-amd64.tar.gz",
+        "-AddToPath",
+        "--add-to-path",
+        "ai-sdlc --help",
+        "python -m ai_sdlc",
     ),
     RELEASE_POLICY_REL: (
         "README.md",
-        "docs/releases/v0.7.15.md",
+        "docs/releases/v0.7.16.md",
         "USER_GUIDE.zh-CN.md",
         "packaging/offline/README.md",
         "docs/pull-request-checklist.zh.md",
         "普通用户主路径",
         "live host evidence",
         "materialized only",
-        "ai-sdlc-offline-0.7.15-windows-amd64.zip",
-        "ai-sdlc-offline-0.7.15-macos-arm64.tar.gz",
-        "ai-sdlc-offline-0.7.15-linux-amd64.tar.gz",
+        "ai-sdlc-offline-0.7.16-windows-amd64.zip",
+        "ai-sdlc-offline-0.7.16-macos-arm64.tar.gz",
+        "ai-sdlc-offline-0.7.16-linux-amd64.tar.gz",
     ),
     PR_CHECKLIST_REL: (
         "README.md",
-        "docs/releases/v0.7.15.md",
+        "docs/releases/v0.7.16.md",
         "USER_GUIDE.zh-CN.md",
         "packaging/offline/README.md",
-        "v0.7.15",
+        "v0.7.16",
         "普通用户主路径",
         "materialized only",
-        "ai-sdlc-offline-0.7.15-windows-amd64.zip",
-        "ai-sdlc-offline-0.7.15-macos-arm64.tar.gz",
-        "ai-sdlc-offline-0.7.15-linux-amd64.tar.gz",
+        "ai-sdlc-offline-0.7.16-windows-amd64.zip",
+        "ai-sdlc-offline-0.7.16-macos-arm64.tar.gz",
+        "ai-sdlc-offline-0.7.16-linux-amd64.tar.gz",
     ),
+    RELEASE_BUILD_WORKFLOW_REL: ("default: v0.7.16",),
+    RELEASE_ARTIFACT_SMOKE_WORKFLOW_REL: ("default: v0.7.16",),
 }
 BEGINNER_GUIDE_REQUIRED_TOKENS = (
-    "当前正式发布版：`v0.7.15`",
+    "当前正式发布版：`v0.7.16`",
     "## 第一章：全新用户 + 全新空项目",
     "## 第二章：全新用户 + 已有项目",
     "## 第三章：老用户升级",
@@ -299,9 +322,13 @@ BEGINNER_GUIDE_REQUIRED_TOKENS = (
     "执行成功以后，你应该看到",
     "如果失败",
     "切换到 AI 对话",
-    "ai-sdlc-offline-0.7.15-windows-amd64.zip",
-    "ai-sdlc-offline-0.7.15-macos-arm64.tar.gz",
-    "ai-sdlc-offline-0.7.15-linux-amd64.tar.gz",
+    "ai-sdlc-offline-0.7.16-windows-amd64.zip",
+    "ai-sdlc-offline-0.7.16-macos-arm64.tar.gz",
+    "ai-sdlc-offline-0.7.16-linux-amd64.tar.gz",
+    "-AddToPath",
+    "--add-to-path",
+    "ai-sdlc --help",
+    "python -m ai_sdlc",
     "脚本只检查当前目录，不扫描其他目录",
     "The script checks only the current directory",
     "请把 zip 放到当前目录，并先 cd 到该目录后重试",
@@ -3473,6 +3500,53 @@ def _backlog_breach_reference_blockers(root: Path) -> list[str]:
     return _dedupe_text_items(blockers)
 
 
+def _pyproject_version(root: Path) -> str | None:
+    path = root / PYPROJECT_REL
+    if not path.is_file():
+        return None
+    try:
+        payload = tomllib.loads(path.read_text(encoding="utf-8"))
+    except tomllib.TOMLDecodeError:
+        return None
+    version = payload.get("project", {}).get("version")
+    if not isinstance(version, str):
+        return None
+    return version.strip() or None
+
+
+def _package_init_fallback_version(root: Path) -> str | None:
+    path = root / PACKAGE_INIT_REL
+    if not path.is_file():
+        return None
+    match = re.search(
+        r'__version__\s*=\s*["\'](?P<version>[^"\']+)["\']',
+        path.read_text(encoding="utf-8"),
+    )
+    if not match:
+        return None
+    return match.group("version").strip() or None
+
+
+def _release_version_truth_blockers(root: Path) -> list[str]:
+    expected_version = "0.7.16"
+    blockers: list[str] = []
+    pyproject_version = _pyproject_version(root)
+    if pyproject_version and pyproject_version != expected_version:
+        blockers.append(
+            "BLOCKER: release version truth drift: "
+            f"{PYPROJECT_REL.as_posix()} project.version is {pyproject_version}, "
+            f"expected {expected_version}"
+        )
+    package_init_version = _package_init_fallback_version(root)
+    if package_init_version and package_init_version != expected_version:
+        blockers.append(
+            "BLOCKER: release version truth drift: "
+            f"{PACKAGE_INIT_REL.as_posix()} fallback __version__ is "
+            f"{package_init_version}, expected {expected_version}"
+        )
+    return blockers
+
+
 def _release_docs_consistency_blockers(root: Path) -> list[str]:
     """Validate the fixed release entry docs for the current staged release."""
     activation_surfaces = (
@@ -3485,7 +3559,7 @@ def _release_docs_consistency_blockers(root: Path) -> list[str]:
     if not any((root / rel).is_file() for rel in activation_surfaces):
         return []
 
-    blockers: list[str] = []
+    blockers = _release_version_truth_blockers(root)
     for rel, required_tokens in RELEASE_DOCS_CONSISTENCY_SURFACES.items():
         path = root / rel
         if not path.is_file():

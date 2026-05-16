@@ -97,7 +97,7 @@ jobs:
           $dryRunLog = Join-Path $evidenceRoot "run-dry-run.txt"
 
           Push-Location $bundleDir.FullName
-          & $windowsPowerShell -NoProfile -ExecutionPolicy Bypass -File .\install_offline.ps1 *>&1 | Tee-Object -FilePath $installLog
+          & $windowsPowerShell -NoProfile -ExecutionPolicy Bypass -File .\install_offline.ps1 -AddToPath *>&1 | Tee-Object -FilePath $installLog
           if ($LASTEXITCODE -ne 0) {
             throw "Windows PowerShell install_offline.ps1 failed with exit code $LASTEXITCODE"
           }
@@ -110,12 +110,11 @@ jobs:
             throw "verify_offline_bundle.py failed with exit code $LASTEXITCODE"
           }
 
-          $cliExe = Join-Path $bundleDir.FullName ".venv\Scripts\ai-sdlc.exe"
-          if (-not (Test-Path $cliExe)) {
-            throw "Expected CLI shim was not created at $cliExe"
+          if (-not (Get-Command ai-sdlc -ErrorAction SilentlyContinue)) {
+            throw "Expected ai-sdlc to resolve on PATH after -AddToPath install."
           }
 
-          & $cliExe --help *>&1 | Tee-Object -FilePath $helpLog
+          ai-sdlc --help *>&1 | Tee-Object -FilePath $helpLog
           if ($LASTEXITCODE -ne 0) {
             throw "ai-sdlc --help failed with exit code $LASTEXITCODE"
           }
@@ -128,12 +127,12 @@ jobs:
             throw "Expected .ai-sdlc directory in GITHUB_WORKSPACE before dry-run."
           }
 
-          & $cliExe adapter status *>&1 | Tee-Object -FilePath $statusLog
+          ai-sdlc adapter status *>&1 | Tee-Object -FilePath $statusLog
           if ($LASTEXITCODE -ne 0) {
             throw "ai-sdlc adapter status failed with exit code $LASTEXITCODE"
           }
 
-          & $cliExe run --dry-run *>&1 | Tee-Object -FilePath $dryRunLog
+          ai-sdlc run --dry-run *>&1 | Tee-Object -FilePath $dryRunLog
           $dryRunExit = $LASTEXITCODE
           if ($dryRunExit -ne 0) {
             $dryRunOutput = Get-Content -LiteralPath $dryRunLog -Raw

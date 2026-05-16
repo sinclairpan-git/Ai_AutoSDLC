@@ -1,7 +1,8 @@
 param(
   [string]$VenvPath = ".venv",
   [string]$PythonExe = "python",
-  [switch]$UpgradeExisting
+  [switch]$UpgradeExisting,
+  [switch]$AddToPath
 )
 
 $ErrorActionPreference = "Stop"
@@ -51,6 +52,43 @@ function Write-BilingualStatus {
   Write-Host "  $Command"
   Write-Host "  $Purpose"
   Write-Host "  $PurposeEn"
+}
+
+function Add-DirectoryToUserPath {
+  param([string]$Directory)
+
+  $resolvedDirectory = (Resolve-Path -LiteralPath $Directory).Path
+  $currentUserPath = [Environment]::GetEnvironmentVariable("Path", "User")
+  if (-not $currentUserPath) {
+    $currentUserPath = ""
+  }
+  $entries = @($currentUserPath -split [IO.Path]::PathSeparator | Where-Object { $_ })
+  $alreadyPresent = $false
+  foreach ($entry in $entries) {
+    if ($entry.TrimEnd('\') -ieq $resolvedDirectory.TrimEnd('\')) {
+      $alreadyPresent = $true
+      break
+    }
+  }
+  if (-not $alreadyPresent) {
+    $updatedPath = if ($currentUserPath) {
+      $currentUserPath + [IO.Path]::PathSeparator + $resolvedDirectory
+    } else {
+      $resolvedDirectory
+    }
+    [Environment]::SetEnvironmentVariable("Path", $updatedPath, "User")
+  }
+  $sessionEntries = @($env:Path -split [IO.Path]::PathSeparator | Where-Object { $_ })
+  $sessionPresent = $false
+  foreach ($entry in $sessionEntries) {
+    if ($entry.TrimEnd('\') -ieq $resolvedDirectory.TrimEnd('\')) {
+      $sessionPresent = $true
+      break
+    }
+  }
+  if (-not $sessionPresent) {
+    $env:Path = $resolvedDirectory + [IO.Path]::PathSeparator + $env:Path
+  }
 }
 
 if (-not (Test-Path $Wheels)) {
@@ -197,7 +235,13 @@ $cliExe = Join-Path $VenvPath "Scripts\\ai-sdlc.exe"
 $resolvedCliExe = (Resolve-Path -LiteralPath $cliExe).Path
 $callOperator = [char]38
 $doubleQuote = [char]34
-$nextCommand = 'cd YOUR_PROJECT_PATH; Start-Process -Wait -NoNewWindow -FilePath {0}{1}{0} -ArgumentList ''-m'', ''ai_sdlc'', ''init'', ''.''' -f $doubleQuote, $resolvedVenvPython
+$cliDir = Split-Path -Parent $resolvedCliExe
+if ($AddToPath) {
+  Add-DirectoryToUserPath $cliDir
+  $nextCommand = 'cd YOUR_PROJECT_PATH; ai-sdlc init .'
+} else {
+  $nextCommand = 'cd YOUR_PROJECT_PATH; Start-Process -Wait -NoNewWindow -FilePath {0}{1}{0} -ArgumentList ''-m'', ''ai_sdlc'', ''init'', ''.''' -f $doubleQuote, $resolvedVenvPython
+}
 Write-Host ""
 Write-BilingualStatus `
   -Status "Offline installation completed. The installer created the runtime and installed AI-SDLC." `
@@ -206,6 +250,12 @@ Write-BilingualStatus `
   -Purpose "Enter your project and initialize it; init will automatically run the required checks and safe rehearsal." `
   -PurposeEn "Enter your project and initialize it; init will automatically run the required checks and safe rehearsal."
 Write-Host ""
+if ($AddToPath) {
+  Write-Host "PATH entry added:"
+  Write-Host "  $cliDir"
+} else {
+  Write-Host "PATH was not changed. Use the direct shim or rerun with -AddToPath."
+}
 Write-Host "Direct shim:"
 Write-Host ('  {0} {1}{2}{1} --help' -f $callOperator, $doubleQuote, $resolvedCliExe)
 Write-Host ('  {0} {1}{2}{1} -m ai_sdlc --help' -f $callOperator, $doubleQuote, $resolvedVenvPython)

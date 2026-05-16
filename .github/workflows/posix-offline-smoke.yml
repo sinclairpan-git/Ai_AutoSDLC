@@ -105,20 +105,17 @@ jobs:
 
           (
             cd "$bundle_dir"
-            bash ./install_offline.sh
+            bash ./install_offline.sh --add-to-path
           ) 2>&1 | tee "$install_log"
 
           python packaging/offline/verify_offline_bundle.py "$bundle_dir" \
             --require-bundled-runtime \
             --install-log "$install_log"
 
-          cli_exe="$bundle_dir/.venv/bin/ai-sdlc"
-          if [[ ! -x "$cli_exe" ]]; then
-            echo "Expected CLI shim was not created at $cli_exe" >&2
-            exit 1
-          fi
+          export PATH="${HOME}/.local/bin:${PATH}"
+          command -v ai-sdlc >/dev/null
 
-          "$cli_exe" --help 2>&1 | tee "$help_log"
+          ai-sdlc --help 2>&1 | tee "$help_log"
 
           if [[ ! -f "AGENTS.md" ]]; then
             echo "Expected AGENTS.md in GITHUB_WORKSPACE before adapter verification." >&2
@@ -129,10 +126,10 @@ jobs:
             exit 1
           fi
 
-          "$cli_exe" adapter status 2>&1 | tee "$status_log"
+          ai-sdlc adapter status 2>&1 | tee "$status_log"
 
           set +e
-          "$cli_exe" run --dry-run 2>&1 | tee "$dry_run_log"
+          ai-sdlc run --dry-run 2>&1 | tee "$dry_run_log"
           dry_run_exit="${PIPESTATUS[0]}"
           set -e
           if [[ "$dry_run_exit" -ne 0 ]]; then

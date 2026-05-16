@@ -23,8 +23,9 @@ def test_build_wheel_includes_templates_and_entry_points(tmp_path: Path) -> None
         assert "ai_sdlc/templates/tasks-template.md" in names
         assert "ai_sdlc/templates/execution-log-template.md" in names
 
-        entry_points = archive.read("ai_sdlc-0.7.15.dist-info/entry_points.txt").decode(
-            "utf-8"
+        entry_points_path = next(
+            name for name in names if name.endswith(".dist-info/entry_points.txt")
         )
+        entry_points = archive.read(entry_points_path).decode("utf-8")
         assert "[console_scripts]" in entry_points
         assert "ai-sdlc = ai_sdlc.cli.main:app" in entry_points

@@ -1,12 +1,12 @@
 # 离线一键安装包（含 Windows）
 
-> 当前 published release：`v0.7.15`
+> 当前 published release：`v0.7.16`
 >
 > 发布入口口径：
-> - Windows 使用 `ai-sdlc-offline-0.7.15-windows-amd64.zip`
-> - macOS 使用 `ai-sdlc-offline-0.7.15-macos-arm64.tar.gz`
-> - Linux 使用 `ai-sdlc-offline-0.7.15-linux-amd64.tar.gz`
-> - Release Notes：`docs/releases/v0.7.15.md`
+> - Windows 使用 `ai-sdlc-offline-0.7.16-windows-amd64.zip`
+> - macOS 使用 `ai-sdlc-offline-0.7.16-macos-arm64.tar.gz`
+> - Linux 使用 `ai-sdlc-offline-0.7.16-linux-amd64.tar.gz`
+> - Release Notes：`docs/releases/v0.7.16.md`
 
 ## 角色分工
 
@@ -40,6 +40,13 @@ AI_SDLC_OFFLINE_PYTHON_RUNTIME=/path/to/python-runtime \
 
 ## 二、离线安装（目标机器）
 
+推荐显式写入 PATH，这样后续可以直接执行 `ai-sdlc --help`、`ai-sdlc init .`、`ai-sdlc adapter status` 和 `ai-sdlc run --dry-run`。
+
+如果没有写入 PATH，就不能直接执行裸 `ai-sdlc` 命令；需要使用包内 Python 入口。相对路径只适用于仍在安装包目录里验证 CLI；如果要先进入业务项目目录，请使用安装脚本最后输出的完整 Python 路径。
+
+- Windows：`.\.venv\Scripts\python.exe -m ai_sdlc <子命令>`
+- macOS / Linux：`./.venv/bin/python -m ai_sdlc <子命令>`
+
 如果机器上已经有旧版 `ai-sdlc`，并且你要覆盖当前 `PATH` 命中的旧入口，使用升级模式：
 
 ### Linux/macOS 升级旧入口
@@ -69,13 +76,13 @@ powershell -ExecutionPolicy Bypass -File .\install_offline.ps1 -UpgradeExisting
 tar xzf ai-sdlc-offline-<version>.tar.gz
 cd ai-sdlc-offline-<version>
 chmod +x install_offline.sh
-./install_offline.sh
+./install_offline.sh --add-to-path
 ```
 
 ### Windows
 
 ```bat
-powershell -ExecutionPolicy Bypass -File .\install_offline.ps1
+powershell -ExecutionPolicy Bypass -File .\install_offline.ps1 -AddToPath
 ```
 
 或直接：
@@ -88,22 +95,20 @@ install_offline.bat
 
 ## 三、安装后验证
 
-**Linux / macOS**（已 `source .venv/bin/activate`）：
+**已写入 PATH**：
 
 ```bash
 ai-sdlc --help
 ```
 
-**Windows**（推荐先激活 venv；若未激活，用完整路径或模块方式）：
+**未写入 PATH**（仍在安装包目录时）：
 
 ```powershell
-# 激活后
-ai-sdlc --help
-
-# 或未激活时
-& .\.venv\Scripts\ai-sdlc.exe --help
-# 或
 & .\.venv\Scripts\python.exe -m ai_sdlc --help
+```
+
+```bash
+./.venv/bin/python -m ai_sdlc --help
 ```
 
 然后进入业务项目目录，执行初始化入口。`init` 会自动完成必要检查和安全预演：
@@ -111,6 +116,8 @@ ai-sdlc --help
 ```bash
 ai-sdlc init .
 ```
+
+如果未写入 PATH，请把上面的 `ai-sdlc` 替换为安装脚本输出的完整 Python 路径加 `-m ai_sdlc`。
 
 CLI 安装器与后续命令提示均会以中英双语输出以下信息：
 
@@ -135,7 +142,7 @@ CLI 安装器与后续命令提示均会以中英双语输出以下信息：
 - 若当前手里没有 Windows 实机，可运行 GitHub Actions 工作流 [windows-offline-smoke.yml](/Users/sinclairpan/project/Ai_AutoSDLC/.github/workflows/windows-offline-smoke.yml) 获取 Windows 目标机安装证据；只有工作流成功并产出 artifact 后，才能把它记为 Windows smoke 证据
 - 上述 CI 工作流产出的是 Windows smoke 证据，不是正式对外交付的离线包来源；正式发布物仍应来自你认可的目标平台构建流程
 - 若希望由云端生成正式发布资产，可运行 GitHub Actions 工作流 [release-build.yml](/Users/sinclairpan/project/Ai_AutoSDLC/.github/workflows/release-build.yml)。该 workflow 在 Windows / macOS / Linux runner 上分别构建、安装 smoke，并把通过 smoke 的平台资产上传到既有 GitHub Release
-- 发布 `v0.7.15` 后，可运行 GitHub Actions 工作流 [release-artifact-smoke.yml](/Users/sinclairpan/project/Ai_AutoSDLC/.github/workflows/release-artifact-smoke.yml) 从 GitHub Release 下载正式 `.zip` / `.tar.gz` 资产并执行安装冒烟；该证据证明的是发布资产，而不是当前源码树临时构建产物
+- 发布 `v0.7.16` 后，可运行 GitHub Actions 工作流 [release-artifact-smoke.yml](/Users/sinclairpan/project/Ai_AutoSDLC/.github/workflows/release-artifact-smoke.yml) 从 GitHub Release 下载正式 `.zip` / `.tar.gz` 资产并执行安装冒烟；该证据证明的是发布资产，而不是当前源码树临时构建产物
 
 ## 四、脚本说明
 
