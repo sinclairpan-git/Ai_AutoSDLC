@@ -1085,13 +1085,16 @@ def _execute_authorization_next_actions(surface: dict[str, Any]) -> list[str]:
         surface,
         action_map={
             "explicit_execute_authorization_missing": [
-                "keep the work item in review-to-decompose until repo truth explicitly enters execute"
+                "confirm the next executable task before changing product code"
             ],
             "tasks_truth_missing": [
                 "materialize tasks.md for the active work item before execute"
             ],
             "formal_work_item_incomplete": [
                 "complete spec.md / plan.md / tasks.md for the active work item before execute"
+            ],
+            "BLOCK_CODE_PREPARE_TASKS": [
+                "prepare the next executable task before changing product code"
             ],
         },
     )

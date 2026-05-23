@@ -58,7 +58,7 @@ def test_evaluate_execute_authorization_blocks_when_tasks_truth_missing(
     assert result.authorized is False
     assert result.reason_codes == ["tasks_truth_missing"]
     assert result.tasks_present is False
-    assert "docs-only / review" in result.detail
+    assert "tasks.md" in result.detail
 
 
 def test_evaluate_execute_authorization_blocks_when_stage_has_not_entered_execute(
@@ -97,8 +97,7 @@ def test_evaluate_execute_authorization_blocks_when_stage_has_not_entered_execut
     assert result.reason_codes == ["explicit_execute_authorization_missing"]
     assert result.tasks_present is True
     assert result.current_stage == "verify"
-    assert "current_stage=verify" in result.detail
-    assert "review-to-decompose" in result.detail
+    assert "可执行任务" in result.detail
 
 
 def test_evaluate_execute_authorization_is_ready_after_checkpoint_enters_execute(
@@ -108,6 +107,23 @@ def test_evaluate_execute_authorization_is_ready_after_checkpoint_enters_execute
     root = tmp_path / "repo"
     root.mkdir()
     (root / "specs" / "116-wi").mkdir(parents=True)
+    (root / "specs" / "116-wi" / "plan.md").write_text("# Plan\n", encoding="utf-8")
+    (root / "specs" / "116-wi" / "tasks.md").write_text(
+        """
+### Task 1.1 Ready
+
+- task_id: T11
+- status: todo
+- goal: Ready task
+- scope:
+  - src/a.py
+- acceptance:
+  - done
+- verify:
+  - pytest
+""",
+        encoding="utf-8",
+    )
 
     monkeypatch.setattr(
         execute_authorization_module,
@@ -137,6 +153,60 @@ def test_evaluate_execute_authorization_is_ready_after_checkpoint_enters_execute
     assert result.reason_codes == []
     assert result.current_stage == "execute"
     assert result.truth_classification == "formal_freeze_only"
+    assert result.next_task_id == "T11"
+
+
+def test_evaluate_execute_authorization_blocks_when_no_executable_task(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    root = tmp_path / "repo"
+    root.mkdir()
+    (root / "specs" / "116-wi").mkdir(parents=True)
+    (root / "specs" / "116-wi" / "plan.md").write_text("# Plan\n", encoding="utf-8")
+    (root / "specs" / "116-wi" / "tasks.md").write_text(
+        """
+### Task 1.1 Done
+
+- task_id: T11
+- status: done
+- goal: Already complete
+- scope:
+  - src/a.py
+- acceptance:
+  - done
+- verify:
+  - pytest
+""",
+        encoding="utf-8",
+    )
+
+    monkeypatch.setattr(
+        execute_authorization_module,
+        "run_truth_check",
+        lambda **_: WorkitemTruthResult(
+            ok=True,
+            classification="formal_freeze_only",
+            requested_revision="HEAD",
+            wi_path="specs/116-wi",
+            formal_docs={
+                "spec": True,
+                "plan": True,
+                "tasks": True,
+                "execution_log": False,
+            },
+            execution_started=False,
+        ),
+    )
+
+    result = execute_authorization_module.evaluate_execute_authorization(
+        root=root,
+        checkpoint=_checkpoint(stage="execute"),
+    )
+
+    assert result.state == "blocked"
+    assert result.authorized is False
+    assert result.reason_codes == ["BLOCK_CODE_PREPARE_TASKS"]
 
 
 def test_evaluate_execute_authorization_surfaces_docs_only_review_truth_when_tasks_missing(
@@ -171,7 +241,59 @@ def test_evaluate_execute_authorization_surfaces_docs_only_review_truth_when_tas
 
     assert result.state == "blocked"
     assert result.reason_codes == ["tasks_truth_missing"]
-    assert "docs-only / review-to-decompose" in result.detail
+    assert "tasks.md" in result.detail
+
+
+def test_evaluate_execute_authorization_blocks_when_formal_docs_incomplete(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    root = tmp_path / "repo"
+    root.mkdir()
+    (root / "specs" / "116-wi").mkdir(parents=True)
+    (root / "specs" / "116-wi" / "tasks.md").write_text(
+        """
+### Task 1.1 Ready
+
+- task_id: T11
+- status: todo
+- goal: Ready task
+- scope:
+  - src/a.py
+- acceptance:
+  - done
+- verify:
+  - pytest
+""",
+        encoding="utf-8",
+    )
+
+    monkeypatch.setattr(
+        execute_authorization_module,
+        "run_truth_check",
+        lambda **_: WorkitemTruthResult(
+            ok=True,
+            classification="formal_freeze_only",
+            requested_revision="HEAD",
+            wi_path="specs/116-wi",
+            formal_docs={
+                "spec": True,
+                "plan": False,
+                "tasks": True,
+                "execution_log": False,
+            },
+            execution_started=False,
+        ),
+    )
+
+    result = execute_authorization_module.evaluate_execute_authorization(
+        root=root,
+        checkpoint=_checkpoint(stage="execute"),
+    )
+
+    assert result.state == "blocked"
+    assert result.reason_codes == ["formal_work_item_incomplete"]
+    assert "plan.md" in result.detail
 
 
 def test_execute_authorization_to_json_dict_deduplicates_reason_codes() -> None:

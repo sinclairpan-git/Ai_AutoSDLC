@@ -7,6 +7,10 @@ from pathlib import Path
 from typing import Any
 
 from ai_sdlc.context.state import load_checkpoint
+from ai_sdlc.core.task_guard import (
+    BLOCK_CODE_PREPARE_TASKS,
+    evaluate_task_guard,
+)
 from ai_sdlc.core.workitem_truth import WorkitemTruthResult, run_truth_check
 from ai_sdlc.models.state import Checkpoint
 
@@ -34,6 +38,7 @@ class ExecuteAuthorizationResult:
     tasks_present: bool | None = None
     execution_log_present: bool | None = None
     truth_classification: str | None = None
+    next_task_id: str | None = None
     reason_codes: list[str] = field(default_factory=list)
     detail: str = ""
     error: str | None = None
@@ -51,6 +56,7 @@ class ExecuteAuthorizationResult:
             "tasks_present": self.tasks_present,
             "execution_log_present": self.execution_log_present,
             "truth_classification": self.truth_classification,
+            "next_task_id": self.next_task_id,
             "reason_codes": _dedupe_text_items(self.reason_codes),
             "detail": self.detail,
             "error": self.error,
@@ -114,10 +120,7 @@ def evaluate_execute_authorization(
         if tasks_present is False:
             result.state = "blocked"
             result.reason_codes = ["tasks_truth_missing"]
-            result.detail = _detail_with_stage(
-                "active work item is missing tasks.md; remain in docs-only / review-to-decompose",
-                current_stage,
-            )
+            result.detail = "请先补齐当前工作项的 tasks.md，再修改产品代码。"
             return result
         if _formal_docs_incomplete(truth):
             result.state = "blocked"
@@ -133,25 +136,33 @@ def evaluate_execute_authorization(
     if tasks_present is False:
         result.state = "blocked"
         result.reason_codes = ["tasks_truth_missing"]
-        result.detail = _detail_with_stage(
-            "active work item is missing tasks.md; remain in docs-only / review-to-decompose",
-            current_stage,
-        )
+        result.detail = "请先补齐当前工作项的 tasks.md，再修改产品代码。"
+        return result
+
+    if _formal_docs_incomplete(truth):
+        result.state = "blocked"
+        result.reason_codes = ["formal_work_item_incomplete"]
+        result.detail = "请先补齐当前工作项的 spec.md / plan.md / tasks.md，再进入代码修改。"
         return result
 
     if current_stage not in _AUTHORIZED_STAGES:
         result.state = "blocked"
         result.reason_codes = ["explicit_execute_authorization_missing"]
-        result.detail = _detail_with_stage(
-            "active work item has tasks.md, but repo truth has not entered execute; remain in review-to-decompose",
-            current_stage,
-        )
+        result.detail = "请先确认当前工作项的下一条可执行任务，再修改产品代码。"
+        return result
+
+    task_guard = evaluate_task_guard(root=root, checkpoint=cp, wi=wi_dir)
+    if not task_guard.allowed:
+        result.state = "blocked"
+        result.reason_codes = [BLOCK_CODE_PREPARE_TASKS]
+        result.detail = task_guard.detail
         return result
 
     result.state = "ready"
     result.authorized = True
+    result.next_task_id = task_guard.task_id
     result.reason_codes = []
-    detail = "tasks.md exists and repo truth is at or beyond execute"
+    detail = "已确认当前工作项和下一条可执行任务"
     if truth.classification:
         detail += f"; truth={truth.classification}"
     result.detail = _detail_with_stage(detail, current_stage)

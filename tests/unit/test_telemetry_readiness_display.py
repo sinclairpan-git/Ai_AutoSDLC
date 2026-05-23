@@ -63,7 +63,7 @@ def test_summarize_workitem_reason_for_display_execute_authorization() -> None:
     assert summarize_workitem_reason_for_display(
         reason,
         source="execute_authorization",
-    ) == "execute not authorized; review-to-decompose; current_stage=verify"
+    ) == "execute blocked: next task not confirmed; current_stage=verify"
 
 
 def test_summarize_workitem_reason_for_display_program_truth() -> None:

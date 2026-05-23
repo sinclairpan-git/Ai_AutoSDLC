@@ -64,7 +64,9 @@ def test_adapter_status_default_is_beginner_safe_but_json_keeps_truth(
     assert status.exit_code == 0
     assert "当前结果 / Result" in status.output
     assert "下一步 / Next" in status.output
-    assert "ai-sdlc run --dry-run" in status.output
+    assert "ai-sdlc run --dry-run" not in status.output
+    assert "回到 Codex/AI 对话输入需求" in status.output
+    assert "当前可执行任务" in status.output
     assert "governance_activation" not in status.output
     assert "adapter_canonical_content_digest" not in status.output
 

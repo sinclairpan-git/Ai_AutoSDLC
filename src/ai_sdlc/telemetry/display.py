@@ -392,7 +392,7 @@ def _display_reason_summary_execute_authorization(normalized: str) -> str:
     stage_match = re.search(r"current_stage=([A-Za-z0-9_-]+)", normalized)
     stage_suffix = f"; current_stage={stage_match.group(1)}" if stage_match else ""
     if "remain in review-to-decompose" in normalized:
-        return "execute not authorized; review-to-decompose" + stage_suffix
+        return "execute blocked: next task not confirmed" + stage_suffix
     if "missing tasks.md" in normalized:
         return "execute blocked: tasks.md missing" + stage_suffix
     if "formal docs are incomplete" in normalized:

@@ -10,9 +10,11 @@
 - 排查入口（仅当 CLI 明确要求时执行）：`ai-sdlc adapter status`、`ai-sdlc run --dry-run` 或对应 `python -m ai_sdlc ...` 写法。
 - 全流程执行：`ai-sdlc run`
 
-当前 Codex adapter 以 `AGENTS.md` 作为 canonical path。治理侧以 `materialized / verified_loaded / degraded / unsupported` 为准；只有存在 machine-verifiable 证据时，才可视为 `verified_loaded`。
+当前 Codex adapter 以 `AGENTS.md` 作为 canonical path。用户主路径不依赖宿主加载证明；规则安装后，写代码前以当前可执行任务为准。诊断侧仍可能显示 `materialized / verified_loaded / degraded / unsupported`，仅用于排查。
 
 当用户在聊天中输入任何需求/任务描述时，如果项目尚未初始化，先引导用户执行 `init`。如果 `init` 已完成且 CLI 输出的下一步是切换到 AI 对话，则不要再要求用户手动执行 `adapter status` 或 `run --dry-run`；直接进入需求细化、分解与实现。`run --dry-run` 保留为异常排查入口，它本身不构成治理激活证明。
+
+代码实现时，新增注释必须跟随当前或近期用户主要沟通语言；当前对话或近期对话以英文为主则使用英文，否则默认简体中文。保留原有注释；确需删除时，必须在同一变更附近补充等价说明，或在 execution log / handoff 记录删除原因。注释只解释复杂意图、边界、兼容、并发、缓存、错误处理和非显然业务约束，不复述命名已经表达清楚的代码。
 
 请在修改 `specs/` 与 `.ai-sdlc/` 下文档时遵守上述入口。
 

@@ -14,6 +14,7 @@ from ai_sdlc.branch.git_client import GitError
 from ai_sdlc.context.state import load_checkpoint
 from ai_sdlc.core.artifact_target_guard import detect_misplaced_formal_artifacts
 from ai_sdlc.core.backlog_breach_guard import collect_missing_backlog_entry_references
+from ai_sdlc.core.comment_policy import collect_comment_deletion_blockers
 from ai_sdlc.core.frontend_contract_observation_provider import (
     FRONTEND_CONTRACT_OBSERVATION_ARTIFACT_STATUS_ATTACHED,
     FRONTEND_CONTRACT_OBSERVATION_ARTIFACT_STATUS_INVALID_ARTIFACT,
@@ -58,6 +59,7 @@ from ai_sdlc.core.frontend_visual_a11y_evidence_provider import (
 )
 from ai_sdlc.core.provenance_gate import load_phase1_provenance_gate_payload
 from ai_sdlc.core.release_gate import ReleaseGateParseError, load_release_gate_report
+from ai_sdlc.core.text_quality import collect_text_quality_blockers
 from ai_sdlc.core.workitem_traceability import evaluate_work_item_branch_lifecycle
 from ai_sdlc.gates.task_ac_checks import (
     first_doc_first_task_scope_violation,
@@ -141,7 +143,7 @@ SKIP_REGISTRY_REL = Path("src") / "ai_sdlc" / "rules" / "agent-skip-registry.zh.
 FRAMEWORK_DEFECT_BACKLOG_REL = Path("docs") / "framework-defect-backlog.zh-CN.md"
 VERIFICATION_RULE_REL = Path("src") / "ai_sdlc" / "rules" / "verification.md"
 PR_CHECKLIST_REL = Path("docs") / "pull-request-checklist.zh.md"
-RELEASE_NOTES_CURRENT_REL = Path("docs") / "releases" / "v0.7.17.md"
+RELEASE_NOTES_CURRENT_REL = Path("docs") / "releases" / "v0.7.18.md"
 RELEASE_POLICY_REL = Path("docs") / "框架自迭代开发与发布约定.md"
 README_REL = Path("README.md")
 USER_GUIDE_REL = Path("USER_GUIDE.zh-CN.md")
@@ -228,25 +230,25 @@ RECONCILE_SMOKE_CONTRACT_SURFACES: dict[Path, tuple[str, ...]] = {
 }
 RELEASE_DOCS_CONSISTENCY_SURFACES: dict[Path, tuple[str, ...]] = {
     README_REL: (
-        "v0.7.17",
-        "docs/releases/v0.7.17.md",
-        "ai-sdlc-offline-0.7.17-windows-amd64.zip",
-        "ai-sdlc-offline-0.7.17-macos-arm64.tar.gz",
-        "ai-sdlc-offline-0.7.17-linux-amd64.tar.gz",
+        "v0.7.18",
+        "docs/releases/v0.7.18.md",
+        "ai-sdlc-offline-0.7.18-windows-amd64.zip",
+        "ai-sdlc-offline-0.7.18-macos-arm64.tar.gz",
+        "ai-sdlc-offline-0.7.18-linux-amd64.tar.gz",
         "No such command 'install'",
         "ai-sdlc self-update check",
         "--upgrade-existing",
-        "releases/download/v0.7.17",
+        "releases/download/v0.7.18",
         "-AddToPath",
         "--add-to-path",
         "python -m ai_sdlc",
     ),
     RELEASE_NOTES_CURRENT_REL: (
-        "v0.7.17",
+        "v0.7.18",
         "No such command 'install'",
         "ai-sdlc self-update check",
         "--upgrade-existing",
-        "releases/download/v0.7.17",
+        "releases/download/v0.7.18",
         "Windows",
         ".zip",
         "macOS / Linux",
@@ -258,11 +260,11 @@ RELEASE_DOCS_CONSISTENCY_SURFACES: dict[Path, tuple[str, ...]] = {
         "python -m ai_sdlc",
     ),
     USER_GUIDE_REL: (
-        "v0.7.17",
+        "v0.7.18",
         "No such command 'install'",
         "ai-sdlc self-update check",
         "--upgrade-existing",
-        "releases/download/v0.7.17",
+        "releases/download/v0.7.18",
         "Windows",
         "macOS",
         "Linux",
@@ -274,10 +276,10 @@ RELEASE_DOCS_CONSISTENCY_SURFACES: dict[Path, tuple[str, ...]] = {
         "python -m ai_sdlc",
     ),
     OFFLINE_README_REL: (
-        "v0.7.17",
-        "ai-sdlc-offline-0.7.17-windows-amd64.zip",
-        "ai-sdlc-offline-0.7.17-macos-arm64.tar.gz",
-        "ai-sdlc-offline-0.7.17-linux-amd64.tar.gz",
+        "v0.7.18",
+        "ai-sdlc-offline-0.7.18-windows-amd64.zip",
+        "ai-sdlc-offline-0.7.18-macos-arm64.tar.gz",
+        "ai-sdlc-offline-0.7.18-linux-amd64.tar.gz",
         "-AddToPath",
         "--add-to-path",
         "ai-sdlc --help",
@@ -285,34 +287,34 @@ RELEASE_DOCS_CONSISTENCY_SURFACES: dict[Path, tuple[str, ...]] = {
     ),
     RELEASE_POLICY_REL: (
         "README.md",
-        "docs/releases/v0.7.17.md",
+        "docs/releases/v0.7.18.md",
         "USER_GUIDE.zh-CN.md",
         "packaging/offline/README.md",
         "docs/pull-request-checklist.zh.md",
         "普通用户主路径",
         "live host evidence",
         "materialized only",
-        "ai-sdlc-offline-0.7.17-windows-amd64.zip",
-        "ai-sdlc-offline-0.7.17-macos-arm64.tar.gz",
-        "ai-sdlc-offline-0.7.17-linux-amd64.tar.gz",
+        "ai-sdlc-offline-0.7.18-windows-amd64.zip",
+        "ai-sdlc-offline-0.7.18-macos-arm64.tar.gz",
+        "ai-sdlc-offline-0.7.18-linux-amd64.tar.gz",
     ),
     PR_CHECKLIST_REL: (
         "README.md",
-        "docs/releases/v0.7.17.md",
+        "docs/releases/v0.7.18.md",
         "USER_GUIDE.zh-CN.md",
         "packaging/offline/README.md",
-        "v0.7.17",
+        "v0.7.18",
         "普通用户主路径",
         "materialized only",
-        "ai-sdlc-offline-0.7.17-windows-amd64.zip",
-        "ai-sdlc-offline-0.7.17-macos-arm64.tar.gz",
-        "ai-sdlc-offline-0.7.17-linux-amd64.tar.gz",
+        "ai-sdlc-offline-0.7.18-windows-amd64.zip",
+        "ai-sdlc-offline-0.7.18-macos-arm64.tar.gz",
+        "ai-sdlc-offline-0.7.18-linux-amd64.tar.gz",
     ),
-    RELEASE_BUILD_WORKFLOW_REL: ("default: v0.7.17",),
-    RELEASE_ARTIFACT_SMOKE_WORKFLOW_REL: ("default: v0.7.17",),
+    RELEASE_BUILD_WORKFLOW_REL: ("default: v0.7.18",),
+    RELEASE_ARTIFACT_SMOKE_WORKFLOW_REL: ("default: v0.7.18",),
 }
 BEGINNER_GUIDE_REQUIRED_TOKENS = (
-    "当前正式发布版：`v0.7.17`",
+    "当前正式发布版：`v0.7.18`",
     "## 第一章：全新用户 + 全新空项目",
     "## 第二章：全新用户 + 已有项目",
     "## 第三章：老用户升级",
@@ -322,9 +324,9 @@ BEGINNER_GUIDE_REQUIRED_TOKENS = (
     "执行成功以后，你应该看到",
     "如果失败",
     "切换到 AI 对话",
-    "ai-sdlc-offline-0.7.17-windows-amd64.zip",
-    "ai-sdlc-offline-0.7.17-macos-arm64.tar.gz",
-    "ai-sdlc-offline-0.7.17-linux-amd64.tar.gz",
+    "ai-sdlc-offline-0.7.18-windows-amd64.zip",
+    "ai-sdlc-offline-0.7.18-macos-arm64.tar.gz",
+    "ai-sdlc-offline-0.7.18-linux-amd64.tar.gz",
     "-AddToPath",
     "--add-to-path",
     "ai-sdlc --help",
@@ -1402,6 +1404,8 @@ def collect_constraint_blockers(root: Path) -> list[str]:
     blockers.extend(_reconcile_smoke_contract_blockers(root))
     blockers.extend(_doc_first_surface_blockers(root))
     blockers.extend(_verification_profile_blockers(root))
+    blockers.extend(collect_comment_deletion_blockers(root))
+    blockers.extend(collect_text_quality_blockers(root))
 
     if cp is None or cp.feature is None:
         return _dedupe_text_items(blockers)
@@ -3528,7 +3532,7 @@ def _package_init_fallback_version(root: Path) -> str | None:
 
 
 def _release_version_truth_blockers(root: Path) -> list[str]:
-    expected_version = "0.7.17"
+    expected_version = "0.7.18"
     blockers: list[str] = []
     pyproject_version = _pyproject_version(root)
     if pyproject_version and pyproject_version != expected_version:

@@ -160,7 +160,7 @@ class TestRunCommand:
         result = runner.invoke(app, ["run", "--dry-run"])
         assert result.exit_code == 0
         assert "当前结果 / Result" in result.output
-        assert "本次 dry-run 会自动继续执行" in result.output
+        assert "下一步 / Next" in result.output
         doc = tmp_path / "AGENTS.md"
         assert doc.is_file()
 
@@ -391,19 +391,18 @@ class TestRunCommand:
         assert "Pipeline completed." in result.output
         assert "truth_snapshot_stale" not in result.output
 
-    def test_run_non_dry_run_blocks_when_adapter_is_not_verified_loaded(
+    def test_run_non_dry_run_continues_when_adapter_is_materialized(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         monkeypatch.chdir(tmp_path)
         assert runner.invoke(app, ["init", ".", "--agent-target", "codex"]).exit_code == 0
+        self._force_passing_gates(monkeypatch)
 
         result = runner.invoke(app, ["run"])
 
-        assert result.exit_code == 1
-        assert "当前结果 / Result" in result.output
-        assert "正式执行需要宿主验证信号" in result.output
-        assert "OPENAI_CODEX" in result.output
-        assert "ai-sdlc run" in result.output
+        assert result.exit_code == 0, result.output
+        assert "Pipeline completed. Stage: close" in result.output
+        assert "正式执行需要宿主验证信号" not in result.output
 
     def test_run_non_dry_run_does_not_suggest_fake_env_for_generic_adapter(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch

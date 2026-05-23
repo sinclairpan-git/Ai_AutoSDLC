@@ -1845,6 +1845,9 @@ specs:
   path: specs/185-self-update-update-advisor-runtime
   depends_on:
   - 093-stage0-installed-runtime-update-advisor-baseline
+- id: 183-production-feedback-guard-adoption
+  path: specs/183-production-feedback-guard-adoption
+  depends_on: []
 truth_snapshot:
   generated_at: '2026-05-04T15:37:33Z'
   generated_by: ai-sdlc program truth sync

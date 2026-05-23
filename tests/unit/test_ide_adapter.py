@@ -208,7 +208,8 @@ class TestApplyAdapter:
             assert "安全预演" in text
             assert "切换到 AI 对话" in text
             assert "ai-sdlc adapter status" in text
-            assert "machine-verifiable" in text
+            assert "用户主路径不依赖宿主加载证明" in text
+            assert "仅用于排查" in text
             assert "ai-sdlc run --dry-run" in text
             assert "verified_loaded" in text
             assert "先检查接入真值" not in text

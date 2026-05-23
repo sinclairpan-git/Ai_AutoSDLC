@@ -140,9 +140,9 @@ def adapter_select(
         render_single_next_step(
             result_zh=f"已选择 AI 代理入口：{cfg.agent_target}。",
             result_en=f"AI agent target selected: {cfg.agent_target}.",
-            next_command="ai-sdlc run --dry-run",
-            next_zh="继续安全预演；如果这是 init 自动流程的一部分，可以直接回到 init 输出继续判断。",
-            next_en="Continue with the safe rehearsal; if this ran inside init, follow the init output.",
+            next_command=None,
+            next_zh="回到 AI 对话输入需求即可；需要排查时再运行 status 或 dry-run。",
+            next_en="Return to AI chat and describe the requirement; use status or dry-run only for troubleshooting.",
             notes=(
                 (
                     f"当前接入状态：{cfg.adapter_ingress_state or 'unknown'}",
@@ -191,9 +191,9 @@ def adapter_shell_select(
         render_single_next_step(
             result_zh=f"已选择项目命令 shell：{preferred_shell_label(selected_shell)}。",
             result_en=f"Project command shell selected: {preferred_shell_label(selected_shell)}.",
-            next_command="ai-sdlc run --dry-run",
-            next_zh="继续安全预演；后续 CLI/AI 指令会优先按这个 shell 展示命令。",
-            next_en="Continue with the safe rehearsal; future CLI/AI commands will prefer this shell.",
+            next_command=None,
+            next_zh="后续 CLI/AI 指令会优先按这个 shell 展示命令；需要排查时再运行 status 或 dry-run。",
+            next_en="Future CLI/AI commands will prefer this shell; use status or dry-run only for troubleshooting.",
         )
     )
 
@@ -218,8 +218,8 @@ def adapter_activate(
             result_zh="已记录 adapter 人工确认；这不是宿主加载验证。",
             result_en="Adapter acknowledgement was recorded; this is not host-load verification.",
             next_command="ai-sdlc adapter status",
-            next_zh="查看当前是否已经 verified_loaded；默认状态页会告诉你下一步。",
-            next_en="Check whether the adapter is verified_loaded; the default status view will show the next step.",
+            next_zh="查看规则安装状态；默认状态页会告诉你下一步。",
+            next_en="Check instruction installation status; the default status view will show the next step.",
             notes=(
                 (
                     f"当前入口：{cfg['agent_target']}，确认状态：{cfg['adapter_activation_state']}",

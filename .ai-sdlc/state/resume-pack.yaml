@@ -3,20 +3,20 @@ current_batch: 0
 last_committed_task: ''
 working_set_snapshot:
   prd_path: AI-SDLC 全自动化框架 产品需求文档（PRD）.md
-  constitution_path: /private/tmp/aisdlc-v0715-init-simplify/.ai-sdlc/memory/constitution.md
-  tech_stack_path: /private/tmp/aisdlc-v0715-init-simplify/.ai-sdlc/profiles/tech-stack.yml
-  spec_path: /private/tmp/aisdlc-v0715-init-simplify/specs/181-cross-platform-release-gate-matrix-baseline/spec.md
-  plan_path: /private/tmp/aisdlc-v0715-init-simplify/specs/181-cross-platform-release-gate-matrix-baseline/plan.md
-  tasks_path: /private/tmp/aisdlc-v0715-init-simplify/specs/181-cross-platform-release-gate-matrix-baseline/tasks.md
+  constitution_path: /Users/sinclairpan/project/Ai_AutoSDLC/.ai-sdlc/memory/constitution.md
+  tech_stack_path: /Users/sinclairpan/project/Ai_AutoSDLC/.ai-sdlc/profiles/tech-stack.yml
+  spec_path: /Users/sinclairpan/project/Ai_AutoSDLC/specs/181-cross-platform-release-gate-matrix-baseline/spec.md
+  plan_path: /Users/sinclairpan/project/Ai_AutoSDLC/specs/181-cross-platform-release-gate-matrix-baseline/plan.md
+  tasks_path: /Users/sinclairpan/project/Ai_AutoSDLC/specs/181-cross-platform-release-gate-matrix-baseline/tasks.md
   active_files: []
-  context_summary: 'Goal: Simplify and clarify user guide init flow | State: Added
-    inline comments above every init cd command stating that the path is an example
-    and must be replaced with the user''s real project root. Updated constraints and
-    tests. | Next: Amend PR #61 commit, push, and wait for checks/review.'
+  context_summary: 'Goal: 归档生产反馈优化点：adapter 认证口径、next executable task 守卫、注释规范、中文编码、brownfield
+    adopt 半途接入。 | State: 已新增 docs/production-feedback-sdlc-guard-adoption-comments.zh-CN.md，作为后续细粒度拆分
+    spec/plan/tasks 的输入文档；未改源码或规则实现。 | Next: 用户审核归档文档；通过后将第 9 节待拆分能力逐项创建 formal work
+    item。'
 current_branch: feature/181-cross-platform-release-gate-matrix-baseline-docs
 docs_baseline_ref: ''
 docs_baseline_at: ''
-timestamp: '2026-05-13T06:25:57+00:00'
+timestamp: '2026-05-23T12:56:46+00:00'
 checkpoint_path: .ai-sdlc/state/checkpoint.yml
 checkpoint_last_updated: '2026-04-30T03:04:43+00:00'
 checkpoint_fingerprint: 3a88fbdb372f95712ec6c6bcb34729d78927236171d0e7ea4f1e0002f7f06d10
