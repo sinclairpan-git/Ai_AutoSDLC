@@ -518,3 +518,17 @@ Batch 6：`brownfield adopt` 已完成首轮实现，正在按两个对抗 agent
 - 对抗 delta 复审：
   - 替代 UX agent：无必须修订项，同意继续 push/PR checks。
   - 替代 AI-native agent：无必须修订项，同意继续 push/PR checks。
+
+#### 4.37 PR Codex review 第二轮修复
+
+- Codex review 发现：`ai-sdlc adopt .` 可能扫描 `.ai-sdlc/**`，导致二次运行时把 `.ai-sdlc/adoption/adoption-map.json` 等框架生成物当成用户外部任务事实源。
+- 已修复：
+  - `IGNORED_DIRS` 增加 `.ai-sdlc`。
+  - 回归测试覆盖 `.ai-sdlc/adoption/adoption-map.json` 存在时，source discovery 仍只返回用户外部 `tasks.json`。
+- 验证：
+  - `uv run pytest tests/unit/test_adoption.py tests/integration/test_cli_adopt.py -q`: 15 passed.
+  - `uv run ruff check src/ai_sdlc/core/adoption.py tests/unit/test_adoption.py`: All checks passed.
+  - `uv run ai-sdlc verify constraints`: no BLOCKERs.
+- 对抗 delta 复审：
+  - 替代 UX agent：无必须修订项，同意继续 push/PR checks。
+  - 替代 AI-native agent：无必须修订项，同意继续 push/PR checks。

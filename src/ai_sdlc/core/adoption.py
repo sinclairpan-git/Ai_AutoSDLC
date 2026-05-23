@@ -103,6 +103,7 @@ IGNORED_DIRS = {
     ".git",
     ".hg",
     ".svn",
+    ".ai-sdlc",
     ".venv",
     "venv",
     "node_modules",

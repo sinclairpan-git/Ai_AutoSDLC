@@ -22,6 +22,9 @@ def test_discovery_ignores_build_outputs_and_honors_budget(tmp_path: Path) -> No
     ignored = tmp_path / "node_modules" / "tasks.json"
     ignored.parent.mkdir()
     ignored.write_text("[]\n", encoding="utf-8")
+    generated = tmp_path / ".ai-sdlc" / "adoption" / "adoption-map.json"
+    generated.parent.mkdir(parents=True)
+    generated.write_text("[]\n", encoding="utf-8")
 
     sources = discover_adoption_sources(
         tmp_path,

@@ -1,9 +1,9 @@
 # Continuity Handoff
 
-- Updated: 2026-05-23T16:32:10+00:00
-- Reason: PR Codex review 修复完成后同步交接
+- Updated: 2026-05-23T16:43:50+00:00
+- Reason: PR Codex review 第二轮修复完成后同步交接
 - Goal: 落实生产反馈：任务守卫、注释规范、中文编码和半途接入优化，并完成 v0.7.18 发布
-- State: PR #65 Codex review 两个 adoption 建议已修复并通过 focused tests、ruff、verify constraints；两个替代对抗 agent 对修复 delta 无必须修订项，同意继续 push/PR checks。
+- State: PR #65 第二轮 Codex review 的 .ai-sdlc self-ingestion 问题已修复，focused tests、ruff、verify constraints 通过；两个替代对抗 agent 对 delta 无必须修订项，同意继续 push/PR checks。
 - Stage: close
 - Work Item: 183-production-feedback-guard-adoption
 - Branch: feature/183-production-feedback-guard-adoption-docs
@@ -41,6 +41,7 @@
 - 采纳 UX 建议：用户指南补 adopt 升级后入口、继续点候选文件说法和 AI 写代码质量底线。
 - 采纳 AI-native 建议：status text 测试名改为 state；PR 描述需说明 specs/142 blocker map 是陈旧 blocker 与 truth ledger 对齐清理。
 - adoption status normalization 使用 PROGRESS_KEYS 全量字段；Markdown parser 支持 GitHub 常见 [X] 已完成标记。
+- adoption source discovery 忽略 .ai-sdlc，避免框架生成的 adoption artifacts 被当成外部任务事实源。
 
 ## Commands / Tests
 - targeted pytest after review deltas: 2 passed
@@ -53,10 +54,13 @@
 - uv run pytest tests/unit/test_adoption.py tests/integration/test_cli_adopt.py -q: 15 passed
 - uv run ruff check src/ai_sdlc/core/adoption.py tests/unit/test_adoption.py: All checks passed
 - uv run ai-sdlc verify constraints: no BLOCKERs
+- uv run pytest tests/unit/test_adoption.py tests/integration/test_cli_adopt.py -q: 15 passed
+- uv run ruff check src/ai_sdlc/core/adoption.py tests/unit/test_adoption.py: All checks passed
+- uv run ai-sdlc verify constraints: no BLOCKERs
 
 ## Blockers / Risks
 - none
 
 ## Exact Next Steps
-- 提交并推送 Codex review 修复。
+- 提交并推送第二轮 Codex review 修复。
 - 重新请求/确认 Codex review，继续监控 PR checks。
