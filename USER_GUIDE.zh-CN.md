@@ -482,7 +482,30 @@ ai-sdlc init .
 - 如果提示项目已有旧 `.ai-sdlc` 痕迹但状态不完整，按 CLI 给出的初始化 / 修复命令继续
 - 如果已有大量未提交改动，先决定是否提交、暂存或继续保留；不要为了初始化而删除业务改动
 
-### 4. 开始输入增量需求
+### 4. 接入已有任务进度
+
+如果项目里已经有 JSON、Markdown、TODO、issue 导出或 Git 提交记录承载任务进度，初始化后可以直接执行：
+
+```bash
+ai-sdlc adopt .
+```
+
+正常时你应该看到：
+
+- 输出标题包含“接入已有项目”
+- 输出说明“原任务文件不会被修改”
+- 生成 `.ai-sdlc/adoption/adoption-map.json`
+- 生成 `.ai-sdlc/adoption/bridge.md`
+- 生成 `.ai-sdlc/adoption/checkpoint-candidate.json`；普通用户不需要手动理解或编辑这个文件
+- 输出推荐继续点和置信度
+
+如果推荐继续点不对，用自然语言纠偏，不需要学习 checkpoint 或 reconcile：
+
+```bash
+ai-sdlc adopt . --prefer "支付回调"
+```
+
+### 5. 开始输入增量需求
 
 完成 `init` 后，再到 AI 聊天入口输入需求，例如：
 

@@ -7,6 +7,7 @@ from rich.console import Console
 
 from ai_sdlc import __version__
 from ai_sdlc.cli.adapter_cmd import adapter_app
+from ai_sdlc.cli.adopt_cmd import adopt_command
 from ai_sdlc.cli.cli_hooks import run_ide_adapter_if_initialized
 from ai_sdlc.cli.commands import (
     index_command,
@@ -87,6 +88,7 @@ def _global_before_command(
 
 
 app.command(name="init")(init_command)
+app.command(name="adopt")(adopt_command)
 app.command(name="doctor")(doctor_command)
 app.command(name="status")(status_command)
 app.command(name="recover")(recover_command)

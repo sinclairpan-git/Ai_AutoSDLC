@@ -16,6 +16,7 @@ def _emit_ascii_module_help() -> None:
         "\n"
         "Commands:\n"
         "  init\n"
+        "  adopt\n"
         "  doctor\n"
         "  status\n"
         "  recover\n"

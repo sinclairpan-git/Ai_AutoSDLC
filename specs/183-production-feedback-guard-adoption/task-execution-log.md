@@ -56,7 +56,7 @@
 
 ## 3. 当前进行中
 
-无。下一步进入 Batch 6：`brownfield adopt`，但必须先通过 Batch 5 对抗评审。
+Batch 6：`brownfield adopt` 已完成首轮实现，正在按两个对抗 agent 的阻塞反馈修订；通过复审后才能进入 Batch 7。
 
 ## 4. 已完成记录
 
@@ -349,3 +349,81 @@
 
 - Batch 5 修订实现已完成 focused verification，并通过 UX 与 AI-native 三轮对抗复审。
 - 下一步：提交 Batch 5 后进入 Batch 6：brownfield adopt。
+
+### Batch 2026-05-23-007 | T61-T66
+
+#### 4.26 批次范围
+
+- 覆盖任务：`T61`、`T62`、`T63`、`T64`、`T65`、`T66`
+- 覆盖阶段：Batch 6 brownfield adopt
+- 预读范围：`tasks.md` Batch 6、CLI main/workitem 命令风格、workitem scaffold 测试、已有项目用户指南
+- 激活的规则：半途接入不能覆盖用户原任务文件；扫描必须有预算；非 git 项目要自动降级；用户不需要理解 checkpoint / reconcile
+
+#### 4.27 改动记录
+
+- 改动范围：
+  - `src/ai_sdlc/core/adoption.py`
+  - `src/ai_sdlc/cli/adopt_cmd.py`
+  - `src/ai_sdlc/cli/main.py`
+  - `src/ai_sdlc/__main__.py`
+  - `USER_GUIDE.zh-CN.md`
+  - `tests/unit/test_adoption.py`
+  - `tests/integration/test_cli_adopt.py`
+  - `tests/unit/test_command_names.py`
+  - `specs/183-production-feedback-guard-adoption/tasks.md`
+  - `specs/183-production-feedback-guard-adoption/task-execution-log.md`
+- 改动内容：
+  - 新增 brownfield adoption core：`AdoptionSource`、`AdoptedTask`、`AdoptionMap`、`AdoptionContinuePoint`、扫描预算和继续点推荐。
+  - 支持 JSON schema inference：id/title/description/status/progress/children/dependencies/files/owner/blockers 字段，支持嵌套和扁平任务。
+  - 支持 Markdown TODO、issue/progress 类文件、最近 git commit 和项目结构 fallback。
+  - 非 git 项目自动降级，不要求用户补 git 信息。
+  - 生成 `.ai-sdlc/adoption/adoption-map.json` 和 `.ai-sdlc/adoption/bridge.md`，不覆盖用户原任务文件。
+  - 新增 `ai-sdlc adopt .` 和 `--prefer "支付回调"` 自然语言纠偏入口。
+  - 用户指南“已有项目”章节增加“接入已有任务进度”步骤。
+- 新增/调整的测试：
+  - `tests/unit/test_adoption.py`
+  - `tests/integration/test_cli_adopt.py`
+  - `tests/unit/test_command_names.py`
+- 执行的命令：
+  - `uv run pytest tests/unit/test_adoption.py tests/integration/test_cli_adopt.py tests/unit/test_command_names.py -q`: 15 passed.
+  - `uv run ruff check src/ai_sdlc/core/adoption.py src/ai_sdlc/cli/adopt_cmd.py src/ai_sdlc/cli/main.py src/ai_sdlc/__main__.py tests/unit/test_adoption.py tests/integration/test_cli_adopt.py tests/unit/test_command_names.py`: All checks passed.
+  - `uv run ai-sdlc verify constraints`: no BLOCKERs.
+- 测试结果：focused tests、ruff 和约束校验均通过。
+- 是否符合任务目标：是，待两个对抗 agent 对 Batch 6 生成物评审。
+
+#### 4.28 对抗评审结论
+
+- 第一轮 UX 评审：不通过。必须修订项包括候选文件只按英文 token 识别，漏掉 `任务.md`、`需求.md`、`计划.md`、`待办.md`、`进度.json` 等大陆常见命名；非 git warning 是英文且偏内部。
+- 第一轮 AI-native 评审：不通过。必须修订项包括 `rglob` 已递归进入大目录、T63 README/branch/diff/test evidence 不完整、T62/T64 缺时间字段和 AI-SDLC task id、T65 缺 checkpoint 候选、测试未覆盖这些边界。
+- 已修订：
+  - 扫描改为 `os.walk` 剪枝，显式跳过 `node_modules`、`dist`、`build`、`target` 等大目录，并增加 visited dirs/files 预算。
+  - 候选识别支持中文文件名 token，并增加内容 sniff：Markdown checklist / TODO / 中文任务标记、JSON title/status/progress/items/tasks 字段。
+  - 支持 `README.md`、git branch、working tree diff、test structure evidence。
+  - `AdoptedTask` 增加 `ai_sdlc_task_id` 和 `updated_at`，confidence scoring 纳入更新时间。
+  - 写入 `.ai-sdlc/adoption/checkpoint-candidate.json`，CLI JSON 和普通输出都展示该路径。
+  - 非 git 降级提示改为中文弱提示：“未检测到 Git 历史，已改用任务文件和项目结构继续接入，无需处理。”
+  - 未初始化错误改为中文。
+  - bridge 文档中的继续原因和任务列表文案中文化。
+  - 测试新增中文命名/content sniff、README、branch/diff/test evidence、更新时间/AI-SDLC task id、checkpoint candidate 覆盖。
+- 第一轮 UX 复审：通过，无必须修订项，同意进入 Batch 7。
+- 第一轮 AI-native 复审：不通过。必须修订项包括目录预算超过后仍可能继续递归，以及继续点推荐未考虑依赖/阻塞状态。
+- 已二次修订：
+  - 目录预算超过后清空 `dirnames` 并退出扫描，避免继续遍历深层目录树。
+  - 继续点推荐对 `dependencies` 和 `blockers` 降分，并在 reason 中说明“依赖待确认 / 存在阻塞”。
+  - Markdown 解析补充 `待办：`、`任务：`、`进行中：` 等中文自然写法。
+  - USER_GUIDE 补充 `checkpoint-candidate.json` 说明，明确普通用户不需要手动理解或编辑。
+  - 测试新增深层目录预算停机、依赖/阻塞评分和中文自然 Markdown 写法覆盖。
+- 第二轮 UX 复审：通过，无必须修订项，同意进入 Batch 7。
+- 第二轮 AI-native 复审：通过，无必须修订项，同意进入 Batch 7。
+- 复审状态：通过。
+
+#### 4.29 任务/计划同步状态
+
+- `tasks.md` 同步状态：`T61`、`T62`、`T63`、`T64`、`T65`、`T66` 已在第二轮复审通过后标记 done。
+- `plan.md` 同步状态：无需调整；实现符合 Phase 4 brownfield adopt 目标。
+- 下一批入口：进入 Batch 7 release closure。
+
+#### 4.30 批次结论
+
+- Batch 6 实现已完成 focused verification，并通过 UX 与 AI-native 二轮对抗复审。
+- 下一步：提交 Batch 6 后进入 Batch 7 release closure。

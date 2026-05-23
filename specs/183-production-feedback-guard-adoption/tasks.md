@@ -300,7 +300,7 @@ Batch 7: release closure
 ### Task 6.1 实现 adoption models 与 source discovery
 
 - task_id: T61
-- status: todo
+- status: done
 - priority: P0
 - depends: T21
 - scope:
@@ -318,7 +318,7 @@ Batch 7: release closure
 ### Task 6.2 实现 JSON schema inference
 
 - task_id: T62
-- status: todo
+- status: done
 - priority: P0
 - depends: T61
 - scope:
@@ -334,7 +334,7 @@ Batch 7: release closure
 ### Task 6.3 实现 markdown / issue / git source adapters
 
 - task_id: T63
-- status: todo
+- status: done
 - priority: P0
 - depends: T61
 - scope:
@@ -351,7 +351,7 @@ Batch 7: release closure
 ### Task 6.4 实现置信度评分与 adoption map
 
 - task_id: T64
-- status: todo
+- status: done
 - priority: P0
 - depends: T62,T63
 - scope:
@@ -367,7 +367,7 @@ Batch 7: release closure
 ### Task 6.5 实现桥接产物与继续点推荐
 
 - task_id: T65
-- status: todo
+- status: done
 - priority: P0
 - depends: T64
 - scope:
@@ -386,7 +386,7 @@ Batch 7: release closure
 ### Task 6.6 暴露“接入已有项目”CLI
 
 - task_id: T66
-- status: todo
+- status: done
 - priority: P1
 - depends: T65
 - scope:
