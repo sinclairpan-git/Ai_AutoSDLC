@@ -56,7 +56,7 @@
 
 ## 3. 当前进行中
 
-无。下一步进入 Batch 5：`comment and text quality policies`，但必须先通过 Batch 4 对抗评审。
+无。下一步进入 Batch 6：`brownfield adopt`，但必须先通过 Batch 5 对抗评审。
 
 ## 4. 已完成记录
 
@@ -271,3 +271,81 @@
 
 - Batch 4 实现已完成 focused verification。
 - 下一步：提交 Batch 4 后进入 Batch 5，处理 `T51` 注释语言信号链路。
+
+### Batch 2026-05-23-006 | T51-T53
+
+#### 4.21 批次范围
+
+- 覆盖任务：`T51`、`T52`、`T53`
+- 覆盖阶段：Batch 5 comment and text quality policies
+- 预读范围：归档文档注释规范、`rules/code-review.md`、verify constraints、adapter/task 模板
+- 激活的规则：注释语言跟随当前/近期用户主要沟通语言，默认简体中文；保留原注释；新增/修改文本必须 UTF-8 且无乱码
+
+#### 4.22 改动记录
+
+- 改动范围：
+  - `src/ai_sdlc/core/comment_policy.py`
+  - `src/ai_sdlc/core/text_quality.py`
+  - `src/ai_sdlc/core/verify_constraints.py`
+  - `rules/code-review.md`
+  - `src/ai_sdlc/rules/code-review.md`
+  - `templates/tasks-template.md`
+  - `tests/unit/test_comment_policy.py`
+  - `tests/unit/test_text_quality.py`
+  - `specs/183-production-feedback-guard-adoption/tasks.md`
+  - `specs/183-production-feedback-guard-adoption/task-execution-log.md`
+- 改动内容：
+  - 新增注释语言决策：当前用户文本优先、近期用户文本次之、项目默认兜底；默认简体中文。
+  - adapter prompt / AGENTS 明确约束新增注释语言跟随当前/近期用户主语言，默认简体中文。
+  - 新增注释策略：复杂逻辑/边界/并发/缓存/错误处理应注释，显而易见复述型注释应避免。
+  - 新增原注释保护：`verify constraints` 接入统一 diff 检查；删除原注释时必须同 hunk 有替代注释，或 execution log / handoff 记录删除原因。
+  - 新增文本质量检查：UTF-8 decode failure、替换字符、高置信 mojibake 为 blocker；BOM 和疑似繁体为 warning，支持繁体项目例外。
+  - `verify constraints` 接入 changed text quality blocker，检查 tracked diff 新增行和 untracked 新文件；支持 `.ai-sdlc/project/config/text-quality-allowlist.txt` 白名单。
+  - code-review 规则和 tasks 模板增加注释/文本质量约束。
+- 新增/调整的测试：
+  - `tests/unit/test_comment_policy.py`
+  - `tests/unit/test_text_quality.py`
+- 执行的命令：
+  - `uv run pytest tests/unit/test_comment_policy.py tests/unit/test_text_quality.py -q`: 18 passed.
+  - `uv run pytest tests/integration/test_cli_verify_constraints.py -q`: 46 passed.
+  - `uv run ruff check src/ai_sdlc/core/comment_policy.py src/ai_sdlc/core/text_quality.py src/ai_sdlc/core/verify_constraints.py tests/unit/test_comment_policy.py tests/unit/test_text_quality.py`: All checks passed.
+  - `uv run ai-sdlc verify constraints`: no BLOCKERs.
+- 测试结果：focused tests、ruff 和约束校验均通过。
+- 是否符合任务目标：是，待两个对抗 agent 对 Batch 5 修订后生成物复审。
+
+#### 4.23 对抗评审结论
+
+- 第一轮 AI-native 评审：不通过。必须修订项包括注释语言 helper 未接入真实 adapter prompt、原注释删除保护未进入门禁且替代判断过宽、文本质量检查全文件扫描且缺少白名单/繁体例外、`verify constraints` 漏检 untracked、tasks/log 状态提前完成。
+- 已修订：
+  - `AGENTS.md`、Codex / VS Code / Claude Code / Cursor / generic adapter prompt 均增加注释语言、保留原注释和高价值注释约束。
+  - `verify constraints` 增加原注释删除 blocker。
+  - 原注释替代判断从“同 hunk 任意新增注释”改为按删除/新增注释数量配对；无法配对时要求 execution log / handoff 记录删除原因。
+  - 文本质量检查改为 diff-based：tracked 文件只检查新增行，untracked 文件检查全量新内容；UTF-8 解码仍按文件检查。
+  - 增加 `.ai-sdlc/project/config/text-quality-allowlist.txt` 白名单支持和繁体项目例外参数。
+  - 测试覆盖中文噪音注释、原注释删除门禁、diff-based 检查、untracked 检查、allowlist 和繁体例外。
+- 第二轮 UX 评审：不通过。必须修订项包括 tracked 文件仍先整文件 UTF-8 decode，可能误卡历史 GBK 文件；原注释删除原因记录是全局关键词豁免，缺路径、注释摘要和逐条对应。
+- 已二次修订：
+  - tracked 文件不再整文件 decode；只检查 diff 新增行，历史非 UTF-8 内容不会阻塞当前干净改动。
+  - untracked 新文件仍做整文件 UTF-8 decode，因为全量内容都是本次新增。
+  - 原注释删除原因记录改为逐条匹配：新增 log / handoff 行必须包含删除原因 token、被删注释所在路径和被删注释摘要。
+  - 新增回归测试覆盖历史 GBK tracked 文件新增 ASCII 不阻塞，以及泛化删除注释原因不能绕过门禁。
+- 第二轮 UX 复审：通过，无必须修订项；建议 blocker 文案提示记录原因需包含文件路径和被删注释摘要。
+- 第二轮 AI-native 复审：不通过。必须修订项为被删注释摘要会压缩空格，但 log 行未同样归一化，导致自然写法 `explains payment idempotency` 被误卡。
+- 已三次修订：
+  - 原注释删除原因匹配时对 log 行做同样 whitespace compact，支持自然空格写法。
+  - blocker 文案明确提示记录原因需包含文件路径和被删注释摘要。
+  - 回归测试改为自然空格写法，避免固化不自然规避格式。
+- 第三轮 UX 复审：通过，无必须修订项，同意进入 Batch 6。
+- 第三轮 AI-native 复审：通过，无必须修订项，同意进入 Batch 6。
+- 复审状态：通过。
+
+#### 4.24 任务/计划同步状态
+
+- `tasks.md` 同步状态：`T51`、`T52`、`T53` 已在第三轮复审通过后标记 done。
+- `plan.md` 同步状态：无需调整；实现符合 Phase 3 注释与中文编码质量底线。
+- 下一批入口：两个对抗 agent 对 Batch 5 无必须修订项后，进入 `T61` adoption models 与 source discovery。
+
+#### 4.25 批次结论
+
+- Batch 5 修订实现已完成 focused verification，并通过 UX 与 AI-native 三轮对抗复审。
+- 下一步：提交 Batch 5 后进入 Batch 6：brownfield adopt。

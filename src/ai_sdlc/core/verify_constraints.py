@@ -14,6 +14,7 @@ from ai_sdlc.branch.git_client import GitError
 from ai_sdlc.context.state import load_checkpoint
 from ai_sdlc.core.artifact_target_guard import detect_misplaced_formal_artifacts
 from ai_sdlc.core.backlog_breach_guard import collect_missing_backlog_entry_references
+from ai_sdlc.core.comment_policy import collect_comment_deletion_blockers
 from ai_sdlc.core.frontend_contract_observation_provider import (
     FRONTEND_CONTRACT_OBSERVATION_ARTIFACT_STATUS_ATTACHED,
     FRONTEND_CONTRACT_OBSERVATION_ARTIFACT_STATUS_INVALID_ARTIFACT,
@@ -58,6 +59,7 @@ from ai_sdlc.core.frontend_visual_a11y_evidence_provider import (
 )
 from ai_sdlc.core.provenance_gate import load_phase1_provenance_gate_payload
 from ai_sdlc.core.release_gate import ReleaseGateParseError, load_release_gate_report
+from ai_sdlc.core.text_quality import collect_text_quality_blockers
 from ai_sdlc.core.workitem_traceability import evaluate_work_item_branch_lifecycle
 from ai_sdlc.gates.task_ac_checks import (
     first_doc_first_task_scope_violation,
@@ -1402,6 +1404,8 @@ def collect_constraint_blockers(root: Path) -> list[str]:
     blockers.extend(_reconcile_smoke_contract_blockers(root))
     blockers.extend(_doc_first_surface_blockers(root))
     blockers.extend(_verification_profile_blockers(root))
+    blockers.extend(collect_comment_deletion_blockers(root))
+    blockers.extend(collect_text_quality_blockers(root))
 
     if cp is None or cp.feature is None:
         return _dedupe_text_items(blockers)

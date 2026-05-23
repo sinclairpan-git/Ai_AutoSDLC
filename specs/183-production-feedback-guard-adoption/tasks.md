@@ -236,7 +236,7 @@ Batch 7: release closure
 ### Task 5.1 实现注释语言信号链路
 
 - task_id: T51
-- status: todo
+- status: done
 - priority: P0
 - depends: T12
 - scope:
@@ -255,7 +255,7 @@ Batch 7: release closure
 ### Task 5.2 落地注释策略与原注释保护
 
 - task_id: T52
-- status: todo
+- status: done
 - priority: P0
 - depends: T51
 - scope:
@@ -276,7 +276,7 @@ Batch 7: release closure
 ### Task 5.3 实现简体中文和编码质量检查
 
 - task_id: T53
-- status: todo
+- status: done
 - priority: P0
 - depends: T52
 - scope:
