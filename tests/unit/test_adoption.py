@@ -86,15 +86,40 @@ def test_json_schema_inference_supports_nested_and_missing_fields(tmp_path: Path
     assert child.confidence < main_task.confidence
 
 
+def test_json_schema_inference_uses_percent_and_completion_progress_keys(
+    tmp_path: Path,
+) -> None:
+    payload = {
+        "tasks": [
+            {"id": "PCT-1", "title": "百分比进行中", "percent": 45},
+            {"id": "CMP-1", "title": "完成度已完成", "completion": 100},
+        ]
+    }
+    (tmp_path / "progress.json").write_text(
+        json.dumps(payload, ensure_ascii=False),
+        encoding="utf-8",
+    )
+
+    adoption_map = build_adoption_map(tmp_path)
+
+    statuses = {task.external_id: task.status for task in adoption_map.tasks}
+    assert statuses["PCT-1"] is AdoptionTaskStatus.DOING
+    assert statuses["CMP-1"] is AdoptionTaskStatus.DONE
+
+
 def test_markdown_and_git_sources_do_not_require_git_history(tmp_path: Path) -> None:
     (tmp_path / "TODO.md").write_text(
-        "- [ ] 接入支付回调\n- [x] 完成用户登录\n进行中：订单退款\n",
+        "- [ ] 接入支付回调\n- [x] 完成用户登录\n- [X] 完成订单列表\n进行中：订单退款\n",
         encoding="utf-8",
     )
 
     adoption_map = build_adoption_map(tmp_path, prefer_text="支付回调")
 
     assert adoption_map.continue_point.title == "接入支付回调"
+    assert any(
+        task.title == "完成订单列表" and task.status is AdoptionTaskStatus.DONE
+        for task in adoption_map.tasks
+    )
     assert any(task.title == "订单退款" for task in adoption_map.tasks)
     assert any("未检测到 Git 历史" in warning for warning in adoption_map.warnings)
 

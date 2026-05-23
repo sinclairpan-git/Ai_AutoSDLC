@@ -393,7 +393,9 @@ def _is_task_candidate_file(path: Path) -> bool:
             key in lowered
             for key in TITLE_KEYS + STATUS_KEYS + PROGRESS_KEYS + CHILDREN_KEYS
         )
-    return any(marker in sample for marker in ("- [ ]", "- [x]", "TODO:", "待办", "任务", "进度"))
+    return any(
+        marker in sample for marker in ("- [ ]", "- [x]", "- [X]", "TODO:", "待办", "任务", "进度")
+    )
 
 
 def _discover_git_sources(root: Path, *, budget: AdoptionBudget) -> tuple[AdoptionSource, ...]:
@@ -486,7 +488,12 @@ def _tasks_from_markdown_source(path: Path, source: AdoptionSource) -> tuple[Ado
         if stripped.startswith("- [ ]") or stripped.startswith("* [ ]"):
             title = stripped[5:].strip()
             status = AdoptionTaskStatus.TODO
-        elif stripped.startswith("- [x]") or stripped.startswith("* [x]"):
+        elif (
+            stripped.startswith("- [x]")
+            or stripped.startswith("* [x]")
+            or stripped.startswith("- [X]")
+            or stripped.startswith("* [X]")
+        ):
             title = stripped[5:].strip()
             status = AdoptionTaskStatus.DONE
         elif stripped.startswith("TODO:"):
@@ -604,7 +611,7 @@ def _task_from_mapping(
     if not title:
         return None
     external_id = _first_text(raw, ID_KEYS) or f"{source.rel_path}:{index}"
-    status = _normalize_status(_first_text(raw, STATUS_KEYS), raw.get("progress"))
+    status = _normalize_status(_first_text(raw, STATUS_KEYS), _first_present(raw, PROGRESS_KEYS))
     path_refs = _string_tuple_from_value(_first_present(raw, FILE_KEYS))
     blockers = _string_tuple_from_value(_first_present(raw, BLOCKER_KEYS))
     dependencies = _string_tuple_from_value(_first_present(raw, DEPENDENCY_KEYS))

@@ -499,3 +499,22 @@ Batch 6：`brownfield adopt` 已完成首轮实现，正在按两个对抗 agent
   - `uv run ai-sdlc verify constraints`: no BLOCKERs.
   - `uv run pytest`: 2593 passed, 2 skipped.
 - 结论：最终本地验证通过，可以提交并进入 PR / Codex review / GitHub checks。
+
+#### 4.36 PR Codex review 修复
+
+- PR：`https://github.com/sinclairpan-git/Ai_AutoSDLC/pull/65`
+- Codex review 发现：
+  - JSON adoption status 只读取 `progress`，没有读取 `percent` / `completion`。
+  - Markdown checklist 只识别 `[x]`，没有识别 GitHub 常见的 `[X]`。
+- 已修复：
+  - `_task_from_mapping` 使用 `_first_present(raw, PROGRESS_KEYS)`，让 `progress`、`percent`、`completion` 都参与状态归一化。
+  - Markdown parser 和 content sniff 支持 `- [X]` / `* [X]`。
+  - 新增回归测试覆盖 `percent=45` -> `DOING`、`completion=100` -> `DONE`、`- [X]` -> `DONE`。
+- 验证：
+  - `uv run pytest tests/unit/test_adoption.py -q`: 12 passed.
+  - `uv run pytest tests/unit/test_adoption.py tests/integration/test_cli_adopt.py -q`: 15 passed.
+  - `uv run ruff check src/ai_sdlc/core/adoption.py tests/unit/test_adoption.py`: All checks passed.
+  - `uv run ai-sdlc verify constraints`: no BLOCKERs.
+- 对抗 delta 复审：
+  - 替代 UX agent：无必须修订项，同意继续 push/PR checks。
+  - 替代 AI-native agent：无必须修订项，同意继续 push/PR checks。
