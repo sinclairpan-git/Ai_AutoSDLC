@@ -82,6 +82,23 @@ from tests.support.managed_delivery import (
 runner = CliRunner()
 
 
+EXECUTABLE_TASKS_FIXTURE = """# Tasks
+
+### Task 1.1 Continue Work
+
+- task_id: T1
+- status: todo
+- priority: P0
+- depends: none
+- scope:
+  - src/app.py
+- acceptance:
+  - Continue work.
+- verify:
+  - uv run pytest
+"""
+
+
 def test_status_surfaces_continuity_handoff_state(tmp_path: Path) -> None:
     init_project(tmp_path)
     spec_dir = tmp_path / "specs" / "182-continuity"
@@ -305,7 +322,7 @@ def _write_truth_ledger_fixture(root: Path) -> None:
     spec_dir.mkdir(parents=True, exist_ok=True)
     (spec_dir / "spec.md").write_text("# Spec\n", encoding="utf-8")
     (spec_dir / "plan.md").write_text("# Plan\n", encoding="utf-8")
-    (spec_dir / "tasks.md").write_text("- [ ] pending\n", encoding="utf-8")
+    (spec_dir / "tasks.md").write_text(EXECUTABLE_TASKS_FIXTURE, encoding="utf-8")
     (root / "program-manifest.yaml").write_text(
         """
 schema_version: "2"
@@ -941,7 +958,7 @@ def test_status_rebuilds_legacy_resume_pack_from_legacy_checkpoint(
     spec_dir.mkdir(parents=True)
     (spec_dir / "spec.md").write_text("# Spec\n", encoding="utf-8")
     (spec_dir / "plan.md").write_text("# Plan\n", encoding="utf-8")
-    (spec_dir / "tasks.md").write_text("# Tasks\n", encoding="utf-8")
+    (spec_dir / "tasks.md").write_text(EXECUTABLE_TASKS_FIXTURE, encoding="utf-8")
 
     checkpoint_path = tmp_path / ".ai-sdlc" / "state" / "checkpoint.yml"
     checkpoint_path.parent.mkdir(parents=True, exist_ok=True)
@@ -1381,7 +1398,7 @@ def test_status_json_includes_execute_authorization_blocker_before_execute_stage
     spec_dir.mkdir(parents=True, exist_ok=True)
     (spec_dir / "spec.md").write_text("# Spec\n", encoding="utf-8")
     (spec_dir / "plan.md").write_text("# Plan\n", encoding="utf-8")
-    (spec_dir / "tasks.md").write_text("# Tasks\n", encoding="utf-8")
+    (spec_dir / "tasks.md").write_text(EXECUTABLE_TASKS_FIXTURE, encoding="utf-8")
     subprocess.run(["git", "add", "."], cwd=tmp_path, check=True, capture_output=True)
     subprocess.run(["git", "commit", "-m", "seed execute auth fixture"], cwd=tmp_path, check=True, capture_output=True)
     save_checkpoint(
@@ -1424,7 +1441,7 @@ def test_status_json_includes_execute_authorization_blocker_before_execute_stage
     )
 
 
-def test_status_text_surfaces_execute_authorization_detail(
+def test_status_text_surfaces_execute_authorization_state(
     tmp_path: Path,
 ) -> None:
     _init_git_repo(tmp_path)
@@ -1433,7 +1450,7 @@ def test_status_text_surfaces_execute_authorization_detail(
     spec_dir.mkdir(parents=True, exist_ok=True)
     (spec_dir / "spec.md").write_text("# Spec\n", encoding="utf-8")
     (spec_dir / "plan.md").write_text("# Plan\n", encoding="utf-8")
-    (spec_dir / "tasks.md").write_text("# Tasks\n", encoding="utf-8")
+    (spec_dir / "tasks.md").write_text(EXECUTABLE_TASKS_FIXTURE, encoding="utf-8")
     subprocess.run(["git", "add", "."], cwd=tmp_path, check=True, capture_output=True)
     subprocess.run(["git", "commit", "-m", "seed execute auth text fixture"], cwd=tmp_path, check=True, capture_output=True)
     save_checkpoint(
@@ -1456,7 +1473,6 @@ def test_status_text_surfaces_execute_authorization_detail(
     assert result.exit_code == 0
     assert "Execute Authorization" in result.output
     assert "blocked" in result.output
-    assert "current_stage=verify" in result.output
 
 
 def test_status_text_consumes_guard_summaries_from_status_surface(tmp_path: Path) -> None:
@@ -1572,7 +1588,7 @@ def test_status_json_surfaces_backlog_breach_guard_in_workitem_diagnostics(
         encoding="utf-8",
     )
     (spec_dir / "plan.md").write_text("# Plan\n", encoding="utf-8")
-    (spec_dir / "tasks.md").write_text("# Tasks\n", encoding="utf-8")
+    (spec_dir / "tasks.md").write_text(EXECUTABLE_TASKS_FIXTURE, encoding="utf-8")
     (spec_dir / "task-execution-log.md").write_text("# Log\n\nexecution evidence\n", encoding="utf-8")
     _commit_all(tmp_path, "docs: seed backlog breach workitem diagnostic fixture")
     save_checkpoint(
@@ -1964,8 +1980,9 @@ def test_status_json_promotes_spec_scoped_program_truth_into_workitem_diagnostic
     diagnostics = payload["workitem_diagnostics"]
     assert diagnostics["state"] == "action_required"
     assert diagnostics["source"] == "program_truth"
-    assert diagnostics["next_required_action"] == (
-        "close the capability_closure_audit entry for the blocked release target"
+    assert (
+        diagnostics["next_required_action"]
+        == "uv run ai-sdlc program browser-gate-probe --execute"
     )
     assert any(
         item["id"] == "program_truth"

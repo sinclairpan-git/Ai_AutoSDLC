@@ -408,7 +408,7 @@ Batch 7: release closure
 ### Task 7.1 全量验证、PR 和补丁发布
 
 - task_id: T71
-- status: todo
+- status: needs-review
 - priority: P0
 - depends: T34,T41,T53,T66
 - scope:

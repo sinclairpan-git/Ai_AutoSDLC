@@ -427,3 +427,75 @@ Batch 6：`brownfield adopt` 已完成首轮实现，正在按两个对抗 agent
 
 - Batch 6 实现已完成 focused verification，并通过 UX 与 AI-native 二轮对抗复审。
 - 下一步：提交 Batch 6 后进入 Batch 7 release closure。
+
+### Batch 2026-05-23-008 | T71
+
+#### 4.31 批次范围
+
+- 覆盖任务：`T71`
+- 覆盖阶段：Batch 7 release closure
+- 预读范围：版本号、发布说明、README、用户指南、离线包文档、release workflow 默认 tag、release consistency constraints、GitHub workflow tests
+- 激活的规则：发布材料必须版本一致；发布前必须完成全量本地验证；最终实现和发布材料必须通过 UX 与 AI-native 对抗评审后才能创建 PR / release
+
+#### 4.32 改动记录
+
+- 改动范围：
+  - `pyproject.toml`
+  - `uv.lock`
+  - `src/ai_sdlc/__init__.py`
+  - `src/ai_sdlc/core/verify_constraints.py`
+  - `README.md`
+  - `USER_GUIDE.zh-CN.md`
+  - `packaging/offline/README.md`
+  - `packaging/offline/RELEASE_CHECKLIST.md`
+  - `docs/pull-request-checklist.zh.md`
+  - `docs/框架自迭代开发与发布约定.md`
+  - `.github/workflows/release-build.yml`
+  - `.github/workflows/release-artifact-smoke.yml`
+  - `docs/releases/v0.7.18.md`
+  - release/version consistency tests
+- 改动内容：
+  - 将框架版本推进到 `0.7.18` / `v0.7.18`。
+  - 新增 `docs/releases/v0.7.18.md`，覆盖 executable task guard、adapter diagnostic、注释与中文文本质量、brownfield adopt。
+  - 同步 README、用户指南、离线包文档、release checklist、PR checklist 和 release workflows 的版本号与资产名。
+  - 更新 release consistency constraints 和测试 fixture，确保发布入口、资产名、workflow 默认 tag 和用户文案一致。
+  - 修正 full-test 过程中暴露的测试 fixture 偏差：module invocation fixture 忽略本仓库旧 `.ai-sdlc/local` 状态、status 文案测试不依赖 Rich 表格宽度、program truth 测试期待当前最具体的 browser gate probe 动作。
+  - 清理 `specs/142-frontend-mainline-delivery-close-check-closure-baseline/blocker-execution-map.yaml` 中已经不在 truth ledger 的陈旧 blocker ref，使 blocker map 与当前 truth source 一致。
+- 执行的命令：
+  - `uv run ruff check src tests`: All checks passed.
+  - `uv run ai-sdlc verify constraints`: no BLOCKERs.
+  - `uv run pytest`: 2593 passed, 2 skipped.
+- 测试结果：全量本地验证通过。
+- 是否符合任务目标：本地验证与发布材料准备完成；待两个对抗 agent 对最终实现和发布材料评审。
+
+#### 4.33 当前门禁状态
+
+- `tasks.md` 同步状态：`T71` 已标记 `needs-review`，等待最终对抗评审、PR checks、Codex review 和 release 资产验证后关闭。
+- 下一步：请求 UX 与 AI-native 对抗 agent 评审 Batch 7 生成物；若无必须修订项，提交、推送、创建 PR，并进入 GitHub review/check/release 流程。
+
+#### 4.34 对抗评审结论
+
+- 常驻 UX agent 与常驻 AI-native agent 在两轮请求中均因远端 compact 断流未返回有效结论；为不绕过门禁，关闭两条旧 agent 线程后拉起同角色替代评审 agent。
+- 替代 UX 评审：无必须修订项，同意进入 PR/release。建议补充安装后 `adopt` 入口、把 `checkpoint-candidate.json` 称为继续点候选文件、增加用户语言的质量底线说明。
+- 替代 AI-native 评审：无必须修订项，同意进入 PR/release。建议将 status text 测试名从 detail 调整为 state，并在 PR 描述说明 `specs/142.../blocker-execution-map.yaml` 是与当前 truth ledger 对齐的陈旧 blocker 清理。
+- 已采纳建议：
+  - `USER_GUIDE.zh-CN.md` 升级后继续章节补充 `ai-sdlc adopt .`。
+  - `USER_GUIDE.zh-CN.md` 将 `checkpoint-candidate.json` 解释为“继续点候选文件”。
+  - `USER_GUIDE.zh-CN.md` 新增“AI 写代码时的质量底线”，覆盖可执行任务、原注释保留、注释语言、简体中文 UTF-8 和禁止噪音注释。
+  - `tests/integration/test_cli_status.py` 将文本输出测试重命名为 `test_status_text_surfaces_execute_authorization_state`。
+- 采纳后验证：
+  - `uv run pytest tests/integration/test_cli_status.py::test_status_text_surfaces_execute_authorization_state tests/unit/test_verify_constraints.py::test_release_docs_consistency_passes_when_release_entry_docs_align -q`: 2 passed.
+  - `uv run ruff check tests/integration/test_cli_status.py`: All checks passed.
+  - `uv run ai-sdlc verify constraints`: no BLOCKERs.
+- delta 复审：
+  - 替代 UX agent：无必须修订项，同意进入 PR/release。
+  - 替代 AI-native agent：无必须修订项，同意进入 PR/release。
+- 复审状态：通过。
+
+#### 4.35 最终本地验证
+
+- 执行的命令：
+  - `uv run ruff check src tests`: All checks passed.
+  - `uv run ai-sdlc verify constraints`: no BLOCKERs.
+  - `uv run pytest`: 2593 passed, 2 skipped.
+- 结论：最终本地验证通过，可以提交并进入 PR / Codex review / GitHub checks。

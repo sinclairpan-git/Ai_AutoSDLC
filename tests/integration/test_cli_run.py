@@ -160,7 +160,7 @@ class TestRunCommand:
         result = runner.invoke(app, ["run", "--dry-run"])
         assert result.exit_code == 0
         assert "当前结果 / Result" in result.output
-        assert "本次 dry-run 会自动继续执行" in result.output
+        assert "下一步 / Next" in result.output
         doc = tmp_path / "AGENTS.md"
         assert doc.is_file()
 

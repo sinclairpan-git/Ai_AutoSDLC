@@ -107,7 +107,11 @@ def test_source_checkout_module_invocation_prefers_local_src_without_pythonpath(
 
 def test_python_m_ai_sdlc_doctor_supports_space_path(tmp_path: Path) -> None:
     project_root = tmp_path / "ai sdlc project"
-    shutil.copytree(_REPO_ROOT / ".ai-sdlc", project_root / ".ai-sdlc")
+    shutil.copytree(
+        _REPO_ROOT / ".ai-sdlc",
+        project_root / ".ai-sdlc",
+        ignore=shutil.ignore_patterns("local"),
+    )
 
     result = subprocess.run(
         [sys.executable, "-m", "ai_sdlc", "doctor"],
@@ -125,7 +129,11 @@ def test_python_m_ai_sdlc_doctor_supports_space_path(tmp_path: Path) -> None:
 
 def test_python_m_ai_sdlc_doctor_supports_non_ascii_path(tmp_path: Path) -> None:
     project_root = tmp_path / "AI测试项目"
-    shutil.copytree(_REPO_ROOT / ".ai-sdlc", project_root / ".ai-sdlc")
+    shutil.copytree(
+        _REPO_ROOT / ".ai-sdlc",
+        project_root / ".ai-sdlc",
+        ignore=shutil.ignore_patterns("local"),
+    )
 
     result = subprocess.run(
         [sys.executable, "-m", "ai_sdlc", "doctor"],
