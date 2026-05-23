@@ -44,16 +44,16 @@ def render_startup_guidance() -> str:
     """Render the startup guidance required after init/bootstrap entrypoints."""
 
     return render_status_guidance(
-        current_status_zh="接入真值尚未确认；先检查 adapter 状态。",
-        current_status_en="Adapter ingress truth is not yet confirmed. Check adapter status first.",
+        current_status_zh="项目规则准备就绪后，开发会先确认当前可执行任务。",
+        current_status_en="After project instructions are ready, development is guarded by the current executable task.",
         next_steps=(
             (
-                "ai-sdlc run --dry-run",
-                "继续安全预演；如 adapter 未验证，输出会直接给出恢复动作。",
-                "Continue with the safe rehearsal; if adapter verification is missing, the output will give one recovery action.",
+                "ai-sdlc status",
+                "查看当前项目状态；普通开发不需要手动证明 AI 宿主已加载规则。",
+                "Check current project status; normal development does not require manually proving the AI host loaded instructions.",
             ),
         ),
         notes=(
-            "如果当前 shell 找不到 ai-sdlc，再使用 python -m ai_sdlc run --dry-run 作为等价入口。",
+            "排查时才需要运行 adapter status 或 run --dry-run；主流程可以回到 AI 对话继续需求细化和任务分解。",
         ),
     )

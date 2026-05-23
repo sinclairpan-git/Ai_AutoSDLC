@@ -56,7 +56,7 @@
 
 ## 3. 当前进行中
 
-无。下一步进入 Batch 4：`adapter wording and user-facing workflow state`，但必须先通过 Batch 3 对抗评审。
+无。下一步进入 Batch 5：`comment and text quality policies`，但必须先通过 Batch 4 对抗评审。
 
 ## 4. 已完成记录
 
@@ -212,3 +212,62 @@
 
 - Batch 3 实现已完成 focused verification。
 - 下一步：提交 Batch 3 后进入 Batch 4，处理 `T41` adapter / init / status 用户口径。
+
+### Batch 2026-05-23-005 | T41
+
+#### 4.16 批次范围
+
+- 覆盖任务：`T41`
+- 覆盖阶段：Batch 4 adapter wording and user-facing workflow state
+- 预读范围：adapter templates、beginner guidance、status guidance、execute authorization wording、USER_GUIDE
+- 激活的规则：用户主路径不依赖不可验证宿主加载证明；排查命令保留为诊断入口
+
+#### 4.17 改动记录
+
+- 改动范围：
+  - `AGENTS.md`
+  - `src/ai_sdlc/adapters/codex/AI-SDLC.md`
+  - `src/ai_sdlc/adapters/vscode/AI-SDLC.md`
+  - `src/ai_sdlc/adapters/claude_code/AI-SDLC.md`
+  - `src/ai_sdlc/adapters/cursor/rules/ai-sdlc.md`
+  - `src/ai_sdlc/cli/beginner_guidance.py`
+  - `src/ai_sdlc/cli/adapter_cmd.py`
+  - `src/ai_sdlc/cli/status_guidance.py`
+  - `src/ai_sdlc/core/execute_authorization.py`
+  - `src/ai_sdlc/telemetry/display.py`
+  - `USER_GUIDE.zh-CN.md`
+  - `tests/unit/test_execute_authorization.py`
+  - `tests/integration/test_cli_status.py`
+- 改动内容：
+  - adapter templates 从“必须证明 verified_loaded”改为“用户主路径不依赖宿主加载证明，写代码前以当前可执行任务为准”。
+  - 默认 adapter status 对已安装规则不再引导用户手动 `run --dry-run`，而是回到 AI 对话继续需求。
+  - adapter activate/status 指引从 verified_loaded 检查改为规则安装状态排查。
+  - `ai-sdlc run` 对 `materialized` adapter 不再因缺 `verified_loaded` 阻断，真正执行授权交给 executable task / formal docs guard。
+  - `adapter select` / `shell-select` 不再把 `run --dry-run` 作为普通下一步。
+  - execute authorization 和 status display 中旧的 `review-to-decompose` / `repo truth` 用户可见文案改为任务确认文案。
+  - USER_GUIDE 将 adapter status 标注为排查入口，并补充 `workitem guard`。
+- 新增/调整的测试：
+  - 更新 execute authorization/status 断言，保留 JSON 机器状态码但默认文案收敛为用户可理解表达。
+- 执行的命令：
+  - `uv run pytest tests/integration/test_cli_run.py::TestRunCommand::test_run_non_dry_run_continues_when_adapter_is_materialized tests/integration/test_cli_run.py::TestRunCommand::test_run_non_dry_run_does_not_suggest_fake_env_for_generic_adapter tests/unit/test_execute_authorization.py tests/integration/test_cli_status.py::test_status_json_includes_execute_authorization_blocker_before_execute_stage tests/integration/test_cli_adapter.py -q`: 29 passed.
+  - `uv run ruff check ...`: All checks passed.
+  - `uv run ai-sdlc verify constraints`: no BLOCKERs.
+- 测试结果：focused tests、ruff 和约束校验均通过。
+- 是否符合任务目标：是，待两个对抗 agent 对 Batch 4 生成物评审。
+
+#### 4.18 对抗评审结论
+
+- 第一轮对抗评审：不通过。必须修订项包括 `ai-sdlc run` 非 dry-run 主路径仍以 `verified_loaded` 为硬门禁、测试仍固定旧行为、`adapter select/shell-select` 仍把 `run --dry-run` 作为普通下一步、USER_GUIDE 升级后普通步骤仍要求 `adapter status`。
+- 第二轮对抗评审：AI-native 通过；UX 仍阻塞，指出 beginner UX 测试仍固定旧 `run --dry-run` 输出，且非 ready adapter 恢复文案仍把 dry-run 放进普通路径。
+- 第三轮对抗评审：UX 通过，无必须修订项；Batch 4 已满足两个对抗视角。
+
+#### 4.19 任务/计划同步状态
+
+- `tasks.md` 同步状态：`T41` 已标记 done。
+- `plan.md` 同步状态：无需调整；实现符合 Phase 2 adapter 口径。
+- 下一批入口：两个对抗 agent 对 Batch 4 无必须修订项后，进入 `T51` 注释语言信号链路。
+
+#### 4.20 批次结论
+
+- Batch 4 实现已完成 focused verification。
+- 下一步：提交 Batch 4 后进入 Batch 5，处理 `T51` 注释语言信号链路。

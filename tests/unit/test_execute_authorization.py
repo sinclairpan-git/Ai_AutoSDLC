@@ -58,7 +58,7 @@ def test_evaluate_execute_authorization_blocks_when_tasks_truth_missing(
     assert result.authorized is False
     assert result.reason_codes == ["tasks_truth_missing"]
     assert result.tasks_present is False
-    assert "docs-only / review" in result.detail
+    assert "tasks.md" in result.detail
 
 
 def test_evaluate_execute_authorization_blocks_when_stage_has_not_entered_execute(
@@ -241,7 +241,7 @@ def test_evaluate_execute_authorization_surfaces_docs_only_review_truth_when_tas
 
     assert result.state == "blocked"
     assert result.reason_codes == ["tasks_truth_missing"]
-    assert "docs-only / review-to-decompose" in result.detail
+    assert "tasks.md" in result.detail
 
 
 def test_evaluate_execute_authorization_blocks_when_formal_docs_incomplete(

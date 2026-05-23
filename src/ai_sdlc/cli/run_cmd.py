@@ -80,7 +80,7 @@ def _failed_gate_messages(result: Any) -> list[str]:
 def _adapter_gate_message(root: object, *, dry_run: bool) -> str | None:
     """Return a warning/blocker based on persisted ingress truth."""
     payload = build_adapter_governance_surface(root)
-    if payload["adapter_ingress_state"] == "verified_loaded":
+    if payload["adapter_ingress_state"] in {"verified_loaded", "materialized"}:
         return None
     result_zh, result_en = adapter_result_text(payload)
     if dry_run:

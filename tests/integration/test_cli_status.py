@@ -1315,13 +1315,10 @@ def test_status_json_includes_bounded_branch_lifecycle_summary(
         "blocking": True,
         "actionable": True,
         "summary_token": "explicit_execute_authorization_missing",
-        "detail": (
-            "active work item has tasks.md, but repo truth has not entered execute; "
-            "remain in review-to-decompose; current_stage=verify"
-        ),
+        "detail": "请先确认当前工作项的下一条可执行任务，再修改产品代码。",
         "reason_codes": ["explicit_execute_authorization_missing"],
         "next_required_actions": [
-            "keep the work item in review-to-decompose until repo truth explicitly enters execute"
+            "confirm the next executable task before changing product code"
         ],
     }
     assert truth_item == {
@@ -1411,12 +1408,12 @@ def test_status_json_includes_execute_authorization_blocker_before_execute_stage
     assert summary["reason_codes"] == ["explicit_execute_authorization_missing"]
     assert summary["tasks_present"] is True
     assert summary["current_stage"] == "verify"
-    assert "review-to-decompose" in summary["detail"]
+    assert "可执行任务" in summary["detail"]
     diagnostics = payload["workitem_diagnostics"]
     assert diagnostics["state"] == "action_required"
     assert diagnostics["source"] == "execute_authorization"
     assert diagnostics["next_required_action"].startswith(
-        "keep the work item in review-to-decompose"
+        "confirm the next executable task"
     )
     assert any(
         item["id"] == "execute_authorization"

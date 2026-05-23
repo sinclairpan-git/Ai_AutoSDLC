@@ -101,8 +101,8 @@ def adapter_result_text(payload: dict[str, object]) -> tuple[str, str]:
         )
     if ingress == "materialized":
         return (
-            f"正常：{target} 规则已安装到 {path}。当前终端无法证明 AI 宿主已加载它，这在普通终端里是常见情况。",
-            f"OK: {target} instructions are installed at {path}. This terminal cannot prove the AI host loaded them; that is common in a regular terminal.",
+            f"正常：{target} 规则已安装到 {path}。写代码前会按当前可执行任务检查。",
+            f"OK: {target} instructions are installed at {path}. Code changes are guarded by the current executable task.",
         )
     if ingress == "degraded":
         return (
@@ -138,9 +138,9 @@ def render_adapter_status_for_beginner(payload: dict[str, object]) -> str:
         return render_single_next_step(
             result_zh=result_zh,
             result_en=result_en,
-            next_command="ai-sdlc run --dry-run",
-            next_zh="继续安全预演；预演会检查初始化路径，但不会真正执行开发改动。",
-            next_en="Continue with the safe rehearsal; it checks startup flow without making development changes.",
+            next_command=None,
+            next_zh="回到 Codex/AI 对话输入需求即可；写代码前会先确认当前可执行任务。",
+            next_en="Return to Codex/AI chat and describe the requirement; code changes will be checked against the current executable task first.",
         )
     select_command = "ai-sdlc adapter select"
     if target in _VERIFICATION_ENV_FOR_TARGET:
@@ -149,8 +149,8 @@ def render_adapter_status_for_beginner(payload: dict[str, object]) -> str:
         result_zh=result_zh,
         result_en=result_en,
         next_command=select_command,
-        next_zh="重新选择实际用于聊天开发的 AI 入口，然后再运行安全预演。",
-        next_en="Select the AI entry you actually use for chat development, then run the safe rehearsal.",
+        next_zh="重新选择实际用于聊天开发的 AI 入口；完成后回到 AI 对话继续需求，只有排查时再运行 dry-run。",
+        next_en="Select the AI entry you actually use for chat development; then return to AI chat, using dry-run only for troubleshooting.",
     )
 
 

@@ -120,10 +120,7 @@ def evaluate_execute_authorization(
         if tasks_present is False:
             result.state = "blocked"
             result.reason_codes = ["tasks_truth_missing"]
-            result.detail = _detail_with_stage(
-                "active work item is missing tasks.md; remain in docs-only / review-to-decompose",
-                current_stage,
-            )
+            result.detail = "请先补齐当前工作项的 tasks.md，再修改产品代码。"
             return result
         if _formal_docs_incomplete(truth):
             result.state = "blocked"
@@ -139,10 +136,7 @@ def evaluate_execute_authorization(
     if tasks_present is False:
         result.state = "blocked"
         result.reason_codes = ["tasks_truth_missing"]
-        result.detail = _detail_with_stage(
-            "active work item is missing tasks.md; remain in docs-only / review-to-decompose",
-            current_stage,
-        )
+        result.detail = "请先补齐当前工作项的 tasks.md，再修改产品代码。"
         return result
 
     if _formal_docs_incomplete(truth):
@@ -168,7 +162,7 @@ def evaluate_execute_authorization(
     result.authorized = True
     result.next_task_id = task_guard.task_id
     result.reason_codes = []
-    detail = "tasks.md exists and repo truth is at or beyond execute"
+    detail = "已确认当前工作项和下一条可执行任务"
     if truth.classification:
         detail += f"; truth={truth.classification}"
     result.detail = _detail_with_stage(detail, current_stage)

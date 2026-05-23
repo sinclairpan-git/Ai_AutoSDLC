@@ -211,7 +211,7 @@ Batch 7: release closure
 ### Task 4.1 调整 adapter / init / status 用户口径
 
 - task_id: T41
-- status: todo
+- status: done
 - priority: P0
 - depends: T34
 - scope:

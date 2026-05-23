@@ -17,8 +17,8 @@ Windows 注意：如果你是用 `powershell -ExecutionPolicy Bypass -File ... -
 | `ai-sdlc --help` | 查看 CLI 是否可用，以及当前支持的命令 |
 | `ai-sdlc --version` | 查看当前安装版本 |
 | `ai-sdlc init .` | 在当前项目初始化 AI-SDLC |
-| `ai-sdlc adapter status` | 查看 AI 入口、adapter 接入真值和治理激活状态 |
-| `ai-sdlc run --dry-run` | 执行安全预演，确认阶段路由和门禁状态 |
+| `ai-sdlc adapter status` | 排查 AI 入口和规则安装状态；普通开发主路径通常不需要手动执行 |
+| `ai-sdlc workitem guard` | 查看当前是否已绑定下一条可执行任务 |
 
 如果没有写入 PATH，不能直接照抄 `ai-sdlc ...`。必须把命令前缀替换为安装包内 Python 入口。
 
@@ -478,7 +478,7 @@ ai-sdlc init .
 如果失败：
 
 - 只执行 CLI 输出里的 `下一步 / Next` 那一条命令
-- 如果提示 target 不匹配，先选择真实聊天入口，再重新执行 `adapter status` 或 `init`
+- 如果提示 target 不匹配，先选择真实聊天入口；普通开发主路径不需要手动证明宿主已加载规则
 - 如果提示项目已有旧 `.ai-sdlc` 痕迹但状态不完整，按 CLI 给出的初始化 / 修复命令继续
 - 如果已有大量未提交改动，先决定是否提交、暂存或继续保留；不要为了初始化而删除业务改动
 
@@ -557,20 +557,19 @@ ai-sdlc self-update check
 
 `--upgrade-existing` 的成功标准不是“安装包运行完”，而是当前 `ai-sdlc` 入口已经换成新版本。安装器会在结束前校验版本和 `self-update` 子命令；如果它无法安全覆盖旧入口，会直接报错并给下一步，不会假装成功。
 
-### 3. 升级后回到项目检查
+### 3. 升级后回到项目继续
 
 在业务项目根目录执行：
 
 ```bash
 ai-sdlc init .
-ai-sdlc adapter status
 ```
 
 正常时你应该看到：
 
-- `init` 或 `adapter status` 输出 `当前结果 / Result`
+- `init` 输出 `当前结果 / Result`
 - `下一步 / Next` 给出唯一下一步
-- 如果接入真值已验证，下一步通常是切换到 AI 对话输入需求
+- 下一步通常是切换到 AI 对话输入需求；只有排查时才需要手动运行 `ai-sdlc adapter status`
 
 如果公司内网不允许访问 GitHub，可以关闭自动更新提醒。
 
@@ -596,8 +595,8 @@ export AI_SDLC_DISABLE_UPDATE_CHECK=1
 | `ai-sdlc --version` | 查看当前安装版本 |
 | `ai-sdlc init .` | 在当前项目初始化 AI-SDLC；新版本会自动执行必要检查和安全预演 |
 | `ai-sdlc status` | 查看项目状态、阶段状态和关键路径 |
-| `ai-sdlc adapter status` | 检查 AI 入口、adapter 接入真值和治理激活状态 |
-| `ai-sdlc adapter status --json` | 查看机器可读的 adapter 真值 |
+| `ai-sdlc adapter status` | 排查 AI 入口和规则安装状态；普通开发主路径通常不需要手动执行 |
+| `ai-sdlc adapter status --json` | 查看机器可读的 adapter 诊断状态 |
 | `ai-sdlc adapter select` | 手工选择真实聊天入口 |
 | `ai-sdlc adapter shell-select` | 选择项目偏好的终端 shell，并刷新 adapter 指引 |
 | `ai-sdlc run --dry-run` | 手动重跑安全预演；通常只在排查时使用 |
