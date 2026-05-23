@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 import typer
@@ -29,6 +30,7 @@ from ai_sdlc.core.program_service import (
     PROGRAM_TRUTH_SYNC_EXECUTE_COMMAND,
     ProgramService,
 )
+from ai_sdlc.core.task_guard import evaluate_task_guard
 from ai_sdlc.core.workitem_scaffold import WorkitemScaffolder, WorkitemScaffoldError
 from ai_sdlc.core.workitem_truth import (
     WorkitemTruthResult,
@@ -288,6 +290,64 @@ def _print_table(result: PlanCheckResult) -> None:
             console.print(f"  - {p}")
         if len(changed_paths) > 50:
             console.print(f"  … ({len(changed_paths) - 50} more)")
+
+
+@workitem_app.command(
+    "guard",
+    help="Read-only: show the current next executable task guard state.",
+)
+def workitem_guard(
+    wi: Path | None = typer.Option(
+        None,
+        "--wi",
+        help="Optional specs/<WI>/ directory. Defaults to the active checkpoint.",
+    ),
+    request_text: str = typer.Option(
+        "处理当前用户请求",
+        "--request",
+        help="Optional user request text used only for a minimal task candidate.",
+    ),
+    as_json: bool = typer.Option(
+        False,
+        "--json",
+        help="Machine-readable guard report.",
+    ),
+) -> None:
+    """Read-only next executable task guard surface."""
+    root = find_project_root()
+    if root is None:
+        console.print("[red]Not inside an AI-SDLC project.[/red]")
+        raise typer.Exit(code=1)
+
+    result = evaluate_task_guard(root=root, wi=wi, request_text=request_text)
+    if as_json:
+        console.print(
+            json.dumps(result.to_json_dict(), ensure_ascii=False, indent=2),
+            soft_wrap=True,
+        )
+    else:
+        _print_guard_table(result.to_json_dict())
+    raise typer.Exit(code=0 if result.allowed else 1)
+
+
+def _print_guard_table(payload: dict[str, object]) -> None:
+    table = Table(title="workitem guard (read-only)")
+    table.add_column("Field", style="cyan")
+    table.add_column("Value")
+    table.add_row(
+        "Status",
+        "可以修改代码" if payload.get("allowed") else "请先准备当前任务",
+    )
+    if payload.get("active_work_item"):
+        table.add_row("Work item", str(payload.get("active_work_item")))
+    if payload.get("task_id"):
+        table.add_row("Next task", str(payload.get("task_id")))
+    if payload.get("task_goal"):
+        table.add_row("Goal", str(payload.get("task_goal")))
+    table.add_row("Detail", str(payload.get("detail", "")))
+    console.print(table)
+    for action in _dedupe_cli_text_items(payload.get("next_actions", [])):
+        console.print(f"  - {action}")
 
 
 @workitem_app.command(

@@ -56,7 +56,7 @@
 
 ## 3. 当前进行中
 
-无。下一步进入 Batch 3：`next executable task guard`，但必须先通过 Batch 2 对抗评审。
+无。下一步进入 Batch 4：`adapter wording and user-facing workflow state`，但必须先通过 Batch 3 对抗评审。
 
 ## 4. 已完成记录
 
@@ -153,3 +153,62 @@
 
 - Batch 2 实现已完成 focused verification。
 - 下一步：提交 Batch 2 后进入 Batch 3，先实现 `T31` 自动准备最小任务。
+
+### Batch 2026-05-23-004 | T31-T34
+
+#### 4.11 批次范围
+
+- 覆盖任务：`T31`、`T32`、`T33`、`T34`
+- 覆盖阶段：Batch 3 next executable task guard
+- 预读范围：`execute_authorization`、`workitem_cmd`、`telemetry/readiness`、Batch 2 parser
+- 激活的规则：产品代码修改主路径必须硬阻断 `BLOCK_CODE_PREPARE_TASKS`；普通用户文案不要求理解 checkpoint/stage
+
+#### 4.12 改动记录
+
+- 改动范围：
+  - `src/ai_sdlc/core/task_preparation.py`
+  - `src/ai_sdlc/core/task_guard.py`
+  - `src/ai_sdlc/core/execute_authorization.py`
+  - `src/ai_sdlc/cli/workitem_cmd.py`
+  - `src/ai_sdlc/telemetry/readiness.py`
+  - `tests/unit/test_task_preparation.py`
+  - `tests/unit/test_task_guard.py`
+  - `tests/unit/test_execute_authorization.py`
+  - `tests/integration/test_cli_workitem_guard.py`
+  - `specs/183-production-feedback-guard-adoption/tasks.md`
+  - `specs/183-production-feedback-guard-adoption/task-execution-log.md`
+- 改动内容：
+  - 新增最小任务候选生成，不直接修改用户文件。
+  - 新增 task guard preflight，支持 `ALLOW_CODE_WITH_TASK` 与 `BLOCK_CODE_PREPARE_TASKS`。
+  - 将 execute authorization 接入 task guard；formal docs 不完整或真实 tasks 文件没有可执行任务时硬阻断。
+  - 新增 during/postflight 范围检查，覆盖 product、test、doc、snapshot、migration、config、generated 伴随文件分类，并承载 verification commands 与 execution log entry。
+  - 新增只读 `ai-sdlc workitem guard` surface，支持 JSON 和表格输出；默认表格显示用户友好文案，JSON 保留机器状态码。
+  - status readiness 的 execute authorization next action 增加 task guard 修复建议。
+- 新增/调整的测试：
+  - `tests/unit/test_task_preparation.py`
+  - `tests/unit/test_task_guard.py`
+  - `tests/integration/test_cli_workitem_guard.py`
+  - 扩展 `tests/unit/test_execute_authorization.py`
+- 执行的命令：
+  - `uv run pytest tests/unit/test_task_preparation.py tests/unit/test_task_guard.py tests/unit/test_execute_authorization.py tests/integration/test_cli_workitem_guard.py -q`: 20 passed.
+  - `uv run ruff check src/ai_sdlc/core/task_preparation.py src/ai_sdlc/core/task_guard.py src/ai_sdlc/core/execute_authorization.py src/ai_sdlc/cli/workitem_cmd.py src/ai_sdlc/telemetry/readiness.py tests/unit/test_task_preparation.py tests/unit/test_task_guard.py tests/unit/test_execute_authorization.py tests/integration/test_cli_workitem_guard.py`: All checks passed.
+  - `uv run ai-sdlc verify constraints`: no BLOCKERs.
+- 测试结果：focused tests、ruff 和约束校验均通过。
+- 是否符合任务目标：是，待两个对抗 agent 对 Batch 3 生成物评审。
+
+#### 4.13 对抗评审结论
+
+- 第一轮对抗评审：不通过。必须修订项包括缺 `plan.md` 时 guard / execute authorization 仍可能放行、postflight 证据模型缺 verification command 和 execution log entry、默认用户文案暴露内部状态。
+- 第二轮对抗评审：UX 和 AI-native 均通过，无必须修订项，同意进入 Batch 4。
+- 非阻塞备注：旧英文 `review-to-decompose` / `repo truth` 等内部文案将在 Batch 4 adapter/status 用户口径中继续收敛。
+
+#### 4.14 任务/计划同步状态
+
+- `tasks.md` 同步状态：`T31`、`T32`、`T33`、`T34` 已标记 done；T33 集成测试路径同步为实际落地的 `tests/integration/test_cli_workitem_guard.py`。
+- `plan.md` 同步状态：无需调整；实现仍符合 Phase 1 guard core。
+- 下一批入口：两个对抗 agent 对 Batch 3 无必须修订项后，进入 `T41` adapter / init / status 用户口径。
+
+#### 4.15 批次结论
+
+- Batch 3 实现已完成 focused verification。
+- 下一步：提交 Batch 3 后进入 Batch 4，处理 `T41` adapter / init / status 用户口径。

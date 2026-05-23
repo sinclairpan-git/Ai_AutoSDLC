@@ -137,7 +137,7 @@ Batch 7: release closure
 ### Task 3.1 实现自动准备最小任务
 
 - task_id: T31
-- status: todo
+- status: done
 - priority: P0
 - depends: T22,T23
 - scope:
@@ -155,7 +155,7 @@ Batch 7: release closure
 ### Task 3.2 实现 guard preflight
 
 - task_id: T32
-- status: todo
+- status: done
 - priority: P0
 - depends: T31
 - scope:
@@ -173,25 +173,25 @@ Batch 7: release closure
 ### Task 3.3 实现 during / postflight 范围检查
 
 - task_id: T33
-- status: todo
+- status: done
 - priority: P1
 - depends: T32
 - scope:
   - src/ai_sdlc/core/task_guard.py
   - tests/unit/test_task_guard.py
-  - tests/integration/test_cli_task_guard.py
+  - tests/integration/test_cli_workitem_guard.py
 - acceptance:
   - during 阶段能识别 diff 是否超出 task scope。
   - postflight 不宣称机器理解自然语言 acceptance；只要求可验证证据模型：changed paths、allowed companion files、verification command、execution log entry。
   - 明确伴随文件分类：product、test、doc、snapshot、migration、config、generated。
   - 伴随文件超出业务 scope 时必须被规则允许、写入 log，或要求更新任务。
 - verify:
-  - uv run pytest tests/unit/test_task_guard.py tests/integration/test_cli_task_guard.py -q
+  - uv run pytest tests/unit/test_task_guard.py tests/integration/test_cli_workitem_guard.py -q
 
 ### Task 3.4 暴露 CLI / status surface
 
 - task_id: T34
-- status: todo
+- status: done
 - priority: P1
 - depends: T32,T33
 - scope:
