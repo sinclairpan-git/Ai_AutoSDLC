@@ -56,7 +56,7 @@
 
 ## 3. 当前进行中
 
-无。下一步进入 Batch 2：`executable task schema`。
+无。下一步进入 Batch 3：`next executable task guard`，但必须先通过 Batch 2 对抗评审。
 
 ## 4. 已完成记录
 
@@ -101,3 +101,55 @@
 
 - Formal work item 四件套已通过两轮对抗评审并收口。
 - 下一步：进入 Batch 2，先实现 `T21` executable task schema contract。
+
+### Batch 2026-05-23-003 | T21-T23
+
+#### 4.6 批次范围
+
+- 覆盖任务：`T21`、`T22`、`T23`
+- 覆盖阶段：Batch 2 executable task schema
+- 预读范围：`tasks.md` Batch 2、现有 `TasksParser`、`execute_authorization`、`task_ac_checks`
+- 激活的规则：代码修改必须绑定已完成 formal task；Batch 完成后必须通过 focused tests、ruff 和两个对抗 agent 评审
+
+#### 4.7 改动记录
+
+- 改动范围：
+  - `src/ai_sdlc/core/executable_task.py`
+  - `tests/unit/test_executable_task.py`
+  - `specs/183-production-feedback-guard-adoption/tasks.md`
+  - `specs/183-production-feedback-guard-adoption/task-execution-log.md`
+- 改动内容：
+  - 新增 executable task parser 和 schema contract。
+  - 支持规范 heading、`task_id/status/goal/scope/acceptance/verify/notes` 字段、多行列表、依赖解析和未知字段 warning。
+  - 增加重复 task id、缺字段、非法状态、非法 scope、占位内容、example scope 的阻断 finding。
+  - 根据对抗评审修正 `first_executable_task()`，当文档存在全局错误时不返回可执行任务。
+  - 根据对抗评审降低占位/模板误伤：`README/TODO` 和真实 `templates/tasks-template.md` 不会被当作占位任务；占位错误会指出具体字段和值。
+  - 提供 `is_executable` 和 `first_executable_task`，为 Batch 3 guard 使用。
+- 新增/调整的测试：
+  - 新增 `tests/unit/test_executable_task.py` 覆盖 T21-T23 验收点，并补充 `goal`、`invalid_status`、`blocked`、低误伤模板路径、占位短语、规则说明不误伤和全局错误不放行测试。
+- 执行的命令：
+  - `uv run pytest tests/unit/test_executable_task.py -q`: 13 passed.
+  - `uv run ruff check src/ai_sdlc/core/executable_task.py tests/unit/test_executable_task.py`: All checks passed.
+  - `uv run ai-sdlc verify constraints`: no BLOCKERs.
+  - parser smoke：当前 `specs/183-production-feedback-guard-adoption/tasks.md` 解析结果为 ok，20 tasks，0 errors，first executable task 为 `T31`。
+- 测试结果：focused tests 和 ruff 均通过。
+- 是否符合任务目标：是，待两个对抗 agent 对 Batch 2 生成物评审。
+
+#### 4.8 对抗评审结论
+
+- 第一轮对抗评审：不通过。必须修订项包括 `goal` contract 未实现、`first_executable_task()` 在全局错误下可能放行、占位错误信息不够可操作、缺无效状态测试、placeholder/template 判定误伤真实任务文件。
+- 第二轮对抗评审：AI-native 通过；UX 仍阻塞，指出占位识别对 `TODO:` / `placeholder:` / `待补充` 短语拦截不足，且 T23 acceptance 与允许真实模板文件的实现不一致。
+- 第三轮对抗评审：UX 通过；AI-native 仍阻塞，指出当前真实 `tasks.md` 的规则说明句被误判为占位，导致 `first_executable_task` 返回 None。
+- 第四轮对抗评审：UX 和 AI-native 均通过，无必须修订项，同意进入 Batch 3。
+- 修订状态：Batch 2 已通过对抗评审。
+
+#### 4.9 任务/计划同步状态
+
+- `tasks.md` 同步状态：`T21`、`T22`、`T23` 已标记 done。
+- `plan.md` 同步状态：无需调整；Batch 2 仍符合 Phase 1 的 schema-first 顺序。
+- 下一批入口：两个对抗 agent 对 Batch 2 无必须修订项后，进入 `T31` 自动准备最小任务。
+
+#### 4.10 批次结论
+
+- Batch 2 实现已完成 focused verification。
+- 下一步：提交 Batch 2 后进入 Batch 3，先实现 `T31` 自动准备最小任务。

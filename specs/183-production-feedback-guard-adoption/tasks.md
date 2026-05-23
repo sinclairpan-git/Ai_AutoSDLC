@@ -80,7 +80,7 @@ Batch 7: release closure
 ### Task 2.1 冻结 executable task schema contract
 
 - task_id: T21
-- status: todo
+- status: done
 - priority: P0
 - depends: T12
 - scope:
@@ -101,7 +101,7 @@ Batch 7: release closure
 ### Task 2.2 实现 executable task parser
 
 - task_id: T22
-- status: todo
+- status: done
 - priority: P0
 - depends: T21
 - scope:
@@ -118,7 +118,7 @@ Batch 7: release closure
 ### Task 2.3 识别模板任务和占位任务
 
 - task_id: T23
-- status: todo
+- status: done
 - priority: P0
 - depends: T22
 - scope:
@@ -126,7 +126,7 @@ Batch 7: release closure
   - tests/unit/test_executable_task.py
 - acceptance:
   - 含“待补充”“TODO”“placeholder”等占位内容的任务不可执行。
-  - 指向框架模板或示例路径、缺验证方式、缺 scope 的任务不可执行。
+  - 指向示例路径、占位模板任务、缺验证方式、缺 scope 的任务不可执行；真实任务明确声明要修改模板文件时允许。
   - 错误信息能说明具体缺失字段或占位原因。
   - 两个对抗 agent 对模板/占位识别无必须修订项。
 - verify:
