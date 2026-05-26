@@ -12,15 +12,22 @@ from ai_sdlc.core.adoption import (
 )
 from ai_sdlc.core.agentops_bridge import (
     CODE_CHANGE_TASK_REQUIRED,
+    DEFAULT_TOKEN_ENV,
     AgentOpsIdentity,
+    AgentOpsIngestionConfig,
     AgentOpsRuntimeContext,
     AgentOpsSdlcFact,
+    agentops_ingestion_readiness,
+    agentops_outbox_status,
     build_agentops_runtime_batch,
     build_code_change_guard_fact,
     build_executable_task_prepared_fact,
     build_l5_eligibility_input_fact,
+    deliver_agentops_outbox,
+    load_agentops_ingestion_config,
     local_readiness_from_batch,
     parse_agentops_receipt,
+    persist_agentops_delivery_diagnostic,
     persist_agentops_outbox_batch,
     persist_agentops_receipt_summary,
     send_agentops_batch,
@@ -255,6 +262,278 @@ def test_send_agentops_batch_wraps_transport_errors(
         assert "network unavailable" in str(exc)
     else:
         raise AssertionError("expected transport failure to be wrapped")
+
+
+def test_load_agentops_ingestion_config_uses_env_token_without_exposing_value(
+    tmp_path: Path,
+) -> None:
+    config = load_agentops_ingestion_config(
+        tmp_path,
+        env={
+            "AGENTOPS_INGESTION_ENDPOINT": "https://gateway.example",
+            "AGENTOPS_INGESTION_TOKEN": "secret-token",
+        },
+    )
+
+    readiness = agentops_ingestion_readiness(config)
+
+    assert config.endpoint == "https://gateway.example"
+    assert config.normalized_endpoint == "https://gateway.example/v1/runtime/events"
+    assert config.token_env_var == DEFAULT_TOKEN_ENV
+    assert config.token_present
+    assert readiness["ready"] is True
+    assert readiness["config"]["token_present"] is True
+    assert "secret-token" not in json.dumps(readiness, ensure_ascii=False)
+
+
+def test_gateway_mode_missing_token_is_blocked_before_send(tmp_path: Path) -> None:
+    batch = build_agentops_runtime_batch(
+        outbox_id="outbox_missing_token",
+        batch_id="batch_missing_token",
+        context=_context(),
+        identity=_identity(),
+        facts=(
+            AgentOpsSdlcFact(
+                producer_event_name="verification_result",
+                sdlc_event_type="verification",
+                span_id="verification",
+                status="passed",
+                payload={
+                    "workitem": "186-agentops-production-runtime-integration",
+                    "executable_task_id": "T186-2.1",
+                    "task_guard_state": "allowed",
+                },
+            ),
+        ),
+    )
+    persist_agentops_outbox_batch(tmp_path, batch)
+
+    result = deliver_agentops_outbox(
+        tmp_path,
+        outbox_id="outbox_missing_token",
+        config=AgentOpsIngestionConfig(endpoint="https://gateway.example"),
+    )
+
+    assert not result.delivered
+    assert result.diagnostic is not None
+    assert result.diagnostic.reason_code == "missing_token"
+    assert result.diagnostic_path is not None
+    diagnostic = json.loads(result.diagnostic_path.read_text(encoding="utf-8"))
+    assert diagnostic["status"] == "blocked_before_send"
+    assert diagnostic["retryable"] is True
+    assert "Bearer" not in json.dumps(diagnostic)
+
+
+def test_send_agentops_batch_uses_gateway_bearer_without_identity_headers(
+    monkeypatch,
+) -> None:
+    batch = build_agentops_runtime_batch(
+        outbox_id="outbox_bearer",
+        batch_id="batch_bearer",
+        context=_context(),
+        identity=_identity(),
+        facts=(
+            AgentOpsSdlcFact(
+                producer_event_name="stage_passed",
+                sdlc_event_type="stage",
+                span_id="stage_execute",
+                status="passed",
+                payload={"executable_task_id": "T186-2.2"},
+            ),
+        ),
+    )
+    captured: dict[str, object] = {}
+
+    class _Response:
+        def __enter__(self) -> _Response:
+            return self
+
+        def __exit__(self, *args: object) -> None:
+            return None
+
+        def read(self) -> bytes:
+            return json.dumps(
+                {
+                    "schema_version": "runtime_outbox_receipt.v1",
+                    "batch_id": "batch_bearer",
+                    "outbox_id": "outbox_bearer",
+                    "producer": "Ai_AutoSDLC",
+                    "replay_reason": "initial_delivery",
+                    "outbox_state": "accepted",
+                }
+            ).encode("utf-8")
+
+    def _capture(request, timeout):  # noqa: ANN001, ANN202
+        captured["url"] = request.full_url
+        captured["headers"] = dict(request.header_items())
+        captured["body"] = request.data.decode("utf-8")
+        captured["timeout"] = timeout
+        return _Response()
+
+    monkeypatch.setattr("urllib.request.urlopen", _capture)
+
+    receipt = send_agentops_batch(
+        "https://gateway.example",
+        batch,
+        bearer_token="secret-token",
+        timeout_seconds=3.0,
+    )
+
+    headers = captured["headers"]
+    assert receipt.outbox_id == "outbox_bearer"
+    assert captured["url"] == "https://gateway.example/v1/runtime/events"
+    assert headers["Authorization"] == "Bearer secret-token"
+    assert headers["Content-type"] == "application/json"
+    assert headers["Accept"] == "application/json"
+    assert captured["timeout"] == 3.0
+    assert not any(str(name).lower().startswith("x-agentops-") for name in headers)
+    assert "secret-token" not in str(captured["body"])
+
+
+def test_delivery_http_error_persists_redacted_gateway_diagnostic(
+    monkeypatch,
+    tmp_path: Path,
+) -> None:
+    batch = build_agentops_runtime_batch(
+        outbox_id="outbox_http_401",
+        batch_id="batch_http_401",
+        context=_context(),
+        identity=_identity(),
+        facts=(
+            AgentOpsSdlcFact(
+                producer_event_name="stage_failed",
+                sdlc_event_type="stage",
+                span_id="stage_execute",
+                status="failed",
+                payload={"executable_task_id": "T186-2.2"},
+            ),
+        ),
+    )
+    persist_agentops_outbox_batch(tmp_path, batch)
+
+    def _raise_http_error(*args, **kwargs):  # noqa: ANN002, ANN003, ANN202
+        raise urllib.error.HTTPError(
+            "https://gateway.example/v1/runtime/events",
+            401,
+            "Unauthorized",
+            {},
+            fp=_BytesReader(b'{"code":"UPSTREAM_IDENTITY_REQUIRED","token":"secret-token"}'),
+        )
+
+    monkeypatch.setattr("urllib.request.urlopen", _raise_http_error)
+
+    result = deliver_agentops_outbox(
+        tmp_path,
+        outbox_id="outbox_http_401",
+        config=AgentOpsIngestionConfig(
+            endpoint="https://gateway.example",
+            bearer_token="secret-token",
+        ),
+    )
+
+    assert result.diagnostic is not None
+    assert result.diagnostic.reason_code == "missing_gateway_identity"
+    assert result.diagnostic.http_status == 401
+    assert result.diagnostic_path is not None
+    payload = json.loads(result.diagnostic_path.read_text(encoding="utf-8"))
+    serialized = json.dumps(payload, ensure_ascii=False)
+    assert "secret-token" not in serialized
+    assert "<redacted>" in serialized
+    assert "Verify the Gateway" in payload["retry_guidance"]
+
+
+def test_delivery_invalid_receipt_schema_persists_diagnostic(
+    monkeypatch,
+    tmp_path: Path,
+) -> None:
+    batch = build_agentops_runtime_batch(
+        outbox_id="outbox_bad_receipt",
+        batch_id="batch_bad_receipt",
+        context=_context(),
+        identity=_identity(),
+        facts=(
+            AgentOpsSdlcFact(
+                producer_event_name="stage_failed",
+                sdlc_event_type="stage",
+                span_id="stage_execute",
+                status="failed",
+                payload={"executable_task_id": "T186-2.2"},
+            ),
+        ),
+    )
+    persist_agentops_outbox_batch(tmp_path, batch)
+
+    class _BadResponse:
+        def __enter__(self) -> _BadResponse:
+            return self
+
+        def __exit__(self, *args: object) -> None:
+            return None
+
+        def read(self) -> bytes:
+            return b'{"schema_version":"unexpected"}'
+
+    monkeypatch.setattr("urllib.request.urlopen", lambda *args, **kwargs: _BadResponse())
+
+    result = deliver_agentops_outbox(
+        tmp_path,
+        outbox_id="outbox_bad_receipt",
+        config=AgentOpsIngestionConfig(
+            endpoint="https://gateway.example",
+            bearer_token="secret-token",
+        ),
+    )
+
+    assert result.diagnostic is not None
+    assert result.diagnostic.reason_code == "receipt_schema_invalid"
+    assert result.diagnostic_path is not None
+
+
+def test_agentops_status_reports_latest_outbox_receipt_and_diagnostic(
+    tmp_path: Path,
+) -> None:
+    receipt = parse_agentops_receipt(
+        {
+            "schema_version": "runtime_outbox_receipt.v1",
+            "batch_id": "batch_status",
+            "outbox_id": "outbox_status",
+            "producer": "Ai_AutoSDLC",
+            "replay_reason": "initial_delivery",
+            "outbox_state": "accepted",
+        }
+    )
+    persist_agentops_outbox_batch(
+        tmp_path,
+        {"schema_version": "runtime.ingestion.v1", "outbox_id": "outbox_status"},
+    )
+    persist_agentops_receipt_summary(tmp_path, receipt)
+    persist_agentops_delivery_diagnostic(
+        tmp_path,
+        result_diagnostic := deliver_agentops_outbox(
+            tmp_path,
+            outbox_id="outbox_status",
+            config=AgentOpsIngestionConfig(endpoint="https://gateway.example"),
+            dry_run=True,
+        ).diagnostic,
+    )
+
+    status = agentops_outbox_status(tmp_path)
+
+    assert status["latest_outbox"]["payload"]["outbox_id"] == "outbox_status"
+    assert status["latest_receipt"]["payload"]["outbox_id"] == "outbox_status"
+    assert result_diagnostic is not None
+    assert status["latest_diagnostic"]["payload"]["reason_code"] == "missing_token"
+
+
+class _BytesReader:
+    def __init__(self, data: bytes) -> None:
+        self._data = data
+
+    def read(self, *args: object) -> bytes:
+        return self._data
+
+    def close(self) -> None:
+        return None
 
 
 def test_adopt_artifacts_map_to_workitem_and_executable_task_id() -> None:

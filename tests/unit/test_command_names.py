@@ -11,6 +11,9 @@ def test_collect_flat_command_strings_includes_nested_subcommands() -> None:
     assert "ai-sdlc adapter activate" in cmds
     assert "ai-sdlc adapter select" in cmds
     assert "ai-sdlc adapter status" in cmds
+    assert "ai-sdlc agentops doctor" in cmds
+    assert "ai-sdlc agentops retry" in cmds
+    assert "ai-sdlc agentops status" in cmds
     assert "ai-sdlc verify constraints" in cmds
     assert "ai-sdlc workitem close-check" in cmds
     assert "ai-sdlc workitem init" in cmds
