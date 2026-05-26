@@ -101,8 +101,8 @@ def adapter_result_text(payload: dict[str, object]) -> tuple[str, str]:
         )
     if ingress == "materialized":
         return (
-            f"正常：{target} 规则已安装到 {path}。写代码前会按当前可执行任务检查。",
-            f"OK: {target} instructions are installed at {path}. Code changes are guarded by the current executable task.",
+            f"已写入：{target} 规则已安装到 {path}，但当前终端未证明 AI 宿主已自动读取。",
+            f"Written: {target} instructions are installed at {path}, but this terminal has not proved the AI host loaded them automatically.",
         )
     if ingress == "degraded":
         return (
@@ -134,13 +134,22 @@ def render_adapter_status_for_beginner(payload: dict[str, object]) -> str:
             next_zh="如果这是当前聊天宿主，先重选 adapter target 并刷新 canonical 文件。",
             next_en="If this is the current chat host, reselect the adapter target and refresh canonical files.",
         )
-    if ingress in {"verified_loaded", "materialized"}:
+    if ingress == "verified_loaded":
         return render_single_next_step(
             result_zh=result_zh,
             result_en=result_en,
             next_command=None,
             next_zh="回到 Codex/AI 对话输入需求即可；写代码前会先确认当前可执行任务。",
             next_en="Return to Codex/AI chat and describe the requirement; code changes will be checked against the current executable task first.",
+        )
+    if ingress == "materialized":
+        prompt = _adapter_bootstrap_prompt(payload)
+        return render_single_next_step(
+            result_zh=result_zh,
+            result_en=result_en,
+            next_command=prompt,
+            next_zh="在 AI 对话里先发送上面这句话，让 AI 明确读取 adapter 规则；之后再输入需求。",
+            next_en="Send the line above in the AI chat first so the AI explicitly reads the adapter instructions; then describe the requirement.",
         )
     select_command = "ai-sdlc adapter select"
     if target in _VERIFICATION_ENV_FOR_TARGET:
@@ -213,6 +222,7 @@ def render_init_complete_guidance(
     """Render the final beginner-facing init summary."""
 
     adapter_zh, adapter_en = adapter_result_text(adapter_payload)
+    ingress = str(adapter_payload.get("adapter_ingress_state") or "")
     if dry_run_passed:
         dry_zh = "安全预演已自动通过。"
         dry_en = "Safe rehearsal passed automatically."
@@ -224,11 +234,36 @@ def render_init_complete_guidance(
             (f"未完成项：{reason}", f"Open item: {reason}") for reason in open_reasons[:2]
         )
 
+    if ingress == "verified_loaded":
+        return render_single_next_step(
+            result_zh=f"初始化完成。{adapter_zh} {dry_zh}",
+            result_en=f"Initialization complete. {adapter_en} {dry_en}",
+            next_command=None,
+            next_zh="不用再手动执行初始化命令；现在切换到 Codex/AI 对话中输入你的需求即可。",
+            next_en="No more setup commands are needed; switch to Codex/AI chat and describe your requirement.",
+            notes=notes,
+        )
+    if ingress == "materialized":
+        prompt = _adapter_bootstrap_prompt(adapter_payload)
+        return render_single_next_step(
+            result_zh=f"初始化完成。{adapter_zh} {dry_zh}",
+            result_en=f"Initialization complete. {adapter_en} {dry_en}",
+            next_command=prompt,
+            next_zh="不用再手动执行初始化命令；但在 AI 对话里要先发送上面这句话，再输入需求。",
+            next_en="No more CLI setup commands are needed; send the line above in the AI chat before describing the requirement.",
+            notes=notes,
+        )
     return render_single_next_step(
         result_zh=f"初始化完成。{adapter_zh} {dry_zh}",
         result_en=f"Initialization complete. {adapter_en} {dry_en}",
-        next_command=None,
-        next_zh="不用再手动执行初始化命令；现在切换到 Codex/AI 对话中输入你的需求即可。",
-        next_en="No more setup commands are needed; switch to Codex/AI chat and describe your requirement.",
+        next_command="ai-sdlc adapter status",
+        next_zh="先查看 adapter 状态页给出的下一步；不要假设 AI 已自动加载规则。",
+        next_en="Check the adapter status page for the next step first; do not assume the AI loaded the instructions automatically.",
         notes=notes,
     )
+
+
+def _adapter_bootstrap_prompt(payload: dict[str, object]) -> str:
+    path = str(payload.get("adapter_canonical_path") or "AGENTS.md").strip()
+    target = str(payload.get("agent_target") or "AI").strip()
+    return f"请先读取 {path}，并在继续前按 AI-SDLC 约束执行本项目任务。（target: {target}）"

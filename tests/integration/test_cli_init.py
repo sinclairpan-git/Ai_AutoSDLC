@@ -43,10 +43,10 @@ class TestCliInit:
         assert "Initialization complete" in result.output
         assert "安全预演已自动执行" in result.output
         assert "Safe rehearsal ran automatically" in result.output
-        assert "不用再手动执行初始化命令" in result.output
-        assert "No more setup commands are needed" in result.output
-        assert "ai-sdlc adapter status" not in result.output
-        assert "python -m ai_sdlc adapter status" not in result.output
+        assert "不要假设 AI 已自动加载规则" in result.output
+        assert "do not assume" in result.output
+        assert "loaded the instructions automatically" in result.output
+        assert "ai-sdlc adapter status" in result.output
         assert "python -m ai_sdlc run --dry-run" not in result.output
         assert "ai-sdlc adapter activate" not in result.output
         cfg = load_project_config(tmp_path)
@@ -77,10 +77,10 @@ class TestCliInit:
         assert "当前结果 / Result" in result.output
         assert "初始化完成" in result.output
         assert "Initialization complete" in result.output
-        assert "不用再手动执行初始化命令" in result.output
-        assert "No more setup commands are needed" in result.output
-        assert "ai-sdlc adapter status" not in result.output
-        assert "python -m ai_sdlc adapter status" not in result.output
+        assert "不要假设 AI 已自动加载规则" in result.output
+        assert "do not assume" in result.output
+        assert "loaded the instructions automatically" in result.output
+        assert "ai-sdlc adapter status" in result.output
         assert "python -m ai_sdlc run --dry-run" not in result.output
         assert "ai-sdlc adapter activate" not in result.output
 

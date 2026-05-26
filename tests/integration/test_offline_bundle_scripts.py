@@ -1412,6 +1412,8 @@ def test_windows_install_scripts_include_auto_python_detection_and_bilingual_gui
     assert "$LASTEXITCODE -ne 0" in offline_ps1
     assert "Result" in offline_ps1
     assert "Next" in offline_ps1
+    assert 'if ($StatusEn -and ($StatusEn -ne $Status))' in offline_ps1
+    assert 'if ($PurposeEn -and ($PurposeEn -ne $Purpose))' in offline_ps1
     assert not any(ord(char) > 127 for char in offline_ps1)
     assert "amd64" in offline_ps1
     assert "x64" in offline_ps1
@@ -1429,6 +1431,8 @@ def test_windows_install_scripts_include_auto_python_detection_and_bilingual_gui
     assert "choco install python311 -y" in online_ps1
     assert "Result" in online_ps1
     assert "Next" in online_ps1
+    assert 'if ($StatusEn -and ($StatusEn -ne $Status))' in online_ps1
+    assert 'if ($PurposeEn -and ($PurposeEn -ne $Purpose))' in online_ps1
     assert not any(ord(char) > 127 for char in online_ps1)
     assert "''-m'', ''ai_sdlc'', ''init'', ''.''" in online_ps1
     assert "ai-sdlc adapter status" not in online_ps1
@@ -1475,6 +1479,8 @@ def test_user_guide_splits_pre_downloaded_and_online_release_install_paths() -> 
     assert "如果使用场景 A，在业务项目目录" not in guide
     assert "如果使用场景 B，在线下载到项目父目录并安装" not in guide
     assert "ai-sdlc init ." in guide
+    assert "如果你的 PowerShell 粘贴多行时把命令显示成连续的 `>>` 提示" in guide
+    assert "Set-Location ..; Invoke-WebRequest -Uri" in guide
     assert "是示例路径；请替换成你的真实项目根目录" in guide
     assert len(scenario_a_sections) == 2
     assert guide.count("Invoke-WebRequest -Uri") >= 2
