@@ -1,29 +1,31 @@
 # Continuity Handoff
 
-- Updated: 2026-05-23T16:43:50+00:00
-- Reason: PR Codex review 第二轮修复完成后同步交接
-- Goal: 落实生产反馈：任务守卫、注释规范、中文编码和半途接入优化，并完成 v0.7.18 发布
-- State: PR #65 第二轮 Codex review 的 .ai-sdlc self-ingestion 问题已修复，focused tests、ruff、verify constraints 通过；两个替代对抗 agent 对 delta 无必须修订项，同意继续 push/PR checks。
+- Updated: 2026-05-25T13:24:25+00:00
+- Reason: final AgentOps bridge handoff
+- Goal: 推进 Ai_AutoSDLC v0.7.18 与 AgentOps AO56 runtime bridge producer/outbox/sink/receipt 联调开发
+- State: AgentOps bridge 模块与 contract tests 已落地；支持 runtime.ingestion.v1 batch、canonical event_envelope.v1、两种 enterprise identity、blocked guard outbox、receipt summary 和 adopt 映射；相关测试、ruff 与 verify constraints 均通过。
 - Stage: close
-- Work Item: 183-production-feedback-guard-adoption
-- Branch: feature/183-production-feedback-guard-adoption-docs
+- Work Item: 181-cross-platform-release-gate-matrix-baseline
+- Branch: main
 
 ## Changed Files
-- M specs/183-production-feedback-guard-adoption/task-execution-log.md
-- M src/ai_sdlc/core/adoption.py
-- M tests/unit/test_adoption.py
+- M .ai-sdlc/state/codex-handoff.md
+- M .ai-sdlc/state/resume-pack.yaml
+- M .ai-sdlc/work-items/181-cross-platform-release-gate-matrix-baseline/codex-handoff.md
+- ?? src/ai_sdlc/core/agentops_bridge.py
+- ?? tests/unit/test_agentops_bridge.py
 
 ## Key Decisions
-- adoption source discovery 忽略 .ai-sdlc，避免框架生成的 adoption artifacts 被当成外部任务事实源。
+- verified_loaded 仅作为 adapter_diagnostic_state 诊断字段；local readiness 不允许仅凭 verified_loaded 推导代码修改或 L5。
+- AgentOps bridge 输出 summary/ref/hash，不输出 raw diff、patch、terminal log、PR 原文或下载链接。
 
 ## Commands / Tests
-- uv run pytest tests/unit/test_adoption.py tests/integration/test_cli_adopt.py -q: 15 passed
-- uv run ruff check src/ai_sdlc/core/adoption.py tests/unit/test_adoption.py: All checks passed
+- uv run pytest tests/unit/test_agentops_bridge.py tests/unit/test_task_guard.py tests/unit/test_adoption.py tests/integration/test_cli_adopt.py -q: 28 passed
+- uv run ruff check src/ai_sdlc/core/agentops_bridge.py tests/unit/test_agentops_bridge.py: All checks passed
 - uv run ai-sdlc verify constraints: no BLOCKERs
 
 ## Blockers / Risks
-- Windows Compatibility Gate checks still in progress before push refresh
+- none
 
 ## Exact Next Steps
-- 提交并推送第二轮 Codex review 修复
-- 重新请求/确认 Codex review，继续监控 PR checks
+- 交付给 AgentOps 侧运行 AO56 consumer tests，并按 receipt/Trace/Evidence 反馈补齐双边 fixture parity。
