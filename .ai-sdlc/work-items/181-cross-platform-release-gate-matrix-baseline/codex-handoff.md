@@ -1,27 +1,27 @@
 # Continuity Handoff
 
-- Updated: 2026-05-23T13:40:24+00:00
-- Reason: after archiving discussed optimization points into a document
-- Goal: 归档生产反馈优化点：adapter 认证口径、next executable task 守卫、注释规范、中文编码、brownfield adopt 半途接入。
-- State: 已新增 docs/production-feedback-sdlc-guard-adoption-comments.zh-CN.md，作为后续细粒度拆分 spec/plan/tasks 的输入文档；未改源码或规则实现。
+- Updated: 2026-05-26T00:37:58+00:00
+- Reason: Codex review fixes applied
+- Goal: 推进 PR #66 AgentOps runtime bridge 并处理 Codex review 反馈
+- State: 已修复 Codex review 两项反馈：null executable_task_id 不再被 readiness 当作存在；send_agentops_batch 会包装 URLError/Timeout/OSError 传输失败。相关测试与约束验证通过。
 - Stage: close
 - Work Item: 181-cross-platform-release-gate-matrix-baseline
-- Branch: main
+- Branch: codex/agentops-runtime-bridge-v0718
 
 ## Changed Files
-- M .ai-sdlc/state/codex-handoff.md
-- M .ai-sdlc/state/resume-pack.yaml
-- M .ai-sdlc/work-items/181-cross-platform-release-gate-matrix-baseline/codex-handoff.md
-- ?? docs/production-feedback-sdlc-guard-adoption-comments.zh-CN.md
+- M src/ai_sdlc/core/agentops_bridge.py
+- M tests/unit/test_agentops_bridge.py
 
 ## Key Decisions
-- 将不可证明的 verified_loaded 从主路径移出，后续方案以 next executable task 作为代码修改控制点；注释规范覆盖 Java/Go/Python/Vue2/JS/TS，并加入原注释保护与简体中文 UTF-8 约束；brownfield 用 adopt/import 而不是要求用户理解内部阶段。
+- 外部反序列化 payload 中 None/null 字段按缺失处理，避免绕过 CODE_CHANGE_TASK_REQUIRED。
 
 ## Commands / Tests
-- Get-Content docs/production-feedback-sdlc-guard-adoption-comments.zh-CN.md -TotalCount 80: 文件内容可读；git status --short: 新增归档文档，handoff 文件为连续性更新。
+- uv run pytest tests/unit/test_agentops_bridge.py tests/unit/test_task_guard.py tests/unit/test_adoption.py tests/integration/test_cli_adopt.py -q: 30 passed
+- uv run ruff check src/ai_sdlc/core/agentops_bridge.py tests/unit/test_agentops_bridge.py: All checks passed
+- uv run ai-sdlc verify constraints: no BLOCKERs
 
 ## Blockers / Risks
 - none
 
 ## Exact Next Steps
-- 用户审核归档文档；通过后将第 9 节待拆分能力逐项创建 formal work item。
+- 提交并推送 review fixes，等待 PR #66 checks 和 Codex review 结论。
