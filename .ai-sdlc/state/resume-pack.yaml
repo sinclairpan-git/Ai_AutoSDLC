@@ -9,10 +9,14 @@ working_set_snapshot:
   plan_path: /Users/sinclairpan/project/Ai_AutoSDLC/specs/181-cross-platform-release-gate-matrix-baseline/plan.md
   tasks_path: /Users/sinclairpan/project/Ai_AutoSDLC/specs/181-cross-platform-release-gate-matrix-baseline/tasks.md
   active_files: []
-  context_summary: 'Goal: 推进 PR #66 AgentOps runtime bridge 并处理 Codex review 反馈 |
-    State: 已修复 Codex review 两项反馈：null executable_task_id 不再被 readiness 当作存在；send_agentops_batch
-    会包装 URLError/Timeout/OSError 传输失败。相关测试与约束验证通过。 | Next: 提交并推送 review fixes，等待 PR
-    #66 checks 和 Codex review 结论。'
+  context_summary: 'Goal: Triage and patch AI-SDLC Windows/Codex onboarding production
+    defects | State: Implemented the PowerShell selector fix that was previously only
+    described: Windows now uses numbered selection for agent target and shell prompts,
+    avoiding redraw-based clear-screen behavior entirely. Added unit tests that monkeypatch
+    Windows mode and fail if os.system(''cls'') is called, while asserting no ANSI
+    clear sequence or arrow-key prompt appears. | Next: Rebuild and smoke-test Windows
+    release asset, verifying init selector transcript has no ANSI clear codes, no
+    cls redraw dependency, and no duplicated menus.'
 current_branch: feature/181-cross-platform-release-gate-matrix-baseline-docs
 docs_baseline_ref: ''
 docs_baseline_at: ''

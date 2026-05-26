@@ -212,6 +212,10 @@ class TestApplyAdapter:
             assert "仅用于排查" in text
             assert "ai-sdlc run --dry-run" in text
             assert "verified_loaded" in text
+            assert "后续 agent 或人工需要维护" in text
+            assert "维护契约" in text
+            assert "docstring" in text
+            assert "payload 字段映射" in text
             assert "先检查接入真值" not in text
             assert "启动入口（先执行）" not in text
             assert "优先引导并先执行上述启动入口" not in text

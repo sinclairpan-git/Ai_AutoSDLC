@@ -104,6 +104,12 @@ powershell -ExecutionPolicy Bypass -File .\install_offline.ps1 -AddToPath
 .\.venv\Scripts\python.exe -m ai_sdlc --help
 ```
 
+如果你的 PowerShell 粘贴多行时把命令显示成连续的 `>>` 提示，改复制下面这一行执行：
+
+```powershell
+$PackageName = "ai-sdlc-offline-0.7.18-windows-amd64.zip"; $PackageDir = (Get-Location).Path; Expand-Archive -LiteralPath (Join-Path $PackageDir $PackageName) -DestinationPath $PackageDir -Force; Set-Location (Join-Path $PackageDir "ai-sdlc-offline-0.7.18-windows-amd64"); powershell -ExecutionPolicy Bypass -File .\install_offline.ps1 -AddToPath; .\.venv\Scripts\python.exe -m ai_sdlc --help
+```
+
 macOS Apple Silicon 直接复制：
 
 ```bash
@@ -162,6 +168,12 @@ Expand-Archive -LiteralPath .\ai-sdlc-offline-0.7.18-windows-amd64.zip -Destinat
 cd .\ai-sdlc-offline-0.7.18-windows-amd64
 powershell -ExecutionPolicy Bypass -File .\install_offline.ps1 -AddToPath
 .\.venv\Scripts\python.exe -m ai_sdlc --help
+```
+
+如果你的 PowerShell 粘贴多行时把命令显示成连续的 `>>` 提示，改复制下面这一行执行：
+
+```powershell
+Set-Location ..; Invoke-WebRequest -Uri "https://github.com/sinclairpan-git/Ai_AutoSDLC/releases/download/v0.7.18/ai-sdlc-offline-0.7.18-windows-amd64.zip" -OutFile "ai-sdlc-offline-0.7.18-windows-amd64.zip"; Expand-Archive -LiteralPath .\ai-sdlc-offline-0.7.18-windows-amd64.zip -DestinationPath . -Force; Set-Location .\ai-sdlc-offline-0.7.18-windows-amd64; powershell -ExecutionPolicy Bypass -File .\install_offline.ps1 -AddToPath; .\.venv\Scripts\python.exe -m ai_sdlc --help
 ```
 
 macOS Apple Silicon 直接复制：
@@ -556,6 +568,12 @@ ai-sdlc --version
 ai-sdlc self-update check
 ```
 
+如果你的 PowerShell 粘贴多行时把命令显示成连续的 `>>` 提示，改复制下面这一行执行：
+
+```powershell
+Invoke-WebRequest -Uri "https://github.com/sinclairpan-git/Ai_AutoSDLC/releases/download/v0.7.18/ai-sdlc-offline-0.7.18-windows-amd64.zip" -OutFile "ai-sdlc-offline-0.7.18-windows-amd64.zip"; Expand-Archive -LiteralPath .\ai-sdlc-offline-0.7.18-windows-amd64.zip -DestinationPath . -Force; Set-Location .\ai-sdlc-offline-0.7.18-windows-amd64; powershell -ExecutionPolicy Bypass -File .\install_offline.ps1 -UpgradeExisting; ai-sdlc --version; ai-sdlc self-update check
+```
+
 macOS Apple Silicon：
 
 ```bash
@@ -627,6 +645,7 @@ AI-SDLC 会把下面几条作为写代码时的默认约束；普通用户不需
 - 新增注释跟随当前或近期用户主要沟通语言；无法判断时默认使用简体中文。
 - 中文内容使用 UTF-8 和简体中文，避免繁体误用、乱码、替换字符和常见 mojibake。
 - 注释只写业务规则、复杂意图、边界条件、兼容性、并发、缓存、事务、安全和错误处理等有价值的信息；不要复述显而易见的代码。
+- 后续 agent 或人工要维护的脚本/模块，如果包含认证、XHR/API 调用、payload 字段映射、加密、阶段流程、重试或副作用边界，必须补维护契约、关键函数 docstring 或边界注释，并在交付说明里确认。
 
 ### 常用命令
 

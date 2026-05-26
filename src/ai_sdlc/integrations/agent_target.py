@@ -122,11 +122,14 @@ def interactive_select_agent_target(
     *,
     output_stream: TextIO | None = None,
     read_key: Callable[[], str] | None = None,
+    read_line: Callable[[], str] | None = None,
 ) -> IDEKind:
     """Select an agent target with arrow keys and Enter confirmation."""
     output = output_stream or sys.stdout
     options = AGENT_TARGET_OPTIONS
     index = options.index(default_target) if default_target in options else len(options) - 1
+    if read_key is None and _should_use_numbered_selector():
+        return _select_agent_target_numbered(index, output, read_line)
     next_key = read_key or _read_selector_key
 
     while True:
@@ -149,11 +152,14 @@ def interactive_select_preferred_shell(
     *,
     output_stream: TextIO | None = None,
     read_key: Callable[[], str] | None = None,
+    read_line: Callable[[], str] | None = None,
 ) -> PreferredShell:
     """Select a preferred shell with arrow keys and Enter confirmation."""
     output = output_stream or sys.stdout
     options = PREFERRED_SHELL_OPTIONS
     index = options.index(default_shell) if default_shell in options else 0
+    if read_key is None and _should_use_numbered_selector():
+        return _select_preferred_shell_numbered(index, output, read_line)
     next_key = read_key or _read_selector_key
 
     while True:
@@ -171,6 +177,62 @@ def interactive_select_preferred_shell(
             raise KeyboardInterrupt
 
 
+def _should_use_numbered_selector() -> bool:
+    """Avoid redraw-based menus in Windows terminals where clear-screen is unstable."""
+    return os.name == "nt"
+
+
+def _select_agent_target_numbered(
+    default_index: int,
+    output: TextIO,
+    read_line: Callable[[], str] | None,
+) -> IDEKind:
+    next_line = read_line or sys.stdin.readline
+    while True:
+        _render_numbered_agent_selector(output, default_index)
+        choice = next_line().strip()
+        selected = _parse_numbered_choice(choice, len(AGENT_TARGET_OPTIONS), default_index)
+        if selected is not None:
+            output.write("\n")
+            output.flush()
+            return AGENT_TARGET_OPTIONS[selected]
+        _render_invalid_numbered_choice(output, len(AGENT_TARGET_OPTIONS))
+
+
+def _select_preferred_shell_numbered(
+    default_index: int,
+    output: TextIO,
+    read_line: Callable[[], str] | None,
+) -> PreferredShell:
+    next_line = read_line or sys.stdin.readline
+    while True:
+        _render_numbered_shell_selector(output, default_index)
+        choice = next_line().strip()
+        selected = _parse_numbered_choice(choice, len(PREFERRED_SHELL_OPTIONS), default_index)
+        if selected is not None:
+            output.write("\n")
+            output.flush()
+            return PREFERRED_SHELL_OPTIONS[selected]
+        _render_invalid_numbered_choice(output, len(PREFERRED_SHELL_OPTIONS))
+
+
+def _parse_numbered_choice(
+    choice: str,
+    option_count: int,
+    default_index: int,
+) -> int | None:
+    if not choice:
+        return default_index
+    try:
+        selected = int(choice)
+    except ValueError:
+        return None
+    index = selected - 1
+    if 0 <= index < option_count:
+        return index
+    return None
+
+
 def _render_selector(output: TextIO, index: int) -> None:
     _clear_selector_screen(output)
     lines = [
@@ -180,6 +242,33 @@ def _render_selector(output: TextIO, index: int) -> None:
         prefix = ">" if position == index else " "
         lines.append(f"{prefix} {agent_target_label(option)}")
     output.write("\n".join(lines))
+    output.flush()
+
+
+def _render_numbered_agent_selector(output: TextIO, default_index: int) -> None:
+    lines = [
+        "请选择当前实际用于聊天开发的 AI 代理入口（输入编号，回车确认；直接回车选择默认项）：",
+    ]
+    for position, option in enumerate(AGENT_TARGET_OPTIONS):
+        suffix = "（默认）" if position == default_index else ""
+        lines.append(f"{position + 1}. {agent_target_label(option)}{suffix}")
+    output.write("\n".join(lines) + "\n> ")
+    output.flush()
+
+
+def _render_numbered_shell_selector(output: TextIO, default_index: int) -> None:
+    lines = [
+        "请选择当前项目默认使用的命令 Shell（输入编号，回车确认；直接回车选择默认项）：",
+    ]
+    for position, option in enumerate(PREFERRED_SHELL_OPTIONS):
+        suffix = "（默认）" if position == default_index else ""
+        lines.append(f"{position + 1}. {preferred_shell_label(option)}{suffix}")
+    output.write("\n".join(lines) + "\n> ")
+    output.flush()
+
+
+def _render_invalid_numbered_choice(output: TextIO, option_count: int) -> None:
+    output.write(f"\n请输入 1-{option_count} 之间的编号，或直接回车选择默认项。\n")
     output.flush()
 
 

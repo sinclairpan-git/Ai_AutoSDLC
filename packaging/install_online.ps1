@@ -27,12 +27,16 @@ function Write-BilingualStatus {
 
   Write-Host "Result"
   Write-Host "  $Status"
-  Write-Host "  $StatusEn"
+  if ($StatusEn -and ($StatusEn -ne $Status)) {
+    Write-Host "  $StatusEn"
+  }
   Write-Host ""
   Write-Host "Next"
   Write-Host "  $Command"
   Write-Host "  $Purpose"
-  Write-Host "  $PurposeEn"
+  if ($PurposeEn -and ($PurposeEn -ne $Purpose)) {
+    Write-Host "  $PurposeEn"
+  }
 }
 
 function Assert-LastExitCode {

@@ -2314,7 +2314,9 @@ def test_agent_instructions_accept_current_init_first_path(tmp_path: Path) -> No
         "- 初始化入口（普通用户先执行）：`ai-sdlc init .`\n"
         "- `init` 会自动执行必要检查与安全预演。\n"
         "- 排查入口（仅当 CLI 明确要求时执行）：`ai-sdlc adapter status`\n"
-        "如果 `init` 已完成，不要再要求用户手动执行 `adapter status` 或 `run --dry-run`。\n",
+        "如果 `init` 已完成，不要再要求用户手动执行 `adapter status` 或 `run --dry-run`。\n"
+        "后续 agent 或人工需要维护的代码，涉及认证、XHR/API 调用、payload 字段映射、"
+        "加密、阶段流程时，必须补维护契约和 docstring。\n",
         encoding="utf-8",
     )
     (tmp_path / "AGENTS.md").write_text(
@@ -2357,13 +2359,37 @@ def test_adapter_template_accepts_current_init_first_path(tmp_path: Path) -> Non
         "- 初始化入口（普通用户先执行）：`ai-sdlc init .`\n"
         "- `init` 会自动执行必要检查与安全预演。\n"
         "- 排查入口（仅当 CLI 明确要求时执行）：`ai-sdlc adapter status`\n"
-        "如果 `init` 已完成，不要再要求用户手动执行 `adapter status` 或 `run --dry-run`。\n",
+        "如果 `init` 已完成，不要再要求用户手动执行 `adapter status` 或 `run --dry-run`。\n"
+        "后续 agent 或人工需要维护的代码，涉及认证、XHR/API 调用、payload 字段映射、"
+        "加密、阶段流程时，必须补维护契约和 docstring。\n",
         encoding="utf-8",
     )
 
     blockers = collect_constraint_blockers(tmp_path)
 
     assert not any("adapter template CLI path" in x for x in blockers)
+    assert not any("adapter template comment policy" in x for x in blockers)
+
+
+def test_adapter_template_blocks_missing_maintainability_comment_policy(
+    tmp_path: Path,
+) -> None:
+    mem = tmp_path / ".ai-sdlc" / "memory"
+    mem.mkdir(parents=True)
+    (mem / "constitution.md").write_text("# C\n", encoding="utf-8")
+    template = tmp_path / "src" / "ai_sdlc" / "adapters" / "codex" / "AI-SDLC.md"
+    template.parent.mkdir(parents=True)
+    template.write_text(
+        "- 初始化入口（普通用户先执行）：`ai-sdlc init .`\n"
+        "- `init` 会自动执行必要检查与安全预演。\n"
+        "- 排查入口（仅当 CLI 明确要求时执行）：`ai-sdlc adapter status`\n"
+        "如果 `init` 已完成，不要再要求用户手动执行 `adapter status` 或 `run --dry-run`。\n",
+        encoding="utf-8",
+    )
+
+    blockers = collect_constraint_blockers(tmp_path)
+
+    assert any("adapter template comment policy missing" in x for x in blockers)
 
 
 def test_reconcile_smoke_contract_blocks_when_workflow_is_not_synced(

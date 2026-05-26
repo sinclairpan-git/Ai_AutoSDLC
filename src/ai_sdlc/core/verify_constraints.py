@@ -405,6 +405,20 @@ ADAPTER_TEMPLATE_CLI_PATH_RELS = (
     Path("src") / "ai_sdlc" / "adapters" / "vscode" / "AI-SDLC.md",
     Path("src") / "ai_sdlc" / "adapters" / "cursor" / "rules" / "ai-sdlc.md",
 )
+ADAPTER_TEMPLATE_COMMENT_POLICY_RELS = (
+    *ADAPTER_TEMPLATE_CLI_PATH_RELS,
+    Path("src") / "ai_sdlc" / "adapters" / "generic" / "ide-hint.md",
+)
+ADAPTER_TEMPLATE_COMMENT_POLICY_REQUIRED_TOKENS = (
+    "后续 agent 或人工需要维护",
+    "认证",
+    "XHR/API 调用",
+    "payload 字段映射",
+    "加密",
+    "阶段流程",
+    "维护契约",
+    "docstring",
+)
 FEATURE_CONTRACT_SURFACE_OBJECT = "feature_contract_surfaces"
 FRAMEWORK_DEFECT_BACKLOG_REQUIRED_FIELDS = (
     "现象",
@@ -1401,6 +1415,7 @@ def collect_constraint_blockers(root: Path) -> list[str]:
     blockers.extend(_beginner_guide_cli_path_blockers(root))
     blockers.extend(_agent_instruction_cli_path_blockers(root))
     blockers.extend(_adapter_template_cli_path_blockers(root))
+    blockers.extend(_adapter_template_comment_policy_blockers(root))
     blockers.extend(_reconcile_smoke_contract_blockers(root))
     blockers.extend(_doc_first_surface_blockers(root))
     blockers.extend(_verification_profile_blockers(root))
@@ -3685,6 +3700,27 @@ def _adapter_template_cli_path_blockers(root: Path) -> list[str]:
             blockers.append(
                 "BLOCKER: adapter template CLI path regressed to old manual startup "
                 f"steps in {rel.as_posix()}: {', '.join(forbidden)}"
+            )
+    return blockers
+
+
+def _adapter_template_comment_policy_blockers(root: Path) -> list[str]:
+    """Keep generated adapter instructions honest about maintainability comments."""
+    blockers: list[str] = []
+    for rel in ADAPTER_TEMPLATE_COMMENT_POLICY_RELS:
+        path = root / rel
+        if not path.is_file():
+            continue
+        text = path.read_text(encoding="utf-8")
+        missing = [
+            token
+            for token in ADAPTER_TEMPLATE_COMMENT_POLICY_REQUIRED_TOKENS
+            if token not in text
+        ]
+        if missing:
+            blockers.append(
+                "BLOCKER: adapter template comment policy missing required "
+                f"markers in {rel.as_posix()}: {', '.join(missing)}"
             )
     return blockers
 
