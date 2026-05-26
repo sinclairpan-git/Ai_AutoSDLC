@@ -438,8 +438,65 @@ def test_delivery_http_error_persists_redacted_gateway_diagnostic(
     payload = json.loads(result.diagnostic_path.read_text(encoding="utf-8"))
     serialized = json.dumps(payload, ensure_ascii=False)
     assert "secret-token" not in serialized
-    assert "<redacted>" in serialized
+    assert payload["detail"].endswith("code=UPSTREAM_IDENTITY_REQUIRED")
     assert "Verify the Gateway" in payload["retry_guidance"]
+
+
+def test_delivery_http_error_omits_echoed_payload_from_diagnostic(
+    monkeypatch,
+    tmp_path: Path,
+) -> None:
+    batch = build_agentops_runtime_batch(
+        outbox_id="outbox_echoed_payload",
+        batch_id="batch_echoed_payload",
+        context=_context(),
+        identity=_identity(),
+        facts=(
+            AgentOpsSdlcFact(
+                producer_event_name="stage_failed",
+                sdlc_event_type="stage",
+                span_id="stage_execute",
+                status="failed",
+                payload={
+                    "executable_task_id": "T186-2.2",
+                    "sensitive_runtime_fragment": "raw-payload-fragment",
+                },
+            ),
+        ),
+    )
+    persist_agentops_outbox_batch(tmp_path, batch)
+
+    def _raise_http_error(*args, **kwargs):  # noqa: ANN002, ANN003, ANN202
+        raise urllib.error.HTTPError(
+            "https://gateway.example/v1/runtime/events",
+            400,
+            "Bad Request",
+            {},
+            fp=_BytesReader(
+                b'{"code":"EVENT_SCHEMA_UNSUPPORTED","payload":{"secret":"raw-payload-fragment"}}'
+            ),
+        )
+
+    monkeypatch.setattr("urllib.request.urlopen", _raise_http_error)
+
+    result = deliver_agentops_outbox(
+        tmp_path,
+        outbox_id="outbox_echoed_payload",
+        config=AgentOpsIngestionConfig(
+            endpoint="https://gateway.example",
+            bearer_token="secret-token",
+        ),
+    )
+
+    assert result.diagnostic is not None
+    assert result.diagnostic.reason_code == "schema_invalid"
+    assert result.diagnostic_path is not None
+    diagnostic = json.loads(result.diagnostic_path.read_text(encoding="utf-8"))
+    serialized = json.dumps(diagnostic, ensure_ascii=False)
+    assert "EVENT_SCHEMA_UNSUPPORTED" in serialized
+    assert "raw-payload-fragment" not in serialized
+    assert '"payload"' not in diagnostic["detail"]
+    assert "secret-token" not in serialized
 
 
 def test_delivery_invalid_receipt_schema_persists_diagnostic(

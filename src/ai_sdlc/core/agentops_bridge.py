@@ -722,7 +722,7 @@ def send_agentops_batch(
             response_body = response.read().decode("utf-8")
     except urllib.error.HTTPError as exc:
         response_body = exc.read().decode("utf-8", errors="replace")
-        safe_body = _redact_sensitive_text(response_body, secrets=(bearer_token,))
+        safe_body = _http_error_body_summary(response_body)
         raise RuntimeError(
             f"AgentOps runtime ingestion failed: HTTP {exc.code} {safe_body}"
         ) from exc
@@ -1166,6 +1166,37 @@ def _redact_sensitive_text(text: str, *, secrets: Sequence[str] = ()) -> str:
         if secret:
             safe = safe.replace(secret, "<redacted>")
     return safe[:1000]
+
+
+def _http_error_body_summary(response_body: str) -> str:
+    code = _known_agentops_error_code(response_body)
+    if code:
+        return f"code={code}"
+    return "response_body_omitted"
+
+
+def _known_agentops_error_code(response_body: str) -> str:
+    try:
+        payload = json.loads(response_body)
+    except json.JSONDecodeError:
+        payload = None
+    if isinstance(payload, Mapping):
+        for key in ("code", "error_code", "reason_code"):
+            value = payload.get(key)
+            if isinstance(value, str) and _is_safe_error_code(value):
+                return value
+    for code in (
+        "UPSTREAM_IDENTITY_REQUIRED",
+        "AGENTOPS_SCOPE_DENIED",
+        "EVENT_SCHEMA_UNSUPPORTED",
+    ):
+        if code in response_body:
+            return code
+    return ""
+
+
+def _is_safe_error_code(value: str) -> bool:
+    return bool(value) and all(ch.isupper() or ch.isdigit() or ch == "_" for ch in value)
 
 
 def _latest_json_file(directory: Path) -> Path | None:

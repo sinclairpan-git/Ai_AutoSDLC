@@ -219,3 +219,42 @@
 - 代码质量：parse failure 在发送边界被规范化，delivery 层继续只处理结构化 diagnostic。
 - 测试质量：两个 Codex review scenarios 均有回归测试。
 - 结论：可推送并等待新一轮 review/check。
+
+### Batch 2026-05-26-004 | PR #68 Codex review feedback
+
+#### 5.1 批次范围
+
+- 覆盖任务：PR #68 Codex review P1 feedback
+- 覆盖阶段：review follow-up
+- 预读范围：PR #68 review threads
+- 激活的规则：`MUST-2`、`MUST-3`、`MUST-4`
+
+#### 5.2 统一验证命令
+
+- `V1`（定向验证）
+  - 命令：`uv run pytest tests/unit/test_agentops_bridge.py tests/integration/test_cli_agentops.py tests/unit/test_command_names.py -q`
+  - 结果：22 passed
+- `V2`（lint）
+  - 命令：`uv run ruff check src/ai_sdlc/core/agentops_bridge.py tests/unit/test_agentops_bridge.py`
+  - 结果：All checks passed
+- `V3`（约束检查）
+  - 命令：`uv run ai-sdlc verify constraints`
+  - 结果：no BLOCKERs
+
+#### 5.3 任务记录
+
+##### PR68-F2 | HTTP error body summary-only diagnostic
+
+- 改动范围：`src/ai_sdlc/core/agentops_bridge.py`、`tests/unit/test_agentops_bridge.py`
+- 改动内容：HTTP error response body 不再进入 runtime error / persisted diagnostic；仅提取安全错误码摘要（如 `code=EVENT_SCHEMA_UNSUPPORTED`），否则写 `response_body_omitted`。
+- 新增/调整的测试：新增 Gateway 回显 payload fragment 的 HTTP 400 回归用例，断言 diagnostic 不包含回显 payload 或 token。
+- 执行的命令：见 V1/V2/V3。
+- 测试结果：通过。
+- 是否符合任务目标：是。
+
+#### 5.4 代码审查结论（Mandatory）
+
+- 宪章/规格对齐：修复满足 AgentOps auth errors 不回显 raw payload/file/diff/token 的边界。
+- 代码质量：HTTP response body 只参与安全错误码提取，不被持久化。
+- 测试质量：覆盖 Codex 指出的 echoed payload 泄露路径。
+- 结论：可推送并等待新一轮 review/check。
