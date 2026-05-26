@@ -729,7 +729,16 @@ def send_agentops_batch(
     except (TimeoutError, urllib.error.URLError, OSError) as exc:
         safe_detail = _redact_sensitive_text(str(exc), secrets=(bearer_token,))
         raise RuntimeError(f"AgentOps runtime ingestion failed: {safe_detail}") from exc
-    return parse_agentops_receipt(json.loads(response_body))
+    try:
+        receipt_payload = json.loads(response_body)
+    except json.JSONDecodeError as exc:
+        raise ValueError("AgentOps receipt payload must be JSON") from exc
+    if not isinstance(receipt_payload, Mapping):
+        raise ValueError("AgentOps receipt payload must be a JSON object")
+    try:
+        return parse_agentops_receipt(receipt_payload)
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"AgentOps receipt payload invalid: {exc}") from exc
 
 
 def parse_agentops_receipt(payload: Mapping[str, Any]) -> AgentOpsReceipt:
@@ -1144,7 +1153,7 @@ def _reason_code_from_error(detail: str, http_status: int | None) -> str:
         return "scope_denied"
     if http_status == 400 and "EVENT_SCHEMA_UNSUPPORTED" in detail:
         return "schema_invalid"
-    if "receipt schema_version" in detail or "Expecting value" in detail:
+    if "receipt payload" in detail or "receipt schema_version" in detail:
         return "receipt_schema_invalid"
     if http_status is not None:
         return f"http_{http_status}"

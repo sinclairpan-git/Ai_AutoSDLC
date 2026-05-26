@@ -489,6 +489,110 @@ def test_delivery_invalid_receipt_schema_persists_diagnostic(
     assert result.diagnostic_path is not None
 
 
+def test_delivery_non_mapping_receipt_persists_diagnostic(
+    monkeypatch,
+    tmp_path: Path,
+) -> None:
+    batch = build_agentops_runtime_batch(
+        outbox_id="outbox_list_receipt",
+        batch_id="batch_list_receipt",
+        context=_context(),
+        identity=_identity(),
+        facts=(
+            AgentOpsSdlcFact(
+                producer_event_name="stage_failed",
+                sdlc_event_type="stage",
+                span_id="stage_execute",
+                status="failed",
+                payload={"executable_task_id": "T186-2.2"},
+            ),
+        ),
+    )
+    persist_agentops_outbox_batch(tmp_path, batch)
+
+    class _ListResponse:
+        def __enter__(self) -> _ListResponse:
+            return self
+
+        def __exit__(self, *args: object) -> None:
+            return None
+
+        def read(self) -> bytes:
+            return b"[]"
+
+    monkeypatch.setattr("urllib.request.urlopen", lambda *args, **kwargs: _ListResponse())
+
+    result = deliver_agentops_outbox(
+        tmp_path,
+        outbox_id="outbox_list_receipt",
+        config=AgentOpsIngestionConfig(
+            endpoint="https://gateway.example",
+            bearer_token="secret-token",
+        ),
+    )
+
+    assert result.diagnostic is not None
+    assert result.diagnostic.reason_code == "receipt_schema_invalid"
+    assert result.diagnostic_path is not None
+
+
+def test_delivery_malformed_receipt_counts_persist_diagnostic(
+    monkeypatch,
+    tmp_path: Path,
+) -> None:
+    batch = build_agentops_runtime_batch(
+        outbox_id="outbox_bad_counts",
+        batch_id="batch_bad_counts",
+        context=_context(),
+        identity=_identity(),
+        facts=(
+            AgentOpsSdlcFact(
+                producer_event_name="stage_failed",
+                sdlc_event_type="stage",
+                span_id="stage_execute",
+                status="failed",
+                payload={"executable_task_id": "T186-2.2"},
+            ),
+        ),
+    )
+    persist_agentops_outbox_batch(tmp_path, batch)
+
+    class _BadCountsResponse:
+        def __enter__(self) -> _BadCountsResponse:
+            return self
+
+        def __exit__(self, *args: object) -> None:
+            return None
+
+        def read(self) -> bytes:
+            return json.dumps(
+                {
+                    "schema_version": "runtime_outbox_receipt.v1",
+                    "batch_id": "batch_bad_counts",
+                    "outbox_id": "outbox_bad_counts",
+                    "accepted_count": None,
+                }
+            ).encode("utf-8")
+
+    monkeypatch.setattr(
+        "urllib.request.urlopen",
+        lambda *args, **kwargs: _BadCountsResponse(),
+    )
+
+    result = deliver_agentops_outbox(
+        tmp_path,
+        outbox_id="outbox_bad_counts",
+        config=AgentOpsIngestionConfig(
+            endpoint="https://gateway.example",
+            bearer_token="secret-token",
+        ),
+    )
+
+    assert result.diagnostic is not None
+    assert result.diagnostic.reason_code == "receipt_schema_invalid"
+    assert result.diagnostic_path is not None
+
+
 def test_agentops_status_reports_latest_outbox_receipt_and_diagnostic(
     tmp_path: Path,
 ) -> None:

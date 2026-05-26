@@ -104,7 +104,7 @@
   - 结果：初次新增测试后通过 13 项；随后补齐 CLI 后执行组合验证
 - `V1`（定向验证）
   - 命令：`uv run pytest tests/unit/test_agentops_bridge.py tests/integration/test_cli_agentops.py tests/unit/test_command_names.py -q`
-  - 结果：19 passed
+  - 结果：21 passed
 - `V2`（lint）
   - 命令：`uv run ruff check src/ai_sdlc/core/agentops_bridge.py src/ai_sdlc/cli/agentops_cmd.py src/ai_sdlc/cli/main.py src/ai_sdlc/models/project.py tests/unit/test_agentops_bridge.py tests/integration/test_cli_agentops.py tests/unit/test_command_names.py`
   - 结果：All checks passed
@@ -127,7 +127,7 @@
 
 - 改动范围：`src/ai_sdlc/core/agentops_bridge.py`、`tests/unit/test_agentops_bridge.py`
 - 改动内容：新增 `deliver_agentops_outbox`、delivery diagnostic、outbox status、receipt/diagnostic 持久化；HTTP/transport 错误进入 redacted diagnostic；`send_agentops_batch` 保持 AO56 payload body，不写 token。
-- 新增/调整的测试：覆盖 Gateway Bearer request、禁止 `X-AgentOps-*` header、token 不进 body、HTTP 401 `UPSTREAM_IDENTITY_REQUIRED` 诊断 redaction、invalid receipt schema 诊断、status 汇总。
+- 新增/调整的测试：覆盖 Gateway Bearer request、禁止 `X-AgentOps-*` header、token 不进 body、HTTP 401 `UPSTREAM_IDENTITY_REQUIRED` 诊断 redaction、invalid receipt schema / non-object receipt / malformed count 诊断、status 汇总。
 - 执行的命令：见 V1/V2。
 - 测试结果：通过。
 - 是否符合任务目标：是。
@@ -180,3 +180,42 @@
 - 当前批次 branch disposition 状态：准备推送 PR
 - 当前批次 worktree disposition 状态：准备提交
 - 是否继续下一批：否，进入 PR 收口
+
+### Batch 2026-05-26-003 | PR #68 Codex review feedback
+
+#### 4.1 批次范围
+
+- 覆盖任务：PR #68 Codex review P1 feedback
+- 覆盖阶段：review follow-up
+- 预读范围：PR #68 review threads
+- 激活的规则：`MUST-2`、`MUST-3`、`MUST-4`
+
+#### 4.2 统一验证命令
+
+- `V1`（定向验证）
+  - 命令：`uv run pytest tests/unit/test_agentops_bridge.py tests/integration/test_cli_agentops.py tests/unit/test_command_names.py -q`
+  - 结果：21 passed
+- `V2`（lint）
+  - 命令：`uv run ruff check src/ai_sdlc/core/agentops_bridge.py tests/unit/test_agentops_bridge.py`
+  - 结果：All checks passed
+- `V3`（约束检查）
+  - 命令：`uv run ai-sdlc verify constraints`
+  - 结果：no BLOCKERs
+
+#### 4.3 任务记录
+
+##### PR68-F1 | receipt parse failure diagnostic
+
+- 改动范围：`src/ai_sdlc/core/agentops_bridge.py`、`tests/unit/test_agentops_bridge.py`
+- 改动内容：`send_agentops_batch` 现在先验证 receipt JSON object，再将 receipt schema/count 类型错误包装为 `ValueError`，由 `deliver_agentops_outbox` 持久化 `receipt_schema_invalid` diagnostic。
+- 新增/调整的测试：新增 non-mapping receipt `[]` 和 malformed count `accepted_count: null` 两个回归用例。
+- 执行的命令：见 V1/V2/V3。
+- 测试结果：通过。
+- 是否符合任务目标：是。
+
+#### 4.4 代码审查结论（Mandatory）
+
+- 宪章/规格对齐：修复保持 schema/transport errors produce diagnostics 的生产集成目标。
+- 代码质量：parse failure 在发送边界被规范化，delivery 层继续只处理结构化 diagnostic。
+- 测试质量：两个 Codex review scenarios 均有回归测试。
+- 结论：可推送并等待新一轮 review/check。
