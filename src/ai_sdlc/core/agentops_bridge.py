@@ -500,6 +500,8 @@ def send_agentops_batch(
         raise RuntimeError(
             f"AgentOps runtime ingestion failed: HTTP {exc.code} {response_body}"
         ) from exc
+    except (TimeoutError, urllib.error.URLError, OSError) as exc:
+        raise RuntimeError(f"AgentOps runtime ingestion failed: {exc}") from exc
     return parse_agentops_receipt(json.loads(response_body))
 
 
@@ -575,7 +577,7 @@ def local_readiness_from_batch(
         if isinstance(payload, Mapping)
     }
     executable_task_ids = {
-        str(payload.get("executable_task_id", "")).strip()
+        _string_payload_field(payload.get("executable_task_id"))
         for payload in payloads
         if isinstance(payload, Mapping)
     }
@@ -735,6 +737,12 @@ def _candidate_fixes_from_guard(task_guard: TaskGuardResult) -> tuple[str, ...]:
     if task_guard.preparation_candidate is not None:
         return ("prepare an executable task from the current request",)
     return ("prepare an executable task",)
+
+
+def _string_payload_field(value: object) -> str:
+    if value is None:
+        return ""
+    return str(value).strip()
 
 
 def _receipt_diagnostics(receipt: AgentOpsReceipt) -> list[dict[str, Any]]:

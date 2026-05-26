@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import urllib.error
 from pathlib import Path
 
 from ai_sdlc.core.adoption import (
@@ -22,6 +23,7 @@ from ai_sdlc.core.agentops_bridge import (
     parse_agentops_receipt,
     persist_agentops_outbox_batch,
     persist_agentops_receipt_summary,
+    send_agentops_batch,
     task_binding_from_adoption_map,
 )
 from ai_sdlc.core.task_guard import BLOCK_CODE_PREPARE_TASKS, TaskGuardResult
@@ -138,6 +140,33 @@ def test_verified_loaded_alone_does_not_allow_l5_or_code_change() -> None:
     assert "verified_loaded" in readiness.detail
 
 
+def test_null_executable_task_id_is_missing_for_readiness() -> None:
+    batch = build_agentops_runtime_batch(
+        outbox_id="outbox_null_task",
+        batch_id="batch_null_task",
+        context=_context(),
+        identity=_identity(),
+        facts=(
+            AgentOpsSdlcFact(
+                producer_event_name="code_change_guard_result",
+                sdlc_event_type="code_guard",
+                span_id="code_change_guard",
+                status="passed",
+                payload={
+                    "workitem": "183-production-feedback-guard-adoption",
+                    "executable_task_id": None,
+                    "task_guard_state": "allowed",
+                },
+            ),
+        ),
+    )
+
+    readiness = local_readiness_from_batch(batch)
+
+    assert not readiness.ready
+    assert readiness.reason_code == CODE_CHANGE_TASK_REQUIRED
+
+
 def test_blocked_code_change_guard_is_written_to_outbox_diagnostics(tmp_path: Path) -> None:
     blocked = TaskGuardResult(
         state=BLOCK_CODE_PREPARE_TASKS,
@@ -209,6 +238,23 @@ def test_agentops_receipt_is_parsed_and_summary_persisted(tmp_path: Path) -> Non
         "evt_dlq",
     ]
     assert summary["audit_id"] == "audit_runtime_ingestion_batch_sdlc_001"
+
+
+def test_send_agentops_batch_wraps_transport_errors(
+    monkeypatch,
+) -> None:
+    def _raise_url_error(*args, **kwargs):
+        raise urllib.error.URLError("network unavailable")
+
+    monkeypatch.setattr("urllib.request.urlopen", _raise_url_error)
+
+    try:
+        send_agentops_batch("https://agentops.example", {"events": []})
+    except RuntimeError as exc:
+        assert "AgentOps runtime ingestion failed" in str(exc)
+        assert "network unavailable" in str(exc)
+    else:
+        raise AssertionError("expected transport failure to be wrapped")
 
 
 def test_adopt_artifacts_map_to_workitem_and_executable_task_id() -> None:
