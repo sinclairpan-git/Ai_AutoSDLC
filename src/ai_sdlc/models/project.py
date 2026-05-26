@@ -113,6 +113,10 @@ class ProjectConfig(BaseModel):
     adapter_degrade_reason: str = ""
     adapter_verification_evidence: str = ""
     adapter_verified_at: str = ""
+    agentops_ingestion_endpoint: str = ""
+    agentops_ingestion_mode: str = "gateway"
+    agentops_ingestion_token_env: str = "AGENTOPS_INGESTION_TOKEN"
+    agentops_ingestion_timeout_seconds: float = 10.0
     telemetry_profile: TelemetryProfile = TelemetryProfile.SELF_HOSTING
     telemetry_mode: TelemetryMode = TelemetryMode.LITE
 

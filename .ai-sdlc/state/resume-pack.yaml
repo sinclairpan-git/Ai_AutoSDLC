@@ -5,19 +5,16 @@ working_set_snapshot:
   prd_path: AI-SDLC 全自动化框架 产品需求文档（PRD）.md
   constitution_path: /Users/sinclairpan/project/Ai_AutoSDLC/.ai-sdlc/memory/constitution.md
   tech_stack_path: /Users/sinclairpan/project/Ai_AutoSDLC/.ai-sdlc/profiles/tech-stack.yml
-  spec_path: /Users/sinclairpan/project/Ai_AutoSDLC/specs/181-cross-platform-release-gate-matrix-baseline/spec.md
-  plan_path: /Users/sinclairpan/project/Ai_AutoSDLC/specs/181-cross-platform-release-gate-matrix-baseline/plan.md
-  tasks_path: /Users/sinclairpan/project/Ai_AutoSDLC/specs/181-cross-platform-release-gate-matrix-baseline/tasks.md
+  spec_path: /Users/sinclairpan/project/Ai_AutoSDLC/specs/186-agentops-production-runtime-integration/spec.md
+  plan_path: /Users/sinclairpan/project/Ai_AutoSDLC/specs/186-agentops-production-runtime-integration/plan.md
+  tasks_path: /Users/sinclairpan/project/Ai_AutoSDLC/specs/186-agentops-production-runtime-integration/tasks.md
   active_files: []
-  context_summary: 'Goal: Triage and patch AI-SDLC Windows/Codex onboarding production
-    defects | State: Implemented the PowerShell selector fix that was previously only
-    described: Windows now uses numbered selection for agent target and shell prompts,
-    avoiding redraw-based clear-screen behavior entirely. Added unit tests that monkeypatch
-    Windows mode and fail if os.system(''cls'') is called, while asserting no ANSI
-    clear sequence or arrow-key prompt appears. | Next: Rebuild and smoke-test Windows
-    release asset, verifying init selector transcript has no ANSI clear codes, no
-    cls redraw dependency, and no duplicated menus.'
-current_branch: feature/181-cross-platform-release-gate-matrix-baseline-docs
+  context_summary: 'Goal: Implement AgentOps Gateway Bearer runtime ingestion for
+    work item 186 | State: Addressed PR #68 Codex review feedback for HTTP error
+    body summary-only diagnostics; targeted pytest, ruff, and verify constraints
+    passed. | Next: Commit and push HTTP diagnostic redaction fix, then continue
+    monitoring PR #68 checks/review.'
+current_branch: feature/186-agentops-production-runtime-integration-docs
 docs_baseline_ref: ''
 docs_baseline_at: ''
 timestamp: '2026-05-25T12:57:10+00:00'

@@ -8,6 +8,7 @@ from rich.console import Console
 from ai_sdlc import __version__
 from ai_sdlc.cli.adapter_cmd import adapter_app
 from ai_sdlc.cli.adopt_cmd import adopt_command
+from ai_sdlc.cli.agentops_cmd import agentops_app
 from ai_sdlc.cli.cli_hooks import run_ide_adapter_if_initialized
 from ai_sdlc.cli.commands import (
     index_command,
@@ -75,6 +76,7 @@ def _global_before_command(
         "adapter",
         "init",
         "doctor",
+        "agentops",
         "handoff",
         "host-runtime",
         "status",
@@ -97,6 +99,7 @@ app.command(name="scan")(scan_command)
 app.command(name="refresh")(refresh_command)
 app.command(name="run")(run_command)
 app.add_typer(adapter_app, name="adapter")
+app.add_typer(agentops_app, name="agentops")
 app.add_typer(gate_app, name="gate")
 app.add_typer(rules_app, name="rules")
 app.add_typer(studio_app, name="studio")

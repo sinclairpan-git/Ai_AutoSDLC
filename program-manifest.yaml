@@ -1848,12 +1848,15 @@ specs:
 - id: 183-production-feedback-guard-adoption
   path: specs/183-production-feedback-guard-adoption
   depends_on: []
+- id: 186-agentops-production-runtime-integration
+  path: specs/186-agentops-production-runtime-integration
+  depends_on: []
 truth_snapshot:
-  generated_at: '2026-05-04T15:37:33Z'
+  generated_at: '2026-05-26T13:19:20Z'
   generated_by: ai-sdlc program truth sync
   generator_version: program_truth_snapshot_v1
-  repo_revision: f35f81f
-  authoring_hash: 9fa5d27e3daf36c92e469dd5b473feff0c85a0fda8717d6aa8f6230e1b596ff1
+  repo_revision: 85d6ede
+  authoring_hash: 359bf445567bb4248878e5128b7380e4419cfb633fedbda507d5ad7f6865322d
   source_hashes:
     truth_check:specs/095-frontend-mainline-product-delivery-baseline: bcf72ac70e6022d849c24a3380b63f01cabe8c7b5c610420f20ac79448033787
     truth_check:specs/096-frontend-mainline-host-runtime-manager-baseline: a713784c4de31cb89ebb0edaa78707f4b6f61309a8c5b66ab1eb387743fe29a2
@@ -1892,14 +1895,12 @@ truth_snapshot:
     truth_check:specs/122-agent-adapter-verified-host-ingress-runtime-baseline: ea9855423cdf1938816f7257609dbf2d16d5029ce5265f2f1f1787fe70f79048
     close_check:specs/121-agent-adapter-verified-host-ingress-truth-baseline: bb1a96307f540d67dcb9ccb06e03e5ef522ae9acfd1e9a2b5f5816aed8658072
     close_check:specs/122-agent-adapter-verified-host-ingress-runtime-baseline: bb1a96307f540d67dcb9ccb06e03e5ef522ae9acfd1e9a2b5f5816aed8658072
-  snapshot_hash: 228c7f51754239e8c67f71497d2824db647a5370336823af454c98e7d0257c85
+  snapshot_hash: 9e53244fb0b78147ca02fc2bbfd5ae6c2d7e52a84d70d481030bc0463d18e3e8
   computed_capabilities:
   - capability_id: frontend-mainline-delivery
     closure_state: closed
-    audit_state: blocked
-    blocking_refs:
-    - frontend_inheritance:generation
-    - frontend_inheritance:quality
+    audit_state: ready
+    blocking_refs: []
     stale_reason: ''
   - capability_id: agent-adapter-verified-host-ingress
     closure_state: closed
@@ -1908,36 +1909,36 @@ truth_snapshot:
     - adapter_canonical_consumption:unverified
     stale_reason: ''
   source_inventory:
-    state: complete
-    total_sources: 948
-    mapped_sources: 948
-    unmapped_sources: 0
-    missing_sources: 0
-    phase_signal_count: 3229
-    deferred_signal_count: 5918
-    non_goal_signal_count: 318
+    state: incomplete
+    total_sources: 972
+    mapped_sources: 958
+    unmapped_sources: 14
+    missing_sources: 2
+    phase_signal_count: 3239
+    deferred_signal_count: 5935
+    non_goal_signal_count: 327
     layer_totals:
       blueprint: 1
-      spec: 185
-      plan: 185
-      tasks: 185
-      execution: 185
-      close: 185
+      spec: 187
+      plan: 187
+      tasks: 187
+      execution: 187
+      close: 187
       requirements: 2
       defect: 3
       design: 8
-      release: 9
+      release: 23
     layer_materialized:
       blueprint: 1
-      spec: 185
-      plan: 185
-      tasks: 185
-      execution: 185
+      spec: 187
+      plan: 187
+      tasks: 187
+      execution: 187
       close: 185
       requirements: 2
       defect: 3
       design: 8
-      release: 9
+      release: 23
     entries:
     - path: AI-SDLC 全自动化框架 产品需求文档（PRD）.md
       source_type: prd
@@ -10273,6 +10274,96 @@ truth_snapshot:
       phase_signal_count: 0
       deferred_signal_count: 1
       non_goal_signal_count: 0
+    - path: specs/183-production-feedback-guard-adoption/spec.md
+      source_type: spec_doc
+      truth_layer: spec
+      mapped: true
+      exists: true
+      mapping_ref: 183-production-feedback-guard-adoption
+      phase_signal_count: 0
+      deferred_signal_count: 0
+      non_goal_signal_count: 2
+    - path: specs/183-production-feedback-guard-adoption/plan.md
+      source_type: plan_doc
+      truth_layer: plan
+      mapped: true
+      exists: true
+      mapping_ref: 183-production-feedback-guard-adoption
+      phase_signal_count: 3
+      deferred_signal_count: 3
+      non_goal_signal_count: 1
+    - path: specs/183-production-feedback-guard-adoption/tasks.md
+      source_type: tasks_doc
+      truth_layer: tasks
+      mapped: true
+      exists: true
+      mapping_ref: 183-production-feedback-guard-adoption
+      phase_signal_count: 3
+      deferred_signal_count: 5
+      non_goal_signal_count: 4
+    - path: specs/183-production-feedback-guard-adoption/task-execution-log.md
+      source_type: execution_log
+      truth_layer: execution
+      mapped: true
+      exists: true
+      mapping_ref: 183-production-feedback-guard-adoption
+      phase_signal_count: 3
+      deferred_signal_count: 4
+      non_goal_signal_count: 1
+    - path: specs/183-production-feedback-guard-adoption/development-summary.md
+      source_type: development_summary
+      truth_layer: close
+      mapped: true
+      exists: false
+      mapping_ref: 183-production-feedback-guard-adoption
+      phase_signal_count: 0
+      deferred_signal_count: 0
+      non_goal_signal_count: 0
+    - path: specs/186-agentops-production-runtime-integration/spec.md
+      source_type: spec_doc
+      truth_layer: spec
+      mapped: true
+      exists: true
+      mapping_ref: 186-agentops-production-runtime-integration
+      phase_signal_count: 0
+      deferred_signal_count: 0
+      non_goal_signal_count: 1
+    - path: specs/186-agentops-production-runtime-integration/plan.md
+      source_type: plan_doc
+      truth_layer: plan
+      mapped: true
+      exists: true
+      mapping_ref: 186-agentops-production-runtime-integration
+      phase_signal_count: 0
+      deferred_signal_count: 0
+      non_goal_signal_count: 0
+    - path: specs/186-agentops-production-runtime-integration/tasks.md
+      source_type: tasks_doc
+      truth_layer: tasks
+      mapped: true
+      exists: true
+      mapping_ref: 186-agentops-production-runtime-integration
+      phase_signal_count: 1
+      deferred_signal_count: 1
+      non_goal_signal_count: 0
+    - path: specs/186-agentops-production-runtime-integration/task-execution-log.md
+      source_type: execution_log
+      truth_layer: execution
+      mapped: true
+      exists: true
+      mapping_ref: 186-agentops-production-runtime-integration
+      phase_signal_count: 0
+      deferred_signal_count: 3
+      non_goal_signal_count: 0
+    - path: specs/186-agentops-production-runtime-integration/development-summary.md
+      source_type: development_summary
+      truth_layer: close
+      mapped: true
+      exists: false
+      mapping_ref: 186-agentops-production-runtime-integration
+      phase_signal_count: 0
+      deferred_signal_count: 0
+      non_goal_signal_count: 0
     - path: docs/SPEC_SPLIT_AND_PROGRAM.zh-CN.md
       source_type: requirement_doc
       truth_layer: requirements
@@ -10307,7 +10398,7 @@ truth_snapshot:
       exists: true
       mapping_ref: docs/framework-defect-backlog.zh-CN.md
       phase_signal_count: 12
-      deferred_signal_count: 81
+      deferred_signal_count: 82
       non_goal_signal_count: 3
     - path: docs/plan-check-cli-spec.zh.md
       source_type: design_doc
@@ -10372,6 +10463,87 @@ truth_snapshot:
       phase_signal_count: 0
       deferred_signal_count: 0
       non_goal_signal_count: 0
+    - path: docs/releases/v0.7.10.md
+      source_type: release_doc
+      truth_layer: release
+      mapped: false
+      exists: true
+      mapping_ref: ''
+      phase_signal_count: 0
+      deferred_signal_count: 0
+      non_goal_signal_count: 0
+    - path: docs/releases/v0.7.11.md
+      source_type: release_doc
+      truth_layer: release
+      mapped: false
+      exists: true
+      mapping_ref: ''
+      phase_signal_count: 0
+      deferred_signal_count: 0
+      non_goal_signal_count: 0
+    - path: docs/releases/v0.7.12.md
+      source_type: release_doc
+      truth_layer: release
+      mapped: false
+      exists: true
+      mapping_ref: ''
+      phase_signal_count: 0
+      deferred_signal_count: 0
+      non_goal_signal_count: 0
+    - path: docs/releases/v0.7.13.md
+      source_type: release_doc
+      truth_layer: release
+      mapped: false
+      exists: true
+      mapping_ref: ''
+      phase_signal_count: 0
+      deferred_signal_count: 0
+      non_goal_signal_count: 0
+    - path: docs/releases/v0.7.14.md
+      source_type: release_doc
+      truth_layer: release
+      mapped: false
+      exists: true
+      mapping_ref: ''
+      phase_signal_count: 0
+      deferred_signal_count: 0
+      non_goal_signal_count: 0
+    - path: docs/releases/v0.7.15.md
+      source_type: release_doc
+      truth_layer: release
+      mapped: false
+      exists: true
+      mapping_ref: ''
+      phase_signal_count: 0
+      deferred_signal_count: 0
+      non_goal_signal_count: 0
+    - path: docs/releases/v0.7.16.md
+      source_type: release_doc
+      truth_layer: release
+      mapped: false
+      exists: true
+      mapping_ref: ''
+      phase_signal_count: 0
+      deferred_signal_count: 0
+      non_goal_signal_count: 0
+    - path: docs/releases/v0.7.17.md
+      source_type: release_doc
+      truth_layer: release
+      mapped: false
+      exists: true
+      mapping_ref: ''
+      phase_signal_count: 0
+      deferred_signal_count: 0
+      non_goal_signal_count: 0
+    - path: docs/releases/v0.7.18.md
+      source_type: release_doc
+      truth_layer: release
+      mapped: false
+      exists: true
+      mapping_ref: ''
+      phase_signal_count: 0
+      deferred_signal_count: 0
+      non_goal_signal_count: 0
     - path: docs/releases/v0.7.2.md
       source_type: release_doc
       truth_layer: release
@@ -10396,6 +10568,51 @@ truth_snapshot:
       mapped: true
       exists: true
       mapping_ref: docs/releases/v0.7.4.md
+      phase_signal_count: 0
+      deferred_signal_count: 0
+      non_goal_signal_count: 0
+    - path: docs/releases/v0.7.5.md
+      source_type: release_doc
+      truth_layer: release
+      mapped: false
+      exists: true
+      mapping_ref: ''
+      phase_signal_count: 0
+      deferred_signal_count: 0
+      non_goal_signal_count: 0
+    - path: docs/releases/v0.7.6.md
+      source_type: release_doc
+      truth_layer: release
+      mapped: false
+      exists: true
+      mapping_ref: ''
+      phase_signal_count: 0
+      deferred_signal_count: 0
+      non_goal_signal_count: 0
+    - path: docs/releases/v0.7.7.md
+      source_type: release_doc
+      truth_layer: release
+      mapped: false
+      exists: true
+      mapping_ref: ''
+      phase_signal_count: 0
+      deferred_signal_count: 0
+      non_goal_signal_count: 0
+    - path: docs/releases/v0.7.8.md
+      source_type: release_doc
+      truth_layer: release
+      mapped: false
+      exists: true
+      mapping_ref: ''
+      phase_signal_count: 0
+      deferred_signal_count: 0
+      non_goal_signal_count: 0
+    - path: docs/releases/v0.7.9.md
+      source_type: release_doc
+      truth_layer: release
+      mapped: false
+      exists: true
+      mapping_ref: ''
       phase_signal_count: 0
       deferred_signal_count: 0
       non_goal_signal_count: 0
@@ -10471,5 +10688,19 @@ truth_snapshot:
       phase_signal_count: 0
       deferred_signal_count: 6
       non_goal_signal_count: 1
-    unmapped_paths: []
-  state: blocked
+    unmapped_paths:
+    - docs/releases/v0.7.10.md
+    - docs/releases/v0.7.11.md
+    - docs/releases/v0.7.12.md
+    - docs/releases/v0.7.13.md
+    - docs/releases/v0.7.14.md
+    - docs/releases/v0.7.15.md
+    - docs/releases/v0.7.16.md
+    - docs/releases/v0.7.17.md
+    - docs/releases/v0.7.18.md
+    - docs/releases/v0.7.5.md
+    - docs/releases/v0.7.6.md
+    - docs/releases/v0.7.7.md
+    - docs/releases/v0.7.8.md
+    - docs/releases/v0.7.9.md
+  state: migration_pending

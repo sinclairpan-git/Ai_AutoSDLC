@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 import urllib.error
 import urllib.request
 from collections.abc import Mapping, Sequence
@@ -13,6 +14,7 @@ from pathlib import Path
 from typing import Any
 
 from ai_sdlc.core.adoption import AdoptionMap
+from ai_sdlc.core.config import YamlStoreError, load_project_config
 from ai_sdlc.core.task_guard import TaskGuardResult
 
 CODE_CHANGE_TASK_REQUIRED = "CODE_CHANGE_TASK_REQUIRED"
@@ -29,6 +31,14 @@ REPLAY_REASONS = frozenset(
 )
 IDENTITY_STORE_MEDIATED = "store_mediated"
 IDENTITY_OPS_DIRECT = "ops_direct"
+INGESTION_MODE_GATEWAY = "gateway"
+INGESTION_MODE_DIRECT_LOCAL = "direct_local"
+DEFAULT_TOKEN_ENV = "AGENTOPS_INGESTION_TOKEN"
+DEFAULT_TIMEOUT_SECONDS = 10.0
+AGENTOPS_ROOT = Path(".ai-sdlc") / "agentops"
+OUTBOX_DIR = AGENTOPS_ROOT / "outbox"
+RECEIPTS_DIR = AGENTOPS_ROOT / "receipts"
+DIAGNOSTICS_DIR = AGENTOPS_ROOT / "diagnostics"
 
 
 @dataclass(frozen=True, slots=True)
@@ -172,6 +182,85 @@ class AgentOpsReceipt:
     @property
     def has_diagnostics(self) -> bool:
         return self.stale_count > 0 or self.rejected_count > 0 or self.dlq_count > 0
+
+
+@dataclass(frozen=True, slots=True)
+class AgentOpsIngestionConfig:
+    endpoint: str
+    mode: str = INGESTION_MODE_GATEWAY
+    token_env_var: str = DEFAULT_TOKEN_ENV
+    timeout_seconds: float = DEFAULT_TIMEOUT_SECONDS
+    bearer_token: str = field(default="", repr=False)
+
+    @property
+    def token_present(self) -> bool:
+        return bool(self.bearer_token.strip())
+
+    @property
+    def normalized_endpoint(self) -> str:
+        return _runtime_events_url(self.endpoint) if self.endpoint.strip() else ""
+
+    @property
+    def requires_token(self) -> bool:
+        return self.mode == INGESTION_MODE_GATEWAY
+
+    def redacted_summary(self) -> dict[str, Any]:
+        return {
+            "endpoint": self.endpoint,
+            "normalized_endpoint": self.normalized_endpoint,
+            "mode": self.mode,
+            "token_env_var": self.token_env_var,
+            "token_present": self.token_present,
+            "timeout_seconds": self.timeout_seconds,
+        }
+
+
+@dataclass(frozen=True, slots=True)
+class AgentOpsDeliveryDiagnostic:
+    diagnostic_id: str
+    outbox_id: str
+    batch_id: str
+    status: str
+    reason_code: str
+    detail: str
+    retry_guidance: str
+    retryable: bool = False
+    http_status: int | None = None
+    endpoint: str = ""
+    mode: str = INGESTION_MODE_GATEWAY
+    created_at: str = ""
+
+    def as_payload(self) -> dict[str, Any]:
+        return {
+            "schema_version": "agentops_delivery_diagnostic.v1",
+            "diagnostic_id": self.diagnostic_id,
+            "outbox_id": self.outbox_id,
+            "batch_id": self.batch_id,
+            "status": self.status,
+            "reason_code": self.reason_code,
+            "detail": self.detail,
+            "retry_guidance": self.retry_guidance,
+            "retryable": self.retryable,
+            "http_status": self.http_status,
+            "endpoint": self.endpoint,
+            "mode": self.mode,
+            "created_at": self.created_at or _now_iso(),
+        }
+
+
+@dataclass(frozen=True, slots=True)
+class AgentOpsDeliveryResult:
+    outbox_path: Path
+    dry_run: bool
+    config_ready: bool
+    receipt: AgentOpsReceipt | None = None
+    receipt_path: Path | None = None
+    diagnostic: AgentOpsDeliveryDiagnostic | None = None
+    diagnostic_path: Path | None = None
+
+    @property
+    def delivered(self) -> bool:
+        return self.receipt is not None and self.diagnostic is None
 
 
 @dataclass(frozen=True, slots=True)
@@ -471,9 +560,145 @@ def build_agentops_runtime_batch(
 
 def persist_agentops_outbox_batch(root: Path, batch: Mapping[str, Any]) -> Path:
     outbox_id = str(batch.get("outbox_id") or "outbox")
-    path = root / ".ai-sdlc" / "agentops" / "outbox" / f"{_safe_id(outbox_id)}.json"
+    path = root / OUTBOX_DIR / f"{_safe_id(outbox_id)}.json"
     _write_json(path, dict(batch))
     return path
+
+
+def load_agentops_ingestion_config(
+    root: Path,
+    *,
+    env: Mapping[str, str] | None = None,
+) -> AgentOpsIngestionConfig:
+    source_env = env if env is not None else os.environ
+    try:
+        project_config = load_project_config(root)
+    except YamlStoreError:
+        raise
+
+    endpoint = _first_non_empty(
+        source_env.get("AGENTOPS_INGESTION_ENDPOINT", ""),
+        getattr(project_config, "agentops_ingestion_endpoint", ""),
+    )
+    mode = _first_non_empty(
+        source_env.get("AGENTOPS_INGESTION_MODE", ""),
+        getattr(project_config, "agentops_ingestion_mode", ""),
+        INGESTION_MODE_GATEWAY,
+    ).lower()
+    token_env_var = _first_non_empty(
+        source_env.get("AGENTOPS_INGESTION_TOKEN_ENV", ""),
+        getattr(project_config, "agentops_ingestion_token_env", ""),
+        DEFAULT_TOKEN_ENV,
+    )
+    timeout_seconds = _parse_timeout_seconds(
+        _first_non_empty(
+            source_env.get("AGENTOPS_INGESTION_TIMEOUT_SECONDS", ""),
+            str(getattr(project_config, "agentops_ingestion_timeout_seconds", "")),
+            str(DEFAULT_TIMEOUT_SECONDS),
+        )
+    )
+    return AgentOpsIngestionConfig(
+        endpoint=endpoint,
+        mode=mode,
+        token_env_var=token_env_var,
+        timeout_seconds=timeout_seconds,
+        bearer_token=source_env.get(token_env_var, ""),
+    )
+
+
+def agentops_ingestion_readiness(
+    config: AgentOpsIngestionConfig,
+) -> dict[str, Any]:
+    checks: list[dict[str, Any]] = []
+    if config.mode not in {INGESTION_MODE_GATEWAY, INGESTION_MODE_DIRECT_LOCAL}:
+        checks.append(
+            {
+                "name": "mode",
+                "state": "error",
+                "reason_code": "unsupported_mode",
+                "detail": "mode must be gateway or direct_local",
+            }
+        )
+    if not config.endpoint.strip():
+        checks.append(
+            {
+                "name": "endpoint",
+                "state": "error",
+                "reason_code": "missing_endpoint",
+                "detail": "AGENTOPS_INGESTION_ENDPOINT is required",
+            }
+        )
+    if config.requires_token and not config.token_present:
+        checks.append(
+            {
+                "name": "token",
+                "state": "error",
+                "reason_code": "missing_token",
+                "detail": f"{config.token_env_var} is required in gateway mode",
+            }
+        )
+    ready = not any(item["state"] == "error" for item in checks)
+    return {
+        "ready": ready,
+        "config": config.redacted_summary(),
+        "checks": checks,
+    }
+
+
+def deliver_agentops_outbox(
+    root: Path,
+    *,
+    outbox_id: str = "",
+    config: AgentOpsIngestionConfig | None = None,
+    dry_run: bool = False,
+) -> AgentOpsDeliveryResult:
+    outbox_path = resolve_agentops_outbox_path(root, outbox_id=outbox_id)
+    batch = json.loads(outbox_path.read_text(encoding="utf-8"))
+    if not isinstance(batch, Mapping):
+        raise ValueError("AgentOps outbox must contain a JSON object")
+    effective_config = config or load_agentops_ingestion_config(root)
+    readiness = agentops_ingestion_readiness(effective_config)
+    if not readiness["ready"]:
+        diagnostic = _diagnostic_from_readiness(batch, effective_config, readiness)
+        diagnostic_path = persist_agentops_delivery_diagnostic(root, diagnostic)
+        return AgentOpsDeliveryResult(
+            outbox_path=outbox_path,
+            dry_run=dry_run,
+            config_ready=False,
+            diagnostic=diagnostic,
+            diagnostic_path=diagnostic_path,
+        )
+    if dry_run:
+        return AgentOpsDeliveryResult(
+            outbox_path=outbox_path,
+            dry_run=True,
+            config_ready=True,
+        )
+    try:
+        receipt = send_agentops_batch(
+            effective_config.endpoint,
+            batch,
+            bearer_token=effective_config.bearer_token,
+            timeout_seconds=effective_config.timeout_seconds,
+        )
+    except (RuntimeError, ValueError) as exc:
+        diagnostic = _diagnostic_from_runtime_error(batch, effective_config, exc)
+        diagnostic_path = persist_agentops_delivery_diagnostic(root, diagnostic)
+        return AgentOpsDeliveryResult(
+            outbox_path=outbox_path,
+            dry_run=False,
+            config_ready=True,
+            diagnostic=diagnostic,
+            diagnostic_path=diagnostic_path,
+        )
+    receipt_path = persist_agentops_receipt_summary(root, receipt)
+    return AgentOpsDeliveryResult(
+        outbox_path=outbox_path,
+        dry_run=False,
+        config_ready=True,
+        receipt=receipt,
+        receipt_path=receipt_path,
+    )
 
 
 def send_agentops_batch(
@@ -497,12 +722,23 @@ def send_agentops_batch(
             response_body = response.read().decode("utf-8")
     except urllib.error.HTTPError as exc:
         response_body = exc.read().decode("utf-8", errors="replace")
+        safe_body = _http_error_body_summary(response_body)
         raise RuntimeError(
-            f"AgentOps runtime ingestion failed: HTTP {exc.code} {response_body}"
+            f"AgentOps runtime ingestion failed: HTTP {exc.code} {safe_body}"
         ) from exc
     except (TimeoutError, urllib.error.URLError, OSError) as exc:
-        raise RuntimeError(f"AgentOps runtime ingestion failed: {exc}") from exc
-    return parse_agentops_receipt(json.loads(response_body))
+        safe_detail = _redact_sensitive_text(str(exc), secrets=(bearer_token,))
+        raise RuntimeError(f"AgentOps runtime ingestion failed: {safe_detail}") from exc
+    try:
+        receipt_payload = json.loads(response_body)
+    except json.JSONDecodeError as exc:
+        raise ValueError("AgentOps receipt payload must be JSON") from exc
+    if not isinstance(receipt_payload, Mapping):
+        raise ValueError("AgentOps receipt payload must be a JSON object")
+    try:
+        return parse_agentops_receipt(receipt_payload)
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"AgentOps receipt payload invalid: {exc}") from exc
 
 
 def parse_agentops_receipt(payload: Mapping[str, Any]) -> AgentOpsReceipt:
@@ -531,15 +767,43 @@ def parse_agentops_receipt(payload: Mapping[str, Any]) -> AgentOpsReceipt:
 
 
 def persist_agentops_receipt_summary(root: Path, receipt: AgentOpsReceipt) -> Path:
-    path = (
-        root
-        / ".ai-sdlc"
-        / "agentops"
-        / "receipts"
-        / f"{_safe_id(receipt.outbox_id)}.summary.json"
-    )
+    path = root / RECEIPTS_DIR / f"{_safe_id(receipt.outbox_id)}.summary.json"
     _write_json(path, receipt_summary(receipt))
     return path
+
+
+def persist_agentops_delivery_diagnostic(
+    root: Path,
+    diagnostic: AgentOpsDeliveryDiagnostic,
+) -> Path:
+    name = f"{_safe_id(diagnostic.outbox_id)}.{_safe_id(diagnostic.reason_code)}.json"
+    path = root / DIAGNOSTICS_DIR / name
+    _write_json(path, diagnostic.as_payload())
+    return path
+
+
+def agentops_outbox_status(root: Path) -> dict[str, Any]:
+    latest_outbox = _latest_json_file(root / OUTBOX_DIR)
+    latest_receipt = _latest_json_file(root / RECEIPTS_DIR)
+    latest_diagnostic = _latest_json_file(root / DIAGNOSTICS_DIR)
+    return {
+        "schema_version": "agentops_outbox_status.v1",
+        "latest_outbox": _status_entry(latest_outbox),
+        "latest_receipt": _status_entry(latest_receipt),
+        "latest_diagnostic": _status_entry(latest_diagnostic),
+    }
+
+
+def resolve_agentops_outbox_path(root: Path, *, outbox_id: str = "") -> Path:
+    if outbox_id:
+        path = root / OUTBOX_DIR / f"{_safe_id(outbox_id)}.json"
+        if path.exists():
+            return path
+        raise FileNotFoundError(f"AgentOps outbox not found: {outbox_id}")
+    latest = _latest_json_file(root / OUTBOX_DIR)
+    if latest is None:
+        raise FileNotFoundError("AgentOps outbox directory has no JSON outbox files")
+    return latest
 
 
 def receipt_summary(receipt: AgentOpsReceipt) -> dict[str, Any]:
@@ -798,6 +1062,183 @@ def _runtime_events_url(endpoint: str) -> str:
     if normalized.endswith("/v1/runtime/events"):
         return normalized
     return f"{normalized}/v1/runtime/events"
+
+
+def _diagnostic_from_readiness(
+    batch: Mapping[str, Any],
+    config: AgentOpsIngestionConfig,
+    readiness: Mapping[str, Any],
+) -> AgentOpsDeliveryDiagnostic:
+    reason = _first_readiness_reason(readiness)
+    return AgentOpsDeliveryDiagnostic(
+        diagnostic_id=f"diag_{_safe_id(str(batch.get('outbox_id') or 'outbox'))}_{reason}",
+        outbox_id=str(batch.get("outbox_id", "")),
+        batch_id=str(batch.get("batch_id", "")),
+        status="blocked_before_send",
+        reason_code=reason,
+        detail=_first_readiness_detail(readiness),
+        retry_guidance=_retry_guidance(reason),
+        retryable=reason in {"missing_endpoint", "missing_token"},
+        endpoint=config.normalized_endpoint,
+        mode=config.mode,
+    )
+
+
+def _diagnostic_from_runtime_error(
+    batch: Mapping[str, Any],
+    config: AgentOpsIngestionConfig,
+    error: Exception,
+) -> AgentOpsDeliveryDiagnostic:
+    detail = _redact_sensitive_text(str(error), secrets=(config.bearer_token,))
+    http_status = _http_status_from_error(detail)
+    reason_code = _reason_code_from_error(detail, http_status)
+    return AgentOpsDeliveryDiagnostic(
+        diagnostic_id=f"diag_{_safe_id(str(batch.get('outbox_id') or 'outbox'))}_{reason_code}",
+        outbox_id=str(batch.get("outbox_id", "")),
+        batch_id=str(batch.get("batch_id", "")),
+        status="delivery_failed",
+        reason_code=reason_code,
+        detail=detail,
+        retry_guidance=_retry_guidance(reason_code),
+        retryable=reason_code in {"transport_error", "missing_gateway_identity"},
+        http_status=http_status,
+        endpoint=config.normalized_endpoint,
+        mode=config.mode,
+    )
+
+
+def _first_readiness_reason(readiness: Mapping[str, Any]) -> str:
+    for check in readiness.get("checks", ()):
+        if isinstance(check, Mapping) and check.get("state") == "error":
+            return str(check.get("reason_code") or "config_not_ready")
+    return "config_not_ready"
+
+
+def _first_readiness_detail(readiness: Mapping[str, Any]) -> str:
+    for check in readiness.get("checks", ()):
+        if isinstance(check, Mapping) and check.get("state") == "error":
+            return str(check.get("detail") or "AgentOps ingestion config is not ready")
+    return "AgentOps ingestion config is not ready"
+
+
+def _retry_guidance(reason_code: str) -> str:
+    guidance = {
+        "missing_endpoint": "Set AGENTOPS_INGESTION_ENDPOINT to the AgentOps Gateway URL.",
+        "missing_token": "Set AGENTOPS_INGESTION_TOKEN for gateway mode, then retry the same outbox.",
+        "unsupported_mode": "Use gateway for production or direct_local for local development.",
+        "missing_gateway_identity": "Verify the Gateway validates the token and injects X-AgentOps identity headers.",
+        "scope_denied": "Use an ingestion token whose principal has the event.ingest scope.",
+        "schema_invalid": "Fix the runtime.ingestion.v1 batch before retrying.",
+        "transport_error": "Check Gateway reachability and retry the same outbox.",
+    }
+    return guidance.get(reason_code, "Inspect AgentOps diagnostic detail before retrying.")
+
+
+def _http_status_from_error(detail: str) -> int | None:
+    marker = "HTTP "
+    if marker not in detail:
+        return None
+    suffix = detail.split(marker, 1)[1].strip()
+    raw_code = suffix.split(" ", 1)[0]
+    try:
+        return int(raw_code)
+    except ValueError:
+        return None
+
+
+def _reason_code_from_error(detail: str, http_status: int | None) -> str:
+    if http_status == 401 and "UPSTREAM_IDENTITY_REQUIRED" in detail:
+        return "missing_gateway_identity"
+    if http_status == 403 and "AGENTOPS_SCOPE_DENIED" in detail:
+        return "scope_denied"
+    if http_status == 400 and "EVENT_SCHEMA_UNSUPPORTED" in detail:
+        return "schema_invalid"
+    if "receipt payload" in detail or "receipt schema_version" in detail:
+        return "receipt_schema_invalid"
+    if http_status is not None:
+        return f"http_{http_status}"
+    return "transport_error"
+
+
+def _redact_sensitive_text(text: str, *, secrets: Sequence[str] = ()) -> str:
+    safe = text
+    for secret in secrets:
+        if secret:
+            safe = safe.replace(secret, "<redacted>")
+    return safe[:1000]
+
+
+def _http_error_body_summary(response_body: str) -> str:
+    code = _known_agentops_error_code(response_body)
+    if code:
+        return f"code={code}"
+    return "response_body_omitted"
+
+
+def _known_agentops_error_code(response_body: str) -> str:
+    try:
+        payload = json.loads(response_body)
+    except json.JSONDecodeError:
+        payload = None
+    if isinstance(payload, Mapping):
+        for key in ("code", "error_code", "reason_code"):
+            value = payload.get(key)
+            if isinstance(value, str) and _is_safe_error_code(value):
+                return value
+    for code in (
+        "UPSTREAM_IDENTITY_REQUIRED",
+        "AGENTOPS_SCOPE_DENIED",
+        "EVENT_SCHEMA_UNSUPPORTED",
+    ):
+        if code in response_body:
+            return code
+    return ""
+
+
+def _is_safe_error_code(value: str) -> bool:
+    return bool(value) and all(ch.isupper() or ch.isdigit() or ch == "_" for ch in value)
+
+
+def _latest_json_file(directory: Path) -> Path | None:
+    if not directory.exists():
+        return None
+    files = [path for path in directory.glob("*.json") if path.is_file()]
+    if not files:
+        return None
+    return max(files, key=lambda path: path.stat().st_mtime)
+
+
+def _status_entry(path: Path | None) -> dict[str, Any] | None:
+    if path is None:
+        return None
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError):
+        payload = {}
+    return {
+        "path": str(path),
+        "name": path.name,
+        "payload": payload if isinstance(payload, Mapping) else {},
+    }
+
+
+def _first_non_empty(*values: str) -> str:
+    for value in values:
+        if value and str(value).strip():
+            return str(value).strip()
+    return ""
+
+
+def _parse_timeout_seconds(value: str) -> float:
+    try:
+        parsed = float(value)
+    except ValueError:
+        return DEFAULT_TIMEOUT_SECONDS
+    return parsed if parsed > 0 else DEFAULT_TIMEOUT_SECONDS
+
+
+def _now_iso() -> str:
+    return datetime.now(UTC).isoformat().replace("+00:00", "Z")
 
 
 def _write_json(path: Path, payload: Mapping[str, Any]) -> None:
