@@ -127,3 +127,24 @@
 - `ai-sdlc status --json` and full program truth surfaces remain intentionally heavier and should not be used as the local quick health check while Git truth reconstruction is slow.
 - Close remains open because the dry-run close gate reports `Final tests did not pass`.
 - Full program truth validation remains a separate evidence gate through `python -m ai_sdlc program truth sync --execute --yes` / audit, not through the fast dry-run path.
+
+## Batch 2026-05-27-001 | AgentOps run dry-run delivery guard
+
+### Scope
+
+- Address PR #69 review feedback that `ai-sdlc run --dry-run` must not POST to AgentOps.
+- Keep dry-run useful by persisting the runtime outbox and reporting that delivery was skipped.
+- Preserve normal `ai-sdlc run` delivery behavior for configured AgentOps environments.
+
+### Commands
+
+- `uv run pytest tests/integration/test_cli_run.py tests/integration/test_cli_agentops.py tests/unit/test_agentops_bridge.py tests/unit/test_runner_confirm.py -q`
+- `uv run ruff check src/ai_sdlc/cli/run_cmd.py src/ai_sdlc/core/agentops_bridge.py tests/integration/test_cli_run.py`
+- `uv run ai-sdlc verify constraints`
+
+### Observed Results
+
+- Focused pytest passed with `68 passed`.
+- Ruff passed with `All checks passed!`.
+- `verify constraints` initially blocked on comment-deletion governance after the dry-run test stopped using the previous fake sender.
+- removed comment reason: tests/integration/test_cli_run.py **_kwargs: object, from the removed fake AgentOps sender was replaced by an explicit dry-run no-send assertion because dry-run must persist outbox without delivery side effects.

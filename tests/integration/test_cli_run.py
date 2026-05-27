@@ -194,7 +194,7 @@ class TestRunCommand:
         assert "Stage close" in result.output
         assert "Pipeline completed. Stage: close" in result.output
 
-    def test_run_dry_run_flushes_agentops_outbox_when_gateway_ready(
+    def test_run_dry_run_persists_agentops_outbox_without_delivery(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         monkeypatch.setenv("OPENAI_CODEX", "1")
@@ -203,49 +203,30 @@ class TestRunCommand:
         monkeypatch.chdir(tmp_path)
         assert runner.invoke(app, ["init", ".", "--agent-target", "codex"]).exit_code == 0
         self._force_passing_gates(monkeypatch)
-        captured_batches: list[dict[str, object]] = []
 
-        def fake_send_agentops_batch(
-            _endpoint: str,
-            batch: dict[str, object],
-            **_kwargs: object,
-        ) -> AgentOpsReceipt:
-            captured_batches.append(batch)
-            return AgentOpsReceipt(
-                schema_version="runtime_outbox_receipt.v1",
-                batch_id="batch_test",
-                outbox_id="outbox_test",
-                producer="Ai_AutoSDLC",
-                replay_reason="initial_delivery",
-                outbox_state="delivered",
-                accepted_count=7,
-                deduplicated_count=0,
-                stale_count=0,
-                rejected_count=0,
-                dlq_count=0,
-                item_results=(),
-                audit_id="audit_test",
-            )
+        def fail_send_agentops_batch(*_args: object, **_kwargs: object) -> AgentOpsReceipt:
+            raise AssertionError("dry-run must not send AgentOps batches")
 
         monkeypatch.setattr(
             "ai_sdlc.core.agentops_bridge.send_agentops_batch",
-            fake_send_agentops_batch,
+            fail_send_agentops_batch,
         )
 
         result = runner.invoke(app, ["run", "--dry-run"])
 
         assert result.exit_code == 0
-        assert "AgentOps report delivered: delivered accepted=7" in result.output
-        assert list((tmp_path / ".ai-sdlc" / "agentops" / "outbox").glob("*.json"))
-        assert captured_batches
-        events = captured_batches[0]["events"]  # type: ignore[index]
-        stage_names = [event["payload"]["stage_name"] for event in events]  # type: ignore[index]
+        assert "AgentOps report dry-run: delivery skipped" in result.output
+        outbox_files = list((tmp_path / ".ai-sdlc" / "agentops" / "outbox").glob("*.json"))
+        assert outbox_files
+        batch = json.loads(outbox_files[0].read_text(encoding="utf-8"))
+        events = batch["events"]
+        stage_names = [event["payload"]["stage_name"] for event in events]
         assert stage_names[0] == "init"
         assert stage_names[-1] == "close"
         receipt_files = list(
             (tmp_path / ".ai-sdlc" / "agentops" / "receipts").glob("*.summary.json")
         )
-        assert receipt_files
+        assert not receipt_files
 
     def test_run_non_dry_run_flushes_agentops_outbox_on_halt(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
@@ -393,7 +374,7 @@ class TestRunCommand:
             fake_send_agentops_batch,
         )
 
-        result = runner.invoke(app, ["run", "--dry-run"])
+        result = runner.invoke(app, ["run"])
 
         assert result.exit_code == 0
         assert "AgentOps report delivered with diagnostics:" in result.output
@@ -443,8 +424,8 @@ class TestRunCommand:
             fake_send_agentops_batch,
         )
 
-        first = runner.invoke(app, ["run", "--dry-run"])
-        second = runner.invoke(app, ["run", "--dry-run"])
+        first = runner.invoke(app, ["run"])
+        second = runner.invoke(app, ["run"])
 
         assert first.exit_code == 0
         assert second.exit_code == 0

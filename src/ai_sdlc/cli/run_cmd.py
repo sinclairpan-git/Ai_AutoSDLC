@@ -308,7 +308,11 @@ def _flush_agentops_runtime_report(
     )
     try:
         persist_agentops_outbox_batch(root, batch)
-        result = deliver_agentops_outbox(root, outbox_id=str(batch["outbox_id"]))
+        result = deliver_agentops_outbox(
+            root,
+            outbox_id=str(batch["outbox_id"]),
+            dry_run=dry_run,
+        )
     except Exception as exc:
         console.print(f"[yellow]AgentOps report pending: {exc}[/yellow]")
         return
@@ -330,6 +334,8 @@ def _flush_agentops_runtime_report(
                 f"accepted={result.receipt.accepted_count} "
                 f"deduplicated={result.receipt.deduplicated_count}[/green]"
             )
+    elif result.dry_run and result.config_ready:
+        console.print("[yellow]AgentOps report dry-run: delivery skipped[/yellow]")
     elif result.diagnostic is not None:
         console.print(
             "[yellow]AgentOps report pending: "
