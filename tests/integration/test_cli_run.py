@@ -236,6 +236,97 @@ class TestRunCommand:
         )
         assert receipt_files
 
+    def test_run_non_dry_run_flushes_agentops_outbox_on_halt(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setenv("OPENAI_CODEX", "1")
+        monkeypatch.setenv("AGENTOPS_INGESTION_ENDPOINT", "https://gateway.example")
+        monkeypatch.setenv("AGENTOPS_INGESTION_TOKEN", "secret-token")
+        monkeypatch.chdir(tmp_path)
+        assert runner.invoke(app, ["init", ".", "--agent-target", "codex"]).exit_code == 0
+
+        def halt_gate(
+            self: SDLCRunner,
+            stage: str,
+            cp: Checkpoint,
+            *,
+            dry_run: bool = False,
+        ) -> GateResult:
+            return GateResult(
+                stage=stage,
+                verdict=GateVerdict.HALT,
+                checks=[GateCheck(name="halted", passed=False, message="blocked")],
+            )
+
+        def fake_send_agentops_batch(*_args: object, **_kwargs: object) -> AgentOpsReceipt:
+            return AgentOpsReceipt(
+                schema_version="runtime_outbox_receipt.v1",
+                batch_id="batch_test",
+                outbox_id="outbox_test",
+                producer="Ai_AutoSDLC",
+                replay_reason="initial_delivery",
+                outbox_state="delivered",
+                accepted_count=1,
+                deduplicated_count=0,
+                stale_count=0,
+                rejected_count=0,
+                dlq_count=0,
+                item_results=(),
+                audit_id="audit_test",
+            )
+
+        monkeypatch.setattr(SDLCRunner, "_run_gate", halt_gate)
+        monkeypatch.setattr(
+            "ai_sdlc.core.agentops_bridge.send_agentops_batch",
+            fake_send_agentops_batch,
+        )
+
+        result = runner.invoke(app, ["run"])
+
+        assert result.exit_code == 2
+        assert "AgentOps report delivered: delivered accepted=1" in result.output
+        assert "Pipeline halted:" in result.output
+        assert list((tmp_path / ".ai-sdlc" / "agentops" / "outbox").glob("*.json"))
+
+    def test_run_warns_when_agentops_receipt_has_diagnostics(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setenv("OPENAI_CODEX", "1")
+        monkeypatch.setenv("AGENTOPS_INGESTION_ENDPOINT", "https://gateway.example")
+        monkeypatch.setenv("AGENTOPS_INGESTION_TOKEN", "secret-token")
+        monkeypatch.chdir(tmp_path)
+        assert runner.invoke(app, ["init", ".", "--agent-target", "codex"]).exit_code == 0
+        self._force_passing_gates(monkeypatch)
+
+        def fake_send_agentops_batch(*_args: object, **_kwargs: object) -> AgentOpsReceipt:
+            return AgentOpsReceipt(
+                schema_version="runtime_outbox_receipt.v1",
+                batch_id="batch_test",
+                outbox_id="outbox_test",
+                producer="Ai_AutoSDLC",
+                replay_reason="initial_delivery",
+                outbox_state="delivered_with_diagnostics",
+                accepted_count=6,
+                deduplicated_count=0,
+                stale_count=0,
+                rejected_count=1,
+                dlq_count=0,
+                item_results=({"status": "rejected"},),
+                audit_id="audit_test",
+            )
+
+        monkeypatch.setattr(
+            "ai_sdlc.core.agentops_bridge.send_agentops_batch",
+            fake_send_agentops_batch,
+        )
+
+        result = runner.invoke(app, ["run", "--dry-run"])
+
+        assert result.exit_code == 0
+        assert "AgentOps report delivered with diagnostics:" in result.output
+        assert "rejected=1" in result.output
+        assert "dlq=0" in result.output
+
     def test_run_dry_run_reports_open_gates_without_completed_message(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:

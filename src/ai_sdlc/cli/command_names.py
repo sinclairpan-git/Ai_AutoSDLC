@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from click.core import Group
+from typing import Any
 
 
 def collect_flat_command_strings() -> tuple[str, ...]:
@@ -16,13 +16,14 @@ def collect_flat_command_strings() -> tuple[str, ...]:
     return tuple(sorted(paths))
 
 
-def _walk_group(group: Group, prefix: tuple[str, ...]) -> list[str]:
+def _walk_group(group: Any, prefix: tuple[str, ...]) -> list[str]:
     out: list[str] = []
-    for name in sorted(group.commands):
-        cmd = group.commands[name]
+    commands = getattr(group, "commands", {})
+    for name in sorted(commands):
+        cmd = commands[name]
         if getattr(cmd, "hidden", False):
             continue
-        if isinstance(cmd, Group):
+        if hasattr(cmd, "commands"):
             out.extend(_walk_group(cmd, prefix + (name,)))
         else:
             out.append(" ".join(prefix + (name,)))

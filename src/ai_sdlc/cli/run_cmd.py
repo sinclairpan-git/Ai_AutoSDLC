@@ -16,6 +16,7 @@ from ai_sdlc.cli.beginner_guidance import (
     render_single_next_step,
 )
 from ai_sdlc.cli.commands import _print_reconcile_guidance
+from ai_sdlc.context.state import load_checkpoint
 from ai_sdlc.core.agentops_bridge import (
     AgentOpsIdentity,
     AgentOpsRuntimeContext,
@@ -209,6 +210,9 @@ def run_command(
         _render_frontend_contract_runtime_attachment_summary(root, cp)
         _flush_agentops_runtime_report(root, cp, stage_results, dry_run=dry_run)
     except PipelineHaltError as exc:
+        cp = load_checkpoint(root, warn=False)
+        if cp is not None:
+            _flush_agentops_runtime_report(root, cp, stage_results, dry_run=dry_run)
         console.print(f"\n[bold red]Pipeline halted: {exc}[/bold red]")
         raise typer.Exit(code=2) from None
 
@@ -305,12 +309,23 @@ def _flush_agentops_runtime_report(
         console.print(f"[yellow]AgentOps report pending: {exc}[/yellow]")
         return
     if result.receipt is not None:
-        console.print(
-            "[green]AgentOps report delivered: "
-            f"{result.receipt.outbox_state} "
-            f"accepted={result.receipt.accepted_count} "
-            f"deduplicated={result.receipt.deduplicated_count}[/green]"
-        )
+        if result.receipt.has_diagnostics:
+            console.print(
+                "[yellow]AgentOps report delivered with diagnostics: "
+                f"{result.receipt.outbox_state} "
+                f"accepted={result.receipt.accepted_count} "
+                f"deduplicated={result.receipt.deduplicated_count} "
+                f"stale={result.receipt.stale_count} "
+                f"rejected={result.receipt.rejected_count} "
+                f"dlq={result.receipt.dlq_count}[/yellow]"
+            )
+        else:
+            console.print(
+                "[green]AgentOps report delivered: "
+                f"{result.receipt.outbox_state} "
+                f"accepted={result.receipt.accepted_count} "
+                f"deduplicated={result.receipt.deduplicated_count}[/green]"
+            )
     elif result.diagnostic is not None:
         console.print(
             "[yellow]AgentOps report pending: "
