@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from typing import Any
+from uuid import uuid4
 
 import typer
 from rich.console import Console
@@ -16,6 +17,15 @@ from ai_sdlc.cli.beginner_guidance import (
     render_single_next_step,
 )
 from ai_sdlc.cli.commands import _print_reconcile_guidance
+from ai_sdlc.context.state import load_checkpoint
+from ai_sdlc.core.agentops_bridge import (
+    AgentOpsIdentity,
+    AgentOpsRuntimeContext,
+    build_agentops_runtime_batch,
+    build_gate_fact,
+    deliver_agentops_outbox,
+    persist_agentops_outbox_batch,
+)
 from ai_sdlc.core.frontend_contract_runtime_attachment import (
     build_frontend_contract_runtime_attachment,
     is_frontend_contract_runtime_attachment_work_item,
@@ -26,7 +36,7 @@ from ai_sdlc.integrations.ide_adapter import (
     build_adapter_governance_surface,
 )
 from ai_sdlc.models.state import Checkpoint
-from ai_sdlc.utils.helpers import find_project_root
+from ai_sdlc.utils.helpers import find_project_root, now_iso
 
 console = Console()
 
@@ -154,10 +164,12 @@ def run_command(
     runner = SDLCRunner(root)
     callback = _confirm_callback if mode == "confirm" else None
     last_result: Any | None = None
+    stage_results: list[tuple[str, Any]] = []
 
     def _record_stage_finish(stage: str, result: Any) -> None:
         nonlocal last_result
         last_result = result
+        stage_results.append((stage, result))
         _stage_finish_callback(stage, result)
 
     try:
@@ -197,7 +209,12 @@ def run_command(
                 console.print("")
                 console.print(render_dry_run_pass_guidance())
         _render_frontend_contract_runtime_attachment_summary(root, cp)
+        _flush_agentops_runtime_report(root, cp, stage_results, dry_run=dry_run)
     except PipelineHaltError as exc:
+        _record_halt_result(stage_results, exc)
+        cp = load_checkpoint(root, warn=False)
+        if cp is not None:
+            _flush_agentops_runtime_report(root, cp, stage_results, dry_run=dry_run)
         console.print(f"\n[bold red]Pipeline halted: {exc}[/bold red]")
         raise typer.Exit(code=2) from None
 
@@ -229,3 +246,130 @@ def _render_frontend_contract_runtime_attachment_summary(
         f"[{style}]frontend contract runtime attachment: "
         f"{attachment.status}{suffix}[/{style}]"
     )
+
+
+def _flush_agentops_runtime_report(
+    root: object,
+    checkpoint: Checkpoint,
+    stage_results: list[tuple[str, Any]],
+    *,
+    dry_run: bool,
+) -> None:
+    if not stage_results:
+        return
+    timestamp = now_iso().replace("+00:00", "Z")
+    feature_id = checkpoint.feature.id if checkpoint.feature else "unknown"
+    mode_label = "dry_run" if dry_run else "run"
+    invocation_id = uuid4().hex[:12]
+    run_id = (
+        f"run_{_safe_agentops_id(feature_id)}_"
+        f"{mode_label}_{_safe_agentops_id(timestamp)}_{invocation_id}"
+    )
+    context = AgentOpsRuntimeContext(
+        session_id=f"session_{run_id}",
+        run_id=run_id,
+        trace_id=f"trace_{run_id}",
+        stage_name=checkpoint.current_stage,
+        timestamp=timestamp,
+    )
+    identity = AgentOpsIdentity.ops_direct(
+        producer_id="ai-sdlc-local",
+        runtime_id="ai-sdlc-cli",
+        credential_id="local-agentops-runtime",
+        key_id="local-agentops-runtime-key",
+    )
+    workitem = checkpoint.linked_wi_id or feature_id
+    facts = [
+        build_gate_fact(
+            gate_id=stage,
+            status=_agentops_status(result),
+            workitem=workitem,
+            executable_task_id=f"pipeline_{stage}",
+            task_guard_state="diagnostic",
+            stage_name=stage,
+            blocking=_agentops_status(result) != "passed",
+            rule_results=[
+                {
+                    "name": str(getattr(check, "name", "")),
+                    "passed": bool(getattr(check, "passed", False)),
+                    "message": str(getattr(check, "message", "")),
+                }
+                for check in getattr(result, "checks", []) or []
+            ],
+        )
+        for stage, result in stage_results
+    ]
+    batch = build_agentops_runtime_batch(
+        outbox_id=f"outbox_{run_id}",
+        batch_id=f"batch_{run_id}",
+        context=context,
+        identity=identity,
+        facts=facts,
+    )
+    try:
+        persist_agentops_outbox_batch(root, batch)
+        result = deliver_agentops_outbox(
+            root,
+            outbox_id=str(batch["outbox_id"]),
+            dry_run=dry_run,
+        )
+    except Exception as exc:
+        console.print(f"[yellow]AgentOps report pending: {exc}[/yellow]")
+        return
+    if result.receipt is not None:
+        if result.receipt.has_diagnostics:
+            console.print(
+                "[yellow]AgentOps report delivered with diagnostics: "
+                f"{result.receipt.outbox_state} "
+                f"accepted={result.receipt.accepted_count} "
+                f"deduplicated={result.receipt.deduplicated_count} "
+                f"stale={result.receipt.stale_count} "
+                f"rejected={result.receipt.rejected_count} "
+                f"dlq={result.receipt.dlq_count}[/yellow]"
+            )
+        else:
+            console.print(
+                "[green]AgentOps report delivered: "
+                f"{result.receipt.outbox_state} "
+                f"accepted={result.receipt.accepted_count} "
+                f"deduplicated={result.receipt.deduplicated_count}[/green]"
+            )
+    elif result.dry_run and result.config_ready:
+        console.print("[yellow]AgentOps report dry-run: delivery skipped[/yellow]")
+    elif result.diagnostic is not None:
+        console.print(
+            "[yellow]AgentOps report pending: "
+            f"{result.diagnostic.reason_code}[/yellow]"
+        )
+
+
+def _record_halt_result(
+    stage_results: list[tuple[str, Any]],
+    exc: PipelineHaltError,
+) -> None:
+    stage = str(getattr(exc, "stage", "") or "")
+    result = getattr(exc, "result", None)
+    if not stage or result is None:
+        return
+    if any(
+        existing_stage == stage and existing_result is result
+        for existing_stage, existing_result in stage_results
+    ):
+        return
+    stage_results.append((stage, result))
+
+
+def _agentops_status(result: Any) -> str:
+    verdict = str(getattr(result.verdict, "value", result.verdict)).upper()
+    if verdict == "PASS":
+        return "passed"
+    if verdict == "HALT":
+        return "blocked"
+    return "failed"
+
+
+def _safe_agentops_id(value: object) -> str:
+    safe = "".join(ch if ch.isalnum() else "_" for ch in str(value).strip())
+    while "__" in safe:
+        safe = safe.replace("__", "_")
+    return safe.strip("_") or "unknown"

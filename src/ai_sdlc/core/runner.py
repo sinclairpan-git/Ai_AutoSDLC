@@ -118,6 +118,17 @@ def _program_truth_gate_surface(
 class PipelineHaltError(Exception):
     """Raised when the pipeline halts and cannot continue."""
 
+    def __init__(
+        self,
+        message: str,
+        *,
+        stage: str = "",
+        result: GateResult | None = None,
+    ) -> None:
+        super().__init__(message)
+        self.stage = stage
+        self.result = result
+
 
 class SDLCRunner:
     """Orchestrate the SDLC pipeline from init through close."""
@@ -266,7 +277,9 @@ class SDLCRunner:
             logger.warning("Stage '%s' RETRY %d/%d", stage, attempt + 1, MAX_RETRIES)
         raise PipelineHaltError(
             f"Stage '{stage}' failed after {MAX_RETRIES} retries: "
-            f"{[c.message for c in result.checks if not c.passed]}"
+            f"{[c.message for c in result.checks if not c.passed]}",
+            stage=stage,
+            result=result,
         )
 
     def _apply_result(
@@ -283,7 +296,9 @@ class SDLCRunner:
         if result.verdict == GateVerdict.HALT:
             raise PipelineHaltError(
                 f"Pipeline halted at '{stage}': "
-                f"{[c.message for c in result.checks if not c.passed]}"
+                f"{[c.message for c in result.checks if not c.passed]}",
+                stage=stage,
+                result=result,
             )
 
         if result.verdict == GateVerdict.PASS and not dry_run:
