@@ -366,6 +366,7 @@ def build_gate_fact(
     workitem: str,
     executable_task_id: str,
     task_guard_state: str,
+    stage_name: str = "",
     blocking: bool = False,
     rule_results: Sequence[Mapping[str, Any]] = (),
 ) -> AgentOpsSdlcFact:
@@ -377,7 +378,12 @@ def build_gate_fact(
         workitem=workitem,
         executable_task_id=executable_task_id,
         task_guard_state=task_guard_state,
-        extra={"gate_id": gate_id, "blocking": blocking, "rule_results": list(rule_results)},
+        stage_name=stage_name,
+        extra={
+            "gate_id": gate_id,
+            "blocking": blocking,
+            "rule_results": list(rule_results),
+        },
     )
 
 

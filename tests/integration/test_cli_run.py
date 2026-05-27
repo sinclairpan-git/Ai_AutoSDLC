@@ -203,8 +203,14 @@ class TestRunCommand:
         monkeypatch.chdir(tmp_path)
         assert runner.invoke(app, ["init", ".", "--agent-target", "codex"]).exit_code == 0
         self._force_passing_gates(monkeypatch)
+        captured_batches: list[dict[str, object]] = []
 
-        def fake_send_agentops_batch(*_args: object, **_kwargs: object) -> AgentOpsReceipt:
+        def fake_send_agentops_batch(
+            _endpoint: str,
+            batch: dict[str, object],
+            **_kwargs: object,
+        ) -> AgentOpsReceipt:
+            captured_batches.append(batch)
             return AgentOpsReceipt(
                 schema_version="runtime_outbox_receipt.v1",
                 batch_id="batch_test",
@@ -231,6 +237,11 @@ class TestRunCommand:
         assert result.exit_code == 0
         assert "AgentOps report delivered: delivered accepted=7" in result.output
         assert list((tmp_path / ".ai-sdlc" / "agentops" / "outbox").glob("*.json"))
+        assert captured_batches
+        events = captured_batches[0]["events"]  # type: ignore[index]
+        stage_names = [event["payload"]["stage_name"] for event in events]  # type: ignore[index]
+        assert stage_names[0] == "init"
+        assert stage_names[-1] == "close"
         receipt_files = list(
             (tmp_path / ".ai-sdlc" / "agentops" / "receipts").glob("*.summary.json")
         )

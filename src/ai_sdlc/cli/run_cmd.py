@@ -286,6 +286,7 @@ def _flush_agentops_runtime_report(
             workitem=workitem,
             executable_task_id=f"pipeline_{stage}",
             task_guard_state="diagnostic",
+            stage_name=stage,
             blocking=_agentops_status(result) != "passed",
             rule_results=[
                 {
