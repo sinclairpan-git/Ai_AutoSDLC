@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from typing import Any
+from uuid import uuid4
 
 import typer
 from rich.console import Console
@@ -210,6 +211,7 @@ def run_command(
         _render_frontend_contract_runtime_attachment_summary(root, cp)
         _flush_agentops_runtime_report(root, cp, stage_results, dry_run=dry_run)
     except PipelineHaltError as exc:
+        _record_halt_result(stage_results, exc)
         cp = load_checkpoint(root, warn=False)
         if cp is not None:
             _flush_agentops_runtime_report(root, cp, stage_results, dry_run=dry_run)
@@ -258,9 +260,10 @@ def _flush_agentops_runtime_report(
     timestamp = now_iso().replace("+00:00", "Z")
     feature_id = checkpoint.feature.id if checkpoint.feature else "unknown"
     mode_label = "dry_run" if dry_run else "run"
+    invocation_id = uuid4().hex[:12]
     run_id = (
         f"run_{_safe_agentops_id(feature_id)}_"
-        f"{mode_label}_{_safe_agentops_id(timestamp)}"
+        f"{mode_label}_{_safe_agentops_id(timestamp)}_{invocation_id}"
     )
     context = AgentOpsRuntimeContext(
         session_id=f"session_{run_id}",
@@ -331,6 +334,22 @@ def _flush_agentops_runtime_report(
             "[yellow]AgentOps report pending: "
             f"{result.diagnostic.reason_code}[/yellow]"
         )
+
+
+def _record_halt_result(
+    stage_results: list[tuple[str, Any]],
+    exc: PipelineHaltError,
+) -> None:
+    stage = str(getattr(exc, "stage", "") or "")
+    result = getattr(exc, "result", None)
+    if not stage or result is None:
+        return
+    if any(
+        existing_stage == stage and existing_result is result
+        for existing_stage, existing_result in stage_results
+    ):
+        return
+    stage_results.append((stage, result))
 
 
 def _agentops_status(result: Any) -> str:
