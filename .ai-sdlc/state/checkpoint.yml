@@ -1,12 +1,12 @@
 pipeline_started_at: '2026-03-21T00:00:00'
-pipeline_last_updated: '2026-04-30T03:04:43+00:00'
+pipeline_last_updated: '2026-05-27T08:56:51+00:00'
 current_stage: close
 feature:
-  id: 181-cross-platform-release-gate-matrix-baseline
-  spec_dir: specs/181-cross-platform-release-gate-matrix-baseline
-  design_branch: design/181-cross-platform-release-gate-matrix-baseline-docs
-  feature_branch: feature/181-cross-platform-release-gate-matrix-baseline-dev
-  current_branch: feature/181-cross-platform-release-gate-matrix-baseline-docs
+  id: 187-agentops-self-iteration-monitoring
+  spec_dir: specs/187-agentops-self-iteration-monitoring
+  design_branch: design/187-agentops-self-iteration-monitoring-docs
+  feature_branch: feature/187-agentops-self-iteration-monitoring-dev
+  current_branch: feature/187-agentops-self-iteration-monitoring-docs
   docs_baseline_ref: ''
   docs_baseline_at: ''
 multi_agent:
@@ -16,33 +16,42 @@ multi_agent:
 prd_source: AI-SDLC 全自动化框架 产品需求文档（PRD）.md
 completed_stages:
 - stage: init
-  completed_at: '2026-04-30T03:04:43+00:00'
+  completed_at: '2026-05-27T08:56:29+00:00'
   artifacts: []
 - stage: refine
-  completed_at: '2026-04-30T03:04:43+00:00'
+  completed_at: '2026-05-27T08:56:29+00:00'
   artifacts:
   - spec.md
 - stage: design
-  completed_at: '2026-04-30T03:04:43+00:00'
+  completed_at: '2026-05-27T08:56:29+00:00'
   artifacts:
   - plan.md
 - stage: decompose
-  completed_at: '2026-04-30T03:04:43+00:00'
+  completed_at: '2026-05-27T08:56:29+00:00'
   artifacts:
   - tasks.md
 - stage: verify
-  completed_at: '2026-04-30T03:04:43+00:00'
+  completed_at: '2026-05-27T08:56:29+00:00'
   artifacts:
   - task-execution-log.md
   - tasks.md
 - stage: execute
-  completed_at: '2026-04-30T03:04:43+00:00'
-  artifacts:
-  - development-summary.md
-  - task-execution-log.md
-execute_progress: null
+  completed_at: '2026-05-27T08:56:50+00:00'
+  artifacts: []
+execute_progress:
+  total_batches: 3
+  completed_batches: 3
+  current_batch: 3
+  last_committed_task: T31
+  tasks_file: specs/187-agentops-self-iteration-monitoring/tasks.md
+  execution_log: specs/187-agentops-self-iteration-monitoring/task-execution-log.md
+  last_log_at: '2026-05-27T08:56:48+00:00'
+  last_commit_at: '2026-05-27T08:56:48+00:00'
+  last_commit_hash: bed01cc
+  halted: false
+  error: ''
 ai_decisions_count: 0
 execution_mode: auto
-linked_wi_id: 181-cross-platform-release-gate-matrix-baseline
-linked_plan_uri: null
-last_synced_at: null
+linked_wi_id: 187-agentops-self-iteration-monitoring
+linked_plan_uri: specs/187-agentops-self-iteration-monitoring/plan.md
+last_synced_at: '2026-05-27T08:52:31+00:00'

@@ -286,6 +286,10 @@ class TestRunCommand:
         monkeypatch.setenv("OPENAI_CODEX", "1")
         monkeypatch.setenv("AGENTOPS_INGESTION_ENDPOINT", "https://gateway.example")
         monkeypatch.setenv("AGENTOPS_INGESTION_TOKEN", "secret-token")
+        monkeypatch.setenv("AGENTOPS_PRODUCER_ID", "producer.ai-sdlc.local")
+        monkeypatch.setenv("AGENTOPS_RUNTIME_ID", "runtime.ai-sdlc.local")
+        monkeypatch.setenv("AGENTOPS_CREDENTIAL_ID", "cred.ai-sdlc.local")
+        monkeypatch.setenv("AGENTOPS_KEY_ID", "key.ai-sdlc.local")
         monkeypatch.chdir(tmp_path)
         assert runner.invoke(app, ["init", ".", "--agent-target", "codex"]).exit_code == 0
         captured_batches: list[dict[str, object]] = []
@@ -339,8 +343,18 @@ class TestRunCommand:
         assert "AgentOps report delivered: delivered accepted=1" in result.output
         assert captured_batches
         event = captured_batches[0]["events"][0]  # type: ignore[index]
+        assert event["producer_id"] == "producer.ai-sdlc.local"  # type: ignore[index]
+        assert event["runtime_id"] == "runtime.ai-sdlc.local"  # type: ignore[index]
+        assert event["credential_id"] == "cred.ai-sdlc.local"  # type: ignore[index]
+        assert event["key_id"] == "key.ai-sdlc.local"  # type: ignore[index]
         assert event["payload"]["gate_id"] == "init"  # type: ignore[index]
         assert event["payload"]["status"] == "failed"  # type: ignore[index]
+        assert event["payload"]["task_title"] == "Pipeline init gate"  # type: ignore[index]
+        assert event["payload"]["changed_paths"] == []  # type: ignore[index]
+        assert event["payload"]["allowed_paths"] == []  # type: ignore[index]
+        assert event["payload"]["forbidden_paths"] == []  # type: ignore[index]
+        assert event["payload"]["guard_result"] == "diagnostic"  # type: ignore[index]
+        assert event["payload"]["blocking_reason"] == "retry blocked"  # type: ignore[index]
 
     def test_run_warns_when_agentops_receipt_has_diagnostics(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch

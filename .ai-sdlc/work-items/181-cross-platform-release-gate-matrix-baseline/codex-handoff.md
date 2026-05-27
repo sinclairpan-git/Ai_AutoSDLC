@@ -20,7 +20,7 @@
 - uv run pytest tests/integration/test_cli_run.py tests/integration/test_cli_agentops.py tests/unit/test_agentops_bridge.py tests/unit/test_command_names.py -q => 42 passed
 - uv run ruff check src/ai_sdlc/cli/run_cmd.py tests/integration/test_cli_run.py src/ai_sdlc/core/agentops_bridge.py tests/unit/test_agentops_bridge.py tests/integration/test_cli_agentops.py => passed
 - uv run ai-sdlc verify constraints => no BLOCKERs
-- AGENTOPS_INGESTION_ENDPOINT=http://127.0.0.1:8766 AGENTOPS_INGESTION_TOKEN=local-agentops-gateway-token uv run ai-sdlc run --dry-run => AgentOps report delivered accepted=1
+- AGENTOPS_INGESTION_ENDPOINT=http://127.0.0.1:8766 plus redacted token uv run ai-sdlc run --dry-run => AgentOps report delivered accepted=1
 
 ## Blockers / Risks
 - none

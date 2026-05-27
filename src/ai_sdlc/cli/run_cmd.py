@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import os
+from pathlib import Path
 from typing import Any
 from uuid import uuid4
 
@@ -30,6 +32,7 @@ from ai_sdlc.core.frontend_contract_runtime_attachment import (
     build_frontend_contract_runtime_attachment,
     is_frontend_contract_runtime_attachment_work_item,
 )
+from ai_sdlc.core.plan_check import git_changed_paths
 from ai_sdlc.core.reconcile import detect_reconcile_hint
 from ai_sdlc.core.runner import PipelineHaltError, SDLCRunner
 from ai_sdlc.integrations.ide_adapter import (
@@ -272,33 +275,30 @@ def _flush_agentops_runtime_report(
         stage_name=checkpoint.current_stage,
         timestamp=timestamp,
     )
-    identity = AgentOpsIdentity.ops_direct(
-        producer_id="ai-sdlc-local",
-        runtime_id="ai-sdlc-cli",
-        credential_id="local-agentops-runtime",
-        key_id="local-agentops-runtime-key",
-    )
+    identity = _agentops_identity_from_env()
     workitem = checkpoint.linked_wi_id or feature_id
-    facts = [
-        build_gate_fact(
-            gate_id=stage,
-            status=_agentops_status(result),
-            workitem=workitem,
-            executable_task_id=f"pipeline_{stage}",
-            task_guard_state="diagnostic",
-            stage_name=stage,
-            blocking=_agentops_status(result) != "passed",
-            rule_results=[
-                {
-                    "name": str(getattr(check, "name", "")),
-                    "passed": bool(getattr(check, "passed", False)),
-                    "message": str(getattr(check, "message", "")),
-                }
-                for check in getattr(result, "checks", []) or []
-            ],
+    changed_paths = _agentops_changed_paths(root)
+    facts = []
+    for stage, result in stage_results:
+        rule_results = _agentops_rule_results(result)
+        facts.append(
+            build_gate_fact(
+                gate_id=stage,
+                status=_agentops_status(result),
+                workitem=workitem,
+                executable_task_id=f"pipeline_{stage}",
+                task_guard_state="diagnostic",
+                stage_name=stage,
+                task_title=f"Pipeline {stage} gate",
+                changed_paths=changed_paths,
+                allowed_paths=(),
+                forbidden_paths=(),
+                guard_result="diagnostic",
+                blocking_reason=_agentops_blocking_reason(rule_results),
+                blocking=_agentops_status(result) != "passed",
+                rule_results=rule_results,
+            )
         )
-        for stage, result in stage_results
-    ]
     batch = build_agentops_runtime_batch(
         outbox_id=f"outbox_{run_id}",
         batch_id=f"batch_{run_id}",
@@ -357,6 +357,46 @@ def _record_halt_result(
     ):
         return
     stage_results.append((stage, result))
+
+
+def _agentops_identity_from_env() -> AgentOpsIdentity:
+    return AgentOpsIdentity.ops_direct(
+        producer_id=_agentops_env("AGENTOPS_PRODUCER_ID", "ai-sdlc-local"),
+        runtime_id=_agentops_env("AGENTOPS_RUNTIME_ID", "ai-sdlc-cli"),
+        credential_id=_agentops_env("AGENTOPS_CREDENTIAL_ID", "local-agentops-runtime"),
+        key_id=_agentops_env("AGENTOPS_KEY_ID", "local-agentops-runtime-key"),
+    )
+
+
+def _agentops_env(name: str, default: str) -> str:
+    return os.getenv(name, "").strip() or default
+
+
+def _agentops_changed_paths(root: object) -> list[str]:
+    try:
+        return git_changed_paths(Path(root))
+    except Exception:
+        return []
+
+
+def _agentops_rule_results(result: Any) -> list[dict[str, object]]:
+    return [
+        {
+            "name": str(getattr(check, "name", "")),
+            "passed": bool(getattr(check, "passed", False)),
+            "message": str(getattr(check, "message", "")),
+        }
+        for check in getattr(result, "checks", []) or []
+    ]
+
+
+def _agentops_blocking_reason(rule_results: list[dict[str, object]]) -> str:
+    failed = [
+        str(item.get("message") or item.get("name") or "").strip()
+        for item in rule_results
+        if not bool(item.get("passed"))
+    ]
+    return "; ".join(item for item in failed if item)
 
 
 def _agentops_status(result: Any) -> str:

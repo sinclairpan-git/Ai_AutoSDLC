@@ -1,0 +1,65 @@
+total_tasks: 3
+total_batches: 3
+tasks:
+- task_id: T11
+  title: Freeze AgentOps self-iteration monitoring work item
+  user_story: ''
+  phase: 1
+  file_paths: []
+  parallelizable: false
+  parallel_group: ''
+  allowed_paths: []
+  forbidden_paths: []
+  interface_contracts: []
+  merge_order: 0
+  status: completed
+  depends_on: []
+- task_id: T21
+  title: Enrich AgentOps self-iteration run payload
+  user_story: ''
+  phase: 2
+  file_paths: []
+  parallelizable: false
+  parallel_group: ''
+  allowed_paths: []
+  forbidden_paths: []
+  interface_contracts: []
+  merge_order: 0
+  status: completed
+  depends_on: []
+- task_id: T31
+  title: Run local AgentOps live smoke and summarize quality signals
+  user_story: ''
+  phase: 3
+  file_paths: []
+  parallelizable: false
+  parallel_group: ''
+  allowed_paths: []
+  forbidden_paths: []
+  interface_contracts: []
+  merge_order: 0
+  status: completed
+  depends_on: []
+batches:
+- batch_id: 1
+  phase: 1
+  tasks:
+  - T11
+  status: completed
+  started_at: '2026-05-27T08:56:48+00:00'
+  completed_at: '2026-05-27T08:56:48+00:00'
+- batch_id: 2
+  phase: 2
+  tasks:
+  - T21
+  status: completed
+  started_at: '2026-05-27T08:56:48+00:00'
+  completed_at: '2026-05-27T08:56:48+00:00'
+- batch_id: 3
+  phase: 3
+  tasks:
+  - T31
+  status: completed
+  started_at: '2026-05-27T08:56:48+00:00'
+  completed_at: '2026-05-27T08:56:48+00:00'
+current_batch: 3
