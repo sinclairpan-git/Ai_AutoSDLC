@@ -8,6 +8,7 @@ pytest-tmp/
 # Local project config (IDE detection timestamps); recreated by init / adapter — see project-config.example.yaml
 .ai-sdlc/project/config/project-config.yaml
 .ai-sdlc/state/checkpoint.yml.bak
+.ai-sdlc/agentops/
 .ai-sdlc/work-items/*/resume-pack.yaml
 .ai-sdlc/local/
 .ai-sdlc/artifacts/
