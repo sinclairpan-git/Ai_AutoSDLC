@@ -63,8 +63,13 @@ chmod +x install_offline.sh
 ### Windows 升级旧入口
 
 ```powershell
-Expand-Archive -LiteralPath .\ai-sdlc-offline-<version>-windows-amd64.zip -DestinationPath .
-cd .\ai-sdlc-offline-<version>-windows-amd64
+$BundleName = "ai-sdlc-offline-<version>-windows-amd64"
+$PackageName = "$BundleName.zip"
+$PackageDir = (Get-Location).Path
+$ExtractRoot = Join-Path $PackageDir ".ai-sdlc-install"
+New-Item -ItemType Directory -Path $ExtractRoot -Force | Out-Null
+Expand-Archive -LiteralPath (Join-Path $PackageDir $PackageName) -DestinationPath $ExtractRoot -Force
+Set-Location (Join-Path $ExtractRoot $BundleName)
 powershell -ExecutionPolicy Bypass -File .\install_offline.ps1 -UpgradeExisting
 ```
 

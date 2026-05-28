@@ -6,6 +6,7 @@ import importlib.util
 import json
 import os
 import platform
+import re
 import shutil
 import subprocess
 import sys
@@ -1480,7 +1481,7 @@ def test_user_guide_splits_pre_downloaded_and_online_release_install_paths() -> 
     assert "如果使用场景 B，在线下载到项目父目录并安装" not in guide
     assert "ai-sdlc init ." in guide
     assert "如果你的 PowerShell 粘贴多行时把命令显示成连续的 `>>` 提示" in guide
-    assert "Set-Location ..; Invoke-WebRequest -Uri" in guide
+    assert 'Set-Location ..; $BundleName = "ai-sdlc-offline-0.7.18-windows-amd64"' in guide
     assert "是示例路径；请替换成你的真实项目根目录" in guide
     assert len(scenario_a_sections) == 2
     assert guide.count("Invoke-WebRequest -Uri") >= 2
@@ -1507,3 +1508,22 @@ def test_user_guide_splits_pre_downloaded_and_online_release_install_paths() -> 
     assert "Place the zip in the current directory, cd into that directory, then retry" in guide
     assert "请把 tar.gz 放到当前目录，并先 cd 到该目录后重试" in guide
     assert "Place the tar.gz in the current directory, cd into that directory, then retry" in guide
+
+
+def test_windows_release_guidance_uses_repeat_safe_extract_cache() -> None:
+    guidance_paths = [
+        _REPO_ROOT / "README.md",
+        _REPO_ROOT / "USER_GUIDE.zh-CN.md",
+        _OFFLINE_DIR / "README.md",
+    ]
+
+    for path in guidance_paths:
+        text = path.read_text(encoding="utf-8")
+        assert ".ai-sdlc-install" in text, path
+        assert not re.search(r"Expand-Archive[^\n]*-DestinationPath\s+\.(?:\s|$)", text), path
+        assert not re.search(r"(?m)^(?:cd|Set-Location)\s+\.\\ai-sdlc-offline", text), path
+
+    build_script = (_OFFLINE_DIR / "build_offline_bundle.sh").read_text(encoding="utf-8")
+    assert ".ai-sdlc-install" in build_script
+    assert "DestinationPath \\$ExtractRoot -Force" in build_script
+    assert "unzip ${OUT_BASENAME}.zip" not in build_script
