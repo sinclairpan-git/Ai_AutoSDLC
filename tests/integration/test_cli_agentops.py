@@ -193,3 +193,28 @@ def test_enterprise_configure_allows_off_profile_without_endpoint(
     content = profile.read_text(encoding="utf-8")
     assert "agentops_reporting_mode: 'off'" in content or "agentops_reporting_mode: off" in content
     assert "agentops_ingestion_endpoint: ''" in content
+
+
+def test_enterprise_configure_rejects_unsupported_ingestion_mode(
+    monkeypatch,
+    tmp_path: Path,
+) -> None:
+    profile = tmp_path / "enterprise.yaml"
+    monkeypatch.setenv("AI_SDLC_ENTERPRISE_PROFILE", str(profile))
+
+    result = runner.invoke(
+        app,
+        [
+            "enterprise",
+            "configure",
+            "--endpoint",
+            "https://ops.example",
+            "--ingestion-mode",
+            "gateawy",
+            "--json",
+        ],
+    )
+
+    assert result.exit_code != 0
+    assert "ingestion-mode must be gateway or direct_local" in result.output
+    assert not profile.exists()

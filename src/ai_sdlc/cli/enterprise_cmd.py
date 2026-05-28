@@ -13,6 +13,7 @@ from rich.console import Console
 from ai_sdlc.core.agentops_bridge import (
     DEFAULT_TOKEN_ENV,
     ENTERPRISE_PROFILE_ENV,
+    INGESTION_MODE_DIRECT_LOCAL,
     INGESTION_MODE_GATEWAY,
     REPORTING_MODE_REQUIRED,
     REPORTING_MODES,
@@ -64,6 +65,9 @@ def enterprise_configure(
     normalized_reporting_mode = reporting_mode.strip().lower()
     if normalized_reporting_mode not in REPORTING_MODES:
         raise typer.BadParameter("reporting-mode must be off, opportunistic, or required")
+    normalized_ingestion_mode = ingestion_mode.strip().lower() or INGESTION_MODE_GATEWAY
+    if normalized_ingestion_mode not in {INGESTION_MODE_GATEWAY, INGESTION_MODE_DIRECT_LOCAL}:
+        raise typer.BadParameter("ingestion-mode must be gateway or direct_local")
     endpoint = endpoint.strip()
     if normalized_reporting_mode != "off" and not endpoint:
         raise typer.BadParameter("endpoint is required unless reporting-mode is off")
@@ -74,7 +78,7 @@ def enterprise_configure(
         "enterprise_id": enterprise_id.strip(),
         "agentops_reporting_mode": normalized_reporting_mode,
         "agentops_ingestion_endpoint": endpoint,
-        "agentops_ingestion_mode": ingestion_mode.strip().lower() or INGESTION_MODE_GATEWAY,
+        "agentops_ingestion_mode": normalized_ingestion_mode,
         "agentops_token_env": token_env.strip() or DEFAULT_TOKEN_ENV,
     }
     resolved_path = resolved_path.expanduser()
