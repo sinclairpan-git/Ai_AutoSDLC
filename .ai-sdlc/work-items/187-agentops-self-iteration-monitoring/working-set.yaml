@@ -1,0 +1,32 @@
+prd_path: AI-SDLC 全自动化框架 产品需求文档（PRD）.md
+constitution_path: .ai-sdlc/memory/constitution.md
+tech_stack_path: .ai-sdlc/profiles/tech-stack.yml
+spec_path: specs/187-agentops-self-iteration-monitoring/spec.md
+plan_path: specs/187-agentops-self-iteration-monitoring/plan.md
+tasks_path: specs/187-agentops-self-iteration-monitoring/tasks.md
+active_files: []
+context_summary: '# Development Summary
+
+
+  Status: completed
+
+  Total Tasks: 3
+
+  Completed Tasks: 3
+
+  Halted Tasks: 0
+
+  Total Batches: 3
+
+  Completed Batches: 3
+
+  Last Committed Task: T31
+
+
+  ## Commit Records
+
+  - 523e51d
+
+  - 7633eb4
+
+  - bed01cc'

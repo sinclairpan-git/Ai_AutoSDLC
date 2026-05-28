@@ -13,6 +13,8 @@ from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
+import yaml
+
 from ai_sdlc.core.adoption import AdoptionMap
 from ai_sdlc.core.config import YamlStoreError, load_project_config
 from ai_sdlc.core.task_guard import TaskGuardResult
@@ -35,6 +37,13 @@ INGESTION_MODE_GATEWAY = "gateway"
 INGESTION_MODE_DIRECT_LOCAL = "direct_local"
 DEFAULT_TOKEN_ENV = "AGENTOPS_INGESTION_TOKEN"
 DEFAULT_TIMEOUT_SECONDS = 10.0
+REPORTING_MODE_OFF = "off"
+REPORTING_MODE_OPPORTUNISTIC = "opportunistic"
+REPORTING_MODE_REQUIRED = "required"
+REPORTING_MODES = frozenset(
+    {REPORTING_MODE_OFF, REPORTING_MODE_OPPORTUNISTIC, REPORTING_MODE_REQUIRED}
+)
+ENTERPRISE_PROFILE_ENV = "AI_SDLC_ENTERPRISE_PROFILE"
 AGENTOPS_ROOT = Path(".ai-sdlc") / "agentops"
 OUTBOX_DIR = AGENTOPS_ROOT / "outbox"
 RECEIPTS_DIR = AGENTOPS_ROOT / "receipts"
@@ -164,6 +173,25 @@ class AgentOpsSdlcFact:
 
 
 @dataclass(frozen=True, slots=True)
+class AgentOpsTraceSpanFact:
+    producer_event_name: str
+    span_id: str
+    span_kind: str
+    operation_name: str
+    status_code: str
+    parent_span_id: str = ""
+    input_ref: str = ""
+    output_ref: str = ""
+    token_usage: Mapping[str, Any] = field(default_factory=dict)
+    cost_estimate: Mapping[str, Any] = field(default_factory=dict)
+    grant_id: str = ""
+    guardrail_result_refs: Sequence[str] = ()
+    error_code: str = ""
+    retryable: bool = False
+    extra: Mapping[str, Any] = field(default_factory=dict)
+
+
+@dataclass(frozen=True, slots=True)
 class AgentOpsReceipt:
     schema_version: str
     batch_id: str
@@ -181,16 +209,23 @@ class AgentOpsReceipt:
 
     @property
     def has_diagnostics(self) -> bool:
-        return self.stale_count > 0 or self.rejected_count > 0 or self.dlq_count > 0
+        return (
+            self.outbox_state not in {"accepted", "delivered"}
+            or self.stale_count > 0
+            or self.rejected_count > 0
+            or self.dlq_count > 0
+        )
 
 
 @dataclass(frozen=True, slots=True)
 class AgentOpsIngestionConfig:
     endpoint: str
+    reporting_mode: str = REPORTING_MODE_OFF
     mode: str = INGESTION_MODE_GATEWAY
     token_env_var: str = DEFAULT_TOKEN_ENV
     timeout_seconds: float = DEFAULT_TIMEOUT_SECONDS
     bearer_token: str = field(default="", repr=False)
+    profile_path: str = ""
 
     @property
     def token_present(self) -> bool:
@@ -204,14 +239,24 @@ class AgentOpsIngestionConfig:
     def requires_token(self) -> bool:
         return self.mode == INGESTION_MODE_GATEWAY
 
+    @property
+    def enabled(self) -> bool:
+        return self.reporting_mode != REPORTING_MODE_OFF
+
+    @property
+    def required(self) -> bool:
+        return self.reporting_mode == REPORTING_MODE_REQUIRED
+
     def redacted_summary(self) -> dict[str, Any]:
         return {
             "endpoint": self.endpoint,
             "normalized_endpoint": self.normalized_endpoint,
+            "reporting_mode": self.reporting_mode,
             "mode": self.mode,
             "token_env_var": self.token_env_var,
             "token_present": self.token_present,
             "timeout_seconds": self.timeout_seconds,
+            "profile_path": self.profile_path,
         }
 
 
@@ -367,6 +412,12 @@ def build_gate_fact(
     executable_task_id: str,
     task_guard_state: str,
     stage_name: str = "",
+    task_title: str = "",
+    changed_paths: Sequence[str] = (),
+    allowed_paths: Sequence[str] = (),
+    forbidden_paths: Sequence[str] = (),
+    guard_result: str = "",
+    blocking_reason: str = "",
     blocking: bool = False,
     rule_results: Sequence[Mapping[str, Any]] = (),
 ) -> AgentOpsSdlcFact:
@@ -381,6 +432,12 @@ def build_gate_fact(
         stage_name=stage_name,
         extra={
             "gate_id": gate_id,
+            "task_title": task_title,
+            "changed_paths": list(_dedupe(changed_paths)),
+            "allowed_paths": list(_dedupe(allowed_paths)),
+            "forbidden_paths": list(_dedupe(forbidden_paths)),
+            "guard_result": guard_result or task_guard_state,
+            "blocking_reason": blocking_reason,
             "blocking": blocking,
             "rule_results": list(rule_results),
         },
@@ -428,7 +485,7 @@ def build_artifact_fact(
         producer_event_name="artifact_generated",
         sdlc_event_type="artifact",
         span_id=f"artifact_{_safe_id(artifact_ref)}",
-        status="generated",
+        status="emitted",
         workitem=workitem,
         executable_task_id=executable_task_id,
         task_guard_state=task_guard_state,
@@ -436,6 +493,32 @@ def build_artifact_fact(
         extra={
             "payload_hash": payload_hash,
             "data_classification": data_classification,
+        },
+    )
+
+
+def build_model_span_fact(
+    *,
+    span_id: str,
+    operation_name: str,
+    status_code: str,
+    input_ref: str,
+    output_ref: str,
+    model_ref: str = "external.ai_agent.summary_only",
+    parent_span_id: str = "",
+) -> AgentOpsTraceSpanFact:
+    return AgentOpsTraceSpanFact(
+        producer_event_name="model_invocation_summary",
+        span_id=span_id,
+        span_kind="model",
+        operation_name=operation_name,
+        status_code=status_code,
+        parent_span_id=parent_span_id,
+        input_ref=input_ref,
+        output_ref=output_ref,
+        extra={
+            "model_ref": model_ref,
+            "redaction_policy": "summary_only",
         },
     )
 
@@ -539,7 +622,7 @@ def build_agentops_runtime_batch(
     batch_id: str,
     context: AgentOpsRuntimeContext,
     identity: AgentOpsIdentity,
-    facts: Sequence[AgentOpsSdlcFact],
+    facts: Sequence[AgentOpsSdlcFact | AgentOpsTraceSpanFact],
     replay_reason: str = "initial_delivery",
 ) -> dict[str, Any]:
     if replay_reason not in REPLAY_REASONS:
@@ -577,38 +660,143 @@ def load_agentops_ingestion_config(
     env: Mapping[str, str] | None = None,
 ) -> AgentOpsIngestionConfig:
     source_env = env if env is not None else os.environ
+    profile_path, profile = load_enterprise_profile(env=source_env)
     try:
         project_config = load_project_config(root)
     except YamlStoreError:
         raise
 
-    endpoint = _first_non_empty(
-        source_env.get("AGENTOPS_INGESTION_ENDPOINT", ""),
-        getattr(project_config, "agentops_ingestion_endpoint", ""),
+    project_endpoint = getattr(project_config, "agentops_ingestion_endpoint", "")
+    project_reporting_mode = str(
+        getattr(project_config, "agentops_reporting_mode", "") or ""
+    ).strip()
+    project_reporting_mode_normalized = project_reporting_mode.lower()
+    profile_endpoint = _profile_text(profile, "agentops_ingestion_endpoint")
+    if profile:
+        endpoint = profile_endpoint
+    else:
+        if project_reporting_mode_normalized == REPORTING_MODE_REQUIRED:
+            endpoint = project_endpoint
+        else:
+            endpoint = _first_non_empty(
+                source_env.get("AGENTOPS_INGESTION_ENDPOINT", ""),
+                project_endpoint,
+            )
+    profile_reporting_mode = _profile_text(profile, "agentops_reporting_mode")
+    env_reporting_mode = source_env.get("AGENTOPS_REPORTING_MODE", "")
+    explicit_reporting_mode = _first_non_empty(
+        profile_reporting_mode,
+        env_reporting_mode,
     )
-    mode = _first_non_empty(
-        source_env.get("AGENTOPS_INGESTION_MODE", ""),
-        getattr(project_config, "agentops_ingestion_mode", ""),
-        INGESTION_MODE_GATEWAY,
-    ).lower()
-    token_env_var = _first_non_empty(
-        source_env.get("AGENTOPS_INGESTION_TOKEN_ENV", ""),
-        getattr(project_config, "agentops_ingestion_token_env", ""),
-        DEFAULT_TOKEN_ENV,
-    )
+    if profile_reporting_mode:
+        reporting_mode = _normal_reporting_mode(profile_reporting_mode)
+    elif project_reporting_mode_normalized == REPORTING_MODE_REQUIRED:
+        reporting_mode = REPORTING_MODE_REQUIRED
+    elif explicit_reporting_mode:
+        reporting_mode = _normal_reporting_mode(explicit_reporting_mode)
+    elif project_reporting_mode and project_reporting_mode_normalized != REPORTING_MODE_OFF:
+        reporting_mode = _normal_reporting_mode(project_reporting_mode)
+    elif endpoint.strip():
+        reporting_mode = REPORTING_MODE_OPPORTUNISTIC
+    else:
+        reporting_mode = _normal_reporting_mode(
+            _first_non_empty(project_reporting_mode, REPORTING_MODE_OFF)
+        )
+    if profile:
+        mode = _first_non_empty(
+            _profile_text(profile, "agentops_ingestion_mode"),
+            INGESTION_MODE_GATEWAY,
+        ).lower()
+        token_env_var = _first_non_empty(
+            _profile_text(profile, "agentops_token_env"),
+            _profile_text(profile, "agentops_ingestion_token_env"),
+            DEFAULT_TOKEN_ENV,
+        )
+    else:
+        if project_reporting_mode_normalized == REPORTING_MODE_REQUIRED:
+            mode = _first_non_empty(
+                getattr(project_config, "agentops_ingestion_mode", ""),
+                INGESTION_MODE_GATEWAY,
+            ).lower()
+        else:
+            mode = _first_non_empty(
+                source_env.get("AGENTOPS_INGESTION_MODE", ""),
+                getattr(project_config, "agentops_ingestion_mode", ""),
+                INGESTION_MODE_GATEWAY,
+            ).lower()
+        if project_reporting_mode_normalized == REPORTING_MODE_REQUIRED:
+            token_env_var = _first_non_empty(
+                getattr(project_config, "agentops_ingestion_token_env", ""),
+                DEFAULT_TOKEN_ENV,
+            )
+        else:
+            token_env_var = _first_non_empty(
+                source_env.get("AGENTOPS_INGESTION_TOKEN_ENV", ""),
+                getattr(project_config, "agentops_ingestion_token_env", ""),
+                DEFAULT_TOKEN_ENV,
+            )
     timeout_seconds = _parse_timeout_seconds(
         _first_non_empty(
             source_env.get("AGENTOPS_INGESTION_TIMEOUT_SECONDS", ""),
+            _profile_text(profile, "agentops_ingestion_timeout_seconds"),
             str(getattr(project_config, "agentops_ingestion_timeout_seconds", "")),
             str(DEFAULT_TIMEOUT_SECONDS),
         )
     )
     return AgentOpsIngestionConfig(
         endpoint=endpoint,
+        reporting_mode=reporting_mode,
         mode=mode,
         token_env_var=token_env_var,
         timeout_seconds=timeout_seconds,
         bearer_token=source_env.get(token_env_var, ""),
+        profile_path=str(profile_path) if profile_path else "",
+    )
+
+
+def load_enterprise_profile(
+    *,
+    env: Mapping[str, str] | None = None,
+) -> tuple[Path | None, Mapping[str, Any]]:
+    source_env = env if env is not None else os.environ
+    explicit_path = source_env.get(ENTERPRISE_PROFILE_ENV, "").strip()
+    for path in enterprise_profile_paths(env=source_env):
+        if not path.is_file():
+            if explicit_path:
+                raise YamlStoreError(f"Enterprise profile {path} does not exist")
+            continue
+        try:
+            data = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+        except yaml.YAMLError as exc:
+            raise YamlStoreError(f"Invalid YAML in enterprise profile {path}: {exc}") from exc
+        except OSError as exc:
+            raise YamlStoreError(f"Failed to read enterprise profile {path}: {exc}") from exc
+        if not isinstance(data, Mapping):
+            raise YamlStoreError(f"Enterprise profile {path} must be a YAML object")
+        return path, data
+    return None, {}
+
+
+def enterprise_profile_paths(
+    *,
+    env: Mapping[str, str] | None = None,
+) -> tuple[Path, ...]:
+    source_env = env if env is not None else os.environ
+    explicit = source_env.get(ENTERPRISE_PROFILE_ENV, "").strip()
+    if explicit:
+        return (Path(explicit).expanduser(),)
+    if os.name == "nt":
+        paths: list[Path] = []
+        program_data = source_env.get("ProgramData", "").strip()
+        app_data = source_env.get("APPDATA", "").strip()
+        if program_data:
+            paths.append(Path(program_data) / "AI-SDLC" / "enterprise.yaml")
+        if app_data:
+            paths.append(Path(app_data) / "AI-SDLC" / "enterprise.yaml")
+        return tuple(paths)
+    return (
+        Path("/etc/ai-sdlc/enterprise.yaml"),
+        Path.home() / ".config" / "ai-sdlc" / "enterprise.yaml",
     )
 
 
@@ -616,6 +804,23 @@ def agentops_ingestion_readiness(
     config: AgentOpsIngestionConfig,
 ) -> dict[str, Any]:
     checks: list[dict[str, Any]] = []
+    if config.reporting_mode not in REPORTING_MODES:
+        checks.append(
+            {
+                "name": "reporting_mode",
+                "state": "error",
+                "reason_code": "unsupported_reporting_mode",
+                "detail": "reporting_mode must be off, opportunistic, or required",
+            }
+        )
+    if not config.enabled:
+        return {
+            "ready": True,
+            "enabled": False,
+            "required": False,
+            "config": config.redacted_summary(),
+            "checks": checks,
+        }
     if config.mode not in {INGESTION_MODE_GATEWAY, INGESTION_MODE_DIRECT_LOCAL}:
         checks.append(
             {
@@ -646,6 +851,8 @@ def agentops_ingestion_readiness(
     ready = not any(item["state"] == "error" for item in checks)
     return {
         "ready": ready,
+        "enabled": config.enabled,
+        "required": config.required,
         "config": config.redacted_summary(),
         "checks": checks,
     }
@@ -663,6 +870,27 @@ def deliver_agentops_outbox(
     if not isinstance(batch, Mapping):
         raise ValueError("AgentOps outbox must contain a JSON object")
     effective_config = config or load_agentops_ingestion_config(root)
+    if not effective_config.enabled:
+        diagnostic = AgentOpsDeliveryDiagnostic(
+            diagnostic_id=f"diag_{_safe_id(str(batch.get('outbox_id') or 'outbox'))}_reporting_disabled",
+            outbox_id=str(batch.get("outbox_id") or ""),
+            batch_id=str(batch.get("batch_id") or ""),
+            status="blocked_before_send",
+            reason_code="reporting_disabled",
+            detail="AgentOps reporting mode is off.",
+            retry_guidance="Run ai-sdlc enterprise configure or set AGENTOPS_REPORTING_MODE before retrying.",
+            retryable=False,
+            endpoint=effective_config.endpoint,
+            mode=effective_config.mode,
+        )
+        diagnostic_path = persist_agentops_delivery_diagnostic(root, diagnostic)
+        return AgentOpsDeliveryResult(
+            outbox_path=outbox_path,
+            dry_run=dry_run,
+            config_ready=False,
+            diagnostic=diagnostic,
+            diagnostic_path=diagnostic_path,
+        )
     readiness = agentops_ingestion_readiness(effective_config)
     if not readiness["ready"]:
         diagnostic = _diagnostic_from_readiness(batch, effective_config, readiness)
@@ -920,15 +1148,19 @@ def task_binding_from_adoption_map(
 
 def _build_event_envelope(
     *,
-    fact: AgentOpsSdlcFact,
+    fact: AgentOpsSdlcFact | AgentOpsTraceSpanFact,
     sequence_no: int,
     context: AgentOpsRuntimeContext,
     identity: AgentOpsIdentity,
     replay_reason: str,
 ) -> dict[str, Any]:
     timestamp = _event_timestamp(context, sequence_no)
-    started_at = fact.started_at or timestamp
-    ended_at = fact.ended_at or started_at
+    if isinstance(fact, AgentOpsSdlcFact):
+        started_at = fact.started_at or timestamp
+        ended_at = fact.ended_at or started_at
+    else:
+        started_at = timestamp
+        ended_at = timestamp
     payload = _canonical_payload(
         fact=fact,
         context=context,
@@ -940,8 +1172,8 @@ def _build_event_envelope(
     envelope = {
         "event_id": event_id,
         "schema_version": "event_envelope.v1",
-        "event_type": "sdlc_trace_event",
-        "event_type_version": "sdlc_trace_event.v1",
+        "event_type": _event_type_for_fact(fact),
+        "event_type_version": _event_type_version_for_fact(fact),
         "timestamp": timestamp,
         "integration_mode": "enterprise_managed",
         "enterprise_state": context.enterprise_state,
@@ -969,11 +1201,34 @@ def _build_event_envelope(
 
 def _canonical_payload(
     *,
-    fact: AgentOpsSdlcFact,
+    fact: AgentOpsSdlcFact | AgentOpsTraceSpanFact,
     context: AgentOpsRuntimeContext,
     started_at: str,
     ended_at: str,
 ) -> dict[str, Any]:
+    if isinstance(fact, AgentOpsTraceSpanFact):
+        payload = {
+            "trace_id": context.trace_id,
+            "span_id": fact.span_id,
+            "parent_span_id": fact.parent_span_id,
+            "run_id": context.run_id,
+            "span_kind": fact.span_kind,
+            "operation_name": fact.operation_name,
+            "status_code": fact.status_code,
+            "start_time": started_at,
+            "end_time": ended_at,
+            "attempt_no": context.attempt_no,
+            "input_ref": fact.input_ref,
+            "output_ref": fact.output_ref,
+            "token_usage": dict(fact.token_usage),
+            "cost_estimate": dict(fact.cost_estimate),
+            "grant_id": fact.grant_id,
+            "guardrail_result_refs": list(fact.guardrail_result_refs),
+            "error_code": fact.error_code,
+            "retryable": fact.retryable,
+        }
+        payload.update(dict(fact.extra))
+        return payload
     payload = {
         "sdlc_event_id": f"sdlc_{fact.producer_event_name}",
         "producer_event_name": fact.producer_event_name,
@@ -997,6 +1252,18 @@ def _canonical_payload(
     }
     payload.update(dict(fact.payload))
     return payload
+
+
+def _event_type_for_fact(fact: AgentOpsSdlcFact | AgentOpsTraceSpanFact) -> str:
+    if isinstance(fact, AgentOpsTraceSpanFact):
+        return "trace_span"
+    return "sdlc_trace_event"
+
+
+def _event_type_version_for_fact(fact: AgentOpsSdlcFact | AgentOpsTraceSpanFact) -> str:
+    if isinstance(fact, AgentOpsTraceSpanFact):
+        return "trace_span.v1"
+    return "sdlc_trace_event.v1"
 
 
 def _candidate_fixes_from_guard(task_guard: TaskGuardResult) -> tuple[str, ...]:
@@ -1233,6 +1500,18 @@ def _first_non_empty(*values: str) -> str:
         if value and str(value).strip():
             return str(value).strip()
     return ""
+
+
+def _profile_text(profile: Mapping[str, Any], key: str) -> str:
+    value = profile.get(key)
+    if value in (None, ""):
+        return ""
+    return str(value).strip()
+
+
+def _normal_reporting_mode(value: str) -> str:
+    normalized = str(value or REPORTING_MODE_OFF).strip().lower()
+    return normalized if normalized in REPORTING_MODES else normalized
 
 
 def _parse_timeout_seconds(value: str) -> float:

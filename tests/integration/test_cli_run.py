@@ -193,6 +193,344 @@ class TestRunCommand:
         assert "Stage init" in result.output
         assert "Stage close" in result.output
         assert "Pipeline completed. Stage: close" in result.output
+        assert "AgentOps report" not in result.output
+        assert not (tmp_path / ".ai-sdlc" / "agentops").exists()
+
+    def test_run_required_agentops_blocks_when_token_missing(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setenv("OPENAI_CODEX", "1")
+        monkeypatch.setenv("AGENTOPS_REPORTING_MODE", "required")
+        monkeypatch.setenv("AGENTOPS_INGESTION_ENDPOINT", "https://gateway.example")
+        monkeypatch.delenv("AGENTOPS_INGESTION_TOKEN", raising=False)
+        monkeypatch.chdir(tmp_path)
+        assert runner.invoke(app, ["init", ".", "--agent-target", "codex"]).exit_code == 0
+        self._force_passing_gates(monkeypatch)
+
+        result = runner.invoke(app, ["run"])
+
+        assert result.exit_code == 2
+        assert "Pipeline completed. Stage: close" in result.output
+        assert "AgentOps report pending: missing_token" in result.output
+        diagnostic_files = list(
+            (tmp_path / ".ai-sdlc" / "agentops" / "diagnostics").glob("*.json")
+        )
+        assert diagnostic_files
+
+    def test_run_halt_output_survives_required_agentops_block(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setenv("OPENAI_CODEX", "1")
+        monkeypatch.setenv("AGENTOPS_REPORTING_MODE", "required")
+        monkeypatch.setenv("AGENTOPS_INGESTION_ENDPOINT", "https://gateway.example")
+        monkeypatch.delenv("AGENTOPS_INGESTION_TOKEN", raising=False)
+        monkeypatch.chdir(tmp_path)
+        assert runner.invoke(app, ["init", ".", "--agent-target", "codex"]).exit_code == 0
+
+        def halt_gate(
+            self: SDLCRunner,
+            stage: str,
+            cp: Checkpoint,
+            *,
+            dry_run: bool = False,
+        ) -> GateResult:
+            return GateResult(
+                stage=stage,
+                verdict=GateVerdict.HALT,
+                checks=[GateCheck(name="halted", passed=False, message="blocked")],
+            )
+
+        monkeypatch.setattr(SDLCRunner, "_run_gate", halt_gate)
+
+        result = runner.invoke(app, ["run"])
+
+        assert result.exit_code == 2
+        assert "Pipeline halted:" in result.output
+        assert "AgentOps report pending: missing_token" in result.output
+
+    def test_run_required_agentops_blocks_when_profile_is_malformed(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        profile_path = tmp_path / "enterprise.yaml"
+        profile_path.write_text("agentops_reporting_mode: [required\n", encoding="utf-8")
+        monkeypatch.setenv("OPENAI_CODEX", "1")
+        monkeypatch.setenv("AGENTOPS_REPORTING_MODE", "required")
+        monkeypatch.setenv("AI_SDLC_ENTERPRISE_PROFILE", str(profile_path))
+        monkeypatch.chdir(tmp_path)
+        assert runner.invoke(app, ["init", ".", "--agent-target", "codex"]).exit_code == 0
+        self._force_passing_gates(monkeypatch)
+
+        result = runner.invoke(app, ["run"])
+
+        assert result.exit_code == 2
+        assert "Pipeline completed. Stage: close" in result.output
+        assert "AgentOps report pending: Invalid YAML in enterprise profile" in result.output
+
+    def test_run_required_enterprise_profile_ignores_env_downgrade(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        profile_path = tmp_path / "enterprise.yaml"
+        profile_path.write_text(
+            "\n".join(
+                [
+                    "agentops_reporting_mode: required",
+                    "agentops_ingestion_endpoint: https://gateway.example",
+                ]
+            )
+            + "\n",
+            encoding="utf-8",
+        )
+        monkeypatch.setenv("OPENAI_CODEX", "1")
+        monkeypatch.setenv("AI_SDLC_ENTERPRISE_PROFILE", str(profile_path))
+        monkeypatch.setenv("AGENTOPS_REPORTING_MODE", "off")
+        monkeypatch.delenv("AGENTOPS_INGESTION_TOKEN", raising=False)
+        monkeypatch.chdir(tmp_path)
+        assert runner.invoke(app, ["init", ".", "--agent-target", "codex"]).exit_code == 0
+        self._force_passing_gates(monkeypatch)
+
+        result = runner.invoke(app, ["run"])
+
+        assert result.exit_code == 2
+        assert "Pipeline completed. Stage: close" in result.output
+        assert "AgentOps report pending: missing_token" in result.output
+
+    def test_run_required_enterprise_profile_missing_endpoint_ignores_env_endpoint(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        profile_path = tmp_path / "enterprise.yaml"
+        profile_path.write_text(
+            "\n".join(
+                [
+                    "agentops_reporting_mode: required",
+                    "agentops_token_env: DEPT_AGENTOPS_TOKEN",
+                ]
+            )
+            + "\n",
+            encoding="utf-8",
+        )
+        monkeypatch.setenv("OPENAI_CODEX", "1")
+        monkeypatch.setenv("AI_SDLC_ENTERPRISE_PROFILE", str(profile_path))
+        monkeypatch.setenv("AGENTOPS_INGESTION_ENDPOINT", "https://local-stale.example")
+        monkeypatch.setenv("DEPT_AGENTOPS_TOKEN", "secret-token")
+        monkeypatch.chdir(tmp_path)
+        assert runner.invoke(app, ["init", ".", "--agent-target", "codex"]).exit_code == 0
+        self._force_passing_gates(monkeypatch)
+
+        result = runner.invoke(app, ["run"])
+
+        assert result.exit_code == 2
+        assert "Pipeline completed. Stage: close" in result.output
+        assert "AgentOps report pending: missing_endpoint" in result.output
+        assert "secret-token" not in result.output
+
+    def test_run_required_enterprise_profile_gateway_mode_ignores_env_direct_local(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        profile_path = tmp_path / "enterprise.yaml"
+        profile_path.write_text(
+            "\n".join(
+                [
+                    "agentops_reporting_mode: required",
+                    "agentops_ingestion_endpoint: https://gateway.example",
+                    "agentops_ingestion_mode: gateway",
+                ]
+            )
+            + "\n",
+            encoding="utf-8",
+        )
+        monkeypatch.setenv("OPENAI_CODEX", "1")
+        monkeypatch.setenv("AI_SDLC_ENTERPRISE_PROFILE", str(profile_path))
+        monkeypatch.setenv("AGENTOPS_INGESTION_MODE", "direct_local")
+        monkeypatch.delenv("AGENTOPS_INGESTION_TOKEN", raising=False)
+        monkeypatch.chdir(tmp_path)
+        assert runner.invoke(app, ["init", ".", "--agent-target", "codex"]).exit_code == 0
+        self._force_passing_gates(monkeypatch)
+
+        result = runner.invoke(app, ["run"])
+
+        assert result.exit_code == 2
+        assert "Pipeline completed. Stage: close" in result.output
+        assert "AgentOps report pending: missing_token" in result.output
+
+    def test_run_explicit_missing_enterprise_profile_fails_closed(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        missing_profile = tmp_path / "missing-enterprise.yaml"
+        monkeypatch.setenv("OPENAI_CODEX", "1")
+        monkeypatch.setenv("AI_SDLC_ENTERPRISE_PROFILE", str(missing_profile))
+        monkeypatch.chdir(tmp_path)
+        assert runner.invoke(app, ["init", ".", "--agent-target", "codex"]).exit_code == 0
+        self._force_passing_gates(monkeypatch)
+
+        result = runner.invoke(app, ["run"])
+
+        assert result.exit_code == 2
+        assert "Pipeline completed. Stage: close" in result.output
+        assert "AgentOps report pending: Enterprise profile" in result.output
+        assert "does not exist" in result.output
+
+    def test_run_project_required_agentops_blocks_when_token_missing(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setenv("OPENAI_CODEX", "1")
+        monkeypatch.delenv("AGENTOPS_REPORTING_MODE", raising=False)
+        monkeypatch.delenv("AGENTOPS_INGESTION_TOKEN", raising=False)
+        monkeypatch.chdir(tmp_path)
+        assert runner.invoke(app, ["init", ".", "--agent-target", "codex"]).exit_code == 0
+        cfg = load_project_config(tmp_path)
+        cfg.agentops_reporting_mode = "required"
+        cfg.agentops_ingestion_endpoint = "https://gateway.example"
+        save_project_config(tmp_path, cfg)
+        self._force_passing_gates(monkeypatch)
+
+        result = runner.invoke(app, ["run"])
+
+        assert result.exit_code == 2
+        assert "Pipeline completed. Stage: close" in result.output
+        assert "AgentOps report pending: missing_token" in result.output
+
+    def test_run_project_required_agentops_ignores_env_downgrade(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setenv("OPENAI_CODEX", "1")
+        monkeypatch.setenv("AGENTOPS_REPORTING_MODE", "off")
+        monkeypatch.delenv("AGENTOPS_INGESTION_TOKEN", raising=False)
+        monkeypatch.chdir(tmp_path)
+        assert runner.invoke(app, ["init", ".", "--agent-target", "codex"]).exit_code == 0
+        cfg = load_project_config(tmp_path)
+        cfg.agentops_reporting_mode = "required"
+        cfg.agentops_ingestion_endpoint = "https://gateway.example"
+        save_project_config(tmp_path, cfg)
+        self._force_passing_gates(monkeypatch)
+
+        result = runner.invoke(app, ["run"])
+
+        assert result.exit_code == 2
+        assert "Pipeline completed. Stage: close" in result.output
+        assert "AgentOps report pending: missing_token" in result.output
+
+    def test_run_project_required_agentops_gateway_mode_ignores_env_direct_local(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setenv("OPENAI_CODEX", "1")
+        monkeypatch.setenv("AGENTOPS_INGESTION_MODE", "direct_local")
+        monkeypatch.delenv("AGENTOPS_INGESTION_TOKEN", raising=False)
+        monkeypatch.chdir(tmp_path)
+        assert runner.invoke(app, ["init", ".", "--agent-target", "codex"]).exit_code == 0
+        cfg = load_project_config(tmp_path)
+        cfg.agentops_reporting_mode = "required"
+        cfg.agentops_ingestion_endpoint = "https://gateway.example"
+        cfg.agentops_ingestion_mode = "gateway"
+        save_project_config(tmp_path, cfg)
+        self._force_passing_gates(monkeypatch)
+
+        result = runner.invoke(app, ["run"])
+
+        assert result.exit_code == 2
+        assert "Pipeline completed. Stage: close" in result.output
+        assert "AgentOps report pending: missing_token" in result.output
+
+    def test_run_project_required_agentops_endpoint_ignores_env_redirect(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setenv("OPENAI_CODEX", "1")
+        monkeypatch.setenv("AGENTOPS_INGESTION_ENDPOINT", "https://local-stale.example")
+        monkeypatch.setenv("AGENTOPS_INGESTION_TOKEN", "secret-token")
+        monkeypatch.chdir(tmp_path)
+        assert runner.invoke(app, ["init", ".", "--agent-target", "codex"]).exit_code == 0
+        cfg = load_project_config(tmp_path)
+        cfg.agentops_reporting_mode = "required"
+        cfg.agentops_ingestion_endpoint = "https://gateway.example"
+        save_project_config(tmp_path, cfg)
+        self._force_passing_gates(monkeypatch)
+        captured_endpoints: list[str] = []
+
+        def fake_send_agentops_batch(
+            endpoint: str,
+            _batch: dict[str, object],
+            **_kwargs: object,
+        ) -> AgentOpsReceipt:
+            captured_endpoints.append(endpoint)
+            return AgentOpsReceipt(
+                schema_version="runtime_outbox_receipt.v1",
+                batch_id="batch_test",
+                outbox_id="outbox_test",
+                producer="Ai_AutoSDLC",
+                replay_reason="initial_delivery",
+                outbox_state="delivered",
+                accepted_count=1,
+                deduplicated_count=0,
+                stale_count=0,
+                rejected_count=0,
+                dlq_count=0,
+                item_results=(),
+                audit_id="audit_test",
+            )
+
+        monkeypatch.setattr(
+            "ai_sdlc.core.agentops_bridge.send_agentops_batch",
+            fake_send_agentops_batch,
+        )
+
+        result = runner.invoke(app, ["run"])
+
+        assert result.exit_code == 0
+        assert "Pipeline completed. Stage: close" in result.output
+        assert "AgentOps report delivered: delivered accepted=1" in result.output
+        assert captured_endpoints == ["https://gateway.example"]
+
+    def test_run_project_required_agentops_token_env_ignores_env_redirect(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setenv("OPENAI_CODEX", "1")
+        monkeypatch.setenv("AGENTOPS_INGESTION_TOKEN_ENV", "LOCAL_AGENTOPS_TOKEN")
+        monkeypatch.setenv("DEPT_AGENTOPS_TOKEN", "secret-token")
+        monkeypatch.delenv("LOCAL_AGENTOPS_TOKEN", raising=False)
+        monkeypatch.chdir(tmp_path)
+        assert runner.invoke(app, ["init", ".", "--agent-target", "codex"]).exit_code == 0
+        cfg = load_project_config(tmp_path)
+        cfg.agentops_reporting_mode = "required"
+        cfg.agentops_ingestion_endpoint = "https://gateway.example"
+        cfg.agentops_ingestion_token_env = "DEPT_AGENTOPS_TOKEN"
+        save_project_config(tmp_path, cfg)
+        self._force_passing_gates(monkeypatch)
+        captured_tokens: list[str] = []
+
+        def fake_send_agentops_batch(
+            _endpoint: str,
+            _batch: dict[str, object],
+            *,
+            bearer_token: str = "",
+            **_kwargs: object,
+        ) -> AgentOpsReceipt:
+            captured_tokens.append(bearer_token)
+            return AgentOpsReceipt(
+                schema_version="runtime_outbox_receipt.v1",
+                batch_id="batch_test",
+                outbox_id="outbox_test",
+                producer="Ai_AutoSDLC",
+                replay_reason="initial_delivery",
+                outbox_state="delivered",
+                accepted_count=1,
+                deduplicated_count=0,
+                stale_count=0,
+                rejected_count=0,
+                dlq_count=0,
+                item_results=(),
+                audit_id="audit_test",
+            )
+
+        monkeypatch.setattr(
+            "ai_sdlc.core.agentops_bridge.send_agentops_batch",
+            fake_send_agentops_batch,
+        )
+
+        result = runner.invoke(app, ["run"])
+
+        assert result.exit_code == 0
+        assert "AgentOps report delivered: delivered accepted=1" in result.output
+        assert captured_tokens == ["secret-token"]
+        assert "secret-token" not in result.output
 
     def test_run_dry_run_persists_agentops_outbox_without_delivery(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
@@ -220,7 +558,11 @@ class TestRunCommand:
         assert outbox_files
         batch = json.loads(outbox_files[0].read_text(encoding="utf-8"))
         events = batch["events"]
-        stage_names = [event["payload"]["stage_name"] for event in events]
+        stage_names = [
+            event["payload"]["stage_name"]
+            for event in events
+            if event["event_type"] == "sdlc_trace_event"
+        ]
         assert stage_names[0] == "init"
         assert stage_names[-1] == "close"
         receipt_files = list(
@@ -286,6 +628,10 @@ class TestRunCommand:
         monkeypatch.setenv("OPENAI_CODEX", "1")
         monkeypatch.setenv("AGENTOPS_INGESTION_ENDPOINT", "https://gateway.example")
         monkeypatch.setenv("AGENTOPS_INGESTION_TOKEN", "secret-token")
+        monkeypatch.setenv("AGENTOPS_PRODUCER_ID", "producer.ai-sdlc.local")
+        monkeypatch.setenv("AGENTOPS_RUNTIME_ID", "runtime.ai-sdlc.local")
+        monkeypatch.setenv("AGENTOPS_CREDENTIAL_ID", "cred.ai-sdlc.local")
+        monkeypatch.setenv("AGENTOPS_KEY_ID", "key.ai-sdlc.local")
         monkeypatch.chdir(tmp_path)
         assert runner.invoke(app, ["init", ".", "--agent-target", "codex"]).exit_code == 0
         captured_batches: list[dict[str, object]] = []
@@ -338,9 +684,42 @@ class TestRunCommand:
         assert result.exit_code == 2
         assert "AgentOps report delivered: delivered accepted=1" in result.output
         assert captured_batches
-        event = captured_batches[0]["events"][0]  # type: ignore[index]
+        envelope_event_types = [
+            str(event["event_type"])  # type: ignore[index]
+            for event in captured_batches[0]["events"]  # type: ignore[index]
+        ]
+        event_types = [
+            str(event["payload"]["sdlc_event_type"])  # type: ignore[index]
+            for event in captured_batches[0]["events"]  # type: ignore[index]
+            if event["event_type"] == "sdlc_trace_event"  # type: ignore[index]
+        ]
+        model_events = [
+            event
+            for event in captured_batches[0]["events"]  # type: ignore[index]
+            if event["event_type"] == "trace_span"  # type: ignore[index]
+            and event["payload"]["span_kind"] == "model"  # type: ignore[index]
+        ]
+        assert "trace_span" in envelope_event_types
+        assert "verification" in event_types
+        assert "artifact" in event_types
+        assert model_events
+        event = next(
+            event
+            for event in captured_batches[0]["events"]  # type: ignore[index]
+            if event["event_type"] == "sdlc_trace_event"  # type: ignore[index]
+        )
+        assert event["producer_id"] == "producer.ai-sdlc.local"  # type: ignore[index]
+        assert event["runtime_id"] == "runtime.ai-sdlc.local"  # type: ignore[index]
+        assert event["credential_id"] == "cred.ai-sdlc.local"  # type: ignore[index]
+        assert event["key_id"] == "key.ai-sdlc.local"  # type: ignore[index]
         assert event["payload"]["gate_id"] == "init"  # type: ignore[index]
         assert event["payload"]["status"] == "failed"  # type: ignore[index]
+        assert event["payload"]["task_title"] == "Pipeline init gate"  # type: ignore[index]
+        assert event["payload"]["changed_paths"] == []  # type: ignore[index]
+        assert event["payload"]["allowed_paths"] == []  # type: ignore[index]
+        assert event["payload"]["forbidden_paths"] == []  # type: ignore[index]
+        assert event["payload"]["guard_result"] == "diagnostic"  # type: ignore[index]
+        assert event["payload"]["blocking_reason"] == "retry blocked"  # type: ignore[index]
 
     def test_run_warns_when_agentops_receipt_has_diagnostics(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
@@ -365,7 +744,20 @@ class TestRunCommand:
                 stale_count=0,
                 rejected_count=1,
                 dlq_count=0,
-                item_results=({"status": "rejected"},),
+                item_results=(
+                    {
+                        "status": "accepted",
+                        "code": "accepted_context",
+                        "message": "accepted item metadata",
+                        "retry_guidance": "Do not show this when a rejected item exists.",
+                    },
+                    {
+                        "status": "rejected",
+                        "code": "schema_mismatch",
+                        "message": "event payload failed validation",
+                        "retry_guidance": "Fix the payload shape and retry.",
+                    },
+                ),
                 audit_id="audit_test",
             )
 
@@ -380,6 +772,55 @@ class TestRunCommand:
         assert "AgentOps report delivered with diagnostics:" in result.output
         assert "rejected=1" in result.output
         assert "dlq=0" in result.output
+        assert "AgentOps receipt summary:" in result.output
+        assert "code=schema_mismatch" in result.output
+        assert "message=event payload failed validation" in result.output
+        assert "AgentOps receipt retry guidance: Fix the payload shape and retry." in (
+            result.output
+        )
+        assert "accepted_context" not in result.output
+        assert "accepted item metadata" not in result.output
+
+    def test_run_required_agentops_blocks_when_receipt_state_is_rejected(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setenv("OPENAI_CODEX", "1")
+        monkeypatch.setenv("AGENTOPS_REPORTING_MODE", "required")
+        monkeypatch.setenv("AGENTOPS_INGESTION_ENDPOINT", "https://gateway.example")
+        monkeypatch.setenv("AGENTOPS_INGESTION_TOKEN", "secret-token")
+        monkeypatch.chdir(tmp_path)
+        assert runner.invoke(app, ["init", ".", "--agent-target", "codex"]).exit_code == 0
+        self._force_passing_gates(monkeypatch)
+
+        def fake_send_agentops_batch(*_args: object, **_kwargs: object) -> AgentOpsReceipt:
+            return AgentOpsReceipt(
+                schema_version="runtime_outbox_receipt.v1",
+                batch_id="batch_test",
+                outbox_id="outbox_test",
+                producer="Ai_AutoSDLC",
+                replay_reason="initial_delivery",
+                outbox_state="rejected",
+                accepted_count=0,
+                deduplicated_count=0,
+                stale_count=0,
+                rejected_count=0,
+                dlq_count=0,
+                item_results=(),
+                audit_id="audit_test",
+            )
+
+        monkeypatch.setattr(
+            "ai_sdlc.core.agentops_bridge.send_agentops_batch",
+            fake_send_agentops_batch,
+        )
+
+        result = runner.invoke(app, ["run"])
+
+        assert result.exit_code == 2
+        assert "AgentOps report delivered with diagnostics:" in result.output
+        assert "rejected accepted=0" in result.output
+        assert "rejected=0" in result.output
+        assert "AgentOps receipt summary:" in result.output
 
     def test_run_agentops_run_ids_are_unique_for_same_second_invocations(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch

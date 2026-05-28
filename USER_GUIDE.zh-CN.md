@@ -4,6 +4,14 @@
 
 普通用户优先使用 GitHub Release 离线包或公司管理员提供的安装包。安装脚本会自己检测运行时；不要一上来就手动创建 venv、拼 pip 依赖或改 PATH。
 
+## 企业 AgentOps 接入
+
+个人单机用户不需要配置 AgentOps。本手册后续章节只描述普通个人/项目使用路径，不混入企业接入步骤。
+
+如果你所在部门要求 AI-SDLC 强制接入 AgentOps，请先按企业内部提供的一次性脚本完成接入。脚本会写入用户级企业 profile，并设置 AgentOps token 环境变量；之后 `ai-sdlc run` 会自动进入企业 required 上报模式。
+
+企业接入步骤单独见：[企业 AgentOps 接入指南](docs/enterprise-agentops-setup.zh-CN.md)。
+
 ## 命令入口规则：PATH 与无 PATH
 
 本手册推荐安装时显式同意写入 PATH，这样后续可以直接执行 `ai-sdlc ...`。Windows 用 `-AddToPath`，macOS / Linux 用 `--add-to-path`。这些参数本身就是写入 PATH 的确认信号；安装器不会再弹出第二次确认。

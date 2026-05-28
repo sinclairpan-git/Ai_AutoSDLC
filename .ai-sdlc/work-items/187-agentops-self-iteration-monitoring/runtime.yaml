@@ -1,0 +1,11 @@
+current_stage: execute
+current_batch: 3
+current_task: ''
+last_committed_task: T31
+current_branch: feature/187-agentops-self-iteration-monitoring-docs
+ai_decisions_count: 0
+execution_mode: auto
+started_at: '2026-05-27T08:56:48+00:00'
+last_updated: '2026-05-27T08:56:48+00:00'
+debug_rounds: {}
+consecutive_halts: 0

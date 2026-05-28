@@ -19,6 +19,7 @@ from ai_sdlc.cli.commands import (
     status_command,
 )
 from ai_sdlc.cli.doctor_cmd import doctor_command
+from ai_sdlc.cli.enterprise_cmd import enterprise_app
 from ai_sdlc.cli.handoff_cmd import handoff_app
 from ai_sdlc.cli.host_runtime_cmd import host_runtime_app
 from ai_sdlc.cli.program_cmd import program_app
@@ -76,6 +77,7 @@ def _global_before_command(
         "adapter",
         "init",
         "doctor",
+        "enterprise",
         "agentops",
         "handoff",
         "host-runtime",
@@ -100,6 +102,7 @@ app.command(name="refresh")(refresh_command)
 app.command(name="run")(run_command)
 app.add_typer(adapter_app, name="adapter")
 app.add_typer(agentops_app, name="agentops")
+app.add_typer(enterprise_app, name="enterprise")
 app.add_typer(gate_app, name="gate")
 app.add_typer(rules_app, name="rules")
 app.add_typer(studio_app, name="studio")

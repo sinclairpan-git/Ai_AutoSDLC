@@ -18,8 +18,21 @@ Batch 3: Release checklist alignment and focused verification
 
 ## Batch 1: Formal Baseline and TDD Red Test
 
-### Task T11: Freeze formal work item docs
+### Task 1.1 Freeze formal work item docs
 
+- task_id: T11
+- status: done
+- scope:
+  - specs/181-cross-platform-release-gate-matrix-baseline/spec.md
+  - specs/181-cross-platform-release-gate-matrix-baseline/plan.md
+  - specs/181-cross-platform-release-gate-matrix-baseline/tasks.md
+  - specs/181-cross-platform-release-gate-matrix-baseline/task-execution-log.md
+- AC: See acceptance list below.
+- acceptance:
+  - Work item defines the release-gate matrix problem and scope.
+  - Work item names Windows and POSIX evidence as separate release gates.
+- verify:
+  - Review formal work item docs for release-gate scope and target-platform evidence boundaries.
 - **Priority**: P0
 - **Status**: Complete
 - **Dependencies**: none
@@ -28,11 +41,21 @@ Batch 3: Release checklist alignment and focused verification
   1. The work item defines the release-gate matrix problem and scope.
   2. The work item names Windows and POSIX evidence as separate release gates.
 
-### Task T12: Add failing workflow contract test
+### Task 1.2 Add failing workflow contract test
 
+- task_id: T12
+- status: done
+- scope:
+  - tests/integration/test_github_workflows.py
+- AC: See acceptance list below.
+- acceptance:
+  - Test requires .github/workflows/posix-offline-smoke.yml.
+  - Test requires macos-latest, ubuntu-latest, install_offline.sh, .venv/bin/ai-sdlc, adapter status, run --dry-run, and artifact upload.
+- verify:
+  - python -m pytest tests/integration/test_github_workflows.py -q fails before the workflow exists.
 - **Priority**: P0
 - **Status**: Complete
-- **Dependencies**: T11
+- **Dependencies**: 1.1
 - **Files**: `tests/integration/test_github_workflows.py`
 - **Acceptance**:
   1. Test requires `.github/workflows/posix-offline-smoke.yml`.
@@ -42,11 +65,23 @@ Batch 3: Release checklist alignment and focused verification
 
 ## Batch 2: POSIX Workflow Implementation
 
-### Task T21: Add POSIX offline smoke workflow
+### Task 2.1 Add POSIX offline smoke workflow
 
+- task_id: T21
+- status: done
+- scope:
+  - .github/workflows/posix-offline-smoke.yml
+- AC: See acceptance list below.
+- acceptance:
+  - Workflow runs on pull requests and manual dispatch.
+  - Workflow runs a matrix over macos-latest and ubuntu-latest.
+  - Workflow builds the offline bundle, installs it, verifies CLI help, adapter status, and run --dry-run.
+  - Workflow uploads per-platform evidence.
+- verify:
+  - python -m pytest tests/integration/test_github_workflows.py -q passes locally.
 - **Priority**: P0
 - **Status**: Complete
-- **Dependencies**: T12
+- **Dependencies**: 1.2
 - **Files**: `.github/workflows/posix-offline-smoke.yml`
 - **Acceptance**:
   1. Workflow runs on pull requests and manual dispatch.
@@ -59,22 +94,43 @@ Batch 3: Release checklist alignment and focused verification
 
 ## Batch 3: Release Checklist Alignment and Verification
 
-### Task T31: Update release checklist evidence contract
+### Task 3.1 Update release checklist evidence contract
 
+- task_id: T31
+- status: done
+- scope:
+  - packaging/offline/RELEASE_CHECKLIST.md
+- AC: See acceptance list below.
+- acceptance:
+  - Checklist explicitly says both Windows and POSIX smoke evidence are required for cross-platform release claims.
+  - Checklist identifies posix-offline-smoke-evidence and its required log files.
+  - Checklist warns that Windows success does not prove macOS/Linux and POSIX success does not prove Windows.
+- verify:
+  - Review release checklist wording for separate Windows and POSIX evidence gates.
 - **Priority**: P1
 - **Status**: Complete
-- **Dependencies**: T21
+- **Dependencies**: 2.1
 - **Files**: `packaging/offline/RELEASE_CHECKLIST.md`
 - **Acceptance**:
   1. Checklist explicitly says both Windows and POSIX smoke evidence are required for cross-platform release claims.
   2. Checklist identifies `posix-offline-smoke-evidence` and its required log files.
   3. Checklist warns that Windows success does not prove macOS/Linux and POSIX success does not prove Windows.
 
-### Task T32: Record verification and open gates
+### Task 3.2 Record verification and open gates
 
+- task_id: T32
+- status: done
+- scope:
+  - specs/181-cross-platform-release-gate-matrix-baseline/task-execution-log.md
+- AC: See acceptance list below.
+- acceptance:
+  - Local focused test result is recorded.
+  - Long-running local run --dry-run timeout and target-platform CI gates are recorded as open evidence requirements.
+- verify:
+  - Review task-execution-log.md for focused verification and open gate notes.
 - **Priority**: P1
 - **Status**: Complete
-- **Dependencies**: T31
+- **Dependencies**: 3.1
 - **Files**: `task-execution-log.md`
 - **Acceptance**:
   1. Local focused test result is recorded.
