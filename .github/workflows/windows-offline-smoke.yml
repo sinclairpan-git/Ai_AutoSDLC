@@ -235,6 +235,7 @@ jobs:
 
           function Run-Flow([string] $Mode) {
             Add-Summary "=== $Mode ==="
+            Set-Location $env:RUNNER_TEMP
             Remove-Item -Recurse -Force "D:\work" -ErrorAction SilentlyContinue
             New-Item -ItemType Directory -Force -Path "D:\work" | Out-Null
 
