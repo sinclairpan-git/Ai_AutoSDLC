@@ -18,7 +18,7 @@
 
 Windows 注意：如果你是用 `powershell -ExecutionPolicy Bypass -File ... -AddToPath` 启动安装脚本，PATH 会写入用户 PATH，通常需要新开一个终端后裸 `ai-sdlc ...` 才会被父终端识别。安装完成后的当前终端如果要立刻初始化项目，请使用安装脚本最后打印的 Direct shim；否则裸 `ai-sdlc init .` 可能仍解析到机器上已有的旧版本。可用 `Get-Command ai-sdlc | Select-Object Source` 检查当前命中的入口。
 
-写入 PATH 后，通用命令就是：
+写入 PATH 后并且新终端已经识别新 PATH 时，通用命令就是：
 
 | 命令 | 用途 |
 | --- | --- |
@@ -242,10 +242,17 @@ ai-sdlc --help
 
 安装包目录只是安装位置，不是业务项目。下一步统一回到刚创建的项目目录执行初始化；不要在安装包目录里执行 `init`。
 
-Windows 直接复制：
+Windows 当前终端立即初始化时，不要直接照抄裸 `ai-sdlc init .`。先回到项目根目录，然后复制安装脚本刚刚输出的 `Direct shim` 里的 `init .` 那一行执行；下面是形状示例，路径必须替换成你终端里实际打印的完整路径：
 
 ```powershell
 # D:\work\ui-test-platform 是示例路径；请替换成你的真实项目根目录
+cd D:\work\ui-test-platform
+& "D:\work\.ai-sdlc-install\ai-sdlc-offline-0.7.19-windows-amd64\.venv\Scripts\ai-sdlc.exe" init .
+```
+
+如果你已经新开了一个终端，并且 `Get-Command ai-sdlc | Select-Object Source` 显示的是刚安装的 `0.7.19` 路径，也可以执行：
+
+```powershell
 cd D:\work\ui-test-platform
 ai-sdlc init .
 ```
@@ -486,10 +493,17 @@ ai-sdlc --help
 
 进入已有项目根目录后执行；不要在安装包目录里执行 `init`。
 
-Windows 示例：
+Windows 当前终端立即初始化时，不要直接照抄裸 `ai-sdlc init .`。先进入已有项目根目录，然后复制安装脚本刚刚输出的 `Direct shim` 里的 `init .` 那一行执行；下面是形状示例，路径必须替换成你终端里实际打印的完整路径：
 
 ```powershell
 # D:\work\my-existing-project 是示例路径；请替换成你的真实项目根目录
+cd D:\work\my-existing-project
+& "D:\work\.ai-sdlc-install\ai-sdlc-offline-0.7.19-windows-amd64\.venv\Scripts\ai-sdlc.exe" init .
+```
+
+如果你已经新开了一个终端，并且 `Get-Command ai-sdlc | Select-Object Source` 显示的是刚安装的 `0.7.19` 路径，也可以执行：
+
+```powershell
 cd D:\work\my-existing-project
 ai-sdlc init .
 ```
