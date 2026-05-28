@@ -91,15 +91,20 @@ Windows x64 直接复制：
 # 当前假设你已经 cd 到 zip 所在目录；脚本只检查当前目录，不扫描其他目录
 # This assumes you have cd'ed into the directory containing the zip. The script checks only the current directory.
 $PackageName = "ai-sdlc-offline-0.7.18-windows-amd64.zip"
+$BundleName = "ai-sdlc-offline-0.7.18-windows-amd64"
 $PackageDir = (Get-Location).Path
+$ExtractRoot = Join-Path $PackageDir ".ai-sdlc-install"
 $Zip = Get-ChildItem -LiteralPath . -Filter $PackageName -File | Select-Object -First 1
 if (-not $Zip) {
   Write-Host "当前目录没有找到安装包：$PackageDir\$PackageName"
   Write-Host "Package not found in the current directory: $PackageDir\$PackageName"
   throw "请把 zip 放到当前目录，并先 cd 到该目录后重试。Place the zip in the current directory, cd into that directory, then retry."
 }
-Expand-Archive -LiteralPath $Zip.FullName -DestinationPath $PackageDir -Force
-Set-Location (Join-Path $PackageDir "ai-sdlc-offline-0.7.18-windows-amd64")
+New-Item -ItemType Directory -Path $ExtractRoot -Force | Out-Null
+Write-Host "正在解压安装包；如果已经解压过，会安静覆盖同名文件。"
+Write-Host "Extracting package; existing installer files will be overwritten quietly."
+Expand-Archive -LiteralPath $Zip.FullName -DestinationPath $ExtractRoot -Force
+Set-Location (Join-Path $ExtractRoot $BundleName)
 powershell -ExecutionPolicy Bypass -File .\install_offline.ps1 -AddToPath
 .\.venv\Scripts\python.exe -m ai_sdlc --help
 ```
@@ -107,7 +112,7 @@ powershell -ExecutionPolicy Bypass -File .\install_offline.ps1 -AddToPath
 如果你的 PowerShell 粘贴多行时把命令显示成连续的 `>>` 提示，改复制下面这一行执行：
 
 ```powershell
-$PackageName = "ai-sdlc-offline-0.7.18-windows-amd64.zip"; $PackageDir = (Get-Location).Path; Expand-Archive -LiteralPath (Join-Path $PackageDir $PackageName) -DestinationPath $PackageDir -Force; Set-Location (Join-Path $PackageDir "ai-sdlc-offline-0.7.18-windows-amd64"); powershell -ExecutionPolicy Bypass -File .\install_offline.ps1 -AddToPath; .\.venv\Scripts\python.exe -m ai_sdlc --help
+$PackageName = "ai-sdlc-offline-0.7.18-windows-amd64.zip"; $BundleName = "ai-sdlc-offline-0.7.18-windows-amd64"; $PackageDir = (Get-Location).Path; $ExtractRoot = Join-Path $PackageDir ".ai-sdlc-install"; New-Item -ItemType Directory -Path $ExtractRoot -Force | Out-Null; Expand-Archive -LiteralPath (Join-Path $PackageDir $PackageName) -DestinationPath $ExtractRoot -Force; Set-Location (Join-Path $ExtractRoot $BundleName); powershell -ExecutionPolicy Bypass -File .\install_offline.ps1 -AddToPath; .\.venv\Scripts\python.exe -m ai_sdlc --help
 ```
 
 macOS Apple Silicon 直接复制：
@@ -163,9 +168,16 @@ Windows x64 直接复制：
 ```powershell
 # 回到项目父目录，让安装包目录和业务项目目录同级
 cd ..
-Invoke-WebRequest -Uri "https://github.com/sinclairpan-git/Ai_AutoSDLC/releases/download/v0.7.18/ai-sdlc-offline-0.7.18-windows-amd64.zip" -OutFile "ai-sdlc-offline-0.7.18-windows-amd64.zip"
-Expand-Archive -LiteralPath .\ai-sdlc-offline-0.7.18-windows-amd64.zip -DestinationPath .
-cd .\ai-sdlc-offline-0.7.18-windows-amd64
+$BundleName = "ai-sdlc-offline-0.7.18-windows-amd64"
+$PackageName = "$BundleName.zip"
+$PackageDir = (Get-Location).Path
+$ExtractRoot = Join-Path $PackageDir ".ai-sdlc-install"
+Invoke-WebRequest -Uri "https://github.com/sinclairpan-git/Ai_AutoSDLC/releases/download/v0.7.18/$PackageName" -OutFile (Join-Path $PackageDir $PackageName)
+New-Item -ItemType Directory -Path $ExtractRoot -Force | Out-Null
+Write-Host "正在解压安装包；如果已经解压过，会安静覆盖同名文件。"
+Write-Host "Extracting package; existing installer files will be overwritten quietly."
+Expand-Archive -LiteralPath (Join-Path $PackageDir $PackageName) -DestinationPath $ExtractRoot -Force
+Set-Location (Join-Path $ExtractRoot $BundleName)
 powershell -ExecutionPolicy Bypass -File .\install_offline.ps1 -AddToPath
 .\.venv\Scripts\python.exe -m ai_sdlc --help
 ```
@@ -173,7 +185,7 @@ powershell -ExecutionPolicy Bypass -File .\install_offline.ps1 -AddToPath
 如果你的 PowerShell 粘贴多行时把命令显示成连续的 `>>` 提示，改复制下面这一行执行：
 
 ```powershell
-Set-Location ..; Invoke-WebRequest -Uri "https://github.com/sinclairpan-git/Ai_AutoSDLC/releases/download/v0.7.18/ai-sdlc-offline-0.7.18-windows-amd64.zip" -OutFile "ai-sdlc-offline-0.7.18-windows-amd64.zip"; Expand-Archive -LiteralPath .\ai-sdlc-offline-0.7.18-windows-amd64.zip -DestinationPath . -Force; Set-Location .\ai-sdlc-offline-0.7.18-windows-amd64; powershell -ExecutionPolicy Bypass -File .\install_offline.ps1 -AddToPath; .\.venv\Scripts\python.exe -m ai_sdlc --help
+Set-Location ..; $BundleName = "ai-sdlc-offline-0.7.18-windows-amd64"; $PackageName = "$BundleName.zip"; $PackageDir = (Get-Location).Path; $ExtractRoot = Join-Path $PackageDir ".ai-sdlc-install"; Invoke-WebRequest -Uri "https://github.com/sinclairpan-git/Ai_AutoSDLC/releases/download/v0.7.18/$PackageName" -OutFile (Join-Path $PackageDir $PackageName); New-Item -ItemType Directory -Path $ExtractRoot -Force | Out-Null; Expand-Archive -LiteralPath (Join-Path $PackageDir $PackageName) -DestinationPath $ExtractRoot -Force; Set-Location (Join-Path $ExtractRoot $BundleName); powershell -ExecutionPolicy Bypass -File .\install_offline.ps1 -AddToPath; .\.venv\Scripts\python.exe -m ai_sdlc --help
 ```
 
 macOS Apple Silicon 直接复制：
@@ -215,6 +227,7 @@ ai-sdlc --help
 - `offline bundle platform mismatch`：安装包和当前系统 / CPU / Python ABI 不匹配，换对应平台包
 - `need Python >= 3.11`：包内没有可用 Python runtime，换带 `python-runtime/` 的包，或让管理员重新发包
 - Windows `running scripts is disabled`：继续使用 `powershell -ExecutionPolicy Bypass -File .\install_offline.ps1`
+- Windows `ExpandArchiveFileExists`：说明旧命令正在重复解压到同一目录；改用本章带 `.ai-sdlc-install` 和 `-Force` 的 Windows 命令
 - `ai-sdlc` 不在 PATH：先用包内完整路径，例如 `.\.venv\Scripts\python.exe -m ai_sdlc --help` 或 `./.venv/bin/python -m ai_sdlc --help`
 
 ### 3. 回到空项目并初始化
@@ -336,15 +349,20 @@ Windows x64 直接复制：
 # 当前假设你已经 cd 到 zip 所在目录；脚本只检查当前目录，不扫描其他目录
 # This assumes you have cd'ed into the directory containing the zip. The script checks only the current directory.
 $PackageName = "ai-sdlc-offline-0.7.18-windows-amd64.zip"
+$BundleName = "ai-sdlc-offline-0.7.18-windows-amd64"
 $PackageDir = (Get-Location).Path
+$ExtractRoot = Join-Path $PackageDir ".ai-sdlc-install"
 $Zip = Get-ChildItem -LiteralPath . -Filter $PackageName -File | Select-Object -First 1
 if (-not $Zip) {
   Write-Host "当前目录没有找到安装包：$PackageDir\$PackageName"
   Write-Host "Package not found in the current directory: $PackageDir\$PackageName"
   throw "请把 zip 放到当前目录，并先 cd 到该目录后重试。Place the zip in the current directory, cd into that directory, then retry."
 }
-Expand-Archive -LiteralPath $Zip.FullName -DestinationPath $PackageDir -Force
-Set-Location (Join-Path $PackageDir "ai-sdlc-offline-0.7.18-windows-amd64")
+New-Item -ItemType Directory -Path $ExtractRoot -Force | Out-Null
+Write-Host "正在解压安装包；如果已经解压过，会安静覆盖同名文件。"
+Write-Host "Extracting package; existing installer files will be overwritten quietly."
+Expand-Archive -LiteralPath $Zip.FullName -DestinationPath $ExtractRoot -Force
+Set-Location (Join-Path $ExtractRoot $BundleName)
 powershell -ExecutionPolicy Bypass -File .\install_offline.ps1 -AddToPath
 .\.venv\Scripts\python.exe -m ai_sdlc --help
 ```
@@ -402,9 +420,16 @@ Windows x64 直接复制：
 ```powershell
 # 当前假设你还在 D:\work\my-existing-project；先回到父目录 D:\work
 cd ..
-Invoke-WebRequest -Uri "https://github.com/sinclairpan-git/Ai_AutoSDLC/releases/download/v0.7.18/ai-sdlc-offline-0.7.18-windows-amd64.zip" -OutFile "ai-sdlc-offline-0.7.18-windows-amd64.zip"
-Expand-Archive -LiteralPath .\ai-sdlc-offline-0.7.18-windows-amd64.zip -DestinationPath .
-cd .\ai-sdlc-offline-0.7.18-windows-amd64
+$BundleName = "ai-sdlc-offline-0.7.18-windows-amd64"
+$PackageName = "$BundleName.zip"
+$PackageDir = (Get-Location).Path
+$ExtractRoot = Join-Path $PackageDir ".ai-sdlc-install"
+Invoke-WebRequest -Uri "https://github.com/sinclairpan-git/Ai_AutoSDLC/releases/download/v0.7.18/$PackageName" -OutFile (Join-Path $PackageDir $PackageName)
+New-Item -ItemType Directory -Path $ExtractRoot -Force | Out-Null
+Write-Host "正在解压安装包；如果已经解压过，会安静覆盖同名文件。"
+Write-Host "Extracting package; existing installer files will be overwritten quietly."
+Expand-Archive -LiteralPath (Join-Path $PackageDir $PackageName) -DestinationPath $ExtractRoot -Force
+Set-Location (Join-Path $ExtractRoot $BundleName)
 powershell -ExecutionPolicy Bypass -File .\install_offline.ps1 -AddToPath
 .\.venv\Scripts\python.exe -m ai_sdlc --help
 ```
@@ -446,6 +471,7 @@ ai-sdlc --help
 - `offline bundle platform mismatch`：安装包和当前系统 / CPU / Python ABI 不匹配，换对应平台包
 - `need Python >= 3.11`：包内没有可用 Python runtime，换带 `python-runtime/` 的包，或让管理员重新发包
 - Windows `running scripts is disabled`：继续使用 `powershell -ExecutionPolicy Bypass -File .\install_offline.ps1`
+- Windows `ExpandArchiveFileExists`：说明旧命令正在重复解压到同一目录；改用本章带 `.ai-sdlc-install` 和 `-Force` 的 Windows 命令
 - `ai-sdlc` 不在 PATH：先用包内完整路径，例如 `.\.venv\Scripts\python.exe -m ai_sdlc --help` 或 `./.venv/bin/python -m ai_sdlc --help`
 
 ### 3. 初始化已有项目
@@ -560,9 +586,16 @@ ai-sdlc self-update check
 Windows x64：
 
 ```powershell
-Invoke-WebRequest -Uri "https://github.com/sinclairpan-git/Ai_AutoSDLC/releases/download/v0.7.18/ai-sdlc-offline-0.7.18-windows-amd64.zip" -OutFile "ai-sdlc-offline-0.7.18-windows-amd64.zip"
-Expand-Archive -LiteralPath .\ai-sdlc-offline-0.7.18-windows-amd64.zip -DestinationPath .
-cd .\ai-sdlc-offline-0.7.18-windows-amd64
+$BundleName = "ai-sdlc-offline-0.7.18-windows-amd64"
+$PackageName = "$BundleName.zip"
+$PackageDir = (Get-Location).Path
+$ExtractRoot = Join-Path $PackageDir ".ai-sdlc-install"
+Invoke-WebRequest -Uri "https://github.com/sinclairpan-git/Ai_AutoSDLC/releases/download/v0.7.18/$PackageName" -OutFile (Join-Path $PackageDir $PackageName)
+New-Item -ItemType Directory -Path $ExtractRoot -Force | Out-Null
+Write-Host "正在解压安装包；如果已经解压过，会安静覆盖同名文件。"
+Write-Host "Extracting package; existing installer files will be overwritten quietly."
+Expand-Archive -LiteralPath (Join-Path $PackageDir $PackageName) -DestinationPath $ExtractRoot -Force
+Set-Location (Join-Path $ExtractRoot $BundleName)
 powershell -ExecutionPolicy Bypass -File .\install_offline.ps1 -UpgradeExisting
 ai-sdlc --version
 ai-sdlc self-update check
@@ -571,7 +604,7 @@ ai-sdlc self-update check
 如果你的 PowerShell 粘贴多行时把命令显示成连续的 `>>` 提示，改复制下面这一行执行：
 
 ```powershell
-Invoke-WebRequest -Uri "https://github.com/sinclairpan-git/Ai_AutoSDLC/releases/download/v0.7.18/ai-sdlc-offline-0.7.18-windows-amd64.zip" -OutFile "ai-sdlc-offline-0.7.18-windows-amd64.zip"; Expand-Archive -LiteralPath .\ai-sdlc-offline-0.7.18-windows-amd64.zip -DestinationPath . -Force; Set-Location .\ai-sdlc-offline-0.7.18-windows-amd64; powershell -ExecutionPolicy Bypass -File .\install_offline.ps1 -UpgradeExisting; ai-sdlc --version; ai-sdlc self-update check
+$BundleName = "ai-sdlc-offline-0.7.18-windows-amd64"; $PackageName = "$BundleName.zip"; $PackageDir = (Get-Location).Path; $ExtractRoot = Join-Path $PackageDir ".ai-sdlc-install"; Invoke-WebRequest -Uri "https://github.com/sinclairpan-git/Ai_AutoSDLC/releases/download/v0.7.18/$PackageName" -OutFile (Join-Path $PackageDir $PackageName); New-Item -ItemType Directory -Path $ExtractRoot -Force | Out-Null; Expand-Archive -LiteralPath (Join-Path $PackageDir $PackageName) -DestinationPath $ExtractRoot -Force; Set-Location (Join-Path $ExtractRoot $BundleName); powershell -ExecutionPolicy Bypass -File .\install_offline.ps1 -UpgradeExisting; ai-sdlc --version; ai-sdlc self-update check
 ```
 
 macOS Apple Silicon：
@@ -685,6 +718,7 @@ python -m ai_sdlc <子命令>
 | `offline bundle platform mismatch` | 安装包平台不匹配；换 Windows x64、macOS arm64 或 Linux x64 对应包 |
 | `need Python >= 3.11` | 包内没有可用 Python runtime 且系统 Python 太旧；换带 `python-runtime/` 的安装包 |
 | Windows `running scripts is disabled` | 使用 `powershell -ExecutionPolicy Bypass -File .\install_offline.ps1` |
+| Windows `ExpandArchiveFileExists` | 旧解压目录里已有同名文件；改用本指南带 `.ai-sdlc-install` 和 `-Force` 的 Windows 命令 |
 | `tar: command not found` / `curl: command not found` | 让管理员下载并解压包，或在具备这些工具的终端执行 |
 | `init` 输出提示 adapter target 不匹配 | 按 `下一步 / Next` 执行 `adapter select`，选择真实聊天入口 |
 | `init` 或 `run --dry-run` 显示 open gates | 看 `下一步 / Next` 和 `说明 / Notes`；新项目未开始需求时不一定是错误 |

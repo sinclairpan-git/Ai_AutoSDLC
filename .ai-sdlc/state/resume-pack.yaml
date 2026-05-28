@@ -3,21 +3,20 @@ current_batch: 0
 last_committed_task: ''
 working_set_snapshot:
   prd_path: AI-SDLC 全自动化框架 产品需求文档（PRD）.md
-  constitution_path: /Users/sinclairpan/project/Ai_AutoSDLC/.ai-sdlc/memory/constitution.md
-  tech_stack_path: /Users/sinclairpan/project/Ai_AutoSDLC/.ai-sdlc/profiles/tech-stack.yml
-  spec_path: /Users/sinclairpan/project/Ai_AutoSDLC/specs/181-cross-platform-release-gate-matrix-baseline/spec.md
-  plan_path: /Users/sinclairpan/project/Ai_AutoSDLC/specs/181-cross-platform-release-gate-matrix-baseline/plan.md
-  tasks_path: /Users/sinclairpan/project/Ai_AutoSDLC/specs/181-cross-platform-release-gate-matrix-baseline/tasks.md
+  constitution_path: /private/tmp/ai-sdlc-windows-repeat-install/.ai-sdlc/memory/constitution.md
+  tech_stack_path: /private/tmp/ai-sdlc-windows-repeat-install/.ai-sdlc/profiles/tech-stack.yml
+  spec_path: /private/tmp/ai-sdlc-windows-repeat-install/specs/181-cross-platform-release-gate-matrix-baseline/spec.md
+  plan_path: /private/tmp/ai-sdlc-windows-repeat-install/specs/181-cross-platform-release-gate-matrix-baseline/plan.md
+  tasks_path: /private/tmp/ai-sdlc-windows-repeat-install/specs/181-cross-platform-release-gate-matrix-baseline/tasks.md
   active_files: []
-  context_summary: 'Goal: Complete local AgentOps reporting loop for ai-sdlc run |
-    State: Added non-blocking AgentOps runtime report flush in run command; local
-    Ops compose smoke delivered latest run_181_cross_platform_release_gate_matrix_baseline_dry_run_2026_05_27T02_08_32Z
-    to AgentOps. | Next: Commit codex/agentops-run-auto-flush, push, open PR, request
-    Codex review, and monitor checks.'
+  context_summary: 'Goal: 修复 Windows 离线包重复下载/重复解压时 ExpandArchiveFileExists 刷屏体验 |
+    State: 实现和验证完成：Windows 文档/打包输出使用 .ai-sdlc-install 缓存目录与 Expand-Archive -Force；回归测试覆盖
+    README、USER_GUIDE、packaging/offline README 和 build_offline_bundle.sh 不再使用刷屏解压写法。
+    | Next: 提交、推送并打开 PR；PR 检查中重点关注 Windows offline smoke。'
 current_branch: feature/181-cross-platform-release-gate-matrix-baseline-docs
 docs_baseline_ref: ''
 docs_baseline_at: ''
-timestamp: '2026-05-27T02:09:15+00:00'
+timestamp: '2026-05-28T02:24:50+00:00'
 checkpoint_path: .ai-sdlc/state/checkpoint.yml
 checkpoint_last_updated: '2026-04-30T03:04:43+00:00'
 checkpoint_fingerprint: 3a88fbdb372f95712ec6c6bcb34729d78927236171d0e7ea4f1e0002f7f06d10

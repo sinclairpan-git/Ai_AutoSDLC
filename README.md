@@ -88,9 +88,14 @@ cd ai-sdlc-offline-0.7.18-linux-amd64
 Windows PowerShell:
 
 ```powershell
-Invoke-WebRequest -Uri "https://github.com/sinclairpan-git/Ai_AutoSDLC/releases/download/v0.7.18/ai-sdlc-offline-0.7.18-windows-amd64.zip" -OutFile "ai-sdlc-offline-0.7.18-windows-amd64.zip"
-Expand-Archive -LiteralPath .\ai-sdlc-offline-0.7.18-windows-amd64.zip -DestinationPath .
-cd .\ai-sdlc-offline-0.7.18-windows-amd64
+$BundleName = "ai-sdlc-offline-0.7.18-windows-amd64"
+$PackageName = "$BundleName.zip"
+$PackageDir = (Get-Location).Path
+$ExtractRoot = Join-Path $PackageDir ".ai-sdlc-install"
+Invoke-WebRequest -Uri "https://github.com/sinclairpan-git/Ai_AutoSDLC/releases/download/v0.7.18/$PackageName" -OutFile (Join-Path $PackageDir $PackageName)
+New-Item -ItemType Directory -Path $ExtractRoot -Force | Out-Null
+Expand-Archive -LiteralPath (Join-Path $PackageDir $PackageName) -DestinationPath $ExtractRoot -Force
+Set-Location (Join-Path $ExtractRoot $BundleName)
 powershell -ExecutionPolicy Bypass -File .\install_offline.ps1 -UpgradeExisting
 ```
 
