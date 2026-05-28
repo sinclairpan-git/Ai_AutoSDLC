@@ -661,24 +661,28 @@ def load_agentops_ingestion_config(
     except YamlStoreError:
         raise
 
+    project_endpoint = getattr(project_config, "agentops_ingestion_endpoint", "")
+    project_reporting_mode = str(
+        getattr(project_config, "agentops_reporting_mode", "") or ""
+    ).strip()
+    project_reporting_mode_normalized = project_reporting_mode.lower()
     profile_endpoint = _profile_text(profile, "agentops_ingestion_endpoint")
     if profile:
         endpoint = profile_endpoint
     else:
-        endpoint = _first_non_empty(
-            source_env.get("AGENTOPS_INGESTION_ENDPOINT", ""),
-            getattr(project_config, "agentops_ingestion_endpoint", ""),
-        )
+        if project_reporting_mode_normalized == REPORTING_MODE_REQUIRED:
+            endpoint = project_endpoint
+        else:
+            endpoint = _first_non_empty(
+                source_env.get("AGENTOPS_INGESTION_ENDPOINT", ""),
+                project_endpoint,
+            )
     profile_reporting_mode = _profile_text(profile, "agentops_reporting_mode")
     env_reporting_mode = source_env.get("AGENTOPS_REPORTING_MODE", "")
     explicit_reporting_mode = _first_non_empty(
         profile_reporting_mode,
         env_reporting_mode,
     )
-    project_reporting_mode = str(
-        getattr(project_config, "agentops_reporting_mode", "") or ""
-    ).strip()
-    project_reporting_mode_normalized = project_reporting_mode.lower()
     if profile_reporting_mode:
         reporting_mode = _normal_reporting_mode(profile_reporting_mode)
     elif project_reporting_mode_normalized == REPORTING_MODE_REQUIRED:

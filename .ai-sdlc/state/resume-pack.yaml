@@ -10,16 +10,17 @@ working_set_snapshot:
   tasks_path: specs/187-agentops-self-iteration-monitoring/tasks.md
   active_files: []
   context_summary: 'Goal: Monitor PR #71 through merge after PR #70 was merged. |
-    State: Addressed fresh Codex P2 review on PR #71 head 80b22d1: project-required
-    AgentOps gateway ingestion mode now resists AGENTOPS_INGESTION_MODE=direct_local
-    env downgrade. Focused lint/tests, ai-sdlc verify constraints, and ai-sdlc run
-    passed locally. Preparing commit and push on feature/187-agentops-self-iteration-monitoring-docs.
-    | Next: Commit and push the fix, request fresh @codex review, update heartbeat
-    expected head SHA, then continue polling PR #71 until merge criteria are met.'
+    State: Addressed fresh Codex P2 review on PR #71 head f91a6e6: project-required
+    AgentOps endpoint is now authoritative over AGENTOPS_INGESTION_ENDPOINT env redirect
+    attempts when no enterprise profile is loaded. Focused lint/tests, ai-sdlc verify
+    constraints, and ai-sdlc run passed locally. Preparing commit and push on feature/187-agentops-self-iteration-monitoring-docs.
+    | Next: Commit and push the endpoint precedence fix, request fresh @codex review,
+    update heartbeat expected head SHA, then continue polling PR #71 until merge criteria
+    are met.'
 current_branch: feature/187-agentops-self-iteration-monitoring-docs
 docs_baseline_ref: ''
 docs_baseline_at: ''
-timestamp: '2026-05-28T07:17:51+00:00'
+timestamp: '2026-05-28T07:28:07+00:00'
 checkpoint_path: .ai-sdlc/state/checkpoint.yml
-checkpoint_last_updated: '2026-05-28T07:17:38+00:00'
-checkpoint_fingerprint: b65170ebb99d7eaafbe7ecd3479c4e67da5db70a69b4456866465b7709bfa581
+checkpoint_last_updated: '2026-05-28T07:27:56+00:00'
+checkpoint_fingerprint: 1a9f050baceacab9c0769d2d4ad88bd076e30c20e8acd6a12d72a9e3811cedb3

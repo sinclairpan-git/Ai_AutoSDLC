@@ -388,6 +388,26 @@ def test_project_required_agentops_mode_is_not_downgraded_by_env_override(
     assert any(check["reason_code"] == "missing_token" for check in readiness["checks"])
 
 
+def test_project_required_endpoint_is_not_downgraded_by_env_override(
+    tmp_path: Path,
+) -> None:
+    save_project_config(
+        tmp_path,
+        ProjectConfig(
+            agentops_ingestion_endpoint="https://gateway.example",
+            agentops_reporting_mode="required",
+        ),
+    )
+
+    config = load_agentops_ingestion_config(
+        tmp_path,
+        env={"AGENTOPS_INGESTION_ENDPOINT": "https://local-stale.example"},
+    )
+
+    assert config.endpoint == "https://gateway.example"
+    assert config.normalized_endpoint == "https://gateway.example/v1/runtime/events"
+
+
 def test_project_required_gateway_mode_is_not_downgraded_by_env_override(
     tmp_path: Path,
 ) -> None:
