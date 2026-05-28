@@ -52,7 +52,7 @@ class SelfUpdateError(RuntimeError):
 
 
 def _print_json(payload: dict[str, object]) -> None:
-    console.print(json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True))
+    typer.echo(json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True))
 
 
 def maybe_render_update_notice() -> None:

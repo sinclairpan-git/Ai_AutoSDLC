@@ -5,6 +5,7 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 from datetime import date
+from importlib import resources as importlib_resources
 from pathlib import Path
 
 from ai_sdlc.core.artifact_target_guard import validate_formal_artifact_target
@@ -485,6 +486,13 @@ class WorkitemScaffolder:
             searched.append(str(path))
             if path.is_file():
                 return path.read_text(encoding="utf-8")
+        try:
+            resource = importlib_resources.files("ai_sdlc.templates").joinpath(template_name)
+            searched.append(f"package resource ai_sdlc.templates/{template_name}")
+            if resource.is_file():
+                return resource.read_text(encoding="utf-8")
+        except (FileNotFoundError, ModuleNotFoundError, NotADirectoryError):
+            pass
         raise WorkitemScaffoldError(
             f"template not found: {template_name}; searched: {', '.join(searched)}"
         )

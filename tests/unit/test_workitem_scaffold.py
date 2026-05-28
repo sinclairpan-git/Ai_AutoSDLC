@@ -207,3 +207,33 @@ def test_scaffold_falls_back_to_packaged_templates_when_repo_templates_missing(
 
     assert result.work_item_id == "008-packaged-template-fallback"
     assert (result.spec_dir / "spec.md").is_file()
+
+
+def test_scaffold_falls_back_to_importlib_template_resources(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    root = tmp_path / "repo"
+    root.mkdir()
+    _setup_project(root, next_work_item_seq=8)
+
+    resource_templates = tmp_path / "resources"
+    _copy_scaffold_templates(resource_templates)
+    fake_module_path = tmp_path / "python" / "site-packages" / "ai_sdlc" / "core" / "workitem_scaffold.py"
+    fake_module_path.parent.mkdir(parents=True, exist_ok=True)
+    fake_module_path.touch()
+
+    monkeypatch.setattr(workitem_scaffold_module, "__file__", str(fake_module_path))
+    monkeypatch.setattr(
+        workitem_scaffold_module.importlib_resources,
+        "files",
+        lambda package: resource_templates,
+    )
+
+    result = WorkitemScaffolder(template_dir=tmp_path / "missing-templates").scaffold(
+        root=root,
+        title="Importlib Resource Template Fallback",
+    )
+
+    assert result.work_item_id == "008-importlib-resource-template-fallback"
+    assert (result.spec_dir / "spec.md").is_file()

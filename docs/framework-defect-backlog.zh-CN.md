@@ -296,7 +296,7 @@
 
 - 日期 (UTC): 2026-04-05
 - 来源: user_review, self_review
-- 状态: closed
+- 状态: reopened
 - 缺陷类型: installed_wheel_cli_coverage_gap
 - owner: codex
 - wi_id: 001-ai-sdlc-framework
@@ -305,11 +305,11 @@
 - trace_anchor: installed_wheel_smoke_regression
 - observed_scope: isolated_python311_installed_wheel_runtime
 - subject_ref: 无（当前无稳定 provenance inspection subject）
-- chain_status: closed_loop_local_runtime_verified（当前已由真实 installed-wheel 自动化回归、wheel 打包校验与隔离环境手工 smoke 形成关闭证据）
+- chain_status: production_recurrence_requires_release_regression（2026-05-28 生产反馈显示安装态模板解析仍可能复发，v0.8.0 发布前必须补充更稳的包资源 fallback 与回归）
 - highest_confidence_source: installed_wheel_smoke_regression
 - key_gaps: unobserved: 当前回归没有在隔离 `python3.11` 环境中安装新构建 wheel 并通过真实 CLI 入口执行 `workitem init`；unsupported: 现有测试只覆盖 source-tree `CliRunner`、`__file__` monkeypatch 的伪安装态 fallback 和 wheel 内容断言，没有覆盖真实 installed-wheel runtime；ambiguous: 缺陷收口标准允许“单测 + 打包内容检查”替代“真实安装态 smoke 成功”，导致生产路径仍可能复发；environment_drift: 本机默认 `python3` 仍为 `3.9.6`，而项目要求 `>=3.11`，若不显式锁定解释器，连复现实验本身都会偏离目标运行时。
 - evidence_refs: file:src/ai_sdlc/core/workitem_scaffold.py; file:pyproject.toml; file:tests/unit/test_workitem_scaffold.py; file:tests/unit/test_packaging_config.py; test:tests/integration/test_cli_workitem_init.py::test_workitem_init_succeeds_from_installed_wheel_runtime; command:uv run pytest tests/unit/test_workitem_scaffold.py tests/unit/test_packaging_config.py tests/integration/test_cli_workitem_init.py -q; command:uv run ruff check tests/integration/test_cli_workitem_init.py tests/unit/test_workitem_scaffold.py tests/unit/test_packaging_config.py src/ai_sdlc/core/workitem_scaffold.py
-- 现象: 前一轮已针对 `workitem init` 缺少 `templates/spec-template.md` 等模板的安装态问题补了代码、打包配置和回归测试，且 source-tree 测试与 wheel 内容检查均为绿色；但生产环境再次出现同类问题，说明现有验证仍未真正覆盖用户执行 `workitem init` 的安装态链路，形成“测试已绿、生产仍可复发”的假收口。
+- 现象: 前一轮已针对 `workitem init` 缺少 `templates/spec-template.md` 等模板的安装态问题补了代码、打包配置和回归测试，且 source-tree 测试与 wheel 内容检查均为绿色；但生产环境再次出现同类问题，说明现有验证仍未真正覆盖用户执行 `workitem init` 的安装态链路，形成“测试已绿、生产仍可复发”的假收口。2026-05-28 再次收到用户生产反馈：本地 CLI 在 Python 安装目录寻找 `templates/spec-template.md` 失败，操作者只能手工补 canonical `spec.md / plan.md / tasks.md` 骨架；这证明发布前需要把模板解析从纯 `__file__` 路径候选扩展到包资源 fallback。
 - 触发场景: 用户在真实安装环境而非源码树内执行 `workitem init`；或在与开发机不同的解释器 / 依赖 / 入口路径组合下运行已安装 wheel。
 - 影响范围: 所有通过已安装 `ai-sdlc` CLI 使用 `workitem init` 的用户、release/packaging 质量门禁、以及框架对“安装态已修复”的可信度。若不补足，后续任何依赖包内资源、entrypoint、解释器版本或安装布局的命令都可能重复出现“源码态通过、生产态失败”的回归。
 - 根因分类: B, G（G: installed-wheel runtime contract was not covered by a real isolated smoke path, so closure was based on proxy evidence instead of production-equivalent execution）

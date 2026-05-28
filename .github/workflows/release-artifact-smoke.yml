@@ -6,7 +6,7 @@ on:
       tag:
         description: Release tag to verify.
         required: true
-        default: v0.7.19
+        default: v0.8.0
   release:
     types:
       - published
