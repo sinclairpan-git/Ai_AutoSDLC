@@ -495,6 +495,39 @@ def test_required_enterprise_profile_missing_endpoint_does_not_fallback_to_env(
     assert "secret-token" not in json.dumps(readiness, ensure_ascii=False)
 
 
+def test_enterprise_profile_gateway_mode_is_not_downgraded_by_env_override(
+    tmp_path: Path,
+) -> None:
+    profile = tmp_path / "enterprise.yaml"
+    profile.write_text(
+        "\n".join(
+            [
+                "schema_version: ai_sdlc_enterprise_profile.v1",
+                "managed: true",
+                "agentops_reporting_mode: required",
+                "agentops_ingestion_endpoint: https://managed-ops.example",
+                "agentops_ingestion_mode: gateway",
+            ]
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    config = load_agentops_ingestion_config(
+        tmp_path,
+        env={
+            ENTERPRISE_PROFILE_ENV: str(profile),
+            "AGENTOPS_INGESTION_MODE": "direct_local",
+        },
+    )
+    readiness = agentops_ingestion_readiness(config)
+
+    assert config.mode == "gateway"
+    assert config.requires_token
+    assert readiness["ready"] is False
+    assert any(check["reason_code"] == "missing_token" for check in readiness["checks"])
+
+
 def test_explicit_missing_enterprise_profile_is_configuration_error(
     tmp_path: Path,
 ) -> None:

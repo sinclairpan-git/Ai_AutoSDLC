@@ -690,19 +690,27 @@ def load_agentops_ingestion_config(
         reporting_mode = _normal_reporting_mode(
             _first_non_empty(project_reporting_mode, REPORTING_MODE_OFF)
         )
-    mode = _first_non_empty(
-        source_env.get("AGENTOPS_INGESTION_MODE", ""),
-        _profile_text(profile, "agentops_ingestion_mode"),
-        getattr(project_config, "agentops_ingestion_mode", ""),
-        INGESTION_MODE_GATEWAY,
-    ).lower()
-    token_env_var = _first_non_empty(
-        source_env.get("AGENTOPS_INGESTION_TOKEN_ENV", ""),
-        _profile_text(profile, "agentops_token_env"),
-        _profile_text(profile, "agentops_ingestion_token_env"),
-        getattr(project_config, "agentops_ingestion_token_env", ""),
-        DEFAULT_TOKEN_ENV,
-    )
+    if profile:
+        mode = _first_non_empty(
+            _profile_text(profile, "agentops_ingestion_mode"),
+            INGESTION_MODE_GATEWAY,
+        ).lower()
+        token_env_var = _first_non_empty(
+            _profile_text(profile, "agentops_token_env"),
+            _profile_text(profile, "agentops_ingestion_token_env"),
+            DEFAULT_TOKEN_ENV,
+        )
+    else:
+        mode = _first_non_empty(
+            source_env.get("AGENTOPS_INGESTION_MODE", ""),
+            getattr(project_config, "agentops_ingestion_mode", ""),
+            INGESTION_MODE_GATEWAY,
+        ).lower()
+        token_env_var = _first_non_empty(
+            source_env.get("AGENTOPS_INGESTION_TOKEN_ENV", ""),
+            getattr(project_config, "agentops_ingestion_token_env", ""),
+            DEFAULT_TOKEN_ENV,
+        )
     timeout_seconds = _parse_timeout_seconds(
         _first_non_empty(
             source_env.get("AGENTOPS_INGESTION_TIMEOUT_SECONDS", ""),
