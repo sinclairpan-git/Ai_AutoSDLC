@@ -36,7 +36,7 @@ from ai_sdlc.core.agentops_bridge import (
     send_agentops_batch,
     task_binding_from_adoption_map,
 )
-from ai_sdlc.core.config import save_project_config
+from ai_sdlc.core.config import YamlStoreError, save_project_config
 from ai_sdlc.core.task_guard import BLOCK_CODE_PREPARE_TASKS, TaskGuardResult
 from ai_sdlc.models.project import ProjectConfig
 
@@ -401,6 +401,52 @@ def test_enterprise_profile_enables_required_reporting_without_token_value(
     assert readiness["ready"] is True
     assert readiness["required"] is True
     assert "secret-token" not in json.dumps(readiness, ensure_ascii=False)
+
+
+def test_enterprise_profile_required_mode_is_not_downgraded_by_env_override(
+    tmp_path: Path,
+) -> None:
+    profile = tmp_path / "enterprise.yaml"
+    profile.write_text(
+        "\n".join(
+            [
+                "schema_version: ai_sdlc_enterprise_profile.v1",
+                "managed: true",
+                "agentops_reporting_mode: required",
+                "agentops_ingestion_endpoint: https://ops.example",
+            ]
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    config = load_agentops_ingestion_config(
+        tmp_path,
+        env={
+            ENTERPRISE_PROFILE_ENV: str(profile),
+            "AGENTOPS_REPORTING_MODE": "off",
+        },
+    )
+
+    assert config.reporting_mode == "required"
+    assert config.required
+    assert config.enabled
+
+
+def test_explicit_missing_enterprise_profile_is_configuration_error(
+    tmp_path: Path,
+) -> None:
+    missing_profile = tmp_path / "missing-enterprise.yaml"
+
+    try:
+        load_agentops_ingestion_config(
+            tmp_path,
+            env={ENTERPRISE_PROFILE_ENV: str(missing_profile)},
+        )
+    except YamlStoreError as exc:
+        assert "does not exist" in str(exc)
+    else:
+        raise AssertionError("expected missing explicit enterprise profile to fail closed")
 
 
 def test_gateway_mode_missing_token_is_blocked_before_send(tmp_path: Path) -> None:

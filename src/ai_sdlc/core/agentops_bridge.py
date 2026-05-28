@@ -666,9 +666,10 @@ def load_agentops_ingestion_config(
         _profile_text(profile, "agentops_ingestion_endpoint"),
         getattr(project_config, "agentops_ingestion_endpoint", ""),
     )
+    profile_reporting_mode = _profile_text(profile, "agentops_reporting_mode")
     explicit_reporting_mode = _first_non_empty(
+        profile_reporting_mode,
         source_env.get("AGENTOPS_REPORTING_MODE", ""),
-        _profile_text(profile, "agentops_reporting_mode"),
     )
     project_reporting_mode = str(
         getattr(project_config, "agentops_reporting_mode", "") or ""
@@ -723,8 +724,11 @@ def load_enterprise_profile(
     env: Mapping[str, str] | None = None,
 ) -> tuple[Path | None, Mapping[str, Any]]:
     source_env = env if env is not None else os.environ
+    explicit_path = source_env.get(ENTERPRISE_PROFILE_ENV, "").strip()
     for path in enterprise_profile_paths(env=source_env):
         if not path.is_file():
+            if explicit_path:
+                raise YamlStoreError(f"Enterprise profile {path} does not exist")
             continue
         try:
             data = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
