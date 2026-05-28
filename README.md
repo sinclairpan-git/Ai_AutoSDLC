@@ -4,18 +4,18 @@ AI-native SDLC automation framework — a Python CLI tool and rule file set for 
 
 ## Release And Current Source
 
-`v0.7.19` is the current published framework release. This patch release
-separates personal local use from enterprise AgentOps reporting: personal users
-stay offline and quiet by default, while managed profiles and project-required
-AgentOps settings fail closed when required reporting is misconfigured or
-receipts contain diagnostics.
+`v0.8.0` is the current published framework release. This minor release
+establishes the AgentOps governance line and hardens Windows initialization
+guidance: personal users stay offline and quiet by default, while managed
+profiles, project-required reporting, and release install paths fail closed or
+guide users more clearly when required setup is missing.
 
-If you want the published release, install `v0.7.19`. If you are evaluating newer unreleased behavior beyond this tag, prefer the source-checkout path below.
+If you want the published release, install `v0.8.0`. If you are evaluating newer unreleased behavior beyond this tag, prefer the source-checkout path below.
 
-- Current release notes: `docs/releases/v0.7.19.md`
-- Windows offline bundle: `ai-sdlc-offline-0.7.19-windows-amd64.zip`
-- macOS offline bundle: `ai-sdlc-offline-0.7.19-macos-arm64.tar.gz`
-- Linux offline bundle: `ai-sdlc-offline-0.7.19-linux-amd64.tar.gz`
+- Current release notes: `docs/releases/v0.8.0.md`
+- Windows offline bundle: `ai-sdlc-offline-0.8.0-windows-amd64.zip`
+- macOS offline bundle: `ai-sdlc-offline-0.8.0-macos-arm64.tar.gz`
+- Linux offline bundle: `ai-sdlc-offline-0.8.0-linux-amd64.tar.gz`
 - Offline packaging details: `packaging/offline/README.md`
 - Offline Python runtime release checklist: `packaging/offline/RELEASE_CHECKLIST.md`
 - Windows CI smoke evidence: `.github/workflows/windows-offline-smoke.yml` uploads `windows-offline-smoke-evidence` with `install.log`, `help.txt`, `adapter-status.txt`, `run-dry-run.txt`, and `bundle-manifest.json`
@@ -84,29 +84,29 @@ package and run its `--upgrade-existing` mode once; after that, use
 macOS Apple Silicon:
 
 ```bash
-curl -L -o ai-sdlc-offline-0.7.19-macos-arm64.tar.gz "https://github.com/sinclairpan-git/Ai_AutoSDLC/releases/download/v0.7.19/ai-sdlc-offline-0.7.19-macos-arm64.tar.gz"
-tar xzf ai-sdlc-offline-0.7.19-macos-arm64.tar.gz
-cd ai-sdlc-offline-0.7.19-macos-arm64
+curl -L -o ai-sdlc-offline-0.8.0-macos-arm64.tar.gz "https://github.com/sinclairpan-git/Ai_AutoSDLC/releases/download/v0.8.0/ai-sdlc-offline-0.8.0-macos-arm64.tar.gz"
+tar xzf ai-sdlc-offline-0.8.0-macos-arm64.tar.gz
+cd ai-sdlc-offline-0.8.0-macos-arm64
 ./install_offline.sh --upgrade-existing
 ```
 
 Linux x64:
 
 ```bash
-curl -L -o ai-sdlc-offline-0.7.19-linux-amd64.tar.gz "https://github.com/sinclairpan-git/Ai_AutoSDLC/releases/download/v0.7.19/ai-sdlc-offline-0.7.19-linux-amd64.tar.gz"
-tar xzf ai-sdlc-offline-0.7.19-linux-amd64.tar.gz
-cd ai-sdlc-offline-0.7.19-linux-amd64
+curl -L -o ai-sdlc-offline-0.8.0-linux-amd64.tar.gz "https://github.com/sinclairpan-git/Ai_AutoSDLC/releases/download/v0.8.0/ai-sdlc-offline-0.8.0-linux-amd64.tar.gz"
+tar xzf ai-sdlc-offline-0.8.0-linux-amd64.tar.gz
+cd ai-sdlc-offline-0.8.0-linux-amd64
 ./install_offline.sh --upgrade-existing
 ```
 
 Windows PowerShell:
 
 ```powershell
-$BundleName = "ai-sdlc-offline-0.7.19-windows-amd64"
+$BundleName = "ai-sdlc-offline-0.8.0-windows-amd64"
 $PackageName = "$BundleName.zip"
 $PackageDir = (Get-Location).Path
 $ExtractRoot = Join-Path $PackageDir ".ai-sdlc-install"
-Invoke-WebRequest -Uri "https://github.com/sinclairpan-git/Ai_AutoSDLC/releases/download/v0.7.19/$PackageName" -OutFile (Join-Path $PackageDir $PackageName)
+Invoke-WebRequest -Uri "https://github.com/sinclairpan-git/Ai_AutoSDLC/releases/download/v0.8.0/$PackageName" -OutFile (Join-Path $PackageDir $PackageName)
 New-Item -ItemType Directory -Path $ExtractRoot -Force | Out-Null
 Expand-Archive -LiteralPath (Join-Path $PackageDir $PackageName) -DestinationPath $ExtractRoot -Force
 Set-Location (Join-Path $ExtractRoot $BundleName)
@@ -265,7 +265,7 @@ The file `.ai-sdlc/project/config/project-config.yaml` holds IDE detection metad
 
 ## Documentation
 
-- Current release notes: `docs/releases/v0.7.19.md`
+- Current release notes: `docs/releases/v0.8.0.md`
 - Chinese user guide: `USER_GUIDE.zh-CN.md` (start with the **目录**, then jump to Chapter 1 or Chapter 2)
 - Offline install bundle (build + one-command install): `packaging/offline/README.md`
 - Offline Python runtime release checklist: `packaging/offline/RELEASE_CHECKLIST.md`
