@@ -224,9 +224,9 @@ def run_command(
     except PipelineHaltError as exc:
         _record_halt_result(stage_results, exc)
         cp = load_checkpoint(root, warn=False)
+        console.print(f"\n[bold red]Pipeline halted: {exc}[/bold red]")
         if cp is not None:
             _flush_agentops_runtime_report(root, cp, stage_results, dry_run=dry_run)
-        console.print(f"\n[bold red]Pipeline halted: {exc}[/bold red]")
         raise typer.Exit(code=2) from None
 
 

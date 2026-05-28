@@ -1855,10 +1855,10 @@ specs:
   path: specs/187-agentops-self-iteration-monitoring
   depends_on: []
 truth_snapshot:
-  generated_at: '2026-05-28T02:56:38Z'
+  generated_at: '2026-05-28T06:39:48Z'
   generated_by: ai-sdlc program truth sync
   generator_version: program_truth_snapshot_v1
-  repo_revision: 6da664d
+  repo_revision: f94d36d
   authoring_hash: 764bde74c7f974b278cd7a8222d9a585f6ea53c2024ab0e73a1545732bcdd97e
   source_hashes:
     truth_check:specs/095-frontend-mainline-product-delivery-baseline: 40b5e9332011b0d8941245c0e8e7c3b192e897b2bc4aa4876a3d37a94f9b80f0
@@ -1898,7 +1898,7 @@ truth_snapshot:
     truth_check:specs/122-agent-adapter-verified-host-ingress-runtime-baseline: 668bc35f896163f99929da88d733d0de367d996b276b9775d659227fcafcbca7
     close_check:specs/121-agent-adapter-verified-host-ingress-truth-baseline: bb1a96307f540d67dcb9ccb06e03e5ef522ae9acfd1e9a2b5f5816aed8658072
     close_check:specs/122-agent-adapter-verified-host-ingress-runtime-baseline: bb1a96307f540d67dcb9ccb06e03e5ef522ae9acfd1e9a2b5f5816aed8658072
-  snapshot_hash: 8584402e537fc29e546ba9d6640d31aa3247d9fa0644f953485b0cb261b7e18f
+  snapshot_hash: 89a08bc40bb1a2df31507f5f62fa8ce7089fef98004058006fb69d0876dddba0
   computed_capabilities:
   - capability_id: frontend-mainline-delivery
     closure_state: closed

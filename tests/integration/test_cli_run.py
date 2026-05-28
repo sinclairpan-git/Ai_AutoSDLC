@@ -217,6 +217,37 @@ class TestRunCommand:
         )
         assert diagnostic_files
 
+    def test_run_halt_output_survives_required_agentops_block(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setenv("OPENAI_CODEX", "1")
+        monkeypatch.setenv("AGENTOPS_REPORTING_MODE", "required")
+        monkeypatch.setenv("AGENTOPS_INGESTION_ENDPOINT", "https://gateway.example")
+        monkeypatch.delenv("AGENTOPS_INGESTION_TOKEN", raising=False)
+        monkeypatch.chdir(tmp_path)
+        assert runner.invoke(app, ["init", ".", "--agent-target", "codex"]).exit_code == 0
+
+        def halt_gate(
+            self: SDLCRunner,
+            stage: str,
+            cp: Checkpoint,
+            *,
+            dry_run: bool = False,
+        ) -> GateResult:
+            return GateResult(
+                stage=stage,
+                verdict=GateVerdict.HALT,
+                checks=[GateCheck(name="halted", passed=False, message="blocked")],
+            )
+
+        monkeypatch.setattr(SDLCRunner, "_run_gate", halt_gate)
+
+        result = runner.invoke(app, ["run"])
+
+        assert result.exit_code == 2
+        assert "Pipeline halted:" in result.output
+        assert "AgentOps report pending: missing_token" in result.output
+
     def test_run_required_agentops_blocks_when_profile_is_malformed(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
