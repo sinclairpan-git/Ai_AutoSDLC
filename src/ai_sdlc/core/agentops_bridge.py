@@ -704,11 +704,17 @@ def load_agentops_ingestion_config(
             DEFAULT_TOKEN_ENV,
         )
     else:
-        mode = _first_non_empty(
-            source_env.get("AGENTOPS_INGESTION_MODE", ""),
-            getattr(project_config, "agentops_ingestion_mode", ""),
-            INGESTION_MODE_GATEWAY,
-        ).lower()
+        if project_reporting_mode_normalized == REPORTING_MODE_REQUIRED:
+            mode = _first_non_empty(
+                getattr(project_config, "agentops_ingestion_mode", ""),
+                INGESTION_MODE_GATEWAY,
+            ).lower()
+        else:
+            mode = _first_non_empty(
+                source_env.get("AGENTOPS_INGESTION_MODE", ""),
+                getattr(project_config, "agentops_ingestion_mode", ""),
+                INGESTION_MODE_GATEWAY,
+            ).lower()
         token_env_var = _first_non_empty(
             source_env.get("AGENTOPS_INGESTION_TOKEN_ENV", ""),
             getattr(project_config, "agentops_ingestion_token_env", ""),
