@@ -9,17 +9,16 @@ working_set_snapshot:
   plan_path: specs/187-agentops-self-iteration-monitoring/plan.md
   tasks_path: specs/187-agentops-self-iteration-monitoring/tasks.md
   active_files: []
-  context_summary: 'Goal: Support one AI-SDLC version for personal offline use and
-    enterprise required AgentOps monitoring | State: Implemented enterprise profile
-    loading, ai-sdlc enterprise configure, reporting modes off/opportunistic/required,
-    personal default off/no AgentOps output, enterprise required delivery blocking,
-    and separate enterprise setup docs. Final close PASS and verify constraints no
-    BLOCKERs. | Next: Prepare branch for commit/PR; if releasing, bump version and
-    add release notes for enterprise opt-in AgentOps setup'
+  context_summary: 'Goal: Fix AgentOps required-mode fail-closed review blocker |
+    State: Updated run AgentOps config-load handling so required reporting mode or
+    enterprise profile presence exits with code 2 when config loading fails; added
+    malformed enterprise profile regression coverage in src/ai_sdlc/cli/run_cmd.py
+    and tests/integration/test_cli_run.py. | Next: Commit, push to PR #71, request
+    Codex review, and restart heartbeat monitoring for PR #70/#71.'
 current_branch: feature/187-agentops-self-iteration-monitoring-docs
 docs_baseline_ref: ''
 docs_baseline_at: ''
-timestamp: '2026-05-28T02:59:11+00:00'
+timestamp: '2026-05-28T03:45:10+00:00'
 checkpoint_path: .ai-sdlc/state/checkpoint.yml
-checkpoint_last_updated: '2026-05-28T02:58:34+00:00'
-checkpoint_fingerprint: 3a023b70ee7054dad847557de1a71d9d301e2e4708df11064bb96d4a4f17735e
+checkpoint_last_updated: '2026-05-28T03:44:45+00:00'
+checkpoint_fingerprint: 8d627c8a84fc15139f4e1ec66543b4ef190b54df1b4739103f9df1246357d649

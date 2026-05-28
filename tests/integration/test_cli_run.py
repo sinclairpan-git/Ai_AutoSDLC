@@ -217,6 +217,24 @@ class TestRunCommand:
         )
         assert diagnostic_files
 
+    def test_run_required_agentops_blocks_when_profile_is_malformed(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        profile_path = tmp_path / "enterprise.yaml"
+        profile_path.write_text("agentops_reporting_mode: [required\n", encoding="utf-8")
+        monkeypatch.setenv("OPENAI_CODEX", "1")
+        monkeypatch.setenv("AGENTOPS_REPORTING_MODE", "required")
+        monkeypatch.setenv("AI_SDLC_ENTERPRISE_PROFILE", str(profile_path))
+        monkeypatch.chdir(tmp_path)
+        assert runner.invoke(app, ["init", ".", "--agent-target", "codex"]).exit_code == 0
+        self._force_passing_gates(monkeypatch)
+
+        result = runner.invoke(app, ["run"])
+
+        assert result.exit_code == 2
+        assert "Pipeline completed. Stage: close" in result.output
+        assert "AgentOps report pending: Invalid YAML in enterprise profile" in result.output
+
     def test_run_dry_run_persists_agentops_outbox_without_delivery(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:

@@ -22,6 +22,7 @@ from ai_sdlc.cli.beginner_guidance import (
 from ai_sdlc.cli.commands import _print_reconcile_guidance
 from ai_sdlc.context.state import load_checkpoint
 from ai_sdlc.core.agentops_bridge import (
+    ENTERPRISE_PROFILE_ENV,
     AgentOpsIdentity,
     AgentOpsRuntimeContext,
     build_agentops_runtime_batch,
@@ -30,6 +31,7 @@ from ai_sdlc.core.agentops_bridge import (
     build_model_span_fact,
     build_verification_fact,
     deliver_agentops_outbox,
+    enterprise_profile_paths,
     load_agentops_ingestion_config,
     persist_agentops_outbox_batch,
 )
@@ -270,6 +272,8 @@ def _flush_agentops_runtime_report(
         agentops_config = load_agentops_ingestion_config(Path(root))
     except Exception as exc:
         console.print(f"[yellow]AgentOps report pending: {exc}[/yellow]")
+        if _agentops_config_load_failure_is_required():
+            raise typer.Exit(code=2) from None
         return
     if not agentops_config.enabled:
         return
@@ -397,6 +401,18 @@ def _flush_agentops_runtime_report(
         )
         if agentops_config.required:
             raise typer.Exit(code=2)
+
+
+def _agentops_config_load_failure_is_required() -> bool:
+    reporting_mode = os.environ.get("AGENTOPS_REPORTING_MODE", "").strip().lower()
+    if reporting_mode == "required":
+        return True
+    if os.environ.get(ENTERPRISE_PROFILE_ENV, "").strip():
+        return True
+    try:
+        return any(path.is_file() for path in enterprise_profile_paths())
+    except OSError:
+        return True
 
 
 def _record_halt_result(
