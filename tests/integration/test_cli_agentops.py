@@ -166,3 +166,30 @@ def test_enterprise_configure_writes_profile_without_token_value(
     assert "agentops_reporting_mode: required" in content
     assert "agentops_ingestion_endpoint: https://ops.example" in content
     assert "secret" not in content.lower()
+
+
+def test_enterprise_configure_allows_off_profile_without_endpoint(
+    monkeypatch,
+    tmp_path: Path,
+) -> None:
+    profile = tmp_path / "enterprise-off.yaml"
+    monkeypatch.setenv("AI_SDLC_ENTERPRISE_PROFILE", str(profile))
+
+    result = runner.invoke(
+        app,
+        [
+            "enterprise",
+            "configure",
+            "--reporting-mode",
+            "off",
+            "--json",
+        ],
+    )
+
+    assert result.exit_code == 0
+    payload = json.loads(result.stdout)
+    assert payload["profile_path"] == str(profile)
+    assert payload["reporting_mode"] == "off"
+    content = profile.read_text(encoding="utf-8")
+    assert "agentops_reporting_mode: 'off'" in content or "agentops_reporting_mode: off" in content
+    assert "agentops_ingestion_endpoint: ''" in content

@@ -29,7 +29,7 @@ console = Console()
 @enterprise_app.command("configure")
 def enterprise_configure(
     endpoint: str = typer.Option(
-        ...,
+        "",
         "--endpoint",
         help="AgentOps Gateway base URL for enterprise reporting.",
     ),

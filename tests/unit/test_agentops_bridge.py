@@ -433,6 +433,35 @@ def test_enterprise_profile_required_mode_is_not_downgraded_by_env_override(
     assert config.enabled
 
 
+def test_enterprise_profile_endpoint_is_not_downgraded_by_env_override(
+    tmp_path: Path,
+) -> None:
+    profile = tmp_path / "enterprise.yaml"
+    profile.write_text(
+        "\n".join(
+            [
+                "schema_version: ai_sdlc_enterprise_profile.v1",
+                "managed: true",
+                "agentops_reporting_mode: required",
+                "agentops_ingestion_endpoint: https://managed-ops.example",
+            ]
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    config = load_agentops_ingestion_config(
+        tmp_path,
+        env={
+            ENTERPRISE_PROFILE_ENV: str(profile),
+            "AGENTOPS_INGESTION_ENDPOINT": "https://local-stale.example",
+        },
+    )
+
+    assert config.endpoint == "https://managed-ops.example"
+    assert config.normalized_endpoint == "https://managed-ops.example/v1/runtime/events"
+
+
 def test_explicit_missing_enterprise_profile_is_configuration_error(
     tmp_path: Path,
 ) -> None:
