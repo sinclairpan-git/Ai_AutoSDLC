@@ -124,7 +124,7 @@
 
 - 日期 (UTC): 2026-05-06
 - 来源: user_review
-- 状态: reopened
+- 状态: closed
 - 缺陷类型: recover_placeholder_stage_false_advance
 - owner: codex
 - wi_id: 001-agent-store-phase1-trusted-min-loop
@@ -296,7 +296,7 @@
 
 - 日期 (UTC): 2026-04-05
 - 来源: user_review, self_review
-- 状态: closed
+- 状态: reopened
 - 缺陷类型: installed_wheel_cli_coverage_gap
 - owner: codex
 - wi_id: 001-ai-sdlc-framework
