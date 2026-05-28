@@ -36,7 +36,9 @@ from ai_sdlc.core.agentops_bridge import (
     send_agentops_batch,
     task_binding_from_adoption_map,
 )
+from ai_sdlc.core.config import save_project_config
 from ai_sdlc.core.task_guard import BLOCK_CODE_PREPARE_TASKS, TaskGuardResult
+from ai_sdlc.models.project import ProjectConfig
 
 
 def _context() -> AgentOpsRuntimeContext:
@@ -339,6 +341,28 @@ def test_agentops_ingestion_defaults_to_disabled_for_personal_use(tmp_path: Path
     assert readiness["ready"] is True
     assert readiness["enabled"] is False
     assert readiness["checks"] == []
+
+
+def test_project_required_agentops_mode_is_not_downgraded_by_endpoint(
+    tmp_path: Path,
+) -> None:
+    save_project_config(
+        tmp_path,
+        ProjectConfig(
+            agentops_ingestion_endpoint="https://gateway.example",
+            agentops_reporting_mode="required",
+        ),
+    )
+
+    config = load_agentops_ingestion_config(tmp_path, env={})
+    readiness = agentops_ingestion_readiness(config)
+
+    assert config.reporting_mode == "required"
+    assert config.required
+    assert config.endpoint == "https://gateway.example"
+    assert readiness["required"] is True
+    assert readiness["ready"] is False
+    assert any(check["reason_code"] == "missing_token" for check in readiness["checks"])
 
 
 def test_enterprise_profile_enables_required_reporting_without_token_value(

@@ -670,16 +670,21 @@ def load_agentops_ingestion_config(
         source_env.get("AGENTOPS_REPORTING_MODE", ""),
         _profile_text(profile, "agentops_reporting_mode"),
     )
+    project_reporting_mode = str(
+        getattr(project_config, "agentops_reporting_mode", "") or ""
+    ).strip()
     if explicit_reporting_mode:
         reporting_mode = _normal_reporting_mode(explicit_reporting_mode)
+    elif (
+        project_reporting_mode
+        and project_reporting_mode.lower() != REPORTING_MODE_OFF
+    ):
+        reporting_mode = _normal_reporting_mode(project_reporting_mode)
     elif endpoint.strip():
         reporting_mode = REPORTING_MODE_OPPORTUNISTIC
     else:
         reporting_mode = _normal_reporting_mode(
-            _first_non_empty(
-                getattr(project_config, "agentops_reporting_mode", ""),
-                REPORTING_MODE_OFF,
-            )
+            _first_non_empty(project_reporting_mode, REPORTING_MODE_OFF)
         )
     mode = _first_non_empty(
         source_env.get("AGENTOPS_INGESTION_MODE", ""),
