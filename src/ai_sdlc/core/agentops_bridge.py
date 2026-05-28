@@ -209,7 +209,12 @@ class AgentOpsReceipt:
 
     @property
     def has_diagnostics(self) -> bool:
-        return self.stale_count > 0 or self.rejected_count > 0 or self.dlq_count > 0
+        return (
+            self.outbox_state not in {"accepted", "delivered"}
+            or self.stale_count > 0
+            or self.rejected_count > 0
+            or self.dlq_count > 0
+        )
 
 
 @dataclass(frozen=True, slots=True)
