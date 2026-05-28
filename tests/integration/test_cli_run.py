@@ -479,6 +479,59 @@ class TestRunCommand:
         assert "AgentOps report delivered: delivered accepted=1" in result.output
         assert captured_endpoints == ["https://gateway.example"]
 
+    def test_run_project_required_agentops_token_env_ignores_env_redirect(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setenv("OPENAI_CODEX", "1")
+        monkeypatch.setenv("AGENTOPS_INGESTION_TOKEN_ENV", "LOCAL_AGENTOPS_TOKEN")
+        monkeypatch.setenv("DEPT_AGENTOPS_TOKEN", "secret-token")
+        monkeypatch.delenv("LOCAL_AGENTOPS_TOKEN", raising=False)
+        monkeypatch.chdir(tmp_path)
+        assert runner.invoke(app, ["init", ".", "--agent-target", "codex"]).exit_code == 0
+        cfg = load_project_config(tmp_path)
+        cfg.agentops_reporting_mode = "required"
+        cfg.agentops_ingestion_endpoint = "https://gateway.example"
+        cfg.agentops_ingestion_token_env = "DEPT_AGENTOPS_TOKEN"
+        save_project_config(tmp_path, cfg)
+        self._force_passing_gates(monkeypatch)
+        captured_tokens: list[str] = []
+
+        def fake_send_agentops_batch(
+            _endpoint: str,
+            _batch: dict[str, object],
+            *,
+            bearer_token: str = "",
+            **_kwargs: object,
+        ) -> AgentOpsReceipt:
+            captured_tokens.append(bearer_token)
+            return AgentOpsReceipt(
+                schema_version="runtime_outbox_receipt.v1",
+                batch_id="batch_test",
+                outbox_id="outbox_test",
+                producer="Ai_AutoSDLC",
+                replay_reason="initial_delivery",
+                outbox_state="delivered",
+                accepted_count=1,
+                deduplicated_count=0,
+                stale_count=0,
+                rejected_count=0,
+                dlq_count=0,
+                item_results=(),
+                audit_id="audit_test",
+            )
+
+        monkeypatch.setattr(
+            "ai_sdlc.core.agentops_bridge.send_agentops_batch",
+            fake_send_agentops_batch,
+        )
+
+        result = runner.invoke(app, ["run"])
+
+        assert result.exit_code == 0
+        assert "AgentOps report delivered: delivered accepted=1" in result.output
+        assert captured_tokens == ["secret-token"]
+        assert "secret-token" not in result.output
+
     def test_run_dry_run_persists_agentops_outbox_without_delivery(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:

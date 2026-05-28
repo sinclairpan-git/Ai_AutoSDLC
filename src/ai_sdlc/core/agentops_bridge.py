@@ -719,11 +719,17 @@ def load_agentops_ingestion_config(
                 getattr(project_config, "agentops_ingestion_mode", ""),
                 INGESTION_MODE_GATEWAY,
             ).lower()
-        token_env_var = _first_non_empty(
-            source_env.get("AGENTOPS_INGESTION_TOKEN_ENV", ""),
-            getattr(project_config, "agentops_ingestion_token_env", ""),
-            DEFAULT_TOKEN_ENV,
-        )
+        if project_reporting_mode_normalized == REPORTING_MODE_REQUIRED:
+            token_env_var = _first_non_empty(
+                getattr(project_config, "agentops_ingestion_token_env", ""),
+                DEFAULT_TOKEN_ENV,
+            )
+        else:
+            token_env_var = _first_non_empty(
+                source_env.get("AGENTOPS_INGESTION_TOKEN_ENV", ""),
+                getattr(project_config, "agentops_ingestion_token_env", ""),
+                DEFAULT_TOKEN_ENV,
+            )
     timeout_seconds = _parse_timeout_seconds(
         _first_non_empty(
             source_env.get("AGENTOPS_INGESTION_TIMEOUT_SECONDS", ""),

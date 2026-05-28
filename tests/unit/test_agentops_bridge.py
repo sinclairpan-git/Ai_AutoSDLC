@@ -408,6 +408,33 @@ def test_project_required_endpoint_is_not_downgraded_by_env_override(
     assert config.normalized_endpoint == "https://gateway.example/v1/runtime/events"
 
 
+def test_project_required_token_env_is_not_downgraded_by_env_override(
+    tmp_path: Path,
+) -> None:
+    save_project_config(
+        tmp_path,
+        ProjectConfig(
+            agentops_ingestion_endpoint="https://gateway.example",
+            agentops_reporting_mode="required",
+            agentops_ingestion_token_env="DEPT_AGENTOPS_TOKEN",
+        ),
+    )
+
+    config = load_agentops_ingestion_config(
+        tmp_path,
+        env={
+            "AGENTOPS_INGESTION_TOKEN_ENV": "LOCAL_AGENTOPS_TOKEN",
+            "DEPT_AGENTOPS_TOKEN": "secret-token",
+        },
+    )
+    readiness = agentops_ingestion_readiness(config)
+
+    assert config.token_env_var == "DEPT_AGENTOPS_TOKEN"
+    assert config.token_present
+    assert readiness["ready"] is True
+    assert "secret-token" not in json.dumps(readiness, ensure_ascii=False)
+
+
 def test_project_required_gateway_mode_is_not_downgraded_by_env_override(
     tmp_path: Path,
 ) -> None:
