@@ -218,8 +218,8 @@ jobs:
 
           function Invoke-ManualScript([string] $ScriptPath, [string] $LogPath, [string] $Label) {
             Add-Summary "RUN: $Label"
-            $windowsPowerShell = Join-Path $env:SystemRoot "System32\WindowsPowerShell\v1.0\powershell.exe"
-            & $windowsPowerShell -NoProfile -ExecutionPolicy Bypass -File $ScriptPath *>&1 |
+            $manualShell = (Get-Command pwsh).Source
+            & $manualShell -NoProfile -File $ScriptPath *>&1 |
               Tee-Object -FilePath $LogPath
             $exitCode = $LASTEXITCODE
             if ($exitCode -ne 0) {
