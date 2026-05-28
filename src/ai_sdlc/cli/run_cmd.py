@@ -71,6 +71,8 @@ def _agentops_receipt_diagnostic_lines(
     lines: list[str] = []
     if receipt_path is not None:
         lines.append(f"AgentOps receipt summary: {receipt_path}")
+    fallback_item: dict[str, Any] | None = None
+    selected_item: dict[str, Any] | None = None
     for item in receipt.item_results:
         state = str(item.get("state") or item.get("status") or "").strip()
         code = str(item.get("code", "")).strip()
@@ -78,13 +80,19 @@ def _agentops_receipt_diagnostic_lines(
         guidance = str(
             item.get("retry_guidance") or item.get("guidance") or ""
         ).strip()
-        if (
-            state.lower() not in _AGENTOPS_DIAGNOSTIC_ITEM_STATES
-            and not code
-            and not message
-            and not guidance
-        ):
-            continue
+        if state.lower() in _AGENTOPS_DIAGNOSTIC_ITEM_STATES:
+            selected_item = item
+            break
+        if fallback_item is None and (code or message or guidance):
+            fallback_item = item
+    item = selected_item or fallback_item
+    if item is not None:
+        state = str(item.get("state") or item.get("status") or "").strip()
+        code = str(item.get("code", "")).strip()
+        message = str(item.get("message", "")).strip()
+        guidance = str(
+            item.get("retry_guidance") or item.get("guidance") or ""
+        ).strip()
         details = [
             value
             for value in (
@@ -98,7 +106,6 @@ def _agentops_receipt_diagnostic_lines(
             lines.append("AgentOps receipt diagnostic item: " + " ".join(details))
         if guidance:
             lines.append(f"AgentOps receipt retry guidance: {guidance}")
-        break
     return lines
 
 

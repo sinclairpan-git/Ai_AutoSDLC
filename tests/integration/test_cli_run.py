@@ -746,6 +746,12 @@ class TestRunCommand:
                 dlq_count=0,
                 item_results=(
                     {
+                        "status": "accepted",
+                        "code": "accepted_context",
+                        "message": "accepted item metadata",
+                        "retry_guidance": "Do not show this when a rejected item exists.",
+                    },
+                    {
                         "status": "rejected",
                         "code": "schema_mismatch",
                         "message": "event payload failed validation",
@@ -772,6 +778,8 @@ class TestRunCommand:
         assert "AgentOps receipt retry guidance: Fix the payload shape and retry." in (
             result.output
         )
+        assert "accepted_context" not in result.output
+        assert "accepted item metadata" not in result.output
 
     def test_run_required_agentops_blocks_when_receipt_state_is_rejected(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch

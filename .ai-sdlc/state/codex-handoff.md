@@ -1,9 +1,9 @@
 # Continuity Handoff
 
-- Updated: 2026-05-28T08:00:02+00:00
-- Reason: Post-review fix for active PR #71 thread
+- Updated: 2026-05-28T08:09:03+00:00
+- Reason: Post-review fix for active PR #71 diagnostic item selection thread
 - Goal: Monitor and merge PR #71 after Codex review and required checks pass
-- State: Addressed latest Codex review on head 727eb7f by exposing AgentOps receipt summary path plus first diagnostic item code/message/retry guidance before required-mode blocking.
+- State: Addressed latest Codex review on head edd494e: AgentOps receipt diagnostic output now prefers the first stale/rejected/DLQ item before falling back to non-diagnostic item details, so required-mode blocking guidance points at the item that caused the block.
 - Stage: close
 - Work Item: 187-agentops-self-iteration-monitoring
 - Branch: feature/187-agentops-self-iteration-monitoring-docs
@@ -17,7 +17,7 @@
 - M tests/integration/test_cli_run.py
 
 ## Key Decisions
-- Keep the fix scoped to CLI diagnostic output; reuse persisted receipt summary path and existing receipt item fields without changing delivery semantics.
+- Keep behavior scoped to diagnostic line selection; delivery semantics and required-mode blocking remain unchanged.
 
 ## Commands / Tests
 - uv run ruff check src/ai_sdlc/cli/run_cmd.py tests/integration/test_cli_run.py -> passed
