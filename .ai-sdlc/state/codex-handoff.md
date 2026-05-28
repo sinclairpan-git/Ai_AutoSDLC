@@ -1,9 +1,9 @@
 # Continuity Handoff
 
-- Updated: 2026-05-28T06:41:19+00:00
-- Reason: after PR #71 halt-output remediation and validation
+- Updated: 2026-05-28T06:51:18+00:00
+- Reason: after PR #71 project-required env-downgrade remediation and validation
 - Goal: Monitor PR #71 through merge after PR #70 was merged.
-- State: Implemented PR #71 Codex P2 fix for f94d36d feedback: pipeline halt output is now printed before required AgentOps flush can raise its blocking exit, so governance halt details remain visible when AgentOps is also missing token/config. Added regression coverage. Refreshed program truth after state edits.
+- State: Implemented PR #71 Codex P2 fix for 6bf8e43 feedback: project-level agentops_reporting_mode=required now takes precedence over AGENTOPS_REPORTING_MODE env downgrades when no enterprise profile is loaded. Added unit and CLI regression coverage.
 - Stage: close
 - Work Item: 187-agentops-self-iteration-monitoring
 - Branch: feature/187-agentops-self-iteration-monitoring-docs
@@ -13,18 +13,16 @@
 - M .ai-sdlc/state/codex-handoff.md
 - M .ai-sdlc/state/resume-pack.yaml
 - M .ai-sdlc/work-items/187-agentops-self-iteration-monitoring/codex-handoff.md
-- M program-manifest.yaml
-- M src/ai_sdlc/cli/run_cmd.py
+- M src/ai_sdlc/core/agentops_bridge.py
 - M tests/integration/test_cli_run.py
+- M tests/unit/test_agentops_bridge.py
 
 ## Key Decisions
-- Preserve the original pipeline halt message before AgentOps required-mode blocking exits; continue to block with exit code 2 when AgentOps required delivery/config is not ready.
-- removed comment reason: .ai-sdlc/state/resume-pack.yaml 71 became conflicting after PR #70 was stale wrapped YAML context from the previous heartbeat; it was replaced by refreshed handoff state after the halt-output remediation.
+- Enterprise profile reporting mode remains highest priority; absent a profile, project required mode cannot be weakened by process env, while env can still configure non-project-required cases.
 
 ## Commands / Tests
-- uv run ruff check src/ai_sdlc/cli/run_cmd.py tests/integration/test_cli_run.py: PASS
-- uv run pytest tests/integration/test_cli_run.py -q: PASS (32 passed)
-- ai-sdlc program truth sync --execute --yes: PASS (program-manifest.yaml refreshed)
+- uv run ruff check src/ai_sdlc/core/agentops_bridge.py tests/unit/test_agentops_bridge.py tests/integration/test_cli_run.py: PASS
+- uv run pytest tests/unit/test_agentops_bridge.py tests/integration/test_cli_run.py -q: PASS (61 passed)
 - ai-sdlc verify constraints: PASS (no BLOCKERs)
 - ai-sdlc run: PASS (Pipeline completed. Stage: close)
 
@@ -32,4 +30,4 @@
 - none
 
 ## Exact Next Steps
-- Commit and push the PR #71 fix, post @codex review with validation summary, update heartbeat expected SHA, then continue polling checks/review until PR #71 can merge.
+- Commit and push the PR #71 project-required-mode fix, post @codex review with validation summary, update heartbeat expected SHA, then continue polling checks/review until PR #71 can merge.

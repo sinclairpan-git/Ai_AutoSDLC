@@ -389,6 +389,26 @@ class TestRunCommand:
         assert "Pipeline completed. Stage: close" in result.output
         assert "AgentOps report pending: missing_token" in result.output
 
+    def test_run_project_required_agentops_ignores_env_downgrade(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setenv("OPENAI_CODEX", "1")
+        monkeypatch.setenv("AGENTOPS_REPORTING_MODE", "off")
+        monkeypatch.delenv("AGENTOPS_INGESTION_TOKEN", raising=False)
+        monkeypatch.chdir(tmp_path)
+        assert runner.invoke(app, ["init", ".", "--agent-target", "codex"]).exit_code == 0
+        cfg = load_project_config(tmp_path)
+        cfg.agentops_reporting_mode = "required"
+        cfg.agentops_ingestion_endpoint = "https://gateway.example"
+        save_project_config(tmp_path, cfg)
+        self._force_passing_gates(monkeypatch)
+
+        result = runner.invoke(app, ["run"])
+
+        assert result.exit_code == 2
+        assert "Pipeline completed. Stage: close" in result.output
+        assert "AgentOps report pending: missing_token" in result.output
+
     def test_run_dry_run_persists_agentops_outbox_without_delivery(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:

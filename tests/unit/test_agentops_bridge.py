@@ -365,6 +365,29 @@ def test_project_required_agentops_mode_is_not_downgraded_by_endpoint(
     assert any(check["reason_code"] == "missing_token" for check in readiness["checks"])
 
 
+def test_project_required_agentops_mode_is_not_downgraded_by_env_override(
+    tmp_path: Path,
+) -> None:
+    save_project_config(
+        tmp_path,
+        ProjectConfig(
+            agentops_ingestion_endpoint="https://gateway.example",
+            agentops_reporting_mode="required",
+        ),
+    )
+
+    config = load_agentops_ingestion_config(
+        tmp_path,
+        env={"AGENTOPS_REPORTING_MODE": "off"},
+    )
+    readiness = agentops_ingestion_readiness(config)
+
+    assert config.reporting_mode == "required"
+    assert config.required
+    assert readiness["ready"] is False
+    assert any(check["reason_code"] == "missing_token" for check in readiness["checks"])
+
+
 def test_enterprise_profile_enables_required_reporting_without_token_value(
     tmp_path: Path,
 ) -> None:
