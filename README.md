@@ -37,6 +37,19 @@ Online installer entrypoints:
 - macOS / Linux: `./packaging/install_online.sh --add-to-path`
 - Windows PowerShell: `.\packaging\install_online.ps1 -AddToPath`
 
+## Enterprise AgentOps Setup
+
+Personal and single-machine users do not need AgentOps setup. By default,
+AI-SDLC stays local and does not connect to AgentOps.
+
+Teams that require enterprise monitoring can run a lightweight internal setup
+script once per user. That script writes a user-level enterprise profile and
+sets the AgentOps token environment variable; after that, `ai-sdlc run` uses
+AgentOps in required mode. Keep this flow separate from the personal quick
+start.
+
+See: `docs/enterprise-agentops-setup.zh-CN.md`.
+
 ## Update Advisor
 
 Installed `ai-sdlc` runtimes include a non-blocking update advisor. During normal

@@ -9,19 +9,17 @@ working_set_snapshot:
   plan_path: specs/187-agentops-self-iteration-monitoring/plan.md
   tasks_path: specs/187-agentops-self-iteration-monitoring/tasks.md
   active_files: []
-  context_summary: 'Goal: Route Ai_AutoSDLC self-iteration runtime reporting to local
-    AgentOps as observational sink | State: Created and linked work item 187; enriched
-    ai-sdlc run AgentOps gate payload with task_title, changed_paths, allowed_paths,
-    forbidden_paths, guard_result, blocking_reason, and env-configurable producer
-    identity. Real run for 187 passed execute, failed close only on program_truth_audit_ready
-    stale, and delivered AgentOps batch with accepted=2 rejected=0 dlq=0. Ops Postgres,
-    trace, evidence summary, Gateway audit, and Console workbench read back the same
-    run. | Next: Decide branch disposition or open PR for feature/187-agentops-self-iteration-monitoring-docs,
-    then rerun verify constraints and ai-sdlc run.'
+  context_summary: 'Goal: Support one AI-SDLC version for personal offline use and
+    enterprise required AgentOps monitoring | State: Implemented enterprise profile
+    loading, ai-sdlc enterprise configure, reporting modes off/opportunistic/required,
+    personal default off/no AgentOps output, enterprise required delivery blocking,
+    and separate enterprise setup docs. Final close PASS and verify constraints no
+    BLOCKERs. | Next: Prepare branch for commit/PR; if releasing, bump version and
+    add release notes for enterprise opt-in AgentOps setup'
 current_branch: feature/187-agentops-self-iteration-monitoring-docs
 docs_baseline_ref: ''
 docs_baseline_at: ''
-timestamp: '2026-05-27T09:06:14+00:00'
+timestamp: '2026-05-28T02:59:11+00:00'
 checkpoint_path: .ai-sdlc/state/checkpoint.yml
-checkpoint_last_updated: '2026-05-27T08:56:51+00:00'
-checkpoint_fingerprint: 1efc47cd8c7b2775eb831ef0c2d24d2dbdcf1ce0225fcb0b6fb782b4b8cd4ae6
+checkpoint_last_updated: '2026-05-28T02:58:34+00:00'
+checkpoint_fingerprint: 3a023b70ee7054dad847557de1a71d9d301e2e4708df11064bb96d4a4f17735e

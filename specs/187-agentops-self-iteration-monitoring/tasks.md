@@ -37,6 +37,7 @@ related_doc:
   - src/ai_sdlc/cli/run_cmd.py
   - src/ai_sdlc/core/agentops_bridge.py
   - tests/integration/test_cli_run.py
+  - tests/unit/test_agentops_bridge.py
   - specs/181-cross-platform-release-gate-matrix-baseline/tasks.md
   - specs/187-agentops-self-iteration-monitoring/spec.md
   - specs/187-agentops-self-iteration-monitoring/plan.md
@@ -49,6 +50,7 @@ related_doc:
 - AC: See acceptance list below.
 - acceptance:
   - AgentOps gate payload includes task_title, changed_paths, allowed_paths, forbidden_paths, guard_result, blocking_reason, and rule_results.
+  - AgentOps runtime batch includes summary-only model trace_span plus verification/tool and artifact SDLC events for evidence readiness.
   - AgentOps event envelope can use AGENTOPS_PRODUCER_ID, AGENTOPS_RUNTIME_ID, AGENTOPS_CREDENTIAL_ID, and AGENTOPS_KEY_ID without exposing token values.
   - Existing dry-run delivery semantics remain unchanged.
 - verify:
@@ -76,3 +78,33 @@ related_doc:
   - uv run ai-sdlc agentops doctor --json
   - uv run ai-sdlc run
   - uv run ai-sdlc agentops status --json
+
+## Batch 4：enterprise opt-in and personal default hardening
+
+### Task 4.1 Add enterprise profile and required reporting mode
+
+- task_id: T41
+- status: done
+- depends:
+  - T31
+- scope:
+  - src/ai_sdlc/core/agentops_bridge.py
+  - src/ai_sdlc/cli/run_cmd.py
+  - src/ai_sdlc/cli/enterprise_cmd.py
+  - src/ai_sdlc/cli/main.py
+  - src/ai_sdlc/models/project.py
+  - tests/unit/test_agentops_bridge.py
+  - tests/integration/test_cli_run.py
+  - tests/integration/test_cli_agentops.py
+  - docs/enterprise-agentops-setup.zh-CN.md
+  - README.md
+  - USER_GUIDE.zh-CN.md
+- AC: See acceptance list below.
+- acceptance:
+  - Personal default mode does not create AgentOps outbox, does not connect to AgentOps, and does not print missing endpoint guidance.
+  - Enterprise profile can set AgentOps reporting to required without storing token values.
+  - Required reporting mode blocks when endpoint/token/receipt delivery is not compliant.
+  - Enterprise setup documentation is separate from personal user guidance.
+- verify:
+  - uv run ruff check src/ai_sdlc/cli/run_cmd.py src/ai_sdlc/core/agentops_bridge.py src/ai_sdlc/cli/enterprise_cmd.py src/ai_sdlc/cli/main.py tests/integration/test_cli_run.py tests/unit/test_agentops_bridge.py tests/integration/test_cli_agentops.py
+  - uv run pytest tests/integration/test_cli_run.py tests/unit/test_agentops_bridge.py tests/integration/test_cli_agentops.py tests/unit/test_command_names.py -q

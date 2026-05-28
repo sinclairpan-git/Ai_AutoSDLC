@@ -1855,10 +1855,10 @@ specs:
   path: specs/187-agentops-self-iteration-monitoring
   depends_on: []
 truth_snapshot:
-  generated_at: '2026-05-27T09:01:51Z'
+  generated_at: '2026-05-28T02:56:38Z'
   generated_by: ai-sdlc program truth sync
   generator_version: program_truth_snapshot_v1
-  repo_revision: bed01cc
+  repo_revision: 6da664d
   authoring_hash: 764bde74c7f974b278cd7a8222d9a585f6ea53c2024ab0e73a1545732bcdd97e
   source_hashes:
     truth_check:specs/095-frontend-mainline-product-delivery-baseline: 40b5e9332011b0d8941245c0e8e7c3b192e897b2bc4aa4876a3d37a94f9b80f0
@@ -1893,25 +1893,23 @@ truth_snapshot:
     close_check:specs/126-frontend-mainline-browser-gate-recheck-remediation-runtime-closure-baseline: 35266eb3da9e13ff82f745fd7f785ab0ac4fec7d2cd2e026da973fdf5033e0bf
     close_check:specs/143-frontend-mainline-browser-gate-real-probe-runtime-baseline: 35266eb3da9e13ff82f745fd7f785ab0ac4fec7d2cd2e026da973fdf5033e0bf
     close_check:specs/144-frontend-mainline-host-remediation-and-workspace-integration-closure-baseline: 35266eb3da9e13ff82f745fd7f785ab0ac4fec7d2cd2e026da973fdf5033e0bf
-    verify:uv run ai-sdlc verify constraints: 3bd3df8d6dd33d0e9d569ad8aedc5649000f18833d8ceb9e00932d005a17a5af
+    verify:uv run ai-sdlc verify constraints: 67c162e8ce6369708f41fd003c4d3b2703509ebeb85aefbbc2a2d67663c45333
     truth_check:specs/121-agent-adapter-verified-host-ingress-truth-baseline: 4dc83697eff99a6a0eb5d52b5352c8fb073736a704a1533370a5521d699cdfbc
     truth_check:specs/122-agent-adapter-verified-host-ingress-runtime-baseline: 668bc35f896163f99929da88d733d0de367d996b276b9775d659227fcafcbca7
     close_check:specs/121-agent-adapter-verified-host-ingress-truth-baseline: bb1a96307f540d67dcb9ccb06e03e5ef522ae9acfd1e9a2b5f5816aed8658072
     close_check:specs/122-agent-adapter-verified-host-ingress-runtime-baseline: bb1a96307f540d67dcb9ccb06e03e5ef522ae9acfd1e9a2b5f5816aed8658072
-  snapshot_hash: db6ce53a909893cd6b53115a9f53e3a0da0c72ab1d579daface50979962105a8
+  snapshot_hash: 8584402e537fc29e546ba9d6640d31aa3247d9fa0644f953485b0cb261b7e18f
   computed_capabilities:
   - capability_id: frontend-mainline-delivery
     closure_state: closed
-    audit_state: blocked
-    blocking_refs:
-    - verify:uv run ai-sdlc verify constraints
+    audit_state: ready
+    blocking_refs: []
     stale_reason: ''
   - capability_id: agent-adapter-verified-host-ingress
     closure_state: closed
     audit_state: blocked
     blocking_refs:
     - adapter_canonical_consumption:unverified
-    - verify:uv run ai-sdlc verify constraints
     stale_reason: ''
   source_inventory:
     state: incomplete
@@ -1919,8 +1917,8 @@ truth_snapshot:
     mapped_sources: 963
     unmapped_sources: 14
     missing_sources: 2
-    phase_signal_count: 3249
-    deferred_signal_count: 5954
+    phase_signal_count: 3250
+    deferred_signal_count: 5956
     non_goal_signal_count: 329
     layer_totals:
       blueprint: 1
@@ -10384,8 +10382,8 @@ truth_snapshot:
       mapped: true
       exists: true
       mapping_ref: 187-agentops-self-iteration-monitoring
-      phase_signal_count: 1
-      deferred_signal_count: 1
+      phase_signal_count: 2
+      deferred_signal_count: 2
       non_goal_signal_count: 0
     - path: specs/187-agentops-self-iteration-monitoring/tasks.md
       source_type: tasks_doc
@@ -10403,7 +10401,7 @@ truth_snapshot:
       exists: true
       mapping_ref: 187-agentops-self-iteration-monitoring
       phase_signal_count: 2
-      deferred_signal_count: 6
+      deferred_signal_count: 7
       non_goal_signal_count: 0
     - path: specs/187-agentops-self-iteration-monitoring/development-summary.md
       source_type: development_summary

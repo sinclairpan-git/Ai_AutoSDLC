@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import os
 from pathlib import Path
 from typing import Any
@@ -24,10 +25,15 @@ from ai_sdlc.core.agentops_bridge import (
     AgentOpsIdentity,
     AgentOpsRuntimeContext,
     build_agentops_runtime_batch,
+    build_artifact_fact,
     build_gate_fact,
+    build_model_span_fact,
+    build_verification_fact,
     deliver_agentops_outbox,
+    load_agentops_ingestion_config,
     persist_agentops_outbox_batch,
 )
+from ai_sdlc.core.executable_task import parse_executable_tasks
 from ai_sdlc.core.frontend_contract_runtime_attachment import (
     build_frontend_contract_runtime_attachment,
     is_frontend_contract_runtime_attachment_work_item,
@@ -260,6 +266,13 @@ def _flush_agentops_runtime_report(
 ) -> None:
     if not stage_results:
         return
+    try:
+        agentops_config = load_agentops_ingestion_config(Path(root))
+    except Exception as exc:
+        console.print(f"[yellow]AgentOps report pending: {exc}[/yellow]")
+        return
+    if not agentops_config.enabled:
+        return
     timestamp = now_iso().replace("+00:00", "Z")
     feature_id = checkpoint.feature.id if checkpoint.feature else "unknown"
     mode_label = "dry_run" if dry_run else "run"
@@ -278,7 +291,19 @@ def _flush_agentops_runtime_report(
     identity = _agentops_identity_from_env()
     workitem = checkpoint.linked_wi_id or feature_id
     changed_paths = _agentops_changed_paths(root)
+    allowed_paths = _agentops_workitem_scope(root, workitem)
     facts = []
+    summary_ref = f"vault://sdlc/{run_id}/runtime_report_summary"
+    run_passed = all(_agentops_status(result) == "passed" for _, result in stage_results)
+    facts.append(
+        build_model_span_fact(
+            span_id="model_ai_sdlc_runtime_summary",
+            operation_name="ai_sdlc.model.summary_only_coordination",
+            status_code="ok" if run_passed else "error",
+            input_ref=f"vault://sdlc/{run_id}/run_context_summary",
+            output_ref=summary_ref,
+        )
+    )
     for stage, result in stage_results:
         rule_results = _agentops_rule_results(result)
         facts.append(
@@ -291,7 +316,7 @@ def _flush_agentops_runtime_report(
                 stage_name=stage,
                 task_title=f"Pipeline {stage} gate",
                 changed_paths=changed_paths,
-                allowed_paths=(),
+                allowed_paths=allowed_paths,
                 forbidden_paths=(),
                 guard_result="diagnostic",
                 blocking_reason=_agentops_blocking_reason(rule_results),
@@ -299,6 +324,30 @@ def _flush_agentops_runtime_report(
                 rule_results=rule_results,
             )
         )
+    facts.extend(
+        [
+            build_verification_fact(
+                verification_id="ai_sdlc_run",
+                status="passed" if run_passed else "failed",
+                workitem=workitem,
+                executable_task_id="pipeline_run",
+                task_guard_state="diagnostic",
+                command_or_job="ai-sdlc run",
+                freshness="fresh",
+            ),
+            build_artifact_fact(
+                artifact_ref=summary_ref,
+                payload_hash=_agentops_summary_hash(
+                    run_id=run_id,
+                    changed_paths=changed_paths,
+                    allowed_paths=allowed_paths,
+                ),
+                workitem=workitem,
+                executable_task_id="pipeline_run",
+                task_guard_state="diagnostic",
+            ),
+        ]
+    )
     batch = build_agentops_runtime_batch(
         outbox_id=f"outbox_{run_id}",
         batch_id=f"batch_{run_id}",
@@ -311,10 +360,13 @@ def _flush_agentops_runtime_report(
         result = deliver_agentops_outbox(
             root,
             outbox_id=str(batch["outbox_id"]),
+            config=agentops_config,
             dry_run=dry_run,
         )
     except Exception as exc:
         console.print(f"[yellow]AgentOps report pending: {exc}[/yellow]")
+        if agentops_config.required:
+            raise typer.Exit(code=2) from None
         return
     if result.receipt is not None:
         if result.receipt.has_diagnostics:
@@ -327,6 +379,8 @@ def _flush_agentops_runtime_report(
                 f"rejected={result.receipt.rejected_count} "
                 f"dlq={result.receipt.dlq_count}[/yellow]"
             )
+            if agentops_config.required:
+                raise typer.Exit(code=2)
         else:
             console.print(
                 "[green]AgentOps report delivered: "
@@ -341,6 +395,8 @@ def _flush_agentops_runtime_report(
             "[yellow]AgentOps report pending: "
             f"{result.diagnostic.reason_code}[/yellow]"
         )
+        if agentops_config.required:
+            raise typer.Exit(code=2)
 
 
 def _record_halt_result(
@@ -377,6 +433,30 @@ def _agentops_changed_paths(root: object) -> list[str]:
         return git_changed_paths(Path(root))
     except Exception:
         return []
+
+
+def _agentops_workitem_scope(root: object, workitem: str) -> list[str]:
+    tasks_path = Path(root) / "specs" / workitem / "tasks.md"
+    if not tasks_path.is_file():
+        return []
+    try:
+        parsed = parse_executable_tasks(tasks_path)
+    except Exception:
+        return []
+    paths: list[str] = []
+    for task in parsed.tasks:
+        paths.extend(task.scope)
+    return _dedupe_text_items(paths)
+
+
+def _agentops_summary_hash(
+    *,
+    run_id: str,
+    changed_paths: list[str],
+    allowed_paths: list[str],
+) -> str:
+    raw = "\n".join([run_id, *changed_paths, *allowed_paths]).encode("utf-8")
+    return f"sha256:{hashlib.sha256(raw).hexdigest()}"
 
 
 def _agentops_rule_results(result: Any) -> list[dict[str, object]]:

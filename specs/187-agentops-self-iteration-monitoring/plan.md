@@ -64,6 +64,13 @@ specs/187-agentops-self-iteration-monitoring/
 **验证方式**：`ai-sdlc agentops doctor/status` + AgentOps local API readback。
 **回退方式**：保留 outbox/diagnostic，按 diagnostic retry guidance 修复。
 
+### Phase 3：企业 opt-in 与个人默认静默
+
+**目标**：同一发行包同时支持个人单机和企业 AgentOps required 接入；个人默认不连接 Ops，企业通过轻量脚本写入 profile 后强制上报。
+**产物**：enterprise profile 读取、`ai-sdlc enterprise configure`、required 模式阻断、独立企业接入文档。
+**验证方式**：focused pytest + ruff，覆盖个人默认无 outbox、profile required、token 缺失阻断。
+**回退方式**：恢复 AgentOps reporter 到显式 env-only 旁路行为。
+
 ## 关键路径验证策略
 
 | 关键路径 | 主验证方式 | 次验证方式 |
@@ -78,4 +85,4 @@ specs/187-agentops-self-iteration-monitoring/
 | 问题 | 状态 | 阻塞阶段 |
 | --- | --- | --- |
 | close gate 当前因 final tests/truth snapshot stale 失败 | open | release/close，不阻塞旁路观测 |
-| evidence summary 缺 model/tool/artifact span | open | quality analysis |
+| evidence summary 缺 model/tool/artifact span | resolved | `ai-sdlc run` batch now emits summary-only `trace_span.v1` model span plus SDLC verification/tool and artifact events. |

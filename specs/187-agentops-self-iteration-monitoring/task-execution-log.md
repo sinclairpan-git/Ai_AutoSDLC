@@ -115,6 +115,49 @@
 - close gate 当前主要失败项是 truth snapshot stale，建议执行 `python -m ai_sdlc program truth sync --execute --yes` 后复跑 close。
 - Evidence readiness 仍缺 model/tool/artifact span，说明当前 AgentOps 只能分析 gate-level 自迭代质量，尚不能完整分析工具调用与产物生成链路。
 - `allowed_paths`、`forbidden_paths` 当前在 pipeline gate event 中为空数组，字段已存在；后续应把 executable task scope 映射进 gate event，提升 task guard 精度分析。
+- 关联 branch/worktree disposition 计划：archived
+- 当前批次 branch disposition 状态：archived
+- 当前批次 worktree disposition 状态：retained（当前工作区保留用于本地 AgentOps 观测复跑）
+
+### Batch 2026-05-27-004 | Enterprise opt-in and personal default hardening
+
+#### 4.1 批次范围
+
+- 覆盖任务：`T41`
+- 改动范围：
+  - `src/ai_sdlc/core/agentops_bridge.py`
+  - `src/ai_sdlc/cli/run_cmd.py`
+  - `src/ai_sdlc/cli/enterprise_cmd.py`
+  - `src/ai_sdlc/cli/main.py`
+  - `src/ai_sdlc/models/project.py`
+  - `tests/unit/test_agentops_bridge.py`
+  - `tests/integration/test_cli_run.py`
+  - `tests/integration/test_cli_agentops.py`
+  - `docs/enterprise-agentops-setup.zh-CN.md`
+  - `README.md`
+  - `USER_GUIDE.zh-CN.md`
+- 改动内容：
+  - 新增企业 profile 读取：`AI_SDLC_ENTERPRISE_PROFILE`、Windows `%APPDATA%\AI-SDLC\enterprise.yaml`、macOS/Linux `~/.config/ai-sdlc/enterprise.yaml`。
+  - 新增 `agentops_reporting_mode`：`off`、`opportunistic`、`required`。
+  - 个人默认 `off`，不生成 AgentOps outbox、不联网、不打印 `missing_endpoint`。
+  - 新增 `ai-sdlc enterprise configure`，只写非敏感 profile，不写 token 值。
+  - `required` 模式下 AgentOps 配置或 receipt 不合规会阻断。
+  - 新增独立企业 AgentOps 接入文档，并在 README / 用户指引中与个人路径分离。
+
+#### 4.2 验证与结果
+
+- `uv run ruff check src/ai_sdlc/cli/run_cmd.py src/ai_sdlc/core/agentops_bridge.py src/ai_sdlc/cli/enterprise_cmd.py src/ai_sdlc/cli/main.py src/ai_sdlc/models/project.py tests/integration/test_cli_run.py tests/unit/test_agentops_bridge.py tests/integration/test_cli_agentops.py`：通过。
+- `uv run pytest tests/integration/test_cli_run.py tests/unit/test_agentops_bridge.py tests/integration/test_cli_agentops.py tests/unit/test_command_names.py -q`：52 passed。
+- `uv run ai-sdlc verify constraints`：通过，no BLOCKERs。
+- `uv run ai-sdlc program truth sync --execute --yes`：通过，写入 `program-manifest.yaml`，snapshot hash `b7efc57d396ea855fb5e009076da37da939a7096deb077ff45a931da717c23e9`。
+- `uv run ai-sdlc run`（未设置 AgentOps env/profile）：`close` PASS，无 AgentOps report 输出。
+- `uv run ai-sdlc run`（仅进程内设置本地 AgentOps Gateway env 与 `AGENTOPS_REPORTING_MODE=required`）：`close` PASS，AgentOps report delivered，accepted=4，deduplicated=0。
+- 最新企业模式 outbox/receipt 摘要：`event_types=sdlc_trace_event,trace_span`，accepted=4，rejected=0，dlq=0。
+
+#### 4.3 质量信号
+
+- 该批次目标是同一版本兼容企业与个人：企业用户通过轻量脚本显式接入 Ops；个人用户不配置 profile 时继续纯单机使用。
+- token 仍只通过环境变量读取，不写入 profile、outbox、receipt 或项目文档。
 
 #### 2.8 归档后动作
 
@@ -140,3 +183,51 @@ Phase 2 complete: 1/1 tasks completed, 0 halted.
 ### Batch 3
 
 Phase 3 complete: 1/1 tasks completed, 0 halted.
+
+- 关联 branch/worktree disposition 计划：archived
+- 当前批次 branch disposition 状态：archived
+- 当前批次 worktree disposition 状态：retained（当前工作区保留用于本地 AgentOps 观测复跑）
+
+### Batch 2026-05-27-003 | AgentOps evidence readiness closure
+
+#### 3.1 批次范围
+
+- 覆盖任务：`T21`、`T31`
+- 改动范围：
+  - `src/ai_sdlc/core/agentops_bridge.py`
+  - `src/ai_sdlc/cli/run_cmd.py`
+  - `tests/unit/test_agentops_bridge.py`
+  - `tests/integration/test_cli_run.py`
+  - `specs/187-agentops-self-iteration-monitoring/plan.md`
+  - `specs/187-agentops-self-iteration-monitoring/tasks.md`
+  - `specs/187-agentops-self-iteration-monitoring/task-execution-log.md`
+- 改动内容：
+  - 新增 summary-only `trace_span.v1` model span builder，`ai-sdlc run` 的 AgentOps batch 现在同时包含 model span、SDLC verification/tool span 与 SDLC artifact span。
+  - `ai-sdlc run` 的 pipeline gate event 使用当前 work item executable task scope 映射 `allowed_paths`。
+  - 保持 token 仅进入 Authorization header；model span 只保存摘要 ref，不记录 prompt、token 明细或 cost。
+
+#### 3.2 验证与结果
+
+- `uv run ruff check src/ai_sdlc/cli/run_cmd.py src/ai_sdlc/core/agentops_bridge.py tests/integration/test_cli_run.py tests/unit/test_agentops_bridge.py`：通过。
+- `uv run pytest tests/integration/test_cli_run.py tests/unit/test_agentops_bridge.py tests/integration/test_cli_agentops.py tests/unit/test_command_names.py -q`：48 passed。
+- `uv run ai-sdlc verify constraints`：通过，no BLOCKERs。
+- `uv run ai-sdlc program truth sync --execute --yes`：通过，写入 `program-manifest.yaml`，snapshot hash `4cc32ef38efd412747a75fe193bb46809a020d1275669805dc3a5075a1b37965`。
+- `uv run ai-sdlc run`（未设置 AgentOps env）：`close` PASS，AgentOps delivery blocked before send，reason `missing_endpoint`。
+- `uv run ai-sdlc run`（仅进程内设置本地 AgentOps Gateway env）：`close` PASS，AgentOps report delivered，accepted=4，deduplicated=0，rejected=0，dlq=0。
+- 最新 outbox/receipt 摘要：`event_types=sdlc_trace_event,trace_span`，`sdlc_event_types=artifact,gate,verification`，`span_kinds=artifact,guardrail,model,tool`，`allowed_paths_count=14`。
+
+#### 3.3 质量信号
+
+- branch lifecycle disposition 已在最新批次明确为 archived。
+- model/tool/artifact readiness 已在 runtime batch payload 侧补齐：model 使用标准 `trace_span.v1`，tool 使用 SDLC `verification`，artifact 使用 SDLC `artifact`。
+- `allowed_paths` 已由 `specs/187-agentops-self-iteration-monitoring/tasks.md` 的 executable task scope 映射，后续 live run 需用 AgentOps readback 确认 ingestion 后 summary 不再缺对应维度。
+- truth snapshot stale 已通过 truth sync 与两次 `close` PASS 收口。
+- 直接读取受保护的 AgentOps trace/evidence API 需要上游 operator 身份；本批未注入 `X-AgentOps-*` 读权限头，readback 以 Gateway console snapshot、Ai_AutoSDLC outbox 和 receipt summary 为准。
+
+#### 3.4 任务/计划同步状态（Mandatory）
+
+- `tasks.md` 同步状态：已补充 model/tool/artifact readiness acceptance 与 unit test scope。
+- `related_plan` 同步状态：已将 evidence readiness 缺口从 open 更新为 resolved。
+- 关联 branch/worktree disposition 计划：archived
+- 当前批次 branch disposition 状态：archived
+- 当前批次 worktree disposition 状态：retained（当前工作区保留用于本地 AgentOps 观测复跑）

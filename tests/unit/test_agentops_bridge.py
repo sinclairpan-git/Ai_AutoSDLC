@@ -13,6 +13,7 @@ from ai_sdlc.core.adoption import (
 from ai_sdlc.core.agentops_bridge import (
     CODE_CHANGE_TASK_REQUIRED,
     DEFAULT_TOKEN_ENV,
+    ENTERPRISE_PROFILE_ENV,
     AgentOpsIdentity,
     AgentOpsIngestionConfig,
     AgentOpsRuntimeContext,
@@ -20,9 +21,11 @@ from ai_sdlc.core.agentops_bridge import (
     agentops_ingestion_readiness,
     agentops_outbox_status,
     build_agentops_runtime_batch,
+    build_artifact_fact,
     build_code_change_guard_fact,
     build_executable_task_prepared_fact,
     build_l5_eligibility_input_fact,
+    build_model_span_fact,
     deliver_agentops_outbox,
     load_agentops_ingestion_config,
     local_readiness_from_batch,
@@ -122,6 +125,45 @@ def test_code_change_guard_blocks_when_executable_task_is_missing() -> None:
     assert fact.payload["executable_task_id"] == ""
     assert fact.payload["error_code"] == CODE_CHANGE_TASK_REQUIRED
     assert "prepare an executable task" in fact.payload["candidate_fixes"]
+
+
+def test_artifact_fact_uses_registered_emitted_status() -> None:
+    fact = build_artifact_fact(
+        artifact_ref="vault://sdlc/run/artifact",
+        payload_hash="sha256:abc",
+        workitem="187-agentops-self-iteration-monitoring",
+        executable_task_id="pipeline_run",
+        task_guard_state="diagnostic",
+    )
+
+    assert fact.status == "emitted"
+    assert fact.sdlc_event_type == "artifact"
+
+
+def test_model_span_fact_uses_trace_span_contract() -> None:
+    batch = build_agentops_runtime_batch(
+        outbox_id="outbox_model_span",
+        batch_id="batch_model_span",
+        context=_context(),
+        identity=_identity(),
+        facts=(
+            build_model_span_fact(
+                span_id="model_ai_sdlc_runtime_summary",
+                operation_name="ai_sdlc.model.summary_only_coordination",
+                status_code="ok",
+                input_ref="vault://sdlc/run/input",
+                output_ref="vault://sdlc/run/output",
+            ),
+        ),
+    )
+
+    event = batch["events"][0]
+    payload = event["payload"]
+    assert event["event_type"] == "trace_span"
+    assert event["event_type_version"] == "trace_span.v1"
+    assert payload["span_kind"] == "model"
+    assert payload["token_usage"] == {}
+    assert payload["model_ref"] == "external.ai_agent.summary_only"
 
 
 def test_verified_loaded_alone_does_not_allow_l5_or_code_change() -> None:
@@ -282,7 +324,58 @@ def test_load_agentops_ingestion_config_uses_env_token_without_exposing_value(
     assert config.token_env_var == DEFAULT_TOKEN_ENV
     assert config.token_present
     assert readiness["ready"] is True
+    assert readiness["enabled"] is True
     assert readiness["config"]["token_present"] is True
+    assert "secret-token" not in json.dumps(readiness, ensure_ascii=False)
+
+
+def test_agentops_ingestion_defaults_to_disabled_for_personal_use(tmp_path: Path) -> None:
+    config = load_agentops_ingestion_config(tmp_path, env={})
+
+    readiness = agentops_ingestion_readiness(config)
+
+    assert config.reporting_mode == "off"
+    assert not config.enabled
+    assert readiness["ready"] is True
+    assert readiness["enabled"] is False
+    assert readiness["checks"] == []
+
+
+def test_enterprise_profile_enables_required_reporting_without_token_value(
+    tmp_path: Path,
+) -> None:
+    profile = tmp_path / "enterprise.yaml"
+    profile.write_text(
+        "\n".join(
+            [
+                "schema_version: ai_sdlc_enterprise_profile.v1",
+                "managed: true",
+                "enterprise_id: dept",
+                "agentops_reporting_mode: required",
+                "agentops_ingestion_endpoint: https://ops.example",
+                "agentops_token_env: DEPT_AGENTOPS_TOKEN",
+            ]
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    config = load_agentops_ingestion_config(
+        tmp_path,
+        env={
+            ENTERPRISE_PROFILE_ENV: str(profile),
+            "DEPT_AGENTOPS_TOKEN": "secret-token",
+        },
+    )
+
+    readiness = agentops_ingestion_readiness(config)
+
+    assert config.reporting_mode == "required"
+    assert config.required
+    assert config.endpoint == "https://ops.example"
+    assert config.token_env_var == "DEPT_AGENTOPS_TOKEN"
+    assert readiness["ready"] is True
+    assert readiness["required"] is True
     assert "secret-token" not in json.dumps(readiness, ensure_ascii=False)
 
 
@@ -311,7 +404,10 @@ def test_gateway_mode_missing_token_is_blocked_before_send(tmp_path: Path) -> No
     result = deliver_agentops_outbox(
         tmp_path,
         outbox_id="outbox_missing_token",
-        config=AgentOpsIngestionConfig(endpoint="https://gateway.example"),
+        config=AgentOpsIngestionConfig(
+            endpoint="https://gateway.example",
+            reporting_mode="opportunistic",
+        ),
     )
 
     assert not result.delivered
@@ -427,6 +523,7 @@ def test_delivery_http_error_persists_redacted_gateway_diagnostic(
         outbox_id="outbox_http_401",
         config=AgentOpsIngestionConfig(
             endpoint="https://gateway.example",
+            reporting_mode="opportunistic",
             bearer_token="secret-token",
         ),
     )
@@ -484,6 +581,7 @@ def test_delivery_http_error_omits_echoed_payload_from_diagnostic(
         outbox_id="outbox_echoed_payload",
         config=AgentOpsIngestionConfig(
             endpoint="https://gateway.example",
+            reporting_mode="opportunistic",
             bearer_token="secret-token",
         ),
     )
@@ -537,6 +635,7 @@ def test_delivery_invalid_receipt_schema_persists_diagnostic(
         outbox_id="outbox_bad_receipt",
         config=AgentOpsIngestionConfig(
             endpoint="https://gateway.example",
+            reporting_mode="opportunistic",
             bearer_token="secret-token",
         ),
     )
@@ -584,6 +683,7 @@ def test_delivery_non_mapping_receipt_persists_diagnostic(
         outbox_id="outbox_list_receipt",
         config=AgentOpsIngestionConfig(
             endpoint="https://gateway.example",
+            reporting_mode="opportunistic",
             bearer_token="secret-token",
         ),
     )
@@ -641,6 +741,7 @@ def test_delivery_malformed_receipt_counts_persist_diagnostic(
         outbox_id="outbox_bad_counts",
         config=AgentOpsIngestionConfig(
             endpoint="https://gateway.example",
+            reporting_mode="opportunistic",
             bearer_token="secret-token",
         ),
     )
@@ -673,7 +774,7 @@ def test_agentops_status_reports_latest_outbox_receipt_and_diagnostic(
         result_diagnostic := deliver_agentops_outbox(
             tmp_path,
             outbox_id="outbox_status",
-            config=AgentOpsIngestionConfig(endpoint="https://gateway.example"),
+            config=AgentOpsIngestionConfig(endpoint="https://gateway.example", reporting_mode="opportunistic"),
             dry_run=True,
         ).diagnostic,
     )

@@ -193,6 +193,29 @@ class TestRunCommand:
         assert "Stage init" in result.output
         assert "Stage close" in result.output
         assert "Pipeline completed. Stage: close" in result.output
+        assert "AgentOps report" not in result.output
+        assert not (tmp_path / ".ai-sdlc" / "agentops").exists()
+
+    def test_run_required_agentops_blocks_when_token_missing(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setenv("OPENAI_CODEX", "1")
+        monkeypatch.setenv("AGENTOPS_REPORTING_MODE", "required")
+        monkeypatch.setenv("AGENTOPS_INGESTION_ENDPOINT", "https://gateway.example")
+        monkeypatch.delenv("AGENTOPS_INGESTION_TOKEN", raising=False)
+        monkeypatch.chdir(tmp_path)
+        assert runner.invoke(app, ["init", ".", "--agent-target", "codex"]).exit_code == 0
+        self._force_passing_gates(monkeypatch)
+
+        result = runner.invoke(app, ["run"])
+
+        assert result.exit_code == 2
+        assert "Pipeline completed. Stage: close" in result.output
+        assert "AgentOps report pending: missing_token" in result.output
+        diagnostic_files = list(
+            (tmp_path / ".ai-sdlc" / "agentops" / "diagnostics").glob("*.json")
+        )
+        assert diagnostic_files
 
     def test_run_dry_run_persists_agentops_outbox_without_delivery(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
@@ -220,7 +243,11 @@ class TestRunCommand:
         assert outbox_files
         batch = json.loads(outbox_files[0].read_text(encoding="utf-8"))
         events = batch["events"]
-        stage_names = [event["payload"]["stage_name"] for event in events]
+        stage_names = [
+            event["payload"]["stage_name"]
+            for event in events
+            if event["event_type"] == "sdlc_trace_event"
+        ]
         assert stage_names[0] == "init"
         assert stage_names[-1] == "close"
         receipt_files = list(
@@ -342,7 +369,30 @@ class TestRunCommand:
         assert result.exit_code == 2
         assert "AgentOps report delivered: delivered accepted=1" in result.output
         assert captured_batches
-        event = captured_batches[0]["events"][0]  # type: ignore[index]
+        envelope_event_types = [
+            str(event["event_type"])  # type: ignore[index]
+            for event in captured_batches[0]["events"]  # type: ignore[index]
+        ]
+        event_types = [
+            str(event["payload"]["sdlc_event_type"])  # type: ignore[index]
+            for event in captured_batches[0]["events"]  # type: ignore[index]
+            if event["event_type"] == "sdlc_trace_event"  # type: ignore[index]
+        ]
+        model_events = [
+            event
+            for event in captured_batches[0]["events"]  # type: ignore[index]
+            if event["event_type"] == "trace_span"  # type: ignore[index]
+            and event["payload"]["span_kind"] == "model"  # type: ignore[index]
+        ]
+        assert "trace_span" in envelope_event_types
+        assert "verification" in event_types
+        assert "artifact" in event_types
+        assert model_events
+        event = next(
+            event
+            for event in captured_batches[0]["events"]  # type: ignore[index]
+            if event["event_type"] == "sdlc_trace_event"  # type: ignore[index]
+        )
         assert event["producer_id"] == "producer.ai-sdlc.local"  # type: ignore[index]
         assert event["runtime_id"] == "runtime.ai-sdlc.local"  # type: ignore[index]
         assert event["credential_id"] == "cred.ai-sdlc.local"  # type: ignore[index]

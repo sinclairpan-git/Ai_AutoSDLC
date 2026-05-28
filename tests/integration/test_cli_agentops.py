@@ -133,3 +133,36 @@ def test_agentops_retry_dry_run_validates_persisted_outbox_without_network(
     assert payload["receipt_path"] == ""
     assert payload["diagnostic_path"] == ""
     assert "secret-token" not in result.stdout
+
+
+def test_enterprise_configure_writes_profile_without_token_value(
+    monkeypatch,
+    tmp_path: Path,
+) -> None:
+    profile = tmp_path / "enterprise.yaml"
+    monkeypatch.setenv("AI_SDLC_ENTERPRISE_PROFILE", str(profile))
+
+    result = runner.invoke(
+        app,
+        [
+            "enterprise",
+            "configure",
+            "--endpoint",
+            "https://ops.example",
+            "--enterprise-id",
+            "dept",
+            "--token-env",
+            "DEPT_AGENTOPS_TOKEN",
+            "--json",
+        ],
+    )
+
+    assert result.exit_code == 0
+    payload = json.loads(result.stdout)
+    assert payload["profile_path"] == str(profile)
+    assert payload["reporting_mode"] == "required"
+    assert payload["token_written"] is False
+    content = profile.read_text(encoding="utf-8")
+    assert "agentops_reporting_mode: required" in content
+    assert "agentops_ingestion_endpoint: https://ops.example" in content
+    assert "secret" not in content.lower()
