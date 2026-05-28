@@ -744,7 +744,14 @@ class TestRunCommand:
                 stale_count=0,
                 rejected_count=1,
                 dlq_count=0,
-                item_results=({"status": "rejected"},),
+                item_results=(
+                    {
+                        "status": "rejected",
+                        "code": "schema_mismatch",
+                        "message": "event payload failed validation",
+                        "retry_guidance": "Fix the payload shape and retry.",
+                    },
+                ),
                 audit_id="audit_test",
             )
 
@@ -759,6 +766,12 @@ class TestRunCommand:
         assert "AgentOps report delivered with diagnostics:" in result.output
         assert "rejected=1" in result.output
         assert "dlq=0" in result.output
+        assert "AgentOps receipt summary:" in result.output
+        assert "code=schema_mismatch" in result.output
+        assert "message=event payload failed validation" in result.output
+        assert "AgentOps receipt retry guidance: Fix the payload shape and retry." in (
+            result.output
+        )
 
     def test_run_required_agentops_blocks_when_receipt_state_is_rejected(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
@@ -799,6 +812,7 @@ class TestRunCommand:
         assert "AgentOps report delivered with diagnostics:" in result.output
         assert "rejected accepted=0" in result.output
         assert "rejected=0" in result.output
+        assert "AgentOps receipt summary:" in result.output
 
     def test_run_agentops_run_ids_are_unique_for_same_second_invocations(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch

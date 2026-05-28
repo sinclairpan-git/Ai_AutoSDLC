@@ -24,6 +24,7 @@ from ai_sdlc.context.state import load_checkpoint
 from ai_sdlc.core.agentops_bridge import (
     ENTERPRISE_PROFILE_ENV,
     AgentOpsIdentity,
+    AgentOpsReceipt,
     AgentOpsRuntimeContext,
     build_agentops_runtime_batch,
     build_artifact_fact,
@@ -51,6 +52,8 @@ from ai_sdlc.utils.helpers import find_project_root, now_iso
 
 console = Console()
 
+_AGENTOPS_DIAGNOSTIC_ITEM_STATES = {"stale", "rejected", "dlq"}
+
 
 def _dedupe_text_items(values: object) -> list[str]:
     deduped: list[str] = []
@@ -59,6 +62,44 @@ def _dedupe_text_items(values: object) -> list[str]:
         if normalized and normalized not in deduped:
             deduped.append(normalized)
     return deduped
+
+
+def _agentops_receipt_diagnostic_lines(
+    receipt: AgentOpsReceipt,
+    receipt_path: Path | None,
+) -> list[str]:
+    lines: list[str] = []
+    if receipt_path is not None:
+        lines.append(f"AgentOps receipt summary: {receipt_path}")
+    for item in receipt.item_results:
+        state = str(item.get("state") or item.get("status") or "").strip()
+        code = str(item.get("code", "")).strip()
+        message = str(item.get("message", "")).strip()
+        guidance = str(
+            item.get("retry_guidance") or item.get("guidance") or ""
+        ).strip()
+        if (
+            state.lower() not in _AGENTOPS_DIAGNOSTIC_ITEM_STATES
+            and not code
+            and not message
+            and not guidance
+        ):
+            continue
+        details = [
+            value
+            for value in (
+                f"state={state}" if state else "",
+                f"code={code}" if code else "",
+                f"message={message}" if message else "",
+            )
+            if value
+        ]
+        if details:
+            lines.append("AgentOps receipt diagnostic item: " + " ".join(details))
+        if guidance:
+            lines.append(f"AgentOps receipt retry guidance: {guidance}")
+        break
+    return lines
 
 
 def _stage_start_callback(stage: str, *, dry_run: bool) -> None:
@@ -383,6 +424,11 @@ def _flush_agentops_runtime_report(
                 f"rejected={result.receipt.rejected_count} "
                 f"dlq={result.receipt.dlq_count}[/yellow]"
             )
+            for line in _agentops_receipt_diagnostic_lines(
+                result.receipt,
+                result.receipt_path,
+            ):
+                console.print(f"[yellow]{line}[/yellow]")
             if agentops_config.required:
                 raise typer.Exit(code=2)
         else:
