@@ -156,7 +156,7 @@ echo "  Folder:  ${OUT}"
 echo ""
 echo "Ship either archive (or the folder) to offline machines."
 echo "  Linux/macOS: tar xzf ${OUT_BASENAME}.tar.gz && cd ${OUT_BASENAME} && ./install_offline.sh"
-echo "  Windows:     unzip ${OUT_BASENAME}.zip && cd ${OUT_BASENAME} && install_offline.bat"
+echo "  Windows:     \$BundleName = \"${OUT_BASENAME}\"; \$PackageName = \"\$BundleName.zip\"; \$PackageDir = (Get-Location).Path; \$ExtractRoot = Join-Path \$PackageDir \".ai-sdlc-install\"; New-Item -ItemType Directory -Path \$ExtractRoot -Force | Out-Null; Expand-Archive -LiteralPath (Join-Path \$PackageDir \$PackageName) -DestinationPath \$ExtractRoot -Force; Set-Location (Join-Path \$ExtractRoot \$BundleName); install_offline.bat"
 if [[ "${RUNTIME_BUNDLED}" == "true" ]]; then
   echo "  Bundled Python runtime: included"
 else

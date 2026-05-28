@@ -28,6 +28,11 @@ Windows 安装:
   或
   powershell -ExecutionPolicy Bypass -File .\install_offline.ps1
 
+Windows 重复解压:
+  如果同一目录里已经解压过本安装包，请使用 PowerShell 的 -Force 参数，
+  或解压到 .ai-sdlc-install 这样的安装缓存目录，避免 Expand-Archive 对每个
+  已存在文件刷屏报错。
+
 可选参数:
   Linux/macOS:
     PYTHON=/usr/bin/python3.11 ./install_offline.sh
