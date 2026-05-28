@@ -1,0 +1,270 @@
+name: Temporary Windows User Guide E2E
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/windows-user-guide-e2e-temp.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  online-install:
+    name: Online release download path
+    runs-on: windows-latest
+    timeout-minutes: 30
+    steps:
+      - name: Run USER_GUIDE online Windows path
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Continue"
+          $ProgressPreference = "SilentlyContinue"
+          $utf8 = [System.Text.UTF8Encoding]::new($false)
+          [Console]::InputEncoding = $utf8
+          [Console]::OutputEncoding = $utf8
+          $OutputEncoding = $utf8
+
+          $EvidenceRoot = Join-Path $env:RUNNER_TEMP "ai-sdlc-user-guide-e2e-online"
+          New-Item -ItemType Directory -Force -Path $EvidenceRoot | Out-Null
+          $TranscriptPath = Join-Path $EvidenceRoot "transcript.txt"
+          $SummaryPath = Join-Path $EvidenceRoot "summary.txt"
+          Start-Transcript -Path $TranscriptPath -Force
+
+          $Issues = New-Object System.Collections.Generic.List[string]
+
+          function Add-Issue($Message) {
+            $script:Issues.Add($Message)
+            Write-Host "::error::$Message"
+          }
+
+          function Invoke-CheckedStep($Name, [scriptblock]$Body) {
+            Write-Host ""
+            Write-Host "===== STEP: $Name ====="
+            $previousPreference = $ErrorActionPreference
+            $ErrorActionPreference = "Stop"
+            $global:LASTEXITCODE = 0
+            try {
+              $output = & $Body *>&1 | Out-String
+              $exitCode = $global:LASTEXITCODE
+            } catch {
+              $output = $_ | Out-String
+              $exitCode = 1
+            } finally {
+              $ErrorActionPreference = $previousPreference
+            }
+            Write-Host $output
+            if ($exitCode -ne 0) {
+              Add-Issue "$Name exited with code $exitCode. Output: $output"
+            }
+            return @{ ExitCode = $exitCode; Output = $output }
+          }
+
+          if (Get-Command ai-sdlc -ErrorAction SilentlyContinue) {
+            Add-Issue "Clean Windows runner unexpectedly had ai-sdlc on PATH before installation."
+          }
+
+          $WorkRoot = Join-Path $env:RUNNER_TEMP "work-online"
+          New-Item -ItemType Directory -Force -Path $WorkRoot | Out-Null
+          $ProjectDir = Join-Path $WorkRoot "ui-test-platform"
+
+          Invoke-CheckedStep "USER_GUIDE Chapter 1 Step 1 - create empty Windows project directory" {
+            Set-Location $WorkRoot
+            mkdir ui-test-platform
+            Set-Location $ProjectDir
+            Get-Location
+            Get-ChildItem -Force
+          }
+
+          if (-not (Test-Path $ProjectDir)) {
+            Add-Issue "Project directory was not created."
+          }
+          if ((Get-ChildItem -LiteralPath $ProjectDir -Force | Measure-Object).Count -ne 0) {
+            Add-Issue "New project directory was not empty before installation/init."
+          }
+
+          $InstallResult = Invoke-CheckedStep "USER_GUIDE Chapter 1 Scenario B - online download, extract, install, help" {
+            Set-Location $ProjectDir
+            cd ..
+            $BundleName = "ai-sdlc-offline-0.7.19-windows-amd64"
+            $PackageName = "$BundleName.zip"
+            $PackageDir = (Get-Location).Path
+            $ExtractRoot = Join-Path $PackageDir ".ai-sdlc-install"
+            Invoke-WebRequest -Uri "https://github.com/sinclairpan-git/Ai_AutoSDLC/releases/download/v0.7.19/$PackageName" -OutFile (Join-Path $PackageDir $PackageName)
+            New-Item -ItemType Directory -Path $ExtractRoot -Force | Out-Null
+            Write-Host "正在解压安装包；如果已经解压过，会安静覆盖同名文件。"
+            Write-Host "Extracting package; existing installer files will be overwritten quietly."
+            Expand-Archive -LiteralPath (Join-Path $PackageDir $PackageName) -DestinationPath $ExtractRoot -Force
+            Set-Location (Join-Path $ExtractRoot $BundleName)
+            powershell -ExecutionPolicy Bypass -File .\install_offline.ps1 -AddToPath
+            if ($LASTEXITCODE -ne 0) { throw "install_offline.ps1 exited with $LASTEXITCODE" }
+            .\.venv\Scripts\python.exe -m ai_sdlc --help
+            if ($LASTEXITCODE -ne 0) { throw "python -m ai_sdlc --help exited with $LASTEXITCODE" }
+          }
+
+          foreach ($token in @("Result", "Next", "Offline installation completed", "Usage", "Commands", "init", "adapter", "run", "self-update")) {
+            if ($InstallResult.Output -notmatch [regex]::Escape($token)) {
+              Add-Issue "Online install output did not contain expected manual token: $token"
+            }
+          }
+
+          $InitResult = Invoke-CheckedStep "USER_GUIDE Chapter 1 Step 3 - return to empty project and run ai-sdlc init ." {
+            Set-Location $ProjectDir
+            ai-sdlc init .
+          }
+
+          foreach ($token in @("Initialized AI-SDLC project", "当前结果 / Result", "下一步 / Next")) {
+            if ($InitResult.Output -notmatch [regex]::Escape($token)) {
+              Add-Issue "Online init output did not contain expected manual token: $token"
+            }
+          }
+
+          "Issues found: $($Issues.Count)" | Set-Content -LiteralPath $SummaryPath -Encoding utf8
+          $Issues | Add-Content -LiteralPath $SummaryPath -Encoding utf8
+          Stop-Transcript
+          if ($Issues.Count -gt 0) {
+            exit 1
+          }
+
+      - name: Upload online E2E evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: windows-user-guide-online-e2e-evidence
+          path: ${{ runner.temp }}/ai-sdlc-user-guide-e2e-online
+          if-no-files-found: error
+
+  predownloaded-install:
+    name: Pre-downloaded package path
+    runs-on: windows-latest
+    timeout-minutes: 30
+    steps:
+      - name: Run USER_GUIDE pre-downloaded Windows path
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Continue"
+          $ProgressPreference = "SilentlyContinue"
+          $utf8 = [System.Text.UTF8Encoding]::new($false)
+          [Console]::InputEncoding = $utf8
+          [Console]::OutputEncoding = $utf8
+          $OutputEncoding = $utf8
+
+          $EvidenceRoot = Join-Path $env:RUNNER_TEMP "ai-sdlc-user-guide-e2e-predownloaded"
+          New-Item -ItemType Directory -Force -Path $EvidenceRoot | Out-Null
+          $TranscriptPath = Join-Path $EvidenceRoot "transcript.txt"
+          $SummaryPath = Join-Path $EvidenceRoot "summary.txt"
+          Start-Transcript -Path $TranscriptPath -Force
+
+          $Issues = New-Object System.Collections.Generic.List[string]
+
+          function Add-Issue($Message) {
+            $script:Issues.Add($Message)
+            Write-Host "::error::$Message"
+          }
+
+          function Invoke-CheckedStep($Name, [scriptblock]$Body) {
+            Write-Host ""
+            Write-Host "===== STEP: $Name ====="
+            $previousPreference = $ErrorActionPreference
+            $ErrorActionPreference = "Stop"
+            $global:LASTEXITCODE = 0
+            try {
+              $output = & $Body *>&1 | Out-String
+              $exitCode = $global:LASTEXITCODE
+            } catch {
+              $output = $_ | Out-String
+              $exitCode = 1
+            } finally {
+              $ErrorActionPreference = $previousPreference
+            }
+            Write-Host $output
+            if ($exitCode -ne 0) {
+              Add-Issue "$Name exited with code $exitCode. Output: $output"
+            }
+            return @{ ExitCode = $exitCode; Output = $output }
+          }
+
+          if (Get-Command ai-sdlc -ErrorAction SilentlyContinue) {
+            Add-Issue "Clean Windows runner unexpectedly had ai-sdlc on PATH before installation."
+          }
+
+          $WorkRoot = Join-Path $env:RUNNER_TEMP "work-predownloaded"
+          New-Item -ItemType Directory -Force -Path $WorkRoot | Out-Null
+          $ProjectDir = Join-Path $WorkRoot "ui-test-platform"
+          $PackageName = "ai-sdlc-offline-0.7.19-windows-amd64.zip"
+
+          Invoke-CheckedStep "USER_GUIDE Chapter 1 Step 1 - create empty Windows project directory" {
+            Set-Location $WorkRoot
+            mkdir ui-test-platform
+            Set-Location $ProjectDir
+            Get-Location
+            Get-ChildItem -Force
+          }
+
+          if (-not (Test-Path $ProjectDir)) {
+            Add-Issue "Project directory was not created."
+          }
+          if ((Get-ChildItem -LiteralPath $ProjectDir -Force | Measure-Object).Count -ne 0) {
+            Add-Issue "New project directory was not empty before pre-download."
+          }
+
+          Invoke-CheckedStep "Precondition for Scenario A - package already downloaded into current terminal directory" {
+            Set-Location $ProjectDir
+            Invoke-WebRequest -Uri "https://github.com/sinclairpan-git/Ai_AutoSDLC/releases/download/v0.7.19/$PackageName" -OutFile (Join-Path $ProjectDir $PackageName)
+            Get-ChildItem -LiteralPath . -Filter $PackageName -File
+          }
+
+          $InstallResult = Invoke-CheckedStep "USER_GUIDE Chapter 1 Scenario A - install already downloaded package and help" {
+            Set-Location $ProjectDir
+            $PackageName = "ai-sdlc-offline-0.7.19-windows-amd64.zip"
+            $BundleName = "ai-sdlc-offline-0.7.19-windows-amd64"
+            $PackageDir = (Get-Location).Path
+            $ExtractRoot = Join-Path $PackageDir ".ai-sdlc-install"
+            $Zip = Get-ChildItem -LiteralPath . -Filter $PackageName -File | Select-Object -First 1
+            if (-not $Zip) {
+              throw "当前目录没有找到安装包：$PackageDir\$PackageName"
+            }
+            New-Item -ItemType Directory -Path $ExtractRoot -Force | Out-Null
+            Write-Host "正在解压安装包；如果已经解压过，会安静覆盖同名文件。"
+            Write-Host "Extracting package; existing installer files will be overwritten quietly."
+            Expand-Archive -LiteralPath $Zip.FullName -DestinationPath $ExtractRoot -Force
+            Set-Location (Join-Path $ExtractRoot $BundleName)
+            powershell -ExecutionPolicy Bypass -File .\install_offline.ps1 -AddToPath
+            if ($LASTEXITCODE -ne 0) { throw "install_offline.ps1 exited with $LASTEXITCODE" }
+            .\.venv\Scripts\python.exe -m ai_sdlc --help
+            if ($LASTEXITCODE -ne 0) { throw "python -m ai_sdlc --help exited with $LASTEXITCODE" }
+          }
+
+          foreach ($token in @("Result", "Next", "Offline installation completed", "Usage", "Commands", "init", "adapter", "run", "self-update")) {
+            if ($InstallResult.Output -notmatch [regex]::Escape($token)) {
+              Add-Issue "Pre-downloaded install output did not contain expected manual token: $token"
+            }
+          }
+
+          $InitResult = Invoke-CheckedStep "USER_GUIDE Chapter 1 Step 3 - return to empty project and run ai-sdlc init ." {
+            Set-Location $ProjectDir
+            ai-sdlc init .
+          }
+
+          foreach ($token in @("Initialized AI-SDLC project", "当前结果 / Result", "下一步 / Next")) {
+            if ($InitResult.Output -notmatch [regex]::Escape($token)) {
+              Add-Issue "Pre-downloaded init output did not contain expected manual token: $token"
+            }
+          }
+
+          "Issues found: $($Issues.Count)" | Set-Content -LiteralPath $SummaryPath -Encoding utf8
+          $Issues | Add-Content -LiteralPath $SummaryPath -Encoding utf8
+          Stop-Transcript
+          if ($Issues.Count -gt 0) {
+            exit 1
+          }
+
+      - name: Upload pre-downloaded E2E evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: windows-user-guide-predownloaded-e2e-evidence
+          path: ${{ runner.temp }}/ai-sdlc-user-guide-e2e-predownloaded
+          if-no-files-found: error
