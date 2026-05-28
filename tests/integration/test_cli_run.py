@@ -263,6 +263,35 @@ class TestRunCommand:
         assert "Pipeline completed. Stage: close" in result.output
         assert "AgentOps report pending: missing_token" in result.output
 
+    def test_run_required_enterprise_profile_missing_endpoint_ignores_env_endpoint(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        profile_path = tmp_path / "enterprise.yaml"
+        profile_path.write_text(
+            "\n".join(
+                [
+                    "agentops_reporting_mode: required",
+                    "agentops_token_env: DEPT_AGENTOPS_TOKEN",
+                ]
+            )
+            + "\n",
+            encoding="utf-8",
+        )
+        monkeypatch.setenv("OPENAI_CODEX", "1")
+        monkeypatch.setenv("AI_SDLC_ENTERPRISE_PROFILE", str(profile_path))
+        monkeypatch.setenv("AGENTOPS_INGESTION_ENDPOINT", "https://local-stale.example")
+        monkeypatch.setenv("DEPT_AGENTOPS_TOKEN", "secret-token")
+        monkeypatch.chdir(tmp_path)
+        assert runner.invoke(app, ["init", ".", "--agent-target", "codex"]).exit_code == 0
+        self._force_passing_gates(monkeypatch)
+
+        result = runner.invoke(app, ["run"])
+
+        assert result.exit_code == 2
+        assert "Pipeline completed. Stage: close" in result.output
+        assert "AgentOps report pending: missing_endpoint" in result.output
+        assert "secret-token" not in result.output
+
     def test_run_explicit_missing_enterprise_profile_fails_closed(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:

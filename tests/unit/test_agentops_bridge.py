@@ -462,6 +462,39 @@ def test_enterprise_profile_endpoint_is_not_downgraded_by_env_override(
     assert config.normalized_endpoint == "https://managed-ops.example/v1/runtime/events"
 
 
+def test_required_enterprise_profile_missing_endpoint_does_not_fallback_to_env(
+    tmp_path: Path,
+) -> None:
+    profile = tmp_path / "enterprise.yaml"
+    profile.write_text(
+        "\n".join(
+            [
+                "schema_version: ai_sdlc_enterprise_profile.v1",
+                "managed: true",
+                "agentops_reporting_mode: required",
+            ]
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    config = load_agentops_ingestion_config(
+        tmp_path,
+        env={
+            ENTERPRISE_PROFILE_ENV: str(profile),
+            "AGENTOPS_INGESTION_ENDPOINT": "https://local-stale.example",
+            "AGENTOPS_INGESTION_TOKEN": "secret-token",
+        },
+    )
+    readiness = agentops_ingestion_readiness(config)
+
+    assert config.endpoint == ""
+    assert config.required
+    assert readiness["ready"] is False
+    assert any(check["reason_code"] == "missing_endpoint" for check in readiness["checks"])
+    assert "secret-token" not in json.dumps(readiness, ensure_ascii=False)
+
+
 def test_explicit_missing_enterprise_profile_is_configuration_error(
     tmp_path: Path,
 ) -> None:

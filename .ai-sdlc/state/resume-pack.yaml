@@ -9,16 +9,17 @@ working_set_snapshot:
   plan_path: specs/187-agentops-self-iteration-monitoring/plan.md
   tasks_path: specs/187-agentops-self-iteration-monitoring/tasks.md
   active_files: []
-  context_summary: 'Goal: Fix managed enterprise AgentOps endpoint review blocker
-    | State: Updated AgentOps config loading so managed enterprise profile endpoint
-    takes precedence over AGENTOPS_INGESTION_ENDPOINT env overrides. Also made enterprise
-    configure endpoint optional for reporting-mode off. Added unit and CLI regression
-    coverage. | Next: Commit, push to PR #71, request Codex review, and restart heartbeat
-    monitoring for PR #70/#71.'
+  context_summary: 'Goal: Fix required managed profile endpoint fallback blocker |
+    State: Updated AgentOps config loading so any loaded enterprise profile treats
+    its endpoint as authoritative; required profiles with an empty/missing endpoint
+    now keep endpoint empty and fail closed with missing_endpoint rather than falling
+    back to AGENTOPS_INGESTION_ENDPOINT. Added unit and CLI regression coverage. |
+    Next: Commit, push to PR #71, request Codex review, and restart heartbeat monitoring
+    with auto-fix instructions for blockers.'
 current_branch: feature/187-agentops-self-iteration-monitoring-docs
 docs_baseline_ref: ''
 docs_baseline_at: ''
-timestamp: '2026-05-28T05:21:36+00:00'
+timestamp: '2026-05-28T05:32:35+00:00'
 checkpoint_path: .ai-sdlc/state/checkpoint.yml
-checkpoint_last_updated: '2026-05-28T05:21:15+00:00'
-checkpoint_fingerprint: eafed900221d70d4f644be28328ffad3376f67964e80efcbdbf053c195da2df2
+checkpoint_last_updated: '2026-05-28T05:32:01+00:00'
+checkpoint_fingerprint: b846f4a53ed20730c7fcc6668b94e340d0d50c87cfb6c4780c85e1923055b09c
