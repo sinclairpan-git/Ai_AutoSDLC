@@ -10,6 +10,8 @@
 #   PYTHON=/path/to/python3.11   interpreter used for pip download (default: try python3.11, then python3)
 #   AI_SDLC_OFFLINE_PYTHON_RUNTIME=/path/to/portable/python-runtime   optional runtime copied into python-runtime/
 #   AI_SDLC_OFFLINE_ASSET_SUFFIX=-windows-amd64   optional suffix for platform-specific release assets
+#   AI_SDLC_OFFLINE_PYTHON_VERSIONS=3.11,3.12   optional wheel ABI versions to include
+#   AI_SDLC_OFFLINE_TARGET_PLATFORM=win_amd64   optional pip target platform for multi-ABI wheels
 
 set -euo pipefail
 
@@ -75,7 +77,41 @@ if [[ -z "${MAIN_WHEEL}" ]]; then
 fi
 
 echo "==> Downloading dependency wheels into bundle (needs network)…"
-"${PY}" -m pip download -d "${OUT}/wheels" "${MAIN_WHEEL}"
+
+_py_version_nodot() {
+  printf '%s' "$1" | tr -d '.'
+}
+
+if [[ -n "${AI_SDLC_OFFLINE_PYTHON_VERSIONS:-}" ]]; then
+  IFS=', ' read -r -a SUPPORTED_PYTHON_VERSIONS <<< "${AI_SDLC_OFFLINE_PYTHON_VERSIONS}"
+else
+  CURRENT_PY_VERSION="$("${PY}" -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")')"
+  SUPPORTED_PYTHON_VERSIONS=("${CURRENT_PY_VERSION}")
+fi
+
+if [[ "${#SUPPORTED_PYTHON_VERSIONS[@]}" -eq 0 ]]; then
+  echo "error: AI_SDLC_OFFLINE_PYTHON_VERSIONS did not contain any Python versions" >&2
+  exit 1
+fi
+
+for PY_VERSION in "${SUPPORTED_PYTHON_VERSIONS[@]}"; do
+  if [[ -z "${PY_VERSION}" ]]; then
+    continue
+  fi
+  PY_VERSION_NODOT="$(_py_version_nodot "${PY_VERSION}")"
+  if [[ -n "${AI_SDLC_OFFLINE_TARGET_PLATFORM:-}" ]]; then
+    "${PY}" -m pip download \
+      --only-binary=:all: \
+      --platform "${AI_SDLC_OFFLINE_TARGET_PLATFORM}" \
+      --implementation cp \
+      --python-version "${PY_VERSION_NODOT}" \
+      --abi "cp${PY_VERSION_NODOT}" \
+      -d "${OUT}/wheels" \
+      "${MAIN_WHEEL}"
+  else
+    "${PY}" -m pip download -d "${OUT}/wheels" "${MAIN_WHEEL}"
+  fi
+done
 
 cp "${SCRIPT_DIR}/install_offline.sh" "${OUT}/"
 cp "${SCRIPT_DIR}/install_offline.ps1" "${OUT}/"
@@ -93,7 +129,7 @@ if [[ -n "${AI_SDLC_OFFLINE_PYTHON_RUNTIME:-}" ]]; then
   RUNTIME_BUNDLED="true"
 fi
 
-"${PY}" - "${VERSION}" "${MANIFEST}" "${RUNTIME_BUNDLED}" <<'PY'
+"${PY}" - "${VERSION}" "${MANIFEST}" "${RUNTIME_BUNDLED}" "${SUPPORTED_PYTHON_VERSIONS[@]}" <<'PY'
 from __future__ import annotations
 
 import json
@@ -104,6 +140,9 @@ from pathlib import Path
 version = sys.argv[1]
 manifest_path = Path(sys.argv[2])
 runtime_bundled = sys.argv[3].lower() == "true"
+supported_versions = [item.strip() for item in sys.argv[4:] if item.strip()]
+if not supported_versions:
+    supported_versions = [f"{sys.version_info.major}.{sys.version_info.minor}"]
 manifest_path.write_text(
     json.dumps(
         {
@@ -112,8 +151,12 @@ manifest_path.write_text(
             "platform_os": platform.system().lower(),
             "platform_machine": platform.machine().lower(),
             "python_runtime_bundled": runtime_bundled,
-            "wheel_python_version": f"{sys.version_info.major}.{sys.version_info.minor}",
-            "wheel_python_tag": f"cp{sys.version_info.major}{sys.version_info.minor}",
+            "wheel_python_version": supported_versions[0],
+            "wheel_python_tag": "cp" + supported_versions[0].replace(".", ""),
+            "supported_python_versions": supported_versions,
+            "supported_wheel_python_tags": [
+                "cp" + item.replace(".", "") for item in supported_versions
+            ],
         },
         indent=2,
     )

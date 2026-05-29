@@ -9,17 +9,16 @@ working_set_snapshot:
   plan_path: specs/187-agentops-self-iteration-monitoring/plan.md
   tasks_path: specs/187-agentops-self-iteration-monitoring/tasks.md
   active_files: []
-  context_summary: 'Goal: Monitor and merge PR #71 after Codex review and required
-    checks pass | State: Addressed latest Codex review on head edd494e: AgentOps receipt
-    diagnostic output now prefers the first stale/rejected/DLQ item before falling
-    back to non-diagnostic item details, so required-mode blocking guidance points
-    at the item that caused the block. | Next: Commit and push the same PR #71 branch,
-    request @codex review for the new head, update heartbeat expected SHA, then continue
-    polling.'
+  context_summary: 'Goal: Prepare v0.8.1 Windows old-user upgrade reliability patch
+    | State: Added permanent Windows old-user upgrade CI matrix for v0.7.5/v0.7.6
+    on Python 3.11/3.12, using branch-built v0.8.1 offline bundle and manual-equivalent
+    -UpgradeExisting/init/dry-run commands. | Next: Commit, push branch, open PR,
+    request @codex review, create 5-minute heartbeat monitor, then watch checks/review
+    and fix any blockers on the same branch.'
 current_branch: feature/187-agentops-self-iteration-monitoring-docs
 docs_baseline_ref: ''
 docs_baseline_at: ''
-timestamp: '2026-05-28T08:09:03+00:00'
+timestamp: '2026-05-29T03:14:06+00:00'
 checkpoint_path: .ai-sdlc/state/checkpoint.yml
 checkpoint_last_updated: '2026-05-28T08:08:48+00:00'
 checkpoint_fingerprint: c403f940b40a9a3222c1f05dfae716ff124139952b363af6395156da948a9bce

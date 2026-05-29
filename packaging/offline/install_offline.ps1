@@ -35,6 +35,27 @@ function Normalize-Architecture {
   }
 }
 
+function Get-ManifestPythonVersions {
+  param($Manifest)
+
+  $versions = @()
+  if ($Manifest.PSObject.Properties.Name -contains "supported_python_versions") {
+    foreach ($item in @($Manifest.supported_python_versions)) {
+      $value = [string]$item
+      if ($value) {
+        $versions += $value
+      }
+    }
+  }
+  if (($versions.Count -eq 0) -and ($Manifest.PSObject.Properties.Name -contains "wheel_python_version")) {
+    $value = [string]$Manifest.wheel_python_version
+    if ($value) {
+      $versions += $value
+    }
+  }
+  return $versions
+}
+
 function Write-BilingualStatus {
   param(
     [string]$Status,
@@ -173,7 +194,7 @@ if (Test-Path $ManifestPath) {
   $manifest = Get-Content $ManifestPath -Raw | ConvertFrom-Json
   $expectedOs = [string]$manifest.platform_os
   $expectedMachine = Normalize-Architecture ([string]$manifest.platform_machine)
-  $expectedPythonVersion = [string]$manifest.wheel_python_version
+  $expectedPythonVersions = @(Get-ManifestPythonVersions $manifest)
   $currentOs = "windows"
   $currentMachine = Normalize-Architecture (
     [System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture.ToString()
@@ -186,8 +207,8 @@ if (Test-Path $ManifestPath) {
   if ($expectedMachine -and $expectedMachine.ToLowerInvariant() -ne $currentMachine) {
     $mismatches += "machine=$expectedMachine (current=$currentMachine)"
   }
-  if ($expectedPythonVersion -and $expectedPythonVersion -ne $currentPythonVersion) {
-    $mismatches += "python=$expectedPythonVersion wheel ABI (selected=$currentPythonVersion)"
+  if (($expectedPythonVersions.Count -gt 0) -and ($expectedPythonVersions -notcontains $currentPythonVersion)) {
+    $mismatches += "python=$($expectedPythonVersions -join ',') wheel ABI (selected=$currentPythonVersion)"
   }
   if ($mismatches.Count -gt 0) {
     throw "offline bundle platform mismatch: $($mismatches -join '; '). Rebuild the bundle on the target OS/CPU/Python ABI or use a matching archive."
