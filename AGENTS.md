@@ -62,10 +62,13 @@ When a Codex change is ready for mainline:
 
 - Push the branch and open a PR.
 - Request Codex review on the PR.
-- Monitor review threads and required checks until there is a clear conclusion.
+- Immediately create or keep a heartbeat at about five-minute intervals for the
+  PR. The heartbeat must monitor Codex review results and required GitHub check
+  status until the PR is merged or a user-input blocker is reached.
 - If review finds actionable issues, implement focused fixes on the same branch,
-  rerun relevant local tests, push, and continue monitoring.
+  rerun relevant local tests, push, re-request Codex review, and continue the
+  heartbeat monitoring loop.
 - If Codex review reports no actionable issues and all required checks pass,
   mark the PR ready when needed and merge it into `main`.
-- For long-running PR monitoring, create or keep a heartbeat that checks at about
-  five-minute intervals until the PR is merged or a blocker is reported.
+- This protocol is a local development rule for this repository only; do not
+  copy it into external user guidance or AI-SDLC framework runtime rules.

@@ -61,7 +61,9 @@ separately from explicit acknowledgement, so missing the first notice does not
 hide the same update forever.
 
 When a newer GitHub Release is available, run one command. It checks, downloads,
-installs, and verifies the target version automatically:
+installs, and verifies the target version automatically. This command is not
+project-root specific and uses a system temporary directory for its own download
+and extraction work, so it does not place upgrade files in the current project:
 
 ```bash
 ai-sdlc self-update check
@@ -80,6 +82,13 @@ automatic updater. They cannot learn a missing subcommand from the new release
 until the package itself is replaced. Download the latest platform install
 package and run its `--upgrade-existing` mode once; after that, use
 `ai-sdlc self-update check` for future updates.
+
+Run the rescue commands below from the project parent directory or a temporary
+download directory, not from the application project root. They download and
+expand `.ai-sdlc-install` in the current directory, enter the unpacked installer
+bundle, and replace the currently resolved `ai-sdlc` entry. After the upgrade,
+return to the application project root before running project commands such as
+`ai-sdlc init .`.
 
 macOS Apple Silicon:
 
