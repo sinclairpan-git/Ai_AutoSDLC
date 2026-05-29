@@ -259,9 +259,10 @@ jobs:
             throw "old ai-sdlc install failed with exit code $LASTEXITCODE"
           }
           $env:Path = $oldCliDir + [IO.Path]::PathSeparator + $env:Path
-          ai-sdlc --version *>&1 | Tee-Object -FilePath (Join-Path $evidenceRoot "old-version.txt")
+          & $oldPython -c "from importlib.metadata import version; print(version('ai-sdlc'))" *>&1 |
+            Tee-Object -FilePath (Join-Path $evidenceRoot "old-version.txt")
           if ($LASTEXITCODE -ne 0) {
-            throw "old ai-sdlc --version failed with exit code $LASTEXITCODE"
+            throw "old ai-sdlc metadata version check failed with exit code $LASTEXITCODE"
           }
 
           $windowsPowerShell = Join-Path $env:SystemRoot "System32\WindowsPowerShell\v1.0\powershell.exe"

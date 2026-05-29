@@ -10,10 +10,10 @@ working_set_snapshot:
   tasks_path: specs/187-agentops-self-iteration-monitoring/tasks.md
   active_files: []
   context_summary: 'Goal: Prepare v0.8.1 Windows old-user upgrade reliability patch
-    | State: PR #79 cloud old-user upgrade jobs failed before upgrade because PyPI
-    does not publish ai-sdlc 0.7.5/0.7.6; workflow fixture now installs old versions
-    from existing Git tags and always uploads scenario evidence. | Next: Commit and
-    push workflow fixture fix to PR #79, re-request @codex review, then monitor checks.'
+    | State: Second cloud run reached old tag install but failed because v0.7.5/v0.7.6
+    CLI lacks --version; fixture now checks old version via importlib.metadata before
+    upgrade. | Next: Commit and push fixture fix, re-request @codex review, then monitor
+    PR #79 checks.'
 current_branch: feature/187-agentops-self-iteration-monitoring-docs
 docs_baseline_ref: ''
 docs_baseline_at: ''
