@@ -228,6 +228,8 @@ jobs:
           $upgradeRoot = Join-Path $env:RUNNER_TEMP "ai-sdlc-old-user-upgrade"
           Remove-Item -Recurse -Force $evidenceRoot, $upgradeRoot -ErrorAction SilentlyContinue
           New-Item -ItemType Directory -Force -Path $evidenceRoot, $upgradeRoot | Out-Null
+          "old-version=${{ matrix.old-version }}; python-version=${{ matrix.python-version }}" |
+            Out-File -FilePath (Join-Path $evidenceRoot "scenario.txt") -Encoding utf8
 
           $archive = Get-ChildItem -Path "dist-offline" -Filter "ai-sdlc-offline-*.zip" -File | Select-Object -First 1
           if (-not $archive) {
@@ -251,7 +253,8 @@ jobs:
           if ($LASTEXITCODE -ne 0) {
             throw "pip upgrade failed with exit code $LASTEXITCODE"
           }
-          & $oldPython -m pip install "ai-sdlc==${{ matrix.old-version }}"
+          & $oldPython -m pip install "git+https://github.com/sinclairpan-git/Ai_AutoSDLC.git@v${{ matrix.old-version }}" *>&1 |
+            Tee-Object -FilePath (Join-Path $evidenceRoot "old-install.txt")
           if ($LASTEXITCODE -ne 0) {
             throw "old ai-sdlc install failed with exit code $LASTEXITCODE"
           }

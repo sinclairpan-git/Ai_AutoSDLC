@@ -43,7 +43,12 @@ def test_windows_offline_smoke_workflow_covers_bundle_build_install_and_cli_chec
     assert '"0.7.6"' in workflow
     assert 'python-version:' in workflow
     assert '"3.12"' in workflow
-    assert 'pip install "ai-sdlc==${{ matrix.old-version }}"' in workflow
+    assert (
+        'pip install "git+https://github.com/sinclairpan-git/Ai_AutoSDLC.git@v${{ matrix.old-version }}"'
+        in workflow
+    )
+    assert "scenario.txt" in workflow
+    assert "old-install.txt" in workflow
     assert "-NoProfile -ExecutionPolicy Bypass -File .\\install_offline.ps1 -UpgradeExisting" in workflow
     assert "ai-sdlc init . --agent-target codex --shell powershell" in workflow
     assert "当前结果 / Result" in workflow
