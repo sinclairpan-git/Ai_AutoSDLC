@@ -6,7 +6,7 @@ on:
       tag:
         description: Release tag that will receive the platform assets.
         required: true
-        default: v0.8.0
+        default: v0.8.1
       upload_to_release:
         description: Upload smoke-passed assets to the existing GitHub Release.
         required: true
@@ -94,6 +94,8 @@ jobs:
           "AI_SDLC_OFFLINE_ASSET_SUFFIX=-windows-$arch" | Out-File -FilePath $env:GITHUB_ENV -Append
           "AI_SDLC_RELEASE_ASSET_OS=windows" | Out-File -FilePath $env:GITHUB_ENV -Append
           "AI_SDLC_RELEASE_ASSET_MACHINE=$arch" | Out-File -FilePath $env:GITHUB_ENV -Append
+          "AI_SDLC_OFFLINE_PYTHON_VERSIONS=3.11,3.12" | Out-File -FilePath $env:GITHUB_ENV -Append
+          "AI_SDLC_OFFLINE_TARGET_PLATFORM=win_$arch" | Out-File -FilePath $env:GITHUB_ENV -Append
 
       - name: Build offline bundle
         shell: bash
@@ -113,6 +115,8 @@ jobs:
           PYTHON="${runtime_python}" \
             AI_SDLC_OFFLINE_PYTHON_RUNTIME="${runtime_root}" \
             AI_SDLC_OFFLINE_ASSET_SUFFIX="${AI_SDLC_OFFLINE_ASSET_SUFFIX}" \
+            AI_SDLC_OFFLINE_PYTHON_VERSIONS="${AI_SDLC_OFFLINE_PYTHON_VERSIONS:-}" \
+            AI_SDLC_OFFLINE_TARGET_PLATFORM="${AI_SDLC_OFFLINE_TARGET_PLATFORM:-}" \
             bash packaging/offline/build_offline_bundle.sh
 
       - name: Smoke Windows zip

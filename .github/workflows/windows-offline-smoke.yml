@@ -54,6 +54,8 @@ jobs:
             PYTHONUTF8="1" \
             PYTHONIOENCODING="utf-8" \
             AI_SDLC_OFFLINE_PYTHON_RUNTIME="$runtime_root" \
+            AI_SDLC_OFFLINE_PYTHON_VERSIONS="3.11,3.12" \
+            AI_SDLC_OFFLINE_TARGET_PLATFORM="win_amd64" \
             bash packaging/offline/build_offline_bundle.sh
 
       - name: Install bundle and run CLI smoke
@@ -158,4 +160,152 @@ jobs:
         with:
           name: windows-offline-smoke-evidence
           path: ${{ runner.temp }}/ai-sdlc-windows-smoke-evidence
+          if-no-files-found: error
+
+  old-user-upgrade:
+    name: Upgrade ${{ matrix.old-version }} on Python ${{ matrix.python-version }}
+    runs-on: windows-latest
+    timeout-minutes: 40
+    strategy:
+      fail-fast: false
+      matrix:
+        old-version:
+          - "0.7.5"
+          - "0.7.6"
+        python-version:
+          - "3.11"
+          - "3.12"
+
+    env:
+      PYTHONUTF8: "1"
+      PYTHONIOENCODING: utf-8
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Set up bundle build Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+
+      - name: Build branch Windows offline bundle
+        shell: bash
+        run: |
+          set -euo pipefail
+          uv python install 3.11
+          runtime_python="$(uv python find --managed-python 3.11)"
+          runtime_python="$(cygpath -u "$runtime_python")"
+          runtime_root="$(dirname "$runtime_python")"
+          PYTHON="$runtime_python" \
+            PYTHONUTF8="1" \
+            PYTHONIOENCODING="utf-8" \
+            AI_SDLC_OFFLINE_PYTHON_RUNTIME="$runtime_root" \
+            AI_SDLC_OFFLINE_PYTHON_VERSIONS="3.11,3.12" \
+            AI_SDLC_OFFLINE_TARGET_PLATFORM="win_amd64" \
+            bash packaging/offline/build_offline_bundle.sh
+
+      - name: Set up old-user Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Upgrade old installation and run project E2E
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $utf8 = [System.Text.UTF8Encoding]::new($false)
+          [Console]::InputEncoding = $utf8
+          [Console]::OutputEncoding = $utf8
+          $OutputEncoding = $utf8
+
+          $evidenceRoot = Join-Path $env:RUNNER_TEMP "ai-sdlc-old-user-upgrade-evidence"
+          $upgradeRoot = Join-Path $env:RUNNER_TEMP "ai-sdlc-old-user-upgrade"
+          Remove-Item -Recurse -Force $evidenceRoot, $upgradeRoot -ErrorAction SilentlyContinue
+          New-Item -ItemType Directory -Force -Path $evidenceRoot, $upgradeRoot | Out-Null
+          "old-version=${{ matrix.old-version }}; python-version=${{ matrix.python-version }}" |
+            Out-File -FilePath (Join-Path $evidenceRoot "scenario.txt") -Encoding utf8
+
+          $archive = Get-ChildItem -Path "dist-offline" -Filter "ai-sdlc-offline-*.zip" -File | Select-Object -First 1
+          if (-not $archive) {
+            throw "Expected dist-offline zip archive was not produced."
+          }
+          $expandedRoot = Join-Path $upgradeRoot "bundle"
+          Expand-Archive -LiteralPath $archive.FullName -DestinationPath $expandedRoot -Force
+          $bundleDir = Get-ChildItem -Path $expandedRoot -Directory | Select-Object -First 1
+          if (-not $bundleDir) {
+            throw "Expanded archive did not contain a bundle directory."
+          }
+
+          $oldVenv = Join-Path $upgradeRoot "old-runtime"
+          python -m venv $oldVenv
+          if ($LASTEXITCODE -ne 0) {
+            throw "python -m venv failed with exit code $LASTEXITCODE"
+          }
+          $oldPython = Join-Path $oldVenv "Scripts\python.exe"
+          $oldCliDir = Join-Path $oldVenv "Scripts"
+          & $oldPython -m pip install --upgrade pip
+          if ($LASTEXITCODE -ne 0) {
+            throw "pip upgrade failed with exit code $LASTEXITCODE"
+          }
+          & $oldPython -m pip install "git+https://github.com/sinclairpan-git/Ai_AutoSDLC.git@v${{ matrix.old-version }}" *>&1 |
+            Tee-Object -FilePath (Join-Path $evidenceRoot "old-install.txt")
+          if ($LASTEXITCODE -ne 0) {
+            throw "old ai-sdlc install failed with exit code $LASTEXITCODE"
+          }
+          $env:Path = $oldCliDir + [IO.Path]::PathSeparator + $env:Path
+          & $oldPython -c "from importlib.metadata import version; print(version('ai-sdlc'))" *>&1 |
+            Tee-Object -FilePath (Join-Path $evidenceRoot "old-version.txt")
+          if ($LASTEXITCODE -ne 0) {
+            throw "old ai-sdlc metadata version check failed with exit code $LASTEXITCODE"
+          }
+
+          $windowsPowerShell = Join-Path $env:SystemRoot "System32\WindowsPowerShell\v1.0\powershell.exe"
+          Push-Location $bundleDir.FullName
+          & $windowsPowerShell -NoProfile -ExecutionPolicy Bypass -File .\install_offline.ps1 -UpgradeExisting *>&1 | Tee-Object -FilePath (Join-Path $evidenceRoot "upgrade-existing.log")
+          if ($LASTEXITCODE -ne 0) {
+            throw "install_offline.ps1 -UpgradeExisting failed with exit code $LASTEXITCODE"
+          }
+          Pop-Location
+
+          ai-sdlc --version *>&1 | Tee-Object -FilePath (Join-Path $evidenceRoot "upgraded-version.txt")
+          if ($LASTEXITCODE -ne 0) {
+            throw "upgraded ai-sdlc --version failed with exit code $LASTEXITCODE"
+          }
+          $upgradedVersion = Get-Content -LiteralPath (Join-Path $evidenceRoot "upgraded-version.txt") -Raw
+          if ($upgradedVersion -notmatch "0\.8\.1") {
+            throw "expected upgraded ai-sdlc version 0.8.1, got: $upgradedVersion"
+          }
+
+          $projectRoot = Join-Path $upgradeRoot "clean-project"
+          New-Item -ItemType Directory -Force -Path $projectRoot | Out-Null
+          Push-Location $projectRoot
+          ai-sdlc init . --agent-target codex --shell powershell *>&1 | Tee-Object -FilePath (Join-Path $evidenceRoot "init-codex-powershell.txt")
+          if ($LASTEXITCODE -ne 0) {
+            throw "ai-sdlc init . --agent-target codex --shell powershell failed with exit code $LASTEXITCODE"
+          }
+          $initOutput = Get-Content -LiteralPath (Join-Path $evidenceRoot "init-codex-powershell.txt") -Raw
+          if (($initOutput -notmatch "当前结果 / Result") -or ($initOutput -notmatch "下一步 / Next")) {
+            throw "init output did not include required bilingual Result/Next guidance."
+          }
+
+          ai-sdlc run --dry-run *>&1 | Tee-Object -FilePath (Join-Path $evidenceRoot "run-dry-run.txt")
+          if ($LASTEXITCODE -ne 0) {
+            throw "ai-sdlc run --dry-run failed with exit code $LASTEXITCODE"
+          }
+          Pop-Location
+
+          Copy-Item -LiteralPath (Join-Path $bundleDir.FullName "bundle-manifest.json") -Destination $evidenceRoot
+
+      - name: Upload old-user upgrade evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: windows-old-user-upgrade-${{ matrix.old-version }}-py${{ matrix.python-version }}-evidence
+          path: ${{ runner.temp }}/ai-sdlc-old-user-upgrade-evidence
           if-no-files-found: error

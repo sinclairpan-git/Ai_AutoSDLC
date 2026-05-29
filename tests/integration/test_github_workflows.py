@@ -33,8 +33,28 @@ def test_windows_offline_smoke_workflow_covers_bundle_build_install_and_cli_chec
     assert "uv python install 3.11" in workflow
     assert "uv python find --managed-python 3.11" in workflow
     assert "AI_SDLC_OFFLINE_PYTHON_RUNTIME" in workflow
+    assert 'AI_SDLC_OFFLINE_PYTHON_VERSIONS="3.11,3.12"' in workflow
+    assert 'AI_SDLC_OFFLINE_TARGET_PLATFORM="win_amd64"' in workflow
     assert "build_offline_bundle.sh" in workflow
     assert "install_offline.ps1" in workflow
+    assert "old-user-upgrade:" in workflow
+    assert 'old-version:' in workflow
+    assert '"0.7.5"' in workflow
+    assert '"0.7.6"' in workflow
+    assert 'python-version:' in workflow
+    assert '"3.12"' in workflow
+    assert (
+        'pip install "git+https://github.com/sinclairpan-git/Ai_AutoSDLC.git@v${{ matrix.old-version }}"'
+        in workflow
+    )
+    assert "scenario.txt" in workflow
+    assert "old-install.txt" in workflow
+    assert "from importlib.metadata import version; print(version('ai-sdlc'))" in workflow
+    assert "old ai-sdlc metadata version check failed" in workflow
+    assert "-NoProfile -ExecutionPolicy Bypass -File .\\install_offline.ps1 -UpgradeExisting" in workflow
+    assert "ai-sdlc init . --agent-target codex --shell powershell" in workflow
+    assert "当前结果 / Result" in workflow
+    assert "下一步 / Next" in workflow
     assert "OPENAI_CODEX" in workflow
     assert "AI_SDLC_ADAPTER_CANONICAL_SHA256" in workflow
     assert "adapter status" in workflow
@@ -103,7 +123,7 @@ def test_release_artifact_smoke_workflow_installs_published_assets() -> None:
 
     assert "workflow_dispatch:" in workflow
     assert "release:" in workflow
-    assert "default: v0.8.0" in workflow
+    assert "default: v0.8.1" in workflow
     assert "gh release download" in workflow
     assert "windows-latest" in workflow
     assert "macos-latest" in workflow
@@ -139,7 +159,7 @@ def test_release_build_workflow_matrix_builds_smokes_and_uploads_assets() -> Non
     workflow = workflow_path.read_text(encoding="utf-8")
 
     assert "workflow_dispatch:" in workflow
-    assert "default: v0.8.0" in workflow
+    assert "default: v0.8.1" in workflow
     assert "windows-latest" in workflow
     assert "macos-latest" in workflow
     assert "ubuntu-latest" in workflow

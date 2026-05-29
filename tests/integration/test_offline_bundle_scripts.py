@@ -476,6 +476,8 @@ def test_build_offline_bundle_emits_platform_manifest_and_archives(tmp_path: Pat
     assert manifest["platform_machine"]
     assert manifest["wheel_python_version"]
     assert manifest["wheel_python_tag"].startswith("cp")
+    assert manifest["supported_python_versions"] == [manifest["wheel_python_version"]]
+    assert manifest["supported_wheel_python_tags"] == [manifest["wheel_python_tag"]]
 
     tar_path = repo / "dist-offline" / "ai-sdlc-offline-0.2.0.tar.gz"
     zip_path = repo / "dist-offline" / "ai-sdlc-offline-0.2.0.zip"
@@ -757,6 +759,42 @@ def test_build_offline_bundle_can_suffix_platform_release_assets(tmp_path: Path)
         )
 
 
+def test_build_offline_bundle_can_include_multiple_python_abis(tmp_path: Path) -> None:
+    repo = _prepare_fake_bundle_repo(tmp_path)
+    wrapper_dir = tmp_path / "wrappers"
+    wrapper_dir.mkdir()
+    fake_python = _make_fake_python(wrapper_dir)
+    _make_fake_uv(wrapper_dir)
+
+    env = _script_env(wrapper_dir, fake_python)
+    env["AI_SDLC_OFFLINE_ASSET_SUFFIX"] = "-windows-amd64"
+    env["AI_SDLC_OFFLINE_PYTHON_VERSIONS"] = "3.11,3.12"
+    env["AI_SDLC_OFFLINE_TARGET_PLATFORM"] = "win_amd64"
+    if os.name == "nt":
+        _set_bash_wrapper_env(env, wrapper_dir, tmp_path)
+
+    result = subprocess.run(
+        [_bash_command(), str(repo / "packaging" / "offline" / "build_offline_bundle.sh")],
+        cwd=repo,
+        capture_output=True,
+        text=True,
+        env=env,
+        check=False,
+    )
+
+    assert result.returncode == 0, result.stderr
+    manifest_path = (
+        repo
+        / "dist-offline"
+        / "ai-sdlc-offline-0.2.0-windows-amd64"
+        / "bundle-manifest.json"
+    )
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    assert manifest["wheel_python_version"] == "3.11"
+    assert manifest["supported_python_versions"] == ["3.11", "3.12"]
+    assert manifest["supported_wheel_python_tags"] == ["cp311", "cp312"]
+
+
 def test_install_offline_rejects_platform_manifest_mismatch(tmp_path: Path) -> None:
     bundle_dir = tmp_path / "bundle"
     wheels_dir = bundle_dir / "wheels"
@@ -906,6 +944,49 @@ def test_install_offline_rejects_python_abi_manifest_mismatch(tmp_path: Path) ->
     combined = f"{result.stdout}\n{result.stderr}"
     assert result.returncode != 0
     assert "python=9.9 wheel ABI" in combined
+
+
+def test_install_offline_accepts_current_python_in_supported_abi_list(
+    tmp_path: Path,
+) -> None:
+    bundle_dir = tmp_path / "bundle"
+    wheels_dir = bundle_dir / "wheels"
+    wheels_dir.mkdir(parents=True)
+    shutil.copy2(_OFFLINE_DIR / "install_offline.sh", bundle_dir / "install_offline.sh")
+    (wheels_dir / "ai_sdlc-0.2.0-py3-none-any.whl").write_text(
+        "fake wheel\n",
+        encoding="utf-8",
+    )
+    current_version = f"{sys.version_info.major}.{sys.version_info.minor}"
+    other_version = "3.99" if current_version != "3.99" else "3.98"
+    (bundle_dir / "bundle-manifest.json").write_text(
+        json.dumps(
+            {
+                "package_version": "0.2.0",
+                "platform_os": platform.system().lower(),
+                "platform_machine": platform.machine().lower(),
+                "wheel_python_version": other_version,
+                "supported_python_versions": [other_version, current_version],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    wrapper_dir = tmp_path / "wrappers"
+    wrapper_dir.mkdir()
+    fake_python = _make_fake_python(wrapper_dir)
+
+    result = subprocess.run(
+        [_bash_command(), str(bundle_dir / "install_offline.sh")],
+        cwd=bundle_dir,
+        capture_output=True,
+        text=True,
+        env=_script_env(wrapper_dir, fake_python),
+        check=False,
+    )
+
+    assert result.returncode == 0, result.stderr
+    assert "Validated offline bundle platform manifest." in result.stdout
 
 
 def test_install_offline_reports_bundled_runtime_startup_crash(
@@ -1408,6 +1489,8 @@ def test_windows_install_scripts_include_auto_python_detection_and_bilingual_gui
     assert "UpgradeExisting" in offline_ps1
     assert "Using existing AI-SDLC runtime" in offline_ps1
     assert 'Join-Path $baseDir "python.exe"' in offline_ps1
+    assert "supported_python_versions" in offline_ps1
+    assert "Get-ManifestPythonVersions" in offline_ps1
     assert "self-update install --help" in offline_ps1
     assert "failed to upgrade the current ai-sdlc installation" in offline_ps1
     assert "$LASTEXITCODE -ne 0" in offline_ps1
@@ -1481,7 +1564,7 @@ def test_user_guide_splits_pre_downloaded_and_online_release_install_paths() -> 
     assert "如果使用场景 B，在线下载到项目父目录并安装" not in guide
     assert "ai-sdlc init ." in guide
     assert "如果你的 PowerShell 粘贴多行时把命令显示成连续的 `>>` 提示" in guide
-    assert 'Set-Location ..; $BundleName = "ai-sdlc-offline-0.8.0-windows-amd64"' in guide
+    assert 'Set-Location ..; $BundleName = "ai-sdlc-offline-0.8.1-windows-amd64"' in guide
     assert "是示例路径；请替换成你的真实项目根目录" in guide
     assert len(scenario_a_sections) == 2
     assert guide.count("Invoke-WebRequest -Uri") >= 2

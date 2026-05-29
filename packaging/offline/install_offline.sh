@@ -265,6 +265,15 @@ expected_machine = str(payload.get("platform_machine", "")).strip().lower()
 current_os = platform.system().lower()
 current_machine = platform.machine().lower()
 wheel_python_version = str(payload.get("wheel_python_version", "")).strip()
+supported_python_versions_raw = payload.get("supported_python_versions") or []
+if isinstance(supported_python_versions_raw, str):
+    supported_python_versions = [supported_python_versions_raw.strip()]
+else:
+    supported_python_versions = [
+        str(item).strip() for item in supported_python_versions_raw if str(item).strip()
+    ]
+if not supported_python_versions and wheel_python_version:
+    supported_python_versions = [wheel_python_version]
 current_python_version = f"{sys.version_info.major}.{sys.version_info.minor}"
 
 mismatches: list[str] = []
@@ -272,9 +281,11 @@ if expected_os and expected_os != current_os:
     mismatches.append(f"os={expected_os} (current={current_os})")
 if expected_machine and expected_machine != current_machine:
     mismatches.append(f"machine={expected_machine} (current={current_machine})")
-if wheel_python_version and wheel_python_version != current_python_version:
+if supported_python_versions and current_python_version not in supported_python_versions:
     mismatches.append(
-        f"python={wheel_python_version} wheel ABI (selected={current_python_version})"
+        "python="
+        + ",".join(supported_python_versions)
+        + f" wheel ABI (selected={current_python_version})"
     )
 
 if mismatches:
