@@ -62,9 +62,8 @@ hide the same update forever.
 
 When a newer GitHub Release is available, run one command. It checks, downloads,
 installs, and verifies the target version automatically. This command is not
-project-root specific; run it from the project parent directory, a Downloads
-directory, or another neutral temporary directory so upgrade scratch files do not
-land inside your application repository:
+project-root specific and uses a system temporary directory for its own download
+and extraction work, so it does not place upgrade files in the current project:
 
 ```bash
 ai-sdlc self-update check

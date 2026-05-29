@@ -578,7 +578,7 @@ ai-sdlc adopt . --prefer "支付回调"
 
 ### 1. `v0.7.6` 及以后的用户
 
-在已经能正常运行 `ai-sdlc` 的终端里执行。执行目录不要求是业务项目根目录；推荐在业务项目父目录、下载目录或任意普通临时目录执行，避免把升级过程产生的安装包或 `.ai-sdlc-install` 临时目录放进业务项目。
+在已经能正常运行 `ai-sdlc` 的终端里执行。执行目录不要求是业务项目根目录；`self-update check` 会使用系统临时目录完成下载和解压，不会把升级安装包或 `.ai-sdlc-install` 写进当前项目。
 
 ```bash
 ai-sdlc self-update check
