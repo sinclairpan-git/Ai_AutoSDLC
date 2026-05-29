@@ -49,7 +49,9 @@ Windows 注意：如果从父 PowerShell 里用 `powershell -ExecutionPolicy Byp
 - Windows：`.\.venv\Scripts\python.exe -m ai_sdlc <子命令>`
 - macOS / Linux：`./.venv/bin/python -m ai_sdlc <子命令>`
 
-如果机器上已经有旧版 `ai-sdlc`，并且你要覆盖当前 `PATH` 命中的旧入口，使用升级模式：
+如果机器上已经有旧版 `ai-sdlc`，并且你要覆盖当前 `PATH` 命中的旧入口，使用升级模式。
+
+升级模式请在业务项目父目录或临时下载目录执行，不要在业务项目根目录执行。下面的命令会在当前目录解压安装包或创建 `.ai-sdlc-install` 临时目录，并进入安装包目录运行升级脚本；升级完成后再回业务项目根目录继续执行 `ai-sdlc init .`、`ai-sdlc run --dry-run` 等项目命令。
 
 ### Linux/macOS 升级旧入口
 

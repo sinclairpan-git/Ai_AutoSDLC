@@ -578,7 +578,7 @@ ai-sdlc adopt . --prefer "支付回调"
 
 ### 1. `v0.7.6` 及以后的用户
 
-在已经能正常运行 `ai-sdlc` 的终端里执行：
+在已经能正常运行 `ai-sdlc` 的终端里执行。执行目录不要求是业务项目根目录；推荐在业务项目父目录、下载目录或任意普通临时目录执行，避免把升级过程产生的安装包或 `.ai-sdlc-install` 临时目录放进业务项目。
 
 ```bash
 ai-sdlc self-update check
@@ -604,6 +604,8 @@ ai-sdlc self-update check
 ### 2. 更旧版本或 `No such command 'install'`
 
 如果旧版本提示 `No such command 'install'`，说明旧 CLI 太老，不能靠旧 CLI 学会新子命令。直接下载最新平台包，并让安装包覆盖当前 `PATH` 命中的旧入口。
+
+下面的救援升级命令请在业务项目父目录或临时下载目录执行，不要在业务项目根目录执行。命令会把安装包和 `.ai-sdlc-install` 解压目录放到当前目录，并自动进入解压后的安装包目录运行升级脚本；升级完成后再回到业务项目根目录继续。
 
 Windows x64：
 
@@ -655,7 +657,7 @@ ai-sdlc self-update check
 
 ### 3. 升级后回到项目继续
 
-在业务项目根目录执行：
+升级命令不在业务项目根目录执行；升级完成以后，才回到业务项目根目录执行：
 
 ```bash
 ai-sdlc init .
