@@ -312,6 +312,10 @@ RELEASE_DOCS_CONSISTENCY_SURFACES: dict[Path, tuple[str, ...]] = {
     ),
     RELEASE_BUILD_WORKFLOW_REL: ("default: v0.8.2",),
     RELEASE_ARTIFACT_SMOKE_WORKFLOW_REL: ("default: v0.8.2",),
+    WINDOWS_OFFLINE_SMOKE_WORKFLOW_REL: (
+        "expected upgraded ai-sdlc version 0.8.2",
+        r"0\.8\.2",
+    ),
 }
 BEGINNER_GUIDE_REQUIRED_TOKENS = (
     "当前正式发布版：`v0.8.2`",

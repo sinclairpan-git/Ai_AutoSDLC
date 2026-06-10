@@ -9,11 +9,15 @@ working_set_snapshot:
   plan_path: specs/187-agentops-self-iteration-monitoring/plan.md
   tasks_path: specs/187-agentops-self-iteration-monitoring/tasks.md
   active_files: []
-  context_summary: 'Goal: Publish AI-SDLC v0.8.2 patch release | State: Release bump
-    is ready to commit. Escaped Windows smoke version matcher was corrected to 0.8.2
-    and release-entry regression tests pass. | Next: Stage all release bump files,
-    commit, push codex/release-v0.8.2, open PR, request Codex review, then monitor
-    checks.'
+  context_summary: 'State: Independent Codex review fallback for PR #81 found one
+    P2 release-guard gap: verify_constraints did not require windows-offline-smoke.yml
+    to carry the current v0.8.2 upgrade expectation. Fixed by adding windows-offline-smoke.yml
+    to RELEASE_DOCS_CONSISTENCY_SURFACES with 0.8.2 markers and adding unit coverage
+    for stale Windows upgrade smoke versions. Validation: uv run pytest tests/unit/test_verify_constraints.py
+    -q => 126 passed; uv run ruff check src/ai_sdlc/core/verify_constraints.py tests/unit/test_verify_constraints.py
+    => pass; uv run ai-sdlc verify constraints => no BLOCKERs. Next: commit, push
+    PR #81, monitor refreshed checks, and use independent review result as substitute
+    while GitHub @codex review remains quota-blocked.'
 current_branch: feature/187-agentops-self-iteration-monitoring-docs
 docs_baseline_ref: ''
 docs_baseline_at: ''

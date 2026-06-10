@@ -1931,6 +1931,25 @@ def test_release_docs_consistency_passes_when_release_entry_docs_align(
     mem.mkdir(parents=True)
     (mem / "constitution.md").write_text("# C\n", encoding="utf-8")
     _write_verification_profile_docs(tmp_path)
+    verification_path = tmp_path / "src" / "ai_sdlc" / "rules" / "verification.md"
+    verification_path.write_text(
+        verification_path.read_text(encoding="utf-8")
+        + "\n## Reconcile Smoke Contract\n\n"
+        + "- `Legacy Artifact Probe` 与 `ai-sdlc recover --reconcile` 属于 Windows smoke 依赖的仓库状态诊断契约。\n"
+        + "- 变更上述诊断输出契约时，必须同步更新 `.github/workflows/windows-offline-smoke.yml` 与相关测试。\n",
+        encoding="utf-8",
+    )
+    cli_dir = tmp_path / "src" / "ai_sdlc" / "cli"
+    cli_dir.mkdir(parents=True, exist_ok=True)
+    (cli_dir / "commands.py").write_text(
+        "table_title = 'Legacy Artifact Probe'\n"
+        "next_step = 'ai-sdlc recover --reconcile'\n",
+        encoding="utf-8",
+    )
+    (cli_dir / "run_cmd.py").write_text(
+        "message = '已停止当前运行，避免基于过时 checkpoint 继续执行。'\n",
+        encoding="utf-8",
+    )
     (tmp_path / "README.md").write_text(
         "# AI-SDLC\n\n`v0.8.2`\n\n"
         "## Start The Framework\n\n"
@@ -2051,8 +2070,39 @@ def test_release_docs_consistency_passes_when_release_entry_docs_align(
         "workflow_dispatch:\n  inputs:\n    tag:\n      default: v0.8.2\n",
         encoding="utf-8",
     )
+    (workflows_dir / "windows-offline-smoke.yml").write_text(
+        "Legacy Artifact Probe\n"
+        "recover --reconcile\n"
+        "ai-sdlc run --dry-run reported repo-state reconciliation diagnostics; treating this as smoke pass.\n"
+        "expected upgraded ai-sdlc version 0.8.2\n"
+        "$upgradedVersion -notmatch \"0\\.8\\.2\"\n",
+        encoding="utf-8",
+    )
 
     assert collect_constraint_blockers(tmp_path) == []
+
+
+def test_release_docs_consistency_blocks_stale_windows_upgrade_smoke_version(
+    tmp_path: Path,
+) -> None:
+    mem = tmp_path / ".ai-sdlc" / "memory"
+    mem.mkdir(parents=True)
+    (mem / "constitution.md").write_text("# C\n", encoding="utf-8")
+    (tmp_path / "README.md").write_text("v0.8.2\n", encoding="utf-8")
+    workflows_dir = tmp_path / ".github" / "workflows"
+    workflows_dir.mkdir(parents=True, exist_ok=True)
+    (workflows_dir / "windows-offline-smoke.yml").write_text(
+        "expected upgraded ai-sdlc version 0.8.1\n"
+        "$upgradedVersion -notmatch \"0\\.8\\.1\"\n",
+        encoding="utf-8",
+    )
+
+    blockers = collect_constraint_blockers(tmp_path)
+
+    assert any(
+        "windows-offline-smoke.yml missing required markers" in blocker
+        for blocker in blockers
+    )
 
 
 def test_beginner_guide_blocks_old_manual_setup_path(tmp_path: Path) -> None:
