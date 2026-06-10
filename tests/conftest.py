@@ -9,6 +9,31 @@ from pathlib import Path
 import pytest
 
 
+@pytest.fixture(autouse=True)
+def isolated_user_agentops_profile(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """Keep tests independent from a developer's user-level enterprise profile."""
+    home = tmp_path / ".pytest-home"
+    home.mkdir(exist_ok=True)
+    monkeypatch.setenv("HOME", str(home))
+    monkeypatch.setenv("USERPROFILE", str(home))
+    for key in (
+        "AI_SDLC_ENTERPRISE_PROFILE",
+        "AGENTOPS_REPORTING_MODE",
+        "AGENTOPS_INGESTION_ENDPOINT",
+        "AGENTOPS_INGESTION_TOKEN",
+        "AGENTOPS_INGESTION_TOKEN_ENV",
+        "AGENTOPS_INGESTION_MODE",
+        "AGENTOPS_INGESTION_TIMEOUT_SECONDS",
+        "AGENTOPS_PRODUCER_ID",
+        "AGENTOPS_RUNTIME_ID",
+        "AGENTOPS_CREDENTIAL_ID",
+        "AGENTOPS_KEY_ID",
+    ):
+        monkeypatch.delenv(key, raising=False)
+
+
 @pytest.fixture()
 def tmp_project_dir(tmp_path: Path) -> Path:
     """Provide a clean temporary directory simulating an empty project."""

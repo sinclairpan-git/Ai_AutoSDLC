@@ -1,24 +1,28 @@
 # Continuity Handoff
 
-- Updated: 2026-06-10T08:37:44+00:00
-- Reason: Heartbeat fixed verify import-order failure
-- Goal: Keep PR #80 heartbeat until checks are green and Codex review has no actionable findings
-- State: Fixed verify failure caused by Ruff import ordering after InitGate import; local targeted verification is green.
+- Updated: 2026-06-10T10:12:05+00:00
+- Reason: none
+- Goal: none
+- State: Independent Codex review fallback for PR #81 found one P2 release-guard gap: verify_constraints did not require windows-offline-smoke.yml to carry the current v0.8.2 upgrade expectation. Fixed by adding windows-offline-smoke.yml to RELEASE_DOCS_CONSISTENCY_SURFACES with 0.8.2 markers and adding unit coverage for stale Windows upgrade smoke versions. Validation: uv run pytest tests/unit/test_verify_constraints.py -q => 126 passed; uv run ruff check src/ai_sdlc/core/verify_constraints.py tests/unit/test_verify_constraints.py => pass; uv run ai-sdlc verify constraints => no BLOCKERs. Next: commit, push PR #81, monitor refreshed checks, and use independent review result as substitute while GitHub @codex review remains quota-blocked.
 - Stage: close
 - Work Item: 187-agentops-self-iteration-monitoring
-- Branch: codex/init-update-path-fixes
+- Branch: codex/release-v0.8.2
 
 ## Changed Files
-- M src/ai_sdlc/cli/commands.py
+- M .ai-sdlc/state/codex-handoff.md
+- M .ai-sdlc/state/resume-pack.yaml
+- M .ai-sdlc/work-items/187-agentops-self-iteration-monitoring/codex-handoff.md
+- M src/ai_sdlc/core/verify_constraints.py
+- M tests/unit/test_verify_constraints.py
 
 ## Key Decisions
-- Sorted commands.py imports so governance_guard precedes pipeline_gates, matching Ruff/isort ordering without changing behavior.
+- none
 
 ## Commands / Tests
-- uv run ruff check src tests -> pass; .venv/bin/python -m pytest tests/integration/test_cli_init.py tests/integration/test_cli_stage.py targeted run tests tests/unit/test_run_cmd.py -q -> 31 passed; uv run ai-sdlc verify constraints -> no BLOCKERs; git diff --check -> clean
+- none
 
 ## Blockers / Risks
 - none
 
 ## Exact Next Steps
-- Amend and push PR #80, re-comment @codex review, then continue polling checks and review results.
+- none
