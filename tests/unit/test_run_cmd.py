@@ -94,3 +94,33 @@ def test_runtime_attachment_summary_deduplicates_gap_and_blocker_text() -> None:
     finally:
         run_cmd_module.is_frontend_contract_runtime_attachment_work_item = original_contract_check
         run_cmd_module.build_frontend_contract_runtime_attachment = original_builder
+
+
+def test_agentops_verification_metrics_count_only_test_stage_checks() -> None:
+    stage_results = [
+        (
+            "refine",
+            SimpleNamespace(
+                checks=[
+                    SimpleNamespace(name="prd", passed=False),
+                    SimpleNamespace(name="scope", passed=True),
+                ]
+            ),
+        ),
+        (
+            "verify",
+            SimpleNamespace(
+                checks=[
+                    SimpleNamespace(name="unit", passed=True),
+                    SimpleNamespace(name="lint", passed=False),
+                ]
+            ),
+        ),
+        (
+            "close",
+            SimpleNamespace(checks=[SimpleNamespace(name="summary", passed=False)]),
+        ),
+    ]
+
+    assert run_cmd_module._agentops_total_check_count(stage_results) == 2
+    assert run_cmd_module._agentops_total_failed_check_count(stage_results) == 1

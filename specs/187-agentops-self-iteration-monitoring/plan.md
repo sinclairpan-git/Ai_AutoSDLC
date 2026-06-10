@@ -84,5 +84,6 @@ specs/187-agentops-self-iteration-monitoring/
 
 | 问题 | 状态 | 阻塞阶段 |
 | --- | --- | --- |
-| close gate 当前因 final tests/truth snapshot stale 失败 | open | release/close，不阻塞旁路观测 |
+| close gate 当前因 final tests/truth snapshot stale 失败 | resolved | 最新真实 run close PASS，receipt delivered accepted=5 |
 | evidence summary 缺 model/tool/artifact span | resolved | `ai-sdlc run` batch now emits summary-only `trace_span.v1` model span plus SDLC verification/tool and artifact events. |
+| stage/gate failure detail 不足以反推框架优化建议 | resolved | Batch 5 补齐 stage-level event、failed_conditions/open_gates/next_action、summary-only guard metrics 与 report_type。 |

@@ -231,3 +231,45 @@ Phase 3 complete: 1/1 tasks completed, 0 halted.
 - 关联 branch/worktree disposition 计划：archived
 - 当前批次 branch disposition 状态：archived
 - 当前批次 worktree disposition 状态：retained（当前工作区保留用于本地 AgentOps 观测复跑）
+
+### Batch 2026-06-02-001 | AgentOps self-iteration failure analytics payload
+
+#### 5.1 批次范围
+
+- 覆盖任务：`T51`
+- 改动范围：
+  - `src/ai_sdlc/core/agentops_bridge.py`
+  - `src/ai_sdlc/cli/run_cmd.py`
+  - `tests/unit/test_agentops_bridge.py`
+  - `tests/integration/test_cli_run.py`
+  - `specs/187-agentops-self-iteration-monitoring/spec.md`
+  - `specs/187-agentops-self-iteration-monitoring/plan.md`
+  - `specs/187-agentops-self-iteration-monitoring/tasks.md`
+  - `specs/187-agentops-self-iteration-monitoring/task-execution-log.md`
+  - `.ai-sdlc/state/codex-handoff.md`
+  - `.ai-sdlc/state/resume-pack.yaml`
+- 改动内容：
+  - 所有 AgentOps payload 经 canonicalizer 补齐 run/trace/span/stage/status/workitem/task/time/retry/error/next_action 字段。
+  - failed/blocked span 补齐 failed_conditions、open_gates、expected_result、actual_result_summary、blocking_reason、retry_guidance、diagnostic_ref 与 evidence_ref。
+  - `ai-sdlc run` 为每个实际执行 stage 额外上报 stage-level event；verify/verification 观测阶段映射为 `test`。
+  - task guard 与 path 观测改为 summary-only：raw path list 为空，只保留 count/hash、blocked_paths_summary、guard_policy_version、missing_executable_task、candidate_fix_summary。
+  - runtime report 标记 `report_type`，默认真实 run 为 `real_run`、dry-run 为 `dry_run_retry`，允许显式 `readiness_fixture` / `live_smoke`。
+  - 工程指标补充 test/failed_test、CI/review/retry/duration/token/cost summary、commit_sha、branch、pr_number。
+
+#### 5.2 验证与结果
+
+- `uv run ruff check src/ai_sdlc/cli/run_cmd.py src/ai_sdlc/core/agentops_bridge.py tests/integration/test_cli_run.py tests/unit/test_agentops_bridge.py tests/integration/test_cli_agentops.py`：通过。
+- `HOME=.tmp/home UV_CACHE_DIR=.uv-cache uv run pytest tests/unit/test_agentops_bridge.py tests/integration/test_cli_run.py tests/integration/test_cli_agentops.py -q`：75 passed。
+- `UV_CACHE_DIR=.uv-cache uv run ai-sdlc verify constraints`：通过，no BLOCKERs。
+- `UV_CACHE_DIR=.uv-cache uv run ai-sdlc workitem guard --json`：失败，原因是 187 原任务均已 done、没有下一条 executable task；本批已补充 `T51` 作为追溯任务。
+- `source ~/.config/ai-sdlc/agentops.env && UV_CACHE_DIR=.uv-cache uv run ai-sdlc run`（沙箱内）：`close` PASS，AgentOps delivery `transport_error`，diagnostic 写入 `.ai-sdlc/agentops/diagnostics/...transport_error.json`。
+- `source ~/.config/ai-sdlc/agentops.env && UV_CACHE_DIR=.uv-cache uv run ai-sdlc run`（授权访问本地 Gateway）：`close` PASS，AgentOps report delivered，accepted=5，deduplicated=0。
+- `UV_CACHE_DIR=.uv-cache uv run ai-sdlc agentops status --json`：最新 receipt `outbox_run_187_agentops_self_iteration_monitoring_run_2026_06_02T03_44_32Z_deaee2f816c7.summary.json`，counts accepted=5、deduplicated=0、stale=0、rejected=0、dlq=0。
+
+#### 5.3 质量信号
+
+- 最新 outbox 包含 `trace_span:model`、`sdlc_trace_event:stage`、`sdlc_trace_event:gate`、`sdlc_trace_event:verification`、`sdlc_trace_event:artifact` 五类事件。
+- `stage_close` payload 已包含 `span_kind=stage`、`operation_name=ai_sdlc.stage.close`、`status_code=ok`、`report_type=real_run`、`commit_sha`、`branch`、token/cost summary。
+- `gate_close` payload 已将 raw `changed_paths/allowed_paths/forbidden_paths` 保持为空，并提供 `changed_paths_count=10`、`allowed_paths_count=21`、hash 与 `guard_policy_version=task_guard.summary_only.v1`。
+- receipt 继续保持 accepted/deduplicated/stale/rejected/dlq 语义；沙箱 transport_error 被写入 diagnostic，未静默吞掉。
+- Batch 5 初版用 `status=diagnostic` 表达未执行 stage catalog，Gateway 返回 delivered_with_diagnostics 且 rejected=7；后续修正为 `status=emitted` + `stage_observation_state=not_reached`，保留观测语义并避免 schema reject。

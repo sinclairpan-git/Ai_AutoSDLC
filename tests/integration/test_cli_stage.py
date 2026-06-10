@@ -66,6 +66,17 @@ class TestStageCommand:
         assert "创建 feature/{id}-docs 分支" in result.output
         assert "创建 design/{id}-docs 分支" not in result.output
 
+    def test_stage_show_refine_after_init_does_not_report_init_missing(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.chdir(tmp_path)
+        assert runner.invoke(app, ["init", "."]).exit_code == 0
+
+        result = runner.invoke(app, ["stage", "show", "refine"])
+
+        assert result.exit_code == 0
+        assert "前置阶段未完成: init" not in result.output
+
     def test_stage_status_inside_project(
         self, initialized_project_dir: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:

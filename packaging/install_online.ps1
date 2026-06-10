@@ -181,7 +181,8 @@ if ($AddToPath) {
   Write-Host "Check resolved command before using bare ai-sdlc:"
   Write-Host "  Get-Command ai-sdlc | Select-Object Source"
 } else {
-  Write-Host "PATH was not changed. Rerun with -AddToPath to enable bare ai-sdlc commands."
+  Write-Host "PATH was not changed. Bare ai-sdlc may still resolve an older install."
+  Write-Host "Use the direct shim above, or rerun with -AddToPath for new terminals."
 }
 Write-Host "Direct shim:"
 Write-Host ('  {0} {1}{2}{1} init .' -f $callOperator, $doubleQuote, $resolvedCliExe)

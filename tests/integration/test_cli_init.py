@@ -9,8 +9,10 @@ from typer.testing import CliRunner
 
 from ai_sdlc.cli import commands
 from ai_sdlc.cli.main import app
+from ai_sdlc.context.state import load_checkpoint, load_resume_pack, save_checkpoint
 from ai_sdlc.core.config import load_project_config
 from ai_sdlc.integrations.agent_target import PreferredShell
+from ai_sdlc.models.state import Checkpoint, CompletedStage, FeatureInfo
 
 runner = CliRunner()
 
@@ -51,6 +53,12 @@ class TestCliInit:
         assert "ai-sdlc adapter activate" not in result.output
         cfg = load_project_config(tmp_path)
         assert cfg.preferred_shell != ""
+        cp = load_checkpoint(tmp_path)
+        assert cp is not None
+        assert cp.current_stage == "init"
+        assert "init" in {stage.stage for stage in cp.completed_stages}
+        resume_pack = load_resume_pack(tmp_path)
+        assert resume_pack.current_stage == "init"
 
     def test_init_fails_when_automatic_dry_run_crashes(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
@@ -83,6 +91,41 @@ class TestCliInit:
         assert "ai-sdlc adapter status" in result.output
         assert "python -m ai_sdlc run --dry-run" not in result.output
         assert "ai-sdlc adapter activate" not in result.output
+        cp = load_checkpoint(initialized_project_dir)
+        assert cp is not None
+        assert cp.current_stage == "init"
+        assert "init" in {stage.stage for stage in cp.completed_stages}
+
+    def test_init_does_not_mark_init_complete_when_rehearsal_init_gate_is_open(
+        self, initialized_project_dir: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.chdir(initialized_project_dir)
+        (initialized_project_dir / ".ai-sdlc" / "memory" / "constitution.md").unlink()
+        cp = load_checkpoint(initialized_project_dir)
+        assert cp is None
+        save_checkpoint(
+            initialized_project_dir,
+            Checkpoint(
+                current_stage="init",
+                feature=FeatureInfo(
+                    id="unknown",
+                    spec_dir="specs/unknown",
+                    design_branch="design/unknown",
+                    feature_branch="feature/unknown",
+                    current_branch="main",
+                ),
+                completed_stages=[
+                    CompletedStage(stage="init", completed_at="2026-06-10T00:00:00Z")
+                ],
+            ),
+        )
+
+        result = runner.invoke(app, ["init", str(initialized_project_dir)])
+
+        assert result.exit_code == 0
+        cp = load_checkpoint(initialized_project_dir)
+        assert cp is not None
+        assert "init" not in {stage.stage for stage in cp.completed_stages}
 
     def test_init_nonexistent_dir(self, tmp_path: Path) -> None:
         result = runner.invoke(app, ["init", str(tmp_path / "nope")])

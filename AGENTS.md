@@ -3,7 +3,7 @@
 本工程使用 **AI-SDLC** 自动化流水线。
 
 - 宪章：`.ai-sdlc/memory/constitution.md`
-- **终端约定**：优先使用用户已安装好的 `ai-sdlc`；若裸命令不可用，使用 `python -m ai_sdlc ...`。不要要求普通用户手动安装 Python、venv、pip 或依赖，除非 CLI 明确报错并给出修复命令。
+- **终端约定（普通用户项目）**：优先使用用户已安装好的 `ai-sdlc`；若裸命令不可用，使用 `python -m ai_sdlc ...`。不要要求普通用户手动安装 Python、venv、pip 或依赖，除非 CLI 明确报错并给出修复命令。
 - 分阶段清单：`ai-sdlc stage show <阶段名>`
 - 初始化入口（普通用户先执行）：`ai-sdlc init .` 或 `python -m ai_sdlc init .`
 - `init` 会在用户选择 AI 代理入口和 shell 后自动执行必要检查与安全预演；正常输出会给出“当前结果 / Result”和“下一步 / Next”。
@@ -30,7 +30,14 @@ For long-running Codex/ChatGPT tasks, maintain `.ai-sdlc/state/codex-handoff.md`
 When a checkpoint is linked to an active work item, also keep the scoped copy at
 `.ai-sdlc/work-items/<wi-id>/codex-handoff.md`.
 
-Update the handoff with `ai-sdlc handoff update` or `python -m ai_sdlc handoff update`:
+Update the handoff with the active AI-SDLC CLI for the current context:
+
+- In ordinary user projects, use `ai-sdlc handoff update` or
+  `python -m ai_sdlc handoff update`.
+- In this Ai_AutoSDLC repository's self-development workflow, use the
+  repository source entrypoint: `uv run ai-sdlc handoff update`.
+
+Update the handoff:
 
 - after any meaningful code or document change batch
 - after running tests or debugging a failure
@@ -57,6 +64,12 @@ Keep the handoff concise enough for a fresh thread to read quickly.
 
 This section is for development of this AI-SDLC repository itself. Do not copy
 it into external user guidance or framework runtime rules.
+
+For this repository's self-development workflow, treat the checked-out source as
+the active framework implementation. Use `uv run ai-sdlc ...` for SDLC
+governance, AgentOps, handoff, work item, verify, and run commands. A globally
+installed `ai-sdlc` may be older and is only a distribution/user-install smoke
+target, not the controlling framework for local repository development.
 
 When a Codex change is ready for mainline:
 

@@ -318,8 +318,12 @@ if [[ "${UPGRADE_EXISTING}" == "1" ]]; then
   if [[ "${INSTALLED_VERSION}" != "${EXPECTED_VERSION}" ]]; then
     fail_install "installed version is ${INSTALLED_VERSION}, expected ${EXPECTED_VERSION}"
   fi
-  if ! ai-sdlc self-update install --help >/dev/null 2>&1; then
+  if ! PATH_VERSION="$(ai-sdlc --version 2>/dev/null)"; then
     fail_install "current PATH still resolves an older ai-sdlc command after installation"
+  fi
+  PATH_VERSION="$(printf '%s\n' "${PATH_VERSION}" | tail -n 1 | tr -d '[:space:]')"
+  if [[ "${PATH_VERSION}" != "${EXPECTED_VERSION}" ]]; then
+    fail_install "current PATH resolves ai-sdlc ${PATH_VERSION:-unknown}, expected ${EXPECTED_VERSION}"
   fi
   echo ""
   print_status \
@@ -373,5 +377,12 @@ if [[ "${ADD_TO_PATH}" == "1" ]]; then
   echo "PATH entry added: ${HOME}/.local/bin"
 else
   echo ""
-  echo "PATH was not changed. Rerun with --add-to-path to enable bare ai-sdlc commands."
+  echo "PATH was not changed. Bare ai-sdlc may still resolve an older install."
+  echo "Use the direct Python command above, or rerun with --add-to-path for new terminals."
+  echo "To upgrade the existing bare ai-sdlc entrypoint, rerun with --upgrade-existing."
+  if command -v ai-sdlc >/dev/null 2>&1; then
+    echo "Current bare ai-sdlc:"
+    echo "  $(command -v ai-sdlc)"
+    echo "  $(ai-sdlc --version 2>/dev/null || true)"
+  fi
 fi

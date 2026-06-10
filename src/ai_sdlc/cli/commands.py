@@ -25,6 +25,7 @@ from ai_sdlc.context.state import (
     load_resume_pack,
     load_runtime_state,
     load_working_set,
+    save_checkpoint,
 )
 from ai_sdlc.core.artifact_target_guard import evaluate_formal_artifact_target_guard
 from ai_sdlc.core.backlog_breach_guard import evaluate_backlog_breach_guard
@@ -50,6 +51,7 @@ from ai_sdlc.core.reconcile import (
 )
 from ai_sdlc.core.runner import PipelineHaltError, SDLCRunner
 from ai_sdlc.gates.governance_guard import load_governance_state
+from ai_sdlc.gates.pipeline_gates import InitGate
 from ai_sdlc.generators.index_gen import (
     generate_all_extended_indexes,
     generate_index,
@@ -73,7 +75,7 @@ from ai_sdlc.integrations.ide_adapter import (
 from ai_sdlc.knowledge.engine import apply_refresh, compute_refresh_level, load_baseline
 from ai_sdlc.models.gate import GateResult
 from ai_sdlc.models.project import PreferredShell, ProjectStatus
-from ai_sdlc.models.state import Checkpoint
+from ai_sdlc.models.state import Checkpoint, CompletedStage
 from ai_sdlc.routers.bootstrap import (
     EXISTING_INITIALIZED,
     EXISTING_UNINITIALIZED,
@@ -130,29 +132,35 @@ class InitSafeRehearsalError(RuntimeError):
     """Raised when init's automatic dry-run crashes instead of reaching gates."""
 
 
-def _run_init_safe_rehearsal(root: Path) -> tuple[bool, list[str]]:
+def _run_init_safe_rehearsal(root: Path) -> tuple[bool, list[str], bool]:
     """Run the same dry-run startup check that users previously ran manually."""
 
     last_result: GateResult | None = None
+    init_result = InitGate().check({"root": str(root)})
 
-    def remember_result(_stage: str, result: GateResult) -> None:
+    def remember_result(stage: str, result: GateResult) -> None:
         nonlocal last_result
         last_result = result
 
     try:
         SDLCRunner(root).run(dry_run=True, on_stage_finish=remember_result)
     except PipelineHaltError as exc:
-        return False, [str(exc)]
+        return False, [str(exc)], False
     except Exception as exc:  # pragma: no cover - defensive CLI boundary
         raise InitSafeRehearsalError(str(exc)) from exc
 
     if last_result is None:
         raise InitSafeRehearsalError("dry-run did not report a final gate result")
     verdict = str(getattr(last_result.verdict, "value", last_result.verdict)).upper()
-    return verdict == "PASS", _failed_gate_messages_for_init(last_result)
+    init_verdict = str(getattr(init_result.verdict, "value", init_result.verdict)).upper()
+    return (
+        verdict == "PASS",
+        _failed_gate_messages_for_init(last_result),
+        init_verdict == "PASS",
+    )
 
 
-def _run_init_safe_rehearsal_or_exit(root: Path) -> tuple[bool, list[str]]:
+def _run_init_safe_rehearsal_or_exit(root: Path) -> tuple[bool, list[str], bool]:
     try:
         return _run_init_safe_rehearsal(root)
     except InitSafeRehearsalError as exc:
@@ -172,6 +180,28 @@ def _run_init_safe_rehearsal_or_exit(root: Path) -> tuple[bool, list[str]]:
             )
         )
         raise typer.Exit(code=1) from exc
+
+
+def _ensure_init_checkpoint_completed(root: Path, *, init_gate_passed: bool) -> None:
+    """Align init's project-state success with the stage checkpoint ledger."""
+    cp = load_checkpoint(root)
+    if cp is None:
+        return
+
+    changed = False
+    if init_gate_passed and not any(stage.stage == "init" for stage in cp.completed_stages):
+        cp.completed_stages.append(
+            CompletedStage(stage="init", completed_at=utc_now_z())
+        )
+        changed = True
+    if not init_gate_passed:
+        original_count = len(cp.completed_stages)
+        cp.completed_stages = [
+            stage for stage in cp.completed_stages if stage.stage != "init"
+        ]
+        changed = len(cp.completed_stages) != original_count
+    if changed:
+        save_checkpoint(root, cp)
 
 
 def _is_interactive_terminal() -> bool:
@@ -806,7 +836,12 @@ def init_command(
             root,
             detected_ide=detect_ide(root),
         )
-        dry_run_passed, open_reasons = _run_init_safe_rehearsal_or_exit(root)
+        (
+            dry_run_passed,
+            open_reasons,
+            init_gate_passed,
+        ) = _run_init_safe_rehearsal_or_exit(root)
+        _ensure_init_checkpoint_completed(root, init_gate_passed=init_gate_passed)
         console.print(
             Panel(
                 f"Project already initialized at [bold]{root}[/bold]"
@@ -894,7 +929,12 @@ def init_command(
         root,
         detected_ide=detect_ide(root),
     )
-    dry_run_passed, open_reasons = _run_init_safe_rehearsal_or_exit(root)
+    (
+        dry_run_passed,
+        open_reasons,
+        init_gate_passed,
+    ) = _run_init_safe_rehearsal_or_exit(root)
+    _ensure_init_checkpoint_completed(root, init_gate_passed=init_gate_passed)
     info += "\n\n" + render_init_complete_guidance(
         adapter_payload=adapter_payload,
         dry_run_passed=dry_run_passed,

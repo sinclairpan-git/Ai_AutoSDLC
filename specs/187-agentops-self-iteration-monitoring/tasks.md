@@ -108,3 +108,36 @@ related_doc:
 - verify:
   - uv run ruff check src/ai_sdlc/cli/run_cmd.py src/ai_sdlc/core/agentops_bridge.py src/ai_sdlc/cli/enterprise_cmd.py src/ai_sdlc/cli/main.py tests/integration/test_cli_run.py tests/unit/test_agentops_bridge.py tests/integration/test_cli_agentops.py
   - uv run pytest tests/integration/test_cli_run.py tests/unit/test_agentops_bridge.py tests/integration/test_cli_agentops.py tests/unit/test_command_names.py -q
+
+## Batch 5：self-iteration failure analytics payload
+
+### Task 5.1 Enrich stage failure diagnostics and summary-only guard metrics
+
+- task_id: T51
+- status: done
+- depends:
+  - T41
+- scope:
+  - src/ai_sdlc/cli/run_cmd.py
+  - src/ai_sdlc/core/agentops_bridge.py
+  - tests/integration/test_cli_run.py
+  - tests/unit/test_agentops_bridge.py
+  - specs/187-agentops-self-iteration-monitoring/spec.md
+  - specs/187-agentops-self-iteration-monitoring/plan.md
+  - specs/187-agentops-self-iteration-monitoring/tasks.md
+  - specs/187-agentops-self-iteration-monitoring/task-execution-log.md
+  - .ai-sdlc/state/codex-handoff.md
+  - .ai-sdlc/state/resume-pack.yaml
+- AC: See acceptance list below.
+- acceptance:
+  - Every AgentOps span carries stable run/trace/span/stage/status/workitem/task/time/retry/error/next_action fields.
+  - Failed or blocked stage/gate spans include failed_conditions, open_gates, expected/actual summaries, blocking_reason, retry_guidance, diagnostic_ref, and evidence_ref.
+  - Task guard payloads are summary-only: counts, hashes, policy version, missing_executable_task, blocked_paths_summary, and candidate_fix_summary; raw path lists remain empty.
+  - Runtime reports are tagged with report_type values from real_run, dry_run_retry, readiness_fixture, or live_smoke.
+  - Engineering metrics include summary counts for tests, CI/review/retry/duration/token/cost and branch/commit/PR identifiers.
+  - verified_loaded remains adapter_diagnostic_state only and does not authorize code modification, L5 eligibility, or outbox delivery.
+- verify:
+  - uv run ruff check src/ai_sdlc/cli/run_cmd.py src/ai_sdlc/core/agentops_bridge.py tests/integration/test_cli_run.py tests/unit/test_agentops_bridge.py tests/integration/test_cli_agentops.py
+  - HOME=.tmp/home UV_CACHE_DIR=.uv-cache uv run pytest tests/unit/test_agentops_bridge.py tests/integration/test_cli_run.py tests/integration/test_cli_agentops.py -q
+  - uv run ai-sdlc verify constraints
+  - source ~/.config/ai-sdlc/agentops.env && UV_CACHE_DIR=.uv-cache uv run ai-sdlc run
