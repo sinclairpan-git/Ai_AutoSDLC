@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import os
+import subprocess
 from pathlib import Path
 from typing import Any
 from uuid import uuid4
@@ -30,6 +31,7 @@ from ai_sdlc.core.agentops_bridge import (
     build_artifact_fact,
     build_gate_fact,
     build_model_span_fact,
+    build_stage_fact,
     build_verification_fact,
     deliver_agentops_outbox,
     enterprise_profile_paths,
@@ -53,6 +55,16 @@ from ai_sdlc.utils.helpers import find_project_root, now_iso
 console = Console()
 
 _AGENTOPS_DIAGNOSTIC_ITEM_STATES = {"stale", "rejected", "dlq"}
+_AGENTOPS_REPORTING_STAGES = (
+    "refine",
+    "design",
+    "decompose",
+    "execute",
+    "test",
+    "review",
+    "close",
+    "merge_release",
+)
 
 
 def _dedupe_text_items(values: object) -> list[str]:
@@ -339,6 +351,7 @@ def _flush_agentops_runtime_report(
         trace_id=f"trace_{run_id}",
         stage_name=checkpoint.current_stage,
         timestamp=timestamp,
+        report_type=_agentops_report_type(dry_run=dry_run),
     )
     identity = _agentops_identity_from_env()
     workitem = checkpoint.linked_wi_id or feature_id
@@ -354,26 +367,94 @@ def _flush_agentops_runtime_report(
             status_code="ok" if run_passed else "error",
             input_ref=f"vault://sdlc/{run_id}/run_context_summary",
             output_ref=summary_ref,
+            stage_name="run",
+            workitem=workitem,
+            executable_task_id="pipeline_run",
+            task_title="AI-SDLC runtime summary",
+            token_usage=_agentops_token_usage_summary(),
+            cost_estimate=_agentops_cost_estimate_summary(),
         )
     )
+    git_summary = _agentops_git_summary(root)
+    observed_stage_names: set[str] = set()
     for stage, result in stage_results:
+        public_stage_name = _agentops_public_stage_name(stage)
+        observed_stage_names.add(public_stage_name)
         rule_results = _agentops_rule_results(result)
+        status = _agentops_status(result)
+        failed_conditions = _agentops_failed_conditions(rule_results)
+        blocking_reason = _agentops_blocking_reason(rule_results)
+        metrics = _agentops_engineering_metrics(
+            result,
+            stage=stage,
+            git_summary=git_summary,
+        )
         facts.append(
-            build_gate_fact(
-                gate_id=stage,
-                status=_agentops_status(result),
+            build_stage_fact(
+                stage_name=public_stage_name,
+                status=status,
                 workitem=workitem,
                 executable_task_id=f"pipeline_{stage}",
                 task_guard_state="diagnostic",
-                stage_name=stage,
+                task_title=f"Pipeline {stage} stage",
+                adapter_diagnostic_state=_agentops_adapter_diagnostic_state(root),
+                extra={
+                    "parent_span_id": "model_ai_sdlc_runtime_summary",
+                    "observed_stage": True,
+                    "blocking_reason": blocking_reason,
+                    "failure_reason": blocking_reason if status != "passed" else "",
+                    "failed_conditions": failed_conditions,
+                    "open_gates": failed_conditions if status != "passed" else [],
+                    "expected_result": "stage gate passes",
+                    "actual_result_summary": _agentops_actual_result_summary(
+                        status=status,
+                        blocking_reason=blocking_reason,
+                        failed_conditions=failed_conditions,
+                    ),
+                    "retry_guidance": _agentops_retry_guidance(failed_conditions),
+                    "next_action": _agentops_next_action(failed_conditions),
+                    **metrics,
+                },
+            )
+        )
+        facts.append(
+            build_gate_fact(
+                gate_id=stage,
+                status=status,
+                workitem=workitem,
+                executable_task_id=f"pipeline_{stage}",
+                task_guard_state="diagnostic",
+                stage_name=public_stage_name,
                 task_title=f"Pipeline {stage} gate",
                 changed_paths=changed_paths,
                 allowed_paths=allowed_paths,
                 forbidden_paths=(),
                 guard_result="diagnostic",
-                blocking_reason=_agentops_blocking_reason(rule_results),
-                blocking=_agentops_status(result) != "passed",
+                blocking_reason=blocking_reason,
+                blocking=status != "passed",
                 rule_results=rule_results,
+            )
+        )
+    for stage in _AGENTOPS_REPORTING_STAGES:
+        if stage in observed_stage_names:
+            continue
+        facts.append(
+            build_stage_fact(
+                stage_name=stage,
+                status="emitted",
+                workitem=workitem,
+                executable_task_id=f"pipeline_{stage}",
+                task_guard_state="diagnostic",
+                task_title=f"Pipeline {stage} stage",
+                adapter_diagnostic_state=_agentops_adapter_diagnostic_state(root),
+                extra={
+                    "parent_span_id": "model_ai_sdlc_runtime_summary",
+                    "observed_stage": False,
+                    "stage_observation_state": "not_reached",
+                    "actual_result_summary": "stage not reached in this run",
+                    "next_action": "",
+                    **_agentops_idle_engineering_metrics(git_summary),
+                },
             )
         )
     facts.extend(
@@ -386,6 +467,9 @@ def _flush_agentops_runtime_report(
                 task_guard_state="diagnostic",
                 command_or_job="ai-sdlc run",
                 freshness="fresh",
+                stage_name="test",
+                test_count=_agentops_total_check_count(stage_results),
+                failed_test_count=_agentops_total_failed_check_count(stage_results),
             ),
             build_artifact_fact(
                 artifact_ref=summary_ref,
@@ -528,6 +612,119 @@ def _agentops_summary_hash(
     return f"sha256:{hashlib.sha256(raw).hexdigest()}"
 
 
+def _agentops_report_type(*, dry_run: bool) -> str:
+    requested = os.getenv("AGENTOPS_REPORT_TYPE", "").strip()
+    if requested in {"real_run", "dry_run_retry", "readiness_fixture", "live_smoke"}:
+        return requested
+    return "dry_run_retry" if dry_run else "real_run"
+
+
+def _agentops_public_stage_name(stage: str) -> str:
+    if stage in {"verify", "verification"}:
+        return "test"
+    return stage
+
+
+def _agentops_adapter_diagnostic_state(root: object) -> str:
+    try:
+        payload = build_adapter_governance_surface(root)
+    except Exception:
+        return ""
+    return str(payload.get("adapter_ingress_state") or "")
+
+
+def _agentops_git_summary(root: object) -> dict[str, str]:
+    return {
+        "commit_sha": _agentops_git_value(root, ("rev-parse", "HEAD")),
+        "branch": _agentops_git_value(root, ("branch", "--show-current")),
+        "pr_number": os.getenv("AGENTOPS_PR_NUMBER", "").strip(),
+    }
+
+
+def _agentops_git_value(root: object, args: tuple[str, ...]) -> str:
+    try:
+        result = subprocess.run(
+            ["git", *args],
+            cwd=Path(root),
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+    except Exception:
+        return ""
+    if result.returncode != 0:
+        return ""
+    return result.stdout.strip().splitlines()[0] if result.stdout.strip() else ""
+
+
+def _agentops_engineering_metrics(
+    result: Any,
+    *,
+    stage: str,
+    git_summary: dict[str, str],
+) -> dict[str, object]:
+    checks = list(getattr(result, "checks", []) or [])
+    failed_count = sum(1 for check in checks if not bool(getattr(check, "passed", False)))
+    is_test_stage = _agentops_public_stage_name(stage) == "test"
+    return {
+        "test_count": len(checks) if is_test_stage else 0,
+        "failed_test_count": failed_count if is_test_stage else 0,
+        "ci_check_name": os.getenv("AGENTOPS_CI_CHECK_NAME", "").strip(),
+        "ci_result": os.getenv("AGENTOPS_CI_RESULT", "").strip(),
+        "review_findings_count": _agentops_int_env("AGENTOPS_REVIEW_FINDINGS_COUNT"),
+        "retry_count": int(getattr(result, "retry_count", 0) or 0),
+        "duration_ms": 0,
+        "token_usage": _agentops_token_usage_summary(),
+        "cost_estimate": _agentops_cost_estimate_summary(),
+        **git_summary,
+    }
+
+
+def _agentops_idle_engineering_metrics(git_summary: dict[str, str]) -> dict[str, object]:
+    return {
+        "test_count": 0,
+        "failed_test_count": 0,
+        "ci_check_name": os.getenv("AGENTOPS_CI_CHECK_NAME", "").strip(),
+        "ci_result": os.getenv("AGENTOPS_CI_RESULT", "").strip(),
+        "review_findings_count": _agentops_int_env("AGENTOPS_REVIEW_FINDINGS_COUNT"),
+        "retry_count": 0,
+        "duration_ms": 0,
+        "token_usage": _agentops_token_usage_summary(),
+        "cost_estimate": _agentops_cost_estimate_summary(),
+        **git_summary,
+    }
+
+
+def _agentops_token_usage_summary() -> dict[str, int]:
+    return {
+        "input_tokens": _agentops_int_env("AGENTOPS_INPUT_TOKENS"),
+        "output_tokens": _agentops_int_env("AGENTOPS_OUTPUT_TOKENS"),
+        "total_tokens": _agentops_int_env("AGENTOPS_TOTAL_TOKENS"),
+    }
+
+
+def _agentops_cost_estimate_summary() -> dict[str, object]:
+    raw_amount = os.getenv("AGENTOPS_COST_ESTIMATE_USD", "").strip()
+    try:
+        amount = float(raw_amount) if raw_amount else 0.0
+    except ValueError:
+        amount = 0.0
+    return {
+        "amount": amount,
+        "currency": "USD",
+        "source": "summary_only_env" if raw_amount else "",
+    }
+
+
+def _agentops_int_env(name: str) -> int:
+    raw = os.getenv(name, "").strip()
+    try:
+        value = int(raw)
+    except ValueError:
+        return 0
+    return value if value >= 0 else 0
+
+
 def _agentops_rule_results(result: Any) -> list[dict[str, object]]:
     return [
         {
@@ -539,6 +736,18 @@ def _agentops_rule_results(result: Any) -> list[dict[str, object]]:
     ]
 
 
+def _agentops_failed_conditions(rule_results: list[dict[str, object]]) -> list[str]:
+    conditions: list[str] = []
+    for item in rule_results:
+        if bool(item.get("passed")):
+            continue
+        name = str(item.get("name") or item.get("message") or "").strip()
+        condition = _safe_agentops_id(name).lower()
+        if condition and condition not in conditions:
+            conditions.append(condition)
+    return conditions
+
+
 def _agentops_blocking_reason(rule_results: list[dict[str, object]]) -> str:
     failed = [
         str(item.get("message") or item.get("name") or "").strip()
@@ -546,6 +755,49 @@ def _agentops_blocking_reason(rule_results: list[dict[str, object]]) -> str:
         if not bool(item.get("passed"))
     ]
     return "; ".join(item for item in failed if item)
+
+
+def _agentops_actual_result_summary(
+    *,
+    status: str,
+    blocking_reason: str,
+    failed_conditions: list[str],
+) -> str:
+    if blocking_reason:
+        return blocking_reason[:240]
+    if failed_conditions:
+        return "failed_conditions=" + ",".join(failed_conditions[:5])
+    return status
+
+
+def _agentops_retry_guidance(failed_conditions: list[str]) -> str:
+    if not failed_conditions:
+        return ""
+    return "Resolve the failed stage conditions, then rerun ai-sdlc run."
+
+
+def _agentops_next_action(failed_conditions: list[str]) -> str:
+    if not failed_conditions:
+        return ""
+    return f"resolve {failed_conditions[0]}"
+
+
+def _agentops_total_check_count(stage_results: list[tuple[str, Any]]) -> int:
+    return sum(
+        len(getattr(result, "checks", []) or [])
+        for stage, result in stage_results
+        if _agentops_public_stage_name(stage) == "test"
+    )
+
+
+def _agentops_total_failed_check_count(stage_results: list[tuple[str, Any]]) -> int:
+    return sum(
+        1
+        for stage, result in stage_results
+        if _agentops_public_stage_name(stage) == "test"
+        for check in getattr(result, "checks", []) or []
+        if not bool(getattr(check, "passed", False))
+    )
 
 
 def _agentops_status(result: Any) -> str:

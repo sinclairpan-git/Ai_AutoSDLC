@@ -404,16 +404,23 @@ def _write_basic_bundle(bundle_dir: Path, version: str = "0.2.0") -> None:
     )
 
 
-def _make_upgrade_existing_python(bin_dir: Path, version: str = "0.2.0") -> Path:
+def _make_upgrade_existing_python(
+    bin_dir: Path,
+    version: str = "0.2.0",
+    *,
+    cli_version: str | None = None,
+) -> Path:
     bin_dir.mkdir(parents=True, exist_ok=True)
     wrapper_path = bin_dir / "python"
     shebang_python = _bash_shebang_python()
+    emitted_cli_version = cli_version or version
     wrapper = f"""#!{shebang_python}
 from pathlib import Path
 import sys
 
 BIN_DIR = Path({str(bin_dir)!r})
 VERSION = {version!r}
+CLI_VERSION = {emitted_cli_version!r}
 MARKER = BIN_DIR / "installed-version.txt"
 
 
@@ -434,7 +441,7 @@ if len(args) >= 3 and args[:3] == ["-m", "pip", "install"]:
         BIN_DIR / "ai-sdlc",
         f'''#!/usr/bin/env bash
 if [[ "$1" == "--version" ]]; then
-  echo "{{VERSION}}"
+  echo "{{CLI_VERSION}}"
   exit 0
 fi
 if [[ "$1" == "self-update" && "$2" == "install" && "$3" == "--help" ]]; then
@@ -873,6 +880,8 @@ def test_install_offline_accepts_matching_platform_manifest(tmp_path: Path) -> N
     expected_python = _bash_path(bundle_dir / ".venv" / "bin" / "python")
     assert f'"{expected_python}" -m ai_sdlc init .' in result.stdout
     assert "PATH was not changed" in result.stdout
+    assert "Bare ai-sdlc may still resolve an older install" in result.stdout
+    assert "--upgrade-existing" in result.stdout
 
 
 def test_install_offline_add_to_path_enables_bare_cli_guidance(tmp_path: Path) -> None:
@@ -1100,6 +1109,34 @@ def test_install_offline_upgrade_existing_uses_current_cli_runtime(tmp_path: Pat
     assert not (bundle_dir / ".venv").exists()
 
 
+def test_install_offline_upgrade_existing_rejects_stale_bare_cli_version(
+    tmp_path: Path,
+) -> None:
+    if os.name == "nt":
+        pytest.skip("POSIX upgrade-existing installer path is covered on POSIX runners")
+    bundle_dir = tmp_path / "bundle"
+    _write_basic_bundle(bundle_dir)
+    existing_bin = tmp_path / "existing-bin"
+    fake_python = _make_upgrade_existing_python(existing_bin, cli_version="0.1.0")
+    _write_executable(existing_bin / "ai-sdlc", f"#!{fake_python}\n")
+
+    env = dict(os.environ)
+    _set_env_path(env, os.pathsep.join([str(existing_bin), "/usr/bin", "/bin"]))
+    env.pop("PYTHON", None)
+
+    result = subprocess.run(
+        [_bash_command(), str(bundle_dir / "install_offline.sh"), "--upgrade-existing"],
+        cwd=bundle_dir,
+        capture_output=True,
+        text=True,
+        env=env,
+        check=False,
+    )
+
+    assert result.returncode == 1
+    assert "current PATH resolves ai-sdlc 0.1.0, expected 0.2.0" in result.stderr
+
+
 def test_install_offline_upgrade_existing_reads_distlib_shell_wrapper(
     tmp_path: Path,
 ) -> None:
@@ -1211,6 +1248,7 @@ def test_install_online_uses_detected_python_and_prints_bilingual_guidance(
     expected_python = _bash_path(tmp_path / ".venv" / "bin" / "python")
     assert f'"{expected_python}" -m ai_sdlc init .' in result.stdout
     assert "PATH was not changed" in result.stdout
+    assert "Bare ai-sdlc may still resolve an older install" in result.stdout
     assert "ai-sdlc adapter status" not in result.stdout
     assert "ai-sdlc run --dry-run" not in result.stdout
 
@@ -1491,7 +1529,8 @@ def test_windows_install_scripts_include_auto_python_detection_and_bilingual_gui
     assert 'Join-Path $baseDir "python.exe"' in offline_ps1
     assert "supported_python_versions" in offline_ps1
     assert "Get-ManifestPythonVersions" in offline_ps1
-    assert "self-update install --help" in offline_ps1
+    assert "ai-sdlc --version" in offline_ps1
+    assert "expectedVersion" in offline_ps1
     assert "failed to upgrade the current ai-sdlc installation" in offline_ps1
     assert "$LASTEXITCODE -ne 0" in offline_ps1
     assert "Result" in offline_ps1
@@ -1526,6 +1565,7 @@ def test_windows_install_scripts_include_auto_python_detection_and_bilingual_gui
     assert "-AddToPath was provided, so the installer wrote User PATH" in online_ps1
     assert "current parent terminal may still resolve an older ai-sdlc command" in online_ps1
     assert "Get-Command ai-sdlc | Select-Object Source" in online_ps1
+    assert "Bare ai-sdlc may still resolve an older install" in online_ps1
     assert "Direct shim" in online_ps1
     assert '{1}{2}{1} init .' in online_ps1
 

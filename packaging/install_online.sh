@@ -193,5 +193,6 @@ if [[ "${ADD_TO_PATH}" == "1" ]]; then
   echo "PATH entry added: ${HOME}/.local/bin"
 else
   echo ""
-  echo "PATH was not changed. Rerun with --add-to-path to enable bare ai-sdlc commands."
+  echo "PATH was not changed. Bare ai-sdlc may still resolve an older install."
+  echo "Use the direct Python command above, or rerun with --add-to-path for new terminals."
 fi

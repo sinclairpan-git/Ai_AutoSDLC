@@ -229,9 +229,13 @@ if ($UpgradeExisting) {
   if ($installedVersion -ne $expectedVersion) {
     throw "installed version is $installedVersion, expected $expectedVersion"
   }
-  & ai-sdlc self-update install --help | Out-Null
+  $pathVersionOutput = (& ai-sdlc --version 2>$null)
   if ($LASTEXITCODE -ne 0) {
     throw "current PATH still resolves an older ai-sdlc command after installation"
+  }
+  $pathVersion = (($pathVersionOutput | Select-Object -Last 1) -replace '\s+', '')
+  if ($pathVersion -ne $expectedVersion) {
+    throw "current PATH resolves ai-sdlc $pathVersion, expected $expectedVersion"
   }
   Write-Host ""
   Write-BilingualStatus `
@@ -285,7 +289,18 @@ if ($AddToPath) {
   Write-Host "Check resolved command before using bare ai-sdlc:"
   Write-Host "  Get-Command ai-sdlc | Select-Object Source"
 } else {
-  Write-Host "PATH was not changed. Use the direct shim or rerun with -AddToPath."
+  Write-Host "PATH was not changed. Bare ai-sdlc may still resolve an older install."
+  Write-Host "Use the direct shim above, or rerun with -AddToPath for new terminals."
+  Write-Host "To upgrade the existing bare ai-sdlc entrypoint, rerun with -UpgradeExisting."
+  $currentCommand = Get-Command ai-sdlc -ErrorAction SilentlyContinue
+  if ($null -ne $currentCommand) {
+    Write-Host "Current bare ai-sdlc:"
+    Write-Host "  $($currentCommand.Source)"
+    $currentVersion = (& ai-sdlc --version 2>$null)
+    if ($LASTEXITCODE -eq 0) {
+      Write-Host "  $currentVersion"
+    }
+  }
 }
 Write-Host "Direct shim:"
 Write-Host ('  {0} {1}{2}{1} init .' -f $callOperator, $doubleQuote, $resolvedCliExe)

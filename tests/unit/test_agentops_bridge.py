@@ -24,6 +24,7 @@ from ai_sdlc.core.agentops_bridge import (
     build_artifact_fact,
     build_code_change_guard_fact,
     build_executable_task_prepared_fact,
+    build_gate_fact,
     build_l5_eligibility_input_fact,
     build_model_span_fact,
     deliver_agentops_outbox,
@@ -105,6 +106,12 @@ def test_executable_task_batch_matches_runtime_ingestion_contract() -> None:
     assert payload["executable_task_id"] == "T56-2.2"
     assert payload["task_guard_state"] == "allowed"
     assert payload["adapter_diagnostic_state"] == "verified_loaded"
+    assert payload["guard_policy_version"] == "task_guard.summary_only.v1"
+    assert payload["missing_executable_task"] is False
+    assert payload["allowed_paths"] == []
+    assert payload["allowed_paths_count"] == 1
+    assert payload["forbidden_paths"] == []
+    assert payload["forbidden_paths_count"] == 1
 
 
 def test_code_change_guard_blocks_when_executable_task_is_missing() -> None:
@@ -126,7 +133,35 @@ def test_code_change_guard_blocks_when_executable_task_is_missing() -> None:
     assert fact.payload["task_guard_state"] == "blocked"
     assert fact.payload["executable_task_id"] == ""
     assert fact.payload["error_code"] == CODE_CHANGE_TASK_REQUIRED
-    assert "prepare an executable task" in fact.payload["candidate_fixes"]
+    assert fact.payload["missing_executable_task"] is True
+    assert fact.payload["changed_paths"] == []
+    assert fact.payload["changed_paths_count"] == 1
+    assert fact.payload["blocked_paths_summary"] == "src:1"
+    assert fact.payload["guard_policy_version"] == "task_guard.summary_only.v1"
+    assert fact.payload["candidate_fixes"] == []
+    assert "prepare an executable task" in fact.payload["candidate_fix_summary"]
+
+
+def test_executable_task_prepared_redacts_candidate_fix_details() -> None:
+    blocked = TaskGuardResult(
+        state=BLOCK_CODE_PREPARE_TASKS,
+        allowed=False,
+        detail="Missing executable task",
+        active_work_item="187-agentops-self-iteration-monitoring",
+    )
+
+    fact = build_executable_task_prepared_fact(
+        blocked,
+        candidate_fixes=(
+            "Write specs/187-agentops-self-iteration-monitoring/plan.md",
+            "Write specs/187-agentops-self-iteration-monitoring/tasks.md",
+        ),
+        adapter_diagnostic_state="verified_loaded",
+    )
+
+    assert fact.payload["candidate_fixes"] == []
+    assert fact.payload["candidate_fix_summary"] == "2 candidate fixes available"
+    assert fact.payload["next_action"] == "2 candidate fixes available"
 
 
 def test_artifact_fact_uses_registered_emitted_status() -> None:
@@ -140,6 +175,34 @@ def test_artifact_fact_uses_registered_emitted_status() -> None:
 
     assert fact.status == "emitted"
     assert fact.sdlc_event_type == "artifact"
+
+
+def test_gate_fact_only_reports_failed_command_when_blocking() -> None:
+    passed = build_gate_fact(
+        gate_id="refine",
+        status="passed",
+        workitem="187-agentops-self-iteration-monitoring",
+        executable_task_id="pipeline_run",
+        task_guard_state="diagnostic",
+        stage_name="refine",
+        blocking=False,
+    )
+    failed = build_gate_fact(
+        gate_id="refine",
+        status="failed",
+        workitem="187-agentops-self-iteration-monitoring",
+        executable_task_id="pipeline_run",
+        task_guard_state="diagnostic",
+        stage_name="refine",
+        blocking=True,
+        blocking_reason="retry blocked",
+        rule_results=(
+            {"name": "retry_blocked", "passed": False, "message": "retry blocked"},
+        ),
+    )
+
+    assert passed.payload["failed_command"] == ""
+    assert failed.payload["failed_command"] == "ai-sdlc stage show refine"
 
 
 def test_model_span_fact_uses_trace_span_contract() -> None:
@@ -164,6 +227,15 @@ def test_model_span_fact_uses_trace_span_contract() -> None:
     assert event["event_type"] == "trace_span"
     assert event["event_type_version"] == "trace_span.v1"
     assert payload["span_kind"] == "model"
+    assert payload["stage_name"] == "execute"
+    assert payload["status"] == "passed"
+    assert payload["status_code"] == "ok"
+    assert payload["workitem"] == ""
+    assert payload["executable_task_id"] == ""
+    assert payload["task_title"] == ""
+    assert payload["retryable"] is False
+    assert payload["error_code"] == ""
+    assert payload["next_action"] == ""
     assert payload["token_usage"] == {}
     assert payload["model_ref"] == "external.ai_agent.summary_only"
 
@@ -245,6 +317,9 @@ def test_blocked_code_change_guard_is_written_to_outbox_diagnostics(tmp_path: Pa
     assert guard_payload["guard_result"] == "blocked"
     assert guard_payload["blocking_reason"] == "缺少 executable task"
     assert guard_payload["task_guard_state"] == "blocked"
+    assert guard_payload["error_code"] == CODE_CHANGE_TASK_REQUIRED
+    assert guard_payload["failed_conditions"] == [CODE_CHANGE_TASK_REQUIRED.lower()]
+    assert guard_payload["next_action"] == "prepare an executable task"
 
 
 def test_agentops_receipt_is_parsed_and_summary_persisted(tmp_path: Path) -> None:

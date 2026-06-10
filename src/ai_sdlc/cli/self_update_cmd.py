@@ -292,6 +292,10 @@ def self_update_install(
                         f"已自动安装 release 资产：{hint['filename']}",
                         f"Installed release asset automatically: {hint['filename']}",
                     ),
+                    (
+                        f"已校验当前运行环境：{sys.executable}",
+                        f"Verified current runtime: {sys.executable}",
+                    ),
                 ),
             ),
             title="AI-SDLC Self Update",

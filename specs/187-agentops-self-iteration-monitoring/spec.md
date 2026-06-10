@@ -54,6 +54,13 @@
 - **FR-187-006**：发送 HTTP 请求时不得直接发送或伪造 `X-AgentOps-*` 生产身份头。
 - **FR-187-007**：如 receipt 出现 rejected/stale/dlq，CLI 和 diagnostic 必须暴露 error_code、诊断摘要和 retry guidance。
 - **FR-187-008**：交付总结必须包含 doctor/status/receipt/trace/evidence/console readback，以及 SDLC 框架自迭代质量建议。
+- **FR-187-009**：每个 AgentOps span 必须稳定包含 run_id、trace_id、span_id、parent_span_id、stage_name、span_kind、operation_name、status/status_code、workitem、executable_task_id、task_title、时间、retryable、error_code、blocking/failure reason 和 next_action。
+- **FR-187-010**：failed/error/blocked span 必须补齐 failed_conditions、open_gates、failed_command、expected_result、actual_result_summary、blocking_reason、retry_guidance、diagnostic_ref 和 evidence_ref。
+- **FR-187-011**：`ai-sdlc run` 必须按 stage 产出 stage-level event，并把 verify 映射为 test 观测阶段；后续 merge/release 通过 report_type 与工程指标继续接入。
+- **FR-187-012**：task guard 上报必须是 summary-only，不上传 raw path list，只上传 allowed/forbidden/changed/blocked counts、hash、blocked_paths_summary、guard_policy_version、missing_executable_task 和 candidate_fix_summary。
+- **FR-187-013**：runtime report 必须标记 report_type，取值限定为 real_run、dry_run_retry、readiness_fixture、live_smoke。
+- **FR-187-014**：工程效果指标应包含 test/failed_test、CI、review finding、retry、duration、token/cost summary、commit_sha、branch、pr_number。
+- **FR-187-015**：`verified_loaded` 只能作为 adapter_diagnostic_state，不得作为代码修改授权、L5 eligibility 或 outbox delivered 主门禁。
 
 ## 成功标准
 
@@ -61,3 +68,5 @@
 - **SC-187-002**：真实 `uv run ai-sdlc run` 产生新的 AgentOps outbox，并经本地 Gateway delivered。
 - **SC-187-003**：AgentOps Postgres、trace、evidence summary、Gateway audit 和 Console workbench 能按同一 batch/run 对账。
 - **SC-187-004**：token 值不出现在 `.ai-sdlc/agentops`、handoff 或 CLI JSON 输出中。
+- **SC-187-005**：真实 `ai-sdlc run` 的最新 outbox 包含 stage-level span；若 close gate failed，AgentOps 能读取 failed_conditions、blocking_reason 和 next_action。
+- **SC-187-006**：task guard blocked 时，AgentOps 能读取 missing_executable_task 或 blocked_paths_summary；receipt 继续保留 accepted/deduplicated/rejected/dlq/stale 语义，且 rejected/stale/dlq 不静默吞掉。

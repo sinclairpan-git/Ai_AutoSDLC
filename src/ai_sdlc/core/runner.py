@@ -182,7 +182,8 @@ class SDLCRunner:
             PipelineHaltError: If a gate HALTs after max retries.
         """
         cp = self._ensure_checkpoint()
-        start_idx = self._stage_index(cp.current_stage)
+        start_stage = self._effective_start_stage(cp)
+        start_idx = self._stage_index(start_stage)
         last_stage = cp.current_stage
         run_open = False
         if not dry_run:
@@ -322,6 +323,13 @@ class SDLCRunner:
 
         logger.info("Pipeline: stage '%s' %s", stage, result.verdict.value)
         return cp
+
+    @staticmethod
+    def _effective_start_stage(cp: Checkpoint) -> str:
+        completed = {stage.stage for stage in cp.completed_stages}
+        if cp.current_stage == "init" and "init" in completed:
+            return "refine"
+        return cp.current_stage
 
     def check_gate(self, stage: str) -> dict[str, Any]:
         """Run a single gate check and return the result as dict."""

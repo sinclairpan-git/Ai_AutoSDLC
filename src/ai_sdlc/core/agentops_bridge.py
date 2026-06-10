@@ -48,6 +48,10 @@ AGENTOPS_ROOT = Path(".ai-sdlc") / "agentops"
 OUTBOX_DIR = AGENTOPS_ROOT / "outbox"
 RECEIPTS_DIR = AGENTOPS_ROOT / "receipts"
 DIAGNOSTICS_DIR = AGENTOPS_ROOT / "diagnostics"
+GUARD_POLICY_VERSION = "task_guard.summary_only.v1"
+REPORT_TYPES = frozenset(
+    {"real_run", "dry_run_retry", "readiness_fixture", "live_smoke"}
+)
 
 
 @dataclass(frozen=True, slots=True)
@@ -148,6 +152,7 @@ class AgentOpsRuntimeContext:
     timestamp: str = ""
     attempt_no: int = 1
     enterprise_state: str = "active"
+    report_type: str = "real_run"
 
 
 @dataclass(frozen=True, slots=True)
@@ -325,6 +330,11 @@ def build_executable_task_prepared_fact(
 ) -> AgentOpsSdlcFact:
     guard_state = "allowed" if task_guard.allowed else "blocked"
     fixes = tuple(candidate_fixes) or _candidate_fixes_from_guard(task_guard)
+    path_summary = _path_summary(
+        allowed_paths=allowed_paths,
+        forbidden_paths=forbidden_paths,
+    )
+    fix_summary = _summarize_items(fixes)
     return AgentOpsSdlcFact(
         producer_event_name="executable_task_prepared",
         sdlc_event_type="executable_task",
@@ -336,11 +346,17 @@ def build_executable_task_prepared_fact(
             "executable_task_id": task_guard.task_id or "",
             "task_title": task_guard.task_title or "",
             "task_guard_state": guard_state,
-            "allowed_paths": list(_dedupe(allowed_paths)),
-            "forbidden_paths": list(_dedupe(forbidden_paths)),
-            "candidate_fixes": list(fixes),
+            "guard_result": guard_state,
+            "missing_executable_task": not bool(task_guard.task_id),
+            "guard_policy_version": GUARD_POLICY_VERSION,
+            "allowed_paths": [],
+            "forbidden_paths": [],
+            **path_summary,
+            "candidate_fixes": [],
+            "candidate_fix_summary": fix_summary,
             "adapter_diagnostic_state": adapter_diagnostic_state,
             "blocking_reason": "" if task_guard.allowed else task_guard.detail,
+            "next_action": "" if task_guard.allowed else fix_summary,
         },
     )
 
@@ -354,19 +370,29 @@ def build_code_change_guard_fact(
     adapter_diagnostic_state: str = "",
 ) -> AgentOpsSdlcFact:
     guard_result = "allowed" if task_guard.allowed else "blocked"
+    fixes = tuple(candidate_fixes) or _candidate_fixes_from_guard(task_guard)
+    path_summary = _path_summary(
+        changed_paths=changed_paths,
+        allowed_paths=allowed_paths,
+        blocked_paths=changed_paths if not task_guard.allowed else (),
+    )
     payload = {
         "producer_event_name": "code_change_guard_result",
         "workitem": task_guard.active_work_item or "",
         "executable_task_id": task_guard.task_id or "",
+        "task_title": task_guard.task_title or "",
         "task_guard_state": guard_result,
         "guard_result": guard_result,
-        "changed_paths": list(_dedupe(changed_paths)),
-        "allowed_paths": list(_dedupe(allowed_paths)),
+        "missing_executable_task": not bool(task_guard.task_id),
+        "guard_policy_version": GUARD_POLICY_VERSION,
+        "changed_paths": [],
+        "allowed_paths": [],
         "blocking_reason": "" if task_guard.allowed else task_guard.detail,
-        "candidate_fixes": list(
-            tuple(candidate_fixes) or _candidate_fixes_from_guard(task_guard)
-        ),
+        "candidate_fixes": [],
+        "candidate_fix_summary": _summarize_items(fixes),
+        "next_action": "" if task_guard.allowed else _first_text(fixes),
         "adapter_diagnostic_state": adapter_diagnostic_state,
+        **path_summary,
     }
     if not task_guard.allowed:
         payload["error_code"] = (
@@ -390,7 +416,16 @@ def build_stage_fact(
     executable_task_id: str,
     task_guard_state: str,
     adapter_diagnostic_state: str = "",
+    task_title: str = "",
+    extra: Mapping[str, Any] | None = None,
 ) -> AgentOpsSdlcFact:
+    payload_extra = {
+        "task_title": task_title,
+        "operation_name": f"ai_sdlc.stage.{stage_name}",
+        "span_kind": "stage",
+    }
+    if extra:
+        payload_extra.update(extra)
     return build_sdlc_fact(
         producer_event_name=f"stage_{status}",
         sdlc_event_type="stage",
@@ -401,6 +436,7 @@ def build_stage_fact(
         task_guard_state=task_guard_state,
         stage_name=stage_name,
         adapter_diagnostic_state=adapter_diagnostic_state,
+        extra=payload_extra,
     )
 
 
@@ -421,6 +457,14 @@ def build_gate_fact(
     blocking: bool = False,
     rule_results: Sequence[Mapping[str, Any]] = (),
 ) -> AgentOpsSdlcFact:
+    rule_result_items = [dict(item) for item in rule_results]
+    failed_conditions = _failed_conditions_from_rule_results(rule_result_items)
+    path_summary = _path_summary(
+        changed_paths=changed_paths,
+        allowed_paths=allowed_paths,
+        forbidden_paths=forbidden_paths,
+        blocked_paths=changed_paths if blocking else (),
+    )
     return build_sdlc_fact(
         producer_event_name="gate_result" if status == "passed" else "gate_failed",
         sdlc_event_type="gate",
@@ -433,13 +477,33 @@ def build_gate_fact(
         extra={
             "gate_id": gate_id,
             "task_title": task_title,
-            "changed_paths": list(_dedupe(changed_paths)),
-            "allowed_paths": list(_dedupe(allowed_paths)),
-            "forbidden_paths": list(_dedupe(forbidden_paths)),
+            "span_kind": "guardrail",
+            "operation_name": f"ai_sdlc.gate.{gate_id}",
+            "changed_paths": [],
+            "allowed_paths": [],
+            "forbidden_paths": [],
             "guard_result": guard_result or task_guard_state,
+            "guard_policy_version": GUARD_POLICY_VERSION,
+            "missing_executable_task": not bool(executable_task_id),
             "blocking_reason": blocking_reason,
+            "failure_reason": blocking_reason if blocking else "",
             "blocking": blocking,
-            "rule_results": list(rule_results),
+            "failed_conditions": failed_conditions,
+            "open_gates": failed_conditions if blocking else [],
+            "failed_command": f"ai-sdlc stage show {stage_name or gate_id}"
+            if blocking
+            else "",
+            "expected_result": "gate verdict PASS",
+            "actual_result_summary": _actual_result_summary(
+                status=status,
+                blocking_reason=blocking_reason,
+                failed_conditions=failed_conditions,
+            ),
+            "retry_guidance": _gate_retry_guidance(failed_conditions),
+            "next_action": _gate_next_action(failed_conditions),
+            "diagnostic_ref": f"vault://sdlc/gates/{_safe_id(gate_id)}",
+            "rule_results": _summary_rule_results(rule_result_items),
+            **path_summary,
         },
     )
 
@@ -454,7 +518,11 @@ def build_verification_fact(
     command_or_job: str = "",
     artifact_ref: str = "",
     freshness: str = "",
+    stage_name: str = "test",
+    failed_test_count: int = 0,
+    test_count: int = 0,
 ) -> AgentOpsSdlcFact:
+    failed_conditions = ["verification_failed"] if status not in {"passed", "emitted"} else []
     return build_sdlc_fact(
         producer_event_name="verification_result",
         sdlc_event_type="verification",
@@ -463,11 +531,26 @@ def build_verification_fact(
         workitem=workitem,
         executable_task_id=executable_task_id,
         task_guard_state=task_guard_state,
+        stage_name=stage_name,
         artifact_ref=artifact_ref,
         extra={
             "verification_id": verification_id,
+            "span_kind": "tool",
+            "operation_name": f"ai_sdlc.verification.{verification_id}",
             "command_or_job": command_or_job,
+            "failed_command": command_or_job if failed_conditions else "",
+            "expected_result": "verification passes",
+            "actual_result_summary": status,
+            "failed_conditions": failed_conditions,
+            "open_gates": failed_conditions,
+            "blocking_reason": "verification failed" if failed_conditions else "",
+            "retry_guidance": "Run the failed verification command and inspect summary output."
+            if failed_conditions
+            else "",
+            "next_action": "rerun verification" if failed_conditions else "",
             "freshness": freshness,
+            "test_count": test_count,
+            "failed_test_count": failed_test_count,
         },
     )
 
@@ -491,6 +574,8 @@ def build_artifact_fact(
         task_guard_state=task_guard_state,
         artifact_ref=artifact_ref,
         extra={
+            "span_kind": "artifact",
+            "operation_name": "ai_sdlc.artifact.summary",
             "payload_hash": payload_hash,
             "data_classification": data_classification,
         },
@@ -506,7 +591,22 @@ def build_model_span_fact(
     output_ref: str,
     model_ref: str = "external.ai_agent.summary_only",
     parent_span_id: str = "",
+    stage_name: str = "",
+    workitem: str = "",
+    executable_task_id: str = "",
+    task_title: str = "",
+    token_usage: Mapping[str, Any] | None = None,
+    cost_estimate: Mapping[str, Any] | None = None,
 ) -> AgentOpsTraceSpanFact:
+    extra: dict[str, Any] = {
+        "workitem": workitem,
+        "executable_task_id": executable_task_id,
+        "task_title": task_title,
+        "model_ref": model_ref,
+        "redaction_policy": "summary_only",
+    }
+    if stage_name:
+        extra["stage_name"] = stage_name
     return AgentOpsTraceSpanFact(
         producer_event_name="model_invocation_summary",
         span_id=span_id,
@@ -516,10 +616,9 @@ def build_model_span_fact(
         parent_span_id=parent_span_id,
         input_ref=input_ref,
         output_ref=output_ref,
-        extra={
-            "model_ref": model_ref,
-            "redaction_policy": "summary_only",
-        },
+        token_usage=dict(token_usage or {}),
+        cost_estimate=dict(cost_estimate or {}),
+        extra=extra,
     )
 
 
@@ -1206,18 +1305,29 @@ def _canonical_payload(
     started_at: str,
     ended_at: str,
 ) -> dict[str, Any]:
+    report_type = (
+        context.report_type if context.report_type in REPORT_TYPES else "real_run"
+    )
     if isinstance(fact, AgentOpsTraceSpanFact):
         payload = {
             "trace_id": context.trace_id,
             "span_id": fact.span_id,
             "parent_span_id": fact.parent_span_id,
             "run_id": context.run_id,
+            "report_type": report_type,
+            "stage_name": context.stage_name,
             "span_kind": fact.span_kind,
             "operation_name": fact.operation_name,
+            "status": _status_from_status_code(fact.status_code),
             "status_code": fact.status_code,
             "start_time": started_at,
             "end_time": ended_at,
+            "started_at": started_at,
+            "ended_at": ended_at,
             "attempt_no": context.attempt_no,
+            "workitem": "",
+            "executable_task_id": "",
+            "task_title": "",
             "input_ref": fact.input_ref,
             "output_ref": fact.output_ref,
             "token_usage": dict(fact.token_usage),
@@ -1226,8 +1336,26 @@ def _canonical_payload(
             "guardrail_result_refs": list(fact.guardrail_result_refs),
             "error_code": fact.error_code,
             "retryable": fact.retryable,
+            "failure_reason": "",
+            "blocking_reason": "",
+            "failed_conditions": [],
+            "open_gates": [],
+            "failed_command": "",
+            "expected_result": "",
+            "actual_result_summary": "",
+            "retry_guidance": "",
+            "diagnostic_ref": "",
+            "evidence_ref": "",
+            "next_action": "",
         }
         payload.update(dict(fact.extra))
+        payload["status"] = str(
+            payload.get("status") or _status_from_status_code(fact.status_code)
+        )
+        payload["status_code"] = str(
+            payload.get("status_code") or _status_code_from_status(payload["status"])
+        )
+        _complete_failure_defaults(payload)
         return payload
     payload = {
         "sdlc_event_id": f"sdlc_{fact.producer_event_name}",
@@ -1236,21 +1364,54 @@ def _canonical_payload(
         "trace_id": context.trace_id,
         "span_id": fact.span_id,
         "parent_span_id": fact.parent_span_id,
+        "report_type": report_type,
         "attempt_no": context.attempt_no,
         "sdlc_event_type": fact.sdlc_event_type,
         "stage_name": str(fact.payload.get("stage_name") or context.stage_name),
+        "span_kind": str(fact.payload.get("span_kind") or fact.sdlc_event_type),
+        "operation_name": str(
+            fact.payload.get("operation_name")
+            or f"ai_sdlc.{fact.sdlc_event_type}.{fact.producer_event_name}"
+        ),
         "status": fact.status,
+        "status_code": _status_code_from_status(fact.status),
         "started_at": started_at,
         "ended_at": ended_at,
+        "start_time": started_at,
+        "end_time": ended_at,
         "artifact_ref": fact.artifact_ref,
         "evidence_ref": fact.evidence_ref,
         "violation_code": fact.violation_code,
         "workitem": "",
         "executable_task_id": "",
+        "task_title": "",
         "task_guard_state": "",
+        "guard_result": "",
+        "missing_executable_task": False,
+        "allowed_paths_count": 0,
+        "forbidden_paths_count": 0,
+        "changed_paths_count": 0,
+        "blocked_paths_summary": "",
+        "guard_policy_version": "",
         "adapter_diagnostic_state": "",
+        "retryable": False,
+        "error_code": "",
+        "failure_reason": "",
+        "blocking_reason": "",
+        "failed_conditions": [],
+        "open_gates": [],
+        "failed_command": "",
+        "expected_result": "",
+        "actual_result_summary": "",
+        "retry_guidance": "",
+        "diagnostic_ref": "",
+        "next_action": "",
     }
     payload.update(dict(fact.payload))
+    payload["status_code"] = str(
+        payload.get("status_code") or _status_code_from_status(payload.get("status", ""))
+    )
+    _complete_failure_defaults(payload)
     return payload
 
 
@@ -1264,6 +1425,216 @@ def _event_type_version_for_fact(fact: AgentOpsSdlcFact | AgentOpsTraceSpanFact)
     if isinstance(fact, AgentOpsTraceSpanFact):
         return "trace_span.v1"
     return "sdlc_trace_event.v1"
+
+
+def _complete_failure_defaults(payload: dict[str, Any]) -> None:
+    status = str(payload.get("status") or "").lower()
+    status_code = str(payload.get("status_code") or "").lower()
+    failed = status in {"failed", "error", "blocked"} or status_code == "error"
+    if not failed:
+        return
+    failed_conditions = _dedupe(
+        tuple(str(item) for item in payload.get("failed_conditions", ()) or ())
+    )
+    if not failed_conditions:
+        reason = (
+            CODE_CHANGE_TASK_REQUIRED
+            if payload.get("missing_executable_task")
+            else str(
+                payload.get("blocking_reason")
+                or payload.get("failure_reason")
+                or payload.get("error_code")
+                or status
+            ).strip()
+        )
+        if reason:
+            failed_conditions = (_safe_condition(reason),)
+            payload["failed_conditions"] = list(failed_conditions)
+    if not payload.get("open_gates"):
+        payload["open_gates"] = list(failed_conditions)
+    if not payload.get("blocking_reason"):
+        payload["blocking_reason"] = str(payload.get("failure_reason") or "").strip()
+    if not payload.get("failure_reason"):
+        payload["failure_reason"] = str(payload.get("blocking_reason") or "").strip()
+    if not payload.get("error_code"):
+        payload["error_code"] = _error_code_from_failure(payload)
+    if not payload.get("retry_guidance"):
+        payload["retry_guidance"] = "Inspect the diagnostic summary and retry after resolving the blocking condition."
+    if not payload.get("next_action"):
+        payload["next_action"] = str(payload.get("retry_guidance") or "").strip()
+    if not payload.get("failed_command"):
+        payload["failed_command"] = str(payload.get("operation_name") or "").strip()
+    if not payload.get("expected_result"):
+        payload["expected_result"] = "status_code ok"
+    if not payload.get("actual_result_summary"):
+        payload["actual_result_summary"] = str(
+            payload.get("blocking_reason")
+            or payload.get("failure_reason")
+            or payload.get("status")
+            or ""
+        ).strip()[:240]
+    if not payload.get("diagnostic_ref"):
+        payload["diagnostic_ref"] = (
+            f"vault://sdlc/diagnostics/{_safe_id(str(payload.get('span_id') or 'span'))}"
+        )
+
+
+def _status_code_from_status(status: object) -> str:
+    normalized = str(status or "").strip().lower()
+    if normalized in {"passed", "emitted", "diagnostic", "allowed"}:
+        return "ok"
+    if normalized in {"failed", "blocked", "error", "rejected"}:
+        return "error"
+    return normalized or "unknown"
+
+
+def _status_from_status_code(status_code: object) -> str:
+    normalized = str(status_code or "").strip().lower()
+    if normalized == "ok":
+        return "passed"
+    if normalized == "error":
+        return "failed"
+    return normalized or "unknown"
+
+
+def _error_code_from_failure(payload: Mapping[str, Any]) -> str:
+    if payload.get("missing_executable_task"):
+        return CODE_CHANGE_TASK_REQUIRED
+    failed_conditions = payload.get("failed_conditions", ()) or ()
+    first = _first_text(failed_conditions)
+    if first:
+        return _safe_condition(first).upper()
+    return "SDLC_SPAN_FAILED"
+
+
+def _failed_conditions_from_rule_results(
+    rule_results: Sequence[Mapping[str, Any]],
+) -> list[str]:
+    conditions: list[str] = []
+    for item in rule_results:
+        if bool(item.get("passed")):
+            continue
+        condition = _safe_condition(str(item.get("name") or item.get("message") or ""))
+        if condition and condition not in conditions:
+            conditions.append(condition)
+    return conditions
+
+
+def _summary_rule_results(
+    rule_results: Sequence[Mapping[str, Any]],
+) -> list[dict[str, Any]]:
+    summary: list[dict[str, Any]] = []
+    for item in rule_results:
+        name = str(item.get("name") or "").strip()
+        passed = bool(item.get("passed"))
+        message = str(item.get("message") or "").strip()
+        summary.append(
+            {
+                "name": name,
+                "passed": passed,
+                "message_summary": message[:240],
+                "message_hash": _value_hash(message) if message else "",
+            }
+        )
+    return summary
+
+
+def _actual_result_summary(
+    *,
+    status: str,
+    blocking_reason: str,
+    failed_conditions: Sequence[str],
+) -> str:
+    if blocking_reason:
+        return blocking_reason[:240]
+    if failed_conditions:
+        return "failed_conditions=" + ",".join(failed_conditions[:5])
+    return status
+
+
+def _gate_retry_guidance(failed_conditions: Sequence[str]) -> str:
+    if failed_conditions:
+        return "Resolve failed gate conditions, then rerun ai-sdlc run."
+    return ""
+
+
+def _gate_next_action(failed_conditions: Sequence[str]) -> str:
+    if failed_conditions:
+        return f"resolve {failed_conditions[0]}"
+    return ""
+
+
+def _path_summary(
+    *,
+    changed_paths: Sequence[str] = (),
+    allowed_paths: Sequence[str] = (),
+    forbidden_paths: Sequence[str] = (),
+    blocked_paths: Sequence[str] = (),
+) -> dict[str, Any]:
+    changed = _dedupe(changed_paths)
+    allowed = _dedupe(allowed_paths)
+    forbidden = _dedupe(forbidden_paths)
+    blocked = _dedupe(blocked_paths)
+    return {
+        "changed_paths_count": len(changed),
+        "allowed_paths_count": len(allowed),
+        "forbidden_paths_count": len(forbidden),
+        "blocked_paths_count": len(blocked),
+        "changed_paths_hash": _sequence_hash(changed),
+        "allowed_paths_hash": _sequence_hash(allowed),
+        "forbidden_paths_hash": _sequence_hash(forbidden),
+        "blocked_paths_summary": _path_category_summary(blocked),
+    }
+
+
+def _path_category_summary(paths: Sequence[str]) -> str:
+    if not paths:
+        return ""
+    categories: dict[str, int] = {}
+    for path in paths:
+        normalized = str(path).strip().replace("\\", "/")
+        prefix = normalized.split("/", 1)[0] if "/" in normalized else normalized
+        key = prefix or "root"
+        categories[key] = categories.get(key, 0) + 1
+    return ", ".join(
+        f"{key}:{count}" for key, count in sorted(categories.items())[:8]
+    )
+
+
+def _summarize_items(values: Sequence[str]) -> str:
+    items = _dedupe(values)
+    if not items:
+        return ""
+    if len(items) == 1 and "/" not in items[0] and "\\" not in items[0]:
+        return items[0][:160]
+    return f"{len(items)} candidate fixes available"
+
+
+def _first_text(values: object) -> str:
+    for value in values or ():
+        text = str(value).strip()
+        if text:
+            return text
+    return ""
+
+
+def _safe_condition(value: str) -> str:
+    text = value.strip().lower()
+    safe = "".join(ch if ch.isalnum() else "_" for ch in text)
+    while "__" in safe:
+        safe = safe.replace("__", "_")
+    return safe.strip("_")[:80]
+
+
+def _sequence_hash(values: Sequence[str]) -> str:
+    items = _dedupe(values)
+    if not items:
+        return ""
+    return _value_hash("\n".join(items))
+
+
+def _value_hash(value: str) -> str:
+    return f"sha256:{hashlib.sha256(value.encode('utf-8')).hexdigest()}"
 
 
 def _candidate_fixes_from_guard(task_guard: TaskGuardResult) -> tuple[str, ...]:

@@ -183,6 +183,11 @@ class TestRunCommand:
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         monkeypatch.setenv("OPENAI_CODEX", "1")
+        monkeypatch.delenv("AGENTOPS_INGESTION_ENDPOINT", raising=False)
+        monkeypatch.delenv("AGENTOPS_INGESTION_TOKEN", raising=False)
+        enterprise_profile = tmp_path / "enterprise.yaml"
+        enterprise_profile.write_text("agentops_reporting_mode: 'off'\n", encoding="utf-8")
+        monkeypatch.setenv("AI_SDLC_ENTERPRISE_PROFILE", str(enterprise_profile))
         monkeypatch.chdir(tmp_path)
         assert runner.invoke(app, ["init", ".", "--agent-target", "codex"]).exit_code == 0
         self._force_passing_gates(monkeypatch)
@@ -190,7 +195,7 @@ class TestRunCommand:
         result = runner.invoke(app, ["run", "--dry-run"])
 
         assert result.exit_code == 0
-        assert "Stage init" in result.output
+        assert "Stage refine" in result.output
         assert "Stage close" in result.output
         assert "Pipeline completed. Stage: close" in result.output
         assert "AgentOps report" not in result.output
@@ -563,8 +568,20 @@ class TestRunCommand:
             for event in events
             if event["event_type"] == "sdlc_trace_event"
         ]
-        assert stage_names[0] == "init"
+        assert stage_names[0] == "refine"
         assert stage_names[-1] == "close"
+        diagnostic_stages = [
+            event["payload"]
+            for event in events
+            if event["event_type"] == "sdlc_trace_event"
+            and event["payload"]["sdlc_event_type"] == "stage"
+            and event["payload"].get("stage_observation_state") == "not_reached"
+        ]
+        assert {item["stage_name"] for item in diagnostic_stages} >= {
+            "review",
+            "merge_release",
+        }
+        assert all(item["observed_stage"] is False for item in diagnostic_stages)
         receipt_files = list(
             (tmp_path / ".ai-sdlc" / "agentops" / "receipts").glob("*.summary.json")
         )
@@ -703,23 +720,47 @@ class TestRunCommand:
         assert "verification" in event_types
         assert "artifact" in event_types
         assert model_events
+        stage_event = next(
+            event
+            for event in captured_batches[0]["events"]  # type: ignore[index]
+            if event["event_type"] == "sdlc_trace_event"  # type: ignore[index]
+            and event["payload"]["sdlc_event_type"] == "stage"  # type: ignore[index]
+        )
         event = next(
             event
             for event in captured_batches[0]["events"]  # type: ignore[index]
             if event["event_type"] == "sdlc_trace_event"  # type: ignore[index]
+            and event["payload"]["sdlc_event_type"] == "gate"  # type: ignore[index]
         )
         assert event["producer_id"] == "producer.ai-sdlc.local"  # type: ignore[index]
         assert event["runtime_id"] == "runtime.ai-sdlc.local"  # type: ignore[index]
         assert event["credential_id"] == "cred.ai-sdlc.local"  # type: ignore[index]
         assert event["key_id"] == "key.ai-sdlc.local"  # type: ignore[index]
-        assert event["payload"]["gate_id"] == "init"  # type: ignore[index]
+        assert stage_event["payload"]["stage_name"] == "refine"  # type: ignore[index]
+        assert stage_event["payload"]["span_kind"] == "stage"  # type: ignore[index]
+        assert stage_event["payload"]["status_code"] == "error"  # type: ignore[index]
+        assert stage_event["payload"]["failed_conditions"] == ["retry_blocked"]  # type: ignore[index]
+        assert stage_event["payload"]["blocking_reason"] == "retry blocked"  # type: ignore[index]
+        assert stage_event["payload"]["next_action"] == "resolve retry_blocked"  # type: ignore[index]
+        assert stage_event["payload"]["report_type"] == "real_run"  # type: ignore[index]
+        assert event["payload"]["gate_id"] == "refine"  # type: ignore[index]
         assert event["payload"]["status"] == "failed"  # type: ignore[index]
-        assert event["payload"]["task_title"] == "Pipeline init gate"  # type: ignore[index]
+        assert event["payload"]["status_code"] == "error"  # type: ignore[index]
+        assert event["payload"]["task_title"] == "Pipeline refine gate"  # type: ignore[index]
         assert event["payload"]["changed_paths"] == []  # type: ignore[index]
         assert event["payload"]["allowed_paths"] == []  # type: ignore[index]
         assert event["payload"]["forbidden_paths"] == []  # type: ignore[index]
+        assert event["payload"]["changed_paths_count"] == 0  # type: ignore[index]
+        assert event["payload"]["allowed_paths_count"] == 0  # type: ignore[index]
+        assert event["payload"]["forbidden_paths_count"] == 0  # type: ignore[index]
+        assert event["payload"]["blocked_paths_summary"] == ""  # type: ignore[index]
         assert event["payload"]["guard_result"] == "diagnostic"  # type: ignore[index]
         assert event["payload"]["blocking_reason"] == "retry blocked"  # type: ignore[index]
+        assert event["payload"]["failed_conditions"] == ["retry_blocked"]  # type: ignore[index]
+        assert event["payload"]["expected_result"] == "gate verdict PASS"  # type: ignore[index]
+        assert event["payload"]["retry_guidance"] == (
+            "Resolve failed gate conditions, then rerun ai-sdlc run."
+        )  # type: ignore[index]
 
     def test_run_warns_when_agentops_receipt_has_diagnostics(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch

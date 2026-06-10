@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import io
 import json
+import sys
 import tarfile
 from pathlib import Path
 
@@ -228,6 +229,7 @@ def test_self_update_install_completes_without_manual_followup(monkeypatch, tmp_
     assert "更新完成" in result.output
     assert "Update completed" in result.output
     assert "不需要继续执行升级命令" in result.output
+    assert str(sys.executable) in result.output
     assert "执行下面整段命令" not in result.output
     assert "curl -L" not in result.output
     assert "install_offline" not in result.output
