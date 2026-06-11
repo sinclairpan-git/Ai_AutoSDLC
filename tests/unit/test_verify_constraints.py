@@ -2536,6 +2536,47 @@ def test_doc_first_rule_surfaces_block_when_pipeline_terms_missing(tmp_path: Pat
     assert any("pipeline.md" in x for x in blockers)
 
 
+def test_frontend_solution_confirmation_instruction_blocks_missing_pipeline_guard(
+    tmp_path: Path,
+) -> None:
+    mem = tmp_path / ".ai-sdlc" / "memory"
+    mem.mkdir(parents=True)
+    (mem / "constitution.md").write_text("# C\n", encoding="utf-8")
+    rules_dir = tmp_path / "src" / "ai_sdlc" / "rules"
+    rules_dir.mkdir(parents=True, exist_ok=True)
+    (rules_dir / "pipeline.md").write_text(
+        "# 流水线总控规则\n\n前端需求可以按普通需求直接进入实现。\n",
+        encoding="utf-8",
+    )
+
+    blockers = collect_constraint_blockers(tmp_path)
+
+    assert any("frontend solution confirmation instruction" in x for x in blockers)
+    assert any("技术栈 / 组件库建议" in x for x in blockers)
+
+
+def test_frontend_solution_confirmation_instruction_accepts_required_pipeline_guard(
+    tmp_path: Path,
+) -> None:
+    mem = tmp_path / ".ai-sdlc" / "memory"
+    mem.mkdir(parents=True)
+    (mem / "constitution.md").write_text("# C\n", encoding="utf-8")
+    rules_dir = tmp_path / "src" / "ai_sdlc" / "rules"
+    rules_dir.mkdir(parents=True, exist_ok=True)
+    (rules_dir / "pipeline.md").write_text(
+        "# 流水线总控规则\n\n"
+        "前端需求进入实现前必须先给出技术栈 / 组件库建议，等待用户明确确认。"
+        "确认前不得进入 execute。"
+        "确认后才允许 program solution-confirm --execute --yes。"
+        "框架自带 Vue2 企业级组件库默认使用 enterprise-vue2。\n",
+        encoding="utf-8",
+    )
+
+    blockers = collect_constraint_blockers(tmp_path)
+
+    assert not any("frontend solution confirmation instruction" in x for x in blockers)
+
+
 def test_doc_first_rule_surfaces_block_when_doc_first_task_targets_code(
     tmp_path: Path,
 ) -> None:

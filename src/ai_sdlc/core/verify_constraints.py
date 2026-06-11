@@ -417,6 +417,19 @@ ADAPTER_TEMPLATE_CLI_PATH_RELS = (
     Path("src") / "ai_sdlc" / "adapters" / "vscode" / "AI-SDLC.md",
     Path("src") / "ai_sdlc" / "adapters" / "cursor" / "rules" / "ai-sdlc.md",
 )
+FRONTEND_SOLUTION_CONFIRMATION_RELS = (
+    PIPELINE_RULE_REL,
+    AGENTS_REL,
+    *ADAPTER_TEMPLATE_CLI_PATH_RELS,
+)
+FRONTEND_SOLUTION_CONFIRMATION_REQUIRED_TOKENS = (
+    "前端需求",
+    "技术栈 / 组件库建议",
+    "用户明确确认",
+    "不得进入 execute",
+    "program solution-confirm --execute --yes",
+    "enterprise-vue2",
+)
 ADAPTER_TEMPLATE_COMMENT_POLICY_RELS = (
     *ADAPTER_TEMPLATE_CLI_PATH_RELS,
     Path("src") / "ai_sdlc" / "adapters" / "generic" / "ide-hint.md",
@@ -1427,6 +1440,7 @@ def collect_constraint_blockers(root: Path) -> list[str]:
     blockers.extend(_beginner_guide_cli_path_blockers(root))
     blockers.extend(_agent_instruction_cli_path_blockers(root))
     blockers.extend(_adapter_template_cli_path_blockers(root))
+    blockers.extend(_frontend_solution_confirmation_instruction_blockers(root))
     blockers.extend(_adapter_template_comment_policy_blockers(root))
     blockers.extend(_reconcile_smoke_contract_blockers(root))
     blockers.extend(_doc_first_surface_blockers(root))
@@ -3712,6 +3726,36 @@ def _adapter_template_cli_path_blockers(root: Path) -> list[str]:
             blockers.append(
                 "BLOCKER: adapter template CLI path regressed to old manual startup "
                 f"steps in {rel.as_posix()}: {', '.join(forbidden)}"
+            )
+    return blockers
+
+
+def _frontend_solution_confirmation_instruction_blockers(root: Path) -> list[str]:
+    """Keep frontend implementation blocked until the user confirms the stack."""
+    existing_rels = [
+        rel for rel in FRONTEND_SOLUTION_CONFIRMATION_RELS if (root / rel).is_file()
+    ]
+    if not existing_rels:
+        return []
+    has_adapter_or_agents = any(rel != PIPELINE_RULE_REL for rel in existing_rels)
+    if not has_adapter_or_agents:
+        pipeline_text = (root / PIPELINE_RULE_REL).read_text(encoding="utf-8")
+        if "前端需求" not in pipeline_text and "frontend" not in pipeline_text.lower():
+            return []
+
+    blockers: list[str] = []
+    for rel in existing_rels:
+        path = root / rel
+        text = path.read_text(encoding="utf-8")
+        missing = [
+            token
+            for token in FRONTEND_SOLUTION_CONFIRMATION_REQUIRED_TOKENS
+            if token not in text
+        ]
+        if missing:
+            blockers.append(
+                "BLOCKER: frontend solution confirmation instruction drift in "
+                f"{rel.as_posix()}: {', '.join(missing)}"
             )
     return blockers
 

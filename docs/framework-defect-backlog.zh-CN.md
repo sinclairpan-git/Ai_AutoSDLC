@@ -1526,3 +1526,26 @@
 - 下一步任务归属（2026-04-14）: `140` Batch 2 起进入实现前分解后的正式执行阶段。
 - 可验证成功标准: 给定“某 work item 已有 `spec.md` / `plan.md` 但无 `tasks.md`”的场景时，代理必须先补 `tasks.md`，而不是宣称可进入实现；正常路径下，`140` 现在已具备 `spec.md`、`plan.md`、`tasks.md` 三件套。
 - 是否需要回归测试补充: 是：至少补一条流程约束或 checklist，防止在 spec/plan 收敛后再次跳过 `tasks`。
+
+## FD-2026-06-11-001 | 前端需求未等待技术栈与组件库确认即进入实现
+
+- 日期 (UTC): 2026-06-11
+- 来源: user_report
+- 状态: open
+- owner: codex
+- wi_id: 001-ai-sdlc-framework
+- 现象: 用户在 2026-06-10 反馈：提交前端需求后，LLM 在 SDLC 框架约束下完成需求拆分，但没有先提供技术栈建议、组件库建议或确认卡，就直接开始落地实现；用户没有机会选择前端技术栈和技术组件库。
+- 触发场景: 普通用户项目已初始化，用户输入需求后，Agent 把 refine/design/decompose 后的“可执行感”误判为 execute 授权，没有先执行或模拟 `program solution-confirm` 的前端方案确认。
+- 影响范围: 前端项目初始技术选型、组件库一致性、企业级组件库接入、用户选择权、后续代码可维护性，以及 AI-SDLC “需求先确认、实现后落地”的核心可信度。
+- 根因分类: A, B, D, H
+- 未来杜绝方案摘要: 把“前端方案确认先于实现”提升为 pipeline MUST：凡涉及前端需求、UI、页面、组件、浏览器交互或前端工程，进入 execute 或修改前端代码前必须先给出技术栈 / 组件库建议并等待用户明确确认；框架自带 Vue2 企业级组件库场景默认建议必须包含 `enterprise-vue2` / `vue2`，不得擅自切换到其他栈。
+- 建议改动层级: prompt / context, rule / policy, middleware, workflow, tool, eval
+- prompt / context: Adapter 指令必须明确“前端需求先建议并确认技术栈 / 组件库，未确认不得实现”；普通用户对话入口不得把“需求已拆分”表述为“可以开始编码”。
+- rule / policy: `rules/pipeline.md` 增加前端方案确认 MUST；技术栈 / 组件库未确认时，法定下一步只能停在 refine/design/decompose 或输出确认卡，不得进入 execute。
+- middleware: `verify constraints` 增加 frontend solution confirmation instruction surface 检查，确保 pipeline 与 adapter 模板持续包含 `program solution-confirm --execute --yes`、`enterprise-vue2` 和“用户明确确认”等 marker。
+- workflow: 前端需求标准路径为“需求细化 -> 技术栈 / 组件库建议 -> 用户确认 -> solution-confirm 落库 -> decompose/verify -> execute”；如用户目标是框架自带 Vue2 企业级组件库，先呈现 `enterprise-vue2` 推荐方案。
+- tool: `src/ai_sdlc/rules/pipeline.md`, `src/ai_sdlc/adapters/*`, `src/ai_sdlc/core/verify_constraints.py`, `tests/unit/test_verify_constraints.py`
+- eval: 前端需求未确认技术栈即修改代码次数、solution-confirm 使用率、前端 provider 与用户期望不一致次数、被用户指出“没来得及选择技术栈”的次数。
+- 风险等级: 高
+- 可验证成功标准: 给定仅有前端需求描述且尚无用户确认的场景，adapter 指令和 pipeline 规则都要求先输出技术栈 / 组件库建议，且 `verify constraints` 能阻断缺少该规则 marker 的 pipeline / adapter 模板。
+- 是否需要回归测试补充: 是：补 `verify constraints` 单测覆盖缺失前端方案确认 marker 的阻断，以及 marker 完整时不误报。
