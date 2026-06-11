@@ -11,9 +11,10 @@ globs: ["**/specs/**", "**/.ai-sdlc/**"]
 4. `init` 会在用户选择 AI 代理入口和 shell 后自动执行必要检查与安全预演；正常输出会给出“当前结果 / Result”和“下一步 / Next”。
 5. 排查入口（仅当 CLI 明确要求时执行）：`ai-sdlc adapter status`、`ai-sdlc run --dry-run` 或对应 `python -m ai_sdlc ...` 写法。
 6. 使用 `ai-sdlc stage show <阶段名>` 按阶段加载清单。
-7. 当用户输入任何需求/任务描述时，如果项目尚未初始化，先引导用户执行 `init`。如果 `init` 已完成且 CLI 输出的下一步是切换到 AI 对话，则不要再要求用户手动执行 `adapter status` 或 `run --dry-run`；直接推进后续阶段。
+7. 当用户输入任何需求/任务描述时，如果项目尚未初始化，先引导用户执行 `init`。如果 `init` 已完成且 CLI 输出的下一步是切换到 AI 对话，则不要再要求用户手动执行 `adapter status` 或 `run --dry-run`；直接推进后续设计与分解阶段。
 8. 产物目录：`specs/<工作项>/` 与 `.ai-sdlc/` 分离；不要混用工程约束目录与产物。
-9. 代码实现时，新增注释必须跟随当前或近期用户主要沟通语言；当前对话或近期对话以英文为主则使用英文，否则默认简体中文。保留原有注释；确需删除时，必须在同一变更附近补充等价说明，或在 execution log / handoff 记录删除原因。注释只解释复杂意图、边界、兼容、并发、缓存、错误处理和非显然业务约束，不复述命名已经表达清楚的代码。凡是后续 agent 或人工需要维护的脚本/模块，尤其包含认证、XHR/API 调用、payload 字段映射、加密、阶段流程、重试或副作用边界时，必须补维护契约、关键函数 docstring 或边界注释，并在验证/交付说明中确认这些注释已覆盖。
+9. 若需求涉及前端需求、UI、页面、组件、浏览器交互或前端工程，进入实现前必须先给出技术栈 / 组件库建议，并等待用户明确确认；确认前不得进入 execute、不得生成前端实现代码、不得运行 managed delivery apply。确认可通过 `program solution-confirm --dry-run` 预览，只有用户确认后才允许 `program solution-confirm --execute --yes`。当用户目标是框架自带 Vue2 企业级组件库时，默认建议必须包含 `enterprise-vue2` / `vue2`，不得擅自改用 Vue3、React 或 public fallback。
+10. 代码实现时，新增注释必须跟随当前或近期用户主要沟通语言；当前对话或近期对话以英文为主则使用英文，否则默认简体中文。保留原有注释；确需删除时，必须在同一变更附近补充等价说明，或在 execution log / handoff 记录删除原因。注释只解释复杂意图、边界、兼容、并发、缓存、错误处理和非显然业务约束，不复述命名已经表达清楚的代码。凡是后续 agent 或人工需要维护的脚本/模块，尤其包含认证、XHR/API 调用、payload 字段映射、加密、阶段流程、重试或副作用边界时，必须补维护契约、关键函数 docstring 或边界注释，并在验证/交付说明中确认这些注释已覆盖。
 
 当前 Cursor adapter 以 `.cursor/rules/ai-sdlc.mdc` 作为 canonical path。用户主路径不依赖宿主加载证明；规则安装后，写代码前以当前可执行任务为准。诊断侧仍可能显示 `materialized / verified_loaded / degraded / unsupported`，仅用于排查。
 
