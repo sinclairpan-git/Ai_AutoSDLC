@@ -143,7 +143,7 @@ SKIP_REGISTRY_REL = Path("src") / "ai_sdlc" / "rules" / "agent-skip-registry.zh.
 FRAMEWORK_DEFECT_BACKLOG_REL = Path("docs") / "framework-defect-backlog.zh-CN.md"
 VERIFICATION_RULE_REL = Path("src") / "ai_sdlc" / "rules" / "verification.md"
 PR_CHECKLIST_REL = Path("docs") / "pull-request-checklist.zh.md"
-RELEASE_NOTES_CURRENT_REL = Path("docs") / "releases" / "v0.8.2.md"
+RELEASE_NOTES_CURRENT_REL = Path("docs") / "releases" / "v0.8.3.md"
 RELEASE_POLICY_REL = Path("docs") / "框架自迭代开发与发布约定.md"
 README_REL = Path("README.md")
 USER_GUIDE_REL = Path("USER_GUIDE.zh-CN.md")
@@ -230,25 +230,25 @@ RECONCILE_SMOKE_CONTRACT_SURFACES: dict[Path, tuple[str, ...]] = {
 }
 RELEASE_DOCS_CONSISTENCY_SURFACES: dict[Path, tuple[str, ...]] = {
     README_REL: (
-        "v0.8.2",
-        "docs/releases/v0.8.2.md",
-        "ai-sdlc-offline-0.8.2-windows-amd64.zip",
-        "ai-sdlc-offline-0.8.2-macos-arm64.tar.gz",
-        "ai-sdlc-offline-0.8.2-linux-amd64.tar.gz",
+        "v0.8.3",
+        "docs/releases/v0.8.3.md",
+        "ai-sdlc-offline-0.8.3-windows-amd64.zip",
+        "ai-sdlc-offline-0.8.3-macos-arm64.tar.gz",
+        "ai-sdlc-offline-0.8.3-linux-amd64.tar.gz",
         "No such command 'install'",
         "ai-sdlc self-update check",
         "--upgrade-existing",
-        "releases/download/v0.8.2",
+        "releases/download/v0.8.3",
         "-AddToPath",
         "--add-to-path",
         "python -m ai_sdlc",
     ),
     RELEASE_NOTES_CURRENT_REL: (
-        "v0.8.2",
+        "v0.8.3",
         "No such command 'install'",
         "ai-sdlc self-update check",
         "--upgrade-existing",
-        "releases/download/v0.8.2",
+        "releases/download/v0.8.3",
         "Windows",
         ".zip",
         "macOS / Linux",
@@ -260,11 +260,11 @@ RELEASE_DOCS_CONSISTENCY_SURFACES: dict[Path, tuple[str, ...]] = {
         "python -m ai_sdlc",
     ),
     USER_GUIDE_REL: (
-        "v0.8.2",
+        "v0.8.3",
         "No such command 'install'",
         "ai-sdlc self-update check",
         "--upgrade-existing",
-        "releases/download/v0.8.2",
+        "releases/download/v0.8.3",
         "Windows",
         "macOS",
         "Linux",
@@ -276,10 +276,10 @@ RELEASE_DOCS_CONSISTENCY_SURFACES: dict[Path, tuple[str, ...]] = {
         "python -m ai_sdlc",
     ),
     OFFLINE_README_REL: (
-        "v0.8.2",
-        "ai-sdlc-offline-0.8.2-windows-amd64.zip",
-        "ai-sdlc-offline-0.8.2-macos-arm64.tar.gz",
-        "ai-sdlc-offline-0.8.2-linux-amd64.tar.gz",
+        "v0.8.3",
+        "ai-sdlc-offline-0.8.3-windows-amd64.zip",
+        "ai-sdlc-offline-0.8.3-macos-arm64.tar.gz",
+        "ai-sdlc-offline-0.8.3-linux-amd64.tar.gz",
         "-AddToPath",
         "--add-to-path",
         "ai-sdlc --help",
@@ -287,38 +287,38 @@ RELEASE_DOCS_CONSISTENCY_SURFACES: dict[Path, tuple[str, ...]] = {
     ),
     RELEASE_POLICY_REL: (
         "README.md",
-        "docs/releases/v0.8.2.md",
+        "docs/releases/v0.8.3.md",
         "USER_GUIDE.zh-CN.md",
         "packaging/offline/README.md",
         "docs/pull-request-checklist.zh.md",
         "普通用户主路径",
         "live host evidence",
         "materialized only",
-        "ai-sdlc-offline-0.8.2-windows-amd64.zip",
-        "ai-sdlc-offline-0.8.2-macos-arm64.tar.gz",
-        "ai-sdlc-offline-0.8.2-linux-amd64.tar.gz",
+        "ai-sdlc-offline-0.8.3-windows-amd64.zip",
+        "ai-sdlc-offline-0.8.3-macos-arm64.tar.gz",
+        "ai-sdlc-offline-0.8.3-linux-amd64.tar.gz",
     ),
     PR_CHECKLIST_REL: (
         "README.md",
-        "docs/releases/v0.8.2.md",
+        "docs/releases/v0.8.3.md",
         "USER_GUIDE.zh-CN.md",
         "packaging/offline/README.md",
-        "v0.8.2",
+        "v0.8.3",
         "普通用户主路径",
         "materialized only",
-        "ai-sdlc-offline-0.8.2-windows-amd64.zip",
-        "ai-sdlc-offline-0.8.2-macos-arm64.tar.gz",
-        "ai-sdlc-offline-0.8.2-linux-amd64.tar.gz",
+        "ai-sdlc-offline-0.8.3-windows-amd64.zip",
+        "ai-sdlc-offline-0.8.3-macos-arm64.tar.gz",
+        "ai-sdlc-offline-0.8.3-linux-amd64.tar.gz",
     ),
-    RELEASE_BUILD_WORKFLOW_REL: ("default: v0.8.2",),
-    RELEASE_ARTIFACT_SMOKE_WORKFLOW_REL: ("default: v0.8.2",),
+    RELEASE_BUILD_WORKFLOW_REL: ("default: v0.8.3",),
+    RELEASE_ARTIFACT_SMOKE_WORKFLOW_REL: ("default: v0.8.3",),
     WINDOWS_OFFLINE_SMOKE_WORKFLOW_REL: (
-        "expected upgraded ai-sdlc version 0.8.2",
-        r"0\.8\.2",
+        "expected upgraded ai-sdlc version 0.8.3",
+        r"0\.8\.3",
     ),
 }
 BEGINNER_GUIDE_REQUIRED_TOKENS = (
-    "当前正式发布版：`v0.8.2`",
+    "当前正式发布版：`v0.8.3`",
     "## 第一章：全新用户 + 全新空项目",
     "## 第二章：全新用户 + 已有项目",
     "## 第三章：老用户升级",
@@ -328,9 +328,9 @@ BEGINNER_GUIDE_REQUIRED_TOKENS = (
     "执行成功以后，你应该看到",
     "如果失败",
     "切换到 AI 对话",
-    "ai-sdlc-offline-0.8.2-windows-amd64.zip",
-    "ai-sdlc-offline-0.8.2-macos-arm64.tar.gz",
-    "ai-sdlc-offline-0.8.2-linux-amd64.tar.gz",
+    "ai-sdlc-offline-0.8.3-windows-amd64.zip",
+    "ai-sdlc-offline-0.8.3-macos-arm64.tar.gz",
+    "ai-sdlc-offline-0.8.3-linux-amd64.tar.gz",
     "-AddToPath",
     "--add-to-path",
     "ai-sdlc --help",
@@ -340,7 +340,7 @@ BEGINNER_GUIDE_REQUIRED_TOKENS = (
     "请把 zip 放到当前目录，并先 cd 到该目录后重试",
     "Place the zip in the current directory, cd into that directory, then retry",
     "D:\\work\\ui-test-platform 是示例路径；请替换成你的真实项目根目录",
-    'cd D:\\work\\ui-test-platform\n& "D:\\work\\.ai-sdlc-install\\ai-sdlc-offline-0.8.2-windows-amd64\\.venv\\Scripts\\ai-sdlc.exe" init .',
+    'cd D:\\work\\ui-test-platform\n& "D:\\work\\.ai-sdlc-install\\ai-sdlc-offline-0.8.3-windows-amd64\\.venv\\Scripts\\ai-sdlc.exe" init .',
     "Windows 当前终端立即初始化时，不要直接照抄裸 `ai-sdlc init .`",
     "Direct shim",
     "Get-Command ai-sdlc | Select-Object Source",
@@ -352,7 +352,7 @@ BEGINNER_GUIDE_EXISTING_PROJECT_INIT_TOKENS = (
     "Windows 当前终端立即初始化时，不要直接照抄裸 `ai-sdlc init .`",
     "Direct shim",
     "Get-Command ai-sdlc | Select-Object Source",
-    'cd D:\\work\\my-existing-project\n& "D:\\work\\.ai-sdlc-install\\ai-sdlc-offline-0.8.2-windows-amd64\\.venv\\Scripts\\ai-sdlc.exe" init .',
+    'cd D:\\work\\my-existing-project\n& "D:\\work\\.ai-sdlc-install\\ai-sdlc-offline-0.8.3-windows-amd64\\.venv\\Scripts\\ai-sdlc.exe" init .',
     "~/work/my-existing-project 是示例路径；请替换成你的真实项目根目录",
     "cd ~/work/my-existing-project\nai-sdlc init .",
     "如果 `ai-sdlc` 不在 PATH",
@@ -3573,7 +3573,7 @@ def _package_init_fallback_version(root: Path) -> str | None:
 
 
 def _release_version_truth_blockers(root: Path) -> list[str]:
-    expected_version = "0.8.2"
+    expected_version = "0.8.3"
     blockers: list[str] = []
     pyproject_version = _pyproject_version(root)
     if pyproject_version and pyproject_version != expected_version:
