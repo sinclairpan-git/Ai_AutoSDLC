@@ -1,44 +1,27 @@
 # Continuity Handoff
 
-- Updated: 2026-06-22T11:24:38+00:00
-- Reason: v0.8.4 release validation passed
-- Goal: Publish AI-SDLC v0.8.4
-- State: v0.8.4 version truth, release docs, workflows, verify constraints, and tests are updated on codex/release-0.8.4. Local release verification set passed.
+- Updated: 2026-06-22T11:29:40+00:00
+- Reason: PR #86 verify CI 修复后交接
+- Goal: 发布 AI-SDLC v0.8.4
+- State: PR #86 已创建并请求 Codex review；CI verify 失败原因定位为 workflow/offline 指南测试仍断言 v0.8.3，已同步到 v0.8.4。
 - Stage: close
 - Work Item: release-v0.8.4
 - Branch: codex/release-0.8.4
 
 ## Changed Files
-- M .ai-sdlc/state/codex-handoff.md
-- M .ai-sdlc/state/resume-pack.yaml
-- M .github/workflows/release-artifact-smoke.yml
-- M .github/workflows/release-build.yml
-- M .github/workflows/windows-offline-smoke.yml
-- M README.md
-- M USER_GUIDE.zh-CN.md
-- M docs/pull-request-checklist.zh.md
-- M docs/releases/v0.8.4.md
-- M "docs/\346\241\206\346\236\266\350\207\252\350\277\255\344\273\243\345\274\200\345\217\221\344\270\216\345\217\221\345\270\203\347\272\246\345\256\232.md"
-- M packaging/offline/README.md
-- M packaging/offline/RELEASE_CHECKLIST.md
-- M pyproject.toml
-- M src/ai_sdlc/__init__.py
-- M src/ai_sdlc/core/verify_constraints.py
-- M tests/unit/test_verify_constraints.py
-- M uv.lock
+- M tests/integration/test_github_workflows.py
+- M tests/integration/test_offline_bundle_scripts.py
 
 ## Key Decisions
-- Keep the release PR focused on version and release-entry consistency before creating the GitHub Release/tag.
+- 历史 docs/releases/v0.8.3.md 保留不改；当前发布面测试断言同步到 v0.8.4。
 
 ## Commands / Tests
-- uv run pytest tests/unit/test_frontend_solution_confirmation_artifacts.py tests/unit/test_managed_delivery_apply.py tests/unit/test_verify_constraints.py tests/unit/test_frontend_browser_gate_runtime.py -q: 211 passed, 2 skipped
-- uv run pytest tests/integration -k 'visual or browser_gate or a11y' -q: 56 passed, 601 deselected
-- uv run ruff check src tests: pass
-- uv run ai-sdlc verify constraints: no BLOCKERs
-- git diff --check: pass
+- uv run pytest tests/integration/test_github_workflows.py tests/integration/test_offline_bundle_scripts.py -q => 40 passed
+- uv run ruff check src tests => passed
+- uv run ai-sdlc verify constraints => no BLOCKERs
 
 ## Blockers / Risks
-- PR review/checks and GitHub release/tag still pending.
+- none
 
 ## Exact Next Steps
-- Commit and push codex/release-0.8.4, open PR, request Codex review, monitor checks, merge, then tag and publish v0.8.4.
+- 提交并推送 CI 断言修复，重新监控 PR #86 检查和 Codex review。
