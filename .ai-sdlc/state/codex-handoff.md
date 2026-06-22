@@ -1,27 +1,25 @@
 # Continuity Handoff
 
-- Updated: 2026-06-22T11:29:40+00:00
-- Reason: PR #86 verify CI 修复后交接
+- Updated: 2026-06-22T11:46:50+00:00
+- Reason: Codex review P2 修复后交接
 - Goal: 发布 AI-SDLC v0.8.4
-- State: PR #86 已创建并请求 Codex review；CI verify 失败原因定位为 workflow/offline 指南测试仍断言 v0.8.3，已同步到 v0.8.4。
+- State: PR #86 checks 已通过；Codex review 对最新提交提出 P2：Windows release note 不应把 install_offline.ps1 写成 --upgrade-existing。已修正为 install_offline.ps1 -UpgradeExisting。
 - Stage: close
 - Work Item: release-v0.8.4
 - Branch: codex/release-0.8.4
 
 ## Changed Files
-- M tests/integration/test_github_workflows.py
-- M tests/integration/test_offline_bundle_scripts.py
+- M docs/releases/v0.8.4.md
 
 ## Key Decisions
-- 历史 docs/releases/v0.8.3.md 保留不改；当前发布面测试断言同步到 v0.8.4。
+- Windows .ps1 示例使用 -UpgradeExisting；macOS/Linux shell installer 继续使用 --upgrade-existing。
 
 ## Commands / Tests
-- uv run pytest tests/integration/test_github_workflows.py tests/integration/test_offline_bundle_scripts.py -q => 40 passed
-- uv run ruff check src tests => passed
 - uv run ai-sdlc verify constraints => no BLOCKERs
+- uv run pytest tests/unit/test_verify_constraints.py tests/integration/test_github_workflows.py tests/integration/test_offline_bundle_scripts.py -q => 173 passed
 
 ## Blockers / Risks
 - none
 
 ## Exact Next Steps
-- 提交并推送 CI 断言修复，重新监控 PR #86 检查和 Codex review。
+- 提交并推送 Codex P2 修复，重新请求 Codex review 并等待 PR #86 checks 重新通过后合并。
