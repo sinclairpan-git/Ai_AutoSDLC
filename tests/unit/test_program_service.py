@@ -5174,10 +5174,14 @@ def test_build_frontend_managed_delivery_apply_request_materializes_artifact_gen
     assert '"UiTable"' in generated_by_path["src/generated/provider-adapter.ts"]
     assert '"primevue/datatable"' in generated_by_path["src/generated/provider-adapter.ts"]
     assert "RouterView" in generated_by_path["src/App.vue"]
-    assert "BaseButton" in generated_by_path["src/views/ManagedDeliverySmoke.vue"]
-    assert "BaseTable" in generated_by_path["src/views/ManagedDeliverySmoke.vue"]
-    assert "BaseDialog" in generated_by_path["src/views/ManagedDeliverySmoke.vue"]
-    assert "BaseForm" in generated_by_path["src/views/ManagedDeliverySmoke.vue"]
+    smoke_view = generated_by_path["src/views/ManagedDeliverySmoke.vue"]
+    assert "BaseButton" in smoke_view
+    assert "BaseTable" in smoke_view
+    assert "BaseDialog" in smoke_view
+    assert "BaseForm" in smoke_view
+    assert "entry-eyebrow" in smoke_view
+    assert "package-item" in smoke_view
+    assert "page-item" in smoke_view
 
 
 def test_build_frontend_managed_delivery_apply_request_generates_safe_enterprise_adapter(
@@ -5246,6 +5250,9 @@ def test_build_frontend_managed_delivery_apply_request_generates_safe_enterprise
     assert "publicPrimeVueProviderComponents = {}" not in provider_adapter
     assert "providerComponents.UiPageHeader.component" in smoke_view
     assert "Managed provider adapter scaffold" in smoke_view
+    assert "entry-eyebrow" in smoke_view
+    assert "package-item" in smoke_view
+    assert "page-item" in smoke_view
 
 
 def test_build_frontend_managed_delivery_apply_request_splits_enterprise_and_public_runtime_installs(

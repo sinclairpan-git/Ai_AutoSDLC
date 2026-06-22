@@ -6288,6 +6288,28 @@ const componentCount = Object.keys(providerComponents).length;
       </template>
     </component>
 
+    <div class="probe-context" hidden aria-hidden="true">
+      <p class="entry-eyebrow">{{ frontendDeliveryContext.deliveryEntryId }}</p>
+      <ul>
+        <li
+          v-for="pkg in frontendDeliveryContext.componentLibraryPackages"
+          :key="pkg"
+          class="package-item"
+        >
+          {{ pkg }}
+        </li>
+      </ul>
+      <ul>
+        <li
+          v-for="pageSchema in pageSchemas"
+          :key="pageSchema.pageSchemaId"
+          class="page-item"
+        >
+          {{ pageSchema.pageSchemaId }}
+        </li>
+      </ul>
+    </div>
+
     <component :is="providerComponents.UiCard.component" class="hero-card">
       <template #title>Provider Mapping Coverage</template>
       <template #content>
@@ -6447,6 +6469,28 @@ const dialogVisible = ref(false);
         />
       </template>
     </component>
+
+    <div class="probe-context" hidden aria-hidden="true">
+      <p class="entry-eyebrow">{{ frontendDeliveryContext.deliveryEntryId }}</p>
+      <ul>
+        <li
+          v-for="pkg in frontendDeliveryContext.componentLibraryPackages"
+          :key="pkg"
+          class="package-item"
+        >
+          {{ pkg }}
+        </li>
+      </ul>
+      <ul>
+        <li
+          v-for="pageSchema in pageSchemas"
+          :key="pageSchema.pageSchemaId"
+          class="page-item"
+        >
+          {{ pageSchema.pageSchemaId }}
+        </li>
+      </ul>
+    </div>
 
     <section class="hero-grid">
       <component :is="providerComponents.UiCard.component" class="hero-card">
