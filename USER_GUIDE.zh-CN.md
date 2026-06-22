@@ -669,6 +669,14 @@ ai-sdlc init .
 - `下一步 / Next` 给出唯一下一步
 - 下一步通常是切换到 AI 对话输入需求；只有排查时才需要手动运行 `ai-sdlc adapter status`
 
+如果升级后看到 `adapter ingress`、`materialized`、`unverified`、`host ingress` 这类英文诊断词，不要先判断为升级失败。它们的意思通常是：
+
+- 规则文件已经写入项目，例如 Codex 的 `AGENTS.md` 已存在
+- 当前普通终端不能机器证明 AI 聊天宿主已经自动读取这些规则
+- `run --dry-run` 可以继续做安全预演，但 dry-run 本身不等于“治理已被 AI 宿主自动加载”
+
+普通用户下一步仍然是回到 Codex / AI 对话，先发送 CLI 给出的“请先读取 AGENTS.md ...”那句话，再输入需求。只有在以下情况才需要排查：`init` 明确提示 adapter target 不匹配、正式 `ai-sdlc run` 被阻断、或 AI 对话明显没有遵守项目规则。排查时再运行 `ai-sdlc adapter status` 或 `ai-sdlc adapter status --json`。
+
 如果这个项目本来就有 JSON、Markdown、TODO 或 issue 导出的任务进度，再执行一次：
 
 ```bash
@@ -765,5 +773,6 @@ python -m ai_sdlc <子命令>
 | Windows `ExpandArchiveFileExists` | 旧解压目录里已有同名文件；改用本指南带 `.ai-sdlc-install` 和 `-Force` 的 Windows 命令 |
 | `tar: command not found` / `curl: command not found` | 让管理员下载并解压包，或在具备这些工具的终端执行 |
 | `init` 输出提示 adapter target 不匹配 | 按 `下一步 / Next` 执行 `adapter select`，选择真实聊天入口 |
+| `adapter ingress truth not yet verified` / `materialized (unverified)` / `host ingress` | 这通常不是升级失败，而是当前终端无法机器证明 AI 聊天宿主已自动读取规则；按 `下一步 / Next` 回到 AI 对话，让 AI 先读取 `AGENTS.md` |
 | `init` 或 `run --dry-run` 显示 open gates | 看 `下一步 / Next` 和 `说明 / Notes`；新项目未开始需求时不一定是错误 |
 | 在聊天框里粘贴命令没有反应 | 命令必须在终端执行；聊天框只输入自然语言需求 |

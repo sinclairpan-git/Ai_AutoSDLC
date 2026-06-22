@@ -101,8 +101,8 @@ def adapter_result_text(payload: dict[str, object]) -> tuple[str, str]:
         )
     if ingress == "materialized":
         return (
-            f"已写入：{target} 规则已安装到 {path}，但当前终端未证明 AI 宿主已自动读取。",
-            f"Written: {target} instructions are installed at {path}, but this terminal has not proved the AI host loaded them automatically.",
+            f"正常：{target} 规则已安装到 {path}。当前终端只是无法机器证明 AI 宿主已自动读取；这不是安装或升级失败。",
+            f"OK: {target} instructions are installed at {path}. This terminal simply cannot machine-verify that the AI host loaded them automatically; this is not an install or upgrade failure.",
         )
     if ingress == "degraded":
         return (
@@ -148,8 +148,8 @@ def render_adapter_status_for_beginner(payload: dict[str, object]) -> str:
             result_zh=result_zh,
             result_en=result_en,
             next_command=prompt,
-            next_zh="在 AI 对话里先发送上面这句话，让 AI 明确读取 adapter 规则；之后再输入需求。",
-            next_en="Send the line above in the AI chat first so the AI explicitly reads the adapter instructions; then describe the requirement.",
+            next_zh="在 AI 对话里先发送上面这句话，让 AI 明确读取项目规则；之后直接输入需求，不需要反复运行 dry-run。",
+            next_en="Send the line above in the AI chat first so the AI explicitly reads the project instructions; then describe the requirement without repeatedly running dry-run.",
         )
     select_command = "ai-sdlc adapter select"
     if target in _VERIFICATION_ENV_FOR_TARGET:
@@ -249,8 +249,8 @@ def render_init_complete_guidance(
             result_zh=f"初始化完成。{adapter_zh} {dry_zh}",
             result_en=f"Initialization complete. {adapter_en} {dry_en}",
             next_command=prompt,
-            next_zh="不用再手动执行初始化命令；但在 AI 对话里要先发送上面这句话，再输入需求。",
-            next_en="No more CLI setup commands are needed; send the line above in the AI chat before describing the requirement.",
+            next_zh="不用再手动执行初始化命令；在 AI 对话里先发送上面这句话，再直接输入需求。",
+            next_en="No more CLI setup commands are needed; send the line above in the AI chat, then describe the requirement directly.",
             notes=notes,
         )
     return render_single_next_step(
