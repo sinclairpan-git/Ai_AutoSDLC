@@ -11,6 +11,10 @@ from ai_sdlc.models.frontend_provider_profile import (
     build_mvp_enterprise_vue2_provider_profile,
     build_mvp_public_primevue_provider_profile,
 )
+from ai_sdlc.models.frontend_solution_confirmation import (
+    PUBLIC_PRIMEVUE_TEMPLATE_DEV_DEPENDENCIES,
+    PUBLIC_PRIMEVUE_TEMPLATE_RUNTIME_DEPENDENCIES,
+)
 
 BUILTIN_FRONTEND_PROVIDER_PROFILE_IDS = frozenset(
     {"enterprise-vue2", "public-primevue"}
@@ -41,26 +45,30 @@ def materialize_frontend_provider_profile_artifacts(
     """Write the minimal Provider profile artifact set to disk."""
 
     base_dir = frontend_provider_profile_root(root, profile.provider_id)
+    manifest_payload: dict[str, object] = {
+        "work_item_id": profile.work_item_id,
+        "provider_id": profile.provider_id,
+        "kernel_artifact_ref": profile.kernel_artifact_ref,
+        "access_mode": profile.access_mode,
+        "install_strategy_ids": profile.install_strategy_ids,
+        "availability_prerequisites": profile.availability_prerequisites,
+        "default_style_pack_id": profile.default_style_pack_id,
+        "mapped_components": [mapping.component_id for mapping in profile.mappings],
+        "whitelist_components": [entry.component_id for entry in profile.whitelist],
+        "cross_stack_fallback_targets": profile.cross_stack_fallback_targets,
+    }
+    if profile.provider_id == "public-primevue":
+        manifest_payload["template_runtime_dependencies"] = list(
+            PUBLIC_PRIMEVUE_TEMPLATE_RUNTIME_DEPENDENCIES
+        )
+        manifest_payload["template_dev_dependencies"] = list(
+            PUBLIC_PRIMEVUE_TEMPLATE_DEV_DEPENDENCIES
+        )
 
     return _dedupe_paths([
         _write_yaml(
             base_dir / "provider.manifest.yaml",
-            {
-                "work_item_id": profile.work_item_id,
-                "provider_id": profile.provider_id,
-                "kernel_artifact_ref": profile.kernel_artifact_ref,
-                "access_mode": profile.access_mode,
-                "install_strategy_ids": profile.install_strategy_ids,
-                "availability_prerequisites": profile.availability_prerequisites,
-                "default_style_pack_id": profile.default_style_pack_id,
-                "mapped_components": [
-                    mapping.component_id for mapping in profile.mappings
-                ],
-                "whitelist_components": [
-                    entry.component_id for entry in profile.whitelist
-                ],
-                "cross_stack_fallback_targets": profile.cross_stack_fallback_targets,
-            },
+            manifest_payload,
         ),
         _write_yaml(
             base_dir / "mappings.yaml",

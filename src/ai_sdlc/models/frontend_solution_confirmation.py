@@ -8,6 +8,23 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 _SNAPSHOT_ID_PATTERN = re.compile(r"^(?P<prefix>.*?)(?P<number>\d+)$")
+PUBLIC_PRIMEVUE_TEMPLATE_RUNTIME_DEPENDENCIES = (
+    "@vueuse/core",
+    "axios",
+    "dayjs",
+    "pinia",
+    "vue",
+    "vue-i18n",
+    "vue-router",
+)
+PUBLIC_PRIMEVUE_TEMPLATE_DEV_DEPENDENCIES = (
+    "@vitejs/plugin-vue",
+    "typescript",
+    "unocss",
+    "vite",
+    "vitest",
+    "vue-tsc",
+)
 
 
 def _dedupe_strings(value: object) -> list[str]:
@@ -310,7 +327,7 @@ def build_mvp_solution_snapshot(
     )
     if previous_snapshot is None:
         effective_style_pack_id = str(
-            overrides.get("effective_style_pack_id", "enterprise-default")
+            overrides.get("effective_style_pack_id", "modern-saas")
         )
         base_payload: dict[str, object] = {
             "project_id": "073-demo",
@@ -319,23 +336,23 @@ def build_mvp_solution_snapshot(
             "confirmed_by_mode": "guided",
             "decision_status": "recommended",
             "recommended_project_shape": "frontend-heavy",
-            "recommended_frontend_stack": "vue2",
-            "recommended_provider_id": "enterprise-vue2",
+            "recommended_frontend_stack": "vue3",
+            "recommended_provider_id": "public-primevue",
             "recommended_backend_stack": "fastapi",
             "recommended_api_collab_mode": "typed-bff",
-            "recommended_style_pack_id": "enterprise-default",
+            "recommended_style_pack_id": "modern-saas",
             "recommendation_source": "simple-mode",
-            "recommendation_reason_codes": ["enterprise-provider-preferred"],
-            "recommendation_reason_text": "Enterprise baseline is available and preferred.",
+            "recommendation_reason_codes": ["public-primevue-default"],
+            "recommendation_reason_text": "Vue3 public-primevue is the default frontend provider.",
             "requested_project_shape": "frontend-heavy",
-            "requested_frontend_stack": "vue2",
-            "requested_provider_id": "enterprise-vue2",
+            "requested_frontend_stack": "vue3",
+            "requested_provider_id": "public-primevue",
             "requested_backend_stack": "fastapi",
             "requested_api_collab_mode": "typed-bff",
             "requested_style_pack_id": effective_style_pack_id,
             "effective_project_shape": "frontend-heavy",
-            "effective_frontend_stack": "vue2",
-            "effective_provider_id": "enterprise-vue2",
+            "effective_frontend_stack": "vue3",
+            "effective_provider_id": "public-primevue",
             "effective_backend_stack": "fastapi",
             "effective_api_collab_mode": "typed-bff",
             "effective_style_pack_id": effective_style_pack_id,
@@ -360,7 +377,7 @@ def build_mvp_solution_snapshot(
                 style_tokens_by_id,
             ),
             "provider_theme_adapter_config": _default_provider_theme_adapter_config(
-                "enterprise-vue2",
+                "public-primevue",
                 effective_style_pack_id,
             ),
             "style_fidelity_status": "full",
@@ -442,6 +459,8 @@ __all__ = [
     "AvailabilitySummary",
     "FrontendSolutionSnapshot",
     "InstallStrategy",
+    "PUBLIC_PRIMEVUE_TEMPLATE_DEV_DEPENDENCIES",
+    "PUBLIC_PRIMEVUE_TEMPLATE_RUNTIME_DEPENDENCIES",
     "StylePackManifest",
     "build_builtin_install_strategies",
     "build_builtin_style_pack_manifests",

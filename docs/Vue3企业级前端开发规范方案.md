@@ -380,3 +380,56 @@ AI 辅助开发友好
 长期维护成本低
 适合多人协作
 非常适合现代 Vue3 企业项目
+
+二十一、AI-SDLC 默认落地映射
+
+当前 AI-SDLC 源码版本中，普通前端需求的首个推荐 provider 已对齐本规范：
+
+frontend_stack
+vue3
+
+provider_id
+public-primevue
+
+style_pack_id
+modern-saas
+
+默认生成路径包括：
+Vite
+PrimeVue
+UnoCSS
+CSS Variables
+Pinia
+Vue Router
+BaseButton / BaseTable / BaseDialog / BaseForm
+
+企业 Vue2 组件库仍作为显式选择路径保留：
+
+frontend_stack
+vue2
+
+provider_id
+enterprise-vue2
+
+style_pack_id
+enterprise-default
+
+二十二、AI-SDLC Web、视觉和可访问性质量门
+
+Web smoke blocker：
+Vite dev server 无法启动
+页面无法打开
+页面白屏或主要内容缺失
+browser console error
+browser page error
+
+首版 warning / advisory：
+桌面 1440x900 截图证据
+移动 390x844 截图证据
+视觉结构、主内容、横向溢出
+Button / Input / Select / Dialog / Form 覆盖
+Dialog close / focus return 风险
+表单控件缺少 label 或 aria 等价名称
+键盘焦点可见性问题
+
+这些 warning 不阻断普通生成，但必须作为浏览器 gate 证据沉淀，后续可升级为 pixel diff、结构 diff 或更严格的可访问性 blocker。

@@ -33,7 +33,7 @@ related_doc:
 ### Task 2.1 Switch default recommendation to vue3/public-primevue
 
 - task_id: T21
-- status: pending
+- status: done
 - depends:
   - T11
 - scope:
@@ -57,7 +57,7 @@ related_doc:
 ### Task 3.1 Split provider core packages and template dependencies
 
 - task_id: T31
-- status: pending
+- status: done
 - depends:
   - T21
 - scope:
@@ -77,7 +77,7 @@ related_doc:
 ### Task 3.2 Generate PrimeVue + UnoCSS + CSS Variables template
 
 - task_id: T32
-- status: pending
+- status: done
 - depends:
   - T31
 - scope:
@@ -100,7 +100,7 @@ related_doc:
 ### Task 4.1 Add public-primevue import boundary verification
 
 - task_id: T41
-- status: pending
+- status: done
 - depends:
   - T32
 - scope:
@@ -119,7 +119,7 @@ related_doc:
 ### Task 4.2 Add validation level reporting for Vue3 default provider
 
 - task_id: T42
-- status: pending
+- status: done
 - depends:
   - T41
 - scope:
@@ -139,7 +139,7 @@ related_doc:
 ### Task 5.1 Implement Vue3 public-primevue Web smoke runner
 
 - task_id: T51
-- status: pending
+- status: done
 - depends:
   - T42
 - scope:
@@ -161,7 +161,7 @@ related_doc:
 ### Task 6.1 Produce desktop/mobile visual evidence
 
 - task_id: T61
-- status: pending
+- status: done
 - depends:
   - T51
 - scope:
@@ -180,7 +180,7 @@ related_doc:
 ### Task 6.2 Capture basic interaction and accessibility warning evidence
 
 - task_id: T62
-- status: pending
+- status: done
 - depends:
   - T61
 - scope:
@@ -200,7 +200,7 @@ related_doc:
 ### Task 7.1 Align docs, release notes, and user guidance
 
 - task_id: T71
-- status: pending
+- status: done
 - depends:
   - T62
 - scope:

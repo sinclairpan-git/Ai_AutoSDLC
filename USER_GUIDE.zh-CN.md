@@ -693,6 +693,26 @@ export AI_SDLC_DISABLE_UPDATE_CHECK=1
 
 ## 附录：常用命令和常见报错
 
+## 前端组件库默认选择和质量门
+
+当前源码版本的普通前端推荐默认值是：
+
+- `frontend_stack=vue3`
+- `provider_id=public-primevue`
+- `style_pack_id=modern-saas`
+
+这条路径会生成框架托管的 Vue3 / PrimeVue 前端模板，并配套 Vite、UnoCSS、CSS Variables、Pinia、Vue Router 和 Base 组件层。除非需求明确要求公司内置 Vue2 企业组件库，否则普通新前端需求默认走这条 Vue3 公共 PrimeVue provider。
+
+如果你的目标就是框架自带 Vue2 企业组件库，需要在方案确认时显式选择：
+
+```bash
+ai-sdlc program solution-confirm --execute --yes --frontend-stack vue2 --provider-id enterprise-vue2 --style-pack-id enterprise-default --enterprise-provider-eligible
+```
+
+前端实现前必须先完成方案确认；未确认技术栈 / 组件库前，不应进入 execute，也不应运行 managed delivery apply。
+
+生成 Vue3 `public-primevue` 前端后，`browser-gate-probe --execute` 会启动 Vite 页面进行 Web smoke。白屏、无法打开页面、fatal console error 或 page error 属于 blocker。桌面 `1440x900` 和移动 `390x844` 截图、视觉结构、Button/Input/Select/Dialog/Form 交互、缺失 label/aria、焦点可见性和 Dialog 焦点回收等首版证据会作为 warning/advisory 输出，用于质量闭环和后续升级为更严格 blocker。
+
 ## AI 写代码时的质量底线
 
 AI-SDLC 会把下面几条作为写代码时的默认约束；普通用户不需要每次在对话里重复强调：

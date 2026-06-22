@@ -509,6 +509,40 @@ FRONTEND_CROSS_PROVIDER_CONSISTENCY_SOURCE_NAME = (
 FRONTEND_CROSS_PROVIDER_CONSISTENCY_COVERAGE_GAP = (
     "frontend_cross_provider_consistency"
 )
+FRONTEND_PUBLIC_PRIMEVUE_IMPORT_BOUNDARY_SOURCE_NAME = (
+    "frontend public-primevue import boundary verification"
+)
+FRONTEND_PUBLIC_PRIMEVUE_IMPORT_BOUNDARY_CHECK_OBJECTS = (
+    "frontend_public_primevue_import_boundary",
+)
+FRONTEND_PUBLIC_PRIMEVUE_IMPORT_BOUNDARY_IMPORT_RE = re.compile(
+    r"""(?x)
+    (?:import\s+(?:type\s+)?[^;]*?\s+from\s*|import\s*\()\s*
+    ["']primevue/
+    """
+)
+FRONTEND_PUBLIC_PRIMEVUE_IMPORT_BOUNDARY_EXTENSIONS = frozenset(
+    {".js", ".jsx", ".ts", ".tsx", ".vue"}
+)
+FRONTEND_PUBLIC_PRIMEVUE_DEFAULT_RECOMMENDATION = (
+    "vue3",
+    "public-primevue",
+    "modern-saas",
+)
+FRONTEND_PUBLIC_PRIMEVUE_REQUIRED_TEMPLATE_FILES = (
+    Path("index.html"),
+    Path("package.json"),
+    Path("uno.config.ts"),
+    Path("vite.config.ts"),
+    Path("src") / "App.vue",
+    Path("src") / "main.ts",
+    Path("src") / "plugins" / "primevue.ts",
+    Path("src") / "router" / "index.ts",
+    Path("src") / "stores" / "app.ts",
+    Path("src") / "styles" / "variables.css",
+    Path("src") / "styles" / "primevue.css",
+    Path("src") / "styles" / "main.css",
+)
 FRONTEND_EVIDENCE_CLASS_ALLOWED_VALUES = (
     "framework_capability",
     "consumer_adoption",
@@ -973,6 +1007,33 @@ class FrontendCrossProviderConsistencyVerificationReport:
         }
 
 
+@dataclass(frozen=True, slots=True)
+class FrontendPublicPrimeVueImportBoundaryReport:
+    """Non-blocking warning evidence for public-primevue direct import boundaries."""
+
+    root: str
+    source_name: str = FRONTEND_PUBLIC_PRIMEVUE_IMPORT_BOUNDARY_SOURCE_NAME
+    check_objects: tuple[str, ...] = FRONTEND_PUBLIC_PRIMEVUE_IMPORT_BOUNDARY_CHECK_OBJECTS
+    warnings: tuple[str, ...] = ()
+    gate_result: str = "PASS"
+    scanned_file_count: int = 0
+
+    def __post_init__(self) -> None:
+        object.__setattr__(
+            self, "check_objects", tuple(_dedupe_text_items(self.check_objects))
+        )
+        object.__setattr__(self, "warnings", tuple(_dedupe_text_items(self.warnings)))
+
+    def to_json_dict(self) -> dict[str, object]:
+        return {
+            "source_name": self.source_name,
+            "gate_verdict": self.gate_result,
+            "check_objects": _dedupe_text_items(self.check_objects),
+            "warnings": _dedupe_text_items(self.warnings),
+            "scanned_file_count": self.scanned_file_count,
+        }
+
+
 def build_constraint_report(root: Path) -> ConstraintReport:
     """Build a structured report for verify constraints."""
     checkpoint = load_checkpoint(root)
@@ -997,6 +1058,9 @@ def build_constraint_report(root: Path) -> ConstraintReport:
     )
     frontend_cross_provider_consistency_report = (
         _frontend_cross_provider_consistency_attachment_report(root, checkpoint)
+    )
+    frontend_public_primevue_import_boundary_report = (
+        _frontend_public_primevue_import_boundary_report(root, checkpoint)
     )
     check_objects = _merge_unique_strings(
         _merge_unique_strings(
@@ -1050,6 +1114,14 @@ def build_constraint_report(root: Path) -> ConstraintReport:
         (
             frontend_cross_provider_consistency_report.check_objects
             if frontend_cross_provider_consistency_report
+            else ()
+        ),
+    )
+    check_objects = _merge_unique_strings(
+        check_objects,
+        (
+            frontend_public_primevue_import_boundary_report.check_objects
+            if frontend_public_primevue_import_boundary_report
             else ()
         ),
     )
@@ -1205,6 +1277,9 @@ def build_verification_gate_context(root: Path) -> dict[str, object]:
     frontend_cross_provider_consistency_report = (
         _frontend_cross_provider_consistency_attachment_report(root, checkpoint)
     )
+    frontend_public_primevue_import_boundary_report = (
+        _frontend_public_primevue_import_boundary_report(root, checkpoint)
+    )
     governance = build_verification_governance_bundle(
         report,
         decision_subject=f"verify:{root}",
@@ -1266,6 +1341,14 @@ def build_verification_gate_context(root: Path) -> dict[str, object]:
             else ()
         ),
     )
+    verification_sources = _merge_unique_strings(
+        verification_sources,
+        (
+            (frontend_public_primevue_import_boundary_report.source_name,)
+            if frontend_public_primevue_import_boundary_report
+            else ()
+        ),
+    )
     context: dict[str, object] = {
         "verification_sources": verification_sources,
         "verification_check_objects": report.check_objects,
@@ -1308,6 +1391,10 @@ def build_verification_gate_context(root: Path) -> dict[str, object]:
     if frontend_cross_provider_consistency_report is not None:
         context["frontend_cross_provider_consistency_verification"] = (
             frontend_cross_provider_consistency_report.to_json_dict()
+        )
+    if frontend_public_primevue_import_boundary_report is not None:
+        context["frontend_public_primevue_import_boundary_verification"] = (
+            frontend_public_primevue_import_boundary_report.to_json_dict()
         )
     return context
 
@@ -1881,6 +1968,7 @@ def _frontend_solution_confirmation_attachment_report(
                     )
 
         blockers.extend(_frontend_solution_provider_consistency_blockers(root, snapshot_payload))
+        blockers.extend(_frontend_public_primevue_template_file_blockers(root, snapshot_payload))
 
     blockers_tuple = tuple(blockers)
     return FrontendSolutionConfirmationVerificationReport(
@@ -2640,6 +2728,70 @@ def _frontend_cross_provider_consistency_attachment_report(
     )
 
 
+def _frontend_public_primevue_import_boundary_report(
+    root: Path,
+    checkpoint: Checkpoint | None,
+) -> FrontendPublicPrimeVueImportBoundaryReport | None:
+    del checkpoint
+    scanned_file_count = 0
+    warnings: list[str] = []
+
+    for source_file in _iter_public_primevue_boundary_source_files(root):
+        scanned_file_count += 1
+        try:
+            source_text = source_file.read_text(encoding="utf-8")
+        except UnicodeDecodeError:
+            continue
+        if not FRONTEND_PUBLIC_PRIMEVUE_IMPORT_BOUNDARY_IMPORT_RE.search(source_text):
+            continue
+        rel_path = _relative_path_text(root, source_file)
+        warnings.append(
+            "WARNING: public-primevue import boundary direct import: "
+            f"{rel_path} imports primevue/* outside provider/base adapter layers"
+        )
+
+    if scanned_file_count == 0:
+        return None
+
+    warnings_tuple = tuple(_dedupe_text_items(warnings))
+    return FrontendPublicPrimeVueImportBoundaryReport(
+        root=str(root),
+        warnings=warnings_tuple,
+        gate_result="WARN" if warnings_tuple else "PASS",
+        scanned_file_count=scanned_file_count,
+    )
+
+
+def _iter_public_primevue_boundary_source_files(root: Path):
+    scan_roots = (
+        root / "src" / "views",
+        root / "src" / "components" / "business",
+        root / "managed" / "frontend" / "src" / "views",
+        root / "managed" / "frontend" / "src" / "components" / "business",
+    )
+    seen: set[Path] = set()
+    for scan_root in scan_roots:
+        if not scan_root.is_dir():
+            continue
+        for source_file in sorted(scan_root.rglob("*")):
+            if (
+                not source_file.is_file()
+                or source_file.suffix
+                not in FRONTEND_PUBLIC_PRIMEVUE_IMPORT_BOUNDARY_EXTENSIONS
+                or source_file in seen
+            ):
+                continue
+            seen.add(source_file)
+            yield source_file
+
+
+def _relative_path_text(root: Path, path: Path) -> str:
+    try:
+        return path.relative_to(root).as_posix()
+    except ValueError:
+        return path.as_posix()
+
+
 def _frontend_contract_runtime_attachment(
     root: Path,
     checkpoint: Checkpoint | None,
@@ -3151,6 +3303,25 @@ def _frontend_solution_snapshot_blockers(
     recommended_tuple = _frontend_solution_tuple(snapshot_payload, prefix="recommended")
     requested_tuple = _frontend_solution_tuple(snapshot_payload, prefix="requested")
     effective_tuple = _frontend_solution_tuple(snapshot_payload, prefix="effective")
+    recommendation_source = _optional_str(snapshot_payload.get("recommendation_source")) or ""
+    decision_status = _optional_str(snapshot_payload.get("decision_status")) or ""
+    if (
+        recommendation_source == "simple-mode"
+        and recommended_tuple != FRONTEND_PUBLIC_PRIMEVUE_DEFAULT_RECOMMENDATION
+    ):
+        blockers.append(
+            "BLOCKER: frontend solution confirmation default provider drift: "
+            "simple-mode recommendation must be vue3/public-primevue/modern-saas"
+        )
+    if (
+        requested_tuple[1] == "enterprise-vue2"
+        and effective_tuple[1] == "public-primevue"
+        and decision_status not in {"fallback_required", "fallback_confirmed"}
+    ):
+        blockers.append(
+            "BLOCKER: frontend solution confirmation explicit enterprise-vue2 request "
+            "silently switched to public-primevue without fallback decision status"
+        )
     frontend_stacks = (
         recommended_tuple[0],
         requested_tuple[0],
@@ -3162,7 +3333,6 @@ def _frontend_solution_snapshot_blockers(
             "`react` into current recommendation / snapshot truth"
         )
 
-    decision_status = _optional_str(snapshot_payload.get("decision_status")) or ""
     provider_mode = _optional_str(snapshot_payload.get("provider_mode")) or ""
     fallback_reason_code = _optional_str(snapshot_payload.get("fallback_reason_code"))
     fallback_reason_text = _optional_str(snapshot_payload.get("fallback_reason_text"))
@@ -3358,6 +3528,38 @@ def _frontend_solution_provider_consistency_blockers(
         blockers.append(
             "BLOCKER: frontend solution consistency degraded style-pack reason codes "
             f"for {effective_style_pack_id} do not match provider style-support truth"
+        )
+
+    return _dedupe_text_items(blockers)
+
+
+def _frontend_public_primevue_template_file_blockers(
+    root: Path,
+    snapshot_payload: dict[str, object],
+) -> list[str]:
+    if _optional_str(snapshot_payload.get("effective_provider_id")) != "public-primevue":
+        return []
+
+    managed_frontend_root = root / "managed" / "frontend"
+    if not managed_frontend_root.exists():
+        return []
+
+    blockers: list[str] = []
+    for required_file in FRONTEND_PUBLIC_PRIMEVUE_REQUIRED_TEMPLATE_FILES:
+        required_path = managed_frontend_root / required_file
+        if not required_path.is_file():
+            blockers.append(
+                "BLOCKER: frontend public-primevue template missing required file "
+                f"{required_file.as_posix()}: {required_path.as_posix()}"
+            )
+
+    index_path = managed_frontend_root / "index.html"
+    if index_path.is_file() and "/src/main.ts" not in index_path.read_text(
+        encoding="utf-8"
+    ):
+        blockers.append(
+            "BLOCKER: frontend public-primevue template index.html missing Vite "
+            "module entry /src/main.ts"
         )
 
     return _dedupe_text_items(blockers)

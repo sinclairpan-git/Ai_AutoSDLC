@@ -439,3 +439,13 @@ Given 生成的默认验证页包含按钮、表格、弹窗和表单，When 执
 ## 12. 最终结论
 
 本 PRD 通过三轮对抗评审，已达到进入后续正式 spec / plan / tasks 拆解的质量门槛。后续实现应以本 PRD 中的默认 provider 决策、依赖分层、组件封装边界、验证等级以及 Web/视觉测试规划为准。
+
+## 13. 落地状态
+
+截至本工作项执行记录，默认 provider 口径、Vue3 public-primevue 生成模板、import boundary warning、Web smoke blocker、桌面/移动视觉 evidence、基础交互和可访问性 warning evidence 均已进入实现与验证范围。
+
+当前首版质量等级保持如下：
+
+- blocker：默认 provider 漂移、显式企业 Vue2 被静默切换、生成模板关键文件缺失、Web smoke 白屏、browser console error、browser page error。
+- warning / advisory：PrimeVue 原始组件业务层直接 import、桌面/移动视觉结构风险、横向溢出、Button/Input/Select/Dialog/Form 覆盖不足、Dialog close/focus return 风险、表单 label/aria 缺失、键盘焦点可见性问题。
+- advisory：ESLint、Prettier、Playwright 完整用例、husky、lint-staged、commitlint 等工程增强项在本工作项中不作为普通生成 blocker。

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import os
 import shutil
 import subprocess
 from contextlib import contextmanager
@@ -273,6 +274,76 @@ def test_materialize_browser_gate_probe_runtime_executes_real_runner_and_capture
     assert bundle.provider_runtime_adapter_delivery_state == "scaffolded"
     assert bundle.provider_runtime_adapter_evidence_state == "missing"
     assert bundle.page_schema_ids == ["dashboard-workspace", "search-list-workspace"]
+
+
+def test_materialize_browser_gate_probe_runtime_blocks_smoke_on_console_errors(
+    tmp_path: Path,
+) -> None:
+    context = _context().model_copy(update={"required_probe_set": ["playwright_smoke"]})
+
+    def _runner(*, artifact_root: Path, execution_context, generated_at: str):
+        del generated_at
+        trace_path = artifact_root / "shared-runtime" / "playwright-trace.zip"
+        screenshot_path = artifact_root / "shared-runtime" / "navigation-screenshot.png"
+        interaction_path = artifact_root / "interaction" / "interaction-snapshot.json"
+        trace_path.parent.mkdir(parents=True, exist_ok=True)
+        interaction_path.parent.mkdir(parents=True, exist_ok=True)
+        trace_path.write_text('{"trace":"ok"}\n', encoding="utf-8")
+        screenshot_path.write_bytes(b"png")
+        interaction_path.write_text('{"interaction":"ok"}\n', encoding="utf-8")
+        return BrowserGateProbeRunnerResult(
+            runtime_status="completed",
+            shared_capture=BrowserGateSharedRuntimeCapture(
+                gate_run_id=execution_context.gate_run_id,
+                trace_artifact_ref=str(trace_path.relative_to(tmp_path)),
+                navigation_screenshot_ref=str(screenshot_path.relative_to(tmp_path)),
+                capture_status="captured",
+                final_url="http://127.0.0.1:5173/",
+                anchor_refs=["page:managed-frontend"],
+                diagnostic_codes=[],
+            ),
+            interaction_capture=BrowserGateInteractionProbeCapture(
+                gate_run_id=execution_context.gate_run_id,
+                interaction_probe_id="primary-action",
+                artifact_refs=[str(interaction_path.relative_to(tmp_path))],
+                capture_status="captured",
+                classification_candidate="pass",
+                blocking_reason_codes=[],
+                anchor_refs=["interaction:primary-action"],
+            ),
+            quality_capture=BrowserGateQualityCapture(
+                gate_run_id=execution_context.gate_run_id,
+                page_title="vue3-public-primevue",
+                final_url="http://127.0.0.1:5173/",
+                screenshot_ref=str(screenshot_path.relative_to(tmp_path)),
+                body_text_char_count=120,
+                heading_count=1,
+                landmark_count=1,
+                interactive_count=1,
+                unlabeled_button_count=0,
+                unlabeled_input_count=0,
+                image_missing_alt_count=0,
+                console_error_messages=["ReferenceError: broken is not defined"],
+                page_error_messages=[],
+            ),
+            diagnostic_codes=[],
+            warnings=[],
+        )
+
+    _session, _records, receipts, bundle = materialize_browser_gate_probe_runtime(
+        root=tmp_path,
+        context=context,
+        apply_artifact_path=".ai-sdlc/memory/frontend-managed-delivery/latest.yaml",
+        visual_a11y_evidence_artifact=_visual_a11y_pass_artifact(),
+        generated_at="2026-04-14T15:05:00Z",
+        probe_runner=_runner,
+        execute_probe=True,
+    )
+
+    smoke_receipt = next(item for item in receipts if item.check_name == "playwright_smoke")
+    assert smoke_receipt.classification_candidate == "actual_quality_blocker"
+    assert smoke_receipt.blocking_reason_codes == ["browser_console_error"]
+    assert bundle.overall_gate_status == "blocked"
 
 
 def test_materialize_browser_gate_probe_runtime_can_pass_without_visual_regression_matrix(
@@ -1074,6 +1145,300 @@ def test_materialize_browser_gate_probe_runtime_auto_materializes_visual_a11y_ev
     )
 
 
+def test_materialize_browser_gate_probe_runtime_records_viewport_visual_evidence_advisories(
+    tmp_path: Path,
+) -> None:
+    context = _context().model_copy(
+        update={
+            "visual_regression_matrix_id": "",
+            "visual_regression_viewport_id": "",
+            "required_probe_set": [
+                "playwright_smoke",
+                "visual_expectation",
+                "basic_a11y",
+                "interaction_anti_pattern_checks",
+            ],
+        }
+    )
+
+    def _runner(*, artifact_root: Path, execution_context, generated_at: str):
+        del generated_at
+        trace_path = artifact_root / "shared-runtime" / "playwright-trace.zip"
+        screenshot_path = artifact_root / "shared-runtime" / "navigation-screenshot.png"
+        interaction_path = artifact_root / "interaction" / "interaction-snapshot.json"
+        desktop_path = artifact_root / "visual" / "desktop-1440-screenshot.png"
+        mobile_path = artifact_root / "visual" / "mobile-390-screenshot.png"
+        trace_path.parent.mkdir(parents=True, exist_ok=True)
+        interaction_path.parent.mkdir(parents=True, exist_ok=True)
+        desktop_path.parent.mkdir(parents=True, exist_ok=True)
+        trace_path.write_text('{"trace":"ok"}\n', encoding="utf-8")
+        screenshot_path.write_bytes(b"png")
+        interaction_path.write_text('{"interaction":"ok"}\n', encoding="utf-8")
+        desktop_path.write_bytes(b"desktop-png")
+        mobile_path.write_bytes(b"mobile-png")
+        return BrowserGateProbeRunnerResult.model_validate(
+            {
+                "runtime_status": "completed",
+                "shared_capture": {
+                    "gate_run_id": execution_context.gate_run_id,
+                    "trace_artifact_ref": str(trace_path.relative_to(tmp_path)),
+                    "navigation_screenshot_ref": str(screenshot_path.relative_to(tmp_path)),
+                    "capture_status": "captured",
+                    "final_url": "http://localhost:4173/",
+                    "anchor_refs": ["page:landing"],
+                    "diagnostic_codes": [],
+                },
+                "interaction_capture": {
+                    "gate_run_id": execution_context.gate_run_id,
+                    "interaction_probe_id": "primary-action",
+                    "artifact_refs": [str(interaction_path.relative_to(tmp_path))],
+                    "capture_status": "captured",
+                    "classification_candidate": "pass",
+                    "blocking_reason_codes": [],
+                    "anchor_refs": ["interaction:primary-action"],
+                },
+                "quality_capture": {
+                    "gate_run_id": execution_context.gate_run_id,
+                    "page_title": "vue3-public-primevue",
+                    "final_url": "http://localhost:4173/",
+                    "screenshot_ref": str(screenshot_path.relative_to(tmp_path)),
+                    "body_text_char_count": 420,
+                    "heading_count": 2,
+                    "landmark_count": 3,
+                    "interactive_count": 4,
+                    "unlabeled_button_count": 0,
+                    "unlabeled_input_count": 0,
+                    "image_missing_alt_count": 0,
+                    "console_error_messages": [],
+                    "page_error_messages": [],
+                    "visual_evidence_items": [
+                        {
+                            "viewport_id": "desktop-1440",
+                            "viewport_width": 1440,
+                            "viewport_height": 900,
+                            "screenshot_ref": str(desktop_path.relative_to(tmp_path)),
+                            "final_url": "http://localhost:4173/",
+                            "page_title": "vue3-public-primevue",
+                            "delivery_entry_id": execution_context.delivery_entry_id,
+                            "effective_provider": execution_context.effective_provider,
+                            "effective_style_pack": execution_context.effective_style_pack,
+                            "body_text_char_count": 420,
+                            "element_count": 12,
+                            "main_content_present": True,
+                            "document_scroll_width": 1440,
+                            "document_scroll_height": 900,
+                            "horizontal_overflow_count": 0,
+                        },
+                        {
+                            "viewport_id": "mobile-390",
+                            "viewport_width": 390,
+                            "viewport_height": 844,
+                            "screenshot_ref": str(mobile_path.relative_to(tmp_path)),
+                            "final_url": "http://localhost:4173/",
+                            "page_title": "vue3-public-primevue",
+                            "delivery_entry_id": execution_context.delivery_entry_id,
+                            "effective_provider": execution_context.effective_provider,
+                            "effective_style_pack": execution_context.effective_style_pack,
+                            "body_text_char_count": 420,
+                            "element_count": 12,
+                            "main_content_present": True,
+                            "document_scroll_width": 430,
+                            "document_scroll_height": 900,
+                            "horizontal_overflow_count": 1,
+                        },
+                    ],
+                },
+                "diagnostic_codes": [],
+                "warnings": [],
+            }
+        )
+
+    session, records, receipts, bundle = materialize_browser_gate_probe_runtime(
+        root=tmp_path,
+        context=context,
+        apply_artifact_path=".ai-sdlc/memory/frontend-managed-delivery/latest.yaml",
+        visual_a11y_evidence_artifact=_visual_a11y_pass_artifact(),
+        generated_at="2026-04-22T16:30:00Z",
+        probe_runner=_runner,
+        execute_probe=True,
+    )
+
+    evidence_path = (
+        tmp_path
+        / ".ai-sdlc"
+        / "artifacts"
+        / "frontend-browser-gate"
+        / "gate-run-001"
+        / "visual"
+        / "evidence.yaml"
+    )
+    evidence_payload = runtime_module.yaml.safe_load(
+        evidence_path.read_text(encoding="utf-8")
+    )
+    assert evidence_payload["schema_version"] == "frontend-visual-evidence/v1"
+    assert evidence_payload["effective_provider"] == "public-primevue"
+    assert evidence_payload["effective_style_pack"] == "modern-saas"
+    assert evidence_payload["delivery_entry_id"] == "vue3-public-primevue"
+    assert evidence_payload["generated_at"] == "2026-04-22T16:30:00Z"
+    assert evidence_payload["smoke_result"] == "pass"
+    assert evidence_payload["advisory_reason_codes"] == ["visual_horizontal_overflow"]
+    assert {item["viewport_id"] for item in evidence_payload["items"]} == {
+        "desktop-1440",
+        "mobile-390",
+    }
+    assert session.status == "completed"
+    assert bundle.overall_gate_status == "passed_with_advisories"
+    assert any(record.artifact_type == "visual_evidence_metadata" for record in records)
+    viewport_records = [
+        record for record in records if record.artifact_type == "viewport_screenshot"
+    ]
+    assert [record.source_linkage_refs["viewport_id"] for record in viewport_records] == [
+        "desktop-1440",
+        "mobile-390",
+    ]
+    assert any("desktop-1440-screenshot.png" in ref for ref in bundle.screenshot_refs)
+    assert any("mobile-390-screenshot.png" in ref for ref in bundle.screenshot_refs)
+    visual_receipt = next(item for item in receipts if item.check_name == "visual_expectation")
+    assert visual_receipt.classification_candidate == "advisory_only"
+    assert visual_receipt.advisory_reason_codes == ["visual_horizontal_overflow"]
+
+
+def test_materialize_browser_gate_probe_runtime_records_interaction_a11y_warning_evidence(
+    tmp_path: Path,
+) -> None:
+    context = _context().model_copy(
+        update={
+            "visual_regression_matrix_id": "",
+            "visual_regression_viewport_id": "",
+            "required_probe_set": [
+                "playwright_smoke",
+                "visual_expectation",
+                "basic_a11y",
+                "interaction_anti_pattern_checks",
+            ],
+        }
+    )
+
+    def _runner(*, artifact_root: Path, execution_context, generated_at: str):
+        del generated_at
+        trace_path = artifact_root / "shared-runtime" / "playwright-trace.zip"
+        screenshot_path = artifact_root / "shared-runtime" / "navigation-screenshot.png"
+        interaction_path = artifact_root / "interaction" / "interaction-snapshot.json"
+        a11y_path = artifact_root / "interaction" / "a11y-evidence.json"
+        trace_path.parent.mkdir(parents=True, exist_ok=True)
+        interaction_path.parent.mkdir(parents=True, exist_ok=True)
+        trace_path.write_text('{"trace":"ok"}\n', encoding="utf-8")
+        screenshot_path.write_bytes(b"png")
+        interaction_path.write_text('{"interaction":"ok"}\n', encoding="utf-8")
+        a11y_evidence = {
+            "schema_version": "frontend-interaction-a11y-evidence/v1",
+            "gate_run_id": execution_context.gate_run_id,
+            "generated_at": "2026-04-22T16:35:00Z",
+            "delivery_entry_id": execution_context.delivery_entry_id,
+            "effective_provider": execution_context.effective_provider,
+            "effective_style_pack": execution_context.effective_style_pack,
+            "advisory_reason_codes": [
+                "a11y_form_control_label_missing",
+                "a11y_focus_visible_missing",
+                "interaction_dialog_focus_return_unverified",
+            ],
+            "component_checks": [
+                {"component": "Button", "present": True, "total": 1},
+                {
+                    "component": "Input",
+                    "present": True,
+                    "total": 1,
+                    "unlabeled_count": 1,
+                },
+                {"component": "Select", "present": True, "total": 1},
+                {"component": "Dialog", "present": True, "total": 1},
+                {"component": "Form", "present": True, "total": 1},
+            ],
+            "focusable_count": 3,
+            "focusable_without_visible_focus_count": 1,
+            "dialog_open_close_checked": True,
+            "dialog_focus_return_checked": False,
+        }
+        a11y_path.write_text(json.dumps(a11y_evidence), encoding="utf-8")
+        return BrowserGateProbeRunnerResult.model_validate(
+            {
+                "runtime_status": "completed",
+                "shared_capture": {
+                    "gate_run_id": execution_context.gate_run_id,
+                    "trace_artifact_ref": str(trace_path.relative_to(tmp_path)),
+                    "navigation_screenshot_ref": str(screenshot_path.relative_to(tmp_path)),
+                    "capture_status": "captured",
+                    "final_url": "http://localhost:4173/",
+                    "anchor_refs": ["page:landing"],
+                    "diagnostic_codes": [],
+                },
+                "interaction_capture": {
+                    "gate_run_id": execution_context.gate_run_id,
+                    "interaction_probe_id": "primary-action",
+                    "artifact_refs": [
+                        str(interaction_path.relative_to(tmp_path)),
+                        str(a11y_path.relative_to(tmp_path)),
+                    ],
+                    "capture_status": "captured",
+                    "classification_candidate": "pass",
+                    "blocking_reason_codes": [],
+                    "advisory_reason_codes": a11y_evidence["advisory_reason_codes"],
+                    "anchor_refs": ["interaction:primary-action"],
+                },
+                "quality_capture": {
+                    "gate_run_id": execution_context.gate_run_id,
+                    "page_title": "vue3-public-primevue",
+                    "final_url": "http://localhost:4173/",
+                    "screenshot_ref": str(screenshot_path.relative_to(tmp_path)),
+                    "body_text_char_count": 420,
+                    "heading_count": 2,
+                    "landmark_count": 3,
+                    "interactive_count": 4,
+                    "unlabeled_button_count": 0,
+                    "unlabeled_input_count": 1,
+                    "image_missing_alt_count": 0,
+                    "focusable_count": 3,
+                    "focusable_without_visible_focus_count": 1,
+                    "console_error_messages": [],
+                    "page_error_messages": [],
+                    "interaction_a11y_evidence": a11y_evidence,
+                },
+                "diagnostic_codes": [],
+                "warnings": [],
+            }
+        )
+
+    session, records, receipts, bundle = materialize_browser_gate_probe_runtime(
+        root=tmp_path,
+        context=context,
+        apply_artifact_path=".ai-sdlc/memory/frontend-managed-delivery/latest.yaml",
+        visual_a11y_evidence_artifact=_visual_a11y_pass_artifact(),
+        generated_at="2026-04-22T16:35:00Z",
+        probe_runner=_runner,
+        execute_probe=True,
+    )
+
+    assert session.status == "completed"
+    assert bundle.overall_gate_status == "passed_with_advisories"
+    interaction_receipt = next(
+        item for item in receipts if item.check_name == "interaction_anti_pattern_checks"
+    )
+    a11y_receipt = next(item for item in receipts if item.check_name == "basic_a11y")
+    assert interaction_receipt.classification_candidate == "advisory_only"
+    assert a11y_receipt.classification_candidate == "advisory_only"
+    assert interaction_receipt.advisory_reason_codes == [
+        "a11y_form_control_label_missing",
+        "a11y_focus_visible_missing",
+        "interaction_dialog_focus_return_unverified",
+    ]
+    assert a11y_receipt.advisory_reason_codes == interaction_receipt.advisory_reason_codes
+    assert bundle.interaction_anti_pattern_verdict == "advisory_only"
+    assert bundle.a11y_verdict == "advisory_only"
+    assert any(
+        record.artifact_type == "interaction_a11y_evidence" for record in records
+    )
+
+
 def test_materialize_browser_gate_probe_runtime_rejects_outside_spec_dir_for_auto_visual_a11y_evidence(
     tmp_path: Path,
 ) -> None:
@@ -1869,6 +2234,222 @@ export const chromium = {
         "dashboard-workspace",
         "search-list-workspace",
     ]
+
+
+@pytest.mark.skipif(shutil.which("node") is None, reason="node runtime unavailable")
+def test_frontend_browser_gate_probe_runner_starts_vite_for_generated_managed_frontend(
+    tmp_path: Path,
+) -> None:
+    source_script_path = (
+        Path(__file__).resolve().parents[2] / "scripts" / "frontend_browser_gate_probe_runner.mjs"
+    )
+    script_dir = tmp_path / "scripts"
+    script_dir.mkdir()
+    script_path = script_dir / "frontend_browser_gate_probe_runner.mjs"
+    script_path.write_text(source_script_path.read_text(encoding="utf-8"), encoding="utf-8")
+    fake_bin_dir = tmp_path / "fake-bin"
+    fake_bin_dir.mkdir()
+    fake_npm = fake_bin_dir / "npm"
+    fake_npm.write_text(
+        "#!/usr/bin/env node\n"
+        "console.log('  Local: http://127.0.0.1:5173/');\n"
+        "setInterval(() => {}, 1000);\n",
+        encoding="utf-8",
+    )
+    fake_npm.chmod(0o755)
+    fake_playwright_dir = tmp_path / "node_modules" / "playwright"
+    fake_playwright_dir.mkdir(parents=True)
+    (fake_playwright_dir / "package.json").write_text(
+        json.dumps({"name": "playwright", "type": "module"}),
+        encoding="utf-8",
+    )
+    (fake_playwright_dir / "index.js").write_text(
+        """
+import { mkdir, writeFile } from "node:fs/promises";
+
+let currentUrl = "";
+let evaluateCallCount = 0;
+let currentViewport = { width: 1280, height: 720 };
+
+export const chromium = {
+  async launch() {
+    return {
+      async newContext() {
+        return {
+          tracing: {
+            async start() {},
+            async stop({ path }) {
+              await mkdir(new URL(".", `file://${path}`).pathname, { recursive: true }).catch(() => {});
+              await writeFile(path, "trace");
+            },
+          },
+          async newPage() {
+            return {
+              on() {},
+              async goto(targetUrl) {
+                currentUrl = targetUrl;
+              },
+              url() {
+                return currentUrl;
+              },
+              async setViewportSize(size) {
+                currentViewport = size;
+              },
+              async waitForTimeout() {},
+              async screenshot({ path }) {
+                await writeFile(path, "png");
+              },
+              async evaluate(callback, payload) {
+                evaluateCallCount += 1;
+                if (evaluateCallCount === 1) {
+                  return { bodyText: "vue3-public-primevue", elementCount: 8 };
+                }
+                if (evaluateCallCount === 2) {
+                  return {
+                    interaction_probe_id: "primary-action",
+                    anchor_refs: ["interaction:primary-action"],
+                    classification_candidate: "pass",
+                    blocking_reason_codes: [],
+                    rendered_delivery_entry_id: payload.delivery_entry_id,
+                    rendered_component_library_packages: payload.component_library_packages,
+                    rendered_page_schema_ids: payload.page_schema_ids,
+                    delivery_context_validation_status: "passed",
+                    detail: "clicked-primary-candidate",
+                  };
+                }
+                if (evaluateCallCount === 3) {
+                  return {
+                  body_text_char_count: 120,
+                  heading_count: 1,
+                  landmark_count: 1,
+                  interactive_count: 1,
+                  unlabeled_button_count: 0,
+                  unlabeled_input_count: 0,
+                  image_missing_alt_count: 0,
+                  viewport_width: 1280,
+                  viewport_height: 720,
+                  document_scroll_width: 1280,
+                  document_scroll_height: 720,
+                  horizontal_overflow_count: 0,
+                  low_contrast_text_count: 0,
+                  focusable_count: 1,
+                  focusable_without_visible_focus_count: 0,
+                  };
+                }
+                if (evaluateCallCount === 4) {
+                  return {
+                    component_checks: [
+                      {
+                        component: "Button",
+                        present: true,
+                        total: 1,
+                        unlabeled_count: 0,
+                      },
+                      {
+                        component: "Input",
+                        present: true,
+                        total: 1,
+                        unlabeled_count: 0,
+                      },
+                      {
+                        component: "Select",
+                        present: true,
+                        total: 1,
+                        unlabeled_count: 0,
+                      },
+                      {
+                        component: "Dialog",
+                        present: true,
+                        total: 1,
+                        named_count: 1,
+                        close_control_count: 1,
+                      },
+                      { component: "Form", present: true, total: 1 },
+                    ],
+                    focusable_count: 4,
+                    dialog_open_close_checked: true,
+                    dialog_focus_return_checked: true,
+                  };
+                }
+                return {
+                  body_text_char_count: 120,
+                  element_count: 8,
+                  main_content_present: true,
+                  document_scroll_width: currentViewport.width,
+                  document_scroll_height: currentViewport.height,
+                  horizontal_overflow_count: 0,
+                };
+              },
+              async title() {
+                return "vue3-public-primevue";
+              },
+              async close() {},
+            };
+          },
+          async close() {},
+        };
+      },
+      async close() {},
+    };
+  },
+};
+""".strip(),
+        encoding="utf-8",
+    )
+    managed_root = tmp_path / "managed" / "frontend"
+    (managed_root / "src").mkdir(parents=True)
+    (managed_root / "package.json").write_text(
+        json.dumps({"scripts": {"dev": "vite"}}),
+        encoding="utf-8",
+    )
+    (managed_root / "src" / "main.ts").write_text("import './main.css';\n", encoding="utf-8")
+    (managed_root / "index.html").write_text(
+        '<div id="app"></div><script type="module" src="/src/main.ts"></script>\n',
+        encoding="utf-8",
+    )
+    artifact_root = tmp_path / "artifacts"
+    artifact_root.mkdir()
+    payload = {
+        "artifact_root": str(artifact_root),
+        "artifact_root_ref": "artifacts",
+        "browser_entry_ref": "managed/frontend/index.html",
+        "managed_frontend_target": "managed/frontend",
+        "package_manager": "npm",
+        "gate_run_id": "gate-run-001",
+        "generated_at": "2026-04-18T11:00:00Z",
+        "delivery_entry_id": "vue3-public-primevue",
+        "component_library_packages": ["primevue", "@primeuix/themes"],
+        "page_schema_ids": ["dashboard-workspace", "search-list-workspace"],
+        "effective_provider": "public-primevue",
+        "effective_style_pack": "modern-saas",
+    }
+
+    completed = subprocess.run(
+        ["node", str(script_path)],
+        cwd=tmp_path,
+        input=json.dumps(payload),
+        text=True,
+        capture_output=True,
+        check=True,
+        env={"PATH": f"{fake_bin_dir}:{os.environ.get('PATH', '')}"},
+    )
+
+    result = json.loads(completed.stdout)
+    assert result["runtime_status"] == "completed"
+    assert result["shared_capture"]["final_url"] == "http://127.0.0.1:5173/"
+    assert result["shared_capture"]["capture_status"] == "captured"
+    assert [
+        item["viewport_id"]
+        for item in result["quality_capture"]["visual_evidence_items"]
+    ] == ["desktop-1440", "mobile-390"]
+    assert (
+        result["quality_capture"]["interaction_a11y_evidence"]["schema_version"]
+        == "frontend-interaction-a11y-evidence/v1"
+    )
+    assert result["interaction_capture"]["advisory_reason_codes"] == []
+    assert (artifact_root / "interaction" / "a11y-evidence.json").is_file()
+    assert (artifact_root / "visual" / "desktop-1440-screenshot.png").is_file()
+    assert (artifact_root / "visual" / "mobile-390-screenshot.png").is_file()
 
 
 @pytest.mark.skipif(shutil.which("node") is None, reason="node runtime unavailable")

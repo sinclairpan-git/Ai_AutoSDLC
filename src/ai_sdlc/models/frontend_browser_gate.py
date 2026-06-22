@@ -130,9 +130,16 @@ class BrowserGateInteractionProbeCapture(FrontendBrowserGateModel):
         "actual_quality_blocker",
     ]
     blocking_reason_codes: list[str] = Field(default_factory=list)
+    advisory_reason_codes: list[str] = Field(default_factory=list)
     anchor_refs: list[str] = Field(default_factory=list)
 
-    @field_validator("artifact_refs", "blocking_reason_codes", "anchor_refs", mode="before")
+    @field_validator(
+        "artifact_refs",
+        "blocking_reason_codes",
+        "advisory_reason_codes",
+        "anchor_refs",
+        mode="before",
+    )
     @classmethod
     def _dedupe_interaction_capture_lists(cls, value: object) -> list[str]:
         return _dedupe_strings(value)
@@ -162,6 +169,8 @@ class BrowserGateQualityCapture(FrontendBrowserGateModel):
     focusable_without_visible_focus_count: int | None = None
     console_error_messages: list[str] = Field(default_factory=list)
     page_error_messages: list[str] = Field(default_factory=list)
+    visual_evidence_items: list[dict[str, object]] = Field(default_factory=list)
+    interaction_a11y_evidence: dict[str, object] = Field(default_factory=dict)
 
     @field_validator("console_error_messages", "page_error_messages", mode="before")
     @classmethod

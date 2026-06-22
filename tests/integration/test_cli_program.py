@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import subprocess
 from pathlib import Path
 from types import SimpleNamespace
@@ -2448,6 +2449,47 @@ class TestCliProgram:
             root / "managed" / "frontend" / "src" / "generated" / "provider-adapter.ts"
         ).is_file()
         assert (root / "managed" / "frontend" / "src" / "App.vue").is_file()
+        package_payload = json.loads(
+            (root / "managed" / "frontend" / "package.json").read_text(
+                encoding="utf-8"
+            )
+        )
+        assert package_payload["dependencies"]["vue"] == "latest"
+        assert package_payload["dependencies"]["pinia"] == "latest"
+        assert package_payload["dependencies"]["vue-router"] == "latest"
+        assert package_payload["dependencies"]["primevue"] == "0.0.0-test"
+        assert package_payload["dependencies"]["@primeuix/themes"] == "0.0.0-test"
+        assert package_payload["devDependencies"]["vite"] == "latest"
+        assert package_payload["devDependencies"]["unocss"] == "latest"
+        for rel_path in [
+            "src/api/modules",
+            "src/components/base",
+            "src/components/business",
+            "src/components/layout",
+            "src/router/modules",
+            "src/styles",
+            "src/views",
+        ]:
+            assert (root / "managed" / "frontend" / rel_path).is_dir()
+        index_html = (root / "managed" / "frontend" / "index.html").read_text(
+            encoding="utf-8"
+        )
+        assert '<div id="app"></div>' in index_html
+        assert '<script type="module" src="/src/main.ts"></script>' in index_html
+        assert (
+            root / "managed" / "frontend" / "src" / "plugins" / "primevue.ts"
+        ).is_file()
+        assert (root / "managed" / "frontend" / "src" / "router" / "index.ts").is_file()
+        assert (
+            root / "managed" / "frontend" / "src" / "stores" / "app.ts"
+        ).is_file()
+        smoke_view = (
+            root / "managed" / "frontend" / "src" / "views" / "ManagedDeliverySmoke.vue"
+        ).read_text(encoding="utf-8")
+        assert "BaseButton" in smoke_view
+        assert "BaseTable" in smoke_view
+        assert "BaseDialog" in smoke_view
+        assert "BaseForm" in smoke_view
         assert (
             root / "src" / "frontend-governance" / "runtime" / "kernel" / "KernelWrapper.tsx"
         ).is_file()
@@ -5336,8 +5378,9 @@ specs:
         assert result.exit_code == 0
         assert "Program Frontend Solution Confirm Simple" in result.output
         assert "Recommended Solution" in result.output
-        assert "recommended_frontend_stack: vue2" in result.output
-        assert "recommended_provider_id: enterprise-vue2" in result.output
+        assert "recommended_frontend_stack: vue3" in result.output
+        assert "recommended_provider_id: public-primevue" in result.output
+        assert "recommended_style_pack_id: modern-saas" in result.output
         assert "fallback_required: false" in result.output
         assert not (
             root
@@ -5346,6 +5389,32 @@ specs:
             / "frontend-solution-confirmation"
             / "latest.yaml"
         ).exists()
+
+    def test_program_solution_confirm_default_stays_public_when_enterprise_ineligible(
+        self, initialized_project_dir: Path
+    ) -> None:
+        root = initialized_project_dir
+        _write_manifest(root)
+
+        with patch("ai_sdlc.cli.program_cmd.find_project_root", return_value=root):
+            result = runner.invoke(
+                app,
+                [
+                    "program",
+                    "solution-confirm",
+                    "--enterprise-provider-ineligible",
+                    "--no-fallback-candidate",
+                ],
+            )
+
+        assert result.exit_code == 0
+        assert "recommended_frontend_stack: vue3" in result.output
+        assert "recommended_provider_id: public-primevue" in result.output
+        assert "recommended_style_pack_id: modern-saas" in result.output
+        assert "requested_frontend_stack: vue3" in result.output
+        assert "effective_frontend_stack: vue3" in result.output
+        assert "preflight_status: ready" in result.output
+        assert "fallback_required: false" in result.output
 
     def test_program_solution_confirm_advanced_mode_surfaces_wizard_and_preflight(
         self, initialized_project_dir: Path
@@ -5463,6 +5532,23 @@ specs:
         assert "will_change_on_confirm" not in payload
         assert provider_manifest["provider_id"] == "public-primevue"
         assert provider_manifest["install_strategy_ids"] == ["public-primevue-default"]
+        assert provider_manifest["template_runtime_dependencies"] == [
+            "@vueuse/core",
+            "axios",
+            "dayjs",
+            "pinia",
+            "vue",
+            "vue-i18n",
+            "vue-router",
+        ]
+        assert provider_manifest["template_dev_dependencies"] == [
+            "@vitejs/plugin-vue",
+            "typescript",
+            "unocss",
+            "vite",
+            "vitest",
+            "vue-tsc",
+        ]
         assert any(
             item["style_pack_id"] == "modern-saas"
             and item["fidelity_status"] == "full"
@@ -5512,6 +5598,12 @@ specs:
                 [
                     "program",
                     "solution-confirm",
+                    "--frontend-stack",
+                    "vue2",
+                    "--provider-id",
+                    "enterprise-vue2",
+                    "--style-pack-id",
+                    "enterprise-default",
                     "--enterprise-provider-ineligible",
                     "--no-fallback-candidate",
                     "--execute",

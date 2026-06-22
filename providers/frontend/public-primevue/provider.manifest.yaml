@@ -6,6 +6,21 @@ install_strategy_ids:
 - public-primevue-default
 availability_prerequisites: []
 default_style_pack_id: modern-saas
+template_runtime_dependencies:
+- '@vueuse/core'
+- axios
+- dayjs
+- pinia
+- vue
+- vue-i18n
+- vue-router
+template_dev_dependencies:
+- '@vitejs/plugin-vue'
+- typescript
+- unocss
+- vite
+- vitest
+- vue-tsc
 mapped_components:
 - UiButton
 - UiInput

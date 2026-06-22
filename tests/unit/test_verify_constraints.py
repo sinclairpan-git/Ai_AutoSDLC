@@ -40,6 +40,7 @@ from ai_sdlc.core.verify_constraints import (
     FrontendCrossProviderConsistencyVerificationReport,
     FrontendProviderExpansionVerificationReport,
     FrontendProviderRuntimeAdapterVerificationReport,
+    FrontendPublicPrimeVueImportBoundaryReport,
     FrontendQualityPlatformVerificationReport,
     FrontendSolutionConfirmationVerificationReport,
     FrontendThemeTokenGovernanceVerificationReport,
@@ -96,6 +97,7 @@ from ai_sdlc.models.frontend_provider_expansion import (
 )
 from ai_sdlc.models.frontend_provider_profile import (
     build_mvp_enterprise_vue2_provider_profile,
+    build_mvp_public_primevue_provider_profile,
 )
 from ai_sdlc.models.frontend_provider_runtime_adapter import (
     build_p3_target_project_adapter_scaffold_baseline,
@@ -178,6 +180,11 @@ def test_verify_constraint_report_runtime_objects_canonicalize_lists() -> None:
         blockers=("blocker", "blocker"),
         coverage_gaps=("gap", "gap"),
     )
+    import_boundary_report = FrontendPublicPrimeVueImportBoundaryReport(
+        root=".",
+        warnings=("warning", "warning"),
+        check_objects=("boundary", "boundary"),
+    )
 
     assert constraint_report.blockers == ("blocker",)
     assert constraint_report.check_objects == ("verify",)
@@ -191,6 +198,87 @@ def test_verify_constraint_report_runtime_objects_canonicalize_lists() -> None:
     assert expansion_report.check_objects == ("expansion",)
     assert runtime_adapter_report.check_objects == ("adapter",)
     assert cross_provider_report.check_objects == ("cross",)
+    assert import_boundary_report.check_objects == ("boundary",)
+    assert import_boundary_report.warnings == ("warning",)
+
+
+def test_public_primevue_import_boundary_reports_business_direct_imports(
+    tmp_path: Path,
+) -> None:
+    view_path = tmp_path / "managed" / "frontend" / "src" / "views" / "BadView.vue"
+    business_path = tmp_path / "src" / "components" / "business" / "BadWidget.ts"
+    view_path.parent.mkdir(parents=True, exist_ok=True)
+    business_path.parent.mkdir(parents=True, exist_ok=True)
+    view_path.write_text(
+        '<script setup lang="ts">\nimport Button from "primevue/button";\n</script>\n',
+        encoding="utf-8",
+    )
+    business_path.write_text(
+        "const Dialog = await import('primevue/dialog');\n",
+        encoding="utf-8",
+    )
+
+    report = verify_constraints_module._frontend_public_primevue_import_boundary_report(
+        tmp_path,
+        None,
+    )
+    context = build_verification_gate_context(tmp_path)
+
+    assert report.gate_result == "WARN"
+    assert report.scanned_file_count == 2
+    assert len(report.warnings) == 2
+    assert any("managed/frontend/src/views/BadView.vue" in item for item in report.warnings)
+    assert any("src/components/business/BadWidget.ts" in item for item in report.warnings)
+    assert "frontend_public_primevue_import_boundary" in context[
+        "verification_check_objects"
+    ]
+    boundary_context = context[
+        "frontend_public_primevue_import_boundary_verification"
+    ]
+    assert boundary_context["gate_verdict"] == "WARN"
+    assert boundary_context["warnings"] == list(report.warnings)
+    assert all("public-primevue import boundary" not in item for item in context[
+        "constraint_blockers"
+    ])
+
+
+def test_public_primevue_import_boundary_allows_base_and_adapter_imports(
+    tmp_path: Path,
+) -> None:
+    base_path = (
+        tmp_path
+        / "managed"
+        / "frontend"
+        / "src"
+        / "components"
+        / "base"
+        / "BaseButton.vue"
+    )
+    adapter_path = (
+        tmp_path
+        / "src"
+        / "frontend-governance"
+        / "runtime"
+        / "providers"
+        / "public-primevue"
+        / "ProviderAdapter.tsx"
+    )
+    business_path = tmp_path / "src" / "components" / "business" / "CleanWidget.ts"
+    base_path.parent.mkdir(parents=True, exist_ok=True)
+    adapter_path.parent.mkdir(parents=True, exist_ok=True)
+    business_path.parent.mkdir(parents=True, exist_ok=True)
+    base_path.write_text('import Button from "primevue/button";\n', encoding="utf-8")
+    adapter_path.write_text('import Dialog from "primevue/dialog";\n', encoding="utf-8")
+    business_path.write_text("export const clean = true;\n", encoding="utf-8")
+
+    report = verify_constraints_module._frontend_public_primevue_import_boundary_report(
+        tmp_path,
+        None,
+    )
+
+    assert report.gate_result == "PASS"
+    assert report.warnings == ()
+    assert report.scanned_file_count == 1
 
 
 def _write_framework_backlog(root: Path, entry_body: str) -> None:
@@ -705,6 +793,10 @@ def _write_073_solution_confirmation_artifacts(
         root,
         build_mvp_enterprise_vue2_provider_profile(),
     )
+    materialize_frontend_provider_profile_artifacts(
+        root,
+        build_mvp_public_primevue_provider_profile(),
+    )
     materialize_frontend_solution_confirmation_artifacts(
         root,
         style_packs=build_builtin_style_pack_manifests(),
@@ -876,10 +968,13 @@ def _write_073_inconsistent_solution_confirmation_artifacts(root: Path) -> None:
         snapshot_overrides={
             "recommendation_source": "simple-mode",
             "decision_status": "fallback_required",
+            "recommended_provider_id": "enterprise-vue2",
             "recommended_style_pack_id": "macos-glass",
             "requested_frontend_stack": "react",
+            "requested_provider_id": "enterprise-vue2",
             "requested_style_pack_id": "macos-glass",
             "effective_frontend_stack": "react",
+            "effective_provider_id": "enterprise-vue2",
             "effective_style_pack_id": "macos-glass",
             "provider_mode": "normal",
             "fallback_reason_code": None,
@@ -3363,6 +3458,73 @@ def test_073_frontend_solution_confirmation_verification_surfaces_consistency_ga
     assert any("degraded" in blocker for blocker in report.blockers)
 
 
+def test_188_frontend_solution_confirmation_blocks_public_default_drift(
+    tmp_path: Path,
+) -> None:
+    _write_073_checkpoint(tmp_path)
+    _write_073_solution_confirmation_artifacts(
+        tmp_path,
+        snapshot_overrides={
+            "recommended_frontend_stack": "vue2",
+            "recommended_provider_id": "enterprise-vue2",
+            "recommended_style_pack_id": "enterprise-default",
+        },
+    )
+
+    report = build_constraint_report(tmp_path)
+
+    assert report.coverage_gaps == ("frontend_solution_confirmation_consistency",)
+    assert any("default provider drift" in blocker for blocker in report.blockers)
+
+
+def test_188_frontend_solution_confirmation_blocks_enterprise_silent_switch(
+    tmp_path: Path,
+) -> None:
+    _write_073_checkpoint(tmp_path)
+    _write_073_solution_confirmation_artifacts(
+        tmp_path,
+        snapshot_overrides={
+            "decision_status": "user_confirmed",
+            "requested_frontend_stack": "vue2",
+            "requested_provider_id": "enterprise-vue2",
+            "requested_style_pack_id": "enterprise-default",
+            "effective_frontend_stack": "vue3",
+            "effective_provider_id": "public-primevue",
+            "effective_style_pack_id": "modern-saas",
+            "user_overrode_recommendation": True,
+            "user_override_fields": [
+                "frontend_stack",
+                "provider_id",
+                "style_pack_id",
+            ],
+        },
+    )
+
+    report = build_constraint_report(tmp_path)
+
+    assert report.coverage_gaps == ("frontend_solution_confirmation_consistency",)
+    assert any("silently switched to public-primevue" in blocker for blocker in report.blockers)
+
+
+def test_188_frontend_solution_confirmation_blocks_missing_public_template_files(
+    tmp_path: Path,
+) -> None:
+    _write_073_checkpoint(tmp_path)
+    _write_073_solution_confirmation_artifacts(tmp_path)
+    managed_frontend = tmp_path / "managed" / "frontend"
+    managed_frontend.mkdir(parents=True)
+    (managed_frontend / "index.html").write_text(
+        '<div id="frontend-browser-entry"></div>\n',
+        encoding="utf-8",
+    )
+
+    report = build_constraint_report(tmp_path)
+
+    assert report.coverage_gaps == ("frontend_solution_confirmation_consistency",)
+    assert any("template missing required file src/main.ts" in blocker for blocker in report.blockers)
+    assert any("index.html missing Vite module entry" in blocker for blocker in report.blockers)
+
+
 def test_073_frontend_solution_confirmation_verification_rejects_string_false_override_flag(
     tmp_path: Path,
 ) -> None:
@@ -3481,7 +3643,7 @@ def test_073_frontend_solution_confirmation_verification_surfaces_invalid_style_
         tmp_path
         / "providers"
         / "frontend"
-        / "enterprise-vue2"
+        / "public-primevue"
         / "style-support.yaml"
     )
     style_support_path.write_text("items: [broken\n", encoding="utf-8")
@@ -3543,7 +3705,7 @@ def test_073_frontend_solution_provider_consistency_helper_deduplicates_missing_
     def _fake_load_yaml_mapping(path: Path) -> dict[str, object]:
         if path.name == "provider.manifest.yaml":
             return {
-                "default_style_pack_id": "enterprise-default",
+                "default_style_pack_id": "modern-saas",
                 "install_strategy_ids": [
                     "missing-strategy",
                     "missing-strategy",
@@ -3553,7 +3715,7 @@ def test_073_frontend_solution_provider_consistency_helper_deduplicates_missing_
             return {
                 "items": [
                     {
-                        "style_pack_id": "enterprise-default",
+                        "style_pack_id": "modern-saas",
                         "fidelity_status": "full",
                         "degradation_reason_codes": [],
                     }
